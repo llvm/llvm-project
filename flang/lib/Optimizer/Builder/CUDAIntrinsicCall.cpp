@@ -195,7 +195,7 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      false},
     {"atomicadd_r4x4",
      static_cast<CUDAIntrinsicLibrary::ExtendedGenerator>(
-         &CI::genAtomicAddVector<4>),
+         &CI::genAtomicAddVector4x4),
      {{{"a", asAddr}, {"v", asAddr}}},
      false},
     {"atomicaddd",
@@ -758,6 +758,56 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genAtomicAddVector(
   return fir::ArrayBoxValue(res, {ext});
 }
 
+// ATOMICADDVECTOR4x4
+fir::ExtendedValue CUDAIntrinsicLibrary::genAtomicAddVector4x4(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value a = fir::getBase(args[0]);
+  if (mlir::isa<fir::BaseBoxType>(a.getType()))
+    a = fir::BoxAddrOp::create(builder, loc, a);
+
+  const unsigned extent = 4;
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  mlir::Value ptr = builder.createConvert(loc, llvmPtrTy, a);
+  mlir::Type f32Ty = builder.getF32Type();
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Type refTy = fir::ReferenceType::get(f32Ty);
+  llvm::SmallVector<mlir::Value> values;
+  for (unsigned i = 0; i < extent; ++i) {
+    mlir::Value pos = builder.createIntegerConstant(loc, idxTy, i);
+    mlir::Value coord = fir::CoordinateOp::create(builder, loc, refTy,
+                                                  fir::getBase(args[1]), pos);
+    mlir::Value value = fir::LoadOp::create(builder, loc, coord);
+    values.push_back(value);
+  }
+
+  auto inlinePtx = mlir::NVVM::InlinePtxOp::create(
+      builder, loc, {f32Ty, f32Ty, f32Ty, f32Ty},
+      {ptr, values[0], values[1], values[2], values[3]}, {},
+      "atom.add.v4.f32 {%0, %1, %2, %3}, [%4], {%5, %6, %7, %8};", {});
+
+  llvm::SmallVector<mlir::Value> results;
+  results.push_back(inlinePtx.getResult(0));
+  results.push_back(inlinePtx.getResult(1));
+  results.push_back(inlinePtx.getResult(2));
+  results.push_back(inlinePtx.getResult(3));
+
+  mlir::Type vecF32Ty = mlir::VectorType::get({extent}, f32Ty);
+  mlir::Value undef = mlir::LLVM::UndefOp::create(builder, loc, vecF32Ty);
+  mlir::Type i32Ty = builder.getI32Type();
+  for (unsigned i = 0; i < extent; ++i)
+    undef = mlir::LLVM::InsertElementOp::create(
+        builder, loc, undef, results[i],
+        builder.createIntegerConstant(loc, i32Ty, i));
+
+  auto i128Ty = builder.getIntegerType(128);
+  auto i128VecTy = mlir::VectorType::get({1}, i128Ty);
+  mlir::Value vec128 =
+      mlir::vector::BitCastOp::create(builder, loc, i128VecTy, undef);
+  return mlir::vector::ExtractOp::create(builder, loc, vec128,
+                                         mlir::ArrayRef<int64_t>{0});
+}
+
 mlir::Value
 CUDAIntrinsicLibrary::genAtomicAnd(mlir::Type resultType,
                                    llvm::ArrayRef<mlir::Value> args) {
@@ -906,7 +956,7 @@ CUDAIntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
   return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier)
-      .getResult();
+      .getResult(0);
 }
 
 // BARRIER_ARRIBVE_CNT
