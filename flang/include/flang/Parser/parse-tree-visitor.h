@@ -34,7 +34,6 @@ template <typename A, typename V> void Walk(const A &x, V &visitor);
 template <typename A, typename M> void Walk(A &x, M &mutator);
 
 namespace detail {
-
 // A number of the Walk functions below call other Walk functions. Define
 // a dummy class, and put all of them in it to ensure that name lookup for
 // Walk considers all overloads (not just those defined prior to the call
