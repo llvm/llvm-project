@@ -1067,6 +1067,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DIAGNOSE_NULLPTR
 #  endif
 
+#  if __has_cpp_attribute(_Clang::__no_field_protection__)
+#    define _LIBCPP_NO_PFP [[_Clang::__no_field_protection__]]
+#  else
+#    define _LIBCPP_NO_PFP
+#  endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP___CONFIG
