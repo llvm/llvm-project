@@ -773,8 +773,8 @@ private:
                       SmallVectorImpl<Subscript> &Pair);
 
   /// Tries to delinearize \p Src and \p Dst access functions for a fixed size
-  /// multi-dimensional array. Calls tryDelinearizeFixedSizeImpl() to
-  /// delinearize \p Src and \p Dst separately,
+  /// multi-dimensional array. Calls delinearizeFixedSizeArray() to delinearize
+  /// \p Src and \p Dst separately,
   bool tryDelinearizeFixedSize(Instruction *Src, Instruction *Dst,
                                const SCEV *SrcAccessFn, const SCEV *DstAccessFn,
                                SmallVectorImpl<const SCEV *> &SrcSubscripts,
