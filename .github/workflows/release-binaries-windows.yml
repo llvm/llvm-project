@@ -14,8 +14,9 @@ on:
         default: false
 
 
-permissionks:
-  contents: read # Default everything to read-only
+permissions:
+  id-token: write
+  attestations: write
 
 jobs:
   build-windows-release:
