@@ -29655,8 +29655,8 @@ bool AArch64TargetLowering::shouldInsertFencesForAtomic(
   return false;
 }
 
-bool AArch64TargetLowering::shouldInsertTrailingFenceForAtomicStore(
-    const Instruction *I) const {
+bool AArch64TargetLowering::storeNeedsSeqCstTrailingFence(
+    Instruction *I) const {
   // Store-Release instructions only provide seq_cst guarantees when paired with
   // Load-Acquire instructions. MSVC CRT does not use these instructions to
   // implement seq_cst loads and stores, so we need additional explicit fences
@@ -29664,19 +29664,31 @@ bool AArch64TargetLowering::shouldInsertTrailingFenceForAtomicStore(
   if (!Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
     return false;
 
-  switch (I->getOpcode()) {
-  default:
+  if (auto *SI = dyn_cast<StoreInst>(I))
+    return SI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+
+  auto *CAS = dyn_cast<AtomicCmpXchgInst>(I);
+  auto *RMW = dyn_cast<AtomicRMWInst>(I);
+  // Not a store.
+  if (!CAS && !RMW)
     return false;
-  case Instruction::AtomicCmpXchg:
-    return cast<AtomicCmpXchgInst>(I)->getSuccessOrdering() ==
-           AtomicOrdering::SequentiallyConsistent;
-  case Instruction::AtomicRMW:
-    return cast<AtomicRMWInst>(I)->getOrdering() ==
-           AtomicOrdering::SequentiallyConsistent;
-  case Instruction::Store:
-    return cast<StoreInst>(I)->getOrdering() ==
-           AtomicOrdering::SequentiallyConsistent;
-  }
+
+  // Fence only needed for seq_cst.
+  if (CAS &&
+      CAS->getSuccessOrdering() != AtomicOrdering::SequentiallyConsistent)
+    return false;
+  if (RMW && RMW->getOrdering() != AtomicOrdering::SequentiallyConsistent)
+    return false;
+
+  // We do not need a fence only if we have LSE and are not expanding.
+  TargetLoweringBase::AtomicExpansionKind ExpandKind =
+      CAS ? shouldExpandAtomicCmpXchgInIR(CAS) : shouldExpandAtomicRMWInIR(RMW);
+  if (ExpandKind == AtomicExpansionKind::None && Subtarget->hasLSE())
+    return false;
+  if (RMW && ExpandKind == AtomicExpansionKind::CmpXChg && Subtarget->hasLSE())
+    return false;
+
+  return true;
 }
 
 // Loads and stores less than 128-bits are already atomic; ones above that
