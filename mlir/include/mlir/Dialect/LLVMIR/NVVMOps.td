@@ -37,84 +37,6 @@ def LLVM_PointerSharedCluster : LLVM_PointerInAddressSpace<7>;
 //===----------------------------------------------------------------------===//
 
 def NVVM_Dialect : Dialect {
-  let summary = "The NVVM dialect that models NVIDIA's public ISA";
-
-  let description = [{
-    The NVVM dialect is MLIR's LLVM-IR-based, NVIDIA-specific backend dialect. It
-    models NVVM intrinsics and public ISA functionality and introduces NVIDIA
-    extensions to the MLIR/LLVM type system and address spaces (e.g., global,
-    shared, and cluster memory), enabling faithful lowering of GPU kernels to the
-    NVPTX toolchain. While a NVVM op usually maps to a single LLVM IR intrinsic,
-    the NVVM dialect uses type polymorphism and other attributes so that a single
-    NVVM op can map to different LLVM intrinsics.
-
-    **Scope and capabilities:** The dialect covers core GPU features such as
-    thread/block builtins, barriers and atomics, warp-level collectives (e.g.,
-    shuffle/vote), matrix/tensor core operations (e.g., `mma.sync`, `wgmma`),
-    tensor memory accelerator (TMA) operations, asynchronous copies (`cp.async`,
-    bulk/tensor variants) with memory barriers, cache and prefetch controls, and
-    NVVM-specific attributes and enums (e.g., FP rounding modes, memory scopes,
-    and MMA types/layouts).
-
-    **Non-goals:** NVVM is not a place for convenience or “wrapper” ops. It is
-    not intended to introduce high-level ops that expand into multiple unrelated
-    NVVM intrinsics or that lower to no intrinsic at all. Such abstractions belong
-    in higher-level dialects (e.g., `nvgpu`, `gpu`, or project-specific dialects).
-    The design intent is a thin, predictable, low-level surface with
-    near-mechanical lowering to NVVM/LLVM IR.
-
-    **Placement in the lowering pipeline:** NVVM sits below target-agnostic
-    dialects like `gpu` and NVIDIA's `nvgpu`. Typical pipelines convert
-    `gpu`/`nvgpu` ops into NVVM using `-convert-gpu-to-nvvm` and
-    `-convert-nvgpu-to-nvvm`, then translate into LLVM for final code
-    generation via NVPTX backend.
-
-    **Target configuration and serialization:** NVVM provides a `#nvvm.target`
-    attribute to describe the GPU target (SM, features, and flags). In
-    conjunction with `gpu` serialization (e.g., `gpu-module-to-binary`), this
-    enables producing architecture-specific GPU binaries (such as CUBIN) from
-    nested GPU modules.
-
-    **Inline PTX:** When an intrinsic is unavailable or a performance-critical
-    sequence must be expressed directly, NVVM provides an `nvvm.inline_ptx` op to
-    embed PTX inline as a last-resort escape hatch, with explicit operands and
-    results.
-
-
-    **Memory Spaces:** The NVVM dialect introduces the following memory spaces,
-    each with distinct scopes and lifetimes:
-```
-    | Memory Space      | Address Space | Scope                | Lifetime          |
-    |-------------------|---------------|----------------------|-------------------|
-    | `generic`         | 0             | All threads          | Context-dependent |
-    | `global`          | 1             | All threads (device) | Application       |
-    | `shared`          | 3             | Thread block (CTA)   | Kernel execution  |
-    | `constant`        | 4             | All threads (RO)     | Application       |
-    | `local`           | 5             | Single thread        | Kernel execution  |
-    | `tensor`          | 6             | Thread block (CTA)   | Kernel execution  |
-    | `shared_cluster`  | 7             | Thread block cluster | Kernel execution  |
-```
-    **Memory Space Details:**
-    - **generic**: Can point to any memory space; requires runtime resolution of
-      actual address space. Use when pointer origin is unknown at compile time.
-      Performance varies based on the underlying memory space.
-    - **global**: Accessible by all threads across all blocks; persists across
-      kernel launches. Highest latency but largest capacity (device memory). Best
-      for large data and inter-kernel communication.
-    - **shared**: Shared within a thread block (CTA); very fast on-chip memory for
-      cooperation between threads in the same block. Limited capacity. Ideal for 
-      block-level collaboration, caching, and reducing global memory traffic.
-    - **constant**: Read-only memory cached per SM. Size typically limited to 
-      64KB. Best for read-only data and uniform values accessed by all threads.
-    - **local**: Private to each thread. Use for per-thread private data and
-      automatic variables that don't fit in registers.
-    - **tensor**: Special memory space for tensor core operations. Used by
-      `tcgen05` instructions on SM 100+ for tensor input/output operations.
-    - **shared_cluster**: Distributed shared memory across thread blocks within
-      a cluster (SM 90+). Enables collaboration beyond single-block scope with
-      fast access across cluster threads.
-  }];
-
   let name = "nvvm";
   let cppNamespace = "::mlir::NVVM";
   let dependentDialects = ["LLVM::LLVMDialect"];
@@ -716,9 +638,76 @@ def NVVM_MBarrierInvalOp : NVVM_Op<"mbarrier.inval">,
   }];
 }
 
-def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
-  Results<(outs I64:$res)>,
-  Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr)> {
+def NVVM_MBarrierExpectTxOp : NVVM_Op<"mbarrier.expect_tx"> {
+  let summary = "MBarrier expect-tx Operation";
+  let description = [{
+    The `nvvm.mbarrier.expect_tx` operation increases the transaction count
+    of the mbarrier located at `addr` by `txcount` amount. The `scope`
+    specifies the set of threads that can directly observe the memory
+    synchronizing effect of the `mbarrier.expect_tx` operation. `CTA`
+    and `CLUSTER` are the only allowed values for `scope`.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-expect-tx)
+  }];
+
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    I32:$txcount,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope);
+
+  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands)";
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MBarrierExpectTxOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def NVVM_MBarrierCompleteTxOp : NVVM_Op<"mbarrier.complete_tx"> {
+  let summary = "MBarrier complete-tx Operation";
+  let description = [{
+    The `nvvm.mbarrier.complete_tx` operation decrements the transaction
+    count of the *mbarrier object* at `addr` by `txcount`. It also signals
+    the completion of asynchronous transactions that were tracked by the
+    current phase. The `scope` specifies the set of threads that can directly
+    observe the memory synchronizing effect of the `mbarrier.complete_tx`
+    operation. `CTA` and `CLUSTER` are the only allowed values for `scope`.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-complete-tx)
+  }];
+
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    I32:$txcount,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope);
+
+  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands)";
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MBarrierCompleteTxOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive"> {
   let summary = "MBarrier Arrive Operation";
   let description = [{
     The `nvvm.mbarrier.arrive` operation performs an arrive-on operation on the 
@@ -730,19 +719,40 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
     with this release pattern.
 
     This operation causes the executing thread to signal its arrival at the barrier.
-    The operation returns an opaque value that captures the phase of the 
-    *mbarrier object* prior to the arrive-on operation. The contents of this state 
-    value are implementation-specific.
 
-    The operation takes the following operand:
+    - `res`: When the `space` is not shared_cluster, this operation returns an
+      opaque 64-bit value capturing the phase of the *mbarrier object* prior to
+      the arrive-on operation. The contents of this return value are
+      implementation-specific. An *mbarrier object* located in the shared_cluster
+      space cannot return a value.
+
+    The operation takes the following operands:
     - `addr`: A pointer to the memory location of the *mbarrier object*. The `addr`
-      must be a pointer to generic or shared::cta memory. When it is generic, the
-      underlying address must be within the shared::cta memory space; otherwise
-      the behavior is undefined.
+      must be a pointer to generic or shared_cta or shared_cluster memory. When it
+      is generic, the underlying address must be within the shared_cta memory space;
+      otherwise the behavior is undefined.
+    - `count`: This specifies the amount by which the pending arrival count is
+      decremented. If the `count` argument is not specified, the pending arrival
+      count is decremented by 1.
+    - `scope`: This specifies the set of threads that directly observe the memory
+      synchronizing effect of the `mbarrier.arrive` operation.
+    - `space`: This indicates the memory space where the mbarrier object resides.
+    - `relaxed`: When set to true, the `arrive` operation has relaxed memory semantics
+      and does not provide any ordering or visibility guarantees.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
   }];
-  let assemblyFormat = "$addr attr-dict `:` type($addr) `->` type($res)";
+
+  let results = (outs Optional<I64>:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    Optional<I32>:$count,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
+    DefaultValuedAttr<BoolAttr, "false">:$relaxed);
+
+  let assemblyFormat = "$addr (`,` $count^)? attr-dict `:` type($addr) (`->` type($res)^)?";
+
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     static mlir::NVVM::IDArgPair
@@ -753,7 +763,54 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
   string llvmBuilder = [{
     auto [id, args] = NVVM::MBarrierArriveOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
+
+    int addrSpace = llvm::cast<LLVMPointerType>(op.getAddr().getType()).getAddressSpace();
+    if (addrSpace != static_cast<unsigned>(NVVM::NVVMMemorySpace::SharedCluster))
+      $res = createIntrinsicCall(builder, id, args);
+    else
+      createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def NVVM_MBarrierArriveDropOp : NVVM_Op<"mbarrier.arrive_drop"> {
+  let summary = "MBarrier Arrive-Drop Operation";
+  let description = [{
+    The `nvvm.mbarrier.arrive_drop` operation decrements the expected arrival
+    count of the *mbarrier object* by `count` and then performs an arrive-on
+    operation. When `count` is not specified, it defaults to 1. The decrement
+    of the expected arrival count applies to all the subsequent phases of the
+    *mbarrier object*. The remaining semantics are identical to those of the
+    `nvvm.mbarrier.arrive` operation.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
+  }];
+
+  let results = (outs Optional<I64>:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    Optional<I32>:$count,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
+    DefaultValuedAttr<BoolAttr, "false">:$relaxed);
+
+  let assemblyFormat = "$addr (`,` $count^)? attr-dict `:` type($addr) (`->` type($res)^)?";
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MBarrierArriveDropOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+
+    int addrSpace = llvm::cast<LLVMPointerType>(op.getAddr().getType()).getAddressSpace();
+    if (addrSpace != static_cast<unsigned>(NVVM::NVVMMemorySpace::SharedCluster))
+      $res = createIntrinsicCall(builder, id, args);
+    else
+      createIntrinsicCall(builder, id, args);
   }];
 }
 
@@ -798,6 +855,35 @@ def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
 
   string llvmBuilder = [{
     auto [id, args] = NVVM::MBarrierArriveNocompleteOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    $res = createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def NVVM_MBarrierArriveDropNocompleteOp : NVVM_Op<"mbarrier.arrive_drop.nocomplete">,
+  Results<(outs I64:$res)>,
+  Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
+                 I32:$count)> {
+  let summary = "MBarrier Arrive-Drop No-Complete Operation";
+  let description = [{
+    The `nvvm.mbarrier.arrive_drop.nocomplete` operation decrements the expected
+    arrival count of the *mbarrier object* by the amount `count` and then performs
+    an arrive-on operation on the *mbarrier object* with the guarantee that it
+    will not cause the barrier to complete its current phase.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
+  }];
+
+  let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands) `->` type($res)";
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MBarrierArriveDropNocompleteOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
     $res = createIntrinsicCall(builder, id, args);
   }];
