@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -34,7 +35,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -778,6 +779,12 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   // we have more non-fatal errors from InstrProfReader in the future. How
   // should this interact with different -failure-mode?
   std::optional<std::pair<Error, std::string>> ReaderWarning;
+  auto ReaderWarningScope = llvm::make_scope_exit([&] {
+    // If we hit a different error we may still have an error in ReaderWarning.
+    // Consume it now to avoid an assert
+    if (ReaderWarning)
+      consumeError(std::move(ReaderWarning->first));
+  });
   auto Warn = [&](Error E) {
     if (ReaderWarning) {
       consumeError(std::move(E));
@@ -2922,9 +2929,9 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       continue;
     }
 
-    for (size_t I = 0, E = Func.Counts.size(); I < E; ++I) {
-      FuncMax = std::max(FuncMax, Func.Counts[I]);
-      FuncSum += Func.Counts[I];
+    for (uint64_t Count : Func.Counts) {
+      FuncMax = std::max(FuncMax, Count);
+      FuncSum += Count;
     }
 
     if (FuncMax < ShowValueCutoff) {
@@ -3465,6 +3472,7 @@ static int order_main() {
 }
 
 int main(int argc, const char *argv[]) {
+  InitLLVM X(argc, argv);
   StringRef ProgName(sys::path::filename(argv[0]));
 
   if (argc < 2) {

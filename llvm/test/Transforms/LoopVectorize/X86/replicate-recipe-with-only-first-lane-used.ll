@@ -199,10 +199,6 @@ define float @uniform_load_replicating_select(ptr %A, ptr %B, i64 %1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 7
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ogt float [[TMP6]], 0.000000e+00
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i1> poison, i1 [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i1> [[TMP8]], i1 [[TMP10]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i1> [[TMP9]], i1 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i1> [[TMP13]], i1 [[TMP10]], i32 3
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP4]]
@@ -211,7 +207,7 @@ define float @uniform_load_replicating_select(ptr %A, ptr %B, i64 %1) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP10]], ptr [[A]], ptr [[TMP16]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP10]], ptr [[A]], ptr [[TMP17]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = select i1 [[TMP10]], ptr [[A]], ptr [[TMP18]]
-; CHECK-NEXT:    [[TMP23:%.*]] = select <4 x i1> [[TMP14]], <4 x float> splat (float 1.000000e+01), <4 x float> splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP23:%.*]] = select i1 [[TMP10]], <4 x float> splat (float 1.000000e+01), <4 x float> splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP24:%.*]] = load float, ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = load float, ptr [[TMP20]], align 4
 ; CHECK-NEXT:    [[TMP26:%.*]] = load float, ptr [[TMP21]], align 4

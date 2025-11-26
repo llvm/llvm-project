@@ -41,10 +41,10 @@ class VPRecipeBase;
 class VPInterleaveBase;
 class VPPhiAccessors;
 
-// This is the base class of the VPlan Def/Use graph, used for modeling the data
-// flow into, within and out of the VPlan. VPValues can stand for live-ins
-// coming from the input IR and instructions which VPlan will generate if
-// executed.
+/// This is the base class of the VPlan Def/Use graph, used for modeling the
+/// data flow into, within and out of the VPlan. VPValues can stand for live-ins
+/// coming from the input IR and instructions which VPlan will generate if
+/// executed.
 class LLVM_ABI_FOR_TEST VPValue {
   friend class VPDef;
   friend struct VPDoubleValueDef;
@@ -57,7 +57,7 @@ class LLVM_ABI_FOR_TEST VPValue {
   SmallVector<VPUser *, 1> Users;
 
 protected:
-  // Hold the underlying Value, if any, attached to this VPValue.
+  /// Hold the underlying Value, if any, attached to this VPValue.
   Value *UnderlyingVal;
 
   /// Pointer to the VPDef that defines this VPValue. If it is nullptr, the
@@ -150,6 +150,13 @@ public:
 
   bool hasOneUse() const { return getNumUsers() == 1; }
 
+  /// Return the single user of this value, or nullptr if there is not exactly
+  /// one user.
+  VPUser *getSingleUser() { return hasOneUse() ? *user_begin() : nullptr; }
+  const VPUser *getSingleUser() const {
+    return hasOneUse() ? *user_begin() : nullptr;
+  }
+
   void replaceAllUsesWith(VPValue *New);
 
   /// Go through the uses list for this VPValue and make each use point to \p
@@ -192,7 +199,8 @@ public:
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
 typedef DenseMap<VPValue *, Value *> VPValue2ValueTy;
 
-raw_ostream &operator<<(raw_ostream &OS, const VPRecipeBase &R);
+LLVM_ABI_FOR_TEST raw_ostream &operator<<(raw_ostream &OS,
+                                          const VPRecipeBase &R);
 
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
@@ -274,12 +282,12 @@ public:
   virtual bool usesScalars(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return onlyFirstLaneUsed(Op);
+    return usesFirstLaneOnly(Op);
   }
 
   /// Returns true if the VPUser only uses the first lane of operand \p Op.
   /// Conservatively returns false.
-  virtual bool onlyFirstLaneUsed(const VPValue *Op) const {
+  virtual bool usesFirstLaneOnly(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return false;
@@ -287,7 +295,7 @@ public:
 
   /// Returns true if the VPUser only uses the first part of operand \p Op.
   /// Conservatively returns false.
-  virtual bool onlyFirstPartUsed(const VPValue *Op) const {
+  virtual bool usesFirstPartOnly(const VPValue *Op) const {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return false;
@@ -430,7 +438,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump the VPDef to stderr (for debugging).
-  void dump() const;
+  LLVM_ABI_FOR_TEST void dump() const;
 
   /// Each concrete VPDef prints itself.
   virtual void print(raw_ostream &O, const Twine &Indent,
