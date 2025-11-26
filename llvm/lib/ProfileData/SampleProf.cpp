@@ -22,6 +22,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <string>
 #include <system_error>
 
@@ -398,28 +399,19 @@ LLVM_DUMP_METHOD void FunctionSamples::dump() const { print(dbgs(), 0); }
 
 std::error_code ProfileSymbolList::read(const uint8_t *Data,
                                         uint64_t ListSize) {
+  // Scan forward to see how many elements we expect.
+  uint64_t ExpectedCount = std::count(Data, Data + ListSize, 0);
+  reserve(ExpectedCount);
+
   const char *ListStart = reinterpret_cast<const char *>(Data);
   uint64_t Size = 0;
   uint64_t StrNum = 0;
-  uint64_t ExpectedCount = 0;
-
-  // Scan forward to see how many elements we expect.
-  while (Size < ListSize) {
-    if (ListStart[Size] == '\0') ExpectedCount++;
-    Size++;
-  }
-
-  reserve(ExpectedCount);
-
-  Size = 0;
-
   while (Size < ListSize && StrNum < ProfileSymbolListCutOff) {
     StringRef Str(ListStart + Size);
     add(Str);
     Size += Str.size() + 1;
     StrNum++;
   }
-
   if (Size != ListSize && StrNum != ProfileSymbolListCutOff)
     return sampleprof_error::malformed;
   return sampleprof_error::success;
