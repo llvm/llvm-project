@@ -32,8 +32,7 @@
 // CK11_5-DAG: [[SIZES:@.+]] = {{.+}}constant [2 x i64] [i64 16, i64 0]
 // Map types: OMP_MAP_TO  | OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
 // CK11_4-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 547, i64 547]
-// Map types: OMP_MAP_TO  | OMP_MAP_FROM | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547, OMP_MAP_IS_PTR | OMP_MAP_LITERAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK11_5-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 547, i64 800]
+// CK11_5-DAG: [[TYPES:@.+]] = {{.+}}constant [2 x i64] [i64 547, i64 544]
 
 // CK11-LABEL: implicit_maps_double_complex{{.*}}(
 void implicit_maps_double_complex (int a, int *b){

@@ -333,11 +333,14 @@ added in the future:
     (e.g., by passing things in registers). This calling convention
     allows the target to use whatever tricks it wants to produce fast
     code for the target, without having to conform to an externally
-    specified ABI (Application Binary Interface). `Tail calls can only
-    be optimized when this, the tailcc, the GHC or the HiPE convention is
-    used. <CodeGenerator.html#tail-call-optimization>`_ This calling
-    convention does not support varargs and requires the prototype of all
-    callees to exactly match the prototype of the function definition.
+    specified ABI (Application Binary Interface). Targets may use different
+    implementations according to different features. In this case, a
+    TTI interface ``useFastCCForInternalCall`` must return false when
+    any caller functions and the callee belong to different implementations.
+    `Tail calls can only be optimized when this, the tailcc, the GHC or the
+    HiPE convention is used. <CodeGenerator.html#tail-call-optimization>`_
+    This calling convention does not support varargs and requires the prototype
+    of all callees to exactly match the prototype of the function definition.
 "``coldcc``" - The cold calling convention
     This calling convention attempts to make code in the caller as
     efficient as possible under the assumption that the call is not
@@ -8059,6 +8062,21 @@ pass should record the new estimates by calling
 ``llvm.loop.estimated_trip_count`` metadata.  Once this metadata is present on a
 loop, ``llvm::getLoopEstimatedTripCount`` returns its value instead of
 estimating the trip count from the loop's ``branch_weights`` metadata.
+
+Zero
+""""
+
+Some passes set ``llvm.loop.estimated_trip_count`` to 0.  For example, after
+peeling 10 or more iterations from a loop with an estimated trip count of 10,
+``llvm.loop.estimated_trip_count`` becomes 0 on the remaining loop.  It
+indicates that, each time execution reaches the peeled iterations, execution is
+estimated to exit them without reaching the remaining loop's header.
+
+Even if the probability of reaching a loop's header is low, if it is reached, it
+is the start of an iteration.  Consequently, some passes historically assume
+that ``llvm::getLoopEstimatedTripCount`` always returns a positive count or
+``std::nullopt``.  Thus, it returns ``std::nullopt`` when
+``llvm.loop.estimated_trip_count`` is 0.
 
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
