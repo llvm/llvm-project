@@ -12,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "../utils/LexerUtils.h"
+#include "../utils/ASTUtils.h"
 #include <algorithm>
 #include <cctype>
 #include <map>
@@ -224,6 +225,14 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
       RemovalRange.setEnd(Semicolon->getEndLoc());
     }
     
+    // Check if the range can be fixed (i.e., doesn't contain macro expansions)
+    bool CanFix = utils::rangeCanBeFixed(RemovalRange, Result.SourceManager);
+    
+    // Also check if the insertion location is in a macro
+    if (CanFix && Condition->getBeginLoc().isMacroID()) {
+      CanFix = false;
+    }
+    
     // Get the text of the declaration (without semicolon)
     std::string DeclStmtText = Lexer::getSourceText(
         CharSourceRange::getTokenRange(PrevDecl->getSourceRange()),
@@ -245,8 +254,10 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
       if (AllVarsInDecl.size() == 1) {
         Diag << AllVarsInDecl[0];
       }
-      Diag << FixItHint::CreateRemoval(RemovalRange)
-           << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);
+      if (CanFix) {
+        Diag << FixItHint::CreateRemoval(RemovalRange)
+             << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);
+      }
     } else if (Switch) {
       std::string Message = AllVarsInDecl.size() > 1
           ? "multiple variable declaration before switch statement could be moved into switch init statement"
@@ -255,8 +266,10 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
       if (AllVarsInDecl.size() == 1) {
         Diag << AllVarsInDecl[0];
       }
-      Diag << FixItHint::CreateRemoval(RemovalRange)
-           << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);
+      if (CanFix) {
+        Diag << FixItHint::CreateRemoval(RemovalRange)
+             << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);
+      }
     }
   }
 }
