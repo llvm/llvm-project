@@ -5581,16 +5581,21 @@ class t2LOL<dag oops, dag iops, string asm, string ops>
   let Predicates = [IsThumb2, HasV8_1MMainline, HasLOB];
 }
 
+// Setup for the iteration count of a WLS. See t2WhileLoopSetup.
 def arm_wlssetup
     : SDNode<"ARMISD::WLSSETUP",
-             SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<1, 0>]>>;
+             SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<1, 0>]>,
+             [SDNPSideEffect]>;
 
+// Low-overhead loops, While Loop Start branch. See t2WhileLoopStart
 def arm_wls : SDNode<"ARMISD::WLS",
                      SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisVT<1, OtherVT>]>,
                      [SDNPHasChain]>;
 
+// Really a part of LE, performs the sub
 def arm_loop_dec : SDNode<"ARMISD::LOOP_DEC", SDTIntBinOp, [SDNPHasChain]>;
 
+// Low-overhead loops, Loop End
 def arm_le : SDNode<"ARMISD::LE",
                     SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisVT<1, OtherVT>]>,
                     [SDNPHasChain]>;
@@ -5664,6 +5669,7 @@ def t2DoLoopStartTP :
 // t2WhileLoopSetup to setup LR and t2WhileLoopStart to perform the branch. Not
 // valid after reg alloc, as it should be lowered during MVETPAndVPTOptimisations
 // into a t2WhileLoopStartLR (or expanded).
+let hasSideEffects = 1 in
 def t2WhileLoopSetup :
     t2PseudoInst<(outs GPRlr:$lr), (ins rGPR:$tc), 4, IIC_Br,
                  [(set i32:$lr, (arm_wlssetup i32:$tc))]>;
@@ -5890,6 +5896,7 @@ def t2AUT    : PACBTIHintSpaceUseInst<"aut", 0b00101101> {
   let hasSideEffects = 1;
 }
 
+// Thumb function call followed by BTI instruction.
 def ARMt2CallBTI : SDNode<"ARMISD::t2CALL_BTI", SDT_ARMcall,
                    [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 

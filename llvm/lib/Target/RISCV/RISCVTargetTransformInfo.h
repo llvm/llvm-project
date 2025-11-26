@@ -144,8 +144,7 @@ public:
   bool shouldConsiderVectorizationRegPressure() const override { return true; }
 
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const override;
 
   InstructionCost
@@ -286,11 +285,13 @@ public:
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned /*AddressSpace*/) const override {
+                         unsigned /*AddressSpace*/,
+                         TTI::MaskKind /*MaskKind*/) const override {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned /*AddressSpace*/) const override {
+                          unsigned /*AddressSpace*/,
+                          TTI::MaskKind /*MaskKind*/) const override {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
