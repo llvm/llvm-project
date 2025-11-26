@@ -7545,10 +7545,10 @@ SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {
         DAG.getMaskFromElementCount(DL, SubVT, OrigVT.getVectorElementCount());
 
     // Overwrite the sub-vector at the required offset.
-    StackPtr =
+    SDValue SubVecPtr =
         TLI.getVectorSubVecPointer(DAG, StackPtr, VT, OrigVT, N->getOperand(2));
-    Ch = DAG.getMaskedStore(Ch, DL, SubVec, StackPtr,
-                            DAG.getUNDEF(StackPtr.getValueType()), Mask, VT,
+    Ch = DAG.getMaskedStore(Ch, DL, SubVec, SubVecPtr,
+                            DAG.getUNDEF(SubVecPtr.getValueType()), Mask, VT,
                             StoreMMO, ISD::UNINDEXED, ISD::NON_EXTLOAD);
 
     // Read back the result.
