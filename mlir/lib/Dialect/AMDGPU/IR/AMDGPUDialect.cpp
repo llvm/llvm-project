@@ -720,8 +720,14 @@ LogicalResult MakeDmaDescriptorOp::verify() {
   }
 
   ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
-  if (globalStaticSizes.size() != globalStaticStrides.size()) {
+  size_t rank = globalStaticSizes.size();
+  if (rank != globalStaticStrides.size()) {
     return emitOpError("strides and sizes must have same rank.");
+  }
+
+  ArrayRef<int64_t> sharedStaticSizes = getSharedStaticSizes();
+  if (rank != sharedStaticSizes.size()) {
+    return emitOpError("tensor must have same rank as tile.");
   }
 
   return success();

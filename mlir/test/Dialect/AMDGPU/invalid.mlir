@@ -385,3 +385,12 @@ func.func @make_dma_descriptor_invalid_size_and_stride_sizes(%base: !amdgpu.tdm_
   func.return
 }
 
+// -----
+
+// CHECK-LABEL: func @make_dma_descriptor_invalid_shared_and_global_rank
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
+func.func @make_dma_descriptor_invalid_shared_and_global_rank(%base: !amdgpu.tdm_base<i32>) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op tensor must have same rank as tile.}}
+  amdgpu.make_dma_descriptor %base globalSize [4, 4] globalStride [1, 1] sharedSize [2] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return
+}
