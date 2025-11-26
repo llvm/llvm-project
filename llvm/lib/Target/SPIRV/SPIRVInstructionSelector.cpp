@@ -467,6 +467,7 @@ static bool isConstReg(MachineRegisterInfo *MRI, MachineInstr *OpDef,
   switch (Opcode) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT:
+  case TargetOpcode::G_IMPLICIT_DEF:
     return true;
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
@@ -3088,6 +3089,11 @@ bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
                  .addUse(GR.getSPIRVTypeID(ResType))
                  // Object to get a pointer to.
                  .addUse(I.getOperand(3).getReg());
+  assert(Opcode == SPIRV::OpPtrAccessChain ||
+         Opcode == SPIRV::OpInBoundsPtrAccessChain ||
+         (getImm(I.getOperand(4), MRI) && foldImm(I.getOperand(4), MRI) == 0) &&
+             "Cannot translate GEP to OpAccessChain. First index must be 0.");
+
   // Adding indices.
   const unsigned StartingIndex =
       (Opcode == SPIRV::OpAccessChain || Opcode == SPIRV::OpInBoundsAccessChain)

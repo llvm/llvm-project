@@ -31,10 +31,10 @@ define i64 @test_value_in_exit_compare_chain_used_outside(ptr %src, i64 %x, i64 
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i8> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = and i64 [[TMP10]], 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP18]]
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP26]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP27]], i32 -3
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP26]], i32 -4
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP14]], i32 -3
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP26]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP12]], i64 -3
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP26]], i64 -4
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP14]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP13]], align 1
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8>, ptr [[TMP15]], align 1
