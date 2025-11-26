@@ -22,8 +22,7 @@ using namespace clang::CIRGen;
 
 template <typename... Operands>
 static mlir::Value emitIntrinsicCallOp(CIRGenBuilderTy &builder,
-                                       mlir::Location loc,
-                                       const StringRef str,
+                                       mlir::Location loc, const StringRef str,
                                        const mlir::Type &resTy,
                                        Operands &&...op) {
   return cir::LLVMIntrinsicCallOp::create(builder, loc,
