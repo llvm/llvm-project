@@ -26,6 +26,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -566,17 +567,15 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
     return false;
 
   SmallVector<std::pair<CallBase *, FunctionType *>> Calls;
-  for (auto &&BB : *F) {
-    for (auto &&I : BB) {
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        if (!CB->getCalledOperand() || CB->getCalledFunction())
-          continue;
-        if (CB->getType()->isAggregateType() ||
-            any_of(CB->args(), [](auto &&Arg) {
-              return Arg->getType()->isAggregateType();
-            }))
-          Calls.emplace_back(CB, nullptr);
-      }
+  for (auto &&I : instructions(F)) {
+    if (auto *CB = dyn_cast<CallBase>(&I)) {
+      if (!CB->getCalledOperand() || CB->getCalledFunction())
+        continue;
+      if (CB->getType()->isAggregateType() ||
+          any_of(CB->args(), [](auto &&Arg) {
+            return Arg->getType()->isAggregateType();
+          }))
+        Calls.emplace_back(CB, nullptr);
     }
   }
 

@@ -1074,8 +1074,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
   FunctionType *FTy = SPIRV::getOriginalFunctionType(*CI);
   bool IsNewFTy = false, IsIncomplete = false;
   SmallVector<Type *, 4> ArgTys;
-  unsigned ParmIdx = 0;
-  for (Value *Arg : CI->args()) {
+  for (auto &&[ParmIdx, Arg] : llvm::enumerate(CI->args())) {
     Type *ArgTy = Arg->getType();
     if (ArgTy->isPointerTy()) {
       if (Type *ElemTy = GR->findDeducedElementType(Arg)) {
@@ -1090,7 +1089,6 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
       ArgTy = FTy->getFunctionParamType(ParmIdx);
     }
     ArgTys.push_back(ArgTy);
-    ++ParmIdx;
   }
   Type *RetTy = FTy->getReturnType();
   if (CI->getType()->isPointerTy()) {
