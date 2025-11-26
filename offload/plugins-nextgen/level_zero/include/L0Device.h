@@ -228,10 +228,6 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// MemAllocator for this device
   MemAllocatorTy MemAllocator;
 
-  /// The current size of the global device memory pool (managed by us).
-  uint64_t HeapSize = 1L << 23L /*8MB=*/;
-
-  bool shouldSetupDeviceMemoryPool() const override { return false; }
   DeviceArchTy computeArch() const;
 
   /// Get default compute group ordinal. Returns Ordinal-NumQueues pair
@@ -628,14 +624,6 @@ public:
   Expected<GenericKernelTy &> constructKernel(const char *Name) override;
 
   Error setDeviceStackSize(uint64_t V) override { return Plugin::success(); }
-  Error getDeviceHeapSize(uint64_t &V) override {
-    V = HeapSize;
-    return Plugin::success();
-  }
-  Error setDeviceHeapSize(uint64_t V) override {
-    HeapSize = V;
-    return Plugin::success();
-  }
 
   Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override;
