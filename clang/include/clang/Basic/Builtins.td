@@ -2290,6 +2290,18 @@ def ScopedAtomicMaxFetch : AtomicBuiltin {
   let Prototype = "void(...)";
 }
 
+def ScopedAtomicUIncWrap : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_uinc_wrap"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicUDecWrap : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_udec_wrap"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 // OpenCL 2.0 atomic builtins.
 def OpenCLAtomicInit : AtomicBuiltin {
   let Spellings = ["__opencl_atomic_init"];

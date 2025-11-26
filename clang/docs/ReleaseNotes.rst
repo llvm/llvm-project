@@ -230,6 +230,8 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Added ``__scoped_atomic_uinc_wrap`` and ``__scoped_atomic_udec_wrap``.
+
 - Removed OpenCL header-only feature macros (previously unconditionally enabled
   on SPIR-V and only selectively disabled via ``-D__undef_<feature>``). All
   OpenCL extensions and features are now centralized in OpenCLExtensions.def,
