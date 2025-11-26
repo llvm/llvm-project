@@ -151,6 +151,7 @@ public:
     OPC_RecordChild7,
     OPC_RecordMemRef,
     OPC_CaptureGlueInput,
+    OPC_CaptureDeactivationSymbol,
     OPC_MoveChild,
     OPC_MoveChild0,
     OPC_MoveChild1,
