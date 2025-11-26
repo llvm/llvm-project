@@ -11,9 +11,9 @@ subroutine etime_test(values, time)
   ! CHECK-NEXT:        %[[c2:.*]] = arith.constant 2 : index
   ! CHECK-NEXT:        %[[timeTmpAddr:.*]] = fir.alloca f32
   ! CHECK-NEXT:        %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
-  ! CHECK-NEXT:        %[[timeDeclare:.*]] = fir.declare %[[timeArg]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFetime_testEtime"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  ! CHECK-NEXT:        %[[timeDeclare:.*]] = fir.declare %[[timeArg]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFetime_testEtime"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   ! CHECK-NEXT:        %[[shape:.*]] = fir.shape %[[c2]] : (index) -> !fir.shape<1>
-  ! CHECK-NEXT:        %[[valuesDeclare:.*]] = fir.declare %[[valuesArg]](%[[shape]]) dummy_scope %[[DSCOPE]] {uniq_name = "_QFetime_testEvalues"} : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<2xf32>>
+  ! CHECK-NEXT:        %[[valuesDeclare:.*]] = fir.declare %[[valuesArg]](%[[shape]]) dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFetime_testEvalues"} : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<2xf32>>
   ! CHECK-NEXT:        %[[valuesBox:.*]] = fir.embox %[[valuesDeclare]](%[[shape]]) : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xf32>>
   ! CHECK-NEXT:        %[[timeTmpBox:.*]] = fir.embox %[[timeTmpAddr]] : (!fir.ref<f32>) -> !fir.box<f32>
   ! CHECK:             %[[values:.*]] = fir.convert %[[valuesBox]] : (!fir.box<!fir.array<2xf32>>) -> !fir.box<none>

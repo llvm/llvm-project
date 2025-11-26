@@ -10,15 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
@@ -61,11 +61,11 @@ clang::createInvocation(ArrayRef<const char *> ArgList,
   if (!C)
     return nullptr;
 
-  if (C->getArgs().hasArg(driver::options::OPT_fdriver_only))
+  if (C->getArgs().hasArg(options::OPT_fdriver_only))
     return nullptr;
 
   // Just print the cc1 options if -### was present.
-  if (C->getArgs().hasArg(driver::options::OPT__HASH_HASH_HASH)) {
+  if (C->getArgs().hasArg(options::OPT__HASH_HASH_HASH)) {
     C->getJobs().Print(llvm::errs(), "\n", true);
     return nullptr;
   }
@@ -78,7 +78,7 @@ clang::createInvocation(ArrayRef<const char *> ArgList,
   const driver::JobList &Jobs = C->getJobs();
   bool OffloadCompilation = false;
   if (Jobs.size() > 1) {
-    for (auto &A : C->getActions()){
+    for (auto &A : C->getActions()) {
       // On MacOSX real actions may end up being wrapped in BindArchAction
       if (isa<driver::BindArchAction>(A))
         A = *A->input_begin();

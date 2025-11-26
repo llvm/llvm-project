@@ -5121,6 +5121,15 @@ public:
       : CommandObjectParsed(interpreter, "target stop-hook delete",
                             "Delete a stop-hook.",
                             "target stop-hook delete [<idx>]") {
+    SetHelpLong(
+        R"(
+Deletes the stop hook by index.
+
+At any given stop, all enabled stop hooks that pass the stop filter will
+get a chance to run.  That means if one stop-hook deletes another stop hook 
+while executing, the deleted stop hook will still fire for the stop at which 
+it was deleted.
+        )");
     AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
   }
 
@@ -5223,33 +5232,72 @@ private:
 #pragma mark CommandObjectTargetStopHookList
 
 // CommandObjectTargetStopHookList
+#define LLDB_OPTIONS_target_stop_hook_list
+#include "CommandOptions.inc"
 
 class CommandObjectTargetStopHookList : public CommandObjectParsed {
 public:
   CommandObjectTargetStopHookList(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "target stop-hook list",
-                            "List all stop-hooks.", "target stop-hook list") {}
+                            "List all stop-hooks.") {}
 
   ~CommandObjectTargetStopHookList() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() = default;
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'i':
+        m_internal = true;
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_internal = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_target_stop_hook_list_options);
+    }
+
+    // Instance variables to hold the values for command options.
+    bool m_internal = false;
+  };
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
 
-    size_t num_hooks = target.GetNumStopHooks();
-    if (num_hooks == 0) {
-      result.GetOutputStream().PutCString("No stop hooks.\n");
-    } else {
-      for (size_t i = 0; i < num_hooks; i++) {
-        Target::StopHookSP this_hook = target.GetStopHookAtIndex(i);
-        if (i > 0)
-          result.GetOutputStream().PutCString("\n");
-        this_hook->GetDescription(result.GetOutputStream(),
-                                  eDescriptionLevelFull);
-      }
+    bool printed_hook = false;
+    for (auto &hook : target.GetStopHooks(m_options.m_internal)) {
+      if (printed_hook)
+        result.GetOutputStream().PutCString("\n");
+      hook->GetDescription(result.GetOutputStream(), eDescriptionLevelFull);
+      printed_hook = true;
     }
+
+    if (!printed_hook)
+      result.GetOutputStream().PutCString("No stop hooks.\n");
+
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
+
+private:
+  CommandOptions m_options;
 };
 
 #pragma mark CommandObjectMultiwordTargetStopHooks

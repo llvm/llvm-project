@@ -715,6 +715,45 @@ public:
   EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
 }
 
+TEST_F(OverridePureVirtualsTests, QualifiedNames) {
+  constexpr auto Before = R"cpp(
+namespace foo { struct S{}; namespace bar { struct S2{}; } }
+
+class B {
+public:
+  virtual foo::S foo(int var = 0) = 0;
+  virtual foo::bar::S2 bar(int var = 0) = 0;
+};
+
+class ^D : public B {};
+)cpp";
+
+  constexpr auto Expected = R"cpp(
+namespace foo { struct S{}; namespace bar { struct S2{}; } }
+
+class B {
+public:
+  virtual foo::S foo(int var = 0) = 0;
+  virtual foo::bar::S2 bar(int var = 0) = 0;
+};
+
+class D : public B {
+public:
+  foo::S foo(int var = 0) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `foo` is not implemented.");
+  }
+
+  foo::bar::S2 bar(int var = 0) override {
+    // TODO: Implement this pure virtual method.
+    static_assert(false, "Method `bar` is not implemented.");
+  }
+};
+)cpp";
+  auto Applied = apply(Before);
+  EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

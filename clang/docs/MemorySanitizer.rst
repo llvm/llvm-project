@@ -176,7 +176,7 @@ for `lifetime <https://eel.is/c++draft/basic.life#1>`_ definition.
 
 This feature can be disabled with either:
 
-#. Pass addition Clang option ``-fno-sanitize-memory-use-after-dtor`` during
+#. Pass additional Clang option ``-fno-sanitize-memory-use-after-dtor`` during
    compilation.
 #. Set environment variable `MSAN_OPTIONS=poison_in_dtor=0` before running
    the program.

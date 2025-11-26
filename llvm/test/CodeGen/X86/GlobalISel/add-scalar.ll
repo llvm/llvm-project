@@ -7,12 +7,15 @@ define i128 @test_add_i128(i128 %arg1, i128 %arg2) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %rax
 ; X64-NEXT:    addq %rdi, %rax
+; X64-NEXT:    setb %dl
+; X64-NEXT:    cmpb $1, %dl
 ; X64-NEXT:    adcq %rsi, %rcx
 ; X64-NEXT:    movq %rcx, %rdx
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_add_i128:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -21,8 +24,14 @@ define i128 @test_add_i128(i128 %arg1, i128 %arg2) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    setb %bl
+; X86-NEXT:    cmpb $1, %bl
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    setb %bl
+; X86-NEXT:    cmpb $1, %bl
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    setb %bl
+; X86-NEXT:    cmpb $1, %bl
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    movl %edx, 4(%eax)
@@ -30,6 +39,7 @@ define i128 @test_add_i128(i128 %arg1, i128 %arg2) nounwind {
 ; X86-NEXT:    movl %edi, 12(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
   %ret = add i128 %arg1, %arg2
   ret i128 %ret
@@ -46,6 +56,8 @@ define i64 @test_add_i64(i64 %arg1, i64 %arg2) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    setb %cl
+; X86-NEXT:    cmpb $1, %cl
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
   %ret = add i64 %arg1, %arg2
