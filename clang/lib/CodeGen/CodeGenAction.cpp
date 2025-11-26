@@ -897,6 +897,21 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
 
   // Report the backend message using the usual diagnostic mechanism.
   FullSourceLoc Loc;
+  if (auto *GenericDI = dyn_cast<DiagnosticInfoGeneric>(&DI)) {
+    if (auto *I = GenericDI->getInstruction())
+      if (auto MaybeLoc = getFunctionSourceLocation(*I->getFunction()))
+        Loc = *MaybeLoc;
+  } else if (auto *GenericDILoc = dyn_cast<DiagnosticInfoGenericWithLoc>(&DI);
+             GenericDILoc && Context) {
+    bool BadDebugInfo = false;
+    StringRef Filename;
+    unsigned Line, Column;
+    Loc = getBestLocationFromDebugLoc(*GenericDILoc, BadDebugInfo, Filename,
+                                      Line, Column);
+    MsgStorage.clear();
+    raw_string_ostream Stream(MsgStorage);
+    Stream << GenericDILoc->getMsgStr();
+  }
   Diags.Report(Loc, DiagID).AddString(MsgStorage);
 }
 #undef ComputeDiagID
