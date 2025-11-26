@@ -92,7 +92,7 @@ class VPRecipeBuilder {
   /// Check if the load or store instruction \p VPI should widened for \p
   /// Range.Start and potentially masked. Such instructions are handled by a
   /// recipe that takes an additional VPInstruction for the mask.
-  VPWidenMemoryRecipe *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
+  VPRecipeBase *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
 
   /// Check if an induction recipe should be constructed for \p VPI. If so build
   /// and return it. If not, return null.

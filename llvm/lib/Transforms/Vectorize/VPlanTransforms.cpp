@@ -2775,6 +2775,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   // contained.
   bool ContainsFORs =
       any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
+  VPValue *PrevEVL = nullptr;
   if (ContainsFORs) {
     // TODO: Use VPInstruction::ExplicitVectorLength to get maximum EVL.
     VPValue *MaxEVL = &Plan.getVF();
@@ -2785,28 +2786,42 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
         TypeInfo.inferScalarType(MaxEVL), DebugLoc::getUnknown());
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
-    VPValue *PrevEVL = Builder.createScalarPhi(
-        {MaxEVL, &EVL}, DebugLoc::getUnknown(), "prev.evl");
+    PrevEVL = Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc::getUnknown(),
+                                      "prev.evl");
+  }
 
-    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-             vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
-      for (VPRecipeBase &R : *VPBB) {
-        VPValue *V1, *V2;
-        if (!match(&R,
-                   m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
-                       m_VPValue(V1), m_VPValue(V2))))
-          continue;
+  // Transform the recipes must be converted to vector predication intrinsics
+  // even if they do not use header mask.
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      VPWidenIntrinsicRecipe *NewRecipe = nullptr;
+      VPValue *V1, *V2;
+      if (match(&R, m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
+                        m_VPValue(V1), m_VPValue(V2)))) {
         VPValue *Imm = Plan.getOrAddLiveIn(
             ConstantInt::getSigned(Type::getInt32Ty(Plan.getContext()), -1));
-        VPWidenIntrinsicRecipe *VPSplice = new VPWidenIntrinsicRecipe(
+        NewRecipe = new VPWidenIntrinsicRecipe(
             Intrinsic::experimental_vp_splice,
             {V1, V2, Imm, Plan.getTrue(), PrevEVL, &EVL},
             TypeInfo.inferScalarType(R.getVPSingleValue()), {}, {},
             R.getDebugLoc());
-        VPSplice->insertBefore(&R);
-        R.getVPSingleValue()->replaceAllUsesWith(VPSplice);
-        ToErase.push_back(&R);
       }
+
+      // TODO: Only convert reverse to vp.reverse if it uses the result of
+      // vp.load, or defines the stored value of vp.store.
+      if (match(&R, m_VPInstruction<VPInstruction::Reverse>(m_VPValue(V1)))) {
+        NewRecipe = new VPWidenIntrinsicRecipe(
+            Intrinsic::experimental_vp_reverse, {V1, Plan.getTrue(), &EVL},
+            TypeInfo.inferScalarType(R.getVPSingleValue()), {}, {},
+            R.getDebugLoc());
+      }
+
+      if (!NewRecipe)
+        continue;
+      NewRecipe->insertBefore(&R);
+      R.getVPSingleValue()->replaceAllUsesWith(NewRecipe);
+      ToErase.push_back(&R);
     }
   }
 

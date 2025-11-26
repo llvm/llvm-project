@@ -1099,6 +1099,8 @@ public:
     // Implemented with @llvm.experimental.cttz.elts, but returns the expected
     // result even with operands that are all zeroes.
     FirstActiveLane,
+    // Returns a reversed vector for the operand.
+    Reverse,
 
     // The opcodes below are used for VPInstructionWithType.
     //
