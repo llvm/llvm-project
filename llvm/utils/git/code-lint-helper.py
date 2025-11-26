@@ -20,19 +20,18 @@ https://llvm.org/docs/CodingStandards.html
 import argparse
 import github
 import json
-from operator import attrgetter
 import os
 import subprocess
 import sys
-from typing import Any, Dict, Final, List, Optional
+from typing import Any, Dict, Final, List, Sequence
 
 
 class LintArgs:
-    start_rev: Optional[str] = None
-    end_rev: Optional[str] = None
-    repo: Optional[str] = None
-    changed_files: Optional[str] = None
-    token: Optional[str] = None
+    start_rev: str
+    end_rev: str
+    repo: str
+    changed_files: Sequence[str]
+    token: str
     verbose: bool = True
     issue_number: int = 0
     build_path: str = "build"
@@ -44,7 +43,9 @@ class LintArgs:
             self.end_rev = args.end_rev
             self.repo = args.repo
             self.token = args.token
-            self.changed_files = args.changed_files
+            self.changed_files = (
+                args.changed_files.split(",") if args.changed_files else []
+            )
             self.issue_number = args.issue_number
             self.verbose = args.verbose
             self.build_path = args.build_path
@@ -55,25 +56,23 @@ class LintHelper:
     COMMENT_TAG = "<!--LLVM CODE LINT COMMENT: {linter}-->"
     name: str
     friendly_name: str
-    comment: Optional[Dict[str, Any]] = None
+    comment: Dict[str, Any] = {}
 
     @property
     def comment_tag(self) -> str:
         return self.COMMENT_TAG.format(linter=self.name)
 
-    def instructions(self, files_to_lint: List[str], args: LintArgs) -> str:
+    def instructions(self, files_to_lint: Sequence[str], args: LintArgs) -> str:
         raise NotImplementedError()
 
-    def filter_changed_files(self, changed_files: List[str]) -> List[str]:
+    def filter_changed_files(self, changed_files: Sequence[str]) -> Sequence[str]:
         raise NotImplementedError()
 
-    def run_linter_tool(
-        self, files_to_lint: List[str], args: LintArgs
-    ) -> Optional[str]:
+    def run_linter_tool(self, files_to_lint: Sequence[str], args: LintArgs) -> str:
         raise NotImplementedError()
 
     def create_comment_text(
-        self, linter_output: str, files_to_lint: List[str], args: LintArgs
+        self, linter_output: str, files_to_lint: Sequence[str], args: LintArgs
     ) -> str:
         instructions = self.instructions(files_to_lint, args)
         return f"""
@@ -102,7 +101,6 @@ View the output from {self.name} here.
 </details>
 """
 
-    # TODO: Refactor this
     def find_comment(self, pr: Any) -> Any:
         for comment in pr.as_issue().get_comments():
             if comment.body.startswith(self.comment_tag):
@@ -124,7 +122,7 @@ View the output from {self.name} here.
             self.comment = {"body": comment_text}
 
 
-    def run(self, changed_files: List[str], args: LintArgs) -> bool:
+    def run(self, changed_files: Sequence[str], args: LintArgs) -> bool:
         if args.verbose:
             print(f"got changed files: {changed_files}")
 
@@ -134,7 +132,7 @@ View the output from {self.name} here.
             print("no modified files found")
 
         is_success = True
-        linter_output = None
+        linter_output = ""
 
         if files_to_lint:
             linter_output = self.run_linter_tool(files_to_lint, args)
@@ -179,17 +177,17 @@ View the output from {self.name} here.
 
 
 class ClangTidyLintHelper(LintHelper):
-    name: Final[str] = "clang-tidy"
-    friendly_name: Final[str] = "C/C++ code linter"
+    name: Final = "clang-tidy"
+    friendly_name: Final = "C/C++ code linter"
 
-    def instructions(self, cpp_files: List[str], args: LintArgs) -> str:
+    def instructions(self, cpp_files: Sequence[str], args: LintArgs) -> str:
         files_str = " ".join(cpp_files)
         return f"""
 git diff -U0 origin/main...HEAD -- {files_str} |
 python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
   -path {args.build_path} -p1 -quiet"""
 
-    def filter_changed_files(self, changed_files: List[str]) -> List[str]:
+    def filter_changed_files(self, changed_files: Sequence[str]) -> Sequence[str]:
         clang_tidy_changed_files = [
             arg for arg in changed_files if "third-party" not in arg
         ]
@@ -209,9 +207,9 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
         # TODO: Add more rules when enabling other projects to use clang-tidy in CI.
         return filepath.startswith("clang-tools-extra/clang-tidy/")
 
-    def run_linter_tool(self, cpp_files: List[str], args: LintArgs) -> Optional[str]:
+    def run_linter_tool(self, cpp_files: Sequence[str], args: LintArgs) -> str:
         if not cpp_files:
-            return None
+            return ""
 
         git_diff_cmd = [
             "git",
@@ -219,7 +217,8 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
             "-U0",
             f"{args.start_rev}...{args.end_rev}",
             "--",
-        ] + cpp_files
+        ]
+        git_diff_cmd.extend(cpp_files)
 
         diff_proc = subprocess.run(
             git_diff_cmd,
@@ -231,13 +230,13 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
 
         if diff_proc.returncode != 0:
             print(f"Git diff failed: {diff_proc.stderr}")
-            return None
+            return ""
 
         diff_content = diff_proc.stdout
         if not diff_content.strip():
             if args.verbose:
                 print("No diff content found")
-            return None
+            return ""
 
         tidy_diff_cmd = [
             "clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py",
@@ -262,14 +261,14 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
         clean_output = self._clean_clang_tidy_output(proc.stdout.strip())
         return clean_output
 
-    def _clean_clang_tidy_output(self, output: str) -> Optional[str]:
+    def _clean_clang_tidy_output(self, output: str) -> str:
         """
         - Remove 'Running clang-tidy in X threads...' line
         - Remove 'N warnings generated.' line
         - Strip leading workspace path from file paths
         """
         if not output or output == "No relevant changes found.":
-            return None
+            return ""
 
         lines = output.split("\n")
         cleaned_lines = []
@@ -287,7 +286,8 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
 
         if cleaned_lines:
             return "\n".join(cleaned_lines)
-        return None
+        return ""
+
 
 
 ALL_LINTERS = (ClangTidyLintHelper(),)
@@ -338,9 +338,7 @@ if __name__ == "__main__":
     parsed_args = parser.parse_args()
     args = LintArgs(parsed_args)
 
-    changed_files = []
-    if args.changed_files:
-        changed_files = args.changed_files.split(",")
+    changed_files = args.changed_files
 
     overall_success = True
     failed_linters: List[str] = []
