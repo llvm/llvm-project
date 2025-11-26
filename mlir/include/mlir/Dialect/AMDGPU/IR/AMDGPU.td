@@ -1237,8 +1237,10 @@ def AMDGPU_MakeDmaBaseOp :
     This operation creates a pair of addresses that will be used by tensor_load_to_lds
     and tensor_store_from_lds.
 
-    This operation creates a value corresponding roughly to the descriptor group 0
+    This operation creates a value corresponding to the tensor descriptor (D#) group 0
     found in TensorLoadToLDSOp and TensorStoreFromLDSOp in the rocdl dialect.
+
+    These tensor DMA operations were introduced in gfx1250.
   }];
 
   let assemblyFormat = [{
