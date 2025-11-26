@@ -32,7 +32,7 @@ FunctionPass *createSPIRVPreLegalizerPass();
 FunctionPass *createSPIRVPostLegalizerPass();
 ModulePass *createSPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM);
 ModulePass *createSPIRVPrepareGlobalsPass();
-MachineFunctionPass *createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM);
+ModulePass *createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM);
 InstructionSelector *
 createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                                const SPIRVSubtarget &Subtarget,

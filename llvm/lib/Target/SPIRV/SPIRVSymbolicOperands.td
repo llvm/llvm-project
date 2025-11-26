@@ -394,6 +394,7 @@ defm SPV_ALTERA_arbitrary_precision_fixed_point : ExtensionOperand<131, [EnvOpen
 defm SPV_NV_shader_atomic_fp16_vector
     : ExtensionOperand<132, [EnvVulkan, EnvOpenCL]>;
 defm SPV_EXT_image_raw10_raw12 :ExtensionOperand<133, [EnvOpenCL, EnvVulkan]>;
+defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<134, [EnvVulkan, EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
