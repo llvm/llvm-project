@@ -20,8 +20,6 @@
 
 #include "test_macros.h"
 
-using namespace std::chrono_literals;
-
 const auto timePoint = std::chrono::steady_clock::now();
 
 void test() {
@@ -67,7 +65,7 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     m.try_lock();
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    m.try_lock_for(82ms);
+    m.try_lock_for(std::chrono::nanoseconds{82});
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     m.try_lock_until(timePoint);
   }
@@ -77,7 +75,7 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     m.try_lock();
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    m.try_lock_for(82ms);
+    m.try_lock_for(std::chrono::nanoseconds{82});
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     m.try_lock_until(timePoint);
   }
@@ -110,7 +108,7 @@ void test() {
     cs.max(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    cs.try_acquire_for(92ms);
+    cs.try_acquire_for(std::chrono::nanoseconds{82});
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     cs.try_acquire();
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -121,7 +119,7 @@ void test() {
     bs.max(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    bs.try_acquire_for(82ms);
+    bs.try_acquire_for(std::chrono::nanoseconds{82});
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     bs.try_acquire();
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
