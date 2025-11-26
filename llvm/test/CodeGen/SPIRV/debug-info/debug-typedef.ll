@@ -1,16 +1,16 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-MIR
+; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-MIR-DAG: [[TYPE_I32:%[0-9]+:type.*]] = OpTypeInt 32, 0
-; CHECK-MIR-DAG: [[TYPE_VOID:%[0-9]+:type.*]] = OpTypeVoid
-; CHECK-MIR: [[DBG_SOURCE:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 35
-; CHECK-MIR: [[DBG_CU:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 1, {{%[0-9]+\:[a-z0-9\(\)]+}}, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[DBG_SOURCE]], {{%[0-9]+\:[a-z0-9\(\)]+}}
-; CHECK-MIR-DAG: [[STR_INT:%[0-9]+:id\(s32\)]] = OpString 7630441
-; CHECK-MIR: [[DBG_INT:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 2, [[STR_INT]]
-; CHECK-MIR-DAG: [[STR_TYPEDEF:%[0-9]+:id\(s32\)]] = OpString 1852406125, 116
-; CHECK-MIR: [[DBG_TYPEDEF:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 7, [[STR_TYPEDEF]], [[DBG_INT]], [[DBG_SOURCE]]
+; CHECK-MIR: [[TYPE_I32:%[0-9]+]]:type = OpTypeInt 32, 0
+; CHECK-MIR: [[TYPE_VOID:%[0-9]+]]:type(s64) = OpTypeVoid
+; CHECK-MIR: [[DBG_SOURCE:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 35
+; CHECK-MIR: [[DBG_CU:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 1
+; CHECK-MIR: [[STR_INT:%[0-9]+]]:id(s32) = OpString 7630441
+; CHECK-MIR: [[DBG_INT:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 2, [[STR_INT]](s32)
+; CHECK-MIR: [[STR_TYPEDEF:%[0-9]+]]:id(s32) = OpString 1852406125, 116
+; CHECK-MIR: [[DBG_TYPEDEF:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 7, [[STR_TYPEDEF]](s32), [[DBG_INT]](s32), [[DBG_SOURCE]](s32)
 
 ; CHECK-SPIRV-DAG: [[int_str:%[0-9]+]] = OpString "int"
 ; CHECK-SPIRV-DAG: [[typedef_str:%[0-9]+]] = OpString "myint"
@@ -61,7 +61,7 @@ entry:
 !7 = !{i32 7, !"uwtable", i32 2}
 !8 = !{i32 7, !"frame-pointer", i32 2}
 !10 = distinct !DISubprogram(name: "square", scope: !1, file: !1, line: 5, type: !11, scopeLine: 5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !15)
-!11 = !DISubroutineType(types: !12)
+!11 = !DISubroutineType(types: !12, flags: DIFlagPublic)
 !12 = !{!13, !13}
 !13 = !DIDerivedType(tag: DW_TAG_typedef, name: "myint", file: !1, line: 3, baseType: !14)
 !14 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed, flags: DIFlagPublic)
@@ -72,8 +72,8 @@ entry:
 !19 = !DILocation(line: 6, column: 16, scope: !10)
 !20 = !DILocation(line: 6, column: 14, scope: !10)
 !21 = !DILocation(line: 6, column: 5, scope: !10)
-!22 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 9, type: !23, scopeLine: 9, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !15)
-!23 = !DISubroutineType(types: !24)
+!22 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 9, type: !23, scopeLine: 9, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !15)
+!23 = !DISubroutineType(types: !24, flags: DIFlagPublic)
 !24 = !{!14}
 !25 = !DILocalVariable(name: "val", scope: !22, file: !1, line: 10, type: !13)
 !26 = !DILocation(line: 10, column: 11, scope: !22)

@@ -1,33 +1,33 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-MIR
+; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-MIR-DAG: [[i32type:%[0-9]+\:type]] = OpTypeInt 32, 0
-; CHECK-MIR-DAG: [[void_type:%[0-9]+\:type\(s64\)]] = OpTypeVoid
-; CHECK-MIR-DAG: [[func_type:%[0-9]+\:type]] = OpTypeFunction [[i32type]]
-; CHECK-MIR-DAG: [[ptr_type:%[0-9]+\:type]] = OpTypePointer 7, [[i32type]]
-; CHECK-MIR-DAG: [[i32_0:%[0-9]+\:iid]] = OpConstantNull [[i32type]]
-; CHECK-MIR-DAG: [[i32_1:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 1
-; CHECK-MIR-DAG: [[i32_3:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 3
-; CHECK-MIR-DAG: [[i32_5:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 5
-; CHECK-MIR-DAG: [[i32_12:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 12
-; CHECK-MIR-DAG: [[debug_source:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 35
-; CHECK-MIR-DAG: [[debug_comp_unit:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 1, [[i32_3]], [[i32_5]], [[debug_source]], [[i32_12]]
-; CHECK-MIR: [[string_macro_name:%[0-9]+\:id\(s32\)]] = OpString 778462564, 99
-; CHECK-MIR-DAG: [[string_empty:%[0-9]+\:id\(s32\)]] = OpString 1163544915, 0
-; CHECK-MIR-DAG: [[string_macro_value:%[0-9]+\:id\(s32\)]] = OpString 53
-; CHECK-MIR-DAG: [[debug_macrodef:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 32, [[string_macro_name]], [[i32_1]], [[string_empty]], [[string_macro_value]]
+; CHECK-MIR: [[i32type:%[0-9]+]]:type = OpTypeInt 32, 0
+; CHECK-MIR: [[func_type:%[0-9]+]]:type = OpTypeFunction [[i32type]]
+; CHECK-MIR: [[ptr_type:%[0-9]+]]:type = OpTypePointer 7, [[i32type]]
+; CHECK-MIR: [[i32_0:%[0-9]+]]:iid = OpConstantNull [[i32type]]
+; CHECK-MIR: [[void_type:%[0-9]+]]:type(s64) = OpTypeVoid
+; CHECK-MIR: [[i32_5:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 5
+; CHECK-MIR: [[i32_3:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 3
+; CHECK-MIR: [[i32_12:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 12
+; CHECK-MIR: [[i32_1:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 1
+; CHECK-MIR: [[debug_source:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 35
+; CHECK-MIR: [[debug_comp_unit:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 1, [[i32_3]](s32), [[i32_5]](s32), [[debug_source]](s32), [[i32_12]](s32)
+; CHECK-MIR: [[string_macro_name:%[0-9]+]]:id(s32) = OpString 778462564, 99
+; CHECK-MIR: [[string_empty:%[0-9]+]]:id(s32) = OpString 1163544915, 0
+; CHECK-MIR: [[string_macro_value:%[0-9]+]]:id(s32) = OpString 53
+; CHECK-MIR: [[debug_macrodef:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 32, [[string_macro_name]](s32), [[i32_1]](s32), [[string_empty]](s32), [[string_macro_value]](s32)
 
 ; CHECK-SPIRV-DAG: [[i32type:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: [[void_type:%[0-9]+]] = OpTypeVoid
 ; CHECK-SPIRV-DAG: [[func_type:%[0-9]+]] = OpTypeFunction [[i32type]]
 ; CHECK-SPIRV-DAG: [[ptr_type:%[0-9]+]] = OpTypePointer Function [[i32type]]
 ; CHECK-SPIRV-DAG: [[i32_0:%[0-9]+]] = OpConstantNull [[i32type]]
-; CHECK-SPIRV-DAG: [[i32_1:%[0-9]+]] = OpConstant [[i32type]] 1
-; CHECK-SPIRV-DAG: [[i32_3:%[0-9]+]] = OpConstant [[i32type]] 3
 ; CHECK-SPIRV-DAG: [[i32_5:%[0-9]+]] = OpConstant [[i32type]] 5
+; CHECK-SPIRV-DAG: [[i32_3:%[0-9]+]] = OpConstant [[i32type]] 3
 ; CHECK-SPIRV-DAG: [[i32_12:%[0-9]+]] = OpConstant [[i32type]] 12
+; CHECK-SPIRV-DAG: [[i32_1:%[0-9]+]] = OpConstant [[i32type]] 1
 ; CHECK-SPIRV-DAG: [[debug_source:%[0-9]+]] = OpExtInst [[void_type]] {{%[0-9]+}} DebugSource
 ; CHECK-SPIRV-DAG: [[string_macro_name:%[0-9]+]] = OpString "def.c"
 ; CHECK-SPIRV-DAG: [[string_macro_value:%[0-9]+]] = OpString "5"

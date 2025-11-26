@@ -634,6 +634,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
 // be correctly collected until these registers are globally numbered.
 void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
   InstrTraces IS;
+  DenseMap<InstrSignature, MCRegister> GlobalDIMap;
   for (const Function &F : M) {
     if (F.isDeclaration())
       continue;
@@ -645,8 +646,11 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         if (MAI.getSkipEmission(&MI))
           continue;
         const unsigned OpCode = MI.getOpcode();
+        bool IsGlobalInstruction = false;
+        SPIRV::ModuleSectionType TargetSection;
         if (OpCode == SPIRV::OpString) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_DebugStrings, IS);
+          IsGlobalInstruction = true;
+          TargetSection = SPIRV::MB_DebugStrings;
         } else if ((OpCode == SPIRV::OpExtInst ||
                     OpCode == SPIRV::OpExtInstWithForwardRefsKHR) &&
                    MI.getOperand(2).isImm() &&
@@ -682,12 +686,35 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
               NS::DebugMacroUndef,
               NS::DebugTypePtrToMember,
               NS::DebugTypeEnum};
-          bool IsGlobalDI = false;
           for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy); ++Idx)
-            IsGlobalDI |= Ins.getImm() == GlobalNonSemanticDITy[Idx];
-          if (IsGlobalDI)
-            collectOtherInstr(MI, MAI, SPIRV::MB_NonSemanticGlobalDI, IS);
-        } else if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
+            if (Ins.getImm() == GlobalNonSemanticDITy[Idx]) {
+              IsGlobalInstruction = true;
+              TargetSection = SPIRV::MB_NonSemanticGlobalDI;
+              break;
+            }
+        }
+        if (IsGlobalInstruction) {
+          InstrSignature Sig = instrToSignature(MI, MAI, false);
+          auto It = GlobalDIMap.find(Sig);
+          if (It != GlobalDIMap.end()) {
+            if (MI.getNumOperands() > 0 && MI.getOperand(0).isReg() &&
+                MI.getOperand(0).isDef()) {
+              MAI.setRegisterAlias(MF, MI.getOperand(0).getReg(), It->second);
+            }
+            MAI.setSkipEmission(&MI);
+            continue;
+          } else {
+            if (MI.getNumOperands() > 0 && MI.getOperand(0).isReg() &&
+                MI.getOperand(0).isDef()) {
+              MCRegister GReg =
+                  MAI.getRegisterAlias(MF, MI.getOperand(0).getReg());
+              GlobalDIMap[Sig] = GReg;
+            }
+            collectOtherInstr(MI, MAI, TargetSection, IS);
+            continue;
+          }
+        }
+        if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
           collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);

@@ -1,19 +1,17 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-MIR
+; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-MIR-DAG: [[TYPE_VOID:%[0-9]+:type.*]] = OpTypeVoid
-; CHECK-MIR: [[DBG_SOURCE:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 35
-; CHECK-MIR: [[DBG_CU:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 1, {{%[0-9]+\:[a-z0-9\(\)]+}}, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[DBG_SOURCE]], {{%[0-9]+\:[a-z0-9\(\)]+}}
-; CHECK-MIR-DAG: [[STR_INT:%[0-9]+:id\(s32\)]] = OpString 7630441
-; CHECK-MIR: [[DBG_INT:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 2, [[STR_INT]], {{%[0-9]+\:[a-z0-9\(\)]+}}, {{%[0-9]+\:[a-z0-9\(\)]+}}, {{%[0-9]+\:[a-z0-9\(\)]+}}
-; CHECK-MIR-DAG: [[STR_S:%[0-9]+:id\(s32\)]] = OpString 97
-; CHECK-MIR: [[DBG_VAR_S:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 11, [[STR_S]], [[DBG_INT]], [[DBG_SOURCE]]
-; CHECK-MIR: [[DBG_FUNC:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 10, {{%[0-9]+\:[a-z0-9\(\)]+}}, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[DBG_SOURCE]], {{%[0-9]+\:[a-z0-9\(\)]+}}, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[DBG_CU]], {{%[0-9]+\:[a-z0-9\(\)]+}}
-; CHECK-MIR: [[dbg_global1:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 13, [[DBG_INT]], [[DBG_FUNC]]
-; CHECK-MIR-DAG: [[STR_PID:%[0-9]+:id\(s32\)]] = OpString 7500912
-; CHECK-MIR: [[dbg_global:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 18, [[STR_PID]], [[dbg_global1]], [[DBG_SOURCE]]
+; CHECK-MIR: [[TYPE_VOID:%[0-9]+]]:type(s64) = OpTypeVoid
+; CHECK-MIR: [[DBG_SOURCE:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 35
+; CHECK-MIR: [[DBG_CU:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 1
+; CHECK-MIR: [[STR_INT:%[0-9]+]]:id(s32) = OpString 7630441
+; CHECK-MIR: [[DBG_INT:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 2, [[STR_INT]](s32)
+; CHECK-MIR: [[STR_S:%[0-9]+]]:id(s32) = OpString 97
+; CHECK-MIR: [[DBG_VAR_S:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 11, [[STR_S]](s32), [[DBG_INT]](s32), [[DBG_SOURCE]](s32)
+; CHECK-MIR: [[DBG_FUNC:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 10, {{%[0-9]+}}(s32), {{%[0-9]+}}(s32), [[DBG_SOURCE]](s32)
+; CHECK-MIR: [[dbg_global1:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 13, [[DBG_INT]](s32), [[DBG_FUNC]](s32)
 
 ; CHECK-SPIRV-DAG: [[int_str:%[0-9]+]] = OpString "int"
 ; CHECK-SPIRV-DAG: [[struct_str:%[0-9]+]] = OpString "S"
@@ -25,8 +23,6 @@
 ; CHECK-SPIRV: [[dbg_member:%[0-9]+]] = OpExtInst [[void_ty]] %[[#]] DebugTypeMember [[member_a_str]] [[dbg_int]] [[dbg_src]] %[[#]] %[[#]] %[[#]] %[[#]] %[[#]]
 ; CHECK-SPIRV: [[dbg_struct:%[0-9]+]] = OpExtInst [[void_ty]] %[[#]] DebugTypeComposite [[struct_str]] %[[#]] [[dbg_src]] %[[#]] %[[#]] [[dbg_cu]] %[[#]] %[[#]] %[[#]] [[dbg_member]]
 ; CHECK-SPIRV: [[dbg_ptr:%[0-9]+]] = OpExtInst [[void_ty]] %[[#]] DebugTypePtrToMember [[dbg_int]] [[dbg_struct]]
-; CHECK-SPIRV: [[dbg_none:%[0-9]+]] = OpExtInst [[void_ty]] %[[#]] DebugInfoNone
-; CHECK-SPIRV: OpExtInst [[void_ty]] %[[#]] DebugGlobalVariable [[ptr_str]] [[dbg_ptr]] [[dbg_src]] %[[#]] %[[#]] [[dbg_cu]] %[[#]] [[dbg_none]] %[[#]]
 
 ; CHECK-OPTION-NOT: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 

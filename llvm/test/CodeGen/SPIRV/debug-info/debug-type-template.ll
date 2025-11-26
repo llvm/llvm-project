@@ -1,27 +1,24 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-MIR
+; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-MIR-DAG: [[I32:%[0-9]+:type.*]] = OpTypeInt 32, 0
-; CHECK-MIR-DAG: [[VOID:%[0-9]+:type.*]] = OpTypeVoid
-; CHECK-MIR: [[DBG_SOURCE:%[0-9]+:id\(s32\)]] = OpExtInst [[VOID]], 3, 35
-; CHECK-MIR: [[DBG_CU:%[0-9]+:id\(s32\)]] = OpExtInst [[VOID]], 3, 1, {{%[0-9]+:[a-z0-9\(\)]+}}, {{%[0-9]+:[a-z0-9\(\)]+}}, [[DBG_SOURCE]], {{%[0-9]+:[a-z0-9\(\)]+}}
-; CHECK-MIR-DAG: [[STR_INT:%[0-9]+:id\(s32\)]] = OpString 7630441
-; CHECK-MIR: [[DBG_INT:%[0-9]+:id\(s32\)]] = OpExtInst [[VOID]], 3, 2, [[STR_INT]]
-; CHECK-MIR: [[DBG_ARRAY:%[0-9]+:id\(s32\)]] = OpExtInst [[VOID]], 3, 5, [[DBG_INT]], {{%[0-9]+:[a-z0-9\(\)]+}}
-; CHECK-MIR-DAG: [[STR_STRUCT:%[0-9]+:id\(s32\)]] = OpString 1635017060, 0
-; CHECK-MIR: [[DBG_STRUCT:%[0-9]+:id\(s32\)]] = OpExtInst [[VOID]], 3, 11, [[STR_STRUCT]], [[DBG_ARRAY]], [[DBG_SOURCE]], {{%[0-9]+:[a-z0-9\(\)]+}}
-; CHECK-MIR: [[DBG_FUNC:%[0-9]+:id\(s32\)]] = OpExtInst [[VOID]], 3, 10, {{%[0-9]+:[a-z0-9\(\)]+}}, {{%[0-9]+:[a-z0-9\(\)]+}}, [[DBG_SOURCE]], {{%[0-9]+:[a-z0-9\(\)]+}}, {{%[0-9]+:[a-z0-9\(\)]+}}, [[DBG_CU]]
-; CHECK-MIR: [[DBG_INFO:%[0-9]+:id\(s32\)]] = OpExtInst [[VOID]], 3, 0
-; CHECK-MIR-DAG: [[DBG_TEMPL:%[0-9]+:id\(s32\)]] = OpExtInst [[VOID]], 3, 15, {{%[0-9]+:[a-z0-9\(\)]+}}, {{%[0-9]+:[a-z0-9\(\)]+}}, [[DBG_INFO]]
-; CHECK-MIR: [[STR_X:%[0-9]+:id\(s32\)]] = OpString 78
-; CHECK-MIR: [[DBG_X:%[0-9]+:id\(s32\)]] = OpExtInst [[VOID]], 3, 15, [[STR_X]], [[DBG_INT]], {{%[0-9]+:[a-z0-9\(\)]+}}, [[DBG_SOURCE]], {{%[0-9]+:[a-z0-9\(\)]+}}, {{%[0-9]+:[a-z0-9\(\)]+}}
-; CHECK-MIR: [[DBG_COMPOSITE:%[0-9]+:id\(s32\)]] = OpExtInst [[VOID]], 3, 14, [[DBG_FUNC]], [[DBG_TEMPL]], [[DBG_X]]
-; CHECK-MIR: [[STR_GLOBAL:%[0-9]+:id\(s32\)]] = OpString {{.*}}
-; CHECK-MIR: [[STR_ZERO:%[0-9]+:id\(s32\)]] = OpString 0
-; CHECK-MIR: [[DBG_NULL:%[0-9]+:id\(s32\)]] = OpExtInst [[VOID]], 3, 0
-; CHECK-MIR: [[DBG_GLOBAL:%[0-9]+:id\(s32\)]] = OpExtInst [[VOID]], 3, 18, [[STR_GLOBAL]], [[DBG_FUNC]], [[DBG_SOURCE]], {{%[0-9]+:[a-z0-9\(\)]+}}, {{%[0-9]+:[a-z0-9\(\)]+}}, [[DBG_CU]], [[STR_ZERO]], [[DBG_NULL]], {{%[0-9]+:[a-z0-9\(\)]+}}
+; CHECK-MIR: [[VOID:%[0-9]+]]:type(s64) = OpTypeVoid
+; CHECK-MIR: [[I32:%[0-9]+]]:type = OpTypeInt 32, 0
+; CHECK-MIR: [[STR:%[0-9]+]]:id(s32) = OpString 1094795567, 1094795585
+; CHECK-MIR: [[DBG_SOURCE:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 35, [[STR]](s32)
+; CHECK-MIR: [[DBG_CU:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 1
+; CHECK-MIR: [[STR_INT:%[0-9]+]]:id(s32) = OpString 7630441
+; CHECK-MIR: [[DBG_INT:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 2, [[STR_INT]](s32)
+; CHECK-MIR: [[DBG_ARRAY:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 5, [[DBG_INT]](s32), {{%[0-9]+}}
+; CHECK-MIR: [[STR_STRUCT:%[0-9]+]]:id(s32) = OpString 1635017060, 0
+; CHECK-MIR: [[DBG_STRUCT:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 11, [[STR_STRUCT]](s32), [[DBG_ARRAY]](s32), [[DBG_SOURCE]](s32), {{%[0-9]+}}
+; CHECK-MIR: [[DBG_FUNC:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 10, {{%[0-9]+}}(s32), {{%[0-9]+}}(s32), [[DBG_SOURCE]](s32)
+; CHECK-MIR: [[DBG_INFO:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 0
+; CHECK-MIR: [[DBG_TEMPL:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 15, {{%[0-9]+}}(s32), {{%[0-9]+}}(s32), [[DBG_INFO]](s32)
+; CHECK-MIR: [[STR_X:%[0-9]+]]:id(s32) = OpString 78
+; CHECK-MIR: [[DBG_X:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 15, [[STR_X]](s32), [[DBG_INT]](s32)
+; CHECK-MIR: [[DBG_COMPOSITE:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 14, [[DBG_FUNC]](s32), [[DBG_TEMPL]](s32), [[DBG_X]](s32)
 
 ; CHECK-SPIRV: [[data_str:%[0-9]+]] = OpString "data"
 ; CHECK-SPIRV: [[T_str:%[0-9]+]] = OpString "T"
@@ -39,8 +36,6 @@
 ; CHECK-SPIRV: [[dbg_tparam_T:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugTypeTemplateParameter [[T_str]] [[dbg_int]] [[dbg_none_1]] [[dbg_src]] %[[#]] %[[#]]
 ; CHECK-SPIRV: [[dbg_tparam_N:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugTypeTemplateParameter [[N_str]] [[dbg_int]] %[[#]] [[dbg_src]] %[[#]] %[[#]]
 ; CHECK-SPIRV: [[dbg_templ_1:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugTypeTemplate [[dbg_comp]] [[dbg_tparam_T]] [[dbg_tparam_N]]
-; CHECK-SPIRV: [[dbg_none_2:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugInfoNone
-; CHECK-SPIRV: [[dbg_global:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugGlobalVariable [[fa_global_str]] [[dbg_comp]] [[dbg_src]] %[[#]] %[[#]] [[dbg_cu]] %[[#]] [[dbg_none_2]] %[[#]]
 
 ; CHECK-OPTION-NOT: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 
