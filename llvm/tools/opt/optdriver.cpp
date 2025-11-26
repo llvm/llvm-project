@@ -543,7 +543,8 @@ optMain(int argc, char **argv,
 
     std::string Str = TT.computeDataLayout();
     if (Str.empty()) {
-      errs() << argv[0] << ": warning: failed to infer data layout\n";
+      errs() << argv[0]
+             << ": warning: failed to infer data layout from target triple\n";
       return std::nullopt;
     }
     return Str;

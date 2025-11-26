@@ -7,10 +7,10 @@
 
 ;; Using "unknown" as the architecture is explicitly allowed (but warns)
 ; RUN: opt -mtriple=unknown -S -passes=no-op-module -o /dev/null < %s 2>&1 | FileCheck %s --check-prefix=UNKNOWN
-; UNKNOWN: warning: failed to infer data layout{{$}}
+; UNKNOWN: warning: failed to infer data layout from target triple{{$}}
 
 ;; However, any other invalid target triple should cause the tool to fail:
 ; RUN: not opt -mtriple=invalid -S -passes=no-op-module -o /dev/null < %s 2>&1 | FileCheck %s --check-prefix=INVALID
-; INVALID: warning: failed to infer data layout{{$}}
+; INVALID: warning: failed to infer data layout from target triple{{$}}
 ; INVALID-NEXT: unrecognized architecture 'invalid' provided.
 ; INVALID-EMPTY:
