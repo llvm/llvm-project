@@ -13,6 +13,9 @@
 - [Getting Started with LLVM](https://llvm.org/docs/GettingStarted.html)
 - [Contributing to LLVM](https://llvm.org/docs/Contributing.html)
 
+### Security Articles
+- [Constant-Time Support Lands in LLVM: Protecting Cryptographic Code at the Compiler Level](https://securityboulevard.com/2025/11/constant-time-support-lands-in-llvm-protecting-cryptographic-code-at-the-compiler-level/)
+
 ### DSLLVM-Specific
 **Quick Start**:
 ```bash
