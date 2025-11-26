@@ -146,6 +146,14 @@ void testValueInRangeOfEnumerationValues() {
 
   const NumberType neg_one = (NumberType) ((NumberType) 0 - (NumberType) 1); // ok, not a constant expression context
 }
+struct EnumTest {
+  enum type {
+      Type1,
+      BOUND
+  };
+  static const type binding_completed = type(BOUND + 1); // both-error {{in-class initializer for static data member is not a constant expression}} \
+                                                         // both-note {{integer value 2 is outside the valid range of values}}
+};
 
 template<class T, unsigned size> struct Bitfield {
   static constexpr T max = static_cast<T>((1 << size) - 1);
@@ -361,4 +369,53 @@ namespace GH150709 {
   static_assert((e1.*mp)() == 1, ""); // ref-error {{constant expression}}
   static_assert((e2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
   static_assert((g.*mp)() == 1, ""); // ref-error {{constant expression}}
+}
+
+namespace DiscardedAddrLabel {
+  void foo(void) {
+  L:
+    *&&L; // both-error {{indirection not permitted on operand of type 'void *'}} \
+          // both-warning {{expression result unused}}
+  }
+}
+
+struct Counter {
+  int copies;
+  constexpr Counter(int copies) : copies(copies) {}
+  constexpr Counter(const Counter& other) : copies(other.copies + 1) {}
+};
+// Passing an lvalue by value makes a non-elidable copy.
+constexpr int PassByValue(Counter c) { return c.copies; }
+static_assert(PassByValue(Counter(0)) == 0, "expect no copies");
+
+namespace PointerCast {
+  /// The two interpreters disagree here.
+  struct S { int x, y; } s;
+  constexpr S* sptr = &s;
+  struct U {};
+  struct Str {
+    int e : (Str*)(sptr) == (Str*)(sptr); // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{cast that performs the conversions of a reinterpret_cast}}
+  };
+}
+
+namespace DummyToGlobalBlockMove {
+  struct Baz {
+    unsigned int n;
+  };
+
+  struct AP {
+    const AP *p;
+    const Baz *lp;
+  };
+
+  class Bar {
+  public:
+    static Baz _m[];
+    static const AP m;
+  };
+
+  const AP Bar::m = {0, &Bar::_m[0]};
+  Baz Bar::_m[] = {{0}};
+  const AP m = {&Bar ::m};
 }

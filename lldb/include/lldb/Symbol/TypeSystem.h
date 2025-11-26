@@ -163,7 +163,7 @@ public:
   virtual bool IsDefined(lldb::opaque_compiler_type_t type) = 0;
 
   virtual bool IsFloatingPointType(lldb::opaque_compiler_type_t type,
-                                   uint32_t &count, bool &is_complex) = 0;
+                                   bool &is_complex) = 0;
 
   virtual bool IsFunctionType(lldb::opaque_compiler_type_t type) = 0;
 
@@ -317,8 +317,7 @@ public:
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) = 0;
 
-  virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
-                                     uint64_t &count) = 0;
+  virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) = 0;
 
   virtual lldb::Format GetFormat(lldb::opaque_compiler_type_t type) = 0;
 
@@ -411,6 +410,18 @@ public:
   virtual std::optional<CompilerType::IntegralTemplateArgument>
   GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type, size_t idx,
                               bool expand_pack);
+
+  // DIL
+
+  /// Checks if the type is eligible for integral promotion.
+  virtual bool IsPromotableIntegerType(lldb::opaque_compiler_type_t type);
+
+  /// Perform integral promotion on a given type.
+  /// This promotes eligible types (boolean, integers, unscoped enumerations)
+  /// to a larger integer type according to type system rules.
+  /// \returns Promoted type.
+  virtual llvm::Expected<CompilerType>
+  DoIntegralPromotion(CompilerType from, ExecutionContextScope *exe_scope);
 
   // Dumping types
 
