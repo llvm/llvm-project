@@ -324,32 +324,33 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
 
         out = _mod.normalize_release_notes(rn_text.splitlines(True))
 
-        expected_out = "".join(
-            [
-                "Changes in existing checks\n",
-                "^^^^^^^^^^^^^^^^^^^^^^^^^^\n",
-                "\n",
-                "- Improved :doc:`bugprone-easily-swappable-parameters\n",
-                "  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by\n",
-                "  correcting a spelling mistake on its option\n",
-                "  ``NamePrefixSuffixSilenceDissimilarityTreshold``.\n",
-                "\n",
-                "- Improved :doc:`bugprone-exception-escape\n",
-                "  <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:\n",
-                "  exceptions from captures are now diagnosed, exceptions in the bodies of\n",
-                "  lambdas that aren't actually invoked are not.\n",
-                "\n",
-                "- Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals\n",
-                "  <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:\n",
-                "\n",
-                "  - Fix-it handles callees with nested-name-specifier correctly.\n",
-                "\n",
-                "  - ``if`` statements with init-statement (``if (auto X = ...; ...)``) are\n",
-                "    handled correctly.\n",
-                "\n",
-                "  - ``for`` loops are supported.\n",
-                "\n\n",
-            ]
+        expected_out = textwrap.dedent(
+            """\
+            Changes in existing checks
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+            - Improved :doc:`bugprone-easily-swappable-parameters
+              <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
+              correcting a spelling mistake on its option
+              ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+
+            - Improved :doc:`bugprone-exception-escape
+              <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
+              exceptions from captures are now diagnosed, exceptions in the bodies of
+              lambdas that aren't actually invoked are not.
+
+            - Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
+              <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
+
+              - Fix-it handles callees with nested-name-specifier correctly.
+
+              - ``if`` statements with init-statement (``if (auto X = ...; ...)``) are
+                handled correctly.
+
+              - ``for`` loops are supported.
+
+
+           """
         )
         self.assertEqual(out, expected_out)
 
