@@ -589,7 +589,7 @@ public:
     // VALU mask write hazards have already been handled, but this pass
     // performs a forward scan optimize them.
     if (ST->hasVALUMaskWriteHazard())
-      return runWaitMerging(MF);
+      return ST->isWave64() ? runWaitMerging(MF) : false;
 
     auto CallingConv = MF.getFunction().getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CallingConv) &&
