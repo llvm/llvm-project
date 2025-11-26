@@ -8,8 +8,6 @@
 ; trunc <vscale x 1 x double>
 ; ================================================================================
 
-declare <vscale x 1 x double> @llvm.trunc.nxv1f64(<vscale x 1 x double>)
-
 define <vscale x 1 x i8> @trunc_nxv1f64_to_si8(<vscale x 1 x double> %x) {
 ; RV32-LABEL: trunc_nxv1f64_to_si8:
 ; RV32:       # %bb.0:
@@ -254,8 +252,6 @@ define <vscale x 1 x i64> @trunc_nxv1f64_to_ui64(<vscale x 1 x double> %x) {
 ; trunc <vscale x 4 x double>
 ; ================================================================================
 
-declare <vscale x 4 x double> @llvm.trunc.nxv4f64(<vscale x 4 x double>)
-
 define <vscale x 4 x i8> @trunc_nxv4f64_to_si8(<vscale x 4 x double> %x) {
 ; RV32-LABEL: trunc_nxv4f64_to_si8:
 ; RV32:       # %bb.0:
@@ -499,8 +495,6 @@ define <vscale x 4 x i64> @trunc_nxv4f64_to_ui64(<vscale x 4 x double> %x) {
 ; ================================================================================
 ; ceil <vscale x 1 x double>
 ; ================================================================================
-
-declare <vscale x 1 x double> @llvm.ceil.nxv1f64(<vscale x 1 x double>)
 
 define <vscale x 1 x i8> @ceil_nxv1f64_to_si8(<vscale x 1 x double> %x) {
 ; RV32-LABEL: ceil_nxv1f64_to_si8:
@@ -778,8 +772,6 @@ define <vscale x 1 x i64> @ceil_nxv1f64_to_ui64(<vscale x 1 x double> %x) {
 ; ceil <vscale x 4 x double>
 ; ================================================================================
 
-declare <vscale x 4 x double> @llvm.ceil.nxv4f64(<vscale x 4 x double>)
-
 define <vscale x 4 x i8> @ceil_nxv4f64_to_si8(<vscale x 4 x double> %x) {
 ; RV32-LABEL: ceil_nxv4f64_to_si8:
 ; RV32:       # %bb.0:
@@ -1056,8 +1048,6 @@ define <vscale x 4 x i64> @ceil_nxv4f64_to_ui64(<vscale x 4 x double> %x) {
 ; rint <vscale x 1 x double>
 ; ================================================================================
 
-declare <vscale x 1 x double> @llvm.rint.nxv1f64(<vscale x 1 x double>)
-
 define <vscale x 1 x i8> @rint_nxv1f64_to_si8(<vscale x 1 x double> %x) {
 ; RV32-LABEL: rint_nxv1f64_to_si8:
 ; RV32:       # %bb.0:
@@ -1301,8 +1291,6 @@ define <vscale x 1 x i64> @rint_nxv1f64_to_ui64(<vscale x 1 x double> %x) {
 ; ================================================================================
 ; rint <vscale x 4 x double>
 ; ================================================================================
-
-declare <vscale x 4 x double> @llvm.rint.nxv4f64(<vscale x 4 x double>)
 
 define <vscale x 4 x i8> @rint_nxv4f64_to_si8(<vscale x 4 x double> %x) {
 ; RV32-LABEL: rint_nxv4f64_to_si8:
