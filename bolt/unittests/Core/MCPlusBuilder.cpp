@@ -171,9 +171,11 @@ TEST_P(MCPlusBuilderTester, AArch64_BTI) {
   ASSERT_EQ(II->getOperand(0).getImm(), 34);
   ASSERT_TRUE(BC->MIB->isBTILandingPad(*II, true, false));
 
+#ifndef NDEBUG
   MCInst BTIinvalid;
   ASSERT_DEATH(BC->MIB->createBTI(BTIinvalid, false, false),
                "No target kinds!");
+#endif
 
   MCInst Paciasp = MCInstBuilder(AArch64::PACIASP);
   II = BB->addInstruction(Paciasp);
