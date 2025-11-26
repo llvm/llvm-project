@@ -65,9 +65,26 @@ void test_ref(InitArgs&&... args) {
     assert(&(*lhs) == &(*rhs));
 }
 
-// TODO: Add constexpr tests
-void test_reference_extension() {
 #if TEST_STD_VER >= 26
+struct X {
+  int copy_count = 0;
+
+  constexpr X() {}
+  constexpr X(const X&) { copy_count++; }
+};
+
+constexpr void test_ref() {
+  {
+    X x{};
+    std::optional<X&> o1(x);
+    std::optional<X&> o2(o1);
+    assert(o1.has_value() && o2.has_value());
+    assert(x.copy_count == 0);
+    assert(&*o1 == &*o2);
+  }
+}
+
+void test_reference_extension() {
   using T = TestTypes::TestType;
   T::reset();
   {
@@ -103,13 +120,15 @@ void test_reference_extension() {
     static_assert(!std::is_copy_constructible<std::optional<T const&&>>::value);
   }
 #  endif
-#endif
 }
+#endif
 
 constexpr bool test() {
   test<int>();
   test<int>(3);
   test<const int>(42);
+  test<TrivialTestTypes::TestType>();
+  test<TrivialTestTypes::TestType>(42);
 
   // FIXME: Why is this in ctor copy.pass.cpp?
   {
@@ -129,34 +148,19 @@ constexpr bool test() {
     }
   }
 
-  {
-    using T = TrivialTestTypes::TestType;
-    test<T>();
-    test<T>(42);
-  }
+#if TEST_STD_VER >= 26
+  test_ref();
 
   // TODO: Enable once P3068R6 is implemented
-#if TEST_STD_VER >= 26 && 0
+#  if 0
   test_throwing_ctor();
+#  endif
 #endif
 
   return true;
 }
 
-int main(int, char**) {
-  test();
-  static_assert(test());
-
-  {
-    test_throwing_ctor();
-  }
-
-#if TEST_STD_VER >= 26
-  {
-    test_reference_extension();
-  }
-#endif
-
+void test_rt() {
   { // FIXME: Shouldn't this be able to pass in a constexpr context since C++17?
     using T = ConstexprTestTypes::TestType;
     test<T>();
@@ -189,6 +193,25 @@ int main(int, char**) {
   }
 
   TestTypes::TestType::reset();
+}
+
+int main(int, char**) {
+  test();
+  static_assert(test());
+
+  {
+    test_rt();
+  }
+
+  {
+    test_throwing_ctor();
+  }
+
+#if TEST_STD_VER >= 26
+  {
+    test_reference_extension();
+  }
+#endif
 
   return 0;
 }

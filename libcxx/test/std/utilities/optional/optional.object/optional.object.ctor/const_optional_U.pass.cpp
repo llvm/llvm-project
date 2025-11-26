@@ -87,6 +87,7 @@ constexpr bool test_all() {
 }
 
 constexpr bool test() {
+  static_assert(!(std::is_constructible<optional<X>, const optional<Y>&>::value));
   test_all<int, short>();
   test_all<X, int>();
   test_all<Y, int>();
@@ -126,6 +127,5 @@ int main(int, char**) {
     test_throwing();
   }
 
-  static_assert(!(std::is_constructible<optional<X>, const optional<Y>&>::value));
   return 0;
 }

@@ -59,16 +59,33 @@ TEST_CONSTEXPR_CXX26 void test_throwing_ctor() {
 template <class T, class... InitArgs>
 void test_ref(InitArgs&&... args) {
   optional<T> rhs(std::forward<InitArgs>(args)...);
-  bool rhs_engaged = static_cast<bool>(rhs);
-  optional<T> lhs  = std::move(rhs);
-  assert(static_cast<bool>(lhs) == rhs_engaged);
-  if (rhs_engaged)
-    assert(&(*lhs) == &(*rhs));
+  optional<T> lhs(std::move(rhs));
+
+  assert(lhs.has_value() == rhs.has_value());
+  assert(rhs.has_value() ? &*lhs == &*rhs : true);
 }
 
-// TODO: Add constexpr tests
-void test_reference_extension() {
+struct F {
+  int move_count = 0;
+
+  constexpr F() {}
+  constexpr F(F&&) { move_count++; }
+};
+
 #if TEST_STD_VER >= 26
+
+constexpr void test_ref() {
+  { // Test that moving from an optional<T&> doesn't also move the object it's referencing
+    F f{};
+    std::optional<F&> o1(f);
+    std::optional<F&> o2(std::move(o1));
+    assert(f.move_count == 0);
+    assert(o1.has_value() && o2.has_value());
+    assert(&*o1 == &*o2);
+  }
+}
+
+void test_reference_extension() {
   using T = TestTypes::TestType;
   T::reset();
   {
@@ -129,8 +146,8 @@ void test_reference_extension() {
     static_assert(!std::is_copy_constructible_v<std::optional<T const&&>>);
   }
 #  endif
-#endif
 }
+#endif
 
 constexpr bool test() {
   test<int>();
@@ -143,6 +160,10 @@ constexpr bool test() {
     test<T>(42);
   }
 
+#if TEST_STD_VER >= 26
+  test_ref();
+#endif
+
 #if TEST_STD_VER >= 26 && 0
   {
     test_throwing_ctor();
@@ -152,7 +173,7 @@ constexpr bool test() {
   return true;
 }
 
-bool rt_test() {
+bool test_rt() {
   {
     using T = TestTypes::TestType;
     T::reset();
@@ -213,7 +234,7 @@ int main(int, char**) {
   static_assert(test());
 
   {
-    rt_test();
+    test_rt();
   }
 
   {
