@@ -307,10 +307,10 @@ public:
         "bugprone-unique-ptr-array-mismatch");
     CheckFactories.registerCheck<CrtpConstructorAccessibilityCheck>(
         "bugprone-crtp-constructor-accessibility");
-    CheckFactories.registerCheck<UnsafeFunctionsCheck>(
-        "bugprone-unsafe-functions");
     CheckFactories.registerCheck<UnsafeFormatStringCheck>(
         "bugprone-unsafe-format-string");
+    CheckFactories.registerCheck<UnsafeFunctionsCheck>(
+        "bugprone-unsafe-functions");
     CheckFactories.registerCheck<UnusedLocalNonTrivialVariableCheck>(
         "bugprone-unused-local-non-trivial-variable");
     CheckFactories.registerCheck<UnusedRaiiCheck>("bugprone-unused-raii");

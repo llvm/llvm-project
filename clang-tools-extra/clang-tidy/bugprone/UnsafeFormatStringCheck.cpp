@@ -1,4 +1,4 @@
-//===--- UnsafeFormatStringCheck.cpp - clang-tidy -----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,11 +26,12 @@ void UnsafeFormatStringCheck::registerMatchers(MatchFinder *Finder) {
                  "vfscanf", "vsscanf", "wscanf", "fwscanf", "swscanf",
                  "vwscanf", "vfwscanf", "vswscanf");
   Finder->addMatcher(
-      callExpr(callee(functionDecl(VulnerableFunctions,
-                                   anyOf(isInStdNamespace(),
-                                         hasParent(translationUnitDecl())))),
-               anyOf(hasArgument(0, stringLiteral().bind("format")),
-                     hasArgument(1, stringLiteral().bind("format"))))
+      callExpr(
+          callee(functionDecl(VulnerableFunctions,
+                              anyOf(isInStdNamespace(),
+                                    hasDeclContext(translationUnitDecl())))),
+          anyOf(hasArgument(0, stringLiteral().bind("format")),
+                hasArgument(1, stringLiteral().bind("format"))))
           .bind("call"),
       this);
 }
@@ -39,8 +40,7 @@ void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
   const auto *Format = Result.Nodes.getNodeAs<StringLiteral>("format");
 
-  if (!Call || !Format)
-    return;
+  assert(Call && Format);
 
   std::string FormatString;
   if (Format->getCharByteWidth() == 1) {
@@ -54,21 +54,19 @@ void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   const auto *Callee = cast<FunctionDecl>(Call->getCalleeDecl());
-  StringRef FunctionName = Callee->getName();
+  const StringRef FunctionName = Callee->getName();
 
-  bool IsScanfFamily = FunctionName.contains("scanf");
+  const bool IsScanfFamily = FunctionName.contains("scanf");
 
   if (!hasUnboundedStringSpecifier(FormatString, IsScanfFamily))
     return;
 
-  auto Diag =
-      diag(
-          Call->getBeginLoc(),
-          IsScanfFamily
-              ? "format specifier '%%s' without field width may cause buffer "
-                "overflow; consider using '%%Ns' where N limits input length"
-              : "format specifier '%%s' without precision may cause buffer "
-                "overflow; consider using '%%.Ns' where N limits output length")
+  diag(Call->getBeginLoc(),
+       IsScanfFamily
+           ? "format specifier '%%s' without field width may cause buffer "
+             "overflow; consider using '%%Ns' where N limits input length"
+           : "format specifier '%%s' without precision may cause buffer "
+             "overflow; consider using '%%.Ns' where N limits output length")
       << Call->getSourceRange();
 }
 

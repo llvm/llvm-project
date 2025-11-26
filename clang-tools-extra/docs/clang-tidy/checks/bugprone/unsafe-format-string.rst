@@ -1,7 +1,7 @@
 .. title:: clang-tidy - bugprone-unsafe-format-string
 
 bugprone-unsafe-format-string
-==============================
+=============================
 
 Detects usage of vulnerable format string functions with unbounded ``%s``
 specifiers that can cause buffer overflows.
@@ -12,7 +12,7 @@ This can lead to buffer overflow vulnerabilities when the input string is longer
 than the destination buffer.
 
 Format Specifier Behavior
---------------------------
+-------------------------
 
 The check distinguishes between different function families:
 
