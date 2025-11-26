@@ -289,6 +289,23 @@ void OmpStructureChecker::CheckNestedBlock(const parser::OpenMPLoopConstruct &x,
 void OmpStructureChecker::CheckNestedConstruct(
     const parser::OpenMPLoopConstruct &x) {
   size_t nestedCount{0};
+  unsigned version{context_.langOptions().OpenMPVersion};
+
+  if (version <= 50) {
+    const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+    auto &flags{
+        std::get<parser::OmpDirectiveSpecification::Flags>(beginSpec.t)};
+    if (flags.test(parser::OmpDirectiveSpecification::Flag::CrossesLabelDo)) {
+      if (auto &endSpec{x.EndDir()}) {
+        parser::CharBlock beginSource{beginSpec.DirName().source};
+        context_
+            .Say(endSpec->DirName().source,
+                "END %s directive is not allowed when the construct does not contain all loops that shares a loop-terminating statement"_err_en_US,
+                parser::ToUpperCaseLetters(beginSource.ToString()))
+            .Attach(beginSource, "The construct starts here"_en_US);
+      }
+    }
+  }
 
   auto &body{std::get<parser::Block>(x.t)};
   if (body.empty()) {
