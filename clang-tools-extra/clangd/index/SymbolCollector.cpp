@@ -694,16 +694,11 @@ bool SymbolCollector::handleDeclOccurrence(
           for (auto *Specialized : FT->specializations()) {
             Visitor.TraverseStmt(Specialized->getBody());
           }
-          auto FileLoc = SM.getFileLoc(Loc);
-          auto FID = SM.getFileID(FileLoc);
-          if (Opts.RefsInHeaders || FID == SM.getMainFileID()) {
-            for (auto *Constructor : Visitor.Constructors) {
-              addRef(getSymbolIDCached(Constructor),
-                     SymbolRef{FileLoc, FID, Roles,
-                               index::getSymbolInfo(ND).Kind,
-                               getRefContainer(ASTNode.Parent, Opts),
-                               isSpelled(FileLoc, *ND)});
-            }
+          for (auto *Constructor : Visitor.Constructors) {
+            addRef(getSymbolIDCached(Constructor),
+                   SymbolRef{FileLoc, FID, Roles, index::getSymbolInfo(ND).Kind,
+                             getRefContainer(ASTNode.Parent, Opts),
+                             isSpelled(FileLoc, *ND)});
           }
         }
       }
