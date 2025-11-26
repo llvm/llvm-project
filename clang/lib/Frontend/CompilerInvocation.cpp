@@ -3948,21 +3948,7 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
                 std::to_string(*Opts.AllocTokenMax));
 
   if (Opts.AllocTokenMode) {
-    StringRef S;
-    switch (*Opts.AllocTokenMode) {
-    case llvm::AllocTokenMode::Increment:
-      S = "increment";
-      break;
-    case llvm::AllocTokenMode::Random:
-      S = "random";
-      break;
-    case llvm::AllocTokenMode::TypeHash:
-      S = "typehash";
-      break;
-    case llvm::AllocTokenMode::TypeHashPointerSplit:
-      S = "typehashpointersplit";
-      break;
-    }
+    StringRef S = llvm::getAllocTokenModeAsString(*Opts.AllocTokenMode);
     GenerateArg(Consumer, OPT_falloc_token_mode_EQ, S);
   }
 }
