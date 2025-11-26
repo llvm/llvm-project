@@ -8,6 +8,8 @@
 # CHECK-HELP: Available features for this target:
 ## To check we still disassemble the file:
 # CHECK-DISASM: file format elf32-littlearm
+# CHECK-SECTION-HEADER: Sections:
+# CHECK-SECTION-HEADER: Idx Name            Size     VMA      Type
 # CHECK-FILE-ISSUE: 'a.out': No such file or directory
 
 --- !ELF
@@ -24,8 +26,8 @@ FileHeader:
 
 ## Check if we can handle the default filename.
 # RUN: cp %t a.out
-# RUN: llvm-objdump -d --mcpu=help 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM,CHECK-DISASM
+# RUN: llvm-objdump -d --mcpu=help --section-headers 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM,CHECK-DISASM,CHECK-SECTION-HEADER
 # RUN: rm a.out
 
 ## 3. -d + --mcpu=help + --triple
@@ -35,14 +37,14 @@ FileHeader:
 
 ## Check triple priority
 # RUN: cp %t a.out
-# RUN: llvm-objdump -d --mcpu=help --triple=x86_64 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-DISASM,CHECK-HELP,CHECK-X86
+# RUN: llvm-objdump -d --mcpu=help --triple=x86_64 --section-headers 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-DISASM,CHECK-HELP,CHECK-X86,CHECK-SECTION-HEADER
 # RUN: rm a.out
 
 ## 4. --mcpu + file
 ## Check if we can handle without -d
-# RUN: llvm-objdump --mcpu=help %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM
+# RUN: llvm-objdump --mcpu=help --section-headers %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM,CHECK-SECTION-HEADER
 
 ## We should also check if we can handle without -d and file
 # RUN: not llvm-objdump --mcpu=help --triple=x86_64 2>&1 \
