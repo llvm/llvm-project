@@ -2436,12 +2436,20 @@ void NoteForRangeBeginEndFunction(Sema &SemaRef, Expr *E,
 /// Build a variable declaration for a for-range statement.
 VarDecl *Sema::BuildForRangeVarDecl(SourceLocation Loc, QualType Type,
                                     IdentifierInfo *II, bool IsConstexpr) {
+  // Making the variable constexpr doesn't automatically add 'const' to the
+  // type, so do that now.
+  if (IsConstexpr && !Type->isReferenceType())
+    Type = Type.withConst();
+
   DeclContext *DC = CurContext;
   TypeSourceInfo *TInfo = Context.getTrivialTypeSourceInfo(Type, Loc);
   VarDecl *Decl =
       VarDecl::Create(Context, DC, Loc, Loc, II, Type, TInfo, SC_None);
   Decl->setImplicit();
   Decl->setCXXForRangeImplicitVar(true);
+  if (IsConstexpr)
+    // CWG3044 changed this from 'static constexpr' to 'constexpr'.
+    Decl->setConstexpr(true);
   return Decl;
 }
 
