@@ -190,10 +190,11 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     CmdArgs.append({"-cc1", Triple, "-emit-obj", "-disable-llvm-optzns",
                     LinkedBCFile.getFilename(), "-o", Output.getFilename()});
 
-    const char *Exec = getToolChain().getDriver().getClangProgramPath();
-    C.addCommand(std::make_unique<Command>(JA, *this,
-                                           ResponseFileSupport::None(), Exec,
-                                           CmdArgs, LinkedBCFile, Output));
+    const Driver &Driver = getToolChain().getDriver();
+    const char *Exec = Driver.getClangProgramPath();
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::None(), Exec, CmdArgs, LinkedBCFile,
+        Output, Driver.getPrependArg()));
   } else {
     // Emit SPIR-V binary using the translator
     llvm::opt::ArgStringList TrArgs{

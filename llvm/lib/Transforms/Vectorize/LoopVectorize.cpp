@@ -7021,10 +7021,11 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
                              VPInstruction::FirstOrderRecurrenceSplice>())))
           return true;
       }
-      // The VPlan-based cost model is more accurate for partial reduction and
+      // The VPlan-based cost model is more accurate for partial reductions and
       // comparing against the legacy cost isn't desirable.
-      if (isa<VPPartialReductionRecipe>(&R))
-        return true;
+      if (auto *VPR = dyn_cast<VPReductionRecipe>(&R))
+        if (VPR->isPartialReduction())
+          return true;
 
       // The VPlan-based cost model can analyze if recipes are scalar
       // recursively, but the legacy cost model cannot.
@@ -8207,11 +8208,15 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
              Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
 
       // If the PHI is used by a partial reduction, set the scale factor.
+      bool UseInLoopReduction = CM.isInLoopReduction(Phi);
+      bool UseOrderedReductions = CM.useOrderedReductions(RdxDesc);
       unsigned ScaleFactor =
           getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
+
       PhiRecipe = new VPReductionPHIRecipe(
-          Phi, RdxDesc.getRecurrenceKind(), *StartV, CM.isInLoopReduction(Phi),
-          CM.useOrderedReductions(RdxDesc), ScaleFactor);
+          Phi, RdxDesc.getRecurrenceKind(), *StartV,
+          getReductionStyle(UseInLoopReduction, UseOrderedReductions,
+                            ScaleFactor));
     } else {
       // TODO: Currently fixed-order recurrences are modeled as chains of
       // first-order recurrences. If there are no users of the intermediate
@@ -8280,16 +8285,18 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
 
   VPValue *BinOp = Reduction->getOperand(0);
   VPValue *Accumulator = Reduction->getOperand(1);
-  if (isa<VPReductionPHIRecipe>(BinOp) || isa<VPPartialReductionRecipe>(BinOp))
+  VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
+  if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
+      (isa<VPReductionRecipe>(BinOpRecipe) &&
+       cast<VPReductionRecipe>(BinOpRecipe)->isPartialReduction()))
     std::swap(BinOp, Accumulator);
 
   assert(ScaleFactor ==
              vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()) &&
          "all accumulators in chain must have same scale factor");
 
-  unsigned ReductionOpcode = Reduction->getOpcode();
   auto *ReductionI = Reduction->getUnderlyingInstr();
-  if (ReductionOpcode == Instruction::Sub) {
+  if (Reduction->getOpcode() == Instruction::Sub) {
     auto *const Zero = ConstantInt::get(ReductionI->getType(), 0);
     SmallVector<VPValue *, 2> Ops;
     Ops.push_back(Plan.getOrAddLiveIn(Zero));
@@ -8297,14 +8304,15 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
     BinOp = new VPWidenRecipe(*ReductionI, Ops, VPIRFlags(*ReductionI),
                               VPIRMetadata(), ReductionI->getDebugLoc());
     Builder.insert(BinOp->getDefiningRecipe());
-    ReductionOpcode = Instruction::Add;
   }
 
   VPValue *Cond = nullptr;
   if (CM.blockNeedsPredicationForAnyReason(ReductionI->getParent()))
     Cond = getBlockInMask(Builder.getInsertBlock());
-  return new VPPartialReductionRecipe(ReductionOpcode, Accumulator, BinOp, Cond,
-                                      ScaleFactor, ReductionI);
+
+  return new VPReductionRecipe(
+      RecurKind::Add, FastMathFlags(), ReductionI, Accumulator, BinOp, Cond,
+      RdxUnordered{/*VFScaleFactor=*/ScaleFactor}, ReductionI->getDebugLoc());
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -8336,6 +8344,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     if (auto Plan = tryToBuildVPlanWithVPRecipes(
             std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange, &LVer)) {
       // Now optimize the initial VPlan.
+      VPlanTransforms::hoistPredicatedLoads(*Plan, *PSE.getSE(), OrigLoop);
       VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
                                *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
@@ -8794,9 +8803,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (CM.blockNeedsPredicationForAnyReason(CurrentLinkI->getParent()))
         CondOp = RecipeBuilder.getBlockInMask(CurrentLink->getParent());
 
-      auto *RedRecipe = new VPReductionRecipe(
-          Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
-          PhiR->isOrdered(), CurrentLinkI->getDebugLoc());
+      ReductionStyle Style = getReductionStyle(true, PhiR->isOrdered(), 1);
+      auto *RedRecipe =
+          new VPReductionRecipe(Kind, FMFs, CurrentLinkI, PreviousLink, VecOp,
+                                CondOp, Style, CurrentLinkI->getDebugLoc());
       // Append the recipe to the end of the VPBasicBlock because we need to
       // ensure that it comes after all of it's inputs, including CondOp.
       // Delete CurrentLink as it will be invalid if its operand is replaced
@@ -8831,8 +8841,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // Don't output selects for partial reductions because they have an output
     // with fewer lanes than the VF. So the operands of the select would have
     // different numbers of lanes. Partial reductions mask the input instead.
+    auto *RR = dyn_cast<VPReductionRecipe>(OrigExitingVPV->getDefiningRecipe());
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
-        !isa<VPPartialReductionRecipe>(OrigExitingVPV)) {
+        (!RR || !RR->isPartialReduction())) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(PhiR->getParent());
       std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()
@@ -8929,7 +8940,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_ExtractLastElement(m_VPValue())))
+      if (match(U, m_CombineOr(m_ExtractLastElement(m_VPValue()),
+                               m_ExtractLane(m_VPValue(), m_VPValue()))))
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 

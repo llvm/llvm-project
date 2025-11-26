@@ -1869,8 +1869,28 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Check if an Instruction is a BTI landing pad with the required properties.
+  /// Takes both explicit and implicit BTIs into account.
+  virtual bool isBTILandingPad(MCInst &Inst, bool CallTarget,
+                               bool JumpTarget) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Check if an Instruction is an implicit BTI c landing pad.
+  virtual bool isImplicitBTIC(MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// Create a BTI landing pad instruction.
   virtual void createBTI(MCInst &Inst, bool CallTarget, bool JumpTarget) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Update operand of BTI instruction.
+  virtual void updateBTIVariant(MCInst &Inst, bool CallTarget,
+                                bool JumpTarget) const {
     llvm_unreachable("not implemented");
   }
 
