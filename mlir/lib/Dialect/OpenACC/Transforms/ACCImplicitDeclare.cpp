@@ -289,9 +289,9 @@ static void hoistNonConstantDirectUses(AccConstructT accOp,
 // Collects the globals referenced in a device region
 static void collectGlobalsFromDeviceRegion(mlir::Region &region,
                                            GlobalOpSetT &globals,
-                                           acc::OpenACCSupport &accSupport) {
+                                           acc::OpenACCSupport &accSupport,
+                                           SymbolTable &symTab) {
   auto mod = region.getParentOfType<mlir::ModuleOp>();
-  auto symTab = SymbolTable(mod);
   region.walk([&](Operation *op) {
     // 1) Only consider relevant operations which use symbols
     auto addrOfOp = dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(op);
@@ -354,51 +354,58 @@ public:
     // 2) Collect global symbols which need to be `acc declare`d. Do it for
     // compute regions, acc routine, and existing globals with the declare
     // attribute.
+    SymbolTable symTab(mod);
     GlobalOpSetT globalsToAccDeclare;
     mod.walk([&](Operation *op) {
       TypeSwitch<Operation *, void>(op)
           .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(
               [&](auto accOp) {
-                collectGlobalsFromDeviceRegion(accOp.getRegion(),
-                                               globalsToAccDeclare, accSupport);
+                collectGlobalsFromDeviceRegion(
+                    accOp.getRegion(), globalsToAccDeclare, accSupport, symTab);
               })
           .Case<mlir::FunctionOpInterface>([&](auto func) {
             if (acc::isAccRoutineOp(func) && !func.isExternal())
               collectGlobalsFromDeviceRegion(func.getFunctionBody(),
-                                             globalsToAccDeclare, accSupport);
+                                             globalsToAccDeclare, accSupport,
+                                             symTab);
           })
           .Case<mlir::acc::GlobalVariableOpInterface>([&](auto globalVarOp) {
             if (globalVarOp->getAttr(acc::getDeclareAttrName()))
               if (mlir::Region *initRegion = globalVarOp.getInitRegion())
                 collectGlobalsFromDeviceRegion(*initRegion, globalsToAccDeclare,
-                                               accSupport);
+                                               accSupport, symTab);
           })
           .Case<acc::PrivateRecipeOp>([&](auto privateRecipe) {
             if (hasRelevantRecipeUse(privateRecipe)) {
               collectGlobalsFromDeviceRegion(privateRecipe.getInitRegion(),
-                                             globalsToAccDeclare, accSupport);
+                                             globalsToAccDeclare, accSupport,
+                                             symTab);
               collectGlobalsFromDeviceRegion(privateRecipe.getDestroyRegion(),
-                                             globalsToAccDeclare, accSupport);
+                                             globalsToAccDeclare, accSupport,
+                                             symTab);
             }
           })
           .Case<acc::FirstprivateRecipeOp>([&](auto firstprivateRecipe) {
             if (hasRelevantRecipeUse(firstprivateRecipe)) {
               collectGlobalsFromDeviceRegion(firstprivateRecipe.getInitRegion(),
-                                             globalsToAccDeclare, accSupport);
+                                             globalsToAccDeclare, accSupport,
+                                             symTab);
               collectGlobalsFromDeviceRegion(
                   firstprivateRecipe.getDestroyRegion(), globalsToAccDeclare,
-                  accSupport);
+                  accSupport, symTab);
               collectGlobalsFromDeviceRegion(firstprivateRecipe.getCopyRegion(),
-                                             globalsToAccDeclare, accSupport);
+                                             globalsToAccDeclare, accSupport,
+                                             symTab);
             }
           })
           .Case<acc::ReductionRecipeOp>([&](auto reductionRecipe) {
             if (hasRelevantRecipeUse(reductionRecipe)) {
               collectGlobalsFromDeviceRegion(reductionRecipe.getInitRegion(),
-                                             globalsToAccDeclare, accSupport);
+                                             globalsToAccDeclare, accSupport,
+                                             symTab);
               collectGlobalsFromDeviceRegion(
                   reductionRecipe.getCombinerRegion(), globalsToAccDeclare,
-                  accSupport);
+                  accSupport, symTab);
             }
           });
     });
