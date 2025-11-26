@@ -109,8 +109,14 @@ set(LIBOMP_MIC_ARCH knc CACHE STRING
 if("${LIBOMP_ARCH}" STREQUAL "mic")
   libomp_check_variable(LIBOMP_MIC_ARCH knf knc)
 endif()
-set(LIBOMP_FORTRAN_MODULES "${RUNTIMES_FLANG_MODULES_ENABLED}" CACHE BOOL
-  "Create Fortran module files? (requires fortran compiler)")
+
+if (LLVM_RUNTIMES_BUILD)
+  set(LIBOMP_FORTRAN_MODULES "${RUNTIMES_FLANG_MODULES_ENABLED}" CACHE BOOL
+    "Create Fortran module files? (requires fortran compiler)")
+else ()
+  set(LIBOMP_FORTRAN_MODULES OFF)
+endif ()
+
 
 # - Support for universal fat binary builds on Mac
 # - Having this extra variable allows people to build this library as a universal library

@@ -16,9 +16,6 @@ include(CMakePushCheckState)
 #    build to ensure consistency of real(16) support between compiler and
 #    runtime.
 #
-#  * Does not work with Flang and CMake < 3.24; rely on an externally set
-#    FORTRAN_SUPPORTS_REAL16 instead.
-#
 #  * cmake_push_check_state/cmake_pop_check_state is insufficient to isolate
 #    a compiler introspection environment, see
 #    https://gitlab.kitware.com/cmake/cmake/-/issues/27419
@@ -36,3 +33,4 @@ function (check_fortran_quadmath_support)
   )
   cmake_pop_check_state()
 endfunction ()
+

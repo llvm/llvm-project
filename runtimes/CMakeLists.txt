@@ -85,41 +85,81 @@ include(CheckLibraryExists)
 include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+include(GetToolchainDirs)
 include(ExtendPath)
 
 
-# CMake 3.24 is the first version of CMake that directly recognizes Flang.
-# LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
-if (CMAKE_VERSION VERSION_LESS "3.24" AND CMAKE_Fortran_COMPILER)
-  cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
-  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR
-      _Fortran_COMPILER_STEM STREQUAL "flang")
-    include(CMakeForceCompiler)
-    CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
+# Check whether the build environment supports building Fortran modules
+# flang-rt and openmp are the only runtimes that contain Fortran modules.
+set(FORTRAN_MODULE_DEPS "")
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+  # CMake 3.24 is the first version of CMake that directly recognizes Flang.
+  # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
+  if (CMAKE_VERSION VERSION_LESS "3.24" AND CMAKE_Fortran_COMPILER)
+    cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
+    if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR
+        _Fortran_COMPILER_STEM STREQUAL "flang")
+      include(CMakeForceCompiler)
+      CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
 
-    set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
-    set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
+      set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
+      set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
 
-    set(CMAKE_Fortran_SUBMODULE_SEP "-")
-    set(CMAKE_Fortran_SUBMODULE_EXT ".mod")
+      set(CMAKE_Fortran_SUBMODULE_SEP "-")
+      set(CMAKE_Fortran_SUBMODULE_EXT ".mod")
 
-    set(CMAKE_Fortran_PREPROCESS_SOURCE
-      "<CMAKE_Fortran_COMPILER> -cpp <DEFINES> <INCLUDES> <FLAGS> -E <SOURCE> > <PREPROCESSED_SOURCE>")
+      set(CMAKE_Fortran_PREPROCESS_SOURCE
+        "<CMAKE_Fortran_COMPILER> -cpp <DEFINES> <INCLUDES> <FLAGS> -E <SOURCE> > <PREPROCESSED_SOURCE>")
 
-    set(CMAKE_Fortran_FORMAT_FIXED_FLAG "-ffixed-form")
-    set(CMAKE_Fortran_FORMAT_FREE_FLAG "-ffree-form")
+      set(CMAKE_Fortran_FORMAT_FIXED_FLAG "-ffixed-form")
+      set(CMAKE_Fortran_FORMAT_FREE_FLAG "-ffree-form")
 
-    set(CMAKE_Fortran_MODDIR_FLAG "-J")
+      set(CMAKE_Fortran_MODDIR_FLAG "-J")
 
-    set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_ON "-cpp")
-    set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_OFF "-nocpp")
-    set(CMAKE_Fortran_POSTPROCESS_FLAG "-ffixed-line-length-72")
+      set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_ON "-cpp")
+      set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_OFF "-nocpp")
+      set(CMAKE_Fortran_POSTPROCESS_FLAG "-ffixed-line-length-72")
 
-    set(CMAKE_Fortran_COMPILE_OPTIONS_TARGET "--target=")
+      set(CMAKE_Fortran_COMPILE_OPTIONS_TARGET "--target=")
 
-    set(CMAKE_Fortran_LINKER_WRAPPER_FLAG "-Wl,")
-    set(CMAKE_Fortran_LINKER_WRAPPER_FLAG_SEP ",")
+      set(CMAKE_Fortran_LINKER_WRAPPER_FLAG "-Wl,")
+      set(CMAKE_Fortran_LINKER_WRAPPER_FLAG_SEP ",")
+    endif ()
   endif ()
+
+  include(HandleFortran)
+  include(CheckFortranSourceCompiles)
+  include(CheckLanguage)
+
+  set(RUNTIMES_FLANG_MODULES_ENABLED_default OFF)
+  check_language(Fortran)
+  if (CMAKE_Fortran_COMPILER)
+    enable_language(Fortran)
+
+    if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang" AND "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+      # In a bootstrapping build (or any runtimes-build that includes flang-rt),
+      # the intrinsic modules are not built yet. Targets can depend on
+      # flang-rt-mod to ensure that flang-rt's modules are built first.
+      set(FORTRAN_MODULE_DEPS flang-rt-mod)
+      set(RUNTIMES_FLANG_MODULES_ENABLED_default ON)
+    else ()
+      # Check whether building modules works, avoid causing the entire build to
+      # fail because of Fortran. The primary situation we want to support here
+      # is Flang or its intrinsic modules were built separately in a
+      # non-bootstrapping build.
+      check_fortran_builtins_available()
+      if (HAVE_FORTRAN_INTRINSIC_MODS)
+        set(RUNTIMES_FLANG_MODULES_ENABLED_default ON)
+        message(STATUS "${LLVM_SUBPROJECT_TITLE}: Non-bootstrapping Fortran modules build (${CMAKE_Fortran_COMPILER_ID} located at ${CMAKE_Fortran_COMPILER})")
+      else ()
+        message(STATUS "Not compiling Flang modules: Not passing smoke check")
+      endif ()
+    endif ()
+  endif ()
+
+  option(RUNTIMES_FLANG_MODULES_ENABLED "Build Fortran modules" "${RUNTIMES_FLANG_MODULES_ENABLED_default}")
+else ()
+  set(RUNTIMES_FLANG_MODULES_ENABLED NO)
 endif ()
 
 
@@ -242,7 +282,26 @@ message(STATUS "LLVM default target triple: ${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 
+if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+  set(option_prefix "")
+  if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
+    set(option_prefix "/clang:")
+  endif()
+  set(print_target_triple ${CMAKE_C_COMPILER} ${option_prefix}--target=${LLVM_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple)
+  execute_process(COMMAND ${print_target_triple}
+    RESULT_VARIABLE result
+    OUTPUT_VARIABLE output
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(result EQUAL 0)
+    set(LLVM_DEFAULT_TARGET_TRIPLE ${output})
+  else()
+    string(REPLACE ";" " " print_target_triple "${print_target_triple}")
+    # TODO(#97876): Report an error.
+    message(WARNING "Failed to execute `${print_target_triple}` to normalize target triple.")
+  endif()
+endif()
 
+# Determine output and install paths based on LLVM_TARGET_TRIPLE
 if(LLVM_TREE_AVAILABLE)
   # In a bootstrap build emit the libraries into a default search path in the
   # build directory of the just-built compiler. This allows using the
@@ -284,7 +343,6 @@ endif()
 #        But the linker as invoked by the Flang driver also requires
 #        libflang_rt.so to be found when linking and the resource lib dir is
 #        the only reliable location.
-include(GetToolchainDirs)
 get_toolchain_library_subdir(toolchain_lib_subdir)
 extend_path(RUNTIMES_OUTPUT_RESOURCE_LIB_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_lib_subdir}")
 
@@ -297,24 +355,29 @@ cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_LIB_DIR)
 cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
 
 
-if(CMAKE_C_COMPILER_ID MATCHES "Clang")
-  set(option_prefix "")
-  if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
-    set(option_prefix "/clang:")
-  endif()
-  set(print_target_triple ${CMAKE_C_COMPILER} ${option_prefix}--target=${LLVM_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple)
-  execute_process(COMMAND ${print_target_triple}
-    RESULT_VARIABLE result
-    OUTPUT_VARIABLE output
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if(result EQUAL 0)
-    set(LLVM_DEFAULT_TARGET_TRIPLE ${output})
-  else()
-    string(REPLACE ";" " " print_target_triple "${print_target_triple}")
-    # TODO(#97876): Report an error.
-    message(WARNING "Failed to execute `${print_target_triple}` to normalize target triple.")
-  endif()
-endif()
+if (RUNTIMES_FLANG_MODULES_ENABLED)
+  if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+    # Flang expects its builtin modules in Clang's resource directory
+    get_toolchain_module_subdir(toolchain_mod_subdir)
+    extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_mod_subdir}")
+    extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "${toolchain_mod_subdir}")
+  else ()
+    # For non-Flang compilers, avoid the risk of Flang accidentally picking them up.
+    extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
+    extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
+  endif ()
+  cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_MOD_DIR)
+  cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_MOD_PATH)
+
+  # No way to find out which mod files are built by a target, so install the
+  # entire output directory
+  # https://stackoverflow.com/questions/52712416/cmake-fortran-module-directory-to-be-used-with-add-library
+  set(destination "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")
+  cmake_path(NORMAL_PATH destination)
+    install(DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
+      DESTINATION "${destination}"
+    )
+endif ()
 
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)
@@ -407,127 +470,6 @@ if(LLVM_INCLUDE_TESTS)
 
   umbrella_lit_testsuite_begin(check-runtimes)
 endif()
-
-
-include(CheckFortranSourceCompiles)
-
-# Enable building Fortran modules
-#  * Set up the Fortran compiler
-#  * Determine files location in the Clang/Flang resource dir
-#  * Install module files
-macro (flang_module_fortran_enable)
-  # Assume flang modules are enabled until all tests pass
-  set(FORTRAN_MODULE_DEPS "")
-  set(RUNTIMES_FLANG_MODULES_ENABLED_default OFF)
-
-  include(CheckLanguage)
-  check_language(Fortran)
-
-  if (CMAKE_Fortran_COMPILER)
-    enable_language(Fortran)
-
-    if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang" AND "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-      # In a bootstrapping build, the intrinsic modules are not built yet.
-      # Targets can depend on flang-rt-mod to ensure they are built before.
-      set(FORTRAN_MODULE_DEPS flang-rt-mod)
-      set(RUNTIMES_FLANG_MODULES_ENABLED_default ON)
-      message(STATUS "${LLVM_SUBPROJECT_TITLE}: Building Fortran modules for Flang bootstrapping itself")
-    else ()
-      # Check whether building modules works, avoid causing the entire build to fail because of Fortran.
-      # The primary situation we want to support here is Flang or its intrinsic modules were built separately in a non-bootstrapping build.
-      cmake_push_check_state(RESET)
-      set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
-      check_fortran_source_compiles("
-        subroutine testroutine
-          use iso_c_binding
-          end subroutine
-        " HAVE_FORTRAN_INTRINSIC_MODS SRC_EXT F90)
-      cmake_pop_check_state()
-      if (HAVE_FORTRAN_INTRINSIC_MODS)
-        set(RUNTIMES_FLANG_MODULES_ENABLED_default ON)
-        message(STATUS "${LLVM_SUBPROJECT_TITLE}: Non-bootstrapping Fortran modules build (${CMAKE_Fortran_COMPILER_ID} located at ${CMAKE_Fortran_COMPILER})")
-      else ()
-        message(STATUS "Not compiling Flang modules: Not passing smoke check")
-      endif ()
-    endif ()
-  else ()
-    message(STATUS "Not compiling Flang modules: Fortran not enabled")
-  endif ()
-
-  option(RUNTIMES_FLANG_MODULES_ENABLED "Build Fortran modules" "${RUNTIMES_FLANG_MODULES_ENABLED_default}")
-
-  if (RUNTIMES_FLANG_MODULES_ENABLED)
-    if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
-      get_toolchain_module_subdir(toolchain_mod_subdir)
-      extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_mod_subdir}")
-      extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "${toolchain_mod_subdir}")
-    else ()
-      # For non-Flang compilers, avoid the risk of Flang accidentally picking them up.
-      extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
-      extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
-    endif ()
-    cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_MOD_DIR)
-    cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_MOD_PATH)
-
-    # Avoid module files to be installed multiple times if this macro is called multiple times
-    get_property(is_installed GLOBAL PROPERTY RUNTIMES_MODS_INSTALLED)
-    if (NOT is_installed)
-      # No way to find out which mod files built by target individually, so install the entire output directory
-      # https://stackoverflow.com/questions/52712416/cmake-fortran-module-directory-to-be-used-with-add-library
-      set(destination "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")
-      cmake_path(NORMAL_PATH destination)
-      install(DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
-        DESTINATION "${destination}"
-      )
-      set_property(GLOBAL PROPERTY RUNTIMES_MODS_INSTALLED TRUE)
-    endif ()
-  endif ()
-endmacro ()
-
-
-# Set options to compile Fortran module files.
-#
-# Usage:
-#
-# flang_module_target(name
-#   PUBLIC
-#     Modules files are to be used by other Fortran sources. If a library is
-#     compiled multiple times (e.g. static/shared, or msvcrt variants), only
-#     one of those can be public module files; non-public modules are still
-#     generated but to be forgotten deep inside the build directory to not
-#     conflict with each other.
-#     Also, installs the module with the toolchain.
-# )
-function (flang_module_target tgtname)
-  set(options PUBLIC)
-  cmake_parse_arguments(ARG
-    "${options}"
-    ""
-    ""
-    ${ARGN})
-
-  if (NOT RUNTIMES_FLANG_MODULES_ENABLED)
-    return ()
-  endif ()
-
-  # Let it find the other public module files
-  target_compile_options(${tgtname} PRIVATE
-      "$<$<COMPILE_LANGUAGE:Fortran>:-fintrinsic-modules-path=${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}>"
-    )
-
-  if (ARG_PUBLIC)
-    set_target_properties(${tgtname}
-      PROPERTIES
-        Fortran_MODULE_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
-      )
-  else ()
-    set_target_properties(${tgtname}
-      PROPERTIES
-        Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${tgtname}.mod"
-      )
-  endif ()
-endfunction ()
-
 
 # We do this in two loops so that HAVE_* is set for each runtime before the
 # other runtimes are added.

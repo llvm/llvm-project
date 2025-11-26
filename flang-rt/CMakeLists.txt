@@ -43,12 +43,10 @@ include(CMakePushCheckState)
 ############################
 
 # Path to LLVM development tools (FileCheck, llvm-lit, not, ...)
-set(LLVM_TOOLS_DIR "${LLVM_BINARY_DIR}/bin")
+set(LLVM_TOOLS_DIR "${LLVM_TOOLS_BINARY_DIR}")
 
 # Fortran compiler not optional for building Flang-RT
 enable_language(Fortran)
-
-flang_module_fortran_enable()
 
 
 #################
@@ -72,12 +70,11 @@ endif ()
 
 if (LLVM_RUNTIMES_TARGET MATCHES "^amdgcn|^nvptx")
   # Compiling libraries for offload targets is currently experimental;
-  # only build the buildtin modules by default.
+  # Only build the builtin modules by default.
   set(FLANG_RT_ENABLE_STATIC_default OFF)
 else ()
   set(FLANG_RT_ENABLE_STATIC_default ON)
 endif ()
-
 option(FLANG_RT_ENABLE_STATIC "Build Flang-RT as a static library." "${FLANG_RT_ENABLE_STATIC_default}")
 if (WIN32)
   # Windows DLL currently not implemented.
@@ -96,8 +93,8 @@ endif ()
 if (FLANG_RT_ENABLE_STATIC OR FLANG_RT_ENABLE_SHARED)
   option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
 else ()
-  # Tests require at least one libraries
-  message(STATUS "Testing disabled without either FLANG_RT_ENABLE_STATIC or FLANG_RT_ENABLE_SHARED")
+  # Tests require at least one of the libraries
+  message(STATUS "Testing disabled without either FLANG_RT_ENABLE_STATIC OR FLANG_RT_ENABLE_SHARED")
   set(FLANG_RT_INCLUDE_TESTS OFF)
 endif ()
 
