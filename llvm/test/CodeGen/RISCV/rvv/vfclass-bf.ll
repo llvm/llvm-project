@@ -4,11 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+experimental-zvfbfa \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s
 
-declare <vscale x 1 x i16> @llvm.riscv.vfclass.nxv1i16.nxv1bf16(
-  <vscale x 1 x i16>,
-  <vscale x 1 x bfloat>,
-  iXLen);
-
 define <vscale x 1 x i16> @intrinsic_vfclass_v_nxv1i16_nxv1bf16(
 ; CHECK-LABEL: intrinsic_vfclass_v_nxv1i16_nxv1bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -25,12 +20,6 @@ entry:
 
   ret <vscale x 1 x i16> %a
 }
-
-declare <vscale x 1 x i16> @llvm.riscv.vfclass.mask.nxv1i16.nxv1bf16(
-  <vscale x 1 x i16>,
-  <vscale x 1 x bfloat>,
-  <vscale x 1 x i1>,
-  iXLen, iXLen);
 
 define <vscale x 1 x i16> @intrinsic_vfclass_mask_v_nxv1i16_nxv1bf16(
 ; CHECK-LABEL: intrinsic_vfclass_mask_v_nxv1i16_nxv1bf16:
@@ -52,11 +41,6 @@ entry:
   ret <vscale x 1 x i16> %a
 }
 
-declare <vscale x 2 x i16> @llvm.riscv.vfclass.nxv2i16.nxv2bf16(
-  <vscale x 2 x i16>,
-  <vscale x 2 x bfloat>,
-  iXLen);
-
 define <vscale x 2 x i16> @intrinsic_vfclass_v_nxv2i16_nxv2bf16(
 ; CHECK-LABEL: intrinsic_vfclass_v_nxv2i16_nxv2bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -73,12 +57,6 @@ entry:
 
   ret <vscale x 2 x i16> %a
 }
-
-declare <vscale x 2 x i16> @llvm.riscv.vfclass.mask.nxv2i16.nxv2bf16(
-  <vscale x 2 x i16>,
-  <vscale x 2 x bfloat>,
-  <vscale x 2 x i1>,
-  iXLen, iXLen);
 
 define <vscale x 2 x i16> @intrinsic_vfclass_mask_v_nxv2i16_nxv2bf16(
 ; CHECK-LABEL: intrinsic_vfclass_mask_v_nxv2i16_nxv2bf16:
@@ -100,11 +78,6 @@ entry:
   ret <vscale x 2 x i16> %a
 }
 
-declare <vscale x 4 x i16> @llvm.riscv.vfclass.nxv4i16.nxv4bf16(
-  <vscale x 4 x i16>,
-  <vscale x 4 x bfloat>,
-  iXLen);
-
 define <vscale x 4 x i16> @intrinsic_vfclass_v_nxv4i16_nxv4bf16(
 ; CHECK-LABEL: intrinsic_vfclass_v_nxv4i16_nxv4bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -121,12 +94,6 @@ entry:
 
   ret <vscale x 4 x i16> %a
 }
-
-declare <vscale x 4 x i16> @llvm.riscv.vfclass.mask.nxv4i16.nxv4bf16(
-  <vscale x 4 x i16>,
-  <vscale x 4 x bfloat>,
-  <vscale x 4 x i1>,
-  iXLen, iXLen);
 
 define <vscale x 4 x i16> @intrinsic_vfclass_mask_v_nxv4i16_nxv4bf16(
 ; CHECK-LABEL: intrinsic_vfclass_mask_v_nxv4i16_nxv4bf16:
@@ -148,11 +115,6 @@ entry:
   ret <vscale x 4 x i16> %a
 }
 
-declare <vscale x 8 x i16> @llvm.riscv.vfclass.nxv8i16.nxv8bf16(
-  <vscale x 8 x i16>,
-  <vscale x 8 x bfloat>,
-  iXLen);
-
 define <vscale x 8 x i16> @intrinsic_vfclass_v_nxv8i16_nxv8bf16(
 ; CHECK-LABEL: intrinsic_vfclass_v_nxv8i16_nxv8bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -169,12 +131,6 @@ entry:
 
   ret <vscale x 8 x i16> %a
 }
-
-declare <vscale x 8 x i16> @llvm.riscv.vfclass.mask.nxv8i16.nxv8bf16(
-  <vscale x 8 x i16>,
-  <vscale x 8 x bfloat>,
-  <vscale x 8 x i1>,
-  iXLen, iXLen);
 
 define <vscale x 8 x i16> @intrinsic_vfclass_mask_v_nxv8i16_nxv8bf16(
 ; CHECK-LABEL: intrinsic_vfclass_mask_v_nxv8i16_nxv8bf16:
@@ -196,11 +152,6 @@ entry:
   ret <vscale x 8 x i16> %a
 }
 
-declare <vscale x 16 x i16> @llvm.riscv.vfclass.nxv16i16.nxv16bf16(
-  <vscale x 16 x i16>,
-  <vscale x 16 x bfloat>,
-  iXLen);
-
 define <vscale x 16 x i16> @intrinsic_vfclass_v_nxv16i16_nxv16bf16(
 ; CHECK-LABEL: intrinsic_vfclass_v_nxv16i16_nxv16bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -217,12 +168,6 @@ entry:
 
   ret <vscale x 16 x i16> %a
 }
-
-declare <vscale x 16 x i16> @llvm.riscv.vfclass.mask.nxv16i16.nxv16bf16(
-  <vscale x 16 x i16>,
-  <vscale x 16 x bfloat>,
-  <vscale x 16 x i1>,
-  iXLen, iXLen);
 
 define <vscale x 16 x i16> @intrinsic_vfclass_mask_v_nxv16i16_nxv16bf16(
 ; CHECK-LABEL: intrinsic_vfclass_mask_v_nxv16i16_nxv16bf16:
@@ -244,11 +189,6 @@ entry:
   ret <vscale x 16 x i16> %a
 }
 
-declare <vscale x 32 x i16> @llvm.riscv.vfclass.nxv32i16.nxv32bf16(
-  <vscale x 32 x i16>,
-  <vscale x 32 x bfloat>,
-  iXLen);
-
 define <vscale x 32 x i16> @intrinsic_vfclass_v_nxv32i16_nxv32bf16(
 ; CHECK-LABEL: intrinsic_vfclass_v_nxv32i16_nxv32bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -265,12 +205,6 @@ entry:
 
   ret <vscale x 32 x i16> %a
 }
-
-declare <vscale x 32 x i16> @llvm.riscv.vfclass.mask.nxv32i16.nxv32bf16(
-  <vscale x 32 x i16>,
-  <vscale x 32 x bfloat>,
-  <vscale x 32 x i1>,
-  iXLen, iXLen);
 
 define <vscale x 32 x i16> @intrinsic_vfclass_mask_v_nxv32i16_nxv32bf16(
 ; CHECK-LABEL: intrinsic_vfclass_mask_v_nxv32i16_nxv32bf16:

@@ -11,8 +11,6 @@
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s \
 ; RUN:   --check-prefixes=CHECK,ZVFHMIN,ZVFHMIN64
 
-declare <7 x i1> @llvm.vp.fcmp.v7f16(<7 x half>, <7 x half>, metadata, <7 x i1>, i32)
-
 define <7 x i1> @fcmp_oeq_vv_v7f16(<7 x half> %va, <7 x half> %vb, <7 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: fcmp_oeq_vv_v7f16:
 ; ZVFH:       # %bb.0:
@@ -32,8 +30,6 @@ define <7 x i1> @fcmp_oeq_vv_v7f16(<7 x half> %va, <7 x half> %vb, <7 x i1> %m, 
   %v = call <7 x i1> @llvm.vp.fcmp.v7f16(<7 x half> %va, <7 x half> %vb, metadata !"oeq", <7 x i1> %m, i32 %evl)
   ret <7 x i1> %v
 }
-
-declare <8 x i1> @llvm.vp.fcmp.v8f16(<8 x half>, <8 x half>, metadata, <8 x i1>, i32)
 
 define <8 x i1> @fcmp_oeq_vv_v8f16(<8 x half> %va, <8 x half> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: fcmp_oeq_vv_v8f16:
@@ -1054,8 +1050,6 @@ define <8 x i1> @fcmp_uno_vf_swap_v8f16(<8 x half> %va, half %b, <8 x i1> %m, i3
   %v = call <8 x i1> @llvm.vp.fcmp.v8f16(<8 x half> %vb, <8 x half> %va, metadata !"uno", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
-
-declare <128 x i1> @llvm.vp.fcmp.v128f16(<128 x half>, <128 x half>, metadata, <128 x i1>, i32)
 
 define <128 x i1> @fcmp_oeq_vv_v128f16(<128 x half> %va, <128 x half> %vb, <128 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: fcmp_oeq_vv_v128f16:
@@ -3361,8 +3355,6 @@ define <128 x i1> @fcmp_oeq_vv_v128f16(<128 x half> %va, <128 x half> %vb, <128 
   ret <128 x i1> %v
 }
 
-declare <7 x i1> @llvm.vp.fcmp.v7f64(<7 x double>, <7 x double>, metadata, <7 x i1>, i32)
-
 define <7 x i1> @fcmp_oeq_vv_v7f64(<7 x double> %va, <7 x double> %vb, <7 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fcmp_oeq_vv_v7f64:
 ; CHECK:       # %bb.0:
@@ -3373,8 +3365,6 @@ define <7 x i1> @fcmp_oeq_vv_v7f64(<7 x double> %va, <7 x double> %vb, <7 x i1> 
   %v = call <7 x i1> @llvm.vp.fcmp.v7f64(<7 x double> %va, <7 x double> %vb, metadata !"oeq", <7 x i1> %m, i32 %evl)
   ret <7 x i1> %v
 }
-
-declare <8 x i1> @llvm.vp.fcmp.v8f64(<8 x double>, <8 x double>, metadata, <8 x i1>, i32)
 
 define <8 x i1> @fcmp_oeq_vv_v8f64(<8 x double> %va, <8 x double> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fcmp_oeq_vv_v8f64:
@@ -3913,8 +3903,6 @@ define <8 x i1> @fcmp_uno_vf_swap_v8f64(<8 x double> %va, double %b, <8 x i1> %m
   %v = call <8 x i1> @llvm.vp.fcmp.v8f64(<8 x double> %vb, <8 x double> %va, metadata !"uno", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
 }
-
-declare <32 x i1> @llvm.vp.fcmp.v32f64(<32 x double>, <32 x double>, metadata, <32 x i1>, i32)
 
 define <32 x i1> @fcmp_oeq_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fcmp_oeq_vv_v32f64:

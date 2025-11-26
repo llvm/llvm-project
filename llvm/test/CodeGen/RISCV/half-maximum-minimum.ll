@@ -12,8 +12,6 @@
 ; RUN:   -verify-machineinstrs -target-abi lp64 | \
 ; RUN:   FileCheck -check-prefixes=CHECKIZHINX %s
 
-declare half @llvm.minimum.f16(half, half)
-
 define half @fminimum_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: fminimum_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -55,8 +53,6 @@ define half @fminimum_f16(half %a, half %b) nounwind {
   %1 = call half @llvm.minimum.f16(half %a, half %b)
   ret half %1
 }
-
-declare half @llvm.maximum.f16(half, half)
 
 define half @fmaximum_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: fmaximum_f16:

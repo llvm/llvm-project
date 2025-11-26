@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32d -mattr=+v,+zfh,+zvfh,+f,+d -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,RV32 %s
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64d -mattr=+v,+zfh,+zvfh,+f,+d  -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,RV64 %s
 
-declare half @llvm.vector.reduce.fadd.v1f16(half, <1 x half>)
-
 define half @vreduce_fadd_v1f16(<1 x half> %v, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v1f16:
 ; CHECK:       # %bb.0:
@@ -26,8 +24,6 @@ define half @vreduce_ord_fadd_v1f16(<1 x half> %v, half %s) {
   %red = call half @llvm.vector.reduce.fadd.v1f16(half %s, <1 x half> %v)
   ret half %red
 }
-
-declare half @llvm.vector.reduce.fadd.v2f16(half, <2 x half>)
 
 define half @vreduce_fadd_v2f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v2f16:
@@ -57,8 +53,6 @@ define half @vreduce_ord_fadd_v2f16(ptr %x, half %s) {
   ret half %red
 }
 
-declare half @llvm.vector.reduce.fadd.v4f16(half, <4 x half>)
-
 define half @vreduce_fadd_v4f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v4f16:
 ; CHECK:       # %bb.0:
@@ -87,8 +81,6 @@ define half @vreduce_ord_fadd_v4f16(ptr %x, half %s) {
   ret half %red
 }
 
-declare half @llvm.vector.reduce.fadd.v7f16(half, <7 x half>)
-
 define half @vreduce_fadd_v7f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v7f16:
 ; CHECK:       # %bb.0:
@@ -102,8 +94,6 @@ define half @vreduce_fadd_v7f16(ptr %x, half %s) {
   %red = call reassoc half @llvm.vector.reduce.fadd.v7f16(half %s, <7 x half> %v)
   ret half %red
 }
-
-declare half @llvm.vector.reduce.fadd.v8f16(half, <8 x half>)
 
 define half @vreduce_fadd_v8f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v8f16:
@@ -133,8 +123,6 @@ define half @vreduce_ord_fadd_v8f16(ptr %x, half %s) {
   ret half %red
 }
 
-declare half @llvm.vector.reduce.fadd.v16f16(half, <16 x half>)
-
 define half @vreduce_fadd_v16f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v16f16:
 ; CHECK:       # %bb.0:
@@ -162,8 +150,6 @@ define half @vreduce_ord_fadd_v16f16(ptr %x, half %s) {
   %red = call half @llvm.vector.reduce.fadd.v16f16(half %s, <16 x half> %v)
   ret half %red
 }
-
-declare half @llvm.vector.reduce.fadd.v32f16(half, <32 x half>)
 
 define half @vreduce_fadd_v32f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v32f16:
@@ -195,8 +181,6 @@ define half @vreduce_ord_fadd_v32f16(ptr %x, half %s) {
   ret half %red
 }
 
-declare half @llvm.vector.reduce.fadd.v64f16(half, <64 x half>)
-
 define half @vreduce_fadd_v64f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v64f16:
 ; CHECK:       # %bb.0:
@@ -226,8 +210,6 @@ define half @vreduce_ord_fadd_v64f16(ptr %x, half %s) {
   %red = call half @llvm.vector.reduce.fadd.v64f16(half %s, <64 x half> %v)
   ret half %red
 }
-
-declare half @llvm.vector.reduce.fadd.v128f16(half, <128 x half>)
 
 define half @vreduce_fadd_v128f16(ptr %x, half %s) {
 ; CHECK-LABEL: vreduce_fadd_v128f16:
@@ -264,8 +246,6 @@ define half @vreduce_ord_fadd_v128f16(ptr %x, half %s) {
   %red = call half @llvm.vector.reduce.fadd.v128f16(half %s, <128 x half> %v)
   ret half %red
 }
-
-declare float @llvm.vector.reduce.fadd.v1f32(float, <1 x float>)
 
 define float @vreduce_fadd_v1f32(<1 x float> %v, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v1f32:
@@ -318,8 +298,6 @@ define float @vreduce_ord_fwadd_v1f32(<1 x half> %v, float %s) {
   %red = call float @llvm.vector.reduce.fadd.v1f32(float %s, <1 x float> %e)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fadd.v2f32(float, <2 x float>)
 
 define float @vreduce_fadd_v2f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v2f32:
@@ -383,8 +361,6 @@ define float @vreduce_ord_fwadd_v2f32(ptr %x, float %s) {
   ret float %red
 }
 
-declare float @llvm.vector.reduce.fadd.v4f32(float, <4 x float>)
-
 define float @vreduce_fadd_v4f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v4f32:
 ; CHECK:       # %bb.0:
@@ -446,8 +422,6 @@ define float @vreduce_ord_fwadd_v4f32(ptr %x, float %s) {
   %red = call float @llvm.vector.reduce.fadd.v4f32(float %s, <4 x float> %e)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fadd.v7f32(float, <7 x float>)
 
 define float @vreduce_fadd_v7f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v7f32:
@@ -521,9 +495,6 @@ define float @vreduce_fadd_v7f32_neutralstart_fast(ptr %x) {
   ret float %red
 }
 
-
-declare float @llvm.vector.reduce.fadd.v8f32(float, <8 x float>)
-
 define float @vreduce_fadd_v8f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v8f32:
 ; CHECK:       # %bb.0:
@@ -586,8 +557,6 @@ define float @vreduce_ord_fwadd_v8f32(ptr %x, float %s) {
   ret float %red
 }
 
-declare float @llvm.vector.reduce.fadd.v16f32(float, <16 x float>)
-
 define float @vreduce_fadd_v16f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v16f32:
 ; CHECK:       # %bb.0:
@@ -649,8 +618,6 @@ define float @vreduce_ord_fwadd_v16f32(ptr %x, float %s) {
   %red = call float @llvm.vector.reduce.fadd.v16f32(float %s, <16 x float> %e)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fadd.v32f32(float, <32 x float>)
 
 define float @vreduce_fadd_v32f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v32f32:
@@ -717,8 +684,6 @@ define float @vreduce_ord_fwadd_v32f32(ptr %x, float %s) {
   %red = call float @llvm.vector.reduce.fadd.v32f32(float %s, <32 x float> %e)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fadd.v64f32(float, <64 x float>)
 
 define float @vreduce_fadd_v64f32(ptr %x, float %s) {
 ; CHECK-LABEL: vreduce_fadd_v64f32:
@@ -801,8 +766,6 @@ define float @vreduce_ord_fwadd_v64f32(ptr %x, float %s) {
   ret float %red
 }
 
-declare double @llvm.vector.reduce.fadd.v1f64(double, <1 x double>)
-
 define double @vreduce_fadd_v1f64(<1 x double> %v, double %s) {
 ; CHECK-LABEL: vreduce_fadd_v1f64:
 ; CHECK:       # %bb.0:
@@ -854,8 +817,6 @@ define double @vreduce_ord_fwadd_v1f64(<1 x float> %v, double %s) {
   %red = call double @llvm.vector.reduce.fadd.v1f64(double %s, <1 x double> %e)
   ret double %red
 }
-
-declare double @llvm.vector.reduce.fadd.v2f64(double, <2 x double>)
 
 define double @vreduce_fadd_v2f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fadd_v2f64:
@@ -919,8 +880,6 @@ define double @vreduce_ord_fwadd_v2f64(ptr %x, double %s) {
   ret double %red
 }
 
-declare double @llvm.vector.reduce.fadd.v4f64(double, <4 x double>)
-
 define double @vreduce_fadd_v4f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fadd_v4f64:
 ; CHECK:       # %bb.0:
@@ -982,8 +941,6 @@ define double @vreduce_ord_fwadd_v4f64(ptr %x, double %s) {
   %red = call double @llvm.vector.reduce.fadd.v4f64(double %s, <4 x double> %e)
   ret double %red
 }
-
-declare double @llvm.vector.reduce.fadd.v8f64(double, <8 x double>)
 
 define double @vreduce_fadd_v8f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fadd_v8f64:
@@ -1047,8 +1004,6 @@ define double @vreduce_ord_fwadd_v8f64(ptr %x, double %s) {
   ret double %red
 }
 
-declare double @llvm.vector.reduce.fadd.v16f64(double, <16 x double>)
-
 define double @vreduce_fadd_v16f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fadd_v16f64:
 ; CHECK:       # %bb.0:
@@ -1110,8 +1065,6 @@ define double @vreduce_ord_fwadd_v16f64(ptr %x, double %s) {
   %red = call double @llvm.vector.reduce.fadd.v16f64(double %s, <16 x double> %e)
   ret double %red
 }
-
-declare double @llvm.vector.reduce.fadd.v32f64(double, <32 x double>)
 
 define double @vreduce_fadd_v32f64(ptr %x, double %s) {
 ; CHECK-LABEL: vreduce_fadd_v32f64:
@@ -1190,8 +1143,6 @@ define double @vreduce_ord_fwadd_v32f64(ptr %x, double %s) {
   ret double %red
 }
 
-declare half @llvm.vector.reduce.fmin.v2f16(<2 x half>)
-
 define half @vreduce_fmin_v2f16(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v2f16:
 ; CHECK:       # %bb.0:
@@ -1204,8 +1155,6 @@ define half @vreduce_fmin_v2f16(ptr %x) {
   %red = call half @llvm.vector.reduce.fmin.v2f16(<2 x half> %v)
   ret half %red
 }
-
-declare half @llvm.vector.reduce.fmin.v4f16(<4 x half>)
 
 define half @vreduce_fmin_v4f16(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v4f16:
@@ -1246,8 +1195,6 @@ define half @vreduce_fmin_v4f16_nonans_noinfs(ptr %x) {
   ret half %red
 }
 
-declare half @llvm.vector.reduce.fmin.v128f16(<128 x half>)
-
 define half @vreduce_fmin_v128f16(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v128f16:
 ; CHECK:       # %bb.0:
@@ -1265,8 +1212,6 @@ define half @vreduce_fmin_v128f16(ptr %x) {
   ret half %red
 }
 
-declare float @llvm.vector.reduce.fmin.v2f32(<2 x float>)
-
 define float @vreduce_fmin_v2f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v2f32:
 ; CHECK:       # %bb.0:
@@ -1279,8 +1224,6 @@ define float @vreduce_fmin_v2f32(ptr %x) {
   %red = call float @llvm.vector.reduce.fmin.v2f32(<2 x float> %v)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fmin.v4f32(<4 x float>)
 
 define float @vreduce_fmin_v4f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v4f32:
@@ -1321,8 +1264,6 @@ define float @vreduce_fmin_v4f32_nonans_noinfs(ptr %x) {
   ret float %red
 }
 
-declare float @llvm.vector.reduce.fmin.v7f32(<7 x float>)
-
 define float @vreduce_fmin_v7f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v7f32:
 ; CHECK:       # %bb.0:
@@ -1337,8 +1278,6 @@ define float @vreduce_fmin_v7f32(ptr %x) {
   %red = call float @llvm.vector.reduce.fmin.v7f32(<7 x float> %v)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fmin.v128f32(<128 x float>)
 
 define float @vreduce_fmin_v128f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v128f32:
@@ -1363,8 +1302,6 @@ define float @vreduce_fmin_v128f32(ptr %x) {
   ret float %red
 }
 
-declare double @llvm.vector.reduce.fmin.v2f64(<2 x double>)
-
 define double @vreduce_fmin_v2f64(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v2f64:
 ; CHECK:       # %bb.0:
@@ -1377,8 +1314,6 @@ define double @vreduce_fmin_v2f64(ptr %x) {
   %red = call double @llvm.vector.reduce.fmin.v2f64(<2 x double> %v)
   ret double %red
 }
-
-declare double @llvm.vector.reduce.fmin.v4f64(<4 x double>)
 
 define double @vreduce_fmin_v4f64(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v4f64:
@@ -1419,8 +1354,6 @@ define double @vreduce_fmin_v4f64_nonans_noinfs(ptr %x) {
   ret double %red
 }
 
-declare double @llvm.vector.reduce.fmin.v32f64(<32 x double>)
-
 define double @vreduce_fmin_v32f64(ptr %x) {
 ; CHECK-LABEL: vreduce_fmin_v32f64:
 ; CHECK:       # %bb.0:
@@ -1437,8 +1370,6 @@ define double @vreduce_fmin_v32f64(ptr %x) {
   ret double %red
 }
 
-declare half @llvm.vector.reduce.fmax.v2f16(<2 x half>)
-
 define half @vreduce_fmax_v2f16(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v2f16:
 ; CHECK:       # %bb.0:
@@ -1451,8 +1382,6 @@ define half @vreduce_fmax_v2f16(ptr %x) {
   %red = call half @llvm.vector.reduce.fmax.v2f16(<2 x half> %v)
   ret half %red
 }
-
-declare half @llvm.vector.reduce.fmax.v4f16(<4 x half>)
 
 define half @vreduce_fmax_v4f16(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v4f16:
@@ -1493,8 +1422,6 @@ define half @vreduce_fmax_v4f16_nonans_noinfs(ptr %x) {
   ret half %red
 }
 
-declare half @llvm.vector.reduce.fmax.v128f16(<128 x half>)
-
 define half @vreduce_fmax_v128f16(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v128f16:
 ; CHECK:       # %bb.0:
@@ -1512,8 +1439,6 @@ define half @vreduce_fmax_v128f16(ptr %x) {
   ret half %red
 }
 
-declare float @llvm.vector.reduce.fmax.v2f32(<2 x float>)
-
 define float @vreduce_fmax_v2f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v2f32:
 ; CHECK:       # %bb.0:
@@ -1526,8 +1451,6 @@ define float @vreduce_fmax_v2f32(ptr %x) {
   %red = call float @llvm.vector.reduce.fmax.v2f32(<2 x float> %v)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fmax.v4f32(<4 x float>)
 
 define float @vreduce_fmax_v4f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v4f32:
@@ -1568,8 +1491,6 @@ define float @vreduce_fmax_v4f32_nonans_noinfs(ptr %x) {
   ret float %red
 }
 
-declare float @llvm.vector.reduce.fmax.v7f32(<7 x float>)
-
 define float @vreduce_fmax_v7f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v7f32:
 ; CHECK:       # %bb.0:
@@ -1584,8 +1505,6 @@ define float @vreduce_fmax_v7f32(ptr %x) {
   %red = call float @llvm.vector.reduce.fmax.v7f32(<7 x float> %v)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fmax.v128f32(<128 x float>)
 
 define float @vreduce_fmax_v128f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v128f32:
@@ -1610,8 +1529,6 @@ define float @vreduce_fmax_v128f32(ptr %x) {
   ret float %red
 }
 
-declare double @llvm.vector.reduce.fmax.v2f64(<2 x double>)
-
 define double @vreduce_fmax_v2f64(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v2f64:
 ; CHECK:       # %bb.0:
@@ -1624,8 +1541,6 @@ define double @vreduce_fmax_v2f64(ptr %x) {
   %red = call double @llvm.vector.reduce.fmax.v2f64(<2 x double> %v)
   ret double %red
 }
-
-declare double @llvm.vector.reduce.fmax.v4f64(<4 x double>)
 
 define double @vreduce_fmax_v4f64(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v4f64:
@@ -1666,8 +1581,6 @@ define double @vreduce_fmax_v4f64_nonans_noinfs(ptr %x) {
   ret double %red
 }
 
-declare double @llvm.vector.reduce.fmax.v32f64(<32 x double>)
-
 define double @vreduce_fmax_v32f64(ptr %x) {
 ; CHECK-LABEL: vreduce_fmax_v32f64:
 ; CHECK:       # %bb.0:
@@ -1697,8 +1610,6 @@ define float @vreduce_nsz_fadd_v4f32(ptr %x, float %s) {
   %red = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float %s, <4 x float> %v)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fminimum.v2f32(<2 x float>)
 
 define float @vreduce_fminimum_v2f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fminimum_v2f32:
@@ -1734,8 +1645,6 @@ define float @vreduce_fminimum_v2f32_nonans(ptr %x) {
   ret float %red
 }
 
-declare float @llvm.vector.reduce.fminimum.v4f32(<4 x float>)
-
 define float @vreduce_fminimum_v4f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fminimum_v4f32:
 ; CHECK:       # %bb.0:
@@ -1769,8 +1678,6 @@ define float @vreduce_fminimum_v4f32_nonans(ptr %x) {
   %red = call nnan float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %v)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fminimum.v7f32(<7 x float>)
 
 define float @vreduce_fminimum_v7f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fminimum_v7f32:
@@ -1810,8 +1717,6 @@ define float @vreduce_fminimum_v7f32_nonans(ptr %x) {
   ret float %red
 }
 
-declare float @llvm.vector.reduce.fminimum.v8f32(<8 x float>)
-
 define float @vreduce_fminimum_v8f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fminimum_v8f32:
 ; CHECK:       # %bb.0:
@@ -1846,8 +1751,6 @@ define float @vreduce_fminimum_v8f32_nonans(ptr %x) {
   ret float %red
 }
 
-declare float @llvm.vector.reduce.fminimum.v16f32(<16 x float>)
-
 define float @vreduce_fminimum_v16f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fminimum_v16f32:
 ; CHECK:       # %bb.0:
@@ -1881,8 +1784,6 @@ define float @vreduce_fminimum_v16f32_nonans(ptr %x) {
   %red = call nnan float @llvm.vector.reduce.fminimum.v16f32(<16 x float> %v)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fminimum.v32f32(<32 x float>)
 
 define float @vreduce_fminimum_v32f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fminimum_v32f32:
@@ -1919,8 +1820,6 @@ define float @vreduce_fminimum_v32f32_nonans(ptr %x) {
   %red = call nnan float @llvm.vector.reduce.fminimum.v32f32(<32 x float> %v)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fminimum.v64f32(<64 x float>)
 
 define float @vreduce_fminimum_v64f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fminimum_v64f32:
@@ -1968,8 +1867,6 @@ define float @vreduce_fminimum_v64f32_nonans(ptr %x) {
   %red = call nnan float @llvm.vector.reduce.fminimum.v64f32(<64 x float> %v)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fminimum.v128f32(<128 x float>)
 
 define float @vreduce_fminimum_v128f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fminimum_v128f32:
@@ -2080,8 +1977,6 @@ define float @vreduce_fminimum_v128f32_nonans(ptr %x) {
   ret float %red
 }
 
-declare double @llvm.vector.reduce.fminimum.v2f64(<2 x double>)
-
 define double @vreduce_fminimum_v2f64(ptr %x) {
 ; RV32-LABEL: vreduce_fminimum_v2f64:
 ; RV32:       # %bb.0:
@@ -2132,8 +2027,6 @@ define double @vreduce_fminimum_v2f64_nonans(ptr %x) {
   %red = call nnan double @llvm.vector.reduce.fminimum.v2f64(<2 x double> %v)
   ret double %red
 }
-
-declare double @llvm.vector.reduce.fminimum.v4f64(<4 x double>)
 
 define double @vreduce_fminimum_v4f64(ptr %x) {
 ; RV32-LABEL: vreduce_fminimum_v4f64:
@@ -2186,8 +2079,6 @@ define double @vreduce_fminimum_v4f64_nonans(ptr %x) {
   ret double %red
 }
 
-declare double @llvm.vector.reduce.fminimum.v8f64(<8 x double>)
-
 define double @vreduce_fminimum_v8f64(ptr %x) {
 ; RV32-LABEL: vreduce_fminimum_v8f64:
 ; RV32:       # %bb.0:
@@ -2239,8 +2130,6 @@ define double @vreduce_fminimum_v8f64_nonans(ptr %x) {
   ret double %red
 }
 
-declare double @llvm.vector.reduce.fminimum.v16f64(<16 x double>)
-
 define double @vreduce_fminimum_v16f64(ptr %x) {
 ; RV32-LABEL: vreduce_fminimum_v16f64:
 ; RV32:       # %bb.0:
@@ -2291,8 +2180,6 @@ define double @vreduce_fminimum_v16f64_nonans(ptr %x) {
   %red = call nnan double @llvm.vector.reduce.fminimum.v16f64(<16 x double> %v)
   ret double %red
 }
-
-declare double @llvm.vector.reduce.fminimum.v32f64(<32 x double>)
 
 define double @vreduce_fminimum_v32f64(ptr %x) {
 ; RV32-LABEL: vreduce_fminimum_v32f64:
@@ -2363,8 +2250,6 @@ define double @vreduce_fminimum_v32f64_nonans(ptr %x) {
   %red = call nnan double @llvm.vector.reduce.fminimum.v32f64(<32 x double> %v)
   ret double %red
 }
-
-declare double @llvm.vector.reduce.fminimum.v64f64(<64 x double>)
 
 define double @vreduce_fminimum_v64f64(ptr %x) {
 ; RV32-LABEL: vreduce_fminimum_v64f64:
@@ -2554,8 +2439,6 @@ define double @vreduce_fminimum_v64f64_nonans(ptr %x) {
   ret double %red
 }
 
-declare float @llvm.vector.reduce.fmaximum.v2f32(<2 x float>)
-
 define float @vreduce_fmaximum_v2f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmaximum_v2f32:
 ; CHECK:       # %bb.0:
@@ -2590,8 +2473,6 @@ define float @vreduce_fmaximum_v2f32_nonans(ptr %x) {
   ret float %red
 }
 
-declare float @llvm.vector.reduce.fmaximum.v4f32(<4 x float>)
-
 define float @vreduce_fmaximum_v4f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmaximum_v4f32:
 ; CHECK:       # %bb.0:
@@ -2625,8 +2506,6 @@ define float @vreduce_fmaximum_v4f32_nonans(ptr %x) {
   %red = call nnan float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %v)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fmaximum.v7f32(<7 x float>)
 
 define float @vreduce_fmaximum_v7f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmaximum_v7f32:
@@ -2666,8 +2545,6 @@ define float @vreduce_fmaximum_v7f32_nonans(ptr %x) {
   ret float %red
 }
 
-declare float @llvm.vector.reduce.fmaximum.v8f32(<8 x float>)
-
 define float @vreduce_fmaximum_v8f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmaximum_v8f32:
 ; CHECK:       # %bb.0:
@@ -2702,8 +2579,6 @@ define float @vreduce_fmaximum_v8f32_nonans(ptr %x) {
   ret float %red
 }
 
-declare float @llvm.vector.reduce.fmaximum.v16f32(<16 x float>)
-
 define float @vreduce_fmaximum_v16f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmaximum_v16f32:
 ; CHECK:       # %bb.0:
@@ -2737,8 +2612,6 @@ define float @vreduce_fmaximum_v16f32_nonans(ptr %x) {
   %red = call nnan float @llvm.vector.reduce.fmaximum.v16f32(<16 x float> %v)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fmaximum.v32f32(<32 x float>)
 
 define float @vreduce_fmaximum_v32f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmaximum_v32f32:
@@ -2775,8 +2648,6 @@ define float @vreduce_fmaximum_v32f32_nonans(ptr %x) {
   %red = call nnan float @llvm.vector.reduce.fmaximum.v32f32(<32 x float> %v)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fmaximum.v64f32(<64 x float>)
 
 define float @vreduce_fmaximum_v64f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmaximum_v64f32:
@@ -2824,8 +2695,6 @@ define float @vreduce_fmaximum_v64f32_nonans(ptr %x) {
   %red = call nnan float @llvm.vector.reduce.fmaximum.v64f32(<64 x float> %v)
   ret float %red
 }
-
-declare float @llvm.vector.reduce.fmaximum.v128f32(<128 x float>)
 
 define float @vreduce_fmaximum_v128f32(ptr %x) {
 ; CHECK-LABEL: vreduce_fmaximum_v128f32:
@@ -2936,8 +2805,6 @@ define float @vreduce_fmaximum_v128f32_nonans(ptr %x) {
   ret float %red
 }
 
-declare double @llvm.vector.reduce.fmaximum.v2f64(<2 x double>)
-
 define double @vreduce_fmaximum_v2f64(ptr %x) {
 ; RV32-LABEL: vreduce_fmaximum_v2f64:
 ; RV32:       # %bb.0:
@@ -2988,8 +2855,6 @@ define double @vreduce_fmaximum_v2f64_nonans(ptr %x) {
   %red = call nnan double @llvm.vector.reduce.fmaximum.v2f64(<2 x double> %v)
   ret double %red
 }
-
-declare double @llvm.vector.reduce.fmaximum.v4f64(<4 x double>)
 
 define double @vreduce_fmaximum_v4f64(ptr %x) {
 ; RV32-LABEL: vreduce_fmaximum_v4f64:
@@ -3042,8 +2907,6 @@ define double @vreduce_fmaximum_v4f64_nonans(ptr %x) {
   ret double %red
 }
 
-declare double @llvm.vector.reduce.fmaximum.v8f64(<8 x double>)
-
 define double @vreduce_fmaximum_v8f64(ptr %x) {
 ; RV32-LABEL: vreduce_fmaximum_v8f64:
 ; RV32:       # %bb.0:
@@ -3095,8 +2958,6 @@ define double @vreduce_fmaximum_v8f64_nonans(ptr %x) {
   ret double %red
 }
 
-declare double @llvm.vector.reduce.fmaximum.v16f64(<16 x double>)
-
 define double @vreduce_fmaximum_v16f64(ptr %x) {
 ; RV32-LABEL: vreduce_fmaximum_v16f64:
 ; RV32:       # %bb.0:
@@ -3147,8 +3008,6 @@ define double @vreduce_fmaximum_v16f64_nonans(ptr %x) {
   %red = call nnan double @llvm.vector.reduce.fmaximum.v16f64(<16 x double> %v)
   ret double %red
 }
-
-declare double @llvm.vector.reduce.fmaximum.v32f64(<32 x double>)
 
 define double @vreduce_fmaximum_v32f64(ptr %x) {
 ; RV32-LABEL: vreduce_fmaximum_v32f64:
@@ -3219,8 +3078,6 @@ define double @vreduce_fmaximum_v32f64_nonans(ptr %x) {
   %red = call nnan double @llvm.vector.reduce.fmaximum.v32f64(<32 x double> %v)
   ret double %red
 }
-
-declare double @llvm.vector.reduce.fmaximum.v64f64(<64 x double>)
 
 define double @vreduce_fmaximum_v64f64(ptr %x) {
 ; RV32-LABEL: vreduce_fmaximum_v64f64:

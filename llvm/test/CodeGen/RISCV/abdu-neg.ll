@@ -1941,18 +1941,3 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
   ret i128 %sel
 }
 
-declare i8 @llvm.abs.i8(i8, i1)
-declare i16 @llvm.abs.i16(i16, i1)
-declare i32 @llvm.abs.i32(i32, i1)
-declare i64 @llvm.abs.i64(i64, i1)
-declare i128 @llvm.abs.i128(i128, i1)
-
-declare i8 @llvm.umax.i8(i8, i8)
-declare i16 @llvm.umax.i16(i16, i16)
-declare i32 @llvm.umax.i32(i32, i32)
-declare i64 @llvm.umax.i64(i64, i64)
-
-declare i8 @llvm.umin.i8(i8, i8)
-declare i16 @llvm.umin.i16(i16, i16)
-declare i32 @llvm.umin.i32(i32, i32)
-declare i64 @llvm.umin.i64(i64, i64)
