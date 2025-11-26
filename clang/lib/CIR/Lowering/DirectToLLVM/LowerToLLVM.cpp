@@ -2057,7 +2057,7 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
   assert(
       (isa<cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
            cir::ConstPtrAttr, cir::ConstComplexAttr, cir::GlobalViewAttr,
-           cir::TypeInfoAttr, cir::VTableAttr, cir::UndefAttr, cir::ZeroAttr>(
+           cir::TypeInfoAttr, cir::UndefAttr, cir::VTableAttr, cir::ZeroAttr>(
           init)));
 
   // TODO(cir): once LLVM's dialect has proper equivalent attributes this
