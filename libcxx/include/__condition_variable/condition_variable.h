@@ -170,7 +170,7 @@ public:
   wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d, _Predicate __pred);
 
   typedef __libcpp_condvar_t* native_handle_type;
-  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() { return &__cv_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() { return &__cv_; }
 
 private:
   void
