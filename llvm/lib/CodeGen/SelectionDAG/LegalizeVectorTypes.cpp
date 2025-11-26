@@ -6222,14 +6222,14 @@ SDValue DAGTypeLegalizer::WidenVecRes_EXTRACT_SUBVECTOR(SDNode *N) {
 
     Align Alignment = DAG.getReducedAlign(InVT, /*UseABI=*/false);
     SDValue StackPtr = DAG.CreateStackTemporary(InVT.getStoreSize(), Alignment);
-    auto &MF = DAG.getMachineFunction();
-    auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+    MachineFunction &MF = DAG.getMachineFunction();
+    int FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
     auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
 
-    MachineMemOperand *StoreMMO = DAG.getMachineFunction().getMachineMemOperand(
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
         PtrInfo, MachineMemOperand::MOStore,
         LocationSize::beforeOrAfterPointer(), Alignment);
-    MachineMemOperand *LoadMMO = DAG.getMachineFunction().getMachineMemOperand(
+    MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
         PtrInfo, MachineMemOperand::MOLoad,
         LocationSize::beforeOrAfterPointer(), Alignment);
 
@@ -7525,14 +7525,14 @@ SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {
 
     Align Alignment = DAG.getReducedAlign(VT, /*UseABI=*/false);
     SDValue StackPtr = DAG.CreateStackTemporary(VT.getStoreSize(), Alignment);
-    auto &MF = DAG.getMachineFunction();
-    auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+    MachineFunction &MF = DAG.getMachineFunction();
+    int FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
     auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
 
-    MachineMemOperand *StoreMMO = DAG.getMachineFunction().getMachineMemOperand(
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
         PtrInfo, MachineMemOperand::MOStore,
         LocationSize::beforeOrAfterPointer(), Alignment);
-    MachineMemOperand *LoadMMO = DAG.getMachineFunction().getMachineMemOperand(
+    MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
         PtrInfo, MachineMemOperand::MOLoad,
         LocationSize::beforeOrAfterPointer(), Alignment);
 
