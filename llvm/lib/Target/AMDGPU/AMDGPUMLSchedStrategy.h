@@ -20,6 +20,8 @@ class AMDGPUMLSchedStrategy final : public GCNSchedStrategy {
 protected:
   bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
                     SchedBoundary *Zone) const override;
+  bool tryPendingCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                           SchedBoundary *Zone) const override;
 
 public:
   AMDGPUMLSchedStrategy(const MachineSchedContext *C);

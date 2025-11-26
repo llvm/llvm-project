@@ -13,6 +13,10 @@
 
 #include "AMDGPUMLSchedStrategy.h"
 
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "machine-scheduler"
+
 using namespace llvm;
 
 AMDGPUMLSchedStrategy::AMDGPUMLSchedStrategy(const MachineSchedContext *C)
@@ -116,6 +120,74 @@ bool AMDGPUMLSchedStrategy::tryCandidate(SchedCandidate &Cand,
       TryCand.Reason = NodeOrder;
       return true;
     }
+  }
+
+  return false;
+}
+
+bool AMDGPUMLSchedStrategy::tryPendingCandidate(SchedCandidate &Cand,
+                                                SchedCandidate &TryCand,
+                                                SchedBoundary *Zone) const {
+  // Initialize the candidate if needed.
+  if (!Cand.isValid()) {
+    TryCand.Reason = NodeOrder;
+    return true;
+  }
+
+  // Bias PhysReg Defs and copies to their uses and defined respectively.
+  if (tryGreater(biasPhysReg(TryCand.SU, TryCand.AtTop),
+                 biasPhysReg(Cand.SU, Cand.AtTop), TryCand, Cand, PhysReg))
+    return TryCand.Reason != NoCand;
+
+  // Avoid exceeding the target's limit.
+  if (DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.Excess, Cand.RPDelta.Excess, TryCand, Cand,
+                  RegExcess, TRI, DAG->MF))
+    return TryCand.Reason != NoCand;
+
+  // Avoid increasing the max critical pressure in the scheduled region.
+  if (DAG->isTrackingPressure() &&
+      tryPressure(TryCand.RPDelta.CriticalMax, Cand.RPDelta.CriticalMax,
+                  TryCand, Cand, RegCritical, TRI, DAG->MF))
+    return TryCand.Reason != NoCand;
+
+  bool SameBoundary = Zone != nullptr;
+  if (SameBoundary) {
+    // Compare effective stall cycles between candidates.
+    // Effective stall = max(structural stall, latency stall)
+    // - Structural stalls: resource/hazard constraints (HW not ready)
+    // - Latency stalls: data dependency constraints (operands not ready)
+    //
+    // This allows picking a pending instruction with structural stalls over
+    // an available instruction with higher latency stalls (e.g., scheduling
+    // a WMMA while waiting for a memory load result).
+    unsigned TryStructStall = getStructuralStallCycles(*Zone, TryCand.SU);
+    unsigned TryLatencyStall = Zone->getLatencyStallCycles(TryCand.SU);
+    unsigned TryEffectiveStall = std::max(TryStructStall, TryLatencyStall);
+
+    unsigned CandStructStall = getStructuralStallCycles(*Zone, Cand.SU);
+    unsigned CandLatencyStall = Zone->getLatencyStallCycles(Cand.SU);
+    unsigned CandEffectiveStall = std::max(CandStructStall, CandLatencyStall);
+
+    LLVM_DEBUG(if (TryEffectiveStall || CandEffectiveStall) {
+      dbgs() << "Effective stalls: try=" << TryEffectiveStall
+             << " (struct=" << TryStructStall << ", lat=" << TryLatencyStall
+             << ") cand=" << CandEffectiveStall
+             << " (struct=" << CandStructStall << ", lat=" << CandLatencyStall
+             << ")\n";
+    });
+
+    if (tryLess(TryEffectiveStall, CandEffectiveStall, TryCand, Cand, Stall))
+      return TryCand.Reason != NoCand;
+
+    TryCand.initResourceDelta(DAG, SchedModel);
+    if (tryLess(TryCand.ResDelta.CritResources, Cand.ResDelta.CritResources,
+                TryCand, Cand, ResourceReduce))
+      return TryCand.Reason != NoCand;
+    if (tryGreater(TryCand.ResDelta.DemandedResources,
+                   Cand.ResDelta.DemandedResources, TryCand, Cand,
+                   ResourceDemand))
+      return TryCand.Reason != NoCand;
   }
 
   return false;

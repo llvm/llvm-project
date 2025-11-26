@@ -10,6 +10,8 @@
   attributes #1 = { "amdgpu-waves-per-eu"="1,1" }
 ...
 
+# The scheduler should reorder the use of the global load after WMMAs to hide memory latency.
+
 ---
 name: with_ml_workload_attr
 tracksRegLiveness: true
@@ -29,8 +31,8 @@ body: |
     ; DEFAULT-NEXT: [[DEF10:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[DEF10]], 0, 0, implicit $exec
     ; DEFAULT-NEXT: early-clobber %13:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[DEF3]], [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; DEFAULT-NEXT: [[V_PK_ADD_F32_:%[0-9]+]]:vreg_64_align2 = V_PK_ADD_F32 8, [[GLOBAL_LOAD_DWORDX2_]], 8, [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; DEFAULT-NEXT: early-clobber %14:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 0, [[DEF7]], [[DEF8]], [[DEF9]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; DEFAULT-NEXT: [[V_PK_ADD_F32_:%[0-9]+]]:vreg_64_align2 = V_PK_ADD_F32 8, [[GLOBAL_LOAD_DWORDX2_]], 8, [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; DEFAULT-NEXT: S_ENDPGM 0, implicit [[V_PK_ADD_F32_]], implicit %13, implicit %14
     ;
     ; ML-LABEL: name: with_ml_workload_attr
@@ -47,8 +49,8 @@ body: |
     ; ML-NEXT: [[DEF10:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; ML-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[DEF10]], 0, 0, implicit $exec
     ; ML-NEXT: early-clobber %13:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[DEF3]], [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    ; ML-NEXT: [[V_PK_ADD_F32_:%[0-9]+]]:vreg_64_align2 = V_PK_ADD_F32 8, [[GLOBAL_LOAD_DWORDX2_]], 8, [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; ML-NEXT: early-clobber %14:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 0, [[DEF7]], [[DEF8]], [[DEF9]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; ML-NEXT: [[V_PK_ADD_F32_:%[0-9]+]]:vreg_64_align2 = V_PK_ADD_F32 8, [[GLOBAL_LOAD_DWORDX2_]], 8, [[GLOBAL_LOAD_DWORDX2_]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; ML-NEXT: S_ENDPGM 0, implicit [[V_PK_ADD_F32_]], implicit %13, implicit %14
     %0:vreg_512_align2 = IMPLICIT_DEF
     %1:vreg_512_align2 = IMPLICIT_DEF
@@ -99,8 +101,8 @@ body: |
     ; ML-NEXT: [[DEF3:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
     ; ML-NEXT: [[DEF4:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
     ; ML-NEXT: [[DEF5:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; ML-NEXT: early-clobber %13:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[DEF3]], [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; ML-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[DEF5]], 0, 0, implicit $exec
+    ; ML-NEXT: early-clobber %13:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[DEF3]], [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     ; ML-NEXT: [[DEF6:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; ML-NEXT: [[DEF7:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
     ; ML-NEXT: [[DEF8:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF

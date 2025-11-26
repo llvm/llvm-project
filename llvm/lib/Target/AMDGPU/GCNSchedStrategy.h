@@ -56,6 +56,10 @@ protected:
                      const SIRegisterInfo *SRI, unsigned SGPRPressure,
                      unsigned VGPRPressure, bool IsBottomUp);
 
+  /// Estimate how many cycles \p SU must wait due to structural hazards at the
+  /// current boundary cycle. Returns zero when no stall is required.
+  unsigned getStructuralStallCycles(SchedBoundary &Zone, SUnit *SU) const;
+
   /// Evaluates instructions in the pending queue using a subset of scheduling
   /// heuristics.
   ///
@@ -64,8 +68,8 @@ protected:
   /// invisible to scheduling heuristics. However, in certain scenarios (such as
   /// avoiding register spilling), it may be beneficial to consider scheduling
   /// these not-yet-ready instructions.
-  bool tryPendingCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
-                           SchedBoundary *Zone) const;
+  virtual bool tryPendingCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                                   SchedBoundary *Zone) const;
 
   void printCandidateDecision(const SchedCandidate &Current,
                               const SchedCandidate &Preferred);
