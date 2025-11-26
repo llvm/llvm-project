@@ -9,22 +9,26 @@ cir.func private @division(%a: !s32i, %b: !s32i) -> !s32i
 cir.func @flatten_structure_with_try_call_op() {
    %a = cir.const #cir.int<1> : !s32i
    %b = cir.const #cir.int<2> : !s32i
-   %3 = cir.try_call @division(%a, %b) ^continue, ^landing_pad : (!s32i, !s32i) -> !s32i
- ^continue:
-   cir.br ^landing_pad
- ^landing_pad:
+   %3 = cir.try_call @division(%a, %b) ^normal, ^unwind : (!s32i, !s32i) -> !s32i
+ ^normal:
+   cir.br ^end
+ ^unwind:
+   cir.br ^end
+ ^end:
    cir.return
 }
 
 // CHECK: cir.func private @division(!s32i, !s32i) -> !s32i
 
 // CHECK: cir.func @flatten_structure_with_try_call_op() {
-// CHECK-NEXT:   %[[CONST_0:.*]] = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:   %[[CONST_1:.*]] = cir.const #cir.int<2> : !s32i
-// CHECK-NEXT:   %[[CALL:.*]] = cir.try_call @division(%0, %1) ^[[CONTINUE:.*]], ^[[LANDING_PAD:.*]] : (!s32i, !s32i) -> !s32i
-// CHECK-NEXT: ^[[CONTINUE]]:
-// CHECK-NEXT:   cir.br ^[[LANDING_PAD]]
-// CHECK-NEXT: ^[[LANDING_PAD]]:
+// CHECK-NEXT:   %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT:   %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
+// CHECK-NEXT:   %[[CALL:.*]] = cir.try_call @division(%[[CONST_1]], %[[CONST_2]]) ^[[NORMAL:.*]], ^[[UNWIND:.*]] : (!s32i, !s32i) -> !s32i
+// CHECK-NEXT: ^[[normal]]:
+// CHECK-NEXT:   cir.br ^[[END:.*]]
+// CHECK-NEXT: ^[[unwind]]:
+// CHECK-NEXT:   cir.br ^[[END:.*]]
+// CHECK-NEXT: ^[[END]]:
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
 

@@ -833,9 +833,8 @@ static void printCallCommon(mlir::Operation *op,
   printer << "(" << ops << ")";
 
   if (normalDest) {
-    assert(landingPad && "expected two successors");
-    auto tryCall = dyn_cast<cir::TryCallOp>(op);
-    assert(tryCall && "regular calls do not branch");
+    assert(unwindDest && "expected two successors");
+    auto tryCall = cast<cir::TryCallOp>(op);
     printer << ' ' << tryCall.getNormalDest();
     printer << ",";
     printer << ' ';
@@ -856,7 +855,6 @@ static void printCallCommon(mlir::Operation *op,
       CIRDialect::getSideEffectAttrName(),
       CIRDialect::getOperandSegmentSizesAttrName()};
   printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
-
   printer << " : ";
   printer.printFunctionalType(op->getOperands().getTypes(),
                               op->getResultTypes());

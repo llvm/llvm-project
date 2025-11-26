@@ -2860,9 +2860,10 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
 ]> {
   let summary = "try_call operation";
   let description = [{
-    Mostly similar to `cir.call` but requires two destination
-    branches, one for follow on regular control-flow, and the other
-    one for handling exceptions in case it's thrown.
+    Similar to `cir.call` but requires two destination blocks,
+    one which is used if the call returns without throwing an
+    exception (the "normal" destination) and another which is used
+    if an exception is thrown (the "unwind" destination). 
 
     This operation is used only after the CFG flatterning pass.
 
