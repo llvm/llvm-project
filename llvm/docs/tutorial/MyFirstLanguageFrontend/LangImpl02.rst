@@ -453,7 +453,7 @@ starts with:
           return LHS;
 
 This code gets the precedence of the current token and checks to see if
-if is too low. Because we defined invalid tokens to have a precedence of
+it is too low. Because we defined invalid tokens to have a precedence of
 -1, this check implicitly knows that the pair-stream ends when the token
 stream runs out of binary operators. If this check succeeds, we know
 that the token is a binary operator and that it will be included in this

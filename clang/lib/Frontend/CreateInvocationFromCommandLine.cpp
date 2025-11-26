@@ -78,7 +78,7 @@ clang::createInvocation(ArrayRef<const char *> ArgList,
   const driver::JobList &Jobs = C->getJobs();
   bool OffloadCompilation = false;
   if (Jobs.size() > 1) {
-    for (auto &A : C->getActions()){
+    for (auto &A : C->getActions()) {
       // On MacOSX real actions may end up being wrapped in BindArchAction
       if (isa<driver::BindArchAction>(A))
         A = *A->input_begin();
