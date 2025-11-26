@@ -11735,7 +11735,12 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (LHS.getValueType().isInteger()) {
-
+    if (Subtarget->hasCSSC() && CC == ISD::SETNE && isNullConstant(RHS)) {
+      SDValue One = DAG.getConstant(1, DL, LHS.getValueType());
+      auto UMin = DAG.getNode(ISD::UMIN, DL, LHS.getValueType(), LHS, One);
+      SDValue Res = DAG.getNode(ISD::TRUNCATE, DL, VT, UMin);
+      return IsStrict ? DAG.getMergeValues({Res, Chain}, DL) : Res;
+    }
     simplifySetCCIntoEq(CC, LHS, RHS, DAG, DL);
 
     SDValue CCVal;
@@ -26428,8 +26433,7 @@ performVecReduceBitwiseCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
 static SDValue performSETCCCombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
-                                   SelectionDAG &DAG,
-                                   const AArch64Subtarget *Subtarget) {
+                                   SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::SETCC && "Unexpected opcode!");
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
@@ -26470,12 +26474,6 @@ static SDValue performSETCCCombine(SDNode *N,
                                 DAG.getSignedConstant(TstImm, DL, TstVT));
       return DAG.getNode(ISD::SETCC, DL, VT, TST, RHS, N->getOperand(2));
     }
-  }
-  if (Subtarget->hasCSSC() && Cond == ISD::SETNE && isNullConstant(RHS) &&
-      !VT.isVector() && DCI.getDAGCombineLevel() >= AfterLegalizeTypes) {
-    SDValue One = DAG.getConstant(1, DL, LHS.getValueType());
-    auto UMin = DAG.getNode(ISD::UMIN, DL, LHS.getValueType(), LHS, One);
-    return DAG.getNode(ISD::TRUNCATE, DL, VT, UMin);
   }
 
   // setcc (iN (bitcast (vNi1 X))), 0, (eq|ne)
@@ -28240,7 +28238,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::VSELECT:
     return performVSelectCombine(N, DCI.DAG);
   case ISD::SETCC:
-    return performSETCCCombine(N, DCI, DAG, Subtarget);
+    return performSETCCCombine(N, DCI, DAG);
   case ISD::LOAD:
     return performLOADCombine(N, DCI, DAG, Subtarget);
   case ISD::STORE:
