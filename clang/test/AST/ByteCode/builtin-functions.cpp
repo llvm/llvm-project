@@ -63,6 +63,19 @@ constexpr int test_address_of_incomplete_array_type() { // both-error {{never pr
 static_assert(test_address_of_incomplete_array_type() == 1234, ""); // both-error {{constant}} \
                                                                     // both-note {{in call}}
 
+namespace LocalExternRedecl {
+  constexpr int externRedecl1() {
+    extern int arr[];
+    return 0;
+  }
+  constexpr int externRedecl2() { // both-error {{never produces a constant expression}}
+    extern int arr[];
+    __builtin_memmove(&arr, &arr, 4 * sizeof(arr[0])); // both-note 2{{incomplete type}}
+    return 1234;
+  }
+  static_assert(externRedecl2() == 1234); // both-error {{not an integral constant expression}} \
+                                          // both-note {{in call to}}
+}
 
   struct NonTrivial {
     constexpr NonTrivial() : n(0) {}
@@ -824,6 +837,39 @@ namespace bswap {
   int h3 = __builtin_bswap16(0x1234) == 0x3412 ? 1 : f();
   int h4 = __builtin_bswap32(0x1234) == 0x34120000 ? 1 : f();
   int h5 = __builtin_bswap64(0x1234) == 0x3412000000000000 ? 1 : f();
+  int h6 = __builtin_bswapg(0x12) == 0x12 ? 1 : f();
+  int h7 = __builtin_bswapg(0x1234) == 0x3412 ? 1 : f();
+  int h8 = __builtin_bswapg(0x00001234) == 0x34120000 ? 1 : f();
+  int h9 = __builtin_bswapg(0x0000000000001234) == 0x3412000000000000 ? 1 : f();
+#ifndef __AVR__
+  int h10 = __builtin_bswapg((_BitInt(8))0x12) == (_BitInt(8))0x12 ? 1 : f();
+  int h11 = __builtin_bswapg((_BitInt(16))0x1234) == (_BitInt(16))0x3412 ? 1 : f();
+  int h12 = __builtin_bswapg((_BitInt(32))0x00001234) == (_BitInt(32))0x34120000 ? 1 : f();
+  int h13 = __builtin_bswapg((_BitInt(64))0x0000000000001234) == (_BitInt(64))0x3412000000000000 ? 1 : f();
+  int h14 = __builtin_bswapg(~(_BitInt(128))0) == (~(_BitInt(128))0) ? 1 : f();
+  int h15 = __builtin_bswapg((_BitInt(24))0x1234) == (_BitInt(24))0x3412 ? 1 : f();
+  // expected-error@-1 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
+  // ref-error@-2 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
+#endif
+
+  constexpr const int const_expr = 0x1234;
+
+  void test_constexpr_reference() {
+    const int expr = 0x1234; 
+    const int& ref = expr; // #declare
+    
+    constexpr const int& const_ref = const_expr;
+
+    constexpr auto result2 = __builtin_bswapg(ref); 
+    //expected-error@-1 {{constexpr variable 'result2' must be initialized by a constant expression}}
+    //expected-note@-2 {{initializer of 'ref' is not a constant expression}}
+    //expected-note@#declare {{declared here}}
+    //ref-error@-4 {{constexpr variable 'result2' must be initialized by a constant expression}}
+    //ref-note@-5 {{initializer of 'ref' is not a constant expression}}
+    //ref-note@#declare {{declared here}}
+      
+    constexpr auto result3 = __builtin_bswapg(const_ref);
+  }
 }
 
 #define CFSTR __builtin___CFStringMakeConstantString
@@ -1497,6 +1543,8 @@ namespace Memcmp {
   static_assert(f());
 #endif
 
+  int unknown;
+  void foo(void) { unknown *= __builtin_memcmp(0, 0, 2); }
 }
 
 namespace Memchr {
@@ -1840,3 +1888,9 @@ namespace InitParam {
 }
 
 #endif
+
+namespace NonBlockPointerStore {
+  int a;
+  void foo(void) { a *= __builtin_sadd_overflow(1, 2, 0); }
+  void foo2(void) { a *= __builtin_addc(1, 2, 0, 0); }
+}

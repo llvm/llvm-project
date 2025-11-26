@@ -79,7 +79,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
     // void foo(int /*unused*/)
     const char *Begin = SM.getCharacterData(Parm->getBeginLoc());
     const char *End = SM.getCharacterData(Parm->getLocation());
-    StringRef Data(Begin, End - Begin);
+    const StringRef Data(Begin, End - Begin);
     if (Data.contains("/*"))
       continue;
 
@@ -104,7 +104,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
       if (M && M->size_overridden_methods() > 0) {
         const ParmVarDecl *OtherParm =
             (*M->begin_overridden_methods())->getParamDecl(P.second);
-        StringRef Name = OtherParm->getName();
+        const StringRef Name = OtherParm->getName();
         if (!Name.empty())
           NewName = Name;
       }
@@ -112,7 +112,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
       // If the definition has a named parameter use that name.
       if (Definition) {
         const ParmVarDecl *DefParm = Definition->getParamDecl(P.second);
-        StringRef Name = DefParm->getName();
+        const StringRef Name = DefParm->getName();
         if (!Name.empty())
           NewName = Name;
       }

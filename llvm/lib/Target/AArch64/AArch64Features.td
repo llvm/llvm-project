@@ -394,9 +394,6 @@ def FeatureTRBE : Extension<"trbe", "TRBE", "FEAT_TRBE",
 def FeatureETE : Extension<"ete", "ETE", "FEAT_ETE",
   "Enable Embedded Trace Extension", [FeatureTRBE]>;
 
-def FeatureTME : ExtensionWithMArch<"tme", "TME", "FEAT_TME",
-  "Enable Transactional Memory Extension">;
-
 //===----------------------------------------------------------------------===//
 //  Armv9.1 Architecture Extensions
 //===----------------------------------------------------------------------===//
@@ -585,6 +582,63 @@ def FeatureSME_TMOP: ExtensionWithMArch<"sme-tmop", "SME_TMOP", "FEAT_SME_TMOP",
 def FeatureSSVE_FEXPA : ExtensionWithMArch<"ssve-fexpa", "SSVE_FEXPA", "FEAT_SSVE_FEXPA",
   "Enable SVE FEXPA instruction in Streaming SVE mode", [FeatureSME2]>;
 
+//===----------------------------------------------------------------------===//
+//  Armv9.7 Architecture Extensions
+//===----------------------------------------------------------------------===//
+
+def FeatureCMH : ExtensionWithMArch<"cmh", "CMH", "FEAT_CMH",
+  "Enable Armv9.7-A Contention Management Hints">;
+
+def FeatureLSCP : ExtensionWithMArch<"lscp", "LSCP", "FEAT_LSCP",
+  "Enable Armv9.7-A Load-acquire and store-release pair extension">;
+
+def FeatureTLBID: ExtensionWithMArch<"tlbid", "TLBID", "FEAT_TLBID",
+  "Enable Armv9.7-A TLBI Domains extension">;
+
+def FeatureMPAMv2: ExtensionWithMArch<"mpamv2", "MPAMv2", "FEAT_MPAMv2",
+  "Enable Armv9.7-A MPAMv2 Lookaside Buffer Invalidate instructions">;
+
+def FeatureMTETC: ExtensionWithMArch<"mtetc", "MTETC", "FEAT_MTETC",
+  "Enable Virtual Memory Tagging Extension">;
+
+def FeatureGCIE: ExtensionWithMArch<"gcie", "GCIE", "FEAT_GCIE",
+  "Enable GICv5 (Generic Interrupt Controller) CPU Interface Extension">;
+
+def FeatureSVE2p3 : ExtensionWithMArch<"sve2p3", "SVE2p3", "FEAT_SVE2p3",
+  "Enable Armv9.7-A Scalable Vector Extension 2.3 instructions", [FeatureSVE2p2]>;
+
+def FeatureSME2p3 : ExtensionWithMArch<"sme2p3", "SME2p3", "FEAT_SME2p3",
+  "Enable Armv9.7-A Scalable Matrix Extension 2.3 instructions", [FeatureSME2p2]>;
+
+def FeatureSVE_B16MM : ExtensionWithMArch<"sve-b16mm", "SVE_B16MM", "FEAT_SVE_B16MM",
+  "Enable Armv9.7-A SVE non-widening BFloat16 matrix multiply-accumulate", [FeatureSVE]>;
+
+def FeatureF16MM : ExtensionWithMArch<"f16mm", "F16MM", "FEAT_F16MM",
+  "Enable Armv9.7-A non-widening half-precision matrix multiply-accumulate", [FeatureFullFP16]>;
+
+def FeatureF16F32DOT : ExtensionWithMArch<"f16f32dot", "F16F32DOT", "FEAT_F16F32DOT",
+  "Enable Armv9.7-A Advanced SIMD half-precision dot product accumulate to single-precision", [FeatureNEON, FeatureFullFP16]>;
+
+def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM",
+  "Enable Armv9.7-A Advanced SIMD half-precision matrix multiply-accumulate to single-precision", [FeatureNEON, FeatureFullFP16]>;
+
+//===----------------------------------------------------------------------===//
+//  Future Architecture Technologies
+//===----------------------------------------------------------------------===//
+
+def FeatureMOPS_GO: ExtensionWithMArch<"mops-go", "MOPS_GO", "FEAT_MOPS_GO",
+  "Enable memset acceleration granule only">;
+
+def FeatureBTIE: ExtensionWithMArch<"btie", "BTIE", "FEAT_BTIE",
+  "Enable Enhanced Branch Target Identification extension">;
+
+def FeatureS1POE2: ExtensionWithMArch<"poe2", "POE2", "FEAT_S1POE2",
+  "Enable Stage 1 Permission Overlays Extension 2 instructions">;
+
+def FeatureTEV: ExtensionWithMArch<"tev", "TEV", "FEAT_TEV",
+  "Enable TIndex Exception-like Vector instructions">;
+
+//===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//
 
@@ -939,9 +993,12 @@ def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
 def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
-  [HasV9_5aOps, FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2, FeatureLSUI, FeatureOCCMO],
-  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR, FeatureFPRCVT, FeatureSVE2p2,
+  [HasV9_5aOps, FeatureCMPBR, FeatureLSUI, FeatureOCCMO],
+  !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR,
     FeatureLSUI, FeatureOCCMO])>;
+def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
+  [HasV9_6aOps, FeatureSVE2p3, FeatureFPRCVT],
+  !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,

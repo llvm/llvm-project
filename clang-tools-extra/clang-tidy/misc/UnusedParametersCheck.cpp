@@ -22,15 +22,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
 
-namespace {
-bool isOverrideMethod(const FunctionDecl *Function) {
+static bool isOverrideMethod(const FunctionDecl *Function) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(Function))
     return MD->size_overridden_methods() > 0 || MD->hasAttr<OverrideAttr>();
   return false;
 }
 
-bool hasAttrAfterParam(const SourceManager *SourceManager,
-                       const ParmVarDecl *Param) {
+static bool hasAttrAfterParam(const SourceManager *SourceManager,
+                              const ParmVarDecl *Param) {
   for (const auto *Attr : Param->attrs()) {
     if (SourceManager->isBeforeInTranslationUnit(Param->getLocation(),
                                                  Attr->getLocation())) {
@@ -39,7 +38,6 @@ bool hasAttrAfterParam(const SourceManager *SourceManager,
   }
   return false;
 }
-} // namespace
 
 void UnusedParametersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(functionDecl(isDefinition(), hasBody(stmt()),
@@ -162,12 +160,11 @@ void UnusedParametersCheck::warnOnUnusedParameter(
       !Result.SourceManager->isInMainFile(Function->getLocation()) ||
       !Indexer->getOtherRefs(Function).empty() || isOverrideMethod(Function) ||
       isLambdaCallOperator(Function)) {
-
     // It is illegal to omit parameter name here in C code, so early-out.
     if (!Result.Context->getLangOpts().CPlusPlus)
       return;
 
-    SourceRange RemovalRange(Param->getLocation());
+    const SourceRange RemovalRange(Param->getLocation());
     // Note: We always add a space before the '/*' to not accidentally create
     // a '*/*' for pointer types, which doesn't start a comment. clang-format
     // will clean this up afterwards.

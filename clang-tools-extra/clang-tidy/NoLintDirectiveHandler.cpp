@@ -134,7 +134,7 @@ static SmallVector<NoLintToken> getNoLints(StringRef Buffer) {
     // Get checks, if specified.
     std::optional<StringRef> Checks;
     if (Pos < Buffer.size() && Buffer[Pos] == '(') {
-      size_t ClosingBracket = Buffer.find_first_of("\n)", ++Pos);
+      const size_t ClosingBracket = Buffer.find_first_of("\n)", ++Pos);
       if (ClosingBracket != StringRef::npos && Buffer[ClosingBracket] == ')') {
         Checks = Buffer.slice(Pos, ClosingBracket);
         Pos = ClosingBracket + 1;
@@ -183,13 +183,13 @@ static tooling::Diagnostic makeNoLintError(const SourceManager &SrcMgr,
   tooling::Diagnostic Error;
   Error.DiagLevel = tooling::Diagnostic::Error;
   Error.DiagnosticName = "clang-tidy-nolint";
-  StringRef Message =
+  const StringRef Message =
       (NoLint.Type == NoLintType::NoLintBegin)
           ? ("unmatched 'NOLINTBEGIN' comment without a subsequent 'NOLINT"
              "END' comment")
           : ("unmatched 'NOLINTEND' comment without a previous 'NOLINT"
              "BEGIN' comment");
-  SourceLocation Loc = SrcMgr.getComposedLoc(File, NoLint.Pos);
+  const SourceLocation Loc = SrcMgr.getComposedLoc(File, NoLint.Pos);
   Error.Message = tooling::DiagnosticMessage(Message, SrcMgr, Loc);
   return Error;
 }
@@ -294,8 +294,8 @@ bool NoLintDirectiveHandler::Impl::diagHasNoLintInMacro(
 // this line.
 static std::pair<size_t, size_t> getLineStartAndEnd(StringRef Buffer,
                                                     size_t From) {
-  size_t StartPos = Buffer.find_last_of('\n', From) + 1;
-  size_t EndPos = std::min(Buffer.find('\n', From), Buffer.size());
+  const size_t StartPos = Buffer.find_last_of('\n', From) + 1;
+  const size_t EndPos = std::min(Buffer.find('\n', From), Buffer.size());
   return {StartPos, EndPos};
 }
 
