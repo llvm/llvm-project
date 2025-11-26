@@ -1338,7 +1338,7 @@ define <vscale x 4 x i32> @insert_nxv1i32_nxv4i32_0(<vscale x 4 x i32> %vec, <vs
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %i = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i64.nxv4i32(<vscale x 4 x i32> %subvec, i64 0)
+  %i = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %subvec, i64 0)
   %retval = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> %vec, <vscale x 1 x i32> %i, i64 0)
   ret <vscale x 4 x i32> %retval
 }
@@ -1362,7 +1362,7 @@ define <vscale x 4 x i32> @insert_nxv1i32_nxv4i32_1(<vscale x 4 x i32> %vec, <vs
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %i = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i64.nxv4i32(<vscale x 4 x i32> %subvec, i64 0)
+  %i = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %subvec, i64 0)
   %retval = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> %vec, <vscale x 1 x i32> %i, i64 1)
   ret <vscale x 4 x i32> %retval
 }
@@ -1386,7 +1386,7 @@ define <vscale x 4 x i32> @insert_nxv1i32_nxv4i32_2(<vscale x 4 x i32> %vec, <vs
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %i = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i64.nxv4i32(<vscale x 4 x i32> %subvec, i64 0)
+  %i = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %subvec, i64 0)
   %retval = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> %vec, <vscale x 1 x i32> %i, i64 2)
   ret <vscale x 4 x i32> %retval
 }
@@ -1410,7 +1410,7 @@ define <vscale x 4 x i32> @insert_nxv1i32_nxv4i32_3(<vscale x 4 x i32> %vec, <vs
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %i = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i64.nxv4i32(<vscale x 4 x i32> %subvec, i64 0)
+  %i = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %subvec, i64 0)
   %retval = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> %vec, <vscale x 1 x i32> %i, i64 3)
   ret <vscale x 4 x i32> %retval
 }
@@ -1432,7 +1432,7 @@ define <vscale x 2 x float> @insert_nxv1f32_nxv2f32_0(<vscale x 2 x float> %vec,
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %i = call <vscale x 1 x float> @llvm.vector.extract.nxv1i64.nxv2f32(<vscale x 2 x float> %subvec, i64 0)
+  %i = call <vscale x 1 x float> @llvm.vector.extract.nxv1f32.nxv2f32(<vscale x 2 x float> %subvec, i64 0)
   %retval = call <vscale x 2 x float> @llvm.vector.insert.nxv2f32.nxv1f32(<vscale x 2 x float> %vec, <vscale x 1 x float> %i, i64 0)
   ret <vscale x 2 x float> %retval
 }
@@ -1457,7 +1457,7 @@ define <vscale x 2 x float> @insert_nxv1f32_nxv2f32_1(<vscale x 2 x float> %vec,
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %i = call <vscale x 1 x float> @llvm.vector.extract.nxv1i64.nxv2f32(<vscale x 2 x float> %subvec, i64 0)
+  %i = call <vscale x 1 x float> @llvm.vector.extract.nxv1f32.nxv2f32(<vscale x 2 x float> %subvec, i64 0)
   %retval = call <vscale x 2 x float> @llvm.vector.insert.nxv2f32.nxv1f32(<vscale x 2 x float> %vec, <vscale x 1 x float> %i, i64 1)
   ret <vscale x 2 x float> %retval
 }
@@ -1479,7 +1479,7 @@ define <vscale x 4 x float> @insert_nxv1f32_nxv4f32_0(<vscale x 4 x float> %vec,
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %i = call <vscale x 1 x float> @llvm.vector.extract.nxv1i64.nxv4f32(<vscale x 4 x float> %subvec, i64 0)
+  %i = call <vscale x 1 x float> @llvm.vector.extract.nxv1f32.nxv4f32(<vscale x 4 x float> %subvec, i64 0)
   %retval = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float> %vec, <vscale x 1 x float> %i, i64 0)
   ret <vscale x 4 x float> %retval
 }
@@ -1504,7 +1504,7 @@ define <vscale x 4 x float> @insert_nxv1f32_nxv4f32_1(<vscale x 4 x float> %vec,
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %i = call <vscale x 1 x float> @llvm.vector.extract.nxv1i64.nxv4f32(<vscale x 4 x float> %subvec, i64 0)
+  %i = call <vscale x 1 x float> @llvm.vector.extract.nxv1f32.nxv4f32(<vscale x 4 x float> %subvec, i64 0)
   %retval = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float> %vec, <vscale x 1 x float> %i, i64 1)
   ret <vscale x 4 x float> %retval
 }
@@ -1526,7 +1526,7 @@ define <vscale x 4 x float> @insert_nxv1f32_nxv4f32_2(<vscale x 4 x float> %vec,
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %i = call <vscale x 1 x float> @llvm.vector.extract.nxv1i64.nxv4f32(<vscale x 4 x float> %subvec, i64 0)
+  %i = call <vscale x 1 x float> @llvm.vector.extract.nxv1f32.nxv4f32(<vscale x 4 x float> %subvec, i64 0)
   %retval = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float> %vec, <vscale x 1 x float> %i, i64 2)
   ret <vscale x 4 x float> %retval
 }
@@ -1551,7 +1551,7 @@ define <vscale x 4 x float> @insert_nxv1f32_nxv4f32_3(<vscale x 4 x float> %vec,
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %i = call <vscale x 1 x float> @llvm.vector.extract.nxv1i64.nxv4f32(<vscale x 4 x float> %subvec, i64 0)
+  %i = call <vscale x 1 x float> @llvm.vector.extract.nxv1f32.nxv4f32(<vscale x 4 x float> %subvec, i64 0)
   %retval = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float> %vec, <vscale x 1 x float> %i, i64 3)
   ret <vscale x 4 x float> %retval
 }
