@@ -27,6 +27,14 @@ def ALU32 : SubtargetFeature<"alu32", "HasAlu32", "true",
 def DwarfRIS: SubtargetFeature<"dwarfris", "UseDwarfRIS", "true",
                                "Disable MCAsmInfo DwarfUsesRelocationsAcrossSections">;
 
+def MisalignedMemAccess : SubtargetFeature<"allows-misaligned-mem-access",
+                                           "AllowsMisalignedMemAccess", "true",
+                                           "Allows misaligned memory access">;
+
+def AllowBuiltinCall : SubtargetFeature<"allow-builtin-calls",
+                                        "AllowBuiltinCalls", "true",
+                                        "Allow calls to builtin functions">;
+
 def : Proc<"generic", []>;
 def : Proc<"v1", []>;
 def : Proc<"v2", []>;

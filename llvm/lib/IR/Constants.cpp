@@ -183,6 +183,23 @@ bool Constant::isMinSignedValue() const {
   return false;
 }
 
+bool Constant::isMaxSignedValue() const {
+  // Check for INT_MAX integers
+  if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
+    return CI->isMaxValue(/*isSigned=*/true);
+
+  // Check for FP which are bitcasted from INT_MAX integers
+  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
+    return CFP->getValueAPF().bitcastToAPInt().isMaxSignedValue();
+
+  // Check for splats of INT_MAX values.
+  if (getType()->isVectorTy())
+    if (const auto *SplatVal = getSplatValue())
+      return SplatVal->isMaxSignedValue();
+
+  return false;
+}
+
 bool Constant::isNotMinSignedValue() const {
   // Check for INT_MIN integers
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
@@ -667,8 +684,11 @@ Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
     if (CE->getOpcode() == Instruction::Sub) {
       ConstantExpr *LHS = dyn_cast<ConstantExpr>(CE->getOperand(0));
       ConstantExpr *RHS = dyn_cast<ConstantExpr>(CE->getOperand(1));
-      if (LHS && RHS && LHS->getOpcode() == Instruction::PtrToInt &&
-          RHS->getOpcode() == Instruction::PtrToInt) {
+      if (LHS && RHS &&
+          (LHS->getOpcode() == Instruction::PtrToInt ||
+           LHS->getOpcode() == Instruction::PtrToAddr) &&
+          (RHS->getOpcode() == Instruction::PtrToInt ||
+           RHS->getOpcode() == Instruction::PtrToAddr)) {
         Constant *LHSOp0 = LHS->getOperand(0);
         Constant *RHSOp0 = RHS->getOperand(0);
 
