@@ -115,7 +115,7 @@ struct VarKey {
   const char *const SubprogramName;
   const char *const Name;
   std::string DeclFile;
-  unsigned long DeclLine;
+  uint64_t DeclLine;
 
   bool operator==(const VarKey &Other) const {
     return DeclLine == Other.DeclLine &&
