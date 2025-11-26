@@ -1117,18 +1117,18 @@ REGISTER_CHECKER(vfork)
 REGISTER_CHECKER(FloatLoopCounter)
 REGISTER_CHECKER(UncheckedReturn)
 
-void ento::registerDeprecatedOrUnsafeBufferHandling(CheckerManager &mgr) {
-  SecuritySyntaxChecker *checker = mgr.getChecker<SecuritySyntaxChecker>();
-  checker->filter.check_DeprecatedOrUnsafeBufferHandling = true;
-  checker->filter.checkName_DeprecatedOrUnsafeBufferHandling =
-      mgr.getCurrentCheckerName();
-  checker->filter.reportDeprecatedOrUnsafeBufferHandlingInC99AndEarlier =
-      mgr.getAnalyzerOptions().getCheckerBooleanOption(
-          mgr.getCurrentCheckerName(), "ReportInC99AndEarlier");
+void ento::registerDeprecatedOrUnsafeBufferHandling(CheckerManager &Mgr) {
+  SecuritySyntaxChecker *Checker = Mgr.getChecker<SecuritySyntaxChecker>();
+  Checker->filter.check_DeprecatedOrUnsafeBufferHandling = true;
+  Checker->filter.checkName_DeprecatedOrUnsafeBufferHandling =
+      Mgr.getCurrentCheckerName();
+  Checker->filter.reportDeprecatedOrUnsafeBufferHandlingInC99AndEarlier =
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          Mgr.getCurrentCheckerName(), "ReportInC99AndEarlier");
 }
 
 bool ento::shouldRegisterDeprecatedOrUnsafeBufferHandling(
-    const CheckerManager &mgr) {
+    const CheckerManager &) {
   return true;
 }
 
