@@ -142,7 +142,7 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT:       vector.body:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 16
+; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i64 16
 ; DEFAULT-NEXT:    store <16 x i8> [[TMP3]], ptr [[TMP4]], align 1, !alias.scope [[META9:![0-9]+]], !noalias [[META6]]
 ; DEFAULT-NEXT:    store <16 x i8> [[TMP3]], ptr [[TMP5]], align 1, !alias.scope [[META9]], !noalias [[META6]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
