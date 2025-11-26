@@ -257,7 +257,7 @@ The following is generated if there are no errors reported::
 .. _variable-coverage-format:
 
 FORMAT OF VARIABLE COVERAGE OUTPUT
----------------------------
+----------------------------------
 
 The :option:`--show-variable-coverage` option differs from
 :option:`--statistics` by printing per-variable debug info coverage metrics
