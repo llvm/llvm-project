@@ -429,17 +429,32 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   VPBlockBase *LatchExitVPB = LatchVPBB->getSingleSuccessor();
   assert(LatchExitVPB && "Latch expected to be left with a single successor");
 
+  VPPhi *ScalarCanIV = nullptr;
+  Type *CanIVTy = nullptr;
+  DebugLoc DL = DebugLoc::getCompilerGenerated();
+  // Get type info and debug location from the scalar phi corresponding to the
+  // canonical IV for outermost loops.
+  if (PreheaderVPBB->getSinglePredecessor() == Plan.getEntry()) {
+    ScalarCanIV = cast<VPPhi>(&*cast<VPBasicBlock>(HeaderVPB)->begin());
+    CanIVTy = ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType();
+    DL = ScalarCanIV->getDebugLoc();
+  }
+
   // Create an empty region first and insert it between PreheaderVPBB and
   // LatchExitVPB, taking care to preserve the original predecessor & successor
   // order of blocks. Set region entry and exiting after both HeaderVPB and
   // LatchVPBB have been disconnected from their predecessors/successors.
-  auto *R = Plan.createLoopRegion();
+  auto *R = Plan.createLoopRegion(CanIVTy, DL);
   VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, R);
   VPBlockUtils::disconnectBlocks(LatchVPBB, R);
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);
   R->setEntry(HeaderVPB);
   R->setExiting(LatchVPBB);
 
+  if (ScalarCanIV) {
+    ScalarCanIV->replaceAllUsesWith(R->getCanonicalIV());
+    ScalarCanIV->eraseFromParent();
+  }
   // All VPBB's reachable shallowly from HeaderVPB belong to the current region.
   for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB))
     VPBB->setParent(R);
@@ -452,9 +467,7 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                   DebugLoc DL) {
   Value *StartIdx = ConstantInt::get(IdxTy, 0);
   auto *StartV = Plan.getOrAddLiveIn(StartIdx);
-
-  // Add a VPCanonicalIVPHIRecipe starting at 0 to the header.
-  auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DL);
+  auto *CanonicalIVPHI = new VPPhi(StartV, DL);
   HeaderVPBB->insert(CanonicalIVPHI, HeaderVPBB->begin());
 
   // We are about to replace the branch to exit the region. Remove the original
@@ -472,8 +485,6 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
   auto *CanonicalIVIncrement = Builder.createOverflowingOp(
       Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()}, {true, false}, DL,
       "index.next");
-  CanonicalIVPHI->addOperand(CanonicalIVIncrement);
-
   // Add the BranchOnCount VPInstruction to the latch.
   Builder.createNaryOp(VPInstruction::BranchOnCount,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()},
@@ -698,7 +709,7 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
       VPBuilder(CheckBlockVPBB)
           .createNaryOp(
               VPInstruction::BranchOnCond, {CondVPV},
-              Plan.getVectorLoopRegion()->getCanonicalIV()->getDebugLoc());
+              Plan.getVectorLoopRegion()->getCanonicalIVInfo().getDebugLoc());
   if (AddBranchWeights) {
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =
@@ -875,7 +886,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       MinMaxNumReductionsToHandle;
   bool HasUnsupportedPhi = false;
   for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
-    if (isa<VPCanonicalIVPHIRecipe, VPWidenIntOrFpInductionRecipe>(&R))
+    if (isa<VPWidenIntOrFpInductionRecipe>(&R))
       continue;
     auto *Cur = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!Cur) {

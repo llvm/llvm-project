@@ -315,7 +315,6 @@ private:
     auto *DefR = dyn_cast<RecipeTy>(R);
     // Check for recipes that do not have opcodes.
     if constexpr (std::is_same_v<RecipeTy, VPScalarIVStepsRecipe> ||
-                  std::is_same_v<RecipeTy, VPCanonicalIVPHIRecipe> ||
                   std::is_same_v<RecipeTy, VPDerivedIVRecipe> ||
                   std::is_same_v<RecipeTy, VPVectorEndPointerRecipe>)
       return DefR;
