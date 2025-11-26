@@ -320,14 +320,18 @@ bool Builtin::Context::isNonNull(unsigned ID, llvm::SmallVectorImpl<int> &Indxs,
   if (!AttrPos)
     return false;
 
-  AttrPos += 2; // skip 'N' and ':'
+  ++AttrPos;
+  assert(*AttrPos == ':' && "Format specifier must be followed by a ':'");
+  ++AttrPos;
   if (*AttrPos == '0')
     Mode = Info::NonNullMode::NonOptimizing;
   else if (*AttrPos == '1')
     Mode = Info::NonNullMode::Optimizing;
   else
     llvm_unreachable("Unrecognized NonNull optimization mode");
-  AttrPos += 2; // skip mode and ':'
+  ++AttrPos; // skip mode
+  assert(*AttrPos == ':' && "Mode must be followed by a ':'");
+  ++AttrPos;
 
   parseCommaSeparatedIndices(AttrPos, Indxs);
 

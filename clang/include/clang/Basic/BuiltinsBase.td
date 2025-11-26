@@ -33,16 +33,15 @@ def NoThrow : Attribute<"n">;
 def Pure : Attribute<"U">;
 def ReturnsTwice : Attribute<"j">;
 
-class NonNullOptMode {
-  int value;
+class NonNullOptMode<int mode> {
+  int value = mode;
 }
 
-def NonOptimizing : NonNullOptMode { let value = 0; }
-def Optimizing    : NonNullOptMode { let value = 1; }
+def NonOptimizing : NonNullOptMode<0>;
+def Optimizing    : NonNullOptMode<1>;
 
-class NonNull<NonNullOptMode Mode, list<int> Is> : MultiIndexAttribute<"N", Is> {
+class NonNull<NonNullOptMode Mode, list<int> Is> : MultiIndexAttribute<"N:" # Mode.value # ":", Is> {
   int optMode = Mode.value;
-  let Mangling = "N:" # Mode.value # ":";
 }
 
 // builtin-specific attributes
