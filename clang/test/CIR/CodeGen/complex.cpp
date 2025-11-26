@@ -1360,6 +1360,30 @@ void complex_type_argument() {
 // OGCG: %[[TMP_ARG:.*]] = load <2 x float>, ptr %[[ARG_ADDR]], align 4
 // OGCG: call void @_Z22complex_type_parameterCf(<2 x float> noundef %[[TMP_ARG]])
 
+float _Complex complex_type_return_type() {
+  return { 1.0f, 2.0f };
+}
+
+// CIR: %[[RET_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["__retval"]
+// CIR: %[[RET_VAL:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[RET_VAL]], %[[RET_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[TMP_RET:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: cir.return %[[TMP_RET]] : !cir.complex<!cir.float>
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+// LLVM: %[[RET_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: store { float, float } { float 1.000000e+00, float 2.000000e+00 }, ptr %[[RET_ADDR]], align 4
+// LLVM: %[[TMP_RET:.*]] = load { float, float }, ptr %[[RET_ADDR]], align 4
+// LLVM: ret { float, float } %[[TMP_RET]]
+
+// OGCG: %[[RET_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[RET_VAL_REAL:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RET_ADDR]], i32 0, i32 0
+// OGCG: %[[RET_VAL_IMAG:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RET_ADDR]], i32 0, i32 1
+// OGCG: store float 1.000000e+00, ptr %[[RET_VAL_REAL]], align 4
+// OGCG: store float 2.000000e+00, ptr %[[RET_VAL_IMAG]], align 4
+// OGCG: %[[TMP_RET:.*]] = load <2 x float>, ptr %[[RET_ADDR]], align 4
+// OGCG: ret <2 x float> %[[TMP_RET]]
+
 void real_on_scalar_bool() {
   bool a;
   bool b = __real__ a;
@@ -1405,3 +1429,251 @@ void imag_on_scalar_bool() {
 // OGCG: %[[A_ADDR:.*]] = alloca i8, align 1
 // OGCG: %[[B_ADDR:.*]] = alloca i8, align 1
 // OGCG: store i8 0, ptr %[[B_ADDR]], align 1
+
+void function_with_complex_default_arg(
+    float _Complex a = __builtin_complex(1.0f, 2.2f)) {}
+
+// CIR: %[[ARG_0_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: cir.store %{{.*}}, %[[ARG_0_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+
+// LLVM: %[[ARG_0_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: store { float, float } %{{.*}}, ptr %[[ARG_0_ADDR]], align 4
+
+// OGCG: %[[ARG_0_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: store <2 x float> %{{.*}}, ptr %[[ARG_0_ADDR]], align 4
+
+void calling_function_with_default_arg() {
+  function_with_complex_default_arg();
+}
+
+// CIR: %[[DEFAULT_ARG_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["coerce"]
+// CIR: %[[DEFAULT_ARG_VAL:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float> : !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[DEFAULT_ARG_VAL]], %[[DEFAULT_ARG_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[TMP_DEFAULT_ARG:.*]] = cir.load{{.*}} %[[DEFAULT_ARG_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: cir.call @_Z33function_with_complex_default_argCf(%[[TMP_DEFAULT_ARG]]) : (!cir.complex<!cir.float>) -> ()
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+
+// LLVM: %[[DEFAULT_ARG_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: store { float, float } { float 1.000000e+00, float 0x40019999A0000000 }, ptr %[[DEFAULT_ARG_ADDR]], align 4
+// LLVM: %[[TMP_DEFAULT_ARG:.*]] = load { float, float }, ptr %[[DEFAULT_ARG_ADDR]], align 4
+// LLVM: call void @_Z33function_with_complex_default_argCf({ float, float } %[[TMP_DEFAULT_ARG]])
+
+// OGCG: %[[DEFAULT_ARG_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[DEFAULT_ARG_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[DEFAULT_ARG_ADDR]], i32 0, i32 0
+// OGCG: %[[DEFAULT_ARG_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[DEFAULT_ARG_ADDR]], i32 0, i32 1
+// OGCG: store float 1.000000e+00, ptr %[[DEFAULT_ARG_REAL_PTR]], align 4
+// OGCG: store float 0x40019999A0000000, ptr %[[DEFAULT_ARG_IMAG_PTR]], align 4
+// OGCG: %[[TMP_DEFAULT_ARG:.*]] = load <2 x float>, ptr %[[DEFAULT_ARG_ADDR]], align 4
+// OGCG: call void @_Z33function_with_complex_default_argCf(<2 x float> {{.*}} %[[TMP_DEFAULT_ARG]])
+
+void calling_function_that_return_complex() {
+  float _Complex a = complex_type_return_type();
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: %[[RESULT:.*]] = cir.call @_Z24complex_type_return_typev() : () -> !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[RESULT:.*]] = call { float, float } @_Z24complex_type_return_typev()
+// LLVM: store { float, float } %[[RESULT]], ptr %[[A_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[RESULT_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[RESULT:.*]] = call noundef <2 x float> @_Z24complex_type_return_typev()
+// OGCG: store <2 x float> %[[RESULT]], ptr %[[RESULT_ADDR]], align 4
+// OGCG: %[[RESULT_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RESULT_ADDR]], i32 0, i32 0
+// OGCG: %[[RESULT_REAL:.*]] = load float, ptr %[[RESULT_REAL_PTR]], align 4
+// OGCG: %[[RESULT_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RESULT_ADDR]], i32 0, i32 1
+// OGCG: %[[RESULT_IMAG:.*]] = load float, ptr %[[RESULT_IMAG_PTR]], align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: store float %[[RESULT_REAL]], ptr %[[A_REAL_PTR]], align 4
+// OGCG: store float %[[RESULT_IMAG]], ptr %[[A_IMAG_PTR]], align 4
+
+void imag_literal_gnu_extension() {
+  float _Complex a = 3.0fi;
+  double _Complex b = 3.0i;
+  int _Complex c = 3i;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["b", init]
+// CIR: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CIR: %[[COMPLEX_A:.*]] = cir.const #cir.const_complex<#cir.fp<0.000000e+00> : !cir.float, #cir.fp<3.000000e+00> : !cir.float> : !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[COMPLEX_A]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[COMPLEX_B:.*]] = cir.const #cir.const_complex<#cir.fp<0.000000e+00> : !cir.double, #cir.fp<3.000000e+00> : !cir.double> : !cir.complex<!cir.double>
+// CIR: cir.store{{.*}} %[[COMPLEX_B]], %[[B_ADDR]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[COMPLEX_C:.*]] = cir.const #cir.const_complex<#cir.int<0> : !s32i, #cir.int<3> : !s32i> : !cir.complex<!s32i>
+// CIR: cir.store{{.*}} %[[COMPLEX_C]], %[[C_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[C_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: store { float, float } { float 0.000000e+00, float 3.000000e+00 }, ptr %[[A_ADDR]], align 4
+// LLVM: store { double, double } { double 0.000000e+00, double 3.000000e+00 }, ptr %[[B_ADDR]], align 8
+// LLVM: store { i32, i32 } { i32 0, i32 3 }, ptr %[[C_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[B_ADDR:.*]] = alloca { double, double }, align 8
+// OGCG: %[[C_ADDR:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: store float 0.000000e+00, ptr %[[A_REAL_PTR]], align 4
+// OGCG: store float 3.000000e+00, ptr %[[A_IMAG_PTR]], align 4
+// OGCG: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_ADDR]], i32 0, i32 0
+// OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_ADDR]], i32 0, i32 1
+// OGCG: store double 0.000000e+00, ptr %[[B_REAL_PTR]], align 8
+// OGCG: store double 3.000000e+00, ptr %[[B_IMAG_PTR]], align 8
+// OGCG: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[C_ADDR]], i32 0, i32 0
+// OGCG: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[C_ADDR]], i32 0, i32 1
+// OGCG: store i32 0, ptr %[[C_REAL_PTR]], align 4
+// OGCG: store i32 3, ptr %[[C_IMAG_PTR]], align 4
+
+void load_store_volatile() {
+  volatile double _Complex a;
+  volatile double _Complex b;
+  a = b;
+
+  volatile int _Complex c;
+  volatile int _Complex d;
+  c = d;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["b"]
+// CIR: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c"]
+// CIR: %[[D_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["d"]
+// CIR: %[[TMP_B:.*]] = cir.load volatile {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+// CIR: cir.store volatile {{.*}} %[[TMP_B]], %[[A_ADDR]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[TMP_D:.*]] = cir.load volatile {{.*}} %[[D_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CIR: cir.store volatile {{.*}} %[[TMP_D]], %[[C_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[C_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[D_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[TMP_B:.*]] = load volatile { double, double }, ptr %[[B_ADDR]], align 8
+// LLVM: store volatile { double, double } %[[TMP_B]], ptr %[[A_ADDR]], align 8
+// LLVM: %[[TMP_D:.*]] = load volatile { i32, i32 }, ptr %[[D_ADDR]], align 4
+// LLVM: store volatile { i32, i32 } %[[TMP_D]], ptr %[[C_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca { double, double }, align 8
+// OGCG: %[[B_ADDR:.*]] = alloca { double, double }, align 8
+// OGCG: %[[C_ADDR:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[D_ADDR:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_ADDR]], i32 0, i32 0
+// OGCG: %[[B_REAL:.*]] = load volatile double, ptr %[[B_REAL_PTR]], align 8
+// OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_ADDR]], i32 0, i32 1
+// OGCG: %[[B_IMAG:.*]] = load volatile double, ptr %[[B_IMAG_PTR]], align 8
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: store volatile double %[[B_REAL]], ptr %[[A_REAL_PTR]], align 8
+// OGCG: store volatile double %[[B_IMAG]], ptr %[[A_IMAG_PTR]], align 8
+// OGCG: %[[D_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[D_ADDR]], i32 0, i32 0
+// OGCG: %[[D_REAL:.*]] = load volatile i32, ptr %[[D_REAL_PTR]], align 4
+// OGCG: %[[D_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[D_ADDR]], i32 0, i32 1
+// OGCG: %[[D_IMAG:.*]] = load volatile i32, ptr %[[D_IMAG_PTR]], align 4
+// OGCG: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[C_ADDR]], i32 0, i32 0
+// OGCG: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[C_ADDR]], i32 0, i32 1
+// OGCG: store volatile i32 %[[D_REAL]], ptr %[[C_REAL_PTR]], align 4
+// OGCG: store volatile i32 %[[D_IMAG]], ptr %[[C_IMAG_PTR]], align 4
+
+
+void load_store_volatile_2() {
+  volatile double _Complex av;
+  double _Complex a;
+  av = a;
+
+  double _Complex b;
+  volatile double _Complex bv;
+  b = bv;
+
+  int _Complex c;
+  volatile int _Complex cv;
+  c = cv;
+
+  volatile int _Complex dv;
+  int _Complex d;
+  dv = d;
+}
+
+// CIR: %[[AV_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["av"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["a"]
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["b"]
+// CIR: %[[BV_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["bv"]
+// CIR: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c"]
+// CIR: %[[CV_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["cv"]
+// CIR: %[[DV_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["dv"]
+// CIR: %[[D_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["d"]
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+// CIR: cir.store volatile {{.*}} %[[TMP_A]], %[[AV_ADDR]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[TMP_BV:.*]] = cir.load volatile {{.*}} %[[BV_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
+// CIR: cir.store {{.*}} %[[TMP_BV]], %[[B_ADDR]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[TMP_CV:.*]] = cir.load volatile {{.*}} %[[CV_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CIR: cir.store {{.*}} %[[TMP_CV]], %[[C_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[TMP_D:.*]] = cir.load {{.*}} %[[D_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CIR: cir.store volatile {{.*}} %[[TMP_D]], %[[DV_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+
+// LLVM: %[[AV_ADDR:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[BV_ADDR:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[C_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[CV_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[DV_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[D_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[TMP_A:.*]] = load { double, double }, ptr %[[A_ADDR]], align 8
+// LLVM: store volatile { double, double } %[[TMP_A]], ptr %[[AV_ADDR]], align 8
+// LLVM: %[[TMP_BV:.*]] = load volatile { double, double }, ptr %[[BV_ADDR]], align 8
+// LLVM: store { double, double } %[[TMP_BV]], ptr %[[B_ADDR]], align 8
+// LLVM: %[[TMP_CV:.*]] = load volatile { i32, i32 }, ptr %[[CV_ADDR]], align 4
+// LLVM: store { i32, i32 } %[[TMP_CV]], ptr %[[C_ADDR]], align 4
+// LLVM: %[[TMP_D:.*]] = load { i32, i32 }, ptr %[[D_ADDR]], align 4
+// LLVM: store volatile { i32, i32 } %[[TMP_D]], ptr %[[DV_ADDR]], align 4
+
+// OGCG: %[[AV_ADDR:.*]] = alloca { double, double }, align 8
+// OGCG: %[[A_ADDR:.*]] = alloca { double, double }, align 8
+// OGCG: %[[B_ADDR:.*]] = alloca { double, double }, align 8
+// OGCG: %[[BV_ADDR:.*]] = alloca { double, double }, align 8
+// OGCG: %[[C_ADDR:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[CV_ADDR:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[DV_ADDR:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[D_ADDR:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_REAL:.*]] = load double, ptr %[[A_REAL_PTR]], align 8
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: %[[A_IMAG:.*]] = load double, ptr %[[A_IMAG_PTR]], align 8
+// OGCG: %[[AV_REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[AV_ADDR]], i32 0, i32 0
+// OGCG: %[[AV_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[AV_ADDR]], i32 0, i32 1
+// OGCG: store volatile double %[[A_REAL]], ptr %[[AV_REAL_PTR]], align 8
+// OGCG: store volatile double %[[A_IMAG]], ptr %[[AV_IMAG_PTR]], align 8
+// OGCG: %[[BV_REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[BV_ADDR]], i32 0, i32 0
+// OGCG: %[[BV_REAL:.*]] = load volatile double, ptr %[[BV_REAL_PTR]], align 8
+// OGCG: %[[BV_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[BV_ADDR]], i32 0, i32 1
+// OGCG: %[[BV_IMAG:.*]] = load volatile double, ptr %[[BV_IMAG_PTR]], align 8
+// OGCG: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_ADDR]], i32 0, i32 0
+// OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[B_ADDR]], i32 0, i32 1
+// OGCG: store double %[[BV_REAL]], ptr %[[B_REAL_PTR]], align 8
+// OGCG: store double %[[BV_IMAG]], ptr %[[B_IMAG_PTR]], align 8
+// OGCG: %[[CV_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[CV_ADDR]], i32 0, i32 0
+// OGCG: %[[CV_REAL:.*]] = load volatile i32, ptr %[[CV_REAL_PTR]], align 4
+// OGCG: %[[CV_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[CV_ADDR]], i32 0, i32 1
+// OGCG: %[[CV_IMAG:.*]] = load volatile i32, ptr %[[CV_IMAG_PTR]], align 4
+// OGCG: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[C_ADDR]], i32 0, i32 0
+// OGCG: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[C_ADDR]], i32 0, i32 1
+// OGCG: store i32 %[[CV_REAL]], ptr %[[C_REAL_PTR]], align 4
+// OGCG: store i32 %[[CV_IMAG]], ptr %[[C_IMAG_PTR]], align 4
+// OGCG: %[[D_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[D_ADDR]], i32 0, i32 0
+// OGCG: %[[D_REAL:.*]] = load i32, ptr %[[D_REAL_PTR]], align 4
+// OGCG: %[[D_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[D_ADDR]], i32 0, i32 1
+// OGCG: %[[D_IMAG:.*]] = load i32, ptr %[[D_IMAG_PTR]], align 4
+// OGCG: %[[DV_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[DV_ADDR]], i32 0, i32 0
+// OGCG: %[[DV_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[DV_ADDR]], i32 0, i32 1
+// OGCG: store volatile i32 %[[D_REAL]], ptr %[[DV_REAL_PTR]], align 4
+// OGCG: store volatile i32 %[[D_IMAG]], ptr %[[DV_IMAG_PTR]], align 4

@@ -72,7 +72,7 @@ enum class IR2VecKind { Symbolic, FlowAware };
 
 namespace ir2vec {
 
-extern llvm::cl::OptionCategory IR2VecCategory;
+LLVM_ABI extern llvm::cl::OptionCategory IR2VecCategory;
 LLVM_ABI extern cl::opt<float> OpcWeight;
 LLVM_ABI extern cl::opt<float> TypeWeight;
 LLVM_ABI extern cl::opt<float> ArgWeight;
@@ -110,8 +110,8 @@ public:
     return Data[Itr];
   }
 
-  using iterator = typename std::vector<double>::iterator;
-  using const_iterator = typename std::vector<double>::const_iterator;
+  using iterator = std::vector<double>::iterator;
+  using const_iterator = std::vector<double>::const_iterator;
 
   iterator begin() { return Data.begin(); }
   iterator end() { return Data.end(); }
@@ -161,10 +161,10 @@ private:
 
 public:
   /// Default constructor creates empty storage (invalid state)
-  VocabStorage() : Sections(), TotalSize(0), Dimension(0) {}
+  VocabStorage() = default;
 
   /// Create a VocabStorage with pre-organized section data
-  VocabStorage(std::vector<std::vector<Embedding>> &&SectionData);
+  LLVM_ABI VocabStorage(std::vector<std::vector<Embedding>> &&SectionData);
 
   VocabStorage(VocabStorage &&) = default;
   VocabStorage &operator=(VocabStorage &&) = default;
@@ -533,21 +533,20 @@ protected:
   /// in the IR instructions to generate the vector representation.
   const float OpcWeight, TypeWeight, ArgWeight;
 
-  // Utility maps - these are used to store the vector representations of
-  // instructions, basic blocks and functions.
-  mutable Embedding FuncVector;
-  mutable BBEmbeddingsMap BBVecMap;
-  mutable InstEmbeddingsMap InstVecMap;
+  LLVM_ABI Embedder(const Function &F, const Vocabulary &Vocab)
+      : F(F), Vocab(Vocab), Dimension(Vocab.getDimension()),
+        OpcWeight(ir2vec::OpcWeight), TypeWeight(ir2vec::TypeWeight),
+        ArgWeight(ir2vec::ArgWeight) {}
 
-  LLVM_ABI Embedder(const Function &F, const Vocabulary &Vocab);
-
-  /// Function to compute embeddings. It generates embeddings for all
-  /// the instructions and basic blocks in the function F.
-  void computeEmbeddings() const;
+  /// Function to compute embeddings.
+  Embedding computeEmbeddings() const;
 
   /// Function to compute the embedding for a given basic block.
+  Embedding computeEmbeddings(const BasicBlock &BB) const;
+
+  /// Function to compute the embedding for a given instruction.
   /// Specific to the kind of embeddings being computed.
-  virtual void computeEmbeddings(const BasicBlock &BB) const = 0;
+  virtual Embedding computeEmbeddings(const Instruction &I) const = 0;
 
 public:
   virtual ~Embedder() = default;
@@ -556,23 +555,27 @@ public:
   LLVM_ABI static std::unique_ptr<Embedder>
   create(IR2VecKind Mode, const Function &F, const Vocabulary &Vocab);
 
-  /// Returns a map containing instructions and the corresponding embeddings for
-  /// the function F if it has been computed. If not, it computes the embeddings
-  /// for the function and returns the map.
-  LLVM_ABI const InstEmbeddingsMap &getInstVecMap() const;
+  /// Computes and returns the embedding for a given instruction in the function
+  /// F
+  LLVM_ABI Embedding getInstVector(const Instruction &I) const {
+    return computeEmbeddings(I);
+  }
 
-  /// Returns a map containing basic block and the corresponding embeddings for
-  /// the function F if it has been computed. If not, it computes the embeddings
-  /// for the function and returns the map.
-  LLVM_ABI const BBEmbeddingsMap &getBBVecMap() const;
-
-  /// Returns the embedding for a given basic block in the function F if it has
-  /// been computed. If not, it computes the embedding for the basic block and
-  /// returns it.
-  LLVM_ABI const Embedding &getBBVector(const BasicBlock &BB) const;
+  /// Computes and returns the embedding for a given basic block in the function
+  /// F
+  LLVM_ABI Embedding getBBVector(const BasicBlock &BB) const {
+    return computeEmbeddings(BB);
+  }
 
   /// Computes and returns the embedding for the current function.
-  LLVM_ABI const Embedding &getFunctionVector() const;
+  LLVM_ABI Embedding getFunctionVector() const { return computeEmbeddings(); }
+
+  /// Invalidate embeddings if cached. The embeddings may not be relevant
+  /// anymore when the IR changes due to transformations. In such cases, the
+  /// cached embeddings should be invalidated to ensure
+  /// correctness/recomputation. This is a no-op for SymbolicEmbedder but
+  /// removes all the cached entries in FlowAwareEmbedder.
+  virtual void invalidateEmbeddings() {}
 };
 
 /// Class for computing the Symbolic embeddings of IR2Vec.
@@ -580,7 +583,7 @@ public:
 /// representations obtained from the Vocabulary.
 class LLVM_ABI SymbolicEmbedder : public Embedder {
 private:
-  void computeEmbeddings(const BasicBlock &BB) const override;
+  Embedding computeEmbeddings(const Instruction &I) const override;
 
 public:
   SymbolicEmbedder(const Function &F, const Vocabulary &Vocab)
@@ -592,11 +595,15 @@ public:
 /// embeddings, and additionally capture the flow information in the IR.
 class LLVM_ABI FlowAwareEmbedder : public Embedder {
 private:
-  void computeEmbeddings(const BasicBlock &BB) const override;
+  // FlowAware embeddings would benefit from caching instruction embeddings as
+  // they are reused while computing the embeddings of other instructions.
+  mutable InstEmbeddingsMap InstVecMap;
+  Embedding computeEmbeddings(const Instruction &I) const override;
 
 public:
   FlowAwareEmbedder(const Function &F, const Vocabulary &Vocab)
       : Embedder(F, Vocab) {}
+  void invalidateEmbeddings() override { InstVecMap.clear(); }
 };
 
 } // namespace ir2vec

@@ -2,12 +2,12 @@
 
 import gc
 import io
-import itertools
 from tempfile import NamedTemporaryFile
 from mlir.ir import *
 from mlir.dialects.builtin import ModuleOp
-from mlir.dialects import arith
+from mlir.dialects import arith, func, scf
 from mlir.dialects._ods_common import _cext
+from mlir.extras import types as T
 
 
 def run(f):
@@ -569,12 +569,30 @@ def testOperationAttributes():
     # CHECK: Attribute value b'text'
     print(f"Attribute value {sattr.value_bytes}")
 
+    # Python dict-style iteration
     # We don't know in which order the attributes are stored.
-    # CHECK-DAG: NamedAttribute(dependent="text")
-    # CHECK-DAG: NamedAttribute(other.attribute=3.000000e+00 : f64)
-    # CHECK-DAG: NamedAttribute(some.attribute=1 : i8)
-    for attr in op.attributes:
-        print(str(attr))
+    # CHECK-DAG: dependent
+    # CHECK-DAG: other.attribute
+    # CHECK-DAG: some.attribute
+    for name in op.attributes:
+        print(name)
+
+    # Basic dict-like introspection
+    # CHECK: True
+    print("some.attribute" in op.attributes)
+    # CHECK: False
+    print("missing" in op.attributes)
+    # CHECK: Keys: ['dependent', 'other.attribute', 'some.attribute']
+    print("Keys:", sorted(op.attributes.keys()))
+    # CHECK: Values count 3
+    print("Values count", len(op.attributes.values()))
+    # CHECK: Items count 3
+    print("Items count", len(op.attributes.items()))
+
+    # Dict() conversion test
+    d = {k: v.value for k, v in dict(op.attributes).items()}
+    # CHECK: Dict mapping {'dependent': 'text', 'other.attribute': 3.0, 'some.attribute': 1}
+    print("Dict mapping", d)
 
     # Check that exceptions are raised as expected.
     try:
@@ -1169,3 +1187,37 @@ def testOpWalk():
         module.operation.walk(callback)
     except RuntimeError:
         print("Exception raised")
+
+
+# CHECK-LABEL: TEST: testGetOwnerConcreteOpview
+@run
+def testGetOwnerConcreteOpview():
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        with InsertionPoint(module.body):
+            a = arith.ConstantOp(value=42, result=IntegerType.get_signless(32))
+            r = arith.AddIOp(a, a, overflowFlags=arith.IntegerOverflowFlags.nsw)
+            for u in a.result.uses:
+                assert isinstance(u.owner, arith.AddIOp)
+
+
+# CHECK-LABEL: TEST: testIndexSwitch
+@run
+def testIndexSwitch():
+    with Context() as ctx, Location.unknown():
+        i32 = T.i32()
+        module = Module.create()
+        with InsertionPoint(module.body):
+
+            @func.FuncOp.from_py_func(T.index())
+            def index_switch(index):
+                c1 = arith.constant(i32, 1)
+                switch_op = scf.IndexSwitchOp(results=[i32], arg=index, cases=range(3))
+
+                assert len(switch_op.regions) == 4
+                assert len(switch_op.regions[2:]) == 2
+                assert len([i for i in switch_op.regions[2:]]) == 2
+                assert len(switch_op.caseRegions) == 3
+                assert len([i for i in switch_op.caseRegions]) == 3
+                assert len(switch_op.caseRegions[1:]) == 2
+                assert len([i for i in switch_op.caseRegions[1:]]) == 2

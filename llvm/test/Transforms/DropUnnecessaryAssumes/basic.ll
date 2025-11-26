@@ -184,6 +184,18 @@ define void @type_test(ptr %x) {
   ret void
 }
 
+define void @public_type_test(ptr %x) {
+; CHECK-LABEL: define void @public_type_test(
+; CHECK-SAME: ptr [[X:%.*]]) {
+; CHECK-NEXT:    [[TEST:%.*]] = call i1 @llvm.public.type.test(ptr [[X]], metadata !"typeid")
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TEST]])
+; CHECK-NEXT:    ret void
+;
+  %test = call i1 @llvm.public.type.test(ptr %x, metadata !"typeid")
+  call void @llvm.assume(i1 %test)
+  ret void
+}
+
 define void @multiple_dead_conds(i32 %x) {
 ; CHECK-LABEL: define void @multiple_dead_conds(
 ; CHECK-SAME: i32 [[X:%.*]]) {

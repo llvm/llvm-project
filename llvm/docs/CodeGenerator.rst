@@ -269,7 +269,7 @@ Each register in the processor description has an associated
 indicate whether one register overlaps with another).
 
 In addition to the per-register description, the ``TargetRegisterInfo`` class
-exposes a set of processor specific register classes (instances of the
+exposes a set of processor-specific register classes (instances of the
 ``TargetRegisterClass`` class).  Each register class contains sets of registers
 that have the same properties (for example, they are all 32-bit integer
 registers).  Each SSA virtual register created by the instruction selector has
@@ -498,7 +498,7 @@ The ``MachineBasicBlock`` class
 The ``MachineBasicBlock`` class contains a list of machine instructions
 (:raw-html:`<tt>` `MachineInstr`_ :raw-html:`</tt>` instances).  It roughly
 corresponds to the LLVM code input to the instruction selector, but there can be
-a one-to-many mapping (i.e. one LLVM basic block can map to multiple machine
+a one-to-many mapping (i.e., one LLVM basic block can map to multiple machine
 basic blocks). The ``MachineBasicBlock`` class has a "``getBasicBlock``" method,
 which returns the LLVM basic block that it comes from.
 
@@ -522,7 +522,7 @@ LLVM code generator can model sequences of instructions as MachineInstr
 bundles. A MI bundle can model a VLIW group / pack which contains an arbitrary
 number of parallel instructions. It can also be used to model a sequential list
 of instructions (potentially with data dependencies) that cannot be legally
-separated (e.g. ARM Thumb2 IT blocks).
+separated (e.g., ARM Thumb2 IT blocks).
 
 Conceptually a MI bundle is a MI with a number of other MIs nested within:
 
@@ -583,8 +583,8 @@ Packing / bundling of MachineInstrs for VLIW architectures should
 generally be done as part of the register allocation super-pass. More
 specifically, the pass which determines what MIs should be bundled
 together should be done after code generator exits SSA form
-(i.e. after two-address pass, PHI elimination, and copy coalescing).
-Such bundles should be finalized (i.e. adding BUNDLE MIs and input and
+(i.e., after two-address pass, PHI elimination, and copy coalescing).
+Such bundles should be finalized (i.e., adding BUNDLE MIs and input and
 output register MachineOperands) after virtual registers have been
 rewritten into physical registers. This eliminates the need to add
 virtual register operands to BUNDLE instructions which would
@@ -615,7 +615,7 @@ The ``MCStreamer`` API
 ----------------------
 
 MCStreamer is best thought of as an assembler API.  It is an abstract API which
-is *implemented* in different ways (e.g. to output a ``.s`` file, output an ELF ``.o``
+is *implemented* in different ways (e.g., to output a ``.s`` file, output an ELF ``.o``
 file, etc) but whose API corresponds directly to what you see in a ``.s`` file.
 MCStreamer has one method per directive, such as EmitLabel, EmitSymbolAttribute,
 switchSection, emitValue (for .byte, .word), etc, which directly correspond to
@@ -631,7 +631,7 @@ directives through MCStreamer.
 On the implementation side of MCStreamer, there are two major implementations:
 one for writing out a ``.s`` file (MCAsmStreamer), and one for writing out a ``.o``
 file (MCObjectStreamer).  MCAsmStreamer is a straightforward implementation
-that prints out a directive for each method (e.g. ``EmitValue -> .byte``), but
+that prints out a directive for each method (e.g., ``EmitValue -> .byte``), but
 MCObjectStreamer implements a full assembler.
 
 For target-specific directives, the MCStreamer has a MCTargetStreamer instance.
@@ -681,7 +681,7 @@ The ``MCSection`` class
 -----------------------
 
 The ``MCSection`` class represents an object-file specific section. It is
-subclassed by object file specific implementations (e.g. ``MCSectionMachO``,
+subclassed by object file specific implementations (e.g., ``MCSectionMachO``,
 ``MCSectionCOFF``, ``MCSectionELF``) and these are created and uniqued by
 MCContext.  The MCStreamer has a notion of the current section, which can be
 changed with the SwitchToSection method (which corresponds to a ".section"
@@ -696,7 +696,7 @@ The ``MCInst`` class is a target-independent representation of an instruction.
 It is a simple class (much more so than `MachineInstr`_) that holds a
 target-specific opcode and a vector of MCOperands.  MCOperand, in turn, is a
 simple discriminated union of three cases: 1) a simple immediate, 2) a target
-register ID, 3) a symbolic expression (e.g. "``Lfoo-Lbar+42``") as an MCExpr.
+register ID, 3) a symbolic expression (e.g., "``Lfoo-Lbar+42``") as an MCExpr.
 
 MCInst is the common currency used to represent machine instructions at the MC
 layer.  It is the type used by the instruction encoder, the instruction printer,
@@ -711,9 +711,9 @@ The MC layer's object writers support a variety of object formats. Because of
 target-specific aspects of object formats each target only supports a subset of
 the formats supported by the MC layer. Most targets support emitting ELF
 objects. Other vendor-specific objects are generally supported only on targets
-that are supported by that vendor (i.e. MachO is only supported on targets
+that are supported by that vendor (i.e., MachO is only supported on targets
 supported by Darwin, and XCOFF is only supported on targets that support AIX).
-Additionally some targets have their own object formats (i.e. DirectX, SPIR-V
+Additionally some targets have their own object formats (i.e., DirectX, SPIR-V
 and WebAssembly).
 
 The table below captures a snapshot of object file support in LLVM:
@@ -769,7 +769,7 @@ Introduction to SelectionDAGs
 
 The SelectionDAG provides an abstraction for code representation in a way that
 is amenable to instruction selection using automatic techniques
-(e.g. dynamic-programming based optimal pattern matching selectors). It is also
+(e.g., dynamic-programming based optimal pattern matching selectors). It is also
 well-suited to other phases of code generation; in particular, instruction
 scheduling (SelectionDAG's are very close to scheduling DAGs post-selection).
 Additionally, the SelectionDAG provides a host representation where a large
@@ -898,7 +898,7 @@ Initial SelectionDAG Construction
 The initial SelectionDAG is na\ :raw-html:`&iuml;`\ vely peephole expanded from
 the LLVM input by the ``SelectionDAGBuilder`` class.  The intent of this pass
 is to expose as much low-level, target-specific details to the SelectionDAG as
-possible.  This pass is mostly hard-coded (e.g. an LLVM ``add`` turns into an
+possible.  This pass is mostly hard-coded (e.g., an LLVM ``add`` turns into an
 ``SDNode add`` while a ``getelementptr`` is expanded into the obvious
 arithmetic). This pass requires target-specific hooks to lower calls, returns,
 varargs, etc.  For these features, the :raw-html:`<tt>` `TargetLowering`_
@@ -944,7 +944,7 @@ The Legalize phase is in charge of converting a DAG to only use the operations
 that are natively supported by the target.
 
 Targets often have weird constraints, such as not supporting every operation on
-every supported data type (e.g. X86 does not support byte conditional moves and
+every supported data type (e.g., X86 does not support byte conditional moves and
 PowerPC does not support sign-extending loads from a 16-bit memory location).
 Legalize takes care of this by open-coding another sequence of operations to
 emulate the operation ("expansion"), by promoting one type to a larger type that
@@ -995,7 +995,7 @@ SelectionDAG Optimization Phase: the DAG Combiner
 
 The SelectionDAG optimization phase is run multiple times for code generation,
 immediately after the DAG is built and once after each legalization.  The first
-run of the pass allows the initial code to be cleaned up (e.g. performing
+run of the pass allows the initial code to be cleaned up (e.g., performing
 optimizations that depend on knowing that the operators have restricted type
 inputs).  Subsequent runs of the pass clean up the messy code generated by the
 Legalize passes, which allows Legalize to be very simple (it can focus on making
@@ -1120,10 +1120,10 @@ for your target.  It has the following strengths:
   16-bits of the immediate).
 
 * When using the 'Pat' class to map a pattern to an instruction that has one
-  or more complex operands (like e.g. `X86 addressing mode`_), the pattern may
+  or more complex operands (like e.g., `X86 addressing mode`_), the pattern may
   either specify the operand as a whole using a ``ComplexPattern``, or else it
   may specify the components of the complex operand separately.  The latter is
-  done e.g. for pre-increment instructions by the PowerPC back end:
+  done e.g., for pre-increment instructions by the PowerPC back end:
 
   ::
 
@@ -1145,13 +1145,13 @@ While it has many strengths, the system currently has some limitations,
 primarily because it is a work in progress and is not yet finished:
 
 * Overall, there is no way to define or match SelectionDAG nodes that define
-  multiple values (e.g. ``SMUL_LOHI``, ``LOAD``, ``CALL``, etc).  This is the
+  multiple values (e.g., ``SMUL_LOHI``, ``LOAD``, ``CALL``, etc).  This is the
   biggest reason that you currently still *have to* write custom C++ code
   for your instruction selector.
 
 * There is no great way to support matching complex addressing modes yet.  In
   the future, we will extend pattern fragments to allow them to define multiple
-  values (e.g. the four operands of the `X86 addressing mode`_, which are
+  values (e.g., the four operands of the `X86 addressing mode`_, which are
   currently matched with custom C++ code).  In addition, we'll extend fragments
   so that a fragment can match multiple different patterns.
 
@@ -1175,7 +1175,7 @@ SelectionDAG Scheduling and Formation Phase
 
 The scheduling phase takes the DAG of target instructions from the selection
 phase and assigns an order.  The scheduler can pick an order depending on
-various constraints of the machines (i.e. order for minimal register pressure or
+various constraints of the machines (i.e., order for minimal register pressure or
 try to cover instruction latencies).  Once an order is established, the DAG is
 converted to a list of :raw-html:`<tt>` `MachineInstr`_\s :raw-html:`</tt>` and
 the SelectionDAG is destroyed.
@@ -1295,7 +1295,7 @@ Physical registers, in LLVM, are grouped in *Register Classes*.  Elements in the
 same register class are functionally equivalent, and can be interchangeably
 used. Each virtual register can only be mapped to physical registers of a
 particular class. For instance, in the X86 architecture, some virtuals can only
-be allocated to 8 bit registers.  A register class is described by
+be allocated to 8-bit registers.  A register class is described by
 ``TargetRegisterClass`` objects.  To discover if a virtual register is
 compatible with a given physical, this code can be used:
 
@@ -1615,7 +1615,7 @@ Since the MC layer works at the level of abstraction of object files, it doesn't
 have a notion of functions, global variables etc.  Instead, it thinks about
 labels, directives, and instructions.  A key class used at this time is the
 MCStreamer class.  This is an abstract API that is implemented in different ways
-(e.g. to output a ``.s`` file, output an ELF ``.o`` file, etc) that is effectively an
+(e.g., to output a ``.s`` file, output an ELF ``.o`` file, etc) that is effectively an
 "assembler API".  MCStreamer has one method per directive, such as EmitLabel,
 EmitSymbolAttribute, switchSection, etc, which directly correspond to assembly
 level directives.
@@ -1661,6 +1661,13 @@ section will contain an array of pairs of function symbol values (pointer size)
 and stack sizes (unsigned LEB128). The stack size values only include the space
 allocated in the function prologue. Functions with dynamic stack allocations are
 not included.
+
+Emitting function call graph information
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A section containing metadata on function call graph will be emitted when
+``TargetOptions::EmitCallGraphSection`` is set (--call-graph-section). Layout of
+this section is documented in detail at :doc:`CallGraphSection`.
 
 VLIW Packetizer
 ---------------

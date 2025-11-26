@@ -148,9 +148,8 @@ void NonNullParamChecker::checkPreCall(const CallEvent &Call,
 
       QualType T = ArgE->getType();
       const RecordType *UT = T->getAsUnionType();
-      if (!UT || !UT->getOriginalDecl()
-                      ->getMostRecentDecl()
-                      ->hasAttr<TransparentUnionAttr>())
+      if (!UT ||
+          !UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>())
         continue;
 
       auto CSV = DV->getAs<nonloc::CompoundVal>();
