@@ -47,11 +47,6 @@ static cl::opt<bool> EnsureWholeVectorRegisterMoveValidVTYPE(
              "vill is cleared"),
     cl::init(true));
 
-static cl::opt<bool> UseVsetivliForImmAVL(
-    DEBUG_TYPE "-use-vsetivli-for-imm-avl", cl::Hidden,
-    cl::desc("Use vsetivli to replace x0,x0 form when AVL is an immediate."),
-    cl::init(true));
-
 namespace {
 
 /// Given a virtual register \p Reg, return the corresponding VNInfo for it.
@@ -1173,7 +1168,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     // VLMAX.
     if (Info.hasSameAVL(PrevInfo) && Info.hasSameVLMAX(PrevInfo)) {
       auto MI =
-          UseVsetivliForImmAVL && Info.hasAVLImm()
+          Info.hasAVLImm()
               ? BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETIVLI))
                     .addReg(RISCV::X0, RegState::Define | RegState::Dead)
                     .addImm(PrevInfo.getAVLImm())
