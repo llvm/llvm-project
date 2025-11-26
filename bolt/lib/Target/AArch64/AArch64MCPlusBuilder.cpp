@@ -164,11 +164,53 @@ public:
 
   bool isPush(const MCInst &Inst) const override {
     return isStoreToStack(Inst);
-  };
+  }
 
   bool isPop(const MCInst &Inst) const override {
     return isLoadFromStack(Inst);
-  };
+  }
+
+  // We look for instructions that load from stack or make stack pointer
+  // adjustment, and assume the basic block is an epilogue if and only if
+  // such instructions are present and also immediately precede the branch
+  // instruction that ends the basic block.
+  bool isEpilogue(const BinaryBasicBlock &BB) const override {
+    if (BB.succ_size())
+      return false;
+
+    bool SeenLoadFromStack = false;
+    bool SeenStackPointerAdjustment = false;
+    for (const MCInst &Instr : BB) {
+      // Skip CFI pseudo instruction.
+      if (isCFI(Instr))
+        continue;
+
+      bool IsPop = isPop(Instr);
+      // A load from stack instruction could do SP adjustment in pre-index or
+      // post-index form, which we can skip to check for epilogue recognition
+      // purpose.
+      bool IsSPAdj = (isADD(Instr) || isMOVW(Instr)) &&
+                     Instr.getOperand(0).isReg() &&
+                     Instr.getOperand(0).getReg() == AArch64::SP;
+      SeenLoadFromStack |= IsPop;
+      SeenStackPointerAdjustment |= IsSPAdj;
+
+      if (!SeenLoadFromStack && !SeenStackPointerAdjustment)
+        continue;
+      if (IsPop || IsSPAdj || isPAuthOnLR(Instr))
+        continue;
+      if (isReturn(Instr))
+        return true;
+      if (isBranch(Instr))
+        break;
+
+      // Any previously seen load from stack or stack adjustment instruction
+      // is definitely not part of epilogue code sequence, so reset these two.
+      SeenLoadFromStack = false;
+      SeenStackPointerAdjustment = false;
+    }
+    return SeenLoadFromStack || SeenStackPointerAdjustment;
+  }
 
   void createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {
@@ -269,6 +311,33 @@ public:
            Inst.getOpcode() == AArch64::RETABSPPCi ||
            Inst.getOpcode() == AArch64::RETAASPPCr ||
            Inst.getOpcode() == AArch64::RETABSPPCr;
+  }
+
+  void createMatchingAuth(const MCInst &AuthAndRet, MCInst &Auth) override {
+    Auth.clear();
+    Auth.setOperands(AuthAndRet.getOperands());
+    switch (AuthAndRet.getOpcode()) {
+    case AArch64::RETAA:
+      Auth.setOpcode(AArch64::AUTIASP);
+      break;
+    case AArch64::RETAB:
+      Auth.setOpcode(AArch64::AUTIBSP);
+      break;
+    case AArch64::RETAASPPCi:
+      Auth.setOpcode(AArch64::AUTIASPPCi);
+      break;
+    case AArch64::RETABSPPCi:
+      Auth.setOpcode(AArch64::AUTIBSPPCi);
+      break;
+    case AArch64::RETAASPPCr:
+      Auth.setOpcode(AArch64::AUTIASPPCr);
+      break;
+    case AArch64::RETABSPPCr:
+      Auth.setOpcode(AArch64::AUTIBSPPCr);
+      break;
+    default:
+      llvm_unreachable("Unhandled fused pauth-and-return instruction");
+    }
   }
 
   std::optional<MCPhysReg> getSignedReg(const MCInst &Inst) const override {
@@ -640,7 +709,8 @@ public:
     Insts[1].addOperand(MCOperand::createImm(0));
     Insts[1].addOperand(MCOperand::createImm(0));
     setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx,
-                          ELF::R_AARCH64_ADD_ABS_LO12_NC);
+                          isLDRXl(LDRInst) ? ELF::R_AARCH64_LDST64_ABS_LO12_NC
+                                           : ELF::R_AARCH64_LDST32_ABS_LO12_NC);
     return Insts;
   }
 
@@ -2705,6 +2775,31 @@ public:
     return Insts;
   }
 
+  void createBTI(MCInst &Inst, bool CallTarget,
+                 bool JumpTarget) const override {
+    Inst.setOpcode(AArch64::HINT);
+    unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
+    Inst.addOperand(MCOperand::createImm(HintNum));
+  }
+
+  bool isBTILandingPad(MCInst &Inst, bool CallTarget,
+                       bool JumpTarget) const override {
+    unsigned HintNum = getBTIHintNum(CallTarget, JumpTarget);
+    bool IsExplicitBTI =
+        Inst.getOpcode() == AArch64::HINT && Inst.getNumOperands() == 1 &&
+        Inst.getOperand(0).isImm() && Inst.getOperand(0).getImm() == HintNum;
+
+    bool IsImplicitBTI = HintNum == 34 && isImplicitBTIC(Inst);
+    return IsExplicitBTI || IsImplicitBTI;
+  }
+
+  bool isImplicitBTIC(MCInst &Inst) const override {
+    // PACI[AB]SP are always implicitly BTI C, independently of
+    // SCTLR_EL1.BT[01].
+    return Inst.getOpcode() == AArch64::PACIASP ||
+           Inst.getOpcode() == AArch64::PACIBSP;
+  }
+
   InstructionListType materializeAddress(const MCSymbol *Target, MCContext *Ctx,
                                          MCPhysReg RegName,
                                          int64_t Addend = 0) const override {
@@ -2804,7 +2899,7 @@ public:
     BitVector WrittenRegs(RegInfo->getNumRegs());
     const BitVector &SizeRegAliases = getAliases(SizeReg);
 
-    for (auto InstIt = BB.begin(); InstIt != CallInst; ++InstIt) {
+    for (auto InstIt = CallInst; InstIt != BB.begin(); --InstIt) {
       const MCInst &Inst = *InstIt;
       WrittenRegs.reset();
       getWrittenRegs(Inst, WrittenRegs);

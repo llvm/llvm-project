@@ -14,78 +14,36 @@
 define dso_local signext range(i32 0, 2) i32 @cmpeq16(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b) {
 ; CHECK-AIX64-32-P8-LABEL: cmpeq16:
 ; CHECK-AIX64-32-P8:       # %bb.0: # %entry
-; CHECK-AIX64-32-P8-NEXT:    ld r5, 0(r3)
-; CHECK-AIX64-32-P8-NEXT:    ld r6, 0(r4)
-; CHECK-AIX64-32-P8-NEXT:    cmpld r5, r6
-; CHECK-AIX64-32-P8-NEXT:    bne cr0, L..BB0_2
-; CHECK-AIX64-32-P8-NEXT:  # %bb.1: # %loadbb1
-; CHECK-AIX64-32-P8-NEXT:    ld r5, 8(r3)
-; CHECK-AIX64-32-P8-NEXT:    ld r4, 8(r4)
-; CHECK-AIX64-32-P8-NEXT:    li r3, 0
-; CHECK-AIX64-32-P8-NEXT:    cmpld r5, r4
-; CHECK-AIX64-32-P8-NEXT:    beq cr0, L..BB0_3
-; CHECK-AIX64-32-P8-NEXT:  L..BB0_2: # %res_block
-; CHECK-AIX64-32-P8-NEXT:    li r3, 1
-; CHECK-AIX64-32-P8-NEXT:  L..BB0_3: # %endblock
-; CHECK-AIX64-32-P8-NEXT:    cntlzw r3, r3
-; CHECK-AIX64-32-P8-NEXT:    srwi r3, r3, 5
+; CHECK-AIX64-32-P8-NEXT:    lxvw4x vs34, 0, r4
+; CHECK-AIX64-32-P8-NEXT:    lxvw4x vs35, 0, r3
+; CHECK-AIX64-32-P8-NEXT:    vcmpequb. v2, v3, v2
+; CHECK-AIX64-32-P8-NEXT:    mfocrf r3, 2
+; CHECK-AIX64-32-P8-NEXT:    rlwinm r3, r3, 25, 31, 31
 ; CHECK-AIX64-32-P8-NEXT:    blr
 ;
 ; CHECK-AIX64-32-P10-LABEL: cmpeq16:
 ; CHECK-AIX64-32-P10:       # %bb.0: # %entry
-; CHECK-AIX64-32-P10-NEXT:    ld r5, 0(r3)
-; CHECK-AIX64-32-P10-NEXT:    ld r6, 0(r4)
-; CHECK-AIX64-32-P10-NEXT:    cmpld r5, r6
-; CHECK-AIX64-32-P10-NEXT:    bne cr0, L..BB0_2
-; CHECK-AIX64-32-P10-NEXT:  # %bb.1: # %loadbb1
-; CHECK-AIX64-32-P10-NEXT:    ld r5, 8(r3)
-; CHECK-AIX64-32-P10-NEXT:    ld r4, 8(r4)
-; CHECK-AIX64-32-P10-NEXT:    li r3, 0
-; CHECK-AIX64-32-P10-NEXT:    cmpld r5, r4
-; CHECK-AIX64-32-P10-NEXT:    beq cr0, L..BB0_3
-; CHECK-AIX64-32-P10-NEXT:  L..BB0_2: # %res_block
-; CHECK-AIX64-32-P10-NEXT:    li r3, 1
-; CHECK-AIX64-32-P10-NEXT:  L..BB0_3: # %endblock
-; CHECK-AIX64-32-P10-NEXT:    cntlzw r3, r3
-; CHECK-AIX64-32-P10-NEXT:    rlwinm r3, r3, 27, 31, 31
+; CHECK-AIX64-32-P10-NEXT:    lxv vs34, 0(r4)
+; CHECK-AIX64-32-P10-NEXT:    lxv vs35, 0(r3)
+; CHECK-AIX64-32-P10-NEXT:    vcmpequb. v2, v3, v2
+; CHECK-AIX64-32-P10-NEXT:    setbc r3, 4*cr6+lt
 ; CHECK-AIX64-32-P10-NEXT:    blr
 ;
 ; CHECK-LINUX64-P8-LABEL: cmpeq16:
 ; CHECK-LINUX64-P8:       # %bb.0: # %entry
-; CHECK-LINUX64-P8-NEXT:    ld r5, 0(r3)
-; CHECK-LINUX64-P8-NEXT:    ld r6, 0(r4)
-; CHECK-LINUX64-P8-NEXT:    cmpld r5, r6
-; CHECK-LINUX64-P8-NEXT:    bne cr0, .LBB0_2
-; CHECK-LINUX64-P8-NEXT:  # %bb.1: # %loadbb1
-; CHECK-LINUX64-P8-NEXT:    ld r5, 8(r3)
-; CHECK-LINUX64-P8-NEXT:    ld r4, 8(r4)
-; CHECK-LINUX64-P8-NEXT:    li r3, 0
-; CHECK-LINUX64-P8-NEXT:    cmpld r5, r4
-; CHECK-LINUX64-P8-NEXT:    beq cr0, .LBB0_3
-; CHECK-LINUX64-P8-NEXT:  .LBB0_2: # %res_block
-; CHECK-LINUX64-P8-NEXT:    li r3, 1
-; CHECK-LINUX64-P8-NEXT:  .LBB0_3: # %endblock
-; CHECK-LINUX64-P8-NEXT:    cntlzw r3, r3
-; CHECK-LINUX64-P8-NEXT:    srwi r3, r3, 5
+; CHECK-LINUX64-P8-NEXT:    lxvd2x vs34, 0, r4
+; CHECK-LINUX64-P8-NEXT:    lxvd2x vs35, 0, r3
+; CHECK-LINUX64-P8-NEXT:    vcmpequb. v2, v3, v2
+; CHECK-LINUX64-P8-NEXT:    mfocrf r3, 2
+; CHECK-LINUX64-P8-NEXT:    rlwinm r3, r3, 25, 31, 31
 ; CHECK-LINUX64-P8-NEXT:    blr
 ;
 ; CHECK-LINUX64-P10-LABEL: cmpeq16:
 ; CHECK-LINUX64-P10:       # %bb.0: # %entry
-; CHECK-LINUX64-P10-NEXT:    ld r5, 0(r3)
-; CHECK-LINUX64-P10-NEXT:    ld r6, 0(r4)
-; CHECK-LINUX64-P10-NEXT:    cmpld r5, r6
-; CHECK-LINUX64-P10-NEXT:    bne cr0, .LBB0_2
-; CHECK-LINUX64-P10-NEXT:  # %bb.1: # %loadbb1
-; CHECK-LINUX64-P10-NEXT:    ld r5, 8(r3)
-; CHECK-LINUX64-P10-NEXT:    ld r4, 8(r4)
-; CHECK-LINUX64-P10-NEXT:    li r3, 0
-; CHECK-LINUX64-P10-NEXT:    cmpld r5, r4
-; CHECK-LINUX64-P10-NEXT:    beq cr0, .LBB0_3
-; CHECK-LINUX64-P10-NEXT:  .LBB0_2: # %res_block
-; CHECK-LINUX64-P10-NEXT:    li r3, 1
-; CHECK-LINUX64-P10-NEXT:  .LBB0_3: # %endblock
-; CHECK-LINUX64-P10-NEXT:    cntlzw r3, r3
-; CHECK-LINUX64-P10-NEXT:    rlwinm r3, r3, 27, 31, 31
+; CHECK-LINUX64-P10-NEXT:    lxv vs34, 0(r4)
+; CHECK-LINUX64-P10-NEXT:    lxv vs35, 0(r3)
+; CHECK-LINUX64-P10-NEXT:    vcmpequb. v2, v3, v2
+; CHECK-LINUX64-P10-NEXT:    setbc r3, 4*cr6+lt
 ; CHECK-LINUX64-P10-NEXT:    blr
 entry:
   %bcmp = tail call i32 @bcmp(ptr noundef nonnull dereferenceable(16) %a, ptr noundef nonnull dereferenceable(16) %b, i64 16)

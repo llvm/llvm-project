@@ -33,6 +33,7 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(ptr addrspace(1) %out.ptr, ptr
 ; GCN-NEXT:    v_mov_b32_e32 v13, s49
 ; GCN-NEXT:    v_mov_b32_e32 v14, s50
 ; GCN-NEXT:    v_mov_b32_e32 v15, s51
+; GCN-NEXT:    s_load_dwordx16 s[36:51], s[22:23], 0xc0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:4
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:8
@@ -50,7 +51,6 @@ define amdgpu_kernel void @v_insert_v64i32_varidx(ptr addrspace(1) %out.ptr, ptr
 ; GCN-NEXT:    buffer_store_dword v14, off, s[0:3], 0 offset:56
 ; GCN-NEXT:    buffer_store_dword v15, off, s[0:3], 0 offset:60
 ; GCN-NEXT:    v_mov_b32_e32 v0, s52
-; GCN-NEXT:    s_load_dwordx16 s[36:51], s[22:23], 0xc0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:64
 ; GCN-NEXT:    v_mov_b32_e32 v0, s53
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:68

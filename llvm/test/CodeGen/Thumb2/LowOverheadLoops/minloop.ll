@@ -28,29 +28,29 @@ define void @arm_min_q31(ptr nocapture readonly %pSrc, i32 %blockSize, ptr nocap
 ; CHECK-NEXT:    str r6, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    subs r7, #4
 ; CHECK-NEXT:    movs r6, #1
-; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    mov.w r10, #0
+; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    add.w lr, r6, r7, lsr #2
 ; CHECK-NEXT:  .LBB0_5: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r11, [r0, #16]!
-; CHECK-NEXT:    ldrd r5, r7, [r0, #-12]
+; CHECK-NEXT:    ldrd r5, r6, [r0, #-12]
 ; CHECK-NEXT:    ldr r4, [r0, #-4]
 ; CHECK-NEXT:    cmp r12, r5
 ; CHECK-NEXT:    csel r5, r5, r12, gt
-; CHECK-NEXT:    csinc r6, r10, r8, le
-; CHECK-NEXT:    cmp r5, r7
+; CHECK-NEXT:    csinc r7, r10, r8, le
+; CHECK-NEXT:    cmp r5, r6
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    addgt.w r6, r8, #2
-; CHECK-NEXT:    csel r7, r7, r5, gt
-; CHECK-NEXT:    cmp r7, r4
+; CHECK-NEXT:    addgt.w r7, r8, #2
+; CHECK-NEXT:    csel r6, r6, r5, gt
+; CHECK-NEXT:    cmp r6, r4
 ; CHECK-NEXT:    it gt
-; CHECK-NEXT:    addgt.w r6, r8, #3
-; CHECK-NEXT:    csel r7, r4, r7, gt
+; CHECK-NEXT:    addgt.w r7, r8, #3
+; CHECK-NEXT:    csel r6, r4, r6, gt
 ; CHECK-NEXT:    add.w r8, r8, #4
-; CHECK-NEXT:    cmp r7, r11
-; CHECK-NEXT:    csel r10, r8, r6, gt
-; CHECK-NEXT:    csel r12, r11, r7, gt
+; CHECK-NEXT:    cmp r6, r11
+; CHECK-NEXT:    csel r10, r8, r7, gt
+; CHECK-NEXT:    csel r12, r11, r6, gt
 ; CHECK-NEXT:    le lr, .LBB0_5
 ; CHECK-NEXT:  @ %bb.6: @ %while.end.loopexit.unr-lcssa.loopexit
 ; CHECK-NEXT:    ldr r6, [sp] @ 4-byte Reload

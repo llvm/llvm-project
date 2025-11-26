@@ -188,8 +188,7 @@ public:
                                                   unsigned Opcode2) const;
 
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const override;
 
   InstructionCost
@@ -312,7 +311,7 @@ public:
   }
 
   bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) const {
-    if (!ST->hasSVE())
+    if (!ST->isSVEorStreamingSVEAvailable())
       return false;
 
     // For fixed vectors, avoid scalarization if using SVE for them.
@@ -324,12 +323,14 @@ public:
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned /*AddressSpace*/) const override {
+                         unsigned /*AddressSpace*/,
+                         TTI::MaskKind /*MaskKind*/) const override {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned /*AddressSpace*/) const override {
+                          unsigned /*AddressSpace*/,
+                          TTI::MaskKind /*MaskKind*/) const override {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
@@ -456,11 +457,10 @@ public:
 
   /// FP16 and BF16 operations are lowered to fptrunc(op(fpext, fpext) if the
   /// architecture features are not present.
-  std::optional<InstructionCost>
-  getFP16BF16PromoteCost(Type *Ty, TTI::TargetCostKind CostKind,
-                         TTI::OperandValueInfo Op1Info,
-                         TTI::OperandValueInfo Op2Info, bool IncludeTrunc,
-                         std::function<InstructionCost(Type *)> InstCost) const;
+  std::optional<InstructionCost> getFP16BF16PromoteCost(
+      Type *Ty, TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+      TTI::OperandValueInfo Op2Info, bool IncludeTrunc, bool CanUseSVE,
+      std::function<InstructionCost(Type *)> InstCost) const;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,

@@ -26,6 +26,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -40,7 +41,6 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
@@ -1295,8 +1295,8 @@ static ASTUnit::StandaloneFixIt makeStandaloneFixIt(const SourceManager &SM,
                                                     const FixItHint &InFix) {
   ASTUnit::StandaloneFixIt OutFix;
   OutFix.RemoveRange = makeStandaloneRange(InFix.RemoveRange, SM, LangOpts);
-  OutFix.InsertFromRange = makeStandaloneRange(InFix.InsertFromRange, SM,
-                                               LangOpts);
+  OutFix.InsertFromRange =
+      makeStandaloneRange(InFix.InsertFromRange, SM, LangOpts);
   OutFix.CodeToInsert = InFix.CodeToInsert;
   OutFix.BeforePreviousInsertions = InFix.BeforePreviousInsertions;
   return OutFix;
@@ -1860,8 +1860,8 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->TUKind = TUKind;
   AST->ShouldCacheCodeCompletionResults = CacheCodeCompletionResults;
-  AST->IncludeBriefCommentsInCodeCompletion
-    = IncludeBriefCommentsInCodeCompletion;
+  AST->IncludeBriefCommentsInCodeCompletion =
+      IncludeBriefCommentsInCodeCompletion;
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
   AST->Invocation = CI;
   AST->SkipFunctionBodies = SkipFunctionBodies;
@@ -1872,12 +1872,10 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
   Diags = nullptr;
 
   // Recover resources if we crash before exiting this method.
-  llvm::CrashRecoveryContextCleanupRegistrar<ASTUnit>
-    ASTUnitCleanup(AST.get());
+  llvm::CrashRecoveryContextCleanupRegistrar<ASTUnit> ASTUnitCleanup(AST.get());
 
   if (AST->LoadFromCompilerInvocation(std::move(PCHContainerOps),
-                                      PrecompilePreambleAfterNParses,
-                                      VFS)) {
+                                      PrecompilePreambleAfterNParses, VFS)) {
     // Some error occurred, if caller wants to examine diagnostics, pass it the
     // ASTUnit.
     if (ErrAST) {
@@ -2409,10 +2407,9 @@ bool ASTUnit::serialize(raw_ostream &OS) {
 }
 
 void ASTUnit::TranslateStoredDiagnostics(
-                          FileManager &FileMgr,
-                          SourceManager &SrcMgr,
-                          const SmallVectorImpl<StandaloneDiagnostic> &Diags,
-                          SmallVectorImpl<StoredDiagnostic> &Out) {
+    FileManager &FileMgr, SourceManager &SrcMgr,
+    const SmallVectorImpl<StandaloneDiagnostic> &Diags,
+    SmallVectorImpl<StoredDiagnostic> &Out) {
   // Map the standalone diagnostic into the new source manager. We also need to
   // remap all the locations to the new view. This includes the diag location,
   // any associated source ranges, and the source ranges of associated fix-its.
@@ -2461,8 +2458,8 @@ void ASTUnit::TranslateStoredDiagnostics(
       FH.RemoveRange = CharSourceRange::getCharRange(BL, EL);
     }
 
-    Result.push_back(StoredDiagnostic(SD.Level, SD.ID,
-                                      SD.Message, Loc, Ranges, FixIts));
+    Result.push_back(
+        StoredDiagnostic(SD.Level, SD.ID, SD.Message, Loc, Ranges, FixIts));
   }
   Result.swap(Out);
 }

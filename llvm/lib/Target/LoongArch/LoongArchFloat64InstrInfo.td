@@ -20,6 +20,7 @@ def SDT_LoongArchMOVGR2FR_D_LO_HI
     : SDTypeProfile<1, 2, [SDTCisVT<0, f64>, SDTCisVT<1, i32>,
                            SDTCisSameAs<1, 2>]>;
 
+// FPR<->GPR transfer operations
 def loongarch_movgr2fr_d
     : SDNode<"LoongArchISD::MOVGR2FR_D", SDT_LoongArchMOVGR2FR_D>;
 def loongarch_movgr2fr_d_lo_hi

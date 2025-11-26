@@ -476,6 +476,7 @@ define void @ds_write2_b32_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GCN-NEXT:    v_accvgpr_read_b32 v1, a1
 ; GCN-NEXT:    v_accvgpr_read_b32 v2, a2
+; GCN-NEXT:    ds_write2_b32 v0, v1, v2 offset0:10 offset1:24
 ; GCN-NEXT:    v_accvgpr_write_b32 a31, v19 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a30, v20 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a29, v21 ; Reload Reuse
@@ -488,7 +489,6 @@ define void @ds_write2_b32_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    v_accvgpr_write_b32 a22, v28 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a21, v29 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a20, v30 ; Reload Reuse
-; GCN-NEXT:    ds_write2_b32 v0, v1, v2 offset0:10 offset1:24
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
@@ -1029,6 +1029,7 @@ define void @ds_write2_b64_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GCN-NEXT:    v_accvgpr_read_b32 v3, a3
 ; GCN-NEXT:    v_accvgpr_read_b32 v5, a5
+; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:10 offset1:24
 ; GCN-NEXT:    v_accvgpr_write_b32 a31, v21 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a30, v22 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a29, v23 ; Reload Reuse
@@ -1039,7 +1040,6 @@ define void @ds_write2_b64_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; GCN-NEXT:    v_accvgpr_write_b32 a24, v28 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a23, v29 ; Reload Reuse
 ; GCN-NEXT:    v_accvgpr_write_b32 a22, v30 ; Reload Reuse
-; GCN-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:10 offset1:24
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload

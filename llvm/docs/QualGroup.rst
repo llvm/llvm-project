@@ -181,7 +181,7 @@ Membership Review
 
 To ensure the group remains active and focused, member participation will be reviewed every six months. Inactive members may be removed following this review.
 
-Decision Taking
+Decision Making
 ---------------
 
 The LLVM Qualification Working Group aims to make decisions transparently, collaboratively, and without unnecessary formality. The goal is to maintain efficiency while encouraging broad participation and mutual understanding.

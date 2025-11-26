@@ -348,7 +348,7 @@ class WaveReduceOp<string OpName, string TypeStr, ValueType Ty,
 
 // Input list : [Operation_name,
 //              type - Signed(I)/Unsigned(U)/Float(F)/Bitwise(B),
-//              bit-width
+//              input-type
 //              output register class,
 //              input register class]
 defvar Operations = [
@@ -371,6 +371,11 @@ defvar Operations = [
   WaveReduceOp<"and", "B64", i64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"or", "B64", i64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"xor", "B64", i64, SGPR_64, VSrc_b64>,
+
+  WaveReduceOp<"fmin", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fmax", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fadd", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fsub", "F32", f32, SGPR_32, VSrc_b32>,
 ];
 
 foreach Op = Operations in {
@@ -789,6 +794,17 @@ def SI_CALL_ISEL : SPseudoInstSI <
 def : GCNPat<
   (AMDGPUcall i64:$src0, (i64 0)),
   (SI_CALL_ISEL $src0, (i64 0))
+>;
+
+// Funnel shift right (fshr) patterns for uniform inputs.
+// These patterns implement this using scalar instructions by constructing a 64-bit
+// value {a, b} and performing a single right shift.
+def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
+  (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), (S_AND_B32 $src2, (i32 31))), sub0))
+>;
+
+def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, (i32 ShiftAmt32Imm:$src2)),
+  (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src1, sub0, $src0, sub1), $src2), sub0))
 >;
 
 // Wrapper around s_swappc_b64 with extra $callee parameter to track
@@ -2930,13 +2946,23 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (i64 (zext i32:$src)),
+  (i64 (UniformUnaryFrag<zext> i32:$src)),
   (REG_SEQUENCE SReg_64, $src, sub0, (S_MOV_B32 (i32 0)), sub1)
 >;
 
 def : GCNPat <
-  (i64 (anyext i32:$src)),
+  (i64 (zext i32:$src)),
+  (REG_SEQUENCE VReg_64, $src, sub0, (V_MOV_B32_e32 (i32 0)), sub1)
+>;
+
+def : GCNPat <
+  (i64 (UniformUnaryFrag<anyext> i32:$src)),
   (REG_SEQUENCE SReg_64, $src, sub0, (i32 (IMPLICIT_DEF)), sub1)
+>;
+
+def : GCNPat <
+  (i64 (anyext i32:$src)),
+  (REG_SEQUENCE VReg_64, $src, sub0, (i32 (IMPLICIT_DEF)), sub1)
 >;
 
 class ZExt_i64_i1_Pat <SDNode ext> : GCNPat <
