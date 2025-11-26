@@ -1997,8 +1997,8 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   for (size_t I = 0; I != CmpSize; I += ElemSize) {
     if (IsWide) {
       INT_TYPE_SWITCH(*S.getContext().classify(ASTCtx.getWCharType()), {
-        T A = *reinterpret_cast<T *>(BufferA.Data.get() + I);
-        T B = *reinterpret_cast<T *>(BufferB.Data.get() + I);
+        T A = *reinterpret_cast<T *>(BufferA.atByte(I));
+        T B = *reinterpret_cast<T *>(BufferB.atByte(I));
         if (A < B) {
           pushInteger(S, -1, Call->getType());
           return true;
@@ -2009,8 +2009,8 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
         }
       });
     } else {
-      std::byte A = BufferA.Data[I];
-      std::byte B = BufferB.Data[I];
+      std::byte A = BufferA.deref<std::byte>(Bytes(I));
+      std::byte B = BufferB.deref<std::byte>(Bytes(I));
 
       if (A < B) {
         pushInteger(S, -1, Call->getType());
