@@ -5,7 +5,7 @@ import io
 from tempfile import NamedTemporaryFile
 from mlir.ir import *
 from mlir.dialects.builtin import ModuleOp
-from mlir.dialects import arith, func, scf
+from mlir.dialects import arith, func, scf, shape
 from mlir.dialects._ods_common import _cext
 from mlir.extras import types as T
 
@@ -772,6 +772,21 @@ def testKnownOpView():
         constant = module.body.operations[3]
         # CHECK: <__main__.testKnownOpView.<locals>.ConstantOp object
         print(repr(constant))
+
+
+# CHECK-LABEL: TEST: testFailedGenericOperationCreationReportsError
+@run
+def testFailedGenericOperationCreationReportsError():
+    with Context(), Location.unknown():
+        c0 = shape.const_shape([])
+        c1 = shape.const_shape([1, 2, 3])
+        try:
+            shape.MeetOp.build_generic(operands=[c0, c1])
+        except MLIRError as e:
+            # CHECK: unequal shape cardinality
+            print(e)
+        else:
+            assert False, "Expected exception"
 
 
 # CHECK-LABEL: TEST: testSingleResultProperty
