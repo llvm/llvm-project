@@ -2934,7 +2934,7 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   auto ApplyHazardWorkarounds = [this, &MBB, &I, &DL, FlushSGPRWrites]() {
     if (FlushSGPRWrites)
       BuildMI(MBB, I, DL, get(AMDGPU::S_WAITCNT_DEPCTR))
-          .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
+          .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0, ST));
   };
 
   // We need to compute the offset relative to the instruction immediately after
@@ -5518,9 +5518,10 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         Desc.getNumOperands() + Desc.implicit_uses().size();
     const unsigned NumImplicitOps = IsDst ? 2 : 1;
 
-    // Allow additional implicit operands. This allows a fixup done by the post
-    // RA scheduler where the main implicit operand is killed and implicit-defs
-    // are added for sub-registers that remain live after this instruction.
+    // Require additional implicit operands. This allows a fixup done by the
+    // post RA scheduler where the main implicit operand is killed and
+    // implicit-defs are added for sub-registers that remain live after this
+    // instruction.
     if (MI.getNumOperands() < StaticNumOps + NumImplicitOps) {
       ErrInfo = "missing implicit register operands";
       return false;
