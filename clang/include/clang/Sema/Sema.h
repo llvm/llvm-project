@@ -11066,6 +11066,37 @@ public:
       BuildForRangeKind Kind,
       ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
 
+  /// Set the type of a for-range declaration whose for-range or expansion
+  /// initialiser is dependent.
+  void ActOnDependentForRangeInitializer(VarDecl *LoopVar,
+                                         BuildForRangeKind BFRK);
+
+  /// Holds the 'begin' and 'end' variables of a range-based for loop or
+  /// expansion statement; begin-expr and end-expr are also provided; the
+  /// latter are used in some diagnostics.
+  struct ForRangeBeginEndInfo {
+    VarDecl *BeginVar = nullptr;
+    VarDecl *EndVar = nullptr;
+    Expr *BeginExpr = nullptr;
+    Expr *EndExpr = nullptr;
+    bool isValid() const { return BeginVar != nullptr && EndVar != nullptr; }
+  };
+
+  /// Determine begin-expr and end-expr and build variable declarations for
+  /// them as per [stmt.ranged].
+  ForRangeBeginEndInfo BuildCXXForRangeBeginEndVars(
+      Scope *S, VarDecl *RangeVar, SourceLocation ColonLoc,
+      SourceLocation CoawaitLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps,
+      BuildForRangeKind Kind, bool ForExpansionStmt,
+      StmtResult *RebuildResult = nullptr,
+      llvm::function_ref<StmtResult()> RebuildWithDereference = {});
+
+  /// Build the range variable of a range-based for loop or iterating
+  /// expansion statement and return its DeclStmt.
+  StmtResult BuildCXXForRangeRangeVar(Scope *S, Expr *Range,
+                                      bool ForExpansionStmt);
+
   /// FinishCXXForRangeStmt - Attach the body to a C++0x for-range statement.
   /// This is a separate step from ActOnCXXForRangeStmt because analysis of the
   /// body cannot be performed until after the type of the range variable is
@@ -11206,6 +11237,9 @@ public:
   RecordDecl *CreateCapturedStmtRecordDecl(CapturedDecl *&CD,
                                            SourceLocation Loc,
                                            unsigned NumParams);
+
+  void ApplyForRangeOrExpansionStatementLifetimeExtension(
+      VarDecl *RangeVar, ArrayRef<MaterializeTemporaryExpr *> Temporaries);
 
 private:
   /// Check whether the given statement can have musttail applied to it,
