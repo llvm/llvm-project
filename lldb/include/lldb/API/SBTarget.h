@@ -65,8 +65,8 @@ public:
 
   static lldb::SBTarget GetTargetFromEvent(const lldb::SBEvent &event);
 
-  /// For eBroadcastBitNewTargetCreated events, returns the newly created target.
-  /// For other event types, returns an invalid SBTarget.
+  /// For eBroadcastBitNewTargetCreated events, returns the newly created
+  /// target. For other event types, returns an invalid SBTarget.
   static lldb::SBTarget GetCreatedTargetFromEvent(const lldb::SBEvent &event);
 
   static uint32_t GetNumModulesFromEvent(const lldb::SBEvent &event);

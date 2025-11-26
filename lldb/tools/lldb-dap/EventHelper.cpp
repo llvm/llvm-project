@@ -23,8 +23,8 @@
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBListener.h"
-#include "lldb/API/SBStream.h"
 #include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
@@ -594,7 +594,7 @@ void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
   broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
   debugger.GetBroadcaster().AddListener(
       listener, lldb::eBroadcastBitError | lldb::eBroadcastBitWarning);
-    
+
   // listen for thread events.
   listener.StartListeningForEventClass(
       debugger, lldb::SBThread::GetBroadcasterClassName(),

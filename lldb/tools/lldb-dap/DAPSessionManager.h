@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declarations of the DAPSessionManager and ManagedEventThread classes,
-/// which are used to multiple concurrent DAP sessions in a single lldb-dap process.
+/// This file contains the declarations of the DAPSessionManager and
+/// ManagedEventThread classes, which are used to multiple concurrent DAP
+/// sessions in a single lldb-dap process.
 ///
 //===----------------------------------------------------------------------===//
 
