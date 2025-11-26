@@ -33,6 +33,13 @@ int main(int, char**)
         constexpr optional<int> opt(0);
         static_assert(opt.has_value(), "");
     }
+#if TEST_STD_VER >= 26
+    {
+      static constexpr int i = 0;
+      constexpr optional<const int&> opt{i};
+      static_assert(opt.has_value());
+    }
+#endif
 
-  return 0;
+    return 0;
 }

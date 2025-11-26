@@ -14,16 +14,13 @@ static_library("Driver") {
     # See the review thread of r311958 for details.
     "//clang/include/clang/StaticAnalyzer/Checkers",
     "//clang/lib/Basic",
+    "//clang/lib/Options",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
     "//llvm/lib/WindowsDriver",
-  ]
-  public_deps = [
-    # public_dep because public header Options.h includes generated Options.inc.
-    "//clang/include/clang/Driver:Options",
   ]
   if (host_os == "win") {
     # MSVCToolChain.cpp uses version.dll.
@@ -34,12 +31,10 @@ static_library("Driver") {
     "Compilation.cpp",
     "Distro.cpp",
     "Driver.cpp",
-    "DriverOptions.cpp",
     "Job.cpp",
     "Multilib.cpp",
     "MultilibBuilder.cpp",
     "OffloadBundler.cpp",
-    "OptionUtils.cpp",
     "Phases.cpp",
     "SanitizerArgs.cpp",
     "Tool.cpp",

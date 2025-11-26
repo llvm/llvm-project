@@ -85,16 +85,11 @@ template <> struct llvm::DenseMapInfo<VariableID> {
 
 using VarLocInsertPt = PointerUnion<const Instruction *, const DbgRecord *>;
 
-namespace std {
-template <> struct hash<VarLocInsertPt> {
-  using argument_type = VarLocInsertPt;
-  using result_type = std::size_t;
-
-  result_type operator()(const argument_type &Arg) const {
+template <> struct std::hash<VarLocInsertPt> {
+  std::size_t operator()(const VarLocInsertPt &Arg) const {
     return std::hash<void *>()(Arg.getOpaqueValue());
   }
 };
-} // namespace std
 
 /// Helper class to build FunctionVarLocs, since that class isn't easy to
 /// modify. TODO: There's not a great deal of value in the split, it could be
