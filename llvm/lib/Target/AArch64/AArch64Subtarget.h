@@ -218,7 +218,8 @@ public:
   }
 
   bool isFPRCVTStreamingSafe() const {
-    return hasFPRCVT() && (!hasSMEFA64() && (isStreaming() || isStreamingCompatible()));
+    return hasFPRCVT() &&
+           (!hasSMEFA64() && (isStreaming() || isStreamingCompatible()));
   }
 
   unsigned getMinVectorRegisterBitWidth() const {
