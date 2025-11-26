@@ -242,8 +242,7 @@ bool isValidForAccDeclare(Operation *globalOp) {
 /// 2. The only symbol use is the recipe's own symbol definition
 template <typename RecipeOpT>
 static bool hasRelevantRecipeUse(RecipeOpT &recipeOp, ModuleOp &mod) {
-  std::optional<SymbolTable::UseRange> symbolUses =
-      recipeOp.getSymbolUses(mod);
+  std::optional<SymbolTable::UseRange> symbolUses = recipeOp.getSymbolUses(mod);
 
   // No recipe symbol uses.
   if (!symbolUses.has_value() || symbolUses->empty())
