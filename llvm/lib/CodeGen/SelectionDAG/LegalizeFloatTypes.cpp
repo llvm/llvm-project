@@ -315,7 +315,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FCANONICALIZE(SDNode *N) {
   SDLoc dl(N);
-  auto Node = DAG.getNode(ISD::FMINIMUMNUM, dl, N->getValueType(0),
+  SDValue Node = DAG.getNode(ISD::FMINIMUMNUM, dl, N->getValueType(0),
                           N->getOperand(0), N->getOperand(0));
   return SoftenFloatRes_Binary(
       Node.getNode(),
