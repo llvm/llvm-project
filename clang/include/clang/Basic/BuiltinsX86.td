@@ -24,12 +24,12 @@ def undef128 : X86Builtin<"_Vector<2, double>()"> {
   let Attributes = [Const, NoThrow, RequiredVectorWidth<128>];
 }
 
-def undef256 : X86Builtin<"_Vector<4, double>()"> {
-  let Attributes = [Const, NoThrow, RequiredVectorWidth<256>];
+def undef256 : X86Builtin<"_Vector<4, double>()"  > {
+  let Attributes = [Const, Constexpr, NoThrow, RequiredVectorWidth<256>];
 }
 
 def undef512 : X86Builtin<"_Vector<8, double>()"> {
-  let Attributes = [Const, NoThrow, RequiredVectorWidth<512>];
+  let Attributes = [Const, Constexpr, NoThrow, RequiredVectorWidth<512>];
 }
 
 // FLAGS
@@ -168,7 +168,7 @@ let Features = "sse2", Attributes = [NoThrow] in {
   def movnti : X86Builtin<"void(int *, int)">;
 }
 
-let Features = "sse2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def psadbw128 : X86Builtin<"_Vector<2, long long int>(_Vector<16, char>, _Vector<16, char>)">;
   def sqrtpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>)">;
   def sqrtsd : X86Builtin<"_Vector<2, double>(_Vector<2, double>)">;
@@ -468,7 +468,7 @@ let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWid
   def vpermilvarps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, int>)">;
 }
 
-let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def dpps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant char)">;
   def cmppd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Constant char)">;
   def cmpps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant char)">;
@@ -1009,7 +1009,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
   def cmppd128_mask : X86Builtin<"unsigned char(_Vector<2, double>, _Vector<2, double>, _Constant int, unsigned char)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def rndscaleps_mask : X86Builtin<"_Vector<16, float>(_Vector<16, float>, _Constant int, _Vector<16, float>, unsigned short, _Constant int)">;
   def rndscalepd_mask : X86Builtin<"_Vector<8, double>(_Vector<8, double>, _Constant int, _Vector<8, double>, unsigned char, _Constant int)">;
   def cvtps2dq512_mask : X86Builtin<"_Vector<16, int>(_Vector<16, float>, _Vector<16, int>, unsigned short, _Constant int)">;
@@ -1457,7 +1457,7 @@ let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
   def compressstoresi256_mask : X86Builtin<"void(_Vector<8, int *>, _Vector<8, int>, unsigned char)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtpd2dq128_mask : X86Builtin<"_Vector<4, int>(_Vector<2, double>, _Vector<4, int>, unsigned char)">;
   def cvtpd2ps_mask : X86Builtin<"_Vector<4, float>(_Vector<2, double>, _Vector<4, float>, unsigned char)">;
   def cvtpd2udq128_mask : X86Builtin<"_Vector<4, int>(_Vector<2, double>, _Vector<4, int>, unsigned char)">;
@@ -3301,7 +3301,7 @@ let Features = "avx512bw,avx512vl",
   def cvtw2mask256 : X86Builtin<"unsigned short(_Vector<16, short>)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtsd2ss_round_mask : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<2, double>, _Vector<4, float>, unsigned char, _Constant int)">;
   def cvtsi2ss32 : X86Builtin<"_Vector<4, float>(_Vector<4, float>, int, _Constant int)">;
   def cvtss2sd_round_mask : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<4, float>, _Vector<2, double>, unsigned char, _Constant int)">;
