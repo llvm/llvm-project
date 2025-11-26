@@ -1829,7 +1829,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
     return failure();
 
-  for (StringRef disallowed : cir::FuncType::disallowedFromAttrList) {
+  for (StringRef disallowed : cir::FuncOp::getAttributeNames()) {
     if (parsedAttrs.get(disallowed))
       return parser.emitError(loc, "attribute '")
              << disallowed
@@ -1992,7 +1992,7 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   }
 
   function_interface_impl::printFunctionAttributes(
-      p, *this, cir::FuncType::disallowedFromAttrList);
+      p, *this, cir::FuncOp::getAttributeNames());
 
   // Print the body if this is not an external function.
   Region &body = getOperation()->getRegion(0);

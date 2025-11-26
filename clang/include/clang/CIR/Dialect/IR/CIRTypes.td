@@ -509,25 +509,6 @@ def CIR_FuncType : CIR_Type<"Func", "func"> {
     /// Returns a clone of this function type with the given argument
     /// and result types.
     FuncType clone(mlir::TypeRange inputs, mlir::TypeRange results) const;
-
-    /// A list of mlir attributes that shouldn't appear in the generic
-    /// 'attributes' list, and instead are handled via other syntax.
-    static constexpr llvm::StringRef disallowedFromAttrList[] = {
-        "alias",
-        "builtin",
-        "comdat",
-        "coroutine",
-        "cxx_special_member",
-        "dso_local",
-        "function_type",
-        "global_ctor_priority",
-        "global_dtor_priority",
-        "global_visibility",
-        "inline_kind",
-        "lambda",
-        "linkage",
-        "no_proto",
-        "sym_visibility"};
   }];
 }
 
