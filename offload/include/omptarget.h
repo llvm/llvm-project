@@ -94,6 +94,8 @@ enum OpenMPOffloadingDeclareTargetFlags {
   OMP_DECLARE_TARGET_INDIRECT = 0x08,
   /// This is an entry corresponding to a requirement to be registered.
   OMP_REGISTER_REQUIRES = 0x10,
+  /// Mark the entry global as being an indirect vtable.
+  OMP_DECLARE_TARGET_INDIRECT_VTABLE = 0x20,
 };
 
 enum TargetAllocTy : int32_t {
