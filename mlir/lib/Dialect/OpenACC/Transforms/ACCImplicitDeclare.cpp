@@ -335,7 +335,7 @@ public:
   using ACCImplicitDeclareBase<ACCImplicitDeclare>::ACCImplicitDeclareBase;
 
   void runOnOperation() override {
-    ModuleOp module = getOperation();
+    ModuleOp mod = getOperation();
     auto *context = &getContext();
     acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
 
@@ -343,7 +343,7 @@ public:
     // for any cases we do not want to `acc declare`. This is because we can
     // rely on implicit data mapping in majority of cases without uselessly
     // polluting the device globals.
-    module.walk([&](Operation *op) {
+    mod.walk([&](Operation *op) {
       TypeSwitch<Operation *, void>(op)
           .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(
               [&](auto accOp) {
@@ -355,7 +355,7 @@ public:
     // compute regions, acc routine, and existing globals with the declare
     // attribute.
     GlobalOpSetT globalsToAccDeclare;
-    module.walk([&](Operation *op) {
+    mod.walk([&](Operation *op) {
       TypeSwitch<Operation *, void>(op)
           .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(
               [&](auto accOp) {
