@@ -1297,7 +1297,7 @@ def AMDGPU_MakeDmaDescriptorOp :
     Variadic<Index>: $shared_dynamic_sizes,
     DenseI64ArrayAttr: $shared_static_sizes,
     Optional<Index>: $pad,
-    Optional<Index>: $every,
+    Optional<Index>: $pad_every,
     Optional<AnyMemRef>: $atomic_barrier_address,
     Variadic<Index>: $atomic_barrier_indices,
     Optional<Index>: $global_increment,
@@ -1333,7 +1333,7 @@ def AMDGPU_MakeDmaDescriptorOp :
 
       // Example of moving a two dimension tensor to LDS where padding is applied after every integer.
       %base = amdgpu.make_dma_base %src[0, 0], %dst[0, 0] : memref<32x32xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
-      %descriptor = amdgpu.make_dma_descriptor %base globalSize [32, 32] globalStride [32, 1] sharedSize [64, 64] padding(1 every 1) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+      %descriptor = amdgpu.make_dma_descriptor %base globalSize [32, 32] globalStride [32, 1] sharedSize [64, 64] padding(%pad pad_every %pad_every) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
       amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
      ```
   }];
@@ -1343,7 +1343,7 @@ def AMDGPU_MakeDmaDescriptorOp :
     `globalSize` custom<DynamicIndexList>($global_dynamic_sizes, $global_static_sizes)
     `globalStride` custom<DynamicIndexList>($global_dynamic_strides, $global_static_strides)
     `sharedSize` custom<DynamicIndexList>($shared_dynamic_sizes, $shared_static_sizes)
-    ( `padShared` `(` $pad^ `every` $every `)` )?
+    ( `padShared` `(` $pad^ `every` $pad_every `)` )?
     ( `atomicBarrier` `(` $atomic_barrier_address^ `[` $atomic_barrier_indices `]`
                       `:` type($atomic_barrier_address) `)`)?
     ( `iterate` $global_increment^ `,` $lds_increment `,` $iteration_count )?
