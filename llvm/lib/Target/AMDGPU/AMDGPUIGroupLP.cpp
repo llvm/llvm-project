@@ -2391,6 +2391,56 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
   if (MI.isMetaInstruction())
     Result = false;
 
+  else if (MI.isInlineAsm()) {
+    const SIRegisterInfo &TRI = TII->getRegisterInfo();
+    auto &MRI = MI.getParent()->getParent()->getRegInfo();
+    bool SGPR_used = false, VGPR_used = false, VMFMA_used = false,
+         VReg32_used = false, MayLoad = MI.mayLoad(), MayStore = MI.mayStore();
+    for (const MachineOperand &Operand : MI.operands())
+      if (Operand.isReg()) {
+        auto &RegClass = *TRI.getRegClassForOperandReg(MRI, Operand);
+        if (TRI.hasVGPRs(&RegClass)) {
+          VGPR_used = true;
+          if (Operand.isUse() && TRI.getRegSizeInBits(RegClass) == 32)
+            VReg32_used = true;
+        }
+        // >= 128 bit registers are usually only used by MFMA instructions, so
+        // we're using that as a heuristic to guess the schedule group mask of
+        // the inline asm.
+        if (TRI.hasAGPRs(&RegClass) || TRI.getRegSizeInBits(RegClass) >= 128)
+          VMFMA_used = true;
+        if (TRI.hasSGPRs(&RegClass))
+          SGPR_used = true;
+      }
+
+    unsigned long InlineAsmMask = 0;
+    if (VGPR_used && !VMFMA_used && !MayLoad && !MayStore)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::VALU;
+    if (SGPR_used && !MayLoad && !MayStore)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::SALU;
+    if (VMFMA_used)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::MFMA;
+    if (VGPR_used && MayLoad)
+      InlineAsmMask |= (unsigned long)(VReg32_used ? SchedGroupMask::DS_READ
+                                                   : SchedGroupMask::VMEM_READ);
+    if (VGPR_used && MayStore)
+      InlineAsmMask |=
+          (unsigned long)(VReg32_used ? SchedGroupMask::DS_WRITE
+                                      : SchedGroupMask::VMEM_WRITE);
+    if (InlineAsmMask & (unsigned long)SchedGroupMask::VALU ||
+        InlineAsmMask & (unsigned long)SchedGroupMask::SALU)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::ALU;
+    if (InlineAsmMask & (unsigned long)SchedGroupMask::DS_READ ||
+        InlineAsmMask & (unsigned long)SchedGroupMask::DS_WRITE)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::DS;
+    if (InlineAsmMask & (unsigned long)SchedGroupMask::VMEM_READ ||
+        InlineAsmMask & (unsigned long)SchedGroupMask::VMEM_WRITE)
+      InlineAsmMask |= (unsigned long)SchedGroupMask::VMEM;
+
+    Result = ((unsigned long)SGMask & InlineAsmMask) != 0;
+
+  }
+
   else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
            (TII->isVALU(MI) || TII->isMFMAorWMMA(MI) || TII->isSALU(MI) ||
             TII->isTRANS(MI)))
