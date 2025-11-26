@@ -463,7 +463,7 @@ class DS_GWS_0D <string opName>
 
 class DS_GWS_1D <string opName>
 : DS_GWS<opName,
-  (ins AVLdSt_32:$data0, Offset:$offset),
+  (ins AV_LdSt_32_Align2_RegOp:$data0, Offset:$offset),
   " $data0$offset gds"> {
 
   let has_gws_data0 = 1;
