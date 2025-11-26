@@ -1,30 +1,29 @@
 ; RUN: opt < %s -passes=slsr -S | FileCheck %s
 
-target datalayout = "e-p6:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
-；；； This test encodes a regression where SCEV based reuse of an instruction
-；；； derived from `or disjoint` is unsound. In the source function there is an
-；；； arithmetic expression `row*4 + column` that is materialized twice. The
-；；； first materialization uses `or disjoint` which can become poison if the
-；；； disjointness promise is violated. The second materialization recomputes the
-；；； value with ordinary `shl` and `add` so it is not poisoned on that path.
-；；；
-；；； The buggy optimization tries to "reuse" the first materialization on a
-；；； different path. In the pointer version it reuses a GEP that is based on
-；；； the `or disjoint` value. In the integer version it reuses an `add i64`
-；；； based on the same value. For some inputs the original program never uses
-；；； the poisoned `or disjoint` result on that path so the behavior is defined.
-；；； After the transformation the reused instruction is consumed by a load or
-；；； call argument which observes poison and turns the program into UB.
-；；；
-；；； These tests pin the behavior of ScalarEvolution::canReuseInstruction. It
-；；； must reject reuse of the `or disjoint` based instruction in favor of the
-；；； recomputed expression, since the candidate IR is strictly more poison
-；；； generating than the SCEV expression we want to realize.
+;;; This test encodes a regression where SCEV based reuse of an instruction
+;;; derived from `or disjoint` is unsound. In the source function there is an
+;;; arithmetic expression `row*4 + column` that is materialized twice. The
+;;; first materialization uses `or disjoint` which can become poison if the
+;;; disjointness promise is violated. The second materialization recomputes the
+;;; value with ordinary `shl` and `add` so it is not poisoned on that path.
+;;;
+;;; The buggy optimization tries to "reuse" the first materialization on a
+;;; different path. In the pointer version it reuses a GEP that is based on
+;;; the `or disjoint` value. In the integer version it reuses an `add i64`
+;;; based on the same value. For some inputs the original program never uses
+;;; the poisoned `or disjoint` result on that path so the behavior is defined.
+;;; After the transformation the reused instruction is consumed by a load or
+;;; call argument which observes poison and turns the program into UB.
+;;;
+;;; These tests pin the behavior of ScalarEvolution::canReuseInstruction. It
+;;; must reject reuse of the `or disjoint` based instruction in favor of the
+;;; recomputed expression, since the candidate IR is strictly more poison
+;;; generating than the SCEV expression we want to realize.
 
-define void @invalid_gep_rese(ptr readonly align 16 captures(none) dereferenceable(12) %0, ptr writeonly align 256 captures(none) dereferenceable(15) %1, i32 %row, i32 %column) {
-; CHECK-LABEL: define void @invalid_gep_rese(
+define void @invalid_gep_reuse(ptr readonly align 16 captures(none) dereferenceable(12) %0, ptr writeonly align 256 captures(none) dereferenceable(15) %1, i32 %row, i32 %column) {
+; CHECK-LABEL: define void @invalid_gep_reuse(
 ; CHECK-SAME: ptr readonly align 16 captures(none) dereferenceable(12) [[TMP0:%.*]], ptr writeonly align 256 captures(none) dereferenceable(15) [[TMP1:%.*]], i32 [[ROW:%.*]], i32 [[COLUMN:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp samesign ult i32 [[COLUMN]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i32 [[ROW]], 2
@@ -79,8 +78,8 @@ define void @invalid_gep_rese(ptr readonly align 16 captures(none) dereferenceab
   ret void
 }
 
-define void @invalid_add_resue(i64 %0, ptr writeonly align 256 captures(none) dereferenceable(15) %1, i32 %row, i32 %column) {
-; CHECK-LABEL: define void @invalid_add_resue(
+define void @invalid_add_reuse(i64 %0, ptr writeonly align 256 captures(none) dereferenceable(15) %1, i32 %row, i32 %column) {
+; CHECK-LABEL: define void @invalid_add_reuse(
 ; CHECK-SAME: i64 [[TMP0:%.*]], ptr writeonly align 256 captures(none) dereferenceable(15) [[TMP1:%.*]], i32 [[ROW:%.*]], i32 [[COLUMN:%.*]]) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp samesign ult i32 [[COLUMN]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i32 [[ROW]], 2
