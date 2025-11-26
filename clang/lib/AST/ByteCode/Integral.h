@@ -202,24 +202,19 @@ public:
 
   static Integral min(unsigned NumBits) { return Integral(Min); }
   static Integral max(unsigned NumBits) { return Integral(Max); }
+  static Integral zero(unsigned BitWidth = 0) { return from(0); }
 
-  template <typename ValT> static Integral from(ValT Value) {
-    if constexpr (std::is_integral<ValT>::value)
+  template <typename ValT>
+  static Integral from(ValT Value, unsigned NumBits = 0) {
+    if constexpr (std::is_integral_v<ValT>)
       return Integral(Value);
     else
-      return Integral::from(static_cast<Integral::ReprT>(Value));
+      return Integral(static_cast<Integral::ReprT>(Value));
   }
 
   template <unsigned SrcBits, bool SrcSign>
-  static std::enable_if_t<SrcBits != 0, Integral>
-  from(Integral<SrcBits, SrcSign> Value) {
+  static Integral from(Integral<SrcBits, SrcSign> Value) {
     return Integral(Value.V);
-  }
-
-  static Integral zero(unsigned BitWidth = 0) { return from(0); }
-
-  template <typename T> static Integral from(T Value, unsigned NumBits) {
-    return Integral(Value);
   }
 
   static bool inRange(int64_t Value, unsigned NumBits) {

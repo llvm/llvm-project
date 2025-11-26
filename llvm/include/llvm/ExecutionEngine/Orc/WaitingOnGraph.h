@@ -592,7 +592,7 @@ private:
                             std::vector<std::unique_ptr<SuperNode>> &Failed,
                             SuperNodeDepsMap &SuperNodeDeps,
                             ElemToSuperNodeMap &ElemToSNs,
-                            std::vector<SuperNode *> FailedSNs) {
+                            const std::vector<SuperNode *> &FailedSNs) {
     for (size_t I = 0; I != SNs.size();) {
       auto &SN = SNs[I];
 
