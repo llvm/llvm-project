@@ -25,6 +25,23 @@
 ; CHECK-NEXT: .xword [[FUNC]]@FUNCINIT
 @dsolocalref = constant ptr ptrauth (ptr @dsolocal, i32 2, i64 2, ptr null), align 8
 
+@ds = external global i8
+
+; CHECK: dsolocalrefds:
+; CHECK-NEXT: [[PLACE:.*]]:
+; CHECK-NEXT: .section .text.startup
+; CHECK-NEXT: [[FUNC:.*]]:
+; CHECK-NEXT: adrp x0, dsolocal
+; CHECK-NEXT: add x0, x0, :lo12:dsolocal
+; CHECK-NEXT: mov x1, #2
+; CHECK-NEXT: [[LABEL:.L.*]]:
+; CHECK-NEXT: .reloc [[LABEL]], R_AARCH64_PATCHINST, ds
+; CHECK-NEXT: b __emupac_pacda
+; CHECK-NEXT: ret
+; CHECK-NEXT: .section .rodata
+; CHECK-NEXT: .xword [[FUNC]]@FUNCINIT
+@dsolocalrefds = constant ptr ptrauth (ptr @dsolocal, i32 2, i64 2, ptr null, ptr @ds), align 8
+
 ; CHECK: dsolocalref8:
 ; CHECK-NEXT: [[PLACE:.*]]:
 ; CHECK-NEXT: .section .text.startup

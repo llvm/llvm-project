@@ -219,11 +219,9 @@ public:
   // authenticating)
   void LowerLOADgotAUTH(const MachineInstr &MI);
 
-  const MCExpr *emitPAuthRelocationAsIRelative(const MCExpr *Target,
-                                               uint16_t Disc,
-                                               AArch64PACKey::ID KeyID,
-                                               bool HasAddressDiversity,
-                                               bool IsDSOLocal);
+  const MCExpr *emitPAuthRelocationAsIRelative(
+      const MCExpr *Target, uint16_t Disc, AArch64PACKey::ID KeyID,
+      bool HasAddressDiversity, bool IsDSOLocal, const MCExpr *DSExpr);
 
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
@@ -2386,15 +2384,17 @@ static void emitAddress(MCStreamer &Streamer, MCRegister Reg,
 }
 
 static bool targetSupportsPAuthRelocation(const Triple &TT,
-                                          const MCExpr *Target) {
+                                          const MCExpr *Target,
+                                          const MCExpr *DSExpr) {
   // No released version of glibc supports PAuth relocations.
   if (TT.isOSGlibc())
     return false;
 
   // We emit PAuth constants as IRELATIVE relocations in cases where the
   // constant cannot be represented as a PAuth relocation:
-  // 1) The signed value is not a symbol.
-  return !isa<MCConstantExpr>(Target);
+  // 1) There is a deactivation symbol.
+  // 2) The signed value is not a symbol.
+  return !DSExpr && !isa<MCConstantExpr>(Target);
 }
 
 static bool targetSupportsIRelativeRelocation(const Triple &TT) {
@@ -2447,14 +2447,27 @@ static bool targetSupportsIRelativeRelocation(const Triple &TT) {
 // mov x1, #12345
 // b __emupac_pacda
 // .popsection
+//
+// Example (signed null pointer, not address discriminated, with deactivation
+// symbol ds):
+//
+// .8byte .Lpauth_ifunc0
+// .pushsection .text.startup,"ax",@progbits
+// .Lpauth_ifunc0:
+// mov x0, #0
+// mov x1, #12345
+// .reloc ., R_AARCH64_PATCHINST, ds
+// b __emupac_pacda
+// ret
+// .popsection
 const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
     const MCExpr *Target, uint16_t Disc, AArch64PACKey::ID KeyID,
-    bool HasAddressDiversity, bool IsDSOLocal) {
+    bool HasAddressDiversity, bool IsDSOLocal, const MCExpr *DSExpr) {
   const Triple &TT = TM.getTargetTriple();
 
   // We only emit an IRELATIVE relocation if the target supports IRELATIVE and
   // does not support the kind of PAuth relocation that we are trying to emit.
-  if (targetSupportsPAuthRelocation(TT, Target) ||
+  if (targetSupportsPAuthRelocation(TT, Target, DSExpr) ||
       !targetSupportsIRelativeRelocation(TT))
     return nullptr;
 
@@ -2498,6 +2511,16 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
     emitMOVZ(AArch64::X1, Disc, 0);
   }
 
+  if (DSExpr) {
+    MCSymbol *PrePACInst = OutStreamer->getContext().createTempSymbol();
+    OutStreamer->emitLabel(PrePACInst);
+
+    auto *PrePACInstExpr =
+        MCSymbolRefExpr::create(PrePACInst, OutStreamer->getContext());
+    OutStreamer->emitRelocDirective(*PrePACInstExpr, "R_AARCH64_PATCHINST",
+                                    DSExpr, SMLoc());
+  }
+
   // We don't know the subtarget because this is being emitted for a global
   // initializer. Because the performance of IFUNC resolvers is unimportant, we
   // always call the EmuPAC runtime, which will end up using the PAC instruction
@@ -2508,6 +2531,12 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
       MCSymbolRefExpr::create(EmuPAC, OutStreamer->getContext());
   OutStreamer->emitInstruction(MCInstBuilder(AArch64::B).addExpr(EmuPACRef),
                                *STI);
+
+  // We need a RET despite the above tail call because the deactivation symbol
+  // may replace the tail call with a NOP.
+  if (DSExpr)
+    OutStreamer->emitInstruction(
+        MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
   OutStreamer->popSection();
 
   return MCSymbolRefExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
@@ -2539,6 +2568,13 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
     Sym = MCConstantExpr::create(Offset.getSExtValue(), Ctx);
   }
 
+  const MCExpr *DSExpr = nullptr;
+  if (auto *DS = dyn_cast<GlobalValue>(CPA.getDeactivationSymbol())) {
+    if (isa<GlobalAlias>(DS))
+      return Sym;
+    DSExpr = MCSymbolRefExpr::create(getSymbol(DS), Ctx);
+  }
+
   uint64_t KeyID = CPA.getKey()->getZExtValue();
   // We later rely on valid KeyID value in AArch64PACKeyIDToString call from
   // AArch64AuthMCExpr::printImpl, so fail fast.
@@ -2559,8 +2595,12 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   // Check if we need to represent this with an IRELATIVE and emit it if so.
   if (auto *IFuncSym = emitPAuthRelocationAsIRelative(
           Sym, Disc, AArch64PACKey::ID(KeyID), CPA.hasAddressDiscriminator(),
-          BaseGVB && BaseGVB->isDSOLocal()))
+          BaseGVB && BaseGVB->isDSOLocal(), DSExpr))
     return IFuncSym;
+
+  if (DSExpr)
+    report_fatal_error("deactivation symbols unsupported in constant "
+                       "expressions on this target");
 
   // Finally build the complete @AUTH expr.
   return AArch64AuthMCExpr::create(Sym, Disc, AArch64PACKey::ID(KeyID),
