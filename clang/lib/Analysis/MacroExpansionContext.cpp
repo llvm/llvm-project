@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/MacroExpansionContext.h"
+#include "clang/Format/Format.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -130,6 +131,35 @@ MacroExpansionContext::getOriginalText(SourceLocation MacroExpansionLoc) const {
   return Lexer::getSourceText(
       CharSourceRange::getCharRange(It->getFirst(), It->getSecond()), *SM,
       LangOpts);
+}
+
+std::optional<StringRef> MacroExpansionContext::getFormattedExpandedText(
+    SourceLocation MacroExpansionLoc) const {
+  std::optional<StringRef> ExpandedText = getExpandedText(MacroExpansionLoc);
+  if (!ExpandedText)
+    return std::nullopt;
+
+  auto [It, Inserted] =
+      FormattedExpandedTokens.try_emplace(MacroExpansionLoc, "");
+  if (!Inserted)
+    return StringRef(It->getSecond());
+
+  clang::format::FormatStyle Style = clang::format::getLLVMStyle();
+
+  std::string MacroCodeBlock = ExpandedText->str();
+
+  std::vector<clang::tooling::Range> Ranges;
+  Ranges.emplace_back(0, MacroCodeBlock.length());
+
+  clang::tooling::Replacements Replacements = clang::format::reformat(
+      Style, MacroCodeBlock, Ranges, "<macro-expansion>");
+
+  llvm::Expected<std::string> Result =
+      clang::tooling::applyAllReplacements(MacroCodeBlock, Replacements);
+
+  It->getSecond() = Result ? std::move(*Result) : std::move(MacroCodeBlock);
+
+  return StringRef(It->getSecond());
 }
 
 void MacroExpansionContext::dumpExpansionRanges() const {
