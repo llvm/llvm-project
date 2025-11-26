@@ -210,7 +210,8 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::CXXDependentExpansionStmtPatternClass:
     llvm_unreachable("unexpanded expansion statements should not be emitted");
   case Stmt::CXXExpansionStmtInstantiationClass:
-    llvm_unreachable("Todo");
+    EmitCXXExpansionStmtInstantiation(cast<CXXExpansionStmtInstantiation>(*S));
+    break;
   case Stmt::SEHTryStmtClass:
     EmitSEHTryStmt(cast<SEHTryStmt>(*S));
     break;
@@ -1560,6 +1561,44 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
     // We want the for closing brace to be step-able on to match existing
     // behaviour.
     addInstToNewSourceAtom(FinalBodyBB->getTerminator(), nullptr);
+  }
+}
+
+void CodeGenFunction::EmitCXXExpansionStmtInstantiation(
+    const CXXExpansionStmtInstantiation &S) {
+  // FIXME: For reasons beyond my understanding, two scopes are required to emit
+  // the destructors of lifetime-extended temporaries in the right place, but
+  // only in some templates. There are some other issues with lifetime-extended
+  // temporaries currently (https://github.com/llvm/llvm-project/issues/165182);
+  // perhaps resolving those will allow us to remove the second scope here
+  // because there really ought to be a better way of doing this.
+  LexicalScope Scope(*this, S.getSourceRange());
+  LexicalScope Scope2(*this, S.getSourceRange());
+
+  for (const Stmt *DS : S.getSharedStmts())
+    EmitStmt(DS);
+
+  if (S.getInstantiations().empty() || !HaveInsertPoint())
+    return;
+
+  JumpDest ExpandExit = getJumpDestInCurrentScope("expand.end");
+  JumpDest ContinueDest;
+  for (auto [N, Inst] : enumerate(S.getInstantiations())) {
+    if (!HaveInsertPoint()) {
+      EmitBlock(ExpandExit.getBlock(), true);
+      return;
+    }
+
+    if (N == S.getInstantiations().size() - 1)
+      ContinueDest = ExpandExit;
+    else
+      ContinueDest = getJumpDestInCurrentScope("expand.next");
+
+    LexicalScope ExpansionScope(*this, S.getSourceRange());
+    BreakContinueStack.push_back(BreakContinue(S, ExpandExit, ContinueDest));
+    EmitStmt(Inst);
+    BreakContinueStack.pop_back();
+    EmitBlock(ContinueDest.getBlock(), true);
   }
 }
 
