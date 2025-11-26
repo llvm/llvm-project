@@ -34,7 +34,17 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
   // launched debugger.
   std::optional<int> debugger_id = args.debuggerId;
   std::optional<lldb::user_id_t> target_id = args.targetId;
-  if (Error err = dap.InitializeDebugger(debugger_id, target_id))
+
+  // Validate that both debugger_id and target_id are provided together.
+  if (debugger_id.has_value() != target_id.has_value()) {
+    return llvm::createStringError(
+        "Both debuggerId and targetId must be specified together for debugger "
+        "reuse, or both must be omitted to create a new debugger");
+  }
+
+  if (Error err = debugger_id && target_id
+                      ? dap.InitializeDebugger(*debugger_id, *target_id)
+                      : dap.InitializeDebugger())
     return err;
 
   // Validate that we have a well formed attach request.

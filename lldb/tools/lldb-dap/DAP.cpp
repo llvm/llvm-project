@@ -1323,38 +1323,29 @@ void DAP::StartEventThreads() {
   StartEventThread();
 }
 
-llvm::Error DAP::InitializeDebugger(std::optional<int> debugger_id,
-                                    std::optional<lldb::user_id_t> target_id) {
-  // Validate that both debugger_id and target_id are provided together.
-  if (debugger_id.has_value() != target_id.has_value()) {
+llvm::Error DAP::InitializeDebugger(int debugger_id,
+                                    lldb::user_id_t target_id) {
+  // Find the existing debugger by ID
+  debugger = lldb::SBDebugger::FindDebuggerWithID(debugger_id);
+  if (!debugger.IsValid()) {
     return llvm::createStringError(
-        "Both debuggerId and targetId must be specified together for debugger "
-        "reuse, or both must be omitted to create a new debugger");
+        "Unable to find existing debugger for debugger ID");
   }
 
-  // Initialize debugger instance (shared or individual).
-  if (debugger_id && target_id) {
-    // Find the existing debugger by ID
-    debugger = lldb::SBDebugger::FindDebuggerWithID(*debugger_id);
-    if (!debugger.IsValid()) {
-      return llvm::createStringError(
-          "Unable to find existing debugger for debugger ID");
-    }
-
-    // Find the target within the debugger by its globally unique ID
-    lldb::SBTarget shared_target =
-        debugger.FindTargetByGloballyUniqueID(*target_id);
-    if (!shared_target.IsValid()) {
-      return llvm::createStringError(
-          "Unable to find existing target for target ID");
-    }
-
-    // Set the target for this DAP session.
-    SetTarget(shared_target);
-    StartEventThreads();
-    return llvm::Error::success();
+  // Find the target within the debugger by its globally unique ID
+  lldb::SBTarget target = debugger.FindTargetByGloballyUniqueID(target_id);
+  if (!target.IsValid()) {
+    return llvm::createStringError(
+        "Unable to find existing target for target ID");
   }
 
+  // Set the target for this DAP session.
+  SetTarget(target);
+  StartEventThreads();
+  return llvm::Error::success();
+}
+
+llvm::Error DAP::InitializeDebugger() {
   debugger = lldb::SBDebugger::Create(/*argument_name=*/false);
 
   // Configure input/output/error file descriptors.

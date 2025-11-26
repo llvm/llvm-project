@@ -426,10 +426,18 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// DAP debugger initialization functions.
   /// @{
 
-  /// Perform complete DAP initialization in one call.
-  llvm::Error
-  InitializeDebugger(std::optional<int> debugger_id = std::nullopt,
-                     std::optional<lldb::user_id_t> target_id = std::nullopt);
+  /// Perform complete DAP initialization for a new debugger.
+  llvm::Error InitializeDebugger();
+
+  /// Perform complete DAP initialization by reusing an existing debugger and
+  /// target.
+  ///
+  /// \param[in] debugger_id
+  ///     The ID of the existing debugger to reuse.
+  ///
+  /// \param[in] target_id
+  ///     The globally unique ID of the existing target to reuse.
+  llvm::Error InitializeDebugger(int debugger_id, lldb::user_id_t target_id);
 
   /// Start event handling threads based on client capabilities.
   void StartEventThreads();
