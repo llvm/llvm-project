@@ -920,6 +920,17 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(
     const StructType *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccQual,
     StructOffsetDecorator Decorator, bool EmitIR) {
+  Type *OriginalElementType = nullptr;
+  uint64_t TotalSize = 0;
+  if (matchPeeledArrayPattern(Ty, OriginalElementType, TotalSize)) {
+    SPIRVType *ElementSPIRVType = findSPIRVType(
+        OriginalElementType, MIRBuilder, AccQual,
+        /* ExplicitLayoutRequired= */ Decorator != nullptr, EmitIR);
+    return getOpTypeArray(TotalSize, ElementSPIRVType, MIRBuilder,
+                          /*ExplicitLayoutRequired=*/Decorator != nullptr,
+                          EmitIR);
+  }
+
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   SmallVector<Register, 4> FieldTypes;
@@ -1440,6 +1451,18 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateVulkanBufferType(
   }
 
   SPIRVType *R = getOrCreateSPIRVPointerTypeInternal(BlockType, MIRBuilder, SC);
+  add(Key, R);
+  return R;
+}
+
+SPIRVType *
+SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder) {
+  auto Key = SPIRV::irhandle_padding();
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+  auto *T = Type::getInt8Ty(MIRBuilder.getContext());
+  SPIRVType *R = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+  finishCreatingSPIRVType(T, R);
   add(Key, R);
   return R;
 }
