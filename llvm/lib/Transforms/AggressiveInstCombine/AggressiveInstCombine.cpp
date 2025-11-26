@@ -1501,19 +1501,19 @@ static bool foldMulHigh(Instruction &I) {
   if (!Ty->isIntOrIntVectorTy())
     return false;
 
-  unsigned BW = Ty->getScalarSizeInBits();
-  APInt LowMask = APInt::getLowBitsSet(BW, BW / 2);
-  if (BW % 2 != 0)
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+  APInt LowMask = APInt::getLowBitsSet(BitWidth, BitWidth / 2);
+  if (BitWidth % 2 != 0)
     return false;
 
   auto CreateMulHigh = [&](Value *X, Value *Y) {
     IRBuilder<> Builder(&I);
-    Type *NTy = Ty->getWithNewBitWidth(BW * 2);
+    Type *NTy = Ty->getWithNewBitWidth(BitWidth * 2);
     Value *XExt = Builder.CreateZExt(X, NTy);
     Value *YExt = Builder.CreateZExt(Y, NTy);
-    Value *Mul = Builder.CreateMul(XExt, YExt, "", true);
-    Value *High = Builder.CreateLShr(Mul, BW);
-    Value *Res = Builder.CreateTrunc(High, Ty, "", true);
+    Value *Mul = Builder.CreateMul(XExt, YExt, "", /*HasNUW=*/true);
+    Value *High = Builder.CreateLShr(Mul, BitWidth);
+    Value *Res = Builder.CreateTrunc(High, Ty, "", /*HasNUW=*/true);
     Res->takeName(&I);
     I.replaceAllUsesWith(Res);
     LLVM_DEBUG(dbgs() << "Created long multiply from parts of " << *X << " and "
@@ -1527,8 +1527,9 @@ static bool foldMulHigh(Instruction &I) {
                                m_And(m_Specific(Y), m_SpecificInt(LowMask))));
   };
   auto CheckHiLo = [&](Value *XhYl, Value *X, Value *Y) {
-    return match(XhYl, m_c_Mul(m_LShr(m_Specific(X), m_SpecificInt(BW / 2)),
-                               m_And(m_Specific(Y), m_SpecificInt(LowMask))));
+    return match(XhYl,
+                 m_c_Mul(m_LShr(m_Specific(X), m_SpecificInt(BitWidth / 2)),
+                         m_And(m_Specific(Y), m_SpecificInt(LowMask))));
   };
 
   auto FoldMulHighCarry = [&](Value *X, Value *Y, Instruction *Carry,
@@ -1543,7 +1544,8 @@ static bool foldMulHigh(Instruction &I) {
                m_OneUse(m_Select(
                    m_OneUse(m_SpecificICmp(ICmpInst::ICMP_ULT, m_Value(LowSum),
                                            m_Value(XhYl))),
-                   m_SpecificInt(APInt::getOneBitSet(BW, BW / 2)), m_Zero()))))
+                   m_SpecificInt(APInt::getOneBitSet(BitWidth, BitWidth / 2)),
+                   m_Zero()))))
       return false;
 
     // XhYl can be Xh*Yl or Xl*Yh
@@ -1557,14 +1559,14 @@ static bool foldMulHigh(Instruction &I) {
       return false;
 
     // B = LowSum >> 32
-    if (!match(B,
-               m_OneUse(m_LShr(m_Specific(LowSum), m_SpecificInt(BW / 2)))) ||
+    if (!match(B, m_OneUse(m_LShr(m_Specific(LowSum),
+                                  m_SpecificInt(BitWidth / 2)))) ||
         LowSum->hasNUsesOrMore(3))
       return false;
 
     // LowSum = XhYl + XlYh + XlYl>>32
     Value *XlYh, *XlYl;
-    auto XlYlHi = m_LShr(m_Value(XlYl), m_SpecificInt(BW / 2));
+    auto XlYlHi = m_LShr(m_Value(XlYl), m_SpecificInt(BitWidth / 2));
     if (!match(LowSum,
                m_c_Add(m_Specific(XhYl),
                        m_OneUse(m_c_Add(m_OneUse(m_Value(XlYh)), XlYlHi)))) &&
@@ -1591,20 +1593,23 @@ static bool foldMulHigh(Instruction &I) {
     // or c2 = (xl*yh&0xffffffff) + xh*yl + (xl*yl>>32); c3 = xh*yl
     Value *XlYh, *XhYl, *XlYl, *C2, *C3;
     // Strip off the two expected shifts.
-    if (!match(A, m_LShr(m_Value(C2), m_SpecificInt(BW / 2))) ||
-        !match(B, m_LShr(m_Value(C3), m_SpecificInt(BW / 2))))
+    if (!match(A, m_LShr(m_Value(C2), m_SpecificInt(BitWidth / 2))) ||
+        !match(B, m_LShr(m_Value(C3), m_SpecificInt(BitWidth / 2))))
       return false;
 
     if (match(C3, m_c_Add(m_Add(m_Value(), m_Value()), m_Value())))
       std::swap(C2, C3);
     // Try to match c2 = (xl*yh&0xffffffff) + xh*yl + (xl*yl>>32)
-    if (match(C2, m_c_Add(m_c_Add(m_And(m_Specific(C3), m_SpecificInt(LowMask)),
-                                  m_Value(XlYh)),
-                          m_LShr(m_Value(XlYl), m_SpecificInt(BW / 2)))) ||
+    if (match(C2,
+              m_c_Add(m_c_Add(m_And(m_Specific(C3), m_SpecificInt(LowMask)),
+                              m_Value(XlYh)),
+                      m_LShr(m_Value(XlYl), m_SpecificInt(BitWidth / 2)))) ||
         match(C2, m_c_Add(m_c_Add(m_And(m_Specific(C3), m_SpecificInt(LowMask)),
-                                  m_LShr(m_Value(XlYl), m_SpecificInt(BW / 2))),
+                                  m_LShr(m_Value(XlYl),
+                                         m_SpecificInt(BitWidth / 2))),
                           m_Value(XlYh))) ||
-        match(C2, m_c_Add(m_c_Add(m_LShr(m_Value(XlYl), m_SpecificInt(BW / 2)),
+        match(C2, m_c_Add(m_c_Add(m_LShr(m_Value(XlYl),
+                                         m_SpecificInt(BitWidth / 2)),
                                   m_Value(XlYh)),
                           m_And(m_Specific(C3), m_SpecificInt(LowMask))))) {
       XhYl = C3;
@@ -1620,7 +1625,7 @@ static bool foldMulHigh(Instruction &I) {
         return false;
 
       // Match c2 = xh*yl + (xl*yl >> 32)
-      if (!match(C2, m_c_Add(m_LShr(m_Value(XlYl), m_SpecificInt(BW / 2)),
+      if (!match(C2, m_c_Add(m_LShr(m_Value(XlYl), m_SpecificInt(BitWidth / 2)),
                              m_Value(XhYl))))
         return false;
     }
@@ -1644,19 +1649,20 @@ static bool foldMulHigh(Instruction &I) {
     ///           low = (xl*yl)>>32 + (xl*yh)&0xffffffff + (xh*yl)&0xffffffff
 
     // Find A = Low >> 32 and B/C = XhYl>>32, XlYh>>32.
-    auto ShiftAdd = m_LShr(m_Add(m_Value(), m_Value()), m_SpecificInt(BW / 2));
+    auto ShiftAdd =
+        m_LShr(m_Add(m_Value(), m_Value()), m_SpecificInt(BitWidth / 2));
     if (!match(A, ShiftAdd))
       std::swap(A, B);
     if (!match(A, ShiftAdd))
       std::swap(A, C);
     Value *Low;
-    if (!match(A, m_LShr(m_OneUse(m_Value(Low)), m_SpecificInt(BW / 2))))
+    if (!match(A, m_LShr(m_OneUse(m_Value(Low)), m_SpecificInt(BitWidth / 2))))
       return false;
 
     // Match B == XhYl>>32 and C == XlYh>>32
     Value *XhYl, *XlYh;
-    if (!match(B, m_LShr(m_Value(XhYl), m_SpecificInt(BW / 2))) ||
-        !match(C, m_LShr(m_Value(XlYh), m_SpecificInt(BW / 2))))
+    if (!match(B, m_LShr(m_Value(XhYl), m_SpecificInt(BitWidth / 2))) ||
+        !match(C, m_LShr(m_Value(XlYh), m_SpecificInt(BitWidth / 2))))
       return false;
     if (!CheckHiLo(XhYl, X, Y))
       std::swap(XhYl, XlYh);
@@ -1673,20 +1679,23 @@ static bool foldMulHigh(Instruction &I) {
                 m_OneUse(m_c_Add(
                     m_OneUse(m_And(m_Specific(XhYl), m_SpecificInt(LowMask))),
                     m_OneUse(m_And(m_Specific(XlYh), m_SpecificInt(LowMask))))),
-                m_OneUse(m_LShr(m_Value(XlYl), m_SpecificInt(BW / 2))))) &&
+                m_OneUse(
+                    m_LShr(m_Value(XlYl), m_SpecificInt(BitWidth / 2))))) &&
         !match(
             Low,
             m_c_Add(
                 m_OneUse(m_c_Add(
                     m_OneUse(m_And(m_Specific(XhYl), m_SpecificInt(LowMask))),
-                    m_OneUse(m_LShr(m_Value(XlYl), m_SpecificInt(BW / 2))))),
+                    m_OneUse(
+                        m_LShr(m_Value(XlYl), m_SpecificInt(BitWidth / 2))))),
                 m_OneUse(m_And(m_Specific(XlYh), m_SpecificInt(LowMask))))) &&
         !match(
             Low,
             m_c_Add(
                 m_OneUse(m_c_Add(
                     m_OneUse(m_And(m_Specific(XlYh), m_SpecificInt(LowMask))),
-                    m_OneUse(m_LShr(m_Value(XlYl), m_SpecificInt(BW / 2))))),
+                    m_OneUse(
+                        m_LShr(m_Value(XlYl), m_SpecificInt(BitWidth / 2))))),
                 m_OneUse(m_And(m_Specific(XhYl), m_SpecificInt(LowMask))))))
       return false;
     if (!CheckLoLo(XlYl, X, Y))
@@ -1711,20 +1720,21 @@ static bool foldMulHigh(Instruction &I) {
                m_OneUse(m_Select(
                    m_OneUse(m_SpecificICmp(ICmpInst::ICMP_ULT,
                                            m_Value(CrossSum), m_Value(XhYl))),
-                   m_SpecificInt(APInt::getOneBitSet(BW, BW / 2)), m_Zero()))))
+                   m_SpecificInt(APInt::getOneBitSet(BitWidth, BitWidth / 2)),
+                   m_Zero()))))
       return false;
 
-    if (!match(B, m_LShr(m_Specific(CrossSum), m_SpecificInt(BW / 2))))
+    if (!match(B, m_LShr(m_Specific(CrossSum), m_SpecificInt(BitWidth / 2))))
       std::swap(B, C);
-    if (!match(B, m_LShr(m_Specific(CrossSum), m_SpecificInt(BW / 2))))
+    if (!match(B, m_LShr(m_Specific(CrossSum), m_SpecificInt(BitWidth / 2))))
       return false;
 
     Value *XlYl, *LowAccum;
-    if (!match(C, m_LShr(m_Value(LowAccum), m_SpecificInt(BW / 2))) ||
-        !match(LowAccum,
-               m_c_Add(m_OneUse(m_LShr(m_Value(XlYl), m_SpecificInt(BW / 2))),
-                       m_OneUse(m_And(m_Specific(CrossSum),
-                                      m_SpecificInt(LowMask))))) ||
+    if (!match(C, m_LShr(m_Value(LowAccum), m_SpecificInt(BitWidth / 2))) ||
+        !match(LowAccum, m_c_Add(m_OneUse(m_LShr(m_Value(XlYl),
+                                                 m_SpecificInt(BitWidth / 2))),
+                                 m_OneUse(m_And(m_Specific(CrossSum),
+                                                m_SpecificInt(LowMask))))) ||
         LowAccum->hasNUsesOrMore(3))
       return false;
     if (!CheckLoLo(XlYl, X, Y))
@@ -1747,8 +1757,8 @@ static bool foldMulHigh(Instruction &I) {
   // (crosssum>>32, carry, etc).
   Value *X, *Y;
   Instruction *A, *B, *C;
-  auto HiHi = m_OneUse(m_Mul(m_LShr(m_Value(X), m_SpecificInt(BW / 2)),
-                             m_LShr(m_Value(Y), m_SpecificInt(BW / 2))));
+  auto HiHi = m_OneUse(m_Mul(m_LShr(m_Value(X), m_SpecificInt(BitWidth / 2)),
+                             m_LShr(m_Value(Y), m_SpecificInt(BitWidth / 2))));
   if ((match(&I, m_c_Add(HiHi, m_OneUse(m_Add(m_Instruction(A),
                                               m_Instruction(B))))) ||
        match(&I, m_c_Add(m_Instruction(A),
