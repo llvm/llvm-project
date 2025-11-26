@@ -1886,6 +1886,27 @@ def ROCDL_FMed3Op : ROCDL_IntrOp<"fmed3", [0], [], [Pure, AllTypesMatch<["res", 
 }
 
 //===----------------------------------------------------------------------===//
+// Math operations
+//===----------------------------------------------------------------------===//
+
+class ROCDL_Math_IntrOp<string mnemonic, list<Trait> traits = []> :
+  ROCDL_IntrOp<mnemonic, [0], [], traits, 1>,
+  Arguments<(ins LLVM_AnyFloat:$arg)> {
+  let results = (outs LLVM_AnyFloat:$res);
+  let assemblyFormat =
+    "$arg qualified(type($arg)) attr-dict `->` qualified(type($res))";
+}
+
+def ROCDLTanh : ROCDL_Math_IntrOp<"tanh">;
+def ROCDLSin : ROCDL_Math_IntrOp<"sin">;
+def ROCDLCos : ROCDL_Math_IntrOp<"cos">;
+def ROCDLRcp : ROCDL_Math_IntrOp<"rcp">;
+def ROCDLExp : ROCDL_Math_IntrOp<"exp">;
+def ROCDLExp2 : ROCDL_Math_IntrOp<"exp2">;
+def ROCDLLog : ROCDL_Math_IntrOp<"log">;
+def ROCDLSqrt : ROCDL_Math_IntrOp<"sqrt">;
+
+//===----------------------------------------------------------------------===//
 // ROCDL target attribute.
 //===----------------------------------------------------------------------===//
 
