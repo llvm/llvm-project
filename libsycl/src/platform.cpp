@@ -34,7 +34,7 @@ platform::get_info() const {
   return impl.get_info<Param>();
 }
 
-#define __SYCL_PARAM_TRAITS_SPEC(DescType, Desc, ReturnT, PiCode)              \
+#define __SYCL_PARAM_TRAITS_SPEC(DescType, Desc, ReturnT)                      \
   template _LIBSYCL_EXPORT ReturnT platform::get_info<info::platform::Desc>()  \
       const;
 #include <sycl/__impl/info/platform.def>

@@ -14,7 +14,6 @@
 #include <sycl/__impl/platform.hpp>
 
 #include <detail/common.hpp>
-#include <detail/offload/info_code.hpp>
 #include <detail/offload/offload_utils.hpp>
 
 #include <OffloadAPI.h>
@@ -72,20 +71,32 @@ public:
   /// \return the platform_impl representing the offloading RT platform
   static platform_impl &getPlatformImpl(ol_platform_handle_t Platform);
 
+  template <typename InfoDesc>
+  static constexpr ol_platform_info_t getOffloadInfo() {
+    if constexpr (std::is_same_v<InfoDesc, sycl::info::platform::version>)
+      return OL_PLATFORM_INFO_VERSION;
+    else if constexpr (std::is_same_v<InfoDesc, sycl::info::platform::name>)
+      return OL_PLATFORM_INFO_NAME;
+    else if constexpr (std::is_same_v<InfoDesc, sycl::info::platform::vendor>)
+      return OL_PLATFORM_INFO_VENDOR_NAME;
+    else
+      static_assert(false && "Convertion list for platform info is not full.");
+  }
   /// Queries this SYCL platform for info.
   ///
   /// The return type depends on information being queried.
   template <typename Param> typename Param::return_type get_info() const {
     // for now we have only std::string properties
     static_assert(std::is_same_v<typename Param::return_type, std::string>);
+    constexpr ol_platform_info_t OffloadCode = getOffloadInfo<Param>();
+
     size_t ExpectedSize = 0;
-    call_and_throw(olGetPlatformInfoSize, MOffloadPlatform,
-                   detail::OffloadInfoCode<Param>::value, &ExpectedSize);
+    call_and_throw(olGetPlatformInfoSize, MOffloadPlatform, OffloadCode,
+                   &ExpectedSize);
     std::string Result;
     Result.resize(ExpectedSize - 1);
-    call_and_throw(olGetPlatformInfo, MOffloadPlatform,
-                   detail::OffloadInfoCode<Param>::value, ExpectedSize,
-                   Result.data());
+    call_and_throw(olGetPlatformInfo, MOffloadPlatform, OffloadCode,
+                   ExpectedSize, Result.data());
     return Result;
   }
 
