@@ -275,6 +275,33 @@ define i32 @ashr_var_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
   ret i32 %r
 }
 
+define i1 @ashr_nonezero_removes_test_optsize(i32 %val, i32 %amt) optsize {
+; CHECK-LABEL: ashr_nonezero_removes_test_optsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orb $1, %sil, %cl
+; CHECK-NEXT:    sarl %cl, %edi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %amt.nz = or i32 %amt, 1
+  %sar = ashr i32 %val, %amt.nz
+  %cmp = icmp eq i32 %sar, 0
+  ret i1 %cmp
+}
+
+define i1 @ashr_maybezero_keeps_test_optsize(i32 %val, i32 %amt) optsize {
+; CHECK-LABEL: ashr_maybezero_keeps_test_optsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    sarl %cl, %edi
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %sar = ashr i32 %val, %amt
+  %cmp = icmp eq i32 %sar, 0
+  ret i1 %cmp
+}
+
 ; lshr by non-zero variable - use separate test
 define i32 @lshr_var_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: lshr_var_amt_never_zero:
@@ -309,7 +336,34 @@ define i32 @shl_var_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
   ret i32 %r
 }
 
-; ashr by non-zero variable and using result - use separate test
+define i1 @shl_nonzero_removes_testl_optsize(i32 %val, i32 %amt) optsize {
+; CHECK-LABEL: shl_nonzero_removes_testl_optsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orb $1, %sil, %cl
+; CHECK-NEXT:    shll %cl, %edi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %amt.nz = or i32 %amt, 1
+  %shl = shl i32 %val, %amt.nz
+  %cmp = icmp eq i32 %shl, 0
+  ret i1 %cmp
+}
+
+define i1 @shl_maybezero_keeps_test_optsize(i32 %val, i32 %amt) minsize {
+; CHECK-LABEL: shl_maybezero_keeps_test_optsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    shll %cl, %edi
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %shl = shl i32 %val, %amt
+  %cmp = icmp eq i32 %shl, 0
+  ret i1 %cmp
+}
+
+; lshr by non-zero variable and using result - use separate test
 define i32 @ashr_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: ashr_var_self_select_amt_never_zero:
 ; CHECK:       # %bb.0:
@@ -341,7 +395,7 @@ define i32 @lshr_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %
   ret i32 %r
 }
 
-; shl by non-zero variable and using result - use separate test
+; lshr by non-zero variable and using result - use separate test
 define i32 @shl_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a3) {
 ; CHECK-LABEL: shl_var_self_select_amt_never_zero:
 ; CHECK:       # %bb.0:
@@ -357,35 +411,8 @@ define i32 @shl_var_self_select_amt_never_zero(i32 %a0, i32 %a1, i32 %a2, i32 %a
   ret i32 %r
 }
 
-define i1 @shl_optsize_nonzero_removes_test(i32 %val, i32 %amt) optsize {
-; CHECK-LABEL: shl_optsize_nonzero_removes_test:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    orb $1, %sil, %cl
-; CHECK-NEXT:    shll %cl, %edi
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    retq
-  %amt.nz = or i32 %amt, 1
-  %shl = shl i32 %val, %amt.nz
-  %cmp = icmp eq i32 %shl, 0
-  ret i1 %cmp
-}
-
-define i1 @shl_optsize_maybezero_keeps_test(i32 %val, i32 %amt) optsize {
-; CHECK-LABEL: shl_optsize_maybezero_keeps_test:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shll %cl, %edi
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    retq
-  %shl = shl i32 %val, %amt
-  %cmp = icmp eq i32 %shl, 0
-  ret i1 %cmp
-}
-
-define i1 @lshr_optsize_nonezero_removes_test(i32 %val, i32 %amt) optsize {
-; CHECK-LABEL: lshr_optsize_nonezero_removes_test:
+define i1 @lshr_nonezero_removes_test_optsize(i32 %val, i32 %amt) minsize {
+; CHECK-LABEL: lshr_nonezero_removes_test_optsize:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orb $1, %sil, %cl
 ; CHECK-NEXT:    shrl %cl, %edi
@@ -397,8 +424,8 @@ define i1 @lshr_optsize_nonezero_removes_test(i32 %val, i32 %amt) optsize {
   ret i1 %cmp
 }
 
-define i1 @lshr_optsize_maybezero_keeps_test(i32 %val, i32 %amt) optsize {
-; CHECK-LABEL: lshr_optsize_maybezero_keeps_test:
+define i1 @lshr_maybezero_keeps_test_optsize(i32 %val, i32 %amt) optsize {
+; CHECK-LABEL: lshr_maybezero_keeps_test_optsize:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -408,32 +435,5 @@ define i1 @lshr_optsize_maybezero_keeps_test(i32 %val, i32 %amt) optsize {
 ; CHECK-NEXT:    retq
   %shr = lshr i32 %val, %amt
   %cmp = icmp eq i32 %shr, 0
-  ret i1 %cmp
-}
-
-define i1 @ashr_optsize_nonezero_removes_test(i32 %val, i32 %amt) optsize {
-; CHECK-LABEL: ashr_optsize_nonezero_removes_test:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    orb $1, %sil, %cl
-; CHECK-NEXT:    sarl %cl, %edi
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    retq
-  %amt.nz = or i32 %amt, 1
-  %sar = ashr i32 %val, %amt.nz
-  %cmp = icmp eq i32 %sar, 0
-  ret i1 %cmp
-}
-
-define i1 @ashr_optsize_maybezero_keeps_test(i32 %val, i32 %amt) optsize {
-; CHECK-LABEL: ashr_optsize_maybezero_keeps_test:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    sarl %cl, %edi
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    retq
-  %sar = ashr i32 %val, %amt
-  %cmp = icmp eq i32 %sar, 0
   ret i1 %cmp
 }
