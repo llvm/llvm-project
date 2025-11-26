@@ -5,7 +5,9 @@
 ; Test passing IR struct arguments, which do not adhere to the ABI but are
 ; split up with each element passed like a separate argument.
 
-@fnptr = external global ptr
+@Fnptr = external global ptr
+@Src = external global ptr
+@Dst = external global ptr
 
 %Ty0 = type {i128}
 define fastcc void @fun0(%Ty0 %A) {
@@ -21,7 +23,7 @@ define fastcc void @fun0(%Ty0 %A) {
 ; CHECK-NEXT:    stg %r0, 168(%r15)
 ; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    stg %r1, 160(%r15)
-; CHECK-NEXT:    brasl %r14, fnptr@PLT
+; CHECK-NEXT:    brasl %r14, Fnptr@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 288(%r15)
 ; CHECK-NEXT:    br %r14
 ;
@@ -35,10 +37,10 @@ define fastcc void @fun0(%Ty0 %A) {
 ; VECTOR-NEXT:    vl %v0, 0(%r2), 3
 ; VECTOR-NEXT:    la %r2, 160(%r15)
 ; VECTOR-NEXT:    vst %v0, 160(%r15), 3
-; VECTOR-NEXT:    brasl %r14, fnptr@PLT
+; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 288(%r15)
 ; VECTOR-NEXT:    br %r14
-  call void @fnptr(%Ty0 %A)
+  call void @Fnptr(%Ty0 %A)
   ret void
 }
 
@@ -72,7 +74,7 @@ define fastcc void @fun1(%Ty1 %A, %Ty1 %B) {
 ; CHECK-NEXT:    la %r4, 176(%r15)
 ; CHECK-NEXT:    la %r5, 160(%r15)
 ; CHECK-NEXT:    stg %r0, 208(%r15)
-; CHECK-NEXT:    brasl %r14, fnptr@PLT
+; CHECK-NEXT:    brasl %r14, Fnptr@PLT
 ; CHECK-NEXT:    lmg %r13, %r15, 328(%r15)
 ; CHECK-NEXT:    br %r14
 ;
@@ -95,10 +97,10 @@ define fastcc void @fun1(%Ty1 %A, %Ty1 %B) {
 ; VECTOR-NEXT:    vst %v2, 176(%r15), 3
 ; VECTOR-NEXT:    vst %v1, 192(%r15), 3
 ; VECTOR-NEXT:    vst %v0, 208(%r15), 3
-; VECTOR-NEXT:    brasl %r14, fnptr@PLT
+; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 336(%r15)
 ; VECTOR-NEXT:    br %r14
-  call void @fnptr(%Ty1 %A, %Ty1 %B)
+  call void @Fnptr(%Ty1 %A, %Ty1 %B)
   ret void
 }
 
@@ -130,7 +132,7 @@ define fastcc void @fun2(%Ty2 %A, %Ty2 %B) {
 ; CHECK-NEXT:    la %r2, 192(%r15)
 ; CHECK-NEXT:    la %r3, 160(%r15)
 ; CHECK-NEXT:    stg %r0, 192(%r15)
-; CHECK-NEXT:    brasl %r14, fnptr@PLT
+; CHECK-NEXT:    brasl %r14, Fnptr@PLT
 ; CHECK-NEXT:    lmg %r13, %r15, 328(%r15)
 ; CHECK-NEXT:    br %r14
 ;
@@ -151,10 +153,10 @@ define fastcc void @fun2(%Ty2 %A, %Ty2 %B) {
 ; VECTOR-NEXT:    vst %v2, 160(%r15), 3
 ; VECTOR-NEXT:    vst %v1, 208(%r15), 3
 ; VECTOR-NEXT:    vst %v0, 192(%r15), 3
-; VECTOR-NEXT:    brasl %r14, fnptr@PLT
+; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 336(%r15)
 ; VECTOR-NEXT:    br %r14
-  call void @fnptr(%Ty2 %A, %Ty2 %B)
+  call void @Fnptr(%Ty2 %A, %Ty2 %B)
   ret void
 }
 
@@ -162,7 +164,8 @@ define fastcc void @fun2(%Ty2 %A, %Ty2 %B) {
 define fastcc void @fun3(%Ty3 %A) {
 ; CHECK-LABEL: fun3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    stmg %r13, %r15, 104(%r15)
+; CHECK-NEXT:    stmg %r12, %r15, 96(%r15)
+; CHECK-NEXT:    .cfi_offset %r12, -64
 ; CHECK-NEXT:    .cfi_offset %r13, -56
 ; CHECK-NEXT:    .cfi_offset %r14, -48
 ; CHECK-NEXT:    .cfi_offset %r15, -40
@@ -171,28 +174,29 @@ define fastcc void @fun3(%Ty3 %A) {
 ; CHECK-NEXT:    lg %r0, 0(%r2)
 ; CHECK-NEXT:    lg %r1, 8(%r2)
 ; CHECK-NEXT:    lg %r14, 16(%r2)
+; CHECK-NEXT:    lgrl %r13, Dst@GOT
 ; CHECK-NEXT:    lg %r2, 24(%r2)
-; CHECK-NEXT:    lg %r13, 0(%r4)
+; CHECK-NEXT:    lg %r12, 0(%r4)
 ; CHECK-NEXT:    lg %r4, 8(%r4)
-; CHECK-NEXT:    stc %r5, 64
-; CHECK-NEXT:    st %r3, 40
-; CHECK-NEXT:    ste %f0, 0
-; CHECK-NEXT:    stg %r4, 56
-; CHECK-NEXT:    stg %r13, 48
-; CHECK-NEXT:    stg %r2, 32
-; CHECK-NEXT:    stg %r14, 24
-; CHECK-NEXT:    stg %r1, 16
-; CHECK-NEXT:    stg %r0, 8
+; CHECK-NEXT:    stc %r5, 64(%r13)
+; CHECK-NEXT:    st %r3, 40(%r13)
+; CHECK-NEXT:    ste %f0, 0(%r13)
+; CHECK-NEXT:    stg %r4, 56(%r13)
+; CHECK-NEXT:    stg %r12, 48(%r13)
+; CHECK-NEXT:    stg %r2, 32(%r13)
+; CHECK-NEXT:    stg %r14, 24(%r13)
+; CHECK-NEXT:    stg %r1, 16(%r13)
+; CHECK-NEXT:    stg %r0, 8(%r13)
 ; CHECK-NEXT:    stg %r4, 168(%r15)
-; CHECK-NEXT:    stg %r13, 160(%r15)
+; CHECK-NEXT:    stg %r12, 160(%r15)
 ; CHECK-NEXT:    stg %r2, 200(%r15)
 ; CHECK-NEXT:    stg %r14, 192(%r15)
 ; CHECK-NEXT:    stg %r1, 184(%r15)
 ; CHECK-NEXT:    la %r2, 176(%r15)
 ; CHECK-NEXT:    la %r4, 160(%r15)
 ; CHECK-NEXT:    stg %r0, 176(%r15)
-; CHECK-NEXT:    brasl %r14, fnptr@PLT
-; CHECK-NEXT:    lmg %r13, %r15, 312(%r15)
+; CHECK-NEXT:    brasl %r14, Fnptr@PLT
+; CHECK-NEXT:    lmg %r12, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
 ;
 ; VECTOR-LABEL: fun3:
@@ -205,22 +209,23 @@ define fastcc void @fun3(%Ty3 %A) {
 ; VECTOR-NEXT:    vl %v1, 0(%r4), 3
 ; VECTOR-NEXT:    vl %v2, 0(%r2), 3
 ; VECTOR-NEXT:    vl %v3, 16(%r2), 3
+; VECTOR-NEXT:    lgrl %r1, Dst@GOT
 ; VECTOR-NEXT:    la %r2, 176(%r15)
 ; VECTOR-NEXT:    la %r4, 160(%r15)
-; VECTOR-NEXT:    stc %r5, 64
-; VECTOR-NEXT:    st %r3, 40
-; VECTOR-NEXT:    ste %f0, 0
-; VECTOR-NEXT:    vst %v3, 24, 3
-; VECTOR-NEXT:    vst %v2, 8, 3
-; VECTOR-NEXT:    vst %v1, 48, 3
+; VECTOR-NEXT:    stc %r5, 64(%r1)
+; VECTOR-NEXT:    st %r3, 40(%r1)
+; VECTOR-NEXT:    ste %f0, 0(%r1)
+; VECTOR-NEXT:    vst %v3, 24(%r1), 3
+; VECTOR-NEXT:    vst %v2, 8(%r1), 3
+; VECTOR-NEXT:    vst %v1, 48(%r1), 3
 ; VECTOR-NEXT:    vst %v1, 160(%r15), 3
 ; VECTOR-NEXT:    vst %v3, 192(%r15), 3
 ; VECTOR-NEXT:    vst %v2, 176(%r15), 3
-; VECTOR-NEXT:    brasl %r14, fnptr@PLT
+; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 320(%r15)
 ; VECTOR-NEXT:    br %r14
-  store %Ty3 %A, ptr null
-  call void @fnptr(%Ty3 %A)
+  store %Ty3 %A, ptr @Dst
+  call void @Fnptr(%Ty3 %A)
   ret void
 }
 
@@ -234,22 +239,23 @@ define fastcc void @fun4(%Ty4 %A) {
 ; CHECK-NEXT:    aghi %r15, -192
 ; CHECK-NEXT:    .cfi_def_cfa_offset 352
 ; CHECK-NEXT:    lg %r0, 8(%r3)
-; CHECK-NEXT:    lg %r1, 0(%r3)
-; CHECK-NEXT:    lg %r3, 8(%r2)
-; CHECK-NEXT:    lg %r4, 0(%r2)
-; CHECK-NEXT:    stg %r0, 24
-; CHECK-NEXT:    stg %r1, 16
-; CHECK-NEXT:    stc %r3, 8
-; CHECK-NEXT:    sllg %r2, %r4, 56
-; CHECK-NEXT:    rosbg %r2, %r3, 8, 63, 56
-; CHECK-NEXT:    stg %r2, 0
+; CHECK-NEXT:    lgrl %r1, Dst@GOT
+; CHECK-NEXT:    lg %r3, 0(%r3)
+; CHECK-NEXT:    lg %r4, 8(%r2)
+; CHECK-NEXT:    lg %r5, 0(%r2)
+; CHECK-NEXT:    stg %r0, 24(%r1)
+; CHECK-NEXT:    stg %r3, 16(%r1)
+; CHECK-NEXT:    stc %r4, 8(%r1)
+; CHECK-NEXT:    sllg %r2, %r5, 56
+; CHECK-NEXT:    rosbg %r2, %r4, 8, 63, 56
+; CHECK-NEXT:    stg %r2, 0(%r1)
 ; CHECK-NEXT:    stg %r0, 168(%r15)
-; CHECK-NEXT:    stg %r1, 160(%r15)
-; CHECK-NEXT:    stg %r3, 184(%r15)
+; CHECK-NEXT:    stg %r3, 160(%r15)
+; CHECK-NEXT:    stg %r4, 184(%r15)
 ; CHECK-NEXT:    la %r2, 176(%r15)
 ; CHECK-NEXT:    la %r3, 160(%r15)
-; CHECK-NEXT:    stg %r4, 176(%r15)
-; CHECK-NEXT:    brasl %r14, fnptr@PLT
+; CHECK-NEXT:    stg %r5, 176(%r15)
+; CHECK-NEXT:    brasl %r14, Fnptr@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
 ;
@@ -262,62 +268,303 @@ define fastcc void @fun4(%Ty4 %A) {
 ; VECTOR-NEXT:    .cfi_def_cfa_offset 352
 ; VECTOR-NEXT:    vl %v1, 0(%r2), 3
 ; VECTOR-NEXT:    vl %v0, 0(%r3), 3
-; VECTOR-NEXT:    vsteb %v1, 8, 15
+; VECTOR-NEXT:    lgrl %r1, Dst@GOT
 ; VECTOR-NEXT:    vrepib %v2, 8
 ; VECTOR-NEXT:    vsrlb %v2, %v1, %v2
+; VECTOR-NEXT:    vsteb %v1, 8(%r1), 15
 ; VECTOR-NEXT:    la %r2, 176(%r15)
 ; VECTOR-NEXT:    la %r3, 160(%r15)
-; VECTOR-NEXT:    vst %v0, 16, 3
-; VECTOR-NEXT:    vsteg %v2, 0, 1
+; VECTOR-NEXT:    vst %v0, 16(%r1), 3
+; VECTOR-NEXT:    vsteg %v2, 0(%r1), 1
 ; VECTOR-NEXT:    vst %v0, 160(%r15), 3
 ; VECTOR-NEXT:    vst %v1, 176(%r15), 3
-; VECTOR-NEXT:    brasl %r14, fnptr@PLT
+; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 304(%r15)
 ; VECTOR-NEXT:    br %r14
-  store %Ty4 %A, ptr null
-  call void @fnptr(%Ty4 %A)
+  store %Ty4 %A, ptr @Dst
+  call void @Fnptr(%Ty4 %A)
   ret void
 }
 
 %Ty5 = type {i128, i128}
 declare fastcc %Ty5 @foo5()
-define fastcc void @fun5() {
+define fastcc %Ty5 @fun5() {
 ; CHECK-LABEL: fun5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    stmg %r13, %r15, 104(%r15)
+; CHECK-NEXT:    .cfi_offset %r13, -56
 ; CHECK-NEXT:    .cfi_offset %r14, -48
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -192
 ; CHECK-NEXT:    .cfi_def_cfa_offset 352
+; CHECK-NEXT:    lgr %r13, %r2
 ; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    brasl %r14, foo5@PLT
-; CHECK-NEXT:    lg %r0, 176(%r15)
-; CHECK-NEXT:    lg %r1, 184(%r15)
+; CHECK-NEXT:    lg %r0, 168(%r15)
+; CHECK-NEXT:    lgrl %r1, Src@GOT
 ; CHECK-NEXT:    lg %r2, 160(%r15)
-; CHECK-NEXT:    lg %r3, 168(%r15)
-; CHECK-NEXT:    stg %r0, 16
-; CHECK-NEXT:    stg %r1, 24
-; CHECK-NEXT:    stg %r2, 0
-; CHECK-NEXT:    stg %r3, 8
-; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
+; CHECK-NEXT:    alg %r0, 8(%r1)
+; CHECK-NEXT:    lg %r3, 176(%r15)
+; CHECK-NEXT:    lg %r4, 184(%r15)
+; CHECK-NEXT:    alcg %r2, 0(%r1)
+; CHECK-NEXT:    stg %r3, 16(%r13)
+; CHECK-NEXT:    stg %r4, 24(%r13)
+; CHECK-NEXT:    stg %r0, 8(%r13)
+; CHECK-NEXT:    stg %r2, 0(%r13)
+; CHECK-NEXT:    lmg %r13, %r15, 296(%r15)
 ; CHECK-NEXT:    br %r14
 ;
 ; VECTOR-LABEL: fun5:
 ; VECTOR:       # %bb.0:
-; VECTOR-NEXT:    stmg %r14, %r15, 112(%r15)
+; VECTOR-NEXT:    stmg %r13, %r15, 104(%r15)
+; VECTOR-NEXT:    .cfi_offset %r13, -56
 ; VECTOR-NEXT:    .cfi_offset %r14, -48
 ; VECTOR-NEXT:    .cfi_offset %r15, -40
 ; VECTOR-NEXT:    aghi %r15, -192
 ; VECTOR-NEXT:    .cfi_def_cfa_offset 352
+; VECTOR-NEXT:    lgr %r13, %r2
 ; VECTOR-NEXT:    la %r2, 160(%r15)
 ; VECTOR-NEXT:    brasl %r14, foo5@PLT
-; VECTOR-NEXT:    vl %v0, 160(%r15), 3
-; VECTOR-NEXT:    vl %v1, 176(%r15), 3
-; VECTOR-NEXT:    vst %v1, 16, 3
-; VECTOR-NEXT:    vst %v0, 0, 3
-; VECTOR-NEXT:    lmg %r14, %r15, 304(%r15)
+; VECTOR-NEXT:    lgrl %r1, Src@GOT
+; VECTOR-NEXT:    vl %v1, 160(%r15), 3
+; VECTOR-NEXT:    vl %v2, 0(%r1), 3
+; VECTOR-NEXT:    vl %v0, 176(%r15), 3
+; VECTOR-NEXT:    vaq %v1, %v1, %v2
+; VECTOR-NEXT:    vst %v0, 16(%r13), 3
+; VECTOR-NEXT:    vst %v1, 0(%r13), 3
+; VECTOR-NEXT:    lmg %r13, %r15, 296(%r15)
 ; VECTOR-NEXT:    br %r14
-  %A = call %Ty5 @foo5()
-  store %Ty5 %A, ptr null
-  ret void
+  %V = call %Ty5 @foo5()
+  %Val0 = extractvalue %Ty5 %V, 0
+  %Ld = load i128, ptr @Src
+  %Add = add i128 %Val0, %Ld
+  %Res = insertvalue %Ty5 %V, i128 %Add, 0
+  ret %Ty5 %Res
+}
+
+%Ty6 = type {float, i128, i16}
+declare fastcc %Ty6 @foo6()
+define fastcc %Ty6 @fun6() {
+; CHECK-LABEL: fun6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    stmg %r13, %r15, 104(%r15)
+; CHECK-NEXT:    .cfi_offset %r13, -56
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    aghi %r15, -192
+; CHECK-NEXT:    .cfi_def_cfa_offset 352
+; CHECK-NEXT:    lgr %r13, %r2
+; CHECK-NEXT:    la %r2, 160(%r15)
+; CHECK-NEXT:    brasl %r14, foo6@PLT
+; CHECK-NEXT:    lg %r0, 176(%r15)
+; CHECK-NEXT:    lgrl %r1, Src@GOT
+; CHECK-NEXT:    lg %r2, 168(%r15)
+; CHECK-NEXT:    alg %r0, 8(%r1)
+; CHECK-NEXT:    le %f0, 160(%r15)
+; CHECK-NEXT:    lh %r3, 184(%r15)
+; CHECK-NEXT:    alcg %r2, 0(%r1)
+; CHECK-NEXT:    ste %f0, 0(%r13)
+; CHECK-NEXT:    sth %r3, 24(%r13)
+; CHECK-NEXT:    stg %r0, 16(%r13)
+; CHECK-NEXT:    stg %r2, 8(%r13)
+; CHECK-NEXT:    lmg %r13, %r15, 296(%r15)
+; CHECK-NEXT:    br %r14
+;
+; VECTOR-LABEL: fun6:
+; VECTOR:       # %bb.0:
+; VECTOR-NEXT:    stmg %r13, %r15, 104(%r15)
+; VECTOR-NEXT:    .cfi_offset %r13, -56
+; VECTOR-NEXT:    .cfi_offset %r14, -48
+; VECTOR-NEXT:    .cfi_offset %r15, -40
+; VECTOR-NEXT:    aghi %r15, -192
+; VECTOR-NEXT:    .cfi_def_cfa_offset 352
+; VECTOR-NEXT:    lgr %r13, %r2
+; VECTOR-NEXT:    la %r2, 160(%r15)
+; VECTOR-NEXT:    brasl %r14, foo6@PLT
+; VECTOR-NEXT:    lgrl %r1, Src@GOT
+; VECTOR-NEXT:    vl %v1, 168(%r15), 3
+; VECTOR-NEXT:    vl %v2, 0(%r1), 3
+; VECTOR-NEXT:    lh %r0, 184(%r15)
+; VECTOR-NEXT:    lde %f0, 160(%r15)
+; VECTOR-NEXT:    vaq %v1, %v1, %v2
+; VECTOR-NEXT:    sth %r0, 24(%r13)
+; VECTOR-NEXT:    vst %v1, 8(%r13), 3
+; VECTOR-NEXT:    ste %f0, 0(%r13)
+; VECTOR-NEXT:    lmg %r13, %r15, 296(%r15)
+; VECTOR-NEXT:    br %r14
+  %V = call %Ty6 @foo6()
+  %Val1 = extractvalue %Ty6 %V, 1
+  %Ld = load i128, ptr @Src
+  %Add = add i128 %Val1, %Ld
+  %Res = insertvalue %Ty6 %V, i128 %Add, 1
+  ret %Ty6 %Res
+}
+
+%Ty7 = type [4 x i128]
+declare fastcc %Ty7 @foo7()
+define fastcc %Ty7 @fun7() {
+; CHECK-LABEL: fun7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    stmg %r12, %r15, 96(%r15)
+; CHECK-NEXT:    .cfi_offset %r12, -64
+; CHECK-NEXT:    .cfi_offset %r13, -56
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    aghi %r15, -224
+; CHECK-NEXT:    .cfi_def_cfa_offset 384
+; CHECK-NEXT:    lgr %r13, %r2
+; CHECK-NEXT:    la %r2, 160(%r15)
+; CHECK-NEXT:    brasl %r14, foo7@PLT
+; CHECK-NEXT:    lg %r0, 200(%r15)
+; CHECK-NEXT:    lg %r1, 192(%r15)
+; CHECK-NEXT:    lg %r2, 176(%r15)
+; CHECK-NEXT:    lg %r3, 184(%r15)
+; CHECK-NEXT:    lg %r4, 168(%r15)
+; CHECK-NEXT:    lg %r5, 160(%r15)
+; CHECK-NEXT:    lg %r14, 208(%r15)
+; CHECK-NEXT:    lg %r12, 216(%r15)
+; CHECK-NEXT:    algr %r4, %r3
+; CHECK-NEXT:    alcgr %r5, %r2
+; CHECK-NEXT:    stg %r14, 48(%r13)
+; CHECK-NEXT:    stg %r12, 56(%r13)
+; CHECK-NEXT:    stg %r1, 32(%r13)
+; CHECK-NEXT:    stg %r0, 40(%r13)
+; CHECK-NEXT:    stg %r2, 16(%r13)
+; CHECK-NEXT:    stg %r3, 24(%r13)
+; CHECK-NEXT:    stg %r4, 8(%r13)
+; CHECK-NEXT:    stg %r5, 0(%r13)
+; CHECK-NEXT:    lmg %r12, %r15, 320(%r15)
+; CHECK-NEXT:    br %r14
+;
+; VECTOR-LABEL: fun7:
+; VECTOR:       # %bb.0:
+; VECTOR-NEXT:    stmg %r13, %r15, 104(%r15)
+; VECTOR-NEXT:    .cfi_offset %r13, -56
+; VECTOR-NEXT:    .cfi_offset %r14, -48
+; VECTOR-NEXT:    .cfi_offset %r15, -40
+; VECTOR-NEXT:    aghi %r15, -224
+; VECTOR-NEXT:    .cfi_def_cfa_offset 384
+; VECTOR-NEXT:    lgr %r13, %r2
+; VECTOR-NEXT:    la %r2, 160(%r15)
+; VECTOR-NEXT:    brasl %r14, foo7@PLT
+; VECTOR-NEXT:    vl %v2, 176(%r15), 3
+; VECTOR-NEXT:    vl %v3, 160(%r15), 3
+; VECTOR-NEXT:    vl %v0, 192(%r15), 3
+; VECTOR-NEXT:    vl %v1, 208(%r15), 3
+; VECTOR-NEXT:    vaq %v3, %v3, %v2
+; VECTOR-NEXT:    vst %v1, 48(%r13), 3
+; VECTOR-NEXT:    vst %v0, 32(%r13), 3
+; VECTOR-NEXT:    vst %v2, 16(%r13), 3
+; VECTOR-NEXT:    vst %v3, 0(%r13), 3
+; VECTOR-NEXT:    lmg %r13, %r15, 328(%r15)
+; VECTOR-NEXT:    br %r14
+  %V = call %Ty7 @foo7()
+  %Val0 = extractvalue %Ty7 %V, 0
+  %Val1 = extractvalue %Ty7 %V, 1
+  %Add = add i128 %Val0, %Val1
+  %Res = insertvalue %Ty7 %V, i128 %Add, 0
+  ret %Ty7 %Res
+}
+
+%Ty8 = type {float, [2 x i128], i32}
+declare fastcc %Ty8 @foo8()
+define fastcc %Ty8 @fun8() {
+; CHECK-LABEL: fun8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    stmg %r13, %r15, 104(%r15)
+; CHECK-NEXT:    .cfi_offset %r13, -56
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    aghi %r15, -208
+; CHECK-NEXT:    .cfi_def_cfa_offset 368
+; CHECK-NEXT:    lgr %r13, %r2
+; CHECK-NEXT:    la %r2, 160(%r15)
+; CHECK-NEXT:    brasl %r14, foo8@PLT
+; CHECK-NEXT:    lg %r0, 176(%r15)
+; CHECK-NEXT:    lg %r1, 168(%r15)
+; CHECK-NEXT:    le %f0, 160(%r15)
+; CHECK-NEXT:    lhi %r2, 1
+; CHECK-NEXT:    a %r2, 200(%r15)
+; CHECK-NEXT:    lg %r3, 184(%r15)
+; CHECK-NEXT:    lg %r4, 192(%r15)
+; CHECK-NEXT:    ste %f0, 0(%r13)
+; CHECK-NEXT:    st %r2, 40(%r13)
+; CHECK-NEXT:    stg %r3, 24(%r13)
+; CHECK-NEXT:    stg %r4, 32(%r13)
+; CHECK-NEXT:    stg %r1, 8(%r13)
+; CHECK-NEXT:    stg %r0, 16(%r13)
+; CHECK-NEXT:    lmg %r13, %r15, 312(%r15)
+; CHECK-NEXT:    br %r14
+;
+; VECTOR-LABEL: fun8:
+; VECTOR:       # %bb.0:
+; VECTOR-NEXT:    stmg %r13, %r15, 104(%r15)
+; VECTOR-NEXT:    .cfi_offset %r13, -56
+; VECTOR-NEXT:    .cfi_offset %r14, -48
+; VECTOR-NEXT:    .cfi_offset %r15, -40
+; VECTOR-NEXT:    aghi %r15, -208
+; VECTOR-NEXT:    .cfi_def_cfa_offset 368
+; VECTOR-NEXT:    lgr %r13, %r2
+; VECTOR-NEXT:    la %r2, 160(%r15)
+; VECTOR-NEXT:    brasl %r14, foo8@PLT
+; VECTOR-NEXT:    lhi %r0, 1
+; VECTOR-NEXT:    a %r0, 200(%r15)
+; VECTOR-NEXT:    lde %f0, 160(%r15)
+; VECTOR-NEXT:    vl %v1, 168(%r15), 3
+; VECTOR-NEXT:    vl %v2, 184(%r15), 3
+; VECTOR-NEXT:    st %r0, 40(%r13)
+; VECTOR-NEXT:    vst %v2, 24(%r13), 3
+; VECTOR-NEXT:    vst %v1, 8(%r13), 3
+; VECTOR-NEXT:    ste %f0, 0(%r13)
+; VECTOR-NEXT:    lmg %r13, %r15, 312(%r15)
+; VECTOR-NEXT:    br %r14
+  %V = call %Ty8 @foo8()
+  %Val2 = extractvalue %Ty8 %V, 2
+  %Add = add i32 %Val2, 1
+  %Res = insertvalue %Ty8 %V, i32 %Add, 2
+  ret %Ty8 %Res
+}
+
+%Ty9 = type {i72}
+declare fastcc %Ty9 @foo9(%Ty9)
+define fastcc %Ty9 @fun9(%Ty9 %A) {
+; CHECK-LABEL: fun9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
+; CHECK-NEXT:    .cfi_offset %r14, -48
+; CHECK-NEXT:    .cfi_offset %r15, -40
+; CHECK-NEXT:    aghi %r15, -176
+; CHECK-NEXT:    .cfi_def_cfa_offset 336
+; CHECK-NEXT:    lg %r0, 8(%r2)
+; CHECK-NEXT:    lg %r1, 0(%r2)
+; CHECK-NEXT:    stg %r0, 168(%r15)
+; CHECK-NEXT:    la %r2, 160(%r15)
+; CHECK-NEXT:    stg %r1, 160(%r15)
+; CHECK-NEXT:    brasl %r14, foo9@PLT
+; CHECK-NEXT:    lmg %r14, %r15, 288(%r15)
+; CHECK-NEXT:    br %r14
+;
+; VECTOR-LABEL: fun9:
+; VECTOR:       # %bb.0:
+; VECTOR-NEXT:    stmg %r13, %r15, 104(%r15)
+; VECTOR-NEXT:    .cfi_offset %r13, -56
+; VECTOR-NEXT:    .cfi_offset %r14, -48
+; VECTOR-NEXT:    .cfi_offset %r15, -40
+; VECTOR-NEXT:    aghi %r15, -192
+; VECTOR-NEXT:    .cfi_def_cfa_offset 352
+; VECTOR-NEXT:    vl %v0, 0(%r3), 3
+; VECTOR-NEXT:    lgr %r13, %r2
+; VECTOR-NEXT:    la %r2, 160(%r15)
+; VECTOR-NEXT:    la %r3, 176(%r15)
+; VECTOR-NEXT:    vst %v0, 176(%r15), 3
+; VECTOR-NEXT:    brasl %r14, foo9@PLT
+; VECTOR-NEXT:    vgbm %v0, 0
+; VECTOR-NEXT:    vleb %v0, 168(%r15), 15
+; VECTOR-NEXT:    vlrepg %v1, 160(%r15)
+; VECTOR-NEXT:    vsteg %v1, 0(%r13), 1
+; VECTOR-NEXT:    vsteb %v0, 8(%r13), 15
+; VECTOR-NEXT:    lmg %r13, %r15, 296(%r15)
+; VECTOR-NEXT:    br %r14
+  %Res = call %Ty9 @foo9(%Ty9 %A)
+  ret %Ty9 %Res
 }
