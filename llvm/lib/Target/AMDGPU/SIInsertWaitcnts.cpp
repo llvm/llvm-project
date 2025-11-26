@@ -736,6 +736,22 @@ public:
     PendingEvents |= Context->WaitEventMaskForInst[STORE_CNT];
   }
 
+  // Returns true if any VGPR has a pending load (score > lower bound for T).
+  // This is used to optimize waitcnt insertion at function boundaries when the
+  // only pending LOAD_CNT events are from instructions that don't write to
+  // VGPRs (e.g., GLOBAL_INV).
+  bool hasPendingVGPRWait(InstCounterType T) const {
+    unsigned LB = getScoreLB(T);
+    // If VgprUB is -1, no VGPRs have been touched
+    if (VgprUB < 0)
+      return false;
+    for (int RegNo = 0; RegNo <= VgprUB; ++RegNo) {
+      if (VgprScores[T][RegNo] > LB)
+        return true;
+    }
+    return false;
+  }
+
   ArrayRef<const MachineInstr *> getLDSDMAStores() const {
     return LDSDMAStores;
   }
@@ -1946,7 +1962,16 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       Opc == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
       Opc == AMDGPU::S_SETPC_B64_return ||
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
-    Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
+    AMDGPU::Waitcnt AllZeroWait =
+        WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
+    // On GFX12+, if LOAD_CNT is pending but no VGPRs are waiting for loads
+    // (e.g., only GLOBAL_INV is pending), we can skip waiting on loadcnt.
+    // GLOBAL_INV increments loadcnt but doesn't write to VGPRs, so there's
+    // no need to wait for it at function boundaries.
+    if (ST->hasExtendedWaitCounts() &&
+        !ScoreBrackets.hasPendingVGPRWait(LOAD_CNT))
+      AllZeroWait.LoadCnt = ~0u;
+    Wait = Wait.combined(AllZeroWait);
   }
   // In dynamic VGPR mode, we want to release the VGPRs before the wave exits.
   // Technically the hardware will do this on its own if we don't, but that
