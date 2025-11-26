@@ -3132,6 +3132,27 @@ void ASTStmtWriter::VisitHLSLOutArgExpr(HLSLOutArgExpr *S) {
 }
 
 //===----------------------------------------------------------------------===//
+// Ripple Constructs/Directives.
+//===----------------------------------------------------------------------===//
+
+void ASTStmtWriter::VisitRippleComputeConstruct(RippleComputeConstruct *S) {
+  VisitStmt(S);
+  auto DimensionIds = S->getDimensionIds();
+  Record.push_back(DimensionIds.size());
+  Record.AddSourceRange(S->getPragmaRange());
+  Record.AddSourceRange(S->getProcessingElementRange());
+  Record.AddSourceRange(S->getDimsRange());
+  Record.AddDeclRef(S->getBlockShape());
+  for (uint64_t Id : DimensionIds)
+    Record.writeUInt64(Id);
+  Record.writeBool(S->NoRemainder);
+  for (int i = 0; i <= RippleComputeConstruct::LastSubStmt; ++i)
+    Record.AddStmt(S->SubStmts[i]);
+
+  Code = serialization::STMT_RIPPLE_COMPUTE_CONSTRUCT;
+}
+
+//===----------------------------------------------------------------------===//
 // ASTWriter Implementation
 //===----------------------------------------------------------------------===//
 

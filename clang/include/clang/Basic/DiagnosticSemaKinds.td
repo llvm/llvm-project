@@ -14145,6 +14145,10 @@ def note_acc_reduction_combiner_forming
 def err_ripple_block_shape_argument
     : Error<"%0 takes a ripple block shape"
     " (ripple_block_t) as 1st argument (current type is %1)">;
+def err_ripple_loop_not_for_loop
+    : Error<"the Ripple 'parallel' construct can only be applied to a 'for' loop">;
+def err_ripple_duplicate_parallel_index : Error<
+  "duplicate parallel dimension '%0' in pragma ripple parallel">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

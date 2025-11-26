@@ -31,6 +31,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtRipple.h"
 #include "clang/AST/StmtSYCL.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
@@ -1298,6 +1299,17 @@ void StmtPrinter::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
   });
 
   OS << ")\n";
+}
+
+//===----------------------------------------------------------------------===//
+//  Ripple construct printing methods
+//===----------------------------------------------------------------------===//
+
+void StmtPrinter::VisitRippleComputeConstruct(RippleComputeConstruct *S) {
+  S->printPragma(Indent());
+  OS << '\n';
+
+  PrintStmt(S->getAssociatedForStmt());
 }
 
 //===----------------------------------------------------------------------===//

@@ -345,6 +345,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::EmbedExprClass:
   case Stmt::HLSLOutArgExprClass:
   case Stmt::OpenACCAsteriskSizeExprClass:
+  case Stmt::RippleComputeConstructClass:
     K = CXCursor_UnexposedExpr;
     break;
 

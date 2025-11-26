@@ -504,6 +504,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OpenACCCacheConstructClass:
     EmitOpenACCCacheConstruct(cast<OpenACCCacheConstruct>(*S));
     break;
+  case Stmt::RippleComputeConstructClass:
+    EmitRippleComputeConstruct(cast<RippleComputeConstruct>(*S), Attrs);
+    break;
   }
 }
 

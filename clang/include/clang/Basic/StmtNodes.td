@@ -344,3 +344,6 @@ def OpenACCAsteriskSizeExpr : StmtNode<Expr>;
 
 // HLSL Constructs.
 def HLSLOutArgExpr : StmtNode<Expr>;
+
+// Ripple Constructs.
+def RippleComputeConstruct : StmtNode<Stmt>;

@@ -38,6 +38,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtRipple.h"
 #include "clang/AST/StmtSYCL.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
@@ -520,6 +521,7 @@ private:
   TraverseOpenACCAssociatedStmtConstruct(OpenACCAssociatedStmtConstruct *S);
   bool VisitOpenACCClauseList(ArrayRef<const OpenACCClause *>);
   bool VisitOpenACCClause(const OpenACCClause *);
+  bool VisitRippleComputeConstruct(const RippleComputeConstruct *Node);
 };
 
 template <typename Derived>
@@ -4296,6 +4298,9 @@ DEF_TRAVERSE_STMT(OpenACCCacheConstruct, {
 
 // Traverse HLSL: Out argument expression
 DEF_TRAVERSE_STMT(HLSLOutArgExpr, {})
+
+// Ripple
+DEF_TRAVERSE_STMT(RippleComputeConstruct, {})
 
 // FIXME: look at the following tricky-seeming exprs to see if we
 // need to recurse on anything.  These are ones that have methods

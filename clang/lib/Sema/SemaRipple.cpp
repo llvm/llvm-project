@@ -13,12 +13,17 @@
 #include "clang/Sema/SemaRipple.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/StmtRipple.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -27,6 +32,44 @@
 using namespace clang;
 
 #define DEBUG_TYPE "semaripple"
+
+StmtResult SemaRipple::CreateRippleParallelComputeStmt(
+    SourceRange PragmaLoc, SourceRange BlockShapeLoc, SourceRange DimsLoc,
+    ValueDecl *BlockShape, ArrayRef<uint64_t> Dims, Stmt *AssociatedStatement,
+    bool NoRemainder) {
+  auto ForLoop = dyn_cast<ForStmt>(AssociatedStatement);
+  if (!ForLoop) {
+    Diag(AssociatedStatement->getBeginLoc(),
+         diag::err_ripple_loop_not_for_loop);
+    Diag(PragmaLoc.getBegin(), diag::note_pragma_entered_here) << PragmaLoc;
+    return StmtError();
+  }
+
+  auto *RPC = RippleComputeConstruct::Create(
+      getASTContext(), PragmaLoc, BlockShapeLoc, DimsLoc, BlockShape, Dims,
+      cast<ForStmt>(AssociatedStatement), NoRemainder);
+
+  ActOnDuplicateDimensionIndex(*RPC);
+
+  // Mark the block shape as being used to avoid warnings about possible unused
+  // block shape in dependant contexts (we only generate a declrefexpr in
+  // non-dependant contexts)
+  BlockShape->markUsed(getASTContext());
+
+  return RPC;
+}
+
+void SemaRipple::ActOnDuplicateDimensionIndex(const RippleComputeConstruct &S) {
+  llvm::DenseSet<uint64_t> DimensionIds;
+  for (auto DimIndex : S.getDimensionIds()) {
+    if (DimensionIds.contains(DimIndex)) {
+      SemaRef.Diag(S.getDimsRange().getBegin(),
+                   diag::err_ripple_duplicate_parallel_index)
+          << DimIndex << S.getDimsRange();
+    } else
+      DimensionIds.insert(DimIndex);
+  }
+}
 
 bool SemaRipple::CheckHasRippleBlockType(const Expr *E, unsigned BuiltinID) {
   auto *ENoCast = E->IgnoreParenImpCasts();

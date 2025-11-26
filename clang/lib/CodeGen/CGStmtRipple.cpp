@@ -827,3 +827,95 @@ RValue CodeGenFunction::emitRippleBuiltin(const CallExpr *E,
 }
 
 #undef CASE_RIPPLE_MATH_BUILTIN
+
+void CodeGenFunction::EmitRippleComputeConstruct(
+    const RippleComputeConstruct &S, ArrayRef<const Attr *> Attrs) {
+  JumpDest LoopExit = getJumpDestInCurrentScope("ripple.par.for.end");
+
+  LexicalScope RippleParallelForScope(
+      *this, S.getAssociatedForStmt()->getSourceRange());
+
+  // Make it clear that we are entering a ripple parallel loop
+  llvm::BasicBlock *ParallelLoopEntry =
+      createBasicBlock("ripple.par.for.begin");
+  EmitBranch(ParallelLoopEntry);
+  EmitBlock(ParallelLoopEntry);
+
+  // All local variable used by ripple, and the original induction variable
+  // if a DeclStmt was present in the associated loop's init
+  for (const auto *VD : S.getRippleVarDecls())
+    EmitVarDecl(*VD);
+
+  llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
+
+  // Emit the ripple parallel loop of full blocks
+  if (!S.getRippleLoopStmt()) {
+    CGM.Error(S.getBeginLoc(),
+              "ripple_parallel construct has no loop statement");
+    return;
+  }
+  EmitForStmt(*S.getRippleLoopStmt(), Attrs);
+
+  // Update the loop IV for the last time
+  // When the remainder is empty, the induction variable has for value the upper
+  // bound (we added the step NumIteration times), otherwise we re-compute the
+  // upper bound at the end of the remainder body.
+  EmitStmt(S.getLoopIVUpdate());
+
+  if (S.generateRemainder()) {
+    llvm::BasicBlock *ForBodyRippleCond =
+        createBasicBlock("ripple.par.for.remainder.cond");
+
+    Stmt::Likelihood LH = Stmt::LH_None;
+    uint64_t RemainderCount = getProfileCount(S.getRemainderBody());
+    if (!RemainderCount && !getCurrentProfileCount() &&
+        CGM.getCodeGenOpts().OptimizationLevel)
+      LH = Stmt::getLikelihood(S.getRemainderBody(), nullptr);
+    if (!CGM.getCodeGenOpts().MCDCCoverage) {
+      EmitBranchOnBoolExpr(S.getRemainderRuntimeCond(), ForBodyRippleCond,
+                           ExitBlock, RemainderCount, LH,
+                           /*ConditionalOp=*/nullptr);
+    } else {
+      llvm::Value *BoolCondVal =
+          EvaluateExprAsBool(S.getRemainderRuntimeCond());
+      Builder.CreateCondBr(BoolCondVal, ForBodyRippleCond, ExitBlock);
+    }
+
+    // Remainder tensor condition
+    EmitBlock(ForBodyRippleCond);
+
+    llvm::BasicBlock *ForBodyRemainder =
+        createBasicBlock("ripple.par.for.remainder.body");
+
+    if (!CGM.getCodeGenOpts().MCDCCoverage) {
+      EmitBranchOnBoolExpr(S.getAssociatedForStmt()->getCond(),
+                           ForBodyRemainder, ExitBlock, RemainderCount, LH,
+                           /*ConditionalOp=*/nullptr);
+    } else {
+      llvm::Value *BoolCondVal =
+          EvaluateExprAsBool(S.getAssociatedForStmt()->getCond());
+      Builder.CreateCondBr(BoolCondVal, ForBodyRemainder, ExitBlock);
+    }
+
+    // It's the last iteration, continue goes to the exit!
+    BreakContinueStack.push_back(
+        BreakContinue(*S.getAssociatedForStmt(), LoopExit, LoopExit));
+
+    EmitBlock(ForBodyRemainder);
+    {
+      RunCleanupsScope BodyScope(*this);
+      if (!S.getRemainderBody()) {
+        CGM.Error(S.getBeginLoc(),
+                  "ripple_parallel construct has no remainder body statement");
+        return;
+      }
+      EmitStmt(S.getRemainderBody());
+    }
+    EmitStmt(S.getEndLoopIVUpdate());
+
+    BreakContinueStack.pop_back();
+  }
+
+  EmitBlock(ExitBlock,
+            /*IsFinished*/ !RippleParallelForScope.requiresCleanups());
+}

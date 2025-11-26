@@ -27,6 +27,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtRipple.h"
 #include "clang/AST/StmtSYCL.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
@@ -4275,6 +4276,8 @@ public:
   //                         Ripple Emission
   //===--------------------------------------------------------------------===//
 
+  void EmitRippleComputeConstruct(const RippleComputeConstruct &S,
+                                  ArrayRef<const Attr *> Attrs);
   RValue emitRippleBuiltin(const CallExpr *E, unsigned BuiltinID);
 
   //===--------------------------------------------------------------------===//

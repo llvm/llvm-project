@@ -3025,6 +3025,26 @@ void ASTStmtReader::VisitHLSLOutArgExpr(HLSLOutArgExpr *S) {
 }
 
 //===----------------------------------------------------------------------===//
+// Ripple Constructs/Directives.
+//===----------------------------------------------------------------------===//
+
+void ASTStmtReader::VisitRippleComputeConstruct(RippleComputeConstruct *S) {
+  VisitStmt(S);
+  // NumDimensionIds already set on object allocation
+  (void)Record.readInt();
+  S->Range = Record.readSourceRange();
+  S->PERange = Record.readSourceRange();
+  S->DimsRange = Record.readSourceRange();
+  S->BlockShape = Record.readDeclAs<ValueDecl>();
+  auto DimIds = S->dimensionIds();
+  for (size_t i = 0; i < S->NumDimensionIds; ++i)
+    DimIds[i] = Record.readUInt64();
+  S->NoRemainder = Record.readBool();
+  for (int i = 0; i <= RippleComputeConstruct::LastSubStmt; ++i)
+    S->SubStmts[i] = Record.readStmt();
+}
+
+//===----------------------------------------------------------------------===//
 // ASTReader Implementation
 //===----------------------------------------------------------------------===//
 
@@ -4593,6 +4613,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case EXPR_HLSL_OUT_ARG:
       S = HLSLOutArgExpr::CreateEmpty(Context);
       break;
+    case STMT_RIPPLE_COMPUTE_CONSTRUCT: {
+      uint64_t NumDims = Record[ASTStmtReader::NumStmtFields];
+      S = RippleComputeConstruct::CreateEmpty(Context, NumDims);
+      break;
+    }
     case EXPR_REFLECT: {
       S = CXXReflectExpr::CreateEmpty(Context);
       break;

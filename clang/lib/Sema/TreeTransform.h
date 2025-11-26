@@ -29,6 +29,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtRipple.h"
 #include "clang/AST/StmtSYCL.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenMPKinds.h"
@@ -44,6 +45,7 @@
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPseudoObject.h"
+#include "clang/Sema/SemaRipple.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -13107,6 +13109,32 @@ ExprResult TreeTransform<Derived>::TransformOpenACCAsteriskSizeExpr(
     return getDerived().RebuildOpenACCAsteriskSizeExpr(E->getLocation());
   // Nothing can ever change, so there is never anything to transform.
   return E;
+}
+
+//===----------------------------------------------------------------------===//
+// Ripple transformation
+//===----------------------------------------------------------------------===//
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformRippleComputeConstruct(
+    RippleComputeConstruct *C) {
+  StmtResult ForLoop = getDerived().TransformForStmt(C->getAssociatedForStmt());
+  if (!ForLoop.isUsable())
+    return ForLoop;
+  ValueDecl *OldBlockShapeValue = C->getBlockShape();
+  ValueDecl *NewBlockShape =
+      cast_if_present<ValueDecl>(getDerived().TransformDecl(
+          OldBlockShapeValue->getLocation(), OldBlockShapeValue));
+  if (!NewBlockShape)
+    return StmtError();
+  if (ForLoop.get() != C->getAssociatedForStmt() ||
+      OldBlockShapeValue != NewBlockShape)
+    return getSema().Ripple().CreateRippleParallelComputeStmt(
+        C->getPragmaRange(), C->getProcessingElementRange(), C->getDimsRange(),
+        NewBlockShape, C->getDimensionIds(), ForLoop.get(),
+        !C->generateRemainder());
+  else
+    return C;
 }
 
 //===----------------------------------------------------------------------===//

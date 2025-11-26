@@ -13,7 +13,12 @@
 #ifndef LLVM_CLANG_SEMA_SEMARIPPLE_H
 #define LLVM_CLANG_SEMA_SEMARIPPLE_H
 
+#include "clang/AST/StmtRipple.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
+#include <cstdint>
 
 namespace clang {
 
@@ -21,10 +26,22 @@ class CallExpr;
 class Expr;
 class FunctionDecl;
 class Sema;
+class Stmt;
+class ValueDecl;
 
 class SemaRipple : public SemaBase {
 public:
   SemaRipple(Sema &S) : SemaBase(S) {};
+
+  /// Constructor of a Ripple parallel compute construct statement
+  StmtResult
+  CreateRippleParallelComputeStmt(SourceRange PragmaLoc, SourceRange PELoc,
+                                  SourceRange DimsLoc, ValueDecl *BlockShape,
+                                  ArrayRef<uint64_t> Dims,
+                                  Stmt *AssociatedStatement, bool NoRemainder);
+
+  // Checks that dimension indices are uniq
+  void ActOnDuplicateDimensionIndex(const RippleComputeConstruct &S);
 
   /// Checks Ripple builtin calls
   bool CheckBuiltinFunctionCall(const FunctionDecl *FDecl, unsigned BuiltinID,

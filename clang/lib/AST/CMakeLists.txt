@@ -124,6 +124,7 @@ add_clang_library(clangAST
   StmtObjC.cpp
   StmtOpenACC.cpp
   StmtOpenMP.cpp
+  StmtRipple.cpp
   StmtPrinter.cpp
   StmtProfile.cpp
   StmtViz.cpp
