@@ -873,12 +873,14 @@ public:
                              const TargetTransformInfo &TTI,
                              const TargetLibraryInfo *TLI, DemandedBits *DB,
                              AssumptionCache *AC,
-                             OptimizationRemarkEmitter *ORE, const Function *F,
-                             const LoopVectorizeHints *Hints,
+                             OptimizationRemarkEmitter *ORE,
+                             std::function<BlockFrequencyInfo *()> GetBFI,
+                             const Function *F, const LoopVectorizeHints *Hints,
                              InterleavedAccessInfo &IAI, bool OptForSize)
       : ScalarEpilogueStatus(SEL), TheLoop(L), PSE(PSE), LI(LI), Legal(Legal),
-        TTI(TTI), TLI(TLI), DB(DB), AC(AC), ORE(ORE), TheFunction(F),
-        Hints(Hints), InterleaveInfo(IAI), OptForSize(OptForSize) {
+        TTI(TTI), TLI(TLI), DB(DB), AC(AC), ORE(ORE), GetBFI(GetBFI),
+        TheFunction(F), Hints(Hints), InterleaveInfo(IAI),
+        OptForSize(OptForSize) {
     if (TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors)
       initializeVScaleForTuning();
     CostKind = F->hasMinSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
@@ -1234,21 +1236,12 @@ public:
   /// optimizing for code size it will just be 1 as code size costs don't depend
   /// on execution probabilities.
   ///
-  /// TODO: We should use actual block probability here, if available.
-  /// Currently, we always assume predicated blocks have a 50% chance of
-  /// executing, apart from blocks that are only predicated due to tail folding.
+  /// Note that if a block wasn't originally predicated but was predicated due
+  /// to tail folding, the divisor will still be 1 because it will execute for
+  /// every iteration of the loop header.
   inline unsigned
   getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
-                          BasicBlock *BB) const {
-    // If a block wasn't originally predicated but was predicated due to
-    // e.g. tail folding, don't divide the cost. Tail folded loops may still be
-    // predicated in the final vector loop iteration, but for most loops that
-    // don't have low trip counts we can expect their probability to be close to
-    // zero.
-    if (!Legal->blockNeedsPredication(BB))
-      return 1;
-    return CostKind == TTI::TCK_CodeSize ? 1 : 2;
-  }
+                          const BasicBlock *BB) const;
 
   /// Return the costs for our two available strategies for lowering a
   /// div/rem operation which requires speculating at least one lane.
@@ -1728,6 +1721,11 @@ public:
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter *ORE;
+
+  /// A function to lazily fetch BlockFrequencyInfo. This avoids computing it
+  /// unless necessary, e.g. when the loop isn't legal to vectorize or when
+  /// there is no predication.
+  std::function<BlockFrequencyInfo *()> GetBFI;
 
   const Function *TheFunction;
 
@@ -2884,6 +2882,23 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
     // If the divisor is loop-invariant no predication is needed.
     return !Legal->isInvariant(I->getOperand(1));
   }
+}
+
+unsigned LoopVectorizationCostModel::getPredBlockCostDivisor(
+    TargetTransformInfo::TargetCostKind CostKind, const BasicBlock *BB) const {
+  // If the block wasn't originally predicated then return early to avoid
+  // computing BlockFrequencyInfo unnecessarily.
+  if (!Legal->blockNeedsPredication(BB))
+    return 1;
+  if (CostKind == TTI::TCK_CodeSize)
+    return 1;
+
+  BlockFrequencyInfo *BFI = GetBFI();
+  uint64_t HeaderFreq = BFI->getBlockFreq(TheLoop->getHeader()).getFrequency();
+  uint64_t BBFreq = BFI->getBlockFreq(BB).getFrequency();
+  assert(HeaderFreq >= BBFreq &&
+         "Header has smaller block freq than dominated BB?");
+  return HeaderFreq / BBFreq;
 }
 
 std::pair<InstructionCost, InstructionCost>
@@ -9136,8 +9151,9 @@ static bool processLoopInVPlanNativePath(
     Loop *L, PredicatedScalarEvolution &PSE, LoopInfo *LI, DominatorTree *DT,
     LoopVectorizationLegality *LVL, TargetTransformInfo *TTI,
     TargetLibraryInfo *TLI, DemandedBits *DB, AssumptionCache *AC,
-    OptimizationRemarkEmitter *ORE, bool OptForSize, LoopVectorizeHints &Hints,
-    LoopVectorizationRequirements &Requirements) {
+    OptimizationRemarkEmitter *ORE,
+    std::function<BlockFrequencyInfo *()> GetBFI, bool OptForSize,
+    LoopVectorizeHints &Hints, LoopVectorizationRequirements &Requirements) {
 
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
     LLVM_DEBUG(dbgs() << "LV: cannot compute the outer-loop trip count\n");
@@ -9150,8 +9166,8 @@ static bool processLoopInVPlanNativePath(
   ScalarEpilogueLowering SEL =
       getScalarEpilogueLowering(F, L, Hints, OptForSize, TTI, TLI, *LVL, &IAI);
 
-  LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE, F,
-                                &Hints, IAI, OptForSize);
+  LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE,
+                                GetBFI, F, &Hints, IAI, OptForSize);
   // Use the planner for outer loop vectorization.
   // TODO: CM is not used at this point inside the planner. Turn CM into an
   // optional argument if we don't need it in the future.
@@ -9851,8 +9867,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Query this against the original loop and save it here because the profile
   // of the original loop header may change as the transformation happens.
-  bool OptForSize = llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI,
-                                                PGSOQueryType::IRPass);
+  bool OptForSize = llvm::shouldOptimizeForSize(
+      L->getHeader(), PSI, PSI && PSI->hasProfileSummary() ? GetBFI() : nullptr,
+      PGSOQueryType::IRPass);
 
   // Check if it is legal to vectorize the loop.
   LoopVectorizationRequirements Requirements;
@@ -9886,7 +9903,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // pipeline.
   if (!L->isInnermost())
     return processLoopInVPlanNativePath(L, PSE, LI, DT, &LVL, TTI, TLI, DB, AC,
-                                        ORE, OptForSize, Hints, Requirements);
+                                        ORE, GetBFI, OptForSize, Hints,
+                                        Requirements);
 
   assert(L->isInnermost() && "Inner loop expected.");
 
@@ -9989,7 +10007,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Use the cost model.
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, TLI, DB, AC, ORE,
-                                F, &Hints, IAI, OptForSize);
+                                GetBFI, F, &Hints, IAI, OptForSize);
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, IAI, PSE, Hints,
                                ORE);
@@ -10307,9 +10325,7 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
 
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  BFI = nullptr;
-  if (PSI && PSI->hasProfileSummary())
-    BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+  GetBFI = [&AM, &F]() { return &AM.getResult<BlockFrequencyAnalysis>(F); };
   LoopVectorizeResult Result = runImpl(F);
   if (!Result.MadeAnyChange)
     return PreservedAnalyses::all();
