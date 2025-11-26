@@ -145,7 +145,7 @@ if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "openmp" IN_LIST LLVM_ENABLE_RUNT
     else ()
       # Check whether building modules works, avoid causing the entire build to
       # fail because of Fortran. The primary situation we want to support here
-      # is Flang or its intrinsic modules were built separately in a
+      # is Flang, or its intrinsic modules were built separately in a
       # non-bootstrapping build.
       check_fortran_builtins_available()
       if (HAVE_FORTRAN_INTRINSIC_MODS)

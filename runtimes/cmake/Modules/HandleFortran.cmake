@@ -1,20 +1,45 @@
 
 
-# Check whether the Fortran compiler already access to builtin modules.
+# Check whether the Fortran compiler already access to builtin modules. Sets
+# HAVE_FORTRAN_INTRINSIC_MODS when returning.
 #
 # This must be wrapped in a function because
 # cmake_push_check_state/cmake_pop_check_state is insufficient to isolate
 # a compiler introspection environment, see
 # https://gitlab.kitware.com/cmake/cmake/-/issues/27419
 function (check_fortran_builtins_available)
-  cmake_push_check_state(RESET)
-  set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
-  check_fortran_source_compiles("
-    subroutine testroutine
-      use iso_c_binding
-    end subroutine
-    " HAVE_FORTRAN_INTRINSIC_MODS SRC_EXT F90)
-  cmake_pop_check_state()
+  if (CMAKE_Fortran_COMPILER_FORCED AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+    # CMake's try_compile does not take a user-defined
+    # CMAKE_Fortran_PREPROCESS_SOURCE into account. Instead of test-compiling,
+    # ask Flang directly for the builtin module files.
+    if (NOT DEFINED HAVE_FORTRAN_HAS_ISO_C_BINDING_MOD)
+      message(STATUS "Performing Test ISO_C_BINDING_PATH")
+      execute_process(
+        COMMAND ${CMAKE_Fortran_COMPILER} ${CMAKE_Fortran_FLAGS} "-print-file-name=iso_c_binding.mod"
+        OUTPUT_VARIABLE ISO_C_BINDING_PATH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+      )
+      set(HAVE_FORTRAN_HAS_ISO_C_BINDING_MOD "" )
+      if (EXISTS "${ISO_C_BINDING_PATH}")
+        message(STATUS "Performing Test ISO_C_BINDING_PATH -- Success")
+        set(HAVE_FORTRAN_HAS_ISO_C_BINDING_MOD TRUE CACHE INTERNAL "Existence result of ${CMAKE_Fortran_COMPILER} -print-file-name=iso_c_binding.mod")
+      else ()
+        message(STATUS "Performing Test ISO_C_BINDING_PATH -- Failed")
+        set(HAVE_FORTRAN_HAS_ISO_C_BINDING_MOD FALSE CACHE INTERNAL "Existence result of ${CMAKE_Fortran_COMPILER} -print-file-name=iso_c_binding.mod")
+      endif ()
+    endif ()
+  else ()
+    cmake_push_check_state(RESET)
+    set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
+    check_fortran_source_compiles("
+      subroutine testroutine
+        use iso_c_binding
+      end subroutine
+      " HAVE_FORTRAN_HAS_ISO_C_BINDING_MOD SRC_EXT F90)
+    cmake_pop_check_state()
+  endif ()
+  set(HAVE_FORTRAN_INTRINSIC_MODS "${HAVE_FORTRAN_HAS_ISO_C_BINDING_MOD}" PARENT_SCOPE)
 endfunction ()
 
 
