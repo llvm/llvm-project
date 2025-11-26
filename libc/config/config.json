@@ -51,6 +51,10 @@
     "LIBC_CONF_PRINTF_RUNTIME_DISPATCH": {
       "value": true,
       "doc": "Use dynamic dispatch for the output mechanism to reduce code size."
+    },
+    "LIBC_CONF_PRINTF_MODULAR": {
+      "value": false,
+      "doc": "Split printf implementation into modules that can be lazily linked in."
     }
   },
   "scanf": {

@@ -1,4 +1,4 @@
-//===-- Implementation of snprintf ------------------------------*- C++ -*-===//
+//===-- Implementation of sprintf_modular -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/snprintf.h"
+#include "src/stdio/sprintf.h"
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/arg_list.h"
@@ -18,36 +18,30 @@
 #include "src/stdio/printf_core/writer.h"
 
 #include <stdarg.h>
-#include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, snprintf,
-                   (char *__restrict buffer, size_t buffsz,
-                    const char *__restrict format, ...)) {
+LLVM_LIBC_FUNCTION(int, __sprintf_modular,
+                   (char *__restrict buffer, const char *__restrict format,
+                    ...)) {
   va_list vlist;
   va_start(vlist, format);
   internal::ArgList args(vlist); // This holder class allows for easier copying
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
   va_end(vlist);
-  printf_core::WriteBuffer<printf_core::Mode<
-      printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value>
-      wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
+
+  printf_core::WriteBuffer<
+      printf_core::Mode<printf_core::WriteMode::RESIZE_AND_FILL_BUFF>::value>
+      wb(buffer, cpp::numeric_limits<size_t>::max());
   printf_core::Writer writer(wb);
 
-#ifdef LIBC_COPT_PRINTF_MODULAR
-  LIBC_INLINE_ASM(".reloc ., BFD_RELOC_NONE, __printf_float");
   auto ret_val = printf_core::printf_main_modular(&writer, format, args);
-#else
-  auto ret_val = printf_core::printf_main(&writer, format, args);
-#endif
   if (!ret_val.has_value()) {
     libc_errno = printf_core::internal_error_to_errno(ret_val.error());
     return -1;
   }
-  if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.
-    wb.buff[wb.buff_cur] = '\0';
+  wb.buff[wb.buff_cur] = '\0';
 
   if (ret_val.value() > static_cast<size_t>(cpp::numeric_limits<int>::max())) {
     libc_errno =

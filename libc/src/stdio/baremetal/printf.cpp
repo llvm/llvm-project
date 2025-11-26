@@ -45,7 +45,12 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
       buffer, BUFF_SIZE, &stdout_write_hook, nullptr);
   printf_core::Writer<printf_core::WriteMode::FLUSH_TO_STREAM> writer(wb);
 
+#ifdef LIBC_COPT_PRINTF_MODULAR
+  LIBC_INLINE_ASM(".reloc ., BFD_RELOC_NONE, __printf_float");
+  auto retval = printf_core::printf_main_modular(&writer, format, args);
+#else
   auto retval = printf_core::printf_main(&writer, format, args);
+#endif
   if (!retval.has_value()) {
     libc_errno = printf_core::internal_error_to_errno(retval.error());
     return -1;

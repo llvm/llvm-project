@@ -1,4 +1,4 @@
-//===-- Implementation of vprintf -------------------------------*- C++ -*-===//
+//===-- Implementation of vprintf_modular -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/vprintf.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/arg_list.h"
@@ -16,6 +15,7 @@
 #include "src/stdio/printf_core/error_mapper.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
+#include "src/stdio/vprintf.h"
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -31,7 +31,7 @@ LIBC_INLINE int stdout_write_hook(cpp::string_view new_str, void *) {
 
 } // namespace
 
-LLVM_LIBC_FUNCTION(int, vprintf,
+LLVM_LIBC_FUNCTION(int, __vprintf_modular,
                    (const char *__restrict format, va_list vlist)) {
   internal::ArgList args(vlist); // This holder class allows for easier copying
                                  // and pointer semantics, as well as handling
@@ -43,12 +43,7 @@ LLVM_LIBC_FUNCTION(int, vprintf,
       buffer, BUFF_SIZE, &stdout_write_hook, nullptr);
   printf_core::Writer<printf_core::WriteMode::FLUSH_TO_STREAM> writer(wb);
 
-#ifdef LIBC_COPT_PRINTF_MODULAR
-  LIBC_INLINE_ASM(".reloc ., BFD_RELOC_NONE, __printf_float");
   auto retval = printf_core::printf_main_modular(&writer, format, args);
-#else
-  auto retval = printf_core::printf_main(&writer, format, args);
-#endif
   if (!retval.has_value()) {
     libc_errno = printf_core::internal_error_to_errno(retval.error());
     return -1;

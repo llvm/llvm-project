@@ -43,6 +43,7 @@ LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str, void *target) {
 
 constexpr size_t DEFAULT_BUFFER_SIZE = 200;
 
+template <bool use_modular = false>
 LIBC_INLINE ErrorOr<size_t> vasprintf_internal(char **ret,
                                                const char *__restrict format,
                                                internal::ArgList args) {
@@ -51,7 +52,9 @@ LIBC_INLINE ErrorOr<size_t> vasprintf_internal(char **ret,
       init_buff_on_stack, DEFAULT_BUFFER_SIZE, resize_overflow_hook);
   printf_core::Writer writer(wb);
 
-  auto ret_val = printf_core::printf_main(&writer, format, args);
+  auto ret_val = use_modular
+                     ? printf_core::printf_main_modular(&writer, format, args)
+                     : printf_core::printf_main(&writer, format, args);
   if (!ret_val.has_value()) {
     *ret = nullptr;
     return ret_val;
