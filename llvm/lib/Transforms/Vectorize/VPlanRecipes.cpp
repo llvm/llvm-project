@@ -2593,22 +2593,11 @@ void VPWidenGEPRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-static Type *getGEPIndexTy(bool IsScalable, bool IsReverse, bool IsUnitStride,
-                           unsigned CurrentPart, IRBuilderBase &Builder) {
-  // Use i32 for the gep index type when the value is constant,
-  // or query DataLayout for a more suitable index type otherwise.
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  return !IsUnitStride || (IsScalable && (IsReverse || CurrentPart > 0))
-             ? DL.getIndexType(Builder.getPtrTy(0))
-             : Builder.getInt32Ty();
-}
-
 void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
-  bool IsUnitStride = Stride == 1 || Stride == -1;
-  Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ true,
-                                IsUnitStride, CurrentPart, Builder);
+  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  Type *IndexTy = DL.getIndexType(State.TypeAnalysis.inferScalarType(this));
 
   // The wide store needs to start at the last vector element.
   Value *RunTimeVF = State.get(getVFValue(), VPLane(0));
@@ -2644,8 +2633,8 @@ void VPVectorEndPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
-  Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ false,
-                                /*IsUnitStride*/ true, CurrentPart, Builder);
+  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  Type *IndexTy = DL.getIndexType(State.TypeAnalysis.inferScalarType(this));
   Value *Ptr = State.get(getOperand(0), VPLane(0));
 
   Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
