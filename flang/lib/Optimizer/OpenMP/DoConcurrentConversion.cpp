@@ -848,7 +848,8 @@ private:
         if (!ompReducer) {
           ompReducer = mlir::omp::DeclareReductionOp::create(
               rewriter, firReducer.getLoc(), ompReducerName,
-              firReducer.getTypeAttr().getValue());
+              firReducer.getTypeAttr().getValue(),
+              firReducer.getByrefElementTypeAttr());
 
           cloneFIRRegionToOMP(rewriter, firReducer.getAllocRegion(),
                               ompReducer.getAllocRegion());
