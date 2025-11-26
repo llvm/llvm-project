@@ -81,14 +81,14 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
 
 FunctionType *getOriginalFunctionType(const Function &F) {
   return extractFunctionTypeFromMetadata(
-      F.getParent()->getNamedMetadata("spv.cloned_funcs"),
-      F.getFunctionType(), F.getName());
+      F.getParent()->getNamedMetadata("spv.cloned_funcs"), F.getFunctionType(),
+      F.getName());
 }
 
 FunctionType *getOriginalFunctionType(const CallBase &CB) {
   return extractFunctionTypeFromMetadata(
-      CB.getParent()
-        ->getParent()->getParent()->getNamedMetadata("spv.mutated_callsites"),
+      CB.getParent()->getParent()->getParent()->getNamedMetadata(
+          "spv.mutated_callsites"),
       CB.getFunctionType(), CB.getName());
 }
 } // Namespace SPIRV

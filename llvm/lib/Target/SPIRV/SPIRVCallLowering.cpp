@@ -131,7 +131,6 @@ fixFunctionTypeIfPtrArgs(SPIRVGlobalRegistry *GR, const Function &F,
   return FunctionType::get(const_cast<Type *>(RetTy), ArgTys, false);
 }
 
-
 static SPIRV::AccessQualifier::AccessQualifier
 getArgAccessQual(const Function &F, unsigned ArgIdx) {
   if (F.getCallingConv() != CallingConv::SPIR_KERNEL)
@@ -494,8 +493,8 @@ void SPIRVCallLowering::produceIndirectPtrTypes(
         FTy, SpirvRetTy, SpirvArgTypes, MIRBuilder);
     // SPIR-V pointer to function type:
     auto SC = ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)
-        ? SPIRV::StorageClass::CodeSectionINTEL
-        : SPIRV::StorageClass::Function;
+                  ? SPIRV::StorageClass::CodeSectionINTEL
+                  : SPIRV::StorageClass::Function;
     SPIRVType *IndirectFuncPtrTy =
         GR->getOrCreateSPIRVPointerType(SpirvFuncTy, MIRBuilder, SC);
     // Correct the Callee type

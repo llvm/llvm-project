@@ -257,9 +257,10 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       Register Def = MI.getOperand(0).getReg();
       Register Source = MI.getOperand(2).getReg();
       Type *ElemTy = getMDOperandAsType(MI.getOperand(3).getMetadata(), 0);
-      auto SC = isa<FunctionType>(ElemTy)
-          ? SPIRV::StorageClass::CodeSectionINTEL
-          : addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST);
+      auto SC =
+          isa<FunctionType>(ElemTy)
+              ? SPIRV::StorageClass::CodeSectionINTEL
+              : addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST);
       SPIRVType *AssignedPtrType =
           GR->getOrCreateSPIRVPointerType(ElemTy, MI, SC);
 

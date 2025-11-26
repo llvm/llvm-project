@@ -471,22 +471,22 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
   return Changed;
 }
 
-static void addFunctionTypeMutation(
-    NamedMDNode *NMD,
-    SmallVector<std::pair<int, Type *>> ChangedTys, StringRef Name) {
+static void
+addFunctionTypeMutation(NamedMDNode *NMD,
+                        SmallVector<std::pair<int, Type *>> ChangedTys,
+                        StringRef Name) {
 
-    LLVMContext &Ctx = NMD->getParent()->getContext();
-    Type *I32Ty = IntegerType::getInt32Ty(Ctx);
+  LLVMContext &Ctx = NMD->getParent()->getContext();
+  Type *I32Ty = IntegerType::getInt32Ty(Ctx);
 
-    SmallVector<Metadata *> MDArgs;
-    MDArgs.push_back(MDString::get(Ctx, Name));
-    transform(ChangedTys, std::back_inserter(MDArgs), [=, &Ctx](auto &&CTy) {
-      return MDNode::get(
-          Ctx,
-          {ConstantAsMetadata::get(ConstantInt::get(I32Ty, CTy.first, true)),
-           ValueAsMetadata::get(Constant::getNullValue(CTy.second))});
-    });
-    NMD->addOperand(MDNode::get(Ctx, MDArgs));
+  SmallVector<Metadata *> MDArgs;
+  MDArgs.push_back(MDString::get(Ctx, Name));
+  transform(ChangedTys, std::back_inserter(MDArgs), [=, &Ctx](auto &&CTy) {
+    return MDNode::get(
+        Ctx, {ConstantAsMetadata::get(ConstantInt::get(I32Ty, CTy.first, true)),
+              ValueAsMetadata::get(Constant::getNullValue(CTy.second))});
+  });
+  NMD->addOperand(MDNode::get(Ctx, MDArgs));
 }
 // Returns F if aggregate argument/return types are not present or cloned F
 // function with the types replaced by i32 types. The change in types is
@@ -572,8 +572,9 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
         if (!CB->getCalledOperand() || CB->getCalledFunction())
           continue;
         if (CB->getType()->isAggregateType() ||
-            any_of(CB->args(),
-                  [](auto &&Arg) { return Arg->getType()->isAggregateType(); }))
+            any_of(CB->args(), [](auto &&Arg) {
+              return Arg->getType()->isAggregateType();
+            }))
           Calls.emplace_back(CB, nullptr);
       }
     }
@@ -607,9 +608,8 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
       CB->setName("spv.mutated_callsite");
 
     addFunctionTypeMutation(
-      F->getParent()->getOrInsertNamedMetadata("spv.mutated_callsites"),
-      std::move(ChangedTypes),
-      CB->getName());
+        F->getParent()->getOrInsertNamedMetadata("spv.mutated_callsites"),
+        std::move(ChangedTypes), CB->getName());
   }
 
   for (auto &&[CB, NewFTy] : Calls) {
