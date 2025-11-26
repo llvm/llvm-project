@@ -58,31 +58,40 @@ void dsmil_nanosleep(uint64_t ns) {
  * @param data Data to send
  * @param length Length of data
  *
- * Batches network operations and adds controlled delays to reduce
- * fingerprints. In aggressive stealth mode, operations are queued
- * and sent at fixed intervals.
+ * Applies timing delays to reduce network fingerprints by normalizing
+ * send intervals. This function is called BEFORE the actual network
+ * send operation to add controlled delays between transmissions.
+ *
+ * The pass inserts this wrapper before send/write calls to enforce
+ * minimum intervals between network operations, reducing burst patterns
+ * and timing-based fingerprinting.
+ *
+ * IMPORTANT: This wrapper only applies timing delays. The actual network
+ * send must still be performed by the original call that follows this
+ * wrapper. Do NOT use this as a replacement for send() - it's a timing
+ * decorator that runs before the real send.
  */
 void dsmil_network_stealth_wrapper(const void *data, uint64_t length) {
-    // TODO: Implement batching queue
-    // For now, just add a small delay to reduce burst patterns
-
     static uint64_t last_send_time = 0;
     uint64_t current_time = dsmil_get_timestamp_ns();
 
-    // Minimum 10ms between sends
+    // Minimum 10ms between sends to reduce burst fingerprinting
     const uint64_t MIN_INTERVAL_NS = 10 * 1000000ULL;
 
+    // Enforce minimum interval between sends
     if (last_send_time != 0) {
         uint64_t elapsed = current_time - last_send_time;
         if (elapsed < MIN_INTERVAL_NS) {
+            // Add delay to reach minimum interval
             dsmil_nanosleep(MIN_INTERVAL_NS - elapsed);
         }
     }
 
+    // Update last send timestamp
     last_send_time = dsmil_get_timestamp_ns();
 
-    // Actual network send would happen here
-    // For now, this is a placeholder
+    // Touch parameters to avoid unused warnings
+    // The data/length will be used by the actual send() call that follows
     (void)data;
     (void)length;
 }
