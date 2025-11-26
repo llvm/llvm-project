@@ -3544,8 +3544,8 @@ static bool interp__builtin_ia32_multishiftqb(InterpState &S, CodePtr OpPC,
   const Pointer &BPtr = S.Stk.pop<Pointer>();
   const Pointer &APtr = S.Stk.pop<Pointer>();
   const auto *AVecT = ATy->castAs<VectorType>();
-  const auto *BVecT = BTy->castAs<VectorType>();
-  assert(AVecT->getNumElements() == BVecT->getNumElements());
+  assert(AVecT->getNumElements() ==
+         BTy->castAs<VectorType>()->getNumElements());
 
   PrimType ElemT = *S.getContext().classify(AVecT->getElementType());
 
