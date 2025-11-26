@@ -377,16 +377,6 @@ if(WIN32)
   endif()
 endif()
 
-# Building the Fortran module files
-# One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
-configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
-configure_file(${LIBOMP_INC_DIR}/omp_lib.F90.var omp_lib.F90 @ONLY)
-
-# Move files to exports/ directory if requested
-if(${LIBOMP_COPY_EXPORTS})
-  include(LibompExports)
-endif()
-
 # Micro test rules for after library has been built (cmake/LibompMicroTests.cmake)
 include(LibompMicroTests)
 add_custom_target(libomp-micro-tests)
@@ -464,11 +454,18 @@ if(${LIBOMP_OMPT_SUPPORT})
 endif()
 
 
-# Build the modules files if a Fortran compiler is available.
+# Build the module files if a Fortran compiler is available.
 # Only LLVM_ENABLE_RUNTIMES=openmp is supported, LLVM_ENABLE_PROJECTS=openmp
 # has been deprecated.
 if(LIBOMP_FORTRAN_MODULES)
-  add_library(libomp-mod OBJECT
+  configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
+  configure_file(${LIBOMP_INC_DIR}/omp_lib.F90.var omp_lib.F90 @ONLY)
+
+  # One compilation step creates both omp_lib.mod and omp_lib_kinds.mod. Only
+  # these files are used, the library itself can be discarded. Cannot use an
+  # OBJECT library to avoid creating the library because LibompExports.cmake
+  # attaches a POST_BUILD command to libomp-mod.
+  add_library(libomp-mod STATIC
     omp_lib.F90
   )
   set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP/Fortran Modules")
@@ -490,4 +487,9 @@ if(LIBOMP_FORTRAN_MODULES)
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
     DESTINATION ${destination}
   )
+endif()
+
+# Move files to exports/ directory if requested
+if(LIBOMP_COPY_EXPORTS)
+  include(LibompExports)
 endif()
