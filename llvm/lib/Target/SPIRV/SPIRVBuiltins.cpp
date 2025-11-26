@@ -3373,6 +3373,8 @@ SPIRVType *lowerBuiltinType(const Type *OpaqueType,
     TargetType = getInlineSpirvType(BuiltinType, MIRBuilder, GR);
   } else if (Name == "spirv.VulkanBuffer") {
     TargetType = getVulkanBufferType(BuiltinType, MIRBuilder, GR);
+  } else if (Name == "spirv.Padding") {
+    TargetType = GR->getOrCreatePaddingType(MIRBuilder);
   } else if (Name == "spirv.Layout") {
     TargetType = getLayoutType(BuiltinType, MIRBuilder, GR);
   } else {

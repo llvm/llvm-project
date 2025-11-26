@@ -19,10 +19,15 @@
 ; TODO: Add a check to ensure that there's no behavior change of bitreverse operation
 ;       between the LLVM-IR and SPIR-V for i2 and i4
 
+@G_res2 = global i2 0
+@G_res4 = global i4 0
+
 define spir_func void @foo(i2 %a, i4 %b) {
 entry:
   %res2 = tail call i2 @llvm.bitreverse.i2(i2 %a)
+  store i2 %res2, ptr @G_res2
   %res4 = tail call i4 @llvm.bitreverse.i4(i4 %b)
+  store i4 %res4, ptr @G_res4
   ret void
 }
 

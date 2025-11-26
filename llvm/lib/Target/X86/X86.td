@@ -795,6 +795,8 @@ include "X86Schedule.td"
 include "X86InstrInfo.td"
 include "X86SchedPredicates.td"
 
+defm : RemapAllTargetPseudoPointerOperands<x86_ptr_rc>;
+
 def X86InstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//

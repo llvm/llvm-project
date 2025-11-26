@@ -184,6 +184,8 @@
 ; CHECK-SPIRV: %[[#r89]] = OpUnordered %[[#bool]]
 ; CHECK-SPIRV: %[[#r90]] = OpUnordered %[[#bool]]
 
+@G = global [90 x i1] zeroinitializer
+
 define spir_kernel void @testFCmp(float %a, float %b) local_unnamed_addr {
 entry:
   %r1 = fcmp oeq float %a, %b
@@ -276,5 +278,185 @@ entry:
   %r88 = fcmp uno float %a, %b
   %r89 = fcmp ninf uno float %a, %b
   %r90 = fcmp nsz uno float %a, %b
+  %p1 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 0
+  store i1 %r1, ptr %p1
+  %p2 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 1
+  store i1 %r2, ptr %p2
+  %p3 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 2
+  store i1 %r3, ptr %p3
+  %p4 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 3
+  store i1 %r4, ptr %p4
+  %p5 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 4
+  store i1 %r5, ptr %p5
+  %p6 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 5
+  store i1 %r6, ptr %p6
+  %p7 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 6
+  store i1 %r7, ptr %p7
+  %p8 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 7
+  store i1 %r8, ptr %p8
+  %p9 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 8
+  store i1 %r9, ptr %p9
+  %p10 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 9
+  store i1 %r10, ptr %p10
+  %p11 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 10
+  store i1 %r11, ptr %p11
+  %p12 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 11
+  store i1 %r12, ptr %p12
+  %p13 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 12
+  store i1 %r13, ptr %p13
+  %p14 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 13
+  store i1 %r14, ptr %p14
+  %p15 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 14
+  store i1 %r15, ptr %p15
+  %p16 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 15
+  store i1 %r16, ptr %p16
+  %p17 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 16
+  store i1 %r17, ptr %p17
+  %p18 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 17
+  store i1 %r18, ptr %p18
+  %p19 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 18
+  store i1 %r19, ptr %p19
+  %p20 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 19
+  store i1 %r20, ptr %p20
+  %p21 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 20
+  store i1 %r21, ptr %p21
+  %p22 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 21
+  store i1 %r22, ptr %p22
+  %p23 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 22
+  store i1 %r23, ptr %p23
+  %p24 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 23
+  store i1 %r24, ptr %p24
+  %p25 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 24
+  store i1 %r25, ptr %p25
+  %p26 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 25
+  store i1 %r26, ptr %p26
+  %p27 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 26
+  store i1 %r27, ptr %p27
+  %p28 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 27
+  store i1 %r28, ptr %p28
+  %p29 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 28
+  store i1 %r29, ptr %p29
+  %p30 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 29
+  store i1 %r30, ptr %p30
+  %p31 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 30
+  store i1 %r31, ptr %p31
+  %p32 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 31
+  store i1 %r32, ptr %p32
+  %p33 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 32
+  store i1 %r33, ptr %p33
+  %p34 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 33
+  store i1 %r34, ptr %p34
+  %p35 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 34
+  store i1 %r35, ptr %p35
+  %p36 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 35
+  store i1 %r36, ptr %p36
+  %p37 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 36
+  store i1 %r37, ptr %p37
+  %p38 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 37
+  store i1 %r38, ptr %p38
+  %p39 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 38
+  store i1 %r39, ptr %p39
+  %p40 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 39
+  store i1 %r40, ptr %p40
+  %p41 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 40
+  store i1 %r41, ptr %p41
+  %p42 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 41
+  store i1 %r42, ptr %p42
+  %p43 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 42
+  store i1 %r43, ptr %p43
+  %p44 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 43
+  store i1 %r44, ptr %p44
+  %p45 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 44
+  store i1 %r45, ptr %p45
+  %p46 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 45
+  store i1 %r46, ptr %p46
+  %p47 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 46
+  store i1 %r47, ptr %p47
+  %p48 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 47
+  store i1 %r48, ptr %p48
+  %p49 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 48
+  store i1 %r49, ptr %p49
+  %p50 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 49
+  store i1 %r50, ptr %p50
+  %p51 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 50
+  store i1 %r51, ptr %p51
+  %p52 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 51
+  store i1 %r52, ptr %p52
+  %p53 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 52
+  store i1 %r53, ptr %p53
+  %p54 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 53
+  store i1 %r54, ptr %p54
+  %p55 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 54
+  store i1 %r55, ptr %p55
+  %p56 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 55
+  store i1 %r56, ptr %p56
+  %p57 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 56
+  store i1 %r57, ptr %p57
+  %p58 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 57
+  store i1 %r58, ptr %p58
+  %p59 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 58
+  store i1 %r59, ptr %p59
+  %p60 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 59
+  store i1 %r60, ptr %p60
+  %p61 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 60
+  store i1 %r61, ptr %p61
+  %p62 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 61
+  store i1 %r62, ptr %p62
+  %p63 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 62
+  store i1 %r63, ptr %p63
+  %p64 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 63
+  store i1 %r64, ptr %p64
+  %p65 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 64
+  store i1 %r65, ptr %p65
+  %p66 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 65
+  store i1 %r66, ptr %p66
+  %p67 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 66
+  store i1 %r67, ptr %p67
+  %p68 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 67
+  store i1 %r68, ptr %p68
+  %p69 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 68
+  store i1 %r69, ptr %p69
+  %p70 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 69
+  store i1 %r70, ptr %p70
+  %p71 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 70
+  store i1 %r71, ptr %p71
+  %p72 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 71
+  store i1 %r72, ptr %p72
+  %p73 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 72
+  store i1 %r73, ptr %p73
+  %p74 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 73
+  store i1 %r74, ptr %p74
+  %p75 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 74
+  store i1 %r75, ptr %p75
+  %p76 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 75
+  store i1 %r76, ptr %p76
+  %p77 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 76
+  store i1 %r77, ptr %p77
+  %p78 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 77
+  store i1 %r78, ptr %p78
+  %p79 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 78
+  store i1 %r79, ptr %p79
+  %p80 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 79
+  store i1 %r80, ptr %p80
+  %p81 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 80
+  store i1 %r81, ptr %p81
+  %p82 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 81
+  store i1 %r82, ptr %p82
+  %p83 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 82
+  store i1 %r83, ptr %p83
+  %p84 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 83
+  store i1 %r84, ptr %p84
+  %p85 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 84
+  store i1 %r85, ptr %p85
+  %p86 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 85
+  store i1 %r86, ptr %p86
+  %p87 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 86
+  store i1 %r87, ptr %p87
+  %p88 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 87
+  store i1 %r88, ptr %p88
+  %p89 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 88
+  store i1 %r89, ptr %p89
+  %p90 = getelementptr inbounds [90 x i1], ptr @G, i32 0, i32 89
+  store i1 %r90, ptr %p90
   ret void
 }

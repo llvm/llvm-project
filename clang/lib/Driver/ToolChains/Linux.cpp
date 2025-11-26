@@ -922,12 +922,12 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ ||
       IsLoongArch64 || IsRISCV64)
     Res |= SanitizerKind::Thread;
-  if (IsX86_64 || IsAArch64)
+  if (IsX86_64 || IsAArch64 || IsSystemZ)
     Res |= SanitizerKind::Type;
   if (IsX86_64 || IsSystemZ || IsPowerPC64)
     Res |= SanitizerKind::KernelMemory;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsMIPS || IsArmArch ||
-      IsPowerPC64 || IsHexagon || IsLoongArch64 || IsRISCV64)
+      IsPowerPC64 || IsHexagon || IsLoongArch64 || IsRISCV64 || IsSystemZ)
     Res |= SanitizerKind::Scudo;
   if (IsX86_64 || IsAArch64 || IsRISCV64) {
     Res |= SanitizerKind::HWAddress;

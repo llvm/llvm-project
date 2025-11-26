@@ -918,15 +918,22 @@ def slice;
 def encoder;
 def decoder;
 
-/// PointerLikeRegClass - Values that are designed to have pointer width are
-/// derived from this. TableGen treats the register class as having a symbolic
-/// type that it doesn't know, and resolves the actual regclass to use by using
-/// the TargetRegisterInfo::getPointerRegClass() hook at codegen time.
-///
-/// This is deprecated in favor of RegClassByHwMode.
+/// PointerLikeRegClass - Pseudoinstruction operands that are designed
+/// to have pointer width are derived from this. This should only be
+/// used by StandardPseudoInstruction instructions. No target specific
+/// instruction should use this.
 class PointerLikeRegClass<int Kind> {
   int RegClassKind = Kind;
 }
+
+/// ptr_rc definition - Mark this operand as being a pointer value
+/// whose register class needs to be defined by the target. Targets
+/// should provide instruction definition overrides which substitute
+/// the uses of this with the backend defined RegisterClass or
+/// RegClassByHwMode to use for pointer virtual registers for a
+/// particular opcode (typically by defining a subsitute instruction
+/// with RemapPointerOperands).
+def ptr_rc : PointerLikeRegClass<0>;
 
 /// RegClassByHwMode - Operands that change the register class based
 /// on the subtarget are derived from this. TableGen
@@ -940,13 +947,6 @@ class RegClassByHwMode<list<HwMode> Modes,
   : HwModeSelect<Modes, !size(RegClasses)>, RegisterClassLike {
   list<RegisterClass> Objects = RegClasses;
 }
-
-/// ptr_rc definition - Mark this operand as being a pointer value whose
-/// register class is resolved dynamically via a callback to TargetInstrInfo.
-/// FIXME: We should probably change this to a class which contain a list of
-/// flags. But currently we have but one flag.
-// Deprecated, use RegClassByHwMode instead.
-def ptr_rc : PointerLikeRegClass<0>;
 
 /// unknown definition - Mark this operand as being of unknown type, causing
 /// it to be resolved by inference in the context it is used.

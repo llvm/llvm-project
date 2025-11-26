@@ -244,6 +244,8 @@ include "MipsScheduleI6400.td"
 include "MipsScheduleP5600.td"
 include "MipsScheduleGeneric.td"
 
+defm : RemapAllTargetPseudoPointerOperands<mips_ptr_rc>;
+
 def MipsInstrInfo : InstrInfo {
 }
 
