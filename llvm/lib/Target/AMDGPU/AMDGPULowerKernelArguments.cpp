@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUAsanInstrumentation.h"
 #include "GCNSubtarget.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CaptureTracking.h"
@@ -86,12 +87,7 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL) {
   for (unsigned I = 0u; I < NoAliasArgs.size(); ++I) {
     Argument const *Arg = NoAliasArgs[I];
     std::string Name(F.getName());
-
-    if (Arg->hasName())
-      Name += std::string(": %") + std::string(Arg->getName());
-    else
-      Name += std::string(": argument ") + std::to_string(I);
-
+    Name += std::string(": argument ") + std::to_string(I);
     MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Name);
     NewScopes.insert(std::make_pair(Arg, NewScope));
   }
@@ -100,37 +96,14 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL) {
   DominatorTree DT;
   DT.recalculate(F);
 
-  for (inst_iterator Inst = inst_begin(F); Inst != inst_end(F); ++Inst) {
+  for (inst_iterator Inst = inst_begin(F), InstEnd = inst_end(F);
+       Inst != InstEnd; ++Inst) {
     // If instruction accesses memory, collect its pointer arguments.
     Instruction *I = &(*Inst);
-    bool IsFuncCall = false;
-    SmallVector<Value const *, 2u> PtrArgs;
+    SmallVector<InterestingMemoryOperand, 2u> MemOps;
+    llvm::AMDGPU::getInterestingMemoryOperands(*F.getParent(), I, MemOps);
 
-    if (LoadInst *LI = dyn_cast<LoadInst>(I))
-      PtrArgs.push_back(LI->getPointerOperand());
-    else if (StoreInst *SI = dyn_cast<StoreInst>(I))
-      PtrArgs.push_back(SI->getPointerOperand());
-    else if (VAArgInst *VAAI = dyn_cast<VAArgInst>(I))
-      PtrArgs.push_back(VAAI->getPointerOperand());
-    else if (AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(I))
-      PtrArgs.push_back(CXI->getPointerOperand());
-    else if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I))
-      PtrArgs.push_back(RMWI->getPointerOperand());
-    else if (CallBase *Call = dyn_cast<CallBase>(I)) {
-      if (Call->doesNotAccessMemory())
-        continue;
-
-      IsFuncCall = true;
-
-      for (Use &Arg : Call->args()) {
-        if (!Arg->getType()->isPointerTy())
-          continue;
-
-        PtrArgs.push_back(Arg);
-      }
-    }
-
-    if (PtrArgs.empty() && !IsFuncCall)
+    if (MemOps.empty())
       continue;
 
     // Collect underlying objects of pointer arguments.
@@ -138,9 +111,9 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL) {
     SmallPtrSet<Value const *, 4u> ObjSet;
     SmallVector<Metadata *, 4u> NoAliases;
 
-    for (Value const *&Ptr : PtrArgs) {
+    for (InterestingMemoryOperand &MO : MemOps) {
       SmallVector<Value const *, 4u> Objects;
-      getUnderlyingObjects(Ptr, Objects);
+      getUnderlyingObjects(MO.getPtr(), Objects);
       ObjSet.insert_range(Objects);
     }
 
@@ -148,12 +121,11 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL) {
     bool UsesUnknownObject = false;
     bool UsesAliasingPtr = false;
 
-    for (Value const *Val : ObjSet) {
-      if (isa<ConstantPointerNull>(Val) || isa<ConstantDataVector>(Val) ||
-          isa<ConstantInt>(Val) || isa<ConstantFP>(Val) || isa<UndefValue>(Val))
+    for (const Value *Val : ObjSet) {
+      if (isa<ConstantData>(Val) || isa<UndefValue>(Val))
         continue;
 
-      if (Argument const *Arg = dyn_cast<Argument>(Val)) {
+      if (const Argument *Arg = dyn_cast<Argument>(Val)) {
         if (!Arg->hasAttribute(Attribute::NoAlias))
           UsesAliasingPtr = true;
       } else
@@ -387,6 +359,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
 bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   auto &TPC = getAnalysis<TargetPassConfig>();
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
+  // DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   return lowerKernelArguments(F, TM);
 }
 
@@ -403,6 +376,7 @@ FunctionPass *llvm::createAMDGPULowerKernelArgumentsPass() {
 
 PreservedAnalyses
 AMDGPULowerKernelArgumentsPass::run(Function &F, FunctionAnalysisManager &AM) {
+  // DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   bool Changed = lowerKernelArguments(F, TM);
   if (Changed) {
     // TODO: Preserves a lot more.
