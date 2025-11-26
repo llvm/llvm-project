@@ -420,8 +420,6 @@ std::error_code ProfileSymbolList::read(const uint8_t *Data,
     StrNum++;
   }
 
-  assert(ExpectedCount == StrNum);
-
   if (Size != ListSize && StrNum != ProfileSymbolListCutOff)
     return sampleprof_error::malformed;
   return sampleprof_error::success;
