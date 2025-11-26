@@ -9981,14 +9981,13 @@ bool LLParser::parseAliasSummary(std::string Name, GlobalValue::GUID GUID,
 
   ValueInfo AliaseeVI;
   unsigned GVId;
-  std::unique_ptr<AliasSummary> AS;
+  auto AS = std::make_unique<AliasSummary>(GVFlags);
+  AS->setModulePath(ModulePath);
 
   if (!EatIfPresent(lltok::kw_null)) {
     if (parseGVReference(AliaseeVI, GVId))
       return true;
 
-    AS = std::make_unique<AliasSummary>(GVFlags);
-    AS->setModulePath(ModulePath);
     // Record forward reference if the aliasee is not parsed yet.
     if (AliaseeVI.getRef() == FwdVIRef) {
       ForwardRefAliasees[GVId].emplace_back(AS.get(), Loc);
