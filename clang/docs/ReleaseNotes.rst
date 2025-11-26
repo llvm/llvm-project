@@ -84,6 +84,8 @@ Potentially Breaking Changes
 - Downstream projects that previously linked only against ``clangDriver`` may
   now (also) need to link against the new ``clangOptions`` library, since
   options-related code has been moved out of the Driver into a separate library.
+- The ``clangFrontend`` library no longer depends on ``clangDriver``, which may
+  break downstream projects that relied on this transitive dependency.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -230,6 +232,8 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Added ``__scoped_atomic_uinc_wrap`` and ``__scoped_atomic_udec_wrap``.
+
 - Removed OpenCL header-only feature macros (previously unconditionally enabled
   on SPIR-V and only selectively disabled via ``-D__undef_<feature>``). All
   OpenCL extensions and features are now centralized in OpenCLExtensions.def,
@@ -759,6 +763,9 @@ OpenMP Support
 - Updated parsing and semantic analysis support for ``nowait`` clause to accept
   optional argument in OpenMP >= 60.
 - Added support for ``default`` clause on ``target`` directive.
+- Added parsing and semantic analysis support for ``need_device_ptr`` modifier
+  to accept an optional fallback argument (``fb_nullify`` or ``fb_preserve``)
+  with OpenMP >= 61.
 
 Improvements
 ^^^^^^^^^^^^

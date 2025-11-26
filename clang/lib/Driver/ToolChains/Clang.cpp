@@ -32,6 +32,7 @@
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/XRayArgs.h"
+#include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
@@ -4442,6 +4443,10 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                          DebuggerTuning != llvm::DebuggerKind::DBX)))
     CmdArgs.push_back("-gno-column-info");
 
+  if (!Args.hasFlag(options::OPT_gcall_site_info,
+                    options::OPT_gno_call_site_info, true))
+    CmdArgs.push_back("-gno-call-site-info");
+
   // FIXME: Move backend command line options to the module.
   if (Args.hasFlag(options::OPT_gmodules, options::OPT_gno_modules, false)) {
     // If -gline-tables-only or -gline-directives-only is the last option it
@@ -5057,6 +5062,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.ClaimAllArgs(options::OPT_femit_dwarf_unwind_EQ);
   }
 
+  bool IsAMDSPIRVForHIPDevice =
+      IsHIPDevice && getToolChain().getTriple().isSPIRV() &&
+      getToolChain().getTriple().getVendor() == llvm::Triple::AMD;
+
   if (isa<AnalyzeJobAction>(JA)) {
     assert(JA.getType() == types::TY_Plist && "Invalid output type.");
     CmdArgs.push_back("-analyze");
@@ -5154,6 +5163,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       rewriteKind = RK_Fragile;
     } else if (JA.getType() == types::TY_CIR) {
       CmdArgs.push_back("-emit-cir");
+    } else if (JA.getType() == types::TY_Image && IsAMDSPIRVForHIPDevice) {
+      CmdArgs.push_back("-emit-obj");
     } else {
       assert(JA.getType() == types::TY_PP_Asm && "Unexpected output type!");
     }
@@ -9084,7 +9095,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fno_lto,
       OPT_flto,
       OPT_flto_partitions_EQ,
-      OPT_flto_EQ};
+      OPT_flto_EQ,
+      OPT_use_spirv_backend};
+
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC) {
     // Don't forward -mllvm to toolchains that don't support LLVM.
