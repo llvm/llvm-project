@@ -94,6 +94,10 @@ function (add_flangrt_library name)
     set(build_object ON)
   elseif (build_static AND build_shared)
     set(build_object ON)
+  elseif (NOT build_static AND NOT build_shared)
+    # If not building a library, still build the object files
+    # Needed to generate the .mod files as byproduct
+    set(build_object ON)
   endif ()
 
   # srctargets: targets that contain source files
@@ -168,14 +172,18 @@ function (add_flangrt_library name)
     if (BUILD_SHARED_LIBS)
       if (build_shared)
         set(default_target "${name_shared}")
-      else ()
+      elseif (build_static)
         set(default_target "${name_static}")
+      else ()
+        set(default_target "${name_object}")
       endif ()
     else ()
       if (build_static)
         set(default_target "${name_static}")
-      else ()
+      elseif (build_shared)
         set(default_target "${name_shared}")
+      else ()
+        set(default_target "${name_object}")
       endif ()
     endif ()
     add_library(${name}.default ALIAS "${default_target}")
@@ -292,6 +300,11 @@ function (add_flangrt_library name)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
         )
+      foreach (_arch IN LISTS FLANG_RT_DEVICE_ARCHITECTURES)
+        target_compile_options(${tgtname} PRIVATE
+         -march=${_arch}
+        )
+       endforeach()
     elseif (APPLE)
       # Clang on Darwin enables non-POSIX extensions by default.
       # This causes some macros to leak, such as HUGE from <math.h>, which

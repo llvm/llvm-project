@@ -18,6 +18,22 @@ set(intrinsics_sources
   __cuda_builtins.f90
 )
 
+# Fortran sources for builtin .mod files
+set(module_sources
+  __fortran_ieee_exceptions.f90
+  __fortran_type_info.f90
+  iso_fortran_env.f90
+  ieee_arithmetic.f90
+  ieee_exceptions.f90
+  ieee_features.f90
+  iso_c_binding.f90
+  iso_fortran_env.f90
+  iso_fortran_env_impl.f90
+
+  __cuda_device.f90
+  cooperative_groups.f90
+  cudadevice.f90
+)
 
 # List of files that are buildable for all devices.
 set(supported_sources
@@ -80,16 +96,6 @@ set(supported_sources
 
 # List of source not used for GPU offloading.
 set(host_sources
-  __fortran_ieee_exceptions.f90
-  __fortran_type_info.f90
-  iso_fortran_env.f90
-  ieee_arithmetic.f90
-  ieee_exceptions.f90
-  ieee_features.f90
-  iso_c_binding.f90
-  iso_fortran_env_impl.f90
-  iso_fortran_env.f90
-
   command.cpp
   complex-powi.cpp
   complex-reduction.c
@@ -104,31 +110,7 @@ set(host_sources
   temporary-stack.cpp
   time-intrinsic.cpp
   unit-map.cpp
-
-  __cuda_device.f90
-  cooperative_groups.f90
-  cudadevice.f90
 )
-
-if (LLVM_TARGET_TRIPLE MATCHES "^ppc|^powerpc")
-  list(APPEND intrinsics_sources
-    __ppc_types.f90
-  )
-  list(APPEND host_sources
-    __ppc_intrinsics.f90
-    mma.f90
-  )
-endif ()
-
-# Compile as CUDA-Fortran, not directly supported by CMake
-set_property(SOURCE
-    __cuda_device.f90
-    cooperative_groups.f90
-    cudadevice.f90
-  APPEND PROPERTY
-    COMPILE_OPTIONS --offload-host-only -xcuda
-)
-
 
 # Sources that can be compiled directly for the GPU.
 set(gpu_sources
@@ -189,6 +171,24 @@ file(GLOB_RECURSE private_headers
   "${FLANG_SOURCE_DIR}/lib/Common/*.h"
   )
 
+if (LLVM_TARGET_TRIPLE MATCHES "^ppc|^powerpc")
+  list(APPEND intrinsics_sources
+    __ppc_types.f90
+  )
+  list(APPEND module_sources
+    __ppc_intrinsics.f90
+    mma.f90
+  )
+endif ()
+
+# Compile as CUDA-Fortran, not directly supported by CMake
+set_property(SOURCE
+    __cuda_device.f90
+    cooperative_groups.f90
+    cudadevice.f90
+  APPEND PROPERTY
+    COMPILE_OPTIONS --offload-host-only -xcuda
+)
 
 # Import changes from flang_rt.quadmath
 get_target_property(f128_sources
@@ -215,14 +215,17 @@ else ()
   set(f128_sources "")
 endif ()
 
-if (LLVM_RUNTIMES_TARGET MATCHES "^amdgcn|^nvptx")
-  set(sources ${gpu_sources})
+if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_STATIC)
+  # If not compiling the library, only build the modules.
+  set(sources ${module_sources})
+elseif (LLVM_RUNTIMES_TARGET MATCHES "^amdgcn|^nvptx")
+  set(sources ${gpu_sources} ${module_sources})
 else ()
-  set(sources ${supported_sources} ${host_sources} ${f128_sources})
+  set(sources ${supported_sources} ${host_sources} ${module_sources} ${f128_sources})
 endif ()
 
 
-# check-flang depends on this to build intrinsic modules
+# check-flang depends on flang-rt-mod to build intrinsic modules
 if (NOT TARGET flang-rt-mod)
   add_custom_target(flang-rt-mod)
 endif ()
@@ -259,8 +262,10 @@ if (NOT WIN32)
   enable_omp_offload_compilation(flang_rt.runtime "${supported_sources}")
 
   # Select a default runtime, which is used for unit and regression tests.
-  get_target_property(default_target flang_rt.runtime.default ALIASED_TARGET)
-  add_library(flang_rt.runtime.unittest ALIAS "${default_target}")
+  if (FLANG_RT_INCLUDE_TESTS)
+    get_target_property(default_target flang_rt.runtime.default ALIASED_TARGET)
+    add_library(flang_rt.runtime.unittest ALIAS "${default_target}")
+  endif ()
 
   # Select a target that compiles the sources to build the public module files.
   get_target_property(compile_target flang_rt.runtime.compile ALIASED_TARGET)

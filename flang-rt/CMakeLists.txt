@@ -58,8 +58,6 @@ flang_module_fortran_enable()
 # Important: flang-rt user options must be prefixed with "FLANG_RT_". Variables
 # with this prefix will be forwarded in bootstrap builds.
 
-option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
-
 # Provide an interface to link against the LLVM libc/libc++ projects directly.
 set(FLANG_RT_SUPPORTED_PROVIDERS system llvm)
 set(FLANG_RT_LIBC_PROVIDER "system" CACHE STRING "Specify C library to use. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
@@ -72,7 +70,15 @@ if (NOT "${FLANG_RT_LIBCXX_PROVIDER}" IN_LIST FLANG_RT_SUPPORTED_PROVIDERS)
   message(FATAL_ERROR "Unsupported library: '${FLANG_RT_LIBCXX_PROVIDER}'. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
 endif ()
 
-option(FLANG_RT_ENABLE_STATIC "Build Flang-RT as a static library." ON)
+if (LLVM_RUNTIMES_TARGET MATCHES "^amdgcn|^nvptx")
+  # Compiling libraries for offload targets is currently experimental;
+  # only build the buildtin modules by default.
+  set(FLANG_RT_ENABLE_STATIC_default OFF)
+else ()
+  set(FLANG_RT_ENABLE_STATIC_default ON)
+endif ()
+
+option(FLANG_RT_ENABLE_STATIC "Build Flang-RT as a static library." "${FLANG_RT_ENABLE_STATIC_default}")
 if (WIN32)
   # Windows DLL currently not implemented.
   set(FLANG_RT_ENABLE_SHARED OFF)
@@ -85,11 +91,14 @@ else ()
   #       breaking change unless the driver is changed.
   option(FLANG_RT_ENABLE_SHARED "Build Flang-RT as a shared library." OFF)
 endif ()
-if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
-  message(FATAL_ERROR "
-      Must build at least one type of library
-      (FLANG_RT_ENABLE_STATIC=ON, FLANG_RT_ENABLE_SHARED=ON, or both)
-    ")
+
+
+if (FLANG_RT_ENABLE_STATIC OR FLANG_RT_ENABLE_SHARED)
+  option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
+else ()
+  # Tests require at least one libraries
+  message(STATUS "Testing disabled without either FLANG_RT_ENABLE_STATIC or FLANG_RT_ENABLE_SHARED")
+  set(FLANG_RT_INCLUDE_TESTS OFF)
 endif ()
 
 
@@ -107,8 +116,14 @@ elseif (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   option(FLANG_RT_CUDA_RUNTIME_PTX_WITHOUT_GLOBAL_VARS "Do not compile global variables' definitions when producing PTX library" OFF)
 elseif (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
   # Support for OpenMP offloading
+else ()
+  message(FATAL_ERROR "Invalid value '${FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT}' for FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT; must be empty, 'CUDA', or 'OpenMP'")
+endif ()
+
+
+if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP" OR LLVM_TARGET_TRIPLE MATCHES "^nvptx")
   set(FLANG_RT_DEVICE_ARCHITECTURES "all" CACHE STRING
-      "List of OpenMP device architectures to be used to compile the Fortran runtime (e.g. 'gfx1103;sm_90')"
+      "List of offload device architectures to be used to compile the Fortran runtime (e.g. 'gfx1103;sm_90')"
     )
 
   if (FLANG_RT_DEVICE_ARCHITECTURES STREQUAL "all")
@@ -127,8 +142,6 @@ elseif (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
       set(FLANG_RT_DEVICE_ARCHITECTURES ${all_gpu_architectures})
   endif()
   list(REMOVE_DUPLICATES FLANG_RT_DEVICE_ARCHITECTURES)
-else ()
-  message(FATAL_ERROR "Invalid value '${FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT}' for FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT; must be empty, 'CUDA', or 'OpenMP'")
 endif ()
 
 
