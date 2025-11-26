@@ -535,8 +535,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeISAAndImmediateSigned &&
                context.info.ISAAndImmediateSigned.signed_data32 > 0) {
-      m_branch_offset =
-          context.info.ISAAndImmediateSigned.signed_data32;
+      m_branch_offset = context.info.ISAAndImmediateSigned.signed_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeImmediate &&
                context.info.unsigned_immediate > 0) {
