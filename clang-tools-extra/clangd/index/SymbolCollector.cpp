@@ -29,6 +29,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -576,6 +577,21 @@ SymbolCollector::getRefContainer(const Decl *Enclosing,
   return Enclosing;
 }
 
+class ForwardVisitor : public RecursiveASTVisitor<ForwardVisitor> {
+public:
+  ForwardVisitor() {}
+
+  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    if (auto *Callee = E->getConstructor()) {
+      Constructors.push_back(Callee);
+    }
+    return true;
+  }
+
+  // Output of this visitor
+  std::vector<CXXConstructorDecl *> Constructors{};
+};
+
 // Always return true to continue indexing.
 bool SymbolCollector::handleDeclOccurrence(
     const Decl *D, index::SymbolRoleSet Roles,
@@ -653,6 +669,26 @@ bool SymbolCollector::handleDeclOccurrence(
   // occurrences. For example, RelationBaseOf is only populated for the
   // occurrence inside the base-specifier.
   processRelations(*ND, ID, Relations);
+
+  if (auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D)) {
+    if (auto *FT = FD->getDescribedFunctionTemplate();
+        FT && isLikelyForwardingFunction(FT)) {
+      ForwardVisitor FS{};
+      for (auto *Specialized : FT->specializations()) {
+        FS.TraverseStmt(Specialized->getBody());
+      }
+      auto FileLoc = SM.getFileLoc(Loc);
+      auto FID = SM.getFileID(FileLoc);
+      if (Opts.RefsInHeaders || FID == SM.getMainFileID()) {
+        for (auto *Constructor : FS.Constructors) {
+          addRef(getSymbolIDCached(Constructor),
+                 SymbolRef{FileLoc, FID, Roles, index::getSymbolInfo(ND).Kind,
+                           getRefContainer(ASTNode.Parent, Opts),
+                           isSpelled(FileLoc, *ND)});
+        }
+      }
+    }
+  }
 
   bool CollectRef = static_cast<bool>(Opts.RefFilter & toRefKind(Roles));
   // Unlike other fields, e.g. Symbols (which use spelling locations), we use
