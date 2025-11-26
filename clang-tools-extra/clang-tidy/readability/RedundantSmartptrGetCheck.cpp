@@ -14,8 +14,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-namespace {
-internal::Matcher<Expr> callToGet(const internal::Matcher<Decl> &OnClass) {
+static internal::Matcher<Expr>
+callToGet(const internal::Matcher<Decl> &OnClass) {
   return expr(
              anyOf(cxxMemberCallExpr(
                        on(expr(anyOf(hasType(OnClass),
@@ -43,12 +43,13 @@ internal::Matcher<Expr> callToGet(const internal::Matcher<Decl> &OnClass) {
       .bind("redundant_get");
 }
 
-internal::Matcher<Decl> knownSmartptr() {
+static internal::Matcher<Decl> knownSmartptr() {
   return recordDecl(hasAnyName("::std::unique_ptr", "::std::shared_ptr"));
 }
 
-void registerMatchersForGetArrowStart(MatchFinder *Finder,
-                                      MatchFinder::MatchCallback *Callback) {
+static void
+registerMatchersForGetArrowStart(MatchFinder *Finder,
+                                 MatchFinder::MatchCallback *Callback) {
   const auto MatchesOpArrow =
       allOf(hasName("operator->"),
             returns(qualType(pointsTo(type().bind("op->Type")))));
@@ -100,8 +101,8 @@ void registerMatchersForGetArrowStart(MatchFinder *Finder,
                      Callback);
 }
 
-void registerMatchersForGetEquals(MatchFinder *Finder,
-                                  MatchFinder::MatchCallback *Callback) {
+static void registerMatchersForGetEquals(MatchFinder *Finder,
+                                         MatchFinder::MatchCallback *Callback) {
   // This one is harder to do with duck typing.
   // The operator==/!= that we are looking for might be member or non-member,
   // might be on global namespace or found by ADL, might be a template, etc.
@@ -118,8 +119,6 @@ void registerMatchersForGetEquals(MatchFinder *Finder,
   // FIXME: Match and fix if (l.get() == r.get()).
 }
 
-} // namespace
-
 void RedundantSmartptrGetCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
@@ -130,8 +129,7 @@ void RedundantSmartptrGetCheck::registerMatchers(MatchFinder *Finder) {
   registerMatchersForGetEquals(Finder, this);
 }
 
-namespace {
-bool allReturnTypesMatch(const MatchFinder::MatchResult &Result) {
+static bool allReturnTypesMatch(const MatchFinder::MatchResult &Result) {
   if (Result.Nodes.getNodeAs<Decl>("duck_typing") == nullptr)
     return true;
   // Verify that the types match.
@@ -146,14 +144,14 @@ bool allReturnTypesMatch(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<Type>("getType")->getUnqualifiedDesugaredType();
   return OpArrowType == OpStarType && OpArrowType == GetType;
 }
-} // namespace
 
 void RedundantSmartptrGetCheck::check(const MatchFinder::MatchResult &Result) {
   if (!allReturnTypesMatch(Result))
     return;
 
-  bool IsPtrToPtr = Result.Nodes.getNodeAs<Decl>("ptr_to_ptr") != nullptr;
-  bool IsMemberExpr = Result.Nodes.getNodeAs<Expr>("memberExpr") != nullptr;
+  const bool IsPtrToPtr = Result.Nodes.getNodeAs<Decl>("ptr_to_ptr") != nullptr;
+  const bool IsMemberExpr =
+      Result.Nodes.getNodeAs<Expr>("memberExpr") != nullptr;
   const auto *GetCall = Result.Nodes.getNodeAs<Expr>("redundant_get");
   if (GetCall->getBeginLoc().isMacroID() && IgnoreMacros)
     return;
@@ -181,7 +179,8 @@ void RedundantSmartptrGetCheck::check(const MatchFinder::MatchResult &Result) {
     SmartptrText = SmartptrText.drop_back(2);
   }
   // Replace foo->get() with *foo, and foo.get() with foo.
-  std::string Replacement = Twine(IsPtrToPtr ? "*" : "", SmartptrText).str();
+  const std::string Replacement =
+      Twine(IsPtrToPtr ? "*" : "", SmartptrText).str();
   diag(GetCall->getBeginLoc(), "redundant get() call on smart pointer")
       << FixItHint::CreateReplacement(SR, Replacement);
 }

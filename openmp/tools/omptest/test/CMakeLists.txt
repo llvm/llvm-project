@@ -5,7 +5,13 @@
 ##===----------------------------------------------------------------------===##
 
 # Target: ompTest library unit tests
-file(GLOB UNITTEST_SOURCES "unittests/*.cpp")
+set(UNITTEST_SOURCES
+  unittests/asserter-seq-test.cpp
+  unittests/internal-event-eq-test.cpp
+  unittests/internal-event-tostring-test.cpp
+  unittests/internal-util-test.cpp
+  unittests/main-test.cpp
+)
 add_executable(omptest-unittests ${UNITTEST_SOURCES})
 
 # Add local and LLVM-provided GoogleTest include directories.

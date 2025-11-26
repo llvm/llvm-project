@@ -246,7 +246,7 @@ static bool canEmitMemcpy(const TargetMachine *TM, Function *F) {
   if (!TM)
     return true;
   const TargetLowering *TLI = TM->getSubtargetImpl(*F)->getTargetLowering();
-  return TLI->getMemcpyName() != nullptr;
+  return TLI->getMemcpyImpl() != RTLIB::Unsupported;
 }
 
 // Return a value appropriate for use with the memset_pattern16 libcall, if
@@ -482,7 +482,7 @@ static bool expandProtectedFieldPtr(Function &Intr) {
   FunctionCallee EmuAuthIntr = M.getOrInsertFunction("__emupac_autda", EmuFnTy);
 
   auto CreateSign = [&](IRBuilder<> &B, Value *Val, Value *Disc,
-                       OperandBundleDef DSBundle) {
+                        OperandBundleDef DSBundle) {
     Function *F = B.GetInsertBlock()->getParent();
     Attribute FSAttr = F->getFnAttribute("target-features");
     if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
@@ -491,7 +491,7 @@ static bool expandProtectedFieldPtr(Function &Intr) {
   };
 
   auto CreateAuth = [&](IRBuilder<> &B, Value *Val, Value *Disc,
-                       OperandBundleDef DSBundle) {
+                        OperandBundleDef DSBundle) {
     Function *F = B.GetInsertBlock()->getParent();
     Attribute FSAttr = F->getFnAttribute("target-features");
     if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
@@ -745,7 +745,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::log:
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Type *Ty = CI->getArgOperand(0)->getType();
-        if (!isa<ScalableVectorType>(Ty))
+        if (!TM || !isa<ScalableVectorType>(Ty))
           return false;
         const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());

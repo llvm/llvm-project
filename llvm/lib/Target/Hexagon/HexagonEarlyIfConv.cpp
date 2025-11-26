@@ -132,8 +132,7 @@ namespace {
     const TargetRegisterInfo &TRI;
     friend raw_ostream &operator<< (raw_ostream &OS, const PrintFP &P);
   };
-  raw_ostream &operator<<(raw_ostream &OS,
-                          const PrintFP &P) LLVM_ATTRIBUTE_UNUSED;
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS, const PrintFP &P);
   raw_ostream &operator<<(raw_ostream &OS, const PrintFP &P) {
     OS << "{ SplitB:" << PrintMB(P.FP.SplitB)
        << ", PredR:" << printReg(P.FP.PredR, &P.TRI)
