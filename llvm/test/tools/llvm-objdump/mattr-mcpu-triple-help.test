@@ -1,0 +1,49 @@
+# RUN: yaml2obj %s -o %t
+# REQUIRES: arm-registered-target,x86-registered-target
+
+
+# CHECK-HELP: Available CPUs for this target:
+# CHECK-ARM: arm
+# CHECK-X86: i386
+# CHECK-HELP: Available features for this target:
+## To check we still disassemble the file:
+# CHECK-DISASM: file format elf32-littlearm
+# CHECK-FILE-ISSUE: 'a.out': No such file or directory
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_ARM
+
+## 2. -d + --mcpu=help + a.out
+## Check the error if there is an issue with the file.
+# RUN: not llvm-objdump -d --mcpu=help 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-FILE-ISSUE
+
+## Check if we can handle the default filename.
+# RUN: cp %t a.out
+# RUN: llvm-objdump -d --mcpu=help 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM,CHECK-DISASM
+# RUN: rm a.out
+
+## 3. -d + --mcpu=help + --triple
+## Check the error if there is an issue with the file.
+# RUN: not llvm-objdump -d --mcpu=help --triple=x86_64 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-FILE-ISSUE
+
+## Check triple priority
+# RUN: cp %t a.out
+# RUN: llvm-objdump -d --mcpu=help --triple=x86_64 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-DISASM,CHECK-HELP,CHECK-X86
+# RUN: rm a.out
+
+## 4. --mcpu + file
+## Check if we can handle without -d
+# RUN: llvm-objdump --mcpu=help %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM
+
+## We should also check if we can handle without -d and file
+# RUN: not llvm-objdump --mcpu=help --triple=x86_64 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-X86

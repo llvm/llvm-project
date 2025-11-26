@@ -3535,11 +3535,11 @@ commaSeparatedValues(const llvm::opt::InputArgList &InputArgs, int ID) {
 
 static void mcpuHelp() {
   std::string Error;
-  Triple DummyTriple;
+  Triple TheTriple;
 
-  if (!TripleName.empty())
-    DummyTriple.setTriple(TripleName);
-  else {
+  if (!TripleName.empty()) {
+    TheTriple.setTriple(TripleName);
+  } else {
     // If the target triple is derived from the files, we display help message
     // when disassembling them.
     if (Disassemble)
@@ -3549,17 +3549,18 @@ static void mcpuHelp() {
           unwrapOrError(createBinary(Filename), Filename);
       Binary *Bin = OBinary.getBinary();
       if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin)) {
-        DummyTriple = Obj->makeTriple();
+      if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin)) {
+        TheTriple = Obj->makeTriple();
         break;
       }
     }
   }
 
-  const Target *DummyTarget = TargetRegistry::lookupTarget(DummyTriple, Error);
+  const Target *DummyTarget = TargetRegistry::lookupTarget(TheTriple, Error);
   if (!DummyTarget)
     reportCmdLineError(Error);
   // We need to access the Help() through the corresponding MCSubtargetInfo.
-  DummyTarget->createMCSubtargetInfo(DummyTriple, "help", "");
+  DummyTarget->createMCSubtargetInfo(TheTriple, "help", "");
 }
 
 static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
