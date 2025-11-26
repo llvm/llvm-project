@@ -3549,7 +3549,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (N->getNumOperands() != 0 &&
           N->getOperand(N->getNumOperands() - 1).getOpcode() ==
               ISD::DEACTIVATION_SYMBOL)
-        DeactivationSymbol = N->getOperand(N->getNumOperands()-1);
+        DeactivationSymbol = N->getOperand(N->getNumOperands() - 1);
       continue;
 
     case OPC_MoveChild: {
