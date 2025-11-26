@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03
 
-// check that <utility> functions are marked [[nodiscard]]
+// Check that functions are marked [[nodiscard]]
 
 #include <compare>
 #include <coroutine>
