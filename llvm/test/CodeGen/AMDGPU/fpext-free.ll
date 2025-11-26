@@ -28,19 +28,13 @@ define float @fadd_fpext_fmul_f16_to_f32(half %x, half %y, float %z) #0 {
 ; GFX11-FAKE16-NEXT:    v_add_f32_e32 v0, v0, v2
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-F32FLUSH-LABEL: fadd_fpext_fmul_f16_to_f32:
-; GFX9-F32FLUSH:       ; %bb.0: ; %entry
-; GFX9-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,0]
-; GFX9-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-F32DENORM-LABEL: fadd_fpext_fmul_f16_to_f32:
-; GFX9-F32DENORM:       ; %bb.0: ; %entry
-; GFX9-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32DENORM-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX9-F32DENORM-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX9-F32DENORM-NEXT:    v_add_f32_e32 v0, v0, v2
-; GFX9-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX89-LABEL: fadd_fpext_fmul_f16_to_f32:
+; GFX89:       ; %bb.0: ; %entry
+; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX89-NEXT:    v_mul_f16_e32 v0, v0, v1
+; GFX89-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX89-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX89-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %mul = fmul half %x, %y
   %mul.ext = fpext half %mul to float
@@ -132,19 +126,13 @@ define float @fadd_fpext_fmul_f16_to_f32_commute(half %x, half %y, float %z) #0 
 ; GFX11-FAKE16-NEXT:    v_add_f32_e32 v0, v2, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-F32FLUSH-LABEL: fadd_fpext_fmul_f16_to_f32_commute:
-; GFX9-F32FLUSH:       ; %bb.0: ; %entry
-; GFX9-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,0]
-; GFX9-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-F32DENORM-LABEL: fadd_fpext_fmul_f16_to_f32_commute:
-; GFX9-F32DENORM:       ; %bb.0: ; %entry
-; GFX9-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32DENORM-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX9-F32DENORM-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX9-F32DENORM-NEXT:    v_add_f32_e32 v0, v2, v0
-; GFX9-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX89-LABEL: fadd_fpext_fmul_f16_to_f32_commute:
+; GFX89:       ; %bb.0: ; %entry
+; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX89-NEXT:    v_mul_f16_e32 v0, v0, v1
+; GFX89-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX89-NEXT:    v_add_f32_e32 v0, v2, v0
+; GFX89-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %mul = fmul half %x, %y
   %mul.ext = fpext half %mul to float
@@ -176,9 +164,9 @@ define float @fadd_muladd_fpext_fmul_f16_to_f32(float %x, float %y, half %u, hal
 ; GFX9-F32FLUSH-LABEL: fadd_muladd_fpext_fmul_f16_to_f32:
 ; GFX9-F32FLUSH:       ; %bb.0: ; %entry
 ; GFX9-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v2, v2, v3, v4 op_sel_hi:[1,1,0]
-; GFX9-F32FLUSH-NEXT:    v_mac_f32_e32 v2, v0, v1
-; GFX9-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-F32FLUSH-NEXT:    v_mul_f16_e32 v2, v2, v3
+; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[0,0,1]
+; GFX9-F32FLUSH-NEXT:    v_add_f32_e32 v0, v0, v4
 ; GFX9-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-F32DENORM-LABEL: fadd_muladd_fpext_fmul_f16_to_f32:
@@ -221,9 +209,9 @@ define float @fadd_muladd_fpext_fmul_f16_to_f32_commute(float %x, float %y, half
 ; GFX9-F32FLUSH-LABEL: fadd_muladd_fpext_fmul_f16_to_f32_commute:
 ; GFX9-F32FLUSH:       ; %bb.0: ; %entry
 ; GFX9-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v2, v2, v3, v4 op_sel_hi:[1,1,0]
-; GFX9-F32FLUSH-NEXT:    v_mac_f32_e32 v2, v0, v1
-; GFX9-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-F32FLUSH-NEXT:    v_mul_f16_e32 v2, v2, v3
+; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[0,0,1]
+; GFX9-F32FLUSH-NEXT:    v_add_f32_e32 v0, v4, v0
 ; GFX9-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-F32DENORM-LABEL: fadd_muladd_fpext_fmul_f16_to_f32_commute:
@@ -264,9 +252,9 @@ define float @fadd_fmad_fpext_fmul_f16_to_f32(float %x, float %y, half %u, half 
 ; GFX9-F32FLUSH-LABEL: fadd_fmad_fpext_fmul_f16_to_f32:
 ; GFX9-F32FLUSH:       ; %bb.0: ; %entry
 ; GFX9-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v2, v2, v3, v4 op_sel_hi:[1,1,0]
-; GFX9-F32FLUSH-NEXT:    v_mac_f32_e32 v2, v0, v1
-; GFX9-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-F32FLUSH-NEXT:    v_mul_f16_e32 v2, v2, v3
+; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[0,0,1]
+; GFX9-F32FLUSH-NEXT:    v_add_f32_e32 v0, v0, v4
 ; GFX9-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-F32DENORM-LABEL: fadd_fmad_fpext_fmul_f16_to_f32:
@@ -307,22 +295,14 @@ define float @fadd_fma_fpext_fmul_f16_to_f32(float %x, float %y, half %u, half %
 ; GFX11-FAKE16-NEXT:    v_add_f32_e32 v0, v0, v4
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-F32FLUSH-LABEL: fadd_fma_fpext_fmul_f16_to_f32:
-; GFX9-F32FLUSH:       ; %bb.0: ; %entry
-; GFX9-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v2, v2, v3, v4 op_sel_hi:[1,1,0]
-; GFX9-F32FLUSH-NEXT:    v_mac_f32_e32 v2, v0, v1
-; GFX9-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
-; GFX9-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-F32DENORM-LABEL: fadd_fma_fpext_fmul_f16_to_f32:
-; GFX9-F32DENORM:       ; %bb.0: ; %entry
-; GFX9-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32DENORM-NEXT:    v_mul_f16_e32 v2, v2, v3
-; GFX9-F32DENORM-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX9-F32DENORM-NEXT:    v_fma_f32 v0, v0, v1, v2
-; GFX9-F32DENORM-NEXT:    v_add_f32_e32 v0, v0, v4
-; GFX9-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX89-LABEL: fadd_fma_fpext_fmul_f16_to_f32:
+; GFX89:       ; %bb.0: ; %entry
+; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX89-NEXT:    v_mul_f16_e32 v2, v2, v3
+; GFX89-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX89-NEXT:    v_fma_f32 v0, v0, v1, v2
+; GFX89-NEXT:    v_add_f32_e32 v0, v0, v4
+; GFX89-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %mul = fmul contract half %u, %v
   %mul.ext = fpext half %mul to float
@@ -350,22 +330,14 @@ define float @fadd_fma_fpext_fmul_f16_to_f32_commute(float %x, float %y, half %u
 ; GFX11-FAKE16-NEXT:    v_add_f32_e32 v0, v4, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-F32FLUSH-LABEL: fadd_fma_fpext_fmul_f16_to_f32_commute:
-; GFX9-F32FLUSH:       ; %bb.0: ; %entry
-; GFX9-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v2, v2, v3, v4 op_sel_hi:[1,1,0]
-; GFX9-F32FLUSH-NEXT:    v_mac_f32_e32 v2, v0, v1
-; GFX9-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
-; GFX9-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-F32DENORM-LABEL: fadd_fma_fpext_fmul_f16_to_f32_commute:
-; GFX9-F32DENORM:       ; %bb.0: ; %entry
-; GFX9-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32DENORM-NEXT:    v_mul_f16_e32 v2, v2, v3
-; GFX9-F32DENORM-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; GFX9-F32DENORM-NEXT:    v_fma_f32 v0, v0, v1, v2
-; GFX9-F32DENORM-NEXT:    v_add_f32_e32 v0, v4, v0
-; GFX9-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX89-LABEL: fadd_fma_fpext_fmul_f16_to_f32_commute:
+; GFX89:       ; %bb.0: ; %entry
+; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX89-NEXT:    v_mul_f16_e32 v2, v2, v3
+; GFX89-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; GFX89-NEXT:    v_fma_f32 v0, v0, v1, v2
+; GFX89-NEXT:    v_add_f32_e32 v0, v4, v0
+; GFX89-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %mul = fmul contract half %u, %v
   %mul.ext = fpext half %mul to float
@@ -535,19 +507,13 @@ define float @fsub_fpext_fmul_f16_to_f32(half %x, half %y, float %z) #0 {
 ; GFX11-FAKE16-NEXT:    v_sub_f32_e32 v0, v0, v2
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-F32FLUSH-LABEL: fsub_fpext_fmul_f16_to_f32:
-; GFX9-F32FLUSH:       ; %bb.0: ; %entry
-; GFX9-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v0, v0, v1, -v2 op_sel_hi:[1,1,0]
-; GFX9-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-F32DENORM-LABEL: fsub_fpext_fmul_f16_to_f32:
-; GFX9-F32DENORM:       ; %bb.0: ; %entry
-; GFX9-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32DENORM-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX9-F32DENORM-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX9-F32DENORM-NEXT:    v_sub_f32_e32 v0, v0, v2
-; GFX9-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX89-LABEL: fsub_fpext_fmul_f16_to_f32:
+; GFX89:       ; %bb.0: ; %entry
+; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX89-NEXT:    v_mul_f16_e32 v0, v0, v1
+; GFX89-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX89-NEXT:    v_sub_f32_e32 v0, v0, v2
+; GFX89-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %mul = fmul half %x, %y
   %mul.ext = fpext half %mul to float
@@ -582,19 +548,13 @@ define float @fsub_fpext_fmul_f16_to_f32_commute(float %x, half %y, half %z) #0 
 ; GFX11-F32DENORM-FAKE16-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; GFX11-F32DENORM-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-F32FLUSH-LABEL: fsub_fpext_fmul_f16_to_f32_commute:
-; GFX9-F32FLUSH:       ; %bb.0: ; %entry
-; GFX9-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v0, -v1, v2, v0 op_sel_hi:[1,1,0]
-; GFX9-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-F32DENORM-LABEL: fsub_fpext_fmul_f16_to_f32_commute:
-; GFX9-F32DENORM:       ; %bb.0: ; %entry
-; GFX9-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32DENORM-NEXT:    v_mul_f16_e32 v1, v1, v2
-; GFX9-F32DENORM-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GFX9-F32DENORM-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX9-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX89-LABEL: fsub_fpext_fmul_f16_to_f32_commute:
+; GFX89:       ; %bb.0: ; %entry
+; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX89-NEXT:    v_mul_f16_e32 v1, v1, v2
+; GFX89-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX89-NEXT:    v_sub_f32_e32 v0, v0, v1
+; GFX89-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %mul = fmul contract half %y, %z
   %mul.ext = fpext half %mul to float
@@ -623,19 +583,13 @@ define float @fsub_fpext_fneg_fmul_f16_to_f32(half %x, half %y, float %z) #0 {
 ; GFX11-FAKE16-NEXT:    v_sub_f32_e32 v0, v0, v2
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-F32FLUSH-LABEL: fsub_fpext_fneg_fmul_f16_to_f32:
-; GFX9-F32FLUSH:       ; %bb.0: ; %entry
-; GFX9-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v0, v0, -v1, -v2 op_sel_hi:[1,1,0]
-; GFX9-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-F32DENORM-LABEL: fsub_fpext_fneg_fmul_f16_to_f32:
-; GFX9-F32DENORM:       ; %bb.0: ; %entry
-; GFX9-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32DENORM-NEXT:    v_mul_f16_e64 v0, v0, -v1
-; GFX9-F32DENORM-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX9-F32DENORM-NEXT:    v_sub_f32_e32 v0, v0, v2
-; GFX9-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX89-LABEL: fsub_fpext_fneg_fmul_f16_to_f32:
+; GFX89:       ; %bb.0: ; %entry
+; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX89-NEXT:    v_mul_f16_e64 v0, v0, -v1
+; GFX89-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX89-NEXT:    v_sub_f32_e32 v0, v0, v2
+; GFX89-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %mul = fmul half %x, %y
   %neg.mul = fsub half -0.0, %mul
@@ -665,19 +619,13 @@ define float @fsub_fneg_fpext_fmul_f16_to_f32(half %x, half %y, float %z) #0 {
 ; GFX11-FAKE16-NEXT:    v_sub_f32_e32 v0, v0, v2
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-F32FLUSH-LABEL: fsub_fneg_fpext_fmul_f16_to_f32:
-; GFX9-F32FLUSH:       ; %bb.0: ; %entry
-; GFX9-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v0, v0, -v1, -v2 op_sel_hi:[1,1,0]
-; GFX9-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-F32DENORM-LABEL: fsub_fneg_fpext_fmul_f16_to_f32:
-; GFX9-F32DENORM:       ; %bb.0: ; %entry
-; GFX9-F32DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32DENORM-NEXT:    v_mul_f16_e64 v0, v0, -v1
-; GFX9-F32DENORM-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX9-F32DENORM-NEXT:    v_sub_f32_e32 v0, v0, v2
-; GFX9-F32DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX89-LABEL: fsub_fneg_fpext_fmul_f16_to_f32:
+; GFX89:       ; %bb.0: ; %entry
+; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX89-NEXT:    v_mul_f16_e64 v0, v0, -v1
+; GFX89-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX89-NEXT:    v_sub_f32_e32 v0, v0, v2
+; GFX89-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %mul = fmul half %x, %y
   %mul.ext = fpext half %mul to float
@@ -710,9 +658,9 @@ define float @fsub_muladd_fpext_mul_f16_to_f32(float %x, float %y, float %z, hal
 ; GFX9-F32FLUSH-LABEL: fsub_muladd_fpext_mul_f16_to_f32:
 ; GFX9-F32FLUSH:       ; %bb.0: ; %entry
 ; GFX9-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v2, v3, v4, -v2 op_sel_hi:[1,1,0]
-; GFX9-F32FLUSH-NEXT:    v_mac_f32_e32 v2, v0, v1
-; GFX9-F32FLUSH-NEXT:    v_mov_b32_e32 v0, v2
+; GFX9-F32FLUSH-NEXT:    v_mul_f16_e32 v3, v3, v4
+; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v0, v0, v1, v3 op_sel_hi:[0,0,1]
+; GFX9-F32FLUSH-NEXT:    v_sub_f32_e32 v0, v0, v2
 ; GFX9-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-F32DENORM-LABEL: fsub_muladd_fpext_mul_f16_to_f32:
@@ -797,8 +745,9 @@ define float @fsub_muladd_fpext_mul_f16_to_f32_commute(float %x, float %y, float
 ; GFX9-F32FLUSH-LABEL: fsub_muladd_fpext_mul_f16_to_f32_commute:
 ; GFX9-F32FLUSH:       ; %bb.0: ; %entry
 ; GFX9-F32FLUSH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v0, -v3, v4, v0 op_sel_hi:[1,1,0]
-; GFX9-F32FLUSH-NEXT:    v_mad_f32 v0, -v1, v2, v0
+; GFX9-F32FLUSH-NEXT:    v_mul_f16_e32 v3, v3, v4
+; GFX9-F32FLUSH-NEXT:    v_mad_mix_f32 v1, v1, v2, v3 op_sel_hi:[0,0,1]
+; GFX9-F32FLUSH-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; GFX9-F32FLUSH-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-F32DENORM-LABEL: fsub_muladd_fpext_mul_f16_to_f32_commute:
