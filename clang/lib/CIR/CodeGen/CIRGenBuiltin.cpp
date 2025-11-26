@@ -78,8 +78,7 @@ static mlir::Value makeAtomicFenceValue(CIRGenFunction &cgf,
   auto constOrderingAttr = constOrdering.getValueAttr<cir::IntAttr>();
   assert(constOrderingAttr && "Expected integer constant for ordering");
 
-  auto ordering =
-      static_cast<cir::MemOrder>(constOrderingAttr.getUInt());
+  auto ordering = static_cast<cir::MemOrder>(constOrderingAttr.getUInt());
 
   cir::AtomicFence::create(
       builder, cgf.getLoc(expr->getSourceRange()), ordering,
