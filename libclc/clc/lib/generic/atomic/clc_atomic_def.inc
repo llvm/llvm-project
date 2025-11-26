@@ -44,7 +44,7 @@
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
   _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION(                         \
       ADDRSPACE __CLC_GENTYPE *Ptr, int MemoryOrder, int MemoryScope) {        \
-    return __CLC_IMPL_FUNCTION(Ptr, (__CLC_GENTYPE)1, MemoryOrder,             \
+    return __CLC_IMPL_FUNCTION(Ptr, (__CLC_U_GENTYPE)(-1), MemoryOrder,        \
                                MemoryScope);                                   \
   }
 #elif defined(__CLC_RETURN_VOID)

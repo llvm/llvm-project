@@ -585,6 +585,10 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::MTBUF;
   }
 
+  static bool isBUF(const MachineInstr &MI) {
+    return isMUBUF(MI) || isMTBUF(MI);
+  }
+
   static bool isSMRD(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SMRD;
   }
@@ -1653,6 +1657,7 @@ public:
 
   const TargetSchedModel &getSchedModel() const { return SchedModel; }
 
+  // FIXME: This should be removed
   // Enforce operand's \p OpName even alignment if required by target.
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.
