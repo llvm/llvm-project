@@ -15,7 +15,7 @@ define void @cost_hoisted_vector_code(ptr %p, float %arg) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[P]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TMP1]], i32 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TMP1]], i64 4
 ; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
