@@ -13,7 +13,6 @@
 #include <compare>
 #include <coroutine>
 #include <functional>
-#include <hash>
 #include <initializer_list>
 
 #include "test_macros.h"
