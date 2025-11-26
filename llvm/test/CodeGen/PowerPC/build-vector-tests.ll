@@ -1754,7 +1754,11 @@ entry:
 define <4 x i32> @fromRegsConvdtoi(double %a, double %b, double %c, double %d) {
 ; P9BE-LABEL: fromRegsConvdtoi:
 ; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; P9BE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
 ; P9BE-NEXT:    xxmrghd vs0, vs2, vs4
+; P9BE-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; P9BE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P9BE-NEXT:    xvcvdpsxws v2, vs0
 ; P9BE-NEXT:    xxmrghd vs0, vs1, vs3
 ; P9BE-NEXT:    xvcvdpsxws v3, vs0
@@ -1763,7 +1767,11 @@ define <4 x i32> @fromRegsConvdtoi(double %a, double %b, double %c, double %d) {
 ;
 ; P9LE-LABEL: fromRegsConvdtoi:
 ; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; P9LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P9LE-NEXT:    xxmrghd vs0, vs3, vs1
+; P9LE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; P9LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
 ; P9LE-NEXT:    xvcvdpsxws v2, vs0
 ; P9LE-NEXT:    xxmrghd vs0, vs4, vs2
 ; P9LE-NEXT:    xvcvdpsxws v3, vs0
@@ -1772,6 +1780,10 @@ define <4 x i32> @fromRegsConvdtoi(double %a, double %b, double %c, double %d) {
 ;
 ; P8BE-LABEL: fromRegsConvdtoi:
 ; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; P8BE-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; P8BE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; P8BE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8BE-NEXT:    xxmrghd vs0, vs2, vs4
 ; P8BE-NEXT:    xxmrghd vs1, vs1, vs3
 ; P8BE-NEXT:    xvcvdpsxws v2, vs0
@@ -1781,6 +1793,10 @@ define <4 x i32> @fromRegsConvdtoi(double %a, double %b, double %c, double %d) {
 ;
 ; P8LE-LABEL: fromRegsConvdtoi:
 ; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; P8LE-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; P8LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; P8LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8LE-NEXT:    xxmrghd vs0, vs3, vs1
 ; P8LE-NEXT:    xxmrghd vs1, vs4, vs2
 ; P8LE-NEXT:    xvcvdpsxws v2, vs0
@@ -3240,7 +3256,11 @@ entry:
 define <4 x i32> @fromRegsConvdtoui(double %a, double %b, double %c, double %d) {
 ; P9BE-LABEL: fromRegsConvdtoui:
 ; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; P9BE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
 ; P9BE-NEXT:    xxmrghd vs0, vs2, vs4
+; P9BE-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; P9BE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P9BE-NEXT:    xvcvdpuxws v2, vs0
 ; P9BE-NEXT:    xxmrghd vs0, vs1, vs3
 ; P9BE-NEXT:    xvcvdpuxws v3, vs0
@@ -3249,7 +3269,11 @@ define <4 x i32> @fromRegsConvdtoui(double %a, double %b, double %c, double %d) 
 ;
 ; P9LE-LABEL: fromRegsConvdtoui:
 ; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; P9LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P9LE-NEXT:    xxmrghd vs0, vs3, vs1
+; P9LE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; P9LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
 ; P9LE-NEXT:    xvcvdpuxws v2, vs0
 ; P9LE-NEXT:    xxmrghd vs0, vs4, vs2
 ; P9LE-NEXT:    xvcvdpuxws v3, vs0
@@ -3258,6 +3282,10 @@ define <4 x i32> @fromRegsConvdtoui(double %a, double %b, double %c, double %d) 
 ;
 ; P8BE-LABEL: fromRegsConvdtoui:
 ; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; P8BE-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; P8BE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; P8BE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8BE-NEXT:    xxmrghd vs0, vs2, vs4
 ; P8BE-NEXT:    xxmrghd vs1, vs1, vs3
 ; P8BE-NEXT:    xvcvdpuxws v2, vs0
@@ -3267,6 +3295,10 @@ define <4 x i32> @fromRegsConvdtoui(double %a, double %b, double %c, double %d) 
 ;
 ; P8LE-LABEL: fromRegsConvdtoui:
 ; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    # kill: def $f4 killed $f4 def $vsl4
+; P8LE-NEXT:    # kill: def $f3 killed $f3 def $vsl3
+; P8LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; P8LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8LE-NEXT:    xxmrghd vs0, vs3, vs1
 ; P8LE-NEXT:    xxmrghd vs1, vs4, vs2
 ; P8LE-NEXT:    xvcvdpuxws v2, vs0
@@ -4540,24 +4572,32 @@ entry:
 define <2 x i64> @fromRegsConvdtoll(double %a, double %b) {
 ; P9BE-LABEL: fromRegsConvdtoll:
 ; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; P9BE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P9BE-NEXT:    xxmrghd vs0, vs1, vs2
 ; P9BE-NEXT:    xvcvdpsxds v2, vs0
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromRegsConvdtoll:
 ; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; P9LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P9LE-NEXT:    xxmrghd vs0, vs2, vs1
 ; P9LE-NEXT:    xvcvdpsxds v2, vs0
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromRegsConvdtoll:
 ; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; P8BE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8BE-NEXT:    xxmrghd vs0, vs1, vs2
 ; P8BE-NEXT:    xvcvdpsxds v2, vs0
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: fromRegsConvdtoll:
 ; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; P8LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8LE-NEXT:    xxmrghd vs0, vs2, vs1
 ; P8LE-NEXT:    xvcvdpsxds v2, vs0
 ; P8LE-NEXT:    blr
@@ -5694,24 +5734,32 @@ entry:
 define <2 x i64> @fromRegsConvdtoull(double %a, double %b) {
 ; P9BE-LABEL: fromRegsConvdtoull:
 ; P9BE:       # %bb.0: # %entry
+; P9BE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; P9BE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P9BE-NEXT:    xxmrghd vs0, vs1, vs2
 ; P9BE-NEXT:    xvcvdpuxds v2, vs0
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: fromRegsConvdtoull:
 ; P9LE:       # %bb.0: # %entry
+; P9LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; P9LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P9LE-NEXT:    xxmrghd vs0, vs2, vs1
 ; P9LE-NEXT:    xvcvdpuxds v2, vs0
 ; P9LE-NEXT:    blr
 ;
 ; P8BE-LABEL: fromRegsConvdtoull:
 ; P8BE:       # %bb.0: # %entry
+; P8BE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; P8BE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8BE-NEXT:    xxmrghd vs0, vs1, vs2
 ; P8BE-NEXT:    xvcvdpuxds v2, vs0
 ; P8BE-NEXT:    blr
 ;
 ; P8LE-LABEL: fromRegsConvdtoull:
 ; P8LE:       # %bb.0: # %entry
+; P8LE-NEXT:    # kill: def $f2 killed $f2 def $vsl2
+; P8LE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8LE-NEXT:    xxmrghd vs0, vs2, vs1
 ; P8LE-NEXT:    xvcvdpuxds v2, vs0
 ; P8LE-NEXT:    blr
