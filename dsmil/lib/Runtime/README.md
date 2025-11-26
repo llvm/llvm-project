@@ -38,12 +38,12 @@ dsmil-clang -o binary input.c -ldsmil_sandbox_runtime -lcap-ng -lseccomp
 Runtime support for provenance generation, verification, and extraction.
 
 **Dependencies**:
-- libcrypto (DSSSL preferred, fallback to OpenSSL 3.x) for SHA-384
+- **libdsssl (REQUIRED)** - DSMIL-Grade OpenSSL for SHA-384 and cryptographic operations
 - liboqs (Open Quantum Safe) for ML-DSA-87, ML-KEM-1024
 - libcbor (CBOR encoding/decoding)
 - libelf (ELF binary manipulation)
 
-**Note**: [DSSSL](https://github.com/SWORDIntel/DSSSL) is a hardened OpenSSL fork providing enhanced security and PQC support.
+**Note**: [DSSSL](https://github.com/SWORDIntel/DSSSL) is **required** for DSLLVM. It is a hardened OpenSSL 3.x fork providing enhanced security, PQC support, and TPM integration. OpenSSL 3.x fallback is available for development only.
 
 **Functions**:
 
@@ -71,10 +71,10 @@ ninja -C build dsmil_provenance_runtime
 
 **Link**:
 ```bash
-# With DSSSL (recommended)
+# With DSSSL (REQUIRED for production)
 dsmil-clang -o binary input.c -ldsmil_provenance_runtime -loqs -lcbor -lelf -ldsssl
 
-# Or with standard OpenSSL 3.x
+# Development/testing with OpenSSL 3.x fallback (not recommended)
 dsmil-clang -o binary input.c -ldsmil_provenance_runtime -loqs -lcbor -lelf -lcrypto
 ```
 

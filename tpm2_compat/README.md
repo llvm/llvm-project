@@ -11,7 +11,9 @@ Version: 2.0.1
 
 ## 🎯 Overview
 
-This directory contains a **portable userspace C library** for TPM 2.0 cryptographic operations, providing **88 algorithms** across all categories. Built on **DSSSL (DSMIL-Grade OpenSSL)** - a hardened OpenSSL 3.x fork with post-quantum cryptography support - for maximum security and compatibility with DSLLVM-compiled applications.
+This directory contains a **portable userspace C library** for TPM 2.0 cryptographic operations, providing **88 algorithms** across all categories. **Requires DSSSL (DSMIL-Grade OpenSSL)** - a hardened OpenSSL 3.x fork with post-quantum cryptography support - as the default cryptographic backend for DSLLVM/DSMIL applications.
+
+> **⚠️ DSSSL Required**: This library requires DSSSL by default. OpenSSL 3.x fallback is available for development only with `-DUSE_OPENSSL_FALLBACK=ON`.
 
 ### 🔗 Full System Implementation
 
@@ -88,9 +90,12 @@ tpm2_compat/
 
 ### Building
 
+**Prerequisites**: Install DSSSL first (see DSSSL Integration section below)
+
 ```bash
-# Configure
+# Standard build (requires DSSSL)
 cmake -S . -B build \
+  -DCMAKE_PREFIX_PATH=/usr/local/dsssl \
   -DCMAKE_BUILD_TYPE=Release \
   -DENABLE_TPM2_COMPAT=ON \
   -DENABLE_HARDWARE_ACCEL=ON
@@ -102,19 +107,30 @@ cmake --build build -j$(nproc)
 sudo cmake --install build
 ```
 
+**Development/Testing with OpenSSL fallback** (not recommended for production):
+```bash
+cmake -S . -B build \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DUSE_OPENSSL_FALLBACK=ON \
+  -DENABLE_TPM2_COMPAT=ON
+
+cmake --build build -j$(nproc)
+```
+
 ---
 
-## 🔐 DSSSL Integration
+## 🔐 DSSSL Integration (Required)
 
-This library uses **[DSSSL](https://github.com/SWORDIntel/DSSSL)** (DSMIL-Grade OpenSSL) - a hardened OpenSSL 3.x fork providing:
+This library **requires [DSSSL](https://github.com/SWORDIntel/DSSSL)** (DSMIL-Grade OpenSSL) - a hardened OpenSSL 3.x fork providing:
 
 - ✅ **Post-Quantum Cryptography**: ML-KEM (Kyber) and ML-DSA (Dilithium) algorithms
 - ✅ **TPM 2.0 Integration**: Hardware-backed key storage and operations
 - ✅ **Enhanced Side-Channel Resistance**: CNSA constant-time annotations
 - ✅ **Security Profiles**: WORLD_COMPAT, DSMIL_SECURE, and ATOMAL modes
 - ✅ **Hardware Acceleration**: Intel AES-NI (3,800 MB/s) and SHA-NI (8,400 MB/s)
+- ✅ **DSLLVM Integration**: Full compatibility with DSMIL compiler toolchain
 
-### Installation
+### Installation (Required)
 
 ```bash
 # Build and install DSSSL
@@ -135,7 +151,7 @@ cmake -S . -B build \
 cmake --build build -j$(nproc)
 ```
 
-**Note**: The library automatically falls back to OpenSSL 3.x if DSSSL is not available.
+**Note**: DSSSL is **required by default**. To use OpenSSL 3.x fallback for development/testing, build with `-DUSE_OPENSSL_FALLBACK=ON` (not recommended for production).
 
 ---
 
