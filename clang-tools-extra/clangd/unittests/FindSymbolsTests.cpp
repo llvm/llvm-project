@@ -656,15 +656,16 @@ TEST(DocumentSymbols, Enums) {
       getSymbols(TU.build()),
       ElementsAre(
           AllOf(withName("(anonymous enum)"), withDetail("enum"),
-                children(AllOf(withName("Red"), withDetail("(unnamed)")))),
+                children(AllOf(withName("Red"), withDetail("(unnamed enum)")))),
           AllOf(withName("Color"), withDetail("enum"),
                 children(AllOf(withName("Green"), withDetail("Color")))),
           AllOf(withName("Color2"), withDetail("enum"),
                 children(AllOf(withName("Yellow"), withDetail("Color2")))),
-          AllOf(withName("ns"),
-                children(AllOf(withName("(anonymous enum)"), withDetail("enum"),
-                               children(AllOf(withName("Black"),
-                                              withDetail("(unnamed)"))))))));
+          AllOf(
+              withName("ns"),
+              children(AllOf(withName("(anonymous enum)"), withDetail("enum"),
+                             children(AllOf(withName("Black"),
+                                            withDetail("(unnamed enum)"))))))));
 }
 
 TEST(DocumentSymbols, Macro) {
