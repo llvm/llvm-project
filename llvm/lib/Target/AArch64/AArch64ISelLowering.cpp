@@ -29680,15 +29680,8 @@ bool AArch64TargetLowering::storeNeedsSeqCstTrailingFence(
   if (RMW && RMW->getOrdering() != AtomicOrdering::SequentiallyConsistent)
     return false;
 
-  // We do not need a fence only if we have LSE and are not expanding.
-  TargetLoweringBase::AtomicExpansionKind ExpandKind =
-      CAS ? shouldExpandAtomicCmpXchgInIR(CAS) : shouldExpandAtomicRMWInIR(RMW);
-  if (ExpandKind == AtomicExpansionKind::None && Subtarget->hasLSE())
-    return false;
-  if (RMW && ExpandKind == AtomicExpansionKind::CmpXChg && Subtarget->hasLSE())
-    return false;
-
-  return true;
+  // We do not need a fence if we have LSE atomics.
+  return !Subtarget->hasLSE();
 }
 
 // Loads and stores less than 128-bits are already atomic; ones above that
