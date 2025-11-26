@@ -24,7 +24,7 @@ using namespace llvm;
     return *NAME##View;                                                        \
   }
 
-#define MCSTROPT(TY, NAME)                                                     \
+#define MCSTROPT(NAME)                                                         \
   static cl::opt<std::string> *NAME##View;                                     \
   StringRef llvm::mc::get##NAME() {                                            \
     assert(NAME##View && "RegisterMCTargetOptionsFlags not created.");         \
@@ -59,8 +59,8 @@ MCOPT(bool, Crel)
 MCOPT(bool, ImplicitMapSyms)
 MCOPT(bool, X86RelaxRelocations)
 MCOPT(bool, X86Sse2Avx)
-MCSTROPT(std::string, ABIName)
-MCSTROPT(std::string, AsSecureLogFile)
+MCSTROPT(ABIName)
+MCSTROPT(AsSecureLogFile)
 
 llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
 #define MCBINDOPT(NAME)                                                        \
