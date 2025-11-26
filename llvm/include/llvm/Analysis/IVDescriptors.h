@@ -181,9 +181,8 @@ public:
   /// where one of (X, Y) is an increasing (FindLastIV) or decreasing
   /// (FindFirstIV) loop induction variable, or an arbitrary integer value
   /// (FindLast), and the other is a PHI value.
-  LLVM_ABI static InstDesc isFindPattern(RecurKind Kind, Loop *TheLoop,
-                                         PHINode *OrigPhi, Instruction *I,
-                                         ScalarEvolution &SE);
+  LLVM_ABI static InstDesc isFindPattern(Loop *TheLoop, PHINode *OrigPhi,
+                                         Instruction *I, ScalarEvolution &SE);
 
   /// Returns a struct describing if the instruction is a
   /// Select(FCmp(X, Y), (Z = X op PHINode), PHINode) instruction pattern.
@@ -312,6 +311,10 @@ public:
   ///   other is a recurrence.
   static bool isFindLastRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::FindLast;
+  }
+
+  static bool isFindRecurrenceKind(RecurKind Kind) {
+    return isFindLastRecurrenceKind(Kind) || isFindIVRecurrenceKind(Kind);
   }
 
   /// Returns the type of the recurrence. This type can be narrower than the

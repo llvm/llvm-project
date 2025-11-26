@@ -1259,9 +1259,8 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   // reductions.
   if (!RecurrenceDescriptor::isIntegerRecurrenceKind(RK) ||
       RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindIVRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindLastRecurrenceKind(RK))
+      RecurrenceDescriptor::isFindRecurrenceKind(RK) ||
+      RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
     return std::nullopt;
 
   if (RdxDesc.IntermediateStore)

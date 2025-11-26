@@ -4617,10 +4617,12 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
              IsaPred<VPReductionPHIRecipe>);
 
   // FIXME: implement interleaving for FindLast transform correctly.
-  for (auto &[_, RdxDesc] : Legal->getReductionVars())
-    if (RecurrenceDescriptor::isFindLastRecurrenceKind(
-            RdxDesc.getRecurrenceKind()))
-      return 1;
+  if (any_of(make_second_range(Legal->getReductionVars()),
+             [](const RecurrenceDescriptor &RdxDesc) {
+               return RecurrenceDescriptor::isFindLastRecurrenceKind(
+                   RdxDesc.getRecurrenceKind());
+             }))
+    return 1;
 
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
