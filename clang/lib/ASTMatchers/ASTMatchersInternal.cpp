@@ -518,9 +518,9 @@ static StringRef getNodeName(const RecordDecl &Node,
 
   llvm::raw_svector_ostream OS(Scratch);
 
-  printAnonymousTagDecl(
-      OS, llvm::cast<TagDecl>(&Node), Node.getASTContext().getPrintingPolicy(),
-      /*PrintKindDecoration=*/true, /*PrintTagLocations=*/false);
+  PrintingPolicy Copy(Node.getASTContext().getPrintingPolicy());
+  Copy.AnonymousTagLocations = false;
+  Node.printName(OS, Copy);
 
   return OS.str();
 }

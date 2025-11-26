@@ -45,7 +45,7 @@ union barp { int x; float y; };     // c17-note {{previous definition is here}}
 union barp { int x; float y; };     // c17-error {{redefinition of 'barp'}}
 typedef struct q { int x; } q_t;    // c17-note 2 {{previous definition is here}}
 typedef struct q { int x; } q_t;    // c17-error {{redefinition of 'q'}} \
-                                       c17-error-re {{typedef redefinition with different types ('struct (unnamed struct at {{.*}})' vs 'struct q')}}
+                                       c17-error-re {{typedef redefinition with different types ('struct (unnamed at {{.*}})' vs 'struct q')}}
 typedef struct { int x; } untagged_q_t; // both-note {{previous definition is here}}
 typedef struct { int x; } untagged_q_t; // both-error {{typedef redefinition with different types}}
 void func3(void) {
@@ -432,9 +432,9 @@ void compare_unnamed_struct_from_different_outer_type(
     struct InnerUnnamedStruct_differentNaming differentFieldName,
     struct InnerUnnamedStruct_differentShape differentType) {
   inner_unnamed_tagged.untagged = sameOuterType.untagged;
-  inner_unnamed_tagged.untagged = matchingType.untagged; // both-error-re {{assigning to 'struct (unnamed struct at {{.*}})' from incompatible type 'struct (unnamed struct at {{.*}})'}}
-  inner_unnamed_tagged.untagged = differentFieldName.untaggedDifferent; // both-error-re {{assigning to 'struct (unnamed struct at {{.*}})' from incompatible type 'struct (unnamed struct at {{.*}})'}}
-  inner_unnamed_tagged.untagged = differentType.untagged; // both-error-re {{assigning to 'struct (unnamed struct at {{.*}})' from incompatible type 'struct (unnamed struct at {{.*}})'}}
+  inner_unnamed_tagged.untagged = matchingType.untagged; // both-error-re {{assigning to 'struct (unnamed at {{.*}})' from incompatible type 'struct (unnamed at {{.*}})'}}
+  inner_unnamed_tagged.untagged = differentFieldName.untaggedDifferent; // both-error-re {{assigning to 'struct (unnamed at {{.*}})' from incompatible type 'struct (unnamed at {{.*}})'}}
+  inner_unnamed_tagged.untagged = differentType.untagged; // both-error-re {{assigning to 'struct (unnamed at {{.*}})' from incompatible type 'struct (unnamed at {{.*}})'}}
 }
 
 // Test the same thing with enumerations (test for unions is omitted because
