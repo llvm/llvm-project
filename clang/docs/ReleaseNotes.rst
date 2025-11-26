@@ -126,6 +126,8 @@ C++ Language Changes
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Clang now has partial support for `P1306R5 <https://wg21.link/P1306R5>`_ Expansion Statements. Iterating expansion
+  statements currently cannot be expanded and will result in a diagnostic, but other types of expansion statements work.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
