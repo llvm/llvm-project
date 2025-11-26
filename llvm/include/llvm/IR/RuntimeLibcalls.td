@@ -50,6 +50,7 @@ def isWindowsMSVCOrItaniumEnvironment : RuntimeLibcallPredicate<
 def isGNUEnvironment : RuntimeLibcallPredicate<"TT.isGNUEnvironment()">;
 def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
 def darwinHasExp10 : RuntimeLibcallPredicate<"darwinHasExp10(TT)">;
+def darwinHasMemsetPattern : RuntimeLibcallPredicate<[{darwinHasMemsetPattern(TT)}]>;
 
 def hasExp10 : RuntimeLibcallPredicate<[{!TT.isOSDarwin()}]>;
 
@@ -1976,6 +1977,11 @@ defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret,
                                         darwinHasSinCosStret>;
 defvar DarwinExp10 = LibcallImpls<(add __exp10f, __exp10), darwinHasExp10>;
 
+defvar DarwinMemsetPattern = LibcallImpls<(add memset_pattern4,
+                                               memset_pattern8,
+                                               memset_pattern16),
+                                               darwinHasMemsetPattern>;
+
 defvar SecurityCheckCookieIfWinMSVC =
     LibcallImpls<(add __security_check_cookie, __security_cookie),
                  isWindowsMSVCOrItaniumEnvironment>;
@@ -2133,7 +2139,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        AArch64LibcallImpls,
        LibcallImpls<(add Int128RTLibcalls), isAArch64_ILP64>,
        LibcallImpls<(add bzero), isOSDarwin>,
-       DarwinExp10, DarwinSinCosStret,
+       DarwinExp10, DarwinSinCosStret, DarwinMemsetPattern,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
        DefaultLibmExp10,
        DefaultStackProtector,
@@ -2603,7 +2609,7 @@ def ARMSystemLibrary
            WindowARMFPIntCasts,
            SecurityCheckCookieIfWinMSVC,
            AEABIDivRemCalls,
-           DarwinSinCosStret, DarwinExp10,
+           DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern,
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
            DefaultLibmExp10,
 
@@ -3288,7 +3294,7 @@ defvar MemChkLibcalls = [__memcpy_chk, __memset_chk, __memmove_chk];
 
 defvar X86CommonLibcalls =
   (add (sub WinDefaultLibcallImpls, WindowsDivRemMulLibcallOverrides, MemChkLibcalls),
-       DarwinSinCosStret, DarwinExp10,
+       DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern,
        X86_F128_Libcalls,
        LibmHasSinCosF80, // FIXME: Depends on long double
        SinCosF32F64Libcalls,
