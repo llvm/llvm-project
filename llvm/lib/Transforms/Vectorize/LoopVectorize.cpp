@@ -8114,7 +8114,8 @@ bool VPRecipeBuilder::getScaledReductions(
         continue;
       }
       Value *ExtOp;
-      if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))))
+      if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))) &&
+          !match(OpI, m_FPExt(m_Value(ExtOp))))
         return false;
       Exts[I] = cast<Instruction>(OpI);
 
@@ -8289,6 +8290,8 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
 
   unsigned ReductionOpcode = Reduction->getOpcode();
   auto *ReductionI = Reduction->getUnderlyingInstr();
+  if (ReductionOpcode == Instruction::FAdd && !ReductionI->hasAllowReassoc())
+    return nullptr;
   if (ReductionOpcode == Instruction::Sub) {
     auto *const Zero = ConstantInt::get(ReductionI->getType(), 0);
     SmallVector<VPValue *, 2> Ops;

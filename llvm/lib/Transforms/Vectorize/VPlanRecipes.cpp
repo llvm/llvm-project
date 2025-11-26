@@ -335,7 +335,8 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   // should have been turned into a VPExpressionRecipe.
   // FIXME: Replace the entire function with this once all partial reduction
   // variants are bundled into VPExpressionRecipe.
-  if (!match(Op, m_Mul(m_VPValue(), m_ConstantInt(MulConst)))) {
+  if (!match(Op, m_Mul(m_VPValue(), m_ConstantInt(MulConst))) &&
+      !match(Op, m_FMul(m_VPValue(), m_VPValue()))) {
     auto *PhiType = Ctx.Types.inferScalarType(getChainOp());
     auto *InputType = Ctx.Types.inferScalarType(getVecOp());
     return CondCost + Ctx.TTI.getPartialReductionCost(
@@ -358,6 +359,8 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
       return TTI::PR_ZeroExtend;
     if (WidenCastR->getOpcode() == Instruction::CastOps::SExt)
       return TTI::PR_SignExtend;
+    if (WidenCastR->getOpcode() == Instruction::CastOps::FPExt)
+      return TTI::PR_FPExtend;
     return TTI::PR_None;
   };
 
@@ -410,8 +413,9 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
 void VPPartialReductionRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
 
-  assert(getOpcode() == Instruction::Add &&
-         "Unhandled partial reduction opcode");
+  assert(
+      (getOpcode() == Instruction::Add || getOpcode() == Instruction::FAdd) &&
+      "Unhandled partial reduction opcode");
 
   Value *BinOpVal = State.get(getVecOp());
   Value *PhiVal = State.get(getChainOp());
@@ -425,9 +429,13 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
     BinOpVal = Builder.CreateSelect(Cond, BinOpVal, Zero);
   }
 
-  CallInst *V =
-      Builder.CreateIntrinsic(RetTy, Intrinsic::vector_partial_reduce_add,
-                              {PhiVal, BinOpVal}, nullptr, "partial.reduce");
+  assert(getOpcode() == Instruction::Add || getOpcode() == Instruction::FAdd);
+  Intrinsic::IndependentIntrinsics PRIntrinsic =
+      getOpcode() == Instruction::Add ? Intrinsic::vector_partial_reduce_add
+                                      : Intrinsic::vector_partial_reduce_fadd;
+
+  CallInst *V = Builder.CreateIntrinsic(RetTy, PRIntrinsic, {PhiVal, BinOpVal},
+                                        nullptr, "partial.reduce");
 
   State.set(this, V);
 }

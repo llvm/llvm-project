@@ -5781,7 +5781,8 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       (!ST->isNeonAvailable() || !ST->hasDotProd()))
     return Invalid;
 
-  if ((Opcode != Instruction::Add && Opcode != Instruction::Sub) ||
+  if ((Opcode != Instruction::Add && Opcode != Instruction::Sub &&
+       Opcode != Instruction::FAdd) ||
       OpAExtend == TTI::PR_None)
     return Invalid;
 
@@ -5791,7 +5792,8 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   // We only support multiply binary operations for now, and for muls we
   // require the types being extended to be the same.
-  if (BinOp && (*BinOp != Instruction::Mul || InputTypeA != InputTypeB))
+  if (BinOp && ((*BinOp != Instruction::Mul && *BinOp != Instruction::FMul) ||
+                InputTypeA != InputTypeB))
     return Invalid;
 
   bool IsUSDot = OpBExtend != TTI::PR_None && OpAExtend != OpBExtend;
@@ -5859,6 +5861,13 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
        ST->hasDotProd())) {
     if (AccumLT.second.getScalarType() == MVT::i32 &&
         InputLT.second.getScalarType() == MVT::i8)
+      return Cost;
+  }
+
+  // f16 -> f32 is natively supported for fdot
+  if (Opcode == Instruction::FAdd && (ST->hasSME2() || ST->hasSVE2p1())) {
+    if (AccumLT.second.getScalarType() == MVT::f32 &&
+        InputLT.second.getScalarType() == MVT::f16)
       return Cost;
   }
 
