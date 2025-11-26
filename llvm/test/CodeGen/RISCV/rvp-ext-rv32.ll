@@ -605,21 +605,3 @@ define void @test_psslai_h(ptr %ret_ptr, ptr %a_ptr) {
   store <2 x i16> %res, ptr %ret_ptr
   ret void
 }
-
-; Intrinsic declarations
-declare <2 x i16> @llvm.sadd.sat.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.ssub.sat.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.usub.sat.v2i16(<2 x i16>, <2 x i16>)
-declare <4 x i8> @llvm.sadd.sat.v4i8(<4 x i8>, <4 x i8>)
-declare <4 x i8> @llvm.uadd.sat.v4i8(<4 x i8>, <4 x i8>)
-declare <4 x i8> @llvm.ssub.sat.v4i8(<4 x i8>, <4 x i8>)
-declare <4 x i8> @llvm.usub.sat.v4i8(<4 x i8>, <4 x i8>)
-declare <2 x i16> @llvm.smin.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.smax.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.umin.v2i16(<2 x i16>, <2 x i16>)
-declare <2 x i16> @llvm.umax.v2i16(<2 x i16>, <2 x i16>)
-declare <4 x i8> @llvm.smin.v4i8(<4 x i8>, <4 x i8>)
-declare <4 x i8> @llvm.smax.v4i8(<4 x i8>, <4 x i8>)
-declare <4 x i8> @llvm.umin.v4i8(<4 x i8>, <4 x i8>)
-declare <4 x i8> @llvm.umax.v4i8(<4 x i8>, <4 x i8>)
