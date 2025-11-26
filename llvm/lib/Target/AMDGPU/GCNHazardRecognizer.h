@@ -145,6 +145,12 @@ public:
   void EmitInstruction(SUnit *SU) override;
   void EmitInstruction(MachineInstr *MI) override;
   HazardType getHazardType(SUnit *SU, int Stalls) override;
+
+  /// Returns the number of wait states until all hazards for \p MI are
+  /// resolved. This is useful for scheduling heuristics that want
+  /// cycle-accurate hazard information rather than just a boolean.  Unlike
+  /// PreEmitNoops, this does not modify state or fix hazards.
+  unsigned getHazardWaitStates(MachineInstr *MI) const;
   void EmitNoop() override;
   unsigned PreEmitNoops(MachineInstr *) override;
   unsigned PreEmitNoopsCommon(MachineInstr *);
