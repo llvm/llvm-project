@@ -118,7 +118,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return Type::getIntNTy(Ctx, 64);
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractLastLanePerPart:
-  case VPInstruction::ExtractPenultimateElement: {
+  case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::ExtractLastActive: {
     Type *BaseTy = inferScalarType(R->getOperand(0));
     if (auto *VecTy = dyn_cast<VectorType>(BaseTy))
       return VecTy->getElementType();

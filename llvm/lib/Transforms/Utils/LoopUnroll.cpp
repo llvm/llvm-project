@@ -1259,7 +1259,7 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   // reductions.
   if (!RecurrenceDescriptor::isIntegerRecurrenceKind(RK) ||
       RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindIVRecurrenceKind(RK) ||
+      RecurrenceDescriptor::isFindRecurrenceKind(RK) ||
       RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
     return std::nullopt;
 

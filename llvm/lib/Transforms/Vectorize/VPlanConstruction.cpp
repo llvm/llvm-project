@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopVectorizationPlanner.h"
+#include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
@@ -999,5 +1000,82 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   VPValue *NewCond =
       MiddleBuilder.createAnd(MiddleCond, MiddleBuilder.createNot(AnyNaNLane));
   MiddleTerm->setOperand(0, NewCond);
+  return true;
+}
+
+bool VPlanTransforms::handleFindLastReductions(VPlan &Plan,
+                                               VPRecipeBuilder &RecipeBuilder) {
+  if (Plan.hasScalarVFOnly())
+    return false;
+
+  // We want to create the following nodes:
+  // vec.body:
+  //   mask.phi = phi <VF x i1> [ all.false, vec.ph ], [ new.mask, vec.body ]
+  //   ...data.phi already exists, but needs updating...
+  //   data.phi = phi <VF x Ty> [ default.val, vec.ph ], [ new.data, vec.body ]
+  //
+  //   ...'data' and 'compare' created by existing nodes...
+  //
+  //   any_active = i1 any_of_reduction(compare)
+  //   new.mask = select any_active, compare, mask.phi
+  //   new.data = select any_active, data, data.phi
+  //
+  // middle.block:
+  //   result = extract-last-active new.data, new.mask, default.val
+
+  for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
+    if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
+                     PhiR->getRecurrenceKind()))
+      continue;
+
+    // Find the condition for the select
+    auto *SelectR = cast<VPSingleDefRecipe>(&PhiR->getBackedgeRecipe());
+    VPValue *Cond = nullptr;
+    if (auto *WidenR = dyn_cast<VPWidenSelectRecipe>(SelectR))
+      Cond = WidenR->getCond();
+    else if (auto *RepR = dyn_cast<VPReplicateRecipe>(SelectR)) {
+      auto *SI = dyn_cast<SelectInst>(RepR->getUnderlyingInstr());
+      if (!SI)
+        return false;
+      auto *CmpI = dyn_cast<Instruction>(SI->getCondition());
+      if (!CmpI)
+        return false;
+      Cond = RecipeBuilder.getRecipe(CmpI)->getVPSingleValue();
+    } else
+      return false;
+
+    // Add mask phi
+    VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
+    auto *MaskPHI = new VPWidenPHIRecipe(nullptr, Plan.getFalse());
+    Builder.insert(MaskPHI);
+
+    // Add select for mask
+    Builder.setInsertPoint(SelectR);
+    VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
+    VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
+    MaskPHI->addOperand(MaskSelect);
+
+    // Replace select for data
+    VPValue *DataSelect =
+        Builder.createSelect(AnyOf, SelectR->getOperand(1),
+                             SelectR->getOperand(2), SelectR->getDebugLoc());
+    SelectR->replaceAllUsesWith(DataSelect);
+    SelectR->eraseFromParent();
+
+    // Find final reduction computation and replace it with an
+    // extract.last.active intrinsic.
+    VPInstruction *RdxResult = findComputeReductionResult(PhiR);
+    if (!RdxResult)
+      return false;
+    Builder.setInsertPoint(RdxResult);
+    auto *ExtractLastActive =
+        Builder.createNaryOp(VPInstruction::ExtractLastActive,
+                             {DataSelect, MaskSelect, PhiR->getStartValue()},
+                             RdxResult->getDebugLoc());
+    RdxResult->replaceAllUsesWith(ExtractLastActive);
+    RdxResult->eraseFromParent();
+  }
+
   return true;
 }
