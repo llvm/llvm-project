@@ -315,13 +315,22 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FCANONICALIZE(SDNode *N) {
   SDLoc dl(N);
-  SDValue Node = DAG.getNode(ISD::FMINIMUMNUM, dl, N->getValueType(0),
-                          N->getOperand(0), N->getOperand(0));
+
+  // Create a constant 1.0, then soften it to integer and record the mapping.
+  SDValue CstFP = DAG.getConstantFP(1.0, dl, N->getValueType(0));
+  SDValue CstInt = SoftenFloatRes_ConstantFP(CstFP.getNode());
+
+  if (!SoftenedFloats[getTableId(CstFP)])
+    SetSoftenedFloat(CstFP, CstInt);
+
+  // Multiply the input by 1.0 to canonicalize it. We use `MorphNodeTo` to
+  // avoid constant folding, which happens with `DAG.getNode(ISD::FMUL, ...)`.
+  SDNode *Node =
+      DAG.MorphNodeTo(N, ISD::FMUL, DAG.getVTList(N->getValueType(0)),
+                      {N->getOperand(0), CstFP});
   return SoftenFloatRes_Binary(
-      Node.getNode(),
-      GetFPLibCall(N->getValueType(0), RTLIB::FMINIMUM_NUM_F32,
-                   RTLIB::FMINIMUM_NUM_F64, RTLIB::FMINIMUM_NUM_F80,
-                   RTLIB::FMINIMUM_NUM_F128, RTLIB::FMINIMUM_NUM_PPCF128));
+      Node, GetFPLibCall(N->getValueType(0), RTLIB::MUL_F32, RTLIB::MUL_F64,
+                         RTLIB::MUL_F80, RTLIB::MUL_F128, RTLIB::MUL_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMINNUM(SDNode *N) {
