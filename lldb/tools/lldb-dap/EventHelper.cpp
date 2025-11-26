@@ -449,35 +449,34 @@ void HandleTargetEvent(const lldb::SBEvent &event, Log *log) {
       }
     }
   } else if (event_mask & lldb::SBTarget::eBroadcastBitNewTargetCreated) {
-    auto target = lldb::SBTarget::GetTargetFromEvent(event);
+    // For NewTargetCreated events, GetTargetFromEvent returns the parent
+    // target, and GetCreatedTargetFromEvent returns the newly created target.
+    lldb::SBTarget created_target =
+        lldb::SBTarget::GetCreatedTargetFromEvent(event);
 
-    // Find the DAP instance that owns this target
-    DAP *dap_instance = DAPSessionManager::FindDAP(target);
-    // If we don't have a dap_instance (target wasn't found), get any
-    // active instance
-    if (!dap_instance) {
-      std::vector<DAP *> active_instances =
-          DAPSessionManager::GetInstance().GetActiveSessions();
-      if (!active_instances.empty())
-        dap_instance = active_instances[0];
+    if (!target.IsValid() || !created_target.IsValid()) {
+      DAP_LOG(log, "Received NewTargetCreated event but parent or "
+                   "created target is invalid");
+      return;
     }
 
-    if (dap_instance) {
-      // Send a startDebugging reverse request with the debugger and target
-      // IDs. The new DAP instance will use these IDs to find the existing
-      // debugger and target via FindDebuggerWithID and
-      // FindTargetByGloballyUniqueID.
-      llvm::json::Object configuration{
-          {"type", "lldb"},
-          {"debuggerId", target.GetDebugger().GetID()},
-          {"targetId", target.GetGloballyUniqueID()},
-          {"name", target.GetTargetSessionName()}};
+    // Send a startDebugging reverse request with the debugger and target
+    // IDs. The new DAP instance will use these IDs to find the existing
+    // debugger and target via FindDebuggerWithID and
+    // FindTargetByGloballyUniqueID.
+    llvm::json::Object configuration;
+    configuration.try_emplace("type", "lldb");
+    configuration.try_emplace("debuggerId",
+                              created_target.GetDebugger().GetID());
+    configuration.try_emplace("targetId", created_target.GetGloballyUniqueID());
+    configuration.try_emplace("name", created_target.GetTargetSessionName());
 
-      dap_instance->SendReverseRequest<LogFailureResponseHandler>(
-          "startDebugging", llvm::json::Object{{"request", "attach"},
-                                                {"configuration",
-                                                std::move(configuration)}});
-    }
+    llvm::json::Object request;
+    request.try_emplace("request", "attach");
+    request.try_emplace("configuration", std::move(configuration));
+
+    dap->SendReverseRequest<LogFailureResponseHandler>("startDebugging",
+                                                       std::move(request));
   }
 }
 

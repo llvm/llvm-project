@@ -557,6 +557,12 @@ public:
     TargetEventData(const lldb::TargetSP &target_sp,
                     const ModuleList &module_list);
 
+    // Constructor for eBroadcastBitNewTargetCreated events. For this event type:
+    // - target_sp is the parent target (the subject/broadcaster of the event)
+    // - created_target_sp is the newly created target
+    TargetEventData(const lldb::TargetSP &target_sp,
+                    const lldb::TargetSP &created_target_sp);
+
     ~TargetEventData() override;
 
     static llvm::StringRef GetFlavorString();
@@ -571,14 +577,21 @@ public:
 
     static lldb::TargetSP GetTargetFromEvent(const Event *event_ptr);
 
+    // For eBroadcastBitNewTargetCreated events, returns the newly created target.
+    // For other event types, returns an invalid target.
+    static lldb::TargetSP GetCreatedTargetFromEvent(const Event *event_ptr);
+
     static ModuleList GetModuleListFromEvent(const Event *event_ptr);
 
     const lldb::TargetSP &GetTarget() const { return m_target_sp; }
+
+    const lldb::TargetSP &GetCreatedTarget() const { return m_created_target_sp; }
 
     const ModuleList &GetModuleList() const { return m_module_list; }
 
   private:
     lldb::TargetSP m_target_sp;
+    lldb::TargetSP m_created_target_sp;
     ModuleList m_module_list;
 
     TargetEventData(const TargetEventData &) = delete;

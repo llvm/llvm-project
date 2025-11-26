@@ -128,6 +128,12 @@ SBTarget SBTarget::GetTargetFromEvent(const SBEvent &event) {
   return Target::TargetEventData::GetTargetFromEvent(event.get());
 }
 
+SBTarget SBTarget::GetCreatedTargetFromEvent(const SBEvent &event) {
+  LLDB_INSTRUMENT_VA(event);
+
+  return Target::TargetEventData::GetCreatedTargetFromEvent(event.get());
+}
+
 uint32_t SBTarget::GetNumModulesFromEvent(const SBEvent &event) {
   LLDB_INSTRUMENT_VA(event);
 
