@@ -1261,3 +1261,63 @@ func.func @contract_matmul_bcast_a_b(
       outs(%C: memref<3x7xf32>)
   return
 }
+
+// -----
+
+// CHECK: #[[A_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d4, d3 + d5)>
+// CHECK: #[[B_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d1, d2, d4, d5)>
+// CHECK: #[[C_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3)>
+// CHECK: func @gen_grouped_1D_ngcs_gfcs_ngfs_memref
+func.func @gen_grouped_1D_ngcs_gfcs_ngfs_memref(%arg0: memref<64x8x16x10xf32>, %arg1: memref<8x32x16x3xf32>, %arg2: memref<64x8x32x8xf32>) {
+// CHECK:       linalg.generic
+// CHECK-SAME:    indexing_maps = [#[[A_MAP]], #[[B_MAP]], #[[C_MAP]]]
+// CHECK-SAME:    iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]
+// CHECK-SAME:    ins(%arg0, %arg1 : {{.*}}) outs(%arg2 : {{.*}})
+// CHECK-NEXT:    ^bb0(%[[IN_0:.*]]: f32, %[[IN_1:.*]]: f32, %[[OUT:.*]]: f32):
+// CHECK-NEXT:      %[[MUL:.*]] = arith.mulf %[[IN_0]], %[[IN_1]] : f32
+// CHECK-NEXT:      %[[ADD:.*]] = arith.addf %[[OUT]], %[[MUL]] : f32
+// CHECK-NEXT:      linalg.yield %[[ADD]] : f32
+// CHECK-NEXT:    }
+    linalg.grouped_conv_nd {layouts = ["ngcs", "gfcs", "ngfs"]} ins(%arg0, %arg1: memref<64x8x16x10xf32>, memref<8x32x16x3xf32>) outs(%arg2: memref<64x8x32x8xf32>)
+    return
+}
+
+// -----
+
+// CHECK: #[[A_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d5, d3 * 3 + d6 * 2, d4 * 3 + d7 * 2)>
+// CHECK: #[[B_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d1, d2, d5, d6, d7)>
+// CHECK: #[[C_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d2, d3, d4)>
+// CHECK: func @gen_grouped_2D_ngcs_gfcs_ngfs_memref
+func.func @gen_grouped_2D_ngcs_gfcs_ngfs_memref(%arg0: memref<64x2x16x26x26xf32>, %arg1: memref<2x20x16x3x3xf32>, %arg2: memref<64x2x20x8x8xf32>) {
+// CHECK:       linalg.generic
+// CHECK-SAME:    indexing_maps = [#[[A_MAP]], #[[B_MAP]], #[[C_MAP]]]
+// CHECK-SAME:    iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]
+// CHECK-SAME:    ins(%arg0, %arg1 : {{.*}}) outs(%arg2 : {{.*}})
+// CHECK-NEXT:    ^bb0(%[[IN_0:.*]]: f32, %[[IN_1:.*]]: f32, %[[OUT:.*]]: f32):
+// CHECK-NEXT:      %[[MUL:.*]] = arith.mulf %[[IN_0]], %[[IN_1]] : f32
+// CHECK-NEXT:      %[[ADD:.*]] = arith.addf %[[OUT]], %[[MUL]] : f32
+// CHECK-NEXT:      linalg.yield %[[ADD]] : f32
+// CHECK-NEXT:    }
+    linalg.grouped_conv_nd {strides = dense<3> : memref<2xi64>, dilations = dense<2> : memref<2xi64>, layouts = ["ngcs", "gfcs", "ngfs"]} ins(%arg0, %arg1: memref<64x2x16x26x26xf32>, memref<2x20x16x3x3xf32>) outs(%arg2: memref<64x2x20x8x8xf32>)
+    return
+}
+
+// -----
+
+// CHECK: #[[A_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d3 * 3 + d6 * 2, d4 * 3 + d7 * 2, d5)>
+// CHECK: #[[B_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d1, d6, d7, d2, d5)>
+// CHECK: #[[C_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6, d7) -> (d0, d1, d3, d4, d2)>
+// CHECK: func @gen_grouped_2D_ngsc_gsfc_ngsf_memref
+func.func @gen_grouped_2D_ngsc_gsfc_ngsf_memref(%arg0: memref<64x2x26x26x16xf32>, %arg1: memref<2x3x3x20x16xf32>, %arg2: memref<64x2x8x8x20xf32>) {
+// CHECK:       linalg.generic
+// CHECK-SAME:    indexing_maps = [#[[A_MAP]], #[[B_MAP]], #[[C_MAP]]]
+// CHECK-SAME:    iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]
+// CHECK-SAME:    ins(%arg0, %arg1 : {{.*}}) outs(%arg2 : {{.*}})
+// CHECK-NEXT:    ^bb0(%[[IN_0:.*]]: f32, %[[IN_1:.*]]: f32, %[[OUT:.*]]: f32):
+// CHECK-NEXT:      %[[MUL:.*]] = arith.mulf %[[IN_0]], %[[IN_1]] : f32
+// CHECK-NEXT:      %[[ADD:.*]] = arith.addf %[[OUT]], %[[MUL]] : f32
+// CHECK-NEXT:      linalg.yield %[[ADD]] : f32
+// CHECK-NEXT:    }
+    linalg.grouped_conv_nd {strides = dense<3> : memref<2xi64>, dilations = dense<2> : memref<2xi64>, layouts = ["ngsc", "gsfc", "ngsf"]} ins(%arg0, %arg1: memref<64x2x26x26x16xf32>, memref<2x3x3x20x16xf32>) outs(%arg2: memref<64x2x8x8x20xf32>)
+    return
+}
