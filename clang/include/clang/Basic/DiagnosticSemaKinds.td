@@ -14141,6 +14141,11 @@ def note_acc_reduction_combiner_forming
     : Note<"while forming %select{|binary operator '%1'|conditional "
            "operator|final assignment operator}0">;
 
+// Ripple diagnostics.
+def err_ripple_block_shape_argument
+    : Error<"%0 takes a ripple block shape"
+    " (ripple_block_t) as 1st argument (current type is %1)">;
+
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;

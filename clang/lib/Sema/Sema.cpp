@@ -62,6 +62,7 @@
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/SemaRipple.h"
 #include "clang/Sema/SemaSPIRV.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSwift.h"
@@ -300,6 +301,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       OpenMPPtr(std::make_unique<SemaOpenMP>(*this)),
       PPCPtr(std::make_unique<SemaPPC>(*this)),
       PseudoObjectPtr(std::make_unique<SemaPseudoObject>(*this)),
+      RipplePtr(std::make_unique<SemaRipple>(*this)),
       RISCVPtr(std::make_unique<SemaRISCV>(*this)),
       SPIRVPtr(std::make_unique<SemaSPIRV>(*this)),
       SYCLPtr(std::make_unique<SemaSYCL>(*this)),
