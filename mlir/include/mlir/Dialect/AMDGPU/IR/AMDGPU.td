@@ -1301,8 +1301,7 @@ def AMDGPU_MakeDmaDescriptorOp :
     Optional<Index>: $every,
     OptionalAttr<IndexAttr>: $every_const,
     Optional<AnyMemRef>: $atomic_barrier_address,
-    Variadic<Index>: $atomic_barrier_dynamic_indices,
-    OptionalAttr<DenseI64ArrayAttr>: $atomic_barrier_static_indices,
+    Variadic<Index>: $atomic_barrier_indices,
     Optional<Index>: $global_increment,
     Optional<Index>: $lds_increment,
     Optional<Index>: $iteration_count)>,
@@ -1347,8 +1346,7 @@ def AMDGPU_MakeDmaDescriptorOp :
     `globalStride` custom<DynamicIndexList>($global_dynamic_strides, $global_static_strides)
     `sharedSize` custom<DynamicIndexList>($shared_dynamic_sizes, $shared_static_sizes)
     ( `padShared` `(` custom<DynamicIndex>($pad, $pad_const)^ `every` custom<DynamicIndex>($every, $every_const) `)` )?
-    ( `atomicBarrier` `(` $atomic_barrier_address^
-                          custom<DynamicIndexList>($atomic_barrier_dynamic_indices, $atomic_barrier_static_indices)
+    ( `atomicBarrier` `(` $atomic_barrier_address^ `[` $atomic_barrier_indices `]`
                       `:` type($atomic_barrier_address) `)`)?
     ( `iterate` $global_increment^ `,` $lds_increment `,` $iteration_count )?
     attr-dict `:` qualified(type($base)) `->` type(results)

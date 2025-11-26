@@ -742,8 +742,8 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x
         globalStride [1]
         // CHECK-SAME: sharedSize [0]
         sharedSize [0]
-        // CHECK-SAME: atomicBarrier(%[[BARRIER]] [0] : memref<8xi32>)
-        atomicBarrier(%barrier [0] : memref<8xi32>)
+        // CHECK-SAME: atomicBarrier(%[[BARRIER]][%[[IDX]]] : memref<8xi32>)
+        atomicBarrier(%barrier[%idx] : memref<8xi32>)
         : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
