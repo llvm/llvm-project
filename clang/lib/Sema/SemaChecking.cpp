@@ -29,6 +29,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/FormatString.h"
 #include "clang/AST/IgnoreExpr.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/OperationKinds.h"
@@ -45,6 +46,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -4192,6 +4194,7 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   CheckAbsoluteValueFunction(TheCall, FDecl);
   CheckMaxUnsignedZero(TheCall, FDecl);
   CheckInfNaNFunction(TheCall, FDecl);
+  CheckUseOfAtomicThreadFenceWithTSan(TheCall, FDecl);
 
   if (getLangOpts().ObjC)
     ObjC().DiagnoseCStringFormatDirectiveInCFAPI(FDecl, Args, NumArgs);
@@ -9914,6 +9917,65 @@ void Sema::CheckMaxUnsignedZero(const CallExpr *Call,
   Diag(Call->getExprLoc(), diag::note_remove_max_call)
         << FixItHint::CreateRemoval(Call->getCallee()->getSourceRange())
         << FixItHint::CreateRemoval(RemovalRange);
+}
+
+//===--- CHECK: Warn on use of `std::atomic_thread_fence` with TSan. ------===//
+void Sema::CheckUseOfAtomicThreadFenceWithTSan(const CallExpr *Call,
+                                               const FunctionDecl *FDecl) {
+  // Thread sanitizer currently does not support `std::atomic_thread_fence`,
+  // leading to false positives. Example issue:
+  // https://github.com/llvm/llvm-project/issues/52942
+
+  if (!Call || !FDecl)
+    return;
+
+  if (!IsStdFunction(FDecl, "atomic_thread_fence"))
+    return;
+
+  // Check that TSan is enabled in this context
+  const auto EnabledTSanMask =
+      Context.getLangOpts().Sanitize.Mask & (SanitizerKind::Thread);
+  if (!EnabledTSanMask)
+    return;
+
+  // Check that the file isn't in the no-sanitize list
+  const auto &NoSanitizeList = Context.getNoSanitizeList();
+  if (NoSanitizeList.containsLocation(EnabledTSanMask,
+                                      Call->getSourceRange().getBegin()))
+    return;
+
+  std::unique_ptr<MangleContext> MC(Context.createMangleContext());
+
+  // Check that the calling function or lambda:
+  //  - Does not have any attributes preventing TSan checking
+  //  - Is not in the ignore list
+  auto IsNotSanitized = [&](NamedDecl *Decl) {
+    const auto SpecificAttrs = Decl->specific_attrs<NoSanitizeAttr>();
+    const auto IsNoSanitizeThreadAttr = [](NoSanitizeAttr *Attr) {
+      return static_cast<bool>(Attr->getMask() & SanitizerKind::Thread);
+    };
+
+    // Get mangled name for ignorelist lookup
+    std::string MangledName;
+    if (MC->shouldMangleDeclName(Decl)) {
+      llvm::raw_string_ostream S = llvm::raw_string_ostream(MangledName);
+      MC->mangleName(Decl, S);
+    } else {
+      MangledName = Decl->getName();
+    }
+
+    return Decl &&
+           (Decl->hasAttr<DisableSanitizerInstrumentationAttr>() ||
+            std::any_of(SpecificAttrs.begin(), SpecificAttrs.end(),
+                        IsNoSanitizeThreadAttr) ||
+            NoSanitizeList.containsFunction(EnabledTSanMask, MangledName));
+  };
+  if (IsNotSanitized(getCurFunctionOrMethodDecl()))
+    return;
+  if (IsNotSanitized(getCurFunctionDecl(/*AllowLambdas*/ true)))
+    return;
+
+  Diag(Call->getExprLoc(), diag::warn_atomic_thread_fence_with_tsan);
 }
 
 //===--- CHECK: Standard memory functions ---------------------------------===//
