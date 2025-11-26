@@ -24,9 +24,8 @@ program target_update_mapper
   !$omp target enter data map(alloc: t)
 
   ! Test target update to with custom mapper
-  ! CHECK: %[[T_VAR:.*]] = fir.declare %{{.*}} {uniq_name = "_QFtarget_update_mapperEt"} : (!fir.ref<!fir.type<_QFTtyp{a:!fir.box<!fir.heap<!fir.array<?xi32>>>,b:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.type<_QFTtyp{a:!fir.box<!fir.heap<!fir.array<?xi32>>>,b:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
-  ! CHECK: %[[MAP_INFO:.*]] = omp.map.info var_ptr(%[[T_VAR]] : {{.*}}, {{.*}}) map_clauses(to) capture(ByRef) mapper(@_QQFcustom) -> {{.*}}
-  ! CHECK: omp.target_update motion_entries(%[[MAP_INFO]] : {{.*}})
+  ! CHECK: %[[MAP_INFO:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(to) capture(ByRef) mapper(@_QQFcustom) -> {{.*}}
+  ! CHECK: omp.target_update map_entries(%[[MAP_INFO]] : {{.*}})
   t%a = 42
   !$omp target update to(mapper(custom): t)
 
@@ -37,12 +36,12 @@ program target_update_mapper
 
   ! Test target update from with custom mapper
   ! CHECK: %[[MAP_INFO2:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(from) capture(ByRef) mapper(@_QQFcustom) -> {{.*}}
-  ! CHECK: omp.target_update motion_entries(%[[MAP_INFO2]] : {{.*}})
+  ! CHECK: omp.target_update map_entries(%[[MAP_INFO2]] : {{.*}})
   !$omp target update from(mapper(custom): t)
 
   ! Test target update to with default mapper
   ! CHECK: %[[MAP_INFO3:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(to) capture(ByRef) mapper(@_QQFtyp_omp_default_mapper) -> {{.*}}
-  ! CHECK: omp.target_update motion_entries(%[[MAP_INFO3]] : {{.*}})
+  ! CHECK: omp.target_update map_entries(%[[MAP_INFO3]] : {{.*}})
   !$omp target update to(mapper(default): t)
 
   !$omp target exit data map(delete: t)
