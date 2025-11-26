@@ -3566,21 +3566,17 @@ static bool interp__builtin_ia32_multishiftqb(InterpState &S, CodePtr OpPC,
     }
 
     for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+      unsigned Idx = QWordId * NumBytesInQWord + ByteIdx;
       uint64_t Ctrl = 0;
-      INT_TYPE_SWITCH(ElemT, {
-        Ctrl = static_cast<uint64_t>(
-                   APtr.elem<T>(QWordId * NumBytesInQWord + ByteIdx)) &
-               0x3F;
-      });
+      INT_TYPE_SWITCH(
+          ElemT, { Ctrl = static_cast<uint64_t>(APtr.elem<T>(Idx)) & 0x3F; });
 
       APInt Byte(8, 0);
       for (unsigned BitIdx = 0; BitIdx != NumBitsInByte; ++BitIdx) {
         Byte.setBitVal(BitIdx, BQWord[(Ctrl + BitIdx) & 0x3F]);
       }
-      INT_TYPE_SWITCH(ElemT, {
-        Dst.elem<T>(QWordId * NumBytesInQWord + ByteIdx) =
-            T::from(Byte.getZExtValue());
-      });
+      INT_TYPE_SWITCH(ElemT,
+                      { Dst.elem<T>(Idx) = T::from(Byte.getZExtValue()); });
     }
   }
 

@@ -13122,10 +13122,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       }
 
       for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
-        uint64_t Ctrl = A.getVectorElt(QWordId * NumBytesInQWord + ByteIdx)
-                            .getInt()
-                            .getZExtValue() &
-                        0x3F;
+        unsigned Idx = QWordId * NumBytesInQWord + ByteIdx;
+        uint64_t Ctrl = A.getVectorElt(Idx).getInt().getZExtValue() & 0x3F;
 
         APInt Byte(8, 0);
         for (unsigned BitIdx = 0; BitIdx != NumBitsInByte; ++BitIdx) {
