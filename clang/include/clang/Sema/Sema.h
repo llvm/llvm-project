@@ -893,6 +893,7 @@ class Sema final : public SemaBase {
   // 33. Types (SemaType.cpp)
   // 34. FixIt Helpers (SemaFixItUtils.cpp)
   // 35. Function Effects (SemaFunctionEffects.cpp)
+  // 36. C++ Expansion Statements (SemaExpand.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -4097,7 +4098,7 @@ public:
   /// complete.
   void ActOnInitializerError(Decl *Dcl);
 
-  void ActOnCXXForRangeDecl(Decl *D);
+  void ActOnCXXForRangeDecl(Decl *D, bool InExpansionStmt);
   StmtResult ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
                                         IdentifierInfo *Ident,
                                         ParsedAttributes &Attrs);
@@ -15612,6 +15613,36 @@ public:
 
   void performFunctionEffectAnalysis(TranslationUnitDecl *TU);
 
+  ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
+  /// \name Expansion Statements
+  /// Implementations are in SemaExpand.cpp
+  ///@{
+public:
+  CXXExpansionStmtDecl *ActOnCXXExpansionStmtDecl(unsigned TemplateDepth,
+                                                  SourceLocation TemplateKWLoc);
+
+  CXXExpansionStmtDecl *
+  BuildCXXExpansionStmtDecl(DeclContext *Ctx, SourceLocation TemplateKWLoc,
+                            NonTypeTemplateParmDecl *NTTP);
+
+  ExprResult ActOnCXXExpansionInitList(MultiExprArg SubExprs,
+                                       SourceLocation LBraceLoc,
+                                       SourceLocation RBraceLoc);
+
+  StmtResult ActOnCXXExpansionStmtPattern(
+      CXXExpansionStmtDecl *ESD, Stmt *Init, Stmt *ExpansionVarStmt,
+      Expr *ExpansionInitializer, SourceLocation LParenLoc,
+      SourceLocation ColonLoc, SourceLocation RParenLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps);
+
+  StmtResult FinishCXXExpansionStmt(Stmt *Expansion, Stmt *Body);
   ///@}
 };
 

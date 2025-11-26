@@ -2900,10 +2900,10 @@ def note_which_delegates_to : Note<"which delegates to">;
 
 // C++11 range-based for loop
 def err_for_range_decl_must_be_var : Error<
-  "for range declaration must declare a variable">;
+  "%select{for range|expansion statement}0 declaration must declare a variable">;
 def err_for_range_storage_class : Error<
-  "loop variable %0 may not be declared %select{'extern'|'static'|"
-  "'__private_extern__'|'auto'|'register'|'constexpr'|'thread_local'}1">;
+  "%select{loop|expansion}0 variable %1 may not be declared %select{'extern'|'static'|"
+  "'__private_extern__'|'auto'|'register'|'constexpr'|'thread_local'}2">;
 def err_type_defined_in_for_range : Error<
   "types may not be defined in a for range declaration">;
 def err_for_range_deduction_failure : Error<
