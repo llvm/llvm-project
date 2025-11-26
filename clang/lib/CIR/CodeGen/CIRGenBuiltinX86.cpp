@@ -877,9 +877,16 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vp2intersect_d_512:
   case X86::BI__builtin_ia32_vp2intersect_d_256:
   case X86::BI__builtin_ia32_vp2intersect_d_128:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_vpmultishiftqb128:
+    return emitIntrinsicCallOp(*this, expr, "x86_avx512_pmultishift_qb_128", ops[0].getType(), ops);
   case X86::BI__builtin_ia32_vpmultishiftqb256:
+    return emitIntrinsicCallOp(*this, expr, "x86_avx512_pmultishift_qb_256", ops[0].getType(), ops);
   case X86::BI__builtin_ia32_vpmultishiftqb512:
+    return emitIntrinsicCallOp(*this, expr, "x86_avx512_pmultishift_qb_512", ops[0].getType(), ops);
   case X86::BI__builtin_ia32_vpshufbitqmb128_mask:
   case X86::BI__builtin_ia32_vpshufbitqmb256_mask:
   case X86::BI__builtin_ia32_vpshufbitqmb512_mask:
