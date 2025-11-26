@@ -42,6 +42,14 @@ struct BBClusterInfo {
   unsigned PositionInCluster;
 };
 
+// The prefetch symbol is emitted immediately after the call of the given index,
+// in block `BBID` (First call has an index of 1). Zero callsite index means the
+// start of the block.
+struct CallsiteID {
+  UniqueBBID BBID;
+  unsigned CallsiteIndex;
+};
+
 // This represents the raw input profile for one function.
 struct FunctionPathAndClusterInfo {
   // BB Cluster information specified by `UniqueBBID`s.
@@ -50,9 +58,12 @@ struct FunctionPathAndClusterInfo {
   // the edge a -> b (a is not cloned). The index of the path in this vector
   // determines the `UniqueBBID::CloneID` of the cloned blocks in that path.
   SmallVector<SmallVector<unsigned>> ClonePaths;
+  // Code prefetch targets, specified by the callsite ID immediately after
+  // which beginning must be targetted for prefetching.
+  SmallVector<CallsiteID> PrefetchTargets;
   // Node counts for each basic block.
   DenseMap<UniqueBBID, uint64_t> NodeCounts;
-  // Edge counts for each edge, stored as a nested map.
+  // Edge counts for each edge.
   DenseMap<UniqueBBID, DenseMap<UniqueBBID, uint64_t>> EdgeCounts;
   // Hash for each basic block. The Hashes are stored for every original block
   // (not cloned blocks), hence the map key being unsigned instead of
@@ -85,6 +96,11 @@ public:
   // function `FuncName` or zero if it does not exist.
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &SinkBBID) const;
+
+  // Returns the prefetch targets (identified by their containing callsite IDs)
+  // for function `FuncName`.
+  SmallVector<CallsiteID>
+  getPrefetchTargetsForFunction(StringRef FuncName) const;
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
@@ -194,6 +210,9 @@ public:
 
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &DestBBID) const;
+
+  SmallVector<CallsiteID>
+  getPrefetchTargetsForFunction(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.
