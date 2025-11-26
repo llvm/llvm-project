@@ -315,43 +315,53 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
     }
   }
 
+  if (isa<CXXConstructorDecl>(FD)) {
+    Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
+        << SKEPAttr << /*constructor*/ 3;
+    SKEPAttr->setInvalidAttr();
+  }
+  if (isa<CXXDestructorDecl>(FD)) {
+    Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
+        << SKEPAttr << /*destructor*/ 4;
+    SKEPAttr->setInvalidAttr();
+  }
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-    if (!MD->isStatic()) {
+    if (MD->isExplicitObjectMemberFunction()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << SKEPAttr << /*non-static member function*/ 0;
+          << SKEPAttr << /*function with an explicit object parameter*/ 10;
       SKEPAttr->setInvalidAttr();
     }
   }
 
   if (FD->isVariadic()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << SKEPAttr << /*variadic function*/ 1;
+        << SKEPAttr << /*variadic function*/ 0;
     SKEPAttr->setInvalidAttr();
   }
 
   if (FD->isDefaulted()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << SKEPAttr << /*defaulted function*/ 3;
+        << SKEPAttr << /*defaulted function*/ 2;
     SKEPAttr->setInvalidAttr();
   } else if (FD->isDeleted()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << SKEPAttr << /*deleted function*/ 2;
+        << SKEPAttr << /*deleted function*/ 1;
     SKEPAttr->setInvalidAttr();
   }
 
   if (FD->isConsteval()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << SKEPAttr << /*consteval function*/ 5;
+        << SKEPAttr << /*consteval function*/ 7;
     SKEPAttr->setInvalidAttr();
   } else if (FD->isConstexpr()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << SKEPAttr << /*constexpr function*/ 4;
+        << SKEPAttr << /*constexpr function*/ 6;
     SKEPAttr->setInvalidAttr();
   }
 
   if (FD->isNoReturn()) {
     Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-        << SKEPAttr << /*function declared with the 'noreturn' attribute*/ 6;
+        << SKEPAttr << /*function declared with the 'noreturn' attribute*/ 8;
     SKEPAttr->setInvalidAttr();
   }
 
@@ -387,7 +397,161 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
   }
 }
 
+ExprResult SemaSYCL::BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD,
+                                                 QualType KNT) {
+  // The current context must be the function definition context to ensure
+  // that name lookup is performed within the correct scope.
+  assert(SemaRef.CurContext == FD);
+
+  // An appropriate source location is required to emit diagnostics if
+  // lookup fails to produce an overload set. The desired location is the
+  // start of the function body, but that is not yet available since the
+  // body of the function has not yet been set when this function is called.
+  // The general location of the function is used instead.
+  SourceLocation Loc = FD->getLocation();
+
+  ASTContext &Ctx = SemaRef.getASTContext();
+  IdentifierInfo &SYCLKernelLaunchID =
+      Ctx.Idents.get("sycl_kernel_launch", tok::TokenKind::identifier);
+
+  // Establish a code synthesis context for the implicit name lookup of
+  // a template named 'sycl_kernel_launch'. In the event of an error, this
+  // ensures an appropriate diagnostic note is issued to explain why the
+  // lookup was performed.
+  Sema::CodeSynthesisContext CSC;
+  CSC.Kind = Sema::CodeSynthesisContext::SYCLKernelLaunchLookup;
+  CSC.Entity = FD;
+  Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
+
+  // Perform ordinary name lookup for a function or variable template that
+  // accepts a single type template argument.
+  LookupResult Result(SemaRef, &SYCLKernelLaunchID, Loc,
+                      Sema::LookupOrdinaryName);
+  CXXScopeSpec EmptySS;
+  if (SemaRef.LookupTemplateName(Result, SemaRef.getCurScope(), EmptySS,
+                                 /*ObjectType*/ QualType(),
+                                 /*EnteringContext*/ false,
+                                 Sema::TemplateNameIsRequired))
+    return ExprError();
+  if (Result.isAmbiguous())
+    return ExprError();
+
+  TemplateArgumentListInfo TALI{Loc, Loc};
+  TemplateArgument KNTA = TemplateArgument(KNT);
+  TemplateArgumentLoc TAL =
+      SemaRef.getTrivialTemplateArgumentLoc(KNTA, QualType(), Loc);
+  TALI.addArgument(TAL);
+
+  ExprResult IdExpr;
+  if (SemaRef.isPotentialImplicitMemberAccess(EmptySS, Result,
+                                              /*IsAddressOfOperand*/ false))
+    // The lookup result allows for a possible implicit member access that
+    // would require an implicit or explicit 'this' argument.
+    IdExpr = SemaRef.BuildPossibleImplicitMemberExpr(
+        EmptySS, SourceLocation(), Result, &TALI, SemaRef.getCurScope());
+  else
+    IdExpr = SemaRef.BuildTemplateIdExpr(EmptySS, SourceLocation(), Result,
+                                         /*RequiresADL*/ true, &TALI);
+
+  // The resulting expression may be invalid if, for example, 'FD' is a
+  // non-static member function and sycl_kernel_launch lookup selects a
+  // member function (which would require a 'this' argument which is
+  // not available).
+  if (IdExpr.isInvalid())
+    return ExprError();
+
+  return IdExpr;
+}
+
 namespace {
+
+// Constructs the arguments to be passed for the SYCL kernel launch call.
+// The first argument is a string literal that contains the SYCL kernel
+// name. The remaining arguments are the parameters of 'FD' passed as
+// move-elligible xvalues. Returns true on error and false otherwise.
+bool BuildSYCLKernelLaunchCallArgs(Sema &SemaRef, FunctionDecl *FD,
+                                   const SYCLKernelInfo *SKI,
+                                   SmallVectorImpl<Expr *> &Args,
+                                   SourceLocation Loc) {
+  // The current context must be the function definition context to ensure
+  // that parameter references occur within the correct scope.
+  assert(SemaRef.CurContext == FD);
+
+  // Prepare a string literal that contains the kernel name.
+  ASTContext &Ctx = SemaRef.getASTContext();
+  const std::string KernelName = SKI->GetKernelName();
+  QualType KernelNameCharTy = Ctx.CharTy.withConst();
+  llvm::APInt KernelNameSize(Ctx.getTypeSize(Ctx.getSizeType()),
+                             KernelName.size() + 1);
+  QualType KernelNameArrayTy = Ctx.getConstantArrayType(
+      KernelNameCharTy, KernelNameSize, nullptr, ArraySizeModifier::Normal, 0);
+  Expr *KernelNameExpr =
+      StringLiteral::Create(Ctx, KernelName, StringLiteralKind::Ordinary,
+                            /*Pascal*/ false, KernelNameArrayTy, Loc);
+  Args.push_back(KernelNameExpr);
+
+  // Forward all parameters of 'FD' to the SYCL kernel launch function as if
+  // by std::move().
+  for (ParmVarDecl *PVD : FD->parameters()) {
+    QualType ParamType = PVD->getOriginalType().getNonReferenceType();
+    ExprResult E = SemaRef.BuildDeclRefExpr(PVD, ParamType, VK_LValue, Loc);
+    if (E.isInvalid())
+      return true;
+    if (!PVD->getType()->isLValueReferenceType())
+      E = ImplicitCastExpr::Create(SemaRef.Context, E.get()->getType(), CK_NoOp,
+                                   E.get(), nullptr, VK_XValue,
+                                   FPOptionsOverride());
+    if (E.isInvalid())
+      return true;
+    Args.push_back(E.get());
+  }
+
+  return false;
+}
+
+// Constructs the SYCL kernel launch call.
+StmtResult BuildSYCLKernelLaunchCallStmt(Sema &SemaRef, FunctionDecl *FD,
+                                         const SYCLKernelInfo *SKI,
+                                         Expr *IdExpr, SourceLocation Loc) {
+  SmallVector<Stmt *> Stmts;
+  // IdExpr may be null if name lookup failed.
+  if (IdExpr) {
+    llvm::SmallVector<Expr *, 12> Args;
+
+    // Establish a code synthesis context for construction of the arguments
+    // for the implicit call to 'sycl_kernel_launch'.
+    {
+      Sema::CodeSynthesisContext CSC;
+      CSC.Kind = Sema::CodeSynthesisContext::SYCLKernelLaunchLookup;
+      CSC.Entity = FD;
+      Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
+
+      if (BuildSYCLKernelLaunchCallArgs(SemaRef, FD, SKI, Args, Loc))
+        return StmtError();
+    }
+
+    // Establish a code synthesis context for the implicit call to
+    // 'sycl_kernel_launch'.
+    {
+      Sema::CodeSynthesisContext CSC;
+      CSC.Kind = Sema::CodeSynthesisContext::SYCLKernelLaunchOverloadResolution;
+      CSC.Entity = FD;
+      CSC.CallArgs = Args.data();
+      CSC.NumCallArgs = Args.size();
+      Sema::ScopedCodeSynthesisContext ScopedCSC(SemaRef, CSC);
+
+      ExprResult LaunchResult =
+          SemaRef.BuildCallExpr(SemaRef.getCurScope(), IdExpr, Loc, Args, Loc);
+      if (LaunchResult.isInvalid())
+        return StmtError();
+
+      Stmts.push_back(SemaRef.MaybeCreateExprWithCleanups(LaunchResult).get());
+    }
+  }
+
+  return CompoundStmt::Create(SemaRef.getASTContext(), Stmts,
+                              FPOptionsOverride(), Loc, Loc);
+}
 
 // The body of a function declared with the [[sycl_kernel_entry_point]]
 // attribute is cloned and transformed to substitute references to the original
@@ -399,9 +563,10 @@ class OutlinedFunctionDeclBodyInstantiator
 public:
   using ParmDeclMap = llvm::DenseMap<ParmVarDecl *, VarDecl *>;
 
-  OutlinedFunctionDeclBodyInstantiator(Sema &S, ParmDeclMap &M)
+  OutlinedFunctionDeclBodyInstantiator(Sema &S, ParmDeclMap &M,
+                                       FunctionDecl *FD)
       : TreeTransform<OutlinedFunctionDeclBodyInstantiator>(S), SemaRef(S),
-        MapRef(M) {}
+        MapRef(M), FD(FD) {}
 
   // A new set of AST nodes is always required.
   bool AlwaysRebuild() { return true; }
@@ -427,18 +592,61 @@ public:
     return DRE;
   }
 
+  // Diagnose CXXThisExpr in a potentially evaluated expression.
+  ExprResult TransformCXXThisExpr(CXXThisExpr *CTE) {
+    if (SemaRef.currentEvaluationContext().isPotentiallyEvaluated()) {
+      SemaRef.Diag(CTE->getExprLoc(), diag::err_sycl_entry_point_invalid_this)
+          << (CTE->isImplicitCXXThis() ? /* implicit */ 1 : /* empty */ 0)
+          << FD->getAttr<SYCLKernelEntryPointAttr>();
+    }
+    return CTE;
+  }
+
 private:
   Sema &SemaRef;
   ParmDeclMap &MapRef;
+  FunctionDecl *FD;
 };
+
+OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
+                                                       FunctionDecl *FD,
+                                                       CompoundStmt *Body) {
+  using ParmDeclMap = OutlinedFunctionDeclBodyInstantiator::ParmDeclMap;
+  ParmDeclMap ParmMap;
+
+  OutlinedFunctionDecl *OFD = OutlinedFunctionDecl::Create(
+      SemaRef.getASTContext(), FD, FD->getNumParams());
+  unsigned i = 0;
+  for (ParmVarDecl *PVD : FD->parameters()) {
+    ImplicitParamDecl *IPD = ImplicitParamDecl::Create(
+        SemaRef.getASTContext(), OFD, SourceLocation(), PVD->getIdentifier(),
+        PVD->getType(), ImplicitParamKind::Other);
+    OFD->setParam(i, IPD);
+    ParmMap[PVD] = IPD;
+    ++i;
+  }
+
+  OutlinedFunctionDeclBodyInstantiator OFDBodyInstantiator(SemaRef, ParmMap,
+                                                           FD);
+  Stmt *OFDBody = OFDBodyInstantiator.TransformStmt(Body).get();
+  OFD->setBody(OFDBody);
+  OFD->setNothrow();
+
+  return OFD;
+}
 
 } // unnamed namespace
 
 StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
-                                             CompoundStmt *Body) {
+                                             CompoundStmt *Body,
+                                             Expr *LaunchIdExpr) {
   assert(!FD->isInvalidDecl());
   assert(!FD->isTemplated());
   assert(FD->hasPrototype());
+  // The current context must be the function definition context to ensure
+  // that name lookup and parameter and local variable creation are performed
+  // within the correct scope.
+  assert(SemaRef.CurContext == FD);
 
   const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
   assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
@@ -451,29 +659,28 @@ StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
       getASTContext().getSYCLKernelInfo(SKEPAttr->getKernelName());
   assert(declaresSameEntity(SKI.getKernelEntryPointDecl(), FD) &&
          "SYCL kernel name conflict");
-  (void)SKI;
 
-  using ParmDeclMap = OutlinedFunctionDeclBodyInstantiator::ParmDeclMap;
-  ParmDeclMap ParmMap;
-
-  assert(SemaRef.CurContext == FD);
+  // Build the outline of the synthesized device entry point function.
   OutlinedFunctionDecl *OFD =
-      OutlinedFunctionDecl::Create(getASTContext(), FD, FD->getNumParams());
-  unsigned i = 0;
-  for (ParmVarDecl *PVD : FD->parameters()) {
-    ImplicitParamDecl *IPD = ImplicitParamDecl::Create(
-        getASTContext(), OFD, SourceLocation(), PVD->getIdentifier(),
-        PVD->getType(), ImplicitParamKind::Other);
-    OFD->setParam(i, IPD);
-    ParmMap[PVD] = IPD;
-    ++i;
-  }
+      BuildSYCLKernelEntryPointOutline(SemaRef, FD, Body);
+  assert(OFD);
 
-  OutlinedFunctionDeclBodyInstantiator OFDBodyInstantiator(SemaRef, ParmMap);
-  Stmt *OFDBody = OFDBodyInstantiator.TransformStmt(Body).get();
-  OFD->setBody(OFDBody);
-  OFD->setNothrow();
-  Stmt *NewBody = new (getASTContext()) SYCLKernelCallStmt(Body, OFD);
+  // Build the host kernel launch statement. An appropriate source location
+  // is required to emit diagnostics.
+  SourceLocation Loc = Body->getLBracLoc();
+  StmtResult LaunchResult =
+      BuildSYCLKernelLaunchCallStmt(SemaRef, FD, &SKI, LaunchIdExpr, Loc);
+  if (LaunchResult.isInvalid())
+    return StmtError();
+
+  Stmt *NewBody =
+      new (getASTContext()) SYCLKernelCallStmt(Body, LaunchResult.get(), OFD);
 
   return NewBody;
+}
+
+StmtResult SemaSYCL::BuildUnresolvedSYCLKernelCallStmt(CompoundStmt *Body,
+                                                       Expr *LaunchIdExpr) {
+  return UnresolvedSYCLKernelCallStmt::Create(SemaRef.getASTContext(), Body,
+                                              LaunchIdExpr);
 }
