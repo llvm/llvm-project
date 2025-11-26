@@ -286,9 +286,8 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
   return false;
 }
 
-static constexpr const char *UndefLocation = "undef";
-static const std::string UndefLocationFormatted =
-    llvm::formatv("<{0}>", UndefLocation).str();
+static constexpr const llvm::StringLiteral kUndefLocation = "undef";
+static contexpr const llvm::StringLiteral kUndefLocationFormatted = "<undef>";
 
 // For each instruction, this block attempts to resolve in-scope variables
 // and determine if the current PC falls within their
