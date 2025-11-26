@@ -33,7 +33,7 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
 CIRGenFunction::~CIRGenFunction() {}
 
 mlir::Type CIRGenFunction::convertTypeForLoadStore(QualType astType,
-                                                     mlir::Type mlirType) {
+                                                   mlir::Type mlirType) {
   return cgm.getTypes().convertTypeForLoadStore(astType, mlirType);
 }
 

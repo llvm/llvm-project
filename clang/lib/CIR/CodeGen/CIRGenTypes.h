@@ -118,8 +118,7 @@ public:
   std::string getRecordTypeName(const clang::RecordDecl *,
                                 llvm::StringRef suffix);
 
-  mlir::Type convertTypeForLoadStore(QualType qualType,
-                                                 mlir::Type mlirType);
+  mlir::Type convertTypeForLoadStore(QualType qualType, mlir::Type mlirType);
   const CIRGenRecordLayout &getCIRGenRecordLayout(const clang::RecordDecl *rd);
 
   /// Convert type T into an mlir::Type. This differs from convertType in that

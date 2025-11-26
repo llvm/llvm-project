@@ -202,8 +202,7 @@ public:
     return convertType(getContext().getTypeDeclType(t));
   }
 
-  mlir::Type convertTypeForLoadStore(QualType astType,
-                                                     mlir::Type mlirType);
+  mlir::Type convertTypeForLoadStore(QualType astType, mlir::Type mlirType);
 
   ///  Return the cir::TypeEvaluationKind of QualType \c type.
   static cir::TypeEvaluationKind getEvaluationKind(clang::QualType type);

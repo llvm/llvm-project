@@ -90,7 +90,7 @@ static Address checkAtomicAlignment(CIRGenFunction &cgf, const CallExpr *e) {
       mlir::isa<cir::PointerType>(ptr.getElementType())
           ? astContext.getTypeSizeInChars(astContext.VoidPtrTy).getQuantity()
           : cgf.cgm.getDataLayout().getTypeSizeInBits(ptr.getElementType()) /
-                                 cgf.cgm.getASTContext().getCharWidth();
+                cgf.cgm.getASTContext().getCharWidth();
 
   unsigned align = ptr.getAlignment().getQuantity();
   if (align % bytes != 0) {
@@ -673,8 +673,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_fetch_and_max:
   case Builtin::BI__sync_fetch_and_umin:
   case Builtin::BI__sync_fetch_and_umax:
-    cgm.errorNYI(e->getSourceRange(),
-                           "__sync_fetch_and_* builtins NYI");
+    cgm.errorNYI(e->getSourceRange(), "__sync_fetch_and_* builtins NYI");
     return getUndefRValue(e->getType());
   case Builtin::BI__sync_add_and_fetch_1:
   case Builtin::BI__sync_add_and_fetch_2:

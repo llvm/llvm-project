@@ -570,7 +570,8 @@ mlir::Value CIRGenFunction::emitFromMemory(mlir::Value value, QualType ty) {
     cgm.errorNYI("emitFromMemory: PackedVectorBoolType");
   }
 
-  if (ty->hasBooleanRepresentation() || ty->isBitIntType() || ty->isExtVectorBoolType()) {
+  if (ty->hasBooleanRepresentation() || ty->isBitIntType() ||
+      ty->isExtVectorBoolType()) {
     mlir::Type resTy = convertType(ty);
     return builder.createIntCast(value, resTy);
   }
