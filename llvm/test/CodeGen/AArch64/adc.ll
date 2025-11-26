@@ -71,9 +71,8 @@ define i128 @test_shifted(i128 %a, i128 %b) {
 ;
 ; CHECK-GI-LABEL: test_shifted:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    lsr x8, x2, #19
+; CHECK-GI-NEXT:    extr x8, x3, x2, #19
 ; CHECK-GI-NEXT:    adds x0, x0, x2, lsl #45
-; CHECK-GI-NEXT:    orr x8, x8, x3, lsl #45
 ; CHECK-GI-NEXT:    adc x1, x1, x8
 ; CHECK-GI-NEXT:    ret
   %rhs = shl i128 %b, 45
@@ -108,8 +107,7 @@ define i128 @test_extended(i128 %a, i16 %b) {
 ; CHECK-GI-NEXT:    sxth x8, w2
 ; CHECK-GI-NEXT:    adds x0, x0, w2, sxth #3
 ; CHECK-GI-NEXT:    asr x9, x8, #63
-; CHECK-GI-NEXT:    lsr x8, x8, #61
-; CHECK-GI-NEXT:    orr x8, x8, x9, lsl #3
+; CHECK-GI-NEXT:    extr x8, x9, x8, #61
 ; CHECK-GI-NEXT:    adc x1, x1, x8
 ; CHECK-GI-NEXT:    ret
   %ext = sext i16 %b to i128

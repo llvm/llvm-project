@@ -104,7 +104,7 @@ static Value getTargetMemref(Operation *op) {
                      vector::MaskedStoreOp, vector::TransferReadOp,
                      vector::TransferWriteOp>(
           [](auto op) { return op.getBase(); })
-      .Default([](auto) { return Value{}; });
+      .Default(nullptr);
 }
 
 template <typename T>

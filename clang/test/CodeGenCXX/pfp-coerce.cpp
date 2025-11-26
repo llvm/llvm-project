@@ -150,6 +150,29 @@ void returned_pointer(Pointer *pp) {
   *pp = returned_pointer_callee();
 }
 
+union PointerUnion {
+  Pointer ptr;
+};
+
+void pass_pointer_union_callee(PointerUnion pu);
+
+// CHECK: define dso_local void @_Z18pass_pointer_unionP12PointerUnion(
+void pass_pointer_union(PointerUnion *pup) {
+  // CHECK: %0 = load ptr, ptr %pup.addr, align 8
+  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %agg.tmp, ptr align 8 %0, i64 16, i1 false)
+
+  // AARCH64: %coerce.dive = getelementptr inbounds nuw %union.PointerUnion, ptr %agg.tmp, i32 0, i32 0
+  // AARCH64: %1 = load [2 x i64], ptr %coerce.dive, align 8
+  // AARCH64: call void @_Z25pass_pointer_union_callee12PointerUnion([2 x i64] %1)
+
+  // X86_64: %1 = getelementptr inbounds nuw { ptr, i32 }, ptr %agg.tmp, i32 0, i32 0
+  // X86_64: %2 = load ptr, ptr %1, align 8
+  // X86_64: %3 = getelementptr inbounds nuw { ptr, i32 }, ptr %agg.tmp, i32 0, i32 1
+  // X86_64: %4 = load i32, ptr %3, align 8
+  // X86_64: call void @_Z25pass_pointer_union_callee12PointerUnion(ptr %2, i32 %4)
+  pass_pointer_union_callee(*pup);
+}
+
 // Manual opt into PFP, non-trivially destructible.
 // Pointer fields are signed and discriminated by address.
 // Trivial ABI: passed and returned by value despite being non-trivial.

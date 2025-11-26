@@ -216,9 +216,9 @@ SimpleRemoteEPC::createDefaultMemoryManager(SimpleRemoteEPC &SREPC) {
   if (auto Err = SREPC.getBootstrapSymbols(
           {{SAs.Allocator, rt::SimpleExecutorMemoryManagerInstanceName},
            {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
-           {SAs.Finalize, rt::SimpleExecutorMemoryManagerFinalizeWrapperName},
-           {SAs.Deallocate,
-            rt::SimpleExecutorMemoryManagerDeallocateWrapperName}}))
+           {SAs.Initialize,
+            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
+           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName}}))
     return std::move(Err);
 
   return std::make_unique<EPCGenericJITLinkMemoryManager>(SREPC, SAs);
@@ -448,7 +448,7 @@ Error SimpleRemoteEPC::handleHangup(SimpleRemoteEPCArgBytesVector ArgBytes) {
   if (const char *ErrMsg = WFR.getOutOfBandError())
     return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
 
-  detail::SPSSerializableError Info;
+  orc::shared::detail::SPSSerializableError Info;
   SPSInputBuffer IB(WFR.data(), WFR.size());
   if (!SPSArgList<SPSError>::deserialize(IB, Info))
     return make_error<StringError>("Could not deserialize hangup info",

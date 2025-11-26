@@ -18,7 +18,7 @@ target triple = "bpf"
 %union.__t = type { i32 }
 
 ; Function Attrs: nounwind readonly
-define dso_local i32 @test(ptr readonly %arg) local_unnamed_addr #0 !dbg !13 {
+define dso_local i32 @test(ptr readonly %arg) local_unnamed_addr !dbg !13 {
 entry:
   call void @llvm.dbg.value(metadata ptr %arg, metadata !18, metadata !DIExpression()), !dbg !19
   %0 = tail call ptr @llvm.preserve.union.access.index.p0.__ts.p0.__ts(ptr %arg, i32 0), !dbg !20, !llvm.preserve.access.index !4
@@ -50,14 +50,10 @@ entry:
 ; CHECK-NEXT:        .long   0
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.union.access.index.p0.__ts.p0.__ts(ptr, i32) #1
+declare ptr @llvm.preserve.union.access.index.p0.__ts.p0.__ts(ptr, i32)
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #2
-
-attributes #0 = { nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind readnone speculatable}
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10, !11}

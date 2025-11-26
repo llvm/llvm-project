@@ -390,7 +390,7 @@ toDW_LNAME(SourceLanguage language) {
   case DW_LANG_C11:
     return {{DW_LNAME_C, 201112}};
   case DW_LANG_C17:
-    return {{DW_LNAME_C, 201712}};
+    return {{DW_LNAME_C, 201710}};
   case DW_LANG_C_plus_plus:
     return {{DW_LNAME_C_plus_plus, 0}};
   case DW_LANG_C_plus_plus_03:
@@ -1127,6 +1127,9 @@ struct FormParams {
   /// The size of a reference is determined by the DWARF 32/64-bit format.
   uint8_t getDwarfOffsetByteSize() const {
     return dwarf::getDwarfOffsetByteSize(Format);
+  }
+  inline uint64_t getDwarfMaxOffset() const {
+    return (getDwarfOffsetByteSize() == 4) ? UINT32_MAX : UINT64_MAX;
   }
 
   explicit operator bool() const { return Version && AddrSize; }
