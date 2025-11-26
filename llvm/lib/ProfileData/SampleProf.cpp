@@ -23,6 +23,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cstdint>
 #include <string>
 #include <system_error>
 
@@ -400,8 +401,8 @@ LLVM_DUMP_METHOD void FunctionSamples::dump() const { print(dbgs(), 0); }
 std::error_code ProfileSymbolList::read(const uint8_t *Data,
                                         uint64_t ListSize) {
   // Scan forward to see how many elements we expect.
-  uint64_t ExpectedCount = std::count(Data, Data + ListSize, 0);
-  reserve(ExpectedCount);
+  reserve(std::min<uint64_t>(ProfileSymbolListCutOff,
+                             std::count(Data, Data + ListSize, 0)));
 
   const char *ListStart = reinterpret_cast<const char *>(Data);
   uint64_t Size = 0;
