@@ -9,6 +9,7 @@
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/windows/windows.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Errno.h"
 #include <cassert>
@@ -29,16 +30,11 @@
 
 using namespace lldb_private;
 
-// PseudoTerminal constructor
 PseudoTerminal::PseudoTerminal() = default;
 
-// Destructor
-//
-// The destructor will close the primary and secondary file descriptors if they
-// are valid and ownership has not been released using the
-// ReleasePrimaryFileDescriptor() or the ReleaseSaveFileDescriptor() member
-// functions.
-PseudoTerminal::~PseudoTerminal() {
+PseudoTerminal::~PseudoTerminal() { Close(); }
+
+void PseudoTerminal::Close() {
   ClosePrimaryFileDescriptor();
   CloseSecondaryFileDescriptor();
 }

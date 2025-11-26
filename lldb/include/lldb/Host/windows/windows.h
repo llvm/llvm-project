@@ -9,9 +9,9 @@
 #ifndef LLDB_lldb_windows_h_
 #define LLDB_lldb_windows_h_
 
-#define NTDDI_VERSION NTDDI_VISTA
+#define NTDDI_VERSION NTDDI_WIN10_RS5
 #undef _WIN32_WINNT // undef a previous definition to avoid warning
-#define _WIN32_WINNT _WIN32_WINNT_VISTA
+#define _WIN32_WINNT _WIN32_WINNT_WIN10
 #define WIN32_LEAN_AND_MEAN
 #define NOGDI
 #undef NOMINMAX // undef a previous definition to avoid warning

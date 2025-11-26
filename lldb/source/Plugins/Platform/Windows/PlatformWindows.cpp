@@ -496,6 +496,7 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
   // plugin, and PlatformWindows::DebugProcess is just a pass-through to get to
   // the process plugin.
 
+  Log *log = GetLog(LLDBLog::Platform);
   if (IsRemote()) {
     if (m_remote_platform_sp)
       return m_remote_platform_sp->DebugProcess(launch_info, debugger, target,
@@ -519,8 +520,14 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
 
   // We need to launch and attach to the process.
   launch_info.GetFlags().Set(eLaunchFlagDebug);
-  if (process_sp)
-    error = process_sp->Launch(launch_info);
+  if (!process_sp)
+    return process_sp;
+  error = process_sp->Launch(launch_info);
+  if (error.Success())
+    process_sp->SetPseudoTerminalHandle(launch_info.GetPTYSP());
+  else
+    LLDB_LOGF(log, "Platform::%s LaunchProcess() failed: %s", __FUNCTION__,
+              error.AsCString());
 
   return process_sp;
 }
