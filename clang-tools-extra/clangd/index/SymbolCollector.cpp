@@ -671,26 +671,6 @@ bool SymbolCollector::handleDeclOccurrence(
   // occurrence inside the base-specifier.
   processRelations(*ND, ID, Relations);
 
-  if (auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D)) {
-    if (auto *FT = FD->getDescribedFunctionTemplate();
-        FT && isLikelyForwardingFunction(FT)) {
-      ForwardingToConstructorVisitor Visitor{};
-      for (auto *Specialized : FT->specializations()) {
-        Visitor.TraverseStmt(Specialized->getBody());
-      }
-      auto FileLoc = SM.getFileLoc(Loc);
-      auto FID = SM.getFileID(FileLoc);
-      if (Opts.RefsInHeaders || FID == SM.getMainFileID()) {
-        for (auto *Constructor : Visitor.Constructors) {
-          addRef(getSymbolIDCached(Constructor),
-                 SymbolRef{FileLoc, FID, Roles, index::getSymbolInfo(ND).Kind,
-                           getRefContainer(ASTNode.Parent, Opts),
-                           isSpelled(FileLoc, *ND)});
-        }
-      }
-    }
-  }
-
   bool CollectRef = static_cast<bool>(Opts.RefFilter & toRefKind(Roles));
   // Unlike other fields, e.g. Symbols (which use spelling locations), we use
   // file locations for references (as it aligns the behavior of clangd's
@@ -706,6 +686,27 @@ bool SymbolCollector::handleDeclOccurrence(
       addRef(ID, SymbolRef{FileLoc, FID, Roles, index::getSymbolInfo(ND).Kind,
                            getRefContainer(ASTNode.Parent, Opts),
                            isSpelled(FileLoc, *ND)});
+      // Also collect indirect constructor calls like `make_unique`
+      if (auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D)) {
+        if (auto *FT = FD->getDescribedFunctionTemplate();
+            FT && isLikelyForwardingFunction(FT)) {
+          ForwardingToConstructorVisitor Visitor{};
+          for (auto *Specialized : FT->specializations()) {
+            Visitor.TraverseStmt(Specialized->getBody());
+          }
+          auto FileLoc = SM.getFileLoc(Loc);
+          auto FID = SM.getFileID(FileLoc);
+          if (Opts.RefsInHeaders || FID == SM.getMainFileID()) {
+            for (auto *Constructor : Visitor.Constructors) {
+              addRef(getSymbolIDCached(Constructor),
+                     SymbolRef{FileLoc, FID, Roles,
+                               index::getSymbolInfo(ND).Kind,
+                               getRefContainer(ASTNode.Parent, Opts),
+                               isSpelled(FileLoc, *ND)});
+            }
+          }
+        }
+      }
     }
   }
   // Don't continue indexing if this is a mere reference.
