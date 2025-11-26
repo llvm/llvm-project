@@ -184,7 +184,16 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   }
 
   case Intrinsic::arm_neon_vtbl1:
-    return ARMCommon::simplifyNeonTbl1(II, IC);
+  case Intrinsic::arm_neon_vtbl2:
+  case Intrinsic::arm_neon_vtbl3:
+  case Intrinsic::arm_neon_vtbl4:
+    return ARMCommon::simplifyNeonTbl(II, IC, /*IsExtension=*/false);
+
+  case Intrinsic::arm_neon_vtbx1:
+  case Intrinsic::arm_neon_vtbx2:
+  case Intrinsic::arm_neon_vtbx3:
+  case Intrinsic::arm_neon_vtbx4:
+    return ARMCommon::simplifyNeonTbl(II, IC, /*IsExtension=*/true);
 
   case Intrinsic::arm_neon_vmulls:
   case Intrinsic::arm_neon_vmullu: {

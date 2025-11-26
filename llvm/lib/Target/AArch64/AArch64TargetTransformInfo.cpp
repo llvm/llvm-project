@@ -2858,7 +2858,15 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_neon_fminnm:
     return instCombineMaxMinNM(IC, II);
   case Intrinsic::aarch64_neon_tbl1:
-    return ARMCommon::simplifyNeonTbl1(II, IC);
+  case Intrinsic::aarch64_neon_tbl2:
+  case Intrinsic::aarch64_neon_tbl3:
+  case Intrinsic::aarch64_neon_tbl4:
+    return ARMCommon::simplifyNeonTbl(II, IC, /*IsExtension=*/false);
+  case Intrinsic::aarch64_neon_tbx1:
+  case Intrinsic::aarch64_neon_tbx2:
+  case Intrinsic::aarch64_neon_tbx3:
+  case Intrinsic::aarch64_neon_tbx4:
+    return ARMCommon::simplifyNeonTbl(II, IC, /*IsExtension=*/true);
   case Intrinsic::aarch64_neon_smull:
   case Intrinsic::aarch64_neon_umull: {
     bool IsSigned = IID == Intrinsic::aarch64_neon_smull;
