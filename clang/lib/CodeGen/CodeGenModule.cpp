@@ -4707,7 +4707,8 @@ void CodeGenModule::emitMultiVersionFunctions() {
     emitMultiVersionFunctions();
 }
 
-llvm::GlobalValue *CodeGenModule::getPFPDeactivationSymbol(const FieldDecl *FD) {
+llvm::GlobalValue *
+CodeGenModule::getPFPDeactivationSymbol(const FieldDecl *FD) {
   std::string DSName = "__pfp_ds_" + getPFPFieldName(FD);
   llvm::GlobalValue *DS = TheModule.getNamedValue(DSName);
   if (!DS) {
