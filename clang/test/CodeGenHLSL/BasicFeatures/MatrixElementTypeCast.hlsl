@@ -168,14 +168,14 @@ struct Derived : BFields {
 // CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[GEP1]], align 8
 // CHECK-NEXT:    [[CONV:%.*]] = fptosi double [[TMP1]] to i32
 // CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[CONV]], i64 0
+// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP2]], align 4
+// CHECK-NEXT:    [[CONV4:%.*]] = fptosi float [[TMP3]] to i32
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[CONV4]], i64 1
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i24, ptr [[E]], align 1
 // CHECK-NEXT:    [[BF_SHL:%.*]] = shl i24 [[BF_LOAD]], 9
 // CHECK-NEXT:    [[BF_ASHR:%.*]] = ashr i24 [[BF_SHL]], 9
 // CHECK-NEXT:    [[BF_CAST:%.*]] = sext i24 [[BF_ASHR]] to i32
-// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[BF_CAST]], i64 1
-// CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP2]], align 4
-// CHECK-NEXT:    [[CONV4:%.*]] = fptosi float [[TMP4]] to i32
-// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[CONV4]], i64 2
+// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[BF_CAST]], i64 2
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[GEP3]], align 4
 // CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP6]], i64 3
 // CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[A]], align 4
@@ -186,14 +186,14 @@ void call4(Derived D) {
 }
 
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z5call5Dv4_f(
-// CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[M:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-NEXT:    [[M2:%.*]] = alloca [4 x float], align 4
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x float>, align 16
+// CHECK-NEXT:    [[M:%.*]] = alloca [4 x float], align 4
 // CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca <4 x float>, align 16
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <4 x float>, align 4
-// CHECK-NEXT:    store <4 x float> [[M]], ptr [[M_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[M_ADDR]], align 16
+// CHECK-NEXT:    store <4 x float> [[V]], ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[V_ADDR]], align 16
 // CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[HLSL_EWCAST_SRC]], align 16
 // CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr inbounds <4 x float>, ptr [[HLSL_EWCAST_SRC]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[FLATCAST_TMP]], align 4
@@ -201,16 +201,16 @@ void call4(Derived D) {
 // CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP1]], float [[VECEXT]], i64 0
 // CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 16
-// CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x float> [[TMP4]], i32 1
+// CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x float> [[TMP4]], i32 2
 // CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP3]], float [[VECEXT1]], i64 1
 // CHECK-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 16
-// CHECK-NEXT:    [[VECEXT2:%.*]] = extractelement <4 x float> [[TMP6]], i32 2
+// CHECK-NEXT:    [[VECEXT2:%.*]] = extractelement <4 x float> [[TMP6]], i32 1
 // CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP5]], float [[VECEXT2]], i64 2
 // CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[VECTOR_GEP]], align 16
 // CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x float> [[TMP8]], i32 3
 // CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP7]], float [[VECEXT3]], i64 3
-// CHECK-NEXT:    store <4 x float> [[TMP9]], ptr [[M2]], align 4
-// CHECK-NEXT:    [[TMP10:%.*]] = load <4 x float>, ptr [[M2]], align 4
+// CHECK-NEXT:    store <4 x float> [[TMP9]], ptr [[M]], align 4
+// CHECK-NEXT:    [[TMP10:%.*]] = load <4 x float>, ptr [[M]], align 4
 // CHECK-NEXT:    ret <4 x float> [[TMP10]]
 //
 float2x2 call5(float4 v) {
