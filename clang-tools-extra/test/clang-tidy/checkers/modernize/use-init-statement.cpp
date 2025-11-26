@@ -24,12 +24,12 @@ void good() {
 void good_already_has_init_stmt() {
     int i1 = 0;
     if (int i=0; i1 == 0) {
-// FIXME: should be changed to 'if (int i1=0,i=0; i1 == 0) {'
+// FIXME: convert to bad case - should be changed to 'if (int i1=0,i=0; i1 == 0) {'
         do_some(i);
     }
     int i2 = 0;
     switch (int i=0; i2) {
-// FIXME: should be changed to 'switch (int i2=0,i=0; i2) {'
+// FIXME: convert to bad case - should be changed to 'switch (int i2=0,i=0; i2) {'
         case 0:
             do_some(i);
             break;
@@ -54,8 +54,24 @@ void good_unused_in_condition() {
         }
     }
 }
+
+void good_multiple() {
+    int i1=0, k1=0, j1=0;
+    if (i1 == 0 && k1 == 0 && j1 == 0) {
+        do_some();
+    }
+    ++k1;
+    int i2=0, k2=0, j2=0;
+    switch (i2+k2+j2) {
+        case 0:
+            do_some();
+            break;
+    }
+    ++j2;
+}
+
 // TODO: implement structured binding case
-// TODO: implement case for multiple variables in one line
+
 void bad1() {
     int i1 = 0; DUMMY_TOKEN
     if (i1 == 0) {
@@ -168,3 +184,23 @@ void bad_unitialized() {
             break;
     }
 }
+
+void bad_multiple() {
+    int i1=0, k1=0, j1=0; DUMMY_TOKEN
+    if (i1 == 0 && k1 == 0 && j1 == 0) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: multiple variable declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (int i1=0, k1=0, j1=0; i1 == 0 && k1 == 0 && j1 == 0) {
+        do_some();
+    }
+    int i2=0, k2=0, j2=0; DUMMY_TOKEN
+    switch (i2+k2+j2) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: multiple variable declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (int i2=0, k2=0, j2=0; i2+k2+j2) {
+        case 0:
+            do_some();
+            break;
+    }
+}
+

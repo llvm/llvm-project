@@ -11,6 +11,10 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include "../utils/LexerUtils.h"
+#include <algorithm>
+#include <cctype>
+#include <map>
 
 using namespace clang;
 using namespace ast_matchers;
@@ -148,10 +152,6 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Condition) return;
   
   // Find all variable references in the condition
-  VariableUsageVisitor CondVisitor(nullptr);
-  std::vector<const VarDecl*> VarsInCondition;
-  
-  // We need to manually traverse to collect variables
   class VarCollector : public RecursiveASTVisitor<VarCollector> {
   public:
     std::vector<const VarDecl*> Vars;
@@ -167,36 +167,96 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   VarCollector Collector;
   Collector.TraverseStmt(const_cast<Expr*>(Condition));
   
+  const Stmt *Statement = If ? static_cast<const Stmt*>(If) : Switch;
+  if (!Statement) return;
+  
+  // Group variables by their DeclStmt
+  std::map<const DeclStmt*, std::vector<const VarDecl*>> DeclStmtToVars;
+  
   for (const VarDecl *VD : Collector.Vars) {
-    // For each variable used in condition, check if it's declared right before
-    const Stmt *Statement = If ? static_cast<const Stmt*>(If) : Switch;
-    if (!Statement) continue;
-    
     const DeclStmt *PrevDecl = findPreviousDeclStmt(Statement, VD, Result.Context);
-    if (!PrevDecl) continue;
+    if (PrevDecl) {
+      DeclStmtToVars[PrevDecl].push_back(VD);
+    }
+  }
+  
+  // Process each DeclStmt
+  for (const auto &Pair : DeclStmtToVars) {
+    const DeclStmt *PrevDecl = Pair.first;
+    const std::vector<const VarDecl*> &VarsInDecl = Pair.second;
     
-    // Check that variable is NOT used after the statement
-    bool usedAfter = isVariableUsedAfterStmt(VD, Statement, Result.Context);
-    if (!usedAfter) {
-      // Perfect candidate - variable used only in condition
-      std::string Var = Lexer::getSourceText(
-          CharSourceRange::getTokenRange(VD->getSourceRange()),
-          *Result.SourceManager, getLangOpts()).str();
-      const std::string NewInitStmt = std::move(Var) + "; ";
-
-      if (If) {
-        auto Diag = diag(PrevDecl->getBeginLoc(), 
-                        "variable %0 declaration before if statement could be moved into if init statement")
-                    << VD
-                    << FixItHint::CreateRemoval(PrevDecl->getSourceRange())
-                    << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);
-      } else if (Switch) {
-        auto Diag = diag(PrevDecl->getBeginLoc(),
-                        "variable %0 declaration before switch statement could be moved into switch init statement")  
-                    << VD
-                    << FixItHint::CreateRemoval(PrevDecl->getSourceRange())
-                    << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);
+    // Get all variables declared in this DeclStmt
+    std::vector<const VarDecl*> AllVarsInDecl;
+    for (const auto *D : PrevDecl->decls()) {
+      if (const auto *VD = dyn_cast<VarDecl>(D)) {
+        AllVarsInDecl.push_back(VD);
       }
+    }
+    
+    // Check if all variables in DeclStmt are used in condition
+    bool allVarsUsedInCondition = true;
+    for (const VarDecl *VD : AllVarsInDecl) {
+      if (std::find(VarsInDecl.begin(), VarsInDecl.end(), VD) == VarsInDecl.end()) {
+        allVarsUsedInCondition = false;
+        break;
+      }
+    }
+    
+    if (!allVarsUsedInCondition) continue;
+    
+    // Check that none of the variables are used after the statement
+    bool anyUsedAfter = false;
+    for (const VarDecl *VD : AllVarsInDecl) {
+      if (isVariableUsedAfterStmt(VD, Statement, Result.Context)) {
+        anyUsedAfter = true;
+        break;
+      }
+    }
+    
+    if (anyUsedAfter) continue;
+    
+    // All conditions met - suggest moving the entire DeclStmt
+    // Get the source range including the semicolon
+    SourceRange RemovalRange = PrevDecl->getSourceRange();
+    std::optional<Token> Semicolon = utils::lexer::findNextTokenSkippingComments(
+        PrevDecl->getEndLoc(), *Result.SourceManager, getLangOpts());
+    if (Semicolon && Semicolon->is(tok::semi)) {
+      RemovalRange.setEnd(Semicolon->getEndLoc());
+    }
+    
+    // Get the text of the declaration (without semicolon)
+    std::string DeclStmtText = Lexer::getSourceText(
+        CharSourceRange::getTokenRange(PrevDecl->getSourceRange()),
+        *Result.SourceManager, getLangOpts()).str();
+    
+    // Remove trailing semicolon and whitespace if present
+    while (!DeclStmtText.empty() && 
+           (DeclStmtText.back() == ';' || std::isspace(DeclStmtText.back()))) {
+      DeclStmtText.pop_back();
+    }
+    
+    const std::string NewInitStmt = DeclStmtText + "; ";
+
+    if (If) {
+      std::string Message = AllVarsInDecl.size() > 1 
+          ? "multiple variable declaration before if statement could be moved into if init statement"
+          : "variable %0 declaration before if statement could be moved into if init statement";
+      auto Diag = diag(PrevDecl->getBeginLoc(), Message);
+      if (AllVarsInDecl.size() == 1) {
+        Diag << AllVarsInDecl[0];
+      }
+      Diag << FixItHint::CreateRemoval(RemovalRange)
+           << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);
+    } else if (Switch) {
+      std::string Message = AllVarsInDecl.size() > 1
+          ? "multiple variable declaration before switch statement could be moved into switch init statement"
+          : "variable %0 declaration before switch statement could be moved into switch init statement";
+      auto Diag = diag(PrevDecl->getBeginLoc(), Message);
+      if (AllVarsInDecl.size() == 1) {
+        Diag << AllVarsInDecl[0];
+      }
+      Diag << FixItHint::CreateRemoval(RemovalRange)
+           << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);
     }
   }
 }
