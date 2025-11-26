@@ -33,6 +33,7 @@ def AMDGPU_Dialect : Dialect {
     "gpu::GPUDialect"
   ];
   let useDefaultAttributePrinterParser = 1;
+  let useDefaultTypePrinterParser = 1;
 }
 
 def AnyIntegerOrFloat : AnyTypeOf<[AnySignlessInteger, AnyFloat], "Integer or Float">;
@@ -77,6 +78,30 @@ def AMDGPU_AddressSpaceAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_AddressSpace,
     is also incompatible with the simple indexing model supported by memref.
   }];
   let assemblyFormat = "`<` $value `>`";
+}
+
+class AMDGPU_Type<string name, string typeMnemonic, list<Trait> traits = []>
+    : TypeDef<AMDGPU_Dialect, name, traits> {
+  let mnemonic = typeMnemonic;
+}
+
+//===----------------------------------------------------------------------===//
+// AMDGPU Type definitions
+//===----------------------------------------------------------------------===//
+
+def AMDGPU_TDMBaseType : AMDGPU_Type<"TDMBase", "tdm_base"> {
+  let summary = "Pair of base addresses that move data between LDS and global storage.";
+  let description = [{
+    This type is opaque and it is used to represent a struct of two addresses.
+    One address is in LDS while the other is in global memory.
+  }];
+  let parameters = (ins "Type":$elementType);
+  let builders = [
+    TypeBuilderWithInferredContext<(ins "Type":$elementType), [{
+      return $_get(elementType.getContext(), elementType);
+    }]>
+  ];
+  let assemblyFormat = "`<` $elementType `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1192,4 +1217,35 @@ def AMDGPU_ScaledMFMAOp :
   }];
   let hasCanonicalizer = 1;
 }
+
+def AMDGPU_MakeDmaBaseOp :
+    AMDGPU_Op<"make_dma_base", [Pure, AttrSizedOperandSegments]>,
+    Arguments<(ins
+                   Arg<AnyMemRef, "buffer to read from">:$src,
+                   Variadic<Index>:$srcIndices,
+                   Arg<AnyMemRef, "buffer to write to">:$dst,
+                   Variadic<Index>:$dstIndices)>,
+    Results<(outs AMDGPU_TDMBaseType: $base)> {
+
+  // TODO:
+  // * Add verifiers such that one of the memrefs is from LDS and the other global.
+  // * Add verifiers to make sure that the type is in the correct direction.
+  // * Add verifiers to make sure that the number of indices do not exceed the number of dimensions.
+
+  let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
+  let description = [{
+    This operation creates a pair of addresses that will be used by tensor_load_to_lds
+    and tensor_store_from_lds.
+
+    This operation creates a value corresponding to the tensor descriptor (D#) group 0
+    found in TensorLoadToLDSOp and TensorStoreFromLDSOp in the rocdl dialect.
+
+    These tensor DMA operations were introduced in gfx1250.
+  }];
+
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` type($src) `,` type($dst) `to` type(results)
+  }];
+}
+
 #endif // AMDGPU

@@ -1620,6 +1620,19 @@ const char *SBTarget::GetTriple() {
   return nullptr;
 }
 
+const char *SBTarget::GetArchName() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP()) {
+    llvm::StringRef arch_name =
+        target_sp->GetArchitecture().GetTriple().getArchName();
+    ConstString const_arch_name(arch_name);
+
+    return const_arch_name.GetCString();
+  }
+  return nullptr;
+}
+
 const char *SBTarget::GetABIName() {
   LLDB_INSTRUMENT_VA(this);
 

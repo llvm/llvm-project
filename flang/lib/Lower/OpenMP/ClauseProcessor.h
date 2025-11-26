@@ -20,7 +20,6 @@
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
