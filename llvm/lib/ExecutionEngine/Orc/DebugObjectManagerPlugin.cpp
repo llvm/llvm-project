@@ -114,10 +114,23 @@ static Error fixUpDebugObject(LinkGraph &LG) {
 
   return Error::success();
 }                                                                 
+// TODO: create from ES, check how to do this without using deprecated ES constructor
+DebugObjectManagerPlugin::DebugObjectManagerPlugin(ExecutionSession &ES) {
+
+  SymbolAddrs SAs;
+    if (auto Err = ES.getBootstrapSymbols(
+            {{SAs.Instance, rt::SimpleExecutorDylibManagerInstanceName},
+            {SAs.Open, rt::SimpleExecutorDylibManagerOpenWrapperName},
+            {SAs.Lookup, rt::SimpleExecutorDylibManagerLookupWrapperName}}))
+      return std::move(Err);
+    ExecutorProcessControl EPC = ES.getExecutorProcessControl();
+    return EPCGenericDylibManager(EPC, std::move(SAs));
+}
 
 DebugObjectManagerPlugin::DebugObjectManagerPlugin(
     ExecutorSymbolDef RegisterDebugObject,
     ExecutorSymbolDef DeregisterDebugObject,
+    SymbolAddrs SAs,
     bool RequireDebugSections, bool AutoRegisterCode)
   : RegisterDebugObject(RegisterDebugObject),
     DeregisterDebugObject(DeregisterDebugObject),
