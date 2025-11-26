@@ -14,13 +14,19 @@ on:
         default: false
 
 
-permissions:
+permissionks:
   contents: read # Default everything to read-only
 
 jobs:
   build-windows-release:
-    runs-on: depot-windows-2022-16
+    runs-on: ${{ matrix.runs-on }}
     if: github.repository_owner == 'llvm'
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on:
+          - depot-windows-2022-16
+          - windows-11-arm
     steps:
       - name: Setup crlf
         run: |
@@ -43,20 +49,43 @@ jobs:
           else
             version_string="${{inputs.release-version }}"
           fi
+          case $RUNNER_ARCH in 
+            "X64" )
+              installer_arch="win64"
+              tar_arch="x86_64"
+              installer_dir_arch="amd64"
+              script_options="--x64"
+              ;;
+            "ARM64" )
+              installer_arch="woa64"
+              tar_arch="aarch64"
+              installer_dir_arch="arm64"
+              script_options="--arm64"
+              ;;
+          esac
+          echo "installer-name=LLVM-$version_string-$installer_arch.exe" >> $GITHUB_OUTPUT
+          echo "tar-name=$tar_arch-pc-windows-msvc.tar.xz" >> $GITHUB_OUTPUT 
+          echo "installer-dir=build_$installer_dir_arch" >> $GITHUB_OUTPUT
+          echo "script-options=$script_options" >> $GITHUB_OUTPUT
           echo "version-string=$version_string" >> $GITHUB_OUTPUT
       - env:
           LDFLAGS: "-Wl,--verbose"
         run: |
           subst S: ${{ github.workspace }}
           cd S:\llvm\utils\release\
-          .\build_llvm_release.bat --x64 --version ${{ steps.variables.outputs.version-string }} --local-python --skip-checkout
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        with:
-          name: ${{ runner.os }}-${{ runner.arch }}-release-binaries
-          # Due to path differences on Windows when running in bash vs running on node,
-          # we need to search for files in the current workspace.
-          path: |
-            S:\llvm\utils\release\llvm_package_${{ steps.variables.outputs.version-string }}\build_amd64\LLVM-${{ steps.variables.outputs.version-string }}-win64.exe
-            S:\llvm\utils\release\llvm_package_${{ steps.variables.outputs.version-string}}\clang+llvm-${{ steps.variables.outputs.version-string }}-x86_64-pc-windows-msvc.tar.xz
+          .\build_llvm_release.bat ${{ steps.variables.outputs.script-options }} --version ${{ steps.variables.outputs.version-string }} --local-python --skip-checkout
+          # Move installer to top-level directory so it is easier to upload.
+          mv ${{ steps.variables.outputs.installer-dir }}/${{ steps.variables.outputs.installer-name }} .
 
+      - name: Upload Installer
+        uses: ./.github/workflows/upload-release-artifact
+        with:
+          files: ${{ steps.variables.outputs.installer-name }}
+          upload: false
+      
+      - name: Upload Tar
+        uses: ./.github/workflows/upload-release-artifact
+        with:
+          files: ${{ steps.variables.outputs.tar-name }}
+          upload: false
 
