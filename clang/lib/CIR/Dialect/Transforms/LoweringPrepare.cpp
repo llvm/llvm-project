@@ -702,6 +702,7 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
                                                      cir::GlobalOp op,
                                                      mlir::Region &dtorRegion,
                                                      cir::CallOp &dtorCall) {
+  mlir::OpBuilder::InsertionGuard guard(builder);
   assert(!cir::MissingFeatures::astVarDeclInterface());
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
 

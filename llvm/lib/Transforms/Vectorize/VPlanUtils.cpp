@@ -195,9 +195,9 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
            (preservesUniformity(VPI->getOpcode()) &&
             all_of(VPI->operands(), isSingleScalar));
-  if (isa<VPPartialReductionRecipe>(VPV))
-    return false;
-  if (isa<VPReductionRecipe>(VPV))
+  if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
+    return !RR->isPartialReduction();
+  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isSingleScalar();
@@ -269,7 +269,7 @@ unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
     return 1;
   if (auto *RR = dyn_cast<VPReductionPHIRecipe>(R))
     return RR->getVFScaleFactor();
-  if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
+  if (auto *RR = dyn_cast<VPReductionRecipe>(R))
     return RR->getVFScaleFactor();
   if (auto *ER = dyn_cast<VPExpressionRecipe>(R))
     return ER->getVFScaleFactor();

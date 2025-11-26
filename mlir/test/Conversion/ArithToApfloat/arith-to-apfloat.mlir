@@ -126,3 +126,75 @@ func.func @remf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
   %0 = arith.remf %arg0, %arg1 : f4E2M1FN
   return
 }
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_convert(i32, i32, i64) -> i64
+// CHECK: %[[sem_in:.*]] = arith.constant 18 : i32
+// CHECK: %[[sem_out:.*]] = arith.constant 2 : i32
+// CHECK: call @_mlir_apfloat_convert(%[[sem_in]], %[[sem_out]], %{{.*}}) : (i32, i32, i64) -> i64
+func.func @extf(%arg0: f4E2M1FN) {
+  %0 = arith.extf %arg0 : f4E2M1FN to f32
+  return
+}
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_convert(i32, i32, i64) -> i64
+// CHECK: %[[sem_in:.*]] = arith.constant 1 : i32
+// CHECK: %[[sem_out:.*]] = arith.constant 18 : i32
+// CHECK: call @_mlir_apfloat_convert(%[[sem_in]], %[[sem_out]], %{{.*}}) : (i32, i32, i64) -> i64
+func.func @truncf(%arg0: bf16) {
+  %0 = arith.truncf %arg0 : bf16 to f4E2M1FN
+  return
+}
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_convert_to_int(i32, i32, i1, i64) -> i64
+// CHECK: %[[sem_in:.*]] = arith.constant 0 : i32
+// CHECK: %[[out_width:.*]] = arith.constant 4 : i32
+// CHECK: %[[is_unsigned:.*]] = arith.constant false
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_convert_to_int(%[[sem_in]], %[[out_width]], %[[is_unsigned]], %{{.*}}) : (i32, i32, i1, i64) -> i64
+// CHECK: arith.trunci %[[res]] : i64 to i4
+func.func @fptosi(%arg0: f16) {
+  %0 = arith.fptosi %arg0 : f16 to i4
+  return
+}
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_convert_to_int(i32, i32, i1, i64) -> i64
+// CHECK: %[[sem_in:.*]] = arith.constant 0 : i32
+// CHECK: %[[out_width:.*]] = arith.constant 4 : i32
+// CHECK: %[[is_unsigned:.*]] = arith.constant true
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_convert_to_int(%[[sem_in]], %[[out_width]], %[[is_unsigned]], %{{.*}}) : (i32, i32, i1, i64) -> i64
+// CHECK: arith.trunci %[[res]] : i64 to i4
+func.func @fptoui(%arg0: f16) {
+  %0 = arith.fptoui %arg0 : f16 to i4
+  return
+}
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_convert_from_int(i32, i32, i1, i64) -> i64
+// CHECK: %[[sem_out:.*]] = arith.constant 18 : i32
+// CHECK: %[[in_width:.*]] = arith.constant 32 : i32
+// CHECK: %[[is_unsigned:.*]] = arith.constant false
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_convert_from_int(%[[sem_out]], %[[in_width]], %[[is_unsigned]], %{{.*}}) : (i32, i32, i1, i64) -> i64
+func.func @sitofp(%arg0: i32) {
+  %0 = arith.sitofp %arg0 : i32 to f4E2M1FN
+  return
+}
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_convert_from_int(i32, i32, i1, i64) -> i64
+// CHECK: %[[sem_out:.*]] = arith.constant 18 : i32
+// CHECK: %[[in_width:.*]] = arith.constant 32 : i32
+// CHECK: %[[is_unsigned:.*]] = arith.constant true
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_convert_from_int(%[[sem_out]], %[[in_width]], %[[is_unsigned]], %{{.*}}) : (i32, i32, i1, i64) -> i64
+func.func @uitofp(%arg0: i32) {
+  %0 = arith.uitofp %arg0 : i32 to f4E2M1FN
+  return
+}
