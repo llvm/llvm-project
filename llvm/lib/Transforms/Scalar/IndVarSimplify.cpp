@@ -1855,7 +1855,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // is that enough for *all* side effects?
   bool HasThreadLocalSideEffects = false;
   for (BasicBlock *BB : L->blocks())
-    for (auto &I : *BB)
+    for (auto &I : *BB) {
       // TODO:isGuaranteedToTransfer
       if (I.mayHaveSideEffects()) {
         if (!LoopPredicationTraps)
@@ -1872,6 +1872,18 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
           return false;
         }
       }
+
+      // Skip if the loop has tokens referenced outside the loop to avoid
+      // changing convergence behavior.
+      if (I.getType()->isTokenTy()) {
+        for (User *U : I.users()) {
+          Instruction *UserInst = dyn_cast<Instruction>(U);
+          if (UserInst && !L->contains(UserInst)) {
+            return false;
+          }
+        }
+      }
+    }
 
   bool Changed = false;
   // Finally, do the actual predication for all predicatable blocks.  A couple
