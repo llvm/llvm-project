@@ -4612,6 +4612,16 @@ def CIR_ExpOp : CIR_UnaryFPToFPBuiltinOp<"exp", "ExpOp"> {
   }];
 }
 
+def CIR_Exp2Op : CIR_UnaryFPToFPBuiltinOp<"exp2", "Exp2Op"> {
+  let summary = "Computes the floating-point base-2 exponential value";
+  let description = [{
+    `cir.exp2` computes the base-2 exponential of a floating-point operand and
+     returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   let summary = "Computes the floating-point absolute value";
   let description = [{
