@@ -80,14 +80,14 @@ def AMDGPU_AddressSpaceAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_AddressSpace,
   let assemblyFormat = "`<` $value `>`";
 }
 
+//===----------------------------------------------------------------------===//
+// AMDGPU Type definitions
+//===----------------------------------------------------------------------===//
+
 class AMDGPU_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<AMDGPU_Dialect, name, traits> {
   let mnemonic = typeMnemonic;
 }
-
-//===----------------------------------------------------------------------===//
-// AMDGPU Type definitions
-//===----------------------------------------------------------------------===//
 
 def AMDGPU_TDMBaseType : AMDGPU_Type<"TDMBase", "tdm_base"> {
   let summary = "Pair of base addresses that move data between LDS and global storage.";
@@ -102,6 +102,15 @@ def AMDGPU_TDMBaseType : AMDGPU_Type<"TDMBase", "tdm_base"> {
     }]>
   ];
   let assemblyFormat = "`<` $elementType `>`";
+}
+
+def AMDGPU_TDMDescriptorType : AMDGPU_Type<"TDMDescriptor", "tdm_descriptor"> {
+  let summary = "Descriptors used in tensor store/load operations.";
+  let description = [{
+    This type is opaque and corresponds to the two or four descriptor groups
+    used in tensor_load_to_lds or tensor_store_from_lds.
+  }];
+
 }
 
 //===----------------------------------------------------------------------===//
@@ -1222,14 +1231,13 @@ def AMDGPU_MakeDmaBaseOp :
     AMDGPU_Op<"make_dma_base", [Pure, AttrSizedOperandSegments]>,
     Arguments<(ins
                    Arg<AnyMemRef, "buffer to read from">:$src,
-                   Variadic<Index>:$srcIndices,
+                   Variadic<Index>:$src_indices,
                    Arg<AnyMemRef, "buffer to write to">:$dst,
-                   Variadic<Index>:$dstIndices)>,
+                   Variadic<Index>:$dst_indices)>,
     Results<(outs AMDGPU_TDMBaseType: $base)> {
 
   // TODO:
   // * Add verifiers such that one of the memrefs is from LDS and the other global.
-  // * Add verifiers to make sure that the type is in the correct direction.
   // * Add verifiers to make sure that the number of indices do not exceed the number of dimensions.
 
   let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
@@ -1240,12 +1248,105 @@ def AMDGPU_MakeDmaBaseOp :
     This operation creates a value corresponding to the tensor descriptor (D#) group 0
     found in TensorLoadToLDSOp and TensorStoreFromLDSOp in the rocdl dialect.
 
+    For example:
+
+    ```mlir
+      %base = amdgpu.make_dma_base %src[%idx0], %dst[%idx1] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+      %descriptor = amdgpu.make_dma_descriptor %base globalSize [2, 2] globalStride [2, 1] sharedSize [2, 2] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+      amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
+    ```
+
+    to
+
+    ```mlir
+       // pseudocode
+       %base_0 = llvm.mlir.undef : !llvm.struct<(ptr, ptr)>
+       %base_1 = llvm.insertvalue %global_addr, %base_0[0] : !llvm.struct<(ptr, ptr)>
+       %base_2 = llvm.insertvalue %lds_addr, %base_1[1] : !llvm.struct(ptr, ptr)>
+       // type(%base_2) = !llvm.struct<(ptr, ptr) roughly corresponds to amdgpu.tdm_base<i32>
+
+       // The base will be used when contructing dgroup0
+       // when lowering amdgpu.make_dma_descriptor
+       %dgroup0_0 = llvm.mlir.undef : !llvm.struct<(....)>
+       %dgroup0_1 = llvm.insertvalue %base2, %dgroup0_0 : ....
+
+       // When lowering amdgpu.tensor_load_to_lds
+       rocdl.tensor.load.to.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+    ```
+
     These tensor DMA operations were introduced in gfx1250.
   }];
 
   let assemblyFormat = [{
-    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` type($src) `,` type($dst) `to` type(results)
+    $src `[` $src_indices `]` `,` $dst `[` $dst_indices `]` attr-dict `:` type($src) `,` type($dst) `->` type(results)
   }];
+}
+
+def AMDGPU_MakeDmaDescriptorOp :
+  AMDGPU_Op<"make_dma_descriptor", [Pure, AttrSizedOperandSegments]>,
+  Arguments<(ins
+    AMDGPU_TDMBaseType: $base,
+    Variadic<Index>: $global_dynamic_sizes,
+    DenseI64ArrayAttr: $global_static_sizes,
+    Variadic<Index>: $global_dynamic_strides,
+    DenseI64ArrayAttr: $global_static_strides,
+    Variadic<Index>: $shared_dynamic_sizes,
+    DenseI64ArrayAttr: $shared_static_sizes,
+    Optional<Index>: $pad,
+    Optional<Index>: $pad_every,
+    Optional<AnyMemRef>: $atomic_barrier_address,
+    Variadic<Index>: $atomic_barrier_indices,
+    Optional<Index>: $global_increment,
+    Optional<Index>: $lds_increment,
+    Optional<Index>: $iteration_count)>,
+  Results<(outs AMDGPU_TDMDescriptorType: $desc)> {
+
+  let summary = "Make all descriptor groups needed by TensorLoadToLDS/TensorStoreFromLDS.";
+  let description = [{
+     Make all descriptor groups needed by tensor memory operations.
+
+     The $base operand corresponds to the base pair addresses, one must be an address in LDS
+     while the other must be a global memory location.
+
+     $global_{static/dynamic}_sizes determine the size of the tensor.
+     $global_{static/dynamic}_strides determine the strides of the tensor.
+     $shared_{static/dynamic}_sizes determines the size of the tile.
+
+     Padding can be applied to the LDS address when copying from memory to LDS,
+     but not when copying from LDS to memory.
+     The values in the padded target addresses remain the same as before the operation was applied.
+
+     2D and 3D tensors may be iterated over by setting $global_increment, $lds_increment, and $iteration_count.
+     $global_increment determines how much to increment the starting global memory address per iteration in units of the $base's element type.
+     $lds_increment determines how much to increment the starting LDS address per iteration in units of the $base's element type.
+     $iterate_count determines how many times to iterate.
+
+     ```mlir
+      // Example of moving a two-dimensional tensor to LDS.
+      %base = amdgpu.make_dma_base %src[0, 0], %dst[0, 0] : memref<64x64xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+      %descriptor = amdgpu.make_dma_descriptor %base globalSize [64, 64] globalStride [64, 1] sharedSize [64, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+      amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
+
+      // Example of moving a two dimension tensor to LDS where padding is applied after every integer.
+      %base = amdgpu.make_dma_base %src[0, 0], %dst[0, 0] : memref<32x32xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+      %descriptor = amdgpu.make_dma_descriptor %base globalSize [32, 32] globalStride [32, 1] sharedSize [64, 64] padding(%pad pad_every %pad_every) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+      amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
+     ```
+  }];
+
+  let assemblyFormat = [{
+    $base
+    `globalSize` custom<DynamicIndexList>($global_dynamic_sizes, $global_static_sizes)
+    `globalStride` custom<DynamicIndexList>($global_dynamic_strides, $global_static_strides)
+    `sharedSize` custom<DynamicIndexList>($shared_dynamic_sizes, $shared_static_sizes)
+    ( `padShared` `(` $pad^ `every` $pad_every `)` )?
+    ( `atomicBarrier` `(` $atomic_barrier_address^ `[` $atomic_barrier_indices `]`
+                      `:` type($atomic_barrier_address) `)`)?
+    ( `iterate` $global_increment^ `,` $lds_increment `,` $iteration_count )?
+    attr-dict `:` qualified(type($base)) `->` type(results)
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // AMDGPU
