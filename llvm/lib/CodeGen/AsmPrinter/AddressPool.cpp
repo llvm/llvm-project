@@ -12,7 +12,6 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
-#include <utility>
 
 using namespace llvm;
 

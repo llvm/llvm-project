@@ -328,6 +328,8 @@ private:
                            MachineInstr &I) const;
   bool selectFrexp(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
+  bool selectDpdCoarse(Register ResVReg, const SPIRVType *ResType,
+                       MachineInstr &I, const unsigned DPdOpCode) const;
   // Utilities
   std::pair<Register, bool>
   buildI32Constant(uint32_t Val, MachineInstr &I,
@@ -371,6 +373,7 @@ private:
   bool loadHandleBeforePosition(Register &HandleReg, const SPIRVType *ResType,
                                 GIntrinsic &HandleDef, MachineInstr &Pos) const;
   void decorateUsesAsNonUniform(Register &NonUniformReg) const;
+  void errorIfInstrOutsideShader(MachineInstr &I) const;
 };
 
 bool sampledTypeIsSignedInteger(const llvm::Type *HandleType) {
@@ -1210,8 +1213,16 @@ bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
     for (MachineRegisterInfo::def_instr_iterator DefIt =
              MRI->def_instr_begin(SrcReg);
          DefIt != MRI->def_instr_end(); DefIt = std::next(DefIt)) {
-      if ((*DefIt).getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
-          (*DefIt).getOpcode() == SPIRV::OpVariable) {
+      unsigned DefOpCode = DefIt->getOpcode();
+      if (DefOpCode == SPIRV::ASSIGN_TYPE) {
+        // We need special handling to look through the type assignment and see
+        // if this is a constant or a global
+        if (auto *VRD = getVRegDef(*MRI, DefIt->getOperand(1).getReg()))
+          DefOpCode = VRD->getOpcode();
+      }
+      if (DefOpCode == TargetOpcode::G_GLOBAL_VALUE ||
+          DefOpCode == TargetOpcode::G_CONSTANT ||
+          DefOpCode == SPIRV::OpVariable || DefOpCode == SPIRV::OpConstantI) {
         IsGV = true;
         break;
       }
@@ -3099,9 +3110,10 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
     SmallPtrSet<SPIRVType *, 4> Visited;
     if (!OpDefine || !OpType || isConstReg(MRI, OpDefine, Visited) ||
         OpDefine->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST ||
+        OpDefine->getOpcode() == TargetOpcode::G_INTTOPTR ||
         GR.isAggregateType(OpType)) {
       // The case of G_ADDRSPACE_CAST inside spv_const_composite() is processed
-      // by selectAddrSpaceCast()
+      // by selectAddrSpaceCast(), and G_INTTOPTR is processed by selectUnOp()
       CompositeArgs.push_back(OpReg);
       continue;
     }
@@ -3128,6 +3140,58 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
     if (!Result)
       break;
   }
+  return Result;
+}
+
+bool SPIRVInstructionSelector::selectDpdCoarse(Register ResVReg,
+                                               const SPIRVType *ResType,
+                                               MachineInstr &I,
+                                               const unsigned DPdOpCode) const {
+  // TODO: This should check specifically for Fragment Execution Model, but STI
+  // doesn't provide that information yet. See #167562
+  errorIfInstrOutsideShader(I);
+
+  // If the arg/result types are half then we need to wrap the instr in
+  // conversions to float
+  // This case occurs because a half arg/result is legal in HLSL but not spirv.
+  Register SrcReg = I.getOperand(2).getReg();
+  SPIRVType *SrcType = GR.getSPIRVTypeForVReg(SrcReg);
+  unsigned BitWidth = std::min(GR.getScalarOrVectorBitWidth(SrcType),
+                               GR.getScalarOrVectorBitWidth(ResType));
+  if (BitWidth == 32)
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(DPdOpCode))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(I.getOperand(2).getReg());
+
+  MachineIRBuilder MIRBuilder(I);
+  unsigned componentCount = GR.getScalarOrVectorComponentCount(SrcType);
+  SPIRVType *F32ConvertTy = GR.getOrCreateSPIRVFloatType(32, I, TII);
+  if (componentCount != 1)
+    F32ConvertTy = GR.getOrCreateSPIRVVectorType(F32ConvertTy, componentCount,
+                                                 MIRBuilder, false);
+
+  const TargetRegisterClass *RegClass = GR.getRegClass(SrcType);
+  Register ConvertToVReg = MRI->createVirtualRegister(RegClass);
+  Register DpdOpVReg = MRI->createVirtualRegister(RegClass);
+
+  bool Result =
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFConvert))
+          .addDef(ConvertToVReg)
+          .addUse(GR.getSPIRVTypeID(F32ConvertTy))
+          .addUse(SrcReg)
+          .constrainAllUses(TII, TRI, RBI);
+  Result &= BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(DPdOpCode))
+                .addDef(DpdOpVReg)
+                .addUse(GR.getSPIRVTypeID(F32ConvertTy))
+                .addUse(ConvertToVReg)
+                .constrainAllUses(TII, TRI, RBI);
+  Result &=
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFConvert))
+          .addDef(ResVReg)
+          .addUse(GR.getSPIRVTypeID(ResType))
+          .addUse(DpdOpVReg)
+          .constrainAllUses(TII, TRI, RBI);
   return Result;
 }
 
@@ -3515,6 +3579,15 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   case Intrinsic::spv_resource_nonuniformindex: {
     return selectResourceNonUniformIndex(ResVReg, ResType, I);
+  }
+  case Intrinsic::spv_unpackhalf2x16: {
+    return selectExtInst(ResVReg, ResType, I, GL::UnpackHalf2x16);
+  }
+  case Intrinsic::spv_ddx_coarse: {
+    return selectDpdCoarse(ResVReg, ResType, I, SPIRV::OpDPdxCoarse);
+  }
+  case Intrinsic::spv_ddy_coarse: {
+    return selectDpdCoarse(ResVReg, ResType, I, SPIRV::OpDPdyCoarse);
   }
   default: {
     std::string DiagMsg;
@@ -4679,6 +4752,17 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(VarReg)
       .constrainAllUses(TII, TRI, RBI);
+}
+
+void SPIRVInstructionSelector::errorIfInstrOutsideShader(
+    MachineInstr &I) const {
+  if (!STI.isShader()) {
+    std::string DiagMsg;
+    raw_string_ostream OS(DiagMsg);
+    I.print(OS, true, false, false, false);
+    DiagMsg += " is only supported in shaders.\n";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
 }
 
 namespace llvm {

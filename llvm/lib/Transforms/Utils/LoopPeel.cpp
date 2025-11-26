@@ -54,6 +54,7 @@ using namespace llvm::SCEVPatternMatch;
 STATISTIC(NumPeeled, "Number of loops peeled");
 STATISTIC(NumPeeledEnd, "Number of loops peeled from end");
 
+namespace llvm {
 static cl::opt<unsigned> UnrollPeelCount(
     "unroll-peel-count", cl::Hidden,
     cl::desc("Set the unroll peeling count, for testing purposes"));
@@ -86,6 +87,9 @@ static cl::opt<bool> EnablePeelingForIV(
     cl::desc("Enable peeling to convert Phi nodes into IVs"));
 
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
+
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 
 // Check whether we are capable of peeling this loop.
 bool llvm::canPeel(const Loop *L) {
@@ -1190,7 +1194,24 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
       IRBuilder<> B(PreHeaderBR);
       Value *Cond =
           B.CreateICmpNE(BTCValue, ConstantInt::get(BTCValue->getType(), 0));
-      B.CreateCondBr(Cond, NewPreHeader, InsertTop);
+      auto *BI = B.CreateCondBr(Cond, NewPreHeader, InsertTop);
+      SmallVector<uint32_t> Weights;
+      auto *OrigLatchBr = Latch->getTerminator();
+      auto HasBranchWeights = !ProfcheckDisableMetadataFixes &&
+                              extractBranchWeights(*OrigLatchBr, Weights);
+      if (HasBranchWeights) {
+        // The probability that the new guard skips the loop to execute just one
+        // iteration is the original loop's probability of exiting at the latch
+        // after any iteration. That should maintain the original loop body
+        // frequency. Upon arriving at the loop, due to the guard, the
+        // probability of reaching iteration i of the new loop is the
+        // probability of reaching iteration i+1 of the original loop. The
+        // probability of reaching the peeled iteration is 1, which is the
+        // probability of reaching iteration 0 of the original loop.
+        if (L->getExitBlock() == OrigLatchBr->getSuccessor(0))
+          std::swap(Weights[0], Weights[1]);
+        setBranchWeights(*BI, Weights, /*IsExpected=*/false);
+      }
       PreHeaderBR->eraseFromParent();
 
       // PreHeader now dominates InsertTop.

@@ -992,9 +992,12 @@ BranchProbability llvm::getBranchProbability(BranchInst *B,
   uint64_t Weight0, Weight1;
   if (!extractBranchWeights(*B, Weight0, Weight1))
     return BranchProbability::getUnknown();
+  uint64_t Denominator = Weight0 + Weight1;
+  if (Denominator == 0)
+    return BranchProbability::getUnknown();
   if (!ForFirstTarget)
     std::swap(Weight0, Weight1);
-  return BranchProbability::getBranchProbability(Weight0, Weight0 + Weight1);
+  return BranchProbability::getBranchProbability(Weight0, Denominator);
 }
 
 bool llvm::setBranchProbability(BranchInst *B, BranchProbability P,

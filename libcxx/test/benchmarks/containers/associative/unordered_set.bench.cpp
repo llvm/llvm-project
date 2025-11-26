@@ -24,6 +24,9 @@ struct support::adapt_operations<std::unordered_set<K>> {
 
   using InsertionResult = std::pair<typename std::unordered_set<K>::iterator, bool>;
   static auto get_iterator(InsertionResult const& result) { return result.first; }
+
+  template <class Allocator>
+  using rebind_alloc = std::unordered_set<K, std::hash<K>, std::equal_to<K>, Allocator>;
 };
 
 int main(int argc, char** argv) {

@@ -22,7 +22,11 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/TargetInfo.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include <optional>
 
@@ -311,7 +315,8 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isVolatile, QualType ty,
-                                       bool isInit, bool isNontemporal) {
+                                       LValueBaseInfo baseInfo, bool isInit,
+                                       bool isNontemporal) {
   assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
 
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
@@ -333,7 +338,13 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
 
   value = emitToMemory(value, ty);
 
-  assert(!cir::MissingFeatures::opLoadStoreAtomic());
+  assert(!cir::MissingFeatures::opLoadStoreTbaa());
+  LValue atomicLValue = LValue::makeAddr(addr, ty, baseInfo);
+  if (ty->isAtomicType() ||
+      (!isInit && isLValueSuitableForInlineAtomic(atomicLValue))) {
+    emitAtomicStore(RValue::get(value), atomicLValue, isInit);
+    return;
+  }
 
   // Update the alloca with more info on initialization.
   assert(addr.getPointer() && "expected pointer to exist");
@@ -550,7 +561,8 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
   }
 
   emitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
-                    lvalue.getType(), isInit, /*isNontemporal=*/false);
+                    lvalue.getType(), lvalue.getBaseInfo(), isInit,
+                    /*isNontemporal=*/false);
 }
 
 mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
@@ -619,8 +631,56 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
                                                  lv.getVectorIdx()));
   }
 
+  if (lv.isExtVectorElt())
+    return emitLoadOfExtVectorElementLValue(lv);
+
   cgm.errorNYI(loc, "emitLoadOfLValue");
   return RValue::get(nullptr);
+}
+
+int64_t CIRGenFunction::getAccessedFieldNo(unsigned int idx,
+                                           const mlir::ArrayAttr elts) {
+  auto elt = mlir::cast<mlir::IntegerAttr>(elts[idx]);
+  return elt.getInt();
+}
+
+// If this is a reference to a subset of the elements of a vector, create an
+// appropriate shufflevector.
+RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
+  mlir::Location loc = lv.getExtVectorPointer().getLoc();
+  mlir::Value vec = builder.createLoad(loc, lv.getExtVectorAddress());
+
+  // HLSL allows treating scalars as one-element vectors. Converting the scalar
+  // IR value to a vector here allows the rest of codegen to behave as normal.
+  if (getLangOpts().HLSL && !mlir::isa<cir::VectorType>(vec.getType())) {
+    cgm.errorNYI(loc, "emitLoadOfExtVectorElementLValue: HLSL");
+    return {};
+  }
+
+  const mlir::ArrayAttr elts = lv.getExtVectorElts();
+
+  // If the result of the expression is a non-vector type, we must be extracting
+  // a single element. Just codegen as an extractelement.
+  const auto *exprVecTy = lv.getType()->getAs<clang::VectorType>();
+  if (!exprVecTy) {
+    int64_t indexValue = getAccessedFieldNo(0, elts);
+    cir::ConstantOp index =
+        builder.getConstInt(loc, builder.getSInt64Ty(), indexValue);
+    return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
+  }
+
+  // Always use shuffle vector to try to retain the original program structure
+  SmallVector<int64_t> mask;
+  for (auto i : llvm::seq<unsigned>(0, exprVecTy->getNumElements()))
+    mask.push_back(getAccessedFieldNo(i, elts));
+
+  cir::VecShuffleOp resultVec = builder.createVecShuffle(loc, vec, mask);
+  if (lv.getType()->isExtVectorBoolType()) {
+    cgm.errorNYI(loc, "emitLoadOfExtVectorElementLValue: ExtVectorBoolType");
+    return {};
+  }
+
+  return RValue::get(resultVec);
 }
 
 static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
@@ -1108,6 +1168,51 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
   return lv;
 }
 
+LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
+  // Emit the base vector as an l-value.
+  LValue base;
+
+  // ExtVectorElementExpr's base can either be a vector or pointer to vector.
+  if (e->isArrow()) {
+    // If it is a pointer to a vector, emit the address and form an lvalue with
+    // it.
+    LValueBaseInfo baseInfo;
+    Address ptr = emitPointerWithAlignment(e->getBase(), &baseInfo);
+    const auto *clangPtrTy =
+        e->getBase()->getType()->castAs<clang::PointerType>();
+    base = makeAddrLValue(ptr, clangPtrTy->getPointeeType(), baseInfo);
+    base.getQuals().removeObjCGCAttr();
+  } else if (e->getBase()->isGLValue()) {
+    // Otherwise, if the base is an lvalue ( as in the case of foo.x.x),
+    // emit the base as an lvalue.
+    assert(e->getBase()->getType()->isVectorType());
+    base = emitLValue(e->getBase());
+  } else {
+    // Otherwise, the base is a normal rvalue (as in (V+V).x), emit it as such.
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitExtVectorElementExpr: base is a normal rvalue");
+    return {};
+  }
+
+  QualType type =
+      e->getType().withCVRQualifiers(base.getQuals().getCVRQualifiers());
+
+  // Encode the element access list into a vector of unsigned indices.
+  SmallVector<uint32_t, 4> indices;
+  e->getEncodedElementAccess(indices);
+
+  if (base.isSimple()) {
+    SmallVector<int64_t> attrElts(indices.begin(), indices.end());
+    mlir::ArrayAttr elts = builder.getI64ArrayAttr(attrElts);
+    return LValue::makeExtVectorElt(base.getAddress(), elts, type,
+                                    base.getBaseInfo());
+  }
+
+  cgm.errorNYI(e->getSourceRange(),
+               "emitExtVectorElementExpr: isSimple is false");
+  return {};
+}
+
 LValue CIRGenFunction::emitStringLiteralLValue(const StringLiteral *e,
                                                llvm::StringRef name) {
   cir::GlobalOp globalOp = cgm.getGlobalForStringLiteral(e, name);
@@ -1196,8 +1301,6 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
   case CK_ToUnion:
-  case CK_BaseToDerived:
-  case CK_AddressSpaceConversion:
   case CK_ObjCObjectLValueCast:
   case CK_VectorSplat:
   case CK_ConstructorConversion:
@@ -1210,6 +1313,27 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
                      e->getCastKindName());
 
     return {};
+  }
+  case CK_AddressSpaceConversion: {
+    LValue lv = emitLValue(e->getSubExpr());
+    QualType destTy = getContext().getPointerType(e->getType());
+
+    clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
+    cir::TargetAddressSpaceAttr srcAS;
+    if (clang::isTargetAddressSpace(srcLangAS))
+      srcAS = cir::toCIRTargetAddressSpace(getMLIRContext(), srcLangAS);
+    else
+      cgm.errorNYI(
+          e->getSourceRange(),
+          "emitCastLValue: address space conversion from unknown address "
+          "space");
+
+    mlir::Value v = getTargetHooks().performAddrSpaceCast(
+        *this, lv.getPointer(), srcAS, convertType(destTy));
+
+    return makeAddrLValue(Address(v, convertTypeForMem(e->getType()),
+                                  lv.getAddress().getAlignment()),
+                          e->getType(), lv.getBaseInfo());
   }
 
   case CK_LValueBitCast: {
@@ -1261,6 +1385,22 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     // type.
     assert(!cir::MissingFeatures::opTBAA());
     return makeAddrLValue(baseAddr, e->getType(), lv.getBaseInfo());
+  }
+
+  case CK_BaseToDerived: {
+    const auto *derivedClassDecl = e->getType()->castAsCXXRecordDecl();
+    LValue lv = emitLValue(e->getSubExpr());
+
+    // Perform the base-to-derived conversion
+    Address derived = getAddressOfDerivedClass(
+        getLoc(e->getSourceRange()), lv.getAddress(), derivedClassDecl,
+        e->path(), /*NullCheckValue=*/false);
+    // C++11 [expr.static.cast]p2: Behavior is undefined if a downcast is
+    // performed and the object is not of the derived type.
+    assert(!cir::MissingFeatures::sanitizers());
+
+    assert(!cir::MissingFeatures::opTBAA());
+    return makeAddrLValue(derived, e->getType(), lv.getBaseInfo());
   }
 
   case CK_ZeroToOCLOpaqueType:
@@ -1630,7 +1770,7 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot,
                                    bool ignoreResult) {
   switch (CIRGenFunction::getEvaluationKind(e->getType())) {
   case cir::TEK_Scalar:
-    return RValue::get(emitScalarExpr(e));
+    return RValue::get(emitScalarExpr(e, ignoreResult));
   case cir::TEK_Complex:
     return RValue::getComplex(emitComplexExpr(e));
   case cir::TEK_Aggregate: {
@@ -1658,11 +1798,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
 
   if (unsigned builtinID = fd->getBuiltinID()) {
-    if (fd->getAttr<AsmLabelAttr>()) {
-      cgm.errorNYI("AsmLabelAttr");
-    }
-
-    StringRef ident = fd->getName();
+    StringRef ident = cgm.getMangledName(gd);
     std::string fdInlineName = (ident + ".inline").str();
 
     bool isPredefinedLibFunction =
@@ -2126,79 +2262,6 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
       ce, md, returnValue, hasQualifier, qualifier, isArrow, base);
 }
 
-void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
-                                          AggValueSlot dest) {
-  assert(!dest.isIgnored() && "Must have a destination!");
-  const CXXConstructorDecl *cd = e->getConstructor();
-
-  // If we require zero initialization before (or instead of) calling the
-  // constructor, as can be the case with a non-user-provided default
-  // constructor, emit the zero initialization now, unless destination is
-  // already zeroed.
-  if (e->requiresZeroInitialization() && !dest.isZeroed()) {
-    switch (e->getConstructionKind()) {
-    case CXXConstructionKind::Delegating:
-    case CXXConstructionKind::Complete:
-      emitNullInitialization(getLoc(e->getSourceRange()), dest.getAddress(),
-                             e->getType());
-      break;
-    case CXXConstructionKind::VirtualBase:
-    case CXXConstructionKind::NonVirtualBase:
-      cgm.errorNYI(e->getSourceRange(),
-                   "emitCXXConstructExpr: base requires initialization");
-      break;
-    }
-  }
-
-  // If this is a call to a trivial default constructor, do nothing.
-  if (cd->isTrivial() && cd->isDefaultConstructor())
-    return;
-
-  // Elide the constructor if we're constructing from a temporary
-  if (getLangOpts().ElideConstructors && e->isElidable()) {
-    // FIXME: This only handles the simplest case, where the source object is
-    //        passed directly as the first argument to the constructor. This
-    //        should also handle stepping through implicit casts and conversion
-    //        sequences which involve two steps, with a conversion operator
-    //        follwed by a converting constructor.
-    const Expr *srcObj = e->getArg(0);
-    assert(srcObj->isTemporaryObject(getContext(), cd->getParent()));
-    assert(
-        getContext().hasSameUnqualifiedType(e->getType(), srcObj->getType()));
-    emitAggExpr(srcObj, dest);
-    return;
-  }
-
-  if (const ArrayType *arrayType = getContext().getAsArrayType(e->getType())) {
-    assert(!cir::MissingFeatures::sanitizers());
-    emitCXXAggrConstructorCall(cd, arrayType, dest.getAddress(), e, false);
-  } else {
-
-    clang::CXXCtorType type = Ctor_Complete;
-    bool forVirtualBase = false;
-    bool delegating = false;
-
-    switch (e->getConstructionKind()) {
-    case CXXConstructionKind::Complete:
-      type = Ctor_Complete;
-      break;
-    case CXXConstructionKind::Delegating:
-      // We should be emitting a constructor; GlobalDecl will assert this
-      type = curGD.getCtorType();
-      delegating = true;
-      break;
-    case CXXConstructionKind::VirtualBase:
-      forVirtualBase = true;
-      [[fallthrough]];
-    case CXXConstructionKind::NonVirtualBase:
-      type = Ctor_Base;
-      break;
-    }
-
-    emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
-  }
-}
-
 RValue CIRGenFunction::emitReferenceBindingToExpr(const Expr *e) {
   // Emit the expression as an lvalue.
   LValue lv = emitLValue(e);
@@ -2298,6 +2361,8 @@ Address CIRGenFunction::createTempAllocaWithoutCast(
 
 /// This creates a alloca and inserts it into the entry block. The alloca is
 /// casted to default address space if necessary.
+// TODO(cir): Implement address space casting to match classic codegen's
+// CreateTempAlloca behavior with DestLangAS parameter
 Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
                                          mlir::Location loc, const Twine &name,
                                          mlir::Value arraySize,
@@ -2312,7 +2377,21 @@ Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
   // be different from the type defined by the language. For example,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
-  assert(!cir::MissingFeatures::addressSpace());
+
+  LangAS allocaAS = alloca.getAddressSpace()
+                        ? clang::getLangASFromTargetAS(
+                              alloca.getAddressSpace().getValue().getUInt())
+                        : clang::LangAS::Default;
+  LangAS dstTyAS = clang::LangAS::Default;
+  if (getCIRAllocaAddressSpace()) {
+    dstTyAS = clang::getLangASFromTargetAS(
+        getCIRAllocaAddressSpace().getValue().getUInt());
+  }
+
+  if (dstTyAS != allocaAS) {
+    getTargetHooks().performAddrSpaceCast(*this, v, getCIRAllocaAddressSpace(),
+                                          builder.getPointerTo(ty, dstTyAS));
+  }
   return Address(v, ty, align);
 }
 

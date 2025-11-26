@@ -304,40 +304,76 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   GEPOperator *GOp = cast<GEPOperator>(&GEPI);
   Value *PtrOperand = GOp->getPointerOperand();
   Type *NewGEPType = GOp->getSourceElementType();
-  bool NeedsTransform = false;
 
   // Unwrap GEP ConstantExprs to find the base operand and element type
-  while (auto *CE = dyn_cast<ConstantExpr>(PtrOperand)) {
-    if (auto *GEPCE = dyn_cast<GEPOperator>(CE)) {
-      GOp = GEPCE;
-      PtrOperand = GEPCE->getPointerOperand();
-      NewGEPType = GEPCE->getSourceElementType();
-    } else
-      break;
+  while (auto *GEPCE = dyn_cast_or_null<GEPOperator>(
+             dyn_cast<ConstantExpr>(PtrOperand))) {
+    GOp = GEPCE;
+    PtrOperand = GEPCE->getPointerOperand();
+    NewGEPType = GEPCE->getSourceElementType();
   }
+
+  Type *const OrigGEPType = NewGEPType;
+  Value *const OrigOperand = PtrOperand;
 
   if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand)) {
     NewGEPType = NewGlobal->getValueType();
     PtrOperand = NewGlobal;
-    NeedsTransform = true;
   } else if (AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrOperand)) {
     Type *AllocatedType = Alloca->getAllocatedType();
     if (isa<ArrayType>(AllocatedType) &&
-        AllocatedType != GOp->getResultElementType()) {
+        AllocatedType != GOp->getResultElementType())
       NewGEPType = AllocatedType;
-      NeedsTransform = true;
+  } else
+    return false; // Only GEPs into an alloca or global variable are considered
+
+  // Defer changing i8 GEP types until dxil-flatten-arrays
+  if (OrigGEPType->isIntegerTy(8))
+    NewGEPType = OrigGEPType;
+
+  // If the original type is a "sub-type" of the new type, then ensure the gep
+  // correctly zero-indexes the extra dimensions to keep the offset calculation
+  // correct.
+  // Eg:
+  //  i32, [4 x i32] and [8 x [4 x i32]] are sub-types of [8 x [4 x i32]], etc.
+  //
+  // So then:
+  //   gep [4 x i32] %idx
+  //     -> gep [8 x [4 x i32]], i32 0, i32 %idx
+  //   gep i32 %idx
+  //     -> gep [8 x [4 x i32]], i32 0, i32 0, i32 %idx
+  uint32_t MissingDims = 0;
+  Type *SubType = NewGEPType;
+
+  // The new type will be in its array version; so match accordingly.
+  Type *const GEPArrType = equivalentArrayTypeFromVector(OrigGEPType);
+
+  while (SubType != GEPArrType) {
+    MissingDims++;
+
+    ArrayType *ArrType = dyn_cast<ArrayType>(SubType);
+    if (!ArrType) {
+      assert(SubType == GEPArrType &&
+             "GEP uses an DXIL invalid sub-type of alloca/global variable");
+      break;
     }
+
+    SubType = ArrType->getElementType();
   }
+
+  bool NeedsTransform = OrigOperand != PtrOperand ||
+                        OrigGEPType != NewGEPType || MissingDims != 0;
 
   if (!NeedsTransform)
     return false;
 
-  // Keep scalar GEPs scalar; dxil-flatten-arrays will do flattening later
-  if (!isa<ArrayType>(GOp->getSourceElementType()))
-    NewGEPType = GOp->getSourceElementType();
-
   IRBuilder<> Builder(&GEPI);
-  SmallVector<Value *, MaxVecSize> Indices(GOp->indices());
+  SmallVector<Value *, MaxVecSize> Indices;
+
+  for (uint32_t I = 0; I < MissingDims; I++)
+    Indices.push_back(Builder.getInt32(0));
+  llvm::append_range(Indices, GOp->indices());
+
   Value *NewGEP = Builder.CreateGEP(NewGEPType, PtrOperand, Indices,
                                     GOp->getName(), GOp->getNoWrapFlags());
 

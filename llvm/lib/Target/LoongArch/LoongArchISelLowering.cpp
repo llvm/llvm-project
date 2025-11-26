@@ -76,7 +76,7 @@ static cl::opt<bool> ZeroDivCheck("loongarch-check-zero-division", cl::Hidden,
 
 LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                                                  const LoongArchSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
 
   MVT GRLenVT = Subtarget.getGRLenVT();
 
@@ -6630,6 +6630,11 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(LoongArchISD::VANY_NONZERO, DL, N->getValueType(0),
                          N->getOperand(1));
     break;
+  case Intrinsic::loongarch_lasx_concat_128_s:
+  case Intrinsic::loongarch_lasx_concat_128_d:
+  case Intrinsic::loongarch_lasx_concat_128:
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2));
   }
   return SDValue();
 }

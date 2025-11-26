@@ -450,13 +450,16 @@ if( LLVM_ENABLE_PIC )
     # Enable interprocedural optimizations for non-inline functions which would
     # otherwise be disabled due to GCC -fPIC's default.
     # Note: GCC<10.3 has a bug on SystemZ.
-    #
+    # Note: Default on AIX is "no semantic interposition".
     # Note: Clang allows IPO for -fPIC so this optimization is less effective.
     # Clang 13 has a bug related to -fsanitize-coverage
     # -fno-semantic-interposition (https://reviews.llvm.org/D117183).
-    if ((CMAKE_COMPILER_IS_GNUCXX AND
-         NOT (LLVM_NATIVE_ARCH STREQUAL "SystemZ" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.3))
-       OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 14))
+    if ((NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX"))
+        AND ((CMAKE_COMPILER_IS_GNUCXX AND
+              NOT (LLVM_NATIVE_ARCH STREQUAL "SystemZ"
+                   AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.3))
+             OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"
+                 AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 14)))
       add_flag_if_supported("-fno-semantic-interposition" FNO_SEMANTIC_INTERPOSITION)
     endif()
   endif()

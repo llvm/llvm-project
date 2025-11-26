@@ -306,6 +306,23 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: func.func @dead_alloc_escaped
+func.func @dead_alloc_escaped() -> memref<8x64xf32, 3> {
+  // CHECK: %{{.+}} = memref.alloc
+  %0 = memref.alloc() : memref<8x64xf32, 3>
+  return %0 : memref<8x64xf32, 3>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.memref.erase_dead_alloc_and_stores %0 : (!transform.any_op) -> ()
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: func.func @dead_alloc
 func.func @dead_alloc() {
   // CHECK-NOT: %{{.+}} = memref.alloc

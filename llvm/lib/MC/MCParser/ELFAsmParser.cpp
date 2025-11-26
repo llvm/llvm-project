@@ -25,7 +25,6 @@
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
 #include <cstdint>
-#include <utility>
 
 using namespace llvm;
 
@@ -888,10 +887,4 @@ bool ELFAsmParser::parseDirectiveCGProfile(StringRef S, SMLoc Loc) {
   return MCAsmParserExtension::parseDirectiveCGProfile(S, Loc);
 }
 
-namespace llvm {
-
-MCAsmParserExtension *createELFAsmParser() {
-  return new ELFAsmParser;
-}
-
-} // end namespace llvm
+MCAsmParserExtension *llvm::createELFAsmParser() { return new ELFAsmParser; }
