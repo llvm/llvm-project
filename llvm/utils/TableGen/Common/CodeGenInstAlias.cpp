@@ -55,9 +55,10 @@ static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
       // Match 'RegClass:$name' or 'RegOp:$name'.
       if (const Record *ArgRC = T.getInitValueAsRegClassLike(Arg)) {
         if (ArgRC->isSubClassOf("RegisterClass")) {
-          if (!T.getRegisterClass(OpRC).hasSubClass(&T.getRegisterClass(ArgRC)))
+          if (!OpRC->isSubClassOf("RegisterClass") ||
+              !T.getRegisterClass(OpRC).hasSubClass(&T.getRegisterClass(ArgRC)))
             return createStringError(
-                "argument register class" + ArgRC->getName() +
+                "argument register class " + ArgRC->getName() +
                 " is not a subclass of operand register class " +
                 OpRC->getName());
           if (!ArgName)
