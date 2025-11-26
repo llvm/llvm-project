@@ -9584,7 +9584,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (SDValue V = lowerSelectToBinOp(Op.getNode(), DAG, Subtarget))
     return V;
 
-  // When there is no cost for GPR <-> FGPR, we can use zicond select for
+  // When there is no cost for GPR <-> FPR, we can use zicond select for
   // floating value when CondV is int type
   bool FPinGPR = Subtarget.hasStdExtZfinx();
 
@@ -9599,12 +9599,9 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     MVT XLenIntVT = Subtarget.getXLenVT();
 
     auto CastToInt = [&](SDValue V) -> SDValue {
-      // Treat +0.0 as integer 0 to enable single 'czero' instruction
-      // generation.
-      if (auto *CFP = dyn_cast<ConstantFPSDNode>(V)) {
-        if (CFP->isZero() && !CFP->isNegative())
-          return DAG.getConstant(0, DL, XLenIntVT);
-      }
+      // Treat +0.0 as int 0 to enable single 'czero' instruction generation.
+      if (isNullFPConstant(V))
+        return DAG.getConstant(0, DL, XLenIntVT);
 
       if (VT == MVT::f16)
         return DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenIntVT, V);

@@ -546,3 +546,93 @@ entry:
   %sel = select i1 %cond, float %t, float 0.000000e+00
   ret float %sel
 }
+
+; -----------------------------------------------------------------------------
+; Test select with i1 condition and zero ret val for half fp (cond ? a : 0)
+; -----------------------------------------------------------------------------
+define dso_local noundef half @select_i1_half_0(i1 %cond, half %val) nounwind {
+; RV64ZDINX_ZICOND-LABEL: select_i1_half_0:
+; RV64ZDINX_ZICOND:       # %bb.0: # %entry
+; RV64ZDINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV64ZDINX_ZICOND-NEXT:    andi a0, a0, 1
+; RV64ZDINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV64ZDINX_ZICOND-NEXT:    lui a1, 1048560
+; RV64ZDINX_ZICOND-NEXT:    or a0, a0, a1
+; RV64ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZDINX_ZICOND-NEXT:    ret
+;
+; RV64ZDINX_NOZICOND-LABEL: select_i1_half_0:
+; RV64ZDINX_NOZICOND:       # %bb.0: # %entry
+; RV64ZDINX_NOZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV64ZDINX_NOZICOND-NEXT:    slli a0, a0, 63
+; RV64ZDINX_NOZICOND-NEXT:    srai a0, a0, 63
+; RV64ZDINX_NOZICOND-NEXT:    and a0, a0, a1
+; RV64ZDINX_NOZICOND-NEXT:    lui a1, 1048560
+; RV64ZDINX_NOZICOND-NEXT:    or a0, a0, a1
+; RV64ZDINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZDINX_NOZICOND-NEXT:    ret
+;
+; RV64ZHINX_ZICOND-LABEL: select_i1_half_0:
+; RV64ZHINX_ZICOND:       # %bb.0: # %entry
+; RV64ZHINX_ZICOND-NEXT:    # kill: def $x11_h killed $x11_h def $x11
+; RV64ZHINX_ZICOND-NEXT:    andi a0, a0, 1
+; RV64ZHINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV64ZHINX_ZICOND-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
+; RV64ZHINX_ZICOND-NEXT:    ret
+;
+; RV64FD-LABEL: select_i1_half_0:
+; RV64FD:       # %bb.0: # %entry
+; RV64FD-NEXT:    fmv.x.w a1, fa0
+; RV64FD-NEXT:    slli a0, a0, 63
+; RV64FD-NEXT:    srai a0, a0, 63
+; RV64FD-NEXT:    and a0, a0, a1
+; RV64FD-NEXT:    lui a1, 1048560
+; RV64FD-NEXT:    or a0, a0, a1
+; RV64FD-NEXT:    fmv.w.x fa0, a0
+; RV64FD-NEXT:    ret
+;
+; RV32ZFINX_ZICOND-LABEL: select_i1_half_0:
+; RV32ZFINX_ZICOND:       # %bb.0: # %entry
+; RV32ZFINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV32ZFINX_ZICOND-NEXT:    andi a0, a0, 1
+; RV32ZFINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV32ZFINX_ZICOND-NEXT:    lui a1, 1048560
+; RV32ZFINX_ZICOND-NEXT:    or a0, a0, a1
+; RV32ZFINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZFINX_ZICOND-NEXT:    ret
+;
+; RV32ZFINX_NOZICOND-LABEL: select_i1_half_0:
+; RV32ZFINX_NOZICOND:       # %bb.0: # %entry
+; RV32ZFINX_NOZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV32ZFINX_NOZICOND-NEXT:    slli a0, a0, 31
+; RV32ZFINX_NOZICOND-NEXT:    srai a0, a0, 31
+; RV32ZFINX_NOZICOND-NEXT:    and a0, a0, a1
+; RV32ZFINX_NOZICOND-NEXT:    lui a1, 1048560
+; RV32ZFINX_NOZICOND-NEXT:    or a0, a0, a1
+; RV32ZFINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZFINX_NOZICOND-NEXT:    ret
+;
+; RV32ZDINX_ZICOND-LABEL: select_i1_half_0:
+; RV32ZDINX_ZICOND:       # %bb.0: # %entry
+; RV32ZDINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV32ZDINX_ZICOND-NEXT:    andi a0, a0, 1
+; RV32ZDINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV32ZDINX_ZICOND-NEXT:    lui a1, 1048560
+; RV32ZDINX_ZICOND-NEXT:    or a0, a0, a1
+; RV32ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZDINX_ZICOND-NEXT:    ret
+;
+; RV32ZDINX_NOZICOND-LABEL: select_i1_half_0:
+; RV32ZDINX_NOZICOND:       # %bb.0: # %entry
+; RV32ZDINX_NOZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV32ZDINX_NOZICOND-NEXT:    slli a0, a0, 31
+; RV32ZDINX_NOZICOND-NEXT:    srai a0, a0, 31
+; RV32ZDINX_NOZICOND-NEXT:    and a0, a0, a1
+; RV32ZDINX_NOZICOND-NEXT:    lui a1, 1048560
+; RV32ZDINX_NOZICOND-NEXT:    or a0, a0, a1
+; RV32ZDINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZDINX_NOZICOND-NEXT:    ret
+entry:
+  %sel = select i1 %cond, half %val, half 0xH0000
+  ret half %sel
+}
