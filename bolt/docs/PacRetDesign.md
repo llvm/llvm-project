@@ -201,27 +201,21 @@ Some BOLT passes can add new Instructions. In InsertNegateRAStatePass, we have
 to know what RA state these have.
 
 > [!important]
-> As issue #160989 describes, unwind info is incorrect in stubs with multiple callers.
-> For this same reason, we cannot generate correct pac-specific unwind info: the signess
-> of the _incorrect_ return address is meaningless.
+> As issue #160989 explains, unwind info is missing from stubs.
+> For this same reason, we cannot generate correct pac-specific unwind info: the
+> signedness of the _incorrect_ return address is meaningless.
 
 Assignment of RAStates to newly generated instructions is done in `inferUnknownStates`.
-We have three different cases to cover:
+We have two different cases to cover:
 
 1. If a BasicBlock has some instructions with known RA state, and some without, we
    can copy the RAState of known instructions to the unknown ones. As the control
-   flow only changes between BasicBlocks, instructions in the same BasicBlock have the
-   same return address.
+   flow only changes between BasicBlocks, instructions in the same BasicBlock have
+   the same return address. (The exception is noreturn calls, but these would only
+   cause problems, if the newly inserted instruction is right after the call.)
 
-2. If all instructions in a BasicBlock are unknown, we can look at all CFG neighbors
-   (that is predecessors/successors). The RAState should be the same as of the
-   neighboring blocks. Conflicting RAStates in neighbors indicate an error. Such
-   functions should be ignored.
-
-3. If a BasicBlock has no CFG neighbors, we have to copy the RAState of the previous
-    BasicBlock in layout order.
-
-If any BasicBlocks remain with unknown instructions, the function will be ignored.
+2. If a BasicBlock has no instructions with known RAState, we have to copy the
+   RAState of the previous BasicBlock in layout order.
 
 ### Optimizations requiring special attention
 
