@@ -9,10 +9,9 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK-LABEL: 'wide_or_replaced_with_add_vpinstruction'
 ; CHECK:  Cost of 1 for VF 2: induction instruction %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 2: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
-; CHECK:  Cost of 1 for VF 2: exit condition instruction %exitcond = icmp eq i64 %iv.next, 32
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK:  Cost of 0 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<%0>
-; CHECK:  Cost of 0 for VF 2: vp<%4> = SCALAR-STEPS vp<%3>, ir<1>
+; CHECK:  Cost of 0 for VF 2: vp<%4> = SCALAR-STEPS vp<%3>, ir<1>, vp<%0>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<%4>
 ; CHECK:  Cost of 0 for VF 2: vp<%5> = vector-pointer inbounds ir<%g.src>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%l> = load vp<%5>
@@ -23,14 +22,21 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK:  Cost of 0 for VF 2: vp<%6> = vector-pointer ir<%g.dst>
 ; CHECK:  Cost of 1 for VF 2: WIDEN store vp<%6>, ir<%iv.4>, ir<%c>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<%3>, vp<%1>
-; CHECK:  Cost of 0 for VF 2: EMIT branch-on-count vp<%index.next>, vp<%2>
+; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<%2>
 ; CHECK:  Cost of 0 for VF 2: vector loop backedge
+; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%2>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK:  Cost of 0 for VF 2: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK:  Cost of 0 for VF 2: IR %g.src = getelementptr inbounds i64, ptr %src, i64 %iv
+; CHECK:  Cost of 0 for VF 2: IR %l = load i64, ptr %g.src, align 8
+; CHECK:  Cost of 0 for VF 2: IR %iv.4 = add nuw nsw i64 %iv, 4
+; CHECK:  Cost of 0 for VF 2: IR %c = icmp ule i64 %l, 128
+; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<32>, vp<%2>
+; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
-; CHECK:  Cost of 1 for VF 4: exit condition instruction %exitcond = icmp eq i64 %iv.next, 32
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK:  Cost of 0 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<%0>
-; CHECK:  Cost of 0 for VF 4: vp<%4> = SCALAR-STEPS vp<%3>, ir<1>
+; CHECK:  Cost of 0 for VF 4: vp<%4> = SCALAR-STEPS vp<%3>, ir<1>, vp<%0>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<%4>
 ; CHECK:  Cost of 0 for VF 4: vp<%5> = vector-pointer inbounds ir<%g.src>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%l> = load vp<%5>
@@ -41,11 +47,18 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK:  Cost of 0 for VF 4: vp<%6> = vector-pointer ir<%g.dst>
 ; CHECK:  Cost of 1 for VF 4: WIDEN store vp<%6>, ir<%iv.4>, ir<%c>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<%3>, vp<%1>
-; CHECK:  Cost of 0 for VF 4: EMIT branch-on-count vp<%index.next>, vp<%2>
+; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<%2>
 ; CHECK:  Cost of 0 for VF 4: vector loop backedge
+; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%2>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK:  Cost of 0 for VF 4: IR %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK:  Cost of 0 for VF 4: IR %g.src = getelementptr inbounds i64, ptr %src, i64 %iv
+; CHECK:  Cost of 0 for VF 4: IR %l = load i64, ptr %g.src, align 8
+; CHECK:  Cost of 0 for VF 4: IR %iv.4 = add nuw nsw i64 %iv, 4
+; CHECK:  Cost of 0 for VF 4: IR %c = icmp ule i64 %l, 128
+; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<32>, vp<%2>
+; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
-; CHECK:  Cost of 1 for VF 4: exit condition instruction %exitcond = icmp eq i64 %iv.next, 32
 ;
 entry:
   br label %loop.header
