@@ -1144,6 +1144,28 @@ static bool isCheapImmediate(const MachineInstr &MI, unsigned BitSize) {
   return Is.size() <= 2;
 }
 
+// Check if a COPY instruction is cheap.
+static bool isCheapCopy(const MachineInstr &MI, const AArch64RegisterInfo &RI) {
+  assert(MI.isCopy() && "Expected COPY instruction");
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+
+  // Cross-bank copies (e.g., between GPR and FPR) are expensive on AArch64,
+  // typically requiring an FMOV instruction with a 2-6 cycle latency.
+  auto GetRegClass = [&](Register Reg) -> const TargetRegisterClass * {
+    if (Reg.isVirtual())
+      return MRI.getRegClass(Reg);
+    if (Reg.isPhysical())
+      return RI.getMinimalPhysRegClass(Reg);
+    return nullptr;
+  };
+  const TargetRegisterClass *DstRC = GetRegClass(MI.getOperand(0).getReg());
+  const TargetRegisterClass *SrcRC = GetRegClass(MI.getOperand(1).getReg());
+  if (DstRC && SrcRC && !RI.getCommonSubClass(DstRC, SrcRC))
+    return false;
+
+  return MI.isAsCheapAsAMove();
+}
+
 // FIXME: this implementation should be micro-architecture dependent, so a
 // micro-architecture target hook should be introduced here in future.
 bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
@@ -1156,6 +1178,9 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     return MI.isAsCheapAsAMove();
+
+  case TargetOpcode::COPY:
+    return isCheapCopy(MI, RI);
 
   case AArch64::ADDWrs:
   case AArch64::ADDXrs:
@@ -9771,8 +9796,8 @@ outliningCandidatesSigningScopeConsensus(const outliner::Candidate &a,
   const auto &MFIa = a.getMF()->getInfo<AArch64FunctionInfo>();
   const auto &MFIb = b.getMF()->getInfo<AArch64FunctionInfo>();
 
-  return MFIa->shouldSignReturnAddress(false) == MFIb->shouldSignReturnAddress(false) &&
-         MFIa->shouldSignReturnAddress(true) == MFIb->shouldSignReturnAddress(true);
+  return MFIa->getSignReturnAddressCondition() ==
+         MFIb->getSignReturnAddressCondition();
 }
 
 static bool
@@ -9863,10 +9888,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // Performing a tail call may require extra checks when PAuth is enabled.
   // If PAuth is disabled, set it to zero for uniformity.
   unsigned NumBytesToCheckLRInTCEpilogue = 0;
-  if (RepeatedSequenceLocs[0]
-          .getMF()
-          ->getInfo<AArch64FunctionInfo>()
-          ->shouldSignReturnAddress(true)) {
+  const auto RASignCondition = RepeatedSequenceLocs[0]
+                                   .getMF()
+                                   ->getInfo<AArch64FunctionInfo>()
+                                   ->getSignReturnAddressCondition();
+  if (RASignCondition != SignReturnAddress::None) {
     // One PAC and one AUT instructions
     NumBytesToCreateFrame += 8;
 
@@ -10670,7 +10696,9 @@ void AArch64InstrInfo::buildOutlinedFrame(
     Et = MBB.insert(Et, LDRXpost);
   }
 
-  bool ShouldSignReturnAddr = FI->shouldSignReturnAddress(!IsLeafFunction);
+  auto RASignCondition = FI->getSignReturnAddressCondition();
+  bool ShouldSignReturnAddr = AArch64FunctionInfo::shouldSignReturnAddress(
+      RASignCondition, !IsLeafFunction);
 
   // If this is a tail call outlined function, then there's already a return.
   if (OF.FrameConstructionID == MachineOutlinerTailCall ||

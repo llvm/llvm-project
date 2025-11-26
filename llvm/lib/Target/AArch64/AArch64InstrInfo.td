@@ -1184,7 +1184,7 @@ def AArch64msrr : SDNode<"AArch64ISD::MSRR",
                                                SDTCisVT<2, i64>]>,
                           [SDNPHasChain]>;
 
-def SD_AArch64rshrnb : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisInt<2>]>;
+def SD_AArch64rshrnb : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVT<2, i32>]>;
 // Vector narrowing shift by immediate (bottom)
 def AArch64rshrnb : SDNode<"AArch64ISD::RSHRNB_I", SD_AArch64rshrnb>;
 def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
@@ -2215,6 +2215,7 @@ let Predicates = [HasPAuth] in {
     let Size = 12;
     let Defs = [X16, X17];
     let usesCustomInserter = 1;
+    let supportsDeactivationSymbol = true;
   }
 
   // A standalone pattern is used, so that literal 0 can be passed as $Disc.
@@ -2751,6 +2752,20 @@ def : Pat<(AArch64sub_flag GPR32:$Rn, neg_addsub_shifted_imm32:$imm),
 def : Pat<(AArch64sub_flag GPR64:$Rn, neg_addsub_shifted_imm64:$imm),
           (ADDSXri GPR64:$Rn, neg_addsub_shifted_imm64:$imm)>;
 }
+
+
+def trunc_isWorthFoldingALU : PatFrag<(ops node:$src), (trunc $src)> {
+  let PredicateCode = [{ return isWorthFoldingALU(SDValue(N, 0)); }];
+  let GISelPredicateCode = [{ return isWorthFoldingIntoExtendedReg(MI, MRI, false); }];
+}
+
+// Patterns for (add X, trunc(shift(Y))), for which we can generate 64bit instructions.
+def : Pat<(add GPR32:$Rn, (trunc_isWorthFoldingALU arith_shifted_reg64:$Rm)),
+          (EXTRACT_SUBREG (ADDXrs (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Rn, sub_32),
+                                  arith_shifted_reg64:$Rm), sub_32)>;
+def : Pat<(sub GPR32:$Rn, (trunc_isWorthFoldingALU arith_shifted_reg64:$Rm)),
+          (EXTRACT_SUBREG (SUBXrs (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Rn, sub_32),
+                                  arith_shifted_reg64:$Rm), sub_32)>;
 
 def : InstAlias<"neg $dst, $src",
                 (SUBWrs GPR32:$dst, WZR,
@@ -7014,6 +7029,19 @@ multiclass UIntToFPROLoadPat<ValueType DstTy, ValueType SrcTy,
                                  sub))>;
 }
 
+let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
+defm : UIntToFPROLoadPat<f16, i32, zextloadi8,
+                         UCVTFv1i16, ro8, LDRBroW, LDRBroX, bsub>;
+def : Pat <(f16 (uint_to_fp (i32
+               (zextloadi8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
+           (UCVTFv1i16 (INSERT_SUBREG (f16 (IMPLICIT_DEF)),
+                          (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub))>;
+def : Pat <(f16 (uint_to_fp (i32
+                     (zextloadi8 (am_unscaled8 GPR64sp:$Rn, simm9:$offset))))),
+           (UCVTFv1i16 (INSERT_SUBREG (f16 (IMPLICIT_DEF)),
+                          (LDURBi GPR64sp:$Rn, simm9:$offset), bsub))>;
+}
+
 defm : UIntToFPROLoadPat<f32, i32, zextloadi8,
                          UCVTFv1i32, ro8, LDRBroW, LDRBroX, bsub>;
 def : Pat <(f32 (uint_to_fp (i32
@@ -8354,6 +8382,7 @@ def : InstAlias<"orr.4s $Vd, $imm", (ORRv4i32 V128:$Vd, imm0_255:$imm, 0)>;
 }
 
 // AdvSIMD FMOV
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def FMOVv2f64_ns : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1111, V128, fpimm8,
                                               "fmov", ".2d",
                        [(set (v2f64 V128:$Rd), (AArch64fmov imm0_255:$imm8))]>;
@@ -8371,6 +8400,7 @@ def FMOVv8f16_ns : SIMDModifiedImmVectorNoShift<1, 0, 1, 0b1111, V128, fpimm8,
                                               "fmov", ".8h",
                        [(set (v8f16 V128:$Rd), (AArch64fmov imm0_255:$imm8))]>;
 } // Predicates = [HasNEON, HasFullFP16]
+}
 
 // AdvSIMD MOVI
 

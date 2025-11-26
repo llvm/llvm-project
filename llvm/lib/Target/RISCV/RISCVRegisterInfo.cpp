@@ -864,6 +864,46 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
+  // Handle RegPairEven/RegPairOdd hints for Zilsd register pairs
+  std::pair<unsigned, Register> Hint = MRI->getRegAllocationHint(VirtReg);
+  unsigned HintType = Hint.first;
+  Register Partner = Hint.second;
+
+  MCRegister TargetReg;
+  if (HintType == RISCVRI::RegPairEven || HintType == RISCVRI::RegPairOdd) {
+    // Check if we want the even or odd register of a consecutive pair
+    bool WantOdd = (HintType == RISCVRI::RegPairOdd);
+
+    // First priority: Check if partner is already allocated
+    if (Partner.isVirtual() && VRM && VRM->hasPhys(Partner)) {
+      MCRegister PartnerPhys = VRM->getPhys(Partner);
+      // Calculate the exact register we need for consecutive pairing
+      TargetReg = PartnerPhys.id() + (WantOdd ? 1 : -1);
+
+      // Verify it's valid and available
+      if (RISCV::GPRRegClass.contains(TargetReg) &&
+          is_contained(Order, TargetReg))
+        Hints.push_back(TargetReg.id());
+    }
+
+    // Second priority: Try to find consecutive register pairs in the allocation
+    // order
+    for (MCPhysReg PhysReg : Order) {
+      // Don't add the hint if we already added above.
+      if (TargetReg == PhysReg)
+        continue;
+
+      unsigned RegNum = getEncodingValue(PhysReg);
+      // Check if this register matches the even/odd requirement
+      bool IsOdd = (RegNum % 2 != 0);
+
+      // Don't provide hints that are paired to a reserved register.
+      MCRegister Paired = PhysReg + (IsOdd ? -1 : 1);
+      if (WantOdd == IsOdd && !MRI->isReserved(Paired))
+        Hints.push_back(PhysReg);
+    }
+  }
+
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
       VirtReg, Order, Hints, MF, VRM, Matrix);
 
@@ -1003,6 +1043,35 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       Hints.push_back(OrderReg);
 
   return BaseImplRetVal;
+}
+
+void RISCVRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,
+                                           MachineFunction &MF) const {
+  MachineRegisterInfo *MRI = &MF.getRegInfo();
+  std::pair<unsigned, Register> Hint = MRI->getRegAllocationHint(Reg);
+
+  // Handle RegPairEven/RegPairOdd hints for Zilsd register pairs
+  if ((Hint.first == RISCVRI::RegPairOdd ||
+       Hint.first == RISCVRI::RegPairEven) &&
+      Hint.second.isVirtual()) {
+    // If 'Reg' is one of the even/odd register pair and it's now changed
+    // (e.g. coalesced) into a different register, the other register of the
+    // pair allocation hint must be updated to reflect the relationship change.
+    Register Partner = Hint.second;
+    std::pair<unsigned, Register> PartnerHint =
+        MRI->getRegAllocationHint(Partner);
+
+    // Make sure partner still points to us
+    if (PartnerHint.second == Reg) {
+      // Update partner to point to NewReg instead of Reg
+      MRI->setRegAllocationHint(Partner, PartnerHint.first, NewReg);
+
+      // If NewReg is virtual, set up the reciprocal hint
+      // NewReg takes over Reg's role, so it gets the SAME hint type as Reg
+      if (NewReg.isVirtual())
+        MRI->setRegAllocationHint(NewReg, Hint.first, Partner);
+    }
+  }
 }
 
 Register

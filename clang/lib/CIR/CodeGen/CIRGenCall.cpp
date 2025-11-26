@@ -465,12 +465,47 @@ static cir::CIRCallOpInterface
 emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
                cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
                cir::FuncOp directFuncOp,
-               const SmallVectorImpl<mlir::Value> &cirCallArgs,
+               const SmallVectorImpl<mlir::Value> &cirCallArgs, bool isInvoke,
                const mlir::NamedAttrList &attrs) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   assert(!cir::MissingFeatures::opCallSurroundingTry());
-  assert(!cir::MissingFeatures::invokeOp());
+
+  if (isInvoke) {
+    // This call may throw and requires catch and/or cleanup handling.
+    // If this call does not appear within the `try` region of an existing
+    // TryOp, we must create a synthetic TryOp to contain the call. This
+    // happens when a call that may throw appears within a cleanup
+    // scope.
+
+    // In OG, we build the landing pad for this scope. In CIR, we emit a
+    // synthetic cir.try because this didn't come from code generating from a
+    // try/catch in C++.
+    assert(cgf.curLexScope && "expected scope");
+    cir::TryOp tryOp = cgf.curLexScope->getClosestTryParent();
+    if (!tryOp) {
+      cgf.cgm.errorNYI(
+          "emitCallLikeOp: call does not have an associated cir.try");
+      return {};
+    }
+
+    if (tryOp.getSynthetic()) {
+      cgf.cgm.errorNYI("emitCallLikeOp: tryOp synthetic");
+      return {};
+    }
+
+    cir::CallOp callOpWithExceptions;
+    if (indirectFuncTy) {
+      cgf.cgm.errorNYI("emitCallLikeOp: indirect function type");
+      return {};
+    }
+
+    callOpWithExceptions =
+        builder.createCallOp(callLoc, directFuncOp, cirCallArgs);
+
+    cgf.populateCatchHandlersIfRequired(tryOp);
+    return callOpWithExceptions;
+  }
 
   assert(builder.getInsertionBlock() && "expected valid basic block");
 
@@ -601,8 +636,6 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   assert(!cir::MissingFeatures::opCallAttrs());
   cgm.constructAttributeList(callee.getAbstractInfo(), attrs);
 
-  assert(!cir::MissingFeatures::invokeOp());
-
   cir::FuncType indirectFuncTy;
   mlir::Value indirectFuncVal;
   cir::FuncOp directFuncOp;
@@ -628,10 +661,17 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     indirectFuncVal = calleePtr->getResult(0);
   }
 
+  assert(!cir::MissingFeatures::msvcCXXPersonality());
+  assert(!cir::MissingFeatures::functionUsesSEHTry());
+  assert(!cir::MissingFeatures::nothrowAttr());
+
+  bool cannotThrow = attrs.getNamed("nothrow").has_value();
+  bool isInvoke = !cannotThrow && isCatchOrCleanupRequired();
+
   mlir::Location callLoc = loc;
   cir::CIRCallOpInterface theCall =
       emitCallLikeOp(*this, loc, indirectFuncTy, indirectFuncVal, directFuncOp,
-                     cirCallArgs, attrs);
+                     cirCallArgs, isInvoke, attrs);
 
   if (callOp)
     *callOp = theCall;
