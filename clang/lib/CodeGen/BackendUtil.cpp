@@ -86,6 +86,7 @@
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 #include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
+#include "llvm/Transforms/Ripple/RippleModulePass.h"
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
@@ -1108,6 +1109,14 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
         MPM.addPass(ModuleMemProfilerPass());
       });
     }
+
+    if (LangOpts.Ripple)
+      PB.registerOptimizerEarlyEPCallback(
+          [TM = std::ref(TM)](ModulePassManager &MPM, OptimizationLevel Level,
+                              ThinOrFullLTOPhase Phase) {
+            TargetMachine *LTM = TM.get() ? (TM.get()).get() : nullptr;
+            MPM.addPass(RippleModulePass(LTM));
+          });
 
     if (CodeGenOpts.FatLTO) {
       MPM.addPass(PB.buildFatLTODefaultPipeline(

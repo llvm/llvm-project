@@ -7918,6 +7918,63 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  // Forward the Ripple options to CC1
+  if (Args.hasArg(options::OPT_fenable_ripple)) {
+    // Check if the target is supported
+    auto &TargetTriple = TC.getTriple();
+    if (TargetTriple.isHexagon() || TargetTriple.isAArch64() ||
+        TargetTriple.isX86()) {
+      if (!Args.hasArg(options::OPT_fdisable_ripple_lib)) {
+        // Collect all the ripple's runtime libs (.bc files) available for the
+        // target
+        llvm::SmallString<128> RippleRTLibPath;
+        llvm::SmallString<128> RippleIncludePath;
+        ;
+        std::vector<std::string> TargetRTLibs;
+        std::string TargetName = TargetTriple.getArchName().str();
+
+        RippleRTLibPath = TC.getDriver().ResourceDir;
+        llvm::sys::path::append(RippleRTLibPath, "lib",
+                                TargetTriple.getTriple(), "ripple", TargetName);
+
+        if (llvm::sys::fs::is_directory(RippleRTLibPath)) {
+          std::error_code EC;
+          for (llvm::sys::fs::directory_iterator File(RippleRTLibPath, EC),
+               DirEnd;
+               File != DirEnd && !EC; File.increment(EC)) {
+            if (llvm::sys::path::extension(File->path()) == ".bc") {
+              std::string FileName =
+                  llvm::sys::path::filename(File->path()).str();
+              TargetRTLibs.push_back(File->path());
+            }
+          }
+          // Sort the collected file paths alphabetically
+          std::sort(TargetRTLibs.begin(), TargetRTLibs.end());
+          // Note: Currently, the priority is alphabetical order.
+          // We probably need to establish a naming convention for the libraries
+          // and updating this part of the code accordingly.
+        }
+        // If the user has already passed some ripple_libs, attach the RT libs
+        // to the end of the path list so that RT libs have lower priority
+        // compared to the user-defined external libraries. Each ripple_lib is
+        // passed as a separate -mllvm flag.
+        for (auto &PathVal : Args.getAllArgValues(options::OPT_fripple_lib)) {
+          CmdArgs.push_back("-mllvm");
+          CmdArgs.push_back(Args.MakeArgString("--ripple-lib=" + PathVal));
+        }
+        for (const auto &Lib : TargetRTLibs) {
+          CmdArgs.push_back("-mllvm");
+          CmdArgs.push_back(Args.MakeArgString("--ripple-lib=" + Lib));
+        }
+      }
+      Args.AddLastArg(CmdArgs, options::OPT_fenable_ripple);
+    } else {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << Args.getLastArg(options::OPT_fenable_ripple)->getAsString(Args)
+          << TargetTriple.str();
+    }
+  }
+
   // This needs to run after -Xclang argument forwarding to pick up the target
   // features enabled through -Xclang -target-feature flags.
   SanitizeArgs.addArgs(TC, Args, CmdArgs, InputType);
