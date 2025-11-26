@@ -71,7 +71,7 @@
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
-# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "command": "clangd.applyFix.{{[0-9A-F]+}}",
 # CHECK-NEXT:      "title": "Apply fix: place parentheses around the assignment to silence this warning"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
@@ -102,7 +102,7 @@
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
-# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "command": "clangd.applyFix.{{[0-9A-F]+}}",
 # CHECK-NEXT:      "title": "Apply fix: use '==' to turn this assignment into an equality comparison"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
@@ -153,7 +153,7 @@
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
-# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "command": "clangd.applyFix.{{[0-9A-F]+}}",
 # CHECK-NEXT:      "title": "Apply fix: place parentheses around the assignment to silence this warning"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
@@ -184,7 +184,7 @@
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
-# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "command": "clangd.applyFix.{{[0-9A-F]+}}",
 # CHECK-NEXT:      "title": "Apply fix: use '==' to turn this assignment into an equality comparison"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
