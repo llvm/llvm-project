@@ -1054,12 +1054,19 @@ TEST_F(TestArm64InstEmulation, TestMidFunctionEpilogueAndBackwardsJump) {
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
   EXPECT_EQ(row->GetCFAValue().GetOffset(), 0);
 
-  // FIXME: Row for offset +32 incorrectly inherits the state of the `ret`
-  // instruction, but +32 _never_ executes after the `ret`.
+  // Row for offset +32 should not inherits the state of the `ret` instruction
+  // in +28. Instead, it should inherit the state of the branch in +64.
+  // Check for register x22, which is available in row +64.
   // <+28>: ret
   // <+32>: mov    x23, #0x1
   row = unwind_plan.GetRowForFunctionOffset(32);
-  // FIXME: EXPECT_NE(28, row->GetOffset());
+  EXPECT_EQ(32, row->GetOffset());
+  {
+    UnwindPlan::Row::AbstractRegisterLocation loc;
+    EXPECT_TRUE(row->GetRegisterInfo(gpr_x22_arm64, loc));
+    EXPECT_TRUE(loc.IsAtCFAPlusOffset());
+    EXPECT_EQ(loc.GetOffset(), -32);
+  }
 
   // Check that the state of this branch
   // <+16>: b.ne   ; <+52> DO_SOMETHING_AND_GOTO_AFTER_EPILOGUE
@@ -1070,4 +1077,12 @@ TEST_F(TestArm64InstEmulation, TestMidFunctionEpilogueAndBackwardsJump) {
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset());
   EXPECT_EQ(row->GetCFAValue().GetRegisterNumber(), gpr_fp_arm64);
   EXPECT_EQ(row->GetCFAValue().GetOffset(), 16);
+
+  row = unwind_plan.GetRowForFunctionOffset(64);
+  {
+    UnwindPlan::Row::AbstractRegisterLocation loc;
+    EXPECT_TRUE(row->GetRegisterInfo(gpr_x22_arm64, loc));
+    EXPECT_TRUE(loc.IsAtCFAPlusOffset());
+    EXPECT_EQ(loc.GetOffset(), -32);
+  }
 }
