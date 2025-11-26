@@ -21,11 +21,11 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 template <typename... Operands>
-static mlir::Value emitIntrinsicCallOp(CIRGenFunction &cgf, mlir::Location loc,
-                                       const std::string &str,
+static mlir::Value emitIntrinsicCallOp(CIRGenBuilderTy &builder,
+                                       mlir::Location loc,
+                                       const StringRef str,
                                        const mlir::Type &resTy,
                                        Operands &&...op) {
-  CIRGenBuilderTy &builder = cgf.getBuilder();
   return cir::LLVMIntrinsicCallOp::create(builder, loc,
                                           builder.getStringAttr(str), resTy,
                                           std::forward<Operands>(op)...)
@@ -67,10 +67,8 @@ static mlir::Value emitVectorFCmp(CIRGenBuilderTy &builder,
   return bitCast;
 }
 
-static mlir::Value getMaskVecValue(CIRGenFunction &cgf, mlir::Location loc,
+static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
                                    mlir::Value mask, unsigned numElems) {
-
-  CIRGenBuilderTy &builder = cgf.getBuilder();
   auto maskTy = cir::VectorType::get(
       builder.getUIntNTy(1), cast<cir::IntType>(mask.getType()).getWidth());
   mlir::Value maskVec = builder.createBitcast(mask, maskTy);
@@ -130,19 +128,19 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   default:
     return {};
   case X86::BI_mm_clflush:
-    return emitIntrinsicCallOp(*this, getLoc(expr->getExprLoc()),
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
                                "x86.sse2.clflush", voidTy, ops[0]);
   case X86::BI_mm_lfence:
-    return emitIntrinsicCallOp(*this, getLoc(expr->getExprLoc()),
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
                                "x86.sse2.lfence", voidTy);
   case X86::BI_mm_pause:
-    return emitIntrinsicCallOp(*this, getLoc(expr->getExprLoc()),
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
                                "x86.sse2.pause", voidTy);
   case X86::BI_mm_mfence:
-    return emitIntrinsicCallOp(*this, getLoc(expr->getExprLoc()),
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
                                "x86.sse2.mfence", voidTy);
   case X86::BI_mm_sfence:
-    return emitIntrinsicCallOp(*this, getLoc(expr->getExprLoc()),
+    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
                                "x86.sse.sfence", voidTy);
   case X86::BI_mm_prefetch:
   case X86::BI__rdtsc:
@@ -157,7 +155,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_lzcnt_u64: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     mlir::Value isZeroPoison = builder.getFalse(loc);
-    return emitIntrinsicCallOp(*this, loc, "ctlz", ops[0].getType(),
+    return emitIntrinsicCallOp(builder, loc, "ctlz", ops[0].getType(),
                                mlir::ValueRange{ops[0], isZeroPoison});
   }
   case X86::BI__builtin_ia32_tzcnt_u16:
@@ -165,7 +163,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_tzcnt_u64: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     mlir::Value isZeroPoison = builder.getFalse(loc);
-    return emitIntrinsicCallOp(*this, loc, "cttz", ops[0].getType(),
+    return emitIntrinsicCallOp(builder, loc, "cttz", ops[0].getType(),
                                mlir::ValueRange{ops[0], isZeroPoison});
   }
   case X86::BI__builtin_ia32_undef128:
@@ -221,14 +219,14 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     mlir::Location loc = getLoc(expr->getExprLoc());
     Address tmp = createMemTemp(expr->getArg(0)->getType(), loc);
     builder.createStore(loc, ops[0], tmp);
-    return emitIntrinsicCallOp(*this, loc, "x86.sse.ldmxcsr",
+    return emitIntrinsicCallOp(builder, loc, "x86.sse.ldmxcsr",
                                builder.getVoidTy(), tmp.getPointer());
   }
   case X86::BI_mm_getcsr:
   case X86::BI__builtin_ia32_stmxcsr: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     Address tmp = createMemTemp(expr->getType(), loc);
-    emitIntrinsicCallOp(*this, loc, "x86.sse.stmxcsr", builder.getVoidTy(),
+    emitIntrinsicCallOp(builder, loc, "x86.sse.stmxcsr", builder.getVoidTy(),
                         tmp.getPointer());
     return builder.createLoad(loc, tmp);
   }
@@ -619,7 +617,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     if (shiftVal >= numElems)
       return builder.getNullValue(ops[0].getType(), loc);
 
-    mlir::Value in = getMaskVecValue(*this, loc, ops[0], numElems);
+    mlir::Value in = getMaskVecValue(builder, loc, ops[0], numElems);
 
     SmallVector<mlir::Attribute, 64> indices;
     mlir::Type i32Ty = builder.getSInt32Ty();
@@ -643,7 +641,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     if (shiftVal >= numElems)
       return builder.getNullValue(ops[0].getType(), loc);
 
-    mlir::Value in = getMaskVecValue(*this, loc, ops[0], numElems);
+    mlir::Value in = getMaskVecValue(builder, loc, ops[0], numElems);
 
     SmallVector<mlir::Attribute, 64> indices;
     mlir::Type i32Ty = builder.getSInt32Ty();
