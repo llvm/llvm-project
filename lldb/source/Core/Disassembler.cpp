@@ -336,7 +336,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
       VariableAnnotation annotation_entity = KV.second;
       annotation_entity.is_live = false;
       annotation_entity.location_description = kUndefLocation;
-      annotations.push_back(annotation_entity);
+      annotations.push_back(std::move(annotation_entity));
     }
     m_live_vars.clear();
     return annotations;
@@ -353,7 +353,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
       VariableAnnotation annotation_entity = KV.second;
       annotation_entity.is_live = false;
       annotation_entity.location_description = kUndefLocation;
-      annotations.push_back(annotation_entity);
+      annotations.push_back(std::move(annotation_entity));
     }
     m_live_vars.clear();
     return annotations;
@@ -441,13 +441,13 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
       // Newly live.
       VariableAnnotation annotation_entity = KV.second;
       annotation_entity.is_live = true;
-      annotations.push_back(annotation_entity);
+      annotations.push_back(std::move(annotation_entity));
     } else if (it->second.location_description !=
                KV.second.location_description) {
       // Location changed.
       VariableAnnotation annotation_entity = KV.second;
       annotation_entity.is_live = true;
-      annotations.push_back(annotation_entity);
+      annotations.push_back(std::move(annotation_entity));
     }
   }
 
@@ -458,7 +458,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
       auto annotation_entity = KV.second;
       annotation_entity.is_live = false;
       annotation_entity.location_description = kUndefLocation;
-      annotations.push_back(annotation_entity);
+      annotations.push_back(std::move(annotation_entity));
     }
 
   // Commit new state.
