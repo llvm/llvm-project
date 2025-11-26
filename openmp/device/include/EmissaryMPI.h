@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "EmissaryIds.h"
+#include <mpi.h>
 #include <stdarg.h>
 
 typedef enum {
