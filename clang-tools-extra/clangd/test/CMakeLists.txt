@@ -3,6 +3,7 @@ set(CLANGD_TEST_DEPS
   ClangdTests
   clangd-indexer
   split-file
+  IndexBenchmark
   )
 
 if(CLANGD_BUILD_XPC)
