@@ -395,6 +395,8 @@ defm SPV_NV_shader_atomic_fp16_vector
     : ExtensionOperand<132, [EnvVulkan, EnvOpenCL]>;
 defm SPV_EXT_image_raw10_raw12 :ExtensionOperand<133, [EnvOpenCL, EnvVulkan]>;
 defm SPV_ALTERA_arbitrary_precision_floating_point: ExtensionOperand<134, [EnvOpenCL]>;
+defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<135, [EnvVulkan, EnvOpenCL]>;
+
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
 // SymbolicOperand entries with string mnemonics, versioning, extensions, and
