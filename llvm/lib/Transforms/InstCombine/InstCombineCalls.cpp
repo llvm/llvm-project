@@ -4007,11 +4007,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::experimental_get_vector_length: {
     // get.vector.length(Cnt, MaxLanes) --> Cnt when Cnt <= MaxLanes
-    ConstantRange Cnt = computeConstantRangeIncludingKnownBits(
-        II->getArgOperand(0), false, SQ.getWithInstruction(II));
+    unsigned BitWidth =
+        std::max(II->getArgOperand(0)->getType()->getScalarSizeInBits(),
+                 II->getType()->getScalarSizeInBits());
+    ConstantRange Cnt =
+        computeConstantRangeIncludingKnownBits(II->getArgOperand(0), false,
+                                               SQ.getWithInstruction(II))
+            .zextOrTrunc(BitWidth);
     ConstantRange MaxLanes = cast<ConstantInt>(II->getArgOperand(1))
                                  ->getValue()
-                                 .zext(Cnt.getBitWidth());
+                                 .zextOrTrunc(Cnt.getBitWidth());
     if (cast<ConstantInt>(II->getArgOperand(2))->isOne())
       MaxLanes = MaxLanes.multiply(
           getVScaleRange(II->getFunction(), Cnt.getBitWidth()));

@@ -78,3 +78,12 @@ define i32 @cnt_known_lt_runtime_assumption(i32 %x) {
   %y = call i32 @llvm.experimental.get.vector.length(i32 %x, i32 2, i1 false)
   ret i32 %y
 }
+
+
+define i32 @cnt_known_lt_i16() {
+; CHECK-LABEL: define i32 @cnt_known_lt_i16() {
+; CHECK-NEXT:    ret i32 1
+;
+  %x = call i32 @llvm.experimental.get.vector.length(i16 1, i32 2, i1 false)
+  ret i32 %x
+}
