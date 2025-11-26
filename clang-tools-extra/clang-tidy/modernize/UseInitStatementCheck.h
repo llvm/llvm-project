@@ -21,19 +21,13 @@ class UseInitStatementCheck : public ClangTidyCheck {
 public:
   UseInitStatementCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
-  
+
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  
+
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus17;
   }
-
-private:
-  const DeclStmt* findPreviousDeclStmt(const Stmt *CurrentStmt, const VarDecl *TargetVar, 
-                                      ASTContext *Context);
-  bool isVariableUsedInStmt(const VarDecl *VD, const Stmt *S);
-  bool isVariableUsedAfterStmt(const VarDecl *VD, const Stmt *Stmt, ASTContext *Context);
 };
 
 } // namespace clang::tidy::modernize
