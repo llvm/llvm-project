@@ -539,7 +539,8 @@ public:
   Slice(uint64_t BeginOffset, uint64_t EndOffset, Use *U, bool IsSplittable,
         Value *ProtectedFieldDisc)
       : BeginOffset(BeginOffset), EndOffset(EndOffset),
-        UseAndIsSplittable(U, IsSplittable), ProtectedFieldDisc(ProtectedFieldDisc) {}
+        UseAndIsSplittable(U, IsSplittable),
+        ProtectedFieldDisc(ProtectedFieldDisc) {}
 
   uint64_t beginOffset() const { return BeginOffset; }
   uint64_t endOffset() const { return EndOffset; }
