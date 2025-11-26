@@ -49,7 +49,7 @@ exit:
 ; CHECK-NEXT:     WIDEN-PHI vp<[[MASKPHI:%.*]]> = phi [ ir<false>, vector.ph ], [ vp<[[MASKSELECT:%.*]]>, vector.body ]
 ; CHECK-NEXT:     vp<[[STEPS:%.*]]> = SCALAR-STEPS vp<[[CIV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<[[LDADDR:%.*]]> = getelementptr inbounds ir<%data>, vp<[[STEPS:%.*]]>
-; CHECK-NEXT:     vp<[[VPTR:%.*]]> = vector-pointer ir<[[LDADDR]]>
+; CHECK-NEXT:     vp<[[VPTR:%.*]]> = vector-pointer inbounds ir<[[LDADDR]]>
 ; CHECK-NEXT:     WIDEN ir<[[LD:%.*]]> = load vp<[[VPTR]]>
 ; CHECK-NEXT:     WIDEN ir<[[SELECTCMP:%.*]]> = icmp slt ir<%a>, ir<[[LD]]>
 ; CHECK-NEXT:     EMIT vp<[[ANYOF:%.*]]> = any-of ir<[[SELECTCMP]]>

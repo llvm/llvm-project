@@ -192,7 +192,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[IV_START]], i64 0
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-VF4IC1-NEXT:    [[INDUCTION:%.*]] = add nsw <4 x i32> [[BROADCAST_SPLAT2]], <i32 0, i32 1, i32 2, i32 3>
+; CHECK-VF4IC1-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT2]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
 ; CHECK-VF4IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -208,7 +208,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC1-NEXT:    [[TMP7]] = select i1 [[TMP6]], <4 x i1> [[TMP4]], <4 x i1> [[LAST_ACTIVE_MASK]]
 ; CHECK-VF4IC1-NEXT:    [[TMP8]] = select i1 [[TMP6]], <4 x i32> [[VEC_IND]], <4 x i32> [[VEC_PHI]]
 ; CHECK-VF4IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-VF4IC1-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-VF4IC1-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-VF4IC1-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-VF4IC1:       [[MIDDLE_BLOCK]]:
@@ -257,7 +257,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[IV_START]], i64 0
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-VF4IC4-NEXT:    [[INDUCTION:%.*]] = add nsw <4 x i32> [[BROADCAST_SPLAT2]], <i32 0, i32 1, i32 2, i32 3>
+; CHECK-VF4IC4-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> [[BROADCAST_SPLAT2]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
 ; CHECK-VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -273,7 +273,7 @@ define i32 @select_trunc_non_const_iv_start_signed_guard(ptr %a, i32 %rdx_start,
 ; CHECK-VF4IC4-NEXT:    [[TMP7]] = select i1 [[TMP6]], <4 x i1> [[TMP4]], <4 x i1> [[LAST_ACTIVE_MASK]]
 ; CHECK-VF4IC4-NEXT:    [[TMP8]] = select i1 [[TMP6]], <4 x i32> [[VEC_IND]], <4 x i32> [[VEC_PHI]]
 ; CHECK-VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-VF4IC4-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-VF4IC4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-VF4IC4-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC4-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-VF4IC4:       [[MIDDLE_BLOCK]]:

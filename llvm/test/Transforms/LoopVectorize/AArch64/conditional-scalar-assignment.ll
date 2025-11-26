@@ -466,16 +466,16 @@ exit:
 }
 
 ;; Add more work to the loop besides the CSA to check cost modelling for NEON.
-define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr readonly %B, ptr noalias %C, i32 %a) {
+define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr readonly %B, ptr noalias %C, i32 %threshold) {
 ; NEON-LABEL: define i32 @int_select_with_extra_arith_payload(
-; NEON-SAME: i64 [[N:%.*]], ptr readonly [[A:%.*]], ptr readonly [[B:%.*]], ptr noalias [[C:%.*]], i32 [[A:%.*]]) {
+; NEON-SAME: i64 [[N:%.*]], ptr readonly [[A:%.*]], ptr readonly [[B:%.*]], ptr noalias [[C:%.*]], i32 [[THRESHOLD:%.*]]) {
 ; NEON-NEXT:  [[ENTRY:.*]]:
 ; NEON-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; NEON-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NEON:       [[VECTOR_PH]]:
 ; NEON-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; NEON-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; NEON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
+; NEON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; NEON-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; NEON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NEON:       [[VECTOR_BODY]]:
@@ -519,7 +519,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; NEON-NEXT:    [[ADD:%.*]] = add i32 [[MUL_A]], [[MUL_B]]
 ; NEON-NEXT:    [[C_ADDR:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
 ; NEON-NEXT:    store i32 [[ADD]], ptr [[C_ADDR]], align 4
-; NEON-NEXT:    [[SELECT_CMP:%.*]] = icmp slt i32 [[A]], [[LD_A]]
+; NEON-NEXT:    [[SELECT_CMP:%.*]] = icmp slt i32 [[THRESHOLD]], [[LD_A]]
 ; NEON-NEXT:    [[SELECT_A]] = select i1 [[SELECT_CMP]], i32 [[LD_A]], i32 [[A_PHI]]
 ; NEON-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; NEON-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
@@ -529,7 +529,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; NEON-NEXT:    ret i32 [[SELECT_A_LCSSA]]
 ;
 ; SVE-LABEL: define i32 @int_select_with_extra_arith_payload(
-; SVE-SAME: i64 [[N:%.*]], ptr readonly [[A:%.*]], ptr readonly [[B:%.*]], ptr noalias [[C:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
+; SVE-SAME: i64 [[N:%.*]], ptr readonly [[A:%.*]], ptr readonly [[B:%.*]], ptr noalias [[C:%.*]], i32 [[THRESHOLD:%.*]]) #[[ATTR0]] {
 ; SVE-NEXT:  [[ENTRY:.*]]:
 ; SVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; SVE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
@@ -540,7 +540,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; SVE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[A]], i64 0
+; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SVE:       [[VECTOR_BODY]]:
@@ -584,7 +584,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; SVE-NEXT:    [[ADD:%.*]] = add i32 [[MUL_A]], [[MUL_B]]
 ; SVE-NEXT:    [[C_ADDR:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
 ; SVE-NEXT:    store i32 [[ADD]], ptr [[C_ADDR]], align 4
-; SVE-NEXT:    [[SELECT_CMP:%.*]] = icmp slt i32 [[A]], [[LD_A]]
+; SVE-NEXT:    [[SELECT_CMP:%.*]] = icmp slt i32 [[THRESHOLD]], [[LD_A]]
 ; SVE-NEXT:    [[SELECT_A]] = select i1 [[SELECT_CMP]], i32 [[LD_A]], i32 [[A_PHI]]
 ; SVE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; SVE-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
@@ -608,7 +608,7 @@ loop:
   %add = add i32 %mul.A, %mul.B
   %C.addr = getelementptr inbounds i32, ptr %C, i64 %iv
   store i32 %add, ptr %C.addr, align 4
-  %select.cmp = icmp slt i32 %a, %ld.A
+  %select.cmp = icmp slt i32 %threshold, %ld.A
   %select.A = select i1 %select.cmp, i32 %ld.A, i32 %A.phi
   %iv.next = add nuw nsw i64 %iv, 1
   %exit.cmp = icmp eq i64 %iv.next, %N
