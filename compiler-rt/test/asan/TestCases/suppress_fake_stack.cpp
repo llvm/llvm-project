@@ -9,26 +9,31 @@
 
 volatile uintptr_t saved;
 
-ATTRIBUTE_NOINLINE bool IsOnRealStack(uintptr_t caller_frame) {
+ATTRIBUTE_NOINLINE bool IsOnRealStack(uintptr_t parent_frame,
+                                      uintptr_t var_addr) {
   uintptr_t this_frame =
       reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
-  return this_frame <= saved && saved <= caller_frame;
+  return this_frame <= var_addr && var_addr <= parent_frame;
 }
 
-ATTRIBUTE_NOINLINE bool IsOnStack() {
+ATTRIBUTE_NOINLINE bool IsOnRealStack(uintptr_t parent_frame) {
   volatile char temp = ' ';
   saved = reinterpret_cast<uintptr_t>(&temp);
+  return IsOnRealStack(parent_frame, saved);
+}
+
+ATTRIBUTE_NOINLINE bool IsOnRealStack() {
   return IsOnRealStack(reinterpret_cast<uintptr_t>(__builtin_frame_address(0)));
 }
 
 int main(int argc, char *argv[]) {
-  assert(!IsOnStack());
+  assert(!IsOnRealStack());
 
   __asan_suppress_fake_stack();
-  assert(IsOnStack());
+  assert(IsOnRealStack());
 
   __asan_unsuppress_fake_stack();
-  assert(!IsOnStack());
+  assert(!IsOnRealStack());
 
   return 0;
 }
