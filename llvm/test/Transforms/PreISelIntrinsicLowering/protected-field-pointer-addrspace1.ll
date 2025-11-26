@@ -157,11 +157,11 @@ declare ptr addrspace(1) @llvm.protected.field.ptr.p1(ptr addrspace(1), i64, i1 
 ;.
 ; NOPAUTH: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; NOPAUTH: attributes #[[ATTR1:[0-9]+]] = { nounwind memory(none) }
-; NOPAUTH: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; NOPAUTH: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; PAUTH: attributes #[[ATTR0]] = { "target-features"="+pauth" }
 ; PAUTH: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) "target-features"="+pauth" }
 ; PAUTH: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; PAUTH: attributes #[[ATTR3:[0-9]+]] = { nounwind memory(none) }
-; PAUTH: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; PAUTH: attributes #[[ATTR4:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
