@@ -99,25 +99,10 @@ public:
     return try_emplace_impl(Key).first->second;
   }
 
-  [[nodiscard]] inline auto keys() {
-    return map_range(
-        Vector, [](const std::pair<KeyT, ValueT> &KV) { return KV.first; });
-  }
-
-  [[nodiscard]] inline auto values() {
-    return map_range(
-        Vector, [](const std::pair<KeyT, ValueT> &KV) { return KV.second; });
-  }
-
-  [[nodiscard]] inline auto keys() const {
-    return map_range(
-        Vector, [](const std::pair<KeyT, ValueT> &KV) { return KV.first; });
-  }
-
-  [[nodiscard]] inline auto values() const {
-    return map_range(
-        Vector, [](const std::pair<KeyT, ValueT> &KV) { return KV.second; });
-  }
+  [[nodiscard]] inline auto keys() { return make_first_range(Vector); }
+  [[nodiscard]] inline auto values() { return make_second_range(Vector); }
+  [[nodiscard]] inline auto keys() const { return make_first_range(Vector); }
+  [[nodiscard]] inline auto values() const { return make_second_range(Vector); }
 
   // Returns a copy of the value.  Only allowed if ValueT is copyable.
   [[nodiscard]] ValueT lookup(const KeyT &Key) const {
