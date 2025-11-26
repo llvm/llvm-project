@@ -63,6 +63,10 @@ public:
     bool IgnoreNullStatements = false;
     bool NoRemainder = false;
   };
+
+private:
+  /// Semantic analysis of a RippleComputeConstruct
+  void ActOnRippleComputeConstruct(RippleComputeConstruct &S);
 };
 
 } // namespace clang

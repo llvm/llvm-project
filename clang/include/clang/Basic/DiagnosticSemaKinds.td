@@ -14166,6 +14166,8 @@ def err_ripple_duplicate_parallel_index : Error<
   "duplicate parallel dimension '%0' in pragma ripple parallel">;
 def err_ripple_stmt_depends_on_loop_counter : Error<
   "the loop %select{initializer|condition|increment}0 expression depends on the current loop control variable">;
+def err_ripple_loop_body_cannot_contain
+    : Error<"the Ripple parallel loop body cannot contain %0">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
