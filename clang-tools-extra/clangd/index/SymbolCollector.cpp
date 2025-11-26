@@ -577,9 +577,10 @@ SymbolCollector::getRefContainer(const Decl *Enclosing,
   return Enclosing;
 }
 
-class ForwardVisitor : public RecursiveASTVisitor<ForwardVisitor> {
+class ForwardingToConstructorVisitor
+    : public RecursiveASTVisitor<ForwardingToConstructorVisitor> {
 public:
-  ForwardVisitor() {}
+  ForwardingToConstructorVisitor() {}
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
     if (auto *Callee = E->getConstructor()) {
@@ -673,14 +674,14 @@ bool SymbolCollector::handleDeclOccurrence(
   if (auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D)) {
     if (auto *FT = FD->getDescribedFunctionTemplate();
         FT && isLikelyForwardingFunction(FT)) {
-      ForwardVisitor FS{};
+      ForwardingToConstructorVisitor Visitor{};
       for (auto *Specialized : FT->specializations()) {
-        FS.TraverseStmt(Specialized->getBody());
+        Visitor.TraverseStmt(Specialized->getBody());
       }
       auto FileLoc = SM.getFileLoc(Loc);
       auto FID = SM.getFileID(FileLoc);
       if (Opts.RefsInHeaders || FID == SM.getMainFileID()) {
-        for (auto *Constructor : FS.Constructors) {
+        for (auto *Constructor : Visitor.Constructors) {
           addRef(getSymbolIDCached(Constructor),
                  SymbolRef{FileLoc, FID, Roles, index::getSymbolInfo(ND).Kind,
                            getRefContainer(ASTNode.Parent, Opts),
