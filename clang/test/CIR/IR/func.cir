@@ -191,6 +191,6 @@ cir.func @has_attrs() attributes {foo, baz = 5, floof = "flop"} {
   cir.return
 }
 
-// CHECK: cir.func @has_attrs() attributes {baz = 5, floof = "flop", foo} {
+// CHECK: cir.func @has_attrs() attributes {baz = 5 : i64{{.*}}, floof = "flop", foo} {
 // CHECK:   cir.return
 // CHECK: }
