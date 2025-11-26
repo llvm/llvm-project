@@ -2256,7 +2256,7 @@ public:
 
   /// Whether AtomicExpandPass should automatically insert a trailing fence
   /// without reducing the ordering for this atomic. Defaults to false.
-  virtual bool storeNeedsSeqCstTrailingFence(Instruction *I) const {
+  virtual bool storeNeedsSeqCstTrailingFence(const Instruction *I) const {
     return false;
   }
 

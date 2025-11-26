@@ -29656,7 +29656,7 @@ bool AArch64TargetLowering::shouldInsertFencesForAtomic(
 }
 
 bool AArch64TargetLowering::storeNeedsSeqCstTrailingFence(
-    Instruction *I) const {
+    const Instruction *I) const {
   // Store-Release instructions only provide seq_cst guarantees when paired with
   // Load-Acquire instructions. MSVC CRT does not use these instructions to
   // implement seq_cst loads and stores, so we need additional explicit fences
