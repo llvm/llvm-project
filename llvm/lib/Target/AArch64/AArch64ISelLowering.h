@@ -349,7 +349,7 @@ public:
   bool isOpSuitableForLSE128(const Instruction *I) const;
   bool isOpSuitableForRCPC3(const Instruction *I) const;
   bool shouldInsertFencesForAtomic(const Instruction *I) const override;
-  bool storeNeedsSeqCstTrailingFence(Instruction *I) const override;
+  bool storeNeedsSeqCstTrailingFence(const Instruction *I) const override;
 
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
