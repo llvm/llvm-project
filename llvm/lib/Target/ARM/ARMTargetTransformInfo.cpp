@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMTargetTransformInfo.h"
+#include "../ARMCommon/ARMCommonInstCombineIntrinsic.h"
 #include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "llvm/ADT/APInt.h"
@@ -181,6 +182,21 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
                       Attribute::getWithAlignment(II.getContext(), NewAlign));
     break;
   }
+
+  case Intrinsic::arm_neon_vtbl1:
+    if (Value *V = ARMCommon::simplifyNeonTbl1(II, IC.Builder))
+      return IC.replaceInstUsesWith(II, V);
+    break;
+
+  case Intrinsic::arm_neon_vmulls:
+  case Intrinsic::arm_neon_vmullu: {
+    bool Zext = IID == Intrinsic::arm_neon_vmullu;
+    return ARMCommon::simplifyNeonMultiply(II, IC, Zext);
+  }
+
+  case Intrinsic::arm_neon_aesd:
+  case Intrinsic::arm_neon_aese:
+    return ARMCommon::simplifyAES(II, IC);
 
   case Intrinsic::arm_mve_pred_i2v: {
     Value *Arg = II.getArgOperand(0);

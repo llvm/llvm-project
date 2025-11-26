@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64TargetTransformInfo.h"
+#include "../ARMCommon/ARMCommonInstCombineIntrinsic.h"
 #include "AArch64ExpandImm.h"
 #include "AArch64PerfectShuffle.h"
 #include "AArch64SMEAttributes.h"
@@ -2856,6 +2857,20 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_neon_fmaxnm:
   case Intrinsic::aarch64_neon_fminnm:
     return instCombineMaxMinNM(IC, II);
+  case Intrinsic::aarch64_neon_tbl1:
+    if (Value *V = ARMCommon::simplifyNeonTbl1(II, IC.Builder))
+      return IC.replaceInstUsesWith(II, V);
+    break;
+  case Intrinsic::aarch64_neon_smull:
+  case Intrinsic::aarch64_neon_umull: {
+    bool Zext = IID == Intrinsic::aarch64_neon_umull;
+    return ARMCommon::simplifyNeonMultiply(II, IC, Zext);
+  }
+  case Intrinsic::aarch64_crypto_aesd:
+  case Intrinsic::aarch64_crypto_aese:
+  case Intrinsic::aarch64_sve_aesd:
+  case Intrinsic::aarch64_sve_aese:
+    return ARMCommon::simplifyAES(II, IC);
   case Intrinsic::aarch64_sve_convert_from_svbool:
     return instCombineConvertFromSVBool(IC, II);
   case Intrinsic::aarch64_sve_dup:
