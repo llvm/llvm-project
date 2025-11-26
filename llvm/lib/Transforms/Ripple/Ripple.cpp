@@ -3465,18 +3465,41 @@ void Ripple::genVectorInstructions() {
     // Sequentialize the Call by extracting each element of the vector operands,
     // running the scalar function on them, and insert the scalar result into
     // the output vector.
+    // The Hexagon backend does not deal well with Extract/InsertElement
+    bool UseBuffers = Triple(F.getParent()->getTargetTriple()).isHexagon();
 
     // The Index type for GEP of the Alloca buffers
     Type *AllocaIndexType =
         DL.getIndexType(F.getContext(), DL.getAllocaAddrSpace());
 
-    SmallVector<Value *, 4> CallRippleArgs;
+    // Allocate temporary buffers for each argument
+    // Store broadcasted arguments into the buffer
+    SmallVector<std::pair<Value *, bool>, 4> ScalarArgOrBuffers;
     for (auto &Arg : Call->args()) {
       if (getRippleShape(Arg).isScalar()) {
-        CallRippleArgs.push_back(Arg);
+        // We don't need to broadcast
+        ScalarArgOrBuffers.push_back({Arg, /*IsBufferized*/ false});
       } else {
+        // Create a temporary buffer to store the vector
         auto BcastedVal = getTensorUseAndBcast(Arg, ToShape);
-        CallRippleArgs.push_back(BcastedVal);
+        if (!UseBuffers) {
+          ScalarArgOrBuffers.push_back({BcastedVal, /*IsBufferized*/ false});
+        } else {
+          Type *ScalarTy = Arg->getType()->getScalarType();
+          Type *BufferTy = ArrayType::get(ScalarTy, ToShape.flatShape());
+          irBuilder.SetInsertPoint(F.getEntryBlock().getFirstInsertionPt());
+          AllocaInst *ArgBuffer = irBuilder.CreateAlloca(BufferTy);
+          // Get the alignment right so that we can do align vector load/store
+          ArgBuffer->setAlignment(std::max(
+              ArgBuffer->getAlign(),
+              DL.getPrefTypeAlign(VectorType::get(ScalarTy, ToShape.flatShape(),
+                                                  /*Scalable*/ false))));
+          setRippleShape(ArgBuffer, ScalarShape);
+          ScalarArgOrBuffers.push_back({ArgBuffer, /*IsBufferized*/ true});
+          irBuilder.SetInsertPoint(Call);
+          Value *StrPtr = irBuilder.CreateStore(BcastedVal, ArgBuffer);
+          setRippleShape(StrPtr, ToShape);
+        }
       }
     }
 
@@ -3585,21 +3608,36 @@ void Ripple::genVectorInstructions() {
     DTU.applyUpdates({{DominatorTree::Insert, LoopHeader, AfterLoop}});
     DTU.flush();
 
-    PHINode *ResValue = nullptr;
+    // nullptr if function returns void else contains a buffer (AllocaInst) when
+    // UseBuffers or a PHINode when !UseBuffers
+    Value *ResValue = nullptr;
+    Type *ResBuffTy = nullptr;
 
     Type *VectorCallType = Call->getType();
     if (!VectorCallType->isVoidTy()) {
       assert(VectorType::isValidElementType(VectorCallType));
       VectorCallType = VectorType::get(Call->getType(), ToShape.flatShape(),
                                        /*Scalable*/ false);
-      // generate a PHI: init with Poison from the LoopPreHeader and the
-      // result of InsertElement from the LoopBody
-      irBuilder.SetInsertPoint(LoopHeader->begin());
-      irBuilder.SetInstDebugLocation(Call);
-      PHINode *ResultValue = irBuilder.CreatePHI(VectorCallType, 2u);
-      setRippleShape(ResultValue, ToShape);
-      ResultValue->addIncoming(PoisonValue::get(VectorCallType), LoopPreHeader);
-      ResValue = ResultValue;
+      if (UseBuffers) {
+        // Allocate a buffer for the return values
+        ResBuffTy = ArrayType::get(Call->getType(), ToShape.flatShape());
+        irBuilder.SetInsertPoint(F.getEntryBlock().getFirstInsertionPt());
+        AllocaInst *AllocaRes = irBuilder.CreateAlloca(ResBuffTy);
+        setRippleShape(AllocaRes, ScalarShape);
+        AllocaRes->setAlignment(std::max(AllocaRes->getAlign(),
+                                         DL.getPrefTypeAlign(VectorCallType)));
+        ResValue = AllocaRes;
+      } else {
+        // When in register mode, generate a PHI init with Poison from the
+        // LoopPreHeader and the InsertElement from LoopBody
+        irBuilder.SetInsertPoint(LoopHeader->begin());
+        irBuilder.SetInstDebugLocation(Call);
+        PHINode *ResultValue = irBuilder.CreatePHI(VectorCallType, 2u);
+        setRippleShape(ResultValue, ToShape);
+        ResultValue->addIncoming(PoisonValue::get(VectorCallType),
+                                 LoopPreHeader);
+        ResValue = ResultValue;
+      }
     }
 
     // Create the scalar call inside the loop body w/ the extracted/buffer
@@ -3607,13 +3645,27 @@ void Ripple::genVectorInstructions() {
     irBuilder.SetInsertPoint(CallBlock->getFirstNonPHIIt());
 
     SmallVector<Value *, 4> ScalarArgs;
-    for (auto *Arg : CallRippleArgs) {
-      if (Arg->getType()->isVectorTy()) {
-        Value *Extracted = irBuilder.CreateExtractElement(Arg, InductionVar);
-        setRippleShape(Extracted, ScalarShape);
-        ScalarArgs.push_back(Extracted);
-      } else
-        ScalarArgs.push_back(Arg);
+    for (auto &[Arg, IsBufferized] : ScalarArgOrBuffers) {
+      if (IsBufferized) {
+        AllocaInst *Alloca = cast<AllocaInst>(Arg);
+        Type *BufferTy = Alloca->getAllocatedType();
+        Type *ScalarTy = BufferTy->getArrayElementType();
+        Value *ArgPtr = irBuilder.CreateGEP(
+            BufferTy, Arg,
+            {ConstantInt::get(AllocaIndexType, 0), InductionVar});
+        setRippleShape(ArgPtr, ScalarShape);
+        Value *LdPtr = irBuilder.CreateLoad(ScalarTy, ArgPtr);
+        setRippleShape(LdPtr, ScalarShape);
+        ScalarArgs.push_back(LdPtr);
+      } else {
+        if (Arg->getType()->isVectorTy()) {
+          assert(!UseBuffers);
+          Value *Extracted = irBuilder.CreateExtractElement(Arg, InductionVar);
+          setRippleShape(Extracted, ScalarShape);
+          ScalarArgs.push_back(Extracted);
+        } else
+          ScalarArgs.push_back(Arg);
+      }
     }
     // Function call proper
     Value *ScalarCall = irBuilder.CreateCall(
@@ -3621,20 +3673,36 @@ void Ripple::genVectorInstructions() {
     setRippleShape(ScalarCall, ScalarShape);
     // If the function returns a value
     if (ResValue) {
-      // Insert the element into the PHINode
-      Value *Inserted =
-          irBuilder.CreateInsertElement(ResValue, ScalarCall, InductionVar);
-      setRippleShape(Inserted, ToShape);
+      if (UseBuffers) {
+        // Store the returned scalar value into the buffer
+        Value *ResultPtr = irBuilder.CreateGEP(
+            ResBuffTy, ResValue,
+            {ConstantInt::get(AllocaIndexType, 0), InductionVar});
+        setRippleShape(ResultPtr, ScalarShape);
+        Value *StrPtr = irBuilder.CreateStore(ScalarCall, ResultPtr);
+        setRippleShape(StrPtr, ScalarShape);
+        // Create a vector load in AfterLoop
+        irBuilder.SetInsertPoint(AfterLoop->getFirstInsertionPt());
+        irBuilder.SetInstDebugLocation(Call);
+        Value *ResultLoad = irBuilder.CreateLoad(VectorCallType, ResValue);
+        setReplacementFor(Call, ResultLoad, ToShape);
+      } else {
+        PHINode *ResultPhi = cast<PHINode>(ResValue);
+        // Insert the element into the PHINode
+        Value *Inserted =
+            irBuilder.CreateInsertElement(ResultPhi, ScalarCall, InductionVar);
+        setRippleShape(Inserted, ToShape);
 
-      irBuilder.SetInsertPoint(ContinueBlock->begin());
-      irBuilder.SetInstDebugLocation(Call);
-      PHINode *UpdatedResPhi = irBuilder.CreatePHI(VectorCallType, 2u);
-      setRippleShape(UpdatedResPhi, ToShape);
-      UpdatedResPhi->addIncoming(Inserted, CallBlock);
-      UpdatedResPhi->addIncoming(ResValue, LoopBody);
-      // Which is the value coming back from the LoopBody
-      ResValue->addIncoming(UpdatedResPhi, ContinueBlock);
-      setReplacementFor(Call, ResValue, ToShape);
+        irBuilder.SetInsertPoint(ContinueBlock->begin());
+        irBuilder.SetInstDebugLocation(Call);
+        PHINode *UpdatedResPhi = irBuilder.CreatePHI(VectorCallType, 2u);
+        setRippleShape(UpdatedResPhi, ToShape);
+        UpdatedResPhi->addIncoming(Inserted, CallBlock);
+        UpdatedResPhi->addIncoming(ResultPhi, LoopBody);
+        // Which is the value coming back from the LoopBody
+        ResultPhi->addIncoming(UpdatedResPhi, ContinueBlock);
+        setReplacementFor(Call, ResultPhi, ToShape);
+      }
     } else {
       setReplacementFor(Call, nullptr, ToShape);
     }
