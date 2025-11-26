@@ -30,7 +30,8 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
       {"foo::~bar(baz)", "", "foo", "~bar", "(baz)", "", "foo::~bar"},
       {"a::b::c::d(e,f)", "", "a::b::c", "d", "(e,f)", "", "a::b::c::d"},
       {"void f(int)", "void", "", "f", "(int)", "", "f"},
-      {"int main()", "int", "", "main", "()", "", "main"},
+      {"std::vector<int>foo::bar()", "std::vector<int>", "foo", "bar", "()", "",
+       "foo::bar"},
       {"int foo::bar::func01(int a, double b)", "int", "foo::bar", "func01",
        "(int a, double b)", "", "foo::bar::func01"},
 
