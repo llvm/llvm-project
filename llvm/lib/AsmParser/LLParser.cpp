@@ -4250,7 +4250,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   }
   case lltok::kw_ptrauth: {
     // ValID ::= 'ptrauth' '(' ptr @foo ',' i32 <key>
-    //                         (',' i64 <disc> (',' ptr addrdisc (',' ptr ds)? )? )? ')'
+    //                         (',' i64 <disc> (',' ptr addrdisc (',' ptr ds)?
+    //                         )? )? ')'
     Lex.Lex();
 
     Constant *Ptr, *Key;
