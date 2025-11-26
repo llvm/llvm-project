@@ -1633,7 +1633,8 @@ TYPE_PARSER(
             maybe(Parser<OmpClauseList>{}),
             maybe(parenthesized(
                 OmpArgumentListParser<llvm::omp::Directive::OMPD_flush>{})),
-            pure(OmpDirectiveSpecification::Flags::DeprecatedSyntax)))) ||
+            pure(OmpDirectiveSpecification::Flags(
+                {OmpDirectiveSpecification::Flag::DeprecatedSyntax}))))) ||
     // Parse DECLARE_VARIANT individually, because the "[base:]variant"
     // argument will conflict with DECLARE_REDUCTION's "ident:types...".
     predicated(Parser<OmpDirectiveName>{},
@@ -1643,13 +1644,13 @@ TYPE_PARSER(
             maybe(parenthesized(OmpArgumentListParser<
                 llvm::omp::Directive::OMPD_declare_variant>{})),
             maybe(Parser<OmpClauseList>{}),
-            pure(OmpDirectiveSpecification::Flags::None))) ||
+            pure(OmpDirectiveSpecification::Flags()))) ||
     // Parse the standard syntax: directive [(arguments)] [clauses]
     sourced(construct<OmpDirectiveSpecification>( //
         sourced(OmpDirectiveNameParser{}),
         maybe(parenthesized(OmpArgumentListParser<>{})),
         maybe(Parser<OmpClauseList>{}),
-        pure(OmpDirectiveSpecification::Flags::None))))
+        pure(OmpDirectiveSpecification::Flags()))))
 
 static bool IsStandaloneOrdered(const OmpDirectiveSpecification &dirSpec) {
   // An ORDERED construct is standalone if it has DOACROSS or DEPEND clause.

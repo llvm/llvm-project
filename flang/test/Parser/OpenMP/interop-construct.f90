@@ -21,7 +21,7 @@ END SUBROUTINE test_interop_01
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = interop
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
@@ -64,7 +64,7 @@ END SUBROUTINE test_interop_02
 !PARSE-TREE: | | | | OmpObject -> Designator -> DataRef -> Name = 'obj'
 !PARSE-TREE: | | | OmpClause -> Use -> OmpUseClause -> OmpObject -> Designator -> DataRef -> Name = 'obj1'
 !PARSE-TREE: | | | OmpClause -> Destroy -> OmpDestroyClause -> OmpObject -> Designator -> DataRef -> Name = 'obj3'
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
@@ -104,7 +104,7 @@ END SUBROUTINE test_interop_03
 !PARSE-TREE: | | | OmpClause -> Depend -> OmpDependClause -> TaskDep
 !PARSE-TREE: | | | | Modifier -> OmpTaskDependenceType -> Value = Inout
 !PARSE-TREE: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'obj'
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
@@ -159,7 +159,7 @@ END SUBROUTINE test_interop_04
 !PARSE-TREE: | | | | Modifier -> OmpTaskDependenceType -> Value = Inout
 !PARSE-TREE: | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'arr'
 !PARSE-TREE: | | | OmpClause -> Nowait
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
@@ -200,7 +200,7 @@ END SUBROUTINE test_interop_05
 !PARSE-TREE: | | | OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: | | | | Modifier -> OmpDeviceModifier -> Value = Device_Num
 !PARSE-TREE: | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '0'
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> PrintStmt
 !PARSE-TREE: | | | Format -> Star
 !PARSE-TREE: | | | OutputItem -> Expr -> LiteralConstant -> CharLiteralConstant
