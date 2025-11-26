@@ -1,3 +1,8 @@
+set(LLVM_TARGET_DEFINITIONS TestAnalysisOps.td)
+mlir_tablegen(TestAnalysisOps.h.inc -gen-op-decls)
+mlir_tablegen(TestAnalysisOps.cpp.inc -gen-op-defs)
+add_public_tablegen_target(MLIRTestAnalysisOpsIncGen)
+
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestAnalysis
   TestAliasAnalysis.cpp
@@ -11,6 +16,7 @@ add_mlir_library(MLIRTestAnalysis
   TestMemRefStrideCalculation.cpp
   TestSlice.cpp
   TestTopologicalSort.cpp
+  TestAnalysisOps.cpp
 
   DataFlow/TestDeadCodeAnalysis.cpp
   DataFlow/TestDenseBackwardDataFlowAnalysis.cpp
@@ -20,6 +26,9 @@ add_mlir_library(MLIRTestAnalysis
   DataFlow/TestStridedMetadataRangeAnalysis.cpp
 
   EXCLUDE_FROM_LIBMLIR
+
+  DEPENDS
+  MLIRTestAnalysisOpsIncGen
 
   LINK_LIBS PUBLIC
   MLIRTestDialect
