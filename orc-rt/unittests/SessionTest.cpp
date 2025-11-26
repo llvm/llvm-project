@@ -11,16 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/Session.h"
+#include "orc-rt/SPSWrapperFunction.h"
 #include "orc-rt/ThreadPoolTaskDispatcher.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include <chrono>
 #include <deque>
 #include <future>
 #include <optional>
-
-#include <iostream>
 
 using namespace orc_rt;
 using ::testing::Eq;
@@ -77,9 +77,183 @@ public:
       OnShutdownRun();
   }
 
+  /// Run up to NumTasks (arbitrarily many if NumTasks == std::nullopt) tasks
+  /// from the front of the queue, returning the number actually run.
+  static size_t
+  runTasksFromFront(std::deque<std::unique_ptr<Task>> &Tasks,
+                    std::optional<size_t> NumTasks = std::nullopt) {
+    size_t NumRun = 0;
+
+    while (!Tasks.empty() && (!NumTasks || NumRun != *NumTasks)) {
+      auto T = std::move(Tasks.front());
+      Tasks.pop_front();
+      T->run();
+      ++NumRun;
+    }
+
+    return NumRun;
+  }
+
 private:
   std::deque<std::unique_ptr<Task>> &Tasks;
   OnShutdownRunFn OnShutdownRun;
+};
+
+class MockControllerAccess : public Session::ControllerAccess {
+public:
+  MockControllerAccess(Session &SS) : Session::ControllerAccess(SS), SS(SS) {}
+
+  void disconnect() override {
+    std::unique_lock<std::mutex> Lock(M);
+    Shutdown = true;
+    ShutdownCV.wait(Lock, [this]() { return Shutdown && Outstanding == 0; });
+  }
+
+  void callController(OnCallHandlerCompleteFn OnComplete, HandlerTag T,
+                      WrapperFunctionBuffer ArgBytes) override {
+    // Simulate a call to the controller by dispatching a task to run the
+    // requested function.
+    size_t CId;
+    {
+      std::scoped_lock<std::mutex> Lock(M);
+      if (Shutdown)
+        return;
+      CId = CallId++;
+      Pending[CId] = std::move(OnComplete);
+      ++Outstanding;
+    }
+
+    SS.dispatch(makeGenericTask([this, CId, OnComplete = std::move(OnComplete),
+                                 T, ArgBytes = std::move(ArgBytes)]() mutable {
+      auto Fn = reinterpret_cast<orc_rt_WrapperFunction>(T);
+      Fn(reinterpret_cast<orc_rt_SessionRef>(this), CId, wfReturn,
+         ArgBytes.release());
+    }));
+
+    bool Notify = false;
+    {
+      std::scoped_lock<std::mutex> Lock(M);
+      if (--Outstanding == 0 && Shutdown)
+        Notify = true;
+    }
+    if (Notify)
+      ShutdownCV.notify_all();
+  }
+
+  void sendWrapperResult(uint64_t CallId,
+                         WrapperFunctionBuffer ResultBytes) override {
+    // Respond to a simulated call by the controller.
+    OnCallHandlerCompleteFn OnComplete;
+    {
+      std::scoped_lock<std::mutex> Lock(M);
+      if (Shutdown) {
+        assert(Pending.empty() && "Shut down but results still pending?");
+        return;
+      }
+      auto I = Pending.find(CallId);
+      assert(I != Pending.end());
+      OnComplete = std::move(I->second);
+      Pending.erase(I);
+      ++Outstanding;
+    }
+
+    SS.dispatch(
+        makeGenericTask([OnComplete = std::move(OnComplete),
+                         ResultBytes = std::move(ResultBytes)]() mutable {
+          OnComplete(std::move(ResultBytes));
+        }));
+
+    bool Notify = false;
+    {
+      std::scoped_lock<std::mutex> Lock(M);
+      if (--Outstanding == 0 && Shutdown)
+        Notify = true;
+    }
+    if (Notify)
+      ShutdownCV.notify_all();
+  }
+
+  void callFromController(OnCallHandlerCompleteFn OnComplete,
+                          orc_rt_WrapperFunction Fn,
+                          WrapperFunctionBuffer ArgBytes) {
+    size_t CId = 0;
+    bool BailOut = false;
+    {
+      std::scoped_lock<std::mutex> Lock(M);
+      if (!Shutdown) {
+        CId = CallId++;
+        Pending[CId] = std::move(OnComplete);
+        ++Outstanding;
+      } else
+        BailOut = true;
+    }
+    if (BailOut)
+      return OnComplete(WrapperFunctionBuffer::createOutOfBandError(
+          "Controller disconnected"));
+
+    handleWrapperCall(CId, Fn, std::move(ArgBytes));
+
+    bool Notify = false;
+    {
+      std::scoped_lock<std::mutex> Lock(M);
+      if (--Outstanding == 0 && Shutdown)
+        Notify = true;
+    }
+
+    if (Notify)
+      ShutdownCV.notify_all();
+  }
+
+  /// Simulate start of outstanding operation.
+  void incOutstanding() {
+    std::scoped_lock<std::mutex> Lock(M);
+    ++Outstanding;
+  }
+
+  /// Simulate end of outstanding operation.
+  void decOutstanding() {
+    bool Notify = false;
+    {
+      std::scoped_lock<std::mutex> Lock(M);
+      if (--Outstanding == 0 && Shutdown)
+        Notify = true;
+    }
+    if (Notify)
+      ShutdownCV.notify_all();
+  }
+
+private:
+  static void wfReturn(orc_rt_SessionRef S, uint64_t CallId,
+                       orc_rt_WrapperFunctionBuffer ResultBytes) {
+    // Abuse "session" to refer to the ControllerAccess object.
+    // We can just re-use sendFunctionResult for this.
+    reinterpret_cast<MockControllerAccess *>(S)->sendWrapperResult(CallId,
+                                                                   ResultBytes);
+  }
+
+  Session &SS;
+
+  std::mutex M;
+  bool Shutdown = false;
+  size_t Outstanding = 0;
+  size_t CallId = 0;
+  std::unordered_map<size_t, OnCallHandlerCompleteFn> Pending;
+  std::condition_variable ShutdownCV;
+};
+
+class CallViaMockControllerAccess {
+public:
+  CallViaMockControllerAccess(MockControllerAccess &CA,
+                              orc_rt_WrapperFunction Fn)
+      : CA(CA), Fn(Fn) {}
+  void operator()(Session::OnCallHandlerCompleteFn OnComplete,
+                  WrapperFunctionBuffer ArgBytes) {
+    CA.callFromController(std::move(OnComplete), Fn, std::move(ArgBytes));
+  }
+
+private:
+  MockControllerAccess &CA;
+  orc_rt_WrapperFunction Fn;
 };
 
 // Non-overloaded version of cantFail: allows easy construction of
@@ -170,7 +344,6 @@ TEST(SessionTest, ExpectedShutdownSequence) {
   Session S(std::make_unique<EnqueueingDispatcher>(
                 Tasks,
                 [&]() {
-                  std::cerr << "Running dispatcher shutdown.\n";
                   EXPECT_TRUE(ShutdownOpIdx);
                   EXPECT_EQ(*ShutdownOpIdx, 0);
                   EXPECT_FALSE(SessionShutdownComplete);
@@ -182,10 +355,112 @@ TEST(SessionTest, ExpectedShutdownSequence) {
 
   S.shutdown([&]() {
     EXPECT_TRUE(DispatcherShutDown);
-    std::cerr << "Running shutdown callback.\n";
     SessionShutdownComplete = true;
   });
   S.waitForShutdown();
 
   EXPECT_TRUE(SessionShutdownComplete);
+}
+
+TEST(ControllerAccessTest, Basics) {
+  // Test that we can set the ControllerAccess implementation and still shut
+  // down as expected.
+  std::deque<std::unique_ptr<Task>> Tasks;
+  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  auto CA = std::make_shared<MockControllerAccess>(S);
+  S.setController(CA);
+
+  EnqueueingDispatcher::runTasksFromFront(Tasks);
+
+  S.waitForShutdown();
+}
+
+static void add_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
+                            orc_rt_WrapperFunctionReturn Return,
+                            orc_rt_WrapperFunctionBuffer ArgBytes) {
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
+      S, CallId, Return, ArgBytes,
+      [](move_only_function<void(int32_t)> Return, int32_t X, int32_t Y) {
+        Return(X + Y);
+      });
+}
+
+TEST(ControllerAccessTest, ValidCallToController) {
+  // Simulate a call to a controller handler.
+  std::deque<std::unique_ptr<Task>> Tasks;
+  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  auto CA = std::make_shared<MockControllerAccess>(S);
+  S.setController(CA);
+
+  int32_t Result = 0;
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
+      CallViaSession(S, reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+
+  EnqueueingDispatcher::runTasksFromFront(Tasks);
+
+  EXPECT_EQ(Result, 42);
+
+  S.waitForShutdown();
+}
+
+TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
+  // Expect calls to the controller prior to attaching to fail.
+  std::deque<std::unique_ptr<Task>> Tasks;
+  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+
+  Error Err = Error::success();
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
+      CallViaSession(S, reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      [&](Expected<int32_t> R) {
+        ErrorAsOutParameter _(Err);
+        Err = R.takeError();
+      },
+      41, 1);
+
+  EXPECT_EQ(toString(std::move(Err)), "no controller attached");
+
+  S.waitForShutdown();
+}
+
+TEST(ControllerAccessTest, CallToControllerAfterDetach) {
+  // Expect calls to the controller prior to attaching to fail.
+  std::deque<std::unique_ptr<Task>> Tasks;
+  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  auto CA = std::make_shared<MockControllerAccess>(S);
+  S.setController(CA);
+
+  S.detachFromController();
+
+  Error Err = Error::success();
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
+      CallViaSession(S, reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
+      [&](Expected<int32_t> R) {
+        ErrorAsOutParameter _(Err);
+        Err = R.takeError();
+      },
+      41, 1);
+
+  EXPECT_EQ(toString(std::move(Err)), "no controller attached");
+
+  S.waitForShutdown();
+}
+
+TEST(ControllerAccessTest, CallFromController) {
+  // Simulate a call from the controller.
+  std::deque<std::unique_ptr<Task>> Tasks;
+  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  auto CA = std::make_shared<MockControllerAccess>(S);
+  S.setController(CA);
+
+  int32_t Result = 0;
+  SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
+      CallViaMockControllerAccess(*CA, add_sps_wrapper),
+      [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
+
+  EnqueueingDispatcher::runTasksFromFront(Tasks);
+
+  EXPECT_EQ(Result, 42);
+
+  S.waitForShutdown();
 }

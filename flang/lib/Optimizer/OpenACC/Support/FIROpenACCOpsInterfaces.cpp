@@ -71,6 +71,11 @@ bool GlobalVariableModel::isConstant(mlir::Operation *op) const {
   return globalOp.getConstant().has_value();
 }
 
+mlir::Region *GlobalVariableModel::getInitRegion(mlir::Operation *op) const {
+  auto globalOp = mlir::cast<fir::GlobalOp>(op);
+  return globalOp.hasInitializationBody() ? &globalOp.getRegion() : nullptr;
+}
+
 // Helper to recursively process address-of operations in derived type
 // descriptors and collect all needed fir.globals.
 static void processAddrOfOpInDerivedTypeDescriptor(

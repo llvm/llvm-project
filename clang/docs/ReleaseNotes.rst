@@ -84,8 +84,6 @@ Potentially Breaking Changes
 - Downstream projects that previously linked only against ``clangDriver`` may
   now (also) need to link against the new ``clangOptions`` library, since
   options-related code has been moved out of the Driver into a separate library.
-- The ``clangFrontend`` library no longer depends on ``clangDriver``, which may
-  break downstream projects that relied on this transitive dependency.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -232,6 +230,8 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Added ``__scoped_atomic_uinc_wrap`` and ``__scoped_atomic_udec_wrap``.
+
 - Removed OpenCL header-only feature macros (previously unconditionally enabled
   on SPIR-V and only selectively disabled via ``-D__undef_<feature>``). All
   OpenCL extensions and features are now centralized in OpenCLExtensions.def,
@@ -491,6 +491,8 @@ Bug Fixes in This Version
 - Accept empty enumerations in MSVC-compatible C mode. (#GH114402)
 - Fix a bug leading to incorrect code generation with complex number compound assignment and bitfield values, which also caused a crash with UBsan. (#GH166798)
 - Fixed false-positive shadow diagnostics for lambdas in explicit object member functions. (#GH163731)
+- Fix an assertion failure when a ``target_clones`` attribute is only on the
+  forward declaration of a multiversioned function. (#GH165517) (#GH129483)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
