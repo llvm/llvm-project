@@ -2654,6 +2654,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::AVGFLOORU,
                        ISD::BITREVERSE,
                        ISD::ADD,
+                       ISD::SADDSAT,
+                       ISD::SSUBSAT,
                        ISD::FADD,
                        ISD::FSUB,
                        ISD::FNEG,
@@ -8114,6 +8116,8 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
   case X86ISD::FHSUB:
   case X86ISD::HADD:
   case X86ISD::HSUB:
+  case X86ISD::HADDS:
+  case X86ISD::HSUBS:
     return true;
   }
   return false;
@@ -34984,6 +34988,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BLENDV)
   NODE_NAME_CASE(HADD)
   NODE_NAME_CASE(HSUB)
+  NODE_NAME_CASE(HADDS)
+  NODE_NAME_CASE(HSUBS)
   NODE_NAME_CASE(FHADD)
   NODE_NAME_CASE(FHSUB)
   NODE_NAME_CASE(CONFLICT)
@@ -54034,7 +54040,8 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
                                          const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   unsigned Opcode = N->getOpcode();
-  bool IsAdd = (Opcode == ISD::FADD) || (Opcode == ISD::ADD);
+  bool IsAdd =
+      (Opcode == ISD::FADD) || (Opcode == ISD::ADD) || (Opcode == ISD::SADDSAT);
   SmallVector<int, 8> PostShuffleMask;
 
   auto MergableHorizOp = [N](unsigned HorizOpcode) {
@@ -54069,6 +54076,27 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
       SDValue LHS = N->getOperand(0);
       SDValue RHS = N->getOperand(1);
       auto HorizOpcode = IsAdd ? X86ISD::HADD : X86ISD::HSUB;
+      if (isHorizontalBinOp(HorizOpcode, LHS, RHS, DAG, Subtarget, IsAdd,
+                            PostShuffleMask, MergableHorizOp(HorizOpcode))) {
+        auto HOpBuilder = [HorizOpcode](SelectionDAG &DAG, const SDLoc &DL,
+                                        ArrayRef<SDValue> Ops) {
+          return DAG.getNode(HorizOpcode, DL, Ops[0].getValueType(), Ops);
+        };
+        SDValue HorizBinOp = SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT,
+                                              {LHS, RHS}, HOpBuilder);
+        if (!PostShuffleMask.empty())
+          HorizBinOp = DAG.getVectorShuffle(VT, SDLoc(HorizBinOp), HorizBinOp,
+                                            DAG.getUNDEF(VT), PostShuffleMask);
+        return HorizBinOp;
+      }
+    }
+    break;
+  case ISD::SADDSAT:
+  case ISD::SSUBSAT:
+    if (Subtarget.hasSSSE3() && VT == MVT::v8i16) {
+      SDValue LHS = N->getOperand(0);
+      SDValue RHS = N->getOperand(1);
+      auto HorizOpcode = IsAdd ? X86ISD::HADDS : X86ISD::HSUBS;
       if (isHorizontalBinOp(HorizOpcode, LHS, RHS, DAG, Subtarget, IsAdd,
                             PostShuffleMask, MergableHorizOp(HorizOpcode))) {
         auto HOpBuilder = [HorizOpcode](SelectionDAG &DAG, const SDLoc &DL,
@@ -60793,6 +60821,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SUB:            return combineSub(N, DAG, DCI, Subtarget);
   case X86ISD::ADD:
   case X86ISD::SUB:         return combineX86AddSub(N, DAG, DCI, Subtarget);
+  case ISD::SADDSAT:
+  case ISD::SSUBSAT:        return combineToHorizontalAddSub(N, DAG, Subtarget);
   case X86ISD::CLOAD:
   case X86ISD::CSTORE:      return combineX86CloadCstore(N, DAG);
   case X86ISD::SBB:         return combineSBB(N, DAG);

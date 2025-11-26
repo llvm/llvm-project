@@ -4949,6 +4949,12 @@ defm PMULHRSW    : SS3I_binop_rm<0x0B, "pmulhrsw", X86mulhrs, v8i16, v8i16,
                                  VR128, memop, i128mem, SchedWriteVecIMul.XMM>;
 }
 
+def : Pat<(v8i16 (X86hadds VR128:$src1, VR128:$src2)),
+          (PHADDSWrr VR128:$src1, VR128:$src2)>;
+
+def : Pat<(v8i16 (X86hsubs VR128:$src1, VR128:$src2)),
+          (PHSUBSWrr VR128:$src1, VR128:$src2)>;
+
 //===---------------------------------------------------------------------===//
 // SSSE3 - Packed Align Instruction Patterns
 //===---------------------------------------------------------------------===//
