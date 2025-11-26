@@ -60,5 +60,3 @@ define i32 @ctz_v2i1_poison(<2 x i1> %a) {
   ret i32 %res
 }
 
-declare i32 @llvm.experimental.cttz.elts.i32.v2i1(<2 x i1>, i1)
-declare i16 @llvm.experimental.cttz.elts.i16.v4i32(<4 x i32>, i1)

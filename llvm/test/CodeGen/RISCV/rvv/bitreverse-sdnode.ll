@@ -33,7 +33,6 @@ define <vscale x 1 x i8> @bitreverse_nxv1i8(<vscale x 1 x i8> %va) {
   %a = call <vscale x 1 x i8> @llvm.bitreverse.nxv1i8(<vscale x 1 x i8> %va)
   ret <vscale x 1 x i8> %a
 }
-declare <vscale x 1 x i8> @llvm.bitreverse.nxv1i8(<vscale x 1 x i8>)
 
 define <vscale x 2 x i8> @bitreverse_nxv2i8(<vscale x 2 x i8> %va) {
 ; CHECK-LABEL: bitreverse_nxv2i8:
@@ -64,7 +63,6 @@ define <vscale x 2 x i8> @bitreverse_nxv2i8(<vscale x 2 x i8> %va) {
   %a = call <vscale x 2 x i8> @llvm.bitreverse.nxv2i8(<vscale x 2 x i8> %va)
   ret <vscale x 2 x i8> %a
 }
-declare <vscale x 2 x i8> @llvm.bitreverse.nxv2i8(<vscale x 2 x i8>)
 
 define <vscale x 4 x i8> @bitreverse_nxv4i8(<vscale x 4 x i8> %va) {
 ; CHECK-LABEL: bitreverse_nxv4i8:
@@ -95,7 +93,6 @@ define <vscale x 4 x i8> @bitreverse_nxv4i8(<vscale x 4 x i8> %va) {
   %a = call <vscale x 4 x i8> @llvm.bitreverse.nxv4i8(<vscale x 4 x i8> %va)
   ret <vscale x 4 x i8> %a
 }
-declare <vscale x 4 x i8> @llvm.bitreverse.nxv4i8(<vscale x 4 x i8>)
 
 define <vscale x 8 x i8> @bitreverse_nxv8i8(<vscale x 8 x i8> %va) {
 ; CHECK-LABEL: bitreverse_nxv8i8:
@@ -126,7 +123,6 @@ define <vscale x 8 x i8> @bitreverse_nxv8i8(<vscale x 8 x i8> %va) {
   %a = call <vscale x 8 x i8> @llvm.bitreverse.nxv8i8(<vscale x 8 x i8> %va)
   ret <vscale x 8 x i8> %a
 }
-declare <vscale x 8 x i8> @llvm.bitreverse.nxv8i8(<vscale x 8 x i8>)
 
 define <vscale x 16 x i8> @bitreverse_nxv16i8(<vscale x 16 x i8> %va) {
 ; CHECK-LABEL: bitreverse_nxv16i8:
@@ -157,7 +153,6 @@ define <vscale x 16 x i8> @bitreverse_nxv16i8(<vscale x 16 x i8> %va) {
   %a = call <vscale x 16 x i8> @llvm.bitreverse.nxv16i8(<vscale x 16 x i8> %va)
   ret <vscale x 16 x i8> %a
 }
-declare <vscale x 16 x i8> @llvm.bitreverse.nxv16i8(<vscale x 16 x i8>)
 
 define <vscale x 32 x i8> @bitreverse_nxv32i8(<vscale x 32 x i8> %va) {
 ; CHECK-LABEL: bitreverse_nxv32i8:
@@ -188,7 +183,6 @@ define <vscale x 32 x i8> @bitreverse_nxv32i8(<vscale x 32 x i8> %va) {
   %a = call <vscale x 32 x i8> @llvm.bitreverse.nxv32i8(<vscale x 32 x i8> %va)
   ret <vscale x 32 x i8> %a
 }
-declare <vscale x 32 x i8> @llvm.bitreverse.nxv32i8(<vscale x 32 x i8>)
 
 define <vscale x 64 x i8> @bitreverse_nxv64i8(<vscale x 64 x i8> %va) {
 ; CHECK-LABEL: bitreverse_nxv64i8:
@@ -219,7 +213,6 @@ define <vscale x 64 x i8> @bitreverse_nxv64i8(<vscale x 64 x i8> %va) {
   %a = call <vscale x 64 x i8> @llvm.bitreverse.nxv64i8(<vscale x 64 x i8> %va)
   ret <vscale x 64 x i8> %a
 }
-declare <vscale x 64 x i8> @llvm.bitreverse.nxv64i8(<vscale x 64 x i8>)
 
 define <vscale x 1 x i16> @bitreverse_nxv1i16(<vscale x 1 x i16> %va) {
 ; CHECK-LABEL: bitreverse_nxv1i16:
@@ -259,7 +252,6 @@ define <vscale x 1 x i16> @bitreverse_nxv1i16(<vscale x 1 x i16> %va) {
   %a = call <vscale x 1 x i16> @llvm.bitreverse.nxv1i16(<vscale x 1 x i16> %va)
   ret <vscale x 1 x i16> %a
 }
-declare <vscale x 1 x i16> @llvm.bitreverse.nxv1i16(<vscale x 1 x i16>)
 
 define <vscale x 2 x i16> @bitreverse_nxv2i16(<vscale x 2 x i16> %va) {
 ; CHECK-LABEL: bitreverse_nxv2i16:
@@ -299,7 +291,6 @@ define <vscale x 2 x i16> @bitreverse_nxv2i16(<vscale x 2 x i16> %va) {
   %a = call <vscale x 2 x i16> @llvm.bitreverse.nxv2i16(<vscale x 2 x i16> %va)
   ret <vscale x 2 x i16> %a
 }
-declare <vscale x 2 x i16> @llvm.bitreverse.nxv2i16(<vscale x 2 x i16>)
 
 define <vscale x 4 x i16> @bitreverse_nxv4i16(<vscale x 4 x i16> %va) {
 ; CHECK-LABEL: bitreverse_nxv4i16:
@@ -339,7 +330,6 @@ define <vscale x 4 x i16> @bitreverse_nxv4i16(<vscale x 4 x i16> %va) {
   %a = call <vscale x 4 x i16> @llvm.bitreverse.nxv4i16(<vscale x 4 x i16> %va)
   ret <vscale x 4 x i16> %a
 }
-declare <vscale x 4 x i16> @llvm.bitreverse.nxv4i16(<vscale x 4 x i16>)
 
 define <vscale x 8 x i16> @bitreverse_nxv8i16(<vscale x 8 x i16> %va) {
 ; CHECK-LABEL: bitreverse_nxv8i16:
@@ -379,7 +369,6 @@ define <vscale x 8 x i16> @bitreverse_nxv8i16(<vscale x 8 x i16> %va) {
   %a = call <vscale x 8 x i16> @llvm.bitreverse.nxv8i16(<vscale x 8 x i16> %va)
   ret <vscale x 8 x i16> %a
 }
-declare <vscale x 8 x i16> @llvm.bitreverse.nxv8i16(<vscale x 8 x i16>)
 
 define <vscale x 16 x i16> @bitreverse_nxv16i16(<vscale x 16 x i16> %va) {
 ; CHECK-LABEL: bitreverse_nxv16i16:
@@ -419,7 +408,6 @@ define <vscale x 16 x i16> @bitreverse_nxv16i16(<vscale x 16 x i16> %va) {
   %a = call <vscale x 16 x i16> @llvm.bitreverse.nxv16i16(<vscale x 16 x i16> %va)
   ret <vscale x 16 x i16> %a
 }
-declare <vscale x 16 x i16> @llvm.bitreverse.nxv16i16(<vscale x 16 x i16>)
 
 define <vscale x 32 x i16> @bitreverse_nxv32i16(<vscale x 32 x i16> %va) {
 ; CHECK-LABEL: bitreverse_nxv32i16:
@@ -459,7 +447,6 @@ define <vscale x 32 x i16> @bitreverse_nxv32i16(<vscale x 32 x i16> %va) {
   %a = call <vscale x 32 x i16> @llvm.bitreverse.nxv32i16(<vscale x 32 x i16> %va)
   ret <vscale x 32 x i16> %a
 }
-declare <vscale x 32 x i16> @llvm.bitreverse.nxv32i16(<vscale x 32 x i16>)
 
 define <vscale x 1 x i32> @bitreverse_nxv1i32(<vscale x 1 x i32> %va) {
 ; CHECK-LABEL: bitreverse_nxv1i32:
@@ -507,7 +494,6 @@ define <vscale x 1 x i32> @bitreverse_nxv1i32(<vscale x 1 x i32> %va) {
   %a = call <vscale x 1 x i32> @llvm.bitreverse.nxv1i32(<vscale x 1 x i32> %va)
   ret <vscale x 1 x i32> %a
 }
-declare <vscale x 1 x i32> @llvm.bitreverse.nxv1i32(<vscale x 1 x i32>)
 
 define <vscale x 2 x i32> @bitreverse_nxv2i32(<vscale x 2 x i32> %va) {
 ; CHECK-LABEL: bitreverse_nxv2i32:
@@ -555,7 +541,6 @@ define <vscale x 2 x i32> @bitreverse_nxv2i32(<vscale x 2 x i32> %va) {
   %a = call <vscale x 2 x i32> @llvm.bitreverse.nxv2i32(<vscale x 2 x i32> %va)
   ret <vscale x 2 x i32> %a
 }
-declare <vscale x 2 x i32> @llvm.bitreverse.nxv2i32(<vscale x 2 x i32>)
 
 define <vscale x 4 x i32> @bitreverse_nxv4i32(<vscale x 4 x i32> %va) {
 ; CHECK-LABEL: bitreverse_nxv4i32:
@@ -603,7 +588,6 @@ define <vscale x 4 x i32> @bitreverse_nxv4i32(<vscale x 4 x i32> %va) {
   %a = call <vscale x 4 x i32> @llvm.bitreverse.nxv4i32(<vscale x 4 x i32> %va)
   ret <vscale x 4 x i32> %a
 }
-declare <vscale x 4 x i32> @llvm.bitreverse.nxv4i32(<vscale x 4 x i32>)
 
 define <vscale x 8 x i32> @bitreverse_nxv8i32(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: bitreverse_nxv8i32:
@@ -651,7 +635,6 @@ define <vscale x 8 x i32> @bitreverse_nxv8i32(<vscale x 8 x i32> %va) {
   %a = call <vscale x 8 x i32> @llvm.bitreverse.nxv8i32(<vscale x 8 x i32> %va)
   ret <vscale x 8 x i32> %a
 }
-declare <vscale x 8 x i32> @llvm.bitreverse.nxv8i32(<vscale x 8 x i32>)
 
 define <vscale x 16 x i32> @bitreverse_nxv16i32(<vscale x 16 x i32> %va) {
 ; CHECK-LABEL: bitreverse_nxv16i32:
@@ -699,7 +682,6 @@ define <vscale x 16 x i32> @bitreverse_nxv16i32(<vscale x 16 x i32> %va) {
   %a = call <vscale x 16 x i32> @llvm.bitreverse.nxv16i32(<vscale x 16 x i32> %va)
   ret <vscale x 16 x i32> %a
 }
-declare <vscale x 16 x i32> @llvm.bitreverse.nxv16i32(<vscale x 16 x i32>)
 
 define <vscale x 1 x i64> @bitreverse_nxv1i64(<vscale x 1 x i64> %va) {
 ; RV32-LABEL: bitreverse_nxv1i64:
@@ -840,7 +822,6 @@ define <vscale x 1 x i64> @bitreverse_nxv1i64(<vscale x 1 x i64> %va) {
   %a = call <vscale x 1 x i64> @llvm.bitreverse.nxv1i64(<vscale x 1 x i64> %va)
   ret <vscale x 1 x i64> %a
 }
-declare <vscale x 1 x i64> @llvm.bitreverse.nxv1i64(<vscale x 1 x i64>)
 
 define <vscale x 2 x i64> @bitreverse_nxv2i64(<vscale x 2 x i64> %va) {
 ; RV32-LABEL: bitreverse_nxv2i64:
@@ -981,7 +962,6 @@ define <vscale x 2 x i64> @bitreverse_nxv2i64(<vscale x 2 x i64> %va) {
   %a = call <vscale x 2 x i64> @llvm.bitreverse.nxv2i64(<vscale x 2 x i64> %va)
   ret <vscale x 2 x i64> %a
 }
-declare <vscale x 2 x i64> @llvm.bitreverse.nxv2i64(<vscale x 2 x i64>)
 
 define <vscale x 4 x i64> @bitreverse_nxv4i64(<vscale x 4 x i64> %va) {
 ; RV32-LABEL: bitreverse_nxv4i64:
@@ -1122,7 +1102,6 @@ define <vscale x 4 x i64> @bitreverse_nxv4i64(<vscale x 4 x i64> %va) {
   %a = call <vscale x 4 x i64> @llvm.bitreverse.nxv4i64(<vscale x 4 x i64> %va)
   ret <vscale x 4 x i64> %a
 }
-declare <vscale x 4 x i64> @llvm.bitreverse.nxv4i64(<vscale x 4 x i64>)
 
 define <vscale x 8 x i64> @bitreverse_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32-LABEL: bitreverse_nxv8i64:
@@ -1285,4 +1264,3 @@ define <vscale x 8 x i64> @bitreverse_nxv8i64(<vscale x 8 x i64> %va) {
   %a = call <vscale x 8 x i64> @llvm.bitreverse.nxv8i64(<vscale x 8 x i64> %va)
   ret <vscale x 8 x i64> %a
 }
-declare <vscale x 8 x i64> @llvm.bitreverse.nxv8i64(<vscale x 8 x i64>)

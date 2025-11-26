@@ -214,7 +214,5 @@ define void @func_07() {
 
 attributes #0 = { strictfp }
 
-declare void @llvm.set.rounding(i32)
-declare i32 @llvm.get.rounding()
 declare i32 @fesetround(i32 noundef)
 

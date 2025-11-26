@@ -8,11 +8,6 @@
 ;       fold (bitreverse(srl (bitreverse c), x)) -> (shl c, x)
 ;       fold (bitreverse(shl (bitreverse c), x)) -> (srl c, x)
 
-declare i8 @llvm.bitreverse.i8(i8)
-declare i16 @llvm.bitreverse.i16(i16)
-declare i32 @llvm.bitreverse.i32(i32)
-declare i64 @llvm.bitreverse.i64(i64)
-
 define i8 @test_bitreverse_srli_bitreverse_i8(i8 %a) nounwind {
 ; CHECK-LABEL: test_bitreverse_srli_bitreverse_i8:
 ; CHECK:       # %bb.0:

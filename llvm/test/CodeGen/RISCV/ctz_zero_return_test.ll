@@ -106,9 +106,6 @@ define signext i32 @ctz_dereferencing_pointer(ptr %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 
-
-
-
 entry:
   %0 = load i64, ptr %b, align 8
   %1 = tail call i64 @llvm.cttz.i64(i64 %0, i1 true)
@@ -196,9 +193,6 @@ define i64 @ctz_dereferencing_pointer_zext(ptr %b) nounwind {
 ; RV64I-NEXT:    andi a0, a0, 31
 ; RV64I-NEXT:    ret
 
-
-
-
 entry:
   %0 = load i32, ptr %b, align 8
   %1 = tail call i32 @llvm.cttz.i32(i32 %0, i1 true)
@@ -281,9 +275,6 @@ define signext i32 @ctz1(i32 signext %x) nounwind {
 ; RV64I-NEXT:    andi a0, a0, 31
 ; RV64I-NEXT:    ret
 
-
-
-
 entry:
   %0 = tail call i32 @llvm.cttz.i32(i32 %x, i1 true)
   %1 = icmp eq i32 %x, 0
@@ -364,9 +355,6 @@ define signext i32 @ctz1_flipped(i32 signext %x) nounwind {
 ; RV64I-NEXT:    andi a0, a0, 31
 ; RV64I-NEXT:    ret
 
-
-
-
 entry:
   %0 = tail call i32 @llvm.cttz.i32(i32 %x, i1 true)
   %1 = icmp ne i32 %x, 0
@@ -444,9 +432,6 @@ define signext i32 @ctz2(i32 signext %x) nounwind {
 ; RV64I-NEXT:    li a0, 32
 ; RV64I-NEXT:    ret
 
-
-
-
 entry:
   %0 = tail call i32 @llvm.cttz.i32(i32 %x, i1 false)
   ret i32 %0
@@ -521,9 +506,6 @@ define signext i32 @ctz3(i32 signext %x) nounwind {
 ; RV64I-NEXT:  .LBB5_2:
 ; RV64I-NEXT:    li a0, 32
 ; RV64I-NEXT:    ret
-
-
-
 
 entry:
   %0 = tail call i32 @llvm.cttz.i32(i32 %x, i1 false)
@@ -625,9 +607,6 @@ define signext i32 @ctz4(i64 %b) nounwind {
 ; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-
-
-
 
 entry:
   %0 = tail call i64 @llvm.cttz.i64(i64 %b, i1 true)
@@ -773,9 +752,6 @@ define signext i32 @ctlz(i64 %b) nounwind {
 ; RV64I-NEXT:    srli a0, a0, 58
 ; RV64I-NEXT:    ret
 
-
-
-
 entry:
   %0 = tail call i64 @llvm.ctlz.i64(i64 %b, i1 true)
   %1 = icmp eq i64 %b, 0
@@ -857,9 +833,6 @@ define signext i32 @ctz5(i32 signext %x) nounwind {
 ; RV64I-NEXT:    andi a0, a0, 31
 ; RV64I-NEXT:    ret
 
-
-
-
 entry:
   %0 = tail call i32 @llvm.cttz.i32(i32 %x, i1 true)
   %1 = icmp eq i32 %x, 0
@@ -939,9 +912,6 @@ define signext i32 @ctz6(i32 signext %x) nounwind {
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    andi a0, a0, 31
 ; RV64I-NEXT:    ret
-
-
-
 
 entry:
   %0 = tail call i32 @llvm.cttz.i32(i32 %x, i1 true)
@@ -1029,9 +999,6 @@ define signext i32 @globalVar() nounwind {
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    andi a0, a0, 31
 ; RV64I-NEXT:    ret
-
-
-
 
 entry:
   %0 = load i32, ptr @global_x, align 4
@@ -1803,6 +1770,3 @@ define i32 @test_ctlz_select_i32(i32 %0) {
   ret i32 %4
 }
 
-declare i64 @llvm.cttz.i64(i64, i1 immarg)
-declare i32 @llvm.cttz.i32(i32, i1 immarg)
-declare i64 @llvm.ctlz.i64(i64, i1 immarg)

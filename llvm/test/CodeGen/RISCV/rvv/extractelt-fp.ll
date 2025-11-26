@@ -1472,8 +1472,6 @@ define void @store_vfmv_f_s_nxv8f64(ptr %x, ptr %p) {
   ret void
 }
 
-declare double @llvm.riscv.vfmv.f.s.nxv8f64(<vscale x 8 x double>)
-
 define float @extractelt_fadd_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: extractelt_fadd_nxv4f32_splat:
 ; CHECK:       # %bb.0:

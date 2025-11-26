@@ -118,8 +118,6 @@ start:
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare { i128, i1 } @llvm.umul.with.overflow.i128(i128, i128) #1
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { nounwind }

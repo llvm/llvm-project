@@ -124,6 +124,3 @@ define void @stride_one_store(i64 %n, ptr %p) {
   ret void
 }
 
-declare <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
-declare void @llvm.masked.scatter.nxv2i32.nxv2p0(<vscale x 2 x i32>, <vscale x 2 x ptr>, i32, <vscale x 2 x i1>)
-declare void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64>, <vscale x 1 x ptr>, i32, <vscale x 1 x i1>)

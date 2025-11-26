@@ -8,8 +8,6 @@
 ; trunc <vscale x 1 x half>
 ; ================================================================================
 
-declare <vscale x 1 x half> @llvm.trunc.nxv1f16(<vscale x 1 x half>)
-
 define <vscale x 1 x i8> @trunc_nxv1f16_to_si8(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: trunc_nxv1f16_to_si8:
 ; CHECK:       # %bb.0:
@@ -128,8 +126,6 @@ define <vscale x 1 x i64> @trunc_nxv1f16_to_ui64(<vscale x 1 x half> %x) {
 ; trunc <vscale x 4 x half>
 ; ================================================================================
 
-declare <vscale x 4 x half> @llvm.trunc.nxv4f16(<vscale x 4 x half>)
-
 define <vscale x 4 x i8> @trunc_nxv4f16_to_si8(<vscale x 4 x half> %x) {
 ; CHECK-LABEL: trunc_nxv4f16_to_si8:
 ; CHECK:       # %bb.0:
@@ -247,8 +243,6 @@ define <vscale x 4 x i64> @trunc_nxv4f16_to_ui64(<vscale x 4 x half> %x) {
 ; ================================================================================
 ; ceil <vscale x 1 x half>
 ; ================================================================================
-
-declare <vscale x 1 x half> @llvm.ceil.nxv1f16(<vscale x 1 x half>)
 
 define <vscale x 1 x i8> @ceil_nxv1f16_to_si8(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: ceil_nxv1f16_to_si8:
@@ -452,8 +446,6 @@ define <vscale x 1 x i64> @ceil_nxv1f16_to_ui64(<vscale x 1 x half> %x) {
 ; ceil <vscale x 4 x half>
 ; ================================================================================
 
-declare <vscale x 4 x half> @llvm.ceil.nxv4f16(<vscale x 4 x half>)
-
 define <vscale x 4 x i8> @ceil_nxv4f16_to_si8(<vscale x 4 x half> %x) {
 ; CHECK-LABEL: ceil_nxv4f16_to_si8:
 ; CHECK:       # %bb.0:
@@ -656,8 +648,6 @@ define <vscale x 4 x i64> @ceil_nxv4f16_to_ui64(<vscale x 4 x half> %x) {
 ; rint <vscale x 1 x half>
 ; ================================================================================
 
-declare <vscale x 1 x half> @llvm.rint.nxv1f16(<vscale x 1 x half>)
-
 define <vscale x 1 x i8> @rint_nxv1f16_to_si8(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: rint_nxv1f16_to_si8:
 ; CHECK:       # %bb.0:
@@ -843,8 +833,6 @@ define <vscale x 1 x i64> @rint_nxv1f16_to_ui64(<vscale x 1 x half> %x) {
 ; ================================================================================
 ; rint <vscale x 4 x half>
 ; ================================================================================
-
-declare <vscale x 4 x half> @llvm.rint.nxv4f16(<vscale x 4 x half>)
 
 define <vscale x 4 x i8> @rint_nxv4f16_to_si8(<vscale x 4 x half> %x) {
 ; CHECK-LABEL: rint_nxv4f16_to_si8:

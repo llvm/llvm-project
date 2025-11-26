@@ -6,19 +6,6 @@
 ; RUN:   -verify-machineinstrs -target-abi=lp64d < %s \
 ; RUN:   | FileCheck -check-prefixes=CHECK,RV64IFD %s
 
-declare <1 x half> @llvm.exp10.v1f16(<1 x half>)
-declare <2 x half> @llvm.exp10.v2f16(<2 x half>)
-declare <3 x half> @llvm.exp10.v3f16(<3 x half>)
-declare <4 x half> @llvm.exp10.v4f16(<4 x half>)
-declare <1 x float> @llvm.exp10.v1f32(<1 x float>)
-declare <2 x float> @llvm.exp10.v2f32(<2 x float>)
-declare <3 x float> @llvm.exp10.v3f32(<3 x float>)
-declare <4 x float> @llvm.exp10.v4f32(<4 x float>)
-declare <1 x double> @llvm.exp10.v1f64(<1 x double>)
-declare <2 x double> @llvm.exp10.v2f64(<2 x double>)
-declare <3 x double> @llvm.exp10.v3f64(<3 x double>)
-declare <4 x double> @llvm.exp10.v4f64(<4 x double>)
-
 define <1 x half> @exp10_v1f16(<1 x half> %x) {
 ; RV32IFD-LABEL: exp10_v1f16:
 ; RV32IFD:       # %bb.0:

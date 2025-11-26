@@ -548,27 +548,3 @@ define <vscale x 6 x bfloat> @extract_nxv6bf16_nxv12bf16_6(<vscale x 12 x bfloat
   ret <vscale x 6 x bfloat> %res
 }
 
-declare <vscale x 6 x half> @llvm.vector.extract.nxv6f16.nxv12f16(<vscale x 12 x half>, i64)
-
-declare <vscale x 1 x i8> @llvm.vector.extract.nxv1i8.nxv4i8(<vscale x 4 x i8> %vec, i64 %idx)
-declare <vscale x 1 x i8> @llvm.vector.extract.nxv1i8.nxv8i8(<vscale x 8 x i8> %vec, i64 %idx)
-
-declare <vscale x 2 x i8> @llvm.vector.extract.nxv2i8.nxv32i8(<vscale x 32 x i8> %vec, i64 %idx)
-
-declare <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv2i32(<vscale x 2 x i32> %vec, i64 %idx)
-
-declare <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv8i32(<vscale x 8 x i32> %vec, i64 %idx)
-declare <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> %vec, i64 %idx)
-
-declare <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv16i32(<vscale x 16 x i32> %vec, i64 %idx)
-declare <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv16i32(<vscale x 16 x i32> %vec, i64 %idx)
-declare <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32> %vec, i64 %idx)
-declare <vscale x 8 x i32> @llvm.vector.extract.nxv8i32.nxv16i32(<vscale x 16 x i32> %vec, i64 %idx)
-
-declare <vscale x 2 x half> @llvm.vector.extract.nxv2f16.nxv16f16(<vscale x 16 x half> %vec, i64 %idx)
-
-declare <vscale x 4 x i1> @llvm.vector.extract.nxv4i1(<vscale x 32 x i1> %vec, i64 %idx)
-declare <vscale x 16 x i1> @llvm.vector.extract.nxv16i1(<vscale x 32 x i1> %vec, i64 %idx)
-
-declare <vscale x 2 x i1> @llvm.vector.extract.nxv2i1(<vscale x 64 x i1> %vec, i64 %idx)
-declare <vscale x 8 x i1> @llvm.vector.extract.nxv8i1(<vscale x 64 x i1> %vec, i64 %idx)

@@ -9,7 +9,6 @@
 ; RUN:   -mattr=+xsfmm32a -mattr=+xsfmm32a8f -mattr=+xsfmm32a4i -mattr=+xsfmm64a64f \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
-declare void @llvm.riscv.sf.vtzero.t.iXLen(iXLen, iXLen, iXLen, iXLen, iXLen)
 define void @test_sf_vtzero_t(iXLen %tm, iXLen %tn) {
 ; CHECK-LABEL: test_sf_vtzero_t:
 ; CHECK:       # %bb.0: # %entry

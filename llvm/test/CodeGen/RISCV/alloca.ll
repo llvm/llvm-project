@@ -29,9 +29,6 @@ define void @simple_alloca(i32 %n) nounwind {
   ret void
 }
 
-declare ptr @llvm.stacksave()
-declare void @llvm.stackrestore(ptr)
-
 define void @scoped_alloca(i32 %n) nounwind {
 ; RV32I-LABEL: scoped_alloca:
 ; RV32I:       # %bb.0:

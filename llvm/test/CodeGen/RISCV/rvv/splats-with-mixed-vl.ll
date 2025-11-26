@@ -226,5 +226,3 @@ define void @extract_vector_mixed3(ptr %p, ptr %p2, i32 %v) {
   ret void
 }
 
-
-declare <4 x i32> @llvm.vector.extract.v4i32.nxv1132(<vscale x 1 x i32> %vec, i64 %idx)

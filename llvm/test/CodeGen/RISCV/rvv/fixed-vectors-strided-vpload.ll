@@ -24,8 +24,6 @@
 ; RUN:   -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-RV64,CHECK-NO-OPT,CHECK-NO-OPT-ZVFHMIN
 
-declare <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i8(ptr, i8, <2 x i1>, i32)
-
 define <2 x i8> @strided_vpload_v2i8_i8(ptr %ptr, i8 signext %stride, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v2i8_i8:
 ; CHECK:       # %bb.0:
@@ -36,8 +34,6 @@ define <2 x i8> @strided_vpload_v2i8_i8(ptr %ptr, i8 signext %stride, <2 x i1> %
   ret <2 x i8> %load
 }
 
-declare <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i16(ptr, i16, <2 x i1>, i32)
-
 define <2 x i8> @strided_vpload_v2i8_i16(ptr %ptr, i16 signext %stride, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v2i8_i16:
 ; CHECK:       # %bb.0:
@@ -47,8 +43,6 @@ define <2 x i8> @strided_vpload_v2i8_i16(ptr %ptr, i16 signext %stride, <2 x i1>
   %load = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i16(ptr %ptr, i16 %stride, <2 x i1> %m, i32 %evl)
   ret <2 x i8> %load
 }
-
-declare <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i64(ptr, i64, <2 x i1>, i32)
 
 define <2 x i8> @strided_vpload_v2i8_i64(ptr %ptr, i64 signext %stride, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_vpload_v2i8_i64:
@@ -66,8 +60,6 @@ define <2 x i8> @strided_vpload_v2i8_i64(ptr %ptr, i64 signext %stride, <2 x i1>
   ret <2 x i8> %load
 }
 
-declare <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i32(ptr, i32, <2 x i1>, i32)
-
 define <2 x i8> @strided_vpload_v2i8(ptr %ptr, i32 signext %stride, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v2i8:
 ; CHECK:       # %bb.0:
@@ -77,8 +69,6 @@ define <2 x i8> @strided_vpload_v2i8(ptr %ptr, i32 signext %stride, <2 x i1> %m,
   %load = call <2 x i8> @llvm.experimental.vp.strided.load.v2i8.p0.i32(ptr %ptr, i32 %stride, <2 x i1> %m, i32 %evl)
   ret <2 x i8> %load
 }
-
-declare <4 x i8> @llvm.experimental.vp.strided.load.v4i8.p0.i32(ptr, i32, <4 x i1>, i32)
 
 define <4 x i8> @strided_vpload_v4i8(ptr %ptr, i32 signext %stride, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v4i8:
@@ -100,8 +90,6 @@ define <4 x i8> @strided_vpload_v4i8_allones_mask(ptr %ptr, i32 signext %stride,
   ret <4 x i8> %load
 }
 
-declare <8 x i8> @llvm.experimental.vp.strided.load.v8i8.p0.i32(ptr, i32, <8 x i1>, i32)
-
 define <8 x i8> @strided_vpload_v8i8(ptr %ptr, i32 signext %stride, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v8i8:
 ; CHECK:       # %bb.0:
@@ -122,8 +110,6 @@ define <8 x i8> @strided_vpload_v8i8_unit_stride(ptr %ptr, <8 x i1> %m, i32 zero
   ret <8 x i8> %load
 }
 
-declare <2 x i16> @llvm.experimental.vp.strided.load.v2i16.p0.i32(ptr, i32, <2 x i1>, i32)
-
 define <2 x i16> @strided_vpload_v2i16(ptr %ptr, i32 signext %stride, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v2i16:
 ; CHECK:       # %bb.0:
@@ -134,8 +120,6 @@ define <2 x i16> @strided_vpload_v2i16(ptr %ptr, i32 signext %stride, <2 x i1> %
   ret <2 x i16> %load
 }
 
-declare <4 x i16> @llvm.experimental.vp.strided.load.v4i16.p0.i32(ptr, i32, <4 x i1>, i32)
-
 define <4 x i16> @strided_vpload_v4i16(ptr %ptr, i32 signext %stride, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v4i16:
 ; CHECK:       # %bb.0:
@@ -145,8 +129,6 @@ define <4 x i16> @strided_vpload_v4i16(ptr %ptr, i32 signext %stride, <4 x i1> %
   %load = call <4 x i16> @llvm.experimental.vp.strided.load.v4i16.p0.i32(ptr %ptr, i32 %stride, <4 x i1> %m, i32 %evl)
   ret <4 x i16> %load
 }
-
-declare <8 x i16> @llvm.experimental.vp.strided.load.v8i16.p0.i32(ptr, i32, <8 x i1>, i32)
 
 define <8 x i16> @strided_vpload_v8i16(ptr %ptr, i32 signext %stride, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v8i16:
@@ -178,8 +160,6 @@ define <8 x i16> @strided_vpload_v8i16_allones_mask(ptr %ptr, i32 signext %strid
   ret <8 x i16> %load
 }
 
-declare <2 x i32> @llvm.experimental.vp.strided.load.v2i32.p0.i32(ptr, i32, <2 x i1>, i32)
-
 define <2 x i32> @strided_vpload_v2i32(ptr %ptr, i32 signext %stride, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v2i32:
 ; CHECK:       # %bb.0:
@@ -189,8 +169,6 @@ define <2 x i32> @strided_vpload_v2i32(ptr %ptr, i32 signext %stride, <2 x i1> %
   %load = call <2 x i32> @llvm.experimental.vp.strided.load.v2i32.p0.i32(ptr %ptr, i32 %stride, <2 x i1> %m, i32 %evl)
   ret <2 x i32> %load
 }
-
-declare <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i32(ptr, i32, <4 x i1>, i32)
 
 define <4 x i32> @strided_vpload_v4i32(ptr %ptr, i32 signext %stride, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v4i32:
@@ -212,8 +190,6 @@ define <4 x i32> @strided_vpload_v4i32_unit_stride(ptr %ptr, <4 x i1> %m, i32 ze
   ret <4 x i32> %load
 }
 
-declare <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i32(ptr, i32, <8 x i1>, i32)
-
 define <8 x i32> @strided_vpload_v8i32(ptr %ptr, i32 signext %stride, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v8i32:
 ; CHECK:       # %bb.0:
@@ -233,8 +209,6 @@ define <8 x i32> @strided_vpload_v8i32_allones_mask(ptr %ptr, i32 signext %strid
   %load = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i32(ptr %ptr, i32 %stride, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x i32> %load
 }
-
-declare <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i32(ptr, i32, <2 x i1>, i32)
 
 define <2 x i64> @strided_vpload_v2i64(ptr %ptr, i32 signext %stride, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v2i64:
@@ -256,8 +230,6 @@ define <2 x i64> @strided_vpload_v2i64_unit_stride(ptr %ptr, <2 x i1> %m, i32 ze
   ret <2 x i64> %load
 }
 
-declare <4 x i64> @llvm.experimental.vp.strided.load.v4i64.p0.i32(ptr, i32, <4 x i1>, i32)
-
 define <4 x i64> @strided_vpload_v4i64(ptr %ptr, i32 signext %stride, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v4i64:
 ; CHECK:       # %bb.0:
@@ -278,8 +250,6 @@ define <4 x i64> @strided_vpload_v4i64_allones_mask(ptr %ptr, i32 signext %strid
   ret <4 x i64> %load
 }
 
-declare <8 x i64> @llvm.experimental.vp.strided.load.v8i64.p0.i32(ptr, i32, <8 x i1>, i32)
-
 define <8 x i64> @strided_vpload_v8i64(ptr %ptr, i32 signext %stride, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v8i64:
 ; CHECK:       # %bb.0:
@@ -289,8 +259,6 @@ define <8 x i64> @strided_vpload_v8i64(ptr %ptr, i32 signext %stride, <8 x i1> %
   %load = call <8 x i64> @llvm.experimental.vp.strided.load.v8i64.p0.i32(ptr %ptr, i32 %stride, <8 x i1> %m, i32 %evl)
   ret <8 x i64> %load
 }
-
-declare <2 x bfloat> @llvm.experimental.vp.strided.load.v2bf16.p0.i32(ptr, i32, <2 x i1>, i32)
 
 define <2 x bfloat> @strided_vpload_v2bf16(ptr %ptr, i32 signext %stride, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v2bf16:
@@ -312,8 +280,6 @@ define <2 x bfloat> @strided_vpload_v2bf16_allones_mask(ptr %ptr, i32 signext %s
   ret <2 x bfloat> %load
 }
 
-declare <4 x bfloat> @llvm.experimental.vp.strided.load.v4bf16.p0.i32(ptr, i32, <4 x i1>, i32)
-
 define <4 x bfloat> @strided_vpload_v4bf16(ptr %ptr, i32 signext %stride, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v4bf16:
 ; CHECK:       # %bb.0:
@@ -323,8 +289,6 @@ define <4 x bfloat> @strided_vpload_v4bf16(ptr %ptr, i32 signext %stride, <4 x i
   %load = call <4 x bfloat> @llvm.experimental.vp.strided.load.v4bf16.p0.i32(ptr %ptr, i32 %stride, <4 x i1> %m, i32 %evl)
   ret <4 x bfloat> %load
 }
-
-declare <8 x bfloat> @llvm.experimental.vp.strided.load.v8bf16.p0.i32(ptr, i32, <8 x i1>, i32)
 
 define <8 x bfloat> @strided_vpload_v8bf16(ptr %ptr, i32 signext %stride, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v8bf16:
@@ -346,8 +310,6 @@ define <8 x bfloat> @strided_vpload_v8bf16_unit_stride(ptr %ptr, <8 x i1> %m, i3
   ret <8 x bfloat> %load
 }
 
-declare <2 x half> @llvm.experimental.vp.strided.load.v2f16.p0.i32(ptr, i32, <2 x i1>, i32)
-
 define <2 x half> @strided_vpload_v2f16(ptr %ptr, i32 signext %stride, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v2f16:
 ; CHECK:       # %bb.0:
@@ -368,8 +330,6 @@ define <2 x half> @strided_vpload_v2f16_allones_mask(ptr %ptr, i32 signext %stri
   ret <2 x half> %load
 }
 
-declare <4 x half> @llvm.experimental.vp.strided.load.v4f16.p0.i32(ptr, i32, <4 x i1>, i32)
-
 define <4 x half> @strided_vpload_v4f16(ptr %ptr, i32 signext %stride, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v4f16:
 ; CHECK:       # %bb.0:
@@ -379,8 +339,6 @@ define <4 x half> @strided_vpload_v4f16(ptr %ptr, i32 signext %stride, <4 x i1> 
   %load = call <4 x half> @llvm.experimental.vp.strided.load.v4f16.p0.i32(ptr %ptr, i32 %stride, <4 x i1> %m, i32 %evl)
   ret <4 x half> %load
 }
-
-declare <8 x half> @llvm.experimental.vp.strided.load.v8f16.p0.i32(ptr, i32, <8 x i1>, i32)
 
 define <8 x half> @strided_vpload_v8f16(ptr %ptr, i32 signext %stride, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v8f16:
@@ -402,8 +360,6 @@ define <8 x half> @strided_vpload_v8f16_unit_stride(ptr %ptr, <8 x i1> %m, i32 z
   ret <8 x half> %load
 }
 
-declare <2 x float> @llvm.experimental.vp.strided.load.v2f32.p0.i32(ptr, i32, <2 x i1>, i32)
-
 define <2 x float> @strided_vpload_v2f32(ptr %ptr, i32 signext %stride, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v2f32:
 ; CHECK:       # %bb.0:
@@ -413,8 +369,6 @@ define <2 x float> @strided_vpload_v2f32(ptr %ptr, i32 signext %stride, <2 x i1>
   %load = call <2 x float> @llvm.experimental.vp.strided.load.v2f32.p0.i32(ptr %ptr, i32 %stride, <2 x i1> %m, i32 %evl)
   ret <2 x float> %load
 }
-
-declare <4 x float> @llvm.experimental.vp.strided.load.v4f32.p0.i32(ptr, i32, <4 x i1>, i32)
 
 define <4 x float> @strided_vpload_v4f32(ptr %ptr, i32 signext %stride, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v4f32:
@@ -436,8 +390,6 @@ define <4 x float> @strided_vpload_v4f32_unit_stride(ptr %ptr, <4 x i1> %m, i32 
   ret <4 x float> %load
 }
 
-declare <8 x float> @llvm.experimental.vp.strided.load.v8f32.p0.i32(ptr, i32, <8 x i1>, i32)
-
 define <8 x float> @strided_vpload_v8f32(ptr %ptr, i32 signext %stride, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v8f32:
 ; CHECK:       # %bb.0:
@@ -457,8 +409,6 @@ define <8 x float> @strided_vpload_v8f32_allones_mask(ptr %ptr, i32 signext %str
   %load = call <8 x float> @llvm.experimental.vp.strided.load.v8f32.p0.i32(ptr %ptr, i32 %stride, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x float> %load
 }
-
-declare <2 x double> @llvm.experimental.vp.strided.load.v2f64.p0.i32(ptr, i32, <2 x i1>, i32)
 
 define <2 x double> @strided_vpload_v2f64(ptr %ptr, i32 signext %stride, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v2f64:
@@ -480,9 +430,6 @@ define <2 x double> @strided_vpload_v2f64_unit_stride(ptr %ptr, <2 x i1> %m, i32
   ret <2 x double> %load
 }
 
-
-declare <4 x double> @llvm.experimental.vp.strided.load.v4f64.p0.i32(ptr, i32, <4 x i1>, i32)
-
 define <4 x double> @strided_vpload_v4f64(ptr %ptr, i32 signext %stride, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v4f64:
 ; CHECK:       # %bb.0:
@@ -502,8 +449,6 @@ define <4 x double> @strided_vpload_v4f64_allones_mask(ptr %ptr, i32 signext %st
   %load = call <4 x double> @llvm.experimental.vp.strided.load.v4f64.p0.i32(ptr %ptr, i32 %stride, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x double> %load
 }
-
-declare <8 x double> @llvm.experimental.vp.strided.load.v8f64.p0.i32(ptr, i32, <8 x i1>, i32)
 
 define <8 x double> @strided_vpload_v8f64(ptr %ptr, i32 signext %stride, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v8f64:
@@ -535,8 +480,6 @@ define <3 x double> @strided_vpload_v3f64_allones_mask(ptr %ptr, i32 signext %st
   %v = call <3 x double> @llvm.experimental.vp.strided.load.v3f64.p0.i32(ptr %ptr, i32 %stride, <3 x i1> splat (i1 true), i32 %evl)
   ret <3 x double> %v
 }
-
-declare <3 x double> @llvm.experimental.vp.strided.load.v3f64.p0.i32(ptr, i32, <3 x i1>, i32)
 
 ; Splitting
 define <32 x double> @strided_vpload_v32f64(ptr %ptr, i32 signext %stride, <32 x i1> %m, i32 zeroext %evl) nounwind {
@@ -592,8 +535,6 @@ define <32 x double> @strided_vpload_v32f64_allones_mask(ptr %ptr, i32 signext %
   %load = call <32 x double> @llvm.experimental.vp.strided.load.v32f64.p0.i32(ptr %ptr, i32 %stride, <32 x i1> splat (i1 true), i32 %evl)
   ret <32 x double> %load
 }
-
-declare <32 x double> @llvm.experimental.vp.strided.load.v32f64.p0.i32(ptr, i32, <32 x i1>, i32)
 
 ; Widening + splitting (with HiIsEmpty == true)
 define <33 x double> @strided_load_v33f64(ptr %ptr, i64 %stride, <33 x i1> %mask, i32 zeroext %evl) {
@@ -701,8 +642,6 @@ define <33 x double> @strided_load_v33f64(ptr %ptr, i64 %stride, <33 x i1> %mask
   %v = call <33 x double> @llvm.experimental.vp.strided.load.v33f64.p0.i64(ptr %ptr, i64 %stride, <33 x i1> %mask, i32 %evl)
   ret <33 x double> %v
 }
-
-declare <33 x double> @llvm.experimental.vp.strided.load.v33f64.p0.i64(ptr, i64, <33 x i1>, i32)
 
 ; Test unmasked integer zero strided
 define <4 x i8> @zero_strided_unmasked_vpload_4i8_i8(ptr %ptr) {

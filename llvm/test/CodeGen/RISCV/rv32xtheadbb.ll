@@ -6,8 +6,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+xtheadbb,+b -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV32XTHEADBB,RV32XTHEADBB-B
 
-declare i32 @llvm.ctlz.i32(i32, i1)
-
 define i32 @ctlz_i32(i32 %a) nounwind {
 ; RV32I-LABEL: ctlz_i32:
 ; RV32I:       # %bb.0:
@@ -62,8 +60,6 @@ define i32 @ctlz_i32(i32 %a) nounwind {
   %1 = call i32 @llvm.ctlz.i32(i32 %a, i1 false)
   ret i32 %1
 }
-
-declare i64 @llvm.ctlz.i64(i64, i1)
 
 define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32I-LABEL: ctlz_i64:
@@ -171,8 +167,6 @@ define i64 @ctlz_i64(i64 %a) nounwind {
   ret i64 %1
 }
 
-declare i32 @llvm.cttz.i32(i32, i1)
-
 define i32 @cttz_i32(i32 %a) nounwind {
 ; RV32I-LABEL: cttz_i32:
 ; RV32I:       # %bb.0:
@@ -219,8 +213,6 @@ define i32 @cttz_i32(i32 %a) nounwind {
   %1 = call i32 @llvm.cttz.i32(i32 %a, i1 false)
   ret i32 %1
 }
-
-declare i64 @llvm.cttz.i64(i64, i1)
 
 define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32I-LABEL: cttz_i64:
@@ -578,8 +570,6 @@ define i64 @zexth_i64(i64 %a) nounwind {
   ret i64 %and
 }
 
-declare i32 @llvm.bswap.i32(i32)
-
 define i32 @bswap_i32(i32 %a) nounwind {
 ; RV32I-LABEL: bswap_i32:
 ; RV32I:       # %bb.0:
@@ -608,8 +598,6 @@ define i32 @bswap_i32(i32 %a) nounwind {
   %1 = tail call i32 @llvm.bswap.i32(i32 %a)
   ret i32 %1
 }
-
-declare i64 @llvm.bswap.i64(i64)
 
 define i64 @bswap_i64(i64 %a) {
 ; RV32I-LABEL: bswap_i64:

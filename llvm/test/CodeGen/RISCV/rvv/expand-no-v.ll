@@ -3,8 +3,6 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=RV64
 ; Should expand to scalar instructions and do not crash
 
-declare i32 @llvm.vp.reduce.add.v4i32(i32, <4 x i32>, <4 x i1>, i32)
-
 define i32 @vpreduce_add_v4i32(i32 %s, <4 x i32> %v, <4 x i1> %m, i32 %evl) {
 ; RV32-LABEL: vpreduce_add_v4i32:
 ; RV32:       # %bb.0:

@@ -48,7 +48,6 @@ define i32 @fcmp_oeq(half %a, half %b) nounwind strictfp {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
-declare i1 @llvm.experimental.constrained.fcmp.f16(half, half, metadata, metadata)
 
 define i32 @fcmp_ogt(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fcmp_ogt:
@@ -653,7 +652,6 @@ define i32 @fcmps_oeq(half %a, half %b) nounwind strictfp {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
-declare i1 @llvm.experimental.constrained.fcmps.f16(half, half, metadata, metadata)
 
 define i32 @fcmps_ogt(half %a, half %b) nounwind strictfp {
 ; CHECK-LABEL: fcmps_ogt:

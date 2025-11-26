@@ -27,12 +27,6 @@ entry:
   ret <2 x i32> %y12
 }
 
-declare <vscale x 2 x i16> @llvm.riscv.vnsrl.nxv2i16.nxv2i32.nxv2i16(
-  <vscale x 2 x i16>,
-  <vscale x 2 x i32>,
-  <vscale x 2 x i16>,
-  iXLen);
-
 define <vscale x 2 x i16> @intrinsic_vnsrl_wv_nxv2i16_nxv2i32_nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i16> %b, iXLen %2, <vscale x 2 x i32> %3, <vscale x 2 x i32> %4, <vscale x 2 x i16> %z) nounwind {
 ; CHECK-LABEL: intrinsic_vnsrl_wv_nxv2i16_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
@@ -52,12 +46,6 @@ entry:
 
   ret <vscale x 2 x i16> %x
 }
-
-declare <vscale x 2 x i16> @llvm.riscv.vnclip.nxv2i16.nxv2i32.nxv2i16(
-  <vscale x 2 x i16>,
-  <vscale x 2 x i32>,
-  <vscale x 2 x i16>,
-  iXLen, iXLen);
 
 define <vscale x 2 x i16> @vnclip(<vscale x 2 x i16> %a, <vscale x 2 x i16> %b, iXLen %2, <vscale x 2 x i32> %3, <vscale x 2 x i32> %4, <vscale x 2 x i16> %z) nounwind {
 ; CHECK-LABEL: vnclip:

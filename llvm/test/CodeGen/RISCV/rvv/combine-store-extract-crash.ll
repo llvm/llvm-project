@@ -68,8 +68,6 @@ entry:
   ret void
 }
 
-declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
-
 !0 = !{!1, !1, i64 0}
 !1 = !{!"int", !2, i64 0}
 !2 = !{!"omnipotent char", !3, i64 0}

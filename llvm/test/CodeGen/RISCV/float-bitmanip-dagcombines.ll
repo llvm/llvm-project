@@ -56,8 +56,6 @@ define float @fneg(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.fabs.f32(float)
-
 define float @fabs(float %a) nounwind {
 ; RV32I-LABEL: fabs:
 ; RV32I:       # %bb.0:
@@ -95,8 +93,6 @@ define float @fabs(float %a) nounwind {
   %1 = call float @llvm.fabs.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.copysign.f32(float, float)
 
 ; DAGTypeLegalizer::SoftenFloatRes_FCOPYSIGN will convert to bitwise
 ; operations if floating point isn't supported. A combine could be written to

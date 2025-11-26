@@ -4,13 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+zvksh \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
-declare <vscale x 8 x i32> @llvm.riscv.vsm3c.nxv8i32.i32(
-  <vscale x 8 x i32>,
-  <vscale x 8 x i32>,
-  iXLen,
-  iXLen,
-  iXLen)
-
 define <vscale x 8 x i32> @intrinsic_vsm3c_vi_nxv8i32_i32(<vscale x 8 x i32> %0, <vscale x 8 x i32> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm3c_vi_nxv8i32_i32:
 ; CHECK:       # %bb.0: # %entry
@@ -27,13 +20,6 @@ entry:
 
   ret <vscale x 8 x i32> %a
 }
-
-declare <vscale x 16 x i32> @llvm.riscv.vsm3c.nxv16i32.i32(
-  <vscale x 16 x i32>,
-  <vscale x 16 x i32>,
-  iXLen,
-  iXLen,
-  iXLen)
 
 define <vscale x 16 x i32> @intrinsic_vsm3c_vi_nxv16i32_i32(<vscale x 16 x i32> %0, <vscale x 16 x i32> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vsm3c_vi_nxv16i32_i32:

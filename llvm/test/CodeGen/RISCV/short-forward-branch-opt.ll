@@ -2047,7 +2047,6 @@ define signext i32 @abs_i32(i32 signext %x) {
   %a = call i32 @llvm.abs.i32(i32 %x, i1 false)
   ret i32 %a
 }
-declare i32 @llvm.abs.i32(i32, i1)
 
 define i64 @abs_i64(i64 %x) {
 ; NOSFB-LABEL: abs_i64:
@@ -2088,7 +2087,6 @@ define i64 @abs_i64(i64 %x) {
   %a = call i64 @llvm.abs.i64(i64 %x, i1 false)
   ret i64 %a
 }
-declare i64 @llvm.abs.i64(i64, i1)
 
 define i64 @select_andn(i64 %A, i64 %B, i64 %C, i1 zeroext %cond) {
 ; NOSFB-LABEL: select_andn:

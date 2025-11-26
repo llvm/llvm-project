@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zihintpause -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RVPAUSE
 
-declare void @llvm.riscv.pause()
-
 define void @test_pause() {
 ; RVPAUSE-LABEL: test_pause:
 ; RVPAUSE:       # %bb.0:
