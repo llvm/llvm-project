@@ -481,18 +481,22 @@ bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
       m_basename = full.substr(basename_begin, basename_end - basename_begin);
     }
 
-    if (IsTrivialBasename(m_basename)) {
+    // if the context has a white space it may have a return type.
+    // e.g. `int foo::bar::func()` or `Type<int > foo::bar::func(int)`
+    const bool no_whitespace =
+        m_context.find_first_of(" \t\n\v\f\r") == llvm::StringRef::npos;
+
+    if (no_whitespace && IsTrivialBasename(m_basename)) {
       return true;
-    } else {
-      // The C++ basename doesn't match our regular expressions so this can't
-      // be a valid C++ method, clear everything out and indicate an error
-      m_context = llvm::StringRef();
-      m_basename = llvm::StringRef();
-      m_arguments = llvm::StringRef();
-      m_qualifiers = llvm::StringRef();
-      m_return_type = llvm::StringRef();
-      return false;
     }
+    // The C++ basename doesn't match our regular expressions so this can't
+    // be a valid C++ method, clear everything out and indicate an error
+    m_context = llvm::StringRef();
+    m_basename = llvm::StringRef();
+    m_arguments = llvm::StringRef();
+    m_qualifiers = llvm::StringRef();
+    m_return_type = llvm::StringRef();
+    return false;
   }
   return false;
 }
