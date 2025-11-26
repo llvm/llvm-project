@@ -327,13 +327,17 @@ public:
   // optimization.
   bool isOptNone() const { return OptNone; }
 
-  // Get the maximum wait count value for a given counter type
+  // Get the maximum wait count value for a given counter type.
+  // For pre-GFX12, LOAD_CNT uses vmcnt and DS_CNT uses lgkmcnt.
+  // For GFX12+, LOAD_CNT uses loadcnt and DS_CNT uses dscnt.
   unsigned getWaitCountMax(InstCounterType T) const {
     switch (T) {
     case LOAD_CNT:
-      return AMDGPU::getLoadcntBitMask(IV);
+      return ST->hasExtendedWaitCounts() ? AMDGPU::getLoadcntBitMask(IV)
+                                         : AMDGPU::getVmcntBitMask(IV);
     case DS_CNT:
-      return AMDGPU::getDscntBitMask(IV);
+      return ST->hasExtendedWaitCounts() ? AMDGPU::getDscntBitMask(IV)
+                                         : AMDGPU::getLgkmcntBitMask(IV);
     case EXP_CNT:
       return AMDGPU::getExpcntBitMask(IV);
     case STORE_CNT:
@@ -345,7 +349,7 @@ public:
     case KM_CNT:
       return AMDGPU::getKmcntBitMask(IV);
     case X_CNT:
-      return 0; // No hardware limit for XCNT
+      return AMDGPU::getXcntBitMask(IV);
     default:
       return 0;
     }
@@ -1739,35 +1743,17 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
     // If profiling expansion is enabled and we have score brackets,
     // emit an expanded sequence
     if (ExpandWaitcntProfiling && ScoreBrackets) {
-      if (Wait.LoadCnt != ~0u) {
-        unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(LOAD_CNT) -
-                                            ScoreBrackets->getScoreLB(LOAD_CNT),
-                                        getWaitCountMax(LOAD_CNT) - 1);
-        emitExpandedWaitcnt(Outstanding, Wait.LoadCnt, [&](unsigned Count) {
+      for (auto CT : {LOAD_CNT, DS_CNT, EXP_CNT}) {
+        unsigned &WaitCnt = getCounterRef(Wait, CT);
+        if (WaitCnt == ~0u)
+          continue;
+
+        unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(CT) -
+                                            ScoreBrackets->getScoreLB(CT),
+                                        getWaitCountMax(CT) - 1);
+        emitExpandedWaitcnt(Outstanding, WaitCnt, [&](unsigned Count) {
           AMDGPU::Waitcnt W;
-          W.LoadCnt = Count;
-          BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT))
-              .addImm(AMDGPU::encodeWaitcnt(IV, W));
-        });
-      }
-      if (Wait.DsCnt != ~0u) {
-        unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(DS_CNT) -
-                                            ScoreBrackets->getScoreLB(DS_CNT),
-                                        getWaitCountMax(DS_CNT) - 1);
-        emitExpandedWaitcnt(Outstanding, Wait.DsCnt, [&](unsigned Count) {
-          AMDGPU::Waitcnt W;
-          W.DsCnt = Count;
-          BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT))
-              .addImm(AMDGPU::encodeWaitcnt(IV, W));
-        });
-      }
-      if (Wait.ExpCnt != ~0u) {
-        unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(EXP_CNT) -
-                                            ScoreBrackets->getScoreLB(EXP_CNT),
-                                        getWaitCountMax(EXP_CNT) - 1);
-        emitExpandedWaitcnt(Outstanding, Wait.ExpCnt, [&](unsigned Count) {
-          AMDGPU::Waitcnt W;
-          W.ExpCnt = Count;
+          getCounterRef(W, CT) = Count;
           BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT))
               .addImm(AMDGPU::encodeWaitcnt(IV, W));
         });
