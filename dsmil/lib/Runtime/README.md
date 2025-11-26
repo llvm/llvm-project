@@ -38,10 +38,12 @@ dsmil-clang -o binary input.c -ldsmil_sandbox_runtime -lcap-ng -lseccomp
 Runtime support for provenance generation, verification, and extraction.
 
 **Dependencies**:
-- libcrypto (OpenSSL or BoringSSL) for SHA-384
+- **libdsssl (REQUIRED)** - DSMIL-Grade OpenSSL for SHA-384 and cryptographic operations
 - liboqs (Open Quantum Safe) for ML-DSA-87, ML-KEM-1024
 - libcbor (CBOR encoding/decoding)
 - libelf (ELF binary manipulation)
+
+**Note**: [DSSSL](https://github.com/SWORDIntel/DSSSL) is **required** for DSLLVM. It is a hardened OpenSSL 3.x fork providing enhanced security, PQC support, and TPM integration. OpenSSL 3.x fallback is available for development only.
 
 **Functions**:
 
@@ -69,6 +71,10 @@ ninja -C build dsmil_provenance_runtime
 
 **Link**:
 ```bash
+# With DSSSL (REQUIRED for production)
+dsmil-clang -o binary input.c -ldsmil_provenance_runtime -loqs -lcbor -lelf -ldsssl
+
+# Development/testing with OpenSSL 3.x fallback (not recommended)
 dsmil-clang -o binary input.c -ldsmil_provenance_runtime -loqs -lcbor -lelf -lcrypto
 ```
 
@@ -91,10 +97,10 @@ Runtime/
 
 | Algorithm | Library | Purpose |
 |-----------|---------|---------|
-| SHA-384 | OpenSSL/BoringSSL | Hashing |
-| ML-DSA-87 | liboqs | Digital signatures (FIPS 204) |
-| ML-KEM-1024 | liboqs | Key encapsulation (FIPS 203) |
-| AES-256-GCM | OpenSSL/BoringSSL | AEAD encryption |
+| SHA-384 | DSSSL/OpenSSL 3.x | Hashing |
+| ML-DSA-87 | liboqs (DSSSL integrated) | Digital signatures (FIPS 204) |
+| ML-KEM-1024 | liboqs (DSSSL integrated) | Key encapsulation (FIPS 203) |
+| AES-256-GCM | DSSSL/OpenSSL 3.x | AEAD encryption |
 
 ### Constant-Time Operations
 
@@ -287,7 +293,17 @@ Install required libraries:
 sudo apt install libcap-ng-dev libseccomp-dev \
   libssl-dev libelf-dev libcbor-dev
 
-# Build and install liboqs (for ML-DSA/ML-KEM)
+# Build and install DSSSL (DSMIL-Grade OpenSSL with PQC support)
+git clone https://github.com/SWORDIntel/DSSSL.git
+cd DSSSL
+./config --prefix=/usr/local/dsssl \
+  --enable-dsmil-security \
+  --enable-pqc \
+  --enable-tpm2
+make -j$(nproc)
+sudo make install
+
+# Build and install liboqs (for ML-DSA/ML-KEM - if not using DSSSL built-in PQC)
 git clone https://github.com/open-quantum-safe/liboqs.git
 cd liboqs
 mkdir build && cd build

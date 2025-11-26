@@ -387,15 +387,9 @@ private:
    * Analyze function for constant-time violations
    */
   bool analyzeFunction(Function &F) {
-    // Skip declarations and functions without secret attribute
+    // Skip declarations
     if (F.isDeclaration())
       return false;
-
-    // Only analyze functions with dsmil_secret attribute or that handle secret data
-    if (!hasDsmilSecretAttr(F)) {
-      // Still check for accidental secret handling
-      return false;
-    }
 
     LLVM_DEBUG(dbgs() << "Analyzing constant-time properties of function: " << F.getName() << "\n");
 
