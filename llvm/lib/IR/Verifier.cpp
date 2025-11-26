@@ -2732,6 +2732,14 @@ void Verifier::visitConstantPtrAuth(const ConstantPtrAuth *CPA) {
 
   Check(CPA->getDiscriminator()->getBitWidth() == 64,
         "signed ptrauth constant discriminator must be i64 constant integer");
+
+  Check(CPA->getDeactivationSymbol()->getType()->isPointerTy(),
+        "signed ptrauth constant deactivation symbol must be a pointer");
+
+  Check(isa<GlobalValue>(CPA->getDeactivationSymbol()) ||
+            CPA->getDeactivationSymbol()->isNullValue(),
+        "signed ptrauth constant deactivation symbol must be a global value "
+        "or null");
 }
 
 bool Verifier::verifyAttributeCount(AttributeList Attrs, unsigned Params) {

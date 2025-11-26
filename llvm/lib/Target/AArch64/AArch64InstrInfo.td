@@ -2215,6 +2215,7 @@ let Predicates = [HasPAuth] in {
     let Size = 12;
     let Defs = [X16, X17];
     let usesCustomInserter = 1;
+    let supportsDeactivationSymbol = true;
   }
 
   // A standalone pattern is used, so that literal 0 can be passed as $Disc.

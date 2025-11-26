@@ -1674,12 +1674,14 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
   if (const auto *CPA = dyn_cast<ConstantPtrAuth>(CV)) {
     Out << "ptrauth (";
 
-    // ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC]?]?)
+    // ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC[, ptr DS]?]?]?)
     unsigned NumOpsToWrite = 2;
     if (!CPA->getOperand(2)->isNullValue())
       NumOpsToWrite = 3;
     if (!CPA->getOperand(3)->isNullValue())
       NumOpsToWrite = 4;
+    if (!CPA->getOperand(4)->isNullValue())
+      NumOpsToWrite = 5;
 
     ListSeparator LS;
     for (unsigned i = 0, e = NumOpsToWrite; i != e; ++i) {

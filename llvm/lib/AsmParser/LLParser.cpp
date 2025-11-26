@@ -4250,11 +4250,13 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   }
   case lltok::kw_ptrauth: {
     // ValID ::= 'ptrauth' '(' ptr @foo ',' i32 <key>
-    //                         (',' i64 <disc> (',' ptr addrdisc)? )? ')'
+    //                         (',' i64 <disc> (',' ptr addrdisc (',' ptr ds)?
+    //                         )? )? ')'
     Lex.Lex();
 
     Constant *Ptr, *Key;
-    Constant *Disc = nullptr, *AddrDisc = nullptr;
+    Constant *Disc = nullptr, *AddrDisc = nullptr,
+             *DeactivationSymbol = nullptr;
 
     if (parseToken(lltok::lparen,
                    "expected '(' in constant ptrauth expression") ||
@@ -4263,11 +4265,14 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
                    "expected comma in constant ptrauth expression") ||
         parseGlobalTypeAndValue(Key))
       return true;
-    // If present, parse the optional disc/addrdisc.
-    if (EatIfPresent(lltok::comma))
-      if (parseGlobalTypeAndValue(Disc) ||
-          (EatIfPresent(lltok::comma) && parseGlobalTypeAndValue(AddrDisc)))
-        return true;
+    // If present, parse the optional disc/addrdisc/ds.
+    if (EatIfPresent(lltok::comma) && parseGlobalTypeAndValue(Disc))
+      return true;
+    if (EatIfPresent(lltok::comma) && parseGlobalTypeAndValue(AddrDisc))
+      return true;
+    if (EatIfPresent(lltok::comma) &&
+        parseGlobalTypeAndValue(DeactivationSymbol))
+      return true;
     if (parseToken(lltok::rparen,
                    "expected ')' in constant ptrauth expression"))
       return true;
@@ -4298,7 +4303,15 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       AddrDisc = ConstantPointerNull::get(PointerType::get(Context, 0));
     }
 
-    ID.ConstantVal = ConstantPtrAuth::get(Ptr, KeyC, DiscC, AddrDisc);
+    if (!DeactivationSymbol)
+      DeactivationSymbol =
+          ConstantPointerNull::get(PointerType::get(Context, 0));
+    if (!DeactivationSymbol->getType()->isPointerTy())
+      return error(ID.Loc,
+                   "constant ptrauth deactivation symbol must be a pointer");
+
+    ID.ConstantVal =
+        ConstantPtrAuth::get(Ptr, KeyC, DiscC, AddrDisc, DeactivationSymbol);
     ID.Kind = ValID::t_Constant;
     return false;
   }

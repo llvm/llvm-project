@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -895,6 +896,10 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
   }
   if (uint32_t CFIType = MI.getCFIType())
     OS << LS << "cfi-type " << CFIType;
+  if (Value *DS = MI.getDeactivationSymbol()) {
+    OS << LS << "deactivation-symbol ";
+    MIRFormatter::printIRValue(OS, *DS, State.MST);
+  }
 
   if (auto Num = MI.peekDebugInstrNum())
     OS << LS << "debug-instr-number " << Num;
