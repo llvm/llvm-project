@@ -54093,7 +54093,7 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
     break;
   case ISD::SADDSAT:
   case ISD::SSUBSAT:
-    if (Subtarget.hasSSSE3() && VT == MVT::v8i16) {
+    if ((Subtarget.hasSSSE3() && VT == MVT::v8i16) || (Subtarget.hasAVX2() && VT == MVT::v16i16)) {
       SDValue LHS = N->getOperand(0);
       SDValue RHS = N->getOperand(1);
       auto HorizOpcode = IsAdd ? X86ISD::HADDS : X86ISD::HSUBS;

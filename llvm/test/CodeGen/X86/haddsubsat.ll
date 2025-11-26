@@ -46,18 +46,8 @@ define <16 x i16> @phaddsw_v16i16_generic(<16 x i16> %a, <16 x i16> %b) {
 ;
 ; AVX2-LABEL: phaddsw_v16i16_generic:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpshuflw {{.*#+}} ymm2 = ymm1[0,2,2,3,4,5,6,7,8,10,10,11,12,13,14,15]
-; AVX2-NEXT:    vpshufhw {{.*#+}} ymm2 = ymm2[0,1,2,3,4,6,6,7,8,9,10,11,12,14,14,15]
-; AVX2-NEXT:    vpshuflw {{.*#+}} ymm3 = ymm0[0,2,2,3,4,5,6,7,8,10,10,11,12,13,14,15]
-; AVX2-NEXT:    vpshufhw {{.*#+}} ymm3 = ymm3[0,1,2,3,4,6,6,7,8,9,10,11,12,14,14,15]
-; AVX2-NEXT:    vshufps {{.*#+}} ymm2 = ymm3[0,2],ymm2[0,2],ymm3[4,6],ymm2[4,6]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[0,2,1,3]
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [2,3,6,7,10,11,14,15,2,3,6,7,10,11,14,15,18,19,22,23,26,27,30,31,18,19,22,23,26,27,30,31]
-; AVX2-NEXT:    vpshufb ymm1, ymm1, ymm3
-; AVX2-NEXT:    vpshufb ymm0, ymm0, ymm3
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
+; AVX2-NEXT:    vphaddsw ymm0, ymm0, ymm1
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX2-NEXT:    vpaddsw ymm0, ymm2, ymm0
 ; AVX2-NEXT:    ret
 entry:
   %even = shufflevector <16 x i16> %a, <16 x i16> %b,
@@ -114,18 +104,8 @@ define <16 x i16> @phsubsw_v16i16_generic(<16 x i16> %a, <16 x i16> %b) {
 ;
 ; AVX2-LABEL: phsubsw_v16i16_generic:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpshuflw {{.*#+}} ymm2 = ymm1[0,2,2,3,4,5,6,7,8,10,10,11,12,13,14,15]
-; AVX2-NEXT:    vpshufhw {{.*#+}} ymm2 = ymm2[0,1,2,3,4,6,6,7,8,9,10,11,12,14,14,15]
-; AVX2-NEXT:    vpshuflw {{.*#+}} ymm3 = ymm0[0,2,2,3,4,5,6,7,8,10,10,11,12,13,14,15]
-; AVX2-NEXT:    vpshufhw {{.*#+}} ymm3 = ymm3[0,1,2,3,4,6,6,7,8,9,10,11,12,14,14,15]
-; AVX2-NEXT:    vshufps {{.*#+}} ymm2 = ymm3[0,2],ymm2[0,2],ymm3[4,6],ymm2[4,6]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[0,2,1,3]
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [2,3,6,7,10,11,14,15,2,3,6,7,10,11,14,15,18,19,22,23,26,27,30,31,18,19,22,23,26,27,30,31]
-; AVX2-NEXT:    vpshufb ymm1, ymm1, ymm3
-; AVX2-NEXT:    vpshufb ymm0, ymm0, ymm3
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
+; AVX2-NEXT:    vphsubsw ymm0, ymm0, ymm1
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX2-NEXT:    vpsubsw ymm0, ymm2, ymm0
 ; AVX2-NEXT:    ret
 entry:
   %even = shufflevector <16 x i16> %a, <16 x i16> %b,
