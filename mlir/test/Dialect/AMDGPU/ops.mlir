@@ -758,7 +758,5 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x
         iterate %idx, %idx, %idx
         : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
-
   func.return
 }
-

@@ -80,7 +80,6 @@ def AMDGPU_AddressSpaceAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_AddressSpace,
   let assemblyFormat = "`<` $value `>`";
 }
 
-
 //===----------------------------------------------------------------------===//
 // AMDGPU Type definitions
 //===----------------------------------------------------------------------===//
@@ -1248,8 +1247,9 @@ def AMDGPU_MakeDmaBaseOp :
     This operation creates a pair of addresses that will be used by tensor_load_to_lds
     and tensor_store_from_lds.
 
-    This operation creates a value corresponding roughly to the descriptor group 0
+    This operation creates a value corresponding to the tensor descriptor (D#) group 0
     found in TensorLoadToLDSOp and TensorStoreFromLDSOp in the rocdl dialect.
+
     For example:
 
     ```mlir
@@ -1275,6 +1275,8 @@ def AMDGPU_MakeDmaBaseOp :
        // When lowering amdgpu.tensor_load_to_lds
        rocdl.tensor.load.to.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
     ```
+
+    These tensor DMA operations were introduced in gfx1250.
   }];
 
   // TODO: Define a custom printer, parser to avoid space between $src/%dst and indices.
