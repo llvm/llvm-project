@@ -79,6 +79,7 @@ if (NOT LIBCXX_ENABLE_RTTI)
 endif()
 
 serialize_lit_string_param(SERIALIZED_LIT_PARAMS hardening_mode "${LIBCXX_HARDENING_MODE}")
+serialize_lit_string_param(SERIALIZED_LIT_PARAMS pfp "${LIBCXX_PFP}")
 
 if (CMAKE_CXX_COMPILER_TARGET)
   serialize_lit_string_param(SERIALIZED_LIT_PARAMS target_triple "${CMAKE_CXX_COMPILER_TARGET}")
