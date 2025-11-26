@@ -1142,7 +1142,7 @@ CIRGenFunction::VlaSizePair
 CIRGenFunction::getVLAElements1D(const VariableArrayType *vla) {
   mlir::Value vlaSize = vlaSizeMap[vla->getSizeExpr()];
   assert(vlaSize && "no size for VLA!");
-  assert(vlaSize->getType() == sizeTy);
+  assert(vlaSize.getType() == sizeTy);
   return {vlaSize, vla->getElementType()};
 }
 
