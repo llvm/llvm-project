@@ -11423,9 +11423,10 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   SDValue Y;
   if (VT.getScalarSizeInBits() % 2 == 0) {
     // Fold clmul(zext(x), zext(y)) >> (BW - 1 | BW) -> clmul(r|h)(x, y).
-    uint64_t HalfBW = VT.getScalarSizeInBits() / 2;
+    unsigned HalfBW = VT.getScalarSizeInBits() / 2;
     if (sd_match(N0, m_Clmul(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
-        X.getScalarValueSizeInBits() == HalfBW) {
+        X.getScalarValueSizeInBits() == HalfBW &&
+        Y.getScalarValueSizeInBits() == HalfBW) {
       if (sd_match(N1, m_SpecificInt(HalfBW - 1)))
         return DAG.getNode(
             ISD::ZERO_EXTEND, DL, VT,

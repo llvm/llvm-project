@@ -8333,7 +8333,7 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
       SDValue YRev = DAG.getNode(ISD::BITREVERSE, DL, VT, Y);
       SDValue ClMul = DAG.getNode(ISD::CLMUL, DL, VT, XRev, YRev);
       SDValue Res = DAG.getNode(ISD::BITREVERSE, DL, VT, ClMul);
-      if (Opcode == ISD::CLMULR)
+      if (Opcode == ISD::CLMULH)
         Res = DAG.getNode(ISD::SRL, DL, VT, Res,
                           DAG.getShiftAmountConstant(1, VT, DL));
       return Res;
