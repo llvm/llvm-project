@@ -25,7 +25,7 @@ define <8 x i16> @phaddsw_v8i16_generic(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX2-LABEL: phaddsw_v8i16_generic:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    phaddsw xmm0, xmm1
+; AVX2-NEXT:    vphaddsw xmm0, xmm0, xmm1
 ; AVX2-NEXT:    ret
 entry:
   %even = shufflevector <8 x i16> %a, <8 x i16> %b,
@@ -93,7 +93,7 @@ define <8 x i16> @phsubsw_v8i16_generic(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX2-LABEL: phsubsw_v8i16_generic:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    phsubsw xmm0, xmm1
+; AVX2-NEXT:    vphsubsw xmm0, xmm0, xmm1
 ; AVX2-NEXT:    ret
 entry:
   %even = shufflevector <8 x i16> %a, <8 x i16> %b,
