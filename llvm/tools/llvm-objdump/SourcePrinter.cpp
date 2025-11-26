@@ -126,7 +126,6 @@ void LiveElementPrinter::addInlinedFunction(DWARFDie FuncDie,
       InlinedFuncName, U, FuncDie, InlinedFuncDie, Range));
 
   LiveElement *LE = LiveElements.back().get();
-
   // Map the element's low address (LowPC) to its pointer for fast range start
   // lookup.
   LiveElementsByAddress[FuncLowPC].push_back(LE);
@@ -153,10 +152,9 @@ void LiveElementPrinter::registerNewVariable() {
 
   if (const std::optional<DWARFAddressRange> &RangeOpt =
           CurrentVar->getLocExpr().Range) {
-    const DWARFAddressRange &Range = *RangeOpt;
     // Add the variable to address-based maps.
-    LiveElementsByAddress[Range.LowPC].push_back(CurrentVar);
-    LiveElementsByEndAddress[Range.HighPC].push_back(CurrentVar);
+    LiveElementsByAddress[RangeOpt->LowPC].push_back(CurrentVar);
+    LiveElementsByEndAddress[RangeOpt->HighPC].push_back(CurrentVar);
   }
 }
 
