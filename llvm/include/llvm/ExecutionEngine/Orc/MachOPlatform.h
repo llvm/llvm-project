@@ -286,7 +286,6 @@ private:
     // FIXME: ObjCImageInfos and HeaderAddrs need to be cleared when
     // JITDylibs are removed.
     DenseMap<JITDylib *, ObjCImageInfo> ObjCImageInfos;
-    DenseMap<JITDylib *, ExecutorAddr> HeaderAddrs;
   };
 
   using GetJITDylibHeaderSendResultFn =

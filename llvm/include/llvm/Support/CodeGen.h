@@ -82,7 +82,7 @@ namespace llvm {
   enum class CodeGenOptLevel {
     None = 0,      ///< -O0
     Less = 1,      ///< -O1
-    Default = 2,   ///< -O2, -Os
+    Default = 2,   ///< -O2, -Os, -Oz
     Aggressive = 3 ///< -O3
   };
 
@@ -115,7 +115,13 @@ namespace llvm {
   };
 
   // Specify what functions should keep the frame pointer.
-  enum class FramePointerKind { None, NonLeaf, All, Reserved };
+  enum class FramePointerKind {
+    None,
+    NonLeaf,
+    All,
+    Reserved,
+    NonLeafNoReserve
+  };
 
   // Specify what type of zeroing callee-used registers.
   namespace ZeroCallUsedRegs {
