@@ -4685,6 +4685,27 @@ LogicalResult tosa::ConcatShapeOp::verify() {
   return success();
 }
 
+LogicalResult tosa::Exp2ShapeOp::verify() {
+  SmallVector<int64_t> shapes;
+  // Verification is done only for inputs with a const_shape.
+  if (tosa::getConstShapeValues(getInput().getDefiningOp(), shapes)) {
+    if (llvm::any_of(shapes, [](int64_t s) { return s < 0; }))
+      return emitOpError("input elements must be >= 0 for exp2");
+  }
+  return success();
+}
+
+LogicalResult tosa::Log2FloorShapeOp::verify() {
+  SmallVector<int64_t> shapes;
+  // Verification is done only for inputs with a const_shape.
+  if (tosa::getConstShapeValues(getInput().getDefiningOp(), shapes)) {
+    if (llvm::any_of(shapes, [](int64_t s) { return s < 1; }))
+      return emitOpError("input elements must be >= 1 for log2");
+  }
+
+  return success();
+}
+
 LogicalResult tosa::SliceShapeOp::verify() {
   std::optional<int32_t> start;
   DenseIntElementsAttr startAttr;
@@ -4723,6 +4744,17 @@ LogicalResult tosa::SliceShapeOp::verify() {
     return emitOpError("expected start + size to be less than or equal to "
                        "input shape rank (")
            << inputRank << "), got " << sliceSize;
+
+  return success();
+}
+
+LogicalResult tosa::Log2CeilShapeOp::verify() {
+  SmallVector<int64_t> shapes;
+  // Verification is done only for inputs with a const_shape.
+  if (tosa::getConstShapeValues(getInput().getDefiningOp(), shapes)) {
+    if (llvm::any_of(shapes, [](int64_t s) { return s < 1; }))
+      return emitOpError("input elements must be >= 1 for log2");
+  }
 
   return success();
 }

@@ -437,6 +437,22 @@ private:
     return success();
   }
 
+  // Exp2Shape op: level check max shape
+  LogicalResult levelCheckExp2Shape(Operation *op) {
+    if (auto exp2Shape = dyn_cast<tosa::Exp2ShapeOp>(op)) {
+      SmallVector<int64_t> shapes;
+      // Level check is done only for inputs with a const_shape.
+      if (tosa::getConstShapeValues(exp2Shape.getInput().getDefiningOp(),
+                                    shapes)) {
+        for (int64_t shape : shapes) {
+          if (shape >= targetEnv.getLevel().MAX_LOG2_SIZE)
+            return op->emitOpError("failed level check: shape < MAX_LOG2_SIZE");
+        }
+      }
+    }
+    return success();
+  }
+
   // Recursively perform a bottom-up search to determine the maximum nesting
   // depth, starting from a specific operation and continuing up to the function
   // or module scope. Tosa nesting_depth starts at 0 and increments by one each
@@ -673,6 +689,13 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(VariableRead);
   // Shape Operators
   CHECK_RANKS_AND_SIZES(Dim);
+  CHECK_RANKS_AND_SIZES(DivCeilShape);
+  CHECK_RANKS_AND_SIZES(DivFloorShape);
+  CHECK_RANKS_AND_SIZES(Exp2Shape);
+  CHECK_RANKS_AND_SIZES(Log2CeilShape);
+  CHECK_RANKS_AND_SIZES(Log2FloorShape);
+  CHECK_RANKS_AND_SIZES(MulShape);
+  CHECK_RANKS_AND_SIZES(SubShape);
 
   // For the following operators, check whether the size of each tensor
   // operand is valid in a given Level.
@@ -785,7 +808,8 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
       failed(levelCheckFFT<tosa::FFT2dOp>(op)) ||
       failed(levelCheckPool<tosa::MaxPool2dOp>(op)) ||
       failed(levelCheckFFT<tosa::RFFT2dOp>(op)) ||
-      failed(levelCheckTransposeConv2d(op)) || failed(levelCheckResize(op))) {
+      failed(levelCheckTransposeConv2d(op)) || failed(levelCheckResize(op)) ||
+      failed(levelCheckExp2Shape(op))) {
     return failure();
   }
 

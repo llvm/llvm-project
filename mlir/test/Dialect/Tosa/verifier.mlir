@@ -1284,6 +1284,33 @@ func.func @test_concat_shape_rank_mismatch() -> !tosa.shape<4> {
 
 // -----
 
+func.func @test_exp2_negative_shape() -> !tosa.shape<4> {
+  %0 = tosa.const_shape {values = dense<[-1, 0, 10, 3]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error @+1 {{'tosa.exp2_shape' op input elements must be >= 0 for exp2}}
+  %1 = tosa.exp2_shape %0 : (!tosa.shape<4>) -> !tosa.shape<4>
+  return %1 : !tosa.shape<4>
+}
+
+// -----
+
+func.func @test_log2_floor_zero_shape() -> !tosa.shape<4> {
+  %0 = tosa.const_shape {values = dense<[5, 0, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error @+1 {{'tosa.log2_floor_shape' op input elements must be >= 1 for log2}}
+  %1 = tosa.log2_floor_shape %0 : (!tosa.shape<4>) -> !tosa.shape<4>
+  return %1 : !tosa.shape<4>
+}
+
+// -----
+
+func.func @test_log2_ceil_zero_shape() -> !tosa.shape<4> {
+  %0 = tosa.const_shape {values = dense<[5, 0, 10, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error @+1 {{'tosa.log2_ceil_shape' op input elements must be >= 1 for log2}}
+  %1 = tosa.log2_ceil_shape %0 : (!tosa.shape<4>) -> !tosa.shape<4>
+  return %1 : !tosa.shape<4>
+}
+
+// -----
+
 func.func @test_slice_shape_negative_start() -> !tosa.shape<3> {
   %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
   %1 = "tosa.const"() {values = dense<-1> : tensor<1xi32>} : () -> tensor<1xi32>
