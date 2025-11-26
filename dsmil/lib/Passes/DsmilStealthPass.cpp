@@ -384,6 +384,8 @@ private:
         Type::getInt64Ty(Ctx)    // length
     );
 
+    std::vector<CallInst *> ToWrap;
+
     for (auto &BB : F) {
       for (auto &I : BB) {
         if (auto *CI = dyn_cast<CallInst>(&I)) {
@@ -393,19 +395,55 @@ private:
 
           StringRef Name = Callee->getName();
 
-          // Identify network calls
-          if (Name.contains("send") || Name.contains("write") ||
-              Name.contains("network") || Name.contains("socket")) {
+          // Identify network calls (send, write, sendto, sendmsg, etc.)
+          if (Name == "send" || Name == "write" || Name == "sendto" ||
+              Name == "sendmsg" || Name.contains("network_send")) {
 
             // For aggressive mode, wrap network calls
             if (Level == STEALTH_AGGRESSIVE) {
-              // This is a simplified example - real implementation would
-              // need to handle different function signatures
-              NetworkCallsModified++;
-              Modified = true;
+              ToWrap.push_back(CI);
             }
           }
         }
+      }
+    }
+
+    // Actually wrap the network calls
+    for (auto *CI : ToWrap) {
+      IRBuilder<> Builder(CI);
+
+      // Extract data pointer and length from original call
+      // For send(sockfd, buf, len, flags), we want buf (arg 1) and len (arg 2)
+      // For write(fd, buf, count), we want buf (arg 1) and count (arg 2)
+      Value *DataPtr = nullptr;
+      Value *DataLen = nullptr;
+
+      unsigned NumArgs = CI->arg_size();
+      if (NumArgs >= 3) {
+        // Typical send(sockfd, buf, len, ...) or write(fd, buf, count)
+        DataPtr = CI->getArgOperand(1);  // buf/data pointer
+        DataLen = CI->getArgOperand(2);  // len/count
+
+        // Cast data pointer to i8* if needed
+        if (!DataPtr->getType()->isPointerTy() ||
+            !cast<PointerType>(DataPtr->getType())->isOpaqueOrPointeeTypeMatches(
+                Type::getInt8Ty(Ctx))) {
+          DataPtr = Builder.CreateBitCast(DataPtr, Type::getInt8PtrTy(Ctx));
+        }
+
+        // Ensure length is i64
+        if (DataLen->getType() != Type::getInt64Ty(Ctx)) {
+          DataLen = Builder.CreateZExtOrTrunc(DataLen, Type::getInt64Ty(Ctx));
+        }
+
+        // Insert stealth wrapper call BEFORE the original send
+        Builder.CreateCall(NetworkWrapperFunc, {DataPtr, DataLen});
+
+        NetworkCallsModified++;
+        Modified = true;
+
+        LLVM_DEBUG(dbgs() << "  [Stealth] Wrapped network call: "
+                          << CI->getCalledFunction()->getName() << "\n");
       }
     }
 
