@@ -150,11 +150,11 @@ void LiveElementPrinter::registerNewVariable() {
   // Map from a LiveElement pointer to its index in the LiveElements.
   ElementPtrToIndex[CurrentVar] = LiveElements.size() - 1;
 
-  if (const std::optional<DWARFAddressRange> &RangeOpt =
+  if (const std::optional<DWARFAddressRange> &Range =
           CurrentVar->getLocExpr().Range) {
     // Add the variable to address-based maps.
-    LiveElementsByAddress[RangeOpt->LowPC].push_back(CurrentVar);
-    LiveElementsByEndAddress[RangeOpt->HighPC].push_back(CurrentVar);
+    LiveElementsByAddress[Range->LowPC].push_back(CurrentVar);
+    LiveElementsByEndAddress[Range->HighPC].push_back(CurrentVar);
   }
 }
 
