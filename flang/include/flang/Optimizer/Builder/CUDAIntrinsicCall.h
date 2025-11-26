@@ -29,6 +29,8 @@ struct CUDAIntrinsicLibrary : IntrinsicLibrary {
   template <int extent>
   fir::ExtendedValue genAtomicAddVector(mlir::Type,
                                         llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genAtomicAddVector4x4(mlir::Type,
+                                           llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtomicAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAtomicCas(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
