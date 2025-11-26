@@ -23,7 +23,7 @@ void use_global_lambda() {
 // CIR:   %[[LAMBDA:.*]] = cir.get_global @global_lambda : !cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]>
 // CIR:   cir.call @_ZNK3$_0clEv(%[[LAMBDA]]) : (!cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]>) -> ()
 
-// LLVM: @global_lambda = internal global %class.anon.0 undef, align 1
+// LLVM: @global_lambda = internal global %[[REC_LAM_GLOBAL_LAMBDA:.*]] undef, align 1
 // LLVM: define internal void @"_ZNK3$_0clEv"(ptr %[[THIS_ARG:.*]])
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
@@ -32,7 +32,7 @@ void use_global_lambda() {
 // LLVM: define dso_local void @_Z17use_global_lambdav()
 // LLVM:   call void @"_ZNK3$_0clEv"(ptr @global_lambda)
 
-// OGCG: @global_lambda = internal global %class.anon undef, align 1
+// OGCG: @global_lambda = internal global %[[REC_LAM_GLOBAL_LAMBDA:.*]] undef, align 1
 // OGCG: define dso_local void @_Z17use_global_lambdav()
 // OGCG:   call void @"_ZNK3$_0clEv"(ptr noundef nonnull align 1 dereferenceable(1) @global_lambda)
 //
