@@ -47,7 +47,7 @@ class LLVM_ABI GlobalTypeTableBuilder : public TypeCollection {
 
 public:
   explicit GlobalTypeTableBuilder(BumpPtrAllocator &Storage);
-  ~GlobalTypeTableBuilder();
+  ~GlobalTypeTableBuilder() override;
 
   // TypeCollection overrides
   std::optional<TypeIndex> getFirst() override;

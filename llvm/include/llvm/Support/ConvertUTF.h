@@ -126,10 +126,10 @@ namespace llvm {
     bit mask & shift operations.
 ------------------------------------------------------------------------ */
 
-typedef unsigned int    UTF32;  /* at least 32 bits */
-typedef unsigned short  UTF16;  /* at least 16 bits */
-typedef unsigned char   UTF8;   /* typically 8 bits */
-typedef unsigned char   Boolean; /* 0 or 1 */
+using UTF32 = unsigned int;    /* at least 32 bits */
+using UTF16 = unsigned short;  /* at least 16 bits */
+using UTF8 = unsigned char;    /* typically 8 bits */
+using Boolean = unsigned char; /* 0 or 1 */
 
 /* Some fundamental constants */
 #define UNI_REPLACEMENT_CHAR (UTF32)0x0000FFFD
@@ -146,17 +146,14 @@ typedef unsigned char   Boolean; /* 0 or 1 */
 #define UNI_UTF32_BYTE_ORDER_MARK_NATIVE 0x0000FEFF
 #define UNI_UTF32_BYTE_ORDER_MARK_SWAPPED 0xFFFE0000
 
-typedef enum {
-  conversionOK,           /* conversion successful */
-  sourceExhausted,        /* partial character in source, but hit end */
-  targetExhausted,        /* insuff. room in target for conversion */
-  sourceIllegal           /* source sequence is illegal/malformed */
-} ConversionResult;
+enum ConversionResult {
+  conversionOK,    /* conversion successful */
+  sourceExhausted, /* partial character in source, but hit end */
+  targetExhausted, /* insuff. room in target for conversion */
+  sourceIllegal    /* source sequence is illegal/malformed */
+};
 
-typedef enum {
-  strictConversion = 0,
-  lenientConversion
-} ConversionFlags;
+enum ConversionFlags { strictConversion = 0, lenientConversion };
 
 LLVM_ABI ConversionResult ConvertUTF8toUTF16(const UTF8 **sourceStart,
                                              const UTF8 *sourceEnd,

@@ -531,6 +531,13 @@ enum {
  */
 typedef unsigned LLVMGEPNoWrapFlags;
 
+typedef enum {
+  LLVMDbgRecordLabel,
+  LLVMDbgRecordDeclare,
+  LLVMDbgRecordValue,
+  LLVMDbgRecordAssign,
+} LLVMDbgRecordKind;
+
 /**
  * @}
  */
@@ -3897,6 +3904,37 @@ LLVM_C_ABI LLVMDbgRecordRef
 LLVMGetPreviousDbgRecord(LLVMDbgRecordRef DbgRecord);
 
 /**
+ * Get the debug location attached to the debug record.
+ *
+ * @see llvm::DbgRecord::getDebugLoc()
+ */
+LLVMMetadataRef LLVMDbgRecordGetDebugLoc(LLVMDbgRecordRef Rec);
+
+LLVMDbgRecordKind LLVMDbgRecordGetKind(LLVMDbgRecordRef Rec);
+
+/**
+ * Get the value of the DbgVariableRecord.
+ *
+ * @see llvm::DbgVariableRecord::getValue()
+ */
+LLVMValueRef LLVMDbgVariableRecordGetValue(LLVMDbgRecordRef Rec,
+                                           unsigned OpIdx);
+
+/**
+ * Get the debug info variable of the DbgVariableRecord.
+ *
+ * @see llvm::DbgVariableRecord::getVariable()
+ */
+LLVMMetadataRef LLVMDbgVariableRecordGetVariable(LLVMDbgRecordRef Rec);
+
+/**
+ * Get the debug info expression of the DbgVariableRecord.
+ *
+ * @see llvm::DbgVariableRecord::getExpression()
+ */
+LLVMMetadataRef LLVMDbgVariableRecordGetExpression(LLVMDbgRecordRef Rec);
+
+/**
  * @defgroup LLVMCCoreValueInstructionCall Call Sites and Invocations
  *
  * Functions in this group apply to instructions that refer to call
@@ -4757,7 +4795,7 @@ LLVM_C_ABI LLVMValueRef LLVMBuildGlobalString(LLVMBuilderRef B, const char *Str,
 LLVM_C_ABI LLVMValueRef LLVMBuildGlobalStringPtr(LLVMBuilderRef B,
                                                  const char *Str,
                                                  const char *Name);
-LLVM_C_ABI LLVMBool LLVMGetVolatile(LLVMValueRef MemoryAccessInst);
+LLVM_C_ABI LLVMBool LLVMGetVolatile(LLVMValueRef Inst);
 LLVM_C_ABI void LLVMSetVolatile(LLVMValueRef MemoryAccessInst,
                                 LLVMBool IsVolatile);
 LLVM_C_ABI LLVMBool LLVMGetWeak(LLVMValueRef CmpXchgInst);
