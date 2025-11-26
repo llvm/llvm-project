@@ -64,16 +64,6 @@ OriginID OriginManager::get(const Expr &E) {
   if (It != ExprToOriginID.end())
     return It->second;
 
-  // if the expression has no specific origin, increment the missing origin
-  // counter.
-  // std::string ExprStr(E.getStmtClassName());
-  // ExprStr = ExprStr + "<" + E.getType().getAsString() + ">";
-  // auto CountIt = ExprTypeToMissingOriginCount.find(ExprStr);
-  // if (CountIt == ExprTypeToMissingOriginCount.end())
-  //   ExprTypeToMissingOriginCount[ExprStr] = 1;
-  // else
-  //   CountIt->second++;
-
   // If the expression itself has no specific origin, and it's a reference
   // to a declaration, its origin is that of the declaration it refers to.
   // For pointer types, where we don't pre-emptively create an origin for the
