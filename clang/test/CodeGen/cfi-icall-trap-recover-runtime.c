@@ -9,9 +9,9 @@
 
 // RUN: %clang_cc1 -fsanitize=cfi-icall -fno-sanitize-trap=cfi-icall -fsanitize-recover=cfi-icall -fsanitize-minimal-runtime -flto -fvisibility=hidden -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=RECOVER_MIN %s
 
-// RUN: %clang -fsanitize=cfi-icall -fno-sanitize-trap=cfi-icall -fsanitize-recover=cfi-icall -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs -flto -fvisibility=hidden -target x86_64-unknown-linux  -fwhole-program-vtables -S -emit-llvm -o - %s | FileCheck --check-prefix=PRESERVE_MIN %s
+// RUN: %clang -fno-sanitize-ignorelist -S -fsanitize=cfi-icall -fno-sanitize-trap=cfi-icall -fsanitize-recover=cfi-icall -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs -flto -fvisibility=hidden -target x86_64-unknown-linux  -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=PRESERVE_MIN %s
 
-// RUN: %clang -fsanitize=cfi-icall -fno-sanitize-trap=cfi-icall -fsanitize-recover=cfi-icall -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs -flto -fvisibility=hidden -target riscv64-unknown-linux -fwhole-program-vtables -S -emit-llvm -o - %s | FileCheck --check-prefix=RECOVER_MIN_RV64 %s
+// RUN: %clang -fno-sanitize-ignorelist -S -fsanitize=cfi-icall -fno-sanitize-trap=cfi-icall -fsanitize-recover=cfi-icall -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs -flto -fvisibility=hidden -target riscv64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=RECOVER_MIN_RV64 %s
 
 // RUN: %clang_cc1 -fsanitize=cfi-icall -fno-sanitize-trap=cfi-icall -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs -flto -fvisibility=hidden -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=ABORT_MIN %s
 
