@@ -251,6 +251,26 @@ TEST_F(IntrinsicsTest, OverloadedIntrinsicVector) {
   EXPECT_EQ(F->getName(), "llvm.umax.v4i32");
 }
 
+// Tests overloaded intrinsic with automatic type resolution for addrspace.
+TEST_F(IntrinsicsTest, OverloadedIntrinsicAddressSpace) {
+  Type *RetTy = Type::getVoidTy(Context);
+  SmallVector<Type *, 4> ArgTys;
+  ArgTys.push_back(PointerType::get(Context, 1)); // ptr addrspace(1)
+  ArgTys.push_back(Type::getInt32Ty(Context));    // rw
+  ArgTys.push_back(Type::getInt32Ty(Context));    // locality
+  ArgTys.push_back(Type::getInt32Ty(Context));    // cache type
+
+  Function *F = Intrinsic::getOrInsertDeclaration(M.get(), Intrinsic::prefetch,
+                                                  RetTy, ArgTys);
+
+  ASSERT_NE(F, nullptr);
+  EXPECT_EQ(F->getIntrinsicID(), Intrinsic::prefetch);
+  EXPECT_EQ(F->getReturnType(), RetTy);
+  EXPECT_EQ(F->arg_size(), 4u);
+  EXPECT_FALSE(F->isVarArg());
+  EXPECT_EQ(F->getName(), "llvm.prefetch.p1");
+}
+
 // Tests vararg intrinsic declaration.
 TEST_F(IntrinsicsTest, VarArgIntrinsicStatepoint) {
   Type *RetTy = Type::getTokenTy(Context);
@@ -280,8 +300,8 @@ TEST_F(IntrinsicsTest, DifferentOverloads) {
   ArgTys32.push_back(Type::getInt32Ty(Context));
   ArgTys32.push_back(Type::getInt32Ty(Context));
 
-  Function *F32 = Intrinsic::getOrInsertDeclaration(M.get(), Intrinsic::umax,
-                                                    RetTy32, ArgTys32);
+  Function *Func32 = Intrinsic::getOrInsertDeclaration(M.get(), Intrinsic::umax,
+                                                       RetTy32, ArgTys32);
 
   // i64 version
   Type *RetTy64 = Type::getInt64Ty(Context);
@@ -289,12 +309,13 @@ TEST_F(IntrinsicsTest, DifferentOverloads) {
   ArgTys64.push_back(Type::getInt64Ty(Context));
   ArgTys64.push_back(Type::getInt64Ty(Context));
 
-  Function *F64 = Intrinsic::getOrInsertDeclaration(M.get(), Intrinsic::umax,
-                                                    RetTy64, ArgTys64);
+  Function *Func64 = Intrinsic::getOrInsertDeclaration(M.get(), Intrinsic::umax,
+                                                       RetTy64, ArgTys64);
 
-  EXPECT_NE(F32, F64) << "Different overloads should be different functions";
-  EXPECT_EQ(F32->getName(), "llvm.umax.i32");
-  EXPECT_EQ(F64->getName(), "llvm.umax.i64");
+  EXPECT_NE(Func32, Func64)
+      << "Different overloads should be different functions";
+  EXPECT_EQ(Func32->getName(), "llvm.umax.i32");
+  EXPECT_EQ(Func64->getName(), "llvm.umax.i64");
 }
 
 // Tests IRBuilder::CreateIntrinsic with overloaded scalar type.
@@ -331,6 +352,28 @@ TEST_F(IntrinsicsTest, IRBuilderCreateIntrinsicVector) {
   EXPECT_EQ(CI->getType(), RetTy);
   EXPECT_EQ(CI->arg_size(), 2u);
   EXPECT_FALSE(CI->getCalledFunction()->isVarArg());
+}
+
+// Tests IRBuilder::CreateIntrinsic with overloaded address space.
+TEST_F(IntrinsicsTest, IRBuilderCreateIntrinsicAddressSpace) {
+  IRBuilder<> Builder(BB);
+
+  Type *RetTy = Type::getVoidTy(Context);
+  SmallVector<Value *, 4> Args;
+  Args.push_back(
+      Constant::getNullValue(PointerType::get(Context, 1))); // ptr addrspace(1)
+  Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 0)); // rw
+  Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 3)); // locality
+  Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 1)); // cache type
+
+  CallInst *CI = Builder.CreateIntrinsic(RetTy, Intrinsic::prefetch, Args);
+
+  ASSERT_NE(CI, nullptr);
+  EXPECT_EQ(CI->getIntrinsicID(), Intrinsic::prefetch);
+  EXPECT_EQ(CI->getType(), RetTy);
+  EXPECT_EQ(CI->arg_size(), 4u);
+  EXPECT_FALSE(CI->getCalledFunction()->isVarArg());
+  EXPECT_EQ(CI->getCalledFunction()->getName(), "llvm.prefetch.p1");
 }
 
 // Tests IRBuilder::CreateIntrinsic with vararg intrinsic.

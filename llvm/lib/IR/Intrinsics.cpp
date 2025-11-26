@@ -760,15 +760,15 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
   return getOrInsertIntrinsicDeclarationImpl(M, id, Tys, FT);
 }
 
-Function *Intrinsic::getOrInsertDeclaration(Module *M, ID IID, Type *RetTy,
+Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id, Type *RetTy,
                                             ArrayRef<Type *> ArgTys) {
   // If the intrinsic is not overloaded, use the non-overloaded version.
-  if (!Intrinsic::isOverloaded(IID))
-    return getOrInsertDeclaration(M, IID);
+  if (!Intrinsic::isOverloaded(id))
+    return getOrInsertDeclaration(M, id);
 
   // Get the intrinsic signature metadata.
   SmallVector<Intrinsic::IITDescriptor, 8> Table;
-  getIntrinsicInfoTableEntries(IID, Table);
+  getIntrinsicInfoTableEntries(id, Table);
   ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
 
   FunctionType *FTy = FunctionType::get(RetTy, ArgTys, /*isVarArg=*/false);
@@ -786,7 +786,7 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID IID, Type *RetTy,
 
   assert(TableRef.empty() && "Unprocessed descriptors remain");
 
-  return getOrInsertIntrinsicDeclarationImpl(M, IID, OverloadTys, FTy);
+  return getOrInsertIntrinsicDeclarationImpl(M, id, OverloadTys, FTy);
 }
 
 Function *Intrinsic::getDeclarationIfExists(const Module *M, ID id) {
