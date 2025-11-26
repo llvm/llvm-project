@@ -70,7 +70,7 @@ jobs:
           echo "script-options=$script_options" >> $GITHUB_OUTPUT
           echo "version-string=$version_string" >> $GITHUB_OUTPUT
       - env:
-          LDFLAGS: "-Wl,--verbose"
+          LDFLAGS: "/verbose"
         run: |
           subst S: ${{ github.workspace }}
           cd S:\llvm\utils\release\
