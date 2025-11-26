@@ -26,7 +26,6 @@ static_library("lib") {
     "DAP.cpp",
     "DAPError.cpp",
     "DAPLog.cpp",
-    "DAPSessionManager.cpp",
     "EventHelper.cpp",
     "ExceptionBreakpoint.cpp",
     "FifoFiles.cpp",

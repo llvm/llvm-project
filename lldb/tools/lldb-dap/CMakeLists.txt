@@ -10,7 +10,6 @@ add_lldb_library(lldbDAP
   DAP.cpp
   DAPError.cpp
   DAPLog.cpp
-  DAPSessionManager.cpp
   EventHelper.cpp
   ExceptionBreakpoint.cpp
   FifoFiles.cpp

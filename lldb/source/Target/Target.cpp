@@ -185,8 +185,6 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_internal_stop_hooks(), m_latest_stop_hook_id(0), m_valid(true),
       m_suppress_stop_hooks(false), m_is_dummy_target(is_dummy_target),
       m_target_unique_id(g_target_unique_id++),
-      m_target_session_name(
-          llvm::formatv("Session {0}", m_target_unique_id).str()),
       m_frame_recognizer_manager_up(
           std::make_unique<StackFrameRecognizerManager>()) {
   SetEventName(eBroadcastBitBreakpointChanged, "breakpoint-changed");
@@ -194,7 +192,6 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
   SetEventName(eBroadcastBitModulesUnloaded, "modules-unloaded");
   SetEventName(eBroadcastBitWatchpointChanged, "watchpoint-changed");
   SetEventName(eBroadcastBitSymbolsLoaded, "symbols-loaded");
-  SetEventName(eBroadcastBitNewTargetCreated, "new-target-created");
 
   CheckInWithManager();
 
@@ -5203,11 +5200,6 @@ Target::TargetEventData::TargetEventData(const lldb::TargetSP &target_sp,
                                          const ModuleList &module_list)
     : EventData(), m_target_sp(target_sp), m_module_list(module_list) {}
 
-Target::TargetEventData::TargetEventData(
-    const lldb::TargetSP &target_sp, const lldb::TargetSP &created_target_sp)
-    : EventData(), m_target_sp(target_sp),
-      m_created_target_sp(created_target_sp), m_module_list() {}
-
 Target::TargetEventData::~TargetEventData() = default;
 
 llvm::StringRef Target::TargetEventData::GetFlavorString() {
@@ -5240,15 +5232,6 @@ TargetSP Target::TargetEventData::GetTargetFromEvent(const Event *event_ptr) {
   if (event_data)
     target_sp = event_data->m_target_sp;
   return target_sp;
-}
-
-TargetSP
-Target::TargetEventData::GetCreatedTargetFromEvent(const Event *event_ptr) {
-  TargetSP created_target_sp;
-  const TargetEventData *event_data = GetEventDataFromEvent(event_ptr);
-  if (event_data)
-    created_target_sp = event_data->m_created_target_sp;
-  return created_target_sp;
 }
 
 ModuleList

@@ -317,9 +317,7 @@ bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
          O.mapOptional("waitFor", ARA.waitFor) &&
          O.mapOptional("gdb-remote-port", ARA.gdbRemotePort) &&
          O.mapOptional("gdb-remote-hostname", ARA.gdbRemoteHostname) &&
-         O.mapOptional("coreFile", ARA.coreFile) &&
-         O.mapOptional("targetId", ARA.targetId) &&
-         O.mapOptional("debuggerId", ARA.debuggerId);
+         O.mapOptional("coreFile", ARA.coreFile);
 }
 
 bool fromJSON(const json::Value &Params, ContinueArguments &CA, json::Path P) {
