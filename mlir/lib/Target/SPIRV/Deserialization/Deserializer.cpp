@@ -702,8 +702,8 @@ spirv::Deserializer::processGraphEntryPointARM(ArrayRef<uint32_t> operands) {
   // RAII guard to reset the insertion point to previous value when done.
   OpBuilder::InsertionGuard insertionGuard(opBuilder);
   opBuilder.setInsertionPoint(graphARM);
-  opBuilder.create<spirv::GraphEntryPointARMOp>(
-      unknownLoc, SymbolRefAttr::get(opBuilder.getContext(), name),
+  spirv::GraphEntryPointARMOp::create(
+      opBuilder, unknownLoc, SymbolRefAttr::get(opBuilder.getContext(), name),
       opBuilder.getArrayAttr(interface));
 
   return success();
@@ -736,7 +736,7 @@ spirv::Deserializer::processGraphARM(ArrayRef<uint32_t> operands) {
 
   std::string graphName = getGraphSymbol(graphID);
   auto graphOp =
-      opBuilder.create<spirv::GraphARMOp>(unknownLoc, graphName, graphType);
+      spirv::GraphARMOp::create(opBuilder, unknownLoc, graphName, graphType);
   curGraph = graphMap[graphID] = graphOp;
   Block *entryBlock = graphOp.addEntryBlock();
   LLVM_DEBUG({
@@ -844,7 +844,7 @@ spirv::Deserializer::processOpGraphSetOutputARM(ArrayRef<uint32_t> operands) {
 LogicalResult
 spirv::Deserializer::processGraphEndARM(ArrayRef<uint32_t> operands) {
   // Create GraphOutputsARM instruction.
-  opBuilder.create<spirv::GraphOutputsARMOp>(unknownLoc, graphOutputs);
+  spirv::GraphOutputsARMOp::create(opBuilder, unknownLoc, graphOutputs);
 
   // Process OpGraphEndARM.
   if (!operands.empty()) {
@@ -2292,6 +2292,38 @@ LogicalResult spirv::Deserializer::processPhi(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult spirv::Deserializer::processSwitch(ArrayRef<uint32_t> operands) {
+  if (!curBlock)
+    return emitError(unknownLoc, "OpSwitch must appear in a block");
+
+  if (operands.size() < 2)
+    return emitError(unknownLoc, "OpSwitch must at least specify selector and "
+                                 "a default target");
+
+  if (operands.size() % 2)
+    return emitError(unknownLoc,
+                     "OpSwitch must at have an even number of operands: "
+                     "selector, default target and any number of literal and "
+                     "label <id> pairs");
+
+  Value selector = getValue(operands[0]);
+  Block *defaultBlock = getOrCreateBlock(operands[1]);
+  Location loc = createFileLineColLoc(opBuilder);
+
+  SmallVector<int32_t> literals;
+  SmallVector<Block *> blocks;
+  for (unsigned i = 2, e = operands.size(); i < e; i += 2) {
+    literals.push_back(operands[i]);
+    blocks.push_back(getOrCreateBlock(operands[i + 1]));
+  }
+
+  SmallVector<ValueRange> targetOperands(blocks.size(), {});
+  spirv::SwitchOp::create(opBuilder, loc, selector, defaultBlock,
+                          ArrayRef<Value>(), literals, blocks, targetOperands);
+
+  return success();
+}
+
 namespace {
 /// A class for putting all blocks in a structured selection/loop in a
 /// spirv.mlir.selection/spirv.mlir.loop op.
@@ -2619,6 +2651,11 @@ LogicalResult ControlFlowStructurizer::structurize() {
   // region. We cannot handle such cases given that once a value is sinked into
   // the SelectionOp/LoopOp's region, there is no escape for it.
   for (auto *block : constructBlocks) {
+    if (!block->use_empty())
+      return emitError(block->getParent()->getLoc(),
+                       "failed control flow structurization: "
+                       "block has uses outside of the "
+                       "enclosing selection/loop construct");
     for (Operation &op : *block)
       if (!op.use_empty())
         return op.emitOpError("failed control flow structurization: value has "

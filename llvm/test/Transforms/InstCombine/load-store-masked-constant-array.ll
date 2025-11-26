@@ -7,8 +7,8 @@
 define void @combine_masked_load_store_from_constant_array(ptr %ptr) {
 ; CHECK-LABEL: @combine_masked_load_store_from_constant_array(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.whilelt.nxv2i1.i32(i32 0, i32 10)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr nonnull @contant_int_array, i32 8, <vscale x 2 x i1> [[TMP1]], <vscale x 2 x i64> zeroinitializer)
-; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP2]], ptr [[PTR:%.*]], i32 1, <vscale x 2 x i1> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr nonnull align 8 @contant_int_array, <vscale x 2 x i1> [[TMP1]], <vscale x 2 x i64> zeroinitializer)
+; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP2]], ptr align 1 [[PTR:%.*]], <vscale x 2 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   %1 = alloca [10 x i64]

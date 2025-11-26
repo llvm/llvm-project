@@ -107,7 +107,7 @@ static bool typeIsMemberPointer(const Type *T) {
 static std::optional<std::vector<SourceRange>>
 declRanges(const DeclStmt *DS, const SourceManager &SM,
            const LangOptions &LangOpts) {
-  std::size_t DeclCount = std::distance(DS->decl_begin(), DS->decl_end());
+  const std::size_t DeclCount = std::distance(DS->decl_begin(), DS->decl_end());
   if (DeclCount < 2)
     return std::nullopt;
 
@@ -157,7 +157,7 @@ declRanges(const DeclStmt *DS, const SourceManager &SM,
     if (Start.isInvalid() || Start.isMacroID())
       break;
 
-    Token T = getPreviousToken(Start, SM, LangOpts);
+    const Token T = getPreviousToken(Start, SM, LangOpts);
     if (T.is(tok::l_paren)) {
       Start = findPreviousTokenStart(Start, SM, LangOpts);
       continue;
@@ -165,7 +165,7 @@ declRanges(const DeclStmt *DS, const SourceManager &SM,
     break;
   }
 
-  SourceRange DeclRange(DS->getBeginLoc(), Start);
+  const SourceRange DeclRange(DS->getBeginLoc(), Start);
   if (DeclRange.isInvalid() || isMacroID(DeclRange))
     return std::nullopt;
 
@@ -183,13 +183,13 @@ declRanges(const DeclStmt *DS, const SourceManager &SM,
     if (typeIsMemberPointer(CurrentDecl->getType().IgnoreParens().getTypePtr()))
       return std::nullopt;
 
-    SourceLocation DeclEnd =
+    const SourceLocation DeclEnd =
         CurrentDecl->hasInit()
             ? findNextTerminator(CurrentDecl->getInit()->getEndLoc(), SM,
                                  LangOpts)
             : findNextTerminator(CurrentDecl->getEndLoc(), SM, LangOpts);
 
-    SourceRange VarNameRange(DeclBegin, DeclEnd);
+    const SourceRange VarNameRange(DeclBegin, DeclEnd);
     if (VarNameRange.isInvalid() || isMacroID(VarNameRange))
       return std::nullopt;
 
@@ -206,7 +206,7 @@ collectSourceRanges(llvm::ArrayRef<SourceRange> Ranges, const SourceManager &SM,
   Snippets.reserve(Ranges.size());
 
   for (const auto &Range : Ranges) {
-    CharSourceRange CharRange = Lexer::getAsCharRange(
+    const CharSourceRange CharRange = Lexer::getAsCharRange(
         CharSourceRange::getCharRange(Range.getBegin(), Range.getEnd()), SM,
         LangOpts);
 
@@ -214,7 +214,7 @@ collectSourceRanges(llvm::ArrayRef<SourceRange> Ranges, const SourceManager &SM,
       return std::nullopt;
 
     bool InvalidText = false;
-    StringRef Snippet =
+    const StringRef Snippet =
         Lexer::getSourceText(CharRange, SM, LangOpts, &InvalidText);
 
     if (InvalidText)
@@ -262,7 +262,7 @@ void IsolateDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   std::vector<std::string> NewDecls = createIsolatedDecls(*PotentialSnippets);
-  std::string Replacement = llvm::join(
+  const std::string Replacement = llvm::join(
       NewDecls,
       (Twine("\n") + Lexer::getIndentationForLine(WholeDecl->getBeginLoc(),
                                                   *Result.SourceManager))
