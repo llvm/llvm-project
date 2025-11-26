@@ -1475,17 +1475,17 @@ struct TestInitSizeTSDExclusiveConfig : public TestInitSizeConfig {
   template <class A> using TSDRegistryT = scudo::TSDRegistryExT<A>;
 };
 
-template <class AllocatorT>
-void RunStress() {
+template <class AllocatorT> void RunStress() {
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   // This test is designed to try and have many threads trying to initialize
   // the TSD at the same time. Make sure this doesn't crash.
   std::atomic_bool StartRunning = false;
-  std::vector<std::thread*> threads;
+  std::vector<std::thread *> threads;
   for (size_t I = 0; I < 16; I++) {
-    threads.emplace_back(new std::thread([&Allocator, &StartRunning] (){
-      while (!StartRunning.load());
+    threads.emplace_back(new std::thread([&Allocator, &StartRunning]() {
+      while (!StartRunning.load())
+        ;
 
       void *Ptr = Allocator->allocate(10, Origin);
       EXPECT_TRUE(Ptr != nullptr);
@@ -1497,7 +1497,7 @@ void RunStress() {
 
   StartRunning = true;
 
-  for (auto* thread : threads) {
+  for (auto *thread : threads) {
     thread->join();
     delete thread;
   }
