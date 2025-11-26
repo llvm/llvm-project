@@ -1242,8 +1242,8 @@ define amdgpu_kernel void @s_fdiv_ulp25_v2f32(ptr addrspace(1) %out, <2 x float>
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, s7
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_dual_mul_f32 v0, s0, v0 :: v_dual_mul_f32 v1, s1, v1
-; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
+; GFX11-NEXT:    v_dual_mul_f32 v0, s2, v0 :: v_dual_mul_f32 v1, s3, v1
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ;
 ; EG-LABEL: s_fdiv_ulp25_v2f32:
@@ -1320,8 +1320,8 @@ define amdgpu_kernel void @s_fdiv_v2f32_fast_math(ptr addrspace(1) %out, <2 x fl
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, s6
 ; GFX11-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_dual_mul_f32 v1, s1, v0 :: v_dual_mul_f32 v0, s0, v2
-; GFX11-NEXT:    global_store_b64 v3, v[0:1], s[4:5]
+; GFX11-NEXT:    v_dual_mul_f32 v1, s3, v0 :: v_dual_mul_f32 v0, s2, v2
+; GFX11-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ;
 ; EG-LABEL: s_fdiv_v2f32_fast_math:
@@ -1398,8 +1398,8 @@ define amdgpu_kernel void @s_fdiv_v2f32_arcp_math(ptr addrspace(1) %out, <2 x fl
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, s6
 ; GFX11-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
-; GFX11-NEXT:    v_dual_mul_f32 v1, s1, v0 :: v_dual_mul_f32 v0, s0, v2
-; GFX11-NEXT:    global_store_b64 v3, v[0:1], s[4:5]
+; GFX11-NEXT:    v_dual_mul_f32 v1, s3, v0 :: v_dual_mul_f32 v0, s2, v2
+; GFX11-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ;
 ; EG-LABEL: s_fdiv_v2f32_arcp_math:
