@@ -61,21 +61,27 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
 static mlir::Value makeAtomicFenceValue(CIRGenFunction &cgf,
                                         const CallExpr *expr,
                                         cir::SyncScopeKind syncScope) {
-  auto &builder = cgf.getBuilder();
+  CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Value orderingVal = cgf.emitScalarExpr(expr->getArg(0));
 
   auto constOrdering = orderingVal.getDefiningOp<cir::ConstantOp>();
-  if (!constOrdering)
-    llvm_unreachable("NYI: variable ordering not supported");
 
-  if (auto constOrderingAttr = constOrdering.getValueAttr<cir::IntAttr>()) {
-    cir::MemOrder ordering =
-        static_cast<cir::MemOrder>(constOrderingAttr.getUInt());
-
-    cir::AtomicFence::create(
-        builder, cgf.getLoc(expr->getSourceRange()), ordering,
-        cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
+  if (!constOrdering) {
+    // TODO(cir): Emit code to switch on `orderingVal`,
+    //            and creating the fence op for valid values.
+    cgf.cgm.errorNYI("Variable atomic fence ordering");
+    return {};
   }
+
+  auto constOrderingAttr = constOrdering.getValueAttr<cir::IntAttr>();
+  assert(constOrderingAttr && "Expected integer constant for ordering");
+
+  auto ordering =
+      static_cast<cir::MemOrder>(constOrderingAttr.getUInt());
+
+  cir::AtomicFence::create(
+      builder, cgf.getLoc(expr->getSourceRange()), ordering,
+      cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
 
   return {};
 }
