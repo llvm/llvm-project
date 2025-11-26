@@ -519,13 +519,13 @@ class VSETVLIInfo {
     unsigned AVLImm;
   };
 
-  enum : uint8_t {
+  enum class AVLState : uint8_t {
     Uninitialized,
     AVLIsReg,
     AVLIsImm,
     AVLIsVLMAX,
     Unknown, // AVL and VTYPE are fully unknown
-  } State = Uninitialized;
+  } State = AVLState::Uninitialized;
 
   // Fields from VTYPE.
   RISCVVType::VLMUL VLMul = RISCVVType::LMUL_1;
@@ -539,7 +539,7 @@ class VSETVLIInfo {
 public:
   VSETVLIInfo()
       : AVLImm(0), TailAgnostic(false), MaskAgnostic(false),
-        SEWLMULRatioOnly(false) {}
+        SEWLMULRatioOnly(false), AltFmt(false), TWiden(0) {}
 
   static VSETVLIInfo getUnknown() {
     VSETVLIInfo Info;
@@ -547,27 +547,27 @@ public:
     return Info;
   }
 
-  bool isValid() const { return State != Uninitialized; }
-  void setUnknown() { State = Unknown; }
-  bool isUnknown() const { return State == Unknown; }
+  bool isValid() const { return State != AVLState::Uninitialized; }
+  void setUnknown() { State = AVLState::Unknown; }
+  bool isUnknown() const { return State == AVLState::Unknown; }
 
   void setAVLRegDef(const VNInfo *VNInfo, Register AVLReg) {
     assert(AVLReg.isVirtual());
     AVLRegDef.ValNo = VNInfo;
     AVLRegDef.DefReg = AVLReg;
-    State = AVLIsReg;
+    State = AVLState::AVLIsReg;
   }
 
   void setAVLImm(unsigned Imm) {
     AVLImm = Imm;
-    State = AVLIsImm;
+    State = AVLState::AVLIsImm;
   }
 
-  void setAVLVLMAX() { State = AVLIsVLMAX; }
+  void setAVLVLMAX() { State = AVLState::AVLIsVLMAX; }
 
-  bool hasAVLImm() const { return State == AVLIsImm; }
-  bool hasAVLReg() const { return State == AVLIsReg; }
-  bool hasAVLVLMAX() const { return State == AVLIsVLMAX; }
+  bool hasAVLImm() const { return State == AVLState::AVLIsImm; }
+  bool hasAVLReg() const { return State == AVLState::AVLIsReg; }
+  bool hasAVLVLMAX() const { return State == AVLState::AVLIsVLMAX; }
   Register getAVLReg() const {
     assert(hasAVLReg() && AVLRegDef.DefReg.isVirtual());
     return AVLRegDef.DefReg;
@@ -607,12 +607,36 @@ public:
     }
   }
 
-  unsigned getSEW() const { return SEW; }
-  RISCVVType::VLMUL getVLMUL() const { return VLMul; }
-  bool getTailAgnostic() const { return TailAgnostic; }
-  bool getMaskAgnostic() const { return MaskAgnostic; }
-  bool getAltFmt() const { return AltFmt; }
-  unsigned getTWiden() const { return TWiden; }
+  unsigned getSEW() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return SEW;
+  }
+  RISCVVType::VLMUL getVLMUL() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return VLMul;
+  }
+  bool getTailAgnostic() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return TailAgnostic;
+  }
+  bool getMaskAgnostic() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return MaskAgnostic;
+  }
+  bool getAltFmt() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return AltFmt;
+  }
+  unsigned getTWiden() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    return TWiden;
+  }
 
   bool hasNonZeroAVL(const LiveIntervals *LIS) const {
     if (hasAVLImm())
@@ -837,42 +861,44 @@ public:
   /// Implement operator<<.
   /// @{
   void print(raw_ostream &OS) const {
-    OS << "{";
+    OS << '{';
     switch (State) {
-    case Uninitialized:
+    case AVLState::Uninitialized:
       OS << "Uninitialized";
       break;
-    case Unknown:
+    case AVLState::Unknown:
       OS << "unknown";
       break;
-    case AVLIsReg:
+    case AVLState::AVLIsReg:
       OS << "AVLReg=" << llvm::printReg(getAVLReg());
       break;
-    case AVLIsImm:
+    case AVLState::AVLIsImm:
       OS << "AVLImm=" << (unsigned)AVLImm;
       break;
-    case AVLIsVLMAX:
+    case AVLState::AVLIsVLMAX:
       OS << "AVLVLMAX";
       break;
     }
-    OS << ", ";
+    if (isValid() && !isUnknown()) {
+      OS << ", ";
 
-    unsigned LMul;
-    bool Fractional;
-    std::tie(LMul, Fractional) = decodeVLMUL(VLMul);
+      unsigned LMul;
+      bool Fractional;
+      std::tie(LMul, Fractional) = decodeVLMUL(VLMul);
 
-    OS << "VLMul=";
-    if (Fractional)
-      OS << "mf";
-    else
-      OS << "m";
-    OS << LMul << ", "
-       << "SEW=e" << (unsigned)SEW << ", "
-       << "TailAgnostic=" << (bool)TailAgnostic << ", "
-       << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
-       << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << ", "
-       << "TWiden=" << (unsigned)TWiden << ", "
-       << "AltFmt=" << (bool)AltFmt << "}";
+      OS << "VLMul=m";
+      if (Fractional)
+        OS << 'f';
+      OS << LMul << ", "
+         << "SEW=e" << (unsigned)SEW << ", "
+         << "TailAgnostic=" << (bool)TailAgnostic << ", "
+         << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
+         << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << ", "
+         << "TWiden=" << (unsigned)TWiden << ", "
+         << "AltFmt=" << (bool)AltFmt;
+    }
+
+    OS << '}';
   }
 #endif
 };
