@@ -20,7 +20,9 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/FileSystem.h"
 
-#if !defined(_WIN32)
+#ifdef _WIN32
+#include "lldb/Host/windows/PseudoTerminalWindows.h"
+#else
 #include <climits>
 #endif
 
@@ -31,7 +33,12 @@ using namespace lldb_private;
 
 ProcessLaunchInfo::ProcessLaunchInfo()
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(0),
-      m_file_actions(), m_pty(new PseudoTerminal), m_monitor_callback(nullptr) {
+      m_file_actions(), m_monitor_callback(nullptr) {
+#ifdef _WIN32
+  m_pty = std::make_shared<PseudoTerminalWindows>();
+#else
+  m_pty = std::make_shared<PseudoTerminal>();
+#endif
 }
 
 ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
@@ -40,7 +47,13 @@ ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
                                      const FileSpec &working_directory,
                                      uint32_t launch_flags)
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(launch_flags),
-      m_file_actions(), m_pty(new PseudoTerminal) {
+      m_file_actions() {
+#ifdef _WIN32
+  m_pty = std::make_shared<PseudoTerminalWindows>();
+#else
+  m_pty = std::make_shared<PseudoTerminal>();
+#endif
+
   if (stdin_file_spec) {
     FileAction file_action;
     const bool read = true;

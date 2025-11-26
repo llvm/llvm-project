@@ -13,6 +13,7 @@
 #include <psapi.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -21,12 +22,17 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeProcessBase.h"
 #include "lldb/Host/HostProcess.h"
+#include "lldb/Host/Pipe.h"
+#include "lldb/Host/PseudoTerminal.h"
+#include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
 #include "llvm/Support/ConvertUTF.h"
@@ -122,22 +128,6 @@ ProcessWindows::ProcessWindows(lldb::TargetSP target_sp,
           LLDB_INVALID_BREAK_ID) {}
 
 ProcessWindows::~ProcessWindows() {}
-
-size_t ProcessWindows::GetSTDOUT(char *buf, size_t buf_size, Status &error) {
-  error = Status::FromErrorString("GetSTDOUT unsupported on Windows");
-  return 0;
-}
-
-size_t ProcessWindows::GetSTDERR(char *buf, size_t buf_size, Status &error) {
-  error = Status::FromErrorString("GetSTDERR unsupported on Windows");
-  return 0;
-}
-
-size_t ProcessWindows::PutSTDIN(const char *buf, size_t buf_size,
-                                Status &error) {
-  error = Status::FromErrorString("PutSTDIN unsupported on Windows");
-  return 0;
-}
 
 Status ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (bp_site->HardwareRequired())
@@ -661,6 +651,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
 
   TargetSP target = CalculateTarget();
+  target->GetProcessLaunchInfo().GetPTY().Close();
   if (target) {
     ModuleSP executable_module = target->GetExecutableModule();
     ModuleList unloaded_modules;
@@ -955,5 +946,163 @@ Status ProcessWindows::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
   wp_sp->SetEnabled(false, notify);
 
   return error;
+}
+
+class IOHandlerProcessSTDIOWindows : public IOHandler {
+public:
+  IOHandlerProcessSTDIOWindows(Process *process, HANDLE conpty_input)
+      : IOHandler(process->GetTarget().GetDebugger(),
+                  IOHandler::Type::ProcessIO),
+        m_process(process),
+        m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
+        m_write_file(conpty_input) {
+    m_pipe.CreateNew();
+  }
+
+  ~IOHandlerProcessSTDIOWindows() override = default;
+
+  void SetIsRunning(bool running) {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    SetIsDone(!running);
+    m_is_running = running;
+  }
+
+  void Run() override {
+    if (!m_read_file.IsValid() || m_write_file == INVALID_HANDLE_VALUE ||
+        !m_pipe.CanRead() || !m_pipe.CanWrite()) {
+      SetIsDone(true);
+      return;
+    }
+
+    SetIsDone(false);
+    SetIsRunning(true);
+
+    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    HANDLE hInterrupt = (HANDLE)_get_osfhandle(m_pipe.GetReadFileDescriptor());
+    HANDLE waitHandles[2] = {hStdin, hInterrupt};
+
+    while (true) {
+      {
+        std::lock_guard<std::mutex> guard(m_mutex);
+        if (GetIsDone())
+          goto exit_loop;
+      }
+
+      DWORD result = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
+      switch (result) {
+      case WAIT_FAILED:
+        goto exit_loop;
+      case WAIT_OBJECT_0: {
+        char ch = 0;
+        DWORD read = 0;
+        if (!ReadFile(hStdin, &ch, 1, &read, nullptr) || read != 1)
+          goto exit_loop;
+
+        DWORD written = 0;
+        if (!WriteFile(m_write_file, &ch, 1, &written, nullptr) || written != 1)
+          goto exit_loop;
+        break;
+      }
+      case WAIT_OBJECT_0 + 1: {
+        char ch = 0;
+        DWORD read = 0;
+        if (!ReadFile(hInterrupt, &ch, 1, &read, nullptr) || read != 1)
+          goto exit_loop;
+
+        if (ch == 'q')
+          goto exit_loop;
+        if (ch == 'i' && StateIsRunningState(m_process->GetState()))
+          m_process->SendAsyncInterrupt();
+        break;
+      }
+      default:
+        goto exit_loop;
+      }
+    }
+
+  exit_loop:;
+    SetIsRunning(false);
+  }
+
+  void Cancel() override {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    SetIsDone(true);
+    // Only write to our pipe to cancel if we are in
+    // IOHandlerProcessSTDIO::Run(). We can end up with a python command that
+    // is being run from the command interpreter:
+    //
+    // (lldb) step_process_thousands_of_times
+    //
+    // In this case the command interpreter will be in the middle of handling
+    // the command and if the process pushes and pops the IOHandler thousands
+    // of times, we can end up writing to m_pipe without ever consuming the
+    // bytes from the pipe in IOHandlerProcessSTDIO::Run() and end up
+    // deadlocking when the pipe gets fed up and blocks until data is consumed.
+    if (m_is_running) {
+      char ch = 'q'; // Send 'q' for quit
+      if (llvm::Error err = m_pipe.Write(&ch, 1).takeError()) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Process), std::move(err),
+                       "Pipe write failed: {0}");
+      }
+    }
+  }
+
+  bool Interrupt() override {
+    // Do only things that are safe to do in an interrupt context (like in a
+    // SIGINT handler), like write 1 byte to a file descriptor. This will
+    // interrupt the IOHandlerProcessSTDIO::Run() and we can look at the byte
+    // that was written to the pipe and then call
+    // m_process->SendAsyncInterrupt() from a much safer location in code.
+    if (m_active) {
+      char ch = 'i'; // Send 'i' for interrupt
+      return !errorToBool(m_pipe.Write(&ch, 1).takeError());
+    } else {
+      // This IOHandler might be pushed on the stack, but not being run
+      // currently so do the right thing if we aren't actively watching for
+      // STDIN by sending the interrupt to the process. Otherwise the write to
+      // the pipe above would do nothing. This can happen when the command
+      // interpreter is running and gets a "expression ...". It will be on the
+      // IOHandler thread and sending the input is complete to the delegate
+      // which will cause the expression to run, which will push the process IO
+      // handler, but not run it.
+
+      if (StateIsRunningState(m_process->GetState())) {
+        m_process->SendAsyncInterrupt();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void GotEOF() override {}
+
+private:
+  Process *m_process;
+  NativeFile m_read_file; // Read from this file (usually actual STDIN for LLDB
+  HANDLE m_write_file =
+      INVALID_HANDLE_VALUE; // Write to this file (usually the primary pty for
+                            // getting io to debuggee)
+  Pipe m_pipe;
+  std::mutex m_mutex;
+  bool m_is_running = false;
+};
+
+void ProcessWindows::SetPseudoTerminalHandle(
+    const std::shared_ptr<PseudoTerminal> &pty) {
+  m_stdio_communication.SetConnection(
+      std::make_unique<ConnectionGenericFile>(pty->GetPrimaryHandle(), false));
+  if (m_stdio_communication.IsConnected()) {
+    m_stdio_communication.SetReadThreadBytesReceivedCallback(
+        STDIOReadThreadBytesReceived, this);
+    m_stdio_communication.StartReadThread();
+
+    // Now read thread is set up, set up input reader.
+    {
+      std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
+      if (!m_process_input_reader)
+        m_process_input_reader = std::make_shared<IOHandlerProcessSTDIOWindows>(
+            this, pty->GetSecondaryHandle());
+    }
+  }
 }
 } // namespace lldb_private
