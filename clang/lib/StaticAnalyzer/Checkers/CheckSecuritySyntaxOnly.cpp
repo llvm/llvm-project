@@ -1124,7 +1124,7 @@ void ento::registerDeprecatedOrUnsafeBufferHandling(CheckerManager &mgr) {
       mgr.getCurrentCheckerName();
   checker->filter.allowDeprecatedOrUnsafeBufferHandlingWithoutC11 =
       mgr.getAnalyzerOptions().getCheckerBooleanOption(
-          mgr.getCurrentCheckerName(), "AllowWithoutC11");
+          mgr.getCurrentCheckerName(), "ReportInC99AndEarlier");
 }
 
 bool ento::shouldRegisterDeprecatedOrUnsafeBufferHandling(

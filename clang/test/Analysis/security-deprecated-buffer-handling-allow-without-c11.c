@@ -5,7 +5,7 @@
 // Test 2: Without C11 but with flag enabled - should warn
 // RUN: %clang_analyze_cc1 %s -verify=c99-withflag -std=gnu99 \
 // RUN:   -analyzer-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling \
-// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:AllowWithoutC11=true
+// RUN:   -analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportInC99AndEarlier=true
 
 // Test 3: With C11 - should warn (existing behavior)
 // RUN: %clang_analyze_cc1 %s -verify=c11 -std=gnu11 \

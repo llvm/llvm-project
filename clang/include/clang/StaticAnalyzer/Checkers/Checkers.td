@@ -908,10 +908,10 @@ def DeprecatedOrUnsafeBufferHandling
       Dependencies<[SecuritySyntaxChecker]>,
       CheckerOptions<
           [CmdLineOption<
-               Boolean, "AllowWithoutC11",
+               Boolean, "ReportInC99AndEarlier",
                "Allow reporting deprecated or unsafe buffer handling "
                "functions even when not compiling with C11 standard. "
-               "These functions are deprecated in C11, but may still be "
+               "These functions became deprecated in C11, but may still be "
                "problematic in earlier C standards.",
                "false", Released>,
 ]>,

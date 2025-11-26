@@ -1785,10 +1785,10 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    strncpy(buf, "a", 1); // warn
  }
 
-The ``AllowWithoutC11`` option allows reporting warnings for these functions even when not compiling with C11 standard. These functions are deprecated in C11, but may still be problematic in earlier C standards.
+The ``ReportInC99AndEarlier`` option allows reporting warnings for these functions even when not compiling with C11 standard. These functions became deprecated in C11, but may still be problematic in earlier C standards.
 
 To enable this option, use:
-``-analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:AllowWithoutC11=true``.
+``-analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportInC99AndEarlier=true``.
 
 By default, this option is set to *false*.
 
