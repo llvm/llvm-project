@@ -9325,6 +9325,20 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtPattern(
     NewPattern = CXXExpansionStmtPattern::CreateEnumerating(
         SemaRef.Context, NewESD, Init, ExpansionVarStmt, S->getLParenLoc(),
         S->getColonLoc(), S->getRParenLoc());
+  } else if (S->isIterating()) {
+    StmtResult Range = getDerived().TransformStmt(S->getRangeVarStmt());
+    if (Range.isInvalid())
+      return StmtError();
+
+    StmtResult Begin = getDerived().TransformStmt(S->getBeginVarStmt());
+    StmtResult End = getDerived().TransformStmt(S->getEndVarStmt());
+    if (Begin.isInvalid() || End.isInvalid())
+      return StmtError();
+
+    NewPattern = CXXExpansionStmtPattern::CreateIterating(
+        SemaRef.Context, NewESD, Init, ExpansionVarStmt,
+        Range.getAs<DeclStmt>(), Begin.getAs<DeclStmt>(), End.getAs<DeclStmt>(),
+        S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc());
   } else {
     llvm_unreachable("TODO");
   }
