@@ -600,7 +600,7 @@ public:
     insert(sorted_unique, __il.begin(), __il.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 containers extract() && {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 containers extract() && {
     auto __guard = std::__make_scope_guard([&]() noexcept { clear() /* noexcept */; });
     auto __ret   = std::move(__containers_);
     return __ret;

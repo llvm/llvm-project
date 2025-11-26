@@ -53,7 +53,7 @@ void test() {
   cfm.rbegin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   fm.rend();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cfm.rend();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  cfm.begin();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cfm.cbegin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cfm.cend();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cfm.crbegin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cfm.crend();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -61,8 +61,6 @@ void test() {
   fm.empty();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   fm.size();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   fm.max_size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-  fm.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   int key = 0;
   TransparentKey<int> tkey;
@@ -76,6 +74,8 @@ void test() {
   cfm.at(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   fm.at(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cfm.at(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  std::move(fm).extract(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   fm.key_comp();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   fm.value_comp(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
