@@ -247,10 +247,10 @@ private:
 
       // Handling for defined symbols
       if (!isUndefined) {
-        if ((isFatBinSymbol) && (!isHidden)) {
+        if (isFatBinSymbol && !isHidden) {
           DefinedFatBinSymbols.insert(Name.str());
           FatBinSymbols.erase(Name.str());
-        } else if ((isGPUBinHandleSymbol) && (!isHidden)) {
+        } else if (isGPUBinHandleSymbol && !isHidden) {
           DefinedGPUBinHandleSymbols.insert(Name.str());
           GPUBinHandleSymbols.erase(Name.str());
         }
