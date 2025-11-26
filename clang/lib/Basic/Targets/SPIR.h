@@ -335,8 +335,28 @@ public:
 
     // SPIR-V IDs are represented with a single 32-bit word.
     SizeType = TargetInfo::UnsignedInt;
-    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
-                    "v256:256-v512:512-v1024:1024-n8:16:32:64-G10");
+
+    // The data layout is intended to allow the least restrictive layout allowed
+    // by the Vulkan specification. This is the standard buffer layout when the
+    // scalarBlockLayout feature is enabled. See
+    // https://docs.vulkan.org/spec/latest/chapters/interfaces.html#interfaces-resources-layout.
+
+    // Bool is not allows in externally visible variables. They will be replaced
+    // with an i32. (i1:32). For vectors, we will make assumptions about the
+    // element for each vector size. We favor the most common element sizes.
+    // However, to get everything correct for HLSL, we will need to be able to
+    // specify the alighment more precisely.
+    // v16 -> 2 x 8-bits
+    // v24 -> 3 x 8-bits
+    // v32 -> 2 x 16-bits (ambiguous, could also be 4 x 8-bits)
+    // v48 -> 3 x 16-bits
+    // v64 -> 2 x 32-bits (ambiguous, could also be 4 x 16-bits)
+    // v96 -> 3 x 32-bits
+    // v128 -> 3 x 32-bits (ambiguous, could also be 2 x 64-bits)
+    // v192 -> 3 x 64-bits
+    // v256 -> 4 x 64-bits
+    resetDataLayout("e-i1:32-i64:64-v16:8-v24:8-v32:16-v48:16-v64:32-v96:32-"
+                    "v128:32-v192:64-v256:64-n8:16:32:64-G10");
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -359,8 +379,9 @@ public:
     // SPIR-V has core support for atomic ops, and Int32 is always available;
     // we take the maximum because it's possible the Host supports wider types.
     MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 32);
-    resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-"
-                    "v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1");
+    resetDataLayout(
+        "e-p:32:32-i64:64-v16:16-v24:24-v32:32-v48:48-v96:96-v192:192-"
+        "v256:256-v512:512-v1024:1024-n8:16:32:64-G1");
   }
 
   void getTargetDefines(const LangOptions &Opts,

@@ -311,9 +311,14 @@ static Error parseAlignment(StringRef Str, Align &Alignment, StringRef Name,
   }
 
   constexpr unsigned ByteWidth = 8;
-  if (Value % ByteWidth || !isPowerOf2_32(Value / ByteWidth))
+  if (Value % ByteWidth || !isPowerOf2_32(Value / ByteWidth)) {
+    llvm::dbgs() << "Value: " << Value << "\n";
+    llvm::dbgs() << "ByteWidth: " << ByteWidth << "\n";
+    llvm::dbgs() << "str: " << Str << "\n";
+    llvm::dbgs() << "Name: " << Name << "\n";
     return createStringError(
         Name + " alignment must be a power of two times the byte width");
+  }
 
   Alignment = Align(Value / ByteWidth);
   return Error::success();
