@@ -3696,7 +3696,7 @@ defm application_extension : BoolFOption<"application-extension",
   NegFlag<SetFalse>>;
 defm reflection : BoolFOption<"reflection",
   LangOpts<"Reflection">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [CC1Option],
           "Enable C++26 reflection">,
   NegFlag<SetFalse>>, ShouldParseIf<cplusplus.KeyPath>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
