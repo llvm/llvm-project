@@ -778,6 +778,10 @@
                 "description": "Custom commands that are executed instead of attaching to a process ID or to a process by name. These commands may optionally create a new target and must perform an attach. A valid process must exist after these commands complete or the \"attach\" will fail.",
                 "default": []
               },
+              "targetId": {
+                "type": "number",
+                "description": "The globally unique target id to attach to. Used when a target is dynamically created."
+              },
               "initCommands": {
                 "type": "array",
                 "items": {

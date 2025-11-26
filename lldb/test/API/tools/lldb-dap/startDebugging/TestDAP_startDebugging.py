@@ -36,3 +36,54 @@ class TestDAP_startDebugging(lldbdap_testcase.DAPTestCaseBase):
         request = self.dap_server.reverse_requests[0]
         self.assertEqual(request["arguments"]["configuration"]["pid"], 321)
         self.assertEqual(request["arguments"]["request"], "attach")
+
+    def test_startDebugging_debugger_reuse(self):
+        """
+        Tests that debugger and target IDs can be passed through startDebugging
+        for debugger reuse. This verifies the infrastructure for child DAP
+        sessions to reuse the parent's debugger and attach to an existing target.
+        """
+        program = self.getBuildArtifact("a.out")
+        source = "main.c"
+        self.build_and_launch(program)
+
+        breakpoint_line = line_number(source, "// breakpoint")
+        self.set_source_breakpoints(source, [breakpoint_line])
+        self.continue_to_next_stop()
+
+        # Use mock IDs to test the infrastructure
+        # In a real scenario, these would come from the parent session
+        test_debugger_id = 1
+        test_target_id = 100
+
+        # Send a startDebugging request with debuggerId and targetId
+        # This simulates creating a child DAP session that reuses the debugger
+        self.dap_server.request_evaluate(
+            f'`lldb-dap start-debugging attach \'{{"debuggerId":{test_debugger_id},"targetId":{test_target_id}}}\'',
+            context="repl",
+        )
+
+        self.continue_to_exit()
+
+        # Verify the reverse request was sent with the correct IDs
+        self.assertEqual(
+            len(self.dap_server.reverse_requests),
+            1,
+            "Should have received one startDebugging reverse request",
+        )
+
+        request = self.dap_server.reverse_requests[0]
+        self.assertEqual(request["command"], "startDebugging")
+        self.assertEqual(request["arguments"]["request"], "attach")
+
+        config = request["arguments"]["configuration"]
+        self.assertEqual(
+            config["debuggerId"],
+            test_debugger_id,
+            "Reverse request should include debugger ID",
+        )
+        self.assertEqual(
+            config["targetId"],
+            test_target_id,
+            "Reverse request should include target ID",
+        )
