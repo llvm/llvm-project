@@ -3162,13 +3162,8 @@ void llvm::copyMetadataForAccess(Instruction &DestI, Instruction &SourceI) {
       break;
 
     case LLVMContext::MD_tbaa:
-      if (isa<LoadInst>(DestI)) {
+      if (isa<LoadInst>(DestI))
         DestI.setMetadata(ID, N);
-      } else if (isa<StoreInst>(DestI)) {
-        MDNode *NewTyNode =
-            MDB.createTBAAScalarTypeNode(NewType->getStructName(), N);
-        DestI.setMetadata(LLVMContext::MD_tbaa, NewTyNode);
-      }
       break;
     }
   }
