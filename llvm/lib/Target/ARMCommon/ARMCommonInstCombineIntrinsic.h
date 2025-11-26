@@ -43,7 +43,7 @@ Value *simplifyNeonTbl1(const IntrinsicInst &II,
 /// 3. Both operands constant => regular multiply that can be constant-folded
 ///    later
 Instruction *simplifyNeonMultiply(IntrinsicInst &II, InstCombiner &IC,
-                                  bool Zext);
+                                  bool IsSigned);
 
 /// Simplify AES encryption/decryption intrinsics (AESE, AESD).
 ///

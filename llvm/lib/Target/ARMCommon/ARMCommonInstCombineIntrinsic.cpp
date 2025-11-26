@@ -75,7 +75,7 @@ Value *simplifyNeonTbl1(const IntrinsicInst &II,
 /// 3. Both operands constant => regular multiply that can be constant-folded
 ///    later
 Instruction *simplifyNeonMultiply(IntrinsicInst &II, InstCombiner &IC,
-                                  bool Zext) {
+                                  bool IsSigned) {
   Value *Arg0 = II.getArgOperand(0);
   Value *Arg1 = II.getArgOperand(1);
 
@@ -88,8 +88,8 @@ Instruction *simplifyNeonMultiply(IntrinsicInst &II, InstCombiner &IC,
   VectorType *NewVT = cast<VectorType>(II.getType());
   if (Constant *CV0 = dyn_cast<Constant>(Arg0)) {
     if (Constant *CV1 = dyn_cast<Constant>(Arg1)) {
-      Value *V0 = IC.Builder.CreateIntCast(CV0, NewVT, /*isSigned=*/!Zext);
-      Value *V1 = IC.Builder.CreateIntCast(CV1, NewVT, /*isSigned=*/!Zext);
+      Value *V0 = IC.Builder.CreateIntCast(CV0, NewVT, IsSigned);
+      Value *V1 = IC.Builder.CreateIntCast(CV1, NewVT, IsSigned);
       return IC.replaceInstUsesWith(II, IC.Builder.CreateMul(V0, V1));
     }
 
@@ -102,8 +102,7 @@ Instruction *simplifyNeonMultiply(IntrinsicInst &II, InstCombiner &IC,
     if (ConstantInt *Splat =
             dyn_cast_or_null<ConstantInt>(CV1->getSplatValue()))
       if (Splat->isOne())
-        return CastInst::CreateIntegerCast(Arg0, II.getType(),
-                                           /*isSigned=*/!Zext);
+        return CastInst::CreateIntegerCast(Arg0, II.getType(), IsSigned);
 
   return nullptr;
 }

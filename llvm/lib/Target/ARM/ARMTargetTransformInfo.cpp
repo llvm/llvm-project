@@ -190,8 +190,8 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
   case Intrinsic::arm_neon_vmulls:
   case Intrinsic::arm_neon_vmullu: {
-    bool Zext = IID == Intrinsic::arm_neon_vmullu;
-    return ARMCommon::simplifyNeonMultiply(II, IC, Zext);
+    bool IsSigned = IID == Intrinsic::arm_neon_vmulls;
+    return ARMCommon::simplifyNeonMultiply(II, IC, IsSigned);
   }
 
   case Intrinsic::arm_neon_aesd:

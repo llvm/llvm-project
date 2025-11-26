@@ -2863,8 +2863,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     break;
   case Intrinsic::aarch64_neon_smull:
   case Intrinsic::aarch64_neon_umull: {
-    bool Zext = IID == Intrinsic::aarch64_neon_umull;
-    return ARMCommon::simplifyNeonMultiply(II, IC, Zext);
+    bool IsSigned = IID == Intrinsic::aarch64_neon_smull;
+    return ARMCommon::simplifyNeonMultiply(II, IC, IsSigned);
   }
   case Intrinsic::aarch64_crypto_aesd:
   case Intrinsic::aarch64_crypto_aese:
