@@ -538,7 +538,8 @@ private:
 
   Candidate *pickRewriteCandidate(Instruction *I) const;
   void sortCandidateInstructions();
-  static Constant *getIndexDelta(Candidate &C, Candidate &Basis);
+  Value *getDelta(const Candidate &C, const Candidate &Basis,
+                  Candidate::DKind K) const;
   static bool isSimilar(Candidate &C, Candidate &Basis, Candidate::DKind K);
 
   // Add Basis -> C in DependencyGraph and propagate
@@ -625,14 +626,24 @@ static void unifyBitWidth(APInt &A, APInt &B) {
     B = B.sext(A.getBitWidth());
 }
 
-Constant *StraightLineStrengthReduce::getIndexDelta(Candidate &C,
-                                                    Candidate &Basis) {
-  APInt Idx = C.Index->getValue(), BasisIdx = Basis.Index->getValue();
-  unifyBitWidth(Idx, BasisIdx);
-  APInt IndexDelta = Idx - BasisIdx;
-  IntegerType *DeltaType =
-      IntegerType::get(C.Ins->getContext(), IndexDelta.getBitWidth());
-  return ConstantInt::get(DeltaType, IndexDelta);
+Value *StraightLineStrengthReduce::getDelta(const Candidate &C,
+                                            const Candidate &Basis,
+                                            Candidate::DKind K) const {
+  if (K == Candidate::IndexDelta) {
+    APInt Idx = C.Index->getValue(), BasisIdx = Basis.Index->getValue();
+    unifyBitWidth(Idx, BasisIdx);
+    APInt IndexDelta = Idx - BasisIdx;
+    IntegerType *DeltaType =
+        IntegerType::get(C.Ins->getContext(), IndexDelta.getBitWidth());
+    return ConstantInt::get(DeltaType, IndexDelta);
+  } else if (K == Candidate::BaseDelta || K == Candidate::StrideDelta) {
+    const SCEV *BasisPart =
+        (K == Candidate::BaseDelta) ? Basis.Base : Basis.StrideSCEV;
+    const SCEV *CandPart = (K == Candidate::BaseDelta) ? C.Base : C.StrideSCEV;
+    const SCEV *Diff = SE->getMinusSCEV(CandPart, BasisPart);
+    return getNearestValueOfSCEV(Diff, C.Ins);
+  }
+  return nullptr;
 }
 
 bool StraightLineStrengthReduce::isSimilar(Candidate &C, Candidate &Basis,
@@ -677,61 +688,37 @@ void StraightLineStrengthReduce::setBasisAndDeltaFor(Candidate &C) {
     return false;
   };
 
-  // Priority:
-  // Constant Delta from Index > Constant Delta from Base >
-  // Constant Delta from Stride > Variable Delta from Base or Stride
-  // TODO: Change the priority to align with the cost model.
-
-  // First, look for a constant index-diff basis
-  if (const auto *IndexDeltaCandidates =
-          CandidateDict.getCandidatesWithDeltaKind(C, Candidate::IndexDelta)) {
-    bool FoundConstDelta =
-        SearchFrom(*IndexDeltaCandidates, [&DT = DT, &C](Candidate *Basis) {
-          if (isSimilar(C, *Basis, Candidate::IndexDelta)) {
-            assert(DT->dominates(Basis->Ins, C.Ins));
-            auto *Delta = getIndexDelta(C, *Basis);
-            if (!C.isProfitableRewrite(Delta, Candidate::IndexDelta))
-              return false;
-            C.Basis = Basis;
-            C.DeltaKind = Candidate::IndexDelta;
-            C.Delta = Delta;
-            LLVM_DEBUG(dbgs() << "Found delta from Index " << *C.Delta << "\n");
-            return true;
-          }
-          return false;
-        });
-    if (FoundConstDelta)
-      return;
-  }
-
-  // No constant-index-diff basis found. look for the best possible base-diff
-  // or stride-diff basis
-  // Base/Stride diffs not supported for form (B + i) * S
-  if (C.CandidateKind == Candidate::Mul)
-    return;
-
   auto For = [this, &C](Candidate::DKind K) {
     // return true if find a Basis with constant delta and stop searching,
     // return false if did not find a Basis or the delta is not a constant
     // and continue searching for a Basis with constant delta
     return [K, this, &C](Candidate *Basis) -> bool {
-      if (!isSimilar(C, *Basis, K))
+      SmallVector<Instruction *> DropPoisonGeneratingInsts;
+      // Ensure the IR of Basis->Ins is not more poisonous than its SCEV.
+      if (!isSimilar(C, *Basis, K) ||
+          !SE->canReuseInstruction(SE->getSCEV(Basis->Ins), Basis->Ins,
+                                   DropPoisonGeneratingInsts))
         return false;
 
       assert(DT->dominates(Basis->Ins, C.Ins));
-      const SCEV *BasisPart =
-          (K == Candidate::BaseDelta) ? Basis->Base : Basis->StrideSCEV;
-      const SCEV *CandPart =
-          (K == Candidate::BaseDelta) ? C.Base : C.StrideSCEV;
-      const SCEV *Diff = SE->getMinusSCEV(CandPart, BasisPart);
-      Value *AvailableVal = getNearestValueOfSCEV(Diff, C.Ins);
-      if (!AvailableVal)
+      Value *Delta = getDelta(C, *Basis, K);
+      if (K == Candidate::IndexDelta &&
+          !C.isProfitableRewrite(Delta, Candidate::IndexDelta))
         return false;
+
+      if (!Delta)
+        return false;
+      
+      // If there is a Delta that we can reuse Basis to rewrite C,
+      // drop the poison-generating instructions of Basis to avoid
+      // introducing poison.
+      for (Instruction *I : DropPoisonGeneratingInsts)
+        I->dropPoisonGeneratingAnnotations();
 
       // Record delta if none has been found yet, or the new delta is
       // a constant that is better than the existing delta.
-      if (!C.Delta || isa<ConstantInt>(AvailableVal)) {
-        C.Delta = AvailableVal;
+      if (!C.Delta || isa<ConstantInt>(Delta)) {
+        C.Delta = Delta;
         C.Basis = Basis;
         C.DeltaKind = K;
       }
@@ -741,7 +728,8 @@ void StraightLineStrengthReduce::setBasisAndDeltaFor(Candidate &C) {
 
   if (const auto *BaseDeltaCandidates =
           CandidateDict.getCandidatesWithDeltaKind(C, Candidate::BaseDelta)) {
-    if (SearchFrom(*BaseDeltaCandidates, For(Candidate::BaseDelta))) {
+    if ((C.CandidateKind != Candidate::Mul) &&
+        SearchFrom(*BaseDeltaCandidates, For(Candidate::BaseDelta))) {
       LLVM_DEBUG(dbgs() << "Found delta from Base: " << *C.Delta << "\n");
       return;
     }
@@ -749,8 +737,17 @@ void StraightLineStrengthReduce::setBasisAndDeltaFor(Candidate &C) {
 
   if (const auto *StrideDeltaCandidates =
           CandidateDict.getCandidatesWithDeltaKind(C, Candidate::StrideDelta)) {
-    if (SearchFrom(*StrideDeltaCandidates, For(Candidate::StrideDelta))) {
+    if ((C.CandidateKind != Candidate::Mul) &&
+        SearchFrom(*StrideDeltaCandidates, For(Candidate::StrideDelta))) {
       LLVM_DEBUG(dbgs() << "Found delta from Stride: " << *C.Delta << "\n");
+      return;
+    }
+  }
+
+  if (const auto *IndexDeltaCandidates =
+          CandidateDict.getCandidatesWithDeltaKind(C, Candidate::IndexDelta)) {
+    if (SearchFrom(*IndexDeltaCandidates, For(Candidate::IndexDelta))) {
+      LLVM_DEBUG(dbgs() << "Found delta from Index: " << *C.Delta << "\n");
       return;
     }
   }
@@ -792,7 +789,8 @@ auto StraightLineStrengthReduce::compressPath(Candidate &C,
     Candidate *NextRoot = Root->Basis;
     if (C.Base == NextRoot->Base && C.StrideSCEV == NextRoot->StrideSCEV &&
         isSimilar(C, *NextRoot, Candidate::IndexDelta)) {
-      ConstantInt *CI = cast<ConstantInt>(getIndexDelta(C, *NextRoot));
+      ConstantInt *CI =
+          cast<ConstantInt>(getDelta(C, *NextRoot, Candidate::IndexDelta));
       if (CI->isZero() || CI->isOne() || isa<SCEVConstant>(C.StrideSCEV)) {
         Root = NextRoot;
         NewKind = Candidate::IndexDelta;
