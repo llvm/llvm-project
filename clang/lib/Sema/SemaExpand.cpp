@@ -173,6 +173,52 @@ TryBuildIterableExpansionStmtInitializer(Sema &S, Expr *ExpansionInitializer,
   return Data;
 }
 
+static StmtResult BuildDestructuringCXXExpansionStmt(
+    Sema &S, Expr *ExpansionInitializer, SourceLocation ColonLoc,
+    bool VarIsConstexpr,
+    ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
+  auto Ctx = Sema::ExpressionEvaluationContext::PotentiallyEvaluated;
+  if (VarIsConstexpr)
+    Ctx = Sema::ExpressionEvaluationContext::ImmediateFunctionContext;
+  EnterExpressionEvaluationContext ExprEvalCtx(S, Ctx);
+
+  // The declarations should be attached to the parent decl context.
+  Sema::ContextRAII CtxGuard(
+      S, S.CurContext->getEnclosingNonExpansionStatementContext(),
+      /*NewThis=*/false);
+
+  UnsignedOrNone Arity =
+      S.GetDecompositionElementCount(ExpansionInitializer->getType(), ColonLoc);
+
+  if (!Arity) {
+    S.Diag(ExpansionInitializer->getBeginLoc(),
+           diag::err_expansion_stmt_invalid_init)
+        << ExpansionInitializer->getType()
+        << ExpansionInitializer->getSourceRange();
+    return StmtError();
+  }
+
+  QualType AutoRRef = S.Context.getAutoRRefDeductType();
+  SmallVector<BindingDecl *> Bindings;
+  for (unsigned I = 0; I < *Arity; ++I)
+    Bindings.push_back(BindingDecl::Create(
+        S.Context, S.CurContext, ColonLoc,
+        S.getPreprocessor().getIdentifierInfo("__u" + std::to_string(I)),
+        AutoRRef));
+
+  TypeSourceInfo *TSI = S.Context.getTrivialTypeSourceInfo(AutoRRef);
+  auto *DD =
+      DecompositionDecl::Create(S.Context, S.CurContext, ColonLoc, ColonLoc,
+                                AutoRRef, TSI, SC_Auto, Bindings);
+
+  if (VarIsConstexpr)
+    DD->setConstexpr(true);
+
+  S.ApplyForRangeOrExpansionStatementLifetimeExtension(DD, LifetimeExtendTemps);
+  S.AddInitializerToDecl(DD, ExpansionInitializer, false);
+  return S.ActOnDeclStmt(S.ConvertDeclToDeclGroup(DD), ColonLoc, ColonLoc);
+}
+
 CXXExpansionStmtDecl *
 Sema::ActOnCXXExpansionStmtDecl(unsigned TemplateDepth,
                                 SourceLocation TemplateKWLoc) {
@@ -309,8 +355,31 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
         Data.EndDecl, LParenLoc, ColonLoc, RParenLoc);
   }
 
-  Diag(ESD->getLocation(), diag::err_expansion_statements_todo);
-  return StmtError();
+  // If not, try destructuring.
+  StmtResult DecompDeclStmt = BuildDestructuringCXXExpansionStmt(
+      *this, ExpansionInitializer, ColonLoc, ExpansionVar->isConstexpr(),
+      LifetimeExtendTemps);
+  if (DecompDeclStmt.isInvalid()) {
+    ActOnInitializerError(ExpansionVar);
+    return StmtError();
+  }
+
+  auto *DS = DecompDeclStmt.getAs<DeclStmt>();
+  auto *DD = cast<DecompositionDecl>(DS->getSingleDecl());
+  if (DD->isInvalidDecl())
+    return StmtError();
+
+  ExprResult Select = BuildCXXDestructuringExpansionSelectExpr(DD, Index);
+  if (Select.isInvalid()) {
+    ActOnInitializerError(ExpansionVar);
+    return StmtError();
+  }
+
+  if (FinaliseExpansionVar(*this, ExpansionVar, Select))
+    return StmtError();
+
+  return new (Context) CXXDestructuringExpansionStmtPattern(
+      ESD, Init, ExpansionVarStmt, DS, LParenLoc, ColonLoc, RParenLoc);
 }
 
 StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
@@ -339,8 +408,9 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
     Shared.push_back(Iter->getRangeVarStmt());
     Shared.push_back(Iter->getBeginVarStmt());
     Shared.push_back(Iter->getEndVarStmt());
-  } else {
-    assert(isa<CXXEnumeratingExpansionStmtPattern>(Expansion) && "TODO");
+  } else if (auto *Destructuring =
+                 dyn_cast<CXXDestructuringExpansionStmtPattern>(Expansion)) {
+    Shared.push_back(Destructuring->getDecompositionDeclStmt());
   }
 
   // Return an empty statement if the range is empty.
@@ -409,6 +479,23 @@ Sema::BuildCXXExpansionInitListSelectExpr(CXXExpansionInitListExpr *Range,
   return Range->getExprs()[I];
 }
 
+ExprResult Sema::BuildCXXDestructuringExpansionSelectExpr(DecompositionDecl *DD,
+                                                          Expr *Idx) {
+  if (Idx->isValueDependent())
+    return new (Context) CXXDestructuringExpansionSelectExpr(Context, DD, Idx);
+
+  Expr::EvalResult ER;
+  if (!Idx->EvaluateAsInt(ER, Context))
+    llvm_unreachable("Failed to evaluate expansion index");
+
+  uint64_t I = ER.Val.getInt().getZExtValue();
+  MarkAnyDeclReferenced(Idx->getBeginLoc(), DD, true);
+  if (auto *BD = DD->bindings()[I]; auto *HVD = BD->getHoldingVar())
+    return HVD->getInit();
+  else
+    return BD->getBinding();
+}
+
 std::optional<uint64_t>
 Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
   assert(!Expansion->hasDependentSize());
@@ -468,5 +555,9 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
     return ER.Val.getInt().getZExtValue();
   }
 
-  llvm_unreachable("TODO");
+  if (auto *Destructuring =
+          dyn_cast<CXXDestructuringExpansionStmtPattern>(Expansion))
+    return Destructuring->getDecompositionDecl()->bindings().size();
+
+  llvm_unreachable("Invalid expansion statement class");
 }

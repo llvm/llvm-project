@@ -9383,20 +9383,35 @@ StmtResult TreeTransform<Derived>::TransformCXXDependentExpansionStmtPattern(
     CXXDependentExpansionStmtPattern *S) {
   TransformCXXExpansionStmtPatternResult Common;
   ExprResult ExpansionInitializer;
+  SmallVector<MaterializeTemporaryExpr *, 8> LifetimeExtendTemps;
 
-  Common = TransformCXXExpansionStmtPatternCommonParts(S);
-  if (!Common.isValid())
-    return StmtError();
+  // Collect lifetime-extended temporaries in case this ends up being a
+  // destructuring expansion statement (for other kinds of expansion statements,
+  // this should make no difference since we ignore 'LifetimeExtendTemps' for
+  // those).
+  {
+    EnterExpressionEvaluationContext ExprEvalCtx(
+        SemaRef, SemaRef.currentEvaluationContext().Context);
+    SemaRef.currentEvaluationContext().InLifetimeExtendingContext = true;
+    SemaRef.currentEvaluationContext().RebuildDefaultArgOrDefaultInit = true;
 
-  ExpansionInitializer =
-      getDerived().TransformExpr(S->getExpansionInitializer());
-  if (ExpansionInitializer.isInvalid())
-    return StmtError();
+    Common = TransformCXXExpansionStmtPatternCommonParts(S);
+    if (!Common.isValid())
+      return StmtError();
+
+    ExpansionInitializer =
+        getDerived().TransformExpr(S->getExpansionInitializer());
+    if (ExpansionInitializer.isInvalid())
+      return StmtError();
+
+    LifetimeExtendTemps =
+        SemaRef.currentEvaluationContext().ForRangeLifetimeExtendTemps;
+  }
 
   StmtResult Expansion = SemaRef.BuildNonEnumeratingCXXExpansionStmtPattern(
       Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl,
       ExpansionInitializer.get(), S->getLParenLoc(), S->getColonLoc(),
-      S->getRParenLoc(), /*LifetimeExtendTemps=*/{});
+      S->getRParenLoc(), LifetimeExtendTemps);
   if (Expansion.isInvalid())
     return StmtError();
 
@@ -9455,8 +9470,23 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtInstantiation(
   SmallVector<Stmt *> SharedStmts;
   SmallVector<Stmt *> Instantiations;
 
-  if (TransformStmts(SharedStmts, S->getSharedStmts()))
-    return StmtError();
+  // Apply lifetime extension to the shared statements if this was a
+  // destructuring expansion statement.
+  {
+    EnterExpressionEvaluationContext ExprEvalCtx(
+        SemaRef, SemaRef.currentEvaluationContext().Context);
+    SemaRef.currentEvaluationContext().InLifetimeExtendingContext = true;
+    SemaRef.currentEvaluationContext().RebuildDefaultArgOrDefaultInit = true;
+    if (TransformStmts(SharedStmts, S->getSharedStmts()))
+      return StmtError();
+
+    if (S->shouldApplyLifetimeExtensionToSharedStmts()) {
+      auto *VD =
+          cast<VarDecl>(cast<DeclStmt>(SharedStmts.front())->getSingleDecl());
+      SemaRef.ApplyForRangeOrExpansionStatementLifetimeExtension(
+          VD, SemaRef.currentEvaluationContext().ForRangeLifetimeExtendTemps);
+    }
+  }
 
   if (TransformStmts(Instantiations, S->getInstantiations()))
     return StmtError();
@@ -9488,7 +9518,18 @@ ExprResult TreeTransform<Derived>::TransformCXXExpansionInitListSelectExpr(
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXDestructuringExpansionSelectExpr(
     CXXDestructuringExpansionSelectExpr *E) {
-  llvm_unreachable("TOOD");
+  Decl *DD = getDerived().TransformDecl(
+      E->getDecompositionDecl()->getLocation(), E->getDecompositionDecl());
+  ExprResult Idx = getDerived().TransformExpr(E->getIndexExpr());
+  if (!DD || Idx.isInvalid())
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() && DD == E->getDecompositionDecl() &&
+      Idx.get() == E->getIndexExpr())
+    return E;
+
+  return SemaRef.BuildCXXDestructuringExpansionSelectExpr(
+      cast<DecompositionDecl>(DD), Idx.get());
 }
 
 template<typename Derived>
