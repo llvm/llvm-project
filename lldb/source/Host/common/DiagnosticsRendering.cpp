@@ -100,7 +100,7 @@ void RenderDiagnosticDetails(Stream &stream,
   }
 
   llvm::StringRef cursor, underline, vbar, joint, hbar, spacer;
-  if (TerminalSupportsUnicode()) {
+  if (Terminal::SupportsUnicode()) {
     cursor = "˄";
     underline = "˜";
     vbar = "│";
