@@ -457,6 +457,8 @@ endif()
 # Build the module files if a Fortran compiler is available.
 # Only LLVM_ENABLE_RUNTIMES=openmp is supported, LLVM_ENABLE_PROJECTS=openmp
 # has been deprecated.
+# TODO: openmp/runtimes/CMakeLists.txt is only included for host
+#       (non-amdgpu/nvptx) targets, but device side code needs a module as well.
 if(LIBOMP_FORTRAN_MODULES)
   configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
   configure_file(${LIBOMP_INC_DIR}/omp_lib.F90.var omp_lib.F90 @ONLY)
