@@ -235,6 +235,12 @@ struct VPlanTransforms {
   /// plan using noalias metadata.
   static void hoistInvariantLoads(VPlan &Plan);
 
+  /// Hoist predicated loads from the same address to the loop entry block, if
+  /// they are guaranteed to execute on both paths (i.e., in replicate regions
+  /// with complementary masks P and NOT P).
+  static void hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
+                                   const Loop *L);
+
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF
   /// elements, if all transformed interleave groups access the full vector
