@@ -263,12 +263,13 @@ unsigned LiveElementPrinter::getOrCreateColumn(unsigned ElementIdx) {
 }
 
 void LiveElementPrinter::freeColumn(unsigned ColIdx) {
+  unsigned ElementIdx = ActiveCols[ColIdx].ElementIdx;
+
   // Clear the column's data.
   ActiveCols[ColIdx].clear();
 
   // Remove the element's entry from the map and add the column to the free
   // list.
-  unsigned ElementIdx = ActiveCols[ColIdx].ElementIdx;
   ElementToColumn.erase(ElementIdx);
   FreeCols.insert(ColIdx);
 }
