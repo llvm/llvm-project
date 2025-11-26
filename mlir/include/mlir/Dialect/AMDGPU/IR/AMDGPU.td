@@ -90,11 +90,6 @@ class AMDGPU_Type<string name, string typeMnemonic, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 
 def AMDGPU_TDMBaseType : AMDGPU_Type<"TDMBase", "tdm_base"> {
-  // TODO:
-  // * Add verifiers such that one of the memrefs is from LDS and the other global.
-  // * Add verifiers to make sure that the type is in the correct direction.
-  // * Add verifiers to make sure that the number of indices do not exceed the number of dimensions.
-
   let summary = "Pair of base addresses that move data between LDS and global storage.";
   let description = [{
     This type is opaque and it is used to represent a struct of two addresses.
@@ -107,7 +102,6 @@ def AMDGPU_TDMBaseType : AMDGPU_Type<"TDMBase", "tdm_base"> {
     }]>
   ];
   let assemblyFormat = "`<` $elementType `>`";
-
 }
 
 //===----------------------------------------------------------------------===//
@@ -1232,6 +1226,11 @@ def AMDGPU_MakeDmaBaseOp :
                    Arg<AnyMemRef, "buffer to write to">:$dst,
                    Variadic<Index>:$dstIndices)>,
     Results<(outs AMDGPU_TDMBaseType: $base)> {
+
+  // TODO:
+  // * Add verifiers such that one of the memrefs is from LDS and the other global.
+  // * Add verifiers to make sure that the type is in the correct direction.
+  // * Add verifiers to make sure that the number of indices do not exceed the number of dimensions.
 
   let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
   let description = [{
