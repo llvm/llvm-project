@@ -5414,8 +5414,8 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
         VT.getVectorElementType().getSimpleVT(), NumElements);
     EVT WhileVT = ContainerVT.changeElementType(MVT::i1);
 
-    SDValue Mask =
-        DAG.getNode(MaskOpcode, DL, WhileVT, PtrA, PtrB, EltSizeInBytesValue, Op.getOperand(3));
+    SDValue Mask = DAG.getNode(MaskOpcode, DL, WhileVT, PtrA, PtrB,
+                               EltSizeInBytesValue, Op.getOperand(3));
     SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
     return convertFromScalableVector(DAG, VT, MaskAsInt);
   }
@@ -5432,8 +5432,8 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
       EltSizeInBytes;
 
   SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  SDValue Low =
-      DAG.getNode(MaskOpcode, DL, PartVT, PtrA, PtrB, EltSizeInBytesValue, Zero);
+  SDValue Low = DAG.getNode(MaskOpcode, DL, PartVT, PtrA, PtrB,
+                            EltSizeInBytesValue, Zero);
   SDValue High = DAG.getNode(MaskOpcode, DL, PartVT,
                              DAG.getMemBasePlusOffset(PtrA, PartOffset, DL),
                              PtrB, EltSizeInBytesValue, Zero);
