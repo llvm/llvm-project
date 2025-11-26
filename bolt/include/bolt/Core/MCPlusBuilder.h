@@ -1901,9 +1901,9 @@ public:
     return false;
   }
 
-  /// Adds a BTI landing pad to the start of the BB, that matches the indirect
-  /// call/jump inst.
-  virtual void addBTItoBBStart(BinaryBasicBlock &BB, MCInst &Call) const {
+  /// Inserts a BTI landing pad to the start of the BB, that matches the
+  /// indirect call inst used to call the BB.
+  virtual void insertBTI(BinaryBasicBlock &BB, MCInst &Call) const {
     llvm_unreachable("not implemented");
   }
 
