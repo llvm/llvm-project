@@ -1562,7 +1562,7 @@ bool CompilerInvocation::createFromArgs(
           args.getLastArg(clang::options::OPT_resource_dir))
     invoc.resourceDir = a->getValue();
   else
-    invoc.resourceDir = clang::driver::Driver::GetResourcesPath(
+    invoc.resourceDir = clang::GetResourcesPath(
         llvm::sys::fs::getMainExecutable(argv0, nullptr));
 
   // -flang-experimental-hlfir
