@@ -1008,13 +1008,13 @@ TEST_F(TestArm64InstEmulation, TestMidFunctionEpilogueAndBackwardsJump) {
   // row[4]:   24: CFA=sp+48 => fp=<same>   lr=<same>
   //
   // This must come from +56
-  // row[5]:   32: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8] x22=[CFA-24], x23=[CFA-32]
+  // row[5]:   32: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8] x22=[CFA-32], x23=[CFA-24]
   // row[6]:   40: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8] x22=same,     x23 = same
   // row[6]:   44: CFA=sp+48 => fp=same     lr=same    x22=same,     x23 = same
   // row[6]:   48: CFA=sp0   => fp=same     lr=same    x22=same,     x23 = same
   //
   // row[x]:   52: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8]
-  // row[x]:   56: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8] x22=[CFA-24], x23=[CFA-32]
+  // row[x]:   56: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8] x22=[CFA-32], x23=[CFA-24]
   // clang-format on
 
   sample_range = AddressRange(0x1000, sizeof(data));
@@ -1059,7 +1059,7 @@ TEST_F(TestArm64InstEmulation, TestMidFunctionEpilogueAndBackwardsJump) {
   // <+28>: ret
   // <+32>: mov    x23, #0x1
   row = unwind_plan.GetRowForFunctionOffset(32);
-  // FIXME: EXPECT_NE(32, row->GetOffset());
+  // FIXME: EXPECT_NE(28, row->GetOffset());
 
   // Check that the state of this branch
   // <+16>: b.ne   ; <+52> DO_SOMETHING_AND_GOTO_AFTER_EPILOGUE
