@@ -1389,6 +1389,20 @@ bool WaitcntBrackets::counterOutOfOrder(InstCounterType T) const {
   if ((T == Context->SmemAccessCounter && hasPendingEvent(SMEM_ACCESS)) ||
       (T == X_CNT && hasPendingEvent(SMEM_GROUP)))
     return true;
+
+  // GLOBAL_INV completes in-order with other LOAD_CNT events (VMEM_READ_ACCESS,
+  // VMEM_ACCESS), so having GLOBAL_INV_ACCESS mixed with other LOAD_CNT events
+  // doesn't cause out-of-order completion.
+  if (T == LOAD_CNT) {
+    unsigned Events = hasPendingEvent(T);
+    // Remove GLOBAL_INV_ACCESS from the event mask before checking for mixed
+    // events
+    Events &= ~(1 << GLOBAL_INV_ACCESS);
+    // Return true only if there are still multiple event types after removing
+    // GLOBAL_INV
+    return Events & (Events - 1);
+  }
+
   return hasMixedPendingEvents(T);
 }
 
