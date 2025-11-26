@@ -5,6 +5,8 @@
 ; Test passing IR struct arguments, which do not adhere to the ABI but are
 ; split up with each element passed like a separate argument.
 
+@fnptr = external global ptr
+
 %Ty0 = type {i128}
 define fastcc void @fun0(%Ty0 %A) {
 ; CHECK-LABEL: fun0:
@@ -19,7 +21,7 @@ define fastcc void @fun0(%Ty0 %A) {
 ; CHECK-NEXT:    stg %r0, 168(%r15)
 ; CHECK-NEXT:    la %r2, 160(%r15)
 ; CHECK-NEXT:    stg %r1, 160(%r15)
-; CHECK-NEXT:    basr %r14, %r1
+; CHECK-NEXT:    brasl %r14, fnptr@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 288(%r15)
 ; CHECK-NEXT:    br %r14
 ;
@@ -33,10 +35,10 @@ define fastcc void @fun0(%Ty0 %A) {
 ; VECTOR-NEXT:    vl %v0, 0(%r2), 3
 ; VECTOR-NEXT:    la %r2, 160(%r15)
 ; VECTOR-NEXT:    vst %v0, 160(%r15), 3
-; VECTOR-NEXT:    basr %r14, %r1
+; VECTOR-NEXT:    brasl %r14, fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 288(%r15)
 ; VECTOR-NEXT:    br %r14
-  call void undef(%Ty0 %A)
+  call void @fnptr(%Ty0 %A)
   ret void
 }
 
@@ -70,7 +72,7 @@ define fastcc void @fun1(%Ty1 %A, %Ty1 %B) {
 ; CHECK-NEXT:    la %r4, 176(%r15)
 ; CHECK-NEXT:    la %r5, 160(%r15)
 ; CHECK-NEXT:    stg %r0, 208(%r15)
-; CHECK-NEXT:    basr %r14, %r1
+; CHECK-NEXT:    brasl %r14, fnptr@PLT
 ; CHECK-NEXT:    lmg %r13, %r15, 328(%r15)
 ; CHECK-NEXT:    br %r14
 ;
@@ -93,10 +95,10 @@ define fastcc void @fun1(%Ty1 %A, %Ty1 %B) {
 ; VECTOR-NEXT:    vst %v2, 176(%r15), 3
 ; VECTOR-NEXT:    vst %v1, 192(%r15), 3
 ; VECTOR-NEXT:    vst %v0, 208(%r15), 3
-; VECTOR-NEXT:    basr %r14, %r1
+; VECTOR-NEXT:    brasl %r14, fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 336(%r15)
 ; VECTOR-NEXT:    br %r14
-  call void undef(%Ty1 %A, %Ty1 %B)
+  call void @fnptr(%Ty1 %A, %Ty1 %B)
   ret void
 }
 
@@ -128,7 +130,7 @@ define fastcc void @fun2(%Ty2 %A, %Ty2 %B) {
 ; CHECK-NEXT:    la %r2, 192(%r15)
 ; CHECK-NEXT:    la %r3, 160(%r15)
 ; CHECK-NEXT:    stg %r0, 192(%r15)
-; CHECK-NEXT:    basr %r14, %r1
+; CHECK-NEXT:    brasl %r14, fnptr@PLT
 ; CHECK-NEXT:    lmg %r13, %r15, 328(%r15)
 ; CHECK-NEXT:    br %r14
 ;
@@ -149,10 +151,10 @@ define fastcc void @fun2(%Ty2 %A, %Ty2 %B) {
 ; VECTOR-NEXT:    vst %v2, 160(%r15), 3
 ; VECTOR-NEXT:    vst %v1, 208(%r15), 3
 ; VECTOR-NEXT:    vst %v0, 192(%r15), 3
-; VECTOR-NEXT:    basr %r14, %r1
+; VECTOR-NEXT:    brasl %r14, fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 336(%r15)
 ; VECTOR-NEXT:    br %r14
-  call void undef(%Ty2 %A, %Ty2 %B)
+  call void @fnptr(%Ty2 %A, %Ty2 %B)
   ret void
 }
 
@@ -189,7 +191,7 @@ define fastcc void @fun3(%Ty3 %A) {
 ; CHECK-NEXT:    la %r2, 176(%r15)
 ; CHECK-NEXT:    la %r4, 160(%r15)
 ; CHECK-NEXT:    stg %r0, 176(%r15)
-; CHECK-NEXT:    basr %r14, %r1
+; CHECK-NEXT:    brasl %r14, fnptr@PLT
 ; CHECK-NEXT:    lmg %r13, %r15, 312(%r15)
 ; CHECK-NEXT:    br %r14
 ;
@@ -214,11 +216,11 @@ define fastcc void @fun3(%Ty3 %A) {
 ; VECTOR-NEXT:    vst %v1, 160(%r15), 3
 ; VECTOR-NEXT:    vst %v3, 192(%r15), 3
 ; VECTOR-NEXT:    vst %v2, 176(%r15), 3
-; VECTOR-NEXT:    basr %r14, %r1
+; VECTOR-NEXT:    brasl %r14, fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 320(%r15)
 ; VECTOR-NEXT:    br %r14
   store %Ty3 %A, ptr null
-  call void undef(%Ty3 %A)
+  call void @fnptr(%Ty3 %A)
   ret void
 }
 
@@ -247,7 +249,7 @@ define fastcc void @fun4(%Ty4 %A) {
 ; CHECK-NEXT:    la %r2, 176(%r15)
 ; CHECK-NEXT:    la %r3, 160(%r15)
 ; CHECK-NEXT:    stg %r4, 176(%r15)
-; CHECK-NEXT:    basr %r14, %r1
+; CHECK-NEXT:    brasl %r14, fnptr@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
 ;
@@ -269,11 +271,11 @@ define fastcc void @fun4(%Ty4 %A) {
 ; VECTOR-NEXT:    vsteg %v2, 0, 1
 ; VECTOR-NEXT:    vst %v0, 160(%r15), 3
 ; VECTOR-NEXT:    vst %v1, 176(%r15), 3
-; VECTOR-NEXT:    basr %r14, %r1
+; VECTOR-NEXT:    brasl %r14, fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 304(%r15)
 ; VECTOR-NEXT:    br %r14
   store %Ty4 %A, ptr null
-  call void undef(%Ty4 %A)
+  call void @fnptr(%Ty4 %A)
   ret void
 }
 
