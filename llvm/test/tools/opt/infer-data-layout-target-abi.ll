@@ -1,3 +1,4 @@
+; REQUIRES: mips-registered-target
 ;; Check that we infer the correct datalayout from a target triple
 ; RUN: opt -mtriple=mips64-- -S -passes=no-op-module -target-abi=n32 < %s | FileCheck -check-prefix=N32 %s
 ; RUN: opt -mtriple=mips64-- -S -passes=no-op-module -target-abi=n64 < %s | FileCheck -check-prefix=N64 %s
