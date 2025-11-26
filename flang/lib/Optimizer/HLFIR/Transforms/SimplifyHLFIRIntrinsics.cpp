@@ -956,9 +956,6 @@ private:
     checkReductions(currentValue);
     hlfir::Entity elementValue =
         hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
-    // NOTE: we can use "Kahan summation" same way as the runtime
-    // (e.g. when fast-math is not allowed), but let's start with
-    // the simple version.
     return {genScalarMult(currentValue[0], elementValue)};
   }
 
