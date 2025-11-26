@@ -538,15 +538,16 @@ optMain(int argc, char **argv,
     // the IR, we should default to an empty (default) DataLayout.
     if (TripleStr.empty())
       return std::nullopt;
-    // Otherwise we infer the DataLayout from the target machine.
-    Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
-        codegen::createTargetMachineForTriple(TripleStr, GetCodeGenOptLevel());
-    if (!ExpectedTM) {
-      errs() << argv[0] << ": warning: failed to infer data layout: "
-             << toString(ExpectedTM.takeError()) << "\n";
+
+    Triple TT(TripleStr);
+
+    std::string Str = TT.computeDataLayout();
+    if (Str.empty()) {
+      errs() << argv[0]
+             << ": warning: failed to infer data layout from target triple\n";
       return std::nullopt;
     }
-    return (*ExpectedTM)->createDataLayout().getStringRepresentation();
+    return Str;
   };
   std::unique_ptr<Module> M;
   if (NoUpgradeDebugInfo)

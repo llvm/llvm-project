@@ -6429,8 +6429,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::DS_GWS_INIT:
   case AMDGPU::DS_GWS_SEMA_BR:
   case AMDGPU::DS_GWS_BARRIER:
-    TII->enforceOperandRCAlignment(MI, AMDGPU::OpName::data0);
-    [[fallthrough]];
   case AMDGPU::DS_GWS_SEMA_V:
   case AMDGPU::DS_GWS_SEMA_P:
   case AMDGPU::DS_GWS_SEMA_RELEASE_ALL:
@@ -9819,7 +9817,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                              AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR);
   }
   case Intrinsic::amdgcn_kernarg_segment_ptr: {
-    if (!AMDGPU::isKernel(MF.getFunction().getCallingConv())) {
+    if (!AMDGPU::isKernel(MF.getFunction())) {
       // This only makes sense to call in a kernel, so just lower to null.
       return DAG.getConstant(0, DL, VT);
     }
