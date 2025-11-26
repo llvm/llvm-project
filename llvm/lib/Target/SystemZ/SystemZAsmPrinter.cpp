@@ -1343,8 +1343,7 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
   OutStreamer->emitInt8(static_cast<uint8_t>(Flags2)); // Flags 2.
 
   OutStreamer->AddComment("PPA1 Flags 3");
-  if ((Flags3 & PPA1Flag3::HasArgAreaLength) ==
-      PPA1Flag3::HasArgAreaLength)
+  if ((Flags3 & PPA1Flag3::HasArgAreaLength) == PPA1Flag3::HasArgAreaLength)
     OutStreamer->AddComment(
         "  Bit 1: 1 = Argument Area Length is in optional area");
   if ((Flags3 & PPA1Flag3::FPRMask) == PPA1Flag3::FPRMask)
