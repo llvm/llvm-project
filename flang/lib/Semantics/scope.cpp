@@ -432,6 +432,78 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Scope &scope) {
   return os;
 }
 
+void Scope::print(llvm::raw_ostream &os, int indent) const {
+  auto PutIndent{[&]() {
+    for (int i = 0; i < indent; ++i) {
+      os << "  ";
+    }
+  }};
+
+  PutIndent();
+  os << EnumToString(kind()) << " scope:";
+  if (symbol_) {
+    os << ' ' << symbol_->name();
+  }
+  if (alignment().has_value()) {
+    os << " size=" << size() << " alignment=" << *alignment();
+  }
+  if (derivedTypeSpec()) {
+    os << " instantiation of " << *derivedTypeSpec();
+  }
+  os << " sourceRange=" << sourceRange().size() << " bytes\n";
+
+  ++indent;
+
+  for (const auto &pair : *this) {
+    const auto &symbol{*pair.second};
+    PutIndent();
+    os << symbol << '\n';
+    if (const auto *details{symbol.detailsIf<GenericDetails>()}) {
+      if (const auto &type{details->derivedType()}) {
+        PutIndent();
+        os << *type << '\n';
+      }
+    }
+  }
+  if (!equivalenceSets().empty()) {
+    PutIndent();
+    os << "Equivalence Sets:";
+    for (const auto &set : equivalenceSets()) {
+      os << ' ';
+      char sep = '(';
+      for (const auto &object : set) {
+        os << sep << object.AsFortran();
+        sep = ',';
+      }
+      os << ')';
+    }
+    os << '\n';
+  }
+  if (!crayPointers().empty()) {
+    PutIndent();
+    os << "Cray Pointers:";
+    for (const auto &[pointee, pointer] : crayPointers()) {
+      os << " (" << pointer->name() << ',' << pointee << ')';
+    }
+    os << '\n';
+  }
+  for (const auto &pair : commonBlocks()) {
+    const auto &symbol{*pair.second};
+    PutIndent();
+    os << symbol << '\n';
+  }
+
+  for (const auto &child : children()) {
+    child.print(os, indent);
+  }
+
+  --indent;
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void Scope::dump() const { print(llvm::errs()); }
+#endif
+
 bool Scope::IsStmtFunction() const {
   return symbol_ && symbol_->test(Symbol::Flag::StmtFunction);
 }
