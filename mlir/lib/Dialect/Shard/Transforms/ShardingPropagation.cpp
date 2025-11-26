@@ -184,7 +184,7 @@ ReshardingRquirementKind getReshardingRquirementKind(
 
   for (auto [result, sharding] :
        llvm::zip_equal(op->getResults(), resultShardings)) {
-    for (auto user : result.getUsers()) {
+    for (auto *user : result.getUsers()) {
       ShardOp shardOp = llvm::dyn_cast<ShardOp>(user);
       if (!shardOp) {
         continue;

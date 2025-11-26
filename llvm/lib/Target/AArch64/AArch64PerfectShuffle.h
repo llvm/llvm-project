@@ -6685,15 +6685,30 @@ inline bool isUZPMask(ArrayRef<int> M, unsigned NumElts,
 ///  <0, 8, 2, 10, 4, 12, 6, 14> or
 ///  <1, 9, 3, 11, 5, 13, 7, 15>
 inline bool isTRNMask(ArrayRef<int> M, unsigned NumElts,
-                      unsigned &WhichResult) {
+                      unsigned &WhichResultOut) {
   if (NumElts % 2 != 0)
     return false;
-  WhichResult = (M[0] == 0 ? 0 : 1);
+  // Check the first non-undef element for trn1 vs trn2.
+  unsigned WhichResult = 2;
+  for (unsigned i = 0; i != NumElts; i += 2) {
+    if (M[i] >= 0) {
+      WhichResult = ((unsigned)M[i] == i ? 0 : 1);
+      break;
+    }
+    if (M[i + 1] >= 0) {
+      WhichResult = ((unsigned)M[i + 1] == i + NumElts ? 0 : 1);
+      break;
+    }
+  }
+  if (WhichResult == 2)
+    return false;
+
   for (unsigned i = 0; i < NumElts; i += 2) {
     if ((M[i] >= 0 && (unsigned)M[i] != i + WhichResult) ||
         (M[i + 1] >= 0 && (unsigned)M[i + 1] != i + NumElts + WhichResult))
       return false;
   }
+  WhichResultOut = WhichResult;
   return true;
 }
 
