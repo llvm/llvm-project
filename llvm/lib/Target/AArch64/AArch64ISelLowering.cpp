@@ -105,7 +105,6 @@
 #include <vector>
 
 using namespace llvm;
-using namespace llvm::SDPatternMatch;
 
 #define DEBUG_TYPE "aarch64-lower"
 
@@ -22594,6 +22593,7 @@ static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG) {
 // ashr+xtn+usra. The first form has less total latency due to more parallelism,
 // but more micro-ops and seems to be slower in practice.
 static SDValue performAddTruncShiftCombine(SDNode *N, SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
   EVT VT = N->getValueType(0);
   if (VT != MVT::v2i32 && VT != MVT::v4i16 && VT != MVT::v8i8)
     return SDValue();
@@ -28150,6 +28150,7 @@ static SDValue performRNDRCombine(SDNode *N, SelectionDAG &DAG) {
 static SDValue performCTPOPCombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
