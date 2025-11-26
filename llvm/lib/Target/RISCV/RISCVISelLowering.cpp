@@ -25580,6 +25580,9 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
       return false;
     }
+    if (II->getIntrinsicID() == Intrinsic::vector_extract) {
+      return false;
+    }
   }
 
   if (Inst.getType()->isScalableTy())
