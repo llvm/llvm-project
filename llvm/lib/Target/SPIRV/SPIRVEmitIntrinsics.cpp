@@ -358,12 +358,19 @@ static inline void reportFatalOnTokenType(const Instruction *I) {
 
 static void emitAssignName(Instruction *I, IRBuilder<> &B) {
   if (!I->hasName() || I->getType()->isAggregateType() ||
-      expectIgnoredInIRTranslation(I) ||
-      // TODO: this is a temporary workaround meant to prevent inserting
-      //       internal noise into the generated binary; remove once we rework
-      //       the entire aggregate removal machinery.
-      I->getName().starts_with("spv.mutated_callsite"))
+      expectIgnoredInIRTranslation(I))
     return;
+
+  if (isa<CallBase>(I)) {
+    // TODO: this is a temporary workaround meant to prevent inserting internal
+    //       noise into the generated binary; remove once we rework the entire
+    //       aggregate removal machinery.
+    StringRef Name = I->getName();
+    if (Name.starts_with("spv.mutated_callsite"))
+      return;
+    if (Name.starts_with("spv.named_mutated_callsite"))
+      I->setName(Name.substr(Name.rfind('.') + 1));
+  }
   reportFatalOnTokenType(I);
   setInsertPointAfterDef(B, I);
   LLVMContext &Ctx = I->getContext();

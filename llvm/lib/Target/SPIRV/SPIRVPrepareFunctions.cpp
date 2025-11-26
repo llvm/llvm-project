@@ -606,7 +606,10 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
                                 CB->getFunctionType()->isVarArg());
 
     if (!CB->hasName())
-      CB->setName("spv.mutated_callsite");
+      CB->setName("spv.mutated_callsite." + F->getName());
+    else
+      CB->setName(
+          "spv.named_mutated_callsite." + F->getName() + "." + CB->getName());
 
     addFunctionTypeMutation(
         F->getParent()->getOrInsertNamedMetadata("spv.mutated_callsites"),
