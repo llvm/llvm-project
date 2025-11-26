@@ -5708,6 +5708,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       StringRef Val = A->getValue();
       if (Val == "row-major" || Val == "column-major") {
         CmdArgs.push_back(Args.MakeArgString("-fmatrix-memory-layout=" + Val));
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back(Args.MakeArgString("-matrix-default-layout=" + Val));
+        
       } else {
         D.Diag(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
       }

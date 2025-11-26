@@ -4555,13 +4555,19 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   // Enable options for matrix types.
   if (Opts.MatrixTypes) {
     if (const Arg *A = Args.getLastArg(OPT_fmatrix_memory_layout_EQ)) {
-      StringRef Val = A->getValue();
-      if (Val == "row-major")
+      StringRef ClangValue = A->getValue();
+      if (ClangValue == "row-major")
         Opts.setDefaultMatrixMemoryLayout(
             LangOptions::MatrixMemoryLayout::MatrixRowMajor);
       else
         Opts.setDefaultMatrixMemoryLayout(
             LangOptions::MatrixMemoryLayout::MatrixColMajor);
+      
+      for (Arg *A : Args.filtered(options::OPT_mllvm)) {
+        StringRef OptValue = A->getValue();
+        if (OptValue.consume_front("-matrix-default-layout=") && ClangValue != OptValue)
+            Diags.Report(diag::err_conflicting_matrix_layout_flags) << ClangValue << OptValue;
+      }
     }
   }
 
