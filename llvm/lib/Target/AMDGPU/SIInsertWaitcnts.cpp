@@ -147,6 +147,7 @@ struct HardwareLimits {
   DECL(VMEM_ACCESS) /* vmem read & write (pre-gfx10), vmem read (gfx10+) */    \
   DECL(VMEM_SAMPLER_READ_ACCESS) /* vmem SAMPLER read (gfx12+ only) */         \
   DECL(VMEM_BVH_READ_ACCESS)     /* vmem BVH read (gfx12+ only) */             \
+  DECL(GLOBAL_INV_ACCESS)        /* GLOBAL_INV (gfx12+ only) */                \
   DECL(VMEM_WRITE_ACCESS)        /* vmem write that is not scratch */          \
   DECL(SCRATCH_WRITE_ACCESS)     /* vmem write that may be scratch */          \
   DECL(VMEM_GROUP)               /* vmem group */                              \
@@ -402,7 +403,7 @@ public:
     assert(ST);
 
     static const unsigned WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] = {
-        eventMask({VMEM_ACCESS}),
+        eventMask({VMEM_ACCESS, GLOBAL_INV_ACCESS}),
         eventMask({LDS_ACCESS, GDS_ACCESS}),
         eventMask({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK, EXP_PARAM_ACCESS,
                    EXP_POS_ACCESS, EXP_LDS_ACCESS}),
@@ -536,7 +537,8 @@ public:
     switch (Inst.getOpcode()) {
     // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
     case AMDGPU::GLOBAL_INV:
-      return VMEM_ACCESS; // tracked using loadcnt
+      return GLOBAL_INV_ACCESS; // tracked using loadcnt, but doesn't write
+                                // VGPRs
     case AMDGPU::GLOBAL_WB:
     case AMDGPU::GLOBAL_WBINV:
       return VMEM_WRITE_ACCESS; // tracked using storecnt
@@ -736,20 +738,14 @@ public:
     PendingEvents |= Context->WaitEventMaskForInst[STORE_CNT];
   }
 
-  // Returns true if any VGPR has a pending load (score > lower bound for T).
+  // Returns true if there are pending VGPR-writing loads for counter type T.
   // This is used to optimize waitcnt insertion at function boundaries when the
   // only pending LOAD_CNT events are from instructions that don't write to
-  // VGPRs (e.g., GLOBAL_INV).
+  // VGPRs (e.g., GLOBAL_INV). We check for VMEM_READ_ACCESS or VMEM_ACCESS
+  // events, which correspond to actual VGPR-writing loads.
   bool hasPendingVGPRWait(InstCounterType T) const {
-    unsigned LB = getScoreLB(T);
-    // If VgprUB is -1, no VGPRs have been touched
-    if (VgprUB < 0)
-      return false;
-    for (int RegNo = 0; RegNo <= VgprUB; ++RegNo) {
-      if (VgprScores[T][RegNo] > LB)
-        return true;
-    }
-    return false;
+    assert(T == LOAD_CNT && "Only LOAD_CNT is supported");
+    return hasPendingEvent(VMEM_READ_ACCESS) || hasPendingEvent(VMEM_ACCESS);
   }
 
   ArrayRef<const MachineInstr *> getLDSDMAStores() const {
