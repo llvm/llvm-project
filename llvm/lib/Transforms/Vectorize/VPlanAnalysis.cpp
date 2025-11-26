@@ -288,10 +288,10 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
                 VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-                VPVectorEndPointerRecipe, VPWidenCanonicalIVRecipe,
-                VPPartialReductionRecipe>([this](const VPRecipeBase *R) {
-            return inferScalarType(R->getOperand(0));
-          })
+                VPVectorEndPointerRecipe, VPWidenCanonicalIVRecipe>(
+              [this](const VPRecipeBase *R) {
+                return inferScalarType(R->getOperand(0));
+              })
           // VPInstructionWithType must be handled before VPInstruction.
           .Case<VPInstructionWithType, VPWidenIntrinsicRecipe,
                 VPWidenCastRecipe>(
@@ -561,11 +561,12 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
           // fewer lanes than the VF.
           unsigned ScaleFactor =
               vputils::getVFScaleFactor(VPV->getDefiningRecipe());
-          ElementCount VF = VFs[J].divideCoefficientBy(ScaleFactor);
-          LLVM_DEBUG(if (VF != VFs[J]) {
-            dbgs() << "LV(REG): Scaled down VF from " << VFs[J] << " to " << VF
-                   << " for " << *R << "\n";
-          });
+          ElementCount VF = VFs[J];
+          if (ScaleFactor > 1) {
+            VF = VFs[J].divideCoefficientBy(ScaleFactor);
+            LLVM_DEBUG(dbgs() << "LV(REG): Scaled down VF from " << VFs[J]
+                              << " to " << VF << " for " << *R << "\n";);
+          }
 
           Type *ScalarTy = TypeInfo.inferScalarType(VPV);
           unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
