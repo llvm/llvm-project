@@ -52,6 +52,18 @@ struct IterableExpansionStmtData {
 };
 } // namespace
 
+static bool CheckExpansionSize(Sema &S, uint64_t NumInstantiations,
+                               SourceLocation Loc) {
+  unsigned Max = S.LangOpts.MaxTemplateForExpansions;
+  if (Max != 0 && NumInstantiations > Max) {
+    S.Diag(Loc, diag::err_expansion_too_big) << NumInstantiations << Max;
+    S.Diag(Loc, diag::note_use_fexpansion_limit);
+    return true;
+  }
+
+  return false;
+}
+
 // Build a 'DeclRefExpr' designating the template parameter that is used as
 // the expansion index
 static DeclRefExpr *BuildIndexDRE(Sema &S, CXXExpansionStmtDecl *ESD) {
@@ -253,6 +265,9 @@ static StmtResult BuildDestructuringDecompositionDecl(
       S.GetDecompositionElementCount(ExpansionInitializer->getType(), ColonLoc);
 
   if (!Arity)
+    return StmtError();
+
+  if (CheckExpansionSize(S, *Arity, ColonLoc))
     return StmtError();
 
   QualType AutoRRef = S.Context.getAutoRRefDeductType();
@@ -511,6 +526,9 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
   // This can fail if this is an iterating expansion statement.
   std::optional<uint64_t> NumInstantiations = ComputeExpansionSize(Expansion);
   if (!NumInstantiations)
+    return StmtError();
+
+  if (CheckExpansionSize(*this, *NumInstantiations, Expansion->getColonLoc()))
     return StmtError();
 
   // Collect preamble statements.
