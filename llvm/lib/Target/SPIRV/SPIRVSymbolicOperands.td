@@ -390,6 +390,7 @@ defm SPV_KHR_maximal_reconvergence : ExtensionOperand<128, [EnvVulkan]>;
 defm SPV_INTEL_bfloat16_arithmetic
     : ExtensionOperand<129, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_16bit_atomics : ExtensionOperand<130, [EnvVulkan, EnvOpenCL]>;
+defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<131, [EnvVulkan, EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
