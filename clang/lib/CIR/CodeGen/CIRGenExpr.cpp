@@ -547,15 +547,32 @@ LValue CIRGenFunction::emitLValueForFieldInitialization(
 }
 
 mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
-  // Bool has a different representation in memory than in registers,
-  // but in ClangIR, it is simply represented as a cir.bool value.
-  // This function is here as a placeholder for possible future changes.
+  if (auto *atomicTy = ty->getAs<AtomicType>())
+    ty = atomicTy->getValueType();
+
+  if (ty->isExtVectorBoolType()) {
+    cgm.errorNYI("emitToMemory: extVectorBoolType");
+  }
+
+  if (ty->hasBooleanRepresentation() || ty->isBitIntType()) {
+    mlir::Type storeType = convertTypeForLoadStore(ty, value.getType());
+    return builder.createIntCast(value, storeType);
+  }
+
   return value;
 }
 
 mlir::Value CIRGenFunction::emitFromMemory(mlir::Value value, QualType ty) {
-  if (!ty->isBooleanType() && hasBooleanRepresentation(ty)) {
-    llvm_unreachable("NIY");
+  if (auto *atomicTy = ty->getAs<AtomicType>())
+    ty = atomicTy->getValueType();
+
+  if (ty->isPackedVectorBoolType(getContext())) {
+    cgm.errorNYI("emitFromMemory: PackedVectorBoolType");
+  }
+
+  if (ty->hasBooleanRepresentation() || ty->isBitIntType() || ty->isExtVectorBoolType()) {
+    mlir::Type resTy = convertType(ty);
+    return builder.createIntCast(value, resTy);
   }
 
   return value;
@@ -1927,21 +1944,6 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
   assert(!cir::MissingFeatures::generateDebugInfo());
 
   return callResult;
-}
-
-// TODO: this can also be abstrated into common AST helpers
-bool CIRGenFunction::hasBooleanRepresentation(QualType type) {
-
-  if (type->isBooleanType())
-    return true;
-
-  if (const EnumType *enumType = type->getAs<EnumType>())
-    return enumType->getDecl()->getIntegerType()->isBooleanType();
-
-  if (const AtomicType *atomicType = type->getAs<AtomicType>())
-    return hasBooleanRepresentation(atomicType->getValueType());
-
-  return false;
 }
 
 CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {

@@ -1153,6 +1153,10 @@ void test_op_and_fetch() {
   // LLVM:  [[RES0:%.*]] = atomicrmw add ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
   // LLVM:  [[RET0:%.*]] = add i8 [[RES0]], [[VAL0]]
   // LLVM:  store i8 [[RET0]], ptr %{{.*}}, align 1
+  // OGCG:  [[VAL0:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[RES0:%.*]] = atomicrmw add ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
+  // OGCG:  [[RET0:%.*]] = add i8 [[RES0]], [[VAL0]]
+  // OGCG:  store i8 [[RET0]], ptr %{{.*}}, align 1
   sc = __sync_add_and_fetch(&sc, uc);
 
   // CHECK: [[RES1:%.*]] = cir.atomic.fetch(add, {{%.*}} : !cir.ptr<!u8i>, [[VAL1:%.*]] : !u8i, seq_cst) fetch_first : !u8i
@@ -1161,6 +1165,10 @@ void test_op_and_fetch() {
   // LLVM:  [[RES1:%.*]] = atomicrmw add ptr %{{.*}}, i8 [[VAL1]] seq_cst, align 1
   // LLVM:  [[RET1:%.*]] = add i8 [[RES1]], [[VAL1]]
   // LLVM:  store i8 [[RET1]], ptr %{{.*}}, align 1
+  // OGCG:  [[VAL1:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[RES1:%.*]] = atomicrmw add ptr %{{.*}}, i8 [[VAL1]] seq_cst, align 1
+  // OGCG:  [[RET1:%.*]] = add i8 [[RES1]], [[VAL1]]
+  // OGCG:  store i8 [[RET1]], ptr %{{.*}}, align 1
   uc = __sync_add_and_fetch(&uc, uc);
 
   // CHECK: [[VAL2:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s16i
@@ -1171,6 +1179,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES2:%.*]] = atomicrmw add ptr %{{.*}}, i16 [[CONV2]] seq_cst, align 2
   // LLVM:  [[RET2:%.*]] = add i16 [[RES2]], [[CONV2]]
   // LLVM:  store i16 [[RET2]], ptr %{{.*}}, align 2
+  // OGCG:  [[VAL2:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV2:%.*]] = zext i8 [[VAL2]] to i16
+  // OGCG:  [[RES2:%.*]] = atomicrmw add ptr %{{.*}}, i16 [[CONV2]] seq_cst, align 2
+  // OGCG:  [[RET2:%.*]] = add i16 [[RES2]], [[CONV2]]
+  // OGCG:  store i16 [[RET2]], ptr %{{.*}}, align 2
   ss = __sync_add_and_fetch(&ss, uc);
 
   // CHECK: [[VAL3:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u16i
@@ -1181,6 +1194,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES3:%.*]] = atomicrmw add ptr %{{.*}}, i16 [[CONV3]] seq_cst, align 2
   // LLVM:  [[RET3:%.*]] = add i16 [[RES3]], [[CONV3]]
   // LLVM:  store i16 [[RET3]], ptr %{{.*}}
+  // OGCG:  [[VAL3:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV3:%.*]] = zext i8 [[VAL3]] to i16
+  // OGCG:  [[RES3:%.*]] = atomicrmw add ptr %{{.*}}, i16 [[CONV3]] seq_cst, align 2
+  // OGCG:  [[RET3:%.*]] = add i16 [[RES3]], [[CONV3]]
+  // OGCG:  store i16 [[RET3]], ptr %{{.*}}
   us = __sync_add_and_fetch(&us, uc);
 
   // CHECK: [[VAL4:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s32i
@@ -1191,6 +1209,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES4:%.*]] = atomicrmw add ptr %{{.*}}, i32 [[CONV4]] seq_cst, align 4
   // LLVM:  [[RET4:%.*]] = add i32 [[RES4]], [[CONV4]]
   // LLVM:  store i32 [[RET4]], ptr %{{.*}}, align 4
+  // OGCG:  [[VAL4:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV4:%.*]] = zext i8 [[VAL4]] to i32
+  // OGCG:  [[RES4:%.*]] = atomicrmw add ptr %{{.*}}, i32 [[CONV4]] seq_cst, align 4
+  // OGCG:  [[RET4:%.*]] = add i32 [[RES4]], [[CONV4]]
+  // OGCG:  store i32 [[RET4]], ptr %{{.*}}, align 4
   si = __sync_add_and_fetch(&si, uc);
 
   // CHECK: [[VAL5:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u32i
@@ -1201,6 +1224,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES5:%.*]] = atomicrmw add ptr %{{.*}}, i32 [[CONV5]] seq_cst, align 4
   // LLVM:  [[RET5:%.*]] = add i32 [[RES5]], [[CONV5]]
   // LLVM:  store i32 [[RET5]], ptr %{{.*}}, align 4
+  // OGCG:  [[VAL5:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV5:%.*]] = zext i8 [[VAL5]] to i32
+  // OGCG:  [[RES5:%.*]] = atomicrmw add ptr %{{.*}}, i32 [[CONV5]] seq_cst, align 4
+  // OGCG:  [[RET5:%.*]] = add i32 [[RES5]], [[CONV5]]
+  // OGCG:  store i32 [[RET5]], ptr %{{.*}}, align 4
   ui = __sync_add_and_fetch(&ui, uc);
 
   // CHECK: [[VAL6:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s64i
@@ -1211,6 +1239,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES6:%.*]] = atomicrmw add ptr %{{.*}}, i64 [[CONV6]] seq_cst, align 8
   // LLVM:  [[RET6:%.*]] = add i64 [[RES6]], [[CONV6]]
   // LLVM:  store i64 [[RET6]], ptr %{{.*}}, align 8
+  // OGCG:  [[VAL6:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV6:%.*]] = zext i8 [[VAL6]] to i64
+  // OGCG:  [[RES6:%.*]] = atomicrmw add ptr %{{.*}}, i64 [[CONV6]] seq_cst, align 8
+  // OGCG:  [[RET6:%.*]] = add i64 [[RES6]], [[CONV6]]
+  // OGCG:  store i64 [[RET6]], ptr %{{.*}}, align 8
   sll = __sync_add_and_fetch(&sll, uc);
 
   // CHECK: [[VAL7:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u64i
@@ -1221,6 +1254,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES7:%.*]] = atomicrmw add ptr %{{.*}}, i64 [[CONV7]] seq_cst, align 8
   // LLVM:  [[RET7:%.*]] = add i64 [[RES7]], [[CONV7]]
   // LLVM:  store i64 [[RET7]], ptr %{{.*}}, align 8
+  // OGCG:  [[VAL7:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV7:%.*]] = zext i8 [[VAL7]] to i64
+  // OGCG:  [[RES7:%.*]] = atomicrmw add ptr %{{.*}}, i64 [[CONV7]] seq_cst, align 8
+  // OGCG:  [[RET7:%.*]] = add i64 [[RES7]], [[CONV7]]
+  // OGCG:  store i64 [[RET7]], ptr %{{.*}}, align 8
   ull = __sync_add_and_fetch(&ull, uc);
 
   // CHECK: [[VAL0:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s8i
@@ -1230,6 +1268,10 @@ void test_op_and_fetch() {
   // LLVM:  [[RES0:%.*]] = atomicrmw sub ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
   // LLVM:  [[RET0:%.*]] = sub i8 [[RES0]], [[VAL0]]
   // LLVM:  store i8 [[RET0]], ptr %{{.*}}, align 1
+  // OGCG:  [[VAL0:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[RES0:%.*]] = atomicrmw sub ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
+  // OGCG:  [[RET0:%.*]] = sub i8 [[RES0]], [[VAL0]]
+  // OGCG:  store i8 [[RET0]], ptr %{{.*}}, align 1
   sc = __sync_sub_and_fetch(&sc, uc);
 
   // CHECK: [[RES1:%.*]] = cir.atomic.fetch(sub, {{%.*}} : !cir.ptr<!u8i>, [[VAL1:%.*]] : !u8i, seq_cst) fetch_first : !u8i
@@ -1238,6 +1280,10 @@ void test_op_and_fetch() {
   // LLVM:  [[RES1:%.*]] = atomicrmw sub ptr %{{.*}}, i8 [[VAL1]] seq_cst, align 1
   // LLVM:  [[RET1:%.*]] = sub i8 [[RES1]], [[VAL1]]
   // LLVM:  store i8 [[RET1]], ptr %{{.*}}, align 1
+  // OGCG:  [[VAL1:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[RES1:%.*]] = atomicrmw sub ptr %{{.*}}, i8 [[VAL1]] seq_cst, align 1
+  // OGCG:  [[RET1:%.*]] = sub i8 [[RES1]], [[VAL1]]
+  // OGCG:  store i8 [[RET1]], ptr %{{.*}}, align 1
   uc = __sync_sub_and_fetch(&uc, uc);
 
   // CHECK: [[VAL2:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s16i
@@ -1248,6 +1294,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES2:%.*]] = atomicrmw sub ptr %{{.*}}, i16 [[CONV2]] seq_cst, align 2
   // LLVM:  [[RET2:%.*]] = sub i16 [[RES2]], [[CONV2]]
   // LLVM:  store i16 [[RET2]], ptr %{{.*}}, align 2
+  // OGCG:  [[VAL2:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV2:%.*]] = zext i8 [[VAL2]] to i16
+  // OGCG:  [[RES2:%.*]] = atomicrmw sub ptr %{{.*}}, i16 [[CONV2]] seq_cst, align 2
+  // OGCG:  [[RET2:%.*]] = sub i16 [[RES2]], [[CONV2]]
+  // OGCG:  store i16 [[RET2]], ptr %{{.*}}, align 2
   ss = __sync_sub_and_fetch(&ss, uc);
 
   // CHECK: [[VAL3:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u16i
@@ -1258,6 +1309,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES3:%.*]] = atomicrmw sub ptr %{{.*}}, i16 [[CONV3]] seq_cst, align 2
   // LLVM:  [[RET3:%.*]] = sub i16 [[RES3]], [[CONV3]]
   // LLVM:  store i16 [[RET3]], ptr %{{.*}}
+  // OGCG:  [[VAL3:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV3:%.*]] = zext i8 [[VAL3]] to i16
+  // OGCG:  [[RES3:%.*]] = atomicrmw sub ptr %{{.*}}, i16 [[CONV3]] seq_cst, align 2
+  // OGCG:  [[RET3:%.*]] = sub i16 [[RES3]], [[CONV3]]
+  // OGCG:  store i16 [[RET3]], ptr %{{.*}}
   us = __sync_sub_and_fetch(&us, uc);
 
   // CHECK: [[VAL4:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s32i
@@ -1267,7 +1323,11 @@ void test_op_and_fetch() {
   // LLVM:  [[CONV4:%.*]] = zext i8 [[VAL4]] to i32
   // LLVM:  [[RES4:%.*]] = atomicrmw sub ptr %{{.*}}, i32 [[CONV4]] seq_cst, align 4
   // LLVM:  [[RET4:%.*]] = sub i32 [[RES4]], [[CONV4]]
-  // LLVM:  store i32 [[RET4]], ptr %{{.*}}, align 4
+  // OGCG:  [[VAL4:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV4:%.*]] = zext i8 [[VAL4]] to i32
+  // OGCG:  [[RES4:%.*]] = atomicrmw sub ptr %{{.*}}, i32 [[CONV4]] seq_cst, align 4
+  // OGCG:  [[RET4:%.*]] = sub i32 [[RES4]], [[CONV4]]
+  // OGCG:  store i32 [[RET4]], ptr %{{.*}}, align 4
   si = __sync_sub_and_fetch(&si, uc);
 
   // CHECK: [[VAL5:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u32i
@@ -1278,6 +1338,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES5:%.*]] = atomicrmw sub ptr %{{.*}}, i32 [[CONV5]] seq_cst, align 4
   // LLVM:  [[RET5:%.*]] = sub i32 [[RES5]], [[CONV5]]
   // LLVM:  store i32 [[RET5]], ptr %{{.*}}, align 4
+  // OGCG:  [[VAL5:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV5:%.*]] = zext i8 [[VAL5]] to i32
+  // OGCG:  [[RES5:%.*]] = atomicrmw sub ptr %{{.*}}, i32 [[CONV5]] seq_cst, align 4
+  // OGCG:  [[RET5:%.*]] = sub i32 [[RES5]], [[CONV5]]
+  // OGCG:  store i32 [[RET5]], ptr %{{.*}}, align 4
   ui = __sync_sub_and_fetch(&ui, uc);
 
   // CHECK: [[VAL6:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s64i
@@ -1288,6 +1353,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES6:%.*]] = atomicrmw sub ptr %{{.*}}, i64 [[CONV6]] seq_cst, align 8
   // LLVM:  [[RET6:%.*]] = sub i64 [[RES6]], [[CONV6]]
   // LLVM:  store i64 [[RET6]], ptr %{{.*}}, align 8
+  // OGCG:  [[VAL6:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV6:%.*]] = zext i8 [[VAL6]] to i64
+  // OGCG:  [[RES6:%.*]] = atomicrmw sub ptr %{{.*}}, i64 [[CONV6]] seq_cst, align 8
+  // OGCG:  [[RET6:%.*]] = sub i64 [[RES6]], [[CONV6]]
+  // OGCG:  store i64 [[RET6]], ptr %{{.*}}, align 8
   sll = __sync_sub_and_fetch(&sll, uc);
 
   // CHECK: [[VAL7:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u64i
@@ -1298,6 +1368,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES7:%.*]] = atomicrmw sub ptr %{{.*}}, i64 [[CONV7]] seq_cst, align 8
   // LLVM:  [[RET7:%.*]] = sub i64 [[RES7]], [[CONV7]]
   // LLVM:  store i64 [[RET7]], ptr %{{.*}}, align 8
+  // OGCG:  [[VAL7:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV7:%.*]] = zext i8 [[VAL7]] to i64
+  // OGCG:  [[RES7:%.*]] = atomicrmw sub ptr %{{.*}}, i64 [[CONV7]] seq_cst, align 8
+  // OGCG:  [[RET7:%.*]] = sub i64 [[RES7]], [[CONV7]]
+  // OGCG:  store i64 [[RET7]], ptr %{{.*}}, align 8
   ull = __sync_sub_and_fetch(&ull, uc);
 
   // CHECK: [[VAL0:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s8i
@@ -1307,6 +1382,10 @@ void test_op_and_fetch() {
   // LLVM:  [[RES0:%.*]] = atomicrmw and ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
   // LLVM:  [[RET0:%.*]] = and i8 [[RES0]], [[VAL0]]
   // LLVM:  store i8 [[RET0]], ptr %{{.*}}, align 1
+  // OGCG:  [[VAL0:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[RES0:%.*]] = atomicrmw and ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
+  // OGCG:  [[RET0:%.*]] = and i8 [[RES0]], [[VAL0]]
+  // OGCG:  store i8 [[RET0]], ptr %{{.*}}, align 1
   sc = __sync_and_and_fetch(&sc, uc);
 
   // CHECK: [[RES1:%.*]] = cir.atomic.fetch(and, {{%.*}} : !cir.ptr<!u8i>, [[VAL1:%.*]] : !u8i, seq_cst) fetch_first : !u8i
@@ -1315,6 +1394,10 @@ void test_op_and_fetch() {
   // LLVM:  [[RES1:%.*]] = atomicrmw and ptr %{{.*}}, i8 [[VAL1]] seq_cst, align 1
   // LLVM:  [[RET1:%.*]] = and i8 [[RES1]], [[VAL1]]
   // LLVM:  store i8 [[RET1]], ptr %{{.*}}, align 1
+  // OGCG:  [[VAL1:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[RES1:%.*]] = atomicrmw and ptr %{{.*}}, i8 [[VAL1]] seq_cst, align 1
+  // OGCG:  [[RET1:%.*]] = and i8 [[RES1]], [[VAL1]]
+  // OGCG:  store i8 [[RET1]], ptr %{{.*}}, align 1
   uc = __sync_and_and_fetch(&uc, uc);
 
   // CHECK: [[VAL2:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s16i
@@ -1325,6 +1408,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES2:%.*]] = atomicrmw and ptr %{{.*}}, i16 [[CONV2]] seq_cst, align 2
   // LLVM:  [[RET2:%.*]] = and i16 [[RES2]], [[CONV2]]
   // LLVM:  store i16 [[RET2]], ptr %{{.*}}, align 2
+  // OGCG:  [[VAL2:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV2:%.*]] = zext i8 [[VAL2]] to i16
+  // OGCG:  [[RES2:%.*]] = atomicrmw and ptr %{{.*}}, i16 [[CONV2]] seq_cst, align 2
+  // OGCG:  [[RET2:%.*]] = and i16 [[RES2]], [[CONV2]]
+  // OGCG:  store i16 [[RET2]], ptr %{{.*}}, align 2
   ss = __sync_and_and_fetch(&ss, uc);
 
   // CHECK: [[VAL3:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u16i
@@ -1335,6 +1423,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES3:%.*]] = atomicrmw and ptr %{{.*}}, i16 [[CONV3]] seq_cst, align 2
   // LLVM:  [[RET3:%.*]] = and i16 [[RES3]], [[CONV3]]
   // LLVM:  store i16 [[RET3]], ptr %{{.*}}
+  // OGCG:  [[VAL3:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV3:%.*]] = zext i8 [[VAL3]] to i16
+  // OGCG:  [[RES3:%.*]] = atomicrmw and ptr %{{.*}}, i16 [[CONV3]] seq_cst, align 2
+  // OGCG:  [[RET3:%.*]] = and i16 [[RES3]], [[CONV3]]
+  // OGCG:  store i16 [[RET3]], ptr %{{.*}}
   us = __sync_and_and_fetch(&us, uc);
 
   // CHECK: [[VAL4:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s32i
@@ -1345,6 +1438,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES4:%.*]] = atomicrmw and ptr %{{.*}}, i32 [[CONV4]] seq_cst, align 4
   // LLVM:  [[RET4:%.*]] = and i32 [[RES4]], [[CONV4]]
   // LLVM:  store i32 [[RET4]], ptr %{{.*}}, align 4
+  // OGCG:  [[VAL4:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV4:%.*]] = zext i8 [[VAL4]] to i32
+  // OGCG:  [[RES4:%.*]] = atomicrmw and ptr %{{.*}}, i32 [[CONV4]] seq_cst, align 4
+  // OGCG:  [[RET4:%.*]] = and i32 [[RES4]], [[CONV4]]
+  // OGCG:  store i32 [[RET4]], ptr %{{.*}}, align 4
   si = __sync_and_and_fetch(&si, uc);
 
   // CHECK: [[VAL5:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u32i
@@ -1355,6 +1453,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES5:%.*]] = atomicrmw and ptr %{{.*}}, i32 [[CONV5]] seq_cst, align 4
   // LLVM:  [[RET5:%.*]] = and i32 [[RES5]], [[CONV5]]
   // LLVM:  store i32 [[RET5]], ptr %{{.*}}, align 4
+  // OGCG:  [[VAL5:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV5:%.*]] = zext i8 [[VAL5]] to i32
+  // OGCG:  [[RES5:%.*]] = atomicrmw and ptr %{{.*}}, i32 [[CONV5]] seq_cst, align 4
+  // OGCG:  [[RET5:%.*]] = and i32 [[RES5]], [[CONV5]]
+  // OGCG:  store i32 [[RET5]], ptr %{{.*}}, align 4
   ui = __sync_and_and_fetch(&ui, uc);
 
   // CHECK: [[VAL6:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s64i
@@ -1365,6 +1468,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES6:%.*]] = atomicrmw and ptr %{{.*}}, i64 [[CONV6]] seq_cst, align 8
   // LLVM:  [[RET6:%.*]] = and i64 [[RES6]], [[CONV6]]
   // LLVM:  store i64 [[RET6]], ptr %{{.*}}, align 8
+  // OGCG:  [[VAL6:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV6:%.*]] = zext i8 [[VAL6]] to i64
+  // OGCG:  [[RES6:%.*]] = atomicrmw and ptr %{{.*}}, i64 [[CONV6]] seq_cst, align 8
+  // OGCG:  [[RET6:%.*]] = and i64 [[RES6]], [[CONV6]]
+  // OGCG:  store i64 [[RET6]], ptr %{{.*}}, align 8
   sll = __sync_and_and_fetch(&sll, uc);
 
   // CHECK: [[VAL7:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u64i
@@ -1375,6 +1483,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES7:%.*]] = atomicrmw and ptr %{{.*}}, i64 [[CONV7]] seq_cst, align 8
   // LLVM:  [[RET7:%.*]] = and i64 [[RES7]], [[CONV7]]
   // LLVM:  store i64 [[RET7]], ptr %{{.*}}, align 8
+  // OGCG:  [[VAL7:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV7:%.*]] = zext i8 [[VAL7]] to i64
+  // OGCG:  [[RES7:%.*]] = atomicrmw and ptr %{{.*}}, i64 [[CONV7]] seq_cst, align 8
+  // OGCG:  [[RET7:%.*]] = and i64 [[RES7]], [[CONV7]]
+  // OGCG:  store i64 [[RET7]], ptr %{{.*}}, align 8
   ull = __sync_and_and_fetch(&ull, uc);
 
   // CHECK: [[VAL0:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s8i
@@ -1384,6 +1497,10 @@ void test_op_and_fetch() {
   // LLVM:  [[RES0:%.*]] = atomicrmw or ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
   // LLVM:  [[RET0:%.*]] = or i8 [[RES0]], [[VAL0]]
   // LLVM:  store i8 [[RET0]], ptr %{{.*}}, align 1
+  // OGCG:  [[VAL0:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[RES0:%.*]] = atomicrmw or ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
+  // OGCG:  [[RET0:%.*]] = or i8 [[RES0]], [[VAL0]]
+  // OGCG:  store i8 [[RET0]], ptr %{{.*}}, align 1
   sc = __sync_or_and_fetch(&sc, uc);
 
   // CHECK: [[RES1:%.*]] = cir.atomic.fetch(or, {{%.*}} : !cir.ptr<!u8i>, [[VAL1:%.*]] : !u8i, seq_cst) fetch_first : !u8i
@@ -1392,6 +1509,10 @@ void test_op_and_fetch() {
   // LLVM:  [[RES1:%.*]] = atomicrmw or ptr %{{.*}}, i8 [[VAL1]] seq_cst, align 1
   // LLVM:  [[RET1:%.*]] = or i8 [[RES1]], [[VAL1]]
   // LLVM:  store i8 [[RET1]], ptr %{{.*}}, align 1
+  // OGCG:  [[VAL1:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[RES1:%.*]] = atomicrmw or ptr %{{.*}}, i8 [[VAL1]] seq_cst, align 1
+  // OGCG:  [[RET1:%.*]] = or i8 [[RES1]], [[VAL1]]
+  // OGCG:  store i8 [[RET1]], ptr %{{.*}}, align 1
   uc = __sync_or_and_fetch(&uc, uc);
 
   // CHECK: [[VAL2:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s16i
@@ -1402,6 +1523,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES2:%.*]] = atomicrmw or ptr %{{.*}}, i16 [[CONV2]] seq_cst, align 2
   // LLVM:  [[RET2:%.*]] = or i16 [[RES2]], [[CONV2]]
   // LLVM:  store i16 [[RET2]], ptr %{{.*}}, align 2
+  // OGCG:  [[VAL2:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV2:%.*]] = zext i8 [[VAL2]] to i16
+  // OGCG:  [[RES2:%.*]] = atomicrmw or ptr %{{.*}}, i16 [[CONV2]] seq_cst, align 2
+  // OGCG:  [[RET2:%.*]] = or i16 [[RES2]], [[CONV2]]
+  // OGCG:  store i16 [[RET2]], ptr %{{.*}}, align 2
   ss = __sync_or_and_fetch(&ss, uc);
 
   // CHECK: [[VAL3:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u16i
@@ -1412,6 +1538,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES3:%.*]] = atomicrmw or ptr %{{.*}}, i16 [[CONV3]] seq_cst, align 2
   // LLVM:  [[RET3:%.*]] = or i16 [[RES3]], [[CONV3]]
   // LLVM:  store i16 [[RET3]], ptr %{{.*}}
+  // OGCG:  [[VAL3:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV3:%.*]] = zext i8 [[VAL3]] to i16
+  // OGCG:  [[RES3:%.*]] = atomicrmw or ptr %{{.*}}, i16 [[CONV3]] seq_cst, align 2
+  // OGCG:  [[RET3:%.*]] = or i16 [[RES3]], [[CONV3]]
+  // OGCG:  store i16 [[RET3]], ptr %{{.*}}
   us = __sync_or_and_fetch(&us, uc);
 
   // CHECK: [[VAL4:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s32i
@@ -1422,6 +1553,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES4:%.*]] = atomicrmw or ptr %{{.*}}, i32 [[CONV4]] seq_cst, align 4
   // LLVM:  [[RET4:%.*]] = or i32 [[RES4]], [[CONV4]]
   // LLVM:  store i32 [[RET4]], ptr %{{.*}}, align 4
+  // OGCG:  [[VAL4:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV4:%.*]] = zext i8 [[VAL4]] to i32
+  // OGCG:  [[RES4:%.*]] = atomicrmw or ptr %{{.*}}, i32 [[CONV4]] seq_cst, align 4
+  // OGCG:  [[RET4:%.*]] = or i32 [[RES4]], [[CONV4]]
+  // OGCG:  store i32 [[RET4]], ptr %{{.*}}, align 4
   si = __sync_or_and_fetch(&si, uc);
 
   // CHECK: [[VAL5:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u32i
@@ -1432,6 +1568,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES5:%.*]] = atomicrmw or ptr %{{.*}}, i32 [[CONV5]] seq_cst, align 4
   // LLVM:  [[RET5:%.*]] = or i32 [[RES5]], [[CONV5]]
   // LLVM:  store i32 [[RET5]], ptr %{{.*}}, align 4
+  // OGCG:  [[VAL5:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV5:%.*]] = zext i8 [[VAL5]] to i32
+  // OGCG:  [[RES5:%.*]] = atomicrmw or ptr %{{.*}}, i32 [[CONV5]] seq_cst, align 4
+  // OGCG:  [[RET5:%.*]] = or i32 [[RES5]], [[CONV5]]
+  // OGCG:  store i32 [[RET5]], ptr %{{.*}}, align 4
   ui = __sync_or_and_fetch(&ui, uc);
 
   // CHECK: [[VAL6:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s64i
@@ -1442,6 +1583,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES6:%.*]] = atomicrmw or ptr %{{.*}}, i64 [[CONV6]] seq_cst, align 8
   // LLVM:  [[RET6:%.*]] = or i64 [[RES6]], [[CONV6]]
   // LLVM:  store i64 [[RET6]], ptr %{{.*}}, align 8
+  // OGCG:  [[VAL6:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV6:%.*]] = zext i8 [[VAL6]] to i64
+  // OGCG:  [[RES6:%.*]] = atomicrmw or ptr %{{.*}}, i64 [[CONV6]] seq_cst, align 8
+  // OGCG:  [[RET6:%.*]] = or i64 [[RES6]], [[CONV6]]
+  // OGCG:  store i64 [[RET6]], ptr %{{.*}}, align 8
   sll = __sync_or_and_fetch(&sll, uc);
 
   // CHECK: [[VAL7:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u64i
@@ -1452,6 +1598,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES7:%.*]] = atomicrmw or ptr %{{.*}}, i64 [[CONV7]] seq_cst, align 8
   // LLVM:  [[RET7:%.*]] = or i64 [[RES7]], [[CONV7]]
   // LLVM:  store i64 [[RET7]], ptr %{{.*}}, align 8
+  // OGCG:  [[VAL7:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV7:%.*]] = zext i8 [[VAL7]] to i64
+  // OGCG:  [[RES7:%.*]] = atomicrmw or ptr %{{.*}}, i64 [[CONV7]] seq_cst, align 8
+  // OGCG:  [[RET7:%.*]] = or i64 [[RES7]], [[CONV7]]
+  // OGCG:  store i64 [[RET7]], ptr %{{.*}}, align 8
   ull = __sync_or_and_fetch(&ull, uc);
 
   // CHECK: [[VAL0:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s8i
@@ -1461,6 +1612,10 @@ void test_op_and_fetch() {
   // LLVM:  [[RES0:%.*]] = atomicrmw xor ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
   // LLVM:  [[RET0:%.*]] = xor i8 [[RES0]], [[VAL0]]
   // LLVM:  store i8 [[RET0]], ptr %{{.*}}, align 1
+  // OGCG:  [[VAL0:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[RES0:%.*]] = atomicrmw xor ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
+  // OGCG:  [[RET0:%.*]] = xor i8 [[RES0]], [[VAL0]]
+  // OGCG:  store i8 [[RET0]], ptr %{{.*}}, align 1
   sc = __sync_xor_and_fetch(&sc, uc);
 
   // CHECK: [[RES1:%.*]] = cir.atomic.fetch(xor, {{%.*}} : !cir.ptr<!u8i>, [[VAL1:%.*]] : !u8i, seq_cst) fetch_first : !u8i
@@ -1469,6 +1624,10 @@ void test_op_and_fetch() {
   // LLVM:  [[RES1:%.*]] = atomicrmw xor ptr %{{.*}}, i8 [[VAL1]] seq_cst, align 1
   // LLVM:  [[RET1:%.*]] = xor i8 [[RES1]], [[VAL1]]
   // LLVM:  store i8 [[RET1]], ptr %{{.*}}, align 1
+  // OGCG:  [[VAL1:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[RES1:%.*]] = atomicrmw xor ptr %{{.*}}, i8 [[VAL1]] seq_cst, align 1
+  // OGCG:  [[RET1:%.*]] = xor i8 [[RES1]], [[VAL1]]
+  // OGCG:  store i8 [[RET1]], ptr %{{.*}}, align 1
   uc = __sync_xor_and_fetch(&uc, uc);
 
   // CHECK: [[VAL2:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s16i
@@ -1479,6 +1638,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES2:%.*]] = atomicrmw xor ptr %{{.*}}, i16 [[CONV2]] seq_cst, align 2
   // LLVM:  [[RET2:%.*]] = xor i16 [[RES2]], [[CONV2]]
   // LLVM:  store i16 [[RET2]], ptr %{{.*}}, align 2
+  // OGCG:  [[VAL2:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV2:%.*]] = zext i8 [[VAL2]] to i16
+  // OGCG:  [[RES2:%.*]] = atomicrmw xor ptr %{{.*}}, i16 [[CONV2]] seq_cst, align 2
+  // OGCG:  [[RET2:%.*]] = xor i16 [[RES2]], [[CONV2]]
+  // OGCG:  store i16 [[RET2]], ptr %{{.*}}, align 2
   ss = __sync_xor_and_fetch(&ss, uc);
 
   // CHECK: [[VAL3:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u16i
@@ -1489,6 +1653,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES3:%.*]] = atomicrmw xor ptr %{{.*}}, i16 [[CONV3]] seq_cst, align 2
   // LLVM:  [[RET3:%.*]] = xor i16 [[RES3]], [[CONV3]]
   // LLVM:  store i16 [[RET3]], ptr %{{.*}}
+  // OGCG:  [[VAL3:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV3:%.*]] = zext i8 [[VAL3]] to i16
+  // OGCG:  [[RES3:%.*]] = atomicrmw xor ptr %{{.*}}, i16 [[CONV3]] seq_cst, align 2
+  // OGCG:  [[RET3:%.*]] = xor i16 [[RES3]], [[CONV3]]
+  // OGCG:  store i16 [[RET3]], ptr %{{.*}}
   us = __sync_xor_and_fetch(&us, uc);
 
   // CHECK: [[VAL4:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s32i
@@ -1499,6 +1668,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES4:%.*]] = atomicrmw xor ptr %{{.*}}, i32 [[CONV4]] seq_cst, align 4
   // LLVM:  [[RET4:%.*]] = xor i32 [[RES4]], [[CONV4]]
   // LLVM:  store i32 [[RET4]], ptr %{{.*}}, align 4
+  // OGCG:  [[VAL4:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV4:%.*]] = zext i8 [[VAL4]] to i32
+  // OGCG:  [[RES4:%.*]] = atomicrmw xor ptr %{{.*}}, i32 [[CONV4]] seq_cst, align 4
+  // OGCG:  [[RET4:%.*]] = xor i32 [[RES4]], [[CONV4]]
+  // OGCG:  store i32 [[RET4]], ptr %{{.*}}, align 4
   si = __sync_xor_and_fetch(&si, uc);
 
   // CHECK: [[VAL5:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u32i
@@ -1509,6 +1683,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES5:%.*]] = atomicrmw xor ptr %{{.*}}, i32 [[CONV5]] seq_cst, align 4
   // LLVM:  [[RET5:%.*]] = xor i32 [[RES5]], [[CONV5]]
   // LLVM:  store i32 [[RET5]], ptr %{{.*}}, align 4
+  // OGCG:  [[VAL5:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV5:%.*]] = zext i8 [[VAL5]] to i32
+  // OGCG:  [[RES5:%.*]] = atomicrmw xor ptr %{{.*}}, i32 [[CONV5]] seq_cst, align 4
+  // OGCG:  [[RET5:%.*]] = xor i32 [[RES5]], [[CONV5]]
+  // OGCG:  store i32 [[RET5]], ptr %{{.*}}, align 4
   ui = __sync_xor_and_fetch(&ui, uc);
 
   // CHECK: [[VAL6:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s64i
@@ -1519,6 +1698,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES6:%.*]] = atomicrmw xor ptr %{{.*}}, i64 [[CONV6]] seq_cst, align 8
   // LLVM:  [[RET6:%.*]] = xor i64 [[RES6]], [[CONV6]]
   // LLVM:  store i64 [[RET6]], ptr %{{.*}}, align 8
+  // OGCG:  [[VAL6:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV6:%.*]] = zext i8 [[VAL6]] to i64
+  // OGCG:  [[RES6:%.*]] = atomicrmw xor ptr %{{.*}}, i64 [[CONV6]] seq_cst, align 8
+  // OGCG:  [[RET6:%.*]] = xor i64 [[RES6]], [[CONV6]]
+  // OGCG:  store i64 [[RET6]], ptr %{{.*}}, align 8
   sll = __sync_xor_and_fetch(&sll, uc);
 
   // CHECK: [[VAL7:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u64i
@@ -1529,6 +1713,11 @@ void test_op_and_fetch() {
   // LLVM:  [[RES7:%.*]] = atomicrmw xor ptr %{{.*}}, i64 [[CONV7]] seq_cst, align 8
   // LLVM:  [[RET7:%.*]] = xor i64 [[RES7]], [[CONV7]]
   // LLVM:  store i64 [[RET7]], ptr %{{.*}}, align 8
+  // OGCG:  [[VAL7:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV7:%.*]] = zext i8 [[VAL7]] to i64
+  // OGCG:  [[RES7:%.*]] = atomicrmw xor ptr %{{.*}}, i64 [[CONV7]] seq_cst, align 8
+  // OGCG:  [[RET7:%.*]] = xor i64 [[RES7]], [[CONV7]]
+  // OGCG:  store i64 [[RET7]], ptr %{{.*}}, align 8
   ull = __sync_xor_and_fetch(&ull, uc);
 
   // CHECK: [[VAL0:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s8i
@@ -1540,6 +1729,11 @@ void test_op_and_fetch() {
   // LLVM:  [[INTERM0:%.*]] = and i8 [[RES0]], [[VAL0]]
   // LLVM:  [[RET0:%.*]] = xor i8 [[INTERM0]], -1
   // LLVM:  store i8 [[RET0]], ptr %{{.*}}, align 1
+  // OGCG:  [[VAL0:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[RES0:%.*]] = atomicrmw nand ptr %{{.*}}, i8 [[VAL0]] seq_cst, align 1
+  // OGCG:  [[INTERM0:%.*]] = and i8 [[RES0]], [[VAL0]]
+  // OGCG:  [[RET0:%.*]] = xor i8 [[INTERM0]], -1
+  // OGCG:  store i8 [[RET0]], ptr %{{.*}}, align 1
   sc = __sync_nand_and_fetch(&sc, uc);
 
   // CHECK: [[RES1:%.*]] = cir.atomic.fetch(nand, {{%.*}} : !cir.ptr<!u8i>, [[VAL1:%.*]] : !u8i, seq_cst) fetch_first : !u8i
@@ -1550,6 +1744,11 @@ void test_op_and_fetch() {
   // LLVM:  [[INTERM1:%.*]] = and i8 [[RES1]], [[VAL1]]
   // LLVM:  [[RET1:%.*]] = xor i8 [[INTERM1]], -1
   // LLVM:  store i8 [[RET1]], ptr %{{.*}}, align 1
+  // OGCG:  [[VAL1:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[RES1:%.*]] = atomicrmw nand ptr %{{.*}}, i8 [[VAL1]] seq_cst, align 1
+  // OGCG:  [[INTERM1:%.*]] = and i8 [[RES1]], [[VAL1]]
+  // OGCG:  [[RET1:%.*]] = xor i8 [[INTERM1]], -1
+  // OGCG:  store i8 [[RET1]], ptr %{{.*}}, align 1
   uc = __sync_nand_and_fetch(&uc, uc);
 
   // CHECK: [[VAL2:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s16i
@@ -1562,6 +1761,12 @@ void test_op_and_fetch() {
   // LLVM:  [[INTERM2:%.*]] = and i16 [[RES2]], [[CONV2]]
   // LLVM:  [[RET2:%.*]] = xor i16 [[INTERM2]], -1
   // LLVM:  store i16 [[RET2]], ptr %{{.*}}, align 2
+  // OGCG:  [[VAL2:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV2:%.*]] = zext i8 [[VAL2]] to i16
+  // OGCG:  [[RES2:%.*]] = atomicrmw nand ptr %{{.*}}, i16 [[CONV2]] seq_cst, align 2
+  // OGCG:  [[INTERM2:%.*]] = and i16 [[RES2]], [[CONV2]]
+  // OGCG:  [[RET2:%.*]] = xor i16 [[INTERM2]], -1
+  // OGCG:  store i16 [[RET2]], ptr %{{.*}}, align 2
   ss = __sync_nand_and_fetch(&ss, uc);
 
   // CHECK: [[VAL3:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u16i
@@ -1574,6 +1779,12 @@ void test_op_and_fetch() {
   // LLVM:  [[INTERM3:%.*]] = and i16 [[RES3]], [[CONV3]]
   // LLVM:  [[RET3:%.*]] = xor i16 [[INTERM3]], -1
   // LLVM:  store i16 [[RET3]], ptr %{{.*}}, align 2
+  // OGCG:  [[VAL3:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV3:%.*]] = zext i8 [[VAL3]] to i16
+  // OGCG:  [[RES3:%.*]] = atomicrmw nand ptr %{{.*}}, i16 [[CONV3]] seq_cst, align 2
+  // OGCG:  [[INTERM3:%.*]] = and i16 [[RES3]], [[CONV3]]
+  // OGCG:  [[RET3:%.*]] = xor i16 [[INTERM3]], -1
+  // OGCG:  store i16 [[RET3]], ptr %{{.*}}, align 2
   us = __sync_nand_and_fetch(&us, uc);
 
   // CHECK: [[VAL4:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s32i
@@ -1586,6 +1797,12 @@ void test_op_and_fetch() {
   // LLVM:  [[INTERM4:%.*]] = and i32 [[RES4]], [[CONV4]]
   // LLVM:  [[RET4:%.*]] = xor i32 [[INTERM4]], -1
   // LLVM:  store i32 [[RET4]], ptr %{{.*}}, align 4
+  // OGCG:  [[VAL4:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV4:%.*]] = zext i8 [[VAL4]] to i32
+  // OGCG:  [[RES4:%.*]] = atomicrmw nand ptr %{{.*}}, i32 [[CONV4]] seq_cst, align 4
+  // OGCG:  [[INTERM4:%.*]] = and i32 [[RES4]], [[CONV4]]
+  // OGCG:  [[RET4:%.*]] = xor i32 [[INTERM4]], -1
+  // OGCG:  store i32 [[RET4]], ptr %{{.*}}, align 4
   si = __sync_nand_and_fetch(&si, uc);
 
   // CHECK: [[VAL5:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u32i
@@ -1598,6 +1815,12 @@ void test_op_and_fetch() {
   // LLVM:  [[INTERM5:%.*]] = and i32 [[RES5]], [[CONV5]]
   // LLVM:  [[RET5:%.*]] = xor i32 [[INTERM5]], -1
   // LLVM:  store i32 [[RET5]], ptr %{{.*}}, align 4
+  // OGCG:  [[VAL5:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV5:%.*]] = zext i8 [[VAL5]] to i32
+  // OGCG:  [[RES5:%.*]] = atomicrmw nand ptr %{{.*}}, i32 [[CONV5]] seq_cst, align 4
+  // OGCG:  [[INTERM5:%.*]] = and i32 [[RES5]], [[CONV5]]
+  // OGCG:  [[RET5:%.*]] = xor i32 [[INTERM5]], -1
+  // OGCG:  store i32 [[RET5]], ptr %{{.*}}, align 4
   ui = __sync_nand_and_fetch(&ui, uc);
 
   // CHECK: [[VAL6:%.*]] = cir.cast integral {{%.*}} : !u8i -> !s64i
@@ -1610,6 +1833,12 @@ void test_op_and_fetch() {
   // LLVM:  [[INTERM6:%.*]] = and i64 [[RES6]], [[CONV6]]
   // LLVM:  [[RET6:%.*]] = xor i64 [[INTERM6]], -1
   // LLVM:  store i64 [[RET6]], ptr %{{.*}}, align 8
+  // OGCG:  [[VAL6:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV6:%.*]] = zext i8 [[VAL6]] to i64
+  // OGCG:  [[RES6:%.*]] = atomicrmw nand ptr %{{.*}}, i64 [[CONV6]] seq_cst, align 8
+  // OGCG:  [[INTERM6:%.*]] = and i64 [[RES6]], [[CONV6]]
+  // OGCG:  [[RET6:%.*]] = xor i64 [[INTERM6]], -1
+  // OGCG:  store i64 [[RET6]], ptr %{{.*}}, align 8
   sll = __sync_nand_and_fetch(&sll, uc);
 
   // CHECK: [[VAL7:%.*]] = cir.cast integral {{%.*}} : !u8i -> !u64i
@@ -1622,5 +1851,11 @@ void test_op_and_fetch() {
   // LLVM:  [[INTERM7:%.*]] = and i64 [[RES7]], [[CONV7]]
   // LLVM:  [[RET7:%.*]] = xor i64 [[INTERM7]], -1
   // LLVM:  store i64 [[RET7]], ptr %{{.*}}, align 8
+  // OGCG:  [[VAL7:%.*]] = load i8, ptr %{{.*}}, align 1
+  // OGCG:  [[CONV7:%.*]] = zext i8 [[VAL7]] to i64
+  // OGCG:  [[RES7:%.*]] = atomicrmw nand ptr %{{.*}}, i64 [[CONV7]] seq_cst, align 8
+  // OGCG:  [[INTERM7:%.*]] = and i64 [[RES7]], [[CONV7]]
+  // OGCG:  [[RET7:%.*]] = xor i64 [[INTERM7]], -1
+  // OGCG:  store i64 [[RET7]], ptr %{{.*}}, align 8
   ull = __sync_nand_and_fetch(&ull, uc);
 }

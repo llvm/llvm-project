@@ -202,6 +202,9 @@ public:
     return convertType(getContext().getTypeDeclType(t));
   }
 
+  mlir::Type convertTypeForLoadStore(QualType astType,
+                                                     mlir::Type mlirType);
+
   ///  Return the cir::TypeEvaluationKind of QualType \c type.
   static cir::TypeEvaluationKind getEvaluationKind(clang::QualType type);
 
@@ -1370,7 +1373,6 @@ public:
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
   LValue emitCallExprLValue(const clang::CallExpr *e);
-  bool hasBooleanRepresentation(QualType type);
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   template <typename T>

@@ -65,7 +65,7 @@ static mlir::Value emitToInt(CIRGenFunction &cgf, mlir::Value v, QualType t,
                              cir::IntType intType) {
   v = cgf.emitToMemory(v, t);
 
-  if (isa<cir::PointerType>(v.getType()))
+  if (mlir::isa<cir::PointerType>(v.getType()))
     return cgf.getBuilder().createPtrToInt(v, intType);
 
   assert(v.getType() == intType);
@@ -76,7 +76,7 @@ static mlir::Value emitFromInt(CIRGenFunction &cgf, mlir::Value v, QualType t,
                                mlir::Type resultType) {
   v = cgf.emitFromMemory(v, t);
 
-  if (isa<cir::PointerType>(resultType))
+  if (mlir::isa<cir::PointerType>(resultType))
     return cgf.getBuilder().createIntToPtr(v, resultType);
 
   assert(v.getType() == resultType);
@@ -87,9 +87,11 @@ static Address checkAtomicAlignment(CIRGenFunction &cgf, const CallExpr *e) {
   ASTContext &astContext = cgf.getContext();
   Address ptr = cgf.emitPointerWithAlignment(e->getArg(0));
   unsigned bytes =
-      isa<cir::PointerType>(ptr.getElementType())
+      mlir::isa<cir::PointerType>(ptr.getElementType())
           ? astContext.getTypeSizeInChars(astContext.VoidPtrTy).getQuantity()
-          : cgf.cgm.getDataLayout().getTypeSizeInBits(ptr.getElementType()) / 8;
+          : cgf.cgm.getDataLayout().getTypeSizeInBits(ptr.getElementType()) /
+                                 cgf.cgm.getASTContext().getCharWidth();
+
   unsigned align = ptr.getAlignment().getQuantity();
   if (align % bytes != 0) {
     DiagnosticsEngine &diags = cgf.cgm.getDiags();
@@ -130,9 +132,8 @@ static mlir::Value makeBinaryAtomicValue(
   // that calculate the result of the operation as return value of
   // <binop>_and_fetch builtins. The `AtomicFetch` operation only updates the
   // memory location and returns the old value.
-  if (neededValP) {
+  if (neededValP)
     *neededValP = val;
-  }
 
   auto rmwi = cir::AtomicFetchOp::create(
       builder, cgf.getLoc(expr->getSourceRange()), destAddr.emitRawPointer(),
@@ -151,10 +152,9 @@ static RValue emitBinaryAtomicPost(CIRGenFunction &cgf,
   clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
   result = cir::BinOp::create(builder, result.getLoc(), binopKind, result, val);
 
-  if (invert) {
+  if (invert)
     result = cir::UnaryOp::create(builder, result.getLoc(),
                                   cir::UnaryOpKind::Not, result);
-  }
 
   result = emitFromInt(cgf, result, typ, val.getType());
   return RValue::get(result);
@@ -639,56 +639,43 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_lock_test_and_set:
   case Builtin::BI__sync_lock_release:
   case Builtin::BI__sync_swap:
-    llvm_unreachable("Shouldn't make it through sema");
-
   case Builtin::BI__sync_fetch_and_add_1:
   case Builtin::BI__sync_fetch_and_add_2:
   case Builtin::BI__sync_fetch_and_add_4:
   case Builtin::BI__sync_fetch_and_add_8:
   case Builtin::BI__sync_fetch_and_add_16:
-    llvm_unreachable("BI__sync_fetch_and_add NYI");
   case Builtin::BI__sync_fetch_and_sub_1:
   case Builtin::BI__sync_fetch_and_sub_2:
   case Builtin::BI__sync_fetch_and_sub_4:
   case Builtin::BI__sync_fetch_and_sub_8:
   case Builtin::BI__sync_fetch_and_sub_16:
-    llvm_unreachable("BI__sync_fetch_and_sub NYI");
-
   case Builtin::BI__sync_fetch_and_or_1:
   case Builtin::BI__sync_fetch_and_or_2:
   case Builtin::BI__sync_fetch_and_or_4:
   case Builtin::BI__sync_fetch_and_or_8:
   case Builtin::BI__sync_fetch_and_or_16:
-    llvm_unreachable("BI__sync_fetch_and_or NYI");
   case Builtin::BI__sync_fetch_and_and_1:
   case Builtin::BI__sync_fetch_and_and_2:
   case Builtin::BI__sync_fetch_and_and_4:
   case Builtin::BI__sync_fetch_and_and_8:
   case Builtin::BI__sync_fetch_and_and_16:
-    llvm_unreachable("BI__sync_fetch_and_and NYI");
   case Builtin::BI__sync_fetch_and_xor_1:
   case Builtin::BI__sync_fetch_and_xor_2:
   case Builtin::BI__sync_fetch_and_xor_4:
   case Builtin::BI__sync_fetch_and_xor_8:
   case Builtin::BI__sync_fetch_and_xor_16:
-    llvm_unreachable("BI__sync_fetch_and_xor NYI");
   case Builtin::BI__sync_fetch_and_nand_1:
   case Builtin::BI__sync_fetch_and_nand_2:
   case Builtin::BI__sync_fetch_and_nand_4:
   case Builtin::BI__sync_fetch_and_nand_8:
   case Builtin::BI__sync_fetch_and_nand_16:
-    llvm_unreachable("BI__sync_fetch_and_nand NYI");
-
-  // Clang extensions: not overloaded yet.
   case Builtin::BI__sync_fetch_and_min:
-    llvm_unreachable("BI__sync_fetch_and_min NYI");
   case Builtin::BI__sync_fetch_and_max:
-    llvm_unreachable("BI__sync_fetch_and_max NYI");
   case Builtin::BI__sync_fetch_and_umin:
-    llvm_unreachable("BI__sync_fetch_and_umin NYI");
   case Builtin::BI__sync_fetch_and_umax:
-    llvm_unreachable("BI__sync_fetch_and_umax NYI");
-
+    cgm.errorNYI(e->getSourceRange(),
+                           "__sync_fetch_and_* builtins NYI");
+    return getUndefRValue(e->getType());
   case Builtin::BI__sync_add_and_fetch_1:
   case Builtin::BI__sync_add_and_fetch_2:
   case Builtin::BI__sync_add_and_fetch_4:
