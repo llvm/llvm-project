@@ -2078,7 +2078,7 @@ Error RewriteInstance::readSpecialSections() {
   if (BC->IsStripped && !opts::AllowStripped) {
     BC->errs()
         << "BOLT-ERROR: stripped binaries are not supported. If you know "
-           "what you're doing, use --allow-stripped to proceed";
+           "what you're doing, use --allow-stripped to proceed\n";
     exit(1);
   }
 

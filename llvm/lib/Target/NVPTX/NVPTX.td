@@ -150,6 +150,16 @@ def : Proc<"sm_121",  [SM121, PTX88]>;
 def : Proc<"sm_121a", [SM121a, PTX88]>;
 def : Proc<"sm_121f", [SM121f, PTX88]>;
 
+
+def Is64Bit : Predicate<"Subtarget->getTargetTriple().getArch() == Triple::nvptx64">;
+def NVPTX64 : HwMode<[Is64Bit]>;
+
+def nvptx_ptr_rc : RegClassByHwMode<
+  [DefaultMode, NVPTX64],
+  [B32, B64]>;
+
+defm : RemapAllTargetPseudoPointerOperands<nvptx_ptr_rc>;
+
 def NVPTXInstrInfo : InstrInfo {
 }
 
