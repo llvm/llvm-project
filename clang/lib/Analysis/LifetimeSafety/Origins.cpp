@@ -9,9 +9,30 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeBase.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace clang::lifetimes::internal {
+
+static bool isGslPointerType(QualType QT) {
+  if (const auto *RD = QT->getAsCXXRecordDecl()) {
+    // We need to check the template definition for specializations.
+    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+      return CTSD->getSpecializedTemplate()
+          ->getTemplatedDecl()
+          ->hasAttr<PointerAttr>();
+    return RD->hasAttr<PointerAttr>();
+  }
+  return false;
+}
+
+static bool isPointerType(QualType QT) {
+  return QT->isPointerOrReferenceType() || isGslPointerType(QT);
+}
+// Check if a type has an origin.
+static bool hasOrigin(const Expr *E) {
+  return E->isGLValue() || isPointerType(E->getType());
+}
 
 void OriginManager::dump(OriginID OID, llvm::raw_ostream &OS) const {
   OS << OID << " (";
@@ -23,10 +44,6 @@ void OriginManager::dump(OriginID OID, llvm::raw_ostream &OS) const {
   else
     OS << "Unknown";
   OS << ")";
-}
-
-const llvm::StringMap<unsigned> OriginManager::getMissingOrigins() const {
-  return ExprTypeToMissingOriginCount;
 }
 
 Origin &OriginManager::addOrigin(OriginID ID, const clang::ValueDecl &D) {
@@ -49,14 +66,14 @@ OriginID OriginManager::get(const Expr &E) {
 
   // if the expression has no specific origin, increment the missing origin
   // counter.
-  std::string ExprStr(E.getStmtClassName());
-  ExprStr = ExprStr + "<" + E.getType().getAsString() + ">";
-  auto CountIt = ExprTypeToMissingOriginCount.find(ExprStr);
-  if (CountIt == ExprTypeToMissingOriginCount.end()) {
-    ExprTypeToMissingOriginCount[ExprStr] = 1;
-  } else {
-    CountIt->second++;
-  }
+  // std::string ExprStr(E.getStmtClassName());
+  // ExprStr = ExprStr + "<" + E.getType().getAsString() + ">";
+  // auto CountIt = ExprTypeToMissingOriginCount.find(ExprStr);
+  // if (CountIt == ExprTypeToMissingOriginCount.end())
+  //   ExprTypeToMissingOriginCount[ExprStr] = 1;
+  // else
+  //   CountIt->second++;
+
   // If the expression itself has no specific origin, and it's a reference
   // to a declaration, its origin is that of the declaration it refers to.
   // For pointer types, where we don't pre-emptively create an origin for the
@@ -104,6 +121,35 @@ OriginID OriginManager::getOrCreate(const ValueDecl &D) {
   addOrigin(NewID, D);
   DeclToOriginID[&D] = NewID;
   return NewID;
+}
+
+const llvm::DenseMap<const clang::Expr *, OriginID> &
+OriginManager::getExprToOriginId() const {
+  return ExprToOriginID;
+}
+
+void OriginManager::collectMissingOrigins(Stmt *FunctionBody,
+                                          LifetimeSafetyStats &LSStats) {
+  if (!FunctionBody)
+    return;
+
+  MissingOriginCollector Collector(*this, LSStats.MissingOriginCount);
+  Collector.TraverseStmt(const_cast<Stmt *>(FunctionBody));
+}
+
+bool MissingOriginCollector::VisitExpr(Expr *E) {
+  if (!hasOrigin(E))
+    return true;
+  // Check if we have an origin for this expression
+  const auto &ExprToOriginId = OM.getExprToOriginId();
+  auto It = ExprToOriginId.find(E);
+  if (It == ExprToOriginId.end()) {
+    // No origin found - count this as missing
+    std::string ExprStr = std::string(E->getStmtClassName()) + "<" +
+                          E->getType().getAsString() + ">";
+    MissingOriginCount[ExprStr]++;
+  }
+  return true;
 }
 
 } // namespace clang::lifetimes::internal

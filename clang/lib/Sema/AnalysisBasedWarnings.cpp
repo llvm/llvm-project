@@ -54,7 +54,6 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -3165,7 +3164,6 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
 void clang::sema::AnalysisBasedWarnings::PrintStats() const {
 
-  clang::lifetimes::PrintStats(LSStats);
   llvm::errs() << "\n*** Analysis Based Warnings Stats:\n";
   unsigned NumCFGsBuilt = NumFunctionsAnalyzed - NumFunctionsWithBadCFGs;
   unsigned AvgCFGBlocksPerFunction =
@@ -3194,4 +3192,5 @@ void clang::sema::AnalysisBasedWarnings::PrintStats() const {
                << " average block visits per function.\n"
                << "  " << MaxUninitAnalysisBlockVisitsPerFunction
                << " max block visits per function.\n";
+  clang::lifetimes::printStats(LSStats);
 }

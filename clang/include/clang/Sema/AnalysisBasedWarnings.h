@@ -105,7 +105,9 @@ private:
   /// a single function.
   unsigned MaxUninitAnalysisBlockVisitsPerFunction;
 
-  /// Map from expressions missing origin in OriginManager to their counts.
+  /// Statistics collected during lifetime safety analysis.
+  /// These are accumulated across all analyzed functions and printed
+  /// when -print-stats is enabled.
   clang::lifetimes::LifetimeSafetyStats LSStats;
 
   /// @}

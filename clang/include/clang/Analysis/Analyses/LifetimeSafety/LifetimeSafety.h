@@ -54,7 +54,19 @@ public:
                                   Confidence Confidence) {}
 };
 
+// utility function to print missing origin stats.
+void printStats(const LifetimeSafetyStats &Stats);
+
+/// The main entry point for the analysis.
+void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
+                               LifetimeSafetyReporter *Reporter,
+                               LifetimeSafetyStats &Stats, bool CollectStats);
+
 namespace internal {
+
+void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
+                          LifetimeSafetyStats &Stats);
+
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
@@ -89,14 +101,6 @@ private:
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
 };
 } // namespace internal
-
-// utility function to print missing origin stats.
-void PrintStats(const LifetimeSafetyStats &Stats);
-
-/// The main entry point for the analysis.
-void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter,
-                               LifetimeSafetyStats &Stats, bool CollectStats);
 
 } // namespace clang::lifetimes
 

@@ -20,6 +20,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/FactsGenerator.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -70,9 +71,17 @@ void LifetimeSafetyAnalysis::run() {
 
   runLifetimeChecker(*LoanPropagation, *LiveOrigins, FactMgr, AC, Reporter);
 }
+
+void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
+                          LifetimeSafetyStats &Stats) {
+  if (!AC.getBody())
+    return;
+  Stmt *FunctionBody = AC.getBody();
+  OM.collectMissingOrigins(FunctionBody, Stats);
+}
 } // namespace internal
 
-void PrintStats(const LifetimeSafetyStats &Stats) {
+void printStats(const LifetimeSafetyStats &Stats) {
   llvm::errs() << "\n*** LifetimeSafety Missing Origin Stats "
                   "(expression_type : count) :\n\n";
   unsigned totalMissingOrigins = 0;
@@ -90,9 +99,7 @@ void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
   std::unique_ptr<internal::LifetimeSafetyAnalysis> Analysis =
       std::make_unique<internal::LifetimeSafetyAnalysis>(AC, Reporter);
   Analysis->run();
-  for (const auto &[expr, count] :
-       Analysis->getFactManager().getOriginMgr().getMissingOrigins()) {
-    Stats.MissingOriginCount[expr] += count;
-  }
+  if (CollectStats)
+    collectLifetimeStats(AC, Analysis->getFactManager().getOriginMgr(), Stats);
 }
 } // namespace clang::lifetimes
