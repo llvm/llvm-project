@@ -1250,6 +1250,7 @@ llvm::Constant *ItaniumCXXABI::EmitMemberPointer(const APValue &MP,
     return pointerAuthResignMemberFunctionPointer(Src, MPType, SrcType, CGM);
   }
 
+  getContext().recordMemberDataPointerEvaluation(MPD);
   CharUnits FieldOffset =
     getContext().toCharUnitsFromBits(getContext().getFieldOffset(MPD));
   return EmitMemberDataPointer(MPT, ThisAdjustment + FieldOffset);

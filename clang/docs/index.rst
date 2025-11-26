@@ -49,6 +49,7 @@ Using Clang as a Compiler
    PointerAuthentication
    SafeStack
    ShadowCallStack
+   StructureProtection
    SourceBasedCodeCoverage
    StandardCPlusPlusModules
    Modules
