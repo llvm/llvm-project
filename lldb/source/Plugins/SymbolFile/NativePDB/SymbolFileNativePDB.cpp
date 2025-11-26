@@ -152,14 +152,24 @@ static bool IsFunctionEpilogue(const CompilandIndexItem &cci,
   return false;
 }
 
+// See llvm::codeview::TypeIndex::simpleTypeName as well as strForPrimitiveTi
+// from the original pdbdump:
+// https://github.com/microsoft/microsoft-pdb/blob/805655a28bd8198004be2ac27e6e0290121a5e89/pdbdump/pdbdump.cpp#L1896-L1974
+//
+// For 64bit integers we use "long long" like DIA instead of "__int64".
 static llvm::StringRef GetSimpleTypeName(SimpleTypeKind kind) {
   switch (kind) {
   case SimpleTypeKind::Boolean128:
-  case SimpleTypeKind::Boolean16:
-  case SimpleTypeKind::Boolean32:
+    return "__bool128";
   case SimpleTypeKind::Boolean64:
+    return "__bool64";
+  case SimpleTypeKind::Boolean32:
+    return "__bool32";
+  case SimpleTypeKind::Boolean16:
+    return "__bool16";
   case SimpleTypeKind::Boolean8:
     return "bool";
+
   case SimpleTypeKind::Byte:
   case SimpleTypeKind::UnsignedCharacter:
     return "unsigned char";
@@ -168,57 +178,81 @@ static llvm::StringRef GetSimpleTypeName(SimpleTypeKind kind) {
   case SimpleTypeKind::SignedCharacter:
   case SimpleTypeKind::SByte:
     return "signed char";
-  case SimpleTypeKind::Character16:
-    return "char16_t";
   case SimpleTypeKind::Character32:
     return "char32_t";
+  case SimpleTypeKind::Character16:
+    return "char16_t";
   case SimpleTypeKind::Character8:
     return "char8_t";
+
+  case SimpleTypeKind::Complex128:
+    return "_Complex __float128";
   case SimpleTypeKind::Complex80:
+    return "_Complex long double";
   case SimpleTypeKind::Complex64:
+    return "_Complex double";
+  case SimpleTypeKind::Complex48:
+    return "_Complex __float48";
   case SimpleTypeKind::Complex32:
-    return "complex";
+  case SimpleTypeKind::Complex32PartialPrecision:
+    return "_Complex float";
+  case SimpleTypeKind::Complex16:
+    return "_Complex _Float16";
+
   case SimpleTypeKind::Float128:
+    return "__float128";
   case SimpleTypeKind::Float80:
     return "long double";
   case SimpleTypeKind::Float64:
     return "double";
+  case SimpleTypeKind::Float48:
+    return "__float48";
   case SimpleTypeKind::Float32:
+  case SimpleTypeKind::Float32PartialPrecision:
     return "float";
   case SimpleTypeKind::Float16:
-    return "single";
+    return "_Float16";
+
+  case SimpleTypeKind::Int128Oct:
   case SimpleTypeKind::Int128:
     return "__int128";
   case SimpleTypeKind::Int64:
   case SimpleTypeKind::Int64Quad:
-    return "int64_t";
+    return "long long";
+  case SimpleTypeKind::Int32Long:
+    return "long";
   case SimpleTypeKind::Int32:
     return "int";
   case SimpleTypeKind::Int16:
+  case SimpleTypeKind::Int16Short:
     return "short";
+
+  case SimpleTypeKind::UInt128Oct:
   case SimpleTypeKind::UInt128:
     return "unsigned __int128";
   case SimpleTypeKind::UInt64:
   case SimpleTypeKind::UInt64Quad:
-    return "uint64_t";
-  case SimpleTypeKind::HResult:
-    return "HRESULT";
+    return "unsigned long long";
   case SimpleTypeKind::UInt32:
     return "unsigned";
   case SimpleTypeKind::UInt16:
   case SimpleTypeKind::UInt16Short:
     return "unsigned short";
-  case SimpleTypeKind::Int32Long:
-    return "long";
   case SimpleTypeKind::UInt32Long:
     return "unsigned long";
+
+  case SimpleTypeKind::HResult:
+    return "HRESULT";
   case SimpleTypeKind::Void:
     return "void";
   case SimpleTypeKind::WideCharacter:
     return "wchar_t";
-  default:
+
+  case SimpleTypeKind::None:
+  case SimpleTypeKind::NotTranslated:
     return "";
   }
+  return "";
 }
 
 static bool IsClassRecord(TypeLeafKind kind) {
@@ -598,8 +632,8 @@ lldb::TypeSP SymbolFileNativePDB::CreateSimpleType(TypeIndex ti,
   uint64_t uid = toOpaqueUid(PdbTypeSymId(ti, false));
   if (ti == TypeIndex::NullptrT()) {
     Declaration decl;
-    return MakeType(uid, ConstString("std::nullptr_t"), 0, nullptr,
-                    LLDB_INVALID_UID, Type::eEncodingIsUID, decl, ct,
+    return MakeType(uid, ConstString("decltype(nullptr)"), std::nullopt,
+                    nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID, decl, ct,
                     Type::ResolveState::Full);
   }
 
@@ -720,6 +754,10 @@ TypeSP SymbolFileNativePDB::CreateArrayType(PdbTypeSymId type_id,
 TypeSP SymbolFileNativePDB::CreateFunctionType(PdbTypeSymId type_id,
                                                const MemberFunctionRecord &mfr,
                                                CompilerType ct) {
+  if (mfr.ReturnType.isSimple())
+    GetOrCreateType(mfr.ReturnType);
+  CreateSimpleArgumentListTypes(mfr.ArgumentList);
+
   Declaration decl;
   return MakeType(toOpaqueUid(type_id), ConstString(), 0, nullptr,
                   LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
@@ -729,10 +767,31 @@ TypeSP SymbolFileNativePDB::CreateFunctionType(PdbTypeSymId type_id,
 TypeSP SymbolFileNativePDB::CreateProcedureType(PdbTypeSymId type_id,
                                                 const ProcedureRecord &pr,
                                                 CompilerType ct) {
+  if (pr.ReturnType.isSimple())
+    GetOrCreateType(pr.ReturnType);
+  CreateSimpleArgumentListTypes(pr.ArgumentList);
+
   Declaration decl;
   return MakeType(toOpaqueUid(type_id), ConstString(), 0, nullptr,
                   LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
                   ct, lldb_private::Type::ResolveState::Full);
+}
+
+void SymbolFileNativePDB::CreateSimpleArgumentListTypes(
+    llvm::codeview::TypeIndex arglist_ti) {
+  if (arglist_ti.isNoneType())
+    return;
+
+  CVType arglist_cvt = m_index->tpi().getType(arglist_ti);
+  if (arglist_cvt.kind() != LF_ARGLIST)
+    return; // invalid debug info
+
+  ArgListRecord alr;
+  llvm::cantFail(
+      TypeDeserializer::deserializeAs<ArgListRecord>(arglist_cvt, alr));
+  for (TypeIndex id : alr.getIndices())
+    if (!id.isNoneType() && id.isSimple())
+      GetOrCreateType(id);
 }
 
 TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
@@ -1071,7 +1130,35 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
   if (!section_list)
     return;
 
-  for (auto pid : m_index->publics().getPublicsTable()) {
+  PublicSym32 last_sym;
+  size_t last_sym_idx = 0;
+  lldb::SectionSP section_sp;
+
+  // To estimate the size of a symbol, we use the difference to the next symbol.
+  // If there's no next symbol or the section/segment changed, the symbol will
+  // take the remaining space. The estimate can be too high in case there's
+  // padding between symbols. This similar to the algorithm used by the DIA
+  // SDK.
+  auto finish_last_symbol = [&](const PublicSym32 *next) {
+    if (!section_sp)
+      return;
+    Symbol *last = symtab.SymbolAtIndex(last_sym_idx);
+    if (!last)
+      return;
+
+    if (next && last_sym.Segment == next->Segment) {
+      assert(last_sym.Offset <= next->Offset);
+      last->SetByteSize(next->Offset - last_sym.Offset);
+    } else {
+      // the last symbol was the last in its section
+      assert(section_sp->GetByteSize() >= last_sym.Offset);
+      assert(!next || next->Segment > last_sym.Segment);
+      last->SetByteSize(section_sp->GetByteSize() - last_sym.Offset);
+    }
+  };
+
+  // The address map is sorted by the address of a symbol.
+  for (auto pid : m_index->publics().getAddressMap()) {
     PdbGlobalSymId global{pid, true};
     CVSymbol sym = m_index->ReadSymbolRecord(global);
     auto kind = sym.kind();
@@ -1079,8 +1166,11 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
       continue;
     PublicSym32 pub =
         llvm::cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(sym));
+    finish_last_symbol(&pub);
 
-    auto section_sp = section_list->FindSectionByID(pub.Segment);
+    if (!section_sp || last_sym.Segment != pub.Segment)
+      section_sp = section_list->FindSectionByID(pub.Segment);
+
     if (!section_sp)
       continue;
 
@@ -1089,20 +1179,24 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
         (pub.Flags & PublicSymFlags::Code) != PublicSymFlags::None)
       type = eSymbolTypeCode;
 
-    symtab.AddSymbol(Symbol(/*symID=*/pid,
-                            /*name=*/pub.Name,
-                            /*type=*/type,
-                            /*external=*/true,
-                            /*is_debug=*/true,
-                            /*is_trampoline=*/false,
-                            /*is_artificial=*/false,
-                            /*section_sp=*/section_sp,
-                            /*value=*/pub.Offset,
-                            /*size=*/0,
-                            /*size_is_valid=*/false,
-                            /*contains_linker_annotations=*/false,
-                            /*flags=*/0));
+    last_sym_idx =
+        symtab.AddSymbol(Symbol(/*symID=*/pid,
+                                /*name=*/pub.Name,
+                                /*type=*/type,
+                                /*external=*/true,
+                                /*is_debug=*/true,
+                                /*is_trampoline=*/false,
+                                /*is_artificial=*/false,
+                                /*section_sp=*/section_sp,
+                                /*value=*/pub.Offset,
+                                /*size=*/0,
+                                /*size_is_valid=*/false,
+                                /*contains_linker_annotations=*/false,
+                                /*flags=*/0));
+    last_sym = pub;
   }
+
+  finish_last_symbol(nullptr);
 }
 
 size_t SymbolFileNativePDB::ParseFunctions(CompileUnit &comp_unit) {
@@ -2141,14 +2235,17 @@ TypeSP SymbolFileNativePDB::CreateTypedef(PdbGlobalSymId id) {
   if (!ts)
     return nullptr;
 
-  ts->GetNativePDBParser()->GetOrCreateTypedefDecl(id);
+  auto *typedef_decl = ts->GetNativePDBParser()->GetOrCreateTypedefDecl(id);
+
+  CompilerType ct = target_type->GetForwardCompilerType();
+  if (auto *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get()))
+    ct = clang->GetType(clang->getASTContext().getTypeDeclType(typedef_decl));
 
   Declaration decl;
   return MakeType(toOpaqueUid(id), ConstString(udt.Name),
                   llvm::expectedToOptional(target_type->GetByteSize(nullptr)),
                   nullptr, target_type->GetID(),
-                  lldb_private::Type::eEncodingIsTypedefUID, decl,
-                  target_type->GetForwardCompilerType(),
+                  lldb_private::Type::eEncodingIsTypedefUID, decl, ct,
                   lldb_private::Type::ResolveState::Forward);
 }
 

@@ -9,10 +9,13 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/UriParser.h"
 #include "lldb/ValueObject/ValueObject.h"
+
+#include "llvm/ADT/DenseMap.h"
 
 #include "AdbClient.h"
 #include "PlatformAndroid.h"
@@ -477,6 +480,133 @@ std::string PlatformAndroid::GetRunAs() {
   }
   return run_as.str();
 }
+
+static bool NeedsCmdlineSupplement(const ProcessInstanceInfo &proc_info) {
+  llvm::StringRef name =
+      proc_info.GetExecutableFile().GetFilename().GetStringRef();
+  return name.contains("app_process") || name.contains("zygote");
+}
+
+// Fetch /proc/PID/cmdline for processes to get actual package names.
+// Android apps often show as "zygote" or "app_process" without this.
+static void SupplementWithCmdlineInfo(ProcessInstanceInfoList &proc_infos,
+                                      AdbClient *adb) {
+  if (proc_infos.empty())
+    return;
+
+  llvm::DenseMap<lldb::pid_t, ProcessInstanceInfo *> pid_map;
+  std::string pid_list;
+  for (auto &proc_info : proc_infos) {
+    if (NeedsCmdlineSupplement(proc_info)) {
+      lldb::pid_t pid = proc_info.GetProcessID();
+      pid_map[pid] = &proc_info;
+      if (!pid_list.empty())
+        pid_list += " ";
+      pid_list += std::to_string(pid);
+    }
+  }
+
+  if (pid_list.empty())
+    return;
+
+  Log *log = GetLog(LLDBLog::Platform);
+
+  // Use xargs -P to parallelize cmdline fetching (up to 8 concurrent reads)
+  StreamString cmd;
+  cmd.Printf(
+      "echo '%s' | xargs -n 1 -P 8 sh -c "
+      "'echo \"$1:$(cat /proc/$1/cmdline 2>/dev/null | tr \"\\0\" \" \")\"' sh",
+      pid_list.c_str());
+
+  std::string cmdline_output;
+  Status error = adb->Shell(cmd.GetData(), seconds(5), &cmdline_output);
+
+  if (error.Fail() || cmdline_output.empty())
+    return;
+
+  llvm::SmallVector<llvm::StringRef, 256> lines;
+  llvm::StringRef(cmdline_output).split(lines, '\n', -1, false);
+
+  for (llvm::StringRef line : lines) {
+    line = line.trim();
+    auto [pid_str, cmdline] = line.split(':');
+    if (pid_str.empty() || cmdline.empty())
+      continue;
+
+    cmdline = cmdline.trim();
+
+    lldb::pid_t pid;
+    if (!llvm::to_integer(pid_str, pid) || cmdline.empty())
+      continue;
+
+    auto it = pid_map.find(pid);
+    if (it == pid_map.end())
+      continue;
+
+    ProcessInstanceInfo *proc_info = it->second;
+    llvm::SmallVector<llvm::StringRef, 16> args;
+    cmdline.split(args, ' ', -1, false);
+
+    if (!args.empty()) {
+      proc_info->GetExecutableFile().SetFile(args[0], FileSpec::Style::posix);
+
+      if (args.size() > 1) {
+        Args process_args;
+        for (size_t i = 1; i < args.size(); ++i) {
+          if (!args[i].empty())
+            process_args.AppendArgument(args[i]);
+        }
+        proc_info->SetArguments(process_args, false);
+      }
+
+      LLDB_LOGF(log,
+                "PlatformAndroid::%s supplemented PID %llu with cmdline: %s",
+                __FUNCTION__, static_cast<unsigned long long>(pid),
+                cmdline.str().c_str());
+    }
+  }
+}
+
+uint32_t
+PlatformAndroid::FindProcesses(const ProcessInstanceInfoMatch &match_info,
+                               ProcessInstanceInfoList &proc_infos) {
+  proc_infos.clear();
+
+  if (IsHost())
+    return PlatformLinux::FindProcesses(match_info, proc_infos);
+
+  if (!m_remote_platform_sp)
+    return 0;
+
+  // Android-specific process name handling:
+  // Apps spawned from zygote initially appear as "app_process" or "zygote"
+  // in the process list, but their actual package names (e.g.,
+  // "com.example.app") are only available in /proc/PID/cmdline. To support
+  // name-based matching, we must first fetch cmdline info for all processes,
+  // then apply the original name filter.
+  ProcessInstanceInfoMatch broad_match_info = match_info;
+  broad_match_info.SetNameMatchType(NameMatch::Ignore);
+
+  ProcessInstanceInfoList all_procs;
+  uint32_t count =
+      m_remote_platform_sp->FindProcesses(broad_match_info, all_procs);
+
+  if (count > 0) {
+    Status error;
+    AdbClientUP adb(GetAdbClient(error));
+    if (error.Success())
+      SupplementWithCmdlineInfo(all_procs, adb.get());
+
+    // Apply the original name matching against supplemented process info.
+    for (auto &proc_info : all_procs) {
+      if (match_info.Matches(proc_info))
+        proc_infos.push_back(proc_info);
+    }
+  }
+
+  return proc_infos.size();
+}
+
 std::unique_ptr<AdbSyncService> PlatformAndroid::GetSyncService(Status &error) {
   auto sync_service = std::make_unique<AdbSyncService>(m_device_id);
   error = sync_service->SetupSyncConnection();
