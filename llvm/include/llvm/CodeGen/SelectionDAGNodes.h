@@ -2011,8 +2011,7 @@ class DeactivationSymbolSDNode : public SDNode {
   const GlobalValue *TheGlobal;
 
   DeactivationSymbolSDNode(const GlobalValue *GV, SDVTList VTs)
-      : SDNode(ISD::DEACTIVATION_SYMBOL, 0, DebugLoc(), VTs),
-        TheGlobal(GV) {}
+      : SDNode(ISD::DEACTIVATION_SYMBOL, 0, DebugLoc(), VTs), TheGlobal(GV) {}
 
 public:
   const GlobalValue *getGlobal() const { return TheGlobal; }
