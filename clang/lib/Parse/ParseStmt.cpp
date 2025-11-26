@@ -715,8 +715,9 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
   // identifier ':' statement
   SourceLocation ColonLoc = ConsumeToken();
 
-  LabelDecl *LD = Actions.LookupOrCreateLabel(IdentTok.getIdentifierInfo(),
-                                              IdentTok.getLocation());
+  LabelDecl *LD = Actions.LookupOrCreateLabel(
+      IdentTok.getIdentifierInfo(), IdentTok.getLocation(), /*GnuLabelLoc=*/{},
+      /*ForLabelStmt=*/true);
 
   // Read label attributes, if present.
   StmtResult SubStmt;
@@ -759,6 +760,12 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
     SubStmt = Actions.ActOnNullStmt(ColonLoc);
 
   DiagnoseLabelFollowedByDecl(*this, SubStmt.get());
+
+  // If a label cannot appear here, just return the underlying statement.
+  if (!LD) {
+    Attrs.clear();
+    return SubStmt.get();
+  }
 
   Actions.ProcessDeclAttributeList(Actions.CurScope, LD, Attrs);
   Attrs.clear();
