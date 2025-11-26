@@ -1815,17 +1815,12 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   SDValue SourceValue = N->getOperand(0);
   SDValue SinkValue = N->getOperand(1);
   SDValue EltSize = N->getOperand(2);
+  SDValue LaneOffset = N->getOperand(3);
 
   bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
   EVT VT = N->getValueType(0);
   EVT PtrVT = SourceValue->getValueType(0);
 
-  SDValue Offset = N->getOperand(3);
-  if (VT.isScalableVT())
-    Offset = DAG.getVScale(DL, PtrVT, N->getConstantOperandAPInt(3));
-
-  SourceValue = DAG.getNode(ISD::ADD, DL, PtrVT, SourceValue,
-                            DAG.getNode(ISD::MUL, DL, PtrVT, EltSize, Offset));
   SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
   if (IsReadAfterWrite)
     Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
@@ -1843,6 +1838,8 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   EVT SplatVT = VT.changeElementType(PtrVT);
   SDValue DiffSplat = DAG.getSplat(SplatVT, DL, Diff);
   SDValue VectorStep = DAG.getStepVector(DL, SplatVT);
+  VectorStep = DAG.getNode(ISD::ADD, DL, SplatVT, VectorStep,
+                           DAG.getSplat(SplatVT, DL, LaneOffset));
   EVT MaskVT = VT.changeElementType(MVT::i1);
   SDValue DiffMask =
       DAG.getSetCC(DL, MaskVT, VectorStep, DiffSplat, ISD::CondCode::SETULT);

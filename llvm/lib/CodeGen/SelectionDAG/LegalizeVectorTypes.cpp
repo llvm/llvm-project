@@ -1701,16 +1701,8 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
 
 /// Split a loop dependence mask.
 /// This is done by creating a high and low mask, each of half the vector
-/// length. A select of the high mask and a predicate of all zeroes is needed to
-/// guarantee that the high mask is safe. A case where simply producing a high
-/// mask without the select is unsafe, is when the difference between the two
-/// pointers is less than half the vector length, e.g. ptrA = 0 and ptrB 3 when
-/// the vector length is 32.
-///     The full 32xi1 mask should be three active lanes and the rest inactive,
-///     however when half the vector length is added to ptrA to produce the high
-///     mask, the difference between ptrA and ptrB is now -13, which will result
-///     in a mask with all lanes active. The select will guard against this case
-///     by choosing a mask of all inactive lanes when ptrA + VL/2 >= ptrB.
+/// length. The low mask inherits the lane offset from the original mask, and
+/// the high mask adds half the vector length.
 void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
                                                         SDValue &Hi) {
   SDLoc DL(N);
@@ -1719,12 +1711,14 @@ void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
   SDValue PtrA = N->getOperand(0);
   SDValue PtrB = N->getOperand(1);
 
-  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB, N->getOperand(2),
-                   N->getOperand(3));
-  unsigned Offset =
+  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB,
+                   /*ElementSizeInBytes=*/N->getOperand(2),
+                   /*LaneOffset=*/N->getOperand(3));
+  unsigned LaneOffset =
       N->getConstantOperandVal(3) + LoVT.getVectorMinNumElements();
-  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB, N->getOperand(2),
-                   DAG.getConstant(Offset, DL, MVT::i64));
+  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB,
+                   /*ElementSizeInBytes=*/N->getOperand(2),
+                   /*LaneOffset=*/DAG.getConstant(LaneOffset, DL, MVT::i64));
 }
 
 void DAGTypeLegalizer::SplitVecRes_BUILD_VECTOR(SDNode *N, SDValue &Lo,
