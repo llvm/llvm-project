@@ -1442,8 +1442,16 @@ Register
 SPIRVInstructionSelector::getOrCreateMemSetGlobal(MachineInstr &I) const {
   MachineIRBuilder MIRBuilder(I);
   assert(I.getOperand(1).isReg() && I.getOperand(2).isReg());
-  unsigned Val = getIConstVal(I.getOperand(1).getReg(), MRI);
+
+  // TODO: check if we have such GV, add init, use buildGlobalVariable.
   unsigned Num = getIConstVal(I.getOperand(2).getReg(), MRI);
+  Function &CurFunction = GR.CurMF->getFunction();
+  Type *LLVMArrTy =
+      ArrayType::get(IntegerType::get(CurFunction.getContext(), 8), Num);
+  GlobalVariable *GV = new GlobalVariable(*CurFunction.getParent(), LLVMArrTy,
+                                          true, GlobalValue::InternalLinkage,
+                                          Constant::getNullValue(LLVMArrTy));
+
   Type *ValTy = Type::getInt8Ty(I.getMF()->getFunction().getContext());
   Type *ArrTy = ArrayType::get(ValTy, Num);
   SPIRVType *VarTy = GR.getOrCreateSPIRVPointerType(
@@ -1451,15 +1459,10 @@ SPIRVInstructionSelector::getOrCreateMemSetGlobal(MachineInstr &I) const {
 
   SPIRVType *SpvArrTy = GR.getOrCreateSPIRVType(
       ArrTy, MIRBuilder, SPIRV::AccessQualifier::None, false);
+
+  unsigned Val = getIConstVal(I.getOperand(1).getReg(), MRI);
   Register Const = GR.getOrCreateConstIntArray(Val, Num, I, SpvArrTy, TII);
-  // TODO: check if we have such GV, add init, use buildGlobalVariable.
-  Function &CurFunction = GR.CurMF->getFunction();
-  Type *LLVMArrTy =
-      ArrayType::get(IntegerType::get(CurFunction.getContext(), 8), Num);
-  // Module takes ownership of the global var.
-  GlobalVariable *GV = new GlobalVariable(*CurFunction.getParent(), LLVMArrTy,
-                                          true, GlobalValue::InternalLinkage,
-                                          Constant::getNullValue(LLVMArrTy));
+
   Register VarReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   auto MIBVar =
       BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
