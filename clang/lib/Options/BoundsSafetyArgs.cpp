@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Driver/BoundsSafetyArgs.h"
+#include "clang/Options/BoundsSafetyArgs.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Options/Options.h"
@@ -14,11 +14,10 @@
 #include <array>
 
 using namespace llvm::opt;
-using namespace clang::options;
 
 namespace clang {
 
-namespace driver {
+namespace options {
 
 static void DiagnoseDisabledBoundsSafetyChecks(
     LangOptions::BoundsSafetyNewChecksMaskIntTy EnabledChecks,
@@ -212,6 +211,6 @@ ParseBoundsSafetyNewChecksMaskFromArgs(const llvm::opt::ArgList &Args,
   return Result;
 }
 
-} // namespace driver
+} // namespace options
 
 } // namespace clang

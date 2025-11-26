@@ -5,20 +5,20 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_BASIC_BOUNDS_SAFETY_ARGS_H
-#define LLVM_CLANG_BASIC_BOUNDS_SAFETY_ARGS_H
+#ifndef LLVM_CLANG_OPTIONS_BOUNDSSAFETYARGS_H
+#define LLVM_CLANG_OPTIONS_BOUNDSSAFETYARGS_H
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/Option/ArgList.h"
 
 namespace clang {
-namespace driver {
+namespace options {
 
 LangOptions::BoundsSafetyNewChecksMaskIntTy
 ParseBoundsSafetyNewChecksMaskFromArgs(const llvm::opt::ArgList &Args,
                                        DiagnosticsEngine *Diags,
                                        bool DiagnoseMissingChecks);
-} // namespace driver
+} // namespace options
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_OPTIONS_BOUNDSSAFETYARGS_H

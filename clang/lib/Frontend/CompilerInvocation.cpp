@@ -29,7 +29,6 @@
 #include "clang/Basic/XRayInstr.h"
 #include "clang/CAS/IncludeTree.h"
 #include "clang/Config/config.h"
-#include "clang/Driver/BoundsSafetyArgs.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Frontend/CompileJobCacheResult.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
@@ -40,6 +39,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Options/BoundsSafetyArgs.h" // TO_UPSTREAM(BoundsSafety)
 #include "clang/Options/Options.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ModuleFileExtension.h"
@@ -104,7 +104,6 @@
 #include <vector>
 
 using namespace clang;
-using namespace driver;
 using namespace options;
 using namespace llvm::opt;
 

@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
 )
 
 add_clang_library(clangOptions
+  BoundsSafetyArgs.cpp
   DriverOptions.cpp
   OptionUtils.cpp
   

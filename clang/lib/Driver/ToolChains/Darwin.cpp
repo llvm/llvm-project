@@ -11,11 +11,11 @@
 #include "clang/Basic/AlignedAllocation.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Config/config.h"
-#include "clang/Driver/BoundsSafetyArgs.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/BoundsSafetyArgs.h" // TO_UPSTREAM(BoundsSafety)
 #include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
@@ -1335,9 +1335,10 @@ void DarwinClang::addClangTargetOptions(
   if (DriverArgs.hasFlagNoClaim(options::OPT_fbounds_safety,
                                 options::OPT_fno_bounds_safety, false)) {
     LangOptions::BoundsSafetyNewChecksMaskIntTy NewChecks =
-        ParseBoundsSafetyNewChecksMaskFromArgs(DriverArgs,
-                                               /*DiagnosticsEngine=*/nullptr,
-                                               /*DiagnoseMissingChecks=*/false);
+        options::ParseBoundsSafetyNewChecksMaskFromArgs(
+            DriverArgs,
+            /*DiagnosticsEngine=*/nullptr,
+            /*DiagnoseMissingChecks=*/false);
     if (NewChecks & LangOptions::BS_CHK_LibCAttributes) {
       bool TargetWithoutUserspaceLibc = false;
       if (getTriple().isOSDarwin() && !TargetWithoutUserspaceLibc) {

@@ -26,13 +26,13 @@
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
-#include "clang/Driver/BoundsSafetyArgs.h" // TO_UPSTREAM(BoundsSafety)
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/XRayArgs.h"
+#include "clang/Options/BoundsSafetyArgs.h" // TO_UPSTREAM(BoundsSafety)
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -7581,7 +7581,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
       // warnings in CC1 (where `ParseBoundsSafetyNewChecksMaskFromArgs` is also
       // called) they cannot be suppressed and ignore `-Werror`
       // (rdar://152730261).
-      (void)ParseBoundsSafetyNewChecksMaskFromArgs(
+      (void)options::ParseBoundsSafetyNewChecksMaskFromArgs(
           Args, &D.getDiags(),
           /*DiagnoseMissingChecks=*/true);
     }

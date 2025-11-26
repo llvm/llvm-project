@@ -17,7 +17,6 @@ endif()
 
 add_clang_library(clangDriver
   Action.cpp
-  BoundsSafetyArgs.cpp
   Compilation.cpp
   CreateASTUnitFromArgs.cpp
   CreateInvocationFromArgs.cpp
