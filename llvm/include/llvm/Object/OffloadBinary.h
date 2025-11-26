@@ -134,7 +134,7 @@ public:
   struct StringEntry {
     uint64_t KeyOffset;
     uint64_t ValueOffset;
-    uint64_t ValueSize;   // Size of the value in bytes.
+    uint64_t ValueSize; // Size of the value in bytes.
   };
 
 private:

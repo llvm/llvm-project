@@ -189,19 +189,23 @@ OffloadBinary::create(MemoryBufferRef Buf) {
       TheHeader->Size < sizeof(Entry) || TheHeader->Size < sizeof(Header))
     return errorCodeToError(object_error::unexpected_eof);
 
-  if (TheHeader->EntryOffset > TheHeader->Size - sizeof(Entry) ||
-      TheHeader->EntrySize > TheHeader->Size - sizeof(Header))
+  uint64_t EntriesSize = sizeof(Entry) * TheHeader->EntriesCount;
+  if (TheHeader->EntriesOffset > TheHeader->Size - EntriesSize ||
+      EntriesSize > TheHeader->Size - sizeof(Header))
     return errorCodeToError(object_error::unexpected_eof);
 
-  const Entry *TheEntry =
-      reinterpret_cast<const Entry *>(&Start[TheHeader->EntryOffset]);
+  const Entry *Entries =
+      reinterpret_cast<const Entry *>(&Start[TheHeader->EntriesOffset]);
+  for (uint32_t I = 0; I < TheHeader->EntriesCount; ++I) {
+    const Entry *TheEntry = &Entries[I];
 
-  if (TheEntry->ImageOffset > Buf.getBufferSize() ||
-      TheEntry->StringOffset > Buf.getBufferSize())
-    return errorCodeToError(object_error::unexpected_eof);
+    if (TheEntry->ImageOffset > Buf.getBufferSize() ||
+        TheEntry->StringOffset > Buf.getBufferSize())
+      return errorCodeToError(object_error::unexpected_eof);
+  }
 
   return std::unique_ptr<OffloadBinary>(
-      new OffloadBinary(Buf, TheHeader, TheEntry));
+      new OffloadBinary(Buf, TheHeader, Entries));
 }
 
 SmallString<0> OffloadBinary::write(const OffloadingImage &OffloadingData) {
@@ -227,8 +231,8 @@ SmallString<0> OffloadBinary::write(const OffloadingImage &OffloadingData) {
   Header TheHeader;
   TheHeader.Size = alignTo(
       BinaryDataSize + OffloadingData.Image->getBufferSize(), getAlignment());
-  TheHeader.EntryOffset = sizeof(Header);
-  TheHeader.EntrySize = sizeof(Entry);
+  TheHeader.EntriesOffset = sizeof(Header);
+  TheHeader.EntriesCount = 1;
 
   // Create the entry using the string table offsets. The string table will be
   // placed directly after the entry in memory, and the image after that.

@@ -45,10 +45,10 @@ bool yaml2offload(Binary &Doc, raw_ostream &Out, ErrorHandler EH) {
       TheHeader->Version = *Doc.Version;
     if (Doc.Size)
       TheHeader->Size = *Doc.Size;
-    if (Doc.EntryOffset)
-      TheHeader->EntryOffset = *Doc.EntryOffset;
-    if (Doc.EntrySize)
-      TheHeader->EntrySize = *Doc.EntrySize;
+    if (Doc.EntriesOffset)
+      TheHeader->EntriesOffset = *Doc.EntriesOffset;
+    if (Doc.EntriesCount)
+      TheHeader->EntriesCount = *Doc.EntriesCount;
 
     Out.write(Buffer.begin(), Buffer.size());
   }
