@@ -199,13 +199,11 @@ define void @large_offset(ptr nocapture %p, i64 %d) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, 4
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    lw a1, -384(a0)
-; CHECK-NEXT:    lw a2, -380(a0)
-; CHECK-NEXT:    addi a1, a1, 1
-; CHECK-NEXT:    seqz a3, a1
-; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    sw a1, -384(a0)
-; CHECK-NEXT:    sw a2, -380(a0)
+; CHECK-NEXT:    ld a2, -384(a0)
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    seqz a1, a2
+; CHECK-NEXT:    add a3, a3, a1
+; CHECK-NEXT:    sd a2, -384(a0)
 ; CHECK-NEXT:    ret
 entry:
   %add.ptr = getelementptr inbounds i64, ptr %p, i64 2000
