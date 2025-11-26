@@ -1430,12 +1430,6 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   Conf.RemarksFormat = CGOpts.OptRecordFormat;
   Conf.SplitDwarfFile = CGOpts.SplitDwarfFile;
   Conf.SplitDwarfOutput = CGOpts.SplitDwarfOutput;
-  Conf.PassBuilderCallback = [&](PassBuilder &PB) {
-    // Skipped during pre-link phase to avoid instrumentation interfering with
-    // backend LTO optimizations, and instead we run it as late as possible.
-    // This case handles distributed ThinLTO.
-    addAllocTokenPass(CI.getTarget().getTriple(), CGOpts, CI.getLangOpts(), PB);
-  };
   switch (Action) {
   case Backend_EmitNothing:
     Conf.PreCodeGenModuleHook = [](size_t Task, const llvm::Module &Mod) {

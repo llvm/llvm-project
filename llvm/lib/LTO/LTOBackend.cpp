@@ -31,7 +31,6 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
-#include "llvm/Support/AllocToken.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -43,7 +42,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
-#include "llvm/Transforms/Instrumentation/AllocToken.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 #include <optional>
@@ -69,10 +67,6 @@ static cl::opt<LTOBitcodeEmbedding> EmbedBitcode(
                           "post-merge-pre-opt",
                           "Embed post merge, but before optimizations")),
     cl::desc("Embed LLVM bitcode in object files produced by LTO"));
-
-static cl::opt<std::string> LTOAllocTokenMode(
-    "lto-alloc-token-mode", cl::init(""),
-    cl::desc("Enable AllocToken instrumentation during LTO with chosen mode"));
 
 static cl::opt<bool> ThinLTOAssumeMerged(
     "thinlto-assume-merged", cl::init(false),
@@ -204,31 +198,6 @@ static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
   }
 }
 
-// Register instrumentation passes that need to run late in the pipeline; these
-// are non-optimization passes and need to run after most optimizations to avoid
-// interfering with them (e.g. PGHO) or to capture the final state of the code.
-static void registerBackendInstrumentation(PassBuilder &PB) {
-  if (!LTOAllocTokenMode.empty()) {
-    AllocTokenOptions Opts;
-    if (auto Mode = getAllocTokenModeFromString(LTOAllocTokenMode))
-      Opts.Mode = *Mode;
-    else
-      report_fatal_error("invalid lto-alloc-token-mode: " +
-                         Twine(LTOAllocTokenMode));
-
-    // ThinLTO backend
-    PB.registerOptimizerLastEPCallback(
-        [Opts](ModulePassManager &MPM, OptimizationLevel, ThinOrFullLTOPhase) {
-          MPM.addPass(AllocTokenPass(Opts));
-        });
-    // Full LTO backend
-    PB.registerFullLinkTimeOptimizationLastEPCallback(
-        [Opts](ModulePassManager &MPM, OptimizationLevel) {
-          MPM.addPass(AllocTokenPass(Opts));
-        });
-  }
-}
-
 static std::unique_ptr<TargetMachine>
 createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   const Triple &TheTriple = M.getTargetTriple();
@@ -307,10 +276,6 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
 
   RegisterPassPlugins(Conf.PassPlugins, PB);
-  if (Conf.PassBuilderCallback)
-    Conf.PassBuilderCallback(PB);
-
-  registerBackendInstrumentation(PB);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       new TargetLibraryInfoImpl(TM->getTargetTriple()));

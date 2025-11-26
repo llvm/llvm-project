@@ -141,10 +141,6 @@ public:
     return Sanitizers.has(SanitizerKind::ShadowCallStack);
   }
 
-  bool hasAllocToken() const {
-    return Sanitizers.has(SanitizerKind::AllocToken);
-  }
-
   bool requiresPIE() const;
   bool needsUnwindTables() const;
   bool needsLTO() const;

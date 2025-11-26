@@ -45,6 +45,10 @@
 ; CHECK-PRE-LINK-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-THINLTO: Running pass: LowerTypeTestsPass
 ; CHECK-THINLTO-NEXT: Running pass: CoroConditionalWrapper
+; CHECK-THINLTO-NEXT: Running pass: AllocTokenPass
+; CHECK-THINLTO-NEXT: Running analysis: InnerAnalysisManagerProxy
+; CHECK-THINLTO-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
+; CHECK-THINLTO-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-THINLTO-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-THINLTO-NEXT: Running pass: GlobalDCEPass
 ; CHECK-LTO: Running pass: CrossDSOCFIPass on [module]
@@ -53,10 +57,12 @@
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-LTO-NEXT: CoroConditionalWrapper
+; CHECK-LTO-NEXT: Running pass: AllocTokenPass
+; CHECK-LTO-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
+; CHECK-LTO-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-CORO-NEXT: Running pass: AnnotationRemarksPass
 ; CHECK-CORO-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-LTO-NEXT: Running pass: AnnotationRemarksPass
-; CHECK-LTO-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-NEXT: Running pass: PrintModulePass
 
 ; Make sure we get the IR back out without changes when we print the module.

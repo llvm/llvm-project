@@ -51,8 +51,6 @@ struct Config {
   std::vector<std::string> MAttrs;
   std::vector<std::string> MllvmArgs;
   std::vector<std::string> PassPlugins;
-  /// Callback to customize the PassBuilder.
-  std::function<void(PassBuilder &)> PassBuilderCallback;
   /// For adding passes that run right before codegen.
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
