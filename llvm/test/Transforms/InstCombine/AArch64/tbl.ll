@@ -10,7 +10,7 @@ target triple = "aarch64"
 ; Basic tbl1 with all in-bounds indices should optimize to shufflevector.
 define <16 x i8> @tbl1_basic(<16 x i8> %a) {
 ; CHECK-LABEL: @tbl1_basic(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> [[A:%.*]], <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> %a, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
@@ -20,7 +20,7 @@ define <16 x i8> @tbl1_basic(<16 x i8> %a) {
 ; tbl2 with both operands the same should optimize (1 unique source).
 define <16 x i8> @tbl2_duplicate_operands(<16 x i8> %a) {
 ; CHECK-LABEL: @tbl2_duplicate_operands(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8> [[A:%.*]], <16 x i8> [[A]], <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23>)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8> %a, <16 x i8> %a, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23>)
@@ -30,7 +30,7 @@ define <16 x i8> @tbl2_duplicate_operands(<16 x i8> %a) {
 ; tbl4 with alternating duplicate operands should optimize (2 unique sources).
 define <16 x i8> @tbl4_duplicate_operands(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: @tbl4_duplicate_operands(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i8> [[A]], <16 x i8> [[B]], <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 16, i8 17, i8 18, i8 19, i8 32, i8 33, i8 34, i8 35, i8 48, i8 49, i8 50, i8 51>)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 16, i8 17, i8 18, i8 19, i8 32, i8 33, i8 34, i8 35, i8 48, i8 49, i8 50, i8 51>)
@@ -40,7 +40,7 @@ define <16 x i8> @tbl4_duplicate_operands(<16 x i8> %a, <16 x i8> %b) {
 ; tbl4 where mask only references first two operands should optimize.
 define <16 x i8> @tbl4_unused_operands(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; CHECK-LABEL: @tbl4_unused_operands(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i8> [[C:%.*]], <16 x i8> [[D:%.*]], <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23>)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23>)
@@ -50,7 +50,7 @@ define <16 x i8> @tbl4_unused_operands(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c,
 ; tbl4 where mask only references one operand should optimize.
 define <16 x i8> @tbl4_single_operand_used(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; CHECK-LABEL: @tbl4_single_operand_used(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i8> [[C:%.*]], <16 x i8> [[D:%.*]], <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
@@ -60,7 +60,7 @@ define <16 x i8> @tbl4_single_operand_used(<16 x i8> %a, <16 x i8> %b, <16 x i8>
 ; tbl1 with some OOB indices should optimize (1 source + zero vector = 2 sources).
 define <16 x i8> @tbl1_with_oob(<16 x i8> %a) {
 ; CHECK-LABEL: @tbl1_with_oob(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> [[A:%.*]], <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23>)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> <i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> %a, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23>)
@@ -70,7 +70,7 @@ define <16 x i8> @tbl1_with_oob(<16 x i8> %a) {
 ; tbl2 with duplicate operands and OOB should optimize (1 unique source + zero vector = 2 sources).
 define <16 x i8> @tbl2_duplicate_with_oob(<16 x i8> %a) {
 ; CHECK-LABEL: @tbl2_duplicate_with_oob(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8> [[A:%.*]], <16 x i8> [[A]], <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 16, i8 17, i8 18, i8 19, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99>)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> <i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8> %a, <16 x i8> %a, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 16, i8 17, i8 18, i8 19, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99>)
@@ -90,8 +90,7 @@ define <16 x i8> @tbl2_with_oob_bail(<16 x i8> %a, <16 x i8> %b) {
 ; tbl1 with all OOB indices should optimize to zero vector.
 define <16 x i8> @tbl1_all_oob(<16 x i8> %a) {
 ; CHECK-LABEL: @tbl1_all_oob(
-; CHECK-NEXT:    [[TBL:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> [[A:%.*]], <16 x i8> splat (i8 99))
-; CHECK-NEXT:    ret <16 x i8> [[TBL]]
+; CHECK-NEXT:    ret <16 x i8> zeroinitializer
 ;
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> %a, <16 x i8> <i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99>)
   ret <16 x i8> %tbl
@@ -130,7 +129,7 @@ define <16 x i8> @tbl4_four_sources_bail(<16 x i8> %a, <16 x i8> %b, <16 x i8> %
 ; tbx1 with no OOB should optimize.
 define <16 x i8> @tbx1_no_oob(<16 x i8> %fallback, <16 x i8> %a) {
 ; CHECK-LABEL: @tbx1_no_oob(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> [[FALLBACK:%.*]], <16 x i8> [[A:%.*]], <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %tbx = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> %fallback, <16 x i8> %a, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
@@ -140,7 +139,7 @@ define <16 x i8> @tbx1_no_oob(<16 x i8> %fallback, <16 x i8> %a) {
 ; tbx2 where fallback == second source operand should optimize (deduplicated).
 define <16 x i8> @tbx2_fallback_equals_second_source(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: @tbx2_fallback_equals_second_source(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx2.v16i8(<16 x i8> [[B:%.*]], <16 x i8> [[A:%.*]], <16 x i8> [[B]], <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 16, i8 17, i8 18, i8 19, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99>)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %tbx = call <16 x i8> @llvm.aarch64.neon.tbx2.v16i8(<16 x i8> %b, <16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 16, i8 17, i8 18, i8 19, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99>)
@@ -150,7 +149,7 @@ define <16 x i8> @tbx2_fallback_equals_second_source(<16 x i8> %a, <16 x i8> %b)
 ; tbx1 with OOB where fallback == source should optimize (deduplicated).
 define <16 x i8> @tbx1_oob_fallback_same_as_source(<16 x i8> %a) {
 ; CHECK-LABEL: @tbx1_oob_fallback_same_as_source(
-; CHECK-NEXT:    [[A:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> [[A1:%.*]], <16 x i8> [[A1]], <16 x i8> <i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99>)
+; CHECK-NEXT:    [[A:%.*]] = shufflevector <16 x i8> [[A1:%.*]], <16 x i8> poison, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    ret <16 x i8> [[A]]
 ;
   %tbx = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> %a, <16 x i8> %a, <16 x i8> <i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99>)
@@ -170,8 +169,7 @@ define <16 x i8> @tbx2_with_oob_bail(<16 x i8> %fallback, <16 x i8> %a, <16 x i8
 ; tbx1 with all OOB indices should optimize to fallback.
 define <16 x i8> @tbx1_all_oob(<16 x i8> %fallback, <16 x i8> %a) {
 ; CHECK-LABEL: @tbx1_all_oob(
-; CHECK-NEXT:    [[FALLBACK:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> [[FALLBACK1:%.*]], <16 x i8> [[A:%.*]], <16 x i8> splat (i8 99))
-; CHECK-NEXT:    ret <16 x i8> [[FALLBACK]]
+; CHECK-NEXT:    ret <16 x i8> [[FALLBACK:%.*]]
 ;
   %tbx = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> %fallback, <16 x i8> %a, <16 x i8> <i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99, i8 99>)
   ret <16 x i8> %tbx
@@ -190,7 +188,7 @@ define <8 x i8> @tbx1_fallback_size_mismatch(<8 x i8> %fallback, <16 x i8> %a) {
 ; tbx1 with no OOB and mismatched fallback/source sizes should optimize.
 define <8 x i8> @tbx1_fallback_size_mismatch_no_oob(<8 x i8> %fallback, <16 x i8> %a) {
 ; CHECK-LABEL: @tbx1_fallback_size_mismatch_no_oob(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> [[FALLBACK:%.*]], <16 x i8> [[A:%.*]], <8 x i8> <i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x i8> [[TMP1]]
 ;
   %tbx = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> %fallback, <16 x i8> %a, <8 x i8> <i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
@@ -236,7 +234,7 @@ define <16 x i8> @tbl1_non_constant_mask(<16 x i8> %a, <16 x i8> %mask) {
 ; Mask with some poison elements should optimize, with poison propagating to output.
 define <16 x i8> @tbl1_poison_mask_elements(<16 x i8> %a) {
 ; CHECK-LABEL: @tbl1_poison_mask_elements(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> [[A:%.*]], <16 x i8> <i8 0, i8 poison, i8 2, i8 poison, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <16 x i32> <i32 0, i32 poison, i32 2, i32 poison, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> %a, <16 x i8> <i8 0, i8 poison, i8 2, i8 poison, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>)
@@ -246,8 +244,7 @@ define <16 x i8> @tbl1_poison_mask_elements(<16 x i8> %a) {
 ; Mask with all poison elements should optimize to poison.
 define <16 x i8> @tbl1_all_poison_mask(<16 x i8> %a) {
 ; CHECK-LABEL: @tbl1_all_poison_mask(
-; CHECK-NEXT:    [[TBL:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> [[A:%.*]], <16 x i8> poison)
-; CHECK-NEXT:    ret <16 x i8> [[TBL]]
+; CHECK-NEXT:    ret <16 x i8> poison
 ;
   %tbl = call <16 x i8> @llvm.aarch64.neon.tbl1.v16i8(<16 x i8> %a, <16 x i8> poison)
   ret <16 x i8> %tbl
