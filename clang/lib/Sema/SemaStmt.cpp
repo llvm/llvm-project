@@ -2411,6 +2411,11 @@ void NoteForRangeBeginEndFunction(Sema &SemaRef, Expr *E,
 /// Build a variable declaration for a for-range statement.
 VarDecl *BuildForRangeVarDecl(Sema &SemaRef, SourceLocation Loc, QualType Type,
                               StringRef Name, bool ForExpansionStmt) {
+  // Making the variable constexpr doesn't automatically add 'const' to the
+  // type, so do that now.
+  if (ForExpansionStmt && !Type->isReferenceType())
+    Type = Type.withConst();
+
   DeclContext *DC = SemaRef.CurContext;
   IdentifierInfo *II = &SemaRef.PP.getIdentifierTable().get(Name);
   TypeSourceInfo *TInfo = SemaRef.Context.getTrivialTypeSourceInfo(Type, Loc);
@@ -2418,6 +2423,9 @@ VarDecl *BuildForRangeVarDecl(Sema &SemaRef, SourceLocation Loc, QualType Type,
                                   TInfo, SC_None);
   Decl->setImplicit();
   Decl->setCXXForRangeImplicitVar(true);
+  if (ForExpansionStmt)
+    // CWG 3044: Do not make the variable 'static'.
+    Decl->setConstexpr(true);
   return Decl;
 }
 }
@@ -2731,7 +2739,10 @@ Sema::ForRangeBeginEndInfo Sema::BuildCXXForRangeBeginEndVars(
     return {};
 
   // P2718R0 - Lifetime extension in range-based for loops.
-  if (getLangOpts().CPlusPlus23)
+  //
+  // CWG 3043 – Do not apply lifetime extension to iterating
+  // expansion statements.
+  if (getLangOpts().CPlusPlus23 && !ForExpansionStmt)
     ApplyForRangeOrExpansionStatementLifetimeExtension(RangeVar,
                                                        LifetimeExtendTemps);
 

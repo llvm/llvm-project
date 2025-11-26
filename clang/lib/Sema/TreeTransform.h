@@ -9352,13 +9352,59 @@ StmtResult TreeTransform<Derived>::TransformCXXEnumeratingExpansionStmtPattern(
 template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformCXXIteratingExpansionStmtPattern(
     CXXIteratingExpansionStmtPattern *S) {
-  llvm_unreachable("TOOD");
+  TransformCXXExpansionStmtPatternResult Common =
+      TransformCXXExpansionStmtPatternCommonParts(S);
+  if (!Common.isValid())
+    return StmtError();
+
+  StmtResult Range = getDerived().TransformStmt(S->getRangeVarStmt());
+  if (Range.isInvalid())
+    return StmtError();
+
+  StmtResult Begin = getDerived().TransformStmt(S->getBeginVarStmt());
+  StmtResult End = getDerived().TransformStmt(S->getEndVarStmt());
+  if (Begin.isInvalid() || End.isInvalid())
+    return StmtError();
+
+  auto *Expansion = new (SemaRef.Context) CXXIteratingExpansionStmtPattern(
+      Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl,
+      Range.getAs<DeclStmt>(), Begin.getAs<DeclStmt>(), End.getAs<DeclStmt>(),
+      S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc());
+
+  StmtResult Body = getDerived().TransformStmt(S->getBody());
+  if (Body.isInvalid())
+    return StmtError();
+
+  return SemaRef.FinishCXXExpansionStmt(Expansion, Body.get());
 }
 
 template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformCXXDependentExpansionStmtPattern(
     CXXDependentExpansionStmtPattern *S) {
-  llvm_unreachable("TOOD");
+  TransformCXXExpansionStmtPatternResult Common;
+  ExprResult ExpansionInitializer;
+
+  Common = TransformCXXExpansionStmtPatternCommonParts(S);
+  if (!Common.isValid())
+    return StmtError();
+
+  ExpansionInitializer =
+      getDerived().TransformExpr(S->getExpansionInitializer());
+  if (ExpansionInitializer.isInvalid())
+    return StmtError();
+
+  StmtResult Expansion = SemaRef.BuildNonEnumeratingCXXExpansionStmtPattern(
+      Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl,
+      ExpansionInitializer.get(), S->getLParenLoc(), S->getColonLoc(),
+      S->getRParenLoc(), /*LifetimeExtendTemps=*/{});
+  if (Expansion.isInvalid())
+    return StmtError();
+
+  StmtResult Body = getDerived().TransformStmt(S->getBody());
+  if (Body.isInvalid())
+    return StmtError();
+
+  return SemaRef.FinishCXXExpansionStmt(Expansion.get(), Body.get());
 }
 
 template <typename Derived>

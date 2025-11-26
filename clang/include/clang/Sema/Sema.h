@@ -15693,6 +15693,12 @@ public:
                                                      SourceLocation ColonLoc,
                                                      SourceLocation RParenLoc);
 
+  StmtResult BuildNonEnumeratingCXXExpansionStmtPattern(
+      CXXExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
+      Expr *ExpansionInitializer, SourceLocation LParenLoc,
+      SourceLocation ColonLoc, SourceLocation RParenLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
+
   ExprResult
   BuildCXXExpansionInitListSelectExpr(CXXExpansionInitListExpr *Range,
                                       Expr *Idx);

@@ -24,6 +24,25 @@
 using namespace clang;
 using namespace sema;
 
+namespace {
+struct IterableExpansionStmtData {
+  enum class State {
+    NotIterable,
+    Error,
+    Ok,
+  };
+
+  DeclStmt *RangeDecl = nullptr;
+  DeclStmt *BeginDecl = nullptr;
+  DeclStmt *EndDecl = nullptr;
+  Expr *Initializer = nullptr;
+  State TheState = State::NotIterable;
+
+  bool isIterable() const { return TheState == State::Ok; }
+  bool hasError() { return TheState == State::Error; }
+};
+} // namespace
+
 // Build a 'DeclRefExpr' designating the template parameter '__N'.
 static DeclRefExpr *BuildIndexDRE(Sema &S, CXXExpansionStmtDecl *ESD) {
   return S.BuildDeclRefExpr(ESD->getIndexTemplateParm(),
@@ -40,6 +59,118 @@ static bool FinaliseExpansionVar(Sema &S, VarDecl *ExpansionVar,
 
   S.AddInitializerToDecl(ExpansionVar, Initializer.get(), /*DirectInit=*/false);
   return ExpansionVar->isInvalidDecl();
+}
+
+static IterableExpansionStmtData
+TryBuildIterableExpansionStmtInitializer(Sema &S, Expr *ExpansionInitializer,
+                                         Expr *Index, SourceLocation ColonLoc,
+                                         bool VarIsConstexpr) {
+  IterableExpansionStmtData Data;
+
+  // C++26 [stmt.expand]p3: An expression is expansion-iterable if it does not
+  // have array type [...]
+  QualType Ty = ExpansionInitializer->getType().getNonReferenceType();
+  if (Ty->isArrayType())
+    return Data;
+
+  // Lookup member and ADL 'begin()'/'end()'. Only check if they exist; even if
+  // they're deleted, inaccessible, etc., this is still an iterating expansion
+  // statement, albeit an ill-formed one.
+  DeclarationNameInfo BeginName(&S.PP.getIdentifierTable().get("begin"),
+                                ColonLoc);
+  DeclarationNameInfo EndName(&S.PP.getIdentifierTable().get("end"), ColonLoc);
+
+  // Try member lookup first.
+  bool FoundBeginEnd = false;
+  if (auto *Record = Ty->getAsCXXRecordDecl()) {
+    LookupResult BeginLR(S, BeginName, Sema::LookupMemberName);
+    LookupResult EndLR(S, EndName, Sema::LookupMemberName);
+    FoundBeginEnd = S.LookupQualifiedName(BeginLR, Record) &&
+                    S.LookupQualifiedName(EndLR, Record);
+  }
+
+  // Try ADL.
+  //
+  // If overload resolution for 'begin()' *and* 'end()' succeeds (irrespective
+  // of whether it results in a usable candidate), then assume this is an
+  // iterating expansion statement.
+  auto HasADLCandidate = [&](DeclarationName Name) {
+    OverloadCandidateSet Candidates(ColonLoc, OverloadCandidateSet::CSK_Normal);
+    OverloadCandidateSet::iterator Best;
+
+    S.AddArgumentDependentLookupCandidates(Name, ColonLoc, ExpansionInitializer,
+                                           /*ExplicitTemplateArgs=*/nullptr,
+                                           Candidates);
+
+    return Candidates.BestViableFunction(S, ColonLoc, Best) !=
+           OR_No_Viable_Function;
+  };
+
+  if (!FoundBeginEnd && (!HasADLCandidate(BeginName.getName()) ||
+                         !HasADLCandidate(EndName.getName())))
+    return Data;
+
+  auto Ctx = Sema::ExpressionEvaluationContext::PotentiallyEvaluated;
+  if (VarIsConstexpr)
+    Ctx = Sema::ExpressionEvaluationContext::ImmediateFunctionContext;
+  EnterExpressionEvaluationContext ExprEvalCtx(S, Ctx);
+
+  // The declarations should be attached to the parent decl context.
+  Sema::ContextRAII CtxGuard(
+      S, S.CurContext->getEnclosingNonExpansionStatementContext(),
+      /*NewThis=*/false);
+
+  // Ok, we know that this is supposed to be an iterable expansion statement;
+  // delegate to the for-range code to build the range/begin/end variables.
+  //
+  // Any failure at this point is a hard error.
+  Data.TheState = IterableExpansionStmtData::State::Error;
+  Scope *Scope = S.getCurScope();
+
+  // TODO: CWG 3131 changes how this range is declared.
+  StmtResult Var = S.BuildCXXForRangeRangeVar(Scope, ExpansionInitializer,
+                                              /*ForExpansionStmt=*/true);
+  if (Var.isInvalid())
+    return Data;
+
+  auto *RangeVar = cast<DeclStmt>(Var.get());
+  Sema::ForRangeBeginEndInfo Info = S.BuildCXXForRangeBeginEndVars(
+      Scope, cast<VarDecl>(RangeVar->getSingleDecl()), ColonLoc,
+      /*CoawaitLoc=*/{},
+      /*LifetimeExtendTemps=*/{}, Sema::BFRK_Build, /*ForExpansionStmt=*/true);
+
+  if (!Info.isValid())
+    return Data;
+
+  StmtResult BeginStmt = S.ActOnDeclStmt(
+      S.ConvertDeclToDeclGroup(Info.BeginVar), ColonLoc, ColonLoc);
+  StmtResult EndStmt = S.ActOnDeclStmt(S.ConvertDeclToDeclGroup(Info.EndVar),
+                                       ColonLoc, ColonLoc);
+  if (BeginStmt.isInvalid() || EndStmt.isInvalid())
+    return Data;
+
+  // Build '*(begin + i)'.
+  DeclRefExpr *Begin = S.BuildDeclRefExpr(
+      Info.BeginVar, Info.BeginVar->getType().getNonReferenceType(), VK_LValue,
+      ColonLoc);
+
+  ExprResult BeginPlusI =
+      S.ActOnBinOp(Scope, ColonLoc, tok::plus, Begin, Index);
+  if (BeginPlusI.isInvalid())
+    return Data;
+
+  ExprResult Deref =
+      S.ActOnUnaryOp(Scope, ColonLoc, tok::star, BeginPlusI.get());
+  if (Deref.isInvalid())
+    return Data;
+
+  Deref = S.MaybeCreateExprWithCleanups(Deref.get());
+  Data.BeginDecl = BeginStmt.getAs<DeclStmt>();
+  Data.EndDecl = EndStmt.getAs<DeclStmt>();
+  Data.RangeDecl = RangeVar;
+  Data.Initializer = Deref.get();
+  Data.TheState = IterableExpansionStmtData::State::Ok;
+  return Data;
 }
 
 CXXExpansionStmtDecl *
@@ -115,8 +246,26 @@ StmtResult Sema::ActOnCXXExpansionStmtPattern(
                                                    ColonLoc, RParenLoc);
   }
 
-  Diag(ESD->getLocation(), diag::err_expansion_statements_todo);
-  return StmtError();
+  if (ExpansionInitializer->hasPlaceholderType()) {
+    ExprResult R = CheckPlaceholderExpr(ExpansionInitializer);
+    if (R.isInvalid())
+      return StmtError();
+    ExpansionInitializer = R.get();
+  }
+
+  if (DiagnoseUnexpandedParameterPack(ExpansionInitializer))
+    return StmtError();
+
+  // Reject lambdas early.
+  if (auto *RD = ExpansionInitializer->getType()->getAsCXXRecordDecl();
+      RD && RD->isLambda()) {
+    Diag(ExpansionInitializer->getBeginLoc(), diag::err_expansion_stmt_lambda);
+    return StmtError();
+  }
+
+  return BuildNonEnumeratingCXXExpansionStmtPattern(
+      ESD, Init, DS, ExpansionInitializer, LParenLoc, ColonLoc, RParenLoc,
+      LifetimeExtendTemps);
 }
 
 StmtResult Sema::BuildCXXEnumeratingExpansionStmtPattern(
@@ -125,6 +274,43 @@ StmtResult Sema::BuildCXXEnumeratingExpansionStmtPattern(
   return new (Context) CXXEnumeratingExpansionStmtPattern(
       cast<CXXExpansionStmtDecl>(ESD), Init, cast<DeclStmt>(ExpansionVar),
       LParenLoc, ColonLoc, RParenLoc);
+}
+
+StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
+    CXXExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
+    Expr *ExpansionInitializer, SourceLocation LParenLoc,
+    SourceLocation ColonLoc, SourceLocation RParenLoc,
+    ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
+  VarDecl *ExpansionVar = cast<VarDecl>(ExpansionVarStmt->getSingleDecl());
+
+  if (ExpansionInitializer->isTypeDependent()) {
+    ActOnDependentForRangeInitializer(ExpansionVar, BFRK_Build);
+    return new (Context) CXXDependentExpansionStmtPattern(
+        ESD, Init, ExpansionVarStmt, ExpansionInitializer, LParenLoc, ColonLoc,
+        RParenLoc);
+  }
+
+  // Otherwise, if it can be an iterating expansion statement, it is one.
+  DeclRefExpr *Index = BuildIndexDRE(*this, ESD);
+  IterableExpansionStmtData Data = TryBuildIterableExpansionStmtInitializer(
+      *this, ExpansionInitializer, Index, ColonLoc,
+      ExpansionVar->isConstexpr());
+  if (Data.hasError()) {
+    ActOnInitializerError(ExpansionVar);
+    return StmtError();
+  }
+
+  if (Data.isIterable()) {
+    if (FinaliseExpansionVar(*this, ExpansionVar, Data.Initializer))
+      return StmtError();
+
+    return new (Context) CXXIteratingExpansionStmtPattern(
+        ESD, Init, ExpansionVarStmt, Data.RangeDecl, Data.BeginDecl,
+        Data.EndDecl, LParenLoc, ColonLoc, RParenLoc);
+  }
+
+  Diag(ESD->getLocation(), diag::err_expansion_statements_todo);
+  return StmtError();
 }
 
 StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
@@ -149,7 +335,13 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
   if (Expansion->getInit())
     Shared.push_back(Expansion->getInit());
 
-  assert(isa<CXXEnumeratingExpansionStmtPattern>(Expansion) && "TODO");
+  if (auto *Iter = dyn_cast<CXXIteratingExpansionStmtPattern>(Expansion)) {
+    Shared.push_back(Iter->getRangeVarStmt());
+    Shared.push_back(Iter->getBeginVarStmt());
+    Shared.push_back(Iter->getEndVarStmt());
+  } else {
+    assert(isa<CXXEnumeratingExpansionStmtPattern>(Expansion) && "TODO");
+  }
 
   // Return an empty statement if the range is empty.
   if (*NumInstantiations == 0) {
@@ -227,6 +419,54 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
         ->getRangeExpr()
         ->getExprs()
         .size();
+
+  // By [stmt.expand]5.2, N is the result of evaluating the expression
+  //
+  // [] consteval {
+  //    std::ptrdiff_t result = 0;
+  //    for (auto i = begin; i != end; ++i) ++result;
+  //    return result;
+  // }()
+  // TODO: CWG 3131 changes this lambda a bit.
+  if (auto *Iterating = dyn_cast<CXXIteratingExpansionStmtPattern>(Expansion)) {
+    EnterExpressionEvaluationContext ExprEvalCtx(
+        *this, ExpressionEvaluationContext::ConstantEvaluated);
+
+    // FIXME: Actually do that; unfortunately, conjuring a lambda out of thin
+    // air in Sema is a massive pain, so for now just cheat by computing
+    // 'end - begin'.
+    SourceLocation Loc = Iterating->getColonLoc();
+    DeclRefExpr *Begin = BuildDeclRefExpr(
+        Iterating->getBeginVar(),
+        Iterating->getBeginVar()->getType().getNonReferenceType(), VK_LValue,
+        Loc);
+
+    DeclRefExpr *End = BuildDeclRefExpr(
+        Iterating->getEndVar(),
+        Iterating->getEndVar()->getType().getNonReferenceType(), VK_LValue,
+        Loc);
+
+    ExprResult N = ActOnBinOp(getCurScope(), Loc, tok::minus, End, Begin);
+    if (N.isInvalid())
+      return std::nullopt;
+
+    Expr::EvalResult ER;
+    SmallVector<PartialDiagnosticAt, 4> Notes;
+    ER.Diag = &Notes;
+    if (!N.get()->EvaluateAsInt(ER, Context)) {
+      Diag(Loc, diag::err_expansion_size_expr_not_ice);
+      for (const auto &[Location, PDiag] : Notes)
+        Diag(Location, PDiag);
+      return std::nullopt;
+    }
+
+    if (ER.Val.getInt().isNegative()) {
+      Diag(Loc, diag::err_expansion_size_negative) << ER.Val.getInt();
+      return std::nullopt;
+    }
+
+    return ER.Val.getInt().getZExtValue();
+  }
 
   llvm_unreachable("TODO");
 }
