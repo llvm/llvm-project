@@ -23,7 +23,7 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 // A.1. Platform information descriptors
 namespace info {
 namespace platform {
-#define __SYCL_PARAM_TRAITS_SPEC(DescType, Desc, ReturnT, OffloadCode)         \
+#define __SYCL_PARAM_TRAITS_SPEC(DescType, Desc, ReturnT)                      \
   struct Desc {                                                                \
     using return_type = ReturnT;                                               \
   };
@@ -38,7 +38,7 @@ namespace platform {
 namespace detail {
 template <typename T> struct is_platform_info_desc : std::false_type {};
 
-#define __SYCL_PARAM_TRAITS_SPEC(DescType, Desc, ReturnT, OffloadCode)         \
+#define __SYCL_PARAM_TRAITS_SPEC(DescType, Desc, ReturnT)                      \
   template <>                                                                  \
   struct is_##DescType##_info_desc<info::DescType::Desc> : std::true_type {    \
     using return_type = info::DescType::Desc::return_type;                     \
