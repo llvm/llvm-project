@@ -399,7 +399,7 @@ LLVM_DUMP_METHOD void FunctionSamples::dump() const { print(dbgs(), 0); }
 std::error_code ProfileSymbolList::read(const uint8_t *Data,
                                         uint64_t ListSize) {
   const char *ListStart = reinterpret_cast<const char *>(Data);
-  uint64_t Offset = 0;
+  uint64_t Size = 0;
   uint64_t StrNum = 0;
   uint64_t ExpectedCount = 0;
 
@@ -407,22 +407,21 @@ std::error_code ProfileSymbolList::read(const uint8_t *Data,
   while (Offset < ListSize) {
     if (ListStart[Offset] == '\0') ExpectedCount++;
     Offset++;
-  }
 
   reserve(ExpectedCount);
 
-  Offset = 0;
+  Size = 0;
 
-  while (Offset < ListSize && StrNum < ProfileSymbolListCutOff) {
-    StringRef Str(ListStart + Offset);
+  while (Size < ListSize && StrNum < ProfileSymbolListCutOff) {
+    StringRef Str(ListStart + Size);
     add(Str);
-    Offset += Str.size() + 1;
+    Size += Str.size() + 1;
     StrNum++;
   }
 
   assert(ExpectedCount == StrNum);
 
-  if (Offset != ListSize && StrNum != ProfileSymbolListCutOff)
+  if (Size != ListSize && StrNum != ProfileSymbolListCutOff)
     return sampleprof_error::malformed;
   return sampleprof_error::success;
 }
