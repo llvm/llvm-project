@@ -4,14 +4,9 @@
 """Script to generate a build report for Github."""
 
 import argparse
-import platform
 
 import generate_test_report_lib
 
-PLATFORM_TITLES = {
-    "Windows": ":window: Windows x64 Test Results",
-    "Linux": ":penguin: Linux x64 Test Results",
-}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -22,7 +17,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     report = generate_test_report_lib.generate_report_from_files(
-        PLATFORM_TITLES[platform.system()], args.return_code, args.build_test_logs
+        generate_test_report_lib.compute_platform_title(),
+        args.return_code,
+        args.build_test_logs,
     )
 
     print(report)

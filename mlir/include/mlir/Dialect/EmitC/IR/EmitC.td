@@ -471,35 +471,33 @@ def EmitC_ExpressionOp
   let summary = "Expression operation";
   let description = [{
     The `emitc.expression` operation returns a single SSA value which is yielded by
-    its single-basic-block region. The operation doesn't take any arguments.
+    its single-basic-block region. The operation takes zero or more input operands 
+    that are passed as block arguments to the region.
 
     As the operation is to be emitted as a C expression, the operations within
     its body must form a single Def-Use tree, or a DAG trivially expandable to
     one, i.e. a DAG where each operation with side effects is only reachable
     once from the expression root.
 
-    Example:
+    Input operands can be of both value types (`EmitCType`) and lvalue types
+    (`EmitC_LValueType`).
 
+    Example:
     ```mlir
-    %r = emitc.expression : i32 {
-      %0 = emitc.add %a, %b : (i32, i32) -> i32
-      %1 = emitc.call_opaque "foo"(%0) : (i32) -> i32
-      %2 = emitc.add %c, %d : (i32, i32) -> i32
-      %3 = emitc.mul %1, %2 : (i32, i32) -> i32
-      emitc.yield %3 : i32
+    %r = emitc.expression %a, %b, %c : (i32, i32, i32) -> i32 {
+      %0 = emitc.call_opaque "foo"(%a) : (i32) -> i32
+      %1 = emitc.add %b, %c : (i32, i32) -> i32
+      %2 = emitc.mul %0, %1 : (i32, i32) -> i32
+      emitc.yield %2 : i32
     }
     ```
 
-    May be emitted as
-
+    May be emitted as:
     ```c++
-    int32_t v7 = foo(v1 + v2) * (v3 + v4);
+    int32_t v4 = foo(v1) * (v2 + v3);
     ```
 
-    The operations allowed within expression body are EmitC operations with the
-    CExpressionInterface interface.
-
-    When specified, the optional `do_not_inline` indicates that the expression is
+    When specified, the optional `noinline` indicates that the expression is
     to be emitted as seen above, i.e. as the rhs of an EmitC SSA value
     definition. Otherwise, the expression may be emitted inline, i.e. directly
     at its use.

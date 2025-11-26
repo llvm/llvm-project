@@ -107,6 +107,10 @@ STATISTIC(MismatchedCloneAssignments,
 STATISTIC(TotalMergeInvokes, "Number of merge invocations for nodes");
 STATISTIC(TotalMergeIters, "Number of merge iterations for nodes");
 STATISTIC(MaxMergeIters, "Max merge iterations for nodes");
+STATISTIC(NumImportantContextIds, "Number of important context ids");
+STATISTIC(NumFixupEdgeIdsInserted, "Number of fixup edge ids inserted");
+STATISTIC(NumFixupEdgesAdded, "Number of fixup edges added");
+STATISTIC(NumFixedContexts, "Number of contexts with fixed edges");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -223,9 +227,18 @@ static cl::opt<bool> MemProfRequireDefinitionForPromotion(
 extern cl::opt<bool> MemProfReportHintedSizes;
 extern cl::opt<unsigned> MinClonedColdBytePercent;
 
+cl::opt<unsigned> MemProfTopNImportant(
+    "memprof-top-n-important", cl::init(10), cl::Hidden,
+    cl::desc("Number of largest cold contexts to consider important"));
+
+cl::opt<bool> MemProfFixupImportant(
+    "memprof-fixup-important", cl::init(true), cl::Hidden,
+    cl::desc("Enables edge fixup for important contexts"));
+
 } // namespace llvm
 
 namespace {
+
 /// CRTP base for graphs built from either IR or ThinLTO summary index.
 ///
 /// The graph represents the call contexts in all memprof metadata on allocation
@@ -581,16 +594,25 @@ protected:
 
   /// Adds nodes for the given MIB stack ids.
   template <class NodeT, class IteratorT>
-  void addStackNodesForMIB(ContextNode *AllocNode,
-                           CallStack<NodeT, IteratorT> &StackContext,
-                           CallStack<NodeT, IteratorT> &CallsiteContext,
-                           AllocationType AllocType,
-                           ArrayRef<ContextTotalSize> ContextSizeInfo);
+  void addStackNodesForMIB(
+      ContextNode *AllocNode, CallStack<NodeT, IteratorT> &StackContext,
+      CallStack<NodeT, IteratorT> &CallsiteContext, AllocationType AllocType,
+      ArrayRef<ContextTotalSize> ContextSizeInfo,
+      std::map<uint64_t, uint32_t> &TotalSizeToContextIdTopNCold);
 
   /// Matches all callsite metadata (or summary) to the nodes created for
   /// allocation memprof MIB metadata, synthesizing new nodes to reflect any
   /// inlining performed on those callsite instructions.
   void updateStackNodes();
+
+  /// Optionally fixup edges for the N largest cold contexts to better enable
+  /// cloning. This is particularly helpful if the context includes recursion
+  /// as well as inlining, resulting in a single stack node for multiple stack
+  /// ids in the context. With recursion it is particularly difficult to get the
+  /// edge updates correct as in the general case we have lost the original
+  /// stack id ordering for the context. Do more expensive fixup for the largest
+  /// contexts, controlled by MemProfTopNImportant and MemProfFixupImportant.
+  void fixupImportantContexts();
 
   /// Update graph to conservatively handle any callsite stack nodes that target
   /// multiple different callee target functions.
@@ -658,7 +680,8 @@ private:
   void assignStackNodesPostOrder(
       ContextNode *Node, DenseSet<const ContextNode *> &Visited,
       DenseMap<uint64_t, std::vector<CallContextInfo>> &StackIdToMatchingCalls,
-      DenseMap<CallInfo, CallInfo> &CallToMatchingCall);
+      DenseMap<CallInfo, CallInfo> &CallToMatchingCall,
+      const DenseSet<uint32_t> &ImportantContextIds);
 
   /// Duplicates the given set of context ids, updating the provided
   /// map from each original id with the newly generated context ids,
@@ -859,6 +882,50 @@ private:
   /// nodes.
   DenseMap<uint64_t, ContextNode *> StackEntryIdToContextNodeMap;
 
+  /// Saves information for the contexts identified as important (the largest
+  /// cold contexts up to MemProfTopNImportant).
+  struct ImportantContextInfo {
+    // The original list of leaf first stack ids corresponding to this context.
+    std::vector<uint64_t> StackIds;
+    // Max length of stack ids corresponding to a single stack ContextNode for
+    // this context (i.e. the max length of a key in StackIdsToNode below).
+    unsigned MaxLength = 0;
+    // Mapping of slices of the stack ids to the corresponding ContextNode
+    // (there can be multiple stack ids due to inlining). Populated when
+    // updating stack nodes while matching them to the IR or summary.
+    std::map<std::vector<uint64_t>, ContextNode *> StackIdsToNode;
+  };
+
+  // Map of important full context ids to information about each.
+  DenseMap<uint32_t, ImportantContextInfo> ImportantContextIdInfo;
+
+  // For each important context id found in Node (if any), records the list of
+  // stack ids that corresponded to the given callsite Node. There can be more
+  // than one in the case of inlining.
+  void recordStackNode(std::vector<uint64_t> &StackIds, ContextNode *Node,
+                       // We pass in the Node's context ids to avoid the
+                       // overhead of computing them as the caller already has
+                       // them in some cases.
+                       const DenseSet<uint32_t> &NodeContextIds,
+                       const DenseSet<uint32_t> &ImportantContextIds) {
+    if (!MemProfTopNImportant) {
+      assert(ImportantContextIds.empty());
+      return;
+    }
+    DenseSet<uint32_t> Ids =
+        set_intersection(NodeContextIds, ImportantContextIds);
+    if (Ids.empty())
+      return;
+    auto Size = StackIds.size();
+    for (auto Id : Ids) {
+      auto &Entry = ImportantContextIdInfo[Id];
+      Entry.StackIdsToNode[StackIds] = Node;
+      // Keep track of the max to simplify later analysis.
+      if (Size > Entry.MaxLength)
+        Entry.MaxLength = Size;
+    }
+  }
+
   /// Maps to track the calls to their corresponding nodes in the graph.
   MapVector<CallInfo, ContextNode *> AllocationCallToContextNodeMap;
   MapVector<CallInfo, ContextNode *> NonAllocationCallToContextNodeMap;
@@ -1033,19 +1100,17 @@ private:
 };
 } // namespace
 
-namespace llvm {
 template <>
-struct DenseMapInfo<typename CallsiteContextGraph<
+struct llvm::DenseMapInfo<CallsiteContextGraph<
     ModuleCallsiteContextGraph, Function, Instruction *>::CallInfo>
     : public DenseMapInfo<std::pair<Instruction *, unsigned>> {};
 template <>
-struct DenseMapInfo<typename CallsiteContextGraph<
+struct llvm::DenseMapInfo<CallsiteContextGraph<
     IndexCallsiteContextGraph, FunctionSummary, IndexCall>::CallInfo>
     : public DenseMapInfo<std::pair<IndexCall, unsigned>> {};
 template <>
-struct DenseMapInfo<IndexCall>
+struct llvm::DenseMapInfo<IndexCall>
     : public DenseMapInfo<PointerUnion<CallsiteInfo *, AllocInfo *>> {};
-} // end namespace llvm
 
 namespace {
 
@@ -1355,7 +1420,8 @@ template <class NodeT, class IteratorT>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
     ContextNode *AllocNode, CallStack<NodeT, IteratorT> &StackContext,
     CallStack<NodeT, IteratorT> &CallsiteContext, AllocationType AllocType,
-    ArrayRef<ContextTotalSize> ContextSizeInfo) {
+    ArrayRef<ContextTotalSize> ContextSizeInfo,
+    std::map<uint64_t, uint32_t> &TotalSizeToContextIdTopNCold) {
   // Treating the hot alloc type as NotCold before the disambiguation for "hot"
   // is done.
   if (AllocType == AllocationType::Hot)
@@ -1363,8 +1429,33 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
 
   ContextIdToAllocationType[++LastContextId] = AllocType;
 
+  bool IsImportant = false;
   if (!ContextSizeInfo.empty()) {
     auto &Entry = ContextIdToContextSizeInfos[LastContextId];
+    // If this is a cold allocation, and we are collecting non-zero largest
+    // contexts, see if this is a candidate.
+    if (AllocType == AllocationType::Cold && MemProfTopNImportant > 0) {
+      uint64_t TotalCold = 0;
+      for (auto &CSI : ContextSizeInfo)
+        TotalCold += CSI.TotalSize;
+      // Record this context if either we haven't found the first top-n largest
+      // yet, or if it is larger than the smallest already recorded.
+      if (TotalSizeToContextIdTopNCold.size() < MemProfTopNImportant ||
+          // Since TotalSizeToContextIdTopNCold is a std::map, it is implicitly
+          // sorted in ascending size of its key which is the size.
+          TotalCold > TotalSizeToContextIdTopNCold.begin()->first) {
+        if (TotalSizeToContextIdTopNCold.size() == MemProfTopNImportant) {
+          // Remove old one and its associated entries.
+          auto IdToRemove = TotalSizeToContextIdTopNCold.begin()->second;
+          TotalSizeToContextIdTopNCold.erase(
+              TotalSizeToContextIdTopNCold.begin());
+          assert(ImportantContextIdInfo.count(IdToRemove));
+          ImportantContextIdInfo.erase(IdToRemove);
+        }
+        TotalSizeToContextIdTopNCold[TotalCold] = LastContextId;
+        IsImportant = true;
+      }
+    }
     Entry.insert(Entry.begin(), ContextSizeInfo.begin(), ContextSizeInfo.end());
   }
 
@@ -1383,6 +1474,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
   for (auto ContextIter = StackContext.beginAfterSharedPrefix(CallsiteContext);
        ContextIter != StackContext.end(); ++ContextIter) {
     auto StackId = getStackId(*ContextIter);
+    if (IsImportant)
+      ImportantContextIdInfo[LastContextId].StackIds.push_back(StackId);
     ContextNode *StackNode = getNodeForStackId(StackId);
     if (!StackNode) {
       StackNode = createNewNode(/*IsAllocation=*/false);
@@ -1602,11 +1695,12 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
-    assignStackNodesPostOrder(
-        ContextNode *Node, DenseSet<const ContextNode *> &Visited,
-        DenseMap<uint64_t, std::vector<CallContextInfo>>
-            &StackIdToMatchingCalls,
-        DenseMap<CallInfo, CallInfo> &CallToMatchingCall) {
+    assignStackNodesPostOrder(ContextNode *Node,
+                              DenseSet<const ContextNode *> &Visited,
+                              DenseMap<uint64_t, std::vector<CallContextInfo>>
+                                  &StackIdToMatchingCalls,
+                              DenseMap<CallInfo, CallInfo> &CallToMatchingCall,
+                              const DenseSet<uint32_t> &ImportantContextIds) {
   auto Inserted = Visited.insert(Node);
   if (!Inserted.second)
     return;
@@ -1622,7 +1716,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       continue;
     }
     assignStackNodesPostOrder(Edge->Caller, Visited, StackIdToMatchingCalls,
-                              CallToMatchingCall);
+                              CallToMatchingCall, ImportantContextIds);
   }
 
   // If this node's stack id is in the map, update the graph to contain new
@@ -1650,6 +1744,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
       Node->setCall(Call);
       NonAllocationCallToContextNodeMap[Call] = Node;
       NodeToCallingFunc[Node] = Func;
+      recordStackNode(Ids, Node, Node->getContextIds(), ImportantContextIds);
       return;
     }
   }
@@ -1788,6 +1883,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
                                 : CurNode->computeAllocType();
       PrevNode = CurNode;
     }
+
+    recordStackNode(Ids, NewNode, SavedContextIds, ImportantContextIds);
+
     if (VerifyNodes) {
       checkNode<DerivedCCG, FuncTy, CallTy>(NewNode, /*CheckEdges=*/true);
       for (auto Id : Ids) {
@@ -1797,6 +1895,122 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
         checkNode<DerivedCCG, FuncTy, CallTy>(CurNode, /*CheckEdges=*/true);
       }
     }
+  }
+}
+
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+void CallsiteContextGraph<DerivedCCG, FuncTy,
+                          CallTy>::fixupImportantContexts() {
+  if (ImportantContextIdInfo.empty())
+    return;
+
+  // Update statistics as we are done building this map at this point.
+  NumImportantContextIds = ImportantContextIdInfo.size();
+
+  if (!MemProfFixupImportant)
+    return;
+
+  if (ExportToDot)
+    exportToDot("beforestackfixup");
+
+  // For each context we identified as important, walk through the saved context
+  // stack ids in order from leaf upwards, and make sure all edges are correct.
+  // These can be difficult to get right when updating the graph while mapping
+  // nodes onto summary or IR, especially when there is recursion. In
+  // particular, when we have created new nodes to reflect inlining, it is
+  // sometimes impossible to know exactly how to update the edges in the face of
+  // recursion, as we have lost the original ordering of the stack ids in the
+  // contexts.
+  // TODO: Consider only doing this if we detect the context has recursive
+  // cycles.
+  //
+  // I.e. assume we have a context with stack ids like: {A B A C A D E}
+  // and let's say A was inlined into B, C, and D. The original graph will have
+  // multiple recursive cycles through A. When we match the original context
+  // nodes onto the IR or summary, we will merge {A B} into one context node,
+  // {A C} onto another, and {A D} onto another. Looking at the stack sequence
+  // above, we should end up with a non-cyclic set of edges like:
+  // {AB} <- {AC} <- {AD} <- E. However, because we normally have lost the
+  // original ordering, we won't get the edges correct initially (it's
+  // impossible without the original ordering). Here we do the fixup (add and
+  // removing edges where necessary) for this context. In the
+  // ImportantContextInfo struct in this case we should have a MaxLength = 2,
+  // and map entries for {A B}, {A C}, {A D}, and {E}.
+  for (auto &[CurContextId, Info] : ImportantContextIdInfo) {
+    if (Info.StackIdsToNode.empty())
+      continue;
+    bool Changed = false;
+    ContextNode *PrevNode = nullptr;
+    ContextNode *CurNode = nullptr;
+    DenseSet<const ContextEdge *> VisitedEdges;
+    ArrayRef<uint64_t> AllStackIds(Info.StackIds);
+    // Try to identify what callsite ContextNode maps to which slice of the
+    // context's ordered stack ids.
+    for (unsigned I = 0; I < AllStackIds.size(); I++, PrevNode = CurNode) {
+      // We will do this greedily, trying up to MaxLength stack ids in a row, to
+      // see if we recorded a context node for that sequence.
+      auto Len = Info.MaxLength;
+      auto LenToEnd = AllStackIds.size() - I;
+      if (Len > LenToEnd)
+        Len = LenToEnd;
+      CurNode = nullptr;
+      // Try to find a recorded context node starting with the longest length
+      // recorded, and on down until we check for just a single stack node.
+      for (; Len > 0; Len--) {
+        // Get the slice of the original stack id sequence to check.
+        auto CheckStackIds = AllStackIds.slice(I, Len);
+        auto EntryIt = Info.StackIdsToNode.find(CheckStackIds);
+        if (EntryIt == Info.StackIdsToNode.end())
+          continue;
+        CurNode = EntryIt->second;
+        // Skip forward so we don't try to look for the ones we just matched.
+        // We increment by Len - 1, because the outer for loop will increment I.
+        I += Len - 1;
+        break;
+      }
+      // Give up if we couldn't find a node. Since we need to clone from the
+      // leaf allocation upwards, no sense in doing anymore fixup further up
+      // the context if we couldn't match part of the original stack context
+      // onto a callsite node.
+      if (!CurNode)
+        break;
+      // No edges to fix up until we have a pair of nodes that should be
+      // adjacent in the graph.
+      if (!PrevNode)
+        continue;
+      // See if we already have a call edge from CurNode to PrevNode.
+      auto *CurEdge = PrevNode->findEdgeFromCaller(CurNode);
+      if (CurEdge) {
+        // We already have an edge. Make sure it contains this context id.
+        if (CurEdge->getContextIds().insert(CurContextId).second) {
+          NumFixupEdgeIdsInserted++;
+          Changed = true;
+        }
+      } else {
+        // No edge exists - add one.
+        NumFixupEdgesAdded++;
+        DenseSet<uint32_t> ContextIds({CurContextId});
+        auto AllocType = computeAllocType(ContextIds);
+        auto NewEdge = std::make_shared<ContextEdge>(
+            PrevNode, CurNode, AllocType, std::move(ContextIds));
+        PrevNode->CallerEdges.push_back(NewEdge);
+        CurNode->CalleeEdges.push_back(NewEdge);
+        // Save the new edge for the below handling.
+        CurEdge = NewEdge.get();
+        Changed = true;
+      }
+      VisitedEdges.insert(CurEdge);
+      // Now remove this context id from any other caller edges calling
+      // PrevNode.
+      for (auto &Edge : PrevNode->CallerEdges) {
+        // Skip the edge updating/created above and edges we have already
+        // visited (due to recursion).
+        if (Edge.get() != CurEdge && !VisitedEdges.contains(Edge.get()))
+          Edge->getContextIds().erase(CurContextId);
+      }
+    }
+    if (Changed)
+      NumFixedContexts++;
   }
 }
 
@@ -2045,9 +2259,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
   // nodes representing any inlining at interior callsites. Note we move the
   // associated context ids over to the new nodes.
   DenseSet<const ContextNode *> Visited;
+  DenseSet<uint32_t> ImportantContextIds(llvm::from_range,
+                                         ImportantContextIdInfo.keys());
   for (auto &Entry : AllocationCallToContextNodeMap)
     assignStackNodesPostOrder(Entry.second, Visited, StackIdToMatchingCalls,
-                              CallToMatchingCall);
+                              CallToMatchingCall, ImportantContextIds);
+
+  fixupImportantContexts();
+
   if (VerifyCCG)
     check();
 }
@@ -2157,6 +2376,10 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
     Module &M,
     llvm::function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter)
     : Mod(M), OREGetter(OREGetter) {
+  // Map for keeping track of the largest cold contexts up to the number given
+  // by MemProfTopNImportant. Must be a std::map (not DenseMap) because keys
+  // must be sorted.
+  std::map<uint64_t, uint32_t> TotalSizeToContextIdTopNCold;
   for (auto &F : M) {
     std::vector<CallInfo> CallsWithMetadata;
     for (auto &BB : F) {
@@ -2193,7 +2416,8 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
             CallStack<MDNode, MDNode::op_iterator> StackContext(StackNode);
             addStackNodesForMIB<MDNode, MDNode::op_iterator>(
                 AllocNode, StackContext, CallsiteContext,
-                getMIBAllocType(MIBMD), ContextSizeInfo);
+                getMIBAllocType(MIBMD), ContextSizeInfo,
+                TotalSizeToContextIdTopNCold);
           }
           // If exporting the graph to dot and an allocation id of interest was
           // specified, record all the context ids for this allocation node.
@@ -2243,6 +2467,10 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
     llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing)
     : Index(Index), isPrevailing(isPrevailing) {
+  // Map for keeping track of the largest cold contexts up to the number given
+  // by MemProfTopNImportant. Must be a std::map (not DenseMap) because keys
+  // must be sorted.
+  std::map<uint64_t, uint32_t> TotalSizeToContextIdTopNCold;
   for (auto &I : Index) {
     auto VI = Index.getValueInfo(I);
     for (auto &S : VI.getSummaryList()) {
@@ -2290,7 +2518,7 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
             }
             addStackNodesForMIB<MIBInfo, SmallVector<unsigned>::const_iterator>(
                 AllocNode, StackContext, EmptyContext, MIB.AllocType,
-                ContextSizeInfo);
+                ContextSizeInfo, TotalSizeToContextIdTopNCold);
             I++;
           }
           // If exporting the graph to dot and an allocation id of interest was
@@ -6151,4 +6379,43 @@ void MemProfContextDisambiguation::run(
 
   IndexCallsiteContextGraph CCG(Index, isPrevailing);
   CCG.process();
+}
+
+// Strips MemProf attributes and metadata. Can be invoked by the pass pipeline
+// when we don't have an index that has recorded that we are linking with
+// allocation libraries containing the necessary APIs for downstream
+// transformations.
+PreservedAnalyses MemProfRemoveInfo::run(Module &M, ModuleAnalysisManager &AM) {
+  // The profile matcher applies hotness attributes directly for allocations,
+  // and those will cause us to generate calls to the hot/cold interfaces
+  // unconditionally. If supports-hot-cold-new was not enabled in the LTO
+  // link then assume we don't want these calls (e.g. not linking with
+  // the appropriate library, or otherwise trying to disable this behavior).
+  bool Changed = false;
+  for (auto &F : M) {
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        auto *CI = dyn_cast<CallBase>(&I);
+        if (!CI)
+          continue;
+        if (CI->hasFnAttr("memprof")) {
+          CI->removeFnAttr("memprof");
+          Changed = true;
+        }
+        if (!CI->hasMetadata(LLVMContext::MD_callsite)) {
+          assert(!CI->hasMetadata(LLVMContext::MD_memprof));
+          continue;
+        }
+        // Strip off all memprof metadata as it is no longer needed.
+        // Importantly, this avoids the addition of new memprof attributes
+        // after inlining propagation.
+        CI->setMetadata(LLVMContext::MD_memprof, nullptr);
+        CI->setMetadata(LLVMContext::MD_callsite, nullptr);
+        Changed = true;
+      }
+    }
+  }
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
 }

@@ -112,7 +112,7 @@ namespace {
 
 // Use X19 as the loop counter register since it's a callee-saved register
 // that's available for temporary use.
-constexpr const MCPhysReg kDefaultLoopCounterReg = AArch64::X19;
+constexpr MCPhysReg kDefaultLoopCounterReg = AArch64::X19;
 
 class ExegesisAArch64Target : public ExegesisTarget {
 public:

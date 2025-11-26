@@ -207,9 +207,7 @@ bool ApplyCloning(MachineFunction &MF,
   }
   return AnyPathsCloned;
 }
-} // end anonymous namespace
 
-namespace llvm {
 class BasicBlockPathCloning : public MachineFunctionPass {
 public:
   static char ID;
@@ -229,7 +227,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-} // namespace llvm
+} // namespace
 
 char BasicBlockPathCloning::ID = 0;
 INITIALIZE_PASS_BEGIN(

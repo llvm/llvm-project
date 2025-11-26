@@ -40,6 +40,7 @@ GITHUB_WORKFLOW_TO_TRACK = {
 GITHUB_JOB_TO_TRACK = {
     "github_llvm_premerge_checks": {
         "Build and Test Linux": "premerge_linux",
+        "Build and Test Linux AArch64": "premerge_linux_aarch64",
         "Build and Test Windows": "premerge_windows",
     },
     "github_libcxx_premerge_checks": {
@@ -368,6 +369,13 @@ def github_get_metrics(
             created_at = job.created_at
             started_at = job.started_at
             completed_at = job.completed_at
+
+            if completed_at is None:
+                logging.info(
+                    f"Workflow {task.id} is marked completed but has a job without a "
+                    "completion timestamp."
+                )
+                continue
 
             # GitHub API can return results where the started_at is slightly
             # later then the created_at (or completed earlier than started).
