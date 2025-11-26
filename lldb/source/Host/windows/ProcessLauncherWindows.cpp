@@ -26,9 +26,8 @@ ProcessLauncherWindows::CreateEnvironmentBufferW(const Environment &env) {
   std::vector<std::wstring> env_entries;
   for (const auto &KV : env) {
     std::wstring wentry;
-    if (llvm::ConvertUTF8toWide(Environment::compose(KV), wentry)) {
+    if (llvm::ConvertUTF8toWide(Environment::compose(KV), wentry))
       env_entries.push_back(std::move(wentry));
-    }
   }
   std::sort(env_entries.begin(), env_entries.end(),
             [](const std::wstring &a, const std::wstring &b) {
@@ -36,7 +35,6 @@ ProcessLauncherWindows::CreateEnvironmentBufferW(const Environment &env) {
             });
 
   std::vector<wchar_t> buffer;
-  buffer.clear();
   for (const auto &env_entry : env_entries) {
     buffer.insert(buffer.end(), env_entry.begin(), env_entry.end());
     buffer.push_back(L'\0');
