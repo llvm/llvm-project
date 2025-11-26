@@ -471,6 +471,11 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     // a Range vector.
     OpBuilder<(ins "Value":$source, "ArrayRef<Range>":$ranges,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build an ExtractSliceOp with mixed static and dynamic sizes, inferred
+    // result type, offsets set to 0 and strides set to 1.
+    OpBuilder<(ins "RankedTensorType":$resultType, "Value":$source,
+      "ArrayRef<OpFoldResult>":$sizes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
   ];
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -930,7 +935,12 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     // a Range vector and inferred result type.
     OpBuilder<(ins "Value":$source, "Value":$dest,
       "ArrayRef<Range>":$ranges,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build an InsertSliceOp with mixed static and dynamic sizes, offsets set
+    // to 0, strides set to 1 and inferred result type.
+    OpBuilder<(ins "Value":$source, "Value":$dest,
+      "ArrayRef<OpFoldResult>":$sizes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
   ];
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
