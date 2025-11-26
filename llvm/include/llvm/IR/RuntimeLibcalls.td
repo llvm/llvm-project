@@ -382,7 +382,9 @@ def MEMMOVE : RuntimeLibcall;
 def MEMMOVE_CHK : RuntimeLibcall;
 def MEMSET : RuntimeLibcall;
 def MEMSET_CHK : RuntimeLibcall;
+def MALLOC : RuntimeLibcall;
 def CALLOC : RuntimeLibcall;
+def FREE : RuntimeLibcall;
 def BZERO : RuntimeLibcall;
 def STRLEN : RuntimeLibcall;
 
@@ -1101,8 +1103,11 @@ def __memcpy_chk : RuntimeLibcallImpl<MEMCPY_CHK>;
 def __memmove_chk : RuntimeLibcallImpl<MEMMOVE_CHK>;
 def __memset_chk : RuntimeLibcallImpl<MEMSET_CHK>;
 
+def malloc : RuntimeLibcallImpl<MALLOC>;
+
 // DSEPass can emit calloc if it finds a pair of malloc/memset
 def calloc : RuntimeLibcallImpl<CALLOC>;
+def free : RuntimeLibcallImpl<FREE>;
 
 } // End let IsDefault = true
 
