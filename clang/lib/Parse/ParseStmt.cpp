@@ -21,11 +21,13 @@
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaRipple.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -467,6 +469,43 @@ Retry:
 
   case tok::annot_pragma_openacc:
     return ParseOpenACCDirectiveStmt();
+
+  case tok::annot_pragma_ripple: {
+    assert(getLangOpts().Ripple && "Ripple is not enabled");
+    auto AnnotRange = Tok.getAnnotationRange();
+    std::unique_ptr<SemaRipple::AnnotationData> PragmaVals(
+        static_cast<SemaRipple::AnnotationData *>(Tok.getAnnotationValue()));
+    ConsumeAnnotationToken();
+    StmtResult Stmt;
+    // If IgnoreEmptyStmts is set: skip NullStmt
+    do {
+      Stmt = ParseStatement(TrailingElseLoc, StmtCtx);
+    } while (PragmaVals->IgnoreNullStatements && Stmt.isUsable() &&
+             isa<NullStmt>(Stmt.get()));
+    if (!Stmt.isUsable())
+      return Stmt;
+    // Name lookup for the BlockShape variable
+    LookupResult R(Actions, PragmaVals->BlockShape,
+                   PragmaVals->BlockShapeRange.getBegin(),
+                   Sema::LookupOrdinaryName);
+    if (!Actions.LookupName(R, Actions.getCurScope(),
+                            /*CreateBuiltins*/ false)) {
+      PP.Diag(PragmaVals->BlockShapeRange.getBegin(),
+              diag::err_undeclared_var_use)
+          << PragmaVals->BlockShape;
+      return StmtError();
+    }
+    ValueDecl *BlockShape = R.getAsSingle<ValueDecl>();
+    if (!BlockShape) {
+      PP.Diag(PragmaVals->BlockShapeRange.getBegin(),
+              diag::err_ambiguous_reference)
+          << PragmaVals->BlockShape;
+      return StmtError();
+    }
+    return Actions.Ripple().CreateRippleParallelComputeStmt(
+        AnnotRange, PragmaVals->BlockShapeRange, PragmaVals->DimsRange,
+        BlockShape, PragmaVals->Dims, Stmt.get(), PragmaVals->NoRemainder);
+  }
 
   case tok::annot_pragma_ms_pointers_to_members:
     ProhibitAttributes(CXX11Attrs);

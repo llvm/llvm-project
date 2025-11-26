@@ -18,6 +18,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/SmallVector.h"
 #include <cstdint>
 
 namespace clang {
@@ -25,6 +26,7 @@ namespace clang {
 class CallExpr;
 class Expr;
 class FunctionDecl;
+class IdentifierInfo;
 class Sema;
 class Stmt;
 class ValueDecl;
@@ -48,6 +50,15 @@ public:
                                 const CallExpr *RippleBICall);
 
   bool CheckHasRippleBlockType(const Expr *E, unsigned BuiltinID);
+
+  struct AnnotationData {
+    SourceRange BlockShapeRange;
+    SourceRange DimsRange;
+    IdentifierInfo *BlockShape;
+    SmallVector<uint64_t, 4> Dims;
+    bool IgnoreNullStatements = false;
+    bool NoRemainder = false;
+  };
 };
 
 } // namespace clang

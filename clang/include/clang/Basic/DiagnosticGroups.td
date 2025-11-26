@@ -1698,6 +1698,9 @@ def OpenMP : DiagGroup<"openmp", [
 def SourceUsesOpenACC : DiagGroup<"source-uses-openacc">;
 def OpenACC : DiagGroup<"openacc", [SourceUsesOpenACC]>;
 
+// Ripple warnings.
+def SourceUsesRipple : DiagGroup<"source-uses-ripple">;
+
 // Backend warnings.
 def BackendInlineAsm : DiagGroup<"inline-asm">;
 def BackendSourceMgr : DiagGroup<"source-mgr">;

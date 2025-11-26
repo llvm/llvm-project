@@ -1895,4 +1895,10 @@ def err_hlsl_number_literal_underflow : Error<
   "float literal has a magnitude that is too small to be represented as a float type">;
 def err_hlsl_rootsig_non_zero_flag : Error<"flag value is neither a literal 0 nor a named value">;
 
+// Pragma ripple support
+def warn_pragma_ripple_ignored
+    : Warning<"unexpected '#pragma ripple ...' in program">,
+      InGroup<SourceUsesRipple>,
+      DefaultIgnore;
+
 } // end of Parser diagnostics

@@ -1022,6 +1022,11 @@ PRAGMA_ANNOTATION(pragma_openmp_end)
 PRAGMA_ANNOTATION(pragma_openacc)
 PRAGMA_ANNOTATION(pragma_openacc_end)
 
+// Annotations for Ripple pragma directives - #pragma ripple.
+// Like with OpenMP, these are produced by the lexer when it parses a
+// #pragma ripple directive so it can be handled during parsing of the directives.
+PRAGMA_ANNOTATION(pragma_ripple)
+
 // Annotations for loop pragma directives #pragma clang loop ...
 // The lexer produces these so that they only take effect when the parser
 // handles #pragma loop ... directives.

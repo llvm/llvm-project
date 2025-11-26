@@ -24,6 +24,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/SemaRipple.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -226,6 +227,17 @@ struct PragmaOpenACCHandler
                                   tok::annot_pragma_openacc_end,
                                   diag::err_acc_unexpected_directive> {
   PragmaOpenACCHandler() : PragmaSupportHandler("acc") {}
+};
+
+struct PragmaNoRippleHandler
+    : public PragmaNoSupportHandler<diag::warn_pragma_ripple_ignored> {
+  PragmaNoRippleHandler() : PragmaNoSupportHandler("ripple") {}
+};
+
+struct PragmaRippleHandler : public PragmaHandler {
+  PragmaRippleHandler() : PragmaHandler("ripple") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
 };
 
 /// PragmaCommentHandler - "\#pragma comment ...".
@@ -479,6 +491,12 @@ void Parser::initializePragmaHandlers() {
     OpenACCHandler = std::make_unique<PragmaNoOpenACCHandler>();
   PP.AddPragmaHandler(OpenACCHandler.get());
 
+  if (getLangOpts().Ripple)
+    RippleHandler = std::make_unique<PragmaRippleHandler>();
+  else
+    RippleHandler = std::make_unique<PragmaNoRippleHandler>();
+  PP.AddPragmaHandler(RippleHandler.get());
+
   if (getLangOpts().MicrosoftExt ||
       getTargetInfo().getTriple().isOSBinFormatELF()) {
     MSCommentHandler = std::make_unique<PragmaCommentHandler>(Actions);
@@ -605,6 +623,9 @@ void Parser::resetPragmaHandlers() {
 
   PP.RemovePragmaHandler(OpenACCHandler.get());
   OpenACCHandler.reset();
+
+  PP.RemovePragmaHandler(RippleHandler.get());
+  RippleHandler.reset();
 
   if (getLangOpts().MicrosoftExt ||
       getTargetInfo().getTriple().isOSBinFormatELF()) {
@@ -4301,4 +4322,163 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
     Actions.RISCV().DeclareSiFiveVectorBuiltins = true;
   else if (II->isStr("andes_vector"))
     Actions.RISCV().DeclareAndesVectorBuiltins = true;
+}
+
+// '#pragma ripple Block(<BlockRef>) DIMS(<index>[, <index>]) [IgnoreEmptyStmts]'
+void PragmaRippleHandler::HandlePragma(Preprocessor &PP,
+                                       PragmaIntroducer Introducer,
+                                       Token &FirstToken) {
+  Token Tok;
+  auto parseCstInt = [&](uint64_t &ParsedVal, StringRef S) -> bool {
+    if (Tok.isNot(tok::numeric_constant) ||
+        !PP.parseSimpleIntegerLiteral(Tok, ParsedVal)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_integer)
+          << 0 << 2048 << S;
+      return true;
+    }
+    return false;
+  };
+
+  auto ParseBlockShape = [&](IdentifierInfo *&BlockShape) -> bool {
+    constexpr StringRef RippleBlock("ripple parallel Block()");
+    auto LastToKLoc = Tok.getLocation();
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::l_paren)) {
+      auto WarnLoc = PP.getLocForEndOfToken(LastToKLoc, 0);
+      PP.Diag(WarnLoc, diag::warn_pragma_expected_lparen)
+          << RippleBlock << FixItHint::CreateInsertion(WarnLoc, "(");
+      return true;
+    }
+    PP.Lex(Tok);
+    LastToKLoc = Tok.getLocation();
+    BlockShape = Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
+    if (!BlockShape) {
+      auto WarnLoc = PP.getLocForEndOfToken(LastToKLoc, 0);
+      PP.Diag(WarnLoc, diag::warn_pragma_expected_identifier) << RippleBlock;
+      return true;
+    }
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::r_paren)) {
+      auto WarnLoc = PP.getLocForEndOfToken(LastToKLoc, 0);
+      PP.Diag(WarnLoc, diag::warn_pragma_expected_rparen)
+          << RippleBlock << FixItHint::CreateInsertion(WarnLoc, ")");
+      return true;
+    }
+    return false;
+  };
+
+  auto ParseDims = [&](SmallVectorImpl<uint64_t> &Dims) -> bool {
+    constexpr StringRef RippleDims("ripple parallel Dims()");
+    auto LastToKLoc = Tok.getLocation();
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::l_paren)) {
+      auto WarnLoc = PP.getLocForEndOfToken(LastToKLoc, 0);
+      PP.Diag(WarnLoc, diag::warn_pragma_expected_lparen)
+          << RippleDims << FixItHint::CreateInsertion(WarnLoc, "(");
+      return true;
+    }
+    uint64_t ParsedInt;
+    PP.Lex(Tok);
+    if (parseCstInt(ParsedInt, RippleDims)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
+          << Lexer::getSourceText(CharSourceRange::getTokenRange(
+                                      Tok.getLocation(), Tok.getEndLoc()),
+                                  PP.getSourceManager(), PP.getLangOpts())
+          << RippleDims << /*Expected=*/true
+          << "at least one integer dimension";
+      return true;
+    }
+    Dims.push_back(ParsedInt);
+    while (Tok.is(tok::comma)) {
+      PP.Lex(Tok);
+      LastToKLoc = Tok.getLocation();
+      if (parseCstInt(ParsedInt, RippleDims))
+        return true;
+      Dims.push_back(ParsedInt);
+    }
+    if (Tok.isNot(tok::r_paren)) {
+      auto WarnLoc = PP.getLocForEndOfToken(LastToKLoc, 0);
+      PP.Diag(WarnLoc, diag::warn_pragma_expected_rparen)
+          << RippleDims << FixItHint::CreateInsertion(WarnLoc, ")");
+      return true;
+    }
+    return false;
+  };
+
+  PP.Lex(Tok);
+  const IdentifierInfo *Arg = Tok.getIdentifierInfo();
+  if (!Arg || (Arg && !Arg->isStr("parallel"))) {
+    PP.Diag(FirstToken.getLocation(), diag::warn_pragma_missing_argument)
+        << "ripple" << /*Expected=*/true << "parallel" << Tok.getLocation();
+    return;
+  }
+
+  SemaRipple::AnnotationData *AnnotData = new SemaRipple::AnnotationData;
+  if (!AnnotData)
+    return;
+  bool ParsedBlock = false;
+  bool ParsedDims = false;
+  // We expect Block, Dims, NoRemainder or IgnoreNullStmts
+  do {
+    PP.Lex(Tok);
+    Arg = Tok.getIdentifierInfo();
+    if (Arg && Arg->isStr("Block")) {
+      SourceLocation BlockBegin = Tok.getLocation();
+      if (ParsedBlock) {
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
+            << "repeated Block" << "ripple parallel" << /*Expected=*/true
+            << "Dims";
+        return;
+      }
+      if (ParseBlockShape(AnnotData->BlockShape))
+        return;
+      ParsedBlock = true;
+      AnnotData->BlockShapeRange = SourceRange(BlockBegin, Tok.getLocation());
+    } else if (Arg && Arg->isStr("Dims")) {
+      SourceLocation DimsBegin = Tok.getLocation();
+      if (ParsedDims) {
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
+            << "repeated Dims" << "ripple parallel" << /*Expected=*/true
+            << "Block";
+        return;
+      }
+      if (ParseDims(AnnotData->Dims))
+        return;
+      ParsedDims = true;
+      AnnotData->DimsRange = SourceRange(DimsBegin, Tok.getLocation());
+    } else if (Arg && Arg->isStr("IgnoreNullStmts")) {
+      AnnotData->IgnoreNullStatements = true;
+    } else if (Arg && Arg->isStr("NoRemainder")) {
+      AnnotData->NoRemainder = true;
+    } else if (Arg) {
+      // IgnoreNullStmts is only for backward compatibility w/ the
+      // ripple_parallel(); interface so don't advertise it!
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
+          << SourceRange(Tok.getLocation(), Tok.getEndLoc()) << Arg->getName()
+          << "ripple parallel" << /*Expected=*/true
+          << "Block, Dims or NoRemainder"
+          << FixItHint::CreateInsertion(Tok.getLocation(),
+                                        "Block, Dims or NoRemainder");
+      return;
+    } else if (Tok.isNot(tok::eod) && ParsedBlock && ParsedDims) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+          << "ripple parallel";
+    }
+  } while (Tok.isNot(tok::eod));
+
+  if (!(ParsedBlock && ParsedDims)) {
+    StringRef MissingClauses =
+        ParsedBlock ? "Dims" : (ParsedDims ? "Block" : "Block and Dims");
+    PP.Diag(FirstToken.getLocation(), diag::warn_pragma_missing_argument)
+        << "ripple parallel" << /*Expected=*/true << MissingClauses
+        << Tok.getLocation();
+  }
+
+  Token AnnotTok;
+  AnnotTok.startToken();
+  AnnotTok.setKind(tok::annot_pragma_ripple);
+  AnnotTok.setLocation(Introducer.Loc);
+  AnnotTok.setAnnotationEndLoc(Tok.getLocation());
+  AnnotTok.setAnnotationValue(AnnotData);
+  PP.EnterToken(AnnotTok, /*IsReinject=*/true);
 }
