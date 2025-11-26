@@ -258,7 +258,7 @@ static bool hasRelevantRecipeUse(RecipeOpT recipeOp) {
     return true;
 
   // If single use, check if the use is the recipe itself.
-  const auto &use = *symbolUses->begin();
+  const SymbolTable::SymbolUse &use = *symbolUses->begin();
   return use.getUser() != recipeOp.getOperation();
 }
 
@@ -311,7 +311,7 @@ static void collectGlobalsFromDeviceRegion(mlir::Region &region,
       // Process operations that indirectly access globals
       llvm::SmallVector<SymbolRefAttr> symbols;
       indirectAccessOp.getReferencedSymbols(symbols, &symTab);
-      for (auto symRef : symbols)
+      for (SymbolRefAttr symRef : symbols)
         if (Operation *globalOp = SymbolTable::lookupSymbolIn(mod, symRef))
           if (isValidForAccDeclare(globalOp))
             globals.insert(globalOp);
@@ -336,7 +336,7 @@ public:
 
   void runOnOperation() override {
     ModuleOp mod = getOperation();
-    auto *context = &getContext();
+    MLIRContext *context = &getContext();
     acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
 
     // 1) Start off by hoisting any AddressOf operations out of acc region
@@ -405,7 +405,7 @@ public:
 
     // 3) Finally, generate the appropriate declare actions needed to ensure
     // this is considered for device global.
-    for (auto *globalOp : globalsToAccDeclare) {
+    for (Operation *globalOp : globalsToAccDeclare) {
       LLVM_DEBUG(
           llvm::dbgs() << "Global is being `acc declare copyin`d: ";
           globalOp->print(llvm::dbgs(),
