@@ -486,7 +486,8 @@ Error RewriteInstance::setProfile(StringRef Filename) {
 static bool shouldDisassemble(const BinaryFunction &BF) {
 
   const BinaryContext &BC = BF.getBinaryContext();
-  // Disassemble PLT functions on AArch64 to check BTI landing pads.
+  // Disassemble PLT functions for BTI binaries to check if they need landing
+  // pads when targeting them in LongJmp.
   if (BC.usesBTI() && BF.isPLTFunction())
     return true;
 
