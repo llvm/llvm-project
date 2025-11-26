@@ -1,4 +1,4 @@
-// RUN: %clangxx_asan %s -o %t && %run %t
+// RUN: %clangxx_asan %s -o %t && env ASAN_OPTIONS=detect_stack_use_after_return=1 %run %t
 // RUN: %clangxx_asan %s -mllvm -asan-use-after-return=runtime -o %t && env ASAN_OPTIONS=detect_stack_use_after_return=1 %run %t
 // RUN: %clangxx_asan %s -mllvm -asan-use-after-return=always -o %t && %run %t
 
