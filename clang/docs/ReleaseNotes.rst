@@ -759,6 +759,8 @@ OpenMP Support
 - Updated parsing and semantic analysis support for ``nowait`` clause to accept
   optional argument in OpenMP >= 60.
 - Added support for ``default`` clause on ``target`` directive.
+- ``use_device_ptr`` and ``use_device_addr`` now preserve the original host
+  address when lookup fails.
 
 Improvements
 ^^^^^^^^^^^^
