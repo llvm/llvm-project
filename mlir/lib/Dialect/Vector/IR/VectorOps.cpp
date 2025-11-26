@@ -2375,14 +2375,6 @@ static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
 }
 
 //===----------------------------------------------------------------------===//
-// FmaOp
-//===----------------------------------------------------------------------===//
-
-std::optional<SmallVector<int64_t, 4>> FMAOp::getShapeForUnroll() {
-  return llvm::to_vector<4>(getVectorType().getShape());
-}
-
-//===----------------------------------------------------------------------===//
 // ToElementsOp
 //===----------------------------------------------------------------------===//
 
@@ -2780,10 +2772,6 @@ void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
 void BroadcastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                     SetIntRangeFn setResultRanges) {
   setResultRanges(getResult(), argRanges.front());
-}
-
-std::optional<SmallVector<int64_t, 4>> BroadcastOp::getShapeForUnroll() {
-  return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
 /// Return the dimensions of the result vector that were formerly ones in the
@@ -5100,10 +5088,6 @@ OpFoldResult TransferReadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
-std::optional<SmallVector<int64_t, 4>> TransferReadOp::getShapeForUnroll() {
-  return llvm::to_vector<4>(getVectorType().getShape());
-}
-
 void TransferReadOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
@@ -5778,10 +5762,6 @@ OpFoldResult LoadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
-std::optional<SmallVector<int64_t, 4>> LoadOp::getShapeForUnroll() {
-  return llvm::to_vector<4>(getVectorType().getShape());
-}
-
 FailureOr<std::optional<SmallVector<Value>>>
 LoadOp::bubbleDownCasts(OpBuilder &builder) {
   return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
@@ -5984,10 +5964,6 @@ Type GatherOp::getExpectedMaskType() {
   return VectorType::get(vecType.getShape(),
                          IntegerType::get(vecType.getContext(), /*width=*/1),
                          vecType.getScalableDims());
-}
-
-std::optional<SmallVector<int64_t, 4>> GatherOp::getShapeForUnroll() {
-  return llvm::to_vector<4>(getVectorType().getShape());
 }
 
 /// Cheeck if `indexVec` is constant 1D vec of consecutive values [0, 1, 2, ...]
@@ -6724,10 +6700,6 @@ LogicalResult vector::TransposeOp::verify() {
       return emitOpError("dimension size mismatch at: ") << ta.value();
   }
   return success();
-}
-
-std::optional<SmallVector<int64_t, 4>> TransposeOp::getShapeForUnroll() {
-  return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
 void TransposeOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
