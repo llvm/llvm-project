@@ -1193,7 +1193,7 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK:       pred.udiv.continue62:
 ; CHECK-NEXT:    [[TMP161:%.*]] = phi <32 x i32> [ [[TMP156]], [[PRED_UDIV_CONTINUE60]] ], [ [[TMP160]], [[PRED_UDIV_IF61]] ]
 ; CHECK-NEXT:    [[TMP162:%.*]] = zext <32 x i32> [[TMP161]] to <32 x i64>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <32 x i1> [[BROADCAST_SPLAT]], <32 x i64> zeroinitializer, <32 x i64> [[TMP162]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <32 x i64> zeroinitializer, <32 x i64> [[TMP162]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <32 x i32> [[VEC_IND]], splat (i32 32)
 ; CHECK-NEXT:    [[TMP163:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
@@ -1289,7 +1289,7 @@ define i64 @test_predicated_udiv(i32 %d, i1 %c) #2 {
 ; CHECK:       pred.udiv.continue84:
 ; CHECK-NEXT:    [[TMP206:%.*]] = phi <8 x i32> [ [[TMP201]], [[PRED_UDIV_CONTINUE82]] ], [ [[TMP205]], [[PRED_UDIV_IF83]] ]
 ; CHECK-NEXT:    [[TMP207:%.*]] = zext <8 x i32> [[TMP206]] to <8 x i64>
-; CHECK-NEXT:    [[PREDPHI85:%.*]] = select <8 x i1> [[BROADCAST_SPLAT64]], <8 x i64> zeroinitializer, <8 x i64> [[TMP207]]
+; CHECK-NEXT:    [[PREDPHI85:%.*]] = select i1 [[C]], <8 x i64> zeroinitializer, <8 x i64> [[TMP207]]
 ; CHECK-NEXT:    [[INDEX_NEXT86]] = add nuw i32 [[INDEX67]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT87]] = add <8 x i32> [[VEC_IND68]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP208:%.*]] = icmp eq i32 [[INDEX_NEXT86]], 1000

@@ -125,9 +125,8 @@ public:
               .Cases({"power3", "pwr3"}, ArchDefinePpcgr)
               .Cases({"power4", "pwr4"},
                      ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
-              .Cases("power5", "pwr5",
-                     ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
-                         ArchDefinePpcsq)
+              .Cases({"power5", "pwr5"}, ArchDefinePwr5 | ArchDefinePwr4 |
+                                             ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases({"power5x", "pwr5x"},
                      ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
                          ArchDefinePpcgr | ArchDefinePpcsq)
@@ -166,7 +165,7 @@ public:
                         ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
                         ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
                         ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
-              .Cases("8548", "e500", ArchDefineE500)
+              .Cases({"8548", "e500"}, ArchDefineE500)
               .Default(ArchDefineNone);
     }
     return CPUKnown;

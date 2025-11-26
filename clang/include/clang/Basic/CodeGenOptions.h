@@ -155,10 +155,13 @@ public:
   std::string BinutilsVersion;
 
   enum class FramePointerKind {
-    None,     // Omit all frame pointers.
-    Reserved, // Maintain valid frame pointer chain.
-    NonLeaf,  // Keep non-leaf frame pointers.
-    All,      // Keep all frame pointers.
+    NonLeafNoReserve, // Keep non-leaf frame pointers, allow the FP to be used
+                      // as a GPR in leaf functions.
+    None,             // Omit all frame pointers.
+    Reserved,         // Maintain valid frame pointer chain.
+    NonLeaf, // Keep non-leaf frame pointers, don't allow the FP to be used as a
+             // GPR in leaf functions.
+    All,     // Keep all frame pointers.
   };
 
   static StringRef getFramePointerKindName(FramePointerKind Kind) {
@@ -167,6 +170,8 @@ public:
       return "none";
     case FramePointerKind::Reserved:
       return "reserved";
+    case FramePointerKind::NonLeafNoReserve:
+      return "non-leaf-no-reserve";
     case FramePointerKind::NonLeaf:
       return "non-leaf";
     case FramePointerKind::All:

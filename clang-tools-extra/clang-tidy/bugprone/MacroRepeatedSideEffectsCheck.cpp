@@ -127,7 +127,7 @@ unsigned MacroRepeatedPPCallbacks::countArgumentExpansions(
         continue;
     }
 
-    IdentifierInfo *TII = T.getIdentifierInfo();
+    const IdentifierInfo *TII = T.getIdentifierInfo();
     // If not existent, skip it.
     if (TII == nullptr)
       continue;

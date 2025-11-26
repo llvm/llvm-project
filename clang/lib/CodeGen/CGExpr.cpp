@@ -2801,18 +2801,49 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
                                                                LValue Dst) {
   llvm::Value *SrcVal = Src.getScalarVal();
   Address DstAddr = Dst.getExtVectorAddress();
+  const llvm::Constant *Elts = Dst.getExtVectorElts();
   if (DstAddr.getElementType()->getScalarSizeInBits() >
       SrcVal->getType()->getScalarSizeInBits())
     SrcVal = Builder.CreateZExt(
         SrcVal, convertTypeForLoadStore(Dst.getType(), SrcVal->getType()));
 
-  // HLSL allows storing to scalar values through ExtVector component LValues.
-  // To support this we need to handle the case where the destination address is
-  // a scalar.
-  if (!DstAddr.getElementType()->isVectorTy()) {
-    assert(!Dst.getType()->isVectorType() &&
-           "this should only occur for non-vector l-values");
-    Builder.CreateStore(SrcVal, DstAddr, Dst.isVolatileQualified());
+  if (getLangOpts().HLSL) {
+    llvm::Type *DestAddrTy = DstAddr.getElementType();
+    // HLSL allows storing to scalar values through ExtVector component LValues.
+    // To support this we need to handle the case where the destination address
+    // is a scalar.
+    if (!DestAddrTy->isVectorTy()) {
+      assert(!Dst.getType()->isVectorType() &&
+             "this should only occur for non-vector l-values");
+      Builder.CreateStore(SrcVal, DstAddr, Dst.isVolatileQualified());
+      return;
+    }
+
+    // HLSL allows direct access to vector elements, so storing to individual
+    // elements of a vector through ExtVector is handled as separate store
+    // instructions.
+    // If we are updating multiple elements, Dst and Src are vectors; for
+    // a single element update they are scalars.
+    const VectorType *VTy = Dst.getType()->getAs<VectorType>();
+    unsigned NumSrcElts = VTy ? VTy->getNumElements() : 1;
+    CharUnits ElemAlign = CharUnits::fromQuantity(
+        CGM.getDataLayout().getPrefTypeAlign(DestAddrTy->getScalarType()));
+    llvm::Value *Zero = llvm::ConstantInt::get(Int32Ty, 0);
+
+    for (unsigned I = 0; I != NumSrcElts; ++I) {
+      llvm::Value *Val = VTy ? Builder.CreateExtractElement(
+                                   SrcVal, llvm::ConstantInt::get(Int32Ty, I))
+                             : SrcVal;
+      unsigned FieldNo = getAccessedFieldNo(I, Elts);
+      Address DstElemAddr = Address::invalid();
+      if (FieldNo == 0)
+        DstElemAddr = DstAddr.withAlignment(ElemAlign);
+      else
+        DstElemAddr = Builder.CreateGEP(
+            DstAddr, {Zero, llvm::ConstantInt::get(Int32Ty, FieldNo)},
+            DestAddrTy, ElemAlign);
+      Builder.CreateStore(Val, DstElemAddr, Dst.isVolatileQualified());
+    }
     return;
   }
 
@@ -2820,7 +2851,6 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
   // value now.
   llvm::Value *Vec = Builder.CreateLoad(DstAddr, Dst.isVolatileQualified());
   llvm::Type *VecTy = Vec->getType();
-  const llvm::Constant *Elts = Dst.getExtVectorElts();
 
   if (const VectorType *VTy = Dst.getType()->getAs<VectorType>()) {
     unsigned NumSrcElts = VTy->getNumElements();
@@ -3900,18 +3930,8 @@ void CodeGenFunction::EmitCheck(
 
   // Clear arguments for the MinimalRuntime handler.
   if (CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
-    switch (CheckHandler) {
-    case SanitizerHandler::TypeMismatch:
-      // Pass value pointer only. It adds minimal overhead.
-      StaticArgs = {};
-      assert(DynamicArgs.size() == 1);
-      break;
-    default:
-      // No arguments for other checks.
-      StaticArgs = {};
-      DynamicArgs = {};
-      break;
-    }
+    StaticArgs = {};
+    DynamicArgs = {};
   }
 
   // Handler functions take an i8* pointing to the (handler-specific) static
@@ -4641,11 +4661,17 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  LHS.getBaseInfo(), TBAAAccessInfo());
   }
 
-  // The HLSL runtime handle the subscript expression on global resource arrays.
-  if (getLangOpts().HLSL && (E->getType()->isHLSLResourceRecord() ||
-                             E->getType()->isHLSLResourceRecordArray())) {
-    std::optional<LValue> LV =
-        CGM.getHLSLRuntime().emitResourceArraySubscriptExpr(E, *this);
+  // The HLSL runtime handles subscript expressions on global resource arrays
+  // and objects with HLSL buffer layouts.
+  if (getLangOpts().HLSL) {
+    std::optional<LValue> LV;
+    if (E->getType()->isHLSLResourceRecord() ||
+        E->getType()->isHLSLResourceRecordArray()) {
+      LV = CGM.getHLSLRuntime().emitResourceArraySubscriptExpr(E, *this);
+    } else if (E->getType().getAddressSpace() == LangAS::hlsl_constant) {
+      LV = CGM.getHLSLRuntime().emitBufferArraySubscriptExpr(E, *this,
+                                                             EmitIdxAfterBase);
+    }
     if (LV.has_value())
       return *LV;
   }
@@ -5109,6 +5135,11 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
   if (DeclRefExpr *DRE = tryToConvertMemberExprToDeclRefExpr(*this, E)) {
     EmitIgnoredExpr(E->getBase());
     return EmitDeclRefLValue(DRE);
+  }
+  if (getLangOpts().HLSL &&
+      E->getType().getAddressSpace() == LangAS::hlsl_constant) {
+    // We have an HLSL buffer - emit using HLSL's layout rules.
+    return CGM.getHLSLRuntime().emitBufferMemberExpr(*this, E);
   }
 
   Expr *BaseExpr = E->getBase();
@@ -6632,16 +6663,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
                          E == MustTailCall, E->getExprLoc());
 
   if (auto *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-    // Generate function declaration DISuprogram in order to be used
-    // in debug info about call sites.
-    if (CGDebugInfo *DI = getDebugInfo()) {
-      FunctionArgList Args;
-      QualType ResTy = BuildFunctionArgList(CalleeDecl, Args);
-      DI->EmitFuncDeclForCallSite(LocalCallOrInvoke,
-                                  DI->getFunctionType(CalleeDecl, ResTy, Args),
-                                  CalleeDecl);
-    }
     if (CalleeDecl->hasAttr<RestrictAttr>() ||
+        CalleeDecl->hasAttr<MallocSpanAttr>() ||
         CalleeDecl->hasAttr<AllocSizeAttr>()) {
       // Function has 'malloc' (aka. 'restrict') or 'alloc_size' attribute.
       if (SanOpts.has(SanitizerKind::AllocToken)) {

@@ -12,8 +12,7 @@
 
 // This test requires the fix to https://llvm.org/PR60509 in the dylib,
 // which landed in 5afb937d8a30445642ccaf33866ee4cdd0713222.
-// TODO: Remove && !darwin once availability markup for LLVM 19 on macOS has been added
-// XFAIL: using-built-library-before-llvm-19 && !darwin
+// XFAIL: using-built-library-before-llvm-19
 
 #include <fstream>
 #include <cstddef>

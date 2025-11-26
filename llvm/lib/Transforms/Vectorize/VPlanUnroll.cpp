@@ -68,10 +68,9 @@ class UnrollState {
   void unrollWidenInductionByUF(VPWidenInductionRecipe *IV,
                                 VPBasicBlock::iterator InsertPtForPhi);
 
-  VPValue *getConstantVPV(unsigned Part) {
-    Type *CanIVIntTy =
-        Plan.getVectorLoopRegion()->getCanonicalIV()->getScalarType();
-    return Plan.getOrAddLiveIn(ConstantInt::get(CanIVIntTy, Part));
+  VPValue *getConstantInt(unsigned Part) {
+    Type *CanIVIntTy = Plan.getVectorLoopRegion()->getCanonicalIVType();
+    return Plan.getConstantInt(CanIVIntTy, Part);
   }
 
 public:
@@ -138,7 +137,7 @@ void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
       for (const auto &[PartIR, Part0R] : zip(*PartIVPBB, *Part0VPBB)) {
         remapOperands(&PartIR, Part);
         if (auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(&PartIR)) {
-          ScalarIVSteps->addOperand(getConstantVPV(Part));
+          ScalarIVSteps->addOperand(getConstantInt(Part));
         }
 
         addRecipeForPart(&Part0R, &PartIR, Part);
@@ -250,7 +249,7 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
         for (unsigned Part = 1; Part != UF; ++Part)
           VPV2Parts[VPI][Part - 1] = StartV;
       }
-      Copy->addOperand(getConstantVPV(Part));
+      Copy->addOperand(getConstantInt(Part));
     } else {
       assert(isa<VPActiveLaneMaskPHIRecipe>(R) &&
              "unexpected header phi recipe not needing unrolled part");
@@ -319,7 +318,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
             VPVectorPointerRecipe, VPVectorEndPointerRecipe>(Copy) ||
         match(Copy,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
-      Copy->addOperand(getConstantVPV(Part));
+      Copy->addOperand(getConstantInt(Part));
 
     if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))
       Copy->setOperand(0, R.getOperand(0));
@@ -467,7 +466,7 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
 /// definitions for operands of \DefR.
 static VPValue *
 cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
-             VPRecipeWithIRFlags *DefR, VPLane Lane,
+             VPSingleDefRecipe *DefR, VPLane Lane,
              const DenseMap<VPValue *, SmallVector<VPValue *>> &Def2LaneDefs) {
   VPValue *Op;
   if (match(DefR, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)))) {
@@ -475,8 +474,7 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     if (LaneDefs != Def2LaneDefs.end())
       return LaneDefs->second[Lane.getKnownLane()];
 
-    VPValue *Idx =
-        Plan.getOrAddLiveIn(ConstantInt::get(IdxTy, Lane.getKnownLane()));
+    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
     return Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
   }
 
@@ -510,20 +508,19 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
           cast<VPInstruction>(Op)->getOperand(Lane.getKnownLane()));
       continue;
     }
-    VPValue *Idx =
-        Plan.getOrAddLiveIn(ConstantInt::get(IdxTy, Lane.getKnownLane()));
+    VPValue *Idx = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
     VPValue *Ext = Builder.createNaryOp(Instruction::ExtractElement, {Op, Idx});
     NewOps.push_back(Ext);
   }
 
-  VPRecipeWithIRFlags *New;
+  VPSingleDefRecipe *New;
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(DefR)) {
     // TODO: have cloning of replicate recipes also provide the desired result
     // coupled with setting its operands to NewOps (deriving IsSingleScalar and
     // Mask from the operands?)
-    New =
-        new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
-                              /*IsSingleScalar=*/true, /*Mask=*/nullptr, *RepR);
+    New = new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
+                                /*IsSingleScalar=*/true, /*Mask=*/nullptr,
+                                *RepR, *RepR, RepR->getDebugLoc());
   } else {
     assert(isa<VPInstruction>(DefR) &&
            "DefR must be a VPReplicateRecipe or VPInstruction");
@@ -532,7 +529,6 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       New->setOperand(Idx, Op);
     }
   }
-  New->transferFlags(*DefR);
   New->insertBefore(DefR);
   return New;
 }
@@ -566,7 +562,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
            cast<VPInstruction>(&R)->getOpcode() != VPInstruction::Unpack))
         continue;
 
-      auto *DefR = cast<VPRecipeWithIRFlags>(&R);
+      auto *DefR = cast<VPSingleDefRecipe>(&R);
       VPBuilder Builder(DefR);
       if (DefR->getNumUsers() == 0) {
         // Create single-scalar version of DefR for all lanes.
@@ -585,7 +581,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
       DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
-        return U.onlyFirstLaneUsed(DefR);
+        return U.usesFirstLaneOnly(DefR);
       });
 
       // Update each build vector user that currently has DefR as its only

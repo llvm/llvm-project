@@ -963,8 +963,6 @@ namespace llvm {
 
 extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
 
-extern MCAsmParserExtension *createCOFFMasmParser();
-
 } // end namespace llvm
 
 enum { DEFAULT_ADDRSPACE = 0 };
@@ -5323,10 +5321,10 @@ void MasmParser::initializeDirectiveKindMap() {
 bool MasmParser::isMacroLikeDirective() {
   if (getLexer().is(AsmToken::Identifier)) {
     bool IsMacroLike = StringSwitch<bool>(getTok().getIdentifier())
-                           .CasesLower("repeat", "rept", true)
+                           .CasesLower({"repeat", "rept"}, true)
                            .CaseLower("while", true)
-                           .CasesLower("for", "irp", true)
-                           .CasesLower("forc", "irpc", true)
+                           .CasesLower({"for", "irp"}, true)
+                           .CasesLower({"forc", "irpc"}, true)
                            .Default(false);
     if (IsMacroLike)
       return true;

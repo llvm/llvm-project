@@ -72,6 +72,8 @@ struct VersionEntry {
 };
 
 LLVM_ABI StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type);
+LLVM_ABI StringRef getRISCVVendorRelocationTypeName(uint32_t Type,
+                                                    StringRef Vendor);
 LLVM_ABI uint32_t getELFRelativeRelocationType(uint32_t Machine);
 LLVM_ABI StringRef getELFSectionTypeName(uint32_t Machine, uint32_t Type);
 
@@ -260,6 +262,8 @@ public:
   // template for DLL export.
   ELFFile(const ELFFile &) = default;
   ELFFile &operator=(const ELFFile &) = default;
+
+  ELFFile(ELFFile &&) = default;
 
   // This is a callback that can be passed to a number of functions.
   // It can be used to ignore non-critical errors (warnings), which is

@@ -67,10 +67,10 @@ private:
   llvm::DenseMap<const CFGBlock *, Lattice> InStates;
   /// The dataflow state after a basic block is processed.
   llvm::DenseMap<const CFGBlock *, Lattice> OutStates;
-  /// The dataflow state at a Program Point.
+  /// Dataflow state at each program point, indexed by Fact ID.
   /// In a forward analysis, this is the state after the Fact at that point has
   /// been applied, while in a backward analysis, it is the state before.
-  llvm::DenseMap<ProgramPoint, Lattice> PerPointStates;
+  llvm::SmallVector<Lattice> PointToState;
 
   static constexpr bool isForward() { return Dir == Direction::Forward; }
 
@@ -85,6 +85,8 @@ public:
   void run() {
     Derived &D = static_cast<Derived &>(*this);
     llvm::TimeTraceScope Time(D.getAnalysisName());
+
+    PointToState.resize(FactMgr.getNumFacts());
 
     using Worklist =
         std::conditional_t<Dir == Direction::Forward, ForwardDataflowWorklist,
@@ -116,7 +118,9 @@ public:
   }
 
 protected:
-  Lattice getState(ProgramPoint P) const { return PerPointStates.lookup(P); }
+  Lattice getState(ProgramPoint P) const {
+    return PointToState[P->getID().Value];
+  }
 
   std::optional<Lattice> getInState(const CFGBlock *B) const {
     auto It = InStates.find(B);
@@ -144,12 +148,12 @@ private:
     if constexpr (isForward()) {
       for (const Fact *F : Facts) {
         State = transferFact(State, F);
-        PerPointStates[F] = State;
+        PointToState[F->getID().Value] = State;
       }
     } else {
       for (const Fact *F : llvm::reverse(Facts)) {
         // In backward analysis, capture the state before applying the fact.
-        PerPointStates[F] = State;
+        PointToState[F->getID().Value] = State;
         State = transferFact(State, F);
       }
     }
@@ -166,8 +170,8 @@ private:
       return D->transfer(In, *F->getAs<ExpireFact>());
     case Fact::Kind::OriginFlow:
       return D->transfer(In, *F->getAs<OriginFlowFact>());
-    case Fact::Kind::ReturnOfOrigin:
-      return D->transfer(In, *F->getAs<ReturnOfOriginFact>());
+    case Fact::Kind::OriginEscapes:
+      return D->transfer(In, *F->getAs<OriginEscapesFact>());
     case Fact::Kind::Use:
       return D->transfer(In, *F->getAs<UseFact>());
     case Fact::Kind::TestPoint:
@@ -180,7 +184,7 @@ public:
   Lattice transfer(Lattice In, const IssueFact &) { return In; }
   Lattice transfer(Lattice In, const ExpireFact &) { return In; }
   Lattice transfer(Lattice In, const OriginFlowFact &) { return In; }
-  Lattice transfer(Lattice In, const ReturnOfOriginFact &) { return In; }
+  Lattice transfer(Lattice In, const OriginEscapesFact &) { return In; }
   Lattice transfer(Lattice In, const UseFact &) { return In; }
   Lattice transfer(Lattice In, const TestPointFact &) { return In; }
 };
