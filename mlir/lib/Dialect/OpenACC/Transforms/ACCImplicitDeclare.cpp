@@ -217,11 +217,10 @@ static bool isGlobalUseCandidateForHoisting(Operation *globalOp,
   bool isConstant = false;
   bool isFunction = false;
 
-  if (auto globalVarOp =
-          dyn_cast<mlir::acc::GlobalVariableOpInterface>(globalOp))
+  if (auto globalVarOp = dyn_cast<acc::GlobalVariableOpInterface>(globalOp))
     isConstant = globalVarOp.isConstant();
 
-  if (isa<mlir::FunctionOpInterface>(globalOp))
+  if (isa<FunctionOpInterface>(globalOp))
     isFunction = true;
 
   // Constants should be kept in device code to ensure they are duplicated.
@@ -234,7 +233,7 @@ static bool isGlobalUseCandidateForHoisting(Operation *globalOp,
 /// Checks whether it is valid to use acc.declare marking on the global.
 bool isValidForAccDeclare(Operation *globalOp) {
   // For functions - we use acc.routine marking instead.
-  return !isa<mlir::FunctionOpInterface>(globalOp);
+  return !isa<FunctionOpInterface>(globalOp);
 }
 
 /// Checks whether a recipe operation has meaningful use of its symbol that
@@ -243,8 +242,8 @@ bool isValidForAccDeclare(Operation *globalOp) {
 /// 2. The only symbol use is the recipe's own symbol definition
 template <typename RecipeOpT>
 static bool hasRelevantRecipeUse(RecipeOpT recipeOp) {
-  auto moduleOp = recipeOp->template getParentOfType<mlir::ModuleOp>();
-  std::optional<mlir::SymbolTable::UseRange> symbolUses =
+  auto moduleOp = recipeOp->template getParentOfType<ModuleOp>();
+  std::optional<SymbolTable::UseRange> symbolUses =
       recipeOp.getSymbolUses(moduleOp);
 
   // No recipe symbol uses.
@@ -268,7 +267,7 @@ static bool hasRelevantRecipeUse(RecipeOpT recipeOp) {
 template <typename AccConstructT>
 static void hoistNonConstantDirectUses(AccConstructT accOp,
                                        acc::OpenACCSupport &accSupport) {
-  accOp.walk([&](mlir::acc::AddressOfGlobalOpInterface addrOfOp) {
+  accOp.walk([&](acc::AddressOfGlobalOpInterface addrOfOp) {
     SymbolRefAttr symRef = addrOfOp.getSymbol();
     if (symRef) {
       Operation *globalOp =
@@ -287,13 +286,13 @@ static void hoistNonConstantDirectUses(AccConstructT accOp,
 }
 
 // Collects the globals referenced in a device region
-static void collectGlobalsFromDeviceRegion(mlir::Region &region,
+static void collectGlobalsFromDeviceRegion(Region &region,
                                            GlobalOpSetT &globals,
                                            acc::OpenACCSupport &accSupport,
                                            SymbolTable &symTab) {
   region.walk([&](Operation *op) {
     // 1) Only consider relevant operations which use symbols
-    auto addrOfOp = dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(op);
+    auto addrOfOp = dyn_cast<acc::AddressOfGlobalOpInterface>(op);
     if (addrOfOp) {
       SymbolRefAttr symRef = addrOfOp.getSymbol();
       // 2) Found an operation which uses the symbol. Next determine if it
@@ -306,12 +305,12 @@ static void collectGlobalsFromDeviceRegion(mlir::Region &region,
       if (isCandidate && globalOp && isValidForAccDeclare(globalOp))
         globals.insert(globalOp);
     } else if (auto indirectAccessOp =
-                   dyn_cast<mlir::acc::IndirectGlobalAccessOpInterface>(op)) {
+                   dyn_cast<acc::IndirectGlobalAccessOpInterface>(op)) {
       // Process operations that indirectly access globals
       llvm::SmallVector<SymbolRefAttr> symbols;
       indirectAccessOp.getReferencedSymbols(symbols, &symTab);
       for (SymbolRefAttr symRef : symbols)
-        if (auto globalOp = symTab.lookup<mlir::acc::GlobalVariableOpInterface>(
+        if (auto globalOp = symTab.lookup<acc::GlobalVariableOpInterface>(
                 symRef.getLeafReference()))
           if (isValidForAccDeclare(globalOp))
             globals.insert(globalOp);
@@ -363,15 +362,15 @@ public:
                 collectGlobalsFromDeviceRegion(
                     accOp.getRegion(), globalsToAccDeclare, accSupport, symTab);
               })
-          .Case<mlir::FunctionOpInterface>([&](auto func) {
+          .Case<FunctionOpInterface>([&](auto func) {
             if (acc::isAccRoutineOp(func) && !func.isExternal())
               collectGlobalsFromDeviceRegion(func.getFunctionBody(),
                                              globalsToAccDeclare, accSupport,
                                              symTab);
           })
-          .Case<mlir::acc::GlobalVariableOpInterface>([&](auto globalVarOp) {
+          .Case<acc::GlobalVariableOpInterface>([&](auto globalVarOp) {
             if (globalVarOp->getAttr(acc::getDeclareAttrName()))
-              if (mlir::Region *initRegion = globalVarOp.getInitRegion())
+              if (Region *initRegion = globalVarOp.getInitRegion())
                 collectGlobalsFromDeviceRegion(*initRegion, globalsToAccDeclare,
                                                accSupport, symTab);
           })
