@@ -335,7 +335,8 @@ template <class _L0, class _L1>
 #    ifndef _LIBCPP_CXX03_LANG
 
 template <class _L0, class _L1, class _L2, class... _L3>
-[[__nodiscard__]] _LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
+[[__nodiscard__]] _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
+    _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
   int __r = 0;
   unique_lock<_L0> __u0(__l0, try_to_lock);
   if (__u0.owns_lock()) {
