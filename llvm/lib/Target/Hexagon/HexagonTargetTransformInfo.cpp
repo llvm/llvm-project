@@ -46,6 +46,10 @@ static cl::opt<bool> EmitLookupTables("hexagon-emit-lookup-tables",
 static cl::opt<bool> HexagonMaskedVMem("hexagon-masked-vmem", cl::init(true),
     cl::Hidden, cl::desc("Enable masked loads/stores for HVX"));
 
+static cl::opt<bool> EnableHVXTypeChecking(
+    "hexagon-enable-hvx-type-checking", cl::Hidden,  cl::init(false),
+    cl::desc("Allow speculative vector memory access"));
+
 // Constant "cost factor" to make floating point operations more expensive
 // in terms of vectorization cost. This isn't the best way, but it should
 // do. Ultimately, the cost should use cycles.
@@ -335,12 +339,45 @@ bool HexagonTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   return true;
 }
 
+// This is used in conjunction with Ripple codegen to prevent "cannot select"
+// assert but rather produce meaningful feedback to users.
+// This function almost duplicates the one in Ripple.cpp and it is recommended
+// to keep them in sync or to introduce a common method.
+static bool isUsableVectorType(const TargetLowering &TLI,
+                               const DataLayout &DL,
+                               Type *VecType) {
+  if (!EnableHVXTypeChecking)
+    return true;
+  EVT EVTType = TLI.getValueType(DL, VecType, true);
+  if (!EVTType.isSimple()) {
+    LLVM_DEBUG(dbgs() << "  Complex vector type cannot be supported(" << EVTType
+                      << ")\n");
+    return false;
+  }
+
+  // Check if the type is legal
+  if (TLI.isTypeLegal(EVTType.getSimpleVT()))
+    return true;
+
+  // Maybe we can trivially promote or widen it?
+  EVT TransformedType =
+      TLI.getTypeToTransformTo(VecType->getContext(), EVTType);
+  if (TransformedType.isSimple() && TLI.isTypeLegal(TransformedType)) {
+    LLVM_DEBUG(dbgs() << "  Vector type(" << EVTType
+                      << ") Can be used if promoted/widened to("
+                      << TransformedType << ")\n");
+    return true;
+  }
+  return false;
+}
+
 bool HexagonTTIImpl::isLegalMaskedStore(Type *DataType, Align /*Alignment*/,
                                         unsigned /*AddressSpace*/,
                                         TTI::MaskKind /*MaskKind*/) const {
   // This function is called from scalarize-masked-mem-intrin, which runs
   // in pre-isel. Use ST directly instead of calling isHVXVectorType.
-  return HexagonMaskedVMem && ST.isTypeForHVX(DataType);
+  return (HexagonMaskedVMem && ST.isTypeForHVX(DataType) &&
+          isUsableVectorType(TLI, DL, DataType));
 }
 
 bool HexagonTTIImpl::isLegalMaskedLoad(Type *DataType, Align /*Alignment*/,
@@ -348,7 +385,8 @@ bool HexagonTTIImpl::isLegalMaskedLoad(Type *DataType, Align /*Alignment*/,
                                        TTI::MaskKind /*MaskKind*/) const {
   // This function is called from scalarize-masked-mem-intrin, which runs
   // in pre-isel. Use ST directly instead of calling isHVXVectorType.
-  return HexagonMaskedVMem && ST.isTypeForHVX(DataType);
+  return (HexagonMaskedVMem && ST.isTypeForHVX(DataType) &&
+          isUsableVectorType(TLI, DL, DataType));
 }
 
 bool HexagonTTIImpl::isLegalMaskedGather(Type *Ty, Align Alignment) const {
