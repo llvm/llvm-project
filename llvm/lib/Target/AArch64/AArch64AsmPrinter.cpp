@@ -176,7 +176,12 @@ public:
                              const MachineOperand *AUTAddrDisc,
                              Register Scratch,
                              std::optional<AArch64PACKey::ID> PACKey,
-                             uint64_t PACDisc, Register PACAddrDisc);
+                             uint64_t PACDisc, Register PACAddrDisc, Value *DS);
+
+  // Emit R_AARCH64_PATCHINST, the deactivation symbol relocation. Returns true
+  // if no instruction should be emitted because the deactivation symbol is
+  // defined in the current module so this function emitted a NOP instead.
+  bool emitDeactivationSymbolRelocation(Value *DS);
 
   // Emit the sequence for PAC.
   void emitPtrauthSign(const MachineInstr *MI);
@@ -214,11 +219,9 @@ public:
   // authenticating)
   void LowerLOADgotAUTH(const MachineInstr &MI);
 
-  const MCExpr *emitPAuthRelocationAsIRelative(const MCExpr *Target,
-                                               uint16_t Disc,
-                                               AArch64PACKey::ID KeyID,
-                                               bool HasAddressDiversity,
-                                               bool IsDSOLocal);
+  const MCExpr *emitPAuthRelocationAsIRelative(
+      const MCExpr *Target, uint16_t Disc, AArch64PACKey::ID KeyID,
+      bool HasAddressDiversity, bool IsDSOLocal, const MCExpr *DSExpr);
 
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
@@ -2113,11 +2116,31 @@ void AArch64AsmPrinter::emitPtrauthTailCallHardening(const MachineInstr *TC) {
                                      LRCheckMethod);
 }
 
+bool AArch64AsmPrinter::emitDeactivationSymbolRelocation(Value *DS) {
+  if (!DS)
+    return false;
+
+  if (isa<GlobalAlias>(DS)) {
+    // Just emit the nop directly.
+    EmitToStreamer(MCInstBuilder(AArch64::HINT).addImm(0));
+    return true;
+  }
+  MCSymbol *Dot = OutContext.createTempSymbol();
+  OutStreamer->emitLabel(Dot);
+  const MCExpr *DeactDotExpr = MCSymbolRefExpr::create(Dot, OutContext);
+
+  const MCExpr *DSExpr = MCSymbolRefExpr::create(
+      OutContext.getOrCreateSymbol(DS->getName()), OutContext);
+  OutStreamer->emitRelocDirective(*DeactDotExpr, "R_AARCH64_PATCHINST", DSExpr,
+                                  SMLoc());
+  return false;
+}
+
 void AArch64AsmPrinter::emitPtrauthAuthResign(
     Register AUTVal, AArch64PACKey::ID AUTKey, uint64_t AUTDisc,
     const MachineOperand *AUTAddrDisc, Register Scratch,
     std::optional<AArch64PACKey::ID> PACKey, uint64_t PACDisc,
-    Register PACAddrDisc) {
+    Register PACAddrDisc, Value *DS) {
   const bool IsAUTPAC = PACKey.has_value();
 
   // We expand AUT/AUTPAC into a sequence of the form
@@ -2164,15 +2187,17 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   bool AUTZero = AUTDiscReg == AArch64::XZR;
   unsigned AUTOpc = getAUTOpcodeForKey(AUTKey, AUTZero);
 
-  //  autiza x16      ; if  AUTZero
-  //  autia x16, x17  ; if !AUTZero
-  MCInst AUTInst;
-  AUTInst.setOpcode(AUTOpc);
-  AUTInst.addOperand(MCOperand::createReg(AUTVal));
-  AUTInst.addOperand(MCOperand::createReg(AUTVal));
-  if (!AUTZero)
-    AUTInst.addOperand(MCOperand::createReg(AUTDiscReg));
-  EmitToStreamer(*OutStreamer, AUTInst);
+  if (!emitDeactivationSymbolRelocation(DS)) {
+    //  autiza x16      ; if  AUTZero
+    //  autia x16, x17  ; if !AUTZero
+    MCInst AUTInst;
+    AUTInst.setOpcode(AUTOpc);
+    AUTInst.addOperand(MCOperand::createReg(AUTVal));
+    AUTInst.addOperand(MCOperand::createReg(AUTVal));
+    if (!AUTZero)
+      AUTInst.addOperand(MCOperand::createReg(AUTDiscReg));
+    EmitToStreamer(*OutStreamer, AUTInst);
+  }
 
   // Unchecked or checked-but-non-trapping AUT is just an "AUT": we're done.
   if (!IsAUTPAC && (!ShouldCheck || !ShouldTrap))
@@ -2235,6 +2260,9 @@ void AArch64AsmPrinter::emitPtrauthSign(const MachineInstr *MI) {
       Disc, AddrDisc, ScratchReg, /*MayUseAddrAsScratch=*/AddrDiscKilled);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
   unsigned Opc = getPACOpcodeForKey(Key, IsZeroDisc);
+
+  if (emitDeactivationSymbolRelocation(MI->getDeactivationSymbol()))
+    return;
 
   //  paciza x16      ; if  IsZeroDisc
   //  pacia x16, x17  ; if !IsZeroDisc
@@ -2356,15 +2384,17 @@ static void emitAddress(MCStreamer &Streamer, MCRegister Reg,
 }
 
 static bool targetSupportsPAuthRelocation(const Triple &TT,
-                                          const MCExpr *Target) {
+                                          const MCExpr *Target,
+                                          const MCExpr *DSExpr) {
   // No released version of glibc supports PAuth relocations.
   if (TT.isOSGlibc())
     return false;
 
   // We emit PAuth constants as IRELATIVE relocations in cases where the
   // constant cannot be represented as a PAuth relocation:
-  // 1) The signed value is not a symbol.
-  return !isa<MCConstantExpr>(Target);
+  // 1) There is a deactivation symbol.
+  // 2) The signed value is not a symbol.
+  return !DSExpr && !isa<MCConstantExpr>(Target);
 }
 
 static bool targetSupportsIRelativeRelocation(const Triple &TT) {
@@ -2417,14 +2447,27 @@ static bool targetSupportsIRelativeRelocation(const Triple &TT) {
 // mov x1, #12345
 // b __emupac_pacda
 // .popsection
+//
+// Example (signed null pointer, not address discriminated, with deactivation
+// symbol ds):
+//
+// .8byte .Lpauth_ifunc0
+// .pushsection .text.startup,"ax",@progbits
+// .Lpauth_ifunc0:
+// mov x0, #0
+// mov x1, #12345
+// .reloc ., R_AARCH64_PATCHINST, ds
+// b __emupac_pacda
+// ret
+// .popsection
 const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
     const MCExpr *Target, uint16_t Disc, AArch64PACKey::ID KeyID,
-    bool HasAddressDiversity, bool IsDSOLocal) {
+    bool HasAddressDiversity, bool IsDSOLocal, const MCExpr *DSExpr) {
   const Triple &TT = TM.getTargetTriple();
 
   // We only emit an IRELATIVE relocation if the target supports IRELATIVE and
   // does not support the kind of PAuth relocation that we are trying to emit.
-  if (targetSupportsPAuthRelocation(TT, Target) ||
+  if (targetSupportsPAuthRelocation(TT, Target, DSExpr) ||
       !targetSupportsIRelativeRelocation(TT))
     return nullptr;
 
@@ -2468,6 +2511,16 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
     emitMOVZ(AArch64::X1, Disc, 0);
   }
 
+  if (DSExpr) {
+    MCSymbol *PrePACInst = OutStreamer->getContext().createTempSymbol();
+    OutStreamer->emitLabel(PrePACInst);
+
+    auto *PrePACInstExpr =
+        MCSymbolRefExpr::create(PrePACInst, OutStreamer->getContext());
+    OutStreamer->emitRelocDirective(*PrePACInstExpr, "R_AARCH64_PATCHINST",
+                                    DSExpr, SMLoc());
+  }
+
   // We don't know the subtarget because this is being emitted for a global
   // initializer. Because the performance of IFUNC resolvers is unimportant, we
   // always call the EmuPAC runtime, which will end up using the PAC instruction
@@ -2478,6 +2531,12 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
       MCSymbolRefExpr::create(EmuPAC, OutStreamer->getContext());
   OutStreamer->emitInstruction(MCInstBuilder(AArch64::B).addExpr(EmuPACRef),
                                *STI);
+
+  // We need a RET despite the above tail call because the deactivation symbol
+  // may replace the tail call with a NOP.
+  if (DSExpr)
+    OutStreamer->emitInstruction(
+        MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
   OutStreamer->popSection();
 
   return MCSymbolRefExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
@@ -2509,6 +2568,13 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
     Sym = MCConstantExpr::create(Offset.getSExtValue(), Ctx);
   }
 
+  const MCExpr *DSExpr = nullptr;
+  if (auto *DS = dyn_cast<GlobalValue>(CPA.getDeactivationSymbol())) {
+    if (isa<GlobalAlias>(DS))
+      return Sym;
+    DSExpr = MCSymbolRefExpr::create(getSymbol(DS), Ctx);
+  }
+
   uint64_t KeyID = CPA.getKey()->getZExtValue();
   // We later rely on valid KeyID value in AArch64PACKeyIDToString call from
   // AArch64AuthMCExpr::printImpl, so fail fast.
@@ -2529,8 +2595,12 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   // Check if we need to represent this with an IRELATIVE and emit it if so.
   if (auto *IFuncSym = emitPAuthRelocationAsIRelative(
           Sym, Disc, AArch64PACKey::ID(KeyID), CPA.hasAddressDiscriminator(),
-          BaseGVB && BaseGVB->isDSOLocal()))
+          BaseGVB && BaseGVB->isDSOLocal(), DSExpr))
     return IFuncSym;
+
+  if (DSExpr)
+    report_fatal_error("deactivation symbols unsupported in constant "
+                       "expressions on this target");
 
   // Finally build the complete @AUTH expr.
   return AArch64AuthMCExpr::create(Sym, Disc, AArch64PACKey::ID(KeyID),
@@ -3136,17 +3206,18 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   case AArch64::AUTx16x17:
-    emitPtrauthAuthResign(AArch64::X16,
-                          (AArch64PACKey::ID)MI->getOperand(0).getImm(),
-                          MI->getOperand(1).getImm(), &MI->getOperand(2),
-                          AArch64::X17, std::nullopt, 0, 0);
+    emitPtrauthAuthResign(
+        AArch64::X16, (AArch64PACKey::ID)MI->getOperand(0).getImm(),
+        MI->getOperand(1).getImm(), &MI->getOperand(2), AArch64::X17,
+        std::nullopt, 0, 0, MI->getDeactivationSymbol());
     return;
 
   case AArch64::AUTxMxN:
     emitPtrauthAuthResign(MI->getOperand(0).getReg(),
                           (AArch64PACKey::ID)MI->getOperand(3).getImm(),
                           MI->getOperand(4).getImm(), &MI->getOperand(5),
-                          MI->getOperand(1).getReg(), std::nullopt, 0, 0);
+                          MI->getOperand(1).getReg(), std::nullopt, 0, 0,
+                          MI->getDeactivationSymbol());
     return;
 
   case AArch64::AUTPAC:
@@ -3154,7 +3225,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
         AArch64::X16, (AArch64PACKey::ID)MI->getOperand(0).getImm(),
         MI->getOperand(1).getImm(), &MI->getOperand(2), AArch64::X17,
         (AArch64PACKey::ID)MI->getOperand(3).getImm(),
-        MI->getOperand(4).getImm(), MI->getOperand(5).getReg());
+        MI->getOperand(4).getImm(), MI->getOperand(5).getReg(),
+        MI->getDeactivationSymbol());
     return;
 
   case AArch64::PAC:
@@ -3634,6 +3706,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     emitCBPseudoExpansion(MI);
     return;
   }
+
+  if (emitDeactivationSymbolRelocation(MI->getDeactivationSymbol()))
+    return;
 
   // Finally, do the automated lowerings for everything else.
   MCInst TmpInst;
