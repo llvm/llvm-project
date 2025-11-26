@@ -17,8 +17,7 @@
 
 #include "VPlan.h"
 
-namespace llvm {
-namespace VPlanPatternMatch {
+namespace llvm::VPlanPatternMatch {
 
 template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
@@ -27,6 +26,10 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
 template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   auto *R = dyn_cast<VPRecipeBase>(U);
   return R && match(R, P);
+}
+
+template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
+  return P.match(static_cast<const VPRecipeBase *>(R));
 }
 
 template <typename Val, typename Pattern> struct VPMatchFunctor {
@@ -415,6 +418,10 @@ template <typename Op0_t, typename Op1_t>
 inline VPInstruction_match<VPInstruction::BranchOnCount, Op0_t, Op1_t>
 m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
+}
+
+inline VPInstruction_match<VPInstruction::AnyOf> m_AnyOf() {
+  return m_VPInstruction<VPInstruction::AnyOf>();
 }
 
 template <typename Op0_t>
@@ -874,7 +881,6 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
-} // namespace VPlanPatternMatch
-} // namespace llvm
+} // namespace llvm::VPlanPatternMatch
 
 #endif

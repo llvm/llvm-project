@@ -1202,7 +1202,7 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   // Start with privatization, so that the lowering of the nested
   // code will use the right symbols.
   bool isLoop = llvm::omp::getDirectiveAssociation(info.dir) ==
-                llvm::omp::Association::Loop;
+                llvm::omp::Association::LoopNest;
   bool privatize = info.clauses && info.privatize;
 
   firOpBuilder.setInsertionPoint(marker);
@@ -2581,18 +2581,6 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(sym);
       name << sym.name().ToString();
 
-      mlir::FlatSymbolRefAttr mapperId;
-      if (sym.GetType()->category() == semantics::DeclTypeSpec::TypeDerived) {
-        auto &typeSpec = sym.GetType()->derivedTypeSpec();
-        std::string mapperIdName =
-            typeSpec.name().ToString() + llvm::omp::OmpDefaultMapperName;
-        if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
-          mapperIdName = converter.mangleName(mapperIdName, sym->owner());
-        if (converter.getModuleOp().lookupSymbol(mapperIdName))
-          mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                                  mapperIdName);
-      }
-
       fir::factory::AddrAndBoundsInfo info =
           Fortran::lower::getDataOperandBaseAddr(
               converter, firOpBuilder, sym.GetUltimate(),
@@ -2611,6 +2599,44 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       std::pair<mlir::omp::ClauseMapFlags, mlir::omp::VariableCaptureKind>
           mapFlagAndKind = getImplicitMapTypeAndKind(
               firOpBuilder, converter, defaultMaps, eleType, loc, sym);
+
+      mlir::FlatSymbolRefAttr mapperId;
+      if (defaultMaps.empty()) {
+        // TODO: Honor user-provided defaultmap clauses (aggregates/pointers)
+        // instead of blanket-disabling implicit mapper generation whenever any
+        // explicit default map is present.
+        const semantics::DerivedTypeSpec *typeSpec =
+            sym.GetType() ? sym.GetType()->AsDerived() : nullptr;
+        if (typeSpec) {
+          std::string mapperIdName =
+              typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+          if (auto *mapperSym =
+                  converter.getCurrentScope().FindSymbol(mapperIdName))
+            mapperIdName = converter.mangleName(
+                mapperIdName, mapperSym->GetUltimate().owner());
+          else
+            mapperIdName =
+                converter.mangleName(mapperIdName, *typeSpec->GetScope());
+
+          if (!mapperIdName.empty()) {
+            bool allowImplicitMapper =
+                semantics::IsAllocatableOrObjectPointer(&sym);
+            bool hasDefaultMapper =
+                converter.getModuleOp().lookupSymbol(mapperIdName);
+            if (hasDefaultMapper || allowImplicitMapper) {
+              if (!hasDefaultMapper) {
+                if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
+                        converter.genType(*typeSpec)))
+                  mapperId = getOrGenImplicitDefaultDeclareMapper(
+                      converter, loc, recordType, mapperIdName);
+              } else {
+                mapperId = mlir::FlatSymbolRefAttr::get(
+                    &converter.getMLIRContext(), mapperIdName);
+              }
+            }
+          }
+        }
+      }
 
       mlir::Value mapOp = createMapInfoOp(
           firOpBuilder, converter.getCurrentLocation(), baseOp,
@@ -3372,7 +3398,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   };
 
   bool loopLeaf = llvm::omp::getDirectiveAssociation(item->id) ==
-                  llvm::omp::Association::Loop;
+                  llvm::omp::Association::LoopNest;
   if (loopLeaf) {
     symTable.pushScope();
     if (genOMPCompositeDispatch(converter, symTable, stmtCtx, semaCtx, eval,
@@ -3481,6 +3507,13 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_tile:
     genTileOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
     break;
+  case llvm::omp::Directive::OMPD_fuse: {
+    unsigned version = semaCtx.langOptions().OpenMPVersion;
+    if (!semaCtx.langOptions().OpenMPSimd)
+      TODO(loc, "Unhandled loop directive (" +
+                    llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
+    break;
+  }
   case llvm::omp::Directive::OMPD_unroll:
     genUnrollOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
     break;
@@ -3936,12 +3969,9 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   mlir::Location currentLocation = converter.genLocation(beginSpec.source);
 
-  auto &optLoopCons =
-      std::get<std::optional<parser::NestedConstruct>>(loopConstruct.t);
-  if (optLoopCons.has_value()) {
-    if (auto *ompNestedLoopCons{
-            std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
-                &*optLoopCons)}) {
+  for (auto &construct : std::get<parser::Block>(loopConstruct.t)) {
+    if (const parser::OpenMPLoopConstruct *ompNestedLoopCons =
+            parser::omp::GetOmpLoop(construct)) {
       llvm::omp::Directive nestedDirective =
           parser::omp::GetOmpDirectiveName(*ompNestedLoopCons).v;
       switch (nestedDirective) {
