@@ -5194,8 +5194,10 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   const DataLayout &DL = AI.getDataLayout();
   auto ComputePartitionTy = [&]() -> std::tuple<Type *, bool, VectorType *> {
     // First check if the partition is viable for vetor promotion. If it is
-    // via a floating-point vector, we are done because we would never prefer integer widening.
-    VectorType *VecTy = isVectorPromotionViable(P, DL, AI.getFunction()->getVScaleValue());
+    // via a floating-point vector, we are done because we would never prefer
+    // integer widening.
+    VectorType *VecTy =
+        isVectorPromotionViable(P, DL, AI.getFunction()->getVScaleValue());
     if (VecTy) {
       if (VecTy->getElementType()->isFloatingPointTy()) {
         return {VecTy, false, VecTy};
@@ -5213,26 +5215,34 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
 
         if (VecTy)
           return {VecTy, false, VecTy};
-        return {CommonUseTy.first, isIntegerWideningViable(P, CommonUseTy.first, DL), nullptr};
+        return {CommonUseTy.first,
+                isIntegerWideningViable(P, CommonUseTy.first, DL), nullptr};
       }
     }
 
-    // If not, can we find an appropriate subtype in the original allocated type?
-    if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(), P.beginOffset(), P.size())) {
-      if (TypePartitionTy->isArrayTy() && TypePartitionTy->getArrayElementType()->isIntegerTy() && DL.isLegalInteger(P.size() * 8))
+    // If not, can we find an appropriate subtype in the original allocated
+    // type?
+    if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
+                                                 P.beginOffset(), P.size())) {
+      if (TypePartitionTy->isArrayTy() &&
+          TypePartitionTy->getArrayElementType()->isIntegerTy() &&
+          DL.isLegalInteger(P.size() * 8))
         TypePartitionTy = Type::getIntNTy(*C, P.size() * 8);
-      
+
       if (isIntegerWideningViable(P, TypePartitionTy, DL))
         return {TypePartitionTy, true, nullptr};
       if (VecTy)
         return {VecTy, false, VecTy};
-      if (CommonUseTy.second && DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size() && isIntegerWideningViable(P, CommonUseTy.second, DL))
+      if (CommonUseTy.second &&
+          DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size() &&
+          isIntegerWideningViable(P, CommonUseTy.second, DL))
         return {CommonUseTy.second, true, nullptr};
       return {TypePartitionTy, false, nullptr};
     }
 
     // If still not, can we use the largest bitwidth integer type used?
-    if (CommonUseTy.second && DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size())
+    if (CommonUseTy.second &&
+        DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size())
       return {CommonUseTy.second, false, nullptr};
 
     if (DL.isLegalInteger(P.size() * 8))
