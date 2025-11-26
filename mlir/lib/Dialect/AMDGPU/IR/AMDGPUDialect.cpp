@@ -757,6 +757,9 @@ LogicalResult MakeDmaDescriptorOp::verify() {
 
   ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
   size_t rank = globalStaticSizes.size();
+  if (rank < 2) {
+    return emitOpError("tensor and tile must be at least of rank 2.");
+  }
   if (rank != globalStaticStrides.size()) {
     return emitOpError("strides and sizes must have same rank.");
   }
@@ -764,6 +767,13 @@ LogicalResult MakeDmaDescriptorOp::verify() {
   ArrayRef<int64_t> sharedStaticSizes = getSharedStaticSizes();
   if (rank != sharedStaticSizes.size()) {
     return emitOpError("tensor must have same rank as tile.");
+  }
+
+  int elementTypeWidth = getElementTypeWidth();
+  if (!llvm::is_contained({8, 16, 32, 64}, elementTypeWidth)) {
+    return emitOpError(
+               "element type width must be 1, 2, 4 or 8 bytes, but was ")
+           << elementTypeWidth << " bits long";
   }
 
   return success();
