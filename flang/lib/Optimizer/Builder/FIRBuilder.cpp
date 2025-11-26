@@ -1672,7 +1672,7 @@ mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,
 }
 
 mlir::Value fir::factory::createOneValue(fir::FirOpBuilder &builder,
-                                          mlir::Location loc, mlir::Type type) {
+                                         mlir::Location loc, mlir::Type type) {
   mlir::Type i1 = builder.getIntegerType(1);
   if (mlir::isa<fir::LogicalType>(type) || type == i1)
     return builder.createConvert(loc, type, builder.createBool(loc, true));

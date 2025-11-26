@@ -947,8 +947,7 @@ private:
       [[maybe_unused]] mlir::ValueRange oneBasedIndices,
       [[maybe_unused]] const llvm::SmallVectorImpl<mlir::Value> &extents)
       final {
-    return {
-        fir::factory::createOneValue(builder, loc, getResultElementType())};
+    return {fir::factory::createOneValue(builder, loc, getResultElementType())};
   }
   virtual llvm::SmallVector<mlir::Value>
   reduceOneElement(const llvm::SmallVectorImpl<mlir::Value> &currentValue,

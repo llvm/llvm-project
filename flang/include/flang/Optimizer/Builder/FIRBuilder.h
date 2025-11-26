@@ -864,7 +864,7 @@ mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Create a one value of a given numerical or logical \p type (`true`
 /// for logical types).
 mlir::Value createOneValue(fir::FirOpBuilder &builder, mlir::Location loc,
-                            mlir::Type type);
+                           mlir::Type type);
 
 /// Get the integer constants of triplet and compute the extent.
 std::optional<std::int64_t> getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
