@@ -81,7 +81,6 @@ void test() {
   }
 #endif
 
-#if TEST_STD_VER >= 20
   { // <initializer_list>
     std::initializer_list<int> il{94, 82, 49};
 
@@ -89,5 +88,4 @@ void test() {
     il.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     il.end();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
-#endif
 }
