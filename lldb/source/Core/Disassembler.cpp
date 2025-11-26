@@ -287,7 +287,7 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
 }
 
 static constexpr const llvm::StringLiteral kUndefLocation = "undef";
-static contexpr const llvm::StringLiteral kUndefLocationFormatted = "<undef>";
+static constexpr const llvm::StringLiteral kUndefLocationFormatted = "<undef>";
 
 // For each instruction, this block attempts to resolve in-scope variables
 // and determine if the current PC falls within their
@@ -303,17 +303,19 @@ static contexpr const llvm::StringLiteral kUndefLocationFormatted = "<undef>";
 // disassembled instruction stream, similar to how debug information
 // enhances source-level debugging.
 std::vector<std::string> VariableAnnotator::Annotate(Instruction &inst) {
-  auto structured_annotations = AnnotateStructured(inst);
+  std::vector<VariableAnnotation> structured_annotations =
+      AnnotateStructured(inst);
 
   std::vector<std::string> events;
   events.reserve(structured_annotations.size());
 
   for (const auto &annotation : structured_annotations) {
-    auto location = (annotation.location_description == UndefLocation
-                         ? UndefLocationFormatted
-                         : annotation.location_description);
+    const llvm::StringRef location =
+        (annotation.location_description == kUndefLocation
+             ? llvm::StringRef(kUndefLocationFormatted)
+             : llvm::StringRef(annotation.location_description));
 
-    auto display_string =
+    const auto display_string =
         llvm::formatv("{0} = {1}", annotation.variable_name, location).str();
 
     events.push_back(std::move(display_string));
@@ -331,9 +333,9 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
   // If we lost module context, mark all live variables as UndefLocation.
   if (!module_sp) {
     for (const auto &KV : m_live_vars) {
-      auto annotation_entity = KV.second;
+      VariableAnnotation annotation_entity = KV.second;
       annotation_entity.is_live = false;
-      annotation_entity.location_description = UndefLocation;
+      annotation_entity.location_description = kUndefLocation;
       annotations.push_back(annotation_entity);
     }
     m_live_vars.clear();
@@ -348,9 +350,9 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
       !sc.function) {
     // No function context: everything dies here.
     for (const auto &KV : m_live_vars) {
-      auto annotation_entity = KV.second;
+      VariableAnnotation annotation_entity = KV.second;
       annotation_entity.is_live = false;
-      annotation_entity.location_description = UndefLocation;
+      annotation_entity.location_description = kUndefLocation;
       annotations.push_back(annotation_entity);
     }
     m_live_vars.clear();
@@ -437,13 +439,13 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
     auto it = m_live_vars.find(KV.first);
     if (it == m_live_vars.end()) {
       // Newly live.
-      auto annotation_entity = KV.second;
+      VariableAnnotation annotation_entity = KV.second;
       annotation_entity.is_live = true;
       annotations.push_back(annotation_entity);
     } else if (it->second.location_description !=
                KV.second.location_description) {
       // Location changed.
-      auto annotation_entity = KV.second;
+      VariableAnnotation annotation_entity = KV.second;
       annotation_entity.is_live = true;
       annotations.push_back(annotation_entity);
     }
@@ -455,7 +457,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
     if (!current_vars.count(KV.first)) {
       auto annotation_entity = KV.second;
       annotation_entity.is_live = false;
-      annotation_entity.location_description = UndefLocation;
+      annotation_entity.location_description = kUndefLocation;
       annotations.push_back(annotation_entity);
     }
 
