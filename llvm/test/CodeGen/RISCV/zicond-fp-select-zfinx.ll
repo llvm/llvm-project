@@ -182,8 +182,7 @@ define double @select_f64_i1(i1 %cond, double %t, double %f) nounwind {
 ; RV32ZDINX_ZICOND-NEXT:  # %bb.1: # %entry
 ; RV32ZDINX_ZICOND-NEXT:    mv a7, a4
 ; RV32ZDINX_ZICOND-NEXT:    mv a6, a3
-; RV32ZDINX_ZICOND-NEXT:    mv a4, a6
-; RV32ZDINX_ZICOND-NEXT:    mv a5, a7
+; RV32ZDINX_ZICOND-NEXT:    fmv.d a4, a6
 ; RV32ZDINX_ZICOND-NEXT:    j .LBB1_3
 ; RV32ZDINX_ZICOND-NEXT:  .LBB1_2:
 ; RV32ZDINX_ZICOND-NEXT:    mv a5, a2
@@ -200,8 +199,7 @@ define double @select_f64_i1(i1 %cond, double %t, double %f) nounwind {
 ; RV32ZDINX_NOZICOND-NEXT:  # %bb.1: # %entry
 ; RV32ZDINX_NOZICOND-NEXT:    mv a7, a4
 ; RV32ZDINX_NOZICOND-NEXT:    mv a6, a3
-; RV32ZDINX_NOZICOND-NEXT:    mv a4, a6
-; RV32ZDINX_NOZICOND-NEXT:    mv a5, a7
+; RV32ZDINX_NOZICOND-NEXT:    fmv.d a4, a6
 ; RV32ZDINX_NOZICOND-NEXT:    j .LBB1_3
 ; RV32ZDINX_NOZICOND-NEXT:  .LBB1_2:
 ; RV32ZDINX_NOZICOND-NEXT:    mv a5, a2
@@ -328,8 +326,7 @@ define double @select_f64_fcmp(double %a, double %b, double %c, double %d) nounw
 ; RV32ZDINX_ZICOND-NEXT:    flt.d a0, a2, a0
 ; RV32ZDINX_ZICOND-NEXT:    bnez a0, .LBB2_2
 ; RV32ZDINX_ZICOND-NEXT:  # %bb.1: # %entry
-; RV32ZDINX_ZICOND-NEXT:    mv a4, a6
-; RV32ZDINX_ZICOND-NEXT:    mv a5, a7
+; RV32ZDINX_ZICOND-NEXT:    fmv.d a4, a6
 ; RV32ZDINX_ZICOND-NEXT:  .LBB2_2: # %entry
 ; RV32ZDINX_ZICOND-NEXT:    mv a0, a4
 ; RV32ZDINX_ZICOND-NEXT:    mv a1, a5
@@ -340,8 +337,7 @@ define double @select_f64_fcmp(double %a, double %b, double %c, double %d) nounw
 ; RV32ZDINX_NOZICOND-NEXT:    flt.d a0, a2, a0
 ; RV32ZDINX_NOZICOND-NEXT:    bnez a0, .LBB2_2
 ; RV32ZDINX_NOZICOND-NEXT:  # %bb.1: # %entry
-; RV32ZDINX_NOZICOND-NEXT:    mv a4, a6
-; RV32ZDINX_NOZICOND-NEXT:    mv a5, a7
+; RV32ZDINX_NOZICOND-NEXT:    fmv.d a4, a6
 ; RV32ZDINX_NOZICOND-NEXT:  .LBB2_2: # %entry
 ; RV32ZDINX_NOZICOND-NEXT:    mv a0, a4
 ; RV32ZDINX_NOZICOND-NEXT:    mv a1, a5
@@ -635,4 +631,168 @@ define dso_local noundef half @select_i1_half_0(i1 %cond, half %val) nounwind {
 entry:
   %sel = select i1 %cond, half %val, half 0xH0000
   ret half %sel
+}
+
+; -----------------------------------------------------------------------------
+; Test select with i1 condition and zero value for half fp, feeding into fadd ((cond ? a : 0) + 1.0)
+; -----------------------------------------------------------------------------
+define half @select_i1_half_0_add(i1 %cond, half %val) nounwind {
+; RV64ZDINX_ZICOND-LABEL: select_i1_half_0_add:
+; RV64ZDINX_ZICOND:       # %bb.0: # %entry
+; RV64ZDINX_ZICOND-NEXT:    addi sp, sp, -16
+; RV64ZDINX_ZICOND-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV64ZDINX_ZICOND-NEXT:    andi a0, a0, 1
+; RV64ZDINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV64ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZDINX_ZICOND-NEXT:    call __extendhfsf2
+; RV64ZDINX_ZICOND-NEXT:    lui a1, 260096
+; RV64ZDINX_ZICOND-NEXT:    fadd.s a0, a0, a1
+; RV64ZDINX_ZICOND-NEXT:    call __truncsfhf2
+; RV64ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64ZDINX_ZICOND-NEXT:    lui a1, 1048560
+; RV64ZDINX_ZICOND-NEXT:    or a0, a0, a1
+; RV64ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZDINX_ZICOND-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX_ZICOND-NEXT:    addi sp, sp, 16
+; RV64ZDINX_ZICOND-NEXT:    ret
+;
+; RV64ZDINX_NOZICOND-LABEL: select_i1_half_0_add:
+; RV64ZDINX_NOZICOND:       # %bb.0: # %entry
+; RV64ZDINX_NOZICOND-NEXT:    addi sp, sp, -16
+; RV64ZDINX_NOZICOND-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ZDINX_NOZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV64ZDINX_NOZICOND-NEXT:    slli a0, a0, 63
+; RV64ZDINX_NOZICOND-NEXT:    srai a0, a0, 63
+; RV64ZDINX_NOZICOND-NEXT:    and a0, a0, a1
+; RV64ZDINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZDINX_NOZICOND-NEXT:    call __extendhfsf2
+; RV64ZDINX_NOZICOND-NEXT:    lui a1, 260096
+; RV64ZDINX_NOZICOND-NEXT:    fadd.s a0, a0, a1
+; RV64ZDINX_NOZICOND-NEXT:    call __truncsfhf2
+; RV64ZDINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV64ZDINX_NOZICOND-NEXT:    lui a1, 1048560
+; RV64ZDINX_NOZICOND-NEXT:    or a0, a0, a1
+; RV64ZDINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV64ZDINX_NOZICOND-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ZDINX_NOZICOND-NEXT:    addi sp, sp, 16
+; RV64ZDINX_NOZICOND-NEXT:    ret
+;
+; RV64ZHINX_ZICOND-LABEL: select_i1_half_0_add:
+; RV64ZHINX_ZICOND:       # %bb.0: # %entry
+; RV64ZHINX_ZICOND-NEXT:    # kill: def $x11_h killed $x11_h def $x11
+; RV64ZHINX_ZICOND-NEXT:    andi a0, a0, 1
+; RV64ZHINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV64ZHINX_ZICOND-NEXT:    li a1, 15
+; RV64ZHINX_ZICOND-NEXT:    slli a1, a1, 10
+; RV64ZHINX_ZICOND-NEXT:    fadd.h a0, a0, a1
+; RV64ZHINX_ZICOND-NEXT:    ret
+;
+; RV64FD-LABEL: select_i1_half_0_add:
+; RV64FD:       # %bb.0: # %entry
+; RV64FD-NEXT:    addi sp, sp, -16
+; RV64FD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64FD-NEXT:    fmv.x.w a1, fa0
+; RV64FD-NEXT:    slli a0, a0, 63
+; RV64FD-NEXT:    srai a0, a0, 63
+; RV64FD-NEXT:    and a0, a0, a1
+; RV64FD-NEXT:    fmv.w.x fa0, a0
+; RV64FD-NEXT:    call __extendhfsf2
+; RV64FD-NEXT:    lui a0, 260096
+; RV64FD-NEXT:    fmv.w.x fa5, a0
+; RV64FD-NEXT:    fadd.s fa0, fa0, fa5
+; RV64FD-NEXT:    call __truncsfhf2
+; RV64FD-NEXT:    fmv.x.w a0, fa0
+; RV64FD-NEXT:    lui a1, 1048560
+; RV64FD-NEXT:    or a0, a0, a1
+; RV64FD-NEXT:    fmv.w.x fa0, a0
+; RV64FD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64FD-NEXT:    addi sp, sp, 16
+; RV64FD-NEXT:    ret
+;
+; RV32ZFINX_ZICOND-LABEL: select_i1_half_0_add:
+; RV32ZFINX_ZICOND:       # %bb.0: # %entry
+; RV32ZFINX_ZICOND-NEXT:    addi sp, sp, -16
+; RV32ZFINX_ZICOND-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV32ZFINX_ZICOND-NEXT:    andi a0, a0, 1
+; RV32ZFINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV32ZFINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZFINX_ZICOND-NEXT:    call __extendhfsf2
+; RV32ZFINX_ZICOND-NEXT:    lui a1, 260096
+; RV32ZFINX_ZICOND-NEXT:    fadd.s a0, a0, a1
+; RV32ZFINX_ZICOND-NEXT:    call __truncsfhf2
+; RV32ZFINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV32ZFINX_ZICOND-NEXT:    lui a1, 1048560
+; RV32ZFINX_ZICOND-NEXT:    or a0, a0, a1
+; RV32ZFINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZFINX_ZICOND-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX_ZICOND-NEXT:    addi sp, sp, 16
+; RV32ZFINX_ZICOND-NEXT:    ret
+;
+; RV32ZFINX_NOZICOND-LABEL: select_i1_half_0_add:
+; RV32ZFINX_NOZICOND:       # %bb.0: # %entry
+; RV32ZFINX_NOZICOND-NEXT:    addi sp, sp, -16
+; RV32ZFINX_NOZICOND-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZFINX_NOZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV32ZFINX_NOZICOND-NEXT:    slli a0, a0, 31
+; RV32ZFINX_NOZICOND-NEXT:    srai a0, a0, 31
+; RV32ZFINX_NOZICOND-NEXT:    and a0, a0, a1
+; RV32ZFINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZFINX_NOZICOND-NEXT:    call __extendhfsf2
+; RV32ZFINX_NOZICOND-NEXT:    lui a1, 260096
+; RV32ZFINX_NOZICOND-NEXT:    fadd.s a0, a0, a1
+; RV32ZFINX_NOZICOND-NEXT:    call __truncsfhf2
+; RV32ZFINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV32ZFINX_NOZICOND-NEXT:    lui a1, 1048560
+; RV32ZFINX_NOZICOND-NEXT:    or a0, a0, a1
+; RV32ZFINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZFINX_NOZICOND-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZFINX_NOZICOND-NEXT:    addi sp, sp, 16
+; RV32ZFINX_NOZICOND-NEXT:    ret
+;
+; RV32ZDINX_ZICOND-LABEL: select_i1_half_0_add:
+; RV32ZDINX_ZICOND:       # %bb.0: # %entry
+; RV32ZDINX_ZICOND-NEXT:    addi sp, sp, -16
+; RV32ZDINX_ZICOND-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZDINX_ZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV32ZDINX_ZICOND-NEXT:    andi a0, a0, 1
+; RV32ZDINX_ZICOND-NEXT:    czero.eqz a0, a1, a0
+; RV32ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZDINX_ZICOND-NEXT:    call __extendhfsf2
+; RV32ZDINX_ZICOND-NEXT:    lui a1, 260096
+; RV32ZDINX_ZICOND-NEXT:    fadd.s a0, a0, a1
+; RV32ZDINX_ZICOND-NEXT:    call __truncsfhf2
+; RV32ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV32ZDINX_ZICOND-NEXT:    lui a1, 1048560
+; RV32ZDINX_ZICOND-NEXT:    or a0, a0, a1
+; RV32ZDINX_ZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZDINX_ZICOND-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZDINX_ZICOND-NEXT:    addi sp, sp, 16
+; RV32ZDINX_ZICOND-NEXT:    ret
+;
+; RV32ZDINX_NOZICOND-LABEL: select_i1_half_0_add:
+; RV32ZDINX_NOZICOND:       # %bb.0: # %entry
+; RV32ZDINX_NOZICOND-NEXT:    addi sp, sp, -16
+; RV32ZDINX_NOZICOND-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ZDINX_NOZICOND-NEXT:    # kill: def $x11_w killed $x11_w def $x11
+; RV32ZDINX_NOZICOND-NEXT:    slli a0, a0, 31
+; RV32ZDINX_NOZICOND-NEXT:    srai a0, a0, 31
+; RV32ZDINX_NOZICOND-NEXT:    and a0, a0, a1
+; RV32ZDINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZDINX_NOZICOND-NEXT:    call __extendhfsf2
+; RV32ZDINX_NOZICOND-NEXT:    lui a1, 260096
+; RV32ZDINX_NOZICOND-NEXT:    fadd.s a0, a0, a1
+; RV32ZDINX_NOZICOND-NEXT:    call __truncsfhf2
+; RV32ZDINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w def $x10
+; RV32ZDINX_NOZICOND-NEXT:    lui a1, 1048560
+; RV32ZDINX_NOZICOND-NEXT:    or a0, a0, a1
+; RV32ZDINX_NOZICOND-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
+; RV32ZDINX_NOZICOND-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ZDINX_NOZICOND-NEXT:    addi sp, sp, 16
+; RV32ZDINX_NOZICOND-NEXT:    ret
+entry:
+  %sel = select i1 %cond, half %val, half 0xH0000
+  %add = fadd half %sel, 1.0
+  ret half %add
 }
