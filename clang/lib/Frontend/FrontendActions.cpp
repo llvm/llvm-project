@@ -476,6 +476,8 @@ private:
       return "TypeAliasTemplateInstantiation";
     case CodeSynthesisContext::PartialOrderingTTP:
       return "PartialOrderingTTP";
+    case CodeSynthesisContext::ExpansionStmtInstantiation:
+      return "ExpansionStmtInstantiation";
     }
     return "";
   }
