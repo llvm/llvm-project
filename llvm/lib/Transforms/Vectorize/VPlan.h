@@ -2392,14 +2392,14 @@ protected:
 #endif
 };
 
-// Possible variants of a reduction.
+/// Possible variants of a reduction.
 
-// This reduction is ordered and in-loop.
+/// This reduction is ordered and in-loop.
 struct RdxOrdered {};
-// This reduction is in-loop.
+/// This reduction is in-loop.
 struct RdxInLoop {};
-// This reduction is unordered with the partial result scaled down by some
-// factor.
+/// This reduction is unordered with the partial result scaled down by some
+/// factor.
 struct RdxUnordered {
   unsigned VFScaleFactor;
 };
