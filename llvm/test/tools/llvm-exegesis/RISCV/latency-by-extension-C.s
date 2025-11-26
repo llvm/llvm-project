@@ -53,5 +53,5 @@ C_LDSP:      ---
 C_LDSP-NEXT: mode: latency
 C_LDSP-NEXT: key:
 C_LDSP-NEXT:   instructions:
-C_LDSP-NEXT:     - 'C_LDSP [[REG101:X[0-9]+]] [[REG102:X[0-9]+]] [[IMM10:i_0x[0-9]+]]'
+C_LDSP-NEXT:     - 'C_LDSP [[REG111:X[0-9]+]] X2 [[IMM11:i_0x[0-9]+]]'
 C_LDSP-DAG: ...
