@@ -67,6 +67,7 @@ public:
     case AMDGPU::EXEC_HI:
     case AMDGPU::SGPR_NULL:
     case AMDGPU::SGPR_NULL64:
+    case AMDGPU::SCC:
       return {};
     default:
       break;
@@ -438,10 +439,96 @@ public:
     return Changed;
   }
 
+  bool runWaitMerging(MachineFunction &MF) {
+    // Perform per-block merging of existing s_waitcnt_depctr instructions.
+    // Track set of SGPR writes before a given wait instruction, and search
+    // for reads of these SGPRs prior to the next wait.
+    // If no reads occur then the 1st wait can be merged into the 2nd.
+    const unsigned ConstantMaskBits = AMDGPU::DepCtr::encodeFieldSaSdst(
+        AMDGPU::DepCtr::encodeFieldVaSdst(
+            AMDGPU::DepCtr::encodeFieldVaVcc(0, *ST), 0),
+        0);
+
+    bool Changed = false;
+    for (auto &MBB : MF) {
+      std::bitset<128> WriteSet, NextWriteSet;
+      MachineInstr *PrevWait = nullptr;
+      bool ReadWriteDep = false;
+      for (MachineBasicBlock::instr_iterator MI = MBB.instr_begin(),
+                                             E = MBB.instr_end();
+           MI != E; ++MI) {
+        if (MI->isMetaInstruction())
+          continue;
+
+        if (MI->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR && !MI->isBundled() &&
+            (MI->getOperand(0).getImm() & ConstantMaskBits) ==
+                ConstantMaskBits) {
+          if (PrevWait && !ReadWriteDep) {
+            // Merge previous wait into this one and merge write sets.
+            MachineOperand &MaskOp = MI->getOperand(0);
+            MaskOp.setImm(
+                mergeMasks(PrevWait->getOperand(0).getImm(), MaskOp.getImm()));
+            PrevWait->eraseFromParent();
+            WriteSet |= NextWriteSet;
+          } else {
+            // Start a new merging region using fresh write set.
+            WriteSet = NextWriteSet;
+          }
+          NextWriteSet.reset();
+          PrevWait = &*MI;
+          ReadWriteDep = false;
+          Changed = true;
+          continue;
+        }
+
+        const bool IsVALU = SIInstrInfo::isVALU(*MI);
+        const bool IsSALU = SIInstrInfo::isSALU(*MI);
+        if (!IsVALU && !IsSALU)
+          continue;
+
+        for (const MachineOperand &Op : MI->operands()) {
+          if (!Op.isReg())
+            continue;
+          Register Reg = Op.getReg();
+          if (!TRI->isSGPRReg(*MRI, Reg))
+            continue;
+
+          auto RegNumber = sgprNumber(Reg, *TRI);
+          if (!RegNumber)
+            continue;
+          unsigned RegN = *RegNumber;
+
+          uint8_t SGPRCount =
+              AMDGPU::getRegBitWidth(*TRI->getRegClassForReg(*MRI, Reg)) / 32;
+
+          if (Op.isDef()) {
+            for (uint8_t RegIdx = 0; RegIdx < SGPRCount; ++RegIdx)
+              NextWriteSet.set(RegN + RegIdx);
+          } else {
+            if (ReadWriteDep)
+              continue;
+            for (uint8_t RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
+              if (WriteSet[RegN + RegIdx]) {
+                ReadWriteDep = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    return Changed;
+  }
+
   bool run(MachineFunction &MF) {
     ST = &MF.getSubtarget<GCNSubtarget>();
-    if (!ST->hasVALUReadSGPRHazard())
+    if (!ST->hasVALUReadSGPRHazard() && !ST->hasVALUMaskWriteHazard())
       return false;
+
+    TII = ST->getInstrInfo();
+    TRI = ST->getRegisterInfo();
+    MRI = &MF.getRegInfo();
+    DsNopCount = ST->isWave64() ? WAVE64_NOPS : WAVE32_NOPS;
 
     // Parse settings
     EnableSGPRHazardWaits = GlobalEnableSGPRHazardWaits;
@@ -468,10 +555,10 @@ public:
     if (!EnableSGPRHazardWaits)
       return false;
 
-    TII = ST->getInstrInfo();
-    TRI = ST->getRegisterInfo();
-    MRI = &MF.getRegInfo();
-    DsNopCount = ST->isWave64() ? WAVE64_NOPS : WAVE32_NOPS;
+    // VALU mask write hazards have already been handled, but this pass
+    // performs a forward scan optimize them.
+    if (ST->hasVALUMaskWriteHazard())
+      return runWaitMerging(MF);
 
     auto CallingConv = MF.getFunction().getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CallingConv) &&
