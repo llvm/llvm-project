@@ -13114,26 +13114,22 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     Result.reserve(NumBytes);
 
     for (unsigned QWordId = 0; QWordId != NumQWords; ++QWordId) {
-      APInt AQWord(64, 0);
       APInt BQWord(64, 0);
       for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
         unsigned Idx = QWordId * NumBytesInQWord + ByteIdx;
-        uint64_t Byte = A.getVectorElt(Idx).getInt().getZExtValue();
-        AQWord.insertBits(APInt(8, Byte & 0xFF), ByteIdx * NumBitsInByte);
-
-        Byte = B.getVectorElt(Idx).getInt().getZExtValue();
+        uint64_t Byte = B.getVectorElt(Idx).getInt().getZExtValue();
         BQWord.insertBits(APInt(8, Byte & 0xFF), ByteIdx * NumBitsInByte);
       }
 
       for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
-        uint64_t Ctrl =
-            AQWord.extractBits(8, ByteIdx * NumBitsInByte).getZExtValue() &
-            0x3F;
+        uint64_t Ctrl = A.getVectorElt(QWordId * NumBytesInQWord + ByteIdx)
+                            .getInt()
+                            .getZExtValue() &
+                        0x3F;
 
         APInt Byte(8, 0);
         for (unsigned BitIdx = 0; BitIdx != NumBitsInByte; ++BitIdx) {
-          Byte.insertBits(BQWord.extractBits(1, (Ctrl + BitIdx) & 0x3F),
-                          BitIdx);
+          Byte.setBitVal(BitIdx, BQWord[(Ctrl + BitIdx) & 0x3F]);
         }
         Result.push_back(APValue(APSInt(Byte, /*isUnsigned*/ true)));
       }
