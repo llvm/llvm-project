@@ -209,23 +209,20 @@ static bool isGlobalUseCandidateForHoisting(Operation *globalOp,
                                             Operation *user,
                                             SymbolRefAttr symbol,
                                             acc::OpenACCSupport &accSupport) {
-  if (accSupport.isValidSymbolUse(user, symbol)) {
-    // This symbol is valid in GPU region. This means semantics
-    // would change if moved to host - therefore it is not a candidate.
+  // This symbol is valid in GPU region. This means semantics
+  // would change if moved to host - therefore it is not a candidate.
+  if (accSupport.isValidSymbolUse(user, symbol))
     return false;
-  }
 
   bool isConstant = false;
   bool isFunction = false;
 
   if (auto globalVarOp =
-          dyn_cast<mlir::acc::GlobalVariableOpInterface>(globalOp)) {
+          dyn_cast<mlir::acc::GlobalVariableOpInterface>(globalOp))
     isConstant = globalVarOp.isConstant();
-  }
 
-  if (isa<mlir::FunctionOpInterface>(globalOp)) {
+  if (isa<mlir::FunctionOpInterface>(globalOp))
     isFunction = true;
-  }
 
   // Constants should be kept in device code to ensure they are duplicated.
   // Function references should be kept in device code to ensure their device
@@ -251,16 +248,14 @@ static bool hasRelevantRecipeUse(RecipeOpT recipeOp) {
       recipeOp.getSymbolUses(moduleOp);
 
   // No recipe symbol uses.
-  if (!symbolUses.has_value() || symbolUses->empty()) {
+  if (!symbolUses.has_value() || symbolUses->empty())
     return false;
-  }
 
   // If more than one use, assume it's used.
   auto begin = symbolUses->begin();
   auto end = symbolUses->end();
-  if (begin != end && std::next(begin) != end) {
+  if (begin != end && std::next(begin) != end)
     return true;
-  }
 
   // If single use, check if the use is the recipe itself.
   const auto &use = *symbolUses->begin();
@@ -308,22 +303,18 @@ static void collectGlobalsFromDeviceRegion(mlir::Region &region,
       //    acc declare is already used or this is a CUF global).
       Operation *globalOp = nullptr;
       bool isCandidate = !accSupport.isValidSymbolUse(op, symRef, &globalOp);
-      if (isCandidate && globalOp && isValidForAccDeclare(globalOp)) {
-        // 3) Add the candidate to the set of globals to be `acc declare`d.
+      // 3) Add the candidate to the set of globals to be `acc declare`d.
+      if (isCandidate && globalOp && isValidForAccDeclare(globalOp))
         globals.insert(globalOp);
-      }
     } else if (auto indirectAccessOp =
                    dyn_cast<mlir::acc::IndirectGlobalAccessOpInterface>(op)) {
       // Process operations that indirectly access globals
       llvm::SmallVector<SymbolRefAttr> symbols;
       indirectAccessOp.getReferencedSymbols(symbols, &symTab);
-      for (auto symRef : symbols) {
-        if (Operation *globalOp = SymbolTable::lookupSymbolIn(mod, symRef)) {
-          if (isValidForAccDeclare(globalOp)) {
+      for (auto symRef : symbols)
+        if (Operation *globalOp = SymbolTable::lookupSymbolIn(mod, symRef))
+          if (isValidForAccDeclare(globalOp))
             globals.insert(globalOp);
-          }
-        }
-      }
     }
   });
 }
@@ -331,9 +322,9 @@ static void collectGlobalsFromDeviceRegion(mlir::Region &region,
 // Adds the declare attribute to the operation `op`.
 static void addDeclareAttr(MLIRContext *context, Operation *op,
                            acc::DataClause clause) {
-  if (!op) {
+  if (!op)
     return;
-  }
+
   op->setAttr(acc::getDeclareAttrName(),
               acc::DeclareAttr::get(context,
                                     acc::DataClauseAttr::get(context, clause)));
@@ -375,18 +366,15 @@ public:
                                                globalsToAccDeclare, accSupport);
               })
           .Case<mlir::FunctionOpInterface>([&](auto func) {
-            if (acc::isAccRoutineOp(func) && !func.isExternal()) {
+            if (acc::isAccRoutineOp(func) && !func.isExternal())
               collectGlobalsFromDeviceRegion(func.getFunctionBody(),
                                              globalsToAccDeclare, accSupport);
-            }
           })
           .Case<mlir::acc::GlobalVariableOpInterface>([&](auto globalVarOp) {
-            if (globalVarOp->getAttr(acc::getDeclareAttrName())) {
-              if (mlir::Region *initRegion = globalVarOp.getInitRegion()) {
+            if (globalVarOp->getAttr(acc::getDeclareAttrName()))
+              if (mlir::Region *initRegion = globalVarOp.getInitRegion())
                 collectGlobalsFromDeviceRegion(*initRegion, globalsToAccDeclare,
                                                accSupport);
-              }
-            }
           })
           .Case<acc::PrivateRecipeOp>([&](auto privateRecipe) {
             if (hasRelevantRecipeUse(privateRecipe)) {
