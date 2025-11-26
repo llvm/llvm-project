@@ -16511,9 +16511,10 @@ ExprResult Sema::BuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
     return ExprError();
   }
 
-  if(getLangOpts().getDefaultMatrixMemoryLayout() != LangOptions::MatrixColMajor) {
-      Diag(TheCall->getBeginLoc(), diag::err_builtin_matrix_major_order_disabled)
-      << /*column*/1 << /*load*/ 0;
+  if (getLangOpts().getDefaultMatrixMemoryLayout() !=
+      LangOptions::MatrixColMajor) {
+    Diag(TheCall->getBeginLoc(), diag::err_builtin_matrix_major_order_disabled)
+        << /*column*/ 1 << /*load*/ 0;
     return ExprError();
   }
 
@@ -16633,13 +16634,14 @@ ExprResult Sema::BuiltinMatrixColumnMajorStore(CallExpr *TheCall,
     Diag(TheCall->getBeginLoc(), diag::err_builtin_matrix_disabled);
     return ExprError();
   }
-  
-  if(getLangOpts().getDefaultMatrixMemoryLayout() != LangOptions::MatrixColMajor) {
-      Diag(TheCall->getBeginLoc(), diag::err_builtin_matrix_major_order_disabled)
-      << /*column*/1 << /*store*/ 1;
+
+  if (getLangOpts().getDefaultMatrixMemoryLayout() !=
+      LangOptions::MatrixColMajor) {
+    Diag(TheCall->getBeginLoc(), diag::err_builtin_matrix_major_order_disabled)
+        << /*column*/ 1 << /*store*/ 1;
     return ExprError();
   }
-  
+
   if (checkArgCount(TheCall, 3))
     return ExprError();
 
