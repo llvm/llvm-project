@@ -30,10 +30,6 @@ public:
       bool MinRuntime;
       bool MayReturn;
       bool HandlerPreserveAllRegs;
-      bool shouldHandlerPreserveAllRegs(const Triple &T) const {
-        return HandlerPreserveAllRegs && MinRuntime && MayReturn &&
-               (T.isAArch64() || T.isX86_64());
-      };
     };
     std::optional<Runtime> Rt; // Trap if empty.
     bool Merge = false;

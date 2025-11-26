@@ -9,11 +9,7 @@
 ; RUN: opt < %s -passes='bounds-checking<min-rt>'       -S | FileCheck %s --check-prefixes=MINRT-NOMERGE
 ; RUN: opt < %s -passes='bounds-checking<min-rt-abort>' -S | FileCheck %s --check-prefixes=MINRTABORT-NOMERGE
 
-; RUN: opt < %s -passes='bounds-checking<trap;handler-preserve-all-regs>'         -S | FileCheck %s --check-prefixes=TR-NOMERGE
-; RUN: opt < %s -passes='bounds-checking<rt;handler-preserve-all-regs>'           -S | FileCheck %s --check-prefixes=RT-NOMERGE
-; RUN: opt < %s -passes='bounds-checking<rt-abort;handler-preserve-all-regs>'     -S | FileCheck %s --check-prefixes=RTABORT-NOMERGE
-; RUN: opt < %s -mtriple x86_64 -passes='bounds-checking<min-rt;handler-preserve-all-regs>'       -S | FileCheck %s --check-prefixes=MINRT-PRESERVE-NOMERGE
-; RUN: opt < %s -mtriple i386 -passes='bounds-checking<min-rt;handler-preserve-all-regs>'       -S | FileCheck %s --check-prefixes=MINRT-NOMERGE
+; RUN: opt < %s -passes='bounds-checking<min-rt;handler-preserve-all-regs>'       -S | FileCheck %s --check-prefixes=MINRT-PRESERVE-NOMERGE
 ; RUN: opt < %s -passes='bounds-checking<min-rt-abort;handler-preserve-all-regs>' -S | FileCheck %s --check-prefixes=MINRTABORT-NOMERGE
 ;
 ; RUN: opt < %s -passes='bounds-checking<trap;guard=3>'   -S | FileCheck %s --check-prefixes=TR-GUARD-COMMON,TR-GUARD-THREE

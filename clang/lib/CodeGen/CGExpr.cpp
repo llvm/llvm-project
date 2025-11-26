@@ -3819,13 +3819,8 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
   bool NeedsAbortSuffix =
       IsFatal && RecoverKind != CheckRecoverableKind::Unrecoverable;
   bool MinimalRuntime = CGF.CGM.getCodeGenOpts().SanitizeMinimalRuntime;
-  // The preserve-all logic is somewhat duplicated in BoundsChecking.cpp for
-  // local-bounds. Make sure to change that too.
-  const auto &T = CGF.CGM.getTriple();
   bool HandlerPreserveAllRegs =
-      CGF.CGM.getCodeGenOpts().SanitizeHandlerPreserveAllRegs &&
-      (T.isAArch64() || T.isX86_64());
-  bool UsePreserveFn = false;
+      CGF.CGM.getCodeGenOpts().SanitizeHandlerPreserveAllRegs;
   const SanitizerHandlerInfo &CheckInfo = SanitizerHandlers[CheckHandler];
   const StringRef CheckName = CheckInfo.Name;
   std::string FnName = "__ubsan_handle_" + CheckName.str();
@@ -3833,12 +3828,10 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
     FnName += "_v" + llvm::utostr(CheckInfo.Version);
   if (MinimalRuntime)
     FnName += "_minimal";
-  if (NeedsAbortSuffix) {
+  if (NeedsAbortSuffix)
     FnName += "_abort";
-  } else if (MinimalRuntime && HandlerPreserveAllRegs) {
+  if (HandlerPreserveAllRegs && !NeedsAbortSuffix)
     FnName += "_preserve";
-    UsePreserveFn = true;
-  }
   bool MayReturn =
       !IsFatal || RecoverKind == CheckRecoverableKind::AlwaysRecoverable;
 
@@ -3859,7 +3852,7 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
             (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
   if (NoMerge)
     HandlerCall->addFnAttr(llvm::Attribute::NoMerge);
-  if (UsePreserveFn) {
+  if (HandlerPreserveAllRegs && !NeedsAbortSuffix) {
     // N.B. there is also a clang::CallingConv which is not what we want here.
     HandlerCall->setCallingConv(llvm::CallingConv::PreserveAll);
   }

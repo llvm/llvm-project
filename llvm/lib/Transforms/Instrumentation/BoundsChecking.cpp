@@ -172,14 +172,13 @@ static void insertBoundsCheck(Value *Or, BuilderTy &IRB, GetTrapBBT GetTrapBB) {
 }
 
 static std::string
-getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts,
-                   const Triple &T) {
+getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts) {
   std::string Name = "__ubsan_handle_local_out_of_bounds";
   if (Opts.MinRuntime)
     Name += "_minimal";
   if (!Opts.MayReturn)
     Name += "_abort";
-  if (Opts.shouldHandlerPreserveAllRegs(T))
+  else if (Opts.HandlerPreserveAllRegs)
     Name += "_preserve";
   return Name;
 }
@@ -231,17 +230,16 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     }
   }
 
-  auto Triple = F.getParent()->getTargetTriple();
   std::string Name;
   if (Opts.Rt)
-    Name = getRuntimeCallName(*Opts.Rt, Triple);
+    Name = getRuntimeCallName(*Opts.Rt);
 
   // Create a trapping basic block on demand using a callback. Depending on
   // flags, this will either create a single block for the entire function or
   // will create a fresh block every time it is called.
   BasicBlock *ReuseTrapBB = nullptr;
-  auto GetTrapBB = [&ReuseTrapBB, &Opts, &Name, &Triple](BuilderTy &IRB,
-                                                         BasicBlock *Cont) {
+  auto GetTrapBB = [&ReuseTrapBB, &Opts, &Name](BuilderTy &IRB,
+                                                BasicBlock *Cont) {
     Function *Fn = IRB.GetInsertBlock()->getParent();
     auto DebugLoc = IRB.getCurrentDebugLocation();
     IRBuilder<>::InsertPointGuard Guard(IRB);
@@ -273,7 +271,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
     }
     // The preserve-all logic is somewhat duplicated in CGExpr.cpp for
     // local-bounds. Make sure to change that too.
-    if (Opts.Rt && Opts.Rt->shouldHandlerPreserveAllRegs(Triple))
+    if (Opts.Rt && Opts.Rt->HandlerPreserveAllRegs && MayReturn)
       TrapCall->setCallingConv(CallingConv::PreserveAll);
     if (!MayReturn && SingleTrapBB && !DebugTrapBB)
       ReuseTrapBB = TrapBB;
