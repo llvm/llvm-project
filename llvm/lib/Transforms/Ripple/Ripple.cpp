@@ -599,7 +599,7 @@ void TensorShapeAny<SizeTy>::print(raw_ostream &O) const {
   size_t OmittedOnes = 0;
   for (auto &len : make_range(shape.begin(), shape.end())) {
     if (len > 1) {
-      for (auto _ : llvm::seq(size_t(0), OmittedOnes)) {
+      for (size_t I = 0; I < OmittedOnes; ++I) {
         O << "[1]";
       }
       OmittedOnes = 0;
