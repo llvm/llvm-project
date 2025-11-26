@@ -93,13 +93,13 @@ enum ZAState : uint8_t {
 
   // ZA has been committed to the lazy save buffer of the current function.
   // If the function uses ZT0 it must also be saved.
-  // ZA is off when a save has been committed.
+  // ZA is off.
   LOCAL_COMMITTED,
 
   // The ZA/ZT0 state on entry to the function.
   ENTRY,
 
-  // ZA is off
+  // ZA is off.
   OFF,
 
   // The number of ZA states (not a valid state)
