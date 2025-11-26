@@ -56,8 +56,7 @@ void printf_deceptive_newline() {
 
 void printf_utf8_text() {
   // UNSUPPORTED: system-windows
-  // Hex encodes U+4F60 U+597D U+4E16 U+754C (Hello world) in UTF-8
-  printf("\xE4\xBD\xA0\xE5\xA5\xBD\xE4\xB8\x96\xE7\x95\x8C\n");
+  printf("你好世界\n");
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
   // CHECK-FIXES: std::println("你好世界");
 }
@@ -313,8 +312,7 @@ void fprintf_simple() {
 
 void fprintf_utf8_text() {
   // UNSUPPORTED: system-windows
-  // Hex encodes U+4F60 U+597D U+4E16 U+754C (Hello world) in UTF-8
-  fprintf(stderr, "\xE4\xBD\xA0\xE5\xA5\xBD\xE4\xB8\x96\xE7\x95\x8C\n");
+  fprintf(stderr, "你好世界\n");
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'fprintf' [modernize-use-std-print]
   // CHECK-FIXES: std::println(stderr, "你好世界");
 }
