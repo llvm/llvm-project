@@ -1645,7 +1645,7 @@ const char *SBTarget::GetTargetSessionName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())
-    return ConstString(target_sp->GetTargetSessionName().data()).AsCString();
+    return ConstString(target_sp->GetTargetSessionName()).AsCString();
   return nullptr;
 }
 

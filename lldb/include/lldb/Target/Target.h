@@ -631,7 +631,7 @@ public:
   ///
   /// \return
   ///     The target session name for this target.
-  const std::string &GetTargetSessionName() { return m_target_session_name; }
+  llvm::StringRef GetTargetSessionName() { return m_target_session_name; }
 
   /// Set the target session name for this target.
   ///
