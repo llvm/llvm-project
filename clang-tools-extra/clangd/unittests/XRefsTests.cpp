@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "Annotations.h"
 #include "AST.h"
+#include "Annotations.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
