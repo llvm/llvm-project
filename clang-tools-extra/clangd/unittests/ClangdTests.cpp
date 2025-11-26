@@ -1110,7 +1110,7 @@ TEST(ClangdServerTest, FallbackWhenWaitingForCompileCommand) {
   class DelayedCompilationDatabase : public GlobalCompilationDatabase {
   public:
     DelayedCompilationDatabase(Notification &CanReturnCommand)
-        : CanReturnCommand(CanReturnCommand) {}
+        : GlobalCompilationDatabase(std::nullopt), CanReturnCommand(CanReturnCommand) {}
 
     std::optional<tooling::CompileCommand>
     getCompileCommand(PathRef File) const override {

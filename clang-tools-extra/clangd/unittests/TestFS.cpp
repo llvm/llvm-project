@@ -46,7 +46,7 @@ buildTestFS(llvm::StringMap<std::string> const &Files,
 
 MockCompilationDatabase::MockCompilationDatabase(llvm::StringRef Directory,
                                                  llvm::StringRef RelPathPrefix)
-    : ExtraClangFlags({"-ffreestanding"}), Directory(Directory),
+    : GlobalCompilationDatabase(std::nullopt), ExtraClangFlags({"-ffreestanding"}), Directory(Directory),
       RelPathPrefix(RelPathPrefix) {
   // -ffreestanding avoids implicit stdc-predef.h.
 }
