@@ -4065,6 +4065,7 @@ static bool isConsecutiveLoad(VPValue *Addr, Type *LoadTy, ScalarEvolution &SE,
 
   TypeSize TS = DL.getTypeStoreSize(LoadTy);
   const SCEV *ElementSizeSCEV = SE.getSizeOfExpr(StepSCEV->getType(), TS);
+  // TODO: Extend support to reverse accesses (with negative steps).
   return SE.isKnownPositive(StepSCEV) && StepSCEV == ElementSizeSCEV;
 }
 
