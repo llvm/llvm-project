@@ -7968,9 +7968,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           llvm::sys::path::append(RippleIncludePath, "include");
           CmdArgs.push_back(Args.MakeArgString("-I" + RippleIncludePath.str()));
         }
-        llvm::sys::path::append(RippleRTLibPath, "lib",
-                                TargetTriple.getTriple(), "ripple", TargetName);
-
         if (llvm::sys::fs::is_directory(RippleRTLibPath)) {
           std::error_code EC;
           for (llvm::sys::fs::directory_iterator File(RippleRTLibPath, EC),
