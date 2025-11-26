@@ -449,34 +449,10 @@ void HandleTargetEvent(const lldb::SBEvent &event, Log *log) {
       }
     }
   } else if (event_mask & lldb::SBTarget::eBroadcastBitNewTargetCreated) {
-    // Find the DAP instance that owns this target to check if we should
-    // ignore this event.
+    auto target = lldb::SBTarget::GetTargetFromEvent(event);
+
+    // Find the DAP instance that owns this target
     DAP *dap_instance = DAPSessionManager::FindDAP(target);
-
-    // Get the target and debugger IDs for the new session to use.
-    lldb::user_id_t target_id = target.GetGloballyUniqueID();
-    lldb::SBDebugger target_debugger = target.GetDebugger();
-    int debugger_id = target_debugger.GetID();
-
-    // We create an attach config that contains the debugger ID and target
-    // ID. The new DAP instance will use these IDs to find the existing
-    // debugger and target via FindDebuggerWithID and
-    // FindTargetByGloballyUniqueID.
-    llvm::json::Object attach_config;
-
-    attach_config.try_emplace("type", "lldb");
-    attach_config.try_emplace("debuggerId", debugger_id);
-    attach_config.try_emplace("targetId", target_id);
-    const char *session_name = target.GetTargetSessionName();
-    attach_config.try_emplace("name", session_name);
-
-    // 2. Construct the main 'startDebugging' request arguments.
-    llvm::json::Object start_debugging_args{
-        {"request", "attach"},
-        {"configuration", std::move(attach_config)}};
-
-    // Send the request. Note that this is a reverse request, so you don't
-    // expect a direct response in the same way as a client request.
     // If we don't have a dap_instance (target wasn't found), get any
     // active instance
     if (!dap_instance) {
@@ -487,9 +463,22 @@ void HandleTargetEvent(const lldb::SBEvent &event, Log *log) {
     }
 
     if (dap_instance) {
+      // Send a startDebugging reverse request with the debugger and target
+      // IDs. The new DAP instance will use these IDs to find the existing
+      // debugger and target via FindDebuggerWithID and
+      // FindTargetByGloballyUniqueID.
+      llvm::json::Object configuration{
+          {"type", "lldb"},
+          {"debuggerId", target.GetDebugger().GetID()},
+          {"targetId", target.GetGloballyUniqueID()},
+          {"name", target.GetTargetSessionName()}};
+
       dap_instance->SendReverseRequest<LogFailureResponseHandler>(
-          "startDebugging", std::move(start_debugging_args));
+          "startDebugging", llvm::json::Object{{"request", "attach"},
+                                                {"configuration",
+                                                std::move(configuration)}});
     }
+  }
 }
 
 void HandleBreakpointEvent(const lldb::SBEvent &event, Log *log) {
