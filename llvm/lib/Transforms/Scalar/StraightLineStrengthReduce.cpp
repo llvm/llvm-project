@@ -495,6 +495,11 @@ private:
     return S;
   }
 
+  bool candidatePredicate(Candidate *Basis, Candidate &C, Candidate::DKind K);
+
+  bool searchFrom(const CandidateDictTy::BBToCandsTy &BBToCands, Candidate &C,
+                  Candidate::DKind K);
+
   // Get the nearest instruction before CI that represents the value of S,
   // return nullptr if no instruction is associated with S or S is not a
   // reusable expression.
@@ -629,7 +634,8 @@ Value *StraightLineStrengthReduce::getDelta(const Candidate &C,
                                             const Candidate &Basis,
                                             Candidate::DKind K) const {
   if (K == Candidate::IndexDelta) {
-    APInt Idx = C.Index->getValue(), BasisIdx = Basis.Index->getValue();
+    APInt Idx = C.Index->getValue();
+    APInt BasisIdx = Basis.Index->getValue();
     unifyBitWidth(Idx, BasisIdx);
     APInt IndexDelta = Idx - BasisIdx;
     IntegerType *DeltaType =
@@ -664,92 +670,104 @@ bool StraightLineStrengthReduce::isSimilar(Candidate &C, Candidate &Basis,
          Basis.CandidateKind == C.CandidateKind;
 }
 
-void StraightLineStrengthReduce::setBasisAndDeltaFor(Candidate &C) {
-  auto SearchFrom = [this, &C](const CandidateDictTy::BBToCandsTy &BBToCands,
-                               auto IsTarget) -> bool {
-    // Search dominating candidates by walking the immediate-dominator chain
-    // from the candidate's defining block upward. Visiting blocks in this
-    // order ensures we prefer the closest dominating basis.
-    const BasicBlock *BB = C.Ins->getParent();
-    while (BB) {
-      auto It = BBToCands.find(BB);
-      if (It != BBToCands.end())
-        for (Candidate *Basis : reverse(It->second))
-          if (IsTarget(Basis))
-            return true;
-
-      const DomTreeNode *Node = DT->getNode(BB);
-      if (!Node)
-        break;
-      Node = Node->getIDom();
-      BB = Node ? Node->getBlock() : nullptr;
-    }
+// Try to find a Delta that C can reuse Basis to rewrite.
+// Set C.Delta, C.Basis, and C.DeltaKind if found.
+// Return true if found a constant delta.
+// Return false if not found or the delta is not a constant.
+bool StraightLineStrengthReduce::candidatePredicate(Candidate *Basis,
+                                                    Candidate &C,
+                                                    Candidate::DKind K) {
+  SmallVector<Instruction *> DropPoisonGeneratingInsts;
+  // Ensure the IR of Basis->Ins is not more poisonous than its SCEV.
+  if (!isSimilar(C, *Basis, K) ||
+      !SE->canReuseInstruction(SE->getSCEV(Basis->Ins), Basis->Ins,
+                               DropPoisonGeneratingInsts))
     return false;
-  };
 
-  auto For = [this, &C](Candidate::DKind K) {
-    // return true if find a Basis with constant delta and stop searching,
-    // return false if did not find a Basis or the delta is not a constant
-    // and continue searching for a Basis with constant delta
-    return [K, this, &C](Candidate *Basis) -> bool {
-      SmallVector<Instruction *> DropPoisonGeneratingInsts;
-      // Ensure the IR of Basis->Ins is not more poisonous than its SCEV.
-      if (!isSimilar(C, *Basis, K) ||
-          !SE->canReuseInstruction(SE->getSCEV(Basis->Ins), Basis->Ins,
-                                   DropPoisonGeneratingInsts))
-        return false;
+  assert(DT->dominates(Basis->Ins, C.Ins));
+  Value *Delta = getDelta(C, *Basis, K);
+  if (!Delta)
+    return false;
 
-      assert(DT->dominates(Basis->Ins, C.Ins));
-      Value *Delta = getDelta(C, *Basis, K);
-      if (K == Candidate::IndexDelta &&
-          !C.isProfitableRewrite(Delta, Candidate::IndexDelta))
-        return false;
+  // IndexDelta rewrite is not always profitable, e.g.,
+  // X = B + 8 * S
+  // Y = B + S,
+  // rewriting Y to X - 7 * S is probably a bad idea.
+  // So, we need to check if the rewrite form's computation efficiency
+  // is better than the original form.
+  if (K == Candidate::IndexDelta &&
+      !C.isProfitableRewrite(Delta, Candidate::IndexDelta))
+    return false;
 
-      if (!Delta)
-        return false;
+  // If there is a Delta that we can reuse Basis to rewrite C,
+  // clean up DropPoisonGeneratingInsts returned by successful
+  // SE->canReuseInstruction()
+  for (Instruction *I : DropPoisonGeneratingInsts)
+    I->dropPoisonGeneratingAnnotations();
 
-      // If there is a Delta that we can reuse Basis to rewrite C,
-      // drop the poison-generating instructions of Basis to avoid
-      // introducing poison.
-      for (Instruction *I : DropPoisonGeneratingInsts)
-        I->dropPoisonGeneratingAnnotations();
+  // Record delta if none has been found yet, or the new delta is
+  // a constant that is better than the existing delta.
+  if (!C.Delta || isa<ConstantInt>(Delta)) {
+    C.Delta = Delta;
+    C.Basis = Basis;
+    C.DeltaKind = K;
+  }
+  return isa<ConstantInt>(C.Delta);
+}
 
-      // Record delta if none has been found yet, or the new delta is
-      // a constant that is better than the existing delta.
-      if (!C.Delta || isa<ConstantInt>(Delta)) {
-        C.Delta = Delta;
-        C.Basis = Basis;
-        C.DeltaKind = K;
-      }
-      return isa<ConstantInt>(C.Delta);
-    };
-  };
+// return true if find a Basis with constant delta and stop searching,
+// return false if did not find a Basis or the delta is not a constant
+// and continue searching for a Basis with constant delta
+bool StraightLineStrengthReduce::searchFrom(
+    const CandidateDictTy::BBToCandsTy &BBToCands, Candidate &C,
+    Candidate::DKind K) {
 
+  // Stride delta rewrite on Mul form is usually non-profitable, and Base
+  // delta rewrite sometimes is profitable, so we do not support them on Mul.
+  if (C.CandidateKind == Candidate::Mul && K != Candidate::IndexDelta)
+    return false;
+
+  // Search dominating candidates by walking the immediate-dominator chain
+  // from the candidate's defining block upward. Visiting blocks in this
+  // order ensures we prefer the closest dominating basis.
+  const BasicBlock *BB = C.Ins->getParent();
+  while (BB) {
+    auto It = BBToCands.find(BB);
+    if (It != BBToCands.end())
+      for (Candidate *Basis : reverse(It->second))
+        if (candidatePredicate(Basis, C, K))
+          return true;
+
+    const DomTreeNode *Node = DT->getNode(BB);
+    if (!Node)
+      break;
+    Node = Node->getIDom();
+    BB = Node ? Node->getBlock() : nullptr;
+  }
+  return false;
+}
+
+void StraightLineStrengthReduce::setBasisAndDeltaFor(Candidate &C) {
   if (const auto *BaseDeltaCandidates =
-          CandidateDict.getCandidatesWithDeltaKind(C, Candidate::BaseDelta)) {
-    if ((C.CandidateKind != Candidate::Mul) &&
-        SearchFrom(*BaseDeltaCandidates, For(Candidate::BaseDelta))) {
+          CandidateDict.getCandidatesWithDeltaKind(C, Candidate::BaseDelta))
+    if (searchFrom(*BaseDeltaCandidates, C, Candidate::BaseDelta)) {
       LLVM_DEBUG(dbgs() << "Found delta from Base: " << *C.Delta << "\n");
       return;
     }
-  }
 
   if (const auto *StrideDeltaCandidates =
-          CandidateDict.getCandidatesWithDeltaKind(C, Candidate::StrideDelta)) {
-    if ((C.CandidateKind != Candidate::Mul) &&
-        SearchFrom(*StrideDeltaCandidates, For(Candidate::StrideDelta))) {
+          CandidateDict.getCandidatesWithDeltaKind(C, Candidate::StrideDelta))
+    if (searchFrom(*StrideDeltaCandidates, C, Candidate::StrideDelta)) {
       LLVM_DEBUG(dbgs() << "Found delta from Stride: " << *C.Delta << "\n");
       return;
     }
-  }
 
   if (const auto *IndexDeltaCandidates =
-          CandidateDict.getCandidatesWithDeltaKind(C, Candidate::IndexDelta)) {
-    if (SearchFrom(*IndexDeltaCandidates, For(Candidate::IndexDelta))) {
+          CandidateDict.getCandidatesWithDeltaKind(C, Candidate::IndexDelta))
+    if (searchFrom(*IndexDeltaCandidates, C, Candidate::IndexDelta)) {
       LLVM_DEBUG(dbgs() << "Found delta from Index: " << *C.Delta << "\n");
       return;
     }
-  }
 
   // If we did not find a constant delta, we might have found a variable delta
   if (C.Delta) {
