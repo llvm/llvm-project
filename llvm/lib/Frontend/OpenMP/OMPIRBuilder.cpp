@@ -4871,8 +4871,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
   // Call the "init" function and update the trip count of the loop with the
   // value it produced.
   auto BuildInitCall = [LoopType, SrcLoc, ThreadNum, PLastIter, PLowerBound,
-                        PUpperBound, IVTy, PStride, One, Zero,
-                        StaticInit, this](Value *SchedulingType, auto &Builder) {
+                        PUpperBound, IVTy, PStride, One, Zero, StaticInit,
+                        this](Value *SchedulingType, auto &Builder) {
     SmallVector<Value *, 10> Args({SrcLoc, ThreadNum, SchedulingType, PLastIter,
                                    PLowerBound, PUpperBound});
     if (LoopType == WorksharingLoopType::DistributeForStaticLoop) {
@@ -5039,16 +5039,17 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
   Value *SrcLoc = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
   Value *ThreadNum = getOrCreateThreadID(SrcLoc);
-  auto BuildInitCall =
-      [StaticInit, SrcLoc, ThreadNum, PLastIter, PLowerBound, PUpperBound,
-       PStride, One, this](Value *SchedulingType, Value *ChunkSize, auto &Builder) {
-        createRuntimeFunctionCall(
-      StaticInit, {/*loc=*/SrcLoc, /*global_tid=*/ThreadNum,
-                   /*schedtype=*/SchedulingType, /*plastiter=*/PLastIter,
-                   /*plower=*/PLowerBound, /*pupper=*/PUpperBound,
-                   /*pstride=*/PStride, /*incr=*/One,
-                   /*chunk=*/ChunkSize});
-      };
+  auto BuildInitCall = [StaticInit, SrcLoc, ThreadNum, PLastIter, PLowerBound,
+                        PUpperBound, PStride, One,
+                        this](Value *SchedulingType, Value *ChunkSize,
+                              auto &Builder) {
+    createRuntimeFunctionCall(
+        StaticInit, {/*loc=*/SrcLoc, /*global_tid=*/ThreadNum,
+                     /*schedtype=*/SchedulingType, /*plastiter=*/PLastIter,
+                     /*plower=*/PLowerBound, /*pupper=*/PUpperBound,
+                     /*pstride=*/PStride, /*incr=*/One,
+                     /*chunk=*/ChunkSize});
+  };
   BuildInitCall(SchedulingType, CastedChunkSize, Builder);
   if (DistScheduleSchedType != OMPScheduleType::None &&
       SchedType != OMPScheduleType::OrderedDistributeChunked &&
