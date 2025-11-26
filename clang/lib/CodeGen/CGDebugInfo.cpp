@@ -565,20 +565,20 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
   FileID FID;
   std::optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo;
 
+  llvm::DIFile *CUFile = TheCU->getFile();
   if (Loc.isInvalid()) {
     // The DIFile used by the CU is distinct from the main source file. Call
     // createFile() below for canonicalization if the source file was specified
     // with an absolute path.
-    FileName = TheCU->getFile()->getFilename();
-    CSInfo = TheCU->getFile()->getChecksum();
+    FileName = CUFile->getFilename();
+    CSInfo = CUFile->getChecksum();
+    FID = SM.getFileID(Loc);
   } else {
     PresumedLoc PLoc = SM.getPresumedLoc(SM.getFileLoc(Loc));
     FileName = PLoc.getFilename();
 
     if (FileName.empty()) {
-      FileName = TheCU->getFile()->getFilename();
-    } else {
-      FileName = PLoc.getFilename();
+      FileName = CUFile->getFilename();
     }
     FID = PLoc.getFileID();
   }
@@ -599,8 +599,7 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     if (CSKind)
       CSInfo.emplace(*CSKind, Checksum);
   }
-  return createFile(FileName, CSInfo,
-                    getSource(SM, SM.getFileID(SM.getFileLoc(Loc))));
+  return createFile(FileName, CSInfo, getSource(SM, FID));
 }
 
 llvm::DIFile *CGDebugInfo::createFile(
