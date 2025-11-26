@@ -230,7 +230,7 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   IntTy = CGM.IntTy;
   SizeTy = CGM.SizeTy;
   VoidTy = CGM.VoidTy;
-  PtrTy = CGM.UnqualPtrTy;
+  PtrTy = CGM.DefaultPtrTy;
 
   if (CGM.getLangOpts().OffloadViaLLVM)
     Prefix = "llvm";
@@ -1280,8 +1280,7 @@ llvm::Function *CGNVCUDARuntime::finalizeModule() {
     return nullptr;
   }
   if (CGM.getLangOpts().OffloadViaLLVM ||
-      (CGM.getLangOpts().OffloadingNewDriver &&
-       (CGM.getLangOpts().HIP || RelocatableDeviceCode)))
+      (CGM.getLangOpts().OffloadingNewDriver && RelocatableDeviceCode))
     createOffloadingEntries();
   else
     return makeModuleCtorFunction();

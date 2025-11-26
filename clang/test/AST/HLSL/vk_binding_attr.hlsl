@@ -76,13 +76,13 @@
 
 // CHECK: VarDecl {{.*}} Buf6 'RWStructuredBuffer<int>':'hlsl::RWStructuredBuffer<int>'
 // CHECK-NEXT: CallExpr {{.*}} 'RWStructuredBuffer<int>':'hlsl::RWStructuredBuffer<int>'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl::RWStructuredBuffer<int> (*)(unsigned int, unsigned int, int, unsigned int, const char *)' <FunctionToPointerDecay>
-// SPV-NEXT: DeclRefExpr {{.*}} 'hlsl::RWStructuredBuffer<int> (unsigned int, unsigned int, int, unsigned int, const char *)' 
-// SPV-NEXT-SAME: CXXMethod {{.*}} '__createFromBinding' 'hlsl::RWStructuredBuffer<int> (unsigned int, unsigned int, int, unsigned int, const char *)'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl::RWStructuredBuffer<int> (*)(unsigned int, unsigned int, int, unsigned int, const char *, unsigned int)' <FunctionToPointerDecay>
+// SPV-NEXT: DeclRefExpr {{.*}} 'hlsl::RWStructuredBuffer<int> (unsigned int, unsigned int, int, unsigned int, const char *, unsigned int)' 
+// SPV-NEXT-SAME: CXXMethod {{.*}} '__createFromBindingwithImplicitCounter' 'hlsl::RWStructuredBuffer<int> (unsigned int, unsigned int, int, unsigned int, const char *, unsigned int)'
 // SPV-NEXT: IntegerLiteral {{.*}} 'unsigned int' 26
 // SPV-NEXT: IntegerLiteral {{.*}} 'unsigned int' 105
-// DXIL-NEXT: DeclRefExpr {{.*}} 'hlsl::RWStructuredBuffer<int> (unsigned int, unsigned int, int, unsigned int, const char *)' 
-// DXIL-NEXT-SAME: CXXMethod {{.*}} '__createFromBinding' 'hlsl::RWStructuredBuffer<int> (unsigned int, unsigned int, int, unsigned int, const char *)'
+// DXIL-NEXT: DeclRefExpr {{.*}} 'hlsl::RWStructuredBuffer<int> (unsigned int, unsigned int, int, unsigned int, const char *, unsigned int)' 
+// DXIL-NEXT-SAME: CXXMethod {{.*}} '__createFromImplicitBindingwithImplicitCounter' 'hlsl::RWStructuredBuffer<int> (unsigned int, unsigned int, int, unsigned int, const char *, unsigned int)'
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 4
 // DXIL-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
 // CHECK: HLSLVkBindingAttr {{.*}} 26 105

@@ -105,7 +105,7 @@ llvm::Type *CodeGen::getVAListElementType(CodeGenFunction &CGF) {
 
 CGCXXABI::RecordArgABI CodeGen::getRecordArgABI(const RecordType *RT,
                                                 CGCXXABI &CXXABI) {
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
   if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
     return CXXABI.getRecordArgABI(CXXRD);
   if (!RD->canPassInRegisters())
@@ -136,7 +136,7 @@ bool CodeGen::classifyReturnType(const CGCXXABI &CXXABI, CGFunctionInfo &FI,
 
 QualType CodeGen::useFirstFieldIfTransparentUnion(QualType Ty) {
   if (const RecordType *UT = Ty->getAsUnionType()) {
-    const RecordDecl *UD = UT->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *UD = UT->getDecl()->getDefinitionOrSelf();
     if (UD->hasAttr<TransparentUnionAttr>()) {
       assert(!UD->field_empty() && "sema created an empty transparent union");
       return UD->field_begin()->getType();
@@ -274,7 +274,7 @@ bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
   // according to the Itanium ABI.  The exception applies only to records,
   // not arrays of records, so we must also check whether we stripped off an
   // array type above.
-  if (isa<CXXRecordDecl>(RT->getOriginalDecl()) &&
+  if (isa<CXXRecordDecl>(RT->getDecl()) &&
       (WasArray || (!AsIfNoUniqueAddr && !FD->hasAttr<NoUniqueAddressAttr>())))
     return false;
 
