@@ -2650,18 +2650,17 @@ static bool OptimizeNonTrivialIFuncs(
       unsigned J = 0;
 
       for (unsigned I = 0, E = Callers.size(); I < E; ++I) {
-        if (J == Callees.size())
-          break;
-
         Function *Caller = Callers[I];
         APInt CallerBits = FeatureMask[Caller];
-        unsigned BestCandidate = J;
 
-        if (AllowExpensiveChecks) {
+        // Compare the feature bits of the best callee candidate with all the
+        // caller versions preceeding the current one. For each prior caller
+        // discard feature bits that are known to be available in the current
+        // caller. As long as the known missing feature bits are a subset of the
+        // callee feature bits, advance to the next callee and start over.
+        auto computeKnownBits = [&](unsigned BestCandidate) {
           unsigned K = 0;
           while (K < I && BestCandidate < Callees.size()) {
-            // Discard feature bits that are known to be available
-            // in the current iteration.
             APInt KnownBits = FeatureMask[Callers[K]] & ~CallerBits;
             if (KnownBits.isSubsetOf(FeatureMask[Callees[BestCandidate]])) {
               ++BestCandidate;
@@ -2670,9 +2669,12 @@ static bool OptimizeNonTrivialIFuncs(
             } else
               ++K;
           }
-          if (BestCandidate == Callees.size())
-            break;
-        }
+          return BestCandidate;
+        };
+
+        unsigned BestCandidate = AllowExpensiveChecks ? computeKnownBits(J) : J;
+        if (BestCandidate == Callees.size())
+          break;
 
         LLVM_DEBUG(dbgs() << "   Examining "
                           << (CallerIsFMV ? "FMV" : "regular") << " caller "
