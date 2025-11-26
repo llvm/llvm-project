@@ -152,6 +152,9 @@ mlir::ValueRange getDataOperands(mlir::Operation *accOp);
 /// Used to get a mutable range iterating over the data operands.
 mlir::MutableOperandRange getMutableDataOperands(mlir::Operation *accOp);
 
+/// Used to get the recipe attribute from a data clause operation.
+mlir::SymbolRefAttr getRecipe(mlir::Operation *accOp);
+
 /// Used to check whether the provided `type` implements the `PointerLikeType`
 /// interface.
 inline bool isPointerLikeType(mlir::Type type) {
@@ -175,6 +178,11 @@ static constexpr StringLiteral getDeclareActionAttrName() {
 
 static constexpr StringLiteral getRoutineInfoAttrName() {
   return StringLiteral("acc.routine_info");
+}
+
+/// Used to check whether the current operation is an `acc routine`
+inline bool isAccRoutineOp(mlir::Operation *op) {
+  return op->hasAttr(mlir::acc::getRoutineInfoAttrName());
 }
 
 static constexpr StringLiteral getFromDefaultClauseAttrName() {
