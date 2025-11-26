@@ -692,6 +692,9 @@ if(APPLE)
   list_intersect(ORC_SUPPORTED_ARCH
     ALL_ORC_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
+  list_intersect(PFP_SUPPORTED_ARCH
+    ALL_PFP_SUPPORTED_ARCH
+    SANITIZER_COMMON_SUPPORTED_ARCH)
 
 else()
   # Architectures supported by compiler-rt libraries.
@@ -727,6 +730,7 @@ else()
   filter_available_targets(GWP_ASAN_SUPPORTED_ARCH ${ALL_GWP_ASAN_SUPPORTED_ARCH})
   filter_available_targets(NSAN_SUPPORTED_ARCH ${ALL_NSAN_SUPPORTED_ARCH})
   filter_available_targets(ORC_SUPPORTED_ARCH ${ALL_ORC_SUPPORTED_ARCH})
+  filter_available_targets(PFP_SUPPORTED_ARCH ${ALL_PFP_SUPPORTED_ARCH})
 endif()
 
 if (MSVC)
