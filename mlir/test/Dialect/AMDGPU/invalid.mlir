@@ -371,6 +371,17 @@ func.func @make_dma_descriptor_invalid_empty_strides(%base: !amdgpu.tdm_base<i32
 // CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
 func.func @make_dma_descriptor_invalid_innermost_stride(%base: !amdgpu.tdm_base<i32>) {
   // expected-error@+1 {{'amdgpu.make_dma_descriptor' op strides for the innermost dimension must be 1.}}
-  amdgpu.make_dma_descriptor %base globalSize [0] globalStride [1, 2] sharedSize [0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  amdgpu.make_dma_descriptor %base globalSize [2, 2] globalStride [1, 2] sharedSize [0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
   func.return
 }
+
+// -----
+
+// CHECK-LABEL: func @make_dma_descriptor_invalid_size_and_stride_sizes
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
+func.func @make_dma_descriptor_invalid_size_and_stride_sizes(%base: !amdgpu.tdm_base<i32>) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op strides and sizes must have same rank.}}
+  amdgpu.make_dma_descriptor %base globalSize [1] globalStride [1, 1] sharedSize [0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return
+}
+

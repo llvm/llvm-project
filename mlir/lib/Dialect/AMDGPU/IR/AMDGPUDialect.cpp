@@ -710,12 +710,20 @@ LogicalResult TransposeLoadOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult MakeDmaDescriptorOp::verify() {
-  if (getGlobalStaticStrides().empty()) {
+  ArrayRef<int64_t> globalStaticStrides = getGlobalStaticStrides();
+
+  if (globalStaticStrides.empty()) {
     return emitOpError("strides must not be empty.");
   }
-  if (getGlobalStaticStrides().back() != 1) {
+  if (globalStaticStrides.back() != 1) {
     return emitOpError("strides for the innermost dimension must be 1.");
   }
+
+  ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
+  if (globalStaticSizes.size() != globalStaticStrides.size()) {
+    return emitOpError("strides and sizes must have same rank.");
+  }
+
   return success();
 }
 
