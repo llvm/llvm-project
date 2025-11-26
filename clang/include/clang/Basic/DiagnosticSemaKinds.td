@@ -14147,8 +14147,25 @@ def err_ripple_block_shape_argument
     " (ripple_block_t) as 1st argument (current type is %1)">;
 def err_ripple_loop_not_for_loop
     : Error<"the Ripple 'parallel' construct can only be applied to a 'for' loop">;
+def err_ripple_loop_not_canonical_init : Error<
+  "initialization clause of Ripple for loop is not in canonical form "
+  "('var = init' or 'T var = init')">;
+def err_ripple_loop_not_canonical_cond : Error<
+  "condition of Ripple for loop must be a relational comparison "
+  "('<', '<=', '>', '>=' or '!=') of loop variable %0">;
+def err_ripple_loop_not_canonical_incr : Error<
+  "increment clause of Ripple for loop must perform simple addition "
+  "or subtraction on loop variable %0">;
+def err_ripple_loop_incr_not_compatible : Error<
+  "increment expression must cause %0 to %select{decrease|increase}1 "
+  "on each iteration of Ripple for loop">;
+def ext_ripple_loop_not_canonical_init : ExtWarn<
+  "initialization clause of Ripple for loop is not in canonical form "
+  "('var = init' or 'T var = init')">, InGroup<Ripple>;
 def err_ripple_duplicate_parallel_index : Error<
   "duplicate parallel dimension '%0' in pragma ripple parallel">;
+def err_ripple_stmt_depends_on_loop_counter : Error<
+  "the loop %select{initializer|condition|increment}0 expression depends on the current loop control variable">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

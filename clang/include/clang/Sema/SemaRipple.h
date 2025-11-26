@@ -35,6 +35,10 @@ class SemaRipple : public SemaBase {
 public:
   SemaRipple(Sema &S) : SemaBase(S) {};
 
+  /// Checks if @p Op can be converted to Integer type w/ error reporting
+  ExprResult PerformRippleImplicitIntegerConversion(SourceLocation Loc,
+                                                    Expr *Op);
+
   /// Constructor of a Ripple parallel compute construct statement
   StmtResult
   CreateRippleParallelComputeStmt(SourceRange PragmaLoc, SourceRange PELoc,
