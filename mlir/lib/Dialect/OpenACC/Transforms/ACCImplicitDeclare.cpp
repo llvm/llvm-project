@@ -291,7 +291,6 @@ static void collectGlobalsFromDeviceRegion(mlir::Region &region,
                                            GlobalOpSetT &globals,
                                            acc::OpenACCSupport &accSupport,
                                            SymbolTable &symTab) {
-  auto mod = region.getParentOfType<mlir::ModuleOp>();
   region.walk([&](Operation *op) {
     // 1) Only consider relevant operations which use symbols
     auto addrOfOp = dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(op);
@@ -312,7 +311,8 @@ static void collectGlobalsFromDeviceRegion(mlir::Region &region,
       llvm::SmallVector<SymbolRefAttr> symbols;
       indirectAccessOp.getReferencedSymbols(symbols, &symTab);
       for (SymbolRefAttr symRef : symbols)
-        if (Operation *globalOp = SymbolTable::lookupSymbolIn(mod, symRef))
+        if (auto globalOp = symTab.lookup<mlir::acc::GlobalVariableOpInterface>(
+                symRef.getLeafReference()))
           if (isValidForAccDeclare(globalOp))
             globals.insert(globalOp);
     }
