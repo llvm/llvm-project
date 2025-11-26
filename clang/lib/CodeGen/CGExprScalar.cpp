@@ -2430,22 +2430,17 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
     llvm::Value *V =
         CGF.Builder.CreateLoad(CGF.CreateIRTemp(DestTy, "flatcast.tmp"));
     // write to V.
-    unsigned NumCols = MatTy->getNumColumns();
-    unsigned NumRows = MatTy->getNumRows();
-    unsigned ColOffset = NumCols;
-    if (auto *SrcMatTy = SrcVal.getType()->getAs<ConstantMatrixType>())
-      ColOffset = SrcMatTy->getNumColumns();
-    for (unsigned R = 0; R < NumRows; R++) {
-      for (unsigned C = 0; C < NumCols; C++) {
-        unsigned I = R * ColOffset + C;
-        RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
-        assert(RVal.isScalar() &&
-               "All flattened source values should be scalars.");
-        llvm::Value *Cast =
-            CGF.EmitScalarConversion(RVal.getScalarVal(), LoadList[I].getType(),
-                                     MatTy->getElementType(), Loc);
-        V = CGF.Builder.CreateInsertElement(V, Cast, I);
-      }
+    for (unsigned I = 0, E = MatTy->getNumElementsFlattened(); I < E; I++) {
+      unsigned ColMajorIndex =
+          (I % MatTy->getNumRows()) * MatTy->getNumColumns() +
+          (I / MatTy->getNumRows());
+      RValue RVal = CGF.EmitLoadOfLValue(LoadList[ColMajorIndex], Loc);
+      assert(RVal.isScalar() &&
+             "All flattened source values should be scalars.");
+      llvm::Value *Cast = CGF.EmitScalarConversion(
+          RVal.getScalarVal(), LoadList[ColMajorIndex].getType(),
+          MatTy->getElementType(), Loc);
+      V = CGF.Builder.CreateInsertElement(V, Cast, I);
     }
     return V;
   }
