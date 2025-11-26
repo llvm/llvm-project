@@ -738,6 +738,61 @@ define void @test_build_vector_i32(ptr %ret_ptr, i32 %a, i32 %b) {
   ret void
 }
 
+; Test logical shift left immediate for v4i16
+define void @test_pslli_h(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_pslli_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    pslli.h a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i16>, ptr %a_ptr
+  %res = shl <4 x i16> %a, splat(i16 2)
+  store <4 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test logical shift left immediate for v8i8
+define void @test_pslli_b(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_pslli_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    pslli.b a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <8 x i8>, ptr %a_ptr
+  %res = shl <8 x i8> %a, splat(i8 2)
+  store <8 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test logical shift left immediate for v2i32
+define void @test_pslli_w(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_pslli_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    pslli.w a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %res = shl <2 x i32> %a, splat(i32 2)
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test arithmetic saturation shift left immediate for v2i32
+define void @test_psslai_w(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psslai_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    psslai.w a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %res = call <2 x i32> @llvm.sshl.sat.v2i32(<2 x i32> %a, <2 x i32> splat(i32 2))
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
 ; Intrinsic declarations
 declare <4 x i16> @llvm.sadd.sat.v4i16(<4 x i16>, <4 x i16>)
 declare <4 x i16> @llvm.uadd.sat.v4i16(<4 x i16>, <4 x i16>)
