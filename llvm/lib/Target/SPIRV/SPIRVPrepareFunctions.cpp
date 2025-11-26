@@ -588,10 +588,12 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
     SmallVector<std::pair<int, Type *>> ChangedTypes;
     SmallVector<Type *> NewArgTypes;
 
-    if (CB->getType()->isAggregateType())
-      ChangedTypes.emplace_back(-1, CB->getType());
+    Type* RetTy = CB->getType();
+    if (RetTy->isAggregateType()) {
+      ChangedTypes.emplace_back(-1, RetTy);
+      RetTy = B.getInt32Ty();
+    }
 
-    Type *RetTy = ChangedTypes.empty() ? CB->getType() : B.getInt32Ty();
     for (auto &&Arg : CB->args()) {
       if (Arg->getType()->isAggregateType()) {
         NewArgTypes.push_back(B.getInt32Ty());
