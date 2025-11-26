@@ -33,7 +33,7 @@ enum StyleKind : int;
 class IdentifierNamingCheck final : public RenamerClangTidyCheck {
 public:
   IdentifierNamingCheck(StringRef Name, ClangTidyContext *Context);
-  ~IdentifierNamingCheck();
+  ~IdentifierNamingCheck() override;
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 

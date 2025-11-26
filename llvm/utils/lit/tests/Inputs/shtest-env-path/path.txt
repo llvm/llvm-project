@@ -1,0 +1,8 @@
+## Tests env command for setting the PATH variable.
+
+## Check that test.sh can be found using the configured PATH.
+#
+# RUN: env PATH=%S test.sh | FileCheck --check-prefix=CHECK %s
+#
+
+# CHECK: TEST-ENV-PATH-123

@@ -231,14 +231,20 @@ public:
       : messages_{that.messages_}, defaults_{that.defaults_},
         intrinsics_{that.intrinsics_},
         targetCharacteristics_{that.targetCharacteristics_},
-        pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_},
+        pdtInstance_{that.pdtInstance_},
+        analyzingPDTComponentKindSelector_{
+            that.analyzingPDTComponentKindSelector_},
+        impliedDos_{that.impliedDos_},
         languageFeatures_{that.languageFeatures_}, tempNames_{that.tempNames_} {
   }
   FoldingContext(
       const FoldingContext &that, const parser::ContextualMessages &m)
       : messages_{m}, defaults_{that.defaults_}, intrinsics_{that.intrinsics_},
         targetCharacteristics_{that.targetCharacteristics_},
-        pdtInstance_{that.pdtInstance_}, impliedDos_{that.impliedDos_},
+        pdtInstance_{that.pdtInstance_},
+        analyzingPDTComponentKindSelector_{
+            that.analyzingPDTComponentKindSelector_},
+        impliedDos_{that.impliedDos_},
         languageFeatures_{that.languageFeatures_}, tempNames_{that.tempNames_} {
   }
 
@@ -248,6 +254,9 @@ public:
     return defaults_;
   }
   const semantics::DerivedTypeSpec *pdtInstance() const { return pdtInstance_; }
+  bool analyzingPDTComponentKindSelector() const {
+    return analyzingPDTComponentKindSelector_;
+  }
   const IntrinsicProcTable &intrinsics() const { return intrinsics_; }
   const TargetCharacteristics &targetCharacteristics() const {
     return targetCharacteristics_;
@@ -290,9 +299,19 @@ public:
     return common::ScopedSet(pdtInstance_, nullptr);
   }
 
+  common::Restorer<bool> AnalyzingPDTComponentKindSelector() {
+    return common::ScopedSet(analyzingPDTComponentKindSelector_, true);
+  }
+
+  common::Restorer<std::string> SetRealFlagWarningContext(std::string str) {
+    return common::ScopedSet(realFlagWarningContext_, str);
+  }
+
   parser::CharBlock SaveTempName(std::string &&name) {
     return {*tempNames_.emplace(std::move(name)).first};
   }
+
+  void RealFlagWarnings(const RealFlags &, const char *op);
 
 private:
   parser::ContextualMessages messages_;
@@ -300,12 +319,13 @@ private:
   const IntrinsicProcTable &intrinsics_;
   const TargetCharacteristics &targetCharacteristics_;
   const semantics::DerivedTypeSpec *pdtInstance_{nullptr};
+  bool analyzingPDTComponentKindSelector_{false};
   std::optional<parser::CharBlock> moduleFileName_;
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
   const common::LanguageFeatureControl &languageFeatures_;
   std::set<std::string> &tempNames_;
+  std::string realFlagWarningContext_;
 };
 
-void RealFlagWarnings(FoldingContext &, const RealFlags &, const char *op);
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_COMMON_H_

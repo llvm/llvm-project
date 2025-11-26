@@ -73,7 +73,7 @@ body:             |
     ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1
     ; FLATSCR-V2A-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1 :: (store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $vgpr0_vgpr1
-    ; FLATSCR-V2A-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1 :: (load (s32) from %stack.0, addrspace 5)
+    ; FLATSCR-V2A-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1, implicit $vgpr0_vgpr1 :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-V2A-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1 = IMPLICIT_DEF
     SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
@@ -112,7 +112,7 @@ body:             |
     ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr2, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2, implicit $vgpr0_vgpr1_vgpr2
     ; FLATSCR-V2A-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $vgpr0_vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_vgpr1_vgpr2 :: (store (s64) into %stack.0, align 4, addrspace 5)
     ; FLATSCR-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2
-    ; FLATSCR-V2A-NEXT: $vgpr0_vgpr1 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2 :: (load (s64) from %stack.0, align 4, addrspace 5)
+    ; FLATSCR-V2A-NEXT: $vgpr0_vgpr1 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2, implicit $vgpr0_vgpr1_vgpr2 :: (load (s64) from %stack.0, align 4, addrspace 5)
     ; FLATSCR-V2A-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1_vgpr2 = IMPLICIT_DEF
     SI_SPILL_V96_SAVE killed $vgpr0_vgpr1_vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s96) into %stack.0, align 4, addrspace 5)
@@ -157,7 +157,7 @@ body:             |
     ; FLATSCR-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3
     ; FLATSCR-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
     ; FLATSCR-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
-    ; FLATSCR-V2A-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3 :: (load (s32) from %stack.0, addrspace 5)
+    ; FLATSCR-V2A-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-V2A-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1_vgpr2_vgpr3 = IMPLICIT_DEF
     SI_SPILL_V128_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
@@ -203,7 +203,7 @@ body:             |
     ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr4, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4
     ; FLATSCR-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4
     ; FLATSCR-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4
-    ; FLATSCR-V2A-NEXT: $vgpr0_vgpr1 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 :: (load (s64) from %stack.0, align 4, addrspace 5)
+    ; FLATSCR-V2A-NEXT: $vgpr0_vgpr1 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 :: (load (s64) from %stack.0, align 4, addrspace 5)
     ; FLATSCR-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4
     ; FLATSCR-V2A-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 = IMPLICIT_DEF
@@ -255,7 +255,7 @@ body:             |
     ; FLATSCR-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
     ; FLATSCR-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
     ; FLATSCR-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr4, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
-    ; FLATSCR-V2A-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (load (s32) from %stack.0, addrspace 5)
+    ; FLATSCR-V2A-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: (load (s32) from %stack.0, addrspace 5)
     ; FLATSCR-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
     ; FLATSCR-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
     ; FLATSCR-V2A-NEXT: S_ENDPGM 0

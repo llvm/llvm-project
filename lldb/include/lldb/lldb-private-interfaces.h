@@ -15,6 +15,7 @@
 #include "lldb/lldb-types.h"
 #include <memory>
 #include <set>
+#include <vector>
 
 namespace llvm {
 namespace json {
@@ -25,6 +26,7 @@ class Value;
 
 namespace lldb_private {
 class ScriptedInterfaceUsages;
+struct SyntheticFrameProviderDescriptor;
 typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
 typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
@@ -86,6 +88,14 @@ typedef lldb::RegisterTypeBuilderSP (*RegisterTypeBuilderCreateInstance)(
     Target &target);
 typedef lldb::ScriptInterpreterSP (*ScriptInterpreterCreateInstance)(
     Debugger &debugger);
+typedef llvm::Expected<lldb::SyntheticFrameProviderSP> (
+    *ScriptedFrameProviderCreateInstance)(
+    lldb::StackFrameListSP input_frames,
+    const lldb_private::SyntheticFrameProviderDescriptor &descriptor);
+typedef llvm::Expected<lldb::SyntheticFrameProviderSP> (
+    *SyntheticFrameProviderCreateInstance)(
+    lldb::StackFrameListSP input_frames,
+    const std::vector<lldb_private::ThreadSpec> &thread_specs);
 typedef SymbolFile *(*SymbolFileCreateInstance)(lldb::ObjectFileSP objfile_sp);
 typedef SymbolVendor *(*SymbolVendorCreateInstance)(
     const lldb::ModuleSP &module_sp,

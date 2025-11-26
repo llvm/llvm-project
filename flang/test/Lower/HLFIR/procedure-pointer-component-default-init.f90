@@ -1,5 +1,5 @@
 ! Test procedure pointer component default initialization when the size
-! of the derived type is 32 bytes and larger. 
+! of the derived type is 32 bytes and larger.
 ! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
   interface

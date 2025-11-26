@@ -289,7 +289,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .lower();
 
-  getActionDefinitionsBuilder({G_ABDS, G_ABDU})
+  getActionDefinitionsBuilder(
+      {G_ABDS, G_ABDU, G_UAVGFLOOR, G_UAVGCEIL, G_SAVGFLOOR, G_SAVGCEIL})
       .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
       .lower();
 
@@ -449,10 +450,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalar(0, s32)
       .libcallFor({{s32, s32}, {s64, s32}, {s128, s32}});
 
-  // TODO: Libcall support for s128.
-  // TODO: s16 should be legal with full FP16 support.
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
-      .legalFor({{s64, s32}, {s64, s64}});
+      .legalFor({{s64, s32}, {s64, s64}})
+      .legalFor(HasFP16, {{s64, s16}})
+      .minScalar(0, s64)
+      .minScalar(1, s32)
+      .libcallFor({{s64, s128}});
 
   // TODO: Custom legalization for mismatched types.
   getActionDefinitionsBuilder(G_FCOPYSIGN)
@@ -825,6 +828,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(
           {{s32, s16}, {s64, s16}, {s64, s32}, {v4s32, v4s16}, {v2s64, v2s32}})
       .libcallFor({{s128, s64}, {s128, s32}, {s128, s16}})
+      .moreElementsToNextPow2(0)
+      .widenScalarIf(
+          [](const LegalityQuery &Q) {
+            LLT DstTy = Q.Types[0];
+            LLT SrcTy = Q.Types[1];
+            return SrcTy.isVector() && DstTy.isVector() &&
+                   SrcTy.getScalarSizeInBits() == 16 &&
+                   DstTy.getScalarSizeInBits() == 64;
+          },
+          changeElementTo(1, s32))
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .scalarize(0);
@@ -1201,25 +1214,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         return llvm::is_contained(
             {v8s8, v16s8, v4s16, v8s16, v2s32, v4s32, v2s64}, DstTy);
       })
-      // G_SHUFFLE_VECTOR can have scalar sources (from 1 x s vectors) or scalar
-      // destinations, we just want those lowered into G_BUILD_VECTOR or
-      // G_EXTRACT_ELEMENT.
-      .lowerIf([=](const LegalityQuery &Query) {
-        return !Query.Types[0].isVector() || !Query.Types[1].isVector();
-      })
       .moreElementsIf(
           [](const LegalityQuery &Query) {
-            return Query.Types[0].isVector() && Query.Types[1].isVector() &&
-                   Query.Types[0].getNumElements() >
-                       Query.Types[1].getNumElements();
+            return Query.Types[0].getNumElements() >
+                   Query.Types[1].getNumElements();
           },
           changeTo(1, 0))
       .moreElementsToNextPow2(0)
       .moreElementsIf(
           [](const LegalityQuery &Query) {
-            return Query.Types[0].isVector() && Query.Types[1].isVector() &&
-                   Query.Types[0].getNumElements() <
-                       Query.Types[1].getNumElements();
+            return Query.Types[0].getNumElements() <
+                   Query.Types[1].getNumElements();
           },
           changeTo(0, 1))
       .widenScalarOrEltToNextPow2OrMinSize(0, 8)
@@ -1238,7 +1243,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({{v16s8, v8s8}, {v8s16, v4s16}, {v4s32, v2s32}})
       .bitcastIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[0].getSizeInBits() <= 128 &&
+            return Query.Types[0].isFixedVector() &&
+                   Query.Types[1].isFixedVector() &&
+                   Query.Types[0].getSizeInBits() <= 128 &&
                    Query.Types[1].getSizeInBits() <= 64;
           },
           [=](const LegalityQuery &Query) {
@@ -1817,6 +1824,9 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(TargetOpcode::G_FMAXNUM);
   case Intrinsic::aarch64_neon_fminnm:
     return LowerBinOp(TargetOpcode::G_FMINNUM);
+  case Intrinsic::aarch64_neon_pmull:
+  case Intrinsic::aarch64_neon_pmull64:
+    return LowerBinOp(AArch64::G_PMULL);
   case Intrinsic::aarch64_neon_smull:
     return LowerBinOp(AArch64::G_SMULL);
   case Intrinsic::aarch64_neon_umull:
@@ -1825,6 +1835,14 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(TargetOpcode::G_ABDS);
   case Intrinsic::aarch64_neon_uabd:
     return LowerBinOp(TargetOpcode::G_ABDU);
+  case Intrinsic::aarch64_neon_uhadd:
+    return LowerBinOp(TargetOpcode::G_UAVGFLOOR);
+  case Intrinsic::aarch64_neon_urhadd:
+    return LowerBinOp(TargetOpcode::G_UAVGCEIL);
+  case Intrinsic::aarch64_neon_shadd:
+    return LowerBinOp(TargetOpcode::G_SAVGFLOOR);
+  case Intrinsic::aarch64_neon_srhadd:
+    return LowerBinOp(TargetOpcode::G_SAVGCEIL);
   case Intrinsic::aarch64_neon_abs: {
     // Lower the intrinsic to G_ABS.
     MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});
@@ -1855,6 +1873,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerTriOp(AArch64::G_UDOT);
   case Intrinsic::aarch64_neon_sdot:
     return LowerTriOp(AArch64::G_SDOT);
+  case Intrinsic::aarch64_neon_usdot:
+    return LowerTriOp(AArch64::G_USDOT);
   case Intrinsic::aarch64_neon_sqxtn:
     return LowerUnaryOp(TargetOpcode::G_TRUNC_SSAT_S);
   case Intrinsic::aarch64_neon_sqxtun:
