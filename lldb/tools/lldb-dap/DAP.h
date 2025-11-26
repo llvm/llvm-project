@@ -417,6 +417,9 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
 
+  /// Get the client name for this DAP session.
+  llvm::StringRef GetClientName() const { return m_client_name; }
+
   void StartEventThread();
   void StartProgressEventThread();
 
@@ -475,13 +478,6 @@ private:
 
   /// Event threads.
   /// @{
-  void EventThread();
-  void HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited);
-  void HandleTargetEvent(const lldb::SBEvent &event);
-  void HandleNewTargetEvent(const lldb::SBEvent &event);
-  void HandleBreakpointEvent(const lldb::SBEvent &event);
-  void HandleThreadEvent(const lldb::SBEvent &event);
-  void HandleDiagnosticEvent(const lldb::SBEvent &event);
   void ProgressEventThread();
 
   /// Event thread is a shared pointer in case we have a multiple
