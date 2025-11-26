@@ -133,17 +133,19 @@ llvm::Error ProtocolServerMCP::Stop() {
   }
 
   // Stop the main loop.
-  m_loop.AddPendingCallback(
+  bool addition_succeeded = m_loop.AddPendingCallback(
       [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
 
-  // Wait for the main loop to exit.
-  if (m_loop_thread.joinable())
+  // Wait for the main loop to exit, but not if we didn't succeed in inserting
+  // our pending callback or we'll wait forever.
+  if (addition_succeeded && m_loop_thread.joinable())
     m_loop_thread.join();
 
   m_accept_handles.clear();
 
   m_server.reset(nullptr);
   m_server_info_handle.Remove();
+  m_listener.reset();
 
   return llvm::Error::success();
 }

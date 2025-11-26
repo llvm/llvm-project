@@ -189,8 +189,7 @@ private:
                     HasDS);
 
       // Copy the actual data into the trailing objects.
-      std::copy(MMOs.begin(), MMOs.end(),
-                Result->getTrailingObjects<MachineMemOperand *>());
+      llvm::copy(MMOs, Result->getTrailingObjects<MachineMemOperand *>());
 
       unsigned MDNodeIdx = 0;
 

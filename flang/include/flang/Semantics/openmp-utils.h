@@ -13,9 +13,11 @@
 #ifndef FORTRAN_SEMANTICS_OPENMP_UTILS_H
 #define FORTRAN_SEMANTICS_OPENMP_UTILS_H
 
+#include "flang/Common/indirection.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -26,6 +28,7 @@
 #include <utility>
 
 namespace Fortran::semantics {
+class Scope;
 class SemanticsContext;
 class Symbol;
 
@@ -38,6 +41,7 @@ template <typename T, typename U = std::remove_const_t<T>> U AsRvalue(T &t) {
 template <typename T> T &&AsRvalue(T &&t) { return std::move(t); }
 
 const Scope &GetScopingUnit(const Scope &scope);
+const Scope &GetProgramUnit(const Scope &scope);
 
 // There is no consistent way to get the source of an ActionStmt, but there
 // is "source" in Statement<T>. This structure keeps the ActionStmt with the
@@ -68,12 +72,18 @@ const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
 bool IsVariableListItem(const Symbol &sym);
+bool IsTypeParamInquiry(const Symbol &sym);
+bool IsStructureComponent(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
 
-std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr);
+MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr);
+template <typename T> MaybeExpr GetEvaluateExpr(const T &inp) {
+  return GetEvaluateExpr(parser::UnwrapRef<parser::Expr>(inp));
+}
+
 std::optional<evaluate::DynamicType> GetDynamicType(
     const parser::Expr &parserExpr);
 
@@ -87,8 +97,6 @@ const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
 bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
-const parser::Block &GetInnermostExecPart(const parser::Block &block);
-bool IsStrictlyStructuredBlock(const parser::Block &block);
 } // namespace omp
 } // namespace Fortran::semantics
 

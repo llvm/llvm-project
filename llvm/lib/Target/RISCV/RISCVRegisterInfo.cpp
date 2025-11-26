@@ -178,6 +178,10 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Shadow stack pointer.
   markSuperRegs(Reserved, RISCV::SSP);
 
+  // XSfmmbase
+  for (MCPhysReg Reg = RISCV::T0; Reg <= RISCV::T15; Reg++)
+    markSuperRegs(Reserved, Reg);
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
@@ -434,18 +438,19 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
   TypeSize VRegSize = OldLoc.getValue().divideCoefficientBy(NumRegs);
 
   Register VLENB = 0;
-  unsigned PreHandledNum = 0;
+  unsigned VLENBShift = 0;
+  unsigned PrevHandledNum = 0;
   unsigned I = 0;
   while (I != NumRegs) {
     auto [LMulHandled, RegClass, Opcode] =
         getSpillReloadInfo(NumRegs - I, RegEncoding, IsSpill);
     auto [RegNumHandled, _] = RISCVVType::decodeVLMUL(LMulHandled);
     bool IsLast = I + RegNumHandled == NumRegs;
-    if (PreHandledNum) {
+    if (PrevHandledNum) {
       Register Step;
       // Optimize for constant VLEN.
       if (auto VLEN = STI.getRealVLen()) {
-        int64_t Offset = *VLEN / 8 * PreHandledNum;
+        int64_t Offset = *VLEN / 8 * PrevHandledNum;
         Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
         STI.getInstrInfo()->movImm(MBB, II, DL, Step, Offset);
       } else {
@@ -453,15 +458,21 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
           VLENB = MRI.createVirtualRegister(&RISCV::GPRRegClass);
           BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VLENB);
         }
-        uint32_t ShiftAmount = Log2_32(PreHandledNum);
-        if (ShiftAmount == 0)
-          Step = VLENB;
-        else {
-          Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-          BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), Step)
-              .addReg(VLENB, getKillRegState(IsLast))
-              .addImm(ShiftAmount);
+        uint32_t ShiftAmount = Log2_32(PrevHandledNum);
+        // To avoid using an extra register, we shift the VLENB register and
+        // remember how much it has been shifted. We can then use relative
+        // shifts to adjust to the desired shift amount.
+        if (VLENBShift > ShiftAmount) {
+          BuildMI(MBB, II, DL, TII->get(RISCV::SRLI), VLENB)
+              .addReg(VLENB, RegState::Kill)
+              .addImm(VLENBShift - ShiftAmount);
+        } else if (VLENBShift < ShiftAmount) {
+          BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VLENB)
+              .addReg(VLENB, RegState::Kill)
+              .addImm(ShiftAmount - VLENBShift);
         }
+        VLENBShift = ShiftAmount;
+        Step = VLENB;
       }
 
       BuildMI(MBB, II, DL, TII->get(RISCV::ADD), NewBase)
@@ -485,7 +496,7 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
     if (IsSpill)
       MIB.addReg(Reg, RegState::Implicit);
 
-    PreHandledNum = RegNumHandled;
+    PrevHandledNum = RegNumHandled;
     RegEncoding += RegNumHandled;
     I += RegNumHandled;
   }
@@ -853,6 +864,46 @@ bool RISCVRegisterInfo::getRegAllocationHints(
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
+  // Handle RegPairEven/RegPairOdd hints for Zilsd register pairs
+  std::pair<unsigned, Register> Hint = MRI->getRegAllocationHint(VirtReg);
+  unsigned HintType = Hint.first;
+  Register Partner = Hint.second;
+
+  if (HintType == RISCVRI::RegPairEven || HintType == RISCVRI::RegPairOdd) {
+    // Check if we want the even or odd register of a consecutive pair
+    bool WantOdd = (HintType == RISCVRI::RegPairOdd);
+
+    // First priority: Check if partner is already allocated
+    if (Partner.isVirtual() && VRM && VRM->hasPhys(Partner)) {
+      MCRegister PartnerPhys = VRM->getPhys(Partner);
+      // Calculate the exact register we need for consecutive pairing
+      MCRegister TargetReg = PartnerPhys.id() + (WantOdd ? 1 : -1);
+
+      // Verify it's valid and available
+      if (RISCV::GPRRegClass.contains(TargetReg) &&
+          is_contained(Order, TargetReg))
+        Hints.push_back(TargetReg.id());
+    }
+
+    // Second priority: Try to find consecutive register pairs in the allocation
+    // order
+    for (MCPhysReg PhysReg : Order) {
+      if (!PhysReg)
+        continue;
+
+      unsigned RegNum = getEncodingValue(PhysReg);
+      // Check if this register matches the even/odd requirement
+      bool IsOdd = (RegNum % 2 != 0);
+
+      // Verify the pair register exists and is in the same register class
+      // TODO: Skip unallocatable registers: we need to prevent any of odd/even
+      // to be reserved, so if we need odd, we need to check if corresponding
+      // even is preserved, vice versa.
+      if ((WantOdd && IsOdd) || (!WantOdd && !IsOdd))
+        Hints.push_back(PhysReg);
+    }
+  }
+
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
       VirtReg, Order, Hints, MF, VRM, Matrix);
 
@@ -992,6 +1043,35 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       Hints.push_back(OrderReg);
 
   return BaseImplRetVal;
+}
+
+void RISCVRegisterInfo::updateRegAllocHint(Register Reg, Register NewReg,
+                                           MachineFunction &MF) const {
+  MachineRegisterInfo *MRI = &MF.getRegInfo();
+  std::pair<unsigned, Register> Hint = MRI->getRegAllocationHint(Reg);
+
+  // Handle RegPairEven/RegPairOdd hints for Zilsd register pairs
+  if ((Hint.first == RISCVRI::RegPairOdd ||
+       Hint.first == RISCVRI::RegPairEven) &&
+      Hint.second.isVirtual()) {
+    // If 'Reg' is one of the even/odd register pair and it's now changed
+    // (e.g. coalesced) into a different register, the other register of the
+    // pair allocation hint must be updated to reflect the relationship change.
+    Register Partner = Hint.second;
+    std::pair<unsigned, Register> PartnerHint =
+        MRI->getRegAllocationHint(Partner);
+
+    // Make sure partner still points to us
+    if (PartnerHint.second == Reg) {
+      // Update partner to point to NewReg instead of Reg
+      MRI->setRegAllocationHint(Partner, PartnerHint.first, NewReg);
+
+      // If NewReg is virtual, set up the reciprocal hint
+      // NewReg takes over Reg's role, so it gets the SAME hint type as Reg
+      if (NewReg.isVirtual())
+        MRI->setRegAllocationHint(NewReg, Hint.first, Partner);
+    }
+  }
 }
 
 Register
