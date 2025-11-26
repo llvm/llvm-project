@@ -11,6 +11,7 @@
 
 // Check that functions are marked [[nodiscard]]
 
+#include <chrono>
 #include <barrier>
 #include <latch>
 #include <mutex>
@@ -18,6 +19,10 @@
 #include <thread>
 
 #include "test_macros.h"
+
+using namespace std::chrono_literals;
+
+const auto timePoint = std::chrono::steady_clock::now();
 
 void test() {
   // Threads
@@ -47,12 +52,44 @@ void test() {
   { // <mutex>
     std::mutex m;
 
+    m.try_lock();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     m.native_handle(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
   {
     std::recursive_mutex m;
 
+    m.try_lock();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
     m.native_handle(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+  {
+    std::timed_mutex m;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    m.try_lock();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    m.try_lock_for(82ms);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    m.try_lock_until(timePoint);
+  }
+  {
+    std::recursive_timed_mutex m;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    m.try_lock();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    m.try_lock_for(82ms);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    m.try_lock_until(timePoint);
+  }
+  {
+    std::mutex m1;
+    std::mutex m2;
+    std::mutex m3;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::try_lock(m1, m2);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::try_lock(m1, m2, m3);
   }
 
   // Condition variables
@@ -67,14 +104,28 @@ void test() {
 
   // Semaphores
 
-  { // <semaphor>
+  { // <semaphore>
     std::counting_semaphore<> cs{0};
 
     cs.max(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cs.try_acquire_for(92ms);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cs.try_acquire();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cs.try_acquire_until(timePoint);
+
     std::binary_semaphore bs{0};
 
     bs.max(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    bs.try_acquire_for(82ms);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    bs.try_acquire();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    bs.try_acquire_until(timePoint);
   }
 
   // Latches and barriers
@@ -87,7 +138,8 @@ void test() {
   { // <latch>
     std::latch l{94};
 
-    l.max(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    l.max();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    l.try_wait(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
 
 #endif

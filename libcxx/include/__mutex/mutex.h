@@ -37,7 +37,7 @@ public:
 #  endif
 
   _LIBCPP_ACQUIRE_CAPABILITY() void lock();
-  _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) bool try_lock() _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) bool try_lock() _NOEXCEPT;
   _LIBCPP_RELEASE_CAPABILITY void unlock() _NOEXCEPT;
 
   typedef __libcpp_mutex_t* native_handle_type;

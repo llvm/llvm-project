@@ -99,7 +99,7 @@ public:
     if (__old == __update)
       __a_.notify_all();
   }
-  inline _LIBCPP_HIDE_FROM_ABI bool try_wait() const noexcept {
+  [[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool try_wait() const noexcept {
     auto __value = __a_.load(memory_order_acquire);
     return try_wait_impl(__value);
   }

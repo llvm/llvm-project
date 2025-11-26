@@ -156,12 +156,12 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI void acquire() { __semaphore_.acquire(); }
   template <class _Rep, class _Period>
-  _LIBCPP_HIDE_FROM_ABI bool try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time) {
     return __semaphore_.try_acquire_for(chrono::duration_cast<chrono::nanoseconds>(__rel_time));
   }
-  _LIBCPP_HIDE_FROM_ABI bool try_acquire() { return __semaphore_.try_acquire(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool try_acquire() { return __semaphore_.try_acquire(); }
   template <class _Clock, class _Duration>
-  _LIBCPP_HIDE_FROM_ABI bool try_acquire_until(chrono::time_point<_Clock, _Duration> const& __abs_time) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool try_acquire_until(chrono::time_point<_Clock, _Duration> const& __abs_time) {
     auto const __current = _Clock::now();
     if (__current >= __abs_time)
       return try_acquire();
