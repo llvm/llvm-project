@@ -957,88 +957,53 @@ Expected<LibraryDepsInfo> LibraryScanner::extractDeps(StringRef FilePath) {
                            FilePath.str().c_str());
 }
 
-std::optional<std::string> LibraryScanner::shouldScan(StringRef FilePath) {
-  std::error_code EC;
-
+bool LibraryScanner::shouldScan(StringRef FilePath) {
   LLVM_DEBUG(dbgs() << "[shouldScan] Checking: " << FilePath << "\n";);
 
-  // [1] Check file existence early
-  if (!sys::fs::exists(FilePath)) {
-    LLVM_DEBUG(dbgs() << "  -> Skipped: file does not exist.\n";);
-
-    return std::nullopt;
-  }
-
-  // [2] Resolve to canonical path
-  auto CanonicalPathOpt = ScanHelper.resolve(FilePath, EC);
-  if (EC || !CanonicalPathOpt) {
-    LLVM_DEBUG(dbgs() << "  -> Skipped: failed to resolve path (EC="
-                      << EC.message() << ").\n";);
-
-    return std::nullopt;
-  }
-
-  const std::string &CanonicalPath = *CanonicalPathOpt;
-  LLVM_DEBUG(dbgs() << "  -> Canonical path: " << CanonicalPath << "\n");
-
-  // [3] Check if it's a directory — skip directories
-  if (sys::fs::is_directory(CanonicalPath)) {
-    LLVM_DEBUG(dbgs() << "  -> Skipped: path is a directory.\n";);
-
-    return std::nullopt;
-  }
-
   LibraryPathCache &Cache = ScanHelper.getCache();
-  // [4] Skip if we've already seen this path (via cache)
-  if (Cache.hasSeen(CanonicalPath)) {
+  // [1] Skip if we've already seen this path (via cache)
+  if (Cache.hasSeen(FilePath)) {
     LLVM_DEBUG(dbgs() << "  -> Skipped: already seen.\n";);
-
-    return std::nullopt;
+    return false;
   }
 
-  // [5] Already tracked in LibraryManager?
-  if (LibMgr.hasLibrary(CanonicalPath)) {
+  // [2] Already tracked in LibraryManager?
+  if (LibMgr.hasLibrary(FilePath)) {
     LLVM_DEBUG(dbgs() << "  -> Skipped: already tracked by LibraryManager.\n";);
-    return std::nullopt;
+    return false;
   }
 
-  // [6] Skip if it's not a shared library.
-  if (!DylibPathValidator::isSharedLibrary(CanonicalPath)) {
+  // [3] Skip if it's not a shared library.
+  if (!DylibPathValidator::isSharedLibrary(FilePath)) {
     LLVM_DEBUG(dbgs() << "  -> Skipped: not a shared library.\n";);
-    return std::nullopt;
+    return false;
   }
 
   // Mark seen this path
-  Cache.markSeen(CanonicalPath);
+  Cache.markSeen(FilePath.str());
 
-  // [7] Run user-defined hook (default: always true)
-  if (!ShouldScanCall(CanonicalPath)) {
+  // [4] Run user-defined hook (default: always true)
+  if (!ShouldScanCall(FilePath)) {
     LLVM_DEBUG(dbgs() << "  -> Skipped: user-defined hook rejected.\n";);
-
-    return std::nullopt;
+    return false;
   }
 
-  LLVM_DEBUG(dbgs() << "  -> Accepted: ready to scan " << CanonicalPath
-                    << "\n";);
-  return CanonicalPath;
+  LLVM_DEBUG(dbgs() << "  -> Accepted: ready to scan " << FilePath << "\n";);
+  return true;
 }
 
 void LibraryScanner::handleLibrary(StringRef FilePath, PathType K, int level) {
   LLVM_DEBUG(dbgs() << "LibraryScanner::handleLibrary: Scanning: " << FilePath
                     << ", level=" << level << "\n";);
-  auto CanonPathOpt = shouldScan(FilePath);
-  if (!CanonPathOpt) {
+  if (!shouldScan(FilePath)) {
     LLVM_DEBUG(dbgs() << "  Skipped (shouldScan returned false): " << FilePath
                       << "\n";);
-
     return;
   }
-  const std::string CanonicalPath = *CanonPathOpt;
 
-  auto DepsOrErr = extractDeps(CanonicalPath);
+  auto DepsOrErr = extractDeps(FilePath);
   if (!DepsOrErr) {
-    LLVM_DEBUG(dbgs() << "  Failed to extract deps for: " << CanonicalPath
-                      << "\n";);
+    LLVM_DEBUG(dbgs() << "  Failed to extract deps for: " << FilePath << "\n";);
     handleError(DepsOrErr.takeError());
     return;
   }
@@ -1058,15 +1023,15 @@ void LibraryScanner::handleLibrary(StringRef FilePath, PathType K, int level) {
   });
 
   if (Deps.isPIE && level == 0) {
-    LLVM_DEBUG(dbgs() << "  Skipped PIE executable at top level: "
-                      << CanonicalPath << "\n";);
+    LLVM_DEBUG(dbgs() << "  Skipped PIE executable at top level: " << FilePath
+                      << "\n";);
 
     return;
   }
 
-  bool Added = LibMgr.addLibrary(CanonicalPath, K);
+  bool Added = LibMgr.addLibrary(FilePath.str(), K);
   if (!Added) {
-    LLVM_DEBUG(dbgs() << "  Already added: " << CanonicalPath << "\n";);
+    LLVM_DEBUG(dbgs() << "  Already added: " << FilePath << "\n";);
     return;
   }
 
@@ -1074,7 +1039,7 @@ void LibraryScanner::handleLibrary(StringRef FilePath, PathType K, int level) {
   if (Deps.rpath.empty() && Deps.runPath.empty()) {
     LLVM_DEBUG(
         dbgs() << "LibraryScanner::handleLibrary: Skipping deps (Heuristic1): "
-               << CanonicalPath << "\n";);
+               << FilePath << "\n";);
     return;
   }
 
@@ -1084,20 +1049,20 @@ void LibraryScanner::handleLibrary(StringRef FilePath, PathType K, int level) {
     return std::all_of(Paths.begin(), Paths.end(), [&](StringRef P) {
       LLVM_DEBUG(dbgs() << "      Checking isTrackedBasePath : " << P << "\n";);
       return ScanHelper.isTrackedBasePath(
-          DylibResolver::resolvelinkerFlag(P, CanonicalPath));
+          DylibResolver::resolvelinkerFlag(P, FilePath));
     });
   };
 
   if (allTracked(Deps.rpath) && allTracked(Deps.runPath)) {
     LLVM_DEBUG(
         dbgs() << "LibraryScanner::handleLibrary: Skipping deps (Heuristic2): "
-               << CanonicalPath << "\n";);
+               << FilePath << "\n";);
     return;
   }
 
   DylibPathValidator Validator(ScanHelper.getPathResolver());
   DylibResolver Resolver(Validator);
-  Resolver.configure(CanonicalPath,
+  Resolver.configure(FilePath,
                      {{Deps.rpath, SearchPathType::RPath},
                       {ScanHelper.getSearchPaths(), SearchPathType::UsrOrSys},
                       {Deps.runPath, SearchPathType::RunPath}});
@@ -1138,8 +1103,42 @@ void LibraryScanner::scanBaseDir(LibrarySearchPath *SP) {
     auto Status = *Entry.status();
     if (sys::fs::is_regular_file(Status) || sys::fs::is_symlink_file(Status)) {
       LLVM_DEBUG(dbgs() << "  Found file: " << Entry.path() << "\n";);
+
+      std::string FinalPath;
+      bool IsSymlink = sys::fs::is_symlink_file(Status);
+
+      // Resolve symlink
+      if (IsSymlink) {
+        LLVM_DEBUG(dbgs() << "    Symlink → resolving...\n");
+
+        auto CanonicalOpt = ScanHelper.resolve(Entry.path(), EC);
+        if (EC || !CanonicalOpt) {
+          LLVM_DEBUG(dbgs() << "    -> Skipped: resolve failed (EC="
+                            << EC.message() << ")\n");
+          continue;
+        }
+
+        FinalPath = std::move(*CanonicalOpt);
+
+        LLVM_DEBUG(dbgs() << "    Canonical: " << FinalPath << "\n");
+
+      } else {
+        // make absolute
+        SmallString<256> Abs(Entry.path());
+        sys::fs::make_absolute(Abs);
+        FinalPath = Abs.str().str();
+
+        LLVM_DEBUG(dbgs() << "    Regular: absolute = " << FinalPath << "\n");
+      }
+
+      // Check if it's a directory — skip directories
+      if (sys::fs::is_directory(Status)) {
+        LLVM_DEBUG(dbgs() << "  -> Skipped: path is a directory.\n";);
+        continue;
+      }
+
       // async support ?
-      handleLibrary(Entry.path(), SP->Kind);
+      handleLibrary(FinalPath, SP->Kind);
     }
   }
 

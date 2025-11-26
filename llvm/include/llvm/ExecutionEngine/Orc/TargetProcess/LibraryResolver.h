@@ -363,63 +363,6 @@ struct SearchConfig {
         Options(SymbolEnumeratorOptions::defaultOptions()) {}
 };
 
-// class SearchSession {
-//   std::mutex Mtx;
-//   std::condition_variable Cv;
-
-//   int ActiveSearchers = 0;
-//   int ActiveScanners = 0;
-
-// public:
-//   // Called by each search before work begins
-//   void beginSearch() {
-//     std::unique_lock<std::mutex> lock(Mtx);
-
-//     // Wait if scanning is happening
-//     Cv.wait(lock, [&] { return ActiveScanners == 0; });
-
-//     ActiveSearchers++;
-//   }
-
-//   // Called after search completes
-//   void endSearch() {
-//     std::unique_lock<std::mutex> lock(Mtx);
-//     ActiveSearchers--;
-//     if (ActiveSearchers == 0)
-//       Cv.notify_all();
-//   }
-
-//   void beginScan() {
-//     std::unique_lock<std::mutex> lock(Mtx);
-
-//     // Block until NO searchers are active
-//     Cv.wait(lock, [&] { return ActiveSearchers == 0; });
-
-//     ActiveScanners++;
-//   }
-
-//   // Scanner finished
-//   void endScan() {
-//     std::unique_lock<std::mutex> lock(Mtx);
-//     ActiveScanners--;
-//     if (ActiveScanners == 0)
-//       Cv.notify_all(); // wake pending searchers
-//   }
-
-//   // RAII
-//   struct SearchGuard {
-//     SearchSession &S;
-//     SearchGuard(SearchSession &s) : S(s) { S.beginSearch(); }
-//     ~SearchGuard() { S.endSearch(); }
-//   };
-
-//   struct ScanGuard {
-//     SearchSession &S;
-//     ScanGuard(SearchSession &s) : S(s) { S.beginScan(); }
-//     ~ScanGuard() { S.endScan(); }
-//   };
-// };
-
 /// Scans libraries and resolves Symbols across user and system paths.
 ///
 /// Supports symbol enumeration and filtering via SymbolEnumerator, and tracks

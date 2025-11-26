@@ -456,10 +456,10 @@ private:
   LibraryManager &LibMgr;
   ShouldScanFn ShouldScanCall;
 
-  std::optional<std::string> shouldScan(StringRef FilePath);
+  bool shouldScan(StringRef FilePath);
   Expected<LibraryDepsInfo> extractDeps(StringRef FilePath);
 
-  void handleLibrary(StringRef P, PathType K, int level = 1);
+  void handleLibrary(StringRef FilePath, PathType K, int level = 1);
 
   void scanBaseDir(LibrarySearchPath *U);
 };
