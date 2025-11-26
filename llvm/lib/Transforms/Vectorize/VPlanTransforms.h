@@ -314,6 +314,12 @@ struct VPlanTransforms {
   /// plan using noalias metadata.
   static void hoistInvariantLoads(VPlan &Plan);
 
+  /// Hoist predicated loads from the same address to the loop entry block, if
+  /// they are guaranteed to execute on both paths (i.e., in replicate regions
+  /// with complementary masks P and NOT P).
+  static void hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
+                                   const Loop *L);
+
   // Materialize vector trip counts for constants early if it can simply be
   // computed as (Original TC / VF * UF) * VF * UF.
   static void
@@ -372,12 +378,12 @@ struct VPlanTransforms {
   addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
                                     std::optional<unsigned> VScaleForTuning);
 
-  /// Create resume phis in the scalar preheader for first-order recurrences,
-  /// reductions and inductions, and update the VPIRInstructions wrapping the
-  /// original phis in the scalar header. End values for inductions are added to
-  /// \p IVEndValues.
-  static void addScalarResumePhis(VPlan &Plan, VPRecipeBuilder &Builder,
-                                  DenseMap<VPValue *, VPValue *> &IVEndValues);
+  /// Update the resume phis in the scalar preheader after creating wide recipes
+  /// for first-order recurrences, reductions and inductions. End values for
+  /// inductions are added to \p IVEndValues.
+  static void
+  updateScalarResumePhis(VPlan &Plan,
+                         DenseMap<VPValue *, VPValue *> &IVEndValues);
 
   /// Handle users in the exit block for first order reductions in the original
   /// exit block. The penultimate value of recurrences is fed to their LCSSA phi

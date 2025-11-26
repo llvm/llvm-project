@@ -9796,8 +9796,8 @@ outliningCandidatesSigningScopeConsensus(const outliner::Candidate &a,
   const auto &MFIa = a.getMF()->getInfo<AArch64FunctionInfo>();
   const auto &MFIb = b.getMF()->getInfo<AArch64FunctionInfo>();
 
-  return MFIa->shouldSignReturnAddress(false) == MFIb->shouldSignReturnAddress(false) &&
-         MFIa->shouldSignReturnAddress(true) == MFIb->shouldSignReturnAddress(true);
+  return MFIa->getSignReturnAddressCondition() ==
+         MFIb->getSignReturnAddressCondition();
 }
 
 static bool
@@ -9888,10 +9888,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // Performing a tail call may require extra checks when PAuth is enabled.
   // If PAuth is disabled, set it to zero for uniformity.
   unsigned NumBytesToCheckLRInTCEpilogue = 0;
-  if (RepeatedSequenceLocs[0]
-          .getMF()
-          ->getInfo<AArch64FunctionInfo>()
-          ->shouldSignReturnAddress(true)) {
+  const auto RASignCondition = RepeatedSequenceLocs[0]
+                                   .getMF()
+                                   ->getInfo<AArch64FunctionInfo>()
+                                   ->getSignReturnAddressCondition();
+  if (RASignCondition != SignReturnAddress::None) {
     // One PAC and one AUT instructions
     NumBytesToCreateFrame += 8;
 
@@ -10695,7 +10696,9 @@ void AArch64InstrInfo::buildOutlinedFrame(
     Et = MBB.insert(Et, LDRXpost);
   }
 
-  bool ShouldSignReturnAddr = FI->shouldSignReturnAddress(!IsLeafFunction);
+  auto RASignCondition = FI->getSignReturnAddressCondition();
+  bool ShouldSignReturnAddr = AArch64FunctionInfo::shouldSignReturnAddress(
+      RASignCondition, !IsLeafFunction);
 
   // If this is a tail call outlined function, then there's already a return.
   if (OF.FrameConstructionID == MachineOutlinerTailCall ||
