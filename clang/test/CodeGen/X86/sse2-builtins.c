@@ -1338,6 +1338,10 @@ __m128i test_mm_sll_epi16(__m128i A, __m128i B) {
 }
 TEST_CONSTEXPR(match_v8hi(_mm_sll_epi16((__m128i)(__v8hi){1, 2, 3, 4, 5, 6, 7, 8}, (__m128i)(__v8hi){1, 0, 0, 0, 0, 0, 0, 0}), 2, 4, 6, 8, 10, 12, 14, 16));
 TEST_CONSTEXPR(match_v8hi(_mm_sll_epi16((__m128i)(__v8hi){1, 2, 3, 4, 5, 6, 7, 8}, (__m128i)(__v8hi){16, 0, 0, 0, 0, 0, 0, 0}), 0, 0, 0, 0, 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v8hi(_mm_sll_epi16((__m128i)(__v8hi){1, 2, 3, 4, 5, 6, 7, 8}, (__m128i)(__v8hi){0, 1, 0, 0, 0, 0, 0, 0}), 0, 0, 0, 0, 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v8hi(_mm_sll_epi16((__m128i)(__v8hi){1, 2, 3, 4, 5, 6, 7, 8}, (__m128i)(__v8hi){0, 0, 1, 0, 0, 0, 0, 0}), 0, 0, 0, 0, 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v8hi(_mm_sll_epi16((__m128i)(__v8hi){1, 2, 3, 4, 5, 6, 7, 8}, (__m128i)(__v8hi){0, 0, 0, 1, 0, 0, 0, 0}), 0, 0, 0, 0, 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v8hi(_mm_sll_epi16((__m128i)(__v8hi){1, 2, 3, 4, 5, 6, 7, 8}, (__m128i)(__v8hi){1, 0, 0, 0, 1, 1, 1, 1}), 2, 4, 6, 8, 10, 12, 14, 16));
 
 __m128i test_mm_sll_epi32(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_sll_epi32
@@ -1346,6 +1350,8 @@ __m128i test_mm_sll_epi32(__m128i A, __m128i B) {
 }
 TEST_CONSTEXPR(match_v4si(_mm_sll_epi32((__m128i)(__v4si){1, 2, 3, 4}, (__m128i)(__v4si){1, 0, 0, 0}), 2, 4, 6, 8));
 TEST_CONSTEXPR(match_v4si(_mm_sll_epi32((__m128i)(__v4si){1, 2, 3, 4}, (__m128i)(__v4si){32, 0, 0, 0}), 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v4si(_mm_sll_epi32((__m128i)(__v4si){1, 2, 3, 4}, (__m128i)(__v4si){0, 1, 0, 0}), 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v4si(_mm_sll_epi32((__m128i)(__v4si){1, 2, 3, 4}, (__m128i)(__v4si){1, 0, 1, 1}), 2, 4, 6, 8));
 
 __m128i test_mm_sll_epi64(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_sll_epi64
@@ -1354,6 +1360,7 @@ __m128i test_mm_sll_epi64(__m128i A, __m128i B) {
 }
 TEST_CONSTEXPR(match_v2di(_mm_sll_epi64((__m128i)(__v2di){1, 2}, (__m128i)(__v2di){1, 0}), 2, 4));
 TEST_CONSTEXPR(match_v2di(_mm_sll_epi64((__m128i)(__v2di){1, 2}, (__m128i)(__v2di){64, 0}), 0, 0));
+TEST_CONSTEXPR(match_v2di(_mm_sll_epi64((__m128i)(__v2di){1, 2}, (__m128i)(__v2di){1, 1}), 2, 4));
 
 __m128i test_mm_slli_epi16(__m128i A) {
   // CHECK-LABEL: test_mm_slli_epi16
@@ -1460,6 +1467,10 @@ __m128i test_mm_sra_epi16(__m128i A, __m128i B) {
 }
 TEST_CONSTEXPR(match_v8hi(_mm_sra_epi16((__m128i)(__v8hi){-16, 16, -8, 8, -4, 4, -2, 2}, (__m128i)(__v8hi){1, 0, 0, 0, 0, 0, 0, 0}), -8, 8, -4, 4, -2, 2, -1, 1));
 TEST_CONSTEXPR(match_v8hi(_mm_sra_epi16((__m128i)(__v8hi){-16, 16, -8, 8, -4, 4, -2, 2}, (__m128i)(__v8hi){16, 0, 0, 0, 0, 0, 0, 0}), -1, 0, -1, 0, -1, 0, -1, 0));
+TEST_CONSTEXPR(match_v8hi(_mm_sra_epi16((__m128i)(__v8hi){-16, 16, -8, 8, -4, 4, -2, 2}, (__m128i)(__v8hi){0, 1, 0, 0, 0, 0, 0, 0}), -1, 0, -1, 0, -1, 0, -1, 0));
+TEST_CONSTEXPR(match_v8hi(_mm_sra_epi16((__m128i)(__v8hi){-16, 16, -8, 8, -4, 4, -2, 2}, (__m128i)(__v8hi){0, 0, 1, 0, 0, 0, 0, 0}), -1, 0, -1, 0, -1, 0, -1, 0));
+TEST_CONSTEXPR(match_v8hi(_mm_sra_epi16((__m128i)(__v8hi){-16, 16, -8, 8, -4, 4, -2, 2}, (__m128i)(__v8hi){0, 0, 0, 1, 0, 0, 0, 0}), -1, 0, -1, 0, -1, 0, -1, 0));
+TEST_CONSTEXPR(match_v8hi(_mm_sra_epi16((__m128i)(__v8hi){-16, 16, -8, 8, -4, 4, -2, 2}, (__m128i)(__v8hi){1, 0, 0, 0, 1, 1, 1, 1}), -8, 8, -4, 4, -2, 2, -1, 1));
 
 __m128i test_mm_sra_epi32(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_sra_epi32
@@ -1468,6 +1479,8 @@ __m128i test_mm_sra_epi32(__m128i A, __m128i B) {
 }
 TEST_CONSTEXPR(match_v4si(_mm_sra_epi32((__m128i)(__v4si){-16, 16, -8, 8}, (__m128i)(__v4si){1, 0, 0, 0}), -8, 8, -4, 4));
 TEST_CONSTEXPR(match_v4si(_mm_sra_epi32((__m128i)(__v4si){-16, 16, -8, 8}, (__m128i)(__v4si){32, 0, 0, 0}), -1, 0, -1, 0));
+TEST_CONSTEXPR(match_v4si(_mm_sra_epi32((__m128i)(__v4si){-16, 16, -8, 8}, (__m128i)(__v4si){0, 1, 0, 0}), -1, 0, -1, 0));
+TEST_CONSTEXPR(match_v4si(_mm_sra_epi32((__m128i)(__v4si){-16, 16, -8, 8}, (__m128i)(__v4si){1, 0, 1, 1}), -8, 8, -4, 4));
 
 __m128i test_mm_srai_epi16(__m128i A) {
   // CHECK-LABEL: test_mm_srai_epi16
@@ -1515,6 +1528,10 @@ __m128i test_mm_srl_epi16(__m128i A, __m128i B) {
 }
 TEST_CONSTEXPR(match_v8hu(_mm_srl_epi16((__m128i)(__v8hu){0x8000, 16, 8, 4, 2, 1, 0, 0xFFFF}, (__m128i)(__v8hi){1, 0, 0, 0, 0, 0, 0, 0}), 0x4000, 8, 4, 2, 1, 0, 0, 0x7FFF));
 TEST_CONSTEXPR(match_v8hi(_mm_srl_epi16((__m128i)(__v8hi){-1, 16, 8, 4, 2, 1, 0, -1}, (__m128i)(__v8hi){16, 0, 0, 0, 0, 0, 0, 0}), 0, 0, 0, 0, 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v8hi(_mm_srl_epi16((__m128i)(__v8hi){-1, 16, 8, 4, 2, 1, 0, -1}, (__m128i)(__v8hi){0, 1, 0, 0, 0, 0, 0, 0}), 0, 0, 0, 0, 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v8hi(_mm_srl_epi16((__m128i)(__v8hi){-1, 16, 8, 4, 2, 1, 0, -1}, (__m128i)(__v8hi){0, 0, 1, 0, 0, 0, 0, 0}), 0, 0, 0, 0, 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v8hi(_mm_srl_epi16((__m128i)(__v8hi){-1, 16, 8, 4, 2, 1, 0, -1}, (__m128i)(__v8hi){0, 0, 0, 1, 0, 0, 0, 0}), 0, 0, 0, 0, 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v8hu(_mm_srl_epi16((__m128i)(__v8hu){0x8000, 16, 8, 4, 2, 1, 0, 0xFFFF}, (__m128i)(__v8hi){1, 0, 0, 0, 1, 1, 1, 1}), 0x4000, 8, 4, 2, 1, 0, 0, 0x7FFF));
 
 __m128i test_mm_srl_epi32(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_srl_epi32
@@ -1523,6 +1540,8 @@ __m128i test_mm_srl_epi32(__m128i A, __m128i B) {
 }
 TEST_CONSTEXPR(match_v4su(_mm_srl_epi32((__m128i)(__v4su){0x80000000, 16, 8, 4}, (__m128i)(__v4si){1, 0, 0, 0}), 0x40000000, 8, 4, 2));
 TEST_CONSTEXPR(match_v4si(_mm_srl_epi32((__m128i)(__v4si){-1, 16, 8, 4}, (__m128i)(__v4si){32, 0, 0, 0}), 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v4si(_mm_srl_epi32((__m128i)(__v4si){-1, 16, 8, 4}, (__m128i)(__v4si){0, 1, 0, 0}), 0, 0, 0, 0));
+TEST_CONSTEXPR(match_v4su(_mm_srl_epi32((__m128i)(__v4su){0x80000000, 16, 8, 4}, (__m128i)(__v4si){1, 0, 1, 1}), 0x40000000, 8, 4, 2));
 
 __m128i test_mm_srl_epi64(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_srl_epi64
@@ -1531,6 +1550,7 @@ __m128i test_mm_srl_epi64(__m128i A, __m128i B) {
 }
 TEST_CONSTEXPR(match_v2du(_mm_srl_epi64((__m128i)(__v2du){0x8000000000000000ULL, 16}, (__m128i)(__v2di){1, 0}), 0x4000000000000000ULL, 8));
 TEST_CONSTEXPR(match_v2di(_mm_srl_epi64((__m128i)(__v2di){-1, 16}, (__m128i)(__v2di){64, 0}), 0, 0));
+TEST_CONSTEXPR(match_v2du(_mm_srl_epi64((__m128i)(__v2du){0x8000000000000000ULL, 16}, (__m128i)(__v2di){1, 1}), 0x4000000000000000ULL, 8));
 
 __m128i test_mm_srli_epi16(__m128i A) {
   // CHECK-LABEL: test_mm_srli_epi16
