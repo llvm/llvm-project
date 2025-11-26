@@ -31,6 +31,7 @@ jobs:
     steps:
       - name: Setup crlf
         run: |
+          cat  C:/hostedtoolcache/windows/Python/3.9.13/x64/pyconfig.h
           git config --global core.autocrlf false
 #      - name: Setup Python
 #        id: setup-python
