@@ -241,10 +241,9 @@ bool isValidForAccDeclare(Operation *globalOp) {
 /// 1. The recipe has no symbol uses at all, or
 /// 2. The only symbol use is the recipe's own symbol definition
 template <typename RecipeOpT>
-static bool hasRelevantRecipeUse(RecipeOpT recipeOp) {
-  auto moduleOp = recipeOp->template getParentOfType<ModuleOp>();
+static bool hasRelevantRecipeUse(RecipeOpT &recipeOp, ModuleOp &mod) {
   std::optional<SymbolTable::UseRange> symbolUses =
-      recipeOp.getSymbolUses(moduleOp);
+      recipeOp.getSymbolUses(mod);
 
   // No recipe symbol uses.
   if (!symbolUses.has_value() || symbolUses->empty())
@@ -375,7 +374,7 @@ public:
                                                accSupport, symTab);
           })
           .Case<acc::PrivateRecipeOp>([&](auto privateRecipe) {
-            if (hasRelevantRecipeUse(privateRecipe)) {
+            if (hasRelevantRecipeUse(privateRecipe, mod)) {
               collectGlobalsFromDeviceRegion(privateRecipe.getInitRegion(),
                                              globalsToAccDeclare, accSupport,
                                              symTab);
@@ -385,7 +384,7 @@ public:
             }
           })
           .Case<acc::FirstprivateRecipeOp>([&](auto firstprivateRecipe) {
-            if (hasRelevantRecipeUse(firstprivateRecipe)) {
+            if (hasRelevantRecipeUse(firstprivateRecipe, mod)) {
               collectGlobalsFromDeviceRegion(firstprivateRecipe.getInitRegion(),
                                              globalsToAccDeclare, accSupport,
                                              symTab);
@@ -398,7 +397,7 @@ public:
             }
           })
           .Case<acc::ReductionRecipeOp>([&](auto reductionRecipe) {
-            if (hasRelevantRecipeUse(reductionRecipe)) {
+            if (hasRelevantRecipeUse(reductionRecipe, mod)) {
               collectGlobalsFromDeviceRegion(reductionRecipe.getInitRegion(),
                                              globalsToAccDeclare, accSupport,
                                              symTab);
