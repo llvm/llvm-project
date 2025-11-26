@@ -280,9 +280,7 @@ private:
     size_t numTrailingObjects(OverloadToken<uint32_t>) const {
       return HasCFIType;
     }
-    size_t numTrailingObjects(OverloadToken<Value *>) const {
-      return HasDS;
-    }
+    size_t numTrailingObjects(OverloadToken<Value *>) const { return HasDS; }
 
     // Just a boring constructor to allow us to initialize the sizes. Always use
     // the `create` routine above.

@@ -1385,8 +1385,7 @@ static llvm::Value *CreatePFPCoercedLoad(Address Src, QualType SrcFETy,
 /// destination type; in this situation the values of bits which not
 /// present in the src are undefined.
 static llvm::Value *CreateCoercedLoad(Address Src, QualType SrcFETy,
-                                      llvm::Type *Ty,
-                                      CodeGenFunction &CGF) {
+                                      llvm::Type *Ty, CodeGenFunction &CGF) {
   llvm::Type *SrcTy = Src.getElementType();
 
   // If SrcTy and Ty are the same, just do a load.
@@ -1482,10 +1481,10 @@ static bool CreatePFPCoercedStore(llvm::Value *Src, QualType SrcFETy,
       CGF.Builder.CreateStore(FieldVal, fieldAddr);
       PFPFields.erase(PFPFields.begin());
     } else {
-      auto fieldAddr =
-          CGF.Builder
-              .CreateConstInBoundsByteGEP(Dst.withElementType(CGF.Int8Ty), Offset)
-              .withElementType(FieldVal->getType());
+      auto fieldAddr = CGF.Builder
+                           .CreateConstInBoundsByteGEP(
+                               Dst.withElementType(CGF.Int8Ty), Offset)
+                           .withElementType(FieldVal->getType());
       CGF.Builder.CreateStore(FieldVal, fieldAddr);
     }
   };
@@ -1513,10 +1512,8 @@ static bool CreatePFPCoercedStore(llvm::Value *Src, QualType SrcFETy,
   return true;
 }
 
-void CodeGenFunction::CreateCoercedStore(llvm::Value *Src,
-                                         QualType SrcFETy,
-                                         Address Dst,
-                                         llvm::TypeSize DstSize,
+void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, QualType SrcFETy,
+                                         Address Dst, llvm::TypeSize DstSize,
                                          bool DstIsVolatile) {
   if (!DstSize)
     return;
@@ -4268,8 +4265,7 @@ void CodeGenFunction::EmitFunctionEpilog(
 
       auto eltAddr = Builder.CreateStructGEP(addr, i);
       llvm::Value *elt = CreateCoercedLoad(
-          eltAddr,
-          RetTy,
+          eltAddr, RetTy,
           unpaddedStruct ? unpaddedStruct->getElementType(unpaddedIndex++)
                          : unpaddedCoercionType,
           *this);
@@ -5841,8 +5837,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           continue;
         Address eltAddr = Builder.CreateStructGEP(addr, i);
         llvm::Value *elt = CreateCoercedLoad(
-            eltAddr,
-            I->Ty,
+            eltAddr, I->Ty,
             unpaddedStruct ? unpaddedStruct->getElementType(unpaddedIndex++)
                            : unpaddedCoercionType,
             *this);
