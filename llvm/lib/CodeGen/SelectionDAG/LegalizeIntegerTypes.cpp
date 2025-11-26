@@ -204,7 +204,6 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ADD:
   case ISD::SUB:
   case ISD::MUL:
-  case ISD::CLMUL:
   case ISD::CLMULR:
   case ISD::CLMULH:
   case ISD::VP_AND:
@@ -224,6 +223,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_SDIV:
   case ISD::VP_SREM:     Res = PromoteIntRes_SExtIntBinOp(N); break;
 
+  case ISD::CLMUL:
   case ISD::ABDU:
   case ISD::AVGCEILU:
   case ISD::AVGFLOORU:
@@ -5502,8 +5502,28 @@ void DAGTypeLegalizer::ExpandIntRes_FunnelShift(SDNode *N, SDValue &Lo,
 }
 
 void DAGTypeLegalizer::ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi) {
-  SDValue Res = TLI.expandCLMUL(N, DAG);
-  SplitInteger(Res, Lo, Hi);
+  if (N->getOpcode() != ISD::CLMUL) {
+    SDValue Res = TLI.expandCLMUL(N, DAG);
+    return SplitInteger(Res, Lo, Hi);
+  }
+
+  SDValue LL, LH, RL, RH;
+  GetExpandedInteger(N->getOperand(0), LL, LH);
+  GetExpandedInteger(N->getOperand(1), RL, RH);
+  EVT HalfVT = LL.getValueType();
+  SDLoc DL(N);
+
+  // The low bits are a direct CLMUL of the the low bits.
+  Lo = DAG.getNode(ISD::CLMUL, DL, HalfVT, LL, RL);
+
+  // We compute two Hi-Lo cross-products, XOR them, and XOR it with the overflow
+  // of the CLMUL of the low bits (given by CLMULH of the low bits) to yield the
+  // final high bits.
+  SDValue LoH = DAG.getNode(ISD::CLMULH, DL, HalfVT, LL, RL);
+  SDValue HiLoCross1 = DAG.getNode(ISD::CLMUL, DL, HalfVT, LL, RH);
+  SDValue HiLoCross2 = DAG.getNode(ISD::CLMUL, DL, HalfVT, LH, RL);
+  SDValue HiLoCross = DAG.getNode(ISD::XOR, DL, HalfVT, HiLoCross1, HiLoCross2);
+  Hi = DAG.getNode(ISD::XOR, DL, HalfVT, LoH, HiLoCross);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_VSCALE(SDNode *N, SDValue &Lo,
