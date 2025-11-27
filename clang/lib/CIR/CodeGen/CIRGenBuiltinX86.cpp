@@ -85,6 +85,47 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
   return maskVec;
 }
 
+static mlir::Value emitX86Muldq(CIRGenFunction &cgf, const CallExpr *expr,
+                                bool isSigned,
+                                SmallVectorImpl<mlir::Value> &ops) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+  mlir::Type ty = ops[0].getType();
+  unsigned tyPrimitiveSizeInBits =
+      cgf.cgm.getDataLayout().getTypeSizeInBits(ty);
+  mlir::Value lhs, rhs;
+  // in cir, if a shiftOperation is shift right,it will be translated into Ashr
+  // or lShr automatically in match and rewrite stage according to its operand's
+  // type
+  if (isSigned) {
+    ty =
+        cir::VectorType::get(builder.getSInt64Ty(), tyPrimitiveSizeInBits / 64);
+    cir::ConstantOp shiftAmt =
+        builder.getConstant(loc, cir::IntAttr::get(builder.getSInt64Ty(), 32));
+    cir::VecSplatOp shiftSplatVecOp =
+        cir::VecSplatOp::create(builder, loc, ty, shiftAmt.getResult());
+    mlir::Value shiftSplatValue = shiftSplatVecOp.getResult();
+    lhs = builder.createBitcast(loc, ops[0], ty);
+    rhs = builder.createBitcast(loc, ops[1], ty);
+    lhs = builder.createShift(loc, lhs, shiftSplatValue, true);
+    lhs = builder.createShift(loc, lhs, shiftSplatValue, false);
+    rhs = builder.createShift(loc, rhs, shiftSplatValue, true);
+    rhs = builder.createShift(loc, rhs, shiftSplatValue, false);
+  } else {
+    ty =
+        cir::VectorType::get(builder.getSInt64Ty(), tyPrimitiveSizeInBits / 64);
+    cir::ConstantOp maskScalar = builder.getConstant(
+        loc, cir::IntAttr::get(builder.getSInt64Ty(), 0xffffffff));
+    cir::VecSplatOp mask =
+        cir::VecSplatOp::create(builder, loc, ty, maskScalar.getResult());
+    lhs = builder.createBitcast(loc, ops[0], ty);
+    rhs = builder.createBitcast(loc, ops[1], ty);
+    lhs = builder.createAnd(loc, lhs, mask);
+    rhs = builder.createAnd(loc, rhs, mask);
+  }
+  return builder.createMul(loc, lhs, rhs);
+}
+
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
                                                const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
@@ -784,12 +825,18 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_sqrtph512:
   case X86::BI__builtin_ia32_sqrtps512:
   case X86::BI__builtin_ia32_sqrtpd512:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_pmuludq128:
   case X86::BI__builtin_ia32_pmuludq256:
   case X86::BI__builtin_ia32_pmuludq512:
+    return emitX86Muldq(*this, expr, /*IsSigned*/ false, ops);
   case X86::BI__builtin_ia32_pmuldq128:
   case X86::BI__builtin_ia32_pmuldq256:
   case X86::BI__builtin_ia32_pmuldq512:
+    return emitX86Muldq(*this, expr, /*IsSigned*/ true, ops);
   case X86::BI__builtin_ia32_pternlogd512_mask:
   case X86::BI__builtin_ia32_pternlogq512_mask:
   case X86::BI__builtin_ia32_pternlogd128_mask:
