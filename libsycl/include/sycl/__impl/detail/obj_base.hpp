@@ -37,14 +37,19 @@ public:
 protected:
   ImplPtrType impl;
 
-  explicit ObjBase(ImplPtrType pImpl) : impl(pImpl) {}
+  explicit ObjBase(ImplPtrType pImpl) : impl(pImpl) {
+    assert(impl && "Impl can not be nullptr");
+  }
   ObjBase() = default;
 
   static SyclObject createSyclProxy(ImplPtrType impl) {
     return SyclObject(impl);
   }
 
-  ImplType &getImpl() const { return *impl; }
+  ImplType &getImpl() const {
+    assert(impl && "Impl can not be nullptr");
+    return *impl;
+  }
 
   template <class Obj>
   friend const typename Obj::ImplType &getSyclObjImpl(const Obj &Object);
@@ -56,6 +61,7 @@ protected:
 
 template <class Obj>
 const typename Obj::ImplType &getSyclObjImpl(const Obj &Object) {
+  assert(Object.impl && "Impl can not be nullptr");
   return *Object.impl;
 }
 
