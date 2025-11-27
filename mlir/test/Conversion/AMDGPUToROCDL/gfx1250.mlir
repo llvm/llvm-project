@@ -169,6 +169,18 @@ func.func @amdgpu.scaled_ext_packed816_invalid_dst_elem_type(%v: vector<16xf6E3M
 #gpu_lds_addrspace = 3
 #amdgpu_fat_buffer_addrspace = 7
 
+func.func @amdgpu.make_dma_base.invalid_element_types(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>, %smem: memref<8xf32,#gpu_lds_addrspace>) -> (!amdgpu.tdm_base<i32>) {
+  // expected-error@+1 {{'amdgpu.make_dma_base' op failed to verify that all of {src, dst} have same element type}}
+  %0 = amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, #gpu_global_addrspace>, memref<8xf32, #gpu_lds_addrspace> -> !amdgpu.tdm_base<i32>
+  return %0 : !amdgpu.tdm_base<i32>
+}
+
+// -----
+
+#gpu_global_addrspace = 1
+#gpu_lds_addrspace = 3
+#amdgpu_fat_buffer_addrspace = 7
+
 // CHECK-LABEL: func @make_dma_base
 // CHECK-SAME: (%[[IDX:.+]]: index, %[[MEM:.+]]: memref<8xi32, 1>, %[[SMEM:.+]]: memref<8xi32, 3>)
 func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>, %smem: memref<8xi32,#gpu_lds_addrspace>) -> (!amdgpu.tdm_base<i32>, !amdgpu.tdm_base<i32>) {
