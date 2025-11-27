@@ -1099,6 +1099,13 @@ public:
     // Implemented with @llvm.experimental.cttz.elts, but returns the expected
     // result even with operands that are all zeroes.
     FirstActiveLane,
+    // Calculates the last active lane index of the vector predicate operands.
+    // The predicates must be prefix-masks (all 1s before all 0s). Used when
+    // tail-folding to extract the correct live-out value from the last active
+    // iteration. It produces the lane index across all unrolled iterations.
+    // Unrolling will add all copies of its original operand as additional
+    // operands.
+    LastActiveLane,
 
     // The opcodes below are used for VPInstructionWithType.
     //
