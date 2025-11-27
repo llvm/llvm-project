@@ -2292,9 +2292,9 @@ public:
     {
       TimeTraceScope TimeScope("Emit individual index for DTLTO",
                                J.SummaryIndexPath);
-    if (auto E = emitFiles(ImportList, J.ModuleID, J.ModuleID.str(),
-                           J.SummaryIndexPath, J.ImportsFiles))
-      return E;
+      if (auto E = emitFiles(ImportList, J.ModuleID, J.ModuleID.str(),
+                             J.SummaryIndexPath, J.ImportsFiles))
+        return E;
     }
 
     if (!Cache.isValid() || !CombinedIndex.modulePaths().count(J.ModuleID) ||
@@ -2543,12 +2543,12 @@ public:
     SString JsonFile = sys::path::parent_path(LinkerOutputFile);
     {
       llvm::TimeTraceScope TimeScope("Emit DTLTO JSON");
-    sys::path::append(JsonFile, sys::path::stem(LinkerOutputFile) + "." + UID +
-                                    ".dist-file.json");
-    if (!emitDistributorJson(JsonFile))
-      return make_error<StringError>(
-          BCError + "failed to generate distributor JSON script: " + JsonFile,
-          inconvertibleErrorCode());
+      sys::path::append(JsonFile, sys::path::stem(LinkerOutputFile) + "." +
+                                      UID + ".dist-file.json");
+      if (!emitDistributorJson(JsonFile))
+        return make_error<StringError>(
+            BCError + "failed to generate distributor JSON script: " + JsonFile,
+            inconvertibleErrorCode());
     }
     auto CleanJson = llvm::make_scope_exit([&] {
       if (!SaveTemps)
@@ -2558,70 +2558,71 @@ public:
     {
       llvm::TimeTraceScope TimeScope("Execute DTLTO distributor",
                                      DistributorPath);
-    // Checks if we have any jobs that don't have corresponding cache entries.
-    if (CachedJobs.load() < Jobs.size()) {
-      SmallVector<StringRef, 3> Args = {DistributorPath};
-      llvm::append_range(Args, DistributorArgs);
-      Args.push_back(JsonFile);
-      std::string ErrMsg;
-      if (sys::ExecuteAndWait(Args[0], Args,
-                              /*Env=*/std::nullopt, /*Redirects=*/{},
-                              /*SecondsToWait=*/0, /*MemoryLimit=*/0,
-                              &ErrMsg)) {
-        return make_error<StringError>(
-            BCError + "distributor execution failed" +
-                (!ErrMsg.empty() ? ": " + ErrMsg + Twine(".") : Twine(".")),
-            inconvertibleErrorCode());
+      // Checks if we have any jobs that don't have corresponding cache entries.
+      if (CachedJobs.load() < Jobs.size()) {
+        SmallVector<StringRef, 3> Args = {DistributorPath};
+        llvm::append_range(Args, DistributorArgs);
+        Args.push_back(JsonFile);
+        std::string ErrMsg;
+        if (sys::ExecuteAndWait(Args[0], Args,
+                                /*Env=*/std::nullopt, /*Redirects=*/{},
+                                /*SecondsToWait=*/0, /*MemoryLimit=*/0,
+                                &ErrMsg)) {
+          return make_error<StringError>(
+              BCError + "distributor execution failed" +
+                  (!ErrMsg.empty() ? ": " + ErrMsg + Twine(".") : Twine(".")),
+              inconvertibleErrorCode());
+        }
       }
-    }
     }
 
     {
       llvm::TimeTraceScope FilesScope("Add DTLTO files to the link");
-    for (auto &Job : Jobs) {
-      if (!Job.CacheKey.empty() && Job.Cached) {
-        assert(Cache.isValid());
-        continue;
-      }
-      // Load the native object from a file into a memory buffer
-      // and store its contents in the output buffer.
-      auto ObjFileMbOrErr =
-          MemoryBuffer::getFile(Job.NativeObjectPath, /*IsText=*/false,
-                                /*RequiresNullTerminator=*/false);
-      if (std::error_code EC = ObjFileMbOrErr.getError())
-        return make_error<StringError>(
-            BCError + "cannot open native object file: " +
-                Job.NativeObjectPath + ": " + EC.message(),
-            inconvertibleErrorCode());
+      for (auto &Job : Jobs) {
+        if (!Job.CacheKey.empty() && Job.Cached) {
+          assert(Cache.isValid());
+          continue;
+        }
+        // Load the native object from a file into a memory buffer
+        // and store its contents in the output buffer.
+        auto ObjFileMbOrErr =
+            MemoryBuffer::getFile(Job.NativeObjectPath, /*IsText=*/false,
+                                  /*RequiresNullTerminator=*/false);
+        if (std::error_code EC = ObjFileMbOrErr.getError())
+          return make_error<StringError>(
+              BCError + "cannot open native object file: " +
+                  Job.NativeObjectPath + ": " + EC.message(),
+              inconvertibleErrorCode());
 
-      MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
-      if (Cache.isValid()) {
-        // Cache hits are taken care of earlier. At this point, we could only
-        // have cache misses.
-        assert(Job.CacheAddStream);
-        // Obtain a file stream for a storing a cache entry.
-        auto CachedFileStreamOrErr = Job.CacheAddStream(Job.Task, Job.ModuleID);
-        if (!CachedFileStreamOrErr)
-          return joinErrors(
-              CachedFileStreamOrErr.takeError(),
-              createStringError(inconvertibleErrorCode(),
-                                "Cannot get a cache file stream: %s",
-                                Job.NativeObjectPath.data()));
-        // Store a file buffer into the cache stream.
-        auto &CacheStream = *(CachedFileStreamOrErr->get());
-        *(CacheStream.OS) << ObjFileMbRef.getBuffer();
-        if (Error Err = CacheStream.commit())
-          return Err;
-      } else {
-        auto StreamOrErr = AddStream(Job.Task, Job.ModuleID);
-        if (Error Err = StreamOrErr.takeError())
-          report_fatal_error(std::move(Err));
-        auto &Stream = *StreamOrErr->get();
-        *Stream.OS << ObjFileMbRef.getBuffer();
-        if (Error Err = Stream.commit())
-          report_fatal_error(std::move(Err));
+        MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
+        if (Cache.isValid()) {
+          // Cache hits are taken care of earlier. At this point, we could only
+          // have cache misses.
+          assert(Job.CacheAddStream);
+          // Obtain a file stream for a storing a cache entry.
+          auto CachedFileStreamOrErr =
+              Job.CacheAddStream(Job.Task, Job.ModuleID);
+          if (!CachedFileStreamOrErr)
+            return joinErrors(
+                CachedFileStreamOrErr.takeError(),
+                createStringError(inconvertibleErrorCode(),
+                                  "Cannot get a cache file stream: %s",
+                                  Job.NativeObjectPath.data()));
+          // Store a file buffer into the cache stream.
+          auto &CacheStream = *(CachedFileStreamOrErr->get());
+          *(CacheStream.OS) << ObjFileMbRef.getBuffer();
+          if (Error Err = CacheStream.commit())
+            return Err;
+        } else {
+          auto StreamOrErr = AddStream(Job.Task, Job.ModuleID);
+          if (Error Err = StreamOrErr.takeError())
+            report_fatal_error(std::move(Err));
+          auto &Stream = *StreamOrErr->get();
+          *Stream.OS << ObjFileMbRef.getBuffer();
+          if (Error Err = Stream.commit())
+            report_fatal_error(std::move(Err));
+        }
       }
-    }
     }
     return Error::success();
   }
