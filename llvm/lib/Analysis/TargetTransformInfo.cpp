@@ -468,13 +468,17 @@ TargetTransformInfo::getPreferredAddressingMode(const Loop *L,
 }
 
 bool TargetTransformInfo::isLegalMaskedStore(Type *DataType, Align Alignment,
-                                             unsigned AddressSpace) const {
-  return TTIImpl->isLegalMaskedStore(DataType, Alignment, AddressSpace);
+                                             unsigned AddressSpace,
+                                             TTI::MaskKind MaskKind) const {
+  return TTIImpl->isLegalMaskedStore(DataType, Alignment, AddressSpace,
+                                     MaskKind);
 }
 
 bool TargetTransformInfo::isLegalMaskedLoad(Type *DataType, Align Alignment,
-                                            unsigned AddressSpace) const {
-  return TTIImpl->isLegalMaskedLoad(DataType, Alignment, AddressSpace);
+                                            unsigned AddressSpace,
+                                            TTI::MaskKind MaskKind) const {
+  return TTIImpl->isLegalMaskedLoad(DataType, Alignment, AddressSpace,
+                                    MaskKind);
 }
 
 bool TargetTransformInfo::isLegalNTStore(Type *DataType,
@@ -607,6 +611,10 @@ bool TargetTransformInfo::shouldBuildRelLookupTables() const {
 
 bool TargetTransformInfo::useColdCCForColdCall(Function &F) const {
   return TTIImpl->useColdCCForColdCall(F);
+}
+
+bool TargetTransformInfo::useFastCCForInternalCall(Function &F) const {
+  return TTIImpl->useFastCCForInternalCall(F);
 }
 
 bool TargetTransformInfo::isTargetIntrinsicTriviallyScalarizable(
@@ -1183,10 +1191,9 @@ InstructionCost TargetTransformInfo::getMemoryOpCost(
 }
 
 InstructionCost TargetTransformInfo::getMaskedMemoryOpCost(
-    unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+    const MemIntrinsicCostAttributes &MICA,
     TTI::TargetCostKind CostKind) const {
-  InstructionCost Cost = TTIImpl->getMaskedMemoryOpCost(Opcode, Src, Alignment,
-                                                        AddressSpace, CostKind);
+  InstructionCost Cost = TTIImpl->getMaskedMemoryOpCost(MICA, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

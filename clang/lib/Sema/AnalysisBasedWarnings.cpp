@@ -2875,6 +2875,18 @@ public:
         << UseExpr->getEndLoc();
   }
 
+  void reportUseAfterReturn(const Expr *IssueExpr, const Expr *EscapeExpr,
+                            SourceLocation ExpiryLoc, Confidence C) override {
+    S.Diag(IssueExpr->getExprLoc(),
+           C == Confidence::Definite
+               ? diag::warn_lifetime_safety_return_stack_addr_permissive
+               : diag::warn_lifetime_safety_return_stack_addr_strict)
+        << IssueExpr->getEndLoc();
+
+    S.Diag(EscapeExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
+        << EscapeExpr->getEndLoc();
+  }
+
 private:
   Sema &S;
 };
@@ -2982,6 +2994,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
   bool EnableLifetimeSafetyAnalysis = S.getLangOpts().EnableLifetimeSafety;
+
+  if (EnableLifetimeSafetyAnalysis)
+    AC.getCFGBuildOptions().AddLifetime = true;
 
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.

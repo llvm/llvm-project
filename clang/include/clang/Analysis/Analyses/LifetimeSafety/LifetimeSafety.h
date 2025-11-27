@@ -52,6 +52,11 @@ public:
   virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
                                   SourceLocation FreeLoc,
                                   Confidence Confidence) {}
+
+  virtual void reportUseAfterReturn(const Expr *IssueExpr,
+                                    const Expr *EscapeExpr,
+                                    SourceLocation ExpiryLoc,
+                                    Confidence Confidence) {}
 };
 
 // utility function to print missing origin stats.

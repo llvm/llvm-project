@@ -1263,6 +1263,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   switch (BuiltinID) {
   default:
     return;
+  case Builtin::BI__builtin_strcat:
+  case Builtin::BIstrcat:
   case Builtin::BI__builtin_stpcpy:
   case Builtin::BIstpcpy:
   case Builtin::BI__builtin_strcpy:
@@ -1273,6 +1275,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BI__builtin___strcat_chk:
   case Builtin::BI__builtin___stpcpy_chk:
   case Builtin::BI__builtin___strcpy_chk: {
     DiagID = diag::warn_fortify_strlen_overflow;
@@ -1512,7 +1515,7 @@ static bool checkBuiltinInferAllocToken(Sema &S, CallExpr *TheCall) {
       return S.Diag(Arg->getBeginLoc(), diag::err_param_with_void_type);
   }
 
-  TheCall->setType(S.Context.UnsignedLongLongTy);
+  TheCall->setType(S.Context.getSizeType());
   return false;
 }
 
@@ -4479,6 +4482,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__scoped_atomic_or_fetch:
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_nand_fetch:
+  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
+  case AtomicExpr::AO__scoped_atomic_udec_wrap:
     Form = Arithmetic;
     break;
 

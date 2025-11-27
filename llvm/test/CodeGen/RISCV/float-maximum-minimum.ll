@@ -24,8 +24,6 @@
 ; RUN:   -verify-machineinstrs -target-abi=lp64 \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 
-declare float @llvm.minimum.f32(float, float)
-
 define float @fminimum_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fminimum_f32:
 ; RV32IF:       # %bb.0:
@@ -123,8 +121,6 @@ define float @fminimum_f32(float %a, float %b) nounwind {
   %1 = call float @llvm.minimum.f32(float %a, float %b)
   ret float %1
 }
-
-declare float @llvm.maximum.f32(float, float)
 
 define float @fmaximum_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fmaximum_f32:
