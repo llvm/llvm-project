@@ -2920,6 +2920,9 @@ bool IRTranslator::translateIntrinsic(
     }
   }
 
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_deactivation_symbol))
+    MIB->setDeactivationSymbol(*MF, Bundle->Inputs[0].get());
+
   return true;
 }
 
