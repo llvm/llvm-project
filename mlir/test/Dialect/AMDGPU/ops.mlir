@@ -697,3 +697,29 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32>, %smem: memref<8xi32, 
   func.return
 }
 
+// CHECK-LABEL: func @wmma_scale
+func.func @wmma_scale(%fp8_src: vector<64xf8E4M3FN>, %bf8_src: vector<64xf8E5M2>,
+                      %fp6_src: vector<64xf6E2M3FN>, %fp4_src_a: vector<128xf4E2M1FN>,
+                      %fp4_src_b: vector<64xf4E2M1FN>,
+                      %dst0: vector<4xf32>, %dst1: vector<8xf32>,
+                      %scale32: i32, %scale64: i64) {
+  // CHECK: amdgpu.scaled_wmma({{.*}} * {{.*}}) * ({{.*}} * {{.*}}) + {{.*}} {k = 128 : i32, m = 16 : i32, n = 16 : i32} : i32, vector<64xf8E4M3FN>, i32, vector<64xf8E4M3FN>, vector<4xf32>
+  %0 = amdgpu.scaled_wmma (%scale32 * %fp8_src) * (%scale32 * %fp8_src) + %dst0
+    { m = 16 : i32, n = 16 : i32, k = 128 : i32 } : i32, vector<64xf8E4M3FN>, i32, vector<64xf8E4M3FN>, vector<4xf32>
+  // CHECK: amdgpu.scaled_wmma({{.*}} * {{.*}}) * ({{.*}} * {{.*}}) + {{.*}} {k = 128 : i32, m = 16 : i32, n = 16 : i32} : i32, vector<64xf8E5M2>, i32, vector<64xf8E5M2>, vector<4xf32>
+  %1 = amdgpu.scaled_wmma (%scale32 * %bf8_src) * (%scale32 * %bf8_src) + %dst0
+    { m = 16 : i32, n = 16 : i32, k = 128 : i32 } : i32, vector<64xf8E5M2>, i32, vector<64xf8E5M2>, vector<4xf32>
+  // CHECK: amdgpu.scaled_wmma({{.*}} * {{.*}}) * ({{.*}} * {{.*}}) + {{.*}} {k = 128 : i32, m = 16 : i32, n = 16 : i32} : i32, vector<64xf6E2M3FN>, i32, vector<64xf6E2M3FN>, vector<4xf32>
+  %2 = amdgpu.scaled_wmma (%scale32 * %fp6_src) * (%scale32 * %fp6_src) + %dst0
+    { m = 16 : i32, n = 16 : i32, k = 128 : i32 } : i32, vector<64xf6E2M3FN>, i32, vector<64xf6E2M3FN>, vector<4xf32>
+  // CHECK: amdgpu.scaled_wmma({{.*}} * {{.*}}) * ({{.*}} * {{.*}}) + {{.*}} {k = 128 : i32, m = 16 : i32, n = 16 : i32} : i32, vector<64xf4E2M1FN>, i32, vector<64xf6E2M3FN>, vector<4xf32>
+  %3 = amdgpu.scaled_wmma (%scale32 * %fp4_src_b) * (%scale32 * %fp6_src) + %dst0
+    { m = 16 : i32, n = 16 : i32, k = 128 : i32 } : i32, vector<64xf4E2M1FN>, i32, vector<64xf6E2M3FN>, vector<4xf32>
+  // CHECK: amdgpu.scaled_wmma({{.*}} * {{.*}}) * ({{.*}} * {{.*}}) + {{.*}} {k = 128 : i32, m = 16 : i32, n = 16 : i32} : i64, vector<64xf8E4M3FN>, i64, vector<64xf8E4M3FN>, vector<4xf32>
+  %4 = amdgpu.scaled_wmma (%scale64 * %fp8_src) * (%scale64 * %fp8_src) + %dst0
+    { m = 16 : i32, n = 16 : i32, k = 128 : i32 } : i64, vector<64xf8E4M3FN>, i64, vector<64xf8E4M3FN>, vector<4xf32>
+  // CHECK: amdgpu.scaled_wmma({{.*}} * {{.*}}) * ({{.*}} * {{.*}}) + {{.*}} {k = 128 : i32, m = 32 : i32, n = 16 : i32} : i32, vector<128xf4E2M1FN>, i32, vector<64xf4E2M1FN>, vector<8xf32>
+  %5 = amdgpu.scaled_wmma (%scale32 * %fp4_src_a) * (%scale32 * %fp4_src_b) + %dst1
+    { m = 32 : i32, n = 16 : i32, k = 128 : i32 } : i32, vector<128xf4E2M1FN>, i32, vector<64xf4E2M1FN>, vector<8xf32>
+  func.return
+}
