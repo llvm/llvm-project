@@ -11,7 +11,8 @@
 
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/CommonArgs.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/OptionUtils.h"
+#include "clang/Options/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TargetParser/Host.h"
@@ -230,7 +231,7 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
-  if (Args.hasArg(clang::driver::options::OPT_fcoarray))
+  if (Args.hasArg(options::OPT_fcoarray))
     CmdArgs.push_back("-fcoarray");
 }
 
@@ -822,8 +823,14 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
                                          complexRangeKindToStr(Range)));
   }
 
-  if (Args.hasArg(options::OPT_fno_fast_real_mod))
-    CmdArgs.push_back("-fno-fast-real-mod");
+  if (llvm::opt::Arg *A =
+          Args.getLastArg(clang::options::OPT_ffast_real_mod,
+                          clang::options::OPT_fno_fast_real_mod)) {
+    if (A->getOption().matches(clang::options::OPT_ffast_real_mod))
+      CmdArgs.push_back("-ffast-real-mod");
+    else if (A->getOption().matches(clang::options::OPT_fno_fast_real_mod))
+      CmdArgs.push_back("-fno-fast-real-mod");
+  }
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
@@ -1070,6 +1077,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     break;
   case CodeGenOptions::FramePointerKind::Reserved:
     FPKeepKindStr = "-mframe-pointer=reserved";
+    break;
+  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+    FPKeepKindStr = "-mframe-pointer=non-leaf-no-reserve";
     break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     FPKeepKindStr = "-mframe-pointer=non-leaf";

@@ -120,8 +120,6 @@ namespace llvm {
 namespace sys {
 namespace fs {
 
-const file_t::value_type file_t::Invalid = -1;
-
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
     defined(__FreeBSD_kernel__) || defined(__linux__) ||                       \
     defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) ||          \
@@ -769,7 +767,7 @@ std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
 }
 
 std::error_code status(file_t F, file_status &Result) {
-  return status(F.get(), Result);
+  return status(F.native_handle(), Result);
 }
 
 std::error_code status(int FD, file_status &Result) {
@@ -865,7 +863,7 @@ std::error_code mapped_file_region::init(file_t FD, uint64_t Offset,
   }
 #endif // #if defined (__APPLE__)
 
-  Mapping = ::mmap(nullptr, Size, prot, flags, FD.get(), Offset);
+  Mapping = ::mmap(nullptr, Size, prot, flags, FD.native_handle(), Offset);
   if (Mapping == MAP_FAILED)
     return errnoAsErrorCode();
   return std::error_code();
@@ -1205,7 +1203,7 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
   size_t Size = Buf.size();
 #endif
   ssize_t NumRead =
-      sys::RetryAfterSignal(-1, ::read, FD.get(), Buf.data(), Size);
+      sys::RetryAfterSignal(-1, ::read, FD.native_handle(), Buf.data(), Size);
   if (NumRead == -1)
     return errorCodeToError(errnoAsErrorCode());
 // The underlying operation on these platforms allow opening directories
@@ -1228,8 +1226,8 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
   size_t Size = Buf.size();
 #endif
 #ifdef HAVE_PREAD
-  ssize_t NumRead =
-      sys::RetryAfterSignal(-1, ::pread, FD.get(), Buf.data(), Size, Offset);
+  ssize_t NumRead = sys::RetryAfterSignal(-1, ::pread, FD.native_handle(),
+                                          Buf.data(), Size, Offset);
 #else
   if (lseek(FD, Offset, SEEK_SET) == -1)
     return errorCodeToError(errnoAsErrorCode());
@@ -1303,7 +1301,7 @@ std::error_code unlockFile(int FD) {
 std::error_code closeFile(file_t &F) {
   file_t TmpF = F;
   F = file_t::Invalid;
-  return Process::SafelyCloseFileDescriptor(TmpF.get());
+  return Process::SafelyCloseFileDescriptor(TmpF.native_handle());
 }
 
 template <typename T>

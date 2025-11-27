@@ -147,8 +147,11 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const override;
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
-                             const ArrayRef<Type *> &Types) const override;
+                             ArrayRef<Type *> Types) const override;
   bool supportsTailCallFor(const CallBase *CB) const override;
+
+  TargetTransformInfo::VPLegalization
+  getVPLegalizationStrategy(const VPIntrinsic &PI) const override;
 
 private:
   // The following constant is used for estimating costs on power9.

@@ -30,7 +30,9 @@ struct file_t {
 #endif
   value_type Value;
 
-  LLVM_ABI static const value_type Invalid;
+  // Value for an invalid file descriptor/handle. -1 is used for both Unix and
+  // Windows platform.
+  static constexpr value_type Invalid = -1;
 
   /// Default constructor to invalid file.
   file_t() : Value(Invalid) {}
@@ -43,11 +45,11 @@ struct file_t {
   bool isValid() const { return Value != Invalid; }
 
   /// Get the underlying value and return a platform specific value.
-  value_type get() const { return Value; }
+  value_type native_handle() const { return Value; }
 };
 
 inline bool operator==(file_t LHS, file_t RHS) {
-  return LHS.get() == RHS.get();
+  return LHS.native_handle() == RHS.native_handle();
 }
 
 inline bool operator!=(file_t LHS, file_t RHS) { return !(LHS == RHS); }

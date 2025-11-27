@@ -66,7 +66,7 @@ static mlir::LogicalResult emitStmtWithResult(CIRGenFunction &cgf,
 mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
     const CompoundStmt &s, Address *lastValue, AggValueSlot slot) {
   mlir::LogicalResult result = mlir::success();
-  const Stmt *exprResult = s.getStmtExprResult();
+  const Stmt *exprResult = s.body_back();
   assert((!lastValue || (lastValue && exprResult)) &&
          "If lastValue is not null then the CompoundStmt must have a "
          "StmtExprResult");

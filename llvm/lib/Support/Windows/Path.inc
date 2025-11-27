@@ -130,8 +130,6 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
 
 namespace fs {
 
-const file_t::value_type file_t::Invalid = INVALID_HANDLE_VALUE;
-
 std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
   SmallVector<wchar_t, MAX_PATH> PathName;
   PathName.resize_for_overwrite(PathName.capacity());
@@ -828,7 +826,7 @@ std::error_code status(int FD, file_status &Result) {
 }
 
 std::error_code status(file_t FileHandle, file_status &Result) {
-  return getStatus(FileHandle.get(), Result);
+  return getStatus(FileHandle.native_handle(), Result);
 }
 
 unsigned getUmask() { return 0; }
@@ -897,8 +895,9 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
     break;
   }
 
-  HANDLE FileMappingHandle = ::CreateFileMappingW(
-      OrigFileHandle.get(), 0, flprotect, Hi_32(Size), Lo_32(Size), 0);
+  HANDLE FileMappingHandle =
+      ::CreateFileMappingW(OrigFileHandle.native_handle(), 0, flprotect,
+                           Hi_32(Size), Lo_32(Size), 0);
   if (FileMappingHandle == NULL) {
     std::error_code ec = mapWindowsError(GetLastError());
     return ec;
@@ -943,7 +942,7 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
   // from the file.
   ::CloseHandle(FileMappingHandle);
   HANDLE NewFileHandle;
-  if (!::DuplicateHandle(::GetCurrentProcess(), OrigFileHandle.get(),
+  if (!::DuplicateHandle(::GetCurrentProcess(), OrigFileHandle.native_handle(),
                          ::GetCurrentProcess(), &NewFileHandle, 0, 0,
                          DUPLICATE_SAME_ACCESS)) {
     std::error_code ec = mapWindowsError(GetLastError());
@@ -1008,7 +1007,7 @@ void mapped_file_region::unmapImpl() {
         // sure we are on a local file system.
         bool IsLocal = false;
         SmallVector<wchar_t, 128> FinalPath;
-        if (!realPathFromHandle(FileHandle.get(), FinalPath)) {
+        if (!realPathFromHandle(FileHandle.native_handle(), FinalPath)) {
           // Not checking the return value here - if the check fails, assume the
           // file isn't local.
           is_local_internal(FinalPath, IsLocal);
@@ -1016,10 +1015,10 @@ void mapped_file_region::unmapImpl() {
         DoFlush = !IsLocal;
       }
       if (DoFlush)
-        ::FlushFileBuffers(FileHandle.get());
+        ::FlushFileBuffers(FileHandle.native_handle());
     }
 
-    ::CloseHandle(FileHandle.get());
+    ::CloseHandle(FileHandle.native_handle());
   }
 }
 
@@ -1028,7 +1027,7 @@ void mapped_file_region::dontNeedImpl() {}
 std::error_code mapped_file_region::sync() const {
   if (!::FlushViewOfFile(Mapping, Size))
     return mapWindowsError(GetLastError());
-  if (!::FlushFileBuffers(FileHandle.get()))
+  if (!::FlushFileBuffers(FileHandle.native_handle()))
     return mapWindowsError(GetLastError());
   return std::error_code();
 }
@@ -1162,9 +1161,9 @@ static std::error_code nativeFileToFd(Expected<file_t> H, int &ResultFD,
   if (!H)
     return errorToErrorCode(H.takeError());
 
-  ResultFD = ::_open_osfhandle(intptr_t(H->get()), CrtOpenFlags);
+  ResultFD = ::_open_osfhandle(intptr_t(H->native_handle()), CrtOpenFlags);
   if (ResultFD == -1) {
-    ::CloseHandle(H->get());
+    ::CloseHandle(H->native_handle());
     return mapWindowsError(ERROR_INVALID_HANDLE);
   }
   return std::error_code();
@@ -1266,9 +1265,9 @@ Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
     SYSTEMTIME SystemTime;
     GetSystemTime(&SystemTime);
     if (SystemTimeToFileTime(&SystemTime, &FileTime) == 0 ||
-        SetFileTime(Result.get(), NULL, &FileTime, NULL) == 0) {
+        SetFileTime(Result.native_handle(), NULL, &FileTime, NULL) == 0) {
       DWORD LastError = ::GetLastError();
-      ::CloseHandle(Result.get());
+      ::CloseHandle(Result.native_handle());
       return errorCodeToError(mapWindowsError(LastError));
     }
   }
@@ -1294,8 +1293,8 @@ static std::error_code directoryRealPath(const Twine &Name,
   if (EC)
     return EC;
 
-  EC = realPathFromHandle(File.get(), RealPath);
-  ::CloseHandle(File.get());
+  EC = realPathFromHandle(File.native_handle(), RealPath);
+  ::CloseHandle(File.native_handle());
   return EC;
 }
 
@@ -1313,7 +1312,7 @@ Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,
 
   // Fetch the real name of the file, if the user asked
   if (Result && RealPath)
-    realPathFromHandle(Result->get(), *RealPath);
+    realPathFromHandle(Result->native_handle(), *RealPath);
 
   return Result;
 }
@@ -1334,8 +1333,8 @@ Expected<size_t> readNativeFileImpl(file_t FileHandle,
   DWORD BytesToRead =
       std::min(size_t(std::numeric_limits<DWORD>::max()), Buf.size());
   DWORD BytesRead = 0;
-  if (::ReadFile(FileHandle.get(), Buf.data(), BytesToRead, &BytesRead,
-                 Overlap))
+  if (::ReadFile(FileHandle.native_handle(), Buf.data(), BytesToRead,
+                 &BytesRead, Overlap))
     return BytesRead;
   DWORD Err = ::GetLastError();
   // EOF is not an error.
@@ -1366,7 +1365,7 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
   do {
-    if (::LockFileEx(File.get(), Flags, 0, MAXDWORD, MAXDWORD, &OV))
+    if (::LockFileEx(File.native_handle(), Flags, 0, MAXDWORD, MAXDWORD, &OV))
       return std::error_code();
     DWORD Error = ::GetLastError();
     if (Error == ERROR_LOCK_VIOLATION) {
@@ -1384,7 +1383,7 @@ std::error_code lockFile(int FD, LockKind Kind) {
   DWORD Flags = Kind == LockKind::Exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
   OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
-  if (::LockFileEx(File.get(), Flags, 0, MAXDWORD, MAXDWORD, &OV))
+  if (::LockFileEx(File.native_handle(), Flags, 0, MAXDWORD, MAXDWORD, &OV))
     return std::error_code();
   DWORD Error = ::GetLastError();
   return mapWindowsError(Error);
@@ -1393,7 +1392,7 @@ std::error_code lockFile(int FD, LockKind Kind) {
 std::error_code unlockFile(int FD) {
   OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
-  if (::UnlockFileEx(File.get(), 0, MAXDWORD, MAXDWORD, &OV))
+  if (::UnlockFileEx(File.native_handle(), 0, MAXDWORD, MAXDWORD, &OV))
     return std::error_code();
   return mapWindowsError(::GetLastError());
 }
@@ -1401,7 +1400,7 @@ std::error_code unlockFile(int FD) {
 std::error_code closeFile(file_t &F) {
   file_t TmpF = F;
   F = file_t::Invalid;
-  if (!::CloseHandle(TmpF.get()))
+  if (!::CloseHandle(TmpF.native_handle()))
     return mapWindowsError(::GetLastError());
   return std::error_code();
 }
