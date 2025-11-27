@@ -27,8 +27,7 @@
 #
 #   BUILDKITE_AGENT_TOKEN=<token>
 
-ARG BASE_IMAGE_VERSION
-FROM ghcr.io/llvm/libcxx-linux-builder-base:${BASE_IMAGE_VERSION}
+FROM docker.io/library/ubuntu:jammy AS android-builder-base
 
 ARG ANDROID_CLANG_VERSION
 ARG ANDROID_CLANG_PREBUILTS_COMMIT
