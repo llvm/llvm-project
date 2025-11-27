@@ -51,25 +51,37 @@ AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
 } // namespace
 
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
-  static constexpr auto MakeMatcher = [](const auto &StmtMatcher,
-                                         const std::string &Name) {
+  const auto SingleVarDecl = varDecl().bind("singleVar");
+  const auto RefToBoundVarDecl =
+      declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
+
+  // Matcher for the declaration statement that precedes the if/switch
+  const auto PrevDeclStmt = declStmt(forEach(SingleVarDecl)).bind("prevDecl");
+
+  // Matcher for a condition that references the variable from prevDecl
+  const auto ConditionWithVarRef =
+      expr(forEachDescendant(RefToBoundVarDecl)).bind("condition");
+
+  // Helper to create a complete matcher for if/switch statements
+  const auto MakeCompoundMatcher = [&](const auto &StmtMatcher,
+                                       const std::string &StmtName) {
+    const auto StmtMatcherWithCondition =
+        StmtMatcher(unless(hasInitStatement(anything())),
+                    hasCondition(ConditionWithVarRef))
+            .bind(StmtName);
+
+    // Ensure the variable is not referenced elsewhere in the compound statement
+    const auto NoOtherVarRefs = unless(has(stmt(
+        unless(equalsBoundNode(StmtName)), hasDescendant(RefToBoundVarDecl))));
+
     return compoundStmt(
         unless(isInTemplateInstantiation()),
-        hasAdjacentStmts(
-            declStmt(forEach(varDecl().bind("singleVar"))).bind("prevDecl"),
-            StmtMatcher(
-                unless(hasInitStatement(anything())),
-                hasCondition(expr(forEachDescendant(declRefExpr(to(
-                                      varDecl(equalsBoundNode("singleVar"))))))
-                                 .bind("condition")))
-                .bind(Name)),
-        unless(has(stmt(unless(equalsBoundNode(Name)),
-                        hasDescendant(declRefExpr(
-                            to(varDecl(equalsBoundNode("singleVar")))))))));
+        hasAdjacentStmts(PrevDeclStmt, StmtMatcherWithCondition),
+        NoOtherVarRefs);
   };
 
-  Finder->addMatcher(MakeMatcher(ifStmt, "ifStmt"), this);
-  Finder->addMatcher(MakeMatcher(switchStmt, "switchStmt"), this);
+  Finder->addMatcher(MakeCompoundMatcher(ifStmt, "ifStmt"), this);
+  Finder->addMatcher(MakeCompoundMatcher(switchStmt, "switchStmt"), this);
 }
 
 static StringRef normDeclStmtText(StringRef Text) {
