@@ -496,7 +496,7 @@ Expected<void *> L0ProgramTy::getOffloadVarDeviceAddr(const char *CName) const {
       return DevicePtr;
   }
   return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                       "Global variable '%s' not found on device", CName);
+                       "Symbol '%s' not found on device", CName);
 }
 
 Error L0ProgramTy::readGlobalVariable(const char *Name, size_t Size,
