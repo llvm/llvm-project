@@ -5203,26 +5203,28 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     // First check if the partition is viable for vetor promotion.
     // We prefer vector promotion over integer widening promotion when:
     // - The vector element type is a floating-point type.
-    // - All the loads/stores to the alloca are vector loads/stores to the entire alloca.
-    // Otherwise when there is a integer vector with mixed loads/stores we prefer integer widening
-    // promotion because it's more likely the user is doing bitwise arithmetic and we
-    // generate better code.
+    // - All the loads/stores to the alloca are vector loads/stores to the
+    // entire alloca. Otherwise when there is a integer vector with mixed
+    // loads/stores we prefer integer widening promotion because it's more
+    // likely the user is doing bitwise arithmetic and we generate better code.
     VectorType *VecTy =
         isVectorPromotionViable(P, DL, AI.getFunction()->getVScaleValue());
-    // If the vector element type is a floating-point type, we prefer vector promotion.
+    // If the vector element type is a floating-point type, we prefer vector
+    // promotion.
     if (VecTy && VecTy->getElementType()->isFloatingPointTy())
       return {VecTy, false, VecTy};
 
-    // Check if there is a common type that all slices of the partition use that spans the partition.
+    // Check if there is a common type that all slices of the partition use that
+    // spans the partition.
     auto [CommonUseTy, LargestIntTy, OnlyIntrinsicUsers] =
         findCommonType(P.begin(), P.end(), P.endOffset());
     if (CommonUseTy) {
       TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy);
       if (CommonUseSize.isFixed() &&
           CommonUseSize.getFixedValue() >= P.size()) {
-        // We prefer vector promotion here because if vector promotion is viable and 
-        // there is a common type used, then it implies the second listed condition for prefering
-        // vector promotion is true.
+        // We prefer vector promotion here because if vector promotion is viable
+        // and there is a common type used, then it implies the second listed
+        // condition for prefering vector promotion is true.
         if (VecTy)
           return {VecTy, false, VecTy};
         return {CommonUseTy, isIntegerWideningViable(P, CommonUseTy, DL),
@@ -5230,8 +5232,9 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
       }
     }
 
-    // If there are only intrinsic users, try to represent as a legal integer type
-    // because we are probably just copying data around and the integer can be promoted.
+    // If there are only intrinsic users, try to represent as a legal integer
+    // type because we are probably just copying data around and the integer can
+    // be promoted.
     if (OnlyIntrinsicUsers && DL.isLegalInteger(P.size() * 8))
       return {Type::getIntNTy(*C, P.size() * 8), false, nullptr};
 
@@ -5239,8 +5242,9 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     // type?
     if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
                                                  P.beginOffset(), P.size())) {
-      // If the partition is an integer array that can be spanned by a legal integer type,
-      // prefer to represent it as a legal integer type because it's more likely to be promotable.
+      // If the partition is an integer array that can be spanned by a legal
+      // integer type, prefer to represent it as a legal integer type because
+      // it's more likely to be promotable.
       if (TypePartitionTy->isArrayTy() &&
           TypePartitionTy->getArrayElementType()->isIntegerTy() &&
           DL.isLegalInteger(P.size() * 8))
@@ -5250,7 +5254,8 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
         return {TypePartitionTy, true, nullptr};
       if (VecTy)
         return {VecTy, false, VecTy};
-      // If we couldn't promotion with TypePartitionTy, try with the largest integer type used.
+      // If we couldn't promotion with TypePartitionTy, try with the largest
+      // integer type used.
       if (LargestIntTy &&
           DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size() &&
           isIntegerWideningViable(P, LargestIntTy, DL))
