@@ -1381,18 +1381,17 @@ void Sema::ActOnPragmaVisibility(const IdentifierInfo* VisType,
 void Sema::ActOnPragmaFPContract(SourceLocation Loc,
                                  LangOptions::FPModeKind FPC) {
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
-  auto CurrentContractMode = NewFPFeatures.getFPContractModeOverride();
+  bool HasContractOverride = NewFPFeatures.hasFPContractModeOverride();
   auto DefContractMode = getLangOpts().getDefaultFPContractMode();
-  llvm::outs() << "Cur mode from CLI:\t" << getLangOpts().getDefaultFPContractMode() << "\n" << "Cur override:\t" << CurrentContractMode << "\n";
+
   switch (FPC) {
   case LangOptions::FPM_On:
-    if (CurrentContractMode == LangOptions::FPM_Off && DefContractMode != LangOptions::FPM_Fast)
-   	 NewFPFeatures.setAllowFPContractWithinStatement();
+   if ((HasContractOverride && NewFPFeatures.getFPContractModeOverride() == LangOptions::FPM_Off) || (!HasContractOverride && DefContractMode == LangOptions::FPM_Off))
+  	NewFPFeatures.setAllowFPContractWithinStatement();
     break;
   case LangOptions::FPM_Fast:
   case LangOptions::FPM_FastHonorPragmas:
-    if (CurrentContractMode == LangOptions::FPM_Off || CurrentContractMode == LangOptions::FPM_On)
-    	NewFPFeatures.setAllowFPContractAcrossStatement();
+    NewFPFeatures.setAllowFPContractAcrossStatement();
     break;
   case LangOptions::FPM_Off:
     NewFPFeatures.setDisallowFPContract();
