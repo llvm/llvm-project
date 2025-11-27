@@ -11,6 +11,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -J %t %t/omp-declare-mapper-7.use.f90 -o - | FileCheck %t/omp-declare-mapper-7.use.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -module-dir %t %t/omp-declare-mapper-8.mod.f90 -o - >/dev/null
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -J %t %t/omp-declare-mapper-8.use.f90 -o - | FileCheck %t/omp-declare-mapper-8.use.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 %t/omp-declare-mapper-9.f90 -o - | FileCheck %t/omp-declare-mapper-9.f90
 
 !--- omp-declare-mapper-1.f90
 subroutine declare_mapper_1
@@ -360,3 +361,36 @@ program use_module_default_mapper
     a%x = 8
   !$omp end target
 end program use_module_default_mapper
+
+!--- omp-declare-mapper-9.f90
+! Test mapper usage in target update to/from clauses
+program target_update_mapper
+  type :: typ
+    integer :: a
+    integer :: b
+  end type typ
+
+  !CHECK: omp.declare_mapper @_QQFtarget_update_mapperFtyp_omp_default_mapper : !fir.type<_QFtarget_update_mapperTtyp{a:i32,b:i32}>
+  !CHECK: omp.declare_mapper @_QQFtarget_update_mapperFcustom : !fir.type<_QFtarget_update_mapperTtyp{a:i32,b:i32}>
+
+  !$omp declare mapper(typ :: t) map(t%a, t%b)
+  !$omp declare mapper(custom: typ :: t) map(t%a)
+
+  type(typ) :: t
+
+  ! Test target update to with custom mapper
+  !CHECK: %[[MAP_INFO:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(to) capture(ByRef) mapper(@_QQFtarget_update_mapperFcustom) -> {{.*}}
+  !CHECK: omp.target_update map_entries(%[[MAP_INFO]] : {{.*}})
+  !$omp target update to(mapper(custom): t)
+
+  ! Test target update from with custom mapper
+  !CHECK: %[[MAP_INFO2:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(from) capture(ByRef) mapper(@_QQFtarget_update_mapperFcustom) -> {{.*}}
+  !CHECK: omp.target_update map_entries(%[[MAP_INFO2]] : {{.*}})
+  !$omp target update from(mapper(custom): t)
+
+  ! Test target update to with default mapper
+  !CHECK: %[[MAP_INFO3:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(to) capture(ByRef) mapper(@_QQFtarget_update_mapperFtyp_omp_default_mapper) -> {{.*}}
+  !CHECK: omp.target_update map_entries(%[[MAP_INFO3]] : {{.*}})
+  !$omp target update to(mapper(default): t)
+
+end program target_update_mapper
