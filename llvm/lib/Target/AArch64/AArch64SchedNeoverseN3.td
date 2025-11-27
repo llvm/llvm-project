@@ -1133,11 +1133,11 @@ def : InstRW<[N3Write_2c_1V1], (instregex "^SLI(v|d)", "^SRI(v|d)")>;
 
 // ASIMD shift by immed, complex
 def : InstRW<[N3Write_4c_1V1],
-             (instregex "^RSHRNv", "^SQRSHRN(v|b|h|s)", "^SQRSHRUN(v|b|h|s)",
+             (instregex "^RSHRNv", "^SQRSHRN[vbhs]", "^SQRSHRUN[vbhs]",
                         "^(SQSHLU?|UQSHL)[bhsd]$",
                         "^(SQSHLU?|UQSHL)(v8i8|v16i8|v4i16|v8i16|v2i32|v4i32|v2i64)_shift$",
-                        "^SQSHRN(v|b|h|s)", "^SQSHRUN(v|b|h|s)", "^SRSHR(v|d)",
-                        "^UQRSHRN(v|b|h|s)", "^UQSHRN(v|b|h|s)","^URSHR(v|d)")>;
+                        "^SQSHRN[vbhs]", "^SQSHRUN[vbhs]", "^SRSHR(v|d)",
+                        "^UQRSHRN[vbhs]", "^UQSHRN[vbhs]","^URSHR(v|d)")>;
 
 // ASIMD shift by register, basic
 def : InstRW<[N3Write_2c_1V1], (instregex "^[SU]SHLv")>;
