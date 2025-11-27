@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 
 #define DEBUG_TYPE "vplan"
@@ -1030,16 +1031,26 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     if (!MinMaxOp)
       return false;
 
+    // Check that MinMaxOp is a VPWidenIntrinsicRecipe or VPReplicateRecipe
+    // with an intrinsic that matches the reduction kind.
+    Intrinsic::ID ExpectedIntrinsicID = getMinMaxReductionIntrinsicOp(RdxKind);
+    auto *RepR = dyn_cast<VPReplicateRecipe>(MinMaxOp);
+    auto *WideR = dyn_cast<VPWidenIntrinsicRecipe>(MinMaxOp);
+
+    if (WideR && WideR->getVectorIntrinsicID() != ExpectedIntrinsicID)
+      return false;
+    if (RepR) {
+      auto *II = dyn_cast<IntrinsicInst>(RepR->getUnderlyingInstr());
+      if (!II || II->getIntrinsicID() != ExpectedIntrinsicID)
+        return false;
+    }
+    if (!WideR && !RepR)
+      return false;
+
     // MinMaxOp must have 2 users: 1) MinMaxPhiR and 2) ComputeReductionResult
     // (asserted below).
     assert(MinMaxOp->getNumUsers() == 2 &&
            "MinMaxOp must have exactly 2 users");
-
-    assert((isa<VPWidenIntrinsicRecipe>(MinMaxOp) ||
-            (isa<VPReplicateRecipe>(MinMaxOp) &&
-             isa<IntrinsicInst>(
-                 cast<VPReplicateRecipe>(MinMaxOp)->getUnderlyingValue()))) &&
-           "MinMaxOp must be a wide or scalar intrinsic");
         VPValue *MinMaxOpValue = MinMaxOp->getOperand(0);
             if (MinMaxOpValue == MinMaxPhiR)
               MinMaxOpValue= MinMaxOp->getOperand(1);
