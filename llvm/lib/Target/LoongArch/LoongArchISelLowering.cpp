@@ -3088,6 +3088,36 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
   }
 
   if (!IsConstant) {
+    SmallVector<SDValue> Sequence;
+    BitVector UndefElements;
+    bool IsRepeated = Node->getRepeatedSequence(Sequence, &UndefElements);
+    unsigned SeqLen = Sequence.size();
+    unsigned NumUndefElts = UndefElements.count();
+
+    // When a BUILD_VECTOR consists of the same element (ignoring undefs),
+    // prefer emitting a broadcast instead of multiple insertions.
+    if (IsRepeated && SeqLen == 1) {
+      // Integer vectors benefit from splat unconditionally.
+      if (ResTy.isInteger())
+        return DAG.getSplatBuildVector(ResTy, DL, Sequence[0]);
+
+      // Only certain floating-point cases suffer performance regressions,
+      // exclude those specific cases.
+      bool IsSplatBetter = true;
+      if (NumUndefElts == NumElts - 1)
+        IsSplatBetter = false;
+      if (NumUndefElts == NumElts - 2 && !UndefElements[0])
+        IsSplatBetter = false;
+      if (ResTy == MVT::v8f32 && NumUndefElts == NumElts - 2 &&
+          ((!UndefElements[1] && !UndefElements[2]) ||
+           (!UndefElements[1] && !UndefElements[3]) ||
+           (!UndefElements[2] && !UndefElements[3])))
+        IsSplatBetter = false;
+
+      if (IsSplatBetter)
+        return DAG.getSplatBuildVector(ResTy, DL, Sequence[0]);
+    }
+
     // If the BUILD_VECTOR has a repeated pattern, use INSERT_VECTOR_ELT to fill
     // the sub-sequence of the vector and then broadcast the sub-sequence.
     //
@@ -3095,10 +3125,7 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
     // back to use INSERT_VECTOR_ELT to materialize the vector, because it
     // generates worse code in some cases. This could be further optimized
     // with more consideration.
-    SmallVector<SDValue> Sequence;
-    BitVector UndefElements;
-    if (Node->getRepeatedSequence(Sequence, &UndefElements) &&
-        UndefElements.count() == 0) {
+    if (IsRepeated && NumUndefElts == 0) {
       // Using LSX instructions to fill the sub-sequence of 256-bits vector,
       // because the high part can be simply treated as undef.
       SDValue Vector = DAG.getUNDEF(ResTy);
@@ -3110,7 +3137,6 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
       fillVector(Sequence, DAG, DL, Subtarget, FillVec, FillTy);
 
-      unsigned SeqLen = Sequence.size();
       unsigned SplatLen = NumElts / SeqLen;
       MVT SplatEltTy = MVT::getIntegerVT(VT.getScalarSizeInBits() * SeqLen);
       MVT SplatTy = MVT::getVectorVT(SplatEltTy, SplatLen);
