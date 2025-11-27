@@ -14,6 +14,7 @@
 
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -136,6 +137,8 @@ static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
   case OMPScheduleType::NomergeOrderedRuntime:
   case OMPScheduleType::NomergeOrderedAuto:
   case OMPScheduleType::NomergeOrderedTrapezoidal:
+  case OMPScheduleType::OrderedDistributeChunked:
+  case OMPScheduleType::OrderedDistribute:
     break;
   default:
     return false;
@@ -182,7 +185,7 @@ static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
 /// arguments.
 static OMPScheduleType
 getOpenMPBaseScheduleType(llvm::omp::ScheduleKind ClauseKind, bool HasChunks,
-                          bool HasSimdModifier) {
+                          bool HasSimdModifier, bool HasDistScheduleChunks) {
   // Currently, the default schedule it static.
   switch (ClauseKind) {
   case OMP_SCHEDULE_Default:
@@ -199,6 +202,9 @@ getOpenMPBaseScheduleType(llvm::omp::ScheduleKind ClauseKind, bool HasChunks,
   case OMP_SCHEDULE_Runtime:
     return HasSimdModifier ? OMPScheduleType::BaseRuntimeSimd
                            : OMPScheduleType::BaseRuntime;
+  case OMP_SCHEDULE_Distribute:
+    return HasDistScheduleChunks ? OMPScheduleType::BaseDistributeChunked
+                                 : OMPScheduleType::BaseDistribute;
   }
   llvm_unreachable("unhandled schedule clause argument");
 }
@@ -267,9 +273,10 @@ getOpenMPMonotonicityScheduleType(OMPScheduleType ScheduleType,
 static OMPScheduleType
 computeOpenMPScheduleType(ScheduleKind ClauseKind, bool HasChunks,
                           bool HasSimdModifier, bool HasMonotonicModifier,
-                          bool HasNonmonotonicModifier, bool HasOrderedClause) {
-  OMPScheduleType BaseSchedule =
-      getOpenMPBaseScheduleType(ClauseKind, HasChunks, HasSimdModifier);
+                          bool HasNonmonotonicModifier, bool HasOrderedClause,
+                          bool HasDistScheduleChunks) {
+  OMPScheduleType BaseSchedule = getOpenMPBaseScheduleType(
+      ClauseKind, HasChunks, HasSimdModifier, HasDistScheduleChunks);
   OMPScheduleType OrderedSchedule =
       getOpenMPOrderingScheduleType(BaseSchedule, HasOrderedClause);
   OMPScheduleType Result = getOpenMPMonotonicityScheduleType(
@@ -2465,7 +2472,8 @@ Value *OpenMPIRBuilder::createRuntimeShuffleFunction(InsertPointTy AllocaIP,
 
 void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
                                       Value *DstAddr, Type *ElemType,
-                                      Value *Offset, Type *ReductionArrayTy) {
+                                      Value *Offset, Type *ReductionArrayTy,
+                                      bool IsByRefElem) {
   uint64_t Size = M.getDataLayout().getTypeStoreSize(ElemType);
   // Create the loop over the big sized data.
   // ptr = (void*)Elem;
@@ -2547,10 +2555,10 @@ void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
   }
 }
 
-void OpenMPIRBuilder::emitReductionListCopy(
+Error OpenMPIRBuilder::emitReductionListCopy(
     InsertPointTy AllocaIP, CopyAction Action, Type *ReductionArrayTy,
     ArrayRef<ReductionInfo> ReductionInfos, Value *SrcBase, Value *DestBase,
-    CopyOptionsTy CopyOptions) {
+    ArrayRef<bool> IsByRef, CopyOptionsTy CopyOptions) {
   Type *IndexTy = Builder.getIndexTy(
       M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   Value *RemoteLaneOffset = CopyOptions.RemoteLaneOffset;
@@ -2560,6 +2568,7 @@ void OpenMPIRBuilder::emitReductionListCopy(
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
     Value *SrcElementAddr = nullptr;
+    AllocaInst *DestAlloca = nullptr;
     Value *DestElementAddr = nullptr;
     Value *DestElementPtrAddr = nullptr;
     // Should we shuffle in an element from a remote lane?
@@ -2579,14 +2588,18 @@ void OpenMPIRBuilder::emitReductionListCopy(
     DestElementPtrAddr = Builder.CreateInBoundsGEP(
         ReductionArrayTy, DestBase,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
+    bool IsByRefElem = (!IsByRef.empty() && IsByRef[En.index()]);
     switch (Action) {
     case CopyAction::RemoteLaneToThread: {
       InsertPointTy CurIP = Builder.saveIP();
       Builder.restoreIP(AllocaIP);
-      AllocaInst *DestAlloca = Builder.CreateAlloca(RI.ElementType, nullptr,
-                                                    ".omp.reduction.element");
+
+      Type *DestAllocaType =
+          IsByRefElem ? RI.ByRefAllocatedType : RI.ElementType;
+      DestAlloca = Builder.CreateAlloca(DestAllocaType, nullptr,
+                                        ".omp.reduction.element");
       DestAlloca->setAlignment(
-          M.getDataLayout().getPrefTypeAlign(RI.ElementType));
+          M.getDataLayout().getPrefTypeAlign(DestAllocaType));
       DestElementAddr = DestAlloca;
       DestElementAddr =
           Builder.CreateAddrSpaceCast(DestElementAddr, Builder.getPtrTy(),
@@ -2606,8 +2619,57 @@ void OpenMPIRBuilder::emitReductionListCopy(
     // Now that all active lanes have read the element in the
     // Reduce list, shuffle over the value from the remote lane.
     if (ShuffleInElement) {
-      shuffleAndStore(AllocaIP, SrcElementAddr, DestElementAddr, RI.ElementType,
-                      RemoteLaneOffset, ReductionArrayTy);
+      Type *ShuffleType = RI.ElementType;
+      Value *ShuffleSrcAddr = SrcElementAddr;
+      Value *ShuffleDestAddr = DestElementAddr;
+      AllocaInst *LocalStorage = nullptr;
+
+      if (IsByRefElem) {
+        assert(RI.ByRefElementType && "Expected by-ref element type to be set");
+        assert(RI.ByRefAllocatedType &&
+               "Expected by-ref allocated type to be set");
+        // For by-ref reductions, we need to copy from the remote lane the
+        // actual value of the partial reduction computed by that remote lane;
+        // rather than, for example, a pointer to that data or, even worse, a
+        // pointer to the descriptor of the by-ref reduction element.
+        ShuffleType = RI.ByRefElementType;
+
+        InsertPointOrErrorTy GenResult =
+            RI.DataPtrPtrGen(Builder.saveIP(), ShuffleSrcAddr, ShuffleSrcAddr);
+
+        if (!GenResult)
+          return GenResult.takeError();
+
+        ShuffleSrcAddr = Builder.CreateLoad(Builder.getPtrTy(), ShuffleSrcAddr);
+
+        {
+          InsertPointTy OldIP = Builder.saveIP();
+          Builder.restoreIP(AllocaIP);
+
+          LocalStorage = Builder.CreateAlloca(ShuffleType);
+          Builder.restoreIP(OldIP);
+          ShuffleDestAddr = LocalStorage;
+        }
+      }
+
+      shuffleAndStore(AllocaIP, ShuffleSrcAddr, ShuffleDestAddr, ShuffleType,
+                      RemoteLaneOffset, ReductionArrayTy, IsByRefElem);
+
+      if (IsByRefElem) {
+        Value *GEP;
+        InsertPointOrErrorTy GenResult =
+            RI.DataPtrPtrGen(Builder.saveIP(),
+                             Builder.CreatePointerBitCastOrAddrSpaceCast(
+                                 DestAlloca, Builder.getPtrTy(), ".ascast"),
+                             GEP);
+
+        if (!GenResult)
+          return GenResult.takeError();
+
+        Builder.CreateStore(Builder.CreatePointerBitCastOrAddrSpaceCast(
+                                LocalStorage, Builder.getPtrTy(), ".ascast"),
+                            GEP);
+      }
     } else {
       switch (RI.EvaluationKind) {
       case EvalKind::Scalar: {
@@ -2658,11 +2720,13 @@ void OpenMPIRBuilder::emitReductionListCopy(
       Builder.CreateStore(CastDestAddr, DestElementPtrAddr);
     }
   }
+
+  return Error::success();
 }
 
 Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
     const LocationDescription &Loc, ArrayRef<ReductionInfo> ReductionInfos,
-    AttributeList FuncAttrs) {
+    AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
   InsertPointTy SavedIP = Builder.saveIP();
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
@@ -2743,7 +2807,9 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
     // memory.
     //
     const ReductionInfo &RI = En.value();
-    unsigned RealTySize = M.getDataLayout().getTypeAllocSize(RI.ElementType);
+    bool IsByRefElem = !IsByRef.empty() && IsByRef[En.index()];
+    unsigned RealTySize = M.getDataLayout().getTypeAllocSize(
+        IsByRefElem ? RI.ByRefElementType : RI.ElementType);
     for (unsigned TySize = 4; TySize > 0 && RealTySize > 0; TySize /= 2) {
       Type *CType = Builder.getIntNTy(TySize * 8);
 
@@ -2806,6 +2872,17 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
                                      ConstantInt::get(IndexTy, En.index())});
       // elemptr = ((CopyType*)(elemptrptr)) + I
       Value *ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtrPtr);
+
+      if (IsByRefElem) {
+        InsertPointOrErrorTy GenRes =
+            RI.DataPtrPtrGen(Builder.saveIP(), ElemPtr, ElemPtr);
+
+        if (!GenRes)
+          return GenRes.takeError();
+
+        ElemPtr = Builder.CreateLoad(Builder.getPtrTy(), ElemPtr);
+      }
+
       if (NumIters > 1)
         ElemPtr = Builder.CreateGEP(Builder.getInt32Ty(), ElemPtr, Cnt);
 
@@ -2861,6 +2938,17 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
       Value *TargetElemPtrVal =
           Builder.CreateLoad(Builder.getPtrTy(), TargetElemPtrPtr);
       Value *TargetElemPtr = TargetElemPtrVal;
+
+      if (IsByRefElem) {
+        InsertPointOrErrorTy GenRes =
+            RI.DataPtrPtrGen(Builder.saveIP(), TargetElemPtr, TargetElemPtr);
+
+        if (!GenRes)
+          return GenRes.takeError();
+
+        TargetElemPtr = Builder.CreateLoad(Builder.getPtrTy(), TargetElemPtr);
+      }
+
       if (NumIters > 1)
         TargetElemPtr =
             Builder.CreateGEP(Builder.getInt32Ty(), TargetElemPtr, Cnt);
@@ -2895,9 +2983,9 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
   return WcFunc;
 }
 
-Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
+Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
-    AttributeList FuncAttrs) {
+    AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy =
       FunctionType::get(Builder.getVoidTy(),
@@ -2976,9 +3064,13 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
   // This loop iterates through the list of reduce elements and copies,
   // element by element, from a remote lane in the warp to RemoteReduceList,
   // hosted on the thread's stack.
-  emitReductionListCopy(
+  Error EmitRedLsCpRes = emitReductionListCopy(
       AllocaIP, CopyAction::RemoteLaneToThread, RedListArrayTy, ReductionInfos,
-      ReduceList, RemoteListAddrCast, {RemoteLaneOffset, nullptr, nullptr});
+      ReduceList, RemoteListAddrCast, IsByRef,
+      {RemoteLaneOffset, nullptr, nullptr});
+
+  if (EmitRedLsCpRes)
+    return EmitRedLsCpRes;
 
   // The actions to be performed on the Remote Reduce list is dependent
   // on the algorithm version.
@@ -3046,8 +3138,14 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
   Builder.CreateCondBr(CondCopy, CpyThenBB, CpyElseBB);
 
   emitBlock(CpyThenBB, Builder.GetInsertBlock()->getParent());
-  emitReductionListCopy(AllocaIP, CopyAction::ThreadCopy, RedListArrayTy,
-                        ReductionInfos, RemoteListAddrCast, ReduceList);
+
+  EmitRedLsCpRes = emitReductionListCopy(
+      AllocaIP, CopyAction::ThreadCopy, RedListArrayTy, ReductionInfos,
+      RemoteListAddrCast, ReduceList, IsByRef);
+
+  if (EmitRedLsCpRes)
+    return EmitRedLsCpRes;
+
   Builder.CreateBr(CpyMergeBB);
 
   emitBlock(CpyElseBB, Builder.GetInsertBlock()->getParent());
@@ -3452,7 +3550,8 @@ std::string OpenMPIRBuilder::getReductionFuncName(StringRef Name) const {
 
 Expected<Function *> OpenMPIRBuilder::createReductionFunction(
     StringRef ReducerName, ArrayRef<ReductionInfo> ReductionInfos,
-    ReductionGenCBKind ReductionGenCBKind, AttributeList FuncAttrs) {
+    ArrayRef<bool> IsByRef, ReductionGenCBKind ReductionGenCBKind,
+    AttributeList FuncAttrs) {
   auto *FuncTy = FunctionType::get(Builder.getVoidTy(),
                                    {Builder.getPtrTy(), Builder.getPtrTy()},
                                    /* IsVarArg */ false);
@@ -3513,8 +3612,14 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
       LHSPtrs.emplace_back(LHSPtr);
       RHSPtrs.emplace_back(RHSPtr);
     } else {
-      Value *LHS = Builder.CreateLoad(RI.ElementType, LHSPtr);
-      Value *RHS = Builder.CreateLoad(RI.ElementType, RHSPtr);
+      Value *LHS = LHSPtr;
+      Value *RHS = RHSPtr;
+
+      if (!IsByRef.empty() && !IsByRef[En.index()]) {
+        LHS = Builder.CreateLoad(RI.ElementType, LHSPtr);
+        RHS = Builder.CreateLoad(RI.ElementType, RHSPtr);
+      }
+
       Value *Reduced;
       InsertPointOrErrorTy AfterIP =
           RI.ReductionGen(Builder.saveIP(), LHS, RHS, Reduced);
@@ -3524,7 +3629,9 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
         return ReductionFunc;
 
       Builder.restoreIP(*AfterIP);
-      Builder.CreateStore(Reduced, LHSPtr);
+
+      if (!IsByRef.empty() && !IsByRef[En.index()])
+        Builder.CreateStore(Reduced, LHSPtr);
     }
   }
 
@@ -3577,9 +3684,9 @@ checkReductionInfos(ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
-    bool IsNoWait, bool IsTeamsReduction, ReductionGenCBKind ReductionGenCBKind,
-    std::optional<omp::GV> GridValue, unsigned ReductionBufNum,
-    Value *SrcLocInfo) {
+    ArrayRef<bool> IsByRef, bool IsNoWait, bool IsTeamsReduction,
+    ReductionGenCBKind ReductionGenCBKind, std::optional<omp::GV> GridValue,
+    unsigned ReductionBufNum, Value *SrcLocInfo) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
   Builder.restoreIP(CodeGenIP);
@@ -3615,9 +3722,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   FuncAttrs = FuncAttrs.addFnAttributes(Ctx, AttrBldr);
 
   CodeGenIP = Builder.saveIP();
-  Expected<Function *> ReductionResult =
-      createReductionFunction(Builder.GetInsertBlock()->getParent()->getName(),
-                              ReductionInfos, ReductionGenCBKind, FuncAttrs);
+  Expected<Function *> ReductionResult = createReductionFunction(
+      Builder.GetInsertBlock()->getParent()->getName(), ReductionInfos, IsByRef,
+      ReductionGenCBKind, FuncAttrs);
   if (!ReductionResult)
     return ReductionResult.takeError();
   Function *ReductionFunc = *ReductionResult;
@@ -3656,15 +3763,25 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     Value *ElemPtr = Builder.CreateInBoundsGEP(
         RedArrayTy, ReductionList,
         {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, En.index())});
+
+    Value *PrivateVar = RI.PrivateVariable;
+    bool IsByRefElem = !IsByRef.empty() && IsByRef[En.index()];
+    if (IsByRefElem)
+      PrivateVar = Builder.CreateLoad(RI.ElementType, PrivateVar);
+
     Value *CastElem =
-        Builder.CreatePointerBitCastOrAddrSpaceCast(RI.PrivateVariable, PtrTy);
+        Builder.CreatePointerBitCastOrAddrSpaceCast(PrivateVar, PtrTy);
     Builder.CreateStore(CastElem, ElemPtr);
   }
   CodeGenIP = Builder.saveIP();
-  Function *SarFunc =
-      emitShuffleAndReduceFunction(ReductionInfos, ReductionFunc, FuncAttrs);
+  Expected<Function *> SarFunc = emitShuffleAndReduceFunction(
+      ReductionInfos, ReductionFunc, FuncAttrs, IsByRef);
+
+  if (!SarFunc)
+    return SarFunc.takeError();
+
   Expected<Function *> CopyResult =
-      emitInterWarpCopyFunction(Loc, ReductionInfos, FuncAttrs);
+      emitInterWarpCopyFunction(Loc, ReductionInfos, FuncAttrs, IsByRef);
   if (!CopyResult)
     return CopyResult.takeError();
   Function *WcFunc = *CopyResult;
@@ -3684,7 +3801,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
       Builder.getInt64(MaxDataSize * ReductionInfos.size());
   if (!IsTeamsReduction) {
     Value *SarFuncCast =
-        Builder.CreatePointerBitCastOrAddrSpaceCast(SarFunc, FuncPtrTy);
+        Builder.CreatePointerBitCastOrAddrSpaceCast(*SarFunc, FuncPtrTy);
     Value *WcFuncCast =
         Builder.CreatePointerBitCastOrAddrSpaceCast(WcFunc, FuncPtrTy);
     Value *Args[] = {SrcLocInfo, ReductionDataSize, RL, SarFuncCast,
@@ -3716,7 +3833,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
                       Builder.getInt32(ReductionBufNum),
                       ReductionDataSize,
                       RL,
-                      SarFunc,
+                      *SarFunc,
                       WcFunc,
                       LtGCFunc,
                       LtGRFunc,
@@ -3743,7 +3860,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   // Add emission of __kmpc_end_reduce{_nowait}(<gtid>);
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
-    Value *LHS = RI.Variable;
+    Type *ValueType = RI.ElementType;
+    Value *RedValue = RI.Variable;
     Value *RHS =
         Builder.CreatePointerBitCastOrAddrSpaceCast(RI.PrivateVariable, PtrTy);
 
@@ -3754,7 +3872,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
 
       // Fix the CallBack code genereated to use the correct Values for the LHS
       // and RHS
-      LHSPtr->replaceUsesWithIf(LHS, [ReductionFunc](const Use &U) {
+      LHSPtr->replaceUsesWithIf(RedValue, [ReductionFunc](const Use &U) {
         return cast<Instruction>(U.getUser())->getParent()->getParent() ==
                ReductionFunc;
       });
@@ -3763,15 +3881,21 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
                ReductionFunc;
       });
     } else {
-      Value *LHSValue = Builder.CreateLoad(RI.ElementType, LHS, "final.lhs");
-      Value *RHSValue = Builder.CreateLoad(RI.ElementType, RHS, "final.rhs");
+      if (IsByRef.empty() || !IsByRef[En.index()]) {
+        RedValue = Builder.CreateLoad(ValueType, RI.Variable,
+                                      "red.value." + Twine(En.index()));
+      }
+      Value *PrivateRedValue = Builder.CreateLoad(
+          ValueType, RHS, "red.private.value" + Twine(En.index()));
       Value *Reduced;
       InsertPointOrErrorTy AfterIP =
-          RI.ReductionGen(Builder.saveIP(), RHSValue, LHSValue, Reduced);
+          RI.ReductionGen(Builder.saveIP(), RedValue, PrivateRedValue, Reduced);
       if (!AfterIP)
         return AfterIP.takeError();
       Builder.restoreIP(*AfterIP);
-      Builder.CreateStore(Reduced, LHS, false);
+
+      if (!IsByRef.empty() && !IsByRef[En.index()])
+        Builder.CreateStore(Reduced, RI.Variable);
     }
   }
   emitBlock(ExitBB, CurFunc);
@@ -3872,7 +3996,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductions(
   assert(ReductionInfos.size() == IsByRef.size());
   if (Config.isGPU())
     return createReductionsGPU(Loc, AllocaIP, Builder.saveIP(), ReductionInfos,
-                               IsNoWait, IsTeamsReduction);
+                               IsByRef, IsNoWait, IsTeamsReduction);
 
   checkReductionInfos(ReductionInfos, /*IsGPU*/ false);
 
@@ -4689,7 +4813,8 @@ static FunctionCallee getKmpcForStaticInitForType(Type *Ty, Module &M,
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
     DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
-    WorksharingLoopType LoopType, bool NeedsBarrier) {
+    WorksharingLoopType LoopType, bool NeedsBarrier, bool HasDistSchedule,
+    OMPScheduleType DistScheduleSchedType) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
   assert(!isConflictIP(AllocaIP, CLI->getPreheaderIP()) &&
          "Require dedicated allocate IP");
@@ -4745,15 +4870,29 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
 
   // Call the "init" function and update the trip count of the loop with the
   // value it produced.
-  SmallVector<Value *, 10> Args(
-      {SrcLoc, ThreadNum, SchedulingType, PLastIter, PLowerBound, PUpperBound});
-  if (LoopType == WorksharingLoopType::DistributeForStaticLoop) {
-    Value *PDistUpperBound =
-        Builder.CreateAlloca(IVTy, nullptr, "p.distupperbound");
-    Args.push_back(PDistUpperBound);
+  auto BuildInitCall = [LoopType, SrcLoc, ThreadNum, PLastIter, PLowerBound,
+                        PUpperBound, IVTy, PStride, One, Zero, StaticInit,
+                        this](Value *SchedulingType, auto &Builder) {
+    SmallVector<Value *, 10> Args({SrcLoc, ThreadNum, SchedulingType, PLastIter,
+                                   PLowerBound, PUpperBound});
+    if (LoopType == WorksharingLoopType::DistributeForStaticLoop) {
+      Value *PDistUpperBound =
+          Builder.CreateAlloca(IVTy, nullptr, "p.distupperbound");
+      Args.push_back(PDistUpperBound);
+    }
+    Args.append({PStride, One, Zero});
+    createRuntimeFunctionCall(StaticInit, Args);
+  };
+  BuildInitCall(SchedulingType, Builder);
+  if (HasDistSchedule &&
+      LoopType != WorksharingLoopType::DistributeStaticLoop) {
+    Constant *DistScheduleSchedType = ConstantInt::get(
+        I32Type, static_cast<int>(omp::OMPScheduleType::OrderedDistribute));
+    // We want to emit a second init function call for the dist_schedule clause
+    // to the Distribute construct. This should only be done however if a
+    // Workshare Loop is nested within a Distribute Construct
+    BuildInitCall(DistScheduleSchedType, Builder);
   }
-  Args.append({PStride, One, Zero});
-  createRuntimeFunctionCall(StaticInit, Args);
   Value *LowerBound = Builder.CreateLoad(IVTy, PLowerBound);
   Value *InclusiveUpperBound = Builder.CreateLoad(IVTy, PUpperBound);
   Value *TripCountMinusOne = Builder.CreateSub(InclusiveUpperBound, LowerBound);
@@ -4792,14 +4931,44 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
   return AfterIP;
 }
 
+static void addAccessGroupMetadata(BasicBlock *Block, MDNode *AccessGroup,
+                                   LoopInfo &LI);
+static void addLoopMetadata(CanonicalLoopInfo *Loop,
+                            ArrayRef<Metadata *> Properties);
+
+static void applyParallelAccessesMetadata(CanonicalLoopInfo *CLI,
+                                          LLVMContext &Ctx, Loop *Loop,
+                                          LoopInfo &LoopInfo,
+                                          SmallVector<Metadata *> &LoopMDList) {
+  SmallSet<BasicBlock *, 8> Reachable;
+
+  // Get the basic blocks from the loop in which memref instructions
+  // can be found.
+  // TODO: Generalize getting all blocks inside a CanonicalizeLoopInfo,
+  // preferably without running any passes.
+  for (BasicBlock *Block : Loop->getBlocks()) {
+    if (Block == CLI->getCond() || Block == CLI->getHeader())
+      continue;
+    Reachable.insert(Block);
+  }
+
+  // Add access group metadata to memory-access instructions.
+  MDNode *AccessGroup = MDNode::getDistinct(Ctx, {});
+  for (BasicBlock *BB : Reachable)
+    addAccessGroupMetadata(BB, AccessGroup, LoopInfo);
+  // TODO:  If the loop has existing parallel access metadata, have
+  // to combine two lists.
+  LoopMDList.push_back(MDNode::get(
+      Ctx, {MDString::get(Ctx, "llvm.loop.parallel_accesses"), AccessGroup}));
+}
+
 OpenMPIRBuilder::InsertPointOrErrorTy
-OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
-                                                 CanonicalLoopInfo *CLI,
-                                                 InsertPointTy AllocaIP,
-                                                 bool NeedsBarrier,
-                                                 Value *ChunkSize) {
+OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(
+    DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
+    bool NeedsBarrier, Value *ChunkSize, OMPScheduleType SchedType,
+    Value *DistScheduleChunkSize, OMPScheduleType DistScheduleSchedType) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
-  assert(ChunkSize && "Chunk size is required");
+  assert(ChunkSize || DistScheduleChunkSize && "Chunk size is required");
 
   LLVMContext &Ctx = CLI->getFunction()->getContext();
   Value *IV = CLI->getIndVar();
@@ -4812,6 +4981,18 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Constant *Zero = ConstantInt::get(InternalIVTy, 0);
   Constant *One = ConstantInt::get(InternalIVTy, 1);
+
+  Function *F = CLI->getFunction();
+  FunctionAnalysisManager FAM;
+  FAM.registerPass([]() { return DominatorTreeAnalysis(); });
+  FAM.registerPass([]() { return PassInstrumentationAnalysis(); });
+  LoopAnalysis LIA;
+  LoopInfo &&LI = LIA.run(*F, FAM);
+  Loop *L = LI.getLoopFor(CLI->getHeader());
+  SmallVector<Metadata *> LoopMDList;
+  if (ChunkSize || DistScheduleChunkSize)
+    applyParallelAccessesMetadata(CLI, Ctx, L, LI, LoopMDList);
+  addLoopMetadata(CLI, LoopMDList);
 
   // Declare useful OpenMP runtime functions.
   FunctionCallee StaticInit =
@@ -4835,13 +5016,18 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
   Builder.SetCurrentDebugLocation(DL);
 
   // TODO: Detect overflow in ubsan or max-out with current tripcount.
-  Value *CastedChunkSize =
-      Builder.CreateZExtOrTrunc(ChunkSize, InternalIVTy, "chunksize");
+  Value *CastedChunkSize = Builder.CreateZExtOrTrunc(
+      ChunkSize ? ChunkSize : Zero, InternalIVTy, "chunksize");
+  Value *CastedDistScheduleChunkSize = Builder.CreateZExtOrTrunc(
+      DistScheduleChunkSize ? DistScheduleChunkSize : Zero, InternalIVTy,
+      "distschedulechunksize");
   Value *CastedTripCount =
       Builder.CreateZExt(OrigTripCount, InternalIVTy, "tripcount");
 
-  Constant *SchedulingType = ConstantInt::get(
-      I32Type, static_cast<int>(OMPScheduleType::UnorderedStaticChunked));
+  Constant *SchedulingType =
+      ConstantInt::get(I32Type, static_cast<int>(SchedType));
+  Constant *DistSchedulingType =
+      ConstantInt::get(I32Type, static_cast<int>(DistScheduleSchedType));
   Builder.CreateStore(Zero, PLowerBound);
   Value *OrigUpperBound = Builder.CreateSub(CastedTripCount, One);
   Builder.CreateStore(OrigUpperBound, PUpperBound);
@@ -4853,12 +5039,26 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
   Constant *SrcLocStr = getOrCreateSrcLocStr(DL, SrcLocStrSize);
   Value *SrcLoc = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
   Value *ThreadNum = getOrCreateThreadID(SrcLoc);
-  createRuntimeFunctionCall(
-      StaticInit, {/*loc=*/SrcLoc, /*global_tid=*/ThreadNum,
-                   /*schedtype=*/SchedulingType, /*plastiter=*/PLastIter,
-                   /*plower=*/PLowerBound, /*pupper=*/PUpperBound,
-                   /*pstride=*/PStride, /*incr=*/One,
-                   /*chunk=*/CastedChunkSize});
+  auto BuildInitCall = [StaticInit, SrcLoc, ThreadNum, PLastIter, PLowerBound,
+                        PUpperBound, PStride, One,
+                        this](Value *SchedulingType, Value *ChunkSize,
+                              auto &Builder) {
+    createRuntimeFunctionCall(
+        StaticInit, {/*loc=*/SrcLoc, /*global_tid=*/ThreadNum,
+                     /*schedtype=*/SchedulingType, /*plastiter=*/PLastIter,
+                     /*plower=*/PLowerBound, /*pupper=*/PUpperBound,
+                     /*pstride=*/PStride, /*incr=*/One,
+                     /*chunk=*/ChunkSize});
+  };
+  BuildInitCall(SchedulingType, CastedChunkSize, Builder);
+  if (DistScheduleSchedType != OMPScheduleType::None &&
+      SchedType != OMPScheduleType::OrderedDistributeChunked &&
+      SchedType != OMPScheduleType::OrderedDistribute) {
+    // We want to emit a second init function call for the dist_schedule clause
+    // to the Distribute construct. This should only be done however if a
+    // Workshare Loop is nested within a Distribute Construct
+    BuildInitCall(DistSchedulingType, CastedDistScheduleChunkSize, Builder);
+  }
 
   // Load values written by the "init" function.
   Value *FirstChunkStart =
@@ -5185,31 +5385,47 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
     bool NeedsBarrier, omp::ScheduleKind SchedKind, Value *ChunkSize,
     bool HasSimdModifier, bool HasMonotonicModifier,
     bool HasNonmonotonicModifier, bool HasOrderedClause,
-    WorksharingLoopType LoopType, bool NoLoop) {
+    WorksharingLoopType LoopType, bool NoLoop, bool HasDistSchedule,
+    Value *DistScheduleChunkSize) {
   if (Config.isTargetDevice())
     return applyWorkshareLoopTarget(DL, CLI, AllocaIP, LoopType, NoLoop);
   OMPScheduleType EffectiveScheduleType = computeOpenMPScheduleType(
       SchedKind, ChunkSize, HasSimdModifier, HasMonotonicModifier,
-      HasNonmonotonicModifier, HasOrderedClause);
+      HasNonmonotonicModifier, HasOrderedClause, DistScheduleChunkSize);
 
   bool IsOrdered = (EffectiveScheduleType & OMPScheduleType::ModifierOrdered) ==
                    OMPScheduleType::ModifierOrdered;
+  OMPScheduleType DistScheduleSchedType = OMPScheduleType::None;
+  if (HasDistSchedule) {
+    DistScheduleSchedType = DistScheduleChunkSize
+                                ? OMPScheduleType::OrderedDistributeChunked
+                                : OMPScheduleType::OrderedDistribute;
+  }
   switch (EffectiveScheduleType & ~OMPScheduleType::ModifierMask) {
   case OMPScheduleType::BaseStatic:
-    assert(!ChunkSize && "No chunk size with static-chunked schedule");
-    if (IsOrdered)
+  case OMPScheduleType::BaseDistribute:
+    assert(!ChunkSize || !DistScheduleChunkSize &&
+                             "No chunk size with static-chunked schedule");
+    if (IsOrdered && !HasDistSchedule)
       return applyDynamicWorkshareLoop(DL, CLI, AllocaIP, EffectiveScheduleType,
                                        NeedsBarrier, ChunkSize);
     // FIXME: Monotonicity ignored?
-    return applyStaticWorkshareLoop(DL, CLI, AllocaIP, LoopType, NeedsBarrier);
+    if (DistScheduleChunkSize)
+      return applyStaticChunkedWorkshareLoop(
+          DL, CLI, AllocaIP, NeedsBarrier, ChunkSize, EffectiveScheduleType,
+          DistScheduleChunkSize, DistScheduleSchedType);
+    return applyStaticWorkshareLoop(DL, CLI, AllocaIP, LoopType, NeedsBarrier,
+                                    HasDistSchedule);
 
   case OMPScheduleType::BaseStaticChunked:
-    if (IsOrdered)
+  case OMPScheduleType::BaseDistributeChunked:
+    if (IsOrdered && !HasDistSchedule)
       return applyDynamicWorkshareLoop(DL, CLI, AllocaIP, EffectiveScheduleType,
                                        NeedsBarrier, ChunkSize);
     // FIXME: Monotonicity ignored?
-    return applyStaticChunkedWorkshareLoop(DL, CLI, AllocaIP, NeedsBarrier,
-                                           ChunkSize);
+    return applyStaticChunkedWorkshareLoop(
+        DL, CLI, AllocaIP, NeedsBarrier, ChunkSize, EffectiveScheduleType,
+        DistScheduleChunkSize, DistScheduleSchedType);
 
   case OMPScheduleType::BaseRuntime:
   case OMPScheduleType::BaseAuto:
@@ -5803,8 +6019,8 @@ static void addLoopMetadata(CanonicalLoopInfo *Loop,
 }
 
 /// Attach llvm.access.group metadata to the memref instructions of \p Block
-static void addSimdMetadata(BasicBlock *Block, MDNode *AccessGroup,
-                            LoopInfo &LI) {
+static void addAccessGroupMetadata(BasicBlock *Block, MDNode *AccessGroup,
+                                   LoopInfo &LI) {
   for (Instruction &I : *Block) {
     if (I.mayReadOrWriteMemory()) {
       // TODO: This instruction may already have access group from
@@ -5994,16 +6210,8 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
   // dependences of 'safelen' iterations are possible.
   // If clause order(concurrent) is specified then the memory instructions
   // are marked parallel even if 'safelen' is finite.
-  if ((Safelen == nullptr) || (Order == OrderKind::OMP_ORDER_concurrent)) {
-    // Add access group metadata to memory-access instructions.
-    MDNode *AccessGroup = MDNode::getDistinct(Ctx, {});
-    for (BasicBlock *BB : Reachable)
-      addSimdMetadata(BB, AccessGroup, LI);
-    // TODO:  If the loop has existing parallel access metadata, have
-    // to combine two lists.
-    LoopMDList.push_back(MDNode::get(
-        Ctx, {MDString::get(Ctx, "llvm.loop.parallel_accesses"), AccessGroup}));
-  }
+  if ((Safelen == nullptr) || (Order == OrderKind::OMP_ORDER_concurrent))
+    applyParallelAccessesMetadata(CanonicalLoop, Ctx, L, LI, LoopMDList);
 
   // FIXME: the IF clause shares a loop backedge for the SIMD and non-SIMD
   // versions so we can't add the loop attributes in that case.

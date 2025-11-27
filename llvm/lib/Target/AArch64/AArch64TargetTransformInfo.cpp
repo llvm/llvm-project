@@ -375,8 +375,13 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
-  return (K == TargetTransformInfo::RGK_FixedWidthVector &&
-          ST->isNeonAvailable());
+
+  if (K == TargetTransformInfo::RGK_FixedWidthVector && ST->isNeonAvailable())
+    return true;
+
+  return K == TargetTransformInfo::RGK_ScalableVector &&
+         ST->isSVEorStreamingSVEAvailable() &&
+         !ST->disableMaximizeScalableBandwidth();
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper
@@ -6062,7 +6067,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   if (LT.second.isFixedLengthVector() &&
       LT.second.getVectorNumElements() == Mask.size() &&
       (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
-      (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+      (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused, Unused) ||
        isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        isREVMask(Mask, LT.second.getScalarSizeInBits(),
                  LT.second.getVectorNumElements(), 16) ||
