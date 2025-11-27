@@ -47,6 +47,7 @@ define i16 @sqxtn_known_bits(<4 x i32> %x) {
 ;; ============================================================================
 ;; Tests for computeKnownBits
 ;; These verify that known bits analysis enables optimizations
+;; TRUNCATE_SSAT_S: Signed to Signed Saturating Truncate (sqxtn)
 ;; ============================================================================
 
 ; Constant 32512 = 0b0111111110000000 has known zero lower bits
@@ -76,6 +77,51 @@ define i1 @sqxtn_known_nonnegative(<4 x i32> %x) {
   %cmp = icmp slt i16 %extract, 0
   ret i1 %cmp
 }
+
+;; ============================================================================
+;; TRUNCATE_SSAT_U: Signed to Unsigned Saturating Truncate (sqxtun)
+;; ============================================================================
+
+define i16 @sqxtun_known_zero_lower_bits(<4 x i32> %x) {
+; CHECK-LABEL: sqxtun_known_zero_lower_bits:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
+  %masked = and <4 x i32> %x, <i32 32512, i32 32512, i32 32512, i32 32512>
+  %trunc = call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> %masked)
+  %extract = extractelement <4 x i16> %trunc, i32 0
+  %and = and i16 %extract, 255
+  ret i16 %and
+}
+
+define i16 @sqxtun_known_zero_upper_bits(<4 x i32> %x) {
+; CHECK-LABEL: sqxtun_known_zero_upper_bits:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
+  %masked = and <4 x i32> %x, <i32 127, i32 127, i32 127, i32 127>
+  %trunc = call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> %masked)
+  %extract = extractelement <4 x i16> %trunc, i32 0
+  %shift = lshr i16 %extract, 7
+  ret i16 %shift
+}
+
+;; ============================================================================
+;; TRUNCATE_USAT_U: Unsigned to Unsigned Saturating Truncate (uqxtn)
+;; ============================================================================
+
+define i8 @uqxtn_known_zero_upper_bits(<8 x i16> %x) {
+; CHECK-LABEL: uqxtn_known_zero_upper_bits:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ret
+  %masked = and <8 x i16> %x, <i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63, i16 63>
+  %trunc = call <8 x i8> @llvm.aarch64.neon.uqxtn.v8i8(<8 x i16> %masked)
+  %extract = extractelement <8 x i8> %trunc, i32 0
+  %shift = lshr i8 %extract, 6
+  ret i8 %shift
+}
+
 
 declare <4 x i16> @llvm.aarch64.neon.sqxtn.v4i16(<4 x i32>)
 declare <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32>)
