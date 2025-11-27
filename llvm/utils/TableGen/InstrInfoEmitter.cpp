@@ -162,21 +162,29 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
         Res += ", ";
       } else if (OpR->isSubClassOf("RegisterClass"))
         Res += getQualifiedName(OpR) + "RegClassID, ";
-      else if (OpR->isSubClassOf("PointerLikeRegClass"))
-        Res += utostr(OpR->getValueAsInt("RegClassKind")) + ", ";
-      else
+      else if (OpR->isSubClassOf("PointerLikeRegClass")) {
+        if (Inst.isPseudo) {
+          // TODO: Verify this is a fixed pseudo
+          PrintError(Inst.TheDef,
+                     "missing target override for pseudoinstruction "
+                     "using PointerLikeRegClass");
+          PrintNote(OpR->getLoc(),
+                    "target should define equivalent instruction "
+                    "with RegisterClassLike replacement; (use "
+                    "RemapAllTargetPseudoPointerOperands?)");
+        } else {
+          PrintError(Inst.TheDef,
+                     "non-pseudoinstruction user of PointerLikeRegClass");
+        }
+      } else
         // -1 means the operand does not have a fixed register class.
         Res += "-1, ";
 
       // Fill in applicable flags.
       Res += "0";
 
-      if (OpR->isSubClassOf("RegClassByHwMode")) {
+      if (OpR->isSubClassOf("RegClassByHwMode"))
         Res += "|(1<<MCOI::LookupRegClassByHwMode)";
-      } else if (OpR->isSubClassOf("PointerLikeRegClass")) {
-        // Ptr value whose register class is resolved via callback.
-        Res += "|(1<<MCOI::LookupPtrRegClass)";
-      }
 
       // Predicate operands.  Check to see if the original unexpanded operand
       // was of type PredicateOp.
@@ -943,24 +951,23 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     }
   }
 
-  OS << "#if defined(GET_INSTRINFO_MC_DESC) || "
-        "defined(GET_INSTRINFO_CTOR_DTOR)\n";
+  {
+    IfGuardEmitter IfGuard(
+        OS,
+        "defined(GET_INSTRINFO_MC_DESC) || defined(GET_INSTRINFO_CTOR_DTOR)");
+    NamespaceEmitter NS(OS, "llvm");
 
-  OS << "namespace llvm {\n\n";
-
-  OS << "struct " << TargetName << "InstrTable {\n";
-  OS << "  MCInstrDesc Insts[" << NumberedInstructions.size() << "];\n";
-  OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCOperandInfo), "
-        "\"Unwanted padding between Insts and OperandInfo\");\n";
-  OS << "  MCOperandInfo OperandInfo[" << OperandInfoSize << "];\n";
-  OS << "  static_assert(alignof(MCOperandInfo) >= alignof(MCPhysReg), "
-        "\"Unwanted padding between OperandInfo and ImplicitOps\");\n";
-  OS << "  MCPhysReg ImplicitOps[" << std::max(ImplicitListSize, 1U) << "];\n";
-  OS << "};\n\n";
-
-  OS << "} // end namespace llvm\n";
-  OS << "#endif // defined(GET_INSTRINFO_MC_DESC) || "
-        "defined(GET_INSTRINFO_CTOR_DTOR)\n\n";
+    OS << "struct " << TargetName << "InstrTable {\n";
+    OS << "  MCInstrDesc Insts[" << NumberedInstructions.size() << "];\n";
+    OS << "  static_assert(alignof(MCInstrDesc) >= alignof(MCOperandInfo), "
+          "\"Unwanted padding between Insts and OperandInfo\");\n";
+    OS << "  MCOperandInfo OperandInfo[" << OperandInfoSize << "];\n";
+    OS << "  static_assert(alignof(MCOperandInfo) >= alignof(MCPhysReg), "
+          "\"Unwanted padding between OperandInfo and ImplicitOps\");\n";
+    OS << "  MCPhysReg ImplicitOps[" << std::max(ImplicitListSize, 1U)
+       << "];\n";
+    OS << "};";
+  }
 
   const CodeGenRegBank &RegBank = Target.getRegBank();
   const CodeGenHwModes &CGH = Target.getHwModes();

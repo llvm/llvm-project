@@ -71,6 +71,7 @@ def noimplib : F<"noimplib">,
 def lib : F<"lib">,
     HelpText<"Act like lib.exe; must be first argument if present">;
 def libpath : P<"libpath", "Additional library search path">;
+def link : F<"link">, HelpText<"Ignored for compatibility">;
 def linkrepro : Joined<["/", "-", "/?", "-?"], "linkrepro:">,
     MetaVarName<"directory">,
     HelpText<"Write repro.tar containing inputs and command to reproduce link">;

@@ -1407,7 +1407,8 @@ bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T) {
   //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#1677
   // Therefore, we use the C++1y behavior.
 
-  if (S.Current->getFunction() && S.Current->getFunction()->isConstructor() &&
+  if (!S.Current->isBottomFrame() &&
+      S.Current->getFunction()->isConstructor() &&
       S.Current->getThis().getDeclDesc()->asDecl() == S.EvaluatingDecl) {
     return true;
   }
@@ -2080,14 +2081,14 @@ bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index) {
 
 bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, unsigned BitWidth) {
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+
   if (Ptr.isDummy())
     return false;
   if (Ptr.isFunctionPointer())
     return true;
-
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
 
   if (Ptr.isBlockPointer() && !Ptr.isZero()) {
     // Only allow based lvalue casts if they are lossless.
