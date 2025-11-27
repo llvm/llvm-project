@@ -330,7 +330,7 @@ def HasNEONandIsStreamingSafe
       AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
 // A subset of NEON instructions are legal in Streaming SVE mode only with +sme2p2.
 def HasNEONandFPRCVTIsStreamingSafe
-                      : Predicate<"Subtarget->isNeonAvailable() || (Subtarget->hasNEON() && Subtarget->isFPRCVTStreamingSafe())">,
+                     : Predicate<"Subtarget->isNeonAvailable() || (Subtarget->hasNEON() && Subtarget->isFPRCVTStreamingSafe())">,
                                  AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRCPC), "rcpc">;
