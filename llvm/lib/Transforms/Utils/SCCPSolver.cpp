@@ -299,6 +299,7 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
       Value *LHS = ICmp->getOperand(0);
       ICmpInst::Predicate Pred = ICmp->getPredicate();
       const APInt *Offset;
+      // Match icmp X + Offset, C
       if (match(LHS, m_OneUse(m_AddLike(m_Value(X), m_APInt(Offset)))))
         return ConstantRange::makeExactICmpRegion(Pred, *RHSC).sub(*Offset);
       // Match icmp eq/ne X & NegPow2, C
@@ -310,7 +311,10 @@ static Value *simplifyInstruction(SCCPSolver &Solver,
           return Pred == ICmpInst::ICMP_EQ ? CR : CR.inverse();
         }
       }
-      return std::nullopt;
+      // Fallback: Match icmp X, C
+      // E.g., if X ∈ [0, 4], this can simplify icmp uge X, 4 to icmp eq X, 4
+      X = LHS;
+      return ConstantRange::makeExactICmpRegion(Pred, *RHSC);
     };
 
     if (auto CR = MatchTwoInstructionExactRangeCheck()) {
