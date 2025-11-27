@@ -1068,19 +1068,39 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     assert(is_contained(MinMaxOp->users(), MinMaxResult) &&
            "MinMaxResult must be a user of MinMaxOp (and of MinMaxPhiR");
 
-    // TODO: Strict predicates need to find the first IV value for which the
-    // predicate holds, not the last.
-    if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE ||
-        ICmpInst::isLT(Pred) || ICmpInst::isGT(Pred))
-      return false;
-
     // Cmp must be used by the select of a FindLastIV chain.
     VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
     VPValue *IVOp, *FindIV;
-    if (!Sel ||
+    if (!Sel || Sel->getNumUsers() != 2 ||
         !match(Sel,
-               m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(FindIV))) ||
-        Sel->getNumUsers() != 2)
+               m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(FindIV))))
+      return false;
+
+    if (!isa<VPReductionPHIRecipe>(FindIV)) {
+      std::swap(FindIV, IVOp);
+      Pred = CmpInst::getInversePredicate(Pred);
+    }
+    if (MinMaxOpValue != CmpOpB)
+      Pred = CmpInst::getSwappedPredicate(Pred);
+
+    CmpInst::Predicate RdxPredicate = [RdxKind]() {
+      switch (RdxKind) {
+      case RecurKind::UMin:
+        return CmpInst::ICMP_UGE;
+      case RecurKind::UMax:
+        return CmpInst::ICMP_ULE;
+      case RecurKind::SMax:
+        return CmpInst::ICMP_SLE;
+      case RecurKind::SMin:
+        return CmpInst::ICMP_SGE;
+      default:
+        llvm_unreachable("unhandled recurrence kind");
+      }
+    }();
+
+    // TODO: Strict predicates need to find the first IV value for which the
+    // predicate holds, not the last.
+    if (Pred != RdxPredicate)
       return false;
 
     auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
