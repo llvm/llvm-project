@@ -490,7 +490,8 @@ def OMP_SCHEDULE_Dynamic : EnumVal<"dynamic", 3, 1> {}
 def OMP_SCHEDULE_Guided : EnumVal<"guided", 4, 1> {}
 def OMP_SCHEDULE_Auto : EnumVal<"auto", 5, 1> {}
 def OMP_SCHEDULE_Runtime : EnumVal<"runtime", 6, 1> {}
-def OMP_SCHEDULE_Default : EnumVal<"default", 7, 0> { let isDefault = 1; }
+def OMP_SCHEDULE_Distribute : EnumVal<"distribute", 7, 1> {}
+def OMP_SCHEDULE_Default : EnumVal<"default", 8, 0> { let isDefault = 1; }
 def OMPC_Schedule : Clause<[Spelling<"schedule">]> {
   let clangClass = "OMPScheduleClause";
   let flangClass = "OmpScheduleClause";
@@ -501,6 +502,7 @@ def OMPC_Schedule : Clause<[Spelling<"schedule">]> {
     OMP_SCHEDULE_Guided,
     OMP_SCHEDULE_Auto,
     OMP_SCHEDULE_Runtime,
+    OMP_SCHEDULE_Distribute,
     OMP_SCHEDULE_Default
   ];
 }
