@@ -24,6 +24,7 @@ def isNotOSWindows : RuntimeLibcallPredicate<"!TT.isOSWindows()">;
 def isNotOSLinux : RuntimeLibcallPredicate<[{!TT.isOSLinux()}]>;
 def isNotOSMSVCRT : RuntimeLibcallPredicate<"!TT.isOSMSVCRT()">;
 def isPS : RuntimeLibcallPredicate<"TT.isPS()">;
+def isMacOSX : RuntimeLibcallPredicate<[{TT.isMacOSX()}]>;
 def isNotOSWindowsOrIsCygwinMinGW
   : RuntimeLibcallPredicate<"!TT.isOSWindows() || TT.isOSCygMing()">;
 def isWindowsMSVCEnvironment : RuntimeLibcallPredicate<
@@ -1982,6 +1983,10 @@ defvar DarwinMemsetPattern = LibcallImpls<(add memset_pattern4,
                                                memset_pattern16),
                                                darwinHasMemsetPattern>;
 
+defvar MacOSUnlockedIO = LibcallImpls<(add
+  getc_unlocked, getchar_unlocked, putc_unlocked, putchar_unlocked),
+  isMacOSX>;
+
 defvar SecurityCheckCookieIfWinMSVC =
     LibcallImpls<(add __security_check_cookie, __security_cookie),
                  isWindowsMSVCOrItaniumEnvironment>;
@@ -2140,6 +2145,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibcallImpls<(add Int128RTLibcalls), isAArch64_ILP64>,
        LibcallImpls<(add bzero), isOSDarwin>,
        DarwinExp10, DarwinSinCosStret, DarwinMemsetPattern,
+       MacOSUnlockedIO,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
        DefaultLibmExp10,
        DefaultStackProtector,
@@ -3294,7 +3300,7 @@ defvar MemChkLibcalls = [__memcpy_chk, __memset_chk, __memmove_chk];
 
 defvar X86CommonLibcalls =
   (add (sub WinDefaultLibcallImpls, WindowsDivRemMulLibcallOverrides, MemChkLibcalls),
-       DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern,
+       DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern, MacOSUnlockedIO,
        X86_F128_Libcalls,
        LibmHasSinCosF80, // FIXME: Depends on long double
        SinCosF32F64Libcalls,
