@@ -3540,8 +3540,9 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
     // the string.
     bool ForceElaboratedPrinting =
         IK == PredefinedIdentKind::Function && getLangOpts().MSVCCompat;
-    auto Str =
-        PredefinedExpr::ComputeName(IK, currentDecl, ForceElaboratedPrinting);
+    auto Str = PredefinedExpr::ComputeNameAndTranslate(
+        IK, currentDecl, getPreprocessor().getTextEncodingConfig(),
+        ForceElaboratedPrinting);
     unsigned Length = Str.length();
 
     llvm::APInt LengthI(32, Length + 1);

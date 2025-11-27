@@ -54,7 +54,7 @@
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Basic/TypeTraits.h"
-#include "clang/Lex/LiteralConverter.h"
+#include "clang/Lex/TextEncodingConfig.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"

@@ -33,8 +33,9 @@ FormatStringHandler::~FormatStringHandler() {}
 // scanf format strings.
 //===----------------------------------------------------------------------===//
 
-OptionalAmount
-clang::analyze_format_string::ParseAmount(const char *&Beg, const char *E) {
+OptionalAmount clang::analyze_format_string::ParseAmount(
+    const char *&Beg, const char *E,
+    const llvm::TextEncodingConverter &FormatStrConverter) {
   const char *I = Beg;
   UpdateOnReturn <const char*> UpdateBeg(Beg, I);
 
@@ -42,7 +43,7 @@ clang::analyze_format_string::ParseAmount(const char *&Beg, const char *E) {
   bool hasDigits = false;
 
   for ( ; I != E; ++I) {
-    char c = *I;
+    char c = FormatStrConverter.convert(*I);
     if (c >= '0' && c <= '9') {
       hasDigits = true;
       accumulator = (accumulator * 10) + (c - '0');
@@ -59,27 +60,23 @@ clang::analyze_format_string::ParseAmount(const char *&Beg, const char *E) {
   return OptionalAmount();
 }
 
-OptionalAmount
-clang::analyze_format_string::ParseNonPositionAmount(const char *&Beg,
-                                                     const char *E,
-                                                     unsigned &argIndex) {
-  if (*Beg == '*') {
+OptionalAmount clang::analyze_format_string::ParseNonPositionAmount(
+    const char *&Beg, const char *E, unsigned &argIndex,
+    const llvm::TextEncodingConverter &FormatStrConverter) {
+  if (FormatStrConverter.convert(*Beg) == '*') {
     ++Beg;
     return OptionalAmount(OptionalAmount::Arg, argIndex++, Beg, 0, false);
   }
 
-  return ParseAmount(Beg, E);
+  return ParseAmount(Beg, E, FormatStrConverter);
 }
 
-OptionalAmount
-clang::analyze_format_string::ParsePositionAmount(FormatStringHandler &H,
-                                                  const char *Start,
-                                                  const char *&Beg,
-                                                  const char *E,
-                                                  PositionContext p) {
-  if (*Beg == '*') {
+OptionalAmount clang::analyze_format_string::ParsePositionAmount(
+    FormatStringHandler &H, const char *Start, const char *&Beg, const char *E,
+    PositionContext p, const llvm::TextEncodingConverter &FormatStrConverter) {
+  if (FormatStrConverter.convert(*Beg) == '*') {
     const char *I = Beg + 1;
-    const OptionalAmount &Amt = ParseAmount(I, E);
+    const OptionalAmount &Amt = ParseAmount(I, E, FormatStrConverter);
 
     if (Amt.getHowSpecified() == OptionalAmount::NotSpecified) {
       H.HandleInvalidPosition(Beg, I - Beg, p);
@@ -94,7 +91,7 @@ clang::analyze_format_string::ParsePositionAmount(FormatStringHandler &H,
 
     assert(Amt.getHowSpecified() == OptionalAmount::Constant);
 
-    if (*I == '$') {
+    if (FormatStrConverter.convert(*I) == '$') {
       // Handle positional arguments
 
       // Special case: '*0$', since this is an easy mistake.
@@ -114,24 +111,22 @@ clang::analyze_format_string::ParsePositionAmount(FormatStringHandler &H,
     return OptionalAmount(false);
   }
 
-  return ParseAmount(Beg, E);
+  return ParseAmount(Beg, E, FormatStrConverter);
 }
 
-
-bool
-clang::analyze_format_string::ParseFieldWidth(FormatStringHandler &H,
-                                              FormatSpecifier &CS,
-                                              const char *Start,
-                                              const char *&Beg, const char *E,
-                                              unsigned *argIndex) {
+bool clang::analyze_format_string::ParseFieldWidth(
+    FormatStringHandler &H, FormatSpecifier &CS, const char *Start,
+    const char *&Beg, const char *E, unsigned *argIndex,
+    const llvm::TextEncodingConverter &FormatStrConverter) {
   // FIXME: Support negative field widths.
   if (argIndex) {
-    CS.setFieldWidth(ParseNonPositionAmount(Beg, E, *argIndex));
+    CS.setFieldWidth(
+        ParseNonPositionAmount(Beg, E, *argIndex, FormatStrConverter));
   }
   else {
-    const OptionalAmount Amt =
-      ParsePositionAmount(H, Start, Beg, E,
-                          analyze_format_string::FieldWidthPos);
+    const OptionalAmount Amt = ParsePositionAmount(
+        H, Start, Beg, E, analyze_format_string::FieldWidthPos,
+        FormatStrConverter);
 
     if (Amt.isInvalid())
       return true;
@@ -140,15 +135,13 @@ clang::analyze_format_string::ParseFieldWidth(FormatStringHandler &H,
   return false;
 }
 
-bool
-clang::analyze_format_string::ParseArgPosition(FormatStringHandler &H,
-                                               FormatSpecifier &FS,
-                                               const char *Start,
-                                               const char *&Beg,
-                                               const char *E) {
+bool clang::analyze_format_string::ParseArgPosition(
+    FormatStringHandler &H, FormatSpecifier &FS, const char *Start,
+    const char *&Beg, const char *E,
+    const llvm::TextEncodingConverter &FormatStrConverter) {
   const char *I = Beg;
 
-  const OptionalAmount &Amt = ParseAmount(I, E);
+  const OptionalAmount &Amt = ParseAmount(I, E, FormatStrConverter);
 
   if (I == E) {
     // No more characters left?
@@ -156,7 +149,8 @@ clang::analyze_format_string::ParseArgPosition(FormatStringHandler &H,
     return true;
   }
 
-  if (Amt.getHowSpecified() == OptionalAmount::Constant && *(I++) == '$') {
+  if (Amt.getHowSpecified() == OptionalAmount::Constant &&
+      FormatStrConverter.convert(*(I++)) == '$') {
     // Warn that positional arguments are non-standard.
     H.HandlePosition(Start, I - Start);
 
@@ -177,17 +171,15 @@ clang::analyze_format_string::ParseArgPosition(FormatStringHandler &H,
   return false;
 }
 
-bool
-clang::analyze_format_string::ParseVectorModifier(FormatStringHandler &H,
-                                                  FormatSpecifier &FS,
-                                                  const char *&I,
-                                                  const char *E,
-                                                  const LangOptions &LO) {
+bool clang::analyze_format_string::ParseVectorModifier(
+    FormatStringHandler &H, FormatSpecifier &FS, const char *&I, const char *E,
+    const LangOptions &LO,
+    const llvm::TextEncodingConverter &FormatStrConverter) {
   if (!LO.OpenCL)
     return false;
 
   const char *Start = I;
-  if (*I == 'v') {
+  if (FormatStrConverter.convert(*I) == 'v') {
     ++I;
 
     if (I == E) {
@@ -195,7 +187,7 @@ clang::analyze_format_string::ParseVectorModifier(FormatStringHandler &H,
       return true;
     }
 
-    OptionalAmount NumElts = ParseAmount(I, E);
+    OptionalAmount NumElts = ParseAmount(I, E, FormatStrConverter);
     if (NumElts.getHowSpecified() != OptionalAmount::Constant) {
       H.HandleIncompleteSpecifier(Start, E - Start);
       return true;
@@ -207,86 +199,104 @@ clang::analyze_format_string::ParseVectorModifier(FormatStringHandler &H,
   return false;
 }
 
-bool
-clang::analyze_format_string::ParseLengthModifier(FormatSpecifier &FS,
-                                                  const char *&I,
-                                                  const char *E,
-                                                  const LangOptions &LO,
-                                                  bool IsScanf) {
+bool clang::analyze_format_string::ParseLengthModifier(
+    FormatSpecifier &FS, const char *&I, const char *E, const LangOptions &LO,
+    const llvm::TextEncodingConverter &FormatStrConverter, bool IsScanf) {
   LengthModifier::Kind lmKind = LengthModifier::None;
   const char *lmPosition = I;
-  switch (*I) {
-    default:
-      return false;
-    case 'h':
+  switch (FormatStrConverter.convert(*I)) {
+  default:
+    return false;
+  case 'h':
+    ++I;
+    if (I != E && FormatStrConverter.convert(*I) == 'h') {
       ++I;
-      if (I != E && *I == 'h') {
-        ++I;
-        lmKind = LengthModifier::AsChar;
-      } else if (I != E && *I == 'l' && LO.OpenCL) {
-        ++I;
-        lmKind = LengthModifier::AsShortLong;
-      } else {
-        lmKind = LengthModifier::AsShort;
-      }
-      break;
-    case 'l':
+      lmKind = LengthModifier::AsChar;
+    } else if (I != E && FormatStrConverter.convert(*I) == 'l' && LO.OpenCL) {
       ++I;
-      if (I != E && *I == 'l') {
-        ++I;
-        lmKind = LengthModifier::AsLongLong;
-      } else {
-        lmKind = LengthModifier::AsLong;
-      }
-      break;
-    case 'j': lmKind = LengthModifier::AsIntMax;     ++I; break;
-    case 'z': lmKind = LengthModifier::AsSizeT;      ++I; break;
-    case 't': lmKind = LengthModifier::AsPtrDiff;    ++I; break;
-    case 'L': lmKind = LengthModifier::AsLongDouble; ++I; break;
-    case 'q': lmKind = LengthModifier::AsQuad;       ++I; break;
-    case 'a':
-      if (IsScanf && !LO.C99 && !LO.CPlusPlus11) {
-        // For scanf in C90, look at the next character to see if this should
-        // be parsed as the GNU extension 'a' length modifier. If not, this
-        // will be parsed as a conversion specifier.
-        ++I;
-        if (I != E && (*I == 's' || *I == 'S' || *I == '[')) {
-          lmKind = LengthModifier::AsAllocate;
-          break;
-        }
-        --I;
-      }
-      return false;
-    case 'm':
-      if (IsScanf) {
-        lmKind = LengthModifier::AsMAllocate;
-        ++I;
+      lmKind = LengthModifier::AsShortLong;
+    } else {
+      lmKind = LengthModifier::AsShort;
+    }
+    break;
+  case 'l':
+    ++I;
+    if (I != E && FormatStrConverter.convert(*I) == 'l') {
+      ++I;
+      lmKind = LengthModifier::AsLongLong;
+    } else {
+      lmKind = LengthModifier::AsLong;
+    }
+    break;
+  case 'j':
+    lmKind = LengthModifier::AsIntMax;
+    ++I;
+    break;
+  case 'z':
+    lmKind = LengthModifier::AsSizeT;
+    ++I;
+    break;
+  case 't':
+    lmKind = LengthModifier::AsPtrDiff;
+    ++I;
+    break;
+  case 'L':
+    lmKind = LengthModifier::AsLongDouble;
+    ++I;
+    break;
+  case 'q':
+    lmKind = LengthModifier::AsQuad;
+    ++I;
+    break;
+  case 'a':
+    if (IsScanf && !LO.C99 && !LO.CPlusPlus11) {
+      // For scanf in C90, look at the next character to see if this should
+      // be parsed as the GNU extension 'a' length modifier. If not, this
+      // will be parsed as a conversion specifier.
+      ++I;
+      if (I != E && (FormatStrConverter.convert(*I) == 's' ||
+                     FormatStrConverter.convert(*I) == 'S' ||
+                     FormatStrConverter.convert(*I) == '[')) {
+        lmKind = LengthModifier::AsAllocate;
         break;
       }
-      return false;
-    // printf: AsInt64, AsInt32, AsInt3264
-    // scanf:  AsInt64
-    case 'I':
-      if (I + 1 != E && I + 2 != E) {
-        if (I[1] == '6' && I[2] == '4') {
-          I += 3;
-          lmKind = LengthModifier::AsInt64;
-          break;
-        }
-        if (IsScanf)
-          return false;
-
-        if (I[1] == '3' && I[2] == '2') {
-          I += 3;
-          lmKind = LengthModifier::AsInt32;
-          break;
-        }
-      }
+      --I;
+    }
+    return false;
+  case 'm':
+    if (IsScanf) {
+      lmKind = LengthModifier::AsMAllocate;
       ++I;
-      lmKind = LengthModifier::AsInt3264;
       break;
-    case 'w':
-      lmKind = LengthModifier::AsWide; ++I; break;
+    }
+    return false;
+  // printf: AsInt64, AsInt32, AsInt3264
+  // scanf:  AsInt64
+  case 'I':
+    if (I + 1 != E && I + 2 != E) {
+      if (FormatStrConverter.convert(I[1]) == '6' &&
+          FormatStrConverter.convert(I[2]) == '4') {
+        I += 3;
+        lmKind = LengthModifier::AsInt64;
+        break;
+      }
+      if (IsScanf)
+        return false;
+
+      if (FormatStrConverter.convert(I[1]) == '3' &&
+          FormatStrConverter.convert(I[2]) == '2') {
+        I += 3;
+        lmKind = LengthModifier::AsInt32;
+        break;
+      }
+    }
+    ++I;
+    lmKind = LengthModifier::AsInt3264;
+    break;
+  case 'w':
+    lmKind = LengthModifier::AsWide;
+    ++I;
+    break;
   }
   LengthModifier lm(lmPosition, lmKind);
   FS.setLengthModifier(lm);

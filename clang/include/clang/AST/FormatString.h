@@ -19,6 +19,7 @@
 #define LLVM_CLANG_AST_FORMATSTRING_H
 
 #include "clang/AST/CanonicalType.h"
+#include "llvm/Support/TextEncoding.h"
 #include <optional>
 
 namespace clang {
@@ -744,9 +745,9 @@ public:
   // Printf-specific handlers.
 
   virtual bool HandleInvalidPrintfConversionSpecifier(
-                                      const analyze_printf::PrintfSpecifier &FS,
-                                      const char *startSpecifier,
-                                      unsigned specifierLen) {
+      const analyze_printf::PrintfSpecifier &FS, const char *startSpecifier,
+      unsigned specifierLen,
+      const llvm::TextEncodingConverter &FormatStrConverter) {
     return true;
   }
 
@@ -763,9 +764,9 @@ public:
     // Scanf-specific handlers.
 
   virtual bool HandleInvalidScanfConversionSpecifier(
-                                        const analyze_scanf::ScanfSpecifier &FS,
-                                        const char *startSpecifier,
-                                        unsigned specifierLen) {
+      const analyze_scanf::ScanfSpecifier &FS, const char *startSpecifier,
+      unsigned specifierLen,
+      const llvm::TextEncodingConverter &FormatStrConverter) {
     return true;
   }
 

@@ -24,7 +24,7 @@ TextEncodingConfig::getConverter(ConversionAction Action) {
 std::error_code
 TextEncodingConfig::setConvertersFromOptions(TextEncodingConfig &TEC,
                                              const clang::LangOptions &Opts,
-                                             const clang::TargetInfo &TInfo) {
+                                             clang::TargetInfo &TInfo) {
   using namespace llvm;
   TEC.InternalEncoding = "UTF-8";
   TEC.SystemEncoding = TInfo.getTriple().getDefaultNarrowTextEncoding();
@@ -55,5 +55,13 @@ TextEncodingConfig::setConvertersFromOptions(TextEncodingConfig &TEC,
         new TextEncodingConverter(std::move(*ErrorOrConverter));
   } else
     return ErrorOrConverter.getError();
+
+  ErrorOrConverter = llvm::TextEncodingConverter::create(TEC.SystemEncoding,
+                                                         TEC.InternalEncoding);
+
+  if (ErrorOrConverter)
+    TInfo.FormatStrConverter =
+        new TextEncodingConverter(std::move(*ErrorOrConverter));
+
   return std::error_code();
 }
