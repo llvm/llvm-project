@@ -1091,6 +1091,10 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> exp(const complex<_Tp>& __x) {
     }
   }
   _Tp __e = std::exp(__x.real());
+  if (std::isinf(__e)) {
+    _Tp __e2 = std::exp(__x.real() * _Tp(0.5));
+    return complex<_Tp>(__e2 * std::cos(__i) * __e2, __e2 * std::sin(__i) * __e2);
+  }
   return complex<_Tp>(__e * std::cos(__i), __e * std::sin(__i));
 }
 
