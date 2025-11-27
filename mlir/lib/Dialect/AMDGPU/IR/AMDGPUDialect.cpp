@@ -721,6 +721,23 @@ LogicalResult MakeDmaBaseOp::verify() {
   bool is_valid = store_from_lds != load_to_lds;
   if (!is_valid)
     return emitOpError("invalid combination of address spaces.");
+
+  Type elementType = srcType.getElementType();
+  int width;
+  if (auto intType = dyn_cast<IntegerType>(elementType)) {
+    width = intType.getWidth();
+  } else if (auto floatType = dyn_cast<FloatType>(elementType)) {
+    width = floatType.getWidth();
+  } else {
+    return emitOpError("element type must have type width");
+  }
+
+  if (!llvm::is_contained({8, 16, 32, 64}, width)) {
+    return emitOpError(
+               "element type must be 1, 2, 4, or 8 bytes long but type was ")
+           << width << " bits long.";
+  }
+
   return success();
 }
 

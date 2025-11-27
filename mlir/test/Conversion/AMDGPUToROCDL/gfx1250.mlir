@@ -181,6 +181,18 @@ func.func @amdgpu.make_dma_base.invalid_element_types(%idx: index, %mem: memref<
 #gpu_lds_addrspace = 3
 #amdgpu_fat_buffer_addrspace = 7
 
+func.func @amdgpu.make_dma_base.invalid_element_types(%idx: index, %mem: memref<8xi7, #gpu_global_addrspace>, %smem: memref<8xi7,#gpu_lds_addrspace>) -> (!amdgpu.tdm_base<i7>) {
+  // expected-error@+1 {{'amdgpu.make_dma_base' op element type must be 1, 2, 4, or 8 bytes long but type was 7 bits long.}}
+  %0 = amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi7, #gpu_global_addrspace>, memref<8xi7, #gpu_lds_addrspace> -> !amdgpu.tdm_base<i7>
+  return %0 : !amdgpu.tdm_base<i7>
+}
+
+// -----
+
+#gpu_global_addrspace = 1
+#gpu_lds_addrspace = 3
+#amdgpu_fat_buffer_addrspace = 7
+
 // CHECK-LABEL: func @make_dma_base
 // CHECK-SAME: (%[[IDX:.+]]: index, %[[MEM:.+]]: memref<8xi32, 1>, %[[SMEM:.+]]: memref<8xi32, 3>)
 func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>, %smem: memref<8xi32,#gpu_lds_addrspace>) -> (!amdgpu.tdm_base<i32>, !amdgpu.tdm_base<i32>) {
