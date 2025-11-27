@@ -93,22 +93,7 @@ entry:
 define void @buildvector_v32i8_splat_with_undef(ptr %dst, i8 %a0) nounwind {
 ; CHECK-LABEL: buildvector_v32i8_splat_with_undef:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 0
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 1
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 2
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 3
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 4
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 5
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 6
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 7
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 8
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 9
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 10
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 11
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 12
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 13
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 14
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 15
+; CHECK-NEXT:    xvreplgr2vr.b $xr0, $a1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -135,15 +120,7 @@ entry:
 define void @buildvector_v16i16_splat_with_undef(ptr %dst, i16 %a0) nounwind {
 ; CHECK-LABEL: buildvector_v16i16_splat_with_undef:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 0
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 3
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 4
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 5
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 6
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 7
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
+; CHECK-NEXT:    xvreplgr2vr.h $xr0, $a1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -162,9 +139,7 @@ entry:
 define void @buildvector_v8i32_splat_with_undef(ptr %dst, i32 %a0) nounwind {
 ; CHECK-LABEL: buildvector_v8i32_splat_with_undef:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a1, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a1, 2
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
+; CHECK-NEXT:    xvreplgr2vr.w $xr0, $a1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -189,8 +164,7 @@ define void @buildvector_v4i64_splat_with_undef(ptr %dst, i64 %a0) nounwind {
 ;
 ; LA64-LABEL: buildvector_v4i64_splat_with_undef:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvinsgr2vr.d $xr0, $a1, 0
-; LA64-NEXT:    xvinsgr2vr.d $xr0, $a1, 3
+; LA64-NEXT:    xvreplgr2vr.d $xr0, $a1
 ; LA64-NEXT:    xvst $xr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
@@ -232,9 +206,8 @@ define void @buildvector_v8f32_splat_with_undef_2(ptr %dst, float %a0) nounwind 
 ; CHECK-LABEL: buildvector_v8f32_splat_with_undef_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
-; CHECK-NEXT:    xvinsve0.w $xr1, $xr0, 1
-; CHECK-NEXT:    xvinsve0.w $xr1, $xr0, 4
-; CHECK-NEXT:    xvst $xr1, $a0, 0
+; CHECK-NEXT:    xvreplve0.w $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %ins1 = insertelement <8 x float> undef, float %a0, i32 1
@@ -246,11 +219,9 @@ entry:
 define void @buildvector_v8f32_splat_with_undef_3(ptr %dst, float %a0) nounwind {
 ; CHECK-LABEL: buildvector_v8f32_splat_with_undef_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; CHECK-NEXT:    vextrins.w $vr1, $vr0, 16
-; CHECK-NEXT:    vextrins.w $vr1, $vr0, 48
-; CHECK-NEXT:    xvpermi.q $xr1, $xr1, 2
-; CHECK-NEXT:    xvst $xr1, $a0, 0
+; CHECK-NEXT:    # kill: def $f0 killed $f0 def $xr0
+; CHECK-NEXT:    xvreplve0.w $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %ins1 = insertelement <8 x float> undef, float %a0, i32 1
@@ -292,8 +263,7 @@ define void @buildvector_v4f64_splat_with_undef_2(ptr %dst, double %a0) nounwind
 ; CHECK-LABEL: buildvector_v4f64_splat_with_undef_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 def $xr0
-; CHECK-NEXT:    vextrins.d $vr0, $vr0, 16
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
+; CHECK-NEXT:    xvreplve0.d $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
