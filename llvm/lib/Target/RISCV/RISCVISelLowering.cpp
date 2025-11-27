@@ -9596,20 +9596,19 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
                            VT.isFloatingPoint() && FitsInGPR;
 
   if (UseZicondForFPSel) {
-    MVT XLenIntVT = Subtarget.getXLenVT();
 
     auto CastToInt = [&](SDValue V) -> SDValue {
       // Treat +0.0 as int 0 to enable single 'czero' instruction generation.
       if (isNullFPConstant(V))
-        return DAG.getConstant(0, DL, XLenIntVT);
+        return DAG.getConstant(0, DL, XLenVT);
 
       if (VT == MVT::f16)
-        return DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenIntVT, V);
+        return DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, V);
 
       if (VT == MVT::f32 && Subtarget.is64Bit())
-        return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenIntVT, V);
+        return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenVT, V);
 
-      return DAG.getBitcast(XLenIntVT, V);
+      return DAG.getBitcast(XLenVT, V);
     };
 
     SDValue TrueVInt = CastToInt(TrueV);
@@ -9617,7 +9616,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
     // Emit integer SELECT (lowers to Zicond)
     SDValue ResultInt =
-        DAG.getNode(ISD::SELECT, DL, XLenIntVT, CondV, TrueVInt, FalseVInt);
+        DAG.getNode(ISD::SELECT, DL, XLenVT, CondV, TrueVInt, FalseVInt);
 
     // Convert back to floating VT
     if (VT == MVT::f32 && Subtarget.is64Bit())
