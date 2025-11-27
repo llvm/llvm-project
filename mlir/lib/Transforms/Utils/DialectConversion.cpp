@@ -1248,7 +1248,7 @@ performReplaceValue(RewriterBase &rewriter, Value from, Value repl,
     Operation *user = operand.getOwner();
     bool result =
         user->getBlock() != replBlock || replOp->isBeforeInBlock(user);
-    if (functor)
+    if (result && functor)
       result &= functor(operand);
     return result;
   });
@@ -2020,8 +2020,9 @@ void ConversionPatternRewriterImpl::replaceValueUses(
   replacedValues.insert(from);
 #endif // NDEBUG
 
-  assert(!functor &&
-         "conditional value replacement is not supported in rollback mode");
+  if (functor)
+    llvm::report_fatal_error(
+        "conditional value replacement is not supported in rollback mode");
   mapping.map(from, to);
   appendRewrite<ReplaceValueRewrite>(from, converter);
 }
