@@ -13893,7 +13893,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     int ImmVal = Imm.getZExtValue();
     bool UseMXCSR = (ImmVal & 4) != 0;
     bool IsFPConstrained =
-      E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).isFPConstrained();
+        E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).isFPConstrained();
 
     llvm::RoundingMode RM;
     if (!UseMXCSR) {
