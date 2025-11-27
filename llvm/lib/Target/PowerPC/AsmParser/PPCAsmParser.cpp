@@ -365,6 +365,10 @@ public:
   bool isS16ImmX4() const { return isExtImm<16>(/*Signed*/ true, 4); }
   bool isS16ImmX16() const { return isExtImm<16>(/*Signed*/ true, 16); }
   bool isS17Imm() const { return isExtImm<17>(/*Signed*/ true, 1); }
+  bool isS32Imm() const {
+    // TODO: Is ContextImmediate needed?
+    return Kind == Expression || isSImm<32>();
+  }
   bool isS34Imm() const {
     // Once the PC-Rel ABI is finalized, evaluate whether a 34-bit
     // ContextImmediate is needed.
