@@ -241,8 +241,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_div_pd(__m128d __a,
 ///    bits are copied from the upper 64 bits of operand \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sqrt_sd(__m128d __a,
                                                          __m128d __b) {
-  __m128d __c = __builtin_ia32_sqrtsd((__v2df)__b);
-  return __extension__(__m128d){__c[0], __a[1]};
+  return __extension__(__m128d){__builtin_elementwise_sqrt(__b[0]), __a[1]};
 }
 
 /// Calculates the square root of the each of two values stored in a
@@ -257,7 +256,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sqrt_sd(__m128d __a,
 /// \returns A 128-bit vector of [2 x double] containing the square roots of the
 ///    values in the operand.
 static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sqrt_pd(__m128d __a) {
-  return __builtin_ia32_sqrtpd((__v2df)__a);
+  return __builtin_elementwise_sqrt(__a);
 }
 
 /// Compares lower 64-bit double-precision values of both operands, and
