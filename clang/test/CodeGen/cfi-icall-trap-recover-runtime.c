@@ -171,7 +171,7 @@ void xf();
 // PRESERVE_MIN-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[TMP2]], metadata !"_ZTSFvE"), !nosanitize [[META10:![0-9]+]]
 // PRESERVE_MIN-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF11:![0-9]+]], !nosanitize [[META10]]
 // PRESERVE_MIN:       [[HANDLER_CFI_CHECK_FAIL]]:
-// PRESERVE_MIN-NEXT:    call void @__ubsan_handle_cfi_check_fail_minimal() #[[ATTR4:[0-9]+]], !nosanitize [[META10]]
+// PRESERVE_MIN-NEXT:    call preserve_allcc void @__ubsan_handle_cfi_check_fail_minimal_preserve() #[[ATTR4:[0-9]+]], !nosanitize [[META10]]
 // PRESERVE_MIN-NEXT:    br label %[[CONT]], !nosanitize [[META10]]
 // PRESERVE_MIN:       [[CONT]]:
 // PRESERVE_MIN-NEXT:    call void (...) [[TMP2]]()
