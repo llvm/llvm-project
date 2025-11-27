@@ -431,6 +431,8 @@ protected:
   // Visit operands on branch instructions that are not forwarded.
   virtual void visitBranchOperand(OpOperand &operand) = 0;
 
+  virtual void visitBranchRegionArgument(BlockArgument &argument) = 0;
+
   // Visit operands on call instructions that are not forwarded.
   virtual void visitCallOperand(OpOperand &operand) = 0;
 

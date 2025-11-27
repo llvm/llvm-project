@@ -599,7 +599,7 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
   // All operands not forwarded to any successor. This set can be non-contiguous
   // in the presence of multiple successors.
   BitVector unaccounted(op->getNumOperands(), true);
-
+  SmallVector<BlockArgument> regionArguments;
   for (RegionSuccessor &successor : successors) {
     OperandRange operands = branch.getEntrySuccessorOperands(successor);
     MutableArrayRef<OpOperand> opoperands = operandsToOpOperands(operands);
@@ -609,11 +609,23 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
            *getLatticeElementFor(getProgramPointAfter(op), input));
       unaccounted.reset(operand.getOperandNumber());
     }
+
+    if (successor.isParent())
+      continue;
+    auto arguments = successor.getSuccessor()->getArguments();
+    for (BlockArgument argument : arguments) {
+      if (llvm::find(inputs, argument) == inputs.end()) {
+        regionArguments.push_back(argument);
+      }
+    }
   }
   // All operands not forwarded to regions are typically parameters of the
   // branch operation itself (for example the boolean for if/else).
   for (int index : unaccounted.set_bits()) {
     visitBranchOperand(op->getOpOperand(index));
+  }
+  for (BlockArgument argument : regionArguments) {
+    visitBranchRegionArgument(argument);
   }
 }
 

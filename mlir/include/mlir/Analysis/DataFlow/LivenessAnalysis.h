@@ -87,6 +87,8 @@ public:
   void visitCallOperand(OpOperand &operand) override;
 
   void setToExitState(Liveness *lattice) override;
+
+  void visitBranchRegionArgument(BlockArgument &argument) override;
 };
 
 //===----------------------------------------------------------------------===//

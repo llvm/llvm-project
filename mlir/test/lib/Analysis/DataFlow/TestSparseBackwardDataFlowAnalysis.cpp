@@ -82,6 +82,8 @@ public:
 
   void visitCallOperand(OpOperand &operand) override;
 
+  void visitBranchRegionArgument(BlockArgument &argument) override {}
+
   void visitExternalCall(CallOpInterface call, ArrayRef<WrittenTo *> operands,
                          ArrayRef<const WrittenTo *> results) override;
 

@@ -303,6 +303,26 @@ void LivenessAnalysis::visitCallOperand(OpOperand &operand) {
   propagateIfChanged(operandLiveness, operandLiveness->markLive());
 }
 
+void LivenessAnalysis::visitBranchRegionArgument(BlockArgument &blockArgument) {
+  Operation *parentOp = blockArgument.getOwner()->getParentOp();
+  LDBG() << "Visiting branch region argument: " << blockArgument
+         << "in op: " << OpWithFlags(parentOp, OpPrintingFlags().skipRegions());
+  Liveness *argumentLiveness = getLatticeElement(blockArgument);
+  SmallVector<Liveness *> parentResultsLiveness;
+  for (Value result : parentOp->getResults())
+    parentResultsLiveness.push_back(getLatticeElement(result));
+
+  for (Liveness *resultLattice : parentResultsLiveness) {
+    if (resultLattice->isLive) {
+      LDBG() << "Marking branch argument live: " << blockArgument;
+      propagateIfChanged(argumentLiveness, argumentLiveness->markLive());
+      return;
+    }
+  }
+  (void)visitOperation(parentOp, ArrayRef<Liveness *>{argumentLiveness},
+                       parentResultsLiveness);
+}
+
 void LivenessAnalysis::setToExitState(Liveness *lattice) {
   LDBG() << "setToExitState for lattice: " << lattice;
   if (lattice->isLive) {
