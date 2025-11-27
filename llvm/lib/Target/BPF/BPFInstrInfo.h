@@ -39,14 +39,13 @@ public:
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
@@ -59,6 +58,9 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
+
+  int getJumpTableIndex(const MachineInstr &MI) const override;
+
 private:
   void expandMEMCPY(MachineBasicBlock::iterator) const;
 

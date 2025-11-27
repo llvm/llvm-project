@@ -309,12 +309,14 @@ public:
   }
 
   virtual bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                                  unsigned AddressSpace) const {
+                                  unsigned AddressSpace,
+                                  TTI::MaskKind MaskKind) const {
     return false;
   }
 
   virtual bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                                 unsigned AddressSpace) const {
+                                 unsigned AddressSpace,
+                                 TTI::MaskKind MaskKind) const {
     return false;
   }
 
@@ -430,6 +432,8 @@ public:
   virtual bool shouldBuildRelLookupTables() const { return false; }
 
   virtual bool useColdCCForColdCall(Function &F) const { return false; }
+
+  virtual bool useFastCCForInternalCall(Function &F) const { return true; }
 
   virtual bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const {
     return false;
@@ -841,17 +845,8 @@ public:
     return 1;
   }
 
-  virtual InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src,
-                                            Align Alignment,
-                                            unsigned AddressSpace,
-                                            TTI::TargetCostKind CostKind,
-                                            const Instruction *I) const {
-    return 1;
-  }
-
   virtual InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const {
     return 1;
   }
@@ -1036,7 +1031,7 @@ public:
 
   virtual bool areTypesABICompatible(const Function *Caller,
                                      const Function *Callee,
-                                     const ArrayRef<Type *> &Types) const {
+                                     ArrayRef<Type *> Types) const {
     return (Caller->getFnAttribute("target-cpu") ==
             Callee->getFnAttribute("target-cpu")) &&
            (Caller->getFnAttribute("target-features") ==
@@ -1104,6 +1099,8 @@ public:
   virtual bool preferPredicatedReductionSelect() const { return false; }
 
   virtual bool preferEpilogueVectorization() const { return true; }
+
+  virtual bool shouldConsiderVectorizationRegPressure() const { return false; }
 
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const {
     return true;

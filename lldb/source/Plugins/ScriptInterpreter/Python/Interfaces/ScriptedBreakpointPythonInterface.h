@@ -36,6 +36,12 @@ public:
   bool ResolverCallback(SymbolContext sym_ctx) override;
   lldb::SearchDepth GetDepth() override;
   std::optional<std::string> GetShortHelp() override;
+  lldb::BreakpointLocationSP
+  WasHit(lldb::StackFrameSP frame_sp,
+         lldb::BreakpointLocationSP bp_loc_sp) override;
+  virtual std::optional<std::string>
+  GetLocationDescription(lldb::BreakpointLocationSP bp_loc_sp,
+                         lldb::DescriptionLevel level) override;
 
   static void Initialize();
 

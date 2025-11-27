@@ -83,8 +83,6 @@ constrainRegClass(MachineRegisterInfo &MRI, Register Reg,
 
 const TargetRegisterClass *MachineRegisterInfo::constrainRegClass(
     Register Reg, const TargetRegisterClass *RC, unsigned MinNumRegs) {
-  if (Reg.isPhysical())
-    return nullptr;
   return ::constrainRegClass(*this, Reg, getRegClass(Reg), RC, MinNumRegs);
 }
 
@@ -667,7 +665,7 @@ void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
   IsUpdatedCSRsInitialized = true;
 }
 
-bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
+bool MachineRegisterInfo::isReservedRegUnit(MCRegUnit Unit) const {
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
     if (all_of(TRI->superregs_inclusive(*Root),

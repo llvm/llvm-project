@@ -138,6 +138,7 @@ tools = [
         unresolved="fatal",
         extra_args=[link_fdata_cmd],
     ),
+    ToolSubst("process-debug-line", unresolved="fatal"),
     ToolSubst("merge-fdata", unresolved="fatal"),
     ToolSubst("llvm-readobj", unresolved="fatal"),
     ToolSubst("llvm-dwp", unresolved="fatal"),

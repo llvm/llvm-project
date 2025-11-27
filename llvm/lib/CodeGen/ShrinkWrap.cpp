@@ -319,7 +319,7 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
       return isa<GlobalValue>(UO);
     }
     if (const PseudoSourceValue *PSV = Op->getPseudoValue())
-      return PSV->isJumpTable();
+      return PSV->isJumpTable() || PSV->isConstantPool();
     return false;
   };
   // Load/store operations may access the stack indirectly when we previously
@@ -697,14 +697,12 @@ void ShrinkWrapImpl::updateSaveRestorePoints(MachineBasicBlock &MBB,
 
   if (!Restore)
     Restore = &MBB;
-  else if (MPDT->getNode(&MBB)) // If the block is not in the post dom tree, it
-                                // means the block never returns. If that's the
-                                // case, we don't want to call
-                                // `findNearestCommonDominator`, which will
-                                // return `Restore`.
+  else if (MBB.isNoReturnBlock()) {
+    // MBB exits the function without returning, so we don't need an epilogue
+    // here. This is common for things like cleanup landing pads etc. In these
+    // cases, we can skip updating `Restore`.
+  } else
     Restore = MPDT->findNearestCommonDominator(Restore, &MBB);
-  else
-    Restore = nullptr; // Abort, we can't find a restore point in this case.
 
   // Make sure we would be able to insert the restore code before the
   // terminator.
@@ -967,12 +965,12 @@ bool ShrinkWrapImpl::run(MachineFunction &MF) {
                     << "\nRestore: " << printMBBReference(*Restore) << '\n');
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  SmallVector<MachineBasicBlock *, 4> SavePoints;
-  SmallVector<MachineBasicBlock *, 4> RestorePoints;
-  if (Save) {
-    SavePoints.push_back(Save);
-    RestorePoints.push_back(Restore);
-  }
+
+  // List of CalleeSavedInfo for registers will be added during prologepilog
+  // pass
+  SaveRestorePoints SavePoints({{Save, {}}});
+  SaveRestorePoints RestorePoints({{Restore, {}}});
+
   MFI.setSavePoints(SavePoints);
   MFI.setRestorePoints(RestorePoints);
   ++NumCandidates;

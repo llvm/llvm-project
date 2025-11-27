@@ -53,6 +53,7 @@ X86FrameLowering::X86FrameLowering(const X86Subtarget &STI,
       STI(STI), TII(*STI.getInstrInfo()), TRI(STI.getRegisterInfo()) {
   // Cache a bunch of frame-related predicates for this subtarget.
   SlotSize = TRI->getSlotSize();
+  assert(SlotSize == 4 || SlotSize == 8);
   Is64Bit = STI.is64Bit();
   IsLP64 = STI.isTarget64BitLP64();
   // standard x86_64 uses 64-bit frame/stack pointers, x32 - 32-bit.
@@ -224,7 +225,7 @@ flagsNeedToBePreservedBeforeTheTerminators(const MachineBasicBlock &MBB) {
   return false;
 }
 
-constexpr int64_t MaxSPChunk = (1LL << 31) - 1;
+constexpr uint64_t MaxSPChunk = (1ULL << 31) - 1;
 
 /// emitSPUpdate - Emit a series of instructions to increment / decrement the
 /// stack pointer by a constant value.
@@ -245,8 +246,6 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
     return;
   }
 
-  uint64_t Chunk = MaxSPChunk;
-
   MachineFunction &MF = *MBB.getParent();
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   const X86TargetLowering &TLI = *STI.getTargetLowering();
@@ -260,7 +259,7 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
     // loop, by inlineStackProbe().
     BuildMI(MBB, MBBI, DL, TII.get(X86::STACKALLOC_W_PROBING)).addImm(Offset);
     return;
-  } else if (Offset > Chunk) {
+  } else if (Offset > MaxSPChunk) {
     // Rather than emit a long series of instructions for large offsets,
     // load the offset into a register and do one sub/add
     unsigned Reg = 0;
@@ -284,7 +283,7 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
                              .addReg(Reg);
       MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
       return;
-    } else if (Offset > 8 * Chunk) {
+    } else if (Offset > 8 * MaxSPChunk) {
       // If we would need more than 8 add or sub instructions (a >16GB stack
       // frame), it's worth spilling RAX to materialize this immediate.
       //   pushq %rax
@@ -322,8 +321,7 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
   }
 
   while (Offset) {
-    uint64_t ThisVal = std::min(Offset, Chunk);
-    if (ThisVal == SlotSize) {
+    if (Offset == SlotSize) {
       // Use push / pop for slot sized adjustments as a size optimization. We
       // need to find a dead register when using pop.
       unsigned Reg = isSub ? (unsigned)(Is64Bit ? X86::RAX : X86::EAX)
@@ -334,10 +332,11 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
         BuildMI(MBB, MBBI, DL, TII.get(Opc))
             .addReg(Reg, getDefRegState(!isSub) | getUndefRegState(isSub))
             .setMIFlag(Flag);
-        Offset -= ThisVal;
-        continue;
+        return;
       }
     }
+
+    uint64_t ThisVal = std::min(Offset, MaxSPChunk);
 
     BuildStackAdjustment(MBB, MBBI, DL, isSub ? -ThisVal : ThisVal, InEpilogue)
         .setMIFlag(Flag);
@@ -445,7 +444,7 @@ int64_t X86FrameLowering::mergeSPUpdates(MachineBasicBlock &MBB,
       return CalcNewOffset(0);
 
     FoundStackAdjust(PI, Offset);
-    if (std::abs((int64_t)CalcNewOffset(Offset)) < MaxSPChunk)
+    if ((uint64_t)std::abs((int64_t)CalcNewOffset(Offset)) < MaxSPChunk)
       break;
 
     if (doMergeWithPrevious ? (PI == MBB.begin()) : (PI == MBB.end()))
@@ -2402,7 +2401,7 @@ static bool isTailCallOpcode(unsigned Opc) {
          Opc == X86::TCRETURN_HIPE32ri || Opc == X86::TCRETURNdi ||
          Opc == X86::TCRETURNmi || Opc == X86::TCRETURNri64 ||
          Opc == X86::TCRETURNri64_ImpCall || Opc == X86::TCRETURNdi64 ||
-         Opc == X86::TCRETURNmi64;
+         Opc == X86::TCRETURNmi64 || Opc == X86::TCRETURN_WINmi64;
 }
 
 void X86FrameLowering::emitEpilogue(MachineFunction &MF,
@@ -3094,8 +3093,8 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
     MBB.addLiveIn(Reg);
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
 
-    TII.storeRegToStackSlot(MBB, MI, Reg, true, I.getFrameIdx(), RC, TRI,
-                            Register(), MachineInstr::FrameSetup);
+    TII.storeRegToStackSlot(MBB, MI, Reg, true, I.getFrameIdx(), RC, Register(),
+                            MachineInstr::FrameSetup);
   }
 
   return true;
@@ -3167,8 +3166,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
       VT = STI.hasBWI() ? MVT::v64i1 : MVT::v16i1;
 
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
-    TII.loadRegFromStackSlot(MBB, MI, Reg, I.getFrameIdx(), RC, TRI,
-                             Register());
+    TII.loadRegFromStackSlot(MBB, MI, Reg, I.getFrameIdx(), RC, Register());
   }
 
   // Clear the stack slot for spill base pointer register.

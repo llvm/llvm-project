@@ -51,17 +51,17 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[STEP_ADD_10:%.*]] = add <2 x i64> [[STEP_ADD_9]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_11:%.*]] = add <2 x i64> [[STEP_ADD_10]], splat (i64 2)
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 2
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 4
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 6
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 8
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 10
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 12
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 14
-; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 16
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 18
-; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 20
-; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 22
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 4
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 6
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 8
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 10
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 12
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 14
+; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 16
+; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 18
+; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 20
+; CHECK-NEXT:    [[TMP71:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 22
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD25:%.*]] = load <2 x i8>, ptr [[TMP12]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD26:%.*]] = load <2 x i8>, ptr [[TMP13]], align 1
@@ -143,8 +143,7 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[N_VEC]]
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP2]], [[N_VEC]]
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 2
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]

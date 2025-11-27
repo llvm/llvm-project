@@ -16,6 +16,7 @@ unittest("CoreTests") {
   ]
   sources = [
     "BinaryContext.cpp",
+    "ClusteredRows.cpp",
     "DynoStats.cpp",
     "MCPlusBuilder.cpp",
     "MemoryMaps.cpp",

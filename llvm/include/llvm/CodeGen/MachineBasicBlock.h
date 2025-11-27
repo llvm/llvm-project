@@ -129,7 +129,7 @@ public:
     MCRegister PhysReg;
     LaneBitmask LaneMask;
 
-    RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
+    RegisterMaskPair(MCRegister PhysReg, LaneBitmask LaneMask)
         : PhysReg(PhysReg), LaneMask(LaneMask) {}
 
     bool operator==(const RegisterMaskPair &other) const {
@@ -505,6 +505,11 @@ public:
   LLVM_ABI void removeLiveIn(MCRegister Reg,
                              LaneBitmask LaneMask = LaneBitmask::getAll());
 
+  /// Remove the specified register from any overlapped live in. The method is
+  /// subreg-aware and removes Reg and its subregs from the live in set. It also
+  /// clears the corresponding bitmask from its live-in super registers.
+  LLVM_ABI void removeLiveInOverlappedWith(MCRegister Reg);
+
   /// Return true if the specified register is in the live in set.
   LLVM_ABI bool isLiveIn(MCRegister Reg,
                          LaneBitmask LaneMask = LaneBitmask::getAll()) const;
@@ -542,8 +547,8 @@ public:
     using pointer = const RegisterMaskPair *;
     using reference = const RegisterMaskPair &;
 
-    liveout_iterator(const MachineBasicBlock &MBB, MCPhysReg ExceptionPointer,
-                     MCPhysReg ExceptionSelector, bool End)
+    liveout_iterator(const MachineBasicBlock &MBB, MCRegister ExceptionPointer,
+                     MCRegister ExceptionSelector, bool End)
         : ExceptionPointer(ExceptionPointer),
           ExceptionSelector(ExceptionSelector), BlockI(MBB.succ_begin()),
           BlockEnd(MBB.succ_end()) {
@@ -608,7 +613,7 @@ public:
       return true;
     }
 
-    MCPhysReg ExceptionPointer, ExceptionSelector;
+    MCRegister ExceptionPointer, ExceptionSelector;
     const_succ_iterator BlockI;
     const_succ_iterator BlockEnd;
     livein_iterator LiveRegI;
@@ -983,6 +988,13 @@ public:
     return !empty() && back().isEHScopeReturn();
   }
 
+  /// Convenience function that returns true if the block exits the function
+  /// without returning.
+  bool isNoReturnBlock() const {
+    return !empty() && succ_empty() && !back().isReturn() &&
+           !back().isIndirectBranch();
+  }
+
   /// Split a basic block into 2 pieces at \p SplitPoint. A new block will be
   /// inserted after this block, and all instructions after \p SplitInst moved
   /// to it (\p SplitInst will be in the original block). If \p LIS is provided,
@@ -1035,7 +1047,9 @@ public:
   /// Succ, can be split. If this returns true a subsequent call to
   /// SplitCriticalEdge is guaranteed to return a valid basic block if
   /// no changes occurred in the meantime.
-  LLVM_ABI bool canSplitCriticalEdge(const MachineBasicBlock *Succ) const;
+  LLVM_ABI bool
+  canSplitCriticalEdge(const MachineBasicBlock *Succ,
+                       const MachineLoopInfo *MLI = nullptr) const;
 
   void pop_front() { Insts.pop_front(); }
   void pop_back() { Insts.pop_back(); }
@@ -1286,6 +1300,15 @@ public:
 
   // Helper function for MIRPrinter.
   LLVM_ABI bool canPredictBranchProbabilities() const;
+
+  /// Iterate over block PHI instructions and remove all incoming values for
+  /// PredMBB.
+  ///
+  /// Method does not erase PHI instructions even if they have single income or
+  /// do not have incoming values ar all. It is a caller responsibility to make
+  /// decision how to process PHI instructions after incoming values removal.
+  LLVM_ABI void
+  removePHIsIncomingValuesForPredecessor(const MachineBasicBlock &PredMBB);
 
 private:
   /// Return probability iterator corresponding to the I successor iterator.

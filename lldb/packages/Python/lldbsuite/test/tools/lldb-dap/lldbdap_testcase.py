@@ -5,16 +5,20 @@ import uuid
 
 import dap_server
 from dap_server import Source
+from lldbsuite.test.decorators import skipIf
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
 import lldbgdbserverutils
 import base64
 
 
+# DAP tests as a whole have been flakey on the Windows on Arm bot. See:
+# https://github.com/llvm/llvm-project/issues/137660
+@skipIf(oslist=["windows"], archs=["aarch64"])
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
-    DEFAULT_TIMEOUT = 10 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
+    DEFAULT_TIMEOUT = dap_server.DEFAULT_TIMEOUT
     NO_DEBUG_INFO_TESTCASE = True
 
     def create_debug_adapter(
@@ -35,6 +39,7 @@ class DAPTestCaseBase(TestBase):
             log_file=log_file_path,
             env=lldbDAPEnv,
             additional_args=additional_args or [],
+            spawn_helper=self.spawnSubprocess,
         )
 
     def build_and_create_debug_adapter(
@@ -114,11 +119,9 @@ class DAPTestCaseBase(TestBase):
             self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
-    def wait_for_breakpoints_to_resolve(
-        self, breakpoint_ids: list[str], timeout: Optional[float] = DEFAULT_TIMEOUT
-    ):
+    def wait_for_breakpoints_to_resolve(self, breakpoint_ids: list[str]):
         unresolved_breakpoints = self.dap_server.wait_for_breakpoints_to_be_verified(
-            breakpoint_ids, timeout
+            breakpoint_ids
         )
         self.assertEqual(
             len(unresolved_breakpoints),
@@ -130,11 +133,10 @@ class DAPTestCaseBase(TestBase):
         self,
         predicate: Callable[[], bool],
         delay: float = 0.5,
-        timeout: float = DEFAULT_TIMEOUT,
     ) -> bool:
         """Repeatedly run the predicate until either the predicate returns True
         or a timeout has occurred."""
-        deadline = time.monotonic() + timeout
+        deadline = time.monotonic() + self.DEFAULT_TIMEOUT
         while deadline > time.monotonic():
             if predicate():
                 return True
@@ -151,15 +153,13 @@ class DAPTestCaseBase(TestBase):
         if key in self.dap_server.capabilities:
             self.assertEqual(self.dap_server.capabilities[key], False, msg)
 
-    def verify_breakpoint_hit(
-        self, breakpoint_ids: List[Union[int, str]], timeout: float = DEFAULT_TIMEOUT
-    ):
+    def verify_breakpoint_hit(self, breakpoint_ids: List[Union[int, str]]):
         """Wait for the process we are debugging to stop, and verify we hit
         any breakpoint location in the "breakpoint_ids" array.
         "breakpoint_ids" should be a list of breakpoint ID strings
         (["1", "2"]). The return value from self.set_source_breakpoints()
         or self.set_function_breakpoints() can be passed to this function"""
-        stopped_events = self.dap_server.wait_for_stopped(timeout)
+        stopped_events = self.dap_server.wait_for_stopped()
         normalized_bp_ids = [str(b) for b in breakpoint_ids]
         for stopped_event in stopped_events:
             if "body" in stopped_event:
@@ -182,11 +182,11 @@ class DAPTestCaseBase(TestBase):
             f"breakpoint not hit, wanted breakpoint_ids {breakpoint_ids} in stopped_events {stopped_events}",
         )
 
-    def verify_all_breakpoints_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
+    def verify_all_breakpoints_hit(self, breakpoint_ids):
         """Wait for the process we are debugging to stop, and verify we hit
         all of the breakpoint locations in the "breakpoint_ids" array.
         "breakpoint_ids" should be a list of int breakpoint IDs ([1, 2])."""
-        stopped_events = self.dap_server.wait_for_stopped(timeout)
+        stopped_events = self.dap_server.wait_for_stopped()
         for stopped_event in stopped_events:
             if "body" in stopped_event:
                 body = stopped_event["body"]
@@ -204,12 +204,12 @@ class DAPTestCaseBase(TestBase):
                     return
         self.assertTrue(False, f"breakpoints not hit, stopped_events={stopped_events}")
 
-    def verify_stop_exception_info(self, expected_description, timeout=DEFAULT_TIMEOUT):
+    def verify_stop_exception_info(self, expected_description):
         """Wait for the process we are debugging to stop, and verify the stop
         reason is 'exception' and that the description matches
         'expected_description'
         """
-        stopped_events = self.dap_server.wait_for_stopped(timeout)
+        stopped_events = self.dap_server.wait_for_stopped()
         for stopped_event in stopped_events:
             if "body" in stopped_event:
                 body = stopped_event["body"]
@@ -223,6 +223,16 @@ class DAPTestCaseBase(TestBase):
                 if expected_description == description:
                     return True
         return False
+
+    def verify_stop_on_entry(self) -> None:
+        """Waits for the process to be stopped and then verifies at least one
+        thread has the stop reason 'entry'."""
+        self.dap_server.wait_for_stopped()
+        self.assertIn(
+            "entry",
+            (t["reason"] for t in self.dap_server.thread_stop_reasons.values()),
+            "Expected at least one thread to report stop reason 'entry' in {self.dap_server.thread_stop_reasons}",
+        )
 
     def verify_commands(self, flavor: str, output: str, commands: list[str]):
         self.assertTrue(output and len(output) > 0, "expect console output")
@@ -240,6 +250,21 @@ class DAPTestCaseBase(TestBase):
                 found,
                 f"Command '{flavor}' - '{cmd}' not found in output: {output}",
             )
+
+    def verify_invalidated_event(self, expected_areas):
+        event = self.dap_server.invalidated_event
+        self.dap_server.invalidated_event = None
+        self.assertIsNotNone(event)
+        areas = event["body"].get("areas", [])
+        self.assertEqual(set(expected_areas), set(areas))
+
+    def verify_memory_event(self, memoryReference):
+        if memoryReference is None:
+            self.assertIsNone(self.dap_server.memory_event)
+        event = self.dap_server.memory_event
+        self.dap_server.memory_event = None
+        self.assertIsNotNone(event)
+        self.assertEqual(memoryReference, event["body"].get("memoryReference"))
 
     def get_dict_value(self, d: dict, key_path: list[str]) -> Any:
         """Verify each key in the key_path array is in contained in each
@@ -319,26 +344,14 @@ class DAPTestCaseBase(TestBase):
     def get_important(self):
         return self.dap_server.get_output("important")
 
-    def collect_stdout(
-        self, timeout: float = DEFAULT_TIMEOUT, pattern: Optional[str] = None
-    ) -> str:
-        return self.dap_server.collect_output(
-            "stdout", timeout=timeout, pattern=pattern
-        )
+    def collect_stdout(self, pattern: Optional[str] = None) -> str:
+        return self.dap_server.collect_output("stdout", pattern=pattern)
 
-    def collect_console(
-        self, timeout: float = DEFAULT_TIMEOUT, pattern: Optional[str] = None
-    ) -> str:
-        return self.dap_server.collect_output(
-            "console", timeout=timeout, pattern=pattern
-        )
+    def collect_console(self, pattern: Optional[str] = None) -> str:
+        return self.dap_server.collect_output("console", pattern=pattern)
 
-    def collect_important(
-        self, timeout: float = DEFAULT_TIMEOUT, pattern: Optional[str] = None
-    ) -> str:
-        return self.dap_server.collect_output(
-            "important", timeout=timeout, pattern=pattern
-        )
+    def collect_important(self, pattern: Optional[str] = None) -> str:
+        return self.dap_server.collect_output("important", pattern=pattern)
 
     def get_local_as_int(self, name, threadId=None):
         value = self.dap_server.get_local_variable_value(name, threadId=threadId)
@@ -352,13 +365,21 @@ class DAPTestCaseBase(TestBase):
         else:
             return int(value)
 
+    def set_variable(self, varRef, name, value, id=None):
+        """Set a variable."""
+        response = self.dap_server.request_setVariable(varRef, name, str(value), id=id)
+        if response["success"]:
+            self.verify_invalidated_event(["variables"])
+            self.verify_memory_event(response["body"].get("memoryReference"))
+        return response
+
     def set_local(self, name, value, id=None):
         """Set a top level local variable only."""
-        return self.dap_server.request_setVariable(1, name, str(value), id=id)
+        return self.set_variable(1, name, str(value), id=id)
 
     def set_global(self, name, value, id=None):
         """Set a top level global variable only."""
-        return self.dap_server.request_setVariable(2, name, str(value), id=id)
+        return self.set_variable(2, name, str(value), id=id)
 
     def stepIn(
         self,
@@ -366,14 +387,13 @@ class DAPTestCaseBase(TestBase):
         targetId=None,
         waitForStop=True,
         granularity="statement",
-        timeout=DEFAULT_TIMEOUT,
     ):
         response = self.dap_server.request_stepIn(
             threadId=threadId, targetId=targetId, granularity=granularity
         )
         self.assertTrue(response["success"])
         if waitForStop:
-            return self.dap_server.wait_for_stopped(timeout)
+            return self.dap_server.wait_for_stopped()
         return None
 
     def stepOver(
@@ -381,7 +401,6 @@ class DAPTestCaseBase(TestBase):
         threadId=None,
         waitForStop=True,
         granularity="statement",
-        timeout=DEFAULT_TIMEOUT,
     ):
         response = self.dap_server.request_next(
             threadId=threadId, granularity=granularity
@@ -390,40 +409,40 @@ class DAPTestCaseBase(TestBase):
             response["success"], f"next request failed: response {response}"
         )
         if waitForStop:
-            return self.dap_server.wait_for_stopped(timeout)
+            return self.dap_server.wait_for_stopped()
         return None
 
-    def stepOut(self, threadId=None, waitForStop=True, timeout=DEFAULT_TIMEOUT):
+    def stepOut(self, threadId=None, waitForStop=True):
         self.dap_server.request_stepOut(threadId=threadId)
         if waitForStop:
-            return self.dap_server.wait_for_stopped(timeout)
+            return self.dap_server.wait_for_stopped()
         return None
 
     def do_continue(self):  # `continue` is a keyword.
         resp = self.dap_server.request_continue()
         self.assertTrue(resp["success"], f"continue request failed: {resp}")
 
-    def continue_to_next_stop(self, timeout=DEFAULT_TIMEOUT):
+    def continue_to_next_stop(self):
         self.do_continue()
-        return self.dap_server.wait_for_stopped(timeout)
+        return self.dap_server.wait_for_stopped()
 
-    def continue_to_breakpoint(self, breakpoint_id: str, timeout=DEFAULT_TIMEOUT):
-        self.continue_to_breakpoints((breakpoint_id), timeout)
+    def continue_to_breakpoint(self, breakpoint_id: str):
+        self.continue_to_breakpoints((breakpoint_id))
 
-    def continue_to_breakpoints(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
+    def continue_to_breakpoints(self, breakpoint_ids):
         self.do_continue()
-        self.verify_breakpoint_hit(breakpoint_ids, timeout)
+        self.verify_breakpoint_hit(breakpoint_ids)
 
-    def continue_to_exception_breakpoint(self, filter_label, timeout=DEFAULT_TIMEOUT):
+    def continue_to_exception_breakpoint(self, filter_label):
         self.do_continue()
         self.assertTrue(
-            self.verify_stop_exception_info(filter_label, timeout),
+            self.verify_stop_exception_info(filter_label),
             'verify we got "%s"' % (filter_label),
         )
 
-    def continue_to_exit(self, exitCode=0, timeout=DEFAULT_TIMEOUT):
+    def continue_to_exit(self, exitCode=0):
         self.do_continue()
-        stopped_events = self.dap_server.wait_for_stopped(timeout)
+        stopped_events = self.dap_server.wait_for_stopped()
         self.assertEqual(
             len(stopped_events), 1, "stopped_events = {}".format(stopped_events)
         )
@@ -577,4 +596,6 @@ class DAPTestCaseBase(TestBase):
         response = self.dap_server.request_writeMemory(
             memoryReference, encodedData, offset=offset, allowPartial=allowPartial
         )
+        if response["success"]:
+            self.verify_invalidated_event(["all"])
         return response

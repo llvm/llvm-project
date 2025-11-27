@@ -1,4 +1,4 @@
-//===--- ClangTidyProfiling.cpp - clang-tidy --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -59,7 +59,8 @@ void ClangTidyProfiling::storeProfileData(llvm::TimerGroup &TG) {
 
   llvm::SmallString<256> OutputDirectory(Storage->StoreFilename);
   llvm::sys::path::remove_filename(OutputDirectory);
-  if (std::error_code EC = llvm::sys::fs::create_directories(OutputDirectory)) {
+  if (const std::error_code EC =
+          llvm::sys::fs::create_directories(OutputDirectory)) {
     llvm::errs() << "Unable to create output directory '" << OutputDirectory
                  << "': " << EC.message() << "\n";
     return;

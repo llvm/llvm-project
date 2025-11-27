@@ -116,6 +116,9 @@ def err_enumerator_unnamed_no_def : Error<
 def ext_ms_c_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a Microsoft extension">,
   InGroup<MicrosoftFixedEnum>;
+def ext_ms_c_empty_enum_type : Extension<
+  "empty enumeration types are a Microsoft extension">,
+  InGroup<MicrosoftEmptyEnum>;
 def ext_c23_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a C23 extension">,
   InGroup<C23>;
@@ -505,7 +508,7 @@ def err_expected_coloncolon_after_super : Error<
   "expected '::' after '__super'">;
 
 def ext_decomp_decl_empty : ExtWarn<
-  "ISO C++17 does not allow a decomposition group to be empty">,
+  "ISO C++17 does not allow a structured binding group to be empty">,
   InGroup<DiagGroup<"empty-decomposition">>;
 
 def err_function_parameter_limit_exceeded : Error<
@@ -1141,7 +1144,7 @@ def warn_cxx23_compat_binding_pack : Warning<
 def err_capture_default_first : Error<
   "capture default must be first">;
 def ext_decl_attrs_on_lambda : ExtWarn<
-  "%select{an attribute specifier sequence|%0}1 in this position "
+  "%select{an attribute specifier sequence|%1}0 in this position "
   "is a C++23 extension">, InGroup<CXX23AttrsOnLambda>;
 def ext_lambda_missing_parens : ExtWarn<
   "lambda without a parameter clause is a C++23 extension">,
@@ -1497,6 +1500,8 @@ def err_omp_multiple_step_or_linear_modifier : Error<
   "multiple %select{'step size'|'linear modifier'}0 found in linear clause">;
 def err_omp_deprecate_old_syntax: Error<
   "old syntax '%0' on '%1' clause was deprecated, use new syntax '%2'">;
+def err_omp_allocator_comma_separator :
+  Error<"',' not allowed as separator in 'uses_allocators' clause, use ';' instead">;
 def warn_omp_future_directive_spelling: Warning<
   "directive spelling '%0' is introduced in a later OpenMP version">,
   InGroup<OpenMPFuture>;
@@ -1719,6 +1724,10 @@ def warn_omp_invalid_attribute_for_ompx_attributes : Warning<"'ompx_attribute' c
   "%0 is ignored">, InGroup<OpenMPExtensions>;
 def err_omp_duplicate_modifier : Error<"duplicate modifier '%0' in '%1' clause">;
 def err_omp_expected_modifier : Error<"expected modifier in '%0' clause">;
+def err_omp_unknown_need_device_ptr_kind
+    : Error<
+        "invalid argument for 'need_device_ptr' kind in 'adjust_args' clause; "
+        "expected 'fp_nullify' or 'fb_preserve'">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
@@ -1860,9 +1869,8 @@ def note_max_tokens_total_override : Note<"total token limit set here">;
 
 def err_expected_semantic_identifier : Error<
   "expected HLSL Semantic identifier">;
-def err_invalid_declaration_in_hlsl_buffer : Error<
-  "invalid declaration inside %select{tbuffer|cbuffer}0">;
-def err_unknown_hlsl_semantic : Error<"unknown HLSL semantic %0">;
+def err_invalid_declaration_in_hlsl_buffer
+    : Error<"invalid declaration inside %select{tbuffer|cbuffer}0">;
 def err_hlsl_separate_attr_arg_and_number : Error<"wrong argument format for hlsl attribute, use %0 instead">;
 def ext_hlsl_access_specifiers : ExtWarn<
   "access specifiers are a clang HLSL extension">,

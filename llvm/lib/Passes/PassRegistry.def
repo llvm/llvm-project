@@ -35,6 +35,7 @@ MODULE_ANALYSIS("no-op-module", NoOpModuleAnalysis())
 MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 MODULE_ANALYSIS("profile-summary", ProfileSummaryAnalysis())
 MODULE_ANALYSIS("reg-usage", PhysicalRegisterUsageAnalysis())
+MODULE_ANALYSIS("runtime-libcall-info", RuntimeLibraryAnalysis())
 MODULE_ANALYSIS("stack-safety", StackSafetyGlobalAnalysis())
 MODULE_ANALYSIS("verify", VerifierAnalysis())
 
@@ -113,12 +114,14 @@ MODULE_PASS("pgo-force-function-attrs",
                                           ? PGOOpt->ColdOptType
                                           : PGOOptions::ColdFuncOpt::Default))
 MODULE_PASS("memprof-context-disambiguation", MemProfContextDisambiguation())
+MODULE_PASS("memprof-remove-attributes", MemProfRemoveInfo())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("mergefunc", MergeFunctionsPass())
 MODULE_PASS("metarenamer", MetaRenamerPass())
 MODULE_PASS("module-inline", ModuleInlinerPass())
 MODULE_PASS("name-anon-globals", NameAnonGlobalPass())
 MODULE_PASS("no-op-module", NoOpModulePass())
+MODULE_PASS("norecurse-lto-inference", NoRecurseLTOInferencePass())
 MODULE_PASS("nsan", NumericalStabilitySanitizerPass())
 MODULE_PASS("openmp-opt", OpenMPOptPass())
 MODULE_PASS("openmp-opt-postlink",
@@ -179,6 +182,10 @@ MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
 #ifndef MODULE_PASS_WITH_PARAMS
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
+MODULE_PASS_WITH_PARAMS(
+    "alloc-token", "AllocTokenPass",
+    [](AllocTokenOptions Opts) { return AllocTokenPass(Opts); },
+    parseAllocTokenPassOptions, "mode=<mode>")
 MODULE_PASS_WITH_PARAMS(
     "asan", "AddressSanitizerPass",
     [](AddressSanitizerOptions Opts) { return AddressSanitizerPass(Opts); },
@@ -339,7 +346,7 @@ FUNCTION_ANALYSIS("aa", AAManager())
 FUNCTION_ANALYSIS("access-info", LoopAccessAnalysis())
 FUNCTION_ANALYSIS("assumptions", AssumptionAnalysis())
 FUNCTION_ANALYSIS("bb-sections-profile-reader",
-                  BasicBlockSectionsProfileReaderAnalysis(TM))
+                  BasicBlockSectionsProfileReaderAnalysis(*TM))
 FUNCTION_ANALYSIS("block-freq", BlockFrequencyAnalysis())
 FUNCTION_ANALYSIS("branch-prob", BranchProbabilityAnalysis())
 FUNCTION_ANALYSIS("cycles", CycleAnalysis())
@@ -350,9 +357,8 @@ FUNCTION_ANALYSIS("domfrontier", DominanceFrontierAnalysis())
 FUNCTION_ANALYSIS("domtree", DominatorTreeAnalysis())
 FUNCTION_ANALYSIS("ephemerals", EphemeralValuesAnalysis())
 FUNCTION_ANALYSIS("func-properties", FunctionPropertiesAnalysis())
-FUNCTION_ANALYSIS("machine-function-info", MachineFunctionAnalysis(TM))
+FUNCTION_ANALYSIS("machine-function-info", MachineFunctionAnalysis(*TM))
 FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis())
-FUNCTION_ANALYSIS("inliner-size-estimator", InlineSizeEstimatorAnalysis())
 FUNCTION_ANALYSIS("last-run-tracking", LastRunTrackingAnalysis())
 FUNCTION_ANALYSIS("lazy-value-info", LazyValueAnalysis())
 FUNCTION_ANALYSIS("loops", LoopAnalysis())
@@ -400,14 +406,14 @@ FUNCTION_PASS("alignment-from-assumptions", AlignmentFromAssumptionsPass())
 FUNCTION_PASS("annotation-remarks", AnnotationRemarksPass())
 FUNCTION_PASS("assume-builder", AssumeBuilderPass())
 FUNCTION_PASS("assume-simplify", AssumeSimplifyPass())
-FUNCTION_PASS("atomic-expand", AtomicExpandPass(TM))
+FUNCTION_PASS("atomic-expand", AtomicExpandPass(*TM))
 FUNCTION_PASS("bdce", BDCEPass())
 FUNCTION_PASS("break-crit-edges", BreakCriticalEdgesPass())
 FUNCTION_PASS("callbr-prepare", CallBrPreparePass())
 FUNCTION_PASS("callsite-splitting", CallSiteSplittingPass())
 FUNCTION_PASS("chr", ControlHeightReductionPass())
-FUNCTION_PASS("codegenprepare", CodeGenPreparePass(TM))
-FUNCTION_PASS("complex-deinterleaving", ComplexDeinterleavingPass(TM))
+FUNCTION_PASS("codegenprepare", CodeGenPreparePass(*TM))
+FUNCTION_PASS("complex-deinterleaving", ComplexDeinterleavingPass(*TM))
 FUNCTION_PASS("consthoist", ConstantHoistingPass())
 FUNCTION_PASS("constraint-elimination", ConstraintEliminationPass())
 FUNCTION_PASS("coro-elide", CoroElidePass())
@@ -424,9 +430,9 @@ FUNCTION_PASS("dot-dom-only", DomOnlyPrinter())
 FUNCTION_PASS("dot-post-dom", PostDomPrinter())
 FUNCTION_PASS("dot-post-dom-only", PostDomOnlyPrinter())
 FUNCTION_PASS("dse", DSEPass())
-FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass(TM))
-FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM))
-FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(TM))
+FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass(*TM))
+FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(*TM))
+FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(*TM))
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass())
 FUNCTION_PASS("extra-vector-passes",
               ExtraFunctionPassManager<ShouldRunExtraVectorPasses>())
@@ -439,15 +445,15 @@ FUNCTION_PASS("guard-widening", GuardWideningPass())
 FUNCTION_PASS("gvn-hoist", GVNHoistPass())
 FUNCTION_PASS("gvn-sink", GVNSinkPass())
 FUNCTION_PASS("helloworld", HelloWorldPass())
-FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass(TM))
+FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass(*TM))
 FUNCTION_PASS("infer-address-spaces", InferAddressSpacesPass())
 FUNCTION_PASS("infer-alignment", InferAlignmentPass())
 FUNCTION_PASS("inject-tli-mappings", InjectTLIMappings())
 FUNCTION_PASS("instcount", InstCountPass())
 FUNCTION_PASS("instnamer", InstructionNamerPass())
 FUNCTION_PASS("instsimplify", InstSimplifyPass())
-FUNCTION_PASS("interleaved-access", InterleavedAccessPass(TM))
-FUNCTION_PASS("interleaved-load-combine", InterleavedLoadCombinePass(TM))
+FUNCTION_PASS("interleaved-access", InterleavedAccessPass(*TM))
+FUNCTION_PASS("interleaved-load-combine", InterleavedLoadCombinePass(*TM))
 FUNCTION_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 FUNCTION_PASS("irce", IRCEPass())
 FUNCTION_PASS("jump-threading", JumpThreadingPass())
@@ -508,8 +514,6 @@ FUNCTION_PASS("print<domfrontier>", DominanceFrontierPrinterPass(errs()))
 FUNCTION_PASS("print<domtree>", DominatorTreePrinterPass(errs()))
 FUNCTION_PASS("print<func-properties>", FunctionPropertiesPrinterPass(errs()))
 FUNCTION_PASS("print<inline-cost>", InlineCostAnnotationPrinterPass(errs()))
-FUNCTION_PASS("print<inliner-size-estimator>",
-              InlineSizeEstimatorAnalysisPrinterPass(errs()))
 FUNCTION_PASS("print<lazy-value-info>", LazyValueInfoPrinterPass(errs()))
 FUNCTION_PASS("print<loops>", LoopPrinterPass(errs()))
 FUNCTION_PASS("print<memoryssa-walker>", MemorySSAWalkerPrinterPass(errs()))
@@ -526,25 +530,25 @@ FUNCTION_PASS("reassociate", ReassociatePass())
 FUNCTION_PASS("redundant-dbg-inst-elim", RedundantDbgInstEliminationPass())
 FUNCTION_PASS("replace-with-veclib", ReplaceWithVeclib())
 FUNCTION_PASS("reg2mem", RegToMemPass())
-FUNCTION_PASS("safe-stack", SafeStackPass(TM))
+FUNCTION_PASS("safe-stack", SafeStackPass(*TM))
 FUNCTION_PASS("sandbox-vectorizer", SandboxVectorizerPass())
 FUNCTION_PASS("scalarize-masked-mem-intrin", ScalarizeMaskedMemIntrinPass())
 FUNCTION_PASS("sccp", SCCPPass())
-FUNCTION_PASS("select-optimize", SelectOptimizePass(TM))
+FUNCTION_PASS("select-optimize", SelectOptimizePass(*TM))
 FUNCTION_PASS("separate-const-offset-from-gep",
               SeparateConstOffsetFromGEPPass())
 FUNCTION_PASS("sink", SinkingPass())
 FUNCTION_PASS("sjlj-eh-prepare", SjLjEHPreparePass(TM))
 FUNCTION_PASS("slp-vectorizer", SLPVectorizerPass())
 FUNCTION_PASS("slsr", StraightLineStrengthReducePass())
-FUNCTION_PASS("stack-protector", StackProtectorPass(TM))
+FUNCTION_PASS("stack-protector", StackProtectorPass(*TM))
 FUNCTION_PASS("strip-gc-relocates", StripGCRelocates())
 FUNCTION_PASS("tailcallelim", TailCallElimPass())
 FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
 FUNCTION_PASS("trigger-crash-function", TriggerCrashFunctionPass())
 FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
-FUNCTION_PASS("typepromotion", TypePromotionPass(TM))
+FUNCTION_PASS("typepromotion", TypePromotionPass(*TM))
 FUNCTION_PASS("unify-loop-exits", UnifyLoopExitsPass())
 FUNCTION_PASS("unreachableblockelim", UnreachableBlockElimPass())
 FUNCTION_PASS("vector-combine", VectorCombinePass())
@@ -576,6 +580,10 @@ FUNCTION_PASS_WITH_PARAMS(
     "early-cse", "EarlyCSEPass",
     [](bool UseMemorySSA) { return EarlyCSEPass(UseMemorySSA); },
     parseEarlyCSEPassOptions, "memssa")
+FUNCTION_PASS_WITH_PARAMS(
+    "drop-unnecessary-assumes", "DropUnnecessaryAssumesPass",
+    [](bool DropDereferenceable) { return DropUnnecessaryAssumesPass(DropDereferenceable); },
+    parseDropUnnecessaryAssumesPassOptions, "drop-deref")
 FUNCTION_PASS_WITH_PARAMS(
     "ee-instrument", "EntryExitInstrumenterPass",
     [](bool PostInlining) { return EntryExitInstrumenterPass(PostInlining); },
@@ -684,8 +692,9 @@ FUNCTION_PASS_WITH_PARAMS(
     parseSimplifyCFGOptions,
     "no-speculate-blocks;speculate-blocks;no-simplify-cond-branch;"
     "simplify-cond-branch;no-forward-switch-cond;forward-switch-cond;"
-    "no-switch-range-to-icmp;switch-range-to-icmp;no-switch-to-lookup;"
-    "switch-to-lookup;no-keep-loops;keep-loops;no-hoist-common-insts;"
+    "no-switch-range-to-icmp;switch-range-to-icmp;no-switch-to-arithmetic;"
+    "switch-to-arithmetic;no-switch-to-lookup;switch-to-lookup;"
+    "no-keep-loops;keep-loops;no-hoist-common-insts;"
     "hoist-common-insts;no-hoist-loads-stores-with-cond-faulting;"
     "hoist-loads-stores-with-cond-faulting;no-sink-common-insts;"
     "sink-common-insts;no-speculate-unpredictables;speculate-unpredictables;"
@@ -722,10 +731,10 @@ FUNCTION_PASS_WITH_PARAMS(
 FUNCTION_PASS_WITH_PARAMS(
     "expand-fp", "ExpandFpPass",
     [TM = TM](CodeGenOptLevel OL) {
-      return ExpandFpPass(TM, OL);
+      return ExpandFpPass(*TM, OL);
     },
     parseExpandFpOptions, "O0;O1;O2;O3")
-    
+
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOPNEST_PASS
@@ -754,7 +763,6 @@ LOOP_ANALYSIS("should-run-extra-simple-loop-unswitch",
 #endif
 LOOP_PASS("canon-freeze", CanonicalizeFreezeInLoopsPass())
 LOOP_PASS("dot-ddg", DDGDotPrinterPass())
-LOOP_PASS("evl-iv-simplify", EVLIndVarSimplifyPass())
 LOOP_PASS("guard-widening", GuardWideningPass())
 LOOP_PASS("extra-simple-loop-unswitch-passes",
           ExtraLoopPassManager<ShouldRunExtraSimpleLoopUnswitch>())
@@ -804,3 +812,35 @@ LOOP_PASS_WITH_PARAMS(
     },
     parseLoopUnswitchOptions, "nontrivial;no-nontrivial;trivial;no-trivial")
 #undef LOOP_PASS_WITH_PARAMS
+
+#ifdef MODULE_CALLBACK
+MODULE_CALLBACK("pipeline-start-callbacks", invokePipelineStartEPCallbacks)
+#endif
+#undef MODULE_CALLBACK
+
+// There are some full lto specific ones that are ignored here for now
+#ifdef MODULE_LTO_CALLBACK
+MODULE_LTO_CALLBACK("pipeline-early-simplification-callbacks", invokePipelineEarlySimplificationEPCallbacks)
+MODULE_LTO_CALLBACK("optimizer-early-callbacks", invokeOptimizerEarlyEPCallbacks)
+MODULE_LTO_CALLBACK("optimizer-last-callbacks", invokeOptimizerLastEPCallbacks)
+#endif
+#undef MODULE_LTO_CALLBACK
+
+#ifdef FUNCTION_CALLBACK
+FUNCTION_CALLBACK("peephole-callbacks", invokePeepholeEPCallbacks)
+FUNCTION_CALLBACK("scalar-optimizer-late-callbacks", invokeScalarOptimizerLateEPCallbacks)
+FUNCTION_CALLBACK("vectorizer-start-callbacks", invokeVectorizerStartEPCallbacks)
+FUNCTION_CALLBACK("vectorizer-end-callbacks", invokeVectorizerEndEPCallbacks)
+#endif
+#undef FUNCTION_CALLBACK
+
+#ifdef CGSCC_CALLBACK
+CGSCC_CALLBACK("cgscc-optimizer-late-callbacks", invokeCGSCCOptimizerLateEPCallbacks)
+#endif
+#undef CGSCC_CALLBACK
+
+#ifdef LOOP_CALLBACK
+LOOP_CALLBACK("late-loop-optimizations-callbacks", invokeLateLoopOptimizationsEPCallbacks)
+LOOP_CALLBACK("loop-optimizer-end-callbacks", invokeLoopOptimizerEndEPCallbacks)
+#endif
+#undef LOOP_CALLBACK

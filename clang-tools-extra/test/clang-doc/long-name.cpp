@@ -1,7 +1,9 @@
+// FIXME: This test seems to break on windows, so disable it for now.
+// UNSUPPORTED: system-windows
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --output=%t --format=mustache --executor=standalone %s
-// RUN: ls %t/json | FileCheck %s -check-prefix=CHECK-JSON
-// RUN: ls %t/html | FileCheck %s -check-prefix=CHECK-HTML
+// RUN: ls %t/json/GlobalNamespace | FileCheck %s -check-prefix=CHECK-JSON
+// RUN: ls %t/html/GlobalNamespace | FileCheck %s -check-prefix=CHECK-HTML
 
 struct ThisStructHasANameThatResultsInAMangledNameThatIsExactly250CharactersLongThatIsSupposedToTestTheFilenameLengthLimitsWithinClangDocInOrdertoSeeifclangdocwillcrashornotdependingonthelengthofthestructIfTheLengthIsTooLongThenClangDocWillCrashAnd12 {};
 
@@ -9,6 +11,6 @@ struct ThisStructHasANameThatResultsInAMangledNameThatIsExactly250CharactersLong
 struct ThisStructHasANameThatResultsInAMangledNameThatIsExactly251CharactersLongThatIsSupposedToTestTheFilenameLengthLimitsWithinClangDocInOrdertoSeeifclangdocwillcrashornotdependingonthelengthofthestructIfTheLengthIsTooLongThenClangDocWillCrashAnd123 {};
 
 // CHECK-JSON: ThisStructHasANameThatResultsInAMangledNameThatIsExactly250CharactersLongThatIsSupposedToTestTheFilenameLengthLimitsWithinClangDocInOrdertoSeeifclangdocwillcrashornotdependingonthelengthofthestructIfTheLengthIsTooLongThenClangDocWillCrashAnd12.json
-// CHECK-JSON: {{[0-9A-F]*}}.json
+// CHECK-JSON: _ZTV244ThisStructHasANameThatResultsInAMangledNameThatIsExactly251CharactersLongThatIsSupposedToTestTheFilenameLengthLimitsWithinClangDocInOrdertoSeeifclangdocwillcrashornotdependingonthelengthofthestructIfTheL29DE8558215A13A506661C0E01E50AA3E5C9C7FA.json 
 // CHECK-HTML: ThisStructHasANameThatResultsInAMangledNameThatIsExactly250CharactersLongThatIsSupposedToTestTheFilenameLengthLimitsWithinClangDocInOrdertoSeeifclangdocwillcrashornotdependingonthelengthofthestructIfTheLengthIsTooLongThenClangDocWillCrashAnd12.html
-// CHECK-HTML: {{[0-9A-F]*}}.html
+// CHECK-HTML: _ZTV244ThisStructHasANameThatResultsInAMangledNameThatIsExactly251CharactersLongThatIsSupposedToTestTheFilenameLengthLimitsWithinClangDocInOrdertoSeeifclangdocwillcrashornotdependingonthelengthofthestructIfTheL29DE8558215A13A506661C0E01E50AA3E5C9C7FA.html

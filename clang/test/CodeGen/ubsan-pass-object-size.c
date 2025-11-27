@@ -14,7 +14,8 @@ int foo(int *const p __attribute__((pass_object_size(0))), int n) {
   // CHECK: __ubsan_handle_out_of_bounds
 
   {
-    int **p = &p; // Shadow the parameter. The pass_object_size info is lost.
+    int **q = &p;
+    int **p = q; // Shadow the parameter. The pass_object_size info is lost.
     // CHECK-NOT: __ubsan_handle_out_of_bounds
     x = *p[n];
   }

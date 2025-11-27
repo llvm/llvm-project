@@ -7,7 +7,8 @@ from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 import re
 
-
+# Flakey in Github CI runs, see https://github.com/llvm/llvm-project/issues/137660.
+@skipIfLinux
 class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
     def run_test(self, symbol_basename, expect_debug_info_size):
         program_basename = "a.out.stripped"
@@ -66,7 +67,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         # Collect all the module names we saw as events.
         module_new_names = []
         module_changed_names = []
-        module_event = self.dap_server.wait_for_event(["module"], 1)
+        module_event = self.dap_server.wait_for_event(["module"])
         while module_event is not None:
             reason = module_event["body"]["reason"]
             if reason == "new":
@@ -74,7 +75,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
             elif reason == "changed":
                 module_changed_names.append(module_event["body"]["module"]["name"])
 
-            module_event = self.dap_server.wait_for_event(["module"], 1)
+            module_event = self.dap_server.wait_for_event(["module"])
 
         # Make sure we got an event for every active module.
         self.assertNotEqual(len(module_new_names), 0)

@@ -26,6 +26,11 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_CIRCANONICALIZE
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 namespace {
 
 /// Removes branches between two blocks if it is the only branch.
@@ -101,7 +106,8 @@ struct RemoveEmptySwitch : public OpRewritePattern<SwitchOp> {
 // CIRCanonicalizePass
 //===----------------------------------------------------------------------===//
 
-struct CIRCanonicalizePass : public CIRCanonicalizeBase<CIRCanonicalizePass> {
+struct CIRCanonicalizePass
+    : public impl::CIRCanonicalizeBase<CIRCanonicalizePass> {
   using CIRCanonicalizeBase::CIRCanonicalizeBase;
 
   // The same operation rewriting done here could have been performed
@@ -134,8 +140,6 @@ void CIRCanonicalizePass::runOnOperation() {
   getOperation()->walk([&](Operation *op) {
     assert(!cir::MissingFeatures::switchOp());
     assert(!cir::MissingFeatures::tryOp());
-    assert(!cir::MissingFeatures::complexRealOp());
-    assert(!cir::MissingFeatures::complexImagOp());
     assert(!cir::MissingFeatures::callOp());
 
     // Many operations are here to perform a manual `fold` in

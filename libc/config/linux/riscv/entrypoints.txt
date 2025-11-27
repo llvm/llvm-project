@@ -329,6 +329,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.dup2
     libc.src.unistd.dup3
     libc.src.unistd.execve
+    libc.src.unistd.faccessat
     libc.src.unistd.fchdir
     libc.src.unistd.fpathconf
     libc.src.unistd.fsync
@@ -336,6 +337,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getcwd
     libc.src.unistd.getentropy
     libc.src.unistd.geteuid
+    libc.src.unistd.gethostname
     libc.src.unistd.getpid
     libc.src.unistd.getppid
     libc.src.unistd.getsid
@@ -749,6 +751,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.rintf16
     libc.src.math.roundevenf16
     libc.src.math.roundf16
+    libc.src.math.rsqrtf
+    libc.src.math.rsqrtf16
     libc.src.math.scalblnf16
     libc.src.math.scalbnf16
     libc.src.math.setpayloadf16
@@ -906,6 +910,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.llogbbf16
   libc.src.math.llrintbf16
   libc.src.math.llroundbf16
+  libc.src.math.log_bf16
   libc.src.math.logbbf16
   libc.src.math.lrintbf16
   libc.src.math.lroundbf16
@@ -1019,6 +1024,7 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivulr
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
+    libc.src.stdfix.rdivi
   )
 endif()
 
@@ -1072,6 +1078,8 @@ if(LLVM_LIBC_FULL_BUILD)
     # arpa/inet.h entrypoints
     libc.src.arpa.inet.htonl
     libc.src.arpa.inet.htons
+    libc.src.arpa.inet.inet_addr
+    libc.src.arpa.inet.inet_aton
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
 
@@ -1266,6 +1274,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.ctime_r
     libc.src.time.clock
     libc.src.time.clock_gettime
+    libc.src.time.clock_settime
     libc.src.time.difftime
     libc.src.time.gettimeofday
     libc.src.time.gmtime

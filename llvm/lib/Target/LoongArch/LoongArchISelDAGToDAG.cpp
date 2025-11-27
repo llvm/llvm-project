@@ -113,10 +113,11 @@ void LoongArchDAGToDAGISel::Select(SDNode *Node) {
     APInt SplatValue, SplatUndef;
     unsigned SplatBitSize;
     bool HasAnyUndefs;
-    unsigned Op;
+    unsigned Op = 0;
     EVT ResTy = BVN->getValueType(0);
     bool Is128Vec = BVN->getValueType(0).is128BitVector();
     bool Is256Vec = BVN->getValueType(0).is256BitVector();
+    SDNode *Res;
 
     if (!Subtarget->hasExtLSX() || (!Is128Vec && !Is256Vec))
       break;
@@ -124,29 +125,43 @@ void LoongArchDAGToDAGISel::Select(SDNode *Node) {
                               HasAnyUndefs, 8))
       break;
 
-    switch (SplatBitSize) {
-    default:
-      break;
-    case 8:
-      Op = Is256Vec ? LoongArch::PseudoXVREPLI_B : LoongArch::PseudoVREPLI_B;
-      break;
-    case 16:
-      Op = Is256Vec ? LoongArch::PseudoXVREPLI_H : LoongArch::PseudoVREPLI_H;
-      break;
-    case 32:
-      Op = Is256Vec ? LoongArch::PseudoXVREPLI_W : LoongArch::PseudoVREPLI_W;
-      break;
-    case 64:
-      Op = Is256Vec ? LoongArch::PseudoXVREPLI_D : LoongArch::PseudoVREPLI_D;
-      break;
-    }
-
-    SDNode *Res;
     // If we have a signed 10 bit integer, we can splat it directly.
     if (SplatValue.isSignedIntN(10)) {
+      switch (SplatBitSize) {
+      default:
+        break;
+      case 8:
+        Op = Is256Vec ? LoongArch::PseudoXVREPLI_B : LoongArch::PseudoVREPLI_B;
+        break;
+      case 16:
+        Op = Is256Vec ? LoongArch::PseudoXVREPLI_H : LoongArch::PseudoVREPLI_H;
+        break;
+      case 32:
+        Op = Is256Vec ? LoongArch::PseudoXVREPLI_W : LoongArch::PseudoVREPLI_W;
+        break;
+      case 64:
+        Op = Is256Vec ? LoongArch::PseudoXVREPLI_D : LoongArch::PseudoVREPLI_D;
+        break;
+      }
+
       EVT EleType = ResTy.getVectorElementType();
       APInt Val = SplatValue.sextOrTrunc(EleType.getSizeInBits());
       SDValue Imm = CurDAG->getTargetConstant(Val, DL, EleType);
+      Res = CurDAG->getMachineNode(Op, DL, ResTy, Imm);
+      ReplaceNode(Node, Res);
+      return;
+    }
+
+    // Select appropriate [x]vldi instructions for some special constant splats,
+    // where the immediate value `imm[12] == 1` for used [x]vldi instructions.
+    const auto &TLI =
+        *static_cast<const LoongArchTargetLowering *>(getTargetLowering());
+    std::pair<bool, uint64_t> ConvertVLDI =
+        TLI.isImmVLDILegalForMode1(SplatValue, SplatBitSize);
+    if (ConvertVLDI.first) {
+      Op = Is256Vec ? LoongArch::XVLDI : LoongArch::VLDI;
+      SDValue Imm = CurDAG->getSignedTargetConstant(
+          SignExtend32<13>(ConvertVLDI.second), DL, MVT::i32);
       Res = CurDAG->getMachineNode(Op, DL, ResTy, Imm);
       ReplaceNode(Node, Res);
       return;

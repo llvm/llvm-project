@@ -351,8 +351,8 @@ bool PEIImpl::run(MachineFunction &MF) {
   delete RS;
   SaveBlocks.clear();
   RestoreBlocks.clear();
-  MFI.setSavePoints({});
-  MFI.setRestorePoints({});
+  MFI.clearSavePoints();
+  MFI.clearRestorePoints();
   return true;
 }
 
@@ -431,10 +431,12 @@ void PEIImpl::calculateSaveRestoreBlocks(MachineFunction &MF) {
   if (!MFI.getSavePoints().empty()) {
     assert(MFI.getSavePoints().size() == 1 &&
            "Multiple save points are not yet supported!");
-    SaveBlocks.push_back(MFI.getSavePoints().front());
+    const auto &SavePoint = *MFI.getSavePoints().begin();
+    SaveBlocks.push_back(SavePoint.first);
     assert(MFI.getRestorePoints().size() == 1 &&
            "Multiple restore points are not yet supported!");
-    MachineBasicBlock *RestoreBlock = MFI.getRestorePoints().front();
+    const auto &RestorePoint = *MFI.getRestorePoints().begin();
+    MachineBasicBlock *RestoreBlock = RestorePoint.first;
     // If RestoreBlock does not have any successor and is not a return block
     // then the end point is unreachable and we do not need to insert any
     // epilogue.
@@ -563,8 +565,9 @@ static void updateLiveness(MachineFunction &MF) {
 
   assert(MFI.getSavePoints().size() < 2 &&
          "Multiple save points not yet supported!");
-  MachineBasicBlock *Save =
-      MFI.getSavePoints().empty() ? nullptr : MFI.getSavePoints().front();
+  MachineBasicBlock *Save = MFI.getSavePoints().empty()
+                                ? nullptr
+                                : (*MFI.getSavePoints().begin()).first;
 
   if (!Save)
     Save = Entry;
@@ -577,8 +580,9 @@ static void updateLiveness(MachineFunction &MF) {
 
   assert(MFI.getRestorePoints().size() < 2 &&
          "Multiple restore points not yet supported!");
-  MachineBasicBlock *Restore =
-      MFI.getRestorePoints().empty() ? nullptr : MFI.getRestorePoints().front();
+  MachineBasicBlock *Restore = MFI.getRestorePoints().empty()
+                                   ? nullptr
+                                   : (*MFI.getRestorePoints().begin()).first;
   if (Restore)
     // By construction Restore cannot be visited, otherwise it
     // means there exists a path to Restore that does not go
@@ -687,6 +691,20 @@ void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
     MFI.setCalleeSavedInfoValid(true);
 
     std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+
+    // Fill SavePoints and RestorePoints with CalleeSavedRegisters
+    if (!MFI.getSavePoints().empty()) {
+      SaveRestorePoints SaveRestorePts;
+      for (const auto &SavePoint : MFI.getSavePoints())
+        SaveRestorePts.insert({SavePoint.first, CSI});
+      MFI.setSavePoints(std::move(SaveRestorePts));
+
+      SaveRestorePts.clear();
+      for (const auto &RestorePoint : MFI.getRestorePoints())
+        SaveRestorePts.insert({RestorePoint.first, CSI});
+      MFI.setRestorePoints(std::move(SaveRestorePts));
+    }
+
     if (!CSI.empty()) {
       if (!MFI.hasCalls())
         NumLeafFuncWithSpills++;
@@ -1302,8 +1320,9 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
           continue;
 
         // This picks up sibling registers (e.q. %al -> %ah).
+        // FIXME: Mixing physical registers and register units is likely a bug.
         for (MCRegUnit Unit : TRI.regunits(Reg))
-          RegsToZero.reset(Unit);
+          RegsToZero.reset(static_cast<unsigned>(Unit));
 
         for (MCPhysReg SReg : TRI.sub_and_superregs_inclusive(Reg))
           RegsToZero.reset(SReg);

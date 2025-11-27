@@ -34,13 +34,13 @@ define void @test(ptr %arr, i32 %len) {
 ; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI8:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP19:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[ARR]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 4
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 6
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 8
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 10
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 12
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 14
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 4
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 6
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 8
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 10
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 12
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 14
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <2 x double>, ptr [[TMP6]], align 8
@@ -72,8 +72,7 @@ define void @test(ptr %arr, i32 %len) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END_LOOPEXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP1]], [[N_VEC]]
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 2
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]

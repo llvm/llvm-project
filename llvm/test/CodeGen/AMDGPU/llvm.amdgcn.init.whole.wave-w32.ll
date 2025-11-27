@@ -15,13 +15,13 @@ define amdgpu_cs_chain void @basic(<3 x i32> inreg %sgpr, ptr inreg %callee, i32
 ; GISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; GISEL12-NEXT:    s_mov_b32 s6, s3
 ; GISEL12-NEXT:    s_mov_b32 s7, s4
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_and_saveexec_b32 s3, s8
 ; GISEL12-NEXT:  ; %bb.1: ; %shader
 ; GISEL12-NEXT:    v_add_nc_u32_e32 v12, 42, v12
 ; GISEL12-NEXT:    v_add_nc_u32_e32 v8, 5, v8
 ; GISEL12-NEXT:  ; %bb.2: ; %tail
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL12-NEXT:    v_add_nc_u32_e32 v11, 32, v12
@@ -38,13 +38,13 @@ define amdgpu_cs_chain void @basic(<3 x i32> inreg %sgpr, ptr inreg %callee, i32
 ; DAGISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; DAGISEL12-NEXT:    s_mov_b32 s7, s4
 ; DAGISEL12-NEXT:    s_mov_b32 s6, s3
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_and_saveexec_b32 s3, s8
 ; DAGISEL12-NEXT:  ; %bb.1: ; %shader
 ; DAGISEL12-NEXT:    v_add_nc_u32_e32 v12, 42, v12
 ; DAGISEL12-NEXT:    v_add_nc_u32_e32 v8, 5, v8
 ; DAGISEL12-NEXT:  ; %bb.2: ; %tail
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; DAGISEL12-NEXT:    v_add_nc_u32_e32 v11, 32, v12
@@ -115,15 +115,15 @@ define amdgpu_cs_chain void @wwm_in_shader(<3 x i32> inreg %sgpr, ptr inreg %cal
 ; GISEL12-NEXT:    v_dual_mov_b32 v10, v12 :: v_dual_mov_b32 v11, v13
 ; GISEL12-NEXT:    s_mov_b32 s6, s3
 ; GISEL12-NEXT:    s_mov_b32 s7, s4
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_and_saveexec_b32 s3, s8
 ; GISEL12-NEXT:  ; %bb.1: ; %shader
 ; GISEL12-NEXT:    s_or_saveexec_b32 s4, -1
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v10, s4
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
-; GISEL12-NEXT:    s_wait_alu 0xf1ff
+; GISEL12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GISEL12-NEXT:    v_mov_b32_e32 v0, s8
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s4
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -144,11 +144,11 @@ define amdgpu_cs_chain void @wwm_in_shader(<3 x i32> inreg %sgpr, ptr inreg %cal
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v11, v13 :: v_dual_mov_b32 v10, v12
 ; DAGISEL12-NEXT:    s_mov_b32 s7, s4
 ; DAGISEL12-NEXT:    s_mov_b32 s6, s3
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_and_saveexec_b32 s3, s8
 ; DAGISEL12-NEXT:  ; %bb.1: ; %shader
 ; DAGISEL12-NEXT:    s_or_saveexec_b32 s4, -1
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v10, s4
 ; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
@@ -235,15 +235,15 @@ define amdgpu_cs_chain void @phi_whole_struct(<3 x i32> inreg %sgpr, ptr inreg %
 ; GISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; GISEL12-NEXT:    s_mov_b32 s6, s3
 ; GISEL12-NEXT:    s_mov_b32 s7, s4
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_and_saveexec_b32 s3, s8
 ; GISEL12-NEXT:  ; %bb.1: ; %shader
 ; GISEL12-NEXT:    s_or_saveexec_b32 s4, -1
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v12, s4
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
-; GISEL12-NEXT:    s_wait_alu 0xf1ff
+; GISEL12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GISEL12-NEXT:    v_mov_b32_e32 v0, s8
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s4
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -263,11 +263,11 @@ define amdgpu_cs_chain void @phi_whole_struct(<3 x i32> inreg %sgpr, ptr inreg %
 ; DAGISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; DAGISEL12-NEXT:    s_mov_b32 s7, s4
 ; DAGISEL12-NEXT:    s_mov_b32 s6, s3
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_and_saveexec_b32 s3, s8
 ; DAGISEL12-NEXT:  ; %bb.1: ; %shader
 ; DAGISEL12-NEXT:    s_or_saveexec_b32 s4, -1
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v12, s4
 ; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v0
@@ -350,7 +350,7 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; GISEL12-NEXT:    s_mov_b32 s6, s3
 ; GISEL12-NEXT:    s_mov_b32 s7, s4
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_and_saveexec_b32 s3, s8
 ; GISEL12-NEXT:    s_cbranch_execz .LBB3_4
 ; GISEL12-NEXT:  ; %bb.1: ; %shader.preheader
@@ -361,36 +361,36 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GISEL12-NEXT:    v_add_nc_u32_e32 v1, 1, v1
 ; GISEL12-NEXT:    s_or_saveexec_b32 s8, -1
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v1, s8
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GISEL12-NEXT:    v_cmp_ne_u32_e64 s9, 0, v0
-; GISEL12-NEXT:    s_wait_alu 0xf1ff
+; GISEL12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GISEL12-NEXT:    v_mov_b32_e32 v0, s9
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s8
 ; GISEL12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v13, v1
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL12-NEXT:    v_mov_b32_e32 v11, v0
 ; GISEL12-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GISEL12-NEXT:    s_cbranch_execnz .LBB3_2
 ; GISEL12-NEXT:  ; %bb.3: ; %tail.loopexit
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GISEL12-NEXT:    v_add_nc_u32_e32 v10, 42, v1
 ; GISEL12-NEXT:  .LBB3_4: ; %Flow1
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL12-NEXT:    s_mov_b32 s3, exec_lo
 ; GISEL12-NEXT:    ; implicit-def: $vgpr8
 ; GISEL12-NEXT:    v_cmpx_lt_i32_e64 v12, v13
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_xor_b32 s3, exec_lo, s3
 ; GISEL12-NEXT:  ; %bb.5: ; %tail.else
 ; GISEL12-NEXT:    s_or_saveexec_b32 s4, -1
 ; GISEL12-NEXT:    v_mov_b32_e32 v0, 15
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s4
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL12-NEXT:    v_mov_b32_e32 v8, v0
@@ -398,7 +398,7 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL12-NEXT:    s_and_not1_saveexec_b32 s3, s3
 ; GISEL12-NEXT:  ; %bb.7: ; %tail.then
 ; GISEL12-NEXT:    s_mov_b32 s4, 44
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    v_mov_b32_e32 v8, s4
 ; GISEL12-NEXT:  ; %bb.8: ; %tail.end
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
@@ -415,7 +415,7 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; DAGISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; DAGISEL12-NEXT:    s_mov_b32 s7, s4
 ; DAGISEL12-NEXT:    s_mov_b32 s6, s3
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_and_saveexec_b32 s3, s8
 ; DAGISEL12-NEXT:    s_cbranch_execz .LBB3_4
 ; DAGISEL12-NEXT:  ; %bb.1: ; %shader.preheader
@@ -426,7 +426,7 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; DAGISEL12-NEXT:    v_add_nc_u32_e32 v1, 1, v1
 ; DAGISEL12-NEXT:    s_or_saveexec_b32 s8, -1
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    v_cndmask_b32_e64 v0, 0x47, v1, s8
 ; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL12-NEXT:    v_cmp_ne_u32_e64 s9, 0, v0
@@ -434,31 +434,31 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; DAGISEL12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v13, v1
 ; DAGISEL12-NEXT:    v_mov_b32_e32 v11, s9
 ; DAGISEL12-NEXT:    s_or_b32 s4, vcc_lo, s4
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; DAGISEL12-NEXT:    s_cbranch_execnz .LBB3_2
 ; DAGISEL12-NEXT:  ; %bb.3: ; %tail.loopexit
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; DAGISEL12-NEXT:    v_add_nc_u32_e32 v10, 42, v1
 ; DAGISEL12-NEXT:  .LBB3_4: ; %Flow1
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DAGISEL12-NEXT:    s_mov_b32 s3, exec_lo
 ; DAGISEL12-NEXT:    ; implicit-def: $vgpr8
 ; DAGISEL12-NEXT:    v_cmpx_lt_i32_e64 v12, v13
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_xor_b32 s3, exec_lo, s3
 ; DAGISEL12-NEXT:  ; %bb.5: ; %tail.else
 ; DAGISEL12-NEXT:    s_mov_b32 s4, 15
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    v_mov_b32_e32 v8, s4
 ; DAGISEL12-NEXT:  ; %bb.6: ; %Flow
 ; DAGISEL12-NEXT:    s_and_not1_saveexec_b32 s3, s3
 ; DAGISEL12-NEXT:  ; %bb.7: ; %tail.then
 ; DAGISEL12-NEXT:    v_mov_b32_e32 v8, 44
 ; DAGISEL12-NEXT:  ; %bb.8: ; %tail.end
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
 ; DAGISEL12-NEXT:    s_setpc_b64 s[6:7]
@@ -607,16 +607,16 @@ define amdgpu_cs_chain void @use_v0_7(<3 x i32> inreg %sgpr, ptr inreg %callee, 
 ; GISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; GISEL12-NEXT:    s_mov_b32 s6, s3
 ; GISEL12-NEXT:    s_mov_b32 s7, s4
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_and_saveexec_b32 s3, s8
 ; GISEL12-NEXT:    s_cbranch_execz .LBB4_2
 ; GISEL12-NEXT:  ; %bb.1: ; %shader
 ; GISEL12-NEXT:    s_or_saveexec_b32 s4, -1
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    v_cndmask_b32_e64 v13, 0x47, v12, s4
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v13
-; GISEL12-NEXT:    s_wait_alu 0xf1ff
+; GISEL12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GISEL12-NEXT:    v_mov_b32_e32 v13, s8
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s4
 ; GISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -625,7 +625,7 @@ define amdgpu_cs_chain void @use_v0_7(<3 x i32> inreg %sgpr, ptr inreg %callee, 
 ; GISEL12-NEXT:    ; use v0-7
 ; GISEL12-NEXT:    ;;#ASMEND
 ; GISEL12-NEXT:  .LBB4_2: ; %tail
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
 ; GISEL12-NEXT:    s_setpc_b64 s[6:7]
@@ -640,12 +640,12 @@ define amdgpu_cs_chain void @use_v0_7(<3 x i32> inreg %sgpr, ptr inreg %callee, 
 ; DAGISEL12-NEXT:    s_or_saveexec_b32 s8, -1
 ; DAGISEL12-NEXT:    s_mov_b32 s7, s4
 ; DAGISEL12-NEXT:    s_mov_b32 s6, s3
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_and_saveexec_b32 s3, s8
 ; DAGISEL12-NEXT:    s_cbranch_execz .LBB4_2
 ; DAGISEL12-NEXT:  ; %bb.1: ; %shader
 ; DAGISEL12-NEXT:    s_or_saveexec_b32 s4, -1
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    v_cndmask_b32_e64 v13, 0x47, v12, s4
 ; DAGISEL12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL12-NEXT:    v_cmp_ne_u32_e64 s8, 0, v13
@@ -655,7 +655,7 @@ define amdgpu_cs_chain void @use_v0_7(<3 x i32> inreg %sgpr, ptr inreg %callee, 
 ; DAGISEL12-NEXT:    ; use v0-7
 ; DAGISEL12-NEXT:    ;;#ASMEND
 ; DAGISEL12-NEXT:  .LBB4_2: ; %tail
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
 ; DAGISEL12-NEXT:    s_setpc_b64 s[6:7]
@@ -758,17 +758,17 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; GISEL12-NEXT:    v_dual_mov_b32 v34, v18 :: v_dual_mov_b32 v35, v19
 ; GISEL12-NEXT:    v_dual_mov_b32 v36, v20 :: v_dual_mov_b32 v37, v21
 ; GISEL12-NEXT:    v_dual_mov_b32 v38, v22 :: v_dual_mov_b32 v39, v23
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s12
 ; GISEL12-NEXT:    s_and_saveexec_b32 s4, s9
 ; GISEL12-NEXT:    s_cbranch_execz .LBB5_2
 ; GISEL12-NEXT:  ; %bb.1: ; %shader
 ; GISEL12-NEXT:    s_or_saveexec_b32 s9, -1
 ; GISEL12-NEXT:    s_getpc_b64 s[0:1]
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_sext_i32_i16 s1, s1
 ; GISEL12-NEXT:    s_add_co_u32 s0, s0, write_v0_v15@gotpcrel32@lo+12
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_add_co_ci_u32 s1, s1, write_v0_v15@gotpcrel32@hi+24
 ; GISEL12-NEXT:    v_dual_mov_b32 v0, v24 :: v_dual_mov_b32 v1, v25
 ; GISEL12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
@@ -781,18 +781,25 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; GISEL12-NEXT:    v_dual_mov_b32 v14, v38 :: v_dual_mov_b32 v15, v39
 ; GISEL12-NEXT:    s_wait_kmcnt 0x0
 ; GISEL12-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GISEL12-NEXT:    v_dual_mov_b32 v24, v0 :: v_dual_mov_b32 v25, v1
-; GISEL12-NEXT:    v_dual_mov_b32 v26, v2 :: v_dual_mov_b32 v27, v3
-; GISEL12-NEXT:    v_dual_mov_b32 v28, v4 :: v_dual_mov_b32 v29, v5
-; GISEL12-NEXT:    v_dual_mov_b32 v30, v6 :: v_dual_mov_b32 v31, v7
-; GISEL12-NEXT:    v_dual_mov_b32 v32, v8 :: v_dual_mov_b32 v33, v9
-; GISEL12-NEXT:    v_dual_mov_b32 v34, v10 :: v_dual_mov_b32 v35, v11
-; GISEL12-NEXT:    v_dual_mov_b32 v36, v12 :: v_dual_mov_b32 v37, v13
-; GISEL12-NEXT:    v_dual_mov_b32 v38, v14 :: v_dual_mov_b32 v39, v15
+; GISEL12-NEXT:    v_dual_mov_b32 v40, v0 :: v_dual_mov_b32 v41, v1
+; GISEL12-NEXT:    v_dual_mov_b32 v42, v2 :: v_dual_mov_b32 v43, v3
+; GISEL12-NEXT:    v_dual_mov_b32 v44, v4 :: v_dual_mov_b32 v45, v5
+; GISEL12-NEXT:    v_dual_mov_b32 v46, v6 :: v_dual_mov_b32 v47, v7
+; GISEL12-NEXT:    v_dual_mov_b32 v48, v8 :: v_dual_mov_b32 v49, v9
+; GISEL12-NEXT:    v_dual_mov_b32 v50, v10 :: v_dual_mov_b32 v51, v11
+; GISEL12-NEXT:    v_dual_mov_b32 v52, v12 :: v_dual_mov_b32 v53, v13
+; GISEL12-NEXT:    v_dual_mov_b32 v54, v14 :: v_dual_mov_b32 v55, v15
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s9
-; GISEL12-NEXT:    ; kill: def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 killed $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 killed $exec
+; GISEL12-NEXT:    v_dual_mov_b32 v24, v40 :: v_dual_mov_b32 v25, v41
+; GISEL12-NEXT:    v_dual_mov_b32 v26, v42 :: v_dual_mov_b32 v27, v43
+; GISEL12-NEXT:    v_dual_mov_b32 v28, v44 :: v_dual_mov_b32 v29, v45
+; GISEL12-NEXT:    v_dual_mov_b32 v30, v46 :: v_dual_mov_b32 v31, v47
+; GISEL12-NEXT:    v_dual_mov_b32 v32, v48 :: v_dual_mov_b32 v33, v49
+; GISEL12-NEXT:    v_dual_mov_b32 v34, v50 :: v_dual_mov_b32 v35, v51
+; GISEL12-NEXT:    v_dual_mov_b32 v36, v52 :: v_dual_mov_b32 v37, v53
+; GISEL12-NEXT:    v_dual_mov_b32 v38, v54 :: v_dual_mov_b32 v39, v55
 ; GISEL12-NEXT:  .LBB5_2: ; %tail
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GISEL12-NEXT:    v_dual_mov_b32 v8, v24 :: v_dual_mov_b32 v9, v25
 ; GISEL12-NEXT:    v_dual_mov_b32 v10, v26 :: v_dual_mov_b32 v11, v27
@@ -806,7 +813,7 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; GISEL12-NEXT:    s_mov_b32 s1, s7
 ; GISEL12-NEXT:    s_mov_b32 s2, s8
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s5
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_setpc_b64 s[10:11]
 ;
 ; DAGISEL12-LABEL: wwm_write_to_arg_reg:
@@ -827,7 +834,7 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v29, v13 :: v_dual_mov_b32 v28, v12
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v27, v11 :: v_dual_mov_b32 v26, v10
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v25, v9 :: v_dual_mov_b32 v24, v8
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s6
 ; DAGISEL12-NEXT:    s_mov_b32 s9, s4
 ; DAGISEL12-NEXT:    s_mov_b32 s8, s3
@@ -839,10 +846,10 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; DAGISEL12-NEXT:  ; %bb.1: ; %shader
 ; DAGISEL12-NEXT:    s_or_saveexec_b32 s11, -1
 ; DAGISEL12-NEXT:    s_getpc_b64 s[0:1]
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_sext_i32_i16 s1, s1
 ; DAGISEL12-NEXT:    s_add_co_u32 s0, s0, write_v0_v15@gotpcrel32@lo+12
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_add_co_ci_u32 s1, s1, write_v0_v15@gotpcrel32@hi+24
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v0, v24 :: v_dual_mov_b32 v1, v25
 ; DAGISEL12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
@@ -873,7 +880,7 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v36, v52 :: v_dual_mov_b32 v37, v53
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v38, v54 :: v_dual_mov_b32 v39, v55
 ; DAGISEL12-NEXT:  .LBB5_2: ; %tail
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s10
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v8, v24 :: v_dual_mov_b32 v9, v25
 ; DAGISEL12-NEXT:    v_dual_mov_b32 v10, v26 :: v_dual_mov_b32 v11, v27
@@ -887,7 +894,7 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; DAGISEL12-NEXT:    s_mov_b32 s1, s6
 ; DAGISEL12-NEXT:    s_mov_b32 s2, s4
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s5
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_setpc_b64 s[8:9]
 ;
 ; GISEL10-LABEL: wwm_write_to_arg_reg:
@@ -946,24 +953,39 @@ define amdgpu_cs_chain void @wwm_write_to_arg_reg(<3 x i32> inreg %sgpr, ptr inr
 ; GISEL10-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; GISEL10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL10-NEXT:    s_swappc_b64 s[30:31], s[12:13]
-; GISEL10-NEXT:    v_mov_b32_e32 v24, v0
-; GISEL10-NEXT:    v_mov_b32_e32 v25, v1
-; GISEL10-NEXT:    v_mov_b32_e32 v26, v2
-; GISEL10-NEXT:    v_mov_b32_e32 v27, v3
-; GISEL10-NEXT:    v_mov_b32_e32 v28, v4
-; GISEL10-NEXT:    v_mov_b32_e32 v29, v5
-; GISEL10-NEXT:    v_mov_b32_e32 v30, v6
-; GISEL10-NEXT:    v_mov_b32_e32 v31, v7
-; GISEL10-NEXT:    v_mov_b32_e32 v32, v8
-; GISEL10-NEXT:    v_mov_b32_e32 v33, v9
-; GISEL10-NEXT:    v_mov_b32_e32 v34, v10
-; GISEL10-NEXT:    v_mov_b32_e32 v35, v11
-; GISEL10-NEXT:    v_mov_b32_e32 v36, v12
-; GISEL10-NEXT:    v_mov_b32_e32 v37, v13
-; GISEL10-NEXT:    v_mov_b32_e32 v38, v14
-; GISEL10-NEXT:    v_mov_b32_e32 v39, v15
+; GISEL10-NEXT:    v_mov_b32_e32 v40, v0
+; GISEL10-NEXT:    v_mov_b32_e32 v41, v1
+; GISEL10-NEXT:    v_mov_b32_e32 v42, v2
+; GISEL10-NEXT:    v_mov_b32_e32 v43, v3
+; GISEL10-NEXT:    v_mov_b32_e32 v44, v4
+; GISEL10-NEXT:    v_mov_b32_e32 v45, v5
+; GISEL10-NEXT:    v_mov_b32_e32 v46, v6
+; GISEL10-NEXT:    v_mov_b32_e32 v47, v7
+; GISEL10-NEXT:    v_mov_b32_e32 v48, v8
+; GISEL10-NEXT:    v_mov_b32_e32 v49, v9
+; GISEL10-NEXT:    v_mov_b32_e32 v50, v10
+; GISEL10-NEXT:    v_mov_b32_e32 v51, v11
+; GISEL10-NEXT:    v_mov_b32_e32 v52, v12
+; GISEL10-NEXT:    v_mov_b32_e32 v53, v13
+; GISEL10-NEXT:    v_mov_b32_e32 v54, v14
+; GISEL10-NEXT:    v_mov_b32_e32 v55, v15
 ; GISEL10-NEXT:    s_mov_b32 exec_lo, s9
-; GISEL10-NEXT:    ; kill: def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 killed $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 killed $exec
+; GISEL10-NEXT:    v_mov_b32_e32 v24, v40
+; GISEL10-NEXT:    v_mov_b32_e32 v25, v41
+; GISEL10-NEXT:    v_mov_b32_e32 v26, v42
+; GISEL10-NEXT:    v_mov_b32_e32 v27, v43
+; GISEL10-NEXT:    v_mov_b32_e32 v28, v44
+; GISEL10-NEXT:    v_mov_b32_e32 v29, v45
+; GISEL10-NEXT:    v_mov_b32_e32 v30, v46
+; GISEL10-NEXT:    v_mov_b32_e32 v31, v47
+; GISEL10-NEXT:    v_mov_b32_e32 v32, v48
+; GISEL10-NEXT:    v_mov_b32_e32 v33, v49
+; GISEL10-NEXT:    v_mov_b32_e32 v34, v50
+; GISEL10-NEXT:    v_mov_b32_e32 v35, v51
+; GISEL10-NEXT:    v_mov_b32_e32 v36, v52
+; GISEL10-NEXT:    v_mov_b32_e32 v37, v53
+; GISEL10-NEXT:    v_mov_b32_e32 v38, v54
+; GISEL10-NEXT:    v_mov_b32_e32 v39, v55
 ; GISEL10-NEXT:  .LBB5_2: ; %tail
 ; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GISEL10-NEXT:    v_mov_b32_e32 v8, v24
@@ -1133,7 +1155,7 @@ define amdgpu_cs_chain void @with_inactive_vgprs(ptr inreg %callee, i32 inreg %e
 ; GISEL12-NEXT:    s_mov_b32 s4, s0
 ; GISEL12-NEXT:    s_mov_b32 s5, s1
 ; GISEL12-NEXT:    s_mov_b32 s0, s3
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_and_saveexec_b32 s1, s6
 ; GISEL12-NEXT:    s_cbranch_execz .LBB6_2
 ; GISEL12-NEXT:  ; %bb.1: ; %shader
@@ -1147,7 +1169,7 @@ define amdgpu_cs_chain void @with_inactive_vgprs(ptr inreg %callee, i32 inreg %e
 ; GISEL12-NEXT:    flat_store_b32 v[9:10], v11
 ; GISEL12-NEXT:    ; implicit-def: $vgpr9
 ; GISEL12-NEXT:  .LBB6_2: ; %tail.block
-; GISEL12-NEXT:    s_wait_alu 0xfffe
+; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GISEL12-NEXT:    s_mov_b32 exec_lo, s2
 ; GISEL12-NEXT:    s_setpc_b64 s[4:5]
@@ -1162,7 +1184,7 @@ define amdgpu_cs_chain void @with_inactive_vgprs(ptr inreg %callee, i32 inreg %e
 ; DAGISEL12-NEXT:    s_or_saveexec_b32 s6, -1
 ; DAGISEL12-NEXT:    s_mov_b32 s5, s1
 ; DAGISEL12-NEXT:    s_mov_b32 s4, s0
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_and_saveexec_b32 s0, s6
 ; DAGISEL12-NEXT:    s_cbranch_execz .LBB6_2
 ; DAGISEL12-NEXT:  ; %bb.1: ; %shader
@@ -1176,11 +1198,11 @@ define amdgpu_cs_chain void @with_inactive_vgprs(ptr inreg %callee, i32 inreg %e
 ; DAGISEL12-NEXT:    flat_store_b32 v[9:10], v11
 ; DAGISEL12-NEXT:    ; implicit-def: $vgpr9
 ; DAGISEL12-NEXT:  .LBB6_2: ; %tail.block
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; DAGISEL12-NEXT:    s_mov_b32 s0, s3
 ; DAGISEL12-NEXT:    s_mov_b32 exec_lo, s2
-; DAGISEL12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_setpc_b64 s[4:5]
 ;
 ; GISEL10-LABEL: with_inactive_vgprs:

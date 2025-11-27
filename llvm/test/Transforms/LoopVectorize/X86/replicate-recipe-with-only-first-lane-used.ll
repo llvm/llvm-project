@@ -8,9 +8,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @replicate_udiv_with_only_first_lane_used(i32 %x, ptr %dst, i64 %d) {
 ; CHECK-LABEL: define void @replicate_udiv_with_only_first_lane_used(
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[DST:%.*]], i64 [[D:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X]], 10
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -20,12 +20,11 @@ define void @replicate_udiv_with_only_first_lane_used(i32 %x, ptr %dst, i64 %d) 
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 96, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 96, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 true, label %[[LOOP_LATCH]], label %[[ELSE:.*]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    [[DIV_I:%.*]] = udiv i64 99, [[D]]
@@ -68,9 +67,9 @@ exit:
 define void @replicate_udiv_with_only_first_lane_used2(i32 %x, ptr %dst, i64 %d) {
 ; CHECK-LABEL: define void @replicate_udiv_with_only_first_lane_used2(
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[DST:%.*]], i64 [[D:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X]], 10
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
@@ -138,12 +137,11 @@ define void @replicate_udiv_with_only_first_lane_used2(i32 %x, ptr %dst, i64 %d)
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 96, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 96, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[ELSE:.*]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    [[DIV_I:%.*]] = udiv i64 99, [[D]]
@@ -201,10 +199,6 @@ define float @uniform_load_replicating_select(ptr %A, ptr %B, i64 %1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 7
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ogt float [[TMP6]], 0.000000e+00
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i1> poison, i1 [[TMP10]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i1> [[TMP8]], i1 [[TMP10]], i32 1
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i1> [[TMP9]], i1 [[TMP10]], i32 2
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i1> [[TMP13]], i1 [[TMP10]], i32 3
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP4]]
@@ -213,7 +207,7 @@ define float @uniform_load_replicating_select(ptr %A, ptr %B, i64 %1) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP10]], ptr [[A]], ptr [[TMP16]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP10]], ptr [[A]], ptr [[TMP17]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = select i1 [[TMP10]], ptr [[A]], ptr [[TMP18]]
-; CHECK-NEXT:    [[TMP23:%.*]] = select <4 x i1> [[TMP14]], <4 x float> splat (float 1.000000e+01), <4 x float> splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP23:%.*]] = select i1 [[TMP10]], <4 x float> splat (float 1.000000e+01), <4 x float> splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP24:%.*]] = load float, ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = load float, ptr [[TMP20]], align 4
 ; CHECK-NEXT:    [[TMP26:%.*]] = load float, ptr [[TMP21]], align 4

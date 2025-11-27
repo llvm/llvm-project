@@ -269,6 +269,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.time.difftime
     libc.src.time.gmtime
     libc.src.time.gmtime_r
+    libc.src.time.localtime
+    libc.src.time.localtime_r
     libc.src.time.mktime
     libc.src.time.strftime
     libc.src.time.strftime_l
@@ -803,6 +805,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.llogbbf16
   libc.src.math.llrintbf16
   libc.src.math.llroundbf16
+  libc.src.math.log_bf16
   libc.src.math.logbbf16
   libc.src.math.lrintbf16
   libc.src.math.lroundbf16

@@ -1,4 +1,4 @@
-//===--- UpgradeGoogletestCaseCheck.cpp - clang-tidy ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -64,7 +64,7 @@ public:
       // We check if the newly defined macro is one of the target replacements.
       // This ensures that the check creates warnings only if it is including a
       // recent enough version of Google Test.
-      llvm::StringRef FileName = PP->getSourceManager().getFilename(
+      const llvm::StringRef FileName = PP->getSourceManager().getFilename(
           MD->getMacroInfo()->getDefinitionLoc());
       ReplacementFound = FileName.ends_with("gtest/gtest-typed-test.h") &&
                          PP->getSpelling(MacroNameTok) == "TYPED_TEST_SUITE";
@@ -94,18 +94,18 @@ private:
     if (!ReplacementFound)
       return;
 
-    std::string Name = PP->getSpelling(MacroNameTok);
+    const std::string Name = PP->getSpelling(MacroNameTok);
 
     std::optional<llvm::StringRef> Replacement = getNewMacroName(Name);
     if (!Replacement)
       return;
 
-    llvm::StringRef FileName = PP->getSourceManager().getFilename(
+    const llvm::StringRef FileName = PP->getSourceManager().getFilename(
         MD.getMacroInfo()->getDefinitionLoc());
     if (!FileName.ends_with("gtest/gtest-typed-test.h"))
       return;
 
-    DiagnosticBuilder Diag = Check->diag(Loc, RenameCaseToSuiteMessage);
+    const DiagnosticBuilder Diag = Check->diag(Loc, RenameCaseToSuiteMessage);
 
     if (Action == CheckAction::Rename)
       Diag << FixItHint::CreateReplacement(
@@ -234,7 +234,7 @@ static bool isInInstantiation(const NodeType &Node,
 template <typename NodeType>
 static bool isInTemplate(const NodeType &Node,
                          const MatchFinder::MatchResult &Result) {
-  internal::Matcher<NodeType> IsInsideTemplate =
+  const internal::Matcher<NodeType> IsInsideTemplate =
       hasAncestor(decl(anyOf(classTemplateDecl(), functionTemplateDecl())));
   return !match(IsInsideTemplate, Node, *Result.Context).empty();
 }
@@ -340,7 +340,7 @@ void UpgradeGoogletestCaseCheck::check(const MatchFinder::MatchResult &Result) {
     // will only be instantiated with the true type name, `TestSuite`.
   }
 
-  DiagnosticBuilder Diag =
+  const DiagnosticBuilder Diag =
       diag(ReplacementRange.getBegin(), RenameCaseToSuiteMessage);
 
   ReplacementRange = Lexer::makeFileCharRange(

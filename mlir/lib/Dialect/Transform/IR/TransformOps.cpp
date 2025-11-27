@@ -96,9 +96,9 @@ ensurePayloadIsSeparateFromTransform(transform::TransformOpInterface transform,
 // AlternativesOp
 //===----------------------------------------------------------------------===//
 
-OperandRange
-transform::AlternativesOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  if (!point.isParent() && getOperation()->getNumOperands() == 1)
+OperandRange transform::AlternativesOp::getEntrySuccessorOperands(
+    RegionSuccessor successor) {
+  if (!successor.isParent() && getOperation()->getNumOperands() == 1)
     return getOperation()->getOperands();
   return OperandRange(getOperation()->operand_end(),
                       getOperation()->operand_end());
@@ -107,15 +107,18 @@ transform::AlternativesOp::getEntrySuccessorOperands(RegionBranchPoint point) {
 void transform::AlternativesOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   for (Region &alternative : llvm::drop_begin(
-           getAlternatives(),
-           point.isParent() ? 0
-                            : point.getRegionOrNull()->getRegionNumber() + 1)) {
+           getAlternatives(), point.isParent()
+                                  ? 0
+                                  : point.getTerminatorPredecessorOrNull()
+                                            ->getParentRegion()
+                                            ->getRegionNumber() +
+                                        1)) {
     regions.emplace_back(&alternative, !getOperands().empty()
                                            ? alternative.getArguments()
                                            : Block::BlockArgListType());
   }
   if (!point.isParent())
-    regions.emplace_back(getOperation()->getResults());
+    regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 void transform::AlternativesOp::getRegionInvocationBounds(
@@ -616,11 +619,10 @@ DiagnosedSilenceableFailure transform::ApplyConversionPatternsOp::apply(
       if (diag.succeeded()) {
         // Tracking failure is the only failure.
         return trackingFailure;
-      } else {
-        diag.attachNote() << "tracking listener also failed: "
-                          << trackingFailure.getMessage();
-        (void)trackingFailure.silence();
       }
+      diag.attachNote() << "tracking listener also failed: "
+                        << trackingFailure.getMessage();
+      (void)trackingFailure.silence();
     }
 
     if (!diag.succeeded())
@@ -1151,7 +1153,7 @@ transform::CollectMatchingOp::apply(transform::TransformRewriter &rewriter,
   std::optional<DiagnosedSilenceableFailure> maybeFailure;
   for (Operation *root : state.getPayloadOps(getRoot())) {
     WalkResult walkResult = root->walk([&](Operation *op) {
-      LDBG(1, DEBUG_TYPE_MATCHER)
+      LDBG(DEBUG_TYPE_MATCHER, 1)
           << "matching "
           << OpWithFlags(op, OpPrintingFlags().assumeVerified().skipRegions())
           << " @" << op;
@@ -1166,7 +1168,7 @@ transform::CollectMatchingOp::apply(transform::TransformRewriter &rewriter,
       if (diag.isDefiniteFailure())
         return WalkResult::interrupt();
       if (diag.isSilenceableFailure()) {
-        LDBG(1, DEBUG_TYPE_MATCHER) << "matcher " << matcher.getName()
+        LDBG(DEBUG_TYPE_MATCHER, 1) << "matcher " << matcher.getName()
                                     << " failed: " << diag.getMessage();
         return WalkResult::advance();
       }
@@ -1298,7 +1300,7 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
       if (!getRestrictRoot() && op == root)
         return WalkResult::advance();
 
-      LDBG(1, DEBUG_TYPE_MATCHER)
+      LDBG(DEBUG_TYPE_MATCHER, 1)
           << "matching "
           << OpWithFlags(op, OpPrintingFlags().assumeVerified().skipRegions())
           << " @" << op;
@@ -1314,7 +1316,7 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
         if (diag.isDefiniteFailure())
           return WalkResult::interrupt();
         if (diag.isSilenceableFailure()) {
-          LDBG(1, DEBUG_TYPE_MATCHER) << "matcher " << matcher.getName()
+          LDBG(DEBUG_TYPE_MATCHER, 1) << "matcher " << matcher.getName()
                                       << " failed: " << diag.getMessage();
           continue;
         }
@@ -1741,16 +1743,18 @@ void transform::ForeachOp::getSuccessorRegions(
   }
 
   // Branch back to the region or the parent.
-  assert(point == getBody() && "unexpected region index");
+  assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
+             &getBody() &&
+         "unexpected region index");
   regions.emplace_back(bodyRegion, bodyRegion->getArguments());
-  regions.emplace_back();
+  regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 OperandRange
-transform::ForeachOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+transform::ForeachOp::getEntrySuccessorOperands(RegionSuccessor successor) {
   // Each block argument handle is mapped to a subset (one op to be precise)
   // of the payload of the corresponding `targets` operand of ForeachOp.
-  assert(point == getBody() && "unexpected region index");
+  assert(successor.getSuccessor() == &getBody() && "unexpected region index");
   return getOperation()->getOperands();
 }
 
@@ -2098,17 +2102,11 @@ void transform::IncludeOp::getEffects(
       getOperation(), getTarget());
   if (!callee)
     return defaultEffects();
-  DiagnosedSilenceableFailure earlyVerifierResult =
-      verifyNamedSequenceOp(callee, /*emitWarnings=*/false);
-  if (!earlyVerifierResult.succeeded()) {
-    (void)earlyVerifierResult.silence();
-    return defaultEffects();
-  }
 
   for (unsigned i = 0, e = getNumOperands(); i < e; ++i) {
     if (callee.getArgAttr(i, TransformDialect::kArgConsumedAttrName))
       consumesHandle(getOperation()->getOpOperand(i), effects);
-    else
+    else if (callee.getArgAttr(i, TransformDialect::kArgReadOnlyAttrName))
       onlyReadsHandle(getOperation()->getOpOperand(i), effects);
   }
 }
@@ -2165,10 +2163,10 @@ DiagnosedSilenceableFailure transform::MatchOperationEmptyOp::matchOperation(
     ::std::optional<::mlir::Operation *> maybeCurrent,
     transform::TransformResults &results, transform::TransformState &state) {
   if (!maybeCurrent.has_value()) {
-    LDBG(1, DEBUG_TYPE_MATCHER) << "MatchOperationEmptyOp success";
+    LDBG(DEBUG_TYPE_MATCHER, 1) << "MatchOperationEmptyOp success";
     return DiagnosedSilenceableFailure::success();
   }
-  LDBG(1, DEBUG_TYPE_MATCHER) << "MatchOperationEmptyOp failure";
+  LDBG(DEBUG_TYPE_MATCHER, 1) << "MatchOperationEmptyOp failure";
   return emitSilenceableError() << "operation is not empty";
 }
 
@@ -2598,10 +2596,7 @@ transform::NumAssociationsOp::apply(transform::TransformRewriter &rewriter,
           .Case([&](TransformParamTypeInterface param) {
             return llvm::range_size(state.getParams(getHandle()));
           })
-          .Default([](Type) {
-            llvm_unreachable("unknown kind of transform dialect type");
-            return 0;
-          });
+          .DefaultUnreachable("unknown kind of transform dialect type");
   results.setParams(cast<OpResult>(getNum()),
                     rewriter.getI64IntegerAttr(numAssociations));
   return DiagnosedSilenceableFailure::success();
@@ -2658,10 +2653,7 @@ transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
           .Case<TransformParamTypeInterface>([&](auto x) {
             return llvm::range_size(state.getParams(getHandle()));
           })
-          .Default([](auto x) {
-            llvm_unreachable("unknown transform dialect type interface");
-            return -1;
-          });
+          .DefaultUnreachable("unknown transform dialect type interface");
 
   auto produceNumOpsError = [&]() {
     return emitSilenceableError()
@@ -2961,8 +2953,8 @@ void transform::SequenceOp::getEffects(
 }
 
 OperandRange
-transform::SequenceOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(point == getBody() && "unexpected region index");
+transform::SequenceOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert(successor.getSuccessor() == &getBody() && "unexpected region index");
   if (getOperation()->getNumOperands() > 0)
     return getOperation()->getOperands();
   return OperandRange(getOperation()->operand_end(),
@@ -2979,8 +2971,10 @@ void transform::SequenceOp::getSuccessorRegions(
     return;
   }
 
-  assert(point == getBody() && "unexpected region index");
-  regions.emplace_back(getOperation()->getResults());
+  assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
+             &getBody() &&
+         "unexpected region index");
+  regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 void transform::SequenceOp::getRegionInvocationBounds(

@@ -45,11 +45,15 @@ public:
   /// were validated.
   virtual void updateModuleTimestamp(StringRef ModuleFilename) = 0;
 
+  /// Prune module files that haven't been accessed in a long time.
+  virtual void maybePrune(StringRef Path, time_t PruneInterval,
+                          time_t PruneAfter) = 0;
+
   /// Returns this process's view of the module cache.
   virtual InMemoryModuleCache &getInMemoryModuleCache() = 0;
   virtual const InMemoryModuleCache &getInMemoryModuleCache() const = 0;
 
-  // TODO: Virtualize writing/reading PCM files, pruning, etc.
+  // TODO: Virtualize writing/reading PCM files, etc.
 
   virtual ~ModuleCache() = default;
 };
@@ -59,6 +63,9 @@ public:
 /// \c CompilerInstance instances participating in building modules for single
 /// translation unit in order to share the same \c InMemoryModuleCache.
 IntrusiveRefCntPtr<ModuleCache> createCrossProcessModuleCache();
+
+/// Shared implementation of `ModuleCache::maybePrune()`.
+void maybePruneImpl(StringRef Path, time_t PruneInterval, time_t PruneAfter);
 } // namespace clang
 
 #endif
