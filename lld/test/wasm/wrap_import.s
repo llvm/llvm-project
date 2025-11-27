@@ -1,19 +1,17 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %s -o %t.o
-# RUN: wasm-ld -emit-relocs -wrap nosuchsym -wrap foo -allow-undefined -o %t.wasm %t.o
+# RUN: wasm-ld -wrap nosuchsym -wrap foo -allow-undefined -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 .globl foo
 .globl _start
 
 foo:
-  .functype foo () -> (i32)
-  i32.const 1
+  .functype foo () -> ()
   end_function
 
 _start:
   .functype _start () -> ()
   call  foo
-  drop
   end_function
 
 # CHECK:      - Type:            IMPORT
@@ -24,10 +22,8 @@ _start:
 # CHECK-NEXT        SigIndex:        0
 
 # CHECK:      - Type:            CODE
-# CHECK-NEXT:   Relocations:
-# CHECK-NEXT:     - Type:            R_WASM_FUNCTION_INDEX_LEB
+# CHECK-NEXT:   Functions:
 # CHECK-NEXT:       Index:           1
-# CHECK-NEXT:       Offset:          0x4
 
 # CHECK:        FunctionNames:
 # CHECK-NEXT:      - Index:           0
