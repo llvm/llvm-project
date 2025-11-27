@@ -77,3 +77,15 @@ __m512i test_mm512_undefined_epi32(void) {
   // OGCG: ret <8 x i64> zeroinitializer
   return _mm512_undefined_epi32();
 }
+
+__m512i test_mm512_ror_epi32(__m512i __A) {
+  // CHECK-LABEL: test_mm512_ror_epi32
+  // CHECK: @llvm.fshr.v16i32
+  return _mm512_ror_epi32(__A, 5); 
+}
+
+__m512i test_mm512_ror_epi64(__m512i __A) {
+  // CHECK-LABEL: test_mm512_ror_epi64
+  // CHECK: @llvm.fshr.v8i64
+  return _mm512_ror_epi64(__A, 5); 
+}

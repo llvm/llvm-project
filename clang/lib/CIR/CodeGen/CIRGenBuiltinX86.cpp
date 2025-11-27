@@ -92,35 +92,34 @@ static mlir::Value emitX86FunnelShift(CIRGenFunction &cgf,
                                       const mlir::Location &location,
                                       mlir::Value &op0, mlir::Value &op1,
                                       mlir::Value &amt, bool isRight) {
-  auto &builder = cgf.getBuilder();
-  auto op0Ty = op0.getType();
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Type op0Ty = op0.getType();
 
   // Amount may be scalar immediate, in which case create a splat vector.
   // Funnel shifts amounts are treated as modulo and types are all power-of-2
   // so we only care about the lowest log2 bits anyway.
   if (amt.getType() != op0Ty) {
     auto vecTy = mlir::cast<cir::VectorType>(op0Ty);
-    auto numElems = vecTy.getSize();
+    uint64_t numElems = vecTy.getSize();
 
     auto amtTy = mlir::cast<cir::IntType>(amt.getType());
     auto vecElemTy = mlir::cast<cir::IntType>(vecTy.getElementType());
 
     // Cast to same width unsigned if not already unsigned.
     if (amtTy.isSigned()) {
-      auto unsignedAmtTy = builder.getUIntNTy(amtTy.getWidth());
-      amt = builder.createIntCast(amt,
-                                  builder.getUIntNTy(unsignedAmtTy.getWidth()));
+      cir::IntType unsignedAmtTy = builder.getUIntNTy(amtTy.getWidth());
+      amt = builder.createIntCast(amt, unsignedAmtTy);
     }
     // Cast the unsigned `amt` to operand element type's width unsigned.
-    auto unsingedVecElemType = builder.getUIntNTy(vecElemTy.getWidth());
-    amt = builder.createIntCast(amt, unsingedVecElemType);
+    cir::IntType unsignedVecElemType = builder.getUIntNTy(vecElemTy.getWidth());
+    amt = builder.createIntCast(amt, unsignedVecElemType);
     amt = cir::VecSplatOp::create(
-        builder, cgf.getLoc(e->getExprLoc()),
-        cir::VectorType::get(unsingedVecElemType, numElems), amt);
+        builder, location, cir::VectorType::get(unsignedVecElemType, numElems),
+        amt);
   }
 
   const std::string intrinsicName = isRight ? "fshr" : "fshl";
-  return emitIntrinsicCallOp(cgf.getBuilder(), location, intrinsicName, ty,
+  return emitIntrinsicCallOp(cgf.getBuilder(), location, intrinsicName, op0Ty,
                              mlir::ValueRange{op0, op1, amt});
 }
 
