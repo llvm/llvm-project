@@ -861,8 +861,8 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
                                                VPValue *Op,
                                                ScalarEvolution &SE) {
   VPValue *Incoming, *Mask;
-  if (!match(Op, m_VPInstruction<VPInstruction::ExtractLane>(
-                     m_FirstActiveLane(m_VPValue(Mask)), m_VPValue(Incoming))))
+  if (!match(Op, m_ExtractLane(m_FirstActiveLane(m_VPValue(Mask)),
+                               m_VPValue(Incoming))))
     return nullptr;
 
   auto *WideIV = getOptimizableIVOf(Incoming, SE);
@@ -1362,8 +1362,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   }
 
   // Look through ExtractPenultimateElement (BuildVector ....).
-  if (match(Def, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
-                     m_BuildVector()))) {
+  if (match(Def, m_ExtractPenultimateElement(m_BuildVector()))) {
     auto *BuildVector = cast<VPInstruction>(Def->getOperand(0));
     Def->replaceAllUsesWith(
         BuildVector->getOperand(BuildVector->getNumOperands() - 2));
@@ -2175,6 +2174,32 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     // Set the first operand of RecurSplice to FOR again, after replacing
     // all users.
     RecurSplice->setOperand(0, FOR);
+
+    // Check for users extracting at the penultimate active lane of the FOR.
+    // If only a single lane is active in the current iteration, we need to
+    // select the last element from the previous iteration (from the FOR phi
+    // directly).
+    for (VPUser *U : RecurSplice->users()) {
+      if (!match(U, m_ExtractLane(m_LastActiveLane(m_VPValue()),
+                                  m_Specific(RecurSplice))))
+        continue;
+
+      VPBuilder B(cast<VPInstruction>(U));
+      VPValue *LastActiveLane = cast<VPInstruction>(U)->getOperand(0);
+      Type *I64Ty = Type::getInt64Ty(Plan.getContext());
+      VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 0));
+      VPValue *One = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 1));
+      VPValue *PenultimateIndex =
+          B.createNaryOp(Instruction::Sub, {LastActiveLane, One});
+      VPValue *PenultimateLastIter =
+          B.createNaryOp(VPInstruction::ExtractLane,
+                         {PenultimateIndex, FOR->getBackedgeValue()});
+      VPValue *LastPrevIter =
+          B.createNaryOp(VPInstruction::ExtractLastElement, FOR);
+      VPValue *Cmp = B.createICmp(CmpInst::ICMP_EQ, LastActiveLane, Zero);
+      VPValue *Sel = B.createSelect(Cmp, LastPrevIter, PenultimateLastIter);
+      cast<VPInstruction>(U)->replaceAllUsesWith(Sel);
+    }
   }
   return true;
 }
@@ -2711,6 +2736,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                        VPRecipeBase &CurRecipe,
                                        VPTypeAnalysis &TypeInfo, VPValue &EVL) {
   VPlan *Plan = CurRecipe.getParent()->getPlan();
+  DebugLoc DL = CurRecipe.getDebugLoc();
   VPValue *Addr, *Mask, *EndPtr;
 
   /// Adjust any end pointers so that they point to the end of EVL lanes not VF.
@@ -2762,13 +2788,21 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
             m_Select(m_Specific(HeaderMask), m_VPValue(LHS), m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Plan->getTrue(), LHS, RHS, &EVL},
-        TypeInfo.inferScalarType(LHS), {}, {}, CurRecipe.getDebugLoc());
+        TypeInfo.inferScalarType(LHS), {}, {}, DL);
 
   if (match(&CurRecipe, m_Select(m_RemoveMask(HeaderMask, Mask), m_VPValue(LHS),
                                  m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Mask, LHS, RHS, &EVL},
-        TypeInfo.inferScalarType(LHS), {}, {}, CurRecipe.getDebugLoc());
+        TypeInfo.inferScalarType(LHS), {}, {}, DL);
+
+  if (match(&CurRecipe, m_LastActiveLane(m_Specific(HeaderMask)))) {
+    Type *Ty = TypeInfo.inferScalarType(CurRecipe.getVPSingleValue());
+    VPValue *ZExt =
+        VPBuilder(&CurRecipe).createScalarCast(Instruction::ZExt, &EVL, Ty, DL);
+    return new VPInstruction(Instruction::Sub,
+                             {ZExt, Plan->getConstantInt(Ty, 1)}, {}, {}, DL);
+  }
 
   return nullptr;
 }
@@ -3563,6 +3597,34 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         ToRemove.push_back(Expr);
       }
 
+      // Expand LastActiveLane into Not + FirstActiveLane + Sub.
+      auto *LastActiveL = dyn_cast<VPInstruction>(&R);
+      if (LastActiveL &&
+          LastActiveL->getOpcode() == VPInstruction::LastActiveLane) {
+        // Create Not(Mask) for all operands.
+        SmallVector<VPValue *, 2> NotMasks;
+        for (VPValue *Op : LastActiveL->operands()) {
+          VPValue *NotMask = Builder.createNot(Op, LastActiveL->getDebugLoc());
+          NotMasks.push_back(NotMask);
+        }
+
+        // Create FirstActiveLane on the inverted masks.
+        VPValue *FirstInactiveLane = Builder.createNaryOp(
+            VPInstruction::FirstActiveLane, NotMasks,
+            LastActiveL->getDebugLoc(), "first.inactive.lane");
+
+        // Subtract 1 to get the last active lane.
+        VPValue *One = Plan.getOrAddLiveIn(
+            ConstantInt::get(Type::getInt64Ty(Plan.getContext()), 1));
+        VPValue *LastLane = Builder.createNaryOp(
+            Instruction::Sub, {FirstInactiveLane, One},
+            LastActiveL->getDebugLoc(), "last.active.lane");
+
+        LastActiveL->replaceAllUsesWith(LastLane);
+        ToRemove.push_back(LastActiveL);
+        continue;
+      }
+
       VPValue *VectorStep;
       VPValue *ScalarStep;
       if (!match(&R, m_VPInstruction<VPInstruction::WideIVStep>(
@@ -3710,7 +3772,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
               cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
 
-          if (isa<VPPartialReductionRecipe>(Red)) {
+          if (Red->isPartialReduction()) {
             TargetTransformInfo::PartialReductionExtendKind ExtKind =
                 TargetTransformInfo::getPartialReductionExtendKind(ExtOpc);
             // FIXME: Move partial reduction creation, costing and clamping
@@ -3751,8 +3813,6 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 static VPExpressionRecipe *
 tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                           VPCostContext &Ctx, VFRange &Range) {
-  bool IsPartialReduction = isa<VPPartialReductionRecipe>(Red);
-
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
   if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
     return nullptr;
@@ -3770,7 +3830,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
               Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
           InstructionCost MulAccCost;
 
-          if (IsPartialReduction) {
+          if (Red->isPartialReduction()) {
             Type *SrcTy2 =
                 Ext1 ? Ctx.Types.inferScalarType(Ext1->getOperand(0)) : nullptr;
             // FIXME: Move partial reduction creation, costing and clamping
