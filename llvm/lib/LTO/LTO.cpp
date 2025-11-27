@@ -2289,13 +2289,13 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
           &ResolvedODR) {
-
-    llvm::TimeTraceScope timeScope(
-        "Run ThinLTO backend thread (out-of-process)", J.ModuleID);
-
+    {
+      TimeTraceScope TimeScope("Emit individual index for DTLTO",
+                               J.SummaryIndexPath);
     if (auto E = emitFiles(ImportList, J.ModuleID, J.ModuleID.str(),
                            J.SummaryIndexPath, J.ImportsFiles))
       return E;
+    }
 
     if (!Cache.isValid() || !CombinedIndex.modulePaths().count(J.ModuleID) ||
         all_of(CombinedIndex.getModuleHash(J.ModuleID),
@@ -2304,6 +2304,7 @@ public:
       // no module hash.
       return Error::success();
 
+    TimeTraceScope TimeScope("Check cache for DTLTO", J.SummaryIndexPath);
     const GVSummaryMapTy &DefinedGlobals =
         ModuleToDefinedGVSummaries.find(J.ModuleID)->second;
 
@@ -2363,6 +2364,10 @@ public:
             const FunctionImporter::ExportSetTy &ExportList,
             const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
                 &ResolvedODR) {
+          if (LLVM_ENABLE_THREADS && Conf.TimeTraceEnabled)
+            timeTraceProfilerInitialize(
+                Conf.TimeTraceGranularity,
+                "Emit individual index and check cache for DTLTO");
           Error E =
               runThinLTOBackendThread(J, ImportList, ExportList, ResolvedODR);
           if (E) {
@@ -2372,6 +2377,8 @@ public:
             else
               Err = std::move(E);
           }
+          if (LLVM_ENABLE_THREADS && Conf.TimeTraceEnabled)
+            timeTraceProfilerFinishThread();
         },
         std::ref(J), std::ref(ImportList), std::ref(ExportList),
         std::ref(ResolvedODR));
@@ -2520,6 +2527,7 @@ public:
       return std::move(*Err);
 
     auto CleanPerJobFiles = llvm::make_scope_exit([&] {
+      llvm::TimeTraceScope TimeScope("Remove DTLTO temporary files");
       if (!SaveTemps)
         for (auto &Job : Jobs) {
           removeFile(Job.NativeObjectPath);
@@ -2533,17 +2541,23 @@ public:
     buildCommonRemoteCompilerOptions();
 
     SString JsonFile = sys::path::parent_path(LinkerOutputFile);
+    {
+      llvm::TimeTraceScope TimeScope("Emit DTLTO JSON");
     sys::path::append(JsonFile, sys::path::stem(LinkerOutputFile) + "." + UID +
                                     ".dist-file.json");
     if (!emitDistributorJson(JsonFile))
       return make_error<StringError>(
           BCError + "failed to generate distributor JSON script: " + JsonFile,
           inconvertibleErrorCode());
+    }
     auto CleanJson = llvm::make_scope_exit([&] {
       if (!SaveTemps)
         removeFile(JsonFile);
     });
 
+    {
+      llvm::TimeTraceScope TimeScope("Execute DTLTO distributor",
+                                     DistributorPath);
     // Checks if we have any jobs that don't have corresponding cache entries.
     if (CachedJobs.load() < Jobs.size()) {
       SmallVector<StringRef, 3> Args = {DistributorPath};
@@ -2560,7 +2574,10 @@ public:
             inconvertibleErrorCode());
       }
     }
+    }
 
+    {
+      llvm::TimeTraceScope FilesScope("Add DTLTO files to the link");
     for (auto &Job : Jobs) {
       if (!Job.CacheKey.empty() && Job.Cached) {
         assert(Cache.isValid());
@@ -2604,6 +2621,7 @@ public:
         if (Error Err = Stream.commit())
           report_fatal_error(std::move(Err));
       }
+    }
     }
     return Error::success();
   }
