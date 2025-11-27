@@ -123,6 +123,12 @@ public:
     return true;
   }
 
+  size_t getSrcArgforCopyCtor(const CXXConstructorDecl *,
+                              FunctionArgList &args) const override {
+    assert(!args.empty() && "expected the arglist to not be empty!");
+    return args.size() - 1;
+  }
+
   void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) override;
 
   mlir::Value
@@ -459,7 +465,8 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
                  "emitVTableDefinitions: __fundamental_type_info");
   }
 
-  auto vtableAsGlobalValue = dyn_cast<cir::CIRGlobalValueInterface>(*vtable);
+  [[maybe_unused]] auto vtableAsGlobalValue =
+      dyn_cast<cir::CIRGlobalValueInterface>(*vtable);
   assert(vtableAsGlobalValue && "VTable must support CIRGlobalValueInterface");
   // Always emit type metadata on non-available_externally definitions, and on
   // available_externally definitions if we are performing whole program

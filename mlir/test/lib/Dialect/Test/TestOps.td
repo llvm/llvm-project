@@ -120,6 +120,13 @@ def SymbolOp : TEST_Op<"symbol", [NoMemoryEffect, Symbol]> {
                        OptionalAttr<StrAttr>:$sym_visibility);
 }
 
+def SymbolWithResultOp : TEST_Op<"symbol_with_result", [Symbol]> {
+  let summary = "invalid symbol operation that produces an SSA result";
+  let arguments = (ins StrAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
+  let results = (outs AnyType:$result);
+}
+
 def OverriddenSymbolVisibilityOp : TEST_Op<"overridden_symbol_visibility", [
   DeclareOpInterfaceMethods<Symbol, ["getVisibility", "setVisibility"]>,
 ]> {
