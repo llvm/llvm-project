@@ -917,8 +917,8 @@ private:
   /// that indirectly call such 'DISuprogram'. We use its linkage name to
   /// update such list.
   /// The 'CallTargetCache' is updated in the following scenarios:
-  /// - Both 'CallBase' and 'MDNode' are ready available.
-  /// - If only the 'CallBase' or 'MDNode' are are available, the partial
+  /// - Both 'CallBase' and 'MDNode' are available.
+  /// - If only the 'CallBase' or 'MDNode' are available, the partial
   ///   information is added and later is completed when the missing item
   ///   ('CallBase' or 'MDNode') is available.
   using InstrList = llvm::SmallVector<llvm::WeakVH, 2>;

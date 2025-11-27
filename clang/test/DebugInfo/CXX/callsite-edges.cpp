@@ -1,9 +1,16 @@
-// Check edge cases:
+// RUN: %clang_cc1 -triple=x86_64-linux -disable-llvm-passes -emit-llvm \
+// RUN:            -debug-info-kind=constructor -dwarf-version=5 -O1 %s \
+// RUN:            -o - | FileCheck %s -check-prefix CHECK-EDGES
+
+// The following are identified edge cases involving the method being called:
+// 1) Method is declared but not defined in current CU.
+// 2) Pure virtual method but not defined in current CU.
+// 3) Virtual method defined very deeply.
 
 //---------------------------------------------------------------------
-// Method is declared but not defined in current CU - Fail.
-// No debug information entry is generated for 'one'.
-// Generate 'call_target' metadata only for 'two'.
+// 1) Method is declared but not defined in current CU - Fail.
+//    No debug information entry is generated for 'one'.
+//    Generate 'call_target' metadata only for 'two'.
 //---------------------------------------------------------------------
 class CEmpty {
 public:
@@ -20,8 +27,8 @@ void edge_a(CEmpty *Empty) {
 }
 
 //---------------------------------------------------------------------
-// Pure virtual method but not defined in current CU - Pass.
-// Generate 'call_target' metadata for 'one' and 'two'.
+// 2) Pure virtual method but not defined in current CU - Pass.
+//    Generate 'call_target' metadata for 'one' and 'two'.
 //---------------------------------------------------------------------
 class CBase {
 public:
@@ -38,8 +45,8 @@ void edge_b(CBase *Base) {
 }
 
 //---------------------------------------------------------------------
-// Virtual method defined very deeply - Pass.
-// Generate 'call_target' metadata for 'd0', 'd1', 'd2' and 'd3'.
+// 3) Virtual method defined very deeply - Pass.
+//    Generate 'call_target' metadata for 'd0', 'd1', 'd2' and 'd3'.
 //---------------------------------------------------------------------
 struct CDeep {
   struct CD1 {
@@ -78,32 +85,28 @@ void edge_c(CDeep *Deep) {
   D3->d3(3);
 }
 
-// RUN: %clang_cc1 -triple=x86_64-linux -disable-llvm-passes -emit-llvm \
-// RUN:            -debug-info-kind=constructor -dwarf-version=5 -O1 %s \
-// RUN:            -o - | FileCheck %s -check-prefix CHECK-EDGES
-
 // CHECK-EDGES: define {{.*}} @_Z6edge_aP6CEmpty{{.*}} {
-// CHECK-EDGES-DAG:  call void %1{{.*}} !dbg {{![0-9]+}}
-// CHECK-EDGES-DAG:  call void %3{{.*}} !dbg {{![0-9]+}}, !call_target [[CEMPTY_TWO:![0-9]+]]
+// CHECK-EDGES:  call void %1{{.*}} !dbg {{![0-9]+}}
+// CHECK-EDGES:  call void %3{{.*}} !dbg {{![0-9]+}}, !call_target [[CEMPTY_TWO:![0-9]+]]
 // CHECK-EDGES: }
 
 // CHECK-EDGES: define {{.*}} @_Z6edge_bP5CBase{{.*}} {
-// CHECK-EDGES-DAG:  call void %1{{.*}} !dbg {{![0-9]+}}, !call_target [[CBASE_ONE:![0-9]+]]
-// CHECK-EDGES-DAG:  call void %3{{.*}} !dbg {{![0-9]+}}, !call_target [[CBASE_TWO:![0-9]+]]
+// CHECK-EDGES:  call void %1{{.*}} !dbg {{![0-9]+}}, !call_target [[CBASE_ONE:![0-9]+]]
+// CHECK-EDGES:  call void %3{{.*}} !dbg {{![0-9]+}}, !call_target [[CBASE_TWO:![0-9]+]]
 // CHECK-EDGES: }
 
 // CHECK-EDGES: define {{.*}} @_Z6edge_cP5CDeep{{.*}} {
-// CHECK-EDGES-DAG:  call void %1{{.*}} !dbg {{![0-9]+}}, !call_target [[CDEEP_D0:![0-9]+]]
-// CHECK-EDGES-DAG:  call void %4{{.*}} !dbg {{![0-9]+}}, !call_target [[CDEEP_D1:![0-9]+]]
-// CHECK-EDGES-DAG:  call void %7{{.*}} !dbg {{![0-9]+}}, !call_target [[CDEEP_D2:![0-9]+]]
-// CHECK-EDGES-DAG:  call void %10{{.*}} !dbg {{![0-9]+}}, !call_target [[CDEEP_D3:![0-9]+]]
+// CHECK-EDGES:  call void %1{{.*}} !dbg {{![0-9]+}}, !call_target [[CDEEP_D0:![0-9]+]]
+// CHECK-EDGES:  call void %4{{.*}} !dbg {{![0-9]+}}, !call_target [[CDEEP_D1:![0-9]+]]
+// CHECK-EDGES:  call void %7{{.*}} !dbg {{![0-9]+}}, !call_target [[CDEEP_D2:![0-9]+]]
+// CHECK-EDGES:  call void %10{{.*}} !dbg {{![0-9]+}}, !call_target [[CDEEP_D3:![0-9]+]]
 // CHECK-EDGES: }
 
-// CHECK-EDGES-DAG:  [[CEMPTY_TWO]] = {{.*}}!DISubprogram(name: "two", linkageName: "_ZN6CEmpty3twoEic"
-// CHECK-EDGES-DAG:  [[CBASE_ONE]] = {{.*}}!DISubprogram(name: "one", linkageName: "_ZN5CBase3oneEb"
-// CHECK-EDGES-DAG:  [[CBASE_TWO]] = {{.*}}!DISubprogram(name: "two", linkageName: "_ZN5CBase3twoEic"
+// CHECK-EDGES:  [[CBASE_ONE]] = {{.*}}!DISubprogram(name: "one", linkageName: "_ZN5CBase3oneEb"
+// CHECK-EDGES:  [[CEMPTY_TWO]] = {{.*}}!DISubprogram(name: "two", linkageName: "_ZN6CEmpty3twoEic"
+// CHECK-EDGES:  [[CBASE_TWO]] = {{.*}}!DISubprogram(name: "two", linkageName: "_ZN5CBase3twoEic"
 
-// CHECK-EDGES-DAG:  [[CDEEP_D0]] = {{.*}}!DISubprogram(name: "d0", linkageName: "_ZN5CDeep2d0Ei"
-// CHECK-EDGES-DAG:  [[CDEEP_D1]] = {{.*}}!DISubprogram(name: "d1", linkageName: "_ZN5CDeep3CD12d1Ei"
-// CHECK-EDGES-DAG:  [[CDEEP_D2]] = {{.*}}!DISubprogram(name: "d2", linkageName: "_ZN5CDeep3CD13CD22d2Ei"
-// CHECK-EDGES-DAG:  [[CDEEP_D3]] = {{.*}}!DISubprogram(name: "d3", linkageName: "_ZN5CDeep3CD13CD23CD32d3Ei"
+// CHECK-EDGES:  [[CDEEP_D0]] = {{.*}}!DISubprogram(name: "d0", linkageName: "_ZN5CDeep2d0Ei"
+// CHECK-EDGES:  [[CDEEP_D1]] = {{.*}}!DISubprogram(name: "d1", linkageName: "_ZN5CDeep3CD12d1Ei"
+// CHECK-EDGES:  [[CDEEP_D2]] = {{.*}}!DISubprogram(name: "d2", linkageName: "_ZN5CDeep3CD13CD22d2Ei"
+// CHECK-EDGES:  [[CDEEP_D3]] = {{.*}}!DISubprogram(name: "d3", linkageName: "_ZN5CDeep3CD13CD23CD32d3Ei"

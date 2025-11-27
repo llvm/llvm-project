@@ -647,6 +647,7 @@ HANDLE_DW_AT(0x3e10, LLVM_address_space, 0, LLVM)
 HANDLE_DW_AT(0x3e11, LLVM_lanes, 0, LLVM)
 HANDLE_DW_AT(0x3e12, LLVM_lane_pc, 0, LLVM)
 HANDLE_DW_AT(0x3e13, LLVM_vector_size, 0, LLVM)
+HANDLE_DW_AT(0x3e14, LLVM_virtual_call_origin, 0, LLVM)
 
 // https://llvm.org/docs/AMDGPUUsage.html#address-space-identifier
 HANDLE_DW_ASPACE(0x0, none)

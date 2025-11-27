@@ -1,6 +1,10 @@
+// RUN: %clang --target=x86_64-unknown-linux -c -g -O1 %s -o - | \
+// RUN: llvm-dwarfdump --debug-info - | FileCheck %s --check-prefix=CHECK
+
 // Simple base and derived class with virtual:
-// We check for a generated 'DW_AT_call_origin' for 'foo', that corresponds
-// to the 'call_target' metadata added to the indirect call instruction.
+// We check for a generated 'DW_AT_LLVM_virtual_call_origin' for 'foo', that
+// corresponds to the 'call_target' metadata added to the indirect call
+// instruction.
 
 class CBaseOne {
   virtual void foo(int &);
@@ -38,9 +42,6 @@ void CDerivedTwo::bar(int &j) { DerivedOne->foo(j); }
 // !40 = !DISubprogram(name: "bar", linkageName: "_ZN11CDerivedTwo3barERi", ...)
 // !65 = !DILocation(line: 25, column: 15, scope: !40)
 
-// RUN: %clang --target=x86_64-unknown-linux -c -g -O1 %s -o - | \
-// RUN: llvm-dwarfdump --debug-info - | FileCheck %s --check-prefix=CHECK
-
 // CHECK: DW_TAG_compile_unit
 // CHECK:   DW_TAG_structure_type
 // CHECK:     DW_AT_name	("CDerivedOne")
@@ -64,4 +65,4 @@ void CDerivedTwo::bar(int &j) { DerivedOne->foo(j); }
 // CHECK:       DW_AT_call_target	(DW_OP_reg0 RAX)
 // CHECK:       DW_AT_call_tail_call	(true)
 // CHECK:       DW_AT_call_pc	(0x{{.*}})
-// CHECK:       DW_AT_call_origin	([[FOO_DEF]] "{{.*}}foo{{.*}}")
+// CHECK:       DW_AT_LLVM_virtual_call_origin	([[FOO_DEF]] "{{.*}}foo{{.*}}")

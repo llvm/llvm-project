@@ -927,13 +927,14 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       return;
 
     MDNode *MD = CSInfo->second.MD;
-    // Add DW_AT_call_origin with the 'call_target' metadata.
-    assert(!CallSiteDIE.findAttribute(dwarf::DW_AT_call_origin) &&
-           "DW_AT_call_origin already exists");
+    // Add DW_AT_LLVM_virtual_call_origin with the 'call_target' metadata.
+    assert(!CallSiteDIE.findAttribute(dwarf::DW_AT_LLVM_virtual_call_origin) &&
+           "DW_AT_LLVM_virtual_call_origin already exists");
     DIE *CalleeDIE =
         CU.getOrCreateSubprogramDIE(dyn_cast<DISubprogram>(MD), nullptr);
     assert(CalleeDIE && "Could not create DIE for call site entry origin");
-    CU.addDIEEntry(CallSiteDIE, CU.getDwarf5OrGNUAttr(dwarf::DW_AT_call_origin),
+    CU.addDIEEntry(CallSiteDIE,
+                   CU.getDwarf5OrGNUAttr(dwarf::DW_AT_LLVM_virtual_call_origin),
                    *CalleeDIE);
   };
 

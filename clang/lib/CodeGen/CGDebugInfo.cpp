@@ -5073,11 +5073,9 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
   if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined()) {
     EmitFunctionDecl(CalleeGlobalDecl, CalleeDecl->getLocation(), CalleeType,
                      Func);
-    if (Func->getSubprogram()) {
-      // For each call instruction emitted, add the call site target metadata.
-      llvm::DISubprogram *SP = Func->getSubprogram();
+    // For each call instruction emitted, add the call site target metadata.
+    if (llvm::DISubprogram *SP = Func->getSubprogram())
       addCallTarget(SP->getLinkageName(), SP, /*CI=*/nullptr);
-    }
   }
 }
 
@@ -5181,7 +5179,8 @@ void CGDebugInfo::EmitFunctionEnd(CGBuilderTy &Builder, llvm::Function *Fn) {
   FnBeginRegionCount.pop_back();
 
   if (Fn && Fn->getSubprogram()) {
-    // For each call instruction emitted, add the call site target metadata.
+    // As the debug info for the given function has been emitted, add its
+    // name and node to the call site target information.
     llvm::DISubprogram *SP = Fn->getSubprogram();
     addCallTarget(SP->getLinkageName(), SP, /*CI=*/nullptr);
 
