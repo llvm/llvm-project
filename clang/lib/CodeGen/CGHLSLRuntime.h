@@ -179,7 +179,8 @@ public:
 protected:
   CodeGenModule &CGM;
 
-  llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B,
+                                      const FunctionDecl *FD, llvm::Type *Type,
                                       const clang::DeclaratorDecl *Decl,
                                       HLSLAppliedSemanticAttr *Semantic,
                                       std::optional<unsigned> Index);
