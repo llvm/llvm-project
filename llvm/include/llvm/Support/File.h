@@ -22,17 +22,20 @@ namespace llvm::sys::fs {
 /// provide an unified representation.
 struct file_t {
 #if defined(_WIN32)
-  // A Win32 HANDLE is a typedef of void*
+  /// A Win32 HANDLE is a typedef of void*
   using value_type = void *;
 #else
-  // A file descriptor on UNIX.
+  /// A file descriptor on UNIX.
   using value_type = int;
 #endif
   value_type Value;
 
-  // Value for an invalid file descriptor/handle. -1 is used for both Unix and
-  // Windows platform.
+  /// Value for an invalid file descriptor/handle.
+#if defined(_WIN32)
+  static constexpr value_type Invalid = INVALID_FILE_HANDLE;
+#else
   static constexpr value_type Invalid = -1;
+#endif
 
   /// Default constructor to invalid file.
   file_t() : Value(Invalid) {}
