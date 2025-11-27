@@ -1585,18 +1585,16 @@ let TargetPrefix = "nvvm" in {
   //
   // Sub
   //
-  let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
-    foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
-      foreach ftz = ["", "_ftz"] in {
-        foreach sat = ["", "_sat"] in {
-          def int_nvvm_sub # rnd # ftz # sat # _f : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
-        } // sat
-      } // ftz
-      def int_nvvm_sub # rnd # _d : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-    } // rnd
-  }
+  foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
+    foreach ftz = ["", "_ftz"] in {
+      foreach sat = ["", "_sat"] in {
+        def int_nvvm_sub # rnd # ftz # sat # _f : NVVMBuiltin,
+        PureIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
+      } // sat
+    } // ftz
+    def int_nvvm_sub # rnd # _d : NVVMBuiltin,
+        PureIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
+  } // rnd
 
   //
   // Dot Product

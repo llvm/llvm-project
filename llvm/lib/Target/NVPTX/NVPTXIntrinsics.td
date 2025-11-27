@@ -1739,18 +1739,28 @@ defm INT_NVVM_FMA : FMA_INST;
 
 foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
   foreach sat = ["", "_sat"] in {
-    foreach type = ["f16", "bf16"] in {
+    foreach type = [f16, bf16] in {
       def INT_NVVM_MIXED_FMA # rnd # sat # _f32_ # type : 
         BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b, B32:$c),
           !subst("_", ".", "fma" # rnd # sat # "_f32_" # type),
           [(set f32:$dst, 
            (!cast<Intrinsic>("int_nvvm_fma" # rnd # sat # "_f") 
-             (f32 (fpextend !cast<ValueType>(type):$a)),
-             (f32 (fpextend !cast<ValueType>(type):$b)),
+             (f32 (fpextend type:$a)),
+             (f32 (fpextend type:$b)),
              f32:$c))]>,
         Requires<[hasSM<100>, hasPTX<86>]>;
     }
   }
+}
+
+// Pattern for llvm.fma.f32 intrinsic when there is no FTZ flag
+let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
+  def : Pat<(f32 (fma (f32 (fpextend f16:$a)),
+                      (f32 (fpextend f16:$b)), f32:$c)),
+            (INT_NVVM_MIXED_FMA_rn_f32_f16 B16:$a, B16:$b, B32:$c)>;
+  def : Pat<(f32 (fma (f32 (fpextend bf16:$a)), 
+                      (f32 (fpextend bf16:$b)), f32:$c)),
+            (INT_NVVM_MIXED_FMA_rn_f32_bf16 B16:$a, B16:$b, B32:$c)>;
 }
 
 //
@@ -1875,19 +1885,28 @@ def INT_NVVM_ADD_RP_D : F_MATH_2<"add.rp.f64", B64, B64, B64, int_nvvm_add_rp_d>
 
 foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
   foreach sat = ["", "_sat"] in {
-    foreach type = ["f16", "bf16"] in {
+    foreach type = [f16, bf16] in {
       def INT_NVVM_MIXED_ADD # rnd # sat # _f32_ # type : 
         BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B32:$b),
           !subst("_", ".", "add" # rnd # sat # "_f32_" # type),
           [(set f32:$dst, 
            (!cast<Intrinsic>("int_nvvm_add" # rnd # sat # "_f") 
-             (f32 (fpextend !cast<ValueType>(type):$a)),
+             (f32 (fpextend type:$a)),
              f32:$b))]>,
         Requires<[hasSM<100>, hasPTX<86>]>;
     }
   }
 }
 
+// Pattern for fadd when there is no FTZ flag
+let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
+  def : Pat<(f32 (fadd (f32 (fpextend f16:$a)), f32:$b)),
+            (INT_NVVM_MIXED_ADD_rn_f32_f16 B16:$a, B32:$b)>;
+  def : Pat<(f32 (fadd (f32 (fpextend bf16:$a)), f32:$b)),
+            (INT_NVVM_MIXED_ADD_rn_f32_bf16 B16:$a, B32:$b)>;
+}
+
+//
 // Sub
 //
 
@@ -1915,18 +1934,27 @@ def INT_NVVM_SUB_RP_D : F_MATH_2<"sub.rp.f64", B64, B64, B64, int_nvvm_sub_rp_d>
 
 foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
   foreach sat = ["", "_sat"] in {
-    foreach type = ["f16", "bf16"] in {
+    foreach type = [f16, bf16] in {
       def INT_NVVM_MIXED_SUB # rnd # sat # _f32_ # type : 
         BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B32:$b),
           !subst("_", ".", "sub" # rnd # sat # "_f32_" # type),
           [(set f32:$dst, 
            (!cast<Intrinsic>("int_nvvm_sub" # rnd # sat # "_f") 
-             (f32 (fpextend !cast<ValueType>(type):$a)),
+             (f32 (fpextend type:$a)),
              f32:$b))]>,
         Requires<[hasSM<100>, hasPTX<86>]>;
     }
   }
 }
+
+// Pattern for fsub when there is no FTZ flag
+let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
+  def : Pat<(f32 (fsub (f32 (fpextend f16:$a)), f32:$b)),
+            (INT_NVVM_MIXED_SUB_rn_f32_f16 B16:$a, B32:$b)>;
+  def : Pat<(f32 (fsub (f32 (fpextend bf16:$a)), f32:$b)),
+            (INT_NVVM_MIXED_SUB_rn_f32_bf16 B16:$a, B32:$b)>;
+}
+
 //
 // BFIND
 //
