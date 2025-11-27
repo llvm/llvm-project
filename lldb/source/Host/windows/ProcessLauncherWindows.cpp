@@ -21,8 +21,22 @@
 using namespace lldb;
 using namespace lldb_private;
 
-std::vector<wchar_t>
-ProcessLauncherWindows::CreateEnvironmentBufferW(const Environment &env) {
+/// Create a UTF-16 environment block to use with CreateProcessW.
+///
+/// The buffer is a sequence of null-terminated UTF-16 strings, followed by an
+/// extra L'\0' (two bytes of 0). An empty environment must have one
+/// empty string, followed by an extra L'\0'.
+///
+/// The keys are sorted to comply with the CreateProcess' calling convention.
+///
+/// Ensure that the resulting buffer is used in conjunction with
+/// CreateProcessW and be sure that dwCreationFlags includes
+/// CREATE_UNICODE_ENVIRONMENT.
+///
+/// \param env The Environment object to convert.
+/// \returns The sorted sequence of environment variables and their values,
+/// separated by null terminators.
+static std::vector<wchar_t> CreateEnvironmentBufferW(const Environment &env) {
   std::vector<std::wstring> env_entries;
   for (const auto &KV : env) {
     std::wstring wentry;
@@ -44,8 +58,14 @@ ProcessLauncherWindows::CreateEnvironmentBufferW(const Environment &env) {
   return buffer;
 }
 
-llvm::ErrorOr<std::wstring>
-ProcessLauncherWindows::GetFlattenedWindowsCommandStringW(Args args) {
+/// Flattens an Args object into a Windows command-line wide string.
+///
+/// Returns an empty string if args is empty.
+///
+/// \param args The Args object to flatten.
+/// \returns A wide string containing the flattened command line.
+static llvm::ErrorOr<std::wstring>
+GetFlattenedWindowsCommandStringW(Args args) {
   if (args.empty())
     return L"";
 
@@ -62,7 +82,6 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   error.Clear();
 
   std::string executable;
-  std::vector<char> environment;
   STARTUPINFOEXW startupinfoex = {};
   STARTUPINFOW &startupinfo = startupinfoex.StartupInfo;
   PROCESS_INFORMATION pi = {};
