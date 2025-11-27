@@ -319,7 +319,7 @@ getExplicitAndImplicitNVPTXTargetFeatures(clang::DiagnosticsEngine &diags,
   return llvm::join(featuresVec, ",");
 }
 
-enum ppcCPU {prePwr8, prePwr10};
+enum ppcCPU { prePwr8, prePwr10 };
 static std::optional<ppcCPU> ppcType(std::string &cpu) {
   return llvm::StringSwitch<std::optional<ppcCPU>>(cpu)
       .Case("future", std::nullopt)
@@ -395,8 +395,8 @@ std::string CompilerInstance::getTargetFeatures() {
     return getExplicitAndImplicitNVPTXTargetFeatures(getDiagnostics(),
                                                      targetOpts, triple);
   } else if (triple.isPPC()) {
-    return getExplicitAndImplicitPPCTargetFeatures(getDiagnostics(),
-                                                   targetOpts, triple);
+    return getExplicitAndImplicitPPCTargetFeatures(getDiagnostics(), targetOpts,
+                                                   triple);
   }
   return llvm::join(targetOpts.featuresAsWritten.begin(),
                     targetOpts.featuresAsWritten.end(), ",");
