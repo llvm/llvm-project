@@ -699,8 +699,9 @@ void CGHLSLRuntime::emitUserSemanticStore(IRBuilder<> &B, llvm::Value *Source,
 }
 
 llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
-    IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
-    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
+    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
+    std::optional<unsigned> Index) {
 
   std::string SemanticName = Semantic->getAttrName()->getName().upper();
   if (SemanticName == "SV_GROUPINDEX") {
@@ -736,8 +737,12 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     return buildVectorInput(B, GroupIDIntrinsic, Type);
   }
 
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "Entry point has no shader attribute");
+  llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
+
   if (SemanticName == "SV_POSITION") {
-    if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Pixel) {
+    if (ST == Triple::EnvironmentType::Pixel) {
       if (CGM.getTarget().getTriple().isSPIRV())
         return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
                                       Semantic->getAttrName()->getName(),
@@ -746,7 +751,7 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
         return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
     }
 
-    if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Vertex) {
+    if (ST == Triple::EnvironmentType::Vertex) {
       return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
     }
   }
@@ -804,7 +809,7 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
 
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   if (Semantic->getAttrName()->getName().starts_with_insensitive("SV_"))
-    return emitSystemSemanticLoad(B, Type, Decl, Semantic, Index);
+    return emitSystemSemanticLoad(B, FD, Type, Decl, Semantic, Index);
   return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
 }
 
