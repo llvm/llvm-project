@@ -7108,8 +7108,7 @@ static bool CheckMissingFormatAttribute(
     StringLiteral *ReferenceFormatString, unsigned FormatIdx,
     unsigned FirstDataArg, FormatStringType FormatType, unsigned CallerParamIdx,
     SourceLocation Loc) {
-  if (S->getDiagnostics().isIgnored(diag::warn_missing_format_attribute,
-                                    Loc))
+  if (S->getDiagnostics().isIgnored(diag::warn_missing_format_attribute, Loc))
     return false;
 
   DeclContext *DC = S->CurContext;
