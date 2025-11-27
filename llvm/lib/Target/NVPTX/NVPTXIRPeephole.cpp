@@ -6,14 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements FMA folding for float/double type for NVPTX. It folds
-// following patterns:
-// 1. fadd(fmul(a, b), c) => fma(a, b, c)
-// 2. fadd(c, fmul(a, b)) => fma(a, b, c)
-// 3. fadd(fmul(a, b), fmul(c, d)) => fma(a, b, fmul(c, d))
-// 4. fsub(fmul(a, b), c) => fma(a, b, fneg(c))
-// 5. fsub(a, fmul(b, c)) => fma(fneg(b), c, a)
-// 6. fsub(fmul(a, b), fmul(c, d)) => fma(a, b, fneg(fmul(c, d)))
+// This file implements IR-level peephole optimizations. These transformations
+// run late in the NVPTX IR pass pipeline just before the instruction selection.
+//
+// Currently, it implements the following transformation(s):
+// 1. FMA folding (float/double types):
+//    Transforms FMUL+FADD/FSUB sequences into FMA intrinsics when the
+//    'contract' fast-math flag is present. Supported patterns:
+//    - fadd(fmul(a, b), c) => fma(a, b, c)
+//    - fadd(c, fmul(a, b)) => fma(a, b, c)
+//    - fadd(fmul(a, b), fmul(c, d)) => fma(a, b, fmul(c, d))
+//    - fsub(fmul(a, b), c) => fma(a, b, fneg(c))
+//    - fsub(a, fmul(b, c)) => fma(fneg(b), c, a)
+//    - fsub(fmul(a, b), fmul(c, d)) => fma(a, b, fneg(fmul(c, d)))
+//
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXUtilities.h"
