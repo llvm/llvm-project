@@ -88,13 +88,79 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
   }
   return maskVec;
 }
-static mlir::Value emitX86CompressExpand(CIRGenFunction &cgf, const CallExpr *expr,ArrayRef<mlir::Value> ops, bool IsCompress, const std::string &ID){
-  auto ResultTy = cast<cir::VectorType>(ops[1].getType());
-  mlir::Value MaskValue = getMaskVecValue(cgf, expr, ops[2],  cast<cir::VectorType>(ResultTy).getSize());
-  llvm::SmallVector<mlir::Value, 4> op{ops[0], ops[1], MaskValue};
-  
-  return emitIntrinsicCallOp(cgf,expr, ID, ResultTy, op);
 
+// Builds the VecShuffleOp for pshuflw and pshufhw x86 builtins.
+//
+// The vector is split into lanes of 8 word elements (16 bits). The lower or
+// upper half of each lane, controlled by `isLow`, is shuffled in the following
+// way: The immediate is truncated to 8 bits, separated into 4 2-bit fields. The
+// i-th field's value represents the resulting index of the i-th element in the
+// half lane after shuffling. The other half of the lane remains unchanged.
+static cir::VecShuffleOp emitPshufWord(CIRGenBuilderTy &builder,
+                                       const mlir::Value vec,
+                                       const mlir::Value immediate,
+                                       const mlir::Location loc,
+                                       const bool isLow) {
+  uint32_t imm = CIRGenFunction::getZExtIntValueFromConstOp(immediate);
+
+  auto vecTy = cast<cir::VectorType>(vec.getType());
+  unsigned numElts = vecTy.getSize();
+
+  unsigned firstHalfStart = isLow ? 0 : 4;
+  unsigned secondHalfStart = 4 - firstHalfStart;
+
+  // Splat the 8-bits of immediate 4 times to help the loop wrap around.
+  imm = (imm & 0xff) * 0x01010101;
+
+  int64_t indices[32];
+  for (unsigned l = 0; l != numElts; l += 8) {
+    for (unsigned i = firstHalfStart; i != firstHalfStart + 4; ++i) {
+      indices[l + i] = l + (imm & 3) + firstHalfStart;
+      imm >>= 2;
+    }
+    for (unsigned i = secondHalfStart; i != secondHalfStart + 4; ++i)
+      indices[l + i] = l + i;
+  }
+
+  return builder.createVecShuffle(loc, vec, ArrayRef(indices, numElts));
+}
+
+// Builds the shuffle mask for pshufd and shufpd/shufps x86 builtins.
+// The shuffle mask is written to outIndices.
+static void
+computeFullLaneShuffleMask(CIRGenFunction &cgf, const mlir::Value vec,
+                           uint32_t imm, const bool isShufP,
+                           llvm::SmallVectorImpl<int64_t> &outIndices) {
+  auto vecTy = cast<cir::VectorType>(vec.getType());
+  unsigned numElts = vecTy.getSize();
+  unsigned numLanes = cgf.cgm.getDataLayout().getTypeSizeInBits(vecTy) / 128;
+  unsigned numLaneElts = numElts / numLanes;
+
+  // Splat the 8-bits of immediate 4 times to help the loop wrap around.
+  imm = (imm & 0xff) * 0x01010101;
+
+  for (unsigned l = 0; l != numElts; l += numLaneElts) {
+    for (unsigned i = 0; i != numLaneElts; ++i) {
+      uint32_t idx = imm % numLaneElts;
+      imm /= numLaneElts;
+      if (isShufP && i >= (numLaneElts / 2))
+        idx += numElts;
+      outIndices[l + i] = l + idx;
+    }
+  }
+
+  outIndices.resize(numElts);
+}
+static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
+                                         mlir::Location loc, mlir::Value source,
+                                         mlir::Value mask,
+                                         mlir::Value inputVector,
+                                         const std::string &id) {
+  auto ResultTy = cast<cir::VectorType>(mask.getType());
+  mlir::Value MaskValue = getMaskVecValue(
+      builder, loc, inputVector, cast<cir::VectorType>(ResultTy).getSize());
+  return emitIntrinsicCallOp(builder, loc, id, ResultTy,
+                             mlir::ValueRange{source, mask, MaskValue});
 }
 
 static mlir::Value emitX86MaskAddLogic(CIRGenBuilderTy &builder,
@@ -657,6 +723,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_compressstoreqi128_mask:
   case X86::BI__builtin_ia32_compressstoreqi256_mask:
   case X86::BI__builtin_ia32_compressstoreqi512_mask:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_expanddf128_mask:
   case X86::BI__builtin_ia32_expanddf256_mask:
   case X86::BI__builtin_ia32_expanddf512_mask:
@@ -674,7 +744,11 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_expandhi512_mask:
   case X86::BI__builtin_ia32_expandqi128_mask:
   case X86::BI__builtin_ia32_expandqi256_mask:
-  case X86::BI__builtin_ia32_expandqi512_mask:
+  case X86::BI__builtin_ia32_expandqi512_mask:{
+  mlir::Location loc = getLoc(expr->getExprLoc());
+  return emitX86CompressExpand(builder, loc, ops[0], ops[1], ops[2],
+                               "x86.avx512.mask.expand");
+}
   case X86::BI__builtin_ia32_compressdf128_mask:
   case X86::BI__builtin_ia32_compressdf256_mask:
   case X86::BI__builtin_ia32_compressdf512_mask:
@@ -693,8 +767,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_compressqi128_mask:
   case X86::BI__builtin_ia32_compressqi256_mask:
   case X86::BI__builtin_ia32_compressqi512_mask:{
-    return emitX86CompressExpand(*this, expr, ops, true, "x86_avx512_mask_compress");
-  }
+  mlir::Location loc = getLoc(expr->getExprLoc());
+  return emitX86CompressExpand(builder, loc, ops[0], ops[1], ops[2],
+                               "x86.avx512.mask.compress");
+}
   case X86::BI__builtin_ia32_gather3div2df:
   case X86::BI__builtin_ia32_gather3div2di:
   case X86::BI__builtin_ia32_gather3div4df:
