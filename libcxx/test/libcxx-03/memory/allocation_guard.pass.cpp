@@ -85,11 +85,7 @@ struct AssignableAllocator {
   TEST_CONSTEXPR_CXX20 void construct(pointer p, U&& val) {
     if (stats_ != nullptr)
       ++stats_->construct_count;
-#if TEST_STD_VER > 17
-    std::construct_at(std::to_address(p), std::forward<U>(val));
-#else
     ::new (static_cast<void*>(p)) T(std::forward<U>(val));
-#endif
   }
 
   TEST_CONSTEXPR_CXX14 void destroy(pointer p) {
