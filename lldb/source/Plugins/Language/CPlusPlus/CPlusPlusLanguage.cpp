@@ -209,7 +209,8 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
 }
 
 /// A context is trivial if an only if it matches this pattern.
-/// "^\s*([A-Za-z_:]*)\s*$".
+/// "^\s*([A-Za-z_:]*)\s*$". for example function `foo::bar::func()`
+/// has a trivial context but. but `foo<int>::bar::func()` doesn't.
 static bool IsTrivialContext(llvm::StringRef context) {
   // remove trailing or leading whitespace.
   context = context.trim();
