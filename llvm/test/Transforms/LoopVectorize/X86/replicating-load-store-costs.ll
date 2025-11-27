@@ -475,8 +475,8 @@ define double @test_load_used_by_other_load_scev(ptr %ptr.a, ptr %ptr.b, ptr %pt
 ; I64:       [[VECTOR_BODY]]:
 ; I64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[IV:%.*]], %[[VECTOR_BODY]] ]
 ; I64-NEXT:    [[TMP10:%.*]] = load double, ptr [[PTR_A]], align 8
-; I64-NEXT:    [[ADD1:%.*]] = fadd double [[TMP10]], 0.000000e+00
-; I64-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[ADD1]], i64 0
+; I64-NEXT:    [[TMP1:%.*]] = fadd double [[TMP10]], 0.000000e+00
+; I64-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0
 ; I64-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; I64-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[BROADCAST_SPLAT]], zeroinitializer
 ; I64-NEXT:    [[IV]] = add nuw i64 [[INDEX]], 2

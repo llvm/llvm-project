@@ -7163,6 +7163,14 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
             cast<VPRecipeWithIRFlags>(R).getPredicate() !=
                 cast<CmpInst>(UI)->getPredicate())
           return true;
+
+        // Recipes with underlying instructions being moved out of the loop
+        // region by LICM may cause discrepancies between the legacy cost model
+        // and the VPlan-based cost model.
+        if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R))
+          if (Def->isDefinedOutsideLoopRegions())
+            return true;
+
         SeenInstrs.insert(UI);
       }
     }
