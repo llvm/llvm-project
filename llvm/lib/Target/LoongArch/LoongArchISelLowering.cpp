@@ -859,7 +859,7 @@ SDValue LoongArchTargetLowering::lowerRotate(SDValue Op,
     return false;
   };
 
-  // check for constant splat rotation amount.
+  // Check for constant splat rotation amount.
   APInt CstSplatValue;
   bool IsCstSplat = checkCstSplat(Amt, CstSplatValue);
   bool isROTL = Opcode == ISD::ROTL;
