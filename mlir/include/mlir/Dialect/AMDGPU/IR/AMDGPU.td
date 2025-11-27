@@ -951,6 +951,13 @@ def MFMAOutTypes : AnyTypeOf<[F64,
 def ScaledMFMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[32], [F8E5M2, F8E4M3FN]>,
                                    VectorOfLengthAndType<[32], [F6E2M3FN, F6E3M2FN, F4E2M1FN]>]>;
 def ScaledMFMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 16], [F32]>]>;
+
+// scaled_wmma
+def ScaledWMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[64], [F8E5M2, F8E4M3FN]>,
+                                   VectorOfLengthAndType<[64], [F6E2M3FN, F6E3M2FN]>,
+                                   VectorOfLengthAndType<[64, 128], [F4E2M1FN]>]>;
+def ScaledWMMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 8], [F32]>]>;
+
 // wmma
 def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[2], [F32]>,
                              VectorOfLengthAndType<[4, 8, 16], [F16, BF16]>,
@@ -1216,6 +1223,59 @@ def AMDGPU_ScaledMFMAOp :
     `:` type($scalesA) `,` type($sourceA) `,` type($scalesB) `,` type($sourceB) `,` type($destC)
   }];
   let hasCanonicalizer = 1;
+}
+
+def AMDGPU_ScaledWMMAOp :
+    AMDGPU_Op<"scaled_wmma", [AllTypesMatch<["destC", "destD"]>,
+                              Pure]>,
+    Arguments<(ins
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16, 32]>]>:$m,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$n,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[128]>]>:$k,
+                   ScaledWMMAInTypes:$sourceA,
+                   ScaledWMMAInTypes:$sourceB,
+                   ScaledWMMAOutTypes:$destC,
+                   AnyTypeOf<[I32, I64]>:$scaleA,
+                   AnyTypeOf<[I32, I64]>:$scaleB,
+                   DefaultValuedAttr<I32Attr, "0">:$scaleAType,
+                   DefaultValuedAttr<I32Attr, "0">:$fmtScaleA,
+                   DefaultValuedAttr<I32Attr, "0">:$scaleBType,
+                   DefaultValuedAttr<I32Attr, "0">:$fmtScaleB
+                   )>,
+    Results<(outs ScaledWMMAOutTypes: $destD)> {
+  let summary = "MLIR wrapper for RDNA scaled wmma instructions";
+  let description = [{
+    The `amdgpu.scaled_wmma` op is an MLIR wrapper around intrinsics for scaled
+    `wmma` instructions in the RDNA architecture. These instructions perform
+    matrix multiplication with per-block scaling of inputs, supporting fp4, fp6,
+    and fp8 data formats.
+
+    The scale instructions support two tile sizes:
+    - 16x16x128 with mixed f8/f6/f4 formats (output: vector<4xf32>)
+    - 32x16x128 with f4 format only (output: vector<8xf32>)
+
+    The `scaleA` and `scaleB` parameters are scale exponents that can be either
+    i32 (for wmma.scale) or i64 (for wmma.scale16) to support per-block scaling.
+
+    Optional modifiers:
+    - `scaleAType`, `scaleBType`: Type of scale parameter
+    - `fmtScaleA`, `fmtScaleB`: Format of scale parameter
+
+    Example:
+    ```mlir
+      %0 = amdgpu.scaled_wmma (%sa * %matA) * (%sb * %matB) + %matC
+        { m = 16, n = 16, k = 128 } : i32, vector<64xf8E4M3FN>, i32, vector<64xf8E4M3FN>, vector<4xf32>
+
+      %1 = amdgpu.scaled_wmma (%sc * %matD) * (%sd * %matE) + %matF
+        { m = 32, n = 16, k = 128 } : i32, vector<128xf4E2M1FN>, i32, vector<64xf4E2M1FN>, vector<8xf32>
+    ```
+  }];
+  let assemblyFormat = [{
+    `(` $scaleA `*` $sourceA `)` `*` `(` $scaleB `*` $sourceB `)` `+` $destC
+    attr-dict
+    `:` type($scaleA) `,` type($sourceA) `,` type($scaleB) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
 }
 
 def AMDGPU_MakeDmaBaseOp :

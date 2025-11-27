@@ -443,6 +443,77 @@ LogicalResult WMMAOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ScaledWMMAOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ScaledWMMAOp::verify() {
+  auto sourceAType = cast<VectorType>(getSourceA().getType());
+  auto sourceBType = cast<VectorType>(getSourceB().getType());
+  auto destType = cast<VectorType>(getDestC().getType());
+  
+  // Validate output type is F32
+  if (!destType.getElementType().isF32())
+    return emitOpError("destination must have f32 element type");
+
+  // Validate source element types are small floats (fp4/fp6/fp8)
+  Type aElemType = sourceAType.getElementType();
+  Type bElemType = sourceBType.getElementType();
+
+  bool aIsSmallFloat = aElemType.isFloat(4) || aElemType.isFloat(6) ||
+                       aElemType.isFloat(8);
+  bool bIsSmallFloat = bElemType.isFloat(4) || bElemType.isFloat(6) ||
+                       bElemType.isFloat(8);
+
+  if (!aIsSmallFloat || !bIsSmallFloat)
+    return emitOpError("source operands must have small float element types "
+                       "(fp4/fp6/fp8)");
+
+  // Validate scale types match (both i32 or both i64)
+  Type scaleAType = getScaleA().getType();
+  Type scaleBType = getScaleB().getType();
+  if (scaleAType != scaleBType)
+    return emitOpError("scaleA and scaleB must have the same type");
+
+  // Validate vector lengths based on dimensions
+  int64_t m = getM();
+  int64_t aLen = sourceAType.getNumElements();
+  int64_t bLen = sourceBType.getNumElements();
+  int64_t expectedOutLen = (m == 16) ? 4 : 8;
+  
+  if (destType.getNumElements() != expectedOutLen)
+    return emitOpError("expected output vector of length " +
+                       Twine(expectedOutLen) + " but got " +
+                       Twine(destType.getNumElements()));
+
+  if (m == 16) {
+    // For 16×16×128: both A and B must be 64 elements
+    if (aLen != 64)
+      return emitOpError(
+          "for 16x16x128, sourceA must have 64 elements but got " +
+          Twine(aLen));
+    if (bLen != 64)
+      return emitOpError(
+          "for 16x16x128, sourceB must have 64 elements but got " +
+          Twine(bLen));
+  } else { // m == 32
+    // For 32×16×128: only fp4 is supported, A is 128, B is 64
+    if (!aElemType.isFloat(4))
+      return emitOpError("32x16x128 only supports fp4 element types");
+
+    if (aLen != 128)
+      return emitOpError(
+          "for 32x16x128, sourceA must have 128 elements but got " +
+          Twine(aLen));
+    if (bLen != 64)
+      return emitOpError(
+          "for 32x16x128, sourceB must have 64 elements but got " +
+          Twine(bLen));
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // MFMAOp
 //===----------------------------------------------------------------------===//
 LogicalResult MFMAOp::verify() {

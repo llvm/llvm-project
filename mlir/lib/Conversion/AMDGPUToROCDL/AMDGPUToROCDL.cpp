@@ -612,8 +612,8 @@ struct SchedBarrierOpLowering : public ConvertOpToLLVMPattern<SchedBarrierOp> {
 
 } // namespace
 
-/// Converts a MFMA vector operand from MLIR AMDGPU dialect convention to ROCDL
-/// and LLVM AMDGPU intrinsics convention.
+/// Pack small float vector operands (fp4/fp6/fp8/bf16) into the format
+/// expected by scaled matrix multiply intrinsics (MFMA/WMMA).
 ///
 /// Specifically:
 /// 1. If the element type is bfloat16, bitcast it to i16 unless rocdl intrinsic
@@ -627,9 +627,9 @@ struct SchedBarrierOpLowering : public ConvertOpToLLVMPattern<SchedBarrierOp> {
 /// Note that the type of `input` has already been LLVM type converted:
 /// therefore 8-bit and smaller floats are represented as their corresponding
 /// `iN` integers.
-static Value convertMFMAVectorOperand(ConversionPatternRewriter &rewriter,
-                                      Location loc, Value input,
-                                      bool allowBf16 = true) {
+static Value packSmallFloatVectorOperand(ConversionPatternRewriter &rewriter,
+                                         Location loc, Value input,
+                                         bool allowBf16 = true) {
   Type inputType = input.getType();
   if (auto vectorType = dyn_cast<VectorType>(inputType)) {
     if (vectorType.getElementType().isBF16() && !allowBf16)
@@ -918,7 +918,7 @@ static std::optional<StringRef> mfmaOpToIntrinsic(MFMAOp mfma,
   return std::nullopt;
 }
 
-static std::optional<uint32_t> mfmaTypeSelectCode(Type mlirElemType) {
+static std::optional<uint32_t> smallFloatTypeToFormatCode(Type mlirElemType) {
   return llvm::TypeSwitch<Type, std::optional<uint32_t>>(mlirElemType)
       .Case([](Float8E4M3FNType) { return 0u; })
       .Case([](Float8E5M2Type) { return 1u; })
@@ -947,8 +947,8 @@ mfmaOpToScaledIntrinsic(Type aType, Type bType, Type destType, uint32_t m,
   if (!isa<Float32Type>(destType))
     return std::nullopt;
 
-  std::optional<uint32_t> aTypeCode = mfmaTypeSelectCode(aType);
-  std::optional<uint32_t> bTypeCode = mfmaTypeSelectCode(bType);
+  std::optional<uint32_t> aTypeCode = smallFloatTypeToFormatCode(aType);
+  std::optional<uint32_t> bTypeCode = smallFloatTypeToFormatCode(bType);
   if (!aTypeCode || !bTypeCode)
     return std::nullopt;
 
@@ -1212,11 +1212,12 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
     }();
     OperationState loweredOp(loc, intrinsicName);
     loweredOp.addTypes(intrinsicOutType);
-    loweredOp.addOperands({convertMFMAVectorOperand(
-                               rewriter, loc, adaptor.getSourceA(), allowBf16),
-                           convertMFMAVectorOperand(
-                               rewriter, loc, adaptor.getSourceB(), allowBf16),
-                           adaptor.getDestC()});
+    loweredOp.addOperands(
+        {packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceA(),
+                                      allowBf16),
+         packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceB(),
+                                      allowBf16),
+         adaptor.getDestC()});
     if (isScaled) {
       Value zero = createI32Constant(rewriter, loc, 0);
       auto [_scaledName, aTypeCode, bTypeCode] = *maybeScaledIntrinsic;
@@ -1261,8 +1262,8 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
     OperationState loweredOp(loc, intrinsicName);
     loweredOp.addTypes(intrinsicOutType);
     loweredOp.addOperands(
-        {convertMFMAVectorOperand(rewriter, loc, adaptor.getSourceA()),
-         convertMFMAVectorOperand(rewriter, loc, adaptor.getSourceB()),
+        {packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceA()),
+         packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceB()),
          adaptor.getDestC()});
     Value scalesIdxA =
         createI32Constant(rewriter, loc, adaptor.getScalesIdxA());
@@ -1358,6 +1359,103 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
       maybeCastBack = LLVM::BitcastOp::create(rewriter, loc, outType,
                                               lowered->getResult(0));
     rewriter.replaceOp(op, maybeCastBack->getResults());
+
+    return success();
+  }
+};
+
+struct ScaledWMMAOpLowering : public ConvertOpToLLVMPattern<ScaledWMMAOp> {
+  ScaledWMMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<ScaledWMMAOp>(converter), chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(ScaledWMMAOp op, ScaledWMMAOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    auto outType =
+        typeConverter->convertType<VectorType>(op.getDestD().getType());
+    if (!outType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    if (chipset < Chipset(12, 5, 0))
+      return op->emitOpError("WMMA scale only supported on gfx1250+");
+
+    int64_t m = op.getM();
+    int64_t n = op.getN();
+    int64_t k = op.getK();
+
+    Type aElemType = getElementTypeOrSelf(op.getSourceA().getType());
+    Type bElemType = getElementTypeOrSelf(op.getSourceB().getType());
+
+    std::optional<uint32_t> aFmtCode = smallFloatTypeToFormatCode(aElemType);
+    std::optional<uint32_t> bFmtCode = smallFloatTypeToFormatCode(bElemType);
+
+    if (!aFmtCode || !bFmtCode)
+      return op.emitOpError("unsupported element types for scaled_wmma");
+
+    // Determine which intrinsic to use based on dimensions and scale type
+    StringRef intrinsicName;
+    bool isScale16 = adaptor.getScaleA().getType().isInteger(64);
+    bool is32x16 = (m == 32 && n == 16 && k == 128);
+
+    if (m == 16 && n == 16 && k == 128) {
+      intrinsicName = isScale16
+                ? ROCDL::wmma_scale16_f32_16x16x128_f8f6f4::getOperationName()
+                : ROCDL::wmma_scale_f32_16x16x128_f8f6f4::getOperationName();
+    } else if (is32x16) {
+      intrinsicName = isScale16
+                ? ROCDL::wmma_scale16_f32_32x16x128_f4::getOperationName()
+                : ROCDL::wmma_scale_f32_32x16x128_f4::getOperationName();
+    } else {
+      return op.emitOpError("unsupported scaled_wmma dimensions: ")
+             << m << "x" << n << "x" << k;
+    }
+
+    SmallVector<NamedAttribute, 8> attrs;
+
+    // The f4 variant does not have fmtA and fmtB attributes
+    if (!is32x16) {
+      attrs.push_back(rewriter.getNamedAttr("fmtA",
+                              rewriter.getI32IntegerAttr(*aFmtCode)));
+      attrs.push_back(rewriter.getNamedAttr("fmtB",
+                              rewriter.getI32IntegerAttr(*bFmtCode)));
+    }
+
+    // Add modifier attributes - modC and reuse flags default to 0/false
+    attrs.push_back(rewriter.getNamedAttr("reuseA",
+                              rewriter.getBoolAttr(false)));
+    attrs.push_back(rewriter.getNamedAttr("reuseB",
+                              rewriter.getBoolAttr(false)));
+    attrs.push_back(rewriter.getNamedAttr("modC",
+                              rewriter.getI16IntegerAttr(0)));
+
+    // Scale type/format parameters from the operation
+    attrs.push_back(rewriter.getNamedAttr("scaleAType",
+                              rewriter.getI32IntegerAttr(op.getScaleAType())));
+    attrs.push_back(rewriter.getNamedAttr("fmtScaleA",
+                              rewriter.getI32IntegerAttr(op.getFmtScaleA())));
+    attrs.push_back(rewriter.getNamedAttr("scaleBType",
+                              rewriter.getI32IntegerAttr(op.getScaleBType())));
+    attrs.push_back(rewriter.getNamedAttr("fmtScaleB",
+                              rewriter.getI32IntegerAttr(op.getFmtScaleB())));
+
+    // Convert typed float vectors to packed i32 format if needed
+    Value sourceA =
+        packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceA());
+    Value sourceB =
+        packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceB());
+
+    // Create the intrinsic call
+    OperationState loweredOp(loc, intrinsicName);
+    loweredOp.addTypes(outType);
+    loweredOp.addOperands({sourceA, sourceB, adaptor.getDestC(),
+                           adaptor.getScaleA(), adaptor.getScaleB()});
+    loweredOp.addAttributes(attrs);
+
+    Operation *lowered = rewriter.create(loweredOp);
+    rewriter.replaceOp(op, lowered->getResults());
 
     return success();
   }
