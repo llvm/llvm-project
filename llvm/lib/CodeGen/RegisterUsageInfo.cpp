@@ -57,10 +57,12 @@ bool PhysicalRegisterUsageInfo::doFinalization(Module &M) {
 }
 
 PhysicalRegisterUsageInfo::~PhysicalRegisterUsageInfo() {
-    if (DumpRegUsage)
-      print(errs());
-    
-    RegMasks.shrink_and_clear();
+  // As doFinalization() is not called for analysis results in the new PM,
+  // we print the register usage information here.
+  if (DumpRegUsage && TM)
+    print(errs());
+
+  RegMasks.shrink_and_clear();
 }
 
 void PhysicalRegisterUsageInfo::storeUpdateRegUsageInfo(
