@@ -174,13 +174,10 @@ end subroutine
 ! CHECK-NEXT:    br label %omp.par.pre_finalize
 
 ! CHECK:       omp.par.pre_finalize:                             ; preds = %reduce.finalize
-! CHECK-NEXT:    br label %.fini
-
-! CHECK:       .fini:
 ! CHECK-NEXT:    %{{.*}} = load ptr, ptr
 ! CHECK-NEXT:    br label %omp.reduction.cleanup
 
-! CHECK:       omp.reduction.cleanup:                            ; preds = %.fini
+! CHECK:       omp.reduction.cleanup:                            ; preds = %omp.par.pre_finalize
 !                [null check]
 ! CHECK:         br i1 %{{.*}}, label %omp.reduction.cleanup43, label %omp.reduction.cleanup44
 
