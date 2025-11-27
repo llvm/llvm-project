@@ -419,6 +419,18 @@
 #CHECK-BE: mtlpl 3, 4                     # encoding: [0x7c,0x80,0x1a,0x26]
 #CHECK-LE: mtlpl 3, 4                     # encoding: [0x26,0x1a,0x80,0x7c]
 
+           paddis 10, 12, 1000000000, 0
+#CHECK-BE: paddis 10, 12, 1000000000, 0   # encoding: [0x06,0x00,0x3b,0x9a,
+#CHECK-BE-SAME:                                        0x3d,0x4c,0xca,0x00]
+#CHECK-LE: paddis 10, 12, 1000000000, 0   # encoding: [0x9a,0x3b,0x00,0x06,
+#CHECK-LE-SAME:                                        0x00,0xca,0x4c,0x3d]
+
+           paddis 10, 0, 1000000000, 1
+#CHECK-BE: paddis 10, 0, 1000000000, 1    # encoding: [0x06,0x10,0x3b,0x9a,
+#CHECK-BE-SAME:                                        0x3d,0x40,0xca,0x00]
+#CHECK-LE: paddis 10, 0, 1000000000, 1    # encoding: [0x9a,0x3b,0x10,0x06,
+#CHECK-LE-SAME:                                        0x00,0xca,0x40,0x3d]
+
            xxmulmul 8, 3, 4, 2
 #CHECK-BE: xxmulmul 8, 3, 4, 2          # encoding: [0xed,0x03,0x22,0x08]
 #CHECK-LE: xxmulmul 8, 3, 4, 2          # encoding: [0x08,0x22,0x03,0xed]
