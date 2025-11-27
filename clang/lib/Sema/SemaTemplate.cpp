@@ -3368,7 +3368,8 @@ static QualType CopyCV(QualType From, QualType To) {
   return To;
 }
 
-// COND-RES(X, Y) be decltype(false ? declval<X(&)()>()() : declval<Y(&)()>()())
+// Let COND-RES(X, Y) be
+//  decltype(false ? declval<X(&)()>()() : declval<Y(&)()>()())
 static QualType CondRes(Sema &S, QualType X, QualType Y, SourceLocation Loc) {
   EnterExpressionEvaluationContext UnevaluatedContext(
       S, Sema::ExpressionEvaluationContext::Unevaluated);
@@ -3465,6 +3466,7 @@ static QualType CommonRef(Sema &S, QualType A, QualType B, SourceLocation Loc) {
 }
 
 static QualType builtinCommonReferenceImpl(Sema &S,
+                                           ElaboratedTypeKeyword Keyword,
                                            TemplateName CommonReference,
                                            TemplateName CommonType,
                                            SourceLocation TemplateLoc,
@@ -3539,7 +3541,7 @@ static QualType builtinCommonReferenceImpl(Sema &S,
         return Quals[Index];
       };
 
-      auto BCR = InstantiateTemplate(S, CommonReference,
+      auto BCR = InstantiateTemplate(S, Keyword, CommonReference,
                                      {S.BuiltinRemoveCVRef(T1, TemplateLoc),
                                       S.BuiltinRemoveCVRef(T2, TemplateLoc),
                                       TemplateName{getXRef(T1)},
@@ -3556,7 +3558,8 @@ static QualType builtinCommonReferenceImpl(Sema &S,
 
     // Otherwise, if common_type_t<T1, T2> is well-formed, then the member
     // typedef type denotes that type.
-    if (auto CT = InstantiateTemplate(S, CommonType, {T1, T2}, TemplateLoc);
+    if (auto CT =
+            InstantiateTemplate(S, Keyword, CommonType, {T1, T2}, TemplateLoc);
         !CT.isNull())
       return CT;
 
@@ -3571,14 +3574,14 @@ static QualType builtinCommonReferenceImpl(Sema &S,
     auto T1 = Ts[0];
     auto T2 = Ts[1];
     auto Rest = Ts.drop_front(2);
-    auto C = builtinCommonReferenceImpl(S, CommonReference, CommonType,
+    auto C = builtinCommonReferenceImpl(S, Keyword, CommonReference, CommonType,
                                         TemplateLoc, {T1, T2});
     if (C.isNull())
       return QualType();
     llvm::SmallVector<TemplateArgument, 4> Args;
     Args.emplace_back(C);
     Args.append(Rest.begin(), Rest.end());
-    return builtinCommonReferenceImpl(S, CommonReference, CommonType,
+    return builtinCommonReferenceImpl(S, Keyword, CommonReference, CommonType,
                                       TemplateLoc, Args);
   }
   }
@@ -3752,14 +3755,17 @@ static QualType checkBuiltinTemplateIdType(
     TemplateName HasTypeMember = Converted[2].getAsTemplate();
     QualType HasNoTypeMember = Converted[3].getAsType();
     ArrayRef<TemplateArgument> Ts = Converted[4].getPackAsArray();
-    if (auto CR = builtinCommonReferenceImpl(SemaRef, BasicCommonReference,
-                                             CommonType, TemplateLoc, Ts);
+    if (auto CR =
+            builtinCommonReferenceImpl(SemaRef, Keyword, BasicCommonReference,
+                                       CommonType, TemplateLoc, Ts);
         !CR.isNull()) {
       TemplateArgumentListInfo TAs;
       TAs.addArgument(TemplateArgumentLoc(
           TemplateArgument(CR), SemaRef.Context.getTrivialTypeSourceInfo(
                                     CR, TemplateArgs[1].getLocation())));
-      return SemaRef.CheckTemplateIdType(HasTypeMember, TemplateLoc, TAs);
+      return SemaRef.CheckTemplateIdType(Keyword, HasTypeMember, TemplateLoc,
+                                         TAs, /*Scope=*/nullptr,
+                                         /*ForNestedNameSpecifier=*/false);
     }
     return HasNoTypeMember;
   }
@@ -3816,8 +3822,7 @@ static QualType checkBuiltinTemplateIdType(
 
     if (AddLValue)
       T = SemaRef.BuiltinAddLValueReference(T, TemplateLoc);
-
-    if (AddRValue)
+    else if (AddRValue)
       T = SemaRef.BuiltinAddRValueReference(T, TemplateLoc);
 
     return T;

@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Parser/parse-tree.h"
+
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/tools.h"
 #include "flang/Parser/user-state.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -430,6 +432,39 @@ const OmpClauseList &OmpDirectiveSpecification::Clauses() const {
     return *clauses;
   }
   return empty;
+}
+
+const DoConstruct *OpenMPLoopConstruct::GetNestedLoop() const {
+  auto getFromBlock{[](const Block &body, auto self) -> const DoConstruct * {
+    for (auto &stmt : body) {
+      if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+        return self(std::get<Block>(block->t), self);
+      }
+      if (auto *loop{Unwrap<DoConstruct>(&stmt)}) {
+        return loop;
+      }
+    }
+    return nullptr;
+  }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
+}
+
+const OpenMPLoopConstruct *OpenMPLoopConstruct::GetNestedConstruct() const {
+  auto getFromBlock{
+      [](const Block &body, auto self) -> const OpenMPLoopConstruct * {
+        for (auto &stmt : body) {
+          if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+            return self(std::get<Block>(block->t), self);
+          }
+          if (auto *omp{Unwrap<OpenMPLoopConstruct>(&stmt)}) {
+            return omp;
+          }
+        }
+        return nullptr;
+      }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
 }
 
 static bool InitCharBlocksFromStrings(llvm::MutableArrayRef<CharBlock> blocks,

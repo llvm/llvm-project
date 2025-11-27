@@ -123,6 +123,32 @@ struct HardwareLoopInfo {
   LLVM_ABI bool canAnalyze(LoopInfo &LI);
 };
 
+/// Information for memory intrinsic cost model.
+class MemIntrinsicCostAttributes {
+  /// Vector type of the data to be loaded or stored.
+  Type *DataTy = nullptr;
+
+  /// ID of the memory intrinsic.
+  Intrinsic::ID IID;
+
+  /// Address space of the pointer.
+  unsigned AddressSpace = 0;
+
+  /// Alignment of single element.
+  Align Alignment;
+
+public:
+  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
+                                      Align Alignment, unsigned AddressSpace)
+      : DataTy(DataTy), IID(Id), AddressSpace(AddressSpace),
+        Alignment(Alignment) {}
+
+  Intrinsic::ID getID() const { return IID; }
+  Type *getDataType() const { return DataTy; }
+  unsigned getAddressSpace() const { return AddressSpace; }
+  Align getAlignment() const { return Alignment; }
+};
+
 class IntrinsicCostAttributes {
   const IntrinsicInst *II = nullptr;
   Type *RetTy = nullptr;
@@ -816,12 +842,20 @@ public:
   LLVM_ABI AddressingModeKind
   getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const;
 
+  /// Some targets only support masked load/store with a constant mask.
+  enum MaskKind {
+    VariableOrConstantMask,
+    ConstantMask,
+  };
+
   /// Return true if the target supports masked store.
-  LLVM_ABI bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                                   unsigned AddressSpace) const;
+  LLVM_ABI bool
+  isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddressSpace,
+                     MaskKind MaskKind = VariableOrConstantMask) const;
   /// Return true if the target supports masked load.
-  LLVM_ABI bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                                  unsigned AddressSpace) const;
+  LLVM_ABI bool
+  isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
+                    MaskKind MaskKind = VariableOrConstantMask) const;
 
   /// Return true if the target supports nontemporal store.
   LLVM_ABI bool isLegalNTStore(Type *DataType, Align Alignment) const;
@@ -945,6 +979,10 @@ public:
   /// Return true if the input function which is cold at all call sites,
   ///  should use coldcc calling convention.
   LLVM_ABI bool useColdCCForColdCall(Function &F) const;
+
+  /// Return true if the input function is internal, should use fastcc calling
+  /// convention.
+  LLVM_ABI bool useFastCCForInternalCall(Function &F) const;
 
   LLVM_ABI bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
 
@@ -1556,7 +1594,7 @@ public:
 
   /// \return The cost of masked Load and Store instructions.
   LLVM_ABI InstructionCost getMaskedMemoryOpCost(
-      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+      const MemIntrinsicCostAttributes &MICA,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// \return The cost of Gather or Scatter operation

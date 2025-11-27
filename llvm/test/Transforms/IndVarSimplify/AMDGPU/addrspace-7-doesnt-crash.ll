@@ -7,11 +7,11 @@ define void @f(ptr addrspace(7) %arg) {
 ; CHECK-LABEL: define void @f
 ; CHECK-SAME: (ptr addrspace(7) [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(7) [[ARG]], i32 8
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 false, label [[BB2:%.*]], label [[BB1]]
 ; CHECK:       bb2:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(7) [[ARG]], i32 8
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[I4:%.*]] = load i32, ptr addrspace(7) [[SCEVGEP]], align 4

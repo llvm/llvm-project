@@ -188,9 +188,22 @@ void EHScopeStack::popCleanup() {
   }
 }
 
+bool EHScopeStack::requiresCatchOrCleanup() const {
+  for (stable_iterator si = getInnermostEHScope(); si != stable_end();) {
+    if (auto *cleanup = dyn_cast<EHCleanupScope>(&*find(si))) {
+      if (cleanup->isLifetimeMarker()) {
+        // Skip lifetime markers and continue from the enclosing EH scope
+        assert(!cir::MissingFeatures::emitLifetimeMarkers());
+        continue;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
 EHCatchScope *EHScopeStack::pushCatch(unsigned numHandlers) {
   char *buffer = allocate(EHCatchScope::getSizeForNumHandlers(numHandlers));
-  assert(!cir::MissingFeatures::innermostEHScope());
   EHCatchScope *scope =
       new (buffer) EHCatchScope(numHandlers, innermostEHScope);
   innermostEHScope = stable_begin();
