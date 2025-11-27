@@ -1523,8 +1523,8 @@ void DWARFVerifier::verifyNameIndexAttribute(
   }
 
   if (AttrEnc.Index == dwarf::DW_IDX_parent) {
-    constexpr static auto AllowedForms = {dwarf::Form::DW_FORM_flag_present,
-                                          dwarf::Form::DW_FORM_ref4};
+    constexpr static dwarf::Form AllowedForms[] = {
+        dwarf::Form::DW_FORM_flag_present, dwarf::Form::DW_FORM_ref4};
     if (!is_contained(AllowedForms, AttrEnc.Form)) {
       ErrorCategory.Report("Unexpected NameIndex Abbreviation", [&]() {
         error() << formatv(
