@@ -2,13 +2,15 @@
 ; RUN: opt < %s -disable-output -passes="print<da>" -da-dump-monotonicity-report \
 ; RUN:     -da-enable-monotonicity-check 2>&1 | FileCheck %s
 
+; FIXME: These cases are not monotonic because currently we define the domain
+; of monotonicity as "entire iteration space". However, the nsw property is
+; actually valid only under the loop guard conditions.
+
 ; for (i = 0; i < INT64_MAX - 1; i++)
 ;   if (i < 1000)
 ;     for (j = 0; j < 2000; j++)
 ;       a[i + j] = 0;
 ;
-; FIXME: This is not monotonic. The nsw flag is valid under
-; the condition i < 1000, not for all i.
 define void @nsw_under_loop_guard0(ptr %a) {
 ; CHECK-LABEL: 'nsw_under_loop_guard0'
 ; CHECK-NEXT:  Monotonicity check:
@@ -36,33 +38,32 @@ loop.j:
   %idx = getelementptr inbounds i8, ptr %a, i64 %offset
   store i8 0, ptr %idx
   %j.next = add nsw i64 %j, 1
-  %exitcond.j = icmp eq i64 %j.next, 2000
-  br i1 %exitcond.j, label %loop.i.latch, label %loop.j
+  %ec.j = icmp eq i64 %j.next, 2000
+  br i1 %ec.j, label %loop.i.latch, label %loop.j
 
 loop.i.latch:
   %i.next = add nsw i64 %i, 1
-  %exitcond.i = icmp eq i64 %i.next, 9223372036854775807
-  br i1 %exitcond.i, label %exit, label %loop.i.header
+  %ec.i = icmp eq i64 %i.next, 9223372036854775807
+  br i1 %ec.i, label %exit, label %loop.i.header
 
 exit:
   ret void
 }
 
-; for (i = 0; i < 100; i++)
-;   if (i < 1000)
+; for (i = 0; i < INT64_MAX; i++)
+;   if (100 < i)
 ;     for (j = 0; j < 100; j++)
-;       a[i + j] = 0;
+;       a[INT64_MAX - i + j] = 0;
 ;
-; The loop guard is always true, so the nsw flag is valid for all i.
 define void @nsw_under_loop_guard1(ptr %a) {
 ; CHECK-LABEL: 'nsw_under_loop_guard1'
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:      Expr: {{\{\{}}0,+,1}<nuw><nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
+; CHECK-NEXT:      Expr: {{\{\{}}9223372036854775807,+,-1}<nsw><%loop.i.header>,+,1}<nuw><nsw><%loop.j>
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - output [* *]!
+; CHECK-NEXT:    da analyze - none!
 ;
 entry:
   br label %loop.i.header
@@ -72,23 +73,23 @@ loop.i.header:
   br label %loop.j.pr
 
 loop.j.pr:
-  %guard.j = icmp slt i64 %i, 1000
+  %guard.j = icmp sgt i64 %i, 100
   br i1 %guard.j, label %loop.j, label %exit
 
 loop.j:
   %j = phi i64 [ 0, %loop.j.pr ], [ %j.next, %loop.j ]
-  %val = phi i64 [ %i, %loop.j.pr ], [ %val.next, %loop.j ]
-  %j.next = add nsw i64 %j, 1
+  %val.0 = sub nsw i64 9223372036854775807, %i
+  %val = add nsw i64 %val.0, %j
   %idx = getelementptr inbounds i8, ptr %a, i64 %val
   store i8 0, ptr %idx
-  %val.next = add nsw i64 %val, 1
-  %exitcond.j = icmp eq i64 %j.next, 100
-  br i1 %exitcond.j, label %loop.i.latch, label %loop.j
+  %j.next = add nsw i64 %j, 1
+  %ec.j = icmp eq i64 %j.next, 100
+  br i1 %ec.j, label %loop.i.latch, label %loop.j
 
 loop.i.latch:
   %i.next = add nsw i64 %i, 1
-  %exitcond.i = icmp eq i64 %i.next, 100
-  br i1 %exitcond.i, label %exit, label %loop.i.header
+  %ec.i = icmp eq i64 %i.next, 9223372036854775807
+  br i1 %ec.i, label %exit, label %loop.i.header
 
 exit:
   ret void
@@ -99,7 +100,6 @@ exit:
 ;     for (j = 0; j < k; j++)
 ;       a[i + j] = 0;
 ;
-; The nsw flag may valid under the condition i < k.
 define void @nsw_under_loop_guard2(ptr %a, i64 %n, i64 %m, i64 %k) {
 ; CHECK-LABEL: 'nsw_under_loop_guard2'
 ; CHECK-NEXT:  Monotonicity check:
@@ -128,13 +128,13 @@ loop.j:
   %idx = getelementptr inbounds i8, ptr %a, i64 %val
   store i8 0, ptr %idx
   %val.next = add nsw i64 %val, 1
-  %exitcond.j = icmp eq i64 %j.next, %k
-  br i1 %exitcond.j, label %loop.i.latch, label %loop.j
+  %ec.j = icmp eq i64 %j.next, %k
+  br i1 %ec.j, label %loop.i.latch, label %loop.j
 
 loop.i.latch:
   %i.next = add nsw i64 %i, 1
-  %exitcond.i = icmp eq i64 %i.next, %n
-  br i1 %exitcond.i, label %exit, label %loop.i.header
+  %ec.i = icmp eq i64 %i.next, %n
+  br i1 %ec.i, label %exit, label %loop.i.header
 
 exit:
   ret void
