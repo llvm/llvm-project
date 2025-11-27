@@ -1475,7 +1475,6 @@ _mm_setr_pi8(char __b0, char __b1, char __b2, char __b3, char __b4, char __b5,
   return _mm_set_pi8(__b7, __b6, __b5, __b4, __b3, __b2, __b1, __b0);
 }
 
-#undef __anyext128
 #undef __trunc64
 #undef __DEFAULT_FN_ATTRS_SSE2
 
