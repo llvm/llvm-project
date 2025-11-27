@@ -3,7 +3,6 @@
 @__const.test.var_45 = private unnamed_addr constant [2 x i8] c"\D1S", align 1
 @__const.test.var_101 = private unnamed_addr constant [2 x i8] c"\830", align 1
 
-; Function Attrs: nounwind vscale_range(2,1024)
 define dso_local void @test(ptr nocapture noundef %var_99) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
@@ -36,16 +35,3 @@ entry:
   ret void
 }
 
-declare <vscale x 32 x i8> @llvm.riscv.vle.nxv32i8.i64(<vscale x 32 x i8>, ptr nocapture, i64) #1
-declare <vscale x 32 x i8> @llvm.riscv.vmul.nxv32i8.i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, i8, i64) #2
-declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg) #3
-declare i8 @llvm.riscv.vmv.x.s.nxv32i8(<vscale x 32 x i8>) #2
-declare <vscale x 32 x i8> @llvm.riscv.vssra.nxv32i8.nxv32i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i8>, i64, i64) #3
-declare <vscale x 32 x i1> @llvm.riscv.vmsleu.nxv32i8.i8.i64(<vscale x 32 x i8>, i8, i64) #2
-declare <vscale x 32 x i8> @llvm.riscv.vmerge.nxv32i8.nxv32i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i1>, i64) #2
-declare void @llvm.riscv.vse.nxv32i8.i64(<vscale x 32 x i8>, ptr nocapture, i64) #4
-
-attributes #1 = { nofree nounwind memory(read) }
-attributes #2 = { nofree nosync nounwind memory(none) }
-attributes #3 = { nounwind }
-attributes #4 = { nounwind memory(write) }

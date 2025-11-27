@@ -99,6 +99,8 @@ def X86fhsub   : SDNode<"X86ISD::FHSUB",     SDTFPBinOp>;
 // Integer horizontal add/sub.
 def X86hadd    : SDNode<"X86ISD::HADD",      SDTIntBinOp>;
 def X86hsub    : SDNode<"X86ISD::HSUB",      SDTIntBinOp>;
+def X86hadds   : SDNode<"X86ISD::HADDS",     SDTIntBinOp>;
+def X86hsubs   : SDNode<"X86ISD::HSUBS",     SDTIntBinOp>;
 
 // X86 compare and logical compare instructions.
 def X86comi    : SDNode<"X86ISD::COMI",      SDTX86FCmp>;
@@ -359,7 +361,7 @@ def X86cmpms    : SDNode<"X86ISD::FSETCCM",   X86CmpMaskCCScalar>;
 def X86cmpmsSAE : SDNode<"X86ISD::FSETCCM_SAE",   X86CmpMaskCCScalar>;
 
 // v8i16 Horizontal minimum and position.
-def X86phminpos: SDNode<"X86ISD::PHMINPOS", 
+def X86phminpos: SDNode<"X86ISD::PHMINPOS",
                  SDTypeProfile<1, 1, [SDTCisVT<0, v8i16>, SDTCisVT<1, v8i16>]>>;
 
 def X86vshiftuniform : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,

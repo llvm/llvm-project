@@ -599,10 +599,10 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
     if (!UniqFnAttributes.try_emplace(&Int, ID).second)
       continue;
     OS << formatv(R"(
-  case {}:
+  case {}: // {}
     return AttributeSet::get(C, {{
 )",
-                  ID);
+                  ID, Int.Name);
     auto addAttribute = [&OS](StringRef Attr) {
       OS << formatv("      Attribute::get(C, Attribute::{}),\n", Attr);
     };

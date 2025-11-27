@@ -146,15 +146,6 @@ loopIR3.i.i:                                      ; preds = %loopIR3.i.i, %loopI
   br label %loopIR3.i.i
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare <vscale x 2 x float> @llvm.riscv.vrgather.vx.nxv2f32.i64(<vscale x 2 x float>, <vscale x 2 x float>, i64, i64) #2
-declare void @llvm.riscv.vse.nxv2f32.i64(<vscale x 2 x float>, ptr nocapture, i64)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
-declare <vscale x 1 x i16> @llvm.stepvector.nxv1i16()
-declare <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16>, <vscale x 1 x i16>, i64 immarg)
-declare <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i16>, i64)
-
-
 define void @repeat_shuffle(<2 x double> %v, ptr noalias %q) {
 ; CHECK-LABEL: repeat_shuffle:
 ; CHECK:       # %bb.0:

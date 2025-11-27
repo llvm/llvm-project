@@ -41,6 +41,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
@@ -3260,20 +3261,20 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpPredicate Pred, BinaryOperator *LBO,
 
 // If only one of the icmp's operands has NSW flags, try to prove that:
 //
-//   icmp slt (x + C1), (x +nsw C2)
+//   icmp slt/sgt/sle/sge (x + C1), (x +nsw C2)
 //
 // is equivalent to:
 //
-//   icmp slt C1, C2
+//   icmp slt/sgt/sle/sge C1, C2
 //
 // which is true if x + C2 has the NSW flags set and:
-// *) C1 < C2 && C1 >= 0, or
-// *) C2 < C1 && C1 <= 0.
+// *) C1 <= C2 && C1 >= 0, or
+// *) C2 <= C1 && C1 <= 0.
 //
 static bool trySimplifyICmpWithAdds(CmpPredicate Pred, Value *LHS, Value *RHS,
                                     const InstrInfoQuery &IIQ) {
-  // TODO: only support icmp slt for now.
-  if (Pred != CmpInst::ICMP_SLT || !IIQ.UseInstrInfo)
+  // TODO: support other predicates.
+  if (!ICmpInst::isSigned(Pred) || !IIQ.UseInstrInfo)
     return false;
 
   // Canonicalize nsw add as RHS.
@@ -3288,8 +3289,8 @@ static bool trySimplifyICmpWithAdds(CmpPredicate Pred, Value *LHS, Value *RHS,
       !match(RHS, m_Add(m_Specific(X), m_APInt(C2))))
     return false;
 
-  return (C1->slt(*C2) && C1->isNonNegative()) ||
-         (C2->slt(*C1) && C1->isNonPositive());
+  return (C1->sle(*C2) && C1->isNonNegative()) ||
+         (C2->sle(*C1) && C1->isNonPositive());
 }
 
 /// TODO: A large part of this logic is duplicated in InstCombine's
@@ -6676,6 +6677,62 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
   return MinMaxOptResult::CannotOptimize;
 }
 
+static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
+                                      Value *Op0, Value *Op1) {
+  Constant *C0 = dyn_cast<Constant>(Op0);
+  Constant *C1 = dyn_cast<Constant>(Op1);
+  unsigned Width = ReturnType->getPrimitiveSizeInBits();
+
+  // All false predicate or reduction of neutral values ==> neutral result.
+  switch (IID) {
+  case Intrinsic::aarch64_sve_eorv:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_saddv:
+  case Intrinsic::aarch64_sve_uaddv:
+  case Intrinsic::aarch64_sve_umaxv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isNullValue()))
+      return ConstantInt::get(ReturnType, 0);
+    break;
+  case Intrinsic::aarch64_sve_andv:
+  case Intrinsic::aarch64_sve_uminv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isAllOnesValue()))
+      return ConstantInt::get(ReturnType, APInt::getMaxValue(Width));
+    break;
+  case Intrinsic::aarch64_sve_smaxv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isMinSignedValue()))
+      return ConstantInt::get(ReturnType, APInt::getSignedMinValue(Width));
+    break;
+  case Intrinsic::aarch64_sve_sminv:
+    if ((C0 && C0->isNullValue()) || (C1 && C1->isMaxSignedValue()))
+      return ConstantInt::get(ReturnType, APInt::getSignedMaxValue(Width));
+    break;
+  }
+
+  switch (IID) {
+  case Intrinsic::aarch64_sve_andv:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_smaxv:
+  case Intrinsic::aarch64_sve_sminv:
+  case Intrinsic::aarch64_sve_umaxv:
+  case Intrinsic::aarch64_sve_uminv:
+    // sve_reduce_##(all, splat(X)) ==> X
+    if (C0 && C0->isAllOnesValue()) {
+      if (Value *SplatVal = getSplatValue(Op1)) {
+        assert(SplatVal->getType() == ReturnType && "Unexpected result type!");
+        return SplatVal;
+      }
+    }
+    break;
+  case Intrinsic::aarch64_sve_eorv:
+    // sve_reduce_xor(all, splat(X)) ==> 0
+    if (C0 && C0->isAllOnesValue())
+      return ConstantInt::get(ReturnType, 0);
+    break;
+  }
+
+  return nullptr;
+}
+
 Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                      Value *Op0, Value *Op1,
                                      const SimplifyQuery &Q,
@@ -7037,6 +7094,17 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
     break;
   }
+
+  case Intrinsic::aarch64_sve_andv:
+  case Intrinsic::aarch64_sve_eorv:
+  case Intrinsic::aarch64_sve_orv:
+  case Intrinsic::aarch64_sve_saddv:
+  case Intrinsic::aarch64_sve_smaxv:
+  case Intrinsic::aarch64_sve_sminv:
+  case Intrinsic::aarch64_sve_uaddv:
+  case Intrinsic::aarch64_sve_umaxv:
+  case Intrinsic::aarch64_sve_uminv:
+    return simplifySVEIntReduction(IID, ReturnType, Op0, Op1);
   default:
     break;
   }
