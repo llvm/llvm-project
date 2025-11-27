@@ -19,11 +19,11 @@ namespace detail {
 
 // Minimal span-like view
 template <class T> struct range_view {
-  const T *ptr{};
+  T *ptr{};
   size_t len{};
-  const T *begin() const { return ptr; }
-  const T *end() const { return ptr + len; }
-  const T &operator[](size_t i) const { return ptr[i]; }
+  T *begin() const { return ptr; }
+  T *end() const { return ptr + len; }
+  T &operator[](size_t i) const { return ptr[i]; }
   size_t size() const { return len; }
 };
 

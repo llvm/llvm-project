@@ -28,37 +28,40 @@ namespace detail {
 
 template <typename Impl, typename SyclObject> class ObjBase;
 template <typename Impl, typename SyclObject>
-class ObjBase<Impl &, SyclObject> {
+class ObjBase<Impl *, SyclObject> {
 public:
   using ImplType = Impl;
-  using Base = ObjBase<Impl &, SyclObject>;
+  using ImplPtrType = Impl *;
+  using Base = ObjBase<Impl *, SyclObject>;
 
 protected:
-  const ImplType &impl;
+  ImplPtrType impl;
 
-  explicit ObjBase(const ImplType &pImpl) : impl(pImpl) {}
+  explicit ObjBase(ImplPtrType pImpl) : impl(pImpl) {}
   ObjBase() = default;
 
-  static SyclObject createSyclProxy(const ImplType &impl) {
+  static SyclObject createSyclProxy(ImplPtrType impl) {
     return SyclObject(impl);
   }
+
+  ImplType &getImpl() const { return *impl; }
 
   template <class Obj>
   friend const typename Obj::ImplType &getSyclObjImpl(const Obj &Object);
 
   template <class Obj>
   friend Obj createSyclObjFromImpl(
-      std::add_lvalue_reference_t<const typename Obj::ImplType> ImplObj);
+      std::add_lvalue_reference_t<const typename Obj::ImplPtrType> ImplObj);
 };
 
 template <class Obj>
 const typename Obj::ImplType &getSyclObjImpl(const Obj &Object) {
-  return Object.impl;
+  return *Object.impl;
 }
 
 template <class Obj>
 Obj createSyclObjFromImpl(
-    std::add_lvalue_reference_t<const typename Obj::ImplType> ImplObj) {
+    std::add_lvalue_reference_t<const typename Obj::ImplPtrType> ImplObj) {
   return Obj::Base::createSyclProxy(ImplObj);
 }
 

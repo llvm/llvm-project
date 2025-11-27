@@ -35,12 +35,13 @@ struct OffloadTopology {
   void set_backend(ol_platform_backend_t B) { MBackend = B; }
 
   // Platforms for this backend
-  range_view<ol_platform_handle_t> platforms() const {
+  range_view<const ol_platform_handle_t> platforms() const {
     return {MPlatforms.data(), MPlatforms.size()};
   }
 
   // Devices for a specific platform (platform_id is index into Platforms)
-  range_view<ol_device_handle_t> devicesForPlatform(size_t PlatformId) const {
+  range_view<const ol_device_handle_t>
+  devicesForPlatform(size_t PlatformId) const {
     if (PlatformId >= MDevRangePerPlatformId.size())
       return {nullptr, 0};
     return MDevRangePerPlatformId[PlatformId];
@@ -59,8 +60,8 @@ struct OffloadTopology {
 
     for (auto &[NewPlatform, NewDevs] : PlatformsAndDev) {
       MPlatforms.push_back(NewPlatform);
-      range_view<ol_device_handle_t> R{MDevices.data() + MDevices.size(),
-                                       NewDevs.size()};
+      range_view<const ol_device_handle_t> R{MDevices.data() + MDevices.size(),
+                                             NewDevs.size()};
       MDevices.insert(MDevices.end(), NewDevs.begin(), NewDevs.end());
       MDevRangePerPlatformId.push_back(R);
     }
@@ -68,7 +69,7 @@ struct OffloadTopology {
     assert(TotalDevCount == MDevices.size());
   }
 
-  ol_platform_backend_t backend() { return MBackend; }
+  ol_platform_backend_t backend() const { return MBackend; }
 
 private:
   ol_platform_backend_t MBackend = OL_PLATFORM_BACKEND_UNKNOWN;
@@ -79,7 +80,7 @@ private:
 
   // Vector holding range of devices for each platform (index is platform index
   // within Platforms)
-  std::vector<range_view<ol_device_handle_t>>
+  std::vector<range_view<const ol_device_handle_t>>
       MDevRangePerPlatformId; // PlatformDevices.size() == Platforms.size()
 };
 

@@ -14,7 +14,9 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-backend platform::get_backend() const noexcept { return impl.getBackend(); }
+backend platform::get_backend() const noexcept {
+  return getImpl().getBackend();
+}
 
 std::vector<platform> platform::get_platforms() {
   auto PlatformsView = detail::platform_impl::getPlatforms();
@@ -22,7 +24,7 @@ std::vector<platform> platform::get_platforms() {
   Platforms.reserve(PlatformsView.size());
   for (size_t i = 0; i < PlatformsView.size(); i++) {
     platform Platform =
-        detail::createSyclObjFromImpl<platform>(PlatformsView[i]);
+        detail::createSyclObjFromImpl<platform>(&PlatformsView[i]);
     Platforms.push_back(std::move(Platform));
   }
   return Platforms;
@@ -31,7 +33,7 @@ std::vector<platform> platform::get_platforms() {
 template <typename Param>
 typename detail::is_platform_info_desc<Param>::return_type
 platform::get_info() const {
-  return impl.get_info<Param>();
+  return getImpl().get_info<Param>();
 }
 
 #define __SYCL_PARAM_TRAITS_SPEC(DescType, Desc, ReturnT)                      \
