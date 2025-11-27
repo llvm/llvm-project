@@ -2347,6 +2347,7 @@ class BImm<bit op, dag iops, string asm, list<dag> pattern>
   let Inst{25-0}  = addr;
 
   let DecoderMethod = "DecodeUnconditionalBranch";
+  let supportsDeactivationSymbol = true;
 }
 
 class BranchImm<bit op, string asm, list<dag> pattern>
@@ -2404,6 +2405,7 @@ class SignAuthOneData<bits<3> opcode_prefix, bits<2> opcode, string asm,
   let Inst{11-10} = opcode;
   let Inst{9-5} = Rn;
   let Inst{4-0} = Rd;
+  let supportsDeactivationSymbol = true;
 }
 
 class SignAuthZero<bits<3> opcode_prefix, bits<2> opcode, string asm,
@@ -2417,6 +2419,7 @@ class SignAuthZero<bits<3> opcode_prefix, bits<2> opcode, string asm,
   let Inst{11-10} = opcode;
   let Inst{9-5} = 0b11111;
   let Inst{4-0} = Rd;
+  let supportsDeactivationSymbol = true;
 }
 
 class SignAuthTwoOperand<bits<4> opc, string asm,

@@ -25,6 +25,7 @@
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h.inc"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.h.inc"
 
 namespace mlir::amdgpu {
 /// Parser for the `custom<MNKDimensionList>` custom assembly format used by
@@ -51,6 +52,9 @@ inline void printMNKDimensionList(OpAsmPrinter &printer, Operation *,
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.h.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPU.h.inc"

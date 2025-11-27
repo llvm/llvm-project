@@ -1042,6 +1042,75 @@ getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
                                                                      : VarPos;
 }
 
+bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
+                             uint64_t &TotalSize) {
+  // An array of N padded structs is represented as {[N-1 x <{T, pad}>], T}.
+  if (Ty->getStructNumElements() != 2)
+    return false;
+
+  Type *FirstElement = Ty->getStructElementType(0);
+  Type *SecondElement = Ty->getStructElementType(1);
+
+  if (!FirstElement->isArrayTy())
+    return false;
+
+  Type *ArrayElementType = FirstElement->getArrayElementType();
+  if (!ArrayElementType->isStructTy() ||
+      ArrayElementType->getStructNumElements() != 2)
+    return false;
+
+  Type *T_in_struct = ArrayElementType->getStructElementType(0);
+  if (T_in_struct != SecondElement)
+    return false;
+
+  auto *Padding_in_struct =
+      dyn_cast<TargetExtType>(ArrayElementType->getStructElementType(1));
+  if (!Padding_in_struct || Padding_in_struct->getName() != "spirv.Padding")
+    return false;
+
+  const uint64_t ArraySize = FirstElement->getArrayNumElements();
+  TotalSize = ArraySize + 1;
+  OriginalElementType = ArrayElementType;
+  return true;
+}
+
+Type *reconstitutePeeledArrayType(Type *Ty) {
+  if (!Ty->isStructTy())
+    return Ty;
+
+  auto *STy = cast<StructType>(Ty);
+  Type *OriginalElementType = nullptr;
+  uint64_t TotalSize = 0;
+  if (matchPeeledArrayPattern(STy, OriginalElementType, TotalSize)) {
+    Type *ResultTy = ArrayType::get(
+        reconstitutePeeledArrayType(OriginalElementType), TotalSize);
+    return ResultTy;
+  }
+
+  SmallVector<Type *, 4> NewElementTypes;
+  bool Changed = false;
+  for (Type *ElementTy : STy->elements()) {
+    Type *NewElementTy = reconstitutePeeledArrayType(ElementTy);
+    if (NewElementTy != ElementTy)
+      Changed = true;
+    NewElementTypes.push_back(NewElementTy);
+  }
+
+  if (!Changed)
+    return Ty;
+
+  Type *ResultTy;
+  if (STy->isLiteral())
+    ResultTy =
+        StructType::get(STy->getContext(), NewElementTypes, STy->isPacked());
+  else {
+    auto *NewTy = StructType::create(STy->getContext(), STy->getName());
+    NewTy->setBody(NewElementTypes, STy->isPacked());
+    ResultTy = NewTy;
+  }
+  return ResultTy;
+}
+
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
   if (GV.hasLocalLinkage() || GV.hasHiddenVisibility())

@@ -51,10 +51,10 @@ add_lldb_library(lldbPluginExpressionParserClang
   CLANG_LIBS
     clangAST
     clangCodeGen
-    clangDriver
     clangEdit
     clangFrontend
     clangLex
+    clangOptions
     clangParse
     clangRewrite
     clangRewriteFrontend

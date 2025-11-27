@@ -903,6 +903,27 @@ public:
     replaceAllUsesWith(from, ValueRange{to});
   }
 
+  /// Replace the uses of `from` with `to` for which the `functor` returns
+  /// "true". The conversion driver will try to reconcile all type mismatches
+  /// that still exist at the end of the conversion with materializations.
+  /// This function supports both 1:1 and 1:N replacements.
+  ///
+  /// Note: The functor is also applied to builtin.unrealized_conversion_cast
+  /// ops that may have been inserted by the conversion driver. Some uses may
+  /// have been wrapped in unrealized_conversion_cast ops due to type changes.
+  ///
+  /// Note: This function is not supported in rollback mode. Calling it in
+  /// rollback mode will trigger an assertion. Furthermore, the
+  /// `allUsesReplaced` flag is not supported yet.
+  void replaceUsesWithIf(Value from, Value to,
+                         function_ref<bool(OpOperand &)> functor,
+                         bool *allUsesReplaced = nullptr) override {
+    replaceUsesWithIf(from, ValueRange{to}, functor, allUsesReplaced);
+  }
+  void replaceUsesWithIf(Value from, ValueRange to,
+                         function_ref<bool(OpOperand &)> functor,
+                         bool *allUsesReplaced = nullptr);
+
   /// Return the converted value of 'key' with a type defined by the type
   /// converter of the currently executing pattern. Return nullptr in the case
   /// of failure, the remapped value otherwise.

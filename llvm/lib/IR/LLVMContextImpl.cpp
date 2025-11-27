@@ -107,6 +107,7 @@ LLVMContextImpl::~LLVMContextImpl() {
   ArrayConstants.freeConstants();
   StructConstants.freeConstants();
   VectorConstants.freeConstants();
+  ConstantPtrAuths.freeConstants();
   InlineAsms.freeConstants();
 
   CAZConstants.clear();

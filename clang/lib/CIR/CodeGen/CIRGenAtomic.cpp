@@ -644,6 +644,9 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__scoped_atomic_nand_fetch:
 
   case AtomicExpr::AO__scoped_atomic_fetch_nand:
+
+  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
+  case AtomicExpr::AO__scoped_atomic_udec_wrap:
     cgf.cgm.errorNYI(expr->getSourceRange(), "emitAtomicOp: expr op NYI");
     return;
   }

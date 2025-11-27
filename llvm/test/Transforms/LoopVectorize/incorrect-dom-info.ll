@@ -58,7 +58,7 @@ thread-pre-split.loopexit:                        ; preds = %11, %.thread-pre-sp
   br i1 %arg, label %11, label %22
 
 ; <label>:11                                      ; preds = %.lr.ph21
-  %12 = getelementptr inbounds [0 x i8], ptr @PL_utf8skip, i64 0, i64 undef
+  %12 = getelementptr inbounds [0 x i8], ptr @PL_utf8skip, i64 0, i64 0
   %13 = load i8, ptr %12, align 1
   %14 = zext i8 %13 to i64
   %15 = icmp ugt i64 %14, %10

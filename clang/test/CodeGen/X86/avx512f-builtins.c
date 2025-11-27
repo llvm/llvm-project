@@ -6892,6 +6892,7 @@ __m512 test_mm512_shuffle_f32x4(__m512 __A, __m512 __B) {
   // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 16, i32 17, i32 18, i32 19>
   return _mm512_shuffle_f32x4(__A, __B, 4); 
 }
+TEST_CONSTEXPR(match_m512(_mm512_shuffle_f32x4(((__m512){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f}), ((__m512){10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 130.0, 140.0, 150.0, 160.0}), 0b11111111), 13.0f, 14.0f, 15.0f, 16.0f, 13.0f, 14.0f, 15.0f, 16.0f, 130.0, 140.0, 150.0, 160.0, 130.0, 140.0, 150.0, 160.0));
 
 __m512 test_mm512_mask_shuffle_f32x4(__m512 __W, __mmask16 __U, __m512 __A, __m512 __B) {
   // CHECK-LABEL: test_mm512_mask_shuffle_f32x4
@@ -6899,6 +6900,7 @@ __m512 test_mm512_mask_shuffle_f32x4(__m512 __W, __mmask16 __U, __m512 __A, __m5
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_shuffle_f32x4(__W, __U, __A, __B, 4); 
 }
+TEST_CONSTEXPR(match_m512(_mm512_mask_shuffle_f32x4(((__m512){100.0f, 200.0f, 300.0f, 400.0f, 500.0f, 600.0f, 700.0f, 800.0f, 900.0f, 1000.0f, 1100.0f, 1200.0f, 1300.0f, 1400.0f, 1500.0f, 1600.0f}), 0b1111111111111110, ((__m512){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f}), ((__m512){10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 130.0, 140.0, 150.0, 160.0}), 0b11111111), 100.0f, 14.0f, 15.0f, 16.0f, 13.0f, 14.0f, 15.0f, 16.0f, 130.0, 140.0, 150.0, 160.0, 130.0, 140.0, 150.0, 160.0));
 
 __m512 test_mm512_maskz_shuffle_f32x4(__mmask16 __U, __m512 __A, __m512 __B) {
   // CHECK-LABEL: test_mm512_maskz_shuffle_f32x4
@@ -6906,12 +6908,14 @@ __m512 test_mm512_maskz_shuffle_f32x4(__mmask16 __U, __m512 __A, __m512 __B) {
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_shuffle_f32x4(__U, __A, __B, 4); 
 }
+TEST_CONSTEXPR(match_m512(_mm512_maskz_shuffle_f32x4(0b1111111111110111, ((__m512){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f}), ((__m512){10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, 130.0, 140.0, 150.0, 160.0}), 0b11111111), 13.0f, 14.0f, 15.0f, 0.0f, 13.0f, 14.0f, 15.0f, 16.0f, 130.0, 140.0, 150.0, 160.0, 130.0, 140.0, 150.0, 160.0));
 
 __m512d test_mm512_shuffle_f64x2(__m512d __A, __m512d __B) {
   // CHECK-LABEL: test_mm512_shuffle_f64x2
   // CHECK: shufflevector <8 x double> %{{.*}}, <8 x double> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 8, i32 9>
   return _mm512_shuffle_f64x2(__A, __B, 4); 
 }
+TEST_CONSTEXPR(match_m512d(_mm512_shuffle_f64x2(((__m512d){1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0}), ((__m512d){10.0,20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}), 0b10101100), 1.0, 2.0, 7.0, 8.0, 50.0, 60.0, 50.0, 60.0));
 
 __m512d test_mm512_mask_shuffle_f64x2(__m512d __W, __mmask8 __U, __m512d __A, __m512d __B) {
   // CHECK-LABEL: test_mm512_mask_shuffle_f64x2
@@ -6919,6 +6923,7 @@ __m512d test_mm512_mask_shuffle_f64x2(__m512d __W, __mmask8 __U, __m512d __A, __
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_mask_shuffle_f64x2(__W, __U, __A, __B, 4); 
 }
+TEST_CONSTEXPR(match_m512d(_mm512_mask_shuffle_f64x2(((__m512d){100.0, 200.0, 300.0, 400.0, 500.0, 600.0, 700.0, 800.0}), 0b11110000, ((__m512d){1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0}), ((__m512d){10.0,20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}), 0b10101100), 100.0, 200.0, 300.0, 400.0, 50.0, 60.0, 50.0, 60.0));
 
 __m512d test_mm512_maskz_shuffle_f64x2(__mmask8 __U, __m512d __A, __m512d __B) {
   // CHECK-LABEL: test_mm512_maskz_shuffle_f64x2
@@ -6926,12 +6931,15 @@ __m512d test_mm512_maskz_shuffle_f64x2(__mmask8 __U, __m512d __A, __m512d __B) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x double> %{{.*}}, <8 x double> %{{.*}}
   return _mm512_maskz_shuffle_f64x2(__U, __A, __B, 4); 
 }
+TEST_CONSTEXPR(match_m512d(_mm512_maskz_shuffle_f64x2(0b11110100, ((__m512d){1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0}), ((__m512d){10.0,20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}), 0b10101100), 0.0, 0.0, 7.0, 0.0, 50.0, 60.0, 50.0, 60.0));
 
 __m512i test_mm512_shuffle_i32x4(__m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_shuffle_i32x4
   // CHECK: shufflevector <16 x i32> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 16, i32 17, i32 18, i32 19>
   return _mm512_shuffle_i32x4(__A, __B, 4); 
 }
+TEST_CONSTEXPR(match_v16si(_mm512_shuffle_i32x4(((__m512i)(__v16si){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}), ((__m512i)(__v16si){10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160}), 0), 1, 2, 3, 4, 1, 2, 3, 4, 10, 20, 30, 40, 10, 20, 30, 40));
+
 
 __m512i test_mm512_mask_shuffle_i32x4(__m512i __W, __mmask16 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_mask_shuffle_i32x4
@@ -6939,6 +6947,7 @@ __m512i test_mm512_mask_shuffle_i32x4(__m512i __W, __mmask16 __U, __m512i __A, _
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_shuffle_i32x4(__W, __U, __A, __B, 4); 
 }
+TEST_CONSTEXPR(match_v16si(_mm512_mask_shuffle_i32x4(((__m512i)(__v16si){100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600}), 0b1111111111111011, ((__m512i)(__v16si){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}), ((__m512i)(__v16si){10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160}), 0), 1, 2, 300, 4, 1, 2, 3, 4, 10, 20, 30, 40, 10, 20, 30, 40));
 
 __m512i test_mm512_maskz_shuffle_i32x4(__mmask16 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_maskz_shuffle_i32x4
@@ -6946,12 +6955,14 @@ __m512i test_mm512_maskz_shuffle_i32x4(__mmask16 __U, __m512i __A, __m512i __B) 
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_maskz_shuffle_i32x4(__U, __A, __B, 4); 
 }
+TEST_CONSTEXPR(match_v16si(_mm512_maskz_shuffle_i32x4(0b1011111111111111, ((__m512i)(__v16si){1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}), ((__m512i)(__v16si){10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160}), 0), 1, 2, 3, 4, 1, 2, 3, 4, 10, 20, 30, 40, 10, 20, 0, 40));
 
 __m512i test_mm512_shuffle_i64x2(__m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_shuffle_i64x2
   // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 8, i32 9>
   return _mm512_shuffle_i64x2(__A, __B, 4); 
 }
+TEST_CONSTEXPR(match_m512i(_mm512_shuffle_i64x2(((__m512i){1, 2, 3, 4, 5, 6, 7, 8}), ((__m512i){10, 20, 30, 40, 50, 60, 70, 80}), 0b11000110), 5, 6, 3, 4, 10, 20, 70, 80));
 
 __m512i test_mm512_mask_shuffle_i64x2(__m512i __W, __mmask8 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_mask_shuffle_i64x2
@@ -6959,6 +6970,7 @@ __m512i test_mm512_mask_shuffle_i64x2(__m512i __W, __mmask8 __U, __m512i __A, __
   // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_mask_shuffle_i64x2(__W, __U, __A, __B, 4); 
 }
+TEST_CONSTEXPR(match_m512i(_mm512_mask_shuffle_i64x2(((__m512i){100, 200, 300, 400, 500, 600, 700, 800}), 0b11111101, ((__m512i){1, 2, 3, 4, 5, 6, 7, 8}), ((__m512i){10, 20, 30, 40, 50, 60, 70, 80}), 0b11000110), 5, 200, 3, 4, 10, 20, 70, 80));
 
 __m512i test_mm512_maskz_shuffle_i64x2(__mmask8 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_maskz_shuffle_i64x2
@@ -6966,6 +6978,7 @@ __m512i test_mm512_maskz_shuffle_i64x2(__mmask8 __U, __m512i __A, __m512i __B) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_maskz_shuffle_i64x2(__U, __A, __B, 4); 
 }
+TEST_CONSTEXPR(match_m512i(_mm512_maskz_shuffle_i64x2(0b00111101, ((__m512i){1, 2, 3, 4, 5, 6, 7, 8}), ((__m512i){10, 20, 30, 40, 50, 60, 70, 80}), 0b11000110), 5, 0, 3, 4, 10, 20, 0, 0));
 
 __m512d test_mm512_shuffle_pd(__m512d __M, __m512d __V) {
   // CHECK-LABEL: test_mm512_shuffle_pd

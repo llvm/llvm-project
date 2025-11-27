@@ -8,6 +8,39 @@
 // We declare anonymous record types to represent lambdas. Rather than trying to
 // to match the declarations, we establish variables for these when they are used.
 
+auto global_lambda = [](){};
+void use_global_lambda() {
+  global_lambda();
+}
+
+// CIR: cir.global "private" internal dso_local @global_lambda = #cir.undef : ![[REC_LAM_GLOBAL_LAMBDA:.*]] {alignment = 1 : i64}
+// CIR: cir.func lambda internal private dso_local @_ZNK3$_0clEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]> {{.*}})
+// CIR:   %[[THIS:.*]] = cir.alloca !cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]>, !cir.ptr<!cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]>>, ["this", init]
+// CIR:   cir.store %[[THIS_ARG]], %[[THIS]]
+// CIR:   cir.load %[[THIS]]
+//
+// CIR: cir.func {{.*}} @_Z17use_global_lambdav()
+// CIR:   %[[LAMBDA:.*]] = cir.get_global @global_lambda : !cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]>
+// CIR:   cir.call @_ZNK3$_0clEv(%[[LAMBDA]]) : (!cir.ptr<![[REC_LAM_GLOBAL_LAMBDA]]>) -> ()
+
+// LLVM: @global_lambda = internal global %[[REC_LAM_GLOBAL_LAMBDA:.*]] undef, align 1
+// LLVM: define internal void @"_ZNK3$_0clEv"(ptr %[[THIS_ARG:.*]])
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
+// LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+//
+// LLVM: define dso_local void @_Z17use_global_lambdav()
+// LLVM:   call void @"_ZNK3$_0clEv"(ptr @global_lambda)
+
+// OGCG: @global_lambda = internal global %[[REC_LAM_GLOBAL_LAMBDA:.*]] undef, align 1
+// OGCG: define dso_local void @_Z17use_global_lambdav()
+// OGCG:   call void @"_ZNK3$_0clEv"(ptr noundef nonnull align 1 dereferenceable(1) @global_lambda)
+//
+// OGCG: define internal void @"_ZNK3$_0clEv"(ptr {{.*}} %[[THIS_ARG:.*]])
+// OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
+// OGCG:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+
 void fn() {
   auto a = [](){};
   a();

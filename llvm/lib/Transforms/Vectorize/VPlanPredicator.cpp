@@ -44,11 +44,6 @@ class VPPredicator {
   /// possibly inserting new recipes at \p Dst (using Builder's insertion point)
   VPValue *createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst);
 
-  /// Returns the *entry* mask for \p VPBB.
-  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
-    return BlockMaskCache.lookup(VPBB);
-  }
-
   /// Record \p Mask as the *entry* mask of \p VPBB, which is expected to not
   /// already have a mask.
   void setBlockInMask(VPBasicBlock *VPBB, VPValue *Mask) {
@@ -68,6 +63,11 @@ class VPPredicator {
   }
 
 public:
+  /// Returns the *entry* mask for \p VPBB.
+  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
+    return BlockMaskCache.lookup(VPBB);
+  }
+
   /// Returns the precomputed predicate of the edge from \p Src to \p Dst.
   VPValue *getEdgeMask(const VPBasicBlock *Src, const VPBasicBlock *Dst) const {
     return EdgeMaskCache.lookup({Src, Dst});
@@ -300,6 +300,35 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
       VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
 
     PrevVPBB = VPBB;
+  }
+
+  // If we folded the tail and introduced a header mask, any extract of the
+  // last element must be updated to extract from the last active lane of the
+  // header mask instead (i.e., the lane corresponding to the last active
+  // iteration).
+  if (FoldTail) {
+    assert(Plan.getExitBlocks().size() == 1 &&
+           "only a single-exit block is supported currently");
+    VPBasicBlock *EB = Plan.getExitBlocks().front();
+    assert(EB->getSinglePredecessor() == Plan.getMiddleBlock() &&
+           "the exit block must have middle block as single predecessor");
+
+    VPBuilder B(Plan.getMiddleBlock()->getTerminator());
+    for (auto &P : EB->phis()) {
+      auto *ExitIRI = cast<VPIRPhi>(&P);
+      VPValue *Inc = ExitIRI->getIncomingValue(0);
+      VPValue *Op;
+      if (!match(Inc, m_ExtractLastElement(m_VPValue(Op))))
+        continue;
+
+      // Compute the index of the last active lane.
+      VPValue *HeaderMask = Predicator.getBlockInMask(Header);
+      VPValue *LastActiveLane =
+          B.createNaryOp(VPInstruction::LastActiveLane, HeaderMask);
+      auto *Ext =
+          B.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
+      Inc->replaceAllUsesWith(Ext);
+    }
   }
   return Predicator.getBlockMaskCache();
 }

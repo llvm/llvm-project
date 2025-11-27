@@ -197,10 +197,10 @@ define void @narrow_widen_store_user(i32 %x, ptr noalias %A, ptr noalias %B) {
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[A]], i32 [[INDEX]]
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[B]], i32 [[INDEX]]
-; VF2IC2-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[TMP2]], i32 2
+; VF2IC2-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[TMP2]], i64 2
 ; VF2IC2-NEXT:    store <2 x i32> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 4
 ; VF2IC2-NEXT:    store <2 x i32> [[BROADCAST_SPLAT]], ptr [[TMP4]], align 4
-; VF2IC2-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP3]], i32 2
+; VF2IC2-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP3]], i64 2
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP3]], align 4
 ; VF2IC2-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP5]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4

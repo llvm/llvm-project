@@ -178,9 +178,9 @@ define void @test_interleave_store_one_constant(ptr noalias %src, ptr noalias %d
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[TMP13]], i32 2
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[TMP13]], i32 4
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[TMP13]], i32 6
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[TMP13]], i64 2
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[TMP13]], i64 4
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr double, ptr [[TMP13]], i64 6
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x double>, ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <2 x double>, ptr [[TMP16]], align 8
@@ -323,9 +323,9 @@ define void @single_fmul_used_by_each_member(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr double, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr double, ptr [[TMP23]], i32 2
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[TMP23]], i32 4
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr double, ptr [[TMP23]], i32 6
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr double, ptr [[TMP23]], i64 2
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[TMP23]], i64 4
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr double, ptr [[TMP23]], i64 6
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP23]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <2 x double>, ptr [[TMP25]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD13:%.*]] = load <2 x double>, ptr [[TMP26]], align 8
@@ -456,8 +456,9 @@ define void @test_interleave_after_narrowing(i32 %n, ptr %x, ptr noalias %y) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH:.*:]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop

@@ -162,21 +162,29 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
         Res += ", ";
       } else if (OpR->isSubClassOf("RegisterClass"))
         Res += getQualifiedName(OpR) + "RegClassID, ";
-      else if (OpR->isSubClassOf("PointerLikeRegClass"))
-        Res += utostr(OpR->getValueAsInt("RegClassKind")) + ", ";
-      else
+      else if (OpR->isSubClassOf("PointerLikeRegClass")) {
+        if (Inst.isPseudo) {
+          // TODO: Verify this is a fixed pseudo
+          PrintError(Inst.TheDef,
+                     "missing target override for pseudoinstruction "
+                     "using PointerLikeRegClass");
+          PrintNote(OpR->getLoc(),
+                    "target should define equivalent instruction "
+                    "with RegisterClassLike replacement; (use "
+                    "RemapAllTargetPseudoPointerOperands?)");
+        } else {
+          PrintError(Inst.TheDef,
+                     "non-pseudoinstruction user of PointerLikeRegClass");
+        }
+      } else
         // -1 means the operand does not have a fixed register class.
         Res += "-1, ";
 
       // Fill in applicable flags.
       Res += "0";
 
-      if (OpR->isSubClassOf("RegClassByHwMode")) {
+      if (OpR->isSubClassOf("RegClassByHwMode"))
         Res += "|(1<<MCOI::LookupRegClassByHwMode)";
-      } else if (OpR->isSubClassOf("PointerLikeRegClass")) {
-        // Ptr value whose register class is resolved via callback.
-        Res += "|(1<<MCOI::LookupPtrRegClass)";
-      }
 
       // Predicate operands.  Check to see if the original unexpanded operand
       // was of type PredicateOp.
