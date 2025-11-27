@@ -5557,6 +5557,54 @@ string __num_get<_CharT>::__stage2_int_prep(ios_base& __iob, _CharT* __atoms, _C
   return __np.grouping();
 }
 
+template <class _CharT>
+int __num_get<_CharT>::__stage2_int_loop(
+    _CharT __ct,
+    int __base,
+    char* __a,
+    char*& __a_end,
+    unsigned& __dc,
+    _CharT __thousands_sep,
+    const string& __grouping,
+    unsigned* __g,
+    unsigned*& __g_end,
+    _CharT* __atoms) {
+  if (__a_end == __a && (__ct == __atoms[24] || __ct == __atoms[25])) {
+    *__a_end++ = __ct == __atoms[24] ? '+' : '-';
+    __dc       = 0;
+    return 0;
+  }
+  if (__grouping.size() != 0 && __ct == __thousands_sep) {
+    if (__g_end - __g < __num_get_buf_sz) {
+      *__g_end++ = __dc;
+      __dc       = 0;
+    }
+    return 0;
+  }
+  ptrdiff_t __f = __atoms_offset(__atoms, __ct);
+  if (__f >= 24)
+    return -1;
+  switch (__base) {
+  case 8:
+  case 10:
+    if (__f >= __base)
+      return -1;
+    break;
+  case 16:
+    if (__f < 22)
+      break;
+    if (__a_end != __a && __a_end - __a <= 2 && __a_end[-1] == '0') {
+      __dc       = 0;
+      *__a_end++ = __src[__f];
+      return 0;
+    }
+    return -1;
+  }
+  *__a_end++ = __src[__f];
+  ++__dc;
+  return 0;
+}
+
 template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<char>;
 _LIBCPP_IF_WIDE_CHARACTERS(template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS collate<wchar_t>;)
 

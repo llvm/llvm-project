@@ -154,7 +154,7 @@ public:
   // C/C++ identifier, then it will return false
   // and identifier and context will be unchanged.
 
-  static bool ExtractContextAndIdentifier(const char *name,
+  static bool ExtractContextAndIdentifier(llvm::StringRef name,
                                           llvm::StringRef &context,
                                           llvm::StringRef &identifier);
 

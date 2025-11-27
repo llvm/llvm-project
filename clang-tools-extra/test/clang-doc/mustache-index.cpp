@@ -13,19 +13,21 @@ class Foo;
 // CHECK:       <li class="sidebar-section">
 // CHECK-NEXT:      <a class="sidebar-item" href="#Enums">Enums</a>
 // CHECK-NEXT:  </li>
-// CHECK-NEXT:  <ul>
-// CHECK-NEXT:      <li class="sidebar-item-container">
-// CHECK-NEXT:          <a class="sidebar-item" href="#{{[0-9A-F]*}}">Color</a>
-// CHECK-NEXT:      </li>
-// CHECK-NEXT:  </ul>
+// CHECK-NEXT:  <li>
+// CHECK-NEXT:      <ul>
+// CHECK-NEXT:          <li class="sidebar-item-container">
+// CHECK-NEXT:              <a class="sidebar-item" href="#{{[0-9A-F]*}}">Color</a>
+// CHECK-NEXT:          </li>
+// CHECK-NEXT:      </ul>
 // CHECK:           <li class="sidebar-section">
 // CHECK-NEXT:          <a class="sidebar-item" href="#Classes">Inner Classes</a>
 // CHECK-NEXT:      </li>
-// CHECK-NEXT:  <ul>
-// CHECK-NEXT:      <li class="sidebar-item-container">
-// CHECK-NEXT:          <a class="sidebar-item" href="#{{[0-9A-F]*}}">Foo</a>
-// CHECK-NEXT:      </li>
-// CHECK-NEXT:  </ul>
+// CHECK-NEXT:  <li>
+// CHECK-NEXT:      <ul>
+// CHECK-NEXT:          <li class="sidebar-item-container">
+// CHECK-NEXT:              <a class="sidebar-item" href="#{{[0-9A-F]*}}">Foo</a>
+// CHECK-NEXT:          </li>
+// CHECK-NEXT:      </ul>
 
 // CHECK:       <section id="Enums" class="section-container">
 // CHECK-NEXT:      <h2>Enumerations</h2>

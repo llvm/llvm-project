@@ -84,7 +84,7 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
   if (basename.empty()) {
     llvm::StringRef context;
     func_name_type |=
-        (ExtractContextAndIdentifier(name.GetCString(), context, basename)
+        (ExtractContextAndIdentifier(name.GetStringRef(), context, basename)
              ? (eFunctionNameTypeMethod | eFunctionNameTypeBase)
              : eFunctionNameTypeFull);
   } else {
@@ -546,9 +546,8 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
 
   llvm::StringRef identifier;
   llvm::StringRef context;
-  std::string path_str = path.str();
-  bool success = CPlusPlusLanguage::ExtractContextAndIdentifier(
-      path_str.c_str(), context, identifier);
+  const bool success =
+      CPlusPlusLanguage::ExtractContextAndIdentifier(path, context, identifier);
   if (!success)
     return m_full.GetStringRef().contains(path);
 
@@ -592,7 +591,8 @@ bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path,
 }
 
 bool CPlusPlusLanguage::ExtractContextAndIdentifier(
-    const char *name, llvm::StringRef &context, llvm::StringRef &identifier) {
+    llvm::StringRef name, llvm::StringRef &context,
+    llvm::StringRef &identifier) {
   if (MSVCUndecoratedNameParser::IsMSVCUndecoratedName(name))
     return MSVCUndecoratedNameParser::ExtractContextAndIdentifier(name, context,
                                                                   identifier);

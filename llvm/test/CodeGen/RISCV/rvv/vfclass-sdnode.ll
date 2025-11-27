@@ -63,7 +63,6 @@ define <vscale x 2 x i1> @isnan_nxv2f32(<vscale x 2 x float> %x) {
   ret <vscale x 2 x i1> %1
 }
 
-
 define <vscale x 4 x i1> @isnan_nxv4f32(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: isnan_nxv4f32:
 ; CHECK:       # %bb.0:
@@ -188,11 +187,3 @@ define <vscale x 16 x i1> @isnotfinite_nxv16f32(<vscale x 16 x float> %x) {
   ret <vscale x 16 x i1> %1
 }
 
-declare <vscale x 2 x i1> @llvm.is.fpclass.nxv2f16(<vscale x 2 x half>, i32)
-declare <vscale x 2 x i1> @llvm.is.fpclass.nxv2f32(<vscale x 2 x float>, i32)
-declare <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float>, i32)
-declare <vscale x 8 x i1> @llvm.is.fpclass.nxv8f32(<vscale x 8 x float>, i32)
-declare <vscale x 16 x i1> @llvm.is.fpclass.nxv16f32(<vscale x 16 x float>, i32)
-declare <vscale x 2 x i1> @llvm.is.fpclass.nxv2f64(<vscale x 2 x double>, i32)
-declare <vscale x 4 x i1> @llvm.is.fpclass.nxv4f64(<vscale x 4 x double>, i32)
-declare <vscale x 8 x i1> @llvm.is.fpclass.nxv8f64(<vscale x 8 x double>, i32)

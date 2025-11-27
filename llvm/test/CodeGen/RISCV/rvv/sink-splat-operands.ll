@@ -2270,11 +2270,6 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %cmp.not, label %for.cond.cleanup, label %for.body
 }
 
-declare i64 @llvm.vscale.i64()
-declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
-declare <vscale x 2 x float> @llvm.fma.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>)
-declare float @llvm.fma.f32(float, float, float)
-
 define void @sink_splat_icmp(ptr nocapture %x, i32 signext %y) {
 ; CHECK-LABEL: sink_splat_icmp:
 ; CHECK:       # %bb.0: # %entry
@@ -2309,7 +2304,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32, <4 x i1>)
 
 define void @sink_splat_fcmp(ptr nocapture %x, float %y) {
 ; CHECK-LABEL: sink_splat_fcmp:
@@ -2345,7 +2339,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-declare void @llvm.masked.store.v4f32.p0(<4 x float>, ptr, i32, <4 x i1>)
 
 define void @sink_splat_udiv(ptr nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_udiv:
@@ -2847,8 +2840,6 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %cmp.not, label %for.cond.cleanup, label %for.body
 }
 
-declare <4 x i32> @llvm.smin.v4i32(<4 x i32>, <4 x i32>)
-
 define void @sink_splat_min(ptr nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_min:
 ; CHECK:       # %bb.0: # %entry
@@ -2916,8 +2907,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
 
 define void @sink_splat_max(ptr nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_max:
@@ -2987,8 +2976,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x i32> @llvm.umin.v4i32(<4 x i32>, <4 x i32>)
-
 define void @sink_splat_umin(ptr nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_umin:
 ; CHECK:       # %bb.0: # %entry
@@ -3056,8 +3043,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x i32> @llvm.umax.v4i32(<4 x i32>, <4 x i32>)
 
 define void @sink_splat_umax(ptr nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_umax:
@@ -3127,8 +3112,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32>, <4 x i32>)
-
 define void @sink_splat_sadd_sat(ptr nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_sadd_sat:
 ; CHECK:       # %bb.0: # %entry
@@ -3197,8 +3180,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32>, <4 x i32>)
-
 define void @sink_splat_ssub_sat(ptr nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_ssub_sat:
 ; CHECK:       # %bb.0: # %entry
@@ -3232,8 +3213,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32>, <4 x i32>)
 
 define void @sink_splat_uadd_sat(ptr nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_uadd_sat:
@@ -3303,8 +3282,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x i32> @llvm.usub.sat.v4i32(<4 x i32>, <4 x i32>)
-
 define void @sink_splat_usub_sat(ptr nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_usub_sat:
 ; CHECK:       # %bb.0: # %entry
@@ -3338,8 +3315,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x i32> @llvm.vp.mul.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
 define void @sink_splat_vp_mul(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_mul:
@@ -3376,8 +3351,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x i32> @llvm.vp.add.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
 define void @sink_splat_vp_add(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_add:
@@ -3451,8 +3424,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x i32> @llvm.vp.sub.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
-
 define void @sink_splat_vp_sub(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_sub:
 ; CHECK:       # %bb.0: # %entry
@@ -3525,8 +3496,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x i32> @llvm.vp.shl.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
-
 define void @sink_splat_vp_shl(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_shl:
 ; CHECK:       # %bb.0: # %entry
@@ -3562,8 +3531,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x i32> @llvm.vp.lshr.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
 define void @sink_splat_vp_lshr(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_lshr:
@@ -3601,8 +3568,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x i32> @llvm.vp.ashr.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
-
 define void @sink_splat_vp_ashr(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_ashr:
 ; CHECK:       # %bb.0: # %entry
@@ -3639,8 +3604,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x float> @llvm.vp.fmul.v4i32(<4 x float>, <4 x float>, <4 x i1>, i32)
-
 define void @sink_splat_vp_fmul(ptr nocapture %a, float %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_fmul:
 ; CHECK:       # %bb.0: # %entry
@@ -3676,8 +3639,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x float> @llvm.vp.fdiv.v4i32(<4 x float>, <4 x float>, <4 x i1>, i32)
 
 define void @sink_splat_vp_fdiv(ptr nocapture %a, float %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_fdiv:
@@ -3751,8 +3712,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x float> @llvm.vp.fadd.v4i32(<4 x float>, <4 x float>, <4 x i1>, i32)
-
 define void @sink_splat_vp_fadd(ptr nocapture %a, float %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_fadd:
 ; CHECK:       # %bb.0: # %entry
@@ -3788,8 +3747,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x float> @llvm.vp.fsub.v4i32(<4 x float>, <4 x float>, <4 x i1>, i32)
 
 define void @sink_splat_vp_fsub(ptr nocapture %a, float %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_fsub:
@@ -3827,8 +3784,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x float> @llvm.vp.frsub.v4i32(<4 x float>, <4 x float>, <4 x i1>, i32)
-
 define void @sink_splat_vp_frsub(ptr nocapture %a, float %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_frsub:
 ; CHECK:       # %bb.0: # %entry
@@ -3864,8 +3819,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x i32> @llvm.vp.udiv.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
 define void @sink_splat_vp_udiv(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_udiv:
@@ -3903,8 +3856,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x i32> @llvm.vp.sdiv.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
-
 define void @sink_splat_vp_sdiv(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_sdiv:
 ; CHECK:       # %bb.0: # %entry
@@ -3941,8 +3892,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x i32> @llvm.vp.urem.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
-
 define void @sink_splat_vp_urem(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_urem:
 ; CHECK:       # %bb.0: # %entry
@@ -3978,8 +3927,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x i32> @llvm.vp.srem.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
 define void @sink_splat_vp_srem(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_srem:
@@ -4055,8 +4002,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x float> @llvm.vp.fma.v4f32(<4 x float>, <4 x float>, <4 x float>, <4 x i1>, i32)
 
 define void @sink_splat_vp_fma(ptr noalias nocapture %a, ptr nocapture readonly %b, float %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_fma:
@@ -4137,7 +4082,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
 
 define void @sink_splat_mul_lmul2(ptr nocapture %a, i64 signext %x) {
 ; CHECK-LABEL: sink_splat_mul_lmul2:
@@ -4860,8 +4804,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x i1> @llvm.vp.icmp.v4i32(<4 x i32>, <4 x i32>, metadata, <4 x i1>, i32)
-
 define void @sink_splat_vp_icmp(ptr nocapture %x, i32 signext %y, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_icmp:
 ; CHECK:       # %bb.0: # %entry
@@ -4901,8 +4843,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x i1> @llvm.vp.fcmp.v4f32(<4 x float>, <4 x float>, metadata, <4 x i1>, i32)
-
 define void @sink_splat_vp_fcmp(ptr nocapture %x, float %y, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_fcmp:
 ; CHECK:       # %bb.0: # %entry
@@ -4941,8 +4881,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x i32> @llvm.vp.smin.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
 define void @sink_splat_vp_min(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_min:
@@ -5015,8 +4953,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x i32> @llvm.vp.smax.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
 define void @sink_splat_vp_max(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_max:
@@ -5126,8 +5062,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x i32> @llvm.vp.umax.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
-
 define void @sink_splat_vp_umax(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_umax:
 ; CHECK:       # %bb.0: # %entry
@@ -5199,8 +5133,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x i32> @llvm.vp.sadd.sat.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
 define void @sink_splat_vp_sadd_sat(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_sadd_sat:
@@ -5274,8 +5206,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <4 x i32> @llvm.vp.ssub.sat.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
-
 define void @sink_splat_vp_ssub_sat(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_ssub_sat:
 ; CHECK:       # %bb.0: # %entry
@@ -5311,8 +5241,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x i32> @llvm.vp.uadd.sat.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
 define void @sink_splat_vp_uadd_sat(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_uadd_sat:
@@ -5385,8 +5313,6 @@ vector.body:                                      ; preds = %vector.body, %entry
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
-
-declare <4 x i32> @llvm.vp.usub.sat.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
 define void @sink_splat_vp_usub_sat(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_usub_sat:

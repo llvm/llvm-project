@@ -22,8 +22,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 \
 ; RUN:   -verify-machineinstrs | FileCheck -check-prefix=RV64I %s
 
-declare float @llvm.sqrt.f32(float)
-
 define float @sqrt_f32(float %a) nounwind {
 ; RV32IF-LABEL: sqrt_f32:
 ; RV32IF:       # %bb.0:
@@ -70,8 +68,6 @@ define float @sqrt_f32(float %a) nounwind {
   %1 = call float @llvm.sqrt.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.powi.f32.i32(float, i32)
 
 define float @powi_f32(float %a, i32 %b) nounwind {
 ; RV32IF-LABEL: powi_f32:
@@ -134,8 +130,6 @@ define float @powi_f32(float %a, i32 %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.sin.f32(float)
-
 define float @sin_f32(float %a) nounwind {
 ; RV32IF-LABEL: sin_f32:
 ; RV32IF:       # %bb.0:
@@ -177,8 +171,6 @@ define float @sin_f32(float %a) nounwind {
   %1 = call float @llvm.sin.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.cos.f32(float)
 
 define float @cos_f32(float %a) nounwind {
 ; RV32IF-LABEL: cos_f32:
@@ -359,8 +351,6 @@ define float @sincos_f32(float %a) nounwind {
   ret float %3
 }
 
-declare float @llvm.pow.f32(float, float)
-
 define float @pow_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: pow_f32:
 ; RV32IF:       # %bb.0:
@@ -403,8 +393,6 @@ define float @pow_f32(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.exp.f32(float)
-
 define float @exp_f32(float %a) nounwind {
 ; RV32IF-LABEL: exp_f32:
 ; RV32IF:       # %bb.0:
@@ -446,8 +434,6 @@ define float @exp_f32(float %a) nounwind {
   %1 = call float @llvm.exp.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.exp2.f32(float)
 
 define float @exp2_f32(float %a) nounwind {
 ; RV32IF-LABEL: exp2_f32:
@@ -533,8 +519,6 @@ define float @exp10_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.log.f32(float)
-
 define float @log_f32(float %a) nounwind {
 ; RV32IF-LABEL: log_f32:
 ; RV32IF:       # %bb.0:
@@ -576,8 +560,6 @@ define float @log_f32(float %a) nounwind {
   %1 = call float @llvm.log.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.log10.f32(float)
 
 define float @log10_f32(float %a) nounwind {
 ; RV32IF-LABEL: log10_f32:
@@ -621,8 +603,6 @@ define float @log10_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.log2.f32(float)
-
 define float @log2_f32(float %a) nounwind {
 ; RV32IF-LABEL: log2_f32:
 ; RV32IF:       # %bb.0:
@@ -664,8 +644,6 @@ define float @log2_f32(float %a) nounwind {
   %1 = call float @llvm.log2.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.fma.f32(float, float, float)
 
 define float @fma_f32(float %a, float %b, float %c) nounwind {
 ; RV32IF-LABEL: fma_f32:
@@ -713,8 +691,6 @@ define float @fma_f32(float %a, float %b, float %c) nounwind {
   %1 = call float @llvm.fma.f32(float %a, float %b, float %c)
   ret float %1
 }
-
-declare float @llvm.fmuladd.f32(float, float, float)
 
 define float @fmuladd_f32(float %a, float %b, float %c) nounwind {
 ; RV32IF-LABEL: fmuladd_f32:
@@ -773,8 +749,6 @@ define float @fmuladd_f32(float %a, float %b, float %c) nounwind {
   ret float %1
 }
 
-declare float @llvm.fabs.f32(float)
-
 define float @fabs_f32(float %a) nounwind {
 ; RV32IF-LABEL: fabs_f32:
 ; RV32IF:       # %bb.0:
@@ -815,8 +789,6 @@ define float @fabs_f32(float %a) nounwind {
   %1 = call float @llvm.fabs.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.minnum.f32(float, float)
 
 define float @minnum_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: minnum_f32:
@@ -865,8 +837,6 @@ define float @minnum_f32(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.maxnum.f32(float, float)
-
 define float @maxnum_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: maxnum_f32:
 ; RV32IF:       # %bb.0:
@@ -914,8 +884,6 @@ define float @maxnum_f32(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.copysign.f32(float, float)
-
 define float @copysign_f32(float %a, float %b) nounwind {
 ; RV32IF-LABEL: copysign_f32:
 ; RV32IF:       # %bb.0:
@@ -962,8 +930,6 @@ define float @copysign_f32(float %a, float %b) nounwind {
   %1 = call float @llvm.copysign.f32(float %a, float %b)
   ret float %1
 }
-
-declare float @llvm.floor.f32(float)
 
 define float @floor_f32(float %a) nounwind {
 ; RV32IF-LABEL: floor_f32:
@@ -1055,8 +1021,6 @@ define float @floor_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.ceil.f32(float)
-
 define float @ceil_f32(float %a) nounwind {
 ; RV32IF-LABEL: ceil_f32:
 ; RV32IF:       # %bb.0:
@@ -1146,8 +1110,6 @@ define float @ceil_f32(float %a) nounwind {
   %1 = call float @llvm.ceil.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.trunc.f32(float)
 
 define float @trunc_f32(float %a) nounwind {
 ; RV32IF-LABEL: trunc_f32:
@@ -1239,8 +1201,6 @@ define float @trunc_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.rint.f32(float)
-
 define float @rint_f32(float %a) nounwind {
 ; RV32IF-LABEL: rint_f32:
 ; RV32IF:       # %bb.0:
@@ -1331,8 +1291,6 @@ define float @rint_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.nearbyint.f32(float)
-
 define float @nearbyint_f32(float %a) nounwind {
 ; RV32IF-LABEL: nearbyint_f32:
 ; RV32IF:       # %bb.0:
@@ -1374,8 +1332,6 @@ define float @nearbyint_f32(float %a) nounwind {
   %1 = call float @llvm.nearbyint.f32(float %a)
   ret float %1
 }
-
-declare float @llvm.round.f32(float)
 
 define float @round_f32(float %a) nounwind {
 ; RV32IF-LABEL: round_f32:
@@ -1467,8 +1423,6 @@ define float @round_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.roundeven.f32(float)
-
 define float @roundeven_f32(float %a) nounwind {
 ; RV32IF-LABEL: roundeven_f32:
 ; RV32IF:       # %bb.0:
@@ -1559,8 +1513,6 @@ define float @roundeven_f32(float %a) nounwind {
   ret float %1
 }
 
-declare iXLen @llvm.lrint.iXLen.f32(float)
-
 define iXLen @lrint_f32(float %a) nounwind {
 ; RV32IF-LABEL: lrint_f32:
 ; RV32IF:       # %bb.0:
@@ -1607,9 +1559,6 @@ define iXLen @lrint_f32(float %a) nounwind {
   %1 = call iXLen @llvm.lrint.iXLen.f32(float %a)
   ret iXLen %1
 }
-
-declare i32 @llvm.lround.i32.f32(float)
-declare i64 @llvm.lround.i64.f32(float)
 
 define iXLen @lround_f32(float %a) nounwind {
 ; RV32IF-LABEL: lround_f32:
@@ -1707,8 +1656,6 @@ define i32 @lround_i32_f32(float %a) nounwind {
   ret i32 %1
 }
 
-declare i64 @llvm.llrint.i64.f32(float)
-
 define i64 @llrint_f32(float %a) nounwind {
 ; RV32IF-LABEL: llrint_f32:
 ; RV32IF:       # %bb.0:
@@ -1763,8 +1710,6 @@ define i64 @llrint_f32(float %a) nounwind {
   %1 = call i64 @llvm.llrint.i64.f32(float %a)
   ret i64 %1
 }
-
-declare i64 @llvm.llround.i64.f32(float)
 
 define i64 @llround_f32(float %a) nounwind {
 ; RV32IF-LABEL: llround_f32:
@@ -1821,7 +1766,6 @@ define i64 @llround_f32(float %a) nounwind {
   ret i64 %1
 }
 
-declare i1 @llvm.is.fpclass.f32(float, i32)
 define i1 @fpclass(float %x) {
 ; RV32IF-LABEL: fpclass:
 ; RV32IF:       # %bb.0:
@@ -2505,8 +2449,6 @@ define float @tan_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.maximumnum.f32(float, float)
-
 define float @maximumnum_float(float %x, float %y) {
 ; RV32IF-LABEL: maximumnum_float:
 ; RV32IF:       # %bb.0:
@@ -2561,8 +2503,6 @@ define float @maximumnum_float(float %x, float %y) {
   %z = call float @llvm.maximumnum.f32(float %x, float %y)
   ret float %z
 }
-
-declare float @llvm.minimumnum.f32(float, float)
 
 define float @minimumnum_float(float %x, float %y) {
 ; RV32IF-LABEL: minimumnum_float:

@@ -22,12 +22,12 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Serialization/ASTBitCodes.h"
-#include "clang/Frontend/PrecompiledPreamble.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -271,10 +271,10 @@ private:
   static void ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                              ASTUnit &AST, CaptureDiagsKind CaptureDiagnostics);
 
-  void TranslateStoredDiagnostics(FileManager &FileMgr,
-                                  SourceManager &SrcMan,
-                      const SmallVectorImpl<StandaloneDiagnostic> &Diags,
-                            SmallVectorImpl<StoredDiagnostic> &Out);
+  void
+  TranslateStoredDiagnostics(FileManager &FileMgr, SourceManager &SrcMan,
+                             const SmallVectorImpl<StandaloneDiagnostic> &Diags,
+                             SmallVectorImpl<StoredDiagnostic> &Out);
 
   void clearFileLevelDecls();
 

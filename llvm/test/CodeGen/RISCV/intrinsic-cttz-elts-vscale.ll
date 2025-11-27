@@ -234,10 +234,4 @@ define i16 @ctz_v8i1_i16_ret(<8 x i1> %a) {
   ret i16 %res
 }
 
-declare i64 @llvm.experimental.cttz.elts.i64.nxv8i16(<vscale x 8 x i16>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.nxv16i1(<vscale x 16 x i1>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.nxv4i32(<vscale x 4 x i32>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.v16i1(<16 x i1>, i1)
-declare i16 @llvm.experimental.cttz.elts.i16.v16i1(<8 x i1>, i1)
-
 attributes #0 = { vscale_range(2,1024) }

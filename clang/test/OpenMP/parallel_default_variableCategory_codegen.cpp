@@ -1,4 +1,4 @@
-// RUN: %clangxx -Xclang -verify -Wno-vla -fopenmp -fopenmp-version=60 -x c++ -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ -emit-llvm %s -o - | FileCheck %s
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER

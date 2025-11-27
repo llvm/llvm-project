@@ -36,8 +36,8 @@
 // CK10-LABEL: @.__omp_offloading_{{.*}}implicit_maps_pointer{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 
 // CK10-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] zeroinitializer
-// Map types: OMP_MAP_IS_PTR | OMP_MAP_LITERAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
-// CK10-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
+// Map types: OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 544
+// CK10-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 544]
 
 // CK10-LABEL: implicit_maps_pointer{{.*}}(
 void implicit_maps_pointer (){

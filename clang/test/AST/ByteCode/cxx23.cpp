@@ -473,3 +473,26 @@ namespace AIEWithIndex0Narrows {
   }
   static_assert(test());
 }
+
+#if __cplusplus >= 202302L
+namespace InactiveLocalsInConditionalOp {
+  struct A { constexpr A(){}; ~A(); constexpr int get() { return 10; } }; // all-note 2{{declared here}}
+  constexpr int get(bool b) {
+    return b ? A().get() : 1; // all-note {{non-constexpr function '~A' cannot be used in a constant expression}}
+  }
+  static_assert(get(false) == 1, "");
+  static_assert(get(true) == 10, ""); // all-error {{not an integral constant expression}} \
+                                      // all-note {{in call to}}
+
+  static_assert( (false ? A().get() : 1) == 1);
+  static_assert( (true ? A().get() : 1) == 1); // all-error {{not an integral constant expression}} \
+                                               // all-note {{non-constexpr function '~A' cannot be used in a constant expression}}
+
+  constexpr bool test2(bool b) {
+    unsigned long __ms = b ? (const unsigned long &)0 : __ms;
+    return true;
+  }
+  static_assert(test2(true));
+
+}
+#endif

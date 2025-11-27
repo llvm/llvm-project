@@ -23,7 +23,7 @@ define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    v_dual_cndmask_b32 v0, 5, v0 :: v_dual_cndmask_b32 v1, 3, v1
 ; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
@@ -48,7 +48,7 @@ define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 ; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    v_dual_cndmask_b32 v0, 5, v0 :: v_dual_cndmask_b32 v1, 3, v1
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
@@ -73,7 +73,7 @@ define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; DAGISEL64-NEXT:    s_mov_b64 exec, -1
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    v_cndmask_b32_e32 v0, 5, v0, vcc
 ; DAGISEL64-NEXT:    v_cndmask_b32_e32 v1, 3, v1, vcc
 ; DAGISEL64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -99,7 +99,7 @@ define amdgpu_gfx_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 ; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; GISEL64-NEXT:    s_mov_b64 exec, -1
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    v_cndmask_b32_e32 v0, 5, v0, vcc
 ; GISEL64-NEXT:    v_cndmask_b32_e32 v1, 3, v1, vcc
 ; GISEL64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -155,7 +155,7 @@ define amdgpu_gfx_whole_wave i32 @single_use_of_active(i1 %active, i32 %a, i32 %
 ; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    v_cndmask_b32_e32 v1, 17, v1, vcc_lo
 ; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
@@ -180,7 +180,7 @@ define amdgpu_gfx_whole_wave i32 @single_use_of_active(i1 %active, i32 %a, i32 %
 ; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    v_cndmask_b32_e32 v1, 17, v1, vcc_lo
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
@@ -205,7 +205,7 @@ define amdgpu_gfx_whole_wave i32 @single_use_of_active(i1 %active, i32 %a, i32 %
 ; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; DAGISEL64-NEXT:    s_mov_b64 exec, -1
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    v_cndmask_b32_e32 v1, 17, v1, vcc
 ; DAGISEL64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL64-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
@@ -230,7 +230,7 @@ define amdgpu_gfx_whole_wave i32 @single_use_of_active(i1 %active, i32 %a, i32 %
 ; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v1, s32 offset:4
 ; GISEL64-NEXT:    s_mov_b64 exec, -1
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    v_cndmask_b32_e32 v1, 17, v1, vcc
 ; GISEL64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL64-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
@@ -282,7 +282,7 @@ define amdgpu_gfx_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    scratch_store_b32 off, v0, s32 ; 4-byte Folded Spill
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; DAGISEL-NEXT:    v_mov_b32_e32 v0, 14
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; DAGISEL-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
@@ -300,7 +300,7 @@ define amdgpu_gfx_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
 ; GISEL-NEXT:    scratch_store_b32 off, v0, s32 ; 4-byte Folded Spill
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 14
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; GISEL-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s0
@@ -318,7 +318,7 @@ define amdgpu_gfx_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v0, s32 ; 4-byte Folded Spill
 ; DAGISEL64-NEXT:    s_mov_b64 exec, -1
 ; DAGISEL64-NEXT:    v_mov_b32_e32 v0, 14
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_xor_b64 exec, s[0:1], -1
 ; DAGISEL64-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
 ; DAGISEL64-NEXT:    s_mov_b64 exec, s[0:1]
@@ -336,7 +336,7 @@ define amdgpu_gfx_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
 ; GISEL64-NEXT:    scratch_store_b32 off, v0, s32 ; 4-byte Folded Spill
 ; GISEL64-NEXT:    s_mov_b64 exec, -1
 ; GISEL64-NEXT:    v_mov_b32_e32 v0, 14
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    s_xor_b64 exec, s[0:1], -1
 ; GISEL64-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
 ; GISEL64-NEXT:    s_mov_b64 exec, s[0:1]
@@ -390,7 +390,7 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    ; clobber non-CSR
 ; DAGISEL-NEXT:    ;;#ASMEND
 ; DAGISEL-NEXT:    scratch_load_b32 v40, off, s32 offset:12 ; 4-byte Folded Reload
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    v_dual_cndmask_b32 v0, 5, v0 :: v_dual_cndmask_b32 v1, 3, v1
 ; DAGISEL-NEXT:    v_readlane_b32 s20, v2, 0
 ; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -403,7 +403,7 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    scratch_load_b32 v49, off, s32 offset:16
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, vcc_lo
 ; DAGISEL-NEXT:    s_wait_loadcnt 0x0
-; DAGISEL-NEXT:    s_wait_alu 0xf1ff
+; DAGISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: csr:
@@ -432,7 +432,7 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; GISEL-NEXT:    ; clobber non-CSR
 ; GISEL-NEXT:    ;;#ASMEND
 ; GISEL-NEXT:    scratch_load_b32 v40, off, s32 offset:12 ; 4-byte Folded Reload
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    v_dual_cndmask_b32 v0, 5, v0 :: v_dual_cndmask_b32 v1, 3, v1
 ; GISEL-NEXT:    v_readlane_b32 s20, v2, 0
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -445,7 +445,7 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; GISEL-NEXT:    scratch_load_b32 v49, off, s32 offset:16
 ; GISEL-NEXT:    s_mov_b32 exec_lo, vcc_lo
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    s_wait_alu 0xf1ff
+; GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; DAGISEL64-LABEL: csr:
@@ -474,7 +474,7 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL64-NEXT:    ; clobber non-CSR
 ; DAGISEL64-NEXT:    ;;#ASMEND
 ; DAGISEL64-NEXT:    scratch_load_b32 v40, off, s32 offset:12 ; 4-byte Folded Reload
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    v_cndmask_b32_e32 v0, 5, v0, vcc
 ; DAGISEL64-NEXT:    v_cndmask_b32_e32 v1, 3, v1, vcc
 ; DAGISEL64-NEXT:    v_readlane_b32 s20, v2, 0
@@ -488,7 +488,7 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL64-NEXT:    scratch_load_b32 v49, off, s32 offset:16
 ; DAGISEL64-NEXT:    s_mov_b64 exec, vcc
 ; DAGISEL64-NEXT:    s_wait_loadcnt 0x0
-; DAGISEL64-NEXT:    s_wait_alu 0xf1ff
+; DAGISEL64-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; DAGISEL64-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL64-LABEL: csr:
@@ -517,7 +517,7 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; GISEL64-NEXT:    ; clobber non-CSR
 ; GISEL64-NEXT:    ;;#ASMEND
 ; GISEL64-NEXT:    scratch_load_b32 v40, off, s32 offset:12 ; 4-byte Folded Reload
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    v_cndmask_b32_e32 v0, 5, v0, vcc
 ; GISEL64-NEXT:    v_cndmask_b32_e32 v1, 3, v1, vcc
 ; GISEL64-NEXT:    v_readlane_b32 s20, v2, 0
@@ -531,7 +531,7 @@ define amdgpu_gfx_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; GISEL64-NEXT:    scratch_load_b32 v49, off, s32 offset:16
 ; GISEL64-NEXT:    s_mov_b64 exec, vcc
 ; GISEL64-NEXT:    s_wait_loadcnt 0x0
-; GISEL64-NEXT:    s_wait_alu 0xf1ff
+; GISEL64-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GISEL64-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-DAGISEL-LABEL: csr:
@@ -597,7 +597,7 @@ define amdgpu_gfx_whole_wave void @csr_vgpr_only(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    ; clobber CSR VGPR
 ; DAGISEL-NEXT:    ;;#ASMEND
 ; DAGISEL-NEXT:    scratch_load_b32 v40, off, s32 ; 4-byte Folded Reload
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; DAGISEL-NEXT:    s_wait_loadcnt 0x0
 ; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -615,7 +615,7 @@ define amdgpu_gfx_whole_wave void @csr_vgpr_only(i1 %active, i32 %a, i32 %b) {
 ; GISEL-NEXT:    ; clobber CSR VGPR
 ; GISEL-NEXT:    ;;#ASMEND
 ; GISEL-NEXT:    scratch_load_b32 v40, off, s32 ; 4-byte Folded Reload
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -633,7 +633,7 @@ define amdgpu_gfx_whole_wave void @csr_vgpr_only(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL64-NEXT:    ; clobber CSR VGPR
 ; DAGISEL64-NEXT:    ;;#ASMEND
 ; DAGISEL64-NEXT:    scratch_load_b32 v40, off, s32 ; 4-byte Folded Reload
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_mov_b64 exec, s[0:1]
 ; DAGISEL64-NEXT:    s_wait_loadcnt 0x0
 ; DAGISEL64-NEXT:    s_setpc_b64 s[30:31]
@@ -651,7 +651,7 @@ define amdgpu_gfx_whole_wave void @csr_vgpr_only(i1 %active, i32 %a, i32 %b) {
 ; GISEL64-NEXT:    ; clobber CSR VGPR
 ; GISEL64-NEXT:    ;;#ASMEND
 ; GISEL64-NEXT:    scratch_load_b32 v40, off, s32 ; 4-byte Folded Reload
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    s_mov_b64 exec, s[0:1]
 ; GISEL64-NEXT:    s_wait_loadcnt 0x0
 ; GISEL64-NEXT:    s_setpc_b64 s[30:31]
@@ -692,7 +692,7 @@ define amdgpu_gfx_whole_wave void @sgpr_spill_only(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    ;;#ASMEND
 ; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL-NEXT:    v_readlane_b32 s68, v0, 0
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; DAGISEL-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
@@ -715,7 +715,7 @@ define amdgpu_gfx_whole_wave void @sgpr_spill_only(i1 %active, i32 %a, i32 %b) {
 ; GISEL-NEXT:    ;;#ASMEND
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-NEXT:    v_readlane_b32 s68, v0, 0
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; GISEL-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s0
@@ -738,7 +738,7 @@ define amdgpu_gfx_whole_wave void @sgpr_spill_only(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL64-NEXT:    ;;#ASMEND
 ; DAGISEL64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL64-NEXT:    v_readlane_b32 s68, v0, 0
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_xor_b64 exec, s[0:1], -1
 ; DAGISEL64-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
 ; DAGISEL64-NEXT:    s_mov_b64 exec, s[0:1]
@@ -761,7 +761,7 @@ define amdgpu_gfx_whole_wave void @sgpr_spill_only(i1 %active, i32 %a, i32 %b) {
 ; GISEL64-NEXT:    ;;#ASMEND
 ; GISEL64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL64-NEXT:    v_readlane_b32 s68, v0, 0
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    s_xor_b64 exec, s[0:1], -1
 ; GISEL64-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
 ; GISEL64-NEXT:    s_mov_b64 exec, s[0:1]
@@ -802,7 +802,7 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) {
 ; DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; DAGISEL-NEXT:    s_mov_b32 s1, s33
 ; DAGISEL-NEXT:    s_add_co_i32 s33, s32, 0x3ff
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_and_b32 s33, s33, 0xfffffc00
 ; DAGISEL-NEXT:    s_xor_saveexec_b32 s0, -1
 ; DAGISEL-NEXT:    s_mov_b32 s2, s34
@@ -811,12 +811,12 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) {
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
 ; DAGISEL-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_mov_b32 s32, s34
 ; DAGISEL-NEXT:    s_mov_b32 s34, s2
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; DAGISEL-NEXT:    s_mov_b32 s33, s1
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: realign_stack:
@@ -828,7 +828,7 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) {
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-NEXT:    s_mov_b32 s1, s33
 ; GISEL-NEXT:    s_add_co_i32 s33, s32, 0x3ff
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_and_b32 s33, s33, 0xfffffc00
 ; GISEL-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GISEL-NEXT:    s_mov_b32 s2, s34
@@ -837,12 +837,12 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) {
 ; GISEL-NEXT:    s_wait_storecnt 0x0
 ; GISEL-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
 ; GISEL-NEXT:    s_wait_storecnt 0x0
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_mov_b32 s32, s34
 ; GISEL-NEXT:    s_mov_b32 s34, s2
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; GISEL-NEXT:    s_mov_b32 s33, s1
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; DAGISEL64-LABEL: realign_stack:
@@ -854,7 +854,7 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) {
 ; DAGISEL64-NEXT:    s_wait_kmcnt 0x0
 ; DAGISEL64-NEXT:    s_mov_b32 s2, s33
 ; DAGISEL64-NEXT:    s_add_co_i32 s33, s32, 0x3ff
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_and_b32 s33, s33, 0xfffffc00
 ; DAGISEL64-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; DAGISEL64-NEXT:    s_mov_b32 s3, s34
@@ -863,12 +863,12 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) {
 ; DAGISEL64-NEXT:    s_wait_storecnt 0x0
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
 ; DAGISEL64-NEXT:    s_wait_storecnt 0x0
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_mov_b32 s32, s34
 ; DAGISEL64-NEXT:    s_mov_b32 s34, s3
 ; DAGISEL64-NEXT:    s_mov_b64 exec, s[0:1]
 ; DAGISEL64-NEXT:    s_mov_b32 s33, s2
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL64-LABEL: realign_stack:
@@ -880,7 +880,7 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) {
 ; GISEL64-NEXT:    s_wait_kmcnt 0x0
 ; GISEL64-NEXT:    s_mov_b32 s2, s33
 ; GISEL64-NEXT:    s_add_co_i32 s33, s32, 0x3ff
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    s_and_b32 s33, s33, 0xfffffc00
 ; GISEL64-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GISEL64-NEXT:    s_mov_b32 s3, s34
@@ -889,12 +889,12 @@ define amdgpu_gfx_whole_wave void @realign_stack(i1 %active, i32 %x) {
 ; GISEL64-NEXT:    s_wait_storecnt 0x0
 ; GISEL64-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
 ; GISEL64-NEXT:    s_wait_storecnt 0x0
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    s_mov_b32 s32, s34
 ; GISEL64-NEXT:    s_mov_b32 s34, s3
 ; GISEL64-NEXT:    s_mov_b64 exec, s[0:1]
 ; GISEL64-NEXT:    s_mov_b32 s33, s2
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-DAGISEL-LABEL: realign_stack:
@@ -942,7 +942,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:  ; %bb.1: ; %if.then
 ; DAGISEL-NEXT:    v_add_nc_u32_e32 v1, v0, v1
 ; DAGISEL-NEXT:  ; %bb.2: ; %if.end
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
@@ -973,7 +973,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
 ; GISEL-NEXT:  ; %bb.1: ; %if.then
 ; GISEL-NEXT:    v_add_nc_u32_e32 v1, v0, v1
 ; GISEL-NEXT:  ; %bb.2: ; %if.end
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
@@ -1004,7 +1004,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL64-NEXT:  ; %bb.1: ; %if.then
 ; DAGISEL64-NEXT:    v_add_nc_u32_e32 v1, v0, v1
 ; DAGISEL64-NEXT:  ; %bb.2: ; %if.end
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; DAGISEL64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; DAGISEL64-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
@@ -1035,7 +1035,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
 ; GISEL64-NEXT:  ; %bb.1: ; %if.then
 ; GISEL64-NEXT:    v_add_nc_u32_e32 v1, v0, v1
 ; GISEL64-NEXT:  ; %bb.2: ; %if.end
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GISEL64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL64-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
@@ -1106,7 +1106,7 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
 ; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    v_dual_cndmask_b32 v1, 0, v1 :: v_dual_cndmask_b32 v0, 5, v0
 ; DAGISEL-NEXT:    v_dual_cndmask_b32 v2, 3, v2 :: v_dual_cndmask_b32 v3, 0, v3
 ; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -1139,7 +1139,7 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
 ; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    v_dual_cndmask_b32 v0, 5, v0 :: v_dual_cndmask_b32 v1, 0, v1
 ; GISEL-NEXT:    v_dual_cndmask_b32 v2, 3, v2 :: v_dual_cndmask_b32 v3, 0, v3
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -1172,7 +1172,7 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
 ; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v3, s32 offset:12
 ; DAGISEL64-NEXT:    s_mov_b64 exec, -1
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; DAGISEL64-NEXT:    v_cndmask_b32_e32 v0, 5, v0, vcc
 ; DAGISEL64-NEXT:    v_cndmask_b32_e32 v2, 3, v2, vcc
@@ -1207,7 +1207,7 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
 ; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v3, s32 offset:12
 ; GISEL64-NEXT:    s_mov_b64 exec, -1
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    v_cndmask_b32_e32 v0, 5, v0, vcc
 ; GISEL64-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GISEL64-NEXT:    v_cndmask_b32_e32 v2, 3, v2, vcc
@@ -1290,7 +1290,7 @@ define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i
 ; DAGISEL-NEXT:    s_clause 0x1
 ; DAGISEL-NEXT:    scratch_store_b128 off, v[0:3], s11
 ; DAGISEL-NEXT:    scratch_store_b32 off, v5, s11
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; DAGISEL-NEXT:    s_clause 0x5 ; 24-byte Folded Reload
 ; DAGISEL-NEXT:    scratch_load_b32 v0, off, s32
@@ -1329,7 +1329,7 @@ define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i
 ; GISEL-NEXT:    s_mov_b32 s2, s7
 ; GISEL-NEXT:    s_mov_b32 s3, s8
 ; GISEL-NEXT:    v_mov_b32_e32 v4, s4
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
 ; GISEL-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v5, s9
@@ -1380,7 +1380,7 @@ define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i
 ; DAGISEL64-NEXT:    s_clause 0x1
 ; DAGISEL64-NEXT:    scratch_store_b128 off, v[0:3], s11
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v5, s11
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_xor_b64 exec, s[0:1], -1
 ; DAGISEL64-NEXT:    s_clause 0x5 ; 24-byte Folded Reload
 ; DAGISEL64-NEXT:    scratch_load_b32 v0, off, s32
@@ -1419,7 +1419,7 @@ define amdgpu_gfx_whole_wave void @inreg_args(i1 %active, i32 inreg %i32, <4 x i
 ; GISEL64-NEXT:    s_mov_b32 s2, s7
 ; GISEL64-NEXT:    s_mov_b32 s3, s8
 ; GISEL64-NEXT:    v_mov_b32_e32 v4, s4
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL64-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL64-NEXT:    v_mov_b32_e32 v2, s2
@@ -1789,7 +1789,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; DAGISEL-NEXT:    scratch_store_b32 off, v247, s33 offset:576
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; DAGISEL-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    v_writelane_b32 v40, s0, 3
 ; DAGISEL-NEXT:    s_addk_co_i32 s32, 0x250
 ; DAGISEL-NEXT:    v_writelane_b32 v40, s4, 0
@@ -1799,7 +1799,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; DAGISEL-NEXT:    v_swap_b32 v0, v1
 ; DAGISEL-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
 ; DAGISEL-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; DAGISEL-NEXT:    v_readlane_b32 s30, v40, 1
 ; DAGISEL-NEXT:    v_readlane_b32 s31, v40, 2
@@ -1960,7 +1960,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s4
 ; DAGISEL-NEXT:    s_mov_b32 s33, s0
 ; DAGISEL-NEXT:    s_wait_loadcnt 0x0
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: call_gfx_from_whole_wave:
@@ -2263,7 +2263,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GISEL-NEXT:    scratch_store_b32 off, v247, s33 offset:576
 ; GISEL-NEXT:    s_mov_b32 exec_lo, -1
 ; GISEL-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    v_writelane_b32 v40, s0, 3
 ; GISEL-NEXT:    s_addk_co_i32 s32, 0x250
 ; GISEL-NEXT:    v_writelane_b32 v40, s4, 0
@@ -2273,7 +2273,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GISEL-NEXT:    v_swap_b32 v0, v1
 ; GISEL-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
 ; GISEL-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GISEL-NEXT:    v_readlane_b32 s30, v40, 1
 ; GISEL-NEXT:    v_readlane_b32 s31, v40, 2
@@ -2434,7 +2434,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s4
 ; GISEL-NEXT:    s_mov_b32 s33, s0
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; DAGISEL64-LABEL: call_gfx_from_whole_wave:
@@ -2737,7 +2737,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v247, s33 offset:576
 ; DAGISEL64-NEXT:    s_mov_b64 exec, -1
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    v_writelane_b32 v40, s0, 4
 ; DAGISEL64-NEXT:    s_addk_co_i32 s32, 0x250
 ; DAGISEL64-NEXT:    v_writelane_b32 v40, s4, 0
@@ -2748,7 +2748,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; DAGISEL64-NEXT:    v_swap_b32 v0, v1
 ; DAGISEL64-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
 ; DAGISEL64-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; DAGISEL64-NEXT:    v_readlane_b32 s30, v40, 2
 ; DAGISEL64-NEXT:    v_readlane_b32 s31, v40, 3
@@ -2910,7 +2910,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; DAGISEL64-NEXT:    s_mov_b64 exec, s[4:5]
 ; DAGISEL64-NEXT:    s_mov_b32 s33, s0
 ; DAGISEL64-NEXT:    s_wait_loadcnt 0x0
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL64-LABEL: call_gfx_from_whole_wave:
@@ -3213,7 +3213,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GISEL64-NEXT:    scratch_store_b32 off, v247, s33 offset:576
 ; GISEL64-NEXT:    s_mov_b64 exec, -1
 ; GISEL64-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    v_writelane_b32 v40, s0, 4
 ; GISEL64-NEXT:    s_addk_co_i32 s32, 0x250
 ; GISEL64-NEXT:    v_writelane_b32 v40, s4, 0
@@ -3224,7 +3224,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GISEL64-NEXT:    v_swap_b32 v0, v1
 ; GISEL64-NEXT:    s_mov_b32 s0, gfx_callee@abs32@lo
 ; GISEL64-NEXT:    s_mov_b32 s1, gfx_callee@abs32@hi
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GISEL64-NEXT:    v_readlane_b32 s30, v40, 2
 ; GISEL64-NEXT:    v_readlane_b32 s31, v40, 3
@@ -3386,7 +3386,7 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GISEL64-NEXT:    s_mov_b64 exec, s[4:5]
 ; GISEL64-NEXT:    s_mov_b32 s33, s0
 ; GISEL64-NEXT:    s_wait_loadcnt 0x0
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-DAGISEL-LABEL: call_gfx_from_whole_wave:
@@ -6489,7 +6489,7 @@ define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %activ
 ; DAGISEL-NEXT:    s_mov_b32 s37, gfx_callee@abs32@hi
 ; DAGISEL-NEXT:    s_mov_b32 s36, gfx_callee@abs32@lo
 ; DAGISEL-NEXT:    v_swap_b32 v0, v1
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; DAGISEL-NEXT:    s_clause 0x1f ; 128-byte Folded Reload
 ; DAGISEL-NEXT:    scratch_load_b32 v0, off, s32
@@ -6944,7 +6944,7 @@ define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %activ
 ; GISEL-NEXT:    v_swap_b32 v0, v1
 ; GISEL-NEXT:    s_mov_b32 s36, gfx_callee@abs32@lo
 ; GISEL-NEXT:    s_mov_b32 s37, gfx_callee@abs32@hi
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; GISEL-NEXT:    s_clause 0x1f ; 128-byte Folded Reload
 ; GISEL-NEXT:    scratch_load_b32 v0, off, s32
@@ -7399,7 +7399,7 @@ define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %activ
 ; DAGISEL64-NEXT:    s_mov_b32 s37, gfx_callee@abs32@hi
 ; DAGISEL64-NEXT:    s_mov_b32 s36, gfx_callee@abs32@lo
 ; DAGISEL64-NEXT:    v_swap_b32 v0, v1
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_xor_b64 exec, s[0:1], -1
 ; DAGISEL64-NEXT:    s_clause 0x1f ; 128-byte Folded Reload
 ; DAGISEL64-NEXT:    scratch_load_b32 v0, off, s32
@@ -7854,7 +7854,7 @@ define amdgpu_gfx_whole_wave <2 x half> @tail_call_gfx_from_whole_wave(i1 %activ
 ; GISEL64-NEXT:    v_swap_b32 v0, v1
 ; GISEL64-NEXT:    s_mov_b32 s36, gfx_callee@abs32@lo
 ; GISEL64-NEXT:    s_mov_b32 s37, gfx_callee@abs32@hi
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    s_xor_b64 exec, s[0:1], -1
 ; GISEL64-NEXT:    s_clause 0x1f ; 128-byte Folded Reload
 ; GISEL64-NEXT:    scratch_load_b32 v0, off, s32
@@ -10832,8 +10832,9 @@ define amdgpu_cs void @call_from_entry(<8 x float> %x, ptr %p) {
 ;
 ; GFX1250-DAGISEL-LABEL: call_from_entry:
 ; GFX1250-DAGISEL:       ; %bb.0:
-; GFX1250-DAGISEL-NEXT:    s_mov_b64 s[0:1], callee@abs64
 ; GFX1250-DAGISEL-NEXT:    s_mov_b32 s32, 0
+; GFX1250-DAGISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-DAGISEL-NEXT:    s_mov_b64 s[0:1], callee@abs64
 ; GFX1250-DAGISEL-NEXT:    v_dual_mov_b32 v41, v9 :: v_dual_mov_b32 v40, v8
 ; GFX1250-DAGISEL-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
 ; GFX1250-DAGISEL-NEXT:    flat_store_b32 v[40:41], v0
@@ -11149,7 +11150,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; DAGISEL-NEXT:    scratch_store_b32 off, v40, s33 offset:164
 ; DAGISEL-NEXT:    ; meta instruction
 ; DAGISEL-NEXT:    scratch_store_b32 off, v41, s33 offset:168
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    v_writelane_b32 v42, s0, 3
 ; DAGISEL-NEXT:    s_addk_co_i32 s32, 0x250
 ; DAGISEL-NEXT:    v_writelane_b32 v42, s4, 0
@@ -11158,10 +11159,10 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; DAGISEL-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; DAGISEL-NEXT:    s_mov_b32 s0, callee@abs32@lo
 ; DAGISEL-NEXT:    v_dual_mov_b32 v41, v9 :: v_dual_mov_b32 v40, v8
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; DAGISEL-NEXT:    flat_store_b32 v[40:41], v0
 ; DAGISEL-NEXT:    v_readlane_b32 s30, v42, 1
+; DAGISEL-NEXT:    flat_store_b32 v[40:41], v0
 ; DAGISEL-NEXT:    v_readlane_b32 s31, v42, 2
 ; DAGISEL-NEXT:    v_readlane_b32 s4, v42, 0
 ; DAGISEL-NEXT:    v_readlane_b32 s0, v42, 3
@@ -11323,7 +11324,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s4
 ; DAGISEL-NEXT:    s_mov_b32 s33, s0
 ; DAGISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; DAGISEL-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: call_from_whole_wave:
@@ -11631,7 +11632,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GISEL-NEXT:    scratch_store_b32 off, v40, s33 offset:164
 ; GISEL-NEXT:    ; meta instruction
 ; GISEL-NEXT:    scratch_store_b32 off, v41, s33 offset:168
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    v_writelane_b32 v42, s0, 3
 ; GISEL-NEXT:    s_addk_co_i32 s32, 0x250
 ; GISEL-NEXT:    v_writelane_b32 v42, s4, 0
@@ -11640,10 +11641,10 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GISEL-NEXT:    s_mov_b32 s0, callee@abs32@lo
 ; GISEL-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; GISEL-NEXT:    v_dual_mov_b32 v40, v8 :: v_dual_mov_b32 v41, v9
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GISEL-NEXT:    flat_store_b32 v[40:41], v0
 ; GISEL-NEXT:    v_readlane_b32 s30, v42, 1
+; GISEL-NEXT:    flat_store_b32 v[40:41], v0
 ; GISEL-NEXT:    v_readlane_b32 s31, v42, 2
 ; GISEL-NEXT:    v_readlane_b32 s4, v42, 0
 ; GISEL-NEXT:    v_readlane_b32 s0, v42, 3
@@ -11805,7 +11806,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s4
 ; GISEL-NEXT:    s_mov_b32 s33, s0
 ; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; DAGISEL64-LABEL: call_from_whole_wave:
@@ -12113,7 +12114,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v40, s33 offset:164
 ; DAGISEL64-NEXT:    ; meta instruction
 ; DAGISEL64-NEXT:    scratch_store_b32 off, v41, s33 offset:168
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    v_writelane_b32 v42, s0, 4
 ; DAGISEL64-NEXT:    s_addk_co_i32 s32, 0x250
 ; DAGISEL64-NEXT:    v_writelane_b32 v42, s4, 0
@@ -12124,10 +12125,10 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; DAGISEL64-NEXT:    s_mov_b32 s0, callee@abs32@lo
 ; DAGISEL64-NEXT:    v_mov_b32_e32 v41, v9
 ; DAGISEL64-NEXT:    v_mov_b32_e32 v40, v8
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; DAGISEL64-NEXT:    flat_store_b32 v[40:41], v0
 ; DAGISEL64-NEXT:    v_readlane_b32 s30, v42, 2
+; DAGISEL64-NEXT:    flat_store_b32 v[40:41], v0
 ; DAGISEL64-NEXT:    v_readlane_b32 s31, v42, 3
 ; DAGISEL64-NEXT:    v_readlane_b32 s5, v42, 1
 ; DAGISEL64-NEXT:    v_readlane_b32 s4, v42, 0
@@ -12290,7 +12291,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; DAGISEL64-NEXT:    s_mov_b64 exec, s[4:5]
 ; DAGISEL64-NEXT:    s_mov_b32 s33, s0
 ; DAGISEL64-NEXT:    s_wait_loadcnt_dscnt 0x0
-; DAGISEL64-NEXT:    s_wait_alu 0xfffe
+; DAGISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL64-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL64-LABEL: call_from_whole_wave:
@@ -12598,7 +12599,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GISEL64-NEXT:    scratch_store_b32 off, v40, s33 offset:164
 ; GISEL64-NEXT:    ; meta instruction
 ; GISEL64-NEXT:    scratch_store_b32 off, v41, s33 offset:168
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    v_writelane_b32 v42, s0, 4
 ; GISEL64-NEXT:    s_addk_co_i32 s32, 0x250
 ; GISEL64-NEXT:    v_writelane_b32 v42, s4, 0
@@ -12609,10 +12610,10 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GISEL64-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; GISEL64-NEXT:    v_mov_b32_e32 v40, v8
 ; GISEL64-NEXT:    v_mov_b32_e32 v41, v9
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GISEL64-NEXT:    flat_store_b32 v[40:41], v0
 ; GISEL64-NEXT:    v_readlane_b32 s30, v42, 2
+; GISEL64-NEXT:    flat_store_b32 v[40:41], v0
 ; GISEL64-NEXT:    v_readlane_b32 s31, v42, 3
 ; GISEL64-NEXT:    v_readlane_b32 s5, v42, 1
 ; GISEL64-NEXT:    v_readlane_b32 s4, v42, 0
@@ -12775,7 +12776,7 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GISEL64-NEXT:    s_mov_b64 exec, s[4:5]
 ; GISEL64-NEXT:    s_mov_b32 s33, s0
 ; GISEL64-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GISEL64-NEXT:    s_wait_alu 0xfffe
+; GISEL64-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL64-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-DAGISEL-LABEL: call_from_whole_wave:
@@ -14631,8 +14632,8 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    v_dual_mov_b32 v41, v9 :: v_dual_mov_b32 v40, v8
 ; GFX1250-DAGISEL-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
-; GFX1250-DAGISEL-NEXT:    flat_store_b32 v[40:41], v0
 ; GFX1250-DAGISEL-NEXT:    v_readlane_b32 s30, v42, 1
+; GFX1250-DAGISEL-NEXT:    flat_store_b32 v[40:41], v0
 ; GFX1250-DAGISEL-NEXT:    v_readlane_b32 s31, v42, 2
 ; GFX1250-DAGISEL-NEXT:    v_readlane_b32 s4, v42, 0
 ; GFX1250-DAGISEL-NEXT:    v_readlane_b32 s0, v42, 3

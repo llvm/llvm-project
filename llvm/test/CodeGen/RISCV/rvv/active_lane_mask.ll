@@ -200,10 +200,3 @@ define <128 x i1> @fv128(ptr %p, i64 %index, i64 %tc) {
   ret <128 x i1> %mask
 }
 
-
-declare <vscale x 1 x i1> @llvm.get.active.lane.mask.nxv1i1.i64(i64, i64)
-declare <2 x i1> @llvm.get.active.lane.mask.v2i1.i64(i64, i64)
-declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64, i64)
-declare <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64, i64)
-declare <64 x i1> @llvm.get.active.lane.mask.v64i1.i64(i64, i64)
-declare <128 x i1> @llvm.get.active.lane.mask.v128i1.i64(i64, i64)

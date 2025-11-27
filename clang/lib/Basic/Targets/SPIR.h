@@ -108,6 +108,10 @@ protected:
     UseAddrSpaceMapMangling = true;
     HasFastHalfType = true;
     HasFloat16 = true;
+    HasBFloat16 = true;
+    HasFullBFloat16 = true;
+    BFloat16Width = BFloat16Align = 16;
+    BFloat16Format = &llvm::APFloat::BFloat();
     // Define available target features
     // These must be defined in sorted order!
     NoAsmVariants = true;
@@ -427,17 +431,12 @@ public:
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
                     "v256:256-v512:512-v1024:1024-n32:64-S32-G1-P4-A0");
 
-    BFloat16Width = BFloat16Align = 16;
-    BFloat16Format = &llvm::APFloat::BFloat();
-
     HasFastHalfType = true;
     HasFloat16 = true;
     HalfArgsAndReturns = true;
 
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   }
-
-  bool hasBFloat16Type() const override { return true; }
 
   ArrayRef<const char *> getGCCRegNames() const override;
 

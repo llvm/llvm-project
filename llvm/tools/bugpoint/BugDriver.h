@@ -16,6 +16,7 @@
 #define LLVM_TOOLS_BUGPOINT_BUGDRIVER_H
 
 #include "llvm/IR/ValueMap.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -40,6 +41,10 @@ extern bool DisableSimplifyCFG;
 /// BugpointIsInterrupted - Set to true when the user presses ctrl-c.
 ///
 extern bool BugpointIsInterrupted;
+
+/// Command line options used across files.
+extern cl::list<std::string> InputArgv;
+extern cl::opt<std::string> OutputPrefix;
 
 class BugDriver {
   LLVMContext &Context;

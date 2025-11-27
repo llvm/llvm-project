@@ -6430,7 +6430,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
     case bitc::FUNC_CODE_INST_CMPXCHG_OLD: {
-      // CMPXCHG_OLD: [ptrty, ptr, cmp, val, vol, ordering, synchscope,
+      // CMPXCHG_OLD: [ptrty, ptr, cmp, val, vol, ordering, syncscope,
       // failure_ordering?, weak?]
       const size_t NumRecords = Record.size();
       unsigned OpNum = 0;
@@ -6498,7 +6498,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
     case bitc::FUNC_CODE_INST_CMPXCHG: {
-      // CMPXCHG: [ptrty, ptr, cmp, val, vol, success_ordering, synchscope,
+      // CMPXCHG: [ptrty, ptr, cmp, val, vol, success_ordering, syncscope,
       // failure_ordering, weak, align?]
       const size_t NumRecords = Record.size();
       unsigned OpNum = 0;
@@ -6655,6 +6655,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     case bitc::FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE:
     case bitc::FUNC_CODE_DEBUG_RECORD_VALUE:
     case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE:
+    case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE_VALUE:
     case bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN: {
       // DbgVariableRecords are placed after the Instructions that they are
       // attached to.
@@ -6670,6 +6671,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       // dbg_value (FUNC_CODE_DEBUG_RECORD_VALUE_SIMPLE - abbrev'd)
       //   ..., Value
       // dbg_declare (FUNC_CODE_DEBUG_RECORD_DECLARE)
+      //   ..., LocationMetadata
+      // dbg_declare_value (FUNC_CODE_DEBUG_RECORD_DECLARE_VALUE)
       //   ..., LocationMetadata
       // dbg_assign (FUNC_CODE_DEBUG_RECORD_ASSIGN)
       //   ..., LocationMetadata, DIAssignID, DIExpression, LocationMetadata
@@ -6711,6 +6714,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE:
         DVR = new DbgVariableRecord(RawLocation, Var, Expr, DIL,
                                     DbgVariableRecord::LocationType::Declare);
+        break;
+      case bitc::FUNC_CODE_DEBUG_RECORD_DECLARE_VALUE:
+        DVR = new DbgVariableRecord(
+            RawLocation, Var, Expr, DIL,
+            DbgVariableRecord::LocationType::DeclareValue);
         break;
       case bitc::FUNC_CODE_DEBUG_RECORD_ASSIGN: {
         DIAssignID *ID = cast<DIAssignID>(getFnMetadataByID(Record[Slot++]));

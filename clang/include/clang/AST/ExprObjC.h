@@ -247,8 +247,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<ObjCArrayLiteral *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<ObjCArrayLiteral *>(this)->children();
   }
 
   static bool classof(const Stmt *T) {
@@ -394,8 +393,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<ObjCDictionaryLiteral *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<ObjCDictionaryLiteral *>(this)->children();
   }
 
   static bool classof(const Stmt *T) {
@@ -790,8 +788,7 @@ public:
   }
 
   const_child_range children() const {
-    auto Children = const_cast<ObjCPropertyRefExpr *>(this)->children();
-    return const_child_range(Children.begin(), Children.end());
+    return const_cast<ObjCPropertyRefExpr *>(this)->children();
   }
 
   static bool classof(const Stmt *T) {

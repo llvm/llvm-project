@@ -700,7 +700,6 @@ convertArgumentInfo(const AMDGPUFunctionArgInfo &ArgInfo,
     return true;
   };
 
-  // TODO: Need to serialize kernarg preloads.
   bool Any = false;
   Any |= convertArg(AI.PrivateSegmentBuffer, ArgInfo.PrivateSegmentBuffer);
   Any |= convertArg(AI.DispatchPtr, ArgInfo.DispatchPtr);
@@ -721,6 +720,21 @@ convertArgumentInfo(const AMDGPUFunctionArgInfo &ArgInfo,
   Any |= convertArg(AI.WorkItemIDX, ArgInfo.WorkItemIDX);
   Any |= convertArg(AI.WorkItemIDY, ArgInfo.WorkItemIDY);
   Any |= convertArg(AI.WorkItemIDZ, ArgInfo.WorkItemIDZ);
+
+  // Write FirstKernArgPreloadReg separately, since it's a Register,
+  // not ArgDescriptor.
+  if (ArgInfo.FirstKernArgPreloadReg) {
+    Register Reg = ArgInfo.FirstKernArgPreloadReg;
+    assert(Reg.isPhysical() &&
+           "FirstKernArgPreloadReg must be a physical register");
+
+    yaml::SIArgument SA = yaml::SIArgument::createArgument(true);
+    raw_string_ostream OS(SA.RegisterName.Value);
+    OS << printReg(Reg, &TRI);
+
+    AI.FirstKernArgPreloadReg = SA;
+    Any = true;
+  }
 
   if (Any)
     return AI;
@@ -754,7 +768,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
       IsWholeWaveFunction(MFI.isWholeWaveFunction()),
       DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
-      ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()) {
+      ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()),
+      NumKernargPreloadSGPRs(MFI.getNumKernargPreloadedSGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
 
@@ -802,6 +817,8 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
+
+  UserSGPRInfo.allocKernargPreloadSGPRs(YamlMFI.NumKernargPreloadSGPRs);
 
   if (YamlMFI.ScavengeFI) {
     auto FIOrErr = YamlMFI.ScavengeFI->getFI(MF.getFrameInfo());

@@ -169,10 +169,10 @@ bool VPlanSlp::areVectorizable(ArrayRef<VPValue *> Operands) const {
   if (Opcode == Instruction::Load) {
     unsigned LoadsSeen = 0;
     VPBasicBlock *Parent = cast<VPInstruction>(Operands[0])->getParent();
-    for (auto &I : *Parent) {
+    for (auto &I : make_range(Parent->getFirstNonPhi(), Parent->end())) {
       auto *VPI = dyn_cast<VPInstruction>(&I);
       if (!VPI)
-        break;
+        return false;
       if (VPI->getOpcode() == Instruction::Load &&
           llvm::is_contained(Operands, VPI))
         LoadsSeen++;

@@ -440,9 +440,7 @@ bool LLTCodeGen::operator<(const LLTCodeGen &Other) const {
 
 //===- LLTCodeGen Helpers -------------------------------------------------===//
 
-std::optional<LLTCodeGen> llvm::gi::MVTToLLT(MVT::SimpleValueType SVT) {
-  MVT VT(SVT);
-
+std::optional<LLTCodeGen> llvm::gi::MVTToLLT(MVT VT) {
   if (VT.isVector() && !VT.getVectorElementCount().isScalar())
     return LLTCodeGen(
         LLT::vector(VT.getVectorElementCount(), VT.getScalarSizeInBits()));

@@ -5,6 +5,7 @@
 define amdgpu_ps i64 @s_add_u64(i64 inreg %a) {
 ; GCN-LABEL: s_add_u64:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0xf12345678
 ; GCN-NEXT:    ; return to shader part epilog
   %result = add i64 %a, 64729929336
@@ -14,6 +15,7 @@ define amdgpu_ps i64 @s_add_u64(i64 inreg %a) {
 define amdgpu_ps void @v_add_u64(i64 %a, ptr addrspace(1) %out) {
 ; GCN-LABEL: v_add_u64:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    v_add_nc_u64_e32 v[0:1], 0xf12345678, v[0:1]
 ; GCN-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GCN-NEXT:    s_endpgm
@@ -25,6 +27,7 @@ define amdgpu_ps void @v_add_u64(i64 %a, ptr addrspace(1) %out) {
 define amdgpu_ps i64 @s_add_neg_u64(i64 inreg %a) {
 ; GCN-LABEL: s_add_neg_u64:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0xfffffff0edcba988
 ; GCN-NEXT:    ; return to shader part epilog
   %result = sub i64 %a, 64729929336
@@ -34,6 +37,7 @@ define amdgpu_ps i64 @s_add_neg_u64(i64 inreg %a) {
 define amdgpu_ps void @v_add_neg_u64(i64 %a, ptr addrspace(1) %out) {
 ; GCN-LABEL: v_add_neg_u64:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    v_add_nc_u64_e32 v[0:1], 0xfffffff0edcba988, v[0:1]
 ; GCN-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GCN-NEXT:    s_endpgm
@@ -45,6 +49,7 @@ define amdgpu_ps void @v_add_neg_u64(i64 %a, ptr addrspace(1) %out) {
 define amdgpu_ps i64 @s_sub_u64(i64 inreg %a) {
 ; GCN-LABEL: s_sub_u64:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_sub_nc_u64 s[0:1], 0xf12345678, s[0:1]
 ; GCN-NEXT:    ; return to shader part epilog
   %result = sub i64 64729929336, %a
@@ -54,6 +59,7 @@ define amdgpu_ps i64 @s_sub_u64(i64 inreg %a) {
 define amdgpu_ps void @v_sub_u64(i64 %a, ptr addrspace(1) %out) {
 ; GCN-LABEL: v_sub_u64:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    v_sub_nc_u64_e32 v[0:1], 0xf12345678, v[0:1]
 ; GCN-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GCN-NEXT:    s_endpgm
@@ -140,6 +146,7 @@ define double @rsq_f64() {
 define amdgpu_ps i64 @s_and_b64(i64 inreg %a) {
 ; GCN-LABEL: s_and_b64:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], 0xf12345678
 ; GCN-NEXT:    ; return to shader part epilog
   %result = and i64 %a, 64729929336
@@ -151,6 +158,7 @@ define amdgpu_ps i64 @s_and_b64(i64 inreg %a) {
 define amdgpu_ps void @v_and_b64(i64 %a, ptr addrspace(1) %out) {
 ; GCN-SDAG-LABEL: v_and_b64:
 ; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-SDAG-NEXT:    v_and_b32_e32 v1, 15, v1
 ; GCN-SDAG-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
 ; GCN-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
@@ -158,6 +166,7 @@ define amdgpu_ps void @v_and_b64(i64 %a, ptr addrspace(1) %out) {
 ;
 ; GCN-GISEL-LABEL: v_and_b64:
 ; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-GISEL-NEXT:    v_and_b32_e32 v0, 0x12345678, v0
 ; GCN-GISEL-NEXT:    v_and_b32_e32 v1, 15, v1
 ; GCN-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
@@ -170,6 +179,8 @@ define amdgpu_ps void @v_and_b64(i64 %a, ptr addrspace(1) %out) {
 define amdgpu_ps <2 x float> @v_add_f64_200.1(double %a) {
 ; GCN-LABEL: v_add_f64_200.1:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0
 ; GCN-NEXT:    v_add_f64_e32 v[0:1], 0x4069033333333333, v[0:1]
 ; GCN-NEXT:    ; return to shader part epilog
   %add = fadd double %a, 200.1
@@ -182,6 +193,8 @@ define amdgpu_ps <2 x float> @v_add_f64_200.1(double %a) {
 define amdgpu_ps <2 x float> @v_add_f64_200.0(double %a) {
 ; GCN-LABEL: v_add_f64_200.0:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0
 ; GCN-NEXT:    v_add_f64_e32 v[0:1], 0x40690000, v[0:1]
 ; GCN-NEXT:    ; return to shader part epilog
   %add = fadd double %a, 200.0
@@ -194,6 +207,7 @@ define amdgpu_ps <2 x float> @v_add_f64_200.0(double %a) {
 define amdgpu_ps <2 x float> @v_lshl_add_u64(i64 %a) {
 ; GCN-SDAG-LABEL: v_lshl_add_u64:
 ; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-SDAG-NEXT:    s_mov_b64 s[0:1], 0xf12345678
 ; GCN-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 1, s[0:1]
@@ -201,6 +215,7 @@ define amdgpu_ps <2 x float> @v_lshl_add_u64(i64 %a) {
 ;
 ; GCN-GISEL-LABEL: v_lshl_add_u64:
 ; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-GISEL-NEXT:    v_mov_b64_e32 v[2:3], 0xf12345678
 ; GCN-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-GISEL-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 1, v[2:3]
@@ -216,6 +231,7 @@ define amdgpu_ps <2 x float> @v_lshl_add_u64(i64 %a) {
 define amdgpu_ps <2 x float> @v_fma_f64(double %a, double %b) {
 ; GCN-SDAG-LABEL: v_fma_f64:
 ; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-SDAG-NEXT:    v_fmaak_f64 v[4:5], v[0:1], v[2:3], 0x4063233333333333
 ; GCN-SDAG-NEXT:    v_mov_b64_e32 v[2:3], 0x4069033333333333
 ; GCN-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -227,6 +243,7 @@ define amdgpu_ps <2 x float> @v_fma_f64(double %a, double %b) {
 ;
 ; GCN-GISEL-LABEL: v_fma_f64:
 ; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-GISEL-NEXT:    v_mov_b64_e32 v[4:5], 0x4063233333333333
 ; GCN-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GCN-GISEL-NEXT:    v_fmac_f64_e32 v[4:5], v[0:1], v[2:3]
@@ -246,15 +263,18 @@ define amdgpu_ps <2 x float> @v_fma_f64(double %a, double %b) {
 define amdgpu_ps <2 x float> @v_add_neg_f64(double %a) {
 ; GCN-SDAG-LABEL: v_add_neg_f64:
 ; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-SDAG-NEXT:    s_mov_b64 s[0:1], 0x4069033333333333
-; GCN-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0
 ; GCN-SDAG-NEXT:    v_add_f64_e64 v[0:1], -v[0:1], s[0:1]
 ; GCN-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: v_add_neg_f64:
 ; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
 ; GCN-GISEL-NEXT:    v_mov_b64_e32 v[2:3], 0x4069033333333333
+; GCN-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0
 ; GCN-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-GISEL-NEXT:    v_add_f64_e64 v[0:1], -v[0:1], v[2:3]
 ; GCN-GISEL-NEXT:    ; return to shader part epilog
@@ -267,6 +287,7 @@ define amdgpu_ps <2 x float> @v_add_neg_f64(double %a) {
 define amdgpu_ps <2 x float> @v_cndmask(double %a) {
 ; GCN-SDAG-LABEL: v_cndmask:
 ; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-SDAG-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v1, 0x40632000
 ; GCN-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0x33333333, 0, vcc_lo
@@ -276,6 +297,7 @@ define amdgpu_ps <2 x float> @v_cndmask(double %a) {
 ;
 ; GCN-GISEL-LABEL: v_cndmask:
 ; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GCN-GISEL-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0x40690333
 ; GCN-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0x33333333, 0, vcc_lo

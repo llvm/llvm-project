@@ -222,7 +222,9 @@ template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
 
 inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
 
-inline Opcode_match m_Undef() { return Opcode_match(ISD::UNDEF); }
+inline auto m_Undef() {
+  return m_AnyOf(Opcode_match(ISD::UNDEF), Opcode_match(ISD::POISON));
+}
 
 inline Opcode_match m_Poison() { return Opcode_match(ISD::POISON); }
 
@@ -1147,6 +1149,28 @@ inline SpecificInt_match m_SpecificInt(APInt V) {
 }
 inline SpecificInt_match m_SpecificInt(uint64_t V) {
   return SpecificInt_match(APInt(64, V));
+}
+
+struct SpecificFP_match {
+  APFloat Val;
+
+  explicit SpecificFP_match(APFloat V) : Val(V) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue V) {
+    if (const auto *CFP = dyn_cast<ConstantFPSDNode>(V.getNode()))
+      return CFP->isExactlyValue(Val);
+    if (ConstantFPSDNode *C = isConstOrConstSplatFP(V, /*AllowUndefs=*/true))
+      return C->getValueAPF().compare(Val) == APFloat::cmpEqual;
+    return false;
+  }
+};
+
+/// Match a specific float constant.
+inline SpecificFP_match m_SpecificFP(APFloat V) { return SpecificFP_match(V); }
+
+inline SpecificFP_match m_SpecificFP(double V) {
+  return SpecificFP_match(APFloat(V));
 }
 
 struct Zero_match {

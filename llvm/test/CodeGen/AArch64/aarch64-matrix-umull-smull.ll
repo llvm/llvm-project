@@ -803,20 +803,20 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:    smlal2 v4.2d, v16.4s, v20.4s
 ; CHECK-SD-NEXT:    smlal v6.2d, v16.2s, v20.2s
 ; CHECK-SD-NEXT:    smlal v3.2d, v16.2s, v19.2s
-; CHECK-SD-NEXT:    smlal2 v1.2d, v16.4s, v18.4s
+; CHECK-SD-NEXT:    smlal2 v0.2d, v16.4s, v18.4s
 ; CHECK-SD-NEXT:    smlal v7.2d, v16.2s, v17.2s
-; CHECK-SD-NEXT:    smlal v0.2d, v16.2s, v18.2s
+; CHECK-SD-NEXT:    smlal v1.2d, v16.2s, v18.2s
 ; CHECK-SD-NEXT:    smlal2 v5.2d, v16.4s, v17.4s
 ; CHECK-SD-NEXT:    b.ne .LBB6_7
 ; CHECK-SD-NEXT:  // %bb.8: // %middle.block
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v6.2d
+; CHECK-SD-NEXT:    add v1.2d, v1.2d, v6.2d
 ; CHECK-SD-NEXT:    add v3.2d, v3.2d, v7.2d
 ; CHECK-SD-NEXT:    cmp x10, x9
-; CHECK-SD-NEXT:    add v1.2d, v1.2d, v4.2d
+; CHECK-SD-NEXT:    add v0.2d, v0.2d, v4.2d
 ; CHECK-SD-NEXT:    add v2.2d, v2.2d, v5.2d
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v3.2d
-; CHECK-SD-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    add v1.2d, v1.2d, v3.2d
+; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
+; CHECK-SD-NEXT:    add v0.2d, v1.2d, v0.2d
 ; CHECK-SD-NEXT:    addp d0, v0.2d
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    b.eq .LBB6_15

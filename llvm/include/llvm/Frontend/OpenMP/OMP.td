@@ -859,7 +859,7 @@ def OMP_Distribute : Directive<[Spelling<"distribute">]> {
     VersionedClause<OMPC_DistSchedule>,
     VersionedClause<OMPC_Order, 50>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_Do : Directive<[Spelling<"do">]> {
@@ -877,7 +877,7 @@ def OMP_Do : Directive<[Spelling<"do">]> {
     VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_Schedule>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
   let languages = [L_Fortran];
 }
@@ -926,7 +926,7 @@ def OMP_For : Directive<[Spelling<"for">]> {
     VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_Schedule>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
   let languages = [L_C];
 }
@@ -940,14 +940,14 @@ def OMP_Groupprivate : Directive<[Spelling<"groupprivate">]> {
 }
 def OMP_Fuse : Directive<[Spelling<"fuse">]> {
   let allowedOnceClauses = [VersionedClause<OMPC_LoopRange, 60>];
-  let association = AS_Block;
+  let association = AS_LoopSeq;
   let category = CA_Executable;
 }
 def OMP_Interchange : Directive<[Spelling<"interchange">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Permutation>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_interop : Directive<[Spelling<"interop">]> {
@@ -973,7 +973,7 @@ def OMP_loop : Directive<[Spelling<"loop">]> {
     VersionedClause<OMPC_Collapse>,
     VersionedClause<OMPC_Order, 50>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_masked : Directive<[Spelling<"masked">]> {
@@ -1056,7 +1056,7 @@ def OMP_Requires : Directive<[Spelling<"requires">]> {
   let category = CA_Informational;
 }
 def OMP_Reverse : Directive<[Spelling<"reverse">]> {
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_Scan : Directive<[Spelling<"scan">]> {
@@ -1131,7 +1131,7 @@ def OMP_Simd : Directive<[Spelling<"simd">]> {
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_SimdLen>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_Single : Directive<[Spelling<"single">]> {
@@ -1323,7 +1323,7 @@ def OMP_TaskLoop : Directive<[Spelling<"taskloop">]> {
     VersionedClause<OMPC_GrainSize>,
     VersionedClause<OMPC_NumTasks>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_TaskWait : Directive<[Spelling<"taskwait">]> {
@@ -1371,14 +1371,14 @@ def OMP_Tile : Directive<[Spelling<"tile">]> {
   let requiredClauses = [
     VersionedClause<OMPC_Sizes, 51>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_Stripe : Directive<[Spelling<"stripe">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Sizes, 60>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_Unknown : Directive<[Spelling<"unknown">]> {
@@ -1391,7 +1391,7 @@ def OMP_Unroll : Directive<[Spelling<"unroll">]> {
     VersionedClause<OMPC_Full, 51>,
     VersionedClause<OMPC_Partial, 51>,
   ];
-  let association = AS_Loop;
+  let association = AS_LoopNest;
   let category = CA_Executable;
 }
 def OMP_Workshare : Directive<[Spelling<"workshare">]> {

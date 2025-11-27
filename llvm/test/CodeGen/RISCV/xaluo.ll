@@ -1953,7 +1953,6 @@ entry:
   ret i1 %obit
 }
 
-
 ;
 ; Check the use of the overflow bit in combination with a select instruction.
 ;
@@ -3809,7 +3808,6 @@ entry:
   ret i1 %ret
 }
 
-
 ;
 ; Check the use of the overflow bit in combination with a branch instruction.
 ;
@@ -5586,15 +5584,3 @@ IfNoOverflow:
   ret i64 %val
 }
 
-declare {i32, i1} @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone
-declare {i32, i1} @llvm.uadd.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.uadd.with.overflow.i64(i64, i64) nounwind readnone
-declare {i32, i1} @llvm.ssub.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone
-declare {i32, i1} @llvm.usub.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.usub.with.overflow.i64(i64, i64) nounwind readnone
-declare {i32, i1} @llvm.smul.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone
-declare {i32, i1} @llvm.umul.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.umul.with.overflow.i64(i64, i64) nounwind readnone

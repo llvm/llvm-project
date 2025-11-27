@@ -49,6 +49,7 @@ body: |
     ; GFX1250-LABEL: name: generic_store_volatile
     ; GFX1250: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX1250-NEXT: {{  $}}
+    ; GFX1250-NEXT: S_WAIT_XCNT_soft 0
     ; GFX1250-NEXT: GLOBAL_STORE_DWORD killed renamable $vgpr2_vgpr3, killed renamable $vgpr0, 0, 24, implicit $exec :: (volatile store (s32), addrspace 1)
     ; GFX1250-NEXT: S_WAIT_STORECNT_soft 0
     ; GFX1250-NEXT: S_ENDPGM 0
