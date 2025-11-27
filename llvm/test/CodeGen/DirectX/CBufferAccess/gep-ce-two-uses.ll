@@ -27,6 +27,7 @@ entry:
   ret void
 }
 
+; CHECK: define void @g
 define void @g(ptr %dst) {
 entry:
   ; CHECK: [[PTR:%.*]] = call ptr addrspace(2) @llvm.dx.resource.getpointer.{{.*}}(target("dx.CBuffer", %__cblayout_CB) {{%.*}}, i32 0)
