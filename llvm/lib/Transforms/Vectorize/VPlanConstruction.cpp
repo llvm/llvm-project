@@ -1024,17 +1024,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     // Check that MinMaxOp is a VPWidenIntrinsicRecipe or VPReplicateRecipe
     // with an intrinsic that matches the reduction kind.
     Intrinsic::ID ExpectedIntrinsicID = getMinMaxReductionIntrinsicOp(RdxKind);
-    auto *RepR = dyn_cast<VPReplicateRecipe>(MinMaxOp);
-    auto *WideR = dyn_cast<VPWidenIntrinsicRecipe>(MinMaxOp);
-
-    if (WideR && WideR->getVectorIntrinsicID() != ExpectedIntrinsicID)
-      return false;
-    if (RepR) {
-      auto *II = dyn_cast<IntrinsicInst>(RepR->getUnderlyingInstr());
-      if (!II || II->getIntrinsicID() != ExpectedIntrinsicID)
-        return false;
-    }
-    if (!WideR && !RepR)
+    if (!match(MinMaxOp, m_Intrinsic(ExpectedIntrinsicID)))
       return false;
 
     // MinMaxOp must have 2 users: 1) MinMaxPhiR and 2) ComputeReductionResult
@@ -1081,6 +1071,9 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
       std::swap(FindIV, IVOp);
       Pred = CmpInst::getInversePredicate(Pred);
     }
+    if (match(IVOp, m_TruncOrSelf(m_VPValue(IVOp))) && !isa<VPWidenIntOrFpInductionRecipe>(IVOp))
+      return false;
+
     if (MinMaxOpValue != CmpOpB)
       Pred = CmpInst::getSwappedPredicate(Pred);
 
@@ -1109,8 +1102,6 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
                            FindIVPhiR->getRecurrenceKind()))
       return false;
 
-    assert(isa<VPWidenIntOrFpInductionRecipe>(IVOp) &&
-           "IVOp must be a wide induction");
     assert(!FindIVPhiR->isInLoop() && !FindIVPhiR->isOrdered() &&
            "cannot handle inloop/ordered reductions yet");
 
