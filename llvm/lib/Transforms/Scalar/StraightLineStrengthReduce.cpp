@@ -290,7 +290,7 @@ public:
     }
 
     // Evaluate if the given delta is profitable to rewrite this candidate.
-    bool isProfitableRewrite(const Value *Delta, const DKind DeltaKind) const {
+    bool isProfitableRewrite(const Value &Delta, const DKind DeltaKind) const {
       // This function cannot accurately evaluate the profit of whole expression
       // with context. A candidate (B + I * S) cannot express whether this
       // instruction needs to compute on its own (I * S), which may be shared
@@ -308,22 +308,22 @@ public:
 
     // Evaluate the rewrite efficiency of this candidate with its Basis
     EfficiencyLevel getRewriteEfficiency() const {
-      return Basis ? getRewriteEfficiency(Delta, DeltaKind) : Unknown;
+      return Basis ? getRewriteEfficiency(*Delta, DeltaKind) : Unknown;
     }
 
     // Evaluate the rewrite efficiency of this candidate with a given delta
-    EfficiencyLevel getRewriteEfficiency(const Value *Delta,
+    EfficiencyLevel getRewriteEfficiency(const Value &Delta,
                                          const DKind DeltaKind) const {
       switch (DeltaKind) {
       case BaseDelta: // [X + Delta]
         return getComputationEfficiency(
             CandidateKind,
-            ConstantInt::get(cast<IntegerType>(Delta->getType()), 1), Delta);
+            ConstantInt::get(cast<IntegerType>(Delta.getType()), 1), &Delta);
       case StrideDelta: // [X + Index * Delta]
-        return getComputationEfficiency(CandidateKind, Index, Delta);
+        return getComputationEfficiency(CandidateKind, Index, &Delta);
       case IndexDelta: // [X + Delta * Stride]
-        return getComputationEfficiency(CandidateKind, cast<ConstantInt>(Delta),
-                                        Stride);
+        return getComputationEfficiency(CandidateKind,
+                                        cast<ConstantInt>(&Delta), Stride);
       default:
         return Unknown;
       }
@@ -696,7 +696,7 @@ bool StraightLineStrengthReduce::candidatePredicate(Candidate *Basis,
   // So, we need to check if the rewrite form's computation efficiency
   // is better than the original form.
   if (K == Candidate::IndexDelta &&
-      !C.isProfitableRewrite(Delta, Candidate::IndexDelta))
+      !C.isProfitableRewrite(*Delta, Candidate::IndexDelta))
     return false;
 
   // If there is a Delta that we can reuse Basis to rewrite C,

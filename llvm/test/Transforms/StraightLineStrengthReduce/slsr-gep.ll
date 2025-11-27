@@ -357,9 +357,9 @@ define void @stride_var(ptr %input, i32 %c, i32 %b, i32 %n, float %r) {
   store float %r, ptr %getElem, align 4
 
   %mul = mul nsw i32 %b, %n
-  %add = add i32 %mul, %c
-  %add.11 = add i32 %add, %n
-  %add.2 = add i32 %add.11, %n
+  %add = add nsw i32 %mul, %c
+  %add.11 = add nsw i32 %add, %n
+  %add.2 = add nsw i32 %add.11, %n
   %offset1 = sext i32 %add.2 to i64
   %getElem.1 = getelementptr inbounds float, ptr %input, i64 %offset1
   store float %r, ptr %getElem.1, align 4
