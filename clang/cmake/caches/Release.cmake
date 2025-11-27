@@ -36,13 +36,12 @@ if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   list(APPEND DEFAULT_PROJECTS "bolt")
 endif()
 
-set (DEFAULT_RUNTIMES "compiler-rt;libcxx")
-
+set (DEFAULT_RUNTIMES "compiler-rt;libcxx;openmp")
 # Don't build flang on Darwin due to:
 # https://github.com/llvm/llvm-project/issues/160546
 if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
   list(APPEND DEFAULT_PROJECTS "flang")
-  list(APPEND DEFAULT_RUNTIMES "openmp;flang-rt")
+  list(APPEND DEFAULT_RUNTIMES "flang-rt")
 endif()
 
 if (NOT WIN32)
@@ -146,7 +145,6 @@ endif()
 if(LLVM_RELEASE_ENABLE_LINK_LOCAL_RUNTIMES)
   set_instrument_and_final_stage_var(LLVM_ENABLE_LIBCXX "ON" BOOL)
   set_instrument_and_final_stage_var(LLVM_STATIC_LINK_CXX_STDLIB "ON" BOOL)
-  set_instrument_and_final_stage_var(RUNTIMES_CMAKE_ARGS "-DLLVM_ENABLE_LIBCXX=ON" STRING)
   set(RELEASE_LINKER_FLAGS "-rtlib=compiler-rt --unwindlib=libunwind")
   if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
     set(RELEASE_LINKER_FLAGS "${RELEASE_LINKER_FLAGS} -static-libgcc")
