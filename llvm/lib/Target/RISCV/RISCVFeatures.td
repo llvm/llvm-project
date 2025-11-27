@@ -194,6 +194,10 @@ def HasStdExtZilsd : Predicate<"Subtarget->hasStdExtZilsd()">,
                        AssemblerPredicate<(all_of FeatureStdExtZilsd),
                                           "'Zilsd' (Load/Store pair instructions)">;
 
+def FeatureZilsd4ByteAlign
+    : SubtargetFeature<"zilsd-4byte-align", "AllowZilsd4ByteAlign", "true",
+                       "Allow 4-byte alignment for Zilsd LD/SD instructions">;
+
 // Multiply Extensions
 
 def FeatureStdExtZmmul
@@ -955,6 +959,9 @@ def FeatureStdExtSsdbltrp
 
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
+
+def FeatureStdExtSmpmpmt
+    : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
 
 def FeatureStdExtSmrnmi
     : RISCVExtension<1, 0, "Resumable Non-Maskable Interrupts">;
@@ -1850,6 +1857,16 @@ def TuneShortForwardBranchOpt
                        "true", "Enable short forward branch optimization">;
 def HasShortForwardBranchOpt : Predicate<"Subtarget->hasShortForwardBranchOpt()">;
 def NoShortForwardBranchOpt : Predicate<"!Subtarget->hasShortForwardBranchOpt()">;
+
+def TuneShortForwardBranchIMinMax
+    : SubtargetFeature<"short-forward-branch-i-minmax", "HasShortForwardBranchIMinMax",
+                       "true", "Enable short forward branch optimization for min,max instructions in Zbb",
+                       [TuneShortForwardBranchOpt]>;
+
+def TuneShortForwardBranchIMul
+    : SubtargetFeature<"short-forward-branch-i-mul", "HasShortForwardBranchIMul",
+                       "true", "Enable short forward branch optimization for mul instruction",
+                       [TuneShortForwardBranchOpt]>;
 
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.

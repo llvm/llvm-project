@@ -12,12 +12,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/CodeGenHelpers.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/TableGen/Argument.h"
+#include "mlir/TableGen/Attribute.h"
+#include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Pattern.h"
+#include "mlir/TableGen/Property.h"
+#include "mlir/TableGen/Region.h"
+#include "mlir/TableGen/Successor.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/CodeGenHelpers.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include <cassert>
+#include <optional>
+#include <string>
 
 using namespace llvm;
 using namespace mlir;
@@ -111,6 +125,55 @@ StringRef StaticVerifierFunctionEmitter::getRegionConstraintFn(
 //===----------------------------------------------------------------------===//
 // Constraint Emission
 //===----------------------------------------------------------------------===//
+
+/// Helper to generate a C++ string expression from a given message.
+/// Message can contain '{{...}}' placeholders that are substituted with
+/// C-expressions via tgfmt.
+std::string mlir::tblgen::buildErrorStreamingString(
+    StringRef message, const FmtContext &ctx, ErrorStreamType errorStreamType) {
+  std::string result;
+  raw_string_ostream os(result);
+
+  std::string msgStr = escapeString(message);
+  StringRef msg = msgStr;
+
+  // Split the message by '{{' and '}}' and build a streaming expression.
+  auto split = msg.split("{{");
+  os << split.first;
+  if (split.second.empty()) {
+    return msgStr;
+  }
+
+  if (errorStreamType == ErrorStreamType::InsideOpError)
+    os << "\")";
+  else
+    os << '"';
+
+  msg = split.second;
+  while (!msg.empty()) {
+    split = msg.split("}}");
+    StringRef var = split.first;
+    StringRef rest = split.second;
+
+    os << " << " << tgfmt(var, &ctx);
+
+    if (rest.empty())
+      break;
+
+    split = rest.split("{{");
+    if (split.second.empty() &&
+        errorStreamType == ErrorStreamType::InsideOpError) {
+      // To enable having part of string post, this adds a parenthesis before
+      // the last string segment to match the existing one.
+      os << " << (\"" << split.first;
+    } else {
+      os << " << \"" << split.first;
+    }
+    msg = split.second;
+  }
+
+  return os.str();
+}
 
 /// Code templates for emitting type, attribute, successor, and region
 /// constraints. Each of these templates require the following arguments:
@@ -224,22 +287,24 @@ static ::llvm::LogicalResult {0}(
 
 void StaticVerifierFunctionEmitter::emitConstraints(
     const ConstraintMap &constraints, StringRef selfName,
-    const char *const codeTemplate) {
+    const char *const codeTemplate, ErrorStreamType errorStreamType) {
   FmtContext ctx;
   ctx.addSubst("_op", "*op").withSelf(selfName);
+
   for (auto &it : constraints) {
     os << formatv(codeTemplate, it.second,
                   tgfmt(it.first.getConditionTemplate(), &ctx),
-                  escapeString(it.first.getSummary()));
+                  buildErrorStreamingString(it.first.getSummary(), ctx));
   }
 }
-
 void StaticVerifierFunctionEmitter::emitTypeConstraints() {
-  emitConstraints(typeConstraints, "type", typeConstraintCode);
+  emitConstraints(typeConstraints, "type", typeConstraintCode,
+                  ErrorStreamType::InString);
 }
 
 void StaticVerifierFunctionEmitter::emitAttrConstraints() {
-  emitConstraints(attrConstraints, "attr", attrConstraintCode);
+  emitConstraints(attrConstraints, "attr", attrConstraintCode,
+                  ErrorStreamType::InString);
 }
 
 /// Unlike with the other helpers, this one has to substitute in the interface
@@ -251,17 +316,19 @@ void StaticVerifierFunctionEmitter::emitPropConstraints() {
     auto propConstraint = cast<PropConstraint>(it.first);
     os << formatv(propConstraintCode, it.second,
                   tgfmt(propConstraint.getConditionTemplate(), &ctx),
-                  escapeString(it.first.getSummary()),
+                  buildErrorStreamingString(it.first.getSummary(), ctx),
                   propConstraint.getInterfaceType());
   }
 }
 
 void StaticVerifierFunctionEmitter::emitSuccessorConstraints() {
-  emitConstraints(successorConstraints, "successor", successorConstraintCode);
+  emitConstraints(successorConstraints, "successor", successorConstraintCode,
+                  ErrorStreamType::InString);
 }
 
 void StaticVerifierFunctionEmitter::emitRegionConstraints() {
-  emitConstraints(regionConstraints, "region", regionConstraintCode);
+  emitConstraints(regionConstraints, "region", regionConstraintCode,
+                  ErrorStreamType::InString);
 }
 
 void StaticVerifierFunctionEmitter::emitPatternConstraints() {
@@ -270,13 +337,14 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints() {
   for (auto &it : typeConstraints) {
     os << formatv(patternConstraintCode, it.second,
                   tgfmt(it.first.getConditionTemplate(), &ctx),
-                  escapeString(it.first.getSummary()), "::mlir::Type type");
+                  buildErrorStreamingString(it.first.getSummary(), ctx),
+                  "::mlir::Type type");
   }
   ctx.withSelf("attr");
   for (auto &it : attrConstraints) {
     os << formatv(patternConstraintCode, it.second,
                   tgfmt(it.first.getConditionTemplate(), &ctx),
-                  escapeString(it.first.getSummary()),
+                  buildErrorStreamingString(it.first.getSummary(), ctx),
                   "::mlir::Attribute attr");
   }
   ctx.withSelf("prop");
@@ -291,7 +359,7 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints() {
     }
     os << formatv(patternConstraintCode, it.second,
                   tgfmt(propConstraint.getConditionTemplate(), &ctx),
-                  escapeString(propConstraint.getSummary()),
+                  buildErrorStreamingString(propConstraint.getSummary(), ctx),
                   Twine(interfaceType) + " prop");
   }
 }

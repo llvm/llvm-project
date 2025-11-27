@@ -152,6 +152,26 @@ def OpenACC_LoopParMode : I32EnumAttr<
   let genSpecializedAttr = 0;
 }
 
+def OpenACC_PrivateRecipe : I32EnumAttrCase<"private_recipe", 0>;
+def OpenACC_FirstprivateRecipe : I32EnumAttrCase<"firstprivate_recipe", 1>;
+def OpenACC_ReductionRecipe : I32EnumAttrCase<"reduction_recipe", 2>;
+
+def OpenACC_RecipeKind : I32EnumAttr<
+    "RecipeKind",
+    "Encodes the options for kinds of recipes availabie in acc dialect",
+    [
+      OpenACC_PrivateRecipe, OpenACC_FirstprivateRecipe,
+      OpenACC_ReductionRecipe]> {
+  let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
+}
+
+def OpenACC_RecipeKindAttr : EnumAttr<OpenACC_Dialect,
+                                             OpenACC_RecipeKind,
+                                             "recipe_kind"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
+}
+
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
 
@@ -617,7 +637,8 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
           DefaultValuedAttr<BoolAttr, "false">:$implicit,
           DefaultValuedAttr<OpenACC_DataClauseModifierAttr,
             "mlir::acc::DataClauseModifier::none">:$modifiers,
-          OptionalAttr<StrAttr>:$name));
+          OptionalAttr<StrAttr>:$name,
+          OptionalAttr<SymbolRefAttr>:$recipe));
 
   let description = !strconcat(extraDescription, [{
     Description of arguments:
@@ -705,6 +726,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
       | `bounds` `(` $bounds `)`
       | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
+      | `recipe` `(` custom<RecipeSym>($recipe) `)`
     ) `->` type($accVar) attr-dict
   }];
 
@@ -726,7 +748,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
-          /*name=*/nullptr);
+          /*name=*/nullptr, /*recipe=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Value":$var,
                    "bool":$structured, "bool":$implicit,
@@ -744,7 +766,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*modifiers=*/nullptr,
-          /*name=*/$_builder.getStringAttr(name));
+          /*name=*/$_builder.getStringAttr(name), /*recipe=*/nullptr);
       }]>,
     OpBuilder<(ins "::mlir::Type":$accVarType, "::mlir::Value":$var,
                    "::mlir::Type":$varType, "::mlir::Value":$varPtrPtr,
@@ -755,9 +777,26 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
                    "::mlir::acc::DataClause":$dataClause, "bool":$structured,
                    "bool":$implicit, "::mlir::StringAttr":$name),
       [{
+        // Builder provided to ease transition for new data clause modifiers operand.
         build($_builder, $_state, accVarType, var, varType, varPtrPtr, bounds,
           asyncOperands, asyncOperandsDeviceType, asyncOnly, dataClause,
           structured, implicit, ::mlir::acc::DataClauseModifier::none, name);
+      }]>,
+    OpBuilder<(ins "::mlir::Type":$accVarType, "::mlir::Value":$var,
+                   "::mlir::Type":$varType, "::mlir::Value":$varPtrPtr,
+                   "::mlir::ValueRange":$bounds,
+                   "::mlir::ValueRange":$asyncOperands,
+                   "::mlir::ArrayAttr":$asyncOperandsDeviceType,
+                   "::mlir::ArrayAttr":$asyncOnly,
+                   "::mlir::acc::DataClause":$dataClause, "bool":$structured,
+                   "bool":$implicit,
+                   "::mlir::acc::DataClauseModifier":$modifiers,
+                   "::mlir::StringAttr":$name),
+      [{
+        // Builder provided to simplify building after recipe operand was added.
+        build($_builder, $_state, accVarType, var, varType, varPtrPtr, bounds,
+              asyncOperands, asyncOperandsDeviceType, asyncOnly, dataClause,
+              structured, implicit, modifiers, name, /*recipe=*/nullptr);
       }]>,
     ];
 }
@@ -1645,12 +1684,9 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
       Optional<I1>:$ifCond,
       Optional<I1>:$selfCond,
       UnitAttr:$selfAttr,
-      Variadic<AnyType>:$reductionOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$reductionOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr,
       UnitAttr:$combined);
@@ -1776,16 +1812,12 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
-      | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
-            type($firstprivateOperands), $firstprivatizationRecipes)
-        `)`
+      | `firstprivate` `(` $firstprivateOperands `:` type($firstprivateOperands) `)`
       | `num_gangs` `(` custom<NumGangs>($numGangs,
             type($numGangs), $numGangsDeviceType, $numGangsSegments) `)`
       | `num_workers` `(` custom<DeviceTypeOperands>($numWorkers,
             type($numWorkers), $numWorkersDeviceType) `)`
-      | `private` `(` custom<SymOperandList>(
-            $privateOperands, type($privateOperands), $privatizationRecipes)
-        `)`
+      | `private` `(` $privateOperands `:` type($privateOperands) `)`
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
@@ -1793,9 +1825,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
           $waitOnly)
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
-      | `reduction` `(` custom<SymOperandList>(
-            $reductionOperands, type($reductionOperands), $reductionRecipes)
-        `)`
+      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
     )
     $region attr-dict-with-keyword
   }];
@@ -1843,12 +1873,9 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       Optional<I1>:$ifCond,
       Optional<I1>:$selfCond,
       UnitAttr:$selfAttr,
-      Variadic<AnyType>:$reductionOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$reductionOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr,
       UnitAttr:$combined);
@@ -1929,20 +1956,14 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
       | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
-      | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
-            type($firstprivateOperands), $firstprivatizationRecipes)
-        `)`
-      | `private` `(` custom<SymOperandList>(
-            $privateOperands, type($privateOperands), $privatizationRecipes)
-        `)`
+      | `firstprivate` `(` $firstprivateOperands `:` type($firstprivateOperands) `)`
+      | `private` `(` $privateOperands `:` type($privateOperands) `)`
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
           $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
           $waitOnly)
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
-      | `reduction` `(` custom<SymOperandList>(
-            $reductionOperands, type($reductionOperands), $reductionRecipes)
-        `)`
+      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
     )
     $region attr-dict-with-keyword
   }];
@@ -2164,6 +2185,8 @@ def OpenACC_KernelEnvironmentOp : OpenACC_Op<"kernel_environment",
     )
     $region attr-dict
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2537,6 +2560,12 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     device-type-aware getter methods. When modifying these operands, the
     corresponding `device_type` attributes must be updated to maintain
     consistency between operands and their target device types.
+
+    The `unstructured` attribute indicates that the loops inside the OpenACC
+    construct contain early exits and cannot be lowered to structured MLIR
+    operations. When this flag is set, the acc.loop should have no induction
+    variables and the loop must be implemented via explicit control flow
+    inside its body.
   }];
 
   let arguments = (ins
@@ -2565,12 +2594,10 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       OptionalAttr<DeviceTypeArrayAttr>:$tileOperandsDeviceType,
       Variadic<OpenACC_AnyPointerOrMappableType>:$cacheOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizationRecipes,
       Variadic<AnyType>:$reductionOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
-      OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined
+      OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined,
+      UnitAttr:$unstructured
   );
 
   let results = (outs Variadic<AnyType>:$results);
@@ -2746,16 +2773,12 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
             $workerNumOperandsDeviceType, $worker)
       | `vector` `` custom<DeviceTypeOperandsWithKeywordOnly>($vectorOperands,
             type($vectorOperands), $vectorOperandsDeviceType, $vector)
-      | `private` `(` custom<SymOperandList>(
-            $privateOperands, type($privateOperands), $privatizationRecipes) `)`
-      | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
-            type($firstprivateOperands), $firstprivatizationRecipes) `)`
+      | `private` `(` $privateOperands `:` type($privateOperands) `)`
+      | `firstprivate` `(` $firstprivateOperands `:` type($firstprivateOperands) `)`
       | `tile` `(` custom<DeviceTypeOperandsWithSegment>($tileOperands,
             type($tileOperands), $tileOperandsDeviceType, $tileOperandsSegments)
         `)`
-      | `reduction` `(` custom<SymOperandList>(
-            $reductionOperands, type($reductionOperands), $reductionRecipes)
-        `)`
+      | `reduction` `(` $reductionOperands  `:` type($reductionOperands) `)`
       | `cache` `(` $cacheOperands `:` type($cacheOperands) `)`
     )
     custom<LoopControl>($region, $lowerbound, type($lowerbound), $upperbound,
@@ -2805,11 +2828,8 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
           /*tileOperandsDeviceType=*/nullptr,
           /*cacheOperands=*/{},
           /*privateOperands=*/{},
-          /*privatizationRecipes=*/nullptr,
           /*firstprivateOperands=*/{},
-          /*firstprivatizationRecipes=*/nullptr,
           /*reductionOperands=*/{},
-          /*reductionRecipes=*/nullptr,
           /*combined=*/nullptr);
       }]
     >

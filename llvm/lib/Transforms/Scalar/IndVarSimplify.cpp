@@ -198,6 +198,18 @@ static bool ConvertToSInt(const APFloat &APF, int64_t &IntVal) {
   return true;
 }
 
+// Ensure we stay within the bounds of fp values that can be represented as
+// integers without gaps, which are 2^24 and 2^53 for IEEE-754 single and double
+// precision respectively (both on negative and positive side).
+static bool isRepresentableAsExactInteger(ConstantFP *FPVal, int64_t IntVal) {
+  const auto &InitValueFltSema = FPVal->getValueAPF().getSemantics();
+  if (!APFloat::isIEEELikeFP(InitValueFltSema))
+    return false;
+
+  return isUIntN(APFloat::semanticsPrecision(InitValueFltSema),
+                 AbsoluteValue(IntVal));
+}
+
 /// If the loop has floating induction variable then insert corresponding
 /// integer induction variable if possible.
 /// For example,
@@ -214,7 +226,8 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   auto *InitValueVal = dyn_cast<ConstantFP>(PN->getIncomingValue(IncomingEdge));
 
   int64_t InitValue;
-  if (!InitValueVal || !ConvertToSInt(InitValueVal->getValueAPF(), InitValue))
+  if (!InitValueVal || !ConvertToSInt(InitValueVal->getValueAPF(), InitValue) ||
+      !isRepresentableAsExactInteger(InitValueVal, InitValue))
     return false;
 
   // Check IV increment. Reject this PN if increment operation is not
@@ -264,7 +277,8 @@ bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   ConstantFP *ExitValueVal = dyn_cast<ConstantFP>(Compare->getOperand(1));
   int64_t ExitValue;
   if (ExitValueVal == nullptr ||
-      !ConvertToSInt(ExitValueVal->getValueAPF(), ExitValue))
+      !ConvertToSInt(ExitValueVal->getValueAPF(), ExitValue) ||
+      !isRepresentableAsExactInteger(ExitValueVal, ExitValue))
     return false;
 
   // Find new predicate for integer comparison.
@@ -1841,7 +1855,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // is that enough for *all* side effects?
   bool HasThreadLocalSideEffects = false;
   for (BasicBlock *BB : L->blocks())
-    for (auto &I : *BB)
+    for (auto &I : *BB) {
       // TODO:isGuaranteedToTransfer
       if (I.mayHaveSideEffects()) {
         if (!LoopPredicationTraps)
@@ -1858,6 +1872,18 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
           return false;
         }
       }
+
+      // Skip if the loop has tokens referenced outside the loop to avoid
+      // changing convergence behavior.
+      if (I.getType()->isTokenTy()) {
+        for (User *U : I.users()) {
+          Instruction *UserInst = dyn_cast<Instruction>(U);
+          if (UserInst && !L->contains(UserInst)) {
+            return false;
+          }
+        }
+      }
+    }
 
   bool Changed = false;
   // Finally, do the actual predication for all predicatable blocks.  A couple

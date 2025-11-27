@@ -272,7 +272,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
       const MachineOperand &Src2 = MI.getOperand(2);
       bool Is32BitReg = Opc == X86::ADD32ri_ND || Opc == X86::ADD32rr_ND;
       const MCInstrDesc &NewDesc =
-          ST.getInstrInfo()->get(Is32BitReg ? X86::LEA32r : X86::LEA64r);
+          ST.getInstrInfo()->get(Is32BitReg ? X86::LEA64_32r : X86::LEA64r);
       if (Is32BitReg)
         Src1 = getX86SubSuperRegister(Src1, 64);
       MachineInstrBuilder MIB = BuildMI(MBB, MI, MI.getDebugLoc(), NewDesc, Dst)
