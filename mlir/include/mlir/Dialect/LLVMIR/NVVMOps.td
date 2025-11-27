@@ -1998,45 +1998,57 @@ def NVVM_ConvertF4x2ToF16x2Op :
 
 // Base class for conversions from F32x2 to FPx2 formats
 // (F16x2, BF16x2)
-// TODO: In separate PR, add .rn and .rz rounding variants for this conversion
-// as currently only support .rs rounding mode
 class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstType> :
-  NVVM_Op<mnemonic, [Pure, NVVMRequiresSMa<[100, 103]>]>,
+  NVVM_Op<mnemonic, [Pure]>,
   Results<(outs dstType:$dst)>,
-  Arguments<(ins F32:$src_hi, F32:$src_lo, I32:$rbits,
-                 DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::RS">:$rnd,
+  Arguments<(ins F32:$src_hi, F32:$src_lo,
+                 Optional<I32>:$random_bits,
+                 DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
                  DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
                  DefaultValuedAttr<BoolAttr, "false">:$relu)> {
-  let summary = "Convert two F32 values to packed " # dstFormat # " with stochastic rounding (.rs)";
+  let summary = "Convert two F32 values to packed " # !tolower(dstFormat) # ".";
   let description = [{
-    Converts two F32 values to packed }] # dstFormat # [{ format using stochastic 
-    rounding (.rs) mode with randomness provided by the `rbits` parameter. The 
-    `relu` attribute clamps negative results to 0. The `sat` attribute determines 
-    saturation behavior. The `src_hi` and `src_lo` parameters correspond to operands 
-    `a` and `b` in the PTX ISA, respectively.
+    Converts two F32 values to packed }] # !tolower(dstFormat) # [{ format with 
+    the specified rounding mode. The `src_hi` and `src_lo` parameters 
+    correspond to operands `a` and `b` in the PTX ISA, respectively.
+    
+    The `random_bits` parameter is required for stochastic rounding and 
+    provides the [random bits](}] #
+    !if(!eq(dstFormat, "F16x2"),
+    "https://docs.nvidia.com/cuda/parallel-thread-execution/#cvt-rs-rbits-layout-f16",
+    "https://docs.nvidia.com/cuda/parallel-thread-execution/#cvt-rs-rbits-layout-bf16") #
+    [{) to be used for the conversion.
+
+    The `relu` attribute clamps negative results to 0.
+
+    The `sat` attribute determines saturation behavior.
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
   
-  let assemblyFormat = "$src_hi `,` $src_lo `,` $rbits attr-dict `:` type($dst)";
+  let assemblyFormat = "$src_hi `,` $src_lo (`,` $random_bits^)? attr-dict `:` type($dst)";
 
   let hasVerifier = 1;
   
   let extraClassDeclaration = [{
-    llvm::Intrinsic::ID getIntrinsicID();
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(
+      NVVM::ConvertF32x2To}] # dstFormat # [{Op &op, 
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
   
   string llvmBuilder = [{
-    auto intId = op.getIntrinsicID();
-    $dst = createIntrinsicCall(builder, intId, {$src_hi, $src_lo, $rbits});
+    auto [intId, args] = mlir::NVVM::ConvertF32x2To}] # dstFormat # 
+    [{Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    $dst = createIntrinsicCall(builder, intId, args);
   }];
-  }
+}
 
-// F32x2 -> F16x2 with stochastic rounding
-def NVVM_ConvertF32x2ToF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"f16x2", "convert.f32x2.to.f16x2", VectorOfLengthAndType<[2], [F16]>>;
+// F32x2 -> F16x2
+def NVVM_ConvertF32x2ToF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"F16x2", "convert.f32x2.to.f16x2", VectorOfLengthAndType<[2], [F16]>>;
 
-// F32x2 -> BF16x2 with stochastic rounding
-def NVVM_ConvertF32x2ToBF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"bf16x2", "convert.f32x2.to.bf16x2", VectorOfLengthAndType<[2], [BF16]>>;
+// F32x2 -> BF16x2
+def NVVM_ConvertF32x2ToBF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"BF16x2", "convert.f32x2.to.bf16x2", VectorOfLengthAndType<[2], [BF16]>>;
 
 // Base class for stochastic rounding conversions from F32x4 to FPx4 formats
 // (E4M3x4, E5M2x4, E2M3x4, E3M2x4, E2M1x4)
@@ -3297,12 +3309,7 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch",
   let llvmBuilder = [{
     auto [id, args] = NVVM::PrefetchOp::getIntrinsicIDAndArgs(op,
                                           moduleTranslation, builder);
-
-    if(op.getTensormap())
-      // Overloaded intrinsic
-      createIntrinsicCall(builder, id, args, {args[0]->getType()});
-    else
-      createIntrinsicCall(builder, id, args);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 
