@@ -4145,41 +4145,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, [IsRotateRight](const APSInt &Value, APSInt Amount) {
-          // Normalize shift amount to [0, BitWidth) range to match runtime
-          // behavior. This matches the algorithm in ExprConstant.cpp.
-          unsigned BitWidth = Value.getBitWidth();
-          unsigned AmtBitWidth = Amount.getBitWidth();
-          if (BitWidth == 1) {
-            // Rotating a 1-bit value is always a no-op
-            Amount = APSInt(llvm::APInt(AmtBitWidth, 0), Amount.isUnsigned());
-          } else {
-            // Divisor is always unsigned to avoid misinterpreting BitWidth as
-            // negative in small bit widths (e.g., BitWidth=2 would be -2 if
-            // signed).
-            APSInt Divisor;
-            if (AmtBitWidth > BitWidth) {
-              Divisor = APSInt(llvm::APInt(AmtBitWidth, BitWidth),
-                               /*isUnsigned=*/true);
-            } else {
-              Divisor =
-                  APSInt(llvm::APInt(BitWidth, BitWidth), /*isUnsigned=*/true);
-              if (AmtBitWidth < BitWidth) {
-                Amount = Amount.extend(BitWidth);
-              }
-            }
-
-            // Normalize to [0, BitWidth)
-            if (Amount.isSigned()) {
-              Amount = APSInt(Amount.srem(Divisor), /*isUnsigned=*/false);
-              if (Amount.isNegative()) {
-                APSInt SignedDivisor(Divisor, /*isUnsigned=*/false);
-                Amount += SignedDivisor;
-              }
-            } else {
-              Amount = APSInt(Amount.urem(Divisor), /*isUnsigned=*/true);
-            }
-          }
-
+          Amount = NormalizeRotateAmount(Value, Amount);
           return IsRotateRight ? Value.rotr(Amount.getZExtValue())
                                : Value.rotl(Amount.getZExtValue());
         });
