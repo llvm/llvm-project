@@ -230,6 +230,35 @@ the report will look as follow:
 
 <a id="orgcc38a36"></a>
 
+## Pausing Analysis
+
+Archer's analysis may be paused, restarted or ended using OpenMP's
+omp_control_tool functionality with omp_control_tool_[pause|start|end].
+
+Suppose a parallel for loop shall not be considered by Archer:
+
+     1  #include <stdio.h>
+     2  #include <omp.h>
+     3
+     4  #define N 1000
+     5
+     6  int main (int argc, char **argv)
+     7  {
+     8    int a[N];
+     9
+    10  #pragma omp parallel
+    11  {
+    12    omp_control_tool(omp_control_tool_pause, 0, NULL);
+    13  #pragma omp for
+    14    for (int i = 0; i < N - 1; i++) {
+    15      a[i] = a[i + 1];
+    16    }
+    17    omp_control_tool(omp_control_tool_start, 0, NULL);
+    18  }
+    19  }
+
+For more information on the usage of omp_control_tool, see the OpenMP specification.
+
 # Contacts and Support
 
 -   [Google group](https://groups.google.com/forum/#!forum/archer-pruner)
