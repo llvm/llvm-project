@@ -111,8 +111,11 @@ void buildPostGPUCommonPassPipeline(
     pm.addPass(createGpuToLLVMConversionPass(gpuToLLVMOptions));
   }
   pm.addPass(createLowerAffinePass());
+  pm.addPass(createConvertVectorToLLVMPass());
   pm.addPass(createConvertToLLVMPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   // gpu-module-to-binary
   {
     GpuModuleToBinaryPassOptions gpuToModuleBinOptions;

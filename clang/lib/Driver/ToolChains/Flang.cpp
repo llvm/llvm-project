@@ -11,6 +11,7 @@
 
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/CommonArgs.h"
+#include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/Path.h"
@@ -1059,14 +1060,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Pass the path to compiler resource files.
   CmdArgs.push_back("-resource-dir");
   CmdArgs.push_back(D.ResourceDir.c_str());
-
-  // Default intrinsic module dirs must be added after any user-provided
-  // -fintrinsic-modules-path to have lower precedence
-  if (std::optional<std::string> IntrModPath =
-          TC.getDefaultIntrinsicModuleDir()) {
-    CmdArgs.push_back("-fintrinsic-modules-path");
-    CmdArgs.push_back(Args.MakeArgString(*IntrModPath));
-  }
 
   // Offloading related options
   addOffloadOptions(C, Inputs, JA, Args, CmdArgs);

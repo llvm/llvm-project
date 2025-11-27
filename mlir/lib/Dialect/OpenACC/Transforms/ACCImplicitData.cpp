@@ -277,8 +277,7 @@ private:
   /// Generates recipes for a list of variables.
   void generateRecipes(ModuleOp &module, OpBuilder &builder,
                        Operation *computeConstructOp,
-                       const SmallVector<Value> &newOperands,
-                       SmallVector<Attribute> &newRecipeSyms);
+                       const SmallVector<Value> &newOperands);
 };
 
 /// Determines if a variable is a candidate for implicit data mapping.
@@ -453,23 +452,23 @@ ACCImplicitData::generateFirstprivateRecipe(ModuleOp &module, Value var,
 
 void ACCImplicitData::generateRecipes(ModuleOp &module, OpBuilder &builder,
                                       Operation *computeConstructOp,
-                                      const SmallVector<Value> &newOperands,
-                                      SmallVector<Attribute> &newRecipeSyms) {
+                                      const SmallVector<Value> &newOperands) {
   auto &accSupport = this->getAnalysis<acc::OpenACCSupport>();
   for (auto var : newOperands) {
     auto loc{var.getLoc()};
-    if (isa<acc::PrivateOp>(var.getDefiningOp())) {
+    if (auto privateOp = dyn_cast<acc::PrivateOp>(var.getDefiningOp())) {
       auto recipe = generatePrivateRecipe(
           module, acc::getVar(var.getDefiningOp()), loc, builder, accSupport);
       if (recipe)
-        newRecipeSyms.push_back(SymbolRefAttr::get(module->getContext(),
-                                                   recipe.getSymName().str()));
-    } else if (isa<acc::FirstprivateOp>(var.getDefiningOp())) {
+        privateOp.setRecipeAttr(
+            SymbolRefAttr::get(module->getContext(), recipe.getSymName()));
+    } else if (auto firstprivateOp =
+                   dyn_cast<acc::FirstprivateOp>(var.getDefiningOp())) {
       auto recipe = generateFirstprivateRecipe(
           module, acc::getVar(var.getDefiningOp()), loc, builder, accSupport);
       if (recipe)
-        newRecipeSyms.push_back(SymbolRefAttr::get(module->getContext(),
-                                                   recipe.getSymName().str()));
+        firstprivateOp.setRecipeAttr(SymbolRefAttr::get(
+            module->getContext(), recipe.getSymName().str()));
     } else {
       accSupport.emitNYI(var.getLoc(), "implicit reduction");
     }
@@ -613,56 +612,22 @@ static void legalizeValuesInRegion(Region &accRegion,
   }
 }
 
-// Adds the private operands and private recipes to the data construct
-// operation in a valid way (ensures that the index in the privatizationRecipes
-// array matches the position of the private operand).
+// Adds the private operands to the compute construct operation.
 template <typename OpT>
-static void
-addNewPrivateOperands(OpT &accOp, const SmallVector<Value> &privateOperands,
-                      const SmallVector<Attribute> &privateRecipeSyms) {
-  assert(privateOperands.size() == privateRecipeSyms.size());
+static void addNewPrivateOperands(OpT &accOp,
+                                  const SmallVector<Value> &privateOperands) {
   if (privateOperands.empty())
     return;
 
-  SmallVector<Attribute> completePrivateRecipesSyms;
-  SmallVector<Attribute> completeFirstprivateRecipesSyms;
-  SmallVector<Value> newPrivateOperands;
-  SmallVector<Value> newFirstprivateOperands;
-
-  // Collect all of the existing recipes since they are held in an attribute.
-  // To add to it, we need to create a brand new one.
-  if (accOp.getPrivatizationRecipes().has_value())
-    for (auto privatization : accOp.getPrivatizationRecipesAttr())
-      completePrivateRecipesSyms.push_back(privatization);
-  if (accOp.getFirstprivatizationRecipes().has_value())
-    for (auto privatization : accOp.getFirstprivatizationRecipesAttr())
-      completeFirstprivateRecipesSyms.push_back(privatization);
-
-  // Now separate between private and firstprivate operands.
-  for (auto [priv, privateRecipeSym] :
-       llvm::zip(privateOperands, privateRecipeSyms)) {
+  for (auto priv : privateOperands) {
     if (isa<acc::PrivateOp>(priv.getDefiningOp())) {
-      newPrivateOperands.push_back(priv);
-      completePrivateRecipesSyms.push_back(privateRecipeSym);
+      accOp.getPrivateOperandsMutable().append(priv);
     } else if (isa<acc::FirstprivateOp>(priv.getDefiningOp())) {
-      newFirstprivateOperands.push_back(priv);
-      completeFirstprivateRecipesSyms.push_back(privateRecipeSym);
+      accOp.getFirstprivateOperandsMutable().append(priv);
     } else {
-      llvm_unreachable("unhandled private operand");
+      llvm_unreachable("unhandled reduction operand");
     }
   }
-
-  // Append all of the new private operands to their appropriate list.
-  accOp.getPrivateOperandsMutable().append(newPrivateOperands);
-  accOp.getFirstprivateOperandsMutable().append(newFirstprivateOperands);
-
-  // Update the privatizationRecipes attributes to hold all of the new recipes.
-  if (!completePrivateRecipesSyms.empty())
-    accOp.setPrivatizationRecipesAttr(
-        ArrayAttr::get(accOp.getContext(), completePrivateRecipesSyms));
-  if (!completeFirstprivateRecipesSyms.empty())
-    accOp.setFirstprivatizationRecipesAttr(
-        ArrayAttr::get(accOp.getContext(), completeFirstprivateRecipesSyms));
 }
 
 static Operation *findDataExitOp(Operation *dataEntryOp) {
@@ -831,13 +796,11 @@ void ACCImplicitData::generateImplicitDataOps(
   // of the data clause ops)
   legalizeValuesInRegion(accRegion, newPrivateOperands, newDataClauseOperands);
 
-  SmallVector<Attribute> newPrivateRecipeSyms;
   // 5) Generate private recipes which are required for properly attaching
   // private operands.
   if constexpr (!std::is_same_v<OpT, acc::KernelsOp> &&
                 !std::is_same_v<OpT, acc::KernelEnvironmentOp>)
-    generateRecipes(module, builder, computeConstructOp, newPrivateOperands,
-                    newPrivateRecipeSyms);
+    generateRecipes(module, builder, computeConstructOp, newPrivateOperands);
 
   // 6) Figure out insertion order for the new data clause operands.
   SmallVector<Value> sortedDataClauseOperands(
@@ -848,15 +811,10 @@ void ACCImplicitData::generateImplicitDataOps(
   // 7) Generate the data exit operations.
   generateDataExitOperations(builder, computeConstructOp, newDataClauseOperands,
                              sortedDataClauseOperands);
-
   // 8) Add all of the new operands to the compute construct op.
-  assert(newPrivateOperands.size() == newPrivateRecipeSyms.size() &&
-         "sizes must match");
   if constexpr (!std::is_same_v<OpT, acc::KernelsOp> &&
                 !std::is_same_v<OpT, acc::KernelEnvironmentOp>)
-    addNewPrivateOperands(computeConstructOp, newPrivateOperands,
-                          newPrivateRecipeSyms);
-
+    addNewPrivateOperands(computeConstructOp, newPrivateOperands);
   computeConstructOp.getDataClauseOperandsMutable().assign(
       sortedDataClauseOperands);
 }
