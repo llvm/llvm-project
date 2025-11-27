@@ -18,6 +18,8 @@ namespace fir {
 
 namespace {
 class FIRToSCFPass : public fir::impl::FIRToSCFPassBase<FIRToSCFPass> {
+  using FIRToSCFPassBase::FIRToSCFPassBase;
+
 public:
   void runOnOperation() override;
 };
@@ -229,8 +231,4 @@ void FIRToSCFPass::runOnOperation() {
   mlir::RewritePatternSet patterns(&getContext());
   fir::populateFIRToSCFRewrites(patterns, parallelUnordered);
   walkAndApplyPatterns(getOperation(), std::move(patterns));
-}
-
-std::unique_ptr<mlir::Pass> fir::createFIRToSCFPass() {
-  return std::make_unique<FIRToSCFPass>();
 }
