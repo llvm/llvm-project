@@ -115,6 +115,11 @@ static const unsigned UnknownAddressSpace =
 DEBUG_COUNTER(StraightLineStrengthReduceCounter, "slsr-counter",
               "Controls whether rewriteCandidate is executed.");
 
+// Only for testing.
+static cl::opt<bool>
+    EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
+                           cl::desc("Enable poison-reuse guard"));
+
 namespace {
 
 class StraightLineStrengthReduceLegacyPass : public FunctionPass {
@@ -680,8 +685,9 @@ bool StraightLineStrengthReduce::candidatePredicate(Candidate *Basis,
   SmallVector<Instruction *> DropPoisonGeneratingInsts;
   // Ensure the IR of Basis->Ins is not more poisonous than its SCEV.
   if (!isSimilar(C, *Basis, K) ||
-      !SE->canReuseInstruction(SE->getSCEV(Basis->Ins), Basis->Ins,
-                               DropPoisonGeneratingInsts))
+      (EnablePoisonReuseGuard &&
+       !SE->canReuseInstruction(SE->getSCEV(Basis->Ins), Basis->Ins,
+                                DropPoisonGeneratingInsts)))
     return false;
 
   assert(DT->dominates(Basis->Ins, C.Ins));
