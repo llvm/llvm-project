@@ -17,7 +17,6 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
-#include "clang/AST/Attrs.inc"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -41,7 +40,6 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -7111,7 +7109,7 @@ static bool CheckMissingFormatAttribute(
     unsigned FirstDataArg, FormatStringType FormatType, unsigned CallerParamIdx,
     SourceLocation Loc) {
   if (S->getDiagnostics().isIgnored(diag::warn_missing_format_attribute,
-                                    SourceLocation()))
+                                    Loc))
     return false;
 
   DeclContext *DC = S->CurContext;
