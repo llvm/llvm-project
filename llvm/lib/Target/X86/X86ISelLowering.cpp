@@ -40862,8 +40862,9 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
       }))
     return SDValue();
 
-  bool isHoriz = (Opcode0 == X86ISD::FHADD || Opcode0 == X86ISD::HADD ||
-                  Opcode0 == X86ISD::FHSUB || Opcode0 == X86ISD::HSUB);
+  bool isHoriz = (Opcode0 == X86ISD::FHADD || Opcode0 == X86ISD::FHSUB ||
+                  Opcode0 == X86ISD::HADD || Opcode0 == X86ISD::HSUB ||
+                  Opcode0 == X86ISD::HADDS || Opcode0 == X86ISD::HSUBS);
   bool isPack = (Opcode0 == X86ISD::PACKSS || Opcode0 == X86ISD::PACKUS);
   if (!isHoriz && !isPack)
     return SDValue();
@@ -54074,30 +54075,28 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
   case ISD::SUB:
   case ISD::SADDSAT:
   case ISD::SSUBSAT:
-    if (IsSat && !((Subtarget.hasSSSE3() && VT == MVT::v8i16) ||
-                   (Subtarget.hasAVX2() && VT == MVT::v16i16)))
+    if (!Subtarget.hasSSSE3())
       break;
-    if (!IsSat &&
-        !(Subtarget.hasSSSE3() && (VT == MVT::v8i16 || VT == MVT::v4i32 ||
-                                   VT == MVT::v16i16 || VT == MVT::v8i32)))
-      break;
+    if (VT == MVT::v8i16 || VT == MVT::v16i16 ||
+        (!IsSat && (VT == MVT::v4i32 || VT == MVT::v8i32))) {
 
-    SDValue LHS = N->getOperand(0);
-    SDValue RHS = N->getOperand(1);
-    auto HorizOpcode = IsSat ? (IsAdd ? X86ISD::HADDS : X86ISD::HSUBS)
-                             : (IsAdd ? X86ISD::HADD : X86ISD::HSUB);
-    if (isHorizontalBinOp(HorizOpcode, LHS, RHS, DAG, Subtarget, IsAdd,
-                          PostShuffleMask, MergableHorizOp(HorizOpcode))) {
-      auto HOpBuilder = [HorizOpcode](SelectionDAG &DAG, const SDLoc &DL,
-                                      ArrayRef<SDValue> Ops) {
-        return DAG.getNode(HorizOpcode, DL, Ops[0].getValueType(), Ops);
-      };
-      SDValue HorizBinOp = SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT,
-                                            {LHS, RHS}, HOpBuilder);
-      if (!PostShuffleMask.empty())
-        HorizBinOp = DAG.getVectorShuffle(VT, SDLoc(HorizBinOp), HorizBinOp,
-                                          DAG.getUNDEF(VT), PostShuffleMask);
-      return HorizBinOp;
+      SDValue LHS = N->getOperand(0);
+      SDValue RHS = N->getOperand(1);
+      auto HorizOpcode = IsSat ? (IsAdd ? X86ISD::HADDS : X86ISD::HSUBS)
+                               : (IsAdd ? X86ISD::HADD : X86ISD::HSUB);
+      if (isHorizontalBinOp(HorizOpcode, LHS, RHS, DAG, Subtarget, IsAdd,
+                            PostShuffleMask, MergableHorizOp(HorizOpcode))) {
+        auto HOpBuilder = [HorizOpcode](SelectionDAG &DAG, const SDLoc &DL,
+                                        ArrayRef<SDValue> Ops) {
+          return DAG.getNode(HorizOpcode, DL, Ops[0].getValueType(), Ops);
+        };
+        SDValue HorizBinOp = SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT,
+                                              {LHS, RHS}, HOpBuilder);
+        if (!PostShuffleMask.empty())
+          HorizBinOp = DAG.getVectorShuffle(VT, SDLoc(HorizBinOp), HorizBinOp,
+                                            DAG.getUNDEF(VT), PostShuffleMask);
+        return HorizBinOp;
+      }
     }
     break;
   }
