@@ -61,7 +61,7 @@ protected:
 
   /// Tracks the mapping of unit level debug information variables to debug
   /// information entries.
-  DenseMap<const MDNode *, DIE *> MDNodeToDieMap;
+  DwarfInfoHolder InfoHolder;
 
   /// A list of all the DIEBlocks in use.
   std::vector<DIEBlock *> DIEBlocks;
@@ -139,7 +139,7 @@ public:
   /// We delegate the request to DwarfDebug when the MDNode can be part of the
   /// type system, since DIEs for the type system can be shared across CUs and
   /// the mappings are kept in DwarfDebug.
-  DIE *getDIE(const DINode *D) const;
+  DIE *getDIE(const DINode *D) const { return getDIEs(D).getDIE(D); }
 
   /// Returns a fresh newly allocated DIELoc.
   DIELoc *getDIELoc() { return new (DIEValueAllocator) DIELoc; }
@@ -152,6 +152,18 @@ public:
   void insertDIE(const DINode *Desc, DIE *D);
 
   void insertDIE(DIE *D);
+
+  const DwarfInfoHolder &getDIEs(const DINode *N) const {
+    if (isShareableAcrossCUs(N))
+      return DU->getDIEs();
+
+    return InfoHolder;
+  }
+
+  DwarfInfoHolder &getDIEs(const DINode *N) {
+    return const_cast<DwarfInfoHolder &>(
+        const_cast<const DwarfUnit *>(this)->getDIEs(N));
+  }
 
   /// Add a flag that is true to the DIE.
   void addFlag(DIE &Die, dwarf::Attribute Attribute);
@@ -289,6 +301,8 @@ public:
   /// Create a DIE with the given Tag, add the DIE to its parent, and
   /// call insertDIE if MD is not null.
   DIE &createAndAddDIE(dwarf::Tag Tag, DIE &Parent, const DINode *N = nullptr);
+  DIE &createAndAddSubprogramDIE(DIE &Parent, const DISubprogram *SP,
+                                 const Function *F);
 
   bool useSegmentedStringOffsetsTable() const {
     return DD->useSegmentedStringOffsetsTable();
@@ -389,6 +403,9 @@ private:
                                          const DITemplateTypeParameter *TP);
   void constructTemplateValueParameterDIE(DIE &Buffer,
                                           const DITemplateValueParameter *TVP);
+
+  DIE *getExistingSubprogramDIE(const DISubprogram *SP,
+                                const Function *FnHint) const;
 
   /// Return the default lower bound for an array.
   ///
