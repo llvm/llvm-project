@@ -105,6 +105,15 @@ def TosaReduceTransposes : Pass<"tosa-reduce-transposes", "func::FuncOp"> {
   }];
 }
 
+def TosaArithConstantToTosaConstPass
+    : Pass<"tosa-arith-const-to-tosa-const", "func::FuncOp"> {
+  let summary = "Convert tensor arith.constant operations into tosa.const";
+  let description = [{
+    Normalizes tensor-valued arith.constant operations into tosa.const so that
+    subsequent TOSA passes operate on a consistent representation of constants.
+  }];
+}
+
 def TosaConvertIntegerTypeToSignless : Pass<"tosa-convert-integer-type-to-signless", "func::FuncOp"> {
   let summary = "Convert integer types to signless";
   let description = [{
