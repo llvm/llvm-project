@@ -1509,7 +1509,8 @@ let TargetPrefix = "nvvm" in {
         [llvm_v2bf16_ty, llvm_v2bf16_ty, llvm_v2bf16_ty]>;
   } // relu
 
-  // oob
+  // oob (out-of-bounds) - clamps the result to 0 if either of the operands is 
+  // OOB NaN value.
   foreach relu = ["", "_relu"] in {
     def int_nvvm_fma_rn_oob # relu # _f16 : NVVMBuiltin,
       PureIntrinsic<[llvm_half_ty],
@@ -1619,7 +1620,6 @@ let TargetPrefix = "nvvm" in {
     } // rnd
   }
   
-  
   //
   // Sub
   //
@@ -1628,6 +1628,17 @@ let TargetPrefix = "nvvm" in {
       PureIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
 
     def int_nvvm_sub_rn # ftz # _sat_f16x2 : NVVMBuiltin,
+      PureIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
+  } // ftz
+
+  //
+  // Mul
+  //
+  foreach ftz = ["", "_ftz"] in {
+    def int_nvvm_mul_rn # ftz # _sat_f16 : NVVMBuiltin,
+      PureIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
+
+    def int_nvvm_mul_rn # ftz # _sat_f16x2 : NVVMBuiltin,
       PureIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
   } // ftz
 
