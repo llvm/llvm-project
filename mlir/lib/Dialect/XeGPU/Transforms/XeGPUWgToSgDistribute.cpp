@@ -86,8 +86,16 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
   if (origOffsets.empty())
     return failure();
 
+  // if op is xegpu::CreateNdDescOp, call op.getDescLayoutAttr()
+  xegpu::DistributeLayoutAttr layout;
+  if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp> ||
+                std::is_same_v<OpType, xegpu::StoreMatrixOp>) {
+    layout = op.getLayoutAttr();
+  } else {
+    layout = op.getDescLayoutAttr();
+  }
+
   // not applicable to ops without workgroup layout attributes
-  xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
   if (!layout || !layout.isForWorkgroup())
     return failure();
 
@@ -190,7 +198,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
     xegpu::TensorDescType tdescTy = op.getType();
     ArrayRef<int64_t> wgShape = tdescTy.getShape();
     Type elemTy = tdescTy.getElementType();
-    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    xegpu::DistributeLayoutAttr layout = tdescTy.getLayoutAttr();
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     auto newTdescTy =
         xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
