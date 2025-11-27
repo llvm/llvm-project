@@ -7,7 +7,7 @@
 define <16 x i8> @scalar_to_16xi8(i8 %val) {
 ; CHECK-LABEL: scalar_to_16xi8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 0
+; CHECK-NEXT:    vreplgr2vr.b $vr0, $a0
 ; CHECK-NEXT:    ret
   %ret = insertelement <16 x i8> poison, i8 %val, i32 0
   ret <16 x i8> %ret
@@ -16,7 +16,7 @@ define <16 x i8> @scalar_to_16xi8(i8 %val) {
 define <8 x i16> @scalar_to_8xi16(i16 %val) {
 ; CHECK-LABEL: scalar_to_8xi16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
+; CHECK-NEXT:    vreplgr2vr.h $vr0, $a0
 ; CHECK-NEXT:    ret
   %ret = insertelement <8 x i16> poison, i16 %val, i32 0
   ret <8 x i16> %ret
@@ -25,7 +25,7 @@ define <8 x i16> @scalar_to_8xi16(i16 %val) {
 define <4 x i32> @scalar_to_4xi32(i32 %val) {
 ; CHECK-LABEL: scalar_to_4xi32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    vreplgr2vr.w $vr0, $a0
 ; CHECK-NEXT:    ret
   %ret = insertelement <4 x i32> poison, i32 %val, i32 0
   ret <4 x i32> %ret
@@ -40,7 +40,7 @@ define <2 x i64> @scalar_to_2xi64(i64 %val) {
 ;
 ; LA64-LABEL: scalar_to_2xi64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    vreplgr2vr.d $vr0, $a0
 ; LA64-NEXT:    ret
   %ret = insertelement <2 x i64> poison, i64 %val, i32 0
   ret <2 x i64> %ret
