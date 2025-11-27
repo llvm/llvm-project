@@ -185,15 +185,16 @@ void test_implicit_conversions() {
   auto result4 = __builtin_stdc_rotate_right(uw, RotateAmount::ROTATE_BY_4);
 
   bool b = true;
-  float f = 3.7f;
   auto result5 = __builtin_stdc_rotate_left(10U, b);
-  auto result6 = __builtin_stdc_rotate_left(10U, f);
-  auto result7 = __builtin_stdc_rotate_right(10U, 2.9f); // expected-warning {{implicit conversion from 'float' to 'int' changes value from 2.9000001 to 2}}
 }
 
-void test_no_conversions() {
+void test_invalid_types() {
+  float f = 3.7f;
+  auto result6 = __builtin_stdc_rotate_left(10U, f); // expected-error {{2nd argument must be a scalar integer type (was 'float')}}
+  auto result7 = __builtin_stdc_rotate_right(10U, 2.9f); // expected-error {{2nd argument must be a scalar integer type (was 'float')}}
+
   NoConversion nc;
-  auto result1 = __builtin_stdc_rotate_left(5U, nc); // expected-error {{passing 'NoConversion' to parameter of incompatible type 'int'}} expected-error {{2nd argument must be a scalar signed integer type (was 'NoConversion')}}
+  auto result1 = __builtin_stdc_rotate_left(5U, nc); // expected-error {{2nd argument must be a scalar integer type (was 'NoConversion')}}
 }
 
 } // namespace test_conversions

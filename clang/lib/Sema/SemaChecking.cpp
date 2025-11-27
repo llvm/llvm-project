@@ -2322,6 +2322,66 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+class RotateIntegerConverter : public Sema::ContextualImplicitConverter {
+  unsigned ArgIndex;
+  bool OnlyUnsigned;
+
+  Sema::SemaDiagnosticBuilder emitError(Sema &S, SourceLocation Loc,
+                                        QualType T) {
+    return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
+           << ArgIndex << /*scalar*/ 1
+           << (OnlyUnsigned ? /*unsigned integer*/ 3 : /*integer*/ 1)
+           << /*no fp*/ 0 << T;
+  }
+
+public:
+  RotateIntegerConverter(unsigned ArgIndex, bool OnlyUnsigned)
+      : ContextualImplicitConverter(/*Suppress=*/false,
+                                    /*SuppressConversion=*/true),
+        ArgIndex(ArgIndex), OnlyUnsigned(OnlyUnsigned) {}
+
+  bool match(QualType T) override {
+    return OnlyUnsigned ? T->isUnsignedIntegerType() : T->isIntegerType();
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseNoMatch(Sema &S, SourceLocation Loc,
+                                              QualType T) override {
+    return emitError(S, Loc, T);
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseIncomplete(Sema &S, SourceLocation Loc,
+                                                 QualType T) override {
+    return emitError(S, Loc, T);
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseExplicitConv(Sema &S, SourceLocation Loc,
+                                                   QualType T,
+                                                   QualType ConvTy) override {
+    return emitError(S, Loc, T);
+  }
+
+  Sema::SemaDiagnosticBuilder noteExplicitConv(Sema &S, CXXConversionDecl *Conv,
+                                               QualType ConvTy) override {
+    return S.Diag(Conv->getLocation(), diag::note_conv_function_declared_at);
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseAmbiguous(Sema &S, SourceLocation Loc,
+                                                QualType T) override {
+    return emitError(S, Loc, T);
+  }
+
+  Sema::SemaDiagnosticBuilder noteAmbiguous(Sema &S, CXXConversionDecl *Conv,
+                                            QualType ConvTy) override {
+    return S.Diag(Conv->getLocation(), diag::note_conv_function_declared_at);
+  }
+
+  Sema::SemaDiagnosticBuilder diagnoseConversion(Sema &S, SourceLocation Loc,
+                                                 QualType T,
+                                                 QualType ConvTy) override {
+    llvm_unreachable("conversion functions are permitted");
+  }
+};
+
 /// Checks that __builtin_stdc_rotate_{left,right} was called with two
 /// arguments, that the first argument is an unsigned integer type, and that
 /// the second argument is an integer type.
@@ -2329,7 +2389,10 @@ static bool BuiltinRotateGeneric(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 2))
     return true;
 
-  ExprResult Arg0Res = S.DefaultLvalueConversion(TheCall->getArg(0));
+  // First argument (value to rotate) must be unsigned integer type.
+  RotateIntegerConverter Arg0Converter(1, /*OnlyUnsigned=*/true);
+  ExprResult Arg0Res = S.PerformContextualImplicitConversion(
+      TheCall->getArg(0)->getBeginLoc(), TheCall->getArg(0), Arg0Converter);
   if (Arg0Res.isInvalid())
     return true;
 
@@ -2337,24 +2400,13 @@ static bool BuiltinRotateGeneric(Sema &S, CallExpr *TheCall) {
   TheCall->setArg(0, Arg0);
 
   QualType Arg0Ty = Arg0->getType();
-  if (!Arg0Ty->isUnsignedIntegerType()) {
-    ExprResult ConvArg0Res = S.PerformImplicitConversion(
-        TheCall->getArg(0), S.Context.UnsignedIntTy, AssignmentAction::Passing);
-    if (ConvArg0Res.isUsable()) {
-      Arg0 = ConvArg0Res.get();
-      Arg0Ty = Arg0->getType();
-      TheCall->setArg(0, Arg0);
-    }
-  }
-
-  if (!Arg0Ty->isUnsignedIntegerType()) {
-    S.Diag(Arg0->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-        << 1 << /* scalar */ 1 << /* unsigned integer ty */ 3 << /* no fp */ 0
-        << Arg0Ty;
+  if (!Arg0Ty->isUnsignedIntegerType())
     return true;
-  }
 
-  ExprResult Arg1Res = S.DefaultLvalueConversion(TheCall->getArg(1));
+  // Second argument (rotation count) must be integer type.
+  RotateIntegerConverter Arg1Converter(2, /*OnlyUnsigned=*/false);
+  ExprResult Arg1Res = S.PerformContextualImplicitConversion(
+      TheCall->getArg(1)->getBeginLoc(), TheCall->getArg(1), Arg1Converter);
   if (Arg1Res.isInvalid())
     return true;
 
@@ -2362,22 +2414,8 @@ static bool BuiltinRotateGeneric(Sema &S, CallExpr *TheCall) {
   TheCall->setArg(1, Arg1);
 
   QualType Arg1Ty = Arg1->getType();
-
-  if (!Arg1Ty->isIntegerType()) {
-    ExprResult ConvArg1Res = S.PerformImplicitConversion(
-        TheCall->getArg(1), S.Context.IntTy, AssignmentAction::Passing);
-    if (ConvArg1Res.isUsable()) {
-      Arg1 = ConvArg1Res.get();
-      Arg1Ty = Arg1->getType();
-      TheCall->setArg(1, Arg1);
-    }
-  }
-
-  if (!Arg1Ty->isIntegerType()) {
-    S.Diag(Arg1->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-        << 2 << /* scalar */ 1 << /* integer ty */ 2 << /* no fp */ 0 << Arg1Ty;
+  if (!Arg1Ty->isIntegerType())
     return true;
-  }
 
   TheCall->setType(Arg0Ty);
   return false;
