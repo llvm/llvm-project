@@ -173,9 +173,6 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
-  case ISD::CLMUL:
-  case ISD::CLMULR:
-  case ISD::CLMULH:
 
   case ISD::SADDSAT:
   case ISD::UADDSAT:
@@ -203,6 +200,9 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SRL:
   case ISD::ROTL:
   case ISD::ROTR:
+  case ISD::CLMUL:
+  case ISD::CLMULR:
+  case ISD::CLMULH:
     R = ScalarizeVecRes_BinOp(N);
     break;
 
@@ -7073,9 +7073,6 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::LLROUND:
   case ISD::LRINT:
   case ISD::LLRINT:
-  case ISD::CLMUL:
-  case ISD::CLMULR:
-  case ISD::CLMULH:
     Res = WidenVecOp_UnrollVectorOp(N);
     break;
   case ISD::IS_FPCLASS:         Res = WidenVecOp_IS_FPCLASS(N); break;
