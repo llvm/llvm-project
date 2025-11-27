@@ -87,12 +87,14 @@ public:
   using data_handle_type = typename accessor_type::data_handle_type;
   using reference        = typename accessor_type::reference;
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank() noexcept { return extents_type::rank(); }
-  _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank_dynamic() noexcept { return extents_type::rank_dynamic(); }
-  _LIBCPP_HIDE_FROM_ABI static constexpr size_t static_extent(rank_type __r) noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank() noexcept { return extents_type::rank(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr rank_type rank_dynamic() noexcept {
+    return extents_type::rank_dynamic();
+  }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr size_t static_extent(rank_type __r) noexcept {
     return extents_type::static_extent(__r);
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr index_type extent(rank_type __r) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr index_type extent(rank_type __r) const noexcept {
     return __map_.extents().extent(__r);
   };
 
@@ -185,7 +187,7 @@ public:
     requires((is_convertible_v<_OtherIndexTypes, index_type> && ...) &&
              (is_nothrow_constructible_v<index_type, _OtherIndexTypes> && ...) &&
              (sizeof...(_OtherIndexTypes) == rank()))
-  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](_OtherIndexTypes... __indices) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](_OtherIndexTypes... __indices) const {
     // Note the standard layouts would also check this, but user provided ones may not, so we
     // check the precondition here
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__mdspan_detail::__is_multidimensional_index_in(extents(), __indices...),
@@ -196,7 +198,8 @@ public:
   template <class _OtherIndexType>
     requires(is_convertible_v<const _OtherIndexType&, index_type> &&
              is_nothrow_constructible_v<index_type, const _OtherIndexType&>)
-  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](const array< _OtherIndexType, rank()>& __indices) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference
+  operator[](const array< _OtherIndexType, rank()>& __indices) const {
     return __acc_.access(__ptr_, [&]<size_t... _Idxs>(index_sequence<_Idxs...>) {
       return __map_(__indices[_Idxs]...);
     }(make_index_sequence<rank()>()));
@@ -205,7 +208,7 @@ public:
   template <class _OtherIndexType>
     requires(is_convertible_v<const _OtherIndexType&, index_type> &&
              is_nothrow_constructible_v<index_type, const _OtherIndexType&>)
-  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](span<_OtherIndexType, rank()> __indices) const {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](span<_OtherIndexType, rank()> __indices) const {
     return __acc_.access(__ptr_, [&]<size_t... _Idxs>(index_sequence<_Idxs...>) {
       return __map_(__indices[_Idxs]...);
     }(make_index_sequence<rank()>()));
@@ -237,24 +240,28 @@ public:
     swap(__x.__acc_, __y.__acc_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const extents_type& extents() const noexcept { return __map_.extents(); };
-  _LIBCPP_HIDE_FROM_ABI constexpr const data_handle_type& data_handle() const noexcept { return __ptr_; };
-  _LIBCPP_HIDE_FROM_ABI constexpr const mapping_type& mapping() const noexcept { return __map_; };
-  _LIBCPP_HIDE_FROM_ABI constexpr const accessor_type& accessor() const noexcept { return __acc_; };
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const extents_type& extents() const noexcept {
+    return __map_.extents();
+  };
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const data_handle_type& data_handle() const noexcept { return __ptr_; };
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const mapping_type& mapping() const noexcept { return __map_; };
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const accessor_type& accessor() const noexcept { return __acc_; };
 
   // per LWG-4021 "mdspan::is_always_meow() should be noexcept"
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_unique() noexcept { return mapping_type::is_always_unique(); };
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_exhaustive() noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_unique() noexcept {
+    return mapping_type::is_always_unique();
+  };
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_exhaustive() noexcept {
     return mapping_type::is_always_exhaustive();
   };
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_strided() noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_strided() noexcept {
     return mapping_type::is_always_strided();
   };
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool is_unique() const { return __map_.is_unique(); };
-  _LIBCPP_HIDE_FROM_ABI constexpr bool is_exhaustive() const { return __map_.is_exhaustive(); };
-  _LIBCPP_HIDE_FROM_ABI constexpr bool is_strided() const { return __map_.is_strided(); };
-  _LIBCPP_HIDE_FROM_ABI constexpr index_type stride(rank_type __r) const { return __map_.stride(__r); };
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_unique() const { return __map_.is_unique(); };
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_exhaustive() const { return __map_.is_exhaustive(); };
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_strided() const { return __map_.is_strided(); };
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr index_type stride(rank_type __r) const { return __map_.stride(__r); };
 
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS data_handle_type __ptr_{};

@@ -977,7 +977,13 @@ struct TestValueReplace : public ConversionPattern {
     // Replace the first operand with 2x the second operand.
     Value from = op->getOperand(0);
     Value repl = op->getOperand(1);
-    rewriter.replaceAllUsesWith(from, {repl, repl});
+    if (op->hasAttr("conditional")) {
+      rewriter.replaceUsesWithIf(from, {repl, repl}, [=](OpOperand &use) {
+        return use.getOwner()->hasAttr("replace_uses");
+      });
+    } else {
+      rewriter.replaceAllUsesWith(from, {repl, repl});
+    }
     rewriter.modifyOpInPlace(op, [&] {
       // If the "trigger_rollback" attribute is set, keep the op illegal, so
       // that a rollback is triggered.
