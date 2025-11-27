@@ -314,6 +314,12 @@ struct VPlanTransforms {
   /// plan using noalias metadata.
   static void hoistInvariantLoads(VPlan &Plan);
 
+  /// Hoist predicated loads from the same address to the loop entry block, if
+  /// they are guaranteed to execute on both paths (i.e., in replicate regions
+  /// with complementary masks P and NOT P).
+  static void hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
+                                   const Loop *L);
+
   // Materialize vector trip counts for constants early if it can simply be
   // computed as (Original TC / VF * UF) * VF * UF.
   static void
