@@ -215,7 +215,7 @@ else ()
   set(f128_sources "")
 endif ()
 
-if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_STATIC)
+if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
   # If not compiling the library, only build the modules.
   set(sources ${module_sources})
 elseif (LLVM_RUNTIMES_TARGET MATCHES "^amdgcn|^nvptx")
