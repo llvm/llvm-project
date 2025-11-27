@@ -2798,10 +2798,10 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
 
   if (match(&CurRecipe, m_LastActiveLane(m_Specific(HeaderMask)))) {
     Type *Ty = TypeInfo.inferScalarType(CurRecipe.getVPSingleValue());
-    VPValue *Zext =
+    VPValue *ZExt =
         VPBuilder(&CurRecipe).createScalarCast(Instruction::ZExt, &EVL, Ty, DL);
     return new VPInstruction(Instruction::Sub,
-                             {Zext, Plan->getConstantInt(Ty, 1)}, {}, {}, DL);
+                             {ZExt, Plan->getConstantInt(Ty, 1)}, {}, {}, DL);
   }
 
   return nullptr;
