@@ -3468,6 +3468,69 @@ static bool interp__builtin_ia32_shuffle_generic(
   return true;
 }
 
+static bool interp__builtin_ia32_shift_with_count(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<APInt(const APInt &, uint64_t)> ShiftOp,
+    llvm::function_ref<APInt(const APInt &, unsigned)> OverflowOp) {
+
+  assert(Call->getNumArgs() == 2);
+
+  const Pointer &Count = S.Stk.pop<Pointer>();
+  const Pointer &Source = S.Stk.pop<Pointer>();
+
+  QualType SourceType = Call->getArg(0)->getType();
+  QualType CountType = Call->getArg(1)->getType();
+  assert(SourceType->isVectorType() && CountType->isVectorType());
+
+  const auto *SourceVecT = SourceType->castAs<VectorType>();
+  const auto *CountVecT = CountType->castAs<VectorType>();
+  PrimType SourceElemT = *S.getContext().classify(SourceVecT->getElementType());
+  PrimType CountElemT = *S.getContext().classify(CountVecT->getElementType());
+
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned DestEltWidth =
+      S.getASTContext().getTypeSize(SourceVecT->getElementType());
+  bool IsDestUnsigned = SourceVecT->getElementType()->isUnsignedIntegerType();
+  unsigned DestLen = SourceVecT->getNumElements();
+  unsigned CountEltWidth =
+      S.getASTContext().getTypeSize(CountVecT->getElementType());
+  unsigned NumBitsInQWord = 64;
+  unsigned NumCountElts = NumBitsInQWord / CountEltWidth;
+
+  uint64_t CountLQWord = 0;
+  for (unsigned EltIdx = 0; EltIdx != NumCountElts; ++EltIdx) {
+    uint64_t Elt = 0;
+    INT_TYPE_SWITCH(CountElemT,
+                    { Elt = static_cast<uint64_t>(Count.elem<T>(EltIdx)); });
+    CountLQWord |= (Elt << (EltIdx * CountEltWidth));
+  }
+
+  for (unsigned EltIdx = 0; EltIdx != DestLen; ++EltIdx) {
+    APSInt Elt;
+    INT_TYPE_SWITCH(SourceElemT, { Elt = Source.elem<T>(EltIdx).toAPSInt(); });
+
+    APInt Result;
+    if (CountLQWord < DestEltWidth) {
+      Result = ShiftOp(Elt, CountLQWord);
+    } else {
+      Result = OverflowOp(Elt, DestEltWidth);
+    }
+    if (IsDestUnsigned) {
+      INT_TYPE_SWITCH(SourceElemT, {
+        Dst.elem<T>(EltIdx) = T::from(Result.getZExtValue());
+      });
+    } else {
+      INT_TYPE_SWITCH(SourceElemT, {
+        Dst.elem<T>(EltIdx) = T::from(Result.getSExtValue());
+      });
+    }
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_ia32_shufbitqmb_mask(InterpState &S, CodePtr OpPC,
                                                  const CallExpr *Call) {
 
@@ -3527,7 +3590,94 @@ static bool interp__builtin_ia32_shufbitqmb_mask(InterpState &S, CodePtr OpPC,
   }
 
   pushInteger(S, RetMask, Call->getType());
+  return true;
+}
 
+static bool interp__builtin_ia32_vcvtps2ph(InterpState &S, CodePtr OpPC,
+                                           const CallExpr *Call) {
+  // Arguments are: vector of floats, rounding immediate
+  assert(Call->getNumArgs() == 2);
+
+  APSInt Imm = popToAPSInt(S, Call->getArg(1));
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  assert(Src.getFieldDesc()->isPrimitiveArray());
+  assert(Dst.getFieldDesc()->isPrimitiveArray());
+
+  const auto *SrcVTy = Call->getArg(0)->getType()->castAs<VectorType>();
+  unsigned SrcNumElems = SrcVTy->getNumElements();
+  const auto *DstVTy = Call->getType()->castAs<VectorType>();
+  unsigned DstNumElems = DstVTy->getNumElements();
+
+  const llvm::fltSemantics &HalfSem =
+      S.getASTContext().getFloatTypeSemantics(S.getASTContext().HalfTy);
+
+  // imm[2] == 1 means use MXCSR rounding mode.
+  // In that case, we can only evaluate if the conversion is exact.
+  int ImmVal = Imm.getZExtValue();
+  bool UseMXCSR = (ImmVal & 4) != 0;
+  bool IsFPConstrained =
+      Call->getFPFeaturesInEffect(S.getASTContext().getLangOpts())
+          .isFPConstrained();
+
+  llvm::RoundingMode RM;
+  if (!UseMXCSR) {
+    switch (ImmVal & 3) {
+    case 0:
+      RM = llvm::RoundingMode::NearestTiesToEven;
+      break;
+    case 1:
+      RM = llvm::RoundingMode::TowardNegative;
+      break;
+    case 2:
+      RM = llvm::RoundingMode::TowardPositive;
+      break;
+    case 3:
+      RM = llvm::RoundingMode::TowardZero;
+      break;
+    default:
+      llvm_unreachable("Invalid immediate rounding mode");
+    }
+  } else {
+    // For MXCSR, we must check for exactness. We can use any rounding mode
+    // for the trial conversion since the result is the same if it's exact.
+    RM = llvm::RoundingMode::NearestTiesToEven;
+  }
+
+  QualType DstElemQT = Dst.getFieldDesc()->getElemQualType();
+  PrimType DstElemT = *S.getContext().classify(DstElemQT);
+
+  for (unsigned I = 0; I != SrcNumElems; ++I) {
+    Floating SrcVal = Src.elem<Floating>(I);
+    APFloat DstVal = SrcVal.getAPFloat();
+
+    bool LostInfo;
+    APFloat::opStatus St = DstVal.convert(HalfSem, RM, &LostInfo);
+
+    if (UseMXCSR && IsFPConstrained && St != APFloat::opOK) {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_dynamic_rounding);
+      return false;
+    }
+
+    INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+      // Convert the destination value's bit pattern to an unsigned integer,
+      // then reconstruct the element using the target type's 'from' method.
+      uint64_t RawBits = DstVal.bitcastToAPInt().getZExtValue();
+      Dst.elem<T>(I) = T::from(RawBits);
+    });
+  }
+
+  // Zero out remaining elements if the destination has more elements
+  // (e.g., vcvtps2ph converting 4 floats to 8 shorts).
+  if (DstNumElems > SrcNumElems) {
+    for (unsigned I = SrcNumElems; I != DstNumElems; ++I) {
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT, { Dst.elem<T>(I) = T::from(0); });
+    }
+  }
+
+  Dst.initializeAllElements();
   return true;
 }
 
@@ -4884,6 +5034,48 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_phminposuw128:
     return interp__builtin_ia32_phminposuw(S, OpPC, Call);
 
+  case X86::BI__builtin_ia32_psraq128:
+  case X86::BI__builtin_ia32_psraq256:
+  case X86::BI__builtin_ia32_psraq512:
+  case X86::BI__builtin_ia32_psrad128:
+  case X86::BI__builtin_ia32_psrad256:
+  case X86::BI__builtin_ia32_psrad512:
+  case X86::BI__builtin_ia32_psraw128:
+  case X86::BI__builtin_ia32_psraw256:
+  case X86::BI__builtin_ia32_psraw512:
+    return interp__builtin_ia32_shift_with_count(
+        S, OpPC, Call,
+        [](const APInt &Elt, uint64_t Count) { return Elt.ashr(Count); },
+        [](const APInt &Elt, unsigned Width) { return Elt.ashr(Width - 1); });
+
+  case X86::BI__builtin_ia32_psllq128:
+  case X86::BI__builtin_ia32_psllq256:
+  case X86::BI__builtin_ia32_psllq512:
+  case X86::BI__builtin_ia32_pslld128:
+  case X86::BI__builtin_ia32_pslld256:
+  case X86::BI__builtin_ia32_pslld512:
+  case X86::BI__builtin_ia32_psllw128:
+  case X86::BI__builtin_ia32_psllw256:
+  case X86::BI__builtin_ia32_psllw512:
+    return interp__builtin_ia32_shift_with_count(
+        S, OpPC, Call,
+        [](const APInt &Elt, uint64_t Count) { return Elt.shl(Count); },
+        [](const APInt &Elt, unsigned Width) { return APInt::getZero(Width); });
+
+  case X86::BI__builtin_ia32_psrlq128:
+  case X86::BI__builtin_ia32_psrlq256:
+  case X86::BI__builtin_ia32_psrlq512:
+  case X86::BI__builtin_ia32_psrld128:
+  case X86::BI__builtin_ia32_psrld256:
+  case X86::BI__builtin_ia32_psrld512:
+  case X86::BI__builtin_ia32_psrlw128:
+  case X86::BI__builtin_ia32_psrlw256:
+  case X86::BI__builtin_ia32_psrlw512:
+    return interp__builtin_ia32_shift_with_count(
+        S, OpPC, Call,
+        [](const APInt &Elt, uint64_t Count) { return Elt.lshr(Count); },
+        [](const APInt &Elt, unsigned Width) { return APInt::getZero(Width); });
+
   case X86::BI__builtin_ia32_pternlogd128_mask:
   case X86::BI__builtin_ia32_pternlogd256_mask:
   case X86::BI__builtin_ia32_pternlogd512_mask:
@@ -4955,6 +5147,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vinsertf128_si256:
   case X86::BI__builtin_ia32_insert128i256:
     return interp__builtin_x86_insert_subvector(S, OpPC, Call, BuiltinID);
+
+  case clang::X86::BI__builtin_ia32_vcvtps2ph:
+  case clang::X86::BI__builtin_ia32_vcvtps2ph256:
+    return interp__builtin_ia32_vcvtps2ph(S, OpPC, Call);
 
   case X86::BI__builtin_ia32_vec_ext_v4hi:
   case X86::BI__builtin_ia32_vec_ext_v16qi:
