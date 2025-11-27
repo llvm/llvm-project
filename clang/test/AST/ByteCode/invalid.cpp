@@ -111,3 +111,15 @@ namespace InvalidBitCast {
   struct s myx;
   int *myy = ((struct s *)&myx.a)->b;
 }
+
+namespace InvalidIntPtrRecord {
+  typedef __SIZE_TYPE__ Size_t;
+
+#define bufsize ((1LL << (8 * sizeof(Size_t) - 2)) - 256)
+
+  struct S {
+    short buf[bufsize]; // both-error {{array is too large}}
+    int a;
+  };
+  Size_t foo() { return (Size_t)(&((struct S *)0)->a); }
+}
