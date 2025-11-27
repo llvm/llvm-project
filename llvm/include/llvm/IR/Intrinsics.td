@@ -2925,6 +2925,13 @@ def int_experimental_convergence_anchor
 def int_experimental_convergence_loop
   : DefaultAttrsIntrinsic<[llvm_token_ty], [], [IntrNoMem, IntrConvergent]>;
 
+//===----------------- Structure Protection Intrinsics --------------------===//
+
+def int_protected_field_ptr :
+  DefaultAttrsIntrinsic<[llvm_anyptr_ty],
+                        [LLVMMatchType<0>, llvm_i64_ty, llvm_i1_ty],
+                        [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
 //===----------------------------------------------------------------------===//
 // Target-specific intrinsics
 //===----------------------------------------------------------------------===//
