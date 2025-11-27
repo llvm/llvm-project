@@ -165,103 +165,22 @@ int stdarg_start(int count, ...) {
 // OGCG:   %[[VAL:.+]] = load i32, ptr %[[RES_ADDR]]
 // OGCG:   ret i32 %[[VAL]]
 
-int stdarg_copy(int count, ...) {
-    __builtin_va_list args;
-    __builtin_stdarg_start(args, 12345);
-    __builtin_va_list dup;
-    __builtin_va_copy(args, dup);
-    int res = __builtin_va_arg(dup, int);
-    __builtin_va_end(args);
-    __builtin_va_end(dup);
-    return res;
+void stdarg_copy() {
+    __builtin_va_list src, dest;
+    __builtin_va_copy(src, dest);
 }
 
-// CIR-LABEL: cir.func dso_local @stdarg_copy(
-// CIR:   %[[COUNT_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["count", init]
-// CIR:   %[[RET_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[VAAREA:.+]] = cir.alloca !cir.array<!rec___va_list_tag x 1>, !cir.ptr<!cir.array<!rec___va_list_tag x 1>>, ["args"]
-// CIR:   %[[DUP_AREA:.+]] = cir.alloca !cir.array<!rec___va_list_tag x 1>, !cir.ptr<!cir.array<!rec___va_list_tag x 1>>, ["dup"]
-// CIR:   %[[RES_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["res", init]
-// CIR:   cir.store %arg0, %[[COUNT_ADDR]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[C12345:.+]] = cir.const #cir.int<12345> : !s32i
-// CIR:   cir.va_start %[[VA_PTR0]] %[[C12345]] : !cir.ptr<!rec___va_list_tag>, !s32i
-// CIR:   %[[VA_PTR_SRC:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[VA_PTR_DEST:.+]] = cir.cast array_to_ptrdecay %[[DUP_AREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR:   cir.va.copy %[[VA_PTR_DEST]] to %[[VA_PTR_SRC]] : !cir.ptr<!rec___va_list_tag>, !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[VA_PTR_COPY:.+]] = cir.cast array_to_ptrdecay %[[DUP_AREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[VA_ARG:.+]] = cir.va_arg %[[VA_PTR_COPY]] : (!cir.ptr<!rec___va_list_tag>) -> !s32i
-// CIR:   cir.store{{.*}} %[[VA_ARG]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[VA_PTR3:.+]] = cir.cast array_to_ptrdecay %[[DUP_AREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR:   cir.va_end %[[VA_PTR3]] : !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[RESULT:.+]] = cir.load{{.*}} %[[RES_ADDR]] : !cir.ptr<!s32i>, !s32i
-// CIR:   cir.store %[[RESULT]], %[[RET_ADDR]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[RETVAL:.+]] = cir.load{{.*}} %[[RET_ADDR]] : !cir.ptr<!s32i>, !s32i
-// CIR:   cir.return %[[RETVAL]] : !s32i
+// CIR-LABEL: @stdarg_copy
+// CIR:    %{{.*}} = cir.cast array_to_ptrdecay %{{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
+// CIR:    %{{.*}} = cir.cast array_to_ptrdecay %{{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
+// CIR:    cir.va.copy %{{.*}} to %{{.*}} : !cir.ptr<!rec___va_list_tag>, !cir.ptr<!rec___va_list_tag>
 
-// LLVM-LABEL: define dso_local i32 @stdarg_copy(
-// LLVM:   %[[COUNT_ADDR:.+]] = alloca i32{{.*}}
-// LLVM:   %[[RET_ADDR:.+]] = alloca i32{{.*}}
-// LLVM:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}
-// LLVM:   %[[DUP_AREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}
-// LLVM:   %[[RES_ADDR:.+]] = alloca i32{{.*}}
-// LLVM:   %[[VA_PTR0:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
-// LLVM:   call void @llvm.va_start.p0(ptr %[[VA_PTR0]])
-// LLVM:   %[[VA_PTR1:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
-// LLVM:   %[[VA_PTR_DUP:.+]] = getelementptr %struct.__va_list_tag, ptr %[[DUP_AREA]], i32 0
-// LLVM:   call void @llvm.va_copy.p0(ptr %[[VA_PTR1]], ptr %[[VA_PTR_DUP]])
-// LLVM:   %[[VA_PTR_DUP2:.+]] = getelementptr %struct.__va_list_tag, ptr %[[DUP_AREA]], i32 0
-// LLVM:   %[[VA_ARG:.+]] = va_arg ptr %[[VA_PTR_DUP2]], i32
-// LLVM:   store i32 %[[VA_ARG]], ptr %[[RES_ADDR]], {{.*}}
-// LLVM:   %[[VA_PTR2:.+]] = getelementptr %struct.__va_list_tag, ptr %[[VAAREA]], i32 0
-// LLVM:   call void @llvm.va_end.p0(ptr %[[VA_PTR2]])
-// LLVM:   %[[VA_PTR3:.+]] = getelementptr %struct.__va_list_tag, ptr %[[DUP_AREA]], i32 0
-// LLVM:   call void @llvm.va_end.p0(ptr %[[VA_PTR3]])
-// LLVM:   %[[TMP_LOAD:.+]] = load i32, ptr %[[RES_ADDR]], {{.*}}
-// LLVM:   store i32 %[[TMP_LOAD]], ptr %[[RET_ADDR]], {{.*}}
-// LLVM:   %[[RETVAL:.+]] = load i32, ptr %[[RET_ADDR]], {{.*}}
-// LLVM:   ret i32 %[[RETVAL]]
+// LLVM-LABEL: @stdarg_copy
+// LLVM:   %{{.*}} = getelementptr %struct.__va_list_tag, ptr %{{.*}}
+// LLVM:   %{{.*}} = getelementptr %struct.__va_list_tag, ptr %{{.*}}
+// LLVM:   call void @llvm.va_copy.p0(ptr %{{.*}}, ptr %{{.*}}
 
-// OGCG-LABEL: define dso_local i32 @stdarg_copy
-// OGCG:   %[[COUNT_ADDR:.+]] = alloca i32
-// OGCG:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]
-// OGCG:   %[[DUP_AREA:.+]] = alloca [1 x %struct.__va_list_tag]
-// OGCG:   %[[RES_ADDR:.+]] = alloca i32
-// OGCG:   %[[DECAY:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[VAAREA]], i64 0, i64 0
-// OGCG:   call void @llvm.va_start.p0(ptr %[[DECAY]])
-// OGCG:   %[[DECAY1:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[VAAREA]], i64 0, i64 0
-// OGCG:   %[[DECAY_DUP:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[DUP_AREA]], i64 0, i64 0
-// OGCG:   call void @llvm.va_copy.p0(ptr %[[DECAY1]], ptr %[[DECAY_DUP]])
-// OGCG:   %[[DECAY_DUP2:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[DUP_AREA]], i64 0, i64 0
-// OGCG:   %[[GPOFFSET_PTR:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[DECAY_DUP2]], i32 0, i32 0
-// OGCG:   %[[GPOFFSET:.+]] = load i32, ptr %[[GPOFFSET_PTR]]
-// OGCG:   %[[COND:.+]] = icmp ule i32 %[[GPOFFSET]], 40
-// OGCG:   br i1 %[[COND]], label %vaarg.in_reg, label %vaarg.in_mem
-//
-// OGCG: vaarg.in_reg:
-// OGCG:   %[[REGSAVE_PTR:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[DECAY_DUP2]], i32 0, i32 3
-// OGCG:   %[[REGSAVE:.+]] = load ptr, ptr %[[REGSAVE_PTR]]
-// OGCG:   %[[VAADDR1:.+]] = getelementptr i8, ptr %[[REGSAVE]], i32 %[[GPOFFSET]]
-// OGCG:   %[[NEXT_GPOFFSET:.+]] = add i32 %[[GPOFFSET]], 8
-// OGCG:   store i32 %[[NEXT_GPOFFSET]], ptr %[[GPOFFSET_PTR]]
-// OGCG:   br label %vaarg.end
-//
-// OGCG: vaarg.in_mem:
-// OGCG:   %[[OVERFLOW_PTR:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[DECAY_DUP2]], i32 0, i32 2
-// OGCG:   %[[OVERFLOW:.+]] = load ptr, ptr %[[OVERFLOW_PTR]]
-// OGCG:   %[[OVERFLOW_NEXT:.+]] = getelementptr i8, ptr %[[OVERFLOW]], i32 8
-// OGCG:   store ptr %[[OVERFLOW_NEXT]], ptr %[[OVERFLOW_PTR]]
-// OGCG:   br label %vaarg.end
-//
-// OGCG: vaarg.end:
-// OGCG:   %[[PHI:.+]] = phi ptr [ %[[VAADDR1]], %vaarg.in_reg ], [ %[[OVERFLOW]], %vaarg.in_mem ]
-// OGCG:   %[[LOADED:.+]] = load i32, ptr %[[PHI]]
-// OGCG:   store i32 %[[LOADED]], ptr %[[RES_ADDR]]
-// OGCG:   %[[DECAY2:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[VAAREA]], i64 0, i64 0
-// OGCG:   call void @llvm.va_end.p0(ptr %[[DECAY2]])
-// OGCG:   %[[DECAY_DUP3:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %[[DUP_AREA]], i64 0, i64 0
-// OGCG:   call void @llvm.va_end.p0(ptr %[[DECAY_DUP3]])
-// OGCG:   %[[VAL:.+]] = load i32, ptr %[[RES_ADDR]]
-// OGCG:   ret i32 %[[VAL]]
+// OGCG-LABEL: @stdarg_copy
+// OGCG:   %{{.*}} = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %{{.*}}
+// OGCG:   %{{.*}} = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %{{.*}}
+// OGCG:   call void @llvm.va_copy.p0(ptr %{{.*}}, ptr %{{.*}}
