@@ -1386,8 +1386,10 @@ void Sema::ActOnPragmaFPContract(SourceLocation Loc,
 
   switch (FPC) {
   case LangOptions::FPM_On:
-   if ((HasContractOverride && NewFPFeatures.getFPContractModeOverride() == LangOptions::FPM_Off) || (!HasContractOverride && DefContractMode == LangOptions::FPM_Off))
-  	NewFPFeatures.setAllowFPContractWithinStatement();
+    if ((HasContractOverride &&
+         NewFPFeatures.getFPContractModeOverride() == LangOptions::FPM_Off) ||
+        (!HasContractOverride && DefContractMode == LangOptions::FPM_Off))
+      NewFPFeatures.setAllowFPContractWithinStatement();
     break;
   case LangOptions::FPM_Fast:
   case LangOptions::FPM_FastHonorPragmas:
