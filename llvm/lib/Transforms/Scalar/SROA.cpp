@@ -5200,35 +5200,41 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // won't always succeed, in which case we fall back to a legal integer type
   // or an i8 array of an appropriate size.
   auto SelectPartitionTy = [&]() -> std::tuple<Type *, bool, VectorType *> {
-    // First check if the partition is viable for vetor promotion. If it is
-    // via a floating-point vector, we are done because we would never prefer
-    // integer widening.
+    // First check if the partition is viable for vetor promotion.
+    // We prefer vector promotion over integer widening promotion when:
+    // - The vector element type is a floating-point type.
+    // - All the loads/stores to the alloca are vector loads/stores to the entire alloca.
+    // Otherwise when there is a integer vector with mixed loads/stores we prefer integer widening
+    // promotion because it's more likely the user is doing bitwise arithmetic and we
+    // generate better code.
     VectorType *VecTy =
         isVectorPromotionViable(P, DL, AI.getFunction()->getVScaleValue());
-    if (VecTy) {
-      if (VecTy->getElementType()->isFloatingPointTy()) {
-        return {VecTy, false, VecTy};
-      }
-    }
-    // Otherwise, check if there is a common type that all slices of the
-    // partition use that spans the partition.
+    // If the vector element type is a floating-point type, we prefer vector promotion.
+    if (VecTy && VecTy->getElementType()->isFloatingPointTy())
+      return {VecTy, false, VecTy};
+
+    // Check if there is a common type that all slices of the partition use that spans the partition.
     auto [CommonUseTy, LargestIntTy, OnlyIntrinsicUsers] =
         findCommonType(P.begin(), P.end(), P.endOffset());
     if (CommonUseTy) {
       TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy);
       if (CommonUseSize.isFixed() &&
           CommonUseSize.getFixedValue() >= P.size()) {
-        // Prefer vector promotion here because we already calculated it.
+        // We prefer vector promotion here because if vector promotion is viable and 
+        // there is a common type used, then it implies the second listed condition for prefering
+        // vector promotion is true.
         if (VecTy)
           return {VecTy, false, VecTy};
         return {CommonUseTy, isIntegerWideningViable(P, CommonUseTy, DL),
                 nullptr};
       }
     }
+
     // If there are only intrinsic users, try to represent as a legal integer type
     // because we are probably just copying data around and the integer can be promoted.
     if (OnlyIntrinsicUsers && DL.isLegalInteger(P.size() * 8))
       return {Type::getIntNTy(*C, P.size() * 8), false, nullptr};
+
     // Can we find an appropriate subtype in the original allocated
     // type?
     if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
@@ -5239,25 +5245,30 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
           TypePartitionTy->getArrayElementType()->isIntegerTy() &&
           DL.isLegalInteger(P.size() * 8))
         TypePartitionTy = Type::getIntNTy(*C, P.size() * 8);
+      // There was no common type used, so we prefer integer widening promotion.
       if (isIntegerWideningViable(P, TypePartitionTy, DL))
         return {TypePartitionTy, true, nullptr};
       if (VecTy)
         return {VecTy, false, VecTy};
+      // If we couldn't promotion with TypePartitionTy, try with the largest integer type used.
       if (LargestIntTy &&
           DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size() &&
           isIntegerWideningViable(P, LargestIntTy, DL))
         return {LargestIntTy, true, nullptr};
+      // Fallback to TypePartitionTy and we probably won't promote.
       return {TypePartitionTy, false, nullptr};
     }
 
-    // If still not, can we use the largest bitwidth integer type used?
+    // Select the largest integer type used if it spans the partition.
     if (LargestIntTy &&
         DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size())
       return {LargestIntTy, false, nullptr};
 
+    // Select a legal integer type if it spans the partition.
     if (DL.isLegalInteger(P.size() * 8))
       return {Type::getIntNTy(*C, P.size() * 8), false, nullptr};
 
+    // Fallback to an i8 array.
     return {ArrayType::get(Type::getInt8Ty(*C), P.size()), false, nullptr};
   };
 
