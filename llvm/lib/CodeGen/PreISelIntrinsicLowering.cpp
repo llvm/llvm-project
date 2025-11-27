@@ -513,6 +513,7 @@ static bool expandProtectedFieldPtr(Function &Intr) {
     auto *Disc = Call->getArgOperand(1);
     bool UseHWEncoding =
         cast<ConstantInt>(Call->getArgOperand(2))->getZExtValue();
+    assert(UseHWEncoding && "software encoding currently unsupported");
 
     auto *DS = GetDeactivationSymbol(Call);
     OperandBundleDef DSBundle("deactivation-symbol", DS);
@@ -526,18 +527,7 @@ static bool expandProtectedFieldPtr(Function &Intr) {
           IRBuilder<> B(SI);
           auto *SIValInt =
               B.CreatePtrToInt(SI->getValueOperand(), B.getInt64Ty());
-          Value *Sign;
-          if (UseHWEncoding) {
-            Sign = CreateSign(B, SIValInt, Disc, DSBundle);
-          } else {
-            // FIXME: These don't have deactivation symbol attachments, we'll
-            // need to figure out how to add them.
-            Sign =
-                B.CreateIntrinsic(SIValInt->getType(), Intrinsic::fshl,
-                                  {SIValInt, SIValInt,
-                                   ConstantInt::get(SIValInt->getType(), 16)});
-            Sign = B.CreateSub(Sign, Disc);
-          }
+          Value *Sign = CreateSign(B, SIValInt, Disc, DSBundle);
           SI->setOperand(0, B.CreateIntToPtr(Sign, B.getPtrTy()));
           SI->setOperand(1, Pointer);
           continue;
@@ -554,17 +544,7 @@ static bool expandProtectedFieldPtr(Function &Intr) {
           NewLI->setOperand(0, Pointer);
           B.Insert(NewLI);
           auto *LIInt = B.CreatePtrToInt(NewLI, B.getInt64Ty());
-          Value *Auth;
-          if (UseHWEncoding) {
-            Auth = CreateAuth(B, LIInt, Disc, DSBundle);
-          } else {
-            // FIXME: These don't have deactivation symbol attachments, we'll
-            // need to figure out how to add them.
-            Auth = B.CreateAdd(LIInt, Disc);
-            Auth = B.CreateIntrinsic(
-                Auth->getType(), Intrinsic::fshr,
-                {Auth, Auth, ConstantInt::get(Auth->getType(), 16)});
-          }
+          Value *Auth = CreateAuth(B, LIInt, Disc, DSBundle);
           LI->replaceAllUsesWith(B.CreateIntToPtr(Auth, B.getPtrTy()));
           LI->eraseFromParent();
           continue;

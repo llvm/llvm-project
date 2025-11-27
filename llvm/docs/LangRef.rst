@@ -31762,10 +31762,8 @@ third argument is 1, the pointer is signed (using pointer authentication
 instructions or emulated PAC if not supported by the hardware) using
 the discriminator before being stored, and authenticated after being
 loaded. Note that it is currently unsupported to have the third argument
-be 1 on targets other than AArch64. When the third argument is 0, it is
-rotated left by 16 bits and the discriminator is subtracted before being
-stored, and the discriminator is added and the pointer is rotated right
-by 16 bits after being loaded.
+be 1 on targets other than AArch64, and it is also currently unsupported
+to have the third argument be 0 at all.
 
 If the pointer is used other than for loading or storing (e.g. its
 address escapes), that will disable all blending operations using
