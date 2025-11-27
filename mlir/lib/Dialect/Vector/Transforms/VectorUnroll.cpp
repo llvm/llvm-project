@@ -1055,7 +1055,8 @@ struct UnrollCreateMaskPattern : public OpRewritePattern<vector::CreateMaskOp> {
 
     Value result = arith::ConstantOp::create(rewriter, loc, resultType,
                                              rewriter.getZeroAttr(resultType));
-    auto targetVectorType = VectorType::get(*targetShape, rewriter.getI1Type());
+    VectorType targetVectorType =
+        VectorType::get(*targetShape, rewriter.getI1Type());
     SmallVector<int64_t> strides(targetShape->size(), 1);
 
     // In each dimension (d), each unrolled vector computes its mask size as:
@@ -1068,20 +1069,20 @@ struct UnrollCreateMaskPattern : public OpRewritePattern<vector::CreateMaskOp> {
            llvm::enumerate(createMaskOp.getOperands())) {
         Value offsetVal =
             arith::ConstantIndexOp::create(rewriter, loc, offsets[i]);
-        Value adjustedMaskSize = arith::SubIOp::create(
-            rewriter, loc, originalMaskOperand, offsetVal);
+        Value adjustedMaskSize = rewriter.createOrFold<arith::SubIOp>(
+            loc, originalMaskOperand, offsetVal);
         Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
         Value unrolledDimSize =
             arith::ConstantIndexOp::create(rewriter, loc, (*targetShape)[i]);
         Value nonNegative =
-            arith::MaxSIOp::create(rewriter, loc, adjustedMaskSize, zero);
-        Value unrolledOperand =
-            arith::MinSIOp::create(rewriter, loc, nonNegative, unrolledDimSize);
+            rewriter.createOrFold<arith::MaxSIOp>(loc, adjustedMaskSize, zero);
+        Value unrolledOperand = rewriter.createOrFold<arith::MinSIOp>(
+            loc, nonNegative, unrolledDimSize);
         unrolledOperands.push_back(unrolledOperand);
       }
 
-      auto unrolledMask = vector::CreateMaskOp::create(
-          rewriter, loc, targetVectorType, unrolledOperands);
+      auto unrolledMask = rewriter.createOrFold<vector::CreateMaskOp>(
+          loc, targetVectorType, unrolledOperands);
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, unrolledMask, result, offsets, strides);
     }
