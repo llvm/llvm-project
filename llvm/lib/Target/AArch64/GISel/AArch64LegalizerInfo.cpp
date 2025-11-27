@@ -2476,7 +2476,8 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
     TruncOddDstRegs.push_back(Mid);
   }
 
-  // Truncate 4s32 to 4s16 if we can to reduce instruction count, otherwise truncate 2s32 to 2s16.
+  // Truncate 4s32 to 4s16 if we can to reduce instruction count, otherwise
+  // truncate 2s32 to 2s16.
   unsigned Index = 0;
   for (unsigned LoopIter = 0; LoopIter < ElemCount / StepSize; ++LoopIter) {
     if (StepSize == 4) {
