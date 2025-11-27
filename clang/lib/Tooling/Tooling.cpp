@@ -556,7 +556,7 @@ int ClangTool::run(ToolAction *Action) {
   size_t NumOfTotalFiles = AbsolutePaths.size();
   unsigned CurrentFileIndex = 0;
   for (llvm::StringRef File : AbsolutePaths) {
-    ++CurrentFileIndex; // Increment file counter once per file.
+    ++CurrentFileIndex;
     // Currently implementations of CompilationDatabase::getCompileCommands can
     // change the state of the file system (e.g.  prepare generated headers), so
     // this method needs to run right before we invoke the tool, as the next
@@ -622,13 +622,17 @@ int ClangTool::run(ToolAction *Action) {
 
       // FIXME: We need a callback mechanism for the tool writer to output a
       // customized message for each file.
-      if (NumOfTotalFiles > 1 || CompileCommandsForFile.size() > 1)
+      if (NumOfTotalFiles > 1 || CompileCommandsForFile.size() > 1) {
         llvm::errs() << "[" + std::to_string(CurrentFileIndex) + "/" +
-                            std::to_string(NumOfTotalFiles) + "] (" +
-                            std::to_string(CurrentCommandIndexForFile) + "/" +
-                            std::to_string(CompileCommandsForFile.size()) +
-                            ") Processing file " + File
-                     << ".\n";
+                            std::to_string(NumOfTotalFiles) + "]";
+        if (CompileCommandsForFile.size() > 1) {
+          llvm::errs() << " (" + std::to_string(CurrentCommandIndexForFile) +
+                              "/" +
+                              std::to_string(CompileCommandsForFile.size()) +
+                              ")";
+        }
+        llvm::errs() << " Processing file " + File << ".\n";
+      }
       ToolInvocation Invocation(std::move(CommandLine), Action, Files.get(),
                                 PCHContainerOps);
       Invocation.setDiagnosticConsumer(DiagConsumer);
