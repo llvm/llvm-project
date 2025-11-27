@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// REQUIRES: std-at-least-c++17
+
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <optional>
 
