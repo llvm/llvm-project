@@ -58,7 +58,7 @@ thread-pre-split.loopexit:                        ; preds = %11, %.thread-pre-sp
   br i1 %arg, label %11, label %22
 
 ; <label>:11                                      ; preds = %.lr.ph21
-  %12 = getelementptr inbounds [0 x i8], ptr @PL_utf8skip, i64 0, i64 undef
+  %12 = getelementptr inbounds [0 x i8], ptr @PL_utf8skip, i64 0, i64 0
   %13 = load i8, ptr %12, align 1
   %14 = zext i8 %13 to i64
   %15 = icmp ugt i64 %14, %10
@@ -135,7 +135,7 @@ thread-pre-split5:                                ; preds = %.lr.ph
   ret void
 }
 
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

@@ -16,7 +16,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/WindowsError.h"
-#include <algorithm>
 #include <io.h>
 #include <signal.h>
 #include <stdio.h>
@@ -421,8 +420,13 @@ bool sys::RemoveFileOnSignal(StringRef Filename, std::string *ErrMsg) {
     return true;
   }
 
-  if (FilesToRemove == NULL)
+  if (FilesToRemove == NULL) {
     FilesToRemove = new std::vector<std::string>;
+    std::atexit([]() {
+      delete FilesToRemove;
+      FilesToRemove = NULL;
+    });
+  }
 
   FilesToRemove->push_back(std::string(Filename));
 
