@@ -151,4 +151,24 @@ MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_neg(int32_t semantics, uint6
   x.changeSign();
   return x.bitcastToAPInt().getZExtValue();
 }
+
+/// Min/max operations.
+#define APFLOAT_MIN_MAX_OP(OP)                                                 \
+  MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_##OP(                    \
+      int32_t semantics, uint64_t a, uint64_t b) {                             \
+    const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(        \
+        static_cast<llvm::APFloatBase::Semantics>(semantics));                 \
+    unsigned bitWidth = llvm::APFloatBase::semanticsSizeInBits(sem);           \
+    llvm::APFloat lhs(sem, llvm::APInt(bitWidth, a));                          \
+    llvm::APFloat rhs(sem, llvm::APInt(bitWidth, b));                          \
+    llvm::APFloat result = llvm::OP(lhs, rhs);                                 \
+    return result.bitcastToAPInt().getZExtValue();                             \
+  }
+
+APFLOAT_MIN_MAX_OP(minimum)
+APFLOAT_MIN_MAX_OP(maximum)
+APFLOAT_MIN_MAX_OP(minnum)
+APFLOAT_MIN_MAX_OP(maxnum)
+
+#undef APFLOAT_MIN_MAX_OP
 }
