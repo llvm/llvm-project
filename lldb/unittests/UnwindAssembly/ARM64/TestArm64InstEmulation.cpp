@@ -987,7 +987,7 @@ TEST_F(TestArm64InstEmulation, TestMidFunctionEpilogueAndBackwardsJump) {
       0xfd, 0x7b, 0x42, 0xa9, // <+20>: ldp    x29, x30, [sp, #0x20]
       0xff, 0xc3, 0x00, 0x91, // <+24>: add    sp, sp, #0x30
       0xc0, 0x03, 0x5f, 0xd6, // <+28>: ret
-      // AFTER_EPILOGUE:  LLDB computes the next 5 unwind states incorrectly.
+      // AFTER_EPILOGUE
       0x37, 0x00, 0x80, 0xd2, // <+32>: mov    x23, #0x1
       0xf6, 0x5f, 0x41, 0xa9, // <+36>: ldp    x22, x23, [sp, #0x10]
       0xfd, 0x7b, 0x42, 0xa9, // <+40>: ldp    x29, x30, [sp, #0x20]
@@ -1054,7 +1054,7 @@ TEST_F(TestArm64InstEmulation, TestMidFunctionEpilogueAndBackwardsJump) {
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
   EXPECT_EQ(row->GetCFAValue().GetOffset(), 0);
 
-  // Row for offset +32 should not inherits the state of the `ret` instruction
+  // Row for offset +32 should not inherit the state of the `ret` instruction
   // in +28. Instead, it should inherit the state of the branch in +64.
   // Check for register x22, which is available in row +64.
   // <+28>: ret
