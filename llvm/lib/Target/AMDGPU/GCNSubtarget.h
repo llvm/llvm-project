@@ -1478,6 +1478,10 @@ public:
 
   bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
 
+  /// \returns true if the target supports using software to avoid hazards
+  /// between VMEM and VALU instructions in some instances.
+  bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
+
   /// \returns true if the target has s_wait_xcnt insertion. Supported for
   /// GFX1250.
   bool hasWaitXCnt() const { return HasWaitXcnt; }
