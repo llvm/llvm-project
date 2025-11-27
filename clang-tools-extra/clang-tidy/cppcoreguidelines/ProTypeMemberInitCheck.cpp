@@ -361,7 +361,8 @@ void ProTypeMemberInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 // FIXME: Copied from clang/lib/Sema/SemaDeclCXX.cpp.
-static bool isIncompleteOrZeroLengthArrayType(ASTContext &Context, QualType T) {
+static bool isIncompleteOrZeroLengthArrayType(const ASTContext &Context,
+                                              QualType T) {
   if (T->isIncompleteArrayType())
     return true;
 
@@ -375,7 +376,7 @@ static bool isIncompleteOrZeroLengthArrayType(ASTContext &Context, QualType T) {
   return false;
 }
 
-static bool isEmpty(ASTContext &Context, const QualType &Type) {
+static bool isEmpty(const ASTContext &Context, const QualType &Type) {
   if (const CXXRecordDecl *ClassDecl = Type->getAsCXXRecordDecl()) {
     return ClassDecl->isEmpty();
   }
@@ -582,6 +583,33 @@ void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
 
 void ProTypeMemberInitCheck::checkUninitializedTrivialType(
     const ASTContext &Context, const VarDecl *Var) {
+  // Verify that the record actually needs initialization
+  const CXXRecordDecl *Record = Var->getType()->getAsCXXRecordDecl();
+  if (!Record)
+    return;
+
+  SmallPtrSet<const FieldDecl *, 16> FieldsToInit;
+  bool AnyMemberHasInitPerUnion = false;
+  forEachFieldWithFilter(
+      *Record, Record->fields(), AnyMemberHasInitPerUnion,
+      [&](const FieldDecl *F) {
+        if (IgnoreArrays && F->getType()->isArrayType())
+          return;
+        if (F->hasInClassInitializer() && F->getParent()->isUnion()) {
+          AnyMemberHasInitPerUnion = true;
+          removeFieldInitialized(F, FieldsToInit);
+        }
+        if (!F->hasInClassInitializer() &&
+            utils::type_traits::isTriviallyDefaultConstructible(F->getType(),
+                                                                Context) &&
+            !isEmpty(Context, F->getType()) && !F->isUnnamedBitField() &&
+            !AnyMemberHasInitPerUnion)
+          FieldsToInit.insert(F);
+      });
+
+  if (FieldsToInit.empty())
+    return;
+
   const DiagnosticBuilder Diag =
       diag(Var->getBeginLoc(), "uninitialized record type: %0") << Var;
 
