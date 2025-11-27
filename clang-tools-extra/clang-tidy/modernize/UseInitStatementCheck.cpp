@@ -24,94 +24,48 @@ namespace clang::tidy::modernize {
 
 namespace {
 
-class VariableUsageVisitor : public RecursiveASTVisitor<VariableUsageVisitor> {
-public:
-  explicit VariableUsageVisitor(const VarDecl *TargetVar)
-      : TargetVar(TargetVar) {}
-
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
-    assert(!FoundUsage);
-    FoundUsage = (dyn_cast<VarDecl>(DRE->getDecl()) == TargetVar);
-    return !FoundUsage;
-  }
-
-  bool foundUsage() const { return FoundUsage; }
-
-private:
-  const VarDecl *TargetVar;
-  bool FoundUsage = false;
-};
-
-// Matches CompoundStmt that contains a DeclStmt immediately followed by
-// a statement matching the inner matcher.
+// Matches CompoundStmt that contains a PrevStmt immediately followed by
+// NextStmt
 AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
-               ast_matchers::internal::Matcher<DeclStmt>, DeclMatcher,
+               ast_matchers::internal::Matcher<Stmt>, DeclMatcher,
                ast_matchers::internal::Matcher<Stmt>, StmtMatcher) {
   const auto Statements = Node.body();
 
   return std::adjacent_find(
              Statements.begin(), Statements.end(),
-             [&](const Stmt *Prev, const Stmt *NextStmt) {
-               const auto *PrevDecl = dyn_cast<DeclStmt>(Prev);
-               if (!PrevDecl)
+             [&](const Stmt *PrevStmt, const Stmt *NextStmt) {
+               clang::ast_matchers::internal::BoundNodesTreeBuilder PrevBuilder;
+               if (!DeclMatcher.matches(*PrevStmt, Finder, &PrevBuilder))
                  return false;
 
-               clang::ast_matchers::internal::BoundNodesTreeBuilder DeclBuilder;
-               if (!DeclMatcher.matches(*PrevDecl, Finder, &DeclBuilder))
+               clang::ast_matchers::internal::BoundNodesTreeBuilder NextBuilder;
+               NextBuilder.addMatch(PrevBuilder);
+               if (!StmtMatcher.matches(*NextStmt, Finder, &NextBuilder))
                  return false;
 
-               clang::ast_matchers::internal::BoundNodesTreeBuilder StmtBuilder;
-               StmtBuilder.addMatch(DeclBuilder);
-               if (!StmtMatcher.matches(*NextStmt, Finder, &StmtBuilder))
-                 return false;
-
-               Builder->addMatch(StmtBuilder);
+               Builder->addMatch(NextBuilder);
                return true;
              }) != Statements.end();
 }
 
 } // namespace
 
-// Checks if any variable in DeclStmt is used after the statement.
-static bool anyVarUsedAfterStmt(const DeclStmt *DS, const Stmt *STMT,
-                                const CompoundStmt *ParentCompound) {
-  const auto &Statements = ParentCompound->body();
-  const auto CurrentPosition = llvm::find(Statements, STMT);
-  if (CurrentPosition == Statements.end())
-    return false;
-
-  const auto StatementsAfter = std::next(CurrentPosition);
-  if (StatementsAfter == Statements.end())
-    return false;
-
-  return llvm::any_of(DS->decls(), [&](const auto *D) {
-    const auto *VD = dyn_cast<VarDecl>(D);
-    assert(VD); // TODO:
-    return llvm::any_of(llvm::make_range(StatementsAfter, Statements.end()),
-                        [&](const Stmt *S) {
-                          VariableUsageVisitor Visitor(VD);
-                          Visitor.TraverseStmt(const_cast<Stmt *>(S));
-                          return Visitor.foundUsage();
-                        });
-  });
-}
-
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
   static constexpr auto MakeMatcher = [](const auto &StmtMatcher,
-                                         StringRef Name) {
+                                         const std::string &Name) {
     return compoundStmt(
-               unless(isInTemplateInstantiation()),
-               hasAdjacentStmts(
-                   declStmt(forEach(varDecl().bind("singleVar")))
-                       .bind("prevDecl"),
-                   StmtMatcher(
-                       unless(hasInitStatement(anything())),
-                       hasCondition(
-                           expr(forEachDescendant(declRefExpr(
-                                    to(varDecl(equalsBoundNode("singleVar"))))))
-                               .bind("condition")))
-                       .bind(Name)))
-        .bind("compoundStmt");
+        unless(isInTemplateInstantiation()),
+        hasAdjacentStmts(
+            declStmt(forEach(varDecl().bind("singleVar"))).bind("prevDecl"),
+            StmtMatcher(
+                unless(hasInitStatement(anything())),
+                hasCondition(expr(forEachDescendant(declRefExpr(to(
+                                      varDecl(equalsBoundNode("singleVar"))))))
+                                 .bind("condition")))
+                .bind(Name)),
+        unless(has(stmt(unless(equalsBoundNode(Name)),
+                        hasDescendant(declRefExpr(
+                            to(varDecl(equalsBoundNode("singleVar")))))))));
   };
 
   Finder->addMatcher(MakeMatcher(ifStmt, "ifStmt"), this);
@@ -126,36 +80,16 @@ static StringRef normDeclStmtText(StringRef Text) {
   return Text;
 }
 
-static std::vector<const VarDecl *>
-getVarDeclsFromDeclStmt(const DeclStmt *DS) {
-  std::vector<const VarDecl *> Vars;
-  Vars.reserve(llvm::size(DS->decls()));
-  llvm::transform(DS->decls(), std::back_inserter(Vars), [](const auto *D) {
-    const auto *VD = dyn_cast<VarDecl>(D);
-    assert(VD); // TODO:
-    return VD;
-  });
-  return Vars;
-}
-
 void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *If = Result.Nodes.getNodeAs<IfStmt>("ifStmt");
   const auto *Switch = Result.Nodes.getNodeAs<SwitchStmt>("switchStmt");
   const auto *PrevDecl = Result.Nodes.getNodeAs<DeclStmt>("prevDecl");
   const auto *Condition = Result.Nodes.getNodeAs<Expr>("condition");
-  const auto *Compound = Result.Nodes.getNodeAs<CompoundStmt>("compoundStmt");
-
-  if (!PrevDecl || !Condition || !Compound)
-    return;
-
   const Stmt *Statement = If ? static_cast<const Stmt *>(If) : Switch;
-  if (!Statement)
+
+  if (!PrevDecl || !Condition || !Statement)
     return;
 
-  if (anyVarUsedAfterStmt(PrevDecl, Statement, Compound))
-    return;
-
-  const auto AllVarsInDecl = getVarDeclsFromDeclStmt(PrevDecl);
   const SourceRange RemovalRange = PrevDecl->getSourceRange();
   const bool CanFix =
       utils::rangeCanBeFixed(RemovalRange, Result.SourceManager) &&
@@ -170,7 +104,8 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
                    "%select{multiple variable|variable %1}0 declaration "
                    "before %select{if|switch}2 statement could be moved into "
                    "%select{if|switch}2 init statement")
-              << (AllVarsInDecl.size() == 1) << AllVarsInDecl[0] << !If;
+              << (llvm::size(PrevDecl->decls()) == 1)
+              << llvm::dyn_cast<VarDecl>(*PrevDecl->decl_begin()) << !If;
   if (CanFix)
     Diag << FixItHint::CreateRemoval(RemovalRange)
          << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);

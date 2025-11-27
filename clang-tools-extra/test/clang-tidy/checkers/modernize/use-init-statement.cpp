@@ -71,6 +71,13 @@ void good_multiple() {
     ++j2;
 }
 
+void good_prev_decl_stmt_not_a_variable() {
+    struct S1 { bool operator==(int); };
+    if (S1{} == 0) {
+        do_some();
+    }
+}
+
 // TODO: implement structured binding case
 
 void bad1() {
