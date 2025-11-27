@@ -554,7 +554,8 @@ llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
 
   lldb::SBModule module = frame.GetModule();
   if (module.IsValid()) {
-    std::string uuid = module.GetUUIDString();
+    const char *uuid_cstr = module.GetUUIDString();
+    std::string uuid = uuid_cstr ? uuid_cstr : "";
     if (!uuid.empty())
       object.try_emplace("moduleId", uuid);
   }
