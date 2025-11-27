@@ -166,8 +166,8 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
       return instData;
     }
 
-    if (auto type = dyn_cast<ShapedType>(value.getType()))
-      return llvm::to_vector(type.getShape());
+    // if (auto type = dyn_cast<ShapedType>(value.getType()))
+    //   return llvm::to_vector(type.getShape());
   }
   LDBG() << "failed to getTileShape for: " << value;
   return std::nullopt;
@@ -190,12 +190,10 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     return std::nullopt;
   };
 
-  if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp, xegpu::CreateDescOp,
-          xegpu::UpdateOffsetOp>(op))
-    return getTileShape(op->getOpResult(0));
-
   xegpu::DistributeLayoutAttr layout = nullptr;
 
+  if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp>(op))
+    layout = xegpu::getDistributeLayoutAttr(op->getOpResult(0));
   if (isa<xegpu::LoadMatrixOp>(op))
     layout = dyn_cast<xegpu::LoadMatrixOp>(op).getLayoutAttr();
   if (isa<xegpu::StoreMatrixOp>(op))
@@ -212,7 +210,8 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
            "Matrix load/store should have subgroup level layout");
     return layout.getEffectiveInstDataAsInt();
   }
-
+  if (isa<xegpu::CreateDescOp, xegpu::UpdateOffsetOp>(op))
+    layout = xegpu::getDistributeLayoutAttr(op->getOpResult(0));
   if (isa<xegpu::LoadGatherOp>(op))
     layout = dyn_cast<xegpu::LoadGatherOp>(op).getLayoutAttr();
   if (isa<xegpu::StoreScatterOp>(op))
@@ -254,14 +253,16 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
   }
 
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)
-    return getTileShape(op->getOpResult(0));
-
+    layout = xegpu::getDistributeLayoutAttr(op->getOpResult(0));
   if (isa<vector::MultiDimReductionOp>(op))
-    return getTileShape(op->getOpOperand(0));
-
+    layout = xegpu::getDistributeLayoutAttr(op->getOpOperand(0));
   if (isa<vector::TransposeOp, vector::BroadcastOp>(op))
-    return getTileShape(op->getOpResult(0));
-
+    layout = xegpu::getDistributeLayoutAttr(op->getOpResult(0));
+  if (layout != nullptr) {
+    assert(layout.isForSubgroup() &&
+           "Other ops (Vector/Math/Arith) should have subgroup level layout");
+    return getShapeSkipLeadingUnitDim(layout);
+  }
   return std::nullopt;
 }
 
