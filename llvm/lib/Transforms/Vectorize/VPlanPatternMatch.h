@@ -856,6 +856,11 @@ template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
   return IntrinsicID_match(IntrID);
 }
 
+/// Match intrinsic calls with a runtime intrinsic ID.
+inline IntrinsicID_match m_Intrinsic(Intrinsic::ID IntrID) {
+  return IntrinsicID_match(IntrID);
+}
+
 template <Intrinsic::ID IntrID, typename T0>
 inline typename m_Intrinsic_Ty<T0>::Ty m_Intrinsic(const T0 &Op0) {
   return m_CombineAnd(m_Intrinsic<IntrID>(), m_Argument<0>(Op0));
