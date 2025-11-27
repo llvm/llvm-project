@@ -11738,7 +11738,12 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (LHS.getValueType().isInteger()) {
-
+    if (Subtarget->hasCSSC() && CC == ISD::SETNE && isNullConstant(RHS)) {
+      SDValue One = DAG.getConstant(1, DL, LHS.getValueType());
+      SDValue UMin = DAG.getNode(ISD::UMIN, DL, LHS.getValueType(), LHS, One);
+      SDValue Res = DAG.getZExtOrTrunc(UMin, DL, VT);
+      return IsStrict ? DAG.getMergeValues({Res, Chain}, DL) : Res;
+    }
     simplifySetCCIntoEq(CC, LHS, RHS, DAG, DL);
 
     SDValue CCVal;
