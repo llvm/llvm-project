@@ -13096,6 +13096,45 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(R, E);
   }
 
+  case X86::BI__builtin_ia32_vpmultishiftqb128:
+  case X86::BI__builtin_ia32_vpmultishiftqb256:
+  case X86::BI__builtin_ia32_vpmultishiftqb512: {
+    assert(E->getNumArgs() == 2);
+
+    APValue A, B;
+    if (!Evaluate(A, Info, E->getArg(0)) || !Evaluate(B, Info, E->getArg(1)))
+      return false;
+
+    assert(A.getVectorLength() == B.getVectorLength());
+    unsigned NumBytesInQWord = 8;
+    unsigned NumBitsInByte = 8;
+    unsigned NumBytes = A.getVectorLength();
+    unsigned NumQWords = NumBytes / NumBytesInQWord;
+    SmallVector<APValue, 64> Result;
+    Result.reserve(NumBytes);
+
+    for (unsigned QWordId = 0; QWordId != NumQWords; ++QWordId) {
+      APInt BQWord(64, 0);
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        unsigned Idx = QWordId * NumBytesInQWord + ByteIdx;
+        uint64_t Byte = B.getVectorElt(Idx).getInt().getZExtValue();
+        BQWord.insertBits(APInt(8, Byte & 0xFF), ByteIdx * NumBitsInByte);
+      }
+
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        unsigned Idx = QWordId * NumBytesInQWord + ByteIdx;
+        uint64_t Ctrl = A.getVectorElt(Idx).getInt().getZExtValue() & 0x3F;
+
+        APInt Byte(8, 0);
+        for (unsigned BitIdx = 0; BitIdx != NumBitsInByte; ++BitIdx) {
+          Byte.setBitVal(BitIdx, BQWord[(Ctrl + BitIdx) & 0x3F]);
+        }
+        Result.push_back(APValue(APSInt(Byte, /*isUnsigned*/ true)));
+      }
+    }
+    return Success(APValue(Result.data(), Result.size()), E);
+  }
+
   case X86::BI__builtin_ia32_phminposuw128: {
     APValue Source;
     if (!Evaluate(Source, Info, E->getArg(0)))

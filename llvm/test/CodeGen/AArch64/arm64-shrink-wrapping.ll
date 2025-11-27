@@ -1192,3 +1192,182 @@ false:
 
   ret void
 }
+
+@exception = external hidden constant { ptr, ptr, ptr }
+
+define noundef i32 @call_with_no_ret(i32 %in) personality ptr @__gxx_personality_v0 {
+; ENABLE-LABEL: call_with_no_ret:
+; ENABLE:       Lfunc_begin0:
+; ENABLE-NEXT:    .cfi_startproc
+; ENABLE-NEXT:    .cfi_personality 155, ___gxx_personality_v0
+; ENABLE-NEXT:    .cfi_lsda 16, Lexception0
+; ENABLE-NEXT:  ; %bb.0: ; %entry
+; ENABLE-NEXT:    cmp w0, #1
+; ENABLE-NEXT:    b.eq LBB15_2
+; ENABLE-NEXT:  ; %bb.1: ; %exit
+; ENABLE-NEXT:    mov w0, wzr
+; ENABLE-NEXT:    ret
+; ENABLE-NEXT:  LBB15_2: ; %setup
+; ENABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
+; ENABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; ENABLE-NEXT:    add x29, sp, #16
+; ENABLE-NEXT:    .cfi_def_cfa w29, 16
+; ENABLE-NEXT:    .cfi_offset w30, -8
+; ENABLE-NEXT:    .cfi_offset w29, -16
+; ENABLE-NEXT:    .cfi_offset w19, -24
+; ENABLE-NEXT:    .cfi_offset w20, -32
+; ENABLE-NEXT:    mov w0, #32 ; =0x20
+; ENABLE-NEXT:    bl ___cxa_allocate_exception
+; ENABLE-NEXT:  Ltmp0: ; EH_LABEL
+; ENABLE-NEXT:    bl _construct_exception
+; ENABLE-NEXT:  Ltmp1: ; EH_LABEL
+; ENABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; ENABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; ENABLE-NEXT:  ; %bb.3: ; %throw
+; ENABLE-NEXT:  Lloh0:
+; ENABLE-NEXT:    adrp x2, _destruct_exception@GOTPAGE
+; ENABLE-NEXT:  Lloh1:
+; ENABLE-NEXT:    ldr x2, [x2, _destruct_exception@GOTPAGEOFF]
+; ENABLE-NEXT:  Lloh2:
+; ENABLE-NEXT:    adrp x1, _exception@PAGE
+; ENABLE-NEXT:  Lloh3:
+; ENABLE-NEXT:    add x1, x1, _exception@PAGEOFF
+; ENABLE-NEXT:    mov x0, x19
+; ENABLE-NEXT:    bl ___cxa_throw
+; ENABLE-NEXT:  LBB15_4: ; %teardown
+; ENABLE-NEXT:  Ltmp2: ; EH_LABEL
+; ENABLE-NEXT:    mov x20, x0
+; ENABLE-NEXT:    mov x0, x19
+; ENABLE-NEXT:    bl ___cxa_free_exception
+; ENABLE-NEXT:    mov x0, x20
+; ENABLE-NEXT:    bl __Unwind_Resume
+; ENABLE-NEXT:    .loh AdrpAdd Lloh2, Lloh3
+; ENABLE-NEXT:    .loh AdrpLdrGot Lloh0, Lloh1
+; ENABLE-NEXT:  Lfunc_end0:
+; ENABLE-NEXT:    .cfi_endproc
+; ENABLE-NEXT:    .section __TEXT,__gcc_except_tab
+; ENABLE-NEXT:    .p2align 2, 0x0
+; ENABLE-NEXT:  GCC_except_table15:
+; ENABLE-NEXT:  Lexception0:
+; ENABLE-NEXT:    .byte 255 ; @LPStart Encoding = omit
+; ENABLE-NEXT:    .byte 255 ; @TType Encoding = omit
+; ENABLE-NEXT:    .byte 1 ; Call site Encoding = uleb128
+; ENABLE-NEXT:    .uleb128 Lcst_end0-Lcst_begin0
+; ENABLE-NEXT:  Lcst_begin0:
+; ENABLE-NEXT:    .uleb128 Lfunc_begin0-Lfunc_begin0 ; >> Call Site 1 <<
+; ENABLE-NEXT:    .uleb128 Ltmp0-Lfunc_begin0 ; Call between Lfunc_begin0 and Ltmp0
+; ENABLE-NEXT:    .byte 0 ; has no landing pad
+; ENABLE-NEXT:    .byte 0 ; On action: cleanup
+; ENABLE-NEXT:    .uleb128 Ltmp0-Lfunc_begin0 ; >> Call Site 2 <<
+; ENABLE-NEXT:    .uleb128 Ltmp1-Ltmp0 ; Call between Ltmp0 and Ltmp1
+; ENABLE-NEXT:    .uleb128 Ltmp2-Lfunc_begin0 ; jumps to Ltmp2
+; ENABLE-NEXT:    .byte 0 ; On action: cleanup
+; ENABLE-NEXT:    .uleb128 Ltmp1-Lfunc_begin0 ; >> Call Site 3 <<
+; ENABLE-NEXT:    .uleb128 Lfunc_end0-Ltmp1 ; Call between Ltmp1 and Lfunc_end0
+; ENABLE-NEXT:    .byte 0 ; has no landing pad
+; ENABLE-NEXT:    .byte 0 ; On action: cleanup
+; ENABLE-NEXT:  Lcst_end0:
+; ENABLE-NEXT:    .p2align 2, 0x0
+;
+; DISABLE-LABEL: call_with_no_ret:
+; DISABLE:       Lfunc_begin0:
+; DISABLE-NEXT:    .cfi_startproc
+; DISABLE-NEXT:    .cfi_personality 155, ___gxx_personality_v0
+; DISABLE-NEXT:    .cfi_lsda 16, Lexception0
+; DISABLE-NEXT:  ; %bb.0: ; %entry
+; DISABLE-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
+; DISABLE-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; DISABLE-NEXT:    add x29, sp, #16
+; DISABLE-NEXT:    .cfi_def_cfa w29, 16
+; DISABLE-NEXT:    .cfi_offset w30, -8
+; DISABLE-NEXT:    .cfi_offset w29, -16
+; DISABLE-NEXT:    .cfi_offset w19, -24
+; DISABLE-NEXT:    .cfi_offset w20, -32
+; DISABLE-NEXT:    cmp w0, #1
+; DISABLE-NEXT:    b.eq LBB15_2
+; DISABLE-NEXT:  ; %bb.1: ; %exit
+; DISABLE-NEXT:    mov w0, wzr
+; DISABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; DISABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
+; DISABLE-NEXT:    ret
+; DISABLE-NEXT:  LBB15_2: ; %setup
+; DISABLE-NEXT:    mov w0, #32 ; =0x20
+; DISABLE-NEXT:    bl ___cxa_allocate_exception
+; DISABLE-NEXT:    mov x19, x0
+; DISABLE-NEXT:  Ltmp0: ; EH_LABEL
+; DISABLE-NEXT:    bl _construct_exception
+; DISABLE-NEXT:  Ltmp1: ; EH_LABEL
+; DISABLE-NEXT:  ; %bb.3: ; %throw
+; DISABLE-NEXT:  Lloh0:
+; DISABLE-NEXT:    adrp x2, _destruct_exception@GOTPAGE
+; DISABLE-NEXT:  Lloh1:
+; DISABLE-NEXT:    ldr x2, [x2, _destruct_exception@GOTPAGEOFF]
+; DISABLE-NEXT:  Lloh2:
+; DISABLE-NEXT:    adrp x1, _exception@PAGE
+; DISABLE-NEXT:  Lloh3:
+; DISABLE-NEXT:    add x1, x1, _exception@PAGEOFF
+; DISABLE-NEXT:    mov x0, x19
+; DISABLE-NEXT:    bl ___cxa_throw
+; DISABLE-NEXT:  LBB15_4: ; %teardown
+; DISABLE-NEXT:  Ltmp2: ; EH_LABEL
+; DISABLE-NEXT:    mov x20, x0
+; DISABLE-NEXT:    mov x0, x19
+; DISABLE-NEXT:    bl ___cxa_free_exception
+; DISABLE-NEXT:    mov x0, x20
+; DISABLE-NEXT:    bl __Unwind_Resume
+; DISABLE-NEXT:    .loh AdrpAdd Lloh2, Lloh3
+; DISABLE-NEXT:    .loh AdrpLdrGot Lloh0, Lloh1
+; DISABLE-NEXT:  Lfunc_end0:
+; DISABLE-NEXT:    .cfi_endproc
+; DISABLE-NEXT:    .section __TEXT,__gcc_except_tab
+; DISABLE-NEXT:    .p2align 2, 0x0
+; DISABLE-NEXT:  GCC_except_table15:
+; DISABLE-NEXT:  Lexception0:
+; DISABLE-NEXT:    .byte 255 ; @LPStart Encoding = omit
+; DISABLE-NEXT:    .byte 255 ; @TType Encoding = omit
+; DISABLE-NEXT:    .byte 1 ; Call site Encoding = uleb128
+; DISABLE-NEXT:    .uleb128 Lcst_end0-Lcst_begin0
+; DISABLE-NEXT:  Lcst_begin0:
+; DISABLE-NEXT:    .uleb128 Lfunc_begin0-Lfunc_begin0 ; >> Call Site 1 <<
+; DISABLE-NEXT:    .uleb128 Ltmp0-Lfunc_begin0 ; Call between Lfunc_begin0 and Ltmp0
+; DISABLE-NEXT:    .byte 0 ; has no landing pad
+; DISABLE-NEXT:    .byte 0 ; On action: cleanup
+; DISABLE-NEXT:    .uleb128 Ltmp0-Lfunc_begin0 ; >> Call Site 2 <<
+; DISABLE-NEXT:    .uleb128 Ltmp1-Ltmp0 ; Call between Ltmp0 and Ltmp1
+; DISABLE-NEXT:    .uleb128 Ltmp2-Lfunc_begin0 ; jumps to Ltmp2
+; DISABLE-NEXT:    .byte 0 ; On action: cleanup
+; DISABLE-NEXT:    .uleb128 Ltmp1-Lfunc_begin0 ; >> Call Site 3 <<
+; DISABLE-NEXT:    .uleb128 Lfunc_end0-Ltmp1 ; Call between Ltmp1 and Lfunc_end0
+; DISABLE-NEXT:    .byte 0 ; has no landing pad
+; DISABLE-NEXT:    .byte 0 ; On action: cleanup
+; DISABLE-NEXT:  Lcst_end0:
+; DISABLE-NEXT:    .p2align 2, 0x0
+entry:
+  %cmp = icmp eq i32 %in, 1
+  br i1 %cmp, label %setup, label %exit
+
+setup:
+  %exception = tail call ptr @__cxa_allocate_exception(i64 32) nounwind
+  %call = invoke noundef ptr @construct_exception(ptr noundef nonnull %exception) to label %throw unwind label %teardown
+
+throw:
+  tail call void @__cxa_throw(ptr nonnull %exception, ptr nonnull @exception, ptr nonnull @destruct_exception) noreturn
+  unreachable
+
+teardown:
+  %caught = landingpad { ptr, i32 } cleanup
+  tail call void @__cxa_free_exception(ptr nonnull %exception) nounwind
+  resume { ptr, i32 } %caught
+
+exit:
+  ret i32 0
+}
+
+declare i32 @__gxx_personality_v0(...)
+
+declare ptr @__cxa_allocate_exception(i64) local_unnamed_addr
+declare void @__cxa_free_exception(ptr) local_unnamed_addr
+declare void @__cxa_throw(ptr, ptr, ptr) local_unnamed_addr cold noreturn
+
+declare noundef ptr @construct_exception(ptr noundef nonnull returned) unnamed_addr
+declare noundef ptr @destruct_exception(ptr noundef nonnull returned) unnamed_addr mustprogress nounwind ssp uwtable(sync)
