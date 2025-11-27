@@ -78,6 +78,10 @@ public:
 
   bool ChecksEnabled[CK_NumCheckKinds] = {false};
 
+  /// When checking a struct value for uninitialized data, should all the fields
+  /// be un-initialized or only find one uninitialized field.
+  bool StructInitializednessComplete = true;
+
   void checkPreObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
 
   /// Fill in the return value that results from messaging nil based on the
@@ -190,11 +194,13 @@ private:
   StoreManager &StoreMgr;
   MemRegionManager &MrMgr;
   Store store;
+  bool FindNotUninitialized;
 
 public:
   FindUninitializedField(StoreManager &storeMgr, MemRegionManager &mrMgr,
-                         Store s)
-      : StoreMgr(storeMgr), MrMgr(mrMgr), store(s) {}
+                         Store s, bool FindNotUninitialized = false)
+      : StoreMgr(storeMgr), MrMgr(mrMgr), store(s),
+        FindNotUninitialized(FindNotUninitialized) {}
 
   bool Find(const TypedValueRegion *R) {
     QualType T = R->getValueType();
@@ -208,18 +214,18 @@ public:
         FieldChain.push_back(I);
         T = I->getType();
         if (T->isStructureType()) {
-          if (Find(FR))
-            return true;
+          if (FindNotUninitialized ? !Find(FR) : Find(FR))
+            return !FindNotUninitialized;
         } else {
           SVal V = StoreMgr.getBinding(store, loc::MemRegionVal(FR));
-          if (V.isUndef())
-            return true;
+          if (FindNotUninitialized ? !V.isUndef() : V.isUndef())
+            return !FindNotUninitialized;
         }
         FieldChain.pop_back();
       }
     }
 
-    return false;
+    return FindNotUninitialized;
   }
 };
 } // namespace
@@ -228,10 +234,12 @@ namespace llvm {
 template <> struct format_provider<FindUninitializedField::FieldChainTy> {
   static void format(const FindUninitializedField::FieldChainTy &V,
                      raw_ostream &Stream, StringRef Style) {
-    if (V.size() == 1)
-      Stream << "(e.g., field: '" << *V[0] << "')";
+    if (V.size() == 0)
+      return;
+    else if (V.size() == 1)
+      Stream << " (e.g., field: '" << *V[0] << "')";
     else {
-      Stream << "(e.g., via the field chain: '";
+      Stream << " (e.g., via the field chain: '";
       bool First = true;
       for (const FieldDecl *FD : V) {
         if (First)
@@ -298,12 +306,12 @@ bool CallAndMessageChecker::uninitRefOrPointer(
     const LazyCompoundValData *D = LV->getCVData();
     FindUninitializedField F(C.getState()->getStateManager().getStoreManager(),
                              C.getSValBuilder().getRegionManager(),
-                             D->getStore());
+                             D->getStore(), StructInitializednessComplete);
 
     if (F.Find(D->getRegion())) {
       if (ExplodedNode *N = C.generateErrorNode()) {
         std::string Msg = llvm::formatv(
-            "{0}{1} function call argument {2} an uninitialized value {3}",
+            "{0}{1} function call argument {2} an uninitialized value{3}",
             (ArgumentNumber + 1), llvm::getOrdinalSuffix(ArgumentNumber + 1),
             ParamT->isPointerType() ? "points to" : "references", F.FieldChain);
         auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
@@ -363,7 +371,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(
       }
       if (ExplodedNode *N = C.generateErrorNode()) {
         std::string Msg = llvm::formatv(
-            "Passed-by-value struct argument contains uninitialized data {0}",
+            "Passed-by-value struct argument contains uninitialized data{0}",
             F.FieldChain);
 
         // Generate a report for this bug.
@@ -723,6 +731,10 @@ void ento::registerCallAndMessageChecker(CheckerManager &Mgr) {
   QUERY_CHECKER_OPTION(ArgPointeeInitializedness)
   QUERY_CHECKER_OPTION(NilReceiver)
   QUERY_CHECKER_OPTION(UndefReceiver)
+
+  Chk->StructInitializednessComplete =
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          Mgr.getCurrentCheckerName(), "ArgPointeeInitializednessComplete");
 }
 
 bool ento::shouldRegisterCallAndMessageChecker(const CheckerManager &) {
