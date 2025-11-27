@@ -16,16 +16,10 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeBase.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
-
-namespace clang::lifetimes {
-
-struct LifetimeSafetyStats;
-} // namespace clang::lifetimes
 
 namespace clang::lifetimes::internal {
 

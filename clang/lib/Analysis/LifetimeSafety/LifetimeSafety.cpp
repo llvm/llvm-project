@@ -18,17 +18,16 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Checker.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/FactsGenerator.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/Support/raw_ostream.h"
 #include <memory>
 
 namespace clang::lifetimes {
@@ -80,18 +79,6 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
   OM.collectMissingOrigins(FunctionBody, Stats);
 }
 } // namespace internal
-
-void printStats(const LifetimeSafetyStats &Stats) {
-  llvm::errs() << "\n*** LifetimeSafety Missing Origin Stats "
-                  "(expression_type : count) :\n\n";
-  unsigned TotalMissingOrigins = 0;
-  for (const auto &[expr, count] : Stats.MissingOriginCount) {
-    llvm::errs() << expr << " : " << count << '\n';
-    TotalMissingOrigins += count;
-  }
-  llvm::errs() << "Total missing origins: " << TotalMissingOrigins << "\n";
-  llvm::errs() << "\n****************************************\n";
-}
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetyReporter *Reporter,

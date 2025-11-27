@@ -3175,8 +3175,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 }
 
 void clang::sema::AnalysisBasedWarnings::PrintStats() const {
-
   llvm::errs() << "\n*** Analysis Based Warnings Stats:\n";
+
   unsigned NumCFGsBuilt = NumFunctionsAnalyzed - NumFunctionsWithBadCFGs;
   unsigned AvgCFGBlocksPerFunction =
       !NumCFGsBuilt ? 0 : NumCFGBlocks/NumCFGsBuilt;

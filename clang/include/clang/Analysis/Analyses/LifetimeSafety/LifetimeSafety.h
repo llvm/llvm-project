@@ -21,11 +21,11 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
@@ -36,14 +36,6 @@ enum class Confidence : uint8_t {
   None,
   Maybe,   // Reported as a potential error (-Wlifetime-safety-strict)
   Definite // Reported as a definite error (-Wlifetime-safety-permissive)
-};
-
-/// A structure to hold the statistics related to LifetimeAnalysis.
-/// Currently it holds only the missing origin details.
-struct LifetimeSafetyStats {
-  /// A map from `ExpressionClassName<QualType>` to their missing origin
-  /// counts.
-  llvm::StringMap<unsigned> MissingOriginCount;
 };
 
 class LifetimeSafetyReporter {
@@ -60,9 +52,6 @@ public:
                                     SourceLocation ExpiryLoc,
                                     Confidence Confidence) {}
 };
-
-// utility function to print missing origin stats.
-void printStats(const LifetimeSafetyStats &Stats);
 
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,

@@ -8,33 +8,21 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeBase.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace clang::lifetimes::internal {
-
-static bool isGslPointerType(QualType QT) {
-  if (const auto *RD = QT->getAsCXXRecordDecl()) {
-    // We need to check the template definition for specializations.
-    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-      return CTSD->getSpecializedTemplate()
-          ->getTemplatedDecl()
-          ->hasAttr<PointerAttr>();
-    return RD->hasAttr<PointerAttr>();
-  }
-  return false;
-}
-
-static bool isPointerType(QualType QT) {
+namespace {
+bool isPointerType(QualType QT) {
   return QT->isPointerOrReferenceType() || isGslPointerType(QT);
 }
 // Check if a type has an origin.
-static bool hasOrigin(const Expr *E) {
+bool hasOrigin(const Expr *E) {
   return E->isGLValue() || isPointerType(E->getType());
 }
-
-namespace {
 /// An utility class to traverse the function body in the analysis
 /// context and collect the count of expressions with missing origins.
 class MissingOriginCollector
