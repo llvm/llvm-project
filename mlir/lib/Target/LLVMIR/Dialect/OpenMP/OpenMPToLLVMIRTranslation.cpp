@@ -61,8 +61,6 @@ convertToScheduleKind(std::optional<omp::ClauseScheduleKind> schedKind) {
     return llvm::omp::OMP_SCHEDULE_Auto;
   case omp::ClauseScheduleKind::Runtime:
     return llvm::omp::OMP_SCHEDULE_Runtime;
-  case omp::ClauseScheduleKind::Distribute:
-    return llvm::omp::OMP_SCHEDULE_Distribute;
   }
   llvm_unreachable("unhandled schedule clause argument");
 }
@@ -321,6 +319,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getDevice())
       result = todo("device");
   };
+  auto checkDistSchedule = [&todo](auto op, LogicalResult &result) {
+    if (op.getDistScheduleChunkSize())
+      result = todo("dist_schedule with chunk_size");
+  };
   auto checkHint = [](auto op, LogicalResult &) {
     if (op.getHint())
       op.emitWarning("hint clause discarded");
@@ -385,6 +387,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::DistributeOp op) {
         checkAllocate(op, result);
+        checkDistSchedule(op, result);
         checkOrder(op, result);
       })
       .Case([&](omp::OrderedRegionOp op) { checkParLevelSimd(op, result); })
@@ -2545,19 +2548,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     chunk = builder.CreateSExtOrTrunc(chunkVar, ivType);
   }
 
-  omp::DistributeOp distributeOp = nullptr;
-  llvm::Value *distScheduleChunk = nullptr;
-  bool hasDistSchedule = false;
-  if (llvm::isa_and_present<omp::DistributeOp>(opInst.getParentOp())) {
-    distributeOp = cast<omp::DistributeOp>(opInst.getParentOp());
-    hasDistSchedule = distributeOp.getDistScheduleStatic();
-    if (distributeOp.getDistScheduleChunkSize()) {
-      llvm::Value *chunkVar = moduleTranslation.lookupValue(
-          distributeOp.getDistScheduleChunkSize());
-      distScheduleChunk = builder.CreateSExtOrTrunc(chunkVar, ivType);
-    }
-  }
-
   PrivateVarsInfo privateVarsInfo(wsloopOp);
 
   SmallVector<omp::DeclareReductionOp> reductionDecls;
@@ -2685,7 +2675,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
           convertToScheduleKind(schedule), chunk, isSimd,
           scheduleMod == omp::ScheduleModifier::monotonic,
           scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
-          workshareLoopType, noLoopMode, hasDistSchedule, distScheduleChunk);
+          workshareLoopType, noLoopMode);
 
   if (failed(handleError(wsloopIP, opInst)))
     return failure();
@@ -5276,18 +5266,15 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
     if (!isa_and_present<omp::WsloopOp>(distributeOp.getNestedWrapper())) {
       // TODO: Add support for clauses which are valid for DISTRIBUTE
       // constructs. Static schedule is the default.
-      bool hasDistSchedule = distributeOp.getDistScheduleStatic();
-      auto schedule = hasDistSchedule ? omp::ClauseScheduleKind::Distribute
-                                      : omp::ClauseScheduleKind::Static;
-      // dist_schedule clauses are ordered - otherise this should be false
-      bool isOrdered = hasDistSchedule;
+      auto schedule = omp::ClauseScheduleKind::Static;
+      bool isOrdered = false;
       std::optional<omp::ScheduleModifier> scheduleMod;
       bool isSimd = false;
       llvm::omp::WorksharingLoopType workshareLoopType =
           llvm::omp::WorksharingLoopType::DistributeStaticLoop;
       bool loopNeedsBarrier = false;
-      llvm::Value *chunk = moduleTranslation.lookupValue(
-          distributeOp.getDistScheduleChunkSize());
+      llvm::Value *chunk = nullptr;
+
       llvm::CanonicalLoopInfo *loopInfo =
           findCurrentLoopInfo(moduleTranslation);
       llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
@@ -5296,11 +5283,12 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
               convertToScheduleKind(schedule), chunk, isSimd,
               scheduleMod == omp::ScheduleModifier::monotonic,
               scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
-              workshareLoopType, false, hasDistSchedule, chunk);
+              workshareLoopType);
 
       if (!wsloopIP)
         return wsloopIP.takeError();
     }
+
     if (failed(cleanupPrivateVars(builder, moduleTranslation,
                                   distributeOp.getLoc(), privVarsInfo.llvmVars,
                                   privVarsInfo.privatizers)))

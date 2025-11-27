@@ -617,7 +617,6 @@ parseScheduleClause(OpAsmParser &parser, ClauseScheduleKindAttr &scheduleAttr,
     break;
   case ClauseScheduleKind::Auto:
   case ClauseScheduleKind::Runtime:
-  case ClauseScheduleKind::Distribute:
     chunkSize = std::nullopt;
   }
 
