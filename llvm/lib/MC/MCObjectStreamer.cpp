@@ -178,10 +178,11 @@ void MCObjectStreamer::reset() {
   MCStreamer::reset();
 }
 
-void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
+void MCObjectStreamer::emitFrames() {
   if (!getNumFrameInfos())
     return;
 
+  auto *MAB = &getAssembler().getBackend();
   if (EmitEHFrame)
     MCDwarfFrameEmitter::Emit(*this, MAB, true);
 

@@ -178,12 +178,3 @@ entry:
   ret i32 %op.rdx.3
 }
 
-declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)
-declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
-declare <4 x i16> @llvm.abs.v4i16(<4 x i16>, i1)
-declare i16 @llvm.vector.reduce.add.v4i16(<4 x i16>)
-
-declare <16 x i32> @llvm.abs.v16i32(<16 x i32>, i1)
-declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
-declare <16 x i16> @llvm.abs.v16i16(<16 x i16>, i1)
-declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)

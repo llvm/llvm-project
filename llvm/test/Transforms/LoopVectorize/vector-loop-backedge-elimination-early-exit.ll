@@ -42,7 +42,7 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosyn
 ; VF8UF2:       [[VECTOR_PH]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 8
+; VF8UF2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[A]], align 1
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
 ; VF8UF2-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
@@ -141,7 +141,7 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF8UF2:       [[VECTOR_PH]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 8
+; VF8UF2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[A]], align 1
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
 ; VF8UF2-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
@@ -257,7 +257,7 @@ define i8 @test_early_exit_max_vector_tc_eq_16(ptr dereferenceable(17) %A) nosyn
 ; VF8UF2:       [[VECTOR_PH]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 8
+; VF8UF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[A]], align 1
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP1]], align 1
 ; VF8UF2-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer

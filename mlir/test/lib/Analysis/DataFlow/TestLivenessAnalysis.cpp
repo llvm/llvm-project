@@ -56,6 +56,17 @@ struct TestLivenessAnalysisPass
         liveness->print(os);
         os << "\n";
       }
+      for (auto [regionIndex, region] : llvm::enumerate(op->getRegions())) {
+        os << " region: #" << regionIndex << ":\n";
+        for (auto [argumntIndex, argument] :
+             llvm::enumerate(region.getArguments())) {
+          const Liveness *liveness = livenessAnalysis.getLiveness(argument);
+          assert(liveness && "expected a sparse lattice");
+          os << "   argument: #" << argumntIndex << ": ";
+          liveness->print(os);
+          os << "\n";
+        }
+      }
     });
   }
 };

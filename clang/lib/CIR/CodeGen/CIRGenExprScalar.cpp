@@ -2325,14 +2325,45 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
   const QualType typeToSize = e->getTypeOfArgument();
   const mlir::Location loc = cgf.getLoc(e->getSourceRange());
   if (auto kind = e->getKind();
-      kind == UETT_SizeOf || kind == UETT_DataSizeOf) {
-    if (cgf.getContext().getAsVariableArrayType(typeToSize)) {
-      cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
-                                     "sizeof operator for VariableArrayType",
-                                     e->getStmtClassName());
-      return builder.getConstant(
-          loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
-                                 llvm::APSInt(llvm::APInt(64, 1), true)));
+      kind == UETT_SizeOf || kind == UETT_DataSizeOf || kind == UETT_CountOf) {
+    if (const VariableArrayType *vat =
+            cgf.getContext().getAsVariableArrayType(typeToSize)) {
+      // For _Countof, we only want to evaluate if the extent is actually
+      // variable as opposed to a multi-dimensional array whose extent is
+      // constant but whose element type is variable.
+      bool evaluateExtent = true;
+      if (kind == UETT_CountOf && vat->getElementType()->isArrayType()) {
+        evaluateExtent =
+            !vat->getSizeExpr()->isIntegerConstantExpr(cgf.getContext());
+      }
+
+      if (evaluateExtent) {
+        if (e->isArgumentType()) {
+          // sizeof(type) - make sure to emit the VLA size.
+          cgf.emitVariablyModifiedType(typeToSize);
+        } else {
+          // C99 6.5.3.4p2: If the argument is an expression of type
+          // VLA, it is evaluated.
+          cgf.getCIRGenModule().errorNYI(
+              e->getSourceRange(),
+              "sizeof operator for VariableArrayType & evaluateExtent "
+              "ignoredExpr",
+              e->getStmtClassName());
+          return {};
+        }
+
+        // For _Countof, we just want to return the size of a single dimension.
+        if (kind == UETT_CountOf)
+          return cgf.getVLAElements1D(vat).numElts;
+
+        cgf.getCIRGenModule().errorNYI(
+            e->getSourceRange(),
+            "sizeof operator for VariableArrayType & evaluateExtent",
+            e->getStmtClassName());
+        return builder.getConstant(
+            loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
+                                   -llvm::APSInt(llvm::APInt(64, 1), true)));
+      }
     }
   } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {
     cgf.getCIRGenModule().errorNYI(
