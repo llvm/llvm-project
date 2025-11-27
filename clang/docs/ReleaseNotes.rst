@@ -325,6 +325,12 @@ Non-comprehensive list of changes in this release
 
 - Clang now rejects the invalid use of ``constexpr`` with ``auto`` and an explicit type in C. (#GH163090)
 
+- On all platforms excluding Windows and AIX, Clang now builds as a large shared
+  library, ``libclang-cpp``, by default. To revert to the old behavior of
+  producing and linking static libraries, pass ``-DCLANG_LINK_CLANG_DYLIB=OFF``
+  to CMake when configuring your build. The new behavior matches LLVM, which
+  also builds as a large shared library.
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
