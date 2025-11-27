@@ -309,3 +309,39 @@ define i32 @ptrtoaddr_of_gep_of_null_addrsize(i32 %offset) {
   %addr = ptrtoaddr ptr addrspace(1) %gep to i32
   ret i32 %addr
 }
+
+define i1 @icmp_ptrtoaddr_0() {
+; CHECK-LABEL: define i1 @icmp_ptrtoaddr_0() {
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ne i64 ptrtoaddr (ptr @g to i64), 0
+  ret i1 %cmp
+}
+
+; FIXME: This can still fold, but not by converting to pointer comparison.
+define i1 @icmp_ptrtoaddr_0_addrsize() {
+; CHECK-LABEL: define i1 @icmp_ptrtoaddr_0_addrsize() {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32), 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32), 0
+  ret i1 %cmp
+}
+
+define i1 @icmp_ptrtoaddr_ptrtoaddr() {
+; CHECK-LABEL: define i1 @icmp_ptrtoaddr_ptrtoaddr() {
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ne i64 ptrtoaddr (ptr @g to i64), ptrtoaddr (ptr @g2 to i64)
+  ret i1 %cmp
+}
+
+; FIXME: This can still fold, but not by converting to pointer comparison.
+define i1 @icmp_ptrtoaddr_ptrtoaddr_addrsize() {
+; CHECK-LABEL: define i1 @icmp_ptrtoaddr_ptrtoaddr_addrsize() {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32), ptrtoaddr (ptr addrspace(1) @g2.as1 to i32)
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp ne i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32), ptrtoaddr (ptr addrspace(1) @g2.as1 to i32)
+  ret i1 %cmp
+}
