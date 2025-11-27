@@ -34,13 +34,72 @@ LogicalResult dropOutermostUnitDims(RewriterBase &rewriter,
   return success();
 }
 
+LogicalResult dropOutermostUnitDimsWithEncoding(RewriterBase &rewriter,
+                                                linalg::GenericOp genericOp) {
+  linalg::ControlDropUnitDims options;
+
+  options.controlFn = [](Operation *op) { return SmallVector<unsigned>{0}; };
+  options.computeOperandShapeAndMapFn =
+      [](const linalg::ControlDropUnitDims &control, MLIRContext *context,
+         IndexingMapOpInterface op, OpOperand *opOperand,
+         linalg::ControlDropUnitDims::DimensionMapping &oldDimsToNewDimsMap,
+         ArrayRef<AffineExpr> dimReplacements)
+      -> linalg::ControlDropUnitDims::UnitExtentReplacementInfo {
+    auto isCollapsible = [](Type ty) { return isa<RankedTensorType>(ty); };
+    auto indexingMap = op.getMatchingIndexingMap(opOperand);
+    SmallVector<int64_t> shape = op.getStaticOperandShape(opOperand);
+    if (!isCollapsible(opOperand->get().getType())) {
+      AffineMap newIndexingMap = indexingMap.replaceDimsAndSymbols(
+          dimReplacements, ArrayRef<AffineExpr>{}, oldDimsToNewDimsMap.size(),
+          0);
+      linalg::ControlDropUnitDims::UnitExtentReplacementInfo info;
+      info.indexMap = newIndexingMap;
+      info.targetShape = llvm::to_vector(shape);
+      return info;
+    }
+    return control.dropUnitExtentFromOperandMetadata(
+        context, op, opOperand, oldDimsToNewDimsMap, dimReplacements);
+  };
+
+  // Preserve encoding when collapsing
+  options.collapseValueFn =
+      [](const linalg::ControlDropUnitDims &control, RewriterBase &rewriter,
+         Location loc, Value operand, ArrayRef<int64_t> targetShape,
+         ArrayRef<ReassociationIndices> reassociation) -> Value {
+    auto tensorType = cast<RankedTensorType>(operand.getType());
+    assert(control.rankReductionStrategy ==
+               linalg::ControlDropUnitDims::RankReductionStrategy::
+                   ReassociativeReshape &&
+           "unexpected rank reduction strategy");
+    auto targetType = RankedTensorType::get(
+        targetShape, tensorType.getElementType(), tensorType.getEncoding());
+    return tensor::CollapseShapeOp::create(rewriter, loc, targetType, operand,
+                                           reassociation);
+  };
+
+  FailureOr<linalg::DropUnitDimsResult> result =
+      linalg::dropUnitDims(rewriter, genericOp, options);
+  if (failed(result)) {
+    return failure();
+  }
+  rewriter.replaceOp(genericOp, result->replacements);
+  return success();
+}
+
 struct TestLinalgDropUnitDims
     : public PassWrapper<TestLinalgDropUnitDims, OperationPass<func::FuncOp>> {
 
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgDropUnitDims)
 
   TestLinalgDropUnitDims() = default;
-  TestLinalgDropUnitDims(const TestLinalgDropUnitDims &pass) = default;
+  TestLinalgDropUnitDims(const TestLinalgDropUnitDims &pass)
+      : PassWrapper(pass) {}
+
+  Option<bool> preserveEncoding{
+      *this, "preserve-encoding",
+      llvm::cl::desc(
+          "Preserve tensor encodings when collapsing unit dimensions"),
+      llvm::cl::init(false)};
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<linalg::LinalgDialect>();
@@ -63,7 +122,11 @@ struct TestLinalgDropUnitDims
 
     for (auto genericOp : genericOps) {
       rewriter.setInsertionPoint(genericOp);
-      (void)dropOutermostUnitDims(rewriter, genericOp);
+      if (preserveEncoding) {
+        (void)dropOutermostUnitDimsWithEncoding(rewriter, genericOp);
+      } else {
+        (void)dropOutermostUnitDims(rewriter, genericOp);
+      }
     }
   }
 };

@@ -524,6 +524,14 @@ struct ControlDropUnitDims {
   RankReductionStrategy rankReductionStrategy =
       RankReductionStrategy::ReassociativeReshape;
 
+  struct UnitExtentReplacementInfo {
+    AffineMap indexMap;
+    SmallVector<ReassociationIndices> reassociation;
+    SmallVector<int64_t> targetShape;
+  };
+
+  using DimensionMapping = llvm::SmallDenseMap<unsigned, unsigned>;
+
   using ControlFnTy = std::function<SmallVector<unsigned>(Operation *)>;
   ControlFnTy controlFn = [](Operation *op) {
     if (auto genericOp = dyn_cast_or_null<GenericOp>(op)) {
@@ -535,6 +543,83 @@ struct ControlDropUnitDims {
     }
     return SmallVector<unsigned>{};
   };
+
+  using ComputeOperandShapeAndMapFnTy = std::function<UnitExtentReplacementInfo(
+      const ControlDropUnitDims &, MLIRContext *, IndexingMapOpInterface,
+      OpOperand *, DimensionMapping &, ArrayRef<AffineExpr>)>;
+  ComputeOperandShapeAndMapFnTy computeOperandShapeAndMapFn =
+      [](const ControlDropUnitDims &control, MLIRContext *context,
+         IndexingMapOpInterface op, OpOperand *opOperand,
+         DimensionMapping &oldDimsToNewDimsMap,
+         ArrayRef<AffineExpr> dimReplacements) -> UnitExtentReplacementInfo {
+    auto hasCollapsibleType = [](OpOperand &operand) {
+      Type operandType = operand.get().getType();
+      if (auto memrefOperandType = dyn_cast_or_null<MemRefType>(operandType)) {
+        return memrefOperandType.getLayout().isIdentity();
+      }
+      if (auto tensorOperandType = dyn_cast<RankedTensorType>(operandType)) {
+        return tensorOperandType.getEncoding() == nullptr;
+      }
+      return false;
+    };
+    auto indexingMap = op.getMatchingIndexingMap(opOperand);
+    SmallVector<int64_t> shape = op.getStaticOperandShape(opOperand);
+    if (!hasCollapsibleType(*opOperand)) {
+      AffineMap newIndexingMap = indexingMap.replaceDimsAndSymbols(
+          dimReplacements, ArrayRef<AffineExpr>{}, oldDimsToNewDimsMap.size(),
+          0);
+      UnitExtentReplacementInfo info;
+      info.indexMap = newIndexingMap;
+      info.targetShape = llvm::to_vector(shape);
+      return info;
+    }
+    return control.dropUnitExtentFromOperandMetadata(
+        context, op, opOperand, oldDimsToNewDimsMap, dimReplacements);
+  };
+
+  using CollapseValueFnTy = std::function<Value(
+      const ControlDropUnitDims &, RewriterBase &, Location, Value,
+      ArrayRef<int64_t>, ArrayRef<ReassociationIndices>)>;
+  CollapseValueFnTy collapseValueFn =
+      [](const ControlDropUnitDims &control, RewriterBase &rewriter,
+         Location loc, Value operand, ArrayRef<int64_t> targetShape,
+         ArrayRef<ReassociationIndices> reassociation) -> Value {
+    return control.collapseValue(rewriter, loc, operand, targetShape,
+                                 reassociation);
+  };
+
+  using ExpandValueFnTy =
+      std::function<Value(const ControlDropUnitDims &, RewriterBase &, Location,
+                          Value, Value, ArrayRef<ReassociationIndices>)>;
+  ExpandValueFnTy expandValueFn =
+      [](const ControlDropUnitDims &control, RewriterBase &rewriter,
+         Location loc, Value result, Value origDest,
+         ArrayRef<ReassociationIndices> reassociation) -> Value {
+    return control.expandValue(rewriter, loc, result, origDest, reassociation);
+  };
+
+  /// Compute the modified metadata for an operands of operation
+  /// whose unit dims are being dropped. Return the new indexing map
+  /// to use, the shape of the operand in the replacement op
+  /// and the `reassocation` to use to go from original operand shape
+  /// to modified operand shape.
+  UnitExtentReplacementInfo
+  dropUnitExtentFromOperandMetadata(MLIRContext *, IndexingMapOpInterface,
+                                    OpOperand *, DimensionMapping &,
+                                    ArrayRef<AffineExpr>) const;
+
+  /// Collapse the given `value` so that the type matches the type of
+  /// `origOutput`. The `reassociation` is used when `rankReductionStrategy` is
+  /// set to `RankReductionStrategy::ReassociativeReshape`.
+  Value collapseValue(RewriterBase &, Location, Value, ArrayRef<int64_t>,
+                      ArrayRef<ReassociationIndices>) const;
+
+  /// Expand the given `value` so that the type matches the type of `origDest`.
+  /// The `reassociation` is used when `rankReductionStrategy` is set to
+  /// `RankReductionStrategy::ReassociativeReshape`.
+  Value expandValue(RewriterBase &rewriter, Location loc, Value result,
+                    Value origDest,
+                    ArrayRef<ReassociationIndices> reassociation) const;
 };
 
 struct DropUnitDimsResult {
