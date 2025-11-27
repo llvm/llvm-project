@@ -24,9 +24,9 @@ cir.func @flatten_structure_with_try_call_op() {
 // CHECK-NEXT:   %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT:   %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
 // CHECK-NEXT:   %[[CALL:.*]] = cir.try_call @division(%[[CONST_1]], %[[CONST_2]]) ^[[NORMAL:.*]], ^[[UNWIND:.*]] : (!s32i, !s32i) -> !s32i
-// CHECK-NEXT: ^[[normal]]:
+// CHECK-NEXT: ^[[NORMAL]]:
 // CHECK-NEXT:   cir.br ^[[END:.*]]
-// CHECK-NEXT: ^[[unwind]]:
+// CHECK-NEXT: ^[[UNWIND]]:
 // CHECK-NEXT:   cir.br ^[[END:.*]]
 // CHECK-NEXT: ^[[END]]:
 // CHECK-NEXT:   cir.return

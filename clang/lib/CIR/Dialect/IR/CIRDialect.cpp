@@ -850,7 +850,7 @@ static void printCallCommon(mlir::Operation *op,
     printer << ")";
   }
 
-  llvm::SmallVector<::llvm::StringRef, 4> elidedAttrs = {
+  llvm::SmallVector<::llvm::StringRef> elidedAttrs = {
       CIRDialect::getCalleeAttrName(), CIRDialect::getNoThrowAttrName(),
       CIRDialect::getSideEffectAttrName(),
       CIRDialect::getOperandSegmentSizesAttrName()};
