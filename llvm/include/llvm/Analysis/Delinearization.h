@@ -17,6 +17,7 @@
 #define LLVM_ANALYSIS_DELINEARIZATION_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Value.h"
 
 namespace llvm {
 class raw_ostream;
@@ -139,6 +140,15 @@ bool delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
                                SmallVectorImpl<const SCEV *> &Subscripts,
                                SmallVectorImpl<const SCEV *> &Sizes,
                                const SCEV *ElementSize);
+
+/// Check that each subscript in \p Subscripts is within the corresponding size
+/// in \p Sizes. For the outermost dimension, the subscript being negative is
+/// allowed. If \p Ptr is not nullptr, it may be used to get information from
+/// the IR pointer value, which may help in the validation.
+bool validateDelinearizationResult(ScalarEvolution &SE,
+                                   ArrayRef<const SCEV *> Sizes,
+                                   ArrayRef<const SCEV *> Subscripts,
+                                   const Value *Ptr = nullptr);
 
 /// Gathers the individual index expressions from a GEP instruction.
 ///
