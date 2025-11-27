@@ -1440,9 +1440,10 @@ __m128d test_mm_sqrt_pd(__m128d A) {
 
 __m128d test_mm_sqrt_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_sqrt_sd
-  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
+  // CHECK: extractelement <2 x double> %{{.*}}, i32 0
   // CHECK: call double @llvm.sqrt.f64(double {{.*}})
-  // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i64 0
+  // CHECK: %[[sqrt_vec:.*]] = insertelement <2 x double> poison, double %{{.*}}, i32 0
+  // CHECK: insertelement <2 x double> %[[sqrt_vec]], double %{{.*}}, i32 1
   return _mm_sqrt_sd(A, B);
 }
 

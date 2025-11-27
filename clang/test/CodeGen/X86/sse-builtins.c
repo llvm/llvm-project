@@ -751,9 +751,9 @@ __m128 test_mm_sqrt_ps(__m128 x) {
 
 __m128 test_mm_sqrt_ss(__m128 x) {
   // CHECK-LABEL: test_mm_sqrt_ss
-  // CHECK: extractelement <4 x float> {{.*}}, i64 0
+  // CHECK: extractelement <4 x float> {{.*}}, i32 0
   // CHECK: call float @llvm.sqrt.f32(float {{.*}})
-  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i64 0
+  // CHECK: insertelement <4 x float> {{.*}}, float {{.*}}, i32 0
   return _mm_sqrt_ss(x);
 }
 
