@@ -97,8 +97,7 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
   DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts);
 
   // Determine a formatting style from options.
   auto FormatStyleOrError = format::getStyle(FormatStyleOpt, FormatStyleConfig,

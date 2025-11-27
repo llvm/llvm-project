@@ -203,8 +203,10 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
   // find machine architecture for this module
   std::string errMsg;
   const Target *march = TargetRegistry::lookupTarget(Triple, errMsg);
-  if (!march)
+  if (!march) {
+    Context.emitError(errMsg);
     return make_error_code(object::object_error::arch_not_found);
+  }
 
   // construct LTOModule, hand over ownership of module and target
   SubtargetFeatures Features;
@@ -414,8 +416,11 @@ void LTOModule::addDefinedFunctionSymbol(StringRef Name, const GlobalValue *F) {
 
 void LTOModule::addDefinedSymbol(StringRef Name, const GlobalValue *def,
                                  bool isFunction) {
-  const GlobalObject *go = dyn_cast<GlobalObject>(def);
-  uint32_t attr = go ? Log2(go->getAlign().valueOrOne()) : 0;
+  uint32_t attr = 0;
+  if (auto *gv = dyn_cast<GlobalVariable>(def))
+    attr = Log2(gv->getAlign().valueOrOne());
+  else if (auto *f = dyn_cast<Function>(def))
+    attr = Log2(f->getAlign().valueOrOne());
 
   // set permissions part
   if (isFunction) {
@@ -615,13 +620,11 @@ void LTOModule::parseSymbols() {
   }
 
   // make symbols for all undefines
-  for (StringMap<NameAndAttributes>::iterator u =_undefines.begin(),
-         e = _undefines.end(); u != e; ++u) {
+  for (const auto &[Key, Value] : _undefines) {
     // If this symbol also has a definition, then don't make an undefine because
     // it is a tentative definition.
-    if (_defines.count(u->getKey())) continue;
-    NameAndAttributes info = u->getValue();
-    _symbols.push_back(info);
+    if (!_defines.contains(Key))
+      _symbols.push_back(Value);
   }
 }
 

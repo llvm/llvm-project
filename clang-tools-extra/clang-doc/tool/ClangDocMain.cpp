@@ -22,7 +22,6 @@
 #include "Generators.h"
 #include "Representation.h"
 #include "support/Utils.h"
-#include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/Tooling/AllTUsExecution.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
@@ -41,7 +40,6 @@
 #include <mutex>
 #include <string>
 
-using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace clang;
 
@@ -110,7 +108,7 @@ Turn on time profiler. Generates clang-doc-tracing.json)"),
                                       llvm::cl::init(false),
                                       llvm::cl::cat(ClangDocCategory));
 
-enum OutputFormatTy { md, yaml, html, mustache };
+enum OutputFormatTy { md, yaml, html, mustache, json };
 
 static llvm::cl::opt<OutputFormatTy> FormatEnum(
     "format", llvm::cl::desc("Format for outputted docs."),
@@ -121,7 +119,9 @@ static llvm::cl::opt<OutputFormatTy> FormatEnum(
                      clEnumValN(OutputFormatTy::html, "html",
                                 "Documentation in HTML format."),
                      clEnumValN(OutputFormatTy::mustache, "mustache",
-                                "Documentation in mustache HTML format")),
+                                "Documentation in mustache HTML format"),
+                     clEnumValN(OutputFormatTy::json, "json",
+                                "Documentation in JSON format")),
     llvm::cl::init(OutputFormatTy::yaml), llvm::cl::cat(ClangDocCategory));
 
 static llvm::ExitOnError ExitOnErr;
@@ -136,6 +136,8 @@ static std::string getFormatString() {
     return "html";
   case OutputFormatTy::mustache:
     return "mustache";
+  case OutputFormatTy::json:
+    return "json";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }
@@ -434,7 +436,8 @@ Example usage for a project using a compile commands database:
     // Run the generator.
     llvm::outs() << "Generating docs...\n";
 
-    ExitOnErr(G->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx));
+    ExitOnErr(
+        G->generateDocumentation(OutDirectory, std::move(USRToInfo), CDCtx));
     llvm::outs() << "Generating assets for docs...\n";
     ExitOnErr(G->createResources(CDCtx));
     llvm::timeTraceProfilerEnd();

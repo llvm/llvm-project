@@ -1419,10 +1419,11 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
 
   // Return a valid hint if pragma unroll or nounroll were specified
   // without an argument.
-  auto IsLoopHint = llvm::StringSwitch<bool>(PragmaNameInfo->getName())
-                        .Cases("unroll", "nounroll", "unroll_and_jam",
-                               "nounroll_and_jam", true)
-                        .Default(false);
+  auto IsLoopHint =
+      llvm::StringSwitch<bool>(PragmaNameInfo->getName())
+          .Cases({"unroll", "nounroll", "unroll_and_jam", "nounroll_and_jam"},
+                 true)
+          .Default(false);
 
   if (Toks.empty() && IsLoopHint) {
     ConsumeAnnotationToken();
@@ -1926,7 +1927,7 @@ void Parser::HandlePragmaAttribute() {
       SourceLocation AttrNameLoc = ConsumeToken();
 
       if (Tok.isNot(tok::l_paren))
-        Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+        Attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0,
                      ParsedAttr::Form::GNU());
       else
         ParseGNUAttributeArgs(AttrName, AttrNameLoc, Attrs, /*EndLoc=*/nullptr,

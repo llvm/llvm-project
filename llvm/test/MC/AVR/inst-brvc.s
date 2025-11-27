@@ -16,6 +16,9 @@ bar:
 ; CHECK: brvc bar            ; encoding: [0bAAAAA011,0b111101AA]
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 93 f7      brvc .-28
-; INST-NEXT: 0b f7      brvc .-62
-; INST-NEXT: 03 f4      brvc .+0
+; INST-NEXT: fb f7      brvc .-2
+; INST-NEXT: R_AVR_7_PCREL .text-0x1a
+; INST-NEXT: fb f7      brvc .-2
+; INST-NEXT: R_AVR_7_PCREL .text-0x3a
+; INST-NEXT: fb f7      brvc .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x6

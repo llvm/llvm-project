@@ -26,7 +26,7 @@ typedef int v2i32 [[gnu::vector_size(8)]]; // expected-warning{{[[]] attributes 
 // Check various positions where the [[]] spelling can or cannot be used.
 [[gnu::vector_size(16)]] typedef long long v2i64; // expected-warning{{[[]] attributes are a C23 extension}}
 typedef long long [[gnu::vector_size(16)]] v2i64_ignored;
-  // expected-warning@-1{{'vector_size' attribute ignored}}
+  // expected-warning@-1{{'gnu::vector_size' attribute ignored}}
   // expected-warning@-2{{[[]] attributes are a C23 extension}}
 // FIXME: Contrary to the error message that we emit, GCC does actually allow
 // the attribute in the following position. Somewhat surprisingly, the attribute
@@ -34,7 +34,7 @@ typedef long long [[gnu::vector_size(16)]] v2i64_ignored;
 // the same effect in GCC as the other declarations for `v2i64`.
 typedef long long *[[gnu::vector_size(16)]] v2i64_doesnt_work;
   // expected-error@-1{{invalid vector element type 'long long *'}}
-  // expected-warning@-2{{GCC does not allow the 'vector_size' attribute to be written on a type}}
+  // expected-warning@-2{{GCC does not allow the 'gnu::vector_size' attribute to be written on a type}}
   // expected-warning@-3{{[[]] attributes are a C23 extension}}
 
 // Verify that we can use the attribute outside of a typedef.

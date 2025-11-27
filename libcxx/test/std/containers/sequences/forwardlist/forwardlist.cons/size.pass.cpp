@@ -8,8 +8,8 @@
 
 // <forward_list>
 
-// explicit forward_list(size_type n);
-// explicit forward_list(size_type n, const Alloc& a);
+// explicit forward_list(size_type n);                 // constexpr since C++26
+// explicit forward_list(size_type n, const Alloc& a); // constexpr since C++26
 
 #include <forward_list>
 #include <cassert>

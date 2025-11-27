@@ -149,23 +149,24 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, AliasResult AR);
 struct LLVM_ABI CaptureAnalysis {
   virtual ~CaptureAnalysis() = 0;
 
-  /// Check whether Object is not captured before instruction I. If OrAt is
-  /// true, captures by instruction I itself are also considered.
+  /// Return how Object may be captured before instruction I, considering only
+  /// provenance captures. If OrAt is true, captures by instruction I itself
+  /// are also considered.
   ///
   /// If I is nullptr, then captures at any point will be considered.
-  virtual bool isNotCapturedBefore(const Value *Object, const Instruction *I,
-                                   bool OrAt) = 0;
+  virtual CaptureComponents
+  getCapturesBefore(const Value *Object, const Instruction *I, bool OrAt) = 0;
 };
 
 /// Context-free CaptureAnalysis provider, which computes and caches whether an
 /// object is captured in the function at all, but does not distinguish whether
 /// it was captured before or after the context instruction.
 class LLVM_ABI SimpleCaptureAnalysis final : public CaptureAnalysis {
-  SmallDenseMap<const Value *, bool, 8> IsCapturedCache;
+  SmallDenseMap<const Value *, CaptureComponents, 8> IsCapturedCache;
 
 public:
-  bool isNotCapturedBefore(const Value *Object, const Instruction *I,
-                           bool OrAt) override;
+  CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
+                                      bool OrAt) override;
 };
 
 /// Context-sensitive CaptureAnalysis provider, which computes and caches the
@@ -176,10 +177,12 @@ class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   const LoopInfo *LI;
 
   /// Map from identified local object to an instruction before which it does
-  /// not escape, or nullptr if it never escapes. The "earliest" instruction
-  /// may be a conservative approximation, e.g. the first instruction in the
-  /// function is always a legal choice.
-  DenseMap<const Value *, Instruction *> EarliestEscapes;
+  /// not escape (or nullptr if it never escapes) and the possible components
+  /// that may be captured (by any instruction, not necessarily the earliest
+  /// one). The "earliest" instruction may be a conservative approximation,
+  /// e.g. the first instruction in the function is always a legal choice.
+  DenseMap<const Value *, std::pair<Instruction *, CaptureComponents>>
+      EarliestEscapes;
 
   /// Reverse map from instruction to the objects it is the earliest escape for.
   /// This is used for cache invalidation purposes.
@@ -189,8 +192,8 @@ public:
   EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr)
       : DT(DT), LI(LI) {}
 
-  bool isNotCapturedBefore(const Value *Object, const Instruction *I,
-                           bool OrAt) override;
+  CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
+                                      bool OrAt) override;
 
   void removeInstruction(Instruction *I);
 };
@@ -582,6 +585,7 @@ public:
   LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI,
                              const Instruction *CtxI = nullptr);
+  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M);
 
   LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
                                         AAQueryInfo &AAQI,
@@ -741,6 +745,11 @@ public:
                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
                             const Instruction *CtxI) = 0;
 
+  /// Returns an AliasResult indicating whether a specific memory location
+  /// aliases errno.
+  virtual AliasResult aliasErrno(const MemoryLocation &Loc,
+                                 const Module *M) = 0;
+
   /// @}
   //===--------------------------------------------------------------------===//
   /// \name Simple mod/ref information
@@ -802,6 +811,10 @@ public:
     return Result.alias(LocA, LocB, AAQI, CtxI);
   }
 
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) override {
+    return Result.aliasErrno(Loc, M);
+  }
+
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                                bool IgnoreLocals) override {
     return Result.getModRefInfoMask(Loc, AAQI, IgnoreLocals);
@@ -848,12 +861,16 @@ protected:
 
   // Provide all the copy and move constructors so that derived types aren't
   // constrained.
-  AAResultBase(const AAResultBase &Arg) {}
+  AAResultBase(const AAResultBase &Arg) = default;
   AAResultBase(AAResultBase &&Arg) {}
 
 public:
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
                     AAQueryInfo &AAQI, const Instruction *I) {
+    return AliasResult::MayAlias;
+  }
+
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) {
     return AliasResult::MayAlias;
   }
 

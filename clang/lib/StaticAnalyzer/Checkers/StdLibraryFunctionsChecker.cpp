@@ -1589,7 +1589,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
       // and we have a TypedefDecl with the name 'FILE'.
       for (Decl *D : LookupRes)
         if (auto *TD = dyn_cast<TypedefNameDecl>(D))
-          return ACtx.getTypeDeclType(TD).getCanonicalType();
+          return ACtx.getCanonicalTypeDeclType(TD);
 
       // Find the first TypeDecl.
       // There maybe cases when a function has the same name as a struct.
@@ -1597,7 +1597,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
       //   int stat(const char *restrict path, struct stat *restrict buf);
       for (Decl *D : LookupRes)
         if (auto *TD = dyn_cast<TypeDecl>(D))
-          return ACtx.getTypeDeclType(TD).getCanonicalType();
+          return ACtx.getCanonicalTypeDeclType(TD);
       return std::nullopt;
     }
   } lookupTy(ACtx);
@@ -1666,7 +1666,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   const QualType IntTy = ACtx.IntTy;
   const QualType UnsignedIntTy = ACtx.UnsignedIntTy;
   const QualType LongTy = ACtx.LongTy;
-  const QualType SizeTy = ACtx.getSizeType();
+  const QualType SizeTyCanonTy = ACtx.getCanonicalSizeType();
 
   const QualType VoidPtrTy = getPointerTy(VoidTy); // void *
   const QualType IntPtrTy = getPointerTy(IntTy);   // int *
@@ -1684,14 +1684,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   const QualType ConstWchar_tPtrTy =
       getPointerTy(getConstTy(WCharTy)); // const wchar_t *
   const QualType ConstVoidPtrRestrictTy = getRestrictTy(ConstVoidPtrTy);
-  const QualType SizePtrTy = getPointerTy(SizeTy);
+  const QualType SizePtrTy = getPointerTy(SizeTyCanonTy);
   const QualType SizePtrRestrictTy = getRestrictTy(SizePtrTy);
 
   const RangeInt IntMax = BVF.getMaxValue(IntTy)->getLimitedValue();
   const RangeInt UnsignedIntMax =
       BVF.getMaxValue(UnsignedIntTy)->getLimitedValue();
   const RangeInt LongMax = BVF.getMaxValue(LongTy)->getLimitedValue();
-  const RangeInt SizeMax = BVF.getMaxValue(SizeTy)->getLimitedValue();
+  const RangeInt SizeMax = BVF.getMaxValue(SizeTyCanonTy)->getLimitedValue();
 
   // Set UCharRangeMax to min of int or uchar maximum value.
   // The C standard states that the arguments of functions like isalpha must
@@ -2057,18 +2057,19 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
   // size_t fread(void *restrict ptr, size_t size, size_t nitems,
   //              FILE *restrict stream);
-  addToFunctionSummaryMap(
-      "fread",
-      Signature(ArgTypes{VoidPtrRestrictTy, SizeTy, SizeTy, FilePtrRestrictTy},
-                RetType{SizeTy}),
-      FreadSummary);
+  addToFunctionSummaryMap("fread",
+                          Signature(ArgTypes{VoidPtrRestrictTy, SizeTyCanonTy,
+                                             SizeTyCanonTy, FilePtrRestrictTy},
+                                    RetType{SizeTyCanonTy}),
+                          FreadSummary);
   // size_t fwrite(const void *restrict ptr, size_t size, size_t nitems,
   //               FILE *restrict stream);
-  addToFunctionSummaryMap("fwrite",
-                          Signature(ArgTypes{ConstVoidPtrRestrictTy, SizeTy,
-                                             SizeTy, FilePtrRestrictTy},
-                                    RetType{SizeTy}),
-                          FreadSummary);
+  addToFunctionSummaryMap(
+      "fwrite",
+      Signature(ArgTypes{ConstVoidPtrRestrictTy, SizeTyCanonTy, SizeTyCanonTy,
+                         FilePtrRestrictTy},
+                RetType{SizeTyCanonTy}),
+      FreadSummary);
 
   std::optional<QualType> Ssize_tTy = lookupTy("ssize_t");
   std::optional<RangeInt> Ssize_tMax = getMaxValue(Ssize_tTy);
@@ -2083,12 +2084,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   // should handle them together with the rest of the POSIX functions.
   // ssize_t read(int fildes, void *buf, size_t nbyte);
   addToFunctionSummaryMap(
-      "read", Signature(ArgTypes{IntTy, VoidPtrTy, SizeTy}, RetType{Ssize_tTy}),
+      "read",
+      Signature(ArgTypes{IntTy, VoidPtrTy, SizeTyCanonTy}, RetType{Ssize_tTy}),
       ReadSummary);
   // ssize_t write(int fildes, const void *buf, size_t nbyte);
   addToFunctionSummaryMap(
       "write",
-      Signature(ArgTypes{IntTy, ConstVoidPtrTy, SizeTy}, RetType{Ssize_tTy}),
+      Signature(ArgTypes{IntTy, ConstVoidPtrTy, SizeTyCanonTy},
+                RetType{Ssize_tTy}),
       ReadSummary);
 
   auto GetLineSummary =
@@ -2618,7 +2621,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     // char *strndup(const char *s, size_t n);
     addToFunctionSummaryMap(
         "strndup",
-        Signature(ArgTypes{ConstCharPtrTy, SizeTy}, RetType{CharPtrTy}),
+        Signature(ArgTypes{ConstCharPtrTy, SizeTyCanonTy}, RetType{CharPtrTy}),
         Summary(NoEvalCall)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(
@@ -2649,7 +2652,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
     // char *getcwd(char *buf, size_t size);
     addToFunctionSummaryMap(
-        "getcwd", Signature(ArgTypes{CharPtrTy, SizeTy}, RetType{CharPtrTy}),
+        "getcwd",
+        Signature(ArgTypes{CharPtrTy, SizeTyCanonTy}, RetType{CharPtrTy}),
         Summary(NoEvalCall)
             .Case({NotNull(0),
                    ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
@@ -2957,8 +2961,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     // FIXME: Improve for errno modeling.
     addToFunctionSummaryMap(
         "mmap",
-        Signature(ArgTypes{VoidPtrTy, SizeTy, IntTy, IntTy, IntTy, Off_tTy},
-                  RetType{VoidPtrTy}),
+        Signature(
+            ArgTypes{VoidPtrTy, SizeTyCanonTy, IntTy, IntTy, IntTy, Off_tTy},
+            RetType{VoidPtrTy}),
         Summary(NoEvalCall)
             .ArgConstraint(ArgumentCondition(1, WithinRange, Range(1, SizeMax)))
             .ArgConstraint(
@@ -2970,8 +2975,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     // FIXME: Improve for errno modeling.
     addToFunctionSummaryMap(
         "mmap64",
-        Signature(ArgTypes{VoidPtrTy, SizeTy, IntTy, IntTy, IntTy, Off64_tTy},
-                  RetType{VoidPtrTy}),
+        Signature(
+            ArgTypes{VoidPtrTy, SizeTyCanonTy, IntTy, IntTy, IntTy, Off64_tTy},
+            RetType{VoidPtrTy}),
         Summary(NoEvalCall)
             .ArgConstraint(ArgumentCondition(1, WithinRange, Range(1, SizeMax)))
             .ArgConstraint(
@@ -3002,8 +3008,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     //                  size_t bufsize);
     addToFunctionSummaryMap(
         "readlink",
-        Signature(ArgTypes{ConstCharPtrRestrictTy, CharPtrRestrictTy, SizeTy},
-                  RetType{Ssize_tTy}),
+        Signature(
+            ArgTypes{ConstCharPtrRestrictTy, CharPtrRestrictTy, SizeTyCanonTy},
+            RetType{Ssize_tTy}),
         Summary(NoEvalCall)
             .Case({ArgumentCondition(2, WithinRange, Range(1, IntMax)),
                    ReturnValueCondition(LessThanOrEq, ArgNo(2)),
@@ -3025,9 +3032,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     //                    char *restrict buf, size_t bufsize);
     addToFunctionSummaryMap(
         "readlinkat",
-        Signature(
-            ArgTypes{IntTy, ConstCharPtrRestrictTy, CharPtrRestrictTy, SizeTy},
-            RetType{Ssize_tTy}),
+        Signature(ArgTypes{IntTy, ConstCharPtrRestrictTy, CharPtrRestrictTy,
+                           SizeTyCanonTy},
+                  RetType{Ssize_tTy}),
         Summary(NoEvalCall)
             .Case({ArgumentCondition(3, WithinRange, Range(1, IntMax)),
                    ReturnValueCondition(LessThanOrEq, ArgNo(3)),
@@ -3268,14 +3275,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             //                  size_t length,
             //                  int flags, struct sockaddr *restrict address,
             //                  socklen_t *restrict address_len);
-            Signature(ArgTypes{IntTy, VoidPtrRestrictTy, SizeTy, IntTy,
+            Signature(ArgTypes{IntTy, VoidPtrRestrictTy, SizeTyCanonTy, IntTy,
                                StructSockaddrPtrRestrictTy,
                                Socklen_tPtrRestrictTy},
                       RetType{Ssize_tTy}),
             Recvfrom))
       addToFunctionSummaryMap(
           "recvfrom",
-          Signature(ArgTypes{IntTy, VoidPtrRestrictTy, SizeTy, IntTy,
+          Signature(ArgTypes{IntTy, VoidPtrRestrictTy, SizeTyCanonTy, IntTy,
                              Irrelevant, Socklen_tPtrRestrictTy},
                     RetType{Ssize_tTy}),
           Recvfrom);
@@ -3297,14 +3304,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             // ssize_t sendto(int socket, const void *message, size_t length,
             //                int flags, const struct sockaddr *dest_addr,
             //                socklen_t dest_len);
-            Signature(ArgTypes{IntTy, ConstVoidPtrTy, SizeTy, IntTy,
+            Signature(ArgTypes{IntTy, ConstVoidPtrTy, SizeTyCanonTy, IntTy,
                                ConstStructSockaddrPtrTy, Socklen_tTy},
                       RetType{Ssize_tTy}),
             Sendto))
       addToFunctionSummaryMap(
           "sendto",
-          Signature(ArgTypes{IntTy, ConstVoidPtrTy, SizeTy, IntTy, Irrelevant,
-                             Socklen_tTy},
+          Signature(ArgTypes{IntTy, ConstVoidPtrTy, SizeTyCanonTy, IntTy,
+                             Irrelevant, Socklen_tTy},
                     RetType{Ssize_tTy}),
           Sendto);
 
@@ -3320,7 +3327,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     // ssize_t recv(int sockfd, void *buf, size_t len, int flags);
     addToFunctionSummaryMap(
         "recv",
-        Signature(ArgTypes{IntTy, VoidPtrTy, SizeTy, IntTy},
+        Signature(ArgTypes{IntTy, VoidPtrTy, SizeTyCanonTy, IntTy},
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
             .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
@@ -3395,7 +3402,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     // ssize_t send(int sockfd, const void *buf, size_t len, int flags);
     addToFunctionSummaryMap(
         "send",
-        Signature(ArgTypes{IntTy, ConstVoidPtrTy, SizeTy, IntTy},
+        Signature(ArgTypes{IntTy, ConstVoidPtrTy, SizeTyCanonTy, IntTy},
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
             .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
@@ -3683,7 +3690,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     // int pthread_attr_setguardsize(pthread_attr_t *attr, size_t guardsize);
     addToFunctionSummaryMap(
         {"pthread_attr_setstacksize", "pthread_attr_setguardsize"},
-        Signature(ArgTypes{Pthread_attr_tPtrTy, SizeTy}, RetType{IntTy}),
+        Signature(ArgTypes{Pthread_attr_tPtrTy, SizeTyCanonTy}, RetType{IntTy}),
         Summary(NoEvalCall)
             .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(
@@ -3888,13 +3895,14 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(NotNull(ArgNo(1))));
     addToFunctionSummaryMap(
         "__buf_size_arg_constraint",
-        Signature(ArgTypes{ConstVoidPtrTy, SizeTy}, RetType{IntTy}),
+        Signature(ArgTypes{ConstVoidPtrTy, SizeTyCanonTy}, RetType{IntTy}),
         Summary(EvalCallAsPure)
             .ArgConstraint(
                 BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1))));
     addToFunctionSummaryMap(
         "__buf_size_arg_constraint_mul",
-        Signature(ArgTypes{ConstVoidPtrTy, SizeTy, SizeTy}, RetType{IntTy}),
+        Signature(ArgTypes{ConstVoidPtrTy, SizeTyCanonTy, SizeTyCanonTy},
+                  RetType{IntTy}),
         Summary(EvalCallAsPure)
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1),
                                       /*BufSizeMultiplier=*/ArgNo(2))));

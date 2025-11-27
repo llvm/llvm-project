@@ -38,6 +38,7 @@ class InstrItineraryData;
 struct InstrStage;
 class InstructionSelector;
 class LegalizerInfo;
+class LibcallLoweringInfo;
 class MachineInstr;
 struct MachineSchedPolicy;
 struct MCReadAdvanceEntry;
@@ -54,6 +55,7 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class Triple;
+struct SchedRegion;
 
 //===----------------------------------------------------------------------===//
 ///
@@ -138,6 +140,12 @@ public:
     return nullptr;
   }
 
+  /// Configure the LibcallLoweringInfo for this subtarget. The libcalls will be
+  /// pre-configured with defaults based on RuntimeLibcallsInfo. This may be
+  /// used to override those decisions, such as disambiguating alternative
+  /// implementations.
+  virtual void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {}
+
   /// Resolve a SchedClass at runtime, where SchedClass identifies an
   /// MCSchedClassDesc with the isVariant property. This may return the ID of
   /// another variant SchedClass, but repeated invocation must quickly terminate
@@ -209,6 +217,10 @@ public:
   /// can be overridden.
   virtual bool enableJoinGlobalCopies() const;
 
+  /// Hack to bring up option. This should be unconditionally true, all targets
+  /// should enable it and delete this.
+  virtual bool enableTerminalRule() const { return false; }
+
   /// True if the subtarget should run a scheduler after register allocation.
   ///
   /// By default this queries the PostRAScheduling bit in the scheduling model
@@ -231,7 +243,7 @@ public:
   /// scheduling heuristics (no custom MachineSchedStrategy) to make
   /// changes to the generic scheduling policy.
   virtual void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                   unsigned NumRegionInstrs) const {}
+                                   const SchedRegion &Region) const {}
 
   /// Override generic post-ra scheduling policy within a region.
   ///
@@ -241,7 +253,7 @@ public:
   /// Note that some options like tracking register pressure won't take effect
   /// in post-ra scheduling.
   virtual void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
-                                         unsigned NumRegionInstrs) const {}
+                                         const SchedRegion &Region) const {}
 
   // Perform target-specific adjustments to the latency of a schedule
   // dependency.

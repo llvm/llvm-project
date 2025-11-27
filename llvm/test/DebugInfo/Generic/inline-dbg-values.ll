@@ -1,4 +1,4 @@
-; RUN: opt -passes='cgscc(inline)' -S %s -o - -S | FileCheck %s --implicit-check-not=dbg.value
+; RUN: opt -passes='cgscc(inline)' -S %s -o - -S | FileCheck %s --implicit-check-not=dbg_value
 
 ;; Test that dbg.value intrinsics are inlined, remapped, and have their
 ;; dilocation updated just like normal instructions. This becomes

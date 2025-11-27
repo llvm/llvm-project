@@ -322,8 +322,6 @@ template <class R, class... ArgTypes>
 class packaged_task<R(ArgTypes...)>
 {
 public:
-    typedef R result_type; // extension
-
     // construction and destruction
     packaged_task() noexcept;
     template <class F>
@@ -393,7 +391,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #    include <__system_error/error_code.h>
 #    include <__system_error/error_condition.h>
 #    include <__thread/thread.h>
-#    include <__type_traits/add_lvalue_reference.h>
+#    include <__type_traits/add_reference.h>
 #    include <__type_traits/aligned_storage.h>
 #    include <__type_traits/conditional.h>
 #    include <__type_traits/decay.h>
@@ -405,6 +403,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #    include <__type_traits/strip_signature.h>
 #    include <__type_traits/underlying_type.h>
 #    include <__utility/auto_cast.h>
+#    include <__utility/exception_guard.h>
 #    include <__utility/forward.h>
 #    include <__utility/move.h>
 #    include <__utility/swap.h>
@@ -585,12 +584,9 @@ inline future_status __assoc_sub_state::wait_for(const chrono::duration<_Rep, _P
 template <class _Rp>
 class _LIBCPP_HIDDEN __assoc_state : public __assoc_sub_state {
   typedef __assoc_sub_state base;
-  _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-  typedef typename aligned_storage<sizeof(_Rp), _LIBCPP_ALIGNOF(_Rp)>::type _Up;
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
-  _Up __value_;
+  _ALIGNAS_TYPE(_Rp) char __value_[sizeof(_Rp)];
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override;
 
@@ -1605,9 +1601,6 @@ inline _Rp __packaged_task_function<_Rp(_ArgTypes...)>::operator()(_ArgTypes... 
 
 template <class _Rp, class... _ArgTypes>
 class packaged_task<_Rp(_ArgTypes...)> {
-public:
-  using result_type _LIBCPP_DEPRECATED = _Rp; // extension
-
 private:
   __packaged_task_function<_Rp(_ArgTypes...)> __f_;
   promise<_Rp> __p_;
@@ -1699,9 +1692,6 @@ void packaged_task<_Rp(_ArgTypes...)>::reset() {
 
 template <class... _ArgTypes>
 class packaged_task<void(_ArgTypes...)> {
-public:
-  using result_type _LIBCPP_DEPRECATED = void; // extension
-
 private:
   __packaged_task_function<void(_ArgTypes...)> __f_;
   promise<void> __p_;
@@ -1823,7 +1813,9 @@ template <class _Rp, class _Fp>
 _LIBCPP_HIDE_FROM_ABI future<_Rp> __make_async_assoc_state(_Fp&& __f) {
   unique_ptr<__async_assoc_state<_Rp, _Fp>, __release_shared_count> __h(
       new __async_assoc_state<_Rp, _Fp>(std::forward<_Fp>(__f)));
+  auto __guard = std::__make_exception_guard([&] { __h->__make_ready(); });
   std::thread(&__async_assoc_state<_Rp, _Fp>::__execute, __h.get()).detach();
+  __guard.__complete();
   return future<_Rp>(__h.get());
 }
 
@@ -1841,15 +1833,12 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __async_func(__async_func&& __f) : __f_(std::move(__f.__f_)) {}
 
-  _LIBCPP_HIDE_FROM_ABI _Rp operator()() {
-    typedef typename __make_tuple_indices<1 + sizeof...(_Args), 1>::type _Index;
-    return __execute(_Index());
-  }
+  _LIBCPP_HIDE_FROM_ABI _Rp operator()() { return __execute(__make_index_sequence<sizeof...(_Args) + 1>()); }
 
 private:
   template <size_t... _Indices>
-  _LIBCPP_HIDE_FROM_ABI _Rp __execute(__tuple_indices<_Indices...>) {
-    return std::__invoke(std::move(std::get<0>(__f_)), std::move(std::get<_Indices>(__f_))...);
+  _LIBCPP_HIDE_FROM_ABI _Rp __execute(__index_sequence<_Indices...>) {
+    return std::__invoke(std::move(std::get<_Indices>(__f_))...);
   }
 };
 

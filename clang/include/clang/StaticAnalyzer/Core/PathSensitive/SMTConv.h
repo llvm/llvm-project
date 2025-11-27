@@ -18,6 +18,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/Support/SMTAPI.h"
 
+#include <algorithm>
+
 namespace clang {
 namespace ento {
 
@@ -453,6 +455,18 @@ public:
       QualType OperandTy;
       llvm::SMTExprRef OperandExp =
           getSymExpr(Solver, Ctx, USE->getOperand(), &OperandTy, hasComparison);
+
+      // When the operand is a bool expr, but the operator is an integeral
+      // operator, casting the bool expr to the integer before creating the
+      // unary operator.
+      // E.g. -(5 && a)
+      if (OperandTy == Ctx.BoolTy && OperandTy != *RetTy &&
+          (*RetTy)->isIntegerType()) {
+        OperandExp = fromCast(Solver, OperandExp, (*RetTy),
+                              Ctx.getTypeSize(*RetTy), OperandTy, 1);
+        OperandTy = (*RetTy);
+      }
+
       llvm::SMTExprRef UnaryExp =
           OperandTy->isRealFloatingType()
               ? fromFloatUnOp(Solver, USE->getOpcode(), OperandExp)
@@ -570,23 +584,38 @@ public:
   // TODO: Refactor to put elsewhere
   static inline QualType getAPSIntType(ASTContext &Ctx,
                                        const llvm::APSInt &Int) {
-    return Ctx.getIntTypeForBitwidth(Int.getBitWidth(), Int.isSigned());
+    const QualType Ty =
+        Ctx.getIntTypeForBitwidth(Int.getBitWidth(), Int.isSigned());
+    if (!Ty.isNull())
+      return Ty;
+    // If Ty is Null, could be because the original type was a _BitInt.
+    // Get the size of the _BitInt type (expressed in bits) and round it up to
+    // the next power of 2 that is at least the bit size of 'char' (usually 8).
+    unsigned CharTypeSize = Ctx.getTypeSize(Ctx.CharTy);
+    unsigned Pow2DestWidth =
+        std::max(llvm::bit_ceil(Int.getBitWidth()), CharTypeSize);
+    return Ctx.getIntTypeForBitwidth(Pow2DestWidth, Int.isSigned());
   }
 
   // Get the QualTy for the input APSInt, and fix it if it has a bitwidth of 1.
   static inline std::pair<llvm::APSInt, QualType>
   fixAPSInt(ASTContext &Ctx, const llvm::APSInt &Int) {
     llvm::APSInt NewInt;
+    unsigned APSIntBitwidth = Int.getBitWidth();
+    QualType Ty = getAPSIntType(Ctx, Int);
 
     // FIXME: This should be a cast from a 1-bit integer type to a boolean type,
     // but the former is not available in Clang. Instead, extend the APSInt
     // directly.
-    if (Int.getBitWidth() == 1 && getAPSIntType(Ctx, Int).isNull()) {
-      NewInt = Int.extend(Ctx.getTypeSize(Ctx.BoolTy));
-    } else
-      NewInt = Int;
-
-    return std::make_pair(NewInt, getAPSIntType(Ctx, NewInt));
+    if (APSIntBitwidth == 1 && Ty.isNull())
+      return {Int.extend(Ctx.getTypeSize(Ctx.BoolTy)),
+              getAPSIntType(Ctx, NewInt)};
+    else if (APSIntBitwidth == 1 && !Ty.isNull())
+      return {Int.extend(Ctx.getTypeSize(getAPSIntType(Ctx, Int))),
+              getAPSIntType(Ctx, NewInt)};
+    if (llvm::isPowerOf2_32(APSIntBitwidth) || Ty.isNull())
+      return {Int, Ty};
+    return {Int.extend(Ctx.getTypeSize(Ty)), Ty};
   }
 
   // Perform implicit type conversion on binary symbolic expressions.

@@ -450,7 +450,7 @@ bool CoroIdElider::attemptElide() {
 
 PreservedAnalyses CoroElidePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &M = *F.getParent();
-  if (!coro::declaresIntrinsics(M, {"llvm.coro.id"}))
+  if (!coro::declaresIntrinsics(M, Intrinsic::coro_id))
     return PreservedAnalyses::all();
 
   FunctionElideInfo FEI{&F};

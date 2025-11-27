@@ -55,11 +55,37 @@ __chkfeat(uint64_t __features) {
 /* 7.5 Swap */
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __swp(uint32_t __x, volatile uint32_t *__p) {
-  uint32_t v;
-  do
-    v = __builtin_arm_ldrex(__p);
-  while (__builtin_arm_strex(__x, __p));
-  return v;
+  uint32_t __v;
+#if (__ARM_FEATURE_LDREX & 4) || __ARM_ARCH_6M__ || __linux__
+  /*
+   * Using this clang builtin is sensible in most situations. Where
+   * LDREX and STREX are available, it will compile to a loop using
+   * them. Otherwise it will compile to a libcall, requiring the
+   * runtime to provide that library function.
+   *
+   * That's unavoidable on Armv6-M, which has no atomic instructions
+   * at all (not even SWP), so in that situation the user will just
+   * have to provide an implementation of __atomic_exchange_4 (perhaps
+   * it would temporarily disable interrupts, and then do a separate
+   * load and store).
+   *
+   * We also use the libcall strategy on pre-Armv7 Linux targets, on
+   * the theory that Linux's runtime support library _will_ provide a
+   * suitable libcall, and it's better to use that than the SWP
+   * instruction because then when the same binary is run on a later
+   * Linux system the libcall implementation will use LDREX instead.
+   */
+  __v = __atomic_exchange_n(__p, __x, __ATOMIC_RELAXED);
+#else
+  /*
+   * But for older Arm architectures when the target is not Linux, we
+   * fall back to using the SWP instruction via inline assembler. ACLE
+   * is clear that we're allowed to do this, but shouldn't do it if we
+   * have a better alternative.
+   */
+  __asm__("swp %0, %1, [%2]" : "=r"(__v) : "r"(__x), "r"(__p) : "memory");
+#endif
+  return __v;
 }
 
 /* 7.6 Memory prefetch intrinsics */
@@ -794,28 +820,6 @@ __arm_st64bv0(void *__addr, data512_t __value) {
 #endif
 
 #endif // __ARM_FEATURE_COPROC
-
-/* 17 Transactional Memory Extension (TME) Intrinsics */
-#if defined(__ARM_FEATURE_TME) && __ARM_FEATURE_TME
-
-#define _TMFAILURE_REASON  0x00007fffu
-#define _TMFAILURE_RTRY    0x00008000u
-#define _TMFAILURE_CNCL    0x00010000u
-#define _TMFAILURE_MEM     0x00020000u
-#define _TMFAILURE_IMP     0x00040000u
-#define _TMFAILURE_ERR     0x00080000u
-#define _TMFAILURE_SIZE    0x00100000u
-#define _TMFAILURE_NEST    0x00200000u
-#define _TMFAILURE_DBG     0x00400000u
-#define _TMFAILURE_INT     0x00800000u
-#define _TMFAILURE_TRIVIAL 0x01000000u
-
-#define __tstart()        __builtin_arm_tstart()
-#define __tcommit()       __builtin_arm_tcommit()
-#define __tcancel(__arg)  __builtin_arm_tcancel(__arg)
-#define __ttest()         __builtin_arm_ttest()
-
-#endif /* __ARM_FEATURE_TME */
 
 /* 8.7 Armv8.5-A Random number generation intrinsics */
 #if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE

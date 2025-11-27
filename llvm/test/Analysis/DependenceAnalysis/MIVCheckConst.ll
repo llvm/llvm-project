@@ -30,7 +30,7 @@ target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-v32:32-n16:32"
 %20 = type { [768 x i32] }
 %21 = type { [416 x i32] }
 
-define void @test(ptr %A, ptr %B, i1 %arg, i32 %n, i32 %m) #0 align 2 {
+define void @test(ptr %A, ptr %B, i1 %arg, i32 %n, i32 %m) align 2 {
 ; CHECK-LABEL: 'test'
 ; CHECK-NEXT:  Src: %v1 = load i32, ptr %B, align 4 --> Dst: %v1 = load i32, ptr %B, align 4
 ; CHECK-NEXT:    da analyze - none!
@@ -40,6 +40,9 @@ define void @test(ptr %A, ptr %B, i1 %arg, i32 %n, i32 %m) #0 align 2 {
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %v27 = load <32 x i32>, ptr %v25, align 256 --> Dst: %v27 = load <32 x i32>, ptr %v25, align 256
 ; CHECK-NEXT:    da analyze - consistent input [0 S S]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (zext i7 (4 * (trunc i32 %v1 to i7) * (1 + (trunc i32 %n to i7))) to i32) == 0
+; CHECK-NEXT:    Equal predicate: (8 * (zext i4 (trunc i32 %v1 to i4) to i32))<nuw><nsw> == 0
 ; CHECK-NEXT:  Src: %v27 = load <32 x i32>, ptr %v25, align 256 --> Dst: %v32 = load <32 x i32>, ptr %v30, align 128
 ; CHECK-NEXT:    da analyze - input [* S S|<]!
 ; CHECK-NEXT:    Runtime Assumptions:
@@ -88,5 +91,3 @@ bb38:
 bb40:
   ret void
 }
-
-attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

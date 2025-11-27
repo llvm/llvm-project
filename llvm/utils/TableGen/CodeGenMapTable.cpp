@@ -80,13 +80,14 @@
 #include "TableGenBackends.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;
-typedef std::map<std::string, std::vector<const Record *>> InstrRelMapTy;
-typedef std::map<std::vector<const Init *>, std::vector<const Record *>>
-    RowInstrMapTy;
+using InstrRelMapTy = std::map<std::string, std::vector<const Record *>>;
+using RowInstrMapTy =
+    std::map<std::vector<const Init *>, std::vector<const Record *>>;
 
 namespace {
 
@@ -358,7 +359,7 @@ const Record *MapTableEmitter::getInstrForColumn(const Record *KeyInstr,
 
 unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
-      Target.getInstructionsByEnumValue();
+      Target.getInstructions();
   StringRef Namespace = Target.getInstNamespace();
   ArrayRef<const ListInit *> ValueCols = InstrMapDesc.getValueCols();
   unsigned NumCol = ValueCols.size();
@@ -549,9 +550,8 @@ void llvm::EmitMapTable(const RecordKeeper &Records, raw_ostream &OS) {
   if (InstrMapVec.empty())
     return;
 
-  OS << "#ifdef GET_INSTRMAP_INFO\n";
-  OS << "#undef GET_INSTRMAP_INFO\n";
-  OS << "namespace llvm::" << NameSpace << " {\n\n";
+  IfDefEmitter IfDef(OS, "GET_INSTRMAP_INFO");
+  NamespaceEmitter NS(OS, ("llvm::" + NameSpace).str());
 
   // Emit coulumn field names and their values as enums.
   emitEnums(OS, Records);
@@ -574,6 +574,4 @@ void llvm::EmitMapTable(const RecordKeeper &Records, raw_ostream &OS) {
     // Emit map tables and the functions to query them.
     IMap.emitTablesWithFunc(OS);
   }
-  OS << "} // end namespace llvm::" << NameSpace << '\n';
-  OS << "#endif // GET_INSTRMAP_INFO\n\n";
 }

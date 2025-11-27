@@ -81,6 +81,12 @@ lldb::BreakpointSP ScriptInterpreter::GetOpaqueTypeFromSBBreakpoint(
   return breakpoint.m_opaque_wp.lock();
 }
 
+lldb::BreakpointLocationSP
+ScriptInterpreter::GetOpaqueTypeFromSBBreakpointLocation(
+    const lldb::SBBreakpointLocation &break_loc) const {
+  return break_loc.m_opaque_wp.lock();
+}
+
 lldb::ProcessAttachInfoSP ScriptInterpreter::GetOpaqueTypeFromSBAttachInfo(
     const lldb::SBAttachInfo &attach_info) const {
   return attach_info.m_opaque_sp;
@@ -100,6 +106,13 @@ ScriptInterpreter::GetStatusFromSBError(const lldb::SBError &error) const {
   return Status();
 }
 
+lldb::StackFrameSP
+ScriptInterpreter::GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const {
+  if (frame.m_opaque_sp)
+    return frame.m_opaque_sp->GetFrameSP();
+  return nullptr;
+}
+
 Event *
 ScriptInterpreter::GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const {
   return event.m_opaque_ptr;
@@ -116,6 +129,13 @@ lldb::StreamSP ScriptInterpreter::GetOpaqueTypeFromSBStream(
   return nullptr;
 }
 
+SymbolContext ScriptInterpreter::GetOpaqueTypeFromSBSymbolContext(
+    const lldb::SBSymbolContext &sb_sym_ctx) const {
+  if (sb_sym_ctx.m_opaque_up)
+    return *sb_sym_ctx.m_opaque_up;
+  return {};
+}
+
 std::optional<MemoryRegionInfo>
 ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
     const lldb::SBMemoryRegionInfo &mem_region) const {
@@ -128,6 +148,11 @@ lldb::ExecutionContextRefSP
 ScriptInterpreter::GetOpaqueTypeFromSBExecutionContext(
     const lldb::SBExecutionContext &exe_ctx) const {
   return exe_ctx.m_exe_ctx_sp;
+}
+
+lldb::StackFrameListSP ScriptInterpreter::GetOpaqueTypeFromSBFrameList(
+    const lldb::SBFrameList &frame_list) const {
+  return frame_list.m_opaque_sp;
 }
 
 lldb::ScriptLanguage
@@ -220,7 +245,7 @@ ScriptInterpreterIORedirect::ScriptInterpreterIORedirect(
     m_input_file_sp = debugger.GetInputFileSP();
 
     Pipe pipe;
-    Status pipe_result = pipe.CreateNew(false);
+    Status pipe_result = pipe.CreateNew();
 #if defined(_WIN32)
     lldb::file_t read_file = pipe.GetReadNativeHandle();
     pipe.ReleaseReadFileDescriptor();

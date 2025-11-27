@@ -43,6 +43,26 @@ convertFromAttribute(int32_t &storage, Attribute attr,
 /// Convert the provided int32_t to an IntegerAttr attribute.
 Attribute convertToAttribute(MLIRContext *ctx, int32_t storage);
 
+/// Convert an IntegerAttr attribute to an int8_t, or return an error if the
+/// attribute isn't an IntegerAttr. If the optional diagnostic is provided an
+/// error message is also emitted.
+LogicalResult
+convertFromAttribute(int8_t &storage, Attribute attr,
+                     function_ref<InFlightDiagnostic()> emitError);
+
+/// Convert the provided int8_t to an IntegerAttr attribute.
+Attribute convertToAttribute(MLIRContext *ctx, int8_t storage);
+
+/// Convert an IntegerAttr attribute to an uint8_t, or return an error if the
+/// attribute isn't an IntegerAttr. If the optional diagnostic is provided an
+/// error message is also emitted.
+LogicalResult
+convertFromAttribute(uint8_t &storage, Attribute attr,
+                     function_ref<InFlightDiagnostic()> emitError);
+
+/// Convert the provided uint8_t to an IntegerAttr attribute.
+Attribute convertToAttribute(MLIRContext *ctx, uint8_t storage);
+
 /// Extract the string from `attr` into `storage`. If `attr` is not a
 /// `StringAttr`, return failure and emit an error into the diagnostic from
 /// `emitError`.
@@ -97,6 +117,9 @@ convertFromAttribute(SmallVectorImpl<int32_t> &storage, Attribute attr,
 
 /// Convert the provided ArrayRef<int64_t> to a DenseI64ArrayAttr attribute.
 Attribute convertToAttribute(MLIRContext *ctx, ArrayRef<int64_t> storage);
+
+/// Convert the provided ArrayRef<int32_t> to a DenseI32ArrayAttr attribute.
+Attribute convertToAttribute(MLIRContext *ctx, ArrayRef<int32_t> storage);
 
 } // namespace mlir
 

@@ -5,7 +5,7 @@
 // REQUIRES: system-linux
 
 // RUN: %clang %cflags -nostartfiles -nostdlib %s -o %t.exe -mlittle-endian \
-// RUN:     -Wl,-q -Wl,-z,max-page-size=4
+// RUN:     -Wl,-q -Wl,-z,max-page-size=4 -Wl,--no-relax
 // RUN: llvm-readelf -Wa %t.exe | FileCheck %s -check-prefix=CHECKPREL
 
 // CHECKPREL:       R_AARCH64_PREL16      {{.*}} .dummy + 0
@@ -36,9 +36,9 @@
   .type _start, %function
 _start:
   adrp x0, datatable
-  add x0, x0, :lo12:datable
+  add x0, x0, :lo12:datatable
   mov x0, #0
-  ret 
+  ret
 
 .section .dummy, "a", @progbits
 dummy:

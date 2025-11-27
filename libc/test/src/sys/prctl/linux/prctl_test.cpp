@@ -34,6 +34,7 @@ TEST_F(LlvmLibcSysPrctlTest, GetSetName) {
 TEST_F(LlvmLibcSysPrctlTest, GetTHPDisable) {
   // Manually check errno since the return value logic here is not
   // covered in ErrnoSetterMatcher.
+  // Note that PR_GET_THP_DISABLE is not supported by QEMU.
   int ret = LIBC_NAMESPACE::prctl(PR_GET_THP_DISABLE, 0, 0, 0, 0);
   ASSERT_ERRNO_SUCCESS();
   // PR_GET_THP_DISABLE return (as the function result) the current

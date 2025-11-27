@@ -8,7 +8,6 @@
 
 #include "mlir/Analysis//FlatLinearValueConstraints.h"
 
-#include "mlir/Analysis/Presburger/LinearTransform.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
@@ -17,7 +16,6 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InterleavedRange.h"
@@ -62,7 +60,7 @@ private:
                           AffineExpr localExpr) override {
     SimpleAffineExprFlattener::addLocalFloorDivId(dividend, divisor, localExpr);
     // Update localVarCst.
-    localVarCst.addLocalFloorDiv(dividend, divisor);
+    (void)localVarCst.addLocalFloorDiv(dividend, divisor);
   }
 
   LogicalResult addLocalIdSemiAffine(ArrayRef<int64_t> lhs,
@@ -532,7 +530,7 @@ std::pair<AffineMap, AffineMap> FlatLinearConstraints::getLowerAndUpperBound(
     // i - j + 1 >= 0 is the constraint, 'pos' is for i the lower bound is j
     // - 1.
     addCoeffs(ineq, lb);
-    std::transform(lb.begin(), lb.end(), lb.begin(), std::negate<int64_t>());
+    llvm::transform(lb, lb.begin(), std::negate<int64_t>());
     auto expr =
         getAffineExprFromFlatForm(lb, dimCount, symCount, localExprs, context);
     // expr ceildiv divisor is (expr + divisor - 1) floordiv divisor
@@ -561,7 +559,7 @@ std::pair<AffineMap, AffineMap> FlatLinearConstraints::getLowerAndUpperBound(
     auto eq = getEquality64(idx);
     addCoeffs(eq, b);
     if (eq[pos + offset] > 0)
-      std::transform(b.begin(), b.end(), b.begin(), std::negate<int64_t>());
+      llvm::transform(b, b.begin(), std::negate<int64_t>());
 
     // Extract the upper bound (in terms of other coeff's + const).
     auto expr =
@@ -1246,8 +1244,9 @@ bool FlatLinearValueConstraints::areVarsAlignedWithOther(
 
 /// Checks if the SSA values associated with `cst`'s variables in range
 /// [start, end) are unique.
-static bool LLVM_ATTRIBUTE_UNUSED areVarsUnique(
-    const FlatLinearValueConstraints &cst, unsigned start, unsigned end) {
+[[maybe_unused]] static bool
+areVarsUnique(const FlatLinearValueConstraints &cst, unsigned start,
+              unsigned end) {
 
   assert(start <= cst.getNumDimAndSymbolVars() &&
          "Start position out of bounds");
@@ -1269,14 +1268,14 @@ static bool LLVM_ATTRIBUTE_UNUSED areVarsUnique(
 }
 
 /// Checks if the SSA values associated with `cst`'s variables are unique.
-static bool LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]] static bool
 areVarsUnique(const FlatLinearValueConstraints &cst) {
   return areVarsUnique(cst, 0, cst.getNumDimAndSymbolVars());
 }
 
 /// Checks if the SSA values associated with `cst`'s variables of kind `kind`
 /// are unique.
-static bool LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]] static bool
 areVarsUnique(const FlatLinearValueConstraints &cst, VarKind kind) {
 
   if (kind == VarKind::SetDim)

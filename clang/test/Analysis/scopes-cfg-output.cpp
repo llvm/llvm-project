@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -analyze -analyzer-checker=debug.DumpCFG -analyzer-config cfg-scopes=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-scopes=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 class A {
@@ -1437,12 +1437,14 @@ void test_cleanup_functions() {
 // CHECK-NEXT:    4: return;
 // CHECK-NEXT:    5: CleanupFunction (cleanup_int)
 // CHECK-NEXT:    6: CFGScopeEnd(i)
+// CHECK-NEXT:    7: CFGScopeEnd(m)
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:      [B2]
 // CHECK-NEXT:    1: return;
 // CHECK-NEXT:    2: CleanupFunction (cleanup_int)
 // CHECK-NEXT:    3: CFGScopeEnd(i)
+// CHECK-NEXT:    4: CFGScopeEnd(m)
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:      [B3]

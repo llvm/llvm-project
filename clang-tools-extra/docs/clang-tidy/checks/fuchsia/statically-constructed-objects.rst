@@ -3,9 +3,9 @@
 fuchsia-statically-constructed-objects
 ======================================
 
-Warns if global, non-trivial objects with static storage are constructed, unless
-the object is statically initialized with a ``constexpr`` constructor or has no
-explicit constructor.
+Warns if global, non-trivial objects with static storage are constructed,
+unless the object is statically initialized with a ``constexpr`` constructor
+or has no explicit constructor.
 
 For example:
 

@@ -176,6 +176,7 @@ bool YAMLProfileReader::parseFunctionProfile(
   uint64_t FunctionExecutionCount = 0;
 
   BF.setExecutionCount(YamlBF.ExecCount);
+  BF.setExternEntryCount(YamlBF.ExternEntryCount);
 
   uint64_t FuncRawBranchCount = 0;
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks)
@@ -348,9 +349,6 @@ bool YAMLProfileReader::parseFunctionProfile(
       errs() << "BOLT-WARNING: " << MismatchedBlocks << " blocks, "
              << MismatchedCalls << " calls, and " << MismatchedEdges
              << " edges in profile did not match function " << BF << '\n';
-
-    if (YamlBF.NumBasicBlocks != BF.size())
-      ++BC.Stats.NumStaleFuncsWithEqualBlockCount;
 
     if (!opts::InferStaleProfile)
       return false;

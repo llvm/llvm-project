@@ -794,6 +794,11 @@
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-icall-generalize-pointers -fsanitize-cfi-cross-dso -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-GENERALIZE-AND-CROSS-DSO
 // CHECK-CFI-GENERALIZE-AND-CROSS-DSO: error: invalid argument '-fsanitize-cfi-cross-dso' not allowed with '-fsanitize-cfi-icall-generalize-pointers'
 
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-cfi-icall-generalize-pointers -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-GENERALIZE-POINTERS
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-KCFI-GENERALIZE-POINTERS
+// CHECK-KCFI-GENERALIZE-POINTERS: -fsanitize-cfi-icall-generalize-pointers
+// CHECK-NO-KCFI-GENERALIZE-POINTERS-NOT: -fsanitize-cfi-icall-generalize-pointers
+
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-canonical-jump-tables -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CANONICAL-JUMP-TABLES
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fno-sanitize-cfi-canonical-jump-tables -fvisibility=hidden -flto -c %s -resource-dir=%S/Inputs/resource_dir -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-CFI-CANONICAL-JUMP-TABLES
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CANONICAL-JUMP-TABLES
@@ -978,6 +983,21 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-MINIMAL
 // CHECK-UBSAN-MINIMAL: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function),?){18}"}}
 // CHECK-UBSAN-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-MINIMAL-PRESERVE-X86-64
+// CHECK-UBSAN-MINIMAL-PRESERVE-X86-64: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function),?){18}"}}
+// CHECK-UBSAN-MINIMAL-PRESERVE-X86-64: "-fsanitize-minimal-runtime"
+// CHECK-UBSAN-MINIMAL-PRESERVE-X86-64: "-fsanitize-handler-preserve-all-regs
+
+// RUN: %clang --target=aarch64-linux-gnu -fsanitize=undefined -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-MINIMAL-PRESERVE-AARCH64
+// CHECK-UBSAN-MINIMAL-PRESERVE-AARCH64: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function),?){18}"}}
+// CHECK-UBSAN-MINIMAL-PRESERVE-AARCH64: "-fsanitize-minimal-runtime"
+// CHECK-UBSAN-MINIMAL-PRESERVE-AARCH64: "-fsanitize-handler-preserve-all-regs
+
+// RUN: %clang --target=i386-linux-gnu -fsanitize=undefined -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-MINIMAL-PRESERVE-I386
+// CHECK-UBSAN-MINIMAL-PRESERVE-I386: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function),?){18}"}}
+// CHECK-UBSAN-MINIMAL-PRESERVE-I386: "-fsanitize-minimal-runtime"
+// CHECK-UBSAN-MINIMAL-PRESERVE-I386-NOT: "-fsanitize-handler-preserve-all-regs
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=integer -fsanitize-trap=integer %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INTSAN-TRAP
 // CHECK-INTSAN-TRAP: "-fsanitize-trap=integer-divide-by-zero,shift-base,shift-exponent,signed-integer-overflow,unsigned-integer-overflow,unsigned-shift-base,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change"
@@ -1284,18 +1304,26 @@
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff=undefined=xyzzy %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF8
 // CHECK-SKIP-HOT-CUTOFF8: unsupported argument 'undefined=xyzzy' to option '-fsanitize-skip-hot-cutoff='
 
-// Invalid: -fno-sanitize-top without parameters
+// Invalid: -fsanitize-skip-hot-cutoff without parameters
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF9
 // CHECK-SKIP-HOT-CUTOFF9: unknown argument: '-fsanitize-skip-hot-cutoff'
 
-// Invalid: -fno-sanitize-top=undefined without cutoff
+// Invalid: -fsanitize-skip-hot-cutoff=undefined without cutoff
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF10
 // CHECK-SKIP-HOT-CUTOFF10: unsupported argument 'undefined' to option '-fsanitize-skip-hot-cutoff='
 
-// Invalid: -fno-sanitize-top=undefined= without cutoff
+// Invalid: -fsanitize-skip-hot-cutoff=undefined= without cutoff
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff=undefined= %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF11
 // CHECK-SKIP-HOT-CUTOFF11: unsupported argument 'undefined=' to option '-fsanitize-skip-hot-cutoff='
 
-// No-op: -fno-sanitize-top= without parameters is unusual but valid
+// No-op: -fsanitize-skip-hot-cutoff= without parameters is unusual but valid
 // RUN: %clang -Werror --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff= %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF12
 // CHECK-SKIP-HOT-CUTOFF12-NOT: "-fsanitize-skip-hot-cutoff"
+
+// Invalid: out of range cutoff
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff=undefined=1.1 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF13
+// CHECK-SKIP-HOT-CUTOFF13: unsupported argument 'undefined=1.1' to option '-fsanitize-skip-hot-cutoff='
+
+// Invalid: out of range cutoff
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize-skip-hot-cutoff=undefined=-0.1 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SKIP-HOT-CUTOFF14
+// CHECK-SKIP-HOT-CUTOFF14: unsupported argument 'undefined=-0.1' to option '-fsanitize-skip-hot-cutoff='

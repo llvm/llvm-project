@@ -284,13 +284,13 @@ void EmitNodeXFormMatcher::printImpl(raw_ostream &OS, indent Indent) const {
 void EmitNodeMatcherCommon::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent;
   OS << (isa<MorphNodeToMatcher>(this) ? "MorphNodeTo: " : "EmitNode: ")
-     << CGI.Namespace << "::" << CGI.TheDef->getName() << ": <todo flags> ";
+     << CGI.Namespace << "::" << CGI.getName() << ": <todo flags> ";
 
-  for (unsigned i = 0, e = VTs.size(); i != e; ++i)
-    OS << ' ' << getEnumName(VTs[i]);
+  for (MVT VT : VTs)
+    OS << ' ' << getEnumName(VT);
   OS << '(';
-  for (unsigned i = 0, e = Operands.size(); i != e; ++i)
-    OS << Operands[i] << ' ';
+  for (unsigned Operand : Operands)
+    OS << Operand << ' ';
   OS << ")\n";
 }
 
@@ -321,22 +321,35 @@ void MorphNodeToMatcher::anchor() {}
 
 // isContradictoryImpl Implementations.
 
-static bool TypesAreContradictory(MVT::SimpleValueType T1,
-                                  MVT::SimpleValueType T2) {
+static bool TypesAreContradictory(MVT T1, MVT T2) {
   // If the two types are the same, then they are the same, so they don't
   // contradict.
   if (T1 == T2)
     return false;
 
+  if (T1 == MVT::pAny)
+    return TypesAreContradictory(MVT::iPTR, T2) &&
+           TypesAreContradictory(MVT::cPTR, T2);
+
+  if (T2 == MVT::pAny)
+    return TypesAreContradictory(T1, MVT::iPTR) &&
+           TypesAreContradictory(T1, MVT::cPTR);
+
   // If either type is about iPtr, then they don't conflict unless the other
   // one is not a scalar integer type.
   if (T1 == MVT::iPTR)
-    return !MVT(T2).isInteger() || MVT(T2).isVector();
+    return !T2.isInteger() || T2.isVector();
 
   if (T2 == MVT::iPTR)
-    return !MVT(T1).isInteger() || MVT(T1).isVector();
+    return !T1.isInteger() || T1.isVector();
 
-  // Otherwise, they are two different non-iPTR types, they conflict.
+  if (T1 == MVT::cPTR)
+    return !T2.isCheriCapability() || T2.isVector();
+
+  if (T2 == MVT::cPTR)
+    return !T1.isCheriCapability() || T1.isVector();
+
+  // Otherwise, they are two different non-iPTR/cPTR types, they conflict.
   return true;
 }
 
@@ -356,7 +369,7 @@ bool CheckOpcodeMatcher::isContradictoryImpl(const Matcher *M) const {
     if (CT->getResNo() >= getOpcode().getNumResults())
       return true;
 
-    MVT::SimpleValueType NodeType = getOpcode().getKnownType(CT->getResNo());
+    MVT NodeType = getOpcode().getKnownType(CT->getResNo());
     if (NodeType != MVT::Other)
       return TypesAreContradictory(NodeType, CT->getType());
   }

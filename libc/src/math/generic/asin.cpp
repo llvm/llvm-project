@@ -7,24 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/asin.h"
-#include "asin_utils.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
-#include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
-#include "src/__support/FPUtil/double_double.h"
-#include "src/__support/FPUtil/dyadic_float.h"
-#include "src/__support/FPUtil/multiply_add.h"
-#include "src/__support/FPUtil/sqrt.h"
-#include "src/__support/macros/config.h"
-#include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
-#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+#include "src/__support/math/asin.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-using DoubleDouble = fputil::DoubleDouble;
-using Float128 = fputil::DyadicFloat<128>;
-
 LLVM_LIBC_FUNCTION(double, asin, (double x)) {
+  using namespace asin_internal;
   using FPBits = fputil::FPBits<double>;
 
   FPBits xbits(x);

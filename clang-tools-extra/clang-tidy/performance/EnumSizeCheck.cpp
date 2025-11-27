@@ -1,4 +1,4 @@
-//===--- EnumSizeCheck.cpp - clang-tidy -----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,7 +35,8 @@ const std::uint64_t Min32 =
     std::imaxabs(std::numeric_limits<std::int32_t>::min());
 const std::uint64_t Max32 = std::numeric_limits<std::int32_t>::max();
 
-std::pair<const char *, std::uint32_t>
+} // namespace
+static std::pair<const char *, std::uint32_t>
 getNewType(std::size_t Size, std::uint64_t Min, std::uint64_t Max) noexcept {
   if (Min) {
     if (Min <= Min8 && Max <= Max8) {
@@ -74,8 +75,6 @@ getNewType(std::size_t Size, std::uint64_t Min, std::uint64_t Max) noexcept {
   // Zero case
   return {"std::uint8_t", sizeof(std::uint8_t)};
 }
-
-} // namespace
 
 EnumSizeCheck::EnumSizeCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),

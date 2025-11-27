@@ -47,7 +47,6 @@
 #include "llvm/Support/TypeName.h"
 #include <cassert>
 #include <cstring>
-#include <iterator>
 #include <list>
 #include <memory>
 #include <tuple>
@@ -491,6 +490,22 @@ public:
   /// invalidate them, unless they are preserved by the PreservedAnalyses set.
   void invalidate(IRUnitT &IR, const PreservedAnalyses &PA);
 
+  /// Directly clear a cached analysis for an IR unit.
+  ///
+  /// Using invalidate() over this is preferred unless you are really
+  /// sure you want to *only* clear this analysis without asking if it is
+  /// invalid.
+  template <typename AnalysisT> void clearAnalysis(IRUnitT &IR) {
+    AnalysisResultListT &ResultsList = AnalysisResultLists[&IR];
+    AnalysisKey *ID = AnalysisT::ID();
+
+    auto I =
+        llvm::find_if(ResultsList, [&ID](auto &E) { return E.first == ID; });
+    assert(I != ResultsList.end() && "Analysis must be available");
+    ResultsList.erase(I);
+    AnalysisResults.erase({ID, &IR});
+  }
+
 private:
   /// Look up a registered analysis pass.
   PassConceptT &lookUpPass(AnalysisKey *ID) {
@@ -641,8 +656,14 @@ private:
   AnalysisManagerT *InnerAM;
 };
 
+// NOTE: The LLVM_ABI annotation cannot be used here because MSVC disallows
+// storage-class specifiers on class members outside of the class declaration
+// (C2720). LLVM_ATTRIBUTE_VISIBILITY_DEFAULT only applies to non-Windows
+// targets so it is used instead. Without this annotation, compiling LLVM as a
+// shared library with -fvisibility=hidden using GCC fails to export the symbol
+// even though InnerAnalysisManagerProxy is already annotated with LLVM_ABI.
 template <typename AnalysisManagerT, typename IRUnitT, typename... ExtraArgTs>
-AnalysisKey
+LLVM_ATTRIBUTE_VISIBILITY_DEFAULT AnalysisKey
     InnerAnalysisManagerProxy<AnalysisManagerT, IRUnitT, ExtraArgTs...>::Key;
 
 /// Provide the \c FunctionAnalysisManager to \c Module proxy.

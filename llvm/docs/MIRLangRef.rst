@@ -12,7 +12,7 @@ Introduction
 ============
 
 This document is a reference manual for the Machine IR (MIR) serialization
-format. MIR is a human readable serialization format that is used to represent
+format. MIR is a human-readable serialization format that is used to represent
 LLVM's :ref:`machine specific intermediate representation
 <machine code representation>`.
 
@@ -27,7 +27,7 @@ data serialization language, and the full YAML language spec can be read at
 `yaml.org
 <http://www.yaml.org/spec/1.2/spec.html#Introduction>`_.
 
-A MIR file is split up into a series of `YAML documents`_. The first document
+A MIR file is split into a series of `YAML documents`_. The first document
 can contain an optional embedded LLVM IR module, and the rest of the documents
 contain the serialized machine functions.
 
@@ -65,46 +65,46 @@ after the name with a comma.
 
    ``llc -stop-after=dead-mi-elimination,1 bug-trigger.ll -o test.mir``
 
-After generating the input MIR file, you'll have to add a run line that uses
+After generating the input MIR file, you'll have to add a ``RUN`` line that uses
 the ``-run-pass`` option to it. In order to test the post register allocation
 pseudo instruction expansion pass on X86-64, a run line like the one shown
 below can be used:
 
     ``# RUN: llc -o - %s -mtriple=x86_64-- -run-pass=postrapseudos | FileCheck %s``
 
-The MIR files are target dependent, so they have to be placed in the target
-specific test directories (``lib/CodeGen/TARGETNAME``). They also need to
-specify a target triple or a target architecture either in the run line or in
+The MIR files are target dependent, so they have to be placed in the
+target-specific test directories (``lib/CodeGen/TARGETNAME``). They also need to
+specify a target triple or a target architecture either in the ``RUN`` line or in
 the embedded LLVM IR module.
 
 Simplifying MIR files
 ^^^^^^^^^^^^^^^^^^^^^
 
-The MIR code coming out of ``-stop-after``/``-stop-before`` is very verbose;
+The MIR code coming out of ``-stop-after``/``-stop-before`` is very verbose.
 Tests are more accessible and future proof when simplified:
 
 - Use the ``-simplify-mir`` option with llc.
 
 - Machine function attributes often have default values or the test works just
-  as well with default values. Typical candidates for this are: `alignment:`,
-  `exposesReturnsTwice`, `legalized`, `regBankSelected`, `selected`.
+  as well with default values. Typical candidates for this are: ``alignment:``,
+  ``exposesReturnsTwice``, ``legalized``, ``regBankSelected``, ``selected``.
   The whole `frameInfo` section is often unnecessary if there is no special
-  frame usage in the function. `tracksRegLiveness` on the other hand is often
+  frame usage in the function. ``tracksRegLiveness`` on the other hand is often
   necessary for some passes that care about block livein lists.
 
-- The (global) `liveins:` list is typically only interesting for early
+- The (global) ``liveins:`` list is typically only interesting for early
   instruction selection passes and can be removed when testing later passes.
-  The per-block `liveins:` on the other hand are necessary if
+  The per-block ``liveins:`` on the other hand are necessary if
   `tracksRegLiveness` is true.
 
-- Branch probability data in block `successors:` lists can be dropped if the
+- Branch probability data in block ``successors:`` lists can be dropped if the
   test doesn't depend on it. Example:
-  `successors: %bb.1(0x40000000), %bb.2(0x40000000)` can be replaced with
-  `successors: %bb.1, %bb.2`.
+  ``successors: %bb.1(0x40000000), %bb.2(0x40000000)`` can be replaced with
+  ``successors: %bb.1, %bb.2``.
 
 - MIR code contains a whole IR module. This is necessary because there are
   no equivalents in MIR for global variables, references to external functions,
-  function attributes, metadata, debug info. Instead some MIR data references
+  function attributes, metadata, debug info. Instead, some MIR data references
   the IR constructs. You can often remove them if the test doesn't depend on
   them.
 
@@ -113,17 +113,17 @@ Tests are more accessible and future proof when simplified:
   If the test doesn't depend on (good) alias analysis the references can be
   dropped: `:: (load 8)`
 
-- MIR blocks can reference IR blocks for debug printing, profile information
-  or debug locations. Example: `bb.42.myblock` in MIR references the IR block
-  `myblock`. It is usually possible to drop the `.myblock` reference and simply
-  use `bb.42`.
+- MIR blocks can reference IR blocks for debug printing, profile information,
+  or debug locations. Example: ``bb.42.myblock`` in MIR references the IR block
+  ``myblock``. It is usually possible to drop the ``.myblock`` reference and simply
+  use ``bb.42``.
 
-- If there are no memory operands or blocks referencing the IR then the
+- If there are no memory operands or blocks referencing the IR, then the
   IR function can be replaced by a parameterless dummy function like
-  `define @func() { ret void }`.
+  ``define @func() { ret void }``.
 
 - It is possible to drop the whole IR section of the MIR file if it only
-  contains dummy functions (see above). The .mir loader will create the
+  contains dummy functions (see above). The ``.mir`` loader will create the
   IR functions automatically in this case.
 
 .. _limitations:
@@ -131,7 +131,7 @@ Tests are more accessible and future proof when simplified:
 Limitations
 -----------
 
-Currently the MIR format has several limitations in terms of which state it
+Currently, the MIR format has several limitations in terms of which state it
 can serialize:
 
 - The target-specific state in the target-specific ``MachineFunctionInfo``
@@ -143,14 +143,14 @@ can serialize:
 - The ``MCSymbol`` machine operands don't support temporary or local symbols.
 
 - A lot of the state in ``MachineModuleInfo`` isn't serialized - only the CFI
-  instructions and the variable debug information from MMI is serialized right
+  instructions and the variable debug information from MMI are serialized right
   now.
 
 These limitations impose restrictions on what you can test with the MIR format.
 For now, tests that would like to test some behaviour that depends on the state
 of temporary or local ``MCSymbol``  operands or the exception handling state in
 MMI, can't use the MIR format. As well as that, tests that test some behaviour
-that depends on the state of the target specific ``MachineFunctionInfo`` or
+that depends on the state of the target-specific ``MachineFunctionInfo`` or
 ``MachineConstantPoolValue`` subclasses can't use the MIR format at the moment.
 
 High Level Structure
@@ -182,7 +182,7 @@ Machine Functions
 -----------------
 
 The remaining YAML documents contain the machine functions. This is an example
-of such YAML document:
+of such a YAML document:
 
 .. code-block:: text
 
@@ -221,7 +221,7 @@ Machine Instructions Format Reference
 =====================================
 
 The machine basic blocks and their instructions are represented using a custom,
-human readable serialization language. This language is used in the
+human-readable serialization language. This language is used in the
 `YAML block literal string`_ that corresponds to the machine function's body.
 
 A source string that uses this language contains a list of machine basic
@@ -286,7 +286,7 @@ Example:
 Successors
 ^^^^^^^^^^
 
-The machine basic block's successors have to be specified before any of the
+The machine basic block's successors must be specified before any of the
 instructions:
 
 .. code-block:: text
@@ -299,7 +299,7 @@ instructions:
     bb.2.else:
       <instructions>
 
-The branch weights can be specified in brackets after the successor blocks.
+The branch weights can be specified in parentheses after the successor blocks.
 The example below defines a block that has two successors with branch weights
 of 32 and 16:
 
@@ -314,7 +314,7 @@ Live In Registers
 ^^^^^^^^^^^^^^^^^
 
 The machine basic block's live in registers have to be specified before any of
-the instructions:
+its instructions:
 
 .. code-block:: text
 
@@ -322,14 +322,14 @@ the instructions:
       liveins: $edi, $esi
 
 The list of live in registers and successors can be empty. The language also
-allows multiple live in register and successor lists - they are combined into
+allows multiple live in register and successor lists; they are combined into
 one list by the parser.
 
 Miscellaneous Attributes
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 The attributes ``IsAddressTaken``, ``IsLandingPad``,
-``IsInlineAsmBrIndirectTarget`` and ``Alignment`` can be specified in brackets
+``IsInlineAsmBrIndirectTarget`` and ``Alignment`` can be specified in parentheses
 after the block's definition:
 
 .. code-block:: text
@@ -417,7 +417,7 @@ and ``}`` are bundled with the first instruction.
 Registers
 ---------
 
-Registers are one of the key primitives in the machine instructions
+Registers are one of the key primitives in the machine instruction
 serialization language. They are primarily used in the
 :ref:`register machine operands <register-operands>`,
 but they can also be used in a number of other places, like the
@@ -489,13 +489,13 @@ In case this is true, the Machine Operand is printed according to the target.
 
 For example:
 
-In AArch64RegisterInfo.td:
+In ``AArch64RegisterInfo.td``:
 
 .. code-block:: text
 
   def sub_32 : SubRegIndex<32>;
 
-If the third operand is an immediate with the value ``15`` (target-dependent
+If the third operand is an immediate with the value ``15`` (a target-dependent
 value), based on the instruction's opcode and the operand's index the operand
 will be printed as ``%subreg.sub_32``:
 
@@ -503,9 +503,9 @@ will be printed as ``%subreg.sub_32``:
 
     %1:gpr64 = SUBREG_TO_REG 0, %0, %subreg.sub_32
 
-For integers > 64bit, we use a special machine operand, ``MO_CImmediate``,
+For integers larger than 64 bits, we use a special machine operand, ``MO_CImmediate``,
 which stores the immediate in a ``ConstantInt`` using an ``APInt`` (LLVM's
-arbitrary precision integers).
+arbitrary-precision integers).
 
 .. TODO: Describe the FPIMM immediate operands.
 
@@ -552,7 +552,7 @@ corresponding internal ``llvm::RegState`` representation:
 
    * - ``implicit``
      - ``RegState::Implicit``
-     - Not emitted register (e.g. carry, or temporary result).
+     - Not emitted register (e.g., carry, or temporary result).
 
    * - ``implicit-def``
      - ``RegState::ImplicitDefine``
@@ -625,8 +625,8 @@ For a CPI with the index 0 and offset -12:
 
     %1:gr64 = MOV64ri %const.0 - 12
 
-A constant pool entry is bound to a LLVM IR ``Constant`` or a target-specific
-``MachineConstantPoolValue``. When serializing all the function's constants the
+A constant pool entry is bound to an LLVM IR ``Constant`` or a target-specific
+``MachineConstantPoolValue``. When serializing all the function's constants, the
 following format is used:
 
 .. code-block:: text
@@ -670,12 +670,12 @@ a global value operand named ``G``:
 
     $rax = MOV64rm $rip, 1, _, @G, _
 
-The named global values are represented using an identifier with the '@' prefix.
+The named global values are represented using an identifier with the ``@`` prefix.
 If the identifier doesn't match the regular expression
-`[-a-zA-Z$._][-a-zA-Z$._0-9]*`, then this identifier must be quoted.
+``[-a-zA-Z$._][-a-zA-Z$._0-9]*``, then this identifier must be quoted.
 
 The unnamed global values are represented using an unsigned numeric value with
-the '@' prefix, like in the following examples: ``@0``, ``@989``.
+the ``@`` prefix, as in the following examples: ``@0``, ``@989``.
 
 Target-dependent Index Operands
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -695,7 +695,7 @@ and the offset 8:
 Jump-table Index Operands
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A jump-table index operand with the index 0 is printed as following:
+A jump-table index operand with the index 0 is printed as follows:
 
 .. code-block:: text
 
@@ -711,7 +711,7 @@ A machine jump-table entry contains a list of ``MachineBasicBlocks``. When seria
         - id:             <index>
           blocks:         [ <bbreference>, <bbreference>, ... ]
 
-where ``<kind>`` is describing how the jump table is represented and emitted (plain address, relocations, PIC, etc.), and each ``<index>`` is a 32-bit unsigned integer and ``blocks`` contains a list of :ref:`machine basic block references <block-references>`.
+where ``<kind>`` describes how the jump table is represented and emitted (plain address, relocations, PIC, etc.), and each ``<index>`` is a 32-bit unsigned integer and ``blocks`` contains a list of :ref:`machine basic block references <block-references>`.
 
 Example:
 
@@ -741,7 +741,7 @@ Example:
 MCSymbol Operands
 ^^^^^^^^^^^^^^^^^
 
-A MCSymbol operand is holding a pointer to a ``MCSymbol``. For the limitations
+An ``MCSymbol`` operand holds a pointer to an ``MCSymbol``. For the limitations
 of this operand in MIR, see :ref:`limitations <limitations>`.
 
 The syntax is:
@@ -754,7 +754,7 @@ Debug Instruction Reference Operands
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A debug instruction reference operand is a pair of indices, referring to an
-instruction and an operand within that instruction respectively; see
+instruction and an operand within that instruction, respectively; see
 :ref:`Instruction referencing locations <instruction-referencing-locations>`.
 
 The example below uses a reference to Instruction 1, Operand 0:
@@ -766,7 +766,7 @@ The example below uses a reference to Instruction 1, Operand 0:
 CFIIndex Operands
 ^^^^^^^^^^^^^^^^^
 
-A CFI Index operand is holding an index into a per-function side-table,
+A CFI Index operand holds an index into a per-function side-table,
 ``MachineFunction::getFrameInstructions()``, which references all the frame
 instructions in a ``MachineFunction``. A ``CFI_INSTRUCTION`` may look like it
 contains multiple operands, but the only operand it contains is the CFI Index.
@@ -825,7 +825,7 @@ Comments
 ^^^^^^^^
 
 Machine operands can have C/C++ style comments, which are annotations enclosed
-between ``/*`` and ``*/`` to improve readability of e.g. immediate operands.
+between ``/*`` and ``*/`` to improve readability of e.g., immediate operands.
 In the example below, ARM instructions EOR and BCC and immediate operands
 ``14`` and ``0`` have been annotated with their condition codes (CC)
 definitions, i.e. the ``always`` and ``eq`` condition codes:
@@ -842,7 +842,7 @@ Comments can be added or customized by overriding InstrInfo's hook
 Debug-Info constructs
 ---------------------
 
-Most of the debugging information in a MIR file is to be found in the metadata
+Most of the debugging information in a MIR file is found in the metadata
 of the embedded module. Within a machine function, that metadata is referred to
 by various constructs to describe source locations and variable locations.
 
@@ -920,7 +920,7 @@ Instruction referencing locations
 
 This experimental feature aims to separate the specification of variable
 *values* from the program point where a variable takes on that value. Changes
-in variable value occur in the same manner as ``DBG_VALUE`` meta instructions
+in a variable value occur in the same manner as ``DBG_VALUE`` meta instructions
 but using ``DBG_INSTR_REF``. Variable values are identified by a pair of
 instruction number and operand number. Consider the example below:
 

@@ -8,7 +8,6 @@
 //
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// XFAIL: availability-synchronization_library-missing
 // ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-self-move
 
 // jthread& operator=(jthread&&) noexcept;
@@ -110,6 +109,15 @@ int main(int, char**) {
     j1 = std::move(j2);
 
     assert(j1.get_id() == j2Id);
+  }
+
+  // LWG3788: self-assignment
+  {
+    std::jthread j = support::make_test_jthread([] {});
+    auto oldId     = j.get_id();
+    j              = std::move(j);
+
+    assert(j.get_id() == oldId);
   }
 
   return 0;

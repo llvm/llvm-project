@@ -477,8 +477,7 @@ void Watchpoint::SetCondition(const char *condition) {
 const char *Watchpoint::GetConditionText() const {
   if (m_condition_up)
     return m_condition_up->GetUserText();
-  else
-    return nullptr;
+  return nullptr;
 }
 
 void Watchpoint::SendWatchpointChangedEvent(
@@ -534,8 +533,7 @@ Watchpoint::WatchpointEventData::GetWatchpointEventTypeFromEvent(
 
   if (data == nullptr)
     return eWatchpointEventTypeInvalidType;
-  else
-    return data->GetWatchpointEventType();
+  return data->GetWatchpointEventType();
 }
 
 WatchpointSP Watchpoint::WatchpointEventData::GetWatchpointFromEvent(

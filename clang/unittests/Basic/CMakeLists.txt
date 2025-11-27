@@ -6,6 +6,7 @@ add_distinct_clang_unittest(BasicTests
   DiagnosticTest.cpp
   FileEntryTest.cpp
   FileManagerTest.cpp
+  LangOptionsTest.cpp
   LineOffsetMappingTest.cpp
   OffloadArchTest.cpp
   SanitizersTest.cpp

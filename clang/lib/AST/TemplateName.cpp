@@ -59,21 +59,19 @@ void DeducedTemplateStorage::Profile(llvm::FoldingSetNodeID &ID,
 
 TemplateArgument
 SubstTemplateTemplateParmPackStorage::getArgumentPack() const {
-  return TemplateArgument(llvm::ArrayRef(Arguments, Bits.Data));
+  return TemplateArgument(ArrayRef(Arguments, Bits.Data));
 }
 
 TemplateTemplateParmDecl *
 SubstTemplateTemplateParmPackStorage::getParameterPack() const {
-  return cast<TemplateTemplateParmDecl>(
-      getReplacedTemplateParameterList(getAssociatedDecl())
-          ->asArray()[Bits.Index]);
+  return cast<TemplateTemplateParmDecl>(std::get<0>(
+      getReplacedTemplateParameter(getAssociatedDecl(), Bits.Index)));
 }
 
 TemplateTemplateParmDecl *
 SubstTemplateTemplateParmStorage::getParameter() const {
-  return cast<TemplateTemplateParmDecl>(
-      getReplacedTemplateParameterList(getAssociatedDecl())
-          ->asArray()[Bits.Index]);
+  return cast<TemplateTemplateParmDecl>(std::get<0>(
+      getReplacedTemplateParameter(getAssociatedDecl(), Bits.Index)));
 }
 
 void SubstTemplateTemplateParmStorage::Profile(llvm::FoldingSetNodeID &ID) {
@@ -213,25 +211,25 @@ TemplateDecl *TemplateName::getAsTemplateDecl(bool IgnoreDeduced) const {
       dyn_cast_if_present<Decl *>(Name.Storage));
 }
 
-std::pair<TemplateDecl *, DefaultArguments>
+std::pair<TemplateName, DefaultArguments>
 TemplateName::getTemplateDeclAndDefaultArgs() const {
+  DefaultArguments DefArgs;
   for (TemplateName Name = *this; /**/; /**/) {
-    if (Name.getKind() == TemplateName::DeducedTemplate) {
-      DeducedTemplateStorage *DTS = Name.getAsDeducedTemplateName();
-      TemplateDecl *TD =
-          DTS->getUnderlying().getAsTemplateDecl(/*IgnoreDeduced=*/true);
-      DefaultArguments DefArgs = DTS->getDefaultArguments();
-      if (TD && DefArgs)
+    if (DeducedTemplateStorage *DTS = Name.getAsDeducedTemplateName()) {
+      assert(!DefArgs && "multiple default args?");
+      DefArgs = DTS->getDefaultArguments();
+      if (TemplateDecl *TD = DTS->getUnderlying().getAsTemplateDecl();
+          TD && DefArgs)
         assert(DefArgs.StartPos + DefArgs.Args.size() <=
                TD->getTemplateParameters()->size());
-      return {TD, DTS->getDefaultArguments()};
+      Name = DTS->getUnderlying();
     }
     if (std::optional<TemplateName> UnderlyingOrNone =
             Name.desugar(/*IgnoreDeduced=*/false)) {
       Name = *UnderlyingOrNone;
       continue;
     }
-    return {cast_if_present<TemplateDecl>(Name.Storage.dyn_cast<Decl *>()), {}};
+    return {Name, DefArgs};
   }
 }
 
@@ -293,6 +291,21 @@ DependentTemplateName *TemplateName::getAsDependentTemplateName() const {
   return Storage.dyn_cast<DependentTemplateName *>();
 }
 
+std::tuple<NestedNameSpecifier, bool>
+TemplateName::getQualifierAndTemplateKeyword() const {
+  for (std::optional<TemplateName> Cur = *this; Cur;
+       Cur = Cur->desugar(/*IgnoreDeduced=*/true)) {
+    if (DependentTemplateName *N = Cur->getAsDependentTemplateName())
+      return {N->getQualifier(), N->hasTemplateKeyword()};
+    if (QualifiedTemplateName *N = Cur->getAsQualifiedTemplateName())
+      return {N->getQualifier(), N->hasTemplateKeyword()};
+    if (Cur->getAsSubstTemplateTemplateParm() ||
+        Cur->getAsSubstTemplateTemplateParmPack())
+      break;
+  }
+  return {std::nullopt, false};
+}
+
 UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
   if (Decl *D = Storage.dyn_cast<Decl *>())
     if (UsingShadowDecl *USD = dyn_cast<UsingShadowDecl>(D))
@@ -303,24 +316,21 @@ UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
 }
 
 DependentTemplateStorage::DependentTemplateStorage(
-    NestedNameSpecifier *Qualifier, IdentifierOrOverloadedOperator Name,
+    NestedNameSpecifier Qualifier, IdentifierOrOverloadedOperator Name,
     bool HasTemplateKeyword)
     : Qualifier(Qualifier, HasTemplateKeyword), Name(Name) {
-  assert((!Qualifier || Qualifier->isDependent()) &&
+  assert((!Qualifier || Qualifier.isDependent()) &&
          "Qualifier must be dependent");
 }
 
 TemplateNameDependence DependentTemplateStorage::getDependence() const {
-  auto D = TemplateNameDependence::DependentInstantiation;
-  if (NestedNameSpecifier *Qualifier = getQualifier())
-    D |= toTemplateNameDependence(Qualifier->getDependence());
-  return D;
+  return toTemplateNameDependence(getQualifier().getDependence()) |
+         TemplateNameDependence::DependentInstantiation;
 }
 
 void DependentTemplateStorage::print(raw_ostream &OS,
                                      const PrintingPolicy &Policy) const {
-  if (NestedNameSpecifier *NNS = getQualifier())
-    NNS->print(OS, Policy);
+  getQualifier().print(OS, Policy);
 
   if (hasTemplateKeyword())
     OS << "template ";
@@ -363,16 +373,13 @@ TemplateNameDependence TemplateName::getDependence() const {
   case NameKind::QualifiedTemplate: {
     QualifiedTemplateName *S = getAsQualifiedTemplateName();
     TemplateNameDependence D = S->getUnderlyingTemplate().getDependence();
-    if (NestedNameSpecifier *NNS = S->getQualifier())
-      D |= toTemplateNameDependence(NNS->getDependence());
+    D |= toTemplateNameDependence(S->getQualifier().getDependence());
     return D;
   }
   case NameKind::DependentTemplate: {
     DependentTemplateName *S = getAsDependentTemplateName();
-    auto D = TemplateNameDependence::DependentInstantiation;
-    if (NestedNameSpecifier *Qualifier = S->getQualifier())
-      D |= toTemplateNameDependence(Qualifier->getDependence());
-    return D;
+    return toTemplateNameDependence(S->getQualifier().getDependence()) |
+           TemplateNameDependence::DependentInstantiation;
   }
   case NameKind::SubstTemplateTemplateParm: {
     auto *S = getAsSubstTemplateTemplateParm();
@@ -434,18 +441,26 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
       Template = cast<TemplateDecl>(Template->getCanonicalDecl());
     if (handleAnonymousTTP(Template, OS))
       return;
-    if (Qual == Qualified::None)
-      OS << *Template;
-    else
-      Template->printQualifiedName(OS, Policy);
+    if (Qual == Qualified::None || isa<TemplateTemplateParmDecl>(Template) ||
+        Policy.SuppressScope) {
+      if (IdentifierInfo *II = Template->getIdentifier();
+          Policy.CleanUglifiedParameters && II &&
+          isa<TemplateTemplateParmDecl>(Template))
+        OS << II->deuglifiedName();
+      else
+        OS << *Template;
+    } else {
+      PrintingPolicy NestedNamePolicy = Policy;
+      NestedNamePolicy.SuppressUnwrittenScope = true;
+      Template->printQualifiedName(OS, NestedNamePolicy);
+    }
   } else if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName()) {
     if (Policy.PrintAsCanonical) {
       QTN->getUnderlyingTemplate().print(OS, Policy, Qual);
       return;
     }
-    if (NestedNameSpecifier *NNS = QTN->getQualifier();
-        Qual != Qualified::None && NNS)
-      NNS->print(OS, Policy);
+    if (Qual != Qualified::None)
+      QTN->getQualifier().print(OS, Policy);
     if (QTN->hasTemplateKeyword())
       OS << "template ";
 
@@ -458,12 +473,7 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     if (handleAnonymousTTP(UTD, OS))
       return;
 
-    if (IdentifierInfo *II = UTD->getIdentifier();
-        Policy.CleanUglifiedParameters && II &&
-        isa<TemplateTemplateParmDecl>(UTD))
-      OS << II->deuglifiedName();
-    else
-      OS << *UTD;
+    OS << *UTD;
   } else if (DependentTemplateName *DTN = getAsDependentTemplateName()) {
     DTN->print(OS, Policy);
   } else if (SubstTemplateTemplateParmStorage *subst =

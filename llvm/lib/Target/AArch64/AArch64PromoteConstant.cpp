@@ -345,6 +345,10 @@ static bool shouldConvertImpl(const Constant *Cst) {
   if (Cst->isZeroValue())
     return false;
 
+  // Globals cannot be or contain scalable vectors.
+  if (Cst->getType()->isScalableTy())
+    return false;
+
   if (Stress)
     return true;
 

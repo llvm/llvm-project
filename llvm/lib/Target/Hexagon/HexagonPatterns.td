@@ -391,7 +391,6 @@ def Fptoui: pf1<fp_to_uint>;
 def Sitofp: pf1<sint_to_fp>;
 def Uitofp: pf1<uint_to_fp>;
 
-
 // --(1) Immediate -------------------------------------------------------
 //
 
@@ -474,6 +473,18 @@ def: OpR_R_pat<F2_conv_df2uw_chop, pf1<fp_to_uint>, i32, F64>;
 def: OpR_R_pat<F2_conv_sf2ud_chop, pf1<fp_to_uint>, i64, F32>;
 def: OpR_R_pat<F2_conv_df2ud_chop, pf1<fp_to_uint>, i64, F64>;
 
+def: Pat<(i32 (fp_to_bf16 F32:$v)),
+         (C2_mux (F2_sfclass F32:$v, 0x10), (A2_tfrsi(i32 0x7fff)),
+           (C2_mux
+             (C2_cmpeq
+               (A2_and F32:$v, (A2_tfrsi (i32 0x1FFFF))),
+               (A2_tfrsi (i32 0x08000))),
+             (A2_and (A2_asrh F32:$v), (A2_tfrsi (i32 65535))),
+             (A2_and
+               (A2_asrh
+                 (A2_add F32:$v, (A2_and F32:$v, (A2_tfrsi (i32 0x8000))))),
+                 (A2_tfrsi (i32 65535))))
+         )>;
 // Bitcast is different than [fp|sint|uint]_to_[sint|uint|fp].
 def: Pat<(i32 (bitconvert F32:$v)), (I32:$v)>;
 def: Pat<(f32 (bitconvert I32:$v)), (F32:$v)>;
@@ -581,6 +592,13 @@ def: Pat<(v4i1 (trunc V4I16:$Rs)),
 def: Pat<(v8i1 (trunc V8I8:$Rs)),
          (A4_vcmpbeqi (Combinew (A2_andir (HiReg $Rs), (i32 0x01010101)),
                                 (A2_andir (LoReg $Rs), (i32 0x01010101))),
+                      (i32 1))>;
+def : Pat<(v4i1 (trunc V4I8:$Rs)),
+          (A4_vcmpheqi (Combinew (A2_andir (HiReg (S2_vzxtbh $Rs)), 0x00010001),
+                                 (A2_andir (LoReg (S2_vzxtbh $Rs)), 0x00010001)),
+                       (i32 1))>;
+def: Pat<(v2i1 (trunc V2I16:$Rs)),
+          (A4_vcmpweqi (A2_andp (S2_vzxthw $Rs), (A2_combineii (i32 1), (i32 1))),
                       (i32 1))>;
 
 
@@ -692,35 +710,20 @@ def: OpR_RR_pat<C2_cmpgtp,    setgt,          i1,   I64>;
 def: OpR_RR_pat<C2_cmpgtup,   setugt,         i1,   I64>;
 def: OpR_RR_pat<C2_cmpgtp,    RevCmp<setlt>,  i1,   I64>;
 def: OpR_RR_pat<C2_cmpgtup,   RevCmp<setult>, i1,   I64>;
-def: OpR_RR_pat<A2_vcmpbeq,   seteq,          i1,   V8I8>;
 def: OpR_RR_pat<A2_vcmpbeq,   seteq,          v8i1, V8I8>;
-def: OpR_RR_pat<A4_vcmpbgt,   RevCmp<setlt>,  i1,   V8I8>;
 def: OpR_RR_pat<A4_vcmpbgt,   RevCmp<setlt>,  v8i1, V8I8>;
-def: OpR_RR_pat<A4_vcmpbgt,   setgt,          i1,   V8I8>;
 def: OpR_RR_pat<A4_vcmpbgt,   setgt,          v8i1, V8I8>;
-def: OpR_RR_pat<A2_vcmpbgtu,  RevCmp<setult>, i1,   V8I8>;
 def: OpR_RR_pat<A2_vcmpbgtu,  RevCmp<setult>, v8i1, V8I8>;
-def: OpR_RR_pat<A2_vcmpbgtu,  setugt,         i1,   V8I8>;
 def: OpR_RR_pat<A2_vcmpbgtu,  setugt,         v8i1, V8I8>;
-def: OpR_RR_pat<A2_vcmpheq,   seteq,          i1,   V4I16>;
 def: OpR_RR_pat<A2_vcmpheq,   seteq,          v4i1, V4I16>;
-def: OpR_RR_pat<A2_vcmphgt,   RevCmp<setlt>,  i1,   V4I16>;
 def: OpR_RR_pat<A2_vcmphgt,   RevCmp<setlt>,  v4i1, V4I16>;
-def: OpR_RR_pat<A2_vcmphgt,   setgt,          i1,   V4I16>;
 def: OpR_RR_pat<A2_vcmphgt,   setgt,          v4i1, V4I16>;
-def: OpR_RR_pat<A2_vcmphgtu,  RevCmp<setult>, i1,   V4I16>;
 def: OpR_RR_pat<A2_vcmphgtu,  RevCmp<setult>, v4i1, V4I16>;
-def: OpR_RR_pat<A2_vcmphgtu,  setugt,         i1,   V4I16>;
 def: OpR_RR_pat<A2_vcmphgtu,  setugt,         v4i1, V4I16>;
-def: OpR_RR_pat<A2_vcmpweq,   seteq,          i1,   V2I32>;
 def: OpR_RR_pat<A2_vcmpweq,   seteq,          v2i1, V2I32>;
-def: OpR_RR_pat<A2_vcmpwgt,   RevCmp<setlt>,  i1,   V2I32>;
 def: OpR_RR_pat<A2_vcmpwgt,   RevCmp<setlt>,  v2i1, V2I32>;
-def: OpR_RR_pat<A2_vcmpwgt,   setgt,          i1,   V2I32>;
 def: OpR_RR_pat<A2_vcmpwgt,   setgt,          v2i1, V2I32>;
-def: OpR_RR_pat<A2_vcmpwgtu,  RevCmp<setult>, i1,   V2I32>;
 def: OpR_RR_pat<A2_vcmpwgtu,  RevCmp<setult>, v2i1, V2I32>;
-def: OpR_RR_pat<A2_vcmpwgtu,  setugt,         i1,   V2I32>;
 def: OpR_RR_pat<A2_vcmpwgtu,  setugt,         v2i1, V2I32>;
 
 def: OpR_RR_pat<F2_sfcmpeq,   seteq,          i1, F32>;
@@ -1206,12 +1209,6 @@ def: OpR_RI_pat<S2_asl_i_r,  Shl, i32,   I32,   u5_0ImmPred>;
 def: OpR_RI_pat<S2_asr_i_p,  Sra, i64,   I64,   u6_0ImmPred>;
 def: OpR_RI_pat<S2_lsr_i_p,  Srl, i64,   I64,   u6_0ImmPred>;
 def: OpR_RI_pat<S2_asl_i_p,  Shl, i64,   I64,   u6_0ImmPred>;
-def: OpR_RI_pat<S2_asr_i_vh, Sra, v4i16, V4I16, u4_0ImmPred>;
-def: OpR_RI_pat<S2_lsr_i_vh, Srl, v4i16, V4I16, u4_0ImmPred>;
-def: OpR_RI_pat<S2_asl_i_vh, Shl, v4i16, V4I16, u4_0ImmPred>;
-def: OpR_RI_pat<S2_asr_i_vh, Sra, v2i32, V2I32, u5_0ImmPred>;
-def: OpR_RI_pat<S2_lsr_i_vh, Srl, v2i32, V2I32, u5_0ImmPred>;
-def: OpR_RI_pat<S2_asl_i_vh, Shl, v2i32, V2I32, u5_0ImmPred>;
 
 def: OpR_RR_pat<S2_asr_r_r, Sra, i32, I32, I32>;
 def: OpR_RR_pat<S2_lsr_r_r, Srl, i32, I32, I32>;
@@ -1517,6 +1514,14 @@ def: Pat<(or  I32:$Rs, anyimm:$s10),   (A2_orir   I32:$Rs,  imm:$s10)>;
 def: Pat<(and I32:$Rs, anyimm:$s10),   (A2_andir  I32:$Rs,  imm:$s10)>;
 def: Pat<(sub anyimm:$s10, I32:$Rs),   (A2_subri  imm:$s10, I32:$Rs)>;
 
+class OpR_RR_pat_sat<InstHexagon MI, SDNode Op, ValueType ResType,
+                     PatFrag RxPred>
+  : Pat<(ResType (Op RxPred:$Rs, RxPred:$Rt)),
+        (MI RxPred:$Rs, RxPred:$Rt)>;
+
+def: OpR_RR_pat_sat<A2_addsat,  saddsat, i32, I32>;
+def: OpR_RR_pat_sat<A2_addpsat, saddsat, i64, I64>;
+
 def: OpR_RR_pat<A2_add,       Add,        i32,   I32>;
 def: OpR_RR_pat<A2_sub,       Sub,        i32,   I32>;
 def: OpR_RR_pat<A2_and,       And,        i32,   I32>;
@@ -1596,8 +1601,11 @@ def DfMpy: OutPatFrag<(ops node:$Rs, node:$Rt),
     $Rt, $Rs),
   $Rs, $Rt)>;
 
-let Predicates = [HasV67,UseUnsafeMath], AddedComplexity = 50 in {
-  def: Pat<(fmul F64:$Rs, F64:$Rt), (DfMpy $Rs, $Rt)>;
+def fmul_afn : PatFrag<(ops node:$a, node:$b), (fmul node:$a, node:$b), [{
+  return N->getFlags().hasApproximateFuncs();
+}]>;
+let Predicates = [HasV67], AddedComplexity = 50 in {
+  def : Pat<(fmul_afn F64:$Rs, F64:$Rt), (DfMpy $Rs, $Rt)>;
 }
 let Predicates = [HasV67] in {
   def: OpR_RR_pat<F2_dfmin,     pf2<fminimumnum>, f64, F64>;
@@ -3417,6 +3425,11 @@ def HexagonREADTIMER: SDNode<"HexagonISD::READTIMER", SDTInt64Leaf,
 
 def: Pat<(HexagonREADTIMER), (A4_tfrcpp UTIMER)>;
 
+def SDTInt32Leaf : SDTypeProfile<1, 0, [SDTCisVT<0, i32>]>;
+def HexagonTHREADPOINTER : SDNode<"HexagonISD::THREAD_POINTER", SDTPtrLeaf>;
+
+def : Pat<(HexagonTHREADPOINTER), (i32(COPY UGP))>;
+
 // The declared return value of the store-locked intrinsics is i32, but
 // the instructions actually define i1. To avoid register copies from
 // IntRegs to PredRegs and back, fold the entire pattern checking the
@@ -3431,6 +3444,19 @@ let AddedComplexity = 100 in {
   def: Pat<(i1 (seteq (int_hexagon_S4_stored_locked I32:$Rs, I64:$Rt), 0)),
            (C2_not (S4_stored_locked I32:$Rs, I64:$Rt))>;
 }
+
+multiclass FloatClass<SDPatternOperator IntOp, InstHexagon MI,
+                      PatFrag RegPred> {
+  let AddedComplexity = 100 in {
+    def: Pat<(i1 (seteq (IntOp RegPred:$Rs, u5_0ImmPred_timm:$u5), 0)),
+             (C2_not (MI RegPred:$Rs, u5_0ImmPred_timm:$u5))>;
+    def: Pat<(i1 (setne (IntOp RegPred:$Rs, u5_0ImmPred_timm:$u5), 0)),
+             (MI RegPred:$Rs, u5_0ImmPred_timm:$u5)>;
+  }
+}
+
+defm : FloatClass<int_hexagon_F2_sfclass, F2_sfclass, F32>;
+defm : FloatClass<int_hexagon_F2_dfclass, F2_dfclass, F64>;
 
 def: Pat<(int_hexagon_instrprof_custom (HexagonAtPcrel tglobaladdr:$addr), u32_0ImmPred:$I),
          (PS_call_instrprof_custom tglobaladdr:$addr, imm:$I)>;

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -o - %s | FileCheck %s
 
 @lds0 = addrspace(3) global [512 x float] poison
 @lds1 = addrspace(3) global [256 x float] poison
@@ -22,7 +22,7 @@ define amdgpu_kernel void @dynamic_shared_array_0(ptr addrspace(1) %out) {
 }
 
 ; CHECK-LABEL: {{^}}dynamic_shared_array_1:
-; CHECK: v_mov_b32_e32 [[DYNLDS:v[0-9]+]], 0xc00
+; CHECK: s_movk_i32 [[DYNLDS:s[0-9]+]], 0xc00
 ; CHECK: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 2, [[DYNLDS]]
 define amdgpu_kernel void @dynamic_shared_array_1(ptr addrspace(1) %out, i32 %cond) {
 entry:
@@ -49,7 +49,7 @@ endif:                                            ; preds = %else, %if
 }
 
 ; CHECK-LABEL: {{^}}dynamic_shared_array_2:
-; CHECK: v_mov_b32_e32 [[DYNLDS:v[0-9]+]], 0x4000
+; CHECK: s_movk_i32 [[DYNLDS:s[0-9]+]], 0x4000
 ; CHECK: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 2, [[DYNLDS]]
 define amdgpu_kernel void @dynamic_shared_array_2(i32 %idx) {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -64,7 +64,7 @@ define amdgpu_kernel void @dynamic_shared_array_2(i32 %idx) {
 ; The offset to the dynamic shared memory array should be aligned on the type
 ; specified.
 ; CHECK-LABEL: {{^}}dynamic_shared_array_3:
-; CHECK: v_mov_b32_e32 [[DYNLDS:v[0-9]+]], 0x44
+; CHECK: s_movk_i32 [[DYNLDS:s[0-9]+]], 0x44
 ; CHECK: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 2, [[DYNLDS]]
 define amdgpu_kernel void @dynamic_shared_array_3(i32 %idx) {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -80,7 +80,7 @@ define amdgpu_kernel void @dynamic_shared_array_3(i32 %idx) {
 ; The offset to the dynamic shared memory array should be aligned on the
 ; maximal one.
 ; CHECK-LABEL: {{^}}dynamic_shared_array_4:
-; CHECK: v_mov_b32_e32 [[DYNLDS:v[0-9]+]], 0x48
+; CHECK: s_movk_i32 [[DYNLDS:s[0-9]+]], 0x48
 ; CHECK-DAG: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 2, [[DYNLDS]]
 ; CHECK-DAG: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 3, [[DYNLDS]]
 define amdgpu_kernel void @dynamic_shared_array_4(i32 %idx) {
@@ -99,7 +99,7 @@ define amdgpu_kernel void @dynamic_shared_array_4(i32 %idx) {
 
 ; Honor the explicit alignment from the specified variable.
 ; CHECK-LABEL: {{^}}dynamic_shared_array_5:
-; CHECK: v_mov_b32_e32 [[DYNLDS:v[0-9]+]], 0x44
+; CHECK: s_movk_i32 [[DYNLDS:s[0-9]+]], 0x44
 ; CHECK-DAG: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 2, [[DYNLDS]]
 ; CHECK-DAG: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 3, [[DYNLDS]]
 define amdgpu_kernel void @dynamic_shared_array_5(i32 %idx) {
@@ -118,7 +118,7 @@ define amdgpu_kernel void @dynamic_shared_array_5(i32 %idx) {
 
 ; Honor the explicit alignment from the specified variable.
 ; CHECK-LABEL: {{^}}dynamic_shared_array_6:
-; CHECK: v_mov_b32_e32 [[DYNLDS:v[0-9]+]], 0x50
+; CHECK: s_movk_i32 [[DYNLDS:s[0-9]+]], 0x50
 ; CHECK-DAG: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 2, [[DYNLDS]]
 ; CHECK-DAG: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 3, [[DYNLDS]]
 define amdgpu_kernel void @dynamic_shared_array_6(i32 %idx) {

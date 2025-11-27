@@ -41,7 +41,7 @@ function(add_lldb_library name)
   cmake_parse_arguments(PARAM
     "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK;NO_INTERNAL_DEPENDENCIES;NO_PLUGIN_DEPENDENCIES"
     "INSTALL_PREFIX"
-    "EXTRA_CXXFLAGS;LINK_LIBS;CLANG_LIBS"
+    "LINK_LIBS;CLANG_LIBS"
     ${ARGN})
 
   if(PARAM_NO_INTERNAL_DEPENDENCIES)
@@ -68,12 +68,6 @@ function(add_lldb_library name)
     set_property(GLOBAL APPEND PROPERTY LLDB_PLUGINS ${name})
   endif()
 
-  if (MSVC_IDE OR XCODE)
-    string(REGEX MATCHALL "/[^/]+" split_path ${CMAKE_CURRENT_SOURCE_DIR})
-    list(GET split_path -1 dir)
-    file(GLOB_RECURSE headers
-      ../../include/lldb${dir}/*.h)
-  endif()
   if (PARAM_MODULE)
     set(libkind MODULE)
   elseif (PARAM_SHARED)
@@ -92,7 +86,7 @@ function(add_lldb_library name)
     set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
   endif()
 
-  llvm_add_library(${name} ${libkind} ${headers}
+  llvm_add_library(${name} ${libkind}
     ${PARAM_UNPARSED_ARGUMENTS}
     LINK_LIBS ${PARAM_LINK_LIBS}
     ${pass_NO_INSTALL_RPATH}
@@ -136,9 +130,6 @@ function(add_lldb_library name)
     add_dependencies(${name} clang-tablegen-targets)
   endif()
 
-  # Add in any extra C++ compilation flags for this library.
-  target_compile_options(${name} PRIVATE ${PARAM_EXTRA_CXXFLAGS})
-
   if(PARAM_PLUGIN)
     get_property(parent_dir DIRECTORY PROPERTY PARENT_DIRECTORY)
     if(EXISTS ${parent_dir})
@@ -176,6 +167,25 @@ function(add_lldb_executable name)
   )
 
   target_link_libraries(${name} PRIVATE ${ARG_LINK_LIBS})
+  if(WIN32)
+    list(FIND ARG_LINK_LIBS liblldb LIBLLDB_INDEX)
+    if(NOT LIBLLDB_INDEX EQUAL -1)
+      if (MSVC)
+        target_link_options(${name} PRIVATE "/DELAYLOAD:$<TARGET_FILE_NAME:liblldb>")
+        target_link_libraries(${name} PRIVATE delayimp)
+      elseif (MINGW AND LINKER_IS_LLD)
+        # LLD can delay load just by passing a --delayload flag, as long as the import
+        # library is a short type import library (which LLD and MS link.exe produce).
+        # With ld.bfd, with long import libraries (as produced by GNU binutils), one
+        # has to generate a separate delayload import library with dlltool.
+        target_link_options(${name} PRIVATE "-Wl,--delayload=$<TARGET_FILE_NAME:liblldb>")
+      elseif (DEFINED LLDB_PYTHON_DLL_RELATIVE_PATH)
+        # If liblldb can't be delayloaded, then LLDB_PYTHON_DLL_RELATIVE_PATH will not
+        # have any effect.
+        message(WARNING "liblldb is not delay loaded, LLDB_PYTHON_DLL_RELATIVE_PATH has no effect")
+      endif()
+    endif()
+  endif()
   if(CLANG_LINK_CLANG_DYLIB)
     target_link_libraries(${name} PRIVATE clang-cpp)
   else()

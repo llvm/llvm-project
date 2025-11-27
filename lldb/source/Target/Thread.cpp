@@ -710,9 +710,8 @@ bool Thread::ShouldResume(StateType resume_state) {
   const uint32_t process_stop_id = GetProcess()->GetStopID();
   if (m_stop_info_stop_id == process_stop_id &&
       (m_stop_info_sp && m_stop_info_sp->IsValid())) {
-    StopInfo *stop_info = GetPrivateStopInfo().get();
-    if (stop_info)
-      stop_info->WillResume(resume_state);
+    if (StopInfoSP stop_info_sp = GetPrivateStopInfo())
+      stop_info_sp->WillResume(resume_state);
   }
 
   // Tell all the plans that we are about to resume in case they need to clear

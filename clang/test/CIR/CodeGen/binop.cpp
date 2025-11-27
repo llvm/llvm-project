@@ -16,7 +16,7 @@ void b0(int a, int b) {
   x = x | b;
 }
 
-// CIR-LABEL: cir.func @_Z2b0ii(
+// CIR-LABEL: cir.func{{.*}} @_Z2b0ii(
 // CIR: %{{.+}} = cir.binop(mul, %{{.+}}, %{{.+}}) nsw : !s32i
 // CIR: %{{.+}} = cir.binop(div, %{{.+}}, %{{.+}}) : !s32i
 // CIR: %{{.+}} = cir.binop(rem, %{{.+}}, %{{.+}}) : !s32i
@@ -27,7 +27,7 @@ void b0(int a, int b) {
 // CIR: %{{.+}} = cir.binop(or, %{{.+}}, %{{.+}}) : !s32i
 // CIR: cir.return
 
-// LLVM-LABEL: define void @_Z2b0ii(
+// LLVM-LABEL: define{{.*}} void @_Z2b0ii(
 // LLVM-SAME: i32 %[[A:.*]], i32 %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i32
@@ -77,7 +77,7 @@ void b0(int a, int b) {
 
 // LLVM:         ret void
 
-// OGCG-LABEL: define dso_local void @_Z2b0ii(i32 {{.*}} %a, i32 {{.*}} %b) {{.*}} { 
+// OGCG-LABEL: define{{.*}} void @_Z2b0ii(i32 {{.*}} %a, i32 {{.*}} %b) {{.*}} { 
 // OGCG:         %[[A_ADDR:.*]] = alloca i32
 // OGCG:         %[[B_ADDR:.*]] = alloca i32
 // OGCG:         %[[X:.*]] = alloca i32
@@ -133,14 +133,14 @@ void testFloatingPointBinOps(float a, float b) {
   a - b;
 }
 
-// CIR-LABEL: cir.func @_Z23testFloatingPointBinOpsff(
+// CIR-LABEL: cir.func{{.*}} @_Z23testFloatingPointBinOpsff(
 // CIR: cir.binop(mul, %{{.+}}, %{{.+}}) : !cir.float
 // CIR: cir.binop(div, %{{.+}}, %{{.+}}) : !cir.float
 // CIR: cir.binop(add, %{{.+}}, %{{.+}}) : !cir.float
 // CIR: cir.binop(sub, %{{.+}}, %{{.+}}) : !cir.float
 // CIR: cir.return
 
-// LLVM-LABEL: define void @_Z23testFloatingPointBinOpsff(
+// LLVM-LABEL: define{{.*}} void @_Z23testFloatingPointBinOpsff(
 // LLVM-SAME: float %[[A:.*]], float %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca float, i64 1
 // LLVM:         %[[B_ADDR:.*]] = alloca float, i64 1
@@ -165,7 +165,7 @@ void testFloatingPointBinOps(float a, float b) {
 
 // LLVM:         ret void
 
-// OGCG-LABEL: define dso_local void @_Z23testFloatingPointBinOpsff(float {{.*}} %a, float {{.*}} %b)
+// OGCG-LABEL: define{{.*}} void @_Z23testFloatingPointBinOpsff(float {{.*}} %a, float {{.*}} %b)
 // OGCG:         %a.addr = alloca float
 // OGCG:         %b.addr = alloca float
 // OGCG:         store float %a, ptr %a.addr
@@ -194,7 +194,7 @@ void signed_shift(int a, int b) {
   x = a << b;
 }
 
-// CIR-LABEL: cir.func @_Z12signed_shiftii(
+// CIR-LABEL: cir.func{{.*}} @_Z12signed_shiftii(
 // CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !s32i{{.*}})
 // CIR: %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR: %[[B_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
@@ -215,7 +215,7 @@ void signed_shift(int a, int b) {
 
 // CIR: cir.return
 
-// LLVM-LABEL: define void @_Z12signed_shiftii
+// LLVM-LABEL: define{{.*}} void @_Z12signed_shiftii
 // LLVM-SAME: (i32 %[[A:.*]], i32 %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i32
@@ -235,7 +235,7 @@ void signed_shift(int a, int b) {
 
 // LLVM:         ret void
 
-// OGCG-LABEL: define dso_local void @_Z12signed_shiftii
+// OGCG-LABEL: define{{.*}} void @_Z12signed_shiftii
 // OGCG-SAME: (i32 {{.*}} %[[A:.*]], i32 {{.*}} %[[B:.*]])
 // OGCG:         %[[A_ADDR:.*]] = alloca i32
 // OGCG:         %[[B_ADDR:.*]] = alloca i32
@@ -260,7 +260,7 @@ void unsigned_shift(unsigned a, unsigned b) {
   x = a << b;
 }
 
-// CIR-LABEL: cir.func @_Z14unsigned_shiftjj(
+// CIR-LABEL: cir.func{{.*}} @_Z14unsigned_shiftjj(
 // CIR-SAME: %[[ARG0:.*]]: !u32i{{.*}}, %[[ARG1:.*]]: !u32i{{.*}})
 // CIR: %[[A_PTR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init]
 // CIR: %[[B_PTR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["b", init]
@@ -281,7 +281,7 @@ void unsigned_shift(unsigned a, unsigned b) {
 
 // CIR: cir.return
 
-// LLVM-LABEL: define void @_Z14unsigned_shiftjj
+// LLVM-LABEL: define{{.*}} void @_Z14unsigned_shiftjj
 // LLVM-SAME: (i32 %[[A:.*]], i32 %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i32
@@ -301,7 +301,7 @@ void unsigned_shift(unsigned a, unsigned b) {
 
 // LLVM:         ret void
 
-// OGCG-LABEL: define dso_local void @_Z14unsigned_shiftjj
+// OGCG-LABEL: define{{.*}} void @_Z14unsigned_shiftjj
 // OGCG-SAME: (i32 {{.*}} %[[A:.*]], i32 {{.*}} %[[B:.*]])
 // OGCG:         %[[A_ADDR:.*]] = alloca i32
 // OGCG:         %[[B_ADDR:.*]] = alloca i32
@@ -326,7 +326,7 @@ void zext_shift_example(int a, unsigned char b) {
   x = a << b;
 }
 
-// CIR-LABEL: cir.func @_Z18zext_shift_exampleih(
+// CIR-LABEL: cir.func{{.*}} @_Z18zext_shift_exampleih(
 // CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !u8i{{.*}})
 // CIR: %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR: %[[B_PTR:.*]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["b", init]
@@ -337,19 +337,19 @@ void zext_shift_example(int a, unsigned char b) {
 
 // CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!u8i>, !u8i
-// CIR: %[[B1_EXT:.*]] = cir.cast(integral, %[[B1]] : !u8i), !s32i
+// CIR: %[[B1_EXT:.*]] = cir.cast integral %[[B1]] : !u8i -> !s32i
 // CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s32i, %[[B1_EXT]] : !s32i) -> !s32i
 // CIR: cir.store{{.*}} %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!u8i>, !u8i
-// CIR: %[[B2_EXT:.*]] = cir.cast(integral, %[[B2]] : !u8i), !s32i
+// CIR: %[[B2_EXT:.*]] = cir.cast integral %[[B2]] : !u8i -> !s32i
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s32i, %[[B2_EXT]] : !s32i) -> !s32i
 // CIR: cir.store{{.*}} %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // CIR: cir.return
 
-// LLVM-LABEL: define void @_Z18zext_shift_exampleih
+// LLVM-LABEL: define{{.*}} void @_Z18zext_shift_exampleih
 // LLVM-SAME: (i32 %[[A:.*]], i8 %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i8
@@ -371,7 +371,7 @@ void zext_shift_example(int a, unsigned char b) {
 
 // LLVM:         ret void
 
-// OGCG-LABEL: define dso_local void @_Z18zext_shift_exampleih
+// OGCG-LABEL: define{{.*}} void @_Z18zext_shift_exampleih
 // OGCG-SAME: (i32 {{.*}} %[[A:.*]], i8 {{.*}} %[[B:.*]])
 // OGCG:         %[[A_ADDR:.*]] = alloca i32
 // OGCG:         %[[B_ADDR:.*]] = alloca i8
@@ -398,7 +398,7 @@ void sext_shift_example(int a, signed char b) {
   x = a << b;
 }
 
-// CIR-LABEL: cir.func @_Z18sext_shift_exampleia(
+// CIR-LABEL: cir.func{{.*}} @_Z18sext_shift_exampleia(
 // CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !s8i{{.*}})
 // CIR: %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR: %[[B_PTR:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, ["b", init]
@@ -409,19 +409,19 @@ void sext_shift_example(int a, signed char b) {
 
 // CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s8i>, !s8i
-// CIR: %[[B1_EXT:.*]] = cir.cast(integral, %[[B1]] : !s8i), !s32i
+// CIR: %[[B1_EXT:.*]] = cir.cast integral %[[B1]] : !s8i -> !s32i
 // CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s32i, %[[B1_EXT]] : !s32i) -> !s32i
 // CIR: cir.store{{.*}} %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s8i>, !s8i
-// CIR: %[[B2_EXT:.*]] = cir.cast(integral, %[[B2]] : !s8i), !s32i
+// CIR: %[[B2_EXT:.*]] = cir.cast integral %[[B2]] : !s8i -> !s32i
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s32i, %[[B2_EXT]] : !s32i) -> !s32i
 // CIR: cir.store{{.*}} %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // CIR: cir.return
 
-// LLVM-LABEL: define void @_Z18sext_shift_exampleia
+// LLVM-LABEL: define{{.*}} void @_Z18sext_shift_exampleia
 // LLVM-SAME: (i32 %[[A:.*]], i8 %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i8
@@ -443,7 +443,7 @@ void sext_shift_example(int a, signed char b) {
 
 // LLVM:         ret void
 
-// OGCG-LABEL: define dso_local void @_Z18sext_shift_exampleia
+// OGCG-LABEL: define{{.*}} void @_Z18sext_shift_exampleia
 // OGCG-SAME: (i32 {{.*}} %[[A:.*]], i8 {{.*}} %[[B:.*]])
 // OGCG:         %[[A_ADDR:.*]] = alloca i32
 // OGCG:         %[[B_ADDR:.*]] = alloca i8
@@ -470,7 +470,7 @@ void long_shift_example(long long a, short b) {
   x = a << b;
 }
 
-// CIR-LABEL: cir.func @_Z18long_shift_examplexs(
+// CIR-LABEL: cir.func{{.*}} @_Z18long_shift_examplexs(
 // CIR-SAME: %[[ARG0:.*]]: !s64i{{.*}}, %[[ARG1:.*]]: !s16i{{.*}})
 // CIR: %[[A_PTR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["a", init]
 // CIR: %[[B_PTR:.*]] = cir.alloca !s16i, !cir.ptr<!s16i>, ["b", init]
@@ -481,19 +481,19 @@ void long_shift_example(long long a, short b) {
 
 // CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s64i>, !s64i
 // CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s16i>, !s16i
-// CIR: %[[B1_EXT:.*]] = cir.cast(integral, %[[B1]] : !s16i), !s32i
+// CIR: %[[B1_EXT:.*]] = cir.cast integral %[[B1]] : !s16i -> !s32i
 // CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s64i, %[[B1_EXT]] : !s32i) -> !s64i
 // CIR: cir.store{{.*}} %[[ASHR]], %[[X_PTR]] : !s64i, !cir.ptr<!s64i>
 
 // CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s64i>, !s64i
 // CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s16i>, !s16i
-// CIR: %[[B2_EXT:.*]] = cir.cast(integral, %[[B2]] : !s16i), !s32i
+// CIR: %[[B2_EXT:.*]] = cir.cast integral %[[B2]] : !s16i -> !s32i
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s64i, %[[B2_EXT]] : !s32i) -> !s64i
 // CIR: cir.store{{.*}} %[[SHL]], %[[X_PTR]] : !s64i, !cir.ptr<!s64i>
 
 // CIR: cir.return
 
-// LLVM-LABEL: define void @_Z18long_shift_examplexs
+// LLVM-LABEL: define{{.*}} void @_Z18long_shift_examplexs
 // LLVM-SAME: (i64 %[[A:.*]], i16 %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i64
 // LLVM:         %[[B_ADDR:.*]] = alloca i16
@@ -517,7 +517,7 @@ void long_shift_example(long long a, short b) {
 
 // LLVM:         ret void
 
-// OGCG-LABEL: define dso_local void @_Z18long_shift_examplexs
+// OGCG-LABEL: define{{.*}} void @_Z18long_shift_examplexs
 // OGCG-SAME: (i64 {{.*}} %[[A:.*]], i16 {{.*}} %[[B:.*]])
 // OGCG:         %[[A_ADDR:.*]] = alloca i64
 // OGCG:         %[[B_ADDR:.*]] = alloca i16
@@ -546,7 +546,7 @@ void b1(bool a, bool b) {
   x = x || b;
 }
 
-// CIR-LABEL: cir.func @_Z2b1bb(
+// CIR-LABEL: cir.func{{.*}} @_Z2b1bb(
 // CIR-SAME: %[[ARG0:.*]]: !cir.bool {{.*}}, %[[ARG1:.*]]: !cir.bool {{.*}})
 // CIR: [[A:%[0-9]+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a", init]
 // CIR: [[B:%[0-9]+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
@@ -574,7 +574,7 @@ void b1(bool a, bool b) {
 // CIR: cir.return
 
 
-// LLVM-LABEL: define void @_Z2b1bb(
+// LLVM-LABEL: define{{.*}} void @_Z2b1bb(
 // LLVM-SAME: i1 %[[ARG0:.+]], i1 %[[ARG1:.+]])
 // LLVM: %[[A_ADDR:.*]] = alloca i8
 // LLVM: %[[B_ADDR:.*]] = alloca i8
@@ -611,7 +611,7 @@ void b1(bool a, bool b) {
 // LLVM: store i8 %[[ZEXT_OR]], ptr %[[X]]
 // LLVM: ret void
 
-// OGCG-LABEL: define dso_local void @_Z2b1bb
+// OGCG-LABEL: define{{.*}} void @_Z2b1bb
 // OGCG-SAME: (i1 {{.*}} %[[ARG0:.+]], i1 {{.*}} %[[ARG1:.+]])
 // OGCG: [[ENTRY:.*]]:
 // OGCG: %[[A_ADDR:.*]] = alloca i8
@@ -650,7 +650,7 @@ void b3(int a, int b, int c, int d) {
   x = (a == b) || (c == d);
 }
 
-// CIR-LABEL: cir.func @_Z2b3iiii(
+// CIR-LABEL: cir.func{{.*}} @_Z2b3iiii(
 // CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}, %[[ARG2:.*]]: !s32i {{.*}}, %[[ARG3:.*]]: !s32i {{.*}})
 // CIR: [[A:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR: [[B:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
@@ -690,7 +690,7 @@ void b3(int a, int b, int c, int d) {
 // CIR: cir.return
 
 
-// LLVM-LABEL: define void @_Z2b3iiii(
+// LLVM-LABEL: define{{.*}} void @_Z2b3iiii(
 // LLVM-SAME: i32 %[[ARG0:.+]], i32 %[[ARG1:.+]], i32 %[[ARG2:.+]], i32 %[[ARG3:.+]])
 // LLVM: %[[A_ADDR:.*]] = alloca i32, i64 1
 // LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1
@@ -733,7 +733,7 @@ void b3(int a, int b, int c, int d) {
 // LLVM: store i8 %[[ZEXT_OR]], ptr %[[X]]
 // LLVM: ret void
 
-// OGCG-LABEL: define dso_local void @_Z2b3iiii(
+// OGCG-LABEL: define{{.*}} void @_Z2b3iiii(
 // OGCG-SAME: i32 {{.*}} %[[ARG0:.+]], i32 {{.*}} %[[ARG1:.+]], i32 {{.*}} %[[ARG2:.+]], i32 {{.*}} %[[ARG3:.+]])
 // OGCG: [[ENTRY:.*]]:
 // OGCG: %[[A_ADDR:.*]] = alloca i32

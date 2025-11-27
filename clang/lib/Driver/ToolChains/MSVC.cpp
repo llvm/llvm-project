@@ -12,8 +12,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -111,8 +111,9 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Twine("-libpath:") + DIAPath));
   }
   if (!llvm::sys::Process::GetEnv("LIB") ||
-      Args.getLastArg(options::OPT__SLASH_vctoolsdir,
-                      options::OPT__SLASH_winsysroot)) {
+      Args.hasArg(options::OPT__SLASH_vctoolsdir,
+                  options::OPT__SLASH_vctoolsversion,
+                  options::OPT__SLASH_winsysroot)) {
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-libpath:") +
         TC.getSubDirectoryPath(llvm::SubDirectoryType::Lib)));
@@ -121,8 +122,9 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         TC.getSubDirectoryPath(llvm::SubDirectoryType::Lib, "atlmfc")));
   }
   if (!llvm::sys::Process::GetEnv("LIB") ||
-      Args.getLastArg(options::OPT__SLASH_winsdkdir,
-                      options::OPT__SLASH_winsysroot)) {
+      Args.hasArg(options::OPT__SLASH_winsdkdir,
+                  options::OPT__SLASH_winsdkversion,
+                  options::OPT__SLASH_winsysroot)) {
     if (TC.useUniversalCRT()) {
       std::string UniversalCRTLibPath;
       if (TC.getUniversalCRTLibraryPath(Args, UniversalCRTLibPath))
@@ -277,8 +279,8 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     AddRunTimeLibs(TC, TC.getDriver(), CmdArgs, Args);
   }
 
-  StringRef Linker =
-      Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER);
+  StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ,
+                                          TC.getDriver().getPreferredLinker());
   if (Linker.empty())
     Linker = "link";
   // We need to translate 'lld' into 'lld-link'.
@@ -694,9 +696,12 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
 
   // Honor %INCLUDE% and %EXTERNAL_INCLUDE%. It should have essential search
-  // paths set by vcvarsall.bat. Skip if the user expressly set a vctoolsdir.
-  if (!DriverArgs.getLastArg(options::OPT__SLASH_vctoolsdir,
-                             options::OPT__SLASH_winsysroot)) {
+  // paths set by vcvarsall.bat. Skip if the user expressly set any of the
+  // Windows SDK or VC Tools options.
+  if (!DriverArgs.hasArg(
+          options::OPT__SLASH_vctoolsdir, options::OPT__SLASH_vctoolsversion,
+          options::OPT__SLASH_winsysroot, options::OPT__SLASH_winsdkdir,
+          options::OPT__SLASH_winsdkversion)) {
     bool Found = AddSystemIncludesFromEnv("INCLUDE");
     Found |= AddSystemIncludesFromEnv("EXTERNAL_INCLUDE");
     if (Found)

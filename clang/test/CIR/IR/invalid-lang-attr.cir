@@ -1,0 +1,5 @@
+// RUN: cir-opt %s -verify-diagnostics
+
+// expected-error@below {{expected ::cir::SourceLanguage to be one of}}
+// expected-error@below {{failed to parse CIR_SourceLanguageAttr parameter 'value'}}
+module attributes {cir.lang = #cir.lang<dummy>} { }

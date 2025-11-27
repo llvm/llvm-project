@@ -192,7 +192,8 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
     }
 
     static std::function<void(ImplicitLocOpBuilder &,
-                              Block &, ArrayRef<NamedAttribute>)>
+                              Block &, ArrayRef<NamedAttribute>,
+                              function_ref<InFlightDiagnostic()>)>
     getRegionBuilder() {
       return nullptr;
     }
@@ -221,7 +222,6 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
-  let hasVerifier = 1;
 }
 
 
@@ -234,8 +234,7 @@ def TensorOrMemref :
 
 def MapOp : LinalgStructuredBase_Op<"map", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>,
-    SingleBlockImplicitTerminator<"YieldOp">]> {
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>]> {
   let summary = "Elementwise operations";
   let description = [{
     Models elementwise operations on tensors in terms of arithmetic operations
@@ -252,10 +251,12 @@ def MapOp : LinalgStructuredBase_Op<"map", [
           }
     ```
 
-    Shortened print form is available. Applies to simple maps with one
-    non-yield operation inside the body.
+    Shortened print form is available for simple maps where the body contains exactly
+    two operations (the payload operation and a yield), the payload operation has
+    the same number of operands as block arguments with operands matching block
+    arguments in order, and the yield operand is the result of the payload operation.
 
-    The example above will be printed as:
+    The example above will be printed using the shortened form as:
     ```mlir
       %add = linalg.map { arith.addf }
           ins(%lhs, %rhs : tensor<64xf32>, tensor<64xf32>)
@@ -290,17 +291,14 @@ def MapOp : LinalgStructuredBase_Op<"map", [
     // Implement functions necessary for DestinationStyleOpInterface.
     MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
 
-    SmallVector<OpOperand *> getOpOperandsMatchingBBargs() {
-      return getDpsInputOperands();
-    }
-
     bool payloadUsesValueFromOperand(OpOperand * opOperand) {
       if (isDpsInit(opOperand)) return false;
       return !getMatchingBlockArgument(opOperand).use_empty();
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
-                              mlir::ArrayRef<mlir::NamedAttribute>)>
+                              mlir::ArrayRef<mlir::NamedAttribute>,
+                              function_ref<InFlightDiagnostic()>)>
     getRegionBuilder() {
       return nullptr;
     }
@@ -318,8 +316,7 @@ def MapOp : LinalgStructuredBase_Op<"map", [
 def ReduceOp : LinalgStructuredBase_Op<"reduce", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>,
-    SameVariadicOperandSize,
-    SingleBlockImplicitTerminator<"YieldOp">]> {
+    SameVariadicOperandSize]> {
   let summary = "Reduce operator";
   let description = [{
     Executes `combiner` on the `dimensions` of `inputs` and returns the
@@ -338,13 +335,15 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
           }
     ```
 
-    Shortened print form is available. Applies to simple (not variadic) reduces
-    with one non-yield operation inside the body. Applies only if the operation
-    takes `%out` as the first argument.
+    Shortened print form is available for simple reduces where the body contains exactly
+    two operations (the payload operation and a yield), the payload operation has the
+    same number of operands as block arguments, the first block argument (init) is the
+    last operand of the payload operation with remaining operands matching remaining
+    block arguments in order, and the yield operand is the result of the payload operation.
 
-    The example above will be printed as:
+    The example above will be printed using the shortened form as:
     ```mlir
-          %reduce = linalg.reduce { arith.addf }
+      %reduce = linalg.reduce { arith.addf }
           ins(%input:tensor<16x32x64xf32>)
           outs(%init:tensor<16x64xf32>)
           dimensions = [1]
@@ -380,7 +379,8 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
 
     // Implement functions necessary for DestinationStyleOpInterface.
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
-                              mlir::ArrayRef<mlir::NamedAttribute>)>
+                              mlir::ArrayRef<mlir::NamedAttribute>,
+                              function_ref<InFlightDiagnostic()>)>
     getRegionBuilder() {
       return nullptr;
     }
@@ -397,8 +397,7 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
 //===----------------------------------------------------------------------===//
 
 def TransposeOp : LinalgStructuredBase_Op<"transpose", [
-    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    SingleBlockImplicitTerminator<"YieldOp">]> {
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Transpose operator";
   let description = [{
     Permutes the dimensions of `input` according to the given `permutation`.
@@ -449,13 +448,14 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
     MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
 
     static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
-        mlir::ArrayRef<mlir::NamedAttribute>) {
+        mlir::ArrayRef<mlir::NamedAttribute>, function_ref<InFlightDiagnostic()> emitError) {
       OpBuilder::InsertionGuard guard(b);
-      b.create<linalg::YieldOp>(b.getLoc(), block.getArgument(0));
+      linalg::YieldOp::create(b, b.getLoc(), block.getArgument(0));
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
-        mlir::ArrayRef<mlir::NamedAttribute>)>
+                              mlir::ArrayRef<mlir::NamedAttribute>,
+                              function_ref<InFlightDiagnostic()>)>
       getRegionBuilder() {
       return regionBuilder;
     }
@@ -473,8 +473,7 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
 //===----------------------------------------------------------------------===//
 
 def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
-    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    SingleBlockImplicitTerminator<"YieldOp">]> {
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "Static broadcast operator";
   let description = [{
     Broadcast the input into the given shape by adding `dimensions`.
@@ -521,13 +520,15 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
     MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
 
     static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
-        mlir::ArrayRef<mlir::NamedAttribute>) {
+                              mlir::ArrayRef<mlir::NamedAttribute>, 
+                              function_ref<InFlightDiagnostic()> emitError) {
       OpBuilder::InsertionGuard guard(b);
-      b.create<linalg::YieldOp>(b.getLoc(), block.getArgument(0));
+      linalg::YieldOp::create(b, b.getLoc(), block.getArgument(0));
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
-        mlir::ArrayRef<mlir::NamedAttribute>)>
+                              mlir::ArrayRef<mlir::NamedAttribute>,
+                              function_ref<InFlightDiagnostic()>)>
       getRegionBuilder() {
       return regionBuilder;
     }
@@ -541,8 +542,9 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
 //===----------------------------------------------------------------------===//
 // Op definition for ElementwiseOp
 //===----------------------------------------------------------------------===//
+
 def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
-                   AttrSizedOperandSegments]> {
+                    AttrSizedOperandSegments]> {
   let summary = [{ Performs element-wise operation }];
   let description = [{
     The attribute `kind` describes arithmetic operation to perform. The
@@ -617,7 +619,6 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
 
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
-  let hasVerifier = 1;
 
   let extraClassDeclaration = structuredOpsBaseDecls # [{
       /// Get the arity enum corresponding to the kind of op, e.g. if arg is
@@ -631,10 +632,12 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
       /// Implements the block region builder for the elementwiseOp. This is
       /// called by the 'fillStructuredOpRegion'.
       static void regionBuilder(ImplicitLocOpBuilder &b,
-                                Block &block, ArrayRef<NamedAttribute> attrs);
+                                Block &block, ArrayRef<NamedAttribute> attrs,
+                                function_ref<InFlightDiagnostic()> emitError);
 
       static std::function<void(ImplicitLocOpBuilder &,
-                                Block &, ArrayRef<NamedAttribute>)>
+                                Block &, ArrayRef<NamedAttribute>,
+                                function_ref<InFlightDiagnostic()>)>
       getRegionBuilder() {
         return regionBuilder;
       }
@@ -676,7 +679,6 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
 def MatmulOp : LinalgStructuredBase_Op<"matmul", [
                AttrSizedOperandSegments,
                LinalgContractionOpInterface]> {
-
   let summary = [{
     Performs a matrix multiplication of two 2D inputs without broadcast or transpose.
     }];
@@ -771,16 +773,21 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
 
       /// Implements the block region builder.
       static void regionBuilder(ImplicitLocOpBuilder &b,
-                                Block &block, ArrayRef<NamedAttribute> attrs);
+                                Block &block, ArrayRef<NamedAttribute> attrs,
+                                function_ref<InFlightDiagnostic()> emitError);
 
       /// Returns a list of AffineMap with the default matmul indexing charactristic.
       static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
+
+      /// Returns true if the AffineMap is the default matmul indexing charactristic.
+      static bool isDefaultIndexingMaps(Attribute attr);
 
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.
       bool isValidLhsRhsBroadcastMap(AffineMap bcastMap);
 
       static std::function<void(ImplicitLocOpBuilder &,
-                                Block &, ArrayRef<NamedAttribute>)>
+                                Block &, ArrayRef<NamedAttribute>,
+                                function_ref<InFlightDiagnostic()>)>
       getRegionBuilder() {
         return regionBuilder;
       }
@@ -803,8 +810,8 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
 //===----------------------------------------------------------------------===//
 
 def ContractOp : LinalgStructuredBase_Op<"contract", [
-               AttrSizedOperandSegments,
-               LinalgContractionOpInterface]> {
+                 AttrSizedOperandSegments,
+                 LinalgContractionOpInterface]> {
   let summary = [{
     Perform a contraction on two inputs, accumulating into the third.
   }];
@@ -916,10 +923,12 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
     static unsigned getNumRegionArgs();
 
     static void regionBuilder(ImplicitLocOpBuilder &b,
-                              Block &block, ArrayRef<NamedAttribute> attrs);
+                              Block &block, ArrayRef<NamedAttribute> attrs,
+                              function_ref<InFlightDiagnostic()> emitError);
 
     static std::function<void(ImplicitLocOpBuilder &,
-                              Block &, ArrayRef<NamedAttribute>)>
+                              Block &, ArrayRef<NamedAttribute>,
+                              function_ref<InFlightDiagnostic()>)>
     getRegionBuilder() {
       return regionBuilder;
     }
@@ -939,9 +948,9 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
 // Op definition for BatchMatmulOp
 //===----------------------------------------------------------------------===//
 
-def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSizedOperandSegments],
-  /*extraInterfaces=*/[LinalgContractionOpInterface])> {
-    
+def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", [
+                    AttrSizedOperandSegments,
+                    LinalgContractionOpInterface]> {
   let summary = [{Performs a batched matrix multiplication of two 3D inputs.}];
   let description = [{Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.
@@ -1033,15 +1042,20 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
 
       SmallVector<utils::IteratorType> getIteratorTypesArray();
       static void regionBuilder(ImplicitLocOpBuilder &b,
-                                Block &block, ArrayRef<NamedAttribute> attrs);
+                                Block &block, ArrayRef<NamedAttribute> attrs,
+                                function_ref<InFlightDiagnostic()> emitError);
       static std::function<void(ImplicitLocOpBuilder &,
-                                Block &, ArrayRef<NamedAttribute>)>
+                                Block &, ArrayRef<NamedAttribute>,
+                                function_ref<InFlightDiagnostic()>)>
       getRegionBuilder() {
         return regionBuilder;
       }
 
       /// Returns a list with default AffineMap(s), i.e. without broadcasts and transpositions.
       static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
+
+      /// Returns true if the AffineMap is the default batch matmul indexing charactristic.
+      static bool isDefaultIndexingMaps(Attribute attr);
 
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.
       bool isValidLhsRhsBroadcastMap(AffineMap bcastMap, bool isLHS = true);
@@ -1067,7 +1081,6 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
 def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
                           AttrSizedOperandSegments,
                           LinalgContractionOpInterface]> {
-    
   let summary = [{Performs a batch-reduce matrix multiplication on two inputs.
     The partial multiplication results are reduced into a 2D output.}];
   let description = [{
@@ -1161,16 +1174,21 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
 
       /// Implements the block region builder.
       static void regionBuilder(ImplicitLocOpBuilder &b,
-                                Block &block, ArrayRef<NamedAttribute> attrs);
+                                Block &block, ArrayRef<NamedAttribute> attrs,
+                                function_ref<InFlightDiagnostic()> emitError);
 
       /// Returns a list of AffineMap with the default batch_reduce_matmul indexing charactristic.
       static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
+
+      /// Returns true if the AffineMap is the default batch reduce matmul indexing charactristic.
+      static bool isDefaultIndexingMaps(Attribute attr);
 
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.
       bool isValidLhsRhsBroadcastMap(AffineMap bcastMap, bool isLHS = true);
 
       static std::function<void(ImplicitLocOpBuilder &,
-                                Block &, ArrayRef<NamedAttribute>)>
+                                Block &, ArrayRef<NamedAttribute>,
+                              function_ref<InFlightDiagnostic()>)>
       getRegionBuilder() {
         return regionBuilder;
       }

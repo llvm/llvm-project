@@ -81,7 +81,7 @@ inline RT_API_ATTRS void MatrixTimesMatrix(
     SubscriptValue n, std::size_t xColumnByteStride = 0,
     std::size_t yColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
-  std::memset(product, 0, rows * cols * sizeof *product);
+  Fortran::runtime::memset(product, 0, rows * cols * sizeof *product);
   const XT *RESTRICT xp0{x};
   for (SubscriptValue k{0}; k < n; ++k) {
     ResultType *RESTRICT p{product};
@@ -153,7 +153,7 @@ inline RT_API_ATTRS void MatrixTimesVector(
     SubscriptValue n, const XT *RESTRICT x, const YT *RESTRICT y,
     std::size_t xColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
-  std::memset(product, 0, rows * sizeof *product);
+  Fortran::runtime::memset(product, 0, rows * sizeof *product);
   [[maybe_unused]] const XT *RESTRICT xp0{x};
   for (SubscriptValue k{0}; k < n; ++k) {
     ResultType *RESTRICT p{product};
@@ -203,7 +203,7 @@ inline RT_API_ATTRS void VectorTimesMatrix(
     SubscriptValue cols, const XT *RESTRICT x, const YT *RESTRICT y,
     std::size_t yColumnByteStride = 0) {
   using ResultType = CppTypeFor<RCAT, RKIND>;
-  std::memset(product, 0, cols * sizeof *product);
+  Fortran::runtime::memset(product, 0, cols * sizeof *product);
   for (SubscriptValue k{0}; k < n; ++k) {
     ResultType *RESTRICT p{product};
     auto xv{static_cast<ResultType>(*x++)};

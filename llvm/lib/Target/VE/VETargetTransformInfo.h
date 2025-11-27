@@ -49,7 +49,7 @@ static bool isVectorLaneType(llvm::Type &ElemTy) {
 
 namespace llvm {
 
-class VETTIImpl : public BasicTTIImplBase<VETTIImpl> {
+class VETTIImpl final : public BasicTTIImplBase<VETTIImpl> {
   using BaseT = BasicTTIImplBase<VETTIImpl>;
   friend BaseT;
 
@@ -134,12 +134,14 @@ public:
   }
 
   // Load & Store {
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned /*AddressSpace*/) const override {
+  bool
+  isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned /*AddressSpace*/,
+                    TargetTransformInfo::MaskKind /*MaskKind*/) const override {
     return isVectorLaneType(*getLaneType(DataType));
   }
-  bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned /*AddressSpace*/) const override {
+  bool isLegalMaskedStore(
+      Type *DataType, Align Alignment, unsigned /*AddressSpace*/,
+      TargetTransformInfo::MaskKind /*MaskKind*/) const override {
     return isVectorLaneType(*getLaneType(DataType));
   }
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const override {

@@ -1,12 +1,11 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 import gc
-import io
-import itertools
-from mlir.ir import *
+
 from mlir.dialects import builtin
 from mlir.dialects import cf
 from mlir.dialects import func
+from mlir.ir import *
 
 
 def run(f):
@@ -54,9 +53,24 @@ def testBlockCreation():
             with InsertionPoint(middle_block) as middle_ip:
                 assert middle_ip.block == middle_block
                 cf.BranchOp([i32_arg], dest=successor_block)
+
         module.print(enable_debug_info=True)
         # Ensure region back references are coherent.
         assert entry_block.region == middle_block.region == successor_block.region
+
+        assert len(entry_block.predecessors) == 0
+
+        assert len(entry_block.successors) == 1
+        assert middle_block == entry_block.successors[0]
+        assert len(middle_block.predecessors) == 1
+        assert entry_block == middle_block.predecessors[0]
+
+        assert len(middle_block.successors) == 1
+        assert successor_block == middle_block.successors[0]
+        assert len(successor_block.predecessors) == 1
+        assert middle_block == successor_block.predecessors[0]
+
+        assert len(successor_block.successors) == 0
 
 
 # CHECK-LABEL: TEST: testBlockCreationArgLocs
@@ -176,4 +190,19 @@ def testBlockEraseArgs():
         op.print(enable_debug_info=True)
         blocks[0].erase_argument(0)
         # CHECK: ^bb0:
+        op.print(enable_debug_info=True)
+
+
+# CHECK-LABEL: TEST: testBlockArgSetLocation
+# CHECK: ^bb0(%{{.+}}: f32 loc("new_loc")):
+@run
+def testBlockArgSetLocation():
+    with Context() as ctx, Location.unknown(ctx) as loc:
+        ctx.allow_unregistered_dialects = True
+        f32 = F32Type.get()
+        op = Operation.create("test", regions=1, loc=Location.unknown())
+        blocks = op.regions[0].blocks
+        blocks.append(f32)
+        arg = blocks[0].arguments[0]
+        arg.set_location(Location.name("new_loc"))
         op.print(enable_debug_info=True)

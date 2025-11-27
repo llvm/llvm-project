@@ -1,4 +1,4 @@
-//===--- UseAfterMoveCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -148,7 +148,7 @@ UseAfterMoveFinder::find(Stmt *CodeBlock, const Expr *MovingCall,
 std::optional<UseAfterMove>
 UseAfterMoveFinder::findInternal(const CFGBlock *Block, const Expr *MovingCall,
                                  const ValueDecl *MovedVariable) {
-  if (Visited.count(Block))
+  if (Visited.contains(Block))
     return std::nullopt;
 
   // Mark the block as visited (except if this is the block containing the
@@ -232,7 +232,7 @@ void UseAfterMoveFinder::getUsesAndReinits(
   // All references to the variable that aren't reinitializations are uses.
   Uses->clear();
   for (const DeclRefExpr *DeclRef : DeclRefs) {
-    if (!ReinitDeclRefs.count(DeclRef))
+    if (!ReinitDeclRefs.contains(DeclRef))
       Uses->push_back(DeclRef);
   }
 
@@ -242,7 +242,7 @@ void UseAfterMoveFinder::getUsesAndReinits(
   });
 }
 
-bool isStandardSmartPointer(const ValueDecl *VD) {
+static bool isStandardSmartPointer(const ValueDecl *VD) {
   const Type *TheType = VD->getType().getNonReferenceType().getTypePtrOrNull();
   if (!TheType)
     return false;
@@ -255,7 +255,7 @@ bool isStandardSmartPointer(const ValueDecl *VD) {
   if (!ID)
     return false;
 
-  StringRef Name = ID->getName();
+  const StringRef Name = ID->getName();
   if (Name != "unique_ptr" && Name != "shared_ptr" && Name != "weak_ptr")
     return false;
 
@@ -369,7 +369,7 @@ void UseAfterMoveFinder::getReinits(
     if (!S)
       continue;
 
-    SmallVector<BoundNodes, 1> Matches =
+    const SmallVector<BoundNodes, 1> Matches =
         match(findAll(ReinitMatcher), *S->getStmt(), *Context);
 
     for (const auto &Match : Matches) {
@@ -506,7 +506,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
     if (ContainingCtorInit) {
       // Collect the constructor initializer expressions.
       bool BeforeMove{true};
-      for (CXXCtorInitializer *Init : ContainingCtor->inits()) {
+      for (const CXXCtorInitializer *Init : ContainingCtor->inits()) {
         if (BeforeMove && Init->getInit()->IgnoreImplicit() ==
                               ContainingCtorInit->IgnoreImplicit())
           BeforeMove = false;

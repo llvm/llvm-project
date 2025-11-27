@@ -15,25 +15,39 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
 
 namespace {
 
+Type *classifyFunctionType(const Function &F, PointerTypeMap &Map);
+
 // Classifies the type of the value passed in by walking the value's users to
 // find a typed instruction to materialize a type from.
 Type *classifyPointerType(const Value *V, PointerTypeMap &Map) {
   assert(V->getType()->isPointerTy() &&
          "classifyPointerType called with non-pointer");
+
+  // A CallInst will trigger this case, and we want to classify its Function
+  // operand as a Function rather than a generic Value.
+  if (const Function *F = dyn_cast<Function>(V))
+    return classifyFunctionType(*F, Map);
+
+  // There can potentially be dead constants hanging off of the globals we do
+  // not want to deal with. So we remove them here.
+  if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(V))
+    GV->removeDeadConstantUsers();
+
   auto It = Map.find(V);
   if (It != Map.end())
     return It->second;
 
   Type *PointeeTy = nullptr;
-  if (auto *Inst = dyn_cast<GetElementPtrInst>(V)) {
-    if (!Inst->getResultElementType()->isPointerTy())
-      PointeeTy = Inst->getResultElementType();
+  if (auto *GEP = dyn_cast<GEPOperator>(V)) {
+    if (!GEP->getResultElementType()->isPointerTy())
+      PointeeTy = GEP->getResultElementType();
   } else if (auto *Inst = dyn_cast<AllocaInst>(V)) {
     PointeeTy = Inst->getAllocatedType();
   } else if (auto *GV = dyn_cast<GlobalVariable>(V)) {
@@ -49,8 +63,8 @@ Type *classifyPointerType(const Value *V, PointerTypeMap &Map) {
       // When store value is ptr type, cannot get more type info.
       if (NewPointeeTy->isPointerTy())
         continue;
-    } else if (const auto *Inst = dyn_cast<GetElementPtrInst>(User)) {
-      NewPointeeTy = Inst->getSourceElementType();
+    } else if (const auto *GEP = dyn_cast<GEPOperator>(User)) {
+      NewPointeeTy = GEP->getSourceElementType();
     }
     if (NewPointeeTy) {
       // HLSL doesn't support pointers, so it is unlikely to get more than one
@@ -204,6 +218,9 @@ PointerTypeMap PointerTypeAnalysis::run(const Module &M) {
       for (const auto &I : B) {
         if (I.getType()->isPointerTy())
           classifyPointerType(&I, Map);
+        for (const auto &O : I.operands())
+          if (O.get()->getType()->isPointerTy())
+            classifyPointerType(O.get(), Map);
       }
     }
   }

@@ -82,7 +82,8 @@ LLVM_ABI StructType *getEntryTy(Module &M);
 /// \param Data Extra data storage associated with the entry.
 /// \param SectionName The section this entry will be placed at.
 /// \param AuxAddr An extra pointer if needed.
-LLVM_ABI void
+/// \return The emitted global variable containing the offloading entry.
+LLVM_ABI GlobalVariable *
 emitOffloadingEntry(Module &M, object::OffloadKind Kind, Constant *Addr,
                     StringRef Name, uint64_t Size, uint32_t Flags,
                     uint64_t Data, Constant *AuxAddr = nullptr,

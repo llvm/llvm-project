@@ -38,7 +38,7 @@ public:
         AnyResumeFnPtrTy(PointerType::getUnqual(Context)) {}
   void lowerEarlyIntrinsics(Function &F);
 };
-}
+} // namespace
 
 // Replace a direct call to coro.resume or coro.destroy with an indirect call to
 // an address returned by coro.subfn.addr intrinsic. This is done so that
@@ -132,7 +132,7 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
 
     // Create a Noop function that does nothing.
     Function *NoopFn = Function::createWithDefaultAttr(
-        FnTy, GlobalValue::LinkageTypes::PrivateLinkage,
+        FnTy, GlobalValue::LinkageTypes::InternalLinkage,
         M.getDataLayout().getProgramAddressSpace(), "__NoopCoro_ResumeDestroy",
         &M);
     NoopFn->setCallingConv(CallingConv::Fast);
@@ -170,6 +170,12 @@ void Lowerer::hidePromiseAlloca(CoroIdInst *CoroId, CoroBeginInst *CoroBegin) {
   auto *PI = Builder.CreateIntrinsic(
       Builder.getPtrTy(), Intrinsic::coro_promise, Arg, {}, "promise.addr");
   PI->setCannotDuplicate();
+  // Remove lifetime markers, as these are only allowed on allocas.
+  for (User *U : make_early_inc_range(PA->users())) {
+    auto *I = cast<Instruction>(U);
+    if (I->isLifetimeStartOrEnd())
+      I->eraseFromParent();
+  }
   PA->replaceUsesWithIf(PI, [CoroId](Use &U) {
     bool IsBitcast = U == U.getUser()->stripPointerCasts();
     bool IsCoroId = U.getUser() == CoroId;
@@ -279,12 +285,13 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
 }
 
 static bool declaresCoroEarlyIntrinsics(const Module &M) {
+  // coro_suspend omitted as it is overloaded.
   return coro::declaresIntrinsics(
-      M, {"llvm.coro.id", "llvm.coro.id.retcon", "llvm.coro.id.retcon.once",
-          "llvm.coro.id.async", "llvm.coro.destroy", "llvm.coro.done",
-          "llvm.coro.end", "llvm.coro.end.async", "llvm.coro.noop",
-          "llvm.coro.free", "llvm.coro.promise", "llvm.coro.resume",
-          "llvm.coro.suspend"});
+      M, {Intrinsic::coro_id, Intrinsic::coro_id_retcon,
+          Intrinsic::coro_id_retcon_once, Intrinsic::coro_id_async,
+          Intrinsic::coro_destroy, Intrinsic::coro_done, Intrinsic::coro_end,
+          Intrinsic::coro_end_async, Intrinsic::coro_noop, Intrinsic::coro_free,
+          Intrinsic::coro_promise, Intrinsic::coro_resume});
 }
 
 PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &) {

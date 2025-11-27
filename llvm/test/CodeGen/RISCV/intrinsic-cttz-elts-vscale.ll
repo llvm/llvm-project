@@ -42,7 +42,7 @@ define i32 @ctz_nxv4i32(<vscale x 4 x i32> %a) #0 {
 ; RV64-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; RV64-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    sub a0, a0, a1
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    srli a0, a0, 48
 ; RV64-NEXT:    ret
@@ -233,11 +233,5 @@ define i16 @ctz_v8i1_i16_ret(<8 x i1> %a) {
   %res = call i16 @llvm.experimental.cttz.elts.i16.v8i1(<8 x i1> %a, i1 0)
   ret i16 %res
 }
-
-declare i64 @llvm.experimental.cttz.elts.i64.nxv8i16(<vscale x 8 x i16>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.nxv16i1(<vscale x 16 x i1>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.nxv4i32(<vscale x 4 x i32>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.v16i1(<16 x i1>, i1)
-declare i16 @llvm.experimental.cttz.elts.i16.v16i1(<8 x i1>, i1)
 
 attributes #0 = { vscale_range(2,1024) }

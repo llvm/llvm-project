@@ -13,6 +13,7 @@
 #ifndef LLVM_CGDATA_CODEGENDATAWRITER_H
 #define LLVM_CGDATA_CODEGENDATAWRITER_H
 
+#include "llvm/CGData/CGDataPatchItem.h"
 #include "llvm/CGData/CodeGenData.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/CGData/StableFunctionMapRecord.h"
@@ -22,21 +23,23 @@
 
 namespace llvm {
 
-/// A struct to define how the data stream should be patched.
-struct CGDataPatchItem {
-  uint64_t Pos; // Where to patch.
-  uint64_t *D;  // Pointer to an array of source data.
-  int N;        // Number of elements in \c D array.
-};
-
 /// A wrapper class to abstract writer stream with support of bytes
 /// back patching.
 class CGDataOStream {
+  enum class OStreamKind {
+    fd,
+    string,
+    svector,
+  };
+
 public:
   CGDataOStream(raw_fd_ostream &FD)
-      : IsFDOStream(true), OS(FD), LE(FD, llvm::endianness::little) {}
+      : Kind(OStreamKind::fd), OS(FD), LE(FD, llvm::endianness::little) {}
   CGDataOStream(raw_string_ostream &STR)
-      : IsFDOStream(false), OS(STR), LE(STR, llvm::endianness::little) {}
+      : Kind(OStreamKind::string), OS(STR), LE(STR, llvm::endianness::little) {}
+  CGDataOStream(raw_svector_ostream &SVEC)
+      : Kind(OStreamKind::svector), OS(SVEC),
+        LE(SVEC, llvm::endianness::little) {}
 
   uint64_t tell() { return OS.tell(); }
   void write(uint64_t V) { LE.write<uint64_t>(V); }
@@ -48,9 +51,7 @@ public:
   // directly and it won't be reflected in the stream's internal buffer.
   LLVM_ABI void patch(ArrayRef<CGDataPatchItem> P);
 
-  // If \c OS is an instance of \c raw_fd_ostream, this field will be
-  // true. Otherwise, \c OS will be an raw_string_ostream.
-  bool IsFDOStream;
+  OStreamKind Kind;
   raw_ostream &OS;
   support::endian::Writer LE;
 };
