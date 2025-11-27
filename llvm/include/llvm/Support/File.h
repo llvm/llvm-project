@@ -44,11 +44,11 @@ struct file_t {
   bool isValid() const { return Value != Invalid; }
 
   /// Get the underlying value and return a platform specific value.
-  value_type get() const { return Value; }
+  value_type native_handle() const { return Value; }
 };
 
 inline bool operator==(file_t LHS, file_t RHS) {
-  return LHS.get() == RHS.get();
+  return LHS.native_handle() == RHS.native_handle();
 }
 
 inline bool operator!=(file_t LHS, file_t RHS) { return !(LHS == RHS); }
