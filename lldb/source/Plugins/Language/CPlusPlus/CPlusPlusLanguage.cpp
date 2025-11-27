@@ -208,6 +208,20 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
   return idx == basename.size();
 }
 
+/// A context is trivial if an only if it matches this pattern.
+/// "^\s*([A-Za-z_:]*)\s*$". for example function `foo::bar::func()`
+/// has a trivial context but. but `foo<int>::bar::func()` doesn't.
+static bool IsTrivialContext(llvm::StringRef context) {
+  // remove trailing or leading whitespace.
+  context = context.trim();
+
+  const auto iter = context.find_if_not([](char current) {
+    return std::isalnum(static_cast<unsigned char>(current)) ||
+           current == '_' || current == ':';
+  });
+  return iter == llvm::StringRef::npos;
+}
+
 /// Writes out the function name in 'full_name' to 'out_stream'
 /// but replaces each argument type with the variable name
 /// and the corresponding pretty-printed value
@@ -481,18 +495,17 @@ bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
       m_basename = full.substr(basename_begin, basename_end - basename_begin);
     }
 
-    if (IsTrivialBasename(m_basename)) {
+    if (IsTrivialBasename(m_basename) && IsTrivialContext(m_context)) {
       return true;
-    } else {
-      // The C++ basename doesn't match our regular expressions so this can't
-      // be a valid C++ method, clear everything out and indicate an error
-      m_context = llvm::StringRef();
-      m_basename = llvm::StringRef();
-      m_arguments = llvm::StringRef();
-      m_qualifiers = llvm::StringRef();
-      m_return_type = llvm::StringRef();
-      return false;
     }
+    // The C++ basename doesn't match our regular expressions so this can't
+    // be a valid C++ method, clear everything out and indicate an error
+    m_context = llvm::StringRef();
+    m_basename = llvm::StringRef();
+    m_arguments = llvm::StringRef();
+    m_qualifiers = llvm::StringRef();
+    m_return_type = llvm::StringRef();
+    return false;
   }
   return false;
 }
