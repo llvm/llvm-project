@@ -89,9 +89,9 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
 }
 
 static mlir::Value emitX86FunnelShift(CIRGenFunction &cgf,
-                                      const mlir::Location &location,
-                                      mlir::Value &op0, mlir::Value &op1,
-                                      mlir::Value &amt, bool isRight) {
+                                      mlir::Location location, mlir::Value &op0,
+                                      mlir::Value &op1, mlir::Value &amt,
+                                      bool isRight) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Type op0Ty = op0.getType();
 

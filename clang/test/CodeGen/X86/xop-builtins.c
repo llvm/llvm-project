@@ -429,3 +429,10 @@ __m256d test_mm256_frcz_pd(__m256d a) {
   // CHECK: call {{.*}}<4 x double> @llvm.x86.xop.vfrcz.pd.256(<4 x double> %{{.*}})
   return _mm256_frcz_pd(a);
 }
+
+
+__m512i test_mm512_ror_epi32(__m512i __A) {
+  // CHECK-LABEL: test_mm512_ror_epi32
+  // CHECK: @llvm.fshr.v16i32
+  return _mm512_ror_epi32(__A, 5); 
+}
