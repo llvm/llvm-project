@@ -25,6 +25,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -975,9 +976,12 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   void replaceOp(Operation *op, SmallVector<SmallVector<Value>> &&newValues);
 
   /// Replace the uses of the given value with the given values. The specified
-  /// converter is used to build materializations (if necessary).
-  void replaceAllUsesWith(Value from, ValueRange to,
-                          const TypeConverter *converter);
+  /// converter is used to build materializations (if necessary). If `functor`
+  /// is specified, only the uses that the functor returns "true" for are
+  /// replaced.
+  void replaceValueUses(Value from, ValueRange to,
+                        const TypeConverter *converter,
+                        function_ref<bool(OpOperand &)> functor = nullptr);
 
   /// Erase the given block and its contents.
   void eraseBlock(Block *block);
@@ -1051,7 +1055,7 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
         MLIRContext *context,
         std::function<void(Operation *)> opErasedCallback = nullptr)
         : RewriterBase(context, /*listener=*/this),
-          opErasedCallback(opErasedCallback) {}
+          opErasedCallback(std::move(opErasedCallback)) {}
 
     /// Erase the given op (unless it was already erased).
     void eraseOp(Operation *op) override {
@@ -1202,11 +1206,16 @@ void BlockTypeConversionRewrite::rollback() {
 }
 
 /// Replace all uses of `from` with `repl`.
-static void performReplaceValue(RewriterBase &rewriter, Value from,
-                                Value repl) {
+static void
+performReplaceValue(RewriterBase &rewriter, Value from, Value repl,
+                    function_ref<bool(OpOperand &)> functor = nullptr) {
   if (isa<BlockArgument>(repl)) {
     // `repl` is a block argument. Directly replace all uses.
-    rewriter.replaceAllUsesWith(from, repl);
+    if (functor) {
+      rewriter.replaceUsesWithIf(from, repl, functor);
+    } else {
+      rewriter.replaceAllUsesWith(from, repl);
+    }
     return;
   }
 
@@ -1237,7 +1246,11 @@ static void performReplaceValue(RewriterBase &rewriter, Value from,
   Block *replBlock = replOp->getBlock();
   rewriter.replaceUsesWithIf(from, repl, [&](OpOperand &operand) {
     Operation *user = operand.getOwner();
-    return user->getBlock() != replBlock || replOp->isBeforeInBlock(user);
+    bool result =
+        user->getBlock() != replBlock || replOp->isBeforeInBlock(user);
+    if (result && functor)
+      result &= functor(operand);
+    return result;
   });
 }
 
@@ -1645,7 +1658,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
               /*outputTypes=*/origArgType, /*originalType=*/Type(), converter,
               /*isPureTypeConversion=*/false)
               .front();
-      replaceAllUsesWith(origArg, mat, converter);
+      replaceValueUses(origArg, mat, converter);
       continue;
     }
 
@@ -1654,14 +1667,14 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
       assert(inputMap->size == 0 &&
              "invalid to provide a replacement value when the argument isn't "
              "dropped");
-      replaceAllUsesWith(origArg, inputMap->replacementValues, converter);
+      replaceValueUses(origArg, inputMap->replacementValues, converter);
       continue;
     }
 
     // This is a 1->1+ mapping.
     auto replArgs =
         newBlock->getArguments().slice(inputMap->inputNo, inputMap->size);
-    replaceAllUsesWith(origArg, replArgs, converter);
+    replaceValueUses(origArg, replArgs, converter);
   }
 
   if (config.allowPatternRollback)
@@ -1961,8 +1974,24 @@ void ConversionPatternRewriterImpl::replaceOp(
   op->walk([&](Operation *op) { replacedOps.insert(op); });
 }
 
-void ConversionPatternRewriterImpl::replaceAllUsesWith(
-    Value from, ValueRange to, const TypeConverter *converter) {
+void ConversionPatternRewriterImpl::replaceValueUses(
+    Value from, ValueRange to, const TypeConverter *converter,
+    function_ref<bool(OpOperand &)> functor) {
+  LLVM_DEBUG({
+    logger.startLine() << "** Replace Value : '" << from << "'";
+    if (auto blockArg = dyn_cast<BlockArgument>(from)) {
+      if (Operation *parentOp = blockArg.getOwner()->getParentOp()) {
+        logger.getOStream() << " (in region of '" << parentOp->getName()
+                            << "' (" << parentOp << ")";
+      } else {
+        logger.getOStream() << " (unlinked block)";
+      }
+    }
+    if (functor) {
+      logger.getOStream() << ", conditional replacement";
+    }
+  });
+
   if (!config.allowPatternRollback) {
     SmallVector<Value> toConv = llvm::to_vector(to);
     SmallVector<Value> repls =
@@ -1972,7 +2001,7 @@ void ConversionPatternRewriterImpl::replaceAllUsesWith(
     if (!repl)
       return;
 
-    performReplaceValue(r, from, repl);
+    performReplaceValue(r, from, repl, functor);
     return;
   }
 
@@ -1991,6 +2020,9 @@ void ConversionPatternRewriterImpl::replaceAllUsesWith(
   replacedValues.insert(from);
 #endif // NDEBUG
 
+  if (functor)
+    llvm::report_fatal_error(
+        "conditional value replacement is not supported in rollback mode");
   mapping.map(from, to);
   appendRewrite<ReplaceValueRewrite>(from, converter);
 }
@@ -2189,18 +2221,15 @@ FailureOr<Block *> ConversionPatternRewriter::convertRegionTypes(
 }
 
 void ConversionPatternRewriter::replaceAllUsesWith(Value from, ValueRange to) {
-  LLVM_DEBUG({
-    impl->logger.startLine() << "** Replace Value : '" << from << "'";
-    if (auto blockArg = dyn_cast<BlockArgument>(from)) {
-      if (Operation *parentOp = blockArg.getOwner()->getParentOp()) {
-        impl->logger.getOStream() << " (in region of '" << parentOp->getName()
-                                  << "' (" << parentOp << ")\n";
-      } else {
-        impl->logger.getOStream() << " (unlinked block)\n";
-      }
-    }
-  });
-  impl->replaceAllUsesWith(from, to, impl->currentTypeConverter);
+  impl->replaceValueUses(from, to, impl->currentTypeConverter);
+}
+
+void ConversionPatternRewriter::replaceUsesWithIf(
+    Value from, ValueRange to, function_ref<bool(OpOperand &)> functor,
+    bool *allUsesReplaced) {
+  assert(!allUsesReplaced &&
+         "allUsesReplaced is not supported in a dialect conversion");
+  impl->replaceValueUses(from, to, impl->currentTypeConverter, functor);
 }
 
 Value ConversionPatternRewriter::getRemappedValue(Value key) {
@@ -2765,7 +2794,7 @@ LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
       rewriterImpl.patternMaterializations.clear();
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
       // Expensive pattern check that can detect API violations.
-      if (checkOp) {
+      if (checkOp && topLevelFingerPrint) {
         OperationFingerPrint fingerPrintAfterPattern(checkOp);
         if (fingerPrintAfterPattern != *topLevelFingerPrint)
           llvm::report_fatal_error("pattern '" + pattern.getDebugName() +
@@ -2856,17 +2885,19 @@ LogicalResult OperationLegalizer::legalizePatternResult(
   assert(impl.pendingRootUpdates.empty() && "dangling root updates");
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-  // Check that the root was either replaced or updated in place.
-  auto newRewrites = llvm::drop_begin(impl.rewrites, curState.numRewrites);
-  auto replacedRoot = [&] {
-    return hasRewrite<ReplaceOperationRewrite>(newRewrites, op);
-  };
-  auto updatedRootInPlace = [&] {
-    return hasRewrite<ModifyOperationRewrite>(newRewrites, op);
-  };
-  if (!replacedRoot() && !updatedRootInPlace())
-    llvm::report_fatal_error(
-        "expected pattern to replace the root operation or modify it in place");
+  if (impl.config.allowPatternRollback) {
+    // Check that the root was either replaced or updated in place.
+    auto newRewrites = llvm::drop_begin(impl.rewrites, curState.numRewrites);
+    auto replacedRoot = [&] {
+      return hasRewrite<ReplaceOperationRewrite>(newRewrites, op);
+    };
+    auto updatedRootInPlace = [&] {
+      return hasRewrite<ModifyOperationRewrite>(newRewrites, op);
+    };
+    if (!replacedRoot() && !updatedRootInPlace())
+      llvm::report_fatal_error("expected pattern to replace the root operation "
+                               "or modify it in place");
+  }
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
   // Legalize each of the actions registered during application.

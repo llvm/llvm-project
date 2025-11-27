@@ -140,7 +140,6 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     // for StoreMatrixOp, the layout is attached to the property of the op
     if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(defOp))
       return storeOp.getLayoutAttr();
-
     std::string layoutName = getLayoutName(result);
     if (defOp->hasAttr(layoutName))
       return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
@@ -308,7 +307,7 @@ xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
   int64_t rankDiff = srcShapeRank - targetShapeRank;
   std::fill(adjustedTargetShape.begin(), adjustedTargetShape.begin() + rankDiff,
             1);
-  std::copy(shape.begin(), shape.end(), adjustedTargetShape.begin() + rankDiff);
+  llvm::copy(shape, adjustedTargetShape.begin() + rankDiff);
 
   SmallVector<Value> result;
   for (SmallVector<int64_t> offsets :

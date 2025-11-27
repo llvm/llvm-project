@@ -682,6 +682,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Hint &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::DynGroupprivate &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_dyn_groupprivate);
+  parser::CharBlock source{GetContext().clauseSource};
+
+  OmpVerifyModifiers(x.v, llvm::omp::OMPC_dyn_groupprivate, source, context_);
+}
+
 void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   // OmpDirectiveSpecification exists on its own only in METADIRECTIVE.
   // In other cases it's a part of other constructs that handle directive
@@ -3316,6 +3323,32 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
     }
   }
 
+  // Default access-group for DYN_GROUPPRIVATE is "cgroup". On a given
+  // construct there can be at most one DYN_GROUPPRIVATE with a given
+  // access-group.
+  const parser::OmpClause
+      *accGrpClause[parser::OmpAccessGroup::Value_enumSize] = {nullptr};
+  for (auto [_, clause] :
+      FindClauses(llvm::omp::Clause::OMPC_dyn_groupprivate)) {
+    auto &wrapper{std::get<parser::OmpClause::DynGroupprivate>(clause->u)};
+    auto &modifiers{OmpGetModifiers(wrapper.v)};
+    auto accGrp{parser::OmpAccessGroup::Value::Cgroup};
+    if (auto *ag{OmpGetUniqueModifier<parser::OmpAccessGroup>(modifiers)}) {
+      accGrp = ag->v;
+    }
+    auto &firstClause{accGrpClause[llvm::to_underlying(accGrp)]};
+    if (firstClause) {
+      context_
+          .Say(clause->source,
+              "The access-group modifier can only occur on a single clause in a construct"_err_en_US)
+          .Attach(firstClause->source,
+              "Previous clause with access-group modifier"_en_US);
+      break;
+    } else {
+      firstClause = clause;
+    }
+  }
+
   CheckRequireAtLeastOneOf();
 }
 
@@ -3368,9 +3401,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
-  context_.Say(GetContext().clauseSource,
-      "LOOPRANGE clause is not implemented yet"_err_en_US,
-      ContextDirectiveAsFortran());
+  CheckAllowedClause(llvm::omp::Clause::OMPC_looprange);
+  auto &first = std::get<0>(x.v.t);
+  auto &count = std::get<1>(x.v.t);
+  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, count);
+  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, first);
 }
 
 // Restrictions specific to each clause are implemented apart from the
@@ -4673,10 +4708,12 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyin &x) {
 void OmpStructureChecker::CheckStructureComponent(
     const parser::OmpObjectList &objects, llvm::omp::Clause clauseId) {
   auto CheckComponent{[&](const parser::Designator &designator) {
-    if (auto *dataRef{std::get_if<parser::DataRef>(&designator.u)}) {
+    if (const parser::DataRef *dataRef{
+            std::get_if<parser::DataRef>(&designator.u)}) {
       if (!IsDataRefTypeParamInquiry(dataRef)) {
-        if (auto *comp{parser::Unwrap<parser::StructureComponent>(*dataRef)}) {
-          context_.Say(comp->component.source,
+        const auto expr{AnalyzeExpr(context_, designator)};
+        if (expr.has_value() && evaluate::HasStructureComponent(expr.value())) {
+          context_.Say(designator.source,
               "A variable that is part of another variable cannot appear on the %s clause"_err_en_US,
               parser::ToUpperCaseLetters(getClauseName(clauseId).str()));
         }
@@ -5180,6 +5217,13 @@ bool OmpStructureChecker::CheckTargetBlockOnlyTeams(
         if (dirId == llvm::omp::Directive::OMPD_teams) {
           nestedTeams = true;
         }
+      } else if (const auto *ompLoopConstruct{
+                     std::get_if<parser::OpenMPLoopConstruct>(
+                         &ompConstruct->u)}) {
+        llvm::omp::Directive dirId{ompLoopConstruct->BeginDir().DirId()};
+        if (llvm::omp::topTeamsSet.test(dirId)) {
+          nestedTeams = true;
+        }
       }
     }
 
@@ -5439,6 +5483,25 @@ void OmpStructureChecker::CheckAllowedRequiresClause(llvmOmpClause clause) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OpenMPMisplacedEndDirective &x) {
+  context_.Say(x.DirName().source, "Misplaced OpenMP end-directive"_err_en_US);
+  PushContextAndClauseSets(
+      x.DirName().source, llvm::omp::Directive::OMPD_unknown);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPMisplacedEndDirective &x) {
+  dirContext_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPInvalidDirective &x) {
+  context_.Say(x.source, "Invalid OpenMP directive"_err_en_US);
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_unknown);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPInvalidDirective &x) {
+  dirContext_.pop_back();
+}
+
 // Use when clause falls under 'struct OmpClause' in 'parse-tree.h'.
 #define CHECK_SIMPLE_CLAUSE(X, Y) \
   void OmpStructureChecker::Enter(const parser::OmpClause::X &) { \
@@ -5466,13 +5529,13 @@ CHECK_SIMPLE_CLAUSE(Affinity, OMPC_affinity)
 CHECK_SIMPLE_CLAUSE(AppendArgs, OMPC_append_args)
 CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
 CHECK_SIMPLE_CLAUSE(Capture, OMPC_capture)
+CHECK_SIMPLE_CLAUSE(Collector, OMPC_collector)
 CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
 CHECK_SIMPLE_CLAUSE(Contains, OMPC_contains)
 CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
 CHECK_SIMPLE_CLAUSE(Depobj, OMPC_depobj)
 CHECK_SIMPLE_CLAUSE(DeviceType, OMPC_device_type)
 CHECK_SIMPLE_CLAUSE(DistSchedule, OMPC_dist_schedule)
-CHECK_SIMPLE_CLAUSE(DynGroupprivate, OMPC_dyn_groupprivate)
 CHECK_SIMPLE_CLAUSE(Exclusive, OMPC_exclusive)
 CHECK_SIMPLE_CLAUSE(Fail, OMPC_fail)
 CHECK_SIMPLE_CLAUSE(Filter, OMPC_filter)
@@ -5487,6 +5550,7 @@ CHECK_SIMPLE_CLAUSE(Holds, OMPC_holds)
 CHECK_SIMPLE_CLAUSE(Inbranch, OMPC_inbranch)
 CHECK_SIMPLE_CLAUSE(Inclusive, OMPC_inclusive)
 CHECK_SIMPLE_CLAUSE(Indirect, OMPC_indirect)
+CHECK_SIMPLE_CLAUSE(Inductor, OMPC_inductor)
 CHECK_SIMPLE_CLAUSE(Initializer, OMPC_initializer)
 CHECK_SIMPLE_CLAUSE(Init, OMPC_init)
 CHECK_SIMPLE_CLAUSE(Link, OMPC_link)

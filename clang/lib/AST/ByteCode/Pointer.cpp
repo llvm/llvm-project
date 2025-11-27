@@ -33,6 +33,7 @@ Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
 Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
   assert((Base == RootPtrMark || Base % alignof(void *) == 0) && "wrong base");
+  assert(Base >= Pointee->getDescriptor()->getMetadataSize());
 
   BS = {Pointee, Base, nullptr, nullptr};
 
@@ -894,8 +895,8 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
   return Result;
 }
 
-IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
-                                unsigned Offset) const {
+std::optional<IntPointer> IntPointer::atOffset(const ASTContext &ASTCtx,
+                                               unsigned Offset) const {
   if (!this->Desc)
     return *this;
   const Record *R = this->Desc->ElemRecord;
@@ -913,6 +914,9 @@ IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
     return *this;
 
   const FieldDecl *FD = F->Decl;
+  if (FD->getParent()->isInvalidDecl())
+    return std::nullopt;
+
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(FD->getParent());
   unsigned FieldIndex = FD->getFieldIndex();
   uint64_t FieldOffset =

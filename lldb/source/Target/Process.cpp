@@ -2452,8 +2452,10 @@ size_t Process::ReadScalarIntegerFromMemory(addr_t addr, uint32_t byte_size,
         scalar = data.GetMaxU32(&offset, byte_size);
       else
         scalar = data.GetMaxU64(&offset, byte_size);
-      if (is_signed)
+      if (is_signed) {
+        scalar.MakeSigned();
         scalar.SignExtend(byte_size * 8);
+      }
       return bytes_read;
     }
   } else {
@@ -3256,6 +3258,7 @@ Status Process::ConnectRemote(llvm::StringRef remote_url) {
       if (state == eStateStopped || state == eStateCrashed) {
         // If we attached and actually have a process on the other end, then
         // this ended up being the equivalent of an attach.
+        SetShouldDetach(true);
         CompleteAttach();
 
         // This delays passing the stopped event to listeners till

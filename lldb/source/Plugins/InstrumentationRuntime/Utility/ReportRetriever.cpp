@@ -207,8 +207,11 @@ bool ReportRetriever::NotifyBreakpointHit(ProcessSP process_sp,
     return false;
 
   StructuredData::ObjectSP report = RetrieveReportData(process_sp);
-  if (!report || report->GetType() != lldb::eStructuredDataTypeDictionary)
+  if (!report || report->GetType() != lldb::eStructuredDataTypeDictionary) {
+    LLDB_LOGF(GetLog(LLDBLog::InstrumentationRuntime),
+              "ReportRetriever::RetrieveReportData() failed");
     return false;
+  }
 
   std::string description = FormatDescription(report);
 

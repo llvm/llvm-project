@@ -759,6 +759,7 @@ public:
                                  int64_t offset = 0, unsigned TargetFlags = 0) {
     return getGlobalAddress(GV, DL, VT, offset, true, TargetFlags);
   }
+  LLVM_ABI SDValue getDeactivationSymbol(const GlobalValue *GV);
   LLVM_ABI SDValue getFrameIndex(int FI, EVT VT, bool isTarget = false);
   SDValue getTargetFrameIndex(int FI, EVT VT) {
     return getFrameIndex(FI, VT, true);
@@ -1718,16 +1719,6 @@ public:
   /// the target's desired shift amount type.
   LLVM_ABI SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
 
-  /// Expands a node with multiple results to an FP or vector libcall. The
-  /// libcall is expected to take all the operands of the \p Node followed by
-  /// output pointers for each of the results. \p CallRetResNo can be optionally
-  /// set to indicate that one of the results comes from the libcall's return
-  /// value.
-  LLVM_ABI bool
-  expandMultipleResultFPLibCall(RTLIB::Libcall LC, SDNode *Node,
-                                SmallVectorImpl<SDValue> &Results,
-                                std::optional<unsigned> CallRetResNo = {});
-
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   LLVM_ABI SDValue expandVAArg(SDNode *Node);
 
@@ -2071,6 +2062,10 @@ public:
   /// Return true if the sign bit of Op is known to be zero.
   /// We use this predicate to simplify operations downstream.
   LLVM_ABI bool SignBitIsZero(SDValue Op, unsigned Depth = 0) const;
+
+  /// Return true if the sign bit of Op is known to be zero, for a
+  /// floating-point value.
+  LLVM_ABI bool SignBitIsZeroFP(SDValue Op, unsigned Depth = 0) const;
 
   /// Return true if 'Op & Mask' is known to be zero.  We
   /// use this predicate to simplify operations downstream.  Op and Mask are
