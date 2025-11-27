@@ -1134,6 +1134,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                   CodeGenOpts.SanitizeMinimalRuntime),
               /*MayReturn=*/
               CodeGenOpts.SanitizeRecover.has(SanitizerKind::LocalBounds),
+              /*HandlerPreserveAllRegs=*/
+              static_cast<bool>(CodeGenOpts.SanitizeHandlerPreserveAllRegs),
           };
         }
         FPM.addPass(BoundsCheckingPass(Options));
