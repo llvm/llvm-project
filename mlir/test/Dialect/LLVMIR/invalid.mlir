@@ -664,21 +664,21 @@ func.func @zero_non_llvm_type() {
 // -----
 
 func.func @nvvm_invalid_shfl_pred_1(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
-  // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
+  // expected-error@+1 {{expected return type to be a two-element struct}}
   %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> i32
 }
 
 // -----
 
 func.func @nvvm_invalid_shfl_pred_2(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
-  // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
+  // expected-error@+1 {{expected return type to be a two-element struct}}
   %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32)>
 }
 
 // -----
 
 func.func @nvvm_invalid_shfl_pred_3(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
-  // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
+  // expected-error@+1 {{expected second element in the returned struct to be of type 'i1' but got 'i32' instead}}
   %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i32)>
 }
 
@@ -739,6 +739,36 @@ func.func @nvvm_invalid_mma_8(%a0 : i32, %a1 : i32,
      multiplicandAPtxType = #nvvm.mma_type<b1>, multiplicandBPtxType = #nvvm.mma_type<b1>,
      shape = #nvvm.shape<m = 16, n = 8, k = 128>} : (i32, i32, i32) -> !llvm.struct<(i32,i32,i32,i32)>
   llvm.return %0 : !llvm.struct<(i32,i32,i32,i32)>
+}
+
+// -----
+
+// f32 return type, f16 accumulate type
+llvm.func @nvvm_mma_m16n8k16_f32_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+                                     %a2 : vector<2xf16>, %a3 : vector<2xf16>,
+                                     %b0 : vector<2xf16>, %b1 : vector<2xf16>,
+                                     %c0 : vector<2xf16>, %c1 : vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)> {
+  // C and D should have the same type according to PTX ISA
+  // expected-error@+1 {{'nvvm.mma.sync' op ctype does not match dtype}}
+  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1]
+    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
+     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32)>
+}
+
+// -----
+
+// f16 return type, f32 accumulate type
+llvm.func @nvvm_mma_m16n8k16_f16_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
+                                     %a2 : vector<2xf16>, %a3 : vector<2xf16>,
+                                     %b0 : vector<2xf16>, %b1 : vector<2xf16>,
+                                     %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)> {
+  // C and D should have the same type according to PTX ISA
+  // expected-error@+1 {{'nvvm.mma.sync' op ctype does not match dtype}}
+  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1, %c2, %c3]
+    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
+     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+  llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
 }
 
 // -----
@@ -1943,14 +1973,14 @@ llvm.func @invalid_xevm_prefetch(%arg0: !llvm.ptr) {
 
 // -----
 llvm.func @invalid_xevm_blockload(%arg0: !llvm.ptr<1>) {
-  // expected-error@+1 {{op vector size must be 1, 2, 4 or 8 for element type > 8 bits}}
+  // expected-error@+1 {{op vector size must be 2, 4 or 8 for element type > 8 bits}}
   %0 = xevm.blockload %arg0 : (!llvm.ptr<1>) -> vector<3xi16>
   llvm.return
 }
 
 // -----
 llvm.func @invalid_xevm_blockstore(%arg0: !llvm.ptr<1>, %arg1: vector<5xi8>) {
-  // expected-error@+1 {{op vector size must be 1, 2, 4, 8 or 16 for 8-bit element type}}
+  // expected-error@+1 {{op vector size must be 2, 4, 8 or 16 for 8-bit element type}}
   xevm.blockstore %arg0, %arg1 : (!llvm.ptr<1>, vector<5xi8>)
   llvm.return
 }

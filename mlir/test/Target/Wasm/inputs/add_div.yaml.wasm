@@ -1,0 +1,50 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - I32
+      - Index:           1
+        ParamTypes:
+          - I32
+          - I32
+        ReturnTypes:
+          - I32
+  - Type:            IMPORT
+    Imports:
+      - Module:          env
+        Field:           twoTimes
+        Kind:            FUNCTION
+        SigIndex:        0
+  - Type:            FUNCTION
+    FunctionTypes:   [ 1 ]
+  - Type:            MEMORY
+    Memories:
+      - Minimum:         0x2
+  - Type:            GLOBAL
+    Globals:
+      - Index:           0
+        Type:            I32
+        Mutable:         true
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           66560
+  - Type:            EXPORT
+    Exports:
+      - Name:            memory
+        Kind:            MEMORY
+        Index:           0
+      - Name:            add
+        Kind:            FUNCTION
+        Index:           1
+  - Type:            CODE
+    Functions:
+      - Index:           1
+        Locals:          []
+        Body:            20001000200110006A41026D0B
+...

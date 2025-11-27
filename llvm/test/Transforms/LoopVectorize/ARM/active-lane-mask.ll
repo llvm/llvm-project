@@ -23,31 +23,19 @@ define void @f0(ptr noalias %dst, ptr readonly %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK1:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 [[TMP0]], i64 [[N]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 16
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[TMP1]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[TMP3]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK1]], <16 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[TMP1]], <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[TMP3]], <16 x i1> [[ACTIVE_LANE_MASK1]], <16 x i8> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <16 x i8> [[WIDE_MASKED_LOAD]], splat (i8 3)
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <16 x i8> [[WIDE_MASKED_LOAD2]], splat (i8 3)
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i32 16
-; CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[TMP4]], ptr [[TMP6]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[TMP5]], ptr [[TMP8]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK1]])
+; CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[TMP4]], ptr align 1 [[TMP6]], <16 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[TMP5]], ptr align 1 [[TMP8]], <16 x i1> [[ACTIVE_LANE_MASK1]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_END_LOOPEXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[TMP10]], 3
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 [[MUL]], ptr [[ARRAYIDX3]], align 1
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[FOR_END]]
 ; CHECK:       [[FOR_END]]:
@@ -81,7 +69,4 @@ attributes #0 = { nofree norecurse nounwind "target-features"="+armv8.1-m.main,+
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
-; CHECK: [[META4]] = !{!"llvm.loop.vectorize.width", i32 16}
-; CHECK: [[META5]] = !{!"llvm.loop.interleave.count", i32 2}
 ;.

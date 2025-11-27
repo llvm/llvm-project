@@ -29,21 +29,8 @@ define i32 @select_icmp(i32 %x, i32 %y, ptr nocapture readonly %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze i1 [[TMP10]]
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP11]], i32 [[Y]], i32 0
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP12]], [[X]]
-; CHECK-NEXT:    [[COND]] = select i1 [[CMP1]], i32 [[A]], i32 [[Y]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[COND_LCSSA:%.*]] = phi i32 [ [[COND]], %[[FOR_BODY]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[COND_LCSSA]]
+; CHECK-NEXT:    ret i32 [[RDX_SELECT]]
 ;
 entry:
   br label %for.body
@@ -91,21 +78,8 @@ define i32 @select_fcmp(float %x, i32 %y, ptr nocapture readonly %c, i64 %n) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze i1 [[TMP10]]
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP11]], i32 [[Y]], i32 0
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp fast olt float [[TMP12]], [[X]]
-; CHECK-NEXT:    [[COND]] = select i1 [[CMP1]], i32 [[A]], i32 [[Y]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[COND_LCSSA:%.*]] = phi i32 [ [[COND]], %[[FOR_BODY]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[COND_LCSSA]]
+; CHECK-NEXT:    ret i32 [[RDX_SELECT]]
 ;
 entry:
   br label %for.body
@@ -151,21 +125,8 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze i1 [[TMP10]]
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP11]], i32 7, i32 3
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[TMP18:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ 3, %[[SCALAR_PH]] ], [ [[TMP17:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[V]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], 3
-; CHECK-NEXT:    [[TMP17]] = select i1 [[TMP16]], i32 [[TMP13]], i32 7
-; CHECK-NEXT:    [[TMP18]] = add nuw nsw i64 [[TMP12]], 1
-; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP18]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP19]], label %[[EXIT]], label %[[FOR_BODY]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP17]], %[[FOR_BODY]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[DOTLCSSA]]
+; CHECK-NEXT:    ret i32 [[RDX_SELECT]]
 ;
 entry:
   br label %for.body
@@ -211,21 +172,8 @@ define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze i1 [[TMP10]]
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP11]], i32 [[B]], i32 [[A]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[TMP18:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ [[A]], %[[SCALAR_PH]] ], [ [[TMP17:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[V]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], 3
-; CHECK-NEXT:    [[TMP17]] = select i1 [[TMP16]], i32 [[TMP13]], i32 [[B]]
-; CHECK-NEXT:    [[TMP18]] = add nuw nsw i64 [[TMP12]], 1
-; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP18]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP19]], label %[[EXIT]], label %[[FOR_BODY]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP17]], %[[FOR_BODY]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[DOTLCSSA]]
+; CHECK-NEXT:    ret i32 [[RDX_SELECT]]
 ;
 entry:
   br label %for.body
@@ -271,21 +219,8 @@ define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze i1 [[TMP10]]
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP11]], i32 1, i32 2
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[TMP18:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[TMP17:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[V]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load float, ptr [[TMP14]], align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = fcmp fast ueq float [[TMP15]], 3.000000e+00
-; CHECK-NEXT:    [[TMP17]] = select i1 [[TMP16]], i32 [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP18]] = add nuw nsw i64 [[TMP12]], 1
-; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP18]], [[N]]
-; CHECK-NEXT:    br i1 [[TMP19]], label %[[EXIT]], label %[[FOR_BODY]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP17]], %[[FOR_BODY]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[DOTLCSSA]]
+; CHECK-NEXT:    ret i32 [[RDX_SELECT]]
 ;
 entry:
   br label %for.body
@@ -373,29 +308,8 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-NEXT:    [[TMP13:%.*]] = freeze i1 [[TMP12]]
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP13]], i32 1, i32 0
 ; CHECK-NEXT:    br label %[[FOR_END_LOOPEXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_013:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_INC:.*]] ], [ 0, %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[R_012:%.*]] = phi i32 [ [[R_1:%.*]], %[[FOR_INC]] ], [ 0, %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[SRC1]], i64 [[I_013]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP14]], 35
-; CHECK-NEXT:    br i1 [[CMP1]], label %[[IF_THEN:.*]], label %[[FOR_INC]]
-; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[SRC2]], i64 [[I_013]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[TMP15]], 2
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP3]], i32 1, i32 [[R_012]]
-; CHECK-NEXT:    br label %[[FOR_INC]]
-; CHECK:       [[FOR_INC]]:
-; CHECK-NEXT:    [[R_1]] = phi i32 [ [[R_012]], %[[FOR_BODY]] ], [ [[SPEC_SELECT]], %[[IF_THEN]] ]
-; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_013]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
-; CHECK-NEXT:    [[R_1_LCSSA:%.*]] = phi i32 [ [[R_1]], %[[FOR_INC]] ], [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[R_1_LCSSA]]
+; CHECK-NEXT:    ret i32 [[RDX_SELECT]]
 ;
 entry:
   br label %for.body

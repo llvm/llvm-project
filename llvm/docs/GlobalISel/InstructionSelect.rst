@@ -5,8 +5,22 @@ InstructionSelect
 -----------------
 
 This pass transforms generic machine instructions into equivalent
-target-specific instructions.  It traverses the ``MachineFunction`` bottom-up,
-selecting uses before definitions, enabling trivial dead code elimination.
+target-specific instructions.  
+
+The legacy instruction selector, SelectionDAG, iterated over each function's 
+basic block and constructed a dataflow graph. Every backend defines 
+tree patterns in the ``XXXInstrInfo.td``. The legacy selector started
+at the bottom and replaced the SDNodes greedily. 
+
+The GlobalISel's instruction selector traverses the ``MachineFunction`` 
+bottom-up, selecting uses before definitions, enabling trivial dead code 
+elimination. It does that by iterating over the basic blocks in post-order. 
+Each gMIR instruction is then replaced by a MIR instruction when a matching 
+pattern is found. So, when there is a 1:1 mapping between gMIR and MIR, where 
+is the benefit of the global scope? Even in the case of a 1:1 mapping, 
+GlobalISel includes a combiner that can match and fuse multiple gMIR 
+instructions. The scope of the combination is not limited to a basic block, 
+but can extend across the entire function.
 
 .. _api-instructionselector:
 

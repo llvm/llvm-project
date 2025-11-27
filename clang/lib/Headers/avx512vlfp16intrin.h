@@ -34,11 +34,13 @@
 #define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
 #endif
 
-static __inline__ _Float16 __DEFAULT_FN_ATTRS128 _mm_cvtsh_h(__m128h __a) {
+static __inline__ _Float16 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_cvtsh_h(__m128h __a) {
   return __a[0];
 }
 
-static __inline__ _Float16 __DEFAULT_FN_ATTRS256 _mm256_cvtsh_h(__m256h __a) {
+static __inline__ _Float16 __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtsh_h(__m256h __a) {
   return __a[0];
 }
 
@@ -2008,24 +2010,24 @@ _mm256_mask_blend_ph(__mmask16 __U, __m256h __A, __m256h __W) {
                                               (__v16hf)__A);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_permutex2var_ph(__m128h __A, __m128i __I, __m128h __B) {
   return (__m128h)__builtin_ia32_vpermi2varhi128((__v8hi)__A, (__v8hi)__I,
                                                  (__v8hi)__B);
 }
 
-static __inline__ __m256h __DEFAULT_FN_ATTRS256
+static __inline__ __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_permutex2var_ph(__m256h __A, __m256i __I, __m256h __B) {
   return (__m256h)__builtin_ia32_vpermi2varhi256((__v16hi)__A, (__v16hi)__I,
                                                  (__v16hi)__B);
 }
 
-static __inline__ __m128h __DEFAULT_FN_ATTRS128
+static __inline__ __m128h __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_permutexvar_ph(__m128i __A, __m128h __B) {
   return (__m128h)__builtin_ia32_permvarhi128((__v8hi)__B, (__v8hi)__A);
 }
 
-static __inline__ __m256h __DEFAULT_FN_ATTRS256
+static __inline__ __m256h __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_permutexvar_ph(__m256i __A, __m256h __B) {
   return (__m256h)__builtin_ia32_permvarhi256((__v16hi)__B, (__v16hi)__A);
 }

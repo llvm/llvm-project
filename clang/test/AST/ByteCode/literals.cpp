@@ -28,6 +28,8 @@ static_assert(number != 10, ""); // both-error{{failed}} \
 static_assert(__objc_yes, "");
 static_assert(!__objc_no, "");
 
+static_assert((long long)0x00000000FFFF0000 == 4294901760, "");
+
 constexpr bool b = number;
 static_assert(b, "");
 constexpr int one = true;
@@ -1267,6 +1269,17 @@ namespace StmtExprs {
 
   namespace CrossFuncLabelDiff {
     constexpr long a(bool x) { return x ? 0 : (intptr_t)&&lbl + (0 && ({lbl: 0;})); }
+  }
+
+  /// GCC agrees with the bytecode interpreter here.
+  void switchInSE() {
+    static_assert(({ // ref-error {{not an integral constant expression}}
+          int i = 20;
+           switch(10) {
+             case 10: i = 300; // ref-note {{a constant expression cannot modify an object that is visible outside that expression}}
+           }
+           i;
+        }) == 300);
   }
 }
 #endif

@@ -80,8 +80,8 @@ cleanup2:
 ; CHECK: cleanup2.corodispatch:
 ; CHECK:   %1 = phi i8 [ 0, %handler2 ], [ 1, %catch.dispatch.2 ]
 ; CHECK:   %2 = cleanuppad within %h1 []
-; CHECK:   %switch = icmp ult i8 %1, 1
-; CHECK:   br i1 %switch, label %cleanup2.from.handler2, label %cleanup2.from.catch.dispatch.2
+; CHECK:   %3 = icmp eq i8 %1, 0
+; CHECK:   br i1 %3, label %cleanup2.from.handler2, label %cleanup2.from.catch.dispatch.2
 
 ; CHECK: cleanup2.from.handler2:
 ; CHECK:   %valueB.reload = load i32, ptr %valueB.spill.addr, align 4
