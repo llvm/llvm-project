@@ -3309,12 +3309,7 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch",
   let llvmBuilder = [{
     auto [id, args] = NVVM::PrefetchOp::getIntrinsicIDAndArgs(op,
                                           moduleTranslation, builder);
-
-    if(op.getTensormap())
-      // Overloaded intrinsic
-      createIntrinsicCall(builder, id, args, {args[0]->getType()});
-    else
-      createIntrinsicCall(builder, id, args);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 
