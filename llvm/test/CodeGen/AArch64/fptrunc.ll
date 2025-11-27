@@ -113,18 +113,18 @@ define <2 x half> @fptrunc_v2f128_v2f16(<2 x fp128> %a) {
 ; CHECK-GI-LABEL: fptrunc_v2f128_v2f16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #48
-; CHECK-GI-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-GI-NEXT:    .cfi_offset w30, -16
-; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q1, [sp] // 16-byte Spill
 ; CHECK-GI-NEXT:    bl __trunctfhf2
 ; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $q0
 ; CHECK-GI-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-GI-NEXT:    bl __trunctfhf2
-; CHECK-GI-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-GI-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-GI-NEXT:    mov v1.h[1], v0.h[0]
 ; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    add sp, sp, #48
@@ -277,19 +277,11 @@ entry:
 }
 
 define <2 x half> @fptrunc_v2f64_v2f16(<2 x double> %a) {
-; CHECK-SD-LABEL: fptrunc_v2f64_v2f16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fcvtxn v0.2s, v0.2d
-; CHECK-SD-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fptrunc_v2f64_v2f16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fcvtxn v0.2s, v0.2d
-; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
-; CHECK-GI-NEXT:    fcvtn v0.4h, v1.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fptrunc_v2f64_v2f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtxn v0.2s, v0.2d
+; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %c = fptrunc <2 x double> %a to <2 x half>
   ret <2 x half> %c
