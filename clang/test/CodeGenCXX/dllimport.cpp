@@ -651,11 +651,13 @@ struct __declspec(dllimport) T {
 
   T& operator=(const T&) = default;
   // MO1-DAG: define available_externally dllimport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4T@@QAEAAU0@ABU0@@Z"
+  // PS-DAG: declare dllimport nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN1TaSERKS_
 
   T& operator=(T&&) = default;
   // Note: Don't mark inline move operators dllimport because MSVC versions before 2015 don't export them.
   // M18-DAG: define linkonce_odr dso_local x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4T@@QAEAAU0@$$QAU0@@Z"
   // M19-DAG: define available_externally dllimport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4T@@QAEAAU0@$$QAU0@@Z"
+  // PS-DAG: declare dllimport nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN1TaSEOS_
 };
 USEMEMFUNC(T, a)
 USESTATICMEMFUNC(T, StaticMethod)
