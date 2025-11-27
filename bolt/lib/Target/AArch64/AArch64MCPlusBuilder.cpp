@@ -48,14 +48,14 @@ static cl::opt<bool> NoLSEAtomics(
 
 namespace {
 
-static void getSystemFlag(MCInst &Inst, MCPhysReg RegName) {
+[[maybe_unused]] static void getSystemFlag(MCInst &Inst, MCPhysReg RegName) {
   Inst.setOpcode(AArch64::MRS);
   Inst.clear();
   Inst.addOperand(MCOperand::createReg(RegName));
   Inst.addOperand(MCOperand::createImm(AArch64SysReg::NZCV));
 }
 
-static void setSystemFlag(MCInst &Inst, MCPhysReg RegName) {
+[[maybe_unused]] static void setSystemFlag(MCInst &Inst, MCPhysReg RegName) {
   Inst.setOpcode(AArch64::MSR);
   Inst.clear();
   Inst.addOperand(MCOperand::createImm(AArch64SysReg::NZCV));
@@ -2178,6 +2178,14 @@ public:
       convertJmpToTailCall(Inst);
   }
 
+  void createDirectBranch(MCInst &Inst, const MCSymbol *Target,
+                          MCContext *Ctx) override {
+    Inst.setOpcode(AArch64::B);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
+        Inst, MCSymbolRefExpr::create(Target, *Ctx), *Ctx, 0)));
+  }
+
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
                      const MCSymbol *&TBB, const MCSymbol *&FBB,
                      MCInst *&CondBranch,
@@ -2535,21 +2543,14 @@ public:
   }
 
   InstructionListType createInstrumentedIndCallHandlerExitBB() const override {
-    InstructionListType Insts(5);
     // Code sequence for instrumented indirect call handler:
-    //   msr  nzcv, x1
-    //   ldp  x0, x1, [sp], #16
-    //   ldr  x16, [sp], #16
-    //   ldp  x0, x1, [sp], #16
-    //   br   x16
-    setSystemFlag(Insts[0], AArch64::X1);
-    createPopRegisters(Insts[1], AArch64::X0, AArch64::X1);
-    // Here we load address of the next function which should be called in the
-    // original binary to X16 register. Writing to X16 is permitted without
-    // needing to restore.
-    loadReg(Insts[2], AArch64::X16, AArch64::SP);
-    createPopRegisters(Insts[3], AArch64::X0, AArch64::X1);
-    createIndirectBranch(Insts[4], AArch64::X16, 0);
+    //   ret
+
+    InstructionListType Insts;
+
+    Insts.emplace_back();
+    createReturn(Insts.back());
+
     return Insts;
   }
 
@@ -2625,39 +2626,68 @@ public:
                                                      MCSymbol *HandlerFuncAddr,
                                                      int CallSiteID,
                                                      MCContext *Ctx) override {
-    InstructionListType Insts;
     // Code sequence used to enter indirect call instrumentation helper:
-    //   stp x0, x1, [sp, #-16]! createPushRegisters
-    //   mov target x0  convertIndirectCallToLoad -> orr x0 target xzr
+    //   stp x0, x1, [sp, #-16]! createPushRegisters  (1)
+    //   mov target, x0  convertIndirectCallToLoad -> orr x0 target xzr
     //   mov x1 CallSiteID createLoadImmediate ->
     //   movk    x1, #0x0, lsl #48
     //   movk    x1, #0x0, lsl #32
     //   movk    x1, #0x0, lsl #16
     //   movk    x1, #0x0
-    //   stp x0, x1, [sp, #-16]!
-    //   bl *HandlerFuncAddr createIndirectCall ->
+    //   stp x0, x1, [sp, #-16]!    (2)
+    //   str x30, [sp, #-16]!    (3)
     //   adr x0 *HandlerFuncAddr -> adrp + add
-    //   blr x0
+    //   blr x0   (__bolt_instr_ind_call_handler_func)
+    //   ldr x30, [sp], #16   (3)
+    //   ldp x0, x1, [sp], #16   (2)
+    //   mov x0, target ; move target address to used register
+    //   ldp x0, x1, [sp], #16   (1)
+
+    InstructionListType Insts;
     Insts.emplace_back();
-    createPushRegisters(Insts.back(), AArch64::X0, AArch64::X1);
+    createPushRegisters(Insts.back(), getIntArgRegister(0),
+                        getIntArgRegister(1));
     Insts.emplace_back(CallInst);
-    convertIndirectCallToLoad(Insts.back(), AArch64::X0);
+    convertIndirectCallToLoad(Insts.back(), getIntArgRegister(0));
     InstructionListType LoadImm =
         createLoadImmediate(getIntArgRegister(1), CallSiteID);
     Insts.insert(Insts.end(), LoadImm.begin(), LoadImm.end());
     Insts.emplace_back();
-    createPushRegisters(Insts.back(), AArch64::X0, AArch64::X1);
+    createPushRegisters(Insts.back(), getIntArgRegister(0),
+                        getIntArgRegister(1));
+    Insts.emplace_back();
+    storeReg(Insts.back(), AArch64::LR, getSpRegister(/*Size*/ 8));
     Insts.resize(Insts.size() + 2);
-    InstructionListType Addr =
-        materializeAddress(HandlerFuncAddr, Ctx, AArch64::X0);
+    InstructionListType Addr = materializeAddress(
+        HandlerFuncAddr, Ctx, CallInst.getOperand(0).getReg());
     assert(Addr.size() == 2 && "Invalid Addr size");
     std::copy(Addr.begin(), Addr.end(), Insts.end() - Addr.size());
-    Insts.emplace_back();
-    createIndirectCallInst(Insts.back(), isTailCall(CallInst), AArch64::X0);
 
-    // Carry over metadata including tail call marker if present.
-    stripAnnotations(Insts.back());
-    moveAnnotations(std::move(CallInst), Insts.back());
+    Insts.emplace_back();
+    createIndirectCallInst(Insts.back(), false,
+                           CallInst.getOperand(0).getReg());
+
+    Insts.emplace_back();
+    loadReg(Insts.back(), AArch64::LR, getSpRegister(/*Size*/ 8));
+
+    Insts.emplace_back();
+    createPopRegisters(Insts.back(), getIntArgRegister(0),
+                       getIntArgRegister(1));
+
+    // move x0 to indirect call register
+    Insts.emplace_back();
+    Insts.back().setOpcode(AArch64::ORRXrs);
+    Insts.back().insert(Insts.back().begin(),
+                        MCOperand::createReg(CallInst.getOperand(0).getReg()));
+    Insts.back().insert(Insts.back().begin() + 1,
+                        MCOperand::createReg(AArch64::XZR));
+    Insts.back().insert(Insts.back().begin() + 2,
+                        MCOperand::createReg(getIntArgRegister(0)));
+    Insts.back().insert(Insts.back().begin() + 3, MCOperand::createImm(0));
+
+    Insts.emplace_back();
+    createPopRegisters(Insts.back(), getIntArgRegister(0),
+                       getIntArgRegister(1));
 
     return Insts;
   }
@@ -2666,12 +2696,10 @@ public:
   createInstrumentedIndCallHandlerEntryBB(const MCSymbol *InstrTrampoline,
                                           const MCSymbol *IndCallHandler,
                                           MCContext *Ctx) override {
-    // Code sequence used to check whether InstrTampoline was initialized
+    // Code sequence used to check whether InstrTrampoline was initialized
     // and call it if so, returns via IndCallHandler
-    //   stp     x0, x1, [sp, #-16]!
-    //   mrs     x1, nzcv
-    //   adr     x0, InstrTrampoline -> adrp + add
-    //   ldr     x0, [x0]
+    //   adrp    x0, InstrTrampoline
+    //   ldr     x0, [x0, #lo12:InstrTrampoline]
     //   subs    x0, x0, #0x0
     //   b.eq    IndCallHandler
     //   str     x30, [sp, #-16]!
@@ -2679,30 +2707,42 @@ public:
     //   ldr     x30, [sp], #16
     //   b       IndCallHandler
     InstructionListType Insts;
+
+    // load handler address
+    MCInst InstAdrp;
+    InstAdrp.setOpcode(AArch64::ADRP);
+    InstAdrp.addOperand(MCOperand::createReg(getIntArgRegister(0)));
+    InstAdrp.addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(InstAdrp, /* OpNum */ 1, InstrTrampoline,
+                          /* Addend */ 0, Ctx, ELF::R_AARCH64_ADR_GOT_PAGE);
+    Insts.emplace_back(InstAdrp);
+
+    MCInst InstLoad;
+    InstLoad.setOpcode(AArch64::LDRXui);
+    InstLoad.addOperand(MCOperand::createReg(getIntArgRegister(0)));
+    InstLoad.addOperand(MCOperand::createReg(getIntArgRegister(0)));
+    InstLoad.addOperand(MCOperand::createImm(0));
+    setOperandToSymbolRef(InstLoad, /* OpNum */ 2, InstrTrampoline,
+                          /* Addend */ 0, Ctx, ELF::R_AARCH64_LD64_GOT_LO12_NC);
+    Insts.emplace_back(InstLoad);
+
+    InstructionListType CmpJmp =
+        createCmpJE(getIntArgRegister(0), 0, IndCallHandler, Ctx);
+    Insts.insert(Insts.end(), CmpJmp.begin(), CmpJmp.end());
+
     Insts.emplace_back();
-    createPushRegisters(Insts.back(), AArch64::X0, AArch64::X1);
-    Insts.emplace_back();
-    getSystemFlag(Insts.back(), getIntArgRegister(1));
-    Insts.emplace_back();
-    Insts.emplace_back();
-    InstructionListType Addr =
-        materializeAddress(InstrTrampoline, Ctx, AArch64::X0);
-    std::copy(Addr.begin(), Addr.end(), Insts.end() - Addr.size());
-    assert(Addr.size() == 2 && "Invalid Addr size");
-    Insts.emplace_back();
-    loadReg(Insts.back(), AArch64::X0, AArch64::X0);
-    InstructionListType cmpJmp =
-        createCmpJE(AArch64::X0, 0, IndCallHandler, Ctx);
-    Insts.insert(Insts.end(), cmpJmp.begin(), cmpJmp.end());
-    Insts.emplace_back();
-    storeReg(Insts.back(), AArch64::LR, AArch64::SP);
+    storeReg(Insts.back(), AArch64::LR, getSpRegister(/*Size*/ 8));
+
     Insts.emplace_back();
     Insts.back().setOpcode(AArch64::BLR);
-    Insts.back().addOperand(MCOperand::createReg(AArch64::X0));
+    Insts.back().addOperand(MCOperand::createReg(getIntArgRegister(0)));
+
     Insts.emplace_back();
-    loadReg(Insts.back(), AArch64::LR, AArch64::SP);
+    loadReg(Insts.back(), AArch64::LR, getSpRegister(/*Size*/ 8));
+
     Insts.emplace_back();
-    createDirectCall(Insts.back(), IndCallHandler, Ctx, /*IsTailCall*/ true);
+    createDirectBranch(Insts.back(), IndCallHandler, Ctx);
+
     return Insts;
   }
 
