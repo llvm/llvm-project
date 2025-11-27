@@ -1,5 +1,3 @@
-! : aarch64-registered-target, amdgpu-registered-target, powerpc-registered-target
-
 ! Test that invalid cpu and features are ignored.
 
 ! RUN: %if aarch64-registered-target %{ %flang_fc1 -triple aarch64-linux-gnu -target-cpu supercpu \
