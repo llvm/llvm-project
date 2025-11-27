@@ -304,7 +304,8 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceInfo(
 
 void AMDGPUTargetAsmStreamer::EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
                                                      const MCSymbol *MaxAGPR,
-                                                     const MCSymbol *MaxSGPR) {
+                                                     const MCSymbol *MaxSGPR,
+                                                     const MCSymbol *MaxNamedBarrier) {
 #define PRINT_RES_INFO(ARG)                                                    \
   OS << "\t.set ";                                                             \
   ARG->print(OS, getContext().getAsmInfo());                                   \
@@ -315,6 +316,7 @@ void AMDGPUTargetAsmStreamer::EmitMCResourceMaximums(const MCSymbol *MaxVGPR,
   PRINT_RES_INFO(MaxVGPR);
   PRINT_RES_INFO(MaxAGPR);
   PRINT_RES_INFO(MaxSGPR);
+  PRINT_RES_INFO(MaxNamedBarrier);
 #undef PRINT_RES_INFO
 }
 

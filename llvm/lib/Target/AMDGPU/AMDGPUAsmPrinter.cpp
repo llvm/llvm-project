@@ -536,7 +536,8 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   OutStreamer->switchSection(MaxGPRSection);
   getTargetStreamer()->EmitMCResourceMaximums(RI.getMaxVGPRSymbol(OutContext),
                                               RI.getMaxAGPRSymbol(OutContext),
-                                              RI.getMaxSGPRSymbol(OutContext));
+                                              RI.getMaxSGPRSymbol(OutContext),
+                                              RI.getMaxNamedBarrierSymbol(OutContext));
   OutStreamer->popSection();
 
   for (Function &F : M.functions())
