@@ -667,6 +667,21 @@ StringRef PredefinedExpr::getIdentKindName(PredefinedIdentKind IK) {
   llvm_unreachable("Unknown ident kind for PredefinedExpr");
 }
 
+std::string PredefinedExpr::ComputeNameAndTranslate(
+    PredefinedIdentKind IK, const Decl *CurrentDecl,
+    LiteralConverter &LiteralConv, bool ForceElaboratedPrinting) {
+  using namespace clang::charinfo;
+  std::string Result = ComputeName(IK, CurrentDecl, ForceElaboratedPrinting);
+  llvm::TextEncodingConverter *Converter =
+      LiteralConv.getConverter(CA_ToExecEncoding);
+  if (Converter) {
+    SmallString<128> Converted;
+    Converter->convert(Result, Converted);
+    Result = std::string(Converted);
+  }
+  return Result;
+}
+
 // FIXME: Maybe this should use DeclPrinter with a special "print predefined
 // expr" policy instead.
 std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,

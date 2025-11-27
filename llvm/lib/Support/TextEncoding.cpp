@@ -353,3 +353,22 @@ ErrorOr<TextEncodingConverter> TextEncodingConverter::create(StringRef From,
   return std::make_error_code(std::errc::invalid_argument);
 #endif
 }
+
+class TextEncodingConverterNoop final
+    : public details::TextEncodingConverterImplBase {
+
+public:
+  TextEncodingConverterNoop() {}
+
+  std::error_code convertString(StringRef Source,
+                                SmallVectorImpl<char> &Result) override {
+    Result.assign(Source.begin(), Source.end());
+    return std::error_code();
+  }
+
+  void reset() override {}
+};
+
+ErrorOr<TextEncodingConverter> TextEncodingConverter::createNoopConverter() {
+  return TextEncodingConverter(std::make_unique<TextEncodingConverterNoop>());
+}

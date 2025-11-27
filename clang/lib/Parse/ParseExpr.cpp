@@ -2988,13 +2988,14 @@ ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
 
   if (Unevaluated) {
     assert(!AllowUserDefinedLiteral && "UDL are always evaluated");
-    return Actions.ActOnUnevaluatedStringLiteral(StringToks);
+    return Actions.ActOnUnevaluatedStringLiteral(StringToks,
+                                                 ParserConversionAction);
   }
 
   // Pass the set of string tokens, ready for concatenation, to the actions.
-  return Actions.ActOnStringLiteral(StringToks,
-                                    AllowUserDefinedLiteral ? getCurScope()
-                                                            : nullptr);
+  return Actions.ActOnStringLiteral(
+      StringToks, AllowUserDefinedLiteral ? getCurScope() : nullptr,
+      ParserConversionAction);
 }
 
 ExprResult Parser::ParseGenericSelectionExpression() {

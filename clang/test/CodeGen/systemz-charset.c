@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 %s -emit-llvm -triple s390x-none-zos -fexec-charset IBM-1047 -o - | FileCheck %s
 // RUN: %clang %s -emit-llvm -S -target s390x-ibm-zos -o - | FileCheck %s
 
+int printf(char const *, ...);
+
 const char *UpperCaseLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 // CHECK: c"\C1\C2\C3\C4\C5\C6\C7\C8\C9\D1\D2\D3\D4\D5\D6\D7\D8\D9\E2\E3\E4\E5\E6\E7\E8\E9\00"
 
@@ -33,3 +35,9 @@ const char *UcnCharacters = "\u00E2\u00AC\U000000DF";
 
 const char *Unicode = "ÿ";
 //CHECK: c"\DF\00"
+
+void test1() {
+  printf(__FUNCTION__);
+}
+//CHECK: @__FUNCTION__.test1 = private unnamed_addr constant [6 x i8] c"\A3\85\A2\A3\F1\00"
+

@@ -54,6 +54,7 @@
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Basic/TypeTraits.h"
+#include "clang/Lex/LiteralConverter.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"
@@ -7272,9 +7273,12 @@ public:
   /// from multiple tokens.  However, the common case is that StringToks points
   /// to one string.
   ExprResult ActOnStringLiteral(ArrayRef<Token> StringToks,
-                                Scope *UDLScope = nullptr);
+                                Scope *UDLScope = nullptr,
+                                ConversionAction Action = CA_ToExecEncoding);
 
-  ExprResult ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks);
+  ExprResult
+  ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks,
+                                ConversionAction Action = CA_ToExecEncoding);
 
   /// ControllingExprOrType is either an opaque pointer coming out of a
   /// ParsedType or an Expr *. FIXME: it'd be better to split this interface

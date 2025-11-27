@@ -2064,14 +2064,15 @@ static ExprResult BuildCookedLiteralOperatorCall(Sema &S, Scope *Scope,
   return S.BuildLiteralOperatorCall(R, OpNameInfo, Args, LitEndLoc);
 }
 
-ExprResult Sema::ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks) {
+ExprResult Sema::ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks,
+                                               ConversionAction Action) {
   // StringToks needs backing storage as it doesn't hold array elements itself
   std::vector<Token> ExpandedToks;
   if (getLangOpts().MicrosoftExt)
     StringToks = ExpandedToks = ExpandFunctionLocalPredefinedMacros(StringToks);
 
   StringLiteralParser Literal(StringToks, PP,
-                              StringLiteralEvalMethod::Unevaluated);
+                              StringLiteralEvalMethod::Unevaluated, Action);
   if (Literal.hadError)
     return ExprError();
 
@@ -2142,8 +2143,8 @@ Sema::ExpandFunctionLocalPredefinedMacros(ArrayRef<Token> Toks) {
   return ExpandedToks;
 }
 
-ExprResult
-Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
+ExprResult Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope,
+                                    ConversionAction Action) {
   assert(!StringToks.empty() && "Must have at least one string!");
 
   // StringToks needs backing storage as it doesn't hold array elements itself
@@ -2151,7 +2152,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
   if (getLangOpts().MicrosoftExt)
     StringToks = ExpandedToks = ExpandFunctionLocalPredefinedMacros(StringToks);
 
-  StringLiteralParser Literal(StringToks, PP);
+  StringLiteralParser Literal(StringToks, PP,
+                              StringLiteralEvalMethod::Evaluated, Action);
   if (Literal.hadError)
     return ExprError();
 
@@ -3539,8 +3541,9 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
     // the string.
     bool ForceElaboratedPrinting =
         IK == PredefinedIdentKind::Function && getLangOpts().MSVCCompat;
-    auto Str =
-        PredefinedExpr::ComputeName(IK, currentDecl, ForceElaboratedPrinting);
+    auto Str = PredefinedExpr::ComputeNameAndTranslate(
+        IK, currentDecl, getPreprocessor().getLiteralConverter(),
+        ForceElaboratedPrinting);
     unsigned Length = Str.length();
 
     llvm::APInt LengthI(32, Length + 1);
