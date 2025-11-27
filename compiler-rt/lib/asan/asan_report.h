@@ -73,6 +73,11 @@ void ReportInvalidPosixMemalignAlignment(uptr alignment,
                                          BufferedStackTrace *stack);
 void ReportAllocationSizeTooBig(uptr user_size, uptr total_size, uptr max_size,
                                 BufferedStackTrace *stack);
+void ReportMmapAddrOverflow(uptr start, uptr length, BufferedStackTrace *stack);
+void ReportMmapShadowOverlap(uptr start, uptr end, BufferedStackTrace *stack);
+void ReportMmapOutsideRange(uptr start, uptr end, BufferedStackTrace *stack);
+void ReportMunmapShadowOverlap(uptr start, uptr end, BufferedStackTrace *stack);
+void ReportMunmapOutsideRange(uptr start, uptr end, BufferedStackTrace *stack);                                
 void ReportRssLimitExceeded(BufferedStackTrace *stack);
 void ReportOutOfMemory(uptr requested_size, BufferedStackTrace *stack);
 void ReportStringFunctionMemoryRangesOverlap(const char *function,

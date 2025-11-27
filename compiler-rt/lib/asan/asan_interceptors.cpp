@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_interceptors.h"
-
+#include "sanitizer_common/sanitizer_common.h"
 #include "asan_allocator.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
@@ -46,6 +46,12 @@
 #  elif defined(__mips__) && SANITIZER_LINUX
 #    define ASAN_PTHREAD_CREATE_VERSION "GLIBC_2.2"
 #  endif
+
+#if !defined(MAP_FAILED)
+#  define MAP_FAILED ((void *)-1)
+#endif
+
+#define MAP_FIXED        0x0010 /* [MF|SHM] interpret addr exactly */
 
 namespace __asan {
 
@@ -85,6 +91,26 @@ int OnExit() {
   }
   // FIXME: ask frontend whether we need to return failure.
   return 0;
+}
+
+static inline bool RangeOverlaps(uptr beg, uptr end_excl, uptr seg_beg, uptr seg_end_incl) {
+  if (!seg_beg && !seg_end_incl) return false;
+  uptr seg_end_excl = seg_end_incl + 1;
+  return beg < seg_end_excl && end_excl > seg_beg;
+}
+
+static inline bool IntersectsShadowOrGap(uptr beg, uptr end_excl) {
+  // Check shadow regions
+  if (RangeOverlaps(beg, end_excl, kLowShadowBeg, kLowShadowEnd)) return true;
+  if (kMidShadowBeg && RangeOverlaps(beg, end_excl, kMidShadowBeg, kMidShadowEnd)) return true;
+  if (RangeOverlaps(beg, end_excl, kHighShadowBeg, kHighShadowEnd)) return true;
+
+  // Check shadow gaps
+  if (RangeOverlaps(beg, end_excl, kShadowGapBeg, kShadowGapEnd)) return true;
+  if (kShadowGap2Beg && RangeOverlaps(beg, end_excl, kShadowGap2Beg, kShadowGap2End)) return true;
+  if (kShadowGap3Beg && RangeOverlaps(beg, end_excl, kShadowGap3Beg, kShadowGap3End)) return true;
+
+  return false;
 }
 
 } // namespace __asan
@@ -157,45 +183,98 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
     }
 
 template <class Mmap>
-static void* mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
+static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
                               int prot, int flags, int fd, OFF64_T offset) {
+  if (length == 0)
+    return real_mmap(addr, length, prot, flags, fd, offset);
+
+  uptr start = reinterpret_cast<uptr>(addr);
+  uptr end_excl;
+  if (UNLIKELY(__builtin_add_overflow(start, (uptr)length, &end_excl))) {
+    GET_STACK_TRACE_FATAL_HERE;
+    ReportMmapAddrOverflow(start, length, &stack);
+    return MAP_FAILED;
+  }
+
+  if (flags & MAP_FIXED) {
+    if (__asan::IntersectsShadowOrGap(start, end_excl)) {
+      errno = errno_EINVAL;
+      GET_STACK_TRACE_FATAL_HERE;
+      ReportMmapShadowOverlap(start, end_excl, &stack);      
+      if (common_flags()->abort_on_error) {
+        Abort();
+      }
+      return MAP_FAILED;
+    }
+    if (!AddrIsInMem(start) || !AddrIsInMem(end_excl - 1)) {
+      errno = errno_ENOMEM;
+      GET_STACK_TRACE_FATAL_HERE;
+      ReportMmapOutsideRange(start, end_excl, &stack);
+      return MAP_FAILED;
+    }
+  } else {
+    if (addr && __asan::IntersectsShadowOrGap(start, start + 1))
+      addr = nullptr;
+  }
+
   void *res = real_mmap(addr, length, prot, flags, fd, offset);
-  if (length && res != (void *)-1) {
+  if (res != MAP_FAILED) {
     const uptr beg = reinterpret_cast<uptr>(res);
-    DCHECK(IsAligned(beg, GetPageSize()));
-    SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
-    // Only unpoison shadow if it's an ASAN managed address.
-    if (AddrIsInMem(beg) && AddrIsInMem(beg + rounded_length - 1))
-      PoisonShadow(beg, RoundUpTo(length, GetPageSize()), 0);
+    const uptr page = GetPageSize();
+    const uptr sz = RoundUpTo(length, page);
+    if (AddrIsInMem(beg) && AddrIsInMem(beg + sz - 1)) {
+      PoisonShadow(beg, sz, 0);
+    }
   }
   return res;
 }
 
 template <class Munmap>
 static int munmap_interceptor(Munmap real_munmap, void *addr, SIZE_T length) {
-  // We should not tag if munmap fail, but it's to late to tag after
-  // real_munmap, as the pages could be mmaped by another thread.
+  if (length == 0)
+    return real_munmap(addr, length);
+
   const uptr beg = reinterpret_cast<uptr>(addr);
-  if (length && IsAligned(beg, GetPageSize())) {
-    SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
-    // Protect from unmapping the shadow.
-    if (AddrIsInMem(beg) && AddrIsInMem(beg + rounded_length - 1))
-      PoisonShadow(beg, rounded_length, 0);
+  uptr end_excl;
+  if (UNLIKELY(__builtin_add_overflow(beg, (uptr)length, &end_excl))) {
+    errno = errno_EINVAL;
+    GET_STACK_TRACE_FATAL_HERE;
+    ReportMunmapShadowOverlap(beg, end_excl, &stack);
+    return -1;
   }
-  return real_munmap(addr, length);
+
+  if ((AddrIsInMem(beg) || AddrIsInMem(end_excl - 1)) &&
+      (!AddrIsInMem(beg) || !AddrIsInMem(end_excl - 1))) {
+    errno = errno_EINVAL;
+    GET_STACK_TRACE_FATAL_HERE;
+    ReportMunmapOutsideRange(beg, end_excl, &stack);
+    return -1;
+  }
+
+  int res = real_munmap(addr, length);
+
+  if (res == 0) {
+    const uptr page = GetPageSize();
+    const uptr aligned_beg = RoundDownTo(beg, page);
+    const uptr aligned_end = RoundUpTo(end_excl, page);
+    if (AddrIsInMem(aligned_beg) && AddrIsInMem(aligned_end - 1)) {
+      PoisonShadow(aligned_beg, aligned_end - aligned_beg, 0);
+    }
+  }
+  return res;
 }
 
 #  define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, length, prot, flags,   \
                                      fd, offset)                               \
   do {                                                                         \
     (void)(ctx);                                                               \
-    return mmap_interceptor(REAL(mmap), addr, sz, prot, flags, fd, off);       \
+    return mmap_interceptor(REAL(mmap), addr, length, prot, flags, fd, offset);\
   } while (false)
 
 #  define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, addr, length)                    \
   do {                                                                         \
     (void)(ctx);                                                               \
-    return munmap_interceptor(REAL(munmap), addr, sz);                         \
+    return munmap_interceptor(REAL(munmap), addr, length);                     \
   } while (false)
 
 #if CAN_SANITIZE_LEAKS

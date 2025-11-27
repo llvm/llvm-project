@@ -266,6 +266,61 @@ void ErrorAllocationSizeTooBig::Print() {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
+void ErrorMmapAddrOverflow::Print() {
+  Decorator d;
+  Printf("%s", d.Error());
+  Report("ERROR: AddressSanitizer: mmap requested memory range (0x%zx + 0x%zx) "
+         "causes address overflow\n", start, length);
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull();
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
+void ErrorMmapShadowOverlap::Print() {
+  Decorator d;
+  Printf("%s", d.Error());
+  Report("ERROR: AddressSanitizer: mmap requested memory range 0x%zx-0x%zx "
+         "overlaps with ASan shadow memory\n", start, end);
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull();
+  ReportErrorSummary(scariness.GetDescription(), stack); 
+}
+
+void ErrorMmapOutsideRange::Print() {
+  Decorator d;
+  Printf("%s", d.Error());
+  Report("ERROR: AddressSanitizer: mmap requested memory range 0x%zx-0x%zx is "
+         "outside ASan's instrumentable application memory range\n", start, end);
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull();
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
+void ErrorMunmapShadowOverlap::Print() {
+  Decorator d;
+  Printf("%s", d.Error());
+  Report("ERROR: AddressSanitizer: munmap requested memory range 0x%zx-0x%zx "
+         "overlaps with ASan shadow memory\n", start, end);
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull();
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
+void ErrorMunmapOutsideRange::Print() {
+  Decorator d;
+  Printf("%s", d.Error());
+  Report("ERROR: AddressSanitizer: munmap requested memory range 0x%zx-0x%zx is "
+         "outside ASan's instrumentable application memory range\n", start, end);
+  Printf("%s", d.Default());
+  stack->Print();
+  PrintHintAllocatorCannotReturnNull();
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
 void ErrorRssLimitExceeded::Print() {
   Decorator d;
   Printf("%s", d.Error());

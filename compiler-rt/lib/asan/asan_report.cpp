@@ -343,6 +343,36 @@ void ReportAllocationSizeTooBig(uptr user_size, uptr total_size, uptr max_size,
   in_report.ReportError(error);
 }
 
+void ReportMmapAddrOverflow(uptr start, uptr length, BufferedStackTrace *stack) {
+  ScopedInErrorReport in_report(/*fatal*/ true);
+  ErrorMmapAddrOverflow error(GetCurrentTidOrInvalid(), stack, start, length);
+  in_report.ReportError(error);
+}
+
+void ReportMmapShadowOverlap(uptr start, uptr end, BufferedStackTrace *stack) {
+  ScopedInErrorReport in_report(/*fatal*/ true);
+  ErrorMmapShadowOverlap error(GetCurrentTidOrInvalid(), stack, start, end);
+  in_report.ReportError(error);
+}
+
+void ReportMmapOutsideRange(uptr start, uptr end, BufferedStackTrace *stack) {
+  ScopedInErrorReport in_report(/*fatal*/ true);
+  ErrorMmapOutsideRange error(GetCurrentTidOrInvalid(), stack, start, end);
+  in_report.ReportError(error);
+}
+
+void ReportMunmapShadowOverlap(uptr start, uptr end, BufferedStackTrace *stack) {
+  ScopedInErrorReport in_report(/*fatal*/ true);
+  ErrorMunmapShadowOverlap error(GetCurrentTidOrInvalid(), stack, start, end);
+  in_report.ReportError(error);
+}
+
+void ReportMunmapOutsideRange(uptr start, uptr end, BufferedStackTrace *stack) {
+  ScopedInErrorReport in_report(/*fatal*/ true);
+  ErrorMunmapOutsideRange error(GetCurrentTidOrInvalid(), stack, start, end);
+  in_report.ReportError(error);
+}
+
 void ReportRssLimitExceeded(BufferedStackTrace *stack) {
   ScopedInErrorReport in_report(/*fatal*/ true);
   ErrorRssLimitExceeded error(GetCurrentTidOrInvalid(), stack);
