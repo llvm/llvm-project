@@ -13,9 +13,10 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include <algorithm>
 #include <cctype>
-#include <map>
 #include <optional>
+#include <vector>
 
 using namespace clang::ast_matchers;
 
@@ -47,28 +48,29 @@ AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
                ast_matchers::internal::Matcher<DeclStmt>, DeclMatcher,
                ast_matchers::internal::Matcher<Stmt>, StmtMatcher) {
   const auto Statements = Node.body();
-  if (llvm::size(Statements) < 2)
-    return false;
 
-  for (auto It = Statements.begin(), End = Statements.end() - 1; It != End; ++It) {
-    const auto *PrevDecl = dyn_cast<DeclStmt>(*It);
-    if (!PrevDecl)
-      continue;
+  return std::adjacent_find(
+             Statements.begin(), Statements.end(),
+             [&](const Stmt *Prev, const Stmt *NextStmt) {
+               const auto *PrevDecl = dyn_cast<DeclStmt>(Prev);
+               if (!PrevDecl)
+                 return false;
 
-    clang::ast_matchers::internal::BoundNodesTreeBuilder DeclBuilder;
-    if (!DeclMatcher.matches(*PrevDecl, Finder, &DeclBuilder))
-      continue;
+               clang::ast_matchers::internal::BoundNodesTreeBuilder DeclBuilder;
+               if (!DeclMatcher.matches(*PrevDecl, Finder, &DeclBuilder))
+                 return false;
 
-    const auto *NextStmt = *std::next(It);
-    clang::ast_matchers::internal::BoundNodesTreeBuilder StmtBuilder;
-    StmtBuilder.addMatch(DeclBuilder);
-    if (StmtMatcher.matches(*NextStmt, Finder, &StmtBuilder)) {
-      Builder->addMatch(StmtBuilder);
-      return true;
-    }
-  }
-  return false;
+               clang::ast_matchers::internal::BoundNodesTreeBuilder StmtBuilder;
+               StmtBuilder.addMatch(DeclBuilder);
+               if (!StmtMatcher.matches(*NextStmt, Finder, &StmtBuilder))
+                 return false;
+
+               Builder->addMatch(StmtBuilder);
+               return true;
+             }) != Statements.end();
 }
+
+} // namespace
 
 // Collects all VarDecl references from an expression.
 static std::vector<const VarDecl *> collectVarDeclsInExpr(const Expr *E) {
@@ -79,7 +81,7 @@ static std::vector<const VarDecl *> collectVarDeclsInExpr(const Expr *E) {
     bool VisitDeclRefExpr(DeclRefExpr *DRE) {
       if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl()))
         Vars.push_back(VD);
-      return true;
+      return true; // Continue traversing
     }
   };
 
@@ -91,13 +93,11 @@ static std::vector<const VarDecl *> collectVarDeclsInExpr(const Expr *E) {
 // Checks if all variables in DeclStmt are used in the condition.
 static bool allVarsUsedInCondition(const DeclStmt *DS, const Expr *Condition) {
   const auto ConditionVars = collectVarDeclsInExpr(Condition);
-  for (const auto *D : DS->decls()) {
-    if (const auto *VD = dyn_cast<VarDecl>(D)) {
-      if (!llvm::is_contained(ConditionVars, VD))
-        return false;
-    }
-  }
-  return true;
+  return llvm::all_of(DS->decls(), [&](const auto *D) {
+    const auto *VD = dyn_cast<VarDecl>(D);
+    assert(VD); // TODO:
+    return llvm::is_contained(ConditionVars, VD);
+  });
 }
 
 // Checks if any variable in DeclStmt is used after the statement.
@@ -112,41 +112,31 @@ static bool anyVarUsedAfterStmt(const DeclStmt *DS, const Stmt *STMT,
   if (StatementsAfter == Statements.end())
     return false;
 
-  for (const auto *D : DS->decls()) {
-    if (const auto *VD = dyn_cast<VarDecl>(D)) {
-      for (const Stmt *S : llvm::make_range(StatementsAfter, Statements.end())) {
-        VariableUsageVisitor Visitor(VD);
-        Visitor.TraverseStmt(const_cast<Stmt *>(S));
-        if (Visitor.foundUsage())
-          return true;
-      }
-    }
-  }
-  return false;
+  return llvm::any_of(DS->decls(), [&](const auto *D) {
+    const auto *VD = dyn_cast<VarDecl>(D);
+    assert(VD); // TODO:
+    return llvm::any_of(llvm::make_range(StatementsAfter, Statements.end()),
+                        [&](const Stmt *S) {
+                          VariableUsageVisitor Visitor(VD);
+                          Visitor.TraverseStmt(const_cast<Stmt *>(S));
+                          return Visitor.foundUsage();
+                        });
+  });
 }
 
-} // namespace
-
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
-  auto IfStmtMatcher = ifStmt(unless(isInTemplateInstantiation()),
-                              unless(hasInitStatement(anything())),
-                              hasCondition(expr().bind("condition")))
-                           .bind("ifStmt");
-  
-  auto SwitchStmtMatcher = switchStmt(unless(isInTemplateInstantiation()),
-                                      unless(hasInitStatement(anything())),
-                                      hasCondition(expr().bind("condition")))
-                               .bind("switchStmt");
+  static constexpr auto MakeMatcher = [](const auto &StmtMatcher,
+                                         StringRef Name) {
+    return compoundStmt(unless(isInTemplateInstantiation()), hasAdjacentStmts(
+                            declStmt().bind("prevDecl"),
+                            StmtMatcher(unless(hasInitStatement(anything())),
+                                        hasCondition(expr().bind("condition")))
+                                .bind(Name)))
+        .bind("compoundStmt");
+  };
 
-  Finder->addMatcher(
-      compoundStmt(hasAdjacentStmts(declStmt().bind("prevDecl"), IfStmtMatcher))
-          .bind("compoundStmt"),
-      this);
-
-  Finder->addMatcher(
-      compoundStmt(hasAdjacentStmts(declStmt().bind("prevDecl"), SwitchStmtMatcher))
-          .bind("compoundStmt"),
-      this);
+  Finder->addMatcher(MakeMatcher(ifStmt, "ifStmt"), this);
+  Finder->addMatcher(MakeMatcher(switchStmt, "switchStmt"), this);
 }
 
 static StringRef normDeclStmtText(StringRef Text) {
@@ -157,13 +147,15 @@ static StringRef normDeclStmtText(StringRef Text) {
   return Text;
 }
 
-static std::vector<const VarDecl *> getVarDeclsFromDeclStmt(const DeclStmt *DS) {
+static std::vector<const VarDecl *>
+getVarDeclsFromDeclStmt(const DeclStmt *DS) {
   std::vector<const VarDecl *> Vars;
   Vars.reserve(llvm::size(DS->decls()));
-  for (const auto *D : DS->decls()) {
-    if (const auto *VD = dyn_cast<VarDecl>(D))
-      Vars.push_back(VD);
-  }
+  llvm::transform(DS->decls(), std::back_inserter(Vars), [](const auto *D) {
+    const auto *VD = dyn_cast<VarDecl>(D);
+    assert(VD); // TODO:
+    return VD;
+  });
   return Vars;
 }
 
@@ -189,8 +181,9 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
 
   const auto AllVarsInDecl = getVarDeclsFromDeclStmt(PrevDecl);
   const SourceRange RemovalRange = PrevDecl->getSourceRange();
-  const bool CanFix = utils::rangeCanBeFixed(RemovalRange, Result.SourceManager) &&
-                      !Condition->getBeginLoc().isMacroID();
+  const bool CanFix =
+      utils::rangeCanBeFixed(RemovalRange, Result.SourceManager) &&
+      !Condition->getBeginLoc().isMacroID();
 
   const StringRef DeclStmtText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(PrevDecl->getSourceRange()),
