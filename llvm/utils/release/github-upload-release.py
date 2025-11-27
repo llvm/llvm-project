@@ -10,6 +10,9 @@
 # Create and manage releases in the llvm github project.
 #
 # This script requires python3 and the PyGithub module.
+
+# Requirements and lockfiles can be found in llvm/utils/git/requirements.upload_release.txt.in
+# and llvm/utils/git/requirements.upload_release.txt
 #
 # Example Usage:
 #

@@ -2478,6 +2478,7 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   std::unique_ptr<MCSubtargetInfo> STI(
       TM.getTarget().createMCSubtargetInfo(TT, "", ""));
   assert(STI && "Unable to create subtarget info");
+  this->STI = static_cast<const AArch64Subtarget *>(&*STI);
 
   MCSymbol *Place = OutStreamer->getContext().createTempSymbol();
   OutStreamer->emitLabel(Place);
