@@ -12,12 +12,24 @@
 
 #include <queue>
 
-void test_queue() {
-  std::queue<int> queue;
-  queue.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-}
+void test() {
+  {
+    std::queue<int> q;
+    const std::queue<int> cq{};
 
-void test_priority_queue() {
-  std::priority_queue<int> priority_queue;
-  priority_queue.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    q.empty();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    q.size();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    q.front();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cq.front(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    q.back();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    cq.back();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+
+  {
+    std::priority_queue<int> pq;
+
+    pq.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    pq.size();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    pq.top();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
 }
