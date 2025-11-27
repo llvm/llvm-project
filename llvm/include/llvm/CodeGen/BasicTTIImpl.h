@@ -1968,13 +1968,17 @@ public:
       const Value *Mask = Args[2];
       Align Alignment = I->getParamAlign(1).valueOrOne();
       return thisT()->getExpandCompressMemoryOpCost(
-          {IID, Data->getType(), !isa<Constant>(Mask), Alignment, I}, CostKind);
+          MemIntrinsicCostAttributes(IID, Data->getType(), !isa<Constant>(Mask),
+                                     Alignment, I),
+          CostKind);
     }
     case Intrinsic::masked_expandload: {
       const Value *Mask = Args[1];
       Align Alignment = I->getParamAlign(0).valueOrOne();
       return thisT()->getExpandCompressMemoryOpCost(
-          {IID, RetTy, !isa<Constant>(Mask), Alignment, I}, CostKind);
+          MemIntrinsicCostAttributes(IID, RetTy, !isa<Constant>(Mask),
+                                     Alignment, I),
+          CostKind);
     }
     case Intrinsic::experimental_vp_strided_store: {
       const Value *Data = Args[0];
