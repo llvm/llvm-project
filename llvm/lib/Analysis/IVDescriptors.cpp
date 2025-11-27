@@ -1255,6 +1255,7 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FindLastIVUMax:
     // TODO: Set AnyOf and FindIV to Instruction::Select once in-loop reductions
     // are supported.
+    llvm_unreachable("AnyOf and FindIV do not support in-loop");
   default:
     llvm_unreachable("Unknown recurrence operation");
   }
