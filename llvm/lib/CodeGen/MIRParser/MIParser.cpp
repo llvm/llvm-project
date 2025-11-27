@@ -1073,6 +1073,7 @@ bool MIParser::parse(MachineInstr *&MI) {
          Token.isNot(MIToken::kw_heap_alloc_marker) &&
          Token.isNot(MIToken::kw_pcsections) &&
          Token.isNot(MIToken::kw_cfi_type) &&
+         Token.isNot(MIToken::kw_deactivation_symbol) &&
          Token.isNot(MIToken::kw_debug_location) &&
          Token.isNot(MIToken::kw_debug_instr_number) &&
          Token.isNot(MIToken::coloncolon) && Token.isNot(MIToken::lbrace)) {
@@ -1119,6 +1120,14 @@ bool MIParser::parse(MachineInstr *&MI) {
     // Lex past trailing comma if present.
     if (Token.is(MIToken::comma))
       lex();
+  }
+
+  GlobalValue *DS = nullptr;
+  if (Token.is(MIToken::kw_deactivation_symbol)) {
+    lex();
+    if (parseGlobalValue(DS))
+      return true;
+    lex();
   }
 
   unsigned InstrNum = 0;
@@ -1197,6 +1206,8 @@ bool MIParser::parse(MachineInstr *&MI) {
     MI->setPCSections(MF, PCSections);
   if (CFIType)
     MI->setCFIType(MF, CFIType);
+  if (DS)
+    MI->setDeactivationSymbol(MF, DS);
   if (!MemOperands.empty())
     MI->setMemRefs(MF, MemOperands);
   if (InstrNum)
