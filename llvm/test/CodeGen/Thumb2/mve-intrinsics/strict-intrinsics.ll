@@ -141,3 +141,101 @@ entry:
   %0 = tail call <4 x float> @llvm.arm.mve.vmul.v4f32(<4 x float> %a, <4 x float> %s)
   ret <4 x float> %0
 }
+
+define arm_aapcs_vfpcc <4 x float> @fma_v4f32(<4 x float> %dst, <4 x float> %s1, <4 x float> %s2) {
+; CHECK-LABEL: fma_v4f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vfma.f32 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <4 x float> @llvm.arm.mve.fma.v4f32(<4 x float> %s1, <4 x float> %s2, <4 x float> %dst)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @fma_v8f16(<8 x half> %dst, <8 x half> %s1, <8 x half> %s2) {
+; CHECK-LABEL: fma_v8f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vfma.f16 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.arm.mve.fma.v8f16(<8 x half> %s1, <8 x half> %s2, <8 x half> %dst)
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @fma_n_v8f16(<4 x float> %s1, <4 x float> %s2, float %s3) {
+; CHECK-LABEL: fma_n_v8f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r0, s8
+; CHECK-NEXT:    vfma.f32 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %i = insertelement <4 x float> poison, float %s3, i32 0
+  %sp = shufflevector <4 x float> %i, <4 x float> poison, <4 x i32> zeroinitializer
+  %0 = tail call <4 x float> @llvm.arm.mve.fma.v4f32(<4 x float> %s2, <4 x float> %sp, <4 x float> %s1)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @fma_n_v4f32(<8 x half> %s1, <8 x half> %s2, half %s3) {
+; CHECK-LABEL: fma_n_v4f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.f16 r0, s8
+; CHECK-NEXT:    vfma.f16 q0, q1, r0
+; CHECK-NEXT:    bx lr
+entry:
+  %i = insertelement <8 x half> poison, half %s3, i32 0
+  %sp = shufflevector <8 x half> %i, <8 x half> poison, <8 x i32> zeroinitializer
+  %0 = tail call <8 x half> @llvm.arm.mve.fma.v8f16(<8 x half> %s2, <8 x half> %sp, <8 x half> %s1)
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @fms_v4f32(<4 x float> %dst, <4 x float> %s1, <4 x float> %s2) {
+; CHECK-LABEL: fms_v4f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vfms.f32 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = fneg <4 x float> %s1
+  %0 = tail call <4 x float> @llvm.arm.mve.fma.v4f32(<4 x float> %c, <4 x float> %s2, <4 x float> %dst)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @fms_v8f16(<8 x half> %dst, <8 x half> %s1, <8 x half> %s2) {
+; CHECK-LABEL: fms_v8f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vfms.f16 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = fneg <8 x half> %s1
+  %0 = tail call <8 x half> @llvm.arm.mve.fma.v8f16(<8 x half> %c, <8 x half> %s2, <8 x half> %dst)
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @fms_n_v8f16(<4 x float> %s1, <4 x float> %s2, float %s3) {
+; CHECK-LABEL: fms_n_v8f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r0, s8
+; CHECK-NEXT:    vdup.32 q2, r0
+; CHECK-NEXT:    vfms.f32 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = fneg <4 x float> %s2
+  %i = insertelement <4 x float> poison, float %s3, i32 0
+  %sp = shufflevector <4 x float> %i, <4 x float> poison, <4 x i32> zeroinitializer
+  %0 = tail call <4 x float> @llvm.arm.mve.fma.v4f32(<4 x float> %c, <4 x float> %sp, <4 x float> %s1)
+  ret <4 x float> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @fms_n_v4f32(<8 x half> %s1, <8 x half> %s2, half %s3) {
+; CHECK-LABEL: fms_n_v4f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.f16 r0, s8
+; CHECK-NEXT:    vdup.16 q2, r0
+; CHECK-NEXT:    vfms.f16 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = fneg <8 x half> %s2
+  %i = insertelement <8 x half> poison, half %s3, i32 0
+  %sp = shufflevector <8 x half> %i, <8 x half> poison, <8 x i32> zeroinitializer
+  %0 = tail call <8 x half> @llvm.arm.mve.fma.v8f16(<8 x half> %c, <8 x half> %sp, <8 x half> %s1)
+  ret <8 x half> %0
+}
