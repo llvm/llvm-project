@@ -2231,8 +2231,14 @@ static void fillOverallFunction(
                    *CurrentGroup.OutlinedFunction, CurrentGroup.EndBBs);
 
   // Transfer the attributes from the function to the new function.
-  for (Attribute A : CurrentOS->ExtractedFunction->getAttributes().getFnAttrs())
+  for (Attribute A :
+       CurrentOS->ExtractedFunction->getAttributes().getFnAttrs()) {
+    if (M.getTargetTriple().isRISCV() && A.isStringAttribute() &&
+        A.getKindAsString() == "interrupt")
+      continue;
+
     CurrentGroup.OutlinedFunction->addFnAttr(A);
+  }
 
   // Create a new set of output blocks for the first extracted function.
   DenseMap<Value *, BasicBlock *> NewBBs;
