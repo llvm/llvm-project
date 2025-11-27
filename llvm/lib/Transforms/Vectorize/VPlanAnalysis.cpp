@@ -11,6 +11,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanHelpers.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 #define DEBUG_TYPE "vplan"
 
@@ -327,8 +329,7 @@ void llvm::collectEphemeralRecipesForVPlan(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || !match(RepR->getUnderlyingInstr(),
-                          PatternMatch::m_Intrinsic<Intrinsic::assume>()))
+      if (!RepR || !match(RepR, m_Intrinsic<Intrinsic::assume>()))
         continue;
       Worklist.push_back(RepR);
       EphRecipes.insert(RepR);

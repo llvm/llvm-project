@@ -1783,9 +1783,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
+    }
 
-      if (Subtarget->hasSVEB16B16() &&
-          Subtarget->isNonStreamingSVEorSME2Available()) {
+    if (Subtarget->hasSVEB16B16() &&
+        Subtarget->isNonStreamingSVEorSME2Available()) {
+      // Note: Use SVE for bfloat16 operations when +sve-b16b16 is available.
+      for (auto VT : {MVT::v4bf16, MVT::v8bf16, MVT::nxv2bf16, MVT::nxv4bf16,
+                      MVT::nxv8bf16}) {
         setOperationAction(ISD::FADD, VT, Custom);
         setOperationAction(ISD::FMA, VT, Custom);
         setOperationAction(ISD::FMAXIMUM, VT, Custom);
@@ -11738,7 +11742,12 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (LHS.getValueType().isInteger()) {
-
+    if (Subtarget->hasCSSC() && CC == ISD::SETNE && isNullConstant(RHS)) {
+      SDValue One = DAG.getConstant(1, DL, LHS.getValueType());
+      SDValue UMin = DAG.getNode(ISD::UMIN, DL, LHS.getValueType(), LHS, One);
+      SDValue Res = DAG.getZExtOrTrunc(UMin, DL, VT);
+      return IsStrict ? DAG.getMergeValues({Res, Chain}, DL) : Res;
+    }
     simplifySetCCIntoEq(CC, LHS, RHS, DAG, DL);
 
     SDValue CCVal;

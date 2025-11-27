@@ -275,11 +275,10 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       remapOperands(&R, UF - 1);
       return;
     }
-    if (auto *II = dyn_cast<IntrinsicInst>(RepR->getUnderlyingValue())) {
-      if (II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl) {
-        addUniformForAllParts(RepR);
-        return;
-      }
+    if (match(RepR,
+              m_Intrinsic<Intrinsic::experimental_noalias_scope_decl>())) {
+      addUniformForAllParts(RepR);
+      return;
     }
   }
 
