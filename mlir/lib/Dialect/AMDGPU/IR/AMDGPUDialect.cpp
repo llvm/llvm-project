@@ -450,7 +450,7 @@ LogicalResult ScaledWMMAOp::verify() {
   auto sourceAType = cast<VectorType>(getSourceA().getType());
   auto sourceBType = cast<VectorType>(getSourceB().getType());
   auto destType = cast<VectorType>(getDestC().getType());
-  
+
   // Validate output type is F32
   if (!destType.getElementType().isF32())
     return emitOpError("destination must have f32 element type");
@@ -459,10 +459,10 @@ LogicalResult ScaledWMMAOp::verify() {
   Type aElemType = sourceAType.getElementType();
   Type bElemType = sourceBType.getElementType();
 
-  bool aIsSmallFloat = aElemType.isFloat(4) || aElemType.isFloat(6) ||
-                       aElemType.isFloat(8);
-  bool bIsSmallFloat = bElemType.isFloat(4) || bElemType.isFloat(6) ||
-                       bElemType.isFloat(8);
+  bool aIsSmallFloat =
+      aElemType.isFloat(4) || aElemType.isFloat(6) || aElemType.isFloat(8);
+  bool bIsSmallFloat =
+      bElemType.isFloat(4) || bElemType.isFloat(6) || bElemType.isFloat(8);
 
   if (!aIsSmallFloat || !bIsSmallFloat)
     return emitOpError("source operands must have small float element types "
@@ -479,7 +479,7 @@ LogicalResult ScaledWMMAOp::verify() {
   int64_t aLen = sourceAType.getNumElements();
   int64_t bLen = sourceBType.getNumElements();
   int64_t expectedOutLen = (m == 16) ? 4 : 8;
-  
+
   if (destType.getNumElements() != expectedOutLen)
     return emitOpError("expected output vector of length " +
                        Twine(expectedOutLen) + " but got " +

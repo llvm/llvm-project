@@ -1212,12 +1212,11 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
     }();
     OperationState loweredOp(loc, intrinsicName);
     loweredOp.addTypes(intrinsicOutType);
-    loweredOp.addOperands(
-        {packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceA(),
-                                      allowBf16),
-         packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceB(),
-                                      allowBf16),
-         adaptor.getDestC()});
+    loweredOp.addOperands({packSmallFloatVectorOperand(
+                               rewriter, loc, adaptor.getSourceA(), allowBf16),
+                           packSmallFloatVectorOperand(
+                               rewriter, loc, adaptor.getSourceB(), allowBf16),
+                           adaptor.getDestC()});
     if (isScaled) {
       Value zero = createI32Constant(rewriter, loc, 0);
       auto [_scaledName, aTypeCode, bTypeCode] = *maybeScaledIntrinsic;
@@ -1401,13 +1400,14 @@ struct ScaledWMMAOpLowering : public ConvertOpToLLVMPattern<ScaledWMMAOp> {
     bool is32x16 = (m == 32 && n == 16 && k == 128);
 
     if (m == 16 && n == 16 && k == 128) {
-      intrinsicName = isScale16
-                ? ROCDL::wmma_scale16_f32_16x16x128_f8f6f4::getOperationName()
-                : ROCDL::wmma_scale_f32_16x16x128_f8f6f4::getOperationName();
+      intrinsicName =
+          isScale16
+              ? ROCDL::wmma_scale16_f32_16x16x128_f8f6f4::getOperationName()
+              : ROCDL::wmma_scale_f32_16x16x128_f8f6f4::getOperationName();
     } else if (is32x16) {
-      intrinsicName = isScale16
-                ? ROCDL::wmma_scale16_f32_32x16x128_f4::getOperationName()
-                : ROCDL::wmma_scale_f32_32x16x128_f4::getOperationName();
+      intrinsicName =
+          isScale16 ? ROCDL::wmma_scale16_f32_32x16x128_f4::getOperationName()
+                    : ROCDL::wmma_scale_f32_32x16x128_f4::getOperationName();
     } else {
       return op.emitOpError("unsupported scaled_wmma dimensions: ")
              << m << "x" << n << "x" << k;
@@ -1417,29 +1417,29 @@ struct ScaledWMMAOpLowering : public ConvertOpToLLVMPattern<ScaledWMMAOp> {
 
     // The f4 variant does not have fmtA and fmtB attributes
     if (!is32x16) {
-      attrs.push_back(rewriter.getNamedAttr("fmtA",
-                              rewriter.getI32IntegerAttr(*aFmtCode)));
-      attrs.push_back(rewriter.getNamedAttr("fmtB",
-                              rewriter.getI32IntegerAttr(*bFmtCode)));
+      attrs.push_back(
+          rewriter.getNamedAttr("fmtA", rewriter.getI32IntegerAttr(*aFmtCode)));
+      attrs.push_back(
+          rewriter.getNamedAttr("fmtB", rewriter.getI32IntegerAttr(*bFmtCode)));
     }
 
     // Add modifier attributes - modC and reuse flags default to 0/false
-    attrs.push_back(rewriter.getNamedAttr("reuseA",
-                              rewriter.getBoolAttr(false)));
-    attrs.push_back(rewriter.getNamedAttr("reuseB",
-                              rewriter.getBoolAttr(false)));
-    attrs.push_back(rewriter.getNamedAttr("modC",
-                              rewriter.getI16IntegerAttr(0)));
+    attrs.push_back(
+        rewriter.getNamedAttr("reuseA", rewriter.getBoolAttr(false)));
+    attrs.push_back(
+        rewriter.getNamedAttr("reuseB", rewriter.getBoolAttr(false)));
+    attrs.push_back(
+        rewriter.getNamedAttr("modC", rewriter.getI16IntegerAttr(0)));
 
     // Scale type/format parameters from the operation
-    attrs.push_back(rewriter.getNamedAttr("scaleAType",
-                              rewriter.getI32IntegerAttr(op.getScaleAType())));
-    attrs.push_back(rewriter.getNamedAttr("fmtScaleA",
-                              rewriter.getI32IntegerAttr(op.getFmtScaleA())));
-    attrs.push_back(rewriter.getNamedAttr("scaleBType",
-                              rewriter.getI32IntegerAttr(op.getScaleBType())));
-    attrs.push_back(rewriter.getNamedAttr("fmtScaleB",
-                              rewriter.getI32IntegerAttr(op.getFmtScaleB())));
+    attrs.push_back(rewriter.getNamedAttr(
+        "scaleAType", rewriter.getI32IntegerAttr(op.getScaleAType())));
+    attrs.push_back(rewriter.getNamedAttr(
+        "fmtScaleA", rewriter.getI32IntegerAttr(op.getFmtScaleA())));
+    attrs.push_back(rewriter.getNamedAttr(
+        "scaleBType", rewriter.getI32IntegerAttr(op.getScaleBType())));
+    attrs.push_back(rewriter.getNamedAttr(
+        "fmtScaleB", rewriter.getI32IntegerAttr(op.getFmtScaleB())));
 
     // Convert typed float vectors to packed i32 format if needed
     Value sourceA =
@@ -2428,10 +2428,9 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
            SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
            WMMAOpLowering, ScaledWMMAOpLowering, ExtPackedFp8OpLowering,
-           ScaledExtPacked816OpLowering,
-           ScaledExtPackedOpLowering, PackedScaledTruncOpLowering,
-           PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
-           GatherToLDSOpLowering, TransposeLoadOpLowering,
-           AMDGPUPermlaneLowering>(converter, chipset);
+           ScaledExtPacked816OpLowering, ScaledExtPackedOpLowering,
+           PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
+           PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
+           TransposeLoadOpLowering, AMDGPUPermlaneLowering>(converter, chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }

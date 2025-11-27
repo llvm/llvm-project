@@ -953,9 +953,10 @@ def ScaledMFMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[32], [F8E5M2, F8E4M3FN
 def ScaledMFMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 16], [F32]>]>;
 
 // scaled_wmma
-def ScaledWMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[64], [F8E5M2, F8E4M3FN]>,
-                                   VectorOfLengthAndType<[64], [F6E2M3FN, F6E3M2FN]>,
-                                   VectorOfLengthAndType<[64, 128], [F4E2M1FN]>]>;
+def ScaledWMMAInTypes
+    : AnyTypeOf<[VectorOfLengthAndType<[64], [F8E5M2, F8E4M3FN]>,
+                 VectorOfLengthAndType<[64], [F6E2M3FN, F6E3M2FN]>,
+                 VectorOfLengthAndType<[64, 128], [F4E2M1FN]>]>;
 def ScaledWMMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 8], [F32]>]>;
 
 // wmma
@@ -1225,24 +1226,19 @@ def AMDGPU_ScaledMFMAOp :
   let hasCanonicalizer = 1;
 }
 
-def AMDGPU_ScaledWMMAOp :
-    AMDGPU_Op<"scaled_wmma", [AllTypesMatch<["destC", "destD"]>,
-                              Pure]>,
-    Arguments<(ins
-                   ConfinedAttr<I32Attr, [IntIsOneOf<[16, 32]>]>:$m,
-                   ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$n,
-                   ConfinedAttr<I32Attr, [IntIsOneOf<[128]>]>:$k,
-                   ScaledWMMAInTypes:$sourceA,
-                   ScaledWMMAInTypes:$sourceB,
-                   ScaledWMMAOutTypes:$destC,
-                   AnyTypeOf<[I32, I64]>:$scaleA,
-                   AnyTypeOf<[I32, I64]>:$scaleB,
-                   DefaultValuedAttr<I32Attr, "0">:$scaleAType,
-                   DefaultValuedAttr<I32Attr, "0">:$fmtScaleA,
-                   DefaultValuedAttr<I32Attr, "0">:$scaleBType,
-                   DefaultValuedAttr<I32Attr, "0">:$fmtScaleB
-                   )>,
-    Results<(outs ScaledWMMAOutTypes: $destD)> {
+def AMDGPU_ScaledWMMAOp
+    : AMDGPU_Op<"scaled_wmma", [AllTypesMatch<["destC", "destD"]>, Pure]>,
+      Arguments<(ins ConfinedAttr<I32Attr, [IntIsOneOf<[16, 32]>]>:$m,
+          ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$n,
+          ConfinedAttr<I32Attr, [IntIsOneOf<[128]>]>:$k,
+          ScaledWMMAInTypes:$sourceA, ScaledWMMAInTypes:$sourceB,
+          ScaledWMMAOutTypes:$destC, AnyTypeOf<[I32, I64]>:$scaleA,
+          AnyTypeOf<[I32, I64]>:$scaleB,
+          DefaultValuedAttr<I32Attr, "0">:$scaleAType,
+          DefaultValuedAttr<I32Attr, "0">:$fmtScaleA,
+          DefaultValuedAttr<I32Attr, "0">:$scaleBType,
+          DefaultValuedAttr<I32Attr, "0">:$fmtScaleB)>,
+      Results<(outs ScaledWMMAOutTypes:$destD)> {
   let summary = "MLIR wrapper for RDNA scaled wmma instructions";
   let description = [{
     The `amdgpu.scaled_wmma` op is an MLIR wrapper around intrinsics for scaled
