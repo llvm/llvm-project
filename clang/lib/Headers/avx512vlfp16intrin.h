@@ -623,7 +623,7 @@ _mm256_maskz_scalef_ph(__mmask16 __U, __m256h __A, __m256h __B) {
                                             (__mmask16)(U)))
 
 static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_sqrt_ph(__m128h __a) {
-  return __builtin_ia32_sqrtph((__v8hf)__a);
+  return __builtin_elementwise_sqrt(__a);
 }
 
 static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_mask_sqrt_ph(__m128h __W,
@@ -640,7 +640,7 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_maskz_sqrt_ph(__mmask8 __U,
 }
 
 static __inline __m256h __DEFAULT_FN_ATTRS256 _mm256_sqrt_ph(__m256h __a) {
-  return (__m256h)__builtin_ia32_sqrtph256((__v16hf)__a);
+  return __builtin_elementwise_sqrt(__a);
 }
 
 static __inline__ __m256h __DEFAULT_FN_ATTRS256
