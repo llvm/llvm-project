@@ -355,7 +355,8 @@ public:
     llvm_unreachable("Invalid content kind");
   }
 
-  explicit TargetLoweringBase(const TargetMachine &TM);
+  explicit TargetLoweringBase(const TargetMachine &TM,
+                              const TargetSubtargetInfo &STI);
   TargetLoweringBase(const TargetLoweringBase &) = delete;
   TargetLoweringBase &operator=(const TargetLoweringBase &) = delete;
   virtual ~TargetLoweringBase();
@@ -3976,7 +3977,8 @@ public:
   TargetLowering(const TargetLowering &) = delete;
   TargetLowering &operator=(const TargetLowering &) = delete;
 
-  explicit TargetLowering(const TargetMachine &TM);
+  explicit TargetLowering(const TargetMachine &TM,
+                          const TargetSubtargetInfo &STI);
   ~TargetLowering() override;
 
   bool isPositionIndependent() const;
@@ -4762,6 +4764,7 @@ public:
     SmallVector<SDValue, 4> InVals;
     const ConstantInt *CFIType = nullptr;
     SDValue ConvergenceControlToken;
+    GlobalValue *DeactivationSymbol = nullptr;
 
     std::optional<PtrAuthInfo> PAI;
 
@@ -4912,6 +4915,11 @@ public:
 
     CallLoweringInfo &setConvergenceControlToken(SDValue Token) {
       ConvergenceControlToken = Token;
+      return *this;
+    }
+
+    CallLoweringInfo &setDeactivationSymbol(GlobalValue *Sym) {
+      DeactivationSymbol = Sym;
       return *this;
     }
 

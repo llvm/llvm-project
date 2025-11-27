@@ -36,8 +36,8 @@ define void @reuse_lcssa_phi_for_add_rec1(ptr %head) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[IV_LCSSA]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr ptr, ptr [[SRC_2]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr ptr, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr ptr, ptr [[TMP6]], i32 -1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr ptr, ptr [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr ptr, ptr [[TMP6]], i64 -1
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <2 x ptr> [[WIDE_LOAD]], <2 x ptr> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[REVERSE]], i32 0

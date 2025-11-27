@@ -190,7 +190,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // recipes.
       if (Br->isConditional()) {
         VPValue *Cond = getOrCreateVPOperand(Br->getCondition());
-        VPIRBuilder.createNaryOp(VPInstruction::BranchOnCond, {Cond}, Inst,
+        VPIRBuilder.createNaryOp(VPInstruction::BranchOnCond, {Cond}, Inst, {},
                                  VPIRMetadata(*Inst), Inst->getDebugLoc());
       }
 
@@ -205,7 +205,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       SmallVector<VPValue *> Ops = {getOrCreateVPOperand(SI->getCondition())};
       for (auto Case : SI->cases())
         Ops.push_back(getOrCreateVPOperand(Case.getCaseValue()));
-      VPIRBuilder.createNaryOp(Instruction::Switch, Ops, Inst,
+      VPIRBuilder.createNaryOp(Instruction::Switch, Ops, Inst, {},
                                VPIRMetadata(*Inst), Inst->getDebugLoc());
       continue;
     }
@@ -255,13 +255,14 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       if (auto *CI = dyn_cast<CastInst>(Inst)) {
         NewR = VPIRBuilder.createScalarCast(CI->getOpcode(), VPOperands[0],
                                             CI->getType(), CI->getDebugLoc(),
-                                            {}, MD);
+                                            VPIRFlags(*CI), MD);
         NewR->setUnderlyingValue(CI);
       } else {
         // Build VPInstruction for any arbitrary Instruction without specific
         // representation in VPlan.
-        NewR = VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst, MD,
-                                        Inst->getDebugLoc());
+        NewR =
+            VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst,
+                                     VPIRFlags(*Inst), MD, Inst->getDebugLoc());
       }
     }
 
@@ -553,6 +554,15 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
   Plan.getEntry()->swapSuccessors();
 
   createExtractsForLiveOuts(Plan, MiddleVPBB);
+
+  VPBuilder ScalarPHBuilder(ScalarPH);
+  for (const auto &[PhiR, ScalarPhiR] : zip_equal(
+           drop_begin(HeaderVPBB->phis()), Plan.getScalarHeader()->phis())) {
+    auto *VectorPhiR = cast<VPPhi>(&PhiR);
+    auto *ResumePhiR = ScalarPHBuilder.createScalarPhi(
+        {VectorPhiR, VectorPhiR->getOperand(0)}, VectorPhiR->getDebugLoc());
+    cast<VPIRPhi>(&ScalarPhiR)->addOperand(ResumePhiR);
+  }
 }
 
 std::unique_ptr<VPlan>
