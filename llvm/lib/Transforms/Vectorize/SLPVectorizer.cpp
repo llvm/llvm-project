@@ -6900,10 +6900,11 @@ static bool isMaskedLoadCompress(
       ScalarLoadsCost;
   InstructionCost LoadCost = 0;
   if (IsMasked) {
-    LoadCost = TTI.getMemIntrinsicInstrCost({Intrinsic::masked_load, LoadVecTy,
-                                             CommonAlignment,
-                                             LI->getPointerAddressSpace()},
-                                            CostKind);
+    LoadCost = TTI.getMemIntrinsicInstrCost(
+        MemIntrinsicCostAttributes(Intrinsic::masked_load, LoadVecTy,
+                                   CommonAlignment,
+                                   LI->getPointerAddressSpace()),
+        CostKind);
   } else {
     LoadCost =
         TTI.getMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
@@ -7246,10 +7247,11 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
         ScalarGEPCost;
     // The cost of masked gather.
     InstructionCost MaskedGatherCost =
-        TTI.getMemIntrinsicInstrCost({Intrinsic::masked_gather, VecTy,
-                                      cast<LoadInst>(VL0)->getPointerOperand(),
-                                      /*VariableMask=*/false, CommonAlignment},
-                                     CostKind) +
+        TTI.getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(Intrinsic::masked_gather, VecTy,
+                                       cast<LoadInst>(VL0)->getPointerOperand(),
+                                       /*VariableMask=*/false, CommonAlignment),
+            CostKind) +
         (ProfitableGatherPointers ? 0 : VectorGEPCost);
     InstructionCost GatherCost =
         getScalarizationOverhead(TTI, ScalarTy, VecTy, DemandedElts,
@@ -7357,27 +7359,30 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
           break;
         case LoadsState::StridedVectorize:
           VecLdCost += TTI.getMemIntrinsicInstrCost(
-                           {Intrinsic::experimental_vp_strided_load, SubVecTy,
-                            LI0->getPointerOperand(),
-                            /*VariableMask=*/false, CommonAlignment},
+                           MemIntrinsicCostAttributes(
+                               Intrinsic::experimental_vp_strided_load,
+                               SubVecTy, LI0->getPointerOperand(),
+                               /*VariableMask=*/false, CommonAlignment),
                            CostKind) +
                        VectorGEPCost;
           break;
         case LoadsState::CompressVectorize:
           VecLdCost += TTI.getMemIntrinsicInstrCost(
-                           {Intrinsic::masked_load, SubVecTy, CommonAlignment,
-                            LI0->getPointerAddressSpace()},
+                           MemIntrinsicCostAttributes(
+                               Intrinsic::masked_load, SubVecTy,
+                               CommonAlignment, LI0->getPointerAddressSpace()),
                            CostKind) +
                        ::getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, SubVecTy,
                                         {}, CostKind);
           break;
         case LoadsState::ScatterVectorize:
-          VecLdCost +=
-              TTI.getMemIntrinsicInstrCost(
-                  {Intrinsic::masked_gather, SubVecTy, LI0->getPointerOperand(),
-                   /*VariableMask=*/false, CommonAlignment},
-                  CostKind) +
-              VectorGEPCost;
+          VecLdCost += TTI.getMemIntrinsicInstrCost(
+                           MemIntrinsicCostAttributes(
+                               Intrinsic::masked_gather, SubVecTy,
+                               LI0->getPointerOperand(),
+                               /*VariableMask=*/false, CommonAlignment),
+                           CostKind) +
+                       VectorGEPCost;
           break;
         case LoadsState::Gather:
           // Gathers are already calculated - ignore.
@@ -13331,9 +13336,10 @@ void BoUpSLP::transformNodes() {
                                  TTI::OperandValueInfo()) +
             ::getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
         InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
-            {Intrinsic::experimental_vp_strided_load, VecTy,
-             BaseLI->getPointerOperand(),
-             /*VariableMask=*/false, CommonAlignment, BaseLI},
+            MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
+                                       VecTy, BaseLI->getPointerOperand(),
+                                       /*VariableMask=*/false, CommonAlignment,
+                                       BaseLI),
             CostKind);
         if (StridedCost < OriginalVecCost || ForceStridedLoads) {
           // Strided load is more profitable than consecutive load + reverse -
@@ -13368,9 +13374,10 @@ void BoUpSLP::transformNodes() {
                                  TTI::OperandValueInfo()) +
             ::getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
         InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
-            {Intrinsic::experimental_vp_strided_store, VecTy,
-             BaseSI->getPointerOperand(),
-             /*VariableMask=*/false, CommonAlignment, BaseSI},
+            MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_store,
+                                       VecTy, BaseSI->getPointerOperand(),
+                                       /*VariableMask=*/false, CommonAlignment,
+                                       BaseSI),
             CostKind);
         if (StridedCost < OriginalVecCost)
           // Strided store is more profitable than reverse + consecutive store -
@@ -15138,9 +15145,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         VecLdCost = TTI->getMemIntrinsicInstrCost(
-            {Intrinsic::experimental_vp_strided_load, StridedLoadTy,
-             LI0->getPointerOperand(),
-             /*VariableMask=*/false, CommonAlignment},
+            MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
+                                       StridedLoadTy, LI0->getPointerOperand(),
+                                       /*VariableMask=*/false, CommonAlignment),
             CostKind);
         if (StridedLoadTy != VecTy)
           VecLdCost +=
@@ -15177,8 +15184,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               CommonAlignment, LI0->getPointerAddressSpace(), CostKind);
         } else if (IsMasked) {
           VecLdCost = TTI->getMemIntrinsicInstrCost(
-              {Intrinsic::masked_load, LoadVecTy, CommonAlignment,
-               LI0->getPointerAddressSpace()},
+              MemIntrinsicCostAttributes(Intrinsic::masked_load, LoadVecTy,
+                                         CommonAlignment,
+                                         LI0->getPointerAddressSpace()),
               CostKind);
           // TODO: include this cost into CommonCost.
           VecLdCost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
@@ -15197,8 +15205,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         VecLdCost = TTI->getMemIntrinsicInstrCost(
-            {Intrinsic::masked_gather, VecTy, LI0->getPointerOperand(),
-             /*VariableMask=*/false, CommonAlignment},
+            MemIntrinsicCostAttributes(Intrinsic::masked_gather, VecTy,
+                                       LI0->getPointerOperand(),
+                                       /*VariableMask=*/false, CommonAlignment),
             CostKind);
         break;
       }
@@ -15240,9 +15249,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Align CommonAlignment =
             computeCommonAlignment<StoreInst>(UniqueValues.getArrayRef());
         VecStCost = TTI->getMemIntrinsicInstrCost(
-            {Intrinsic::experimental_vp_strided_store, VecTy,
-             BaseSI->getPointerOperand(),
-             /*VariableMask=*/false, CommonAlignment},
+            MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_store,
+                                       VecTy, BaseSI->getPointerOperand(),
+                                       /*VariableMask=*/false, CommonAlignment),
             CostKind);
       } else {
         assert(E->State == TreeEntry::Vectorize &&

@@ -3601,15 +3601,17 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     return Ctx.TTI.getAddressComputationCost(PtrTy, nullptr, nullptr,
                                              Ctx.CostKind) +
            Ctx.TTI.getMemIntrinsicInstrCost(
-               {IID, Ty, Ptr, IsMasked, Alignment, &Ingredient}, Ctx.CostKind);
+               MemIntrinsicCostAttributes(IID, Ty, Ptr, IsMasked, Alignment,
+                                          &Ingredient),
+               Ctx.CostKind);
   }
 
   InstructionCost Cost = 0;
   if (IsMasked) {
     unsigned IID = isa<VPWidenLoadRecipe>(this) ? Intrinsic::masked_load
                                                 : Intrinsic::masked_store;
-    Cost += Ctx.TTI.getMemIntrinsicInstrCost({IID, Ty, Alignment, AS},
-                                             Ctx.CostKind);
+    Cost += Ctx.TTI.getMemIntrinsicInstrCost(
+        MemIntrinsicCostAttributes(IID, Ty, Alignment, AS), Ctx.CostKind);
   } else {
     TTI::OperandValueInfo OpInfo = Ctx.getOperandInfo(
         isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this) ? getOperand(0)
@@ -3730,7 +3732,8 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
   // After migrating to getMemIntrinsicInstrCost, switch this to vp_load.
   InstructionCost Cost = Ctx.TTI.getMemIntrinsicInstrCost(
-      {Intrinsic::masked_load, Ty, Alignment, AS}, Ctx.CostKind);
+      MemIntrinsicCostAttributes(Intrinsic::masked_load, Ty, Alignment, AS),
+      Ctx.CostKind);
   if (!Reverse)
     return Cost;
 
@@ -3841,7 +3844,8 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
   // After migrating to getMemIntrinsicInstrCost, switch this to vp_store.
   InstructionCost Cost = Ctx.TTI.getMemIntrinsicInstrCost(
-      {Intrinsic::masked_store, Ty, Alignment, AS}, Ctx.CostKind);
+      MemIntrinsicCostAttributes(Intrinsic::masked_store, Ty, Alignment, AS),
+      Ctx.CostKind);
   if (!Reverse)
     return Cost;
 
