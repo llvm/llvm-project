@@ -469,6 +469,7 @@ endif()
 
 add_subdirectory(src)
 add_subdirectory(test)
+add_subdirectory(unittests)
 
 # make these variables available for tools:
 set(LIBOMP_LIBRARY_DIR ${LIBOMP_LIBRARY_DIR} PARENT_SCOPE)
