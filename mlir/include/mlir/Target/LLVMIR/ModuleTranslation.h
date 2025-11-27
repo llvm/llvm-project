@@ -512,6 +512,15 @@ llvm::CallInst *createIntrinsicCall(llvm::IRBuilderBase &builder,
                                     ArrayRef<llvm::Value *> args = {},
                                     ArrayRef<llvm::Type *> tys = {});
 
+/// Creates a call to an LLVM IR intrinsic function with the given return type
+/// and arguments. If the intrinsic is overloaded, the function signature will
+/// be automatically resolved based on the provided return type and argument
+/// types.
+llvm::CallInst *createIntrinsicCall(llvm::IRBuilderBase &builder,
+                                    llvm::Intrinsic::ID intrinsic,
+                                    llvm::Type *retTy,
+                                    ArrayRef<llvm::Value *> args);
+
 /// Creates a call to a LLVM IR intrinsic defined by LLVM_IntrOpBase. This
 /// resolves the overloads, and maps mixed MLIR value and attribute arguments to
 /// LLVM values.
