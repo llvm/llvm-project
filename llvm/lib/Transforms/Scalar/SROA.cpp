@@ -1482,12 +1482,14 @@ LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
 
 /// Walk the range of a partitioning looking for a common type to cover this
 /// sequence of slices.
-static std::pair<Type *, IntegerType *>
+/// Returns: {CommonType, LargestIntegerType, OnlyIntrinsicUsers}
+static std::tuple<Type *, IntegerType *, bool>
 findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
                uint64_t EndOffset) {
   Type *Ty = nullptr;
   bool TyIsCommon = true;
   IntegerType *ITy = nullptr;
+  bool OnlyIntrinsicUsers = true;
 
   // Note that we need to look at *every* alloca slice's Use to ensure we
   // always get consistent results regardless of the order of slices.
@@ -1495,6 +1497,8 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
     Use *U = I->getUse();
     if (isa<IntrinsicInst>(*U->getUser()))
       continue;
+    // We found a non-intrinsic user
+    OnlyIntrinsicUsers = false;
     if (I->beginOffset() != B->beginOffset() || I->endOffset() != EndOffset)
       continue;
 
@@ -1528,7 +1532,7 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
       Ty = UserTy;
   }
 
-  return {TyIsCommon ? Ty : nullptr, ITy};
+  return {TyIsCommon ? Ty : nullptr, ITy, OnlyIntrinsicUsers};
 }
 
 /// PHI instructions that use an alloca and are subsequently loaded can be
@@ -5206,19 +5210,23 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
 
     // Otherwise, check if there is a common type that all slices of the
     // partition use. Collect the largest integer type used as a backup.
-    auto CommonUseTy = findCommonType(P.begin(), P.end(), P.endOffset());
+    auto [CommonUseTy, LargestIntTy, OnlyIntrinsicUsers] =
+        findCommonType(P.begin(), P.end(), P.endOffset());
     // If there is a common type that spans the partition, use it.
-    if (CommonUseTy.first) {
-      TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy.first);
+    if (CommonUseTy) {
+      TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy);
       if (CommonUseSize.isFixed() &&
           CommonUseSize.getFixedValue() >= P.size()) {
 
         if (VecTy)
           return {VecTy, false, VecTy};
-        return {CommonUseTy.first,
-                isIntegerWideningViable(P, CommonUseTy.first, DL), nullptr};
+        return {CommonUseTy, isIntegerWideningViable(P, CommonUseTy, DL),
+                nullptr};
       }
     }
+
+    if (OnlyIntrinsicUsers && DL.isLegalInteger(P.size() * 8))
+      return {Type::getIntNTy(*C, P.size() * 8), false, nullptr};
 
     // If not, can we find an appropriate subtype in the original allocated
     // type?
@@ -5233,17 +5241,17 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
         return {TypePartitionTy, true, nullptr};
       if (VecTy)
         return {VecTy, false, VecTy};
-      if (CommonUseTy.second &&
-          DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size() &&
-          isIntegerWideningViable(P, CommonUseTy.second, DL))
-        return {CommonUseTy.second, true, nullptr};
+      if (LargestIntTy &&
+          DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size() &&
+          isIntegerWideningViable(P, LargestIntTy, DL))
+        return {LargestIntTy, true, nullptr};
       return {TypePartitionTy, false, nullptr};
     }
 
     // If still not, can we use the largest bitwidth integer type used?
-    if (CommonUseTy.second &&
-        DL.getTypeAllocSize(CommonUseTy.second).getFixedValue() >= P.size())
-      return {CommonUseTy.second, false, nullptr};
+    if (LargestIntTy &&
+        DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size())
+      return {LargestIntTy, false, nullptr};
 
     if (DL.isLegalInteger(P.size() * 8))
       return {Type::getIntNTy(*C, P.size() * 8), false, nullptr};
