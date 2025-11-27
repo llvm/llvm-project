@@ -41,8 +41,8 @@ Options
 
   Selects what kind of a fix the check should provide. The default is `UseStatic`.
 
-  ``None``
+  - `None`
     Don't fix automatically.
 
-  ``UseStatic``
+  - `UseStatic`
     Add ``static`` for internal linkage variable and function.

@@ -45,11 +45,11 @@ Options
   Selects which set of functions is considered as asynchronous-safe
   (and therefore allowed in signal handlers). It can be set to the following values:
 
-  ``minimal``
+  - `minimal`
      Selects a minimal set that is defined in the CERT SIG30-C rule.
      and includes functions ``abort()``, ``_Exit()``, ``quick_exit()`` and
      ``signal()``.
-  ``POSIX``
+  - `POSIX`
      Selects a larger set of functions that is listed in POSIX.1-2017 (see `this
      link
      <https://pubs.opengroup.org/onlinepubs/9699919799/functions/V2_chap02.html#tag_15_04_03>`_
@@ -94,4 +94,4 @@ Options
      The function ``quick_exit`` is not included in the POSIX list but it
      is included here in the set of safe functions.
 
-  The default value is ``POSIX``.
+  The default value is `POSIX`.
