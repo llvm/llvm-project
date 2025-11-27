@@ -2801,8 +2801,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     VPValue *Zext = VPBuilder(&CurRecipe)
                         .createScalarCast(Instruction::ZExt, &EVL, I64Ty, DL);
     return new VPInstruction(
-        Instruction::Sub,
-        {Zext, Plan->getOrAddLiveIn(ConstantInt::get(I64Ty, 1))}, {}, {}, DL);
+        Instruction::Sub, {Zext, Plan->getConstantInt(I64Ty, 1)}, {}, {}, DL);
   }
 
   return nullptr;
