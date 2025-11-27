@@ -703,6 +703,23 @@ static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
   return Users.takeVector();
 }
 
+/// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
+/// (IndStart, ScalarIVSteps (0, Step)). This is used when the recipe only
+/// generates scalar values.
+static VPValue *
+scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
+                                 VPlan &Plan, VPBuilder &Builder) {
+  const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
+  VPValue *StartV = Plan.getConstantInt(ID.getStep()->getType(), 0);
+  VPValue *StepV = PtrIV->getOperand(1);
+  VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
+      Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
+      nullptr, StartV, StepV, PtrIV->getDebugLoc(), Builder);
+
+  return Builder.createPtrAdd(PtrIV->getStartValue(), Steps,
+                              PtrIV->getDebugLoc(), "next.gep");
+}
+
 /// Legalize VPWidenPointerInductionRecipe, by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)) if only its scalar values are used, as
 /// VPWidenPointerInductionRecipe will generate vectors only. If some users
@@ -755,16 +772,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       if (!PtrIV->onlyScalarsGenerated(Plan.hasScalableVF()))
         continue;
 
-      const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
-      VPValue *StartV = Plan.getConstantInt(ID.getStep()->getType(), 0);
-      VPValue *StepV = PtrIV->getOperand(1);
-      VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
-          Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
-          nullptr, StartV, StepV, PtrIV->getDebugLoc(), Builder);
-
-      VPValue *PtrAdd = Builder.createPtrAdd(PtrIV->getStartValue(), Steps,
-                                             PtrIV->getDebugLoc(), "next.gep");
-
+      VPValue *PtrAdd = scalarizeVPWidenPointerInduction(PtrIV, Plan, Builder);
       PtrIV->replaceAllUsesWith(PtrAdd);
       continue;
     }
@@ -3575,6 +3583,16 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       }
 
       if (auto *WidenIVR = dyn_cast<VPWidenPointerInductionRecipe>(&R)) {
+        // If the recipe only generates scalars, scalarize it instead of
+        // expanding it.
+        if (WidenIVR->onlyScalarsGenerated(Plan.hasScalableVF())) {
+          VPBuilder Builder(WidenIVR);
+          VPValue *PtrAdd =
+              scalarizeVPWidenPointerInduction(WidenIVR, Plan, Builder);
+          WidenIVR->replaceAllUsesWith(PtrAdd);
+          ToRemove.push_back(WidenIVR);
+          continue;
+        }
         expandVPWidenPointerInduction(WidenIVR, TypeInfo);
         ToRemove.push_back(WidenIVR);
         continue;
