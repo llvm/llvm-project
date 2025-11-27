@@ -2360,15 +2360,15 @@ are listed below.
    the assumption before making the direct call, and if the check fails,
    the original virtual call is made instead. This optimization can enable
    more inlining opportunities and better optimization of the direct call.
-   This is different from other whole program devirtualization optimizations
+   This is different from whole program devirtualization optimization
    that rely on global analysis and hidden visibility of the objects to prove
    that the object is always of a particular type at a virtual call site.
    This optimization doesn't require global analysis or hidden visibility.
    This optimization doesn't devirtualize all virtual calls, but only
-   when there's a single implementation of the virtual function.
-   There could be a single implementaiton of the virtual function
+   when there's a single implementation of the virtual function in the module.
+   There could be a single implementation of the virtual function
    either because the function is not overridden in any derived class,
-   or because there is a sinlge instantiated object that is using the funciton.
+   or because there is a single instantiated object that is using the function.
 
    Ex of IR before the optimization:
   .. code-block:: llvm
@@ -2395,7 +2395,7 @@ are listed below.
     if.end.icp:                                       ; preds = %if.false.orig_indirect, %if.true.direct_targ
       ret void
   This feature is temporarily ignored at the LLVM side when LTO is enabled.
-  TODO: Update the comment when the LLVM side supports it.
+  TODO: Update the comment when the LLVM side supports this feature for LTO.
   This feature is turned off by default.
 
 .. option:: -f[no-]unique-source-file-names

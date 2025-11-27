@@ -1,5 +1,5 @@
 // Test that Clang emits vtable metadata when speculative devirtualization is enabled.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -fdevirtualize-speculatively -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=TT-ITANIUM-DEFAULT-NOLTO-SPECULATIVE-DEVIRT  %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fdevirtualize-speculatively -emit-llvm -o - %s | FileCheck --check-prefix=CHECK  %s
 
 struct A {
   A();
@@ -39,25 +39,26 @@ void D::h() {
 }
 
 void af(A *a) {
-  // TT-ITANIUM-DEFAULT-NOLTO-SPECULATIVE-DEVIRT: [[P:%[^ ]*]] = call i1 @llvm.public.type.test(ptr [[VT:%[^ ]*]], metadata !"_ZTS1A")
-  // VTABLE-OPT: call void @llvm.assume(i1 [[P]])
+  // CHECK: [[P:%[^ ]*]] = call i1 @llvm.public.type.test(ptr [[VT:%[^ ]*]], metadata !"_ZTS1A")
+  // CHECK-NEXT: call void @llvm.assume(i1 [[P]])
   a->f();
 }
 
 void dg1(D *d) {
-  // TT-ITANIUM-DEFAULT-NOLTO-SPECULATIVE-DEVIRT: [[P:%[^ ]*]] = call i1 @llvm.public.type.test(ptr [[VT:%[^ ]*]], metadata !"_ZTS1B")
-  // VTABLE-OPT: call void @llvm.assume(i1 [[P]])
+  // CHECK: [[P:%[^ ]*]] = call i1 @llvm.public.type.test(ptr [[VT:%[^ ]*]], metadata !"_ZTS1B")
+  // CHECK-NEXT: call void @llvm.assume(i1 [[P]])
   d->g();
 }
+
 void df1(D *d) {
-  // TT-ITANIUM-DEFAULT-NOLTO-SPECULATIVE-DEVIRT: [[P:%[^ ]*]] = call i1 @llvm.type.test(ptr [[VT:%[^ ]*]], metadata !11)
-  // VTABLE-OPT: call void @llvm.assume(i1 [[P]])
+  // CHECK: [[P:%[^ ]*]] = call i1 @llvm.type.test(ptr [[VT:%[^ ]*]], metadata !11)
+  // CHECK-NEXT: call void @llvm.assume(i1 [[P]])
   d->f();
 }
 
 void dh1(D *d) {
-  // TT-ITANIUM-DEFAULT-NOLTO-SPECULATIVE-DEVIRT: [[P:%[^ ]*]] = call i1 @llvm.type.test(ptr [[VT:%[^ ]*]], metadata !11)
-  // VTABLE-OPT: call void @llvm.assume(i1 [[P]])
+  // CHECK: [[P:%[^ ]*]] = call i1 @llvm.type.test(ptr [[VT:%[^ ]*]], metadata !11)
+  // CHECK-NEXT: call void @llvm.assume(i1 [[P]])
   d->h();
 }
 
