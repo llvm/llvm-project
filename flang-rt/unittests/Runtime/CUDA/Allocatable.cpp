@@ -142,7 +142,7 @@ TEST(AllocatableAsyncTest, StreamDeviceAllocatable) {
   EXPECT_TRUE(a->IsAllocated());
   cudaDeviceSynchronize();
   EXPECT_EQ(cudaSuccess, cudaGetLastError());
-  cudaStream_t s = RTDECL(CUFAssociatedGetStream)(a->raw().base_addr);
+  cudaStream_t s = RTDECL(CUFGetAssociatedStream)(a->raw().base_addr);
   EXPECT_EQ(s, stream);
   RTNAME(AllocatableDeallocate)
   (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
@@ -156,7 +156,7 @@ TEST(AllocatableAsyncTest, StreamDeviceAllocatable) {
   EXPECT_TRUE(a->IsAllocated());
   cudaDeviceSynchronize();
   EXPECT_EQ(cudaSuccess, cudaGetLastError());
-  cudaStream_t d = RTDECL(CUFAssociatedGetStream)(a->raw().base_addr);
+  cudaStream_t d = RTDECL(CUFGetAssociatedStream)(a->raw().base_addr);
   EXPECT_EQ(d, defaultStream);
   RTNAME(AllocatableDeallocate)
   (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
@@ -169,6 +169,6 @@ TEST(AllocatableAsyncTest, StreamDeviceAllocatable) {
   EXPECT_TRUE(a->IsAllocated());
   cudaDeviceSynchronize();
   EXPECT_EQ(cudaSuccess, cudaGetLastError());
-  cudaStream_t empty = RTDECL(CUFAssociatedGetStream)(a->raw().base_addr);
+  cudaStream_t empty = RTDECL(CUFGetAssociatedStream)(a->raw().base_addr);
   EXPECT_EQ(empty, nullptr);
 }
