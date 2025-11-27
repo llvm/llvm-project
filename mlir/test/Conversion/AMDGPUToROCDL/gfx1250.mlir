@@ -192,16 +192,19 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>
   // CHECK-DAG: %[[MEM_INT_LOW:.+]] = llvm.trunc %[[MEM_INT_LOW_57]] : i64 to i32
   // CHECK-DAG: %[[MEM_INT_HIGH:.+]] = llvm.trunc %[[SHIFT]] : i64 to i32
 
+  // CHECK-DAG: %[[TYPE_MASK:.+]] = llvm.mlir.constant(-2147483648 : i32)
+  // CHECK: %[[MEM_INT_HIGH_TYPE:.+]] = llvm.or %[[MEM_INT_HIGH]], %[[TYPE_MASK]]
+
   // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(2 : i32) : i32
   // CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(3 : i32) : i32
 
-  // CHECK: %[[V4I32_1_0:.+]] = llvm.mlir.poison : vector<4xi32>
-  // CHECK: %[[V4I32_1_1:.+]] = llvm.insertelement %[[C1]], %[[V4I32_1_0]][%[[C0]] : i32]
-  // CHECK: %[[V4I32_1_2:.+]] = llvm.insertelement %[[SMEM_INT]], %[[V4I32_1_1]][%[[C1]] : i32]
-  // CHECK: %[[V4I32_1_3:.+]] = llvm.insertelement %[[MEM_INT_LOW]], %[[V4I32_1_2]][%[[C2]] : i32]
-  // CHECK: %[[V4I32_1_4:.+]] = llvm.insertelement %[[MEM_INT_HIGH]], %[[V4I32_1_3]][%[[C3]] : i32]
+  // CHECK: %[[V4I32_0_0:.+]] = llvm.mlir.poison : vector<4xi32>
+  // CHECK: %[[V4I32_0_1:.+]] = llvm.insertelement %[[C1]], %[[V4I32_0_0]][%[[C0]] : i32]
+  // CHECK: %[[V4I32_0_2:.+]] = llvm.insertelement %[[SMEM_INT]], %[[V4I32_0_1]][%[[C1]] : i32]
+  // CHECK: %[[V4I32_0_3:.+]] = llvm.insertelement %[[MEM_INT_LOW]], %[[V4I32_0_2]][%[[C2]] : i32]
+  // CHECK: %[[V4I32_0_4:.+]] = llvm.insertelement %[[MEM_INT_HIGH_TYPE]], %[[V4I32_0_3]][%[[C3]] : i32]
 
   %0 = amdgpu.make_dma_base %smem[%idx], %mem[%idx] : memref<8xi32, #gpu_lds_addrspace>, memref<8xi32, #gpu_global_addrspace> -> !amdgpu.tdm_base<i32>
 

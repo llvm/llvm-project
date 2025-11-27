@@ -2311,6 +2311,10 @@ struct AMDGPUMakeDmaBaseLowering
         LLVM::TruncOp::create(rewriter, loc, i32, first57BitsOfGlobalAddr);
     Value highHalf = LLVM::TruncOp::create(rewriter, loc, i32, shift);
 
+    Value typeMask = createI32Constant(rewriter, loc, 2 << 30);
+    Value highHalfPlusType =
+        LLVM::OrOp::create(rewriter, loc, highHalf, typeMask);
+
     Value c0 = createI32Constant(rewriter, loc, 0);
     Value c1 = createI32Constant(rewriter, loc, 1);
     Value c2 = createI32Constant(rewriter, loc, 2);
@@ -2322,7 +2326,8 @@ struct AMDGPUMakeDmaBaseLowering
     result = LLVM::InsertElementOp::create(rewriter, loc, result,
                                            castForLdsAddr, c1);
     result = LLVM::InsertElementOp::create(rewriter, loc, result, lowHalf, c2);
-    result = LLVM::InsertElementOp::create(rewriter, loc, result, highHalf, c3);
+    result = LLVM::InsertElementOp::create(rewriter, loc, result,
+                                           highHalfPlusType, c3);
 
     rewriter.replaceOp(op, result);
     return success();
