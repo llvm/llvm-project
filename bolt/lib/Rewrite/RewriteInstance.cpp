@@ -1466,6 +1466,11 @@ Error RewriteInstance::discoverRtInitAddress() {
   if (auto EC = InitArraySection.getError())
     return errorCodeToError(EC);
 
+  if (InitArraySection->getAddress() != *BC->InitArrayAddress) {
+    return createStringError(std::errc::not_supported,
+                             "Inconsistent address of .init_array section");
+  }
+
   if (const Relocation *Reloc = InitArraySection->getDynamicRelocationAt(0)) {
     if (Reloc->isRelative()) {
       BC->StartFunctionAddress = Reloc->Addend;
@@ -1516,6 +1521,11 @@ Error RewriteInstance::discoverRtFiniAddress() {
       BC->getSectionForAddress(*BC->FiniArrayAddress);
   if (auto EC = FiniArraySection.getError())
     return errorCodeToError(EC);
+
+  if (FiniArraySection->getAddress() != *BC->FiniArrayAddress) {
+    return createStringError(std::errc::not_supported,
+                             "Inconsistent address of .fini_array section");
+  }
 
   if (const Relocation *Reloc = FiniArraySection->getDynamicRelocationAt(0)) {
     BC->FiniFunctionAddress = Reloc->Addend;
