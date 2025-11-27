@@ -208,59 +208,85 @@ OffloadBinary::create(MemoryBufferRef Buf) {
       new OffloadBinary(Buf, TheHeader, Entries));
 }
 
-SmallString<0> OffloadBinary::write(const OffloadingImage &OffloadingData) {
+SmallString<0> OffloadBinary::write(ArrayRef<OffloadingImage> OffloadingData) {
+  uint64_t EntriesCount = OffloadingData.size();
+  assert(EntriesCount > 0 && "At least one offloading image is required");
+
   // Create a null-terminated string table with all the used strings.
+  // Also calculate total size of images.
   StringTableBuilder StrTab(StringTableBuilder::ELF);
-  for (auto &KeyAndValue : OffloadingData.StringData) {
-    StrTab.add(KeyAndValue.first);
-    StrTab.add(KeyAndValue.second);
+  uint64_t TotalStringEntries = 0;
+  uint64_t TotalImagesSize = 0;
+  for (const OffloadingImage &Img : OffloadingData) {
+    for (auto &KeyAndValue : Img.StringData) {
+      StrTab.add(KeyAndValue.first);
+      StrTab.add(KeyAndValue.second);
+    }
+    TotalStringEntries += Img.StringData.size();
+    TotalImagesSize += Img.Image->getBufferSize();
   }
   StrTab.finalize();
 
-  uint64_t StringEntrySize =
-      sizeof(StringEntry) * OffloadingData.StringData.size();
+  uint64_t StringEntrySize = sizeof(StringEntry) * TotalStringEntries;
+  uint64_t EntriesSize = sizeof(Entry) * EntriesCount;
+  uint64_t StrTabOffset = sizeof(Header) + EntriesSize + StringEntrySize;
 
   // Make sure the image we're wrapping around is aligned as well.
-  uint64_t BinaryDataSize = alignTo(sizeof(Header) + sizeof(Entry) +
-                                        StringEntrySize + StrTab.getSize(),
-                                    getAlignment());
+  uint64_t BinaryDataSize =
+      alignTo(StrTabOffset + StrTab.getSize(), getAlignment());
 
-  // Create the header and fill in the offsets. The entry will be directly
+  // Create the header and fill in the offsets. The entries will be directly
   // placed after the header in memory. Align the size to the alignment of the
   // header so this can be placed contiguously in a single section.
   Header TheHeader;
-  TheHeader.Size = alignTo(
-      BinaryDataSize + OffloadingData.Image->getBufferSize(), getAlignment());
+  TheHeader.Size = alignTo(BinaryDataSize + TotalImagesSize, getAlignment());
   TheHeader.EntriesOffset = sizeof(Header);
-  TheHeader.EntriesCount = 1;
-
-  // Create the entry using the string table offsets. The string table will be
-  // placed directly after the entry in memory, and the image after that.
-  Entry TheEntry;
-  TheEntry.TheImageKind = OffloadingData.TheImageKind;
-  TheEntry.TheOffloadKind = OffloadingData.TheOffloadKind;
-  TheEntry.Flags = OffloadingData.Flags;
-  TheEntry.StringOffset = sizeof(Header) + sizeof(Entry);
-  TheEntry.NumStrings = OffloadingData.StringData.size();
-
-  TheEntry.ImageOffset = BinaryDataSize;
-  TheEntry.ImageSize = OffloadingData.Image->getBufferSize();
+  TheHeader.EntriesCount = EntriesCount;
 
   SmallString<0> Data;
   Data.reserve(TheHeader.Size);
   raw_svector_ostream OS(Data);
   OS << StringRef(reinterpret_cast<char *>(&TheHeader), sizeof(Header));
-  OS << StringRef(reinterpret_cast<char *>(&TheEntry), sizeof(Entry));
-  for (auto &KeyAndValue : OffloadingData.StringData) {
-    uint64_t Offset = sizeof(Header) + sizeof(Entry) + StringEntrySize;
-    StringEntry Map{Offset + StrTab.getOffset(KeyAndValue.first),
-                    Offset + StrTab.getOffset(KeyAndValue.second)};
-    OS << StringRef(reinterpret_cast<char *>(&Map), sizeof(StringEntry));
+
+  // Create the entries using the string table offsets. The string table will be
+  // placed directly after the set of entries in memory, and all the images are
+  // after that.
+  uint64_t StringEntryOffset = sizeof(Header) + EntriesSize;
+  uint64_t ImageOffset = BinaryDataSize;
+  for (const OffloadingImage &Img : OffloadingData) {
+    Entry TheEntry;
+
+    TheEntry.TheImageKind = Img.TheImageKind;
+    TheEntry.TheOffloadKind = Img.TheOffloadKind;
+    TheEntry.Flags = Img.Flags;
+
+    TheEntry.StringOffset = StringEntryOffset;
+    StringEntryOffset += sizeof(StringEntry) * Img.StringData.size();
+    TheEntry.NumStrings = Img.StringData.size();
+
+    TheEntry.ImageOffset = ImageOffset;
+    ImageOffset += Img.Image->getBufferSize();
+    TheEntry.ImageSize = Img.Image->getBufferSize();
+
+    OS << StringRef(reinterpret_cast<char *>(&TheEntry), sizeof(Entry));
   }
+
+  // Create the string map entries.
+  for (const OffloadingImage &Img : OffloadingData) {
+    for (auto &KeyAndValue : Img.StringData) {
+      StringEntry Map{StrTabOffset + StrTab.getOffset(KeyAndValue.first),
+                      StrTabOffset + StrTab.getOffset(KeyAndValue.second),
+                      KeyAndValue.second.size()};
+      OS << StringRef(reinterpret_cast<char *>(&Map), sizeof(StringEntry));
+    }
+  }
+
   StrTab.write(OS);
   // Add padding to required image alignment.
-  OS.write_zeros(TheEntry.ImageOffset - OS.tell());
-  OS << OffloadingData.Image->getBuffer();
+  OS.write_zeros(BinaryDataSize - OS.tell());
+
+  for (const OffloadingImage &Img : OffloadingData)
+    OS << Img.Image->getBuffer();
 
   // Add final padding to required alignment.
   assert(TheHeader.Size >= OS.tell() && "Too much data written?");

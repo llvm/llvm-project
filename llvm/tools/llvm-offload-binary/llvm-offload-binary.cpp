@@ -202,10 +202,12 @@ static Error unbundleImages() {
     } else {
       uint64_t Idx = 0;
       for (const OffloadBinary *Binary : Extracted) {
-        StringRef Filename =
-            Saver.save(sys::path::stem(InputFile) + "-" + Binary->getTriple() +
-                       "-" + Binary->getArch() + "." + std::to_string(Idx++) +
-                       "." + getImageKindName(Binary->getImageKind()));
+        StringRef FileExt = Binary->getEntriesCount() == 1
+                                ? getImageKindName(Binary->getOnlyImageKind())
+                                : "bundle";
+        StringRef Filename = Saver.save(
+            sys::path::stem(InputFile) + "-" + Binary->getTriple() + "-" +
+            Binary->getArch() + "." + std::to_string(Idx++) + "." + FileExt);
         if (Error E = writeFile(Filename, Binary->getImage()))
           return E;
       }

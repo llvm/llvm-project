@@ -25,7 +25,10 @@ void disassembleObject(llvm::object::ObjectFile *, bool InlineRelocs);
 
 /// Get the printable name of the image kind.
 static StringRef getImageName(const OffloadBinary &OB) {
-  switch (OB.getImageKind()) {
+  if (OB.getEntriesCount() > 1)
+    return "bundle";
+
+  switch (OB.getOnlyImageKind()) {
   case IMG_Object:
     return "elf";
   case IMG_Bitcode:

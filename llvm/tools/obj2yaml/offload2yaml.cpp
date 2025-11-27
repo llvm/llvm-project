@@ -18,20 +18,22 @@ namespace {
 
 void populateYAML(OffloadYAML::Binary &YAMLBinary, object::OffloadBinary &OB,
                   UniqueStringSaver Saver) {
-  YAMLBinary.Members.emplace_back();
-  auto &Member = YAMLBinary.Members.back();
-  Member.ImageKind = OB.getImageKind();
-  Member.OffloadKind = OB.getOffloadKind();
-  Member.Flags = OB.getFlags();
-  if (!OB.strings().empty()) {
-    Member.StringEntries = std::vector<OffloadYAML::Binary::StringEntry>();
-    for (const auto &Entry : OB.strings())
-      Member.StringEntries->emplace_back(OffloadYAML::Binary::StringEntry(
-          {Saver.save(Entry.first), Saver.save(Entry.second)}));
-  }
+  for (const auto &Entry : OB.entries()) {
+    YAMLBinary.Members.emplace_back();
+    auto &Member = YAMLBinary.Members.back();
+    Member.ImageKind = Entry.first->TheImageKind;
+    Member.OffloadKind = Entry.first->TheOffloadKind;
+    Member.Flags = Entry.first->Flags;
+    if (!Entry.second.empty()) {
+      Member.StringEntries = std::vector<OffloadYAML::Binary::StringEntry>();
+      for (const auto &StringEntry : Entry.second)
+        Member.StringEntries->emplace_back(OffloadYAML::Binary::StringEntry(
+            {Saver.save(StringEntry.first), Saver.save(StringEntry.second)}));
+    }
 
-  if (!OB.getImage().empty())
-    Member.Content = arrayRefFromStringRef(OB.getImage());
+    if (!OB.getImage().empty())
+      Member.Content = arrayRefFromStringRef(OB.getImage());
+  }
 }
 
 Expected<OffloadYAML::Binary *> dump(MemoryBufferRef Source,
