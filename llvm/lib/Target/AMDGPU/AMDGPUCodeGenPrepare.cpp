@@ -143,14 +143,6 @@ public:
 
   bool canBreakPHINode(const PHINode &I);
 
-  /// \returns True if binary operation \p I is a signed binary operation, false
-  /// otherwise.
-  bool isSigned(const BinaryOperator &I) const;
-
-  /// \returns True if the condition of 'select' operation \p I comes from a
-  /// signed 'icmp' operation, false otherwise.
-  bool isSigned(const SelectInst &I) const;
-
   /// Return true if \p T is a legal scalar floating point type.
   bool isLegalFloatingTy(const Type *T) const;
 
@@ -302,16 +294,6 @@ bool AMDGPUCodeGenPrepareImpl::run() {
   }
 
   return MadeChange;
-}
-
-bool AMDGPUCodeGenPrepareImpl::isSigned(const BinaryOperator &I) const {
-  return I.getOpcode() == Instruction::AShr ||
-      I.getOpcode() == Instruction::SDiv || I.getOpcode() == Instruction::SRem;
-}
-
-bool AMDGPUCodeGenPrepareImpl::isSigned(const SelectInst &I) const {
-  return isa<ICmpInst>(I.getOperand(0)) &&
-         cast<ICmpInst>(I.getOperand(0))->isSigned();
 }
 
 bool AMDGPUCodeGenPrepareImpl::isLegalFloatingTy(const Type *Ty) const {
