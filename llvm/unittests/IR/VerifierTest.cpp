@@ -329,7 +329,7 @@ TEST(VerifierTest, SwitchInst) {
   Switch->addCase(ConstantInt::get(Int32Ty, 2), OnTwo);
 
   EXPECT_FALSE(verifyFunction(*F));
-  // set one case value to function argument.
+  // set one successor to function argument.
   Switch->setOperand(2, F->getArg(1));
   EXPECT_TRUE(verifyFunction(*F));
 }
