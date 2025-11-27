@@ -1258,19 +1258,21 @@ def AMDGPU_MakeDmaBaseOp :
     to
 
     ```mlir
-       // pseudocode
-       %base_0 = llvm.mlir.undef : !llvm.struct<(ptr, ptr)>
-       %base_1 = llvm.insertvalue %global_addr, %base_0[0] : !llvm.struct<(ptr, ptr)>
-       %base_2 = llvm.insertvalue %lds_addr, %base_1[1] : !llvm.struct(ptr, ptr)>
-       // type(%base_2) = !llvm.struct<(ptr, ptr) roughly corresponds to amdgpu.tdm_base<i32>
+      // pseudo-code
+      %global_base = llvm.extractvalue %global_memref[1]
+      %global_address = llvm.get_element_ptr ...
 
-       // The base will be used when contructing dgroup0
-       // when lowering amdgpu.make_dma_descriptor
-       %dgroup0_0 = llvm.mlir.undef : !llvm.struct<(....)>
-       %dgroup0_1 = llvm.insertvalue %base2, %dgroup0_0 : ....
+      %lds_base = llvm.extractvalue %lds_memref[1]
+      %lds_address = llvm.get_element_ptr ...
 
-       // When lowering amdgpu.tensor_load_to_lds
-       rocdl.tensor.load.to.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
+      // Definition of %base
+      %undef = llvm.mlir.undef : vector<4xi32>
+      %v0 = llvm.insertelement %15, %undef[0] : vector<4xi32>
+      %v1 = llvm.insertelement %lds_address, %v0[1] : vector<4xi32>
+      %v2 = llvm.insertelement %global_address_low, %v1[2] : vector<4xi32>
+      %base = llvm.insertelement %global_address_high, %v2[3] : vector<4xi32>
+
+      rocdl.tensor.load.to.lds %base, %dgroup1, %dgroup2, %dgroup3 cachepolicy 0 : vector<4xi32>, vector<8xi32>
     ```
 
     These tensor DMA operations were introduced in gfx1250.
