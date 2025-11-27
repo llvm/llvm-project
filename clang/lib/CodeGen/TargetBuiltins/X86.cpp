@@ -2770,8 +2770,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID IID = Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128;
     return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
   }
-  case X86::BI__builtin_ia32_cvtsbf162ss_32:
-    return Builder.CreateFPExt(Ops[0], Builder.getFloatTy());
 
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
