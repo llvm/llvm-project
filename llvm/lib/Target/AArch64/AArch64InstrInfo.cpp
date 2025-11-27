@@ -2497,7 +2497,9 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addMemOperand(*MI.memoperands_begin());
     }
   }
-  // To match MSVC
+  // To match MSVC. Unlike x86_64 which uses xor instruction to mix the cookie,
+  // we use sub instruction to mix the cookie on aarch64 for keeping the
+  // existing inlining logic intact.
   if (Subtarget.getTargetTriple().isOSMSVCRT() &&
       !Subtarget.getTargetLowering()
            ->getTargetMachine()
