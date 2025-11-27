@@ -1490,7 +1490,7 @@ bool AArch64LegalizerInfo::legalizeCustom(
   case TargetOpcode::G_BITCAST:
     return legalizeBitcast(MI, Helper);
   case TargetOpcode::G_FPTRUNC:
-    // In order to vectorise f16 to f64 properly, we need to use f32 as an
+    // In order to lower f16 to f64 properly, we need to use f32 as an
     // intermediary
     return legalizeFptrunc(MI, MIRBuilder, MRI);
   }
@@ -2461,9 +2461,8 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
   if (ElemCount <= 2)
     RegsToUnmergeTo.push_back(Src);
   else {
-    for (unsigned i = 0; i < ElemCount / 2; ++i) {
+    for (unsigned i = 0; i < ElemCount / 2; ++i)
       RegsToUnmergeTo.push_back(MRI.createGenericVirtualRegister(v2s64));
-    }
 
     MIRBuilder.buildUnmerge(RegsToUnmergeTo, Src);
   }

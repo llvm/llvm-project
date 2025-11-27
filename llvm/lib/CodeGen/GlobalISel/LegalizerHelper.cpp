@@ -8510,7 +8510,7 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   assert(MRI.getType(Dst).getScalarType() == LLT::scalar(16) &&
          MRI.getType(Src).getScalarType() == LLT::scalar(64));
 
-  if (MRI.getType(Src).isVector())
+  if (MRI.getType(Src).isVector()) // TODO: Handle vectors directly.
     return UnableToLegalize;
 
   if (MI.getFlag(MachineInstr::FmAfn)) {
