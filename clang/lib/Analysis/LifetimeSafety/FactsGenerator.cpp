@@ -361,7 +361,7 @@ llvm::SmallVector<Fact *> FactsGenerator::createPlaceholderLoanFacts() {
       continue;
     if (ParamType->isPointerType() || ParamType->isReferenceType() ||
         isGslPointerType(ParamType)) {
-      Loan &L = FactMgr.getLoanMgr().addLoan({PVD}, /*IssueExpr=*/nullptr);
+      Loan &L = FactMgr.getLoanMgr().addLoan({}, /*IssueExpr=*/nullptr);
       FactMgr.getLoanMgr().addPlaceholderLoan(L.ID, PVD);
       OriginID OID = FactMgr.getOriginMgr().getOrCreate(*PVD);
       PlaceholderLoanFacts.push_back(FactMgr.createFact<IssueFact>(L.ID, OID));

@@ -31,7 +31,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
 struct AccessPath {
   const clang::ValueDecl *D;
 
-  AccessPath(const clang::ValueDecl *D) : D(D) {}
+  AccessPath(const clang::ValueDecl *D = nullptr) : D(D) {}
 };
 
 /// Information about a single borrow, or "Loan". A loan is created when a
