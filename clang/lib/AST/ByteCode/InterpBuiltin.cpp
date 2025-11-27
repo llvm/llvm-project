@@ -3554,6 +3554,9 @@ static bool interp__builtin_ia32_vcvtps2ph(InterpState &S, CodePtr OpPC,
   // In that case, we can only evaluate if the conversion is exact.
   int ImmVal = Imm.getZExtValue();
   bool UseMXCSR = (ImmVal & 4) != 0;
+  bool IsFPConstrained =
+      Call->getFPFeaturesInEffect(S.getASTContext().getLangOpts())
+          .isFPConstrained();
 
   llvm::RoundingMode RM;
   if (!UseMXCSR) {
@@ -3589,7 +3592,7 @@ static bool interp__builtin_ia32_vcvtps2ph(InterpState &S, CodePtr OpPC,
     bool LostInfo;
     APFloat::opStatus St = DstVal.convert(HalfSem, RM, &LostInfo);
 
-    if (UseMXCSR && St != APFloat::opOK) {
+    if (UseMXCSR && IsFPConstrained && St != APFloat::opOK) {
       S.FFDiag(S.Current->getSource(OpPC),
                diag::note_constexpr_dynamic_rounding);
       return false;

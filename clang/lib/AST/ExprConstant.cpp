@@ -13892,6 +13892,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     int ImmVal = Imm.getZExtValue();
     bool UseMXCSR = (ImmVal & 4) != 0;
+    bool IsFPConstrained =
+      E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).isFPConstrained();
 
     llvm::RoundingMode RM;
     if (!UseMXCSR) {
@@ -13924,7 +13926,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       bool LostInfo;
       APFloat::opStatus St = SrcVal.convert(HalfSem, RM, &LostInfo);
 
-      if (UseMXCSR && St != APFloat::opOK) {
+      if (UseMXCSR && IsFPConstrained && St != APFloat::opOK) {
         Info.FFDiag(E, diag::note_constexpr_dynamic_rounding);
         return false;
       }
