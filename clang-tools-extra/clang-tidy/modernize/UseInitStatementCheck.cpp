@@ -41,94 +41,112 @@ private:
   bool FoundUsage = false;
 };
 
+// Matches CompoundStmt that contains a DeclStmt immediately followed by
+// a statement matching the inner matcher.
+AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
+               ast_matchers::internal::Matcher<DeclStmt>, DeclMatcher,
+               ast_matchers::internal::Matcher<Stmt>, StmtMatcher) {
+  const auto Statements = Node.body();
+  if (llvm::size(Statements) < 2)
+    return false;
+
+  for (auto It = Statements.begin(), End = Statements.end() - 1; It != End; ++It) {
+    const auto *PrevDecl = dyn_cast<DeclStmt>(*It);
+    if (!PrevDecl)
+      continue;
+
+    clang::ast_matchers::internal::BoundNodesTreeBuilder DeclBuilder;
+    if (!DeclMatcher.matches(*PrevDecl, Finder, &DeclBuilder))
+      continue;
+
+    const auto *NextStmt = *std::next(It);
+    clang::ast_matchers::internal::BoundNodesTreeBuilder StmtBuilder;
+    StmtBuilder.addMatch(DeclBuilder);
+    if (StmtMatcher.matches(*NextStmt, Finder, &StmtBuilder)) {
+      Builder->addMatch(StmtBuilder);
+      return true;
+    }
+  }
+  return false;
+}
+
+// Collects all VarDecl references from an expression.
+static std::vector<const VarDecl *> collectVarDeclsInExpr(const Expr *E) {
+  class VarCollector : public RecursiveASTVisitor<VarCollector> {
+  public:
+    std::vector<const VarDecl *> Vars;
+
+    bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+      if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+        Vars.push_back(VD);
+      return true;
+    }
+  };
+
+  VarCollector Collector;
+  Collector.TraverseStmt(const_cast<Expr *>(E));
+  return Collector.Vars;
+}
+
+// Checks if all variables in DeclStmt are used in the condition.
+static bool allVarsUsedInCondition(const DeclStmt *DS, const Expr *Condition) {
+  const auto ConditionVars = collectVarDeclsInExpr(Condition);
+  for (const auto *D : DS->decls()) {
+    if (const auto *VD = dyn_cast<VarDecl>(D)) {
+      if (!llvm::is_contained(ConditionVars, VD))
+        return false;
+    }
+  }
+  return true;
+}
+
+// Checks if any variable in DeclStmt is used after the statement.
+static bool anyVarUsedAfterStmt(const DeclStmt *DS, const Stmt *STMT,
+                                const CompoundStmt *ParentCompound) {
+  const auto &Statements = ParentCompound->body();
+  const auto CurrentPosition = llvm::find(Statements, STMT);
+  if (CurrentPosition == Statements.end())
+    return false;
+
+  const auto StatementsAfter = std::next(CurrentPosition);
+  if (StatementsAfter == Statements.end())
+    return false;
+
+  for (const auto *D : DS->decls()) {
+    if (const auto *VD = dyn_cast<VarDecl>(D)) {
+      for (const Stmt *S : llvm::make_range(StatementsAfter, Statements.end())) {
+        VariableUsageVisitor Visitor(VD);
+        Visitor.TraverseStmt(const_cast<Stmt *>(S));
+        if (Visitor.foundUsage())
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
-  // Matcher for if statements that use a variable in condition
-  Finder->addMatcher(ifStmt(unless(isInTemplateInstantiation()),
-                            unless(hasInitStatement(anything())),
-                            hasCondition(expr().bind("condition")))
-                         .bind("ifStmt"),
-                     this);
+  auto IfStmtMatcher = ifStmt(unless(isInTemplateInstantiation()),
+                              unless(hasInitStatement(anything())),
+                              hasCondition(expr().bind("condition")))
+                           .bind("ifStmt");
+  
+  auto SwitchStmtMatcher = switchStmt(unless(isInTemplateInstantiation()),
+                                      unless(hasInitStatement(anything())),
+                                      hasCondition(expr().bind("condition")))
+                               .bind("switchStmt");
 
-  // Matcher for switch statements that use a variable in condition
-  Finder->addMatcher(switchStmt(unless(isInTemplateInstantiation()),
-                                unless(hasInitStatement(anything())),
-                                hasCondition(expr().bind("condition")))
-                         .bind("switchStmt"),
-                     this);
-}
+  Finder->addMatcher(
+      compoundStmt(hasAdjacentStmts(declStmt().bind("prevDecl"), IfStmtMatcher))
+          .bind("compoundStmt"),
+      this);
 
-static const DeclStmt *findPreviousDeclStmt(const Stmt *CurrentStmt,
-                                            ASTContext *Context) {
-  // Validate inputs
-  if (!CurrentStmt) {
-    return nullptr;
-  }
-
-  // Get parent compound statement
-  const auto &Parents = Context->getParents(*CurrentStmt);
-  if (Parents.empty()) {
-    return nullptr;
-  }
-
-  const auto *ParentCompound = Parents[0].get<CompoundStmt>();
-  if (!ParentCompound) {
-    return nullptr;
-  }
-
-  // Find current statement position
-  const auto Statements = ParentCompound->body();
-  const auto CurrentPosition = llvm::find(Statements, CurrentStmt);
-
-  if (CurrentPosition == Statements.end() ||
-      CurrentPosition == Statements.begin()) {
-    return nullptr; // Not found or no previous statement
-  }
-
-  // Get previous statement
-  const auto *PreviousStatement = *std::prev(CurrentPosition);
-  return dyn_cast<DeclStmt>(PreviousStatement);
-}
-
-static bool isVariableUsedAfterStmt(const VarDecl *VD, const Stmt *STMT,
-                                    ASTContext *Context) {
-  // Validate inputs
-  if (!STMT || !VD) {
-    return false;
-  }
-
-  // Get parent compound statement
-  const auto &Parents = Context->getParents(*STMT);
-  if (Parents.empty()) {
-    return false;
-  }
-
-  const auto *ParentCompound = Parents[0].get<CompoundStmt>();
-  if (!ParentCompound) {
-    return false;
-  }
-
-  // Find current statement in the compound statement
-  const auto &Statements = ParentCompound->body();
-  const auto CurrentPosition = llvm::find(Statements, STMT);
-
-  // Check if statement was found and there are statements after it
-  if (CurrentPosition == Statements.end()) {
-    return false;
-  }
-
-  const auto StatementsAfter = std::next(CurrentPosition);
-  if (StatementsAfter == Statements.end()) {
-    return false; // No statements after current one
-  }
-
-  // Check each subsequent statement for variable usage
-  return std::any_of(StatementsAfter, Statements.end(), [&](const Stmt *S) {
-    VariableUsageVisitor Visitor(VD);
-    Visitor.TraverseStmt(const_cast<Stmt *>(S));
-    return Visitor.foundUsage();
-  });
+  Finder->addMatcher(
+      compoundStmt(hasAdjacentStmts(declStmt().bind("prevDecl"), SwitchStmtMatcher))
+          .bind("compoundStmt"),
+      this);
 }
 
 static StringRef normDeclStmtText(StringRef Text) {
@@ -139,75 +157,46 @@ static StringRef normDeclStmtText(StringRef Text) {
   return Text;
 }
 
+static std::vector<const VarDecl *> getVarDeclsFromDeclStmt(const DeclStmt *DS) {
+  std::vector<const VarDecl *> Vars;
+  Vars.reserve(llvm::size(DS->decls()));
+  for (const auto *D : DS->decls()) {
+    if (const auto *VD = dyn_cast<VarDecl>(D))
+      Vars.push_back(VD);
+  }
+  return Vars;
+}
+
 void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *If = Result.Nodes.getNodeAs<IfStmt>("ifStmt");
   const auto *Switch = Result.Nodes.getNodeAs<SwitchStmt>("switchStmt");
+  const auto *PrevDecl = Result.Nodes.getNodeAs<DeclStmt>("prevDecl");
   const auto *Condition = Result.Nodes.getNodeAs<Expr>("condition");
+  const auto *Compound = Result.Nodes.getNodeAs<CompoundStmt>("compoundStmt");
+
+  if (!PrevDecl || !Condition || !Compound)
+    return;
 
   const Stmt *Statement = If ? static_cast<const Stmt *>(If) : Switch;
   if (!Statement)
     return;
 
-  // Find all variable references in the condition
-  class VarCollector : public RecursiveASTVisitor<VarCollector> {
-  public:
-    std::vector<const VarDecl *> Vars;
-
-    bool VisitDeclRefExpr(DeclRefExpr *DRE) {
-      if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-        Vars.push_back(VD);
-      }
-      return true; // Continue traversal
-    }
-  };
-
-  VarCollector Collector;
-  Collector.TraverseStmt(const_cast<Expr *>(Condition));
-
-  const DeclStmt *PrevDecl = findPreviousDeclStmt(Statement, Result.Context);
-
-  // Get all variables declared in this DeclStmt
-  std::vector<const VarDecl *> AllVarsInDecl;
-  AllVarsInDecl.reserve(llvm::size(PrevDecl->decls()));
-  for (const auto *D : PrevDecl->decls()) {
-    if (const auto *VD = dyn_cast<VarDecl>(D))
-      AllVarsInDecl.push_back(VD);
-  }
-
-  // TODO: do we need to check all variables??
-  // Check if all variables in DeclStmt are used in condition
-  const auto varUnusedInCondition =
-      llvm::find_if_not(AllVarsInDecl, [&](const VarDecl *VD) {
-        return llvm::is_contained(Collector.Vars, VD);
-      });
-
-  if (varUnusedInCondition != AllVarsInDecl.end())
+  if (!allVarsUsedInCondition(PrevDecl, Condition))
     return;
 
-  // Check that none of the variables are used after the statement
-  const auto anyUsageAfter =
-      llvm::find_if(AllVarsInDecl, [&](const VarDecl *VD) {
-        return isVariableUsedAfterStmt(VD, Statement, Result.Context);
-      });
-
-  if (anyUsageAfter != AllVarsInDecl.end())
+  if (anyVarUsedAfterStmt(PrevDecl, Statement, Compound))
     return;
 
-  // All conditions met - suggest moving the entire DeclStmt
-  // Get the source range including the semicolon
+  const auto AllVarsInDecl = getVarDeclsFromDeclStmt(PrevDecl);
   const SourceRange RemovalRange = PrevDecl->getSourceRange();
+  const bool CanFix = utils::rangeCanBeFixed(RemovalRange, Result.SourceManager) &&
+                      !Condition->getBeginLoc().isMacroID();
 
-  // Check if the range can be fixed (i.e., doesn't contain macro expansions)
-  const bool CanFix =
-      utils::rangeCanBeFixed(RemovalRange, Result.SourceManager) &&
-      !Condition->getBeginLoc().isMacroID();
-
-  // Get the text of the declaration (without semicolon)
   const StringRef DeclStmtText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(PrevDecl->getSourceRange()),
       *Result.SourceManager, getLangOpts());
-  
   const auto NewInitStmt = normDeclStmtText(DeclStmtText).str() + "; ";
+
   auto Diag = diag(PrevDecl->getBeginLoc(),
                    "%select{multiple variable|variable %1}0 declaration "
                    "before %select{if|switch}2 statement could be moved into "

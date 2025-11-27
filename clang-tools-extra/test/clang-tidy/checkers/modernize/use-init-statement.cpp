@@ -5,6 +5,7 @@ int get_with_possible_side_effects();
 enum class INITIALIZE_STATUS { OK, FAIL, PENDING };
 INITIALIZE_STATUS initialize(int& val);
 #define DUMMY_TOKEN // crutch because CHECK-FIXES unable to match empty string
+// TODO: std::lock_guard lock(mx)
 
 void good() {
     int i1 = 0;
