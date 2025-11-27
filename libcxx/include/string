@@ -2329,14 +2329,15 @@ private:
   __allocate_long_buffer(_Allocator& __alloc, size_type __capacity) {
     _LIBCPP_ASSERT_INTERNAL(!__fits_in_sso(__capacity),
                             "Trying to allocate long buffer for a capacity what would fit into the small buffer");
-    auto __buffer = std::__allocate_at_least(__alloc, __align_allocation_size(__capacity));
+    size_type __aligned_capacity = __align_allocation_size(__capacity);
+    auto __buffer                = std::__allocate_at_least(__alloc, __aligned_capacity);
 
     if (__libcpp_is_constant_evaluated()) {
       for (size_type __i = 0; __i != __buffer.count; ++__i)
         std::__construct_at(std::addressof(__buffer.ptr[__i]));
     }
 
-    return __long(__buffer, __capacity);
+    return __long(__buffer, __aligned_capacity);
   }
 
   // Replace the current buffer with __new_rep. Deallocate the old long buffer if it exists.
@@ -2422,6 +2423,10 @@ private:
   }
   enum { __alignment = 8 };
 
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_power_of_2(size_type __s) _NOEXCEPT {
+    return __s != 0 && (__s & (__s - 1)) == 0;
+  }
+
   // This makes sure that we're using a capacity with some extra alignment, since allocators almost always over-align
   // the allocations anyways, improving memory usage. More importantly, this ensures that the lowest bit is never set
   // if __endian_factor == 2, allowing us to store whether we're in the long string inside the lowest bit.
@@ -2429,11 +2434,28 @@ private:
   __align_allocation_size(size_type __size) _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(
         !__fits_in_sso(__size), "Trying to align allocation of a size which would fit into the SSO");
-    const size_type __boundary = sizeof(value_type) < __alignment ? __alignment / sizeof(value_type) : __endian_factor;
-    size_type __guess          = __align_it<__boundary>(__size + 1);
-    if (__guess == __min_cap + 1)
-      __guess += __endian_factor;
 
+    size_type __guess;
+
+    if (__is_power_of_2(sizeof(value_type))) {
+      // If the size of a _Char is itself a power of 2, then we can align the
+      // total allocation size in bytes by aligning the count of characters to
+      // an appropriate power of 2.
+      const size_type __boundary =
+          sizeof(value_type) < __alignment ? __alignment / sizeof(value_type) : __endian_factor;
+      __guess = __align_it<__boundary>(__size + 1);
+      if (__guess == __min_cap + 1)
+        __guess += __endian_factor;
+    } else {
+      // Otherwise, we must align the size in bytes and then calculate the
+      // count of characters by division.
+      const size_type __even_size       = __align_it<__endian_factor>(__size + 1);
+      const size_type __unaligned_bytes = __even_size * sizeof(value_type);
+      const size_type __aligned_bytes   = __align_it<__alignment>(__unaligned_bytes);
+      __guess                           = (__aligned_bytes / (sizeof(value_type) * __endian_factor)) * __endian_factor;
+    }
+
+    _LIBCPP_ASSERT_INTERNAL(__guess % __endian_factor == 0, "aligned allocation size is odd but __endian_factor == 2");
     _LIBCPP_ASSERT_INTERNAL(__guess >= __size, "aligned allocation size is below the requested size");
     return __guess;
   }
