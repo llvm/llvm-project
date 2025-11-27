@@ -394,9 +394,6 @@ def FeatureTRBE : Extension<"trbe", "TRBE", "FEAT_TRBE",
 def FeatureETE : Extension<"ete", "ETE", "FEAT_ETE",
   "Enable Embedded Trace Extension", [FeatureTRBE]>;
 
-def FeatureTME : ExtensionWithMArch<"tme", "TME", "FEAT_TME",
-  "Enable Transactional Memory Extension">;
-
 //===----------------------------------------------------------------------===//
 //  Armv9.1 Architecture Extensions
 //===----------------------------------------------------------------------===//
@@ -631,6 +628,15 @@ def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM"
 
 def FeatureMOPS_GO: ExtensionWithMArch<"mops-go", "MOPS_GO", "FEAT_MOPS_GO",
   "Enable memset acceleration granule only">;
+
+def FeatureBTIE: ExtensionWithMArch<"btie", "BTIE", "FEAT_BTIE",
+  "Enable Enhanced Branch Target Identification extension">;
+
+def FeatureS1POE2: ExtensionWithMArch<"poe2", "POE2", "FEAT_S1POE2",
+  "Enable Stage 1 Permission Overlays Extension 2 instructions">;
+
+def FeatureTEV: ExtensionWithMArch<"tev", "TEV", "FEAT_TEV",
+  "Enable TIndex Exception-like Vector instructions">;
 
 //===----------------------------------------------------------------------===//
 //  Other Features
@@ -887,6 +893,11 @@ def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedO
 def FeatureUseFixedOverScalableIfEqualCost : SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
   "UseFixedOverScalableIfEqualCost", "true",
   "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
+
+def FeatureDisableMaximizeScalableBandwidth : SubtargetFeature< "disable-maximize-scalable-bandwidth",
+    "DisableMaximizeScalableBandwidth", "true",
+    "Determine the maximum scalable vector length for a loop by the "
+    "largest scalar type rather than the smallest">;
 
 // For performance reasons we prefer to use ldapr to ldapur on certain cores.
 def FeatureAvoidLDAPUR : SubtargetFeature<"avoid-ldapur", "AvoidLDAPUR", "true",

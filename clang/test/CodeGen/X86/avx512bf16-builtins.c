@@ -2,6 +2,11 @@
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512bf16 -emit-llvm -o - -Wall -Werror | FileCheck %s
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bf16 -emit-llvm -o - -Wall -Werror | FileCheck %s
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512bf16 -emit-llvm -o - -Wall -Werror | FileCheck %s
+//
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bf16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512bf16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bf16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512bf16 -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
 
 #include <immintrin.h>
 
@@ -74,23 +79,20 @@ __m512 test_mm512_mask_dpbf16_ps(__m512 D, __m512bh A, __m512bh B, __mmask16 U) 
 
 __m512 test_mm512_cvtpbh_ps(__m256bh A) {
   // CHECK-LABEL: test_mm512_cvtpbh_ps
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: call <16 x i32> @llvm.x86.avx512.pslli.d.512(<16 x i32> %{{.*}}, i32 %{{.*}})
+  // CHECK: fpext <16 x bfloat> %{{.*}} to <16 x float>
   return _mm512_cvtpbh_ps(A);
 }
 
 __m512 test_mm512_maskz_cvtpbh_ps(__mmask16 M, __m256bh A) {
   // CHECK-LABEL: test_mm512_maskz_cvtpbh_ps
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
-  // CHECK: call <16 x i32> @llvm.x86.avx512.pslli.d.512(<16 x i32> %{{.*}}, i32 %{{.*}})
+  // CHECK: fpext <16 x bfloat> %{{.*}} to <16 x float>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_cvtpbh_ps(M, A);
 }
 
 __m512 test_mm512_mask_cvtpbh_ps(__m512 S, __mmask16 M, __m256bh A) {
   // CHECK-LABEL: test_mm512_mask_cvtpbh_ps
-  // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
-  // CHECK: call <16 x i32> @llvm.x86.avx512.pslli.d.512(<16 x i32> %{{.*}}, i32 %{{.*}})
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
+  // CHECK: fpext <16 x bfloat> %{{.*}} to <16 x float>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_cvtpbh_ps(S, M, A);
 }

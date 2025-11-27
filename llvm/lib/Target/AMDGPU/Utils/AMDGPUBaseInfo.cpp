@@ -2052,56 +2052,63 @@ unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
   return packBits(VmVsrc, Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
 }
 
-unsigned encodeFieldVmVsrc(unsigned VmVsrc) {
-  return encodeFieldVmVsrc(0xffff, VmVsrc);
+unsigned encodeFieldVmVsrc(unsigned VmVsrc, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVmVsrc(Encoded, VmVsrc);
 }
 
 unsigned encodeFieldVaVdst(unsigned Encoded, unsigned VaVdst) {
   return packBits(VaVdst, Encoded, getVaVdstBitShift(), getVaVdstBitWidth());
 }
 
-unsigned encodeFieldVaVdst(unsigned VaVdst) {
-  return encodeFieldVaVdst(0xffff, VaVdst);
+unsigned encodeFieldVaVdst(unsigned VaVdst, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVaVdst(Encoded, VaVdst);
 }
 
 unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst) {
   return packBits(SaSdst, Encoded, getSaSdstBitShift(), getSaSdstBitWidth());
 }
 
-unsigned encodeFieldSaSdst(unsigned SaSdst) {
-  return encodeFieldSaSdst(0xffff, SaSdst);
+unsigned encodeFieldSaSdst(unsigned SaSdst, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldSaSdst(Encoded, SaSdst);
 }
 
 unsigned encodeFieldVaSdst(unsigned Encoded, unsigned VaSdst) {
   return packBits(VaSdst, Encoded, getVaSdstBitShift(), getVaSdstBitWidth());
 }
 
-unsigned encodeFieldVaSdst(unsigned VaSdst) {
-  return encodeFieldVaSdst(0xffff, VaSdst);
+unsigned encodeFieldVaSdst(unsigned VaSdst, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVaSdst(Encoded, VaSdst);
 }
 
 unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc) {
   return packBits(VaVcc, Encoded, getVaVccBitShift(), getVaVccBitWidth());
 }
 
-unsigned encodeFieldVaVcc(unsigned VaVcc) {
-  return encodeFieldVaVcc(0xffff, VaVcc);
+unsigned encodeFieldVaVcc(unsigned VaVcc, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVaVcc(Encoded, VaVcc);
 }
 
 unsigned encodeFieldVaSsrc(unsigned Encoded, unsigned VaSsrc) {
   return packBits(VaSsrc, Encoded, getVaSsrcBitShift(), getVaSsrcBitWidth());
 }
 
-unsigned encodeFieldVaSsrc(unsigned VaSsrc) {
-  return encodeFieldVaSsrc(0xffff, VaSsrc);
+unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldVaSsrc(Encoded, VaSsrc);
 }
 
 unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt) {
   return packBits(HoldCnt, Encoded, getHoldCntBitShift(), getHoldCntWidth());
 }
 
-unsigned encodeFieldHoldCnt(unsigned HoldCnt) {
-  return encodeFieldHoldCnt(0xffff, HoldCnt);
+unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI) {
+  unsigned Encoded = getDefaultDepCtrEncoding(STI);
+  return encodeFieldHoldCnt(Encoded, HoldCnt);
 }
 
 } // namespace DepCtr
@@ -3439,17 +3446,36 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
       AMDGPU::OpName::src0Y, AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vsrc2Y,
       AMDGPU::OpName::vdstY};
 
+  // VOP2 MADMK instructions use src0, imm, src1 scheme.
+  static const AMDGPU::OpName VOP2MADMKOps[4] = {
+      AMDGPU::OpName::src0, AMDGPU::OpName::NUM_OPERAND_NAMES,
+      AMDGPU::OpName::src1, AMDGPU::OpName::vdst};
+
   unsigned TSFlags = Desc.TSFlags;
 
   if (TSFlags &
       (SIInstrFlags::VOP1 | SIInstrFlags::VOP2 | SIInstrFlags::VOP3 |
        SIInstrFlags::VOP3P | SIInstrFlags::VOPC | SIInstrFlags::DPP)) {
+    switch (Desc.getOpcode()) {
     // LD_SCALE operands ignore MSB.
-    if (Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32 ||
-        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32_gfx1250 ||
-        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64 ||
-        Desc.getOpcode() == AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64_gfx1250)
+    case AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32:
+    case AMDGPU::V_WMMA_LD_SCALE_PAIRED_B32_gfx1250:
+    case AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64:
+    case AMDGPU::V_WMMA_LD_SCALE16_PAIRED_B64_gfx1250:
       return {};
+    case AMDGPU::V_FMAMK_F16:
+    case AMDGPU::V_FMAMK_F16_t16:
+    case AMDGPU::V_FMAMK_F16_t16_gfx12:
+    case AMDGPU::V_FMAMK_F16_fake16:
+    case AMDGPU::V_FMAMK_F16_fake16_gfx12:
+    case AMDGPU::V_FMAMK_F32:
+    case AMDGPU::V_FMAMK_F32_gfx12:
+    case AMDGPU::V_FMAMK_F64:
+    case AMDGPU::V_FMAMK_F64_gfx1250:
+      return {VOP2MADMKOps, nullptr};
+    default:
+      break;
+    }
     return {VOPOps, nullptr};
   }
 
@@ -3546,8 +3572,15 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  return ST.hasFeature(AMDGPU::FeatureAddressableLocalMemorySize327680) ? 256
-                                                                        : 128;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
+    return 64;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
+    return 128;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
+    return 320;
+  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
+    return 512;
+  return 64; // In sync with getAddressableLocalMemorySize
 }
 
 bool isPackedFP32Inst(unsigned Opc) {

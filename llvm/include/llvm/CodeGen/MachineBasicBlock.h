@@ -547,8 +547,8 @@ public:
     using pointer = const RegisterMaskPair *;
     using reference = const RegisterMaskPair &;
 
-    liveout_iterator(const MachineBasicBlock &MBB, MCPhysReg ExceptionPointer,
-                     MCPhysReg ExceptionSelector, bool End)
+    liveout_iterator(const MachineBasicBlock &MBB, MCRegister ExceptionPointer,
+                     MCRegister ExceptionSelector, bool End)
         : ExceptionPointer(ExceptionPointer),
           ExceptionSelector(ExceptionSelector), BlockI(MBB.succ_begin()),
           BlockEnd(MBB.succ_end()) {
@@ -613,7 +613,7 @@ public:
       return true;
     }
 
-    MCPhysReg ExceptionPointer, ExceptionSelector;
+    MCRegister ExceptionPointer, ExceptionSelector;
     const_succ_iterator BlockI;
     const_succ_iterator BlockEnd;
     livein_iterator LiveRegI;
@@ -986,6 +986,13 @@ public:
   /// return instruction.
   bool isEHScopeReturnBlock() const {
     return !empty() && back().isEHScopeReturn();
+  }
+
+  /// Convenience function that returns true if the block exits the function
+  /// without returning.
+  bool isNoReturnBlock() const {
+    return !empty() && succ_empty() && !back().isReturn() &&
+           !back().isIndirectBranch();
   }
 
   /// Split a basic block into 2 pieces at \p SplitPoint. A new block will be

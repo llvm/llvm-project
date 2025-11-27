@@ -11,9 +11,9 @@ CHARACTER(30) :: command, msg
 INTEGER :: exitVal, cmdVal
 LOGICAL :: isWait
 call execute_command_line(command, isWait, exitVal, cmdVal, msg)
-! CHECK-NEXT:        %[[c13:.*]] = arith.constant 13 : i32 
-! CHECK-NEXT:        %true = arith.constant true 
-! CHECK-NEXT:        %[[c0:.*]] = arith.constant 0 : i64 
+! CHECK-NEXT:        %[[c13:.*]] = arith.constant 13 : i32
+! CHECK-NEXT:        %true = arith.constant true
+! CHECK-NEXT:        %[[c0:.*]] = arith.constant 0 : i64
 ! CHECK-NEXT:        %[[c30:.*]] = arith.constant 30 : index
 ! CHECK-NEXT:        %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK-NEXT:        %[[cmdstatsDeclare:.*]] = fir.declare %[[cmdstatArg]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFall_argsEcmdval"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
@@ -51,8 +51,8 @@ end subroutine all_args
 subroutine only_command_default_wait_true(command)
 CHARACTER(30) :: command
 call execute_command_line(command)
-! CHECK-NEXT:     %[[c52:.*]] = arith.constant 53 : i32 
-! CHECK-NEXT:     %true = arith.constant true 
+! CHECK-NEXT:     %[[c52:.*]] = arith.constant 53 : i32
+! CHECK-NEXT:     %true = arith.constant true
 ! CHECK-NEXT:     %[[c30:.*]] = arith.constant 30 : index
 ! CHECK-NEXT:        %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK-NEXT:     %[[commandUnbox:.*]]:2 = fir.unboxchar %[[cmdArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
@@ -60,7 +60,7 @@ call execute_command_line(command)
 ! CHECK-NEXT:     %[[commandDeclare:.*]] = fir.declare %[[commandCast]] typeparams %[[c30]] dummy_scope %[[DSCOPE]] arg {{[0-9]+}} {uniq_name = "_QFonly_command_default_wait_trueEcommand"} : (!fir.ref<!fir.char<1,30>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,30>>
 ! CHECK-NEXT:     %[[commandBox:.*]] = fir.embox %[[commandDeclare]] : (!fir.ref<!fir.char<1,30>>) -> !fir.box<!fir.char<1,30>>
 ! CHECK-NEXT:     %[[absent:.*]] = fir.absent !fir.box<none>
-! CHECK:          %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,30>>) -> !fir.box<none> 
+! CHECK:          %[[command:.*]] = fir.convert %[[commandBox]] : (!fir.box<!fir.char<1,30>>) -> !fir.box<none>
 ! CHECK:          fir.call @_FortranAExecuteCommandLine(%[[command]], %true, %[[absent]], %[[absent]], %[[absent]], %[[VAL_7:.*]], %[[c52]]) fastmath<contract> : (!fir.box<none>, i1, !fir.box<none>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 ! CHECK-NEXT:     return
 end subroutine only_command_default_wait_true

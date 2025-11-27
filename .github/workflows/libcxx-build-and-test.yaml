@@ -36,7 +36,7 @@ concurrency:
 jobs:
   stage1:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-next-runners
+    runs-on: llvm-premerge-libcxx-runners
     continue-on-error: false
     strategy:
       fail-fast: false
@@ -54,7 +54,7 @@ jobs:
             cc: 'gcc-15'
             cxx: 'g++-15'
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -73,7 +73,7 @@ jobs:
             **/crash_diagnostics/*
   stage2:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-libcxx-next-runners
+    runs-on: llvm-premerge-libcxx-runners
     needs: [ stage1 ]
     continue-on-error: false
     strategy:
@@ -99,7 +99,7 @@ jobs:
             cc: 'clang-20'
             cxx: 'clang++-20'
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -148,22 +148,22 @@ jobs:
           'generic-static',
           'bootstrapping-build'
         ]
-        machine: [ 'llvm-premerge-libcxx-next-runners' ]
+        machine: [ 'llvm-premerge-libcxx-runners' ]
         include:
         - config: 'generic-cxx26'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-asan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-tsan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         - config: 'generic-ubsan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
         # Use a larger machine for MSAN to avoid timeout and memory allocation issues.
         - config: 'generic-msan'
-          machine: llvm-premerge-libcxx-next-runners
+          machine: llvm-premerge-libcxx-runners
     runs-on: ${{ matrix.machine }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
@@ -211,7 +211,7 @@ jobs:
           os: macos-15
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
         with:
           # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
@@ -253,7 +253,7 @@ jobs:
         - { config: mingw-static, mingw: true, runner: windows-11-arm }
     runs-on: ${{ matrix.runner != '' && matrix.runner || 'windows-2022' }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Install dependencies
         run: |
           pip install psutil
