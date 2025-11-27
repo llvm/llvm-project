@@ -1190,6 +1190,9 @@ public:
   LLVM_ABI SDValue getElementCount(const SDLoc &DL, EVT VT, ElementCount EC,
                                    bool ConstantFold = true);
 
+  LLVM_ABI SDValue getTypeSize(const SDLoc &DL, EVT VT, TypeSize TS,
+                               bool ConstantFold = true);
+
   /// Return a GLOBAL_OFFSET_TABLE node. This does not have a useful SDLoc.
   SDValue getGLOBAL_OFFSET_TABLE(EVT VT) {
     return getNode(ISD::GLOBAL_OFFSET_TABLE, SDLoc(), VT);

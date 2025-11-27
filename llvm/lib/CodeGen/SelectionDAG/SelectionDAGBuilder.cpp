@@ -4583,17 +4583,8 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   if (AllocSize.getValueType() != IntPtr)
     AllocSize = DAG.getZExtOrTrunc(AllocSize, dl, IntPtr);
 
-  if (TySize.isScalable())
-    AllocSize = DAG.getNode(ISD::MUL, dl, IntPtr, AllocSize,
-                            DAG.getVScale(dl, IntPtr,
-                                          APInt(IntPtr.getScalarSizeInBits(),
-                                                TySize.getKnownMinValue())));
-  else {
-    SDValue TySizeValue =
-        DAG.getConstant(TySize.getFixedValue(), dl, MVT::getIntegerVT(64));
-    AllocSize = DAG.getNode(ISD::MUL, dl, IntPtr, AllocSize,
-                            DAG.getZExtOrTrunc(TySizeValue, dl, IntPtr));
-  }
+  AllocSize = DAG.getNode(ISD::MUL, dl, IntPtr, AllocSize,
+                          DAG.getTypeSize(dl, IntPtr, TySize));
 
   // Handle alignment.  If the requested alignment is less than or equal to
   // the stack alignment, ignore it.  If the size is greater than or equal to
