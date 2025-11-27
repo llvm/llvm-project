@@ -267,11 +267,8 @@ public:
     return *static_cast<DerivedT *>(this);
   }
   using BaseT::operator-;
-  difference_type operator-(const DerivedT &RHS) const
-#ifdef __cpp_concepts
-    requires(bool(BaseT::IsRandomAccess))
-#endif
-  {
+  template <bool Enabled = bool(BaseT::IsRandomAccess), std::enable_if_t<Enabled, int> = 0>
+  difference_type operator-(const DerivedT &RHS) const {
     static_assert(
         BaseT::IsRandomAccess,
         "The '-' operator is only defined for random access iterators.");
