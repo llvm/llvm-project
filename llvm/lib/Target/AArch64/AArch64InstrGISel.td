@@ -149,6 +149,13 @@ def G_VLSHR : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Float truncation using round to odd
+def G_FPTRUNC_ODD : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
 // Represents an integer to FP conversion on the FPR bank.
 def G_SITOF : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
