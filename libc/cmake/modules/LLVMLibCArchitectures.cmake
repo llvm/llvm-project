@@ -215,6 +215,37 @@ else()
           "Unsupported libc target operating system ${LIBC_TARGET_OS}")
 endif()
 
+# If the compiler target triple is not the same as the triple specified by
+# LIBC_TARGET_TRIPLE or LLVM_RUNTIMES_TARGET, we will add a --target option
+# if the compiler is clang. If the compiler is GCC we just error out as there
+# is no equivalent of an option like --target.
+if(explicit_target_triple AND
+   (NOT (libc_compiler_triple STREQUAL explicit_target_triple)))
+  set(LIBC_CROSSBUILD TRUE)
+  if(CMAKE_COMPILER_IS_GNUCXX)
+    message(FATAL_ERROR
+            "GCC target triple (${libc_compiler_triple}) and the explicity "
+            "specified target triple (${explicit_target_triple}) do not match.")
+  else()
+    list(APPEND
+         LIBC_COMPILE_OPTIONS_DEFAULT "--target=${explicit_target_triple}")
+  endif()
+endif()
+
+if(LIBC_TARGET_OS_IS_DARWIN)
+  execute_process(
+    COMMAND xcrun --sdk macosx --show-sdk-path
+    OUTPUT_VARIABLE MACOSX_SDK_PATH
+    RESULT_VARIABLE MACOSX_SDK_PATH_RESULT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if(MACOSX_SDK_PATH_RESULT EQUAL 0)
+    list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-I" "${MACOSX_SDK_PATH}/usr/include")
+  else()
+    message(WARNING "Could not find macOS SDK path. `xcrun --sdk macosx --show-sdk-path` failed.")
+  endif()
+endif()
+
 # Windows does not support full mode build.
 if (LIBC_TARGET_OS_IS_WINDOWS AND LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "Windows does not support full mode build.")

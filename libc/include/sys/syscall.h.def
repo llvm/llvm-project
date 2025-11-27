@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SYS_SYSCALL_H
 #define LLVM_LIBC_SYS_SYSCALL_H
 
-//TODO: Handle non-linux syscalls
+#if defined(__linux__)
 
 #include <asm/unistd.h>
 
@@ -2361,5 +2361,6 @@
 #define SYS_writev __NR_writev
 #endif
 
+#endif // __linux__
 
 #endif // LLVM_LIBC_SYS_SYSCALL_H
