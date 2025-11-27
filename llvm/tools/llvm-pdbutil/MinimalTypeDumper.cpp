@@ -309,7 +309,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
     return Error::success();
 
   auto Max = llvm::max_element(Indices);
-  uint32_t W = NumDigits(Max->getIndex()) + 2;
+  uint32_t W = NumDigitsBase10(Max->getIndex()) + 2;
 
   for (auto I : Indices)
     P.formatLine("{0}: `{1}`", fmt_align(I, AlignStyle::Right, W),
@@ -324,7 +324,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
     return Error::success();
 
   auto Max = llvm::max_element(Indices);
-  uint32_t W = NumDigits(Max->getIndex()) + 2;
+  uint32_t W = NumDigitsBase10(Max->getIndex()) + 2;
 
   for (auto I : Indices)
     P.formatLine("{0}: `{1}`", fmt_align(I, AlignStyle::Right, W),
@@ -494,7 +494,7 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
     return Error::success();
 
   auto Max = llvm::max_element(Indices);
-  uint32_t W = NumDigits(Max->getIndex()) + 2;
+  uint32_t W = NumDigitsBase10(Max->getIndex()) + 2;
 
   for (auto I : Indices)
     P.formatLine("{0}: `{1}`", fmt_align(I, AlignStyle::Right, W),
