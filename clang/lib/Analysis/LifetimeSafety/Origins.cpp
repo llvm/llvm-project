@@ -34,6 +34,37 @@ static bool hasOrigin(const Expr *E) {
   return E->isGLValue() || isPointerType(E->getType());
 }
 
+namespace {
+/// An utility class to traverse the function body in the analysis
+/// context and collect the count of expressions with missing origins.
+class MissingOriginCollector
+    : public RecursiveASTVisitor<MissingOriginCollector> {
+public:
+  MissingOriginCollector(
+      const llvm::DenseMap<const clang::Expr *, OriginID> &ExprToOriginId,
+      llvm::StringMap<unsigned> &MissingOriginCount)
+      : ExprToOriginId(ExprToOriginId), MissingOriginCount(MissingOriginCount) {
+  }
+  bool VisitExpr(Expr *E) {
+    if (!hasOrigin(E))
+      return true;
+    // Check if we have an origin for this expression.
+    auto It = this->ExprToOriginId.find(E);
+    if (It == this->ExprToOriginId.end()) {
+      // No origin found: count this as missing origin.
+      std::string ExprStr = std::string(E->getStmtClassName()) +
+                            " (Type: " + E->getType().getAsString() + ")";
+      MissingOriginCount[ExprStr]++;
+    }
+    return true;
+  }
+
+private:
+  const llvm::DenseMap<const clang::Expr *, OriginID> &ExprToOriginId;
+  llvm::StringMap<unsigned> &MissingOriginCount;
+};
+} // namespace
+
 void OriginManager::dump(OriginID OID, llvm::raw_ostream &OS) const {
   OS << OID << " (";
   Origin O = getOrigin(OID);
@@ -63,7 +94,6 @@ OriginID OriginManager::get(const Expr &E) {
   auto It = ExprToOriginID.find(&E);
   if (It != ExprToOriginID.end())
     return It->second;
-
   // If the expression itself has no specific origin, and it's a reference
   // to a declaration, its origin is that of the declaration it refers to.
   // For pointer types, where we don't pre-emptively create an origin for the
@@ -113,33 +143,14 @@ OriginID OriginManager::getOrCreate(const ValueDecl &D) {
   return NewID;
 }
 
-const llvm::DenseMap<const clang::Expr *, OriginID> &
-OriginManager::getExprToOriginId() const {
-  return ExprToOriginID;
-}
-
 void OriginManager::collectMissingOrigins(Stmt *FunctionBody,
                                           LifetimeSafetyStats &LSStats) {
   if (!FunctionBody)
     return;
 
-  MissingOriginCollector Collector(*this, LSStats.MissingOriginCount);
+  MissingOriginCollector Collector(this->ExprToOriginID,
+                                   LSStats.MissingOriginCount);
   Collector.TraverseStmt(const_cast<Stmt *>(FunctionBody));
-}
-
-bool MissingOriginCollector::VisitExpr(Expr *E) {
-  if (!hasOrigin(E))
-    return true;
-  // Check if we have an origin for this expression
-  const auto &ExprToOriginId = OM.getExprToOriginId();
-  auto It = ExprToOriginId.find(E);
-  if (It == ExprToOriginId.end()) {
-    // No origin found - count this as missing
-    std::string ExprStr = std::string(E->getStmtClassName()) + "<" +
-                          E->getType().getAsString() + ">";
-    MissingOriginCount[ExprStr]++;
-  }
-  return true;
 }
 
 } // namespace clang::lifetimes::internal

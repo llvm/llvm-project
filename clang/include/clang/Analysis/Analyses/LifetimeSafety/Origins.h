@@ -87,9 +87,7 @@ public:
 
   void dump(OriginID OID, llvm::raw_ostream &OS) const;
 
-  const llvm::DenseMap<const clang::Expr *, OriginID> &
-  getExprToOriginId() const;
-
+  /// Collects statistics about expressions that lack associated origins.
   void collectMissingOrigins(Stmt *FunctionBody, LifetimeSafetyStats &LSStats);
 
 private:
@@ -102,22 +100,6 @@ private:
   llvm::DenseMap<const clang::ValueDecl *, OriginID> DeclToOriginID;
   llvm::DenseMap<const clang::Expr *, OriginID> ExprToOriginID;
 };
-
-/// An utility class to traverse the function body in the analysis
-/// context and collect the count of expressions with missing origins.
-class MissingOriginCollector
-    : public RecursiveASTVisitor<MissingOriginCollector> {
-public:
-  MissingOriginCollector(const OriginManager &om,
-                         llvm::StringMap<unsigned> &MissingOriginCount)
-      : OM(om), MissingOriginCount(MissingOriginCount) {}
-  bool VisitExpr(Expr *E);
-
-private:
-  const OriginManager &OM;
-  llvm::StringMap<unsigned> &MissingOriginCount;
-};
-
 } // namespace clang::lifetimes::internal
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_ORIGINS_H

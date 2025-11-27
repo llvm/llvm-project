@@ -39,8 +39,10 @@ enum class Confidence : uint8_t {
 };
 
 /// A structure to hold the statistics related to LifetimeAnalysis.
-/// Curently it holds only the missing origin details.
+/// Currently it holds only the missing origin details.
 struct LifetimeSafetyStats {
+  /// A map from `ExpressionClassName<QualType>` to their missing origin
+  /// counts.
   llvm::StringMap<unsigned> MissingOriginCount;
 };
 
@@ -106,7 +108,6 @@ private:
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
 };
 } // namespace internal
-
 } // namespace clang::lifetimes
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
