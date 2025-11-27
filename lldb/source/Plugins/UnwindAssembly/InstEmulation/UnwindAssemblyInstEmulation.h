@@ -152,7 +152,7 @@ private:
   bool m_curr_row_modified;
   // The instruction is branching forward with the given offset. 0 value means
   // no branching.
-  uint32_t m_branch_offset = 0;
+  int64_t m_branch_offset = 0;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_INSTEMULATION_UNWINDASSEMBLYINSTEMULATION_H
