@@ -17,8 +17,7 @@
 #include <map>
 #include <optional>
 
-using namespace clang;
-using namespace ast_matchers;
+using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
@@ -61,10 +60,9 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static const DeclStmt *findPreviousDeclStmt(const Stmt *CurrentStmt,
-                                           const VarDecl *TargetVar,
-                                           ASTContext *Context) {
+                                            ASTContext *Context) {
   // Validate inputs
-  if (!CurrentStmt || !TargetVar) {
+  if (!CurrentStmt) {
     return nullptr;
   }
 
@@ -82,30 +80,19 @@ static const DeclStmt *findPreviousDeclStmt(const Stmt *CurrentStmt,
   // Find current statement position
   const auto Statements = ParentCompound->body();
   const auto CurrentPosition = llvm::find(Statements, CurrentStmt);
-  
-  if (CurrentPosition == Statements.end() || CurrentPosition == Statements.begin()) {
+
+  if (CurrentPosition == Statements.end() ||
+      CurrentPosition == Statements.begin()) {
     return nullptr; // Not found or no previous statement
   }
 
   // Get previous statement
   const auto *PreviousStatement = *std::prev(CurrentPosition);
-  const auto *PreviousDecl = dyn_cast<DeclStmt>(PreviousStatement);
-  
-  if (!PreviousDecl) {
-    return nullptr; // Previous statement is not a declaration
-  }
-
-  // Check if declaration contains our target variable
-  const bool ContainsTarget = llvm::any_of(PreviousDecl->decls(),
-    [TargetVar](const Decl *D) {
-      return dyn_cast<VarDecl>(D) == TargetVar;
-    });
-
-  return ContainsTarget ? PreviousDecl : nullptr;
+  return dyn_cast<DeclStmt>(PreviousStatement);
 }
 
 static bool isVariableUsedAfterStmt(const VarDecl *VD, const Stmt *STMT,
-                                   ASTContext *Context) {
+                                    ASTContext *Context) {
   // Validate inputs
   if (!STMT || !VD) {
     return false;
@@ -125,12 +112,12 @@ static bool isVariableUsedAfterStmt(const VarDecl *VD, const Stmt *STMT,
   // Find current statement in the compound statement
   const auto &Statements = ParentCompound->body();
   const auto CurrentPosition = llvm::find(Statements, STMT);
-  
+
   // Check if statement was found and there are statements after it
   if (CurrentPosition == Statements.end()) {
     return false;
   }
-  
+
   const auto StatementsAfter = std::next(CurrentPosition);
   if (StatementsAfter == Statements.end()) {
     return false; // No statements after current one
@@ -142,6 +129,14 @@ static bool isVariableUsedAfterStmt(const VarDecl *VD, const Stmt *STMT,
     Visitor.TraverseStmt(const_cast<Stmt *>(S));
     return Visitor.foundUsage();
   });
+}
+
+static StringRef normDeclStmtText(StringRef Text) {
+  Text = Text.trim();
+  while (Text.consume_back(";")) {
+    Text = Text.rtrim();
+  }
+  return Text;
 }
 
 void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
@@ -169,72 +164,58 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   VarCollector Collector;
   Collector.TraverseStmt(const_cast<Expr *>(Condition));
 
-  // Group variables by their DeclStmt
-  std::map<const DeclStmt *, std::vector<const VarDecl *>> DeclStmtToVars;
+  const DeclStmt *PrevDecl = findPreviousDeclStmt(Statement, Result.Context);
 
-  for (const VarDecl *VD : Collector.Vars) {
-    const DeclStmt *PrevDecl =
-        findPreviousDeclStmt(Statement, VD, Result.Context);
-    if (PrevDecl)
-      DeclStmtToVars[PrevDecl].push_back(VD);
+  // Get all variables declared in this DeclStmt
+  std::vector<const VarDecl *> AllVarsInDecl;
+  AllVarsInDecl.reserve(llvm::size(PrevDecl->decls()));
+  for (const auto *D : PrevDecl->decls()) {
+    if (const auto *VD = dyn_cast<VarDecl>(D))
+      AllVarsInDecl.push_back(VD);
   }
 
-  // Process each DeclStmt
-  for (const auto &[PrevDecl, VarsInDecl] : DeclStmtToVars) {
+  // TODO: do we need to check all variables??
+  // Check if all variables in DeclStmt are used in condition
+  const auto varUnusedInCondition =
+      llvm::find_if_not(AllVarsInDecl, [&](const VarDecl *VD) {
+        return llvm::is_contained(Collector.Vars, VD);
+      });
 
-    // Get all variables declared in this DeclStmt
-    std::vector<const VarDecl *> AllVarsInDecl;
-    AllVarsInDecl.reserve(llvm::size(PrevDecl->decls()));
-    for (const auto *D : PrevDecl->decls()) {
-      if (const auto *VD = dyn_cast<VarDecl>(D))
-        AllVarsInDecl.push_back(VD);
-    }
+  if (varUnusedInCondition != AllVarsInDecl.end())
+    return;
 
-    // Check if all variables in DeclStmt are used in condition
-    const auto varUnusedInCondition =
-        llvm::find_if(AllVarsInDecl, [&](const VarDecl *VD) {
-          return !llvm::is_contained(VarsInDecl, VD);
-        });
+  // Check that none of the variables are used after the statement
+  const auto anyUsageAfter =
+      llvm::find_if(AllVarsInDecl, [&](const VarDecl *VD) {
+        return isVariableUsedAfterStmt(VD, Statement, Result.Context);
+      });
 
-    if (varUnusedInCondition != AllVarsInDecl.end())
-      continue;
+  if (anyUsageAfter != AllVarsInDecl.end())
+    return;
 
-    // Check that none of the variables are used after the statement
-    const auto anyUsageAfter =
-        llvm::find_if(AllVarsInDecl, [&](const VarDecl *VD) {
-          return isVariableUsedAfterStmt(VD, Statement, Result.Context);
-        });
+  // All conditions met - suggest moving the entire DeclStmt
+  // Get the source range including the semicolon
+  const SourceRange RemovalRange = PrevDecl->getSourceRange();
 
-    if (anyUsageAfter != AllVarsInDecl.end())
-      continue;
+  // Check if the range can be fixed (i.e., doesn't contain macro expansions)
+  const bool CanFix =
+      utils::rangeCanBeFixed(RemovalRange, Result.SourceManager) &&
+      !Condition->getBeginLoc().isMacroID();
 
-    // All conditions met - suggest moving the entire DeclStmt
-    // Get the source range including the semicolon
-    const SourceRange RemovalRange = PrevDecl->getSourceRange();
-
-    // Check if the range can be fixed (i.e., doesn't contain macro expansions)
-    const bool CanFix =
-        utils::rangeCanBeFixed(RemovalRange, Result.SourceManager) &&
-        !Condition->getBeginLoc().isMacroID();
-
-    // Get the text of the declaration (without semicolon)
-    StringRef DeclStmtText = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(PrevDecl->getSourceRange()),
-        *Result.SourceManager, getLangOpts());
-    do {
-      DeclStmtText = DeclStmtText.trim();
-    } while (DeclStmtText.consume_back(";"));
-
-    const auto NewInitStmt = std::string{DeclStmtText} + "; ";
-    auto Diag = diag(PrevDecl->getBeginLoc(),
-                     "%select{multiple variable|variable %1}0 declaration "
-                     "before %select{if|switch}2 statement could be moved into "
-                     "%select{if|switch}2 init statement")
-                << (AllVarsInDecl.size() == 1) << AllVarsInDecl[0] << !If;
-    if (CanFix)
-      Diag << FixItHint::CreateRemoval(RemovalRange)
-           << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);
-  }
+  // Get the text of the declaration (without semicolon)
+  const StringRef DeclStmtText = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(PrevDecl->getSourceRange()),
+      *Result.SourceManager, getLangOpts());
+  
+  const auto NewInitStmt = normDeclStmtText(DeclStmtText).str() + "; ";
+  auto Diag = diag(PrevDecl->getBeginLoc(),
+                   "%select{multiple variable|variable %1}0 declaration "
+                   "before %select{if|switch}2 statement could be moved into "
+                   "%select{if|switch}2 init statement")
+              << (AllVarsInDecl.size() == 1) << AllVarsInDecl[0] << !If;
+  if (CanFix)
+    Diag << FixItHint::CreateRemoval(RemovalRange)
+         << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);
 }
 
 } // namespace clang::tidy::modernize
