@@ -93,14 +93,7 @@ entry:
 define void @buildvector_v16i8_splat_with_undef(ptr %dst, i8 %a0) nounwind {
 ; CHECK-LABEL: buildvector_v16i8_splat_with_undef:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 0
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 2
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 4
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 6
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 8
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 10
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 12
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 14
+; CHECK-NEXT:    vreplgr2vr.b $vr0, $a1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -119,10 +112,7 @@ entry:
 define void @buildvector_v8i16_splat_with_undef(ptr %dst, i16 %a0) nounwind {
 ; CHECK-LABEL: buildvector_v8i16_splat_with_undef:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 3
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 5
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 7
+; CHECK-NEXT:    vreplgr2vr.h $vr0, $a1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -137,8 +127,7 @@ entry:
 define void @buildvector_v4i32_splat_with_undef(ptr %dst, i32 %a0) nounwind {
 ; CHECK-LABEL: buildvector_v4i32_splat_with_undef:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a1, 1
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a1, 2
+; CHECK-NEXT:    vreplgr2vr.w $vr0, $a1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -158,7 +147,7 @@ define void @buildvector_v2i64_splat_with_undef(ptr %dst, i64 %a0) nounwind {
 ;
 ; LA64-LABEL: buildvector_v2i64_splat_with_undef:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a1, 0
+; LA64-NEXT:    vreplgr2vr.d $vr0, $a1
 ; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
@@ -197,9 +186,8 @@ define void @buildvector_v4f32_splat_with_undef_2(ptr %dst, float %a0) nounwind 
 ; CHECK-LABEL: buildvector_v4f32_splat_with_undef_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; CHECK-NEXT:    vextrins.w $vr1, $vr0, 16
-; CHECK-NEXT:    vextrins.w $vr1, $vr0, 32
-; CHECK-NEXT:    vst $vr1, $a0, 0
+; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %ins1 = insertelement <4 x float> undef, float %a0, i32 1
@@ -969,7 +957,7 @@ define void @buildvector_v2i64_partial(ptr %dst, i64 %a0) nounwind {
 ;
 ; LA64-LABEL: buildvector_v2i64_partial:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a1, 0
+; LA64-NEXT:    vreplgr2vr.d $vr0, $a1
 ; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
