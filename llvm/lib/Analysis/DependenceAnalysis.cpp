@@ -228,10 +228,19 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
       const Loop *OutermostLoop = L ? L->getOutermostLoop() : nullptr;
       const SCEV *PtrSCEV = SE.getSCEVAtScope(Ptr, L);
       const SCEV *AccessFn = SE.removePointerBase(PtrSCEV);
-      SCEVMonotonicity Mon = Checker.checkMonotonicity(AccessFn, OutermostLoop);
       OS.indent(2) << "Inst: " << Inst << "\n";
       OS.indent(4) << "Expr: " << *AccessFn << "\n";
-      Mon.print(OS, 4);
+      for (SCEVMonotonicityDomain Domain :
+           {SCEVMonotonicityDomain::EffectiveDomain,
+            SCEVMonotonicityDomain::EntireDomain}) {
+        OS.indent(4) << (Domain == SCEVMonotonicityDomain::EffectiveDomain
+                             ? "EffectiveDomain"
+                             : "EntireDomain")
+                     << "\n";
+        SCEVMonotonicity Mon =
+            Checker.checkMonotonicity(AccessFn, OutermostLoop, Domain);
+        Mon.print(OS, 6);
+      }
     }
     OS << "\n";
   }
@@ -459,7 +468,7 @@ void SCEVMonotonicity::print(raw_ostream &OS, unsigned Depth) const {
 }
 
 bool SCEVMonotonicityChecker::isLoopInvariant(const SCEV *Expr) const {
-  return !OutermostLoop || SE->isLoopInvariant(Expr, OutermostLoop);
+  return !Ctx.OutermostLoop || SE->isLoopInvariant(Expr, Ctx.OutermostLoop);
 }
 
 SCEVMonotonicity SCEVMonotonicityChecker::invariantOrUnknown(const SCEV *Expr) {
@@ -470,11 +479,14 @@ SCEVMonotonicity SCEVMonotonicityChecker::invariantOrUnknown(const SCEV *Expr) {
 
 SCEVMonotonicity
 SCEVMonotonicityChecker::checkMonotonicity(const SCEV *Expr,
-                                           const Loop *OutermostLoop) {
+                                           const Loop *OutermostLoop,
+                                           SCEVMonotonicityDomain Domain) {
   assert((!OutermostLoop || OutermostLoop->isOutermost()) &&
          "OutermostLoop must be outermost");
   assert(Expr->getType()->isIntegerTy() && "Expr must be integer type");
-  this->OutermostLoop = OutermostLoop;
+  Ctx.clear();
+  Ctx.OutermostLoop = OutermostLoop;
+  Ctx.Domain = Domain;
   return visit(Expr);
 }
 
@@ -491,20 +503,45 @@ SCEVMonotonicityChecker::checkMonotonicity(const SCEV *Expr,
 /// AddRec.
 SCEVMonotonicity
 SCEVMonotonicityChecker::visitAddRecExpr(const SCEVAddRecExpr *Expr) {
-  if (!Expr->isAffine() || !Expr->hasNoSignedWrap())
-    return createUnknown(Expr);
+  auto Res = [&]() {
+    if (!Expr->isAffine() || !Expr->hasNoSignedWrap())
+      return createUnknown(Expr);
 
-  const SCEV *Start = Expr->getStart();
-  const SCEV *Step = Expr->getStepRecurrence(*SE);
+    const SCEV *Start = Expr->getStart();
+    const SCEV *Step = Expr->getStepRecurrence(*SE);
 
-  SCEVMonotonicity StartMon = visit(Start);
-  if (StartMon.isUnknown())
-    return StartMon;
+    SCEVMonotonicity StartMon = visit(Start);
+    if (StartMon.isUnknown())
+      return StartMon;
 
-  if (!isLoopInvariant(Step))
-    return createUnknown(Expr);
+    if (!isLoopInvariant(Step))
+      return createUnknown(Expr);
 
-  return SCEVMonotonicity(SCEVMonotonicityType::MultivariateSignedMonotonic);
+    if (Ctx.Domain == SCEVMonotonicityDomain::EntireDomain) {
+      // If we have a conditional branch like the following:
+      //
+      //   for (i = 0; i < N; i++)
+      //     if (i < 10)
+      //       for (j = 0; j < M; j++)
+      //         A[i + j] = ...;
+      //
+      // The addrec for `i + j` will be like
+      // `{{0,+,1}<nsw><loop.i>,+,1}<nsw><loop.j>`. This doesn't imply `N + M`
+      // doesn't overflow, since the nsw for the j-loop is meaningful only when
+      // `i < 10`. Thus we cannot conclude the monotonicity over EntireDomain.
+      if (Ctx.FoundInnermostAddRec)
+        return createUnknown(Expr);
+
+      // By definition, the exact backedge-taken count must exist.
+      if (!SE->hasLoopInvariantBackedgeTakenCount(Expr->getLoop()))
+        return createUnknown(Expr);
+    }
+
+    return SCEVMonotonicity(SCEVMonotonicityType::MultivariateSignedMonotonic);
+  }();
+
+  Ctx.FoundInnermostAddRec = true;
+  return Res;
 }
 
 //===----------------------------------------------------------------------===//

@@ -8,7 +8,10 @@ define void @single_loop_invariant(ptr %a, i64 %x, i64 %n) {
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:      Expr: %x
-; CHECK-NEXT:      Monotonicity: Invariant
+; CHECK-NEXT:      EffectiveDomain
+; CHECK-NEXT:        Monotonicity: Invariant
+; CHECK-NEXT:      EntireDomain
+; CHECK-NEXT:        Monotonicity: Invariant
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - consistent output [S]!
@@ -36,8 +39,12 @@ define void @single_loop_variant(ptr %a, i64 %x, i64 %y, i64 %n) {
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:      Expr: %offset
-; CHECK-NEXT:      Monotonicity: Unknown
-; CHECK-NEXT:      Reason: %offset
+; CHECK-NEXT:      EffectiveDomain
+; CHECK-NEXT:        Monotonicity: Unknown
+; CHECK-NEXT:        Reason: %offset
+; CHECK-NEXT:      EntireDomain
+; CHECK-NEXT:        Monotonicity: Unknown
+; CHECK-NEXT:        Reason: %offset
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - output [*]!
@@ -68,7 +75,10 @@ define void @invariant_plus_monotonic0(ptr %a, i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:      Expr: {%x,+,1}<nsw><%loop.i.header>
-; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:      EffectiveDomain
+; CHECK-NEXT:        Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:      EntireDomain
+; CHECK-NEXT:        Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - consistent output [0 S]!
@@ -112,7 +122,10 @@ define void @invariant_plus_monotonic1(ptr %a, i64 %x, i64 %n, i64 %m) {
 ; CHECK-NEXT:  Monotonicity check:
 ; CHECK-NEXT:    Inst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:      Expr: {%x,+,1}<nsw><%loop.j>
-; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:      EffectiveDomain
+; CHECK-NEXT:        Monotonicity: MultivariateSignedMonotonic
+; CHECK-NEXT:      EntireDomain
+; CHECK-NEXT:        Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
 ; CHECK-NEXT:    da analyze - consistent output [S 0]!

@@ -339,8 +339,7 @@ private:
 ///
 ///   F(i_1, i_2, ..., i_N)
 ///
-/// The domain of i_k is the closed range [0, BTC_k], where BTC_k is the
-/// backedge-taken count of the k-th loop.
+/// For the domain of F, see the comment of SCEVMonotonicityDomain.
 ///
 /// A function F is said to be "monotonically increasing with respect to the
 /// k-th loop" if x <= y implies the following condition:
@@ -384,6 +383,28 @@ enum class SCEVMonotonicityType {
   MultivariateSignedMonotonic,
 };
 
+/// The domain for checking monotonicity of a SCEV which is represented as a
+/// function F(i_1, i_2, ..., i_N). Given a domain D, we say "F is multivariate
+/// monotonic over the domain D" if F is multivariate monotonic over D.
+enum class SCEVMonotonicityDomain {
+  /// [0, BTC_1] x [0, BTC_2] x ... x [0, BTC_N], where BTC_k is the exact
+  /// backedge-taken count for the k-th loop. This domain is well-defined only
+  /// when all loops have exact backedge-taken counts.
+  EntireDomain,
+
+  /// [L_1, U_1] x [L_2, U_2] x ... x [L_N, U_N].
+  /// When we say "F is multivariate monotonic over effective domain", it means:
+  ///
+  /// \exists L_k, U_k for all k, such that
+  ///   - F is multivariate monotonic over [L_1, U_1] x ... x [L_N, U_N] and
+  ///   - [L_1, U_1] x ... x [L_N, U_N] is a superset of where F is actually
+  ///     executed.
+  ///
+  /// That is, we only implied the existence of such L_k and U_k, without any
+  /// specific values.
+  EffectiveDomain,
+};
+
 struct SCEVMonotonicity {
   SCEVMonotonicity(SCEVMonotonicityType Type,
                    const SCEV *FailurePoint = nullptr);
@@ -416,13 +437,25 @@ struct SCEVMonotonicityChecker
   /// OutermostLoop is not null, \p Expr must be defined in \p OutermostLoop or
   /// one of its nested loops.
   SCEVMonotonicity checkMonotonicity(const SCEV *Expr,
-                                     const Loop *OutermostLoop);
+                                     const Loop *OutermostLoop,
+                                     SCEVMonotonicityDomain Domain);
 
 private:
   ScalarEvolution *SE;
 
-  /// The outermost loop that DA is analyzing.
-  const Loop *OutermostLoop;
+  struct Context {
+    /// The outermost loop that DA is analyzing.
+    const Loop *OutermostLoop;
+
+    bool FoundInnermostAddRec = false;
+
+    SCEVMonotonicityDomain Domain;
+
+    void clear() {
+      OutermostLoop = nullptr;
+      FoundInnermostAddRec = false;
+    }
+  } Ctx;
 
   /// A helper to classify \p Expr as either Invariant or Unknown.
   SCEVMonotonicity invariantOrUnknown(const SCEV *Expr);
@@ -496,7 +529,7 @@ private:
 class DependenceInfo {
 public:
   DependenceInfo(Function *F, AAResults *AA, ScalarEvolution *SE, LoopInfo *LI)
-      : AA(AA), SE(SE), LI(LI), F(F) {}
+      : AA(AA), SE(SE), LI(LI), F(F), MonChecker(SE) {}
 
   /// Handle transitive invalidation when the cached analysis results go away.
   LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
@@ -520,6 +553,8 @@ private:
   ScalarEvolution *SE;
   LoopInfo *LI;
   Function *F;
+  SmallVector<const SCEVPredicate *, 4> Assumptions;
+  SCEVMonotonicityChecker MonChecker;
 
   /// Subscript - This private struct represents a pair of subscripts from
   /// a pair of potentially multi-dimensional array references. We use a
