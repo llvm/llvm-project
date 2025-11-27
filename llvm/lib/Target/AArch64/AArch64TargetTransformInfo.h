@@ -517,6 +517,8 @@ public:
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;
+
+  bool enableAggressiveInterleaving(bool) const override { return ST->enableAggressiveInterleaving(); }
   /// @}
 };
 
