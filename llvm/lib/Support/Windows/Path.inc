@@ -130,6 +130,8 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
 
 namespace fs {
 
+const file_t::value_type file_t::Invalid = INVALID_HANDLE_VALUE;
+
 std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
   SmallVector<wchar_t, MAX_PATH> PathName;
   PathName.resize_for_overwrite(PathName.capacity());

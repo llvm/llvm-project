@@ -31,11 +31,7 @@ struct file_t {
   value_type Value;
 
   /// Value for an invalid file descriptor/handle.
-#if defined(_WIN32)
-  static constexpr value_type Invalid = INVALID_FILE_HANDLE;
-#else
-  static constexpr value_type Invalid = -1;
-#endif
+  LLVM_ABI static const value_type Invalid;
 
   /// Default constructor to invalid file.
   file_t() : Value(Invalid) {}
@@ -48,11 +44,11 @@ struct file_t {
   bool isValid() const { return Value != Invalid; }
 
   /// Get the underlying value and return a platform specific value.
-  value_type native_handle() const { return Value; }
+  value_type get() const { return Value; }
 };
 
 inline bool operator==(file_t LHS, file_t RHS) {
-  return LHS.native_handle() == RHS.native_handle();
+  return LHS.get() == RHS.get();
 }
 
 inline bool operator!=(file_t LHS, file_t RHS) { return !(LHS == RHS); }
