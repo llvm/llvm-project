@@ -3349,6 +3349,7 @@ def XCoreSystemLibrary
     (add DefaultRuntimeLibcallImpls,
          exp10f, exp10, exp10l_f128,
          __memcpy_4,
+         iprintf, siprintf, fiprintf,
          LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLibcalls), isGNUEnvironment>
 )>;
 
