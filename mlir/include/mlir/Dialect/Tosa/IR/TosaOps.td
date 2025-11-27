@@ -164,6 +164,43 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: conv2d_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_Conv2DBlockScaledOp : Tosa_InferShapedTypeOp<"conv2d_block_scaled"> {
+  let summary = "Performs two dimensional convolution using block scaled tensors.";
+
+  let description = [{
+    Performs a 2D convolution over the given input data and scales, using
+    the weight data and scales. Implementations may choose to skip calculation
+    of multiplies in the padding area.
+  }];
+
+  let arguments = (ins
+    Tosa_MXFPDataTensor4D:$input_data,
+    Tosa_MXFPScaleTensor4D:$input_scale,
+    Tosa_MXFPDataTensor4D:$weight_data,
+    Tosa_MXFPScaleTensor4D:$weight_scale,
+    Tosa_Tensor1D:$bias,
+    Rank4TosaShape:$pad,
+    Rank2TosaShape:$stride,
+    Rank2TosaShape:$dilation,
+    Tosa_BlockSizeAttr:$block_size
+  );
+
+  let results = (outs
+    Tosa_Tensor4D:$output
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_MXFP_CONV]>,
+  ];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: conv3d
 //===----------------------------------------------------------------------===//
 def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {

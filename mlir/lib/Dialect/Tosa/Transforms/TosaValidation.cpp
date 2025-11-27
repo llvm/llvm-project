@@ -390,6 +390,55 @@ private:
     return success();
   }
 
+  LogicalResult levelCheckConv2DBlockScaled(Operation *op) {
+    auto convOp = dyn_cast<Conv2DBlockScaledOp>(op);
+    if (!convOp)
+      return success();
+
+    DenseIntElementsAttr padding;
+    if (matchPattern(convOp.getPad(), m_Constant(&padding))) {
+      const SmallVector<int64_t> padValues = convertFromIntAttr(padding, 4);
+      for (const auto p : padValues)
+        if (failed(levelCheckKernel(op, p, "pad <= MAX_KERNEL")))
+          return failure();
+    }
+
+    DenseIntElementsAttr stride;
+    if (matchPattern(convOp.getStride(), m_Constant(&stride))) {
+      const SmallVector<int64_t> strideValues = convertFromIntAttr(stride, 4);
+      for (const auto s : strideValues)
+        if (failed(levelCheckKernel(op, s, "stride <= MAX_KERNEL")))
+          return failure();
+    }
+
+    DenseIntElementsAttr dilation;
+    if (matchPattern(convOp.getDilation(), m_Constant(&dilation))) {
+      const SmallVector<int64_t> dilationValues =
+          convertFromIntAttr(dilation, 4);
+
+      int64_t KH = ShapedType::kDynamic;
+      int64_t KW = ShapedType::kDynamic;
+      const ShapeAdaptor weightDataShape(convOp.getWeightData().getType());
+      KH = weightDataShape.getDimSize(1);
+      KW = weightDataShape.getDimSize(2);
+      const ShapeAdaptor weightScaleShape(convOp.getWeightScale().getType());
+      KH = ShapedType::isDynamic(KH) ? weightScaleShape.getDimSize(1) : KH;
+      KW = ShapedType::isDynamic(KW) ? weightScaleShape.getDimSize(2) : KW;
+
+      if (!ShapedType::isDynamic(KH) &&
+          failed(levelCheckKernel(op, dilationValues[0] * KH,
+                                  "dilation_y * KH <= MAX_KERNEL)")))
+        return failure();
+
+      if (!ShapedType::isDynamic(KW) &&
+          failed(levelCheckKernel(op, dilationValues[1] * KW,
+                                  "dilation_x * KW <= MAX_KERNEL)")))
+        return failure();
+    }
+
+    return success();
+  }
+
   // FFT op: level check H, W in input shape [N,H,W]
   template <typename T>
   LogicalResult levelCheckFFT(Operation *op) {
@@ -700,6 +749,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   // Tensor Operators
   CHECK_SIZES(AvgPool2d);
   CHECK_SIZES(Conv2D);
+  CHECK_SIZES(Conv2DBlockScaled);
   CHECK_SIZES(Conv3D);
   CHECK_SIZES(DepthwiseConv2D);
   CHECK_SIZES(TransposeConv2D);
@@ -800,7 +850,6 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
   if (failed(levelCheckRanksAndSizes(op)))
     return failure();
 
-  // additional level checks from spec 0.70
   if (failed(levelCheckPool<tosa::AvgPool2dOp>(op)) ||
       failed(levelCheckConv<tosa::Conv2DOp>(op)) ||
       failed(levelCheckConv<tosa::Conv3DOp>(op)) ||
@@ -808,7 +857,8 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
       failed(levelCheckFFT<tosa::FFT2dOp>(op)) ||
       failed(levelCheckPool<tosa::MaxPool2dOp>(op)) ||
       failed(levelCheckFFT<tosa::RFFT2dOp>(op)) ||
-      failed(levelCheckTransposeConv2d(op)) || failed(levelCheckResize(op))) {
+      failed(levelCheckTransposeConv2d(op)) || failed(levelCheckResize(op)) ||
+      failed(levelCheckConv2DBlockScaled(op))) {
     return failure();
   }
 
