@@ -333,10 +333,8 @@ static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_mul_ps(__m256 __a,
 ///    A 256-bit vector of [4 x double].
 /// \returns A 256-bit vector of [4 x double] containing the square roots of the
 ///    values in the operand.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_sqrt_pd(__m256d __a)
-{
-  return (__m256d)__builtin_ia32_sqrtpd256((__v4df)__a);
+static __inline __m256d __DEFAULT_FN_ATTRS _mm256_sqrt_pd(__m256d __a) {
+  return __builtin_elementwise_sqrt(__a);
 }
 
 /// Calculates the square roots of the values in a 256-bit vector of
@@ -350,10 +348,8 @@ _mm256_sqrt_pd(__m256d __a)
 ///    A 256-bit vector of [8 x float].
 /// \returns A 256-bit vector of [8 x float] containing the square roots of the
 ///    values in the operand.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_sqrt_ps(__m256 __a)
-{
-  return (__m256)__builtin_ia32_sqrtps256((__v8sf)__a);
+static __inline __m256 __DEFAULT_FN_ATTRS _mm256_sqrt_ps(__m256 __a) {
+  return __builtin_elementwise_sqrt(__a);
 }
 
 /// Calculates the reciprocal square roots of the values in a 256-bit
