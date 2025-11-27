@@ -39,6 +39,7 @@
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/MathToFuncs/MathToFuncs.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
@@ -4314,8 +4315,7 @@ public:
     // handling of things like Box types.
     fir::populateOpenMPFIRToLLVMConversionPatterns(typeConverter, pattern);
 
-    mlir::ConversionTarget target{*context};
-    target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+    mlir::LLVMConversionTarget target(*context);
     // The OpenMP dialect is legal for Operations without regions, for those
     // which contains regions it is legal if the region contains only the
     // LLVM dialect. Add OpenMP dialect as a legal dialect for conversion and
