@@ -449,6 +449,26 @@ def SelectLikeOpInterface : OpInterface<"SelectLikeOpInterface"> {
   ];
 }
 
+
+//===----------------------------------------------------------------------===//
+// Early-exit Interfaces
+//===----------------------------------------------------------------------===//
+
+def InterruptControlFlowOpInterface : OpInterface<"InterruptControlFlowOpInterface"> {
+  let description = [{
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+      }],
+      "::mlir::Operation *", "getSuccessor",
+      (ins)
+    >,
+  ];
+}
+
+
 //===----------------------------------------------------------------------===//
 // WeightedBranchOpInterface
 //===----------------------------------------------------------------------===//

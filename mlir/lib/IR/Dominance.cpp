@@ -14,7 +14,10 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/RegionKindInterface.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
+
+#define DEBUG_TYPE "dominance"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -289,6 +292,26 @@ bool DominanceInfoBase<IsPostDom>::properlyDominatesImpl(
     // regions kinds, uses and defs can come in any order inside a block.
     if (!hasSSADominance(aBlock))
       return true;
+
+    // Any operation that propagates a control flow break invalidate the
+    // post-dominance relation.
+    if (IsPostDom && hasBreakingControlFlow(aBlock->getParent())) {
+      bool inRange = false;
+      for (Operation &op : *aBlock) {
+        if (inRange) {
+          if (op.hasTrait<OpTrait::PropagateControlFlowBreak>() &&
+              hasBreakingControlFlowOps(&op)) {
+            LDBG() << "Breaking control flow: "
+                   << OpWithFlags(&op, OpPrintingFlags().skipRegions());
+            return false;
+          }
+          if (&op == &*bIt || &op == &*aIt)
+            break;
+        } else if (&op == &*bIt || &op == &*aIt) {
+          inRange = true;
+        }
+      }
+    }
     if constexpr (IsPostDom) {
       return isBeforeInBlock(aBlock, bIt, aIt);
     } else {

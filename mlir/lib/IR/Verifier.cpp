@@ -29,6 +29,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/Threading.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -129,6 +130,42 @@ LogicalResult OperationVerifier::verifyOnEntrance(Block &block) {
     if (op.getNumSuccessors() != 0 && &op != &block.back())
       return op.emitError(
           "operation with block successors must terminate its parent block");
+
+    Operation *currentOp = &op;
+    if (op.getNumBreakingControlRegions()) {
+      for (int i [[maybe_unused]] :
+           llvm::seq<int>(0, op.getNumBreakingControlRegions())) {
+        currentOp = currentOp->getParentOp();
+        if (!currentOp)
+          return op.emitError("operation with breaking control regions "
+                              "exceededing the number of enclosing parent ops");
+        if (i == static_cast<int>(op.getNumBreakingControlRegions()) - 1) {
+          auto successorOp =
+              dyn_cast<HasBreakingControlFlowOpInterface>(currentOp);
+          if (!successorOp)
+            return currentOp
+                       ->emitError(
+                           "operation has a nested predessor but does not "
+                           "have "
+                           "the HasBreakingControlFlowOpInterface trait.")
+                       .attachNote(op.getLoc())
+                   << " for this predecessor operation (" << op.getName()
+                   << ")";
+
+          if (!successorOp.acceptsTerminator(&op))
+            return currentOp->emitError(
+                       "operation with breaking control regions "
+                       "does not accept terminator: ")
+                   << OpWithFlags(&op, OpPrintingFlags().skipRegions());
+        } else {
+          if (!currentOp->hasTrait<OpTrait::PropagateControlFlowBreak>())
+            return op.emitError("breaking control regions through an op that "
+                                "does not have "
+                                "the PropagateControlFlowBreak trait: ")
+                   << OpWithFlags(currentOp, OpPrintingFlags().skipRegions());
+        }
+      }
+    }
   }
 
   return success();

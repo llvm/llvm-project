@@ -1,2 +1,3 @@
 add_subdirectory(LoopLikeInterface)
+add_subdirectory(RegionBranchOpInterface)
 add_subdirectory(TilingInterface)

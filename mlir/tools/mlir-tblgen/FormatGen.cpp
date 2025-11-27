@@ -191,6 +191,7 @@ FormatToken FormatLexer::lexIdentifier(const char *tokStart) {
           .Case("successors", FormatToken::kw_successors)
           .Case("type", FormatToken::kw_type)
           .Case("qualified", FormatToken::kw_qualified)
+          .Case("num-breaking-regions", FormatToken::kw_num_breaking_regions)
           .Default(FormatToken::identifier);
   return FormatToken(kind, str);
 }

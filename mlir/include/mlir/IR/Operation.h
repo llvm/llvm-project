@@ -94,7 +94,8 @@ public:
                            TypeRange resultTypes, ValueRange operands,
                            NamedAttrList &&attributes,
                            OpaqueProperties properties, BlockRange successors,
-                           unsigned numRegions);
+                           unsigned numRegions,
+                           unsigned numBreakingControlRegions);
 
   /// Create a new Operation with the specific fields. This constructor uses an
   /// existing attribute dictionary to avoid uniquing a list of attributes.
@@ -102,7 +103,8 @@ public:
                            TypeRange resultTypes, ValueRange operands,
                            DictionaryAttr attributes,
                            OpaqueProperties properties, BlockRange successors,
-                           unsigned numRegions);
+                           unsigned numRegions,
+                           unsigned numBreakingControlRegions);
 
   /// Create a new Operation from the fields stored in `state`.
   static Operation *create(const OperationState &state);
@@ -112,8 +114,8 @@ public:
                            TypeRange resultTypes, ValueRange operands,
                            NamedAttrList &&attributes,
                            OpaqueProperties properties,
-                           BlockRange successors = {},
-                           RegionRange regions = {});
+                           BlockRange successors = {}, RegionRange regions = {},
+                           unsigned numBreakingControlRegions = 0);
 
   /// The name of an operation is the key identifier for it.
   OperationName getName() { return name; }
@@ -705,6 +707,20 @@ public:
   bool hasSuccessors() { return numSuccs != 0; }
   unsigned getNumSuccessors() { return numSuccs; }
 
+  bool isBreakingControlFlow() { return isBreakingControlFlowFlag; }
+  unsigned getNumBreakingControlRegions() {
+    if (!isBreakingControlFlow())
+      return 0;
+    return *reinterpret_cast<unsigned *>(
+        getTrailingObjects<detail::OpProperties>());
+  }
+  void setNumBreakingControlRegions(unsigned numBreakingControlRegions) {
+    assert(isBreakingControlFlow() &&
+           "operation is not a breaking control flow operation");
+    *reinterpret_cast<unsigned *>(getTrailingObjects<detail::OpProperties>()) =
+        numBreakingControlRegions;
+  }
+
   Block *getSuccessor(unsigned index) {
     assert(index < getNumSuccessors());
     return getBlockOperands()[index].get();
@@ -898,14 +914,26 @@ public:
   }
   /// Returns the properties storage.
   OpaqueProperties getPropertiesStorage() {
-    if (propertiesStorageSize)
-      return getPropertiesStorageUnsafe();
+    if (propertiesStorageSize) {
+      void *properties =
+          reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>());
+      if (isBreakingControlFlowFlag)
+        properties =
+            reinterpret_cast<void *>(reinterpret_cast<char *>(properties) + 8);
+      return {properties};
+    }
     return {nullptr};
   }
   OpaqueProperties getPropertiesStorage() const {
-    if (propertiesStorageSize)
-      return {reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
-          getTrailingObjects<detail::OpProperties>()))};
+    if (propertiesStorageSize) {
+      void *properties =
+          reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
+              getTrailingObjects<detail::OpProperties>()));
+      if (isBreakingControlFlowFlag)
+        properties =
+            reinterpret_cast<void *>(reinterpret_cast<char *>(properties) + 8);
+      return {properties};
+    }
     return {nullptr};
   }
   /// Returns the properties storage without checking whether properties are
@@ -960,8 +988,9 @@ private:
 private:
   Operation(Location location, OperationName name, unsigned numResults,
             unsigned numSuccessors, unsigned numRegions,
-            int propertiesStorageSize, DictionaryAttr attributes,
-            OpaqueProperties properties, bool hasOperandStorage);
+            unsigned numBreakingControlRegions, int propertiesStorageSize,
+            DictionaryAttr attributes, OpaqueProperties properties,
+            bool hasOperandStorage);
 
   // Operations are deleted through the destroy() member because they are
   // allocated with malloc.
@@ -1048,12 +1077,15 @@ private:
 
   const unsigned numResults;
   const unsigned numSuccs;
-  const unsigned numRegions : 23;
+  const unsigned numRegions : 22;
 
   /// This bit signals whether this operation has an operand storage or not. The
   /// operand storage may be elided for operations that are known to never have
   /// operands.
   bool hasOperandStorage : 1;
+
+  /// This bit signals [TODO]
+  bool isBreakingControlFlowFlag : 1;
 
   /// The size of the storage for properties (if any), divided by 8: since the
   /// Properties storage will always be rounded up to the next multiple of 8 we
