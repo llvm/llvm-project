@@ -86,8 +86,8 @@ define zeroext i8 @oeq_f64_u32(double %x) nounwind readnone {
 ; AVX512-LABEL: oeq_f64_u32:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vcvttsd2usi %xmm0, %eax
-; AVX512-NEXT:    vcvtusi2sd %eax, %xmm7, %xmm1
+; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm1
+; AVX512-NEXT:    vcvtudq2pd %xmm1, %xmm1
 ; AVX512-NEXT:    vcmpeqsd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -350,8 +350,8 @@ define zeroext i8 @une_f64_u32(double %x) nounwind readnone {
 ; AVX512-LABEL: une_f64_u32:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vcvttsd2usi %xmm0, %eax
-; AVX512-NEXT:    vcvtusi2sd %eax, %xmm7, %xmm1
+; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm1
+; AVX512-NEXT:    vcvtudq2pd %xmm1, %xmm1
 ; AVX512-NEXT:    vcmpneqsd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
