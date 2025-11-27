@@ -50,6 +50,7 @@ struct PendingWarning {
 class LifetimeChecker {
 private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
+  llvm::DenseMap<const ParmVarDecl *, const Expr *> AnnotationWarningsMap;
   const LoanPropagationAnalysis &LoanPropagation;
   const LiveOriginsAnalysis &LiveOrigins;
   const FactManager &FactMgr;
@@ -65,7 +66,28 @@ public:
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
           checkExpiry(EF);
+        else if (const auto *OEF = F->getAs<OriginEscapesFact>())
+          checkAnnotations(OEF);
     issuePendingWarnings();
+    issueAnnotationWarnings();
+  }
+
+  /// Checks if an escaping origin holds a placeholder loan, indicating a
+  /// missing [[clang::lifetimebound]] annotation.
+  void checkAnnotations(const OriginEscapesFact *OEF) {
+    if (!Reporter)
+      return;
+    const auto &PlaceholderLoansMap =
+        FactMgr.getLoanMgr().getPlaceholderLoans();
+    if (PlaceholderLoansMap.empty())
+      return;
+    OriginID EscapedOID = OEF->getEscapedOriginID();
+    LoanSet EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
+    for (LoanID LID : EscapedLoans) {
+      if (auto It = PlaceholderLoansMap.find(LID);
+          It != PlaceholderLoansMap.end())
+        AnnotationWarningsMap.try_emplace(It->second, OEF->getEscapeExpr());
+    }
   }
 
   /// Checks for use-after-free & use-after-return errors when a loan expires.
@@ -131,6 +153,13 @@ public:
       else
         llvm_unreachable("Unhandled CausingFact type");
     }
+  }
+
+  void issueAnnotationWarnings() {
+    if (!Reporter)
+      return;
+    for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap)
+      Reporter->reportMissingAnnotations(PVD, EscapeExpr);
   }
 };
 } // namespace

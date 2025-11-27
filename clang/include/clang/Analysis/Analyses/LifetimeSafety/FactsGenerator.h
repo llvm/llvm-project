@@ -91,6 +91,8 @@ private:
 
   void markUseAsWrite(const DeclRefExpr *DRE);
 
+  llvm::SmallVector<Fact *> createPlaceholderLoanFacts();
+
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
   llvm::SmallVector<Fact *> CurrentBlockFacts;

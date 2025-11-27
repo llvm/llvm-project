@@ -19,8 +19,12 @@ void Fact::dump(llvm::raw_ostream &OS, const LoanManager &,
 
 void IssueFact::dump(llvm::raw_ostream &OS, const LoanManager &LM,
                      const OriginManager &OM) const {
+  const Loan &L = LM.getLoan(getLoanID());
   OS << "Issue (";
-  LM.getLoan(getLoanID()).dump(OS);
+  if (L.IssueExpr == nullptr)
+    OS << getLoanID() << " (Placeholder loan) ";
+  else
+    L.dump(OS);
   OS << ", ToOrigin: ";
   OM.dump(getOriginID(), OS);
   OS << ")\n";

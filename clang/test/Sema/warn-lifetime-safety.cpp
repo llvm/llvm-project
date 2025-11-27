@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wexperimental-lifetime-safety-suggestions -Wno-dangling -verify %s
 
 struct MyObj {
   int id;
@@ -942,4 +942,74 @@ void parentheses(bool cond) {
               : &(((cond ? c : d)))));  // expected-warning 2 {{object whose reference is captured does not live long enough}}.
   }  // expected-note 4 {{destroyed here}}
   (void)*p;  // expected-note 4 {{later used here}}
+}
+
+//===----------------------------------------------------------------------===//
+// Lifetimebound Annotation Suggestion Tests
+//===----------------------------------------------------------------------===//
+
+View return_view_directly (View a // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+) {
+  return a; // expected-note {{param escapes here}}
+}
+
+View conditional_return_view (
+    View a, // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+    View b,  // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+    bool c
+) {
+  View res;
+  if (c)  
+    res = a;                    
+  else
+    res = b;          
+  return res;  // expected-note 2 {{param escapes here}} 
+}
+
+// FIXME: Fails to generate lifetime suggestion for reference types as these are not handled currently.
+MyObj& return_reference (
+  MyObj& a,   
+  MyObj& b,   
+  bool c
+) {
+  if(c) {
+    return a;   
+  }
+  return b;     
+}
+
+// FIXME: Fails to generate lifetime suggestion for reference types as these are not handled currently.
+View return_view_from_reference (
+    MyObj& p 
+) {
+  return p; 
+}
+
+int* return_pointer_directly (int* a // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+) {
+  return a;               // expected-note {{param escapes here}} 
+}
+
+MyObj* return_pointer_object (MyObj* a // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+) {
+  return a;                           // expected-note {{param escapes here}} 
+}
+
+View only_one_paramter_annotated (View a [[clang::lifetimebound]], 
+  View b, // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  bool c
+) {
+ if(c)
+  return a;
+ return b; // expected-note {{param escapes here}} 
+}
+
+// Safe cases
+View already_annotated(View a [[clang::lifetimebound]]) {
+ return a;
+}
+
+// Safe cases
+MyObj return_obj_by_value(MyObj& p) {
+  return p;
 }

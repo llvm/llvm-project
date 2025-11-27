@@ -47,6 +47,9 @@ public:
                                     const Expr *EscapeExpr,
                                     SourceLocation ExpiryLoc,
                                     Confidence Confidence) {}
+
+  virtual void reportMissingAnnotations(const ParmVarDecl *PVD,
+                                        const Expr *EscapeExpr) {}
 };
 
 /// The main entry point for the analysis.

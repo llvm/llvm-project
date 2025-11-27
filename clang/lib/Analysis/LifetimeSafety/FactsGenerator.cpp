@@ -42,11 +42,16 @@ static const Loan *createLoan(FactManager &FactMgr, const DeclRefExpr *DRE) {
 
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
+  const CFG &Cfg = *AC.getCFG();
+  llvm::SmallVector<Fact *> PlaceholderLoanFacts = createPlaceholderLoanFacts();
   // Iterate through the CFG blocks in reverse post-order to ensure that
   // initializations and destructions are processed in the correct sequence.
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
     CurrentBlockFacts.clear();
     EscapesInCurrentBlock.clear();
+    if (Block->getBlockID() == Cfg.getEntry().getBlockID())
+      CurrentBlockFacts.append(PlaceholderLoanFacts.begin(),
+                               PlaceholderLoanFacts.end());
     for (unsigned I = 0; I < Block->size(); ++I) {
       const CFGElement &Element = Block->Elements[I];
       if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
@@ -340,6 +345,29 @@ void FactsGenerator::markUseAsWrite(const DeclRefExpr *DRE) {
     return;
   assert(UseFacts.contains(DRE));
   UseFacts[DRE]->markAsWritten();
+}
+
+// Creates an IssueFact for a new placeholder loan for each pointer or reference
+// parameter at the function's entry.
+llvm::SmallVector<Fact *> FactsGenerator::createPlaceholderLoanFacts() {
+  llvm::SmallVector<Fact *> PlaceholderLoanFacts;
+  const auto *FD = dyn_cast<FunctionDecl>(AC.getDecl());
+  if (!FD)
+    return PlaceholderLoanFacts;
+
+  for (const ParmVarDecl *PVD : FD->parameters()) {
+    QualType ParamType = PVD->getType();
+    if (PVD->hasAttr<LifetimeBoundAttr>())
+      continue;
+    if (ParamType->isPointerType() || ParamType->isReferenceType() ||
+        isGslPointerType(ParamType)) {
+      Loan &L = FactMgr.getLoanMgr().addLoan({PVD}, /*IssueExpr=*/nullptr);
+      FactMgr.getLoanMgr().addPlaceholderLoan(L.ID, PVD);
+      OriginID OID = FactMgr.getOriginMgr().getOrCreate(*PVD);
+      PlaceholderLoanFacts.push_back(FactMgr.createFact<IssueFact>(L.ID, OID));
+    }
+  }
+  return PlaceholderLoanFacts;
 }
 
 } // namespace clang::lifetimes::internal

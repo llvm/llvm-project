@@ -67,6 +67,15 @@ public:
   }
   llvm::ArrayRef<Loan> getLoans() const { return AllLoans; }
 
+  void addPlaceholderLoan(LoanID LID, const ParmVarDecl *PVD) {
+    PlaceholderLoans[LID] = PVD;
+  }
+
+  const llvm::DenseMap<LoanID, const ParmVarDecl *> &
+  getPlaceholderLoans() const {
+    return PlaceholderLoans;
+  }
+
 private:
   LoanID getNextLoanID() { return NextLoanID++; }
 
@@ -74,6 +83,11 @@ private:
   /// TODO(opt): Profile and evaluate the usefullness of small buffer
   /// optimisation.
   llvm::SmallVector<Loan> AllLoans;
+  /// Represents a map of placeholder LoanID to the function parameter.
+  /// Placeholder loans are dummy loans created for each pointer or reference
+  /// parameter to represent a borrow from the function's caller, which the
+  /// analysis tracks to see if it unsafely escapes the function's scope.
+  llvm::DenseMap<LoanID, const ParmVarDecl *> PlaceholderLoans;
 };
 } // namespace clang::lifetimes::internal
 

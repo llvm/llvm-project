@@ -2884,6 +2884,17 @@ public:
         << EscapeExpr->getEndLoc();
   }
 
+  void reportMissingAnnotations(const ParmVarDecl *PVD,
+                                const Expr *EscapeExpr) override {
+    S.Diag(PVD->getLocation(),
+           diag::warn_lifetime_param_should_be_lifetimebound)
+        << PVD->getSourceRange()
+        << FixItHint::CreateInsertion(
+               PVD->getTypeSourceInfo()->getTypeLoc().getBeginLoc(),
+               "[[clang::lifetimebound]] ");
+    S.Diag(EscapeExpr->getBeginLoc(), diag::note_lifetime_escapes_here);
+  }
+
 private:
   Sema &S;
 };

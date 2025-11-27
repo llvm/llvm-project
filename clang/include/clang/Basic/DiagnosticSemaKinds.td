@@ -10778,6 +10778,13 @@ def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 
+def warn_lifetime_param_should_be_lifetimebound
+    : Warning<"param should be marked [[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetySuggestions>,
+      DefaultIgnore;
+
+def note_lifetime_escapes_here : Note<"param escapes here">;
+
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
 // Array comparisons have similar warnings
