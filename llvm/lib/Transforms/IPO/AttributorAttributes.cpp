@@ -13998,9 +13998,11 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
       NewAllocationType = CharArrayType;
       BasicBlock::iterator InsertPt = OldAllocaInst->getIterator();
       InsertPt = std::next(InsertPt);
-      Instruction *NewAllocationInstruction =
+      AllocaInst *NewAllocationInstruction =
           new AllocaInst(CharArrayType, OldAllocaInst->getAddressSpace(),
                          OldAllocaInst->getName(), InsertPt);
+
+      NewAllocationInstruction->setAlignment(OldAllocaInst->getAlign());
 
       Changed |= A.changeAfterManifest(IRPosition::inst(*I),
                                        *NewAllocationInstruction);

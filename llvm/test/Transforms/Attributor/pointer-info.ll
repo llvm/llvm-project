@@ -10,7 +10,7 @@ define void @foo(ptr %ptr) {
 ; TUNIT-LABEL: define {{[^@]+}}@foo
 ; TUNIT-SAME: (ptr nofree readnone captures(none) [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[TMP0:%.*]] = alloca [8 x i8], align 1
+; TUNIT-NEXT:    [[TMP0:%.*]] = alloca [8 x i8], align 8
 ; TUNIT-NEXT:    br label [[CALL_BR:%.*]]
 ; TUNIT:       call.br:
 ; TUNIT-NEXT:    [[NEWGEP:%.*]] = getelementptr [8 x i8], ptr [[TMP0]], i64 0

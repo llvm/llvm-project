@@ -106,8 +106,8 @@ define i32 @test_inf_promote_caller(i32 %arg) {
 ; CGSCC-LABEL: define {{[^@]+}}@test_inf_promote_caller
 ; CGSCC-SAME: (i32 [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CGSCC-NEXT:  bb:
-; CGSCC-NEXT:    [[TMP3:%.*]] = alloca [0 x i8], align 1
-; CGSCC-NEXT:    [[TMP14:%.*]] = alloca [0 x i8], align 1
+; CGSCC-NEXT:    [[TMP3:%.*]] = alloca [0 x i8], align 8
+; CGSCC-NEXT:    [[TMP14:%.*]] = alloca [0 x i8], align 8
 ; CGSCC-NEXT:    ret i32 0
 ;
 bb:

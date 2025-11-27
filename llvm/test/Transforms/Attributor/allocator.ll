@@ -13,8 +13,8 @@ define dso_local void @positive_alloca_1(i32 noundef %val) #0 {
 ; CHECK-LABEL: define dso_local void @positive_alloca_1
 ; CHECK-SAME: (i32 noundef [[VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VAL_ADDR1:%.*]] = alloca [4 x i8], align 1
-; CHECK-NEXT:    [[F2:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    [[VAL_ADDR1:%.*]] = alloca [4 x i8], align 4
+; CHECK-NEXT:    [[F2:%.*]] = alloca [4 x i8], align 4
 ; CHECK-NEXT:    store i32 [[VAL]], ptr [[VAL_ADDR1]], align 4
 ; CHECK-NEXT:    store i32 10, ptr [[F2]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[F2]], align 4
@@ -169,17 +169,17 @@ define dso_local void @positive_test_not_a_single_start_offset(i32 noundef %val)
 ; TUNIT-SAME: (i32 noundef [[VAL:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[VAL_ADDR:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    [[F1:%.*]] = alloca [5 x i8], align 1
+; TUNIT-NEXT:    [[F1:%.*]] = alloca [5 x i8], align 4
 ; TUNIT-NEXT:    store i32 [[VAL]], ptr [[VAL_ADDR]], align 4
 ; TUNIT-NEXT:    [[MUL:%.*]] = mul nsw i32 2, [[VAL]]
 ; TUNIT-NEXT:    store i32 [[MUL]], ptr [[F1]], align 4
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[F1]], align 4
 ; TUNIT-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP0]])
-; TUNIT-NEXT:    [[NEWGEP:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
-; TUNIT-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP0]] to i8
-; TUNIT-NEXT:    store i8 [[CONV1]], ptr [[NEWGEP]], align 4
 ; TUNIT-NEXT:    [[NEWGEP2:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i8, ptr [[NEWGEP2]], align 4
+; TUNIT-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP0]] to i8
+; TUNIT-NEXT:    store i8 [[CONV1]], ptr [[NEWGEP2]], align 4
+; TUNIT-NEXT:    [[NEWGEP:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i8, ptr [[NEWGEP]], align 4
 ; TUNIT-NEXT:    [[CONV:%.*]] = sext i8 [[TMP1]] to i32
 ; TUNIT-NEXT:    [[CALL3:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[CONV]])
 ; TUNIT-NEXT:    ret void
@@ -188,17 +188,17 @@ define dso_local void @positive_test_not_a_single_start_offset(i32 noundef %val)
 ; CGSCC-SAME: (i32 noundef [[VAL:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[VAL_ADDR:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    [[F1:%.*]] = alloca [5 x i8], align 1
+; CGSCC-NEXT:    [[F1:%.*]] = alloca [5 x i8], align 4
 ; CGSCC-NEXT:    store i32 [[VAL]], ptr [[VAL_ADDR]], align 4
 ; CGSCC-NEXT:    [[MUL:%.*]] = mul nsw i32 2, [[VAL]]
 ; CGSCC-NEXT:    store i32 [[MUL]], ptr [[F1]], align 4
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[F1]], align 4
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[TMP0]])
-; CGSCC-NEXT:    [[NEWGEP2:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
-; CGSCC-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP0]] to i8
-; CGSCC-NEXT:    store i8 [[CONV1]], ptr [[NEWGEP2]], align 4
 ; CGSCC-NEXT:    [[NEWGEP:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
-; CGSCC-NEXT:    [[TMP1:%.*]] = load i8, ptr [[NEWGEP]], align 4
+; CGSCC-NEXT:    [[CONV1:%.*]] = trunc i32 [[TMP0]] to i8
+; CGSCC-NEXT:    store i8 [[CONV1]], ptr [[NEWGEP]], align 4
+; CGSCC-NEXT:    [[NEWGEP2:%.*]] = getelementptr [5 x i8], ptr [[F1]], i64 4
+; CGSCC-NEXT:    [[TMP1:%.*]] = load i8, ptr [[NEWGEP2]], align 4
 ; CGSCC-NEXT:    [[CONV:%.*]] = sext i8 [[TMP1]] to i32
 ; CGSCC-NEXT:    [[CALL3:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(17) @.str, i32 noundef [[CONV]])
 ; CGSCC-NEXT:    ret void
@@ -228,7 +228,7 @@ entry:
 define dso_local void @positive_test_reduce_array_allocation_1() {
 ; CHECK-LABEL: define dso_local void @positive_test_reduce_array_allocation_1() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAY1:%.*]] = alloca [4 x i8], align 1
+; CHECK-NEXT:    [[ARRAY1:%.*]] = alloca [4 x i8], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAY1]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAY1]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 2
@@ -460,7 +460,7 @@ define dso_local void @pthread_test(){
 ; TUNIT-NEXT:    [[ARG1:%.*]] = alloca i8, align 8
 ; TUNIT-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
 ; TUNIT-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @pthread_allocation_should_remain_same, ptr noundef nonnull align 8 dereferenceable(1) [[ARG1]])
-; TUNIT-NEXT:    [[F1:%.*]] = alloca [4 x i8], align 1
+; TUNIT-NEXT:    [[F1:%.*]] = alloca [4 x i8], align 4
 ; TUNIT-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @pthread_allocation_should_be_reduced, ptr noalias nofree nonnull readnone align 4 captures(none) dereferenceable(12) undef)
 ; TUNIT-NEXT:    [[F2:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 ; TUNIT-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(ptr noundef nonnull align 8 dereferenceable(8) [[THREAD]], ptr noundef null, ptr noundef nonnull @pthread_check_captured_pointer, ptr noundef nonnull align 4 dereferenceable(12) [[F2]])

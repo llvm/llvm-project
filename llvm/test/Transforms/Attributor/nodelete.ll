@@ -16,7 +16,7 @@ define hidden i64 @f1() align 2 {
 ; CGSCC-LABEL: define {{[^@]+}}@f1
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] align 2 {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[REF_TMP1:%.*]] = alloca [0 x i8], align 1
+; CGSCC-NEXT:    [[REF_TMP1:%.*]] = alloca [0 x i8], align 8
 ; CGSCC-NEXT:    [[CALL2:%.*]] = call i64 @f2() #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i64 [[CALL2]]
 ;

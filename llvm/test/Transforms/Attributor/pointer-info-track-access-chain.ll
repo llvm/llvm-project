@@ -385,3 +385,4 @@ end:
   %ret = load i32, ptr %x
   ret i32 %ret
 }
+
