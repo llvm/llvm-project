@@ -12,7 +12,7 @@ namespace clang::lifetimes::internal {
 
 void Loan::dump(llvm::raw_ostream &OS) const {
   if (Path.D == nullptr) {
-    OS << ID << " (Placeholder loan) ";
+    OS << ID << " (Placeholder loan)";
     return;
   }
   OS << ID << " (Path: ";
