@@ -2736,6 +2736,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                        VPRecipeBase &CurRecipe,
                                        VPTypeAnalysis &TypeInfo, VPValue &EVL) {
   VPlan *Plan = CurRecipe.getParent()->getPlan();
+  DebugLoc DL = CurRecipe.getDebugLoc();
   VPValue *Addr, *Mask, *EndPtr;
 
   /// Adjust any end pointers so that they point to the end of EVL lanes not VF.
@@ -2787,13 +2788,21 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
             m_Select(m_Specific(HeaderMask), m_VPValue(LHS), m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Plan->getTrue(), LHS, RHS, &EVL},
-        TypeInfo.inferScalarType(LHS), {}, {}, CurRecipe.getDebugLoc());
+        TypeInfo.inferScalarType(LHS), {}, {}, DL);
 
   if (match(&CurRecipe, m_Select(m_RemoveMask(HeaderMask, Mask), m_VPValue(LHS),
                                  m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Mask, LHS, RHS, &EVL},
-        TypeInfo.inferScalarType(LHS), {}, {}, CurRecipe.getDebugLoc());
+        TypeInfo.inferScalarType(LHS), {}, {}, DL);
+
+  if (match(&CurRecipe, m_LastActiveLane(m_Specific(HeaderMask)))) {
+    Type *Ty = TypeInfo.inferScalarType(CurRecipe.getVPSingleValue());
+    VPValue *ZExt =
+        VPBuilder(&CurRecipe).createScalarCast(Instruction::ZExt, &EVL, Ty, DL);
+    return new VPInstruction(Instruction::Sub,
+                             {ZExt, Plan->getConstantInt(Ty, 1)}, {}, {}, DL);
+  }
 
   return nullptr;
 }
