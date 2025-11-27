@@ -248,5 +248,11 @@ SPIRVExtensionsParser::getValidExtensions(const Triple &TT) {
       R.insert(ExtensionEnum);
   }
 
+  if (TT.getVendor() == Triple::AMD) {
+    // AMD uses the translator to recover LLVM-IR from SPIRV. Currently, the
+    // translator doesn't implement the SPV_KHR_float_controls2 extension.
+    R.erase(SPIRV::Extension::SPV_KHR_float_controls2);
+  }
+
   return R;
 }

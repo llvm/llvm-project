@@ -12166,6 +12166,52 @@ static bool evalShuffleGeneric(
   return true;
 }
 
+static bool evalShiftWithCount(
+    EvalInfo &Info, const CallExpr *Call, APValue &Out,
+    llvm::function_ref<APInt(const APInt &, uint64_t)> ShiftOp,
+    llvm::function_ref<APInt(const APInt &, unsigned)> OverflowOp) {
+
+  APValue Source, Count;
+  if (!EvaluateAsRValue(Info, Call->getArg(0), Source) ||
+      !EvaluateAsRValue(Info, Call->getArg(1), Count))
+    return false;
+
+  assert(Call->getNumArgs() == 2);
+
+  QualType SourceTy = Call->getArg(0)->getType();
+  QualType CountTy = Call->getArg(1)->getType();
+  assert(SourceTy->isVectorType() && CountTy->isVectorType());
+
+  QualType DestEltTy = SourceTy->castAs<VectorType>()->getElementType();
+  unsigned DestEltWidth = Source.getVectorElt(0).getInt().getBitWidth();
+  unsigned DestLen = Source.getVectorLength();
+  bool IsDestUnsigned = DestEltTy->isUnsignedIntegerType();
+  unsigned CountEltWidth = Count.getVectorElt(0).getInt().getBitWidth();
+  unsigned NumBitsInQWord = 64;
+  unsigned NumCountElts = NumBitsInQWord / CountEltWidth;
+  SmallVector<APValue, 64> Result;
+  Result.reserve(DestLen);
+
+  uint64_t CountLQWord = 0;
+  for (unsigned EltIdx = 0; EltIdx != NumCountElts; ++EltIdx) {
+    uint64_t Elt = Count.getVectorElt(EltIdx).getInt().getZExtValue();
+    CountLQWord |= (Elt << (EltIdx * CountEltWidth));
+  }
+
+  for (unsigned EltIdx = 0; EltIdx != DestLen; ++EltIdx) {
+    APInt Elt = Source.getVectorElt(EltIdx).getInt();
+    if (CountLQWord < DestEltWidth) {
+      Result.push_back(
+          APValue(APSInt(ShiftOp(Elt, CountLQWord), IsDestUnsigned)));
+    } else {
+      Result.push_back(
+          APValue(APSInt(OverflowOp(Elt, DestEltWidth), IsDestUnsigned)));
+    }
+  }
+  Out = APValue(Result.data(), Result.size());
+  return true;
+}
+
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -13167,6 +13213,66 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       Result.emplace_back(APSInt(APInt(ElemBitWidth, 0), ResultUnsigned));
     }
     return Success(APValue(Result.data(), Result.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_psraq128:
+  case X86::BI__builtin_ia32_psraq256:
+  case X86::BI__builtin_ia32_psraq512:
+  case X86::BI__builtin_ia32_psrad128:
+  case X86::BI__builtin_ia32_psrad256:
+  case X86::BI__builtin_ia32_psrad512:
+  case X86::BI__builtin_ia32_psraw128:
+  case X86::BI__builtin_ia32_psraw256:
+  case X86::BI__builtin_ia32_psraw512: {
+    APValue R;
+    if (!evalShiftWithCount(
+            Info, E, R,
+            [](const APInt &Elt, uint64_t Count) { return Elt.ashr(Count); },
+            [](const APInt &Elt, unsigned Width) {
+              return Elt.ashr(Width - 1);
+            }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_psllq128:
+  case X86::BI__builtin_ia32_psllq256:
+  case X86::BI__builtin_ia32_psllq512:
+  case X86::BI__builtin_ia32_pslld128:
+  case X86::BI__builtin_ia32_pslld256:
+  case X86::BI__builtin_ia32_pslld512:
+  case X86::BI__builtin_ia32_psllw128:
+  case X86::BI__builtin_ia32_psllw256:
+  case X86::BI__builtin_ia32_psllw512: {
+    APValue R;
+    if (!evalShiftWithCount(
+            Info, E, R,
+            [](const APInt &Elt, uint64_t Count) { return Elt.shl(Count); },
+            [](const APInt &Elt, unsigned Width) {
+              return APInt::getZero(Width);
+            }))
+      return false;
+    return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_psrlq128:
+  case X86::BI__builtin_ia32_psrlq256:
+  case X86::BI__builtin_ia32_psrlq512:
+  case X86::BI__builtin_ia32_psrld128:
+  case X86::BI__builtin_ia32_psrld256:
+  case X86::BI__builtin_ia32_psrld512:
+  case X86::BI__builtin_ia32_psrlw128:
+  case X86::BI__builtin_ia32_psrlw256:
+  case X86::BI__builtin_ia32_psrlw512: {
+    APValue R;
+    if (!evalShiftWithCount(
+            Info, E, R,
+            [](const APInt &Elt, uint64_t Count) { return Elt.lshr(Count); },
+            [](const APInt &Elt, unsigned Width) {
+              return APInt::getZero(Width);
+            }))
+      return false;
+    return Success(R, E);
   }
 
   case X86::BI__builtin_ia32_pternlogd128_mask:
