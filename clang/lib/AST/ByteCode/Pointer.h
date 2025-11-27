@@ -47,7 +47,8 @@ struct IntPointer {
   const Descriptor *Desc;
   uint64_t Value;
 
-  IntPointer atOffset(const ASTContext &ASTCtx, unsigned Offset) const;
+  std::optional<IntPointer> atOffset(const ASTContext &ASTCtx,
+                                     unsigned Offset) const;
   IntPointer baseCast(const ASTContext &ASTCtx, unsigned BaseOffset) const;
 };
 
