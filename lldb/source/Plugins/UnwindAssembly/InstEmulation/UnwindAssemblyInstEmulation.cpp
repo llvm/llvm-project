@@ -156,11 +156,11 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   llvm::SmallSet<std::size_t, 0> enqueued = {0};
 
   // Instructions reachable through jumps are inserted on the front.
-  // The next instruction in inserted on the back.
+  // The next instruction is inserted on the back.
   // Pop from the back to ensure non-branching instructions are visited
   // sequentially.
   while (!to_visit.empty()) {
-    std::size_t current_index = to_visit.back();
+    const std::size_t current_index = to_visit.back();
     Instruction &inst = *inst_list.GetInstructionAtIndex(current_index);
     to_visit.pop_back();
     DumpInstToLog(log, inst, inst_list);
