@@ -270,6 +270,10 @@ namespace llvm {
     HADD,
     HSUB,
 
+    /// Integer horizontal saturating add/sub.
+    HADDS,
+    HSUBS,
+
     /// Floating point horizontal add/sub.
     FHADD,
     FHSUB,
