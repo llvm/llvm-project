@@ -5196,7 +5196,10 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
                                    Partition &P) {
   const DataLayout &DL = AI.getDataLayout();
-  auto ComputePartitionTy = [&]() -> std::tuple<Type *, bool, VectorType *> {
+  // Try to compute a friendly type for this partition of the alloca. This
+  // won't always succeed, in which case we fall back to a legal integer type
+  // or an i8 array of an appropriate size.
+  auto SelectPartitionTy = [&]() -> std::tuple<Type *, bool, VectorType *> {
     // First check if the partition is viable for vetor promotion. If it is
     // via a floating-point vector, we are done because we would never prefer
     // integer widening.
@@ -5207,36 +5210,35 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
         return {VecTy, false, VecTy};
       }
     }
-
     // Otherwise, check if there is a common type that all slices of the
-    // partition use. Collect the largest integer type used as a backup.
+    // partition use that spans the partition.
     auto [CommonUseTy, LargestIntTy, OnlyIntrinsicUsers] =
         findCommonType(P.begin(), P.end(), P.endOffset());
-    // If there is a common type that spans the partition, use it.
     if (CommonUseTy) {
       TypeSize CommonUseSize = DL.getTypeAllocSize(CommonUseTy);
       if (CommonUseSize.isFixed() &&
           CommonUseSize.getFixedValue() >= P.size()) {
-
+        // Prefer vector promotion here because we already calculated it.
         if (VecTy)
           return {VecTy, false, VecTy};
         return {CommonUseTy, isIntegerWideningViable(P, CommonUseTy, DL),
                 nullptr};
       }
     }
-
+    // If there are only intrinsic users, try to represent as a legal integer type
+    // because we are probably just copying data around and the integer can be promoted.
     if (OnlyIntrinsicUsers && DL.isLegalInteger(P.size() * 8))
       return {Type::getIntNTy(*C, P.size() * 8), false, nullptr};
-
-    // If not, can we find an appropriate subtype in the original allocated
+    // Can we find an appropriate subtype in the original allocated
     // type?
     if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
                                                  P.beginOffset(), P.size())) {
+      // If the partition is an integer array that can be spanned by a legal integer type,
+      // prefer to represent it as a legal integer type because it's more likely to be promotable.
       if (TypePartitionTy->isArrayTy() &&
           TypePartitionTy->getArrayElementType()->isIntegerTy() &&
           DL.isLegalInteger(P.size() * 8))
         TypePartitionTy = Type::getIntNTy(*C, P.size() * 8);
-
       if (isIntegerWideningViable(P, TypePartitionTy, DL))
         return {TypePartitionTy, true, nullptr};
       if (VecTy)
@@ -5259,7 +5261,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
     return {ArrayType::get(Type::getInt8Ty(*C), P.size()), false, nullptr};
   };
 
-  auto [PartitionTy, IsIntegerPromotable, VecTy] = ComputePartitionTy();
+  auto [PartitionTy, IsIntegerPromotable, VecTy] = SelectPartitionTy();
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
