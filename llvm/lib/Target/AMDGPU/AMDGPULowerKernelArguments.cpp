@@ -47,6 +47,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
+    AU.addRequired<DominatorTreeWrapperPass>();
     AU.setPreservesAll();
  }
 };
@@ -68,7 +69,8 @@ static BasicBlock::iterator getInsertPt(BasicBlock &BB) {
   return InsPt;
 }
 
-static void addAliasScopeMetadata(Function &F, DataLayout const &DL) {
+static void addAliasScopeMetadata(Function &F, DataLayout const &DL,
+                                  DominatorTree &DT) {
   // Collect noalias arguments.
   SmallVector<Argument const *, 4u> NoAliasArgs;
 
@@ -93,9 +95,6 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL) {
   }
 
   // Iterate over all instructions.
-  DominatorTree DT;
-  DT.recalculate(F);
-
   for (inst_iterator Inst = inst_begin(F), InstEnd = inst_end(F);
        Inst != InstEnd; ++Inst) {
     // If instruction accesses memory, collect its pointer arguments.
@@ -176,7 +175,8 @@ static void addAliasScopeMetadata(Function &F, DataLayout const &DL) {
   }
 }
 
-static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
+static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
+                                 DominatorTree &DT) {
   CallingConv::ID CC = F.getCallingConv();
   if (CC != CallingConv::AMDGPU_KERNEL || F.arg_empty())
     return false;
@@ -205,7 +205,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
 
   uint64_t ExplicitArgOffset = 0;
 
-  addAliasScopeMetadata(F, F.getParent()->getDataLayout());
+  addAliasScopeMetadata(F, F.getParent()->getDataLayout(), DT);
 
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
@@ -359,8 +359,8 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
 bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   auto &TPC = getAnalysis<TargetPassConfig>();
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
-  // DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  return lowerKernelArguments(F, TM);
+  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  return lowerKernelArguments(F, TM, DT);
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPULowerKernelArguments, DEBUG_TYPE,
@@ -376,8 +376,8 @@ FunctionPass *llvm::createAMDGPULowerKernelArgumentsPass() {
 
 PreservedAnalyses
 AMDGPULowerKernelArgumentsPass::run(Function &F, FunctionAnalysisManager &AM) {
-  // DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  bool Changed = lowerKernelArguments(F, TM);
+  DominatorTree &DT = *AM.getCachedResult<DominatorTreeAnalysis>(F);
+  bool Changed = lowerKernelArguments(F, TM, DT);
   if (Changed) {
     // TODO: Preserves a lot more.
     PreservedAnalyses PA;
