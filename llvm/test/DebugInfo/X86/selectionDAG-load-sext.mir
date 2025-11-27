@@ -1,3 +1,4 @@
+# This test checks that after SelectionDAG runs, it preserves the debug info that is lost due to the DAGCombiner combining a load and a sext instruction, where the #dbg_value is pointing to the result of the load.
 
 # RUN: llc -O2 %s -mtriple=x86_64-unkown-linux -start-before=x86-isel -stop-after=x86-isel -o - | FileCheck %s --check-prefix=MIR
 # RUN: llc -O2 %s -start-before=x86-isel -mtriple=x86_64-unkown-linux --filetype=obj -o %t.o 
@@ -7,7 +8,7 @@
 # MIR-LABEL: bb.0
 # MIR: %{{[0-9a-zA-Z]+}}{{.*}} = MOVSX64rm32 ${{.*}}, 1, $noreg, @GlobArr, $noreg, debug-instr-number [[INSTR_NUM:[0-9]+]]
 # MIR-NEXT: DBG_INSTR_REF ![[IDX]], !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref([[INSTR_NUM]], 0)
-# MIR-NEXT DBG_INSTR_REF ![[IDX]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 0, 32), dbg-instr-ref([[INSTR_NUM]], 0)
+# MIR-NEXT: DBG_INSTR_REF ![[IDX]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 0, 32), dbg-instr-ref([[INSTR_NUM]], 0)
 
 # DUMP: DW_AT_location	(indexed ({{[0-9]+}}x{{[0-9]+}}) loclist = 0x{{[0-9]+}}: 
 # DUMP-NEXT: [0x{{[0-9]+}}, 0x{{[0-9]+}}): {{.*}}, DW_OP_piece 0x4
