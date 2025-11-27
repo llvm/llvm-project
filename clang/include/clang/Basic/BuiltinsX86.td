@@ -710,11 +710,13 @@ let Features = "avx2", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
   def gatherq_d : X86Builtin<"_Vector<4, int>(_Vector<4, int>, int const *, _Vector<2, long long int>, _Vector<4, int>, _Constant char)">;
 }
 
-let Features = "f16c", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "f16c",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def vcvtps2ph : X86Builtin<"_Vector<8, short>(_Vector<4, float>, _Constant int)">;
 }
 
-let Features = "f16c", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "f16c",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def vcvtps2ph256 : X86Builtin<"_Vector<8, short>(_Vector<8, float>, _Constant int)">;
 }
 
@@ -3350,10 +3352,6 @@ let Features = "avx512bf16,avx512vl", Attributes = [NoThrow, Const, RequiredVect
 
 let Features = "avx512bf16", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
   def dpbf16ps_512 : X86Builtin<"_Vector<16, float>(_Vector<16, float>, _Vector<32, __bf16>, _Vector<32, __bf16>)">;
-}
-
-let Features = "avx512bf16", Attributes = [NoThrow, Const] in {
-  def cvtsbf162ss_32 : X86Builtin<"float(__bf16)">;
 }
 
 let Features = "avx512vp2intersect", Attributes = [NoThrow, RequiredVectorWidth<512>] in {

@@ -13909,6 +13909,81 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     return Success(R, E);
   }
+
+  case clang::X86::BI__builtin_ia32_vcvtps2ph:
+  case clang::X86::BI__builtin_ia32_vcvtps2ph256: {
+    APValue SrcVec;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SrcVec))
+      return false;
+
+    APSInt Imm;
+    if (!EvaluateInteger(E->getArg(1), Imm, Info))
+      return false;
+
+    const auto *SrcVTy = E->getArg(0)->getType()->castAs<VectorType>();
+    unsigned SrcNumElems = SrcVTy->getNumElements();
+    const auto *DstVTy = E->getType()->castAs<VectorType>();
+    unsigned DstNumElems = DstVTy->getNumElements();
+    QualType DstElemTy = DstVTy->getElementType();
+
+    const llvm::fltSemantics &HalfSem =
+        Info.Ctx.getFloatTypeSemantics(Info.Ctx.HalfTy);
+
+    int ImmVal = Imm.getZExtValue();
+    bool UseMXCSR = (ImmVal & 4) != 0;
+    bool IsFPConstrained =
+        E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).isFPConstrained();
+
+    llvm::RoundingMode RM;
+    if (!UseMXCSR) {
+      switch (ImmVal & 3) {
+      case 0:
+        RM = llvm::RoundingMode::NearestTiesToEven;
+        break;
+      case 1:
+        RM = llvm::RoundingMode::TowardNegative;
+        break;
+      case 2:
+        RM = llvm::RoundingMode::TowardPositive;
+        break;
+      case 3:
+        RM = llvm::RoundingMode::TowardZero;
+        break;
+      default:
+        llvm_unreachable("Invalid immediate rounding mode");
+      }
+    } else {
+      RM = llvm::RoundingMode::NearestTiesToEven;
+    }
+
+    SmallVector<APValue, 8> ResultElements;
+    ResultElements.reserve(DstNumElems);
+
+    for (unsigned I = 0; I < SrcNumElems; ++I) {
+      APFloat SrcVal = SrcVec.getVectorElt(I).getFloat();
+
+      bool LostInfo;
+      APFloat::opStatus St = SrcVal.convert(HalfSem, RM, &LostInfo);
+
+      if (UseMXCSR && IsFPConstrained && St != APFloat::opOK) {
+        Info.FFDiag(E, diag::note_constexpr_dynamic_rounding);
+        return false;
+      }
+
+      APSInt DstInt(SrcVal.bitcastToAPInt(),
+                    DstElemTy->isUnsignedIntegerOrEnumerationType());
+      ResultElements.push_back(APValue(DstInt));
+    }
+
+    if (DstNumElems > SrcNumElems) {
+      APSInt Zero = Info.Ctx.MakeIntValue(0, DstElemTy);
+      for (unsigned I = SrcNumElems; I < DstNumElems; ++I) {
+        ResultElements.push_back(APValue(Zero));
+      }
+    }
+
+    return Success(ResultElements, E);
+  }
   }
 }
 
