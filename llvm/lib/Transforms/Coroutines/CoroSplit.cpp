@@ -2039,6 +2039,7 @@ remapPredecessorIfPredicate(BasicBlock *InitialBlock,
 static void enforceDominationByCoroBegin(Function &F,
                                          const coro::Shape &Shape) {
   DominatorTree DT(F);
+  ValueToValueMapTy VMap;
   BasicBlock *CoroBeginNode = Shape.CoroBegin->getParent();
 
   // Run is in reversed post order, to enforce visiting predecessors before
@@ -2050,7 +2051,6 @@ static void enforceDominationByCoroBegin(Function &F,
     }
 
     // The duplicate will become the unspilled alternative
-    ValueToValueMapTy VMap;
     auto *UnspilledAlternativeBlock =
         CloneBasicBlock(CurrentBlock, VMap, ".unspilled_alternative", &F);
 
