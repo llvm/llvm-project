@@ -365,10 +365,10 @@ public:
 
   /// If this type is a vector, return a vector with the same number of elements
   /// but the new element size. Otherwise, return the new element type. Invalid
-  /// for pointer types. For pointer types, use changeElementType.
+  /// for pointer and floating point types. For these, use changeElementType.
   constexpr LLT changeElementSize(unsigned NewEltSize) const {
     assert(!isPointerOrPointerVector() && !(isFloat() || isFloatVector()) &&
-           "invalid to directly change element size for pointers");
+           "invalid to directly change element size for pointers and floats");
     return isVector()
                ? LLT::vector(getElementCount(), getElementType().isInteger()
                                                     ? LLT::integer(NewEltSize)
@@ -392,8 +392,8 @@ public:
   /// not attempt to handle cases that aren't evenly divisible.
   constexpr LLT divide(int Factor) const {
     assert(Factor != 1);
-    assert((!isScalar() || getScalarSizeInBits() != 0) &&
-           "cannot divide scalar of size zero");
+    assert((!isScalar() || getScalarSizeInBits() != 0) && !isFloat() &&
+           "cannot divide scalar of size zero and floats");
     if (isVector()) {
       assert(getElementCount().isKnownMultipleOf(Factor));
       return scalarOrVector(getElementCount().divideCoefficientBy(Factor),
