@@ -156,46 +156,43 @@ __bf16 test_mm_cvtness_sbh(float A) {
 
 __m128 test_mm_cvtpbh_ps(__m128bh A) {
   // CHECK-LABEL: test_mm_cvtpbh_ps
-  // CHECK: sext <4 x i16> %{{.*}} to <4 x i32>
-  // CHECK: call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %{{.*}}, i32 %{{.*}})
+  // CHECK: fpext <8 x bfloat> %{{.*}} to <8 x float>
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm_cvtpbh_ps(A);
 }
 
 __m256 test_mm256_cvtpbh_ps(__m128bh A) {
   // CHECK-LABEL: test_mm256_cvtpbh_ps
-  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: call <8 x i32> @llvm.x86.avx2.pslli.d(<8 x i32> %{{.*}}, i32 %{{.*}})
+  // CHECK: fpext <8 x bfloat> %{{.*}} to <8 x float>
   return _mm256_cvtpbh_ps(A);
 }
 
 __m128 test_mm_maskz_cvtpbh_ps(__mmask8 M, __m128bh A) {
   // CHECK-LABEL: test_mm_maskz_cvtpbh_ps
-  // CHECK: sext <4 x i16> %{{.*}} to <4 x i32>
-  // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
-  // CHECK: call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %{{.*}}, i32 %{{.*}})
+  // CHECK: fpext <8 x bfloat> %{{.*}} to <8 x float>
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_maskz_cvtpbh_ps(M, A);
 }
 
 __m256 test_mm256_maskz_cvtpbh_ps(__mmask8 M, __m128bh A) {
   // CHECK-LABEL: test_mm256_maskz_cvtpbh_ps
-  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
-  // CHECK: call <8 x i32> @llvm.x86.avx2.pslli.d(<8 x i32> %{{.*}}, i32 %{{.*}})
+  // CHECK: fpext <8 x bfloat> %{{.*}} to <8 x float>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_cvtpbh_ps(M, A);
 }
 
 __m128 test_mm_mask_cvtpbh_ps(__m128 S, __mmask8 M, __m128bh A) {
   // CHECK-LABEL: test_mm_mask_cvtpbh_ps
-  // CHECK: sext <4 x i16> %{{.*}} to <4 x i32>
-  // CHECK: call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %{{.*}}, i32 %{{.*}})
-  // CHECK: select <4 x i1> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}
+  // CHECK: fpext <8 x bfloat> %{{.*}} to <8 x float>
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_mask_cvtpbh_ps(S, M, A);
 }
 
 __m256 test_mm256_mask_cvtpbh_ps(__m256 S, __mmask8 M, __m128bh A) {
   // CHECK-LABEL: test_mm256_mask_cvtpbh_ps
-  // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
-  // CHECK: call <8 x i32> @llvm.x86.avx2.pslli.d(<8 x i32> %{{.*}}, i32 %{{.*}})
-  // CHECK: select <8 x i1> %{{.*}}, <8 x i32> %{{.*}}, <8 x i32> %{{.*}}
+  // CHECK: fpext <8 x bfloat> %{{.*}} to <8 x float>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_cvtpbh_ps(S, M, A);
 }
