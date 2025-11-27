@@ -3527,7 +3527,94 @@ static bool interp__builtin_ia32_shufbitqmb_mask(InterpState &S, CodePtr OpPC,
   }
 
   pushInteger(S, RetMask, Call->getType());
+  return true;
+}
 
+static bool interp__builtin_ia32_vcvtps2ph(InterpState &S, CodePtr OpPC,
+                                           const CallExpr *Call) {
+  // Arguments are: vector of floats, rounding immediate
+  assert(Call->getNumArgs() == 2);
+
+  APSInt Imm = popToAPSInt(S, Call->getArg(1));
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  assert(Src.getFieldDesc()->isPrimitiveArray());
+  assert(Dst.getFieldDesc()->isPrimitiveArray());
+
+  const auto *SrcVTy = Call->getArg(0)->getType()->castAs<VectorType>();
+  unsigned SrcNumElems = SrcVTy->getNumElements();
+  const auto *DstVTy = Call->getType()->castAs<VectorType>();
+  unsigned DstNumElems = DstVTy->getNumElements();
+
+  const llvm::fltSemantics &HalfSem =
+      S.getASTContext().getFloatTypeSemantics(S.getASTContext().HalfTy);
+
+  // imm[2] == 1 means use MXCSR rounding mode.
+  // In that case, we can only evaluate if the conversion is exact.
+  int ImmVal = Imm.getZExtValue();
+  bool UseMXCSR = (ImmVal & 4) != 0;
+  bool IsFPConstrained =
+      Call->getFPFeaturesInEffect(S.getASTContext().getLangOpts())
+          .isFPConstrained();
+
+  llvm::RoundingMode RM;
+  if (!UseMXCSR) {
+    switch (ImmVal & 3) {
+    case 0:
+      RM = llvm::RoundingMode::NearestTiesToEven;
+      break;
+    case 1:
+      RM = llvm::RoundingMode::TowardNegative;
+      break;
+    case 2:
+      RM = llvm::RoundingMode::TowardPositive;
+      break;
+    case 3:
+      RM = llvm::RoundingMode::TowardZero;
+      break;
+    default:
+      llvm_unreachable("Invalid immediate rounding mode");
+    }
+  } else {
+    // For MXCSR, we must check for exactness. We can use any rounding mode
+    // for the trial conversion since the result is the same if it's exact.
+    RM = llvm::RoundingMode::NearestTiesToEven;
+  }
+
+  QualType DstElemQT = Dst.getFieldDesc()->getElemQualType();
+  PrimType DstElemT = *S.getContext().classify(DstElemQT);
+
+  for (unsigned I = 0; I != SrcNumElems; ++I) {
+    Floating SrcVal = Src.elem<Floating>(I);
+    APFloat DstVal = SrcVal.getAPFloat();
+
+    bool LostInfo;
+    APFloat::opStatus St = DstVal.convert(HalfSem, RM, &LostInfo);
+
+    if (UseMXCSR && IsFPConstrained && St != APFloat::opOK) {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_dynamic_rounding);
+      return false;
+    }
+
+    INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
+      // Convert the destination value's bit pattern to an unsigned integer,
+      // then reconstruct the element using the target type's 'from' method.
+      uint64_t RawBits = DstVal.bitcastToAPInt().getZExtValue();
+      Dst.elem<T>(I) = T::from(RawBits);
+    });
+  }
+
+  // Zero out remaining elements if the destination has more elements
+  // (e.g., vcvtps2ph converting 4 floats to 8 shorts).
+  if (DstNumElems > SrcNumElems) {
+    for (unsigned I = SrcNumElems; I != DstNumElems; ++I) {
+      INT_TYPE_SWITCH_NO_BOOL(DstElemT, { Dst.elem<T>(I) = T::from(0); });
+    }
+  }
+
+  Dst.initializeAllElements();
   return true;
 }
 
@@ -4955,6 +5042,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vinsertf128_si256:
   case X86::BI__builtin_ia32_insert128i256:
     return interp__builtin_x86_insert_subvector(S, OpPC, Call, BuiltinID);
+
+  case clang::X86::BI__builtin_ia32_vcvtps2ph:
+  case clang::X86::BI__builtin_ia32_vcvtps2ph256:
+    return interp__builtin_ia32_vcvtps2ph(S, OpPC, Call);
 
   case X86::BI__builtin_ia32_vec_ext_v4hi:
   case X86::BI__builtin_ia32_vec_ext_v16qi:

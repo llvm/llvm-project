@@ -710,11 +710,13 @@ let Features = "avx2", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
   def gatherq_d : X86Builtin<"_Vector<4, int>(_Vector<4, int>, int const *, _Vector<2, long long int>, _Vector<4, int>, _Constant char)">;
 }
 
-let Features = "f16c", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "f16c",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def vcvtps2ph : X86Builtin<"_Vector<8, short>(_Vector<4, float>, _Constant int)">;
 }
 
-let Features = "f16c", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "f16c",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def vcvtps2ph256 : X86Builtin<"_Vector<8, short>(_Vector<8, float>, _Constant int)">;
 }
 
