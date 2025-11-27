@@ -241,8 +241,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_div_pd(__m128d __a,
 ///    bits are copied from the upper 64 bits of operand \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sqrt_sd(__m128d __a,
                                                          __m128d __b) {
-  __m128d __c = __builtin_ia32_sqrtsd((__v2df)__b);
-  return __extension__(__m128d){__c[0], __a[1]};
+  return __extension__(__m128d){__builtin_elementwise_sqrt(__b[0]), __a[1]};
 }
 
 /// Calculates the square root of the each of two values stored in a
@@ -257,7 +256,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sqrt_sd(__m128d __a,
 /// \returns A 128-bit vector of [2 x double] containing the square roots of the
 ///    values in the operand.
 static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sqrt_pd(__m128d __a) {
-  return __builtin_ia32_sqrtpd((__v2df)__a);
+  return __builtin_elementwise_sqrt(__a);
 }
 
 /// Compares lower 64-bit double-precision values of both operands, and
@@ -2290,8 +2289,8 @@ _mm_avg_epu16(__m128i __a, __m128i __b) {
 ///    A 128-bit signed [8 x i16] vector.
 /// \returns A 128-bit signed [4 x i32] vector containing the sums of products
 ///    of both parameters.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_madd_epi16(__m128i __a,
-                                                            __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_madd_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_pmaddwd128((__v8hi)__a, (__v8hi)__b);
 }
 
@@ -4280,7 +4279,8 @@ _mm_packus_epi16(__m128i __a, __m128i __b) {
 ///    A 128-bit integer vector containing the values with bits to be extracted.
 /// \returns The most significant bits from each 8-bit element in \a __a,
 ///    written to bits [15:0]. The other bits are assigned zeros.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_movemask_epi8(__m128i __a) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_movemask_epi8(__m128i __a) {
   return __builtin_ia32_pmovmskb128((__v16qi)__a);
 }
 
@@ -4699,7 +4699,8 @@ _mm_unpacklo_pd(__m128d __a, __m128d __b) {
 ///    be extracted.
 /// \returns The sign bits from each of the double-precision elements in \a __a,
 ///    written to bits [1:0]. The remaining bits are assigned values of zero.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_movemask_pd(__m128d __a) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_movemask_pd(__m128d __a) {
   return __builtin_ia32_movmskpd((__v2df)__a);
 }
 

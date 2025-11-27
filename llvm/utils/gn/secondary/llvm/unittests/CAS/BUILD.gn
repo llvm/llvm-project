@@ -1,3 +1,4 @@
+import("//llvm/include/llvm/Config/config.gni")
 import("//third-party/unittest/unittest.gni")
 
 unittest("CASTests") {
@@ -8,8 +9,19 @@ unittest("CASTests") {
   ]
   sources = [
     "ActionCacheTest.cpp",
+    "BuiltinUnifiedCASDatabasesTest.cpp",
     "CASTestConfig.cpp",
     "ObjectStoreTest.cpp",
-    "ProgramTest.cpp",
+    "UnifiedOnDiskCacheTest.cpp",
   ]
+
+  if (llvm_enable_ondisk_cas) {
+    sources += [
+      "OnDiskDataAllocatorTest.cpp",
+      "OnDiskGraphDBTest.cpp",
+      "OnDiskKeyValueDBTest.cpp",
+      "OnDiskTrieRawHashMapTest.cpp",
+      "ProgramTest.cpp",
+    ]
+  }
 }

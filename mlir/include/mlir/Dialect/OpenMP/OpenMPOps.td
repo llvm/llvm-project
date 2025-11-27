@@ -358,44 +358,6 @@ def SingleOp : OpenMP_Op<"single", traits = [
 }
 
 //===---------------------------------------------------------------------===//
-// OpenMP Canonical Loop Info Type
-//===---------------------------------------------------------------------===//
-
-def CanonicalLoopInfoType : OpenMP_Type<"CanonicalLoopInfo", "cli"> {
-  let summary = "Type for representing a reference to a canonical loop";
-  let description = [{
-    A variable of type CanonicalLoopInfo refers to an OpenMP-compatible
-    canonical loop in the same function. Values of this type are not
-    available at runtime and therefore cannot be used by the program itself,
-    i.e. an opaque type. It is similar to the transform dialect's
-    `!transform.interface` type, but instead of implementing an interface
-    for each transformation, the OpenMP dialect itself defines possible
-    operations on this type.
-
-    A value of type CanonicalLoopInfoType (in the following: CLI) value can be
-
-    1. created by omp.new_cli.
-    2. passed to omp.canonical_loop to associate the loop to that CLI. A CLI
-       can only be associated once.
-    3. passed to an omp loop transformation operation that modifies the loop
-       associated with the CLI. The CLI is the "applyee" and the operation is
-       the consumer. A CLI can only be consumed once.
-    4. passed to an omp loop transformation operation to associate the cli with
-       a result of that transformation. The CLI is the "generatee" and the
-       operation is the generator.
-
-    A CLI cannot
-
-    1. be returned from a function.
-    2. be passed to operations that are not specifically designed to take a
-       CanonicalLoopInfoType, including AnyType.
-
-    A CLI directly corresponds to an object of
-    OpenMPIRBuilder's CanonicalLoopInfo struct when lowering to LLVM-IR.
-  }];
-}
-
-//===---------------------------------------------------------------------===//
 // OpenMP Canonical Loop Info Creation
 //===---------------------------------------------------------------------===//
 
@@ -561,6 +523,31 @@ def UnrollHeuristicOp : OpenMPTransform_Op<"unroll_heuristic", []> {
   ];
 
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// OpenMP tile operation
+//===----------------------------------------------------------------------===//
+
+def TileOp : OpenMPTransformBase_Op<"tile",
+                                clauses = [OpenMP_SizesClause]> {
+  let summary = "OpenMP tile operation";
+  let description = [{
+    Represents the OpenMP tile directive introduced in OpenMP 5.1.
+
+    The construct partitions the logical iteration space of the affected loops
+    into equally-sized tiles, then creates two sets of nested loops. The outer
+    loops, called the grid loops, iterate over all tiles. The inner loops,
+    called the intratile loops, iterate over the logical iterations of a tile.
+    The sizes clause determines the size of a tile.
+
+    Currently, the affected loops must be rectangular (the tripcount of the
+    inner loop must not depend on any iv of an surrounding affected loop) and
+    perfectly nested (except for the innermost affected loop, no operations
+    other than the nested loop and the terminator in the loop body).
+  }] # clausesDescription;
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1211,7 +1198,7 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
 def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
   let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
                        TypeAttr:$var_type,
-                       UI64Attr:$map_type,
+                       ClauseMapFlagsAttr:$map_type,
                        VariableCaptureKindAttr:$map_capture_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<OpenMP_PointerLikeType>:$members,
@@ -1985,7 +1972,7 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
                                                          Symbol]> {
   let summary = "declares a reduction kind";
   let description = [{
-    Declares an OpenMP reduction kind. This requires two mandatory and three
+    Declares an OpenMP reduction kind. This requires two mandatory and four
     optional regions.
 
       1. The optional alloc region specifies how to allocate the thread-local
@@ -2014,6 +2001,9 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
          allocated by the initializer region. The region has an argument that
          contains the value of the thread-local reduction accumulator. This will
          be executed after the reduction has completed.
+      6. The DataPtrPtr region specifies how to access the base address of a
+         descriptor. This is used, in particular, for GPU reductions in order
+         know where partial reduction results are stored in remote lanes.
 
     Note that the MLIR type system does not allow for type-polymorphic
     reductions. Separate reduction declarations should be created for different
@@ -2021,23 +2011,32 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
 
     For initializer and reduction regions, the operand to `omp.yield` must
     match the parent operation's results.
+
+    * `$byref_element_type`: For by-ref reductions, we want to keep track of the
+      boxed/allocated type.  For example, for a `real, allocatable` variable, 
+      `real` should be stored in this attribute.
+ 
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       TypeAttr:$type);
+                       TypeAttr:$type,
+                       OptionalAttr<TypeAttr>:$byref_element_type
+                       );
 
   let regions = (region MaxSizedRegion<1>:$allocRegion,
                         AnyRegion:$initializerRegion,
                         AnyRegion:$reductionRegion,
                         AnyRegion:$atomicReductionRegion,
-                        AnyRegion:$cleanupRegion);
+                        AnyRegion:$cleanupRegion,
+                        MaxSizedRegion<1>:$dataPtrPtrRegion);
 
   let assemblyFormat = "$sym_name `:` $type attr-dict-with-keyword "
                        "( `alloc` $allocRegion^ )? "
                        "`init` $initializerRegion "
                        "`combiner` $reductionRegion "
                        "( `atomic` $atomicReductionRegion^ )? "
-                       "( `cleanup` $cleanupRegion^ )? ";
+                       "( `cleanup` $cleanupRegion^ )? "
+                       "( `data_ptr_ptr` $dataPtrPtrRegion^ )? ";
 
   let extraClassDeclaration = [{
     BlockArgument getAllocMoldArg() {
@@ -2067,6 +2066,10 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
     }
     BlockArgument getCleanupAllocArg() {
       auto &region = getCleanupRegion();
+      return region.empty() ? nullptr : region.getArgument(0);
+    }
+    BlockArgument getDataPtrPtrRegionArg() {
+      auto &region = getDataPtrPtrRegion();
       return region.empty() ? nullptr : region.getArgument(0);
     }
 

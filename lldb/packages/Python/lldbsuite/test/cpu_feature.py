@@ -39,9 +39,13 @@ class CPUFeature:
         if err.Fail() or retcode != 0:
             return output, False
 
-        # FIXME: simple substring match, e.g., test for 'sme' will be true if
-        # 'sme2' or 'smefa64' is present
-        return None, (self.cpu_info_flag in output)
+        # Assume that every processor presents the same features.
+        # Look for the first "Features: ...." line. Features are space separated.
+        if m := re.search(r"Features\s*: (.*)\n", output):
+            features = m.group(1).split()
+            return None, (self.cpu_info_flag in features)
+
+        return 'No "Features:" line found in /proc/cpuinfo', False
 
     def _is_supported_darwin(self, cmd_runner):
         if not self.sysctl_key:
@@ -58,7 +62,7 @@ class CPUFeature:
 class AArch64:
     FPMR = CPUFeature("fpmr")
     GCS = CPUFeature("gcs")
-    MTE = CPUFeature("mte")
+    MTE = CPUFeature("mte", "hw.optional.arm.FEAT_MTE4")
     MTE_STORE_ONLY = CPUFeature("mtestoreonly")
     PTR_AUTH = CPUFeature("paca", "hw.optional.arm.FEAT_PAuth2")
     SME = CPUFeature("sme", "hw.optional.arm.FEAT_SME")

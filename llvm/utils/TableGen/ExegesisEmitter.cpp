@@ -58,6 +58,14 @@ private:
   const std::map<llvm::StringRef, unsigned> PfmCounterNameTable;
 };
 
+struct ValidationCounterInfo {
+  int64_t EventNumber;
+  StringRef EventName;
+  unsigned PfmCounterID;
+};
+
+} // namespace
+
 static std::map<llvm::StringRef, unsigned>
 collectPfmCounters(const RecordKeeper &Records) {
   std::map<llvm::StringRef, unsigned> PfmCounterNameTable;
@@ -106,14 +114,8 @@ ExegesisEmitter::ExegesisEmitter(const RecordKeeper &RK)
   Target = Targets[0]->getName().str();
 }
 
-struct ValidationCounterInfo {
-  int64_t EventNumber;
-  StringRef EventName;
-  unsigned PfmCounterID;
-};
-
-bool EventNumberLess(const ValidationCounterInfo &LHS,
-                     const ValidationCounterInfo &RHS) {
+static bool EventNumberLess(const ValidationCounterInfo &LHS,
+                            const ValidationCounterInfo &RHS) {
   return LHS.EventNumber < RHS.EventNumber;
 }
 
@@ -221,7 +223,7 @@ void ExegesisEmitter::emitPfmCounters(raw_ostream &OS) const {
     emitPfmCountersInfo(*Def, IssueCountersTableOffset, OS);
 
   OS << "\n";
-} // namespace
+}
 
 void ExegesisEmitter::emitPfmCountersLookupTable(raw_ostream &OS) const {
   std::vector<const Record *> Bindings =
@@ -248,8 +250,6 @@ void ExegesisEmitter::run(raw_ostream &OS) const {
   emitPfmCounters(OS);
   emitPfmCountersLookupTable(OS);
 }
-
-} // end anonymous namespace
 
 static TableGen::Emitter::OptClass<ExegesisEmitter>
     X("gen-exegesis", "Generate llvm-exegesis tables");

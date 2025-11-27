@@ -376,12 +376,12 @@ public:
 #  endif // _LIBCPP_CXX03_LANG
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
-  _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
 
-  _LIBCPP_HIDE_FROM_ABI reference front() { return c.front(); }
-  _LIBCPP_HIDE_FROM_ABI const_reference front() const { return c.front(); }
-  _LIBCPP_HIDE_FROM_ABI reference back() { return c.back(); }
-  _LIBCPP_HIDE_FROM_ABI const_reference back() const { return c.back(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI reference front() { return c.front(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_reference front() const { return c.front(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI reference back() { return c.back(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const_reference back() const { return c.back(); }
 
   _LIBCPP_HIDE_FROM_ABI void push(const value_type& __v) { c.push_back(__v); }
 #  ifndef _LIBCPP_CXX03_LANG
@@ -449,7 +449,7 @@ queue(_Container, _Alloc) -> queue<typename _Container::value_type, _Container>;
 
 #  if _LIBCPP_STD_VER >= 23
 template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
-queue(_InputIterator, _InputIterator) -> queue<__iter_value_type<_InputIterator>>;
+queue(_InputIterator, _InputIterator) -> queue<__iterator_value_type<_InputIterator>>;
 
 template <ranges::input_range _Range>
 queue(from_range_t, _Range&&) -> queue<ranges::range_value_t<_Range>>;
@@ -459,7 +459,7 @@ template <class _InputIterator,
           __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0,
           __enable_if_t<__is_allocator_v<_Alloc>, int>                             = 0>
 queue(_InputIterator, _InputIterator, _Alloc)
-    -> queue<__iter_value_type<_InputIterator>, deque<__iter_value_type<_InputIterator>, _Alloc>>;
+    -> queue<__iterator_value_type<_InputIterator>, deque<__iterator_value_type<_InputIterator>, _Alloc>>;
 
 template <ranges::input_range _Range, class _Alloc, __enable_if_t<__is_allocator_v<_Alloc>, int> = 0>
 queue(from_range_t, _Range&&, _Alloc)
@@ -664,8 +664,10 @@ public:
 #  endif
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI const_reference top() const { return c.front(); }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI const_reference top() const {
+    return c.front();
+  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void push(const value_type& __v);
 #  ifndef _LIBCPP_CXX03_LANG
@@ -705,13 +707,13 @@ template <class _Compare,
 priority_queue(_Compare, _Container) -> priority_queue<typename _Container::value_type, _Container, _Compare>;
 
 template <class _InputIterator,
-          class _Compare   = less<__iter_value_type<_InputIterator>>,
-          class _Container = vector<__iter_value_type<_InputIterator>>,
+          class _Compare   = less<__iterator_value_type<_InputIterator>>,
+          class _Container = vector<__iterator_value_type<_InputIterator>>,
           class            = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
           class            = enable_if_t<!__is_allocator_v<_Compare>>,
           class            = enable_if_t<!__is_allocator_v<_Container>>>
 priority_queue(_InputIterator, _InputIterator, _Compare = _Compare(), _Container = _Container())
-    -> priority_queue<__iter_value_type<_InputIterator>, _Container, _Compare>;
+    -> priority_queue<__iterator_value_type<_InputIterator>, _Container, _Compare>;
 
 template <class _Compare,
           class _Container,
@@ -726,9 +728,9 @@ template <class _InputIterator,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
           class = enable_if_t<__is_allocator_v<_Allocator>>>
 priority_queue(_InputIterator, _InputIterator, _Allocator)
-    -> priority_queue<__iter_value_type<_InputIterator>,
-                      vector<__iter_value_type<_InputIterator>, _Allocator>,
-                      less<__iter_value_type<_InputIterator>>>;
+    -> priority_queue<__iterator_value_type<_InputIterator>,
+                      vector<__iterator_value_type<_InputIterator>, _Allocator>,
+                      less<__iterator_value_type<_InputIterator>>>;
 
 template <class _InputIterator,
           class _Compare,
@@ -737,8 +739,8 @@ template <class _InputIterator,
           class = enable_if_t<!__is_allocator_v<_Compare>>,
           class = enable_if_t<__is_allocator_v<_Allocator>>>
 priority_queue(_InputIterator, _InputIterator, _Compare, _Allocator)
-    -> priority_queue<__iter_value_type<_InputIterator>,
-                      vector<__iter_value_type<_InputIterator>, _Allocator>,
+    -> priority_queue<__iterator_value_type<_InputIterator>,
+                      vector<__iterator_value_type<_InputIterator>, _Allocator>,
                       _Compare>;
 
 template <class _InputIterator,

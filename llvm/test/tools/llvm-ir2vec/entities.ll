@@ -1,6 +1,6 @@
 ; RUN: llvm-ir2vec entities | FileCheck %s
 
-CHECK: 84
+CHECK: 110
 CHECK-NEXT: Ret     0
 CHECK-NEXT: Br      1
 CHECK-NEXT: Switch  2
@@ -85,3 +85,29 @@ CHECK-NEXT: Function        80
 CHECK-NEXT: Pointer 81
 CHECK-NEXT: Constant        82
 CHECK-NEXT: Variable        83
+CHECK-NEXT: FCMP_false   84
+CHECK-NEXT: FCMP_oeq     85
+CHECK-NEXT: FCMP_ogt     86
+CHECK-NEXT: FCMP_oge     87
+CHECK-NEXT: FCMP_olt     88
+CHECK-NEXT: FCMP_ole     89
+CHECK-NEXT: FCMP_one     90
+CHECK-NEXT: FCMP_ord     91
+CHECK-NEXT: FCMP_uno     92
+CHECK-NEXT: FCMP_ueq     93
+CHECK-NEXT: FCMP_ugt     94
+CHECK-NEXT: FCMP_uge     95
+CHECK-NEXT: FCMP_ult     96
+CHECK-NEXT: FCMP_ule     97
+CHECK-NEXT: FCMP_une     98
+CHECK-NEXT: FCMP_true    99
+CHECK-NEXT: ICMP_eq      100
+CHECK-NEXT: ICMP_ne      101
+CHECK-NEXT: ICMP_ugt     102
+CHECK-NEXT: ICMP_uge     103
+CHECK-NEXT: ICMP_ult     104
+CHECK-NEXT: ICMP_ule     105
+CHECK-NEXT: ICMP_sgt     106
+CHECK-NEXT: ICMP_sge     107
+CHECK-NEXT: ICMP_slt     108
+CHECK-NEXT: ICMP_sle     109

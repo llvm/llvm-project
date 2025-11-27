@@ -1118,10 +1118,7 @@ StringRef getTypeMangling(Type type, bool isSigned) {
           llvm_unreachable("Unsupported integer width");
         }
       })
-      .Default([](auto) {
-        llvm_unreachable("No mangling defined");
-        return "";
-      });
+      .DefaultUnreachable("No mangling defined");
 }
 
 template <typename ReduceOp>
@@ -1523,20 +1520,12 @@ public:
     if (!dstType)
       return rewriter.notifyMatchFailure(tanOp, "type conversion failed");
 
-    Location loc = tanOp.getLoc();
-    Value sin = LLVM::SinOp::create(rewriter, loc, dstType, tanOp.getOperand());
-    Value cos = LLVM::CosOp::create(rewriter, loc, dstType, tanOp.getOperand());
-    rewriter.replaceOpWithNewOp<LLVM::FDivOp>(tanOp, dstType, sin, cos);
+    rewriter.replaceOpWithNewOp<LLVM::TanOp>(tanOp, dstType,
+                                             adaptor.getOperands());
     return success();
   }
 };
 
-/// Convert `spirv.Tanh` to
-///
-///   exp(2x) - 1
-///   -----------
-///   exp(2x) + 1
-///
 class TanhPattern : public SPIRVToLLVMConversion<spirv::GLTanhOp> {
 public:
   using SPIRVToLLVMConversion<spirv::GLTanhOp>::SPIRVToLLVMConversion;
@@ -1549,18 +1538,8 @@ public:
     if (!dstType)
       return rewriter.notifyMatchFailure(tanhOp, "type conversion failed");
 
-    Location loc = tanhOp.getLoc();
-    Value two = createFPConstant(loc, srcType, dstType, rewriter, 2.0);
-    Value multiplied =
-        LLVM::FMulOp::create(rewriter, loc, dstType, two, tanhOp.getOperand());
-    Value exponential = LLVM::ExpOp::create(rewriter, loc, dstType, multiplied);
-    Value one = createFPConstant(loc, srcType, dstType, rewriter, 1.0);
-    Value numerator =
-        LLVM::FSubOp::create(rewriter, loc, dstType, exponential, one);
-    Value denominator =
-        LLVM::FAddOp::create(rewriter, loc, dstType, exponential, one);
-    rewriter.replaceOpWithNewOp<LLVM::FDivOp>(tanhOp, dstType, numerator,
-                                              denominator);
+    rewriter.replaceOpWithNewOp<LLVM::TanhOp>(tanhOp, dstType,
+                                              adaptor.getOperands());
     return success();
   }
 };

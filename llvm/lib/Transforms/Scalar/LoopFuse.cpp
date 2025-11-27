@@ -100,6 +100,7 @@ STATISTIC(OnlySecondCandidateIsGuarded,
           "The second candidate is guarded while the first one is not");
 STATISTIC(NumHoistedInsts, "Number of hoisted preheader instructions.");
 STATISTIC(NumSunkInsts, "Number of hoisted preheader instructions.");
+STATISTIC(NumDA, "DA checks passed");
 
 enum FusionDependenceAnalysisChoice {
   FUSION_DEPENDENCE_ANALYSIS_SCEV,
@@ -367,7 +368,7 @@ private:
     Valid = false;
   }
 
-  bool reportInvalidCandidate(llvm::Statistic &Stat) const {
+  bool reportInvalidCandidate(Statistic &Stat) const {
     using namespace ore;
     assert(L && Preheader && "Fusion candidate not initialized properly!");
 #if LLVM_ENABLE_STATS
@@ -444,6 +445,7 @@ struct FusionCandidateCompare {
         "No dominance relationship between these fusion candidates!");
   }
 };
+} // namespace
 
 using LoopVector = SmallVector<Loop *, 4>;
 
@@ -460,9 +462,15 @@ using LoopVector = SmallVector<Loop *, 4>;
 using FusionCandidateSet = std::set<FusionCandidate, FusionCandidateCompare>;
 using FusionCandidateCollection = SmallVector<FusionCandidateSet, 4>;
 
-#if !defined(NDEBUG)
-static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                     const FusionCandidate &FC) {
+#ifndef NDEBUG
+static void printLoopVector(const LoopVector &LV) {
+  dbgs() << "****************************\n";
+  for (const Loop *L : LV)
+    printLoop(*L, dbgs());
+  dbgs() << "****************************\n";
+}
+
+static raw_ostream &operator<<(raw_ostream &OS, const FusionCandidate &FC) {
   if (FC.isValid())
     OS << FC.Preheader->getName();
   else
@@ -471,8 +479,8 @@ static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   return OS;
 }
 
-static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                     const FusionCandidateSet &CandSet) {
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const FusionCandidateSet &CandSet) {
   for (const FusionCandidate &FC : CandSet)
     OS << FC << '\n';
 
@@ -488,7 +496,9 @@ printFusionCandidates(const FusionCandidateCollection &FusionCandidates) {
     dbgs() << "****************************\n";
   }
 }
-#endif
+#endif // NDEBUG
+
+namespace {
 
 /// Collect all loops in function at the same nest level, starting at the
 /// outermost level.
@@ -548,15 +558,6 @@ private:
   /// Vector of loops at the current depth level that have the same parent loop
   LoopsOnLevelTy LoopsOnLevel;
 };
-
-#ifndef NDEBUG
-static void printLoopVector(const LoopVector &LV) {
-  dbgs() << "****************************\n";
-  for (auto *L : LV)
-    printLoop(*L, dbgs());
-  dbgs() << "****************************\n";
-}
-#endif
 
 struct LoopFuser {
 private:
@@ -1371,6 +1372,47 @@ private:
                           << "\n");
       }
 #endif
+      unsigned Levels = DepResult->getLevels();
+      unsigned SameSDLevels = DepResult->getSameSDLevels();
+      unsigned CurLoopLevel = FC0.L->getLoopDepth();
+
+      // Check if DA is missing info regarding the current loop level
+      if (CurLoopLevel > Levels + SameSDLevels)
+        return false;
+
+      // Iterating over the outer levels.
+      for (unsigned Level = 1; Level <= std::min(CurLoopLevel - 1, Levels);
+           ++Level) {
+        unsigned Direction = DepResult->getDirection(Level, false);
+
+        // Check if the direction vector does not include equality. If an outer
+        // loop has a non-equal direction, outer indicies are different and it
+        // is safe to fuse.
+        if (!(Direction & Dependence::DVEntry::EQ)) {
+          LLVM_DEBUG(dbgs() << "Safe to fuse due to non-equal acceses in the "
+                               "outer loops\n");
+          NumDA++;
+          return true;
+        }
+      }
+
+      assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
+
+      unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
+
+      // Check if the direction vector does not include greater direction. In
+      // that case, the dependency is not a backward loop-carried and is legal
+      // to fuse. For example here we have a forward dependency
+      //    for (int i = 0; i < n; i++)
+      //        A[i] = ...;
+      //    for (int i = 0; i < n; i++)
+      //        ... = A[i-1];
+      if (!(CurDir & Dependence::DVEntry::GT)) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse with no backward loop-carried "
+                             "dependency\n");
+        NumDA++;
+        return true;
+      }
 
       if (DepResult->getNextPredecessor() || DepResult->getNextSuccessor())
         LLVM_DEBUG(
@@ -1754,13 +1796,15 @@ private:
     // mergeLatch may remove the only block in FC1.
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
-    // Forget block dispositions as well, so that there are no dangling
-    // pointers to erased/free'ed blocks.
-    SE.forgetBlockAndLoopDispositions();
 
     // Move instructions from FC0.Latch to FC1.Latch.
     // Note: mergeLatch requires an updated DT.
     mergeLatch(FC0, FC1);
+
+    // Forget block dispositions as well, so that there are no dangling
+    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
+    // since merging the latches may affect the dispositions.
+    SE.forgetBlockAndLoopDispositions();
 
     // Merge the loops.
     SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
@@ -1808,7 +1852,7 @@ private:
   ///       <Cand1 Preheader> and <Cand2 Preheader>: <Stat Description>
   template <typename RemarkKind>
   void reportLoopFusion(const FusionCandidate &FC0, const FusionCandidate &FC1,
-                        llvm::Statistic &Stat) {
+                        Statistic &Stat) {
     assert(FC0.Preheader && FC1.Preheader &&
            "Expecting valid fusion candidates");
     using namespace ore;
@@ -2050,13 +2094,15 @@ private:
     // mergeLatch may remove the only block in FC1.
     SE.forgetLoop(FC1.L);
     SE.forgetLoop(FC0.L);
-    // Forget block dispositions as well, so that there are no dangling
-    // pointers to erased/free'ed blocks.
-    SE.forgetBlockAndLoopDispositions();
 
     // Move instructions from FC0.Latch to FC1.Latch.
     // Note: mergeLatch requires an updated DT.
     mergeLatch(FC0, FC1);
+
+    // Forget block dispositions as well, so that there are no dangling
+    // pointers to erased/free'ed blocks. It should be done after mergeLatch()
+    // since merging the latches may affect the dispositions.
+    SE.forgetBlockAndLoopDispositions();
 
     // Merge the loops.
     SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());

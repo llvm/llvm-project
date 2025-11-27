@@ -112,21 +112,58 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
   llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
   for (const auto &Entry : Entries) {
     if (Entry.Kind != llvm::object::OffloadKind::OFK_OpenMP ||
-        Entry.Size == 0 || !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT))
+        Entry.Size == 0 ||
+        (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT) &&
+         !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE)))
       continue;
 
-    assert(Entry.Size == sizeof(void *) && "Global not a function pointer?");
-    auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
+    size_t PtrSize = sizeof(void *);
+    if (Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE) {
+      // This is a VTable entry, the current entry is the first index of the
+      // VTable and Entry.Size is the total size of the VTable. Unlike the
+      // indirect function case below, the Global is not of size Entry.Size and
+      // is instead of size PtrSize (sizeof(void*)).
+      void *Vtable;
+      void *res;
+      if (Device.RTL->get_global(Binary, PtrSize, Entry.SymbolName, &Vtable))
+        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                         "failed to load %s", Entry.SymbolName);
 
-    void *Ptr;
-    if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName, &Ptr))
-      return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                       "failed to load %s", Entry.SymbolName);
+      // HstPtr = Entry.Address;
+      if (Device.retrieveData(&res, Vtable, PtrSize, AsyncInfo))
+        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                         "failed to load %s", Entry.SymbolName);
+      if (Device.synchronize(AsyncInfo))
+        return error::createOffloadError(
+            error::ErrorCode::INVALID_BINARY,
+            "failed to synchronize after retrieving %s", Entry.SymbolName);
+      // Calculate and emplace entire Vtable from first Vtable byte
+      for (uint64_t i = 0; i < Entry.Size / PtrSize; ++i) {
+        auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
+        HstPtr = reinterpret_cast<void *>(
+            reinterpret_cast<uintptr_t>(Entry.Address) + i * PtrSize);
+        DevPtr = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(res) +
+                                          i * PtrSize);
+      }
+    } else {
+      // Indirect function case: Entry.Size should equal PtrSize since we're
+      // dealing with a single function pointer (not a VTable)
+      assert(Entry.Size == PtrSize && "Global not a function pointer?");
+      auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
+      void *Ptr;
+      if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName, &Ptr))
+        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                         "failed to load %s", Entry.SymbolName);
 
-    HstPtr = Entry.Address;
-    if (Device.retrieveData(&DevPtr, Ptr, Entry.Size, AsyncInfo))
-      return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                       "failed to load %s", Entry.SymbolName);
+      HstPtr = Entry.Address;
+      if (Device.retrieveData(&DevPtr, Ptr, Entry.Size, AsyncInfo))
+        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                         "failed to load %s", Entry.SymbolName);
+    }
+    if (Device.synchronize(AsyncInfo))
+      return error::createOffloadError(
+          error::ErrorCode::INVALID_BINARY,
+          "failed to synchronize after retrieving %s", Entry.SymbolName);
   }
 
   // If we do not have any indirect globals we exit early.
@@ -366,4 +403,8 @@ bool DeviceTy::useAutoZeroCopy() {
   if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY)
     return false;
   return RTL->use_auto_zero_copy(RTLDeviceID);
+}
+
+bool DeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
+  return RTL->is_accessible_ptr(RTLDeviceID, Ptr, Size);
 }

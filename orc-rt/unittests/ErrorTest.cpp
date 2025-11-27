@@ -257,6 +257,15 @@ TEST(ErrorTest, ErrorAsOutParameterUnchecked) {
       << "ErrorAsOutParameter did not clear the checked flag on destruction.";
 }
 
+// Test that we can construct an ErrorAsOutParameter from an Error&.
+TEST(ErrorTest, ErrorAsOutParameterRefConstructor) {
+  Error E = Error::success();
+  {
+    ErrorAsOutParameter _(E); // construct with Error&.
+  }
+  (void)!!E;
+}
+
 // Check 'Error::isA<T>' method handling.
 TEST(ErrorTest, IsAHandling) {
   // Check 'isA' handling.
@@ -384,6 +393,54 @@ TEST(ErrorTest, ExpectedCovariance) {
   A2 = Expected<std::unique_ptr<D>>(nullptr);
   // Check A2 again before destruction.
   (void)!!A2;
+}
+
+// Test that Expected<Error> works as expected.
+TEST(ErrorTest, ExpectedError) {
+  {
+    // Test success-success case.
+    Expected<Error> E(Error::success(), ForceExpectedSuccessValue());
+    EXPECT_TRUE(!!E);
+    cantFail(E.takeError());
+    auto Err = std::move(*E);
+    EXPECT_FALSE(!!Err);
+  }
+
+  {
+    // Test "failure" success case.
+    Expected<Error> E(make_error<StringError>("foo"),
+                      ForceExpectedSuccessValue());
+    EXPECT_TRUE(!!E);
+    cantFail(E.takeError());
+    auto Err = std::move(*E);
+    EXPECT_TRUE(!!Err);
+    EXPECT_EQ(toString(std::move(Err)), "foo");
+  }
+}
+
+// Test that Expected<Expected<T>> works as expected.
+TEST(ErrorTest, ExpectedExpected) {
+  {
+    // Test success-success case.
+    Expected<Expected<int>> E(Expected<int>(42), ForceExpectedSuccessValue());
+    EXPECT_TRUE(!!E);
+    cantFail(E.takeError());
+    auto EI = std::move(*E);
+    EXPECT_TRUE(!!EI);
+    cantFail(EI.takeError());
+    EXPECT_EQ(*EI, 42);
+  }
+
+  {
+    // Test "failure" success case.
+    Expected<Expected<int>> E(Expected<int>(make_error<StringError>("foo")),
+                              ForceExpectedSuccessValue());
+    EXPECT_TRUE(!!E);
+    cantFail(E.takeError());
+    auto EI = std::move(*E);
+    EXPECT_FALSE(!!EI);
+    EXPECT_EQ(toString(EI.takeError()), "foo");
+  }
 }
 
 // Test that the ExitOnError utility works as expected.

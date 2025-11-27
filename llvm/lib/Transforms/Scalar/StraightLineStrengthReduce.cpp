@@ -716,8 +716,6 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   return Ret;
 }
 
-namespace llvm {
-
 PreservedAnalyses
 StraightLineStrengthReducePass::run(Function &F, FunctionAnalysisManager &AM) {
   const DataLayout *DL = &F.getDataLayout();
@@ -735,5 +733,3 @@ StraightLineStrengthReducePass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserve<TargetIRAnalysis>();
   return PA;
 }
-
-} // namespace llvm

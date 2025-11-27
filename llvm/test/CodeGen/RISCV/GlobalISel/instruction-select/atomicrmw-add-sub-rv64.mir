@@ -15,7 +15,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; CHECK-NEXT: [[AMOADD_B:%[0-9]+]]:gpr = AMOADD_B [[COPY]], [[COPY1]] :: (load store monotonic (s8))
+    ; CHECK-NEXT: [[AMOADD_B:%[0-9]+]]:gpr = AMOADD_B [[COPY1]], [[COPY]] :: (load store monotonic (s8))
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_B]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
@@ -38,7 +38,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; CHECK-NEXT: [[AMOADD_H:%[0-9]+]]:gpr = AMOADD_H [[COPY]], [[COPY1]] :: (load store monotonic (s16))
+    ; CHECK-NEXT: [[AMOADD_H:%[0-9]+]]:gpr = AMOADD_H [[COPY1]], [[COPY]] :: (load store monotonic (s16))
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_H]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
@@ -61,7 +61,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; CHECK-NEXT: [[AMOADD_W:%[0-9]+]]:gpr = AMOADD_W [[COPY]], [[COPY1]] :: (load store monotonic (s32))
+    ; CHECK-NEXT: [[AMOADD_W:%[0-9]+]]:gpr = AMOADD_W [[COPY1]], [[COPY]] :: (load store monotonic (s32))
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_W]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
@@ -84,7 +84,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; CHECK-NEXT: [[AMOADD_D:%[0-9]+]]:gpr = AMOADD_D [[COPY]], [[COPY1]] :: (load store monotonic (s64))
+    ; CHECK-NEXT: [[AMOADD_D:%[0-9]+]]:gpr = AMOADD_D [[COPY1]], [[COPY]] :: (load store monotonic (s64))
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_D]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
@@ -109,7 +109,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:gpr = SUB [[COPY2]], [[COPY1]]
-    ; CHECK-NEXT: [[AMOADD_B:%[0-9]+]]:gpr = AMOADD_B [[COPY]], [[SUB]] :: (load store monotonic (s8))
+    ; CHECK-NEXT: [[AMOADD_B:%[0-9]+]]:gpr = AMOADD_B [[SUB]], [[COPY]] :: (load store monotonic (s8))
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_B]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
@@ -136,7 +136,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:gpr = SUB [[COPY2]], [[COPY1]]
-    ; CHECK-NEXT: [[AMOADD_H:%[0-9]+]]:gpr = AMOADD_H [[COPY]], [[SUB]] :: (load store monotonic (s16))
+    ; CHECK-NEXT: [[AMOADD_H:%[0-9]+]]:gpr = AMOADD_H [[SUB]], [[COPY]] :: (load store monotonic (s16))
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_H]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
@@ -163,7 +163,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:gpr = SUB [[COPY2]], [[COPY1]]
-    ; CHECK-NEXT: [[AMOADD_W:%[0-9]+]]:gpr = AMOADD_W [[COPY]], [[SUB]] :: (load store monotonic (s32))
+    ; CHECK-NEXT: [[AMOADD_W:%[0-9]+]]:gpr = AMOADD_W [[SUB]], [[COPY]] :: (load store monotonic (s32))
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_W]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
@@ -190,7 +190,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:gpr = SUB [[COPY2]], [[COPY1]]
-    ; CHECK-NEXT: [[AMOADD_B:%[0-9]+]]:gpr = AMOADD_B [[COPY]], [[SUB]] :: (load store monotonic (s8))
+    ; CHECK-NEXT: [[AMOADD_B:%[0-9]+]]:gpr = AMOADD_B [[SUB]], [[COPY]] :: (load store monotonic (s8))
     ; CHECK-NEXT: $x10 = COPY [[AMOADD_B]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10

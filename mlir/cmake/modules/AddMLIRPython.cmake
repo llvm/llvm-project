@@ -173,9 +173,32 @@ function(mlir_generate_type_stubs)
   if(ARG_VERBOSE)
     message(STATUS "Generating type-stubs outputs ${_generated_type_stubs}")
   endif()
+
+  # If PYTHONPATH is set and points to the build location of the python package then when stubgen runs, _mlir will get
+  # imported twice and bad things will happen (e.g., Assertion `!instance && “PyGlobals already constructed”’).
+  # This happens because mlir is a namespace package and the importer/loader can't distinguish between
+  # mlir._mlir_libs._mlir and _mlir_libs._mlir imported from CWD.
+  # So try to filter out any entries in PYTHONPATH that end in "MLIR_BINDINGS_PYTHON_INSTALL_PREFIX/.."
+  # (e.g., python_packages/mlir_core/).
+  set(_pythonpath "$ENV{PYTHONPATH}")
+  cmake_path(CONVERT "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/.." TO_NATIVE_PATH_LIST _install_prefix NORMALIZE)
+  if(WIN32)
+    set(_path_sep ";")
+    set(_trailing_sep "\\")
+  else()
+    set(_path_sep ":")
+    set(_trailing_sep "/")
+    # `;` is the CMake list delimiter so Windows paths are automatically lists
+    # and Unix paths can be made into lists by replacing `:` with `;`
+    string(REPLACE "${_path_sep}" ";" _pythonpath "${_pythonpath}")
+  endif()
+  string(REGEX REPLACE "${_trailing_sep}$" "" _install_prefix "${_install_prefix}")
+  list(FILTER _pythonpath EXCLUDE REGEX "(${_install_prefix}|${_install_prefix}${_trailing_sep})$")
+  # Note, ${_pythonpath} is a list but "${_pythonpath}" is not a list - it's a string with ";" chars in it.
+  string(JOIN "${_path_sep}" _pythonpath ${_pythonpath})
   add_custom_command(
     OUTPUT ${_generated_type_stubs}
-    COMMAND ${_nb_stubgen_cmd}
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH="${_pythonpath}" ${_nb_stubgen_cmd}
     WORKING_DIRECTORY "${CMAKE_CURRENT_FUNCTION_LIST_DIR}"
     DEPENDS "${ARG_DEPENDS_TARGETS}"
     DEPFILE "${_depfile}"
@@ -768,7 +791,6 @@ function(add_mlir_python_extension libname extname)
       get_property(NB_LIBRARY_TARGET_NAME TARGET ${libname} PROPERTY LINK_LIBRARIES)
       target_compile_options(${NB_LIBRARY_TARGET_NAME}
         PRIVATE
-          -Wall -Wextra -Wpedantic
           -Wno-c++98-compat-extra-semi
           -Wno-cast-qual
           -Wno-covered-switch-default
@@ -776,11 +798,11 @@ function(add_mlir_python_extension libname extname)
           -Wno-nested-anon-types
           -Wno-unused-parameter
           -Wno-zero-length-array
+          -Wno-missing-field-initializers
           ${eh_rtti_enable})
 
       target_compile_options(${libname}
         PRIVATE
-          -Wall -Wextra -Wpedantic
           -Wno-c++98-compat-extra-semi
           -Wno-cast-qual
           -Wno-covered-switch-default
@@ -788,6 +810,7 @@ function(add_mlir_python_extension libname extname)
           -Wno-nested-anon-types
           -Wno-unused-parameter
           -Wno-zero-length-array
+          -Wno-missing-field-initializers
           ${eh_rtti_enable})
     endif()
 

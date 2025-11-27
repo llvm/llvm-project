@@ -22,8 +22,6 @@
 namespace llvm {
 namespace bolt {
 
-constexpr uint32_t BinaryBasicBlock::INVALID_OFFSET;
-
 bool operator<(const BinaryBasicBlock &LHS, const BinaryBasicBlock &RHS) {
   return LHS.Index < RHS.Index;
 }
@@ -210,7 +208,11 @@ int32_t BinaryBasicBlock::getCFIStateAtInstr(const MCInst *Instr) const {
       InstrSeen = (&Inst == Instr);
       continue;
     }
-    if (Function->getBinaryContext().MIB->isCFI(Inst)) {
+    // Ignoring OpNegateRAState CFIs here, as they dont have a "State"
+    // number associated with them.
+    if (Function->getBinaryContext().MIB->isCFI(Inst) &&
+        (Function->getCFIFor(Inst)->getOperation() !=
+         MCCFIInstruction::OpNegateRAState)) {
       LastCFI = &Inst;
       break;
     }

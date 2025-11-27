@@ -197,6 +197,7 @@ static Value *expand16BitIsNormal(CallInst *Orig) {
 
 static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
+  case Intrinsic::assume:
   case Intrinsic::abs:
   case Intrinsic::atan2:
   case Intrinsic::exp:
@@ -213,6 +214,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_nclamp:
   case Intrinsic::dx_degrees:
   case Intrinsic::dx_isinf:
+  case Intrinsic::dx_isnan:
   case Intrinsic::dx_lerp:
   case Intrinsic::dx_normalize:
   case Intrinsic::dx_fdot:
@@ -987,6 +989,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::abs:
     Result = expandAbs(Orig);
     break;
+  case Intrinsic::assume:
+    Orig->eraseFromParent();
+    return true;
   case Intrinsic::atan2:
     Result = expandAtan2Intrinsic(Orig);
     break;
@@ -1023,6 +1028,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_isinf:
     Result = expand16BitIsInf(Orig);
+    break;
+  case Intrinsic::dx_isnan:
+    Result = expand16BitIsNaN(Orig);
     break;
   case Intrinsic::dx_lerp:
     Result = expandLerpIntrinsic(Orig);

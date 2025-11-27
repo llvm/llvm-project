@@ -8,6 +8,7 @@
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -33,7 +34,7 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
 
   SmallString<256> CurrentPath;
   sys::fs::current_path(CurrentPath);
-  sys::fs::make_absolute(CurrentPath, FileName);
+  sys::path::make_absolute(CurrentPath, FileName);
 
   // Mount the VFS file itself on the path 'virtual.file'. Makes this test
   // a bit shorter than creating a new dummy file just for this purpose.
