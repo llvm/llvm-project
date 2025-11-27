@@ -194,15 +194,6 @@ void test_rt() {
   }
 
   TestTypes::TestType::reset();
-}
-
-int main(int, char**) {
-  test();
-  static_assert(test());
-
-  {
-    test_rt();
-  }
 
   {
     test_throwing_ctor();
@@ -213,6 +204,15 @@ int main(int, char**) {
     test_reference_extension();
   }
 #endif
+}
+
+int main(int, char**) {
+  test();
+  static_assert(test());
+
+  {
+    test_rt();
+  }
 
   return 0;
 }

@@ -226,6 +226,16 @@ bool test_rt() {
     static_assert(std::is_nothrow_move_constructible<optional<NoThrowMove>>::value, "");
   }
 
+  {
+    test_throwing_ctor();
+  }
+
+#if TEST_STD_VER >= 26
+  {
+    test_reference_extension();
+  }
+#endif
+
   return true;
 }
 
@@ -235,14 +245,6 @@ int main(int, char**) {
 
   {
     test_rt();
-  }
-
-  {
-    test_throwing_ctor();
-  }
-
-  {
-    test_reference_extension();
   }
 
   return 0;

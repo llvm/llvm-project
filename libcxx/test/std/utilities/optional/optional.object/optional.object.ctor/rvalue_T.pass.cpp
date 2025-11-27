@@ -47,39 +47,6 @@ constexpr void test_rvalueT(U arg) {
   };
 }
 
-void test_rt() {
-  {
-    typedef TestTypes::TestType T;
-    T::reset();
-    optional<T> opt = T{3};
-    assert(T::alive == 1);
-    assert(T::move_constructed == 1);
-    assert(static_cast<bool>(opt) == true);
-    assert(opt.value().value == 3);
-  }
-  {
-    typedef ExplicitTestTypes::TestType T;
-    static_assert(!std::is_convertible<T&&, optional<T>>::value, "");
-    T::reset();
-    optional<T> opt(T{3});
-    assert(T::alive == 1);
-    assert(T::move_constructed == 1);
-    assert(static_cast<bool>(opt) == true);
-    assert(opt.value().value == 3);
-  }
-  {
-    typedef TestTypes::TestType T;
-    T::reset();
-    optional<T> opt = {3};
-    assert(T::alive == 1);
-    assert(T::value_constructed == 1);
-    assert(T::copy_constructed == 0);
-    assert(T::move_constructed == 0);
-    assert(static_cast<bool>(opt) == true);
-    assert(opt.value().value == 3);
-  }
-}
-
 TEST_CONSTEXPR_CXX26 void test_throwing() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   {
@@ -92,6 +59,45 @@ TEST_CONSTEXPR_CXX26 void test_throwing() {
     }
   }
 #endif
+}
+
+void test_rt() {
+  {
+    typedef TestTypes::TestType T;
+    T::reset();
+    optional<T> opt = T{3};
+    assert(T::alive == 1);
+    assert(T::move_constructed == 1);
+    assert(static_cast<bool>(opt) == true);
+    assert(opt.value().value == 3);
+  }
+
+  {
+    typedef ExplicitTestTypes::TestType T;
+    static_assert(!std::is_convertible<T&&, optional<T>>::value, "");
+    T::reset();
+    optional<T> opt(T{3});
+    assert(T::alive == 1);
+    assert(T::move_constructed == 1);
+    assert(static_cast<bool>(opt) == true);
+    assert(opt.value().value == 3);
+  }
+
+  {
+    typedef TestTypes::TestType T;
+    T::reset();
+    optional<T> opt = {3};
+    assert(T::alive == 1);
+    assert(T::value_constructed == 1);
+    assert(T::copy_constructed == 0);
+    assert(T::move_constructed == 0);
+    assert(static_cast<bool>(opt) == true);
+    assert(opt.value().value == 3);
+  }
+
+  {
+    test_throwing();
+  }
 }
 
 constexpr bool test() {
@@ -130,10 +136,6 @@ int main(int, char**) {
 
   {
     test_rt();
-  }
-
-  {
-    test_throwing();
   }
 
   return 0;
