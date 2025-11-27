@@ -1997,8 +1997,8 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   for (size_t I = 0; I != CmpSize; I += ElemSize) {
     if (IsWide) {
       INT_TYPE_SWITCH(*S.getContext().classify(ASTCtx.getWCharType()), {
-        T A = *reinterpret_cast<T *>(BufferA.Data.get() + I);
-        T B = *reinterpret_cast<T *>(BufferB.Data.get() + I);
+        T A = *reinterpret_cast<T *>(BufferA.atByte(I));
+        T B = *reinterpret_cast<T *>(BufferB.atByte(I));
         if (A < B) {
           pushInteger(S, -1, Call->getType());
           return true;
@@ -2009,8 +2009,8 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
         }
       });
     } else {
-      std::byte A = BufferA.Data[I];
-      std::byte B = BufferB.Data[I];
+      std::byte A = BufferA.deref<std::byte>(Bytes(I));
+      std::byte B = BufferB.deref<std::byte>(Bytes(I));
 
       if (A < B) {
         pushInteger(S, -1, Call->getType());
@@ -3531,6 +3531,60 @@ static bool interp__builtin_ia32_shufbitqmb_mask(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_multishiftqb(InterpState &S, CodePtr OpPC,
+                                              const CallExpr *Call) {
+  assert(Call->getNumArgs() == 2);
+
+  QualType ATy = Call->getArg(0)->getType();
+  QualType BTy = Call->getArg(1)->getType();
+  if (!ATy->isVectorType() || !BTy->isVectorType()) {
+    return false;
+  }
+
+  const Pointer &BPtr = S.Stk.pop<Pointer>();
+  const Pointer &APtr = S.Stk.pop<Pointer>();
+  const auto *AVecT = ATy->castAs<VectorType>();
+  assert(AVecT->getNumElements() ==
+         BTy->castAs<VectorType>()->getNumElements());
+
+  PrimType ElemT = *S.getContext().classify(AVecT->getElementType());
+
+  unsigned NumBytesInQWord = 8;
+  unsigned NumBitsInByte = 8;
+  unsigned NumBytes = AVecT->getNumElements();
+  unsigned NumQWords = NumBytes / NumBytesInQWord;
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  for (unsigned QWordId = 0; QWordId != NumQWords; ++QWordId) {
+    APInt BQWord(64, 0);
+    for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+      unsigned Idx = QWordId * NumBytesInQWord + ByteIdx;
+      INT_TYPE_SWITCH(ElemT, {
+        uint64_t Byte = static_cast<uint64_t>(BPtr.elem<T>(Idx));
+        BQWord.insertBits(APInt(8, Byte & 0xFF), ByteIdx * NumBitsInByte);
+      });
+    }
+
+    for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+      unsigned Idx = QWordId * NumBytesInQWord + ByteIdx;
+      uint64_t Ctrl = 0;
+      INT_TYPE_SWITCH(
+          ElemT, { Ctrl = static_cast<uint64_t>(APtr.elem<T>(Idx)) & 0x3F; });
+
+      APInt Byte(8, 0);
+      for (unsigned BitIdx = 0; BitIdx != NumBitsInByte; ++BitIdx) {
+        Byte.setBitVal(BitIdx, BQWord[(Ctrl + BitIdx) & 0x3F]);
+      }
+      INT_TYPE_SWITCH(ElemT,
+                      { Dst.elem<T>(Idx) = T::from(Byte.getZExtValue()); });
+    }
+  }
+
+  Dst.initializeAllElements();
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -4756,6 +4810,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return std::make_pair(0, static_cast<int>(LaneOffset + Index));
         });
 
+  case X86::BI__builtin_ia32_vpmultishiftqb128:
+  case X86::BI__builtin_ia32_vpmultishiftqb256:
+  case X86::BI__builtin_ia32_vpmultishiftqb512:
+    return interp__builtin_ia32_multishiftqb(S, OpPC, Call);
   case X86::BI__builtin_ia32_kandqi:
   case X86::BI__builtin_ia32_kandhi:
   case X86::BI__builtin_ia32_kandsi:
@@ -4846,6 +4904,39 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_elementwise_fshr:
     return interp__builtin_elementwise_triop(S, OpPC, Call,
                                              llvm::APIntOps::fshr);
+
+  case X86::BI__builtin_ia32_shuf_f32x4_256:
+  case X86::BI__builtin_ia32_shuf_i32x4_256:
+  case X86::BI__builtin_ia32_shuf_f64x2_256:
+  case X86::BI__builtin_ia32_shuf_i64x2_256:
+  case X86::BI__builtin_ia32_shuf_f32x4:
+  case X86::BI__builtin_ia32_shuf_i32x4:
+  case X86::BI__builtin_ia32_shuf_f64x2:
+  case X86::BI__builtin_ia32_shuf_i64x2: {
+    // Destination and sources A, B all have the same type.
+    QualType VecQT = Call->getArg(0)->getType();
+    const auto *VecT = VecQT->castAs<VectorType>();
+    unsigned NumElems = VecT->getNumElements();
+    unsigned ElemBits = S.getASTContext().getTypeSize(VecT->getElementType());
+    unsigned LaneBits = 128u;
+    unsigned NumLanes = (NumElems * ElemBits) / LaneBits;
+    unsigned NumElemsPerLane = LaneBits / ElemBits;
+
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call,
+        [NumLanes, NumElemsPerLane](unsigned DstIdx, unsigned ShuffleMask) {
+          // DstIdx determines source. ShuffleMask selects lane in source.
+          unsigned BitsPerElem = NumLanes / 2;
+          unsigned IndexMask = (1u << BitsPerElem) - 1;
+          unsigned Lane = DstIdx / NumElemsPerLane;
+          unsigned SrcIdx = (Lane < NumLanes / 2) ? 0 : 1;
+          unsigned BitIdx = BitsPerElem * Lane;
+          unsigned SrcLaneIdx = (ShuffleMask >> BitIdx) & IndexMask;
+          unsigned ElemInLane = DstIdx % NumElemsPerLane;
+          unsigned IdxToPick = SrcLaneIdx * NumElemsPerLane + ElemInLane;
+          return std::pair<unsigned, int>{SrcIdx, IdxToPick};
+        });
+  }
 
   case X86::BI__builtin_ia32_insertf32x4_256:
   case X86::BI__builtin_ia32_inserti32x4_256:

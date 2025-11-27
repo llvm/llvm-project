@@ -2155,6 +2155,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     if (Subtarget.hasCDI()) {
+      for (auto VT : {MVT::i256, MVT::i512}) {
+        if (VT == MVT::i512 && !Subtarget.useAVX512Regs())
+          continue;
+        setOperationAction(ISD::CTLZ, VT, Custom);
+        setOperationAction(ISD::CTTZ, VT, Custom);
+        setOperationAction(ISD::CTLZ_ZERO_UNDEF, VT, Custom);
+        setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Custom);
+      }
       for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64 }) {
         setOperationAction(ISD::CTLZ,            VT, Legal);
       }
@@ -2658,12 +2666,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::AVGCEILU,
                        ISD::AVGFLOORS,
                        ISD::AVGFLOORU,
-                       ISD::CTLZ,
-                       ISD::CTTZ,
-                       ISD::CTLZ_ZERO_UNDEF,
-                       ISD::CTTZ_ZERO_UNDEF,
                        ISD::BITREVERSE,
                        ISD::ADD,
+                       ISD::SADDSAT,
+                       ISD::SSUBSAT,
                        ISD::FADD,
                        ISD::FSUB,
                        ISD::FNEG,
@@ -8147,6 +8153,8 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, const SDLoc &dl,
   case X86ISD::FHSUB:
   case X86ISD::HADD:
   case X86ISD::HSUB:
+  case X86ISD::HADDS:
+  case X86ISD::HSUBS:
     return true;
   }
   return false;
@@ -33889,6 +33897,59 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     }
     return;
   }
+  case ISD::CTLZ:
+  case ISD::CTTZ:
+  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_UNDEF: {
+    // Fold i256/i512 CTLZ/CTTZ patterns to make use of AVX512
+    // vXi64 CTLZ/CTTZ and VECTOR_COMPRESS.
+    // Compute the CTLZ/CTTZ of each element, add the element's bit offset,
+    // compress the result to remove all zero elements (passthru is set to
+    // scalar bitwidth if all elements are zero) and extract the lowest
+    // compressed element.
+    SDValue N0 = N->getOperand(0);
+    EVT VT = N->getValueType(0);
+    assert(Subtarget.hasCDI() && "AVX512CD required");
+    assert((VT == MVT::i256 || VT == MVT::i512) && "Unexpected VT!");
+    if (VT == MVT::i256 && !X86::mayFoldLoad(N0, Subtarget))
+      return;
+
+    unsigned SizeInBits = VT.getSizeInBits();
+    MVT VecVT = MVT::getVectorVT(MVT::i64, SizeInBits / 64);
+    MVT BoolVT = VecVT.changeVectorElementType(MVT::i1);
+    SDValue Vec = DAG.getBitcast(VecVT, N0);
+
+    SmallVector<int, 8> RevMask;
+    SmallVector<SDValue, 8> Offsets;
+    for (unsigned I = 0, E = VecVT.getVectorNumElements(); I != E; ++I) {
+      RevMask.push_back((int)((E - 1) - I));
+      Offsets.push_back(DAG.getConstant(I * 64, dl, MVT::i64));
+    }
+
+    // CTLZ - reverse the elements as we want the top non-zero element at the
+    // bottom for compression.
+    unsigned VecOpc = ISD::CTTZ;
+    if (Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_UNDEF) {
+      VecOpc = ISD::CTLZ;
+      Vec = DAG.getVectorShuffle(VecVT, dl, Vec, Vec, RevMask);
+    }
+
+    SDValue PassThrough = DAG.getUNDEF(VecVT);
+    if (Opc == ISD::CTLZ || Opc == ISD::CTTZ)
+      PassThrough = DAG.getConstant(SizeInBits, dl, VecVT);
+
+    SDValue IsNonZero = DAG.getSetCC(dl, BoolVT, Vec,
+                                     DAG.getConstant(0, dl, VecVT), ISD::SETNE);
+    SDValue Cnt = DAG.getNode(VecOpc, dl, VecVT, Vec);
+    Cnt = DAG.getNode(ISD::ADD, dl, VecVT, Cnt,
+                      DAG.getBuildVector(VecVT, dl, Offsets));
+    Cnt = DAG.getNode(ISD::VECTOR_COMPRESS, dl, VecVT, Cnt, IsNonZero,
+                      PassThrough);
+    Cnt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i64, Cnt,
+                      DAG.getVectorIdxConstant(0, dl));
+    Results.push_back(DAG.getZExtOrTrunc(Cnt, dl, VT));
+    return;
+  }
   case ISD::MUL: {
     EVT VT = N->getValueType(0);
     assert(getTypeAction(*DAG.getContext(), VT) == TypeWidenVector &&
@@ -35064,6 +35125,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BLENDV)
   NODE_NAME_CASE(HADD)
   NODE_NAME_CASE(HSUB)
+  NODE_NAME_CASE(HADDS)
+  NODE_NAME_CASE(HSUBS)
   NODE_NAME_CASE(FHADD)
   NODE_NAME_CASE(FHSUB)
   NODE_NAME_CASE(CONFLICT)
@@ -40840,8 +40903,9 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
       }))
     return SDValue();
 
-  bool isHoriz = (Opcode0 == X86ISD::FHADD || Opcode0 == X86ISD::HADD ||
-                  Opcode0 == X86ISD::FHSUB || Opcode0 == X86ISD::HSUB);
+  bool isHoriz = (Opcode0 == X86ISD::FHADD || Opcode0 == X86ISD::FHSUB ||
+                  Opcode0 == X86ISD::HADD || Opcode0 == X86ISD::HSUB ||
+                  Opcode0 == X86ISD::HADDS || Opcode0 == X86ISD::HSUBS);
   bool isPack = (Opcode0 == X86ISD::PACKSS || Opcode0 == X86ISD::PACKUS);
   if (!isHoriz && !isPack)
     return SDValue();
@@ -54174,7 +54238,9 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
                                          const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   unsigned Opcode = N->getOpcode();
-  bool IsAdd = (Opcode == ISD::FADD) || (Opcode == ISD::ADD);
+  bool IsAdd =
+      (Opcode == ISD::FADD) || (Opcode == ISD::ADD) || (Opcode == ISD::SADDSAT);
+  bool IsSat = (Opcode == ISD::SADDSAT) || (Opcode == ISD::SSUBSAT);
   SmallVector<int, 8> PostShuffleMask;
 
   auto MergableHorizOp = [N](unsigned HorizOpcode) {
@@ -54204,11 +54270,17 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
     break;
   case ISD::ADD:
   case ISD::SUB:
-    if (Subtarget.hasSSSE3() && (VT == MVT::v8i16 || VT == MVT::v4i32 ||
-                                 VT == MVT::v16i16 || VT == MVT::v8i32)) {
+  case ISD::SADDSAT:
+  case ISD::SSUBSAT:
+    if (!Subtarget.hasSSSE3())
+      break;
+    if (VT == MVT::v8i16 || VT == MVT::v16i16 ||
+        (!IsSat && (VT == MVT::v4i32 || VT == MVT::v8i32))) {
+
       SDValue LHS = N->getOperand(0);
       SDValue RHS = N->getOperand(1);
-      auto HorizOpcode = IsAdd ? X86ISD::HADD : X86ISD::HSUB;
+      auto HorizOpcode = IsSat ? (IsAdd ? X86ISD::HADDS : X86ISD::HSUBS)
+                               : (IsAdd ? X86ISD::HADD : X86ISD::HSUB);
       if (isHorizontalBinOp(HorizOpcode, LHS, RHS, DAG, Subtarget, IsAdd,
                             PostShuffleMask, MergableHorizOp(HorizOpcode))) {
         auto HOpBuilder = [HorizOpcode](SelectionDAG &DAG, const SDLoc &DL,
@@ -55281,65 +55353,6 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
     return R;
 
   return combineFneg(N, DAG, DCI, Subtarget);
-}
-
-// Fold i256/i512 CTLZ/CTTZ patterns to make use of AVX512
-// vXi64 CTLZ/CTTZ and VECTOR_COMPRESS.
-// Compute the CTLZ/CTTZ of each element, add the element's bit offset, compress
-// the result to remove all zero elements (passthru is set to scalar bitwidth if
-// all elements are zero) and extract the lowest compressed element.
-static SDValue combineCTZ(SDNode *N, SelectionDAG &DAG,
-                          TargetLowering::DAGCombinerInfo &DCI,
-                          const X86Subtarget &Subtarget) {
-  EVT VT = N->getValueType(0);
-  SDValue N0 = N->getOperand(0);
-  unsigned Opc = N->getOpcode();
-  unsigned SizeInBits = VT.getSizeInBits();
-  assert((Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_UNDEF || Opc == ISD::CTTZ ||
-          Opc == ISD::CTTZ_ZERO_UNDEF) &&
-         "Unsupported bit count");
-
-  if (VT.isScalarInteger() && Subtarget.hasCDI() &&
-      ((SizeInBits == 512 && Subtarget.useAVX512Regs()) ||
-       (SizeInBits == 256 && Subtarget.hasVLX() &&
-        X86::mayFoldLoad(N0, Subtarget)))) {
-    MVT VecVT = MVT::getVectorVT(MVT::i64, SizeInBits / 64);
-    MVT BoolVT = VecVT.changeVectorElementType(MVT::i1);
-    SDValue Vec = DAG.getBitcast(VecVT, N0);
-    SDLoc DL(N);
-
-    SmallVector<int, 8> RevMask;
-    SmallVector<SDValue, 8> Offsets;
-    for (unsigned I = 0, E = VecVT.getVectorNumElements(); I != E; ++I) {
-      RevMask.push_back((int)((E - 1) - I));
-      Offsets.push_back(DAG.getConstant(I * 64, DL, MVT::i64));
-    }
-
-    // CTLZ - reverse the elements as we want the top non-zero element at the
-    // bottom for compression.
-    unsigned VecOpc = ISD::CTTZ;
-    if (Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_UNDEF) {
-      VecOpc = ISD::CTLZ;
-      Vec = DAG.getVectorShuffle(VecVT, DL, Vec, Vec, RevMask);
-    }
-
-    SDValue PassThrough = DAG.getUNDEF(VecVT);
-    if (Opc == ISD::CTLZ || Opc == ISD::CTTZ)
-      PassThrough = DAG.getConstant(SizeInBits, DL, VecVT);
-
-    SDValue IsNonZero = DAG.getSetCC(DL, BoolVT, Vec,
-                                     DAG.getConstant(0, DL, VecVT), ISD::SETNE);
-    SDValue Cnt = DAG.getNode(VecOpc, DL, VecVT, Vec);
-    Cnt = DAG.getNode(ISD::ADD, DL, VecVT, Cnt,
-                      DAG.getBuildVector(VecVT, DL, Offsets));
-    Cnt = DAG.getNode(ISD::VECTOR_COMPRESS, DL, VecVT, Cnt, IsNonZero,
-                      PassThrough);
-    Cnt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cnt,
-                      DAG.getVectorIdxConstant(0, DL));
-    return DAG.getZExtOrTrunc(Cnt, DL, VT);
-  }
-
-  return SDValue();
 }
 
 static SDValue combineBITREVERSE(SDNode *N, SelectionDAG &DAG,
@@ -61054,6 +61067,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SUB:            return combineSub(N, DAG, DCI, Subtarget);
   case X86ISD::ADD:
   case X86ISD::SUB:         return combineX86AddSub(N, DAG, DCI, Subtarget);
+  case ISD::SADDSAT:
+  case ISD::SSUBSAT:        return combineToHorizontalAddSub(N, DAG, Subtarget);
   case X86ISD::CLOAD:
   case X86ISD::CSTORE:      return combineX86CloadCstore(N, DAG);
   case X86ISD::SBB:         return combineSBB(N, DAG);
@@ -61065,10 +61080,6 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::AND:            return combineAnd(N, DAG, DCI, Subtarget);
   case ISD::OR:             return combineOr(N, DAG, DCI, Subtarget);
   case ISD::XOR:            return combineXor(N, DAG, DCI, Subtarget);
-  case ISD::CTLZ:
-  case ISD::CTTZ:
-  case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::CTTZ_ZERO_UNDEF:return combineCTZ(N, DAG, DCI, Subtarget);
   case ISD::BITREVERSE:     return combineBITREVERSE(N, DAG, DCI, Subtarget);
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:

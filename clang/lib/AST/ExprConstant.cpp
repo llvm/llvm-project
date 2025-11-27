@@ -13096,6 +13096,45 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(R, E);
   }
 
+  case X86::BI__builtin_ia32_vpmultishiftqb128:
+  case X86::BI__builtin_ia32_vpmultishiftqb256:
+  case X86::BI__builtin_ia32_vpmultishiftqb512: {
+    assert(E->getNumArgs() == 2);
+
+    APValue A, B;
+    if (!Evaluate(A, Info, E->getArg(0)) || !Evaluate(B, Info, E->getArg(1)))
+      return false;
+
+    assert(A.getVectorLength() == B.getVectorLength());
+    unsigned NumBytesInQWord = 8;
+    unsigned NumBitsInByte = 8;
+    unsigned NumBytes = A.getVectorLength();
+    unsigned NumQWords = NumBytes / NumBytesInQWord;
+    SmallVector<APValue, 64> Result;
+    Result.reserve(NumBytes);
+
+    for (unsigned QWordId = 0; QWordId != NumQWords; ++QWordId) {
+      APInt BQWord(64, 0);
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        unsigned Idx = QWordId * NumBytesInQWord + ByteIdx;
+        uint64_t Byte = B.getVectorElt(Idx).getInt().getZExtValue();
+        BQWord.insertBits(APInt(8, Byte & 0xFF), ByteIdx * NumBitsInByte);
+      }
+
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        unsigned Idx = QWordId * NumBytesInQWord + ByteIdx;
+        uint64_t Ctrl = A.getVectorElt(Idx).getInt().getZExtValue() & 0x3F;
+
+        APInt Byte(8, 0);
+        for (unsigned BitIdx = 0; BitIdx != NumBitsInByte; ++BitIdx) {
+          Byte.setBitVal(BitIdx, BQWord[(Ctrl + BitIdx) & 0x3F]);
+        }
+        Result.push_back(APValue(APSInt(Byte, /*isUnsigned*/ true)));
+      }
+    }
+    return Success(APValue(Result.data(), Result.size()), E);
+  }
+
   case X86::BI__builtin_ia32_phminposuw128: {
     APValue Source;
     if (!Evaluate(Source, Info, E->getArg(0)))
@@ -13515,6 +13554,56 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_shuf_f32x4_256:
+  case X86::BI__builtin_ia32_shuf_i32x4_256:
+  case X86::BI__builtin_ia32_shuf_f64x2_256:
+  case X86::BI__builtin_ia32_shuf_i64x2_256:
+  case X86::BI__builtin_ia32_shuf_f32x4:
+  case X86::BI__builtin_ia32_shuf_i32x4:
+  case X86::BI__builtin_ia32_shuf_f64x2:
+  case X86::BI__builtin_ia32_shuf_i64x2: {
+    APValue SourceA, SourceB;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceB))
+      return false;
+
+    APSInt Imm;
+    if (!EvaluateInteger(E->getArg(2), Imm, Info))
+      return false;
+
+    // Destination and sources A, B all have the same type.
+    unsigned NumElems = SourceA.getVectorLength();
+    const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
+    QualType ElemQT = VT->getElementType();
+    unsigned ElemBits = Info.Ctx.getTypeSize(ElemQT);
+    unsigned LaneBits = 128u;
+    unsigned NumLanes = (NumElems * ElemBits) / LaneBits;
+    unsigned NumElemsPerLane = LaneBits / ElemBits;
+
+    unsigned DstLen = SourceA.getVectorLength();
+    SmallVector<APValue, 16> ResultElements;
+    ResultElements.reserve(DstLen);
+
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [NumLanes, NumElemsPerLane](unsigned DstIdx, unsigned ShuffleMask)
+                -> std::pair<unsigned, int> {
+              // DstIdx determines source. ShuffleMask selects lane in source.
+              unsigned BitsPerElem = NumLanes / 2;
+              unsigned IndexMask = (1u << BitsPerElem) - 1;
+              unsigned Lane = DstIdx / NumElemsPerLane;
+              unsigned SrcIdx = (Lane < NumLanes / 2) ? 0 : 1;
+              unsigned BitIdx = BitsPerElem * Lane;
+              unsigned SrcLaneIdx = (ShuffleMask >> BitIdx) & IndexMask;
+              unsigned ElemInLane = DstIdx % NumElemsPerLane;
+              unsigned IdxToPick = SrcLaneIdx * NumElemsPerLane + ElemInLane;
+              return {SrcIdx, IdxToPick};
+            }))
+      return false;
+    return Success(R, E);
   }
 
   case X86::BI__builtin_ia32_insertf32x4_256:

@@ -3782,21 +3782,21 @@ namespace {
       if (CheckReferenceOnly && !ReferenceField)
         return true;
 
-      llvm::SmallVector<unsigned, 4> UsedFieldIndex;
       // Discard the first field since it is the field decl that is being
       // initialized.
-      for (const FieldDecl *FD : llvm::drop_begin(llvm::reverse(Fields)))
-        UsedFieldIndex.push_back(FD->getFieldIndex());
+      auto UsedFields = llvm::drop_begin(llvm::reverse(Fields));
+      auto UsedIter = UsedFields.begin();
+      const auto UsedEnd = UsedFields.end();
 
-      for (auto UsedIter = UsedFieldIndex.begin(),
-                UsedEnd = UsedFieldIndex.end(),
-                OrigIter = InitFieldIndex.begin(),
-                OrigEnd = InitFieldIndex.end();
-           UsedIter != UsedEnd && OrigIter != OrigEnd; ++UsedIter, ++OrigIter) {
-        if (*UsedIter < *OrigIter)
-          return true;
-        if (*UsedIter > *OrigIter)
+      for (const unsigned Orig : InitFieldIndex) {
+        if (UsedIter == UsedEnd)
           break;
+        const unsigned UsedIndex = (*UsedIter)->getFieldIndex();
+        if (UsedIndex < Orig)
+          return true;
+        if (UsedIndex > Orig)
+          break;
+        ++UsedIter;
       }
 
       return false;

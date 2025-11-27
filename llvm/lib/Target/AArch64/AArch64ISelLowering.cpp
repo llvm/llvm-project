@@ -8912,15 +8912,6 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     }
   }
 
-  if (getTM().useNewSMEABILowering()) {
-    // Clear new ZT0 state. TODO: Move this to the SME ABI pass.
-    if (Attrs.isNewZT0())
-      Chain = DAG.getNode(
-          ISD::INTRINSIC_VOID, DL, MVT::Other, Chain,
-          DAG.getTargetConstant(Intrinsic::aarch64_sme_zero_zt, DL, MVT::i32),
-          DAG.getTargetConstant(0, DL, MVT::i32));
-  }
-
   return Chain;
 }
 
@@ -10211,6 +10202,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (InGlue.getNode())
     Ops.push_back(InGlue);
+
+  if (CLI.DeactivationSymbol)
+    Ops.push_back(DAG.getDeactivationSymbol(CLI.DeactivationSymbol));
 
   // If we're doing a tall call, use a TC_RETURN here rather than an
   // actual call instruction.
@@ -22595,6 +22589,38 @@ static SDValue performSubWithBorrowCombine(SDNode *N, SelectionDAG &DAG) {
                      Flags);
 }
 
+// add(trunc(ashr(A, C)), trunc(lshr(A, BW-1))), with C >= BW
+// ->
+// X = trunc(ashr(A, C)); add(x, lshr(X, BW-1)
+// The original converts into ashr+lshr+xtn+xtn+add. The second becomes
+// ashr+xtn+usra. The first form has less total latency due to more parallelism,
+// but more micro-ops and seems to be slower in practice.
+static SDValue performAddTruncShiftCombine(SDNode *N, SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v2i32 && VT != MVT::v4i16 && VT != MVT::v8i8)
+    return SDValue();
+
+  SDValue AShr, LShr;
+  if (!sd_match(N, m_Add(m_Trunc(m_Value(AShr)), m_Trunc(m_Value(LShr)))))
+    return SDValue();
+  if (AShr.getOpcode() != AArch64ISD::VASHR)
+    std::swap(AShr, LShr);
+  if (AShr.getOpcode() != AArch64ISD::VASHR ||
+      LShr.getOpcode() != AArch64ISD::VLSHR ||
+      AShr.getOperand(0) != LShr.getOperand(0) ||
+      AShr.getConstantOperandVal(1) < VT.getScalarSizeInBits() ||
+      LShr.getConstantOperandVal(1) != VT.getScalarSizeInBits() * 2 - 1)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, VT, AShr);
+  SDValue Shift = DAG.getNode(
+      AArch64ISD::VLSHR, DL, VT, Trunc,
+      DAG.getTargetConstant(VT.getScalarSizeInBits() - 1, DL, MVT::i32));
+  return DAG.getNode(ISD::ADD, DL, VT, Trunc, Shift);
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
@@ -22617,6 +22643,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performAddSubIntoVectorOp(N, DCI.DAG))
     return Val;
   if (SDValue Val = performSubWithBorrowCombine(N, DCI.DAG))
+    return Val;
+  if (SDValue Val = performAddTruncShiftCombine(N, DCI.DAG))
     return Val;
 
   if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
