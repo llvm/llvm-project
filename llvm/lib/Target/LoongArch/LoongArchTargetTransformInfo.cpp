@@ -626,6 +626,20 @@ InstructionCost LoongArchTTIImpl::getCmpSelInstrCost(
                                    Op1Info, Op2Info, I);
 }
 
+InstructionCost LoongArchTTIImpl::getCFInstrCost(unsigned Opcode,
+                                                 TTI::TargetCostKind CostKind,
+                                                 const Instruction *I) const {
+  if (Opcode == Instruction::PHI) {
+    return 0;
+  }
+
+  // Branches are assumed to be predicted.
+  if (CostKind == TTI::TCK_RecipThroughput) {
+    return 4;
+  }
+  return 1;
+}
+
 bool LoongArchTTIImpl::prefersVectorizedAddressing() const { return false; }
 
 // TODO: Implement more hooks to provide TTI machinery for LoongArch.
