@@ -1072,6 +1072,15 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Index needs to be a GPR.
     OpRegBankIdx[2] = PMI_FirstGPR;
     break;
+  case AArch64::G_SQSHLU:
+    // Destination and source need to be FPRs.
+    OpRegBankIdx[0] = PMI_FirstFPR;
+    OpRegBankIdx[1] = PMI_FirstFPR;
+
+    // Shift Index needs to be a GPR.
+    OpRegBankIdx[2] = PMI_FirstGPR;
+    break;
+
   case TargetOpcode::G_INSERT_VECTOR_ELT:
     OpRegBankIdx[0] = PMI_FirstFPR;
     OpRegBankIdx[1] = PMI_FirstFPR;

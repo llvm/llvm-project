@@ -1863,6 +1863,18 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(TargetOpcode::G_SAVGFLOOR);
   case Intrinsic::aarch64_neon_srhadd:
     return LowerBinOp(TargetOpcode::G_SAVGCEIL);
+  case Intrinsic::aarch64_neon_sqshlu: {
+    // Check if last operand is constant vector dup
+    auto shiftAmount = isConstantOrConstantSplatVector(*MRI.getVRegDef(MI.getOperand(3).getReg()), MRI);
+    if (shiftAmount) {
+	    // If so, create a new intrinsic with the correct shift amount
+	    MIB.buildInstr(AArch64::G_SQSHLU, {MI.getOperand(0)}, {MI.getOperand(2)}).addImm(shiftAmount->getSExtValue());
+	    MI.eraseFromParent();
+	    return true;
+    } else {
+	    return false;
+    }
+  }
   case Intrinsic::aarch64_neon_abs: {
     // Lower the intrinsic to G_ABS.
     MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});

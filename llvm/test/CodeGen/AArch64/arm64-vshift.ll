@@ -2,17 +2,7 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=0 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=1 -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:    warning: Instruction selection used fallback path for sqshlu8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu2d
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu1d_constant
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu_i64_constant
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu_i32_constant
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn1s
+; CHECK-GI:    warning: Instruction selection used fallback path for sqshrn1s
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn8b
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn4h
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn2s
@@ -1496,23 +1486,38 @@ define <2 x i64> @sqshlu2d(ptr %A) nounwind {
 }
 
 define <1 x i64> @sqshlu1d_constant(ptr %A) nounwind {
-; CHECK-LABEL: sqshlu1d_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    sqshlu d0, d0, #1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqshlu1d_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    sqshlu d0, d0, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqshlu1d_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr x8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    sqshlu d0, d0, #1
+; CHECK-GI-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.sqshlu.v1i64(<1 x i64> %tmp1, <1 x i64> <i64 1>)
   ret <1 x i64> %tmp3
 }
 
 define i64 @sqshlu_i64_constant(ptr %A) nounwind {
-; CHECK-LABEL: sqshlu_i64_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    sqshlu d0, d0, #1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqshlu_i64_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    sqshlu d0, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqshlu_i64_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr x8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    sqshlu d0, d0, #1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.sqshlu.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
