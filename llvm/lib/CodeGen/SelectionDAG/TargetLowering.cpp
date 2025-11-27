@@ -8397,9 +8397,9 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
     SDValue XExt = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVT, X);
     SDValue YExt = DAG.getNode(ISD::ZERO_EXTEND, DL, ExtVT, Y);
     SDValue ClMul = DAG.getNode(ISD::CLMUL, DL, ExtVT, XExt, YExt);
-    unsigned ShtAmt = Opcode == ISD::CLMULR ? BW - 1 : BW;
+    unsigned ShAmt = Opcode == ISD::CLMULR ? BW - 1 : BW;
     SDValue HiBits = DAG.getNode(ISD::SRL, DL, ExtVT, ClMul,
-                                 DAG.getShiftAmountConstant(ShtAmt, ExtVT, DL));
+                                 DAG.getShiftAmountConstant(ShAmt, ExtVT, DL));
     return DAG.getNode(ISD::TRUNCATE, DL, VT, HiBits);
   }
   }
