@@ -10118,6 +10118,7 @@ cc_binary(
         "//llvm:TableGen",
         "//llvm:TargetParser",
         "//llvm:config",
+        "//llvm:vt_gen",
     ],
 )
 
