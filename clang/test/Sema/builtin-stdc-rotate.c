@@ -105,22 +105,28 @@ void test_errors(int si, float f) {
   __builtin_stdc_rotate_left(ui, 1, 2); // expected-error {{too many arguments to function call}}
 }
 
-void test_implicit_conversions(_Bool b, float f, int si) {
+void test_valid_conversions(_Bool b, int si) {
   unsigned int ui = 5;
 
-  // Test implicit conversions for second argument
+  // Valid: bool converts to int for second argument
   (void)__builtin_stdc_rotate_left(ui, b);
-  (void)__builtin_stdc_rotate_left(ui, f);
-  (void)__builtin_stdc_rotate_left(ui, 1.5); // expected-warning {{implicit conversion from 'double' to 'int' changes value from 1.5 to 1}}
   (void)__builtin_stdc_rotate_right(ui, b);
-  (void)__builtin_stdc_rotate_right(ui, f);
 
-  // Test implicit conversions for first argument
-  (void)__builtin_stdc_rotate_left(si, 1);
-  (void)__builtin_stdc_rotate_left(-5, 1);
-  (void)__builtin_stdc_rotate_right(3.0, 1.5); // expected-warning {{implicit conversion from 'double' to 'int' changes value from 1.5 to 1}}
+  // Valid: signed int is an integer type for second argument
+  (void)__builtin_stdc_rotate_left(ui, si);
+  (void)__builtin_stdc_rotate_right(ui, si);
+}
 
-  // Test narrowing conversion in assignment
-  unsigned _BitInt(17) rotated_odd = __builtin_stdc_rotate_left(0x1ABCD, 5); // expected-warning {{implicit conversion from 'unsigned int' to 'unsigned _BitInt(17)' changes value from 3504544 to 96672}}
-  (void)rotated_odd;
+void test_invalid_types(float f, int si) {
+  unsigned int ui = 5;
+
+  // Invalid: float is not an integer type for second argument
+  (void)__builtin_stdc_rotate_left(ui, f); // expected-error {{2nd argument must be a scalar integer type (was 'float')}}
+  (void)__builtin_stdc_rotate_left(ui, 1.5); // expected-error {{2nd argument must be a scalar integer type (was 'double')}}
+  (void)__builtin_stdc_rotate_right(ui, f); // expected-error {{2nd argument must be a scalar integer type (was 'float')}}
+
+  // Invalid: signed int is not unsigned for first argument
+  (void)__builtin_stdc_rotate_left(si, 1); // expected-error {{1st argument must be a scalar unsigned integer type (was 'int')}}
+  (void)__builtin_stdc_rotate_left(-5, 1); // expected-error {{1st argument must be a scalar unsigned integer type (was 'int')}}
+  (void)__builtin_stdc_rotate_right(3.0, 1); // expected-error {{1st argument must be a scalar unsigned integer type (was 'double')}}
 }

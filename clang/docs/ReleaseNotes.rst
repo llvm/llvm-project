@@ -328,7 +328,8 @@ Non-comprehensive list of changes in this release
 - Added ``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
   for bit rotation of unsigned integers including ``_BitInt`` types. Rotation
   counts are normalized modulo the bit-width and support negative values.
-  Usable in constant expressions.
+  Usable in constant expressions. Implicit conversion is supported for
+  class/struct types with conversion operators.
 
 New Compiler Flags
 ------------------
