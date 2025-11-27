@@ -513,6 +513,14 @@ void ArithToAPFloatConversionPass::runOnOperation() {
       context, "divide", getOperation());
   patterns.add<BinaryArithOpToAPFloatConversion<arith::RemFOp>>(
       context, "remainder", getOperation());
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::MinNumFOp>>(
+      context, "minnum", getOperation());
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::MaxNumFOp>>(
+      context, "maxnum", getOperation());
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::MinimumFOp>>(
+      context, "minimum", getOperation());
+  patterns.add<BinaryArithOpToAPFloatConversion<arith::MaximumFOp>>(
+      context, "maximum", getOperation());
   patterns
       .add<FpToFpConversion<arith::ExtFOp>, FpToFpConversion<arith::TruncFOp>>(
           context, getOperation());
