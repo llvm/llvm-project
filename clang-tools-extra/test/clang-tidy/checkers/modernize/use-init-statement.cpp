@@ -205,6 +205,25 @@ void bad_multiple() {
     }
 }
 
+void bad_multiple_not_all_used() {
+    int i1=0, k1=0, j1=0; DUMMY_TOKEN
+    if (i1 == 0 && k1 == 0) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: multiple variable declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (int i1=0, k1=0, j1=0; i1 == 0 && k1 == 0) {
+        do_some();
+    }
+    int i2=0, k2=0, j2=0; DUMMY_TOKEN
+    switch (i2+j2) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: multiple variable declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (int i2=0, k2=0, j2=0; i2+j2) {
+        case 0:
+            do_some();
+            break;
+    }
+}
+
 #define OPEN_PAREN_I1 (i1
 #define OPEN_PAREN_I2 (i2
 #define OPEN_PAREN_F() (

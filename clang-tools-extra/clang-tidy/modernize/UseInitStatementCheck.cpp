@@ -72,34 +72,6 @@ AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
 
 } // namespace
 
-// Collects all VarDecl references from an expression.
-static std::vector<const VarDecl *> collectVarDeclsInExpr(const Expr *E) {
-  class VarCollector : public RecursiveASTVisitor<VarCollector> {
-  public:
-    std::vector<const VarDecl *> Vars;
-
-    bool VisitDeclRefExpr(DeclRefExpr *DRE) {
-      if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-        Vars.push_back(VD);
-      return true; // Continue traversing
-    }
-  };
-
-  VarCollector Collector;
-  Collector.TraverseStmt(const_cast<Expr *>(E));
-  return Collector.Vars;
-}
-
-// Checks if all variables in DeclStmt are used in the condition.
-static bool allVarsUsedInCondition(const DeclStmt *DS, const Expr *Condition) {
-  const auto ConditionVars = collectVarDeclsInExpr(Condition);
-  return llvm::all_of(DS->decls(), [&](const auto *D) {
-    const auto *VD = dyn_cast<VarDecl>(D);
-    assert(VD); // TODO:
-    return llvm::is_contained(ConditionVars, VD);
-  });
-}
-
 // Checks if any variable in DeclStmt is used after the statement.
 static bool anyVarUsedAfterStmt(const DeclStmt *DS, const Stmt *STMT,
                                 const CompoundStmt *ParentCompound) {
@@ -127,11 +99,18 @@ static bool anyVarUsedAfterStmt(const DeclStmt *DS, const Stmt *STMT,
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
   static constexpr auto MakeMatcher = [](const auto &StmtMatcher,
                                          StringRef Name) {
-    return compoundStmt(unless(isInTemplateInstantiation()), hasAdjacentStmts(
-                            declStmt().bind("prevDecl"),
-                            StmtMatcher(unless(hasInitStatement(anything())),
-                                        hasCondition(expr().bind("condition")))
-                                .bind(Name)))
+    return compoundStmt(
+               unless(isInTemplateInstantiation()),
+               hasAdjacentStmts(
+                   declStmt(forEach(varDecl().bind("singleVar")))
+                       .bind("prevDecl"),
+                   StmtMatcher(
+                       unless(hasInitStatement(anything())),
+                       hasCondition(
+                           expr(forEachDescendant(declRefExpr(
+                                    to(varDecl(equalsBoundNode("singleVar"))))))
+                               .bind("condition")))
+                       .bind(Name)))
         .bind("compoundStmt");
   };
 
@@ -171,9 +150,6 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
 
   const Stmt *Statement = If ? static_cast<const Stmt *>(If) : Switch;
   if (!Statement)
-    return;
-
-  if (!allVarsUsedInCondition(PrevDecl, Condition))
     return;
 
   if (anyVarUsedAfterStmt(PrevDecl, Statement, Compound))
