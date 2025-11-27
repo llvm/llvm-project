@@ -200,6 +200,12 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     layout = dyn_cast<xegpu::LoadMatrixOp>(op).getLayoutAttr();
   if (isa<xegpu::StoreMatrixOp>(op))
     layout = dyn_cast<xegpu::StoreMatrixOp>(op).getLayoutAttr();
+  if (isa<xegpu::LoadNdOp>(op))
+    layout = dyn_cast<xegpu::LoadNdOp>(op).getLayoutAttr();
+  if (isa<xegpu::StoreNdOp>(op))
+    layout = dyn_cast<xegpu::StoreNdOp>(op).getLayoutAttr();
+  if (isa<xegpu::PrefetchNdOp>(op))
+    layout = dyn_cast<xegpu::PrefetchNdOp>(op).getLayoutAttr();
 
   if (layout != nullptr) {
     assert(layout.isForSubgroup() &&
@@ -219,11 +225,6 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
         "LoadGather/StoreScatter/Prefetch should have subgroup level layout");
     return getShapeSkipLeadingUnitDim(layout);
   }
-
-  if (isa<xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::PrefetchOp>(op))
-    return getTileShape(op->getOpOperand(0));
-  if (isa<xegpu::StoreNdOp>(op))
-    return getTileShape(op->getOpOperand(1));
 
   if (isa<xegpu::DpasOp>(op)) {
 
