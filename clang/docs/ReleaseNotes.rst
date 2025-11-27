@@ -124,6 +124,9 @@ C++ Specific Potentially Breaking Changes
 - ``VarTemplateSpecializationDecl::getTemplateArgsAsWritten()`` method now
   returns ``nullptr`` for implicitly instantiated declarations.
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 - Fix AArch64 argument passing for C++ empty classes with large explicitly specified alignment.
