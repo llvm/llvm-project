@@ -370,8 +370,8 @@ program target_update_mapper
     integer :: b
   end type typ
 
-  !CHECK: omp.declare_mapper @_QQFtarget_update_mapperFtyp_omp_default_mapper : !fir.type<_QFtarget_update_mapperTtyp{a:i32,b:i32}>
-  !CHECK: omp.declare_mapper @_QQFtarget_update_mapperFcustom : !fir.type<_QFtarget_update_mapperTtyp{a:i32,b:i32}>
+  !CHECK: omp.declare_mapper @_QQFcustom : !fir.type<_QFTtyp{a:i32,b:i32}>
+  !CHECK: omp.declare_mapper @_QQFtyp_omp_default_mapper : !fir.type<_QFTtyp{a:i32,b:i32}>
 
   !$omp declare mapper(typ :: t) map(t%a, t%b)
   !$omp declare mapper(custom: typ :: t) map(t%a)
@@ -379,17 +379,17 @@ program target_update_mapper
   type(typ) :: t
 
   ! Test target update to with custom mapper
-  !CHECK: %[[MAP_INFO:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(to) capture(ByRef) mapper(@_QQFtarget_update_mapperFcustom) -> {{.*}}
+  !CHECK: %[[MAP_INFO:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(to) capture(ByRef) mapper(@_QQFcustom) -> {{.*}}
   !CHECK: omp.target_update map_entries(%[[MAP_INFO]] : {{.*}})
   !$omp target update to(mapper(custom): t)
 
   ! Test target update from with custom mapper
-  !CHECK: %[[MAP_INFO2:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(from) capture(ByRef) mapper(@_QQFtarget_update_mapperFcustom) -> {{.*}}
+  !CHECK: %[[MAP_INFO2:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(from) capture(ByRef) mapper(@_QQFcustom) -> {{.*}}
   !CHECK: omp.target_update map_entries(%[[MAP_INFO2]] : {{.*}})
   !$omp target update from(mapper(custom): t)
 
   ! Test target update to with default mapper
-  !CHECK: %[[MAP_INFO3:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(to) capture(ByRef) mapper(@_QQFtarget_update_mapperFtyp_omp_default_mapper) -> {{.*}}
+  !CHECK: %[[MAP_INFO3:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(to) capture(ByRef) mapper(@_QQFtyp_omp_default_mapper) -> {{.*}}
   !CHECK: omp.target_update map_entries(%[[MAP_INFO3]] : {{.*}})
   !$omp target update to(mapper(default): t)
 
