@@ -12181,6 +12181,7 @@ static bool evalShiftWithCount(
   QualType SourceTy = Call->getArg(0)->getType();
   QualType CountTy = Call->getArg(1)->getType();
   assert(SourceTy->isVectorType() && CountTy->isVectorType());
+  (void)CountTy;
 
   QualType DestEltTy = SourceTy->castAs<VectorType>()->getElementType();
   unsigned DestEltWidth = Source.getVectorElt(0).getInt().getBitWidth();
