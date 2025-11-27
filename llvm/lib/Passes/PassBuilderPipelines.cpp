@@ -1452,7 +1452,6 @@ ModulePassManager
 PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
                                              ThinOrFullLTOPhase LTOPhase) {
   const bool LTOPreLink = isLTOPreLink(LTOPhase);
-  const bool LTOPostLink = isLTOPostLink(LTOPhase);
   ModulePassManager MPM;
 
   // Run partial inlining pass to partially inline functions that have
@@ -1617,7 +1616,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM),
                                                 PTO.EagerlyInvalidateAnalyses));
 
-  if (LTOPostLink)
+  // AllocToken transforms heap allocation calls; this needs to run late after
+  // other allocation call transformations (such as those in InstCombine).
+  if (!LTOPreLink)
     MPM.addPass(AllocTokenPass());
 
   invokeOptimizerLastEPCallbacks(MPM, Level, LTOPhase);
@@ -1858,7 +1859,11 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
                                    lowertypetests::DropTestKind::Assume));
     MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::ThinLTOPostLink));
+
+    // AllocToken transforms heap allocation calls; this needs to run late after
+    // other allocation call transformations (such as those in InstCombine).
     MPM.addPass(AllocTokenPass());
+
     // Drop available_externally and unreferenced globals. This is necessary
     // with ThinLTO in order to avoid leaving undefined references to dead
     // globals in the object file.
@@ -1919,6 +1924,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                    lowertypetests::DropTestKind::Assume));
 
     MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::FullLTOPostLink));
+
+    // AllocToken transforms heap allocation calls; this needs to run late after
+    // other allocation call transformations (such as those in InstCombine).
     MPM.addPass(AllocTokenPass());
 
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
@@ -2007,6 +2015,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                    lowertypetests::DropTestKind::Assume));
 
     MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::FullLTOPostLink));
+
+    // AllocToken transforms heap allocation calls; this needs to run late after
+    // other allocation call transformations (such as those in InstCombine).
     MPM.addPass(AllocTokenPass());
 
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
@@ -2242,6 +2253,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(CGProfilePass(/*InLTOPostLink=*/true));
 
   MPM.addPass(CoroCleanupPass());
+
+  // AllocToken transforms heap allocation calls; this needs to run late after
+  // other allocation call transformations (such as those in InstCombine).
   MPM.addPass(AllocTokenPass());
 
   invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
@@ -2360,7 +2374,9 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
 
   MPM.addPass(buildCoroWrapper(Phase));
 
-  if (isLTOPostLink(Phase))
+  // AllocToken transforms heap allocation calls; this needs to run late after
+  // other allocation call transformations (such as those in InstCombine).
+  if (!isLTOPreLink(Phase))
     MPM.addPass(AllocTokenPass());
 
   invokeOptimizerLastEPCallbacks(MPM, Level, Phase);
