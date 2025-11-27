@@ -1,21 +1,25 @@
 // No warnings in regular compile
-// RUN: %clang_cc1 -verify=no-tsan %s
+// RUN: %clang_cc1 -verify=no-warnings %s
 
-// Emits warning with `-fsanitize=thread`
-// RUN: %clang_cc1 -verify=with-tsan -fsanitize=thread %s
+// Emits warnings with `-fsanitize=thread`
+// RUN: %clang_cc1 -verify=with-tsan,warn-global-function,warn-member-function -fsanitize=thread %s
 
 // No warnings if `-Wno-tsan` is passed
-// RUN: %clang_cc1 -verify=no-tsan -fsanitize=thread -Wno-tsan %s
-
-// Ignoring func1
-// RUN: echo "fun:*func1*" > %t
-// RUN: %clang_cc1 -verify=no-tsan -fsanitize=thread -fsanitize-ignorelist=%t %s
+// RUN: %clang_cc1 -verify=no-warnings -fsanitize=thread -Wno-tsan %s
 
 // Ignoring source file
 // RUN: echo "src:%s" > %t
-// RUN: %clang_cc1 -verify=no-tsan -fsanitize=thread -fsanitize-ignorelist=%t %s
+// RUN: %clang_cc1 -verify=no-warnings -fsanitize=thread -fsanitize-ignorelist=%t %s
 
-// no-tsan-no-diagnostics
+// Ignoring global function
+// RUN: echo "fun:*global_function_to_maybe_ignore*" > %t
+// RUN: %clang_cc1 -verify=with-tsan,warn-member-function -fsanitize=thread -fsanitize-ignorelist=%t %s
+
+// Ignoring "S::member_function"
+// RUN: echo "fun:_ZN1S15member_functionEv" > %t
+// RUN: %clang_cc1 -triple=%itanium_abi_triple -verify=with-tsan,warn-global-function -fsanitize=thread -fsanitize-ignorelist=%t %s
+
+// no-warnings-no-diagnostics
 
 namespace std {
   enum memory_order {
@@ -29,26 +33,38 @@ namespace std {
   void atomic_thread_fence(memory_order) {}
 };
 
-void func1() { // extern "C" to stop name mangling
-  std::atomic_thread_fence(std::memory_order_relaxed); // with-tsan-warning {{'std::atomic_thread_fence' is not supported with '-fsanitize=thread'}}
-
-  auto lam = []() __attribute__((no_sanitize("thread"))) {
-    std::atomic_thread_fence(std::memory_order_relaxed);
-  };
+void global_function_to_maybe_ignore() {
+  std::atomic_thread_fence(std::memory_order_relaxed); // warn-global-function-warning {{'std::atomic_thread_fence' is not supported with '-fsanitize=thread'}}
 }
 
 __attribute__((no_sanitize("thread")))
-void func2() {
+void no_sanitize_1() {
   std::atomic_thread_fence(std::memory_order_relaxed);
 
   auto lam = []() {
-    std::atomic_thread_fence(std::memory_order_relaxed);
+    std::atomic_thread_fence(std::memory_order_relaxed); // with-tsan-warning {{'std::atomic_thread_fence' is not supported with '-fsanitize=thread'}}
   };
 }
 
 __attribute__((no_sanitize_thread))
-void func3() {
+void no_sanitize_2() {
   std::atomic_thread_fence(std::memory_order_relaxed);
 }
 
-int main() {}
+__attribute__((disable_sanitizer_instrumentation))
+void no_sanitize_3() {
+  std::atomic_thread_fence(std::memory_order_relaxed);
+}
+
+void no_sanitize_lambda() {
+  auto lam = [] () __attribute__((no_sanitize("thread"))) {
+    std::atomic_thread_fence(std::memory_order_relaxed);
+  };
+}
+
+struct S {
+public:
+  void member_function() {
+    std::atomic_thread_fence(std::memory_order_relaxed); // warn-member-function-warning {{'std::atomic_thread_fence' is not supported with '-fsanitize=thread'}}
+  }
+};
