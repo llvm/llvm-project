@@ -449,6 +449,49 @@ struct CmpFOpToAPFloatConversion final : OpRewritePattern<arith::CmpFOp> {
   SymbolOpInterface symTable;
 };
 
+struct NegFOpToAPFloatConversion final : OpRewritePattern<arith::NegFOp> {
+  NegFOpToAPFloatConversion(MLIRContext *context, SymbolOpInterface symTable,
+                            PatternBenefit benefit = 1)
+      : OpRewritePattern<arith::NegFOp>(context, benefit), symTable(symTable) {}
+
+  LogicalResult matchAndRewrite(arith::NegFOp op,
+                                PatternRewriter &rewriter) const override {
+    // Get APFloat function from runtime library.
+    auto i32Type = IntegerType::get(symTable->getContext(), 32);
+    auto i64Type = IntegerType::get(symTable->getContext(), 64);
+    FailureOr<FuncOp> fn =
+        lookupOrCreateApFloatFn(rewriter, symTable, "neg", {i32Type, i64Type});
+    if (failed(fn))
+      return fn;
+
+    // Cast operand to 64-bit integer.
+    rewriter.setInsertionPoint(op);
+    Location loc = op.getLoc();
+    auto floatTy = cast<FloatType>(op.getOperand().getType());
+    auto intWType = rewriter.getIntegerType(floatTy.getWidth());
+    Value operandBits = arith::ExtUIOp::create(
+        rewriter, loc, i64Type, arith::BitcastOp::create(rewriter, loc, intWType, op.getOperand()));
+
+    // Call APFloat function.
+    Value semValue = getSemanticsValue(rewriter, loc, floatTy);
+    SmallVector<Value> params = {semValue, operandBits};
+    Value negatedBits =
+        func::CallOp::create(rewriter, loc, TypeRange(i64Type),
+                             SymbolRefAttr::get(*fn), params)
+            ->getResult(0);
+
+    // Truncate result to the original width.
+    Value truncatedBits = arith::TruncIOp::create(rewriter, loc, intWType,
+                                                  negatedBits);
+    Value result =
+        arith::BitcastOp::create(rewriter, loc, floatTy, truncatedBits);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+
+  SymbolOpInterface symTable;
+};
+
 namespace {
 struct ArithToAPFloatConversionPass final
     : impl::ArithToAPFloatConversionPassBase<ArithToAPFloatConversionPass> {
@@ -482,6 +525,7 @@ void ArithToAPFloatConversionPass::runOnOperation() {
   patterns.add<IntToFpConversion<arith::UIToFPOp>>(context, getOperation(),
                                                    /*isUnsigned=*/true);
   patterns.add<CmpFOpToAPFloatConversion>(context, getOperation());
+  patterns.add<NegFOpToAPFloatConversion>(context, getOperation());
   LogicalResult result = success();
   ScopedDiagnosticHandler scopedHandler(context, [&result](Diagnostic &diag) {
     if (diag.getSeverity() == DiagnosticSeverity::Error) {
