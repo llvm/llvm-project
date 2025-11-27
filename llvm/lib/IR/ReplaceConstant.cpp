@@ -22,9 +22,9 @@ static bool isExpandableUser(User *U) {
   return isa<ConstantExpr>(U) || isa<ConstantAggregate>(U);
 }
 
-static SmallVector<Instruction *, 4> expandUser(BasicBlock::iterator InsertPt,
-                                                Constant *C) {
-  SmallVector<Instruction *, 4> NewInsts;
+static void expandUser(BasicBlock::iterator InsertPt, Constant *C,
+                       SmallVector<Instruction *, 4> &NewInsts) {
+  NewInsts.clear();
   if (auto *CE = dyn_cast<ConstantExpr>(C)) {
     Instruction *ConstInst = CE->getAsInstruction();
     ConstInst->insertBefore(*InsertPt->getParent(), InsertPt);
@@ -46,7 +46,6 @@ static SmallVector<Instruction *, 4> expandUser(BasicBlock::iterator InsertPt,
   } else {
     llvm_unreachable("Not an expandable user");
   }
-  return NewInsts;
 }
 
 bool llvm::convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
@@ -91,6 +90,11 @@ bool llvm::convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
 
   // Replace those expandable operands with instructions
   bool Changed = false;
+  // We need to cache the instructions we've already expanded to avoid expanding
+  // the same constant multiple times in the same basic block, which is
+  // problematic when the same constant is used in a phi node multiple times.
+  DenseMap<std::pair<Constant *, BasicBlock *>, SmallVector<Instruction *, 4>>
+      ConstantToInstructionMap;
   while (!InstructionWorklist.empty()) {
     Instruction *I = InstructionWorklist.pop_back_val();
     DebugLoc Loc = I->getDebugLoc();
@@ -105,7 +109,14 @@ bool llvm::convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
       if (auto *C = dyn_cast<Constant>(U.get())) {
         if (ExpandableUsers.contains(C)) {
           Changed = true;
-          auto NewInsts = expandUser(BI, C);
+          SmallVector<Instruction *, 4> &NewInsts =
+              ConstantToInstructionMap[std::make_pair(C, BI->getParent())];
+          // If the cached instruction is after the insertion point, we need to
+          // create a new one. We can't simply move the cached instruction
+          // because its operands (also expanded instructions) might not
+          // dominate the new position.
+          if (NewInsts.empty() || BI->comesBefore(NewInsts.front()))
+            expandUser(BI, C, NewInsts);
           for (auto *NI : NewInsts)
             NI->setDebugLoc(Loc);
           InstructionWorklist.insert_range(NewInsts);
