@@ -3354,10 +3354,6 @@ let Features = "avx512bf16", Attributes = [NoThrow, Const, RequiredVectorWidth<5
   def dpbf16ps_512 : X86Builtin<"_Vector<16, float>(_Vector<16, float>, _Vector<32, __bf16>, _Vector<32, __bf16>)">;
 }
 
-let Features = "avx512bf16", Attributes = [NoThrow, Const] in {
-  def cvtsbf162ss_32 : X86Builtin<"float(__bf16)">;
-}
-
 let Features = "avx512vp2intersect", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
   def vp2intersect_q_512 : X86Builtin<"void(_Vector<8, long long int>, _Vector<8, long long int>, unsigned char *, unsigned char *)">;
 }
