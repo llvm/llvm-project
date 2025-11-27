@@ -58,7 +58,6 @@ func.func @product_expr_known_extents(%arg0: !hlfir.expr<2x3xi32>) -> !hlfir.exp
 // CHECK:           return %[[ELEMENTAL_0]] : !hlfir.expr<3xi32>
 // CHECK:         }
 
-
 // box with unknown extent
 func.func @product_box_unknown_extent1(%arg0: !fir.box<!fir.array<?x3xcomplex<f64>>>) -> !hlfir.expr<3xcomplex<f64>> {
   %cst = arith.constant 1 : i32
@@ -68,18 +67,19 @@ func.func @product_box_unknown_extent1(%arg0: !fir.box<!fir.array<?x3xcomplex<f6
 // CHECK-LABEL:   func.func @product_box_unknown_extent1(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<?x3xcomplex<f64>>>) -> !hlfir.expr<3xcomplex<f64>> {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
-// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1.000000e+00 : f64
-// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 3 : index
-// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[ARG0]], %[[CONSTANT_3]] : (!fir.box<!fir.array<?x3xcomplex<f64>>>, index) -> (index, index, index)
-// CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_2]] : (index) -> !fir.shape<1>
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0.000000e+00 : f64
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1.000000e+00 : f64
+// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 3 : index
+// CHECK:           %[[CONSTANT_4:.*]] = arith.constant 0 : index
+// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[ARG0]], %[[CONSTANT_4]] : (!fir.box<!fir.array<?x3xcomplex<f64>>>, index) -> (index, index, index)
+// CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_3]] : (index) -> !fir.shape<1>
 // CHECK:           %[[ELEMENTAL_0:.*]] = hlfir.elemental %[[SHAPE_0]] unordered : (!fir.shape<1>) -> !hlfir.expr<3xcomplex<f64>> {
 // CHECK:           ^bb0(%[[VAL_0:.*]]: index):
 // CHECK:             %[[UNDEFINED_0:.*]] = fir.undefined complex<f64>
-// CHECK:             %[[INSERT_VALUE_0:.*]] = fir.insert_value %[[UNDEFINED_0]], %[[CONSTANT_1]], [0 : index] : (complex<f64>, f64) -> complex<f64>
+// CHECK:             %[[INSERT_VALUE_0:.*]] = fir.insert_value %[[UNDEFINED_0]], %[[CONSTANT_2]], [0 : index] : (complex<f64>, f64) -> complex<f64>
 // CHECK:             %[[INSERT_VALUE_1:.*]] = fir.insert_value %[[INSERT_VALUE_0]], %[[CONSTANT_1]], [1 : index] : (complex<f64>, f64) -> complex<f64>
 // CHECK:             %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_1:.*]] = %[[CONSTANT_0]] to %[[BOX_DIMS_0]]#1 step %[[CONSTANT_0]] iter_args(%[[VAL_2:.*]] = %[[INSERT_VALUE_1]]) -> (complex<f64>) {
-// CHECK:               %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[ARG0]], %[[CONSTANT_3]] : (!fir.box<!fir.array<?x3xcomplex<f64>>>, index) -> (index, index, index)
+// CHECK:               %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[ARG0]], %[[CONSTANT_4]] : (!fir.box<!fir.array<?x3xcomplex<f64>>>, index) -> (index, index, index)
 // CHECK:               %[[BOX_DIMS_2:.*]]:3 = fir.box_dims %[[ARG0]], %[[CONSTANT_0]] : (!fir.box<!fir.array<?x3xcomplex<f64>>>, index) -> (index, index, index)
 // CHECK:               %[[SUBI_0:.*]] = arith.subi %[[BOX_DIMS_1]]#0, %[[CONSTANT_0]] : index
 // CHECK:               %[[ADDI_0:.*]] = arith.addi %[[VAL_1]], %[[SUBI_0]] : index
@@ -103,18 +103,19 @@ func.func @product_box_unknown_extent2(%arg0: !fir.box<!fir.array<?x3xcomplex<f6
 // CHECK-LABEL:   func.func @product_box_unknown_extent2(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<?x3xcomplex<f64>>>) -> !hlfir.expr<?xcomplex<f64>> {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
-// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1.000000e+00 : f64
-// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 3 : index
-// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 0 : index
-// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[ARG0]], %[[CONSTANT_3]] : (!fir.box<!fir.array<?x3xcomplex<f64>>>, index) -> (index, index, index)
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0.000000e+00 : f64
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1.000000e+00 : f64
+// CHECK:           %[[CONSTANT_3:.*]] = arith.constant 3 : index
+// CHECK:           %[[CONSTANT_4:.*]] = arith.constant 0 : index
+// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[ARG0]], %[[CONSTANT_4]] : (!fir.box<!fir.array<?x3xcomplex<f64>>>, index) -> (index, index, index)
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[BOX_DIMS_0]]#1 : (index) -> !fir.shape<1>
 // CHECK:           %[[ELEMENTAL_0:.*]] = hlfir.elemental %[[SHAPE_0]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xcomplex<f64>> {
 // CHECK:           ^bb0(%[[VAL_0:.*]]: index):
 // CHECK:             %[[UNDEFINED_0:.*]] = fir.undefined complex<f64>
-// CHECK:             %[[INSERT_VALUE_0:.*]] = fir.insert_value %[[UNDEFINED_0]], %[[CONSTANT_1]], [0 : index] : (complex<f64>, f64) -> complex<f64>
+// CHECK:             %[[INSERT_VALUE_0:.*]] = fir.insert_value %[[UNDEFINED_0]], %[[CONSTANT_2]], [0 : index] : (complex<f64>, f64) -> complex<f64>
 // CHECK:             %[[INSERT_VALUE_1:.*]] = fir.insert_value %[[INSERT_VALUE_0]], %[[CONSTANT_1]], [1 : index] : (complex<f64>, f64) -> complex<f64>
-// CHECK:             %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_1:.*]] = %[[CONSTANT_0]] to %[[CONSTANT_2]] step %[[CONSTANT_0]] iter_args(%[[VAL_2:.*]] = %[[INSERT_VALUE_1]]) -> (complex<f64>) {
-// CHECK:               %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[ARG0]], %[[CONSTANT_3]] : (!fir.box<!fir.array<?x3xcomplex<f64>>>, index) -> (index, index, index)
+// CHECK:             %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_1:.*]] = %[[CONSTANT_0]] to %[[CONSTANT_3]] step %[[CONSTANT_0]] iter_args(%[[VAL_2:.*]] = %[[INSERT_VALUE_1]]) -> (complex<f64>) {
+// CHECK:               %[[BOX_DIMS_1:.*]]:3 = fir.box_dims %[[ARG0]], %[[CONSTANT_4]] : (!fir.box<!fir.array<?x3xcomplex<f64>>>, index) -> (index, index, index)
 // CHECK:               %[[BOX_DIMS_2:.*]]:3 = fir.box_dims %[[ARG0]], %[[CONSTANT_0]] : (!fir.box<!fir.array<?x3xcomplex<f64>>>, index) -> (index, index, index)
 // CHECK:               %[[SUBI_0:.*]] = arith.subi %[[BOX_DIMS_1]]#0, %[[CONSTANT_0]] : index
 // CHECK:               %[[ADDI_0:.*]] = arith.addi %[[VAL_0]], %[[SUBI_0]] : index

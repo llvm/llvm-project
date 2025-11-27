@@ -1683,8 +1683,9 @@ mlir::Value fir::factory::createOneValue(fir::FirOpBuilder &builder,
   if (fir::isa_complex(type)) {
     fir::factory::Complex complexHelper(builder, loc);
     mlir::Type partType = complexHelper.getComplexPartType(type);
-    mlir::Value onePart = builder.createRealOneConstant(loc, partType);
-    return complexHelper.createComplex(type, onePart, onePart);
+    mlir::Value realPart = builder.createRealOneConstant(loc, partType);
+    mlir::Value imagPart = builder.createRealZeroConstant(loc, partType);
+    return complexHelper.createComplex(type, realPart, imagPart);
   }
   fir::emitFatalError(loc, "internal: trying to generate one value of non "
                            "numeric or logical type");
