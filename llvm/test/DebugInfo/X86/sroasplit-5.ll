@@ -23,7 +23,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NOT: DW_OP_LLVM_fragment, 56
 ; CHECK: DIExpression(DW_OP_LLVM_fragment, 0, 32)
 ; CHECK-NOT: DW_OP_LLVM_fragment, 56
-; CHECK: DIExpression(DW_OP_LLVM_fragment, 32, 24)
+; CHECK: DIExpression(DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NOT: DW_OP_LLVM_fragment, 56
 %struct.prog_src_register = type { i32, i24 }
 
