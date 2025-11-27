@@ -5201,10 +5201,13 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // or an i8 array of an appropriate size.
   auto SelectPartitionTy = [&]() -> std::tuple<Type *, bool, VectorType *> {
     // First check if the partition is viable for vetor promotion.
+    //
     // We prefer vector promotion over integer widening promotion when:
     // - The vector element type is a floating-point type.
     // - All the loads/stores to the alloca are vector loads/stores to the
-    // entire alloca. Otherwise when there is a integer vector with mixed
+    // entire alloca.
+    // 
+    // Otherwise when there is a integer vector with mixed
     // loads/stores we prefer integer widening promotion because it's more
     // likely the user is doing bitwise arithmetic and we generate better code.
     VectorType *VecTy =
