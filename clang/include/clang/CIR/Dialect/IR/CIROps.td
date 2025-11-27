@@ -4716,15 +4716,12 @@ def CIR_VACopyOp : CIR_Op<"va.copy"> {
     Example:
 
     ```mlir
-    ```mlir
     // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
     %p = cir.cast array_to_ptrdecay %args
           : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
           -> !cir.ptr<!rec___va_list_tag>
     cir.va.copy %p to %dst
           : (!cir.ptr<!rec___va_list_tag>, !cir.ptr<!rec___va_list_tag>)
-    ```
-
     ```
   }];
 
