@@ -1936,6 +1936,7 @@ public:
   /// inaccessible from the IR.
   LLVM_ABI bool onlyAccessesInaccessibleMemory() const;
   LLVM_ABI void setOnlyAccessesInaccessibleMemory();
+  LLVM_ABI bool onlyAccessesTargetMemory() const;
 
   /// Determine if the function may only access memory that is
   /// either inaccessible from the IR or pointed to by its arguments.
