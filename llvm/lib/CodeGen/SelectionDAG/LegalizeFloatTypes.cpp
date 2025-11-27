@@ -1726,8 +1726,7 @@ void DAGTypeLegalizer::ExpandFloatRes_UnaryWithTwoFPResults(
     SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo) {
   assert(!N->isStrictFPOpcode() && "strictfp not implemented");
   SmallVector<SDValue> Results;
-  DAG.expandMultipleResultFPLibCall(LC, N, Results, N->getValueType(0),
-                                    CallRetResNo);
+  TLI.expandMultipleResultFPLibCall(DAG, LC, N, Results, CallRetResNo);
   for (auto [ResNo, Res] : enumerate(Results)) {
     SDValue Lo, Hi;
     GetPairElements(Res, Lo, Hi);

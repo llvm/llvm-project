@@ -28,7 +28,6 @@ define void @bswap_v8i16(ptr %x, ptr %y) {
   store <8 x i16> %c, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.bswap.v8i16(<8 x i16>)
 
 define void @bswap_v4i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: bswap_v4i32:
@@ -62,7 +61,6 @@ define void @bswap_v4i32(ptr %x, ptr %y) {
   store <4 x i32> %c, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>)
 
 define void @bswap_v2i64(ptr %x, ptr %y) {
 ; RV32-LABEL: bswap_v2i64:
@@ -155,7 +153,6 @@ define void @bswap_v2i64(ptr %x, ptr %y) {
   store <2 x i64> %c, ptr %x
   ret void
 }
-declare <2 x i64> @llvm.bswap.v2i64(<2 x i64>)
 
 define void @bswap_v16i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: bswap_v16i16:
@@ -181,7 +178,6 @@ define void @bswap_v16i16(ptr %x, ptr %y) {
   store <16 x i16> %c, ptr %x
   ret void
 }
-declare <16 x i16> @llvm.bswap.v16i16(<16 x i16>)
 
 define void @bswap_v8i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: bswap_v8i32:
@@ -215,7 +211,6 @@ define void @bswap_v8i32(ptr %x, ptr %y) {
   store <8 x i32> %c, ptr %x
   ret void
 }
-declare <8 x i32> @llvm.bswap.v8i32(<8 x i32>)
 
 define void @bswap_v4i64(ptr %x, ptr %y) {
 ; RV32-LABEL: bswap_v4i64:
@@ -308,4 +303,3 @@ define void @bswap_v4i64(ptr %x, ptr %y) {
   store <4 x i64> %c, ptr %x
   ret void
 }
-declare <4 x i64> @llvm.bswap.v4i64(<4 x i64>)

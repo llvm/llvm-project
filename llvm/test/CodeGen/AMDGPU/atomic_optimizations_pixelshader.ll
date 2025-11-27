@@ -104,7 +104,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, s12
 ; GFX1064-NEXT:    buffer_atomic_add v1, off, s[4:7], 0 glc
 ; GFX1064-NEXT:  .LBB0_3:
-; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1064-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    v_readfirstlane_b32 s4, v1
@@ -139,7 +139,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, s10
 ; GFX1032-NEXT:    buffer_atomic_add v1, off, s[4:7], 0 glc
 ; GFX1032-NEXT:  .LBB0_3:
-; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1032-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s9
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    v_readfirstlane_b32 s4, v1
@@ -413,7 +413,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, s12
 ; GFX1064-NEXT:    buffer_atomic_add v0, off, s[4:7], 0 glc
 ; GFX1064-NEXT:  .LBB1_3:
-; GFX1064-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1064-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1064-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    v_readfirstlane_b32 s4, v0
@@ -463,7 +463,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, s11
 ; GFX1032-NEXT:    buffer_atomic_add v0, off, s[4:7], 0 glc
 ; GFX1032-NEXT:  .LBB1_3:
-; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1032-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1032-NEXT:    s_or_b32 exec_lo, exec_lo, s9
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    v_readfirstlane_b32 s4, v0
@@ -515,7 +515,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[10:11], -1
-; GFX1164-NEXT:    s_waitcnt_depctr 0xfffe
+; GFX1164-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164-NEXT:    v_readlane_b32 s12, v1, 63
 ; GFX1164-NEXT:    v_readlane_b32 s14, v1, 47
 ; GFX1164-NEXT:    v_writelane_b32 v3, s13, 32

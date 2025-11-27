@@ -25,7 +25,6 @@
 #include <map>
 #include <set>
 #include <string>
-#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -797,8 +796,7 @@ void OptTable::internalPrintHelp(
     unsigned ActiveSubCommandID = ActiveSubCommand - &SubCommands[0];
     // Print if the ActiveSubCommandID is registered with the CandidateInfo
     // Option.
-    return std::find(SubCommandIDs.begin(), SubCommandIDs.end(),
-                     ActiveSubCommandID) != SubCommandIDs.end();
+    return llvm::is_contained(SubCommandIDs, ActiveSubCommandID);
   };
 
   for (unsigned Id = 1, e = getNumOptions() + 1; Id != e; ++Id) {
