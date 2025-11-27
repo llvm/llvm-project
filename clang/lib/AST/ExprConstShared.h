@@ -18,6 +18,8 @@
 
 namespace llvm {
 class APFloat;
+class APSInt;
+class APInt;
 }
 namespace clang {
 class QualType;
@@ -73,5 +75,8 @@ void HandleComplexComplexDiv(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
 
 CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
                          UnaryExprOrTypeTrait ExprKind);
+
+llvm::APSInt NormalizeRotateAmount(const llvm::APSInt &Value,
+                                   const llvm::APSInt &Amount);
 
 #endif
