@@ -360,8 +360,8 @@ TEST_F(IntrinsicsTest, IRBuilderCreateIntrinsicAddressSpace) {
 
   Type *RetTy = Type::getVoidTy(Context);
   SmallVector<Value *, 4> Args;
-  Args.push_back(
-      Constant::getNullValue(PointerType::get(Context, 1))); // ptr addrspace(1)
+  Args.push_back(Constant::getNullValue(
+      PointerType::get(Context, 1))); // ptr addrspace(1) null
   Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 0)); // rw
   Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 3)); // locality
   Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 1)); // cache type
