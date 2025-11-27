@@ -687,3 +687,21 @@ func.func @op_block_have_dead_arg(%arg0: index, %arg1: index, %arg2: i1) {
   // CHECK-NEXT: return
   return
 }
+
+// -----
+
+
+// CHECK-LABEL: func @affine_loop_no_use_iv_has_side_effect_op
+func.func @affine_loop_no_use_iv_has_side_effect_op() {
+  %c1 = arith.constant 1 : index
+  %alloc = memref.alloc() : memref<10xindex>
+  affine.for %arg0 = 0 to 79 {
+    memref.store %c1, %alloc[%c1] : memref<10xindex>
+  }
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<10xindex>
+// CHECK: affine.for %[[VAL_0:.*]] = 0 to 79 {
+// CHECK:   memref.store %[[C1]], %[[ALLOC]]{{\[}}%[[C1]]] : memref<10xindex>
+// CHECK: }
+  return
+}
