@@ -67,24 +67,24 @@ cl::opt<std::string> ClFuncPrefix("alloc-token-prefix",
                                   cl::desc("The allocation function prefix"),
                                   cl::Hidden, cl::init("__alloc_token_"));
 
-cl::opt<std::optional<uint64_t>, false, cl::parser<uint64_t>>
+cl::opt<uint64_t>
     ClMaxTokens("alloc-token-max",
                 cl::desc("Maximum number of tokens (0 = target SIZE_MAX)"),
-                cl::Hidden, cl::init(std::nullopt));
+                cl::Hidden, cl::init(0));
 
-cl::opt<std::optional<bool>, false, cl::parser<bool>>
+cl::opt<bool>
     ClFastABI("alloc-token-fast-abi",
               cl::desc("The token ID is encoded in the function name"),
-              cl::Hidden, cl::init(std::nullopt));
+              cl::Hidden, cl::init(false));
 
 // Instrument libcalls only by default - compatible allocators only need to take
 // care of providing standard allocation functions. With extended coverage, also
 // instrument non-libcall allocation function calls with !alloc_token
 // metadata.
-cl::opt<std::optional<bool>, false, cl::parser<bool>>
+cl::opt<bool>
     ClExtended("alloc-token-extended",
                cl::desc("Extend coverage to custom allocation functions"),
-               cl::Hidden, cl::init(std::nullopt));
+               cl::Hidden, cl::init(false));
 
 // C++ defines ::operator new (and variants) as replaceable (vs. standard
 // library versions), which are nobuiltin, and are therefore not covered by
@@ -252,12 +252,12 @@ static AllocTokenOptions resolveOptions(AllocTokenOptions Opts,
     Opts.Extended |= Val->isOne();
 
   // Allow overriding options from command line options.
-  if (ClMaxTokens.has_value())
-    Opts.MaxTokens = *ClMaxTokens;
-  if (ClFastABI.has_value())
-    Opts.FastABI = *ClFastABI;
-  if (ClExtended.has_value())
-    Opts.Extended = *ClExtended;
+  if (ClMaxTokens.getNumOccurrences())
+    Opts.MaxTokens = ClMaxTokens;
+  if (ClFastABI.getNumOccurrences())
+    Opts.FastABI = ClFastABI;
+  if (ClExtended.getNumOccurrences())
+    Opts.Extended = ClExtended;
 
   return Opts;
 }
