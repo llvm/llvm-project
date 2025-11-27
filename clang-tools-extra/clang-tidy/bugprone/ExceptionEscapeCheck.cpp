@@ -13,7 +13,27 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::bugprone {
+namespace clang::tidy {
+
+template <>
+struct OptionEnumMapping<
+    bugprone::ExceptionEscapeCheck::FunctionsThatShouldNotThrowPolicy> {
+  using FunctionsThatShouldNotThrowPolicy =
+      bugprone::ExceptionEscapeCheck::FunctionsThatShouldNotThrowPolicy;
+
+  static llvm::ArrayRef<std::pair<FunctionsThatShouldNotThrowPolicy, StringRef>>
+  getEnumMapping() {
+    static constexpr std::pair<FunctionsThatShouldNotThrowPolicy, StringRef>
+        Mapping[] = {
+            {FunctionsThatShouldNotThrowPolicy::None, "None"},
+            {FunctionsThatShouldNotThrowPolicy::OnlyUndefined, "OnlyUndefined"},
+            {FunctionsThatShouldNotThrowPolicy::All, "All"},
+        };
+    return {Mapping};
+  }
+};
+
+namespace bugprone {
 namespace {
 
 AST_MATCHER_P(FunctionDecl, isEnabled, llvm::StringSet<>,
@@ -43,9 +63,9 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
       CheckMoveMemberFunctions(Options.get("CheckMoveMemberFunctions", true)),
       CheckMain(Options.get("CheckMain", true)),
       CheckNothrowFunctions(Options.get("CheckNothrowFunctions", true)),
-      KnownUnannotatedAsThrowing(
-          Options.get("KnownUnannotatedAsThrowing", false)),
-      UnknownAsThrowing(Options.get("UnknownAsThrowing", false)) {
+      TreatFunctionsWithoutSpecificationAsThrowing(
+          Options.get("TreatFunctionsWithoutSpecificationAsThrowing",
+                      FunctionsThatShouldNotThrowPolicy::None)) {
   llvm::SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
       IgnoredExceptionsVec, CheckedSwapFunctionsVec;
   RawFunctionsThatShouldNotThrow.split(FunctionsThatShouldNotThrowVec, ",", -1,
@@ -60,7 +80,9 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
   IgnoredExceptions.insert_range(IgnoredExceptionsVec);
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
   Tracer.ignoreBadAlloc(true);
-  Tracer.assumeUnannotatedFunctionsThrow(KnownUnannotatedAsThrowing);
+  Tracer.assumeUnannotatedFunctionsThrow(
+      TreatFunctionsWithoutSpecificationAsThrowing ==
+      FunctionsThatShouldNotThrowPolicy::All);
 }
 
 void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -72,8 +94,8 @@ void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckMoveMemberFunctions", CheckMoveMemberFunctions);
   Options.store(Opts, "CheckMain", CheckMain);
   Options.store(Opts, "CheckNothrowFunctions", CheckNothrowFunctions);
-  Options.store(Opts, "KnownUnannotatedAsThrowing", KnownUnannotatedAsThrowing);
-  Options.store(Opts, "UnknownAsThrowing", UnknownAsThrowing);
+  Options.store(Opts, "TreatFunctionsWithoutSpecificationAsThrowing",
+                TreatFunctionsWithoutSpecificationAsThrowing);
 }
 
 void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
@@ -115,15 +137,18 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   const bool IsUnknown = Behaviour == utils::ExceptionAnalyzer::State::Unknown;
 
   const bool ReportUnknown =
-      IsUnknown &&
-      ((KnownUnannotatedAsThrowing && Info.hasUnknownFromKnownUnannotated()) ||
-       (UnknownAsThrowing && Info.hasUnknownFromMissingDefinition()));
+      IsUnknown && ((TreatFunctionsWithoutSpecificationAsThrowing ==
+                         FunctionsThatShouldNotThrowPolicy::All &&
+                     Info.hasUnknownFromKnownUnannotated()) ||
+                    (TreatFunctionsWithoutSpecificationAsThrowing !=
+                         FunctionsThatShouldNotThrowPolicy::None &&
+                     Info.hasUnknownFromMissingDefinition()));
 
   if (!(IsThrowing || ReportUnknown))
     return;
 
-  diag(MatchedDecl->getLocation(), "an exception may be thrown in function %0 "
-                                   "which should not throw exceptions")
+  diag(MatchedDecl->getLocation(), "an exception may be thrown in function "
+                                   "%0 which should not throw exceptions")
       << MatchedDecl;
 
   if (Info.getExceptions().empty())
@@ -136,8 +161,8 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
 
   const utils::ExceptionAnalyzer::CallStack &Stack = ThrowInfo.Stack;
   diag(ThrowInfo.Loc,
-       "frame #0: unhandled exception of type %0 may be thrown in function "
-       "%1 here",
+       "frame #0: unhandled exception of type %0 may be thrown in function %1 "
+       "here",
        DiagnosticIDs::Note)
       << QualType(ThrowType, 0U) << Stack.back().first;
 
@@ -160,4 +185,5 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace clang::tidy::bugprone
+} // namespace bugprone
+} // namespace clang::tidy
