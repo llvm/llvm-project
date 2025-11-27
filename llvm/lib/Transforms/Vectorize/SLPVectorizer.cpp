@@ -5325,13 +5325,14 @@ private:
       if (ScheduleCopyableDataMap.empty())
         return false;
       SmallDenseMap<TreeEntry *, unsigned> PotentiallyReorderedEntriesCount;
-      SmallDenseMap<const TreeEntry *, unsigned> OrderedEntriesCount;
+      ArrayRef<TreeEntry *> Entries = SLP.getTreeEntries(User);
+      if (Entries.empty())
+        return false;
+      unsigned CurNumOps = 0;
       for (const Use &U : User->operands()) {
         if (U.get() != Op)
           continue;
-        ArrayRef<TreeEntry *> Entries = SLP.getTreeEntries(User);
-        if (Entries.empty())
-          return false;
+        ++CurNumOps;
         // Check all tree entries, if they have operands replaced by copyable
         // data.
         for (TreeEntry *TE : Entries) {
@@ -5363,28 +5364,28 @@ private:
           // reordered.
           // Same applies even for non-commutative cmps, because we can invert
           // their predicate potentially and, thus, reorder the operands.
+          constexpr unsigned NumCommutativeOps = 2;
           bool IsCommutativeUser =
-              ::isCommutative(User) ||
-              ::isCommutative(TE->getMatchingMainOpOrAltOp(User), User);
-          if (!IsCommutativeUser && !isa<CmpInst>(User)) {
-            unsigned &OpCnt =
-                OrderedEntriesCount.try_emplace(TE, 0).first->getSecond();
+              U.getOperandNo() < NumCommutativeOps &&
+              (::isCommutative(User) ||
+               ::isCommutative(TE->getMatchingMainOpOrAltOp(User), User));
+          bool IsCommutativeWithSameOps =
+              IsCommutativeUser &&
+              User->getNumOperands() >= NumCommutativeOps &&
+              User->getOperand(0) == User->getOperand(1);
+          if ((!IsCommutativeUser || IsCommutativeWithSameOps) &&
+              !isa<CmpInst>(User)) {
             EdgeInfo EI(TE, U.getOperandNo());
-            if (!getScheduleCopyableData(EI, Op))
+            if (CurNumOps != NumOps || getScheduleCopyableData(EI, Op))
               continue;
-            // Found copyable operand - continue.
-            OpCnt += Inc;
-            continue;
+            return false;
           }
           PotentiallyReorderedEntriesCount.try_emplace(TE, 0)
               .first->getSecond() += Inc;
         }
       }
       if (PotentiallyReorderedEntriesCount.empty())
-        return all_of(OrderedEntriesCount,
-                      [&](const std::pair<const TreeEntry *, unsigned> &P) {
-                        return P.second == NumOps;
-                      });
+        return true;
       // Check the commutative/cmp entries.
       for (auto &P : PotentiallyReorderedEntriesCount) {
         SmallPtrSet<Value *, 4> ParentsUniqueUsers;
@@ -5430,10 +5431,6 @@ private:
       return all_of(PotentiallyReorderedEntriesCount,
                     [&](const std::pair<const TreeEntry *, unsigned> &P) {
                       return P.second == NumOps - 1;
-                    }) &&
-             all_of(OrderedEntriesCount,
-                    [&](const std::pair<const TreeEntry *, unsigned> &P) {
-                      return P.second == NumOps;
                     });
     }
 
@@ -5655,6 +5652,7 @@ private:
                 }
               };
 
+          SmallDenseSet<std::pair<const ScheduleEntity *, unsigned>> Checked;
           for (ScheduleBundle *Bundle : Bundles) {
             if (ScheduleCopyableDataMap.empty() && TotalOpCount == 0)
               break;
@@ -5662,7 +5660,6 @@ private:
             // Need to search for the lane since the tree entry can be
             // reordered.
             auto *It = find(Bundle->getTreeEntry()->Scalars, In);
-            SmallDenseSet<std::pair<const ScheduleEntity *, unsigned>> Checked;
             bool IsNonSchedulableWithParentPhiNode =
                 Bundle->getTreeEntry()->doesNotNeedToSchedule() &&
                 Bundle->getTreeEntry()->UserTreeIndex &&
@@ -10865,7 +10862,9 @@ class InstructionsCompatibilityAnalysis {
            Opcode == Instruction::LShr || Opcode == Instruction::Shl ||
            Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
            Opcode == Instruction::And || Opcode == Instruction::Or ||
-           Opcode == Instruction::Xor;
+           Opcode == Instruction::Xor || Opcode == Instruction::FAdd ||
+           Opcode == Instruction::FSub || Opcode == Instruction::FMul ||
+           Opcode == Instruction::FDiv;
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -11198,6 +11197,10 @@ public:
       case Instruction::And:
       case Instruction::Or:
       case Instruction::Xor:
+      case Instruction::FAdd:
+      case Instruction::FMul:
+      case Instruction::FSub:
+      case Instruction::FDiv:
         VectorCost = TTI.getArithmeticInstrCost(MainOpcode, VecTy, Kind);
         break;
       default:
