@@ -1144,7 +1144,7 @@ struct DocumentSymbol {
   /// Indicates if this symbol is deprecated.
   bool deprecated = false;
 
-  /// Tags for this symbol, e.g public, private, static, const etc.
+  /// The tags for this symbol.
   std::vector<SymbolTag> tags;
 
   /// The range enclosing this symbol not including leading/trailing whitespace
@@ -1171,6 +1171,9 @@ struct SymbolInformation {
 
   /// The kind of this symbol.
   SymbolKind kind;
+
+  /// Tags for this symbol, e.g public, private, static, const etc.
+  std::vector<SymbolTag> tags;
 
   /// The location of this symbol.
   Location location;
@@ -1538,6 +1541,9 @@ struct TypeHierarchyItem {
 
   /// The kind of this item.
   SymbolKind kind;
+
+  /// The symbol tags for this item.
+  std::vector<SymbolTag> tags;
 
   /// More detail for this item, e.g. the signature of a function.
   std::optional<std::string> detail;

@@ -30,6 +30,49 @@
 namespace clang {
 namespace clangd {
 
+std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
+  std::vector<SymbolTag> Tags;
+
+  if (ND.isDeprecated())
+    Tags.push_back(SymbolTag::Deprecated);
+
+  if (isConst(&ND))
+    Tags.push_back(SymbolTag::ReadOnly);
+
+  if (isStatic(&ND))
+    Tags.push_back(SymbolTag::Static);
+
+  if (isVirtual(&ND))
+    Tags.push_back(SymbolTag::Virtual);
+
+  if (isAbstract(&ND))
+    Tags.push_back(SymbolTag::Abstract);
+
+  if (isFinal(&ND))
+    Tags.push_back(SymbolTag::Final);
+
+  if (isUniqueDefinition(&ND))
+    Tags.push_back(SymbolTag::Definition);
+  else if (!isa<UnresolvedUsingValueDecl>(ND))
+    Tags.push_back(SymbolTag::Declaration);
+
+  switch (ND.getAccess()) {
+  case AS_public:
+    Tags.push_back(SymbolTag::Public);
+    break;
+  case AS_protected:
+    Tags.push_back(SymbolTag::Protected);
+    break;
+  case AS_private:
+    Tags.push_back(SymbolTag::Private);
+    break;
+  default:
+    break;
+  }
+
+  return Tags;
+}
+
 namespace {
 using ScoredSymbolInfo = std::pair<float, SymbolInformation>;
 struct ScoredSymbolGreater {
@@ -186,49 +229,6 @@ std::string getSymbolName(ASTContext &Ctx, const NamedDecl &ND) {
     return Name;
   }
   return printName(Ctx, ND);
-}
-
-std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
-  std::vector<SymbolTag> Tags;
-
-  if (ND.isDeprecated())
-    Tags.push_back(SymbolTag::Deprecated);
-
-  if (isConst(&ND))
-    Tags.push_back(SymbolTag::ReadOnly);
-
-  if (isStatic(&ND))
-    Tags.push_back(SymbolTag::Static);
-
-  if (isVirtual(&ND))
-    Tags.push_back(SymbolTag::Virtual);
-
-  if (isAbstract(&ND))
-    Tags.push_back(SymbolTag::Abstract);
-
-  if (isFinal(&ND))
-    Tags.push_back(SymbolTag::Final);
-
-  if (isUniqueDefinition(&ND))
-    Tags.push_back(SymbolTag::Definition);
-  else if (!isa<UnresolvedUsingValueDecl>(ND))
-    Tags.push_back(SymbolTag::Declaration);
-
-  switch (ND.getAccess()) {
-  case AS_public:
-    Tags.push_back(SymbolTag::Public);
-    break;
-  case AS_protected:
-    Tags.push_back(SymbolTag::Protected);
-    break;
-  case AS_private:
-    Tags.push_back(SymbolTag::Private);
-    break;
-  default:
-    break;
-  }
-
-  return Tags;
 }
 
 std::string getSymbolDetail(ASTContext &Ctx, const NamedDecl &ND) {

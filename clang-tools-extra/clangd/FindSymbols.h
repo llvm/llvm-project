@@ -15,6 +15,7 @@
 #include "Protocol.h"
 #include "index/Symbol.h"
 #include "llvm/ADT/StringRef.h"
+#include "clang/AST/Decl.h"
 
 namespace clang {
 namespace clangd {
@@ -46,6 +47,10 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
 /// Retrieves the symbols contained in the "main file" section of an AST in the
 /// same order that they appear.
 llvm::Expected<std::vector<DocumentSymbol>> getDocumentSymbols(ParsedAST &AST);
+
+/// Returns the symbol tags for the given declaration.
+/// \p ND The declaration to get tags for.
+std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND);
 
 } // namespace clangd
 } // namespace clang
