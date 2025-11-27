@@ -164,7 +164,6 @@
 ; CHECK-O1-NEXT: Running pass: CoroConditionalWrapper
 ; CHECK-O23SZ-NEXT: Running pass: CoroCleanupPass
 ; CHECK-O-NEXT: Running pass: AllocTokenPass
-; CHECK-O1-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-EP-NEXT: Running pass: NoOpModulePass
 ; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
 ; CHECK-O-NEXT: Running pass: PrintModulePass

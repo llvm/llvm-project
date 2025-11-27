@@ -67,24 +67,24 @@ cl::opt<std::string> ClFuncPrefix("alloc-token-prefix",
                                   cl::desc("The allocation function prefix"),
                                   cl::Hidden, cl::init("__alloc_token_"));
 
-cl::opt<uint64_t>
+cl::opt<std::optional<uint64_t>, false, cl::parser<uint64_t>>
     ClMaxTokens("alloc-token-max",
                 cl::desc("Maximum number of tokens (0 = target SIZE_MAX)"),
-                cl::Hidden, cl::init(0));
+                cl::Hidden, cl::init(std::nullopt));
 
-cl::opt<bool>
+cl::opt<std::optional<bool>, false, cl::parser<bool>>
     ClFastABI("alloc-token-fast-abi",
               cl::desc("The token ID is encoded in the function name"),
-              cl::Hidden, cl::init(false));
+              cl::Hidden, cl::init(std::nullopt));
 
 // Instrument libcalls only by default - compatible allocators only need to take
 // care of providing standard allocation functions. With extended coverage, also
 // instrument non-libcall allocation function calls with !alloc_token
 // metadata.
-cl::opt<bool>
+cl::opt<std::optional<bool>, false, cl::parser<bool>>
     ClExtended("alloc-token-extended",
                cl::desc("Extend coverage to custom allocation functions"),
-               cl::Hidden, cl::init(false));
+               cl::Hidden, cl::init(std::nullopt));
 
 // C++ defines ::operator new (and variants) as replaceable (vs. standard
 // library versions), which are nobuiltin, and are therefore not covered by
@@ -237,11 +237,6 @@ public:
 // Apply opt overrides and module flags.
 static AllocTokenOptions resolveOptions(AllocTokenOptions Opts,
                                         const Module &M) {
-  if (!Opts.MaxTokens.has_value())
-    Opts.MaxTokens = ClMaxTokens;
-  Opts.FastABI |= ClFastABI;
-  Opts.Extended |= ClExtended;
-
   auto IntModuleFlagOrNull = [&](StringRef Key) {
     return mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key));
   };
@@ -249,15 +244,20 @@ static AllocTokenOptions resolveOptions(AllocTokenOptions Opts,
   if (auto *S = dyn_cast_or_null<MDString>(M.getModuleFlag("alloc-token-mode")))
     if (auto Mode = getAllocTokenModeFromString(S->getString()))
       Opts.Mode = *Mode;
-
   if (auto *Val = IntModuleFlagOrNull("alloc-token-max"))
     Opts.MaxTokens = Val->getZExtValue();
-
   if (auto *Val = IntModuleFlagOrNull("alloc-token-fast-abi"))
     Opts.FastABI |= Val->isOne();
-
   if (auto *Val = IntModuleFlagOrNull("alloc-token-extended"))
     Opts.Extended |= Val->isOne();
+
+  // Allow overriding options from command line options.
+  if (ClMaxTokens.has_value())
+    Opts.MaxTokens = *ClMaxTokens;
+  if (ClFastABI.has_value())
+    Opts.FastABI = *ClFastABI;
+  if (ClExtended.has_value())
+    Opts.Extended = *ClExtended;
 
   return Opts;
 }
@@ -268,19 +268,19 @@ public:
                       ModuleAnalysisManager &MAM)
       : Options(resolveOptions(std::move(Opts), M)), Mod(M),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
-        Mode(IncrementMode(*IntPtrTy, *Options.MaxTokens)) {
+        Mode(IncrementMode(*IntPtrTy, Options.MaxTokens)) {
     switch (Options.Mode) {
     case TokenMode::Increment:
       break;
     case TokenMode::Random:
-      Mode.emplace<RandomMode>(*IntPtrTy, *Options.MaxTokens,
+      Mode.emplace<RandomMode>(*IntPtrTy, Options.MaxTokens,
                                M.createRNG(DEBUG_TYPE));
       break;
     case TokenMode::TypeHash:
-      Mode.emplace<TypeHashMode>(*IntPtrTy, *Options.MaxTokens);
+      Mode.emplace<TypeHashMode>(*IntPtrTy, Options.MaxTokens);
       break;
     case TokenMode::TypeHashPointerSplit:
-      Mode.emplace<TypeHashPointerSplitMode>(*IntPtrTy, *Options.MaxTokens);
+      Mode.emplace<TypeHashPointerSplitMode>(*IntPtrTy, Options.MaxTokens);
       break;
     }
   }
@@ -337,8 +337,6 @@ bool AllocToken::instrumentFunction(Function &F) {
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage)
     return false;
 
-  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
   SmallVector<std::pair<CallBase *, LibFunc>, 4> AllocCalls;
   SmallVector<IntrinsicInst *, 4> IntrinsicInsts;
 
@@ -346,6 +344,10 @@ bool AllocToken::instrumentFunction(Function &F) {
   const bool InstrumentFunction =
       F.hasFnAttribute(Attribute::SanitizeAllocToken) &&
       !F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation);
+
+  // Get TLI only when required.
+  const TargetLibraryInfo *TLI =
+      InstrumentFunction ? &FAM.getResult<TargetLibraryAnalysis>(F) : nullptr;
 
   // Collect all allocation calls to avoid iterator invalidation.
   for (Instruction &I : instructions(F)) {
@@ -362,25 +364,27 @@ bool AllocToken::instrumentFunction(Function &F) {
     auto *CB = dyn_cast<CallBase>(&I);
     if (!CB)
       continue;
-    if (std::optional<LibFunc> Func = shouldInstrumentCall(*CB, TLI))
+    if (std::optional<LibFunc> Func = shouldInstrumentCall(*CB, *TLI))
       AllocCalls.emplace_back(CB, Func.value());
   }
 
+  // Return early to avoid unnecessarily instantiating the ORE.
+  if (AllocCalls.empty() && IntrinsicInsts.empty())
+    return false;
+
+  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   bool Modified = false;
 
-  if (!AllocCalls.empty()) {
-    for (auto &[CB, Func] : AllocCalls)
-      Modified |= replaceAllocationCall(CB, Func, ORE, TLI);
-    if (Modified)
-      NumFunctionsModified++;
+  for (auto &[CB, Func] : AllocCalls)
+    Modified |= replaceAllocationCall(CB, Func, ORE, *TLI);
+
+  for (auto *II : IntrinsicInsts) {
+    replaceIntrinsicInst(II, ORE);
+    Modified = true;
   }
 
-  if (!IntrinsicInsts.empty()) {
-    for (auto *II : IntrinsicInsts)
-      replaceIntrinsicInst(II, ORE);
-    Modified = true;
+  if (Modified)
     NumFunctionsModified++;
-  }
 
   return Modified;
 }
