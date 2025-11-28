@@ -53,13 +53,11 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
   // Adjust stack.
   TII.makeFrame(Mips::SP, StackSize, MBB, MBBI);
 
-  CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::NoFlags);
-  CFIBuilder.buildDefCFAOffset(StackSize);
+  if (MF.needsFrameMoves()) {
+    CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::NoFlags);
+    CFIBuilder.buildDefCFAOffset(StackSize);
 
-  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
-
-  if (!CSI.empty()) {
-    for (const CalleeSavedInfo &I : CSI)
+    for (const CalleeSavedInfo &I : MFI.getCalleeSavedInfo())
       CFIBuilder.buildOffset(I.getReg(), MFI.getObjectOffset(I.getFrameIdx()));
   }
 
