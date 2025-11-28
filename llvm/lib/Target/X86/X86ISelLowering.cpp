@@ -53140,6 +53140,91 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
   return DAG.getSetCC(SDLoc(N), VT, Shift.getOperand(0), Ones, ISD::SETGT);
 }
 
+// Check whether this is a shuffle that interleaves the lanes of the two input
+// vectors. e.g. when interleaving two v8i32 into a single v16i32 that mask is
+// <0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7, 20, 21, 22, 23>. Indices are based
+// on the target type.
+static bool isLaneInterleaveMask(ArrayRef<int> Mask, MVT VT) {
+  assert(VT.isVector() && "Expected vector VT.");
+
+  MVT ElemVT = VT.getScalarType();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltBits = ElemVT.getSizeInBits();
+
+  if (Mask.size() != NumElts)
+    return false;
+
+  // A lane is 128 bits.
+  if (EltBits == 0 || (128u % EltBits) != 0)
+    return false;
+
+  // So 4 for i32, 8 for i16, etc.
+  unsigned EltsPerLane = 128u / EltBits;
+  unsigned GroupSize = 2 * EltsPerLane;
+
+  if (NumElts % GroupSize != 0)
+    return false;
+
+  unsigned Pos = 0;
+  for (unsigned G = 0; G != (NumElts / GroupSize); ++G) {
+    // Indices are based on the output type, hence B starts at NumElts.
+    unsigned ABase = G * EltsPerLane;
+    unsigned BBase = NumElts + G * EltsPerLane;
+
+    for (unsigned I = 0; I != EltsPerLane; ++I)
+      if (Mask[Pos++] != (int)(ABase + I))
+        return false;
+
+    for (unsigned I = 0; I != EltsPerLane; ++I)
+      if (Mask[Pos++] != (int)(BBase + I))
+        return false;
+  }
+
+  return true;
+}
+
+// Check whether this is a shuffle that interleaves the lanes of the two input
+// vectors. e.g. v16i32 that mask is <0, 1, 2, 3, 16, 17, 18, 19, 4, 5, 6, 7,
+// 20, 21, 22, 23>.
+static bool isLaneInterleaveShuffle(MVT VT, SDValue Shuf, SDValue &A,
+                                    SDValue &B, const SelectionDAG &DAG,
+                                    const X86Subtarget &Subtarget) {
+  // For the _mm_pack{u|s}s variants, the shuffle is trivial and therefore
+  // elided.
+  if (VT == MVT::v16i16 || VT == MVT::v8i32) {
+    if (Shuf.getOpcode() == ISD::CONCAT_VECTORS && Shuf.getNumOperands() == 2) {
+      A = Shuf->getOperand(0);
+      B = Shuf->getOperand(1);
+      return true;
+    }
+
+    return false;
+  }
+
+  auto *SVN = dyn_cast<ShuffleVectorSDNode>(Shuf.getNode());
+  if (!SVN)
+    return false;
+
+  ArrayRef<int> TargetMask = SVN->getMask();
+  SDValue V1 = SVN->getOperand(0);
+  SDValue V2 = SVN->getOperand(1);
+
+  if (isLaneInterleaveMask(TargetMask, VT)) {
+    auto peelConcat = [](SDValue V) -> SDValue {
+      if (V.getOpcode() == ISD::CONCAT_VECTORS && V.getNumOperands() == 2)
+        return V.getOperand(0);
+      return V;
+    };
+
+    // The upper half is undefined.
+    A = peelConcat(V1);
+    B = peelConcat(V2);
+    return true;
+  }
+
+  return false;
+}
+
 /// Detect patterns of truncation with unsigned saturation:
 ///
 /// 1. (truncate (umin (x, unsigned_max_of_dest_type)) to dest_type).
@@ -53284,40 +53369,74 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
                                     Subtarget);
   }
 
+  if (!(SVT == MVT::i32 || SVT == MVT::i16 || SVT == MVT::i8))
+    return SDValue();
+
+  unsigned TruncOpc = 0;
+  unsigned PackOpc = 0;
+  SDValue SatVal;
+  if (SDValue SSatVal = detectSSatPattern(In, VT, false)) {
+    SatVal = SSatVal;
+    TruncOpc = X86ISD::VTRUNCS;
+    PackOpc = X86ISD::PACKSS;
+  } else if (SDValue SSatVal = detectSSatPattern(In, VT, true)) {
+    SatVal = SSatVal;
+    PackOpc = X86ISD::PACKUS;
+  } else if (SDValue USatVal = detectUSatPattern(In, VT, DAG, DL)) {
+    SatVal = USatVal;
+    TruncOpc = X86ISD::VTRUNCUS;
+  } else {
+    return SDValue();
+  }
+
+  unsigned ResElts = VT.getVectorNumElements();
+
+  bool IsEpi16 = (SVT == MVT::i8 && InSVT == MVT::i16);
+  bool IsEpi32 = (SVT == MVT::i16 && InSVT == MVT::i32);
+
+  // Is there an adventageous pack given the current types and features?
+  unsigned Width = VT.getSizeInBits();
+  bool HasPackForWidth =
+      (Width == 128 && Subtarget.hasSSE41()) ||
+      (Width == 256 && Subtarget.hasAVX2()) ||
+      (Width == 512 && Subtarget.hasBWI() && Subtarget.hasVLX());
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (TLI.isTypeLegal(InVT) && InVT.isVector() && SVT != MVT::i1 &&
-      Subtarget.hasAVX512() && (InSVT != MVT::i16 || Subtarget.hasBWI()) &&
-      (SVT == MVT::i32 || SVT == MVT::i16 || SVT == MVT::i8)) {
-    unsigned TruncOpc = 0;
-    SDValue SatVal;
-    if (SDValue SSatVal = detectSSatPattern(In, VT)) {
-      SatVal = SSatVal;
-      TruncOpc = X86ISD::VTRUNCS;
-    } else if (SDValue USatVal = detectUSatPattern(In, VT, DAG, DL)) {
-      SatVal = USatVal;
-      TruncOpc = X86ISD::VTRUNCUS;
+  if (PackOpc && HasPackForWidth && (IsEpi16 || IsEpi32)) {
+    SDValue A, B;
+    if (isLaneInterleaveShuffle(InVT.getSimpleVT(), SatVal, A, B, DAG,
+                                Subtarget)) {
+      return DAG.getNode(PackOpc, DL, VT, A, B);
     }
-    if (SatVal) {
-      unsigned ResElts = VT.getVectorNumElements();
-      // If the input type is less than 512 bits and we don't have VLX, we need
-      // to widen to 512 bits.
-      if (!Subtarget.hasVLX() && !InVT.is512BitVector()) {
-        unsigned NumConcats = 512 / InVT.getSizeInBits();
-        ResElts *= NumConcats;
-        SmallVector<SDValue, 4> ConcatOps(NumConcats, DAG.getUNDEF(InVT));
-        ConcatOps[0] = SatVal;
-        InVT = EVT::getVectorVT(*DAG.getContext(), InSVT,
-                                NumConcats * InVT.getVectorNumElements());
-        SatVal = DAG.getNode(ISD::CONCAT_VECTORS, DL, InVT, ConcatOps);
-      }
-      // Widen the result if its narrower than 128 bits.
-      if (ResElts * SVT.getSizeInBits() < 128)
-        ResElts = 128 / SVT.getSizeInBits();
-      EVT TruncVT = EVT::getVectorVT(*DAG.getContext(), SVT, ResElts);
-      SDValue Res = DAG.getNode(TruncOpc, DL, TruncVT, SatVal);
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
-                         DAG.getVectorIdxConstant(0, DL));
+  }
+
+  // This pattern may have been above because an earlier branch got picked.
+  if (SDValue USatVal = detectUSatPattern(In, VT, DAG, DL)) {
+    SatVal = USatVal;
+    TruncOpc = X86ISD::VTRUNCUS;
+  }
+
+  if (TruncOpc && TLI.isTypeLegal(InVT) && InVT.isVector() && SVT != MVT::i1 &&
+      Subtarget.hasAVX512() && (InSVT != MVT::i16 || Subtarget.hasBWI())) {
+
+    // If the input type is less than 512 bits and we don't have VLX, we
+    // need to widen to 512 bits.
+    if (!Subtarget.hasVLX() && !InVT.is512BitVector()) {
+      unsigned NumConcats = 512 / InVT.getSizeInBits();
+      ResElts *= NumConcats;
+      SmallVector<SDValue, 4> ConcatOps(NumConcats, DAG.getUNDEF(InVT));
+      ConcatOps[0] = SatVal;
+      InVT = EVT::getVectorVT(*DAG.getContext(), InSVT,
+                              NumConcats * InVT.getVectorNumElements());
+      SatVal = DAG.getNode(ISD::CONCAT_VECTORS, DL, InVT, ConcatOps);
     }
+    // Widen the result if its narrower than 128 bits.
+    if (ResElts * SVT.getSizeInBits() < 128)
+      ResElts = 128 / SVT.getSizeInBits();
+    EVT TruncVT = EVT::getVectorVT(*DAG.getContext(), SVT, ResElts);
+    SDValue Res = DAG.getNode(TruncOpc, DL, TruncVT, SatVal);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
+                       DAG.getVectorIdxConstant(0, DL));
   }
 
   return SDValue();
