@@ -6321,7 +6321,7 @@ public:
     // Merge two access paths into one.
     void mergeAccessPaths(const AccessPathSetTy &AccessPathsNew) {
       for (auto *Path : AccessPathsNew)
-        if (!existsChain(Path)) {
+        if (Path && !existsChain(*Path)) {
           AccessPaths.insert(Path);
         }
     }
@@ -6333,19 +6333,19 @@ public:
         return false;
 
       for (auto *Path : AccessPathsR) {
-        if (!existsChain(Path))
+        if (Path && !existsChain(*Path))
           IsSame = false;
       }
       return IsSame;
     }
 
     // Check if the chain exists in the AccessPathsSet.
-    bool existsChain(const AccessPathTy *NewPath) const {
+    bool existsChain(const AccessPathTy &NewPath) const {
       if (AccessPaths.empty())
         return false;
 
       for (auto *OldPath : AccessPaths)
-        if (*OldPath == *NewPath)
+        if (OldPath && (*OldPath == NewPath))
           return true;
 
       return false;
@@ -6360,9 +6360,11 @@ public:
       }
 
       for (auto *It : AccessPaths) {
-        O << "Backtrack a unique access path:\n";
-        for (Value *Ins : *It)
-          O << *Ins << "\n";
+        if (It) {
+          O << "Backtrack a unique access path:\n";
+          for (Value *Ins : *It)
+            O << *Ins << "\n";
+        }
       }
     }
 
