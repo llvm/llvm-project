@@ -67,12 +67,14 @@ class AMDGCNSPIRVABIInfo : public SPIRVABIInfo {
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
   ABIArgInfo classifyArgumentType(QualType Ty) const;
+
 public:
   AMDGCNSPIRVABIInfo(CodeGenTypes &CGT) : SPIRVABIInfo(CGT) {}
   void computeInfo(CGFunctionInfo &FI) const override;
 
-  llvm::FixedVectorType *getOptimalVectorMemoryType(
-      llvm::FixedVectorType *Ty, const LangOptions &LangOpt) const override;
+  llvm::FixedVectorType *
+  getOptimalVectorMemoryType(llvm::FixedVectorType *Ty,
+                             const LangOptions &LangOpt) const override;
 };
 } // end anonymous namespace
 namespace {
@@ -251,9 +253,9 @@ unsigned AMDGCNSPIRVABIInfo::numRegsForType(QualType Ty) const {
   return (getContext().getTypeSize(Ty) + 31) / 32;
 }
 
-llvm::Type *
-AMDGCNSPIRVABIInfo::coerceKernelArgumentType(llvm::Type *Ty, unsigned FromAS,
-                                             unsigned ToAS) const {
+llvm::Type *AMDGCNSPIRVABIInfo::coerceKernelArgumentType(llvm::Type *Ty,
+                                                         unsigned FromAS,
+                                                         unsigned ToAS) const {
   // Single value types.
   auto *PtrTy = llvm::dyn_cast<llvm::PointerType>(Ty);
   if (PtrTy && PtrTy->getAddressSpace() == FromAS)
