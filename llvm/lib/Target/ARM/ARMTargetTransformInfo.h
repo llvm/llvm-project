@@ -280,7 +280,7 @@ public:
 
   InstructionCost
   getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
-                           TTI::TargetCostKind CostKind) const;
+                           TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                         TTI::TargetCostKind CostKind) const;
