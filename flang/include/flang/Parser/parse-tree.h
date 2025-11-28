@@ -22,6 +22,7 @@
 #include "format-specification.h"
 #include "message.h"
 #include "provenance.h"
+#include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"
@@ -4975,7 +4976,9 @@ struct OmpClauseList {
 // --- Directives and constructs
 
 struct OmpDirectiveSpecification {
-  ENUM_CLASS(Flags, None, DeprecatedSyntax);
+  ENUM_CLASS(Flag, DeprecatedSyntax)
+  using Flags = common::EnumSet<Flag, Flag_enumSize>;
+
   TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
   const OmpDirectiveName &DirName() const {
     return std::get<OmpDirectiveName>(t);
