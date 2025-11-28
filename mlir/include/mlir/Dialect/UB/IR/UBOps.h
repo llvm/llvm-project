@@ -9,6 +9,10 @@
 #ifndef MLIR_DIALECT_UB_IR_OPS_H
 #define MLIR_DIALECT_UB_IR_OPS_H
 
+namespace mlir {
+class PatternRewriter;
+}
+
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpImplementation.h"
