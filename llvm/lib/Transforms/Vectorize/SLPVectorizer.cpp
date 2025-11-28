@@ -6900,10 +6900,11 @@ static bool isMaskedLoadCompress(
       ScalarLoadsCost;
   InstructionCost LoadCost = 0;
   if (IsMasked) {
-    LoadCost = TTI.getMaskedMemoryOpCost({Intrinsic::masked_load, LoadVecTy,
-                                          CommonAlignment,
-                                          LI->getPointerAddressSpace()},
-                                         CostKind);
+    LoadCost = TTI.getMemIntrinsicInstrCost(
+        MemIntrinsicCostAttributes(Intrinsic::masked_load, LoadVecTy,
+                                   CommonAlignment,
+                                   LI->getPointerAddressSpace()),
+        CostKind);
   } else {
     LoadCost =
         TTI.getMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
@@ -7246,9 +7247,11 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
         ScalarGEPCost;
     // The cost of masked gather.
     InstructionCost MaskedGatherCost =
-        TTI.getGatherScatterOpCost(
-            Instruction::Load, VecTy, cast<LoadInst>(VL0)->getPointerOperand(),
-            /*VariableMask=*/false, CommonAlignment, CostKind) +
+        TTI.getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(Intrinsic::masked_gather, VecTy,
+                                       cast<LoadInst>(VL0)->getPointerOperand(),
+                                       /*VariableMask=*/false, CommonAlignment),
+            CostKind) +
         (ProfitableGatherPointers ? 0 : VectorGEPCost);
     InstructionCost GatherCost =
         getScalarizationOverhead(TTI, ScalarTy, VecTy, DemandedElts,
@@ -7355,26 +7358,30 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
               VectorGEPCost;
           break;
         case LoadsState::StridedVectorize:
-          VecLdCost += TTI.getStridedMemoryOpCost(Instruction::Load, SubVecTy,
-                                                  LI0->getPointerOperand(),
-                                                  /*VariableMask=*/false,
-                                                  CommonAlignment, CostKind) +
+          VecLdCost += TTI.getMemIntrinsicInstrCost(
+                           MemIntrinsicCostAttributes(
+                               Intrinsic::experimental_vp_strided_load,
+                               SubVecTy, LI0->getPointerOperand(),
+                               /*VariableMask=*/false, CommonAlignment),
+                           CostKind) +
                        VectorGEPCost;
           break;
         case LoadsState::CompressVectorize:
-          VecLdCost += TTI.getMaskedMemoryOpCost(
-                           {Intrinsic::masked_load, SubVecTy, CommonAlignment,
-                            LI0->getPointerAddressSpace()},
+          VecLdCost += TTI.getMemIntrinsicInstrCost(
+                           MemIntrinsicCostAttributes(
+                               Intrinsic::masked_load, SubVecTy,
+                               CommonAlignment, LI0->getPointerAddressSpace()),
                            CostKind) +
-                       VectorGEPCost +
                        ::getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, SubVecTy,
                                         {}, CostKind);
           break;
         case LoadsState::ScatterVectorize:
-          VecLdCost += TTI.getGatherScatterOpCost(Instruction::Load, SubVecTy,
-                                                  LI0->getPointerOperand(),
-                                                  /*VariableMask=*/false,
-                                                  CommonAlignment, CostKind) +
+          VecLdCost += TTI.getMemIntrinsicInstrCost(
+                           MemIntrinsicCostAttributes(
+                               Intrinsic::masked_gather, SubVecTy,
+                               LI0->getPointerOperand(),
+                               /*VariableMask=*/false, CommonAlignment),
+                           CostKind) +
                        VectorGEPCost;
           break;
         case LoadsState::Gather:
@@ -13328,9 +13335,12 @@ void BoUpSLP::transformNodes() {
                                  BaseLI->getPointerAddressSpace(), CostKind,
                                  TTI::OperandValueInfo()) +
             ::getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
-        InstructionCost StridedCost = TTI->getStridedMemoryOpCost(
-            Instruction::Load, VecTy, BaseLI->getPointerOperand(),
-            /*VariableMask=*/false, CommonAlignment, CostKind, BaseLI);
+        InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
+                                       VecTy, BaseLI->getPointerOperand(),
+                                       /*VariableMask=*/false, CommonAlignment,
+                                       BaseLI),
+            CostKind);
         if (StridedCost < OriginalVecCost || ForceStridedLoads) {
           // Strided load is more profitable than consecutive load + reverse -
           // transform the node to strided load.
@@ -13363,9 +13373,12 @@ void BoUpSLP::transformNodes() {
                                  BaseSI->getPointerAddressSpace(), CostKind,
                                  TTI::OperandValueInfo()) +
             ::getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
-        InstructionCost StridedCost = TTI->getStridedMemoryOpCost(
-            Instruction::Store, VecTy, BaseSI->getPointerOperand(),
-            /*VariableMask=*/false, CommonAlignment, CostKind, BaseSI);
+        InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_store,
+                                       VecTy, BaseSI->getPointerOperand(),
+                                       /*VariableMask=*/false, CommonAlignment,
+                                       BaseSI),
+            CostKind);
         if (StridedCost < OriginalVecCost)
           // Strided store is more profitable than reverse + consecutive store -
           // transform the node to strided store.
@@ -15131,9 +15144,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         assert(StridedLoadTy && "Missing StridedPoinerInfo for tree entry.");
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
-        VecLdCost = TTI->getStridedMemoryOpCost(
-            Instruction::Load, StridedLoadTy, LI0->getPointerOperand(),
-            /*VariableMask=*/false, CommonAlignment, CostKind);
+        VecLdCost = TTI->getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
+                                       StridedLoadTy, LI0->getPointerOperand(),
+                                       /*VariableMask=*/false, CommonAlignment),
+            CostKind);
         if (StridedLoadTy != VecTy)
           VecLdCost +=
               TTI->getCastInstrCost(Instruction::BitCast, VecTy, StridedLoadTy,
@@ -15168,9 +15183,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               Instruction::Load, LoadVecTy, InterleaveFactor, {},
               CommonAlignment, LI0->getPointerAddressSpace(), CostKind);
         } else if (IsMasked) {
-          VecLdCost = TTI->getMaskedMemoryOpCost(
-              {Intrinsic::masked_load, LoadVecTy, CommonAlignment,
-               LI0->getPointerAddressSpace()},
+          VecLdCost = TTI->getMemIntrinsicInstrCost(
+              MemIntrinsicCostAttributes(Intrinsic::masked_load, LoadVecTy,
+                                         CommonAlignment,
+                                         LI0->getPointerAddressSpace()),
               CostKind);
           // TODO: include this cost into CommonCost.
           VecLdCost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
@@ -15188,9 +15204,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       case TreeEntry::ScatterVectorize: {
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
-        VecLdCost = TTI->getGatherScatterOpCost(
-            Instruction::Load, VecTy, LI0->getPointerOperand(),
-            /*VariableMask=*/false, CommonAlignment, CostKind);
+        VecLdCost = TTI->getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(Intrinsic::masked_gather, VecTy,
+                                       LI0->getPointerOperand(),
+                                       /*VariableMask=*/false, CommonAlignment),
+            CostKind);
         break;
       }
       case TreeEntry::CombinedVectorize:
@@ -15230,9 +15248,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (E->State == TreeEntry::StridedVectorize) {
         Align CommonAlignment =
             computeCommonAlignment<StoreInst>(UniqueValues.getArrayRef());
-        VecStCost = TTI->getStridedMemoryOpCost(
-            Instruction::Store, VecTy, BaseSI->getPointerOperand(),
-            /*VariableMask=*/false, CommonAlignment, CostKind);
+        VecStCost = TTI->getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_store,
+                                       VecTy, BaseSI->getPointerOperand(),
+                                       /*VariableMask=*/false, CommonAlignment),
+            CostKind);
       } else {
         assert(E->State == TreeEntry::Vectorize &&
                "Expected either strided or consecutive stores.");
