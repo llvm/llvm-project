@@ -17337,7 +17337,7 @@ Semantics:
 """"""""""
 
 Follows the IEEE-754-2008 semantics for minNum, except for handling of
-signaling NaNs. This match's the behavior of libm's fmin.
+signaling NaNs. This matches the behavior of libm's fmin.
 
 If either operand is a NaN, returns the other non-NaN operand. Returns
 NaN only if both operands are NaN. If the operands compare equal,
