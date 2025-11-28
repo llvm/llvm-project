@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the binary format used for budingling device metadata with
+// This file contains the binary format used for bundling device metadata with
 // an associated device image. The data can then be stored inside a host object
 // file to create a fat binary and read by the linker. This is intended to be a
 // thin wrapper around the image itself. If this format becomes sufficiently
@@ -52,6 +52,13 @@ enum ImageKind : uint16_t {
   IMG_LAST,
 };
 
+/// Flags associated with the Entry.
+enum OffloadEntryFlags : uint32_t {
+  OIF_None = 0,
+  // Entry doesn't contain image. Used to keep metadata only entries.
+  OIF_NoImage = (1 << 0),
+};
+
 /// A simple binary serialization of an offloading file. We use this format to
 /// embed the offloading image into the host executable so it can be extracted
 /// and used by the linker.
@@ -63,11 +70,38 @@ enum ImageKind : uint16_t {
 /// offsets from the beginning of the file.
 class OffloadBinary : public Binary {
 public:
+  struct Header {
+    uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
+    uint32_t Version = OffloadBinary::Version;   // Version identifier.
+    uint64_t Size;          // Size in bytes of this entire binary.
+    uint64_t EntriesOffset; // Offset in bytes to the start of entries block.
+    uint64_t EntriesCount;  // Number of metadata entries in the binary.
+  };
+
+  struct Entry {
+    ImageKind TheImageKind;     // The kind of the image stored.
+    OffloadKind TheOffloadKind; // The producer of this image.
+    uint32_t Flags;             // Additional flags associated with the entry.
+    uint64_t StringOffset;      // Offset in bytes to the string map.
+    uint64_t NumStrings;        // Number of entries in the string map.
+    uint64_t ImageOffset;       // Offset in bytes of the actual binary image.
+    uint64_t ImageSize;         // Size in bytes of the binary image.
+  };
+
+  struct StringEntry {
+    uint64_t KeyOffset;
+    uint64_t ValueOffset;
+    uint64_t ValueSize; // Size of the value in bytes.
+  };
+
+  using StringMap = MapVector<StringRef, StringRef>;
+  using entry_iterator = SmallVector<std::pair<const Entry *, StringMap>, 1>::const_iterator;
+  using entry_iterator_range = iterator_range<entry_iterator>;
   using string_iterator = MapVector<StringRef, StringRef>::const_iterator;
   using string_iterator_range = iterator_range<string_iterator>;
 
   /// The current version of the binary used for backwards compatibility.
-  static const uint32_t Version = 1;
+  static const uint32_t Version = 2;
 
   /// The offloading metadata that will be serialized to a memory buffer.
   struct OffloadingImage {
@@ -82,76 +116,79 @@ public:
   LLVM_ABI static Expected<std::unique_ptr<OffloadBinary>>
       create(MemoryBufferRef);
 
-  /// Serialize the contents of \p File to a binary buffer to be read later.
-  LLVM_ABI static SmallString<0> write(const OffloadingImage &);
+  /// Serialize the contents of \p OffloadingData to a binary buffer to be read
+  /// later.
+  LLVM_ABI static SmallString<0>
+  write(ArrayRef<OffloadingImage> OffloadingData);
 
   static uint64_t getAlignment() { return 8; }
 
-  ImageKind getImageKind() const { return TheEntry->TheImageKind; }
-  OffloadKind getOffloadKind() const { return TheEntry->TheOffloadKind; }
+  ImageKind getOnlyImageKind() const {
+    assert(getEntriesCount() == 1 && "Expected exactly one entry.");
+    return Entries[0].first->TheImageKind;
+  }
+
+  OffloadKind getOffloadKind() const { return Entries[0].first->TheOffloadKind; }
   uint32_t getVersion() const { return TheHeader->Version; }
-  uint32_t getFlags() const { return TheEntry->Flags; }
+  uint32_t getFlags() const { return Entries[0].first->Flags; }
   uint64_t getSize() const { return TheHeader->Size; }
+  uint64_t getEntriesCount() const { return TheHeader->EntriesCount; }
 
   StringRef getTriple() const { return getString("triple"); }
   StringRef getArch() const { return getString("arch"); }
   StringRef getImage() const {
-    return StringRef(&Buffer[TheEntry->ImageOffset], TheEntry->ImageSize);
+    return StringRef(&Buffer[Entries[0].first->ImageOffset], Entries[0].first->ImageSize);
+  }
+
+  // Iterator access to all entries in the binary
+  entry_iterator_range entries() const {
+    return make_range(Entries.begin(), Entries.end());
+  }
+  entry_iterator entries_begin() const { return Entries.begin(); }
+  entry_iterator entries_end() const { return Entries.end(); }
+
+  // Access specific entry by index.
+  const std::pair<const Entry *, StringMap> &getEntry(size_t Index) const {
+    assert(Index < Entries.size() && "Entry index out of bounds");
+    return Entries[Index];
   }
 
   // Iterator over all the key and value pairs in the binary.
-  string_iterator_range strings() const { return StringData; }
+  string_iterator_range strings() const { return Entries[0].second; }
 
-  StringRef getString(StringRef Key) const { return StringData.lookup(Key); }
+  StringRef getString(StringRef Key) const { return Entries[0].second.lookup(Key); }
 
   static bool classof(const Binary *V) { return V->isOffloadFile(); }
 
-  struct Header {
-    uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
-    uint32_t Version = OffloadBinary::Version;   // Version identifier.
-    uint64_t Size;        // Size in bytes of this entire binary.
-    uint64_t EntryOffset; // Offset of the metadata entry in bytes.
-    uint64_t EntrySize;   // Size of the metadata entry in bytes.
-  };
-
-  struct Entry {
-    ImageKind TheImageKind;     // The kind of the image stored.
-    OffloadKind TheOffloadKind; // The producer of this image.
-    uint32_t Flags;             // Additional flags associated with the image.
-    uint64_t StringOffset;      // Offset in bytes to the string map.
-    uint64_t NumStrings;        // Number of entries in the string map.
-    uint64_t ImageOffset;       // Offset in bytes of the actual binary image.
-    uint64_t ImageSize;         // Size in bytes of the binary image.
-  };
-
-  struct StringEntry {
-    uint64_t KeyOffset;
-    uint64_t ValueOffset;
-  };
-
 private:
   OffloadBinary(MemoryBufferRef Source, const Header *TheHeader,
-                const Entry *TheEntry)
+                const Entry *EntriesBegin)
       : Binary(Binary::ID_Offload, Source), Buffer(Source.getBufferStart()),
-        TheHeader(TheHeader), TheEntry(TheEntry) {
-    const StringEntry *StringMapBegin =
-        reinterpret_cast<const StringEntry *>(&Buffer[TheEntry->StringOffset]);
-    for (uint64_t I = 0, E = TheEntry->NumStrings; I != E; ++I) {
-      StringRef Key = &Buffer[StringMapBegin[I].KeyOffset];
-      StringData[Key] = &Buffer[StringMapBegin[I].ValueOffset];
+        TheHeader(TheHeader) {
+    for (uint64_t EI = 0, EE = TheHeader->EntriesCount; EI != EE; ++EI) {
+      const Entry *TheEntry = &EntriesBegin[EI];
+      const StringEntry *StringMapBegin = reinterpret_cast<const StringEntry *>(
+          &Buffer[TheEntry->StringOffset]);
+      StringMap Strings;
+      for (uint64_t SI = 0, SE = TheEntry->NumStrings; SI != SE; ++SI) {
+        StringRef Key = &Buffer[StringMapBegin[SI].KeyOffset];
+        StringRef Value = StringRef(
+            &Buffer[StringMapBegin[SI].ValueOffset], StringMapBegin[SI].ValueSize);
+        Strings.insert({Key, Value});
+      }
+      Entries.push_back(std::make_pair(TheEntry, std::move(Strings)));
     }
   }
 
   OffloadBinary(const OffloadBinary &Other) = delete;
 
-  /// Map from keys to offsets in the binary.
-  MapVector<StringRef, StringRef> StringData;
+  /// Location of the metadata entries within the binary mapped to
+  /// the key-value string data.
+  SmallVector<std::pair<const Entry *, StringMap>, 1> Entries;
   /// Raw pointer to the MemoryBufferRef for convenience.
   const char *Buffer;
   /// Location of the header within the binary.
   const Header *TheHeader;
-  /// Location of the metadata entries within the binary.
-  const Entry *TheEntry;
 };
 
 /// A class to contain the binary information for a single OffloadBinary that

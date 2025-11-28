@@ -161,7 +161,7 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
               Binary.bytes_begin());
       const auto *Entry =
           reinterpret_cast<const object::OffloadBinary::Entry *>(
-              Binary.bytes_begin() + Header->EntryOffset);
+              Binary.bytes_begin() + Header->EntriesOffset);
       BeginOffset = Entry->ImageOffset;
       EndOffset = Entry->ImageOffset + Entry->ImageSize;
     }
@@ -952,7 +952,7 @@ private:
     Constant *OffloadKindConstant = ConstantInt::get(
         Type::getInt8Ty(C), static_cast<uint8_t>(OB.getOffloadKind()));
     Constant *ImageKindConstant = ConstantInt::get(
-        Type::getInt8Ty(C), static_cast<uint8_t>(OB.getImageKind()));
+        Type::getInt8Ty(C), static_cast<uint8_t>(OB.getOnlyImageKind()));
     StringRef Triple = OB.getString("triple");
     Constant *TripleConstant =
         addStringToModule(Triple, Twine(OffloadKindTag) + "target." + ImageID);
