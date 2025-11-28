@@ -3026,6 +3026,9 @@ public:
                                          VariableMask, true, CostKind);
     }
 
+    case Intrinsic::vp_load:
+    case Intrinsic::vp_store:
+      return InstructionCost::getInvalid();
     case Intrinsic::masked_load:
     case Intrinsic::masked_store: {
       unsigned Opcode =

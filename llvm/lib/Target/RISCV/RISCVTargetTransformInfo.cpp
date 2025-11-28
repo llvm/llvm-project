@@ -1022,6 +1022,8 @@ RISCVTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_scatter:
   case Intrinsic::masked_gather:
     return getGatherScatterOpCost(MICA, CostKind);
+  case Intrinsic::vp_load:
+  case Intrinsic::vp_store:
   case Intrinsic::masked_load:
   case Intrinsic::masked_store:
     return getMaskedMemoryOpCost(MICA, CostKind);
@@ -1032,8 +1034,9 @@ RISCVTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
 InstructionCost
 RISCVTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                     TTI::TargetCostKind CostKind) const {
-  unsigned Opcode = MICA.getID() == Intrinsic::masked_load ? Instruction::Load
-                                                           : Instruction::Store;
+  unsigned IID = MICA.getID();
+  bool IsLoad = IID == Intrinsic::masked_load || IID == Intrinsic::vp_load;
+  unsigned Opcode = IsLoad ? Instruction::Load : Instruction::Store;
   Type *Src = MICA.getDataType();
   Align Alignment = MICA.getAlignment();
   unsigned AddressSpace = MICA.getAddressSpace();
