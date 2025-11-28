@@ -332,7 +332,7 @@ public:
     const ComparisonCategoryInfo &cmpInfo =
         cgf.getContext().CompCategories.getInfoForType(e->getType());
     assert(cmpInfo.Record->isTriviallyCopyable() &&
-          "cannot copy non-trivially copyable aggregate");
+           "cannot copy non-trivially copyable aggregate");
 
     QualType argTy = e->getLHS()->getType();
 
@@ -353,15 +353,15 @@ public:
     mlir::Value resultScalar;
     if (argTy->isNullPtrType()) {
       resultScalar =
-        builder.getConstInt(loc, cmpInfo.getEqualOrEquiv()->getIntValue());
+          builder.getConstInt(loc, cmpInfo.getEqualOrEquiv()->getIntValue());
     } else {
       llvm::APSInt ltRes = cmpInfo.getLess()->getIntValue();
       llvm::APSInt eqRes = cmpInfo.getEqualOrEquiv()->getIntValue();
       llvm::APSInt gtRes = cmpInfo.getGreater()->getIntValue();
       if (!cmpInfo.isPartial()) {
         // Strong ordering.
-        resultScalar = builder.createThreeWayCmpStrong(loc, lhs, rhs, ltRes,
-                                                          eqRes, gtRes);
+        resultScalar =
+            builder.createThreeWayCmpStrong(loc, lhs, rhs, ltRes, eqRes, gtRes);
       } else {
         // Partial ordering.
         llvm::APSInt unorderedRes = cmpInfo.getUnordered()->getIntValue();
@@ -377,8 +377,8 @@ public:
     // Emit the address of the first (and only) field in the comparison category
     // type, and initialize it from the constant integer value produced above.
     const FieldDecl *resultField = *cmpInfo.Record->field_begin();
-    LValue fieldLVal = cgf.emitLValueForFieldInitialization(destLVal, resultField,
-                                                          resultField->getName());
+    LValue fieldLVal = cgf.emitLValueForFieldInitialization(
+        destLVal, resultField, resultField->getName());
     cgf.emitStoreThroughLValue(RValue::get(resultScalar), fieldLVal);
 
     // All done! The result is in the dest slot.

@@ -1575,8 +1575,9 @@ mlir::LogicalResult CIRToLLVMGetElementOpLowering::matchAndRewrite(
   return mlir::failure();
 }
 
-static std::string getThreeWayCmpIntrinsicName(
-    bool signedCmp, unsigned operandWidth, unsigned resultWidth) {
+static std::string getThreeWayCmpIntrinsicName(bool signedCmp,
+                                               unsigned operandWidth,
+                                               unsigned resultWidth) {
   // The intrinsic's name takes the form:
   // `llvm.<scmp|ucmp>.i<resultWidth>.i<operandWidth>`
 
@@ -1618,7 +1619,7 @@ mlir::LogicalResult CIRToLLVMCmpThreeWayOpLowering::matchAndRewrite(
   rewriter.setInsertionPoint(op);
 
   mlir::Value llvmLhs = adaptor.getLhs();
-  mlir::Value  llvmRhs = adaptor.getRhs();
+  mlir::Value llvmRhs = adaptor.getRhs();
   mlir::Type llvmResultTy = getTypeConverter()->convertType(resultTy);
   mlir::LLVM::CallIntrinsicOp callIntrinsicOp =
       createCallLLVMIntrinsicOp(rewriter, op.getLoc(), llvmIntrinsicName,

@@ -1289,12 +1289,17 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
   mlir::Location loc = op->getLoc();
   cir::CmpThreeWayInfoAttr cmpInfo = op.getInfo();
 
-  mlir::Value ltRes = builder.getConstantInt(loc, op.getType(), cmpInfo.getLt());
-  mlir::Value eqRes = builder.getConstantInt(loc, op.getType(), cmpInfo.getEq());
-  mlir::Value gtRes = builder.getConstantInt(loc, op.getType(), cmpInfo.getGt());
+  mlir::Value ltRes =
+      builder.getConstantInt(loc, op.getType(), cmpInfo.getLt());
+  mlir::Value eqRes =
+      builder.getConstantInt(loc, op.getType(), cmpInfo.getEq());
+  mlir::Value gtRes =
+      builder.getConstantInt(loc, op.getType(), cmpInfo.getGt());
 
-  mlir::Value lt = builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
-  mlir::Value eq = builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
+  mlir::Value lt =
+      builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
+  mlir::Value eq =
+      builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
 
   mlir::Value transformedResult;
   if (cmpInfo.getOrdering() == CmpOrdering::Strong) {
@@ -1303,10 +1308,11 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
     transformedResult = builder.createSelect(loc, lt, ltRes, selectOnEq);
   } else {
     // Partial ordering.
-    cir::ConstantOp unorderedRes =
-      builder.getConstantInt(loc, op.getType(), cmpInfo.getUnordered().value());
+    cir::ConstantOp unorderedRes = builder.getConstantInt(
+        loc, op.getType(), cmpInfo.getUnordered().value());
 
-    mlir::Value gt = builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
+    mlir::Value gt =
+        builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
     mlir::Value selectOnEq = builder.createSelect(loc, eq, eqRes, unorderedRes);
     mlir::Value selectOnGt = builder.createSelect(loc, gt, gtRes, selectOnEq);
     transformedResult = builder.createSelect(loc, lt, ltRes, selectOnGt);
@@ -1551,12 +1557,8 @@ void LoweringPreparePass::runOnOperation() {
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
-<<<<<<< HEAD
                   cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
-                  cir::UnaryOp>(op))
-=======
-                  cir::FuncOp, cir::GlobalOp, cir::UnaryOp, cir::CmpThreeWayOp>(op))
->>>>>>> 32285f45356c ([CIR] Upstream three way compare op)
+                  cir::UnaryOp, cir::CmpThreeWayOp>(op))
       opsToTransform.push_back(op);
   });
 
