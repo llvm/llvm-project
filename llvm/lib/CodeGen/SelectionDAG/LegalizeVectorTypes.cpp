@@ -496,7 +496,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOAD(LoadSDNode *N) {
   SDValue Result = DAG.getLoad(
       ISD::UNINDEXED, N->getExtensionType(),
       N->getValueType(0).getVectorElementType(), SDLoc(N), N->getChain(),
-      N->getBasePtr(), DAG.getUNDEF(N->getBasePtr().getValueType()),
+      N->getBasePtr(), DAG.getPOISON(N->getBasePtr().getValueType()),
       N->getPointerInfo(), N->getMemoryVT().getVectorElementType(),
       N->getBaseAlign(), N->getMemOperand()->getFlags(), N->getAAInfo());
 
@@ -2213,7 +2213,7 @@ void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
   ISD::LoadExtType ExtType = LD->getExtensionType();
   SDValue Ch = LD->getChain();
   SDValue Ptr = LD->getBasePtr();
-  SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  SDValue Offset = DAG.getPOISON(Ptr.getValueType());
   EVT MemoryVT = LD->getMemoryVT();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();
@@ -3344,7 +3344,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
 
   SDValue TrueMask = DAG.getBoolConstant(true, DL, Mask.getValueType(), VT);
   SDValue Store = DAG.getStridedStoreVP(DAG.getEntryNode(), DL, Val, StorePtr,
-                                        DAG.getUNDEF(PtrVT), Stride, TrueMask,
+                                        DAG.getPOISON(PtrVT), Stride, TrueMask,
                                         EVL, MemVT, StoreMMO, ISD::UNINDEXED);
 
   SDValue Load = DAG.getLoadVP(VT, DL, Store, StackPtr, Mask, EVL, LoadMMO);
@@ -3387,14 +3387,16 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
 
   SDValue StackPtr2 = TLI.getVectorElementPointer(DAG, StackPtr, VT, EVL1);
 
+  SDValue PoisonPtr = DAG.getPOISON(PtrVT);
+
   SDValue TrueMask = DAG.getBoolConstant(true, DL, Mask.getValueType(), VT);
-  SDValue StoreV1 = DAG.getStoreVP(DAG.getEntryNode(), DL, V1, StackPtr,
-                                   DAG.getUNDEF(PtrVT), TrueMask, EVL1,
-                                   V1.getValueType(), StoreMMO, ISD::UNINDEXED);
+  SDValue StoreV1 =
+      DAG.getStoreVP(DAG.getEntryNode(), DL, V1, StackPtr, PoisonPtr, TrueMask,
+                     EVL1, V1.getValueType(), StoreMMO, ISD::UNINDEXED);
 
   SDValue StoreV2 =
-      DAG.getStoreVP(StoreV1, DL, V2, StackPtr2, DAG.getUNDEF(PtrVT), TrueMask,
-                     EVL2, V2.getValueType(), StoreMMO, ISD::UNINDEXED);
+      DAG.getStoreVP(StoreV1, DL, V2, StackPtr2, PoisonPtr, TrueMask, EVL2,
+                     V2.getValueType(), StoreMMO, ISD::UNINDEXED);
 
   SDValue Load;
   if (Imm >= 0) {
