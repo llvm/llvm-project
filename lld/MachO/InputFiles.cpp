@@ -409,19 +409,14 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
         addrSigSection = sections.back();
 
       auto *isec = make<ConcatInputSection>(section, data, align);
+      // Keep DWARF sections long enough for relocation rewriting; dropping them
+      // here leaves section-relative relocations (e.g. DW_FORM_strp into
+      // __debug_str) dangling and crashes the linker. Mark them dead so they
+      // are not emitted; Mach-O keeps STABS-only debug output.
       if (isDebugSection(isec->getFlags()) &&
-          isec->getSegName() == segment_names::dwarf) {
-        // Keep debug sections in debugSections for diagnostic purposes
-        debugSections.push_back(isec);
-        // Add DWARF sections to subsections so their relocations are processed,
-        // but mark them dead so they aren't emitted (MachO uses STABS, not DWARF).
-        // This fixes crashes with section-relative relocations (e.g., DW_FORM_strp)
-        // while maintaining MachO's traditional STABS-only debug output.
+          isec->getSegName() == segment_names::dwarf)
         isec->live = false;
-        section.subsections.push_back({0, isec});
-      } else {
-        section.subsections.push_back({0, isec});
-      }
+      section.subsections.push_back({0, isec});
     }
   }
 }

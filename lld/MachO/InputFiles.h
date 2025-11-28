@@ -181,7 +181,6 @@ public:
   const uint32_t modTime;
   bool forceHidden;
   bool builtFromBitcode;
-  std::vector<ConcatInputSection *> debugSections;
   std::vector<CallGraphEntry> callGraph;
   llvm::DenseMap<ConcatInputSection *, FDE> fdes;
   std::vector<AliasSymbol *> aliases;
