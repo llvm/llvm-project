@@ -892,7 +892,7 @@ nonpacked1:
     // Can't be packed; can't save integer registers after float registers.
     stp d8,  d9,  [sp, #-32]!
     .seh_save_fregp_x d8, 32
-    stp x19, x20, [sp, #16]!
+    stp x19, x20, [sp, #16]
     .seh_save_regp x19, 16
     .seh_endprologue
     nop
@@ -1010,7 +1010,7 @@ nonpacked6:
     .seh_startepilogue
     mov sp,  x29
     .seh_set_fp
-    ldp x29, lr,  [sp], #32
+    ldp x29, lr,  [sp], #16
     .seh_save_fplr_x 16
     ldr lr, [sp, #16]
     .seh_save_reg lr, 16
