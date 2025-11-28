@@ -95,6 +95,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -5910,8 +5911,9 @@ AST_POLYMORPHIC_MATCHER_P(hasAnySubstatement,
                                           Builder) != CS->body_end();
 }
 
-/// Matches compound statements that contain a PrevStmt immediately followed by
-/// NextStmt. Also matches StmtExprs that have CompoundStmt as children.
+/// Matches compound statements that contain adjacent substatements matching
+/// the provided sequence of matchers. Also matches StmtExprs that have
+/// CompoundStmt as children.
 ///
 /// Given
 /// \code
@@ -5923,37 +5925,23 @@ AST_POLYMORPHIC_MATCHER_P(hasAnySubstatement,
 ///   matching '{}'
 /// with binaryOperator()
 ///   matching '1+2'
-AST_POLYMORPHIC_MATCHER_P2(hasAdjSubstatements,
-                           AST_POLYMORPHIC_SUPPORTED_TYPES(CompoundStmt,
-                                                           StmtExpr),
-                           ast_matchers::internal::Matcher<Stmt>, PrevMatcher,
-                           ast_matchers::internal::Matcher<Stmt>, NextMatcher) {
-  const CompoundStmt *CS = CompoundStmtMatcher<NodeType>::get(Node);
-  if (!CS)
-    return false;
-
-  auto Begin = CS->body_begin();
-  auto End = CS->body_end();
-  
-  if (CS->size() < 2)
-    return false;
-
-  return std::adjacent_find(
-             Begin, End,
-             [&](const Stmt *PrevStmt, const Stmt *NextStmt) {
-               clang::ast_matchers::internal::BoundNodesTreeBuilder PrevBuilder;
-               if (!PrevMatcher.matches(*PrevStmt, Finder, &PrevBuilder))
-                 return false;
-
-               clang::ast_matchers::internal::BoundNodesTreeBuilder NextBuilder;
-               NextBuilder.addMatch(PrevBuilder);
-               if (!NextMatcher.matches(*NextStmt, Finder, &NextBuilder))
-                 return false;
-
-               Builder->addMatch(NextBuilder);
-               return true;
-             }) != End;
-}
+///
+/// Given
+/// \code
+///   { {}; 1+2; 3+4; }
+/// \endcode
+/// hasAdjSubstatements(compoundStmt(), binaryOperator(), binaryOperator())
+///   matches '{ {}; 1+2; 3+4; }'
+/// with the matchers matching the three consecutive statements in order.
+///
+///    hasAdjSubstatements(compoundStmt(), binaryOperator(), returnStmt())
+///  Is equivalent to matching a compound statement that contains
+///  a compound statement immediately followed by a binary operator
+///  immediately followed by a return statement.
+extern const internal::VariadicFunction<
+    internal::HasAdjSubstatementsMatcherType,
+    internal::Matcher<Stmt>, internal::hasAdjSubstatementsFunc>
+    hasAdjSubstatements;
 
 /// Checks that a compound statement contains a specific number of
 /// child statements.

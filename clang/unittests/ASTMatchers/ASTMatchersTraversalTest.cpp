@@ -2471,6 +2471,134 @@ TEST(HasAdjSubstatements, MatchesWithStatementsBetween) {
                                                      binaryOperator()))));
 }
 
+TEST(HasAdjSubstatements, VariadicMatchesThreeAdjacentSubstatements) {
+  // Test variadic version with 3 matchers
+  EXPECT_TRUE(matches("void f() { {} 1+2; 3+4; }",
+                      compoundStmt(hasAdjSubstatements(compoundStmt(),
+                                                       binaryOperator(),
+                                                       binaryOperator()))));
+}
+
+TEST(HasAdjSubstatements, VariadicMatchesFourAdjacentSubstatements) {
+  // Test variadic version with 4 matchers
+  EXPECT_TRUE(matches("void f() { int x; return; {} 1+2; }",
+                      compoundStmt(hasAdjSubstatements(declStmt(),
+                                                       returnStmt(),
+                                                       compoundStmt(),
+                                                       binaryOperator()))));
+}
+
+TEST(HasAdjSubstatements, VariadicMatchesFiveAdjacentSubstatements) {
+  // Test variadic version with 5 matchers
+  EXPECT_TRUE(matches("void f() { for (;;); while (true); if (true) {} return; 1+2; }",
+                      compoundStmt(hasAdjSubstatements(forStmt(),
+                                                       whileStmt(),
+                                                       ifStmt(),
+                                                       returnStmt(),
+                                                       binaryOperator()))));
+}
+
+TEST(HasAdjSubstatements, VariadicDoesNotMatchNonAdjacentSequence) {
+  // Three matchers but statements are not all adjacent
+  EXPECT_TRUE(notMatches("void f() { {} 1; 1+2; 3+4; }",
+                         compoundStmt(hasAdjSubstatements(compoundStmt(),
+                                                         binaryOperator(),
+                                                         binaryOperator()))));
+}
+
+TEST(HasAdjSubstatements, VariadicDoesNotMatchPartialSequence) {
+  // First two match but third doesn't
+  EXPECT_TRUE(notMatches("void f() { {} 1+2; return; }",
+                         compoundStmt(hasAdjSubstatements(compoundStmt(),
+                                                         binaryOperator(),
+                                                         binaryOperator()))));
+}
+
+TEST(HasAdjSubstatements, VariadicMatchesInNestedCompound) {
+  // Test variadic version in nested compound statements
+  EXPECT_TRUE(matches("void f() { if (true) { {} 1+2; 3+4; } }",
+                      compoundStmt(hasAdjSubstatements(compoundStmt(),
+                                                      binaryOperator(),
+                                                      binaryOperator()))));
+}
+
+TEST(HasAdjSubstatements, VariadicMatchesWithDifferentTypes) {
+  // Test variadic version with different statement types
+  EXPECT_TRUE(matches("void f() { for (;;); while (true); if (true) {} }",
+                      compoundStmt(hasAdjSubstatements(forStmt(),
+                                                       whileStmt(),
+                                                       ifStmt()))));
+}
+
+TEST(HasAdjSubstatements, VariadicDoesNotMatchWrongOrder) {
+  // Order matters in variadic version
+  EXPECT_TRUE(notMatches("void f() { 1+2; {} 3+4; }",
+                         compoundStmt(hasAdjSubstatements(compoundStmt(),
+                                                          binaryOperator(),
+                                                          binaryOperator()))));
+}
+
+TEST(HasAdjSubstatements, VariadicMatchesFirstSequence) {
+  // When multiple sequences exist, should match the first one
+  EXPECT_TRUE(matches("void f() { {} 1+2; 3+4; {} 5+6; 7+8; }",
+                      compoundStmt(hasAdjSubstatements(compoundStmt(),
+                                                      binaryOperator(),
+                                                      binaryOperator()))));
+}
+
+TEST(HasAdjSubstatements, VariadicWorksWithStmtExpr) {
+  // Test variadic version with StmtExpr
+  EXPECT_TRUE(matches("void f() { int x = ({ {} 1+2; 3+4; }); }",
+                      stmtExpr(hasAdjSubstatements(compoundStmt(),
+                                                   binaryOperator(),
+                                                   binaryOperator()))));
+}
+
+TEST(HasAdjSubstatements, VariadicRequiresMinimumStatements) {
+  // Need at least as many statements as matchers
+  EXPECT_TRUE(notMatches("void f() { {} 1+2; }",
+                         compoundStmt(hasAdjSubstatements(compoundStmt(),
+                                                          binaryOperator(),
+                                                          binaryOperator()))));
+}
+
+TEST(HasAdjSubstatements, VariadicMatchesWithStatementsBetween) {
+  // Should still match even if there are other statements before/after
+  EXPECT_TRUE(matches("void f() { int x; {} 1+2; 3+4; int y; }",
+                      compoundStmt(hasAdjSubstatements(compoundStmt(),
+                                                       binaryOperator(),
+                                                       binaryOperator()))));
+}
+
+TEST(HasAdjSubstatements, VariadicMatchesComplexSequence) {
+  // Test with a complex sequence of different statement types
+  EXPECT_TRUE(matches("void f() { int a; int b; return; {} 1+2; }",
+                      compoundStmt(hasAdjSubstatements(declStmt(),
+                                                       declStmt(),
+                                                       returnStmt(),
+                                                       compoundStmt(),
+                                                       binaryOperator()))));
+}
+
+TEST(HasAdjSubstatements, VariadicDoesNotMatchGapInSequence) {
+  // Sequence has a gap in the middle
+  EXPECT_TRUE(notMatches("void f() { {} 1+2; int x; 3+4; }",
+                         compoundStmt(hasAdjSubstatements(compoundStmt(),
+                                                         binaryOperator(),
+                                                         binaryOperator()))));
+}
+
+TEST(HasAdjSubstatements, VariadicMatchesLongSequence) {
+  // Test with a longer sequence (6 statements)
+  EXPECT_TRUE(matches("void f() { int a; int b; int c; return; {} 1+2; }",
+                      compoundStmt(hasAdjSubstatements(declStmt(),
+                                                       declStmt(),
+                                                       declStmt(),
+                                                       returnStmt(),
+                                                       compoundStmt(),
+                                                       binaryOperator()))));
+}
+
 TEST(Member, MatchesMemberAllocationFunction) {
   // Fails in C++11 mode
   EXPECT_TRUE(matchesConditionally(

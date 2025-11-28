@@ -2283,6 +2283,33 @@ using HasOpNameMatcher =
 
 HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
 
+template <typename T, typename ArgT = std::vector<Matcher<Stmt>>>
+class HasAdjSubstatementsMatcher : public MatcherInterface<T> {
+  static_assert(std::is_same<T, CompoundStmt>::value ||
+                    std::is_same<T, StmtExpr>::value,
+                "Matcher only supports `CompoundStmt` and `StmtExpr`");
+  static_assert(std::is_same<ArgT, std::vector<Matcher<Stmt>>>::value,
+                "Matcher ArgT must be std::vector<Matcher<Stmt>>");
+
+public:
+  explicit HasAdjSubstatementsMatcher(std::vector<Matcher<Stmt>> Matchers)
+      : Matchers(std::move(Matchers)) {}
+
+  bool matches(const T &Node, ASTMatchFinder *Finder,
+               BoundNodesTreeBuilder *Builder) const override;
+
+private:
+  std::vector<Matcher<Stmt>> Matchers;
+};
+
+using HasAdjSubstatementsMatcherType =
+    PolymorphicMatcher<HasAdjSubstatementsMatcher,
+                       void(TypeList<CompoundStmt, StmtExpr>),
+                       std::vector<Matcher<Stmt>>>;
+
+HasAdjSubstatementsMatcherType
+hasAdjSubstatementsFunc(ArrayRef<const Matcher<Stmt> *> MatcherRefs);
+
 using HasOverloadOpNameMatcher =
     PolymorphicMatcher<HasOverloadedOperatorNameMatcher,
                        void(TypeList<CXXOperatorCallExpr, FunctionDecl>),

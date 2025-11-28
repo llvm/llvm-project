@@ -467,6 +467,67 @@ hasAnyOverloadedOperatorNameFunc(ArrayRef<const StringRef *> NameRefs) {
   return HasOverloadOpNameMatcher(vectorFromRefs(NameRefs));
 }
 
+static std::vector<Matcher<Stmt>>
+vectorFromMatcherRefs(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
+  std::vector<Matcher<Stmt>> Matchers;
+  Matchers.reserve(MatcherRefs.size());
+  for (auto *Matcher : MatcherRefs)
+    Matchers.push_back(*Matcher);
+  return Matchers;
+}
+
+HasAdjSubstatementsMatcherType
+hasAdjSubstatementsFunc(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
+  return HasAdjSubstatementsMatcherType(vectorFromMatcherRefs(MatcherRefs));
+}
+
+template <typename T, typename ArgT>
+bool HasAdjSubstatementsMatcher<T, ArgT>::matches(
+    const T &Node, ASTMatchFinder *Finder,
+    BoundNodesTreeBuilder *Builder) const {
+  const CompoundStmt *CS = CompoundStmtMatcher<T>::get(Node);
+  if (!CS)
+    return false;
+
+  if (Matchers.empty())
+    return false;
+
+  auto Begin = CS->body_begin();
+  auto End = CS->body_end();
+  size_t NumMatchers = Matchers.size();
+
+  if (CS->size() < NumMatchers)
+    return false;
+
+  // Try to find a sequence of consecutive statements matching all matchers
+  for (auto It = Begin; It + NumMatchers <= End; ++It) {
+    BoundNodesTreeBuilder CurrentBuilder;
+    bool AllMatch = true;
+
+    for (size_t i = 0; i < NumMatchers; ++i) {
+      BoundNodesTreeBuilder StepBuilder;
+      StepBuilder.addMatch(CurrentBuilder);
+      if (!Matchers[i].matches(**(It + i), Finder, &StepBuilder)) {
+        AllMatch = false;
+        break;
+      }
+      CurrentBuilder = StepBuilder;
+    }
+
+    if (AllMatch) {
+      Builder->addMatch(CurrentBuilder);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+template bool HasAdjSubstatementsMatcher<CompoundStmt>::matches(
+    const CompoundStmt &, ASTMatchFinder *, BoundNodesTreeBuilder *) const;
+template bool HasAdjSubstatementsMatcher<StmtExpr>::matches(
+    const StmtExpr &, ASTMatchFinder *, BoundNodesTreeBuilder *) const;
+
 HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
     : UseUnqualifiedMatch(
           llvm::all_of(N, [](StringRef Name) { return !Name.contains("::"); })),
@@ -1046,6 +1107,10 @@ const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
 const internal::VariadicFunction<internal::HasOpNameMatcher, StringRef,
                                  internal::hasAnyOperatorNameFunc>
     hasAnyOperatorName = {};
+const internal::VariadicFunction<internal::HasAdjSubstatementsMatcherType,
+                                 internal::Matcher<Stmt>,
+                                 internal::hasAdjSubstatementsFunc>
+    hasAdjSubstatements = {};
 const internal::VariadicFunction<internal::HasOverloadOpNameMatcher, StringRef,
                                  internal::hasAnyOverloadedOperatorNameFunc>
     hasAnyOverloadedOperatorName = {};
