@@ -33,6 +33,7 @@
 
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/LivenessAnalysis.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
@@ -136,33 +137,6 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
       return true;
     } else {
       LDBG() << "Value " << value << " is dead according to liveness analysis";
-    }
-  }
-  return false;
-}
-
-/// Return true iff at least one value in `values` is dead, given the liveness
-/// information in `la`.
-static bool hasDead(ValueRange values, const DenseSet<Value> &nonLiveSet,
-                    RunLivenessAnalysis &la) {
-  for (Value value : values) {
-    if (nonLiveSet.contains(value)) {
-      LDBG() << "Value " << value << " is already marked non-live (dead)";
-      return true;
-    }
-
-    const Liveness *liveness = la.getLiveness(value);
-    if (!liveness) {
-      LDBG() << "Value " << value
-             << " has no liveness info, conservatively considered live";
-      continue;
-    }
-    if (liveness->isLive) {
-      LDBG() << "Value " << value << " is live according to liveness analysis";
-      continue;
-    } else {
-      LDBG() << "Value " << value << " is dead according to liveness analysis";
-      return true;
     }
   }
   return false;
@@ -287,7 +261,12 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
-  if (hasDead(op->getOperands(), nonLiveSet, la)) {
+  // Operations that have dead operands can be erased regardless of their
+  // side effects. The liveness analysis would not have marked an SSA value as
+  // "dead" if it had a side-effecting user that is reachable.
+  bool hasDeadOperand =
+      markLives(op->getOperands(), nonLiveSet, la).flip().any();
+  if (hasDeadOperand) {
     LDBG() << "Simple op has dead operands, so the op must be dead: "
            << OpWithFlags(op, OpPrintingFlags().skipRegions());
     assert(!hasLive(op->getResults(), nonLiveSet, la) &&
@@ -399,6 +378,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // block other than the entry block, because every block has a terminator.
   for (Block &block : funcOp.getBlocks()) {
     Operation *returnOp = block.getTerminator();
+    if (!returnOp->hasTrait<OpTrait::ReturnLike>())
+      continue;
     if (returnOp && returnOp->getNumOperands() == numReturns)
       cl.operands.push_back({returnOp, nonLiveRets});
   }
@@ -738,7 +719,11 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 }
 
 /// Steps to process a `BranchOpInterface` operation:
-/// Iterate through each successor block of `branchOp`.
+///
+/// When a non-forwarded operand is dead (e.g., the condition value of a
+/// conditional branch op), the entire operation is dead.
+///
+/// Otherwise, iterate through each successor block of `branchOp`.
 /// (1) For each successor block, gather all operands from all successors.
 /// (2) Fetch their associated liveness analysis data and collect for future
 ///     removal.
@@ -749,7 +734,22 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
   LDBG() << "Processing branch op: " << *branchOp;
+
+  // Check for dead non-forwarded operands.
+  BitVector deadNonForwardedOperands =
+      markLives(branchOp->getOperands(), nonLiveSet, la).flip();
   unsigned numSuccessors = branchOp->getNumSuccessors();
+  for (unsigned succIdx = 0; succIdx < numSuccessors; ++succIdx) {
+    SuccessorOperands successorOperands =
+        branchOp.getSuccessorOperands(succIdx);
+    // Remove all non-forwarded operands from the bit vector.
+    for (OpOperand &opOperand : successorOperands.getMutableForwardedOperands())
+      deadNonForwardedOperands[opOperand.getOperandNumber()] = false;
+  }
+  if (deadNonForwardedOperands.any()) {
+    cl.operations.push_back(branchOp.getOperation());
+    return;
+  }
 
   for (unsigned succIdx = 0; succIdx < numSuccessors; ++succIdx) {
     Block *successorBlock = branchOp->getSuccessor(succIdx);
@@ -824,9 +824,14 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
 
   // 3. Operations
   LDBG() << "Cleaning up " << list.operations.size() << " operations";
-  for (auto &op : list.operations) {
+  for (Operation *op : list.operations) {
     LDBG() << "Erasing operation: "
            << OpWithFlags(op, OpPrintingFlags().skipRegions());
+    if (op->hasTrait<OpTrait::IsTerminator>()) {
+      // When erasing a terminator, insert an unreachable op in its place.
+      OpBuilder b(op);
+      ub::UnreachableOp::create(b, op->getLoc());
+    }
     op->dropAllUses();
     op->erase();
   }

@@ -698,3 +698,19 @@ func.func @op_block_have_dead_arg(%arg0: index, %arg1: index, %arg2: i1) {
   // CHECK-NEXT: return
   return
 }
+
+// -----
+
+// CHECK-LABEL: func private @remove_dead_branch_op()
+// CHECK-NEXT:    ub.unreachable
+// CHECK-NEXT:  ^{{.*}}:
+// CHECK-NEXT:    return
+// CHECK-NEXT:  ^{{.*}}:
+// CHECK-NEXT:    return
+func.func private @remove_dead_branch_op(%c: i1, %arg0: i64, %arg1: i64) -> (i64) {
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+  return %arg0 : i64
+^bb2:
+  return %arg1 : i64
+}
