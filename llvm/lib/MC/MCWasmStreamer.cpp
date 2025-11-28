@@ -154,6 +154,10 @@ void MCWasmStreamer::emitULEB128Value(const MCExpr *Value) {
     emitULEB128IntValue(IntValue);
     return;
   }
+  if (Value->getKind() != MCExpr::SymbolRef) {
+    // e.g. binary expression -> handover to superclass impl
+    return MCObjectStreamer::emitULEB128Value(Value);
+  }
   assert(Value->getKind() == MCExpr::SymbolRef &&
          "Non-absolute leb values can only be symbol refs");
 
