@@ -236,6 +236,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FP_TO_SINT,         MVT::i32,   Custom);
   setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::i32,   Custom);
   setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::i32,   Custom);
+  setOperationAction(ISD::GET_ROUNDING,       MVT::i32,   Custom);
+  setOperationAction(ISD::SET_ROUNDING,       MVT::Other, Custom);
 
   setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
@@ -1250,6 +1252,8 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::STRICT_FP_TO_UINT:
     return lowerSTRICT_FP_TO_INT(Op, DAG);
   case ISD::FP_TO_SINT:         return lowerFP_TO_SINT(Op, DAG);
+  case ISD::GET_ROUNDING:       return lowerGET_ROUNDING(Op, DAG);
+  case ISD::SET_ROUNDING:       return lowerSET_ROUNDING(Op, DAG);
   case ISD::READCYCLECOUNTER:
     return lowerREADCYCLECOUNTER(Op, DAG);
   }
@@ -2887,6 +2891,68 @@ static SDValue lowerFP_TO_SINT_STORE(StoreSDNode *SD, SelectionDAG &DAG,
   return DAG.getStore(SD->getChain(), SDLoc(SD), Tr, SD->getBasePtr(),
                       SD->getPointerInfo(), SD->getAlign(),
                       SD->getMemOperand()->getFlags());
+}
+
+SDValue MipsTargetLowering::lowerGET_ROUNDING(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+  
+  // Use formula: 
+  //   ((FCSR & 0x3) ^ ((~FCSR & 0x3) >> 1)) 
+  // to transform Mips rounding mode value stored in bits 1:0 of FCSR 
+  // (FCR31) to LLVM rounding mode format: 1->0, 0->1, 2->2, 3->3.
+  SDValue FCSR = DAG.getNode(MipsISD::ReadFCSR, DL, {MVT::i32, MVT::Other}, Chain);
+  Chain = FCSR.getValue(1);
+  FCSR = FCSR.getValue(0);
+
+  SDValue Expr1 = DAG.getNode(ISD::AND, DL, MVT::i32,
+              FCSR, DAG.getConstant(3, DL, MVT::i32));
+  SDValue Expr2 =
+  DAG.getNode(ISD::SRL, DL, MVT::i32,
+              DAG.getNode(ISD::AND, DL, MVT::i32,
+                          DAG.getNode(ISD::XOR, DL, MVT::i32,
+                                      FCSR, DAG.getConstant(3, DL, MVT::i32)),
+                          DAG.getConstant(3, DL, MVT::i32)),
+              DAG.getConstant(1, DL, MVT::i32));
+
+  SDValue RM = DAG.getNode(ISD::XOR, DL, MVT::i32, Expr1, Expr2);
+
+  return DAG.getMergeValues({RM, Chain}, DL);
+}
+
+SDValue MipsTargetLowering::lowerSET_ROUNDING(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue RMValue = Op->getOperand(1);
+
+  // Use formula x ^ (~(x >> 1) & 1) to transform LLVM rounding mode to Mips 
+  // FCSR (FCR31) format: 0->1, 1->0, 2->2, 3->3.
+  //
+  // It is expected that the argument of llvm.set.rounding is within the
+  // segment [0, 3], so NearestTiesToAway (4) is not handled here. It is
+  // responsibility of the code generated llvm.set.rounding to ensure this
+  // condition.
+  SDValue One = DAG.getConstant(1, DL, MVT::i32);
+  SDValue NewRM = DAG.getNode(
+      ISD::XOR, DL, MVT::i32, RMValue,
+      DAG.getNode(ISD::AND, DL, MVT::i32,
+                  DAG.getNOT(DL,
+                             DAG.getNode(ISD::SRL, DL, MVT::i32, RMValue, One),
+                             MVT::i32),
+                  One));
+
+  // Put calculated rounding mode into FCSR[1:0]: 
+  //  FCSR = (FCSR & FFFFFFFC) | NewRM
+  SDValue FCSR = DAG.getNode(MipsISD::ReadFCSR, DL, {MVT::i32, MVT::Other}, Chain);
+  Chain = FCSR.getValue(1);
+  FCSR = FCSR.getValue(0);
+
+  FCSR = DAG.getNode(ISD::AND, DL, MVT::i32, FCSR, DAG.getConstant(0xFFFFFFFC, DL, MVT::i32));
+  FCSR = DAG.getNode(ISD::OR, DL, MVT::i32, FCSR, NewRM);
+
+  return DAG.getNode(MipsISD::WriteFCSR, DL, MVT::Other, Chain, FCSR);
 }
 
 SDValue MipsTargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {

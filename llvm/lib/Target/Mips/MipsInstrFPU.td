@@ -41,6 +41,9 @@ def SDT_MipsExtractElementF64 : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
 def SDT_MipsMTC1_D64 : SDTypeProfile<1, 1, [SDTCisVT<0, f64>,
                                             SDTCisVT<1, i32>]>;
 
+def SDT_MipsReadFCSR  : SDTypeProfile<1, 0, [SDTCisInt<0>]>;
+def SDT_MipsWriteFCSR : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+
 // Floating Point Compare
 def MipsFPCmp : SDNode<"MipsISD::FPCmp", SDT_MipsFPCmp, [SDNPOutGlue]>;
 
@@ -62,6 +65,10 @@ def MipsExtractElementF64 : SDNode<"MipsISD::ExtractElementF64",
 
 // Node used to generate an MTC1 i32 to f64 instruction
 def MipsMTC1_D64 : SDNode<"MipsISD::MTC1_D64", SDT_MipsMTC1_D64>;
+def MipsReadFCSR : SDNode<"MipsISD::ReadFCSR", SDT_MipsReadFCSR,
+                             [SDNPHasChain]>;
+def MipsWriteFCSR : SDNode<"MipsISD::WriteFCSR", SDT_MipsWriteFCSR,
+                              [SDNPHasChain, SDNPSideEffect]>;
 
 // Operand for printing out a condition code.
 let PrintMethod = "printFCCOperand", DecoderMethod = "DecodeCondCode" in
@@ -795,6 +802,27 @@ class ExtractElementF64Base<RegisterOperand RO> :
 
 def ExtractElementF64 : ExtractElementF64Base<AFGR64Opnd>, FGR_32, HARDFLOAT;
 def ExtractElementF64_64 : ExtractElementF64Base<FGR64Opnd>, FGR_64, HARDFLOAT;
+
+class ReadFCSRImpl<list<Register> Regs> : 
+  PseudoSE<(outs GPR32Opnd:$rd), (ins),
+          [(set GPR32Opnd:$rd, (MipsReadFCSR))]> {
+  let Uses = Regs;
+  let hasSideEffects = 0;
+  let hasNoSchedulingInfo = 1;
+}
+
+class WriteFCSRImpl<list<Register> Regs> : 
+  PseudoSE<(outs), (ins GPR32Opnd:$val),
+           [(MipsWriteFCSR GPR32Opnd:$val)]> {
+  let Defs = Regs;
+  let hasSideEffects = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
+let AdditionalPredicates = [NotInMicroMips] in {
+  def PseudoReadFCSR : ReadFCSRImpl<[FCR31]>;
+  def PseudoWriteFCSR : WriteFCSRImpl<[FCR31]>;
+}
 
 def PseudoTRUNC_W_S : MipsAsmPseudoInst<(outs FGR32Opnd:$fd),
                                         (ins FGR32Opnd:$fs, GPR32Opnd:$rs),

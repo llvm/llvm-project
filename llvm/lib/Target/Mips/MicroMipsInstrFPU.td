@@ -445,6 +445,8 @@ def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
               FGR_64;
 def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
               (TRUNC_W_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS32_NOT_MIPS32R6;
+def PseudoReadFCSR_MM : ReadFCSRImpl<[FCR31]>;
+def PseudoWriteFCSR_MM : WriteFCSRImpl<[FCR31]>;
 
 // Selects
 defm : MovzPats0<GPR32, FGR32, MOVZ_I_S_MM, SLT_MM, SLTu_MM, SLTi_MM, SLTiu_MM>,

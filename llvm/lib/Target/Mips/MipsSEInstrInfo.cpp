@@ -444,6 +444,18 @@ bool MipsSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case Mips::MIPSeh_return64:
     expandEhReturn(MBB, MI);
     break;
+  case Mips::PseudoReadFCSR:
+    expandReadFCSR(MBB, MI, Mips::CFC1);
+    break;
+  case Mips::PseudoWriteFCSR:
+    expandWriteFCSR(MBB, MI, Mips::CTC1);
+    break;
+  case Mips::PseudoReadFCSR_MM:
+    expandReadFCSR(MBB, MI, Mips::CFC1_MM);
+    break;
+  case Mips::PseudoWriteFCSR_MM:
+    expandWriteFCSR(MBB, MI, Mips::CTC1_MM);
+    break;
   }
 
   MBB.erase(MI);
@@ -875,6 +887,23 @@ void MipsSEInstrInfo::expandEhReturn(MachineBasicBlock &MBB,
       .addReg(ZERO);
   BuildMI(MBB, I, I->getDebugLoc(), get(ADDU), SP).addReg(SP).addReg(OffsetReg);
   expandRetRA(MBB, I);
+}
+
+void MipsSEInstrInfo::expandReadFCSR(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator I,
+                                     unsigned Opc) const {
+  Register Dst = I->getOperand(0).getReg();
+  BuildMI(MBB, I, I->getDebugLoc(), get(Opc), Dst)
+      .addImm(31);
+}
+
+void MipsSEInstrInfo::expandWriteFCSR(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator I,
+                                      unsigned Opc) const {
+  Register Src = I->getOperand(0).getReg();
+  BuildMI(MBB, I, I->getDebugLoc(), get(Opc))
+      .addImm(31)
+      .addReg(Src);
 }
 
 const MipsInstrInfo *llvm::createMipsSEInstrInfo(const MipsSubtarget &STI) {
