@@ -426,6 +426,7 @@ public:
   LLVM_ABI LegalizeResult narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
                                              LLT NarrowTy);
   LLVM_ABI LegalizeResult narrowScalarMul(MachineInstr &MI, LLT Ty);
+  LLVM_ABI LegalizeResult narrowScalarMULO(MachineInstr &MI, LLT Ty);
   LLVM_ABI LegalizeResult narrowScalarFPTOI(MachineInstr &MI, unsigned TypeIdx,
                                             LLT Ty);
   LLVM_ABI LegalizeResult narrowScalarExtract(MachineInstr &MI,

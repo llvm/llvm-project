@@ -1669,6 +1669,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   case TargetOpcode::G_MUL:
   case TargetOpcode::G_UMULH:
     return narrowScalarMul(MI, NarrowTy);
+  case TargetOpcode::G_UMULO:
+    return narrowScalarMULO(MI, NarrowTy);
   case TargetOpcode::G_EXTRACT:
     return narrowScalarExtract(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_INSERT:
@@ -7198,6 +7200,92 @@ LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
   // Take only high half of registers if this is high mul.
   ArrayRef<Register> DstRegs(&DstTmpRegs[DstTmpParts - NumParts], NumParts);
   MIRBuilder.buildMergeLikeInstr(DstReg, DstRegs);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+// Narrow unsigned multiplication with overflow (G_UMULO).
+LegalizerHelper::LegalizeResult
+LegalizerHelper::narrowScalarMULO(MachineInstr &MI, LLT NarrowTy) {
+  auto [DstReg, OverflowReg, Src1, Src2] = MI.getFirst4Regs();
+
+  LLT Ty = MRI.getType(DstReg);
+  if (Ty.isVector())
+    return UnableToLegalize;
+
+  unsigned Size = Ty.getSizeInBits();
+  unsigned NarrowSize = NarrowTy.getSizeInBits();
+  if (Size % NarrowSize != 0)
+    return UnableToLegalize;
+
+  unsigned NumParts = Size / NarrowSize;
+  if (NumParts != 2)
+    return UnableToLegalize; // Only handle i128→i64 narrowing
+
+  // Split inputs into high/low parts
+  SmallVector<Register, 2> Src1Parts, Src2Parts;
+  extractParts(Src1, NarrowTy, NumParts, Src1Parts, MIRBuilder, MRI);
+  extractParts(Src2, NarrowTy, NumParts, Src2Parts, MIRBuilder, MRI);
+
+  Register LHSLo = Src1Parts[0];
+  Register LHSHi = Src1Parts[1];
+  Register RHSLo = Src2Parts[0];
+  Register RHSHi = Src2Parts[1];
+
+  // Check if both high parts are non-zero → guaranteed overflow
+  auto Zero = MIRBuilder.buildConstant(NarrowTy, 0);
+  auto LHSHiNZ =
+      MIRBuilder.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), LHSHi, Zero);
+  auto RHSHiNZ =
+      MIRBuilder.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), RHSHi, Zero);
+  auto BothHiNonZero = MIRBuilder.buildAnd(LLT::scalar(1), LHSHiNZ, RHSHiNZ);
+
+  // Cross multiply LHSHi × RHSLo with overflow (use MUL+UMULH directly)
+  auto Mid1 = MIRBuilder.buildMul(NarrowTy, LHSHi, RHSLo);
+  auto Mid1Hi = MIRBuilder.buildUMulH(NarrowTy, LHSHi, RHSLo);
+  auto Ovf1 =
+      MIRBuilder.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Mid1Hi, Zero);
+
+  // Cross multiply LHSLo × RHSHi with overflow (use MUL+UMULH directly)
+  auto Mid2 = MIRBuilder.buildMul(NarrowTy, LHSLo, RHSHi);
+  auto Mid2Hi = MIRBuilder.buildUMulH(NarrowTy, LHSLo, RHSHi);
+  auto Ovf2 =
+      MIRBuilder.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Mid2Hi, Zero);
+
+  // Add the cross products (HighSum = Mid1 + Mid2)
+  auto HighSum = MIRBuilder.buildAdd(NarrowTy, Mid1, Mid2);
+
+  // Multiply low parts to get full 128-bit result (using ZEXT pattern)
+  LLT WideTy = LLT::scalar(Size);
+  auto LHSLoExt = MIRBuilder.buildZExt(WideTy, LHSLo);
+  auto RHSLoExt = MIRBuilder.buildZExt(WideTy, RHSLo);
+  auto FullMul = MIRBuilder.buildMul(WideTy, LHSLoExt, RHSLoExt).getReg(0);
+
+  SmallVector<Register, 2> LowMulParts;
+  extractParts(FullMul, NarrowTy, NumParts, LowMulParts, MIRBuilder, MRI);
+  Register ResLo = LowMulParts[0];
+  Register ResHi = LowMulParts[1];
+
+  // Add HighSum to ResHi with overflow detection
+  auto AddHighSum =
+      MIRBuilder.buildUAddo(NarrowTy, LLT::scalar(1), ResHi, HighSum);
+  Register FinalHi = AddHighSum.getReg(0);
+  Register Ovf3 = AddHighSum.getReg(1);
+
+  // Combine all overflow flags
+  // overflow = BothHiNonZero || Ovf1 || Ovf2 || Ovf3
+  auto Ovf12 = MIRBuilder.buildOr(LLT::scalar(1), Ovf1, Ovf2);
+  auto Ovf123 = MIRBuilder.buildOr(LLT::scalar(1), Ovf12, Ovf3);
+  auto FinalOvf = MIRBuilder.buildOr(LLT::scalar(1), BothHiNonZero, Ovf123);
+
+  // Build final result
+  // Emit G_MERGE_VALUES for the result
+  SmallVector<Register, 2> ResultParts = {ResLo, FinalHi};
+  MIRBuilder.buildMergeLikeInstr(DstReg, ResultParts);
+
+  // Normalize overflow to s1 type
+  MIRBuilder.buildCopy(OverflowReg, FinalOvf);
+
   MI.eraseFromParent();
   return Legalized;
 }
