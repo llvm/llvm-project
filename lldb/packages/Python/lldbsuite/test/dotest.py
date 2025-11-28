@@ -1108,11 +1108,7 @@ def run_suite():
     checkDAPSupport()
 
     skipped_categories_list = ", ".join(configuration.skip_categories)
-    print(
-        "Skipping the following test categories: {}".format(
-            configuration.skip_categories
-        )
-    )
+    print(f"Skipping the following test categories: {skipped_categories_list}")
 
     for testdir in configuration.testdirs:
         for dirpath, dirnames, filenames in os.walk(testdir):

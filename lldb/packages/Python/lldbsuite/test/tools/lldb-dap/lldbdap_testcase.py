@@ -169,6 +169,7 @@ class DAPTestCaseBase(TestBase):
                 if (
                     body["reason"] != "breakpoint"
                     and body["reason"] != "instruction breakpoint"
+                    and body["reason"] != "data breakpoint"
                 ):
                     continue
                 if "hitBreakpointIds" not in body:
