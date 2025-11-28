@@ -69,12 +69,12 @@ if(${LIBOMP_FORTRAN_MODULES})
   # to omp and ensure that libomp-mod is built before by adding a dependency
   add_custom_command(TARGET omp POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_MOD_DIR}
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/../../module/omp_lib.mod ${LIBOMP_EXPORTS_MOD_DIR}
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/../../module/omp_lib_kinds.mod ${LIBOMP_EXPORTS_MOD_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy omp_lib.mod ${LIBOMP_EXPORTS_MOD_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy omp_lib_kinds.mod ${LIBOMP_EXPORTS_MOD_DIR}
   )
   add_dependencies(omp libomp-mod)
   add_custom_command(TARGET omp POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/../../module/omp_lib.h ${LIBOMP_EXPORTS_CMN_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy omp_lib.h ${LIBOMP_EXPORTS_CMN_DIR}
   )
 endif()
 
