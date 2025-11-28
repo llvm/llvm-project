@@ -866,7 +866,7 @@ struct AA::PointerInfo::State : public AbstractState {
 
   /// Find the full chain of instructions that cause the access in
   /// AAPointerInfo. We use the OffsetInfoMap to find all the Offsets which are
-  /// accessed and for each offset we, backtrack a path that leads to that
+  /// accessed and for each offset we backtrack a path that leads to that
   /// access. \Returns a set containing instruction chains that lead to an
   /// access.
   AAPointerInfo::AccessPathSetTy *
