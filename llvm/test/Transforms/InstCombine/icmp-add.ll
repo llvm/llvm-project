@@ -3444,8 +3444,7 @@ define i1 @val_is_aligend_pred_mismatch(i32 %num) {
 define i1 @icmp_samesign_with_nsw_add(i32 %arg0) {
 ; CHECK-LABEL: @icmp_samesign_with_nsw_add(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ARG0:%.*]], -26
-; CHECK-NEXT:    [[V1:%.*]] = icmp ult i32 [[TMP0]], -8
+; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 25
 ; CHECK-NEXT:    ret i1 [[V1]]
 ;
 entry:
@@ -3454,9 +3453,9 @@ entry:
   ret i1 %v1
 }
 
-; Shouldn't fire since -124 - 12 causes signed overflow
-define i1 @icmp_samesign_with_nsw_add_no_fire(i8 %arg0) {
-; CHECK-LABEL: @icmp_samesign_with_nsw_add_no_fire(
+; Negative test; Fold shouldn't fire since -124 - 12 causes signed overflow
+define i1 @icmp_samesign_with_nsw_add_neg(i8 %arg0) {
+; CHECK-LABEL: @icmp_samesign_with_nsw_add_neg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[ARG0:%.*]], -121
 ; CHECK-NEXT:    [[V1:%.*]] = icmp ult i8 [[TMP0]], 123
@@ -3471,20 +3470,19 @@ entry:
 define i1 @icmp_with_nuw_add(i32 %arg0) {
 ; CHECK-LABEL: @icmp_with_nuw_add(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V1:%.*]] = icmp ugt i32 [[ARG0:%.*]], 11
+; CHECK-NEXT:    [[V1:%.*]] = icmp ult i32 [[ARG0:%.*]], 11
 ; CHECK-NEXT:    ret i1 [[V1]]
 ;
 entry:
   %v0 = add nuw i32 %arg0, 7
-  %v1 = icmp ugt i32 %v0, 18
+  %v1 = icmp ult i32 %v0, 18
   ret i1 %v1
 }
 
 define i1 @icmp_partial_negative_samesign_ult_to_slt(i8 range(i8 -1, 5) %x) {
 ; CHECK-LABEL: @icmp_partial_negative_samesign_ult_to_slt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i8 [[ADD]], -3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
