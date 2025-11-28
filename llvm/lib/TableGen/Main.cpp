@@ -17,6 +17,7 @@
 #include "llvm/TableGen/Main.h"
 #include "TGLexer.h"
 #include "TGParser.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
@@ -39,32 +40,32 @@
 #include <utility>
 using namespace llvm;
 
-static cl::opt<std::string>
-OutputFilename("o", cl::desc("Output filename"), cl::value_desc("filename"),
-               cl::init("-"));
+static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
+                                           cl::value_desc("filename"),
+                                           cl::init("-"));
+
+static cl::opt<std::string> DependFilename("d", cl::desc("Dependency filename"),
+                                           cl::value_desc("filename"),
+                                           cl::init(""));
 
 static cl::opt<std::string>
-DependFilename("d",
-               cl::desc("Dependency filename"),
-               cl::value_desc("filename"),
-               cl::init(""));
+    InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
 
-static cl::opt<std::string>
-InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
+static cl::list<std::string> IncludeDirs("I",
+                                         cl::desc("Directory of include files"),
+                                         cl::value_desc("directory"),
+                                         cl::Prefix);
 
 static cl::list<std::string>
-IncludeDirs("I", cl::desc("Directory of include files"),
-            cl::value_desc("directory"), cl::Prefix);
-
-static cl::list<std::string>
-MacroNames("D", cl::desc("Name of the macro to be defined"),
-            cl::value_desc("macro name"), cl::Prefix);
+    MacroNames("D", cl::desc("Name of the macro to be defined"),
+               cl::value_desc("macro name"), cl::Prefix);
 
 static cl::opt<bool>
-WriteIfChanged("write-if-changed", cl::desc("Only write output if it changed"));
+    WriteIfChanged("write-if-changed",
+                   cl::desc("Only write output if it changed"));
 
-static cl::opt<bool>
-TimePhases("time-phases", cl::desc("Time phases of parser and backend"));
+static cl::opt<bool> TimePhases("time-phases",
+                                cl::desc("Time phases of parser and backend"));
 
 cl::opt<bool> llvm::EmitLongStrLiterals(
     "long-string-literals",
@@ -83,6 +84,39 @@ static int reportError(const char *ProgName, Twine Msg) {
   return 1;
 }
 
+/// Escape a filename in the dependency file so that it is correctly
+/// interpreted by `make`. This is consistent with Clang, GCC, and lld.
+static std::string escapeDependencyFilename(StringRef Filename) {
+  std::string Res;
+  raw_string_ostream OS(Res);
+
+  // Only transform the path to native on Windows, where backslashes are valid
+  // path separators. On non-Windows platforms, we don't want backslashes in
+  // filenames to be incorrectly treated as path separators.
+#ifdef _WIN32
+  SmallString<256> NativePath;
+  sys::path::native(Filename, NativePath);
+#else
+  StringRef NativePath = Filename;
+#endif
+
+  for (unsigned I = 0, E = NativePath.size(); I != E; ++I) {
+    if (NativePath[I] == '#')
+      OS << '\\';
+    else if (NativePath[I] == ' ') {
+      OS << '\\';
+      unsigned J = I;
+      while (J > 0 && NativePath[--J] == '\\')
+        OS << '\\';
+    } else if (NativePath[I] == '$')
+      OS << '$';
+    OS << NativePath[I];
+  }
+
+  OS.flush();
+  return Res;
+}
+
 /// Create a dependency file for `-d` option.
 ///
 /// This functionality is really only for the benefit of the build system.
@@ -96,9 +130,9 @@ static int createDependencyFile(const TGParser &Parser, const char *argv0) {
   if (EC)
     return reportError(argv0, "error opening " + DependFilename + ":" +
                                   EC.message() + "\n");
-  DepOut.os() << OutputFilename << ":";
+  DepOut.os() << escapeDependencyFilename(OutputFilename) << ":";
   for (const auto &Dep : Parser.getDependencies()) {
-    DepOut.os() << ' ' << Dep;
+    DepOut.os() << ' ' << escapeDependencyFilename(Dep);
   }
   DepOut.os() << "\n";
   DepOut.keep();
