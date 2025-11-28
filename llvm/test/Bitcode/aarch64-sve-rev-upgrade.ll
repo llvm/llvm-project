@@ -4,7 +4,7 @@
 
 define <vscale x 16 x i1> @rev_nxv16i1(<vscale x 16 x i1> %a) {
 ; CHECK-LABEL: @rev_nxv16i1(
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.nxv16i1(<vscale x 16 x i1> [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 16 x i1> @llvm.vector.reverse.nxv16i1(<vscale x 16 x i1> [[A:%.*]])
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[RES]]
 ;
   %res = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.nxv16i1(<vscale x 16 x i1> %a)
@@ -13,7 +13,7 @@ define <vscale x 16 x i1> @rev_nxv16i1(<vscale x 16 x i1> %a) {
 
 define <vscale x 8 x i1> @rev_nxv8i1(<vscale x 8 x i1> %a) {
 ; CHECK-LABEL: @rev_nxv8i1(
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.rev.nxv8i1(<vscale x 8 x i1> [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x i1> @llvm.vector.reverse.nxv8i1(<vscale x 8 x i1> [[A:%.*]])
 ; CHECK-NEXT:    ret <vscale x 8 x i1> [[RES]]
 ;
   %res = call <vscale x 8 x i1> @llvm.aarch64.sve.rev.nxv8i1(<vscale x 8 x i1> %a)
@@ -22,7 +22,7 @@ define <vscale x 8 x i1> @rev_nxv8i1(<vscale x 8 x i1> %a) {
 
 define <vscale x 4 x i1> @rev_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: @rev_nxv4i1(
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.rev.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[A:%.*]])
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[RES]]
 ;
   %res = call <vscale x 4 x i1> @llvm.aarch64.sve.rev.nxv4i1(<vscale x 4 x i1> %a)
@@ -31,7 +31,7 @@ define <vscale x 4 x i1> @rev_nxv4i1(<vscale x 4 x i1> %a) {
 
 define <vscale x 2 x i1> @rev_nxv2i1(<vscale x 2 x i1> %a) {
 ; CHECK-LABEL: @rev_nxv2i1(
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.rev.nxv2i1(<vscale x 2 x i1> [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> [[A:%.*]])
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[RES]]
 ;
   %res = call <vscale x 2 x i1> @llvm.aarch64.sve.rev.nxv2i1(<vscale x 2 x i1> %a)
@@ -40,7 +40,7 @@ define <vscale x 2 x i1> @rev_nxv2i1(<vscale x 2 x i1> %a) {
 
 define <vscale x 16 x i8> @rev_i8(<vscale x 16 x i8> %a) {
 ; CHECK-LABEL: @rev_i8(
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.rev.nxv16i8(<vscale x 16 x i8> [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8> [[A:%.*]])
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[RES]]
 ;
   %res = call <vscale x 16 x i8> @llvm.aarch64.sve.rev.nxv16i8(<vscale x 16 x i8> %a)
@@ -49,7 +49,7 @@ define <vscale x 16 x i8> @rev_i8(<vscale x 16 x i8> %a) {
 
 define <vscale x 8 x i16> @rev_i16(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: @rev_i16(
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.rev.nxv8i16(<vscale x 8 x i16> [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.vector.reverse.nxv8i16(<vscale x 8 x i16> [[A:%.*]])
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[RES]]
 ;
   %res = call <vscale x 8 x i16> @llvm.aarch64.sve.rev.nxv8i16(<vscale x 8 x i16> %a)
@@ -58,7 +58,7 @@ define <vscale x 8 x i16> @rev_i16(<vscale x 8 x i16> %a) {
 
 define <vscale x 4 x i32> @rev_i32(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: @rev_i32(
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.rev.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
 ;
   %res = call <vscale x 4 x i32> @llvm.aarch64.sve.rev.nxv4i32(<vscale x 4 x i32> %a)
@@ -67,7 +67,7 @@ define <vscale x 4 x i32> @rev_i32(<vscale x 4 x i32> %a) {
 
 define <vscale x 2 x i64> @rev_i64(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: @rev_i64(
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.rev.nxv2i64(<vscale x 2 x i64> [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.vector.reverse.nxv2i64(<vscale x 2 x i64> [[A:%.*]])
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[RES]]
 ;
   %res = call <vscale x 2 x i64> @llvm.aarch64.sve.rev.nxv2i64(<vscale x 2 x i64> %a)
@@ -76,7 +76,7 @@ define <vscale x 2 x i64> @rev_i64(<vscale x 2 x i64> %a) {
 
 define <vscale x 8 x half> @rev_f16(<vscale x 8 x half> %a) {
 ; CHECK-LABEL: @rev_f16(
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.rev.nxv8f16(<vscale x 8 x half> [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x half> @llvm.vector.reverse.nxv8f16(<vscale x 8 x half> [[A:%.*]])
 ; CHECK-NEXT:    ret <vscale x 8 x half> [[RES]]
 ;
   %res = call <vscale x 8 x half> @llvm.aarch64.sve.rev.nxv8f16(<vscale x 8 x half> %a)
@@ -85,7 +85,7 @@ define <vscale x 8 x half> @rev_f16(<vscale x 8 x half> %a) {
 
 define <vscale x 4 x float> @rev_f32(<vscale x 4 x float> %a) {
 ; CHECK-LABEL: @rev_f32(
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.rev.nxv4f32(<vscale x 4 x float> [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[A:%.*]])
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
 ;
   %res = call <vscale x 4 x float> @llvm.aarch64.sve.rev.nxv4f32(<vscale x 4 x float> %a)
@@ -94,7 +94,7 @@ define <vscale x 4 x float> @rev_f32(<vscale x 4 x float> %a) {
 
 define <vscale x 2 x double> @rev_f64(<vscale x 2 x double> %a) {
 ; CHECK-LABEL: @rev_f64(
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.rev.nxv2f64(<vscale x 2 x double> [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[A:%.*]])
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[RES]]
 ;
   %res = call <vscale x 2 x double> @llvm.aarch64.sve.rev.nxv2f64(<vscale x 2 x double> %a)
@@ -103,7 +103,7 @@ define <vscale x 2 x double> @rev_f64(<vscale x 2 x double> %a) {
 
 define <vscale x 8 x bfloat> @rev_bf16(<vscale x 8 x bfloat> %a) #0 {
 ; CHECK-LABEL: @rev_bf16(
-; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.rev.nxv8bf16(<vscale x 8 x bfloat> [[A:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = call <vscale x 8 x bfloat> @llvm.vector.reverse.nxv8bf16(<vscale x 8 x bfloat> [[A:%.*]])
 ; CHECK-NEXT:    ret <vscale x 8 x bfloat> [[RES]]
 ;
   %res = call <vscale x 8 x bfloat> @llvm.aarch64.sve.rev.nxv8bf16(<vscale x 8 x bfloat> %a)
