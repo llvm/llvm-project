@@ -18,6 +18,7 @@ add_clang_library(clangDoc STATIC
   YAMLGenerator.cpp
   HTMLMustacheGenerator.cpp
   JSONGenerator.cpp
+  MDParser.cpp
 
   DEPENDS
   omp_gen

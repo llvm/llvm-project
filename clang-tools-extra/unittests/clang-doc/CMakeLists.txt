@@ -32,6 +32,7 @@ add_extra_unittest(ClangDocTests
   SerializeTest.cpp
   YAMLGeneratorTest.cpp
   JSONGeneratorTest.cpp
+  MDParserTest.cpp
   )
 
 clang_target_link_libraries(ClangDocTests
