@@ -322,14 +322,12 @@ private:
   /// !IsLoad) to ChainBegin -- i.e. there are no intervening may-alias
   /// instructions.
   ///
-  /// The map ChainElemOffsets must contain all of the elements in
-  /// [ChainBegin, ChainElem] and their offsets from some arbitrary base
-  /// address.  It's ok if it contains additional entries.
+  /// The map ChainSet must contain all of the elements in
+  /// [ChainBegin, ChainElem]. It's ok if it contains additional entries.
   template <bool IsLoadChain>
-  bool isSafeToMove(
-      Instruction *ChainElem, Instruction *ChainBegin,
-      const DenseMap<Instruction *, APInt /*OffsetFromLeader*/> &ChainOffsets,
-      BatchAAResults &BatchAA);
+  bool isSafeToMove(Instruction *ChainElem, Instruction *ChainBegin,
+                    const DenseSet<Instruction *> &ChainSet,
+                    BatchAAResults &BatchAA);
 
   /// Merges the equivalence classes if they have underlying objects that differ
   /// by one level of indirection (i.e., one is a getelementptr and the other is
@@ -579,9 +577,9 @@ std::vector<Chain> Vectorizer::splitChainByMayAliasInstrs(Chain &C) {
   // We know that elements in the chain with nonverlapping offsets can't
   // alias, but AA may not be smart enough to figure this out.  Use a
   // hashtable.
-  DenseMap<Instruction *, APInt /*OffsetFromLeader*/> ChainOffsets;
+  DenseSet<Instruction *> ChainSet;
   for (const auto &E : C)
-    ChainOffsets.insert({&*E.Inst, E.OffsetFromLeader});
+    ChainSet.insert(E.Inst);
 
   // Across a single invocation of this function the IR is not changing, so
   // using a batched Alias Analysis is safe and can reduce compile time.
@@ -612,8 +610,8 @@ std::vector<Chain> Vectorizer::splitChainByMayAliasInstrs(Chain &C) {
     SmallVector<ChainElem, 1> NewChain;
     NewChain.emplace_back(*ChainBegin);
     for (auto ChainIt = std::next(ChainBegin); ChainIt != ChainEnd; ++ChainIt) {
-      if (isSafeToMove<IsLoad>(ChainIt->Inst, NewChain.front().Inst,
-                               ChainOffsets, BatchAA)) {
+      if (isSafeToMove<IsLoad>(ChainIt->Inst, NewChain.front().Inst, ChainSet,
+                               BatchAA)) {
         LLVM_DEBUG(dbgs() << "LSV: No intervening may-alias instrs; can merge "
                           << *ChainIt->Inst << " into " << *ChainBegin->Inst
                           << "\n");
@@ -1264,10 +1262,9 @@ bool Vectorizer::vectorizeChain(Chain &C) {
 }
 
 template <bool IsLoadChain>
-bool Vectorizer::isSafeToMove(
-    Instruction *ChainElem, Instruction *ChainBegin,
-    const DenseMap<Instruction *, APInt /*OffsetFromLeader*/> &ChainOffsets,
-    BatchAAResults &BatchAA) {
+bool Vectorizer::isSafeToMove(Instruction *ChainElem, Instruction *ChainBegin,
+                              const DenseSet<Instruction *> &ChainSet,
+                              BatchAAResults &BatchAA) {
   LLVM_DEBUG(dbgs() << "LSV: isSafeToMove(" << *ChainElem << " -> "
                     << *ChainBegin << ")\n");
 
@@ -1293,10 +1290,6 @@ bool Vectorizer::isSafeToMove(
       return BasicBlock::iterator(ChainBegin);
   }());
 
-  const APInt &ChainElemOffset = ChainOffsets.at(ChainElem);
-  const unsigned ChainElemSize =
-      DL.getTypeStoreSize(getLoadStoreType(ChainElem));
-
   for (; BBIt != BBItEnd; ++BBIt) {
     Instruction *I = &*BBIt;
 
@@ -1311,39 +1304,10 @@ bool Vectorizer::isSafeToMove(
     if (!IsLoadChain && isInvariantLoad(I))
       continue;
 
-    // If I is in the chain, we can tell whether it aliases ChainIt by checking
-    // what offset ChainIt accesses.  This may be better than AA is able to do.
-    //
-    // We should really only have duplicate offsets for stores (the duplicate
-    // loads should be CSE'ed), but in case we have a duplicate load, we'll
-    // split the chain so we don't have to handle this case specially.
-    if (auto OffsetIt = ChainOffsets.find(I); OffsetIt != ChainOffsets.end()) {
-      // I and ChainElem overlap if:
-      //   - I and ChainElem have the same offset, OR
-      //   - I's offset is less than ChainElem's, but I touches past the
-      //     beginning of ChainElem, OR
-      //   - ChainElem's offset is less than I's, but ChainElem touches past the
-      //     beginning of I.
-      const APInt &IOffset = OffsetIt->second;
-      unsigned IElemSize = DL.getTypeStoreSize(getLoadStoreType(I));
-      if (IOffset == ChainElemOffset ||
-          (IOffset.sle(ChainElemOffset) &&
-           (IOffset + IElemSize).sgt(ChainElemOffset)) ||
-          (ChainElemOffset.sle(IOffset) &&
-           (ChainElemOffset + ChainElemSize).sgt(OffsetIt->second))) {
-        LLVM_DEBUG({
-          // Double check that AA also sees this alias.  If not, we probably
-          // have a bug.
-          ModRefInfo MR =
-              BatchAA.getModRefInfo(I, MemoryLocation::get(ChainElem));
-          assert(IsLoadChain ? isModSet(MR) : isModOrRefSet(MR));
-          dbgs() << "LSV: Found alias in chain: " << *I << "\n";
-        });
-        return false; // We found an aliasing instruction; bail.
-      }
-
-      continue; // We're confident there's no alias.
-    }
+    // Allow on-chain aliasing because write-order is preserved when stores are
+    // vectorized.
+    if (ChainSet.count(I))
+      continue;
 
     LLVM_DEBUG(dbgs() << "LSV: Querying AA for " << *I << "\n");
     ModRefInfo MR = BatchAA.getModRefInfo(I, MemoryLocation::get(ChainElem));

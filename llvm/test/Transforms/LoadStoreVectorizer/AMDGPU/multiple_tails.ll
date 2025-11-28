@@ -10,11 +10,7 @@ define amdgpu_kernel void @no_crash(i32 %arg) {
 ; GCN-SAME: i32 [[ARG:%.*]]) {
 ; GCN-NEXT:    [[TEMP2:%.*]] = add i32 [[ARG]], 14
 ; GCN-NEXT:    [[TEMP3:%.*]] = getelementptr [16384 x i32], ptr addrspace(3) @[[GLOB0:[0-9]+]], i32 0, i32 [[TEMP2]]
-; GCN-NEXT:    [[TEMP4:%.*]] = add i32 [[ARG]], 15
-; GCN-NEXT:    [[TEMP5:%.*]] = getelementptr [16384 x i32], ptr addrspace(3) @[[GLOB0]], i32 0, i32 [[TEMP4]]
 ; GCN-NEXT:    store <2 x i32> zeroinitializer, ptr addrspace(3) [[TEMP3]], align 4
-; GCN-NEXT:    store i32 0, ptr addrspace(3) [[TEMP5]], align 4
-; GCN-NEXT:    store i32 0, ptr addrspace(3) [[TEMP5]], align 4
 ; GCN-NEXT:    ret void
 ;
   %temp2 = add i32 %arg, 14
