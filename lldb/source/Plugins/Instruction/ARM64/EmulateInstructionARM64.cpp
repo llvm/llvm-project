@@ -346,6 +346,16 @@ EmulateInstructionARM64::GetOpcodeForInstruction(const uint32_t opcode) {
        &EmulateInstructionARM64::EmulateLDRSTRImm<AddrMode_OFF>,
        "LDR <Xt>, [<Xn|SP>{, #<pimm>}]"},
 
+      {0x3f200c00, 0x3c000400, No_VFP,
+       &EmulateInstructionARM64::EmulateLDRSTRImm<AddrMode_POST>,
+       "LDR|STR <Bt|Ht|St|Dt|Qt>, [<Xn|SP>], #<simm>"},
+      {0x3f200c00, 0x3c000c00, No_VFP,
+       &EmulateInstructionARM64::EmulateLDRSTRImm<AddrMode_PRE>,
+       "LDR|STR <Bt|Ht|St|Dt|Qt>, [<Xn|SP>, #<simm>]!"},
+      {0x3f000000, 0x3d000000, No_VFP,
+       &EmulateInstructionARM64::EmulateLDRSTRImm<AddrMode_OFF>,
+       "LDR|STR <Bt|Ht|St|Dt|Qt>, [<Xn|SP>{, #<pimm>}]"},
+
       {0xfc000000, 0x14000000, No_VFP, &EmulateInstructionARM64::EmulateB,
        "B <label>"},
       {0xff000010, 0x54000000, No_VFP, &EmulateInstructionARM64::EmulateBcond,
@@ -930,8 +940,28 @@ template <EmulateInstructionARM64::AddrMode a_mode>
 bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
   uint32_t size = Bits32(opcode, 31, 30);
   uint32_t opc = Bits32(opcode, 23, 22);
+  uint32_t vr = Bit32(opcode, 26);
   uint32_t n = Bits32(opcode, 9, 5);
   uint32_t t = Bits32(opcode, 4, 0);
+
+  MemOp memop;
+  if (vr) {
+    // opc<1> == 1 && size != 0 is an undefined encoding.
+    if (Bit32(opc, 1) == 1 && size != 0)
+      return false;
+    // opc<1> == 1 && size == 0 encode the 128-bit variant.
+    if (Bit32(opc, 1) == 1)
+      size = 4;
+    memop = Bit32(opc, 0) == 1 ? MemOp_LOAD : MemOp_STORE;
+  } else {
+    if (Bit32(opc, 1) == 0) {
+      memop = Bit32(opc, 0) == 1 ? MemOp_LOAD : MemOp_STORE;
+    } else {
+      memop = MemOp_LOAD;
+      if (size == 2 && Bit32(opc, 0) == 1)
+        return false;
+    }
+  }
 
   bool wback;
   bool postindex;
@@ -953,16 +983,6 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
     postindex = false;
     offset = LSL(Bits32(opcode, 21, 10), size);
     break;
-  }
-
-  MemOp memop;
-
-  if (Bit32(opc, 1) == 0) {
-    memop = Bit32(opc, 0) == 1 ? MemOp_LOAD : MemOp_STORE;
-  } else {
-    memop = MemOp_LOAD;
-    if (size == 2 && Bit32(opc, 0) == 1)
-      return false;
   }
 
   Status error;
@@ -989,7 +1009,8 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
     return false;
 
   std::optional<RegisterInfo> reg_info_Rt =
-      GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + t);
+      vr ? GetRegisterInfo(eRegisterKindLLDB, fpu_d0_arm64 + t)
+         : GetRegisterInfo(eRegisterKindLLDB, gpr_x0_arm64 + t);
   if (!reg_info_Rt)
     return false;
 

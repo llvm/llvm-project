@@ -66,8 +66,8 @@ void PosixReturnCheck::registerMatchers(MatchFinder *Finder) {
 void PosixReturnCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *LessThanZeroOp =
           Result.Nodes.getNodeAs<BinaryOperator>("ltzop")) {
-    SourceLocation OperatorLoc = LessThanZeroOp->getOperatorLoc();
-    StringRef NewBinOp =
+    const SourceLocation OperatorLoc = LessThanZeroOp->getOperatorLoc();
+    const StringRef NewBinOp =
         LessThanZeroOp->getOpcode() == BinaryOperator::Opcode::BO_LT ? ">"
                                                                      : "<";
     diag(OperatorLoc, "the comparison always evaluates to false because %0 "

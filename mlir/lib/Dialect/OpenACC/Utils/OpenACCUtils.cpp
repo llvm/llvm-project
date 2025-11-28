@@ -9,8 +9,12 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/Casting.h"
 
 mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
   mlir::Operation *parentOp = region.getParentOp();
@@ -105,4 +109,99 @@ std::string mlir::acc::getVariableName(mlir::Value v) {
   }
 
   return "";
+}
+
+std::string mlir::acc::getRecipeName(mlir::acc::RecipeKind kind,
+                                     mlir::Type type) {
+  assert(kind == mlir::acc::RecipeKind::private_recipe ||
+         kind == mlir::acc::RecipeKind::firstprivate_recipe ||
+         kind == mlir::acc::RecipeKind::reduction_recipe);
+  if (!llvm::isa<mlir::acc::PointerLikeType, mlir::acc::MappableType>(type))
+    return "";
+
+  std::string recipeName;
+  llvm::raw_string_ostream ss(recipeName);
+  ss << (kind == mlir::acc::RecipeKind::private_recipe ? "privatization_"
+         : kind == mlir::acc::RecipeKind::firstprivate_recipe
+             ? "firstprivatization_"
+             : "reduction_");
+
+  // Print the type using its dialect-defined textual format.
+  type.print(ss);
+  ss.flush();
+
+  // Replace invalid characters (anything that's not a letter, number, or
+  // period) since this needs to be a valid MLIR identifier.
+  for (char &c : recipeName) {
+    if (!std::isalnum(static_cast<unsigned char>(c)) && c != '.' && c != '_') {
+      if (c == '?')
+        c = 'U';
+      else if (c == '*')
+        c = 'Z';
+      else if (c == '(' || c == ')' || c == '[' || c == ']' || c == '{' ||
+               c == '}' || c == '<' || c == '>')
+        c = '_';
+      else
+        c = 'X';
+    }
+  }
+
+  return recipeName;
+}
+
+mlir::Value mlir::acc::getBaseEntity(mlir::Value val) {
+  if (auto partialEntityAccessOp =
+          dyn_cast<PartialEntityAccessOpInterface>(val.getDefiningOp())) {
+    if (!partialEntityAccessOp.isCompleteView())
+      return partialEntityAccessOp.getBaseEntity();
+  }
+
+  return val;
+}
+
+bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
+                                 mlir::SymbolRefAttr symbol,
+                                 mlir::Operation **definingOpPtr) {
+  mlir::Operation *definingOp =
+      mlir::SymbolTable::lookupNearestSymbolFrom(user, symbol);
+
+  // If there are no defining ops, we have no way to ensure validity because
+  // we cannot check for any attributes.
+  if (!definingOp)
+    return false;
+
+  if (definingOpPtr)
+    *definingOpPtr = definingOp;
+
+  // Check if the defining op is a recipe (private, reduction, firstprivate).
+  // Recipes are valid as they get materialized before being offloaded to
+  // device. They are only instructions for how to materialize.
+  if (mlir::isa<mlir::acc::PrivateRecipeOp, mlir::acc::ReductionRecipeOp,
+                mlir::acc::FirstprivateRecipeOp>(definingOp))
+    return true;
+
+  // Check if the defining op is a function
+  if (auto func =
+          mlir::dyn_cast_if_present<mlir::FunctionOpInterface>(definingOp)) {
+    // If this symbol is actually an acc routine - then it is expected for it
+    // to be offloaded - therefore it is valid.
+    if (func->hasAttr(mlir::acc::getRoutineInfoAttrName()))
+      return true;
+
+    // If this symbol is a call to an LLVM intrinsic, then it is likely valid.
+    // Check the following:
+    // 1. The function is private
+    // 2. The function has no body
+    // 3. Name starts with "llvm."
+    // 4. The function's name is a valid LLVM intrinsic name
+    if (func.getVisibility() == mlir::SymbolTable::Visibility::Private &&
+        func.getFunctionBody().empty() && func.getName().starts_with("llvm.") &&
+        llvm::Intrinsic::lookupIntrinsicID(func.getName()) !=
+            llvm::Intrinsic::not_intrinsic)
+      return true;
+  }
+
+  // A declare attribute is needed for symbol references.
+  bool hasDeclare = definingOp->hasAttr(mlir::acc::getDeclareAttrName());
+  return hasDeclare;
 }

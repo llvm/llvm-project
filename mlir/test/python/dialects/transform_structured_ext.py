@@ -627,12 +627,16 @@ def testVectorizeChildrenAndApplyPatternsAllAttrs(target):
         disable_transfer_permutation_map_lowering_patterns=True,
         vectorize_nd_extract=True,
         vectorize_padding=True,
+        flatten_1d_depthwise_conv=True,
+        fold_type_extensions_into_contract=True,
     )
     # CHECK-LABEL: TEST: testVectorizeChildrenAndApplyPatternsAllAttrs
     # CHECK: transform.sequence
     # CHECK: = transform.structured.vectorize
     # CHECK-SAME: disable_multi_reduction_to_contract_patterns
     # CHECK-SAME: disable_transfer_permutation_map_lowering_patterns
+    # CHECK-SAME: flatten_1d_depthwise_conv
+    # CHECK-SAME: fold_type_extensions_into_contract
     # CHECK-SAME: vectorize_nd_extract
     # CHECK-SAME: vectorize_padding
 
@@ -646,12 +650,16 @@ def testVectorizeChildrenAndApplyPatternsNoAttrs(target):
         disable_transfer_permutation_map_lowering_patterns=False,
         vectorize_nd_extract=False,
         vectorize_padding=False,
+        flatten_1d_depthwise_conv=False,
+        fold_type_extensions_into_contract=False,
     )
     # CHECK-LABEL: TEST: testVectorizeChildrenAndApplyPatternsNoAttrs
     # CHECK: transform.sequence
     # CHECK: = transform.structured.vectorize
     # CHECK-NOT: disable_multi_reduction_to_contract_patterns
     # CHECK-NOT: disable_transfer_permutation_map_lowering_patterns
+    # CHECK-NOT: flatten_1d_depthwise_conv
+    # CHECK-NOT: fold_type_extensions_into_contract
     # CHECK-NOT: vectorize_nd_extract
     # CHECK-NOT: vectorize_padding
 

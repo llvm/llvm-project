@@ -8,3 +8,4 @@ multiple-split-file-populated.test
 single-split-file-no-expected.test
 split-c-comments.test
 split whitespace.test
+split-both.test

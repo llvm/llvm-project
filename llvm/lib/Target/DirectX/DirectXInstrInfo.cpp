@@ -19,6 +19,6 @@
 using namespace llvm;
 
 DirectXInstrInfo::DirectXInstrInfo(const DirectXSubtarget &STI)
-    : DirectXGenInstrInfo(STI) {}
+    : DirectXGenInstrInfo(STI, RI) {}
 
 DirectXInstrInfo::~DirectXInstrInfo() {}

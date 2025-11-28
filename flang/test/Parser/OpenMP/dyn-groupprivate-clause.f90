@@ -26,21 +26,21 @@ end
 subroutine f01(n)
   implicit none
   integer :: n
-  !$omp target dyn_groupprivate(strict: n)
+  !$omp target dyn_groupprivate(fallback(abort): n)
   !$omp end target
 end
 
 !UNPARSE: SUBROUTINE f01 (n)
 !UNPARSE:  IMPLICIT NONE
 !UNPARSE:  INTEGER n
-!UNPARSE: !$OMP TARGET DYN_GROUPPRIVATE(STRICT: n)
+!UNPARSE: !$OMP TARGET DYN_GROUPPRIVATE(FALLBACK(ABORT): n)
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> DynGroupprivate -> OmpDynGroupprivateClause
-!PARSE-TREE: | | Modifier -> OmpPrescriptiveness -> Value = Strict
+!PARSE-TREE: | | Modifier -> OmpFallbackModifier -> Value = Abort
 !PARSE-TREE: | | Scalar -> Integer -> Expr = 'n'
 !PARSE-TREE: | | | Designator -> DataRef -> Name = 'n'
 !PARSE-TREE: | Flags = None
@@ -49,21 +49,21 @@ end
 subroutine f02(n)
   implicit none
   integer :: n
-  !$omp target dyn_groupprivate(fallback, cgroup: n)
+  !$omp target dyn_groupprivate(fallback(default_mem), cgroup: n)
   !$omp end target
 end
 
 !UNPARSE: SUBROUTINE f02 (n)
 !UNPARSE:  IMPLICIT NONE
 !UNPARSE:  INTEGER n
-!UNPARSE: !$OMP TARGET DYN_GROUPPRIVATE(FALLBACK, CGROUP: n)
+!UNPARSE: !$OMP TARGET DYN_GROUPPRIVATE(FALLBACK(DEFAULT_MEM), CGROUP: n)
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> DynGroupprivate -> OmpDynGroupprivateClause
-!PARSE-TREE: | | Modifier -> OmpPrescriptiveness -> Value = Fallback
+!PARSE-TREE: | | Modifier -> OmpFallbackModifier -> Value = Default_Mem
 !PARSE-TREE: | | Modifier -> OmpAccessGroup -> Value = Cgroup
 !PARSE-TREE: | | Scalar -> Integer -> Expr = 'n'
 !PARSE-TREE: | | | Designator -> DataRef -> Name = 'n'

@@ -1739,7 +1739,7 @@ bool MachProcess::Detach() {
     ReplyToAllExceptions();
   }
 
-  m_task.ShutDownExcecptionThread();
+  m_task.ShutDownExceptionThread();
 
   // Detach from our process
   errno = 0;
@@ -2853,12 +2853,6 @@ pid_t MachProcess::AttachForDebug(
 
     if (err.Success()) {
       m_flags |= eMachProcessFlagsAttached;
-      // Sleep a bit to let the exception get received and set our process
-      // status
-      // to stopped.
-      ::usleep(250000);
-      DNBLog("[LaunchAttach] (%d) Done napping after ptrace(PT_ATTACHEXC)'ing",
-             getpid());
       DNBLogThreadedIf(LOG_PROCESS, "successfully attached to pid %d", pid);
       return m_pid;
     } else {

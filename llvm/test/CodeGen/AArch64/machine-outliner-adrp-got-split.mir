@@ -1,0 +1,133 @@
+# RUN: llc -mtriple=aarch64---  -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+
+  @x = common global i32 0, align 4
+
+  define i32 @adrp_add() #0 {
+    ret i32 0
+  }
+
+  define i32 @adrp_ldr() #0 {
+    ret i32 0
+  }
+
+  attributes #0 = { noinline noredzone }
+...
+---
+# Check that main function body doesn't split ADRP pair
+#
+# CHECK-LABEL: name: adrp_add
+# CHECK-DAG: bb.0:
+# CHECK: BL @OUTLINED_FUNCTION_[[F0:[0-9]+]]
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_[[F2:[0-9]+]]
+# CHECK-NEXT: $lr = ORRXri $xzr, 1
+name:            adrp_add
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+    $x12 = ADDXri $x9, target-flags(aarch64-pageoff, aarch64-got) @x, 0
+    $lr = ORRXri $xzr, 1
+  bb.1:
+  liveins: $lr
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+    $x12 = ADDXri $x9, target-flags(aarch64-pageoff, aarch64-got) @x, 0
+    $lr = ORRXri $xzr, 1
+  bb.2:
+  liveins: $lr
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+    $x12 = ADDXri $x9, target-flags(aarch64-pageoff, aarch64-got) @x, 0
+    $lr = ORRXri $xzr, 1
+  bb.3:
+  liveins: $lr
+    RET undef $lr
+...
+---
+# Check that main function body doesn't split ADRP pair
+#
+# CHECK-LABEL: name: adrp_ldr
+# CHECK-DAG: bb.0:
+# CHECK: BL @OUTLINED_FUNCTION_[[F0]]
+# CHECK-NEXT: BL @OUTLINED_FUNCTION_[[F1:[0-9]+]]
+# CHECK-NEXT: $lr = ORRXri $xzr, 1
+name:            adrp_ldr
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+    $x12 = LDRXui $x9, target-flags(aarch64-pageoff, aarch64-got) @x
+    $lr = ORRXri $xzr, 1
+  bb.1:
+  liveins: $lr
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+    $x12 = LDRXui $x9, target-flags(aarch64-pageoff, aarch64-got) @x
+    $lr = ORRXri $xzr, 1
+  bb.2:
+  liveins: $lr
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $w12 = ORRWri $wzr, 1
+    $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+    $x12 = LDRXui $x9, target-flags(aarch64-pageoff, aarch64-got) @x
+    $lr = ORRXri $xzr, 1
+  bb.3:
+  liveins: $lr
+    RET undef $lr
+
+# Check that no outlined function split the ADRP pair apart
+#
+# CHECK: OUTLINED_FUNCTION_[[F0]]
+# CHECK-DAG: bb.0
+# CHECK: $w12 = ORRWri $wzr, 1
+# CHECK-NEXT: $w12 = ORRWri $wzr, 1
+# CHECK-NEXT: $w12 = ORRWri $wzr, 1
+# CHECK-NEXT: $w12 = ORRWri $wzr, 1
+# CHECK-NEXT: $w12 = ORRWri $wzr, 1
+# CHECK-NEXT: RET $lr
+
+# CHECK: OUTLINED_FUNCTION_[[F1]]
+# CHECK-DAG: bb.0
+# CHECK: $w12 = ORRWri $wzr, 1
+# CHECK-NEXT: $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+# CHECK-NEXT: $x12 = LDRXui $x9, target-flags(aarch64-pageoff, aarch64-got) @x
+
+# CHECK: name: OUTLINED_FUNCTION_[[F2]]
+# CHECK-DAG: bb.0
+# CHECK: $w12 = ORRWri $wzr, 1
+# CHECK-NEXT: $x9 = ADRP target-flags(aarch64-page, aarch64-got) @x
+# CHECK-NEXT: $x12 = ADDXri $x9, target-flags(aarch64-pageoff, aarch64-got) @x, 0

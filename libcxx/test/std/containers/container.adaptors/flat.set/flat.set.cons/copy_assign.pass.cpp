@@ -13,6 +13,7 @@
 // flat_set& operator=(const flat_set& m);
 
 #include <algorithm>
+#include <cassert>
 #include <deque>
 #include <flat_set>
 #include <functional>
