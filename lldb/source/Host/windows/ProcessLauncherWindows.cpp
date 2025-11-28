@@ -27,7 +27,7 @@ using namespace lldb_private;
 /// extra L'\0' (two bytes of 0). An empty environment must have one
 /// empty string, followed by an extra L'\0'.
 ///
-/// The keys are sorted to comply with the CreateProcess' calling convention.
+/// The keys are sorted to comply with the CreateProcess API calling convention.
 ///
 /// Ensure that the resulting buffer is used in conjunction with
 /// CreateProcessW and be sure that dwCreationFlags includes
@@ -35,7 +35,7 @@ using namespace lldb_private;
 ///
 /// \param env The Environment object to convert.
 /// \returns The sorted sequence of environment variables and their values,
-/// separated by null terminators.
+/// separated by null terminators. The vector is guaranteed to never be empty.
 static std::vector<wchar_t> CreateEnvironmentBufferW(const Environment &env) {
   std::vector<std::wstring> env_entries;
   for (const auto &KV : env) {
@@ -53,6 +53,10 @@ static std::vector<wchar_t> CreateEnvironmentBufferW(const Environment &env) {
     buffer.insert(buffer.end(), env_entry.begin(), env_entry.end());
     buffer.push_back(L'\0');
   }
+
+  if (buffer.empty())
+    buffer.push_back(L'\0'); // If there are no environment variables, we have
+                             // to ensure there are 4 zero bytes in the buffer.
   buffer.push_back(L'\0');
 
   return buffer;
@@ -167,7 +171,6 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   std::vector<wchar_t> environment =
       CreateEnvironmentBufferW(launch_info.GetEnvironment());
-  LPVOID env_block = environment.empty() ? nullptr : environment.data();
 
   auto wcommandLineOrErr =
       GetFlattenedWindowsCommandStringW(launch_info.GetArguments());
@@ -189,7 +192,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   BOOL result = ::CreateProcessW(
       wexecutable.c_str(), pwcommandLine, NULL, NULL,
-      /*bInheritHandles=*/!inherited_handles.empty(), flags, env_block,
+      /*bInheritHandles=*/!inherited_handles.empty(), flags, environment.data(),
       wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
       reinterpret_cast<STARTUPINFOW *>(&startupinfoex), &pi);
 
