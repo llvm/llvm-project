@@ -2590,23 +2590,6 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "    Delta = " << *Delta << "\n");
   const SCEVConstant *Constant = dyn_cast<SCEVConstant>(Delta);
-  if (const SCEVAddExpr *Sum = dyn_cast<SCEVAddExpr>(Delta)) {
-    // If Delta is a sum of products, we may be able to make further progress.
-    for (const SCEV *Operand : Sum->operands()) {
-      if (isa<SCEVConstant>(Operand)) {
-        assert(!Constant && "Surprised to find multiple constants");
-        Constant = cast<SCEVConstant>(Operand);
-      } else if (const SCEVMulExpr *Product = dyn_cast<SCEVMulExpr>(Operand)) {
-        // Search for constant operand to participate in GCD;
-        // If none found; return false.
-        std::optional<APInt> ConstOp = getConstanCoefficient(Product);
-        if (!ConstOp)
-          return false;
-        ExtraGCD = APIntOps::GreatestCommonDivisor(ExtraGCD, ConstOp->abs());
-      } else
-        return false;
-    }
-  }
   if (!Constant)
     return false;
   APInt ConstDelta = cast<SCEVConstant>(Constant)->getAPInt();
