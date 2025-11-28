@@ -747,6 +747,20 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
                                          ArrayRef<const SCEV *> Sizes,
                                          ArrayRef<const SCEV *> Subscripts,
                                          const Value *Ptr) {
+  // Sizes and Subscripts are as follows:
+  //
+  //   Sizes:      [UNK][S_2]...[S_n]
+  //   Subscripts: [I_1][I_2]...[I_n]
+  //
+  // where the size of the outermost dimension is unknown (UNK).
+
+  auto MulOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
+    if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/true, A, B))
+      return nullptr;
+    return SE.getMulExpr(A, B);
+  };
+
+  // Range check: 0 <= I_k < S_k for k = 2..n.
   for (size_t I = 1; I < Sizes.size(); ++I) {
     const SCEV *Size = Sizes[I - 1];
     const SCEV *Subscript = Subscripts[I];
@@ -755,6 +769,43 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
     if (!isKnownLessThan(&SE, Subscript, Size))
       return false;
   }
+
+  // The offset computation is as follows:
+  //
+  //   Offset = I_n +
+  //            S_n * I_{n-1} +
+  //            ... +
+  //            (S_2 * ... * S_n) * I_1
+  //
+  // Regarding this as a function from (I_1, I_2, ..., I_n) to integers, it
+  // must be injective. To guarantee it, the above calculation must not
+  // overflow. Since we have already checked that 0 <= I_k < S_k for k = 2..n,
+  // the minimum and maximum values occur in the following cases:
+  //
+  //   Min = [I_1][0]...[0] = S_2 * ... * S_n * I_1
+  //   Max = [I_1][S_2-1]...[S_n-1]
+  //       = (S_2 * ... * S_n) * I_1 +
+  //         (S_2 * ... * S_{n-1}) * (S_2 - 1) +
+  //         ... +
+  //         (S_n - 1)
+  //       = (S_2 * ... * S_n) * I_1 +
+  //         (S_2 * ... * S_n) - 1  (can be proved by induction)
+  //
+  const SCEV *Prod = SE.getOne(Sizes[0]->getType());
+  for (const SCEV *Size : drop_end(Sizes)) {
+    Prod = MulOverflow(Prod, Size);
+    if (!Prod)
+      return false;
+  }
+  const SCEV *Min = MulOverflow(Prod, Subscripts[0]);
+  if (!Min)
+    return false;
+
+  // Over-approximate Max as Prod * I_1 + Prod (ignoring the -1).
+  if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/true, Min,
+                          Subscripts[0]))
+    return false;
+
   return true;
 }
 
