@@ -949,6 +949,12 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
       "[aaaaaaaaaaaaaaaaaaaaaaaaa\n"
       "    aaaaaaaaaaaaaaaaa:aaaaaaaa\n"
       "                  aaa:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa];");
+  verifyFormat("[objectName\n"
+               "    respondsToSelector:\n"
+               "        @selector(\n"
+               "            somelonglonglonglongnameeeeeeee:\n"
+               "            loooooooooanotherlonglonglonglongnametopush:\n"
+               "            otherlongnameforlimit:)];");
 
   Style = getChromiumStyle(FormatStyle::LK_ObjC);
   Style.ColumnLimit = 80;

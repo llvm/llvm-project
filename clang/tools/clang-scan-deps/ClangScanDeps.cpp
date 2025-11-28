@@ -87,7 +87,7 @@ static std::string ModuleFilesDir;
 static bool EagerLoadModules;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
-static std::optional<std::string> ModuleName;
+static std::optional<std::string> ModuleNames;
 static std::vector<std::string> ModuleDepTargets;
 static std::string TranslationUnitFile;
 static bool DeprecatedDriverCommand;
@@ -106,6 +106,7 @@ static constexpr bool DoRoundTripDefault = false;
 #endif
 
 static bool RoundTripArgs = DoRoundTripDefault;
+static bool VerbatimArgs = false;
 
 static void ParseArgs(int argc, char **argv) {
   ScanDepsOptTable Tbl;
@@ -204,8 +205,8 @@ static void ParseArgs(int argc, char **argv) {
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_compilation_database_EQ))
     CompilationDB = A->getValue();
 
-  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_name_EQ))
-    ModuleName = A->getValue();
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_names_EQ))
+    ModuleNames = A->getValue();
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_dependency_target_EQ))
     ModuleDepTargets.emplace_back(A->getValue());
@@ -238,6 +239,8 @@ static void ParseArgs(int argc, char **argv) {
   Verbose = Args.hasArg(OPT_verbose);
 
   RoundTripArgs = Args.hasArg(OPT_round_trip_args);
+
+  VerbatimArgs = Args.hasArg(OPT_verbatim_args);
 
   if (const llvm::opt::Arg *A = Args.getLastArgNoClaim(OPT_DASH_DASH))
     CommandLine.assign(A->getValues().begin(), A->getValues().end());
@@ -661,6 +664,16 @@ static bool handleModuleResult(StringRef ModuleName,
   return false;
 }
 
+static void handleErrorWithInfoString(StringRef Info, llvm::Error E,
+                                      SharedStream &OS, SharedStream &Errs) {
+  llvm::handleAllErrors(std::move(E), [&Info, &Errs](llvm::StringError &Err) {
+    Errs.applyLocked([&](raw_ostream &OS) {
+      OS << "Error: " << Info << ":\n";
+      OS << Err.getMessage();
+    });
+  });
+}
+
 class P1689Deps {
 public:
   void printDependencies(raw_ostream &OS) {
@@ -883,14 +896,16 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   llvm::cl::PrintOptionValues();
 
-  // Expand response files in advance, so that we can "see" all the arguments
-  // when adjusting below.
-  Compilations = expandResponseFiles(std::move(Compilations),
-                                     llvm::vfs::getRealFileSystem());
+  if (!VerbatimArgs) {
+    // Expand response files in advance, so that we can "see" all the arguments
+    // when adjusting below.
+    Compilations = expandResponseFiles(std::move(Compilations),
+                                       llvm::vfs::getRealFileSystem());
 
-  Compilations = inferTargetAndDriverMode(std::move(Compilations));
+    Compilations = inferTargetAndDriverMode(std::move(Compilations));
 
-  Compilations = inferToolLocation(std::move(Compilations));
+    Compilations = inferToolLocation(std::move(Compilations));
+  }
 
   // The command options are rewritten to run Clang in preprocessor only mode.
   auto AdjustingCompilations =
@@ -898,7 +913,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           std::move(Compilations));
   ResourceDirectoryCache ResourceDirCache;
 
-  AdjustingCompilations->appendArgumentsAdjuster(
+  auto ArgsAdjuster =
       [&ResourceDirCache](const tooling::CommandLineArguments &Args,
                           StringRef FileName) {
         std::string LastO;
@@ -960,7 +975,10 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         }
         AdjustedArgs.insert(AdjustedArgs.end(), FlagsEnd, Args.end());
         return AdjustedArgs;
-      });
+      };
+
+  if (!VerbatimArgs)
+    AdjustingCompilations->appendArgumentsAdjuster(ArgsAdjuster);
 
   SharedStream Errs(llvm::errs());
 
@@ -1000,7 +1018,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   };
 
   if (Format == ScanningOutputFormat::Full)
-    FD.emplace(!ModuleName ? Inputs.size() : 0);
+    FD.emplace(!ModuleNames ? Inputs.size() : 0);
 
   std::atomic<size_t> NumStatusCalls = 0;
   std::atomic<size_t> NumOpenFileForReadCalls = 0;
@@ -1074,13 +1092,48 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                                              MakeformatOS, Errs))
             HadErrors = true;
         }
-      } else if (ModuleName) {
-        auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
-            *ModuleName, Input->CommandLine, CWD, AlreadySeenModules,
-            LookupOutput);
-        if (handleModuleResult(*ModuleName, MaybeModuleDepsGraph, *FD,
-                               LocalIndex, DependencyOS, Errs))
-          HadErrors = true;
+      } else if (ModuleNames) {
+        StringRef ModuleNameRef(*ModuleNames);
+        SmallVector<StringRef> Names;
+        ModuleNameRef.split(Names, ',');
+
+        if (Names.size() == 1) {
+          auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
+              Names[0], Input->CommandLine, CWD, AlreadySeenModules,
+              LookupOutput);
+          if (handleModuleResult(Names[0], MaybeModuleDepsGraph, *FD,
+                                 LocalIndex, DependencyOS, Errs))
+            HadErrors = true;
+        } else {
+          if (llvm::Error Err =
+                  WorkerTool.initializeCompilerInstanceWithContext(
+                      CWD, Input->CommandLine)) {
+            handleErrorWithInfoString(
+                "Compiler instance with context setup error", std::move(Err),
+                DependencyOS, Errs);
+            HadErrors = true;
+            continue;
+          }
+
+          for (auto N : Names) {
+            auto MaybeModuleDepsGraph =
+                WorkerTool.computeDependenciesByNameWithContext(
+                    N, AlreadySeenModules, LookupOutput);
+            if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
+                                   DependencyOS, Errs)) {
+              HadErrors = true;
+              break;
+            }
+          }
+
+          if (llvm::Error Err =
+                  WorkerTool.finalizeCompilerInstanceWithContext()) {
+            handleErrorWithInfoString(
+                "Compiler instance with context finialization error",
+                std::move(Err), DependencyOS, Errs);
+            HadErrors = true;
+          }
+        }
       } else {
         std::unique_ptr<llvm::MemoryBuffer> TU;
         std::optional<llvm::MemoryBufferRef> TUBuffer;

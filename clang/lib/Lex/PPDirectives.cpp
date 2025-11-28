@@ -4018,7 +4018,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
       this->LookupEmbedFile(Filename, isAngled, true, LookupFromFile);
   if (!MaybeFileRef) {
     // could not find file
-    if (Callbacks && Callbacks->EmbedFileNotFound(OriginalFilename)) {
+    if (Callbacks && Callbacks->EmbedFileNotFound(Filename)) {
       return;
     }
     Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;

@@ -201,6 +201,9 @@ struct Configuration {
   // Used for /thinlto-remote-compiler:<path>
   StringRef dtltoCompiler;
 
+  // Used for /thinlto-remote-compiler-prepend-arg:<arg>
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerPrependArgs;
+
   // Used for /thinlto-remote-compiler-arg:<arg>
   llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
 

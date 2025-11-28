@@ -86,7 +86,7 @@ namespace {
   // All possible address modes, plus some.
 class Address {
 public:
-  using BaseKind = enum { RegBase, FrameIndexBase };
+  enum BaseKind { RegBase, FrameIndexBase };
 
 private:
   BaseKind Kind = RegBase;

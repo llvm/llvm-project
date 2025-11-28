@@ -391,7 +391,6 @@ def Fptoui: pf1<fp_to_uint>;
 def Sitofp: pf1<sint_to_fp>;
 def Uitofp: pf1<uint_to_fp>;
 
-
 // --(1) Immediate -------------------------------------------------------
 //
 
@@ -474,6 +473,18 @@ def: OpR_R_pat<F2_conv_df2uw_chop, pf1<fp_to_uint>, i32, F64>;
 def: OpR_R_pat<F2_conv_sf2ud_chop, pf1<fp_to_uint>, i64, F32>;
 def: OpR_R_pat<F2_conv_df2ud_chop, pf1<fp_to_uint>, i64, F64>;
 
+def: Pat<(i32 (fp_to_bf16 F32:$v)),
+         (C2_mux (F2_sfclass F32:$v, 0x10), (A2_tfrsi(i32 0x7fff)),
+           (C2_mux
+             (C2_cmpeq
+               (A2_and F32:$v, (A2_tfrsi (i32 0x1FFFF))),
+               (A2_tfrsi (i32 0x08000))),
+             (A2_and (A2_asrh F32:$v), (A2_tfrsi (i32 65535))),
+             (A2_and
+               (A2_asrh
+                 (A2_add F32:$v, (A2_and F32:$v, (A2_tfrsi (i32 0x8000))))),
+                 (A2_tfrsi (i32 65535))))
+         )>;
 // Bitcast is different than [fp|sint|uint]_to_[sint|uint|fp].
 def: Pat<(i32 (bitconvert F32:$v)), (I32:$v)>;
 def: Pat<(f32 (bitconvert I32:$v)), (F32:$v)>;
@@ -3433,6 +3444,19 @@ let AddedComplexity = 100 in {
   def: Pat<(i1 (seteq (int_hexagon_S4_stored_locked I32:$Rs, I64:$Rt), 0)),
            (C2_not (S4_stored_locked I32:$Rs, I64:$Rt))>;
 }
+
+multiclass FloatClass<SDPatternOperator IntOp, InstHexagon MI,
+                      PatFrag RegPred> {
+  let AddedComplexity = 100 in {
+    def: Pat<(i1 (seteq (IntOp RegPred:$Rs, u5_0ImmPred_timm:$u5), 0)),
+             (C2_not (MI RegPred:$Rs, u5_0ImmPred_timm:$u5))>;
+    def: Pat<(i1 (setne (IntOp RegPred:$Rs, u5_0ImmPred_timm:$u5), 0)),
+             (MI RegPred:$Rs, u5_0ImmPred_timm:$u5)>;
+  }
+}
+
+defm : FloatClass<int_hexagon_F2_sfclass, F2_sfclass, F32>;
+defm : FloatClass<int_hexagon_F2_dfclass, F2_dfclass, F64>;
 
 def: Pat<(int_hexagon_instrprof_custom (HexagonAtPcrel tglobaladdr:$addr), u32_0ImmPred:$I),
          (PS_call_instrprof_custom tglobaladdr:$addr, imm:$I)>;

@@ -111,7 +111,6 @@ define void @test_sub_cmp(ptr align 8 %start, ptr %end) {
 ; N32-NEXT:    [[CMP_ENTRY:%.*]] = icmp eq ptr [[START]], [[END]]
 ; N32-NEXT:    br i1 [[CMP_ENTRY]], label %[[EXIT:.*]], label %[[LOOP_HEADER_PREHEADER:.*]]
 ; N32:       [[LOOP_HEADER_PREHEADER]]:
-; N32-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[PTR_DIFF]], i64 1)
 ; N32-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; N32:       [[LOOP_HEADER]]:
 ; N32-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[LOOP_HEADER_PREHEADER]] ]
@@ -119,7 +118,7 @@ define void @test_sub_cmp(ptr align 8 %start, ptr %end) {
 ; N32-NEXT:    br i1 [[C_1]], label %[[EXIT_EARLY:.*]], label %[[LOOP_LATCH]]
 ; N32:       [[LOOP_LATCH]]:
 ; N32-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
-; N32-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_NEXT]], [[UMAX]]
+; N32-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_NEXT]], [[PTR_DIFF]]
 ; N32-NEXT:    br i1 [[EXITCOND]], label %[[LOOP_HEADER]], label %[[EXIT_LOOPEXIT:.*]]
 ; N32:       [[EXIT_EARLY]]:
 ; N32-NEXT:    br label %[[EXIT]]
@@ -162,13 +161,17 @@ define void @test_ptr_diff_with_assume(ptr align 8 %start, ptr align 8 %end, ptr
 ; CHECK-NEXT:    [[PTR_DIFF:%.*]] = sub i64 [[START_INT]], [[END_INT]]
 ; CHECK-NEXT:    [[DIFF_CMP:%.*]] = icmp ult i64 [[PTR_DIFF]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[DIFF_CMP]])
+; CHECK-NEXT:    [[COMPUTED_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[PTR_DIFF]]
 ; CHECK-NEXT:    [[ENTRY_CMP:%.*]] = icmp eq ptr [[START]], [[END]]
 ; CHECK-NEXT:    br i1 [[ENTRY_CMP]], label %[[EXIT:.*]], label %[[LOOP_BODY_PREHEADER:.*]]
 ; CHECK:       [[LOOP_BODY_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP_BODY:.*]]
 ; CHECK:       [[LOOP_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[IV_NEXT:%.*]], %[[LOOP_BODY]] ], [ [[START]], %[[LOOP_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 true, label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP_BODY]]
+; CHECK-NEXT:    [[IV_NEXT]] = getelementptr i8, ptr [[IV]], i64 1
+; CHECK-NEXT:    [[LOOP_CMP:%.*]] = icmp eq ptr [[IV_NEXT]], [[COMPUTED_END]]
+; CHECK-NEXT:    br i1 [[LOOP_CMP]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP_BODY]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -182,13 +185,17 @@ define void @test_ptr_diff_with_assume(ptr align 8 %start, ptr align 8 %end, ptr
 ; N32-NEXT:    [[PTR_DIFF:%.*]] = sub i64 [[START_INT]], [[END_INT]]
 ; N32-NEXT:    [[DIFF_CMP:%.*]] = icmp ult i64 [[PTR_DIFF]], 2
 ; N32-NEXT:    call void @llvm.assume(i1 [[DIFF_CMP]])
+; N32-NEXT:    [[COMPUTED_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[PTR_DIFF]]
 ; N32-NEXT:    [[ENTRY_CMP:%.*]] = icmp eq ptr [[START]], [[END]]
 ; N32-NEXT:    br i1 [[ENTRY_CMP]], label %[[EXIT:.*]], label %[[LOOP_BODY_PREHEADER:.*]]
 ; N32:       [[LOOP_BODY_PREHEADER]]:
 ; N32-NEXT:    br label %[[LOOP_BODY:.*]]
 ; N32:       [[LOOP_BODY]]:
+; N32-NEXT:    [[IV:%.*]] = phi ptr [ [[IV_NEXT:%.*]], %[[LOOP_BODY]] ], [ [[START]], %[[LOOP_BODY_PREHEADER]] ]
 ; N32-NEXT:    [[TMP0:%.*]] = call i1 @cond()
-; N32-NEXT:    br i1 true, label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP_BODY]]
+; N32-NEXT:    [[IV_NEXT]] = getelementptr i8, ptr [[IV]], i64 1
+; N32-NEXT:    [[LOOP_CMP:%.*]] = icmp eq ptr [[IV_NEXT]], [[COMPUTED_END]]
+; N32-NEXT:    br i1 [[LOOP_CMP]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP_BODY]]
 ; N32:       [[EXIT_LOOPEXIT]]:
 ; N32-NEXT:    br label %[[EXIT]]
 ; N32:       [[EXIT]]:

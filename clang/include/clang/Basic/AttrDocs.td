@@ -3450,9 +3450,9 @@ Mac, and BSD. This attribute has no effect on other targets.
 def MSABIDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{
-On non-Windows x86_64 targets, this attribute changes the calling convention of
-a function to match the default convention used on Windows x86_64. This
-attribute has no effect on Windows targets or non-x86_64 targets.
+On non-Windows x86_64 and aarch64 targets, this attribute changes the calling convention of
+a function to match the default convention used on Windows. This
+attribute has no effect on Windows targets or non-x86_64, non-aarch64 targets.
   }];
 }
 
@@ -4295,17 +4295,17 @@ used by other languages. (This prefix is also added to the standard Itanium
 C++ ABI prefix on "mangled" symbol names, so that e.g. on such targets the true
 symbol name for a C++ variable declared as ``int cppvar;`` would be
 ``__Z6cppvar``; note the two underscores.)  This prefix is *not* added to the
-symbol names specified by the ``asm`` attribute; programmers wishing to match a
-C symbol name must compensate for this.
+symbol names specified by the ``__asm`` attribute; programmers wishing to match
+a C symbol name must compensate for this.
 
 For example, consider the following C code:
 
 .. code-block:: c
 
-  int var1 asm("altvar") = 1;  // "altvar" in symbol table.
+  int var1 __asm("altvar") = 1;  // "altvar" in symbol table.
   int var2 = 1; // "_var2" in symbol table.
 
-  void func1(void) asm("altfunc");
+  void func1(void) __asm("altfunc");
   void func1(void) {} // "altfunc" in symbol table.
   void func2(void) {} // "_func2" in symbol table.
 
@@ -5244,6 +5244,23 @@ deallocation function. When this form is used, it enables the compiler to
 diagnose when the incorrect deallocation function is used with this variable.
 However the associated warning, spelled `-Wmismatched-dealloc` in GCC, is not
 yet implemented in clang.
+  }];
+}
+
+def MallocSpanDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "malloc_span";
+  let Content = [{
+The ``malloc_span`` attribute can be used to mark that a function which acts
+like a system memory allocation function and returns a span-like structure,
+where the returned memory range does not alias storage from any other object
+accessible to the caller.
+
+In this context, a span-like structure is assumed to have two non-static data
+members, one of which is a pointer to the start of the allocated memory and
+the other one is either an integer type containing the size of the actually
+allocated memory or a pointer to the end of the allocated region. Note, static
+data members do not impact whether a type is span-like or not.
   }];
 }
 
@@ -8672,38 +8689,6 @@ randomized.
   }];
 }
 
-def HLSLSV_GroupThreadIDDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_GroupThreadID`` semantic, when applied to an input parameter, specifies which
-individual thread within a thread group is executing in. This attribute is
-only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupthreadid
-  }];
-}
-
-def HLSLSV_GroupIDDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_GroupID`` semantic, when applied to an input parameter, specifies which
-thread group a shader is executing in. This attribute is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupid
-  }];
-}
-
-def HLSLSV_GroupIndexDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_GroupIndex`` semantic, when applied to an input parameter, specifies a
-data binding to map the group index to the specified parameter. This attribute
-is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-groupindex
-  }];
-}
-
 def HLSLResourceBindingDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8747,35 +8732,6 @@ Examples:
   }
 
 The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-packoffset
-  }];
-}
-
-def HLSLSV_DispatchThreadIDDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_DispatchThreadID`` semantic, when applied to an input parameter,
-specifies a data binding to map the global thread offset within the Dispatch
-call (per dimension of the group) to the specified parameter.
-When applied to a field of a struct, the data binding is specified to the field
-when the struct is used as a parameter type.
-The semantic on the field is ignored when not used as a parameter.
-This attribute is only supported in compute shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-dispatchthreadid
-  }];
-}
-
-def HLSLSV_PositionDocs : Documentation {
-  let Category = DocHLSLSemantics;
-  let Content = [{
-The ``SV_Position`` semantic, when applied to an input parameter in a pixel
-shader, contains the location of the pixel center (x, y) in screen space.
-This semantic can be applied to the parameter, or a field in a struct used
-as an input parameter.
-This attribute is supported as an input in pixel, hull, domain and mesh shaders.
-This attribute is supported as an output in vertex, geometry and domain shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
   }];
 }
 

@@ -21,6 +21,28 @@ define i16 @selective_shift_16(i32 %mask, i16 %upper, i16 %lower) {
   ret i16 %trunc
 }
 
+; Will assert if InsertPoint is not set before creating an instruction
+; with IRBuilder
+define i16 @selective_shift_16_insertpt(i32 %mask, i16 %upper, i16 %lower) {
+; CHECK-LABEL: define i16 @selective_shift_16_insertpt(
+; CHECK-SAME: i32 [[MASK:%.*]], i16 [[UPPER:%.*]], i16 [[LOWER:%.*]]) {
+; CHECK-NEXT:    [[MASK_BIT:%.*]] = and i32 [[MASK]], 16
+; CHECK-NEXT:    [[MASK_BIT_Z:%.*]] = icmp eq i32 [[MASK_BIT]], 0
+; CHECK-NEXT:    [[SEL_V:%.*]] = select i1 [[MASK_BIT_Z]], i16 [[LOWER]], i16 [[UPPER]]
+; CHECK-NEXT:    [[ADD_ONE:%.*]] = add i16 [[SEL_V]], 1
+; CHECK-NEXT:    ret i16 [[ADD_ONE]]
+;
+  %mask.bit = and i32 %mask, 16
+  %upper.zext = zext i16 %upper to i32
+  %upper.shl = shl nuw i32 %upper.zext, 16
+  %lower.zext = zext i16 %lower to i32
+  %pack = or disjoint i32 %upper.shl, %lower.zext
+  %sel = lshr i32 %pack, %mask.bit
+  %add.one = add i32 %sel, 1
+  %trunc = trunc i32 %add.one to i16
+  ret i16 %trunc
+}
+
 define i16 @selective_shift_16.commute(i32 %mask, i16 %upper, i16 %lower) {
 ; CHECK-LABEL: define i16 @selective_shift_16.commute(
 ; CHECK-SAME: i32 [[MASK:%.*]], i16 [[UPPER:%.*]], i16 [[LOWER:%.*]]) {

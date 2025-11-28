@@ -297,6 +297,10 @@ public:
 
   lldb::InstructionSP GetInstructionAtIndex(size_t idx) const;
 
+  llvm::ArrayRef<lldb::InstructionSP> Instructions() const {
+    return m_instructions;
+  }
+
   /// Get the instruction at the given address.
   ///
   /// \return
@@ -577,13 +581,13 @@ class VariableAnnotator {
   };
 
   // Live state from the previous instruction, keyed by Variable::GetID().
-  llvm::DenseMap<lldb::user_id_t, VarState> Live_;
+  llvm::DenseMap<lldb::user_id_t, VarState> m_live_vars;
 
 public:
-  /// Compute annotation strings for a single instruction and update `Live_`.
-  /// Returns only the events that should be printed *at this instruction*.
-  std::vector<std::string> annotate(Instruction &inst, Target &target,
-                                    const lldb::ModuleSP &module_sp);
+  /// Compute annotation strings for a single instruction and update
+  /// `m_live_vars`. Returns only the events that should be printed *at this
+  /// instruction*.
+  std::vector<std::string> Annotate(Instruction &inst);
 };
 
 } // namespace lldb_private

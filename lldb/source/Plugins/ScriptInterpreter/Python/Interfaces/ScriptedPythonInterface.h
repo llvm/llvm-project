@@ -188,8 +188,13 @@ public:
       // This addresses the cases where the embedded interpreter session
       // dictionary is passed to the extension initializer which is not used
       // most of the time.
+      // Note, though none of our API's suggest defining the interfaces with
+      // varargs, we have some extant clients that were doing that.  To keep
+      // from breaking them, we just say putting a varargs in these signatures
+      // turns off argument checking.
       size_t num_args = sizeof...(Args);
-      if (num_args != arg_info->max_positional_args) {
+      if (arg_info->max_positional_args != PythonCallable::ArgInfo::UNBOUNDED &&
+          num_args != arg_info->max_positional_args) {
         if (num_args != arg_info->max_positional_args - 1)
           return create_error("Passed arguments ({0}) doesn't match the number "
                               "of expected arguments ({1}).",
@@ -444,6 +449,14 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::ThreadSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::StackFrameListSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::ThreadPlanSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
@@ -626,6 +639,11 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 template <>
 lldb::DescriptionLevel
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DescriptionLevel>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::StackFrameListSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
     python::PythonObject &p, Status &error);
 
 } // namespace lldb_private

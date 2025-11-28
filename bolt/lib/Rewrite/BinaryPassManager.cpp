@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Rewrite/BinaryPassManager.h"
-#include "bolt/Passes/ADRRelaxationPass.h"
+#include "bolt/Passes/AArch64RelaxationPass.h"
 #include "bolt/Passes/Aligner.h"
 #include "bolt/Passes/AllocCombiner.h"
 #include "bolt/Passes/AsmDump.h"
@@ -129,10 +129,10 @@ static cl::opt<bool> PrintJTFootprintReduction(
     cl::desc("print function after jt-footprint-reduction pass"), cl::Hidden,
     cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-    PrintAdrRelaxation("print-adr-relaxation",
-                       cl::desc("print functions after ADR Relaxation pass"),
-                       cl::Hidden, cl::cat(BoltOptCategory));
+static cl::opt<bool> PrintAArch64Relaxation(
+    "print-adr-ldr-relaxation",
+    cl::desc("print functions after ADR/LDR Relaxation pass"), cl::Hidden,
+    cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
     PrintLongJmp("print-longjmp",
@@ -517,7 +517,7 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   if (BC.isAArch64()) {
     Manager.registerPass(
-        std::make_unique<ADRRelaxationPass>(PrintAdrRelaxation));
+        std::make_unique<AArch64RelaxationPass>(PrintAArch64Relaxation));
 
     // Tighten branches according to offset differences between branch and
     // targets. No extra instructions after this pass, otherwise we may have
