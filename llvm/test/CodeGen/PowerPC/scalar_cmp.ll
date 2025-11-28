@@ -648,6 +648,28 @@ entry:
   ret double %z.y
 }
 
+define double @onecmp1_fast(double %a, double %y, double %z) {
+; P8-LABEL: onecmp1_fast:
+; P8:       # %bb.0: # %entry
+; P8-NEXT:    vspltisw v2, -1
+; P8-NEXT:    xvcvsxwdp vs0, vs34
+; P8-NEXT:    xsadddp f0, f1, f0
+; P8-NEXT:    fsel f1, f0, f2, f3
+; P8-NEXT:    blr
+;
+; P9-LABEL: onecmp1_fast:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    vspltisw v2, -1
+; P9-NEXT:    xvcvsxwdp vs0, vs34
+; P9-NEXT:    xsadddp f0, f1, f0
+; P9-NEXT:    fsel f1, f0, f2, f3
+; P9-NEXT:    blr
+entry:
+  %cmp = fcmp nnan ninf nsz ult double %a, 1.000000e+00
+  %z.y = select i1 %cmp, double %z, double %y
+  ret double %z.y
+}
+
 define double @onecmp2(double %a, double %y, double %z) {
 ; P8-LABEL: onecmp2:
 ; P8:       # %bb.0: # %entry
@@ -678,6 +700,28 @@ entry:
   ret double %y.z
 }
 
+define double @onecmp2_fast(double %a, double %y, double %z) {
+; P8-LABEL: onecmp2_fast:
+; P8:       # %bb.0: # %entry
+; P8-NEXT:    vspltisw v2, 1
+; P8-NEXT:    xvcvsxwdp vs0, vs34
+; P8-NEXT:    xssubdp f0, f0, f1
+; P8-NEXT:    fsel f1, f0, f3, f2
+; P8-NEXT:    blr
+;
+; P9-LABEL: onecmp2_fast:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    vspltisw v2, 1
+; P9-NEXT:    xvcvsxwdp vs0, vs34
+; P9-NEXT:    xssubdp f0, f0, f1
+; P9-NEXT:    fsel f1, f0, f3, f2
+; P9-NEXT:    blr
+entry:
+  %cmp = fcmp nnan ninf nsz ogt double %a, 1.000000e+00
+  %y.z = select i1 %cmp, double %y, double %z
+  ret double %y.z
+}
+
 define double @onecmp3(double %a, double %y, double %z) {
 ; P8-LABEL: onecmp3:
 ; P8:       # %bb.0: # %entry
@@ -704,6 +748,32 @@ define double @onecmp3(double %a, double %y, double %z) {
 ; P9-NEXT:    blr
 entry:
   %cmp = fcmp oeq double %a, 1.000000e+00
+  %y.z = select i1 %cmp, double %y, double %z
+  ret double %y.z
+}
+
+define double @onecmp3_fast(double %a, double %y, double %z) {
+; P8-LABEL: onecmp3_fast:
+; P8:       # %bb.0: # %entry
+; P8-NEXT:    vspltisw v2, -1
+; P8-NEXT:    xvcvsxwdp vs0, vs34
+; P8-NEXT:    xsadddp f0, f1, f0
+; P8-NEXT:    fsel f1, f0, f2, f3
+; P8-NEXT:    xsnegdp f0, f0
+; P8-NEXT:    fsel f1, f0, f1, f3
+; P8-NEXT:    blr
+;
+; P9-LABEL: onecmp3_fast:
+; P9:       # %bb.0: # %entry
+; P9-NEXT:    vspltisw v2, -1
+; P9-NEXT:    xvcvsxwdp vs0, vs34
+; P9-NEXT:    xsadddp f0, f1, f0
+; P9-NEXT:    fsel f1, f0, f2, f3
+; P9-NEXT:    xsnegdp f0, f0
+; P9-NEXT:    fsel f1, f0, f1, f3
+; P9-NEXT:    blr
+entry:
+  %cmp = fcmp nnan ninf nsz oeq double %a, 1.000000e+00
   %y.z = select i1 %cmp, double %y, double %z
   ret double %y.z
 }
