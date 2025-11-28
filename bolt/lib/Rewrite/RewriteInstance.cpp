@@ -3507,6 +3507,7 @@ void RewriteInstance::disassembleFunctions() {
     if (!shouldDisassemble(Function))
       continue;
 
+    Function.validateInternalBranch();
     Function.postProcessEntryPoints();
     Function.postProcessJumpTables();
   }

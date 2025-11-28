@@ -1438,6 +1438,9 @@ void BinaryContext::processInterproceduralReferences() {
       continue;
     }
 
+    if (!Function.validateExternalBranch(Address))
+      continue;
+
     // Check if address falls in function padding space - this could be
     // unmarked data in code. In this case adjust the padding space size.
     ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
