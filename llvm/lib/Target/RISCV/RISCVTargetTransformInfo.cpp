@@ -1227,8 +1227,6 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         : Instruction::Store;
 
   Type *DataTy = MICA.getDataType();
-  const Value *Ptr = MICA.getPointer();
-  bool VariableMask = MICA.getVariableMask();
   Align Alignment = MICA.getAlignment();
   const Instruction *I = MICA.getInst();
 
