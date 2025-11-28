@@ -8,6 +8,7 @@
 
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "RISCVInternalRelocations.h"
 #include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -345,8 +346,15 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB_ULEB128:
     return RE_RISCV_LEB128;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
-             << ") against symbol " << &s;
+    if (type.v & INTERNAL_RISCV_VENDOR_MASK) {
+      Err(ctx) << getErrorLoc(ctx, loc)
+               << "unsupported vendor-specific relocation " << type
+               << " against symbol " << &s;
+      return R_NONE;
+    }
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation ("
+             << (type.v & ~INTERNAL_RISCV_VENDOR_MASK) << ") against symbol "
+             << &s;
     return R_NONE;
   }
 }
@@ -859,7 +867,7 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
 
   std::fill_n(aux.relocTypes.get(), relocs.size(), R_RISCV_NONE);
   aux.writes.clear();
-  for (auto [i, r] : llvm::enumerate(relocs)) {
+  for (auto [i, r] : llvm::enumerate(riscv_vendor_relocs(relocs))) {
     const uint64_t loc = secAddr + r.offset - delta;
     uint32_t &cur = aux.relocDeltas[i], remove = 0;
     switch (r.type) {
@@ -1503,12 +1511,19 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       rvVendor = sym.getName();
       continue;
     } else if (!rvVendor.empty()) {
-      Err(ctx) << getErrorLoc(ctx, loc)
-               << "unknown vendor-specific relocation (" << type.v
-               << ") in namespace '" << rvVendor << "' against symbol '" << &sym
-               << "'";
+      uint32_t VendorFlag = getRISCVVendorRelMarker(rvVendor);
+      if (!VendorFlag) {
+        Err(ctx) << getErrorLoc(ctx, loc)
+                 << "unknown vendor-specific relocation (" << type.v
+                 << ") in namespace '" << rvVendor << "' against symbol '"
+                 << &sym << "'";
+        rvVendor = "";
+        continue;
+      }
+
       rvVendor = "";
-      continue;
+      assert((type.v < 256) && "Out of range relocation detected!");
+      type.v |= VendorFlag;
     }
 
     rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
@@ -1533,3 +1548,21 @@ template <class ELFT> void RISCV::scanSection1(InputSectionBase &sec) {
 void RISCV::scanSection(InputSectionBase &sec) {
   invokeELFT(scanSection1, sec);
 }
+
+namespace lld::elf {
+uint32_t getRISCVVendorRelMarker(StringRef rvVendor) {
+  return StringSwitch<uint32_t>(rvVendor)
+      .Case("QUALCOMM", INTERNAL_RISCV_VENDOR_QUALCOMM)
+      .Case("ANDES", INTERNAL_RISCV_VENDOR_ANDES)
+      .Default(0);
+}
+
+std::optional<StringRef> getRISCVVendorString(RelType ty) {
+  if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_QUALCOMM)
+    return "QUALCOMM";
+  if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_ANDES)
+    return "ANDES";
+  return std::nullopt;
+}
+
+} // namespace lld::elf
