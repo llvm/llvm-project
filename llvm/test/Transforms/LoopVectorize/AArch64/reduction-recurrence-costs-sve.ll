@@ -59,8 +59,6 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; VSCALEFORTUNING2-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 8
 ; VSCALEFORTUNING2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
 ; VSCALEFORTUNING2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[Z]], i64 0
-; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i64 0
 ; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; VSCALEFORTUNING2-NEXT:    [[TMP7:%.*]] = add i64 [[Y]], 1
@@ -68,7 +66,9 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; VSCALEFORTUNING2-NEXT:    [[TMP9:%.*]] = lshr <vscale x 4 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
 ; VSCALEFORTUNING2-NEXT:    [[TMP10:%.*]] = shl <vscale x 4 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
 ; VSCALEFORTUNING2-NEXT:    [[TMP11:%.*]] = or <vscale x 4 x i32> [[TMP9]], [[TMP10]]
-; VSCALEFORTUNING2-NEXT:    [[TMP12:%.*]] = or <vscale x 4 x i32> [[BROADCAST_SPLAT2]], [[BROADCAST_SPLAT]]
+; VSCALEFORTUNING2-NEXT:    [[TMP16:%.*]] = or i32 [[Z]], [[X]]
+; VSCALEFORTUNING2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP16]], i64 0
+; VSCALEFORTUNING2-NEXT:    [[TMP12:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; VSCALEFORTUNING2-NEXT:    [[TMP13:%.*]] = and <vscale x 4 x i32> [[TMP12]], splat (i32 1)
 ; VSCALEFORTUNING2-NEXT:    [[TMP14:%.*]] = xor <vscale x 4 x i32> [[TMP13]], splat (i32 1)
 ; VSCALEFORTUNING2-NEXT:    [[TMP15:%.*]] = zext <vscale x 4 x i32> [[TMP14]] to <vscale x 4 x i64>
@@ -180,8 +180,6 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[Z]], i64 0
-; PRED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
@@ -195,7 +193,9 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-NEXT:    [[TMP13:%.*]] = lshr <vscale x 4 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
 ; PRED-NEXT:    [[TMP14:%.*]] = shl <vscale x 4 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
 ; PRED-NEXT:    [[TMP15:%.*]] = or <vscale x 4 x i32> [[TMP13]], [[TMP14]]
-; PRED-NEXT:    [[TMP16:%.*]] = or <vscale x 4 x i32> [[BROADCAST_SPLAT2]], [[BROADCAST_SPLAT]]
+; PRED-NEXT:    [[TMP20:%.*]] = or i32 [[Z]], [[X]]
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP20]], i64 0
+; PRED-NEXT:    [[TMP16:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT2]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP17:%.*]] = and <vscale x 4 x i32> [[TMP16]], splat (i32 1)
 ; PRED-NEXT:    [[TMP18:%.*]] = xor <vscale x 4 x i32> [[TMP17]], splat (i32 1)
 ; PRED-NEXT:    [[TMP19:%.*]] = zext <vscale x 4 x i32> [[TMP18]] to <vscale x 4 x i64>

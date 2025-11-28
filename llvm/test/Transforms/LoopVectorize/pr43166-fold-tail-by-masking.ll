@@ -88,10 +88,7 @@ define i64 @test2(i64 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[Y:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP1]], <4 x i64> splat (i64 77), <4 x i64> splat (i64 55)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -133,12 +130,9 @@ define i32 @test3(i64 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[Y:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[Y:%.*]], 0
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> splat (i32 55)
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:

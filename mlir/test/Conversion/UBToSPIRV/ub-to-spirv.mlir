@@ -19,3 +19,18 @@ func.func @check_poison() {
 }
 
 }
+
+// -----
+
+// No successful test because the dialect conversion framework does not convert
+// unreachable blocks.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Int8, Int16, Int64, Float16, Float64, Shader], []>, #spirv.resource_limits<>>
+} {
+func.func @check_unrechable() {
+// expected-error@+1{{cannot be used in reachable block}}
+  spirv.Unreachable
+}
+}

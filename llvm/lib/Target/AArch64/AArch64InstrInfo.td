@@ -645,29 +645,34 @@ def nontrunc_masked_store :
           (masked_st node:$val, node:$ptr, undef, node:$pred), [{
   return !cast<MaskedStoreSDNode>(N)->isTruncatingStore() &&
          cast<MaskedStoreSDNode>(N)->isUnindexed() &&
-         !cast<MaskedStoreSDNode>(N)->isNonTemporal();
+         !cast<MaskedStoreSDNode>(N)->isNonTemporal() &&
+         !cast<MaskedStoreSDNode>(N)->isCompressingStore();
 }]>;
 // truncating masked store fragments.
 def trunc_masked_store :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),
           (masked_st node:$val, node:$ptr, undef, node:$pred), [{
   return cast<MaskedStoreSDNode>(N)->isTruncatingStore() &&
-         cast<MaskedStoreSDNode>(N)->isUnindexed();
+         cast<MaskedStoreSDNode>(N)->isUnindexed() &&
+         !cast<MaskedStoreSDNode>(N)->isCompressingStore();
 }]>;
 def trunc_masked_store_i8 :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),
           (trunc_masked_store node:$val, node:$ptr, node:$pred), [{
-  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8 &&
+         !cast<MaskedStoreSDNode>(N)->isCompressingStore();
 }]>;
 def trunc_masked_store_i16 :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),
           (trunc_masked_store node:$val, node:$ptr, node:$pred), [{
-  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16 &&
+         !cast<MaskedStoreSDNode>(N)->isCompressingStore();
 }]>;
 def trunc_masked_store_i32 :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),
           (trunc_masked_store node:$val, node:$ptr, node:$pred), [{
-  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32 &&
+         !cast<MaskedStoreSDNode>(N)->isCompressingStore();
 }]>;
 
 def non_temporal_store :
@@ -675,7 +680,8 @@ def non_temporal_store :
           (masked_st node:$val, node:$ptr, undef, node:$pred), [{
   return !cast<MaskedStoreSDNode>(N)->isTruncatingStore() &&
          cast<MaskedStoreSDNode>(N)->isUnindexed() &&
-         cast<MaskedStoreSDNode>(N)->isNonTemporal();
+         cast<MaskedStoreSDNode>(N)->isNonTemporal() &&
+         !cast<MaskedStoreSDNode>(N)->isCompressingStore();
 }]>;
 
 multiclass masked_gather_scatter<PatFrags GatherScatterOp> {

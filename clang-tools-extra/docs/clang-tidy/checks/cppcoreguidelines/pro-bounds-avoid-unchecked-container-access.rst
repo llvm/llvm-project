@@ -31,7 +31,7 @@ excluded from this check (e.g.: ``std::map::operator[]``).
 This check enforces part of the `SL.con.3
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors>`
 guideline and is part of the `Bounds Safety (Bounds 4)
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-bounds-arrayindex>`
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-bounds-arrayindex>`
 profile from the C++ Core Guidelines.
 
 Options

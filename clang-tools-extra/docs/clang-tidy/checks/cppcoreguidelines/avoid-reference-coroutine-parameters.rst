@@ -18,5 +18,5 @@ Examples:
   }
 
 This check implements `CP.53
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rcoro-reference-parameters>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rcoro-reference-parameters>`_
 from the C++ Core Guidelines.
