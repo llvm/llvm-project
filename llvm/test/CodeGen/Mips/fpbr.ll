@@ -20,7 +20,7 @@ entry:
 ; FIXME: We ought to be able to transform not+bnez -> beqz
 ; GPR:           not      $[[GPRCC]], $[[GPRCC]]
 ; 32-GPR:        bnez     $[[GPRCC]], $BB0_2
-; 64-GPR:        bnezc    $[[GPRCC]], .LBB0_2
+; 64-GPR:        bnez     $[[GPRCC]], .LBB0_2
 
   %cmp = fcmp oeq float %f2, %f3
   br i1 %cmp, label %if.then, label %if.else
@@ -55,7 +55,7 @@ entry:
 ; GPR:           mfc1     $[[GPRCC:[0-9]+]], $[[FGRCC:f[0-9]+]]
 ; GPR-NOT:       not      $[[GPRCC]], $[[GPRCC]]
 ; 32-GPR:        bnez     $[[GPRCC]], $BB1_2
-; 64-GPR:        bnezc    $[[GPRCC]], .LBB1_2
+; 64-GPR:        bnez     $[[GPRCC]], .LBB1_2
 
   %cmp = fcmp olt float %f2, %f3
   br i1 %cmp, label %if.then, label %if.else
@@ -86,7 +86,7 @@ entry:
 ; GPR:           mfc1     $[[GPRCC:[0-9]+]], $[[FGRCC:f[0-9]+]]
 ; GPR-NOT:       not      $[[GPRCC]], $[[GPRCC]]
 ; 32-GPR:        beqz     $[[GPRCC]], $BB2_2
-; 64-GPR:        beqzc    $[[GPRCC]], .LBB2_2
+; 64-GPR:        beqz     $[[GPRCC]], .LBB2_2
 
   %cmp = fcmp ugt float %f2, %f3
   br i1 %cmp, label %if.else, label %if.then

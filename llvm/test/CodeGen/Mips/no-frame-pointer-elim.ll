@@ -12,9 +12,8 @@ define dso_local void @caller() nounwind "frame-pointer"="non-leaf" {
 ; STATIC-NEXT:    daddiu $sp, $sp, -16
 ; STATIC-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; STATIC-NEXT:    sd $fp, 0($sp) # 8-byte Folded Spill
-; STATIC-NEXT:    move $fp, $sp
 ; STATIC-NEXT:    jal callee
-; STATIC-NEXT:    nop
+; STATIC-NEXT:    move $fp, $sp
 ;
 ; PIC-LABEL: caller:
 ; PIC:       # %bb.0: # %entry
@@ -22,7 +21,6 @@ define dso_local void @caller() nounwind "frame-pointer"="non-leaf" {
 ; PIC-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
 ; PIC-NEXT:    sd $fp, 16($sp) # 8-byte Folded Spill
 ; PIC-NEXT:    sd $gp, 8($sp) # 8-byte Folded Spill
-; PIC-NEXT:    move $fp, $sp
 ; PIC-NEXT:    lui $1, %hi(%neg(%gp_rel(caller)))
 ; PIC-NEXT:    daddu $1, $1, $25
 ; PIC-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(caller)))
@@ -30,7 +28,7 @@ define dso_local void @caller() nounwind "frame-pointer"="non-leaf" {
 ; PIC-NEXT:    .reloc .Ltmp0, R_MIPS_JALR, callee
 ; PIC-NEXT:  .Ltmp0:
 ; PIC-NEXT:    jalr $25
-; PIC-NEXT:    nop
+; PIC-NEXT:    move $fp, $sp
 entry:
   tail call void @callee()
   unreachable
