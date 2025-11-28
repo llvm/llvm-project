@@ -12,6 +12,7 @@
 #include "AMDGPURegBankLegalizeRules.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 namespace llvm {
@@ -27,11 +28,13 @@ namespace AMDGPU {
 // to replace instruction. In other case InstApplyMethod will create new
 // instruction(s).
 class RegBankLegalizeHelper {
+  MachineFunction &MF;
   const GCNSubtarget &ST;
   MachineIRBuilder &B;
   MachineRegisterInfo &MRI;
   const MachineUniformityInfo &MUI;
   const RegisterBankInfo &RBI;
+  MachineOptimizationRemarkEmitter MORE;
   const RegBankLegalizeRules &RBLRules;
   const bool IsWave32;
   const RegisterBank *SgprRB;
@@ -81,10 +84,10 @@ public:
                         const RegisterBankInfo &RBI,
                         const RegBankLegalizeRules &RBLRules);
 
-  void findRuleAndApplyMapping(MachineInstr &MI);
+  bool findRuleAndApplyMapping(MachineInstr &MI);
 
   // Manual apply helpers.
-  void applyMappingPHI(MachineInstr &MI);
+  bool applyMappingPHI(MachineInstr &MI);
   void applyMappingTrivial(MachineInstr &MI);
 
 private:
@@ -97,7 +100,7 @@ private:
 
   const RegisterBank *getRegBankFromID(RegBankLLTMappingApplyID ID);
 
-  void
+  bool
   applyMappingDst(MachineInstr &MI, unsigned &OpIdx,
                   const SmallVectorImpl<RegBankLLTMappingApplyID> &MethodIDs);
 

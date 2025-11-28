@@ -32,28 +32,45 @@ using namespace AMDGPU;
 RegBankLegalizeHelper::RegBankLegalizeHelper(
     MachineIRBuilder &B, const MachineUniformityInfo &MUI,
     const RegisterBankInfo &RBI, const RegBankLegalizeRules &RBLRules)
-    : ST(B.getMF().getSubtarget<GCNSubtarget>()), B(B), MRI(*B.getMRI()),
-      MUI(MUI), RBI(RBI), RBLRules(RBLRules), IsWave32(ST.isWave32()),
+    : MF(B.getMF()), ST(MF.getSubtarget<GCNSubtarget>()), B(B),
+      MRI(*B.getMRI()), MUI(MUI), RBI(RBI), MORE(MF, nullptr),
+      RBLRules(RBLRules), IsWave32(ST.isWave32()),
       SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
       VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
       VccRB(&RBI.getRegBank(AMDGPU::VCCRegBankID)) {}
 
-void RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
-  const SetOfRulesForOpcode &RuleSet = RBLRules.getRulesForOpc(MI);
-  const RegBankLLTMapping &Mapping = RuleSet.findMappingForMI(MI, MRI, MUI);
+bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
+  const SetOfRulesForOpcode *RuleSet = RBLRules.getRulesForOpc(MI);
+  if (!RuleSet) {
+    reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
+                       "No AMDGPU RegBankLegalize rules defined for opcode",
+                       MI);
+    return false;
+  }
+
+  const RegBankLLTMapping *Mapping = RuleSet->findMappingForMI(MI, MRI, MUI);
+  if (!Mapping) {
+    reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
+                       "AMDGPU RegBankLegalize: none of the rules defined with "
+                       "'Any' for MI's opcode matched MI",
+                       MI);
+    return false;
+  }
 
   SmallSet<Register, 4> WaterfallSgprs;
   unsigned OpIdx = 0;
-  if (Mapping.DstOpMapping.size() > 0) {
+  if (Mapping->DstOpMapping.size() > 0) {
     B.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
-    applyMappingDst(MI, OpIdx, Mapping.DstOpMapping);
+    if (!applyMappingDst(MI, OpIdx, Mapping->DstOpMapping))
+      return false;
   }
-  if (Mapping.SrcOpMapping.size() > 0) {
+  if (Mapping->SrcOpMapping.size() > 0) {
     B.setInstr(MI);
-    applyMappingSrc(MI, OpIdx, Mapping.SrcOpMapping, WaterfallSgprs);
+    applyMappingSrc(MI, OpIdx, Mapping->SrcOpMapping, WaterfallSgprs);
   }
 
-  lower(MI, Mapping, WaterfallSgprs);
+  lower(MI, *Mapping, WaterfallSgprs);
+  return true;
 }
 
 bool RegBankLegalizeHelper::executeInWaterfallLoop(
@@ -1055,7 +1072,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   }
 }
 
-void RegBankLegalizeHelper::applyMappingDst(
+bool RegBankLegalizeHelper::applyMappingDst(
     MachineInstr &MI, unsigned &OpIdx,
     const SmallVectorImpl<RegBankLLTMappingApplyID> &MethodIDs) {
   // Defs start from operand 0
@@ -1180,13 +1197,17 @@ void RegBankLegalizeHelper::applyMappingDst(
       break;
     }
     case InvalidMapping: {
-      LLVM_DEBUG(dbgs() << "Instruction with Invalid mapping: "; MI.dump(););
-      llvm_unreachable("missing fast rule for MI");
+      reportGISelFailure(
+          MF, MORE, "amdgpu-regbanklegalize",
+          "AMDGPU RegBankLegalize: missing fast rule ('Div' or 'Uni') for", MI);
+      return false;
     }
     default:
       llvm_unreachable("ID not supported");
     }
   }
+
+  return true;
 }
 
 void RegBankLegalizeHelper::applyMappingSrc(
@@ -1348,7 +1369,7 @@ void RegBankLegalizeHelper::applyMappingSrc(
   }
 }
 
-void RegBankLegalizeHelper::applyMappingPHI(MachineInstr &MI) {
+bool RegBankLegalizeHelper::applyMappingPHI(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
 
@@ -1371,16 +1392,17 @@ void RegBankLegalizeHelper::applyMappingPHI(MachineInstr &MI) {
       MI.getOperand(i).setReg(NewUse.getReg(0));
     }
 
-    return;
+    return true;
   }
 
-  // ALL divergent i1 phis should be already lowered and inst-selected into PHI
-  // with sgpr reg class and S1 LLT.
+  // ALL divergent i1 phis should have been lowered and inst-selected into PHI
+  // with sgpr reg class and S1 LLT in AMDGPUGlobalISelDivergenceLowering pass.
   // Note: this includes divergent phis that don't require lowering.
   if (Ty == LLT::scalar(1) && MUI.isDivergent(Dst)) {
-    LLVM_DEBUG(dbgs() << "Divergent S1 G_PHI: "; MI.dump(););
-    llvm_unreachable("Make sure to run AMDGPUGlobalISelDivergenceLowering "
-                     "before RegBankLegalize to lower lane mask(vcc) phis");
+    reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
+                       "AMDGPU RegBankLegalize: Can't lower divergent S1 G_PHI",
+                       MI);
+    return false;
   }
 
   // We accept all types that can fit in some register class.
@@ -1388,11 +1410,13 @@ void RegBankLegalizeHelper::applyMappingPHI(MachineInstr &MI) {
   // Divergent G_PHIs have vgpr dst but inputs can be sgpr or vgpr.
   if (Ty == LLT::scalar(32) || Ty == LLT::pointer(1, 64) ||
       Ty == LLT::pointer(4, 64)) {
-    return;
+    return true;
   }
 
-  LLVM_DEBUG(dbgs() << "G_PHI not handled: "; MI.dump(););
-  llvm_unreachable("type not supported");
+  reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
+                     "AMDGPU RegBankLegalize: type not supported for G_PHI",
+                     MI);
+  return false;
 }
 
 [[maybe_unused]] static bool verifyRegBankOnOperands(MachineInstr &MI,
