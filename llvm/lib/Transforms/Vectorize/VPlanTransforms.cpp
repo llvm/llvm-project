@@ -703,6 +703,23 @@ static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
   return Users.takeVector();
 }
 
+/// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
+/// (IndStart, ScalarIVSteps (0, Step)). This is used when the recipe only
+/// generates scalar values.
+static VPValue *
+scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
+                                 VPlan &Plan, VPBuilder &Builder) {
+  const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
+  VPValue *StartV = Plan.getConstantInt(ID.getStep()->getType(), 0);
+  VPValue *StepV = PtrIV->getOperand(1);
+  VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
+      Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
+      nullptr, StartV, StepV, PtrIV->getDebugLoc(), Builder);
+
+  return Builder.createPtrAdd(PtrIV->getStartValue(), Steps,
+                              PtrIV->getDebugLoc(), "next.gep");
+}
+
 /// Legalize VPWidenPointerInductionRecipe, by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)) if only its scalar values are used, as
 /// VPWidenPointerInductionRecipe will generate vectors only. If some users
@@ -755,16 +772,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       if (!PtrIV->onlyScalarsGenerated(Plan.hasScalableVF()))
         continue;
 
-      const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
-      VPValue *StartV = Plan.getConstantInt(ID.getStep()->getType(), 0);
-      VPValue *StepV = PtrIV->getOperand(1);
-      VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
-          Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
-          nullptr, StartV, StepV, PtrIV->getDebugLoc(), Builder);
-
-      VPValue *PtrAdd = Builder.createPtrAdd(PtrIV->getStartValue(), Steps,
-                                             PtrIV->getDebugLoc(), "next.gep");
-
+      VPValue *PtrAdd = scalarizeVPWidenPointerInduction(PtrIV, Plan, Builder);
       PtrIV->replaceAllUsesWith(PtrAdd);
       continue;
     }
@@ -1514,32 +1522,36 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
       }
 
-      // Skip recipes that aren't single scalars or don't have only their
-      // scalar results used. In the latter case, we would introduce extra
-      // broadcasts.
-      if (!vputils::isSingleScalar(RepOrWidenR) ||
-          !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
-            if (auto *Store = dyn_cast<VPWidenStoreRecipe>(U)) {
-              // VPWidenStore doesn't have users, and stores are always
-              // profitable to widen: hence, permitting address and mask
-              // operands, and single-scalar stored values is an important leaf
-              // condition. The assert must hold as we checked the RepOrWidenR
-              // operand against vputils::isSingleScalar.
-              assert(RepOrWidenR != Store->getStoredValue() ||
-                     vputils::isSingleScalar(Store->getStoredValue()));
-              (void)Store;
-              return true;
-            }
+      // Skip recipes that aren't single scalars.
+      if (!vputils::isSingleScalar(RepOrWidenR))
+        continue;
 
-            if (auto *VPI = dyn_cast<VPInstruction>(U)) {
-              unsigned Opcode = VPI->getOpcode();
-              if (Opcode == VPInstruction::ExtractLastElement ||
-                  Opcode == VPInstruction::ExtractLastLanePerPart ||
-                  Opcode == VPInstruction::ExtractPenultimateElement)
-                return true;
-            }
+      // Skip recipes for which conversion to single-scalar does introduce
+      // additional broadcasts. No extra broadcasts are needed, if either only
+      // the scalars of the recipe are used, or at least one of the operands
+      // would require a broadcast. In the latter case, the single-scalar may
+      // need to be broadcasted, but another broadcast is removed.
+      if (!all_of(RepOrWidenR->users(),
+                  [RepOrWidenR](const VPUser *U) {
+                    if (auto *VPI = dyn_cast<VPInstruction>(U)) {
+                      unsigned Opcode = VPI->getOpcode();
+                      if (Opcode == VPInstruction::ExtractLastElement ||
+                          Opcode == VPInstruction::ExtractLastLanePerPart ||
+                          Opcode == VPInstruction::ExtractPenultimateElement)
+                        return true;
+                    }
 
-            return U->usesScalars(RepOrWidenR);
+                    return U->usesScalars(RepOrWidenR);
+                  }) &&
+          none_of(RepOrWidenR->operands(), [RepOrWidenR](VPValue *Op) {
+            if (Op->getSingleUser() != RepOrWidenR)
+              return false;
+            // Non-constant live-ins require broadcasts, while constants do not
+            // need explicit broadcasts.
+            bool LiveInNeedsBroadcast =
+                Op->isLiveIn() && !isa<Constant>(Op->getLiveInIRValue());
+            auto *OpR = dyn_cast<VPReplicateRecipe>(Op);
+            return LiveInNeedsBroadcast || (OpR && OpR->isSingleScalar());
           }))
         continue;
 
@@ -3575,6 +3587,16 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       }
 
       if (auto *WidenIVR = dyn_cast<VPWidenPointerInductionRecipe>(&R)) {
+        // If the recipe only generates scalars, scalarize it instead of
+        // expanding it.
+        if (WidenIVR->onlyScalarsGenerated(Plan.hasScalableVF())) {
+          VPBuilder Builder(WidenIVR);
+          VPValue *PtrAdd =
+              scalarizeVPWidenPointerInduction(WidenIVR, Plan, Builder);
+          WidenIVR->replaceAllUsesWith(PtrAdd);
+          ToRemove.push_back(WidenIVR);
+          continue;
+        }
         expandVPWidenPointerInduction(WidenIVR, TypeInfo);
         ToRemove.push_back(WidenIVR);
         continue;
