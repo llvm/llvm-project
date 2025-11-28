@@ -2038,19 +2038,34 @@ private:
   }
 
   std::optional<float> fuzzyScore(const CompletionCandidate &C) {
+    using MacroFilterPolicy = Config::MacroFilterPolicy;
+
     const auto IsMacroResult =
         ((C.SemaResult &&
           C.SemaResult->Kind == CodeCompletionResult::RK_Macro) ||
          (C.IndexResult &&
           C.IndexResult->SymInfo.Kind == index::SymbolKind::Macro));
 
-    // macros with leading and trailing underscore are probably spammy
-    if (IsMacroResult && (C.Name.starts_with_insensitive("_") ||
-                          C.Name.ends_with_insensitive("_"))) {
-      return std::nullopt;
-    }
+    if (!IsMacroResult)
+      return Filter->match(C.Name);
 
-    return Filter->match(C.Name);
+    // macros with leading and trailing underscore are probably spammy
+    switch (Opts.MacroFilter) {
+    case MacroFilterPolicy::ExactPrefix:
+      if (C.Name.starts_with_insensitive(Filter->pattern()))
+        return Filter->match(C.Name);
+      else
+        return std::nullopt;
+    case MacroFilterPolicy::FuzzyMatch:
+      if (!C.Name.starts_with_insensitive("_") &&
+          !C.Name.ends_with_insensitive("_"))
+        return Filter->match(C.Name);
+      else
+        return std::nullopt;
+    }
+    llvm_unreachable("Unhandled MacroFilter option in fuzzyScore.");
+
+    return std::nullopt;
   }
 
   CodeCompletion::Scores

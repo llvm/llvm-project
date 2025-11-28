@@ -4693,7 +4693,7 @@ TEST(CompletionTest, ListExplicitObjectOverloads) {
 }
 
 TEST(CompletionTest, FuzzyMatchMacro) {
-  auto Results = completions(R"cpp(
+  const auto *const Code = R"cpp(
   #define gl_foo() 42
   #define _gl_foo() 42
   int gl_frob();
@@ -4701,18 +4701,22 @@ TEST(CompletionTest, FuzzyMatchMacro) {
   int main() {
     int x = glf^
   }
-  )cpp");
+  )cpp";
 
   {
-    for (const auto &Res : Results.Completions) {
-      fprintf(stderr, "Name: [%s] Snippet [%s], Signature: [%s] Score %f\n",
-              Res.Name.c_str(), Res.SnippetSuffix.c_str(),
-              Res.Signature.c_str(), Res.Score.Total);
-    }
+    CodeCompleteOptions Opts{};
+    auto Results = completions(Code, {}, Opts);
+    EXPECT_THAT(Results.Completions, ElementsAre(named("gl_frob")));
   }
 
-  EXPECT_THAT(Results.Completions,
-              ElementsAre(named("gl_frob"), named("gl_foo")));
+  {
+    CodeCompleteOptions Opts{};
+    Opts.MacroFilter = Config::MacroFilterPolicy::FuzzyMatch;
+
+    auto Results = completions(Code, {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                ElementsAre(named("gl_frob"), named("gl_foo")));
+  }
 }
 
 } // namespace
