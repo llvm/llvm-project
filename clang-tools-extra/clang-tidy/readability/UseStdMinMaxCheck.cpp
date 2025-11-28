@@ -96,12 +96,11 @@ static QualType getReplacementCastType(const Expr *CondLhs, const Expr *CondRhs,
   return GlobalImplicitCastType;
 }
 
-static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
-                                     const Expr *AssignLhs,
-                                     const SourceManager &Source,
-                                     const LangOptions &LO,
-                                     StringRef FunctionName,
-                                     const BinaryOperator *BO) {
+static std::string
+createReplacement(const Expr *CondLhs, const Expr *CondRhs,
+                  const Expr *AssignLhs, const SourceManager &Source,
+                  const LangOptions &LO, StringRef FunctionName,
+                  const BinaryOperator *BO, StringRef Comment = "") {
   const llvm::StringRef CondLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(CondLhs->getSourceRange()), Source, LO);
   const llvm::StringRef CondRhsStr = Lexer::getSourceText(
@@ -116,7 +115,7 @@ static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
           (!GlobalImplicitCastType.isNull()
                ? "<" + GlobalImplicitCastType.getAsString() + ">("
                : "(") +
-          CondLhsStr + ", " + CondRhsStr + ");")
+          CondLhsStr + ", " + CondRhsStr + ");" + Comment)
       .str();
 }
 
@@ -172,13 +171,21 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto ReplaceAndDiagnose = [&](const llvm::StringRef FunctionName) {
     const SourceManager &Source = *Result.SourceManager;
+    const std::string Comment =
+        Lexer::getSourceText(
+            CharSourceRange::getCharRange(
+                Lexer::getLocForEndOfToken(If->getRParenLoc(), 0, Source, LO),
+                If->getThen()->getBeginLoc()),
+            Source, LO)
+            .rtrim()
+            .str();
     diag(IfLocation, "use `%0` instead of `%1`")
         << FunctionName << BinaryOp->getOpcodeStr()
         << FixItHint::CreateReplacement(
                SourceRange(IfLocation, Lexer::getLocForEndOfToken(
                                            ThenLocation, 0, Source, LO)),
                createReplacement(CondLhs, CondRhs, AssignLhs, Source, LO,
-                                 FunctionName, BinaryOp))
+                                 FunctionName, BinaryOp, Comment))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
   };
