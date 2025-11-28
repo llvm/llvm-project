@@ -1382,10 +1382,7 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
         if (UnderRuntimeAssumptions) {
           const SCEVPredicate *Pred = SE->getComparePredicate(
               ICmpInst::ICMP_NE, Coeff, SE->getZero(Coeff->getType()));
-          SmallVector<const SCEVPredicate *, 4> NewPreds(
-              Result.Assumptions.getPredicates());
-          NewPreds.push_back(Pred);
-          Result.Assumptions = SCEVUnionPredicate(NewPreds, *SE);
+          Result.Assumptions = Result.Assumptions.getUnionWith(Pred, *SE);
           LLVM_DEBUG(dbgs() << "\t    Added runtime assumption: " << *Coeff
                             << " != 0\n");
         } else {
