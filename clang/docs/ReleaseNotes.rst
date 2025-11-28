@@ -449,6 +449,11 @@ Improvements to Clang's diagnostics
   comparison operators when mixed with bitwise operators in enum value initializers.
   This can be locally disabled by explicitly casting the initializer value.
 
+- Added the ``-Wvla-potential-size-confusion`` diagnostic, which is grouped
+  under ``-Wvla`` to diagnose when a variably-modified type in a function
+  parameter list is using a variable from an outer scope as opposed to a
+  variable declared later in the parameter list.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
