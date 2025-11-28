@@ -18,6 +18,8 @@
 #include "src/__support/time/abs_timeout.h"
 #include "sys/errno.h"
 
+#include <stdio.h>
+
 #if defined(__linux__)
 #include "src/__support/threads/linux/futex_utils.h"
 #elif defined(__APPLE__)
