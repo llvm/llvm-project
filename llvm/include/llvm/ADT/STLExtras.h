@@ -1778,6 +1778,11 @@ OutputIt copy_if(R &&Range, OutputIt Out, UnaryPredicate P) {
   return std::copy_if(adl_begin(Range), adl_end(Range), Out, P);
 }
 
+template <typename R1, typename R2, typename BinaryPredicate>
+auto search(R1 &&Range1, R2 &&Range2, BinaryPredicate P) {
+  return std::search(adl_begin(Range1), adl_end(Range1), adl_begin(Range2), adl_end(Range2), P);
+}
+
 /// Return the single value in \p Range that satisfies
 /// \p P(<member of \p Range> *, AllowRepeats)->T * returning nullptr
 /// when no values or multiple values were found.

@@ -490,43 +490,25 @@ bool HasAdjSubstatementsMatcher<T, ArgT>::matches(
   if (!CS)
     return false;
 
-  if (Matchers.empty())
-    return false;
-
-  auto Begin = CS->body_begin();
-  auto End = CS->body_end();
-  size_t NumMatchers = Matchers.size();
-
-  if (CS->size() < NumMatchers)
-    return false;
-
-  // Use std::search with lambda predicate that matches statements against
+  // Use llvm::search with lambda predicate that matches statements against
   // matchers and accumulates BoundNodesTreeBuilder state
   BoundNodesTreeBuilder CurrentBuilder;
-  size_t ChainLength = 0;
+  const auto Found = llvm::search(
+      CS->body(), Matchers,
+      [&](const Stmt *StmtPtr, const Matcher<Stmt> &Matcher) mutable {
+        BoundNodesTreeBuilder StepBuilder;
+        StepBuilder.addMatch(CurrentBuilder);
+        if (!Matcher.matches(*StmtPtr, Finder, &StepBuilder)) {
+          // reset the state
+          CurrentBuilder = {};
+          return false;
+        }
+        // Invalidate the state
+        CurrentBuilder = StepBuilder;
+        return true;
+      });
 
-  auto Pred = [&](
-                  Stmt *const &StmtPtr, const Matcher<Stmt> &Matcher) mutable {
-    if (ChainLength >= Matchers.size())
-      return false;
-
-    BoundNodesTreeBuilder StepBuilder;
-    StepBuilder.addMatch(CurrentBuilder);
-    if (!Matcher.matches(*StmtPtr, Finder, &StepBuilder)) {
-      // Reset on mismatch
-      CurrentBuilder = BoundNodesTreeBuilder();
-      ChainLength = 0;
-      return false;
-    }
-    // Advance chain
-    CurrentBuilder = StepBuilder;
-    ++ChainLength;
-    return true;
-  };
-
-  auto Found = std::search(Begin, End, Matchers.begin(), Matchers.end(), Pred);
-
-  if (Found == End || ChainLength != NumMatchers)
+  if (Found == CS->body_end())
     return false;
 
   Builder->addMatch(CurrentBuilder);
