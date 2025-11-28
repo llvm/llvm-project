@@ -864,8 +864,14 @@ struct AA::PointerInfo::State : public AbstractState {
                          AAPointerInfo::OffsetInfoMapTy &OffsetInfoMap,
                          Instruction *RemoteI = nullptr);
 
+  /// Find the full chain of instructions that cause the access in
+  /// AAPointerInfo. We use the OffsetInfoMap to find all the Offsets which are
+  /// accessed and for each offset we, backtrack a path that leads to that
+  /// access. \Returns a set containing instruction chains that lead to an
+  /// access.
   AAPointerInfo::AccessPathSetTy *
-  findAllAccessPaths(AAPointerInfo::OffsetInfoMapTy &OffsetInfoMap,
+  findAllAccessPaths(Attributor &A,
+                     AAPointerInfo::OffsetInfoMapTy &OffsetInfoMap,
                      Instruction *LocalI);
 
   AAPointerInfo::const_bin_iterator begin() const { return OffsetBins.begin(); }
@@ -945,10 +951,20 @@ private:
   BooleanState BS;
 };
 
+/// This function stores all the paths that lead to the access in AAPointerInfo.
+/// Arguments:
+/// A -- Attributor
+/// OffsetInfoMap -- Contains Accessed Offsets and Origins for the pointer in
+/// AAPointerInfo. LocalI -- This is the Access causing instruction, we
+/// backtrack the access causing instruction and keep forking new paths as we
+/// encounter new predecessors which backtracking. At the end of the
+/// backtracking we store all the unique access causing paths in
+/// AccessPathSetTy. \Return: A set containing all the access causing paths.
 AAPointerInfo::AccessPathSetTy *AA::PointerInfo::State::findAllAccessPaths(
-    AAPointerInfo::OffsetInfoMapTy &OffsetInfoMap, Instruction *LocalI) {
+    Attributor &A, AAPointerInfo::OffsetInfoMapTy &OffsetInfoMap,
+    Instruction *LocalI) {
   AAPointerInfo::AccessPathSetTy *AccessPathsSet =
-      new AAPointerInfo::AccessPathSetTy();
+      new (A.Allocator) AAPointerInfo::AccessPathSetTy();
 
   // Store the instruction and its storage (i.e, which path it belongs to)
   // on the stack.
@@ -963,13 +979,16 @@ AAPointerInfo::AccessPathSetTy *AA::PointerInfo::State::findAllAccessPaths(
   SmallVector<StackElementTy, 16> Stack;
 
   // Populate the stack with elements.
+  // LocalI is the final instruction causing the access.
+  // To begin with, we fork new paths for the arguments of LocalI.
   for (auto *It = LocalI->op_begin(); It != LocalI->op_end(); It++) {
     Value *V = cast<Value>(It);
     if (!OffsetInfoMap.contains(V))
       continue;
 
     SmallPtrSet<Value *, 4> LocalVisitedMap;
-    AAPointerInfo::AccessPathTy *NewPath = new AAPointerInfo::AccessPathTy();
+    AAPointerInfo::AccessPathTy *NewPath =
+        new (A.Allocator) AAPointerInfo::AccessPathTy();
     AccessPathsSet->insert(NewPath);
     NewPath->push_back(LocalI);
     Stack.push_back(std::make_tuple(V, NewPath, LocalVisitedMap));
@@ -1009,8 +1028,9 @@ AAPointerInfo::AccessPathSetTy *AA::PointerInfo::State::findAllAccessPaths(
     SmallVector<AAPointerInfo::AccessPathTy *> NewPaths;
     NewPaths.push_back(CurrentChain);
     for (size_t Index = 1; Index < Successors.size(); Index++) {
-      AAPointerInfo::AccessPathTy *NewPath = new AAPointerInfo::AccessPathTy(
-          CurrentChain->begin(), CurrentChain->end());
+      AAPointerInfo::AccessPathTy *NewPath =
+          new (A.Allocator) AAPointerInfo::AccessPathTy(CurrentChain->begin(),
+                                                        CurrentChain->end());
       NewPaths.push_back(NewPath);
     }
 
@@ -1061,9 +1081,9 @@ ChangeStatus AA::PointerInfo::State::addAccess(
 
   if (!AccExists) {
     AAPointerInfo::AccessPathSetTy *AccessPaths =
-        AA::PointerInfo::State::findAllAccessPaths(OffsetInfoMap, &I);
+        AA::PointerInfo::State::findAllAccessPaths(A, OffsetInfoMap, &I);
     AccessList.emplace_back(&I, RemoteI, Ranges, Content, Kind, Ty,
-                            AccessPaths);
+                            *AccessPaths);
 
     assert((AccessList.size() == AccIndex + 1) &&
            "New Access should have been at AccIndex");
@@ -1075,9 +1095,9 @@ ChangeStatus AA::PointerInfo::State::addAccess(
   // Combine the new Access with the existing Access, and then update the
   // mapping in the offset bins.
   AAPointerInfo::AccessPathSetTy *AccessPaths =
-      AA::PointerInfo::State::findAllAccessPaths(OffsetInfoMap, &I);
+      AA::PointerInfo::State::findAllAccessPaths(A, OffsetInfoMap, &I);
   AAPointerInfo::Access Acc(&I, RemoteI, Ranges, Content, Kind, Ty,
-                            AccessPaths);
+                            *AccessPaths);
   auto &Current = AccessList[AccIndex];
   auto Before = Current;
   Current &= Acc;
@@ -1085,7 +1105,7 @@ ChangeStatus AA::PointerInfo::State::addAccess(
     return ChangeStatus::UNCHANGED;
 
   // Merge the newly generated access paths with the old access paths.
-  Before.mergeAccessPaths(Acc.getAccessChain());
+  AccessList[AccIndex].mergeAccessPaths(Acc.getAccessChain());
   auto &ExistingRanges = Before.getRanges();
   auto &NewRanges = Current.getRanges();
 
@@ -1120,7 +1140,7 @@ static raw_ostream &operator<<(raw_ostream &OS,
                                const AAPointerInfo::OffsetInfo &OI) {
   ListSeparator LS;
   int I = 0;
-  for (auto Offset : OI) {
+  for (const AA::RangeTy &Offset : OI) {
     OS << LS << "[Offset, Size]: " << Offset << "\n";
     auto &Origin = OI.Origins[I];
     for (auto *Val : Origin)
@@ -1147,11 +1167,8 @@ struct AAPointerInfoImpl
                 ? (" (returned:" +
                    join(map_range(ReturnedOffsets,
                                   [](AA::RangeTy O) {
-                                    return std::string("(") +
-                                           std::to_string(O.Offset) +
-                                           std::string(",") +
-                                           std::to_string(O.Size) +
-                                           std::string(")");
+                                    return "(" + std::to_string(O.Offset) +
+                                           "," + std::to_string(O.Size) + ")";
                                   }),
                         ", ") +
                    ")")
@@ -1555,9 +1572,6 @@ struct AAPointerInfoImpl
     }
     return Changed;
   }
-
-  // /// Offsets Info Map
-  // DenseMap<Value *, OffsetInfo> OffsetInfoMap;
 
   /// Statistic tracking for all AAPointerInfo implementations.
   /// See AbstractAttribute::trackStatistics().
@@ -13956,11 +13970,11 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
                   AA::RangeTy(NewOffsetArg, CallArgOldRange.Size);
 
               // Find the chain the call instruction is part of
-              const AAPointerInfo::AccessPathSetTy *AccessPaths =
+              const AAPointerInfo::AccessPathSetTy &AccessPaths =
                   AccessInstruction.getAccessChain();
 
               const AAPointerInfo::AccessPathTy *ChainWithArg = nullptr;
-              for (auto *Chain : *AccessPaths) {
+              for (auto *Chain : AccessPaths) {
 
                 if (std::find(Chain->begin(), Chain->end(),
                               OperandInstruction) != Chain->end()) {
@@ -14012,9 +14026,9 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
 
           bool BackTrackInstructionToGEP = false;
           bool Exists = false;
-          const AAPointerInfo::AccessPathSetTy *AccessPaths =
+          const AAPointerInfo::AccessPathSetTy &AccessPaths =
               AccessInstruction.getAccessChain();
-          for (auto *Chain : *AccessPaths) {
+          for (auto *Chain : AccessPaths) {
             for (auto *V : *Chain) {
 
               GetElementPtrInst *GepI = dyn_cast<GetElementPtrInst>(V);

@@ -6176,16 +6176,16 @@ public:
   struct Access {
     Access(Instruction *I, int64_t Offset, int64_t Size,
            std::optional<Value *> Content, AccessKind Kind, Type *Ty,
-           AccessPathSetTy *AccessPaths)
+           AccessPathSetTy &InitAccessPaths)
         : LocalI(I), RemoteI(I), Content(Content), Ranges(Offset, Size),
-          Kind(Kind), Ty(Ty), AccessPaths(AccessPaths) {
+          Kind(Kind), Ty(Ty), AccessPaths(InitAccessPaths) {
       verify();
     }
     Access(Instruction *LocalI, Instruction *RemoteI, const RangeList &Ranges,
            std::optional<Value *> Content, AccessKind K, Type *Ty,
-           AccessPathSetTy *AccessPaths)
+           AccessPathSetTy &InitAccessPaths)
         : LocalI(LocalI), RemoteI(RemoteI), Content(Content), Ranges(Ranges),
-          Kind(K), Ty(Ty), AccessPaths(AccessPaths) {
+          Kind(K), Ty(Ty), AccessPaths(InitAccessPaths) {
       if (Ranges.size() > 1) {
         Kind = AccessKind(Kind | AK_MAY);
         Kind = AccessKind(Kind & ~AK_MUST);
@@ -6194,9 +6194,10 @@ public:
     }
     Access(Instruction *LocalI, Instruction *RemoteI, int64_t Offset,
            int64_t Size, std::optional<Value *> Content, AccessKind Kind,
-           Type *Ty, AccessPathSetTy *AccessPaths)
+           Type *Ty, AccessPathSetTy &InitAccessPaths)
         : LocalI(LocalI), RemoteI(RemoteI), Content(Content),
-          Ranges(Offset, Size), Kind(Kind), Ty(Ty), AccessPaths(AccessPaths) {
+          Ranges(Offset, Size), Kind(Kind), Ty(Ty),
+          AccessPaths(InitAccessPaths) {
       verify();
     }
     Access(const Access &Other) = default;
@@ -6318,23 +6319,20 @@ public:
     }
 
     // Merge two access paths into one.
-    void mergeAccessPaths(const AccessPathSetTy *AccessPathsNew) const {
-      assert(AccessPathsNew != nullptr &&
-             "Expected the set of access paths to be non null!");
-      for (auto *Path : *AccessPathsNew)
-        if (!existsChain(Path))
-          AccessPaths->insert(Path);
+    void mergeAccessPaths(const AccessPathSetTy &AccessPathsNew) {
+      for (auto *Path : AccessPathsNew)
+        if (!existsChain(Path)) {
+          AccessPaths.insert(Path);
+        }
     }
 
     // Check if the given access paths are same.
-    bool checkAccessPathsAreSame(const AccessPathSetTy *AccessPathsR) const {
-      assert(AccessPathsR != nullptr &&
-             "Expected the set of access paths to be non null!");
+    bool checkAccessPathsAreSame(const AccessPathSetTy &AccessPathsR) const {
       bool IsSame = true;
-      if (AccessPaths->size() != AccessPathsR->size())
+      if (AccessPaths.size() != AccessPathsR.size())
         return false;
 
-      for (auto *Path : *AccessPathsR) {
+      for (auto *Path : AccessPathsR) {
         if (!existsChain(Path))
           IsSame = false;
       }
@@ -6343,10 +6341,10 @@ public:
 
     // Check if the chain exists in the AccessPathsSet.
     bool existsChain(const AccessPathTy *NewPath) const {
-      if (!AccessPaths)
+      if (AccessPaths.empty())
         return false;
 
-      for (auto *OldPath : *AccessPaths)
+      for (auto *OldPath : AccessPaths)
         if (*OldPath == *NewPath)
           return true;
 
@@ -6356,19 +6354,19 @@ public:
     void dumpAccessPaths(raw_ostream &O) const {
       O << "Print all access paths found:\n";
 
-      if (!AccessPaths) {
+      if (AccessPaths.empty()) {
         O << "Could not find any access paths!\n";
         return;
       }
 
-      for (auto *It : *AccessPaths) {
+      for (auto *It : AccessPaths) {
         O << "Backtrack a unique access path:\n";
         for (Value *Ins : *It)
           O << *Ins << "\n";
       }
     }
 
-    const AccessPathSetTy *getAccessChain() const { return AccessPaths; }
+    const AccessPathSetTy &getAccessChain() const { return AccessPaths; }
     const RangeList &getRanges() const { return Ranges; }
 
     using const_iterator = RangeList::const_iterator;
@@ -6400,7 +6398,7 @@ public:
 
     /// The full chain of instructions that participate in the Access.
     /// There may be more than one access chain.
-    AccessPathSetTy *AccessPaths;
+    AccessPathSetTy AccessPaths;
   };
 
   /// Create an abstract attribute view for the position \p IRP.
