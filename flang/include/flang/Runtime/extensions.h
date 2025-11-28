@@ -34,6 +34,7 @@ double RTNAME(Dsecnds)(double *refTime, const char *sourceFile, int line);
 
 // CALL FLUSH(n) antedates the Fortran 2003 FLUSH statement.
 void FORTRAN_PROCEDURE_NAME(flush)(const int &unit);
+void RTNAME(Flush)(int unit);
 
 // GNU extension subroutine FDATE
 void FORTRAN_PROCEDURE_NAME(fdate)(char *string, std::int64_t length);

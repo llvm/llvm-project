@@ -9,10 +9,10 @@ define void @loop_invariant_store(ptr %p, i64 %a, i8 %b) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[A]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[A]], 48
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = shl <4 x i64> [[BROADCAST_SPLAT2]], splat (i64 48)
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i64> [[TMP0]], splat (i64 52)
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i64> [[BROADCAST_SPLAT2]], splat (i64 52)
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT]] to <4 x i32>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -97,10 +97,10 @@ define void @loop_invariant_srem(ptr %p, i64 %a, i8 %b) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[A]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[A]], 48
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT1]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = shl <4 x i64> [[BROADCAST_SPLAT2]], splat (i64 48)
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i64> [[TMP0]], splat (i64 52)
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i64> [[BROADCAST_SPLAT2]], splat (i64 52)
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT]] to <4 x i32>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]

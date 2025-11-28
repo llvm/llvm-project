@@ -34,8 +34,6 @@ define i32 @alias_with_parametric_offset(ptr nocapture %A, i64 %n) {
 ; CHECK-NEXT:    Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %A, align 1 --> Dst: %0 = load i32, ptr %A, align 1
 ; CHECK-NEXT:    da analyze - none!
-; CHECK-NEXT:  Runtime Assumptions:
-; CHECK-NEXT:  Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
 ;
 entry:
   %arrayidx = getelementptr inbounds i8, ptr %A, i64 %n
@@ -55,9 +53,6 @@ define i32 @alias_with_parametric_expr(ptr nocapture %A, i64 %n, i64 %m) {
 ; CHECK-NEXT:    Equal predicate: (zext i2 (-2 + (trunc i64 %m to i2)) to i64) == 0
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx1, align 1 --> Dst: %0 = load i32, ptr %arrayidx1, align 1
 ; CHECK-NEXT:    da analyze - none!
-; CHECK-NEXT:  Runtime Assumptions:
-; CHECK-NEXT:  Equal predicate: (zext i2 ((trunc i64 %m to i2) + (-2 * (trunc i64 %n to i2))) to i64) == 0
-; CHECK-NEXT:  Equal predicate: (zext i2 (-2 + (trunc i64 %m to i2)) to i64) == 0
 ;
 entry:
   %mul = mul nsw i64 %n, 10
@@ -81,8 +76,6 @@ define i32 @gep_i8_vs_i32(ptr nocapture %A, i64 %n, i64 %m) {
 ; CHECK-NEXT:    Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
 ; CHECK-NEXT:  Src: store i32 42, ptr %arrayidx1, align 4 --> Dst: store i32 42, ptr %arrayidx1, align 4
 ; CHECK-NEXT:    da analyze - none!
-; CHECK-NEXT:  Runtime Assumptions:
-; CHECK-NEXT:  Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
 ;
 entry:
   %arrayidx0 = getelementptr inbounds i8, ptr %A, i64 %n

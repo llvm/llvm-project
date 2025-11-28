@@ -180,7 +180,7 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
-; CHECK-NEXT:   WIDEN ir<%for.x.next> = mul ir<%x>, ir<2>
+; CHECK-NEXT:   CLONE ir<%for.x.next> = mul ir<%x>, ir<2>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {

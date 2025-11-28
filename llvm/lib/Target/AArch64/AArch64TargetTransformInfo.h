@@ -334,6 +334,23 @@ public:
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
+  bool isElementTypeLegalForCompressStore(Type *Ty) const {
+    return Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isIntegerTy(32) ||
+           Ty->isIntegerTy(64);
+  }
+
+  bool isLegalMaskedCompressStore(Type *DataType,
+                                  Align Alignment) const override {
+    if (!ST->isSVEAvailable())
+      return false;
+
+    if (isa<FixedVectorType>(DataType) &&
+        DataType->getPrimitiveSizeInBits() < 128)
+      return false;
+
+    return isElementTypeLegalForCompressStore(DataType->getScalarType());
+  }
+
   bool isLegalMaskedGatherScatter(Type *DataType) const {
     if (!ST->isSVEAvailable())
       return false;

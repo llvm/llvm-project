@@ -306,6 +306,9 @@ maybeFloatingPointRecurrence(Loop *L, PHINode *PN) {
   // The branch block must be in the loop and one of the successors must be out
   // of the loop.
   auto *BI = dyn_cast<BranchInst>(Compare->user_back());
+  if (!BI)
+    return std::nullopt;
+
   assert(BI->isConditional() && "Can't use fcmp if not conditional");
   if (!L->contains(BI->getParent()) ||
       (L->contains(BI->getSuccessor(0)) && L->contains(BI->getSuccessor(1))))
