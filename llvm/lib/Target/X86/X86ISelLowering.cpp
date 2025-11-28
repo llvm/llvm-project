@@ -53437,49 +53437,42 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
   if (SDValue ScalarStore = reduceMaskedStoreToScalarStore(Mst, DAG, Subtarget))
     return ScalarStore;
 
-  EVT VT = Mst->getValue().getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(N);
 
-  EVT ValVT = Mst->getValue().getValueType();
-  EVT MemVT = Mst->getMemoryVT();
-
   SDValue Mask = Mst->getMask();
   SDValue Value = Mst->getValue();
+  EVT MemVT = Mst->getMemoryVT();
+  EVT VT = Value.getValueType();
 
   // See if the truncating store can be a saturating truncated store.
-  if (Mst->isTruncatingStore() && ValVT.isVector() && MemVT.isVector() &&
-      ValVT.getScalarType().isInteger() && MemVT.getScalarType().isInteger() &&
-      ValVT.getVectorNumElements() == MemVT.getVectorNumElements() &&
-      Subtarget.hasBWI() && Subtarget.hasVLX()) {
+  if (Mst->isTruncatingStore()) {
+    if (VT.isVector() && MemVT.isVector() && VT.getScalarType().isInteger() &&
+        MemVT.getScalarType().isInteger() &&
+        VT.getVectorNumElements() == MemVT.getVectorNumElements() &&
+        Subtarget.hasBWI() && Subtarget.hasVLX()) {
 
-    SDValue SatSrc;
-    bool IsSigned = false;
-    if (SDValue SVal = detectSSatPattern(Value, MemVT)) {
-      SatSrc = SVal;
-      IsSigned = true;
-    } else if (SDValue UVal = detectUSatPattern(Value, MemVT, DAG, DL)) {
-      SatSrc = UVal;
-    }
+      SDValue SatSrc;
+      unsigned Opc;
+      if (SDValue SVal = detectSSatPattern(Value, MemVT)) {
+        SatSrc = SVal;
+        Opc = X86ISD::VMTRUNCSTORES;
+      } else if (SDValue UVal = detectUSatPattern(Value, MemVT, DAG, DL)) {
+        SatSrc = UVal;
+        Opc = X86ISD::VMTRUNCSTOREUS;
+      } else {
+        return SDValue();
+      }
 
-    if (SatSrc) {
-      unsigned Opc = IsSigned ? X86ISD::VMTRUNCSTORES : X86ISD::VMTRUNCSTOREUS;
-
-      SmallVector<SDValue, 4> Ops;
-      Ops.push_back(Mst->getChain());
-      Ops.push_back(SatSrc);
-      Ops.push_back(Mst->getBasePtr());
-      Ops.push_back(Mask);
-
-      MachineMemOperand *MMO = Mst->getMemOperand();
       SDVTList VTs = DAG.getVTList(MVT::Other);
+      SDValue Ops[] = {Mst->getChain(), SatSrc, Mst->getBasePtr(), Mask};
+      MachineMemOperand *MMO = Mst->getMemOperand();
       return DAG.getMemIntrinsicNode(Opc, DL, VTs, Ops, MemVT, MMO);
     }
-  }
 
-  // Otherwise don't combine if this store already truncates.
-  if (Mst->isTruncatingStore())
+    // Otherwise don't combine if this store already truncates.
     return SDValue();
+  }
 
   // If the mask value has been legalized to a non-boolean vector, try to
   // simplify ops leading up to it. We only demand the MSB of each lane.
