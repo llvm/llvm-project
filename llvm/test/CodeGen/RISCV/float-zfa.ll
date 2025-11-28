@@ -116,8 +116,6 @@ define float @loadfpimm13() {
   ret float 0xb810000000000000
 }
 
-declare float @llvm.minimum.f32(float, float)
-
 define float @fminm_s(float %a, float %b) nounwind {
 ; CHECK-LABEL: fminm_s:
 ; CHECK:       # %bb.0:
@@ -127,8 +125,6 @@ define float @fminm_s(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.maximum.f32(float, float)
-
 define float @fmaxm_s(float %a, float %b) nounwind {
 ; CHECK-LABEL: fmaxm_s:
 ; CHECK:       # %bb.0:
@@ -137,7 +133,6 @@ define float @fmaxm_s(float %a, float %b) nounwind {
   %1 = call float @llvm.maximum.f32(float %a, float %b)
   ret float %1
 }
-
 
 define float @fround_s_1(float %a) nounwind {
 ; CHECK-LABEL: fround_s_1:
@@ -150,7 +145,6 @@ define float @fround_s_1(float %a) nounwind {
 
 declare float @roundf(float) nounwind readnone
 
-
 define float @fround_s_2(float %a) nounwind {
 ; CHECK-LABEL: fround_s_2:
 ; CHECK:       # %bb.0:
@@ -161,7 +155,6 @@ define float @fround_s_2(float %a) nounwind {
 }
 
 declare float @floorf(float) nounwind readnone
-
 
 define float @fround_s_3(float %a) nounwind {
 ; CHECK-LABEL: fround_s_3:
@@ -174,7 +167,6 @@ define float @fround_s_3(float %a) nounwind {
 
 declare float @ceilf(float) nounwind readnone
 
-
 define float @fround_s_4(float %a) nounwind {
 ; CHECK-LABEL: fround_s_4:
 ; CHECK:       # %bb.0:
@@ -185,7 +177,6 @@ define float @fround_s_4(float %a) nounwind {
 }
 
 declare float @truncf(float) nounwind readnone
-
 
 define float @fround_s_5(float %a) nounwind {
 ; CHECK-LABEL: fround_s_5:
@@ -207,9 +198,6 @@ define float @fround_s_6(float %a) nounwind {
   ret float %call
 }
 
-declare float @llvm.roundeven.f32(float) nounwind readnone
-
-
 define float @froundnx_s(float %a) nounwind {
 ; CHECK-LABEL: froundnx_s:
 ; CHECK:       # %bb.0:
@@ -220,8 +208,6 @@ define float @froundnx_s(float %a) nounwind {
 }
 
 declare float @rintf(float) nounwind readnone
-
-declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
 
 define i32 @fcmp_olt_q(float %a, float %b) nounwind strictfp {
 ; CHECK-LABEL: fcmp_olt_q:

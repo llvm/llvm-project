@@ -645,29 +645,34 @@ def nontrunc_masked_store :
           (masked_st node:$val, node:$ptr, undef, node:$pred), [{
   return !cast<MaskedStoreSDNode>(N)->isTruncatingStore() &&
          cast<MaskedStoreSDNode>(N)->isUnindexed() &&
-         !cast<MaskedStoreSDNode>(N)->isNonTemporal();
+         !cast<MaskedStoreSDNode>(N)->isNonTemporal() &&
+         !cast<MaskedStoreSDNode>(N)->isCompressingStore();
 }]>;
 // truncating masked store fragments.
 def trunc_masked_store :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),
           (masked_st node:$val, node:$ptr, undef, node:$pred), [{
   return cast<MaskedStoreSDNode>(N)->isTruncatingStore() &&
-         cast<MaskedStoreSDNode>(N)->isUnindexed();
+         cast<MaskedStoreSDNode>(N)->isUnindexed() &&
+         !cast<MaskedStoreSDNode>(N)->isCompressingStore();
 }]>;
 def trunc_masked_store_i8 :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),
           (trunc_masked_store node:$val, node:$ptr, node:$pred), [{
-  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8 &&
+         !cast<MaskedStoreSDNode>(N)->isCompressingStore();
 }]>;
 def trunc_masked_store_i16 :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),
           (trunc_masked_store node:$val, node:$ptr, node:$pred), [{
-  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16 &&
+         !cast<MaskedStoreSDNode>(N)->isCompressingStore();
 }]>;
 def trunc_masked_store_i32 :
   PatFrag<(ops node:$val, node:$ptr, node:$pred),
           (trunc_masked_store node:$val, node:$ptr, node:$pred), [{
-  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MaskedStoreSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32 &&
+         !cast<MaskedStoreSDNode>(N)->isCompressingStore();
 }]>;
 
 def non_temporal_store :
@@ -675,7 +680,8 @@ def non_temporal_store :
           (masked_st node:$val, node:$ptr, undef, node:$pred), [{
   return !cast<MaskedStoreSDNode>(N)->isTruncatingStore() &&
          cast<MaskedStoreSDNode>(N)->isUnindexed() &&
-         cast<MaskedStoreSDNode>(N)->isNonTemporal();
+         cast<MaskedStoreSDNode>(N)->isNonTemporal() &&
+         !cast<MaskedStoreSDNode>(N)->isCompressingStore();
 }]>;
 
 multiclass masked_gather_scatter<PatFrags GatherScatterOp> {
@@ -2215,6 +2221,7 @@ let Predicates = [HasPAuth] in {
     let Size = 12;
     let Defs = [X16, X17];
     let usesCustomInserter = 1;
+    let supportsDeactivationSymbol = true;
   }
 
   // A standalone pattern is used, so that literal 0 can be passed as $Disc.
@@ -8381,6 +8388,7 @@ def : InstAlias<"orr.4s $Vd, $imm", (ORRv4i32 V128:$Vd, imm0_255:$imm, 0)>;
 }
 
 // AdvSIMD FMOV
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def FMOVv2f64_ns : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1111, V128, fpimm8,
                                               "fmov", ".2d",
                        [(set (v2f64 V128:$Rd), (AArch64fmov imm0_255:$imm8))]>;
@@ -8398,6 +8406,7 @@ def FMOVv8f16_ns : SIMDModifiedImmVectorNoShift<1, 0, 1, 0b1111, V128, fpimm8,
                                               "fmov", ".8h",
                        [(set (v8f16 V128:$Rd), (AArch64fmov imm0_255:$imm8))]>;
 } // Predicates = [HasNEON, HasFullFP16]
+}
 
 // AdvSIMD MOVI
 
