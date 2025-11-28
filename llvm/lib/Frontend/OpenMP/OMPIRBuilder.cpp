@@ -701,7 +701,7 @@ Error OpenMPIRBuilder::FinalizationInfo::mergeFiniBB(IRBuilderBase &Builder,
   // Simple case: FiniBB does not exist yet: re-use OtherFiniBB.
   if (!FiniBB) {
     FiniBB = OtherFiniBB;
-    IRBuilderBase::InsertPointGuard Guard(Builder);
+
     Builder.SetInsertPoint(FiniBB->getFirstNonPHIIt());
     if (Error Err = FiniCB(Builder.saveIP()))
       return Err;
