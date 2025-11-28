@@ -2650,6 +2650,10 @@ static bool OptimizeNonTrivialIFuncs(
       unsigned J = 0;
 
       for (unsigned I = 0, E = Callers.size(); I < E; ++I) {
+        // There are no callee candidates left.
+        if (J == Callees.size())
+          break;
+
         Function *Caller = Callers[I];
         APInt CallerBits = FeatureMask[Caller];
 
@@ -2673,8 +2677,9 @@ static bool OptimizeNonTrivialIFuncs(
         };
 
         unsigned BestCandidate = AllowExpensiveChecks ? computeKnownBits(J) : J;
+        // No callee candidate was found for this caller.
         if (BestCandidate == Callees.size())
-          break;
+          continue;
 
         LLVM_DEBUG(dbgs() << "   Examining "
                           << (CallerIsFMV ? "FMV" : "regular") << " caller "
