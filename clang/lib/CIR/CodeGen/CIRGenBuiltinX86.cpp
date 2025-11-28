@@ -559,11 +559,12 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
       break;
     }
 
+    mlir::Location loc = getLoc(expr->getExprLoc());
     unsigned minElts =
         std::min(cast<cir::VectorType>(ops[0].getType()).getSize(),
                  cast<cir::VectorType>(ops[2].getType()).getSize());
-    ops[3] = getMaskVecValue(*this, expr, ops[3], minElts);
-    return emitIntrinsicCallOp(*this, expr, intrinsicName.str(),
+    ops[3] = getMaskVecValue(builder, loc, ops[3], minElts);
+    return emitIntrinsicCallOp(builder, loc, intrinsicName.str(),
                                convertType(expr->getType()), ops);
   }
   case X86::BI__builtin_ia32_scattersiv8df:
