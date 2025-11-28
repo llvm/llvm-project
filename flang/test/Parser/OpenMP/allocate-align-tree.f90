@@ -28,7 +28,7 @@ end program allocate_align_tree
 !CHECK-NEXT: | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'j'
 !CHECK-NEXT: | | OmpClauseList -> OmpClause -> Align -> OmpAlignClause -> Scalar -> Integer -> Constant -> Expr = '16_4'
 !CHECK-NEXT: | | | LiteralConstant -> IntLiteralConstant = '16'
-!CHECK-NEXT: | | Flags = None
+!CHECK-NEXT: | | Flags = {}
 !CHECK-NEXT: | Block
 !CHECK-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
 !CHECK-NEXT: | | | OmpBeginDirective
@@ -38,7 +38,7 @@ end program allocate_align_tree
 !CHECK-NEXT: | | | | | LiteralConstant -> IntLiteralConstant = '32'
 !CHECK-NEXT: | | | | OmpClause -> Allocator -> Scalar -> Integer -> Expr = '2_8'
 !CHECK-NEXT: | | | | | Designator -> DataRef -> Name = 'omp_large_cap_mem_alloc'
-!CHECK-NEXT: | | | | Flags = None
+!CHECK-NEXT: | | | | Flags = {}
 !CHECK-NEXT: | | | Block
 !CHECK-NEXT: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt
 
