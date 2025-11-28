@@ -31,24 +31,71 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
 struct AccessPath {
   const clang::ValueDecl *D;
 
-  AccessPath(const clang::ValueDecl *D = nullptr) : D(D) {}
+  AccessPath(const clang::ValueDecl *D) : D(D) {}
+};
+
+/// An abstract base class for a single borrow, or "Loan".
+class Loan {
+  /// TODO: Represent opaque loans.
+  /// TODO: Represent nullptr: loans to no path. Accessing it UB! Currently it
+  /// is represented as empty LoanSet
+public:
+  enum class Kind : uint8_t {
+    /// A regular borrow of a variable within the function that has a path and
+    /// can expire.
+    Borrow,
+    /// A non-expiring placeholder loan for a parameter, representing a borrow
+    /// from the function's caller.
+    Placeholder
+  };
+
+  Loan(Kind K, LoanID ID) : K(K), ID(ID) {}
+  virtual ~Loan() = default;
+
+  Kind getKind() const { return K; }
+  LoanID getID() const { return ID; }
+
+  virtual void dump(llvm::raw_ostream &OS) const = 0;
+
+private:
+  const Kind K;
+  const LoanID ID;
 };
 
 /// Information about a single borrow, or "Loan". A loan is created when a
 /// reference or pointer is created.
-struct Loan {
-  /// TODO: Represent opaque loans.
-  /// TODO: Represent nullptr: loans to no path. Accessing it UB! Currently it
-  /// is represented as empty LoanSet
-  LoanID ID;
+class BorrowLoan : public Loan {
   AccessPath Path;
-  /// The expression that creates the loan, e.g., &x.
   const Expr *IssueExpr;
 
-  Loan(LoanID id, AccessPath path, const Expr *IssueExpr)
-      : ID(id), Path(path), IssueExpr(IssueExpr) {}
+public:
+  BorrowLoan(LoanID ID, AccessPath Path, const Expr *IssueExpr)
+      : Loan(Kind::Borrow, ID), Path(Path), IssueExpr(IssueExpr) {}
 
-  void dump(llvm::raw_ostream &OS) const;
+  const AccessPath &getAccessPath() const { return Path; }
+  const Expr *getIssueExpr() const { return IssueExpr; }
+
+  void dump(llvm::raw_ostream &OS) const override;
+
+  static bool classof(const Loan *L) { return L->getKind() == Kind::Borrow; }
+};
+
+/// A concrete loan type for placeholder loans on parameters, representing a
+/// borrow from the function's caller.
+class ParameterLoan : public Loan {
+  const ParmVarDecl *PVD;
+
+public:
+  ParameterLoan(LoanID ID, const ParmVarDecl *PVD)
+      : Loan(Kind::Placeholder, ID), PVD(PVD) {}
+
+  const ParmVarDecl *getParmVarDecl() const { return PVD; }
+
+  void dump(llvm::raw_ostream &OS) const override;
+
+  static bool classof(const Loan *L) {
+    return L->getKind() == Kind::Placeholder;
+  }
 };
 
 /// Manages the creation, storage and retrieval of loans.
@@ -56,25 +103,20 @@ class LoanManager {
 public:
   LoanManager() = default;
 
-  Loan &addLoan(AccessPath Path, const Expr *IssueExpr) {
-    AllLoans.emplace_back(getNextLoanID(), Path, IssueExpr);
-    return AllLoans.back();
+  template <typename LoanType, typename... Args>
+  LoanType *createLoan(Args &&...args) {
+    void *Mem = LoanAllocator.Allocate<LoanType>();
+    auto *NewLoan =
+        new (Mem) LoanType(getNextLoanID(), std::forward<Args>(args)...);
+    AllLoans.push_back(NewLoan);
+    return NewLoan;
   }
 
-  const Loan &getLoan(LoanID ID) const {
+  const Loan *getLoan(LoanID ID) const {
     assert(ID.Value < AllLoans.size());
     return AllLoans[ID.Value];
   }
-  llvm::ArrayRef<Loan> getLoans() const { return AllLoans; }
-
-  void addPlaceholderLoan(LoanID LID, const ParmVarDecl *PVD) {
-    PlaceholderLoans[LID] = PVD;
-  }
-
-  const llvm::DenseMap<LoanID, const ParmVarDecl *> &
-  getPlaceholderLoans() const {
-    return PlaceholderLoans;
-  }
+  llvm::ArrayRef<const Loan *> getLoans() const { return AllLoans; }
 
 private:
   LoanID getNextLoanID() { return NextLoanID++; }
@@ -82,12 +124,8 @@ private:
   LoanID NextLoanID{0};
   /// TODO(opt): Profile and evaluate the usefullness of small buffer
   /// optimisation.
-  llvm::SmallVector<Loan> AllLoans;
-  /// Represents a map of placeholder LoanID to the function parameter.
-  /// Placeholder loans are dummy loans created for each pointer or reference
-  /// parameter to represent a borrow from the function's caller, which the
-  /// analysis tracks to see if it unsafely escapes the function's scope.
-  llvm::DenseMap<LoanID, const ParmVarDecl *> PlaceholderLoans;
+  llvm::SmallVector<const Loan *> AllLoans;
+  llvm::BumpPtrAllocator LoanAllocator;
 };
 } // namespace clang::lifetimes::internal
 

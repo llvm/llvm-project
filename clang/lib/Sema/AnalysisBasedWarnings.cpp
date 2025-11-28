@@ -2884,15 +2884,17 @@ public:
         << EscapeExpr->getEndLoc();
   }
 
-  void reportMissingAnnotations(const ParmVarDecl *PVD,
-                                const Expr *EscapeExpr) override {
-    S.Diag(PVD->getLocation(),
-           diag::warn_lifetime_param_should_be_lifetimebound)
+  void suggestAnnotation(const ParmVarDecl *PVD,
+                         const Expr *EscapeExpr) override {
+    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
+        PVD->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+    S.Diag(PVD->getBeginLoc(), diag::warn_lifetime_safety_suggest_lifetimebound)
         << PVD->getSourceRange()
-        << FixItHint::CreateInsertion(
-               PVD->getTypeSourceInfo()->getTypeLoc().getBeginLoc(),
-               "[[clang::lifetimebound]] ");
-    S.Diag(EscapeExpr->getBeginLoc(), diag::note_lifetime_escapes_here);
+        << FixItHint::CreateInsertion(InsertionPoint,
+                                      " [[clang::lifetimebound]]");
+    S.Diag(EscapeExpr->getBeginLoc(),
+           diag::note_lifetime_safety_suggestion_returned_here)
+        << EscapeExpr->getSourceRange();
   }
 
 private:

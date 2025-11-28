@@ -48,8 +48,8 @@ public:
                                     SourceLocation ExpiryLoc,
                                     Confidence Confidence) {}
 
-  virtual void reportMissingAnnotations(const ParmVarDecl *PVD,
-                                        const Expr *EscapeExpr) {}
+  virtual void suggestAnnotation(const ParmVarDecl *PVD,
+                                 const Expr *EscapeExpr) {}
 };
 
 /// The main entry point for the analysis.

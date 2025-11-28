@@ -31,11 +31,12 @@ static bool hasOrigin(const VarDecl *VD) {
 /// This function should be called whenever a DeclRefExpr represents a borrow.
 /// \param DRE The declaration reference expression that initiates the borrow.
 /// \return The new Loan on success, nullptr otherwise.
-static const Loan *createLoan(FactManager &FactMgr, const DeclRefExpr *DRE) {
+static const BorrowLoan *createLoan(FactManager &FactMgr,
+                                    const DeclRefExpr *DRE) {
   if (const auto *VD = dyn_cast<ValueDecl>(DRE->getDecl())) {
     AccessPath Path(VD);
     // The loan is created at the location of the DeclRefExpr.
-    return &FactMgr.getLoanMgr().addLoan(Path, DRE);
+    return FactMgr.getLoanMgr().createLoan<BorrowLoan>(Path, DRE);
   }
   return nullptr;
 }
@@ -90,7 +91,7 @@ void FactsGenerator::VisitDeclRefExpr(const DeclRefExpr *DRE) {
     if (const Loan *L = createLoan(FactMgr, DRE)) {
       OriginID ExprOID = FactMgr.getOriginMgr().getOrCreate(*DRE);
       CurrentBlockFacts.push_back(
-          FactMgr.createFact<IssueFact>(L->ID, ExprOID));
+          FactMgr.createFact<IssueFact>(L->getID(), ExprOID));
     }
   }
 }
@@ -228,13 +229,14 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   if (!LifetimeEndsVD)
     return;
   // Iterate through all loans to see if any expire.
-  for (const auto &Loan : FactMgr.getLoanMgr().getLoans()) {
-    const AccessPath &LoanPath = Loan.Path;
-    // Check if the loan is for a stack variable and if that variable
-    // is the one being destructed.
-    if (LoanPath.D == LifetimeEndsVD)
-      CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-          Loan.ID, LifetimeEnds.getTriggerStmt()->getEndLoc()));
+  for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
+    if (const auto *BL = dyn_cast<BorrowLoan>(Loan)) {
+      // Check if the loan is for a stack variable and if that variable
+      // is the one being destructed.
+      if (BL->getAccessPath().D == LifetimeEndsVD)
+        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+            BL->getID(), LifetimeEnds.getTriggerStmt()->getEndLoc()));
+    }
   }
 }
 
@@ -356,15 +358,12 @@ llvm::SmallVector<Fact *> FactsGenerator::createPlaceholderLoanFacts() {
     return PlaceholderLoanFacts;
 
   for (const ParmVarDecl *PVD : FD->parameters()) {
-    QualType ParamType = PVD->getType();
-    if (PVD->hasAttr<LifetimeBoundAttr>())
-      continue;
-    if (ParamType->isPointerType() || ParamType->isReferenceType() ||
-        isGslPointerType(ParamType)) {
-      Loan &L = FactMgr.getLoanMgr().addLoan({}, /*IssueExpr=*/nullptr);
-      FactMgr.getLoanMgr().addPlaceholderLoan(L.ID, PVD);
+    if (hasOrigin(PVD)) {
+      const ParameterLoan *L =
+          FactMgr.getLoanMgr().createLoan<ParameterLoan>(PVD);
       OriginID OID = FactMgr.getOriginMgr().getOrCreate(*PVD);
-      PlaceholderLoanFacts.push_back(FactMgr.createFact<IssueFact>(L.ID, OID));
+      PlaceholderLoanFacts.push_back(
+          FactMgr.createFact<IssueFact>(L->getID(), OID));
     }
   }
   return PlaceholderLoanFacts;

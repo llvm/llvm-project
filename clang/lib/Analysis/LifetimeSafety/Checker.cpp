@@ -77,16 +77,19 @@ public:
   void checkAnnotations(const OriginEscapesFact *OEF) {
     if (!Reporter)
       return;
-    const auto &PlaceholderLoansMap =
-        FactMgr.getLoanMgr().getPlaceholderLoans();
-    if (PlaceholderLoansMap.empty())
-      return;
     OriginID EscapedOID = OEF->getEscapedOriginID();
     LoanSet EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
-    for (LoanID LID : EscapedLoans) {
-      if (auto It = PlaceholderLoansMap.find(LID);
-          It != PlaceholderLoansMap.end())
-        AnnotationWarningsMap.try_emplace(It->second, OEF->getEscapeExpr());
+    if (EscapedLoans.isEmpty())
+      return;
+    for (const Loan *L : FactMgr.getLoanMgr().getLoans()) {
+      if (const auto *PL = dyn_cast<ParameterLoan>(L)) {
+        if (EscapedLoans.contains(PL->getID())) {
+          const ParmVarDecl *PVD = PL->getParmVarDecl();
+          if (PVD->hasAttr<LifetimeBoundAttr>())
+            continue;
+          AnnotationWarningsMap.try_emplace(PVD, OEF->getEscapeExpr());
+        }
+      }
     }
   }
 
@@ -136,8 +139,9 @@ public:
     if (!Reporter)
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
-      const Loan &L = FactMgr.getLoanMgr().getLoan(LID);
-      const Expr *IssueExpr = L.IssueExpr;
+      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
+      const auto *BL = cast<BorrowLoan>(L);
+      const Expr *IssueExpr = BL->getIssueExpr();
       llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
           CausingFact = Warning.CausingFact;
       Confidence Confidence = Warning.ConfidenceLevel;
@@ -159,7 +163,7 @@ public:
     if (!Reporter)
       return;
     for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap)
-      Reporter->reportMissingAnnotations(PVD, EscapeExpr);
+      Reporter->suggestAnnotation(PVD, EscapeExpr);
   }
 };
 } // namespace

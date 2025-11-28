@@ -10,13 +10,13 @@
 
 namespace clang::lifetimes::internal {
 
-void Loan::dump(llvm::raw_ostream &OS) const {
-  if (Path.D == nullptr) {
-    OS << ID << " (Placeholder loan)";
-    return;
-  }
-  OS << ID << " (Path: ";
+void BorrowLoan::dump(llvm::raw_ostream &OS) const {
+  OS << getID() << " (Path: ";
   OS << Path.D->getNameAsString() << ")";
+}
+
+void ParameterLoan::dump(llvm::raw_ostream &OS) const {
+  OS << getID() << " (Placeholder loan)";
 }
 
 } // namespace clang::lifetimes::internal
