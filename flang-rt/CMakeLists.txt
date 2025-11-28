@@ -10,7 +10,7 @@
 # included using the LLVM_ENABLE_RUNTIMES mechanism.
 #
 #===------------------------------------------------------------------------===#
-
+cmake_minimum_required(VERSION 3.20.0)
 if (NOT LLVM_RUNTIMES_BUILD)
   message(FATAL_ERROR "Use this CMakeLists.txt from LLVM's runtimes build system.
       Example:
@@ -54,6 +54,8 @@ if (CMAKE_VERSION VERSION_LESS "3.24")
     set(CMAKE_Fortran_LINKER_WRAPPER_FLAG "-Wl,")
     set(CMAKE_Fortran_LINKER_WRAPPER_FLAG_SEP ",")
   endif ()
+else ()
+  set(CMAKE_Fortran_COMPILER_FORCED ON)
 endif ()
 enable_language(Fortran)
 
@@ -61,6 +63,7 @@ enable_language(Fortran)
 list(APPEND CMAKE_MODULE_PATH
     "${FLANG_RT_SOURCE_DIR}/cmake/modules"
     "${FLANG_SOURCE_DIR}/cmake/modules"
+    "${FLANG_SOURCE_DIR}/../cmake/Modules"
   )
 include(AddFlangRT)
 include(GetToolchainDirs)
@@ -142,12 +145,14 @@ option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and 
 # Provide an interface to link against the LLVM libc/libc++ projects directly.
 set(FLANG_RT_SUPPORTED_PROVIDERS system llvm)
 set(FLANG_RT_LIBC_PROVIDER "system" CACHE STRING "Specify C library to use. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
-if (NOT "${FLANG_RT_LIBC_PROVIDER}" IN_LIST FLANG_RT_SUPPORTED_PROVIDERS)
+list(FIND FLANG_RT_SUPPORTED_PROVIDERS "${FLANG_RT_LIBC_PROVIDER}" libc_index)
+if (libc_index EQUAL -1)
   message(FATAL_ERROR "Unsupported library: '${FLANG_RT_RUNTIME_PROVIDER}'. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
 endif ()
 
 set(FLANG_RT_LIBCXX_PROVIDER "system" CACHE STRING "Specify C++ library to use. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
-if (NOT "${FLANG_RT_LIBCXX_PROVIDER}" IN_LIST FLANG_RT_SUPPORTED_PROVIDERS)
+list(FIND FLANG_RT_SUPPORTED_PROVIDERS "${FLANG_RT_LIBCXX_PROVIDER}" libcxx_index)
+if (libcxx_index EQUAL -1)
   message(FATAL_ERROR "Unsupported library: '${FLANG_RT_LIBCXX_PROVIDER}'. Supported values are ${FLANG_RT_SUPPORTED_PROVIDERS}.")
 endif ()
 
@@ -250,6 +255,8 @@ endif ()
 # Aternatively, we could use
 #   CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU"
 # but some older versions of CMake don't define it for GCC itself.
+include(CheckCXXCompilerFlag)
+include(CheckLinkerFlag)
 check_cxx_compiler_flag("-Wp,-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
 
 # Check whether -fno-lto is supported.
