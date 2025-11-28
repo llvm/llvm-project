@@ -108,6 +108,9 @@ void addDebugInfoPass(mlir::PassManager &pm,
                       llvm::OptimizationLevel optLevel,
                       llvm::StringRef inputFilename, int32_t dwarfVersion);
 
+void addFIRToCoreMLIRToLLVMPass(mlir::PassManager &pm,
+                                const MLIRToLLVMPassPipelineConfig &config);
+
 void addFIRToLLVMPass(mlir::PassManager &pm,
                       const MLIRToLLVMPassPipelineConfig &config);
 

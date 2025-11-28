@@ -107,21 +107,32 @@ void addDebugInfoPass(mlir::PassManager &pm,
                        [&]() { return fir::createAddDebugInfoPass(options); });
 }
 
-void addFIRToLLVMPass(mlir::PassManager &pm,
-                      const MLIRToLLVMPassPipelineConfig &config) {
+void addFIRToCoreMLIRToLLVMPass(mlir::PassManager &pm,
+                                const MLIRToLLVMPassPipelineConfig &config) {
   if (disableFirToLlvmIr)
     return;
 
-  if (config.LowerThroughCoreMLIR) {
-    pm.addPass(createFIRToCoreMLIRPass());
-    pm.addPass(mlir::memref::createFoldMemRefAliasOpsPass());
+  pm.addPass(createFIRToCoreMLIRPass());
+  pm.addPass(mlir::memref::createFoldMemRefAliasOpsPass());
+
+  if (config.OptLevel.isOptimizingForSpeed()) {
     pm.addPass(mlir::createMem2Reg());
     pm.addPass(mlir::createCSEPass());
     pm.addPass(mlir::createCanonicalizerPass());
-    pm.addPass(mlir::memref::createExpandOpsPass());
-    pm.addPass(mlir::memref::createExpandStridedMetadataPass());
-    pm.addPass(mlir::createLowerAffinePass());
-    pm.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
+  }
+
+  pm.addPass(mlir::memref::createExpandOpsPass());
+  pm.addPass(mlir::memref::createExpandStridedMetadataPass());
+  pm.addPass(mlir::createLowerAffinePass());
+  pm.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
+  pm.addPass(mlir::createReconcileUnrealizedCastsPass());
+}
+
+void addFIRToLLVMPass(mlir::PassManager &pm,
+                      const MLIRToLLVMPassPipelineConfig &config) {
+  if (config.LowerThroughCoreMLIR) {
+    addFIRToCoreMLIRToLLVMPass(pm, config);
+    return;
   }
 
   fir::FIRToLLVMPassOptions options;
@@ -132,12 +143,13 @@ void addFIRToLLVMPass(mlir::PassManager &pm,
   options.typeDescriptorsRenamedForAssembly =
       !disableCompilerGeneratedNamesConversion;
   options.ComplexRange = config.ComplexRange;
-  options.LowerThroughCoreMLIR = config.LowerThroughCoreMLIR;
-  pm.addPass(fir::createFIRToLLVMPass(options));
-
+  addPassConditionally(pm, disableFirToLlvmIr,
+                       [&]() { return fir::createFIRToLLVMPass(options); });
   // The dialect conversion framework may leave dead unrealized_conversion_cast
   // ops behind, so run reconcile-unrealized-casts to clean them up.
-  pm.addPass(mlir::createReconcileUnrealizedCastsPass());
+  addPassConditionally(pm, disableFirToLlvmIr, [&]() {
+    return mlir::createReconcileUnrealizedCastsPass();
+  });
 }
 
 void addLLVMDialectToLLVMPass(mlir::PassManager &pm,

@@ -4198,54 +4198,6 @@ public:
 } // namespace
 
 namespace {
-/// convert value between fir type and core mlir type.
-struct UnrealizedConversionCastOpConversion
-    : public fir::FIROpConversion<mlir::UnrealizedConversionCastOp> {
-  using FIROpConversion::FIROpConversion;
-
-  llvm::LogicalResult
-  matchAndRewrite(mlir::UnrealizedConversionCastOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    if (op.getNumOperands() != 1 || op.getNumResults() != 1)
-      return mlir::failure();
-
-    auto fromFirTy = op.getOperand(0).getType();
-    auto toFirTy = op.getResultTypes()[0];
-    auto fromTy = convertType(fromFirTy);
-    auto toTy = convertType(toFirTy);
-    mlir::Value op0 = adaptor.getOperands()[0];
-
-    auto loc = op.getLoc();
-    if (fromTy == toTy) {
-      rewriter.replaceOp(op, {op0});
-      return mlir::success();
-    }
-
-    if (mlir::isa<mlir::LLVM::LLVMPointerType>(fromTy) &&
-        mlir::isa<mlir::MemRefType>(toFirTy)) {
-      // Pointer to MemRef conversion.
-      auto dstMemRef = mlir::MemRefDescriptor::poison(rewriter, loc, toTy);
-      dstMemRef.setAlignedPtr(rewriter, loc, op0);
-      dstMemRef.setConstantOffset(rewriter, loc, 0);
-      rewriter.replaceOp(op, {dstMemRef});
-      return mlir::success();
-    } else if (mlir::isa<mlir::MemRefType>(fromFirTy) &&
-               mlir::isa<mlir::LLVM::LLVMPointerType>(toTy)) {
-      // MemRef to pointer conversion.
-      auto srcMemRef = mlir::MemRefDescriptor(op0);
-      mlir::Value srcPtr =
-          srcMemRef.bufferPtr(rewriter, loc, *getTypeConverter(),
-                              mlir::cast<mlir::MemRefType>(fromFirTy));
-      rewriter.replaceOp(op, srcPtr);
-      return mlir::success();
-    }
-
-    return mlir::failure();
-  }
-};
-} // namespace
-
-namespace {
 /// Convert FIR dialect to LLVM dialect
 ///
 /// This pass lowers all FIR dialect operations to LLVM IR dialect. An
@@ -4393,10 +4345,6 @@ public:
             return op.getSymName() != "hypotf";
           });
     }
-
-    if (options.LowerThroughCoreMLIR)
-      pattern.insert<UnrealizedConversionCastOpConversion>(typeConverter,
-                                                           options);
 
     // apply the patterns
     if (mlir::failed(mlir::applyFullConversion(getModule(), target,
