@@ -6,6 +6,7 @@ set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 # Add path for custom modules
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
@@ -96,6 +97,7 @@ endif()
 include(config-ix)
 include(HandleOpenMPOptions)
 include(LibompUtils)
+include(LibompHandleFlags)
 
 
 # Set libomp version

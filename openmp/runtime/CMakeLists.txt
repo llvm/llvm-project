@@ -16,9 +16,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 # These include files are in the cmake/ subdirectory
-include(LibompUtils)
 include(LibompGetArchitecture)
-include(LibompHandleFlags)
 include(LibompDefinitions)
 
 # Determine the target architecture

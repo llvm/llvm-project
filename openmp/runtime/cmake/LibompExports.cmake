@@ -66,7 +66,7 @@ if(${LIBOMP_OMPT_SUPPORT})
 endif()
 if(${LIBOMP_FORTRAN_MODULES})
   # We cannot attach a POST_BUILD command to libomp-mod, so instead attach it
-  # to omp and ensure that libomp-mod is built befoe by adding a dependency
+  # to omp and ensure that libomp-mod is built before by adding a dependency
   add_custom_command(TARGET omp POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_MOD_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy ${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib.mod ${LIBOMP_EXPORTS_MOD_DIR}
@@ -74,7 +74,7 @@ if(${LIBOMP_FORTRAN_MODULES})
   )
   add_dependencies(omp libomp-mod)
   add_custom_command(TARGET omp POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy omp_lib.h ${LIBOMP_EXPORTS_CMN_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/../../module/omp_lib.h ${LIBOMP_EXPORTS_CMN_DIR}
   )
 endif()
 

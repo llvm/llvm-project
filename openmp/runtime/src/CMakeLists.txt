@@ -377,8 +377,6 @@ if(WIN32)
   endif()
 endif()
 
-configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
-
 # Move files to exports/ directory if requested
 if(${LIBOMP_COPY_EXPORTS})
   include(LibompExports)
@@ -458,14 +456,4 @@ if(${LIBOMP_OMPT_SUPPORT})
   # install under legacy name ompt.h
   install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
   set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
-endif()
-if(LIBOMP_FORTRAN_MODULES)
-  set (destination ${LIBOMP_HEADERS_INSTALL_PATH})
-  if (NOT ${LIBOMP_MODULES_INSTALL_PATH} STREQUAL "")
-    set (destination ${LIBOMP_MODULES_INSTALL_PATH})
-  endif()
-  install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
-    DESTINATION ${destination}
-  )
 endif()
