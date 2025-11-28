@@ -14,10 +14,7 @@
 #define LLVM_CLANG_SEMA_ANALYSISBASEDWARNINGS_H
 
 #include "clang/AST/Decl.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Sema/ScopeInfo.h"
 #include <memory>
 
