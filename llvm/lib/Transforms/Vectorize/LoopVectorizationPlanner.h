@@ -152,11 +152,12 @@ public:
   /// its underlying Instruction.
   VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
                               Instruction *Inst = nullptr,
+                              const VPIRFlags &Flags = {},
                               const VPIRMetadata &MD = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
     VPInstruction *NewVPInst = tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, {}, MD, DL, Name));
+        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name));
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
@@ -329,7 +330,7 @@ public:
     else if (Opcode == Instruction::ZExt)
       Flags = VPIRFlags::NonNegFlagsTy(false);
     return tryInsertInstruction(
-        new VPWidenCastRecipe(Opcode, Op, ResultTy, Flags));
+        new VPWidenCastRecipe(Opcode, Op, ResultTy, nullptr, Flags));
   }
 
   VPScalarIVStepsRecipe *

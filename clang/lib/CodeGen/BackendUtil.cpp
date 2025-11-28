@@ -11,9 +11,9 @@
 #include "LinkInModulesPass.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1134,6 +1134,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                   CodeGenOpts.SanitizeMinimalRuntime),
               /*MayReturn=*/
               CodeGenOpts.SanitizeRecover.has(SanitizerKind::LocalBounds),
+              /*HandlerPreserveAllRegs=*/
+              static_cast<bool>(CodeGenOpts.SanitizeHandlerPreserveAllRegs),
           };
         }
         FPM.addPass(BoundsCheckingPass(Options));
