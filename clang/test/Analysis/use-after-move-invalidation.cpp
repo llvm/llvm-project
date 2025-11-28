@@ -25,11 +25,11 @@ class Foo {
     auto tmp = std::move(up); // expected-note{{Smart pointer 'up' of type 'std::unique_ptr' is reset to null when moved from}}
     opaqueFreeFun(); // does not clear region state
     (void)up->memberFun(); // expected-warning{{Dereference of null smart pointer 'up' of type 'std::unique_ptr'}}
-                      // expected-note@-1{{Dereference of null smart pointer 'up' of type 'std::unique_ptr'}}
+                           // expected-note@-1{{Dereference of null smart pointer 'up' of type 'std::unique_ptr'}}
   }
 };
 
-void testInstanceMeth(C c) {
+void testInstanceMemberFun(C c) {
   auto tmp1 = std::move(c); // expected-note{{Object 'c' is moved}}
   auto tmp2 = std::move(c); // expected-warning{{Moved-from object 'c' is moved}}
                             // expected-note@-1{{Moved-from object 'c' is moved}}
@@ -38,8 +38,6 @@ void testInstanceMeth(C c) {
   auto tmp4 = std::move(c);
   auto tmp5 = std::move(c); // no-warning
 }
-
-void modify(C&);
 
 void testPassByRef(C c) {
   auto tmp1 = std::move(c); // expected-note{{Object 'c' is moved}}
