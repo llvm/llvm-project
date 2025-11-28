@@ -52,26 +52,23 @@ struct ParseIndirectionPrefixResult {
 
 /// Parses the "p{indirection} " prefix given to pointer type names in TBAA.
 static ParseIndirectionPrefixResult parseIndirectionPrefix(const char *Name) {
-  size_t CharIndex = 0;
+  const char *Remaining = Name;
 
   // Parse 'p'.
   // This also handles the case of an empty string.
-  if (Name[CharIndex++] != 'p')
-    return {0, Name};
+  if (*Remaining != 'p')
+    return {0, Remaining};
+  ++Remaining;
 
   // Parse indirection level.
-  size_t Indirection = 0;
-  while (isdigit(Name[CharIndex])) {
-    const auto DigitValue = static_cast<size_t>(Name[CharIndex] - '0');
-    Indirection = Indirection * 10 + DigitValue;
-    ++CharIndex;
-  }
+  size_t Indirection = internal_simple_strtoll(Remaining, &Remaining, 10);
 
   // Parse space.
-  if (Name[CharIndex++] != ' ')
+  if (*Remaining != ' ')
     return {0, Name};
+  ++Remaining;
 
-  return {Indirection, Name + CharIndex};
+  return {Indirection, Remaining};
 }
 
 /// Given a TBAA type descriptor name, this function demangles it, also
