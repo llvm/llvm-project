@@ -655,6 +655,37 @@ public:
     return cir::StackRestoreOp::create(*this, loc, v);
   }
 
+  cir::CmpThreeWayOp createThreeWayCmpStrong(mlir::Location loc,
+                                             mlir::Value lhs, mlir::Value rhs,
+                                             const llvm::APSInt &ltRes,
+                                             const llvm::APSInt &eqRes,
+                                             const llvm::APSInt &gtRes) {
+    assert(ltRes.getBitWidth() == eqRes.getBitWidth() &&
+           ltRes.getBitWidth() == gtRes.getBitWidth() &&
+           "the three comparison results must have the same bit width");
+    cir::IntType cmpResultTy = getSIntNTy(ltRes.getBitWidth());
+    auto infoAttr = cir::CmpThreeWayInfoAttr::get(
+        getContext(), ltRes.getSExtValue(), eqRes.getSExtValue(), gtRes.getSExtValue());
+    return cir::CmpThreeWayOp::create(*this, loc, cmpResultTy, lhs, rhs,
+                                      infoAttr);
+  }
+
+  cir::CmpThreeWayOp
+  createThreeWayCmpPartial(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+                           const llvm::APSInt &ltRes, const llvm::APSInt &eqRes,
+                           const llvm::APSInt &gtRes,
+                           const llvm::APSInt &unorderedRes) {
+    assert(ltRes.getBitWidth() == eqRes.getBitWidth() &&
+           ltRes.getBitWidth() == gtRes.getBitWidth() &&
+           ltRes.getBitWidth() == unorderedRes.getBitWidth() &&
+           "the four comparison results must have the same bit width");
+    auto cmpResultTy = getSIntNTy(ltRes.getBitWidth());
+    auto infoAttr = cir::CmpThreeWayInfoAttr::get(
+        getContext(), ltRes.getSExtValue(), eqRes.getSExtValue(), gtRes.getSExtValue(), unorderedRes.getSExtValue());
+    return cir::CmpThreeWayOp::create(*this, loc, cmpResultTy, lhs, rhs,
+                                      infoAttr);
+  }
+
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,
                                 Address dstAddr, mlir::Type storageType,
                                 mlir::Value src, const CIRGenBitFieldInfo &info,
