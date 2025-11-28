@@ -1571,37 +1571,6 @@ public:
                                        true, CostKind);
   }
 
-  InstructionCost
-  getExpandCompressMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                                TTI::TargetCostKind CostKind) const override {
-    unsigned Opcode = MICA.getID() == Intrinsic::masked_expandload
-                          ? Instruction::Load
-                          : Instruction::Store;
-    Type *DataTy = MICA.getDataType();
-    bool VariableMask = MICA.getVariableMask();
-    Align Alignment = MICA.getAlignment();
-    // Treat expand load/compress store as gather/scatter operation.
-    // TODO: implement more precise cost estimation for these intrinsics.
-    return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
-                                       /*IsGatherScatter*/ true, CostKind);
-  }
-
-  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override {
-    // For a target without strided memory operations (or for an illegal
-    // operation type on one which does), assume we lower to a gather/scatter
-    // operation.  (Which may in turn be scalarized.)
-    unsigned IID = Opcode == Instruction::Load ? Intrinsic::masked_gather
-                                               : Intrinsic::masked_scatter;
-    return thisT()->getGatherScatterOpCost(
-        MemIntrinsicCostAttributes(IID, DataTy, Ptr, VariableMask, Alignment,
-                                   I),
-        CostKind);
-  }
-
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -3052,7 +3021,10 @@ public:
       unsigned Opcode = Id == Intrinsic::experimental_vp_strided_load
                             ? Instruction::Load
                             : Instruction::Store;
-      return thisT()->getStridedMemoryOpCost(Opcode, DataTy, Ptr, VariableMask,
+      // For a target without strided memory operations (or for an illegal
+      // operation type on one which does), assume we lower to a gather/scatter
+      // operation.  (Which may in turn be scalarized.)
+      return thisT()->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                              Alignment, CostKind, I);
     }
     case Intrinsic::masked_scatter:
@@ -3069,8 +3041,16 @@ public:
                                          CostKind);
     }
     case Intrinsic::masked_compressstore:
-    case Intrinsic::masked_expandload:
-      return thisT()->getExpandCompressMemoryOpCost(MICA, CostKind);
+    case Intrinsic::masked_expandload: {
+      unsigned Opcode = MICA.getID() == Intrinsic::masked_expandload
+                            ? Instruction::Load
+                            : Instruction::Store;
+      // Treat expand load/compress store as gather/scatter operation.
+      // TODO: implement more precise cost estimation for these intrinsics.
+      return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment,
+                                         VariableMask,
+                                         /*IsGatherScatter*/ true, CostKind);
+    }
     default:
       llvm_unreachable("unexpected intrinsic");
     }
