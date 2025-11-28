@@ -1093,19 +1093,16 @@ bool PPCTTIImpl::hasActiveVectorLength() const {
   return false;
 }
 
-static inline bool isLegalLoadWithLengthType(EVT VT) {
-  if (VT != MVT::i64 && VT != MVT::i32 && VT != MVT::i16 && VT != MVT::i8)
-    return false;
-  return true;
-}
-
 bool PPCTTIImpl::isLegalMaskedLoad(Type *DataType, Align Alignment,
                                    unsigned AddressSpace) const {
   if (!hasActiveVectorLength())
     return false;
-  if (!isLegalLoadWithLengthType(TLI->getValueType(DL, DataType, true)))
-    return false;
-  return true;
+  auto IsLegalLoadWithLengthType = [](EVT VT) {
+    if (VT != MVT::i64 && VT != MVT::i32 && VT != MVT::i16 && VT != MVT::i8)
+      return false;
+    return true;
+  };
+  return IsLegalLoadWithLengthType(TLI->getValueType(DL, DataType, true));
 }
 
 bool PPCTTIImpl::isLegalMaskedStore(Type *DataType, Align Alignment,
@@ -1127,16 +1124,23 @@ PPCTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   auto VecTy = dyn_cast<FixedVectorType>(DataTy);
   if (!VecTy)
     return BaseCost;
-  if (!isLegalMaskedLoad(VecTy->getScalarType(), Alignment, AddressSpace))
-    return BaseCost;
+  if (Opcode == Instruction::Load) {
+    if (!isLegalMaskedLoad(VecTy->getScalarType(), Alignment, AddressSpace))
+      return BaseCost;
+  } else {
+    if (!isLegalMaskedStore(VecTy->getScalarType(), Alignment, AddressSpace))
+      return BaseCost;
+  }
   if (VecTy->getPrimitiveSizeInBits() > 128)
     return BaseCost;
 
-  // Is scalar compare + select + maybe shift + vector load
-  InstructionCost Adj = vectorCostAdjustmentFactor(Opcode, DataTy, nullptr);
-  InstructionCost Cost = 2 + Adj;
+  // Cost is 1 (scalar compare) + 1 (scalar select) +
+  //  1 * vectorCostAdjustmentFactor (vector load with length)
+  // Maybe + 1 (scalar shift)
+  InstructionCost Cost = 1 + 1 +
+      vectorCostAdjustmentFactor(Opcode, DataTy, nullptr);
   if (ST->getCPUDirective() != PPC::DIR_PWR_FUTURE ||
       VecTy->getScalarSizeInBits() != 8)
-    Cost += 1; // need shift
+    Cost += 1; // need shift for length
   return Cost;
 }
