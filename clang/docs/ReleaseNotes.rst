@@ -449,6 +449,8 @@ Improvements to Clang's diagnostics
   comparison operators when mixed with bitwise operators in enum value initializers.
   This can be locally disabled by explicitly casting the initializer value.
 
+- Improved diagnostic location for templates declared inside local classes.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
