@@ -22,6 +22,7 @@
 
 #include "tysan/tysan.h"
 
+#include <ctype.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -40,20 +41,67 @@ tysan_copy_types(const void *daddr, const void *saddr, uptr size) {
     internal_memmove(shadow_for(daddr), shadow_for(saddr), size * sizeof(uptr));
 }
 
-static const char *getDisplayName(const char *Name) {
+/// Struct returned by `parseIndirectionPrefix`.
+struct ParseIndirectionPrefixResult {
+  /// Level of indirection - 0 if the prefix is not found.
+  size_t Indirection;
+  /// Pointer to the remaining part of the name after the indirection prefix.
+  /// (This is the original pointer if the prefix is not found.)
+  const char *RemainingName;
+};
+
+/// Parses the "p{indirection} " prefix given to pointer type names in TBAA.
+static ParseIndirectionPrefixResult parseIndirectionPrefix(const char *Name) {
+  const char *Remaining = Name;
+
+  // Parse 'p'.
+  // This also handles the case of an empty string.
+  if (*Remaining != 'p')
+    return {0, Remaining};
+  ++Remaining;
+
+  // Parse indirection level.
+  size_t Indirection = internal_simple_strtoll(Remaining, &Remaining, 10);
+
+  // Parse space.
+  if (*Remaining != ' ')
+    return {0, Name};
+  ++Remaining;
+
+  return {Indirection, Remaining};
+}
+
+/// Given a TBAA type descriptor name, this function demangles it, also
+/// rewriting the `pN T` pointer notation with more conventional "T*" notation.
+static size_t writeDemangledTypeName(char *Buffer, size_t BufferSize,
+                                     const char *Name) {
   if (Name[0] == '\0')
-    return "<anonymous type>";
+    return internal_snprintf(Buffer, BufferSize, "<anonymous type>");
+
+  size_t Written = 0;
+
+  // Parse indirection prefix and remove it.
+  const auto [Indirection, RemainingName] = parseIndirectionPrefix(Name);
 
   // Clang generates tags for C++ types that demangle as typeinfo. Remove the
   // prefix from the generated string.
   const char *TIPrefix = "typeinfo name for ";
   size_t TIPrefixLen = strlen(TIPrefix);
 
-  const char *DName = Symbolizer::GetOrInit()->Demangle(Name);
+  const char *DName = Symbolizer::GetOrInit()->Demangle(RemainingName);
   if (!internal_strncmp(DName, TIPrefix, TIPrefixLen))
     DName += TIPrefixLen;
 
-  return DName;
+  // Print type name.
+  Written +=
+      internal_snprintf(&Buffer[Written], BufferSize - Written, "%s", DName);
+
+  // Print asterisks for indirection (C pointer notation).
+  for (size_t i = 0; i < Indirection; ++i) {
+    Written += internal_snprintf(&Buffer[Written], BufferSize - Written, "*");
+  }
+
+  return Written;
 }
 
 static void printTDName(tysan_type_descriptor *td) {
@@ -75,8 +123,12 @@ static void printTDName(tysan_type_descriptor *td) {
     }
     break;
   case TYSAN_STRUCT_TD:
-    Printf("%s", getDisplayName(
-                     (char *)(td->Struct.Members + td->Struct.MemberCount)));
+    constexpr size_t BufferSize = 512;
+    char Buffer[BufferSize];
+    writeDemangledTypeName(
+        Buffer, BufferSize,
+        (char *)(td->Struct.Members + td->Struct.MemberCount));
+    Printf("%s", Buffer);
     break;
   }
 }
