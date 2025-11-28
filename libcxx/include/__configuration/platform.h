@@ -42,6 +42,11 @@
 #  define _LIBCPP_GLIBC_PREREQ(a, b) 0
 #endif
 
+// TODO: we should remove this once (#147956) is merged, for the same reason as listed above.
+#if __has_include(<__llvm-libc-common.h>)
+#  include <__llvm-libc-common.h>
+#endif
+
 #ifndef __BYTE_ORDER__
 #  error                                                                                                               \
       "Your compiler doesn't seem to define __BYTE_ORDER__, which is required by libc++ to know the endianness of your target platform"
