@@ -136,7 +136,7 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
           ExpressionVariable::EVNeedsAllocation;
       break;
     case Value::ValueType::LoadAddress:
-      expr_variable_sp->m_live_sp = live_valobj_sp;
+      expr_variable_sp->GetLiveObject() = live_valobj_sp;
       expr_variable_sp->m_flags |=
           ExpressionVariable::EVIsProgramReference;
       break;
