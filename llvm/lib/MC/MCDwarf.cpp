@@ -1297,40 +1297,32 @@ void MCCFIInstruction::replaceRegister(unsigned FromReg, unsigned ToReg) {
     if (Reg == FromReg)
       Reg = ToReg;
   };
-
-  // Replace registers in the shared fields.
-  if (Operation == OpRegister) {
-    ReplaceReg(U.RR.Register);
-    ReplaceReg(U.RR.Register2);
-  } else if (Operation == OpLLVMDefAspaceCfa) {
-    ReplaceReg(U.RIA.Register);
-  } else if (Operation == OpDefCfa || Operation == OpOffset ||
-             Operation == OpRestore || Operation == OpUndefined ||
-             Operation == OpSameValue || Operation == OpDefCfaRegister ||
-             Operation == OpRelOffset || Operation == OpLLVMVectorRegisters ||
-             Operation == OpLLVMRegisterPair ||
-             Operation == OpLLVMVectorOffset ||
-             Operation == OpLLVMVectorRegisterMask) {
-    ReplaceReg(U.RI.Register);
-  }
-
-  // Replace registers in the "ExtraFields" structures.
-  if (Operation == OpLLVMRegisterPair) {
-    auto &Fields = getExtraFields<RegisterPairExtraFields>();
-    ReplaceReg(Fields.Reg1);
-    ReplaceReg(Fields.Reg2);
-  } else if (Operation == OpLLVMVectorRegisters) {
-    auto &Fields = getExtraFields<VectorRegistersExtraFields>();
-    for (auto &VR : Fields.VectorRegisters)
-      ReplaceReg(VR.Register);
-  } else if (Operation == OpLLVMVectorOffset) {
-    auto &Fields = getExtraFields<VectorOffsetExtraFields>();
-    ReplaceReg(Fields.MaskRegister);
-  } else if (Operation == OpLLVMVectorRegisterMask) {
-    auto &Fields = getExtraFields<VectorRegisterMaskExtraFields>();
-    ReplaceReg(Fields.SpillRegister);
-    ReplaceReg(Fields.MaskRegister);
-  }
+  auto Visitor = makeVisitor(
+      [=](CommonFields &F) {
+        ReplaceReg(F.Register);
+        ReplaceReg(F.Register2);
+      },
+      [](EscapeFields &) {}, [](LabelFields &) {},
+      [=](RegisterPairFields &F) {
+        ReplaceReg(F.Register);
+        ReplaceReg(F.Reg1);
+        ReplaceReg(F.Reg2);
+      },
+      [=](VectorRegistersFields &F) {
+        ReplaceReg(F.Register);
+        for (auto &VRL : F.VectorRegisters)
+          ReplaceReg(VRL.Register);
+      },
+      [=](VectorOffsetFields &F) {
+        ReplaceReg(F.Register);
+        ReplaceReg(F.MaskRegister);
+      },
+      [=](VectorRegisterMaskFields &F) {
+        ReplaceReg(F.Register);
+        ReplaceReg(F.SpillRegister);
+        ReplaceReg(F.MaskRegister);
+      });
+  std::visit(Visitor, ExtraFields);
 }
 
 static int getDataAlignmentFactor(MCStreamer &streamer) {
@@ -1576,7 +1568,25 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
   case MCCFIInstruction::OpLabel:
     Streamer.emitLabel(Instr.getCfiLabel(), Instr.getLoc());
     return;
+  case MCCFIInstruction::OpValOffset: {
+    unsigned Reg = Instr.getRegister();
+    if (!IsEH)
+      Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
 
+    int Offset = Instr.getOffset();
+    Offset = Offset / dataAlignmentFactor;
+
+    if (Offset < 0) {
+      Streamer.emitInt8(dwarf::DW_CFA_val_offset_sf);
+      Streamer.emitULEB128IntValue(Reg);
+      Streamer.emitSLEB128IntValue(Offset);
+    } else {
+      Streamer.emitInt8(dwarf::DW_CFA_val_offset);
+      Streamer.emitULEB128IntValue(Reg);
+      Streamer.emitULEB128IntValue(Offset);
+    }
+    return;
+  }
   case MCCFIInstruction::OpLLVMRegisterPair: {
     // CFI for a register spilled to a pair of SGPRs is implemented as an
     // expression(E) rule where E is a composite location description with
@@ -1594,7 +1604,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     // the implictly pushed one is just ignored.)
 
     const auto &Fields =
-        Instr.getExtraFields<MCCFIInstruction::RegisterPairExtraFields>();
+        Instr.getExtraFields<MCCFIInstruction::RegisterPairFields>();
 
     SmallString<10> Block;
     raw_svector_ostream OSBlock(Block);
@@ -1618,31 +1628,11 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     }
 
     Streamer.emitInt8(dwarf::DW_CFA_expression);
-    Streamer.emitULEB128IntValue(Instr.getRegister());
+    Streamer.emitULEB128IntValue(Fields.Register);
     Streamer.emitULEB128IntValue(Block.size());
     Streamer.emitBinaryData(StringRef(&Block[0], Block.size()));
     return;
   }
-  case MCCFIInstruction::OpValOffset: {
-    unsigned Reg = Instr.getRegister();
-    if (!IsEH)
-      Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
-
-    int Offset = Instr.getOffset();
-    Offset = Offset / dataAlignmentFactor;
-
-    if (Offset < 0) {
-      Streamer.emitInt8(dwarf::DW_CFA_val_offset_sf);
-      Streamer.emitULEB128IntValue(Reg);
-      Streamer.emitSLEB128IntValue(Offset);
-    } else {
-      Streamer.emitInt8(dwarf::DW_CFA_val_offset);
-      Streamer.emitULEB128IntValue(Reg);
-      Streamer.emitULEB128IntValue(Offset);
-    }
-    return;
-  }
-
   case MCCFIInstruction::OpLLVMVectorRegisters: {
     // CFI for an SGPR spilled to a multiple lanes of VGPRs is implemented as an
     // expression(E) rule where E is a composite location description with
@@ -1668,9 +1658,9 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     // evaulation to be the location description on the top of the stack (i.e.
     // the implictly pushed one is just ignored.)
 
-    const auto &VRs =
-        Instr.getExtraFields<MCCFIInstruction::VectorRegistersExtraFields>()
-            .VectorRegisters;
+    const auto &Fields =
+        Instr.getExtraFields<MCCFIInstruction::VectorRegistersFields>();
+    auto &VRs = Fields.VectorRegisters;
 
     SmallString<20> Block;
     raw_svector_ostream OSBlock(Block);
@@ -1693,12 +1683,11 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     }
 
     Streamer.emitInt8(dwarf::DW_CFA_expression);
-    Streamer.emitULEB128IntValue(Instr.getRegister());
+    Streamer.emitULEB128IntValue(Fields.Register);
     Streamer.emitULEB128IntValue(Block.size());
     Streamer.emitBinaryData(StringRef(&Block[0], Block.size()));
     return;
   }
-
   case MCCFIInstruction::OpLLVMVectorOffset: {
     // CFI for a vector register spilled to memory is implemented as an
     // expression(E) rule where E is a location description.
@@ -1712,15 +1701,15 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     //    (DW_OP_LLVM_select_bit_piece <VGPRSize> <MaskSize>)
 
     const auto &Fields =
-        Instr.getExtraFields<MCCFIInstruction::VectorOffsetExtraFields>();
+        Instr.getExtraFields<MCCFIInstruction::VectorOffsetFields>();
 
     SmallString<20> Block;
     raw_svector_ostream OSBlock(Block);
-    encodeDwarfRegisterLocation(Instr.getRegister(), OSBlock);
+    encodeDwarfRegisterLocation(Fields.Register, OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_swap);
     OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
             << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
-    encodeULEB128(Instr.getOffset(), OSBlock);
+    encodeULEB128(Fields.Offset, OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
             << uint8_t(dwarf::DW_OP_LLVM_call_frame_entry_reg);
     encodeULEB128(Fields.MaskRegister, OSBlock);
@@ -1732,7 +1721,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     encodeULEB128(Fields.MaskRegisterSizeInBits, OSBlock);
 
     Streamer.emitInt8(dwarf::DW_CFA_expression);
-    Streamer.emitULEB128IntValue(Instr.getRegister());
+    Streamer.emitULEB128IntValue(Fields.Register);
     Streamer.emitULEB128IntValue(Block.size());
     Streamer.emitBinaryData(StringRef(&Block[0], Block.size()));
     return;
@@ -1750,11 +1739,11 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     //   (DW_OP_LLVM_select_bit_piece <GPR lane size> <MaskSize>)
 
     const auto Fields =
-        Instr.getExtraFields<MCCFIInstruction::VectorRegisterMaskExtraFields>();
+        Instr.getExtraFields<MCCFIInstruction::VectorRegisterMaskFields>();
 
     SmallString<20> Block;
     raw_svector_ostream OSBlock(Block);
-    encodeDwarfRegisterLocation(Instr.getRegister(), OSBlock);
+    encodeDwarfRegisterLocation(Fields.Register, OSBlock);
     encodeDwarfRegisterLocation(Fields.SpillRegister, OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
             << uint8_t(dwarf::DW_OP_LLVM_call_frame_entry_reg);
@@ -1767,7 +1756,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     encodeULEB128(Fields.MaskRegisterSizeInBits, OSBlock);
 
     Streamer.emitInt8(dwarf::DW_CFA_expression);
-    Streamer.emitULEB128IntValue(Instr.getRegister());
+    Streamer.emitULEB128IntValue(Fields.Register);
     Streamer.emitULEB128IntValue(Block.size());
     Streamer.emitBinaryData(StringRef(&Block[0], Block.size()));
     return;

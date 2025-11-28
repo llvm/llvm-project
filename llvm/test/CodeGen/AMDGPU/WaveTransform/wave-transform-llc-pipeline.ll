@@ -49,31 +49,30 @@
 ; GCN-O0-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O0-NEXT:    Lower buffer fat pointer operations to buffer resources
 ; GCN-O0-NEXT:    AMDGPU lower intrinsics
+; GCN-O0-NEXT:    FunctionPass Manager
+; GCN-O0-NEXT:      Lazy Value Information Analysis
+; GCN-O0-NEXT:      Lower SwitchInst's to branches
+; GCN-O0-NEXT:      Lower invoke and unwind, for unwindless code generators
+; GCN-O0-NEXT:      Remove unreachable blocks from the CFG
+; GCN-O0-NEXT:      Dominator Tree Construction
+; GCN-O0-NEXT:      Cycle Info Analysis
+; GCN-O0-NEXT:      Uniformity Analysis
+; GCN-O0-NEXT:      Basic Alias Analysis (stateless AA impl)
+; GCN-O0-NEXT:      Function Alias Analysis Results
+; GCN-O0-NEXT:      Memory SSA
+; GCN-O0-NEXT:      AMDGPU IR late optimizations
+; GCN-O0-NEXT:      Post-Dominator Tree Construction
+; GCN-O0-NEXT:      Uniformity Analysis
+; GCN-O0-NEXT:      Unify divergent function exit nodes
+; GCN-O0-NEXT:      Dominator Tree Construction
+; GCN-O0-NEXT:      Cycle Info Analysis
+; GCN-O0-NEXT:      Convert irreducible control-flow into natural loops
+; GCN-O0-NEXT:      Natural Loop Information
+; GCN-O0-NEXT:      Fixup each natural loop to have a single exit block
+; GCN-O0-NEXT:      LCSSA Verifier
+; GCN-O0-NEXT:      Loop-Closed SSA Form Pass
 ; GCN-O0-NEXT:    CallGraph Construction
 ; GCN-O0-NEXT:    Call Graph SCC Pass Manager
-; GCN-O0-NEXT:      DummyCGSCCPass
-; GCN-O0-NEXT:      FunctionPass Manager
-; GCN-O0-NEXT:        Lazy Value Information Analysis
-; GCN-O0-NEXT:        Lower SwitchInst's to branches
-; GCN-O0-NEXT:        Lower invoke and unwind, for unwindless code generators
-; GCN-O0-NEXT:        Remove unreachable blocks from the CFG
-; GCN-O0-NEXT:        Dominator Tree Construction
-; GCN-O0-NEXT:        Cycle Info Analysis
-; GCN-O0-NEXT:        Uniformity Analysis
-; GCN-O0-NEXT:        Basic Alias Analysis (stateless AA impl)
-; GCN-O0-NEXT:        Function Alias Analysis Results
-; GCN-O0-NEXT:        Memory SSA
-; GCN-O0-NEXT:        AMDGPU IR late optimizations
-; GCN-O0-NEXT:        Post-Dominator Tree Construction
-; GCN-O0-NEXT:        Uniformity Analysis
-; GCN-O0-NEXT:        Unify divergent function exit nodes
-; GCN-O0-NEXT:        Dominator Tree Construction
-; GCN-O0-NEXT:        Cycle Info Analysis
-; GCN-O0-NEXT:        Convert irreducible control-flow into natural loops
-; GCN-O0-NEXT:        Natural Loop Information
-; GCN-O0-NEXT:        Fixup each natural loop to have a single exit block
-; GCN-O0-NEXT:        LCSSA Verifier
-; GCN-O0-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O0-NEXT:      DummyCGSCCPass
 ; GCN-O0-NEXT:      FunctionPass Manager
 ; GCN-O0-NEXT:        Prepare callbr
@@ -266,38 +265,37 @@
 ; GCN-O3-NEXT:      GPU Load and Store Vectorizer
 ; GCN-O3-NEXT:    Lower buffer fat pointer operations to buffer resources
 ; GCN-O3-NEXT:    AMDGPU lower intrinsics
+; GCN-O3-NEXT:    FunctionPass Manager
+; GCN-O3-NEXT:      Lazy Value Information Analysis
+; GCN-O3-NEXT:      Lower SwitchInst's to branches
+; GCN-O3-NEXT:      Lower invoke and unwind, for unwindless code generators
+; GCN-O3-NEXT:      Remove unreachable blocks from the CFG
+; GCN-O3-NEXT:      Dominator Tree Construction
+; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
+; GCN-O3-NEXT:      Function Alias Analysis Results
+; GCN-O3-NEXT:      Flatten the CFG
+; GCN-O3-NEXT:      Dominator Tree Construction
+; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)
+; GCN-O3-NEXT:      Function Alias Analysis Results
+; GCN-O3-NEXT:      Natural Loop Information
+; GCN-O3-NEXT:      Code sinking
+; GCN-O3-NEXT:      Cycle Info Analysis
+; GCN-O3-NEXT:      Uniformity Analysis
+; GCN-O3-NEXT:      Function Alias Analysis Results
+; GCN-O3-NEXT:      Memory SSA
+; GCN-O3-NEXT:      AMDGPU IR late optimizations
+; GCN-O3-NEXT:      Post-Dominator Tree Construction
+; GCN-O3-NEXT:      Uniformity Analysis
+; GCN-O3-NEXT:      Unify divergent function exit nodes
+; GCN-O3-NEXT:      Dominator Tree Construction
+; GCN-O3-NEXT:      Cycle Info Analysis
+; GCN-O3-NEXT:      Convert irreducible control-flow into natural loops
+; GCN-O3-NEXT:      Natural Loop Information
+; GCN-O3-NEXT:      Fixup each natural loop to have a single exit block
+; GCN-O3-NEXT:      LCSSA Verifier
+; GCN-O3-NEXT:      Loop-Closed SSA Form Pass
 ; GCN-O3-NEXT:    CallGraph Construction
 ; GCN-O3-NEXT:    Call Graph SCC Pass Manager
-; GCN-O3-NEXT:      DummyCGSCCPass
-; GCN-O3-NEXT:      FunctionPass Manager
-; GCN-O3-NEXT:        Lazy Value Information Analysis
-; GCN-O3-NEXT:        Lower SwitchInst's to branches
-; GCN-O3-NEXT:        Lower invoke and unwind, for unwindless code generators
-; GCN-O3-NEXT:        Remove unreachable blocks from the CFG
-; GCN-O3-NEXT:        Dominator Tree Construction
-; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
-; GCN-O3-NEXT:        Function Alias Analysis Results
-; GCN-O3-NEXT:        Flatten the CFG
-; GCN-O3-NEXT:        Dominator Tree Construction
-; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
-; GCN-O3-NEXT:        Function Alias Analysis Results
-; GCN-O3-NEXT:        Natural Loop Information
-; GCN-O3-NEXT:        Code sinking
-; GCN-O3-NEXT:        Cycle Info Analysis
-; GCN-O3-NEXT:        Uniformity Analysis
-; GCN-O3-NEXT:        Function Alias Analysis Results
-; GCN-O3-NEXT:        Memory SSA
-; GCN-O3-NEXT:        AMDGPU IR late optimizations
-; GCN-O3-NEXT:        Post-Dominator Tree Construction
-; GCN-O3-NEXT:        Uniformity Analysis
-; GCN-O3-NEXT:        Unify divergent function exit nodes
-; GCN-O3-NEXT:        Dominator Tree Construction
-; GCN-O3-NEXT:        Cycle Info Analysis
-; GCN-O3-NEXT:        Convert irreducible control-flow into natural loops
-; GCN-O3-NEXT:        Natural Loop Information
-; GCN-O3-NEXT:        Fixup each natural loop to have a single exit block
-; GCN-O3-NEXT:        LCSSA Verifier
-; GCN-O3-NEXT:        Loop-Closed SSA Form Pass
 ; GCN-O3-NEXT:      Analysis if a function is memory bound
 ; GCN-O3-NEXT:      DummyCGSCCPass
 ; GCN-O3-NEXT:      FunctionPass Manager

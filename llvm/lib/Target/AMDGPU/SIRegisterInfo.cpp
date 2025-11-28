@@ -3990,11 +3990,8 @@ bool SIRegisterInfo::shouldCoalesce(MachineInstr *MI,
     }
   }
 
-  // TODO: This should be more aggressive, but be more cautious with very wide
-  // tuples.
-  unsigned NewSize = getRegSizeInBits(*NewRC);
-  return NewSize <= 128 || NewSize <= getRegSizeInBits(*SrcRC) ||
-         NewSize <= getRegSizeInBits(*DstRC);
+  return TargetRegisterInfo::shouldCoalesce(MI, SrcRC, SubReg, DstRC, DstSubReg,
+                                            NewRC, LIS);
 }
 
 unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,

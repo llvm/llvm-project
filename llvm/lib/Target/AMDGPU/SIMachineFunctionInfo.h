@@ -171,6 +171,7 @@ struct SIArgumentInfo {
   std::optional<SIArgument> DispatchID;
   std::optional<SIArgument> FlatScratchInit;
   std::optional<SIArgument> PrivateSegmentSize;
+  std::optional<SIArgument> FirstKernArgPreloadReg;
 
   std::optional<SIArgument> WorkGroupIDX;
   std::optional<SIArgument> WorkGroupIDY;
@@ -196,6 +197,7 @@ template <> struct MappingTraits<SIArgumentInfo> {
     YamlIO.mapOptional("dispatchID", AI.DispatchID);
     YamlIO.mapOptional("flatScratchInit", AI.FlatScratchInit);
     YamlIO.mapOptional("privateSegmentSize", AI.PrivateSegmentSize);
+    YamlIO.mapOptional("firstKernArgPreloadReg", AI.FirstKernArgPreloadReg);
 
     YamlIO.mapOptional("workGroupIDX", AI.WorkGroupIDX);
     YamlIO.mapOptional("workGroupIDY", AI.WorkGroupIDY);
@@ -307,6 +309,8 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   unsigned DynamicVGPRBlockSize = 0;
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
+  unsigned NumKernargPreloadSGPRs = 0;
+
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
                         const TargetRegisterInfo &TRI,
@@ -364,6 +368,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
+    YamlIO.mapOptional("numKernargPreloadSGPRs", MFI.NumKernargPreloadSGPRs, 0);
     YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
   }
 };

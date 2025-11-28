@@ -40,6 +40,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceManager.h"
@@ -47,7 +48,6 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -4114,6 +4114,38 @@ template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *D) {
   return D->isImplicit();
 }
 
+static bool shouldSkipAliasEmission(const CodeGenModule &CGM,
+                                    const ValueDecl *Global) {
+  const LangOptions &LangOpts = CGM.getLangOpts();
+  if (!LangOpts.OpenMPIsTargetDevice && !LangOpts.CUDA)
+    return false;
+
+  const auto *AA = Global->getAttr<AliasAttr>();
+  GlobalDecl AliaseeGD;
+
+  // Check if the aliasee exists, if the aliasee is not found, skip the alias
+  // emission. This is executed for both the host and device.
+  if (!CGM.lookupRepresentativeDecl(AA->getAliasee(), AliaseeGD))
+    return true;
+
+  const auto *AliaseeDecl = dyn_cast<ValueDecl>(AliaseeGD.getDecl());
+  if (LangOpts.OpenMPIsTargetDevice)
+    return !AliaseeDecl ||
+           !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(AliaseeDecl);
+
+  // CUDA / HIP
+  const bool HasDeviceAttr = Global->hasAttr<CUDADeviceAttr>();
+  const bool AliaseeHasDeviceAttr =
+      AliaseeDecl && AliaseeDecl->hasAttr<CUDADeviceAttr>();
+
+  if (LangOpts.CUDAIsDevice)
+    return !HasDeviceAttr || !AliaseeHasDeviceAttr;
+
+  // CUDA / HIP Host
+  // we know that the aliasee exists from above, so we know to emit
+  return false;
+}
+
 bool CodeGenModule::shouldEmitCUDAGlobalVar(const VarDecl *Global) const {
   assert(LangOpts.CUDA && "Should not be called by non-CUDA languages");
   // We need to emit host-side 'shadows' for all global
@@ -4136,8 +4168,11 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
   // If this is an alias definition (which otherwise looks like a declaration)
   // emit it now.
-  if (Global->hasAttr<AliasAttr>())
+  if (Global->hasAttr<AliasAttr>()) {
+    if (shouldSkipAliasEmission(*this, Global))
+      return;
     return EmitAliasDefinition(GD);
+  }
 
   // IFunc like an alias whose value is resolved at runtime by calling resolver.
   if (Global->hasAttr<IFuncAttr>())
@@ -10073,54 +10108,4 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
-}
-
-bool CodeGenModule::classNeedsVectorDestructor(const CXXRecordDecl *RD) {
-  if (!Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts()))
-    return false;
-  CXXDestructorDecl *Dtor = RD->getDestructor();
-  // The compiler can't know if new[]/delete[] will be used outside of the DLL,
-  // so just force vector deleting destructor emission if dllexport is present.
-  // This matches MSVC behavior.
-  if (Dtor && Dtor->isVirtual() && Dtor->isDefined() &&
-      Dtor->hasAttr<DLLExportAttr>())
-    return true;
-
-  return RequireVectorDeletingDtor.count(RD);
-}
-
-void CodeGenModule::requireVectorDestructorDefinition(const CXXRecordDecl *RD) {
-  if (!Context.getTargetInfo().emitVectorDeletingDtors(Context.getLangOpts()))
-    return;
-  RequireVectorDeletingDtor.insert(RD);
-
-  // To reduce code size in general case we lazily emit scalar deleting
-  // destructor definition and an alias from vector deleting destructor to
-  // scalar deleting destructor. It may happen that we first emitted the scalar
-  // deleting destructor definition and the alias and then discovered that the
-  // definition of the vector deleting destructor is required. Then we need to
-  // remove the alias and the scalar deleting destructor and queue vector
-  // deleting destructor body for emission. Check if that is the case.
-  CXXDestructorDecl *DtorD = RD->getDestructor();
-  GlobalDecl ScalarDtorGD(DtorD, Dtor_Deleting);
-  StringRef MangledName = getMangledName(ScalarDtorGD);
-  llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
-  if (Entry && !Entry->isDeclaration()) {
-    GlobalDecl VectorDtorGD(DtorD, Dtor_VectorDeleting);
-    StringRef VDName = getMangledName(VectorDtorGD);
-    llvm::GlobalValue *VDEntry = GetGlobalValue(VDName);
-    // It exists and it should be an alias.
-    assert(VDEntry && isa<llvm::GlobalAlias>(VDEntry));
-    auto *NewFn = llvm::Function::Create(
-        cast<llvm::FunctionType>(VDEntry->getValueType()),
-        llvm::Function::ExternalLinkage, VDName, &getModule());
-    SetFunctionAttributes(VectorDtorGD, NewFn, /*IsIncompleteFunction*/ false,
-                          /*IsThunk*/ false);
-    NewFn->takeName(VDEntry);
-    VDEntry->replaceAllUsesWith(NewFn);
-    VDEntry->eraseFromParent();
-    Entry->replaceAllUsesWith(NewFn);
-    Entry->eraseFromParent();
-    addDeferredDeclToEmit(VectorDtorGD);
-  }
 }

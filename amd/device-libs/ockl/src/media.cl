@@ -11,6 +11,9 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 #define CATTR __attribute__((const))
+#define LCATTR __attribute__((const, target("lerp-inst")))
+#define QCATTR __attribute__((const, target("qsad-insts")))
+#define SCATTR __attribute__((const, target("sad-insts")))
 #define AS_UCHAR4(X) __builtin_astype(X, uchar4)
 
 CATTR uint
@@ -44,7 +47,7 @@ OCKL_MANGLE_U32(bytealign)(uint a, uint b, uint c)
     return __builtin_amdgcn_alignbyte(a, b, c);
 }
 
-CATTR uint
+LCATTR uint
 OCKL_MANGLE_U32(lerp)(uint a, uint b, uint c)
 {
     return __builtin_amdgcn_lerp(a, b, c);
@@ -155,13 +158,13 @@ OCKL_MANGLE_U32(pack)(float4 a)
                  __builtin_amdgcn_cvt_pk_u8_f32(a.s0, 0, 0))));
 }
 
-CATTR ulong
+QCATTR ulong
 OCKL_MANGLE_U64(qsad)(ulong a, uint b, ulong c)
 {
     return __builtin_amdgcn_qsad_pk_u16_u8(a, b, c);
 }
 
-CATTR uint
+SCATTR uint
 OCKL_MANGLE_U32(sad)(uint a, uint b, uint c)
 {
     return __builtin_amdgcn_sad_u8(a, b, c);
@@ -174,13 +177,13 @@ OCKL_MANGLE_U32(sadd)(uint a, uint b, uint c)
     return (a > b ? a : b) - (a < b ? a : b) + c;
 }
 
-CATTR uint
+SCATTR uint
 OCKL_MANGLE_U32(sadhi)(uint a, uint b, uint c)
 {
     return __builtin_amdgcn_sad_hi_u8(a, b, c);
 }
 
-CATTR uint
+SCATTR uint
 OCKL_MANGLE_U32(sadw)(uint a, uint b, uint c)
 {
     return __builtin_amdgcn_sad_u16(a, b, c);

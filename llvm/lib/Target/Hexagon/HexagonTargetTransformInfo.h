@@ -165,9 +165,10 @@ public:
   }
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned AddressSpace) const override;
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned AddressSpace) const override;
+                          unsigned AddressSpace,
+                          TTI::MaskKind MaskKind) const override;
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
+                         TTI::MaskKind MaskKind) const override;
   bool isLegalMaskedGather(Type *Ty, Align Alignment) const override;
   bool isLegalMaskedScatter(Type *Ty, Align Alignment) const override;
   bool forceScalarizeMaskedGather(VectorType *VTy,

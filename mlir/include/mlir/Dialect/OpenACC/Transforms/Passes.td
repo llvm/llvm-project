@@ -63,6 +63,34 @@ def ACCImplicitData : Pass<"acc-implicit-data", "mlir::ModuleOp"> {
   ];
 }
 
+def ACCImplicitDeclare : Pass<"acc-implicit-declare", "mlir::ModuleOp"> {
+  let summary = "Applies implicit acc declare to globals referenced in compute and routine acc regions";
+  let description = [{
+    This pass applies implicit `acc declare` actions to global variables
+    referenced in OpenACC compute regions and routine functions.
+
+    The pass performs the following actions:
+
+    1. Hoists address-of operations for non-constant globals out of OpenACC
+       regions when they can be implicitly mapped rather than declared.
+
+    2. Collects global symbols referenced in:
+       - OpenACC compute constructs (parallel, kernels, serial)
+       - Functions marked with acc routine
+       - Initialization regions of existing acc declare globals
+       - Private/firstprivate/reduction recipe operations
+
+    3. Marks collected globals with the acc.declare attribute using the
+       copyin data clause.
+
+    The pass avoids unnecessary declare marking by:
+    - Skipping function symbols (which use acc routine instead)
+    - Hoisting non-constant global references that can use implicit mapping
+    - Only processing symbols that are not already valid in device regions
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+}
+
 def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
   let summary = "Generate implicit acc routine for functions in acc regions";
   let description = [{

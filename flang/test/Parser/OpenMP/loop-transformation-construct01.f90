@@ -10,7 +10,7 @@ subroutine loop_transformation_construct
   integer :: y(I)
 
   !$omp do
-  !$omp unroll
+  !$omp unroll partial(1)
   do i = 1, I
     y(i) = y(i) * 5
   end do
@@ -28,7 +28,8 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
 !CHECK-PARSE-NEXT: | | | | | OmpBeginLoopDirective
 !CHECK-PARSE-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = unroll
-!CHECK-PARSE-NEXT: | | | | | | OmpClauseList ->
+!CHECK-PARSE-NEXT: | | | | | | OmpClauseList -> OmpClause -> Partial -> Scalar -> Integer -> Constant -> Expr = '1_4'
+!CHECK-PARSE-NEXT: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
 !CHECK-PARSE-NEXT: | | | | | | Flags = None
 !CHECK-PARSE-NEXT: | | | | | Block
 !CHECK-PARSE-NEXT: | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
@@ -71,7 +72,7 @@ end subroutine
 !CHECK-UNPARSE-NEXT:  INTEGER x
 !CHECK-UNPARSE-NEXT:  INTEGER y(i)
 !CHECK-UNPARSE-NEXT: !$OMP DO
-!CHECK-UNPARSE-NEXT: !$OMP UNROLL
+!CHECK-UNPARSE-NEXT: !$OMP UNROLL PARTIAL(1_4)
 !CHECK-UNPARSE-NEXT:  DO i=1_4,i
 !CHECK-UNPARSE-NEXT:    y(int(i,kind=8))=5_4*y(int(i,kind=8))
 !CHECK-UNPARSE-NEXT:  END DO

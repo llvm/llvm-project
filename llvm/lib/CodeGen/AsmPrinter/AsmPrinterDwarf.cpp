@@ -262,32 +262,32 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
     break;
   case MCCFIInstruction::OpLLVMRegisterPair: {
     const auto &Fields =
-        Inst.getExtraFields<MCCFIInstruction::RegisterPairExtraFields>();
-    OutStreamer->emitCFILLVMRegisterPair(Inst.getRegister(), Fields.Reg1,
+        Inst.getExtraFields<MCCFIInstruction::RegisterPairFields>();
+    OutStreamer->emitCFILLVMRegisterPair(Fields.Register, Fields.Reg1,
                                          Fields.Reg1SizeInBits, Fields.Reg2,
                                          Fields.Reg2SizeInBits, Loc);
     break;
   }
   case MCCFIInstruction::OpLLVMVectorRegisters: {
     const auto &Fields =
-        Inst.getExtraFields<MCCFIInstruction::VectorRegistersExtraFields>();
-    OutStreamer->emitCFILLVMVectorRegisters(Inst.getRegister(),
+        Inst.getExtraFields<MCCFIInstruction::VectorRegistersFields>();
+    OutStreamer->emitCFILLVMVectorRegisters(Fields.Register,
                                             Fields.VectorRegisters, Loc);
     break;
   }
   case MCCFIInstruction::OpLLVMVectorOffset: {
     const auto &Fields =
-        Inst.getExtraFields<MCCFIInstruction::VectorOffsetExtraFields>();
+        Inst.getExtraFields<MCCFIInstruction::VectorOffsetFields>();
     OutStreamer->emitCFILLVMVectorOffset(
-        Inst.getRegister(), Fields.RegisterSizeInBits, Fields.MaskRegister,
-        Fields.MaskRegisterSizeInBits, Inst.getOffset(), Loc);
+        Fields.Register, Fields.RegisterSizeInBits, Fields.MaskRegister,
+        Fields.MaskRegisterSizeInBits, Fields.Offset, Loc);
     break;
   }
   case MCCFIInstruction::OpLLVMVectorRegisterMask: {
     const auto &Fields =
-        Inst.getExtraFields<MCCFIInstruction::VectorRegisterMaskExtraFields>();
+        Inst.getExtraFields<MCCFIInstruction::VectorRegisterMaskFields>();
     OutStreamer->emitCFILLVMVectorRegisterMask(
-        Inst.getRegister(), Fields.SpillRegister,
+        Fields.Register, Fields.SpillRegister,
         Fields.SpillRegisterLaneSizeInBits, Fields.MaskRegister,
         Fields.MaskRegisterSizeInBits);
     break;

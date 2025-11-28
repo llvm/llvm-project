@@ -258,7 +258,7 @@ protected:
 
 protected:
   /// Emits scope cleanup instructions.
-  void emitCleanup();
+  bool emitCleanup();
 
   /// Returns a record type from a record or pointer type.
   const RecordType *getRecordTy(QualType Ty);
@@ -393,6 +393,8 @@ private:
   }
 
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
+  bool emitIntegralCast(PrimType FromT, PrimType ToT, QualType ToQT,
+                        const Expr *E);
   PrimType classifyComplexElementType(QualType T) const {
     assert(T->isAnyComplexType());
 
@@ -477,12 +479,14 @@ public:
   VariableScope(Compiler<Emitter> *Ctx, const ValueDecl *VD,
                 ScopeKind Kind = ScopeKind::Block)
       : Ctx(Ctx), Parent(Ctx->VarScope), ValDecl(VD), Kind(Kind) {
+    if (Parent)
+      this->LocalsAlwaysEnabled = Parent->LocalsAlwaysEnabled;
     Ctx->VarScope = this;
   }
 
   virtual ~VariableScope() { Ctx->VarScope = this->Parent; }
 
-  virtual void addLocal(const Scope::Local &Local) {
+  virtual void addLocal(Scope::Local Local) {
     llvm_unreachable("Shouldn't be called");
   }
 
@@ -519,16 +523,19 @@ public:
       if (!P)
         break;
     }
-
     // Add to this scope.
     this->addLocal(Local);
   }
 
-  virtual void emitDestruction() {}
   virtual bool emitDestructors(const Expr *E = nullptr) { return true; }
   virtual bool destroyLocals(const Expr *E = nullptr) { return true; }
   VariableScope *getParent() const { return Parent; }
   ScopeKind getKind() const { return Kind; }
+
+  /// Whether locals added to this scope are enabled by default.
+  /// This is almost always true, except for the two branches
+  /// of a conditional operator.
+  bool LocalsAlwaysEnabled = true;
 
 protected:
   /// Compiler instance.
@@ -555,15 +562,6 @@ public:
     removeStoredOpaqueValues();
   }
 
-  /// Overriden to support explicit destruction.
-  void emitDestruction() override {
-    if (!Idx)
-      return;
-
-    this->emitDestructors();
-    this->Ctx->emitDestroy(*Idx, SourceInfo{});
-  }
-
   /// Explicit destruction of local variables.
   bool destroyLocals(const Expr *E = nullptr) override {
     if (!Idx)
@@ -576,29 +574,48 @@ public:
     return Success;
   }
 
-  void addLocal(const Scope::Local &Local) override {
+  void addLocal(Scope::Local Local) override {
     if (!Idx) {
       Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
       this->Ctx->Descriptors.emplace_back();
       this->Ctx->emitInitScope(*Idx, {});
     }
 
+    Local.EnabledByDefault = this->LocalsAlwaysEnabled;
     this->Ctx->Descriptors[*Idx].emplace_back(Local);
   }
 
   bool emitDestructors(const Expr *E = nullptr) override {
     if (!Idx)
       return true;
+    assert(!this->Ctx->Descriptors[*Idx].empty());
+
     // Emit destructor calls for local variables of record
     // type with a destructor.
     for (Scope::Local &Local : llvm::reverse(this->Ctx->Descriptors[*Idx])) {
       if (Local.Desc->hasTrivialDtor())
         continue;
-      if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
-        return false;
 
-      if (!this->Ctx->emitDestructionPop(Local.Desc, Local.Desc->getLoc()))
-        return false;
+      if (!Local.EnabledByDefault) {
+        typename Emitter::LabelTy EndLabel = this->Ctx->getLabel();
+        if (!this->Ctx->emitGetLocalEnabled(Local.Offset, E))
+          return false;
+        if (!this->Ctx->jumpFalse(EndLabel))
+          return false;
+
+        if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
+          return false;
+
+        if (!this->Ctx->emitDestructionPop(Local.Desc, Local.Desc->getLoc()))
+          return false;
+
+        this->Ctx->emitLabel(EndLabel);
+      } else {
+        if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
+          return false;
+        if (!this->Ctx->emitDestructionPop(Local.Desc, Local.Desc->getLoc()))
+          return false;
+      }
 
       removeIfStoredOpaqueValue(Local);
     }
