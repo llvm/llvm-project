@@ -100,8 +100,15 @@ auto inst_counter_types(InstCounterType MaxCounter = NUM_INST_CNTS) {
 /// Integer IDs used to track vector memory locations we may have to wait on.
 /// Encoded as u16 chunks:
 ///
-///   [0,            MAX_REGUNITS ): MCRegUnit
-///   [FIRST_LDSDMA, LAST_LDSDMA  ): LDS DMA IDs
+///   [0,               REGUNITS_END ): MCRegUnit
+///   [LDSDMA_BEGIN,    LDSDMA_END  ) : LDS DMA IDs
+///
+/// NOTE: The choice of encoding these as "u16 chunks" is arbitrary.
+/// It gives (2 << 16) - 1 entries per category which is more than enough
+/// for all register units. MCPhysReg is u16 so we don't even support >u16
+/// physical register numbers at this time, let alone >u16 register units.
+/// In any case, an assertion in "WaitcntBrackets" ensures REGUNITS_END
+/// is enough for all register units.
 using VMEMID = uint32_t;
 
 enum : VMEMID {
@@ -586,7 +593,12 @@ public:
 // "s_waitcnt 0" before use.
 class WaitcntBrackets {
 public:
-  WaitcntBrackets(const SIInsertWaitcnts *Context) : Context(Context) {}
+  WaitcntBrackets(const SIInsertWaitcnts *Context) : Context(Context) {
+    static_assert(REGUNITS_BEGIN == 0,
+                  "REGUNITS_BEGIN must be zero; tracking depends on being able "
+                  "to convert a register unit ID to a VMEMID directly!");
+    assert(Context->TRI->getNumRegUnits() < REGUNITS_END);
+  }
 
   bool isSmemCounter(InstCounterType T) const {
     return T == Context->SmemAccessCounter || T == X_CNT;
@@ -730,10 +742,10 @@ private:
 
   iterator_range<MCRegUnitIterator> regunits(MCPhysReg Reg) const {
     assert(Reg != AMDGPU::SCC && "Shouldn't be used on SCC");
-    const TargetRegisterClass *RC = Context->TRI->getPhysRegBaseClass(Reg);
-    unsigned Size = Context->TRI->getRegSizeInBits(*RC);
     if (!Context->TRI->isInAllocatableClass(Reg))
       return {{}, {}};
+    const TargetRegisterClass *RC = Context->TRI->getPhysRegBaseClass(Reg);
+    unsigned Size = Context->TRI->getRegSizeInBits(*RC);
     if (Size == 16 && Context->ST->hasD16Writes32BitVgpr())
       Reg = Context->TRI->get32BitRegister(Reg);
     return Context->TRI->regunits(Reg);
@@ -794,6 +806,10 @@ private:
   // For the VMem case, if the key is within the range of LDS DMA IDs,
   // then the corresponding index into the `LDSDMAStores` vector below is:
   //   Key - LDSDMA_BEGIN - 1
+  // This is because LDSDMA_BEGIN is a generic entry and does not have an
+  // associated MachineInstr.
+  //
+  // TODO: Could we track SCC alongside SGPRs so it's not longer a special case?
 
   struct VGPRInfo {
     // Scores for all instruction counters.
@@ -820,7 +836,6 @@ private:
 
   // Store representative LDS DMA operations. The only useful info here is
   // alias info. One store is kept per unique AAInfo.
-  // Entry zero is the "generic" entry that applies to all LDSDMA stores.
   SmallVector<const MachineInstr *> LDSDMAStores;
 };
 
@@ -849,7 +864,6 @@ public:
 
 void WaitcntBrackets::setScoreByOperand(const MachineOperand &Op,
                                         InstCounterType CntTy, unsigned Score) {
-  assert(Op.isReg());
   setRegScore(Op.getReg().asMCReg(), CntTy, Score);
 }
 
@@ -1017,6 +1031,10 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
         (TII->isDS(Inst) || TII->mayWriteLDSThroughDMA(Inst))) {
       // MUBUF and FLAT LDS DMA operations need a wait on vmcnt before LDS
       // written can be accessed. A load from LDS to VMEM does not need a wait.
+      //
+      // The "Slot" is the offset from LDSDMA_BEGIN. If it's non-zero, then
+      // there is a MachineInstr in LDSDMAStores used to track this LDSDMA
+      // store. The "Slot" is the index into LDSDMAStores + 1.
       unsigned Slot = 0;
       for (const auto *MemOp : Inst.memoperands()) {
         if (!MemOp->isStore() ||
@@ -1029,9 +1047,7 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
         // original memory object and practically produced in the module LDS
         // lowering pass. If there is no scope available we will not be able
         // to disambiguate LDS aliasing as after the module lowering all LDS
-        // is squashed into a single big object. Do not attempt to use one of
-        // the limited LDSDMAStores for something we will not be able to use
-        // anyway.
+        // is squashed into a single big object.
         if (!AAI || !AAI.Scope)
           break;
         for (unsigned I = 0, E = LDSDMAStores.size(); I != E && !Slot; ++I) {
@@ -1044,15 +1060,14 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
         }
         if (Slot)
           break;
-        // The slot may not be valid because it can be >= NUM_LDS_VGPRS which
+        // The slot may not be valid because it can be >= NUM_LDSDMA which
         // means the scoreboard cannot track it. We still want to preserve the
         // MI in order to check alias information, though.
         LDSDMAStores.push_back(&Inst);
-        Slot = LDSDMAStores.size();
         break;
       }
       setVMemScore(LDSDMA_BEGIN, T, CurrScore);
-      if (Slot && (LDSDMA_BEGIN + Slot) < LDSDMA_END)
+      if (Slot && Slot < NUM_LDSDMA)
         setVMemScore(LDSDMA_BEGIN + Slot, T, CurrScore);
     }
 
@@ -1107,8 +1122,11 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
       // Print vgpr scores.
       unsigned LB = getScoreLB(T);
 
-      for (auto &[ID, Info] : VMem) {
-        unsigned RegScore = Info.Scores[T];
+      SmallVector<VMEMID> SortedVMEMIDs(VMem.keys());
+      sort(SortedVMEMIDs);
+
+      for (auto ID : SortedVMEMIDs) {
+        unsigned RegScore = VMem.at(ID).Scores[T];
         if (RegScore <= LB)
           continue;
         unsigned RelScore = RegScore - LB - 1;
@@ -1123,8 +1141,10 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
 
       // Also need to print sgpr scores for lgkm_cnt or xcnt.
       if (isSmemCounter(T)) {
-        for (auto &[ID, Info] : SGPRs) {
-          unsigned RegScore = Info.Scores[getSgprScoresIdx(T)];
+        SmallVector<MCRegUnit> SortedSMEMIDs(SGPRs.keys());
+        sort(SortedSMEMIDs);
+        for (auto ID : SortedSMEMIDs) {
+          unsigned RegScore = SGPRs.at(ID).Scores[getSgprScoresIdx(T)];
           if (RegScore <= LB)
             continue;
           unsigned RelScore = RegScore - LB - 1;
@@ -2409,9 +2429,10 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
   }
 
   for (auto &[TID, Info] : Other.VMem) {
-    unsigned char NewVmemTypes = VMem[TID].VMEMTypes | Info.VMEMTypes;
-    StrictDom |= NewVmemTypes != VMem[TID].VMEMTypes;
-    VMem[TID].VMEMTypes = NewVmemTypes;
+    auto &Value = VMem[TID];
+    unsigned char NewVmemTypes = Value.VMEMTypes | Info.VMEMTypes;
+    StrictDom |= NewVmemTypes != Value.VMEMTypes;
+    Value.VMEMTypes = NewVmemTypes;
   }
 
   return StrictDom;
