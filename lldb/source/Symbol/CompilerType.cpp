@@ -316,6 +316,13 @@ bool CompilerType::IsArrayOfScalarType() const {
   return false;
 }
 
+bool CompilerType::IsClassTypeForLanguage(lldb::LanguageType language) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsClassTypeForLanguage(m_type, language);
+  return false;
+}
+
 bool CompilerType::IsBeingDefined() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
