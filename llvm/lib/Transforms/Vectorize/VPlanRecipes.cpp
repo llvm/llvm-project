@@ -3500,18 +3500,24 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     if (!vputils::isSingleScalar(getAddr()))
       PtrTy = toVectorTy(PtrTy, VF);
 
+    unsigned IID = isa<VPWidenLoadRecipe>(this)      ? Intrinsic::masked_gather
+                   : isa<VPWidenStoreRecipe>(this)   ? Intrinsic::masked_scatter
+                   : isa<VPWidenLoadEVLRecipe>(this) ? Intrinsic::vp_gather
+                                                     : Intrinsic::vp_scatter;
     return Ctx.TTI.getAddressComputationCost(PtrTy, nullptr, nullptr,
                                              Ctx.CostKind) +
-           Ctx.TTI.getGatherScatterOpCost(Opcode, Ty, Ptr, IsMasked, Alignment,
-                                          Ctx.CostKind, &Ingredient);
+           Ctx.TTI.getMemIntrinsicInstrCost(
+               MemIntrinsicCostAttributes(IID, Ty, Ptr, IsMasked, Alignment,
+                                          &Ingredient),
+               Ctx.CostKind);
   }
 
   InstructionCost Cost = 0;
   if (IsMasked) {
     unsigned IID = isa<VPWidenLoadRecipe>(this) ? Intrinsic::masked_load
                                                 : Intrinsic::masked_store;
-    Cost +=
-        Ctx.TTI.getMaskedMemoryOpCost({IID, Ty, Alignment, AS}, Ctx.CostKind);
+    Cost += Ctx.TTI.getMemIntrinsicInstrCost(
+        MemIntrinsicCostAttributes(IID, Ty, Alignment, AS), Ctx.CostKind);
   } else {
     TTI::OperandValueInfo OpInfo = Ctx.getOperandInfo(
         isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this) ? getOperand(0)
@@ -3621,18 +3627,19 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   if (!Consecutive || IsMasked)
     return VPWidenMemoryRecipe::computeCost(VF, Ctx);
 
-  // We need to use the getMaskedMemoryOpCost() instead of getMemoryOpCost()
+  // We need to use the getMemIntrinsicInstrCost() instead of getMemoryOpCost()
   // here because the EVL recipes using EVL to replace the tail mask. But in the
   // legacy model, it will always calculate the cost of mask.
-  // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
+  // TODO: Using getMemoryOpCost() instead of getMemIntrinsicInstrCost  when we
   // don't need to compare to the legacy cost model.
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
   // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
   // After migrating to getMemIntrinsicInstrCost, switch this to vp_load.
-  InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      {Intrinsic::masked_load, Ty, Alignment, AS}, Ctx.CostKind);
+  InstructionCost Cost = Ctx.TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(Intrinsic::masked_load, Ty, Alignment, AS),
+      Ctx.CostKind);
   if (!Reverse)
     return Cost;
 
@@ -3732,18 +3739,19 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   if (!Consecutive || IsMasked)
     return VPWidenMemoryRecipe::computeCost(VF, Ctx);
 
-  // We need to use the getMaskedMemoryOpCost() instead of getMemoryOpCost()
+  // We need to use the getMemIntrinsicInstrCost() instead of getMemoryOpCost()
   // here because the EVL recipes using EVL to replace the tail mask. But in the
   // legacy model, it will always calculate the cost of mask.
-  // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
+  // TODO: Using getMemoryOpCost() instead of getMemIntrinsicInstrCost when we
   // don't need to compare to the legacy cost model.
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
   // FIXME: getMaskedMemoryOpCost assumes masked_* intrinsics.
   // After migrating to getMemIntrinsicInstrCost, switch this to vp_store.
-  InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      {Intrinsic::masked_store, Ty, Alignment, AS}, Ctx.CostKind);
+  InstructionCost Cost = Ctx.TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(Intrinsic::masked_store, Ty, Alignment, AS),
+      Ctx.CostKind);
   if (!Reverse)
     return Cost;
 
