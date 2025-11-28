@@ -140,7 +140,6 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     // for StoreMatrixOp, the layout is attached to the property of the op
     if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(defOp))
       return storeOp.getLayoutAttr();
-
     std::string layoutName = getLayoutName(result);
     if (defOp->hasAttr(layoutName))
       return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);

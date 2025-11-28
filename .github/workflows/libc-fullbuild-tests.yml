@@ -88,7 +88,7 @@ jobs:
           # - c_compiler: gcc
           #   cpp_compiler: g++
     steps:
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
     
     # Libc's build is relatively small comparing with other components of LLVM.
     # A fresh fullbuild takes about 190MiB of uncompressed disk space, which can

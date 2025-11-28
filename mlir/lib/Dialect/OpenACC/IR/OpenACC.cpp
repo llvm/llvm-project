@@ -227,6 +227,11 @@ struct MemrefGlobalVariableModel
     auto globalOp = cast<memref::GlobalOp>(op);
     return globalOp.getConstant();
   }
+
+  Region *getInitRegion(Operation *op) const {
+    // GlobalOp uses attributes for initialization, not regions
+    return nullptr;
+  }
 };
 
 /// Helper function for any of the times we need to modify an ArrayAttr based on
@@ -490,6 +495,28 @@ checkValidModifier(Op op, acc::DataClauseModifier validModifiers) {
   return success();
 }
 
+template <typename OpT, typename RecipeOpT>
+static LogicalResult checkRecipe(OpT op, llvm::StringRef operandName) {
+  // Mappable types do not need a recipe because it is possible to generate one
+  // from its API. Reject reductions though because no API is available for them
+  // at this time.
+  if (mlir::acc::isMappableType(op.getVar().getType()) &&
+      !std::is_same_v<OpT, acc::ReductionOp>)
+    return success();
+
+  mlir::SymbolRefAttr operandRecipe = op.getRecipeAttr();
+  if (!operandRecipe)
+    return op->emitOpError() << "recipe expected for " << operandName;
+
+  auto decl =
+      SymbolTable::lookupNearestSymbolFrom<RecipeOpT>(op, operandRecipe);
+  if (!decl)
+    return op->emitOpError()
+           << "expected symbol reference " << operandRecipe << " to point to a "
+           << operandName << " declaration";
+  return success();
+}
+
 static ParseResult parseVar(mlir::OpAsmParser &parser,
                             OpAsmParser::UnresolvedOperand &var) {
   // Either `var` or `varPtr` keyword is required.
@@ -596,6 +623,18 @@ static void printVarPtrType(mlir::OpAsmPrinter &p, mlir::Operation *op,
   }
 }
 
+static ParseResult parseRecipeSym(mlir::OpAsmParser &parser,
+                                  mlir::SymbolRefAttr &recipeAttr) {
+  if (failed(parser.parseAttribute(recipeAttr)))
+    return failure();
+  return success();
+}
+
+static void printRecipeSym(mlir::OpAsmPrinter &p, mlir::Operation *op,
+                           mlir::SymbolRefAttr recipeAttr) {
+  p << recipeAttr;
+}
+
 //===----------------------------------------------------------------------===//
 // DataBoundsOp
 //===----------------------------------------------------------------------===//
@@ -618,6 +657,9 @@ LogicalResult acc::PrivateOp::verify() {
     return failure();
   if (failed(checkNoModifier(*this)))
     return failure();
+  if (failed(
+          checkRecipe<acc::PrivateOp, acc::PrivateRecipeOp>(*this, "private")))
+    return failure();
   return success();
 }
 
@@ -631,6 +673,9 @@ LogicalResult acc::FirstprivateOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkNoModifier(*this)))
+    return failure();
+  if (failed(checkRecipe<acc::FirstprivateOp, acc::FirstprivateRecipeOp>(
+          *this, "firstprivate")))
     return failure();
   return success();
 }
@@ -659,6 +704,9 @@ LogicalResult acc::ReductionOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkNoModifier(*this)))
+    return failure();
+  if (failed(checkRecipe<acc::ReductionOp, acc::ReductionRecipeOp>(
+          *this, "reduction")))
     return failure();
   return success();
 }
@@ -1455,40 +1503,6 @@ LogicalResult acc::ReductionRecipeOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
-// Custom parser and printer verifier for private clause
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseSymOperandList(
-    mlir::OpAsmParser &parser,
-    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
-    llvm::SmallVectorImpl<Type> &types, mlir::ArrayAttr &symbols) {
-  llvm::SmallVector<SymbolRefAttr> attributes;
-  if (failed(parser.parseCommaSeparatedList([&]() {
-        if (parser.parseAttribute(attributes.emplace_back()) ||
-            parser.parseArrow() ||
-            parser.parseOperand(operands.emplace_back()) ||
-            parser.parseColonType(types.emplace_back()))
-          return failure();
-        return success();
-      })))
-    return failure();
-  llvm::SmallVector<mlir::Attribute> arrayAttr(attributes.begin(),
-                                               attributes.end());
-  symbols = ArrayAttr::get(parser.getContext(), arrayAttr);
-  return success();
-}
-
-static void printSymOperandList(mlir::OpAsmPrinter &p, mlir::Operation *op,
-                                mlir::OperandRange operands,
-                                mlir::TypeRange types,
-                                std::optional<mlir::ArrayAttr> attributes) {
-  llvm::interleaveComma(llvm::zip(*attributes, operands), p, [&](auto it) {
-    p << std::get<0>(it) << " -> " << std::get<1>(it) << " : "
-      << std::get<1>(it).getType();
-  });
-}
-
-//===----------------------------------------------------------------------===//
 // ParallelOp
 //===----------------------------------------------------------------------===//
 
@@ -1507,45 +1521,19 @@ static LogicalResult checkDataOperands(Op op,
   return success();
 }
 
-template <typename Op>
-static LogicalResult
-checkSymOperandList(Operation *op, std::optional<mlir::ArrayAttr> attributes,
-                    mlir::OperandRange operands, llvm::StringRef operandName,
-                    llvm::StringRef symbolName, bool checkOperandType = true) {
-  if (!operands.empty()) {
-    if (!attributes || attributes->size() != operands.size())
-      return op->emitOpError()
-             << "expected as many " << symbolName << " symbol reference as "
-             << operandName << " operands";
-  } else {
-    if (attributes)
-      return op->emitOpError()
-             << "unexpected " << symbolName << " symbol reference";
-    return success();
-  }
-
+template <typename OpT, typename RecipeOpT>
+static LogicalResult checkPrivateOperands(mlir::Operation *accConstructOp,
+                                          const mlir::ValueRange &operands,
+                                          llvm::StringRef operandName) {
   llvm::DenseSet<Value> set;
-  for (auto args : llvm::zip(operands, *attributes)) {
-    mlir::Value operand = std::get<0>(args);
-
+  for (mlir::Value operand : operands) {
+    if (!mlir::isa<OpT>(operand.getDefiningOp()))
+      return accConstructOp->emitOpError()
+             << "expected " << operandName << " as defining op";
     if (!set.insert(operand).second)
-      return op->emitOpError()
+      return accConstructOp->emitOpError()
              << operandName << " operand appears more than once";
-
-    mlir::Type varType = operand.getType();
-    auto symbolRef = llvm::cast<SymbolRefAttr>(std::get<1>(args));
-    auto decl = SymbolTable::lookupNearestSymbolFrom<Op>(op, symbolRef);
-    if (!decl)
-      return op->emitOpError()
-             << "expected symbol reference " << symbolRef << " to point to a "
-             << operandName << " declaration";
-
-    if (checkOperandType && decl.getType() && decl.getType() != varType)
-      return op->emitOpError() << "expected " << operandName << " (" << varType
-                               << ") to be the same type as " << operandName
-                               << " declaration (" << decl.getType() << ")";
   }
-
   return success();
 }
 
@@ -1602,17 +1590,17 @@ static LogicalResult verifyDeviceTypeAndSegmentCountMatch(
 }
 
 LogicalResult acc::ParallelOp::verify() {
-  if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
-          "privatizations", /*checkOperandType=*/false)))
+  if (failed(checkPrivateOperands<mlir::acc::PrivateOp,
+                                  mlir::acc::PrivateRecipeOp>(
+          *this, getPrivateOperands(), "private")))
     return failure();
-  if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
-          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
-          "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
+  if (failed(checkPrivateOperands<mlir::acc::FirstprivateOp,
+                                  mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivateOperands(), "firstprivate")))
     return failure();
-  if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
-          *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions", false)))
+  if (failed(checkPrivateOperands<mlir::acc::ReductionOp,
+                                  mlir::acc::ReductionRecipeOp>(
+          *this, getReductionOperands(), "reduction")))
     return failure();
 
   if (failed(verifyDeviceTypeAndSegmentCountMatch(
@@ -1743,7 +1731,6 @@ void ParallelOp::build(mlir::OpBuilder &odsBuilder,
                        mlir::ValueRange gangPrivateOperands,
                        mlir::ValueRange gangFirstPrivateOperands,
                        mlir::ValueRange dataClauseOperands) {
-
   ParallelOp::build(
       odsBuilder, odsState, asyncOperands, /*asyncOperandsDeviceType=*/nullptr,
       /*asyncOnly=*/nullptr, waitOperands, /*waitOperandsSegments=*/nullptr,
@@ -1752,9 +1739,8 @@ void ParallelOp::build(mlir::OpBuilder &odsBuilder,
       /*numGangsDeviceType=*/nullptr, numWorkers,
       /*numWorkersDeviceType=*/nullptr, vectorLength,
       /*vectorLengthDeviceType=*/nullptr, ifCond, selfCond,
-      /*selfAttr=*/nullptr, reductionOperands, /*reductionRecipes=*/nullptr,
-      gangPrivateOperands, /*privatizations=*/nullptr, gangFirstPrivateOperands,
-      /*firstprivatizations=*/nullptr, dataClauseOperands,
+      /*selfAttr=*/nullptr, reductionOperands, gangPrivateOperands,
+      gangFirstPrivateOperands, dataClauseOperands,
       /*defaultAttr=*/nullptr, /*combined=*/nullptr);
 }
 
@@ -1831,46 +1817,22 @@ void acc::ParallelOp::addWaitOperands(
 void acc::ParallelOp::addPrivatization(MLIRContext *context,
                                        mlir::acc::PrivateOp op,
                                        mlir::acc::PrivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
   getPrivateOperandsMutable().append(op.getResult());
-
-  llvm::SmallVector<mlir::Attribute> recipes;
-
-  if (getPrivatizationRecipesAttr())
-    llvm::copy(getPrivatizationRecipesAttr(), std::back_inserter(recipes));
-
-  recipes.push_back(
-      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
-  setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 void acc::ParallelOp::addFirstPrivatization(
     MLIRContext *context, mlir::acc::FirstprivateOp op,
     mlir::acc::FirstprivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
   getFirstprivateOperandsMutable().append(op.getResult());
-
-  llvm::SmallVector<mlir::Attribute> recipes;
-
-  if (getFirstprivatizationRecipesAttr())
-    llvm::copy(getFirstprivatizationRecipesAttr(), std::back_inserter(recipes));
-
-  recipes.push_back(
-      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
-  setFirstprivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 void acc::ParallelOp::addReduction(MLIRContext *context,
                                    mlir::acc::ReductionOp op,
                                    mlir::acc::ReductionRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
   getReductionOperandsMutable().append(op.getResult());
-
-  llvm::SmallVector<mlir::Attribute> recipes;
-
-  if (getReductionRecipesAttr())
-    llvm::copy(getReductionRecipesAttr(), std::back_inserter(recipes));
-
-  recipes.push_back(
-      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
-  setReductionRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 static ParseResult parseNumGangs(
@@ -2438,17 +2400,17 @@ mlir::Value SerialOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
 }
 
 LogicalResult acc::SerialOp::verify() {
-  if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
-          "privatizations", /*checkOperandType=*/false)))
+  if (failed(checkPrivateOperands<mlir::acc::PrivateOp,
+                                  mlir::acc::PrivateRecipeOp>(
+          *this, getPrivateOperands(), "private")))
     return failure();
-  if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
-          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
-          "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
+  if (failed(checkPrivateOperands<mlir::acc::FirstprivateOp,
+                                  mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivateOperands(), "firstprivate")))
     return failure();
-  if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
-          *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions", false)))
+  if (failed(checkPrivateOperands<mlir::acc::ReductionOp,
+                                  mlir::acc::ReductionRecipeOp>(
+          *this, getReductionOperands(), "reduction")))
     return failure();
 
   if (failed(verifyDeviceTypeAndSegmentCountMatch(
@@ -2512,46 +2474,22 @@ void acc::SerialOp::addWaitOperands(
 void acc::SerialOp::addPrivatization(MLIRContext *context,
                                      mlir::acc::PrivateOp op,
                                      mlir::acc::PrivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
   getPrivateOperandsMutable().append(op.getResult());
-
-  llvm::SmallVector<mlir::Attribute> recipes;
-
-  if (getPrivatizationRecipesAttr())
-    llvm::copy(getPrivatizationRecipesAttr(), std::back_inserter(recipes));
-
-  recipes.push_back(
-      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
-  setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 void acc::SerialOp::addFirstPrivatization(
     MLIRContext *context, mlir::acc::FirstprivateOp op,
     mlir::acc::FirstprivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
   getFirstprivateOperandsMutable().append(op.getResult());
-
-  llvm::SmallVector<mlir::Attribute> recipes;
-
-  if (getFirstprivatizationRecipesAttr())
-    llvm::copy(getFirstprivatizationRecipesAttr(), std::back_inserter(recipes));
-
-  recipes.push_back(
-      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
-  setFirstprivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 void acc::SerialOp::addReduction(MLIRContext *context,
                                  mlir::acc::ReductionOp op,
                                  mlir::acc::ReductionRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
   getReductionOperandsMutable().append(op.getResult());
-
-  llvm::SmallVector<mlir::Attribute> recipes;
-
-  if (getReductionRecipesAttr())
-    llvm::copy(getReductionRecipesAttr(), std::back_inserter(recipes));
-
-  recipes.push_back(
-      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
-  setReductionRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 //===----------------------------------------------------------------------===//
@@ -3133,19 +3071,19 @@ LogicalResult acc::LoopOp::verify() {
     }
   }
 
-  if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
-          "privatizations", false)))
+  if (failed(checkPrivateOperands<mlir::acc::PrivateOp,
+                                  mlir::acc::PrivateRecipeOp>(
+          *this, getPrivateOperands(), "private")))
     return failure();
 
-  if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
-          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
-          "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
+  if (failed(checkPrivateOperands<mlir::acc::FirstprivateOp,
+                                  mlir::acc::FirstprivateRecipeOp>(
+          *this, getFirstprivateOperands(), "firstprivate")))
     return failure();
 
-  if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
-          *this, getReductionRecipes(), getReductionOperands(), "reduction",
-          "reductions", false)))
+  if (failed(checkPrivateOperands<mlir::acc::ReductionOp,
+                                  mlir::acc::ReductionRecipeOp>(
+          *this, getReductionOperands(), "reduction")))
     return failure();
 
   if (getCombined().has_value() &&
@@ -3579,45 +3517,21 @@ void acc::LoopOp::addGangOperands(
 void acc::LoopOp::addPrivatization(MLIRContext *context,
                                    mlir::acc::PrivateOp op,
                                    mlir::acc::PrivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
   getPrivateOperandsMutable().append(op.getResult());
-
-  llvm::SmallVector<mlir::Attribute> recipes;
-
-  if (getPrivatizationRecipesAttr())
-    llvm::copy(getPrivatizationRecipesAttr(), std::back_inserter(recipes));
-
-  recipes.push_back(
-      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
-  setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 void acc::LoopOp::addFirstPrivatization(
     MLIRContext *context, mlir::acc::FirstprivateOp op,
     mlir::acc::FirstprivateRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
   getFirstprivateOperandsMutable().append(op.getResult());
-
-  llvm::SmallVector<mlir::Attribute> recipes;
-
-  if (getFirstprivatizationRecipesAttr())
-    llvm::copy(getFirstprivatizationRecipesAttr(), std::back_inserter(recipes));
-
-  recipes.push_back(
-      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
-  setFirstprivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 void acc::LoopOp::addReduction(MLIRContext *context, mlir::acc::ReductionOp op,
                                mlir::acc::ReductionRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
   getReductionOperandsMutable().append(op.getResult());
-
-  llvm::SmallVector<mlir::Attribute> recipes;
-
-  if (getReductionRecipesAttr())
-    llvm::copy(getReductionRecipesAttr(), std::back_inserter(recipes));
-
-  recipes.push_back(
-      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
-  setReductionRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 //===----------------------------------------------------------------------===//
@@ -4761,4 +4675,13 @@ mlir::acc::getMutableDataOperands(mlir::Operation *accOp) {
               [&](auto entry) { return entry.getDataClauseOperandsMutable(); })
           .Default([&](mlir::Operation *) { return nullptr; })};
   return dataOperands;
+}
+
+mlir::SymbolRefAttr mlir::acc::getRecipe(mlir::Operation *accOp) {
+  auto recipe{
+      llvm::TypeSwitch<mlir::Operation *, mlir::SymbolRefAttr>(accOp)
+          .Case<ACC_DATA_ENTRY_OPS>(
+              [&](auto entry) { return entry.getRecipeAttr(); })
+          .Default([&](mlir::Operation *) { return mlir::SymbolRefAttr{}; })};
+  return recipe;
 }

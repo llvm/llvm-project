@@ -282,7 +282,7 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
 #endif
 
         if (ResultsMatch) {
-          ArrayRef<MVT::SimpleValueType> VTs = EN->getVTList();
+          ArrayRef<MVT> VTs = EN->getVTList();
           ArrayRef<unsigned> Operands = EN->getOperandList();
           MatcherPtr->reset(new MorphNodeToMatcher(
               EN->getInstruction(), VTs, Operands, EN->hasChain(),
@@ -556,17 +556,17 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
   // If all the options are CheckType's, we can form the SwitchType, woot.
   if (AllTypeChecks) {
     DenseMap<unsigned, unsigned> TypeEntry;
-    SmallVector<std::pair<MVT::SimpleValueType, Matcher *>, 8> Cases;
+    SmallVector<std::pair<MVT, Matcher *>, 8> Cases;
     for (Matcher *Optn : OptionsToMatch) {
       Matcher *M = FindNodeWithKind(Optn, Matcher::CheckType);
       assert(M && isa<CheckTypeMatcher>(M) && "Unknown Matcher type");
 
       auto *CTM = cast<CheckTypeMatcher>(M);
       Matcher *MatcherWithoutCTM = Optn->unlinkNode(CTM);
-      MVT::SimpleValueType CTMTy = CTM->getType();
+      MVT CTMTy = CTM->getType();
       delete CTM;
 
-      unsigned &Entry = TypeEntry[CTMTy];
+      unsigned &Entry = TypeEntry[CTMTy.SimpleTy];
       if (Entry != 0) {
         // If we have unfactored duplicate types, then we should factor them.
         Matcher *PrevMatcher = Cases[Entry - 1].second;

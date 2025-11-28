@@ -14,6 +14,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
@@ -193,5 +194,85 @@ TEST(LoopUtils, nestedLoopSharedLatchEstimatedTripCount) {
         EXPECT_EQ(setLoopEstimatedTripCount(Outer, 999), false);
         EXPECT_EQ(getLoopEstimatedTripCount(Inner), 100);
         EXPECT_EQ(getLoopEstimatedTripCount(Outer), std::nullopt);
+      });
+}
+
+// {get,set}LoopEstimatedTripCount implement special handling of zero.
+TEST(LoopUtils, zeroEstimatedTripCount) {
+  LLVMContext C;
+  const char *IR =
+      "define void @foo(i1 %c) {\n"
+      "entry:\n"
+      "  br label %loop0\n"
+      "loop0:\n"
+      "  br i1 %c, label %loop0, label %loop1\n"
+      "loop1:\n"
+      "  br i1 %c, label %loop1, label %loop2, !llvm.loop !1\n"
+      "loop2:\n"
+      "  br i1 %c, label %loop2, label %exit, !prof !5, !llvm.loop !2\n"
+      "exit:\n"
+      "  ret void\n"
+      "}\n"
+      "!1 = distinct !{!1, !3}\n"
+      "!2 = distinct !{!2, !3, !4}\n"
+      "!3 = !{!\"foo\", i32 5}\n"
+      "!4 = !{!\"llvm.loop.estimated_trip_count\", i32 10}\n"
+      "!5 = !{!\"branch_weights\", i32 1, i32 9}\n"
+      "\n";
+
+  // With EstimatedLoopInvocationWeight, setLoopEstimatedTripCount sets branch
+  // weights and llvm.loop.estimated_trip_count all to 0, so
+  // getLoopEstimatedTripCount returns std::nullopt.  It does not touch other
+  // loop metadata, if any.
+  std::unique_ptr<Module> M = parseIR(C, IR);
+  run(*M, "foo",
+      [&](Function &F, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI) {
+        assert(LI.end() - LI.begin() == 3 && "Expected three loops");
+        for (Loop *L : LI) {
+          Instruction &LatchBranch = *L->getLoopLatch()->getTerminator();
+          std::optional<int> Foo = getOptionalIntLoopAttribute(L, "foo");
+
+          EXPECT_EQ(setLoopEstimatedTripCount(
+                        L, 0, /*EstimatedLoopInvocationWeight=*/1),
+                    true);
+
+          SmallVector<uint32_t, 2> Weights;
+          EXPECT_EQ(extractBranchWeights(LatchBranch, Weights), true);
+          EXPECT_EQ(Weights[0], 0u);
+          EXPECT_EQ(Weights[1], 0u);
+          EXPECT_EQ(getOptionalIntLoopAttribute(L, "foo"), Foo);
+          EXPECT_EQ(getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount),
+                    0);
+          EXPECT_EQ(getLoopEstimatedTripCount(L), std::nullopt);
+        }
+      });
+
+  // Without EstimatedLoopInvocationWeight, setLoopEstimatedTripCount sets
+  // llvm.loop.estimated_trip_count to 0, so getLoopEstimatedTripCount returns
+  // std::nullopt.  It does not touch branch weights or other loop metadata, if
+  // any.
+  M = parseIR(C, IR);
+  run(*M, "foo",
+      [&](Function &F, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI) {
+        assert(LI.end() - LI.begin() == 3 && "Expected three loops");
+        for (Loop *L : LI) {
+          Instruction &LatchBranch = *L->getLoopLatch()->getTerminator();
+          std::optional<int> Foo = getOptionalIntLoopAttribute(L, "foo");
+          SmallVector<uint32_t, 2> WeightsOld;
+          bool HasWeights = extractBranchWeights(LatchBranch, WeightsOld);
+
+          EXPECT_EQ(setLoopEstimatedTripCount(L, 0), true);
+
+          SmallVector<uint32_t, 2> WeightsNew;
+          EXPECT_EQ(extractBranchWeights(LatchBranch, WeightsNew), HasWeights);
+          if (HasWeights) {
+            EXPECT_EQ(WeightsNew[0], WeightsOld[0]);
+            EXPECT_EQ(WeightsNew[1], WeightsOld[1]);
+          }
+          EXPECT_EQ(getOptionalIntLoopAttribute(L, "foo"), Foo);
+          EXPECT_EQ(getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount),
+                    0);
+          EXPECT_EQ(getLoopEstimatedTripCount(L), std::nullopt);
+        }
       });
 }
