@@ -353,12 +353,7 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   EmitEOL();
 }
 
-void SystemZHLASMAsmStreamer::emitEnd() {
-  OS << " END";
-  EmitEOL();
-}
-
-void SystemZHLASMAsmStreamer::emitExterns() {
+void SystemZHLASMAsmStreamer::finishImpl() {
   for (auto &Symbol : getAssembler().symbols()) {
     if (Symbol.isTemporary())
       continue;
@@ -373,4 +368,8 @@ void SystemZHLASMAsmStreamer::emitExterns() {
       }
     }
   }
+
+  // Finish the assembly output.
+  OS << " END";
+  EmitEOL();
 }

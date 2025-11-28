@@ -122,8 +122,7 @@ public:
                           bool Parens = false);
   /// @}
 
-  void emitEnd();
-  void emitExterns();
+  void finishImpl() override;
 };
 } // namespace llvm
 

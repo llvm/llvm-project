@@ -1125,12 +1125,8 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
                                                   : MCSA_ELF_TypeObject);
       }
     }
-    getTargetStreamer()->emitExterns();
   }
   emitAttributes(M);
-  // Emit the END instruction in case of HLASM output. This must be the last
-  // instruction in the source file.
-  getTargetStreamer()->emitEnd();
 }
 
 void SystemZAsmPrinter::emitADASection() {

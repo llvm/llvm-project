@@ -39,12 +39,6 @@ SystemZHLASMAsmStreamer &SystemZTargetHLASMStreamer::getHLASMStreamer() {
   return static_cast<SystemZHLASMAsmStreamer &>(getStreamer());
 }
 
-void SystemZTargetHLASMStreamer::emitEnd() { getHLASMStreamer().emitEnd(); }
-
-void SystemZTargetHLASMStreamer::emitExterns() {
-  getHLASMStreamer().emitExterns();
-}
-
 // HLASM statements can only perform a single operation at a time
 const MCExpr *SystemZTargetHLASMStreamer::createWordDiffExpr(
     MCContext &Ctx, const MCSymbol *Hi, const MCSymbol *Lo) {
