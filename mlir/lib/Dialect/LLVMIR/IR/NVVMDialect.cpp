@@ -3420,7 +3420,7 @@ PermuteOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(thisOp.getLo()));
   
-  // First 3 modes (Default, f4e, b4e) use 3 operands. 
+  // Only first 3 modes (Default, f4e, b4e) need the hi operand. 
   if (modeIndex < 3)
     args.push_back(mt.lookupValue(thisOp.getHi()));
   
