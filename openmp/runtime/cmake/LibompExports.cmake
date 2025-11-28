@@ -74,7 +74,7 @@ if(${LIBOMP_FORTRAN_MODULES})
   )
   add_dependencies(omp libomp-mod)
   add_custom_command(TARGET omp POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/../../module/omp_lib.h ${LIBOMP_EXPORTS_CMN_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy omp_lib.h ${LIBOMP_EXPORTS_CMN_DIR}
   )
 endif()
 
