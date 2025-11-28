@@ -2019,7 +2019,6 @@ def int_aarch64_sve_ext       : AdvSIMD_2VectorArgIndexed_Intrinsic<[IntrSpecula
 def int_aarch64_sve_sel       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_lasta     : AdvSIMD_SVE_Reduce_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_lastb     : AdvSIMD_SVE_Reduce_Intrinsic<[IntrSpeculatable]>;
-def int_aarch64_sve_rev       : AdvSIMD_1VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_rev_b16   : AdvSIMD_SVE_2SVBoolArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_rev_b32   : AdvSIMD_SVE_2SVBoolArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_rev_b64   : AdvSIMD_SVE_2SVBoolArg_Intrinsic<[IntrSpeculatable]>;

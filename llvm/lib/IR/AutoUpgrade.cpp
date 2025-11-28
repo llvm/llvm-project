@@ -1015,6 +1015,14 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         }
         return false; // No other 'aarch64.sve.tuple.*'.
       }
+
+      if (Name.starts_with("rev.nxv")) {
+        // 'aarch64.sve.rev.<Ty>'
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), Intrinsic::vector_reverse, F->getReturnType());
+        return true;
+      }
+
       return false; // No other 'aarch64.sve.*'.
     }
   }

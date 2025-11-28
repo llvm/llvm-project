@@ -993,7 +993,7 @@ def SVDUPQ_LANE : SInst<"svdupq_lane[_{d}]", "ddn",  "csilUcUsUiUlhfdb", MergeNo
 def SVEXT       : SInst<"svext[_{d}]",       "dddi", "csilUcUsUiUlhfdb", MergeNone, "aarch64_sve_ext", [VerifyRuntimeMode], [ImmCheck<2, ImmCheckExtract, 1>]>;
 defm SVLASTA    : SVEPerm<"svlasta[_{d}]",   "sPd",  "aarch64_sve_lasta">;
 defm SVLASTB    : SVEPerm<"svlastb[_{d}]",   "sPd",  "aarch64_sve_lastb">;
-def SVREV       : SInst<"svrev[_{d}]",       "dd",   "csilUcUsUiUlhfdb", MergeNone, "aarch64_sve_rev", [VerifyRuntimeMode]>;
+def SVREV       : SInst<"svrev[_{d}]",       "dd",   "csilUcUsUiUlhfdb", MergeNone, "vector_reverse", [VerifyRuntimeMode]>;
 def SVSEL       : SInst<"svsel[_{d}]",       "dPdd", "csilUcUsUiUlhfdb", MergeNone, "aarch64_sve_sel", [VerifyRuntimeMode]>;
 def SVSPLICE    : SInst<"svsplice[_{d}]",    "dPdd", "csilUcUsUiUlhfdb", MergeNone, "aarch64_sve_splice", [VerifyRuntimeMode]>;
 def SVTBL       : SInst<"svtbl[_{d}]",       "ddu",  "csilUcUsUiUlhfdb", MergeNone, "aarch64_sve_tbl", [VerifyRuntimeMode]>;
@@ -1009,7 +1009,7 @@ def SVUZP2     : SInst<"svuzp2[_{d}]",      "ddd",  "csilUcUsUiUlhfdb", MergeNon
 def SVZIP1     : SInst<"svzip1[_{d}]",      "ddd",  "csilUcUsUiUlhfdb", MergeNone, "aarch64_sve_zip1", [VerifyRuntimeMode]>;
 def SVZIP2     : SInst<"svzip2[_{d}]",      "ddd",  "csilUcUsUiUlhfdb", MergeNone, "aarch64_sve_zip2", [VerifyRuntimeMode]>;
 
-def SVREV_B8   : SInst<"svrev_b8",     "PP",   "Pc", MergeNone, "aarch64_sve_rev", [VerifyRuntimeMode]>;
+def SVREV_B8   : SInst<"svrev_b8",     "PP",   "Pc", MergeNone, "vector_reverse", [VerifyRuntimeMode]>;
 def SVREV_B16  : SInst<"svrev_b16",    "PP",   "Pc", MergeNone, "aarch64_sve_rev_b16",  [IsOverloadNone, VerifyRuntimeMode]>;
 def SVREV_B32  : SInst<"svrev_b32",    "PP",   "Pc", MergeNone, "aarch64_sve_rev_b32",  [IsOverloadNone, VerifyRuntimeMode]>;
 def SVREV_B64  : SInst<"svrev_b64",    "PP",   "Pc", MergeNone, "aarch64_sve_rev_b64",  [IsOverloadNone, VerifyRuntimeMode]>;
