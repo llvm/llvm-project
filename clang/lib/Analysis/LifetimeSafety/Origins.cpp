@@ -23,33 +23,34 @@ bool isPointerType(QualType QT) {
 bool hasOrigin(const Expr *E) {
   return E->isGLValue() || isPointerType(E->getType());
 }
-/// An utility class to traverse the function body in the analysis
+/// A utility class to traverse the function body in the analysis
 /// context and collect the count of expressions with missing origins.
 class MissingOriginCollector
     : public RecursiveASTVisitor<MissingOriginCollector> {
 public:
   MissingOriginCollector(
       const llvm::DenseMap<const clang::Expr *, OriginID> &ExprToOriginId,
-      llvm::StringMap<unsigned> &MissingOriginCount)
-      : ExprToOriginId(ExprToOriginId), MissingOriginCount(MissingOriginCount) {
-  }
+      llvm::StringMap<unsigned> &ExprStmtClassToMissingOriginCount,
+      llvm::StringMap<unsigned> &ExprTypeToMissingOriginCount)
+      : ExprToOriginId(ExprToOriginId),
+        ExprStmtClassToMissingOriginCount(ExprStmtClassToMissingOriginCount),
+        ExprTypeToMissingOriginCount(ExprTypeToMissingOriginCount) {}
   bool VisitExpr(Expr *E) {
     if (!hasOrigin(E))
       return true;
     // Check if we have an origin for this expression.
-    auto It = this->ExprToOriginId.find(E);
-    if (It == this->ExprToOriginId.end()) {
+    if (!ExprToOriginId.contains(E)) {
       // No origin found: count this as missing origin.
-      std::string ExprStr = std::string(E->getStmtClassName()) +
-                            " (Type: " + E->getType().getAsString() + ")";
-      MissingOriginCount[ExprStr]++;
+      ExprTypeToMissingOriginCount[std::string(E->getType().getAsString())]++;
+      ExprStmtClassToMissingOriginCount[std::string(E->getStmtClassName())]++;
     }
     return true;
   }
 
 private:
   const llvm::DenseMap<const clang::Expr *, OriginID> &ExprToOriginId;
-  llvm::StringMap<unsigned> &MissingOriginCount;
+  llvm::StringMap<unsigned> &ExprStmtClassToMissingOriginCount;
+  llvm::StringMap<unsigned> &ExprTypeToMissingOriginCount;
 };
 } // namespace
 
@@ -137,7 +138,8 @@ void OriginManager::collectMissingOrigins(Stmt *FunctionBody,
     return;
 
   MissingOriginCollector Collector(this->ExprToOriginID,
-                                   LSStats.MissingOriginCount);
+                                   LSStats.ExprStmtClassToMissingOriginCount,
+                                   LSStats.ExprTypeToMissingOriginCount);
   Collector.TraverseStmt(const_cast<Stmt *>(FunctionBody));
 }
 

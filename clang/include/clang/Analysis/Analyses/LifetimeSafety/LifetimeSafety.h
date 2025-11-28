@@ -74,7 +74,6 @@ struct LifetimeFactory {
 /// Running the lifetime safety analysis and querying its results. It
 /// encapsulates the various dataflow analyses.
 class LifetimeSafetyAnalysis {
-
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                          LifetimeSafetyReporter *Reporter);

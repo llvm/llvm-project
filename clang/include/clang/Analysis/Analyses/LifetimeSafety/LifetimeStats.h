@@ -1,16 +1,15 @@
-//===- LifetimeStats.h - Miscellaneous statistics related to lifetime safety
-//analysis ---*- C++ -*-===//
+//===- LifetimeStats.h - Lifetime Safety Statistics --------------*- C++-* -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===----------------------------------------------------------------------------------------------===//
+//===------------------------------------------------------------------------===//
 //
 // This file declares the data structures and utility function for collection of
-// staticstics related to Lifetimesafety analysis.
+// statistics related to Lifetime Safety analysis.
 //
-//===----------------------------------------------------------------------------------------------===//
+//===------------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LIFETIMESTATS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LIFETIMESTATS_H
@@ -19,14 +18,16 @@
 
 namespace clang::lifetimes {
 /// A structure to hold the statistics related to LifetimeAnalysis.
-/// Currently it holds only the missing origin details.
+/// These are accumulated across all analyzed functions and printed
+/// when -print-stats is enabled.
 struct LifetimeSafetyStats {
-  /// A map from `ExpressionClassName<QualType>` to their missing origin
-  /// counts.
-  llvm::StringMap<unsigned> MissingOriginCount;
+  /// A map from `QualType` to their missing origin counts.
+  llvm::StringMap<unsigned> ExprStmtClassToMissingOriginCount;
+  /// A map from `StmtClassName` to their missing origin counts.
+  llvm::StringMap<unsigned> ExprTypeToMissingOriginCount;
 };
 
-// utility function to print missing origin stats.
+/// Utility function to print missing origin stats.
 void printStats(const LifetimeSafetyStats &Stats);
 } // namespace clang::lifetimes
 
