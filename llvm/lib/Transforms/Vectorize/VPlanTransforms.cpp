@@ -2543,6 +2543,7 @@ static void licm(VPlan &Plan) {
       WorklistForSink.push_back(R);
   }
 
+  VPDominatorTree VPDT(Plan);
   // Sink recipes with no users inside the vector loop region into a dedicated
   // exit block.
   SmallPtrSet<VPBasicBlock *, 16> Visited;
@@ -2556,9 +2557,12 @@ static void licm(VPlan &Plan) {
       continue;
 
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-             vp_depth_first_shallow(CurLoop->getEntry()))) {
+             vp_post_order_shallow(CurLoop->getEntry()))) {
       // Skip the basic block in inner loops.
       if (!Visited.insert(VPBB).second)
+        continue;
+      // Skip the basic block that is not dominates the exit block.
+      if (!VPDT.properlyDominates(VPBB, SingleExit))
         continue;
 
       for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
