@@ -212,8 +212,9 @@ void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
         // the previous instruction.
         std::optional<bool> PrevRAState = BC.MIB->getRAState(PrevInst);
         if (!PrevRAState.has_value()) {
-          llvm_unreachable(
-              "Previous Instruction has no RAState in fillUnknownStubs.");
+          // No non-cfi instruction encountered in the function yet.
+          // This means the RAState is the same as at the function entry.
+          markUnknownBlock(BC, *BB, BF.getInitialRAState());
           continue;
         }
 
@@ -226,11 +227,14 @@ void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
       if (FirstIter) {
         FirstIter = false;
         if (isUnknownBlock(BC, *BB))
-          // Set block to unsigned, because this is the first block of the
-          // function, and all instruction in it are new instructions generated
-          // by BOLT optimizations.
-          markUnknownBlock(BC, *BB, false);
+          // If the first BasicBlock is unknown, the function's entry RAState
+          // should be used.
+          markUnknownBlock(BC, *BB, BF.getInitialRAState());
       }
+      // This function iterates on BasicBlocks, so the PrevInst has to be
+      // updated to the last instruction of the current BasicBlock. If the
+      // BasicBlock is empty, or only has PseudoInstructions, PrevInst will not
+      // be updated.
       auto Last = BB->getLastNonPseudo();
       if (Last != BB->rend())
         PrevInst = *Last;

@@ -282,6 +282,43 @@ TEST_P(PassTester, fillUnknownStubs) {
   EXPECT_EQ(CFILoc.size(), 0u);
 }
 
+TEST_P(PassTester, fillUnknownStubsEmpty) {
+  /*
+   * This test checks that BOLT can set the RAState of unknown BBs,
+   * even if all previous BBs are empty, hence no PrevInst gets set.
+   *
+   * As this means that the current (empty) BB is the first with non-pseudo
+   * instructions, the function's initialRAState should be used.
+   */
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  ASSERT_NE(TextSection, nullptr);
+
+  PREPARE_FUNC("FuncWithStub");
+  BF->setInitialRAState(false);
+  BinaryBasicBlock *BB2 = BF->addBasicBlock();
+  BB2->setCFIState(0);
+
+  // BB is empty.
+  BB->addSuccessor(BB2);
+
+  // BB2, in real code it would be a ShortJmp.
+  // Unknown RAState.
+  MCInst StubInst;
+  BC->MIB->createReturn(StubInst);
+  BB2->addInstruction(StubInst);
+
+  Error E = PassManager->runPasses();
+  EXPECT_FALSE(E);
+
+  // Check that BOLT added an RAState to BB2.
+  std::optional<bool> RAState = BC->MIB->getRAState(*(BB2->begin()));
+  ASSERT_TRUE(RAState.has_value());
+  // BB2 should be set to BF.initialRAState (false).
+  ASSERT_FALSE(*RAState);
+}
+
 #ifdef AARCH64_AVAILABLE
 INSTANTIATE_TEST_SUITE_P(AArch64, PassTester,
                          ::testing::Values(Triple::aarch64));
