@@ -478,6 +478,7 @@ public:
   /// This overload can be used if the addends are written directly instead of
   /// using relocations on the input section (e.g. MipsGotSection::writeTo()).
   template <bool shard = false> void addReloc(const DynamicReloc &reloc) {
+    maybeAddRISCVendorRelocation(reloc, relocs);
     relocs.push_back(reloc);
   }
   /// Add a dynamic relocation against \p sym with an optional addend.
@@ -518,7 +519,7 @@ public:
     return !relocs.empty() ||
            llvm::any_of(relocsVec, [](auto &v) { return !v.empty(); });
   }
-  size_t getSize() const override { return relocs.size() * this->entsize; }
+  size_t getSize() const override;
   size_t getRelativeRelocCount() const { return numRelativeRelocs; }
   void mergeRels();
   void partitionRels();
@@ -529,6 +530,8 @@ public:
 
 protected:
   void computeRels();
+  void maybeAddRISCVendorRelocation(const DynamicReloc &reloc,
+                                    SmallVector<DynamicReloc, 0> &outRelocs);
   // Used when parallel relocation scanning adds relocations. The elements
   // will be moved into relocs by mergeRel().
   SmallVector<SmallVector<DynamicReloc, 0>, 0> relocsVec;
@@ -538,6 +541,8 @@ protected:
 
 template <>
 inline void RelocationBaseSection::addReloc<true>(const DynamicReloc &reloc) {
+  maybeAddRISCVendorRelocation(reloc,
+                               relocsVec[llvm::parallel::getThreadIndex()]);
   relocsVec[llvm::parallel::getThreadIndex()].push_back(reloc);
 }
 

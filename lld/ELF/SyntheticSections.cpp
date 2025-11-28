@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SyntheticSections.h"
+#include "Arch/RISCVInternalRelocations.h"
 #include "Config.h"
 #include "DWARF.h"
 #include "EhFrame.h"
@@ -1703,6 +1704,18 @@ void DynamicReloc::finalize(Ctx &ctx, SymbolTableBaseSection *symt) {
   isFinal = true; // Catch errors
 }
 
+size_t RelocationBaseSection::getSize() const {
+  size_t size = relocs.size() * entsize;
+  if (ctx.arg.emachine == EM_RISCV) {
+    for (const auto &reloc : relocs) {
+      if (reloc.type.v & INTERNAL_RISCV_VENDOR_MASK) {
+        size += entsize;
+      }
+    }
+  }
+  return size;
+}
+
 void RelocationBaseSection::computeRels() {
   SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
   parallelForEach(relocs, [&ctx = ctx, symTab](DynamicReloc &rel) {
@@ -1724,6 +1737,47 @@ void RelocationBaseSection::computeRels() {
     llvm::sort(nonRelative, irelative, [&](auto &a, auto &b) {
       return std::tie(a.r_sym, a.r_offset) < std::tie(b.r_sym, b.r_offset);
     });
+  }
+  // Insert R_RISCV_VENDOR relocations very late, so that it doesn't interfere
+  // with relocation sorting above.
+  if (ctx.arg.emachine == EM_RISCV) {
+    SmallVector<DynamicReloc, 0> processedRelocs;
+    processedRelocs.reserve(relocs.size());
+    for (auto reloc : relocs) {
+      auto vendorString = getRISCVVendorString(reloc.type);
+      if (vendorString) {
+        // Symbol *vendorSym = ctx.symtab->find(*vendorString);
+        auto *vendorSym = ctx.symtab->find(*vendorString);
+        if (!vendorSym || !vendorSym->isDefined()) {
+          vendorSym = ctx.symtab->addSymbol(Defined{ctx, nullptr, *vendorString,
+                                                    STB_GLOBAL, STV_HIDDEN,
+                                                    STT_NOTYPE, 0, 0, nullptr});
+          symTab->addSymbol(vendorSym);
+        }
+        vendorSym->isUsedInRegularObj = true;
+        vendorSym->isExported = true;
+        processedRelocs.push_back({llvm::ELF::R_RISCV_VENDOR, reloc.inputSec,
+                                   reloc.offsetInSec, true, *vendorSym, 0,
+                                   R_ABS});
+        processedRelocs.back().finalize(ctx, symTab);
+      }
+
+      reloc.type.v &= ~INTERNAL_RISCV_VENDOR_MASK;
+      processedRelocs.push_back(reloc);
+    }
+
+    relocs = std::move(processedRelocs);
+  }
+}
+
+void RelocationBaseSection::maybeAddRISCVendorRelocation(
+    const DynamicReloc &reloc, SmallVector<DynamicReloc, 0> &outRelocs) {
+  auto riscvVendorString = getRISCVVendorString(reloc.type);
+  if (ctx.arg.emachine == llvm::ELF::EM_RISCV && riscvVendorString) {
+    Symbol &vendorSym = *ctx.symtab->addSymbol(Defined{
+        ctx, ctx.internalFile, *riscvVendorString, llvm::ELF::STB_GLOBAL,
+        llvm::ELF::STV_HIDDEN, llvm::ELF::STT_NOTYPE, 0, 0, nullptr});
+    vendorSym.isUsedInRegularObj = true;
   }
 }
 
