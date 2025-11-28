@@ -553,4 +553,197 @@ exit:
   ret void
 }
 
+; Evaluating loop `for (float i = 0; i < 499; i += .49999f) ++rv;`
+; Trip count: 999.
+define i32 @test_fp_simulate_tc_rounded_fadd() {
+; CHECK-LABEL: @test_fp_simulate_tc_rounded_fadd(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 999
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi float [ 0.0, %entry ], [ %next, %loop ]
+  %rv = phi i32 [ 0, %entry ], [ %rv.next, %loop ]
+  %rv.next = add i32 %rv, 1
+  %next = fadd float %i, 0x3FDFFFD600000000
+  %cmp = fcmp olt float %next, 499.0
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %phi = phi i32 [ %rv.next, %loop ]
+  ret i32 %phi
+}
+
+; Same as above, using double, addition will not get rounded.
+define i32 @test_fp_simulate_tc_exact_fadd_via_double() {
+; CHECK-LABEL: @test_fp_simulate_tc_exact_fadd_via_double(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 999
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi double [ 0.0, %entry ], [ %next, %loop ]
+  %rv = phi i32 [ 0, %entry ], [ %rv.next, %loop ]
+  %rv.next = add i32 %rv, 1
+  %next = fadd double %i, 0x3FDFFFD600000000
+  %cmp = fcmp olt double %next, 499.0
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %phi = phi i32 [ %rv.next, %loop ]
+  ret i32 %phi
+}
+
+; As above, but %exit branch taken on true.
+; Trip count: 0, exit count: 1, condition always satisfied.
+; While SCEV already infers this, make sure we continue handling this
+; properly when simulating the loop too.
+define i32 @test_fp_simulate_tc_rounded_fadd_inverted_exit() {
+; CHECK-LABEL: @test_fp_simulate_tc_rounded_fadd_inverted_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    call void @opaque()
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi float [ 0.0, %entry ], [ %next, %loop ]
+  call void @opaque()
+  %next = fadd float %i, 0x3FDFFFD600000000
+  %cmp = fcmp une float %next, 499.0
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret i32 0
+}
+
+; As above, inverted condition, %exit branch taken on true.
+; Trip count: 999.
+define i32 @test_fp_simulate_tc_rounded_fadd_inverted_pred_exit() {
+; CHECK-LABEL: @test_fp_simulate_tc_rounded_fadd_inverted_pred_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 999
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi float [ 0.0, %entry ], [ %next, %loop ]
+  %rv = phi i32 [ 0, %entry ], [ %rv.next, %loop ]
+  %rv.next = add i32 %rv, 1
+  %next = fadd float %i, 0x3FDFFFD600000000
+  %cmp = fcmp oge float %next, 499.0
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  %phi = phi i32 [ %rv.next, %loop ]
+  ret i32 %phi
+}
+
+; Evaluating loop `for (float i = 0; i < 499; i += 124.75f) opaque();`
+; Trip count: 4.
+define i32 @test_fp_simulate_tc_exact_fadd_pred_ult() {
+; CHECK-LABEL: @test_fp_simulate_tc_exact_fadd_pred_ult(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I_INT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_INT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    call void @opaque()
+; CHECK-NEXT:    [[ADD_INT]] = add nuw nsw i32 [[I_INT]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[ADD_INT]], 4
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi float [ 0.000000e+00, %entry ], [ %add, %loop ]
+  call void @opaque()
+  %add = fadd float %i, 0x405F600000000000
+  %cmp = fcmp ult float %add, 4.990000e+02
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 0
+}
+
+; Evaluating loop `for (float i = 0; i == 499; i += 124.75f) opaque();`
+; Trip count: 0, exit count: 1, condition never satisfied.
+; While SCEV already infers this, make sure we continue handling this
+; properly when simulating the loop too.
+define i32 @test_fp_simulate_tc_exact_fadd_pred_ueq() {
+; CHECK-LABEL: @test_fp_simulate_tc_exact_fadd_pred_ueq(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    call void @opaque()
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi float [ 0.000000e+00, %entry ], [ %add, %loop ]
+  call void @opaque()
+  %add = fadd float %i, 0x405F600000000000
+  %cmp = fcmp ueq float %add, 4.990000e+02
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 0
+}
+
+; Negative test, fast-math flags are present.
+define i32 @test_fp_simulate_tc_exact_fadd_fcmp_flags() {
+; CHECK-LABEL: @test_fp_simulate_tc_exact_fadd_fcmp_flags(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    call void @opaque()
+; CHECK-NEXT:    [[ADD]] = fadd reassoc float [[I]], 1.255000e+02
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast olt float [[ADD]], 4.990000e+02
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi float [ 0.000000e+00, %entry ], [ %add, %loop ]
+  call void @opaque()
+  %add = fadd reassoc float %i, 0x405F600000000000
+  %cmp = fcmp fast olt float %add, 4.990000e+02
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 0
+}
+
 declare void @opaque()
