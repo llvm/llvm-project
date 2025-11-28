@@ -670,6 +670,10 @@ public:
   /// This is a convenience wrapper function for the above two functions.
   Instruction *foldBinOpIntoSelectOrPhi(BinaryOperator &I);
 
+  /// Given a binary operator with min/max intrinsic as one operand,
+  /// try to fold it into a single min/max intrinsic call.
+  Instruction *foldBinOpIntoMinMax(BinaryOperator &I);
+
   Instruction *foldAddWithConstant(BinaryOperator &Add);
 
   Instruction *foldSquareSumInt(BinaryOperator &I);

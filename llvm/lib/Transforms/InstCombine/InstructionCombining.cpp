@@ -1836,6 +1836,25 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
 }
 
+Instruction *InstCombinerImpl::foldBinOpIntoMinMax(BinaryOperator &I) {
+  Value *LHS = I.getOperand(0);
+  Value *RHS = I.getOperand(1);
+  MinMaxIntrinsic *MinMax = dyn_cast<MinMaxIntrinsic>(LHS);
+  Value* otherOp = RHS;
+  if (!MinMax) {
+    MinMax = dyn_cast<MinMaxIntrinsic>(RHS);
+    otherOp = LHS;
+  }
+  if (!MinMax) return nullptr;
+  Value* X = MinMax->getLHS();
+  Value* Y = MinMax->getRHS();
+  Value* NewX = BinaryOperator::Create(I.getOpcode(), X, otherOp);
+  Value* NewY = BinaryOperator::Create(I.getOpcode(), Y, otherOp);
+  Intrinsic::ID InvID = getInverseMinMaxIntrinsic(MinMax->getIntrinsicID());
+  Function *F = Intrinsic::getOrInsertDeclaration(I.getModule(), InvID, I.getType());
+  return CallInst::Create(F, {NewX, NewY});
+}
+
 static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
                                          Value *InValue, BasicBlock *InBB,
                                          const DataLayout &DL,
