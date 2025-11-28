@@ -5931,8 +5931,8 @@ AST_POLYMORPHIC_MATCHER_P(hasAnySubstatement,
 ///  a compound statement immediately followed by a binary operator
 ///  immediately followed by a return statement.
 extern const internal::VariadicFunction<
-    internal::HasAdjSubstatementsMatcherType,
-    internal::Matcher<Stmt>, internal::hasAdjSubstatementsFunc>
+    internal::HasAdjSubstatementsMatcherType, internal::Matcher<Stmt>,
+    internal::hasAdjSubstatementsFunc>
     hasAdjSubstatements;
 
 /// Checks that a compound statement contains a specific number of
