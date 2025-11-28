@@ -888,12 +888,17 @@ void Sema::ActOnPragmaMSSection(SourceLocation PragmaLocation,
 }
 
 void Sema::ActOnPragmaMSInitSeg(SourceLocation PragmaLocation,
-                                StringLiteral *SegmentName) {
-  // There's no stack to maintain, so we just have a current section.  When we
-  // see the default section, reset our current section back to null so we stop
-  // tacking on unnecessary attributes.
-  CurInitSeg = SegmentName->getString() == ".CRT$XCU" ? nullptr : SegmentName;
+                                StringLiteral *SegmentName,
+                                IdentifierInfo *Func,
+                                SourceLocation FuncLoc) {
+
+  // When we see the default section, reset back to null.
+  CurInitSeg = (SegmentName->getString() == ".CRT$XCU") ? nullptr : SegmentName;
   CurInitSegLoc = PragmaLocation;
+
+  // Store optional function identifier (may be null).
+  CurInitSegFn = Func;
+  CurInitSegFnLoc = Func ? FuncLoc : SourceLocation();
 }
 
 void Sema::ActOnPragmaMSAllocText(

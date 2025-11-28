@@ -1229,6 +1229,11 @@ bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
 
   // Parse either the known section names or the string section name.
   StringLiteral *SegmentName = nullptr;
+  // Optional function identifier provided as the second argument to
+  // #pragma init_seg([segment][, func-name]). Declared here so it's in scope
+  // for the call to ActOnPragmaMSInitSeg below.
+  IdentifierInfo *FuncII = nullptr;
+  SourceLocation FuncLoc;
   if (Tok.isAnyIdentifier()) {
     auto *II = Tok.getIdentifierInfo();
     StringRef Section = llvm::StringSwitch<StringRef>(II->getName())
@@ -1259,7 +1264,31 @@ bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
           << PragmaName;
       return false;
     }
-    // FIXME: Add support for the '[, func-name]' part of the pragma.
+    // Nothing else here; the optional ', func-name' (if present) will be
+    // parsed after the segment parsing so it works whether the segment was
+    // specified as a known identifier or as a string literal.
+  }
+
+  // After parsing the segment name (either via identifier mapping or a
+  // string literal), optionally parse a comma and an identifier naming the
+  // helper function to be used in place of atexit.
+  // Only consume the comma if an identifier follows; otherwise leave it
+  // for ExpectAndConsume(tok::r_paren) to report the error naturally (e.g.,
+  // for malformed pragmas like #pragma init_seg("a", "b")).
+  if (Tok.is(tok::comma)) {
+    // Save current token state for potential backtrack.
+    Token SavedTok = Tok;
+    PP.Lex(Tok); // tentatively consume comma
+    if (Tok.is(tok::identifier)) {
+      // The comma is followed by an identifier; keep both consumed.
+      FuncII = Tok.getIdentifierInfo();
+      FuncLoc = Tok.getLocation();
+      PP.Lex(Tok); // consume identifier and move to next token
+    } else {
+      // Not an identifier after comma; restore and don't consume the comma.
+      // The r_paren check below will produce the expected diagnostics.
+      Tok = SavedTok;
+    }
   }
 
   if (!SegmentName) {
@@ -1273,7 +1302,8 @@ bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
                        PragmaName))
     return false;
 
-  Actions.ActOnPragmaMSInitSeg(PragmaLocation, SegmentName);
+  Actions.ActOnPragmaMSInitSeg(PragmaLocation, SegmentName, FuncII,
+                               FuncLoc);
   return true;
 }
 
