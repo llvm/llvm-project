@@ -45,8 +45,6 @@ elseif (FLANG_RT_LIBCXX_PROVIDER STREQUAL "llvm")
   endif ()
 
   if (FLANG_RT_HAS_STDLIB_FLAG)
-    target_compile_options(flang-rt-libc-headers INTERFACE
-      $<$<COMPILE_LANGUAGE:CXX,C>:$<COMPILE_ONLY:-stdlib=libc++>>
-    )
+    target_compile_options(flang-rt-libc-headers INTERFACE $<$<COMPILE_LANGUAGE:CXX,C>:-stdlib=libc++>)
   endif ()
 endif ()

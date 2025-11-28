@@ -426,7 +426,7 @@ Changes in existing checks
 
 - Improved :doc:`google-readability-casting
   <clang-tidy/checks/google/readability-casting>` check by adding fix-it
-  notes for downcasts.
+  notes for downcasts and casts to void pointer.
 
 - Improved :doc:`google-readability-todo
   <clang-tidy/checks/google/readability-todo>` check to accept the new TODO
@@ -526,6 +526,11 @@ Changes in existing checks
   generating fix-it hints when size method is called from implicit ``this``,
   ignoring default constructors with user provided arguments and adding
   detection in container's method except ``empty``.
+
+- Improved :doc:`readability-duplicate-include
+  <clang-tidy/checks/readability/duplicate-include>` check by adding
+  the ``IgnoredFilesList`` option (semicolon-separated list of regexes or
+  filenames) to allow intentional duplicates.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring

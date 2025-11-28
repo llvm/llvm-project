@@ -289,7 +289,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .lower();
 
-  getActionDefinitionsBuilder({G_ABDS, G_ABDU})
+  getActionDefinitionsBuilder(
+      {G_ABDS, G_ABDU, G_UAVGFLOOR, G_UAVGCEIL, G_SAVGFLOOR, G_SAVGCEIL})
       .legalFor({v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
       .lower();
 
@@ -1242,7 +1243,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({{v16s8, v8s8}, {v8s16, v4s16}, {v4s32, v2s32}})
       .bitcastIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[0].getSizeInBits() <= 128 &&
+            return Query.Types[0].isFixedVector() &&
+                   Query.Types[1].isFixedVector() &&
+                   Query.Types[0].getSizeInBits() <= 128 &&
                    Query.Types[1].getSizeInBits() <= 64;
           },
           [=](const LegalityQuery &Query) {
@@ -1832,6 +1835,14 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(TargetOpcode::G_ABDS);
   case Intrinsic::aarch64_neon_uabd:
     return LowerBinOp(TargetOpcode::G_ABDU);
+  case Intrinsic::aarch64_neon_uhadd:
+    return LowerBinOp(TargetOpcode::G_UAVGFLOOR);
+  case Intrinsic::aarch64_neon_urhadd:
+    return LowerBinOp(TargetOpcode::G_UAVGCEIL);
+  case Intrinsic::aarch64_neon_shadd:
+    return LowerBinOp(TargetOpcode::G_SAVGFLOOR);
+  case Intrinsic::aarch64_neon_srhadd:
+    return LowerBinOp(TargetOpcode::G_SAVGCEIL);
   case Intrinsic::aarch64_neon_abs: {
     // Lower the intrinsic to G_ABS.
     MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});

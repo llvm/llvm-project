@@ -619,6 +619,13 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   for (StringRef VFS : MDC.ScanInstance.getHeaderSearchOpts().VFSOverlayFiles)
     MDC.addFileDep(VFS);
 
+  if (Module *CurrentModule = PP.getCurrentModuleImplementation()) {
+    if (OptionalFileEntryRef CurrentModuleMap =
+            PP.getHeaderSearchInfo().getModuleMap().getModuleMapFileForUniquing(
+                CurrentModule))
+      MDC.addFileDep(CurrentModuleMap->getName());
+  }
+
   for (const Module *M :
        MDC.ScanInstance.getPreprocessor().getAffectingClangModules())
     if (!MDC.isPrebuiltModule(M))

@@ -253,8 +253,8 @@ struct CppEmitter {
     return !fileId.empty() && file.getId() == fileId;
   }
 
-  /// Get expression currently being emitted.
-  ExpressionOp getEmittedExpression() { return emittedExpression; }
+  /// Is expression currently being emitted.
+  bool isEmittingExpression() { return emittedExpression; }
 
   /// Determine whether given value is part of the expression potentially being
   /// emitted.
@@ -1717,7 +1717,7 @@ LogicalResult CppEmitter::emitGlobalVariable(GlobalOp op) {
 
 LogicalResult CppEmitter::emitAssignPrefix(Operation &op) {
   // If op is being emitted as part of an expression, bail out.
-  if (getEmittedExpression())
+  if (isEmittingExpression())
     return success();
 
   switch (op.getNumResults()) {
@@ -1799,7 +1799,7 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   if (hasDeferredEmission(&op))
     return success();
 
-  if (getEmittedExpression() ||
+  if (isEmittingExpression() ||
       (isa<emitc::ExpressionOp>(op) &&
        shouldBeInlined(cast<emitc::ExpressionOp>(op))))
     return success();

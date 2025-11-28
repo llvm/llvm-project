@@ -160,7 +160,6 @@ void UnusedParametersCheck::warnOnUnusedParameter(
       !Result.SourceManager->isInMainFile(Function->getLocation()) ||
       !Indexer->getOtherRefs(Function).empty() || isOverrideMethod(Function) ||
       isLambdaCallOperator(Function)) {
-
     // It is illegal to omit parameter name here in C code, so early-out.
     if (!Result.Context->getLangOpts().CPlusPlus)
       return;
