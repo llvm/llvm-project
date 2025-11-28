@@ -5889,7 +5889,6 @@ AST_MATCHER_P(FunctionDecl, hasAnyBody,
           InnerMatcher.matches(*Statement, Finder, Builder));
 }
 
-
 /// Matches compound statements where at least one substatement matches
 /// a given matcher. Also matches StmtExprs that have CompoundStmt as children.
 ///
@@ -5909,6 +5908,51 @@ AST_POLYMORPHIC_MATCHER_P(hasAnySubstatement,
   return CS && matchesFirstInPointerRange(InnerMatcher, CS->body_begin(),
                                           CS->body_end(), Finder,
                                           Builder) != CS->body_end();
+}
+
+/// Matches compound statements that contain a PrevStmt immediately followed by
+/// NextStmt. Also matches StmtExprs that have CompoundStmt as children.
+///
+/// Given
+/// \code
+///   { {}; 1+2; }
+/// \endcode
+/// hasAdjSubstatements(compoundStmt(), binaryOperator())
+///   matches '{ {}; 1+2; }'
+/// with compoundStmt()
+///   matching '{}'
+/// with binaryOperator()
+///   matching '1+2'
+AST_POLYMORPHIC_MATCHER_P2(hasAdjSubstatements,
+                           AST_POLYMORPHIC_SUPPORTED_TYPES(CompoundStmt,
+                                                           StmtExpr),
+                           ast_matchers::internal::Matcher<Stmt>, PrevMatcher,
+                           ast_matchers::internal::Matcher<Stmt>, NextMatcher) {
+  const CompoundStmt *CS = CompoundStmtMatcher<NodeType>::get(Node);
+  if (!CS)
+    return false;
+
+  auto Begin = CS->body_begin();
+  auto End = CS->body_end();
+  
+  if (CS->size() < 2)
+    return false;
+
+  return std::adjacent_find(
+             Begin, End,
+             [&](const Stmt *PrevStmt, const Stmt *NextStmt) {
+               clang::ast_matchers::internal::BoundNodesTreeBuilder PrevBuilder;
+               if (!PrevMatcher.matches(*PrevStmt, Finder, &PrevBuilder))
+                 return false;
+
+               clang::ast_matchers::internal::BoundNodesTreeBuilder NextBuilder;
+               NextBuilder.addMatch(PrevBuilder);
+               if (!NextMatcher.matches(*NextStmt, Finder, &NextBuilder))
+                 return false;
+
+               Builder->addMatch(NextBuilder);
+               return true;
+             }) != End;
 }
 
 /// Checks that a compound statement contains a specific number of
