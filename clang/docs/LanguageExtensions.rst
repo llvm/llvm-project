@@ -1187,6 +1187,50 @@ specifier for ``_Float16``, and (unlike ``float``) it will not be implicitly pro
 ``double`` when passed to ``printf``, so the programmer must explicitly cast it to
 ``double`` before using it with an ``%f`` or similar specifier.
 
+Pragmas
+=======
+
+#pragma export
+--------------
+
+Clang supports the export pragma used to indicate an
+external symbol is to be exported from the shared library being built.  The
+syntax for the pragma is:
+
+.. code-block:: c++
+
+  #pragma export (name)
+
+where ``name`` is the name of the external function or variable to be
+exported.  The symbol needs to have external linkage.  The pragma may appear
+before or after the declaration of ``name``, but must precede the
+definition.  The pragma must also appear at file scope.  If ``name`` is not
+defined, the pragma will have no effect.  The pragma needs to be specified
+in the same translation unit as ``name`` is defined.
+
+The pragma has the same effect as adding ``__attribute__((visibility("default")))``
+to the declaration of ``name``.
+
+In C++, the function being exported must be declared as ``extern "C"``.  If the
+function has overloads, the pragma only applies to the overload with ``extern "C"``
+linkage.  For example:
+
+.. code-block:: c++
+
+  #pragma export(func)
+  int func(double) { return 0; }
+  extern "C" int func(int) { return 4;}
+
+In the code above the pragma will export ``func(int)`` but not ``func(double)``.
+
+If none of the overloads are declared with ``extern "C"`` a warning will be
+generated saying the pragma didn't resolve to a declaration.  For example:
+
+.. code-block:: c++
+
+  #pragma export(func)
+  int func(double) { return 0; } // warning: failed to resolve '#pragma export' to a declaration
+
 Messages on ``deprecated`` and ``unavailable`` Attributes
 =========================================================
 
