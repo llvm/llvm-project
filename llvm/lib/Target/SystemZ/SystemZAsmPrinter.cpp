@@ -1126,7 +1126,6 @@ void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
       }
     }
     getTargetStreamer()->emitExterns();
-    OutStreamer->popSection();
   }
   emitAttributes(M);
   // Emit the END instruction in case of HLASM output. This must be the last
