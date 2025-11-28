@@ -44,3 +44,36 @@ define <2 x i64> @any_of_select_vf2(<2 x i64> %mask, <2 x i64> %a, <2 x i64> %b)
   %res = select i1 %cmp.bc.not, <2 x i64> %a, <2 x i64> %b
   ret <2 x i64> %res
 }
+
+define <32 x i8> @any_of_select_vf32(<32 x i8> %mask, <32 x i8> %a, <32 x i8> %b) {
+; CHECK-LABEL: any_of_select_vf32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI2_0
+; CHECK-NEXT:    cmlt v1.16b, v1.16b, #0
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    movi d6, #0000000000000000
+; CHECK-NEXT:    and v1.16b, v1.16b, v7.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v7.16b
+; CHECK-NEXT:    ext v7.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    ext v16.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    zip1 v1.16b, v1.16b, v7.16b
+; CHECK-NEXT:    zip1 v0.16b, v0.16b, v16.16b
+; CHECK-NEXT:    addv h1, v1.8h
+; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    bfi w9, w8, #16, #16
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, v6.4s
+; CHECK-NEXT:    dup v1.4s, v0.s[0]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    bsl v1.16b, v3.16b, v5.16b
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v4.16b
+; CHECK-NEXT:    ret
+  %cmp = icmp slt <32 x i8> %mask, zeroinitializer
+  %cmp.bc = bitcast <32 x i1> %cmp to i32
+  %cmp.bc.not = icmp eq i32 %cmp.bc, 0
+  %res = select i1 %cmp.bc.not, <32 x i8> %a, <32 x i8> %b
+  ret <32 x i8> %res
+}
