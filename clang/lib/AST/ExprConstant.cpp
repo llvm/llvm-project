@@ -12179,8 +12179,8 @@ static bool evalShiftWithCount(
   assert(Call->getNumArgs() == 2);
 
   QualType SourceTy = Call->getArg(0)->getType();
-  QualType CountTy = Call->getArg(1)->getType();
-  assert(SourceTy->isVectorType() && CountTy->isVectorType());
+  assert(SourceTy->isVectorType() &&
+         Call->getArg(1)->getType()->isVectorType());
 
   QualType DestEltTy = SourceTy->castAs<VectorType>()->getElementType();
   unsigned DestEltWidth = Source.getVectorElt(0).getInt().getBitWidth();
@@ -16978,7 +16978,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     bool IsUnsigned =
         (BuiltinOp >= clang::X86::BI__builtin_ia32_ucmpb128_mask &&
-         BuiltinOp <= clang::X86::BI__builtin_ia32_ucmpq512_mask);
+         BuiltinOp <= clang::X86::BI__builtin_ia32_ucmpw512_mask);
 
     APValue LHS, RHS;
     APSInt Mask, Opcode;
