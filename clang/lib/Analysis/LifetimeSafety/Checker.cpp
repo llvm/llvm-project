@@ -75,20 +75,15 @@ public:
   /// Checks if an escaping origin holds a placeholder loan, indicating a
   /// missing [[clang::lifetimebound]] annotation.
   void checkAnnotations(const OriginEscapesFact *OEF) {
-    if (!Reporter)
-      return;
     OriginID EscapedOID = OEF->getEscapedOriginID();
     LoanSet EscapedLoans = LoanPropagation.getLoans(EscapedOID, OEF);
-    if (EscapedLoans.isEmpty())
-      return;
-    for (const Loan *L : FactMgr.getLoanMgr().getLoans()) {
-      if (const auto *PL = dyn_cast<ParameterLoan>(L)) {
-        if (EscapedLoans.contains(PL->getID())) {
-          const ParmVarDecl *PVD = PL->getParmVarDecl();
-          if (PVD->hasAttr<LifetimeBoundAttr>())
-            continue;
-          AnnotationWarningsMap.try_emplace(PVD, OEF->getEscapeExpr());
-        }
+    for (LoanID LID : EscapedLoans) {
+      const Loan *L = FactMgr.getLoanMgr().getLoan(LID);
+      if (const auto *PL = dyn_cast<PlaceholderLoan>(L)) {
+        const ParmVarDecl *PVD = PL->getParmVarDecl();
+        if (PVD->hasAttr<LifetimeBoundAttr>())
+          continue;
+        AnnotationWarningsMap.try_emplace(PVD, OEF->getEscapeExpr());
       }
     }
   }

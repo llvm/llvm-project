@@ -44,13 +44,13 @@ static const BorrowLoan *createLoan(FactManager &FactMgr,
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
-  llvm::SmallVector<Fact *> PlaceholderLoanFacts = createPlaceholderLoanFacts();
+  llvm::SmallVector<Fact *> PlaceholderLoanFacts = issuePlaceholderLoans();
   // Iterate through the CFG blocks in reverse post-order to ensure that
   // initializations and destructions are processed in the correct sequence.
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
     CurrentBlockFacts.clear();
     EscapesInCurrentBlock.clear();
-    if (Block->getBlockID() == Cfg.getEntry().getBlockID())
+    if (Block == &Cfg.getEntry())
       CurrentBlockFacts.append(PlaceholderLoanFacts.begin(),
                                PlaceholderLoanFacts.end());
     for (unsigned I = 0; I < Block->size(); ++I) {
@@ -351,16 +351,16 @@ void FactsGenerator::markUseAsWrite(const DeclRefExpr *DRE) {
 
 // Creates an IssueFact for a new placeholder loan for each pointer or reference
 // parameter at the function's entry.
-llvm::SmallVector<Fact *> FactsGenerator::createPlaceholderLoanFacts() {
-  llvm::SmallVector<Fact *> PlaceholderLoanFacts;
+llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
   const auto *FD = dyn_cast<FunctionDecl>(AC.getDecl());
   if (!FD)
-    return PlaceholderLoanFacts;
+    return {};
 
+  llvm::SmallVector<Fact *> PlaceholderLoanFacts;
   for (const ParmVarDecl *PVD : FD->parameters()) {
     if (hasOrigin(PVD)) {
-      const ParameterLoan *L =
-          FactMgr.getLoanMgr().createLoan<ParameterLoan>(PVD);
+      const PlaceholderLoan *L =
+          FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(PVD);
       OriginID OID = FactMgr.getOriginMgr().getOrCreate(*PVD);
       PlaceholderLoanFacts.push_back(
           FactMgr.createFact<IssueFact>(L->getID(), OID));

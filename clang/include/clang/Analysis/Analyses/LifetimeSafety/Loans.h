@@ -80,13 +80,25 @@ public:
   static bool classof(const Loan *L) { return L->getKind() == Kind::Borrow; }
 };
 
-/// A concrete loan type for placeholder loans on parameters, representing a
-/// borrow from the function's caller.
-class ParameterLoan : public Loan {
+/// A placeholder loan held by a function parameter, representing a borrow from
+/// the caller's scope.
+///
+/// Created at function entry for each pointer or reference parameter with an
+/// origin. Unlike BorrowLoan, placeholder loans:
+/// - Have no IssueExpr (created at function entry, not at a borrow site)
+/// - Have no AccessPath (the borrowed object is not visible to the function)
+/// - Do not currently expire, but may in the future when modeling function
+///   invalidations (e.g., vector::push_back)
+///
+/// When a placeholder loan escapes the function (e.g., via return), it
+/// indicates the parameter should be marked [[clang::lifetimebound]], enabling
+/// lifetime annotation suggestions.
+class PlaceholderLoan : public Loan {
+  /// The function parameter that holds this placeholder loan.
   const ParmVarDecl *PVD;
 
 public:
-  ParameterLoan(LoanID ID, const ParmVarDecl *PVD)
+  PlaceholderLoan(LoanID ID, const ParmVarDecl *PVD)
       : Loan(Kind::Placeholder, ID), PVD(PVD) {}
 
   const ParmVarDecl *getParmVarDecl() const { return PVD; }

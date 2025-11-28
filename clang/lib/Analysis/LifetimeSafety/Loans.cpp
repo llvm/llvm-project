@@ -15,7 +15,7 @@ void BorrowLoan::dump(llvm::raw_ostream &OS) const {
   OS << Path.D->getNameAsString() << ")";
 }
 
-void ParameterLoan::dump(llvm::raw_ostream &OS) const {
+void PlaceholderLoan::dump(llvm::raw_ostream &OS) const {
   OS << getID() << " (Placeholder loan)";
 }
 

@@ -12,10 +12,6 @@ struct [[gsl::Pointer()]] View {
   void use() const;
 };
 
-//===----------------------------------------------------------------------===//
-// Lifetimebound Annotation Suggestion Tests
-//===----------------------------------------------------------------------===//
-
 View return_view_directly (View a) {    // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
   return a;                             // expected-note {{param returned here}}
 }
@@ -61,8 +57,15 @@ View only_one_paramter_annotated (View a [[clang::lifetimebound]],
  return b;        // expected-note {{param returned here}} 
 }
 
+View reassigned_to_another_parameter (
+    View a,
+    View b) {     // expected-warning {{param should be marked [[clang::lifetimebound]]}}.
+  a = b;
+  return a;       // expected-note {{param returned here}} 
+}
+
 //===----------------------------------------------------------------------===//
-// Lifetimebound Annotation Negative Test Cases
+// Negative Test Cases
 //===----------------------------------------------------------------------===//
 
 View already_annotated(View a [[clang::lifetimebound]]) {
