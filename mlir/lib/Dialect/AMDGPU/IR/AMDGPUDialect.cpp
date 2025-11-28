@@ -760,6 +760,9 @@ LogicalResult MakeDmaDescriptorOp::verify() {
   if (rank < 2) {
     return emitOpError("tensor and tile must be at least of rank 2.");
   }
+  if (rank > 5) {
+    return emitOpError("tensor and tile must be at most of rank 5.");
+  }
   if (rank != globalStaticStrides.size()) {
     return emitOpError("strides and sizes must have same rank.");
   }
@@ -777,6 +780,82 @@ LogicalResult MakeDmaDescriptorOp::verify() {
   }
 
   return success();
+}
+
+static bool maybeUpdateDynamicIndexList(
+    ArrayRef<int64_t> staticElements, ArrayRef<Attribute> foldedElements,
+    SmallVector<Value> dynamicElements, SmallVector<int64_t> &newStaticElements,
+    SmallVector<Value> &newDynamicElements) {
+  bool changed = false;
+  int index = 0;
+
+  for (int64_t static_element : staticElements) {
+    if (!ShapedType::isDynamic(static_element)) {
+      newStaticElements.push_back(static_element);
+      continue;
+    }
+
+    Attribute folded_element = foldedElements[index++];
+    if (auto attr = dyn_cast<IntegerAttr>(folded_element)) {
+      newStaticElements.push_back(attr.getInt());
+      changed = true;
+      continue;
+    }
+
+    newStaticElements.push_back(ShapedType::kDynamic);
+    newDynamicElements.push_back(dynamicElements[index]);
+  }
+  return changed;
+}
+
+OpFoldResult MakeDmaDescriptorOp::fold(FoldAdaptor adaptor) {
+  ArrayRef<int64_t> oldGlobalStaticStrides = adaptor.getGlobalStaticStrides();
+  ArrayRef<Attribute> foldedGlobalDynamicStrides =
+      adaptor.getGlobalDynamicStrides();
+  SmallVector<Value> oldGlobalDynamicStrides = getGlobalDynamicStrides();
+
+  SmallVector<int64_t> newGlobalStaticStrides;
+  SmallVector<Value> newGlobalDynamicStrides;
+
+  bool change = maybeUpdateDynamicIndexList(
+      oldGlobalStaticStrides, foldedGlobalDynamicStrides,
+      oldGlobalDynamicStrides, newGlobalStaticStrides, newGlobalDynamicStrides);
+
+  ArrayRef<int64_t> oldGlobalStaticSizes = adaptor.getGlobalStaticSizes();
+  ArrayRef<Attribute> foldedGlobalDynamicSizes =
+      adaptor.getGlobalDynamicSizes();
+  SmallVector<Value> oldGlobalDynamicSizes = getGlobalDynamicSizes();
+
+  SmallVector<int64_t> newGlobalStaticSizes;
+  SmallVector<Value> newGlobalDynamicSizes;
+
+  change |= maybeUpdateDynamicIndexList(
+      oldGlobalStaticSizes, foldedGlobalDynamicSizes, oldGlobalDynamicSizes,
+      newGlobalStaticSizes, newGlobalDynamicSizes);
+
+  ArrayRef<int64_t> oldSharedStaticSizes = adaptor.getSharedStaticSizes();
+  ArrayRef<Attribute> foldedSharedDynamicSizes =
+      adaptor.getSharedDynamicSizes();
+  SmallVector<Value> oldSharedDynamicSizes = getSharedDynamicSizes();
+
+  SmallVector<int64_t> newSharedStaticSizes;
+  SmallVector<Value> newSharedDynamicSizes;
+
+  change |= maybeUpdateDynamicIndexList(
+      oldSharedStaticSizes, foldedSharedDynamicSizes, oldSharedDynamicSizes,
+      newSharedStaticSizes, newSharedDynamicSizes);
+
+  if (change) {
+    setGlobalStaticStrides(newGlobalStaticStrides);
+    getGlobalDynamicStridesMutable().assign(newGlobalDynamicStrides);
+    setGlobalStaticSizes(newGlobalStaticSizes);
+    getGlobalDynamicSizesMutable().assign(newGlobalDynamicSizes);
+    setSharedStaticSizes(newSharedStaticSizes);
+    getSharedDynamicSizesMutable().assign(newSharedDynamicSizes);
+    return getResult();
+  }
+
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

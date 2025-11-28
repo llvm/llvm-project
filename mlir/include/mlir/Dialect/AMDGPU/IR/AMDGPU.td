@@ -1395,6 +1395,7 @@ def AMDGPU_MakeDmaDescriptorOp :
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def AMDGPU_TensorLoadToLDSOp :

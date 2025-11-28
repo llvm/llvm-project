@@ -758,3 +758,4 @@ func.func @tensor_load_store(%desc: !amdgpu.tdm_descriptor) {
   amdgpu.tensor_store_from_lds %desc : !amdgpu.tdm_descriptor
   return
 }
+
