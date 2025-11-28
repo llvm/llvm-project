@@ -76,3 +76,89 @@ define <16 x i16> @urem_v16i16_by_255(<16 x i16> %x) {
   %rem = urem <16 x i16> %x, splat (i16 255)
   ret <16 x i16> %rem
 }
+
+define <8 x i16> @udiv_exact_v8i16_by_255(<8 x i16> %x) {
+; CHECK-LABEL: udiv_exact_v8i16_by_255:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvni v1.8h, #1, lsl #8
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %div = udiv exact <8 x i16> %x, splat (i16 255)
+  ret <8 x i16> %div
+}
+
+define <16 x i16> @udiv_exact_v16i16_by_255(<16 x i16> %x) {
+; CHECK-LABEL: udiv_exact_v16i16_by_255:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w9, v0.h[0]
+; CHECK-NEXT:    umov w11, v1.h[0]
+; CHECK-NEXT:    mov w8, #258 // =0x102
+; CHECK-NEXT:    movk w8, #257, lsl #16
+; CHECK-NEXT:    umov w10, v0.h[1]
+; CHECK-NEXT:    umov w12, v1.h[1]
+; CHECK-NEXT:    umov w13, v0.h[2]
+; CHECK-NEXT:    umov w14, v1.h[2]
+; CHECK-NEXT:    umull x9, w9, w8
+; CHECK-NEXT:    umull x11, w11, w8
+; CHECK-NEXT:    umull x10, w10, w8
+; CHECK-NEXT:    umull x12, w12, w8
+; CHECK-NEXT:    lsr x9, x9, #32
+; CHECK-NEXT:    lsr x11, x11, #32
+; CHECK-NEXT:    umull x13, w13, w8
+; CHECK-NEXT:    fmov s2, w9
+; CHECK-NEXT:    lsr x10, x10, #32
+; CHECK-NEXT:    umov w9, v0.h[3]
+; CHECK-NEXT:    fmov s3, w11
+; CHECK-NEXT:    lsr x12, x12, #32
+; CHECK-NEXT:    umull x11, w14, w8
+; CHECK-NEXT:    umov w14, v1.h[3]
+; CHECK-NEXT:    mov v2.h[1], w10
+; CHECK-NEXT:    lsr x10, x13, #32
+; CHECK-NEXT:    mov v3.h[1], w12
+; CHECK-NEXT:    umov w12, v0.h[4]
+; CHECK-NEXT:    lsr x11, x11, #32
+; CHECK-NEXT:    umull x9, w9, w8
+; CHECK-NEXT:    umull x13, w14, w8
+; CHECK-NEXT:    umov w14, v1.h[4]
+; CHECK-NEXT:    mov v2.h[2], w10
+; CHECK-NEXT:    mov v3.h[2], w11
+; CHECK-NEXT:    lsr x9, x9, #32
+; CHECK-NEXT:    umull x10, w12, w8
+; CHECK-NEXT:    lsr x12, x13, #32
+; CHECK-NEXT:    umov w11, v0.h[5]
+; CHECK-NEXT:    umull x13, w14, w8
+; CHECK-NEXT:    umov w14, v1.h[5]
+; CHECK-NEXT:    mov v2.h[3], w9
+; CHECK-NEXT:    lsr x9, x10, #32
+; CHECK-NEXT:    mov v3.h[3], w12
+; CHECK-NEXT:    lsr x12, x13, #32
+; CHECK-NEXT:    umull x10, w11, w8
+; CHECK-NEXT:    umov w11, v0.h[6]
+; CHECK-NEXT:    umull x13, w14, w8
+; CHECK-NEXT:    umov w14, v1.h[6]
+; CHECK-NEXT:    mov v2.h[4], w9
+; CHECK-NEXT:    umov w9, v0.h[7]
+; CHECK-NEXT:    mov v3.h[4], w12
+; CHECK-NEXT:    lsr x10, x10, #32
+; CHECK-NEXT:    lsr x12, x13, #32
+; CHECK-NEXT:    umull x11, w11, w8
+; CHECK-NEXT:    umull x13, w14, w8
+; CHECK-NEXT:    umov w14, v1.h[7]
+; CHECK-NEXT:    mov v2.h[5], w10
+; CHECK-NEXT:    umull x9, w9, w8
+; CHECK-NEXT:    mov v3.h[5], w12
+; CHECK-NEXT:    lsr x10, x11, #32
+; CHECK-NEXT:    lsr x11, x13, #32
+; CHECK-NEXT:    umull x8, w14, w8
+; CHECK-NEXT:    lsr x9, x9, #32
+; CHECK-NEXT:    mov v2.h[6], w10
+; CHECK-NEXT:    mov v3.h[6], w11
+; CHECK-NEXT:    lsr x8, x8, #32
+; CHECK-NEXT:    mov v2.h[7], w9
+; CHECK-NEXT:    mov v3.h[7], w8
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    mov v1.16b, v3.16b
+; CHECK-NEXT:    ret
+  %div = udiv exact <16 x i16> %x, splat (i16 255)
+  ret <16 x i16> %div
+}
