@@ -354,7 +354,7 @@ KEYWORD(__ptrauth                   , KEYALL)
 UNARY_EXPR_OR_TYPE_TRAIT(_Countof, CountOf, KEYNOCXX)
 
 // C++ 2.11p1: Keywords.
-KEYWORD(asm                         , KEYCXX|KEYGNU)
+KEYWORD(asm                         , KEYCXX|KEYGNU|KEYOPENCLC|KEYOPENCLCXX)
 KEYWORD(bool                        , BOOLSUPPORT|KEYC23)
 KEYWORD(catch                       , KEYCXX)
 KEYWORD(class                       , KEYCXX)
