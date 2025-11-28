@@ -13,6 +13,17 @@
 #include <csignal>
 #include <string>
 
+// According to the POSIX specification, if the inherited disposition of a
+// signal is the default action, the behavior of utilitys must be as if the
+// default action had been taken. When the required default action is to
+// terminate the process, such as for SIGUSR1, the utility may catch the
+// signal, perform additional processing, restore the default disposition,
+// and then re-signal itself. This causes the process to terminate as
+// required. Because of this behavior, the crash-reporter test here is not
+// suitable for Unix platforms.
+
+#ifndef LLVM_ON_UNIX
+
 namespace clang {
 namespace clangd {
 
@@ -76,3 +87,4 @@ TEST(ThreadCrashReporterTest, All) {
 } // namespace
 } // namespace clangd
 } // namespace clang
+#endif // !LLVM_ON_UNIX
