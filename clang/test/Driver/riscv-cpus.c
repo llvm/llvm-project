@@ -5,7 +5,7 @@
 // MCPU-ROCKET32: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=rocket-rv64 | FileCheck -check-prefix=MCPU-ROCKET64 %s
-// MCPU-ROCKET64: "-nostdsysteminc" "-target-cpu" "rocket-rv64"
+// MCPU-ROCKET64: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "rocket-rv64"
 // MCPU-ROCKET64: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=syntacore-scr1-base | FileCheck -check-prefix=MCPU-SYNTACORE-SCR1-BASE %s
@@ -21,7 +21,7 @@
 // MCPU-SYNTACORE-SCR1-MAX: "-target-abi" "ilp32"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=xiangshan-nanhu | FileCheck -check-prefix=MCPU-XIANGSHAN-NANHU %s
-// MCPU-XIANGSHAN-NANHU: "-nostdsysteminc" "-target-cpu" "xiangshan-nanhu"
+// MCPU-XIANGSHAN-NANHU: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "xiangshan-nanhu"
 // MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
 // MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+c"
 // MCPU-XIANGSHAN-NANHU-SAME: "-target-feature" "+zicbom" "-target-feature" "+zicboz" "-target-feature" "+zicsr" "-target-feature" "+zifencei"
@@ -32,7 +32,7 @@
 // MCPU-XIANGSHAN-NANHU-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=xiangshan-kunminghu | FileCheck -check-prefix=MCPU-XIANGSHAN-KUNMINGHU %s
-// MCPU-XIANGSHAN-KUNMINGHU: "-nostdsysteminc" "-target-cpu" "xiangshan-kunminghu"
+// MCPU-XIANGSHAN-KUNMINGHU: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "xiangshan-kunminghu"
 // MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+m"
 // MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+a"
 // MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+f"
@@ -104,7 +104,7 @@
 // MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=spacemit-x60 | FileCheck -check-prefix=MCPU-SPACEMIT-X60 %s
-// MCPU-SPACEMIT-X60: "-nostdsysteminc" "-target-cpu" "spacemit-x60"
+// MCPU-SPACEMIT-X60: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "spacemit-x60"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+m"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+a"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+f"
@@ -337,7 +337,7 @@
 
 // -mcpu with -mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-s21 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-S21 %s
-// MCPU-ABI-SIFIVE-S21: "-nostdsysteminc" "-target-cpu" "sifive-s21"
+// MCPU-ABI-SIFIVE-S21: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "sifive-s21"
 // MCPU-ABI-SIFIVE-S21: "-target-feature" "+m" "-target-feature" "+a"
 // MCPU-ABI-SIFIVE-S21: "-target-feature" "+c"
 // MCPU-ABI-SIFIVE-S21: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
@@ -345,7 +345,7 @@
 
 // -mcpu with -mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-s51 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-S51 %s
-// MCPU-ABI-SIFIVE-S51: "-nostdsysteminc" "-target-cpu" "sifive-s51"
+// MCPU-ABI-SIFIVE-S51: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "sifive-s51"
 // MCPU-ABI-SIFIVE-S51: "-target-feature" "+m" "-target-feature" "+a"
 // MCPU-ABI-SIFIVE-S51: "-target-feature" "+c"
 // MCPU-ABI-SIFIVE-S51: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
@@ -353,7 +353,7 @@
 
 // -mcpu with default -march
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-s54 | FileCheck -check-prefix=MCPU-SIFIVE-S54 %s
-// MCPU-SIFIVE-S54: "-nostdsysteminc" "-target-cpu" "sifive-s54"
+// MCPU-SIFIVE-S54: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "sifive-s54"
 // MCPU-SIFIVE-S54: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
 // MCPU-SIFIVE-S54: "-target-feature" "+c"
 // MCPU-SIFIVE-S54: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
@@ -361,7 +361,7 @@
 
 // -mcpu with -mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-s76 | FileCheck -check-prefix=MCPU-SIFIVE-S76 %s
-// MCPU-SIFIVE-S76: "-nostdsysteminc" "-target-cpu" "sifive-s76"
+// MCPU-SIFIVE-S76: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "sifive-s76"
 // MCPU-SIFIVE-S76: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
 // MCPU-SIFIVE-S76: "-target-feature" "+c"
 // MCPU-SIFIVE-S76: "-target-feature" "+zicsr" "-target-feature" "+zifencei" "-target-feature" "+zihintpause"
@@ -369,7 +369,7 @@
 
 // -mcpu with default -march
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-u54 | FileCheck -check-prefix=MCPU-SIFIVE-U54 %s
-// MCPU-SIFIVE-U54: "-nostdsysteminc" "-target-cpu" "sifive-u54"
+// MCPU-SIFIVE-U54: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "sifive-u54"
 // MCPU-SIFIVE-U54: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
 // MCPU-SIFIVE-U54: "-target-feature" "+c"
 // MCPU-SIFIVE-U54: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
@@ -377,7 +377,7 @@
 
 // -mcpu with -mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-u54 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-U54 %s
-// MCPU-ABI-SIFIVE-U54: "-nostdsysteminc" "-target-cpu" "sifive-u54"
+// MCPU-ABI-SIFIVE-U54: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "sifive-u54"
 // MCPU-ABI-SIFIVE-U54: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
 // MCPU-ABI-SIFIVE-U54: "-target-feature" "+c"
 // MCPU-ABI-SIFIVE-U54: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
@@ -393,7 +393,7 @@
 
 // -mcpu with -mabi option
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-u74 -mabi=lp64 | FileCheck -check-prefix=MCPU-ABI-SIFIVE-U74 %s
-// MCPU-ABI-SIFIVE-U74: "-nostdsysteminc" "-target-cpu" "sifive-u74"
+// MCPU-ABI-SIFIVE-U74: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "sifive-u74"
 // MCPU-ABI-SIFIVE-U74: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
 // MCPU-ABI-SIFIVE-U74: "-target-feature" "+c"
 // MCPU-ABI-SIFIVE-U74: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
@@ -430,7 +430,7 @@
 
 // -mcpu with default -march include experimental extensions
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -menable-experimental-extensions -mcpu=sifive-x280 | FileCheck -check-prefix=MCPU-SIFIVE-X280 %s
-// MCPU-SIFIVE-X280: "-nostdsysteminc" "-target-cpu" "sifive-x280"
+// MCPU-SIFIVE-X280: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "sifive-x280"
 // MCPU-SIFIVE-X280-SAME: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
 // MCPU-SIFIVE-X280-SAME: "-target-feature" "+c" "-target-feature" "+v"
 // MCPU-SIFIVE-X280-SAME: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
@@ -448,7 +448,7 @@
 // MCPU-SIFIVE-X390-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p450 | FileCheck -check-prefix=MCPU-SIFIVE-P450 %s
-// MCPU-SIFIVE-P450: "-nostdsysteminc" "-target-cpu" "sifive-p450"
+// MCPU-SIFIVE-P450: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "sifive-p450"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+m"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+a"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+f"
@@ -525,7 +525,7 @@
 // MCPU-SIFIVE-P470-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p550 | FileCheck -check-prefix=MCPU-SIFIVE-P550 %s
-// MCPU-SIFIVE-P550: "-nostdsysteminc" "-target-cpu" "sifive-p550"
+// MCPU-SIFIVE-P550: "-nostdsysteminc" "-enable-tlsdesc" "-target-cpu" "sifive-p550"
 // MCPU-SIFIVE-P550-SAME: "-target-feature" "+m"
 // MCPU-SIFIVE-P550-SAME: "-target-feature" "+a"
 // MCPU-SIFIVE-P550-SAME: "-target-feature" "+f"
