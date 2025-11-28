@@ -27,7 +27,7 @@ set(BUILD_FORTRAN_MODULES False)
 if (LIBOMP_FORTRAN_MODULES_COMPILER)
   # If libomp is built as an LLVM runtime and the flang compiler is available,
   # compile the Fortran module files.
-  message(STATUS "configuring openmp to build Fortran module files using ${LIBOMP_FORTRAN_MODULES_COMPILER}")
+  message(STATUS "configuring openmp to build Fortran module files using '${LIBOMP_FORTRAN_MODULES_COMPILER}'")
   set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
   add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
   add_custom_command(
