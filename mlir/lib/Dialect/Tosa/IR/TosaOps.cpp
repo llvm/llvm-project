@@ -563,7 +563,7 @@ static std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
 static Type getStorageElementTypeOrSelf(Type type) {
   auto srcType = getElementTypeOrSelf(type);
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(srcType))
-    srcType = quantType.getStorageType();
+    srcType = getStorageElementTypeFromQuantized(quantType);
   return srcType;
 }
 
@@ -631,16 +631,16 @@ static LogicalResult verifyConvOp(T op) {
   bool resultIsFloat = llvm::isa<FloatType>(resultEType);
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
-    inputEType = quantType.getStorageType();
+    inputEType = getStorageElementTypeFromQuantized(quantType);
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(weightEType))
-    weightEType = quantType.getStorageType();
+    weightEType = getStorageElementTypeFromQuantized(quantType);
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(biasEType))
-    biasEType = quantType.getStorageType();
+    biasEType = getStorageElementTypeFromQuantized(quantType);
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(resultEType))
-    resultEType = quantType.getStorageType();
+    resultEType = getStorageElementTypeFromQuantized(quantType);
 
   if (biasIsFloat && resultIsFloat && (biasEType != resultEType)) {
     // for now, only enforce bias element type == result element type for
@@ -709,7 +709,7 @@ LogicalResult tosa::ConstOp::verify() {
 
   if (auto result = llvm::dyn_cast<mlir::quant::QuantizedType>(
           outputType.getElementType())) {
-    if (result.getStorageType() == attrType.getElementType())
+    if (getStorageElementTypeFromQuantized(result) == attrType.getElementType())
       return success();
   }
 
@@ -727,7 +727,7 @@ static LogicalResult verifyConvOpModes(T op) {
       llvm::cast<ShapedType>(op.getInput().getType()).getElementType();
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(inputEType))
-    inputEType = quantType.getStorageType();
+    inputEType = getStorageElementTypeFromQuantized(quantType);
 
   auto accType = op.getAccType();
   if (inputEType.isInteger(8) && !accType.isInteger(32))
@@ -752,7 +752,7 @@ static LogicalResult verifyConvOpModes(T op) {
       llvm::cast<ShapedType>(op.getResult().getType()).getElementType();
 
   if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(resultEType))
-    resultEType = quantType.getStorageType();
+    resultEType = getStorageElementTypeFromQuantized(quantType);
 
   return success();
 }
@@ -1179,13 +1179,13 @@ LogicalResult tosa::ClampOp::verify() {
       llvm::cast<ShapedType>(getInput().getType()).getElementType();
   if (auto quantType =
           llvm::dyn_cast<mlir::quant::UniformQuantizedType>(inputETy)) {
-    inputETy = quantType.getStorageType();
+    inputETy = getStorageElementTypeFromQuantized(quantType);
   }
   mlir::Type outputETy =
       llvm::cast<ShapedType>(getOutput().getType()).getElementType();
   if (auto quantType =
           llvm::dyn_cast<mlir::quant::UniformQuantizedType>(outputETy)) {
-    outputETy = quantType.getStorageType();
+    outputETy = getStorageElementTypeFromQuantized(quantType);
   }
   if (inputETy != outputETy)
     return emitOpError("input/output element types are incompatible.");
@@ -1761,6 +1761,11 @@ LogicalResult tosa::ConcatOp::verify() {
       }
     }
 
+    const ShapeAdaptor outputShape(outType);
+    if (outputShape.hasRank() && outputShape.getRank() != firstInputRank)
+      return emitOpError("expect output rank to match inputs rank, got ")
+             << outputShape.getRank() << " vs " << firstInputRank;
+
     // ERROR_IF(axis_sum != shape[axis]);
     int64_t axisSum = 0;
     for (const auto &input : inputList) {
@@ -1772,7 +1777,7 @@ LogicalResult tosa::ConcatOp::verify() {
       }
       axisSum += inputShape.getDimSize(axis);
     }
-    const ShapeAdaptor outputShape(outType);
+
     if (axisSum >= 0 && outputShape.hasRank() &&
         !outputShape.isDynamicDim(axis) &&
         axisSum != outputShape.getDimSize(axis))
@@ -2628,7 +2633,7 @@ static LogicalResult verifyZeroPoint(T op, Value val, const int64_t &zp,
   if (!zpElemType.isInteger(8) && zp != 0) {
     // convert operand to lower case for error message
     std::string lower = operand;
-    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    llvm::transform(lower, lower.begin(), ::tolower);
     return op.emitOpError()
            << lower << " zero point must be zero for non-int8 integer types";
   }

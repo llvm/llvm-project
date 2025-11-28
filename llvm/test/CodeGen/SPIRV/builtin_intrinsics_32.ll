@@ -33,6 +33,28 @@ target triple = "spirv32-unknown-unknown"
 ; CHECK: [[SubgroupId]] = OpVariable [[I32PTR]] Input
 ; CHECK: [[SubgroupLocalInvocationId]] = OpVariable [[I32PTR]] Input
 
+@G_spv_num_workgroups_0 = global i32 0
+@G_spv_num_workgroups_1 = global i32 0
+@G_spv_num_workgroups_2 = global i32 0
+@G_spv_workgroup_size_0 = global i32 0
+@G_spv_workgroup_size_1 = global i32 0
+@G_spv_workgroup_size_2 = global i32 0
+@G_spv_group_id_0 = global i32 0
+@G_spv_group_id_1 = global i32 0
+@G_spv_group_id_2 = global i32 0
+@G_spv_thread_id_in_group_0 = global i32 0
+@G_spv_thread_id_in_group_1 = global i32 0
+@G_spv_thread_id_in_group_2 = global i32 0
+@G_spv_thread_id_0 = global i32 0
+@G_spv_thread_id_1 = global i32 0
+@G_spv_thread_id_2 = global i32 0
+@G_spv_global_size_0 = global i32 0
+@G_spv_global_size_1 = global i32 0
+@G_spv_global_size_2 = global i32 0
+@G_spv_global_offset_0 = global i32 0
+@G_spv_global_offset_1 = global i32 0
+@G_spv_global_offset_2 = global i32 0
+
 ; Function Attrs: convergent noinline norecurse nounwind optnone
 define spir_func void @test_id_and_range() {
 entry:
@@ -44,66 +66,87 @@ entry:
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[NumWorkgroups]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
   %spv.num.workgroups = call i32 @llvm.spv.num.workgroups.i32(i32 0)
+  store i32 %spv.num.workgroups, i32* @G_spv_num_workgroups_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[NumWorkgroups]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
   %spv.num.workgroups1 = call i32 @llvm.spv.num.workgroups.i32(i32 1)
+  store i32 %spv.num.workgroups1, i32* @G_spv_num_workgroups_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[NumWorkgroups]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
   %spv.num.workgroups2 = call i32 @llvm.spv.num.workgroups.i32(i32 2)
+  store i32 %spv.num.workgroups2, i32* @G_spv_num_workgroups_2
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[WorkgroupSize]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
   %spv.workgroup.size = call i32 @llvm.spv.workgroup.size.i32(i32 0)
+  store i32 %spv.workgroup.size, i32* @G_spv_workgroup_size_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[WorkgroupSize]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
   %spv.workgroup.size3 = call i32 @llvm.spv.workgroup.size.i32(i32 1)
+  store i32 %spv.workgroup.size3, i32* @G_spv_workgroup_size_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[WorkgroupSize]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
   %spv.workgroup.size4 = call i32 @llvm.spv.workgroup.size.i32(i32 2)
+  store i32 %spv.workgroup.size4, i32* @G_spv_workgroup_size_2
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[WorkgroupId]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
   %spv.group.id = call i32 @llvm.spv.group.id.i32(i32 0)
+  store i32 %spv.group.id, i32* @G_spv_group_id_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[WorkgroupId]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
   %spv.group.id5 = call i32 @llvm.spv.group.id.i32(i32 1)
+  store i32 %spv.group.id5, i32* @G_spv_group_id_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[WorkgroupId]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
   %spv.group.id6 = call i32 @llvm.spv.group.id.i32(i32 2)
+  store i32 %spv.group.id6, i32* @G_spv_group_id_2
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[LocalInvocationId]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
   %spv.thread.id.in.group = call i32 @llvm.spv.thread.id.in.group.i32(i32 0)
+  store i32 %spv.thread.id.in.group, i32* @G_spv_thread_id_in_group_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[LocalInvocationId]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
   %spv.thread.id.in.group7 = call i32 @llvm.spv.thread.id.in.group.i32(i32 1)
+  store i32 %spv.thread.id.in.group7, i32* @G_spv_thread_id_in_group_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[LocalInvocationId]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
   %spv.thread.id.in.group8 = call i32 @llvm.spv.thread.id.in.group.i32(i32 2)
+  store i32 %spv.thread.id.in.group8, i32* @G_spv_thread_id_in_group_2
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalInvocationId]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
   %spv.thread.id = call i32 @llvm.spv.thread.id.i32(i32 0)
+  store i32 %spv.thread.id, i32* @G_spv_thread_id_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalInvocationId]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
   %spv.thread.id9 = call i32 @llvm.spv.thread.id.i32(i32 1)
+  store i32 %spv.thread.id9, i32* @G_spv_thread_id_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalInvocationId]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
   %spv.thread.id10 = call i32 @llvm.spv.thread.id.i32(i32 2)
+  store i32 %spv.thread.id10, i32* @G_spv_thread_id_2
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalSize]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
   %spv.num.workgroups11 = call i32 @llvm.spv.global.size.i32(i32 0)
+  store i32 %spv.num.workgroups11, i32* @G_spv_global_size_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalSize]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
   %spv.num.workgroups12 = call i32 @llvm.spv.global.size.i32(i32 1)
+  store i32 %spv.num.workgroups12, i32* @G_spv_global_size_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalSize]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
   %spv.num.workgroups13 = call i32 @llvm.spv.global.size.i32(i32 2)
+  store i32 %spv.num.workgroups13, i32* @G_spv_global_size_2
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalOffset]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
   %spv.global.offset = call i32 @llvm.spv.global.offset.i32(i32 0)
+  store i32 %spv.global.offset, i32* @G_spv_global_offset_0
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalOffset]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
   %spv.global.offset14 = call i32 @llvm.spv.global.offset.i32(i32 1)
+  store i32 %spv.global.offset14, i32* @G_spv_global_offset_1
 ; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalOffset]]
 ; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
   %spv.global.offset15 = call i32 @llvm.spv.global.offset.i32(i32 2)
+  store i32 %spv.global.offset15, i32* @G_spv_global_offset_2
 ; CHECK: OpLoad %5 [[SubgroupSize]]
   %0 = call i32 @llvm.spv.subgroup.size()
   store i32 %0, ptr %ssize, align 4

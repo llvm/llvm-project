@@ -48,8 +48,3 @@ entry:
   ret <vscale x 1 x double> %3
 }
 
-declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(
-  <vscale x 1 x double>,
-  <vscale x 1 x double>,
-  <vscale x 1 x double>,
-  i64, i64)

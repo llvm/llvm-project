@@ -327,8 +327,8 @@ void SBDebugger::SkipAppInitFiles(bool b) {
 void SBDebugger::SetInputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
   if (m_opaque_sp)
-    m_opaque_sp->SetInputFile(
-        (FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
+    m_opaque_sp->SetInputFile((FileSP)std::make_shared<NativeFile>(
+        fh, File::eOpenOptionReadOnly, transfer_ownership));
 }
 
 SBError SBDebugger::SetInputString(const char *data) {
@@ -385,7 +385,8 @@ SBError SBDebugger::SetOutputFile(FileSP file_sp) {
 
 void SBDebugger::SetOutputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
-  SetOutputFile((FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
+  SetOutputFile((FileSP)std::make_shared<NativeFile>(
+      fh, File::eOpenOptionWriteOnly, transfer_ownership));
 }
 
 SBError SBDebugger::SetOutputFile(SBFile file) {
@@ -405,7 +406,8 @@ SBError SBDebugger::SetOutputFile(SBFile file) {
 
 void SBDebugger::SetErrorFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, fh, transfer_ownership);
-  SetErrorFile((FileSP)std::make_shared<NativeFile>(fh, transfer_ownership));
+  SetErrorFile((FileSP)std::make_shared<NativeFile>(
+      fh, File::eOpenOptionWriteOnly, transfer_ownership));
 }
 
 SBError SBDebugger::SetErrorFile(FileSP file_sp) {
@@ -576,8 +578,10 @@ void SBDebugger::HandleProcessEvent(const SBProcess &process,
                                     FILE *err) {
   LLDB_INSTRUMENT_VA(this, process, event, out, err);
 
-  FileSP outfile = std::make_shared<NativeFile>(out, false);
-  FileSP errfile = std::make_shared<NativeFile>(err, false);
+  FileSP outfile =
+      std::make_shared<NativeFile>(out, File::eOpenOptionWriteOnly, false);
+  FileSP errfile =
+      std::make_shared<NativeFile>(err, File::eOpenOptionWriteOnly, false);
   return HandleProcessEvent(process, event, outfile, errfile);
 }
 

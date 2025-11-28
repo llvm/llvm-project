@@ -387,3 +387,8 @@ void bar2(void) {
   int a[2][3][4][5]; // all-note {{array 'a' declared here}}
   foo2(&a[0][4]); // all-warning {{array index 4 is past the end of the array}}
 }
+
+void plainComplex(void) {
+  _Complex cd; // all-warning {{_Complex double}}
+  cd = *(_Complex *)&(struct { double r, i; }){0.0, 0.0}; // all-warning {{_Complex double}}
+}

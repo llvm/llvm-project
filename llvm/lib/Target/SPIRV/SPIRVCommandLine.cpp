@@ -29,6 +29,8 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float16_add},
         {"SPV_EXT_shader_atomic_float_min_max",
          SPIRV::Extension::Extension::SPV_EXT_shader_atomic_float_min_max},
+        {"SPV_INTEL_16bit_atomics",
+         SPIRV::Extension::Extension::SPV_INTEL_16bit_atomics},
         {"SPV_EXT_arithmetic_fence",
          SPIRV::Extension::Extension::SPV_EXT_arithmetic_fence},
         {"SPV_EXT_demote_to_helper_invocation",
@@ -244,6 +246,12 @@ SPIRVExtensionsParser::getValidExtensions(const Triple &TT) {
 
     if (llvm::is_contained(AllowedEnv, CurrentEnvironment))
       R.insert(ExtensionEnum);
+  }
+
+  if (TT.getVendor() == Triple::AMD) {
+    // AMD uses the translator to recover LLVM-IR from SPIRV. Currently, the
+    // translator doesn't implement the SPV_KHR_float_controls2 extension.
+    R.erase(SPIRV::Extension::SPV_KHR_float_controls2);
   }
 
   return R;

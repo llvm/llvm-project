@@ -15,6 +15,7 @@ source_set("Basic") {
     "SDNodeProperties.cpp",
     "TableGen.cpp",
     "TargetFeaturesEmitter.cpp",
+    "TargetLibraryInfoEmitter.cpp",
     "VTEmitter.cpp",
   ]
 }

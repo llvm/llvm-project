@@ -27,6 +27,7 @@
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
 ; CHECK-NEXT:   experimental-p                   - 'P' ('Base P' (Packed SIMD)).
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
+; CHECK-NEXT:   experimental-smpmpmt             - 'Smpmpmt' (PMP-based Memory Types Extension).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
 ; CHECK-NEXT:   experimental-xqccmp              - 'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves).
 ; CHECK-NEXT:   experimental-xqcia               - 'Xqcia' (Qualcomm uC Arithmetic Extension).
@@ -296,6 +297,7 @@
 ; CHECK-NEXT:   zihintpause                      - 'Zihintpause' (Pause Hint).
 ; CHECK-NEXT:   zihpm                            - 'Zihpm' (Hardware Performance Counters).
 ; CHECK-NEXT:   zilsd                            - 'Zilsd' (Load/Store Pair Instructions).
+; CHECK-NEXT:   zilsd-4byte-align                - Allow 4-byte alignment for Zilsd LD/SD instructions.
 ; CHECK-NEXT:   zimop                            - 'Zimop' (May-Be-Operations).
 ; CHECK-NEXT:   zk                               - 'Zk' (Standard scalar cryptography extension).
 ; CHECK-NEXT:   zkn                              - 'Zkn' (NIST Algorithm Suite).

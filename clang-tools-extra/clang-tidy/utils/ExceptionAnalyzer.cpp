@@ -192,8 +192,7 @@ static bool isFunctionPointerConvertible(QualType From, QualType To) {
 //
 // The function should only be called in C++ mode.
 static bool isQualificationConvertiblePointer(QualType From, QualType To,
-                                              LangOptions LangOpts) {
-
+                                              const LangOptions &LangOpts) {
   // [N4659 7.5 (1)]
   // A cv-decomposition of a type T is a sequence of cv_i and P_i such that T is
   //    cv_0 P_0 cv_1 P_1 ... cv_n−1 P_n−1 cv_n U” for n > 0,
@@ -601,13 +600,14 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
     // whether the call itself throws.
     if (const auto *Call = dyn_cast<CallExpr>(St)) {
       if (const FunctionDecl *Func = Call->getDirectCallee()) {
-        ExceptionInfo Excs =
+        const ExceptionInfo Excs =
             throwsException(Func, Caught, CallStack, Call->getBeginLoc());
         Results.merge(Excs);
       }
     } else if (const auto *Construct = dyn_cast<CXXConstructExpr>(St)) {
-      ExceptionInfo Excs = throwsException(Construct->getConstructor(), Caught,
-                                           CallStack, Construct->getBeginLoc());
+      const ExceptionInfo Excs =
+          throwsException(Construct->getConstructor(), Caught, CallStack,
+                          Construct->getBeginLoc());
       Results.merge(Excs);
     }
   }

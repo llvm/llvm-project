@@ -2747,9 +2747,9 @@ RelroPaddingSection::RelroPaddingSection(Ctx &ctx)
     : SyntheticSection(ctx, ".relro_padding", SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
                        1) {}
 
-PaddingSection::PaddingSection(Ctx &ctx, uint64_t size, OutputSection *parent)
-    : SyntheticSection(ctx, ".padding", SHT_PROGBITS, SHF_ALLOC, 1),
-      size(size) {
+PaddingSection::PaddingSection(Ctx &ctx, uint64_t amount, OutputSection *parent)
+    : SyntheticSection(ctx, ".padding", SHT_PROGBITS, SHF_ALLOC, 1) {
+  size = amount;
   this->parent = parent;
 }
 
@@ -3784,9 +3784,10 @@ void VersionTableSection::writeTo(uint8_t *buf) {
   buf += 2;
   for (const SymbolTableEntry &s : getPartition(ctx).dynSymTab->getSymbols()) {
     // For an unextracted lazy symbol (undefined weak), it must have been
-    // converted to Undefined and have VER_NDX_GLOBAL version here.
+    // converted to Undefined.
     assert(!s.sym->isLazy());
-    write16(ctx, buf, s.sym->versionId);
+    // Undefined symbols should use index 0 when unversioned.
+    write16(ctx, buf, s.sym->isUndefined() ? 0 : s.sym->versionId);
     buf += 2;
   }
 }
