@@ -13365,7 +13365,7 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
         // v0 - v31 are aliases of q0 - q31 or d0 - d31 depending on size.
         // By default we'll emit v0-v31 for this unless there's a modifier where
         // we'll emit the correct register as well.
-        if (VT != MVT::Other && VT.getSizeInBits() == 64) {
+        if (VT != MVT::Other && VT.getSizeInBits() <= 64) {
           Res.first = AArch64::FPR64RegClass.getRegister(RegNo);
           Res.second = &AArch64::FPR64RegClass;
         } else {
