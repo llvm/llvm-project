@@ -83,30 +83,15 @@ inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) {
 // Strtonum functions
 //
 inline _LIBCPP_HIDE_FROM_ABI float __strtof(const char* __nptr, char** __endptr, __locale_t __loc) {
-#if !_LIBCPP_HAS_MUSL_LIBC || defined(_GNU_SOURCE)
   return ::strtof_l(__nptr, __endptr, __loc);
-#else
-  (void)__loc;
-  return ::strtof(__nptr, __endptr);
-#endif
 }
 
 inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr, __locale_t __loc) {
-#if !_LIBCPP_HAS_MUSL_LIBC || defined(_GNU_SOURCE)
   return ::strtod_l(__nptr, __endptr, __loc);
-#else
-  (void)__loc;
-  return ::strtod(__nptr, __endptr);
-#endif
 }
 
 inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __endptr, __locale_t __loc) {
-#if !_LIBCPP_HAS_MUSL_LIBC || defined(_GNU_SOURCE)
   return ::strtold_l(__nptr, __endptr, __loc);
-#else
-  (void)__loc;
-  return ::strtold(__nptr, __endptr);
-#endif
 }
 
 //
