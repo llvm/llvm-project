@@ -80,8 +80,8 @@ jobs:
           cd S:\llvm\utils\release\
           .\build_llvm_release.bat ${{ steps.variables.outputs.script-options }} --version ${{ steps.variables.outputs.version-string }} --local-python --skip-checkout
           # Move installer to top-level directory so it is easier to upload.
-          mv ${{ steps.variables.outputs.installer-dir }}\${{ steps.variables.outputs.installer-name }} .
-          mv ${{ steps.variables.outputs.installer-dir }}\${{ steps.variables.outputs.tar-name }} .
+          mv llvm_package_${{ steps.variables.outputs.version-string}}\${{ steps.variables.outputs.installer-dir }}\${{ steps.variables.outputs.installer-name }} .
+          mv llvm_package_${{ steps.variables.outputs.version-sring}}\${{ steps.variables.outputs.tar-name }} .
 
       - name: Upload Installer
         uses: ./.github/workflows/upload-release-artifact
