@@ -39,6 +39,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
+#include "llvm/CodeGen/InsertCodePrefetch.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockHashInfo.h"
@@ -1985,7 +1986,33 @@ void AsmPrinter::emitFunctionBody() {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
     DenseMap<StringRef, unsigned> MnemonicCounts;
+
+    SmallVector<unsigned> PrefetchTargets =
+        MBB.getPrefetchTargetCallsiteIndexes();
+    auto PrefetchTargetIt = PrefetchTargets.begin();
+    unsigned LastCallsiteIndex = 0;
+    // Helper to emit a symbol for the prefetch target and proceed to the next
+    // one.
+    auto EmitPrefetchTargetSymbolIfNeeded = [&]() {
+      if (PrefetchTargetIt != PrefetchTargets.end() &&
+          *PrefetchTargetIt == LastCallsiteIndex) {
+        MCSymbol *PrefetchTargetSymbol = OutContext.getOrCreateSymbol(
+            Twine("__llvm_prefetch_target_") + MF->getName() + Twine("_") +
+            utostr(MBB.getBBID()->BaseID) + Twine("_") +
+            utostr(static_cast<unsigned>(*PrefetchTargetIt)));
+        // If the function is weak-linkage it may be replaced by a strong
+        // version, in which case the prefetch targets should also be replaced.
+        OutStreamer->emitSymbolAttribute(
+            PrefetchTargetSymbol,
+            MF->getFunction().isWeakForLinker() ? MCSA_Weak : MCSA_Global);
+        OutStreamer->emitLabel(PrefetchTargetSymbol);
+        ++PrefetchTargetIt;
+      }
+    };
+
     for (auto &MI : MBB) {
+      EmitPrefetchTargetSymbolIfNeeded();
+
       // Print the assembly for the instruction.
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
           !MI.isDebugInstr()) {
@@ -2123,8 +2150,11 @@ void AsmPrinter::emitFunctionBody() {
         break;
       }
 
-      if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
-        OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
+      if (MI.isCall()) {
+        if (MF->getTarget().Options.BBAddrMap)
+          OutStreamer->emitLabel(createCallsiteEndSymbol(MBB));
+        LastCallsiteIndex++;
+      }
 
       if (TM.Options.EmitCallGraphSection && MI.isCall())
         handleCallsiteForCallgraph(FuncCGInfo, CallSitesInfoMap, MI);
@@ -2136,6 +2166,8 @@ void AsmPrinter::emitFunctionBody() {
       for (auto &Handler : Handlers)
         Handler->endInstruction();
     }
+    // Emit the last prefetch target in case the last instruction was a call.
+    EmitPrefetchTargetSymbolIfNeeded();
 
     // We must emit temporary symbol for the end of this basic block, if either
     // we have BBLabels enabled or if this basic blocks marks the end of a
