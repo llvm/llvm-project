@@ -572,9 +572,8 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
       if (!CB->getCalledOperand() || CB->getCalledFunction())
         continue;
       if (CB->getType()->isAggregateType() ||
-          any_of(CB->args(), [](auto &&Arg) {
-            return Arg->getType()->isAggregateType();
-          }))
+          any_of(CB->args(),
+                 [](auto &&Arg) { return Arg->getType()->isAggregateType(); }))
         Calls.emplace_back(CB, nullptr);
     }
   }
@@ -588,7 +587,7 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
     SmallVector<std::pair<int, Type *>> ChangedTypes;
     SmallVector<Type *> NewArgTypes;
 
-    Type* RetTy = CB->getType();
+    Type *RetTy = CB->getType();
     if (RetTy->isAggregateType()) {
       ChangedTypes.emplace_back(-1, RetTy);
       RetTy = B.getInt32Ty();
@@ -608,8 +607,8 @@ bool SPIRVPrepareFunctions::removeAggregateTypesFromCalls(Function *F) {
     if (!CB->hasName())
       CB->setName("spv.mutated_callsite." + F->getName());
     else
-      CB->setName(
-          "spv.named_mutated_callsite." + F->getName() + "." + CB->getName());
+      CB->setName("spv.named_mutated_callsite." + F->getName() + "." +
+                  CB->getName());
 
     addFunctionTypeMutation(
         F->getParent()->getOrInsertNamedMetadata("spv.mutated_callsites"),
