@@ -26,7 +26,7 @@ using namespace llvm::jitlink;
 
 class ReOptimizeLayerTest : public testing::Test {
 public:
-  ~ReOptimizeLayerTest() {
+  ~ReOptimizeLayerTest() override {
     if (ES)
       if (auto Err = ES->endSession())
         ES->reportError(std::move(Err));
@@ -43,7 +43,7 @@ protected:
 
     // COFF-ARM64 is not supported yet
     auto Triple = JTMB->getTargetTriple();
-    if (Triple.isOSBinFormatCOFF() && Triple.isAArch64())
+    if (Triple.isOSBinFormatCOFF())
       GTEST_SKIP();
 
     // SystemZ is not supported yet.

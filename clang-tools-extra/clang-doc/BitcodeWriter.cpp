@@ -303,8 +303,6 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
 
 // AbbreviationMap
 
-constexpr unsigned char BitCodeConstants::Signature[];
-
 void ClangDocBitcodeWriter::AbbreviationMap::add(RecordId RID,
                                                  unsigned AbbrevID) {
   assert(RecordIdNameMap[RID] && "Unknown RecordId.");

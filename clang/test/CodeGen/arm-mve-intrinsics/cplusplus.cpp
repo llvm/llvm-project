@@ -114,7 +114,7 @@ uint16x8_t test_vld1q_u16(const uint16_t *base)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VALUE:%.*]], ptr align 4 [[BASE:%.*]], <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vst1q_p_s32(int32_t *base, int32x4_t value, mve_pred16_t p)

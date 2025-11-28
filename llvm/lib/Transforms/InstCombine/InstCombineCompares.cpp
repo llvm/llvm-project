@@ -1465,29 +1465,33 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
                           ConstantInt::get(V->getType(), 1));
   }
 
-  // TODO: Handle any shifted constant by subtracting trailing zeros.
   // TODO: Handle non-equality predicates.
   Value *Y;
-  if (Cmp.isEquality() && match(X, m_Shl(m_One(), m_Value(Y)))) {
-    // (trunc (1 << Y) to iN) == 0 --> Y u>= N
-    // (trunc (1 << Y) to iN) != 0 --> Y u<  N
+  const APInt *Pow2;
+  if (Cmp.isEquality() && match(X, m_Shl(m_Power2(Pow2), m_Value(Y))) &&
+      DstBits > Pow2->logBase2()) {
+    // (trunc (Pow2 << Y) to iN) == 0 --> Y u>= N - log2(Pow2)
+    // (trunc (Pow2 << Y) to iN) != 0 --> Y u<  N - log2(Pow2)
+    // iff N > log2(Pow2)
     if (C.isZero()) {
       auto NewPred = (Pred == Cmp.ICMP_EQ) ? Cmp.ICMP_UGE : Cmp.ICMP_ULT;
-      return new ICmpInst(NewPred, Y, ConstantInt::get(SrcTy, DstBits));
+      return new ICmpInst(NewPred, Y,
+                          ConstantInt::get(SrcTy, DstBits - Pow2->logBase2()));
     }
-    // (trunc (1 << Y) to iN) == 2**C --> Y == C
-    // (trunc (1 << Y) to iN) != 2**C --> Y != C
+    // (trunc (Pow2 << Y) to iN) == 2**C --> Y == C - log2(Pow2)
+    // (trunc (Pow2 << Y) to iN) != 2**C --> Y != C - log2(Pow2)
     if (C.isPowerOf2())
-      return new ICmpInst(Pred, Y, ConstantInt::get(SrcTy, C.logBase2()));
+      return new ICmpInst(
+          Pred, Y, ConstantInt::get(SrcTy, C.logBase2() - Pow2->logBase2()));
   }
 
-  if (Cmp.isEquality() && Trunc->hasOneUse()) {
+  if (Cmp.isEquality() && (Trunc->hasOneUse() || Trunc->hasNoUnsignedWrap())) {
     // Canonicalize to a mask and wider compare if the wide type is suitable:
     // (trunc X to i8) == C --> (X & 0xff) == (zext C)
     if (!SrcTy->isVectorTy() && shouldChangeType(DstBits, SrcBits)) {
       Constant *Mask =
           ConstantInt::get(SrcTy, APInt::getLowBitsSet(SrcBits, DstBits));
-      Value *And = Builder.CreateAnd(X, Mask);
+      Value *And = Trunc->hasNoUnsignedWrap() ? X : Builder.CreateAnd(X, Mask);
       Constant *WideC = ConstantInt::get(SrcTy, C.zext(SrcBits));
       return new ICmpInst(Pred, And, WideC);
     }
@@ -2637,16 +2641,6 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
   //  (X & 4) >> 1 == 2  --> (X & 4) == 4.
   if (Shr->isExact())
     return new ICmpInst(Pred, X, ConstantInt::get(ShrTy, C << ShAmtVal));
-
-  if (C.isZero()) {
-    // == 0 is u< 1.
-    if (Pred == CmpInst::ICMP_EQ)
-      return new ICmpInst(CmpInst::ICMP_ULT, X,
-                          ConstantInt::get(ShrTy, (C + 1).shl(ShAmtVal)));
-    else
-      return new ICmpInst(CmpInst::ICMP_UGT, X,
-                          ConstantInt::get(ShrTy, (C + 1).shl(ShAmtVal) - 1));
-  }
 
   if (Shr->hasOneUse()) {
     // Canonicalize the shift into an 'and':
@@ -5892,6 +5886,12 @@ static void collectOffsetOp(Value *V, SmallVectorImpl<OffsetOp> &Offsets,
     Offsets.emplace_back(Instruction::Xor, Inst->getOperand(1));
     Offsets.emplace_back(Instruction::Xor, Inst->getOperand(0));
     break;
+  case Instruction::Shl:
+    if (Inst->hasNoSignedWrap())
+      Offsets.emplace_back(Instruction::AShr, Inst->getOperand(1));
+    if (Inst->hasNoUnsignedWrap())
+      Offsets.emplace_back(Instruction::LShr, Inst->getOperand(1));
+    break;
   case Instruction::Select:
     if (AllowRecursion) {
       collectOffsetOp(Inst->getOperand(1), Offsets, /*AllowRecursion=*/false);
@@ -5948,9 +5948,31 @@ static Instruction *foldICmpEqualityWithOffset(ICmpInst &I,
   collectOffsetOp(Op1, OffsetOps, /*AllowRecursion=*/true);
 
   auto ApplyOffsetImpl = [&](Value *V, unsigned BinOpc, Value *RHS) -> Value * {
+    switch (BinOpc) {
+    // V = shl nsw X, RHS => X = ashr V, RHS
+    case Instruction::AShr: {
+      const APInt *CV, *CRHS;
+      if (!(match(V, m_APInt(CV)) && match(RHS, m_APInt(CRHS)) &&
+            CV->ashr(*CRHS).shl(*CRHS) == *CV) &&
+          !match(V, m_NSWShl(m_Value(), m_Specific(RHS))))
+        return nullptr;
+      break;
+    }
+    // V = shl nuw X, RHS => X = lshr V, RHS
+    case Instruction::LShr: {
+      const APInt *CV, *CRHS;
+      if (!(match(V, m_APInt(CV)) && match(RHS, m_APInt(CRHS)) &&
+            CV->lshr(*CRHS).shl(*CRHS) == *CV) &&
+          !match(V, m_NUWShl(m_Value(), m_Specific(RHS))))
+        return nullptr;
+      break;
+    }
+    default:
+      break;
+    }
+
     Value *Simplified = simplifyBinOp(BinOpc, V, RHS, SQ);
-    // Avoid infinite loops by checking if RHS is an identity for the BinOp.
-    if (!Simplified || Simplified == V)
+    if (!Simplified)
       return nullptr;
     // Reject constant expressions as they don't simplify things.
     if (isa<Constant>(Simplified) && !match(Simplified, m_ImmConstant()))

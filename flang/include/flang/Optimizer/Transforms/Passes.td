@@ -81,10 +81,13 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
   let description = [{
     Convert FIR structured control flow ops to SCF dialect.
   }];
-  let constructor = "::fir::createFIRToSCFPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::scf::SCFDialect"
   ];
+  let options = [Option<"parallelUnordered", "parallel-unordered", "bool",
+                        /*default=*/"false",
+                        "Allow converting a fir.do_loop with the `unordered` "
+                        "attribute to scf.parallel (experimental).">];
 }
 
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
@@ -436,7 +439,7 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               "Set the no-signed-zeros-fp-math attribute on functions in the "
               "module.">,
        Option<"unsafeFPMath", "unsafe-fp-math", "bool", /*default=*/"false",
-              "Set the unsafe-fp-math attribute on functions in the module.">,
+              "Set all fast-math flags on instructions in the module.">,
        Option<"reciprocals", "mrecip", "std::string", /*default=*/"",
               "Set the reciprocal-estimates attribute on functions in the "
               "module.">,
@@ -578,6 +581,11 @@ def OptimizeArrayRepacking
     then this pass erases such operations. The corresponding
     fir.unpack_array operations are also removed.
   }];
+}
+
+def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
+  let summary = "Convert some MIF operations to runtime calls";
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

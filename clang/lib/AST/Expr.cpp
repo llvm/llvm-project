@@ -4126,9 +4126,7 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
 
   if (const RecordType *UT = getType()->getAsUnionType())
     if (!Ctx.getLangOpts().CPlusPlus11 && UT &&
-        UT->getOriginalDecl()
-            ->getMostRecentDecl()
-            ->hasAttr<TransparentUnionAttr>())
+        UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>())
       if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(this)){
         const Expr *InitExpr = CLE->getInitializer();
         if (const InitListExpr *ILE = dyn_cast<InitListExpr>(InitExpr))
@@ -5215,6 +5213,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__scoped_atomic_fetch_min:
   case AO__scoped_atomic_fetch_max:
   case AO__scoped_atomic_exchange_n:
+  case AO__scoped_atomic_uinc_wrap:
+  case AO__scoped_atomic_udec_wrap:
   case AO__hip_atomic_exchange:
   case AO__hip_atomic_fetch_add:
   case AO__hip_atomic_fetch_sub:

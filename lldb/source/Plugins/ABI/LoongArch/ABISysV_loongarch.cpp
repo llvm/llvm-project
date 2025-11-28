@@ -510,11 +510,10 @@ ValueObjectSP ABISysV_loongarch::GetReturnValueObjectSimple(
                                           value, ConstString(""));
   }
   if (type_flags & eTypeIsFloat) {
-    uint32_t float_count = 0;
     bool is_complex = false;
 
-    if (compiler_type.IsFloatingPointType(float_count, is_complex) &&
-        float_count == 1 && !is_complex) {
+    if (compiler_type.IsFloatingPointType(is_complex) &&
+        !(type_flags & eTypeIsVector) && !is_complex) {
       return_valobj_sp =
           GetValObjFromFPRegs(thread, reg_ctx, machine, type_flags, byte_size);
       return return_valobj_sp;
@@ -597,15 +596,16 @@ bool ABISysV_loongarch::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
 
   return llvm::StringSwitch<bool>(name)
       // integer ABI names
-      .Cases("ra", "sp", "fp", true)
-      .Cases("s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", true)
+      .Cases({"ra", "sp", "fp"}, true)
+      .Cases({"s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"}, true)
       // integer hardware names
-      .Cases("r1", "r3", "r22", true)
-      .Cases("r23", "r24", "r25", "r26", "r27", "r28", "r29", "r30", "31", true)
+      .Cases({"r1", "r3", "r22"}, true)
+      .Cases({"r23", "r24", "r25", "r26", "r27", "r28", "r29", "r30", "31"},
+             true)
       // floating point ABI names
-      .Cases("fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7", is_hw_fp)
+      .Cases({"fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7"}, is_hw_fp)
       // floating point hardware names
-      .Cases("f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31", is_hw_fp)
+      .Cases({"f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31"}, is_hw_fp)
       .Default(false);
 }
 
@@ -622,17 +622,17 @@ void ABISysV_loongarch::Terminate() {
 static uint32_t GetGenericNum(llvm::StringRef name) {
   return llvm::StringSwitch<uint32_t>(name)
       .Case("pc", LLDB_REGNUM_GENERIC_PC)
-      .Cases("ra", "r1", LLDB_REGNUM_GENERIC_RA)
-      .Cases("sp", "r3", LLDB_REGNUM_GENERIC_SP)
-      .Cases("fp", "r22", LLDB_REGNUM_GENERIC_FP)
-      .Cases("a0", "r4", LLDB_REGNUM_GENERIC_ARG1)
-      .Cases("a1", "r5", LLDB_REGNUM_GENERIC_ARG2)
-      .Cases("a2", "r6", LLDB_REGNUM_GENERIC_ARG3)
-      .Cases("a3", "r7", LLDB_REGNUM_GENERIC_ARG4)
-      .Cases("a4", "r8", LLDB_REGNUM_GENERIC_ARG5)
-      .Cases("a5", "r9", LLDB_REGNUM_GENERIC_ARG6)
-      .Cases("a6", "r10", LLDB_REGNUM_GENERIC_ARG7)
-      .Cases("a7", "r11", LLDB_REGNUM_GENERIC_ARG8)
+      .Cases({"ra", "r1"}, LLDB_REGNUM_GENERIC_RA)
+      .Cases({"sp", "r3"}, LLDB_REGNUM_GENERIC_SP)
+      .Cases({"fp", "r22"}, LLDB_REGNUM_GENERIC_FP)
+      .Cases({"a0", "r4"}, LLDB_REGNUM_GENERIC_ARG1)
+      .Cases({"a1", "r5"}, LLDB_REGNUM_GENERIC_ARG2)
+      .Cases({"a2", "r6"}, LLDB_REGNUM_GENERIC_ARG3)
+      .Cases({"a3", "r7"}, LLDB_REGNUM_GENERIC_ARG4)
+      .Cases({"a4", "r8"}, LLDB_REGNUM_GENERIC_ARG5)
+      .Cases({"a5", "r9"}, LLDB_REGNUM_GENERIC_ARG6)
+      .Cases({"a6", "r10"}, LLDB_REGNUM_GENERIC_ARG7)
+      .Cases({"a7", "r11"}, LLDB_REGNUM_GENERIC_ARG8)
       .Default(LLDB_INVALID_REGNUM);
 }
 

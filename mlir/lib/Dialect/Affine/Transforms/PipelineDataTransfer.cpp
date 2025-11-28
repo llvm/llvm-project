@@ -82,7 +82,7 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
     ArrayRef<int64_t> oldShape = oldMemRefType.getShape();
     SmallVector<int64_t, 4> newShape(1 + oldMemRefType.getRank());
     newShape[0] = 2;
-    std::copy(oldShape.begin(), oldShape.end(), newShape.begin() + 1);
+    llvm::copy(oldShape, newShape.begin() + 1);
     return MemRefType::Builder(oldMemRefType).setShape(newShape).setLayout({});
   };
 

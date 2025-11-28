@@ -341,13 +341,18 @@ private:
 /// Return the distributed vector type based on the original type and the
 /// distribution map. The map is expected to have a dimension equal to the
 /// original type rank and should be a projection where the results are the
-/// distributed dimensions. The number of results should be equal to the number
+/// distributed dimensions. If the number of results is zero there is no
+/// distribution (i.e. original type is returned).
+/// Otherwise, The number of results should be equal to the number
 /// of warp sizes which is currently limited to 1.
 /// Example: For a vector<16x32x64> distributed with a map(d0, d1, d2) -> (d1)
 /// and a warp size of 16 would distribute the second dimension (associated to
 /// d1) and return vector<16x2x64>
 static VectorType getDistributedType(VectorType originalType, AffineMap map,
                                      int64_t warpSize) {
+  // If the map has zero results, return the original type.
+  if (map.getNumResults() == 0)
+    return originalType;
   SmallVector<int64_t> targetShape(originalType.getShape());
   for (unsigned i = 0, e = map.getNumResults(); i < e; i++) {
     unsigned position = map.getDimPosition(i);
@@ -2032,11 +2037,19 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     }
 
     // Newly created `WarpOp` will yield values in following order:
-    // 1. All init args of the `ForOp`.
-    // 2. All escaping values.
-    // 3. All non-`ForOp` yielded values.
+    // 1. Loop bounds.
+    // 2. All init args of the `ForOp`.
+    // 3. All escaping values.
+    // 4. All non-`ForOp` yielded values.
     SmallVector<Value> newWarpOpYieldValues;
     SmallVector<Type> newWarpOpDistTypes;
+    newWarpOpYieldValues.insert(
+        newWarpOpYieldValues.end(),
+        {forOp.getLowerBound(), forOp.getUpperBound(), forOp.getStep()});
+    newWarpOpDistTypes.insert(newWarpOpDistTypes.end(),
+                              {forOp.getLowerBound().getType(),
+                               forOp.getUpperBound().getType(),
+                               forOp.getStep().getType()});
     for (auto [i, initArg] : llvm::enumerate(forOp.getInitArgs())) {
       newWarpOpYieldValues.push_back(initArg);
       // Compute the distributed type for this init arg.
@@ -2072,20 +2085,24 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
 
     // Next, we create a new `ForOp` with the init args yielded by the new
     // `WarpOp`.
+    const unsigned initArgsStartIdx = 3; // After loop bounds.
     const unsigned escapingValuesStartIdx =
+        initArgsStartIdx +
         forOp.getInitArgs().size(); // `ForOp` init args are positioned before
                                     // escaping values in the new `WarpOp`.
     SmallVector<Value> newForOpOperands;
-    for (size_t i = 0; i < escapingValuesStartIdx; ++i)
+    for (size_t i = initArgsStartIdx; i < escapingValuesStartIdx; ++i)
       newForOpOperands.push_back(newWarpOp.getResult(newIndices[i]));
 
     // Create a new `ForOp` outside the new `WarpOp` region.
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(newWarpOp);
     auto newForOp = scf::ForOp::create(
-        rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
-        forOp.getStep(), newForOpOperands, /*bodyBuilder=*/nullptr,
-        forOp.getUnsignedCmp());
+        rewriter, forOp.getLoc(),
+        /**LowerBound=**/ newWarpOp.getResult(newIndices[0]),
+        /**UpperBound=**/ newWarpOp.getResult(newIndices[1]),
+        /**Step=**/ newWarpOp.getResult(newIndices[2]), newForOpOperands,
+        /*bodyBuilder=*/nullptr, forOp.getUnsignedCmp());
     // Next, we insert a new `WarpOp` (called inner `WarpOp`) inside the
     // newly created `ForOp`. This `WarpOp` will contain all ops that were
     // contained within the original `ForOp` body.

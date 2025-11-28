@@ -1129,7 +1129,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   LLVM_DEBUG(llvm::dbgs() << "done collecting ops used in result patterns\n");
 
   // Emit RewritePattern for Pattern.
-  auto locs = pattern.getLocation();
+  auto locs = pattern.getLocation(/*forSourceOutput=*/true);
   os << formatv("/* Generated from:\n    {0:$[ instantiating\n    ]}\n*/\n",
                 llvm::reverse(locs));
   os << formatv(R"(struct {0} : public ::mlir::RewritePattern {
@@ -2120,7 +2120,7 @@ static void emitRewriters(const RecordKeeper &records, raw_ostream &os) {
   }
 
   // Emit function to add the generated matchers to the pattern list.
-  os << "void LLVM_ATTRIBUTE_UNUSED populateWithGenerated("
+  os << "[[maybe_unused]] void populateWithGenerated("
         "::mlir::RewritePatternSet &patterns) {\n";
   for (const auto &name : rewriterNames) {
     os << "  patterns.add<" << name << ">(patterns.getContext());\n";

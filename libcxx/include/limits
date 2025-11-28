@@ -107,7 +107,7 @@ template<> class numeric_limits<cv long double>;
 #else
 #  include <__config>
 #  include <__type_traits/is_arithmetic.h>
-#  include <__type_traits/is_signed.h>
+#  include <__type_traits/is_same.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -217,10 +217,10 @@ protected:
 
   static _LIBCPP_CONSTEXPR const bool is_iec559  = false;
   static _LIBCPP_CONSTEXPR const bool is_bounded = true;
-  static _LIBCPP_CONSTEXPR const bool is_modulo  = !std::is_signed<_Tp>::value;
+  static _LIBCPP_CONSTEXPR const bool is_modulo  = !is_signed;
 
 #  if defined(__i386__) || defined(__x86_64__) || defined(__wasm__)
-  static _LIBCPP_CONSTEXPR const bool traps = true;
+  static _LIBCPP_CONSTEXPR const bool traps = is_same<decltype(+_Tp(0)), _Tp>::value;
 #  else
   static _LIBCPP_CONSTEXPR const bool traps = false;
 #  endif

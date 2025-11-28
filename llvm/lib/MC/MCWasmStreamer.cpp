@@ -179,7 +179,7 @@ void MCWasmStreamer::emitULEB128Value(const MCExpr *Value) {
 }
 
 void MCWasmStreamer::finishImpl() {
-  emitFrames(nullptr);
+  emitFrames();
 
   this->MCObjectStreamer::finishImpl();
 }

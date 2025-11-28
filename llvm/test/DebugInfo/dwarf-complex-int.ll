@@ -1,4 +1,6 @@
 ; REQUIRES: object-emission
+; AIX doesn't have full support for DWARF 5
+; XFAIL: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 ; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
 
 ;; https://github.com/llvm/llvm-project/issues/140362

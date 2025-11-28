@@ -1888,7 +1888,7 @@ drps
 # CHECK-NEXT:  1      2     0.50                        fccmpe	d31, d5, #7, ne
 # CHECK-NEXT:  1      2     0.50                        fcsel	s3, s20, s9, pl
 # CHECK-NEXT:  1      2     0.50                        fcsel	d9, d10, d11, mi
-# CHECK-NEXT:  1      2     0.50                        fmov	s0, s1
+# CHECK-NEXT:  1      0     0.20                        fmov	s0, s1
 # CHECK-NEXT:  1      2     0.50                        fabs	s2, s3
 # CHECK-NEXT:  1      2     0.50                        fneg	s4, s5
 # CHECK-NEXT:  1      7     1.00                        fsqrt	s6, s7
@@ -1901,7 +1901,7 @@ drps
 # CHECK-NEXT:  1      3     1.00                        frinta	s20, s21
 # CHECK-NEXT:  1      3     1.00                        frintx	s22, s23
 # CHECK-NEXT:  1      3     1.00                        frinti	s24, s25
-# CHECK-NEXT:  1      2     0.50                        fmov	d0, d1
+# CHECK-NEXT:  1      0     0.20                        fmov	d0, d1
 # CHECK-NEXT:  1      2     0.50                        fabs	d2, d3
 # CHECK-NEXT:  1      2     0.50                        fneg	d4, d5
 # CHECK-NEXT:  1      12    1.00                        fsqrt	d6, d7
@@ -2508,14 +2508,14 @@ drps
 # CHECK-NEXT:  1      2     0.50                        bics	x3, xzr, x3, lsl #1
 # CHECK-NEXT:  1      2     0.50                        tst	w3, w7, lsl #31
 # CHECK-NEXT:  1      2     0.50                        tst	x2, x20, asr #2
-# CHECK-NEXT:  1      1     0.25                        mov	x3, x6
-# CHECK-NEXT:  1      1     0.25                        mov	x3, xzr
-# CHECK-NEXT:  1      1     0.25                        mov	wzr, w2
-# CHECK-NEXT:  1      1     0.25                        mov	w3, w5
+# CHECK-NEXT:  1      0     0.20                        mov	x3, x6
+# CHECK-NEXT:  1      0     0.20                        mov	x3, xzr
+# CHECK-NEXT:  1      0     0.20                        mov	wzr, w2
+# CHECK-NEXT:  1      0     0.20                        mov	w3, w5
 # CHECK-NEXT:  1      1     0.25                        movz	w2, #0, lsl #16
 # CHECK-NEXT:  1      1     0.25                        mov	w2, #-1235
 # CHECK-NEXT:  1      1     0.25                        mov	x2, #5299989643264
-# CHECK-NEXT:  1      1     0.25                        mov	x2, #0
+# CHECK-NEXT:  1      0     0.20                        mov	x2, #0
 # CHECK-NEXT:  1      1     0.25                        movk	w3, #0
 # CHECK-NEXT:  1      1     0.25                        movz	x4, #0, lsl #16
 # CHECK-NEXT:  1      1     0.25                        movk	w5, #0, lsl #16
@@ -2557,7 +2557,7 @@ drps
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]
-# CHECK-NEXT: 11.00  11.00  33.00  33.00  99.33  163.33 163.33 357.75 212.75 156.25 156.25 184.50 64.50
+# CHECK-NEXT: 11.00  11.00  33.00  33.00  99.33  163.33 163.33 356.50 211.50 155.00 155.00 183.50 63.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    Instructions:
@@ -3072,7 +3072,7 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fccmpe	d31, d5, #7, ne
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcsel	s3, s20, s9, pl
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fcsel	d9, d10, d11, mi
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	s0, s1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	s0, s1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fabs	s2, s3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fneg	s4, s5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fsqrt	s6, s7
@@ -3085,7 +3085,7 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     frinta	s20, s21
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     frintx	s22, s23
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     frinti	s24, s25
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fmov	d0, d1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	d0, d1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fabs	d2, d3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   fneg	d4, d5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -     fsqrt	d6, d7
@@ -3692,14 +3692,14 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     bics	x3, xzr, x3, lsl #1
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     tst	w3, w7, lsl #31
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     tst	x2, x20, asr #2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	x3, x6
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	x3, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	wzr, w2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	w3, w5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x3, x6
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x3, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	wzr, w2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	w3, w5
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     movz	w2, #0, lsl #16
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	w2, #-1235
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	x2, #5299989643264
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     mov	x2, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x2, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     movk	w3, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     movz	x4, #0, lsl #16
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -     movk	w5, #0, lsl #16

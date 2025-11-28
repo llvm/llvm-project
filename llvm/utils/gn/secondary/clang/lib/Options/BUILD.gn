@@ -1,0 +1,19 @@
+static_library("Options") {
+  output_name = "clangOptions"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  include_dirs = [ "." ]
+  deps = [
+    "//clang/include/clang/Config",
+    "//clang/lib/Basic",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+  ]
+  public_deps = [
+    # public_dep because public header Options.h includes generated Options.inc.
+    "//clang/include/clang/Options:Options",
+  ]
+  sources = [
+    "DriverOptions.cpp",
+    "OptionUtils.cpp",
+  ]
+}

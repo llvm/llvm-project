@@ -104,7 +104,7 @@ class RAIIMutexDescriptor {
       // this function is called instead of early returning it. To avoid this, a
       // bool variable (IdentifierInfoInitialized) is used and the function will
       // be run only once.
-      const auto &ASTCtx = Call.getState()->getStateManager().getContext();
+      const auto &ASTCtx = Call.getASTContext();
       Guard = &ASTCtx.Idents.get(GuardName);
     }
   }
@@ -115,7 +115,23 @@ class RAIIMutexDescriptor {
       return false;
     const IdentifierInfo *II =
         cast<CXXRecordDecl>(C->getDecl()->getParent())->getIdentifier();
-    return II == Guard;
+    if (II != Guard)
+      return false;
+
+    // For unique_lock, check if it's constructed with a ctor that takes the tag
+    // type defer_lock_t. In this case, the lock is not acquired.
+    if constexpr (std::is_same_v<T, CXXConstructorCall>) {
+      if (GuardName == "unique_lock" && C->getNumArgs() >= 2) {
+        const Expr *SecondArg = C->getArgExpr(1);
+        QualType ArgType = SecondArg->getType().getNonReferenceType();
+        if (const auto *RD = ArgType->getAsRecordDecl();
+            RD && RD->getName() == "defer_lock_t" && RD->isInStdNamespace()) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
 public:
@@ -270,8 +286,7 @@ REGISTER_LIST_WITH_PROGRAMSTATE(ActiveCritSections, CritSectionMarker)
 // TODO: Move these to llvm::ImmutableList when overhauling immutable data
 // structures for proper iterator concept support.
 template <>
-struct std::iterator_traits<
-    typename llvm::ImmutableList<CritSectionMarker>::iterator> {
+struct std::iterator_traits<llvm::ImmutableList<CritSectionMarker>::iterator> {
   using iterator_category = std::forward_iterator_tag;
   using value_type = CritSectionMarker;
   using difference_type = std::ptrdiff_t;

@@ -192,31 +192,43 @@ static void buildOpBitcast(SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
         .addUse(OpReg);
 }
 
-// We do instruction selections early instead of calling MIB.buildBitcast()
-// generating the general op code G_BITCAST. When MachineVerifier validates
-// G_BITCAST we see a check of a kind: if Source Type is equal to Destination
-// Type then report error "bitcast must change the type". This doesn't take into
-// account the notion of a typed pointer that is important for SPIR-V where a
-// user may and should use bitcast between pointers with different pointee types
-// (https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpBitcast).
-// It's important for correct lowering in SPIR-V, because interpretation of the
-// data type is not left to instructions that utilize the pointer, but encoded
-// by the pointer declaration, and the SPIRV target can and must handle the
-// declaration and use of pointers that specify the type of data they point to.
-// It's not feasible to improve validation of G_BITCAST using just information
-// provided by low level types of source and destination. Therefore we don't
-// produce G_BITCAST as the general op code with semantics different from
-// OpBitcast, but rather lower to OpBitcast immediately. As for now, the only
-// difference would be that CombinerHelper couldn't transform known patterns
-// around G_BUILD_VECTOR. See discussion
-// in https://github.com/llvm/llvm-project/pull/110270 for even more context.
-static void selectOpBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
-                             MachineIRBuilder MIB) {
+// We lower G_BITCAST to OpBitcast here to avoid a MachineVerifier error.
+// The verifier checks if the source and destination LLTs of a G_BITCAST are
+// different, but this check is too strict for SPIR-V's typed pointers, which
+// may have the same LLT but different SPIRVType (e.g. pointers to different
+// pointee types). By lowering to OpBitcast here, we bypass the verifier's
+// check. See discussion in https://github.com/llvm/llvm-project/pull/110270
+// for more context.
+//
+// We also handle the llvm.spv.bitcast intrinsic here. If the source and
+// destination SPIR-V types are the same, we lower it to a COPY to enable
+// further optimizations like copy propagation.
+static void lowerBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                          MachineIRBuilder MIB) {
   SmallVector<MachineInstr *, 16> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
+      if (isSpvIntrinsic(MI, Intrinsic::spv_bitcast)) {
+        Register DstReg = MI.getOperand(0).getReg();
+        Register SrcReg = MI.getOperand(2).getReg();
+        SPIRVType *DstType = GR->getSPIRVTypeForVReg(DstReg);
+        assert(
+            DstType &&
+            "Expected destination SPIR-V type to have been assigned already.");
+        SPIRVType *SrcType = GR->getSPIRVTypeForVReg(SrcReg);
+        assert(SrcType &&
+               "Expected source SPIR-V type to have been assigned already.");
+        if (DstType == SrcType) {
+          MIB.setInsertPt(*MI.getParent(), MI);
+          MIB.buildCopy(DstReg, SrcReg);
+          ToErase.push_back(&MI);
+          continue;
+        }
+      }
+
       if (MI.getOpcode() != TargetOpcode::G_BITCAST)
         continue;
+
       MIB.setInsertPt(*MI.getParent(), MI);
       buildOpBitcast(GR, MIB, MI.getOperand(0).getReg(),
                      MI.getOperand(1).getReg());
@@ -237,16 +249,11 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   SmallVector<MachineInstr *, 10> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (!isSpvIntrinsic(MI, Intrinsic::spv_bitcast) &&
-          !isSpvIntrinsic(MI, Intrinsic::spv_ptrcast))
+      if (!isSpvIntrinsic(MI, Intrinsic::spv_ptrcast))
         continue;
       assert(MI.getOperand(2).isReg());
       MIB.setInsertPt(*MI.getParent(), MI);
       ToErase.push_back(&MI);
-      if (isSpvIntrinsic(MI, Intrinsic::spv_bitcast)) {
-        MIB.buildBitcast(MI.getOperand(0).getReg(), MI.getOperand(2).getReg());
-        continue;
-      }
       Register Def = MI.getOperand(0).getReg();
       Register Source = MI.getOperand(2).getReg();
       Type *ElemTy = getMDOperandAsType(MI.getOperand(3).getMetadata(), 0);
@@ -1060,8 +1067,7 @@ static void removeImplicitFallthroughs(MachineFunction &MF,
     if (!isImplicitFallthrough(MBB))
       continue;
 
-    assert(std::distance(MBB.successors().begin(), MBB.successors().end()) ==
-           1);
+    assert(MBB.succ_size() == 1);
     MIB.setInsertPt(MBB, MBB.end());
     MIB.buildBr(**MBB.successors().begin());
   }
@@ -1089,7 +1095,7 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   removeImplicitFallthroughs(MF, MIB);
   insertSpirvDecorations(MF, GR, MIB);
   insertInlineAsm(MF, GR, ST, MIB);
-  selectOpBitcasts(MF, GR, MIB);
+  lowerBitcasts(MF, GR, MIB);
 
   return true;
 }

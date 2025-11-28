@@ -13,33 +13,43 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/WithColor.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cassert>
+#include <memory>
 #include <optional>
+#include <system_error>
 
 using namespace llvm;
 
 #define CGOPT(TY, NAME)                                                        \
   static cl::opt<TY> *NAME##View;                                              \
   TY codegen::get##NAME() {                                                    \
-    assert(NAME##View && "RegisterCodeGenFlags not created.");                 \
+    assert(NAME##View && "Flag not registered.");                              \
     return *NAME##View;                                                        \
   }
 
 #define CGLIST(TY, NAME)                                                       \
   static cl::list<TY> *NAME##View;                                             \
   std::vector<TY> codegen::get##NAME() {                                       \
-    assert(NAME##View && "RegisterCodeGenFlags not created.");                 \
+    assert(NAME##View && "Flag not registered.");                              \
     return *NAME##View;                                                        \
   }
 
@@ -64,7 +74,6 @@ CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableUnsafeFPMath)
 CGOPT(bool, EnableNoInfsFPMath)
 CGOPT(bool, EnableNoNaNsFPMath)
 CGOPT(bool, EnableNoSignedZerosFPMath)
@@ -98,6 +107,7 @@ CGOPT(bool, UniqueBasicBlockSectionNames)
 CGOPT(bool, SeparateNamedSections)
 CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
+CGOPT(VectorLibrary, VectorLibrary)
 CGOPT(bool, EnableStackSizeSection)
 CGOPT(bool, EnableAddrsig)
 CGOPT(bool, EnableCallGraphSection)
@@ -111,13 +121,14 @@ CGOPT(bool, DebugStrictDwarf)
 CGOPT(unsigned, AlignLoops)
 CGOPT(bool, JMCInstrument)
 CGOPT(bool, XCOFFReadOnlyPointers)
+CGOPT(codegen::SaveStatsMode, SaveStats)
 
-codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
 #define CGBINDOPT(NAME)                                                        \
   do {                                                                         \
     NAME##View = std::addressof(NAME);                                         \
   } while (0)
 
+codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
   static cl::opt<std::string> MArch(
       "march", cl::desc("Architecture to generate code for (see --version)"));
   CGBINDOPT(MArch);
@@ -211,6 +222,9 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(FramePointerKind::All, "all",
                      "Disable frame pointer elimination"),
           clEnumValN(FramePointerKind::NonLeaf, "non-leaf",
+                     "Disable frame pointer elimination for non-leaf frame but "
+                     "reserve the register in leaf functions"),
+          clEnumValN(FramePointerKind::NonLeafNoReserve, "non-leaf-no-reserve",
                      "Disable frame pointer elimination for non-leaf frame"),
           clEnumValN(FramePointerKind::Reserved, "reserved",
                      "Enable frame pointer elimination, but reserve the frame "
@@ -218,12 +232,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(FramePointerKind::None, "none",
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
-
-  static cl::opt<bool> EnableUnsafeFPMath(
-      "enable-unsafe-fp-math",
-      cl::desc("Enable optimizations that may decrease FP precision"),
-      cl::init(false));
-  CGBINDOPT(EnableUnsafeFPMath);
 
   static cl::opt<bool> EnableNoInfsFPMath(
       "enable-no-infs-fp-math",
@@ -444,6 +452,28 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(DebuggerKind::SCE, "sce", "SCE targets (e.g. PS4)")));
   CGBINDOPT(DebuggerTuningOpt);
 
+  static cl::opt<VectorLibrary> VectorLibrary(
+      "vector-library", cl::Hidden, cl::desc("Vector functions library"),
+      cl::init(VectorLibrary::NoLibrary),
+      cl::values(
+          clEnumValN(VectorLibrary::NoLibrary, "none",
+                     "No vector functions library"),
+          clEnumValN(VectorLibrary::Accelerate, "Accelerate",
+                     "Accelerate framework"),
+          clEnumValN(VectorLibrary::DarwinLibSystemM, "Darwin_libsystem_m",
+                     "Darwin libsystem_m"),
+          clEnumValN(VectorLibrary::LIBMVEC, "LIBMVEC",
+                     "GLIBC Vector Math library"),
+          clEnumValN(VectorLibrary::MASSV, "MASSV", "IBM MASS vector library"),
+          clEnumValN(VectorLibrary::SVML, "SVML", "Intel SVML library"),
+          clEnumValN(VectorLibrary::SLEEFGNUABI, "sleefgnuabi",
+                     "SIMD Library for Evaluating Elementary Functions"),
+          clEnumValN(VectorLibrary::ArmPL, "ArmPL",
+                     "Arm Performance Libraries"),
+          clEnumValN(VectorLibrary::AMDLIBM, "AMDLIBM",
+                     "AMD vector math library")));
+  CGBINDOPT(VectorLibrary);
+
   static cl::opt<bool> EnableStackSizeSection(
       "stack-size-section",
       cl::desc("Emit a section containing stack size metadata"),
@@ -522,9 +552,23 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(DisableIntegratedAS);
 
-#undef CGBINDOPT
-
   mc::RegisterMCTargetOptionsFlags();
+}
+
+codegen::RegisterSaveStatsFlag::RegisterSaveStatsFlag() {
+  static cl::opt<SaveStatsMode> SaveStats(
+      "save-stats",
+      cl::desc(
+          "Save LLVM statistics to a file in the current directory"
+          "(`-save-stats`/`-save-stats=cwd`) or the directory of the output"
+          "file (`-save-stats=obj`). (default: cwd)"),
+      cl::values(clEnumValN(SaveStatsMode::Cwd, "cwd",
+                            "Save to the current working directory"),
+                 clEnumValN(SaveStatsMode::Cwd, "", ""),
+                 clEnumValN(SaveStatsMode::Obj, "obj",
+                            "Save to the output file directory")),
+      cl::init(SaveStatsMode::None), cl::ValueOptional);
+  CGBINDOPT(SaveStats);
 }
 
 llvm::BasicBlockSection
@@ -552,7 +596,6 @@ TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
-  Options.UnsafeFPMath = getEnableUnsafeFPMath();
   Options.NoInfsFPMath = getEnableNoInfsFPMath();
   Options.NoNaNsFPMath = getEnableNoNaNsFPMath();
   Options.NoSignedZerosFPMath = getEnableNoSignedZerosFPMath();
@@ -589,6 +632,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.EnableTLSDESC =
       getExplicitEnableTLSDESC().value_or(TheTriple.hasDefaultTLSDESC());
   Options.ExceptionModel = getExceptionModel();
+  Options.VecLib = getVectorLibrary();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
   Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
   Options.EnableStaticDataPartitioning = getEnableStaticDataPartitioning();
@@ -695,6 +739,8 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
       NewAttrs.addAttribute("frame-pointer", "all");
     else if (getFramePointerUsage() == FramePointerKind::NonLeaf)
       NewAttrs.addAttribute("frame-pointer", "non-leaf");
+    else if (getFramePointerUsage() == FramePointerKind::NonLeafNoReserve)
+      NewAttrs.addAttribute("frame-pointer", "non-leaf-no-reserve");
     else if (getFramePointerUsage() == FramePointerKind::Reserved)
       NewAttrs.addAttribute("frame-pointer", "reserved");
     else if (getFramePointerUsage() == FramePointerKind::None)
@@ -706,7 +752,6 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
   if (getStackRealign())
     NewAttrs.addAttribute("stackrealign");
 
-  HANDLE_BOOL_ATTR(EnableUnsafeFPMathView, "unsafe-fp-math");
   HANDLE_BOOL_ATTR(EnableNoInfsFPMathView, "no-infs-fp-math");
   HANDLE_BOOL_ATTR(EnableNoNaNsFPMathView, "no-nans-fp-math");
   HANDLE_BOOL_ATTR(EnableNoSignedZerosFPMathView, "no-signed-zeros-fp-math");
@@ -771,4 +816,43 @@ codegen::createTargetMachineForTriple(StringRef TargetTriple,
                              Twine("could not allocate target machine for ") +
                                  TargetTriple);
   return std::unique_ptr<TargetMachine>(Target);
+}
+
+void codegen::MaybeEnableStatistics() {
+  if (getSaveStats() == SaveStatsMode::None)
+    return;
+
+  llvm::EnableStatistics(false);
+}
+
+int codegen::MaybeSaveStatistics(StringRef OutputFilename, StringRef ToolName) {
+  auto SaveStatsValue = getSaveStats();
+  if (SaveStatsValue == codegen::SaveStatsMode::None)
+    return 0;
+
+  SmallString<128> StatsFilename;
+  if (SaveStatsValue == codegen::SaveStatsMode::Obj) {
+    StatsFilename = OutputFilename;
+    llvm::sys::path::remove_filename(StatsFilename);
+  } else {
+    assert(SaveStatsValue == codegen::SaveStatsMode::Cwd &&
+           "Should have been a valid --save-stats value");
+  }
+
+  auto BaseName = llvm::sys::path::filename(OutputFilename);
+  llvm::sys::path::append(StatsFilename, BaseName);
+  llvm::sys::path::replace_extension(StatsFilename, "stats");
+
+  auto FileFlags = llvm::sys::fs::OF_TextWithCRLF;
+  std::error_code EC;
+  auto StatsOS =
+      std::make_unique<llvm::raw_fd_ostream>(StatsFilename, EC, FileFlags);
+  if (EC) {
+    WithColor::error(errs(), ToolName)
+        << "Unable to open statistics file: " << EC.message() << "\n";
+    return 1;
+  }
+
+  llvm::PrintStatisticsJSON(*StatsOS);
+  return 0;
 }

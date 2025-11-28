@@ -60,8 +60,7 @@ enum ProcessorFeatures {
 #define X86_FEATURE(ENUM, STRING) FEATURE_##ENUM,
 #include "llvm/TargetParser/X86TargetParser.def"
   CPU_FEATURE_MAX,
-
-#define X86_MICROARCH_LEVEL(ENUM, STRING, PRIORITY) FEATURE_##ENUM = PRIORITY,
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE) FEATURE_##ENUM,
 #include "llvm/TargetParser/X86TargetParser.def"
 };
 
@@ -117,6 +116,7 @@ enum CPUKind {
   CK_Lunarlake,
   CK_Pantherlake,
   CK_Wildcatlake,
+  CK_Novalake,
   CK_Sierraforest,
   CK_Grandridge,
   CK_Graniterapids,

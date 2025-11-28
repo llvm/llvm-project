@@ -39,7 +39,7 @@ class TestReports(unittest.TestCase):
         self.assertEqual(
             failures[0],
             (
-                "test/4.stamp",
+                "touch test/4.stamp",
                 dedent(
                     """\
                     FAILED: touch test/4.stamp
@@ -77,7 +77,7 @@ class TestReports(unittest.TestCase):
         self.assertEqual(
             failures[0],
             (
-                "test/3.stamp",
+                "touch test/3.stamp",
                 dedent(
                     """\
                     FAILED: touch test/3.stamp
@@ -106,7 +106,7 @@ class TestReports(unittest.TestCase):
         self.assertEqual(
             failures[0],
             (
-                "test/2.stamp",
+                "touch test/2.stamp",
                 dedent(
                     """\
                     FAILED: touch test/2.stamp
@@ -117,7 +117,7 @@ class TestReports(unittest.TestCase):
         self.assertEqual(
             failures[1],
             (
-                "test/4.stamp",
+                "touch test/4.stamp",
                 dedent(
                     """\
                     FAILED: touch test/4.stamp
@@ -150,10 +150,38 @@ class TestReports(unittest.TestCase):
         self.assertEqual(
             failures[0],
             (
-                "test/2.stamp",
+                "touch test/2.stamp",
                 dedent(
                     """\
                     FAILED: touch test/2.stamp
+                    Wow! This system is really broken!"""
+                ),
+            ),
+        )
+
+    # Test that we correctly handle cases where the FAILED: line does not
+    # match up with the progress indicator.
+    def test_ninja_log_mismatched_failed(self):
+        failures = generate_test_report_lib.find_failure_in_ninja_logs(
+            [
+                [
+                    "[1/5] test/1.stamp",
+                    "[2/5] test/2.stamp",
+                    "ModuleNotFoundError: No module named 'mount_langley'",
+                    "FAILED: tools/check-langley",
+                    "Wow! This system is really broken!",
+                    "[5/5] test/5.stamp",
+                ]
+            ]
+        )
+        self.assertEqual(len(failures), 1)
+        self.assertEqual(
+            failures[0],
+            (
+                "tools/check-langley",
+                dedent(
+                    """\
+                    FAILED: tools/check-langley
                     Wow! This system is really broken!"""
                 ),
             ),
@@ -407,7 +435,6 @@ class TestReports(unittest.TestCase):
                 ]
             ],
         )
-        print(test)
         self.assertEqual(
             generate_test_report_lib.generate_report(
                 "Foo",
@@ -449,7 +476,7 @@ class TestReports(unittest.TestCase):
                     All tests passed but another part of the build **failed**. Click on a failure below to see the details.
 
                     <details>
-                    <summary>test/2.stamp</summary>
+                    <summary>touch test/2.stamp</summary>
 
                     ```
                     FAILED: touch test/2.stamp
@@ -457,7 +484,7 @@ class TestReports(unittest.TestCase):
                     ```
                     </details>
                     <details>
-                    <summary>test/4.stamp</summary>
+                    <summary>touch test/4.stamp</summary>
 
                     ```
                     FAILED: touch test/4.stamp
@@ -749,6 +776,160 @@ class TestReports(unittest.TestCase):
 
           Failed tests and their output was too large to report. Download the build's log file to see the details.
           
+          If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                )
+            ),
+        )
+
+    def test_report_ninja_explanation(self):
+        self.assertEqual(
+            generate_test_report_lib.generate_report(
+                "Foo",
+                1,
+                [],
+                [
+                    [
+                        "[1/5] test/1.stamp",
+                        "[2/5] test/2.stamp",
+                        "[3/5] test/3.stamp",
+                        "[4/5] test/4.stamp",
+                        "FAILED: test/4.stamp",
+                        "touch test/4.stamp",
+                        "Half Moon Bay.",
+                        "[5/5] test/5.stamp",
+                    ]
+                ],
+                failure_explanations_list=[
+                    {
+                        "name": "test/4.stamp",
+                        "explained": True,
+                        "reason": "Failing at head",
+                    }
+                ],
+            ),
+            dedent(
+                """\
+            # Foo
+
+            The build failed before running any tests. Click on a failure below to see the details.
+
+            <details>
+            <summary>test/4.stamp (Likely Already Failing)</summary>
+            Failing at head
+
+            ```
+            FAILED: test/4.stamp
+            touch test/4.stamp
+            Half Moon Bay.
+            ```
+            </details>
+            
+            If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+            ),
+        )
+
+    def test_report_test_failure_explanation(self):
+        self.assertEqual(
+            generate_test_report_lib.generate_report(
+                "Foo",
+                1,
+                [
+                    junit_from_xml(
+                        dedent(
+                            """\
+          <?xml version="1.0" encoding="UTF-8"?>
+          <testsuites time="8.89">
+          <testsuite name="Bar" tests="1" failures="1" skipped="0" time="410.63">
+          <testcase classname="Bar/test_3" name="test_3" time="0.02">
+            <failure><![CDATA[Error! Expected Big Sur to be next to the ocean.]]></failure>
+          </testcase>
+          </testsuite>
+          </testsuites>"""
+                        )
+                    )
+                ],
+                [],
+                failure_explanations_list=[
+                    {
+                        "name": "Bar/test_3/test_3",
+                        "explained": True,
+                        "reason": "Big Sur is next to the Pacific.",
+                    }
+                ],
+            ),
+            (
+                dedent(
+                    """\
+          # Foo
+
+          * 1 test failed
+
+          ## Failed Tests
+          (click on a test name to see its output)
+
+          ### Bar
+          <details>
+          <summary>Bar/test_3/test_3 (Likely Already Failing)</summary>
+          Big Sur is next to the Pacific.
+          
+          ```
+          Error! Expected Big Sur to be next to the ocean.
+          ```
+          </details>
+
+          If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                )
+            ),
+        )
+
+    def test_report_test_failure_have_explanation_explained_false(self):
+        self.assertEqual(
+            generate_test_report_lib.generate_report(
+                "Foo",
+                1,
+                [
+                    junit_from_xml(
+                        dedent(
+                            """\
+          <?xml version="1.0" encoding="UTF-8"?>
+          <testsuites time="8.89">
+          <testsuite name="Bar" tests="1" failures="1" skipped="0" time="410.63">
+          <testcase classname="Bar/test_3" name="test_3" time="0.02">
+            <failure><![CDATA[Error! Expected Mt. Shasta to be next in the Eastern Sierras.]]></failure>
+          </testcase>
+          </testsuite>
+          </testsuites>"""
+                        )
+                    )
+                ],
+                [],
+                failure_explanations_list=[
+                    {
+                        "name": "Bar/test_3/test_3",
+                        "explained": False,
+                        "reason": "Mt. Shasta is in the Cascades",
+                    }
+                ],
+            ),
+            (
+                dedent(
+                    """\
+          # Foo
+
+          * 1 test failed
+
+          ## Failed Tests
+          (click on a test name to see its output)
+
+          ### Bar
+          <details>
+          <summary>Bar/test_3/test_3</summary>
+          
+          ```
+          Error! Expected Mt. Shasta to be next in the Eastern Sierras.
+          ```
+          </details>
+
           If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
                 )
             ),

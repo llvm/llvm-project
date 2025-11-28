@@ -24,14 +24,21 @@ ERROR_CHECK_RE = re.compile(r"# COM: .*")
 OUTPUT_SKIPPED_RE = re.compile(r"(.text)")
 COMMENT = {"asm": "//", "dasm": "#"}
 
+SUBSTITUTIONS = [
+    ("%extract-encodings", "sed -n 's/.*encoding://p'"),
+]
+
+
+class Error(Exception):
+    def __init__(self, test_info, line_no, msg):
+        super().__init__(f"{test_info.path}:{line_no}: {msg}")
+
 
 def invoke_tool(exe, check_rc, cmd_args, testline, verbose=False):
-    if isinstance(cmd_args, list):
-        args = [applySubstitutions(a, substitutions) for a in cmd_args]
-    else:
-        args = cmd_args
+    substs = SUBSTITUTIONS + [(t, exe) for t in mc_LIKE_TOOLS]
+    args = [common.applySubstitutions(cmd, substs) for cmd in cmd_args.split("|")]
 
-    cmd = 'echo "' + testline + '" | ' + exe + " " + args
+    cmd = 'echo "' + testline + '" | ' + exe + " " + " | ".join(args)
     if verbose:
         print("Command: ", cmd)
 
@@ -123,14 +130,67 @@ def getErrCheckLine(prefix, output, mc_mode, line_offset=1):
     )
 
 
+def parse_token_defs(test_info):
+    tokens = {}
+    current_token = None
+    for line_no, line in enumerate(test_info.input_lines, start=1):
+        # Remove comments.
+        line = line.split("#")[0].rstrip()
+
+        # Skip everything up to the instructions definition.
+        if not tokens and not current_token and line != "//  INSTS=":
+            continue
+
+        if not line.startswith("//"):
+            break
+
+        original_len = len(line)
+        line = line[2:].lstrip(" ")
+        indent = original_len - len(line)
+
+        if not line:
+            current_token = None
+            continue
+
+        # Define a new token.
+        if not current_token:
+            if indent != 4 or not line.endswith("="):
+                raise Error(test_info, line_no, "token definition expected")
+
+            current_token = line[:-1].strip()
+            if current_token in tokens:
+                raise Error(test_info, line_no, f"'{current_token}' redefined")
+
+            tokens[current_token] = []
+            continue
+
+        # Add token value.
+        if indent != 8:
+            raise Error(test_info, line_no, "wrong indentation for token value")
+
+        tokens[current_token].append(line)
+
+    return tokens
+
+
+def expand_insts(tokens):
+    def subst(s):
+        for token, values in tokens.items():
+            if token in s:
+                for value in values:
+                    yield from subst(s.replace(token, value, 1))
+                return
+
+        yield s
+
+    yield from subst("INSTS")
+
+
 def update_test(ti: common.TestInfo):
     if ti.path.endswith(".s"):
         mc_mode = "asm"
     elif ti.path.endswith(".txt"):
         mc_mode = "dasm"
-
-        if ti.args.sort:
-            raise Exception("sorting with dasm(.txt) file is not supported!")
     else:
         common.warn("Expected .s and .txt, Skipping file : ", ti.path)
         return
@@ -210,8 +270,13 @@ def update_test(ti: common.TestInfo):
     testlines = list(dict.fromkeys(testlines))
     common.debug("Valid test line found: ", len(testlines))
 
-    run_list_size = len(run_list)
-    testnum = len(testlines)
+    # Where instruction templates are specified, use them instead.
+    use_asm_templates = False
+    if mc_mode == "asm":
+        tokens = parse_token_defs(ti)
+        if "INSTS" in tokens:
+            testlines = list(expand_insts(tokens))
+            use_asm_templates = True
 
     raw_output = []
     raw_prefixes = []
@@ -248,20 +313,18 @@ def update_test(ti: common.TestInfo):
 
         raw_prefixes.append(prefixes)
 
-    output_lines = []
     generated_prefixes = {}
+    sort_keys = {}
     used_prefixes = set()
     prefix_set = set([prefix for p in run_list for prefix in p[0]])
     common.debug("Rewriting FileCheck prefixes:", str(prefix_set))
 
-    for test_id in range(testnum):
-        input_line = testlines[test_id]
-
+    for test_id, input_line in enumerate(testlines):
         # a {prefix : output, [runid] } dict
         # insert output to a prefix-key dict, and do a max sorting
         # to select the most-used prefix which share the same output string
         p_dict = {}
-        for run_id in range(run_list_size):
+        for run_id in range(len(run_list)):
             out = raw_output[run_id][test_id]
 
             if hasErr(out):
@@ -269,67 +332,89 @@ def update_test(ti: common.TestInfo):
             else:
                 o = getOutputString(out)
 
-            prefixes = raw_prefixes[run_id]
-
-            for p in prefixes:
+            for p in raw_prefixes[run_id]:
                 if p not in p_dict:
                     p_dict[p] = o, [run_id]
+                    continue
+
+                if p_dict[p] == (None, []):
+                    continue
+
+                prev_o, run_ids = p_dict[p]
+                if o == prev_o:
+                    run_ids.append(run_id)
+                    p_dict[p] = o, run_ids
                 else:
-                    if p_dict[p] == (None, []):
-                        continue
-
-                    prev_o, run_ids = p_dict[p]
-                    if o == prev_o:
-                        run_ids.append(run_id)
-                        p_dict[p] = o, run_ids
-                    else:
-                        # conflict, discard
-                        p_dict[p] = None, []
-
-        p_dict_sorted = dict(sorted(p_dict.items(), key=lambda item: -len(item[1][1])))
+                    # conflict, discard
+                    p_dict[p] = None, []
 
         # prefix is selected and generated with most shared output lines
         # each run_id can only be used once
-        gen_prefix = ""
-        used_runid = set()
+        used_run_ids = set()
+        selected_prefixes = set()
+        get_num_runs = lambda item: len(item[1][1])
+        p_dict_sorted = sorted(p_dict.items(), key=get_num_runs, reverse=True)
+        for prefix, (o, run_ids) in p_dict_sorted:
+            if run_ids and used_run_ids.isdisjoint(run_ids):
+                selected_prefixes.add(prefix)
 
-        # line number diff between generated prefix and testline
-        line_offset = 1
-        for prefix, tup in p_dict_sorted.items():
-            o, run_ids = tup
+            used_run_ids.update(run_ids)
 
-            if len(run_ids) == 0:
-                continue
+        # Use smallest outputs across RUN lines as sorting keys for
+        # disassembler tests. Sort by instruction codes if no RUN line
+        # produced a disassembled instruction.
+        if mc_mode == "dasm":
+            instr_outs = [
+                o
+                for prefix, (o, run_ids) in p_dict_sorted
+                if o is not None and "encoding:" in o
+            ]
+            sort_keys[input_line] = min(instr_outs) if instr_outs else input_line
 
-            skip = False
-            for i in run_ids:
-                if i in used_runid:
-                    skip = True
-                else:
-                    used_runid.add(i)
-            if not skip:
-                used_prefixes.add(prefix)
+        # Generate check lines in alphabetical order.
+        check_lines = []
+        for prefix in sorted(selected_prefixes):
+            o, run_ids = p_dict[prefix]
+            used_prefixes.add(prefix)
 
-                if hasErr(o):
-                    newline = getErrCheckLine(prefix, o, mc_mode, line_offset)
-                else:
-                    newline = getStdCheckLine(prefix, o, mc_mode)
+            if hasErr(o):
+                line_offset = len(check_lines) + 1
+                check = getErrCheckLine(prefix, o, mc_mode, line_offset)
+            else:
+                check = getStdCheckLine(prefix, o, mc_mode)
 
-                if newline:
-                    gen_prefix += newline
-                    line_offset += 1
+            if check:
+                check_lines.append(check.strip())
 
-        generated_prefixes[input_line] = gen_prefix.rstrip("\n")
+        generated_prefixes[input_line] = "\n".join(check_lines)
 
     # write output
-    for input_info in ti.iterlines(output_lines):
-        input_line = input_info.line
-        if input_line in testlines:
-            output_lines.append(input_line)
-            output_lines.append(generated_prefixes[input_line])
+    output_lines = []
+    if use_asm_templates:
+        # Keep all leading comments and empty lines.
+        for input_info in ti.iterlines(output_lines):
+            input_line = input_info.line
+            if not input_line or input_line.startswith(COMMENT[mc_mode]):
+                output_lines.append(input_line)
+                continue
+            break
 
-        elif should_add_line_to_output(input_line, prefix_set, mc_mode):
-            output_lines.append(input_line)
+        # Remove tail empty lines.
+        while not output_lines[-1]:
+            del output_lines[-1]
+
+        # Emit test and check lines.
+        for input_line in testlines:
+            output_lines.extend(["", input_line, generated_prefixes[input_line]])
+    else:
+        for input_info in ti.iterlines(output_lines):
+            input_line = input_info.line
+            if input_line in testlines:
+                output_lines.append(input_line)
+                output_lines.append(generated_prefixes[input_line])
+
+            elif should_add_line_to_output(input_line, prefix_set, mc_mode):
+                output_lines.append(input_line)
 
     if ti.args.unique or ti.args.sort:
         # split with double newlines
@@ -377,7 +462,7 @@ def update_test(ti: common.TestInfo):
                     line = l.split("\n")[0]
 
                 # runline placed on the top
-                return (not isRunLine(line), line)
+                return (not isRunLine(line), sort_keys.get(line, line))
 
             test_units = sorted(test_units, key=getkey)
 

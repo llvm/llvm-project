@@ -85,7 +85,7 @@ define i64 @test_ldrsw_ldursw(ptr %p) #0 {
 ; CHECK-NEXT: add.2d v0, v[[V0]], v[[V1]]
 ; CHECK-NEXT: ret
 define <2 x i64> @test_ldrq_ldruq_invalidoffset(ptr %p) #0 {
-  %tmp1 = load <2 x i64>, < 2 x i64>* %p, align 8
+  %tmp1 = load <2 x i64>, ptr %p, align 8
   %add.ptr2 = getelementptr inbounds i64, ptr %p, i64 3
   %tmp2 = load <2 x i64>, ptr %add.ptr2, align 8
   %add = add nsw <2 x i64> %tmp1, %tmp2

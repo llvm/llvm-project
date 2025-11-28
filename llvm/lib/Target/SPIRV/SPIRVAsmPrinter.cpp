@@ -78,6 +78,8 @@ public:
   void outputExecutionModeFromNumthreadsAttribute(
       const MCRegister &Reg, const Attribute &Attr,
       SPIRV::ExecutionMode::ExecutionMode EM);
+  void outputExecutionModeFromEnableMaximalReconvergenceAttr(
+      const MCRegister &Reg, const SPIRVSubtarget &ST);
   void outputExecutionMode(const Module &M);
   void outputAnnotations(const Module &M);
   void outputModuleSections();
@@ -495,6 +497,20 @@ void SPIRVAsmPrinter::outputExecutionModeFromNumthreadsAttribute(
   outputMCInst(Inst);
 }
 
+void SPIRVAsmPrinter::outputExecutionModeFromEnableMaximalReconvergenceAttr(
+    const MCRegister &Reg, const SPIRVSubtarget &ST) {
+  assert(ST.canUseExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence) &&
+         "Function called when SPV_KHR_maximal_reconvergence is not enabled.");
+
+  MCInst Inst;
+  Inst.setOpcode(SPIRV::OpExecutionMode);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  unsigned EM =
+      static_cast<unsigned>(SPIRV::ExecutionMode::MaximallyReconvergesKHR);
+  Inst.addOperand(MCOperand::createImm(EM));
+  outputMCInst(Inst);
+}
+
 void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
   NamedMDNode *Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
@@ -551,12 +567,21 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     if (Attribute Attr = F.getFnAttribute("hlsl.numthreads"); Attr.isValid())
       outputExecutionModeFromNumthreadsAttribute(
           FReg, Attr, SPIRV::ExecutionMode::LocalSize);
+    if (Attribute Attr = F.getFnAttribute("enable-maximal-reconvergence");
+        Attr.getValueAsBool()) {
+      outputExecutionModeFromEnableMaximalReconvergenceAttr(FReg, *ST);
+    }
     if (MDNode *Node = F.getMetadata("work_group_size_hint"))
       outputExecutionModeFromMDNode(FReg, Node,
                                     SPIRV::ExecutionMode::LocalSizeHint, 3, 1);
     if (MDNode *Node = F.getMetadata("intel_reqd_sub_group_size"))
       outputExecutionModeFromMDNode(FReg, Node,
                                     SPIRV::ExecutionMode::SubgroupSize, 0, 0);
+    if (MDNode *Node = F.getMetadata("max_work_group_size")) {
+      if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_kernel_attributes))
+        outputExecutionModeFromMDNode(
+            FReg, Node, SPIRV::ExecutionMode::MaxWorkgroupSizeINTEL, 3, 1);
+    }
     if (MDNode *Node = F.getMetadata("vec_type_hint")) {
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionMode);
@@ -587,13 +612,10 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
         // Collect the SPIRVTypes for fp16, fp32, and fp64 and the constant of
         // type int32 with 0 value to represent the FP Fast Math Mode.
         std::vector<const MachineInstr *> SPIRVFloatTypes;
-        const MachineInstr *ConstZero = nullptr;
+        const MachineInstr *ConstZeroInt32 = nullptr;
         for (const MachineInstr *MI :
              MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
-          // Skip if the instruction is not OpTypeFloat or OpConstant.
           unsigned OpCode = MI->getOpcode();
-          if (OpCode != SPIRV::OpTypeFloat && OpCode != SPIRV::OpConstantNull)
-            continue;
 
           // Collect the SPIRV type if it's a float.
           if (OpCode == SPIRV::OpTypeFloat) {
@@ -604,14 +626,18 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
               continue;
             }
             SPIRVFloatTypes.push_back(MI);
-          } else {
+            continue;
+          }
+
+          if (OpCode == SPIRV::OpConstantNull) {
             // Check if the constant is int32, if not skip it.
             const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
             MachineInstr *TypeMI = MRI.getVRegDef(MI->getOperand(1).getReg());
-            if (!TypeMI || TypeMI->getOperand(1).getImm() != 32)
-              continue;
-
-            ConstZero = MI;
+            bool IsInt32Ty = TypeMI &&
+                             TypeMI->getOpcode() == SPIRV::OpTypeInt &&
+                             TypeMI->getOperand(1).getImm() == 32;
+            if (IsInt32Ty)
+              ConstZeroInt32 = MI;
           }
         }
 
@@ -632,9 +658,9 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
           MCRegister TypeReg =
               MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
           Inst.addOperand(MCOperand::createReg(TypeReg));
-          assert(ConstZero && "There should be a constant zero.");
+          assert(ConstZeroInt32 && "There should be a constant zero.");
           MCRegister ConstReg = MAI->getRegisterAlias(
-              ConstZero->getMF(), ConstZero->getOperand(0).getReg());
+              ConstZeroInt32->getMF(), ConstZeroInt32->getOperand(0).getReg());
           Inst.addOperand(MCOperand::createReg(ConstReg));
           outputMCInst(Inst);
         }

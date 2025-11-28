@@ -17,6 +17,8 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <deque>
+#include <ranges>
 #include <vector>
 
 #include "sized_allocator.h"
@@ -126,6 +128,13 @@ TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
   return true;
 }
 
+/*TEST_CONSTEXPR_CXX26*/ void test_deque() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::deque is constexpr
+  std::deque<int> in(20);
+  std::deque<int> expected(in.size(), 42);
+  std::fill_n(in.begin(), in.size(), 42);
+  assert(in == expected);
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::forward_iterator_list<char*>(), Test<char>());
   types::for_each(types::forward_iterator_list<int*>(), Test<int>());
@@ -220,6 +229,20 @@ TEST_CONSTEXPR_CXX20 bool test() {
       assert(in == expected);
     }
   }
+
+  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+    test_deque();
+
+#if TEST_STD_VER >= 20
+  {
+    std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
+    auto jv = std::ranges::join_view(v);
+    std::fill_n(jv.begin(), std::distance(jv.begin(), jv.end()), 42);
+    for (const auto& vec : v)
+      for (auto n : vec)
+        assert(n == 42);
+  }
+#endif
 
   return true;
 }

@@ -158,7 +158,7 @@ static FailureOr<GridOp> getGridAndVerify(Operation *op,
 }
 
 template <typename It>
-bool isUnique(It begin, It end) {
+static bool isUnique(It begin, It end) {
   if (begin == end) {
     return true;
   }
@@ -576,7 +576,7 @@ LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return failure();
   }
   if (mlir::ShapedType::isDynamicShape(grid->getShape()) &&
-      getStaticShardedDimsOffsets().size() > 0) {
+      !getStaticShardedDimsOffsets().empty()) {
     return emitError() << "sharded dims offsets are not allowed for "
                           "device grids with dynamic shape.";
   }

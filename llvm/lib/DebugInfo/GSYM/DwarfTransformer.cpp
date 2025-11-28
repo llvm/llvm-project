@@ -320,12 +320,16 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
   // Attempt to retrieve DW_AT_LLVM_stmt_sequence if present.
   std::optional<uint64_t> StmtSeqOffset;
   if (auto StmtSeqAttr = Die.find(llvm::dwarf::DW_AT_LLVM_stmt_sequence)) {
-    // The `DW_AT_LLVM_stmt_sequence` attribute might be set to `UINT64_MAX`
-    // when it refers to an empty line sequence. In such cases, the DWARF linker
-    // will exclude the empty sequence from the final output and assign
-    // `UINT64_MAX` to the `DW_AT_LLVM_stmt_sequence` attribute.
-    uint64_t StmtSeqVal = dwarf::toSectionOffset(StmtSeqAttr, UINT64_MAX);
-    if (StmtSeqVal != UINT64_MAX)
+    // The `DW_AT_LLVM_stmt_sequence` attribute might be set to an invalid
+    // sentinel value when it refers to an empty line sequence. In such cases,
+    // the DWARF linker will exclude the empty sequence from the final output
+    // and assign the sentinel value to the `DW_AT_LLVM_stmt_sequence`
+    // attribute. The sentinel value is UINT32_MAX for DWARF32 and UINT64_MAX
+    // for DWARF64.
+    const uint64_t InvalidOffset =
+        Die.getDwarfUnit()->getFormParams().getDwarfMaxOffset();
+    uint64_t StmtSeqVal = dwarf::toSectionOffset(StmtSeqAttr, InvalidOffset);
+    if (StmtSeqVal != InvalidOffset)
       StmtSeqOffset = StmtSeqVal;
   }
 

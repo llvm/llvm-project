@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/Utils.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/JSON.h"

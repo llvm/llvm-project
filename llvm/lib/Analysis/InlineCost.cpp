@@ -751,7 +751,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       if (CA.analyze().isSuccess()) {
         // We were able to inline the indirect call! Subtract the cost from the
         // threshold to get the bonus we want to apply, but don't go below zero.
-        Cost -= std::max(0, CA.getThreshold() - CA.getCost());
+        addCost(-std::max(0, CA.getThreshold() - CA.getCost()));
       }
     } else
       // Otherwise simply add the cost for merely making the call.
@@ -1191,7 +1191,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // If this function uses the coldcc calling convention, prefer not to inline
     // it.
     if (F.getCallingConv() == CallingConv::Cold)
-      Cost += InlineConstants::ColdccPenalty;
+      addCost(InlineConstants::ColdccPenalty);
 
     LLVM_DEBUG(dbgs() << "      Initial cost: " << Cost << "\n");
 
@@ -1242,7 +1242,7 @@ public:
     return std::nullopt;
   }
 
-  virtual ~InlineCostCallAnalyzer() = default;
+  ~InlineCostCallAnalyzer() override = default;
   int getThreshold() const { return Threshold; }
   int getCost() const { return Cost; }
   int getStaticBonusApplied() const { return StaticBonusApplied; }
@@ -2193,7 +2193,7 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
   // the cost of inlining it drops dramatically. It may seem odd to update
   // Cost in updateThreshold, but the bonus depends on the logic in this method.
   if (isSoleCallToLocalFunction(Call, F)) {
-    Cost -= LastCallToStaticBonus;
+    addCost(-LastCallToStaticBonus);
     StaticBonusApplied = LastCallToStaticBonus;
   }
 }
