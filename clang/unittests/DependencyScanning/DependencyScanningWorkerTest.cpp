@@ -46,13 +46,9 @@ TEST(DependencyScanner, ScanDepsWithDiagConsumer) {
 
   {
     // Check that a successful scan calls DiagConsumer.finish().
-    std::vector<std::string> Args = {"clang",
-                                     "-target",
-                                     "x86_64-apple-macosx10.7",
-                                     "-c",
-                                     "test.cpp",
-                                     "-o"
-                                     "test.cpp.o"};
+    std::vector<std::string> Args = {
+        "clang",     "-cc1",     "-triple", "x86_64-apple-macosx10.7.0",
+        "-emit-obj", "test.cpp", "-o",      "test.cpp.o"};
 
     EnsureFinishedConsumer DiagConsumer;
     bool Success = Worker.computeDependencies(CWD, Args, DC, AC, DiagConsumer);
@@ -65,7 +61,7 @@ TEST(DependencyScanner, ScanDepsWithDiagConsumer) {
   {
     // Check that an invalid command-line, which never enters the scanning
     // action calls DiagConsumer.finish().
-    std::vector<std::string> Args = {"clang", "-invalid-arg"};
+    std::vector<std::string> Args = {"clang", "-cc1", "-invalid-arg"};
     EnsureFinishedConsumer DiagConsumer;
     bool Success = Worker.computeDependencies(CWD, Args, DC, AC, DiagConsumer);
 
@@ -77,15 +73,10 @@ TEST(DependencyScanner, ScanDepsWithDiagConsumer) {
   {
     // Check that a valid command line that produces no scanning jobs calls
     // DiagConsumer.finish().
-    std::vector<std::string> Args = {"clang",
-                                     "-target",
-                                     "x86_64-apple-macosx10.7",
-                                     "-c",
-                                     "-x",
-                                     "assembler",
-                                     "test.s",
-                                     "-o"
-                                     "test.cpp.o"};
+    std::vector<std::string> Args = {
+        "clang",     "-cc1",      "-triple",   "x86_64-apple-macosx10.7.0",
+        "-emit-obj", "-x",        "assembler", "test.s",
+        "-o",        "test.cpp.o"};
 
     EnsureFinishedConsumer DiagConsumer;
     bool Success = Worker.computeDependencies(CWD, Args, DC, AC, DiagConsumer);

@@ -379,42 +379,6 @@ DignosticsEngineWithDiagOpts::DignosticsEngineWithDiagOpts(
                                                    /*ShouldOwnClient=*/false);
 }
 
-std::pair<std::unique_ptr<driver::Driver>, std::unique_ptr<driver::Compilation>>
-dependencies::buildCompilation(ArrayRef<std::string> ArgStrs,
-                               DiagnosticsEngine &Diags,
-                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                               llvm::BumpPtrAllocator &Alloc) {
-  SmallVector<const char *, 256> Argv;
-  Argv.reserve(ArgStrs.size());
-  for (const std::string &Arg : ArgStrs)
-    Argv.push_back(Arg.c_str());
-
-  std::unique_ptr<driver::Driver> Driver = std::make_unique<driver::Driver>(
-      Argv[0], llvm::sys::getDefaultTargetTriple(), Diags,
-      "clang LLVM compiler", FS);
-  Driver->setTitle("clang_based_tool");
-
-  bool CLMode = driver::IsClangCL(
-      driver::getDriverMode(Argv[0], ArrayRef(Argv).slice(1)));
-
-  if (llvm::Error E =
-          driver::expandResponseFiles(Argv, CLMode, Alloc, FS.get())) {
-    Diags.Report(diag::err_drv_expand_response_file)
-        << llvm::toString(std::move(E));
-    return std::make_pair(nullptr, nullptr);
-  }
-
-  std::unique_ptr<driver::Compilation> Compilation(
-      Driver->BuildCompilation(Argv));
-  if (!Compilation)
-    return std::make_pair(nullptr, nullptr);
-
-  if (Compilation->containsError())
-    return std::make_pair(nullptr, nullptr);
-
-  return std::make_pair(std::move(Driver), std::move(Compilation));
-}
-
 std::unique_ptr<CompilerInvocation>
 dependencies::createCompilerInvocation(ArrayRef<std::string> CommandLine,
                                        DiagnosticsEngine &Diags) {
@@ -428,62 +392,6 @@ dependencies::createCompilerInvocation(ArrayRef<std::string> CommandLine,
     return nullptr;
   }
   return Invocation;
-}
-
-std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
-dependencies::initVFSForTUBufferScanning(
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
-    llvm::MemoryBufferRef TUBuffer) {
-  // Reset what might have been modified in the previous worker invocation.
-  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
-
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> ModifiedFS;
-  auto OverlayFS =
-      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
-  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-  auto InputPath = TUBuffer.getBufferIdentifier();
-  InMemoryFS->addFile(
-      InputPath, 0, llvm::MemoryBuffer::getMemBufferCopy(TUBuffer.getBuffer()));
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
-
-  OverlayFS->pushOverlay(InMemoryOverlay);
-  ModifiedFS = OverlayFS;
-  std::vector<std::string> ModifiedCommandLine(CommandLine);
-  ModifiedCommandLine.emplace_back(InputPath);
-
-  return std::make_pair(ModifiedFS, ModifiedCommandLine);
-}
-
-std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
-          std::vector<std::string>>
-dependencies::initVFSForByNameScanning(
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
-    StringRef ModuleName) {
-  // Reset what might have been modified in the previous worker invocation.
-  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
-
-  // If we're scanning based on a module name alone, we don't expect the client
-  // to provide us with an input file. However, the driver really wants to have
-  // one. Let's just make it up to make the driver happy.
-  auto OverlayFS =
-      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
-  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-  SmallString<128> FakeInputPath;
-  // TODO: We should retry the creation if the path already exists.
-  llvm::sys::fs::createUniquePath(ModuleName + "-%%%%%%%%.input", FakeInputPath,
-                                  /*MakeAbsolute=*/false);
-  InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
-  OverlayFS->pushOverlay(InMemoryOverlay);
-
-  std::vector<std::string> ModifiedCommandLine(CommandLine);
-  ModifiedCommandLine.emplace_back(FakeInputPath);
-
-  return std::make_pair(OverlayFS, ModifiedCommandLine);
 }
 
 bool dependencies::initializeScanCompilerInstance(
@@ -713,39 +621,20 @@ bool DependencyScanningAction::runInvocation(
   return Result;
 }
 
-bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
-  if (DC) {
-    DiagConsumer = DC;
-  } else {
-    DiagPrinterWithOS =
-        std::make_unique<TextDiagnosticsPrinterWithOutput>(CommandLine);
-    DiagConsumer = &DiagPrinterWithOS->DiagPrinter;
-  }
+bool CompilerInstanceWithContext::initialize(
+    std::unique_ptr<DignosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+  assert(DiagEngineWithDiagOpts && "Valid diagnostics engine required!");
+  DiagEngineWithCmdAndOpts = std::move(DiagEngineWithDiagOpts);
+  DiagConsumer = DiagEngineWithCmdAndOpts->DiagEngine->getClient();
 
-  std::tie(OverlayFS, CommandLine) = initVFSForByNameScanning(
-      Worker.DepFS, CommandLine, CWD, "ScanningByName");
+  // Reset what might have been modified in the previous worker invocation.
+  Worker.DepFS->setCurrentWorkingDirectory(CWD);
 
-  DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
-      CommandLine, OverlayFS, *DiagConsumer);
-
-  std::tie(Driver, Compilation) = buildCompilation(
-      CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS, Alloc);
-
-  if (!Compilation)
-    return false;
-
-  assert(Compilation->getJobs().size() &&
-         "Must have a job list of non-zero size");
-  const driver::Command &Command = *(Compilation->getJobs().begin());
-  const auto &CommandArgs = Command.getArguments();
-  assert(!CommandArgs.empty() && "Cannot have a command with 0 args");
-  assert(StringRef(CommandArgs[0]) == "-cc1" && "Requires a cc1 job.");
-  OriginalInvocation = std::make_unique<CompilerInvocation>();
-
-  if (!CompilerInvocation::CreateFromArgs(*OriginalInvocation, CommandArgs,
-                                          *DiagEngineWithCmdAndOpts->DiagEngine,
-                                          Command.getExecutable())) {
-    DiagEngineWithCmdAndOpts->DiagEngine->Report(
+  OriginalInvocation = createCompilerInvocation(
+      CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine);
+  if (!OriginalInvocation) {
+    this->DiagEngineWithCmdAndOpts->DiagEngine->Report(
         diag::err_fe_expected_compiler_job)
         << llvm::join(CommandLine, " ");
     return false;
@@ -763,7 +652,7 @@ bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
   auto &CI = *CIPtr;
 
   if (!initializeScanCompilerInstance(
-          CI, OverlayFS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
+          CI, FS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
           Worker.Service, Worker.DepFS))
     return false;
 
@@ -815,7 +704,7 @@ bool CompilerInstanceWithContext::computeDependencies(
     // file. In this case, we call BeginSourceFile to initialize.
     std::unique_ptr<FrontendAction> Action =
         std::make_unique<PreprocessOnlyAction>();
-    auto InputFile = CI.getFrontendOpts().Inputs.begin();
+    auto *InputFile = CI.getFrontendOpts().Inputs.begin();
     bool ActionBeginSucceeded = Action->BeginSourceFile(CI, *InputFile);
     assert(ActionBeginSucceeded && "Action BeginSourceFile must succeed");
     (void)ActionBeginSucceeded;
@@ -875,12 +764,4 @@ bool CompilerInstanceWithContext::computeDependencies(
 bool CompilerInstanceWithContext::finalize() {
   DiagConsumer->finish();
   return true;
-}
-
-llvm::Error CompilerInstanceWithContext::handleReturnStatus(bool Success) {
-  assert(DiagPrinterWithOS && "Must use the default DiagnosticConsumer.");
-  return Success ? llvm::Error::success()
-                 : llvm::make_error<llvm::StringError>(
-                       DiagPrinterWithOS->DiagnosticsOS.str(),
-                       llvm::inconvertibleErrorCode());
 }
