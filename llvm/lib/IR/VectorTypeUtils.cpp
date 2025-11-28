@@ -8,12 +8,24 @@
 
 #include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/IR/Intrinsics.h"
 
 using namespace llvm;
 
+bool llvm::isVectorIntrinsicWithStructReturnScalarAtField(unsigned ID,
+                                                          int EleIdx) {
+  switch (ID) {
+  case Intrinsic::vp_load_ff:
+    return EleIdx == 1;
+  default:
+    return false;
+  }
+}
+
 /// A helper for converting structs of scalar types to structs of vector types.
 /// Note: Only unpacked literal struct types are supported.
-Type *llvm::toVectorizedStructTy(StructType *StructTy, ElementCount EC) {
+Type *llvm::toVectorizedStructTy(StructType *StructTy, ElementCount EC,
+                                 unsigned IID) {
   if (EC.isScalar())
     return StructTy;
   assert(isUnpackedStructLiteral(StructTy) &&
@@ -22,7 +34,11 @@ Type *llvm::toVectorizedStructTy(StructType *StructTy, ElementCount EC) {
          "expected all element types to be valid vector element types");
   return StructType::get(
       StructTy->getContext(),
-      map_to_vector(StructTy->elements(), [&](Type *ElTy) -> Type * {
+      map_to_vector(enumerate(StructTy->elements()), [&](auto It) -> Type * {
+        Type *ElTy = It.value();
+        if (IID != 0 &&
+            isVectorIntrinsicWithStructReturnScalarAtField(IID, It.index()))
+          return ElTy;
         return VectorType::get(ElTy, EC);
       }));
 }
