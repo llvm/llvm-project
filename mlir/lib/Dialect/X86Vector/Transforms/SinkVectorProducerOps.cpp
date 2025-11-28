@@ -32,57 +32,73 @@ struct SinkVectorProducerOps final : public OpRewritePattern<producerOp> {
                                 PatternRewriter &rewriter) const override {
 
     // Collect all users of the producer op.
-    llvm::SmallVector<Operation *> users;
+    llvm::SmallVector<Operation *> opUsers;
     for (OpResult result : op->getResults())
       for (Operation *user : result.getUsers())
-        users.push_back(user);
+        opUsers.push_back(user);
 
     // If there are no users, nothing to sink.
-    if (users.empty())
+    if (opUsers.empty())
       return failure();
 
     // If the next op is already a user, do not move.
     Operation *nextOp = op->getNextNode();
-    if (llvm::is_contained(users, nextOp))
+    if (llvm::is_contained(opUsers, nextOp))
       return failure();
 
     // Prevent pathological looping:
-    // If the next op produces values used by any of op's users, don't move.
+    // If two producers are used by same consumer, will end in looping of
+    // moving the producers.
+    // For example:
+    // %1 = prod1
+    // %2 = prod2
+    // %3 = op %1, %2
     llvm::SmallVector<Operation *> nextOpUsers;
     for (OpResult result : nextOp->getResults())
       for (Operation *user : result.getUsers())
         nextOpUsers.push_back(user);
 
-    Operation *nextFirstUser = nextOp->getNextNode();
-    while (nextFirstUser) {
-      if (llvm::is_contained(nextOpUsers, nextFirstUser))
+    // Both producers have one same users.
+    if (opUsers.size() == 1 && nextOpUsers.size() != 1 &&
+        llvm::is_contained(opUsers, nextOpUsers.front()))
+      return failure();
+
+    // Get the first user of both the current and next operation.
+    Operation *opFirstUser = op->getNextNode();
+    Operation *nextOpFirstUser = op->getNextNode();
+
+    while (opFirstUser) {
+      if (llvm::is_contained(opUsers, opFirstUser))
         break;
 
-      nextFirstUser = nextFirstUser->getNextNode();
+      opFirstUser = opFirstUser->getNextNode();
     }
 
-    // Find the nearest user by scanning forward.
-    while (nextOp) {
-      if (llvm::is_contained(users, nextOp))
+    while (nextOpFirstUser) {
+      if (llvm::is_contained(nextOpUsers, nextOpFirstUser))
         break;
 
-      nextOp = nextOp->getNextNode();
+      nextOpFirstUser = nextOpFirstUser->getNextNode();
     }
 
-    if (!nextOp)
+    if (!opFirstUser)
       return failure();
 
     // The Op first user and next Op first user are same. Break here to
     // to avoid the shift cycle looping.
-    if (nextOp == nextFirstUser)
+    if (opFirstUser == nextOpFirstUser)
       return failure();
 
     // Both ops must be in the same block to safely move.
-    if (op->getBlock() != nextOp->getBlock())
+    if (op->getBlock() != opFirstUser->getBlock())
       return failure();
 
     // Move producer immediately before its first user.
-    op->moveBefore(nextOp);
+    op->moveBefore(opFirstUser);
+
+    // Move the nextOp to its first user
+    if (nextOpFirstUser && (nextOpFirstUser->getBlock() == nextOp->getBlock()))
+      nextOp->moveBefore(nextOpFirstUser);
 
     return success();
   }
