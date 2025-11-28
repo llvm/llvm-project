@@ -114,6 +114,33 @@ static bool hasUndefSource(AnyMemTransferInst *MI) {
   return isa<AllocaInst>(Src) && Src->hasOneUse();
 }
 
+// Optimistically infer a type from either the Src or Dest.
+//
+// Returns the DefaultTy if unable to infer a type, if inferred types
+// disagree, or, if inferred type does not match the size of load/store.
+static Type *inferType(const DataLayout &DL, IntegerType *DefaultTy, Value *Src,
+                       Value *Dest) {
+  Type *SrcTy = nullptr;
+  Type *DestTy = nullptr;
+
+  if (auto *SrcAI = dyn_cast<AllocaInst>(Src))
+    SrcTy = SrcAI->getAllocatedType();
+
+  if (auto *DestAI = dyn_cast<AllocaInst>(Dest))
+    DestTy = DestAI->getAllocatedType();
+
+  if (SrcTy && DestTy && SrcTy != DestTy)
+    return DefaultTy; // Unable to infer common type
+
+  Type *InferredTy = SrcTy ? SrcTy : DestTy;
+
+  if (InferredTy &&
+      DefaultTy->getPrimitiveSizeInBits() == DL.getTypeSizeInBits(InferredTy))
+    return InferredTy;
+
+  return DefaultTy;
+}
+
 Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
   Align DstAlign = getKnownAlignment(MI->getRawDest(), DL, MI, &AC, &DT);
   MaybeAlign CopyDstAlign = MI->getDestAlign();
@@ -169,16 +196,18 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
     if (*CopyDstAlign < Size || *CopySrcAlign < Size)
       return nullptr;
 
-  // Use an integer load+store unless we can find something better.
-  IntegerType* IntType = IntegerType::get(MI->getContext(), Size<<3);
-
   // If the memcpy has metadata describing the members, see if we can get the
   // TBAA, scope and noalias tags describing our copy.
   AAMDNodes AACopyMD = MI->getAAMetadata().adjustForAccess(Size);
 
   Value *Src = MI->getArgOperand(1);
   Value *Dest = MI->getArgOperand(0);
-  LoadInst *L = Builder.CreateLoad(IntType, Src);
+
+  // Use an integer load+store unless we can find something better.
+  IntegerType *IntType = IntegerType::get(MI->getContext(), Size << 3);
+  Type *InferredType = inferType(DL, IntType, Src, Dest);
+
+  LoadInst *L = Builder.CreateLoad(InferredType, Src);
   // Alignment from the mem intrinsic will be better, so use it.
   L->setAlignment(*CopySrcAlign);
   L->setAAMetadata(AACopyMD);

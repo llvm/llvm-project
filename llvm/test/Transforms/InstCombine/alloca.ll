@@ -189,24 +189,36 @@ define void @test9(ptr %a) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_TYPE:%.*]] }>, align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    store i64 [[TMP0]], ptr [[ARGMEM]], align 4
+; CHECK-NEXT:    [[DOTUNPACK_UNPACK:%.*]] = load i32, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[DOTUNPACK_ELT1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[DOTUNPACK_UNPACK2:%.*]] = load i32, ptr [[DOTUNPACK_ELT1]], align 4
+; CHECK-NEXT:    store i32 [[DOTUNPACK_UNPACK]], ptr [[ARGMEM]], align 4
+; CHECK-NEXT:    [[ARGMEM_REPACK4:%.*]] = getelementptr inbounds nuw i8, ptr [[ARGMEM]], i64 4
+; CHECK-NEXT:    store i32 [[DOTUNPACK_UNPACK2]], ptr [[ARGMEM_REPACK4]], align 4
 ; CHECK-NEXT:    call void @test9_aux(ptr nonnull inalloca(<{ [[STRUCT_TYPE]] }>) [[ARGMEM]])
 ; CHECK-NEXT:    ret void
 ;
 ; P32-LABEL: @test9(
 ; P32-NEXT:  entry:
 ; P32-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_TYPE:%.*]] }>, align 1
-; P32-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A:%.*]], align 4
-; P32-NEXT:    store i64 [[TMP0]], ptr [[ARGMEM]], align 4
+; P32-NEXT:    [[DOTUNPACK_UNPACK:%.*]] = load i32, ptr [[A:%.*]], align 4
+; P32-NEXT:    [[DOTUNPACK_ELT1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i32 4
+; P32-NEXT:    [[DOTUNPACK_UNPACK2:%.*]] = load i32, ptr [[DOTUNPACK_ELT1]], align 4
+; P32-NEXT:    store i32 [[DOTUNPACK_UNPACK]], ptr [[ARGMEM]], align 4
+; P32-NEXT:    [[ARGMEM_REPACK4:%.*]] = getelementptr inbounds nuw i8, ptr [[ARGMEM]], i32 4
+; P32-NEXT:    store i32 [[DOTUNPACK_UNPACK2]], ptr [[ARGMEM_REPACK4]], align 4
 ; P32-NEXT:    call void @test9_aux(ptr nonnull inalloca(<{ [[STRUCT_TYPE]] }>) [[ARGMEM]])
 ; P32-NEXT:    ret void
 ;
 ; NODL-LABEL: @test9(
 ; NODL-NEXT:  entry:
 ; NODL-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_TYPE:%.*]] }>, align 8
-; NODL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A:%.*]], align 4
-; NODL-NEXT:    store i64 [[TMP0]], ptr [[ARGMEM]], align 8
+; NODL-NEXT:    [[DOTUNPACK_UNPACK:%.*]] = load i32, ptr [[A:%.*]], align 4
+; NODL-NEXT:    [[DOTUNPACK_ELT1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
+; NODL-NEXT:    [[DOTUNPACK_UNPACK2:%.*]] = load i32, ptr [[DOTUNPACK_ELT1]], align 4
+; NODL-NEXT:    store i32 [[DOTUNPACK_UNPACK]], ptr [[ARGMEM]], align 8
+; NODL-NEXT:    [[ARGMEM_REPACK4:%.*]] = getelementptr inbounds nuw i8, ptr [[ARGMEM]], i64 4
+; NODL-NEXT:    store i32 [[DOTUNPACK_UNPACK2]], ptr [[ARGMEM_REPACK4]], align 4
 ; NODL-NEXT:    call void @test9_aux(ptr nonnull inalloca(<{ [[STRUCT_TYPE]] }>) [[ARGMEM]])
 ; NODL-NEXT:    ret void
 ;
@@ -251,8 +263,8 @@ entry:
 
 define void @test_inalloca_with_element_count(ptr %a) {
 ; ALL-LABEL: @test_inalloca_with_element_count(
-; ALL-NEXT:    [[ALLOCA1:%.*]] = alloca inalloca [10 x %struct_type], align 4
-; ALL-NEXT:    call void @test9_aux(ptr nonnull inalloca([[STRUCT_TYPE:%.*]]) [[ALLOCA1]])
+; ALL-NEXT:    [[ALLOCA1:%.*]] = alloca inalloca [10 x [[STRUCT_TYPE:%.*]]], align 4
+; ALL-NEXT:    call void @test9_aux(ptr nonnull inalloca([[STRUCT_TYPE]]) [[ALLOCA1]])
 ; ALL-NEXT:    ret void
 ;
   %alloca = alloca inalloca %struct_type, i32 10, align 4

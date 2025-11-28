@@ -79,7 +79,7 @@ struct nullinit { char* null = nullptr; };
 // ZERO-O0: @__const.test_padded_custom.custom = private unnamed_addr constant { i8, [3 x i8], i32 } { i8 42, [3 x i8] zeroinitializer, i32 13371337 }, align 4
 // PATTERN-O1-NOT: @__const.test_padded_uninit.uninit
 // PATTERN-O1-NOT: @__const.test_padded_custom.custom
-// ZERO-O1-NOT: @__const.test_padded_custom.custom
+// ZERO-O1: @__const.test_padded_custom.custom = private unnamed_addr constant { i8, [3 x i8], i32 } { i8 42, [3 x i8] zeroinitializer, i32 13371337 }, align 8
 struct padded { char c; int i; };
 // PATTERN-O0: @__const.test_paddednullinit_uninit.uninit = private unnamed_addr constant { i8, [3 x i8], i32 } { i8 [[I8]], [3 x i8] c"\[[IC]]\[[IC]]\[[IC]]", i32 [[I32]] }, align 4
 // PATTERN-O0: @__const.test_paddednullinit_braces.braces = private unnamed_addr constant { i8, [3 x i8], i32 } { i8 [[I8]], [3 x i8] c"\[[IC]]\[[IC]]\[[IC]]", i32 [[I32]] }, align 4
@@ -713,6 +713,13 @@ TEST_CUSTOM(padded, padded, { 42, 13371337 });
 // CHECK-NEXT:  call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
+// ZERO-O1:     %custom = alloca %struct.padded, align 4
+// ZERO-O1:     %0 = load %struct.padded, ptr @__const.test_padded_custom.custom, align 8
+// ZERO-O1:     %[[I8:.*]] = extractvalue %struct.padded %0, 0
+// ZERO-O1:     store i8 %[[I8]], ptr %custom, align 4
+// ZERO-O1:     %[[I32:.*]] = extractvalue %struct.padded %0, 1
+// ZERO-O1:     %[[GEP:.*]] = getelementptr inbounds nuw i8, ptr %custom, i64 4
+// ZERO-O1:     store i32 %[[I32]], ptr %[[GEP]], align 4
 
 TEST_UNINIT(paddednullinit, paddednullinit);
 // CHECK-LABEL: @test_paddednullinit_uninit()
@@ -1298,7 +1305,9 @@ TEST_CUSTOM(semivolatile, semivolatile, { 0x44444444, 0x44444444 });
 // PATTERN-O1:       store i32 1145324612, ptr %custom, align 4
 // PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw i8, ptr %custom, i64 4
 // PATTERN-O1-NEXT:  store i32 1145324612, ptr %[[I]], align 4
-// ZERO-O1:          store i64 4919131752989213764, ptr %custom, align 8
+// ZERO-O1:       store i32 1145324612, ptr %custom, align 4
+// ZERO-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw i8, ptr %custom, i64 4
+// ZERO-O1-NEXT:  store i32 1145324612, ptr %[[I]], align 4
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(semivolatileinit, semivolatileinit);
@@ -1441,7 +1450,7 @@ TEST_CUSTOM(matchingreverse, matchingreverse, { .i = 0xf00f });
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
 // PATTERN-O1:  store i32 61455, ptr %custom, align 4
-// ZERO-O1:     store i32 61455, ptr %custom, align 4
+// ZERO-O1:     store float 0x379E01E000000000, ptr %custom, align 4
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(unmatched, unmatched);
@@ -1527,7 +1536,7 @@ TEST_CUSTOM(unmatchedfp, unmatchedfp, { .d = 3.1415926535897932384626433 });
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
 // PATTERN-O1:  store double 0x400921FB54442D18, ptr %custom, align 8
-// ZERO-O1:     store i64 4614256656552045848, ptr %custom, align 8
+// ZERO-O1:  store double 0x400921FB54442D18, ptr %custom, align 8
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(emptyenum, emptyenum);

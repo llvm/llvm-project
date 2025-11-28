@@ -5,10 +5,14 @@
 
 define void @swap(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @swap(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[P1:%.*]], align 1
+; CHECK-NEXT:    [[DOTUNPACK:%.*]] = load i32, ptr [[P1:%.*]], align 1
+; CHECK-NEXT:    [[DOTELT1:%.*]] = getelementptr inbounds nuw i8, ptr [[P1]], i64 4
+; CHECK-NEXT:    [[DOTUNPACK2:%.*]] = load i32, ptr [[DOTELT1]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[P2:%.*]], align 1
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr [[P1]], align 1
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[P2]], align 1
+; CHECK-NEXT:    store i32 [[DOTUNPACK]], ptr [[P2]], align 1
+; CHECK-NEXT:    [[P2_REPACK8:%.*]] = getelementptr inbounds nuw i8, ptr [[P2]], i64 4
+; CHECK-NEXT:    store i32 [[DOTUNPACK2]], ptr [[P2_REPACK8]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca [2 x i32]
