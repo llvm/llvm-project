@@ -287,6 +287,8 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
         return "860";
       case OffloadArch::SM_87:
         return "870";
+      case OffloadArch::SM_88:
+        return "880";
       case OffloadArch::SM_89:
         return "890";
       case OffloadArch::SM_90:
@@ -301,6 +303,9 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::SM_103:
       case OffloadArch::SM_103a:
         return "1030";
+      case OffloadArch::SM_110:
+      case OffloadArch::SM_110a:
+        return "1100";
       case OffloadArch::SM_120:
       case OffloadArch::SM_120a:
         return "1200";
@@ -316,6 +321,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::SM_100a:
       case OffloadArch::SM_101a:
       case OffloadArch::SM_103a:
+      case OffloadArch::SM_110a:
       case OffloadArch::SM_120a:
       case OffloadArch::SM_121a:
         Builder.defineMacro("__CUDA_ARCH_FEAT_SM" + CUDAArchCode.drop_back() + "_ALL", "1");
