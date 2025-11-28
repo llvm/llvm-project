@@ -25,7 +25,3 @@ entry:
   ret void
 }
 
-; Function Attrs: argmemonly mustprogress nofree nounwind willreturn
-declare void @llvm.memmove.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1 immarg) #1
-
-attributes #1 = { argmemonly mustprogress nofree nounwind willreturn }

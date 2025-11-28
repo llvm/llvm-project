@@ -212,6 +212,16 @@ public:
                  &ignored);
       return fv.bitwiseIsEqual(fpVal);
     }
+    if (const auto recordVal = mlir::dyn_cast<cir::ConstRecordAttr>(attr)) {
+      for (const auto elt : recordVal.getMembers()) {
+        // FIXME(cir): the record's ID should not be considered a member.
+        if (mlir::isa<mlir::StringAttr>(elt))
+          continue;
+        if (!isNullValue(elt))
+          return false;
+      }
+      return true;
+    }
 
     if (const auto arrayVal = mlir::dyn_cast<cir::ConstArrayAttr>(attr)) {
       if (mlir::isa<mlir::StringAttr>(arrayVal.getElts()))
@@ -332,6 +342,11 @@ public:
     }
 
     llvm_unreachable("negation for the given type is NYI");
+  }
+
+  cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
+                                   cir::FPClassTest flags) {
+    return cir::IsFPClassOp::create(*this, loc, src, flags);
   }
 
   // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast

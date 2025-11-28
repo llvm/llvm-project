@@ -22,6 +22,8 @@ set(ORC_RT_HEADERS
     orc-rt/SPSMemoryFlags.h
     orc-rt/SPSWrapperFunction.h
     orc-rt/SPSWrapperFunctionBuffer.h
+    orc-rt/TaskDispatcher.h
+    orc-rt/ThreadPoolTaskDispatcher.h
     orc-rt/WrapperFunction.h
     orc-rt/bind.h
     orc-rt/bit.h

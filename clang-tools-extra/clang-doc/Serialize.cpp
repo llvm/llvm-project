@@ -11,7 +11,9 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
+#include "clang/AST/CommentVisitor.h"
 #include "clang/AST/DeclFriend.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"

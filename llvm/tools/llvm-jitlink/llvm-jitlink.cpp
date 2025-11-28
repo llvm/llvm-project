@@ -24,7 +24,6 @@
 #include "llvm/ExecutionEngine/Orc/Debugging/VTuneSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
-#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
@@ -347,7 +346,6 @@ static LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << "Linking in runtime functions\n"
          << (void *)&llvm_orc_registerEHFrameSectionAllocAction << '\n'
          << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction << '\n'
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfStart << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfEnd << '\n'

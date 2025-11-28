@@ -16,10 +16,8 @@
 
 #include "clang/AST/Type.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Tooling/StandaloneExecution.h"
-#include "llvm/ADT/APSInt.h"
+#include "clang/Tooling/Execution.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include <array>
 #include <optional>
 #include <string>
