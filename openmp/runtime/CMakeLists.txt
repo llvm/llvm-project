@@ -16,9 +16,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 # These include files are in the cmake/ subdirectory
-include(LibompUtils)
 include(LibompGetArchitecture)
-include(LibompHandleFlags)
 include(LibompDefinitions)
 
 # Determine the target architecture
@@ -456,5 +454,3 @@ set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_OMP_TOOLS_INCLUDE_DIR} PARENT_SCOPE)
 # make these variables available for tools/libompd:
 set(LIBOMP_SRC_DIR ${LIBOMP_SRC_DIR} PARENT_SCOPE)
 set(LIBOMP_OMPD_SUPPORT ${LIBOMP_OMPD_SUPPORT} PARENT_SCOPE)
-
-
