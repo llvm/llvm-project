@@ -1008,6 +1008,17 @@ InstructionCost RISCVTTIImpl::getScalarizationOverhead(
 }
 
 InstructionCost
+RISCVTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                                       TTI::TargetCostKind CostKind) const {
+  switch (MICA.getID()) {
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_store:
+    return getMaskedMemoryOpCost(MICA, CostKind);
+  }
+  return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+}
+
+InstructionCost
 RISCVTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                     TTI::TargetCostKind CostKind) const {
   unsigned Opcode = MICA.getID() == Intrinsic::masked_load ? Instruction::Load
@@ -1018,7 +1029,7 @@ RISCVTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
 
   if (!isLegalMaskedLoadStore(Src, Alignment) ||
       CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getMaskedMemoryOpCost(MICA, CostKind);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   return getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
 }

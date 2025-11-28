@@ -224,9 +224,20 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 InstructionCost
+HexagonTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                                         TTI::TargetCostKind CostKind) const {
+  switch (MICA.getID()) {
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_store:
+    return getMaskedMemoryOpCost(MICA, CostKind);
+  }
+  return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+}
+
+InstructionCost
 HexagonTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                       TTI::TargetCostKind CostKind) const {
-  return BaseT::getMaskedMemoryOpCost(MICA, CostKind);
+  return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 }
 
 InstructionCost

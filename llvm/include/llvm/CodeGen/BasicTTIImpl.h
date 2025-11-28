@@ -1558,19 +1558,6 @@ public:
   }
 
   InstructionCost
-  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                        TTI::TargetCostKind CostKind) const override {
-    Type *DataTy = MICA.getDataType();
-    Align Alignment = MICA.getAlignment();
-    unsigned Opcode = MICA.getID() == Intrinsic::masked_load
-                          ? Instruction::Load
-                          : Instruction::Store;
-    // TODO: Pass on AddressSpace when we have test coverage.
-    return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, true, false,
-                                       CostKind);
-  }
-
-  InstructionCost
   getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
                          TTI::TargetCostKind CostKind) const override {
     unsigned Opcode = (MICA.getID() == Intrinsic::masked_gather ||
@@ -3074,8 +3061,13 @@ public:
     case Intrinsic::vp_gather:
       return thisT()->getGatherScatterOpCost(MICA, CostKind);
     case Intrinsic::masked_load:
-    case Intrinsic::masked_store:
-      return thisT()->getMaskedMemoryOpCost(MICA, CostKind);
+    case Intrinsic::masked_store: {
+      unsigned Opcode =
+          Id == Intrinsic::masked_load ? Instruction::Load : Instruction::Store;
+      // TODO: Pass on AddressSpace when we have test coverage.
+      return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, true, false,
+                                         CostKind);
+    }
     case Intrinsic::masked_compressstore:
     case Intrinsic::masked_expandload:
       return thisT()->getExpandCompressMemoryOpCost(MICA, CostKind);

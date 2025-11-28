@@ -846,12 +846,6 @@ public:
   }
 
   virtual InstructionCost
-  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                        TTI::TargetCostKind CostKind) const {
-    return 1;
-  }
-
-  virtual InstructionCost
   getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
                          TTI::TargetCostKind CostKind) const {
     return 1;
