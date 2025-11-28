@@ -374,7 +374,10 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         buildOpDecorate(VRegs[i][0], MIRBuilder,
                         SPIRV::Decoration::FuncParamAttr, {Attr});
       }
-      if (Arg.hasAttribute(Attribute::ByVal)) {
+      if (Arg.hasAttribute(Attribute::ByVal) ||
+          (Arg.hasAttribute(Attribute::ByRef) &&
+           F.getParent()->getTargetTriple().getVendor() ==
+              Triple::VendorType::AMD)) {
         auto Attr =
             static_cast<unsigned>(SPIRV::FunctionParameterAttribute::ByVal);
         buildOpDecorate(VRegs[i][0], MIRBuilder,
