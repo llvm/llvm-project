@@ -88,36 +88,38 @@ loadFPCRImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
 }
 
 // Generates instructions to load an immediate value into a pair of W registers
-static std::vector<MCInst>
-loadWSeqPairImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
+static std::vector<MCInst> loadWSeqPairImmediate(MCRegister Reg,
+                                                 unsigned RegBitWidth,
+                                                 const APInt &Value) {
   MCRegister EvenReg = (Reg - AArch64::W0_W1) * 2 + AArch64::W0 + 0;
   MCRegister OddReg = (Reg - AArch64::W0_W1) * 2 + AArch64::W0 + 1;
   assert(Value.getBitWidth() <= RegBitWidth &&
          "Value must fit in the Register");
 
   MCInst LoadEven = MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
-    .addReg(EvenReg)
-    .addImm(Value.getZExtValue());
+                        .addReg(EvenReg)
+                        .addImm(Value.getZExtValue());
   MCInst LoadOdd = MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
-    .addReg(OddReg)
-    .addImm(Value.getZExtValue());
+                       .addReg(OddReg)
+                       .addImm(Value.getZExtValue());
   return {LoadEven, LoadOdd};
 }
 
 // Generates instructions to load an immediate value into a pair of X registers
-static std::vector<MCInst>
-loadXSeqPairImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
+static std::vector<MCInst> loadXSeqPairImmediate(MCRegister Reg,
+                                                 unsigned RegBitWidth,
+                                                 const APInt &Value) {
   MCRegister EvenReg = (Reg - AArch64::X0_X1) * 2 + AArch64::X0 + 0;
   MCRegister OddReg = (Reg - AArch64::X0_X1) * 2 + AArch64::X0 + 1;
   assert(Value.getBitWidth() <= RegBitWidth &&
          "Value must fit in the Register");
 
   MCInst LoadEven = MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
-    .addReg(EvenReg)
-    .addImm(Value.getZExtValue());
+                        .addReg(EvenReg)
+                        .addImm(Value.getZExtValue());
   MCInst LoadOdd = MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
-    .addReg(OddReg)
-    .addImm(Value.getZExtValue());
+                        .addReg(OddReg)
+                        .addImm(Value.getZExtValue());
   return {LoadEven, LoadOdd};
 }
 
@@ -233,9 +235,16 @@ loadNZCVImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
 
   MCInst MoveFromNZCV =
       MCInstBuilder(AArch64::MRS).addReg(TempReg1).addImm(AArch64SysReg::NZCV);
-  MCInst LoadMask = MCInstBuilder(AArch64::MOVi64imm).addReg(TempReg2).addImm(0xf0000000);
-  MCInst BitClear = MCInstBuilder(AArch64::BICXrr).addReg(TempReg1).addReg(TempReg1).addReg(TempReg2);
-  MCInst OrrMask = MCInstBuilder(AArch64::ORRXrr).addReg(TempReg1).addReg(TempReg1).addImm(Value.getZExtValue());
+  MCInst LoadMask =
+      MCInstBuilder(AArch64::MOVi64imm).addReg(TempReg2).addImm(0xf0000000);
+  MCInst BitClear = MCInstBuilder(AArch64::BICXrr)
+                        .addReg(TempReg1)
+                        .addReg(TempReg1)
+                        .addReg(TempReg2);
+  MCInst OrrMask = MCInstBuilder(AArch64::ORRXrr)
+                        .addReg(TempReg1)
+                        .addReg(TempReg1)
+                        .addImm(Value.getZExtValue());
   MCInst MoveToNZCV =
       MCInstBuilder(AArch64::MSR).addImm(AArch64SysReg::NZCV).addReg(TempReg1);
 
