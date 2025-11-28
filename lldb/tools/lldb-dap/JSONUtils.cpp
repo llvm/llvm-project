@@ -676,9 +676,16 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;
-  case lldb::eStopReasonWatchpoint:
-  case lldb::eStopReasonInstrumentation:
+  case lldb::eStopReasonWatchpoint: {
     body.try_emplace("reason", "data breakpoint");
+    lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
+    std::vector<lldb::break_id_t> bp_ids = {bp_id};
+    body.try_emplace("hitBreakpointIds", llvm::json::Array(bp_ids));
+    EmplaceSafeString(body, "description",
+                      llvm::formatv("data breakpoint {0}", bp_id).str());
+  } break;
+  case lldb::eStopReasonInstrumentation:
+    body.try_emplace("reason", "breakpoint");
     break;
   case lldb::eStopReasonProcessorTrace:
     body.try_emplace("reason", "processor trace");
