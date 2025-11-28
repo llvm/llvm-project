@@ -441,11 +441,6 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
       }
     }
   }
-  SCEVUnionPredicate Assumptions = DA->getRuntimeAssumptions();
-  if (!Assumptions.isAlwaysTrue()) {
-    OS << "Runtime Assumptions:\n";
-    Assumptions.print(OS, 0);
-  }
 }
 
 void DependenceAnalysisWrapperPass::print(raw_ostream &OS,
@@ -3384,10 +3379,6 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
          Inv.invalidate<LoopAnalysis>(F, PA);
 }
 
-SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() const {
-  return SCEVUnionPredicate(Assumptions, *SE);
-}
-
 // depends -
 // Returns NULL if there is no dependence.
 // Otherwise, return a Dependence with as many details as possible.
@@ -3488,20 +3479,10 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                                         SCEVUnionPredicate(Assume, *SE));
   }
 
-  if (!Assume.empty()) {
-    if (!UnderRuntimeAssumptions)
-      return std::make_unique<Dependence>(Src, Dst,
-                                          SCEVUnionPredicate(Assume, *SE));
-    // Add non-redundant assumptions.
-    unsigned N = Assumptions.size();
-    for (const SCEVPredicate *P : Assume) {
-      bool Implied = false;
-      for (unsigned I = 0; I != N && !Implied; I++)
-        if (Assumptions[I]->implies(P, *SE))
-          Implied = true;
-      if (!Implied)
-        Assumptions.push_back(P);
-    }
+  if (!Assume.empty() && !UnderRuntimeAssumptions) {
+    // Runtime assumptions needed but not allowed.
+    return std::make_unique<Dependence>(Src, Dst,
+                                        SCEVUnionPredicate(Assume, *SE));
   }
 
   unsigned Pairs = 1;
