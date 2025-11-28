@@ -37,9 +37,7 @@ public:
   MCSymbolGOFF(const MCSymbolTableEntry *Name, bool IsTemporary)
       : MCSymbol(Name, IsTemporary) {}
 
-  GOFF::LDAttr getLDAttributes() const;
   bool hasLDAttributes() const;
-  GOFF::ERAttr getERAttributes() const;
   bool hasERAttributes() const;
 
   void setADA(MCSectionGOFF *AssociatedDataArea) {
@@ -65,6 +63,8 @@ public:
 
   void setLinkage(GOFF::ESDLinkageType Value) { Linkage = Value; }
   GOFF::ESDLinkageType getLinkage() const { return Linkage; }
+
+  GOFF::ESDBindingScope getBindingScope() const;
 };
 } // end namespace llvm
 
