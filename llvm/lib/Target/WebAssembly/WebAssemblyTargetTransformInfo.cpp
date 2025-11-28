@@ -524,12 +524,12 @@ static Value *simplifyWasmSwizzle(const IntrinsicInst &II,
       continue;
     }
 
-    int64_t Index = cast<ConstantInt>(COp)->getSExtValue();
-
-    if (Index >= NumElts && IsRelaxed) {
-      // For lane indices above 15, the relaxed_swizzle operation can choose
-      // between returning 0 or the lane at `Index % 16`. However, the choice
-      // must be made consistently. As the WebAssembly spec states:
+    if (IsRelaxed && cast<ConstantInt>(COp)->getSExtValue() >= NumElts) {
+      // The relaxed_swizzle operation always returns 0 if the lane index is
+      // less than 0 when interpreted as a signed value. For lane indices above
+      // 15, however, it can choose between returning 0 or the lane at `Index %
+      // 16`. However, the choice must be made consistently. As the WebAssembly
+      // spec states:
       //
       // "The result of relaxed operators are implementation-dependent, because
       // the set of possible results may depend on properties of the host
@@ -544,7 +544,8 @@ static Value *simplifyWasmSwizzle(const IntrinsicInst &II,
       return nullptr;
     }
 
-    if (Index >= NumElts || Index < 0) {
+    uint64_t Index = cast<ConstantInt>(COp)->getZExtValue();
+    if (Index >= NumElts) {
       AnyOutOfBounds = true;
       // If there are out-of-bounds indices, the swizzle instruction returns
       // zeroes in those lanes. We'll provide an all-zeroes vector as the
