@@ -2464,6 +2464,24 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
   return nullptr;
 }
 
+Value *LibCallSimplifier::foldLdexp(CallInst *CI,IRBuilderBase &B) {
+
+  Type*RequiredType = CI->getType();
+  if(!RequiredType->isFPOrFPVectorTy())
+    return nullptr;
+
+  Value*x = CI->getArgOperand(0); 
+  Value*exp = CI->getArgOperand(1);
+  Module*M = CI->getModule();
+
+  Function*ldexpDecl = llvm::Intrinsic::getOrInsertDeclaration(M, Intrinsic::ldexp,{RequiredType, exp->getType()});
+  
+  CallInst *NewCall = B.CreateCall(ldexpDecl, {x, exp}, CI->getName());
+  NewCall->setAttributes(CI->getAttributes());
+  return copyFlags(*CI, NewCall);
+}
+
+
 Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
   Module *M = CI->getModule();
   Function *Callee = CI->getCalledFunction();
@@ -4031,6 +4049,17 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_exp2:
   case LibFunc_exp2f:
     return optimizeExp2(CI, Builder);
+  // New ldexp / scalbn / scalbln family:
+  case LibFunc_ldexp:
+  case LibFunc_ldexpf:
+  case LibFunc_ldexpl:
+  case LibFunc_scalbn:
+  case LibFunc_scalbnf:
+  case LibFunc_scalbnl:
+  case LibFunc_scalbln:
+  case LibFunc_scalblnf:
+  case LibFunc_scalblnl:
+    return foldLdexp(CI, Builder);
   case LibFunc_fabsf:
   case LibFunc_fabs:
   case LibFunc_fabsl:
