@@ -2512,8 +2512,14 @@ entry:
 define i64 @loadcombine_consecutive_mayalias(ptr %p) {
 ; LE-LABEL: @loadcombine_consecutive_mayalias(
 ; LE-NEXT:  entry:
-; LE-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[P:%.*]], align 4
+; LE-NEXT:    [[LOAD3:%.*]] = load i32, ptr [[P:%.*]], align 4
+; LE-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[P]], i64 4
 ; LE-NEXT:    store i8 0, ptr getelementptr inbounds nuw (i8, ptr @g, i64 4), align 4
+; LE-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[GEP1]], align 4
+; LE-NEXT:    [[TMP0:%.*]] = zext i32 [[LOAD2]] to i64
+; LE-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 32
+; LE-NEXT:    [[ZEXT3:%.*]] = zext i32 [[LOAD3]] to i64
+; LE-NEXT:    [[LOAD1:%.*]] = or i64 [[TMP1]], [[ZEXT3]]
 ; LE-NEXT:    [[RES:%.*]] = lshr i64 [[LOAD1]], 32
 ; LE-NEXT:    ret i64 [[RES]]
 ;
