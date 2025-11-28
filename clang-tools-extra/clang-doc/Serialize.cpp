@@ -11,7 +11,9 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
+#include "clang/AST/CommentVisitor.h"
 #include "clang/AST/DeclFriend.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
@@ -175,55 +177,6 @@ static llvm::SmallString<16> getTypeAlias(const TypeAliasDecl *Alias) {
   QualType Q = Alias->getUnderlyingType();
   Q.print(Stream, Ctx.getPrintingPolicy());
 
-  return Result;
-}
-
-// extract full syntax for record declaration
-static llvm::SmallString<16> getRecordPrototype(const CXXRecordDecl *CXXRD) {
-  llvm::SmallString<16> Result;
-  LangOptions LangOpts;
-  PrintingPolicy Policy(LangOpts);
-  Policy.SuppressTagKeyword = false;
-  Policy.FullyQualifiedName = true;
-  Policy.IncludeNewlines = false;
-  llvm::raw_svector_ostream OS(Result);
-  if (const auto *TD = CXXRD->getDescribedClassTemplate()) {
-    OS << "template <";
-    bool FirstParam = true;
-    for (const auto *Param : *TD->getTemplateParameters()) {
-      if (!FirstParam)
-        OS << ", ";
-      Param->print(OS, Policy);
-      FirstParam = false;
-    }
-    OS << ">\n";
-  }
-
-  if (CXXRD->isStruct())
-    OS << "struct ";
-  else if (CXXRD->isClass())
-    OS << "class ";
-  else if (CXXRD->isUnion())
-    OS << "union ";
-
-  OS << CXXRD->getNameAsString();
-
-  // We need to make sure we have a good enough declaration to check. In the
-  // case where the class is a forward declaration, we'll fail assertions  in
-  // DeclCXX.
-  if (CXXRD->isCompleteDefinition() && CXXRD->getNumBases() > 0) {
-    OS << " : ";
-    bool FirstBase = true;
-    for (const auto &Base : CXXRD->bases()) {
-      if (!FirstBase)
-        OS << ", ";
-      if (Base.isVirtual())
-        OS << "virtual ";
-      OS << getAccessSpelling(Base.getAccessSpecifier()) << " ";
-      OS << Base.getType().getAsString(Policy);
-      FirstBase = false;
-    }
-  }
   return Result;
 }
 
@@ -1033,7 +986,6 @@ emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
   parseFields(*RI, D, PublicOnly);
 
   if (const auto *C = dyn_cast<CXXRecordDecl>(D)) {
-    RI->FullName = getRecordPrototype(C);
     if (const TypedefNameDecl *TD = C->getTypedefNameForAnonDecl()) {
       RI->Name = TD->getNameAsString();
       RI->IsTypeDef = true;

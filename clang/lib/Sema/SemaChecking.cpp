@@ -1263,6 +1263,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   switch (BuiltinID) {
   default:
     return;
+  case Builtin::BI__builtin_strcat:
+  case Builtin::BIstrcat:
   case Builtin::BI__builtin_stpcpy:
   case Builtin::BIstpcpy:
   case Builtin::BI__builtin_strcpy:
@@ -1273,6 +1275,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BI__builtin___strcat_chk:
   case Builtin::BI__builtin___stpcpy_chk:
   case Builtin::BI__builtin___strcpy_chk: {
     DiagID = diag::warn_fortify_strlen_overflow;
@@ -1512,7 +1515,7 @@ static bool checkBuiltinInferAllocToken(Sema &S, CallExpr *TheCall) {
       return S.Diag(Arg->getBeginLoc(), diag::err_param_with_void_type);
   }
 
-  TheCall->setType(S.Context.UnsignedLongLongTy);
+  TheCall->setType(S.Context.getSizeType());
   return false;
 }
 
@@ -2218,6 +2221,39 @@ static bool BuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
   return false;
 }
 
+/// Checks that __builtin_bswapg was called with a single argument, which is an
+/// unsigned integer, and overrides the return value type to the integer type.
+static bool BuiltinBswapg(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 1))
+    return true;
+  ExprResult ArgRes = S.DefaultLvalueConversion(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  Expr *Arg = ArgRes.get();
+  TheCall->setArg(0, Arg);
+  if (Arg->isTypeDependent())
+    return false;
+
+  QualType ArgTy = Arg->getType();
+
+  if (!ArgTy->isIntegerType()) {
+    S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+        << 1 << /*scalar=*/1 << /*unsigned integer=*/1 << /*floating point=*/0
+        << ArgTy;
+    return true;
+  }
+  if (const auto *BT = dyn_cast<BitIntType>(ArgTy)) {
+    if (BT->getNumBits() % 16 != 0 && BT->getNumBits() != 8) {
+      S.Diag(Arg->getBeginLoc(), diag::err_bswapg_invalid_bit_width)
+          << ArgTy << BT->getNumBits();
+      return true;
+    }
+  }
+  TheCall->setType(ArgTy);
+  return false;
+}
+
 /// Checks that __builtin_popcountg was called with a single argument, which is
 /// an unsigned integer.
 static bool BuiltinPopcountg(Sema &S, CallExpr *TheCall) {
@@ -2607,6 +2643,18 @@ static ExprResult BuiltinInvoke(Sema &S, CallExpr *TheCall) {
   }
   return S.ActOnCallExpr(S.getCurScope(), Args.front(), TheCall->getBeginLoc(),
                          Args.drop_front(), TheCall->getRParenLoc());
+}
+
+// Performs a similar job to Sema::UsualUnaryConversions, but without any
+// implicit promotion of integral/enumeration types.
+static ExprResult BuiltinVectorMathConversions(Sema &S, Expr *E) {
+  // First, convert to an r-value.
+  ExprResult Res = S.DefaultFunctionArrayLvalueConversion(E);
+  if (Res.isInvalid())
+    return ExprError();
+
+  // Promote floating-point types.
+  return S.UsualUnaryFPConversions(Res.get());
 }
 
 ExprResult
@@ -3273,6 +3321,46 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
 
+  case Builtin::BI__builtin_elementwise_ldexp: {
+    if (checkArgCount(TheCall, 2))
+      return ExprError();
+
+    ExprResult A = BuiltinVectorMathConversions(*this, TheCall->getArg(0));
+    if (A.isInvalid())
+      return ExprError();
+    QualType TyA = A.get()->getType();
+    if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA,
+                                    EltwiseBuiltinArgTyRestriction::FloatTy, 1))
+      return ExprError();
+
+    ExprResult Exp = UsualUnaryConversions(TheCall->getArg(1));
+    if (Exp.isInvalid())
+      return ExprError();
+    QualType TyExp = Exp.get()->getType();
+    if (checkMathBuiltinElementType(*this, Exp.get()->getBeginLoc(), TyExp,
+                                    EltwiseBuiltinArgTyRestriction::IntegerTy,
+                                    2))
+      return ExprError();
+
+    // Check the two arguments are either scalars or vectors of equal length.
+    const auto *Vec0 = TyA->getAs<VectorType>();
+    const auto *Vec1 = TyExp->getAs<VectorType>();
+    unsigned Arg0Length = Vec0 ? Vec0->getNumElements() : 0;
+    unsigned Arg1Length = Vec1 ? Vec1->getNumElements() : 0;
+    if (Arg0Length != Arg1Length) {
+      Diag(Exp.get()->getBeginLoc(),
+           diag::err_typecheck_vector_lengths_not_equal)
+          << TyA << TyExp << A.get()->getSourceRange()
+          << Exp.get()->getSourceRange();
+      return ExprError();
+    }
+
+    TheCall->setArg(0, A.get());
+    TheCall->setArg(1, Exp.get());
+    TheCall->setType(TyA);
+    break;
+  }
+
   // These builtins restrict the element type to floating point
   // types only, and take in two arguments.
   case Builtin::BI__builtin_elementwise_minnum:
@@ -3470,6 +3558,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+  case Builtin::BI__builtin_bswapg:
+    if (BuiltinBswapg(*this, TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_popcountg:
     if (BuiltinPopcountg(*this, TheCall))
       return ExprError();
@@ -3542,9 +3634,7 @@ bool Sema::ValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum) {
 
 bool Sema::getFormatStringInfo(const Decl *D, unsigned FormatIdx,
                                unsigned FirstArg, FormatStringInfo *FSI) {
-  bool IsCXXMember = false;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
-    IsCXXMember = MD->isInstance();
+  bool HasImplicitThisParam = hasImplicitObjectParameter(D);
   bool IsVariadic = false;
   if (const FunctionType *FnTy = D->getFunctionType())
     IsVariadic = cast<FunctionProtoType>(FnTy)->isVariadic();
@@ -3553,11 +3643,12 @@ bool Sema::getFormatStringInfo(const Decl *D, unsigned FormatIdx,
   else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(D))
     IsVariadic = OMD->isVariadic();
 
-  return getFormatStringInfo(FormatIdx, FirstArg, IsCXXMember, IsVariadic, FSI);
+  return getFormatStringInfo(FormatIdx, FirstArg, HasImplicitThisParam,
+                             IsVariadic, FSI);
 }
 
 bool Sema::getFormatStringInfo(unsigned FormatIdx, unsigned FirstArg,
-                               bool IsCXXMember, bool IsVariadic,
+                               bool HasImplicitThisParam, bool IsVariadic,
                                FormatStringInfo *FSI) {
   if (FirstArg == 0)
     FSI->ArgPassingKind = FAPK_VAList;
@@ -3571,7 +3662,7 @@ bool Sema::getFormatStringInfo(unsigned FormatIdx, unsigned FirstArg,
   // The way the format attribute works in GCC, the implicit this argument
   // of member functions is counted. However, it doesn't appear in our own
   // lists, so decrement format_idx in that case.
-  if (IsCXXMember) {
+  if (HasImplicitThisParam) {
     if(FSI->FormatIdx == 0)
       return false;
     --FSI->FormatIdx;
@@ -4391,6 +4482,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__scoped_atomic_or_fetch:
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_nand_fetch:
+  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
+  case AtomicExpr::AO__scoped_atomic_udec_wrap:
     Form = Arithmetic;
     break;
 
@@ -12373,14 +12466,9 @@ static void DiagnoseMixedUnicodeImplicitConversion(Sema &S, const Type *Source,
   }
 }
 
-enum CFIUncheckedCalleeChange {
-  None,
-  Adding,
-  Discarding,
-};
-
-static CFIUncheckedCalleeChange AdjustingCFIUncheckedCallee(QualType From,
-                                                            QualType To) {
+bool Sema::DiscardingCFIUncheckedCallee(QualType From, QualType To) const {
+  From = Context.getCanonicalType(From);
+  To = Context.getCanonicalType(To);
   QualType MaybePointee = From->getPointeeType();
   if (!MaybePointee.isNull() && MaybePointee->getAs<FunctionType>())
     From = MaybePointee;
@@ -12392,25 +12480,10 @@ static CFIUncheckedCalleeChange AdjustingCFIUncheckedCallee(QualType From,
     if (const auto *ToFn = To->getAs<FunctionType>()) {
       if (FromFn->getCFIUncheckedCalleeAttr() &&
           !ToFn->getCFIUncheckedCalleeAttr())
-        return Discarding;
-      if (!FromFn->getCFIUncheckedCalleeAttr() &&
-          ToFn->getCFIUncheckedCalleeAttr())
-        return Adding;
+        return true;
     }
   }
-  return None;
-}
-
-bool Sema::DiscardingCFIUncheckedCallee(QualType From, QualType To) const {
-  From = Context.getCanonicalType(From);
-  To = Context.getCanonicalType(To);
-  return ::AdjustingCFIUncheckedCallee(From, To) == Discarding;
-}
-
-bool Sema::AddingCFIUncheckedCallee(QualType From, QualType To) const {
-  From = Context.getCanonicalType(From);
-  To = Context.getCanonicalType(To);
-  return ::AdjustingCFIUncheckedCallee(From, To) == Adding;
+  return false;
 }
 
 void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
@@ -16011,18 +16084,6 @@ void Sema::CheckAddressOfPackedMember(Expr *rhs) {
   RefersToMemberWithReducedAlignment(
       rhs, std::bind(&Sema::AddPotentialMisalignedMembers, std::ref(*this), _1,
                      _2, _3, _4));
-}
-
-// Performs a similar job to Sema::UsualUnaryConversions, but without any
-// implicit promotion of integral/enumeration types.
-static ExprResult BuiltinVectorMathConversions(Sema &S, Expr *E) {
-  // First, convert to an r-value.
-  ExprResult Res = S.DefaultFunctionArrayLvalueConversion(E);
-  if (Res.isInvalid())
-    return ExprError();
-
-  // Promote floating-point types.
-  return S.UsualUnaryFPConversions(Res.get());
 }
 
 bool Sema::PrepareBuiltinElementwiseMathOneArgCall(

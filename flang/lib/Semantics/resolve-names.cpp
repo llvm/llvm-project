@@ -1605,6 +1605,12 @@ public:
     Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
+  void Post(const parser::OmpTypeName &);
+  bool Pre(const parser::OmpStylizedDeclaration &);
+  void Post(const parser::OmpStylizedDeclaration &);
+  bool Pre(const parser::OmpStylizedInstance &);
+  void Post(const parser::OmpStylizedInstance &);
+
   bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
@@ -1612,18 +1618,6 @@ public:
 
   bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
     AddOmpSourceRange(x.source);
-    return true;
-  }
-
-  bool Pre(const parser::OmpInitializerProc &x) {
-    auto &procDes = std::get<parser::ProcedureDesignator>(x.t);
-    auto &name = std::get<parser::Name>(procDes.u);
-    auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
-    if (!symbol) {
-      context().Say(name.source,
-          "Implicit subroutine declaration '%s' in DECLARE REDUCTION"_err_en_US,
-          name.source);
-    }
     return true;
   }
 
@@ -1706,12 +1700,12 @@ public:
   void Post(const parser::OpenMPDeclareTargetConstruct &) {
     SkipImplicitTyping(false);
   }
-  bool Pre(const parser::OpenMPDeclarativeAllocate &x) {
+  bool Pre(const parser::OmpAllocateDirective &x) {
     AddOmpSourceRange(x.source);
     SkipImplicitTyping(true);
     return true;
   }
-  void Post(const parser::OpenMPDeclarativeAllocate &) {
+  void Post(const parser::OmpAllocateDirective &) {
     SkipImplicitTyping(false);
     messageHandler().set_currStmtSource(std::nullopt);
   }
@@ -1772,14 +1766,6 @@ public:
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
-  bool Pre(const parser::OmpTypeSpecifier &x) {
-    BeginDeclTypeSpec();
-    return true;
-  }
-  void Post(const parser::OmpTypeSpecifier &x) { //
-    EndDeclTypeSpec();
-  }
-
   bool Pre(const parser::OpenMPConstruct &x) {
     // Indicate that the current directive is not a declarative one.
     declaratives_.push_back(nullptr);
@@ -1835,6 +1821,30 @@ void OmpVisitor::Post(const parser::OmpBlockConstruct &x) {
   }
 }
 
+void OmpVisitor::Post(const parser::OmpTypeName &x) {
+  x.declTypeSpec = GetDeclTypeSpec();
+}
+
+bool OmpVisitor::Pre(const parser::OmpStylizedDeclaration &x) {
+  BeginDecl();
+  Walk(x.type.get());
+  Walk(x.var);
+  return true;
+}
+
+void OmpVisitor::Post(const parser::OmpStylizedDeclaration &x) { //
+  EndDecl();
+}
+
+bool OmpVisitor::Pre(const parser::OmpStylizedInstance &x) {
+  PushScope(Scope::Kind::OtherConstruct, nullptr);
+  return true;
+}
+
+void OmpVisitor::Post(const parser::OmpStylizedInstance &x) { //
+  PopScope();
+}
+
 bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
   auto &mods{OmpGetModifiers(x)};
   if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
@@ -1842,21 +1852,25 @@ bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
       // TODO: Do we need a specific flag or type here, to distinghuish against
       // other ConstructName things? Leaving this for the full implementation
       // of mapper lowering.
-      auto *misc{symbol->detailsIf<MiscDetails>()};
-      if (!misc || misc->kind() != MiscDetails::Kind::ConstructName)
+      auto &ultimate{symbol->GetUltimate()};
+      auto *misc{ultimate.detailsIf<MiscDetails>()};
+      auto *md{ultimate.detailsIf<MapperDetails>()};
+      if (!md && (!misc || misc->kind() != MiscDetails::Kind::ConstructName))
         context().Say(mapper->v.source,
             "Name '%s' should be a mapper name"_err_en_US, mapper->v.source);
       else
         mapper->v.symbol = symbol;
     } else {
-      mapper->v.symbol =
-          &MakeSymbol(mapper->v, MiscDetails{MiscDetails::Kind::ConstructName});
-      // TODO: When completing the implementation, we probably want to error if
-      // the symbol is not declared, but right now, testing that the TODO for
-      // OmpMapClause happens is obscured by the TODO for declare mapper, so
-      // leaving this out. Remove the above line once the declare mapper is
-      // implemented. context().Say(mapper->v.source, "'%s' not
-      // declared"_err_en_US, mapper->v.source);
+      // Allow the special 'default' mapper identifier without prior
+      // declaration so lowering can recognize and handle it. Emit an
+      // error for any other missing mapper identifier.
+      if (mapper->v.source.ToString() == "default") {
+        mapper->v.symbol = &MakeSymbol(
+            mapper->v, MiscDetails{MiscDetails::Kind::ConstructName});
+      } else {
+        context().Say(
+            mapper->v.source, "'%s' not declared"_err_en_US, mapper->v.source);
+      }
     }
   }
   return true;
@@ -1870,8 +1884,16 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   // the type has been fully processed.
   BeginDeclTypeSpec();
   auto &mapperName{std::get<std::string>(spec.t)};
-  MakeSymbol(parser::CharBlock(mapperName), Attrs{},
-      MiscDetails{MiscDetails::Kind::ConstructName});
+  // Create or update the mapper symbol with MapperDetails and
+  // keep track of the declarative construct for module emission.
+  SourceName mapperSource{context().SaveTempName(std::string{mapperName})};
+  Symbol &mapperSym{MakeSymbol(mapperSource, Attrs{})};
+  if (!mapperSym.detailsIf<MapperDetails>()) {
+    mapperSym.set_details(MapperDetails{});
+  }
+  if (!context().langOptions().OpenMPSimd) {
+    mapperSym.get<MapperDetails>().AddDecl(declaratives_.back());
+  }
   PushScope(Scope::Kind::OtherConstruct, nullptr);
   Walk(std::get<parser::TypeSpec>(spec.t));
   auto &varName{std::get<parser::Name>(spec.t)};
@@ -1969,50 +1991,19 @@ void OmpVisitor::ProcessReductionSpecifier(
     }
   }
 
-  auto &typeList{std::get<parser::OmpTypeNameList>(spec.t)};
-
-  // Create a temporary variable declaration for the four variables
-  // used in the reduction specifier and initializer (omp_out, omp_in,
-  // omp_priv and omp_orig), with the type in the  typeList.
-  //
-  // In theory it would be possible to create only variables that are
-  // actually used, but that requires walking the entire parse-tree of the
-  // expressions, and finding the relevant variables [there may well be other
-  // variables involved too].
-  //
-  // This allows doing semantic analysis where the type is a derived type
-  // e.g omp_out%x = omp_out%x + omp_in%x.
-  //
-  // These need to be temporary (in their own scope). If they are created
-  // as variables in the outer scope, if there's more than one type in the
-  // typelist, duplicate symbols will be reported.
-  const parser::CharBlock ompVarNames[]{
-      {"omp_in", 6}, {"omp_out", 7}, {"omp_priv", 8}, {"omp_orig", 8}};
-
-  for (auto &t : typeList.v) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
-    BeginDeclTypeSpec();
-    // We need to walk t.u because Walk(t) does it's own BeginDeclTypeSpec.
-    Walk(t.u);
-
-    // Only process types we can find. There will be an error later on when
-    // a type isn't found.
-    if (const DeclTypeSpec *typeSpec{GetDeclTypeSpec()}) {
-      reductionDetails->AddType(*typeSpec);
-
-      for (auto &nm : ompVarNames) {
-        ObjectEntityDetails details{};
-        details.set_type(*typeSpec);
-        MakeSymbol(nm, Attrs{}, std::move(details));
-      }
-    }
-    EndDeclTypeSpec();
-    Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
-    Walk(clauses);
-    PopScope();
-  }
-
   reductionDetails->AddDecl(declaratives_.back());
+
+  // Do not walk OmpTypeNameList. The types on the list will be visited
+  // during procesing of OmpCombinerExpression.
+  Walk(std::get<std::optional<parser::OmpCombinerExpression>>(spec.t));
+  Walk(clauses);
+
+  for (auto &type : std::get<parser::OmpTypeNameList>(spec.t).v) {
+    // The declTypeSpec can be null if there is some semantic error.
+    if (type.declTypeSpec) {
+      reductionDetails->AddType(*type.declTypeSpec);
+    }
+  }
 
   if (!symbol) {
     symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
@@ -3632,10 +3623,20 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
           rename.u);
     }
     for (const auto &[name, symbol] : *useModuleScope_) {
+      // Default USE imports public names, excluding intrinsic-only and most
+      // miscellaneous details. Allow OpenMP mapper identifiers represented
+      // as MapperDetails, and also legacy MiscDetails::ConstructName.
+      bool isMapper{symbol->has<MapperDetails>()};
+      if (!isMapper) {
+        if (const auto *misc{symbol->detailsIf<MiscDetails>()}) {
+          isMapper = misc->kind() == MiscDetails::Kind::ConstructName;
+        }
+      }
       if (symbol->attrs().test(Attr::PUBLIC) && !IsUseRenamed(symbol->name()) &&
           (!symbol->implicitAttrs().test(Attr::INTRINSIC) ||
               symbol->has<UseDetails>()) &&
-          !symbol->has<MiscDetails>() && useNames.count(name) == 0) {
+          (!symbol->has<MiscDetails>() || isMapper) &&
+          useNames.count(name) == 0) {
         SourceName location{x.moduleName.source};
         if (auto *localSymbol{FindInScope(name)}) {
           DoAddUse(location, localSymbol->name(), *localSymbol, *symbol);
@@ -3966,22 +3967,6 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     useProcedure = &useUltimate;
   }
 
-  // Creates a UseErrorDetails symbol in the current scope for a
-  // current UseDetails symbol, but leaves the UseDetails in the
-  // scope's name map.
-  auto CreateLocalUseError{[&]() {
-    EraseSymbol(*localSymbol);
-    CHECK(localSymbol->has<UseDetails>());
-    UseErrorDetails details{localSymbol->get<UseDetails>()};
-    details.add_occurrence(location, useSymbol);
-    Symbol *newSymbol{&MakeSymbol(localName, Attrs{}, std::move(details))};
-    // Restore *localSymbol in currScope
-    auto iter{currScope().find(localName)};
-    CHECK(iter != currScope().end() && &*iter->second == newSymbol);
-    iter->second = MutableSymbolRef{*localSymbol};
-    return newSymbol;
-  }};
-
   // When two derived types arrived, try to combine them.
   const Symbol *combinedDerivedType{nullptr};
   if (!useDerivedType) {
@@ -4007,8 +3992,19 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       combinedDerivedType = localDerivedType;
     } else {
       // Create a local UseErrorDetails for the ambiguous derived type
-      if (localGeneric) {
-        combinedDerivedType = CreateLocalUseError();
+      if (localSymbol->has<UseDetails>() && localGeneric) {
+        // Creates a UseErrorDetails symbol in the current scope for a
+        // current UseDetails symbol, but leaves the UseDetails in the
+        // scope's name map.
+        UseErrorDetails details{localSymbol->get<UseDetails>()};
+        EraseSymbol(*localSymbol);
+        details.add_occurrence(location, useSymbol);
+        Symbol *newSymbol{&MakeSymbol(localName, Attrs{}, std::move(details))};
+        // Restore *localSymbol in currScope
+        auto iter{currScope().find(localName)};
+        CHECK(iter != currScope().end() && &*iter->second == newSymbol);
+        iter->second = MutableSymbolRef{*localSymbol};
+        combinedDerivedType = newSymbol;
       } else {
         ConvertToUseError(*localSymbol, location, useSymbol);
         localDerivedType = nullptr;
@@ -9194,11 +9190,11 @@ bool DeclarationVisitor::CheckNonPointerInitialization(
               "'%s' has already been initialized"_err_en_US);
         } else if (IsAllocatable(ultimate)) {
           Say(name, "Allocatable object '%s' cannot be initialized"_err_en_US);
+        } else if (details->isCDefined()) {
+          // CDEFINED variables cannot have initializer, because their storage
+          // may come outside of Fortran.
+          Say(name, "CDEFINED variable cannot be initialized"_err_en_US);
         } else {
-          if (details->isCDefined()) {
-            context().Warn(common::UsageWarning::CdefinedInit, name.source,
-                "CDEFINED variable should not have an initializer"_warn_en_US);
-          }
           return true;
         }
       } else {
@@ -9456,13 +9452,18 @@ bool ResolveNamesVisitor::SetProcFlag(
     SayWithDecl(name, symbol,
         "Implicit declaration of function '%s' has a different result type than in previous declaration"_err_en_US);
     return false;
-  } else if (symbol.has<ProcEntityDetails>()) {
-    symbol.set(flag); // in case it hasn't been set yet
-    if (flag == Symbol::Flag::Function) {
-      ApplyImplicitRules(symbol);
-    }
-    if (symbol.attrs().test(Attr::INTRINSIC)) {
-      AcquireIntrinsicProcedureFlags(symbol);
+  } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
+    if (IsPointer(symbol) && !proc->type() && !proc->procInterface()) {
+      // PROCEDURE(), POINTER -- errors will be emitted later about a lack
+      // of known characteristics if used as a function
+    } else {
+      symbol.set(flag); // in case it hasn't been set yet
+      if (flag == Symbol::Flag::Function) {
+        ApplyImplicitRules(symbol);
+      }
+      if (symbol.attrs().test(Attr::INTRINSIC)) {
+        AcquireIntrinsicProcedureFlags(symbol);
+      }
     }
   } else if (symbol.GetType() && flag == Symbol::Flag::Subroutine) {
     SayWithDecl(
@@ -10078,7 +10079,12 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoVector>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoUnroll>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::ForceInline>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::Inline>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::Prefetch>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoInline>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::IVDep>(x.u)) {
     return;
   }
   if (const auto *tkr{
@@ -10126,6 +10132,9 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
                 break;
               case 'c':
                 set.set(common::IgnoreTKR::Contiguous);
+                break;
+              case 'p':
+                set.set(common::IgnoreTKR::Pointer);
                 break;
               case 'a':
                 set = common::ignoreTKRAll;

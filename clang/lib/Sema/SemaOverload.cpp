@@ -1825,20 +1825,34 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
     return ICS;
   }
 
-  if (S.getLangOpts().HLSL && ToType->isHLSLAttributedResourceType() &&
-      FromType->isHLSLAttributedResourceType()) {
-    auto *ToResType = cast<HLSLAttributedResourceType>(ToType);
-    auto *FromResType = cast<HLSLAttributedResourceType>(FromType);
-    if (S.Context.hasSameUnqualifiedType(ToResType->getWrappedType(),
-                                         FromResType->getWrappedType()) &&
-        S.Context.hasSameUnqualifiedType(ToResType->getContainedType(),
-                                         FromResType->getContainedType()) &&
-        ToResType->getAttrs() == FromResType->getAttrs()) {
-      ICS.setStandard();
-      ICS.Standard.setAsIdentityConversion();
-      ICS.Standard.setFromType(FromType);
-      ICS.Standard.setAllToTypes(ToType);
-      return ICS;
+  if (S.getLangOpts().HLSL) {
+    // Handle conversion of the HLSL resource types.
+    const Type *FromTy = FromType->getUnqualifiedDesugaredType();
+    if (FromTy->isHLSLAttributedResourceType()) {
+      // Attributed resource types can convert to other attributed
+      // resource types with the same attributes and contained types,
+      // or to __hlsl_resource_t without any attributes.
+      bool CanConvert = false;
+      const Type *ToTy = ToType->getUnqualifiedDesugaredType();
+      if (ToTy->isHLSLAttributedResourceType()) {
+        auto *ToResType = cast<HLSLAttributedResourceType>(ToTy);
+        auto *FromResType = cast<HLSLAttributedResourceType>(FromTy);
+        if (S.Context.hasSameUnqualifiedType(ToResType->getWrappedType(),
+                                             FromResType->getWrappedType()) &&
+            S.Context.hasSameUnqualifiedType(ToResType->getContainedType(),
+                                             FromResType->getContainedType()) &&
+            ToResType->getAttrs() == FromResType->getAttrs())
+          CanConvert = true;
+      } else if (ToTy->isHLSLResourceType()) {
+        CanConvert = true;
+      }
+      if (CanConvert) {
+        ICS.setStandard();
+        ICS.Standard.setAsIdentityConversion();
+        ICS.Standard.setFromType(FromType);
+        ICS.Standard.setAllToTypes(ToType);
+        return ICS;
+      }
     }
   }
 
@@ -2532,15 +2546,12 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
 
   SCS.setToType(2, FromType);
 
-  // If we have not converted the argument type to the parameter type,
-  // this is a bad conversion sequence, unless we're resolving an overload in C.
-  //
-  // Permit conversions from a function without `cfi_unchecked_callee` to a
-  // function with `cfi_unchecked_callee`.
-  if (CanonFrom == CanonTo || S.AddingCFIUncheckedCallee(CanonFrom, CanonTo))
+  if (CanonFrom == CanonTo)
     return true;
 
-  if ((S.getLangOpts().CPlusPlus || !InOverloadResolution))
+  // If we have not converted the argument type to the parameter type,
+  // this is a bad conversion sequence, unless we're resolving an overload in C.
+  if (S.getLangOpts().CPlusPlus || !InOverloadResolution)
     return false;
 
   ExprResult ER = ExprResult{From};

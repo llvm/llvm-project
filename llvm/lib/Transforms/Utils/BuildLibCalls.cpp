@@ -1283,6 +1283,12 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_ilogbl:
   case LibFunc_logf:
   case LibFunc_logl:
+  case LibFunc_nextafter:
+  case LibFunc_nextafterf:
+  case LibFunc_nextafterl:
+  case LibFunc_nexttoward:
+  case LibFunc_nexttowardf:
+  case LibFunc_nexttowardl:
   case LibFunc_pow:
   case LibFunc_powf:
   case LibFunc_powl:

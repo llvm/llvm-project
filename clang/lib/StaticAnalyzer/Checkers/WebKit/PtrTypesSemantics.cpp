@@ -578,6 +578,10 @@ public:
     return WithCachedResult(CS, [&]() { return VisitChildren(CS); });
   }
 
+  bool VisitCoroutineBodyStmt(const CoroutineBodyStmt *CBS) {
+    return WithCachedResult(CBS, [&]() { return VisitChildren(CBS); });
+  }
+
   bool VisitReturnStmt(const ReturnStmt *RS) {
     // A return statement is allowed as long as the return value is trivial.
     if (auto *RV = RS->getRetValue())

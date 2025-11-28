@@ -754,6 +754,10 @@ TypeSP SymbolFileNativePDB::CreateArrayType(PdbTypeSymId type_id,
 TypeSP SymbolFileNativePDB::CreateFunctionType(PdbTypeSymId type_id,
                                                const MemberFunctionRecord &mfr,
                                                CompilerType ct) {
+  if (mfr.ReturnType.isSimple())
+    GetOrCreateType(mfr.ReturnType);
+  CreateSimpleArgumentListTypes(mfr.ArgumentList);
+
   Declaration decl;
   return MakeType(toOpaqueUid(type_id), ConstString(), 0, nullptr,
                   LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
@@ -763,10 +767,31 @@ TypeSP SymbolFileNativePDB::CreateFunctionType(PdbTypeSymId type_id,
 TypeSP SymbolFileNativePDB::CreateProcedureType(PdbTypeSymId type_id,
                                                 const ProcedureRecord &pr,
                                                 CompilerType ct) {
+  if (pr.ReturnType.isSimple())
+    GetOrCreateType(pr.ReturnType);
+  CreateSimpleArgumentListTypes(pr.ArgumentList);
+
   Declaration decl;
   return MakeType(toOpaqueUid(type_id), ConstString(), 0, nullptr,
                   LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
                   ct, lldb_private::Type::ResolveState::Full);
+}
+
+void SymbolFileNativePDB::CreateSimpleArgumentListTypes(
+    llvm::codeview::TypeIndex arglist_ti) {
+  if (arglist_ti.isNoneType())
+    return;
+
+  CVType arglist_cvt = m_index->tpi().getType(arglist_ti);
+  if (arglist_cvt.kind() != LF_ARGLIST)
+    return; // invalid debug info
+
+  ArgListRecord alr;
+  llvm::cantFail(
+      TypeDeserializer::deserializeAs<ArgListRecord>(arglist_cvt, alr));
+  for (TypeIndex id : alr.getIndices())
+    if (!id.isNoneType() && id.isSimple())
+      GetOrCreateType(id);
 }
 
 TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
@@ -1105,7 +1130,35 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
   if (!section_list)
     return;
 
-  for (auto pid : m_index->publics().getPublicsTable()) {
+  PublicSym32 last_sym;
+  size_t last_sym_idx = 0;
+  lldb::SectionSP section_sp;
+
+  // To estimate the size of a symbol, we use the difference to the next symbol.
+  // If there's no next symbol or the section/segment changed, the symbol will
+  // take the remaining space. The estimate can be too high in case there's
+  // padding between symbols. This similar to the algorithm used by the DIA
+  // SDK.
+  auto finish_last_symbol = [&](const PublicSym32 *next) {
+    if (!section_sp)
+      return;
+    Symbol *last = symtab.SymbolAtIndex(last_sym_idx);
+    if (!last)
+      return;
+
+    if (next && last_sym.Segment == next->Segment) {
+      assert(last_sym.Offset <= next->Offset);
+      last->SetByteSize(next->Offset - last_sym.Offset);
+    } else {
+      // the last symbol was the last in its section
+      assert(section_sp->GetByteSize() >= last_sym.Offset);
+      assert(!next || next->Segment > last_sym.Segment);
+      last->SetByteSize(section_sp->GetByteSize() - last_sym.Offset);
+    }
+  };
+
+  // The address map is sorted by the address of a symbol.
+  for (auto pid : m_index->publics().getAddressMap()) {
     PdbGlobalSymId global{pid, true};
     CVSymbol sym = m_index->ReadSymbolRecord(global);
     auto kind = sym.kind();
@@ -1113,8 +1166,11 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
       continue;
     PublicSym32 pub =
         llvm::cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(sym));
+    finish_last_symbol(&pub);
 
-    auto section_sp = section_list->FindSectionByID(pub.Segment);
+    if (!section_sp || last_sym.Segment != pub.Segment)
+      section_sp = section_list->FindSectionByID(pub.Segment);
+
     if (!section_sp)
       continue;
 
@@ -1123,20 +1179,24 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
         (pub.Flags & PublicSymFlags::Code) != PublicSymFlags::None)
       type = eSymbolTypeCode;
 
-    symtab.AddSymbol(Symbol(/*symID=*/pid,
-                            /*name=*/pub.Name,
-                            /*type=*/type,
-                            /*external=*/true,
-                            /*is_debug=*/true,
-                            /*is_trampoline=*/false,
-                            /*is_artificial=*/false,
-                            /*section_sp=*/section_sp,
-                            /*value=*/pub.Offset,
-                            /*size=*/0,
-                            /*size_is_valid=*/false,
-                            /*contains_linker_annotations=*/false,
-                            /*flags=*/0));
+    last_sym_idx =
+        symtab.AddSymbol(Symbol(/*symID=*/pid,
+                                /*name=*/pub.Name,
+                                /*type=*/type,
+                                /*external=*/true,
+                                /*is_debug=*/true,
+                                /*is_trampoline=*/false,
+                                /*is_artificial=*/false,
+                                /*section_sp=*/section_sp,
+                                /*value=*/pub.Offset,
+                                /*size=*/0,
+                                /*size_is_valid=*/false,
+                                /*contains_linker_annotations=*/false,
+                                /*flags=*/0));
+    last_sym = pub;
   }
+
+  finish_last_symbol(nullptr);
 }
 
 size_t SymbolFileNativePDB::ParseFunctions(CompileUnit &comp_unit) {

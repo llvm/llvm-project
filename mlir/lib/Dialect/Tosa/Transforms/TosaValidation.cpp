@@ -635,6 +635,8 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(Transpose);
   // Type Conversion
   CHECK_RANKS_AND_SIZES(Cast);
+  CHECK_RANKS_AND_SIZES(CastFromBlockScaled);
+  CHECK_RANKS_AND_SIZES(CastToBlockScaled);
   CHECK_RANKS_AND_SIZES(Rescale);
   // Control Flow Operators
   CHECK_RANKS_AND_SIZES(If);
@@ -657,6 +659,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_SIZES(TransposeConv2D);
   CHECK_SIZES(FFT2d);
   CHECK_SIZES(MatMul);
+  CHECK_SIZES(MatmulTBlockScaled);
   CHECK_SIZES(MaxPool2d);
   CHECK_SIZES(RFFT2d);
   // Scatter/Gather Operators
@@ -690,7 +693,7 @@ LogicalResult TosaValidation::levelCheckSize(Operation *op,
                                  << " shape dimension cannot be dynamic";
     }
 
-    int64_t element_bits = type.getElementTypeBitWidth();
+    int64_t element_bits = tosa::getBitWidth(getElementTypeOrSelf(type));
     int64_t element_bytes = std::max(INT64_C(1), element_bits / 8);
     int64_t size = element_bytes * type.getNumElements();
 
@@ -1192,9 +1195,9 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
 bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
   if (isa<FloatType>(type)) {
     return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
-               Float8E5M2Type>(type);
-  }
-  if (auto intTy = dyn_cast<IntegerType>(type)) {
+               Float8E5M2Type, Float4E2M1FNType, Float6E2M3FNType,
+               Float6E3M2FNType, Float8E8M0FNUType>(type);
+  } else if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isSignless()) {
       switch (intTy.getWidth()) {
       case 1:
@@ -1203,6 +1206,7 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
       case 16:
       case 32:
       case 48:
+      case 64:
         return true;
       }
     } else if (allowUnsigned && intTy.isUnsigned()) {
@@ -1213,20 +1217,27 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
         return true;
       }
     }
-  } else if (mlir::isa<tosa::shapeType>(type)) {
+  } else if (isa<tosa::shapeType>(type))
     return true;
-  }
+  else if (isa<tosa::mxint8Type>(type))
+    return true;
   return false;
 }
 
 void TosaValidation::runOnOperation() {
+  ModuleOp modOp = getOperation();
+  const TargetEnvAttr targetEnvAttr = lookupTargetEnvOrDefault(modOp);
+  const auto maybeTargetEnv =
+      tosa::TargetEnv::createTargetEnvFromAttr(targetEnvAttr, modOp.getLoc());
+  if (failed(maybeTargetEnv))
+    return signalPassFailure();
+  targetEnv = *maybeTargetEnv;
+
   TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
   if (!tosaDialect)
     return;
 
-  targetEnv = tosa::TargetEnv(lookupTargetEnvOrDefault(getOperation()));
-
-  getOperation().walk([&](Operation *op) {
+  modOp.walk([&](Operation *op) {
     if (op->getDialect() != tosaDialect)
       return;
 

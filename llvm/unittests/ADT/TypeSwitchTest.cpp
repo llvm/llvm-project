@@ -142,3 +142,44 @@ TEST(TypeSwitchTest, DefaultUnreachableWithVoid) {
   EXPECT_DEATH((void)translate(DerivedD()), "Unhandled type");
 #endif
 }
+
+TEST(TypeSwitchTest, DefaultNullopt) {
+  auto translate = [](auto value) {
+    return TypeSwitch<Base *, std::optional<int>>(&value)
+        .Case([](DerivedA *) { return 0; })
+        .Default(std::nullopt);
+  };
+  EXPECT_EQ(0, translate(DerivedA()));
+  EXPECT_EQ(std::nullopt, translate(DerivedD()));
+}
+
+TEST(TypeSwitchTest, DefaultNullptr) {
+  float foo = 0.0f;
+  auto translate = [&](auto value) {
+    return TypeSwitch<Base *, float *>(&value)
+        .Case([&](DerivedA *) { return &foo; })
+        .Default(nullptr);
+  };
+  EXPECT_EQ(&foo, translate(DerivedA()));
+  EXPECT_EQ(nullptr, translate(DerivedD()));
+}
+
+TEST(TypeSwitchTest, DefaultNullptrForPointerLike) {
+  struct Value {
+    void *ptr;
+    Value(const Value &other) = default;
+    Value(std::nullptr_t) : ptr(nullptr) {}
+    Value() : Value(nullptr) {}
+  };
+
+  float foo = 0.0f;
+  Value fooVal;
+  fooVal.ptr = &foo;
+  auto translate = [&](auto value) {
+    return TypeSwitch<Base *, Value>(&value)
+        .Case([&](DerivedA *) { return fooVal; })
+        .Default(nullptr);
+  };
+  EXPECT_EQ(&foo, translate(DerivedA()).ptr);
+  EXPECT_EQ(nullptr, translate(DerivedD()).ptr);
+}
