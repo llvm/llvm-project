@@ -124,6 +124,9 @@ endif ()
 set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
   "Fortran compiler to use for testing OpenMP runtime libraries.")
 
+set(LIBOMP_FORTRAN_MODULES FALSE CACHE BOOL
+  "Create Fortran module files? (requires fortran compiler)")
+
 # Set up testing infrastructure.
 include(OpenMPTesting)
 
