@@ -41,8 +41,6 @@ public:
 
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override {}
-
-  void emitExterns();
 };
 
 } // end namespace llvm

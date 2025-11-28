@@ -71,7 +71,3 @@ const MCExpr *SystemZTargetGOFFStreamer::createWordDiffExpr(
 MCGOFFStreamer &SystemZTargetGOFFStreamer::getGOFFStreamer() {
   return static_cast<MCGOFFStreamer &>(getStreamer());
 }
-
-void SystemZTargetGOFFStreamer::emitExterns() {
-  getGOFFStreamer().emitExterns();
-}
