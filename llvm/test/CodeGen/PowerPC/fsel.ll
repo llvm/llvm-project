@@ -1,12 +1,12 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=-vsx | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -enable-no-infs-fp-math -enable-no-nans-fp-math -mattr=-vsx | FileCheck -check-prefix=CHECK-FM %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -enable-no-infs-fp-math -enable-no-nans-fp-math -mattr=+vsx | FileCheck -check-prefix=CHECK-FM-VSX %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -enable-no-infs-fp-math -mattr=-vsx | FileCheck -check-prefix=CHECK-FM %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -enable-no-infs-fp-math -mattr=+vsx | FileCheck -check-prefix=CHECK-FM-VSX %s
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
 define double @zerocmp1(double %a, double %y, double %z) #0 {
 entry:
-  %cmp = fcmp ult double %a, 0.000000e+00
+  %cmp = fcmp nnan ult double %a, 0.000000e+00
   %z.y = select i1 %cmp, double %z, double %y
   ret double %z.y
 
@@ -25,7 +25,7 @@ entry:
 
 define double @zerocmp2(double %a, double %y, double %z) #0 {
 entry:
-  %cmp = fcmp ogt double %a, 0.000000e+00
+  %cmp = fcmp nnan ogt double %a, 0.000000e+00
   %y.z = select i1 %cmp, double %y, double %z
   ret double %y.z
 
@@ -46,7 +46,7 @@ entry:
 
 define double @zerocmp3(double %a, double %y, double %z) #0 {
 entry:
-  %cmp = fcmp oeq double %a, 0.000000e+00
+  %cmp = fcmp nnan oeq double %a, 0.000000e+00
   %y.z = select i1 %cmp, double %y, double %z
   ret double %y.z
 
@@ -69,7 +69,7 @@ entry:
 
 define double @min1(double %a, double %b) #0 {
 entry:
-  %cmp = fcmp ole double %a, %b
+  %cmp = fcmp nnan ole double %a, %b
   %cond = select i1 %cmp, double %a, double %b
   ret double %cond
 
@@ -90,7 +90,7 @@ entry:
 
 define double @max1(double %a, double %b) #0 {
 entry:
-  %cmp = fcmp oge double %a, %b
+  %cmp = fcmp nnan oge double %a, %b
   %cond = select i1 %cmp, double %a, double %b
   ret double %cond
 
@@ -111,7 +111,7 @@ entry:
 
 define double @cmp1(double %a, double %b, double %y, double %z) #0 {
 entry:
-  %cmp = fcmp ult double %a, %b
+  %cmp = fcmp nnan ult double %a, %b
   %z.y = select i1 %cmp, double %z, double %y
   ret double %z.y
 
@@ -132,7 +132,7 @@ entry:
 
 define double @cmp2(double %a, double %b, double %y, double %z) #0 {
 entry:
-  %cmp = fcmp ogt double %a, %b
+  %cmp = fcmp nnan ogt double %a, %b
   %y.z = select i1 %cmp, double %y, double %z
   ret double %y.z
 
@@ -153,7 +153,7 @@ entry:
 
 define double @cmp3(double %a, double %b, double %y, double %z) #0 {
 entry:
-  %cmp = fcmp oeq double %a, %b
+  %cmp = fcmp nnan oeq double %a, %b
   %y.z = select i1 %cmp, double %y, double %z
   ret double %y.z
 
