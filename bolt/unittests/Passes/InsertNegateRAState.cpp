@@ -219,6 +219,14 @@ TEST_P(PassTester, fillUnknownStateInBBTest) {
   auto CFILoc = findCFIOffsets(*BF);
   EXPECT_EQ(CFILoc.size(), 1u);
   EXPECT_EQ(CFILoc[0], 4);
+  // Check that the pass set Unknown and Unknown1 to signed.
+  // begin() is the CFI, begin() + 1 is Unknown, begin() + 2 is Unknown1.
+  std::optional<bool> RAState = BC->MIB->getRAState(*(BB2->begin() + 1));
+  EXPECT_TRUE(RAState.has_value());
+  EXPECT_TRUE(*RAState);
+  std::optional<bool> RAState1 = BC->MIB->getRAState(*(BB2->begin() + 2));
+  EXPECT_TRUE(RAState1.has_value());
+  EXPECT_TRUE(*RAState1);
 }
 
 TEST_P(PassTester, fillUnknownStubs) {
@@ -314,9 +322,9 @@ TEST_P(PassTester, fillUnknownStubsEmpty) {
 
   // Check that BOLT added an RAState to BB2.
   std::optional<bool> RAState = BC->MIB->getRAState(*(BB2->begin()));
-  ASSERT_TRUE(RAState.has_value());
+  EXPECT_TRUE(RAState.has_value());
   // BB2 should be set to BF.initialRAState (false).
-  ASSERT_FALSE(*RAState);
+  EXPECT_FALSE(*RAState);
 }
 
 #ifdef AARCH64_AVAILABLE

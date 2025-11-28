@@ -131,6 +131,12 @@ InsertNegateRAState::getFirstKnownRAState(BinaryContext &BC,
   return std::nullopt;
 }
 
+bool InsertNegateRAState::isUnknownBlock(BinaryContext &BC,
+                                         BinaryBasicBlock &BB) {
+  std::optional<bool> FirstRAState = getFirstKnownRAState(BC, BB);
+  return !FirstRAState.has_value();
+}
+
 void InsertNegateRAState::fillUnknownStateInBB(BinaryContext &BC,
                                                BinaryBasicBlock &BB) {
 
@@ -174,18 +180,6 @@ void InsertNegateRAState::fillUnknownStateInBB(BinaryContext &BC,
   }
 }
 
-bool InsertNegateRAState::isUnknownBlock(BinaryContext &BC,
-                                         BinaryBasicBlock &BB) {
-  for (const MCInst &Inst : BB) {
-    if (BC.MIB->isCFI(Inst))
-      continue;
-    std::optional<bool> RAState = BC.MIB->getRAState(Inst);
-    if (RAState.has_value())
-      return false;
-  }
-  return true;
-}
-
 void InsertNegateRAState::markUnknownBlock(BinaryContext &BC,
                                            BinaryBasicBlock &BB, bool State) {
   // If we call this when an Instruction has either kRASigned or kRAUnsigned
@@ -205,7 +199,13 @@ void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
   MCInst PrevInst;
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
     for (BinaryBasicBlock *BB : FF) {
-      if (!FirstIter && isUnknownBlock(BC, *BB)) {
+      if (FirstIter) {
+        FirstIter = false;
+        if (isUnknownBlock(BC, *BB))
+          // If the first BasicBlock is unknown, the function's entry RAState
+          // should be used.
+          markUnknownBlock(BC, *BB, BF.getInitialRAState());
+      } else if (isUnknownBlock(BC, *BB)) {
         // As explained in issue #160989, the unwind info is incorrect for
         // stubs. Indicating the correct RAState without the rest of the unwind
         // info being correct is not useful. Instead, we copy the RAState from
@@ -223,13 +223,6 @@ void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
         else if (BC.MIB->isPAuthOnLR(PrevInst))
           PrevRAState = false;
         markUnknownBlock(BC, *BB, *PrevRAState);
-      }
-      if (FirstIter) {
-        FirstIter = false;
-        if (isUnknownBlock(BC, *BB))
-          // If the first BasicBlock is unknown, the function's entry RAState
-          // should be used.
-          markUnknownBlock(BC, *BB, BF.getInitialRAState());
       }
       // This function iterates on BasicBlocks, so the PrevInst has to be
       // updated to the last instruction of the current BasicBlock. If the
