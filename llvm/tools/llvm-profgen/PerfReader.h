@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_LLVM_PROFGEN_PERFREADER_H
 #include "ErrorHandling.h"
 #include "ProfiledBinary.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -567,23 +568,19 @@ private:
 class PerfReaderBase {
 public:
   PerfReaderBase(ProfiledBinary *B, StringRef PerfTrace)
-      : Binary(B), PerfTraceFile(PerfTrace) {
-    // Initialize the base address to preferred address.
-    Binary->setBaseAddress(Binary->getPreferredBaseAddress());
-  };
+      : Binary(B), PerfTraceFile(PerfTrace) {};
   virtual ~PerfReaderBase() = default;
   static std::unique_ptr<PerfReaderBase>
   create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
-         std::optional<int32_t> PIDFilter);
+         SmallSet<int32_t, 16> &PIDFilter);
 
   // Entry of the reader to parse multiple perf traces
   virtual void parsePerfTraces() = 0;
 
   // Parse the <ip, vtable-data-symbol> from the data access perf trace file,
   // and accumulate the data access count for each <ip, data-symbol> pair.
-  Error
-  parseDataAccessPerfTraces(StringRef DataAccessPerfFile,
-                            std::optional<int32_t> PIDFilter = std::nullopt);
+  Error parseDataAccessPerfTraces(StringRef DataAccessPerfFile,
+                                  SmallSet<int32_t, 16> &PIDFilter);
 
   const ContextSampleCounterMap &getSampleCounters() const {
     return SampleCounters;
@@ -606,8 +603,8 @@ protected:
 class PerfScriptReader : public PerfReaderBase {
 public:
   PerfScriptReader(ProfiledBinary *B, StringRef PerfTrace,
-                   std::optional<int32_t> PID)
-      : PerfReaderBase(B, PerfTrace), PIDFilter(PID) {};
+                   SmallSet<int32_t, 16> &PIDFilter)
+      : PerfReaderBase(B, PerfTrace), PIDFilter(PIDFilter) {};
 
   // Entry of the reader to parse multiple perf traces
   void parsePerfTraces() override;
@@ -622,7 +619,7 @@ public:
   // Generate perf script from perf data
   static PerfInputFile convertPerfDataToTrace(ProfiledBinary *Binary,
                                               bool SkipPID, PerfInputFile &File,
-                                              std::optional<int32_t> PIDFilter);
+                                              SmallSet<int32_t, 16> &PIDFilter);
   // Extract perf script type by peaking at the input
   static PerfContent checkPerfScriptType(StringRef FileName);
 
@@ -651,10 +648,10 @@ protected:
   // Warn if range is invalid.
   void warnInvalidRange();
   // Extract call stack from the perf trace lines
-  bool extractCallstack(TraceStream &TraceIt,
+  bool extractCallstack(int32_t PID, TraceStream &TraceIt,
                         SmallVectorImpl<uint64_t> &CallStack);
   // Extract LBR stack from one perf trace line
-  bool extractLBRStack(TraceStream &TraceIt,
+  bool extractLBRStack(std::optional<int32_t> PIDIfKnown, TraceStream &TraceIt,
                        SmallVectorImpl<LBREntry> &LBRStack);
   uint64_t parseAggregatedCount(TraceStream &TraceIt);
   // Parse one sample from multiple perf lines, override this for different
@@ -675,7 +672,7 @@ protected:
   // Keep track of all invalid return addresses
   std::set<uint64_t> InvalidReturnAddresses;
   // PID for the process of interest
-  std::optional<int32_t> PIDFilter;
+  SmallSet<int32_t, 16> PIDFilter;
 };
 
 /*
@@ -687,8 +684,8 @@ protected:
 class LBRPerfReader : public PerfScriptReader {
 public:
   LBRPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
-                std::optional<int32_t> PID)
-      : PerfScriptReader(Binary, PerfTrace, PID) {};
+                SmallSet<int32_t, 16> &PIDFilter)
+      : PerfScriptReader(Binary, PerfTrace, PIDFilter) {};
   // Parse the LBR only sample.
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
 };
@@ -705,8 +702,8 @@ public:
 class HybridPerfReader : public PerfScriptReader {
 public:
   HybridPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
-                   std::optional<int32_t> PID)
-      : PerfScriptReader(Binary, PerfTrace, PID) {};
+                   SmallSet<int32_t, 16> &PIDFilter)
+      : PerfScriptReader(Binary, PerfTrace, PIDFilter) {};
   // Parse the hybrid sample including the call and LBR line
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
   void generateUnsymbolizedProfile() override;

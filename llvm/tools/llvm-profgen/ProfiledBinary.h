@@ -198,7 +198,13 @@ class ProfiledBinary {
   // Options used to configure the symbolizer
   symbolize::LLVMSymbolizer::Options SymbolizerOpts;
   // The runtime base address that the first executable segment is loaded at.
-  uint64_t BaseAddress = 0;
+  // The binary may be loaded at different addresses in different processes,
+  // so we use a map to store base address by PID.
+  // If the profile doesn't contain PID info we use PID 0.
+  std::unordered_map<int32_t, uint64_t> BaseAddressByPID;
+  // The last PID we saw the binary loaded into. Used to warn the user if a
+  // binary is loaded in multiple processes without --multi-process-profile.
+  std::optional<int32_t> LastSeenPID = std::nullopt;
   // The runtime base address that the first loadabe segment is loaded at.
   uint64_t FirstLoadableAddress = 0;
   // The preferred load address of each executable segment.
@@ -396,19 +402,31 @@ public:
 
   StringRef getPath() const { return Path; }
   StringRef getName() const { return llvm::sys::path::filename(Path); }
-  uint64_t getBaseAddress() const { return BaseAddress; }
-  void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
+  uint64_t getPIDBaseAddress(int32_t PID) const {
+    auto Pos = BaseAddressByPID.find(PID);
+    if (Pos == BaseAddressByPID.end()) {
+      // Use preferred address as the default base address.
+      return getPreferredBaseAddress();
+    }
+
+    return Pos->second;
+  }
+  void setPIDBaseAddress(int32_t PID, uint64_t Address) {
+    BaseAddressByPID[PID] = Address;
+  }
 
   bool isCOFF() const { return IsCOFF; }
 
   // Canonicalize to use preferred load address as base address.
-  uint64_t canonicalizeVirtualAddress(uint64_t Address) {
-    return Address - BaseAddress + getPreferredBaseAddress();
+  uint64_t canonicalizeVirtualAddress(int64_t PID, uint64_t Address) {
+    return Address - getPIDBaseAddress(PID) + getPreferredBaseAddress();
   }
   // Return the preferred load address for the first executable segment.
   uint64_t getPreferredBaseAddress() const {
     return PreferredTextSegmentAddresses[0];
   }
+  std::optional<int32_t> getLastSeenPID() { return LastSeenPID; }
+  void setLastSeenPID(std::optional<int32_t> PID) { LastSeenPID = PID; }
   // Return the preferred load address for the first loadable segment.
   uint64_t getFirstLoadableAddress() const { return FirstLoadableAddress; }
   // Return the file offset for the first executable segment.
