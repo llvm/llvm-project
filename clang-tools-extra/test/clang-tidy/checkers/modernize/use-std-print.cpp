@@ -55,7 +55,6 @@ void printf_deceptive_newline() {
 }
 
 void printf_utf8_text() {
-  // UNSUPPORTED: system-windows
   printf("你好世界\n");
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
   // CHECK-FIXES: std::println("你好世界");
@@ -311,7 +310,6 @@ void fprintf_simple() {
 }
 
 void fprintf_utf8_text() {
-  // UNSUPPORTED: system-windows
   fprintf(stderr, "你好世界\n");
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'fprintf' [modernize-use-std-print]
   // CHECK-FIXES: std::println(stderr, "你好世界");
