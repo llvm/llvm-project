@@ -577,7 +577,8 @@ public:
            "the three comparison results must have the same bit width");
     cir::IntType cmpResultTy = getSIntNTy(ltRes.getBitWidth());
     auto infoAttr = cir::CmpThreeWayInfoAttr::get(
-        getContext(), ltRes.getSExtValue(), eqRes.getSExtValue(), gtRes.getSExtValue());
+        getContext(), ltRes.getSExtValue(), eqRes.getSExtValue(),
+        gtRes.getSExtValue());
     return cir::CmpThreeWayOp::create(*this, loc, cmpResultTy, lhs, rhs,
                                       infoAttr);
   }
@@ -593,7 +594,8 @@ public:
            "the four comparison results must have the same bit width");
     auto cmpResultTy = getSIntNTy(ltRes.getBitWidth());
     auto infoAttr = cir::CmpThreeWayInfoAttr::get(
-        getContext(), ltRes.getSExtValue(), eqRes.getSExtValue(), gtRes.getSExtValue(), unorderedRes.getSExtValue());
+        getContext(), ltRes.getSExtValue(), eqRes.getSExtValue(),
+        gtRes.getSExtValue(), unorderedRes.getSExtValue());
     return cir::CmpThreeWayOp::create(*this, loc, cmpResultTy, lhs, rhs,
                                       infoAttr);
   }

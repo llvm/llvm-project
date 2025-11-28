@@ -1137,7 +1137,6 @@ Block *cir::BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
   return nullptr;
 }
 
-
 //===----------------------------------------------------------------------===//
 // CmpThreeWayOp
 //===----------------------------------------------------------------------===//

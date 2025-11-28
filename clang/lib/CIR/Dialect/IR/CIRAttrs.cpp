@@ -267,7 +267,6 @@ LogicalResult FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
-
 //===----------------------------------------------------------------------===//
 // CmpThreeWayInfoAttr definitions
 //===----------------------------------------------------------------------===//
@@ -319,7 +318,6 @@ CmpThreeWayInfoAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 
   return success();
 }
-
 
 //===----------------------------------------------------------------------===//
 // ConstComplexAttr definitions
