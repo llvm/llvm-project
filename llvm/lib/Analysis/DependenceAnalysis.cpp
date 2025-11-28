@@ -2587,7 +2587,9 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   const SCEV *DstConst = Coefficients;
 
   APInt ExtraGCD = APInt::getZero(BitWidth);
-  const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
+  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
+  if (!Delta)
+    return false;
   LLVM_DEBUG(dbgs() << "    Delta = " << *Delta << "\n");
   const SCEVConstant *Constant = dyn_cast<SCEVConstant>(Delta);
   if (const SCEVAddExpr *Sum = dyn_cast<SCEVAddExpr>(Delta)) {
