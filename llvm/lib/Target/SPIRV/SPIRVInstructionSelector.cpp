@@ -230,8 +230,8 @@ private:
   bool selectWaveReduceMin(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, bool IsUnsigned) const;
 
-  bool selectWaveReduceSum(Register ResVReg, const SPIRVType *ResType,
-                           MachineInstr &I) const;
+  bool selectWaveSumWithGroupOp(Register ResVReg, const SPIRVType *ResType,
+                                MachineInstr &I, int64_t GroupOp) const;
 
   bool selectConst(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
@@ -2696,7 +2696,7 @@ bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
     report_fatal_error("Input Type could not be determined.");
 
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  // Retreive the operation to use based on input type
+  // Retrieve the operation to use based on input type
   bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
   auto IntegerOpcodeType =
       IsUnsigned ? SPIRV::OpGroupNonUniformUMax : SPIRV::OpGroupNonUniformSMax;
@@ -2725,7 +2725,7 @@ bool SPIRVInstructionSelector::selectWaveReduceMin(Register ResVReg,
     report_fatal_error("Input Type could not be determined.");
 
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  // Retreive the operation to use based on input type
+  // Retrieve the operation to use based on input type
   bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
   auto IntegerOpcodeType =
       IsUnsigned ? SPIRV::OpGroupNonUniformUMin : SPIRV::OpGroupNonUniformSMin;
@@ -2740,9 +2740,9 @@ bool SPIRVInstructionSelector::selectWaveReduceMin(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
-bool SPIRVInstructionSelector::selectWaveReduceSum(Register ResVReg,
-                                                   const SPIRVType *ResType,
-                                                   MachineInstr &I) const {
+bool SPIRVInstructionSelector::selectWaveSumWithGroupOp(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
+    int64_t GroupOp) const {
   assert(I.getNumOperands() == 3);
   assert(I.getOperand(2).isReg());
   MachineBasicBlock &BB = *I.getParent();
@@ -2753,7 +2753,7 @@ bool SPIRVInstructionSelector::selectWaveReduceSum(Register ResVReg,
     report_fatal_error("Input Type could not be determined.");
 
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  // Retreive the operation to use based on input type
+  // Retrieve the operation to use based on input type
   bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
   auto Opcode =
       IsFloatTy ? SPIRV::OpGroupNonUniformFAdd : SPIRV::OpGroupNonUniformIAdd;
@@ -2762,7 +2762,7 @@ bool SPIRVInstructionSelector::selectWaveReduceSum(Register ResVReg,
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
                                      !STI.isShader()))
-      .addImm(SPIRV::GroupOperation::Reduce)
+      .addImm(GroupOp)
       .addUse(I.getOperand(2).getReg());
 }
 
@@ -3785,10 +3785,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_reduce_min:
     return selectWaveReduceMin(ResVReg, ResType, I, /*IsUnsigned*/ false);
   case Intrinsic::spv_wave_reduce_sum:
-    return selectWaveReduceSum(ResVReg, ResType, I);
+    return selectWaveSumWithGroupOp(ResVReg, ResType, I,
+                                    SPIRV::GroupOperation::Reduce);
   case Intrinsic::spv_wave_readlane:
     return selectWaveOpInst(ResVReg, ResType, I,
                             SPIRV::OpGroupNonUniformShuffle);
+  case Intrinsic::spv_wave_prefix_sum:
+    return selectWaveSumWithGroupOp(ResVReg, ResType, I,
+                                    SPIRV::GroupOperation::ExclusiveScan);
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:
