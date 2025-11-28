@@ -26965,6 +26965,11 @@ static SDValue performSelectCombine(SDNode *N,
   if (!ResVT.isVector() || NumMaskElts == 0)
     return SDValue();
 
+  // Avoid creating vectors with excessive VFs for small types.
+  if (DCI.isBeforeLegalize() &&
+      SrcVT.getSizeInBits() < ResVT.getScalarSizeInBits())
+    NumMaskElts = ResVT.getVectorNumElements();
+
   SrcVT = EVT::getVectorVT(*DAG.getContext(), SrcVT, NumMaskElts);
   EVT CCVT = SrcVT.changeVectorElementTypeToInteger();
 

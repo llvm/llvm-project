@@ -12,62 +12,13 @@ target triple = "aarch64-linux-gnu"
 define <4 x i32> @any_of_select_vf4(<4 x i32> %mask, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: any_of_select_vf4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
-; CHECK-NEXT:    movi d3, #0000000000000000
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI0_0]
-; CHECK-NEXT:    and v0.16b, v0.16b, v4.16b
-; CHECK-NEXT:    movi v4.16b, #15
-; CHECK-NEXT:    addv s0, v0.4s
-; CHECK-NEXT:    and v3.16b, v3.16b, v4.16b
-; CHECK-NEXT:    and v0.16b, v0.16b, v4.16b
-; CHECK-NEXT:    cmeq v3.16b, v0.16b, v3.16b
-; CHECK-NEXT:    dup v0.16b, v3.b[0]
-; CHECK-NEXT:    umov w8, v3.b[0]
-; CHECK-NEXT:    umov w9, v0.b[1]
-; CHECK-NEXT:    umov w10, v0.b[2]
-; CHECK-NEXT:    umov w11, v0.b[7]
-; CHECK-NEXT:    and x8, x8, #0xf
-; CHECK-NEXT:    bfi x8, x9, #4, #4
-; CHECK-NEXT:    umov w9, v0.b[3]
-; CHECK-NEXT:    bfi x8, x10, #8, #4
-; CHECK-NEXT:    umov w10, v0.b[4]
-; CHECK-NEXT:    bfi x8, x9, #12, #4
-; CHECK-NEXT:    umov w9, v0.b[5]
-; CHECK-NEXT:    bfi x8, x10, #16, #4
-; CHECK-NEXT:    umov w10, v0.b[6]
-; CHECK-NEXT:    bfi x8, x9, #20, #4
-; CHECK-NEXT:    umov w9, v0.b[8]
-; CHECK-NEXT:    bfi x8, x10, #24, #4
-; CHECK-NEXT:    lsl w10, w11, #28
-; CHECK-NEXT:    umov w11, v0.b[9]
-; CHECK-NEXT:    orr x8, x8, x10
-; CHECK-NEXT:    and w9, w9, #0xf
-; CHECK-NEXT:    umov w10, v0.b[10]
-; CHECK-NEXT:    orr x8, x8, x9, lsl #32
-; CHECK-NEXT:    and w9, w11, #0xf
-; CHECK-NEXT:    umov w11, v0.b[11]
-; CHECK-NEXT:    orr x8, x8, x9, lsl #36
-; CHECK-NEXT:    and w9, w10, #0xf
-; CHECK-NEXT:    umov w10, v0.b[12]
-; CHECK-NEXT:    orr x8, x8, x9, lsl #40
-; CHECK-NEXT:    and w9, w11, #0xf
-; CHECK-NEXT:    umov w11, v0.b[13]
-; CHECK-NEXT:    orr x8, x8, x9, lsl #44
-; CHECK-NEXT:    and w9, w10, #0xf
-; CHECK-NEXT:    umov w10, v0.b[14]
-; CHECK-NEXT:    orr x8, x8, x9, lsl #48
-; CHECK-NEXT:    and w9, w11, #0xf
-; CHECK-NEXT:    orr x8, x8, x9, lsl #52
-; CHECK-NEXT:    umov w9, v0.b[15]
-; CHECK-NEXT:    and w10, w10, #0xf
-; CHECK-NEXT:    orr x8, x8, x10, lsl #56
-; CHECK-NEXT:    orr x8, x8, x9, lsl #60
-; CHECK-NEXT:    dup v0.2d, x8
-; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    umaxv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csetm w8, ne
+; CHECK-NEXT:    dup v0.4s, w8
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v1.16b
 ; CHECK-NEXT:    ret
   %cmp = icmp slt <4 x i32> %mask, zeroinitializer
   %cmp.bc = bitcast <4 x i1> %cmp to i4
@@ -79,63 +30,13 @@ define <4 x i32> @any_of_select_vf4(<4 x i32> %mask, <4 x i32> %a, <4 x i32> %b)
 define <2 x i64> @any_of_select_vf2(<2 x i64> %mask, <2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: any_of_select_vf2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    adrp x8, .LCPI1_0
 ; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
-; CHECK-NEXT:    movi d3, #0000000000000000
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI1_0]
-; CHECK-NEXT:    and v0.16b, v0.16b, v4.16b
-; CHECK-NEXT:    movi v4.16b, #3
-; CHECK-NEXT:    addp d0, v0.2d
-; CHECK-NEXT:    and v3.16b, v3.16b, v4.16b
-; CHECK-NEXT:    and v0.16b, v0.16b, v4.16b
-; CHECK-NEXT:    cmeq v3.16b, v0.16b, v3.16b
-; CHECK-NEXT:    dup v0.16b, v3.b[0]
-; CHECK-NEXT:    umov w8, v3.b[0]
-; CHECK-NEXT:    umov w9, v0.b[1]
-; CHECK-NEXT:    umov w10, v0.b[2]
-; CHECK-NEXT:    umov w11, v0.b[7]
-; CHECK-NEXT:    umov w12, v0.b[8]
-; CHECK-NEXT:    and w8, w8, #0x3
-; CHECK-NEXT:    umov w13, v0.b[3]
-; CHECK-NEXT:    umov w14, v0.b[4]
-; CHECK-NEXT:    umov w15, v0.b[10]
-; CHECK-NEXT:    umov w16, v0.b[5]
-; CHECK-NEXT:    bfi w8, w9, #2, #2
-; CHECK-NEXT:    umov w9, v0.b[9]
-; CHECK-NEXT:    ubfiz w11, w11, #14, #2
-; CHECK-NEXT:    ubfiz w12, w12, #16, #2
-; CHECK-NEXT:    bfi w8, w10, #4, #2
-; CHECK-NEXT:    umov w10, v0.b[11]
-; CHECK-NEXT:    ubfiz w15, w15, #20, #2
-; CHECK-NEXT:    orr w11, w11, w12
-; CHECK-NEXT:    umov w12, v0.b[13]
-; CHECK-NEXT:    bfi w8, w13, #6, #2
-; CHECK-NEXT:    umov w13, v0.b[12]
-; CHECK-NEXT:    ubfiz w9, w9, #18, #2
-; CHECK-NEXT:    bfi w8, w14, #8, #2
-; CHECK-NEXT:    umov w14, v0.b[14]
-; CHECK-NEXT:    orr w9, w11, w9
-; CHECK-NEXT:    umov w11, v0.b[6]
-; CHECK-NEXT:    ubfiz w10, w10, #22, #2
-; CHECK-NEXT:    orr w9, w9, w15
-; CHECK-NEXT:    ubfiz w13, w13, #24, #2
-; CHECK-NEXT:    bfi w8, w16, #10, #2
-; CHECK-NEXT:    orr w9, w9, w10
-; CHECK-NEXT:    ubfiz w10, w12, #26, #2
-; CHECK-NEXT:    orr w9, w9, w13
-; CHECK-NEXT:    ubfiz w12, w14, #28, #2
-; CHECK-NEXT:    umov w13, v0.b[15]
-; CHECK-NEXT:    bfi w8, w11, #12, #2
-; CHECK-NEXT:    orr w9, w9, w10
-; CHECK-NEXT:    orr w9, w9, w12
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w13, lsl #30
-; CHECK-NEXT:    orr x8, x8, x8, lsl #32
+; CHECK-NEXT:    umaxv s0, v0.4s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csetm x8, ne
 ; CHECK-NEXT:    dup v0.2d, x8
-; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v1.16b
 ; CHECK-NEXT:    ret
   %cmp = icmp slt <2 x i64> %mask, zeroinitializer
   %cmp.bc = bitcast <2 x i1> %cmp to i2
