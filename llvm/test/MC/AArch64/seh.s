@@ -1,6 +1,7 @@
 // This test checks that the SEH directives emit the correct unwind data.
 
-// RUN: llvm-mc -triple aarch64-pc-win32 -filetype=obj %s | llvm-readobj -S -r -u - | FileCheck %s
+// RUN: llvm-mc -triple aarch64-pc-win32 -filetype=obj %s -o %t.o
+// RUN: llvm-readobj -S -r -u %t.o | FileCheck %s
 
 // Check that the output assembler directives also can be parsed, and
 // that they produce equivalent output:
