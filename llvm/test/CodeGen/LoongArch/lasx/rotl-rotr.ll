@@ -7,11 +7,8 @@ define void @rotl_v32i8(ptr %dst, ptr %src, i8 signext %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvreplgr2vr.b $xr1, $a2
-; CHECK-NEXT:    xvrepli.b $xr2, 8
-; CHECK-NEXT:    xvsub.b $xr2, $xr2, $xr1
-; CHECK-NEXT:    xvsll.b $xr1, $xr0, $xr1
-; CHECK-NEXT:    xvsrl.b $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvneg.b $xr1, $xr1
+; CHECK-NEXT:    xvrotr.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <32 x i8>, ptr %src
@@ -30,11 +27,7 @@ define void @rotr_v32i8(ptr %dst, ptr %src, i8 signext %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvreplgr2vr.b $xr1, $a2
-; CHECK-NEXT:    xvrepli.b $xr2, 8
-; CHECK-NEXT:    xvsub.b $xr2, $xr2, $xr1
-; CHECK-NEXT:    xvsrl.b $xr1, $xr0, $xr1
-; CHECK-NEXT:    xvsll.b $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvrotr.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <32 x i8>, ptr %src
@@ -52,9 +45,7 @@ define void @rotr_v32i8_imm(ptr %dst, ptr %src) nounwind {
 ; CHECK-LABEL: rotr_v32i8_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvsrli.b $xr1, $xr0, 2
-; CHECK-NEXT:    xvslli.b $xr0, $xr0, 6
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvrotri.b $xr0, $xr0, 2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <32 x i8>, ptr %src
@@ -70,11 +61,8 @@ define void @rotl_v16i16(ptr %dst, ptr %src, i16 signext %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a2
-; CHECK-NEXT:    xvrepli.h $xr2, 16
-; CHECK-NEXT:    xvsub.h $xr2, $xr2, $xr1
-; CHECK-NEXT:    xvsll.h $xr1, $xr0, $xr1
-; CHECK-NEXT:    xvsrl.h $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvneg.h $xr1, $xr1
+; CHECK-NEXT:    xvrotr.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i16>, ptr %src
@@ -93,11 +81,7 @@ define void @rotr_v16i16(ptr %dst, ptr %src, i16 signext %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a2
-; CHECK-NEXT:    xvrepli.h $xr2, 16
-; CHECK-NEXT:    xvsub.h $xr2, $xr2, $xr1
-; CHECK-NEXT:    xvsrl.h $xr1, $xr0, $xr1
-; CHECK-NEXT:    xvsll.h $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvrotr.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i16>, ptr %src
@@ -115,9 +99,7 @@ define void @rotr_v16i16_imm(ptr %dst, ptr %src) nounwind {
 ; CHECK-LABEL: rotr_v16i16_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvsrli.h $xr1, $xr0, 2
-; CHECK-NEXT:    xvslli.h $xr0, $xr0, 14
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvrotri.h $xr0, $xr0, 2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i16>, ptr %src
@@ -133,11 +115,8 @@ define void @rotl_v8i32(ptr %dst, ptr %src, i32 signext %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a2
-; CHECK-NEXT:    xvrepli.w $xr2, 32
-; CHECK-NEXT:    xvsub.w $xr2, $xr2, $xr1
-; CHECK-NEXT:    xvsll.w $xr1, $xr0, $xr1
-; CHECK-NEXT:    xvsrl.w $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvneg.w $xr1, $xr1
+; CHECK-NEXT:    xvrotr.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i32>, ptr %src
@@ -156,11 +135,7 @@ define void @rotr_v8i32(ptr %dst, ptr %src, i32 signext %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a2
-; CHECK-NEXT:    xvrepli.w $xr2, 32
-; CHECK-NEXT:    xvsub.w $xr2, $xr2, $xr1
-; CHECK-NEXT:    xvsrl.w $xr1, $xr0, $xr1
-; CHECK-NEXT:    xvsll.w $xr0, $xr0, $xr2
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvrotr.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i32>, ptr %src
@@ -178,9 +153,7 @@ define void @rotr_v8i32_imm(ptr %dst, ptr %src) nounwind {
 ; CHECK-LABEL: rotr_v8i32_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvsrli.w $xr1, $xr0, 2
-; CHECK-NEXT:    xvslli.w $xr0, $xr0, 30
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvrotri.w $xr0, $xr0, 2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i32>, ptr %src
@@ -196,13 +169,10 @@ define void @rotl_v4i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvld $xr0, $a1, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA32-NEXT:    xvreplve0.d $xr1, $xr1
-; LA32-NEXT:    xvrepli.d $xr2, 64
-; LA32-NEXT:    xvsub.d $xr2, $xr2, $xr1
-; LA32-NEXT:    xvsll.d $xr1, $xr0, $xr1
-; LA32-NEXT:    xvsrl.d $xr0, $xr0, $xr2
-; LA32-NEXT:    xvor.v $xr0, $xr1, $xr0
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
+; LA32-NEXT:    xvpermi.q $xr1, $xr1, 2
+; LA32-NEXT:    xvneg.d $xr1, $xr1
+; LA32-NEXT:    xvrotr.d $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
@@ -210,11 +180,8 @@ define void @rotl_v4i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvld $xr0, $a1, 0
 ; LA64-NEXT:    xvreplgr2vr.d $xr1, $a2
-; LA64-NEXT:    xvrepli.d $xr2, 64
-; LA64-NEXT:    xvsub.d $xr2, $xr2, $xr1
-; LA64-NEXT:    xvsll.d $xr1, $xr0, $xr1
-; LA64-NEXT:    xvsrl.d $xr0, $xr0, $xr2
-; LA64-NEXT:    xvor.v $xr0, $xr1, $xr0
+; LA64-NEXT:    xvneg.d $xr1, $xr1
+; LA64-NEXT:    xvrotr.d $xr0, $xr0, $xr1
 ; LA64-NEXT:    xvst $xr0, $a0, 0
 ; LA64-NEXT:    ret
   %v0 = load <4 x i64>, ptr %src
@@ -233,13 +200,9 @@ define void @rotr_v4i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    xvld $xr0, $a1, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA32-NEXT:    xvreplve0.d $xr1, $xr1
-; LA32-NEXT:    xvrepli.d $xr2, 64
-; LA32-NEXT:    xvsub.d $xr2, $xr2, $xr1
-; LA32-NEXT:    xvsrl.d $xr1, $xr0, $xr1
-; LA32-NEXT:    xvsll.d $xr0, $xr0, $xr2
-; LA32-NEXT:    xvor.v $xr0, $xr1, $xr0
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
+; LA32-NEXT:    xvpermi.q $xr1, $xr1, 2
+; LA32-NEXT:    xvrotr.d $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
@@ -247,11 +210,7 @@ define void @rotr_v4i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvld $xr0, $a1, 0
 ; LA64-NEXT:    xvreplgr2vr.d $xr1, $a2
-; LA64-NEXT:    xvrepli.d $xr2, 64
-; LA64-NEXT:    xvsub.d $xr2, $xr2, $xr1
-; LA64-NEXT:    xvsrl.d $xr1, $xr0, $xr1
-; LA64-NEXT:    xvsll.d $xr0, $xr0, $xr2
-; LA64-NEXT:    xvor.v $xr0, $xr1, $xr0
+; LA64-NEXT:    xvrotr.d $xr0, $xr0, $xr1
 ; LA64-NEXT:    xvst $xr0, $a0, 0
 ; LA64-NEXT:    ret
   %v0 = load <4 x i64>, ptr %src
@@ -266,14 +225,20 @@ define void @rotr_v4i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 }
 
 define void @rotr_v4i64_imm(ptr %dst, ptr %src) nounwind {
-; CHECK-LABEL: rotr_v4i64_imm:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvsrli.d $xr1, $xr0, 2
-; CHECK-NEXT:    xvslli.d $xr0, $xr0, 62
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvst $xr0, $a0, 0
-; CHECK-NEXT:    ret
+; LA32-LABEL: rotr_v4i64_imm:
+; LA32:       # %bb.0:
+; LA32-NEXT:    xvld $xr0, $a1, 0
+; LA32-NEXT:    xvrepli.w $xr1, -62
+; LA32-NEXT:    xvrotr.d $xr0, $xr0, $xr1
+; LA32-NEXT:    xvst $xr0, $a0, 0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: rotr_v4i64_imm:
+; LA64:       # %bb.0:
+; LA64-NEXT:    xvld $xr0, $a1, 0
+; LA64-NEXT:    xvrotri.d $xr0, $xr0, 2
+; LA64-NEXT:    xvst $xr0, $a0, 0
+; LA64-NEXT:    ret
   %v0 = load <4 x i64>, ptr %src
   %b = lshr <4 x i64> %v0, splat (i64 2)
   %c = shl <4 x i64> %v0, splat (i64 62)
