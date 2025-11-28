@@ -525,95 +525,85 @@ define <vscale x 32 x iXLen> @lrint_nxv32bf16(<vscale x 32 x bfloat> %x) {
 ;
 ; RV64-i64-LABEL: lrint_nxv32bf16:
 ; RV64-i64:       # %bb.0:
-; RV64-i64-NEXT:    addi sp, sp, -64
-; RV64-i64-NEXT:    .cfi_def_cfa_offset 64
-; RV64-i64-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; RV64-i64-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
-; RV64-i64-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
-; RV64-i64-NEXT:    .cfi_offset ra, -8
-; RV64-i64-NEXT:    .cfi_offset s0, -16
-; RV64-i64-NEXT:    .cfi_offset s1, -24
-; RV64-i64-NEXT:    csrr a1, vlenb
-; RV64-i64-NEXT:    slli a1, a1, 5
-; RV64-i64-NEXT:    sub sp, sp, a1
-; RV64-i64-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x20, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 64 + 32 * vlenb
-; RV64-i64-NEXT:    mv s0, a0
-; RV64-i64-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v16, v8
-; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v20, v10
-; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v8, v12
-; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v24, v14
-; RV64-i64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV64-i64-NEXT:    vfwcvt.x.f.v v0, v16
-; RV64-i64-NEXT:    csrr a0, vlenb
-; RV64-i64-NEXT:    slli a0, a0, 3
-; RV64-i64-NEXT:    mv a1, a0
-; RV64-i64-NEXT:    slli a0, a0, 1
-; RV64-i64-NEXT:    add a0, a0, a1
-; RV64-i64-NEXT:    add a0, sp, a0
-; RV64-i64-NEXT:    addi a0, a0, 32
-; RV64-i64-NEXT:    vs8r.v v0, (a0) # vscale x 64-byte Folded Spill
-; RV64-i64-NEXT:    vfwcvt.x.f.v v0, v20
-; RV64-i64-NEXT:    csrr a0, vlenb
-; RV64-i64-NEXT:    slli a0, a0, 4
-; RV64-i64-NEXT:    add a0, sp, a0
-; RV64-i64-NEXT:    addi a0, a0, 32
-; RV64-i64-NEXT:    vs8r.v v0, (a0) # vscale x 64-byte Folded Spill
-; RV64-i64-NEXT:    vfwcvt.x.f.v v16, v8
-; RV64-i64-NEXT:    csrr a0, vlenb
-; RV64-i64-NEXT:    slli a0, a0, 3
-; RV64-i64-NEXT:    add a0, sp, a0
-; RV64-i64-NEXT:    addi a0, a0, 32
-; RV64-i64-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v24
-; RV64-i64-NEXT:    addi a0, sp, 32
-; RV64-i64-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; RV64-i64-NEXT:    csrr s1, vlenb
-; RV64-i64-NEXT:    li a1, 24
-; RV64-i64-NEXT:    mv a0, s1
-; RV64-i64-NEXT:    call __muldi3
-; RV64-i64-NEXT:    add a0, s0, a0
-; RV64-i64-NEXT:    addi a1, sp, 32
-; RV64-i64-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; RV64-i64-NEXT:    vs8r.v v8, (a0)
-; RV64-i64-NEXT:    slli a0, s1, 4
-; RV64-i64-NEXT:    slli s1, s1, 3
-; RV64-i64-NEXT:    add a0, s0, a0
-; RV64-i64-NEXT:    add s1, s0, s1
-; RV64-i64-NEXT:    csrr a1, vlenb
-; RV64-i64-NEXT:    slli a1, a1, 3
-; RV64-i64-NEXT:    add a1, sp, a1
-; RV64-i64-NEXT:    addi a1, a1, 32
-; RV64-i64-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; RV64-i64-NEXT:    vs8r.v v8, (a0)
-; RV64-i64-NEXT:    csrr a0, vlenb
-; RV64-i64-NEXT:    slli a0, a0, 4
-; RV64-i64-NEXT:    add a0, sp, a0
-; RV64-i64-NEXT:    addi a0, a0, 32
-; RV64-i64-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; RV64-i64-NEXT:    vs8r.v v8, (s1)
-; RV64-i64-NEXT:    csrr a0, vlenb
-; RV64-i64-NEXT:    slli a0, a0, 3
-; RV64-i64-NEXT:    mv a1, a0
-; RV64-i64-NEXT:    slli a0, a0, 1
-; RV64-i64-NEXT:    add a0, a0, a1
-; RV64-i64-NEXT:    add a0, sp, a0
-; RV64-i64-NEXT:    addi a0, a0, 32
-; RV64-i64-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; RV64-i64-NEXT:    vs8r.v v8, (s0)
-; RV64-i64-NEXT:    csrr a0, vlenb
-; RV64-i64-NEXT:    slli a0, a0, 5
-; RV64-i64-NEXT:    add sp, sp, a0
-; RV64-i64-NEXT:    .cfi_def_cfa sp, 64
-; RV64-i64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; RV64-i64-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; RV64-i64-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
-; RV64-i64-NEXT:    .cfi_restore ra
-; RV64-i64-NEXT:    .cfi_restore s0
-; RV64-i64-NEXT:    .cfi_restore s1
-; RV64-i64-NEXT:    addi sp, sp, 64
-; RV64-i64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-i64-NEXT:    ret
+; RV64-i64-NEXT:	addi	sp, sp, -64
+; RV64-i64-NEXT:	.cfi_def_cfa_offset 64
+; RV64-i64-NEXT:	sd	ra, 56(sp)                      # 8-byte Folded Spill
+; RV64-i64-NEXT:	sd	s0, 48(sp)                      # 8-byte Folded Spill
+; RV64-i64-NEXT:	sd	s1, 40(sp)                      # 8-byte Folded Spill
+; RV64-i64-NEXT:	.cfi_offset ra, -8
+; RV64-i64-NEXT:	.cfi_offset s0, -16
+; RV64-i64-NEXT:	.cfi_offset s1, -24
+; RV64-i64-NEXT:	csrr	a1, vlenb
+; RV64-i64-NEXT:	slli	a1, a1, 3
+; RV64-i64-NEXT:	mv	a2, a1
+; RV64-i64-NEXT:	slli	a1, a1, 1
+; RV64-i64-NEXT:	add	a1, a1, a2
+; RV64-i64-NEXT:	sub	sp, sp, a1
+; RV64-i64-NEXT:	.cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x18, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 64 + 24 * vlenb
+; RV64-i64-NEXT:	mv	s0, a0
+; RV64-i64-NEXT:	vsetvli	a0, zero, e16, m2, ta, ma
+; RV64-i64-NEXT:	vfwcvtbf16.f.f.v	v16, v8
+; RV64-i64-NEXT:	vfwcvtbf16.f.f.v	v20, v10
+; RV64-i64-NEXT:	vfwcvtbf16.f.f.v	v8, v12
+; RV64-i64-NEXT:	vfwcvtbf16.f.f.v	v4, v14
+; RV64-i64-NEXT:	vsetvli	zero, zero, e32, m4, ta, ma
+; RV64-i64-NEXT:	vfwcvt.x.f.v	v24, v16
+; RV64-i64-NEXT:	csrr	a0, vlenb
+; RV64-i64-NEXT:	slli	a0, a0, 4
+; RV64-i64-NEXT:	add	a0, sp, a0
+; RV64-i64-NEXT:	addi	a0, a0, 32
+; RV64-i64-NEXT:	vs8r.v	v24, (a0)                       # vscale x 64-byte Folded Spill
+; RV64-i64-NEXT:	vfwcvt.x.f.v	v24, v20
+; RV64-i64-NEXT:	csrr	a0, vlenb
+; RV64-i64-NEXT:	slli	a0, a0, 3
+; RV64-i64-NEXT:	add	a0, sp, a0
+; RV64-i64-NEXT:	addi	a0, a0, 32
+; RV64-i64-NEXT:	vs8r.v	v24, (a0)                       # vscale x 64-byte Folded Spill
+; RV64-i64-NEXT:	vfwcvt.x.f.v	v16, v8
+; RV64-i64-NEXT:	addi	a0, sp, 32
+; RV64-i64-NEXT:	vs8r.v	v16, (a0)                       # vscale x 64-byte Folded Spill
+; RV64-i64-NEXT:	vfwcvt.x.f.v	v24, v4
+; RV64-i64-NEXT:	csrr	s1, vlenb
+; RV64-i64-NEXT:	li	a1, 24
+; RV64-i64-NEXT:	mv	a0, s1
+; RV64-i64-NEXT:	call	__muldi3
+; RV64-i64-NEXT:	add	a0, s0, a0
+; RV64-i64-NEXT:	vs8r.v	v24, (a0)
+; RV64-i64-NEXT:	slli	a0, s1, 4
+; RV64-i64-NEXT:	slli	s1, s1, 3
+; RV64-i64-NEXT:	add	a0, s0, a0
+; RV64-i64-NEXT:	add	s1, s0, s1
+; RV64-i64-NEXT:	addi	a1, sp, 32
+; RV64-i64-NEXT:	vl8r.v	v8, (a1)                        # vscale x 64-byte Folded Reload
+; RV64-i64-NEXT:	vs8r.v	v8, (a0)
+; RV64-i64-NEXT:	csrr	a0, vlenb
+; RV64-i64-NEXT:	slli	a0, a0, 3
+; RV64-i64-NEXT:	add	a0, sp, a0
+; RV64-i64-NEXT:	addi	a0, a0, 32
+; RV64-i64-NEXT:	vl8r.v	v8, (a0)                        # vscale x 64-byte Folded Reload
+; RV64-i64-NEXT:	vs8r.v	v8, (s1)
+; RV64-i64-NEXT:	csrr	a0, vlenb
+; RV64-i64-NEXT:	slli	a0, a0, 4
+; RV64-i64-NEXT:	add	a0, sp, a0
+; RV64-i64-NEXT:	addi	a0, a0, 32
+; RV64-i64-NEXT:	vl8r.v	v8, (a0)                        # vscale x 64-byte Folded Reload
+; RV64-i64-NEXT:	vs8r.v	v8, (s0)
+; RV64-i64-NEXT:	csrr	a0, vlenb
+; RV64-i64-NEXT:	slli	a0, a0, 3
+; RV64-i64-NEXT:	mv	a1, a0
+; RV64-i64-NEXT:	slli	a0, a0, 1
+; RV64-i64-NEXT:	add	a0, a0, a1
+; RV64-i64-NEXT:	add	sp, sp, a0
+; RV64-i64-NEXT:	.cfi_def_cfa sp, 64
+; RV64-i64-NEXT:	ld	ra, 56(sp)                      # 8-byte Folded Reload
+; RV64-i64-NEXT:	ld	s0, 48(sp)                      # 8-byte Folded Reload
+; RV64-i64-NEXT:	ld	s1, 40(sp)                      # 8-byte Folded Reload
+; RV64-i64-NEXT:	.cfi_restore ra
+; RV64-i64-NEXT:	.cfi_restore s0
+; RV64-i64-NEXT:	.cfi_restore s1
+; RV64-i64-NEXT:	addi	sp, sp, 64
+; RV64-i64-NEXT:	.cfi_def_cfa_offset 0
+; RV64-i64-NEXT:	ret
   %a = call <vscale x 32 x iXLen> @llvm.lrint.nxv32iXLen.nxv32bf16(<vscale x 32 x bfloat> %x)
   ret <vscale x 32 x iXLen> %a
 }

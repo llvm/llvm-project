@@ -60,55 +60,41 @@ declare <vscale x 1 x i8> @foo(<vscale x 1 x i8>)
 define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i8> %2, iXLen %3) nounwind {
 ; RV32-LABEL: test3:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    addi sp, sp, -32
-; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    sub sp, sp, a1
-; RV32-NEXT:    mv s0, a0
-; RV32-NEXT:    addi a1, sp, 16
-; RV32-NEXT:    vs1r.v v10, (a1) # vscale x 8-byte Folded Spill
-; RV32-NEXT:    csrwi vxrm, 0
-; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; RV32-NEXT:    vaadd.vv v8, v8, v9
-; RV32-NEXT:    call foo
-; RV32-NEXT:    csrwi vxrm, 0
-; RV32-NEXT:    addi a0, sp, 16
-; RV32-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
-; RV32-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
-; RV32-NEXT:    vaadd.vv v8, v8, v9
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    add sp, sp, a0
-; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 32
-; RV32-NEXT:    ret
+; RV32-NEXT:addi	sp, sp, -16
+; RV32-NEXT:	sw	ra, 12(sp)                      # 4-byte Folded Spill
+; RV32-NEXT:	sw	s0, 8(sp)                       # 4-byte Folded Spill
+; RV32-NEXT:	mv	s0, a0
+; RV32-NEXT:	vsetvli	zero, a0, e8, mf8, ta, ma
+; RV32-NEXT:	vmv1r.v	v24, v10
+; RV32-NEXT:	csrwi	vxrm, 0
+; RV32-NEXT:	vaadd.vv	v8, v8, v9
+; RV32-NEXT:	call	foo
+; RV32-NEXT:	csrwi	vxrm, 0
+; RV32-NEXT:	vsetvli	zero, s0, e8, mf8, ta, ma
+; RV32-NEXT:	vaadd.vv	v8, v8, v24
+; RV32-NEXT:	lw	ra, 12(sp)                      # 4-byte Folded Reload
+; RV32-NEXT:	lw	s0, 8(sp)                       # 4-byte Folded Reload
+; RV32-NEXT:	addi	sp, sp, 16
+; RV32-NEXT:	ret
 ;
 ; RV64-LABEL: test3:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi sp, sp, -32
-; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    sub sp, sp, a1
-; RV64-NEXT:    mv s0, a0
-; RV64-NEXT:    addi a1, sp, 16
-; RV64-NEXT:    vs1r.v v10, (a1) # vscale x 8-byte Folded Spill
-; RV64-NEXT:    csrwi vxrm, 0
-; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; RV64-NEXT:    vaadd.vv v8, v8, v9
-; RV64-NEXT:    call foo
-; RV64-NEXT:    csrwi vxrm, 0
-; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
-; RV64-NEXT:    vsetvli zero, s0, e8, mf8, ta, ma
-; RV64-NEXT:    vaadd.vv v8, v8, v9
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    add sp, sp, a0
-; RV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 32
-; RV64-NEXT:    ret
+; RV64-NEXT: 	addi	sp, sp, -16
+; RV64-NEXT: 	sd	ra, 8(sp)                       # 8-byte Folded Spill
+; RV64-NEXT: 	sd	s0, 0(sp)                       # 8-byte Folded Spill
+; RV64-NEXT: 	mv	s0, a0
+; RV64-NEXT: 	vsetvli	zero, a0, e8, mf8, ta, ma
+; RV64-NEXT: 	vmv1r.v	v24, v10
+; RV64-NEXT: 	csrwi	vxrm, 0
+; RV64-NEXT: 	vaadd.vv	v8, v8, v9
+; RV64-NEXT: 	call	foo
+; RV64-NEXT: 	csrwi	vxrm, 0
+; RV64-NEXT: 	vsetvli	zero, s0, e8, mf8, ta, ma
+; RV64-NEXT: 	vaadd.vv	v8, v8, v24
+; RV64-NEXT: 	ld	ra, 8(sp)                       # 8-byte Folded Reload
+; RV64-NEXT: 	ld	s0, 0(sp)                       # 8-byte Folded Reload
+; RV64-NEXT: 	addi	sp, sp, 16
+; RV64-NEXT: 	ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
     <vscale x 1 x i8> poison,

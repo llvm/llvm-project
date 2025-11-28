@@ -307,41 +307,26 @@ declare void @foo()
 define <vscale x 1 x double> @test8(i64 %avl, i8 zeroext %cond, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    beqz a1, .LBB6_2
-; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB6_2: # %if.else
-; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    mv s0, a0
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add a0, a0, sp
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    call foo
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add a0, a0, sp
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
-; CHECK-NEXT:    vfsub.vv v8, v9, v8
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 32
-; CHECK-NEXT:    ret
+; CHECK-NEXT:	vsetivli	zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:	vmv1r.v	v24, v9
+; CHECK-NEXT:	vmv1r.v	v25, v8
+; CHECK-NEXT:	vsetvli	zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:	beqz	a1, .LBB6_2
+; CHECK-NEXT:# %bb.1:                                # %if.then
+; CHECK-NEXT:	vfadd.vv	v8, v25, v24
+; CHECK-NEXT:	ret
+; CHECK-NEXT:.LBB6_2:                                # %if.else
+; CHECK-NEXT:	addi	sp, sp, -16
+; CHECK-NEXT:	sd	ra, 8(sp)                       # 8-byte Folded Spill
+; CHECK-NEXT:	sd	s0, 0(sp)                       # 8-byte Folded Spill
+; CHECK-NEXT:	mv	s0, a0
+; CHECK-NEXT:	call	foo
+; CHECK-NEXT:	vsetvli	zero, s0, e64, m1, ta, ma
+; CHECK-NEXT:	vfsub.vv	v8, v25, v24
+; CHECK-NEXT:	ld	ra, 8(sp)                       # 8-byte Folded Reload
+; CHECK-NEXT:	ld	s0, 0(sp)                       # 8-byte Folded Reload
+; CHECK-NEXT:	addi	sp, sp, 16
+; CHECK-NEXT:	ret
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 3, i64 0)
   %tobool = icmp eq i8 %cond, 0
@@ -366,43 +351,27 @@ if.end:                                           ; preds = %if.else, %if.then
 define <vscale x 1 x double> @test9(i64 %avl, i8 zeroext %cond, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test9:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 1
-; CHECK-NEXT:    sub sp, sp, a2
-; CHECK-NEXT:    mv s0, a0
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    beqz a1, .LBB7_2
-; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    vfadd.vv v9, v8, v9
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add a0, a0, sp
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    call foo
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add a0, a0, sp
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
-; CHECK-NEXT:    j .LBB7_3
-; CHECK-NEXT:  .LBB7_2: # %if.else
-; CHECK-NEXT:    vfsub.vv v9, v8, v9
-; CHECK-NEXT:  .LBB7_3: # %if.end
-; CHECK-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmul.vv v8, v9, v8
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 32
-; CHECK-NEXT:    ret
+; CHECK-NEXT:	addi	sp, sp, -16
+; CHECK-NEXT:	sd	ra, 8(sp)                       # 8-byte Folded Spill
+; CHECK-NEXT:	sd	s0, 0(sp)                       # 8-byte Folded Spill
+; CHECK-NEXT:	vsetivli	zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:	vmv1r.v	v24, v8
+; CHECK-NEXT:	mv	s0, a0
+; CHECK-NEXT:	vsetvli	zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:	beqz	a1, .LBB7_2
+; CHECK-NEXT:# %bb.1:                                # %if.then
+; CHECK-NEXT:	vfadd.vv	v25, v24, v9
+; CHECK-NEXT:	call	foo
+; CHECK-NEXT:	j	.LBB7_3
+; CHECK-NEXT:.LBB7_2:                                # %if.else
+; CHECK-NEXT:	vfsub.vv	v25, v24, v9
+; CHECK-NEXT:.LBB7_3:                                # %if.end
+; CHECK-NEXT:	vsetvli	zero, s0, e64, m1, ta, ma
+; CHECK-NEXT:	vfmul.vv	v8, v25, v24
+; CHECK-NEXT:	ld	ra, 8(sp)                       # 8-byte Folded Reload
+; CHECK-NEXT:	ld	s0, 0(sp)                       # 8-byte Folded Reload
+; CHECK-NEXT:	addi	sp, sp, 16
+; CHECK-NEXT:	ret
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 3, i64 0)
   %tobool = icmp eq i8 %cond, 0
