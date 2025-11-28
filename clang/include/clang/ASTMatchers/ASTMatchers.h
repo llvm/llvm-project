@@ -5926,14 +5926,6 @@ AST_POLYMORPHIC_MATCHER_P(hasAnySubstatement,
 /// with binaryOperator()
 ///   matching '1+2'
 ///
-/// Given
-/// \code
-///   { {}; 1+2; 3+4; }
-/// \endcode
-/// hasAdjSubstatements(compoundStmt(), binaryOperator(), binaryOperator())
-///   matches '{ {}; 1+2; 3+4; }'
-/// with the matchers matching the three consecutive statements in order.
-///
 ///    hasAdjSubstatements(compoundStmt(), binaryOperator(), returnStmt())
 ///  Is equivalent to matching a compound statement that contains
 ///  a compound statement immediately followed by a binary operator

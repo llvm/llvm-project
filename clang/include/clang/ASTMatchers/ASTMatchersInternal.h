@@ -2283,6 +2283,10 @@ using HasOpNameMatcher =
 
 HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs);
 
+/// Matches nodes of type T (CompoundStmt or StmtExpr) that contain a sequence
+/// of consecutive substatements matching the provided matchers in order.
+///
+/// See \c hasAdjSubstatements() in ASTMatchers.h for details.
 template <typename T, typename ArgT = std::vector<Matcher<Stmt>>>
 class HasAdjSubstatementsMatcher : public MatcherInterface<T> {
   static_assert(std::is_same<T, CompoundStmt>::value ||

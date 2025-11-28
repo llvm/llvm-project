@@ -439,9 +439,14 @@ optionallyVariadicOperator(const DynTypedNode &DynNode, ASTMatchFinder *Finder,
   return true;
 }
 
-inline static
-std::vector<std::string> vectorFromRefs(ArrayRef<const StringRef *> NameRefs) {
-  std::vector<std::string> Names;
+template<typename T, typename T1>
+using replace_void_t = typename std::conditional<
+    std::is_void_v<T>, T1, T
+>::type;
+
+template<typename To=void, typename From>
+static auto convertRefsToVector(ArrayRef<const From *> NameRefs) {
+  std::vector<replace_void_t<To, From>> Names;
   Names.reserve(NameRefs.size());
   for (auto *Name : NameRefs)
     Names.emplace_back(*Name);
@@ -450,35 +455,26 @@ std::vector<std::string> vectorFromRefs(ArrayRef<const StringRef *> NameRefs) {
 
 Matcher<NamedDecl> hasAnyNameFunc(ArrayRef<const StringRef *> NameRefs) {
   return internal::Matcher<NamedDecl>(
-      new internal::HasNameMatcher(vectorFromRefs(NameRefs)));
+      new internal::HasNameMatcher(convertRefsToVector<std::string>(NameRefs)));
 }
 
 Matcher<ObjCMessageExpr> hasAnySelectorFunc(
     ArrayRef<const StringRef *> NameRefs) {
-  return hasAnySelectorMatcher(vectorFromRefs(NameRefs));
+  return hasAnySelectorMatcher(convertRefsToVector<std::string>(NameRefs));
 }
 
 HasOpNameMatcher hasAnyOperatorNameFunc(ArrayRef<const StringRef *> NameRefs) {
-  return HasOpNameMatcher(vectorFromRefs(NameRefs));
+  return HasOpNameMatcher(convertRefsToVector<std::string>(NameRefs));
 }
 
 HasOverloadOpNameMatcher
 hasAnyOverloadedOperatorNameFunc(ArrayRef<const StringRef *> NameRefs) {
-  return HasOverloadOpNameMatcher(vectorFromRefs(NameRefs));
-}
-
-static std::vector<Matcher<Stmt>>
-vectorFromMatcherRefs(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
-  std::vector<Matcher<Stmt>> Matchers;
-  Matchers.reserve(MatcherRefs.size());
-  for (auto *Matcher : MatcherRefs)
-    Matchers.push_back(*Matcher);
-  return Matchers;
+  return HasOverloadOpNameMatcher(convertRefsToVector<std::string>(NameRefs));
 }
 
 HasAdjSubstatementsMatcherType
 hasAdjSubstatementsFunc(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
-  return HasAdjSubstatementsMatcherType(vectorFromMatcherRefs(MatcherRefs));
+  return HasAdjSubstatementsMatcherType(convertRefsToVector(MatcherRefs));
 }
 
 template <typename T, typename ArgT>
