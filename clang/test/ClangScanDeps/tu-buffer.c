@@ -37,6 +37,17 @@ module addition { header "addition.h" }
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -tu-buffer-path %t/tu.c > %t/result.json
 // RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s --check-prefix=CHECK
 
+//--- cdb.cc1.json.template
+[{
+  "file": "",
+  "directory": "DIR",
+  "command": "clang -cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -I DIR -x c -emit-obj"
+}]
+
+// RUN: sed "s|DIR|%/t|g" %t/cdb.cc1.json.template > %t/cdb.cc1.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.cc1.json -format experimental-full -tu-buffer-path %t/tu.c > %t/result.cc1.json
+// RUN: cat %t/result.cc1.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s --check-prefix=CHECK
+
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {

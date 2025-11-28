@@ -1108,7 +1108,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
             HadErrors = true;
         } else {
           if (llvm::Error Err =
-                  WorkerTool.initializeCompilerInstanceWithContext(
+                  WorkerTool.initializeCompilerInstanceWithContextOrError(
                       CWD, Input->CommandLine)) {
             handleErrorWithInfoString(
                 "Compiler instance with context setup error", std::move(Err),
@@ -1119,7 +1119,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
           for (auto N : Names) {
             auto MaybeModuleDepsGraph =
-                WorkerTool.computeDependenciesByNameWithContext(
+                WorkerTool.computeDependenciesByNameWithContextOrError(
                     N, AlreadySeenModules, LookupOutput);
             if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
                                    DependencyOS, Errs)) {
@@ -1129,7 +1129,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           }
 
           if (llvm::Error Err =
-                  WorkerTool.finalizeCompilerInstanceWithContext()) {
+                  WorkerTool.finalizeCompilerInstanceWithContextOrError()) {
             handleErrorWithInfoString(
                 "Compiler instance with context finialization error",
                 std::move(Err), DependencyOS, Errs);
