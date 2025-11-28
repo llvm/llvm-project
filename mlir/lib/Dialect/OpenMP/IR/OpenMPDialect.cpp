@@ -4492,9 +4492,8 @@ void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 //===----------------------------------------------------------------------===//
 // Parser and printer for NumTeamsMultiDim Clause (with dims modifier)
 //===----------------------------------------------------------------------===//
-// num_teams_multidim ::= `num_teams` `(` [`dims` `(` dim-count `)` `:`] values
-// `)` Example: num_teams(dims(3): %v0, %v1, %v2 : i32, i32, i32) Or:
-// num_teams(%v : i32)
+// num_teams_multi_dim(dims(3): %v0, %v1, %v2 : i32, i32, i32) Or:
+// num_teams_multi_dim(%v : i32)
 static ParseResult parseNumTeamsMultiDimClause(
     OpAsmParser &parser, IntegerAttr &dimsAttr,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
