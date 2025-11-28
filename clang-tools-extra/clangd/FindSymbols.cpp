@@ -228,6 +228,20 @@ std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
   return Tags;
 }
 
+std::vector<SymbolTag> getSymbolTags(const Symbol &S) {
+  std::vector<SymbolTag> Tags;
+
+  if (S.Flags & Symbol::Deprecated)
+    Tags.push_back(SymbolTag::Deprecated);
+
+  if (S.Definition)
+    Tags.push_back(SymbolTag::Definition);
+  else
+    Tags.push_back(SymbolTag::Declaration);
+
+  return Tags;
+}
+
 namespace {
 using ScoredSymbolInfo = std::pair<float, SymbolInformation>;
 struct ScoredSymbolGreater {
