@@ -7,8 +7,6 @@
 ; This tests a mix of vfnmsac and vfnmsub by using different operand orders to
 ; trigger commuting in TwoAddressInstructionPass.
 
-declare <2 x half> @llvm.experimental.constrained.fma.v2f16(<2 x half>, <2 x half>, <2 x half>, metadata, metadata)
-
 define <2 x half> @vfnmsub_vv_v2f16(<2 x half> %va, <2 x half> %vb, <2 x half> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_v2f16:
 ; CHECK:       # %bb.0:
@@ -32,8 +30,6 @@ define <2 x half> @vfnmsub_vf_v2f16(<2 x half> %va, <2 x half> %vb, half %c) str
   %vd = call <2 x half> @llvm.experimental.constrained.fma.v2f16(<2 x half> %splat, <2 x half> %neg, <2 x half> %vb, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <2 x half> %vd
 }
-
-declare <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half>, <4 x half>, <4 x half>, metadata, metadata)
 
 define <4 x half> @vfnmsub_vv_v4f16(<4 x half> %va, <4 x half> %vb, <4 x half> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_v4f16:
@@ -59,8 +55,6 @@ define <4 x half> @vfnmsub_vf_v4f16(<4 x half> %va, <4 x half> %vb, half %c) str
   ret <4 x half> %vd
 }
 
-declare <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half>, <8 x half>, <8 x half>, metadata, metadata)
-
 define <8 x half> @vfnmsub_vv_v8f16(<8 x half> %va, <8 x half> %vb, <8 x half> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_v8f16:
 ; CHECK:       # %bb.0:
@@ -85,8 +79,6 @@ define <8 x half> @vfnmsub_vf_v8f16(<8 x half> %va, <8 x half> %vb, half %c) str
   ret <8 x half> %vd
 }
 
-declare <16 x half> @llvm.experimental.constrained.fma.v16f16(<16 x half>, <16 x half>, <16 x half>, metadata, metadata)
-
 define <16 x half> @vfnmsub_vv_v16f16(<16 x half> %va, <16 x half> %vb, <16 x half> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_v16f16:
 ; CHECK:       # %bb.0:
@@ -110,8 +102,6 @@ define <16 x half> @vfnmsub_vf_v16f16(<16 x half> %va, <16 x half> %vb, half %c)
   %vd = call <16 x half> @llvm.experimental.constrained.fma.v16f16(<16 x half> %neg, <16 x half> %va, <16 x half> %vb, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <16 x half> %vd
 }
-
-declare <32 x half> @llvm.experimental.constrained.fma.v32f16(<32 x half>, <32 x half>, <32 x half>, metadata, metadata)
 
 define <32 x half> @vfnmsub_vv_v32f16(<32 x half> %va, <32 x half> %vb, <32 x half> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_v32f16:
@@ -139,8 +129,6 @@ define <32 x half> @vfnmsub_vf_v32f16(<32 x half> %va, <32 x half> %vb, half %c)
   ret <32 x half> %vd
 }
 
-declare <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float>, <2 x float>, <2 x float>, metadata, metadata)
-
 define <2 x float> @vfnmsub_vv_v2f32(<2 x float> %va, <2 x float> %vb, <2 x float> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_v2f32:
 ; CHECK:       # %bb.0:
@@ -164,8 +152,6 @@ define <2 x float> @vfnmsub_vf_v2f32(<2 x float> %va, <2 x float> %vb, float %c)
   %vd = call <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float> %splat, <2 x float> %neg, <2 x float> %vb, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <2 x float> %vd
 }
-
-declare <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float>, <4 x float>, <4 x float>, metadata, metadata)
 
 define <4 x float> @vfnmsub_vv_v4f32(<4 x float> %va, <4 x float> %vb, <4 x float> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_v4f32:
@@ -191,8 +177,6 @@ define <4 x float> @vfnmsub_vf_v4f32(<4 x float> %va, <4 x float> %vb, float %c)
   ret <4 x float> %vd
 }
 
-declare <8 x float> @llvm.experimental.constrained.fma.v8f32(<8 x float>, <8 x float>, <8 x float>, metadata, metadata)
-
 define <8 x float> @vfnmsub_vv_v8f32(<8 x float> %va, <8 x float> %vb, <8 x float> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_v8f32:
 ; CHECK:       # %bb.0:
@@ -216,8 +200,6 @@ define <8 x float> @vfnmsub_vf_v8f32(<8 x float> %va, <8 x float> %vb, float %c)
   %vd = call <8 x float> @llvm.experimental.constrained.fma.v8f32(<8 x float> %vb, <8 x float> %neg, <8 x float> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <8 x float> %vd
 }
-
-declare <16 x float> @llvm.experimental.constrained.fma.v16f32(<16 x float>, <16 x float>, <16 x float>, metadata, metadata)
 
 define <16 x float> @vfnmsub_vv_v16f32(<16 x float> %va, <16 x float> %vb, <16 x float> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_v16f32:
@@ -243,8 +225,6 @@ define <16 x float> @vfnmsub_vf_v16f32(<16 x float> %va, <16 x float> %vb, float
   ret <16 x float> %vd
 }
 
-declare <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double>, <2 x double>, <2 x double>, metadata, metadata)
-
 define <2 x double> @vfnmsub_vv_v2f64(<2 x double> %va, <2 x double> %vb, <2 x double> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_v2f64:
 ; CHECK:       # %bb.0:
@@ -269,8 +249,6 @@ define <2 x double> @vfnmsub_vf_v2f64(<2 x double> %va, <2 x double> %vb, double
   ret <2 x double> %vd
 }
 
-declare <4 x double> @llvm.experimental.constrained.fma.v4f64(<4 x double>, <4 x double>, <4 x double>, metadata, metadata)
-
 define <4 x double> @vfnmsub_vv_v4f64(<4 x double> %va, <4 x double> %vb, <4 x double> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_v4f64:
 ; CHECK:       # %bb.0:
@@ -294,8 +272,6 @@ define <4 x double> @vfnmsub_vf_v4f64(<4 x double> %va, <4 x double> %vb, double
   %vd = call <4 x double> @llvm.experimental.constrained.fma.v4f64(<4 x double> %va, <4 x double> %neg, <4 x double> %vb, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <4 x double> %vd
 }
-
-declare <8 x double> @llvm.experimental.constrained.fma.v8f64(<8 x double>, <8 x double>, <8 x double>, metadata, metadata)
 
 define <8 x double> @vfnmsub_vv_v8f64(<8 x double> %va, <8 x double> %vb, <8 x double> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_v8f64:

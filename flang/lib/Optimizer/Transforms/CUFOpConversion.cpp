@@ -263,28 +263,6 @@ static bool inDeviceContext(mlir::Operation *op) {
   return false;
 }
 
-static int computeWidth(mlir::Location loc, mlir::Type type,
-                        fir::KindMapping &kindMap) {
-  auto eleTy = fir::unwrapSequenceType(type);
-  if (auto t{mlir::dyn_cast<mlir::IntegerType>(eleTy)})
-    return t.getWidth() / 8;
-  if (auto t{mlir::dyn_cast<mlir::FloatType>(eleTy)})
-    return t.getWidth() / 8;
-  if (eleTy.isInteger(1))
-    return 1;
-  if (auto t{mlir::dyn_cast<fir::LogicalType>(eleTy)})
-    return kindMap.getLogicalBitsize(t.getFKind()) / 8;
-  if (auto t{mlir::dyn_cast<mlir::ComplexType>(eleTy)}) {
-    int elemSize =
-        mlir::cast<mlir::FloatType>(t.getElementType()).getWidth() / 8;
-    return 2 * elemSize;
-  }
-  if (auto t{mlir::dyn_cast_or_null<fir::CharacterType>(eleTy)})
-    return kindMap.getCharacterBitsize(t.getFKind()) / 8;
-  mlir::emitError(loc, "unsupported type");
-  return 0;
-}
-
 struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -320,7 +298,7 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
       mlir::Value bytes;
       fir::KindMapping kindMap{fir::getKindMapping(mod)};
       if (fir::isa_trivial(op.getInType())) {
-        int width = computeWidth(loc, op.getInType(), kindMap);
+        int width = cuf::computeElementByteSize(loc, op.getInType(), kindMap);
         bytes =
             builder.createIntegerConstant(loc, builder.getIndexType(), width);
       } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
@@ -330,7 +308,7 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
           mlir::Type structTy = typeConverter->convertType(seqTy.getEleTy());
           size = dl->getTypeSizeInBits(structTy) / 8;
         } else {
-          size = computeWidth(loc, seqTy.getEleTy(), kindMap);
+          size = cuf::computeElementByteSize(loc, seqTy.getEleTy(), kindMap);
         }
         mlir::Value width =
             builder.createIntegerConstant(loc, builder.getIndexType(), size);
@@ -353,6 +331,11 @@ struct CUFAllocOpConversion : public mlir::OpRewritePattern<cuf::AllocOp> {
         std::size_t structSize = dl->getTypeSizeInBits(structTy) / 8;
         bytes = builder.createIntegerConstant(loc, builder.getIndexType(),
                                               structSize);
+      } else if (fir::isa_char(op.getInType())) {
+        mlir::Type charTy = typeConverter->convertType(op.getInType());
+        std::size_t charSize = dl->getTypeSizeInBits(charTy) / 8;
+        bytes = builder.createIntegerConstant(loc, builder.getIndexType(),
+                                              charSize);
       } else {
         mlir::emitError(loc, "unsupported type in cuf.alloc\n");
       }
@@ -673,38 +656,15 @@ struct CUFDataTransferOpConversion
       }
 
       mlir::Type i64Ty = builder.getI64Type();
-      mlir::Value nbElement;
-      if (op.getShape()) {
-        llvm::SmallVector<mlir::Value> extents;
-        if (auto shapeOp =
-                mlir::dyn_cast<fir::ShapeOp>(op.getShape().getDefiningOp())) {
-          extents = shapeOp.getExtents();
-        } else if (auto shapeShiftOp = mlir::dyn_cast<fir::ShapeShiftOp>(
-                       op.getShape().getDefiningOp())) {
-          for (auto i : llvm::enumerate(shapeShiftOp.getPairs()))
-            if (i.index() & 1)
-              extents.push_back(i.value());
-        }
-
-        nbElement = fir::ConvertOp::create(rewriter, loc, i64Ty, extents[0]);
-        for (unsigned i = 1; i < extents.size(); ++i) {
-          auto operand =
-              fir::ConvertOp::create(rewriter, loc, i64Ty, extents[i]);
-          nbElement =
-              mlir::arith::MulIOp::create(rewriter, loc, nbElement, operand);
-        }
-      } else {
-        if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(dstTy))
-          nbElement = builder.createIntegerConstant(
-              loc, i64Ty, seqTy.getConstantArraySize());
-      }
+      mlir::Value nbElement =
+          cuf::computeElementCount(rewriter, loc, op.getShape(), dstTy, i64Ty);
       unsigned width = 0;
       if (fir::isa_derived(fir::unwrapSequenceType(dstTy))) {
         mlir::Type structTy =
             typeConverter->convertType(fir::unwrapSequenceType(dstTy));
         width = dl->getTypeSizeInBits(structTy) / 8;
       } else {
-        width = computeWidth(loc, dstTy, kindMap);
+        width = cuf::computeElementByteSize(loc, dstTy, kindMap);
       }
       mlir::Value widthValue = mlir::arith::ConstantOp::create(
           rewriter, loc, i64Ty, rewriter.getIntegerAttr(i64Ty, width));

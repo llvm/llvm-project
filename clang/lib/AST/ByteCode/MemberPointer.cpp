@@ -23,6 +23,15 @@ std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
   if (!Base.isBlockPointer())
     return std::nullopt;
 
+  unsigned BlockMDSize = Base.block()->getDescriptor()->getMetadataSize();
+
+  if (PtrOffset >= 0) {
+    // If the resulting base would be too small, return nullopt.
+    if (Base.BS.Base < static_cast<unsigned>(PtrOffset) ||
+        (Base.BS.Base - PtrOffset < BlockMDSize))
+      return std::nullopt;
+  }
+
   Pointer CastedBase =
       (PtrOffset < 0 ? Base.atField(-PtrOffset) : Base.atFieldSub(PtrOffset));
 
@@ -31,7 +40,7 @@ std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
     return std::nullopt;
 
   unsigned Offset = 0;
-  Offset += CastedBase.block()->getDescriptor()->getMetadataSize();
+  Offset += BlockMDSize;
 
   if (const auto *FD = dyn_cast<FieldDecl>(Dcl)) {
     if (FD->getParent() == BaseRecord->getDecl())

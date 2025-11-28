@@ -772,6 +772,9 @@ Pass *llvm::createGlobalMergePass(const TargetMachine *TM, unsigned Offset,
   bool MergeConstAggressive = GlobalMergeAllConst.getNumOccurrences() > 0
                                   ? GlobalMergeAllConst
                                   : MergeConstAggressiveByDefault;
-  return new GlobalMerge(TM, Offset, OnlyOptimizeForSize, MergeExternal,
+  unsigned PreferOffset = GlobalMergeMaxOffset.getNumOccurrences() > 0
+                              ? GlobalMergeMaxOffset
+                              : Offset;
+  return new GlobalMerge(TM, PreferOffset, OnlyOptimizeForSize, MergeExternal,
                          MergeConstant, MergeConstAggressive);
 }

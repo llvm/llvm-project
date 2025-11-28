@@ -11,8 +11,11 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IntrinsicInst.h"
 
+using namespace llvm;
+
 namespace llvm {
 class BasicBlock;
+}
 
 //===----------------------------------------------------------------------===//
 //                                 User Class
@@ -214,5 +217,3 @@ LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE void User::operator delete(void *Usr) {
     ::operator delete(Storage);
   }
 }
-
-} // namespace llvm

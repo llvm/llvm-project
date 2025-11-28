@@ -220,7 +220,7 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
                           ProfileLower + "'");
 
     // Name of the object in C++
-    const std::string CppSpelling = ArchInfoName(Major, Minor, ProfileUpper);
+    std::string CppSpelling = ArchInfoName(Major, Minor, ProfileUpper);
     OS << "inline constexpr ArchInfo " << CppSpelling << " = {\n";
     CppSpellings.push_back(std::move(CppSpelling));
 

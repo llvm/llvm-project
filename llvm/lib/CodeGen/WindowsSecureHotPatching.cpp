@@ -461,8 +461,6 @@ static bool searchConstantExprForGlobalVariables(
     Value *V, SmallDenseMap<GlobalVariable *, Value *> &GVLoadMap,
     SmallVector<GlobalVariableUse> &GVUses) {
 
-  SmallVector<Value *, 8> ReplacedOperands;
-
   if (GlobalVariable *GV = dyn_cast<GlobalVariable>(V)) {
     if (globalVariableNeedsRedirect(GV)) {
       GVLoadMap[GV] = nullptr;

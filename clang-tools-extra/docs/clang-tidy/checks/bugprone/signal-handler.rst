@@ -20,10 +20,10 @@ Checked signal handler rules for up to and including C++14:
 
 The check is disabled on C++17 and later.
 
-Asynchronous-safety is determined by comparing the function's name against a set
-of known functions. In addition, the function must come from a system header
-include and in a global namespace. The (possible) arguments passed to the
-function are not checked. Any function that cannot be determined to be
+Asynchronous-safety is determined by comparing the function's name against a
+set of known functions. In addition, the function must come from a system
+header include and in a global namespace. The (possible) arguments passed to
+the function are not checked. Any function that cannot be determined to be
 asynchronous-safe is assumed to be non-asynchronous-safe by the check,
 including user functions for which only the declaration is visible.
 Calls to user-defined functions with visible definitions are checked
@@ -44,7 +44,7 @@ Options
 
   Selects which set of functions is considered as asynchronous-safe
   (and therefore allowed in signal handlers). It can be set to the following values:
-  
+
   ``minimal``
      Selects a minimal set that is defined in the CERT SIG30-C rule.
      and includes functions ``abort()``, ``_Exit()``, ``quick_exit()`` and

@@ -90,17 +90,16 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
     if (!dimIndex)
       return failure();
 
-    ReifiedRankedShapedTypeDims reifiedResultShapes;
-    if (failed(reifyResultShapes(rewriter, dimValue.getOwner(),
-                                 reifiedResultShapes)))
+    FailureOr<OpFoldResult> replacement = reifyDimOfResult(
+        rewriter, dimValue.getOwner(), dimValue.getResultNumber(), *dimIndex);
+    if (failed(replacement))
       return failure();
-    unsigned resultNumber = dimValue.getResultNumber();
-    // Do not apply pattern if the IR is invalid (dim out of bounds).
-    if ((size_t)(*dimIndex) >= reifiedResultShapes[resultNumber].size())
-      return rewriter.notifyMatchFailure(dimOp, "dimension is out of bounds");
-    Value replacement = getValueOrCreateConstantIndexOp(
-        rewriter, dimOp.getLoc(), reifiedResultShapes[resultNumber][*dimIndex]);
-    rewriter.replaceOp(dimOp, replacement);
+    // Check if the OpFoldResult is empty (unreifiable dimension).
+    if (!replacement.value())
+      return failure();
+    Value replacementVal = getValueOrCreateConstantIndexOp(
+        rewriter, dimOp.getLoc(), replacement.value());
+    rewriter.replaceOp(dimOp, replacementVal);
     return success();
   }
 };
@@ -166,12 +165,14 @@ namespace {
 struct ResolveRankedShapeTypeResultDimsPass final
     : public memref::impl::ResolveRankedShapeTypeResultDimsPassBase<
           ResolveRankedShapeTypeResultDimsPass> {
+  using Base::Base;
   void runOnOperation() override;
 };
 
 struct ResolveShapedTypeResultDimsPass final
     : public memref::impl::ResolveShapedTypeResultDimsPassBase<
           ResolveShapedTypeResultDimsPass> {
+  using Base::Base;
   void runOnOperation() override;
 };
 
@@ -195,14 +196,22 @@ void memref::populateResolveShapedTypeResultDimsPatterns(
 void ResolveRankedShapeTypeResultDimsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
-  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+  auto result = applyPatternsGreedily(getOperation(), std::move(patterns));
+  if (errorOnPatternIterationLimit && failed(result)) {
+    getOperation()->emitOpError(
+        "dim operation resolution hit pattern iteration limit");
     return signalPassFailure();
+  }
 }
 
 void ResolveShapedTypeResultDimsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
   memref::populateResolveShapedTypeResultDimsPatterns(patterns);
-  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+  auto result = applyPatternsGreedily(getOperation(), std::move(patterns));
+  if (errorOnPatternIterationLimit && failed(result)) {
+    getOperation()->emitOpError(
+        "dim operation resolution hit pattern iteration limit");
     return signalPassFailure();
+  }
 }

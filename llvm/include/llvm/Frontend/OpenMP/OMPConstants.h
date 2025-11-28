@@ -190,8 +190,18 @@ enum class OMPScheduleType {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue */ ModifierMask)
 };
 
+/// The fallback types for the dyn_groupprivate clause.
+enum class OMPDynGroupprivateFallbackType : uint64_t {
+  /// Abort the execution.
+  Abort = 0,
+  /// Return null pointer.
+  Null = 1,
+  /// Allocate from a implementation defined memory space.
+  DefaultMem = 2
+};
+
 // Default OpenMP mapper name suffix.
-inline constexpr const char *OmpDefaultMapperName = ".omp.default.mapper";
+inline constexpr const char *OmpDefaultMapperName = "_omp_default_mapper";
 
 /// Values for bit flags used to specify the mapping type for
 /// offloading.

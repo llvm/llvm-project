@@ -382,7 +382,7 @@ public:
     RegisteredSubCommands.erase(sub);
   }
 
-  iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+  iterator_range<SmallPtrSet<SubCommand *, 4>::iterator>
   getRegisteredSubcommands() {
     return make_range(RegisteredSubCommands.begin(),
                       RegisteredSubCommands.end());
@@ -602,10 +602,7 @@ static Option *LookupNearestOption(StringRef Arg,
   // Find the closest match.
   Option *Best = nullptr;
   unsigned BestDistance = 0;
-  for (StringMap<Option *>::const_iterator it = OptionsMap.begin(),
-                                           ie = OptionsMap.end();
-       it != ie; ++it) {
-    Option *O = it->second;
+  for (const auto &[_, O] : OptionsMap) {
     // Do not suggest really hidden options (not shown in any help).
     if (O->getOptionHiddenFlag() == ReallyHidden)
       continue;
@@ -2343,10 +2340,10 @@ namespace {
 class HelpPrinter {
 protected:
   const bool ShowHidden;
-  typedef SmallVector<std::pair<const char *, Option *>, 128>
-      StrOptionPairVector;
-  typedef SmallVector<std::pair<const char *, SubCommand *>, 128>
-      StrSubCommandPairVector;
+  using StrOptionPairVector =
+      SmallVector<std::pair<const char *, Option *>, 128>;
+  using StrSubCommandPairVector =
+      SmallVector<std::pair<const char *, SubCommand *>, 128>;
   // Print the options. Opts is assumed to be alphabetically sorted.
   virtual void printOptions(StrOptionPairVector &Opts, size_t MaxArgLen) {
     for (const auto &Opt : Opts)
@@ -2830,7 +2827,7 @@ StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
   return Sub.OptionsMap;
 }
 
-iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+iterator_range<SmallPtrSet<SubCommand *, 4>::iterator>
 cl::getRegisteredSubcommands() {
   return GlobalParser->getRegisteredSubcommands();
 }

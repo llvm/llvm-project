@@ -353,8 +353,6 @@ define half @fdiv_h(half %a, half %b) nounwind {
   ret half %1
 }
 
-declare half @llvm.sqrt.f16(half)
-
 define half @fsqrt_h(half %a) nounwind {
 ; CHECKIZFH-LABEL: fsqrt_h:
 ; CHECKIZFH:       # %bb.0:
@@ -408,8 +406,6 @@ define half @fsqrt_h(half %a) nounwind {
   %1 = call half @llvm.sqrt.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.copysign.f16(half, half)
 
 define half @fsgnj_h(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: fsgnj_h:
@@ -760,8 +756,6 @@ define half @fsgnjn_h(half %a, half %b) nounwind {
   ret half %3
 }
 
-declare half @llvm.fabs.f16(half)
-
 ; This function performs extra work to ensure that
 ; DAGCombiner::visitBITCAST doesn't replace the fabs with an and.
 define half @fabs_h(half %a, half %b) nounwind {
@@ -916,8 +910,6 @@ define half @fabs_h(half %a, half %b) nounwind {
   ret half %3
 }
 
-declare half @llvm.minnum.f16(half, half)
-
 define half @fmin_h(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: fmin_h:
 ; CHECKIZFH:       # %bb.0:
@@ -1000,8 +992,6 @@ define half @fmin_h(half %a, half %b) nounwind {
   ret half %1
 }
 
-declare half @llvm.maxnum.f16(half, half)
-
 define half @fmax_h(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: fmax_h:
 ; CHECKIZFH:       # %bb.0:
@@ -1083,8 +1073,6 @@ define half @fmax_h(half %a, half %b) nounwind {
   %1 = call half @llvm.maxnum.f16(half %a, half %b)
   ret half %1
 }
-
-declare half @llvm.fma.f16(half, half, half)
 
 define half @fmadd_h(half %a, half %b, half %c) nounwind {
 ; CHECKIZFH-LABEL: fmadd_h:
@@ -1761,7 +1749,6 @@ define half @fnmadd_h_3(half %a, half %b, half %c) nounwind {
   %neg = fneg half %1
   ret half %neg
 }
-
 
 define half @fnmadd_nsz(half %a, half %b, half %c) nounwind {
 ; RV32IZFH-LABEL: fnmadd_nsz:

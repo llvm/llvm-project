@@ -4,10 +4,10 @@ cppcoreguidelines-no-malloc
 ===========================
 
 This check handles C-Style memory management using ``malloc()``, ``realloc()``,
-``calloc()`` and ``free()``. It warns about its use and tries to suggest the use
-of an appropriate RAII object.
-Furthermore, it can be configured to check against a user-specified list of functions
-that are used for memory management (e.g. ``posix_memalign()``).
+``calloc()`` and ``free()``. It warns about its use and tries to suggest the
+use of an appropriate RAII object.
+Furthermore, it can be configured to check against a user-specified list of
+functions that are used for memory management (e.g. ``posix_memalign()``).
 
 This check implements `R.10
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rr-mallocfree>`_

@@ -39,7 +39,22 @@ SBFile::SBFile() { LLDB_INSTRUMENT_VA(this); }
 SBFile::SBFile(FILE *file, bool transfer_ownership) {
   LLDB_INSTRUMENT_VA(this, file, transfer_ownership);
 
-  m_opaque_sp = std::make_shared<NativeFile>(file, transfer_ownership);
+  // For backwards comptability, this defaulted to ReadOnly previously.
+  m_opaque_sp = std::make_shared<NativeFile>(file, File::eOpenOptionReadOnly,
+                                             transfer_ownership);
+}
+
+SBFile::SBFile(FILE *file, const char *mode, bool transfer_ownership) {
+  LLDB_INSTRUMENT_VA(this, file, transfer_ownership);
+
+  auto options = File::GetOptionsFromMode(mode);
+  if (!options) {
+    llvm::consumeError(options.takeError());
+    return;
+  }
+
+  m_opaque_sp =
+      std::make_shared<NativeFile>(file, options.get(), transfer_ownership);
 }
 
 SBFile::SBFile(int fd, const char *mode, bool transfer_owndership) {

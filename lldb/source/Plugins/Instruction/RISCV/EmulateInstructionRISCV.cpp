@@ -1328,32 +1328,36 @@ public:
         m_emu, inst, 8, ZextD,
         [](uint64_t a, uint64_t b) { return std::max(a, b); });
   }
-  template <typename T>
-  bool F_Load(T inst, const fltSemantics &(*semantics)(),
-              unsigned int numBits) {
+  template <typename I, typename T>
+  bool F_Load(I inst, const fltSemantics &(*semantics)()) {
     return transformOptional(inst.rs1.Read(m_emu),
                              [&](auto &&rs1) {
-                               uint64_t addr = rs1 + uint64_t(inst.imm);
-                               uint64_t bits = *m_emu.ReadMem<uint64_t>(addr);
+                               uint64_t addr =
+                                   rs1 + uint64_t(SignExt(inst.imm));
+                               uint64_t bits = *m_emu.ReadMem<T>(addr);
+                               unsigned numBits = sizeof(T) * 8;
                                APFloat f(semantics(), APInt(numBits, bits));
                                return inst.rd.WriteAPFloat(m_emu, f);
                              })
         .value_or(false);
   }
-  bool operator()(FLW inst) { return F_Load(inst, &APFloat::IEEEsingle, 32); }
-  template <typename T> bool F_Store(T inst, bool isDouble) {
+  bool operator()(FLW inst) {
+    return F_Load<FLW, uint32_t>(inst, &APFloat::IEEEsingle);
+  }
+  template <typename I, typename T> bool F_Store(I inst, bool isDouble) {
     return transformOptional(zipOpt(inst.rs1.Read(m_emu),
                                     inst.rs2.ReadAPFloat(m_emu, isDouble)),
                              [&](auto &&tup) {
                                auto [rs1, rs2] = tup;
-                               uint64_t addr = rs1 + uint64_t(inst.imm);
+                               uint64_t addr =
+                                   rs1 + uint64_t(SignExt(inst.imm));
                                uint64_t bits =
                                    rs2.bitcastToAPInt().getZExtValue();
-                               return m_emu.WriteMem<uint64_t>(addr, bits);
+                               return m_emu.WriteMem<T>(addr, bits);
                              })
         .value_or(false);
   }
-  bool operator()(FSW inst) { return F_Store(inst, false); }
+  bool operator()(FSW inst) { return F_Store<FSW, uint32_t>(inst, false); }
   std::tuple<bool, APFloat> FusedMultiplyAdd(APFloat rs1, APFloat rs2,
                                              APFloat rs3) {
     auto opStatus = rs1.fusedMultiplyAdd(rs2, rs3, m_emu.GetRoundingMode());
@@ -1616,8 +1620,10 @@ public:
   bool operator()(FCVT_S_LU inst) {
     return FCVT_f2i(inst, &Rs::Read, APFloat::IEEEsingle());
   }
-  bool operator()(FLD inst) { return F_Load(inst, &APFloat::IEEEdouble, 64); }
-  bool operator()(FSD inst) { return F_Store(inst, true); }
+  bool operator()(FLD inst) {
+    return F_Load<FLD, uint64_t>(inst, &APFloat::IEEEdouble);
+  }
+  bool operator()(FSD inst) { return F_Store<FSD, uint64_t>(inst, true); }
   bool operator()(FMADD_D inst) { return FMA(inst, true, 1.0f, 1.0f); }
   bool operator()(FMSUB_D inst) { return FMA(inst, true, 1.0f, -1.0f); }
   bool operator()(FNMSUB_D inst) { return FMA(inst, true, -1.0f, 1.0f); }

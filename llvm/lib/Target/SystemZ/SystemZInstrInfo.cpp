@@ -60,7 +60,7 @@ static uint64_t allOnes(unsigned int Count) {
 void SystemZInstrInfo::anchor() {}
 
 SystemZInstrInfo::SystemZInstrInfo(const SystemZSubtarget &sti)
-    : SystemZGenInstrInfo(sti, -1, -1),
+    : SystemZGenInstrInfo(sti, RI, -1, -1),
       RI(sti.getSpecialRegisters()->getReturnFunctionAddressRegister(),
          sti.getHwMode()),
       STI(sti) {}
@@ -1023,8 +1023,8 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void SystemZInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
-    MachineInstr::MIFlag Flags) const {
+
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Callers may expect a single instruction, so keep 128-bit moves
@@ -1036,10 +1036,12 @@ void SystemZInstrInfo::storeRegToStackSlot(
                     FrameIdx);
 }
 
-void SystemZInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
-    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void SystemZInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator MBBI,
+                                            Register DestReg, int FrameIdx,
+                                            const TargetRegisterClass *RC,
+                                            Register VReg,
+                                            MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Callers may expect a single instruction, so keep 128-bit moves
@@ -2357,4 +2359,20 @@ SystemZInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     return DestSourcePair(MI.getOperand(0), MI.getOperand(1));
 
   return std::nullopt;
+}
+
+std::pair<unsigned, unsigned>
+SystemZInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
+  return std::make_pair(TF, 0u);
+}
+
+ArrayRef<std::pair<unsigned, const char *>>
+SystemZInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
+  using namespace SystemZII;
+
+  static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_ADA_DATA_SYMBOL_ADDR, "systemz-ada-datasymboladdr"},
+      {MO_ADA_INDIRECT_FUNC_DESC, "systemz-ada-indirectfuncdesc"},
+      {MO_ADA_DIRECT_FUNC_DESC, "systemz-ada-directfuncdesc"}};
+  return ArrayRef(TargetFlags);
 }

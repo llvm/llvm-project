@@ -64,7 +64,7 @@ void ComparisonInTempFailureRetryCheck::check(
   const LangOptions &Opts = Result.Context->getLangOpts();
   SourceLocation LocStart = Node.getBeginLoc();
   while (LocStart.isMacroID()) {
-    SourceLocation Invocation = SM.getImmediateMacroCallerLoc(LocStart);
+    const SourceLocation Invocation = SM.getImmediateMacroCallerLoc(LocStart);
     Token Tok;
     if (!Lexer::getRawToken(SM.getSpellingLoc(Invocation), Tok, SM, Opts,
                             /*IgnoreWhiteSpace=*/true)) {

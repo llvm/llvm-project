@@ -262,6 +262,67 @@ faceforward(__detail::HLSL_FIXED_VECTOR<float, L> N,
 }
 
 //===----------------------------------------------------------------------===//
+// firstbithigh builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T firstbithigh(T Val)
+/// \brief Returns the location of the first set bit starting from the lowest
+/// order bit and working upward, per component.
+/// \param Val the input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+
+template <typename T>
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
+                                       __detail::is_same<uint16_t, T>::value,
+                                   uint> firstbithigh(T X) {
+  return __detail::firstbithigh_impl<uint, T, 16>(X);
+}
+
+template <typename T, int N>
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+const
+    inline __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
+                                     __detail::is_same<uint16_t, T>::value,
+                                 vector<uint, N>> firstbithigh(vector<T, N> X) {
+  return __detail::firstbithigh_impl<vector<uint, N>, vector<T, N>, 16>(X);
+}
+
+#endif
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_same<int, T>::value || __detail::is_same<uint, T>::value, uint>
+firstbithigh(T X) {
+  return __detail::firstbithigh_impl<uint, T, 32>(X);
+}
+
+template <typename T, int N>
+const inline __detail::enable_if_t<__detail::is_same<int, T>::value ||
+                                       __detail::is_same<uint, T>::value,
+                                   vector<uint, N>>
+firstbithigh(vector<T, N> X) {
+  return __detail::firstbithigh_impl<vector<uint, N>, vector<T, N>, 32>(X);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<__detail::is_same<int64_t, T>::value ||
+                                       __detail::is_same<uint64_t, T>::value,
+                                   uint>
+firstbithigh(T X) {
+  return __detail::firstbithigh_impl<uint, T, 64>(X);
+}
+
+template <typename T, int N>
+const inline __detail::enable_if_t<__detail::is_same<int64_t, T>::value ||
+                                       __detail::is_same<uint64_t, T>::value,
+                                   vector<uint, N>>
+firstbithigh(vector<T, N> X) {
+  return __detail::firstbithigh_impl<vector<uint, N>, vector<T, N>, 64>(X);
+}
+
+//===----------------------------------------------------------------------===//
 // fmod builtins
 //===----------------------------------------------------------------------===//
 
@@ -603,6 +664,50 @@ smoothstep(__detail::HLSL_FIXED_VECTOR<float, N> Min,
            __detail::HLSL_FIXED_VECTOR<float, N> Max,
            __detail::HLSL_FIXED_VECTOR<float, N> X) {
   return __detail::smoothstep_vec_impl(Min, Max, X);
+}
+
+inline bool CheckAccessFullyMapped(uint Status) {
+  return static_cast<bool>(Status);
+}
+
+//===----------------------------------------------------------------------===//
+// fwidth builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T fwidth(T x)
+/// \brief Computes the sum of the absolute values of the partial derivatives
+/// with regard to the x and y screen space coordinates.
+/// \param x [in] The floating-point scalar or vector to process.
+///
+/// The return value is a floating-point scalar or vector where each element
+/// holds the computation of the matching element in the input.
+
+template <typename T>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> fwidth(T input) {
+  return __detail::fwidth_impl(input);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+fwidth(T input) {
+  return __detail::fwidth_impl(input);
+}
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::HLSL_FIXED_VECTOR<half, N> fwidth(
+    __detail::HLSL_FIXED_VECTOR<half, N> input) {
+  return __detail::fwidth_impl(input);
+}
+
+template <int N>
+const inline __detail::HLSL_FIXED_VECTOR<float, N>
+fwidth(__detail::HLSL_FIXED_VECTOR<float, N> input) {
+  return __detail::fwidth_impl(input);
 }
 
 } // namespace hlsl

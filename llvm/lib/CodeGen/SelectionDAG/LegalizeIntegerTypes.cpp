@@ -2871,18 +2871,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SET_ROUNDING(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntOp_STACKMAP(SDNode *N, unsigned OpNo) {
   assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
   SmallVector<SDValue> NewOps(N->ops());
-  SDValue Operand = N->getOperand(OpNo);
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Operand.getValueType());
-  NewOps[OpNo] = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Operand);
+  NewOps[OpNo] = GetPromotedInteger(NewOps[OpNo]);
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_PATCHPOINT(SDNode *N, unsigned OpNo) {
   assert(OpNo >= 7);
   SmallVector<SDValue> NewOps(N->ops());
-  SDValue Operand = N->getOperand(OpNo);
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Operand.getValueType());
-  NewOps[OpNo] = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Operand);
+  NewOps[OpNo] = GetPromotedInteger(NewOps[OpNo]);
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
@@ -3132,7 +3128,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::USHLSAT: ExpandIntRes_SHLSAT(N, Lo, Hi); break;
 
   case ISD::AVGCEILS:
-  case ISD::AVGCEILU: 
+  case ISD::AVGCEILU:
   case ISD::AVGFLOORS:
   case ISD::AVGFLOORU: ExpandIntRes_AVG(N, Lo, Hi); break;
 

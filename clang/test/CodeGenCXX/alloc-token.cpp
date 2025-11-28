@@ -17,10 +17,10 @@ struct __sized_ptr_t {
   size_t n;
 };
 enum class __hot_cold_t : uint8_t;
-__sized_ptr_t __size_returning_new(size_t size);
-__sized_ptr_t __size_returning_new_hot_cold(size_t, __hot_cold_t);
-__sized_ptr_t __size_returning_new_aligned(size_t, std::align_val_t);
-__sized_ptr_t __size_returning_new_aligned_hot_cold(size_t, std::align_val_t,  __hot_cold_t);
+__sized_ptr_t __size_returning_new(size_t size) __attribute__((malloc_span));
+__sized_ptr_t __size_returning_new_hot_cold(size_t, __hot_cold_t) __attribute__((malloc_span));
+__sized_ptr_t __size_returning_new_aligned(size_t, std::align_val_t) __attribute__((malloc_span));
+__sized_ptr_t __size_returning_new_aligned_hot_cold(size_t, std::align_val_t,  __hot_cold_t) __attribute__((malloc_span));
 }
 
 void *sink; // prevent optimizations from removing the calls
@@ -101,12 +101,11 @@ int *test_new_array_nothrow() {
 }
 
 // CHECK-LABEL: define dso_local void @_Z23test_size_returning_newv(
-// CHECK: call { ptr, i64 } @__size_returning_new(i64 noundef 8)
-// CHECK: call { ptr, i64 } @__size_returning_new_hot_cold(i64 noundef 8, i8 noundef zeroext 1)
-// CHECK: call { ptr, i64 } @__size_returning_new_aligned(i64 noundef 8, i64 noundef 32)
-// CHECK: call { ptr, i64 } @__size_returning_new_aligned_hot_cold(i64 noundef 8, i64 noundef 32, i8 noundef zeroext 1)
+// CHECK: call { ptr, i64 } @__size_returning_new(i64 noundef 8){{.*}} !alloc_token [[META_LONG]]
+// CHECK: call { ptr, i64 } @__size_returning_new_hot_cold(i64 noundef 8, i8 noundef zeroext 1){{.*}} !alloc_token [[META_LONG]]
+// CHECK: call { ptr, i64 } @__size_returning_new_aligned(i64 noundef 8, i64 noundef 32){{.*}} !alloc_token [[META_LONG]]
+// CHECK: call { ptr, i64 } @__size_returning_new_aligned_hot_cold(i64 noundef 8, i64 noundef 32, i8 noundef zeroext 1){{.*}}_token [[META_LONG]]
 void test_size_returning_new() {
-  // FIXME: Support __size_returning_new variants.
   sink = __size_returning_new(sizeof(long)).p;
   sink = __size_returning_new_hot_cold(sizeof(long), __hot_cold_t{1}).p;
   sink = __size_returning_new_aligned(sizeof(long), std::align_val_t{32}).p;

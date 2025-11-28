@@ -513,6 +513,13 @@ defm V_CVT_U16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_u16_f16",
 defm V_CVT_I16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_i16_f16",
   VOP_I16_F16_SPECIAL_OMOD, VOP_I16_F16_SPECIAL_OMOD_t16, VOP_I16_F16_SPECIAL_OMOD_fake16, fp_to_sint>;
 
+
+let HasClamp = 0, HasOMod = 0 in {
+def V_TRANS_BF16_Profile :  VOPProfile <[bf16, bf16, untyped, untyped]>;
+def V_TRANS_BF16_t16_Profile :  VOPProfile_True16 <VOP_BF16_BF16>;
+def V_TRANS_BF16_fake16_Profile :  VOPProfile_Fake16 <VOP_BF16_BF16>;
+}
+
 let TRANS = 1, SchedRW = [WriteTrans32] in {
 defm V_RCP_F16 : VOP1Inst_t16 <"v_rcp_f16", VOP_F16_F16, AMDGPUrcp>;
 defm V_SQRT_F16 : VOP1Inst_t16 <"v_sqrt_f16", VOP_F16_F16, any_amdgcn_sqrt>;
@@ -527,14 +534,30 @@ defm V_TANH_F16  : VOP1Inst_t16 <"v_tanh_f16",  VOP_F16_F16, int_amdgcn_tanh>;
 }
 
 let SubtargetPredicate = HasBF16TransInsts in {
-defm V_TANH_BF16 : VOP1Inst_t16 <"v_tanh_bf16", VOP_BF16_BF16, int_amdgcn_tanh>;
-defm V_RCP_BF16  : VOP1Inst_t16 <"v_rcp_bf16",  VOP_BF16_BF16, AMDGPUrcp>;
-defm V_SQRT_BF16 : VOP1Inst_t16 <"v_sqrt_bf16", VOP_BF16_BF16, any_amdgcn_sqrt>;
-defm V_RSQ_BF16  : VOP1Inst_t16 <"v_rsq_bf16",  VOP_BF16_BF16, AMDGPUrsq>;
-defm V_LOG_BF16  : VOP1Inst_t16 <"v_log_bf16",  VOP_BF16_BF16, AMDGPUlogf16>;
-defm V_EXP_BF16  : VOP1Inst_t16 <"v_exp_bf16",  VOP_BF16_BF16, AMDGPUexpf16>;
-defm V_SIN_BF16  : VOP1Inst_t16 <"v_sin_bf16",  VOP_BF16_BF16, AMDGPUsin>;
-defm V_COS_BF16  : VOP1Inst_t16 <"v_cos_bf16",  VOP_BF16_BF16, AMDGPUcos>;
+defm V_TANH_BF16 : VOP1Inst_t16_with_profiles<"v_tanh_bf16", V_TRANS_BF16_Profile,
+                                               V_TRANS_BF16_t16_Profile, V_TRANS_BF16_fake16_Profile,
+                                               int_amdgcn_tanh>;
+defm V_RCP_BF16  : VOP1Inst_t16_with_profiles<"v_rcp_bf16", V_TRANS_BF16_Profile,
+                                               V_TRANS_BF16_t16_Profile, V_TRANS_BF16_fake16_Profile,
+                                               AMDGPUrcp>;
+defm V_SQRT_BF16 : VOP1Inst_t16_with_profiles<"v_sqrt_bf16", V_TRANS_BF16_Profile,
+                                               V_TRANS_BF16_t16_Profile, V_TRANS_BF16_fake16_Profile,
+                                               any_amdgcn_sqrt>;
+defm V_RSQ_BF16  : VOP1Inst_t16_with_profiles<"v_rsq_bf16", V_TRANS_BF16_Profile,
+                                               V_TRANS_BF16_t16_Profile, V_TRANS_BF16_fake16_Profile,
+                                               AMDGPUrsq>;
+defm V_LOG_BF16  : VOP1Inst_t16_with_profiles<"v_log_bf16", V_TRANS_BF16_Profile,
+                                               V_TRANS_BF16_t16_Profile, V_TRANS_BF16_fake16_Profile,
+                                               AMDGPUlogf16>;
+defm V_EXP_BF16  : VOP1Inst_t16_with_profiles<"v_exp_bf16", V_TRANS_BF16_Profile,
+                                               V_TRANS_BF16_t16_Profile, V_TRANS_BF16_fake16_Profile,
+                                               AMDGPUexpf16>;
+defm V_SIN_BF16  : VOP1Inst_t16_with_profiles<"v_sin_bf16", V_TRANS_BF16_Profile,
+                                               V_TRANS_BF16_t16_Profile, V_TRANS_BF16_fake16_Profile,
+                                               AMDGPUsin>;
+defm V_COS_BF16  : VOP1Inst_t16_with_profiles<"v_cos_bf16", V_TRANS_BF16_Profile,
+                                               V_TRANS_BF16_t16_Profile, V_TRANS_BF16_fake16_Profile,
+                                               AMDGPUcos>;
 }
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 defm V_FREXP_MANT_F16 : VOP1Inst_t16 <"v_frexp_mant_f16", VOP_F16_F16, int_amdgcn_frexp_mant>;
@@ -593,14 +616,14 @@ let SubtargetPredicate = isGFX9Plus in {
 
   let isReMaterializable = 1 in
   defm V_SAT_PK_U8_I16    : VOP1Inst_t16<"v_sat_pk_u8_i16", VOP_I16_I32>;
-
-  let mayRaiseFPException = 0 in {
-  defm V_CVT_NORM_I16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_norm_i16_f16",
-      VOP_I16_F16_SPECIAL_OMOD, VOP_I16_F16_SPECIAL_OMOD_t16, VOP_I16_F16_SPECIAL_OMOD_fake16>;
-  defm V_CVT_NORM_U16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_norm_u16_f16",
-      VOP_I16_F16_SPECIAL_OMOD, VOP_I16_F16_SPECIAL_OMOD_t16, VOP_I16_F16_SPECIAL_OMOD_fake16>;
-  } // End mayRaiseFPException = 0
 } // End SubtargetPredicate = isGFX9Plus
+
+let mayRaiseFPException = 0, SubtargetPredicate = HasCvtNormInsts in {
+defm V_CVT_NORM_I16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_norm_i16_f16",
+    VOP_I16_F16_SPECIAL_OMOD, VOP_I16_F16_SPECIAL_OMOD_t16, VOP_I16_F16_SPECIAL_OMOD_fake16>;
+defm V_CVT_NORM_U16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_norm_u16_f16",
+    VOP_I16_F16_SPECIAL_OMOD, VOP_I16_F16_SPECIAL_OMOD_t16, VOP_I16_F16_SPECIAL_OMOD_fake16>;
+} // End mayRaiseFPException = 0, SubtargetPredicate = HasCvtNormInsts
 
 let SubtargetPredicate = isGFX9Only in {
   defm V_SCREEN_PARTITION_4SE_B32 : VOP1Inst <"v_screen_partition_4se_b32", VOP_I32_I32>;

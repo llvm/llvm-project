@@ -71,7 +71,7 @@ void ComputeValueTypes(const DataLayout &DL, Type *Ty,
 ///
 void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
                      SmallVectorImpl<EVT> &ValueVTs,
-                     SmallVectorImpl<EVT> *MemVTs,
+                     SmallVectorImpl<EVT> *MemVTs = nullptr,
                      SmallVectorImpl<TypeSize> *Offsets = nullptr,
                      TypeSize StartingOffset = TypeSize::getZero());
 void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
@@ -79,20 +79,6 @@ void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL, Type *Ty,
                      SmallVectorImpl<EVT> *MemVTs,
                      SmallVectorImpl<uint64_t> *FixedOffsets,
                      uint64_t StartingOffset);
-
-/// Variant of ComputeValueVTs that don't produce memory VTs.
-inline void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
-                            Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
-                            SmallVectorImpl<TypeSize> *Offsets = nullptr,
-                            TypeSize StartingOffset = TypeSize::getZero()) {
-  ComputeValueVTs(TLI, DL, Ty, ValueVTs, nullptr, Offsets, StartingOffset);
-}
-inline void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
-                            Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
-                            SmallVectorImpl<uint64_t> *FixedOffsets,
-                            uint64_t StartingOffset) {
-  ComputeValueVTs(TLI, DL, Ty, ValueVTs, nullptr, FixedOffsets, StartingOffset);
-}
 
 /// computeValueLLTs - Given an LLVM IR type, compute a sequence of
 /// LLTs that represent all the individual underlying

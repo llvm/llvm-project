@@ -6,23 +6,37 @@
 
 include "llvm/Target/Target.td"
 
-// INSTRINFO: #ifdef GET_INSTRINFO_ENUM
+// INSTRINFO:      #ifdef GET_INSTRINFO_ENUM
 // INSTRINFO-NEXT: #undef GET_INSTRINFO_ENUM
+// INSTRINFO-EMPTY:
 // INSTRINFO-NEXT: namespace llvm::MyTarget {
+// INSTRINFO-EMPTY:
 // INSTRINFO-NEXT: enum {
-// INSTRINFO-NEXT: PHI
-// INSTRINFO: };
-// INSTRINFO: enum RegClassByHwModeUses : uint16_t {
+// INSTRINFO-NEXT:   PHI
+// INSTRINFO: LOAD_STACK_GUARD = [[LOAD_STACK_GUARD_OPCODE:[0-9]+]]
+// INSTRINFO:      };
+// INSTRINFO:      enum RegClassByHwModeUses : uint16_t {
 // INSTRINFO-NEXT:   MyPtrRC,
 // INSTRINFO-NEXT:   XRegs_EvenIfRequired,
 // INSTRINFO-NEXT:   YRegs_EvenIfRequired,
 // INSTRINFO-NEXT: };
-// INSTRINFO-NEXT: }
+// INSTRINFO-EMPTY:
+// INSTRINFO-NEXT: } // namespace llvm::MyTarget
+
+
+// INSTRINFO: { [[LOAD_STACK_GUARD_OPCODE]],	1,	1,	0,	0,	0,	0,	[[LOAD_STACK_GUARD_OP_INDEX:[0-9]+]],	MyTargetImpOpBase + 0,	0|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::MayLoad)|(1ULL<<MCID::Rematerializable)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // anonymous_
+
+// INSTRINFO: /* [[LOAD_STACK_GUARD_OP_INDEX]] */ { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
+// INSTRINFO: { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { -1, 0, MCOI::OPERAND_IMMEDIATE, 0 }, { -1, 0, MCOI::OPERAND_IMMEDIATE, 0 },
+// INSTRINFO: { -1, 0, MCOI::OPERAND_UNKNOWN, 0 }, { -1, 0, MCOI::OPERAND_IMMEDIATE, 0 },
+// INSTRINFO: { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { -1, 0, MCOI::OPERAND_UNKNOWN, 0 },
+// INSTRINFO: { -1, 0, MCOI::OPERAND_UNKNOWN, 0 }, { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { -1, 0, MCOI::OPERAND_UNKNOWN, 0 },
 
 // INSTRINFO: { MyTarget::XRegsRegClassID, 0, MCOI::OPERAND_REGISTER, 0 },
 // INSTRINFO: { MyTarget::XRegs_EvenRegClassID, 0, MCOI::OPERAND_REGISTER, 0 },
+
 // INSTRINFO: { MyTarget::YRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
-// INSTRINFO: { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
+
 // INSTRINFO: { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { MyTarget::MyPtrRC, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
 // INSTRINFO: { MyTarget::YRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 }, { MyTarget::XRegs_EvenIfRequired, 0|(1<<MCOI::LookupRegClassByHwMode), MCOI::OPERAND_REGISTER, 0 },
 
@@ -462,6 +476,8 @@ def : Pat<
   (i64 (load PtrRegOperand:$src)),
   (MY_LOAD $src)
 >;
+
+defm : RemapAllTargetPseudoPointerOperands<XRegs_EvenIfRequired>;
 
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }

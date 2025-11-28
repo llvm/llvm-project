@@ -464,7 +464,7 @@ private:
   SPIRVType *getOpTypeForwardPointer(SPIRV::StorageClass::StorageClass SC,
                                      MachineIRBuilder &MIRBuilder);
 
-  SPIRVType *getOpTypeFunction(SPIRVType *RetType,
+  SPIRVType *getOpTypeFunction(const FunctionType *Ty, SPIRVType *RetType,
                                const SmallVectorImpl<SPIRVType *> &ArgTypes,
                                MachineIRBuilder &MIRBuilder);
 
@@ -610,6 +610,8 @@ public:
                                          Type *ElemType,
                                          SPIRV::StorageClass::StorageClass SC,
                                          bool IsWritable, bool EmitIr = false);
+
+  SPIRVType *getOrCreatePaddingType(MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOrCreateLayoutType(MachineIRBuilder &MIRBuilder,
                                    const TargetExtType *T, bool EmitIr = false);

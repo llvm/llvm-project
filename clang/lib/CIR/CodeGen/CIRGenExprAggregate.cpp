@@ -343,8 +343,8 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitNoInitExpr");
   }
   void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *dae) {
-    cgf.cgm.errorNYI(dae->getSourceRange(),
-                     "AggExprEmitter: VisitCXXDefaultArgExpr");
+    CIRGenFunction::CXXDefaultArgExprScope scope(cgf, dae);
+    Visit(dae->getExpr());
   }
   void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -490,7 +490,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   for (uint64_t i = 0; i != numInitElements; ++i) {
     // Advance to the next element.
     if (i > 0) {
-      one = builder.getConstantInt(loc, cgf.PtrDiffTy, i);
+      one = builder.getConstantInt(loc, cgf.ptrDiffTy, i);
       element = builder.createPtrStride(loc, begin, one);
     }
 
@@ -512,7 +512,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
         cgf.getTypes().isZeroInitializable(elementType))) {
     // Advance to the start of the rest of the array.
     if (numInitElements) {
-      one = builder.getConstantInt(loc, cgf.PtrDiffTy, 1);
+      one = builder.getConstantInt(loc, cgf.ptrDiffTy, 1);
       element = cir::PtrStrideOp::create(builder, loc, cirElementPtrType,
                                          element, one);
     }
@@ -526,7 +526,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
 
     // Compute the end of array
     cir::ConstantOp numArrayElementsConst = builder.getConstInt(
-        loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), numArrayElements);
+        loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), numArrayElements);
     mlir::Value end = cir::PtrStrideOp::create(builder, loc, cirElementPtrType,
                                                begin, numArrayElementsConst);
 
@@ -563,7 +563,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
 
           // Advance pointer and store them to temporary variable
           cir::ConstantOp one = builder.getConstInt(
-              loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), 1);
+              loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), 1);
           auto nextElement = cir::PtrStrideOp::create(
               builder, loc, cirElementPtrType, currentElement, one);
           cgf.emitStoreThroughLValue(RValue::get(nextElement), tmpLV);
@@ -779,8 +779,8 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
     Expr *e, ArrayRef<Expr *> args, FieldDecl *initializedFieldInUnion,
     Expr *arrayFiller) {
 
-  const AggValueSlot dest =
-      ensureSlot(cgf.getLoc(e->getSourceRange()), e->getType());
+  const mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  const AggValueSlot dest = ensureSlot(loc, e->getType());
 
   if (e->getType()->isConstantArrayType()) {
     cir::ArrayType arrayTy =
@@ -819,12 +819,28 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
   if (auto *cxxrd = dyn_cast<CXXRecordDecl>(record)) {
     assert(numInitElements >= cxxrd->getNumBases() &&
            "missing initializer for base class");
-    if (cxxrd->getNumBases() > 0) {
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "visitCXXParenListOrInitListExpr base class init");
-      return;
+    for (auto &base : cxxrd->bases()) {
+      assert(!base.isVirtual() && "should not see vbases here");
+      CXXRecordDecl *baseRD = base.getType()->getAsCXXRecordDecl();
+      Address address = cgf.getAddressOfDirectBaseInCompleteClass(
+          loc, dest.getAddress(), cxxrd, baseRD,
+          /*baseIsVirtual=*/false);
+      assert(!cir::MissingFeatures::aggValueSlotGC());
+      AggValueSlot aggSlot = AggValueSlot::forAddr(
+          address, Qualifiers(), AggValueSlot::IsDestructed,
+          AggValueSlot::IsNotAliased,
+          cgf.getOverlapForBaseInit(cxxrd, baseRD, false));
+      cgf.emitAggExpr(args[curInitIndex++], aggSlot);
+      if (base.getType().isDestructedType()) {
+        cgf.cgm.errorNYI(e->getSourceRange(),
+                         "push deferred deactivation cleanup");
+        return;
+      }
     }
   }
+
+  // Prepare a 'this' for CXXDefaultInitExprs.
+  CIRGenFunction::FieldConstructionScope fcScope(cgf, dest.getAddress());
 
   LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
 

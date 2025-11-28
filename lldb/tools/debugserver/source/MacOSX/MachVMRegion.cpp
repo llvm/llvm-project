@@ -14,6 +14,12 @@
 #include "DNBLog.h"
 #include <cassert>
 #include <mach/mach_vm.h>
+#include <mach/vm_statistics.h>
+
+// From <mach/vm_statistics.h>, but not on older OSs.
+#ifndef VM_MEMORY_SANITIZER
+#define VM_MEMORY_SANITIZER 99
+#endif
 
 MachVMRegion::MachVMRegion(task_t task)
     : m_task(task), m_addr(INVALID_NUB_ADDRESS), m_err(),

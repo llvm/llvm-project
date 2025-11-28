@@ -2032,7 +2032,7 @@ private:
 };
 
 template <typename Range>
-void printDimensionList(raw_ostream &stream, Range &&shape) {
+static void printDimensionList(raw_ostream &stream, Range &&shape) {
   llvm::interleave(
       shape, stream,
       [&stream](const auto &dimSize) {

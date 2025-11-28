@@ -138,7 +138,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToElementwiseAccess",
         /*args=*/(ins "const ::mlir::bufferization::AnalysisState &":$state,
-                      "ArrayRef<OpOperand *>":$opOperands),
+                      "::llvm::ArrayRef<::mlir::OpOperand *>":$opOperands),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // It is always safe to assume that the op is not element-wise.

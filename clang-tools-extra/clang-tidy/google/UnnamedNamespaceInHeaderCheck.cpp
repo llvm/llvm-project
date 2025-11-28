@@ -28,7 +28,7 @@ void UnnamedNamespaceInHeaderCheck::registerMatchers(
 void UnnamedNamespaceInHeaderCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *N = Result.Nodes.getNodeAs<NamespaceDecl>("anonymousNamespace");
-  SourceLocation Loc = N->getBeginLoc();
+  const SourceLocation Loc = N->getBeginLoc();
   if (!Loc.isValid())
     return;
 

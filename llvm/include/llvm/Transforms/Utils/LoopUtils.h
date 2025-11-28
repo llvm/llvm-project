@@ -326,7 +326,10 @@ LLVM_ABI void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
 /// - \c std::nullopt, if the implementation is unable to handle the loop form
 ///   of \p L (e.g., \p L must have a latch block that controls the loop exit).
 /// - The value of \c llvm.loop.estimated_trip_count from the loop metadata of
-///   \p L, if that metadata is present.
+///   \p L, if that metadata is present.  In the special case that the value is
+///   zero, return \c std::nullopt instead as that is historically what callers
+///   expect when a loop is estimated to execute no iterations (i.e., its header
+///   is not reached).
 /// - Else, a new estimate of the trip count from the latch branch weights of
 ///   \p L.
 ///
@@ -353,10 +356,11 @@ getLoopEstimatedTripCount(Loop *L,
 /// to handle the loop form of \p L (e.g., \p L must have a latch block that
 /// controls the loop exit).  Otherwise, return true.
 ///
-/// In addition, if \p EstimatedLoopInvocationWeight, set the branch weight
-/// metadata of \p L to reflect that \p L has an estimated
-/// \p EstimatedTripCount iterations and has \c *EstimatedLoopInvocationWeight
-/// exit weight through the loop's latch.
+/// In addition, if \p EstimatedLoopInvocationWeight:
+/// - Set the branch weight metadata of \p L to reflect that \p L has an
+///   estimated \p EstimatedTripCount iterations and has
+///   \c *EstimatedLoopInvocationWeight exit weight through the loop's latch.
+/// - If \p EstimatedTripCount is zero, zero the branch weights.
 ///
 /// TODO: Eventually, once all passes have migrated away from setting branch
 /// weights to indicate estimated trip counts, this function will drop the
@@ -364,6 +368,40 @@ getLoopEstimatedTripCount(Loop *L,
 LLVM_ABI bool setLoopEstimatedTripCount(
     Loop *L, unsigned EstimatedTripCount,
     std::optional<unsigned> EstimatedLoopInvocationWeight = std::nullopt);
+
+/// Based on branch weight metadata, return either:
+/// - An unknown probability if the implementation is unable to handle the loop
+///   form of \p L (e.g., \p L must have a latch block that controls the loop
+///   exit).
+/// - The probability \c P that, at the end of any iteration, the latch of \p L
+///   will start another iteration such that `1 - P` is the probability of
+///   exiting the loop.
+BranchProbability getLoopProbability(Loop *L);
+
+/// Set branch weight metadata for the latch of \p L to indicate that, at the
+/// end of any iteration, \p P and `1 - P` are the probabilities of starting
+/// another iteration and exiting the loop, respectively.  Return false if the
+/// implementation is unable to handle the loop form of \p L (e.g., \p L must
+/// have a latch block that controls the loop exit).  Otherwise, return true.
+bool setLoopProbability(Loop *L, BranchProbability P);
+
+/// Based on branch weight metadata, return either:
+/// - An unknown probability if the implementation cannot extract the
+///   probability (e.g., \p B must have exactly two target labels, so it must be
+///   a conditional branch).
+/// - The probability \c P that control flows from \p B to its first target
+///   label such that `1 - P` is the probability of control flowing to its
+///   second target label, or vice-versa if \p ForFirstTarget is false.
+BranchProbability getBranchProbability(BranchInst *B, bool ForFirstTarget);
+
+/// Set branch weight metadata for \p B to indicate that \p P and `1 - P` are
+/// the probabilities of control flowing to its first and second target labels,
+/// respectively, or vice-versa if \p ForFirstTarget is false.  Return false if
+/// the implementation cannot set the probability (e.g., \p B must have exactly
+/// two target labels, so it must be a conditional branch).  Otherwise, return
+/// true.
+bool setBranchProbability(BranchInst *B, BranchProbability P,
+                          bool ForFirstTarget);
 
 /// Check inner loop (L) backedge count is known to be invariant on all
 /// iterations of its outer loop. If the loop has no parent, this is trivially

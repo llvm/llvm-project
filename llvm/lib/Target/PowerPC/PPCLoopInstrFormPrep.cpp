@@ -1316,7 +1316,7 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
     // useless and possible to break some original well-form addressing mode
     // to make this pre-inc prep for it.
     if (PointerElementType->isIntegerTy(64)) {
-      const SCEV *LSCEV = SE->getSCEVAtScope(const_cast<Value *>(PtrValue), L);
+      const SCEV *LSCEV = SE->getSCEVAtScope(PtrValue, L);
       const SCEVAddRecExpr *LARSCEV = dyn_cast<SCEVAddRecExpr>(LSCEV);
       if (!LARSCEV || LARSCEV->getLoop() != L)
         return false;

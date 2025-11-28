@@ -216,8 +216,6 @@ struct LinalgOpTilingInterface
       SmallVectorImpl<OpFoldResult> &iterDomainSizes) const {
     auto linalgOp = cast<LinalgOp>(op);
 
-    std::optional<SmallVector<OpFoldResult>> iterationSpaceOffsets,
-        iterationSpaceSizes;
     SmallVector<AffineMap> indexingMaps =
         llvm::map_to_vector(operandNumbers, [&](unsigned operandNumber) {
           OpOperand &opOperand = linalgOp->getOpOperand(operandNumber);

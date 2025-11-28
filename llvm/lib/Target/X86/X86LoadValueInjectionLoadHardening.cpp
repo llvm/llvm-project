@@ -115,9 +115,9 @@ struct MachineGadgetGraph : ImmutableGraph<MachineInstr *, int> {
   static constexpr MachineInstr *const ArgNodeSentinel = nullptr;
 
   using GraphT = ImmutableGraph<MachineInstr *, int>;
-  using Node = typename GraphT::Node;
-  using Edge = typename GraphT::Edge;
-  using size_type = typename GraphT::size_type;
+  using Node = GraphT::Node;
+  using Edge = GraphT::Edge;
+  using size_type = GraphT::size_type;
   MachineGadgetGraph(std::unique_ptr<Node[]> Nodes,
                      std::unique_ptr<Edge[]> Edges, size_type NodesSize,
                      size_type EdgesSize, int NumFences = 0, int NumGadgets = 0)
@@ -191,10 +191,10 @@ template <>
 struct DOTGraphTraits<MachineGadgetGraph *> : DefaultDOTGraphTraits {
   using GraphType = MachineGadgetGraph;
   using Traits = llvm::GraphTraits<GraphType *>;
-  using NodeRef = typename Traits::NodeRef;
-  using EdgeRef = typename Traits::EdgeRef;
-  using ChildIteratorType = typename Traits::ChildIteratorType;
-  using ChildEdgeIteratorType = typename Traits::ChildEdgeIteratorType;
+  using NodeRef = Traits::NodeRef;
+  using EdgeRef = Traits::EdgeRef;
+  using ChildIteratorType = Traits::ChildIteratorType;
+  using ChildEdgeIteratorType = Traits::ChildEdgeIteratorType;
 
   DOTGraphTraits(bool IsSimple = false) : DefaultDOTGraphTraits(IsSimple) {}
 
@@ -226,9 +226,6 @@ struct DOTGraphTraits<MachineGadgetGraph *> : DefaultDOTGraphTraits {
 };
 
 } // end namespace llvm
-
-constexpr MachineInstr *MachineGadgetGraph::ArgNodeSentinel;
-constexpr int MachineGadgetGraph::GadgetEdgeSentinel;
 
 char X86LoadValueInjectionLoadHardeningPass::ID = 0;
 
@@ -335,7 +332,7 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
   L.computePhiInfo();
 
   GraphBuilder Builder;
-  using GraphIter = typename GraphBuilder::BuilderNodeRef;
+  using GraphIter = GraphBuilder::BuilderNodeRef;
   DenseMap<MachineInstr *, GraphIter> NodeMap;
   int FenceCount = 0, GadgetCount = 0;
   auto MaybeAddNode = [&NodeMap, &Builder](MachineInstr *MI) {

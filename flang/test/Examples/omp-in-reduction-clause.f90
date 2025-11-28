@@ -15,7 +15,7 @@ subroutine omp_in_reduction_taskgroup()
         do i=1,10
             z = z * 5
         end do
-    !$omp end taskloop 
+    !$omp end taskloop
     !$omp end taskgroup
 end subroutine omp_in_reduction_taskgroup
 

@@ -7,9 +7,11 @@ entry:
 
 ; CHECK-SPIRV: OpDecorate %[[#PId:]] Volatile
 ; CHECK-SPIRV: OpDecorate %[[#PId]] FuncParamAttr NoAlias
+; CHECK-SPIRV: OpDecorate %[[#PId]] FuncParamAttr NoWrite
 ; CHECK-SPIRV: %[[#PId]] = OpFunctionParameter %[[#]]
 
 !7 = !{!"volatile"}
 !8 = !{i32 38, i32 4} ; FuncParamAttr NoAlias
-!9 = !{!8}
+!11 = !{i32 38, i32 6} ; FuncParamAttr NoWrite
+!9 = !{!8, !11}
 !10 = !{!9}

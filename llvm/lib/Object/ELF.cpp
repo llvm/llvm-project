@@ -191,6 +191,19 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
 
 #undef ELF_RELOC
 
+StringRef llvm::object::getRISCVVendorRelocationTypeName(uint32_t Type,
+                                                         StringRef Vendor) {
+#define ELF_RISCV_NONSTANDARD_RELOC(vendor, name, number)                      \
+  if (Vendor == #vendor && Type == number)                                     \
+    return #name;
+
+#include "llvm/BinaryFormat/ELFRelocs/RISCV_nonstandard.def"
+
+#undef ELF_RISCV_NONSTANDARD_RELOC
+
+  return "Unknown";
+}
+
 uint32_t llvm::object::getELFRelativeRelocationType(uint32_t Machine) {
   switch (Machine) {
   case ELF::EM_X86_64:
@@ -831,17 +844,17 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
   };
 
   uint8_t Version = 0;
-  uint8_t Feature = 0;
+  uint16_t Feature = 0;
   BBAddrMap::Features FeatEnable{};
   while (!ULEBSizeErr && !MetadataDecodeErr && Cur &&
          Cur.tell() < Content.size()) {
     Version = Data.getU8(Cur);
     if (!Cur)
       break;
-    if (Version < 2 || Version > 4)
+    if (Version < 2 || Version > 5)
       return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
                          Twine(static_cast<int>(Version)));
-    Feature = Data.getU8(Cur); // Feature byte
+    Feature = Version < 5 ? Data.getU8(Cur) : Data.getU16(Cur);
     if (!Cur)
       break;
     auto FeatEnableOrErr = BBAddrMap::Features::decode(Feature);
@@ -856,6 +869,11 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     if (FeatEnable.BBHash && Version < 4)
       return createError("version should be >= 4 for SHT_LLVM_BB_ADDR_MAP when "
                          "basic block hash feature is enabled: version = " +
+                         Twine(static_cast<int>(Version)) +
+                         " feature = " + Twine(static_cast<int>(Feature)));
+    if (FeatEnable.PostLinkCfg && Version < 5)
+      return createError("version should be >= 5 for SHT_LLVM_BB_ADDR_MAP when "
+                         "post link cfg feature is enabled: version = " +
                          Twine(static_cast<int>(Version)) +
                          " feature = " + Twine(static_cast<int>(Feature)));
     uint32_t NumBlocksInBBRange = 0;
@@ -946,6 +964,10 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         uint64_t BBF = FeatEnable.BBFreq
                            ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr)
                            : 0;
+        uint32_t PostLinkBBFreq =
+            FeatEnable.PostLinkCfg
+                ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
+                : 0;
 
         // Branch probability
         llvm::SmallVector<PGOAnalysisMap::PGOBBEntry::SuccessorEntry, 2>
@@ -955,13 +977,20 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
           for (uint64_t I = 0; I < SuccCount; ++I) {
             uint32_t BBID = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
             uint32_t BrProb = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+            uint32_t PostLinkFreq =
+                FeatEnable.PostLinkCfg
+                    ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
+                    : 0;
+
             if (PGOAnalyses)
-              Successors.push_back({BBID, BranchProbability::getRaw(BrProb)});
+              Successors.push_back(
+                  {BBID, BranchProbability::getRaw(BrProb), PostLinkFreq});
           }
         }
 
         if (PGOAnalyses)
-          PGOBBEntries.push_back({BlockFrequency(BBF), std::move(Successors)});
+          PGOBBEntries.push_back(
+              {BlockFrequency(BBF), PostLinkBBFreq, std::move(Successors)});
       }
 
       if (PGOAnalyses)

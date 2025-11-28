@@ -1090,7 +1090,7 @@ Usually, config file options are placed before command-line options, regardless
 of the actual operation to be performed. The exception is being made for the
 options prefixed with the ``$`` character. These will be used only when the linker
 is being invoked, and added after all of the command-line specified linker
-inputs. Here is some example of ``$``-prefixed options:
+inputs. Here is an example of ``$``-prefixed options:
 
 ::
 
@@ -2276,6 +2276,15 @@ are listed below.
    reduce the binary size, but might result in a worse run-time performance.
 
    See :doc: `AddressSanitizer` for more details.
+
+.. option:: -f[no-]sanitize-type-outline-instrumentation
+
+   Controls how type sanitizer code is generated. If enabled will always use
+   a function call instead of inlining the code. Turning this option off may
+   result in better run-time performance, but will increase binary size and
+   compilation overhead.
+
+   See :doc: `TypeSanitizer` for more details.
 
 .. option:: -f[no-]sanitize-stats
 

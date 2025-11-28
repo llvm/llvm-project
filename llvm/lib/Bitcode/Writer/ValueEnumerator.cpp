@@ -616,9 +616,8 @@ void ValueEnumerator::OptimizeConstants(unsigned CstStart, unsigned CstEnd) {
 /// EnumerateValueSymbolTable - Insert all of the values in the specified symbol
 /// table into the values table.
 void ValueEnumerator::EnumerateValueSymbolTable(const ValueSymbolTable &VST) {
-  for (ValueSymbolTable::const_iterator VI = VST.begin(), VE = VST.end();
-       VI != VE; ++VI)
-    EnumerateValue(VI->getValue());
+  for (const auto &VI : VST)
+    EnumerateValue(VI.getValue());
 }
 
 /// Insert all of the values referenced by named metadata in the specified

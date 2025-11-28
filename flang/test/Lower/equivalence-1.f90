@@ -53,7 +53,7 @@ SUBROUTINE s3
   ! CHECK: %{{.*}} = fir.load %[[v2loc]] : !fir.ref<f32>
   PRINT *, r(9)
 END SUBROUTINE s3
-  
+
 ! test that equivalence in main program containing arrays are placed in global memory.
 ! CHECK: fir.global internal @_QFEa : !fir.array<400000000xi8>
   integer :: a, b(100000000)

@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Parser/parse-tree.h"
+
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/tools.h"
 #include "flang/Parser/user-state.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -429,5 +432,64 @@ const OmpClauseList &OmpDirectiveSpecification::Clauses() const {
     return *clauses;
   }
   return empty;
+}
+
+const DoConstruct *OpenMPLoopConstruct::GetNestedLoop() const {
+  auto getFromBlock{[](const Block &body, auto self) -> const DoConstruct * {
+    for (auto &stmt : body) {
+      if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+        return self(std::get<Block>(block->t), self);
+      }
+      if (auto *loop{Unwrap<DoConstruct>(&stmt)}) {
+        return loop;
+      }
+    }
+    return nullptr;
+  }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
+}
+
+const OpenMPLoopConstruct *OpenMPLoopConstruct::GetNestedConstruct() const {
+  auto getFromBlock{
+      [](const Block &body, auto self) -> const OpenMPLoopConstruct * {
+        for (auto &stmt : body) {
+          if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+            return self(std::get<Block>(block->t), self);
+          }
+          if (auto *omp{Unwrap<OpenMPLoopConstruct>(&stmt)}) {
+            return omp;
+          }
+        }
+        return nullptr;
+      }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
+}
+
+static bool InitCharBlocksFromStrings(llvm::MutableArrayRef<CharBlock> blocks,
+    llvm::ArrayRef<std::string> strings) {
+  for (auto [i, n] : llvm::enumerate(strings)) {
+    blocks[i] = CharBlock(n);
+  }
+  return true;
+}
+
+// The names should have static storage duration. Keep these names
+// in a sigle place.
+llvm::ArrayRef<CharBlock> OmpCombinerExpression::Variables() {
+  static std::string names[]{"omp_in", "omp_out"};
+  static CharBlock vars[std::size(names)];
+
+  [[maybe_unused]] static bool init = InitCharBlocksFromStrings(vars, names);
+  return vars;
+}
+
+llvm::ArrayRef<CharBlock> OmpInitializerExpression::Variables() {
+  static std::string names[]{"omp_orig", "omp_priv"};
+  static CharBlock vars[std::size(names)];
+
+  [[maybe_unused]] static bool init = InitCharBlocksFromStrings(vars, names);
+  return vars;
 }
 } // namespace Fortran::parser

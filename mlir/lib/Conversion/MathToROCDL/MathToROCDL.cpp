@@ -68,7 +68,7 @@ struct ClampFOpConversion final
       return LLVM::detail::handleMultidimensionalVectors(
           op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
           [&](Type llvm1DVectorTy, ValueRange operands) -> Value {
-            typename math::ClampFOp::Adaptor adaptor(operands);
+            math::ClampFOp::Adaptor adaptor(operands);
             return ROCDL::FMed3Op::create(rewriter, op.getLoc(), llvm1DVectorTy,
                                           adaptor.getValue(), adaptor.getMin(),
                                           adaptor.getMax());

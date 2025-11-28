@@ -1,0 +1,44 @@
+name: Push Container
+description: >-
+  Download all container artifacts for this job and push them to the GitHub registry.
+
+inputs:
+  token:
+    description: >-
+      Token to use to authenticate with the container registry.
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download container
+      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+
+    - name: Push Container
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      shell: bash
+      run: |
+        function push_container {
+          image_name=$1
+          latest_name=$(echo $image_name | sed 's/:[a-f0-9]\+$/:latest/g')
+          podman tag $image_name $latest_name
+          echo "Pushing $image_name ..."
+          podman push --compression-format=zstd $image_name
+          echo "Pushing $latest_name ..."
+          podman push --compression-format=zstd $latest_name
+        }
+
+        podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
+        for f in $(find . -iname '*.tar'); do
+          image_name=$(podman load -q -i $f | sed 's/Loaded image: //g')
+          push_container $image_name
+
+          if echo $image_name | grep '/amd64/'; then
+            # For amd64, create an alias with the arch component removed.
+            # This matches the convention used on dockerhub.
+            default_image_name=$(echo $(dirname $(dirname $image_name))/$(basename $image_name))
+            podman tag $image_name $default_image_name
+            push_container $default_image_name
+          fi
+        done

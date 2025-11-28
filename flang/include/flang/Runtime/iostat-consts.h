@@ -9,7 +9,6 @@
 #ifndef FORTRAN_RUNTIME_IOSTAT_CONSTS_H_
 #define FORTRAN_RUNTIME_IOSTAT_CONSTS_H_
 
-#include "flang/Common/api-attrs.h"
 #include "flang/Runtime/magic-numbers.h"
 
 namespace Fortran::runtime::io {

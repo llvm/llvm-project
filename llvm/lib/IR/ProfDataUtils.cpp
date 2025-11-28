@@ -86,7 +86,7 @@ static void extractFromBranchWeightMD(const MDNode *ProfileData,
 }
 
 /// Push the weights right to fit in uint32_t.
-static SmallVector<uint32_t> fitWeights(ArrayRef<uint64_t> Weights) {
+SmallVector<uint32_t> llvm::fitWeights(ArrayRef<uint64_t> Weights) {
   SmallVector<uint32_t> Ret;
   Ret.reserve(Weights.size());
   uint64_t Max = *llvm::max_element(Weights);
@@ -274,9 +274,12 @@ void llvm::setExplicitlyUnknownBranchWeights(Instruction &I,
 }
 
 void llvm::setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I,
-                                                       Function &F,
-                                                       StringRef PassName) {
-  if (std::optional<Function::ProfileCount> EC = F.getEntryCount();
+                                                       StringRef PassName,
+                                                       const Function *F) {
+  F = F ? F : I.getFunction();
+  assert(F && "Either pass a instruction attached to a Function, or explicitly "
+              "pass the Function that it will be attached to");
+  if (std::optional<Function::ProfileCount> EC = F->getEntryCount();
       EC && EC->getCount() > 0)
     setExplicitlyUnknownBranchWeights(I, PassName);
 }

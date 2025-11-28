@@ -50,25 +50,29 @@
                         <li class="sidebar-section">
                             <a class="sidebar-item" href="#Enums">Enums</a>
                         </li>
-                        <ul>
-                            {{#Enums}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
-                            </li>
-                            {{/Enums}}
-                        </ul>
+                        <li>
+                            <ul>
+                                {{#Enums}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Enums}}
+                            </ul>
+                        </li>
                         {{/HasEnums}}
                         {{#HasRecords}}
                         <li class="sidebar-section">
                             <a class="sidebar-item" href="#Classes">Inner Classes</a>
                         </li>
-                        <ul>
-                            {{#Records}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
-                            </li>
-                            {{/Records}}
-                        </ul>
+                        <li>
+                            <ul>
+                                {{#Records}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Records}}
+                            </ul>
+                        </li>
                         {{/HasRecrods}}
                     </ul>
                 </div>
@@ -92,15 +96,13 @@
                         {{#Records}}
                             <li id="{{USR}}" style="max-height: 40px;">
                                 <a href="{{DocumentationFileName}}.html">
-                                    <pre>
-                                        <code class="language-cpp code-clang-doc">class {{Name}}</code>
-                                    </pre>
+                                    <pre><code class="language-cpp code-clang-doc">class {{Name}}</code></pre>
                                 </a>
                             </li>
                         {{/Records}}
                         </ul>
-                    {{/HasRecords}}
                     </section>
+                    {{/HasRecords}}
                 </div>
             </div>
         </main>

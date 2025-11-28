@@ -1320,8 +1320,9 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
           continue;
 
         // This picks up sibling registers (e.q. %al -> %ah).
+        // FIXME: Mixing physical registers and register units is likely a bug.
         for (MCRegUnit Unit : TRI.regunits(Reg))
-          RegsToZero.reset(Unit);
+          RegsToZero.reset(static_cast<unsigned>(Unit));
 
         for (MCPhysReg SReg : TRI.sub_and_superregs_inclusive(Reg))
           RegsToZero.reset(SReg);

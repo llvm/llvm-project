@@ -193,6 +193,28 @@ OpenACCMappableModel<fir::PointerType>::getOffsetInBytes(
     mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
     const mlir::DataLayout &dataLayout) const;
 
+template <typename Ty>
+bool OpenACCMappableModel<Ty>::hasUnknownDimensions(mlir::Type type) const {
+  assert(fir::isa_ref_type(type) && "expected FIR reference type");
+  return fir::hasDynamicSize(fir::unwrapRefType(type));
+}
+
+template bool OpenACCMappableModel<fir::ReferenceType>::hasUnknownDimensions(
+    mlir::Type type) const;
+
+template bool OpenACCMappableModel<fir::HeapType>::hasUnknownDimensions(
+    mlir::Type type) const;
+
+template bool OpenACCMappableModel<fir::PointerType>::hasUnknownDimensions(
+    mlir::Type type) const;
+
+template <>
+bool OpenACCMappableModel<fir::BaseBoxType>::hasUnknownDimensions(
+    mlir::Type type) const {
+  // Descriptor-based entities have dimensions encoded.
+  return false;
+}
+
 static llvm::SmallVector<mlir::Value>
 generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
                        mlir::OpBuilder &builder) {

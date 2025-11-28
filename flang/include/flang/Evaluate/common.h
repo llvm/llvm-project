@@ -303,9 +303,15 @@ public:
     return common::ScopedSet(analyzingPDTComponentKindSelector_, true);
   }
 
+  common::Restorer<std::string> SetRealFlagWarningContext(std::string str) {
+    return common::ScopedSet(realFlagWarningContext_, str);
+  }
+
   parser::CharBlock SaveTempName(std::string &&name) {
     return {*tempNames_.emplace(std::move(name)).first};
   }
+
+  void RealFlagWarnings(const RealFlags &, const char *op);
 
 private:
   parser::ContextualMessages messages_;
@@ -318,8 +324,8 @@ private:
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
   const common::LanguageFeatureControl &languageFeatures_;
   std::set<std::string> &tempNames_;
+  std::string realFlagWarningContext_;
 };
 
-void RealFlagWarnings(FoldingContext &, const RealFlags &, const char *op);
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_COMMON_H_

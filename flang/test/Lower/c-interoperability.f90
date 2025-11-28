@@ -26,7 +26,7 @@ module c_interoperability_test
   end type thing_with_pointer
 
   type(thing_with_pointer) :: this_thing
-  
+
 contains
   function get_a_thing()
     type(thing_with_pointer) :: get_a_thing

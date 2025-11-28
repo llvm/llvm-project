@@ -984,6 +984,21 @@
 // CHECK-UBSAN-MINIMAL: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function),?){18}"}}
 // CHECK-UBSAN-MINIMAL: "-fsanitize-minimal-runtime"
 
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-MINIMAL-PRESERVE-X86-64
+// CHECK-UBSAN-MINIMAL-PRESERVE-X86-64: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function),?){18}"}}
+// CHECK-UBSAN-MINIMAL-PRESERVE-X86-64: "-fsanitize-minimal-runtime"
+// CHECK-UBSAN-MINIMAL-PRESERVE-X86-64: "-fsanitize-handler-preserve-all-regs
+
+// RUN: %clang --target=aarch64-linux-gnu -fsanitize=undefined -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-MINIMAL-PRESERVE-AARCH64
+// CHECK-UBSAN-MINIMAL-PRESERVE-AARCH64: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function),?){18}"}}
+// CHECK-UBSAN-MINIMAL-PRESERVE-AARCH64: "-fsanitize-minimal-runtime"
+// CHECK-UBSAN-MINIMAL-PRESERVE-AARCH64: "-fsanitize-handler-preserve-all-regs
+
+// RUN: %clang --target=i386-linux-gnu -fsanitize=undefined -fsanitize-minimal-runtime -fsanitize-handler-preserve-all-regs %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-MINIMAL-PRESERVE-I386
+// CHECK-UBSAN-MINIMAL-PRESERVE-I386: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute|function),?){18}"}}
+// CHECK-UBSAN-MINIMAL-PRESERVE-I386: "-fsanitize-minimal-runtime"
+// CHECK-UBSAN-MINIMAL-PRESERVE-I386-NOT: "-fsanitize-handler-preserve-all-regs
+
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=integer -fsanitize-trap=integer %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INTSAN-TRAP
 // CHECK-INTSAN-TRAP: "-fsanitize-trap=integer-divide-by-zero,shift-base,shift-exponent,signed-integer-overflow,unsigned-integer-overflow,unsigned-shift-base,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change"
 

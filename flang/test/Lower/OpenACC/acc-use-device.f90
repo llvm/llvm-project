@@ -9,7 +9,7 @@ subroutine test()
 ! CHECK: %[[A0:.*]] = fir.alloca !fir.array<?xf64>, %{{.*}} {bindc_name = "b", uniq_name = "_QFtestEb"}
 ! CHECK: %[[A1:.*]] = fir.shape_shift {{.*}} : (index, index) -> !fir.shapeshift<1>
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[A0]](%[[A1]]) {uniq_name = "_QFtestEb"} : (!fir.ref<!fir.array<?xf64>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.array<?xf64>>)
-  
+
   !$acc data copy(b)
 ! CHECK: %[[B:.*]] = acc.copyin var(%[[A]]#0 : !fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>> {dataClause = #acc<data_clause acc_copy>, name = "b"}
 ! CHECK: acc.data dataOperands(%[[B]] : !fir.box<!fir.array<?xf64>>) {
@@ -23,7 +23,7 @@ subroutine test()
 ! CHECK: fir.call @_QPvadd(%[[A]]#1) fastmath<contract> : (!fir.ref<!fir.array<?xf64>>) -> ()
   !$acc end data
 ! CHECK: acc.copyout accVar(%[[B]] : !fir.box<!fir.array<?xf64>>) to var(%[[A]]#0 : !fir.box<!fir.array<?xf64>>) {dataClause = #acc<data_clause acc_copy>, name = "b"}
-end 
+end
 
 ! Test for allocatable, pointer and assumed-shape variables appearing in use_device clause.
 subroutine test2(a, b, c)
@@ -36,9 +36,9 @@ subroutine test2(a, b, c)
   call allocate(d(N))
   c => d
 ! CHECK: %[[DS:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK: %[[E:.*]]:2 = hlfir.declare %arg0 dummy_scope %[[DS]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest2Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
-! CHECK: %[[F:.*]]:2 = hlfir.declare %arg1 dummy_scope %[[DS]] {uniq_name = "_QFtest2Eb"} : (!fir.box<!fir.array<?xf64>>, !fir.dscope) -> (!fir.box<!fir.array<?xf64>>, !fir.box<!fir.array<?xf64>>)
-! CHECK: %[[G:.*]]:2 = hlfir.declare %arg2 dummy_scope %[[DS]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest2Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
+! CHECK: %[[E:.*]]:2 = hlfir.declare %arg0 dummy_scope %[[DS]] {{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest2Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+! CHECK: %[[F:.*]]:2 = hlfir.declare %arg1 dummy_scope %[[DS]] {{.*}} {uniq_name = "_QFtest2Eb"} : (!fir.box<!fir.array<?xf64>>, !fir.dscope) -> (!fir.box<!fir.array<?xf64>>, !fir.box<!fir.array<?xf64>>)
+! CHECK: %[[G:.*]]:2 = hlfir.declare %arg2 dummy_scope %[[DS]] {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest2Ec"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
 
   !$acc data copy(a,b,c,d)
   !$acc host_data use_device(a,b,c)

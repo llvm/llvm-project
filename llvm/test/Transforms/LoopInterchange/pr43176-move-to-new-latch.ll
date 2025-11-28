@@ -21,33 +21,34 @@
 
 define void @test1() {
 entry:
-  br label %for.body
+  br label %outer.header
 
-for.body:                                         ; preds = %for.inc3, %entry
-  %inc41 = phi i32 [ %inc4, %for.inc3 ], [ undef, %entry ]
-  br label %for.body2
+outer.header:
+  %i = phi i32 [ %i.next, %outer.latch ], [ 0, %entry ]
+  br label %inner.header
 
-for.body2:                                        ; preds = %for.inc, %for.body
-  %lsr.iv = phi i32 [ %lsr.iv.next, %for.inc ], [ 1, %for.body ]
-  br label %for.inc
+inner.header:
+  %j = phi i32 [ %j.next, %inner.latch ], [ 1, %outer.header ]
+  br label %inner.latch
 
-for.inc:                                          ; preds = %for.body2
-  %idxprom = sext i32 %inc41 to i64
+inner.latch:
+  %idxprom = sext i32 %i to i64
   %arrayidx = getelementptr inbounds [5 x i32], ptr @b, i64 0, i64 %idxprom
   %0 = load i32, ptr %arrayidx, align 4
   store i32 undef, ptr %arrayidx, align 4
-  %cmp = icmp slt i32 %lsr.iv, 4
-  %lsr.iv.next = add nuw nsw i32 %lsr.iv, 1
-  br i1 %cmp, label %for.body2, label %for.cond1.for.end_crit_edge
+  %cmp = icmp slt i32 %j, 4
+  %j.next = add nuw nsw i32 %j, 1
+  br i1 %cmp, label %inner.header, label %outer.body
 
-for.cond1.for.end_crit_edge:                      ; preds = %for.inc
-  br label %for.inc3
+outer.body:
+  br label %outer.latch
 
-for.inc3:                                         ; preds = %for.cond1.for.end_crit_edge
-  %inc4 = add nsw i32 %inc41, 1
-  br i1 false, label %for.body, label %for.cond.for.end5_crit_edge
+outer.latch:
+  %i.next = add nsw i32 %i, 1
+  %cmp2 = icmp slt i32 %i, 4
+  br i1 %cmp2, label %outer.header, label %exit
 
-for.cond.for.end5_crit_edge:                      ; preds = %for.inc3
+exit:
   ret void
 }
 
@@ -61,33 +62,34 @@ for.cond.for.end5_crit_edge:                      ; preds = %for.inc3
 
 define void @test2() {
 entry:
-  br label %for.body
+  br label %outer.header
 
-for.body:                                         ; preds = %for.inc3, %entry
-  %inc41 = phi i32 [ %inc4, %for.inc3 ], [ undef, %entry ]
-  br label %for.body2
+outer.header:
+  %i = phi i32 [ %i.next, %outer.latch ], [ 0, %entry ]
+  br label %inner.header
 
-for.body2:                                        ; preds = %for.inc, %for.body
-  %lsr.iv = phi i32 [ %lsr.iv.next, %for.inc ], [ 1, %for.body ]
-  br label %for.inc
+inner.header:
+  %lsr.iv = phi i32 [ %lsr.iv.next, %inner.latch ], [ 1, %outer.header ]
+  br label %inner.latch
 
-for.inc:                                          ; preds = %for.body2
-  %idxprom = sext i32 %inc41 to i64
+inner.latch:
+  %idxprom = sext i32 %i to i64
   %arrayidx = getelementptr inbounds [5 x i32], ptr @b, i64 0, i64 %idxprom
   %0 = load i32, ptr %arrayidx, align 4
   %cmp = icmp slt i32 %lsr.iv, 4
   %cmp.zext = zext i1 %cmp to i32
   store i32 %cmp.zext, ptr %arrayidx, align 4
   %lsr.iv.next = add nuw nsw i32 %lsr.iv, 1
-  br i1 %cmp, label %for.body2, label %for.cond1.for.end_crit_edge
+  br i1 %cmp, label %inner.header, label %outer.body
 
-for.cond1.for.end_crit_edge:                      ; preds = %for.inc
-  br label %for.inc3
+outer.body:
+  br label %outer.latch
 
-for.inc3:                                         ; preds = %for.cond1.for.end_crit_edge
-  %inc4 = add nsw i32 %inc41, 1
-  br i1 false, label %for.body, label %for.cond.for.end5_crit_edge
+outer.latch:
+  %i.next = add nsw i32 %i, 1
+  %cmp2 = icmp slt i32 %i, 4
+  br i1 %cmp2, label %outer.header, label %exit
 
-for.cond.for.end5_crit_edge:                      ; preds = %for.inc3
+exit:
   ret void
 }

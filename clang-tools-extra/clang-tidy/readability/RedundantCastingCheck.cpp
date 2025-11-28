@@ -25,8 +25,8 @@ static bool areTypesEqual(QualType S, QualType D) {
   if (TS != TD)
     return false;
 
-  QualType PtrS = S->getPointeeType();
-  QualType PtrD = D->getPointeeType();
+  const QualType PtrS = S->getPointeeType();
+  const QualType PtrD = D->getPointeeType();
 
   if (!PtrS.isNull() && !PtrD.isNull())
     return areTypesEqual(PtrS, PtrD);

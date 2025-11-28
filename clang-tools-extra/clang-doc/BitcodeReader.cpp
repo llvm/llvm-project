@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitcodeReader.h"
-#include "llvm/ADT/IndexedMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"

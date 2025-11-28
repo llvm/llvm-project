@@ -1,3 +1,7 @@
+; This test fails under the profcheck configuration due to profcheck creating
+; metadata.
+; UNSUPPORTED: profcheck
+
 ; Test prof-inject and prof-verify
 
 ; RUN: opt -passes=prof-inject %s -S -o - | FileCheck %s --check-prefix=INJECT

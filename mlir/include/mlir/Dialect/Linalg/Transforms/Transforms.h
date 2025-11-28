@@ -653,6 +653,9 @@ struct PadTilingInterfaceResult {
 //    interpreted as the bounding box (dynamic) value to pad to.
 /// * Use "options.paddingValues" to set the padding value of the created
 //    tensor::PadOp.
+//
+// The transformation assumes that the insertion point is set after the
+// operation to pad.
 FailureOr<PadTilingInterfaceResult>
 rewriteAsPaddedOp(OpBuilder &, TilingInterface toPad,
                   PadTilingInterfaceOptions options,

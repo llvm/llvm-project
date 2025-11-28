@@ -659,7 +659,7 @@ void MCAssembler::layout() {
 
   // Some targets might want to adjust fragment offsets. If so, perform another
   // layout iteration.
-  if (getBackend().finishLayout(*this))
+  if (getBackend().finishLayout())
     for (MCSection &Sec : *this)
       layoutSection(Sec);
 

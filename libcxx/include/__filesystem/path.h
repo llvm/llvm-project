@@ -324,6 +324,7 @@ struct _PathCVT<char> {
   }
 };
 
+#    if _LIBCPP_HAS_LOCALIZATION
 template <class _ECharT>
 struct _PathExport {
   typedef __narrow_to_utf8<sizeof(wchar_t) * __CHAR_BIT__> _Narrower;
@@ -364,7 +365,7 @@ struct _PathExport<char16_t> {
   }
 };
 
-#    if _LIBCPP_HAS_CHAR8_T
+#      if _LIBCPP_HAS_CHAR8_T
 template <>
 struct _PathExport<char8_t> {
   typedef __narrow_to_utf8<sizeof(wchar_t) * __CHAR_BIT__> _Narrower;
@@ -374,8 +375,9 @@ struct _PathExport<char8_t> {
     _Narrower()(back_inserter(__dest), __src.data(), __src.data() + __src.size());
   }
 };
-#    endif // _LIBCPP_HAS_CHAR8_T
-#  endif   /* _LIBCPP_WIN32API */
+#      endif // _LIBCPP_HAS_CHAR8_T
+#    endif   // _LIBCPP_HAS_LOCALIZATION
+#  endif     // _LIBCPP_WIN32API
 
 class _LIBCPP_EXPORTED_FROM_ABI path {
   template <class _SourceOrIter, class _Tp = path&>

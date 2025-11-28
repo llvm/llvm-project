@@ -217,7 +217,8 @@ std::optional<MemoryBufferRef> macho::readFile(StringRef path) {
   if (entry != cachedReads.end())
     return entry->second;
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr = MemoryBuffer::getFile(path);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> mbOrErr =
+      MemoryBuffer::getFile(path, false, /*RequiresNullTerminator=*/false);
   if (std::error_code ec = mbOrErr.getError()) {
     error("cannot open " + path + ": " + ec.message());
     return std::nullopt;
@@ -516,12 +517,8 @@ static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
   if (isThreadLocalVariables(sec.flags) &&
       !relocAttrs.hasAttr(RelocAttrBits::UNSIGNED))
     error(message("not allowed in thread-local section, must be UNSIGNED"));
-  if (rel.r_length < 2 || rel.r_length > 3 ||
-      !relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
-    static SmallVector<StringRef, 4> widths{"0", "4", "8", "4 or 8"};
-    error(message("has width " + std::to_string(1 << rel.r_length) +
-                  " bytes, but must be " +
-                  widths[(static_cast<int>(relocAttrs.bits) >> 2) & 3] +
+  if (!relocAttrs.hasAttr(static_cast<RelocAttrBits>(1 << rel.r_length))) {
+    error(message("has invalid width of " + std::to_string(1 << rel.r_length) +
                   " bytes"));
   }
   return valid;
@@ -598,8 +595,8 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
         // FIXME This logic was written around x86_64 behavior -- ARM64 doesn't
         // have pcrel section relocations. We may want to factor this out into
         // the arch-specific .cpp file.
-        assert(target->hasAttr(r.type, RelocAttrBits::BYTE4));
-        referentOffset = sec.addr + relInfo.r_address + 4 + totalAddend -
+        referentOffset = sec.addr + relInfo.r_address +
+                         (1ull << relInfo.r_length) + totalAddend -
                          referentSecHead.addr;
       } else {
         // The addend for a non-pcrel relocation is its absolute address.
@@ -812,6 +809,17 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       continue;
 
     if ((sym.n_type & N_TYPE) == N_SECT) {
+      if (sym.n_sect == 0) {
+        fatal("section symbol " + StringRef(strtab + sym.n_strx) + " in " +
+              toString(this) + " has an invalid section index [0]");
+      }
+      if (sym.n_sect > sections.size()) {
+        fatal("section symbol " + StringRef(strtab + sym.n_strx) + " in " +
+              toString(this) + " has an invalid section index [" +
+              Twine(static_cast<unsigned>(sym.n_sect)) +
+              "] greater than the total number of sections [" +
+              Twine(sections.size()) + "]");
+      }
       Subsections &subsections = sections[sym.n_sect - 1]->subsections;
       // parseSections() may have chosen not to parse this section.
       if (subsections.empty())

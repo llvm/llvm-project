@@ -772,6 +772,17 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                          PreloadedScratchRsrcReg,
                                          ScratchRsrcReg, ScratchWaveOffsetReg);
   }
+
+  if (ST.hasWaitXCnt()) {
+    // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
+    // replay. This aligns hardware behavior with the compiler's s_wait_xcnt
+    // insertion logic, which assumes multi-group mode by default.
+    unsigned RegEncoding =
+        AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 25, 1);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SETREG_IMM32_B32))
+        .addImm(1)
+        .addImm(RegEncoding);
+  }
 }
 
 // Emit scratch RSRC setup code, assuming `ScratchRsrcReg != AMDGPU::NoReg`
@@ -2170,7 +2181,9 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
     return MFI.getStackSize() != 0;
   }
 
-  return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
+  return (frameTriviallyRequiresSP(MFI) &&
+          !MF.getInfo<SIMachineFunctionInfo>()->isChainFunction()) ||
+         MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
          mayReserveScratchForCWSR(MF) ||

@@ -362,7 +362,7 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackFailureNoCache) {
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   ASSERT_FALSE(m_module_sp);
 }
 
@@ -383,7 +383,7 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackFailureCached) {
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
@@ -409,7 +409,7 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNoFiles) {
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
@@ -435,7 +435,7 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNonExistentModule) {
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
@@ -464,7 +464,7 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNonExistentSymbol) {
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_TRUE(m_module_sp->GetSymbolFileFileSpec().GetPath().empty());
@@ -622,7 +622,7 @@ TEST_F(LocateModuleCallbackTest,
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
@@ -650,7 +650,7 @@ TEST_F(LocateModuleCallbackTest,
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
@@ -682,7 +682,7 @@ TEST_F(LocateModuleCallbackTest,
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   CheckModule(m_module_sp);
   ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
   ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
@@ -709,7 +709,7 @@ TEST_F(LocateModuleCallbackTest,
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   ASSERT_FALSE(m_module_sp);
 }
 
@@ -731,7 +731,7 @@ TEST_F(LocateModuleCallbackTest,
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_EQ(callback_call_count, 2);
+  ASSERT_EQ(callback_call_count, 3);
   ASSERT_FALSE(m_module_sp);
 }
 

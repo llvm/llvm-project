@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDBUtils.h"
+#include "DAPError.h"
 #include "JSONUtils.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
@@ -17,6 +18,7 @@
 #include "lldb/API/SBThread.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -214,13 +216,14 @@ GetStopDisassemblyDisplay(lldb::SBDebugger &debugger) {
   return result;
 }
 
-llvm::Error ToError(const lldb::SBError &error) {
+llvm::Error ToError(const lldb::SBError &error, bool show_user) {
   if (error.Success())
     return llvm::Error::success();
 
-  return llvm::createStringError(
-      std::error_code(error.GetError(), std::generic_category()),
-      error.GetCString());
+  return llvm::make_error<DAPError>(
+      /*message=*/error.GetCString(),
+      /*EC=*/std::error_code(error.GetError(), std::generic_category()),
+      /*show_user=*/show_user);
 }
 
 std::string GetStringValue(const lldb::SBStructuredData &data) {

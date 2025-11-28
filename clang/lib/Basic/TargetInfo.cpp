@@ -59,6 +59,7 @@ static const LangASMap FakeAddrSpaceMap = {
 TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   // Set defaults.  Defaults are set for a 32-bit RISC platform, like PPC or
   // SPARC.  These should be overridden by concrete targets as needed.
+  HasMustTail = true;
   BigEndian = !T.isLittleEndian();
   TLSSupported = true;
   VLASupported = true;
@@ -637,6 +638,17 @@ bool TargetInfo::callGlobalDeleteInDeletingDtor(
 
 bool TargetInfo::areDefaultedSMFStillPOD(const LangOptions &LangOpts) const {
   return LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver15;
+}
+
+void TargetInfo::setDependentOpenCLOpts() {
+  auto &Opts = getSupportedOpenCLOpts();
+  if (!hasFeatureEnabled(Opts, "cl_khr_fp64") ||
+      !hasFeatureEnabled(Opts, "__opencl_c_fp64")) {
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_global_atomic_add", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_local_atomic_add", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_global_atomic_min_max", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_local_atomic_min_max", false);
+  }
 }
 
 LangAS TargetInfo::getOpenCLTypeAddrSpace(OpenCLTypeKind TK) const {

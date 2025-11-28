@@ -90,18 +90,18 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:  .LBB0_13: ; %loop-memcpy-expansion2
 ; CHECK-NEXT:    ; Parent Loop BB0_11 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    v_mov_b32_e32 v6, s12
-; CHECK-NEXT:    v_mov_b32_e32 v7, s13
+; CHECK-NEXT:    v_mov_b32_e32 v6, s10
+; CHECK-NEXT:    v_mov_b32_e32 v7, s11
 ; CHECK-NEXT:    flat_load_dwordx4 v[10:13], v[6:7]
-; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, s12, v8
-; CHECK-NEXT:    s_add_u32 s12, s12, 16
+; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, s10, v8
+; CHECK-NEXT:    s_add_u32 s10, s10, 16
 ; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, v9, v7, vcc
-; CHECK-NEXT:    s_addc_u32 s13, s13, 0
-; CHECK-NEXT:    v_cmp_ge_u64_e32 vcc, s[12:13], v[0:1]
-; CHECK-NEXT:    s_or_b64 s[10:11], vcc, s[10:11]
+; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    v_cmp_ge_u64_e32 vcc, s[10:11], v[0:1]
+; CHECK-NEXT:    s_or_b64 s[12:13], vcc, s[12:13]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[6:7], v[10:13]
-; CHECK-NEXT:    s_andn2_b64 exec, exec, s[10:11]
+; CHECK-NEXT:    s_andn2_b64 exec, exec, s[12:13]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_13
 ; CHECK-NEXT:  .LBB0_14: ; %Flow15
 ; CHECK-NEXT:    ; in Loop: Header=BB0_11 Depth=1
@@ -115,8 +115,8 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_9
 ; CHECK-NEXT:  ; %bb.16: ; %loop-memcpy-residual4.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB0_11 Depth=1
-; CHECK-NEXT:    s_mov_b64 s[12:13], 0
 ; CHECK-NEXT:    s_mov_b64 s[14:15], 0
+; CHECK-NEXT:    s_mov_b64 s[12:13], 0
 ; CHECK-NEXT:  .LBB0_17: ; %loop-memcpy-residual4
 ; CHECK-NEXT:    ; Parent Loop BB0_11 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
