@@ -378,6 +378,9 @@ void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
     O << ", !dbg ";
     DL.print(O);
   }
+
+  if (auto *Metadata = dyn_cast<VPIRMetadata>(this))
+    Metadata->print(O, SlotTracker);
 }
 #endif
 
@@ -1605,6 +1608,25 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
   }
   Metadata = std::move(MetadataIntersection);
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
+  const Module *M = SlotTracker.getModule();
+  if (Metadata.empty() || !M)
+    return;
+
+  ArrayRef<StringRef> MDNames = SlotTracker.getMDNames();
+  O << " (";
+  interleaveComma(Metadata, O, [&](const auto &KindNodePair) {
+    auto [Kind, Node] = KindNodePair;
+    assert(Kind < MDNames.size() && !MDNames[Kind].empty() &&
+           "Unexpected unnamed metadata kind");
+    O << "!" << MDNames[Kind] << " ";
+    Node->printAsOperand(O, M);
+  });
+  O << ")";
+}
+#endif
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
