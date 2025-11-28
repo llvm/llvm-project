@@ -792,7 +792,7 @@ def SPIRV_C_FPGABufferLocationINTEL                     : I32EnumAttrCase<"FPGAB
     Extension<[SPV_INTEL_fpga_buffer_location]>
   ];
 }
-def SPIRV_C_ArbitraryPrecisionFixedPointINTEL           : I32EnumAttrCase<"ArbitraryPrecisionFixedPointINTEL", 5922> {
+def SPIRV_C_ArbitraryPrecisionFixedPointINTEL          : I32EnumAttrCase<"ArbitraryPrecisionFixedPointINTEL", 5922> {
   list<Availability> availability = [
     Extension<[SPV_INTEL_arbitrary_precision_fixed_point]>
   ];
