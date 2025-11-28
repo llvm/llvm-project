@@ -118,8 +118,8 @@ static std::vector<MCInst> loadXSeqPairImmediate(MCRegister Reg,
                         .addReg(EvenReg)
                         .addImm(Value.getZExtValue());
   MCInst LoadOdd = MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
-                        .addReg(OddReg)
-                        .addImm(Value.getZExtValue());
+                       .addReg(OddReg)
+                       .addImm(Value.getZExtValue());
   return {LoadEven, LoadOdd};
 }
 
@@ -242,9 +242,9 @@ loadNZCVImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
                         .addReg(TempReg1)
                         .addReg(TempReg2);
   MCInst OrrMask = MCInstBuilder(AArch64::ORRXrr)
-                        .addReg(TempReg1)
-                        .addReg(TempReg1)
-                        .addImm(Value.getZExtValue());
+                       .addReg(TempReg1)
+                       .addReg(TempReg1)
+                       .addImm(Value.getZExtValue());
   MCInst MoveToNZCV =
       MCInstBuilder(AArch64::MSR).addImm(AArch64SysReg::NZCV).addReg(TempReg1);
 
