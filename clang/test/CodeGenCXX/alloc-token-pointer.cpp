@@ -2,6 +2,7 @@
 
 #include "../Analysis/Inputs/system-header-simulator-cxx.h"
 
+typedef __INTPTR_TYPE__ intptr_t;
 typedef __UINTPTR_TYPE__ uintptr_t;
 
 extern "C" {
@@ -187,6 +188,13 @@ uptr *test_uintptr_isptr2() {
   return new uptr;
 }
 
+using iptr = intptr_t;
+// CHECK-LABEL: define dso_local noundef ptr @_Z17test_intptr_isptrv(
+// CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef 8){{.*}} !alloc_token [[META_INTPTRT:![0-9]+]]
+iptr *test_intptr_isptr() {
+  return new iptr;
+}
+
 // CHECK: [[META_INT]] = !{!"int", i1 false}
 // CHECK: [[META_INTPTR]] = !{!"int *", i1 true}
 // CHECK: [[META_ULONG]] = !{!"unsigned long", i1 false}
@@ -195,3 +203,4 @@ uptr *test_uintptr_isptr2() {
 // CHECK: [[META_VIRTUALTESTCLASS]] = !{!"VirtualTestClass", i1 true}
 // CHECK: [[META_MYSTRUCTUINTPTR]] = !{!"MyStructUintptr", i1 true}
 // CHECK: [[META_UINTPTR]] = !{!"unsigned long", i1 true}
+// CHECK: [[META_INTPTRT]] = !{!"long", i1 true}
