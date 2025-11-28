@@ -1138,6 +1138,14 @@ CIRGenFunction::getVLASize(const VariableArrayType *type) {
   return {numElements, elementType};
 }
 
+CIRGenFunction::VlaSizePair
+CIRGenFunction::getVLAElements1D(const VariableArrayType *vla) {
+  mlir::Value vlaSize = vlaSizeMap[vla->getSizeExpr()];
+  assert(vlaSize && "no size for VLA!");
+  assert(vlaSize.getType() == sizeTy);
+  return {vlaSize, vla->getElementType()};
+}
+
 // TODO(cir): Most of this function can be shared between CIRGen
 // and traditional LLVM codegen
 void CIRGenFunction::emitVariablyModifiedType(QualType type) {

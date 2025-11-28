@@ -46,3 +46,24 @@ long double expl(long double f) {
   // LLVM: %{{.*}} = call fp128 @llvm.exp.f128(fp128 %{{.*}})
   // OGCG: %{{.*}} = call fp128 @llvm.exp.f128(fp128 %{{.*}})
 }
+
+float exp2f(float f) {
+  return __builtin_exp2f(f);
+  // CIR: %{{.*}} = cir.exp2 {{.*}} : !cir.float
+  // LLVM: %{{.*}} = call float @llvm.exp2.f32(float %{{.*}})
+  // OGCG: %{{.*}} = call float @llvm.exp2.f32(float %{{.*}})
+}
+
+double my_exp2(double f) {
+  return __builtin_exp2(f);
+  // CIR: %{{.*}} = cir.exp2 {{.*}} : !cir.double
+  // LLVM: %{{.*}} = call double @llvm.exp2.f64(double %{{.*}})
+  // OGCG: %{{.*}} = call double @llvm.exp2.f64(double %{{.*}})
+}
+
+long double my_exp2l(long double f) {
+  return __builtin_exp2l(f);
+  // CIR: %{{.*}} = cir.exp2 {{.*}} : !cir.long_double<!cir.f128>
+  // LLVM: %{{.*}} = call fp128 @llvm.exp2.f128(fp128 %{{.*}})
+  // OGCG: %{{.*}} = call fp128 @llvm.exp2.f128(fp128 %{{.*}})
+}

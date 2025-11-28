@@ -15,6 +15,7 @@ define void @a_i_j_k(ptr %a) {
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][8][32] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j.header>][{0,+,1}<nuw><nsw><%for.k>]
+; CHECK-NEXT:  Delinearization validation: Succeeded
 ;
 entry:
   br label %for.i.header
@@ -63,6 +64,7 @@ define void @a_i_nj_k(ptr %a) {
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][8][32] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{7,+,-1}<nsw><%for.j.header>][{0,+,1}<nuw><nsw><%for.k>]
+; CHECK-NEXT:  Delinearization validation: Succeeded
 ;
 entry:
   br label %for.i.header
@@ -118,12 +120,14 @@ define void @a_ijk_b_i2jk(ptr %a, ptr %b) {
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][4][64] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j.header>][{0,+,1}<nuw><nsw><%for.k>]
+; CHECK-NEXT:  Delinearization validation: Succeeded
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Inst: store i32 1, ptr %b.idx, align 4
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,256}<nw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %b
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][4][64] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j.header>][{0,+,1}<nuw><nsw><%for.k>]
+; CHECK-NEXT:  Delinearization validation: Succeeded
 ;
 entry:
   br label %for.i.header
@@ -180,6 +184,7 @@ define void @a_i_2j1_k(ptr %a) {
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][4][64] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><%for.j.header>][{32,+,1}<nw><%for.k>]
+; CHECK-NEXT:  Delinearization validation: Succeeded
 ;
 entry:
   br label %for.i.header
@@ -284,6 +289,7 @@ define void @a_i_j_3k(ptr %a) {
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][8][32] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j.header>][{0,+,3}<nuw><nsw><%for.k>]
+; CHECK-NEXT:  Delinearization validation: Succeeded
 ;
 entry:
   br label %for.i.header
@@ -386,6 +392,7 @@ define void @a_i_i_jk(ptr %a) {
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][288] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{{\{\{}}0,+,1}<nuw><nsw><%for.j.header>,+,1}<nuw><nsw><%for.k>]
+; CHECK-NEXT:  Delinearization validation: Succeeded
 ;
 entry:
   br label %for.i.header
@@ -436,6 +443,7 @@ define void @a_i_jk_l(ptr %a) {
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][8][32] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{{\{\{}}0,+,1}<nuw><nsw><%for.j.header>,+,1}<nuw><nsw><%for.k.header>][{0,+,1}<nuw><nsw><%for.l>]
+; CHECK-NEXT:  Delinearization validation: Succeeded
 ;
 entry:
   br label %for.i.header

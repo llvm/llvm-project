@@ -892,10 +892,13 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
 llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
     llvm::IRBuilderBase &builder, llvm::Intrinsic::ID intrinsic,
     ArrayRef<llvm::Value *> args, ArrayRef<llvm::Type *> tys) {
-  llvm::Module *module = builder.GetInsertBlock()->getModule();
-  llvm::Function *fn =
-      llvm::Intrinsic::getOrInsertDeclaration(module, intrinsic, tys);
-  return builder.CreateCall(fn, args);
+  return builder.CreateIntrinsic(intrinsic, tys, args);
+}
+
+llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
+    llvm::IRBuilderBase &builder, llvm::Intrinsic::ID intrinsic,
+    llvm::Type *retTy, ArrayRef<llvm::Value *> args) {
+  return builder.CreateIntrinsic(retTy, intrinsic, args);
 }
 
 llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(

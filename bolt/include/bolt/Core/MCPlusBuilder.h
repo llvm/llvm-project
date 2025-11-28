@@ -538,6 +538,11 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  virtual void createDirectBranch(MCInst &Inst, const MCSymbol *Target,
+                                  MCContext *Ctx) {
+    llvm_unreachable("not implemented");
+  }
+
   virtual MCPhysReg getX86R11() const { llvm_unreachable("not implemented"); }
 
   virtual unsigned getShortBranchOpcode(unsigned Opcode) const {
@@ -1885,6 +1890,12 @@ public:
 
   /// Create a BTI landing pad instruction.
   virtual void createBTI(MCInst &Inst, bool CallTarget, bool JumpTarget) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Update operand of BTI instruction.
+  virtual void updateBTIVariant(MCInst &Inst, bool CallTarget,
+                                bool JumpTarget) const {
     llvm_unreachable("not implemented");
   }
 
