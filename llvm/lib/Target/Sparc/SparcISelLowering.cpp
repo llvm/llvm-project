@@ -1905,42 +1905,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::FP_EXTEND, MVT::f128, Custom);
     setOperationAction(ISD::FP_ROUND,  MVT::f64, Custom);
-    setOperationAction(ISD::FP_ROUND,  MVT::f32, Custom);
-
-    // Setup Runtime library names.
-    if (Subtarget->is64Bit() && !Subtarget->useSoftFloat()) {
-      setLibcallImpl(RTLIB::ADD_F128, RTLIB::impl__Qp_add);
-      setLibcallImpl(RTLIB::SUB_F128, RTLIB::impl__Qp_sub);
-      setLibcallImpl(RTLIB::MUL_F128, RTLIB::impl__Qp_mul);
-      setLibcallImpl(RTLIB::DIV_F128, RTLIB::impl__Qp_div);
-      setLibcallImpl(RTLIB::SQRT_F128, RTLIB::impl__Qp_sqrt);
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I32, RTLIB::impl__Qp_qtoi);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I32, RTLIB::impl__Qp_qtoui);
-      setLibcallImpl(RTLIB::SINTTOFP_I32_F128, RTLIB::impl__Qp_itoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I32_F128, RTLIB::impl__Qp_uitoq);
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I64, RTLIB::impl__Qp_qtox);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I64, RTLIB::impl__Qp_qtoux);
-      setLibcallImpl(RTLIB::SINTTOFP_I64_F128, RTLIB::impl__Qp_xtoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I64_F128, RTLIB::impl__Qp_uxtoq);
-      setLibcallImpl(RTLIB::FPEXT_F32_F128, RTLIB::impl__Qp_stoq);
-      setLibcallImpl(RTLIB::FPEXT_F64_F128, RTLIB::impl__Qp_dtoq);
-      setLibcallImpl(RTLIB::FPROUND_F128_F32, RTLIB::impl__Qp_qtos);
-      setLibcallImpl(RTLIB::FPROUND_F128_F64, RTLIB::impl__Qp_qtod);
-    } else if (!Subtarget->useSoftFloat()) {
-      setLibcallImpl(RTLIB::ADD_F128, RTLIB::impl__Q_add);
-      setLibcallImpl(RTLIB::SUB_F128, RTLIB::impl__Q_sub);
-      setLibcallImpl(RTLIB::MUL_F128, RTLIB::impl__Q_mul);
-      setLibcallImpl(RTLIB::DIV_F128, RTLIB::impl__Q_div);
-      setLibcallImpl(RTLIB::SQRT_F128, RTLIB::impl__Q_sqrt);
-      setLibcallImpl(RTLIB::FPTOSINT_F128_I32, RTLIB::impl__Q_qtoi);
-      setLibcallImpl(RTLIB::FPTOUINT_F128_I32, RTLIB::impl__Q_qtou);
-      setLibcallImpl(RTLIB::SINTTOFP_I32_F128, RTLIB::impl__Q_itoq);
-      setLibcallImpl(RTLIB::UINTTOFP_I32_F128, RTLIB::impl__Q_utoq);
-      setLibcallImpl(RTLIB::FPEXT_F32_F128, RTLIB::impl__Q_stoq);
-      setLibcallImpl(RTLIB::FPEXT_F64_F128, RTLIB::impl__Q_dtoq);
-      setLibcallImpl(RTLIB::FPROUND_F128_F32, RTLIB::impl__Q_qtos);
-      setLibcallImpl(RTLIB::FPROUND_F128_F64, RTLIB::impl__Q_qtod);
-    }
+    setOperationAction(ISD::FP_ROUND, MVT::f32, Custom);
   }
 
   if (Subtarget->fixAllFDIVSQRT()) {

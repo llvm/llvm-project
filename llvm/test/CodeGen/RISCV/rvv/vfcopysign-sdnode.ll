@@ -198,8 +198,6 @@ define <vscale x 32 x bfloat> @nxv32bf32(<vscale x 32 x bfloat> %vm, <vscale x 3
   ret <vscale x 32 x bfloat> %r
 }
 
-declare <vscale x 1 x half> @llvm.copysign.nxv1f16(<vscale x 1 x half>, <vscale x 1 x half>)
-
 define <vscale x 1 x half> @vfcopysign_vv_nxv1f16(<vscale x 1 x half> %vm, <vscale x 1 x half> %vs) {
 ; ZVFH-LABEL: vfcopysign_vv_nxv1f16:
 ; ZVFH:       # %bb.0:
@@ -678,8 +676,6 @@ define <vscale x 1 x half> @vfcopynsign_exttrunc_vf_nxv1f16_nxv1f64(<vscale x 1 
   ret <vscale x 1 x half> %r
 }
 
-declare <vscale x 2 x half> @llvm.copysign.nxv2f16(<vscale x 2 x half>, <vscale x 2 x half>)
-
 define <vscale x 2 x half> @vfcopysign_vv_nxv2f16(<vscale x 2 x half> %vm, <vscale x 2 x half> %vs) {
 ; ZVFH-LABEL: vfcopysign_vv_nxv2f16:
 ; ZVFH:       # %bb.0:
@@ -818,8 +814,6 @@ define <vscale x 2 x half> @vfcopynsign_vf_nxv2f16(<vscale x 2 x half> %vm, half
   ret <vscale x 2 x half> %r
 }
 
-declare <vscale x 4 x half> @llvm.copysign.nxv4f16(<vscale x 4 x half>, <vscale x 4 x half>)
-
 define <vscale x 4 x half> @vfcopysign_vv_nxv4f16(<vscale x 4 x half> %vm, <vscale x 4 x half> %vs) {
 ; ZVFH-LABEL: vfcopysign_vv_nxv4f16:
 ; ZVFH:       # %bb.0:
@@ -957,8 +951,6 @@ define <vscale x 4 x half> @vfcopynsign_vf_nxv4f16(<vscale x 4 x half> %vm, half
   %r = call <vscale x 4 x half> @llvm.copysign.nxv4f16(<vscale x 4 x half> %vm, <vscale x 4 x half> %n)
   ret <vscale x 4 x half> %r
 }
-
-declare <vscale x 8 x half> @llvm.copysign.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>)
 
 define <vscale x 8 x half> @vfcopysign_vv_nxv8f16(<vscale x 8 x half> %vm, <vscale x 8 x half> %vs) {
 ; ZVFH-LABEL: vfcopysign_vv_nxv8f16:
@@ -1438,8 +1430,6 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vf_nxv8f16_nxv8f64(<vscale x 8 
   ret <vscale x 8 x half> %r
 }
 
-declare <vscale x 16 x half> @llvm.copysign.nxv16f16(<vscale x 16 x half>, <vscale x 16 x half>)
-
 define <vscale x 16 x half> @vfcopysign_vv_nxv16f16(<vscale x 16 x half> %vm, <vscale x 16 x half> %vs) {
 ; ZVFH-LABEL: vfcopysign_vv_nxv16f16:
 ; ZVFH:       # %bb.0:
@@ -1578,8 +1568,6 @@ define <vscale x 16 x half> @vfcopynsign_vf_nxv16f16(<vscale x 16 x half> %vm, h
   ret <vscale x 16 x half> %r
 }
 
-declare <vscale x 32 x half> @llvm.copysign.nxv32f16(<vscale x 32 x half>, <vscale x 32 x half>)
-
 define <vscale x 32 x half> @vfcopysign_vv_nxv32f16(<vscale x 32 x half> %vm, <vscale x 32 x half> %vs) {
 ; ZVFH-LABEL: vfcopysign_vv_nxv32f16:
 ; ZVFH:       # %bb.0:
@@ -1717,8 +1705,6 @@ define <vscale x 32 x half> @vfcopynsign_vf_nxv32f16(<vscale x 32 x half> %vm, h
   %r = call <vscale x 32 x half> @llvm.copysign.nxv32f16(<vscale x 32 x half> %vm, <vscale x 32 x half> %n)
   ret <vscale x 32 x half> %r
 }
-
-declare <vscale x 1 x float> @llvm.copysign.nxv1f32(<vscale x 1 x float>, <vscale x 1 x float>)
 
 define <vscale x 1 x float> @vfcopysign_vv_nxv1f32(<vscale x 1 x float> %vm, <vscale x 1 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv1f32:
@@ -1880,8 +1866,6 @@ define <vscale x 1 x float> @vfcopynsign_exttrunc_vf_nxv1f32_nxv1f64(<vscale x 1
   ret <vscale x 1 x float> %r
 }
 
-declare <vscale x 2 x float> @llvm.copysign.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>)
-
 define <vscale x 2 x float> @vfcopysign_vv_nxv2f32(<vscale x 2 x float> %vm, <vscale x 2 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv2f32:
 ; CHECK:       # %bb.0:
@@ -1928,8 +1912,6 @@ define <vscale x 2 x float> @vfcopynsign_vf_nxv2f32(<vscale x 2 x float> %vm, fl
   ret <vscale x 2 x float> %r
 }
 
-declare <vscale x 4 x float> @llvm.copysign.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
-
 define <vscale x 4 x float> @vfcopysign_vv_nxv4f32(<vscale x 4 x float> %vm, <vscale x 4 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv4f32:
 ; CHECK:       # %bb.0:
@@ -1975,8 +1957,6 @@ define <vscale x 4 x float> @vfcopynsign_vf_nxv4f32(<vscale x 4 x float> %vm, fl
   %r = call <vscale x 4 x float> @llvm.copysign.nxv4f32(<vscale x 4 x float> %vm, <vscale x 4 x float> %n)
   ret <vscale x 4 x float> %r
 }
-
-declare <vscale x 8 x float> @llvm.copysign.nxv8f32(<vscale x 8 x float>, <vscale x 8 x float>)
 
 define <vscale x 8 x float> @vfcopysign_vv_nxv8f32(<vscale x 8 x float> %vm, <vscale x 8 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv8f32:
@@ -2138,8 +2118,6 @@ define <vscale x 8 x float> @vfcopynsign_exttrunc_vf_nxv8f32_nxv8f64(<vscale x 8
   ret <vscale x 8 x float> %r
 }
 
-declare <vscale x 16 x float> @llvm.copysign.nxv16f32(<vscale x 16 x float>, <vscale x 16 x float>)
-
 define <vscale x 16 x float> @vfcopysign_vv_nxv16f32(<vscale x 16 x float> %vm, <vscale x 16 x float> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv16f32:
 ; CHECK:       # %bb.0:
@@ -2185,8 +2163,6 @@ define <vscale x 16 x float> @vfcopynsign_vf_nxv16f32(<vscale x 16 x float> %vm,
   %r = call <vscale x 16 x float> @llvm.copysign.nxv16f32(<vscale x 16 x float> %vm, <vscale x 16 x float> %n)
   ret <vscale x 16 x float> %r
 }
-
-declare <vscale x 1 x double> @llvm.copysign.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>)
 
 define <vscale x 1 x double> @vfcopysign_vv_nxv1f64(<vscale x 1 x double> %vm, <vscale x 1 x double> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv1f64:
@@ -2350,8 +2326,6 @@ define <vscale x 1 x double> @vfcopynsign_exttrunc_vf_nxv1f64_nxv1f32(<vscale x 
   ret <vscale x 1 x double> %r
 }
 
-declare <vscale x 2 x double> @llvm.copysign.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
-
 define <vscale x 2 x double> @vfcopysign_vv_nxv2f64(<vscale x 2 x double> %vm, <vscale x 2 x double> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv2f64:
 ; CHECK:       # %bb.0:
@@ -2398,8 +2372,6 @@ define <vscale x 2 x double> @vfcopynsign_vf_nxv2f64(<vscale x 2 x double> %vm, 
   ret <vscale x 2 x double> %r
 }
 
-declare <vscale x 4 x double> @llvm.copysign.nxv4f64(<vscale x 4 x double>, <vscale x 4 x double>)
-
 define <vscale x 4 x double> @vfcopysign_vv_nxv4f64(<vscale x 4 x double> %vm, <vscale x 4 x double> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv4f64:
 ; CHECK:       # %bb.0:
@@ -2445,8 +2417,6 @@ define <vscale x 4 x double> @vfcopynsign_vf_nxv4f64(<vscale x 4 x double> %vm, 
   %r = call <vscale x 4 x double> @llvm.copysign.nxv4f64(<vscale x 4 x double> %vm, <vscale x 4 x double> %n)
   ret <vscale x 4 x double> %r
 }
-
-declare <vscale x 8 x double> @llvm.copysign.nxv8f64(<vscale x 8 x double>, <vscale x 8 x double>)
 
 define <vscale x 8 x double> @vfcopysign_vv_nxv8f64(<vscale x 8 x double> %vm, <vscale x 8 x double> %vs) {
 ; CHECK-LABEL: vfcopysign_vv_nxv8f64:

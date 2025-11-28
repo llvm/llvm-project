@@ -4765,9 +4765,21 @@ the configuration (without a prefix: ``Auto``).
       Decimal: 3
       Hex: -1
 
-  You can also specify a minimum number of digits (``BinaryMinDigits``,
-  ``DecimalMinDigits``, and ``HexMinDigits``) the integer literal must
-  have in order for the separators to be inserted.
+  You can also specify a minimum number of digits
+  (``BinaryMinDigitsInsert``, ``DecimalMinDigitsInsert``, and
+  ``HexMinDigitsInsert``) the integer literal must have in order for the
+  separators to be inserted, and a maximum number of digits
+  (``BinaryMaxDigitsRemove``, ``DecimalMaxDigitsRemove``, and
+  ``HexMaxDigitsRemove``) until the separators are removed. This divides the
+  literals in 3 regions, always without separator (up until including
+  ``xxxMaxDigitsRemove``), maybe with, or without separators (up until
+  excluding ``xxxMinDigitsInsert``), and finally always with separators.
+
+  .. note::
+
+   ``BinaryMinDigits``, ``DecimalMinDigits``, and ``HexMinDigits`` are
+   deprecated and renamed to ``BinaryMinDigitsInsert``,
+   ``DecimalMinDigitsInsert``, and ``HexMinDigitsInsert``, respectively.
 
   * ``int8_t Binary`` Format separators in binary literals.
 
@@ -4778,14 +4790,27 @@ the configuration (without a prefix: ``Auto``).
       /*  3: */ b = 0b100'111'101'101;
       /*  4: */ b = 0b1001'1110'1101;
 
-  * ``int8_t BinaryMinDigits`` Format separators in binary literals with a minimum number of digits.
+  * ``int8_t BinaryMinDigitsInsert`` Format separators in binary literals with a minimum number of digits.
 
     .. code-block:: text
 
       // Binary: 3
-      // BinaryMinDigits: 7
+      // BinaryMinDigitsInsert: 7
       b1 = 0b101101;
       b2 = 0b1'101'101;
+
+  * ``int8_t BinaryMaxDigitsRemove`` Remove separators in binary literals with a maximum number of digits.
+
+    .. code-block:: text
+
+      // Binary: 3
+      // BinaryMinDigitsInsert: 7
+      // BinaryMaxDigitsRemove: 4
+      b0 = 0b1011; // Always removed.
+      b1 = 0b101101; // Not added.
+      b2 = 0b1'01'101; // Not removed, not corrected.
+      b3 = 0b1'101'101; // Always added.
+      b4 = 0b10'1101; // Corrected to 0b101'101.
 
   * ``int8_t Decimal`` Format separators in decimal literals.
 
@@ -4795,14 +4820,27 @@ the configuration (without a prefix: ``Auto``).
       /*  0: */ d = 184467'440737'0'95505'92ull;
       /*  3: */ d = 18'446'744'073'709'550'592ull;
 
-  * ``int8_t DecimalMinDigits`` Format separators in decimal literals with a minimum number of digits.
+  * ``int8_t DecimalMinDigitsInsert`` Format separators in decimal literals with a minimum number of digits.
 
     .. code-block:: text
 
       // Decimal: 3
-      // DecimalMinDigits: 5
+      // DecimalMinDigitsInsert: 5
       d1 = 2023;
       d2 = 10'000;
+
+  * ``int8_t DecimalMaxDigitsRemove`` Remove separators in decimal literals with a maximum number of digits.
+
+    .. code-block:: text
+
+      // Decimal: 3
+      // DecimalMinDigitsInsert: 7
+      // DecimalMaxDigitsRemove: 4
+      d0 = 2023; // Always removed.
+      d1 = 123456; // Not added.
+      d2 = 1'23'456; // Not removed, not corrected.
+      d3 = 5'000'000; // Always added.
+      d4 = 1'23'45; // Corrected to 12'345.
 
   * ``int8_t Hex`` Format separators in hexadecimal literals.
 
@@ -4812,15 +4850,29 @@ the configuration (without a prefix: ``Auto``).
       /*  0: */ h = 0xDEAD'BEEF'DE'AD'BEE'Fuz;
       /*  2: */ h = 0xDE'AD'BE'EF'DE'AD'BE'EFuz;
 
-  * ``int8_t HexMinDigits`` Format separators in hexadecimal literals with a minimum number of
+  * ``int8_t HexMinDigitsInsert`` Format separators in hexadecimal literals with a minimum number of
     digits.
 
     .. code-block:: text
 
       // Hex: 2
-      // HexMinDigits: 6
+      // HexMinDigitsInsert: 6
       h1 = 0xABCDE;
       h2 = 0xAB'CD'EF;
+
+  * ``int8_t HexMaxDigitsRemove`` Remove separators in hexadecimal literals with a maximum number of
+    digits.
+
+    .. code-block:: text
+
+      // Hex: 2
+      // HexMinDigitsInsert: 6
+      // HexMaxDigitsRemove: 4
+      h0 = 0xAFFE; // Always removed.
+      h1 = 0xABCDE; // Not added.
+      h2 = 0xABC'DE; // Not removed, not corrected.
+      h3 = 0xAB'CD'EF; // Always added.
+      h4 = 0xABCD'E; // Corrected to 0xA'BC'DE.
 
 
 .. _JavaImportGroups:

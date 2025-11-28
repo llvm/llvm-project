@@ -151,7 +151,6 @@ struct MissingFeatures {
 
   // Coroutines
   static bool coroEndBuiltinCall() { return false; }
-  static bool coroutineFrame() { return false; }
   static bool emitBodyAndFallthrough() { return false; }
   static bool coroOutsideFrameMD() { return false; }
 
@@ -240,7 +239,6 @@ struct MissingFeatures {
   static bool ctorConstLvalueToRvalueConversion() { return false; }
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
-  static bool cxxRecordStaticMembers() { return false; }
   static bool dataLayoutTypeIsSized() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutTypeStoreSize() { return false; }

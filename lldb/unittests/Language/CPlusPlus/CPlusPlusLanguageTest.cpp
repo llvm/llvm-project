@@ -30,6 +30,10 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
       {"foo::~bar(baz)", "", "foo", "~bar", "(baz)", "", "foo::~bar"},
       {"a::b::c::d(e,f)", "", "a::b::c", "d", "(e,f)", "", "a::b::c::d"},
       {"void f(int)", "void", "", "f", "(int)", "", "f"},
+      {"std::vector<int>foo::bar()", "std::vector<int>", "foo", "bar", "()", "",
+       "foo::bar"},
+      {"int foo::bar::func01(int a, double b)", "int", "foo::bar", "func01",
+       "(int a, double b)", "", "foo::bar::func01"},
 
       // Operators
       {"std::basic_ostream<char, std::char_traits<char> >& "
@@ -101,6 +105,8 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "std::forward<decltype(nullptr)>"},
 
       // Templates
+      {"vector<int > foo::bar::func(int)", "vector<int >", "foo::bar", "func",
+       "(int)", "", "foo::bar::func"},
       {"void llvm::PM<llvm::Module, llvm::AM<llvm::Module>>::"
        "addPass<llvm::VP>(llvm::VP)",
        "void", "llvm::PM<llvm::Module, llvm::AM<llvm::Module>>",
@@ -341,7 +347,7 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
   llvm::StringRef context, basename;
   for (const auto &test : test_cases) {
     EXPECT_TRUE(CPlusPlusLanguage::ExtractContextAndIdentifier(
-        test.input.c_str(), context, basename));
+        test.input, context, basename));
     EXPECT_EQ(test.context, context.str());
     EXPECT_EQ(test.basename, basename.str());
   }

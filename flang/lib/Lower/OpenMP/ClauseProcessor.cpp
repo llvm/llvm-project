@@ -13,6 +13,7 @@
 #include "ClauseProcessor.h"
 #include "Utils.h"
 
+#include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -397,6 +398,65 @@ bool ClauseProcessor::processInclusive(
       mlir::Value symVal = converter.getSymbolAddress(*symbol);
       result.inclusiveVars.push_back(symVal);
     }
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processInitializer(
+    lower::SymMap &symMap, const parser::OmpClause::Initializer &inp,
+    ReductionProcessor::GenInitValueCBTy &genInitValueCB) const {
+  if (auto *clause = findUniqueClause<omp::clause::Initializer>()) {
+    genInitValueCB = [&, clause](fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Type type, mlir::Value ompOrig) {
+      lower::SymMapScope scope(symMap);
+      const parser::OmpInitializerExpression &iexpr = inp.v.v;
+      const parser::OmpStylizedInstance &styleInstance = iexpr.v.front();
+      const std::list<parser::OmpStylizedDeclaration> &declList =
+          std::get<std::list<parser::OmpStylizedDeclaration>>(styleInstance.t);
+      mlir::Value ompPrivVar;
+      for (const parser::OmpStylizedDeclaration &decl : declList) {
+        auto &name = std::get<parser::ObjectName>(decl.var.t);
+        assert(name.symbol && "Name does not have a symbol");
+        mlir::Value addr = builder.createTemporary(loc, ompOrig.getType());
+        fir::StoreOp::create(builder, loc, ompOrig, addr);
+        fir::FortranVariableFlagsEnum extraFlags = {};
+        fir::FortranVariableFlagsAttr attributes =
+            Fortran::lower::translateSymbolAttributes(builder.getContext(),
+                                                      *name.symbol, extraFlags);
+        auto declareOp = hlfir::DeclareOp::create(
+            builder, loc, addr, name.ToString(), nullptr, {}, nullptr, nullptr,
+            0, attributes);
+        if (name.ToString() == "omp_priv")
+          ompPrivVar = declareOp.getResult(0);
+        symMap.addVariableDefinition(*name.symbol, declareOp);
+      }
+      // Lower the expression/function call
+      lower::StatementContext stmtCtx;
+      mlir::Value result = common::visit(
+          common::visitors{
+              [&](const evaluate::ProcedureRef &procRef) -> mlir::Value {
+                convertCallToHLFIR(loc, converter, procRef, std::nullopt,
+                                   symMap, stmtCtx);
+                auto privVal = fir::LoadOp::create(builder, loc, ompPrivVar);
+                return privVal;
+              },
+              [&](const auto &expr) -> mlir::Value {
+                mlir::Value exprResult = fir::getBase(convertExprToValue(
+                    loc, converter, clause->v, symMap, stmtCtx));
+                // Conversion can either give a value or a refrence to a value,
+                // we need to return the reduction type, so an optional load may
+                // be generated.
+                if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
+                        exprResult.getType()))
+                  if (ompPrivVar.getType() == refType)
+                    exprResult = fir::LoadOp::create(builder, loc, exprResult);
+                return exprResult;
+              }},
+          clause->v.u);
+      stmtCtx.finalizeAndPop();
+      return result;
+    };
     return true;
   }
   return false;

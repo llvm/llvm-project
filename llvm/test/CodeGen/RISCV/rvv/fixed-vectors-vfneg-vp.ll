@@ -204,8 +204,6 @@ define <16 x bfloat> @vfneg_vv_v16bf16_unmasked(<16 x bfloat> %va, i32 zeroext %
   ret <16 x bfloat> %v
 }
 
-declare <2 x half> @llvm.vp.fneg.v2f16(<2 x half>, <2 x i1>, i32)
-
 define <2 x half> @vfneg_vv_v2f16(<2 x half> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfneg_vv_v2f16:
 ; ZVFH:       # %bb.0:
@@ -253,8 +251,6 @@ define <2 x half> @vfneg_vv_v2f16_unmasked(<2 x half> %va, i32 zeroext %evl) {
   %v = call <2 x half> @llvm.vp.fneg.v2f16(<2 x half> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x half> %v
 }
-
-declare <4 x half> @llvm.vp.fneg.v4f16(<4 x half>, <4 x i1>, i32)
 
 define <4 x half> @vfneg_vv_v4f16(<4 x half> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfneg_vv_v4f16:
@@ -304,8 +300,6 @@ define <4 x half> @vfneg_vv_v4f16_unmasked(<4 x half> %va, i32 zeroext %evl) {
   ret <4 x half> %v
 }
 
-declare <8 x half> @llvm.vp.fneg.v8f16(<8 x half>, <8 x i1>, i32)
-
 define <8 x half> @vfneg_vv_v8f16(<8 x half> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfneg_vv_v8f16:
 ; ZVFH:       # %bb.0:
@@ -353,8 +347,6 @@ define <8 x half> @vfneg_vv_v8f16_unmasked(<8 x half> %va, i32 zeroext %evl) {
   %v = call <8 x half> @llvm.vp.fneg.v8f16(<8 x half> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x half> %v
 }
-
-declare <16 x half> @llvm.vp.fneg.v16f16(<16 x half>, <16 x i1>, i32)
 
 define <16 x half> @vfneg_vv_v16f16(<16 x half> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: vfneg_vv_v16f16:
@@ -404,8 +396,6 @@ define <16 x half> @vfneg_vv_v16f16_unmasked(<16 x half> %va, i32 zeroext %evl) 
   ret <16 x half> %v
 }
 
-declare <2 x float> @llvm.vp.fneg.v2f32(<2 x float>, <2 x i1>, i32)
-
 define <2 x float> @vfneg_vv_v2f32(<2 x float> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v2f32:
 ; CHECK:       # %bb.0:
@@ -425,8 +415,6 @@ define <2 x float> @vfneg_vv_v2f32_unmasked(<2 x float> %va, i32 zeroext %evl) {
   %v = call <2 x float> @llvm.vp.fneg.v2f32(<2 x float> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x float> %v
 }
-
-declare <4 x float> @llvm.vp.fneg.v4f32(<4 x float>, <4 x i1>, i32)
 
 define <4 x float> @vfneg_vv_v4f32(<4 x float> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v4f32:
@@ -448,8 +436,6 @@ define <4 x float> @vfneg_vv_v4f32_unmasked(<4 x float> %va, i32 zeroext %evl) {
   ret <4 x float> %v
 }
 
-declare <8 x float> @llvm.vp.fneg.v8f32(<8 x float>, <8 x i1>, i32)
-
 define <8 x float> @vfneg_vv_v8f32(<8 x float> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v8f32:
 ; CHECK:       # %bb.0:
@@ -469,8 +455,6 @@ define <8 x float> @vfneg_vv_v8f32_unmasked(<8 x float> %va, i32 zeroext %evl) {
   %v = call <8 x float> @llvm.vp.fneg.v8f32(<8 x float> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x float> %v
 }
-
-declare <16 x float> @llvm.vp.fneg.v16f32(<16 x float>, <16 x i1>, i32)
 
 define <16 x float> @vfneg_vv_v16f32(<16 x float> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v16f32:
@@ -492,8 +476,6 @@ define <16 x float> @vfneg_vv_v16f32_unmasked(<16 x float> %va, i32 zeroext %evl
   ret <16 x float> %v
 }
 
-declare <2 x double> @llvm.vp.fneg.v2f64(<2 x double>, <2 x i1>, i32)
-
 define <2 x double> @vfneg_vv_v2f64(<2 x double> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v2f64:
 ; CHECK:       # %bb.0:
@@ -513,8 +495,6 @@ define <2 x double> @vfneg_vv_v2f64_unmasked(<2 x double> %va, i32 zeroext %evl)
   %v = call <2 x double> @llvm.vp.fneg.v2f64(<2 x double> %va, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x double> %v
 }
-
-declare <4 x double> @llvm.vp.fneg.v4f64(<4 x double>, <4 x i1>, i32)
 
 define <4 x double> @vfneg_vv_v4f64(<4 x double> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v4f64:
@@ -536,8 +516,6 @@ define <4 x double> @vfneg_vv_v4f64_unmasked(<4 x double> %va, i32 zeroext %evl)
   ret <4 x double> %v
 }
 
-declare <8 x double> @llvm.vp.fneg.v8f64(<8 x double>, <8 x i1>, i32)
-
 define <8 x double> @vfneg_vv_v8f64(<8 x double> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v8f64:
 ; CHECK:       # %bb.0:
@@ -557,8 +535,6 @@ define <8 x double> @vfneg_vv_v8f64_unmasked(<8 x double> %va, i32 zeroext %evl)
   %v = call <8 x double> @llvm.vp.fneg.v8f64(<8 x double> %va, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x double> %v
 }
-
-declare <15 x double> @llvm.vp.fneg.v15f64(<15 x double>, <15 x i1>, i32)
 
 define <15 x double> @vfneg_vv_v15f64(<15 x double> %va, <15 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v15f64:
@@ -580,8 +556,6 @@ define <15 x double> @vfneg_vv_v15f64_unmasked(<15 x double> %va, i32 zeroext %e
   ret <15 x double> %v
 }
 
-declare <16 x double> @llvm.vp.fneg.v16f64(<16 x double>, <16 x i1>, i32)
-
 define <16 x double> @vfneg_vv_v16f64(<16 x double> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v16f64:
 ; CHECK:       # %bb.0:
@@ -601,8 +575,6 @@ define <16 x double> @vfneg_vv_v16f64_unmasked(<16 x double> %va, i32 zeroext %e
   %v = call <16 x double> @llvm.vp.fneg.v16f64(<16 x double> %va, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x double> %v
 }
-
-declare <32 x double> @llvm.vp.fneg.v32f64(<32 x double>, <32 x i1>, i32)
 
 define <32 x double> @vfneg_vv_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfneg_vv_v32f64:

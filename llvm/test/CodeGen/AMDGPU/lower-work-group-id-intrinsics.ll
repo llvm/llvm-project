@@ -323,7 +323,7 @@ define amdgpu_cs void @caller() {
 ; GFX12-SDAG-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; GFX12-SDAG-NEXT:    s_mov_b32 s0, callee@abs32@lo
 ; GFX12-SDAG-NEXT:    s_mov_b32 s32, 0
-; GFX12-SDAG-NEXT:    s_wait_alu 0xfffe
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -333,7 +333,7 @@ define amdgpu_cs void @caller() {
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, callee@abs32@lo
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; GFX12-GISEL-NEXT:    s_mov_b32 s32, 0
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;

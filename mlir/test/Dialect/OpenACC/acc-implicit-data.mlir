@@ -13,7 +13,7 @@ func.func @test_scalar_in_serial() {
 }
 
 // CHECK-LABEL: func.func @test_scalar_in_serial
-// CHECK: acc.firstprivate varPtr({{.*}} : memref<i64>) -> memref<i64> {implicit = true, name = ""}
+// CHECK: acc.firstprivate varPtr({{.*}} : memref<i64>) recipe({{.*}}) -> memref<i64> {implicit = true, name = ""}
 
 // -----
 
@@ -28,7 +28,7 @@ func.func @test_scalar_in_parallel() {
 }
 
 // CHECK-LABEL: func.func @test_scalar_in_parallel
-// CHECK: acc.firstprivate varPtr({{.*}} : memref<f32>) -> memref<f32> {implicit = true, name = ""}
+// CHECK: acc.firstprivate varPtr({{.*}} : memref<f32>) recipe({{.*}}) -> memref<f32> {implicit = true, name = ""}
 
 // -----
 
@@ -110,7 +110,7 @@ func.func @test_array_parallel_defaultpresent() {
 }
 
 // CHECK-LABEL: func.func @test_array_parallel_defaultpresent
-// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : memref<10xf32>) -> memref<10xf32> {implicit = true, name = ""}
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr({{.*}} : memref<10xf32>) -> memref<10xf32> {acc.from_default, implicit = true, name = ""}
 // CHECK: acc.delete accPtr(%[[PRESENT]] : memref<10xf32>) {dataClause = #acc<data_clause acc_present>, implicit = true, name = ""}
 
 // -----
@@ -126,7 +126,7 @@ func.func @test_scalar_parallel_defaultpresent() {
 }
 
 // CHECK-LABEL: func.func @test_scalar_parallel_defaultpresent
-// CHECK: acc.firstprivate varPtr({{.*}} : memref<f32>) -> memref<f32> {implicit = true, name = ""}
+// CHECK: acc.firstprivate varPtr({{.*}} : memref<f32>) recipe({{.*}}) -> memref<f32> {implicit = true, name = ""}
 
 // -----
 
@@ -197,7 +197,7 @@ func.func @test_multiple_variables() {
 }
 
 // CHECK-LABEL: func.func @test_multiple_variables
-// CHECK: acc.firstprivate varPtr({{.*}} : memref<f32>) -> memref<f32> {implicit = true, name = ""}
+// CHECK: acc.firstprivate varPtr({{.*}} : memref<f32>) recipe({{.*}}) -> memref<f32> {implicit = true, name = ""}
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : memref<10xi32>) -> memref<10xi32> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = ""}
 // CHECK: acc.copyout accPtr(%[[COPYIN]] : memref<10xi32>) to varPtr({{.*}} : memref<10xi32>) {dataClause = #acc<data_clause acc_copy>, implicit = true, name = ""}
 
