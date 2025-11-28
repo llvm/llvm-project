@@ -1676,20 +1676,20 @@ def NVVM_PermuteOp : NVVM_Op<"prmt", [Pure]>,
   }];
 
   let assemblyFormat = [{
-    $mode $lo `,` $selector (`,` $hi^)? attr-dict `:` type($res)
+    $mode $selector `,` $lo  (`,` $hi^)?  attr-dict `:` type($res)
   }];
 
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(NVVM::PermuteMode mode, llvm::Value *lo, 
-                          llvm::Value *hi, llvm::Value *selector);
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
-
+  
   string llvmBuilder = [{
     auto [id, args] = NVVM::PermuteOp::getIntrinsicIDAndArgs(
-        $mode, $lo, $hi, $selector);
+        *op, moduleTranslation, builder);
     $res = createIntrinsicCall(builder, id, args);
   }];
 }

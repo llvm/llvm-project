@@ -458,8 +458,7 @@ LogicalResult PermuteOp::verify() {
   case Mode::B4E:
     if (!hasHi)
       return emitError("mode '") << stringifyPermuteMode(getMode())
-                                 << "' requires 'hi' operand i.e. it requires "
-                                    "3 operands - lo, hi, selector.";
+                                 << "' requires 'hi' operand.";
     break;
   case Mode::RC8:
   case Mode::ECL:
@@ -467,8 +466,7 @@ LogicalResult PermuteOp::verify() {
   case Mode::RC16:
     if (hasHi)
       return emitError("mode '") << stringifyPermuteMode(getMode())
-                                 << "' does not accept 'hi' operand i.e. it "
-                                    "requires 2 operands - lo, selector.";
+                                 << "' does not accept 'hi' operand.";
     break;
   }
 
@@ -3406,26 +3404,28 @@ NVVM::IDArgPair ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
   return {intrinsicID, args};
 }
 
-mlir::NVVM::IDArgPair PermuteOp::getIntrinsicIDAndArgs(NVVM::PermuteMode mode,
-                                                       llvm::Value *lo,
-                                                       llvm::Value *hi,
-                                                       llvm::Value *selector) {
+mlir::NVVM::IDArgPair
+PermuteOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                 llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::PermuteOp>(op);
+  NVVM::PermuteMode mode = thisOp.getMode();
+  
   static constexpr llvm::Intrinsic::ID IDs[] = {
       llvm::Intrinsic::nvvm_prmt,     llvm::Intrinsic::nvvm_prmt_f4e,
       llvm::Intrinsic::nvvm_prmt_b4e, llvm::Intrinsic::nvvm_prmt_rc8,
       llvm::Intrinsic::nvvm_prmt_ecl, llvm::Intrinsic::nvvm_prmt_ecr,
       llvm::Intrinsic::nvvm_prmt_rc16};
-
+  
   unsigned modeIndex = static_cast<unsigned>(mode);
-
   llvm::SmallVector<llvm::Value *> args;
-  args.push_back(lo);
-
+  args.push_back(mt.lookupValue(thisOp.getLo()));
+  
+  // First 3 modes (Default, f4e, b4e) use 3 operands. 
   if (modeIndex < 3)
-    args.push_back(hi);
-
-  args.push_back(selector);
-
+    args.push_back(mt.lookupValue(thisOp.getHi()));
+  
+  args.push_back(mt.lookupValue(thisOp.getSelector()));
+  
   return {IDs[modeIndex], args};
 }
 
