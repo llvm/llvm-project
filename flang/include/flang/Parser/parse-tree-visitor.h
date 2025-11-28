@@ -10,6 +10,7 @@
 #define FORTRAN_PARSER_PARSE_TREE_VISITOR_H_
 
 #include "parse-tree.h"
+#include "flang/Common/enum-set.h"
 #include "flang/Common/visit.h"
 #include <cstddef>
 #include <optional>
@@ -41,7 +42,7 @@ struct ParseTreeVisitorLookupScope {
   // Default case for visitation of non-class data members, strings, and
   // any other non-decomposable values.
   template <typename A, typename V>
-  static std::enable_if_t<!std::is_class_v<A> ||
+  static std::enable_if_t<!std::is_class_v<A> || common::IsEnumSet<A> ||
       std::is_same_v<std::string, A> || std::is_same_v<CharBlock, A>>
   Walk(const A &x, V &visitor) {
     if (visitor.Pre(x)) {

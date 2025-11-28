@@ -28,13 +28,13 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | OmpBeginLoopDirective
 !CHECK-PARSE-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = fuse
 !CHECK-PARSE-NEXT: | | | | OmpClauseList ->
-!CHECK-PARSE-NEXT: | | | | Flags = None
+!CHECK-PARSE-NEXT: | | | | Flags = {}
 !CHECK-PARSE-NEXT: | | | Block
 !CHECK-PARSE-NEXT: | | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
 !CHECK-PARSE-NEXT: | | | | | OmpBeginLoopDirective
 !CHECK-PARSE-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = fuse
 !CHECK-PARSE-NEXT: | | | | | | OmpClauseList ->
-!CHECK-PARSE-NEXT: | | | | | | Flags = None
+!CHECK-PARSE-NEXT: | | | | | | Flags = {}
 !CHECK-PARSE-NEXT: | | | | | Block
 !CHECK-PARSE-NEXT: | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 !CHECK-PARSE-NEXT: | | | | | | | NonLabelDoStmt
@@ -61,7 +61,7 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | | | OmpEndLoopDirective
 !CHECK-PARSE-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = fuse
 !CHECK-PARSE-NEXT: | | | | | | OmpClauseList ->
-!CHECK-PARSE-NEXT: | | | | | | Flags = None
+!CHECK-PARSE-NEXT: | | | | | | Flags = {}
 !CHECK-PARSE-NEXT: | | | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 !CHECK-PARSE-NEXT: | | | | | NonLabelDoStmt
 !CHECK-PARSE-NEXT: | | | | | | LoopControl -> LoopBounds
@@ -76,7 +76,7 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | OmpEndLoopDirective
 !CHECK-PARSE-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = fuse
 !CHECK-PARSE-NEXT: | | | | OmpClauseList ->
-!CHECK-PARSE-NEXT: | | | | Flags = None
+!CHECK-PARSE-NEXT: | | | | Flags = {}
 
 !CHECK-UNPARSE: SUBROUTINE fuse_on_fuse
 !CHECK-UNPARSE-NEXT:  IMPLICIT NONE
