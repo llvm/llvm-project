@@ -126,6 +126,13 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                G_FSINCOS, G_FCEIL,   G_FFLOOR})
       .libcall();
 
+  getActionDefinitionsBuilder(G_FNEG)
+      .legalFor(UseX87 && !HasSSE1, {s32})
+      .legalFor(UseX87 && !HasSSE2, {s64})
+      .legalFor(UseX87, {s80})
+      .customFor(UseX87 && !Is64Bit, {s32})
+      .lowerFor({s32, s64});
+
   getActionDefinitionsBuilder(G_FSQRT)
       .legalFor(HasSSE1 || UseX87, {s32})
       .legalFor(HasSSE2 || UseX87, {s64})
@@ -623,6 +630,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeGETROUNDING(MI, MRI, Helper);
   case TargetOpcode::G_SET_ROUNDING:
     return legalizeSETROUNDING(MI, MRI, Helper);
+  case TargetOpcode::G_FNEG:
+    return legalizeFNEG(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -988,6 +997,35 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
         .addUse(StackPtr)
         .addMemOperand(LoadNewMXCSRMMO);
   }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeFNEG(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    LegalizerHelper &Helper) const {
+  bool UseX87 = !Subtarget.useSoftFloat() && Subtarget.hasX87();
+  bool Is64Bit = Subtarget.is64Bit();
+
+  if (!(UseX87 && !Is64Bit))
+    return false;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+
+  LLT S32 = LLT::scalar(32);
+  LLT S80 = LLT::scalar(80);
+
+  if (MRI.getType(SrcReg) != S32 || MRI.getType(DstReg) != S32)
+    return false;
+
+  Register ExtReg = MRI.createGenericVirtualRegister(S80);
+  Helper.MIRBuilder.buildFPExt(ExtReg, SrcReg);
+
+  Register NegReg = MRI.createGenericVirtualRegister(S80);
+  Helper.MIRBuilder.buildFNeg(NegReg, ExtReg);
+
+  Helper.MIRBuilder.buildFPTrunc(DstReg, NegReg);
 
   MI.eraseFromParent();
   return true;
