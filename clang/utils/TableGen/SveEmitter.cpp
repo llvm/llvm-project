@@ -272,9 +272,16 @@ public:
           Proto[I] == 'R' || Proto[I] == '@' || Proto[I] == '!')
         break;
 
+      if (Proto[I] == '2')
+        Param += 1;
+      if (Proto[I] == '4')
+        Param += 3;
+
       // Multivector modifier can be skipped
-      if (Proto[I] == '.')
+      if (Proto[I] == '.') {
+        Param -= 1; // Adjust for the increment at the top of the loop
         I += 2;
+      }
     }
     assert(I != Proto.size() && "Prototype has no splat operand");
     return Param;
