@@ -2379,10 +2379,7 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/ARM/ARMGenSubtargetInfo.inc",
             ),
             (
-                [
-                    "-gen-disassembler",
-                    "-ignore-non-decodable-operands",
-                ],
+                ["-gen-disassembler"],
                 "lib/Target/ARM/ARMGenDisassemblerTables.inc",
             ),
         ],
