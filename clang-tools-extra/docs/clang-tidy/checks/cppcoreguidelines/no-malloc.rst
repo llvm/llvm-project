@@ -10,7 +10,7 @@ Furthermore, it can be configured to check against a user-specified list of
 functions that are used for memory management (e.g. ``posix_memalign()``).
 
 This check implements `R.10
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rr-mallocfree>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rr-mallocfree>`_
 from the C++ Core Guidelines.
 
 There is no attempt made to provide fix-it hints, since manual resource
