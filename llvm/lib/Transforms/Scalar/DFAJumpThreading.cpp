@@ -581,7 +581,7 @@ struct AllSwitchPaths {
   AllSwitchPaths(const MainSwitch *MSwitch, OptimizationRemarkEmitter *ORE,
                  LoopInfo *LI, Loop *L)
       : Switch(MSwitch->getInstr()), SwitchBlock(Switch->getParent()), ORE(ORE),
-        LI(LI), SwitchOuterLoop(L) {}
+        DefaultDest(nullptr), LI(LI), SwitchOuterLoop(L) {}
 
   std::vector<ThreadingPath> &getThreadingPaths() { return TPaths; }
   unsigned getNumThreadingPaths() { return TPaths.size(); }
@@ -591,6 +591,30 @@ struct AllSwitchPaths {
   void run() {
     findTPaths();
     unifyTPaths();
+  }
+
+  /// Fast helper to get the successor corresponding to a particular case value
+  /// for a switch statement.
+  BasicBlock *getNextCaseSuccessor(const APInt &NextState) {
+    // Precompute the value => successor mapping
+    if (CaseValToDest.empty()) {
+      for (auto Case : Switch->cases()) {
+        APInt CaseVal = Case.getCaseValue()->getValue();
+        CaseValToDest[CaseVal] = Case.getCaseSuccessor();
+      }
+      DefaultDest = Switch->getDefaultDest();
+    }
+
+    auto SuccIt = CaseValToDest.find(NextState);
+    return SuccIt == CaseValToDest.end() ? DefaultDest : SuccIt->second;
+  }
+
+  void updateDefaultDest(BasicBlock *DefaultDest) {
+    this->DefaultDest = DefaultDest;
+  }
+
+  void updateNextCase(const APInt &NextState, BasicBlock *NextCase) {
+    CaseValToDest[NextState] = NextCase;
   }
 
 private:
@@ -833,22 +857,6 @@ private:
     TPaths = std::move(TempList);
   }
 
-  /// Fast helper to get the successor corresponding to a particular case value
-  /// for a switch statement.
-  BasicBlock *getNextCaseSuccessor(const APInt &NextState) {
-    // Precompute the value => successor mapping
-    if (CaseValToDest.empty()) {
-      for (auto Case : Switch->cases()) {
-        APInt CaseVal = Case.getCaseValue()->getValue();
-        CaseValToDest[CaseVal] = Case.getCaseSuccessor();
-      }
-    }
-
-    auto SuccIt = CaseValToDest.find(NextState);
-    return SuccIt == CaseValToDest.end() ? Switch->getDefaultDest()
-                                         : SuccIt->second;
-  }
-
   // Two states are equivalent if they have the same switch destination.
   // Unify the states in different threading path if the states are equivalent.
   void unifyTPaths() {
@@ -873,6 +881,7 @@ private:
   OptimizationRemarkEmitter *ORE;
   std::vector<ThreadingPath> TPaths;
   DenseMap<APInt, BasicBlock *> CaseValToDest;
+  BasicBlock *DefaultDest;
   LoopInfo *LI;
   Loop *SwitchOuterLoop;
 };
@@ -1196,24 +1205,6 @@ private:
     SSAUpdate.RewriteAllUses(&DTU->getDomTree());
   }
 
-  /// Helper to get the successor corresponding to a particular case value for
-  /// a switch statement.
-  /// TODO: Unify it with SwitchPaths->getNextCaseSuccessor(SwitchInst *Switch)
-  /// by updating cached value => successor mapping during threading.
-  static BasicBlock *getNextCaseSuccessor(SwitchInst *Switch,
-                                          const APInt &NextState) {
-    BasicBlock *NextCase = nullptr;
-    for (auto Case : Switch->cases()) {
-      if (Case.getCaseValue()->getValue() == NextState) {
-        NextCase = Case.getCaseSuccessor();
-        break;
-      }
-    }
-    if (!NextCase)
-      NextCase = Switch->getDefaultDest();
-    return NextCase;
-  }
-
   /// Clones a basic block, and adds it to the CFG.
   ///
   /// This function also includes updating phi nodes in the successors of the
@@ -1268,8 +1259,7 @@ private:
     // If BB is the last block in the path, we can simply update the one case
     // successor that will be reached.
     if (BB == SwitchPaths->getSwitchBlock()) {
-      SwitchInst *Switch = SwitchPaths->getSwitchInst();
-      BasicBlock *NextCase = getNextCaseSuccessor(Switch, NextState);
+      BasicBlock *NextCase = SwitchPaths->getNextCaseSuccessor(NextState);
       BlocksToUpdate.push_back(NextCase);
       BasicBlock *ClonedSucc = getClonedBB(NextCase, NextState, DuplicateMap);
       if (ClonedSucc)
@@ -1320,6 +1310,15 @@ private:
       return;
 
     Instruction *PrevTerm = PrevBB->getTerminator();
+    // Update cached value => destination mapping.
+    if (PrevTerm == SwitchPaths->getSwitchInst()) {
+      for (auto Case : SwitchPaths->getSwitchInst()->cases())
+        if (Case.getCaseSuccessor() == OldBB)
+          SwitchPaths->updateNextCase(Case.getCaseValue()->getValue(), NewBB);
+      if (SwitchPaths->getSwitchInst()->getDefaultDest() == OldBB)
+        SwitchPaths->updateDefaultDest(NewBB);
+    }
+    // Replace actual successors.
     for (unsigned Idx = 0; Idx < PrevTerm->getNumSuccessors(); Idx++) {
       if (PrevTerm->getSuccessor(Idx) == OldBB) {
         OldBB->removePredecessor(PrevBB, /* KeepOneInputPHIs = */ true);
@@ -1378,17 +1377,20 @@ private:
     // updated yet
     if (!isa<SwitchInst>(LastBlock->getTerminator()))
       return;
-    SwitchInst *Switch = cast<SwitchInst>(LastBlock->getTerminator());
-    BasicBlock *NextCase = getNextCaseSuccessor(Switch, NextState);
+    assert(BB->getTerminator() == SwitchPaths->getSwitchInst() &&
+           "Original last block must contain the threaded switch");
+    BasicBlock *NextCase = SwitchPaths->getNextCaseSuccessor(NextState);
 
     std::vector<DominatorTree::UpdateType> DTUpdates;
     SmallPtrSet<BasicBlock *, 4> SuccSet;
-    for (BasicBlock *Succ : successors(LastBlock)) {
-      if (Succ != NextCase && SuccSet.insert(Succ).second)
+    for (BasicBlock *Succ : successors(LastBlock))
+      if (SuccSet.insert(Succ).second && Succ != NextCase)
         DTUpdates.push_back({DominatorTree::Delete, LastBlock, Succ});
-    }
 
-    Switch->eraseFromParent();
+    if (!SuccSet.count(NextCase))
+      DTUpdates.push_back({DominatorTree::Insert, LastBlock, NextCase});
+
+    LastBlock->getTerminator()->eraseFromParent();
     BranchInst::Create(NextCase, LastBlock);
 
     DTU->applyUpdates(DTUpdates);
