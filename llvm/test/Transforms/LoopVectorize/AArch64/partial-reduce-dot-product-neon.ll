@@ -44,11 +44,11 @@ define i32 @dotp(ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP6]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP6]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD3:%.*]] = load <16 x i8>, ptr [[TMP6]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i8>, ptr [[TMP8]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = zext <16 x i8> [[WIDE_LOAD3]] to <16 x i32>
@@ -249,7 +249,7 @@ define i32 @not_dotp_different_types(ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP30:%.*]] = add i64 [[INDEX]], 30
 ; CHECK-INTERLEAVED-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 31
 ; CHECK-INTERLEAVED-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[TMP32]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[TMP32]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP32]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP34]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP35:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
@@ -513,13 +513,13 @@ define i32 @not_dotp_not_loop_carried(ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD3:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = zext <16 x i8> [[WIDE_LOAD1]] to <16 x i32>
@@ -791,10 +791,10 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = or disjoint i64 [[INDEX]], 3
 ; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP9]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP9]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD8:%.*]] = load <16 x i8>, ptr [[TMP38]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD9:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD10:%.*]] = load <16 x i8>, ptr [[TMP16]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = sext <16 x i8> [[WIDE_LOAD9]] to <16 x i32>
@@ -805,10 +805,10 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = sext <16 x i8> [[WIDE_LOAD8]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP21:%.*]] = mul nsw <16 x i32> [[TMP19]], [[TMP17]]
 ; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE11]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI7]], <16 x i32> [[TMP21]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD12:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD13:%.*]] = load <16 x i8>, ptr [[TMP22]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD14:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD15:%.*]] = load <16 x i8>, ptr [[TMP26]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP24:%.*]] = sext <16 x i8> [[WIDE_LOAD12]] to <16 x i32>
@@ -819,10 +819,10 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP25:%.*]] = sext <16 x i8> [[WIDE_LOAD15]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP29:%.*]] = mul nsw <16 x i32> [[TMP27]], [[TMP25]]
 ; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE17]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI5]], <16 x i32> [[TMP29]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD18:%.*]] = load <16 x i8>, ptr [[TMP7]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD19:%.*]] = load <16 x i8>, ptr [[TMP32]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD20:%.*]] = load <16 x i8>, ptr [[TMP8]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD21:%.*]] = load <16 x i8>, ptr [[TMP36]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP34:%.*]] = sext <16 x i8> [[WIDE_LOAD18]] to <16 x i32>
@@ -833,10 +833,10 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP33:%.*]] = sext <16 x i8> [[WIDE_LOAD21]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP37:%.*]] = mul nsw <16 x i32> [[TMP35]], [[TMP33]]
 ; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI3]], <16 x i32> [[TMP37]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD24:%.*]] = load <16 x i8>, ptr [[TMP10]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD25:%.*]] = load <16 x i8>, ptr [[TMP42]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD26:%.*]] = load <16 x i8>, ptr [[TMP11]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD27:%.*]] = load <16 x i8>, ptr [[TMP46]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP44:%.*]] = sext <16 x i8> [[WIDE_LOAD24]] to <16 x i32>
@@ -1811,13 +1811,13 @@ define i32 @not_dotp_extend_user(ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP6]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP6]], i64 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD3:%.*]] = load <16 x i8>, ptr [[TMP6]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i8>, ptr [[TMP8]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = zext <16 x i8> [[WIDE_LOAD3]] to <16 x i32>
@@ -1887,6 +1887,515 @@ for.body:                                         ; preds = %for.body, %entry
 for.exit:                        ; preds = %for.body
   %result = add i32 %add, %ext.b
   ret i32 %result
+}
+
+define i32 @dotp_ext_mul(i64 %n, ptr %a, i8 %b) {
+; CHECK-INTERLEAVE1-LABEL: define i32 @dotp_ext_mul(
+; CHECK-INTERLEAVE1-SAME: i64 [[N:%.*]], ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVE1-NEXT:  entry:
+; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-INTERLEAVE1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-INTERLEAVE1:       vector.ph:
+; CHECK-INTERLEAVE1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-INTERLEAVE1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-INTERLEAVE1:       vector.body:
+; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP1]], i64 0
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i32>
+; CHECK-INTERLEAVE1-NEXT:    [[TMP3:%.*]] = mul <8 x i32> [[TMP2]], [[TMP2]]
+; CHECK-INTERLEAVE1-NEXT:    [[PARTIAL_REDUCE]] = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v8i32(<2 x i32> [[VEC_PHI]], <8 x i32> [[TMP3]])
+; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT2]] to <8 x i32>
+; CHECK-INTERLEAVE1-NEXT:    [[TMP5:%.*]] = sext <8 x i32> [[TMP4]] to <8 x i64>
+; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-INTERLEAVE1-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-INTERLEAVE1:       middle.block:
+; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PARTIAL_REDUCE]])
+; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[TMP5]], i32 7
+; CHECK-INTERLEAVE1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-INTERLEAVE1:       scalar.ph:
+;
+; CHECK-INTERLEAVED-LABEL: define i32 @dotp_ext_mul(
+; CHECK-INTERLEAVED-SAME: i64 [[N:%.*]], ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVED-NEXT:  entry:
+; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-INTERLEAVED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
+; CHECK-INTERLEAVED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-INTERLEAVED:       vector.ph:
+; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
+; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-INTERLEAVED:       vector.body:
+; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i16> poison, i16 [[TMP1]], i64 0
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT3]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = mul <8 x i32> [[TMP2]], [[TMP2]]
+; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE]] = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v8i32(<2 x i32> [[VEC_PHI]], <8 x i32> [[TMP3]])
+; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE2]] = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v8i32(<2 x i32> [[VEC_PHI1]], <8 x i32> [[TMP3]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT4]] to <8 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = sext <8 x i32> [[TMP4]] to <8 x i64>
+; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-INTERLEAVED:       middle.block:
+; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add <2 x i32> [[PARTIAL_REDUCE2]], [[PARTIAL_REDUCE]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[BIN_RDX]])
+; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[TMP5]], i32 7
+; CHECK-INTERLEAVED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-INTERLEAVED:       scalar.ph:
+;
+; CHECK-MAXBW-LABEL: define i32 @dotp_ext_mul(
+; CHECK-MAXBW-SAME: i64 [[N:%.*]], ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-MAXBW-NEXT:  entry:
+; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
+; CHECK-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-MAXBW:       vector.ph:
+; CHECK-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-MAXBW:       vector.body:
+; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP1]], i64 0
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i32>
+; CHECK-MAXBW-NEXT:    [[TMP3:%.*]] = mul <8 x i32> [[TMP2]], [[TMP2]]
+; CHECK-MAXBW-NEXT:    [[PARTIAL_REDUCE]] = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v8i32(<2 x i32> [[VEC_PHI]], <8 x i32> [[TMP3]])
+; CHECK-MAXBW-NEXT:    [[TMP4:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT2]] to <8 x i32>
+; CHECK-MAXBW-NEXT:    [[TMP5:%.*]] = sext <8 x i32> [[TMP4]] to <8 x i64>
+; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-MAXBW-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-MAXBW-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-MAXBW:       middle.block:
+; CHECK-MAXBW-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PARTIAL_REDUCE]])
+; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[TMP5]], i32 7
+; CHECK-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-MAXBW:       scalar.ph:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %res1 = phi i64 [ 0, %entry ], [ %load.ext.ext, %loop ]
+  %res2 = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %load = load i16, ptr %a, align 2
+  %iv.next = add i64 %iv, 1
+  %conv = zext i8 %b to i16
+  %mul = mul i16 %conv, %conv
+  %mul.ext = zext i16 %mul to i32
+  %add = add i32 %res2, %mul.ext
+  %load.ext = sext i16 %load to i32
+  %load.ext.ext = sext i32 %load.ext to i64
+  %ec = icmp eq i64 %iv, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %add
+}
+
+define i64 @not_dotp_ext_mul_8to64(i64 %n, ptr %a, i8 %b) {
+; CHECK-INTERLEAVE1-LABEL: define i64 @not_dotp_ext_mul_8to64(
+; CHECK-INTERLEAVE1-SAME: i64 [[N:%.*]], ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVE1-NEXT:  entry:
+; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-INTERLEAVE1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-INTERLEAVE1:       vector.ph:
+; CHECK-INTERLEAVE1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-INTERLEAVE1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i16>
+; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = mul <8 x i16> [[TMP1]], [[TMP1]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP3:%.*]] = zext <8 x i16> [[TMP2]] to <8 x i64>
+; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-INTERLEAVE1:       vector.body:
+; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP4]], i64 0
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVE1-NEXT:    [[TMP5]] = add <8 x i64> [[VEC_PHI]], [[TMP3]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP6:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT2]] to <8 x i32>
+; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = sext <8 x i32> [[TMP6]] to <8 x i64>
+; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-INTERLEAVE1:       middle.block:
+; CHECK-INTERLEAVE1-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP5]])
+; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[TMP7]], i32 7
+; CHECK-INTERLEAVE1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-INTERLEAVE1:       scalar.ph:
+;
+; CHECK-INTERLEAVED-LABEL: define i64 @not_dotp_ext_mul_8to64(
+; CHECK-INTERLEAVED-SAME: i64 [[N:%.*]], ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVED-NEXT:  entry:
+; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-INTERLEAVED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
+; CHECK-INTERLEAVED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-INTERLEAVED:       vector.ph:
+; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
+; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i16>
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = mul <8 x i16> [[TMP1]], [[TMP1]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = zext <8 x i16> [[TMP2]] to <8 x i64>
+; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-INTERLEAVED:       vector.body:
+; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <8 x i16> poison, i16 [[TMP4]], i64 0
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT2]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP5]] = add <8 x i64> [[VEC_PHI]], [[TMP3]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP6]] = add <8 x i64> [[VEC_PHI1]], [[TMP3]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT3]] to <8 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = sext <8 x i32> [[TMP7]] to <8 x i64>
+; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-INTERLEAVED:       middle.block:
+; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add <8 x i64> [[TMP6]], [[TMP5]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[BIN_RDX]])
+; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[TMP8]], i32 7
+; CHECK-INTERLEAVED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-INTERLEAVED:       scalar.ph:
+;
+; CHECK-MAXBW-LABEL: define i64 @not_dotp_ext_mul_8to64(
+; CHECK-MAXBW-SAME: i64 [[N:%.*]], ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-MAXBW-NEXT:  entry:
+; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
+; CHECK-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-MAXBW:       vector.ph:
+; CHECK-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i16>
+; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = mul <8 x i16> [[TMP1]], [[TMP1]]
+; CHECK-MAXBW-NEXT:    [[TMP3:%.*]] = zext <8 x i16> [[TMP2]] to <8 x i64>
+; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-MAXBW:       vector.body:
+; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[TMP4:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP4]], i64 0
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-MAXBW-NEXT:    [[TMP5]] = add <8 x i64> [[VEC_PHI]], [[TMP3]]
+; CHECK-MAXBW-NEXT:    [[TMP6:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT2]] to <8 x i32>
+; CHECK-MAXBW-NEXT:    [[TMP7:%.*]] = sext <8 x i32> [[TMP6]] to <8 x i64>
+; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-MAXBW-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-MAXBW:       middle.block:
+; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP5]])
+; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[TMP7]], i32 7
+; CHECK-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-MAXBW:       scalar.ph:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %res1 = phi i64 [ 0, %entry ], [ %load.ext.ext, %loop ]
+  %res2 = phi i64 [ 0, %entry ], [ %add, %loop ]
+  %load = load i16, ptr %a, align 2
+  %iv.next = add i64 %iv, 1
+  %conv = zext i8 %b to i16
+  %mul = mul i16 %conv, %conv
+  %mul.ext = zext i16 %mul to i64
+  %add = add i64 %res2, %mul.ext
+  %load.ext = sext i16 %load to i32
+  %load.ext.ext = sext i32 %load.ext to i64
+  %ec = icmp eq i64 %iv, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i64 %add
+}
+
+define i32 @not_dotp_sext_mul_zext(i64 %n, ptr %a, i8 %b) {
+; CHECK-INTERLEAVE1-LABEL: define i32 @not_dotp_sext_mul_zext(
+; CHECK-INTERLEAVE1-SAME: i64 [[N:%.*]], ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVE1-NEXT:  entry:
+; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-INTERLEAVE1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-INTERLEAVE1:       vector.ph:
+; CHECK-INTERLEAVE1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-INTERLEAVE1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i16>
+; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = mul <8 x i16> [[TMP1]], [[TMP1]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP3:%.*]] = sext <8 x i16> [[TMP2]] to <8 x i32>
+; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-INTERLEAVE1:       vector.body:
+; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP4]], i64 0
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVE1-NEXT:    [[TMP5]] = add <8 x i32> [[VEC_PHI]], [[TMP3]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP6:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT2]] to <8 x i32>
+; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = sext <8 x i32> [[TMP6]] to <8 x i64>
+; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-INTERLEAVE1:       middle.block:
+; CHECK-INTERLEAVE1-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP5]])
+; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[TMP7]], i32 7
+; CHECK-INTERLEAVE1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-INTERLEAVE1:       scalar.ph:
+;
+; CHECK-INTERLEAVED-LABEL: define i32 @not_dotp_sext_mul_zext(
+; CHECK-INTERLEAVED-SAME: i64 [[N:%.*]], ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVED-NEXT:  entry:
+; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-INTERLEAVED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
+; CHECK-INTERLEAVED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-INTERLEAVED:       vector.ph:
+; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
+; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i16>
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = mul <8 x i16> [[TMP1]], [[TMP1]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = sext <8 x i16> [[TMP2]] to <8 x i32>
+; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-INTERLEAVED:       vector.body:
+; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <8 x i16> poison, i16 [[TMP4]], i64 0
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT2]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP5]] = add <8 x i32> [[VEC_PHI]], [[TMP3]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP6]] = add <8 x i32> [[VEC_PHI1]], [[TMP3]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT3]] to <8 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = sext <8 x i32> [[TMP7]] to <8 x i64>
+; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-INTERLEAVED:       middle.block:
+; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP6]], [[TMP5]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX]])
+; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[TMP8]], i32 7
+; CHECK-INTERLEAVED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-INTERLEAVED:       scalar.ph:
+;
+; CHECK-MAXBW-LABEL: define i32 @not_dotp_sext_mul_zext(
+; CHECK-MAXBW-SAME: i64 [[N:%.*]], ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-MAXBW-NEXT:  entry:
+; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
+; CHECK-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-MAXBW:       vector.ph:
+; CHECK-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i16>
+; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = mul <8 x i16> [[TMP1]], [[TMP1]]
+; CHECK-MAXBW-NEXT:    [[TMP3:%.*]] = sext <8 x i16> [[TMP2]] to <8 x i32>
+; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-MAXBW:       vector.body:
+; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[TMP4:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP4]], i64 0
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-MAXBW-NEXT:    [[TMP5]] = add <8 x i32> [[VEC_PHI]], [[TMP3]]
+; CHECK-MAXBW-NEXT:    [[TMP6:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT2]] to <8 x i32>
+; CHECK-MAXBW-NEXT:    [[TMP7:%.*]] = sext <8 x i32> [[TMP6]] to <8 x i64>
+; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-MAXBW-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-MAXBW:       middle.block:
+; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP5]])
+; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[TMP7]], i32 7
+; CHECK-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-MAXBW:       scalar.ph:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %res1 = phi i64 [ 0, %entry ], [ %load.ext.ext, %loop ]
+  %res2 = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %load = load i16, ptr %a, align 2
+  %iv.next = add i64 %iv, 1
+  %conv = zext i8 %b to i16
+  %mul = mul i16 %conv, %conv
+  %mul.ext = sext i16 %mul to i32
+  %add = add i32 %res2, %mul.ext
+  %load.ext = sext i16 %load to i32
+  %load.ext.ext = sext i32 %load.ext to i64
+  %ec = icmp eq i64 %iv, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %add
+}
+
+define i32 @not_dotp_zext_mul_sext(i64 %n, ptr %a, i8 %b) {
+; CHECK-INTERLEAVE1-LABEL: define i32 @not_dotp_zext_mul_sext(
+; CHECK-INTERLEAVE1-SAME: i64 [[N:%.*]], ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVE1-NEXT:  entry:
+; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-INTERLEAVE1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-INTERLEAVE1:       vector.ph:
+; CHECK-INTERLEAVE1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-INTERLEAVE1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = sext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i16>
+; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = mul <8 x i16> [[TMP1]], [[TMP1]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP3:%.*]] = zext <8 x i16> [[TMP2]] to <8 x i32>
+; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-INTERLEAVE1:       vector.body:
+; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP4]], i64 0
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVE1-NEXT:    [[TMP5]] = add <8 x i32> [[VEC_PHI]], [[TMP3]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP6:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT2]] to <8 x i32>
+; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = sext <8 x i32> [[TMP6]] to <8 x i64>
+; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-INTERLEAVE1:       middle.block:
+; CHECK-INTERLEAVE1-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP5]])
+; CHECK-INTERLEAVE1-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[TMP7]], i32 7
+; CHECK-INTERLEAVE1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-INTERLEAVE1:       scalar.ph:
+;
+; CHECK-INTERLEAVED-LABEL: define i32 @not_dotp_zext_mul_sext(
+; CHECK-INTERLEAVED-SAME: i64 [[N:%.*]], ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVED-NEXT:  entry:
+; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-INTERLEAVED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
+; CHECK-INTERLEAVED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-INTERLEAVED:       vector.ph:
+; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
+; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = sext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i16>
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = mul <8 x i16> [[TMP1]], [[TMP1]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = zext <8 x i16> [[TMP2]] to <8 x i32>
+; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-INTERLEAVED:       vector.body:
+; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <8 x i16> poison, i16 [[TMP4]], i64 0
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT2]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[TMP5]] = add <8 x i32> [[VEC_PHI]], [[TMP3]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP6]] = add <8 x i32> [[VEC_PHI1]], [[TMP3]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT3]] to <8 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = sext <8 x i32> [[TMP7]] to <8 x i64>
+; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-INTERLEAVED:       middle.block:
+; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP6]], [[TMP5]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX]])
+; CHECK-INTERLEAVED-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[TMP8]], i32 7
+; CHECK-INTERLEAVED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-INTERLEAVED:       scalar.ph:
+;
+; CHECK-MAXBW-LABEL: define i32 @not_dotp_zext_mul_sext(
+; CHECK-MAXBW-SAME: i64 [[N:%.*]], ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-MAXBW-NEXT:  entry:
+; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
+; CHECK-MAXBW-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
+; CHECK-MAXBW-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-MAXBW:       vector.ph:
+; CHECK-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = sext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i16>
+; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = mul <8 x i16> [[TMP1]], [[TMP1]]
+; CHECK-MAXBW-NEXT:    [[TMP3:%.*]] = zext <8 x i16> [[TMP2]] to <8 x i32>
+; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-MAXBW:       vector.body:
+; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[TMP4:%.*]] = load i16, ptr [[A]], align 2
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP4]], i64 0
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-MAXBW-NEXT:    [[TMP5]] = add <8 x i32> [[VEC_PHI]], [[TMP3]]
+; CHECK-MAXBW-NEXT:    [[TMP6:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT2]] to <8 x i32>
+; CHECK-MAXBW-NEXT:    [[TMP7:%.*]] = sext <8 x i32> [[TMP6]] to <8 x i64>
+; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-MAXBW-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-MAXBW:       middle.block:
+; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP5]])
+; CHECK-MAXBW-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i64> [[TMP7]], i32 7
+; CHECK-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-MAXBW:       scalar.ph:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %res1 = phi i64 [ 0, %entry ], [ %load.ext.ext, %loop ]
+  %res2 = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %load = load i16, ptr %a, align 2
+  %iv.next = add i64 %iv, 1
+  %conv = sext i8 %b to i16
+  %mul = mul i16 %conv, %conv
+  %mul.ext = zext i16 %mul to i32
+  %add = add i32 %res2, %mul.ext
+  %load.ext = sext i16 %load to i32
+  %load.ext.ext = sext i32 %load.ext to i64
+  %ec = icmp eq i64 %iv, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %add
 }
 
 !7 = distinct !{!7, !8, !9, !10}

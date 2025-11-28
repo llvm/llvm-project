@@ -6526,11 +6526,9 @@ static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
   auto mod = builder.getModule();
-  bool dontUseFastRealMod = false;
-  bool canUseApprox = mlir::arith::bitEnumContainsAny(
-      builder.getFastMathFlags(), mlir::arith::FastMathFlags::afn);
-  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.no_fast_real_mod"))
-    dontUseFastRealMod = attr.getValue();
+  bool useFastRealMod = false;
+  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.fast_real_mod"))
+    useFastRealMod = attr.getValue();
 
   assert(args.size() == 2);
   if (resultType.isUnsignedInteger()) {
@@ -6543,7 +6541,7 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
   if (mlir::isa<mlir::IntegerType>(resultType))
     return mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
 
-  if (resultType.isFloat() && canUseApprox && !dontUseFastRealMod) {
+  if (resultType.isFloat() && useFastRealMod) {
     // Treat MOD as an approximate function and code-gen inline code
     // instead of calling into the Fortran runtime library.
     return builder.createConvert(loc, resultType,

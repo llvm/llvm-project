@@ -3401,9 +3401,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
-  context_.Say(GetContext().clauseSource,
-      "LOOPRANGE clause is not implemented yet"_err_en_US,
-      ContextDirectiveAsFortran());
+  CheckAllowedClause(llvm::omp::Clause::OMPC_looprange);
+  auto &first = std::get<0>(x.v.t);
+  auto &count = std::get<1>(x.v.t);
+  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, count);
+  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, first);
 }
 
 // Restrictions specific to each clause are implemented apart from the
@@ -5215,6 +5217,13 @@ bool OmpStructureChecker::CheckTargetBlockOnlyTeams(
         if (dirId == llvm::omp::Directive::OMPD_teams) {
           nestedTeams = true;
         }
+      } else if (const auto *ompLoopConstruct{
+                     std::get_if<parser::OpenMPLoopConstruct>(
+                         &ompConstruct->u)}) {
+        llvm::omp::Directive dirId{ompLoopConstruct->BeginDir().DirId()};
+        if (llvm::omp::topTeamsSet.test(dirId)) {
+          nestedTeams = true;
+        }
       }
     }
 
@@ -5472,6 +5481,25 @@ void OmpStructureChecker::CheckAllowedRequiresClause(llvmOmpClause clause) {
           parser::ToUpperCaseLetters(getClauseName(clause).str()));
     }
   }
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPMisplacedEndDirective &x) {
+  context_.Say(x.DirName().source, "Misplaced OpenMP end-directive"_err_en_US);
+  PushContextAndClauseSets(
+      x.DirName().source, llvm::omp::Directive::OMPD_unknown);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPMisplacedEndDirective &x) {
+  dirContext_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPInvalidDirective &x) {
+  context_.Say(x.source, "Invalid OpenMP directive"_err_en_US);
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_unknown);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPInvalidDirective &x) {
+  dirContext_.pop_back();
 }
 
 // Use when clause falls under 'struct OmpClause' in 'parse-tree.h'.

@@ -29,28 +29,28 @@ features = [
     Feature(
         name="_target-has-llvm-20",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-21 || target={{.+}}-apple-macosx{{26.[0-9](.\d+)?}}",
+            r"_target-has-llvm-21 || target={{.+}}-apple-macosx{{26.[0-9](.\d+)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
         name="_target-has-llvm-19",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-20 || target={{.+}}-apple-macosx{{15.[4-9](.\d+)?}}",
+            r"_target-has-llvm-20 || target={{.+}}-apple-macosx{{15.[4-9](.\d+)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
         name="_target-has-llvm-18",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-19 || target={{.+}}-apple-macosx{{15.[0-3](.\d+)?}}",
+            r"_target-has-llvm-19 || target={{.+}}-apple-macosx{{15.[0-3](.\d+)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
         name="_target-has-llvm-17",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-18 || target={{.+}}-apple-macosx{{14.[4-9](.\d+)?}}",
+            r"_target-has-llvm-18 || target={{.+}}-apple-macosx{{14.[4-9](.\d+)?}}",
             cfg.available_features,
         ),
     ),

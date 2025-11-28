@@ -541,7 +541,6 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
 void ProTypeMemberInitCheck::checkMissingBaseClassInitializer(
     const ASTContext &Context, const CXXRecordDecl &ClassDecl,
     const CXXConstructorDecl *Ctor) {
-
   // Gather any base classes that need to be initialized.
   SmallVector<const RecordDecl *, 4> AllBases;
   SmallPtrSet<const RecordDecl *, 4> BasesToInit;

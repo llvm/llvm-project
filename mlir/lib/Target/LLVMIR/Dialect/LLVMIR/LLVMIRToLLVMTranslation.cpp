@@ -113,7 +113,7 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     return failure();
 
   // Handle function entry count metadata.
-  if (name->getString() == "function_entry_count") {
+  if (name->getString() == llvm::MDProfLabels::FunctionEntryCount) {
 
     // TODO support function entry count metadata with GUID fields.
     if (node->getNumOperands() != 2)
@@ -131,15 +131,28 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
            << "expected function_entry_count to be attached to a function";
   }
 
-  if (name->getString() != "branch_weights")
+  if (name->getString() != llvm::MDProfLabels::BranchWeights)
     return failure();
+  // The branch_weights metadata must have at least 2 operands.
+  if (node->getNumOperands() < 2)
+    return failure();
+
+  ArrayRef<llvm::MDOperand> branchWeightOperands =
+      node->operands().drop_front();
+  if (auto *mdString = dyn_cast<llvm::MDString>(node->getOperand(1))) {
+    if (mdString->getString() != llvm::MDProfLabels::ExpectedBranchWeights)
+      return failure();
+    // The MLIR WeightedBranchOpInterface does not support the
+    // ExpectedBranchWeights field, so it is dropped.
+    branchWeightOperands = branchWeightOperands.drop_front();
+  }
 
   // Handle branch weights metadata.
   SmallVector<int32_t> branchWeights;
-  branchWeights.reserve(node->getNumOperands() - 1);
-  for (unsigned i = 1, e = node->getNumOperands(); i != e; ++i) {
+  branchWeights.reserve(branchWeightOperands.size());
+  for (const llvm::MDOperand &operand : branchWeightOperands) {
     llvm::ConstantInt *branchWeight =
-        llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(i));
+        llvm::mdconst::dyn_extract<llvm::ConstantInt>(operand);
     if (!branchWeight)
       return failure();
     branchWeights.push_back(branchWeight->getZExtValue());

@@ -54,7 +54,7 @@ static unsigned toCallerWindow(unsigned Reg) {
 
 XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
                                            const XtensaSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
   MVT PtrVT = MVT::i32;
   // Set up the register classes.
   addRegisterClass(MVT::i32, &Xtensa::ARRegClass);
