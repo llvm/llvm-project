@@ -1557,20 +1557,6 @@ public:
     return Cost;
   }
 
-  InstructionCost
-  getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
-                         TTI::TargetCostKind CostKind) const override {
-    unsigned Opcode = (MICA.getID() == Intrinsic::masked_gather ||
-                       MICA.getID() == Intrinsic::vp_gather)
-                          ? Instruction::Load
-                          : Instruction::Store;
-    Type *DataTy = MICA.getDataType();
-    bool VariableMask = MICA.getVariableMask();
-    Align Alignment = MICA.getAlignment();
-    return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
-                                       true, CostKind);
-  }
-
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -3024,14 +3010,22 @@ public:
       // For a target without strided memory operations (or for an illegal
       // operation type on one which does), assume we lower to a gather/scatter
       // operation.  (Which may in turn be scalarized.)
-      return thisT()->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                             Alignment, CostKind, I);
+      return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment,
+                                         VariableMask, true, CostKind);
     }
-    case Intrinsic::masked_scatter:
-    case Intrinsic::masked_gather:
     case Intrinsic::vp_scatter:
     case Intrinsic::vp_gather:
-      return thisT()->getGatherScatterOpCost(MICA, CostKind);
+    case Intrinsic::masked_scatter:
+    case Intrinsic::masked_gather: {
+      unsigned Opcode = (MICA.getID() == Intrinsic::masked_gather ||
+                         MICA.getID() == Intrinsic::vp_gather)
+                            ? Instruction::Load
+                            : Instruction::Store;
+
+      return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment,
+                                         VariableMask, true, CostKind);
+    }
+
     case Intrinsic::masked_load:
     case Intrinsic::masked_store: {
       unsigned Opcode =
