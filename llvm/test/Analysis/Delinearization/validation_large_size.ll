@@ -137,3 +137,44 @@ for.i.latch:
 exit:
   ret void
 }
+
+; for (i = 0; i < (1 << 54); i++)
+;   for (j = 0; j < 256; j++)
+;     A[i*256 + j] = 0;
+;
+; We also need to consider the element size when validation.
+;
+define void @elementsize_cause_ovfl(ptr %A) {
+; CHECK-LABEL: 'elementsize_cause_ovfl'
+; CHECK-NEXT:  Inst: store i64 0, ptr %gep, align 4
+; CHECK-NEXT:  AccessFunction: {{\{\{}}0,+,2048}<%for.i.header>,+,8}<%for.j>
+; CHECK-NEXT:  Base offset: %A
+; CHECK-NEXT:  ArrayDecl[UnknownSize][256] with elements of 8 bytes.
+; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j>]
+; CHECK-NEXT:  Delinearization validation: Failed
+;
+entry:
+  br label %for.i.header
+
+for.i.header:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %for.i.latch ]
+  %i.mul = mul i64 %i, 256
+  br label %for.j
+
+for.j:
+  %j = phi i64 [ 0, %for.i.header ], [ %j.inc, %for.j ]
+  %offset = add i64 %i.mul, %j
+  %gep = getelementptr i64, ptr %A, i64 %offset
+  store i64 0, ptr %gep
+  %j.inc = add i64 %j, 1
+  %ec.j = icmp eq i64 %j.inc, 256
+  br i1 %ec.j, label %for.i.latch, label %for.j
+
+for.i.latch:
+  %i.inc = add i64 %i, 1
+  %ec.i = icmp eq i64 %i.inc, 18014398509481984
+  br i1 %ec.i, label %exit, label %for.i.header
+
+exit:
+  ret void
+}

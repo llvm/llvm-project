@@ -792,7 +792,7 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
   //         (S_2 * ... * S_n) - 1  (can be proven by induction)
   //
   const SCEV *Prod = SE.getOne(Sizes[0]->getType());
-  for (const SCEV *Size : drop_end(Sizes)) {
+  for (const SCEV *Size : Sizes) {
     Prod = MulOverflow(Prod, Size);
     if (!Prod)
       return false;
