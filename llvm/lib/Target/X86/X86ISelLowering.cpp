@@ -38364,22 +38364,22 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     default:
       llvm_unreachable("Unexpected instruction!");
     case X86::PTCVTROWD2PSrri:
-      Opc = X86::TCVTROWD2PSrri;
+      Opc = X86::TCVTROWD2PSrti;
       break;
     case X86::PTCVTROWPS2BF16Hrri:
-      Opc = X86::TCVTROWPS2BF16Hrri;
+      Opc = X86::TCVTROWPS2BF16Hrti;
       break;
     case X86::PTCVTROWPS2PHHrri:
-      Opc = X86::TCVTROWPS2PHHrri;
+      Opc = X86::TCVTROWPS2PHHrti;
       break;
     case X86::PTCVTROWPS2BF16Lrri:
-      Opc = X86::TCVTROWPS2BF16Lrri;
+      Opc = X86::TCVTROWPS2BF16Lrti;
       break;
     case X86::PTCVTROWPS2PHLrri:
-      Opc = X86::TCVTROWPS2PHLrri;
+      Opc = X86::TCVTROWPS2PHLrti;
       break;
     case X86::PTILEMOVROWrri:
-      Opc = X86::TILEMOVROWrri;
+      Opc = X86::TILEMOVROWrti;
       break;
     }
     MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
@@ -38402,22 +38402,22 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     default:
       llvm_unreachable("Unexpected instruction!");
     case X86::PTCVTROWD2PSrre:
-      Opc = X86::TCVTROWD2PSrre;
+      Opc = X86::TCVTROWD2PSrte;
       break;
     case X86::PTCVTROWPS2BF16Hrre:
-      Opc = X86::TCVTROWPS2BF16Hrre;
+      Opc = X86::TCVTROWPS2BF16Hrte;
       break;
     case X86::PTCVTROWPS2BF16Lrre:
-      Opc = X86::TCVTROWPS2BF16Lrre;
+      Opc = X86::TCVTROWPS2BF16Lrte;
       break;
     case X86::PTCVTROWPS2PHHrre:
-      Opc = X86::TCVTROWPS2PHHrre;
+      Opc = X86::TCVTROWPS2PHHrte;
       break;
     case X86::PTCVTROWPS2PHLrre:
-      Opc = X86::TCVTROWPS2PHLrre;
+      Opc = X86::TCVTROWPS2PHLrte;
       break;
     case X86::PTILEMOVROWrre:
-      Opc = X86::TILEMOVROWrre;
+      Opc = X86::TILEMOVROWrte;
       break;
     }
     MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));

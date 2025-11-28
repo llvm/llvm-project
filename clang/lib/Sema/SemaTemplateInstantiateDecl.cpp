@@ -245,15 +245,17 @@ static void sharedInstantiateConstructorDestructorAttr(
     ExprResult Result = S.SubstExpr(A->getPriority(), TemplateArgs);
     if (Result.isInvalid())
       return;
-    tempInstPriority = Result.get();
-    if (std::optional<llvm::APSInt> CE =
-            tempInstPriority->getIntegerConstantExpr(C)) {
-      // Consistent with non-templated priority arguments, which must fit in a
-      // 32-bit unsigned integer.
-      if (!CE->isIntN(32)) {
-        S.Diag(tempInstPriority->getExprLoc(), diag::err_ice_too_large)
-            << toString(*CE, 10, false) << /*Size=*/32 << /*Unsigned=*/1;
-        return;
+    if (Result.isUsable()) {
+      tempInstPriority = Result.get();
+      if (std::optional<llvm::APSInt> CE =
+              tempInstPriority->getIntegerConstantExpr(C)) {
+        // Consistent with non-templated priority arguments, which must fit in a
+        // 32-bit unsigned integer.
+        if (!CE->isIntN(32)) {
+          S.Diag(tempInstPriority->getExprLoc(), diag::err_ice_too_large)
+              << toString(*CE, 10, false) << /*Size=*/32 << /*Unsigned=*/1;
+          return;
+        }
       }
     }
   }
