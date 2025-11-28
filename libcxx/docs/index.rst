@@ -212,6 +212,7 @@ Design Documents
 
    DesignDocs/ABIVersioning
    DesignDocs/AtomicDesign
+   DesignDocs/Availability
    DesignDocs/CapturingConfigInfo
    DesignDocs/ExperimentalFeatures
    DesignDocs/ExtendedCXX03Support
