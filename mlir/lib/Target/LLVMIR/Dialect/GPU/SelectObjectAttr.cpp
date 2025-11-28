@@ -147,13 +147,12 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
           "mgpuModuleLoadJIT", FunctionType::get(ptrTy, {ptrTy, i32Ty}, false));
       Constant *optValue = ConstantInt::get(i32Ty, optLevel);
       return builder.CreateCall(moduleLoadFn, {serializedObj, optValue});
-    } else {
-      FunctionCallee moduleLoadFn = module.getOrInsertFunction(
-          "mgpuModuleLoad", FunctionType::get(ptrTy, {ptrTy, i64Ty}, false));
-      Constant *binarySize =
-          ConstantInt::get(i64Ty, serializedStr.size() + (addNull ? 1 : 0));
-      return builder.CreateCall(moduleLoadFn, {serializedObj, binarySize});
     }
+    FunctionCallee moduleLoadFn = module.getOrInsertFunction(
+        "mgpuModuleLoad", FunctionType::get(ptrTy, {ptrTy, i64Ty}, false));
+    Constant *binarySize =
+        ConstantInt::get(i64Ty, serializedStr.size() + (addNull ? 1 : 0));
+    return builder.CreateCall(moduleLoadFn, {serializedObj, binarySize});
   }();
   builder.CreateStore(moduleObj, modulePtr);
   builder.CreateRetVoid();
