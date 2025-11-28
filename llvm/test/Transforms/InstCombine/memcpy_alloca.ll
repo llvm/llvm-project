@@ -71,4 +71,38 @@ define void @test6(ptr %dest) {
   ret void
 }
 
+; Infer the type of the generated load/store when possible from an alloca
+
+define void @test7(ptr %src, ptr %dest) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    %[[UNPACK0:.*]] = load i32, ptr %src, align 1
+; CHECK-NEXT:    %[[SRC_GEP:.*]] = getelementptr inbounds nuw i8, ptr %src, i64 4
+; CHECK-NEXT:    %[[UNPACK1:.*]] = load i32, ptr %[[SRC_GEP]], align 1
+; CHECK-NEXT:    store i32 %[[UNPACK0]], ptr %dest, align 1
+; CHECK-NEXT:    %[[DEST_GEP:.*]] = getelementptr inbounds nuw i8, ptr %dest, i64 4
+; CHECK-NEXT:    store i32 %[[UNPACK1]], ptr %[[DEST_GEP]], align 1
+; CHECK-NEXT:    ret void
+;
+  %temp = alloca [2 x i32], align 4
+  call void @llvm.memcpy.p0.p0.i32(ptr %temp, ptr %src, i32 8, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %dest, ptr %temp, i32 8, i1 false)
+
+  ret void
+}
+
+; Ensure we don't use alloca type if only paritally copying
+
+define void @test8(ptr %src, ptr %dest) {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:    %[[LI:.*]] = load i32, ptr %src, align 1
+; CHECK-NEXT:    store i32 %[[LI]], ptr %dest, align 1
+; CHECK-NEXT:    ret void
+;
+  %temp = alloca [2 x i32], align 4
+  call void @llvm.memcpy.p0.p0.i32(ptr %temp, ptr %src, i32 4, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %dest, ptr %temp, i32 4, i1 false)
+
+  ret void
+}
+
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
