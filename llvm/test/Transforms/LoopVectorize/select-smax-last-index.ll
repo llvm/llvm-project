@@ -7,19 +7,19 @@ define i64 @test_vectorize_select_smax_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV1]]
-; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[MIN_VAL]], [[L]]
 ; CHECK-NEXT:    [[MIN_VAL_NEXT]] = tail call i64 @llvm.smax.i64(i64 [[MIN_VAL]], i64 [[L]])
-; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV1]], i64 [[MIN_IDX]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
+; CHECK-NEXT:    [[MAX_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV]], i64 [[MAX_IDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MAX_IDX_NEXT]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -49,19 +49,19 @@ define i64 @test_vectorize_select_smax_idx_cond_flipped(ptr %src, i64 %n) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV1]]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i64 [[L]], [[MIN_VAL]]
 ; CHECK-NEXT:    [[MIN_VAL_NEXT]] = tail call i64 @llvm.smax.i64(i64 [[MIN_VAL]], i64 [[L]])
-; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV]], i64 [[MIN_IDX]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[MAX_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV1]], i64 [[MAX_IDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MAX_IDX_NEXT]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -221,19 +221,19 @@ define i64 @test_vectorize_select_smax_idx_min_ops_switched(ptr %src, i64 %n) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV1]]
-; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[MIN_VAL]], [[L]]
 ; CHECK-NEXT:    [[MIN_VAL_NEXT]] = tail call i64 @llvm.smax.i64(i64 [[L]], i64 [[MIN_VAL]])
-; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV1]], i64 [[MIN_IDX]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
+; CHECK-NEXT:    [[MAX_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV]], i64 [[MAX_IDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MAX_IDX_NEXT]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -305,19 +305,19 @@ define i64 @test_cmp_and_smax_use_different_values(ptr %src, i64 %x, i64 %n) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV1]]
-; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[MIN_VAL]], [[X]]
 ; CHECK-NEXT:    [[MIN_VAL_NEXT]] = tail call i64 @llvm.smax.i64(i64 [[MIN_VAL]], i64 [[L]])
-; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV1]], i64 [[MIN_IDX]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
+; CHECK-NEXT:    [[MAX_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV]], i64 [[MAX_IDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MAX_IDX_NEXT]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
