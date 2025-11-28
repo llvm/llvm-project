@@ -1011,11 +1011,13 @@ struct NumTeamsT {
 };
 
 // V5.2: [10.1.2] `num_threads` clause
+// V6.1: Extended with dims modifier support
 template <typename T, typename I, typename E> //
 struct NumThreadsT {
   using Nthreads = E;
+  // Changed to list to support dims modifier with multiple values (OpenMP 6.1)
   using WrapperTrait = std::true_type;
-  Nthreads v;
+  ListT<Nthreads> v;
 };
 
 template <typename T, typename I, typename E> //
