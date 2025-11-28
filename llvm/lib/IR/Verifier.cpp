@@ -80,6 +80,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/GCStrategy.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -5911,6 +5912,39 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     std::optional<RoundingMode> RoundMode =
         convertStrToRoundingMode(cast<MDString>(MD)->getString());
     Check(RoundMode && *RoundMode != RoundingMode::Dynamic,
+          "unsupported rounding mode argument", Call);
+    break;
+  }
+  case Intrinsic::convert_to_arbitrary_fp:
+  case Intrinsic::convert_from_arbitrary_fp: {
+    // Check interpretation metadata (argoperand 1)
+    auto *InterpMAV = dyn_cast<MetadataAsValue>(Call.getArgOperand(1));
+    Check(InterpMAV, "missing interpretation metadata operand", Call);
+    auto *InterpStr = dyn_cast<MDString>(InterpMAV->getMetadata());
+    Check(InterpStr, "interpretation metadata operand must be a string", Call);
+    StringRef Interp = InterpStr->getString();
+
+    Check(!Interp.empty(), "interpretation metadata string must not be empty",
+          Call);
+
+    // Valid interpretation strings: mini-float format names
+    bool IsKnown = Interp == "Float8E5M2" || Interp == "Float8E5M2FNUZ" ||
+                   Interp == "Float8E4M3" || Interp == "Float8E4M3FN" ||
+                   Interp == "Float8E4M3FNUZ" || Interp == "Float8E4M3B11FNUZ" ||
+                   Interp == "Float8E3M4" || Interp == "Float8E8M0FNU" ||
+                   Interp == "Float6E3M2FN" || Interp == "Float6E2M3FN" ||
+                   Interp == "Float4E2M1FN";
+    Check(IsKnown, "unsupported interpretation metadata string", Call);
+
+    // Check rounding mode metadata (argoperand 2)
+    auto *RoundingMAV = dyn_cast<MetadataAsValue>(Call.getArgOperand(2));
+    Check(RoundingMAV, "missing rounding mode metadata operand", Call);
+    auto *RoundingStr = dyn_cast<MDString>(RoundingMAV->getMetadata());
+    Check(RoundingStr, "rounding mode metadata operand must be a string", Call);
+
+    std::optional<RoundingMode> RM =
+        convertStrToRoundingMode(RoundingStr->getString());
+    Check(RM && *RM != RoundingMode::Dynamic,
           "unsupported rounding mode argument", Call);
     break;
   }

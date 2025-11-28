@@ -21512,6 +21512,144 @@ environment <floatenv>` *except* for the rounding mode.
 This intrinsic is not supported on all targets. Some targets may not support
 all rounding modes.
 
+'``llvm.convert.to.arbitrary.fp``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <iNxM> @llvm.convert.to.arbitrary.fp.<iNxM>.<fNxM>(
+          <fNxM> <value>, metadata <interpretation>,
+          metadata <rounding mode>, i1 <saturation>)
+
+Overview:
+"""""""""
+
+The ``llvm.convert.to.arbitrary.fp`` intrinsic converts a native LLVM
+floating-point value to an arbitrary FP format, returning the result as an integer
+containing the arbitrary FP bits. This intrinsic is overloaded on both its return
+type and first argument.
+
+Arguments:
+""""""""""
+
+``value``
+  The native LLVM floating-point value to convert (e.g., ``half``, ``float``, ``double``).
+
+``interpretation``
+  A metadata string describing the target arbitrary FP format. Supported format names include:
+
+  - FP8 formats: ``"Float8E5M2"``, ``"Float8E5M2FNUZ"``, ``"Float8E4M3"``,
+    ``"Float8E4M3FN"``, ``"Float8E4M3FNUZ"``, ``"Float8E4M3B11FNUZ"``, ``"Float8E3M4"``,
+    ``"Float8E8M0FNU"``
+  - FP6 formats: ``"Float6E3M2FN"``, ``"Float6E2M3FN"``
+  - FP4 formats: ``"Float4E2M1FN"``
+
+``rounding mode``
+  A metadata string specifying the rounding mode. The permitted strings match those
+  accepted by :ref:`llvm.fptrunc.round <int_fptrunc_round>` (for example,
+  ``"round.tonearest"`` or ``"round.towardzero"``).
+
+``saturation``
+  A compile-time constant boolean value (``i1``). When ``true``, values outside the
+  representable range of the target format are clamped to the minimum or maximum normal value.
+  When ``false``, no saturation is applied. This parameter must be an immediate constant.
+
+Semantics:
+""""""""""
+
+The intrinsic converts the native LLVM floating-point value to the arbitrary FP
+format specified by ``interpretation``, applying the requested rounding mode and
+saturation behavior. The result is returned as an integer (e.g., ``i8`` for FP8,
+``i6`` for FP6) containing the encoded arbitrary FP bits. When saturation is enabled,
+values that exceed the representable range are clamped to the minimum or maximum
+normal value of the target format.
+
+Example:
+""""""""
+
+::
+
+      ; Convert half to FP8 E4M3 format
+      %fp8bits = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(
+          half %value, metadata !"Float8E4M3",
+          metadata !"round.tonearest", i1 false)
+
+      ; Convert vector of float to FP8 E5M2 with saturation
+      %vec_fp8 = call <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4f32(
+          <4 x float> %values, metadata !"Float8E5M2",
+          metadata !"round.towardzero", i1 true)
+
+'``llvm.convert.from.arbitrary.fp``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <fNxM> @llvm.convert.from.arbitrary.fp.<fNxM>.<iNxM>(
+          <iNxM> <value>, metadata <interpretation>,
+          metadata <rounding mode>, i1 <saturation>)
+
+Overview:
+"""""""""
+
+The ``llvm.convert.from.arbitrary.fp`` intrinsic converts an integer containing
+arbitrary FP bits to a native LLVM floating-point value. This intrinsic is
+overloaded on both its return type and first argument.
+
+Arguments:
+""""""""""
+
+``value``
+  An integer value containing the arbitrary FP bits (e.g., ``i8`` for FP8, ``i6`` for FP6).
+
+``interpretation``
+  A metadata string describing the source arbitrary FP format. Supported format names include:
+
+  - FP8 formats: ``"Float8E5M2"``, ``"Float8E5M2FNUZ"``, ``"Float8E4M3"``,
+    ``"Float8E4M3FN"``, ``"Float8E4M3FNUZ"``, ``"Float8E4M3B11FNUZ"``, ``"Float8E3M4"``,
+    ``"Float8E8M0FNU"``
+  - FP6 formats: ``"Float6E3M2FN"``, ``"Float6E2M3FN"``
+  - FP4 formats: ``"Float4E2M1FN"``
+
+``rounding mode``
+  A metadata string specifying the rounding mode. The permitted strings match those
+  accepted by :ref:`llvm.fptrunc.round <int_fptrunc_round>` (for example,
+  ``"round.tonearest"`` or ``"round.towardzero"``).
+
+``saturation``
+  A compile-time constant boolean value (``i1``). When ``true``, values outside the
+  representable range of the target format are clamped to the minimum or maximum normal value.
+  When ``false``, no saturation is applied. This parameter must be an immediate constant.
+
+Semantics:
+""""""""""
+
+The intrinsic interprets the integer value as arbitrary FP bits according to
+``interpretation``, then converts to the native LLVM floating-point result type,
+applying the requested rounding mode and saturation behavior. When saturation is
+enabled, values that exceed the representable range of the target format are
+clamped to the minimum or maximum normal value.
+
+Example:
+""""""""
+
+::
+
+      ; Convert FP8 E4M3 bits to half
+      %half_val = call half @llvm.convert.from.arbitrary.fp.f16.i8(
+          i8 %fp8bits, metadata !"Float8E4M3",
+          metadata !"round.tonearest", i1 false)
+
+      ; Convert vector of FP8 E5M2 bits to float
+      %vec_float = call <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i8(
+          <4 x i8> %fp8_values, metadata !"Float8E5M2",
+          metadata !"round.tonearest", i1 false)
+
 Convergence Intrinsics
 ----------------------
 
