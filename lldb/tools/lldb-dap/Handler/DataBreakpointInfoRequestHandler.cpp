@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "DAPError.h"
 #include "EventHelper.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
@@ -89,17 +90,12 @@ DataBreakpointInfoRequestHandler::Run(
   } else if (args.asAddress) {
     size = llvm::utostr(args.bytes.value_or(dap.target.GetAddressByteSize()));
     lldb::addr_t load_addr;
-    if (llvm::StringRef(args.name).getAsInteger<lldb::addr_t>(0, load_addr)) {
-      is_data_ok = false;
-      response.description = args.name + " is not a valid address";
-    } else {
-      addr = llvm::utohexstr(load_addr);
-      if (!IsRW(dap, load_addr)) {
-        is_data_ok = false;
-        response.description = "memory region for address " + addr +
-                               " has no read or write permissions";
-      }
-    }
+    if (llvm::StringRef(args.name).getAsInteger<lldb::addr_t>(0, load_addr))
+      return llvm::make_error<DAPError>(args.name + " is not a valid address");
+    addr = llvm::utohexstr(load_addr);
+    if (!IsRW(dap, load_addr))
+      return llvm::make_error<DAPError>("memory region for address " + addr +
+                                        " has no read or write permissions");
   } else {
     is_data_ok = false;
     response.description = "variable not found: " + args.name;
@@ -110,7 +106,10 @@ DataBreakpointInfoRequestHandler::Run(
     response.accessTypes = {protocol::eDataBreakpointAccessTypeRead,
                             protocol::eDataBreakpointAccessTypeWrite,
                             protocol::eDataBreakpointAccessTypeReadWrite};
-    response.description = size + " bytes at " + addr + " " + args.name;
+    if (args.asAddress)
+      response.description = size + " bytes at " + addr;
+    else
+      response.description = size + " bytes at " + addr + " " + args.name;
   }
 
   return response;
