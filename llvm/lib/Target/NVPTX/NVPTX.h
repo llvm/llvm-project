@@ -20,6 +20,8 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/NVPTXAddressSpaces.h"
+
 namespace llvm {
 class FunctionPass;
 class MachineFunctionPass;
@@ -174,19 +176,6 @@ enum Scope : ScopeUnderlyingType {
   System = 4,
   DefaultDevice = 5, //  For SM < 70: denotes PTX op implicit/default .gpu scope
   LASTSCOPE = DefaultDevice
-};
-
-using AddressSpaceUnderlyingType = unsigned int;
-enum AddressSpace : AddressSpaceUnderlyingType {
-  Generic = 0,
-  Global = 1,
-  Shared = 3,
-  Const = 4,
-  Local = 5,
-  SharedCluster = 7,
-
-  // NVPTX Backend Private:
-  Param = 101
 };
 
 namespace PTXLdStInstCode {
