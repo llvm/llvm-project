@@ -216,6 +216,52 @@ static bool checkOrderedReduction(RecurKind Kind, Instruction *ExactFPMathInst,
   return true;
 }
 
+/// Returns true if \p Phi is a min/max reduction matching \p Kind where \p Phi
+/// is used outside the reduction chain. This is common for loops selecting the
+/// index of a minimum/maximum value (argmin/argmax).
+static bool isMinMaxReductionPhiWithUsersOutsideReductionChain(
+    PHINode *Phi, RecurKind Kind, Loop *TheLoop, RecurrenceDescriptor &RedDes) {
+  BasicBlock *Latch = TheLoop->getLoopLatch();
+  if (!Latch)
+    return false;
+
+  assert(Phi->getNumIncomingValues() == 2 && "phi must have 2 incoming values");
+  Value *Inc = Phi->getIncomingValueForBlock(Latch);
+  if (Phi->hasOneUse() || !Inc->hasOneUse() ||
+      !RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind))
+    return false;
+
+  Value *A, *B;
+  bool IsMinMax = [&]() {
+    switch (Kind) {
+    case RecurKind::UMax:
+      return match(Inc, m_UMax(m_Value(A), m_Value(B)));
+    case RecurKind::UMin:
+      return match(Inc, m_UMin(m_Value(A), m_Value(B)));
+    case RecurKind::SMax:
+      return match(Inc, m_SMax(m_Value(A), m_Value(B)));
+    case RecurKind::SMin:
+      return match(Inc, m_SMin(m_Value(A), m_Value(B)));
+    default:
+      llvm_unreachable("all min/max kinds must be handled");
+    }
+  }();
+  if (!IsMinMax)
+    return false;
+
+  if (A == B || (A != Phi && B != Phi))
+    return false;
+
+  SmallPtrSet<Instruction *, 4> CastInsts;
+  Value *RdxStart = Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader());
+  RedDes =
+      RecurrenceDescriptor(RdxStart, /*Exit=*/nullptr, /*Store=*/nullptr, Kind,
+                           FastMathFlags(), /*ExactFP=*/nullptr, Phi->getType(),
+                           /*Signed=*/false, /*Ordered=*/false, CastInsts,
+                           /*MinWidthCastToRecurTy=*/-1U, /*PhiMultiUse=*/true);
+  return true;
+}
+
 bool RecurrenceDescriptor::AddReductionVar(
     PHINode *Phi, RecurKind Kind, Loop *TheLoop, FastMathFlags FuncFMF,
     RecurrenceDescriptor &RedDes, DemandedBits *DB, AssumptionCache *AC,
@@ -226,6 +272,11 @@ bool RecurrenceDescriptor::AddReductionVar(
   // Reduction variables are only found in the loop header block.
   if (Phi->getParent() != TheLoop->getHeader())
     return false;
+
+  // Check for min/max reduction variables that feed other users in the loop.
+  if (isMinMaxReductionPhiWithUsersOutsideReductionChain(Phi, Kind, TheLoop,
+                                                         RedDes))
+    return true;
 
   // Obtain the reduction start value from the value that comes from the loop
   // preheader.
