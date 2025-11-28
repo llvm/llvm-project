@@ -653,23 +653,33 @@ static Value packSmallFloatVectorOperand(ConversionPatternRewriter &rewriter,
   return input;
 }
 
-/// Converts the scaled MFMA operands, `scalesA` and `scalesB`, from MLIR AMDGPU
-/// dialect convention to ROCDL and LLVM AMDGPU intrinsics convention.
+/// Converts the scaled MFMA/WMMA operands, `scalesA` and `scalesB`, from MLIR
+/// AMDGPU dialect convention to ROCDL and LLVM AMDGPU intrinsics convention.
 ///
 /// Specifically:
 /// 1. If `input` is a i8 value, zero extend it to i32
-/// 2. If `input` is a vector of length 4 and type i8, cast it to i32
+/// 2. If `input` is a vector of length 4 or 8 and type i8, cast it to i32
 ///
 /// Note that the type of `input` has already been LLVM type converted:
 /// therefore 8-bit and smaller floats are represented as their corresponding
 /// `iN` integers.
-static Value castMFMAScaleOperand(ConversionPatternRewriter &rewriter,
-                                  Location loc, Value input) {
+static Value castScaleOperand(ConversionPatternRewriter &rewriter, Location loc,
+                              Value input) {
   Type inputType = input.getType();
-  Type outputType = rewriter.getI32Type();
+
+  // Handle scalar i8: zero extend to i32
   if (auto intType = dyn_cast<IntegerType>(inputType))
-    return LLVM::ZExtOp::create(rewriter, loc, outputType, input);
-  return LLVM::BitcastOp::create(rewriter, loc, outputType, input);
+    return LLVM::ZExtOp::create(rewriter, loc, rewriter.getI32Type(), input);
+
+  // Handle vector<4xi8> -> i32 or vector<8xi8> -> i64
+  if (auto vectorType = dyn_cast<VectorType>(inputType)) {
+    int64_t numElements = vectorType.getNumElements();
+    Type outputType = (numElements == 4) ? (Type)rewriter.getI32Type()
+                                         : (Type)rewriter.getI64Type();
+    return LLVM::BitcastOp::create(rewriter, loc, outputType, input);
+  }
+
+  llvm_unreachable("unexpected input type for scale operand");
 }
 
 /// Push an input operand. If it is a float type, nothing to do. If it is
@@ -1273,10 +1283,10 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
          createI32Constant(rewriter, loc, bTypeCode),
          /*scales idx A=*/scalesIdxA,
          /*scales A*/
-         castMFMAScaleOperand(rewriter, loc, adaptor.getScalesA()),
+         castScaleOperand(rewriter, loc, adaptor.getScalesA()),
          /*scales idx B=*/scalesIdxB,
          /*scales B*/
-         castMFMAScaleOperand(rewriter, loc, adaptor.getScalesB())});
+         castScaleOperand(rewriter, loc, adaptor.getScalesB())});
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     rewriter.replaceOp(op, lowered);
     return success();
@@ -1394,9 +1404,35 @@ struct ScaledWMMAOpLowering : public ConvertOpToLLVMPattern<ScaledWMMAOp> {
     if (!aFmtCode || !bFmtCode)
       return op.emitOpError("unsupported element types for scaled_wmma");
 
-    // Determine which intrinsic to use based on dimensions and scale type
+    // Get scale vector types and determine variant (scale vs scale16)
+    auto scaleAVecType = cast<VectorType>(op.getScaleA().getType());
+    auto scaleBVecType = cast<VectorType>(op.getScaleB().getType());
+
+    bool isScale16 = (scaleAVecType.getNumElements() == 8);
+    if (isScale16 != (scaleBVecType.getNumElements() == 8))
+      return op.emitOpError("scaleA and scaleB must have equal vector length");
+
+    // Extract scale format from element types
+    Type scaleAElemType = scaleAVecType.getElementType();
+    Type scaleBElemType = scaleBVecType.getElementType();
+
+    // Map f8 types to format codes
+    auto getScaleFormat = [](Type elemType) -> std::optional<uint32_t> {
+      if (isa<Float8E8M0FNUType>(elemType))
+        return 0;
+      if (isa<Float8E4M3FNType>(elemType))
+        return 2;
+      return std::nullopt;
+    };
+
+    std::optional<uint32_t> scaleAFmt = getScaleFormat(scaleAElemType);
+    std::optional<uint32_t> scaleBFmt = getScaleFormat(scaleBElemType);
+
+    if (!scaleAFmt || !scaleBFmt)
+      return op.emitOpError("unsupported scale element types");
+
+    // Determine which intrinsic to use based on dimensions
     StringRef intrinsicName;
-    bool isScale16 = adaptor.getScaleA().getType().isInteger(64);
     bool is32x16 = (m == 32 && n == 16 && k == 128);
 
     if (m == 16 && n == 16 && k == 128) {
@@ -1423,35 +1459,41 @@ struct ScaledWMMAOpLowering : public ConvertOpToLLVMPattern<ScaledWMMAOp> {
           rewriter.getNamedAttr("fmtB", rewriter.getI32IntegerAttr(*bFmtCode)));
     }
 
-    // Add modifier attributes - modC and reuse flags default to 0/false
+    // modC uses default value of 0
+    attrs.push_back(
+        rewriter.getNamedAttr("modC", rewriter.getI16IntegerAttr(0)));
+
+    // Scale attributes
+    attrs.push_back(rewriter.getNamedAttr(
+        "scaleAType", rewriter.getI32IntegerAttr(op.getScaleAIdx())));
+    attrs.push_back(rewriter.getNamedAttr(
+        "fmtScaleA", rewriter.getI32IntegerAttr(*scaleAFmt)));
+    attrs.push_back(rewriter.getNamedAttr(
+        "scaleBType", rewriter.getI32IntegerAttr(op.getScaleBIdx())));
+    attrs.push_back(rewriter.getNamedAttr(
+        "fmtScaleB", rewriter.getI32IntegerAttr(*scaleBFmt)));
+
+    // Reuse flags use default value of false
     attrs.push_back(
         rewriter.getNamedAttr("reuseA", rewriter.getBoolAttr(false)));
     attrs.push_back(
         rewriter.getNamedAttr("reuseB", rewriter.getBoolAttr(false)));
-    attrs.push_back(
-        rewriter.getNamedAttr("modC", rewriter.getI16IntegerAttr(0)));
 
-    // Scale type/format parameters from the operation
-    attrs.push_back(rewriter.getNamedAttr(
-        "scaleAType", rewriter.getI32IntegerAttr(op.getScaleAType())));
-    attrs.push_back(rewriter.getNamedAttr(
-        "fmtScaleA", rewriter.getI32IntegerAttr(op.getFmtScaleA())));
-    attrs.push_back(rewriter.getNamedAttr(
-        "scaleBType", rewriter.getI32IntegerAttr(op.getScaleBType())));
-    attrs.push_back(rewriter.getNamedAttr(
-        "fmtScaleB", rewriter.getI32IntegerAttr(op.getFmtScaleB())));
-
-    // Convert typed float vectors to packed i32 format if needed
+    // Convert typed float vectors to packed format
     Value sourceA =
         packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceA());
     Value sourceB =
         packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceB());
 
+    // Pack scale vectors into i32/i64
+    Value packedScaleA = castScaleOperand(rewriter, loc, adaptor.getScaleA());
+    Value packedScaleB = castScaleOperand(rewriter, loc, adaptor.getScaleB());
+
     // Create the intrinsic call
     OperationState loweredOp(loc, intrinsicName);
     loweredOp.addTypes(outType);
-    loweredOp.addOperands({sourceA, sourceB, adaptor.getDestC(),
-                           adaptor.getScaleA(), adaptor.getScaleB()});
+    loweredOp.addOperands(
+        {sourceA, sourceB, adaptor.getDestC(), packedScaleA, packedScaleB});
     loweredOp.addAttributes(attrs);
 
     Operation *lowered = rewriter.create(loweredOp);

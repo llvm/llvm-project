@@ -957,7 +957,8 @@ def ScaledWMMAInTypes
     : AnyTypeOf<[VectorOfLengthAndType<[64], [F8E5M2, F8E4M3FN]>,
                  VectorOfLengthAndType<[64], [F6E2M3FN, F6E3M2FN]>,
                  VectorOfLengthAndType<[64, 128], [F4E2M1FN]>]>;
-def ScaledWMMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 8], [F32]>]>;
+
+def ScaledWMMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[8, 16], [F32]>]>;
 
 // wmma
 def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[2], [F32]>,
@@ -1232,42 +1233,44 @@ def AMDGPU_ScaledWMMAOp
           ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$n,
           ConfinedAttr<I32Attr, [IntIsOneOf<[128]>]>:$k,
           ScaledWMMAInTypes:$sourceA, ScaledWMMAInTypes:$sourceB,
-          ScaledWMMAOutTypes:$destC, AnyTypeOf<[I32, I64]>:$scaleA,
-          AnyTypeOf<[I32, I64]>:$scaleB,
-          DefaultValuedAttr<I32Attr, "0">:$scaleAType,
-          DefaultValuedAttr<I32Attr, "0">:$fmtScaleA,
-          DefaultValuedAttr<I32Attr, "0">:$scaleBType,
-          DefaultValuedAttr<I32Attr, "0">:$fmtScaleB)>,
+          ScaledWMMAOutTypes:$destC,
+          VectorOfLengthAndType<[4, 8], [F8E8M0FNU, F8E4M3FN]>:$scaleA,
+          ConfinedAttr<I32Attr, [IntIsOneOf<[0, 1]>]>:$scaleAIdx,
+          VectorOfLengthAndType<[4, 8], [F8E8M0FNU, F8E4M3FN]>:$scaleB,
+          ConfinedAttr<I32Attr, [IntIsOneOf<[0, 1]>]>:$scaleBIdx)>,
       Results<(outs ScaledWMMAOutTypes:$destD)> {
-  let summary = "MLIR wrapper for RDNA scaled wmma instructions";
+  let summary = "MLIR wrapper for scaled wmma instructions";
   let description = [{
     The `amdgpu.scaled_wmma` op is an MLIR wrapper around intrinsics for scaled
-    `wmma` instructions in the RDNA architecture. These instructions perform
-    matrix multiplication with per-block scaling of inputs, supporting fp4, fp6,
-    and fp8 data formats.
+    `wmma` instructions. These instructions perform matrix multiplication with
+    per-block scaling of inputs, supporting fp4, fp6, and fp8 data formats.
 
     The scale instructions support two tile sizes:
     - 16x16x128 with mixed f8/f6/f4 formats (output: vector<4xf32>)
     - 32x16x128 with f4 format only (output: vector<8xf32>)
 
-    The `scaleA` and `scaleB` parameters are scale exponents that can be either
-    i32 (for wmma.scale) or i64 (for wmma.scale16) to support per-block scaling.
-
-    Optional modifiers:
-    - `scaleAType`, `scaleBType`: Type of scale parameter
-    - `fmtScaleA`, `fmtScaleB`: Format of scale parameter
+    Scale parameters (`scaleA`, `scaleB`) are small vectors of f8 scale values
+    (either f8E8M0FNU, or f8E4M3FN). The index attributes (`scaleAIdx`, `scaleBIdx`)
+    select which element from the scale vector to use for scaling. During lowering,
+    these vectors are packed into i32/i64 values for the hardware intrinsics.
 
     Example:
     ```mlir
-      %0 = amdgpu.scaled_wmma (%sa * %matA) * (%sb * %matB) + %matC
-        { m = 16, n = 16, k = 128 } : i32, vector<64xf8E4M3FN>, i32, vector<64xf8E4M3FN>, vector<4xf32>
+      // 16x16x128: fp8 inputs
+      %0 = amdgpu.scaled_wmma (%scaleVecA[0] * %matA) * (%scaleVecB[0] * %matB) + %matC
+        { m = 16, n = 16, k = 128 } : vector<4xf8E8M0FNU>, vector<64xf8E4M3FN>,
+        vector<4xf8E8M0FNU>, vector<64xf8E4M3FN>, vector<8xf32>
 
-      %1 = amdgpu.scaled_wmma (%sc * %matD) * (%sd * %matE) + %matF
-        { m = 32, n = 16, k = 128 } : i32, vector<128xf4E2M1FN>, i32, vector<64xf4E2M1FN>, vector<8xf32>
+      // 32x16x128: fp4 inputs
+      %1 = amdgpu.scaled_wmma (%scaleVecC[1] * %matD) * (%scaleVecD[0] * %matE) + %matF
+        { m = 32, n = 16, k = 128 } : vector<8xf8E4M3FN>, vector<128xf4E2M1FN>,
+        vector<8xf8E4M3FN>, vector<64xf4E2M1FN>, vector<16xf32>
     ```
   }];
   let assemblyFormat = [{
-    `(` $scaleA `*` $sourceA `)` `*` `(` $scaleB `*` $sourceB `)` `+` $destC
+    custom<MNKDimensionList>($m, $n, $k) ` `
+    `(` $scaleA `[` $scaleAIdx `]` `*` $sourceA `)` `*`
+    `(` $scaleB `[` $scaleBIdx `]` `*` $sourceB `)` `+` $destC
     attr-dict
     `:` type($scaleA) `,` type($sourceA) `,` type($scaleB) `,` type($sourceB) `,` type($destC)
   }];
