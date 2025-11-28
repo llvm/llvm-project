@@ -904,6 +904,11 @@ public:
   virtual InstructionCost
   getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
                            TTI::TargetCostKind CostKind) const {
+    unsigned IID = MICA.getID();
+    bool IsStrided = IID == Intrinsic::experimental_vp_strided_load ||
+                     IID == Intrinsic::experimental_vp_strided_store;
+    if (IsStrided)
+      return InstructionCost::getInvalid();
     return 1;
   }
   virtual InstructionCost getCallInstrCost(Function *F, Type *RetTy,
