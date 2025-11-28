@@ -67,6 +67,7 @@ class MipsGotSection;
 class MipsRldMapSection;
 class PPC32Got2Section;
 class PPC64LongBranchTargetSection;
+class TableJumpSection;
 class PltSection;
 class RelocationBaseSection;
 class RelroPaddingSection;
@@ -370,6 +371,7 @@ struct Config {
   bool resolveGroups;
   bool relrGlibc = false;
   bool relrPackDynRelocs = false;
+  bool relaxTbljal;
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint32_t>, 0> shuffleSections;
   bool singleRoRx;
@@ -582,6 +584,7 @@ struct InStruct {
   std::unique_ptr<RelroPaddingSection> relroPadding;
   std::unique_ptr<SyntheticSection> armCmseSGSection;
   std::unique_ptr<PPC64LongBranchTargetSection> ppc64LongBranchTarget;
+  std::unique_ptr<TableJumpSection> riscvTableJumpSection;
   std::unique_ptr<SyntheticSection> mipsAbiFlags;
   std::unique_ptr<MipsGotSection> mipsGot;
   std::unique_ptr<SyntheticSection> mipsOptions;
