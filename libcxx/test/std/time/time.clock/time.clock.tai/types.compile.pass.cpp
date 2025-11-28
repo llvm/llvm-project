@@ -37,11 +37,12 @@
 #include "test_macros.h"
 
 // class tai_clock
-using rep                                 = std::chrono::tai_clock::rep;
-using period                              = std::chrono::tai_clock::period;
-using duration                            = std::chrono::tai_clock::duration;
-using time_point                          = std::chrono::tai_clock::time_point;
-[[maybe_unused]] constexpr bool is_steady = std::chrono::tai_clock::is_steady;
+using rep        = std::chrono::tai_clock::rep;
+using period     = std::chrono::tai_clock::period;
+using duration   = std::chrono::tai_clock::duration;
+using time_point = std::chrono::tai_clock::time_point;
+
+[[maybe_unused]] constexpr std::same_as<const bool> decltype(auto) is_steady = std::chrono::tai_clock::is_steady;
 
 // Tests the values. part of them are implementation defined.
 LIBCPP_STATIC_ASSERT(std::same_as<rep, std::chrono::utc_clock::rep>);

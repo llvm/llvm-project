@@ -37,11 +37,12 @@
 #include "test_macros.h"
 
 // class utc_clock
-using rep                                 = std::chrono::utc_clock::rep;
-using period                              = std::chrono::utc_clock::period;
-using duration                            = std::chrono::utc_clock::duration;
-using time_point                          = std::chrono::utc_clock::time_point;
-[[maybe_unused]] constexpr bool is_steady = std::chrono::utc_clock::is_steady;
+using rep        = std::chrono::utc_clock::rep;
+using period     = std::chrono::utc_clock::period;
+using duration   = std::chrono::utc_clock::duration;
+using time_point = std::chrono::utc_clock::time_point;
+
+[[maybe_unused]] constexpr std::same_as<const bool> decltype(auto) is_steady = std::chrono::utc_clock::is_steady;
 
 // Tests the values. Some of them are implementation-defined.
 LIBCPP_STATIC_ASSERT(std::same_as<rep, std::chrono::system_clock::rep>);
