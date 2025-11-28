@@ -7160,10 +7160,6 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
       resultPtr = globalValue;
   }
 
-  llvm::Type *ptrTy = builder.getPtrTy();
-  if (resultPtr->getType() != ptrTy)
-    resultPtr = builder.CreateBitCast(resultPtr, ptrTy);
-
   moduleTranslation.mapValue(opInst.getResult(0), resultPtr);
   return success();
 }
