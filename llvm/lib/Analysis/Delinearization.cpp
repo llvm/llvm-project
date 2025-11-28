@@ -789,7 +789,7 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
   //         ... +
   //         (S_n - 1)
   //       = (S_2 * ... * S_n) * I_1 +
-  //         (S_2 * ... * S_n) - 1  (can be proved by induction)
+  //         (S_2 * ... * S_n) - 1  (can be proven by induction)
   //
   const SCEV *Prod = SE.getOne(Sizes[0]->getType());
   for (const SCEV *Size : drop_end(Sizes)) {
