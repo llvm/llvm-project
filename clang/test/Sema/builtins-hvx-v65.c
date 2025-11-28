@@ -1,5 +1,5 @@
 // REQUIRES: hexagon-registered-target
-// RUN: %clang_cc1 -triple hexagon %s -target-feature +hvx-length128b -target-feature +hvxv65 -target-cpu hexagonv65 -fsyntax-only -verify
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple hexagon %s -target-feature +hvx-length128b -target-feature +hvxv65 -target-cpu hexagonv65 -fsyntax-only -verify
 
 typedef long Vect1024 __attribute__((__vector_size__(128)))
     __attribute__((aligned(128)));

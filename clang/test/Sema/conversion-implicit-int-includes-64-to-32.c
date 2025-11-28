@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wimplicit-int-conversion -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -fsyntax-only -verify -Wimplicit-int-conversion -triple x86_64-apple-darwin %s
 
 int test0(long v) {
   return v; // expected-warning {{implicit conversion loses integer precision}}
