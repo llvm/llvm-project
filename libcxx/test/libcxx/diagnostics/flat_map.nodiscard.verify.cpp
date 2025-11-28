@@ -10,7 +10,7 @@
 
 // <flat_map>
 
-// [[nodiscard]] bool empty() const noexcept;
+// Check that functions are marked [[nodiscard]]
 
 #include <flat_map>
 #include <utility>
