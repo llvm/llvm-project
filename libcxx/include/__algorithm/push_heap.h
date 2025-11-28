@@ -29,37 +29,35 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-__sift_up(_RandomAccessIterator __first,
-          _RandomAccessIterator __last,
-          _Compare&& __comp,
-          typename iterator_traits<_RandomAccessIterator>::difference_type __len) {
-  using value_type = typename iterator_traits<_RandomAccessIterator>::value_type;
+__sift_up(_RandomAccessIterator __first, _RandomAccessIterator __bottom, _Compare&& __comp) {
+  using difference_type = typename iterator_traits<_RandomAccessIterator>::difference_type;
+  using value_type      = typename iterator_traits<_RandomAccessIterator>::value_type;
 
-  if (__len > 1) {
-    __len                       = (__len - 2) / 2;
-    _RandomAccessIterator __ptr = __first + __len;
+  difference_type __parent = __bottom - __first;
+  _LIBCPP_ASSERT_INTERNAL(__parent > 0, "shouldn't be called unless __bottom - __first > 0");
+  __parent                         = (__parent - 1) / 2;
+  _RandomAccessIterator __parent_i = __first + __parent;
 
-    if (__comp(*__ptr, *--__last)) {
-      value_type __t(_IterOps<_AlgPolicy>::__iter_move(__last));
-      do {
-        *__last = _IterOps<_AlgPolicy>::__iter_move(__ptr);
-        __last  = __ptr;
-        if (__len == 0)
-          break;
-        __len = (__len - 1) / 2;
-        __ptr = __first + __len;
-      } while (__comp(*__ptr, __t));
+  if (__comp(*__parent_i, *__bottom)) {
+    value_type __t(_IterOps<_AlgPolicy>::__iter_move(__bottom));
+    do {
+      *__bottom = _IterOps<_AlgPolicy>::__iter_move(__parent_i);
+      __bottom  = __parent_i;
+      if (__parent == 0)
+        break;
+      __parent   = (__parent - 1) / 2;
+      __parent_i = __first + __parent;
+    } while (__comp(*__parent_i, __t));
 
-      *__last = std::move(__t);
-    }
+    *__bottom = std::move(__t);
   }
 }
 
 template <class _AlgPolicy, class _RandomAccessIterator, class _Compare>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-__push_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare& __comp) {
-  typename iterator_traits<_RandomAccessIterator>::difference_type __len = __last - __first;
-  std::__sift_up<_AlgPolicy, __comp_ref_type<_Compare> >(std::move(__first), std::move(__last), __comp, __len);
+__push_heap(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare&& __comp) {
+  if (__first != __last)
+    std::__sift_up<_AlgPolicy, __comp_ref_type<_Compare> >(std::move(__first), std::move(--__last), __comp);
 }
 
 template <class _RandomAccessIterator, class _Compare>
