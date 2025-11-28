@@ -29,7 +29,7 @@ if (LIBOMP_FORTRAN_MODULES_COMPILER)
   # compile the Fortran module files.
   message(STATUS "configuring openmp to build Fortran module files using '${LIBOMP_FORTRAN_MODULES_COMPILER}'")
   set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
-  add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
+  add_custom_target(libomp-mod ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.mod" "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod")
   add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.mod" "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod"
     COMMAND ${LIBOMP_FORTRAN_MODULES_COMPILER} -cpp -fsyntax-only ${LIBOMP_FORTRAN_SOURCE_FILE} "-J${CMAKE_CURRENT_BINARY_DIR}/../runtime/src"
