@@ -471,15 +471,18 @@ CheckStructurallyEquivalentAttributes(StructuralEquivalenceContext &Context,
   if (D2->hasAttrs())
     D2Attr = *D2->getAttrs().begin();
   if ((D1Attr || D2Attr) && !D1->isImplicit() && !D2->isImplicit()) {
-    const auto *DiagnoseDecl = cast<TypeDecl>(PrimaryDecl ? PrimaryDecl : D2);
-    Context.Diag2(DiagnoseDecl->getLocation(),
-                  diag::warn_odr_tag_type_with_attributes)
-        << Context.ToCtx.getTypeDeclType(DiagnoseDecl)
-        << (PrimaryDecl != nullptr);
-    if (D1Attr)
-      Context.Diag1(D1Attr->getLoc(), diag::note_odr_attr_here) << D1Attr;
-    if (D2Attr)
-      Context.Diag1(D2Attr->getLoc(), diag::note_odr_attr_here) << D2Attr;
+      if (!Context.Complain)
+          return false;
+      const auto *DiagnoseDecl = cast<TypeDecl>(PrimaryDecl ? PrimaryDecl : D2);
+      Context.Diag2(DiagnoseDecl->getLocation(),
+              diag::warn_odr_tag_type_with_attributes)
+          << Context.ToCtx.getTypeDeclType(DiagnoseDecl)
+          << (PrimaryDecl != nullptr);
+      if (D1Attr)
+          Context.Diag1(D1Attr->getLoc(), diag::note_odr_attr_here) << D1Attr;
+      if (D2Attr)
+          Context.Diag2(D2Attr->getLoc(), diag::note_odr_attr_here) << D2Attr;
+      return false;
   }
 
   // The above diagnostic is a warning which defaults to an error. If treated
