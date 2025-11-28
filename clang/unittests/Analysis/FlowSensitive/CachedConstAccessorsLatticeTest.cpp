@@ -307,5 +307,23 @@ TEST_F(CachedConstAccessorsLatticeTest, ProducesNewValueAfterJoinDistinct) {
   EXPECT_NE(ValAfterJoin2, Val3);
 }
 
+TEST_F(CachedConstAccessorsLatticeTest, TypePassed) {
+  CommonTestInputs Inputs;
+  auto *CE = Inputs.CallRef;
+  RecordStorageLocation Loc(Inputs.SType, RecordStorageLocation::FieldToLoc(),
+                            {});
+
+  LatticeT Lattice;
+
+  const FunctionDecl *Callee = CE->getDirectCallee();
+  auto RetType = Callee->getReturnType().getNonReferenceType();
+  auto CheckedInit = [RetType](QualType T, StorageLocation &) {
+    ASSERT_EQ(T, RetType);
+  };
+  ASSERT_NE(Callee, nullptr);
+  Lattice.getOrCreateConstMethodReturnStorageLocation(Loc, Callee, Env,
+                                                      CheckedInit);
+}
+
 } // namespace
 } // namespace clang::dataflow
