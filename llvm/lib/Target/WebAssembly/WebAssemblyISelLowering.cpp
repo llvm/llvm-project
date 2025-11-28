@@ -3343,6 +3343,7 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
       Ret = DAG.getNOT(DL, Ret, MVT::i1);
     return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
   };
+
   if (SDValue AnyTrueEQ = CombineSetCC(Intrinsic::wasm_anytrue, ISD::SETEQ,
                                        Intrinsic::wasm_alltrue))
     return AnyTrueEQ;
