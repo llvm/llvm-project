@@ -2329,15 +2329,14 @@ private:
   __allocate_long_buffer(_Allocator& __alloc, size_type __capacity) {
     _LIBCPP_ASSERT_INTERNAL(!__fits_in_sso(__capacity),
                             "Trying to allocate long buffer for a capacity what would fit into the small buffer");
-    size_type __aligned_capacity = __align_allocation_size(__capacity);
-    auto __buffer                = std::__allocate_at_least(__alloc, __aligned_capacity);
+    auto __buffer = std::__allocate_at_least(__alloc, __align_allocation_size(__capacity));
 
     if (__libcpp_is_constant_evaluated()) {
       for (size_type __i = 0; __i != __buffer.count; ++__i)
         std::__construct_at(std::addressof(__buffer.ptr[__i]));
     }
 
-    return __long(__buffer, __aligned_capacity);
+    return __long(__buffer, __capacity);
   }
 
   // Replace the current buffer with __new_rep. Deallocate the old long buffer if it exists.
