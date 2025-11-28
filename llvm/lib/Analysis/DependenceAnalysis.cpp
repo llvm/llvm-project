@@ -3510,11 +3510,10 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                                         SCEVUnionPredicate(Assume, *SE));
   }
 
-  if (!Assume.empty() && !UnderRuntimeAssumptions) {
-    // Runtime assumptions needed but not allowed.
+  // Runtime assumptions needed but not allowed.
+  if (!Assume.empty() && !UnderRuntimeAssumptions)
     return std::make_unique<Dependence>(Src, Dst,
                                         SCEVUnionPredicate(Assume, *SE));
-  }
 
   unsigned Pairs = 1;
   SmallVector<Subscript, 2> Pair(Pairs);

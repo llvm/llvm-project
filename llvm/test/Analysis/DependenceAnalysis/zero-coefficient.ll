@@ -2,7 +2,7 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1 \
 ; RUN: | FileCheck %s
 
-; Test case for bug fix where Strong SIV test incorrectly concludes "no dependence"
+; Test case for bug #149991 where Strong SIV test incorrectly concludes "no dependence"
 ; when the coefficient is symbolic (unknown at compile time) and delta is zero.
 ;
 ; In this case, the array access is A[k*i] with both src and dst at the same
