@@ -6,20 +6,23 @@
 #//
 #//===----------------------------------------------------------------------===//
 
-enable_language(Fortran)
-
 include(LibompCheckFortranFlag)
 
 set(LIBOMP_FFLAGS "" CACHE STRING
   "Appended user specified Fortran compiler flags.  These are only used if LIBOMP_FORTRAN_MODULES==TRUE.")
 
-libomp_check_fortran_flag(-m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)
+# Enabling Fortran if it is needed
+if (LIBOMP_FORTRAN_MODULES)
+  enable_language(Fortran)
+
+  libomp_check_fortran_flag(-m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)
+endif ()
 
 # Building the Fortran module files
 # One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
 configure_file(omp_lib.F90.var omp_lib.F90 @ONLY)
 set(BUILD_FORTRAN_MODULES False)
-if (NOT ${LIBOMP_FORTRAN_MODULES_COMPILER} STREQUAL "")
+if (NOT LIBOMP_FORTRAN_MODULES_COMPILER STREQUAL "")
   # If libomp is built as an LLVM runtime and the flang compiler is available,
   # compile the Fortran module files.
   message(STATUS "configuring openmp to build Fortran module files using ${LIBOMP_FORTRAN_MODULES_COMPILER}")
@@ -28,43 +31,43 @@ if (NOT ${LIBOMP_FORTRAN_MODULES_COMPILER} STREQUAL "")
   add_custom_command(
     OUTPUT omp_lib.mod omp_lib_kinds.mod
     COMMAND ${LIBOMP_FORTRAN_MODULES_COMPILER} -cpp -fsyntax-only ${LIBOMP_FORTRAN_SOURCE_FILE}
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}"
   )
   set(BUILD_FORTRAN_MODULES True)
-elseif(${LIBOMP_FORTRAN_MODULES})
+elseif (LIBOMP_FORTRAN_MODULES)
   # The following requests explicit building of the Fortran module files
   # Workaround for gfortran to build modules with the
   # omp_sched_monotonic integer parameter
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
     set(ADDITIONAL_Fortran_FLAGS "-fno-range-check")
-  endif()
+  endif ()
   add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
   set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP/Misc")
   libomp_get_fflags(LIBOMP_CONFIGURED_FFLAGS)
-  if(CMAKE_Fortran_COMPILER_SUPPORTS_F90)
+  if (CMAKE_Fortran_COMPILER_SUPPORTS_F90)
     set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
-  else()
+  else ()
     message(FATAL_ERROR "Fortran module build requires Fortran 90 compiler")
-  endif()
+  endif ()
   add_custom_command(
     OUTPUT omp_lib.mod omp_lib_kinds.mod
     COMMAND ${CMAKE_Fortran_COMPILER} -c ${ADDITIONAL_Fortran_FLAGS}
             ${LIBOMP_CONFIGURED_FFLAGS} ${LIBOMP_FORTRAN_SOURCE_FILE}
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}"
   )
-  set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES omp_lib${CMAKE_C_OUTPUT_EXTENSION})
+  set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "omp_lib${CMAKE_C_OUTPUT_EXTENSION}")
   set(BUILD_FORTRAN_MODULES True)
-endif()
+endif ()
 
 
-if(${BUILD_FORTRAN_MODULES})
-  set (destination ${LIBOMP_HEADERS_INSTALL_PATH})
-  if (NOT ${LIBOMP_MODULES_INSTALL_PATH} STREQUAL "")
-    set (destination ${LIBOMP_MODULES_INSTALL_PATH})
-  endif()
+if (BUILD_FORTRAN_MODULES)
+  set(destination ${LIBOMP_HEADERS_INSTALL_PATH})
+  if (NOT LIBOMP_MODULES_INSTALL_PATH STREQUAL "")
+    set(destination ${LIBOMP_MODULES_INSTALL_PATH})
+  endif ()
   install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.mod
-    ${CMAKE_CURRENT_BINARY_DIR}/omp_lib_kinds.mod
+    "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.mod"
+    "${CMAKE_CURRENT_BINARY_DIR}/omp_lib_kinds.mod"
     DESTINATION ${destination}
   )
-endif()
+endif ()

@@ -154,17 +154,6 @@ else()
   get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
 endif()
 
-set(LIBOMP_FORTRAN_MODULES FALSE CACHE BOOL
-  "Create Fortran module files? (requires fortran compiler)")
-
-if(LIBOMP_FORTRAN_MODULES)
-  if(LLVM_DEFAULT_TARGET_TRIPLE MATCHES "^amdgcn|^nvptx" OR
-   CMAKE_CXX_COMPILER_TARGET MATCHES "^amdgcn|^nvptx")
-  else ()
-    add_subdirectory(module)
-  endif ()
-endif()
-
 # Use the current compiler target to determine the appropriate runtime to build.
 if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx" OR
    "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx")
@@ -173,6 +162,8 @@ else()
   # Build host runtime library, after LIBOMPTARGET variables are set since they
   # are needed to enable time profiling support in the OpenMP runtime.
   add_subdirectory(runtime)
+
+  add_subdirectory(module)
 
   set(ENABLE_OMPT_TOOLS ON)
   # Currently tools are not tested well on Windows or MacOS X.
