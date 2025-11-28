@@ -2195,9 +2195,9 @@ StringMap<bool> sys::getHostCPUFeatures() {
   bool HasLeaf24 =
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
 
-  int AVX10Ver = HasLeaf24 && (EBX & 0xff);
-  Features["avx10.1"] = HasAVX10 && AVX10Ver >= 1;
-  Features["avx10.2"] = HasAVX10 && AVX10Ver >= 2;
+  int AVX10Ver = EBX & 0xff;
+  Features["avx10.1"] = HasAVX10 && HasLeaf24 && AVX10Ver >= 1;
+  Features["avx10.2"] = HasAVX10 && HasLeaf24 && AVX10Ver >= 2;
 
   return Features;
 }

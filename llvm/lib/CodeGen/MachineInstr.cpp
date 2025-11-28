@@ -2011,7 +2011,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   // operands.
   if (MCSymbol *PreInstrSymbol = getPreInstrSymbol()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " pre-instr-symbol ";
@@ -2019,7 +2018,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MCSymbol *PostInstrSymbol = getPostInstrSymbol()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " post-instr-symbol ";
@@ -2027,7 +2025,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MDNode *HeapAllocMarker = getHeapAllocMarker()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " heap-alloc-marker ";
@@ -2035,7 +2032,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MDNode *PCSections = getPCSections()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " pcsections ";
@@ -2043,7 +2039,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   if (MDNode *MMRA = getMMRAMetadata()) {
     if (!FirstOp) {
-      FirstOp = false;
       OS << ',';
     }
     OS << " mmra ";
