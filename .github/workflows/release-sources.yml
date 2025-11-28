@@ -79,30 +79,18 @@ jobs:
         run: |
           pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
-      - name: Check Permissions
-        if: github.event_name != 'pull_request'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
-        run: |
-          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
       - name: Create Tarballs
         run: |
           ./llvm/utils/release/export.sh ${{ needs.inputs.outputs.export-args }}
-      - name: Attest Build Provenance
-        if: github.event_name != 'pull_request'
-        id: provenance
-        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
-        with:
-          subject-path: "*.xz"
-      - if: github.event_name != 'pull_request'
+
+      - name: Store Tarball Names
+        id: filenames
         run: |
-          mv ${{ steps.provenance.outputs.bundle-path }} .
-      - name: Create Tarball Artifacts
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+          echo "filenames=*.xz" >> $GITHUB_OUTPUT
+
+      - name: Upload Artifacts
+        uses: ./.github/workflows/upload-release-artifact
         with:
-          path: |
-            *.xz
-            attestation.jsonl
-
-
+          files: ${{ steps.filenames.outputs.filenames }}
+          attestation-name: ${{ needs.inputs.outputs.ref }}-sources
+          upload: false
