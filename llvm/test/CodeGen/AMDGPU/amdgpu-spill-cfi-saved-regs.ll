@@ -46,13 +46,13 @@ define hidden void @func_saved_in_clobbered_vgpr() #0 {
 ; WAVE32-NEXT:    s_xor_saveexec_b32 s4, -1
 ; WAVE32-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    .cfi_offset 1536, 0
-; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-NEXT:    v_writelane_b32 v0, exec_lo, 0
 ; WAVE32-NEXT:    .cfi_llvm_vector_registers 1, 1536, 0, 32
 ; WAVE32-NEXT:    s_xor_saveexec_b32 s4, -1
 ; WAVE32-NEXT:    buffer_load_dword v0, off, s[0:3], s32 ; 4-byte Folded Reload
-; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-NEXT:    s_setpc_b64 s[30:31]
@@ -175,7 +175,7 @@ define hidden void @func_saved_in_preserved_vgpr() #0 {
 ; WAVE32-NEXT:    s_or_saveexec_b32 s4, -1
 ; WAVE32-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    .cfi_offset 1576, 0
-; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-NEXT:    v_writelane_b32 v40, exec_lo, 0
 ; WAVE32-NEXT:    .cfi_llvm_vector_registers 1, 1576, 0, 32
@@ -184,7 +184,7 @@ define hidden void @func_saved_in_preserved_vgpr() #0 {
 ; WAVE32-NEXT:    ;;#ASMEND
 ; WAVE32-NEXT:    s_or_saveexec_b32 s4, -1
 ; WAVE32-NEXT:    buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
-; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-NEXT:    s_setpc_b64 s[30:31]
@@ -223,7 +223,7 @@ define void @empty_func() {
 ; WAVE32-NEXT:    s_xor_saveexec_b32 s4, -1
 ; WAVE32-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    .cfi_offset 1536, 0
-; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-NEXT:    v_writelane_b32 v0, exec_lo, 0
   unreachable
@@ -308,7 +308,7 @@ define void @no_vgprs_to_spill_into() #1 {
 ; WAVE32-NEXT:    s_xor_saveexec_b32 s4, -1
 ; WAVE32-NEXT:    buffer_store_dword v25, off, s[0:3], s32 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    .cfi_offset 1561, 0
-; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-NEXT:    v_writelane_b32 v25, exec_lo, 0
 ; WAVE32-NEXT:    .cfi_llvm_vector_registers 1, 1561, 0, 32
@@ -316,7 +316,7 @@ define void @no_vgprs_to_spill_into() #1 {
 ; WAVE32-NEXT:    ;;#ASMEND
 ; WAVE32-NEXT:    s_xor_saveexec_b32 s4, -1
 ; WAVE32-NEXT:    buffer_load_dword v25, off, s[0:3], s32 ; 4-byte Folded Reload
-; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-NEXT:    s_setpc_b64 s[30:31]
@@ -834,7 +834,7 @@ define void @callee_need_to_spill_fp_exec_to_memory() #2 {
 ; WAVE32-NEXT:    s_xor_saveexec_b32 s4, -1
 ; WAVE32-NEXT:    buffer_store_dword v39, off, s[0:3], s33 offset:192 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    .cfi_offset 1575, 6144
-; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-NEXT:    v_mov_b32_e32 v0, exec_lo
 ; WAVE32-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:196 ; 4-byte Folded Spill
@@ -1007,7 +1007,7 @@ define void @callee_need_to_spill_fp_exec_to_memory() #2 {
 ; WAVE32-NEXT:    ;;#ASMSTART
 ; WAVE32-NEXT:    ; clobber all VGPRs except v39
 ; WAVE32-NEXT:    ;;#ASMEND
-; WAVE32-NEXT:    s_clause 0x2f
+; WAVE32-NEXT:    s_clause 0x2f ; 192-byte Folded Reload
 ; WAVE32-NEXT:    buffer_load_dword v127, off, s[0:3], s33
 ; WAVE32-NEXT:    buffer_load_dword v126, off, s[0:3], s33 offset:4
 ; WAVE32-NEXT:    buffer_load_dword v125, off, s[0:3], s33 offset:8
@@ -1091,7 +1091,7 @@ define void @callee_need_to_spill_fp_exec_to_memory() #2 {
 ; WAVE32-NEXT:    s_mov_b32 s32, s33
 ; WAVE32-NEXT:    s_xor_saveexec_b32 s4, -1
 ; WAVE32-NEXT:    buffer_load_dword v39, off, s[0:3], s33 offset:192 ; 4-byte Folded Reload
-; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-NEXT:    .cfi_def_cfa_register 64
 ; WAVE32-NEXT:    s_mov_b32 s33, s40
@@ -2391,7 +2391,7 @@ define void @need_to_spill_pc_to_mem() #3 {
 ; WAVE32-NEXT:    buffer_store_dword v255, off, s[0:3], s33 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    .cfi_llvm_vector_offset 1791, 32, 1, 32, 0
 ; WAVE32-NEXT:    s_mov_b32 s16, exec_lo
-; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, 3
 ; WAVE32-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:460
 ; WAVE32-NEXT:    v_writelane_b32 v0, s30, 0
@@ -2400,7 +2400,7 @@ define void @need_to_spill_pc_to_mem() #3 {
 ; WAVE32-NEXT:    .cfi_offset 16, 14336
 ; WAVE32-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:460
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0)
-; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, s16
 ; WAVE32-NEXT:    s_getpc_b64 s[16:17]
 ; WAVE32-NEXT:    s_add_u32 s16, s16, caller_needs_to_spill_pc_to_memory@rel32@lo+4
@@ -2415,9 +2415,9 @@ define void @need_to_spill_pc_to_mem() #3 {
 ; WAVE32-NEXT:    v_readlane_b32 s31, v0, 1
 ; WAVE32-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:460
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0)
-; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; WAVE32-NEXT:    s_mov_b32 exec_lo, s4
-; WAVE32-NEXT:    s_clause 0x3e
+; WAVE32-NEXT:    s_clause 0x3e ; 252-byte Folded Reload
 ; WAVE32-NEXT:    buffer_load_dword v255, off, s[0:3], s33
 ; WAVE32-NEXT:    buffer_load_dword v254, off, s[0:3], s33 offset:4
 ; WAVE32-NEXT:    buffer_load_dword v253, off, s[0:3], s33 offset:8
@@ -2481,7 +2481,7 @@ define void @need_to_spill_pc_to_mem() #3 {
 ; WAVE32-NEXT:    buffer_load_dword v139, off, s[0:3], s33 offset:240
 ; WAVE32-NEXT:    buffer_load_dword v138, off, s[0:3], s33 offset:244
 ; WAVE32-NEXT:    buffer_load_dword v137, off, s[0:3], s33 offset:248
-; WAVE32-NEXT:    s_clause 0x30
+; WAVE32-NEXT:    s_clause 0x30 ; 196-byte Folded Reload
 ; WAVE32-NEXT:    buffer_load_dword v136, off, s[0:3], s33 offset:252
 ; WAVE32-NEXT:    buffer_load_dword v127, off, s[0:3], s33 offset:256
 ; WAVE32-NEXT:    buffer_load_dword v126, off, s[0:3], s33 offset:260
@@ -2533,7 +2533,7 @@ define void @need_to_spill_pc_to_mem() #3 {
 ; WAVE32-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:444
 ; WAVE32-NEXT:    s_mov_b32 s32, s33
 ; WAVE32-NEXT:    .cfi_def_cfa_register 64
-; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; WAVE32-NEXT:    s_mov_b32 s33, s18
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-NEXT:    s_setpc_b64 s[30:31]

@@ -3,10 +3,21 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -passes=slp-vectorizer,dce < %s | FileCheck -check-prefixes=GCN,VI %s
 
 define half @reduction_half4(<4 x half> %a) {
-; GCN-LABEL: @reduction_half4(
-; GCN-NEXT:  entry:
-; GCN-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[A:%.*]])
-; GCN-NEXT:    ret half [[TMP0]]
+; GFX9-LABEL: @reduction_half4(
+; GFX9-NEXT:  entry:
+; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[A:%.*]])
+; GFX9-NEXT:    ret half [[TMP0]]
+;
+; VI-LABEL: @reduction_half4(
+; VI-NEXT:  entry:
+; VI-NEXT:    [[ELT0:%.*]] = extractelement <4 x half> [[A:%.*]], i64 0
+; VI-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[A]], i64 1
+; VI-NEXT:    [[ELT2:%.*]] = extractelement <4 x half> [[A]], i64 2
+; VI-NEXT:    [[ELT3:%.*]] = extractelement <4 x half> [[A]], i64 3
+; VI-NEXT:    [[ADD1:%.*]] = fadd fast half [[ELT1]], [[ELT0]]
+; VI-NEXT:    [[ADD2:%.*]] = fadd fast half [[ELT2]], [[ADD1]]
+; VI-NEXT:    [[ADD3:%.*]] = fadd fast half [[ELT3]], [[ADD2]]
+; VI-NEXT:    ret half [[ADD3]]
 ;
 entry:
   %elt0 = extractelement <4 x half> %a, i64 0
@@ -22,10 +33,29 @@ entry:
 }
 
 define half @reduction_half8(<8 x half> %vec8) {
-; GCN-LABEL: @reduction_half8(
-; GCN-NEXT:  entry:
-; GCN-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[VEC8:%.*]])
-; GCN-NEXT:    ret half [[TMP0]]
+; GFX9-LABEL: @reduction_half8(
+; GFX9-NEXT:  entry:
+; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[VEC8:%.*]])
+; GFX9-NEXT:    ret half [[TMP0]]
+;
+; VI-LABEL: @reduction_half8(
+; VI-NEXT:  entry:
+; VI-NEXT:    [[ELT0:%.*]] = extractelement <8 x half> [[VEC8:%.*]], i64 0
+; VI-NEXT:    [[ELT1:%.*]] = extractelement <8 x half> [[VEC8]], i64 1
+; VI-NEXT:    [[ELT2:%.*]] = extractelement <8 x half> [[VEC8]], i64 2
+; VI-NEXT:    [[ELT3:%.*]] = extractelement <8 x half> [[VEC8]], i64 3
+; VI-NEXT:    [[ELT4:%.*]] = extractelement <8 x half> [[VEC8]], i64 4
+; VI-NEXT:    [[ELT5:%.*]] = extractelement <8 x half> [[VEC8]], i64 5
+; VI-NEXT:    [[ELT6:%.*]] = extractelement <8 x half> [[VEC8]], i64 6
+; VI-NEXT:    [[ELT7:%.*]] = extractelement <8 x half> [[VEC8]], i64 7
+; VI-NEXT:    [[ADD1:%.*]] = fadd fast half [[ELT1]], [[ELT0]]
+; VI-NEXT:    [[ADD2:%.*]] = fadd fast half [[ELT2]], [[ADD1]]
+; VI-NEXT:    [[ADD3:%.*]] = fadd fast half [[ELT3]], [[ADD2]]
+; VI-NEXT:    [[ADD4:%.*]] = fadd fast half [[ELT4]], [[ADD3]]
+; VI-NEXT:    [[ADD5:%.*]] = fadd fast half [[ELT5]], [[ADD4]]
+; VI-NEXT:    [[ADD6:%.*]] = fadd fast half [[ELT6]], [[ADD5]]
+; VI-NEXT:    [[ADD7:%.*]] = fadd fast half [[ELT7]], [[ADD6]]
+; VI-NEXT:    ret half [[ADD7]]
 ;
 entry:
   %elt0 = extractelement <8 x half> %vec8, i64 0
@@ -56,10 +86,37 @@ define half @reduction_half16(<16 x half> %vec16) {
 ;
 ; VI-LABEL: @reduction_half16(
 ; VI-NEXT:  entry:
-; VI-NEXT:    [[TMP0:%.*]] = shufflevector <16 x half> [[VEC16:%.*]], <16 x half> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VI-NEXT:    [[TMP2:%.*]] = shufflevector <16 x half> [[VEC16]], <16 x half> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; VI-NEXT:    [[RDX_OP:%.*]] = fadd fast <8 x half> [[TMP0]], [[TMP2]]
-; VI-NEXT:    [[OP_RDX:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH0000, <8 x half> [[RDX_OP]])
+; VI-NEXT:    [[ELT0:%.*]] = extractelement <16 x half> [[VEC16:%.*]], i64 0
+; VI-NEXT:    [[ELT1:%.*]] = extractelement <16 x half> [[VEC16]], i64 1
+; VI-NEXT:    [[ELT2:%.*]] = extractelement <16 x half> [[VEC16]], i64 2
+; VI-NEXT:    [[ELT3:%.*]] = extractelement <16 x half> [[VEC16]], i64 3
+; VI-NEXT:    [[ELT4:%.*]] = extractelement <16 x half> [[VEC16]], i64 4
+; VI-NEXT:    [[ELT5:%.*]] = extractelement <16 x half> [[VEC16]], i64 5
+; VI-NEXT:    [[ELT6:%.*]] = extractelement <16 x half> [[VEC16]], i64 6
+; VI-NEXT:    [[ELT7:%.*]] = extractelement <16 x half> [[VEC16]], i64 7
+; VI-NEXT:    [[ELT8:%.*]] = extractelement <16 x half> [[VEC16]], i64 8
+; VI-NEXT:    [[ELT9:%.*]] = extractelement <16 x half> [[VEC16]], i64 9
+; VI-NEXT:    [[ELT10:%.*]] = extractelement <16 x half> [[VEC16]], i64 10
+; VI-NEXT:    [[ELT11:%.*]] = extractelement <16 x half> [[VEC16]], i64 11
+; VI-NEXT:    [[ELT12:%.*]] = extractelement <16 x half> [[VEC16]], i64 12
+; VI-NEXT:    [[ELT13:%.*]] = extractelement <16 x half> [[VEC16]], i64 13
+; VI-NEXT:    [[ELT14:%.*]] = extractelement <16 x half> [[VEC16]], i64 14
+; VI-NEXT:    [[ELT15:%.*]] = extractelement <16 x half> [[VEC16]], i64 15
+; VI-NEXT:    [[ADD1:%.*]] = fadd fast half [[ELT1]], [[ELT0]]
+; VI-NEXT:    [[ADD2:%.*]] = fadd fast half [[ELT2]], [[ADD1]]
+; VI-NEXT:    [[ADD3:%.*]] = fadd fast half [[ELT3]], [[ADD2]]
+; VI-NEXT:    [[ADD4:%.*]] = fadd fast half [[ELT4]], [[ADD3]]
+; VI-NEXT:    [[ADD5:%.*]] = fadd fast half [[ELT5]], [[ADD4]]
+; VI-NEXT:    [[ADD6:%.*]] = fadd fast half [[ELT6]], [[ADD5]]
+; VI-NEXT:    [[ADD7:%.*]] = fadd fast half [[ELT7]], [[ADD6]]
+; VI-NEXT:    [[ADD8:%.*]] = fadd fast half [[ELT8]], [[ADD7]]
+; VI-NEXT:    [[ADD9:%.*]] = fadd fast half [[ELT9]], [[ADD8]]
+; VI-NEXT:    [[ADD10:%.*]] = fadd fast half [[ELT10]], [[ADD9]]
+; VI-NEXT:    [[ADD11:%.*]] = fadd fast half [[ELT11]], [[ADD10]]
+; VI-NEXT:    [[ADD12:%.*]] = fadd fast half [[ELT12]], [[ADD11]]
+; VI-NEXT:    [[ADD13:%.*]] = fadd fast half [[ELT13]], [[ADD12]]
+; VI-NEXT:    [[ADD14:%.*]] = fadd fast half [[ELT14]], [[ADD13]]
+; VI-NEXT:    [[OP_RDX:%.*]] = fadd fast half [[ELT15]], [[ADD14]]
 ; VI-NEXT:    ret half [[OP_RDX]]
 ;
 entry:
@@ -126,10 +183,21 @@ entry:
 }
 
 define i16 @reduction_v4i16(<4 x i16> %a) {
-; GCN-LABEL: @reduction_v4i16(
-; GCN-NEXT:  entry:
-; GCN-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[A:%.*]])
-; GCN-NEXT:    ret i16 [[TMP0]]
+; GFX9-LABEL: @reduction_v4i16(
+; GFX9-NEXT:  entry:
+; GFX9-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[A:%.*]])
+; GFX9-NEXT:    ret i16 [[TMP0]]
+;
+; VI-LABEL: @reduction_v4i16(
+; VI-NEXT:  entry:
+; VI-NEXT:    [[ELT0:%.*]] = extractelement <4 x i16> [[A:%.*]], i64 0
+; VI-NEXT:    [[ELT1:%.*]] = extractelement <4 x i16> [[A]], i64 1
+; VI-NEXT:    [[ELT2:%.*]] = extractelement <4 x i16> [[A]], i64 2
+; VI-NEXT:    [[ELT3:%.*]] = extractelement <4 x i16> [[A]], i64 3
+; VI-NEXT:    [[ADD1:%.*]] = add i16 [[ELT1]], [[ELT0]]
+; VI-NEXT:    [[ADD2:%.*]] = add i16 [[ELT2]], [[ADD1]]
+; VI-NEXT:    [[ADD3:%.*]] = add i16 [[ELT3]], [[ADD2]]
+; VI-NEXT:    ret i16 [[ADD3]]
 ;
 entry:
   %elt0 = extractelement <4 x i16> %a, i64 0
@@ -145,10 +213,29 @@ entry:
 }
 
 define i16 @reduction_v8i16(<8 x i16> %vec8) {
-; GCN-LABEL: @reduction_v8i16(
-; GCN-NEXT:  entry:
-; GCN-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[VEC8:%.*]])
-; GCN-NEXT:    ret i16 [[TMP0]]
+; GFX9-LABEL: @reduction_v8i16(
+; GFX9-NEXT:  entry:
+; GFX9-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[VEC8:%.*]])
+; GFX9-NEXT:    ret i16 [[TMP0]]
+;
+; VI-LABEL: @reduction_v8i16(
+; VI-NEXT:  entry:
+; VI-NEXT:    [[ELT0:%.*]] = extractelement <8 x i16> [[VEC8:%.*]], i64 0
+; VI-NEXT:    [[ELT1:%.*]] = extractelement <8 x i16> [[VEC8]], i64 1
+; VI-NEXT:    [[ELT2:%.*]] = extractelement <8 x i16> [[VEC8]], i64 2
+; VI-NEXT:    [[ELT3:%.*]] = extractelement <8 x i16> [[VEC8]], i64 3
+; VI-NEXT:    [[ELT4:%.*]] = extractelement <8 x i16> [[VEC8]], i64 4
+; VI-NEXT:    [[ELT5:%.*]] = extractelement <8 x i16> [[VEC8]], i64 5
+; VI-NEXT:    [[ELT6:%.*]] = extractelement <8 x i16> [[VEC8]], i64 6
+; VI-NEXT:    [[ELT7:%.*]] = extractelement <8 x i16> [[VEC8]], i64 7
+; VI-NEXT:    [[ADD1:%.*]] = add i16 [[ELT1]], [[ELT0]]
+; VI-NEXT:    [[ADD2:%.*]] = add i16 [[ELT2]], [[ADD1]]
+; VI-NEXT:    [[ADD3:%.*]] = add i16 [[ELT3]], [[ADD2]]
+; VI-NEXT:    [[ADD4:%.*]] = add i16 [[ELT4]], [[ADD3]]
+; VI-NEXT:    [[ADD5:%.*]] = add i16 [[ELT5]], [[ADD4]]
+; VI-NEXT:    [[ADD6:%.*]] = add i16 [[ELT6]], [[ADD5]]
+; VI-NEXT:    [[ADD7:%.*]] = add i16 [[ELT7]], [[ADD6]]
+; VI-NEXT:    ret i16 [[ADD7]]
 ;
 entry:
   %elt0 = extractelement <8 x i16> %vec8, i64 0
@@ -598,7 +685,16 @@ entry:
 define i8 @reduction_umin_v4i8(<4 x i8> %vec4) {
 ; GCN-LABEL: @reduction_umin_v4i8(
 ; GCN-NEXT:  entry:
-; GCN-NEXT:    [[MIN3:%.*]] = call i8 @llvm.vector.reduce.umin.v4i8(<4 x i8> [[VEC4:%.*]])
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <4 x i8> [[VEC4:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <4 x i8> [[VEC4]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <4 x i8> [[VEC4]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <4 x i8> [[VEC4]], i64 3
+; GCN-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MIN1:%.*]] = select i1 [[CMP1]], i8 [[ELT1]], i8 [[ELT0]]
+; GCN-NEXT:    [[CMP2:%.*]] = icmp ult i8 [[ELT2]], [[MIN1]]
+; GCN-NEXT:    [[MIN2:%.*]] = select i1 [[CMP2]], i8 [[ELT2]], i8 [[MIN1]]
+; GCN-NEXT:    [[CMP3:%.*]] = icmp ult i8 [[ELT3]], [[MIN2]]
+; GCN-NEXT:    [[MIN3:%.*]] = select i1 [[CMP3]], i8 [[ELT3]], i8 [[MIN2]]
 ; GCN-NEXT:    ret i8 [[MIN3]]
 ;
 entry:
@@ -620,7 +716,28 @@ entry:
 define i8 @reduction_icmp_v8i8(<8 x i8> %vec8) {
 ; GCN-LABEL: @reduction_icmp_v8i8(
 ; GCN-NEXT:  entry:
-; GCN-NEXT:    [[MIN7:%.*]] = call i8 @llvm.vector.reduce.umin.v8i8(<8 x i8> [[VEC8:%.*]])
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <8 x i8> [[VEC8:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <8 x i8> [[VEC8]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <8 x i8> [[VEC8]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <8 x i8> [[VEC8]], i64 3
+; GCN-NEXT:    [[ELT4:%.*]] = extractelement <8 x i8> [[VEC8]], i64 4
+; GCN-NEXT:    [[ELT5:%.*]] = extractelement <8 x i8> [[VEC8]], i64 5
+; GCN-NEXT:    [[ELT6:%.*]] = extractelement <8 x i8> [[VEC8]], i64 6
+; GCN-NEXT:    [[ELT7:%.*]] = extractelement <8 x i8> [[VEC8]], i64 7
+; GCN-NEXT:    [[CMP0:%.*]] = icmp ult i8 [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MIN1:%.*]] = select i1 [[CMP0]], i8 [[ELT1]], i8 [[ELT0]]
+; GCN-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[ELT2]], [[MIN1]]
+; GCN-NEXT:    [[MIN2:%.*]] = select i1 [[CMP1]], i8 [[ELT2]], i8 [[MIN1]]
+; GCN-NEXT:    [[CMP2:%.*]] = icmp ult i8 [[ELT3]], [[MIN2]]
+; GCN-NEXT:    [[MIN3:%.*]] = select i1 [[CMP2]], i8 [[ELT3]], i8 [[MIN2]]
+; GCN-NEXT:    [[CMP3:%.*]] = icmp ult i8 [[ELT4]], [[MIN3]]
+; GCN-NEXT:    [[MIN4:%.*]] = select i1 [[CMP3]], i8 [[ELT4]], i8 [[MIN3]]
+; GCN-NEXT:    [[CMP4:%.*]] = icmp ult i8 [[ELT5]], [[MIN4]]
+; GCN-NEXT:    [[MIN5:%.*]] = select i1 [[CMP4]], i8 [[ELT5]], i8 [[MIN4]]
+; GCN-NEXT:    [[CMP5:%.*]] = icmp ult i8 [[ELT6]], [[MIN5]]
+; GCN-NEXT:    [[MIN6:%.*]] = select i1 [[CMP5]], i8 [[ELT6]], i8 [[MIN5]]
+; GCN-NEXT:    [[CMP6:%.*]] = icmp ult i8 [[ELT7]], [[MIN6]]
+; GCN-NEXT:    [[MIN7:%.*]] = select i1 [[CMP6]], i8 [[ELT7]], i8 [[MIN6]]
 ; GCN-NEXT:    ret i8 [[MIN7]]
 ;
 entry:
@@ -656,7 +773,52 @@ entry:
 define i8 @reduction_smin_v16i8(<16 x i8> %vec16) {
 ; GCN-LABEL: @reduction_smin_v16i8(
 ; GCN-NEXT:  entry:
-; GCN-NEXT:    [[MIN15:%.*]] = call i8 @llvm.vector.reduce.smin.v16i8(<16 x i8> [[VEC16:%.*]])
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <16 x i8> [[VEC16:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <16 x i8> [[VEC16]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <16 x i8> [[VEC16]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <16 x i8> [[VEC16]], i64 3
+; GCN-NEXT:    [[ELT4:%.*]] = extractelement <16 x i8> [[VEC16]], i64 4
+; GCN-NEXT:    [[ELT5:%.*]] = extractelement <16 x i8> [[VEC16]], i64 5
+; GCN-NEXT:    [[ELT6:%.*]] = extractelement <16 x i8> [[VEC16]], i64 6
+; GCN-NEXT:    [[ELT7:%.*]] = extractelement <16 x i8> [[VEC16]], i64 7
+; GCN-NEXT:    [[ELT8:%.*]] = extractelement <16 x i8> [[VEC16]], i64 8
+; GCN-NEXT:    [[ELT9:%.*]] = extractelement <16 x i8> [[VEC16]], i64 9
+; GCN-NEXT:    [[ELT10:%.*]] = extractelement <16 x i8> [[VEC16]], i64 10
+; GCN-NEXT:    [[ELT11:%.*]] = extractelement <16 x i8> [[VEC16]], i64 11
+; GCN-NEXT:    [[ELT12:%.*]] = extractelement <16 x i8> [[VEC16]], i64 12
+; GCN-NEXT:    [[ELT13:%.*]] = extractelement <16 x i8> [[VEC16]], i64 13
+; GCN-NEXT:    [[ELT14:%.*]] = extractelement <16 x i8> [[VEC16]], i64 14
+; GCN-NEXT:    [[ELT15:%.*]] = extractelement <16 x i8> [[VEC16]], i64 15
+; GCN-NEXT:    [[CMP0:%.*]] = icmp slt i8 [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MIN1:%.*]] = select i1 [[CMP0]], i8 [[ELT1]], i8 [[ELT0]]
+; GCN-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[ELT2]], [[MIN1]]
+; GCN-NEXT:    [[MIN2:%.*]] = select i1 [[CMP1]], i8 [[ELT2]], i8 [[MIN1]]
+; GCN-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[ELT3]], [[MIN2]]
+; GCN-NEXT:    [[MIN3:%.*]] = select i1 [[CMP2]], i8 [[ELT3]], i8 [[MIN2]]
+; GCN-NEXT:    [[CMP3:%.*]] = icmp slt i8 [[ELT4]], [[MIN3]]
+; GCN-NEXT:    [[MIN4:%.*]] = select i1 [[CMP3]], i8 [[ELT4]], i8 [[MIN3]]
+; GCN-NEXT:    [[CMP4:%.*]] = icmp slt i8 [[ELT5]], [[MIN4]]
+; GCN-NEXT:    [[MIN5:%.*]] = select i1 [[CMP4]], i8 [[ELT5]], i8 [[MIN4]]
+; GCN-NEXT:    [[CMP5:%.*]] = icmp slt i8 [[ELT6]], [[MIN5]]
+; GCN-NEXT:    [[MIN6:%.*]] = select i1 [[CMP5]], i8 [[ELT6]], i8 [[MIN5]]
+; GCN-NEXT:    [[CMP6:%.*]] = icmp slt i8 [[ELT7]], [[MIN6]]
+; GCN-NEXT:    [[MIN7:%.*]] = select i1 [[CMP6]], i8 [[ELT7]], i8 [[MIN6]]
+; GCN-NEXT:    [[CMP7:%.*]] = icmp slt i8 [[ELT8]], [[MIN7]]
+; GCN-NEXT:    [[MIN8:%.*]] = select i1 [[CMP7]], i8 [[ELT8]], i8 [[MIN7]]
+; GCN-NEXT:    [[CMP8:%.*]] = icmp slt i8 [[ELT9]], [[MIN8]]
+; GCN-NEXT:    [[MIN9:%.*]] = select i1 [[CMP8]], i8 [[ELT9]], i8 [[MIN8]]
+; GCN-NEXT:    [[CMP9:%.*]] = icmp slt i8 [[ELT10]], [[MIN9]]
+; GCN-NEXT:    [[MIN10:%.*]] = select i1 [[CMP9]], i8 [[ELT10]], i8 [[MIN9]]
+; GCN-NEXT:    [[CMP10:%.*]] = icmp slt i8 [[ELT11]], [[MIN10]]
+; GCN-NEXT:    [[MIN11:%.*]] = select i1 [[CMP10]], i8 [[ELT11]], i8 [[MIN10]]
+; GCN-NEXT:    [[CMP11:%.*]] = icmp slt i8 [[ELT12]], [[MIN11]]
+; GCN-NEXT:    [[MIN12:%.*]] = select i1 [[CMP11]], i8 [[ELT12]], i8 [[MIN11]]
+; GCN-NEXT:    [[CMP12:%.*]] = icmp slt i8 [[ELT13]], [[MIN12]]
+; GCN-NEXT:    [[MIN13:%.*]] = select i1 [[CMP12]], i8 [[ELT13]], i8 [[MIN12]]
+; GCN-NEXT:    [[CMP13:%.*]] = icmp slt i8 [[ELT14]], [[MIN13]]
+; GCN-NEXT:    [[MIN14:%.*]] = select i1 [[CMP13]], i8 [[ELT14]], i8 [[MIN13]]
+; GCN-NEXT:    [[CMP14:%.*]] = icmp slt i8 [[ELT15]], [[MIN14]]
+; GCN-NEXT:    [[MIN15:%.*]] = select i1 [[CMP14]], i8 [[ELT15]], i8 [[MIN14]]
 ; GCN-NEXT:    ret i8 [[MIN15]]
 ;
 entry:
@@ -722,7 +884,16 @@ entry:
 define i8 @reduction_umax_v4i8(<4 x i8> %vec4) {
 ; GCN-LABEL: @reduction_umax_v4i8(
 ; GCN-NEXT:  entry:
-; GCN-NEXT:    [[MAX3:%.*]] = call i8 @llvm.vector.reduce.umax.v4i8(<4 x i8> [[VEC4:%.*]])
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <4 x i8> [[VEC4:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <4 x i8> [[VEC4]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <4 x i8> [[VEC4]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <4 x i8> [[VEC4]], i64 3
+; GCN-NEXT:    [[CMP1:%.*]] = icmp ugt i8 [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MAX1:%.*]] = select i1 [[CMP1]], i8 [[ELT1]], i8 [[ELT0]]
+; GCN-NEXT:    [[CMP2:%.*]] = icmp ugt i8 [[ELT2]], [[MAX1]]
+; GCN-NEXT:    [[MAX2:%.*]] = select i1 [[CMP2]], i8 [[ELT2]], i8 [[MAX1]]
+; GCN-NEXT:    [[CMP3:%.*]] = icmp ugt i8 [[ELT3]], [[MAX2]]
+; GCN-NEXT:    [[MAX3:%.*]] = select i1 [[CMP3]], i8 [[ELT3]], i8 [[MAX2]]
 ; GCN-NEXT:    ret i8 [[MAX3]]
 ;
 entry:
@@ -744,7 +915,16 @@ entry:
 define i8 @reduction_smax_v4i8(<4 x i8> %vec4) {
 ; GCN-LABEL: @reduction_smax_v4i8(
 ; GCN-NEXT:  entry:
-; GCN-NEXT:    [[MAX3:%.*]] = call i8 @llvm.vector.reduce.smax.v4i8(<4 x i8> [[VEC4:%.*]])
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <4 x i8> [[VEC4:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <4 x i8> [[VEC4]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <4 x i8> [[VEC4]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <4 x i8> [[VEC4]], i64 3
+; GCN-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MAX1:%.*]] = select i1 [[CMP1]], i8 [[ELT1]], i8 [[ELT0]]
+; GCN-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[ELT2]], [[MAX1]]
+; GCN-NEXT:    [[MAX2:%.*]] = select i1 [[CMP2]], i8 [[ELT2]], i8 [[MAX1]]
+; GCN-NEXT:    [[CMP3:%.*]] = icmp sgt i8 [[ELT3]], [[MAX2]]
+; GCN-NEXT:    [[MAX3:%.*]] = select i1 [[CMP3]], i8 [[ELT3]], i8 [[MAX2]]
 ; GCN-NEXT:    ret i8 [[MAX3]]
 ;
 entry:

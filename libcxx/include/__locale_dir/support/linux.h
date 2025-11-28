@@ -83,33 +83,29 @@ inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) {
 // Strtonum functions
 //
 inline _LIBCPP_HIDE_FROM_ABI float __strtof(const char* __nptr, char** __endptr, __locale_t __loc) {
+#if !_LIBCPP_HAS_MUSL_LIBC || defined(_GNU_SOURCE)
   return ::strtof_l(__nptr, __endptr, __loc);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return ::strtod_l(__nptr, __endptr, __loc);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __endptr, __locale_t __loc) {
-  return ::strtold_l(__nptr, __endptr, __loc);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI long long __strtoll(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-#if !_LIBCPP_HAS_MUSL_LIBC
-  return ::strtoll_l(__nptr, __endptr, __base, __loc);
 #else
   (void)__loc;
-  return ::strtoll(__nptr, __endptr, __base);
+  return ::strtof(__nptr, __endptr);
 #endif
 }
 
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-__strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-#if !_LIBCPP_HAS_MUSL_LIBC
-  return ::strtoull_l(__nptr, __endptr, __base, __loc);
+inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr, __locale_t __loc) {
+#if !_LIBCPP_HAS_MUSL_LIBC || defined(_GNU_SOURCE)
+  return ::strtod_l(__nptr, __endptr, __loc);
 #else
   (void)__loc;
-  return ::strtoull(__nptr, __endptr, __base);
+  return ::strtod(__nptr, __endptr);
+#endif
+}
+
+inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __endptr, __locale_t __loc) {
+#if !_LIBCPP_HAS_MUSL_LIBC || defined(_GNU_SOURCE)
+  return ::strtold_l(__nptr, __endptr, __loc);
+#else
+  (void)__loc;
+  return ::strtold(__nptr, __endptr);
 #endif
 }
 
@@ -257,20 +253,6 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
   va_end(__va);
   return __res;
 }
-
-#ifndef _LIBCPP_COMPILER_GCC // GCC complains that this can't be always_inline due to C-style varargs
-_LIBCPP_HIDE_FROM_ABI
-#endif
-inline _LIBCPP_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __sscanf(
-    const char* __s, __locale_t __loc, const char* __format, ...) {
-  va_list __va;
-  va_start(__va, __format);
-  __locale_guard __current(__loc);
-  int __res = std::vsscanf(__s, __format, __va);
-  va_end(__va);
-  return __res;
-}
-
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 

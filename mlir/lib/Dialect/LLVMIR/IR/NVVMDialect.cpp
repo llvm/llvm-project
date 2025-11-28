@@ -57,8 +57,24 @@ static bool isPtrInAddrSpace(mlir::Value ptr, NVVMMemorySpace targetAS) {
   return ptrTy.getAddressSpace() == static_cast<unsigned>(targetAS);
 }
 
+static bool isPtrInGenericSpace(mlir::Value ptr) {
+  return isPtrInAddrSpace(ptr, NVVMMemorySpace::Generic);
+}
+
 static bool isPtrInSharedCTASpace(mlir::Value ptr) {
   return isPtrInAddrSpace(ptr, NVVMMemorySpace::Shared);
+}
+
+static bool isPtrInSharedClusterSpace(mlir::Value ptr) {
+  return isPtrInAddrSpace(ptr, NVVMMemorySpace::SharedCluster);
+}
+
+static llvm::Value *castPtrToAddrSpace(llvm::IRBuilderBase &builder,
+                                       llvm::Value *ptr,
+                                       NVVMMemorySpace targetAS) {
+  unsigned AS = static_cast<unsigned>(targetAS);
+  return builder.CreateAddrSpaceCast(
+      ptr, llvm::PointerType::get(builder.getContext(), AS));
 }
 
 // Helper method to convert CtaGroupKind in NVVM Dialect to CtaGroupKind in LLVM
@@ -233,6 +249,39 @@ LogicalResult CpAsyncBulkGlobalToSharedClusterOp::verify() {
   return success();
 }
 
+static LogicalResult verifyMBarrierArriveLikeOp(Operation *op, Value addr,
+                                                NVVM::MemScopeKind scope,
+                                                Value retVal = nullptr) {
+  bool isSharedCluster = isPtrInSharedClusterSpace(addr);
+  if (scope != NVVM::MemScopeKind::CTA && scope != NVVM::MemScopeKind::CLUSTER)
+    return op->emitError("mbarrier scope must be either CTA or Cluster");
+
+  bool hasRetValue = static_cast<bool>(retVal);
+  if (isSharedCluster && hasRetValue)
+    return op->emitError(
+        "mbarrier in shared_cluster space cannot return any value");
+
+  return success();
+}
+
+LogicalResult MBarrierArriveOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
+                                    getRes());
+}
+
+LogicalResult MBarrierArriveDropOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
+                                    getRes());
+}
+
+LogicalResult MBarrierExpectTxOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
+}
+
+LogicalResult MBarrierCompleteTxOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
+}
+
 LogicalResult ConvertFloatToTF32Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
   switch (getRnd()) {
@@ -403,18 +452,42 @@ LogicalResult ConvertF4x2ToF16x2Op::verify() {
 // Stochastic Rounding Conversion Ops
 //===----------------------------------------------------------------------===//
 
-LogicalResult ConvertF32x2ToF16x2Op::verify() {
-  if (getRnd() != FPRoundingMode::RS)
-    return emitOpError("Only RS rounding mode is supported for "
-                       "conversions from f32x2 to f16x2.");
+static LogicalResult verifyConvertF32x2ToFP16x2Op(Twine dstType,
+                                                  FPRoundingMode rnd,
+                                                  bool hasRandomBits,
+                                                  Operation *op) {
+  static constexpr FPRoundingMode validRndModes[] = {
+      FPRoundingMode::RN, FPRoundingMode::RZ, FPRoundingMode::RS};
+
+  if (!llvm::is_contained(validRndModes, rnd)) {
+    return op->emitOpError(
+               "Only RN, RZ, and RS rounding modes are supported for "
+               "conversions from f32x2 to ")
+           << dstType << ".";
+  }
+
+  if (rnd == FPRoundingMode::RS) {
+    if (!hasRandomBits) {
+      return op->emitOpError("random_bits is required for RS rounding mode.");
+    }
+  } else {
+    if (hasRandomBits) {
+      return op->emitOpError(
+          "random_bits not supported for RN and RZ rounding modes.");
+    }
+  }
+
   return success();
 }
 
+LogicalResult ConvertF32x2ToF16x2Op::verify() {
+  return verifyConvertF32x2ToFP16x2Op("f16x2", getRnd(),
+                                      getRandomBits() ? true : false, *this);
+}
+
 LogicalResult ConvertF32x2ToBF16x2Op::verify() {
-  if (getRnd() != FPRoundingMode::RS)
-    return emitOpError("Only RS rounding mode is supported for "
-                       "conversions from f32x2 to bf16x2.");
-  return success();
+  return verifyConvertF32x2ToFP16x2Op("bf16x2", getRnd(),
+                                      getRandomBits() ? true : false, *this);
 }
 
 LogicalResult ConvertF32x4ToF8x4Op::verify() {
@@ -1874,15 +1947,132 @@ mlir::NVVM::IDArgPair MBarrierInvalOp::getIntrinsicIDAndArgs(
   return {id, {mt.lookupValue(thisOp.getAddr())}};
 }
 
+mlir::NVVM::IDArgPair MBarrierExpectTxOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierExpectTxOp>(op);
+
+  bool isClusterSpace = isPtrInSharedClusterSpace(thisOp.getAddr());
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: Space
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isClusterSpace ? 1 : 0);
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_expect_tx_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_expect_tx_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_expect_tx_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_expect_tx_scope_cluster_space_cluster};
+
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  args.push_back(mt.lookupValue(thisOp.getTxcount()));
+
+  return {IDs[index], std::move(args)};
+}
+
+mlir::NVVM::IDArgPair MBarrierCompleteTxOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierCompleteTxOp>(op);
+
+  bool isClusterSpace = isPtrInSharedClusterSpace(thisOp.getAddr());
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: Space
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isClusterSpace ? 1 : 0);
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_complete_tx_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_complete_tx_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_complete_tx_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_complete_tx_scope_cluster_space_cluster};
+
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  args.push_back(mt.lookupValue(thisOp.getTxcount()));
+
+  return {IDs[index], std::move(args)};
+}
+
 mlir::NVVM::IDArgPair MBarrierArriveOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::MBarrierArriveOp>(op);
-  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
-  llvm::Intrinsic::ID id = isShared
-                               ? llvm::Intrinsic::nvvm_mbarrier_arrive_shared
-                               : llvm::Intrinsic::nvvm_mbarrier_arrive;
 
-  return {id, {mt.lookupValue(thisOp.getAddr())}};
+  bool isClusterSpace = isPtrInSharedClusterSpace(thisOp.getAddr());
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: Space
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isClusterSpace ? 1 : 0);
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_scope_cluster_space_cluster};
+  static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::
+          nvvm_mbarrier_arrive_relaxed_scope_cluster_space_cluster};
+  auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
+
+  // Tidy-up the Intrinsic Args
+  bool needCast = isPtrInGenericSpace(thisOp.getAddr());
+  llvm::Value *mbar = mt.lookupValue(thisOp.getAddr());
+  if (needCast)
+    mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
+
+  // When count is not explicitly specified, the default is 1.
+  llvm::LLVMContext &ctx = mt.getLLVMContext();
+  bool hasCount = static_cast<bool>(thisOp.getCount());
+  llvm::Value *count =
+      hasCount ? mt.lookupValue(thisOp.getCount())
+               : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
+
+  return {id, {mbar, count}};
+}
+
+mlir::NVVM::IDArgPair MBarrierArriveDropOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierArriveDropOp>(op);
+
+  bool isClusterSpace = isPtrInSharedClusterSpace(thisOp.getAddr());
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: Space
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isClusterSpace ? 1 : 0);
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_scope_cluster_space_cluster};
+  static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::
+          nvvm_mbarrier_arrive_drop_relaxed_scope_cta_space_cluster,
+      llvm::Intrinsic::
+          nvvm_mbarrier_arrive_drop_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::
+          nvvm_mbarrier_arrive_drop_relaxed_scope_cluster_space_cluster};
+  auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
+
+  // Tidy-up the Intrinsic Args
+  bool needCast = isPtrInGenericSpace(thisOp.getAddr());
+  llvm::Value *mbar = mt.lookupValue(thisOp.getAddr());
+  if (needCast)
+    mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
+
+  // When count is not explicitly specified, the default is 1.
+  llvm::LLVMContext &ctx = mt.getLLVMContext();
+  bool hasCount = static_cast<bool>(thisOp.getCount());
+  llvm::Value *count =
+      hasCount ? mt.lookupValue(thisOp.getCount())
+               : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
+
+  return {id, {mbar, count}};
 }
 
 mlir::NVVM::IDArgPair MBarrierArriveNocompleteOp::getIntrinsicIDAndArgs(
@@ -1892,6 +2082,21 @@ mlir::NVVM::IDArgPair MBarrierArriveNocompleteOp::getIntrinsicIDAndArgs(
   llvm::Intrinsic::ID id =
       isShared ? llvm::Intrinsic::nvvm_mbarrier_arrive_noComplete_shared
                : llvm::Intrinsic::nvvm_mbarrier_arrive_noComplete;
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+  args.push_back(mt.lookupValue(thisOp.getCount()));
+
+  return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair MBarrierArriveDropNocompleteOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierArriveDropNocompleteOp>(op);
+  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
+  llvm::Intrinsic::ID id =
+      isShared ? llvm::Intrinsic::nvvm_mbarrier_arrive_drop_noComplete_shared
+               : llvm::Intrinsic::nvvm_mbarrier_arrive_drop_noComplete;
   // Fill the Intrinsic Args
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(thisOp.getAddr()));
@@ -2740,30 +2945,100 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
     return TCGEN05_CP_2CTA(shape_mc, , is_2cta);                               \
   }()
 
-llvm::Intrinsic::ID ConvertF32x2ToF16x2Op::getIntrinsicID() {
-  bool hasRelu = getRelu();
-  bool hasSatFinite = (getSat() == NVVM::SaturationMode::SATFINITE);
+NVVM::IDArgPair
+ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
+                                             LLVM::ModuleTranslation &mt,
+                                             llvm::IRBuilderBase &builder) {
+  static constexpr llvm::Intrinsic::ID rndRNIds[] = {
+      llvm::Intrinsic::nvvm_ff2f16x2_rn,
+      llvm::Intrinsic::nvvm_ff2f16x2_rn_relu,
+      llvm::Intrinsic::nvvm_ff2f16x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_ff2f16x2_rn_relu_satfinite,
+  };
+  static constexpr llvm::Intrinsic::ID rndRZIds[] = {
+      llvm::Intrinsic::nvvm_ff2f16x2_rz,
+      llvm::Intrinsic::nvvm_ff2f16x2_rz_relu,
+      llvm::Intrinsic::nvvm_ff2f16x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_ff2f16x2_rz_relu_satfinite,
+  };
+  static constexpr llvm::Intrinsic::ID rndRSIds[] = {
+      llvm::Intrinsic::nvvm_ff2f16x2_rs,
+      llvm::Intrinsic::nvvm_ff2f16x2_rs_relu,
+      llvm::Intrinsic::nvvm_ff2f16x2_rs_satfinite,
+      llvm::Intrinsic::nvvm_ff2f16x2_rs_relu_satfinite,
+  };
 
-  if (hasRelu && hasSatFinite)
-    return llvm::Intrinsic::nvvm_ff2f16x2_rs_relu_satfinite;
-  if (hasRelu)
-    return llvm::Intrinsic::nvvm_ff2f16x2_rs_relu;
-  if (hasSatFinite)
-    return llvm::Intrinsic::nvvm_ff2f16x2_rs_satfinite;
-  return llvm::Intrinsic::nvvm_ff2f16x2_rs;
+  unsigned hasRelu = op.getRelu() ? 1 : 0;
+  unsigned hasSatFinite =
+      (op.getSat() == NVVM::SaturationMode::SATFINITE) ? 1 : 0;
+  // idx: bit-0 - relu
+  //      bit-1 - satfinite
+  unsigned idx = (hasSatFinite << 1) | hasRelu;
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(op.getSrcHi()));
+  args.push_back(mt.lookupValue(op.getSrcLo()));
+  if (op.getRandomBits())
+    args.push_back(mt.lookupValue(op.getRandomBits()));
+
+  switch (op.getRnd()) {
+  case FPRoundingMode::RN:
+    return {rndRNIds[idx], std::move(args)};
+  case FPRoundingMode::RZ:
+    return {rndRZIds[idx], std::move(args)};
+  case FPRoundingMode::RS:
+    return {rndRSIds[idx], std::move(args)};
+  default:
+    llvm_unreachable("Invalid rounding mode for ConvertF32x2ToF16x2Op");
+  }
 }
 
-llvm::Intrinsic::ID ConvertF32x2ToBF16x2Op::getIntrinsicID() {
-  bool hasRelu = getRelu();
-  bool hasSatFinite = (getSat() == NVVM::SaturationMode::SATFINITE);
+NVVM::IDArgPair
+ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
+                                              LLVM::ModuleTranslation &mt,
+                                              llvm::IRBuilderBase &builder) {
+  static constexpr llvm::Intrinsic::ID rndRNIds[] = {
+      llvm::Intrinsic::nvvm_ff2bf16x2_rn,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rn_relu,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rn_satfinite,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rn_relu_satfinite,
+  };
+  static constexpr llvm::Intrinsic::ID rndRZIds[] = {
+      llvm::Intrinsic::nvvm_ff2bf16x2_rz,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rz_relu,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rz_relu_satfinite,
+  };
+  static constexpr llvm::Intrinsic::ID rndRSIds[] = {
+      llvm::Intrinsic::nvvm_ff2bf16x2_rs,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rs_satfinite,
+      llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu_satfinite,
+  };
 
-  if (hasRelu && hasSatFinite)
-    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu_satfinite;
-  if (hasRelu)
-    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_relu;
-  if (hasSatFinite)
-    return llvm::Intrinsic::nvvm_ff2bf16x2_rs_satfinite;
-  return llvm::Intrinsic::nvvm_ff2bf16x2_rs;
+  unsigned hasRelu = op.getRelu() ? 1 : 0;
+  unsigned hasSatFinite =
+      (op.getSat() == NVVM::SaturationMode::SATFINITE) ? 1 : 0;
+  // idx: bit-0 - relu
+  //      bit-1 - satfinite
+  unsigned idx = (hasSatFinite << 1) | hasRelu;
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(op.getSrcHi()));
+  args.push_back(mt.lookupValue(op.getSrcLo()));
+  if (op.getRandomBits())
+    args.push_back(mt.lookupValue(op.getRandomBits()));
+
+  switch (op.getRnd()) {
+  case FPRoundingMode::RN:
+    return {rndRNIds[idx], std::move(args)};
+  case FPRoundingMode::RZ:
+    return {rndRZIds[idx], std::move(args)};
+  case FPRoundingMode::RS:
+    return {rndRSIds[idx], std::move(args)};
+  default:
+    llvm_unreachable("Invalid rounding mode for ConvertF32x2ToBF16x2Op");
+  }
 }
 
 llvm::Intrinsic::ID ConvertF32x4ToF8x4Op::getIntrinsicID() {

@@ -384,6 +384,16 @@ multiclass MVE_TwoOpPatternDup<MVEVectorVTInfo VTI, SDPatternOperator Op, Intrin
                             (VTI.Vec MQPR:$inactive)))>;
 }
 
+def vadd : PatFrags<(ops node:$lhs, node:$rhs),
+                    [(fadd node:$lhs, node:$rhs),
+                     (int_arm_mve_vadd node:$lhs, node:$rhs)]>;
+def vsub : PatFrags<(ops node:$lhs, node:$rhs),
+                    [(fsub node:$lhs, node:$rhs),
+                     (int_arm_mve_vsub node:$lhs, node:$rhs)]>;
+def vmul : PatFrags<(ops node:$lhs, node:$rhs),
+                    [(fmul node:$lhs, node:$rhs),
+                     (int_arm_mve_vmul node:$lhs, node:$rhs)]>;
+
 // --------- Start of base classes for the instructions themselves
 
 class MVE_MI<dag oops, dag iops, InstrItinClass itin, string asm,
@@ -3605,7 +3615,7 @@ class MVE_VMUL_fp<string iname, string suffix, bits<2> size, list<dag> pattern=[
   let validForTailPredication = 1;
 }
 
-multiclass MVE_VMULT_fp_m<string iname, MVEVectorVTInfo VTI, SDNode Op,
+multiclass MVE_VMULT_fp_m<string iname, MVEVectorVTInfo VTI, SDPatternOperator Op,
                           Intrinsic PredInt, SDPatternOperator IdentityVec> {
   def "" : MVE_VMUL_fp<iname, VTI.Suffix, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
@@ -3616,7 +3626,7 @@ multiclass MVE_VMULT_fp_m<string iname, MVEVectorVTInfo VTI, SDNode Op,
 }
 
 multiclass MVE_VMUL_fp_m<MVEVectorVTInfo VTI, SDPatternOperator IdentityVec>
-  : MVE_VMULT_fp_m<"vmul", VTI, fmul, int_arm_mve_mul_predicated, IdentityVec>;
+  : MVE_VMULT_fp_m<"vmul", VTI, vmul, int_arm_mve_mul_predicated, IdentityVec>;
 
 def ARMimmOneF: PatLeaf<(bitconvert (v4f32 (ARMvmovFPImm (i32 112))))>; // 1.0 float
 def ARMimmOneH: PatLeaf<(bitconvert (v8i16 (ARMvmovImm (i32 2620))))>; // 1.0 half
@@ -3740,7 +3750,7 @@ defm MVE_VFMSf32 : MVE_VFMA_fp_multi<"vfms", 1, MVE_v4f32>;
 defm MVE_VFMSf16 : MVE_VFMA_fp_multi<"vfms", 1, MVE_v8f16>;
 
 multiclass MVE_VADDSUB_fp_m<string iname, bit bit_21, MVEVectorVTInfo VTI,
-                            SDNode Op, Intrinsic PredInt, SDPatternOperator IdentityVec> {
+                            SDPatternOperator Op, Intrinsic PredInt, SDPatternOperator IdentityVec> {
   def "" : MVE_VADDSUBFMA_fp<iname, VTI.Suffix, VTI.Size, 0, 1, bit_21> {
     let validForTailPredication = 1;
   }
@@ -3752,9 +3762,9 @@ multiclass MVE_VADDSUB_fp_m<string iname, bit bit_21, MVEVectorVTInfo VTI,
 }
 
 multiclass MVE_VADD_fp_m<MVEVectorVTInfo VTI, SDPatternOperator IdentityVec>
-  : MVE_VADDSUB_fp_m<"vadd", 0, VTI, fadd, int_arm_mve_add_predicated, IdentityVec>;
+  : MVE_VADDSUB_fp_m<"vadd", 0, VTI, vadd, int_arm_mve_add_predicated, IdentityVec>;
 multiclass MVE_VSUB_fp_m<MVEVectorVTInfo VTI, SDPatternOperator IdentityVec>
-  : MVE_VADDSUB_fp_m<"vsub", 1, VTI, fsub, int_arm_mve_sub_predicated, IdentityVec>;
+  : MVE_VADDSUB_fp_m<"vsub", 1, VTI, vsub, int_arm_mve_sub_predicated, IdentityVec>;
 
 def ARMimmMinusZeroF: PatLeaf<(bitconvert (v4i32 (ARMvmovImm (i32 1664))))>; // -0.0 float
 def ARMimmMinusZeroH: PatLeaf<(bitconvert (v8i16 (ARMvmovImm (i32 2688))))>; // -0.0 half
@@ -5391,21 +5401,22 @@ defm MVE_VHSUB_qr_u16 : MVE_VHSUB_qr_m<MVE_v8u16, subnuw, ARMvshruImm>;
 defm MVE_VHSUB_qr_u32 : MVE_VHSUB_qr_m<MVE_v4u32, subnuw, ARMvshruImm>;
 
 multiclass MVE_VADDSUB_qr_f<string iname, MVEVectorVTInfo VTI, bit subtract,
-                            SDNode Op, Intrinsic PredInt, SDPatternOperator IdentityVec> {
+                            SDPatternOperator Op, Intrinsic PredInt,
+                            SDPatternOperator IdentityVec> {
   def "" : MVE_VxADDSUB_qr<iname, VTI.Suffix, VTI.Size{0}, 0b11, subtract, VTI.Size>;
   defm : MVE_TwoOpPatternDup<VTI, Op, PredInt, (? ),
                               !cast<Instruction>(NAME), IdentityVec>;
 }
 
 let Predicates = [HasMVEFloat] in {
-  defm MVE_VADD_qr_f32 : MVE_VADDSUB_qr_f<"vadd", MVE_v4f32, 0b0, fadd,
+  defm MVE_VADD_qr_f32 : MVE_VADDSUB_qr_f<"vadd", MVE_v4f32, 0b0, vadd,
                                           int_arm_mve_add_predicated, ARMimmMinusZeroF>;
-  defm MVE_VADD_qr_f16 : MVE_VADDSUB_qr_f<"vadd", MVE_v8f16, 0b0, fadd,
+  defm MVE_VADD_qr_f16 : MVE_VADDSUB_qr_f<"vadd", MVE_v8f16, 0b0, vadd,
                                           int_arm_mve_add_predicated, ARMimmMinusZeroH>;
 
-  defm MVE_VSUB_qr_f32 : MVE_VADDSUB_qr_f<"vsub", MVE_v4f32, 0b1, fsub,
+  defm MVE_VSUB_qr_f32 : MVE_VADDSUB_qr_f<"vsub", MVE_v4f32, 0b1, vsub,
                                           int_arm_mve_sub_predicated, ARMimmAllZerosV>;
-  defm MVE_VSUB_qr_f16 : MVE_VADDSUB_qr_f<"vsub", MVE_v8f16, 0b1, fsub,
+  defm MVE_VSUB_qr_f16 : MVE_VADDSUB_qr_f<"vsub", MVE_v8f16, 0b1, vsub,
                                           int_arm_mve_sub_predicated, ARMimmAllZerosV>;
 }
 
@@ -5588,7 +5599,7 @@ defm MVE_VQRDMULH_qr_s32  : MVE_VQRDMULH_qr_m<MVE_v4s32>;
 multiclass MVE_VxxMUL_qr_f_m<MVEVectorVTInfo VTI, SDPatternOperator IdentityVec> {
   let validForTailPredication = 1 in
   def "" : MVE_VxxMUL_qr<"vmul", VTI.Suffix, VTI.Size{0}, 0b11, VTI.Size>;
-  defm : MVE_TwoOpPatternDup<VTI, fmul, int_arm_mve_mul_predicated, (? ),
+  defm : MVE_TwoOpPatternDup<VTI, vmul, int_arm_mve_mul_predicated, (? ),
                              !cast<Instruction>(NAME), IdentityVec>;
 }
 

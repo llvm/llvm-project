@@ -24,6 +24,13 @@ def SImm8UnsignedAsmOperand : SImmAsmOperand<8, "Unsigned"> {
   let RenderMethod = "addSImm8UnsignedOperands";
 }
 
+// (<2 x i16>, <2 x i16>) PPACK_DH (<4 x i8>, <4 x i8>, <4 x i8>, <4 x i8>)
+def SDT_RISCVPPackDH
+    : SDTypeProfile<2, 4, [SDTCisVT<0, v2i16>, SDTCisSameAs<0, 1>,
+                           SDTCisVT<2, v4i8>, SDTCisSameAs<0, 3>,
+                           SDTCisSameAs<0, 4>, SDTCisSameAs<0, 5>]>;
+def riscv_ppack_dh : RVSDNode<"PPACK_DH", SDT_RISCVPPackDH>;
+
 // A 8-bit signed immediate allowing range [-128, 255]
 // but represented as [-128, 127].
 def simm8_unsigned : RISCVOp, ImmLeaf<XLenVT, "return isInt<8>(Imm);"> {
@@ -1513,6 +1520,17 @@ let Predicates = [HasStdExtP] in {
   def: Pat<(XLenVecI16VT (abds GPR:$rs1, GPR:$rs2)), (PDIF_H GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI16VT (abdu GPR:$rs1, GPR:$rs2)), (PDIFU_H GPR:$rs1, GPR:$rs2)>;
   
+  // 8-bit logical shift left patterns
+  def: Pat<(XLenVecI8VT (shl GPR:$rs1, (XLenVecI8VT (splat_vector uimm3:$shamt)))),
+           (PSLLI_B GPR:$rs1, uimm3:$shamt)>;
+
+  // 16-bit logical shift left patterns
+  def: Pat<(XLenVecI16VT (shl GPR:$rs1, (XLenVecI16VT (splat_vector uimm4:$shamt)))),
+           (PSLLI_H GPR:$rs1, uimm4:$shamt)>;
+
+  // 16-bit signed saturation shift left patterns
+  def: Pat<(XLenVecI16VT (sshlsat GPR:$rs1, (XLenVecI16VT (splat_vector uimm4:$shamt)))),
+           (PSSLAI_H GPR:$rs1, uimm4:$shamt)>;
 
   // 8-bit PLI SD node pattern
   def: Pat<(XLenVecI8VT (splat_vector simm8_unsigned:$imm8)), (PLI_B simm8_unsigned:$imm8)>;
@@ -1530,6 +1548,10 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : StPat<store, SW, GPR, v2i16>;
   def : LdPat<load, LW, v4i8>;
   def : LdPat<load, LW, v2i16>;
+
+  // Build vector patterns
+  def : Pat<(v2i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
+            (PACK GPR:$a, GPR:$b)>;
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
@@ -1559,6 +1581,14 @@ let Predicates = [HasStdExtP, IsRV64] in {
   // splat pattern
   def: Pat<(v2i32 (splat_vector (XLenVT GPR:$rs2))), (PADD_WS (XLenVT X0), GPR:$rs2)>;
 
+  // 32-bit logical shift left patterns
+  def: Pat<(v2i32 (shl GPR:$rs1, (v2i32 (splat_vector uimm5:$shamt)))),
+           (PSLLI_W GPR:$rs1, uimm5:$shamt)>;
+
+  // 32-bit signed saturation shift left patterns
+  def: Pat<(v2i32 (sshlsat GPR:$rs1, (v2i32 (splat_vector uimm5:$shamt)))),
+           (PSSLAI_W GPR:$rs1, uimm5:$shamt)>;
+
   // Load/Store patterns
   def : StPat<store, SD, GPR, v8i8>;
   def : StPat<store, SD, GPR, v4i16>;
@@ -1566,4 +1596,29 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def : LdPat<load, LD, v8i8>;
   def : LdPat<load, LD, v4i16>;
   def : LdPat<load, LD, v2i32>;
+
+  // Build vector patterns
+  def : Pat<(v8i8 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
+                                (XLenVT GPR:$c), (XLenVT GPR:$d),
+                                (XLenVT undef), (XLenVT undef),
+                                (XLenVT undef), (XLenVT undef))),
+            (PPACK_W (PPACK_H GPR:$a, GPR:$b), (PPACK_H GPR:$c, GPR:$d))>;
+
+  def : Pat<(v8i8 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
+                                (XLenVT GPR:$c), (XLenVT GPR:$d),
+                                (XLenVT GPR:$e), (XLenVT GPR:$f),
+                                (XLenVT GPR:$g), (XLenVT GPR:$h))),
+            (PACK(PPACK_W (PPACK_H GPR:$a, GPR:$b), (PPACK_H GPR:$c, GPR:$d)),
+                 (PPACK_W (PPACK_H GPR:$e, GPR:$f), (PPACK_H GPR:$g, GPR:$h)))>;
+
+  def : Pat<(v4i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
+                                 (XLenVT undef), (XLenVT undef))),
+            (PPACK_W GPR:$a, GPR:$b)>;
+
+  def : Pat<(v4i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
+                                 (XLenVT GPR:$c), (XLenVT GPR:$d))),
+            (PACK (PPACK_W GPR:$a, GPR:$b), (PPACK_W GPR:$c, GPR:$d))>;
+
+  def : Pat<(v2i32 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
+            (PACK GPR:$a, GPR:$b)>;
 } // Predicates = [HasStdExtP, IsRV64]

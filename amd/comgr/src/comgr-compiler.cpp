@@ -1129,7 +1129,7 @@ amd_comgr_status_t AMDGPUCompiler::addDeviceLibraries() {
   SmallString<256> ClangBinaryPath(env::getLLVMPath());
   sys::path::append(ClangBinaryPath, "bin", "clang");
 
-  std::string ClangResourceDir = Driver::GetResourcesPath(ClangBinaryPath);
+  std::string ClangResourceDir = GetResourcesPath(ClangBinaryPath);
 
   SmallString<256> DeviceLibPath(ClangResourceDir);
   sys::path::append(DeviceLibPath, "lib");

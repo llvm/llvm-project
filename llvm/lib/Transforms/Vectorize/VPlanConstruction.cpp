@@ -554,6 +554,15 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
   Plan.getEntry()->swapSuccessors();
 
   createExtractsForLiveOuts(Plan, MiddleVPBB);
+
+  VPBuilder ScalarPHBuilder(ScalarPH);
+  for (const auto &[PhiR, ScalarPhiR] : zip_equal(
+           drop_begin(HeaderVPBB->phis()), Plan.getScalarHeader()->phis())) {
+    auto *VectorPhiR = cast<VPPhi>(&PhiR);
+    auto *ResumePhiR = ScalarPHBuilder.createScalarPhi(
+        {VectorPhiR, VectorPhiR->getOperand(0)}, VectorPhiR->getDebugLoc());
+    cast<VPIRPhi>(&ScalarPhiR)->addOperand(ResumePhiR);
+  }
 }
 
 std::unique_ptr<VPlan>
@@ -836,22 +845,12 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     if (!MinMaxR)
       return nullptr;
 
-    auto *RepR = dyn_cast<VPReplicateRecipe>(MinMaxR);
-    if (!isa<VPWidenIntrinsicRecipe>(MinMaxR) &&
-        !(RepR && isa<IntrinsicInst>(RepR->getUnderlyingInstr())))
+    // Check that MinMaxR is a VPWidenIntrinsicRecipe or VPReplicateRecipe
+    // with an intrinsic that matches the reduction kind.
+    Intrinsic::ID ExpectedIntrinsicID =
+        getMinMaxReductionIntrinsicOp(RedPhiR->getRecurrenceKind());
+    if (!match(MinMaxR, m_Intrinsic(ExpectedIntrinsicID)))
       return nullptr;
-
-#ifndef NDEBUG
-    Intrinsic::ID RdxIntrinsicId =
-        RedPhiR->getRecurrenceKind() == RecurKind::FMaxNum ? Intrinsic::maxnum
-                                                           : Intrinsic::minnum;
-    assert(((isa<VPWidenIntrinsicRecipe>(MinMaxR) &&
-             cast<VPWidenIntrinsicRecipe>(MinMaxR)->getVectorIntrinsicID() ==
-                 RdxIntrinsicId) ||
-            (RepR && cast<IntrinsicInst>(RepR->getUnderlyingInstr())
-                             ->getIntrinsicID() == RdxIntrinsicId)) &&
-           "Intrinsic did not match recurrence kind");
-#endif
 
     if (MinMaxR->getOperand(0) == RedPhiR)
       return MinMaxR->getOperand(1);

@@ -374,6 +374,8 @@ defvar Operations = [
 
   WaveReduceOp<"fmin", "F32", f32, SGPR_32, VSrc_b32>,
   WaveReduceOp<"fmax", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fadd", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fsub", "F32", f32, SGPR_32, VSrc_b32>,
 ];
 
 foreach Op = Operations in {
@@ -4825,4 +4827,15 @@ def V_ILLEGAL : Enc32, InstSI<(outs), (ins), "v_illegal"> {
   let Uses = [EXEC];
   let hasSideEffects = 1;
   let SubtargetPredicate = isGFX10Plus;
+}
+
+defvar VGPR32_Ptr_Opcodes = [LOAD_STACK_GUARD];
+defvar VGPR64_Ptr_Opcodes = !listremove(PseudosWithPtrOps, VGPR32_Ptr_Opcodes);
+
+foreach inst = VGPR32_Ptr_Opcodes in {
+  def : RemapPointerOperands<inst, VGPR_32>;
+}
+
+foreach inst = VGPR64_Ptr_Opcodes in {
+  def : RemapPointerOperands<inst, VReg_64_AlignTarget>;
 }
