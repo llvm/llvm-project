@@ -3274,6 +3274,11 @@ static bool canEmitSpuriousReferenceToVariable(CodeGenFunction &CGF,
 }
 
 LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
+  if (const auto *VD = dyn_cast<VarDecl>(E->getDecl())) {
+    auto It = VectorEltRefBindings.find(VD);
+    if (It != VectorEltRefBindings.end())
+      return It->second;
+  }
   const NamedDecl *ND = E->getDecl();
   QualType T = E->getType();
 
