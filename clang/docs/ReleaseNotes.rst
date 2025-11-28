@@ -448,6 +448,8 @@ Improvements to Clang's diagnostics
 - A new warning ``-Wenum-compare-typo`` has been added to detect potential erroneous
   comparison operators when mixed with bitwise operators in enum value initializers.
   This can be locally disabled by explicitly casting the initializer value.
+- Clang now emits a diagnostic when an invalid identifier string is passed to
+  the `gnu::abi_tag` attribute (#GH168901).
 
 Improvements to Clang's time-trace
 ----------------------------------

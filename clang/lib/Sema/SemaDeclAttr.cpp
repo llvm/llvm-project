@@ -6172,12 +6172,29 @@ static void handleMSConstexprAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) MSConstexprAttr(S.Context, AL));
 }
 
+static bool checkIsRawIdentifier(const Sema &S, StringRef StrRef) {
+  std::string Str = StrRef.str();
+  auto FileLoc = S.getSourceManager().getLocForStartOfFile(
+      S.getSourceManager().getMainFileID());
+  Lexer Lex(FileLoc, S.getLangOpts(), Str.c_str(), Str.c_str(),
+            Str.c_str() + Str.size());
+  Token Tok;
+  bool LexedToEnd = Lex.LexFromRawLexer(Tok);
+  return LexedToEnd && Tok.is(tok::raw_identifier);
+}
+
 static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   SmallVector<StringRef, 4> Tags;
   for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
     StringRef Tag;
     if (!S.checkStringLiteralArgumentAttr(AL, I, Tag))
       return;
+    if (!checkIsRawIdentifier(S, Tag)) {
+      S.Diag(AL.getArgAsExpr(I)->getBeginLoc(),
+             diag::err_attribute_string_literal_invalid_ident)
+          << AL;
+      return;
+    }
     Tags.push_back(Tag);
   }
 
