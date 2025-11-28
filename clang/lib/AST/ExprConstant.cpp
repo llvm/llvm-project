@@ -16978,7 +16978,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     bool IsUnsigned =
         (BuiltinOp >= clang::X86::BI__builtin_ia32_ucmpb128_mask &&
-         BuiltinOp <= clang::X86::BI__builtin_ia32_ucmpq512_mask);
+         BuiltinOp <= clang::X86::BI__builtin_ia32_ucmpw512_mask);
 
     APValue LHS, RHS;
     APSInt Mask, Opcode;
