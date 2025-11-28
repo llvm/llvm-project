@@ -121,7 +121,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     // Arg0 must be <16 x unsigned char>
     if (!Context.hasSameType(Arg0Type, VecType))
       return SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
-                         diag::err_ppc_bcd_invalid_vector_type)
+                          diag::err_ppc_bcd_invalid_vector_type)
              << 0 << VecType << Arg0Type;
 
     // Arg1 must be integer type
