@@ -40,6 +40,12 @@ by the :program:`llvm-ifs`:
     - { Name: sym2, Type: Func, Weak: false }
     - { Name: sym3, Type: TLS }
     - { Name: sym4, Type: Unknown, Warning: foo }
+    - { Name: sym5, Version: VER_1, Type: Func }
+  VersionDefinitions: /* Optional */
+    - { Name: libtest.so }
+    - { Name: VER_1 }
+  VersionRequirements: /* Optional */
+    - { File: libc.so.6, Names: [ GLIBC_2.14, GLIBC_2.4, GLIBC_2.2.5, GLIBC_2.3.4 ] }
   ...
 
 * ``IFSVersion``: Version of the IFS file for reader compatibility.
@@ -67,6 +73,10 @@ by the :program:`llvm-ifs`:
 
   + ``Warning`` (optional): Warning text to output when this symbol is linked against.
 
+* ``VersionDefinitions`` (optional): A collection of symbol versions defined in this shared object file.
+
+* ``VersionRequirements`` (optional): A collection of symbol versions defined in external shared objects that this library depends on.
+
 This YAML based text format contains everything that is needed to generate a
 linkable ELF shared object as well as an Apple TAPI format file. The ordering
 of symbols is sorted, so these files can be easily compared using diff tools.
@@ -81,11 +91,19 @@ A minimum ELF file that can be used by linker should have following sections pro
 
 * ELF header.
 
+* Program headers. (optional)
+
 * Section headers.
 
 * Dynamic symbol table (``.dynsym`` section).
 
 * Dynamic string table (``.dynstr`` section).
+
+* Version symbol table (``.gnu.version`` section). (optional)
+
+* Version definition table (``.gnu.version_d`` section). (optional)
+
+* Version requirement table (``.gnu.version_r`` section). (optional)
 
 * Dynamic table (``.dynamic`` section).
 
@@ -98,6 +116,12 @@ A minimum ELF file that can be used by linker should have following sections pro
   + ``DT_NEEDED`` entries. (optional)
 
   + ``DT_SONAME`` entry. (optional)
+
+  + ``DT_VERSYM`` entry. (optional)
+
+  + ``DT_VERDEF`` entry. (optional)
+
+  + ``DT_VERNEED`` entry. (optional)
 
 * Section header string table (``.shstrtab`` section)
 
@@ -163,7 +187,7 @@ OPTIONS
  triple in the output IFS file. If the value matches the target information
  from the object file, this value will be used in the 'Target:' filed in the
  generated IFS. If it conflicts with the input object file, an error will be
- reported and the program will stop. 
+ reported and the program will stop.
 
 .. option:: --hint-ifs-target
 

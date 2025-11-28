@@ -14,9 +14,12 @@
 # CHECK-NEXT:   - { Name: _ITM_deregisterTMCloneTable, Type: NoType, Undefined: true, Weak: true }
 # CHECK-NEXT:   - { Name: _ITM_registerTMCloneTable, Type: NoType, Undefined: true, Weak: true }
 # CHECK-NEXT:   - { Name: _Z11rotateArrayPii, Type: Func }
-# CHECK-NEXT:   - { Name: __cxa_finalize, Type: Func, Undefined: true, Weak: true }
+# CHECK-NEXT:   - { Name: __cxa_finalize, Version: GLIBC_2.2.5, Type: Func, Undefined: true, Weak: true }
 # CHECK-NEXT:   - { Name: __gmon_start__, Type: NoType, Undefined: true, Weak: true }
-# CHECK-NEXT:   - { Name: __tls_get_addr, Type: Func, Undefined: true }
+# CHECK-NEXT:   - { Name: __tls_get_addr, Version: GLIBC_2.3, Type: Func, Undefined: true }
 # CHECK-NEXT:   - { Name: _fini, Type: Func }
 # CHECK-NEXT:   - { Name: _init, Type: Func }
+# CHECK-NEXT: VersionRequirements:
+# CHECK-NEXT:   - { File: libc.so.6, Names: [ GLIBC_2.2.5 ] }
+# CHECK-NEXT:   - { File: ld-linux-x86-64.so.2, Names: [ GLIBC_2.3 ] }
 # CHECK-NEXT: ...
