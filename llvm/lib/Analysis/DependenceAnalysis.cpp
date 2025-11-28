@@ -1372,29 +1372,23 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
     // Check if coefficient could be zero. If so, 0/0 is undefined and we
     // cannot conclude that only same-iteration dependencies exist.
     // When coeff=0, all iterations access the same location.
-    if (isa<SCEVUnknown>(Coeff)) {
-      // Use both isKnownNonZero and range analysis to prove coefficient != 0.
-      bool CoeffKnownNonZero = SE->isKnownNonZero(Coeff) ||
-                               isKnownPredicate(CmpInst::ICMP_NE, Coeff,
-                                                SE->getZero(Coeff->getType()));
-      if (!CoeffKnownNonZero) {
-        // Cannot prove at compile time, would need runtime assumption.
-        if (UnderRuntimeAssumptions) {
-          const SCEVPredicate *Pred = SE->getComparePredicate(
-              ICmpInst::ICMP_NE, Coeff, SE->getZero(Coeff->getType()));
-          Result.Assumptions = Result.Assumptions.getUnionWith(Pred, *SE);
-          LLVM_DEBUG(dbgs() << "\t    Added runtime assumption: " << *Coeff
-                            << " != 0\n");
-        } else {
-          // Cannot add runtime assumptions, this test cannot handle this case.
-          // Let more complex tests try.
-          LLVM_DEBUG(dbgs() << "\t    Would need runtime assumption " << *Coeff
-                            << " != 0, but not allowed. Failing this test.\n");
-          return false;
-        }
+    if (isa<SCEVConstant>(Coeff) || SE->isKnownNonZero(Coeff)) {
+      LLVM_DEBUG(
+          dbgs() << "\t    Coefficient proven non-zero by SCEV analysis\n");
+    } else {
+      // Cannot prove at compile time, would need runtime assumption.
+      if (UnderRuntimeAssumptions) {
+        const SCEVPredicate *Pred = SE->getComparePredicate(
+            ICmpInst::ICMP_NE, Coeff, SE->getZero(Coeff->getType()));
+        Result.Assumptions = Result.Assumptions.getUnionWith(Pred, *SE);
+        LLVM_DEBUG(dbgs() << "\t    Added runtime assumption: " << *Coeff
+                          << " != 0\n");
       } else {
-        LLVM_DEBUG(
-            dbgs() << "\t    Coefficient proven non-zero by SCEV analysis\n");
+        // Cannot add runtime assumptions, this test cannot handle this case.
+        // Let more complex tests try.
+        LLVM_DEBUG(dbgs() << "\t    Would need runtime assumption " << *Coeff
+                          << " != 0, but not allowed. Failing this test.\n");
+        return false;
       }
     }
     // Since 0/X == 0 (where X is known non-zero or assumed non-zero).
