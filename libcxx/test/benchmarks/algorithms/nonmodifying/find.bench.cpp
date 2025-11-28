@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <deque>
 #include <list>
+#include <ranges>
 #include <string>
 #include <vector>
 
@@ -83,6 +84,20 @@ int main(int argc, char** argv) {
     bm.template operator()<std::list<int>>("rng::find_if_not(list<int>) (" + comment + ")", ranges_find_if_not);
   };
 
+  auto register_nested_container_benchmarks = [&](auto bm, std::string comment) {
+    // ranges_find
+    bm.template operator()<std::vector<std::vector<char>>>(
+        "rng::find(join_view(vector<vector<char>>)) (" + comment + ")", ranges_find);
+    bm.template operator()<std::vector<std::vector<int>>>(
+        "rng::find(join_view(vector<vector<int>>)) (" + comment + ")", ranges_find);
+    bm.template operator()<std::list<std::vector<int>>>(
+        "rng::find(join_view(list<vector<int>>)) (" + comment + ")", ranges_find);
+    bm.template operator()<std::vector<std::list<int>>>(
+        "rng::find(join_view(vector<list<int>>)) (" + comment + ")", ranges_find);
+    bm.template operator()<std::deque<std::deque<int>>>(
+        "rng::find(join_view(deque<deque<int>>)) (" + comment + ")", ranges_find);
+  };
+
   // Benchmark {std,ranges}::{find,find_if,find_if_not}(normal container) where we
   // bail out after 25% of elements
   {
@@ -140,6 +155,44 @@ int main(int argc, char** argv) {
           ->Arg(1 << 15);
     };
     register_benchmarks(bm, "process all");
+  }
+
+  // Benchmark {std,ranges}::{find,find_if,find_if_not}(join(normal container)) where we process the whole sequence
+  {
+    auto bm = []<class Container>(std::string name, auto find) {
+      benchmark::RegisterBenchmark(
+          name,
+          [find](auto& st) {
+            std::size_t const size     = st.range(0);
+            std::size_t const seg_size = 256;
+            std::size_t const segments = (size + seg_size - 1) / seg_size;
+            using C1                   = typename Container::value_type;
+            using ValueType            = typename C1::value_type;
+            ValueType x                = Generate<ValueType>::random();
+            ValueType y                = random_different_from({x});
+            Container c(segments);
+            auto n = size;
+            for (auto it = c.begin(); it != c.end(); it++) {
+              it->resize(std::min(seg_size, n), x);
+              n -= it->size();
+            }
+
+            auto view = c | std::views::join;
+
+            for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(c);
+              benchmark::DoNotOptimize(y);
+              auto result = find(view.begin(), view.end(), y);
+              benchmark::DoNotOptimize(result);
+            }
+          })
+          ->Arg(8)
+          ->Arg(50) // non power-of-two
+          ->Arg(1024)
+          ->Arg(8192)
+          ->Arg(1 << 15);
+    };
+    register_nested_container_benchmarks(bm, "process all");
   }
 
   // Benchmark {std,ranges}::{find,find_if,find_if_not}(vector<bool>) where we process the whole sequence
