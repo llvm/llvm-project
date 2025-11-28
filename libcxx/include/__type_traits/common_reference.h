@@ -44,7 +44,7 @@ template <class _Tp, class _Up, template <class> class _Tx, template <class> cla
 using __basic_common_reference_t = basic_common_reference<_Tp, _Up, _Tx, _Ux>::type;
 
 template <class... _Args>
-struct common_reference
+struct _LIBCPP_NO_SPECIALIZATIONS common_reference
     : __builtin_common_reference<__basic_common_reference_t, common_type_t, type_identity, __empty, _Args...> {};
 
 #  else
@@ -131,9 +131,9 @@ struct __common_ref {};
 // Note C: For the common_reference trait applied to a parameter pack [...]
 
 _LIBCPP_DIAGNOSTIC_PUSH
-#  if __has_warning("-Winvalid-specialization")
+#    if __has_warning("-Winvalid-specialization")
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winvalid-specialization")
-#  endif
+#    endif
 // bullet 1 - sizeof...(T) == 0
 template <>
 struct common_reference<> {};

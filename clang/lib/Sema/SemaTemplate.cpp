@@ -3212,7 +3212,8 @@ void Sema::NoteAllFoundTemplates(TemplateName Name) {
   }
 }
 
-static QualType InstantiateTemplate(Sema &S, ElaboratedTypeKeyword Keyword, TemplateName Template,
+static QualType InstantiateTemplate(Sema &S, ElaboratedTypeKeyword Keyword,
+                                    TemplateName Template,
                                     ArrayRef<TemplateArgument> Args,
                                     SourceLocation Loc) {
   TemplateArgumentListInfo ArgList;
