@@ -2101,6 +2101,8 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
   setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Custom);
+  setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
+  setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
@@ -31080,10 +31082,8 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
                                                 SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT OpVT = Op.getValueType();
-  assert(OpVT.isScalableVector() &&
-         "Expected scalable vector in LowerVECTOR_DEINTERLEAVE.");
 
-  if (Op->getNumOperands() == 3) {
+  if (OpVT.isScalableVector() && Op->getNumOperands() == 3) {
     // aarch64_sve_ld3 only supports packed datatypes.
     EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
     Align Alignment = DAG.getReducedAlign(PackedVT, /*UseABI=*/false);
@@ -31122,7 +31122,7 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
 
   // Are multi-register uzp instructions available?
   if (Subtarget->hasSME2() && Subtarget->isStreaming() &&
-      OpVT.getVectorElementType() != MVT::i1) {
+      OpVT.isScalableVector() && OpVT.getVectorElementType() != MVT::i1) {
     Intrinsic::ID IntID;
     switch (Op->getNumOperands()) {
     default:
@@ -31147,6 +31147,9 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
   if (Op->getNumOperands() != 2)
     return SDValue();
 
+  if (OpVT == MVT::v1i64 || OpVT == MVT::v1f64)
+    return DAG.getMergeValues({Op.getOperand(0), Op.getOperand(1)}, DL);
+
   SDValue Even = DAG.getNode(AArch64ISD::UZP1, DL, OpVT, Op.getOperand(0),
                              Op.getOperand(1));
   SDValue Odd = DAG.getNode(AArch64ISD::UZP2, DL, OpVT, Op.getOperand(0),
@@ -31158,10 +31161,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
                                                       SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT OpVT = Op.getValueType();
-  assert(OpVT.isScalableVector() &&
-         "Expected scalable vector in LowerVECTOR_INTERLEAVE.");
 
-  if (Op->getNumOperands() == 3) {
+  if (OpVT.isScalableVector() && Op->getNumOperands() == 3) {
     // aarch64_sve_st3 only supports packed datatypes.
     EVT PackedVT = getPackedSVEVectorVT(OpVT.getVectorElementCount());
     SmallVector<SDValue, 3> InVecs;
@@ -31199,7 +31200,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
 
   // Are multi-register zip instructions available?
   if (Subtarget->hasSME2() && Subtarget->isStreaming() &&
-      OpVT.getVectorElementType() != MVT::i1) {
+      OpVT.isScalableVector() && OpVT.getVectorElementType() != MVT::i1) {
     Intrinsic::ID IntID;
     switch (Op->getNumOperands()) {
     default:
@@ -31223,6 +31224,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
 
   if (Op->getNumOperands() != 2)
     return SDValue();
+
+  if (OpVT == MVT::v1i64 || OpVT == MVT::v1f64)
+    return DAG.getMergeValues({Op.getOperand(0), Op.getOperand(1)}, DL);
 
   SDValue Lo = DAG.getNode(AArch64ISD::ZIP1, DL, OpVT, Op.getOperand(0),
                            Op.getOperand(1));
