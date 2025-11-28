@@ -9,7 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CHAR_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CHAR_CONVERTER_H
 
+#include "libc/hdr/types/wchar_t.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/wchar/mbstate.h"
+#include "src/__support/wchar/wcrtomb.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
@@ -20,8 +23,12 @@ namespace printf_core {
 template <WriteMode write_mode>
 LIBC_INLINE int convert_char(Writer<write_mode> *writer,
                              const FormatSection &to_conv) {
+  wchar_t wc;
+  char mb_str[MB_LEN_MAX];
+  static internal::mbstate internal_mbstate;
+  int ret = 0;
+  
   char c = static_cast<char>(to_conv.conv_val_raw);
-
   constexpr int STRING_LEN = 1;
 
   size_t padding_spaces =
@@ -33,7 +40,20 @@ LIBC_INLINE int convert_char(Writer<write_mode> *writer,
     RET_IF_RESULT_NEGATIVE(writer->write(' ', padding_spaces));
   }
 
-  RET_IF_RESULT_NEGATIVE(writer->write(c));
+  if (to_conv.length_modifier == LengthModifier::l) {
+    wc = static_cast<wchar_t>(c);
+    ret = internal::wcrtomb(mb_str, wc, &internal_mbstate);
+    if (ret <= 0) {
+      return -1;
+    }
+
+    for (int i = 0; i < ret; i++) {
+      RET_IF_RESULT_NEGATIVE(writer->write(mb_str[i]));
+    }
+
+  } else {
+    RET_IF_RESULT_NEGATIVE(writer->write(c));
+  }
 
   // If the padding is on the right side, write the spaces last.
   if (padding_spaces > 0 &&

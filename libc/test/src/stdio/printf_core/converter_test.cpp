@@ -9,7 +9,7 @@
 #include "src/stdio/printf_core/converter.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
-
+#include "libc/hdr/types/wchar_t.h"
 #include "test/UnitTest/Test.h"
 
 class LlvmLibcPrintfConverterTest : public LIBC_NAMESPACE::testing::Test {
@@ -253,5 +253,58 @@ TEST_F(LlvmLibcPrintfConverterTest, OctConversion) {
 
   wb.buff[wb.buff_cur] = '\0';
   ASSERT_STREQ(str, "1234");
+  ASSERT_EQ(writer.get_chars_written(), size_t{4});
+}
+
+TEST_F(LlvmLibcPrintfConverterTest, WideCharConversion) {
+
+  LIBC_NAMESPACE::printf_core::FormatSection section;
+  section.has_conv = true;
+  section.raw_string = "%c";
+  section.conv_name = 'c';
+  section.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::l;
+  section.conv_val_raw = static_cast<wchar_t>(L'S');
+
+  LIBC_NAMESPACE::printf_core::convert(&writer, section);
+
+  wb.buff[wb.buff_cur] = '\0';
+
+  ASSERT_STREQ(str, "S");
+  ASSERT_EQ(writer.get_chars_written(), size_t{1});
+}
+
+TEST_F(LlvmLibcPrintfConverterTest, WideCharConversionLeftJustified) {
+  LIBC_NAMESPACE::printf_core::FormatSection left_justified_conv;
+  left_justified_conv.has_conv = true;
+  left_justified_conv.raw_string = "%-4c";
+  left_justified_conv.conv_name = 'c';
+  left_justified_conv.length_modifier =
+      LIBC_NAMESPACE::printf_core::LengthModifier::l;
+  left_justified_conv.flags =
+      LIBC_NAMESPACE::printf_core::FormatFlags::LEFT_JUSTIFIED;
+  left_justified_conv.min_width = 4;
+  left_justified_conv.conv_val_raw = static_cast<wchar_t>(L'S');
+
+  LIBC_NAMESPACE::printf_core::convert(&writer, left_justified_conv);
+  wb.buff[wb.buff_cur] = '\0';
+
+  ASSERT_STREQ(str, "S   ");
+  ASSERT_EQ(writer.get_chars_written(), size_t{4});
+}
+
+TEST_F(LlvmLibcPrintfConverterTest, WideCharConversionRightJustified) {
+  LIBC_NAMESPACE::printf_core::FormatSection right_justified_conv;
+  right_justified_conv.has_conv = true;
+  right_justified_conv.raw_string = "%4c";
+  right_justified_conv.conv_name = 'c';
+  right_justified_conv.length_modifier =
+      LIBC_NAMESPACE::printf_core::LengthModifier::l;
+  right_justified_conv.min_width = 4;
+  right_justified_conv.conv_val_raw = static_cast<wchar_t>(L'S');
+
+  LIBC_NAMESPACE::printf_core::convert(&writer, right_justified_conv);
+  wb.buff[wb.buff_cur] = '\0';
+
+  ASSERT_STREQ(str, "   S");
   ASSERT_EQ(writer.get_chars_written(), size_t{4});
 }
