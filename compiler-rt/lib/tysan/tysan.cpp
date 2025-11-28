@@ -74,6 +74,8 @@ static ParseIndirectionPrefixResult parseIndirectionPrefix(const char *Name) {
   return {Indirection, Name + CharIndex};
 }
 
+/// Given a TBAA type descriptor name, this function demangles it, also
+/// rewriting the `pN T` pointer notation with more conventional "T*" notation.
 static size_t writeDemangledTypeName(char *Buffer, size_t BufferSize,
                                      const char *Name) {
   if (Name[0] == '\0')
