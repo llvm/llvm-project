@@ -1437,6 +1437,8 @@ llvm::json::Value toJSON(const TypeHierarchyItem &I) {
 
   if (I.detail)
     Result["detail"] = I.detail;
+  if(!I.tags.empty())
+    Result["tags"] = I.tags;
   return std::move(Result);
 }
 

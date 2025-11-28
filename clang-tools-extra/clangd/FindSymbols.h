@@ -69,6 +69,9 @@ SymbolTags computeSymbolTags(const NamedDecl &ND);
 /// \p ND The declaration to get tags for.
 std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND);
 
+/// Returns the symbol tags for an index `Symbol`.
+std::vector<SymbolTag> getSymbolTags(const Symbol &S);
+
 } // namespace clangd
 } // namespace clang
 

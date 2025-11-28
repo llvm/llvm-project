@@ -1864,6 +1864,7 @@ static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   HI.name = std::string(S.Name);
   HI.detail = (S.Scope + S.Name).str();
   HI.kind = indexSymbolKindToSymbolKind(S.SymInfo.Kind);
+  HI.tags = getSymbolTags(S);
   HI.selectionRange = Loc->range;
   // FIXME: Populate 'range' correctly
   // (https://github.com/clangd/clangd/issues/59).

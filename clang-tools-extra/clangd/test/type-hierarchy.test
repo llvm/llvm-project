@@ -44,6 +44,9 @@
 # CHECK-NEXT:           "line": 2
 # CHECK-NEXT:         }
 # CHECK-NEXT:       },
+# CHECK-NEXT:       "tags": [
+# CHECK-NEXT:         19
+# CHECK-NEXT:       ],
 # CHECK-NEXT:       "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:     }
 # CHECK-NEXT:   ]
@@ -85,6 +88,9 @@
 # CHECK-NEXT:           "line": 1
 # CHECK-NEXT:         }
 # CHECK-NEXT:       },
+# CHECK-NEXT:       "tags": [
+# CHECK-NEXT:         19
+# CHECK-NEXT:       ],
 # CHECK-NEXT:       "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:     }
 # CHECK-NEXT:  ]
@@ -136,6 +142,9 @@
 # CHECK-NEXT:           "line": 3
 # CHECK-NEXT:         }
 # CHECK-NEXT:       },
+# CHECK-NEXT:       "tags": [
+# CHECK-NEXT:         19
+# CHECK-NEXT:       ],
 # CHECK-NEXT:       "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:     }
 # CHECK-NEXT:  ]
