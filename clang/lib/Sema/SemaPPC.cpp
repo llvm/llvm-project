@@ -116,18 +116,18 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     QualType Arg1Type = TheCall->getArg(1)->getType();
 
     QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
-                                              VectorKind::AltiVecVector);
+                                            VectorKind::AltiVecVector);
 
     // Arg0 must be <16 x unsigned char>
     if (!Context.hasSameType(Arg0Type, VecType))
       return SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
-                           diag::err_ppc_bcd_invalid_vector_type)
+                        diag::err_ppc_bcd_invalid_vector_type)
              << 0 << VecType << Arg0Type;
 
     // Arg1 must be integer type
     if (!Arg1Type->isIntegerType())
       return SemaRef.Diag(TheCall->getArg(1)->getBeginLoc(),
-                           diag::err_ppc_bcd_invalid_integer_type)
+                          diag::err_ppc_bcd_invalid_integer_type)
              << 1 << "integer type" << Arg1Type;
 
     // Restrict Arg1 constant range (0–1)
@@ -143,24 +143,24 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     QualType Arg2Type = TheCall->getArg(2)->getType();
 
     QualType VecType = Context.getVectorType(Context.UnsignedCharTy, 16,
-                                              VectorKind::AltiVecVector);
+                                            VectorKind::AltiVecVector);
 
     // Arg0 must be <16 x unsigned char>
     if (!Context.hasSameType(Arg0Type, VecType))
       return SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
-                           diag::err_ppc_bcd_invalid_vector_type)
+                          diag::err_ppc_bcd_invalid_vector_type)
              << 0 << VecType << Arg0Type;
 
     // Arg1 must be integer type
     if (!Arg1Type->isIntegerType())
       return SemaRef.Diag(TheCall->getArg(1)->getBeginLoc(),
-                           diag::err_ppc_bcd_invalid_integer_type)
+                          diag::err_ppc_bcd_invalid_integer_type)
              << 1 << "integer type" << Arg1Type;
 
     // Arg2 must be integer type
     if (!Arg2Type->isIntegerType())
       return SemaRef.Diag(TheCall->getArg(2)->getBeginLoc(),
-                           diag::err_ppc_bcd_invalid_integer_type)
+                          diag::err_ppc_bcd_invalid_integer_type)
              << 2 << "integer type" << Arg2Type;
 
     // Restrict Arg2 constant range (0–1)
