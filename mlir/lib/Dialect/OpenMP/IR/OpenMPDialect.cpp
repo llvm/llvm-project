@@ -2626,6 +2626,7 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   TeamsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
                  clauses.ifExpr, clauses.numTeamsLower, clauses.numTeamsUpper,
+                 clauses.numTeamsDims, clauses.numTeamsValues,
                  /*private_vars=*/{}, /*private_syms=*/nullptr,
                  /*private_needs_barrier=*/nullptr, clauses.reductionMod,
                  clauses.reductionVars,
@@ -4486,6 +4487,69 @@ void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                        makeArrayAttr(ctx, clauses.alignments),
                        clauses.linearVars, clauses.linearStepVars,
                        clauses.linearVarTypes, clauses.simdlen);
+}
+
+//===----------------------------------------------------------------------===//
+// Parser and printer for NumTeamsMultiDim Clause (with dims modifier)
+//===----------------------------------------------------------------------===//
+// num_teams_multidim ::= `num_teams` `(` [`dims` `(` dim-count `)` `:`] values
+// `)` Example: num_teams(dims(3): %v0, %v1, %v2 : i32, i32, i32) Or:
+// num_teams(%v : i32)
+static ParseResult parseNumTeamsMultiDimClause(
+    OpAsmParser &parser, IntegerAttr &dimsAttr,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    SmallVectorImpl<Type> &types) {
+  std::optional<int64_t> dims;
+  // Try to parse optional dims modifier: dims(N):
+  if (succeeded(parser.parseOptionalKeyword("dims"))) {
+    int64_t dimsValue;
+    if (parser.parseLParen() || parser.parseInteger(dimsValue) ||
+        parser.parseRParen() || parser.parseColon()) {
+      return failure();
+    }
+    dims = dimsValue;
+  }
+  // Parse the operand list
+  if (parser.parseOperandList(values))
+    return failure();
+  // Parse colon and types
+  if (parser.parseColon() || parser.parseTypeList(types))
+    return failure();
+
+  // Verify dims matches number of values if specified
+  if (dims.has_value() && values.size() != static_cast<size_t>(*dims)) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "dims(" << *dims << ") specified but " << values.size()
+           << " values provided";
+  }
+
+  // If dims not specified but we have values, it's implicitly unidimensional
+  if (!dims.has_value() && values.size() != 1) {
+    return parser.emitError(parser.getCurrentLocation())
+           << "expected 1 value without dims modifier, got " << values.size();
+  }
+
+  // Convert to IntegerAttr
+  if (dims.has_value()) {
+    dimsAttr = parser.getBuilder().getI64IntegerAttr(*dims);
+  }
+  return success();
+}
+
+static void printNumTeamsMultiDimClause(OpAsmPrinter &p, Operation *op,
+                                        IntegerAttr dimsAttr,
+                                        OperandRange values, TypeRange types) {
+  // Print dims modifier if present
+  if (dimsAttr) {
+    p << "dims(" << dimsAttr.getInt() << "): ";
+  }
+
+  // Print operands
+  p.printOperands(values);
+
+  // Print types
+  p << " : ";
+  llvm::interleaveComma(types, p);
 }
 
 #define GET_ATTRDEF_CLASSES
