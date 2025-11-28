@@ -2062,6 +2062,10 @@ transform::IncludeOp::apply(transform::TransformRewriter &rewriter,
 
   DiagnosedSilenceableFailure result = applySequenceBlock(
       callee.getBody().front(), getFailurePropagationMode(), state, results);
+
+  if (!result.succeeded())
+    return result;
+
   mappings.clear();
   detail::prepareValueMappings(
       mappings, callee.getBody().front().getTerminator()->getOperands(), state);
