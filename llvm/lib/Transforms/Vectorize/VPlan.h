@@ -2374,8 +2374,10 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
   VP_CLASSOF_IMPL(VPDef::VPFirstOrderRecurrencePHISC)
 
   VPFirstOrderRecurrencePHIRecipe *clone() override {
-    return new VPFirstOrderRecurrencePHIRecipe(
+    auto *R = new VPFirstOrderRecurrencePHIRecipe(
         cast<PHINode>(getUnderlyingInstr()), *getOperand(0));
+    R->addOperand(getOperand(1));
+    return R;
   }
 
   void execute(VPTransformState &State) override;
@@ -2459,6 +2461,13 @@ public:
   unsigned getVFScaleFactor() const {
     auto *Partial = std::get_if<RdxUnordered>(&Style);
     return Partial ? Partial->VFScaleFactor : 1;
+  }
+
+  /// Set the VFScaleFactor for this reduction phi. Can only be set to a factor
+  /// > 1
+  void setVFScaleFactor(unsigned ScaleFactor) {
+    assert(ScaleFactor > 1 && "must set to scale factor > 1");
+    Style = RdxUnordered{ScaleFactor};
   }
 
   /// Returns the number of incoming values, also number of incoming blocks.
