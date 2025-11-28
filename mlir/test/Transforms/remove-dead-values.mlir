@@ -690,7 +690,6 @@ func.func @op_block_have_dead_arg(%arg0: index, %arg1: index, %arg2: i1) {
 
 // -----
 
-
 // CHECK-LABEL: func @affine_loop_no_use_iv_has_side_effect_op
 func.func @affine_loop_no_use_iv_has_side_effect_op() {
   %c1 = arith.constant 1 : index
