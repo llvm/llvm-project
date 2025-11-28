@@ -346,6 +346,9 @@ def SDTAtomicStore : SDTypeProfile<0, 2, [
 def SDTAtomicLoad : SDTypeProfile<1, 1, [
   SDTCisPtrTy<1>
 ]>;
+def SDTFPMulOp : SDTypeProfile<1, 2, [
+  SDTCisSameAs<1, 2>, SDTCisFP<0>, SDTCisFP<1>
+]>;
 
 class SDCallSeqStart<list<SDTypeConstraint> constraints> :
         SDTypeProfile<0, 2, constraints>;
