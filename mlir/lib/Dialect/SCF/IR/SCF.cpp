@@ -3726,8 +3726,14 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
 
   LogicalResult matchAndRewrite(scf::WhileOp op,
                                 PatternRewriter &rewriter) const override {
-    auto conditionOp =
-        cast<scf::ConditionOp>(op.getBeforeBody()->getTerminator());
+    auto conditionOp = op.getConditionOp();
+
+    // Only support ifOp right before the condition at the moment. Relaxing this
+    // would require to:
+    // - check that the body does not have side-effects conflicting with
+    //    operations between the if and the condition.
+    // - check that results of the if operation are only used as arguments to
+    //    the condition.
     auto ifOp = dyn_cast_or_null<scf::IfOp>(conditionOp->getPrevNode());
 
     // Check that the ifOp is directly before the conditionOp and that it
@@ -3759,13 +3765,14 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
     }
 
     // Collect additional used values from before region.
-    SetVector<Value> additionalUsedValues;
+    SetVector<Value> additionalUsedValuesSet;
     visitUsedValuesDefinedAbove(ifOp.getThenRegion(), [&](OpOperand *operand) {
-      if (op.getBefore().isAncestor(operand->get().getParentRegion()))
-        additionalUsedValues.insert(operand->get());
+      if (&op.getBefore() == operand->get().getParentRegion())
+        additionalUsedValuesSet.insert(operand->get());
     });
 
     // Create new whileOp with additional used values as results.
+    auto additionalUsedValues = additionalUsedValuesSet.getArrayRef();
     auto additionalValueTypes = llvm::map_to_vector(
         additionalUsedValues, [](Value val) { return val.getType(); });
     size_t additionalValueSize = additionalUsedValues.size();
@@ -3775,23 +3782,22 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
     auto newWhileOp =
         scf::WhileOp::create(rewriter, loc, newResultTypes, op.getInits());
 
-    newWhileOp.getBefore().takeBody(op.getBefore());
-    newWhileOp.getAfter().takeBody(op.getAfter());
-    newWhileOp.getAfter().addArguments(
-        additionalValueTypes, SmallVector<Location>(additionalValueSize, loc));
+    rewriter.modifyOpInPlace(newWhileOp, [&] {
+      newWhileOp.getBefore().takeBody(op.getBefore());
+      newWhileOp.getAfter().takeBody(op.getAfter());
+      newWhileOp.getAfter().addArguments(
+          additionalValueTypes,
+          SmallVector<Location>(additionalValueSize, loc));
+    });
 
-    SmallVector<Value> conditionArgs = conditionOp.getArgs();
-    llvm::append_range(conditionArgs, additionalUsedValues);
-
-    // Update conditionOp inside new whileOp before region.
-    rewriter.setInsertionPoint(conditionOp);
-    rewriter.replaceOpWithNewOp<scf::ConditionOp>(
-        conditionOp, conditionOp.getCondition(), conditionArgs);
+    rewriter.modifyOpInPlace(conditionOp, [&] {
+      conditionOp.getArgsMutable().append(additionalUsedValues);
+    });
 
     // Replace uses of additional used values inside the ifOp then region with
     // the whileOp after region arguments.
     rewriter.replaceUsesWithIf(
-        additionalUsedValues.takeVector(),
+        additionalUsedValues,
         newWhileOp.getAfterArguments().take_back(additionalValueSize),
         [&](OpOperand &use) {
           return ifOp.getThenRegion().isAncestor(
