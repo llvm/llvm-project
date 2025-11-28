@@ -174,7 +174,7 @@ extern cl::opt<bool> ANDIGlueBug;
 
 PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
                                      const PPCSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
   // Initialize map that relates the PPC addressing modes to the computed flags
   // of a load/store instruction. The map is used to determine the optimal
   // addressing mode when selecting load and stores.
@@ -210,8 +210,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // setbc instruction.
   if (!Subtarget.hasP10Vector()) {
     setOperationAction(ISD::SSUBO, MVT::i32, Custom);
-    if (isPPC64)
+    setOperationAction(ISD::SADDO, MVT::i32, Custom);
+    if (isPPC64) {
       setOperationAction(ISD::SSUBO, MVT::i64, Custom);
+      setOperationAction(ISD::SADDO, MVT::i64, Custom);
+    }
   }
 
   // Match BITREVERSE to customized fast code sequence in the td file.
@@ -12514,6 +12517,37 @@ SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues({Sub, OverflowTrunc}, dl);
 }
 
+/// Implements signed add with overflow detection using the rule:
+/// (x eqv y) & (sum xor x), where the overflow bit is extracted from the sign
+SDValue PPCTargetLowering::LowerSADDO(SDValue Op, SelectionDAG &DAG) const {
+
+  SDLoc dl(Op);
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  EVT VT = Op.getNode()->getValueType(0);
+
+  SDValue Sum = DAG.getNode(ISD::ADD, dl, VT, LHS, RHS);
+
+  // Compute ~(x xor y)
+  SDValue XorXY = DAG.getNode(ISD::XOR, dl, VT, LHS, RHS);
+  SDValue EqvXY = DAG.getNOT(dl, XorXY, VT);
+  // Compute (s xor x)
+  SDValue SumXorX = DAG.getNode(ISD::XOR, dl, VT, Sum, LHS);
+
+  // overflow = (x eqv y) & (s xor x)
+  SDValue OverflowInSign = DAG.getNode(ISD::AND, dl, VT, EqvXY, SumXorX);
+
+  // Shift sign bit down to LSB
+  SDValue Overflow =
+      DAG.getNode(ISD::SRL, dl, VT, OverflowInSign,
+                  DAG.getConstant(VT.getSizeInBits() - 1, dl, MVT::i32));
+  // Truncate to the overflow type (i1)
+  SDValue OverflowTrunc =
+      DAG.getNode(ISD::TRUNCATE, dl, Op.getNode()->getValueType(1), Overflow);
+
+  return DAG.getMergeValues({Sum, OverflowTrunc}, dl);
+}
+
 // Lower unsigned 3-way compare producing -1/0/1.
 SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -12565,6 +12599,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
   case ISD::SSUBO:
     return LowerSSUBO(Op, DAG);
+  case ISD::SADDO:
+    return LowerSADDO(Op, DAG);
 
   case ISD::INLINEASM:
   case ISD::INLINEASM_BR:       return LowerINLINEASM(Op, DAG);
@@ -15527,8 +15563,8 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
   assert(N->getOpcode() == ISD::SETCC && "Should be called with a SETCC node");
 
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  assert(CC == ISD::SETNE ||
-         CC == ISD::SETEQ && "CC mus be ISD::SETNE or ISD::SETEQ");
+  assert((CC == ISD::SETNE || CC == ISD::SETEQ) &&
+         "CC mus be ISD::SETNE or ISD::SETEQ");
 
   auto getV16i8Load = [&](const SDValue &Operand) {
     if (Operand.getOpcode() == ISD::Constant)
@@ -15592,10 +15628,80 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
                       CC == ISD::SETNE ? ISD::SETEQ : ISD::SETNE);
 }
 
+// Detect whether there is a pattern like (setcc (and X, 1), 0, eq).
+// If it is , return true; otherwise return false.
+static bool canConvertSETCCToXori(SDNode *N) {
+  assert(N->getOpcode() == ISD::SETCC && "Should be SETCC SDNode here.");
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  if (CC != ISD::SETEQ)
+    return false;
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // Check the `SDValue &V` is from `and` with `1`.
+  auto IsAndWithOne = [](SDValue &V) {
+    if (V.getOpcode() == ISD::AND) {
+      for (const SDValue &Op : V->ops())
+        if (auto *C = dyn_cast<ConstantSDNode>(Op))
+          if (C->isOne())
+            return true;
+    }
+    return false;
+  };
+
+  // Check whether the SETCC compare with zero.
+  auto IsCompareWithZero = [](SDValue &V) {
+    if (auto *C = dyn_cast<ConstantSDNode>(V))
+      if (C->isZero())
+        return true;
+    return false;
+  };
+
+  return (IsAndWithOne(LHS) && IsCompareWithZero(RHS)) ||
+         (IsAndWithOne(RHS) && IsCompareWithZero(LHS));
+}
+
+// You must check whether the `SDNode* N` can be converted to Xori using
+// the function `static bool canConvertSETCCToXori(SDNode *N)`
+// before calling the function; otherwise, it may produce incorrect results.
+static SDValue ConvertSETCCToXori(SDNode *N, SelectionDAG &DAG) {
+
+  assert(N->getOpcode() == ISD::SETCC && "Should be SETCC SDNode here.");
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDLoc DL(N);
+
+  [[maybe_unused]] ISD::CondCode CC =
+      cast<CondCodeSDNode>(N->getOperand(2))->get();
+  assert((CC == ISD::SETEQ) && "CC must be ISD::SETEQ.");
+  // Rewrite it as XORI (and X, 1), 1.
+  auto MakeXor1 = [&](SDValue V) {
+    EVT VT = V.getValueType();
+    SDValue One = DAG.getConstant(1, DL, VT);
+    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, V, One);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Xor);
+  };
+
+  if (LHS.getOpcode() == ISD::AND && RHS.getOpcode() != ISD::AND)
+    return MakeXor1(LHS);
+
+  if (RHS.getOpcode() == ISD::AND && LHS.getOpcode() != ISD::AND)
+    return MakeXor1(RHS);
+
+  llvm_unreachable("Should not reach here.");
+}
+
 SDValue PPCTargetLowering::combineSetCC(SDNode *N,
                                         DAGCombinerInfo &DCI) const {
   assert(N->getOpcode() == ISD::SETCC &&
          "Should be called with a SETCC node");
+
+  // Check if the pattern (setcc (and X, 1), 0, eq) is present.
+  // If it is, rewrite it as XORI (and X, 1), 1.
+  if (canConvertSETCCToXori(N))
+    return ConvertSETCCToXori(N, DCI.DAG);
 
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
   if (CC == ISD::SETNE || CC == ISD::SETEQ) {
@@ -19244,6 +19350,49 @@ static SDValue combineADDToMAT_PCREL_ADDR(SDNode *N, SelectionDAG &DAG,
   return MatPCRel;
 }
 
+// Transform (add X, (build_vector (T 1), (T 1), ...)) -> (sub X, (XXLEQVOnes))
+// XXLEQVOnes creates an all-1s vector (0xFFFFFFFF...) efficiently via xxleqv
+// Mathematical identity: X + 1 = X - (-1)
+// Applies to v4i32, v2i64, v8i16, v16i8 where all elements are constant 1
+// Requirement: VSX feature for efficient xxleqv generation
+static SDValue combineADDToSUB(SDNode *N, SelectionDAG &DAG,
+                               const PPCSubtarget &Subtarget) {
+
+  EVT VT = N->getValueType(0);
+  if (!Subtarget.hasVSX())
+    return SDValue();
+
+  // Handle v2i64, v4i32, v8i16 and v16i8 types
+  if (!(VT == MVT::v8i16 || VT == MVT::v16i8 || VT == MVT::v4i32 ||
+        VT == MVT::v2i64))
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // Check if RHS is BUILD_VECTOR
+  if (RHS.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  // Check if all the elements are 1
+  unsigned NumOfEles = RHS.getNumOperands();
+  for (unsigned i = 0; i < NumOfEles; ++i) {
+    auto *CN = dyn_cast<ConstantSDNode>(RHS.getOperand(i));
+    if (!CN || CN->getSExtValue() != 1)
+      return SDValue();
+  }
+  SDLoc DL(N);
+
+  SDValue MinusOne = DAG.getConstant(APInt::getAllOnes(32), DL, MVT::i32);
+  SmallVector<SDValue, 4> Ops(4, MinusOne);
+  SDValue AllOnesVec = DAG.getBuildVector(MVT::v4i32, DL, Ops);
+
+  // Bitcast to the target vector type
+  SDValue Bitcast = DAG.getNode(ISD::BITCAST, DL, VT, AllOnesVec);
+
+  return DAG.getNode(ISD::SUB, DL, VT, LHS, Bitcast);
+}
+
 SDValue PPCTargetLowering::combineADD(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = combineADDToADDZE(N, DCI.DAG, Subtarget))
     return Value;
@@ -19251,6 +19400,8 @@ SDValue PPCTargetLowering::combineADD(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = combineADDToMAT_PCREL_ADDR(N, DCI.DAG, Subtarget))
     return Value;
 
+  if (auto Value = combineADDToSUB(N, DCI.DAG, Subtarget))
+    return Value;
   return SDValue();
 }
 

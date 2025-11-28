@@ -57,9 +57,6 @@
     unreachable, !dbg !8
   }
 
-  ; Function Attrs: nounwind readnone speculatable willreturn
-  declare void @llvm.dbg.value(metadata, metadata, metadata)
-
   !llvm.dbg.cu = !{!0}
   !llvm.debugify = !{!3, !3}
   !llvm.module.flags = !{!4}
@@ -91,7 +88,6 @@
   !24 = !DIBasicType(name: "_Bool", size: 8, encoding: DW_ATE_boolean)
   !25 = !{!26}
   !26 = !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_bregx, 7202, 0, DW_OP_constu, 1, DW_OP_div, DW_OP_constu, 1, DW_OP_mul))
-
 
 ...
 ---

@@ -94,6 +94,11 @@ public:
   void Enter(const parser::OpenMPDeclarativeConstruct &);
   void Leave(const parser::OpenMPDeclarativeConstruct &);
 
+  void Enter(const parser::OpenMPMisplacedEndDirective &);
+  void Leave(const parser::OpenMPMisplacedEndDirective &);
+  void Enter(const parser::OpenMPInvalidDirective &);
+  void Leave(const parser::OpenMPInvalidDirective &);
+
   void Enter(const parser::OpenMPLoopConstruct &);
   void Leave(const parser::OpenMPLoopConstruct &);
   void Enter(const parser::OmpEndLoopDirective &);
@@ -316,8 +321,14 @@ private:
   void CheckAtomicWrite(const parser::OpenMPAtomicConstruct &x);
   void CheckAtomicUpdate(const parser::OpenMPAtomicConstruct &x);
 
+  void CheckLooprangeBounds(const parser::OpenMPLoopConstruct &x);
+  void CheckNestedFuse(const parser::OpenMPLoopConstruct &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
+  void CheckNestedBlock(const parser::OpenMPLoopConstruct &x,
+      const parser::Block &body, size_t &nestedCount);
+  void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
+  void CheckFullUnroll(const parser::OpenMPLoopConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();
   void CheckTaskgraph(const parser::OmpBlockConstruct &x);

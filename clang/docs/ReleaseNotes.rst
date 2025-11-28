@@ -84,12 +84,8 @@ Potentially Breaking Changes
 - Downstream projects that previously linked only against ``clangDriver`` may
   now (also) need to link against the new ``clangOptions`` library, since
   options-related code has been moved out of the Driver into a separate library.
-- Clang now supports MSVC vector deleting destructors when targeting Windows.
-  This means that vtables of classes with virtual destructors will contain a
-  pointer to vector deleting destructor (instead of scalar deleting destructor)
-  which in fact is a different symbol with different name and linkage. This
-  may cause runtime failures if two binaries using the same class defining a
-  virtual destructor are compiled with different versions of clang.
+- The ``clangFrontend`` library no longer depends on ``clangDriver``, which may
+  break downstream projects that relied on this transitive dependency.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -236,6 +232,13 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Added ``__scoped_atomic_uinc_wrap`` and ``__scoped_atomic_udec_wrap``.
+
+- Removed OpenCL header-only feature macros (previously unconditionally enabled
+  on SPIR-V and only selectively disabled via ``-D__undef_<feature>``). All
+  OpenCL extensions and features are now centralized in OpenCLExtensions.def,
+  allowing consistent control via ``getSupportedOpenCLOpts`` and ``-cl-ext``.
+
 - Added ``__builtin_elementwise_ldexp``.
 
 - Added ``__builtin_elementwise_fshl`` and ``__builtin_elementwise_fshr``.
@@ -353,6 +356,10 @@ Attribute Changes in Clang
 - New format attributes ``gnu_printf``, ``gnu_scanf``, ``gnu_strftime`` and ``gnu_strfmon`` are added
   as aliases for ``printf``, ``scanf``, ``strftime`` and ``strfmon``. (#GH16219)
 
+- New function attribute `malloc_span` is added. It has semantics similar to that of the `malloc`
+  attribute, but `malloc_span` applies not to functions returning pointers, but to functions returning
+  span-like structures (i.e. those that contain a pointer field and a size integer field or two pointers).
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Diagnostics messages now refer to ``structured binding`` instead of ``decomposition``,
@@ -389,6 +396,7 @@ Improvements to Clang's diagnostics
 - Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
   potential misaligned members get processed before they can get discarded.
   (#GH144729)
+- Fix a false positive warning in ``-Wignored-qualifiers`` when the return type is undeduced. (#GH43054)
 
 - Clang now emits a diagnostic with the correct message in case of assigning to const reference captured in lambda. (#GH105647)
 
@@ -434,6 +442,12 @@ Improvements to Clang's diagnostics
   or continue (#GH166013)
 - Clang now emits a diagnostic in case `vector_size` or `ext_vector_type`
   attributes are used with a negative size (#GH165463).
+- Clang no longer emits ``-Wmissing-noreturn`` for virtual methods where
+  the function body consists of a `throw` expression (#GH167247).
+
+- A new warning ``-Wenum-compare-typo`` has been added to detect potential erroneous
+  comparison operators when mixed with bitwise operators in enum value initializers.
+  This can be locally disabled by explicitly casting the initializer value.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -478,7 +492,10 @@ Bug Fixes in This Version
 - Fixed a failed assertion with empty filename in ``#embed`` directive. (#GH162951)
 - Fixed a crash triggered by unterminated ``__has_embed``. (#GH162953)
 - Accept empty enumerations in MSVC-compatible C mode. (#GH114402)
+- Fix a bug leading to incorrect code generation with complex number compound assignment and bitfield values, which also caused a crash with UBsan. (#GH166798)
 - Fixed false-positive shadow diagnostics for lambdas in explicit object member functions. (#GH163731)
+- Fix an assertion failure when a ``target_clones`` attribute is only on the
+  forward declaration of a multiversioned function. (#GH165517) (#GH129483)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -501,6 +518,8 @@ Bug Fixes to Attribute Support
 - Fix handling of parameter indexes when an attribute is applied to a C++23 explicit object member function.
 - Fixed several false positives and false negatives in function effect (`nonblocking`) analysis. (#GH166078) (#GH166101) (#GH166110)
 - Fix ``cleanup`` attribute by delaying type checks until after the type is deduced. (#GH129631)
+- Fix a crash when instantiating a function template with ``constructor`` or ``destructor``
+  attributes without a priority argument. (#GH169072)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -547,6 +566,7 @@ Bug Fixes to C++ Support
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
 - Fix a crash when extracting unavailable member type from alias in template deduction. (#GH165560)
 - Fix incorrect diagnostics for lambdas with init-captures inside braced initializers. (#GH163498)
+- Fixed spurious diagnoses of certain nested lambda expressions. (#GH149121) (#GH156579)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -604,8 +624,6 @@ Windows Support
 ^^^^^^^^^^^^^^^
 - clang-cl now supports /arch:AVX10.1 and /arch:AVX10.2.
 - clang-cl now supports /vlen, /vlen=256 and /vlen=512.
-
-- Clang now supports MSVC vector deleting destructors (GH19772).
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -668,6 +686,9 @@ AST Matchers
 
 - ``hasConditionVariableStatement`` now supports ``for`` loop, ``while`` loop
   and ``switch`` statements.
+- Fixed detection of explicit parameter lists in ``LambdaExpr``. (#GH168452)
+- Added ``hasExplicitParameters`` for ``LambdaExpr`` as an output attribute to
+  AST JSON dumps.
 
 clang-format
 ------------
@@ -685,6 +706,9 @@ clang-format
   ``AlignAfterOpenBracket`` option, and make ``AlignAfterOpenBracket`` a
   ``bool`` type.
 - Add ``AlignPPAndNotPP`` suboption to ``AlignTrailingComments``.
+- Rename ``(Binary|Decimal|Hex)MinDigits`` to ``...MinDigitsInsert`` and  add
+  ``(Binary|Decimal|Hex)MaxDigitsSeparator`` suboptions to
+  ``IntegerLiteralSeparator``.
 
 libclang
 --------
@@ -745,6 +769,9 @@ OpenMP Support
 - Updated parsing and semantic analysis support for ``nowait`` clause to accept
   optional argument in OpenMP >= 60.
 - Added support for ``default`` clause on ``target`` directive.
+- Added parsing and semantic analysis support for ``need_device_ptr`` modifier
+  to accept an optional fallback argument (``fb_nullify`` or ``fb_preserve``)
+  with OpenMP >= 61.
 
 Improvements
 ^^^^^^^^^^^^
