@@ -24,7 +24,7 @@ configure_file(omp_lib.F90.var omp_lib.F90 @ONLY)
 configure_file(omp_lib.h.var omp_lib.h @ONLY)
 
 set(BUILD_FORTRAN_MODULES False)
-if (NOT LIBOMP_FORTRAN_MODULES_COMPILER STREQUAL "")
+if (LIBOMP_FORTRAN_MODULES_COMPILER)
   # If libomp is built as an LLVM runtime and the flang compiler is available,
   # compile the Fortran module files.
   message(STATUS "configuring openmp to build Fortran module files using ${LIBOMP_FORTRAN_MODULES_COMPILER}")
@@ -63,9 +63,9 @@ endif ()
 
 
 if (BUILD_FORTRAN_MODULES)
-  set(destination ${LIBOMP_HEADERS_INSTALL_PATH})
-  if (NOT LIBOMP_MODULES_INSTALL_PATH STREQUAL "")
-    set(destination ${LIBOMP_MODULES_INSTALL_PATH})
+  set(destination "${LIBOMP_HEADERS_INSTALL_PATH}")
+  if (LIBOMP_MODULES_INSTALL_PATH)
+    set(destination "${LIBOMP_MODULES_INSTALL_PATH}")
   endif ()
   install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.mod"
