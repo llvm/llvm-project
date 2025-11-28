@@ -20110,6 +20110,35 @@ public:
       // The argument is not evaluated!
       return true;
 
+    case Builtin::BI__builtin_assume_dereferenceable: {
+      assert(E->getType()->isVoidType());
+      assert(E->getNumArgs() == 2);
+
+      APSInt ReqSizeVal;
+      if (!::EvaluateInteger(E->getArg(1), ReqSizeVal, Info))
+        return false;
+      LValue Pointer;
+      if (!EvaluatePointer(E->getArg(0), Pointer, Info))
+        return false;
+      if (Pointer.Designator.Invalid)
+        return false;
+      if (Pointer.isNullPointer())
+        return false;
+
+      uint64_t ReqSize = ReqSizeVal.getZExtValue();
+      if (ReqSize < 1)
+        return false;
+      CharUnits EndOffset;
+      if (!determineEndOffset(Info, E->getExprLoc(), 0, Pointer, EndOffset))
+        return false;
+
+      uint64_t TotalSize =
+          (EndOffset - Pointer.getLValueOffset()).getQuantity();
+      if (TotalSize < ReqSize) {
+        return false;
+      }
+      return true;
+    }
     case Builtin::BI__builtin_operator_delete:
       return HandleOperatorDeleteCall(Info, E);
 

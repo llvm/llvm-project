@@ -2206,6 +2206,37 @@ static unsigned computePointerOffset(const ASTContext &ASTCtx,
   return Result;
 }
 
+/// __builtin_assume_dereferenceable(Ptr, Size)
+static bool interp__builtin_assume_dereferenceable(InterpState &S, CodePtr OpPC,
+                                                   const InterpFrame *Frame,
+                                                   const CallExpr *Call) {
+  assert(Call->getNumArgs() == 2);
+
+  APSInt ReqSize = popToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(1)));
+  if (ReqSize.getZExtValue() < 1)
+    return false;
+
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (Ptr.isZero() || !Ptr.isLive() || !Ptr.isBlockPointer() || Ptr.isPastEnd())
+    return false;
+
+  const ASTContext &ASTCtx = S.getASTContext();
+  const Descriptor *DeclDesc = Ptr.getDeclDesc();
+  std::optional<unsigned> FullSize = computeFullDescSize(ASTCtx, DeclDesc);
+  if (!FullSize)
+    return false;
+
+  unsigned ByteOffset = computePointerOffset(ASTCtx, Ptr);
+  if (ByteOffset > *FullSize)
+    return false;
+
+  unsigned RemainingSpace = *FullSize - ByteOffset;
+  if (RemainingSpace < ReqSize.getZExtValue())
+    return false;
+
+  return true;
+}
+
 /// Does Ptr point to the last subobject?
 static bool pointsToLastObject(const Pointer &Ptr) {
   Pointer P = Ptr;
@@ -3996,6 +4027,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_assume:
   case Builtin::BI__assume:
     return interp__builtin_assume(S, OpPC, Frame, Call);
+
+  case Builtin::BI__builtin_assume_dereferenceable:
+    return interp__builtin_assume_dereferenceable(S, OpPC, Frame, Call);
 
   case Builtin::BI__builtin_strcmp:
   case Builtin::BIstrcmp:
