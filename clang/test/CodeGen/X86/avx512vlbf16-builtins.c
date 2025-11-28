@@ -9,6 +9,7 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512bf16 -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 __m128bh test_mm_cvtne2ps2bf16(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_cvtne2ps2bf16
@@ -160,12 +161,14 @@ __m128 test_mm_cvtpbh_ps(__m128bh A) {
   // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   return _mm_cvtpbh_ps(A);
 }
+TEST_CONSTEXPR(match_m128(_mm_cvtpbh_ps((__m128bh){-8.0f, 16.0f, -32.0f, 64.0f, -0.0f, 1.0f, -2.0f, 4.0f}), -8.0f, 16.0f, -32.0f, 64.0f));
 
 __m256 test_mm256_cvtpbh_ps(__m128bh A) {
   // CHECK-LABEL: test_mm256_cvtpbh_ps
   // CHECK: fpext <8 x bfloat> %{{.*}} to <8 x float>
   return _mm256_cvtpbh_ps(A);
 }
+TEST_CONSTEXPR(match_m256(_mm256_cvtpbh_ps((__m128bh){-0.0f, 1.0f, -2.0f, 4.0f, -8.0f, 16.0f, -32.0f, 64.0f}), -0.0f, 1.0f, -2.0f, 4.0f, -8.0f, 16.0f, -32.0f, 64.0f));
 
 __m128 test_mm_maskz_cvtpbh_ps(__mmask8 M, __m128bh A) {
   // CHECK-LABEL: test_mm_maskz_cvtpbh_ps
@@ -174,6 +177,7 @@ __m128 test_mm_maskz_cvtpbh_ps(__mmask8 M, __m128bh A) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_maskz_cvtpbh_ps(M, A);
 }
+TEST_CONSTEXPR(match_m128(_mm_maskz_cvtpbh_ps(0x01, (__m128bh){-0.0f, 1.0f, -2.0f, 4.0f, -8.0f, 16.0f, -32.0f, 64.0f}), -0.0f, 0.0f, 0.0f, 0.0f));
 
 __m256 test_mm256_maskz_cvtpbh_ps(__mmask8 M, __m128bh A) {
   // CHECK-LABEL: test_mm256_maskz_cvtpbh_ps
@@ -181,6 +185,7 @@ __m256 test_mm256_maskz_cvtpbh_ps(__mmask8 M, __m128bh A) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_maskz_cvtpbh_ps(M, A);
 }
+TEST_CONSTEXPR(match_m256(_mm256_maskz_cvtpbh_ps(0x73, (__m128bh){-0.0f, 1.0f, -2.0f, 4.0f, -8.0f, 16.0f, -32.0f, 64.0f}), -0.0f, 1.0f, 0.0f, 0.0f, -8.0f, 16.0f, -32.0f, 0.0f));
 
 __m128 test_mm_mask_cvtpbh_ps(__m128 S, __mmask8 M, __m128bh A) {
   // CHECK-LABEL: test_mm_mask_cvtpbh_ps
@@ -189,6 +194,7 @@ __m128 test_mm_mask_cvtpbh_ps(__m128 S, __mmask8 M, __m128bh A) {
   // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
   return _mm_mask_cvtpbh_ps(S, M, A);
 }
+TEST_CONSTEXPR(match_m128(_mm_mask_cvtpbh_ps((__m128){ 99.0f, 99.0f, 99.0f, 99.0f }, 0x03, (__m128bh){-0.0f, 1.0f, -2.0f, 4.0f, -8.0f, 16.0f, -32.0f, 64.0f}), -0.0f, 1.0f, 99.0f, 99.0f));
 
 __m256 test_mm256_mask_cvtpbh_ps(__m256 S, __mmask8 M, __m128bh A) {
   // CHECK-LABEL: test_mm256_mask_cvtpbh_ps
@@ -196,3 +202,4 @@ __m256 test_mm256_mask_cvtpbh_ps(__m256 S, __mmask8 M, __m128bh A) {
   // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
   return _mm256_mask_cvtpbh_ps(S, M, A);
 }
+TEST_CONSTEXPR(match_m256(_mm256_mask_cvtpbh_ps((__m256){ 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f, 99.0f }, 0x37, (__m128bh){-0.0f, 1.0f, -2.0f, 4.0f, -8.0f, 16.0f, -32.0f, 64.0f}), -0.0f, 1.0f, -2.0f, 99.0f, -8.0f, 16.0f, 99.0f, 99.0f));
