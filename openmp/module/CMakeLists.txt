@@ -21,6 +21,8 @@ endif ()
 # Building the Fortran module files
 # One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
 configure_file(omp_lib.F90.var omp_lib.F90 @ONLY)
+configure_file(omp_lib.h.var omp_lib.h @ONLY)
+
 set(BUILD_FORTRAN_MODULES False)
 if (NOT LIBOMP_FORTRAN_MODULES_COMPILER STREQUAL "")
   # If libomp is built as an LLVM runtime and the flang compiler is available,
@@ -68,6 +70,7 @@ if (BUILD_FORTRAN_MODULES)
   install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.mod"
     "${CMAKE_CURRENT_BINARY_DIR}/omp_lib_kinds.mod"
+    "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h"
     DESTINATION ${destination}
   )
 endif ()
