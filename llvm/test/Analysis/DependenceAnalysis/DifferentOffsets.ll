@@ -100,7 +100,7 @@ define void @linearized_accesses(i64 %n, i64 %m, i64 %o, ptr %A) {
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx0, align 4 --> Dst: store i32 1, ptr %idx1, align 4
 ; CHECK-NEXT:    da analyze - output [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx1, align 4 --> Dst: store i32 1, ptr %idx1, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* * *]!
 ;
 entry:
   br label %for.i
