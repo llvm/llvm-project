@@ -93,14 +93,15 @@ public:
 
   RecurrenceDescriptor(Value *Start, Instruction *Exit, StoreInst *Store,
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
-                       Type *RT, bool Signed, bool Ordered,
-                       SmallPtrSetImpl<Instruction *> &CI,
-                       unsigned MinWidthCastToRecurTy)
+                       Type *RT, bool Signed = false, bool Ordered = false,
+                       const SmallPtrSetImpl<Instruction *> *CI = nullptr,
+                       unsigned MinWidthCastToRecurTy = -1U)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
         IsSigned(Signed), IsOrdered(Ordered),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
-    CastInsts.insert_range(CI);
+    if (CI)
+      CastInsts.insert_range(*CI);
   }
 
   /// This POD struct holds information about a potential recurrence operation.
@@ -154,14 +155,6 @@ public:
   /// Returns true if all uses of the instruction I is within the Set.
   LLVM_ABI static bool areAllUsesIn(Instruction *I,
                                     SmallPtrSetImpl<Instruction *> &Set);
-
-  /// Returns a struct describing if the instruction is a llvm.(s/u)(min/max),
-  /// llvm.minnum/maxnum or a Select(ICmp(X, Y), X, Y) pair of instructions
-  /// corresponding to a min(X, Y) or max(X, Y), matching the recurrence kind \p
-  /// Kind. \p Prev specifies the description of an already processed select
-  /// instruction, so its corresponding cmp can be matched to it.
-  LLVM_ABI static InstDesc isMinMaxPattern(Instruction *I, RecurKind Kind,
-                                           const InstDesc &Prev);
 
   /// Returns a struct describing whether the instruction is either a
   ///   Select(ICmp(A, B), X, Y), or
