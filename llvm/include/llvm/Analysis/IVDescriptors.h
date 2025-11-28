@@ -100,8 +100,7 @@ public:
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
         IsSigned(Signed), IsOrdered(Ordered),
-        PhiHasUsesOutsideReductionChain(
-            PhiHasUsesOutsideReductionChain),
+        PhiHasUsesOutsideReductionChain(PhiHasUsesOutsideReductionChain),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
     CastInsts.insert_range(CI);
     assert(
@@ -345,7 +344,9 @@ public:
   /// Expose an ordered FP reduction to the instance users.
   bool isOrdered() const { return IsOrdered; }
 
-  /// Returns true if the reduction PHI has any uses outside the reduction chain. This is relevant for min/max reductions that are part of a FindLastIV pattern.
+  /// Returns true if the reduction PHI has any uses outside the reduction
+  /// chain. This is relevant for min/max reductions that are part of a
+  /// FindLastIV pattern.
   bool hasUsesOutsideReductionChain() const {
     return PhiHasUsesOutsideReductionChain;
   }

@@ -1031,9 +1031,9 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     // (asserted below).
     assert(MinMaxOp->getNumUsers() == 2 &&
            "MinMaxOp must have exactly 2 users");
-        VPValue *MinMaxOpValue = MinMaxOp->getOperand(0);
-            if (MinMaxOpValue == MinMaxPhiR)
-              MinMaxOpValue= MinMaxOp->getOperand(1);
+    VPValue *MinMaxOpValue = MinMaxOp->getOperand(0);
+    if (MinMaxOpValue == MinMaxPhiR)
+      MinMaxOpValue = MinMaxOp->getOperand(1);
 
     VPValue *CmpOpA;
     VPValue *CmpOpB;
@@ -1041,8 +1041,11 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(findUserOf(
         MinMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB))));
     if (!Cmp || Cmp->getNumUsers() != 1 ||
-        (CmpOpA != MinMaxOpValue&& CmpOpB != MinMaxOpValue))
+        (CmpOpA != MinMaxOpValue && CmpOpB != MinMaxOpValue))
       return false;
+
+    if (MinMaxOpValue != CmpOpB)
+      Pred = CmpInst::getSwappedPredicate(Pred);
 
     // MinMaxPhiR must have exactly 3 users:
     // * MinMaxOp,
@@ -1071,11 +1074,15 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
       std::swap(FindIV, IVOp);
       Pred = CmpInst::getInversePredicate(Pred);
     }
-    if (match(IVOp, m_TruncOrSelf(m_VPValue(IVOp))) && !isa<VPWidenIntOrFpInductionRecipe>(IVOp))
+
+    auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
+    if (!FindIVPhiR || !RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+                           FindIVPhiR->getRecurrenceKind()))
       return false;
 
-    if (MinMaxOpValue != CmpOpB)
-      Pred = CmpInst::getSwappedPredicate(Pred);
+    assert(match(IVOp, m_TruncOrSelf(m_VPValue(IVOp))) &&
+           isa<VPWidenIntOrFpInductionRecipe>(IVOp) &&
+           "other select operand must be a (truncated) wide induction");
 
     CmpInst::Predicate RdxPredicate = [RdxKind]() {
       switch (RdxKind) {
@@ -1095,11 +1102,6 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     // TODO: Strict predicates need to find the first IV value for which the
     // predicate holds, not the last.
     if (Pred != RdxPredicate)
-      return false;
-
-    auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
-    if (!FindIVPhiR || !RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-                           FindIVPhiR->getRecurrenceKind()))
       return false;
 
     assert(!FindIVPhiR->isInLoop() && !FindIVPhiR->isOrdered() &&

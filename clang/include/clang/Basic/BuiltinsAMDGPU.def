@@ -187,8 +187,8 @@ TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32, "ffQbiiIi", "", 
 TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f64, "ddQbiiIi", "", "atomic-fmin-fmax-global-f64")
 TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64, "ddQbiiIi", "", "atomic-fmin-fmax-global-f64")
 
-TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_load_lds, "vQbv*3IUiiiIiIi", "t", "vmem-to-lds-load-insts")
-TARGET_BUILTIN(__builtin_amdgcn_struct_ptr_buffer_load_lds, "vQbv*3IUiiiiIiIi", "t", "vmem-to-lds-load-insts")
+TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_load_lds, "vQbv*3IUiiiIiIi", "", "vmem-to-lds-load-insts")
+TARGET_BUILTIN(__builtin_amdgcn_struct_ptr_buffer_load_lds, "vQbv*3IUiiiiIiIi", "", "vmem-to-lds-load-insts")
 
 //===----------------------------------------------------------------------===//
 // Ballot builtins.
@@ -286,7 +286,7 @@ TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_v2bf16, "V2sV2s*1V2s", "t", "
 TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_v2bf16, "V2sV2s*3V2s", "t", "atomic-ds-pk-add-16-insts")
 TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_v2f16, "V2hV2h*3V2h", "t", "atomic-ds-pk-add-16-insts")
 TARGET_BUILTIN(__builtin_amdgcn_load_to_lds, "vv*v*3IUiIiIUi", "", "vmem-to-lds-load-insts")
-TARGET_BUILTIN(__builtin_amdgcn_global_load_lds, "vv*1v*3IUiIiIUi", "t", "vmem-to-lds-load-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_load_lds, "vv*1v*3IUiIiIUi", "", "vmem-to-lds-load-insts")
 
 //===----------------------------------------------------------------------===//
 // Deep learning builtins.

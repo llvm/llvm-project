@@ -275,7 +275,7 @@ bool RecurrenceDescriptor::AddReductionVar(
 
   // Check for min/max reduction variables that feed other users in the loop.
   if (isMinMaxReductionPhiWithUsersOutsideReductionChain(Phi, Kind, TheLoop,
-                                                          RedDes))
+                                                         RedDes))
     return true;
 
   // Obtain the reduction start value from the value that comes from the loop

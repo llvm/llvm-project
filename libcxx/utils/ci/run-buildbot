@@ -205,6 +205,7 @@ function test-armv7m-picolibc() {
         -DLIBUNWIND_TEST_CONFIG="armv7m-picolibc-libunwind.cfg.in" \
         -DCMAKE_C_FLAGS="${flags}" \
         -DCMAKE_CXX_FLAGS="${flags}" \
+        -DRUNTIMES_USE_LIBC=picolibc \
         "${@}"
 
     step "Installing compiler-rt"

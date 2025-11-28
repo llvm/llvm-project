@@ -2444,9 +2444,11 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
-                       ReductionStyle Style, bool HasUsesOutsideReductionChain = false)
+                       ReductionStyle Style,
+                       bool HasUsesOutsideReductionChain = false)
       : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start), Kind(Kind),
-        Style(Style), HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {}
+        Style(Style),
+        HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {}
 
   ~VPReductionPHIRecipe() override = default;
 
