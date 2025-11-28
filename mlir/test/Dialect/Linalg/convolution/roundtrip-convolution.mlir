@@ -55,6 +55,149 @@ func.func @conv_2d(%in : tensor<?x?xf32>, %filter : tensor<?x?xf32>, %out : tens
 
 // -----
 
+func.func @conv_2d_nhwc_hwcf(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?xf32>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
+  %0 = linalg.conv_2d_nhwc_hwcf
+         {dilations = dense<2> : tensor<2xi64>, strides = dense<3> : tensor<2xi64>}
+         ins (%input, %filter: tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?xf32>
+}
+//      CHECK: @conv_2d_nhwc_hwcf
+//      CHECK:   linalg.conv_2d_nhwc_hwcf
+// CHECK-SAME:      dilations = dense<2> : tensor<2xi64>, strides = dense<3> : tensor<2xi64>
+
+// -----
+
+func.func @conv_2d_nhwc_hwcf_q(%input: tensor<?x?x?x?xi8>, %filter: tensor<?x?x?x?xi8>, %output: tensor<?x?x?x?xi32>, %zp_input: i32, %zp_filter: i32) -> tensor<?x?x?x?xi32> {
+  %0 = linalg.conv_2d_nhwc_hwcf_q
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+         ins (%input, %filter, %zp_input, %zp_filter : tensor<?x?x?x?xi8>, tensor<?x?x?x?xi8>, i32, i32)
+         outs (%output: tensor<?x?x?x?xi32>) -> tensor<?x?x?x?xi32>
+  return %0 : tensor<?x?x?x?xi32>
+}
+//      CHECK: @conv_2d_nhwc_hwcf_q
+//      CHECK:   linalg.conv_2d_nhwc_hwcf_q
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
+
+// -----
+
+func.func @conv_2d_nhwc_fhwc(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?xf32>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
+  %0 = linalg.conv_2d_nhwc_fhwc
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>}
+         ins (%input, %filter: tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?xf32>
+}
+//      CHECK: @conv_2d_nhwc_fhwc
+//      CHECK:   linalg.conv_2d_nhwc_fhwc
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>
+
+// -----
+
+func.func @conv_2d_nhwc_fhwc_q(%input: tensor<?x?x?x?xi8>, %filter: tensor<?x?x?x?xi8>, %output: tensor<?x?x?x?xi32>, %zp_input: i32, %zp_filter: i32) -> tensor<?x?x?x?xi32> {
+  %0 = linalg.conv_2d_nhwc_fhwc_q
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+         ins (%input, %filter, %zp_input, %zp_filter : tensor<?x?x?x?xi8>, tensor<?x?x?x?xi8>, i32, i32)
+         outs (%output: tensor<?x?x?x?xi32>) -> tensor<?x?x?x?xi32>
+  return %0 : tensor<?x?x?x?xi32>
+}
+//      CHECK: @conv_2d_nhwc_fhwc_q
+//      CHECK:   linalg.conv_2d_nhwc_fhwc_q
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
+
+// -----
+
+func.func @conv_2d_nchw_fchw(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?xf32>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
+  %0 = linalg.conv_2d_nchw_fchw
+         {dilations = dense<[1, 2]> : tensor<2xi64>, strides = dense<[3, 4]> : tensor<2xi64>}
+         ins (%input, %filter: tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?xf32>
+}
+//      CHECK: @conv_2d_nchw_fchw
+//      CHECK:   linalg.conv_2d_nchw_fchw
+// CHECK-SAME:      dilations = dense<[1, 2]> : tensor<2xi64>, strides = dense<[3, 4]> : tensor<2xi64>
+
+// -----
+
+func.func @conv_2d_nchw_fchw_q(%input: tensor<?x?x?x?xi8>, %filter: tensor<?x?x?x?xi8>, %output: tensor<?x?x?x?xi32>, %zp_input: i32, %zp_filter: i32) -> tensor<?x?x?x?xi32> {
+  %0 = linalg.conv_2d_nchw_fchw_q
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+         ins (%input, %filter, %zp_input, %zp_filter : tensor<?x?x?x?xi8>, tensor<?x?x?x?xi8>, i32, i32)
+         outs (%output: tensor<?x?x?x?xi32>) -> tensor<?x?x?x?xi32>
+  return %0 : tensor<?x?x?x?xi32>
+}
+//      CHECK: @conv_2d_nchw_fchw_q
+//      CHECK:   linalg.conv_2d_nchw_fchw_q
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
+
+// -----
+
+func.func @conv_2d_ngchw_fgchw(%input: tensor<?x?x?x?x?xf32>, %filter: tensor<?x?x?x?x?xf32>, %output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32> {
+  %0 = linalg.conv_2d_ngchw_fgchw
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+         ins (%input, %filter: tensor<?x?x?x?x?xf32>, tensor<?x?x?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?x?xf32>
+}
+//      CHECK: @conv_2d_ngchw_fgchw
+//      CHECK:   linalg.conv_2d_ngchw_fgchw
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
+
+// -----
+
+func.func @conv_2d_ngchw_gfchw(%input: tensor<?x?x?x?x?xf32>, %filter: tensor<?x?x?x?x?xf32>, %output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32> {
+  %0 = linalg.conv_2d_ngchw_gfchw
+         {dilations = dense<2> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+         ins (%input, %filter: tensor<?x?x?x?x?xf32>, tensor<?x?x?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?x?xf32>
+}
+//      CHECK: @conv_2d_ngchw_gfchw
+//      CHECK:   linalg.conv_2d_ngchw_gfchw
+// CHECK-SAME:      dilations = dense<2> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
+
+// -----
+
+func.func @conv_2d_ngchw_gfchw_q(%input: tensor<?x?x?x?x?xi8>, %filter: tensor<?x?x?x?x?xi8>, %output: tensor<?x?x?x?x?xi32>, %zp_input: i32, %zp_filter: i32) -> tensor<?x?x?x?x?xi32> {
+  %0 = linalg.conv_2d_ngchw_gfchw_q
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+         ins (%input, %filter, %zp_input, %zp_filter : tensor<?x?x?x?x?xi8>, tensor<?x?x?x?x?xi8>, i32, i32)
+         outs (%output: tensor<?x?x?x?x?xi32>) -> tensor<?x?x?x?x?xi32>
+  return %0 : tensor<?x?x?x?x?xi32>
+}
+//      CHECK: @conv_2d_ngchw_gfchw_q
+//      CHECK:   linalg.conv_2d_ngchw_gfchw_q
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
+
+// -----
+
+func.func @conv_2d_nhwgc_gfhwc(%input: tensor<?x?x?x?x?xf32>, %filter: tensor<?x?x?x?x?xf32>, %output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32> {
+  %0 = linalg.conv_2d_nhwgc_gfhwc
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>}
+         ins (%input, %filter: tensor<?x?x?x?x?xf32>, tensor<?x?x?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?x?xf32>
+}
+//      CHECK: @conv_2d_nhwgc_gfhwc
+//      CHECK:   linalg.conv_2d_nhwgc_gfhwc
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>
+
+// -----
+
+func.func @conv_2d_nhwgc_gfhwc_q(%input: tensor<?x?x?x?x?xi8>, %filter: tensor<?x?x?x?x?xi8>, %output: tensor<?x?x?x?x?xi32>, %zp_input: i32, %zp_filter: i32) -> tensor<?x?x?x?x?xi32> {
+  %0 = linalg.conv_2d_nhwgc_gfhwc_q
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+         ins (%input, %filter, %zp_input, %zp_filter : tensor<?x?x?x?x?xi8>, tensor<?x?x?x?x?xi8>, i32, i32)
+         outs (%output: tensor<?x?x?x?x?xi32>) -> tensor<?x?x?x?x?xi32>
+  return %0 : tensor<?x?x?x?x?xi32>
+}
+//      CHECK: @conv_2d_nhwgc_gfhwc_q
+//      CHECK:   linalg.conv_2d_nhwgc_gfhwc_q
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
+
+// -----
+
 func.func @conv_3d(%in : tensor<?x?x?xf32>, %filter : tensor<?x?x?xf32>, %out : tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
   %0 = linalg.conv_3d
          ins(%in, %filter : tensor<?x?x?xf32>, tensor<?x?x?xf32>)
@@ -118,6 +261,58 @@ func.func @depthwise_conv_2d_nchw_chw(%input: tensor<?x?x?x?xf16>, %filter: tens
 //      CHECK: @depthwise_conv_2d_nchw_chw
 //      CHECK:   linalg.depthwise_conv_2d_nchw_chw
 // CHECK-SAME:      dilations = dense<[2, 3]> : tensor<2xi64>, strides = dense<[4, 5]> : tensor<2xi64>
+
+// -----
+
+func.func @depthwise_conv_2d_nhwc_hwc(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?xf32>, %output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
+  %0 = linalg.depthwise_conv_2d_nhwc_hwc
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>}
+         ins (%input, %filter: tensor<?x?x?x?xf32>, tensor<?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?xf32>
+}
+//      CHECK: @depthwise_conv_2d_nhwc_hwc
+//      CHECK:   linalg.depthwise_conv_2d_nhwc_hwc
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>
+
+// -----
+
+func.func @depthwise_conv_2d_nhwc_hwc_q(%input: tensor<?x?x?x?xi8>, %filter: tensor<?x?x?xi8>, %output: tensor<?x?x?x?xi32>, %zp_input: i32, %zp_filter: i32) -> tensor<?x?x?x?xi32> {
+  %0 = linalg.depthwise_conv_2d_nhwc_hwc_q
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+         ins (%input, %filter, %zp_input, %zp_filter : tensor<?x?x?x?xi8>, tensor<?x?x?xi8>, i32, i32)
+         outs (%output: tensor<?x?x?x?xi32>) -> tensor<?x?x?x?xi32>
+  return %0 : tensor<?x?x?x?xi32>
+}
+//      CHECK: @depthwise_conv_2d_nhwc_hwc_q
+//      CHECK:   linalg.depthwise_conv_2d_nhwc_hwc_q
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
+
+// -----
+
+func.func @depthwise_conv_2d_nhwc_hwcm(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?xf32>, %output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32> {
+  %0 = linalg.depthwise_conv_2d_nhwc_hwcm
+         {dilations = dense<[1, 2]> : tensor<2xi64>, strides = dense<[3, 1]> : tensor<2xi64>}
+         ins (%input, %filter: tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>)
+         outs (%output: tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32>
+  return %0 : tensor<?x?x?x?x?xf32>
+}
+//      CHECK: @depthwise_conv_2d_nhwc_hwcm
+//      CHECK:   linalg.depthwise_conv_2d_nhwc_hwcm
+// CHECK-SAME:      dilations = dense<[1, 2]> : tensor<2xi64>, strides = dense<[3, 1]> : tensor<2xi64>
+
+// -----
+
+func.func @depthwise_conv_2d_nhwc_hwcm_q(%input: tensor<?x?x?x?xi8>, %filter: tensor<?x?x?x?xi8>, %output: tensor<?x?x?x?x?xi32>, %zp_input: i32, %zp_filter: i32) -> tensor<?x?x?x?x?xi32> {
+  %0 = linalg.depthwise_conv_2d_nhwc_hwcm_q
+         {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+         ins (%input, %filter, %zp_input, %zp_filter : tensor<?x?x?x?xi8>, tensor<?x?x?x?xi8>, i32, i32)
+         outs (%output: tensor<?x?x?x?x?xi32>) -> tensor<?x?x?x?x?xi32>
+  return %0 : tensor<?x?x?x?x?xi32>
+}
+//      CHECK: @depthwise_conv_2d_nhwc_hwcm_q
+//      CHECK:   linalg.depthwise_conv_2d_nhwc_hwcm_q
+// CHECK-SAME:      dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>
 
 // -----
 
