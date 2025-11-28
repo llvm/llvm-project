@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wexperimental-lifetime-safety-suggestions -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify %s
 
 struct MyObj {
   int id;
@@ -943,4 +943,3 @@ void parentheses(bool cond) {
   }  // expected-note 4 {{destroyed here}}
   (void)*p;  // expected-note 4 {{later used here}}
 }
-
