@@ -1,0 +1,46 @@
+//===- ASTMapping.h - AST to SSAF Entity mapping ----------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_ASTMAPPING_H
+#define LLVM_CLANG_ANALYSIS_SCALABLE_ASTMAPPING_H
+
+#include "clang/Analysis/Scalable/Model/EntityName.h"
+#include "clang/AST/Decl.h"
+#include "llvm/ADT/StringRef.h"
+#include <optional>
+
+namespace clang {
+namespace ssaf {
+
+/// Maps a declaration to an EntityName.
+///
+/// Supported declaration types for entity mapping:
+/// - Functions and methods
+/// - Global Variables
+/// - Function parameters
+/// - Struct/class/union type definitions
+/// - Struct/class/union fields
+///
+/// Implicit declarations and compiler builtins are not mapped.
+///
+/// \param D The declaration to map. Must not be null.
+///
+/// \return An EntityName if the declaration can be mapped, std::nullopt otherwise.
+std::optional<EntityName> getLocalEntityNameForDecl(const Decl* D);
+
+/// Maps a function return type to an EntityName.
+///
+/// \param FD The function declaration. Must not be null.
+///
+/// \return An EntityName for the function's return type.
+std::optional<EntityName> getLocalEntityNameForFunctionReturn(const FunctionDecl* FD);
+
+} // namespace ssaf
+} // namespace clang
+
+#endif // LLVM_CLANG_ANALYSIS_SCALABLE_ASTMAPPING_H

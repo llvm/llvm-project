@@ -1,0 +1,72 @@
+//===- BuildNamespace.cpp ---------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "clang/Analysis/Scalable/Model/BuildNamespace.h"
+#include "llvm/Support/ErrorHandling.h"
+
+namespace clang {
+namespace ssaf {
+
+std::string toString(BuildNamespaceKind BNK) {
+  switch(BNK) {
+    case BuildNamespaceKind::CompilationUnit: return "compilation_unit";
+    case BuildNamespaceKind::LinkUnit: return "link_unit";
+  }
+  llvm_unreachable("Unknown BuildNamespaceKind");
+}
+
+std::optional<BuildNamespaceKind> parseBuildNamespaceKind(llvm::StringRef Str) {
+  if (Str == "compilation_unit")
+    return BuildNamespaceKind::CompilationUnit;
+  if (Str == "link_unit")
+    return BuildNamespaceKind::LinkUnit;
+  return std::nullopt;
+}
+
+BuildNamespace BuildNamespace::makeTU(llvm::StringRef CompilationId) {
+  return BuildNamespace{BuildNamespaceKind::CompilationUnit, CompilationId.str()};
+}
+
+bool BuildNamespace::operator==(const BuildNamespace& Other) const {
+  return Kind == Other.Kind && Name == Other.Name;
+}
+
+bool BuildNamespace::operator!=(const BuildNamespace& Other) const {
+  return !(*this == Other);
+}
+
+bool BuildNamespace::operator<(const BuildNamespace& Other) const {
+  if (Kind != Other.Kind)
+    return Kind < Other.Kind;
+  return Name < Other.Name;
+}
+
+NestedBuildNamespace NestedBuildNamespace::makeTU(llvm::StringRef CompilationId) {
+  NestedBuildNamespace Result;
+  Result.Namespaces.push_back(BuildNamespace::makeTU(CompilationId));
+  return Result;
+}
+
+bool NestedBuildNamespace::empty() const {
+  return Namespaces.empty();
+}
+
+bool NestedBuildNamespace::operator==(const NestedBuildNamespace& Other) const {
+  return Namespaces == Other.Namespaces;
+}
+
+bool NestedBuildNamespace::operator!=(const NestedBuildNamespace& Other) const {
+  return !(*this == Other);
+}
+
+bool NestedBuildNamespace::operator<(const NestedBuildNamespace& Other) const {
+  return Namespaces < Other.Namespaces;
+}
+
+} // namespace ssaf
+} // namespace clang
