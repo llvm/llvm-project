@@ -2545,6 +2545,9 @@ void PruneThreadPlans();
   /// The descriptor's ownership is transferred to the underlying
   /// ConnectionFileDescriptor.
   ///
+  /// When data is successfully read from the file descriptor, it is stored in
+  /// m_stdout_data. There is no differentiation between stdout and stderr.
+  ///
   /// \param[in] fd
   ///     The file descriptor to use for process STDIO communication. It's
   ///     assumed to be valid and will be managed by the newly created
