@@ -56,8 +56,6 @@
 ; RUN:   -mattr=+zhinxmin -verify-machineinstrs -target-abi lp64 | \
 ; RUN:   FileCheck -check-prefixes=CHECKIZHINXMIN,RV64IZHINXMIN %s
 
-declare half @llvm.sqrt.f16(half)
-
 define half @sqrt_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: sqrt_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -111,8 +109,6 @@ define half @sqrt_f16(half %a) nounwind {
   %1 = call half @llvm.sqrt.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.powi.f16.i32(half, i32)
 
 define half @powi_f16(half %a, i32 %b) nounwind {
 ; RV32IZFH-LABEL: powi_f16:
@@ -244,8 +240,6 @@ define half @powi_f16(half %a, i32 %b) nounwind {
   ret half %1
 }
 
-declare half @llvm.sin.f16(half)
-
 define half @sin_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: sin_f16:
 ; RV32IZFH:       # %bb.0:
@@ -363,8 +357,6 @@ define half @sin_f16(half %a) nounwind {
   %1 = call half @llvm.sin.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.cos.f16(half)
 
 define half @cos_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: cos_f16:
@@ -819,8 +811,6 @@ define half @sincos_f16(half %a) nounwind {
   ret half %3
 }
 
-declare half @llvm.pow.f16(half, half)
-
 define half @pow_f16(half %a, half %b) nounwind {
 ; RV32IZFH-LABEL: pow_f16:
 ; RV32IZFH:       # %bb.0:
@@ -973,8 +963,6 @@ define half @pow_f16(half %a, half %b) nounwind {
   ret half %1
 }
 
-declare half @llvm.exp.f16(half)
-
 define half @exp_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: exp_f16:
 ; RV32IZFH:       # %bb.0:
@@ -1092,8 +1080,6 @@ define half @exp_f16(half %a) nounwind {
   %1 = call half @llvm.exp.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.exp2.f16(half)
 
 define half @exp2_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: exp2_f16:
@@ -1331,8 +1317,6 @@ define half @exp10_f16(half %a) nounwind {
   ret half %1
 }
 
-declare half @llvm.log.f16(half)
-
 define half @log_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: log_f16:
 ; RV32IZFH:       # %bb.0:
@@ -1450,8 +1434,6 @@ define half @log_f16(half %a) nounwind {
   %1 = call half @llvm.log.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.log10.f16(half)
 
 define half @log10_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: log10_f16:
@@ -1571,8 +1553,6 @@ define half @log10_f16(half %a) nounwind {
   ret half %1
 }
 
-declare half @llvm.log2.f16(half)
-
 define half @log2_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: log2_f16:
 ; RV32IZFH:       # %bb.0:
@@ -1691,8 +1671,6 @@ define half @log2_f16(half %a) nounwind {
   ret half %1
 }
 
-declare half @llvm.fma.f16(half, half, half)
-
 define half @fma_f16(half %a, half %b, half %c) nounwind {
 ; CHECKIZFH-LABEL: fma_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -1790,8 +1768,6 @@ define half @fma_f16(half %a, half %b, half %c) nounwind {
   %1 = call half @llvm.fma.f16(half %a, half %b, half %c)
   ret half %1
 }
-
-declare half @llvm.fmuladd.f16(half, half, half)
 
 define half @fmuladd_f16(half %a, half %b, half %c) nounwind {
 ; CHECKIZFH-LABEL: fmuladd_f16:
@@ -1907,8 +1883,6 @@ define half @fmuladd_f16(half %a, half %b, half %c) nounwind {
   ret half %1
 }
 
-declare half @llvm.fabs.f16(half)
-
 define half @fabs_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: fabs_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -1966,8 +1940,6 @@ define half @fabs_f16(half %a) nounwind {
   %1 = call half @llvm.fabs.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.minnum.f16(half, half)
 
 define half @minnum_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: minnum_f16:
@@ -2051,8 +2023,6 @@ define half @minnum_f16(half %a, half %b) nounwind {
   ret half %1
 }
 
-declare half @llvm.maxnum.f16(half, half)
-
 define half @maxnum_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: maxnum_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -2135,8 +2105,6 @@ define half @maxnum_f16(half %a, half %b) nounwind {
   ret half %1
 }
 
-declare half @llvm.copysign.f16(half, half)
-
 define half @copysign_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: copysign_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -2216,8 +2184,6 @@ define half @copysign_f16(half %a, half %b) nounwind {
   %1 = call half @llvm.copysign.f16(half %a, half %b)
   ret half %1
 }
-
-declare half @llvm.floor.f16(half)
 
 define half @floor_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: floor_f16:
@@ -2309,8 +2275,6 @@ define half @floor_f16(half %a) nounwind {
   ret half %1
 }
 
-declare half @llvm.ceil.f16(half)
-
 define half @ceil_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: ceil_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -2400,8 +2364,6 @@ define half @ceil_f16(half %a) nounwind {
   %1 = call half @llvm.ceil.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.trunc.f16(half)
 
 define half @trunc_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: trunc_f16:
@@ -2493,8 +2455,6 @@ define half @trunc_f16(half %a) nounwind {
   ret half %1
 }
 
-declare half @llvm.rint.f16(half)
-
 define half @rint_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: rint_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -2584,8 +2544,6 @@ define half @rint_f16(half %a) nounwind {
   %1 = call half @llvm.rint.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.nearbyint.f16(half)
 
 define half @nearbyint_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: nearbyint_f16:
@@ -2705,8 +2663,6 @@ define half @nearbyint_f16(half %a) nounwind {
   ret half %1
 }
 
-declare half @llvm.round.f16(half)
-
 define half @round_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: round_f16:
 ; CHECKIZFH:       # %bb.0:
@@ -2796,8 +2752,6 @@ define half @round_f16(half %a) nounwind {
   %1 = call half @llvm.round.f16(half %a)
   ret half %1
 }
-
-declare half @llvm.roundeven.f16(half)
 
 define half @roundeven_f16(half %a) nounwind {
 ; CHECKIZFH-LABEL: roundeven_f16:
@@ -2889,7 +2843,6 @@ define half @roundeven_f16(half %a) nounwind {
   ret half %1
 }
 
-declare i1 @llvm.is.fpclass.f16(half, i32)
 define i1 @isnan_d_fpclass(half %x) {
 ; CHECKIZFH-LABEL: isnan_d_fpclass:
 ; CHECKIZFH:       # %bb.0:
@@ -2965,8 +2918,6 @@ define i1 @isnan_d_fpclass(half %x) {
   %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 3)  ; nan
   ret i1 %1
 }
-
-declare half @llvm.tan.f16(half)
 
 define half @tan_f16(half %a) nounwind {
 ; RV32IZFH-LABEL: tan_f16:
@@ -3086,8 +3037,6 @@ define half @tan_f16(half %a) nounwind {
   ret half %1
 }
 
-declare half @llvm.maximumnum.f16(half, half)
-
 define half @maximumnum_half(half %x, half %y) {
 ; CHECKIZFH-LABEL: maximumnum_half:
 ; CHECKIZFH:       # %bb.0:
@@ -3189,8 +3138,6 @@ define half @maximumnum_half(half %x, half %y) {
   %z = call half @llvm.maximumnum.f16(half %x, half %y)
   ret half %z
 }
-
-declare half @llvm.minimumnum.f16(half, half)
 
 define half @minimumnum_half(half %x, half %y) {
 ; CHECKIZFH-LABEL: minimumnum_half:

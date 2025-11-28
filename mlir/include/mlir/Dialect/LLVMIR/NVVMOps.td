@@ -638,9 +638,76 @@ def NVVM_MBarrierInvalOp : NVVM_Op<"mbarrier.inval">,
   }];
 }
 
-def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
-  Results<(outs I64:$res)>,
-  Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr)> {
+def NVVM_MBarrierExpectTxOp : NVVM_Op<"mbarrier.expect_tx"> {
+  let summary = "MBarrier expect-tx Operation";
+  let description = [{
+    The `nvvm.mbarrier.expect_tx` operation increases the transaction count
+    of the mbarrier located at `addr` by `txcount` amount. The `scope`
+    specifies the set of threads that can directly observe the memory
+    synchronizing effect of the `mbarrier.expect_tx` operation. `CTA`
+    and `CLUSTER` are the only allowed values for `scope`.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-expect-tx)
+  }];
+
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    I32:$txcount,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope);
+
+  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands)";
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MBarrierExpectTxOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def NVVM_MBarrierCompleteTxOp : NVVM_Op<"mbarrier.complete_tx"> {
+  let summary = "MBarrier complete-tx Operation";
+  let description = [{
+    The `nvvm.mbarrier.complete_tx` operation decrements the transaction
+    count of the *mbarrier object* at `addr` by `txcount`. It also signals
+    the completion of asynchronous transactions that were tracked by the
+    current phase. The `scope` specifies the set of threads that can directly
+    observe the memory synchronizing effect of the `mbarrier.complete_tx`
+    operation. `CTA` and `CLUSTER` are the only allowed values for `scope`.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-complete-tx)
+  }];
+
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    I32:$txcount,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope);
+
+  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands)";
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MBarrierCompleteTxOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive"> {
   let summary = "MBarrier Arrive Operation";
   let description = [{
     The `nvvm.mbarrier.arrive` operation performs an arrive-on operation on the 
@@ -652,19 +719,40 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
     with this release pattern.
 
     This operation causes the executing thread to signal its arrival at the barrier.
-    The operation returns an opaque value that captures the phase of the 
-    *mbarrier object* prior to the arrive-on operation. The contents of this state 
-    value are implementation-specific.
 
-    The operation takes the following operand:
+    - `res`: When the `space` is not shared_cluster, this operation returns an
+      opaque 64-bit value capturing the phase of the *mbarrier object* prior to
+      the arrive-on operation. The contents of this return value are
+      implementation-specific. An *mbarrier object* located in the shared_cluster
+      space cannot return a value.
+
+    The operation takes the following operands:
     - `addr`: A pointer to the memory location of the *mbarrier object*. The `addr`
-      must be a pointer to generic or shared::cta memory. When it is generic, the
-      underlying address must be within the shared::cta memory space; otherwise
-      the behavior is undefined.
+      must be a pointer to generic or shared_cta or shared_cluster memory. When it
+      is generic, the underlying address must be within the shared_cta memory space;
+      otherwise the behavior is undefined.
+    - `count`: This specifies the amount by which the pending arrival count is
+      decremented. If the `count` argument is not specified, the pending arrival
+      count is decremented by 1.
+    - `scope`: This specifies the set of threads that directly observe the memory
+      synchronizing effect of the `mbarrier.arrive` operation.
+    - `space`: This indicates the memory space where the mbarrier object resides.
+    - `relaxed`: When set to true, the `arrive` operation has relaxed memory semantics
+      and does not provide any ordering or visibility guarantees.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
   }];
-  let assemblyFormat = "$addr attr-dict `:` type($addr) `->` type($res)";
+
+  let results = (outs Optional<I64>:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    Optional<I32>:$count,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
+    DefaultValuedAttr<BoolAttr, "false">:$relaxed);
+
+  let assemblyFormat = "$addr (`,` $count^)? attr-dict `:` type($addr) (`->` type($res)^)?";
+
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     static mlir::NVVM::IDArgPair
@@ -675,7 +763,54 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
   string llvmBuilder = [{
     auto [id, args] = NVVM::MBarrierArriveOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
+
+    int addrSpace = llvm::cast<LLVMPointerType>(op.getAddr().getType()).getAddressSpace();
+    if (addrSpace != static_cast<unsigned>(NVVM::NVVMMemorySpace::SharedCluster))
+      $res = createIntrinsicCall(builder, id, args);
+    else
+      createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def NVVM_MBarrierArriveDropOp : NVVM_Op<"mbarrier.arrive_drop"> {
+  let summary = "MBarrier Arrive-Drop Operation";
+  let description = [{
+    The `nvvm.mbarrier.arrive_drop` operation decrements the expected arrival
+    count of the *mbarrier object* by `count` and then performs an arrive-on
+    operation. When `count` is not specified, it defaults to 1. The decrement
+    of the expected arrival count applies to all the subsequent phases of the
+    *mbarrier object*. The remaining semantics are identical to those of the
+    `nvvm.mbarrier.arrive` operation.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
+  }];
+
+  let results = (outs Optional<I64>:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    Optional<I32>:$count,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
+    DefaultValuedAttr<BoolAttr, "false">:$relaxed);
+
+  let assemblyFormat = "$addr (`,` $count^)? attr-dict `:` type($addr) (`->` type($res)^)?";
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MBarrierArriveDropOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+
+    int addrSpace = llvm::cast<LLVMPointerType>(op.getAddr().getType()).getAddressSpace();
+    if (addrSpace != static_cast<unsigned>(NVVM::NVVMMemorySpace::SharedCluster))
+      $res = createIntrinsicCall(builder, id, args);
+    else
+      createIntrinsicCall(builder, id, args);
   }];
 }
 
@@ -720,6 +855,35 @@ def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
 
   string llvmBuilder = [{
     auto [id, args] = NVVM::MBarrierArriveNocompleteOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    $res = createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def NVVM_MBarrierArriveDropNocompleteOp : NVVM_Op<"mbarrier.arrive_drop.nocomplete">,
+  Results<(outs I64:$res)>,
+  Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
+                 I32:$count)> {
+  let summary = "MBarrier Arrive-Drop No-Complete Operation";
+  let description = [{
+    The `nvvm.mbarrier.arrive_drop.nocomplete` operation decrements the expected
+    arrival count of the *mbarrier object* by the amount `count` and then performs
+    an arrive-on operation on the *mbarrier object* with the guarantee that it
+    will not cause the barrier to complete its current phase.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
+  }];
+
+  let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands) `->` type($res)";
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MBarrierArriveDropNocompleteOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
     $res = createIntrinsicCall(builder, id, args);
   }];
@@ -1834,45 +1998,57 @@ def NVVM_ConvertF4x2ToF16x2Op :
 
 // Base class for conversions from F32x2 to FPx2 formats
 // (F16x2, BF16x2)
-// TODO: In separate PR, add .rn and .rz rounding variants for this conversion
-// as currently only support .rs rounding mode
 class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstType> :
-  NVVM_Op<mnemonic, [Pure, NVVMRequiresSMa<[100, 103]>]>,
+  NVVM_Op<mnemonic, [Pure]>,
   Results<(outs dstType:$dst)>,
-  Arguments<(ins F32:$src_hi, F32:$src_lo, I32:$rbits,
-                 DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::RS">:$rnd,
+  Arguments<(ins F32:$src_hi, F32:$src_lo,
+                 Optional<I32>:$random_bits,
+                 DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
                  DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
                  DefaultValuedAttr<BoolAttr, "false">:$relu)> {
-  let summary = "Convert two F32 values to packed " # dstFormat # " with stochastic rounding (.rs)";
+  let summary = "Convert two F32 values to packed " # !tolower(dstFormat) # ".";
   let description = [{
-    Converts two F32 values to packed }] # dstFormat # [{ format using stochastic 
-    rounding (.rs) mode with randomness provided by the `rbits` parameter. The 
-    `relu` attribute clamps negative results to 0. The `sat` attribute determines 
-    saturation behavior. The `src_hi` and `src_lo` parameters correspond to operands 
-    `a` and `b` in the PTX ISA, respectively.
+    Converts two F32 values to packed }] # !tolower(dstFormat) # [{ format with 
+    the specified rounding mode. The `src_hi` and `src_lo` parameters 
+    correspond to operands `a` and `b` in the PTX ISA, respectively.
+    
+    The `random_bits` parameter is required for stochastic rounding and 
+    provides the [random bits](}] #
+    !if(!eq(dstFormat, "F16x2"),
+    "https://docs.nvidia.com/cuda/parallel-thread-execution/#cvt-rs-rbits-layout-f16",
+    "https://docs.nvidia.com/cuda/parallel-thread-execution/#cvt-rs-rbits-layout-bf16") #
+    [{) to be used for the conversion.
+
+    The `relu` attribute clamps negative results to 0.
+
+    The `sat` attribute determines saturation behavior.
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
   
-  let assemblyFormat = "$src_hi `,` $src_lo `,` $rbits attr-dict `:` type($dst)";
+  let assemblyFormat = "$src_hi `,` $src_lo (`,` $random_bits^)? attr-dict `:` type($dst)";
 
   let hasVerifier = 1;
   
   let extraClassDeclaration = [{
-    llvm::Intrinsic::ID getIntrinsicID();
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(
+      NVVM::ConvertF32x2To}] # dstFormat # [{Op &op, 
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
   }];
   
   string llvmBuilder = [{
-    auto intId = op.getIntrinsicID();
-    $dst = createIntrinsicCall(builder, intId, {$src_hi, $src_lo, $rbits});
+    auto [intId, args] = mlir::NVVM::ConvertF32x2To}] # dstFormat # 
+    [{Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    $dst = createIntrinsicCall(builder, intId, args);
   }];
-  }
+}
 
-// F32x2 -> F16x2 with stochastic rounding
-def NVVM_ConvertF32x2ToF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"f16x2", "convert.f32x2.to.f16x2", VectorOfLengthAndType<[2], [F16]>>;
+// F32x2 -> F16x2
+def NVVM_ConvertF32x2ToF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"F16x2", "convert.f32x2.to.f16x2", VectorOfLengthAndType<[2], [F16]>>;
 
-// F32x2 -> BF16x2 with stochastic rounding
-def NVVM_ConvertF32x2ToBF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"bf16x2", "convert.f32x2.to.bf16x2", VectorOfLengthAndType<[2], [BF16]>>;
+// F32x2 -> BF16x2
+def NVVM_ConvertF32x2ToBF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"BF16x2", "convert.f32x2.to.bf16x2", VectorOfLengthAndType<[2], [BF16]>>;
 
 // Base class for stochastic rounding conversions from F32x4 to FPx4 formats
 // (E4M3x4, E5M2x4, E2M3x4, E3M2x4, E2M1x4)
@@ -3133,12 +3309,7 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch",
   let llvmBuilder = [{
     auto [id, args] = NVVM::PrefetchOp::getIntrinsicIDAndArgs(op,
                                           moduleTranslation, builder);
-
-    if(op.getTensormap())
-      // Overloaded intrinsic
-      createIntrinsicCall(builder, id, args, {args[0]->getType()});
-    else
-      createIntrinsicCall(builder, id, args);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 

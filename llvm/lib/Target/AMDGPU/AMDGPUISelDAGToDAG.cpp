@@ -3080,9 +3080,38 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
   SDValue OffsetField = CurDAG->getTargetConstant(ImmOffset, SL, MVT::i32);
 
   const unsigned Opc = gwsIntrinToOpcode(IntrID);
+
+  const MCInstrDesc &InstrDesc = TII->get(Opc);
+  int Data0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data0);
+
+  const TargetRegisterClass *DataRC = TII->getRegClass(InstrDesc, Data0Idx);
+
   SmallVector<SDValue, 5> Ops;
-  if (HasVSrc)
-    Ops.push_back(N->getOperand(2));
+  if (HasVSrc) {
+    const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+
+    SDValue Data = N->getOperand(2);
+    MVT DataVT = Data.getValueType().getSimpleVT();
+    if (TRI->isTypeLegalForClass(*DataRC, DataVT)) {
+      // Normal 32-bit case.
+      Ops.push_back(N->getOperand(2));
+    } else {
+      // Operand is really 32-bits, but requires 64-bit alignment, so use the
+      // even aligned 64-bit register class.
+      const SDValue RegSeqOps[] = {
+          CurDAG->getTargetConstant(DataRC->getID(), SL, MVT::i32), Data,
+          CurDAG->getTargetConstant(AMDGPU::sub0, SL, MVT::i32),
+          SDValue(
+              CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, SL, MVT::i32),
+              0),
+          CurDAG->getTargetConstant(AMDGPU::sub1, SL, MVT::i32)};
+
+      Ops.push_back(SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE,
+                                                   SL, MVT::v2i32, RegSeqOps),
+                            0));
+    }
+  }
+
   Ops.push_back(OffsetField);
   Ops.push_back(Chain);
 

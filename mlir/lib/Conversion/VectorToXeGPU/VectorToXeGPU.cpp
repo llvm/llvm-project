@@ -519,8 +519,13 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       return lowerToScatteredLoadOp(readOp, rewriter);
     }
 
-    // Perform common data transfer checks.
     VectorType vecTy = readOp.getVectorType();
+
+    // Lower using load.gather in 1D case
+    if (vecTy.getRank() == 1 && !readOp.hasOutOfBoundsDim())
+      return lowerToScatteredLoadOp(readOp, rewriter);
+
+    // Perform common data transfer checks.
     if (failed(storeLoadPreconditions(rewriter, readOp, vecTy)))
       return failure();
 

@@ -129,9 +129,12 @@ class MemIntrinsicCostAttributes {
   /// load/store to transform to the intrinsic.
   const Instruction *I = nullptr;
 
+<<<<<<< HEAD
   /// Address in memory.
   const Value *Ptr = nullptr;
 
+=======
+>>>>>>> pub/main
   /// Vector type of the data to be loaded or stored.
   Type *DataTy = nullptr;
 
@@ -165,9 +168,18 @@ public:
       : I(I), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
         Alignment(Alignment) {}
 
+  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
+                                      bool VariableMask, Align Alignment,
+                                      const Instruction *I = nullptr)
+      : I(I), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
+        Alignment(Alignment) {}
+
   Intrinsic::ID getID() const { return IID; }
   const Instruction *getInst() const { return I; }
+<<<<<<< HEAD
   const Value *getPointer() const { return Ptr; }
+=======
+>>>>>>> pub/main
   Type *getDataType() const { return DataTy; }
   bool getVariableMask() const { return VariableMask; }
   unsigned getAddressSpace() const { return AddressSpace; }
@@ -867,12 +879,20 @@ public:
   LLVM_ABI AddressingModeKind
   getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const;
 
+  /// Some targets only support masked load/store with a constant mask.
+  enum MaskKind {
+    VariableOrConstantMask,
+    ConstantMask,
+  };
+
   /// Return true if the target supports masked store.
-  LLVM_ABI bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                                   unsigned AddressSpace) const;
+  LLVM_ABI bool
+  isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddressSpace,
+                     MaskKind MaskKind = VariableOrConstantMask) const;
   /// Return true if the target supports masked load.
-  LLVM_ABI bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                                  unsigned AddressSpace) const;
+  LLVM_ABI bool
+  isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
+                    MaskKind MaskKind = VariableOrConstantMask) const;
 
   /// Return true if the target supports nontemporal store.
   LLVM_ABI bool isLegalNTStore(Type *DataType, Align Alignment) const;
@@ -1609,6 +1629,47 @@ public:
       OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
       const Instruction *I = nullptr) const;
 
+<<<<<<< HEAD
+=======
+  /// \return The cost of masked Load and Store instructions.
+  LLVM_ABI InstructionCost getMaskedMemoryOpCost(
+      const MemIntrinsicCostAttributes &MICA,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+
+  /// \return The cost of Gather or Scatter operation
+  /// \p Opcode - is a type of memory access Load or Store
+  /// \p DataTy - a vector type of the data to be loaded or stored
+  /// \p Ptr - pointer [or vector of pointers] - address[es] in memory
+  /// \p VariableMask - true when the memory access is predicated with a mask
+  ///                   that is not a compile-time constant
+  /// \p Alignment - alignment of single element
+  /// \p I - the optional original context instruction, if one exists, e.g. the
+  ///        load/store to transform or the call to the gather/scatter intrinsic
+  LLVM_ABI InstructionCost getGatherScatterOpCost(
+      unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
+      Align Alignment, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      const Instruction *I = nullptr) const;
+
+  /// \return The cost of Expand Load or Compress Store operation
+  LLVM_ABI InstructionCost getExpandCompressMemoryOpCost(
+      const MemIntrinsicCostAttributes &MICA,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+
+  /// \return The cost of strided memory operations.
+  /// \p Opcode - is a type of memory access Load or Store
+  /// \p DataTy - a vector type of the data to be loaded or stored
+  /// \p Ptr - pointer [or vector of pointers] - address[es] in memory
+  /// \p VariableMask - true when the memory access is predicated with a mask
+  ///                   that is not a compile-time constant
+  /// \p Alignment - alignment of single element
+  /// \p I - the optional original context instruction, if one exists, e.g. the
+  ///        load/store to transform or the call to the gather/scatter intrinsic
+  LLVM_ABI InstructionCost getStridedMemoryOpCost(
+      unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
+      Align Alignment, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      const Instruction *I = nullptr) const;
+
+>>>>>>> pub/main
   /// \return The cost of the interleaved memory operation.
   /// \p Opcode is the memory operation code
   /// \p VecTy is the vector type of the interleaved access.

@@ -1580,10 +1580,14 @@ public:
   }
 
   InstructionCost
-  getExpandCompressMemoryOpCost(unsigned Opcode, Type *DataTy,
-                                bool VariableMask, Align Alignment,
-                                TTI::TargetCostKind CostKind,
-                                const Instruction *I = nullptr) const override {
+  getExpandCompressMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                TTI::TargetCostKind CostKind) const override {
+    unsigned Opcode = MICA.getID() == Intrinsic::masked_expandload
+                          ? Instruction::Load
+                          : Instruction::Store;
+    Type *DataTy = MICA.getDataType();
+    bool VariableMask = MICA.getVariableMask();
+    Align Alignment = MICA.getAlignment();
     // Treat expand load/compress store as gather/scatter operation.
     // TODO: implement more precise cost estimation for these intrinsics.
     return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
@@ -1972,18 +1976,29 @@ public:
       const Value *Data = Args[0];
       const Value *Mask = Args[2];
       Align Alignment = I->getParamAlign(1).valueOrOne();
+<<<<<<< HEAD
       return thisT()->getMemIntrinsicInstrCost(
           MemIntrinsicCostAttributes(Intrinsic::masked_compressstore,
                                      Data->getType(), !isa<Constant>(Mask),
+=======
+      return thisT()->getExpandCompressMemoryOpCost(
+          MemIntrinsicCostAttributes(IID, Data->getType(), !isa<Constant>(Mask),
+>>>>>>> pub/main
                                      Alignment, I),
           CostKind);
     }
     case Intrinsic::masked_expandload: {
       const Value *Mask = Args[1];
       Align Alignment = I->getParamAlign(0).valueOrOne();
+<<<<<<< HEAD
       return thisT()->getMemIntrinsicInstrCost(
           MemIntrinsicCostAttributes(Intrinsic::masked_expandload, RetTy,
                                      !isa<Constant>(Mask), Alignment, I),
+=======
+      return thisT()->getExpandCompressMemoryOpCost(
+          MemIntrinsicCostAttributes(IID, RetTy, !isa<Constant>(Mask),
+                                     Alignment, I),
+>>>>>>> pub/main
           CostKind);
     }
     case Intrinsic::experimental_vp_strided_store: {
