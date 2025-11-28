@@ -27,6 +27,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include <optional>
+#include <queue>
 
 using namespace llvm;
 
@@ -35,6 +36,11 @@ using namespace llvm;
 STATISTIC(NumSDWAPatternsFound, "Number of SDWA patterns found.");
 STATISTIC(NumSDWAInstructionsPeepholed,
           "Number of instruction converted to SDWA.");
+STATISTIC(Num16BitPackedInstructionsEliminated,
+          "Number of packed instruction eliminated.");
+STATISTIC(NumSDWAInstructionsToEliminateFP16Pack,
+          "Number of instruction converted/modified into SDWA to eliminate "
+          "FP16 packing.");
 
 namespace {
 
@@ -66,6 +72,14 @@ private:
   MachineInstr *createSDWAVersion(MachineInstr &MI);
   bool convertToSDWA(MachineInstr &MI, const SDWAOperandsVector &SDWAOperands);
   void legalizeScalarOperands(MachineInstr &MI, const GCNSubtarget &ST) const;
+
+  void eliminateFP16Packing(MachineBasicBlock &MBB, const GCNSubtarget &ST);
+  unsigned
+  computeMIChainsForPackedOps(MachineInstr *ParentMI,
+                              std::queue<MachineOperand *> &DefSrcQueue,
+                              const GCNSubtarget &ST);
+  void convertMIToSDWAWithOpsel(MachineInstr *MI, MachineOperand &SrcMO,
+                                AMDGPU::SDWA::SdwaSel OpSel);
 
 public:
   bool run(MachineFunction &MF);
@@ -1369,6 +1383,459 @@ bool SIPeepholeSDWALegacy::runOnMachineFunction(MachineFunction &MF) {
   return SIPeepholeSDWA().run(MF);
 }
 
+static bool isSrcDestFP16Bits(MachineInstr *MI, const SIInstrInfo *TII) {
+  unsigned Opcode = MI->getOpcode();
+  if (TII->isSDWA(Opcode))
+    Opcode = AMDGPU::getBasicFromSDWAOp(Opcode);
+
+  switch (Opcode) {
+  case AMDGPU::V_CVT_F16_U16_e32:
+  case AMDGPU::V_CVT_F16_U16_e64:
+  case AMDGPU::V_CVT_F16_I16_e32:
+  case AMDGPU::V_CVT_F16_I16_e64:
+  case AMDGPU::V_RCP_F16_e64:
+  case AMDGPU::V_RCP_F16_e32:
+  case AMDGPU::V_RSQ_F16_e64:
+  case AMDGPU::V_RSQ_F16_e32:
+  case AMDGPU::V_SQRT_F16_e64:
+  case AMDGPU::V_SQRT_F16_e32:
+  case AMDGPU::V_LOG_F16_e64:
+  case AMDGPU::V_LOG_F16_e32:
+  case AMDGPU::V_EXP_F16_e64:
+  case AMDGPU::V_EXP_F16_e32:
+  case AMDGPU::V_SIN_F16_e64:
+  case AMDGPU::V_SIN_F16_e32:
+  case AMDGPU::V_COS_F16_e64:
+  case AMDGPU::V_COS_F16_e32:
+  case AMDGPU::V_FLOOR_F16_e64:
+  case AMDGPU::V_FLOOR_F16_e32:
+  case AMDGPU::V_CEIL_F16_e64:
+  case AMDGPU::V_CEIL_F16_e32:
+  case AMDGPU::V_TRUNC_F16_e64:
+  case AMDGPU::V_TRUNC_F16_e32:
+  case AMDGPU::V_RNDNE_F16_e64:
+  case AMDGPU::V_RNDNE_F16_e32:
+  case AMDGPU::V_FRACT_F16_e64:
+  case AMDGPU::V_FRACT_F16_e32:
+  case AMDGPU::V_FREXP_MANT_F16_e64:
+  case AMDGPU::V_FREXP_MANT_F16_e32:
+  case AMDGPU::V_FREXP_EXP_I16_F16_e64:
+  case AMDGPU::V_FREXP_EXP_I16_F16_e32:
+  case AMDGPU::V_LDEXP_F16_e64:
+  case AMDGPU::V_LDEXP_F16_e32:
+  case AMDGPU::V_ADD_F16_e64:
+  case AMDGPU::V_ADD_F16_e32:
+  case AMDGPU::V_SUB_F16_e64:
+  case AMDGPU::V_SUB_F16_e32:
+  case AMDGPU::V_SUBREV_F16_e64:
+  case AMDGPU::V_SUBREV_F16_e32:
+  case AMDGPU::V_MUL_F16_e64:
+  case AMDGPU::V_MUL_F16_e32:
+  case AMDGPU::V_MAX_F16_e64:
+  case AMDGPU::V_MAX_F16_e32:
+  case AMDGPU::V_MIN_F16_e64:
+  case AMDGPU::V_MIN_F16_e32:
+  case AMDGPU::V_MAD_F16_e64:
+  case AMDGPU::V_FMA_F16_e64:
+  case AMDGPU::V_DIV_FIXUP_F16_e64:
+    return true;
+  case AMDGPU::V_MADAK_F16:
+  case AMDGPU::V_MADMK_F16:
+  case AMDGPU::V_FMAMK_F16:
+  case AMDGPU::V_FMAAK_F16:
+    // NOTE : SKEPTICAL ABOUT IT
+    return false;
+  case AMDGPU::V_FMAC_F16_e32:
+  case AMDGPU::V_FMAC_F16_e64:
+  case AMDGPU::V_MAC_F16_e32:
+  case AMDGPU::V_MAC_F16_e64:
+    // As their sdwa version allow dst_sel to be equal only set to DWORD
+  default:
+    return false;
+  }
+}
+
+static bool checkForRightSrcRootAccess(MachineInstr *Def0MI,
+                                       MachineInstr *Def1MI,
+                                       Register SrcRootReg,
+                                       const SIInstrInfo *TII) {
+  // As if could, the Def1MI would have been sdwa-ed in order to access
+  // upper half, and Def0MI should not be as it accessing lower half.
+  if (!TII->isSDWA(Def1MI->getOpcode()) || TII->isSDWA(Def0MI->getOpcode()))
+    return false;
+
+  // Def1 should be writing into entire DWORD of dst, with unused part set
+  // to zero-pad.
+  MachineOperand *Def1DstSel =
+      TII->getNamedOperand(*Def1MI, AMDGPU::OpName::dst_sel);
+  if (!Def1DstSel || Def1DstSel->getImm() != AMDGPU::SDWA::SdwaSel::DWORD)
+    return false;
+  MachineOperand *Def1DstUnused =
+      TII->getNamedOperand(*Def1MI, AMDGPU::OpName::dst_unused);
+  if (!Def1DstUnused ||
+      Def1DstUnused->getImm() != AMDGPU::SDWA::DstUnused::UNUSED_PAD)
+    return false;
+
+  const auto CheckSrcSel = [&](MachineInstr *DefMI, AMDGPU::OpName SrcName,
+                               AMDGPU::OpName SrcSelName,
+                               AMDGPU::SDWA::SdwaSel SdwaSel) -> bool {
+    MachineOperand *DefSrc = TII->getNamedOperand(*DefMI, SrcName);
+    if (DefSrc && DefSrc->isReg() && (DefSrc->getReg() == SrcRootReg)) {
+      MachineOperand *DefSrcSel = TII->getNamedOperand(*DefMI, SrcSelName);
+      if (SdwaSel == AMDGPU::SDWA::SdwaSel::WORD_0) {
+        if (!DefSrcSel || DefSrcSel->getImm() == SdwaSel)
+          return true;
+      } else {
+        assert(SdwaSel == AMDGPU::SDWA::SdwaSel::WORD_1 &&
+               "Not valid SDWA SrcSel operand");
+        if (DefSrcSel && DefSrcSel->getImm() == SdwaSel)
+          return true;
+      }
+    }
+    return false;
+  };
+
+  if (!CheckSrcSel(Def1MI, AMDGPU::OpName::src0, AMDGPU::OpName::src0_sel,
+                   AMDGPU::SDWA::SdwaSel::WORD_1) &&
+      !CheckSrcSel(Def1MI, AMDGPU::OpName::src1, AMDGPU::OpName::src1_sel,
+                   AMDGPU::SDWA::SdwaSel::WORD_1))
+    return false;
+
+  return CheckSrcSel(Def0MI, AMDGPU::OpName::src0, AMDGPU::OpName::src0_sel,
+                     AMDGPU::SDWA::SdwaSel::WORD_0) ||
+         CheckSrcSel(Def0MI, AMDGPU::OpName::src1, AMDGPU::OpName::src1_sel,
+                     AMDGPU::SDWA::SdwaSel::WORD_0);
+}
+
+/// Given A and B are in the same MBB, returns true if A comes before B.
+static bool dominates(MachineBasicBlock::const_iterator A,
+                      MachineBasicBlock::const_iterator B) {
+  assert(A->getParent() == B->getParent());
+  const MachineBasicBlock *MBB = A->getParent();
+  auto MBBEnd = MBB->end();
+  if (B == MBBEnd)
+    return true;
+
+  if (A == MBBEnd)
+    return false;
+
+  MachineBasicBlock::const_iterator I = A;
+  while (I != B && I != MBBEnd)
+    I++;
+
+  return (I == B);
+}
+
+// Convert MI into its SDWA version with its Dst_Sel & SrcMO_Sel set with OpSel
+// and preserving the rest of Dst's bits.
+void SIPeepholeSDWA::convertMIToSDWAWithOpsel(MachineInstr *MI,
+                                              MachineOperand &SrcMO,
+                                              AMDGPU::SDWA::SdwaSel OpSel) {
+  LLVM_DEBUG(dbgs() << "Convert instruction:" << MI);
+
+  if (!TII->isSDWA(MI->getOpcode())) {
+    MachineInstr *SDWAInst = createSDWAVersion(*MI);
+    MI->eraseFromParent();
+    MI = SDWAInst;
+  }
+
+  ConvertedInstructions.push_back(MI);
+  unsigned SDWAOpcode = MI->getOpcode();
+  ++NumSDWAInstructionsToEliminateFP16Pack;
+
+  MachineOperand *Dst = TII->getNamedOperand(*MI, AMDGPU::OpName::vdst);
+  assert(Dst && AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::vdst));
+
+  MachineOperand *DstSel = TII->getNamedOperand(*MI, AMDGPU::OpName::dst_sel);
+  assert(DstSel &&
+         AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_sel));
+  DstSel->setImm(OpSel);
+
+  MachineOperand *DstUnused =
+      TII->getNamedOperand(*MI, AMDGPU::OpName::dst_unused);
+  assert(DstUnused &&
+         AMDGPU::hasNamedOperand(SDWAOpcode, AMDGPU::OpName::dst_unused));
+  assert(DstUnused->getImm() != AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE &&
+         "Dst_unused should not be UNUSED_PRESERVE already");
+  DstUnused->setImm(AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE);
+
+  int PreserveDstIdx =
+      AMDGPU::getNamedOperandIdx(SDWAOpcode, AMDGPU::OpName::vdst);
+  assert(PreserveDstIdx != -1);
+  MachineOperand NewSrcImplitMO =
+      MachineOperand::CreateReg(SrcMO.getReg(), false, true);
+  copyRegOperand(NewSrcImplitMO, SrcMO);
+  MI->addOperand(NewSrcImplitMO);
+  MI->tieOperands(PreserveDstIdx, MI->getNumOperands() - 1);
+
+  auto ModifySrcSelIntoOpSel = [&](AMDGPU::OpName SrcName,
+                                   AMDGPU::OpName SrcSelName) -> bool {
+    MachineOperand *Src = TII->getNamedOperand(*MI, SrcName);
+    assert(Src && AMDGPU::hasNamedOperand(SDWAOpcode, SrcName));
+    if (Src->isReg() && (Src->getReg() == SrcMO.getReg())) {
+      MachineOperand *SrcSel = TII->getNamedOperand(*MI, SrcSelName);
+      assert(SrcSel && AMDGPU::hasNamedOperand(SDWAOpcode, SrcSelName));
+      SrcSel->setImm(OpSel);
+
+      LLVM_DEBUG(dbgs() << "\nInto:" << *MI << '\n');
+      return true;
+    }
+
+    return false;
+  };
+
+  if (ModifySrcSelIntoOpSel(AMDGPU::OpName::src0, AMDGPU::OpName::src0_sel))
+    return;
+
+  if (ModifySrcSelIntoOpSel(AMDGPU::OpName::src1, AMDGPU::OpName::src1_sel))
+    return;
+}
+
+// BackTracks the given Parent MI to look for any of its use operand that has
+// been defined by FP16 (sdwa-able) in recursive fashion.
+unsigned SIPeepholeSDWA::computeMIChainsForPackedOps(
+    MachineInstr *ParentMI, std::queue<MachineOperand *> &DefSrcQueue,
+    const GCNSubtarget &ST) {
+  unsigned NumOfFP16Def;
+
+  // We will go up the use-def chain for ParentMI, until we encounter the
+  // exit condition, where we don't find any such defs of use operands
+  // which satisfy convertibility to SDWA OR find such uses more than 1 as now
+  // we don't know which path to follow-up.
+  do {
+    NumOfFP16Def = 0;
+    MachineInstr *NextMIInChain = nullptr;
+    for (MachineOperand &CurrentMO : ParentMI->uses()) {
+      if (!CurrentMO.isReg() || CurrentMO.getReg().isPhysical() ||
+          !MRI->hasOneUse(CurrentMO.getReg()))
+        continue;
+
+      MachineOperand *DefCurrMO = findSingleRegDef(&CurrentMO, MRI);
+      if (!DefCurrMO)
+        continue;
+
+      MachineInstr *DefCurrMI = DefCurrMO->getParent();
+      if (!isSrcDestFP16Bits(DefCurrMI, TII) ||
+          !isConvertibleToSDWA(*DefCurrMI, ST, TII))
+        continue;
+
+      NextMIInChain = DefCurrMI;
+      DefSrcQueue.push(DefCurrMO);
+      NumOfFP16Def++;
+    }
+
+    ParentMI = NextMIInChain;
+  } while (NumOfFP16Def == 1);
+
+  return NumOfFP16Def;
+}
+
+void SIPeepholeSDWA::eliminateFP16Packing(MachineBasicBlock &MBB,
+                                          const GCNSubtarget &ST) {
+  if (!ST.has16BitInsts())
+    return;
+
+  for (MachineInstr &MI : make_early_inc_range(MBB)) {
+    if (MI.getOpcode() != AMDGPU::V_PACK_B32_F16_e64)
+      continue;
+    LLVM_DEBUG(dbgs() << "\nCandidate FP16 Packed MI : " << MI << '\n');
+
+    std::queue<MachineOperand *> DefSrc0Queue;
+    std::queue<MachineOperand *> DefSrc1Queue;
+    MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+    MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
+
+    if (!Src0->isReg() || Src0->getReg().isPhysical() ||
+        !MRI->hasOneUse(Src0->getReg()) || !Src1->isReg() ||
+        Src1->getReg().isPhysical() || !MRI->hasOneUse(Src1->getReg()))
+      continue;
+
+    MachineOperand *Op0 = findSingleRegDef(Src0, MRI);
+    MachineOperand *Op1 = findSingleRegDef(Src1, MRI);
+
+    if (!Op0 || !Op1)
+      continue;
+
+    MachineInstr *ParentMIOp0 = Op0->getParent();
+    MachineInstr *ParentMIOp1 = Op1->getParent();
+
+    if (!isSrcDestFP16Bits(ParentMIOp0, TII) ||
+        !isSrcDestFP16Bits(ParentMIOp1, TII) ||
+        !isConvertibleToSDWA(*ParentMIOp0, ST, TII) ||
+        !isConvertibleToSDWA(*ParentMIOp1, ST, TII))
+      continue;
+
+    DefSrc0Queue.push(Op0);
+    DefSrc1Queue.push(Op1);
+
+    // This checks for the given MI, that it only has exact one register MO
+    // use , that is defined by pure FP16 instruction (that is SDWA-able too)
+    unsigned NumOfFP16Def;
+
+    NumOfFP16Def = computeMIChainsForPackedOps(ParentMIOp0, DefSrc0Queue, ST);
+    if (NumOfFP16Def > 1)
+      continue;
+
+    NumOfFP16Def = computeMIChainsForPackedOps(ParentMIOp1, DefSrc1Queue, ST);
+    if (NumOfFP16Def > 1)
+      continue;
+
+    MachineInstr *Def0RootMI = (DefSrc0Queue.back())->getParent();
+    MachineInstr *Def1RootMI = (DefSrc1Queue.back())->getParent();
+    Register SrcRootMOReg = AMDGPU::NoRegister;
+
+    // Now, check if the last operation for each in of the DefSrcQueue
+    // has the common MO, that would be the source root MO for element-wise
+    // fp16 chain operations
+    for (MachineOperand &Current0MO : Def0RootMI->uses()) {
+      if (!Current0MO.isReg() || Current0MO.getReg().isPhysical())
+        continue;
+
+      for (MachineOperand &Current1MO : Def1RootMI->uses()) {
+        if (!Current1MO.isReg() || Current1MO.getReg().isPhysical())
+          continue;
+
+        if (Current0MO.getReg() == Current1MO.getReg() &&
+            Current0MO.getSubReg() == Current1MO.getSubReg()) {
+          SrcRootMOReg = Current0MO.getReg();
+          break;
+        }
+      }
+      // Found it, no more check needed, so break;
+      if (SrcRootMOReg != AMDGPU::NoRegister)
+        break;
+    }
+
+    if (SrcRootMOReg == AMDGPU::NoRegister)
+      continue;
+
+    // Also we need to ensure that each of the DefXRootMI should access the
+    // lower and upper half word of SrcRootMOReg respectively.
+    if (!checkForRightSrcRootAccess(Def0RootMI, Def1RootMI, SrcRootMOReg, TII))
+      continue;
+
+    // The graph below represents the connection :
+    //       Op0Intial  -->  Op0x  --> ...  -->  Op0Final
+    //      /                                       \'
+    // SrcRootMO                                    v_Pack_b32_f16
+    //      \                                       /
+    //       Op1Intial  -->  Op1x  --> ...  -->  Op1Final
+    // The nomenclature is based upon above flow-graph
+    //
+    // Also for each of DefSrcXQueue :
+    // OpXIntial is at back & OpXFinal is at front
+    auto Op0FinalMI = (DefSrc0Queue.front())->getParent();
+    auto Op1FinalMI = (DefSrc1Queue.front())->getParent();
+    auto Op0IntialMI = (DefSrc0Queue.back())->getParent();
+    auto Op1IntialMI = (DefSrc1Queue.back())->getParent();
+
+    MachineOperand *FinalOutMO = nullptr;
+    std::queue<MachineOperand *> ChainedDefOps;
+    AMDGPU::SDWA::SdwaSel OpSel = AMDGPU::SDWA::SdwaSel::DWORD;
+    int NumOfElemInSecondOpChain = 0;
+
+    auto canonicalizedMIFlow =
+        [&](std::queue<MachineOperand *> DefFromQueue,
+            std::queue<MachineOperand *> DefToQueue) -> void {
+      MachineInstr *OpToIntialMI = (DefToQueue.back())->getParent();
+      int OpIdx = OpToIntialMI->findRegisterUseOperandIdx(SrcRootMOReg, TRI);
+      auto &MOTo = OpToIntialMI->getOperand(OpIdx);
+      auto MOFrom = DefFromQueue.front();
+      copyRegOperand(MOTo, *MOFrom);
+
+      LLVM_DEBUG(dbgs() << "Updated Connecting MI : " << *OpToIntialMI << '\n');
+
+      FinalOutMO = DefToQueue.front();
+      MachineInstr *OpFromIntialMI = (DefFromQueue.back())->getParent();
+      OpIdx = OpFromIntialMI->findRegisterUseOperandIdx(SrcRootMOReg, TRI);
+      auto &IntialInMO = OpFromIntialMI->getOperand(OpIdx);
+
+      while (!DefToQueue.empty()) {
+        ChainedDefOps.push(DefToQueue.front());
+        DefToQueue.pop();
+        NumOfElemInSecondOpChain++;
+      }
+      while (!DefFromQueue.empty()) {
+        ChainedDefOps.push(DefFromQueue.front());
+        DefFromQueue.pop();
+      }
+      ChainedDefOps.push(&IntialInMO);
+    };
+
+    // Now, we will change the flow as per the dominace of MI as follows, if
+    // possible and store it in ChainedDefOps, so later can be used to convert
+    // into its SDWA version:
+    //
+    // If (dominates(Op0FinalMI, Op1IntialMI)) == TRUE
+    // SrcRootMO -> Op0Intial -> Op0x -> ... -> Op0Final
+    // -> Op1Intial -> Op1x -> ... -> Op1Final (FinalOutMO)
+    //
+    // If (dominates(Op1FinalMI, Op0IntialMI)) == TRUE
+    // SrcRootMO -> Op1Intial -> Op1x -> ... -> Op1Final
+    // -> Op0Intial -> Op0x -> ... -> Op0Final (FinalOutMO)
+    //
+    // TODO : Else, not handled!
+    // One such case is observed when multiple fp16 instruction are chained
+    // on a fp16 vector input. For Example :
+    //
+    // %1 = call <2 x half> @llvm.log.v2f16 (<2 x half> %0)
+    // %res = call <2 x half> @llvm.sin.v2f16 (<2 x half> %1)
+    // return <2 x half> %res
+    if (dominates(Op0FinalMI, Op1IntialMI)) {
+      canonicalizedMIFlow(DefSrc0Queue, DefSrc1Queue);
+      OpSel = AMDGPU::SDWA::SdwaSel::WORD_1;
+    } else if (dominates(Op1FinalMI, Op0IntialMI)) {
+      canonicalizedMIFlow(DefSrc1Queue, DefSrc0Queue);
+      OpSel = AMDGPU::SDWA::SdwaSel::WORD_0;
+    } else {
+      LLVM_DEBUG(dbgs() << "No Connecting MI exists" << '\n');
+      continue;
+    }
+
+    // Replace all use places of MI(v_pack) defMO with FinalOutMO.
+    MachineOperand &DefMO = MI.getOperand(0);
+    for (MachineOperand &MO :
+         make_early_inc_range(MRI->use_nodbg_operands(DefMO.getReg()))) {
+      if (!MO.isReg())
+        continue;
+
+      MO.setReg(FinalOutMO->getReg());
+      MO.setSubReg(FinalOutMO->getSubReg());
+    }
+    LLVM_DEBUG(dbgs() << "Replace uses of " << DefMO << " in " << MI << "With "
+                      << *FinalOutMO << '\n');
+
+    // Delete v_pack machine instruction
+    LLVM_DEBUG(dbgs() << "\nInstruction to be deleted : " << MI << "\n\n");
+    MI.eraseFromParent();
+    ++Num16BitPackedInstructionsEliminated;
+
+    // Convert machine instruction into SDWA-version
+    while (ChainedDefOps.size() != 1) {
+      if (NumOfElemInSecondOpChain == 0) {
+        if (OpSel == AMDGPU::SDWA::SdwaSel::WORD_0)
+          OpSel = AMDGPU::SDWA::SdwaSel::WORD_1;
+        else
+          OpSel = AMDGPU::SDWA::SdwaSel::WORD_0;
+      }
+
+      MachineInstr *DefMI = ChainedDefOps.front()->getParent();
+      ChainedDefOps.pop();
+      MachineOperand *SrcMO = ChainedDefOps.front();
+
+      // Take SrcMO (which are def) as its usage in DefMI
+      if (SrcMO->isDef()) {
+        assert(MRI->hasOneUse(SrcMO->getReg()));
+        SrcMO = findSingleRegUse(SrcMO, MRI);
+        assert(DefMI == SrcMO->getParent() && "the only use is not in DefMI");
+      }
+
+      convertMIToSDWAWithOpsel(DefMI, *SrcMO, OpSel);
+      NumOfElemInSecondOpChain--;
+    }
+  }
+}
+
 bool SIPeepholeSDWA::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
@@ -1434,6 +1901,12 @@ bool SIPeepholeSDWA::run(MachineFunction &MF) {
       while (!ConvertedInstructions.empty())
         legalizeScalarOperands(*ConvertedInstructions.pop_back_val(), ST);
     } while (Changed);
+
+    // Process each v_pack_b32_fp16 instruction in MBB.
+    eliminateFP16Packing(MBB, ST);
+    Ret |= !ConvertedInstructions.empty();
+    while (!ConvertedInstructions.empty())
+      legalizeScalarOperands(*ConvertedInstructions.pop_back_val(), ST);
   }
 
   return Ret;
