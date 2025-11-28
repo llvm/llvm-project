@@ -114,10 +114,11 @@ static bool hasUndefSource(AnyMemTransferInst *MI) {
   return isa<AllocaInst>(Src) && Src->hasOneUse();
 }
 
-// Optimistically infer a type from either the Src or Dest.
+// Optimistically infer a type from either the Src or Dest. Prefers the Src
+// over the Dest type.
 //
-// Returns the DefaultTy if unable to infer a type, if inferred types
-// disagree, or, if inferred type does not match the size of load/store.
+// Returns the DefaultTy if unable to infer a type, or, if inferred type does
+// not match the size of load/store.
 static Type *inferType(const DataLayout &DL, IntegerType *DefaultTy, Value *Src,
                        Value *Dest) {
   Type *SrcTy = nullptr;
@@ -128,9 +129,6 @@ static Type *inferType(const DataLayout &DL, IntegerType *DefaultTy, Value *Src,
 
   if (auto *DestAI = dyn_cast<AllocaInst>(Dest))
     DestTy = DestAI->getAllocatedType();
-
-  if (SrcTy && DestTy && SrcTy != DestTy)
-    return DefaultTy; // Unable to infer common type
 
   Type *InferredTy = SrcTy ? SrcTy : DestTy;
 

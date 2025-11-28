@@ -105,4 +105,29 @@ define void @test8(ptr %src, ptr %dest) {
   ret void
 }
 
+; Ensure we don't use alloca type if they don't agree
+
+define double @test9(ptr %src, ptr %dest) {
+; CHECK-LABEL: @test9(
+; CHECK-NEXT:    %[[TEMP:.*]] = alloca double, align 1
+; CHECK-NEXT:    %[[UNPACK0:.*]] = load i32, ptr %src, align 1
+; CHECK-NEXT:    %[[SRC_GEP:.*]] = getelementptr inbounds nuw i8, ptr %src, i64 4
+; CHECK-NEXT:    %[[UNPACK1:.*]] = load i32, ptr %[[SRC_GEP]], align 1
+; CHECK-NEXT:    store i32 %[[UNPACK0]], ptr %[[TEMP]], align 1
+; CHECK-NEXT:    %[[TEMP_GEP:.*]] = getelementptr inbounds nuw i8, ptr %[[TEMP]], i64 4
+; CHECK-NEXT:    store i32 %[[UNPACK1]], ptr %[[TEMP_GEP]], align 1
+; CHECK-NEXT:    %[[RES:.*]] = load double, ptr %[[TEMP]]
+; CHECK-NEXT:    ret double %[[RES]]
+;
+  %temp = alloca [2 x i32], align 4
+  %out = alloca double, align 1
+
+  call void @llvm.memcpy.p0.p0.i32(ptr %temp, ptr %src, i32 8, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %out, ptr %temp, i32 8, i1 false)
+
+  %res = load double, ptr %out
+
+  ret double %res
+}
+
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
