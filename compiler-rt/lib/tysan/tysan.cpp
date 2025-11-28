@@ -74,9 +74,12 @@ static ParseIndirectionPrefixResult parseIndirectionPrefix(const char *Name) {
   return {Indirection, Name + CharIndex};
 }
 
-static void printDisplayName(const char *Name) {
+static size_t writeDemangledTypeName(char *Buffer, size_t BufferSize,
+                                     const char *Name) {
   if (Name[0] == '\0')
-    Printf("<anonymous type>");
+    return internal_snprintf(Buffer, BufferSize, "<anonymous type>");
+
+  size_t Written = 0;
 
   // Parse indirection prefix and remove it.
   const auto [Indirection, RemainingName] = parseIndirectionPrefix(Name);
@@ -91,12 +94,15 @@ static void printDisplayName(const char *Name) {
     DName += TIPrefixLen;
 
   // Print type name.
-  Printf("%s", DName);
+  Written +=
+      internal_snprintf(&Buffer[Written], BufferSize - Written, "%s", DName);
 
   // Print asterisks for indirection (C pointer notation).
   for (size_t i = 0; i < Indirection; ++i) {
-    Printf("*");
+    Written += internal_snprintf(&Buffer[Written], BufferSize - Written, "*");
   }
+
+  return Written;
 }
 
 static void printTDName(tysan_type_descriptor *td) {
@@ -118,7 +124,12 @@ static void printTDName(tysan_type_descriptor *td) {
     }
     break;
   case TYSAN_STRUCT_TD:
-    printDisplayName((char *)(td->Struct.Members + td->Struct.MemberCount));
+    constexpr size_t BufferSize = 512;
+    char Buffer[BufferSize];
+    writeDemangledTypeName(
+        Buffer, BufferSize,
+        (char *)(td->Struct.Members + td->Struct.MemberCount));
+    Printf("%s", Buffer);
     break;
   }
 }
