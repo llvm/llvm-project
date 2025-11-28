@@ -614,9 +614,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
                       ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT})
         setOperationAction(Op, MVT::f64, Legal);
-      
+
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
-      setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
     }
   }
 
@@ -957,6 +956,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FP_ROUND,  MVT::f16, Custom);
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Custom);
     }
+  } else {
+    setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
   }
 
   if (!Subtarget->hasFP16()) {
