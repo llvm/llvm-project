@@ -16,8 +16,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_ARMCOMMON_ARMCOMMONINSTCOMBINEINTRINSIC_H
-#define LLVM_LIB_TARGET_ARMCOMMON_ARMCOMMONINSTCOMBINEINTRINSIC_H
+#ifndef LLVM_TRANSFORMS_UTILS_ARMCOMMONINSTCOMBINEINTRINSIC_H
+#define LLVM_TRANSFORMS_UTILS_ARMCOMMONINSTCOMBINEINTRINSIC_H
 
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Value.h"
@@ -54,4 +54,4 @@ Instruction *simplifyAES(IntrinsicInst &II, InstCombiner &IC);
 } // namespace ARMCommon
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_ARMCOMMON_ARMCOMMONINSTCOMBINEINTRINSIC_H
+#endif // LLVM_TRANSFORMS_UTILS_ARMCOMMONINSTCOMBINEINTRINSIC_H

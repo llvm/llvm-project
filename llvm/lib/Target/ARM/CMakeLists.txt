@@ -73,7 +73,6 @@ add_llvm_target(ARMCodeGen
   Thumb2SizeReduction.cpp
 
   LINK_COMPONENTS
-  ARMCommon
   ARMDesc
   ARMInfo
   ARMUtils

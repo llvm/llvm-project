@@ -16,7 +16,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "ARMCommonInstCombineIntrinsic.h"
+#include "llvm/Transforms/Utils/ARMCommonInstCombineIntrinsic.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Value.h"

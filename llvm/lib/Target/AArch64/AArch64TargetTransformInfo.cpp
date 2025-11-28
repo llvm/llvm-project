@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64TargetTransformInfo.h"
-#include "../ARMCommon/ARMCommonInstCombineIntrinsic.h"
 #include "AArch64ExpandImm.h"
 #include "AArch64PerfectShuffle.h"
 #include "AArch64SMEAttributes.h"
@@ -26,6 +25,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include "llvm/Transforms/Utils/ARMCommonInstCombineIntrinsic.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <algorithm>

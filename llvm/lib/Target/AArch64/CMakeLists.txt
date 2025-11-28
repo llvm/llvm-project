@@ -101,7 +101,6 @@ add_llvm_target(AArch64CodeGen
   AArch64Desc
   AArch64Info
   AArch64Utils
-  ARMCommon
   Analysis
   AsmPrinter
   CFGuard

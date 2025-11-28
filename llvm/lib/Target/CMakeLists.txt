@@ -31,11 +31,6 @@ if (NOT BUILD_SHARED_LIBS AND NOT APPLE AND
   set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 endif()
 
-# Add shared ARM/AArch64 utilities if either target is being built
-if("ARM" IN_LIST LLVM_TARGETS_TO_BUILD OR "AArch64" IN_LIST LLVM_TARGETS_TO_BUILD)
-  add_subdirectory(ARMCommon)
-endif()
-
 foreach(t ${LLVM_TARGETS_TO_BUILD})
   message(STATUS "Targeting ${t}")
   add_subdirectory(${t})
