@@ -128,7 +128,7 @@ if (LLVM_RUNTIMES_BUILD)
   set(LIBOMP_FORTRAN_MODULES "${RUNTIMES_FLANG_MODULES_ENABLED}" CACHE BOOL
     "Create Fortran module files? (requires fortran compiler)")
 else ()
-  set(LIBOMP_FORTRAN_MODULES OFF)
+  set(LIBOMP_FORTRAN_MODULES FALSE)
 endif ()
 
 # Set up testing infrastructure.
