@@ -21,7 +21,7 @@
 // CHECK-NEXT:   }
 // CHECK:        Section {
 // CHECK:          Name: .xdata
-// CHECK:          RawDataSize: 100
+// CHECK:          RawDataSize: 108
 // CHECK:          RelocationCount: 1
 // CHECK:          Characteristics [
 // CHECK-NEXT:       ALIGN_4BYTES
@@ -31,7 +31,7 @@
 // CHECK-NEXT:   }
 // CHECK:        Section {
 // CHECK:          Name: .pdata
-// CHECK:          RelocationCount: 2
+// CHECK:          RelocationCount: 4
 // CHECK:          Characteristics [
 // CHECK-NEXT:       ALIGN_4BYTES
 // CHECK-NEXT:       CNT_INITIALIZED_DATA
@@ -42,11 +42,13 @@
 
 // CHECK-NEXT: Relocations [
 // CHECK-NEXT:   Section (4) .xdata {
-// CHECK-NEXT:     0x58 IMAGE_REL_ARM64_ADDR32NB __C_specific_handler
+// CHECK-NEXT:     0x54 IMAGE_REL_ARM64_ADDR32NB __C_specific_handler
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (5) .pdata {
 // CHECK-NEXT:     0x0 IMAGE_REL_ARM64_ADDR32NB .text
 // CHECK-NEXT:     0x4 IMAGE_REL_ARM64_ADDR32NB .xdata
+// CHECK-NEXT:     0x8 IMAGE_REL_ARM64_ADDR32NB .text
+// CHECK-NEXT:     0xC IMAGE_REL_ARM64_ADDR32NB .xdata
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
@@ -55,7 +57,7 @@
 // CHECK-NEXT:     Function: func
 // CHECK-NEXT:     ExceptionRecord: .xdata
 // CHECK-NEXT:     ExceptionData {
-// CHECK-NEXT:       FunctionLength: 172
+// CHECK-NEXT:       FunctionLength: 148
 // CHECK:            Prologue [
 // CHECK-NEXT:         0xe716c3            ; str p6, [sp, #3, mul vl]
 // CHECK-NEXT:         0xe703c5            ; str z11, [sp, #5, mul vl]
@@ -73,11 +75,6 @@
 // CHECK-NEXT:         0xe74104            ; stp x1, x2, [sp, #64]
 // CHECK-NEXT:         0xe70008            ; str x0, [sp, #64]
 // CHECK-NEXT:         0xfc                ; pacibsp
-// CHECK-NEXT:         0xec                ; clear unwound to call
-// CHECK-NEXT:         0xeb                ; EC context
-// CHECK-NEXT:         0xea                ; context
-// CHECK-NEXT:         0xe9                ; machine frame
-// CHECK-NEXT:         0xe8                ; trap frame
 // CHECK-NEXT:         0xe3                ; nop
 // CHECK-NEXT:         0xe202              ; add fp, sp, #16
 // CHECK-NEXT:         0xdd41              ; str d13, [sp, #8]
@@ -100,8 +97,8 @@
 // CHECK-NEXT:       ]
 // CHECK-NEXT:       EpilogueScopes [
 // CHECK-NEXT:         EpilogueScope {
-// CHECK-NEXT:           StartOffset: 41
-// CHECK-NEXT:           EpilogueStartIndex: 77
+// CHECK-NEXT:           StartOffset: 35
+// CHECK-NEXT:           EpilogueStartIndex: 72
 // CHECK-NEXT:           Opcodes [
 // CHECK-NEXT:             0x01                ; add sp, #16
 // CHECK-NEXT:             0xe4                ; end
@@ -111,6 +108,23 @@
 // CHECK-NEXT:       ExceptionHandler [
 // CHECK-NEXT:         Routine: __C_specific_handler (0x0)
 // CHECK-NEXT:         Parameter: 0x0
+// CHECK-NEXT:       ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT:   RuntimeFunction {
+// CHECK-NEXT:     Function: customfunc
+// CHECK-NEXT:     ExceptionRecord: .xdata
+// CHECK-NEXT:     ExceptionData {
+// CHECK-NEXT:       FunctionLength: 24
+// CHECK:            Prologue [
+// CHECK-NEXT:         0xec                ; clear unwound to call
+// CHECK-NEXT:         0xeb                ; EC context
+// CHECK-NEXT:         0xea                ; context
+// CHECK-NEXT:         0xe9                ; machine frame
+// CHECK-NEXT:         0xe8                ; trap frame
+// CHECK-NEXT:         0xe4                ; end
+// CHECK-NEXT:       ]
+// CHECK-NEXT:       EpilogueScopes [
 // CHECK-NEXT:       ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
@@ -161,16 +175,6 @@ func:
     .seh_add_fp 16
     nop
     .seh_nop
-    nop
-    .seh_trap_frame
-    nop
-    .seh_pushframe
-    nop
-    .seh_context
-    nop
-    .seh_ec_context
-    nop
-    .seh_clear_unwound_to_call
     pacibsp
     .seh_pac_sign_lr
     nop
@@ -203,7 +207,6 @@ func:
     .seh_save_zreg z11, 5
     nop
     .seh_save_preg p6, 3
-    nop
     .seh_endprologue
     nop
     .seh_startepilogue
@@ -215,6 +218,22 @@ func:
     .seh_handlerdata
     .long 0
     .text
+    .seh_endproc
+
+    .seh_proc customfunc
+customfunc:
+    nop
+    .seh_trap_frame
+    nop
+    .seh_pushframe
+    nop
+    .seh_context
+    nop
+    .seh_ec_context
+    nop
+    .seh_clear_unwound_to_call
+    .seh_endprologue
+    ret
     .seh_endproc
 
     // Function with no .seh directives; no pdata/xdata entries are
