@@ -114,11 +114,6 @@ def usable_core_count():
     except AttributeError:
         n = os.cpu_count() or 1
 
-    # On Windows with more than 60 processes, multiprocessing's call to
-    # _winapi.WaitForMultipleObjects() prints an error and lit hangs.
-    if platform.system() == "Windows":
-        return min(n, 60)
-
     return n
 
 def abs_path_preserve_drive(path):
