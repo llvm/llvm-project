@@ -8976,6 +8976,12 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   for (unsigned i = 0; i < NumMemOps; i++) {
     EVT VT = MemOps[i];
     unsigned VTSize = VT.getSizeInBits() / 8;
+    // Skip stores when Size is already 0. This can happen when an oversized
+    // store was added to MemOps but the actual memset size was already
+    // covered by previous stores (e.g., when using extraction from a larger
+    // vector splat).
+    if (Size == 0)
+      continue;
     if (VTSize > Size) {
       // Issuing an unaligned load / store pair  that overlaps with the previous
       // pair. Adjust the offset accordingly.

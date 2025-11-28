@@ -18541,10 +18541,11 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
   bool CanImplicitFloat = !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
   bool CanUseNEON = Subtarget->hasNEON() && CanImplicitFloat;
   bool CanUseFP = Subtarget->hasFPARMv8() && CanImplicitFloat;
-  // Only use AdvSIMD to implement memset of 32-byte and above. It would have
+  // For zero memset, only use AdvSIMD for 32-byte and above. It would have
   // taken one instruction to materialize the v2i64 zero and one store (with
   // restrictive addressing mode). Just do i64 stores.
-  bool IsSmallMemset = Op.isMemset() && Op.size() < 32;
+  // For non-zero memset, use NEON even for smaller sizes as dup is efficient.
+  bool IsSmallZeroMemset = Op.isMemset() && Op.size() < 32 && Op.isZeroMemset();
   auto AlignmentIsAcceptable = [&](EVT VT, Align AlignCheck) {
     if (Op.isAligned(AlignCheck))
       return true;
@@ -18554,10 +18555,13 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
            Fast;
   };
 
-  if (CanUseNEON && Op.isMemset() && !IsSmallMemset &&
-      AlignmentIsAcceptable(MVT::v16i8, Align(16)))
+  // For non-zero memset, use NEON even for smaller sizes as dup + scalar store
+  // is efficient
+  if (CanUseNEON && Op.isMemset() && !IsSmallZeroMemset &&
+      AlignmentIsAcceptable(MVT::v16i8, Align(1)))
     return MVT::v16i8;
-  if (CanUseFP && !IsSmallMemset && AlignmentIsAcceptable(MVT::f128, Align(16)))
+  if (CanUseFP && !IsSmallZeroMemset &&
+      AlignmentIsAcceptable(MVT::f128, Align(16)))
     return MVT::f128;
   if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, Align(8)))
     return MVT::i64;
@@ -18566,15 +18570,87 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
   return MVT::Other;
 }
 
+bool AArch64TargetLowering::findOptimalMemOpLowering(
+    LLVMContext &Context, std::vector<EVT> &MemOps, unsigned Limit,
+    const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+    const AttributeList &FuncAttributes) const {
+  // For non-zero memset with v16i8, don't downgrade if we can extract
+  // the needed size efficiently using
+  // shallExtractConstSplatVectorElementToStore
+  EVT VT = getOptimalMemOpType(Context, Op, FuncAttributes);
+  if (VT == MVT::v16i8 && Op.isMemset() && !Op.isZeroMemset() &&
+      Op.size() < 16) {
+    Type *VectorTy = VT.getTypeForEVT(Context);
+    unsigned Size = Op.size();
+    unsigned RemainingSize = Size;
+
+    // Break down the size into stores that we can extract from v16i8.
+    // We support: i64 (8 bytes), i32 (4 bytes), i16 (2 bytes), i8 (1 byte)
+    // Use the largest possible stores first to minimize the number of
+    // operations.
+    while (RemainingSize > 0) {
+      unsigned Index;
+      EVT TargetVT;
+
+      // Try largest stores first
+      if (RemainingSize >= 8 &&
+          shallExtractConstSplatVectorElementToStore(VectorTy, 64, Index)) {
+        TargetVT = MVT::i64;
+        RemainingSize -= 8;
+      } else if (RemainingSize >= 4 &&
+                 shallExtractConstSplatVectorElementToStore(VectorTy, 32,
+                                                            Index)) {
+        TargetVT = MVT::i32;
+        RemainingSize -= 4;
+      } else if (RemainingSize >= 2 &&
+                 shallExtractConstSplatVectorElementToStore(VectorTy, 16,
+                                                            Index)) {
+        TargetVT = MVT::i16;
+        RemainingSize -= 2;
+      } else if (RemainingSize >= 1 &&
+                 shallExtractConstSplatVectorElementToStore(VectorTy, 8,
+                                                            Index)) {
+        TargetVT = MVT::i8;
+        RemainingSize -= 1;
+      } else {
+        // Can't extract this size, fall back to default implementation
+        break;
+      }
+
+      MemOps.push_back(TargetVT);
+    }
+
+    // If we successfully decomposed the entire size, add v16i8 as LargestVT
+    // and return. Otherwise, fall back to default implementation.
+    if (RemainingSize == 0 && !MemOps.empty()) {
+      // To generate the vector splat (DUP), we need v16i8 to be the LargestVT.
+      // getMemsetStores requires oversized stores to be last with at least 2
+      // operations. We add v16i8 last (satisfies assertion, and is LargestVT
+      // for splat generation). After all actual stores, Size becomes 0, so the
+      // oversized store is skipped by the early continue in getMemsetStores,
+      // avoiding redundant stores.
+      MemOps.push_back(VT); // Last: v16i8 (LargestVT, oversized)
+      return true;
+    }
+
+    // Clear MemOps if we didn't successfully handle everything
+    MemOps.clear();
+  }
+  // Otherwise, use the default implementation
+  return TargetLowering::findOptimalMemOpLowering(Context, MemOps, Limit, Op,
+                                                  DstAS, SrcAS, FuncAttributes);
+}
+
 LLT AArch64TargetLowering::getOptimalMemOpLLT(
     const MemOp &Op, const AttributeList &FuncAttributes) const {
   bool CanImplicitFloat = !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
   bool CanUseNEON = Subtarget->hasNEON() && CanImplicitFloat;
   bool CanUseFP = Subtarget->hasFPARMv8() && CanImplicitFloat;
-  // Only use AdvSIMD to implement memset of 32-byte and above. It would have
+  // For zero memset, only use AdvSIMD for 32-byte and above. It would have
   // taken one instruction to materialize the v2i64 zero and one store (with
   // restrictive addressing mode). Just do i64 stores.
-  bool IsSmallMemset = Op.isMemset() && Op.size() < 32;
+  // For non-zero memset, use NEON even for smaller sizes as dup is efficient.
+  bool IsSmallZeroMemset = Op.isMemset() && Op.size() < 32 && Op.isZeroMemset();
   auto AlignmentIsAcceptable = [&](EVT VT, Align AlignCheck) {
     if (Op.isAligned(AlignCheck))
       return true;
@@ -18584,10 +18660,13 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
            Fast;
   };
 
-  if (CanUseNEON && Op.isMemset() && !IsSmallMemset &&
-      AlignmentIsAcceptable(MVT::v2i64, Align(16)))
+  // For non-zero memset, use NEON for all sizes where it's beneficial.
+  // NEON dup + scalar store works for any alignment and is efficient.
+  if (CanUseNEON && Op.isMemset() && !IsSmallZeroMemset &&
+      AlignmentIsAcceptable(MVT::v16i8, Align(1)))
     return LLT::fixed_vector(2, 64);
-  if (CanUseFP && !IsSmallMemset && AlignmentIsAcceptable(MVT::f128, Align(16)))
+  if (CanUseFP && !IsSmallZeroMemset &&
+      AlignmentIsAcceptable(MVT::f128, Align(16)))
     return LLT::scalar(128);
   if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, Align(8)))
     return LLT::scalar(64);
@@ -30019,6 +30098,30 @@ AArch64TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
       .addReg(Target.getReg())
       .addImm(MBBI->getCFIType())
       .getInstr();
+}
+
+bool AArch64TargetLowering::shallExtractConstSplatVectorElementToStore(
+    Type *VectorTy, unsigned ElemSizeInBits, unsigned &Index) const {
+  // On AArch64, we can efficiently extract a scalar from a splat vector using
+  // str b/h/s/d/q0 which extracts 8/16/32/64/128 bits from the vector register.
+  // This is useful for memset where we generate a v16i8 splat and need to store
+  // a smaller scalar (e.g., i32 for a 4-byte memset, i16 for 2 bytes, i8 for 1
+  // byte).
+  if (FixedVectorType *VTy = dyn_cast<FixedVectorType>(VectorTy)) {
+    // Handle v16i8 splat (128 bits total, 16 elements of 8 bits each) and
+    // v8i8 splat (64 bits total, 8 elements of 8 bits each)
+    if ((VTy->getNumElements() == 16 || VTy->getNumElements() == 8) &&
+        VTy->getElementType()->isIntegerTy(8)) {
+      // Check if we're extracting 8, 16, 32, or 64-bit element
+      // All extract from element 0 since it's a splat
+      if (ElemSizeInBits == 8 || ElemSizeInBits == 16 || ElemSizeInBits == 32 ||
+          ElemSizeInBits == 64) {
+        Index = 0;
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 bool AArch64TargetLowering::enableAggressiveFMAFusion(EVT VT) const {
