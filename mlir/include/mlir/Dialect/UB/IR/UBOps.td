@@ -73,7 +73,7 @@ def PoisonOp : UB_Op<"poison", [ConstantLike, Pure]> {
 def UnreachableOp : UB_Op<"unreachable", [Terminator]> {
   let summary = "Unreachable operation.";
   let description = [{
-    The `unreachable` operation has no defined semantics. This operation
+    The `unreachable` operation triggers immediate undefined behavior if executed. This operation
     indicates that its enclosing basic block is not reachable.
 
     Example:
