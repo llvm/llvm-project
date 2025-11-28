@@ -21,7 +21,7 @@ endif ()
 # Building the Fortran module files
 # One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
 configure_file(omp_lib.F90.var omp_lib.F90 @ONLY)
-configure_file(omp_lib.h.var omp_lib.h @ONLY)
+configure_file(omp_lib.h.var "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.h" @ONLY)
 
 set(BUILD_FORTRAN_MODULES False)
 if (LIBOMP_FORTRAN_MODULES_COMPILER)
@@ -31,8 +31,8 @@ if (LIBOMP_FORTRAN_MODULES_COMPILER)
   set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
   add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
   add_custom_command(
-    OUTPUT omp_lib.mod omp_lib_kinds.mod
-    COMMAND ${LIBOMP_FORTRAN_MODULES_COMPILER} -cpp -fsyntax-only ${LIBOMP_FORTRAN_SOURCE_FILE}
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.mod" "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod"
+    COMMAND ${LIBOMP_FORTRAN_MODULES_COMPILER} -cpp -fsyntax-only ${LIBOMP_FORTRAN_SOURCE_FILE} "-J${CMAKE_CURRENT_BINARY_DIR}/../runtime/src"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}"
   )
   set(BUILD_FORTRAN_MODULES True)
@@ -43,7 +43,7 @@ elseif (LIBOMP_FORTRAN_MODULES)
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
     set(ADDITIONAL_Fortran_FLAGS "-fno-range-check")
   endif ()
-  add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
+  add_custom_target(libomp-mod ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.mod" "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod")
   set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP/Misc")
   libomp_get_fflags(LIBOMP_CONFIGURED_FFLAGS)
   if (CMAKE_Fortran_COMPILER_SUPPORTS_F90)
@@ -52,12 +52,12 @@ elseif (LIBOMP_FORTRAN_MODULES)
     message(FATAL_ERROR "Fortran module build requires Fortran 90 compiler")
   endif ()
   add_custom_command(
-    OUTPUT omp_lib.mod omp_lib_kinds.mod
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.mod" "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod"
     COMMAND ${CMAKE_Fortran_COMPILER} -c ${ADDITIONAL_Fortran_FLAGS}
-            ${LIBOMP_CONFIGURED_FFLAGS} ${LIBOMP_FORTRAN_SOURCE_FILE}
+            ${LIBOMP_CONFIGURED_FFLAGS} ${LIBOMP_FORTRAN_SOURCE_FILE} "-J${CMAKE_CURRENT_BINARY_DIR}/../runtime/src"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}"
   )
-  set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "omp_lib${CMAKE_C_OUTPUT_EXTENSION}")
+  set_property(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src" PROPERTY ADDITIONAL_MAKE_CLEAN_FILES "omp_lib${CMAKE_C_OUTPUT_EXTENSION}")
   set(BUILD_FORTRAN_MODULES True)
 endif ()
 
@@ -68,9 +68,9 @@ if (BUILD_FORTRAN_MODULES)
     set(destination "${LIBOMP_MODULES_INSTALL_PATH}")
   endif ()
   install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.mod"
-    "${CMAKE_CURRENT_BINARY_DIR}/omp_lib_kinds.mod"
-    "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.mod"
+    "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod"
+    "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.h"
     DESTINATION ${destination}
   )
 endif ()
