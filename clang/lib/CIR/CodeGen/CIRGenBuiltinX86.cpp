@@ -85,6 +85,14 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
   return maskVec;
 }
 
+static mlir::Value emitX86CompressStore(CIRGenFunction &cgf, const CallExpr *expr, ArrayRef<mlir::Value> ops){
+  auto ResultTy = cast<cir::VectorType>(ops[1].getType());
+  mlir::Value MaskValue = getMaskVecValue(cgf, expr, ops[2],  cast<cir::VectorType>(ResultTy).getSize());
+  mlir::Value ptr = ops[0];
+
+  return emitIntrinsicCallOp(cgf, expr, "masked_compressstore", ResultTy, llvm::SmallVector<mlir::Value, 3>{ops[1], ptr, MaskValue});
+
+}
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
                                                const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is) {
@@ -402,7 +410,12 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_expandloadhi512_mask:
   case X86::BI__builtin_ia32_expandloadqi128_mask:
   case X86::BI__builtin_ia32_expandloadqi256_mask:
-  case X86::BI__builtin_ia32_expandloadqi512_mask:
+  case X86::BI__builtin_ia32_expandloadqi512_mask:{
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
+  }
   case X86::BI__builtin_ia32_compressstoredf128_mask:
   case X86::BI__builtin_ia32_compressstoredf256_mask:
   case X86::BI__builtin_ia32_compressstoredf512_mask:
@@ -421,6 +434,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_compressstoreqi128_mask:
   case X86::BI__builtin_ia32_compressstoreqi256_mask:
   case X86::BI__builtin_ia32_compressstoreqi512_mask:
+    return emitX86CompressStore(*this, expr, ops);
   case X86::BI__builtin_ia32_expanddf128_mask:
   case X86::BI__builtin_ia32_expanddf256_mask:
   case X86::BI__builtin_ia32_expanddf512_mask:
