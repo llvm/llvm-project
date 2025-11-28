@@ -673,7 +673,7 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer,
     break;
   case Win64EH::UOP_SaveFPLRX:
     b = 0x80;
-    b |= ((inst.Offset - 1) >> 3) & 0x3F;
+    b |= ((inst.Offset >> 3) - 1) & 0x3F;
     streamer.emitInt8(b);
     break;
   case Win64EH::UOP_SaveFPLR:
