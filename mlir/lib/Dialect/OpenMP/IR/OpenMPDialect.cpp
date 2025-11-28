@@ -2625,8 +2625,13 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   TeamsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
+<<<<<<< HEAD
                  clauses.ifExpr, clauses.numTeamsVals, clauses.numTeamsLower,
                  clauses.numTeamsUpper,
+=======
+                 clauses.ifExpr, clauses.numTeamsLower, clauses.numTeamsUpper,
+                 clauses.numTeamsDims, clauses.numTeamsValues,
+>>>>>>> [OpenMP][MLIR] Add num_teams clause with dims modifier support
                  /*private_vars=*/{}, /*private_syms=*/nullptr,
                  /*private_needs_barrier=*/nullptr, clauses.reductionMod,
                  clauses.reductionVars,
