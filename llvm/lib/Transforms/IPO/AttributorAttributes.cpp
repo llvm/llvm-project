@@ -953,13 +953,14 @@ private:
 
 /// This function stores all the paths that lead to the access in AAPointerInfo.
 /// Arguments:
-/// A -- Attributor
-/// OffsetInfoMap -- Contains Accessed Offsets and Origins for the pointer in
-/// AAPointerInfo. LocalI -- This is the Access causing instruction, we
-/// backtrack the access causing instruction and keep forking new paths as we
-/// encounter new predecessors which backtracking. At the end of the
-/// backtracking we store all the unique access causing paths in
-/// AccessPathSetTy. \Return: A set containing all the access causing paths.
+/// - A: Attributor
+/// - OffsetInfoMap: Contains Accessed Offsets and Origins for AAPointerInfo.
+/// - LocalI: The Access causing instruction.
+//  We backtrack the access causing instruction and keep forking new paths as we
+//  encounter new predecessors which backtracking. At the end of the
+//  backtracking we store all the unique access causing paths in
+//  AccessPathSetTy.
+/// - Return: A set containing all the access causing paths.
 AAPointerInfo::AccessPathSetTy *AA::PointerInfo::State::findAllAccessPaths(
     Attributor &A, AAPointerInfo::OffsetInfoMapTy &OffsetInfoMap,
     Instruction *LocalI) {
