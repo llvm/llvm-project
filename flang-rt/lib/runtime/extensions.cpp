@@ -163,6 +163,17 @@ void FORTRAN_PROCEDURE_NAME(flush)(const int &unit) {
   Cookie cookie{IONAME(BeginFlush)(unit, __FILE__, __LINE__)};
   IONAME(EndIoStatement)(cookie);
 }
+
+void RTNAME(Flush)(int unit) {
+  // We set the `unit == -1` on the `flush()` case, so flush all units.
+  if (unit < 0) {
+    Terminator terminator{__FILE__, __LINE__};
+    IoErrorHandler handler{terminator};
+    ExternalFileUnit::FlushAll(handler);
+    return;
+  }
+  FORTRAN_PROCEDURE_NAME(flush)(unit);
+}
 } // namespace io
 
 // CALL FDATE(DATE)
