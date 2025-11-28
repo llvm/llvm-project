@@ -8,9 +8,9 @@ define {<2 x half>, <2 x half>} @vector_deinterleave_v2f16_v4f16(<4 x half> %vec
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    dup v2.2s, v0.s[1]
 ; CHECK-SD-NEXT:    mov v1.16b, v2.16b
+; CHECK-SD-NEXT:    zip1 v2.4h, v0.4h, v2.4h
 ; CHECK-SD-NEXT:    mov v1.h[0], v0.h[1]
-; CHECK-SD-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    fmov d0, d2
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
