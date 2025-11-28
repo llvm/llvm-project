@@ -1899,6 +1899,19 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Checks if the indirect call / jump is accepted by the landing pad at the
+  /// start of the target BasicBlock.
+  virtual bool isBTIVariantCoveringCall(MCInst &Call, MCInst &Pad) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Adds a BTI landing pad to the start of the BB, that matches the indirect
+  /// call/jump inst.
+  virtual void addBTItoBBStart(BinaryBasicBlock &BB, MCInst &Call) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Store \p Target absolute address to \p RegName
   virtual InstructionListType materializeAddress(const MCSymbol *Target,
                                                  MCContext *Ctx,
