@@ -495,17 +495,33 @@ bool ClauseProcessor::processSizes(StatementContext &stmtCtx,
 bool ClauseProcessor::processNumTeams(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumTeamsClauseOps &result) const {
-  // TODO Get lower and upper bounds for num_teams when parser is updated to
-  // accept both.
   if (auto *clause = findUniqueClause<omp::clause::NumTeams>()) {
     // The num_teams directive accepts a list of team lower/upper bounds.
-    // This is an extension to support grid specification for ompx_bare.
-    // Here, only expect a single element in the list.
-    assert(clause->v.size() == 1);
-    // auto lowerBound = std::get<std::optional<ExprTy>>(clause->v[0]->t);
-    auto &upperBound = std::get<ExprTy>(clause->v[0].t);
-    result.numTeamsUpper =
-        fir::getBase(converter.genExprValue(upperBound, stmtCtx));
+    // With dims modifier (OpenMP 6.1): multiple values for multi-dimensional
+    // Without dims modifier: single value (upper bound only)
+    assert(!clause->v.empty());
+
+    // If multiple values (dims modifier), use numTeamsVars
+    // If single value (traditional), use numTeamsLower/numTeamsUpper
+    if (clause->v.size() > 1) {
+      // Multi-dimensional (dims modifier)
+      for (const auto &teamBound : clause->v) {
+        auto &upperBound = std::get<ExprTy>(teamBound.t);
+        result.numTeamsVars.push_back(
+            fir::getBase(converter.genExprValue(upperBound, stmtCtx)));
+      }
+    } else {
+      // Single value (traditional format) with optional lower bound
+      auto &lowerBound = std::get<std::optional<ExprTy>>(clause->v[0].t);
+      auto &upperBound = std::get<ExprTy>(clause->v[0].t);
+      if (lowerBound) {
+        result.numTeamsLower =
+            fir::getBase(converter.genExprValue(*lowerBound, stmtCtx));
+      }
+      result.numTeamsUpper =
+          fir::getBase(converter.genExprValue(upperBound, stmtCtx));
+    }
+
     return true;
   }
   return false;
