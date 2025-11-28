@@ -17,16 +17,6 @@ def _llvm_repos_extension_impl(module_ctx):
         )
 
     http_archive(
-        name = "llvm_zlib",
-        build_file = "@llvm-raw//utils/bazel/third_party_build:zlib-ng.BUILD",
-        sha256 = "e36bb346c00472a1f9ff2a0a4643e590a254be6379da7cddd9daeb9a7f296731",
-        strip_prefix = "zlib-ng-2.0.7",
-        urls = [
-            "https://github.com/zlib-ng/zlib-ng/archive/refs/tags/2.0.7.zip",
-        ],
-    )
-
-    http_archive(
         name = "vulkan_headers",
         build_file = "@llvm-raw//utils/bazel/third_party_build:vulkan_headers.BUILD",
         sha256 = "19f491784ef0bc73caff877d11c96a48b946b5a1c805079d9006e3fbaa5c1895",
