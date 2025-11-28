@@ -4489,7 +4489,9 @@ static SDValue lowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG,
 static SDValue lowerIntNeonIntrinsic(SDValue Op, unsigned Opcode,
                                      SelectionDAG &DAG) {
   SDLoc DL(Op);
-  auto getFloatVT = [](EVT VT) { return VT == MVT::i32 ? MVT::f32 : MVT::f64; };
+  auto getFloatVT = [](EVT VT) { 
+    assert((VT == MVT::i32 || VT == MVT::i64) && "Unexpected VT");
+    return VT == MVT::i32 ? MVT::f32 : MVT::f64; };
   auto bitcastToFloat = [&](SDValue Val) {
     return DAG.getBitcast(getFloatVT(Val.getValueType()), Val);
   };
