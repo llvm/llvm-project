@@ -70,6 +70,28 @@ void SPIRV::constructAssembleCommand(Compilation &C, const Tool &T,
                                          Exec, CmdArgs, Input, Output));
 }
 
+void SPIRV::constructLLVMLinkCommand(Compilation &C, const Tool &T,
+                                     const JobAction &JA,
+                                     const InputInfo &Output,
+                                     const InputInfoList &Inputs,
+                                     const llvm::opt::ArgStringList &Args) {
+  // Construct llvm-link command.
+  // The output from llvm-link is a bitcode file.
+  ArgStringList LlvmLinkArgs;
+
+  assert(!Inputs.empty() && "Must have at least one input.");
+
+  LlvmLinkArgs.append({"-o", Output.getFilename()});
+  for (auto Input : Inputs)
+    LlvmLinkArgs.push_back(Input.getFilename());
+
+  const char *LlvmLink =
+      C.getArgs().MakeArgString(T.getToolChain().GetProgramPath("llvm-link"));
+  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
+                                         LlvmLink, LlvmLinkArgs, Inputs,
+                                         Output));
+}
+
 void SPIRV::Translator::ConstructJob(Compilation &C, const JobAction &JA,
                                      const InputInfo &Output,
                                      const InputInfoList &Inputs,
@@ -121,6 +143,10 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                  const InputInfoList &Inputs,
                                  const ArgList &Args,
                                  const char *LinkingOutput) const {
+  if (JA.getType() == types::TY_LLVM_BC) {
+    constructLLVMLinkCommand(C, *this, JA, Output, Inputs, {});
+    return;
+  }
   const ToolChain &ToolChain = getToolChain();
   std::string Linker = ToolChain.GetProgramPath(getShortName());
   ArgStringList CmdArgs;
