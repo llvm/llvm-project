@@ -1,4 +1,4 @@
-//===- DependencyScanningService.cpp - clang-scan-deps service ------------===//
+//===- DependencyScanningService.cpp - Scanning Service -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
+#include "clang/DependencyScanning/DependencyScanningService.h"
 
 using namespace clang;
-using namespace tooling;
 using namespace dependencies;
 
 DependencyScanningService::DependencyScanningService(
