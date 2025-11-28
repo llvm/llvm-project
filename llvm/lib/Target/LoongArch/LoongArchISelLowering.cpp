@@ -837,8 +837,7 @@ SDValue LoongArchTargetLowering::lowerPREFETCH(SDValue Op,
 SDValue LoongArchTargetLowering::lowerRotate(SDValue Op,
                                              SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
-  if (!VT.isVector())
-    return Op;
+  assert(VT.isVector() && "Unexpected type");
 
   SDLoc DL(Op);
   SDValue R = Op.getOperand(0);
@@ -868,7 +867,7 @@ SDValue LoongArchTargetLowering::lowerRotate(SDValue Op,
   if (IsCstSplat && CstSplatValue.urem(EltSizeInBits) == 0)
     return R;
 
-  // LoongArch tagets always prefers ISD::ROTR.
+  // LoongArch targets always prefer ISD::ROTR.
   if (isROTL) {
     SDValue Zero = DAG.getConstant(0, DL, VT);
     return DAG.getNode(ISD::ROTR, DL, VT, R,
@@ -881,7 +880,7 @@ SDValue LoongArchTargetLowering::lowerRotate(SDValue Op,
     SDValue Bits = DAG.getConstant(EltSizeInBits, DL, VT);
     if (SDValue Urem =
             DAG.FoldConstantArithmetic(ISD::UREM, DL, VT, {Amt, Bits}))
-      return DAG.getNode(Op.getOpcode(), DL, VT, R, Urem);
+      return DAG.getNode(Opcode, DL, VT, R, Urem);
   }
 
   return Op;
