@@ -29,23 +29,23 @@ public:
                                  const CGPassBuilderOption &Opts,
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
-  void addPreISel(AddIRPass &addPass) const;
-  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
-  Error addInstSelector(AddMachinePass &) const;
+  void addPreISel(ModulePassManager &MPM) const;
+  void addAsmPrinter(ModulePassManager &MPM, CreateMCStreamer) const;
+  Error addInstSelector(ModulePassManager &MPM) const;
 };
 
-void X86CodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
+void X86CodeGenPassBuilder::addPreISel(ModulePassManager &MPM) const {
   // TODO: Add passes pre instruction selection.
 }
 
-void X86CodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
+void X86CodeGenPassBuilder::addAsmPrinter(ModulePassManager &MPM,
                                           CreateMCStreamer) const {
   // TODO: Add AsmPrinter.
 }
 
-Error X86CodeGenPassBuilder::addInstSelector(AddMachinePass &addPass) const {
+Error X86CodeGenPassBuilder::addInstSelector(ModulePassManager &MPM) const {
   // TODO: Add instruction selector related passes.
-  addPass(X86ISelDAGToDAGPass(TM));
+  addMachineFunctionPass(X86ISelDAGToDAGPass(TM));
   return Error::success();
 }
 

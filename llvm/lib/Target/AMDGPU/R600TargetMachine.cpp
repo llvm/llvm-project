@@ -57,9 +57,9 @@ public:
   R600CodeGenPassBuilder(R600TargetMachine &TM, const CGPassBuilderOption &Opts,
                          PassInstrumentationCallbacks *PIC);
 
-  void addPreISel(AddIRPass &addPass) const;
-  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
-  Error addInstSelector(AddMachinePass &) const;
+  void addPreISel(ModulePassManager &MPM) const;
+  void addAsmPrinter(ModulePassManager &MPM, CreateMCStreamer) const;
+  Error addInstSelector(ModulePassManager &MPM) const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -188,16 +188,16 @@ R600CodeGenPassBuilder::R600CodeGenPassBuilder(
   Opt.RequiresCodeGenSCCOrder = true;
 }
 
-void R600CodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
+void R600CodeGenPassBuilder::addPreISel(ModulePassManager &MPM) const {
   // TODO: Add passes pre instruction selection.
 }
 
-void R600CodeGenPassBuilder::addAsmPrinter(AddMachinePass &addPass,
+void R600CodeGenPassBuilder::addAsmPrinter(ModulePassManager &MPM,
                                            CreateMCStreamer) const {
   // TODO: Add AsmPrinter.
 }
 
-Error R600CodeGenPassBuilder::addInstSelector(AddMachinePass &) const {
+Error R600CodeGenPassBuilder::addInstSelector(ModulePassManager &MPM) const {
   // TODO: Add instruction selector.
   return Error::success();
 }
