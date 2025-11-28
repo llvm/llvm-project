@@ -2447,6 +2447,26 @@ static bool InBlock(const Value *V, const BasicBlock *BB) {
   return true;
 }
 
+static bool AreFCmpOperandsNonNaN(const Instruction *Inst,
+                                  const SelectionDAG &DAG) {
+  assert(
+      (isa<FCmpInst>(Inst) || isa<ConstrainedFPCmpIntrinsic>(Inst) ||
+       (isa<VPIntrinsic>(Inst) &&
+        dyn_cast<VPIntrinsic>(Inst)->getIntrinsicID() == Intrinsic::vp_fcmp)) &&
+      "Not fcmp instruction or its intrinsic variants!");
+
+  if (const auto *FPOp = dyn_cast<FPMathOperator>(Inst))
+    if (FPOp->hasNoNaNs())
+      return true;
+
+  for (int I = 0; I != 2; ++I)
+    if (!isKnownNeverNaN(Inst->getOperand(I),
+                         SimplifyQuery(DAG.getDataLayout(), Inst)))
+      return false;
+
+  return true;
+}
+
 /// EmitBranchForMergedCondition - Helper method for FindMergedConditions.
 /// This function emits a branch and is used at the leaves of an OR or an
 /// AND operator tree.
@@ -2480,7 +2500,7 @@ SelectionDAGBuilder::EmitBranchForMergedCondition(const Value *Cond,
         FCmpInst::Predicate Pred =
             InvertCond ? FC->getInversePredicate() : FC->getPredicate();
         Condition = getFCmpCondCode(Pred);
-        if (TM.Options.NoNaNsFPMath)
+        if (AreFCmpOperandsNonNaN(FC, DAG))
           Condition = getFCmpCodeWithoutNaN(Condition);
       }
 
@@ -3795,7 +3815,7 @@ void SelectionDAGBuilder::visitFCmp(const FCmpInst &I) {
 
   ISD::CondCode Condition = getFCmpCondCode(predicate);
   auto *FPMO = cast<FPMathOperator>(&I);
-  if (FPMO->hasNoNaNs() || TM.Options.NoNaNsFPMath)
+  if (AreFCmpOperandsNonNaN(&I, DAG))
     Condition = getFCmpCodeWithoutNaN(Condition);
 
   SDNodeFlags Flags;
@@ -8543,7 +8563,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   case ISD::STRICT_FSETCCS: {
     auto *FPCmp = dyn_cast<ConstrainedFPCmpIntrinsic>(&FPI);
     ISD::CondCode Condition = getFCmpCondCode(FPCmp->getPredicate());
-    if (TM.Options.NoNaNsFPMath)
+    if (AreFCmpOperandsNonNaN(FPCmp, DAG))
       Condition = getFCmpCodeWithoutNaN(Condition);
     Opers.push_back(DAG.getCondCode(Condition));
     break;
@@ -8826,11 +8846,8 @@ void SelectionDAGBuilder::visitVPCmp(const VPCmpIntrinsic &VPIntrin) {
   CmpInst::Predicate CondCode = VPIntrin.getPredicate();
   bool IsFP = VPIntrin.getOperand(0)->getType()->isFPOrFPVectorTy();
   if (IsFP) {
-    // FIXME: Regular fcmps are FPMathOperators which may have fast-math (nnan)
-    // flags, but calls that don't return floating-point types can't be
-    // FPMathOperators, like vp.fcmp. This affects constrained fcmp too.
     Condition = getFCmpCondCode(CondCode);
-    if (TM.Options.NoNaNsFPMath)
+    if (AreFCmpOperandsNonNaN(&VPIntrin, DAG))
       Condition = getFCmpCodeWithoutNaN(Condition);
   } else {
     Condition = getICmpCondCode(CondCode);
