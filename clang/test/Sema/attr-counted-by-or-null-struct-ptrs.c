@@ -105,8 +105,6 @@ struct on_pointer_anon_count {
 //==============================================================================
 // __counted_by_or_null on struct member pointer in type attribute position
 //==============================================================================
-// TODO: Correctly parse counted_by_or_null as a type attribute. Currently it is parsed
-// as a declaration attribute
 
 struct on_member_pointer_complete_ty_ty_pos {
   int count;
@@ -158,10 +156,9 @@ struct on_member_pointer_fn_ptr_ty_ty_pos {
   fn_ptr_ty __counted_by_or_null(count) fn_ptr;
 };
 
-// TODO: This should be forbidden but isn't due to counted_by_or_null being treated
-// as a declaration attribute.
 struct on_member_pointer_fn_ptr_ty_ty_pos_inner {
   int count;
+  // expected-error@+1{{'counted_by_or_null' attribute on nested pointer type is not allowed}}
   void (* __counted_by_or_null(count) * fn_ptr)(void);
 };
 
@@ -181,9 +178,8 @@ struct on_member_pointer_struct_with_annotated_vla_ty_pos {
 };
 
 struct on_nested_pointer_inner {
-  // TODO: This should be disallowed because in the `-fbounds-safety` model
-  // `__counted_by_or_null` can only be nested when used in function parameters.
   int count;
+  // expected-error@+1{{'counted_by_or_null' attribute on nested pointer type is not allowed}}
   struct size_known *__counted_by_or_null(count) *buf;
 };
 

@@ -151,10 +151,9 @@ struct on_member_pointer_fn_ptr_ty_ty_pos {
   fn_ptr_ty __sized_by(size) fn_ptr;
 };
 
-// TODO: This should be forbidden but isn't due to sized_by being treated
-// as a declaration attribute.
 struct on_member_pointer_fn_ptr_ty_ty_pos_inner {
   int size;
+  // expected-error@+1{{'sized_by' attribute on nested pointer type is not allowed}}
   void (* __sized_by(size) * fn_ptr)(void);
 };
 
@@ -171,9 +170,8 @@ struct on_member_pointer_struct_with_annotated_vla_ty_pos {
 };
 
 struct on_nested_pointer_inner {
-  // TODO: This should be disallowed because in the `-fbounds-safety` model
-  // `__sized_by` can only be nested when used in function parameters.
   int size;
+  // expected-error@+1{{'sized_by' attribute on nested pointer type is not allowed}}
   struct size_known *__sized_by(size) *buf;
 };
 

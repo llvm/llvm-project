@@ -1238,6 +1238,13 @@ struct DeclaratorChunk {
 
   ParsedAttributesView AttrList;
 
+  /// Stores pointers to `Parser::LateParsedAttribute`. We use `void*` here
+  /// because `LateParsedAttribute` is a nested struct of `class Parser` and
+  /// cannot be forward-declared.
+  using LateAttrOpaquePtr = void *;
+  using LateAttrListTy = SmallVector<LateAttrOpaquePtr, 1>;
+  LateAttrListTy LateAttrList;
+
   struct PointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/unaligned/atomic.
     LLVM_PREFERRED_TYPE(DeclSpec::TQ)
@@ -2324,14 +2331,18 @@ public:
   /// EndLoc, which should be the last token of the chunk.
   /// This function takes attrs by R-Value reference because it takes ownership
   /// of those attributes from the parameter.
-  void AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
-                   SourceLocation EndLoc) {
+  void
+  AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
+              SourceLocation EndLoc,
+              ArrayRef<DeclaratorChunk::LateAttrOpaquePtr> LateAttrs = {}) {
     DeclTypeInfo.push_back(TI);
     DeclTypeInfo.back().getAttrs().prepend(attrs.begin(), attrs.end());
     getAttributePool().takeAllFrom(attrs.getPool());
 
     if (!EndLoc.isInvalid())
       SetRangeEnd(EndLoc);
+
+    DeclTypeInfo.back().LateAttrList.assign(LateAttrs);
   }
 
   /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
