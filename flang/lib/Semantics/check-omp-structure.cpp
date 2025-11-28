@@ -2748,8 +2748,8 @@ void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
 
   unsigned version{context_.langOptions().OpenMPVersion};
   if (version >= 52) {
-    using Flags = parser::OmpDirectiveSpecification::Flags;
-    if (std::get<Flags>(x.v.t) == Flags::DeprecatedSyntax) {
+    auto &flags{std::get<parser::OmpDirectiveSpecification::Flags>(x.v.t)};
+    if (flags.test(parser::OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {
       context_.Say(x.source,
           "The syntax \"FLUSH clause (object, ...)\" has been deprecated, use \"FLUSH(object, ...) clause\" instead"_warn_en_US);
     }
