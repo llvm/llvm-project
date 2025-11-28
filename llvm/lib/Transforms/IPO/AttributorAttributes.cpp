@@ -976,13 +976,14 @@ AAPointerInfo::AccessPathSetTy *AA::PointerInfo::State::findAllAccessPaths(
   using VisitedTy = SmallPtrSet<Value *, 4>;
   using StackElementTy =
       std::tuple<Value *, AAPointerInfo::AccessPathTy *, VisitedTy>;
+  using OffsetInfoTy = AAPointerInfo::OffsetInfo::OriginsTy;
+  using OriginTy = AAPointerInfo::OffsetInfo::OriginTy;
 
   SmallVector<StackElementTy, 16> Stack;
-
   // Populate the stack with elements.
   // LocalI is the final instruction causing the access.
   // To begin with, we fork new paths for the arguments of LocalI.
-  for (auto *It = LocalI->op_begin(); It != LocalI->op_end(); It++) {
+  for (Use *It = LocalI->op_begin(); It != LocalI->op_end(); It++) {
     Value *V = cast<Value>(It);
     if (!OffsetInfoMap.contains(V))
       continue;
@@ -996,10 +997,10 @@ AAPointerInfo::AccessPathSetTy *AA::PointerInfo::State::findAllAccessPaths(
   }
 
   while (!Stack.empty()) {
-    auto Entry = Stack.pop_back_val();
+    StackElementTy Entry = Stack.pop_back_val();
     Value *Top = std::get<0>(Entry);
     AAPointerInfo::AccessPathTy *CurrentChain = std::get<1>(Entry);
-    auto &Visited = std::get<2>(Entry);
+    VisitedTy &Visited = std::get<2>(Entry);
 
     if (!OffsetInfoMap.contains(Top))
       continue;
@@ -1008,12 +1009,12 @@ AAPointerInfo::AccessPathSetTy *AA::PointerInfo::State::findAllAccessPaths(
       continue;
 
     CurrentChain->push_back(Top);
-    auto OI = OffsetInfoMap.lookup(Top);
-    auto &Origins = OI.Origins;
+    const AAPointerInfo::OffsetInfo &OI = OffsetInfoMap.lookup(Top);
+    const OffsetInfoTy &Origins = OI.Origins;
 
     SmallPtrSet<Value *, 16> Successors;
-    for (auto &Origin : Origins) {
-      for (auto *Val : Origin) {
+    for (const OriginTy &Origin : Origins) {
+      for (Value *Val : Origin) {
         // Since we store depth 1 predecessors in our Origins map
         // We can be sure that we hit termination condition if the
         // Successor is the current instruction.
@@ -1037,7 +1038,7 @@ AAPointerInfo::AccessPathSetTy *AA::PointerInfo::State::findAllAccessPaths(
 
     int Index = 0;
     // Traverse the successors
-    for (auto *Successor : Successors) {
+    for (Value *Successor : Successors) {
       AAPointerInfo::AccessPathTy *NextChain = NewPaths[Index];
       AccessPathsSet->insert(NextChain);
       // Push successors to traverse and their corresponding storage on
@@ -1144,7 +1145,7 @@ static raw_ostream &operator<<(raw_ostream &OS,
   for (const AA::RangeTy &Offset : OI) {
     OS << LS << "[Offset, Size]: " << Offset << "\n";
     auto &Origin = OI.Origins[I];
-    for (auto *Val : Origin)
+    for (Value *Val : Origin)
       OS << "Origin: " << *Val << "\n";
   }
   OS << "\n";
@@ -1555,7 +1556,7 @@ struct AAPointerInfoImpl
         const auto &RAcc = State.getAccess(Index);
         if (!IsMustAcc && RAcc.isAssumption())
           continue;
-        for (auto Range : Ranges) {
+        for (const AA::RangeTy &Range : Ranges) {
           auto NewRanges = Range.Offset == AA::RangeTy::Unknown
                                ? AA::RangeTy::getUnknown()
                                : RAcc.getRanges();
@@ -1627,7 +1628,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
     auto Origins = OI.Origins;
 
     llvm::sort(Ranges);
-    auto *Last = llvm::unique(Ranges);
+    const AA::RangeTy *Last = llvm::unique(Ranges);
     Ranges.erase(Last, Ranges.end());
 
     SmallVector<int64_t> OffsetsOnly;
@@ -13667,8 +13668,9 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
             A, this, IRP, DepClassTy::OPTIONAL, IsKnownNoCapture))
       return indicatePessimisticFixpoint();
 
-    const auto *AAPrivatizablePtrI = A.getOrCreateAAFor<AAPrivatizablePtr>(
-        getIRPosition(), *this, DepClassTy::OPTIONAL);
+    const AAPrivatizablePtr *AAPrivatizablePtrI =
+        A.getOrCreateAAFor<AAPrivatizablePtr>(getIRPosition(), *this,
+                                              DepClassTy::OPTIONAL);
 
     // If this allocation is privatizable we don't want to modify its allocation
     // size.
@@ -13686,7 +13688,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
         continue;
 
       unsigned ArgIdx = 0;
-      for (auto *It = CB->arg_begin(); It != CB->arg_end(); It++) {
+      for (Use *It = CB->arg_begin(); It != CB->arg_end(); It++) {
         Value *ArgVal = *It;
 
         // Remove any pointer casts.
@@ -13705,8 +13707,9 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
 
         IRPosition FunctionDefArgPos = IRPosition::argument(FunctionDefArg);
 
-        const auto *AAPrivateArgPos = A.getOrCreateAAFor<AAPrivatizablePtr>(
-            FunctionDefArgPos, *this, DepClassTy::OPTIONAL);
+        const AAPrivatizablePtr *AAPrivateArgPos =
+            A.getOrCreateAAFor<AAPrivatizablePtr>(FunctionDefArgPos, *this,
+                                                  DepClassTy::OPTIONAL);
 
         if (!AAPrivateArgPos)
           continue;
@@ -13746,7 +13749,8 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
 
     int64_t NumBins = PI->numOffsetBins();
     if (NumBins == 0) {
-      auto NewAllocationSize = std::optional<TypeSize>(TypeSize(0, false));
+      std::optional<TypeSize> NewAllocationSize =
+          std::optional<TypeSize>(TypeSize(0, false));
       if (!changeAllocationSize(NewAllocationSize))
         return ChangeStatus::UNCHANGED;
       return ChangeStatus::CHANGED;
@@ -13788,7 +13792,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
 
     AccessedIntervals Intervals;
     // Obtain the intervals from the ranges.
-    for (auto &OldBin : OldBins) {
+    for (AA::RangeTy &OldBin : OldBins) {
       AccessedInterval Interval =
           std::make_tuple(OldBin.Offset, OldBin.Offset + OldBin.Size, OldBin);
       Intervals.push_back(Interval);
@@ -13827,16 +13831,16 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     int64_t PackedCursorStart = 0;
     bool ChangedOffsets = false;
     for (ClusterTy &Cluster : Clusters) {
-      auto &ClusterStart = get<0>(Cluster);
-      auto &ClusterEnd = get<1>(Cluster);
+      const long &ClusterStart = get<0>(Cluster);
+      const long &ClusterEnd = get<1>(Cluster);
       for (AccessedInterval &Interval : Intervals) {
-        auto &InterValStart = get<0>(Interval);
-        auto &InterValEnd = get<1>(Interval);
+        const long &InterValStart = get<0>(Interval);
+        const long &InterValEnd = get<1>(Interval);
         if (InterValStart >= ClusterStart && InterValEnd <= ClusterEnd) {
           int64_t NewRangeStart =
               PackedCursorStart + (InterValStart - ClusterStart);
           int64_t NewRangeSize = InterValEnd - InterValStart;
-          auto &OldRange = get<2>(Interval);
+          const AA::RangeTy &OldRange = get<2>(Interval);
 
           ChangedOffsets |= setNewOffsets(OldRange, OldRange.Offset,
                                           NewRangeStart, NewRangeSize);
@@ -13847,7 +13851,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
 
     // Set the new size of the allocation. The new size of the Allocation should
     // be the size of PrevBinEndOffset * 8 in bits.
-    auto NewAllocationSize =
+    std::optional<TypeSize> NewAllocationSize =
         std::optional<TypeSize>(TypeSize(PackedRangeSize * 8, false));
 
     if (!changeAllocationSize(NewAllocationSize))
@@ -13902,8 +13906,9 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
           NewBinsForInstruction.insert(std::make_pair(OldRange, NewRange));
         };
 
-    const auto &NewOffsetsMap = getNewOffsets();
-    const auto &OffsetInfoMap = PI->getOffsetInfoMap();
+    const NewOffsetsTy &NewOffsetsMap = getNewOffsets();
+    const AAPointerInfo::OffsetInfoMapTy &OffsetInfoMap =
+        PI->getOffsetInfoMap();
 
     // Map access causing instructions to a tuple of (Old, New) bins.
     // The access causing instruction contains the pointer operand
@@ -13916,15 +13921,15 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     // original offset.
     for (AAPointerInfo::OffsetBinsTy::const_iterator It = PI->begin();
          It != PI->end(); It++) {
-      const auto &OldOffsetRange = It->getFirst();
+      const AA::RangeTy &OldOffsetRange = It->getFirst();
       // If the OldOffsetRange is not in the map, offsets for that bin did not
       // change. We should just continue and skip changing the offsets in that
       // case.
       if (!NewOffsetsMap.contains(OldOffsetRange))
         continue;
 
-      const auto &NewOffsetRange = NewOffsetsMap.lookup(OldOffsetRange);
-      for (const auto AccIndex : It->getSecond()) {
+      const AA::RangeTy &NewOffsetRange = NewOffsetsMap.lookup(OldOffsetRange);
+      for (const unsigned int &AccIndex : It->getSecond()) {
         const auto &AccessInstruction = PI->getBinAccess(AccIndex);
         Instruction *LocalInst = AccessInstruction.getLocalInst();
 
@@ -13941,7 +13946,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
         switch (LocalInst->getOpcode()) {
         case Instruction::Call: {
           CallInst *CallInstruction = cast<CallInst>(LocalInst);
-          for (auto *It = CallInstruction->op_begin();
+          for (Use *It = CallInstruction->op_begin();
                It != CallInstruction->op_end(); It++) {
             if (Instruction *OperandInstruction = dyn_cast<Instruction>(It)) {
               // Operand does not cause an access in the current byte range.
@@ -13950,12 +13955,12 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
 
               // Find the old offset and the corresponding new offset for the
               // call argument.
-              auto OffsetsVecArg =
+              const AAPointerInfo::OffsetInfo::VecTy &OffsetsVecArg =
                   OffsetInfoMap.lookup(OperandInstruction).Ranges;
               int64_t OldOffsetArg = OffsetsVecArg.front().Offset;
               int NewOffsetArg = 0;
-              for (auto OldToNewRange : NewOffsetsMap) {
-                auto Old = OldToNewRange.getFirst();
+              for (const auto &OldToNewRange : NewOffsetsMap) {
+                const AA::RangeTy &Old = OldToNewRange.getFirst();
                 if (Old.Offset == OldOffsetArg)
                   NewOffsetArg = OldToNewRange.getSecond().Offset;
               }
@@ -13966,7 +13971,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
 
               // We don't have access to the size of the offset here but it is
               // ok since we do not need it here.
-              AA::RangeTy &CallArgOldRange = OffsetsVecArg.front();
+              const AA::RangeTy &CallArgOldRange = OffsetsVecArg.front();
               AA::RangeTy CallArgNewRange =
                   AA::RangeTy(NewOffsetArg, CallArgOldRange.Size);
 
@@ -13974,8 +13979,12 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
               const AAPointerInfo::AccessPathSetTy &AccessPaths =
                   AccessInstruction.getAccessChain();
 
-              const AAPointerInfo::AccessPathTy *ChainWithArg = nullptr;
-              for (auto *Chain : AccessPaths) {
+              AAPointerInfo::AccessPathTy *ChainWithArg = nullptr;
+              for (AAPointerInfo::AccessPathTy *Chain : AccessPaths) {
+
+                // nullptr check
+                if (!Chain)
+                  continue;
 
                 if (std::find(Chain->begin(), Chain->end(),
                               OperandInstruction) != Chain->end()) {
@@ -13986,7 +13995,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
               bool BackTrackInstructionToGEP = false;
               if (ChainWithArg) {
                 bool Exists = false;
-                for (auto *V : *ChainWithArg) {
+                for (Value *V : *ChainWithArg) {
 
                   GetElementPtrInst *GepI = dyn_cast<GetElementPtrInst>(V);
 
@@ -14029,8 +14038,11 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
           bool Exists = false;
           const AAPointerInfo::AccessPathSetTy &AccessPaths =
               AccessInstruction.getAccessChain();
-          for (auto *Chain : AccessPaths) {
+          for (const AAPointerInfo::AccessPathTy *Chain : AccessPaths) {
             for (auto *V : *Chain) {
+
+              if (!Chain)
+                continue;
 
               GetElementPtrInst *GepI = dyn_cast<GetElementPtrInst>(V);
 
@@ -14076,7 +14088,8 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     case Instruction::Alloca: {
       AllocaInst *OldAllocaInst = cast<AllocaInst>(I);
       const DataLayout &DL = A.getDataLayout();
-      auto OriginalAllocationSize = OldAllocaInst->getAllocationSizeInBits(DL);
+      std::optional<TypeSize> OriginalAllocationSize =
+          OldAllocaInst->getAllocationSizeInBits(DL);
 
       if (*OriginalAllocationSize <= FixedAllocatedSizeInBits)
         return ChangeStatus::UNCHANGED;
@@ -14197,11 +14210,11 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     O << "Printing Map from [OldOffsetsRange] : [NewOffsetsRange] if the "
          "offsets changed."
       << "\n";
-    const auto &NewOffsetsMap = getNewOffsets();
+    const NewOffsetsTy &NewOffsetsMap = getNewOffsets();
     for (auto It = NewOffsetsMap.begin(); It != NewOffsetsMap.end(); It++) {
 
-      const auto &OldRange = It->getFirst();
-      const auto &NewRange = It->getSecond();
+      const AA::RangeTy &OldRange = It->getFirst();
+      const AA::RangeTy &NewRange = It->getSecond();
 
       O << "[" << OldRange.Offset << "," << OldRange.Offset + OldRange.Size
         << "] : ";
@@ -14258,7 +14271,7 @@ private:
                                      Values, AA::AnyScope,
                                      UsedAssumedInformation))
 
-      for (auto &ValAndContext : Values)
+      for (const AA::ValueAndContext &ValAndContext : Values)
         // Don't modify the instruction if any simplified value exists.
         if (ValAndContext.getValue() && ValAndContext.getValue() != LocalInst)
           return true;
@@ -14287,11 +14300,12 @@ private:
       // come from different call arguments and we can address them
       // seperately.
       // TODO: handle when one instruction has multiple bins
-      auto OffsetsVecArg = OffsetInfoMap.lookup(GetBack).Ranges;
+      const AAPointerInfo::OffsetInfo::VecTy &OffsetsVecArg =
+          OffsetInfoMap.lookup(GetBack).Ranges;
       if (GetBack->getOpcode() != Instruction::Call && OffsetsVecArg.size() > 1)
         return true;
 
-      for (auto *It = GetBack->op_begin(); It != GetBack->op_end(); It++) {
+      for (Use *It = GetBack->op_begin(); It != GetBack->op_end(); It++) {
         if (Instruction *Ins = dyn_cast<Instruction>(*It)) {
           ReadyList.push_back(Ins);
         }
