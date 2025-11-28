@@ -10,6 +10,7 @@
 #include "EventHelper.h"
 #include "JSONUtils.h"
 #include "RequestHandler.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lldb_dap {
 
@@ -60,12 +61,12 @@ void CompileUnitsRequestHandler::operator()(
   llvm::json::Object body;
   llvm::json::Array units;
   const auto *arguments = request.getObject("arguments");
-  const std::string module_id =
-      GetString(arguments, "moduleId").value_or("").str();
+  const llvm::StringRef module_id =
+      GetString(arguments, "moduleId").value_or("");
   int num_modules = dap.target.GetNumModules();
   for (int i = 0; i < num_modules; i++) {
     auto curr_module = dap.target.GetModuleAtIndex(i);
-    if (module_id == curr_module.GetUUIDString()) {
+    if (module_id == llvm::StringRef(curr_module.GetUUIDString())) {
       int num_units = curr_module.GetNumCompileUnits();
       for (int j = 0; j < num_units; j++) {
         auto curr_unit = curr_module.GetCompileUnitAtIndex(j);
