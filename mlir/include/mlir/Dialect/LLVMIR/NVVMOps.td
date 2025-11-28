@@ -1567,6 +1567,133 @@ def NVVM_ElectSyncOp : NVVM_Op<"elect.sync">
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// Permute Bytes (Prmt)
+//===----------------------------------------------------------------------===//
+
+// Attributes for the permute operation modes supported by PTX.
+def PermuteModeDefault : I32EnumAttrCase<"DEFAULT", 0, "default">;
+def PermuteModeF4E : I32EnumAttrCase<"F4E", 1, "f4e">;
+def PermuteModeB4E : I32EnumAttrCase<"B4E", 2, "b4e">;
+def PermuteModeRC8 : I32EnumAttrCase<"RC8", 3, "rc8">;
+def PermuteModeECL : I32EnumAttrCase<"ECL", 4, "ecl">;
+def PermuteModeECR : I32EnumAttrCase<"ECR", 5, "ecr">;
+def PermuteModeRC16 : I32EnumAttrCase<"RC16", 6, "rc16">;
+
+def PermuteMode : I32EnumAttr<"PermuteMode", "NVVM permute mode",
+                              [PermuteModeDefault, PermuteModeF4E,
+                               PermuteModeB4E, PermuteModeRC8, PermuteModeECL,
+                               PermuteModeECR, PermuteModeRC16]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def PermuteModeAttr : EnumAttr<NVVM_Dialect, PermuteMode, "permute_mode"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def NVVM_PermuteOp : NVVM_Op<"prmt", [Pure]>,
+                     Results<(outs I32:$res)>,
+                     Arguments<(ins I32:$lo, Optional<I32>:$hi, I32:$selector,
+                         PermuteModeAttr:$mode)> {
+  let summary = "Permute bytes from two 32-bit registers";
+  let description = [{
+    The `nvvm.prmt` operation constructs a permutation of the
+    bytes of the first one or two operands, selecting based on 
+    the 2 least significant bits of the final operand.
+    
+    The bytes in the first one or two source operands are numbered. 
+    The first source operand (%lo) is numbered {b3, b2, b1, b0}, 
+    in the case of the '``default``', '``f4e``' and '``b4e``' variants, 
+    the second source operand (%hi) is numbered {b7, b6, b5, b4}.
+
+    Modes:
+    - `default`: Index mode         - each nibble in `selector` selects a byte from the 8-byte pool
+    - `f4e`    : Forward 4 extract  - extracts 4 contiguous bytes starting from position in `selector`
+    - `b4e`    : Backward 4 extract - extracts 4 contiguous bytes in reverse order
+    - `rc8`    : Replicate 8        - replicates the lower 8 bits across the 32-bit result
+    - `ecl`    : Edge clamp left    - clamps out-of-range indices to the leftmost valid byte
+    - `ecr`    : Edge clamp right   - clamps out-of-range indices to the rightmost valid byte  
+    - `rc16`   : Replicate 16       - replicates the lower 16 bits across the 32-bit result
+
+    Depending on the 2 least significant bits of the %selector operand, the result
+    of the permutation is defined as follows:
+
+    +------------+----------------+--------------+
+    |    Mode    | %selector[1:0] |    Output    |
+    +------------+----------------+--------------+
+    | '``f4e``'  | 0              | {3, 2, 1, 0} |
+    |            +----------------+--------------+
+    |            | 1              | {4, 3, 2, 1} |
+    |            +----------------+--------------+
+    |            | 2              | {5, 4, 3, 2} |
+    |            +----------------+--------------+
+    |            | 3              | {6, 5, 4, 3} |
+    +------------+----------------+--------------+
+    | '``b4e``'  | 0              | {5, 6, 7, 0} |
+    |            +----------------+--------------+
+    |            | 1              | {6, 7, 0, 1} |
+    |            +----------------+--------------+
+    |            | 2              | {7, 0, 1, 2} |
+    |            +----------------+--------------+
+    |            | 3              | {0, 1, 2, 3} |
+    +------------+----------------+--------------+
+    | '``rc8``'  | 0              | {0, 0, 0, 0} |
+    |            +----------------+--------------+
+    |            | 1              | {1, 1, 1, 1} |
+    |            +----------------+--------------+
+    |            | 2              | {2, 2, 2, 2} |
+    |            +----------------+--------------+
+    |            | 3              | {3, 3, 3, 3} |
+    +------------+----------------+--------------+
+    | '``ecl``'  | 0              | {3, 2, 1, 0} |
+    |            +----------------+--------------+
+    |            | 1              | {3, 2, 1, 1} |
+    |            +----------------+--------------+
+    |            | 2              | {3, 2, 2, 2} |
+    |            +----------------+--------------+
+    |            | 3              | {3, 3, 3, 3} |
+    +------------+----------------+--------------+
+    | '``ecr``'  | 0              | {0, 0, 0, 0} |
+    |            +----------------+--------------+
+    |            | 1              | {1, 1, 1, 0} |
+    |            +----------------+--------------+
+    |            | 2              | {2, 2, 1, 0} |
+    |            +----------------+--------------+
+    |            | 3              | {3, 2, 1, 0} |
+    +------------+----------------+--------------+
+    | '``rc16``' | 0              | {1, 0, 1, 0} |
+    |            +----------------+--------------+
+    |            | 1              | {3, 2, 3, 2} |
+    |            +----------------+--------------+
+    |            | 2              | {1, 0, 1, 0} |
+    |            +----------------+--------------+
+    |            | 3              | {3, 2, 3, 2} |
+    +------------+----------------+--------------+
+    
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prmt)
+  }];
+
+  let assemblyFormat = [{
+    $mode $selector `,` $lo  (`,` $hi^)?  attr-dict `:` type($res)
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+  }];
+  
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::PermuteOp::getIntrinsicIDAndArgs(
+        *op, moduleTranslation, builder);
+    $res = createIntrinsicCall(builder, id, args);
+  }];
+}
+
 def LoadCacheModifierCA : I32EnumAttrCase<"CA", 0, "ca">;
 def LoadCacheModifierCG : I32EnumAttrCase<"CG", 1, "cg">;
 def LoadCacheModifierCS : I32EnumAttrCase<"CS", 2, "cs">;

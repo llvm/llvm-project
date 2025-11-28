@@ -448,6 +448,31 @@ LogicalResult ConvertF4x2ToF16x2Op::verify() {
   return success();
 }
 
+LogicalResult PermuteOp::verify() {
+  using Mode = NVVM::PermuteMode;
+  bool hasHi = static_cast<bool>(getHi());
+
+  switch (getMode()) {
+  case Mode::DEFAULT:
+  case Mode::F4E:
+  case Mode::B4E:
+    if (!hasHi)
+      return emitError("mode '")
+             << stringifyPermuteMode(getMode()) << "' requires 'hi' operand.";
+    break;
+  case Mode::RC8:
+  case Mode::ECL:
+  case Mode::ECR:
+  case Mode::RC16:
+    if (hasHi)
+      return emitError("mode '") << stringifyPermuteMode(getMode())
+                                 << "' does not accept 'hi' operand.";
+    break;
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Stochastic Rounding Conversion Ops
 //===----------------------------------------------------------------------===//
@@ -3853,6 +3878,31 @@ NVVM::IDArgPair ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
     break;
   }
   return {intrinsicID, args};
+}
+
+mlir::NVVM::IDArgPair
+PermuteOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                 llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::PermuteOp>(op);
+  NVVM::PermuteMode mode = thisOp.getMode();
+
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_prmt,     llvm::Intrinsic::nvvm_prmt_f4e,
+      llvm::Intrinsic::nvvm_prmt_b4e, llvm::Intrinsic::nvvm_prmt_rc8,
+      llvm::Intrinsic::nvvm_prmt_ecl, llvm::Intrinsic::nvvm_prmt_ecr,
+      llvm::Intrinsic::nvvm_prmt_rc16};
+
+  unsigned modeIndex = static_cast<unsigned>(mode);
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getLo()));
+
+  // Only first 3 modes (Default, f4e, b4e) need the hi operand.
+  if (modeIndex < 3)
+    args.push_back(mt.lookupValue(thisOp.getHi()));
+
+  args.push_back(mt.lookupValue(thisOp.getSelector()));
+
+  return {IDs[modeIndex], args};
 }
 
 //===----------------------------------------------------------------------===//
