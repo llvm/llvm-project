@@ -212,7 +212,11 @@ void CodeGenFunction::EmitVarDecl(const VarDecl &D) {
     // Static sampler variables translated to function calls.
     if (D.getType()->isSamplerT())
       return;
-
+    if (D.hasAttr<OMPGroupPrivateDeclAttr>()) {
+      llvm::GlobalValue::LinkageTypes Linkage =
+          CGM.getLLVMLinkageVarDefinition(&D);
+      return EmitStaticVarDecl(D, Linkage);
+    }
     llvm::GlobalValue::LinkageTypes Linkage =
         CGM.getLLVMLinkageVarDefinition(&D);
 
