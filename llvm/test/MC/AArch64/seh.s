@@ -139,8 +139,8 @@
     .endef
     .seh_proc func
 func:
-    sub sp, sp, #24
-    .seh_stackalloc 24
+    sub sp, sp, #16
+    .seh_stackalloc 16
     mov x29, sp
     .seh_set_fp
     stp x29, x30, [sp, #-32]!
@@ -210,8 +210,8 @@ func:
     .seh_endprologue
     nop
     .seh_startepilogue
-    add sp, sp, #24
-    .seh_stackalloc 24
+    add sp, sp, #16
+    .seh_stackalloc 16
     .seh_endepilogue
     ret
     .seh_handler __C_specific_handler, @except
