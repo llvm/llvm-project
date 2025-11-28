@@ -255,13 +255,7 @@ void Matrix<T>::fillRow(unsigned row, const T &value) {
 }
 
 // moveColumns is implemented by moving the columns adjacent to the source range
-// to their final position. When moving right (i.e. dstPos > srcPos), the range
-// of the adjacent columns is [srcPos + num, dstPos + num). When moving left
-// (i.e. dstPos < srcPos) the range of the adjacent columns is [dstPos, srcPos).
-// First, zeroed out columns are inserted in the final positions of the adjacent
-// columns. Then, the adjacent columns are moved to their final positions by
-// swapping them with the zeroed columns. Finally, the now zeroed adjacent
-// columns are deleted.
+// to their final position.
 template <typename T>
 void Matrix<T>::moveColumns(unsigned srcPos, unsigned num, unsigned dstPos) {
   if (num == 0)
@@ -276,23 +270,23 @@ void Matrix<T>::moveColumns(unsigned srcPos, unsigned num, unsigned dstPos) {
   assert(dstPos + num <= getNumColumns() &&
          "move destination range exceeds matrix columns");
 
-  unsigned insertCount = offset > 0 ? offset : -offset;
-  unsigned finalAdjStart = offset > 0 ? srcPos : srcPos + num;
-  unsigned curAdjStart = offset > 0 ? srcPos + num : dstPos;
-  // TODO: This can be done using std::rotate.
-  // Insert new zero columns in the positions where the adjacent columns are to
-  // be moved.
-  insertColumns(finalAdjStart, insertCount);
-  // Update curAdjStart if insertion of new columns invalidates it.
-  if (finalAdjStart < curAdjStart)
-    curAdjStart += insertCount;
+  unsigned numRows = getNumRows();
 
-  // Swap the adjacent columns with inserted zero columns.
-  for (unsigned i = 0; i < insertCount; ++i)
-    swapColumns(finalAdjStart + i, curAdjStart + i);
-
-  // Delete the now redundant zero columns.
-  removeColumns(curAdjStart, insertCount);
+  if (offset > 0) {
+    // Shift the matrix left, because start < end, that std::rotate(start,
+    // middle, end) turns the range [start, end] to [middle, end) + [start,
+    // middle).
+    for (unsigned i = 0; i < numRows; ++i) {
+      std::rotate(&at(i, srcPos), &at(i, srcPos) + num, &at(i, dstPos) + num);
+    }
+    return;
+  }
+  // Shift the matrix right. because end < start, that std::rotate(start,
+  // middle, end) turns the range [start, end] to [middle, start) + [end,
+  // middle).
+  for (unsigned i = 0; i < numRows; ++i) {
+    std::rotate(&at(i, dstPos), &at(i, srcPos), &at(i, srcPos) + num);
+  }
 }
 
 template <typename T>
