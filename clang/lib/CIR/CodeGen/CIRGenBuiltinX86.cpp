@@ -787,24 +787,21 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_sqrtpd:
   case X86::BI__builtin_ia32_sqrtps256:
   case X86::BI__builtin_ia32_sqrtps: {
-    mlir::Location loc = getLoc(E->getExprLoc());
-    assert(E->getNumArgs() == 1 && "__builtin_ia32_sqrtps takes one argument");
-    mlir::Value arg = emitScalarExpr(E->getArg(0));
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    assert(expr->getNumArgs() == 1 && "__builtin_ia32_sqrtps takes one argument");
+    mlir::Value arg = emitScalarExpr(expr->getArg(0));
     mlir::Type argTy = arg.getType();
     if (auto vecTy = argTy.dyn_cast<mlir::VectorType>()) {
       assert(vecTy.getNumElements() == 4 &&
              vecTy.getElementType().isa<mlir::FloatType>() &&
              "__builtin_ia32_sqrtps expects <4 x float> / __m128");
     }
-    auto sqrt = cir::SqrtOp > ::create(builder, loc, argTy, arg);
+    auto sqrt = cir::SqrtOp::create(builder, loc, argTy, arg);
     return sqrt.getResult();
   }
   case X86::BI__builtin_ia32_sqrtph256:
   case X86::BI__builtin_ia32_sqrtph:
   case X86::BI__builtin_ia32_sqrtph512:
-  case X86::BI__builtin_ia32_vsqrtbf16256:
-  case X86::BI__builtin_ia32_vsqrtbf16:
-  case X86::BI__builtin_ia32_vsqrtbf16512:
   case X86::BI__builtin_ia32_sqrtps512:
   case X86::BI__builtin_ia32_sqrtpd512:
   case X86::BI__builtin_ia32_pmuludq128:
@@ -957,7 +954,6 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vcvtph2ps256_mask:
   case X86::BI__builtin_ia32_vcvtph2ps512_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_128_mask:
-  case X86::BI__builtin_ia32_cvtsbf162ss_32:
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_512_mask:
   case X86::BI__cpuid:
