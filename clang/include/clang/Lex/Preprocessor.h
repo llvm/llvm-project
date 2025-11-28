@@ -2943,6 +2943,7 @@ public:
   void HandlePragmaMark(Token &MarkTok);
   void HandlePragmaPoison();
   void HandlePragmaSystemHeader(Token &SysHeaderTok);
+  void HandlePragmaDeprecatedHeader(Token &Tok, std::string DeprecationMessage);
   void HandlePragmaDependency(Token &DependencyTok);
   void HandlePragmaPushMacro(Token &Tok);
   void HandlePragmaPopMacro(Token &Tok);
