@@ -4705,6 +4705,8 @@ TEST(CompletionTest, FuzzyMatchMacro) {
 
   {
     CodeCompleteOptions Opts{};
+    EXPECT_EQ(Opts.MacroFilter, Config::MacroFilterPolicy::ExactPrefix);
+
     auto Results = completions(Code, {}, Opts);
     EXPECT_THAT(Results.Completions, ElementsAre(named("gl_frob")));
   }
