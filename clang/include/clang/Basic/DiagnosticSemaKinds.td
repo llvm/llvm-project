@@ -817,11 +817,12 @@ def warn_unreachable_association : Warning<
 
 /// Built-in functions.
 def ext_implicit_lib_function_decl : ExtWarn<
-  "implicitly declaring library function '%0' with type %1">,
-  InGroup<ImplicitFunctionDeclare>;
+  "implicitly declaring library function '%0' with%select{| standards-mandated}2 "
+  "type %1">, InGroup<ImplicitFunctionDeclare>;
 def ext_implicit_lib_function_decl_c99 : ExtWarn<
-  "call to undeclared library function '%0' with type %1; ISO C99 and later "
-  "do not support implicit function declarations">,
+  "call to undeclared library function '%0', will assume it exists with"
+  "%select{| standards-mandated}2 type %1; ISO C99 and later do not support "
+  "implicit function declarations">,
   InGroup<ImplicitFunctionDeclare>, DefaultError;
 def note_include_header_or_declare : Note<
   "include the header <%0> or explicitly provide a declaration for '%1'">;
