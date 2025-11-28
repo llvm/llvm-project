@@ -2996,8 +2996,6 @@ public:
                            TTI::TargetCostKind CostKind) const override {
     unsigned Id = MICA.getID();
     Type *DataTy = MICA.getDataType();
-    const Value *Ptr = MICA.getPointer();
-    const Instruction *I = MICA.getInst();
     bool VariableMask = MICA.getVariableMask();
     Align Alignment = MICA.getAlignment();
 
