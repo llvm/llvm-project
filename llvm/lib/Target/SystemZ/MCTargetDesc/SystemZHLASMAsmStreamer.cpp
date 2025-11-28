@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCGOFFAttributes.h"
+#include "llvm/MC/MCGOFFStreamer.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Signals.h"
@@ -263,62 +264,7 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
 bool SystemZHLASMAsmStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                                   MCSymbolAttr Attribute) {
-  auto *Symbol = static_cast<MCSymbolGOFF *>(Sym);
-  switch (Attribute) {
-  case MCSA_Invalid:
-  case MCSA_Cold:
-  case MCSA_ELF_TypeIndFunction:
-  case MCSA_ELF_TypeTLS:
-  case MCSA_ELF_TypeCommon:
-  case MCSA_ELF_TypeNoType:
-  case MCSA_ELF_TypeGnuUniqueObject:
-  case MCSA_LGlobal:
-  case MCSA_Extern:
-  case MCSA_Exported:
-  case MCSA_IndirectSymbol:
-  case MCSA_Internal:
-  case MCSA_LazyReference:
-  case MCSA_NoDeadStrip:
-  case MCSA_SymbolResolver:
-  case MCSA_AltEntry:
-  case MCSA_PrivateExtern:
-  case MCSA_Protected:
-  case MCSA_Reference:
-  case MCSA_WeakDefinition:
-  case MCSA_WeakDefAutoPrivate:
-  case MCSA_WeakAntiDep:
-  case MCSA_Memtag:
-    return false;
-
-  case MCSA_ELF_TypeFunction:
-    Symbol->setCodeData(GOFF::ESDExecutable::ESD_EXE_CODE);
-    break;
-  case MCSA_ELF_TypeObject:
-    Symbol->setCodeData(GOFF::ESDExecutable::ESD_EXE_DATA);
-    break;
-  case MCSA_OSLinkage:
-    Symbol->setLinkage(GOFF::ESDLinkageType::ESD_LT_OS);
-    break;
-  case MCSA_XPLinkage:
-    Symbol->setLinkage(GOFF::ESDLinkageType::ESD_LT_XPLink);
-    break;
-  case MCSA_Global:
-    Symbol->setExternal(true);
-    break;
-  case MCSA_Local:
-    Symbol->setExternal(false);
-    break;
-  case MCSA_Weak:
-  case MCSA_WeakReference:
-    Symbol->setExternal(true);
-    Symbol->setWeak();
-    break;
-  case MCSA_Hidden:
-    Symbol->setHidden(true);
-    break;
-  }
-
-  return true;
+  return goff::setSymbolAttribute(static_cast<MCSymbolGOFF *>(Sym), Attribute);
 }
 
 void SystemZHLASMAsmStreamer::emitRawTextImpl(StringRef String) {

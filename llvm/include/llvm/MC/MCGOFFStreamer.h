@@ -16,6 +16,10 @@ namespace llvm {
 class GOFFObjectWriter;
 class MCSymbolGOFF;
 
+namespace goff {
+bool setSymbolAttribute(MCSymbolGOFF *Symbol, MCSymbolAttr Attribute);
+}
+
 class MCGOFFStreamer : public MCObjectStreamer {
 
 public:

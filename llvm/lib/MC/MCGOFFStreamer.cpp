@@ -24,44 +24,9 @@
 
 using namespace llvm;
 
-MCGOFFStreamer::MCGOFFStreamer(MCContext &Context,
-                               std::unique_ptr<MCAsmBackend> MAB,
-                               std::unique_ptr<MCObjectWriter> OW,
-                               std::unique_ptr<MCCodeEmitter> Emitter)
-    : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
-                       std::move(Emitter)) {}
-
-MCGOFFStreamer::~MCGOFFStreamer() = default;
-
-void MCGOFFStreamer::finishImpl() {
-  getWriter().setRootSD(static_cast<MCSectionGOFF *>(
-                            getContext().getObjectFileInfo()->getTextSection())
-                            ->getParent());
-  MCObjectStreamer::finishImpl();
-}
-
-GOFFObjectWriter &MCGOFFStreamer::getWriter() {
-  return static_cast<GOFFObjectWriter &>(getAssembler().getWriter());
-}
-
-void MCGOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
-  // Make sure that all section are registered in the correct order.
-  SmallVector<MCSectionGOFF *> Sections;
-  for (auto *S = static_cast<MCSectionGOFF *>(Section); S; S = S->getParent())
-    Sections.push_back(S);
-  while (!Sections.empty()) {
-    auto *S = Sections.pop_back_val();
-    MCObjectStreamer::changeSection(S, Sections.empty() ? Subsection : 0);
-  }
-}
-
-void MCGOFFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
-  MCObjectStreamer::emitLabel(Symbol, Loc);
-}
-
-bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
-                                         MCSymbolAttr Attribute) {
-  auto *Symbol = static_cast<MCSymbolGOFF *>(Sym);
+namespace llvm {
+namespace goff {
+bool setSymbolAttribute(MCSymbolGOFF *Symbol, MCSymbolAttr Attribute) {
   switch (Attribute) {
   case MCSA_Invalid:
   case MCSA_Cold:
@@ -117,6 +82,48 @@ bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
   }
 
   return true;
+}
+} // namespace goff
+} // namespace llvm
+
+MCGOFFStreamer::MCGOFFStreamer(MCContext &Context,
+                               std::unique_ptr<MCAsmBackend> MAB,
+                               std::unique_ptr<MCObjectWriter> OW,
+                               std::unique_ptr<MCCodeEmitter> Emitter)
+    : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
+                       std::move(Emitter)) {}
+
+MCGOFFStreamer::~MCGOFFStreamer() = default;
+
+void MCGOFFStreamer::finishImpl() {
+  getWriter().setRootSD(static_cast<MCSectionGOFF *>(
+                            getContext().getObjectFileInfo()->getTextSection())
+                            ->getParent());
+  MCObjectStreamer::finishImpl();
+}
+
+GOFFObjectWriter &MCGOFFStreamer::getWriter() {
+  return static_cast<GOFFObjectWriter &>(getAssembler().getWriter());
+}
+
+void MCGOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
+  // Make sure that all section are registered in the correct order.
+  SmallVector<MCSectionGOFF *> Sections;
+  for (auto *S = static_cast<MCSectionGOFF *>(Section); S; S = S->getParent())
+    Sections.push_back(S);
+  while (!Sections.empty()) {
+    auto *S = Sections.pop_back_val();
+    MCObjectStreamer::changeSection(S, Sections.empty() ? Subsection : 0);
+  }
+}
+
+void MCGOFFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
+  MCObjectStreamer::emitLabel(Symbol, Loc);
+}
+
+bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
+                                         MCSymbolAttr Attribute) {
+  return goff::setSymbolAttribute(static_cast<MCSymbolGOFF *>(Sym), Attribute);
 }
 
 void MCGOFFStreamer::emitExterns() {}
