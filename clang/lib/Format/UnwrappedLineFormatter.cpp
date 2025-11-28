@@ -512,6 +512,13 @@ private:
       } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
                                         TT_UnionLBrace)) {
         return tryMergeRecord(I, E, Limit);
+      } else if (TheLine->Last->is(TT_RecordLBrace)) {
+        // NOTE: We use AfterClass (whereas AfterStruct exists) for both classes
+        // and structs, but it seems that wrapping is still handled correctly
+        // elsewhere.
+        ShouldMerge = !Style.BraceWrapping.AfterClass ||
+                      (NextLine.First->is(tok::r_brace) &&
+                       !Style.BraceWrapping.SplitEmptyRecord);
       } else if (TheLine->InPPDirective ||
                  TheLine->First->isNoneOf(tok::kw_class, tok::kw_enum,
                                           tok::kw_struct, Keywords.kw_record)) {
