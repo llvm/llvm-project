@@ -177,7 +177,7 @@ TEST_F(CompletionStringTest, DropFunctionArguments) {
       /*IncludeFunctionArguments=*/false);
   // Arguments dropped from snippet, kept in signature.
   EXPECT_EQ(Signature, "<typename T, int U>(arg1, arg2)");
-  EXPECT_EQ(Snippet, "<${1:typename T}, ${2:int U}>");
+  EXPECT_EQ(Snippet, "<${1:typename T}, ${2:int U}>(arg1, arg2)");
 }
 
 TEST_F(CompletionStringTest, IgnoreInformativeQualifier) {

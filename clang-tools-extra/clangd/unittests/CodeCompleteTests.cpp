@@ -586,14 +586,14 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
     auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
     EXPECT_THAT(Results.Completions,
                 Contains(AllOf(named("method"), signature("(int) const"),
-                               snippetSuffix(""))));
+                               snippetSuffix("(int) const"))));
     // We don't have any arguments to deduce against if this isn't a call.
     // Thus, we should emit these deducible template arguments explicitly.
     EXPECT_THAT(
         Results.Completions,
-        Contains(AllOf(named("generic"),
-                       signature("<typename T, typename U>(U, V)"),
-                       snippetSuffix("<${1:typename T}, ${2:typename U}>"))));
+        Contains(
+            AllOf(named("generic"), signature("<typename T, typename U>(U, V)"),
+                  snippetSuffix("<${1:typename T}, ${2:typename U}>(U, V)"))));
   }
 
   for (const auto &P : Code.points("canBeCall")) {
@@ -618,6 +618,27 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
                     named("staticGeneric"), signature("<typename T, int U>()"),
                     snippetSuffix("<${1:typename T}, ${2:int U}>()"))));
   }
+}
+
+TEST(CompletionTest, DefaultArgsWithValues) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+  auto Results = completions(
+      R"cpp(
+    struct Arg {
+        Arg(int a, int b);
+    };
+    struct Foo {
+      void foo(int x = 42, int y = 0, Arg arg = Arg(42,  0));
+    };
+    void Foo::foo^
+  )cpp",
+      /*IndexSymbols=*/{}, Opts);
+  EXPECT_THAT(Results.Completions,
+              Contains(AllOf(
+                  named("foo"),
+                  signature("(int x = 42, int y = 0, Arg arg = Arg(42,  0))"),
+                  snippetSuffix("(int x, int y, Arg arg)"))));
 }
 
 TEST(CompletionTest, NoSnippetsInUsings) {
@@ -4490,14 +4511,14 @@ TEST(CompletionTest, SkipExplicitObjectParameter) {
     EXPECT_THAT(
         Result.Completions,
         ElementsAre(AllOf(named("foo"), signature("<class self:auto>(int arg)"),
-                          snippetSuffix("<${1:class self:auto}>"))));
+                          snippetSuffix("<${1:class self:auto}>(int arg)"))));
   }
   {
     auto Result = codeComplete(testPath(TU.Filename), Code.point("c3"),
                                Preamble.get(), Inputs, Opts);
     EXPECT_THAT(Result.Completions,
                 ElementsAre(AllOf(named("bar"), signature("(int arg)"),
-                                  snippetSuffix(""))));
+                                  snippetSuffix("(int arg)"))));
   }
 }
 
