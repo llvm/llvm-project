@@ -245,11 +245,11 @@ bool isMovedFrom(ProgramStateRef State, const MemRegion *Region) {
 // If a region is removed all of the subregions needs to be removed too.
 static ProgramStateRef removeFromState(ProgramStateRef State,
                                        const MemRegion *Region,
-                                       bool strict = false) {
+                                       bool Strict = false) {
   if (!Region)
     return State;
   for (auto &E : State->get<TrackedRegionMap>()) {
-    if ((!strict || E.first != Region) && E.first->isSubRegionOf(Region))
+    if ((!Strict || E.first != Region) && E.first->isSubRegionOf(Region))
       State = State->remove<TrackedRegionMap>(E.first);
   }
   return State;
@@ -719,7 +719,7 @@ ProgramStateRef MoveChecker::checkRegionChanges(
     for (const auto *Region : RequestedRegions) {
       if (llvm::is_contained(InvalidatedRegions, Region))
         State = removeFromState(State, Region,
-                                /*strict=*/!!dyn_cast<CXXInstanceCall>(Call));
+                                /*Strict=*/isa<CXXInstanceCall>(Call));
     }
   } else {
     // For invalidations that aren't caused by calls, assume nothing. In
