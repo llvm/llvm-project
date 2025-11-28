@@ -112,6 +112,15 @@ void addFIRToCoreMLIRToLLVMPass(mlir::PassManager &pm,
   if (disableFirToLlvmIr)
     return;
 
+  fir::FIRToLLVMPassOptions options;
+  options.ignoreMissingTypeDescriptors = ignoreMissingTypeDescriptors;
+  options.skipExternalRttiDefinition = skipExternalRttiDefinition;
+  options.applyTBAA = config.AliasAnalysis;
+  options.forceUnifiedTBAATree = useOldAliasTags;
+  options.typeDescriptorsRenamedForAssembly =
+      !disableCompilerGeneratedNamesConversion;
+  options.ComplexRange = config.ComplexRange;
+
   pm.addPass(createFIRToCoreMLIRPass());
   pm.addPass(mlir::memref::createFoldMemRefAliasOpsPass());
 
@@ -125,6 +134,7 @@ void addFIRToCoreMLIRToLLVMPass(mlir::PassManager &pm,
   pm.addPass(mlir::memref::createExpandStridedMetadataPass());
   pm.addPass(mlir::createLowerAffinePass());
   pm.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
+  pm.addPass(fir::createFIRToLLVMPass(options));
   pm.addPass(mlir::createReconcileUnrealizedCastsPass());
 }
 
