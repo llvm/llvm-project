@@ -1930,7 +1930,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
         Register CmpOut;
         CmpInst::Predicate PartPred;
 
-        if (I == E - 1 && LHSLeftoverRegs.empty()) {
+        if (I == E - 1) {
           PartPred = Pred;
           CmpOut = Dst;
         } else {
