@@ -131,6 +131,8 @@
 // CHECK-NEXT: ]
 
 
+    .arch_extension sve
+
     .text
     .globl func
     .def func
@@ -177,35 +179,35 @@ func:
     .seh_nop
     pacibsp
     .seh_pac_sign_lr
-    nop
+    str x0, [sp, #64]
     .seh_save_any_reg x0, 64
-    nop
+    stp x1, x2, [sp, #64]
     .seh_save_any_reg_p x1, 64
-    nop
+    str d29, [sp, #64]
     .seh_save_any_reg d29, 64
-    nop
+    stp d4, d5, [sp, #64]
     .seh_save_any_reg_p d4, 64
-    nop
+    str q30, [sp, #64]
     .seh_save_any_reg q30, 64
-    nop
+    stp q3, q4, [sp, #64]
     .seh_save_any_reg_p q3, 64
-    nop
+    str x30, [sp, #-64]!
     .seh_save_any_reg_x lr, 64
-    nop
+    stp x29, x30, [sp, #-64]!
     .seh_save_any_reg_px fp, 64
-    nop
+    str d31, [sp, #-64]!
     .seh_save_any_reg_x d31, 64
-    nop
+    stp d2, d3, [sp, #-64]!
     .seh_save_any_reg_px d2, 64
-    nop
+    str q29, [sp, #-64]!
     .seh_save_any_reg_x q29, 64
-    nop
+    stp q9, q10, [sp, #-64]!
     .seh_save_any_reg_px q9, 64
-    nop
+    addvl sp, sp, #-5
     .seh_allocz 5
-    nop
+    str z11, [sp, #5, mul vl]
     .seh_save_zreg z11, 5
-    nop
+    str p6, [sp, #3, mul vl]
     .seh_save_preg p6, 3
     .seh_endprologue
     nop
