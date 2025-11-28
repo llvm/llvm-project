@@ -225,9 +225,9 @@ if (CMAKE_Fortran_COMPILER AND ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "open
       set(CMAKE_Fortran_LINK_MODE DRIVER)
     endif ()
 
-    # Optimization flags are only passed after CMake 3.27
+    # Optimization flags are only passed after CMake 3.27.4
     # https://gitlab.kitware.com/cmake/cmake/-/commit/1140087adea98bd8d8974e4c18979f4949b52c34
-    if (CMAKE_VERSION VERSION_LESS "3.27")
+    if (CMAKE_VERSION VERSION_LESS "3.27.4")
       string(APPEND CMAKE_Fortran_FLAGS_DEBUG_INIT " -O0 -g")
       string(APPEND CMAKE_Fortran_FLAGS_RELWITHDEBINFO_INIT " -O2 -g")
       string(APPEND CMAKE_Fortran_FLAGS_RELEASE_INIT " -O3")
