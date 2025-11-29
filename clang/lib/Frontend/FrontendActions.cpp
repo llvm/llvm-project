@@ -9,13 +9,13 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
@@ -1231,20 +1231,6 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
   }
   printDependencyDirectivesAsSource(FromFile.getBuffer(), Directives,
                                     llvm::outs());
-}
-
-void GetDependenciesByModuleNameAction::ExecuteAction() {
-  CompilerInstance &CI = getCompilerInstance();
-  Preprocessor &PP = CI.getPreprocessor();
-  SourceManager &SM = PP.getSourceManager();
-  FileID MainFileID = SM.getMainFileID();
-  SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
-  SmallVector<IdentifierLoc, 2> Path;
-  IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
-  Path.emplace_back(FileStart, ModuleID);
-  auto ModResult = CI.loadModule(FileStart, Path, Module::Hidden, false);
-  PPCallbacks *CB = PP.getPPCallbacks();
-  CB->moduleImport(SourceLocation(), Path, ModResult);
 }
 
 //===----------------------------------------------------------------------===//

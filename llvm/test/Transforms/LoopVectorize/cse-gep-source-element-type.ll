@@ -16,19 +16,19 @@ define void @cse_replicate_gep(ptr noalias %A, ptr noalias %B, ptr noalias %C, i
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TMP0]], i32 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TMP0]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP8]], i32 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP8]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i16>, ptr [[TMP8]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i16>, ptr [[TMP2]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[TMP3]], i32 4
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[TMP3]], i64 4
 ; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD1]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[C]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i16, ptr [[TMP5]], i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i16, ptr [[TMP5]], i64 4
 ; CHECK-NEXT:    store <4 x i16> [[WIDE_LOAD2]], ptr [[TMP5]], align 2
 ; CHECK-NEXT:    store <4 x i16> [[WIDE_LOAD3]], ptr [[TMP6]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
@@ -79,15 +79,15 @@ define void @cse_wide_gep(ptr noalias %A, ptr noalias %B, ptr noalias %C, i64 %n
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[A]], <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[A]], <4 x i64> [[STEP_ADD]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr ptr, ptr [[TMP4]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr ptr, ptr [[TMP4]], i64 4
 ; CHECK-NEXT:    store <4 x ptr> [[TMP0]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    store <4 x ptr> [[TMP1]], ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[C]], i64 [[INDEX1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr ptr, ptr [[TMP6]], i32 4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr ptr, ptr [[TMP6]], i64 4
 ; CHECK-NEXT:    store <4 x ptr> [[TMP2]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    store <4 x ptr> [[TMP3]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

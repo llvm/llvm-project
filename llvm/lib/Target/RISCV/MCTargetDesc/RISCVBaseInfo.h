@@ -407,7 +407,6 @@ enum OperandType : unsigned {
   OPERAND_SIMM5_PLUS1,
   OPERAND_SIMM6,
   OPERAND_SIMM6_NONZERO,
-  OPERAND_SIMM8,
   OPERAND_SIMM8_UNSIGNED,
   OPERAND_SIMM10,
   OPERAND_SIMM10_LSB0000_NONZERO,
@@ -701,7 +700,7 @@ enum RLISTENCODE {
 
 inline unsigned encodeRegList(MCRegister EndReg, bool IsRVE = false) {
   assert((!IsRVE || EndReg <= RISCV::X9) && "Invalid Rlist for RV32E");
-  switch (EndReg) {
+  switch (EndReg.id()) {
   case RISCV::X1:
     return RLISTENCODE::RA;
   case RISCV::X8:

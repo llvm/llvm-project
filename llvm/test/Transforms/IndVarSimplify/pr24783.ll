@@ -7,11 +7,11 @@ target triple = "powerpc64-unknown-linux-gnu"
 define void @f(ptr %end.s, ptr %loc, i32 %p) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds i32, ptr [[END_S:%.*]], i32 [[P:%.*]]
 ; CHECK-NEXT:    br label [[WHILE_BODY_I:%.*]]
 ; CHECK:       while.body.i:
 ; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[WHILE_BODY_I]]
 ; CHECK:       loop.exit:
+; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds i32, ptr [[END_S:%.*]], i32 [[P:%.*]]
 ; CHECK-NEXT:    store ptr [[END]], ptr [[LOC:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;

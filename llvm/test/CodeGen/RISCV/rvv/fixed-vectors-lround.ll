@@ -39,7 +39,6 @@ define <1 x iXLen> @lround_v1f16(<1 x half> %x) nounwind {
   %a = call <1 x iXLen> @llvm.lround.v1iXLen.v1f16(<1 x half> %x)
   ret <1 x iXLen> %a
 }
-declare <1 x iXLen> @llvm.lround.v1iXLen.v1f16(<1 x half>)
 
 define <2 x iXLen> @lround_v2f16(<2 x half> %x) nounwind {
 ; RV32-LABEL: lround_v2f16:
@@ -74,7 +73,6 @@ define <2 x iXLen> @lround_v2f16(<2 x half> %x) nounwind {
   %a = call <2 x iXLen> @llvm.lround.v2iXLen.v2f16(<2 x half> %x)
   ret <2 x iXLen> %a
 }
-declare <2 x iXLen> @llvm.lround.v2iXLen.v2f16(<2 x half>)
 
 define <3 x iXLen> @lround_v3f16(<3 x half> %x) nounwind {
 ; RV32-LABEL: lround_v3f16:
@@ -109,7 +107,6 @@ define <3 x iXLen> @lround_v3f16(<3 x half> %x) nounwind {
   %a = call <3 x iXLen> @llvm.lround.v3iXLen.v3f16(<3 x half> %x)
   ret <3 x iXLen> %a
 }
-declare <3 x iXLen> @llvm.lround.v3iXLen.v3f16(<3 x half>)
 
 define <4 x iXLen> @lround_v4f16(<4 x half> %x) nounwind {
 ; RV32-LABEL: lround_v4f16:
@@ -144,7 +141,6 @@ define <4 x iXLen> @lround_v4f16(<4 x half> %x) nounwind {
   %a = call <4 x iXLen> @llvm.lround.v4iXLen.v4f16(<4 x half> %x)
   ret <4 x iXLen> %a
 }
-declare <4 x iXLen> @llvm.lround.v4iXLen.v4f16(<4 x half>)
 
 define <8 x iXLen> @lround_v8f16(<8 x half> %x) nounwind {
 ; RV32-LABEL: lround_v8f16:
@@ -179,7 +175,6 @@ define <8 x iXLen> @lround_v8f16(<8 x half> %x) nounwind {
   %a = call <8 x iXLen> @llvm.lround.v8iXLen.v8f16(<8 x half> %x)
   ret <8 x iXLen> %a
 }
-declare <8 x iXLen> @llvm.lround.v8iXLen.v8f16(<8 x half>)
 
 define <16 x iXLen> @lround_v16f16(<16 x half> %x) nounwind {
 ; RV32-LABEL: lround_v16f16:
@@ -214,7 +209,6 @@ define <16 x iXLen> @lround_v16f16(<16 x half> %x) nounwind {
   %a = call <16 x iXLen> @llvm.lround.v16iXLen.v16f16(<16 x half> %x)
   ret <16 x iXLen> %a
 }
-declare <16 x iXLen> @llvm.lround.v16iXLen.v16f16(<16 x half>)
 
 define <1 x iXLen> @lround_v1f32(<1 x float> %x) nounwind {
 ; RV32-LABEL: lround_v1f32:
@@ -244,7 +238,6 @@ define <1 x iXLen> @lround_v1f32(<1 x float> %x) nounwind {
   %a = call <1 x iXLen> @llvm.lround.v1iXLen.v1f32(<1 x float> %x)
   ret <1 x iXLen> %a
 }
-declare <1 x iXLen> @llvm.lround.v1iXLen.v1f32(<1 x float>)
 
 define <2 x iXLen> @lround_v2f32(<2 x float> %x) nounwind {
 ; RV32-LABEL: lround_v2f32:
@@ -274,7 +267,6 @@ define <2 x iXLen> @lround_v2f32(<2 x float> %x) nounwind {
   %a = call <2 x iXLen> @llvm.lround.v2iXLen.v2f32(<2 x float> %x)
   ret <2 x iXLen> %a
 }
-declare <2 x iXLen> @llvm.lround.v2iXLen.v2f32(<2 x float>)
 
 define <3 x iXLen> @lround_v3f32(<3 x float> %x) nounwind {
 ; RV32-LABEL: lround_v3f32:
@@ -304,7 +296,6 @@ define <3 x iXLen> @lround_v3f32(<3 x float> %x) nounwind {
   %a = call <3 x iXLen> @llvm.lround.v3iXLen.v3f32(<3 x float> %x)
   ret <3 x iXLen> %a
 }
-declare <3 x iXLen> @llvm.lround.v3iXLen.v3f32(<3 x float>)
 
 define <4 x iXLen> @lround_v4f32(<4 x float> %x) nounwind {
 ; RV32-LABEL: lround_v4f32:
@@ -334,7 +325,6 @@ define <4 x iXLen> @lround_v4f32(<4 x float> %x) nounwind {
   %a = call <4 x iXLen> @llvm.lround.v4iXLen.v4f32(<4 x float> %x)
   ret <4 x iXLen> %a
 }
-declare <4 x iXLen> @llvm.lround.v4iXLen.v4f32(<4 x float>)
 
 define <8 x iXLen> @lround_v8f32(<8 x float> %x) nounwind {
 ; RV32-LABEL: lround_v8f32:
@@ -364,7 +354,6 @@ define <8 x iXLen> @lround_v8f32(<8 x float> %x) nounwind {
   %a = call <8 x iXLen> @llvm.lround.v8iXLen.v8f32(<8 x float> %x)
   ret <8 x iXLen> %a
 }
-declare <8 x iXLen> @llvm.lround.v8iXLen.v8f32(<8 x float>)
 
 define <16 x iXLen> @lround_v16f32(<16 x float> %x) nounwind {
 ; RV32-LABEL: lround_v16f32:
@@ -394,7 +383,6 @@ define <16 x iXLen> @lround_v16f32(<16 x float> %x) nounwind {
   %a = call <16 x iXLen> @llvm.lround.v16iXLen.v16f32(<16 x float> %x)
   ret <16 x iXLen> %a
 }
-declare <16 x iXLen> @llvm.lround.v16iXLen.v16f32(<16 x float>)
 
 define <1 x iXLen> @lround_v1f64(<1 x double> %x) nounwind {
 ; RV32-LABEL: lround_v1f64:
@@ -425,7 +413,6 @@ define <1 x iXLen> @lround_v1f64(<1 x double> %x) nounwind {
   %a = call <1 x iXLen> @llvm.lround.v1iXLen.v1f64(<1 x double> %x)
   ret <1 x iXLen> %a
 }
-declare <1 x iXLen> @llvm.lround.v1iXLen.v1f64(<1 x double>)
 
 define <2 x iXLen> @lround_v2f64(<2 x double> %x) nounwind {
 ; RV32-LABEL: lround_v2f64:
@@ -456,7 +443,6 @@ define <2 x iXLen> @lround_v2f64(<2 x double> %x) nounwind {
   %a = call <2 x iXLen> @llvm.lround.v2iXLen.v2f64(<2 x double> %x)
   ret <2 x iXLen> %a
 }
-declare <2 x iXLen> @llvm.lround.v2iXLen.v2f64(<2 x double>)
 
 define <4 x iXLen> @lround_v4f64(<4 x double> %x) nounwind {
 ; RV32-LABEL: lround_v4f64:
@@ -487,7 +473,6 @@ define <4 x iXLen> @lround_v4f64(<4 x double> %x) nounwind {
   %a = call <4 x iXLen> @llvm.lround.v4iXLen.v4f64(<4 x double> %x)
   ret <4 x iXLen> %a
 }
-declare <4 x iXLen> @llvm.lround.v4iXLen.v4f64(<4 x double>)
 
 define <8 x iXLen> @lround_v8f64(<8 x double> %x) nounwind {
 ; RV32-LABEL: lround_v8f64:
@@ -518,7 +503,6 @@ define <8 x iXLen> @lround_v8f64(<8 x double> %x) nounwind {
   %a = call <8 x iXLen> @llvm.lround.v8iXLen.v8f64(<8 x double> %x)
   ret <8 x iXLen> %a
 }
-declare <8 x iXLen> @llvm.lround.v8iXLen.v8f64(<8 x double>)
 
 define <32 x iXLen> @lround_v32bf16(<32 x bfloat> %x) {
 ; RV32-LABEL: lround_v32bf16:
@@ -561,4 +545,3 @@ define <32 x iXLen> @lround_v32bf16(<32 x bfloat> %x) {
   %a = call <32 x iXLen> @llvm.lround.v32iXLen.v32bf16(<32 x bfloat> %x)
   ret <32 x iXLen> %a
 }
-declare <32 x iXLen> @llvm.lround.v32iXLen.v32bf16(<32 x bfloat>)

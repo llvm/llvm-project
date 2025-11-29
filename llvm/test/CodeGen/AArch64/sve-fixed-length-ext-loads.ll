@@ -7,8 +7,10 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i32> @load_zext_v4i16i32(ptr %ap) vscale_range(2,0) #0 {
 ; CHECK-LABEL: load_zext_v4i16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldp s0, s1, [x0]
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %ap
   %val = zext <4 x i16> %a to <4 x i32>
@@ -97,8 +99,10 @@ define void @load_zext_v64i16i32(ptr %ap, ptr %b) #0 {
 define <4 x i32> @load_sext_v4i16i32(ptr %ap) vscale_range(2,0) #0 {
 ; CHECK-LABEL: load_sext_v4i16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldp s0, s1, [x0]
 ; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %ap
   %val = sext <4 x i16> %a to <4 x i32>

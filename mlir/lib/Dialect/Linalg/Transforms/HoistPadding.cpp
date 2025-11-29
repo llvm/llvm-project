@@ -913,8 +913,7 @@ static Value replaceByPackingResult(RewriterBase &rewriter,
       llvm_unreachable("loop independence prerequisite not met");
 
     // offsets = [maybe_leading_ivs = originalLoopIvs, 0 .. 0].
-    std::copy(loopIterationCounts.begin(), loopIterationCounts.end(),
-              offsets.begin());
+    llvm::copy(loopIterationCounts, offsets.begin());
     hoistedPackedTensor =
         scf::getForInductionVarOwner(packingResult.clonedLoopIvs.front())
             ->getResult(0);

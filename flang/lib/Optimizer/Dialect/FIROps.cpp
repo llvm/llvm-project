@@ -834,6 +834,11 @@ void fir::ArrayCoorOp::getCanonicalizationPatterns(
   patterns.add<SimplifyArrayCoorOp>(context);
 }
 
+std::optional<std::int64_t> fir::ArrayCoorOp::getViewOffset(mlir::OpResult) {
+  // TODO: we can try to compute the constant offset.
+  return std::nullopt;
+}
+
 //===----------------------------------------------------------------------===//
 // ArrayLoadOp
 //===----------------------------------------------------------------------===//
@@ -1084,6 +1089,13 @@ mlir::OpFoldResult fir::BoxAddrOp::fold(FoldAdaptor adaptor) {
         return box.getMemref();
   }
   return {};
+}
+
+std::optional<std::int64_t> fir::BoxAddrOp::getViewOffset(mlir::OpResult) {
+  // fir.box_addr just returns the base address stored inside a box,
+  // so the direct accesses through the base address and through the box
+  // are not offsetted.
+  return 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1820,6 +1832,11 @@ fir::CoordinateIndicesAdaptor fir::CoordinateOp::getIndices() {
   return CoordinateIndicesAdaptor(getFieldIndicesAttr(), getCoor());
 }
 
+std::optional<std::int64_t> fir::CoordinateOp::getViewOffset(mlir::OpResult) {
+  // TODO: we can try to compute the constant offset.
+  return std::nullopt;
+}
+
 //===----------------------------------------------------------------------===//
 // DispatchOp
 //===----------------------------------------------------------------------===//
@@ -2064,6 +2081,14 @@ bool fir::isContiguousEmbox(fir::EmboxOp embox, bool checkWhole) {
     return isContiguousArraySlice(sliceOp, checkWhole);
 
   return false;
+}
+
+std::optional<std::int64_t> fir::EmboxOp::getViewOffset(mlir::OpResult) {
+  // The address offset is zero, unless there is a slice.
+  // TODO: we can handle slices that leave the base address untouched.
+  if (!getSlice())
+    return 0;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3313,6 +3338,14 @@ llvm::LogicalResult fir::ReboxOp::verify() {
   return mlir::success();
 }
 
+std::optional<std::int64_t> fir::ReboxOp::getViewOffset(mlir::OpResult) {
+  // The address offset is zero, unless there is a slice.
+  // TODO: we can handle slices that leave the base address untouched.
+  if (!getSlice())
+    return 0;
+  return std::nullopt;
+}
+
 //===----------------------------------------------------------------------===//
 // ReboxAssumedRankOp
 //===----------------------------------------------------------------------===//
@@ -4252,7 +4285,7 @@ llvm::LogicalResult fir::StoreOp::verify() {
 
 void fir::StoreOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
                          mlir::Value value, mlir::Value memref) {
-  build(builder, result, value, memref, {});
+  build(builder, result, value, memref, {}, {}, {});
 }
 
 void fir::StoreOp::getEffects(

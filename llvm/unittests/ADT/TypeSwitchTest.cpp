@@ -167,7 +167,7 @@ TEST(TypeSwitchTest, DefaultNullptr) {
 TEST(TypeSwitchTest, DefaultNullptrForPointerLike) {
   struct Value {
     void *ptr;
-    Value(const Value &other) : ptr(other.ptr) {}
+    Value(const Value &other) = default;
     Value(std::nullptr_t) : ptr(nullptr) {}
     Value() : Value(nullptr) {}
   };
