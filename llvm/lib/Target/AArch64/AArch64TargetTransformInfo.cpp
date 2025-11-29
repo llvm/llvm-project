@@ -252,12 +252,23 @@ static bool hasPossibleIncompatibleOps(const Function *F,
   return false;
 }
 
-APInt AArch64TTIImpl::getFeatureMask(const Function &F) const {
+static void extractAttrFeatures(const Function &F, const AArch64TTIImpl *TTI,
+                                SmallVectorImpl<StringRef> &Features) {
   StringRef AttributeStr =
-      isMultiversionedFunction(F) ? "fmv-features" : "target-features";
+      TTI->isMultiversionedFunction(F) ? "fmv-features" : "target-features";
   StringRef FeatureStr = F.getFnAttribute(AttributeStr).getValueAsString();
-  SmallVector<StringRef, 8> Features;
   FeatureStr.split(Features, ",");
+}
+
+APInt AArch64TTIImpl::getFeatureMask(const Function &F) const {
+  SmallVector<StringRef, 8> Features;
+  extractAttrFeatures(F, this, Features);
+  return AArch64::getCpuSupportsMask(Features);
+}
+
+APInt AArch64TTIImpl::getPriorityMask(const Function &F) const {
+  SmallVector<StringRef, 8> Features;
+  extractAttrFeatures(F, this, Features);
   return AArch64::getFMVPriority(Features);
 }
 

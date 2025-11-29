@@ -98,6 +98,7 @@ public:
                                 unsigned DefaultCallPenalty) const override;
 
   APInt getFeatureMask(const Function &F) const override;
+  APInt getPriorityMask(const Function &F) const override;
 
   bool isMultiversionedFunction(const Function &F) const override;
 
