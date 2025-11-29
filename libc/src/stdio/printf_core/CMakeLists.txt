@@ -111,6 +111,7 @@ add_header_library(
     .printf_config
     .writer
     libc.include.inttypes
+    libc.hdr.types.wchar_t
     libc.src.__support.big_int
     libc.src.__support.common
     libc.src.__support.CPP.limits
@@ -123,6 +124,8 @@ add_header_library(
     libc.src.__support.integer_to_string
     libc.src.__support.libc_assert
     libc.src.__support.uint128
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.wcrtomb
     libc.src.__support.StringUtil.error_to_string
     libc.src.string.memory_utils.inline_memcpy
 )
