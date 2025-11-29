@@ -95,6 +95,7 @@
 #include <vector>
 
 using namespace clang;
+using namespace driver;
 using namespace options;
 using namespace llvm::opt;
 

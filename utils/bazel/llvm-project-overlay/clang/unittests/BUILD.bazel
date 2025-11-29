@@ -267,7 +267,6 @@ cc_test(
         "//clang:ast",
         "//clang:basic",
         "//clang:codegen",
-        "//clang:driver",
         "//clang:driver_options_inc_gen",
         "//clang:frontend",
         "//clang:frontend_tool",
@@ -339,7 +338,6 @@ cc_test(
         "//clang:ast",
         "//clang:ast_matchers",
         "//clang:basic",
-        "//clang:driver",
         "//clang:frontend",
         "//clang:lex",
         "//clang:parse",
@@ -518,7 +516,6 @@ cc_test(
     deps = [
         "//clang:ast",
         "//clang:basic",
-        "//clang:driver",
         "//clang:frontend",
         "//clang:lex",
         "//clang:testing",
@@ -723,7 +720,6 @@ cc_test(
     deps = [
         "//clang:ast_matchers",
         "//clang:basic",
-        "//clang:driver",
         "//clang:frontend",
         "//clang:lex",
         "//clang:parse",
