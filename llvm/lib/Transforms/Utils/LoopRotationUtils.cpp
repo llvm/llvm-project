@@ -63,16 +63,18 @@ class LoopRotate {
   bool RotationOnly;
   bool IsUtilMode;
   bool PrepareForLTO;
+  bool RotateComputable;
 
 public:
   LoopRotate(unsigned MaxHeaderSize, LoopInfo *LI,
              const TargetTransformInfo *TTI, AssumptionCache *AC,
              DominatorTree *DT, ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
              const SimplifyQuery &SQ, bool RotationOnly, bool IsUtilMode,
-             bool PrepareForLTO)
+             bool PrepareForLTO, bool RotateComputable)
       : MaxHeaderSize(MaxHeaderSize), LI(LI), TTI(TTI), AC(AC), DT(DT), SE(SE),
         MSSAU(MSSAU), SQ(SQ), RotationOnly(RotationOnly),
-        IsUtilMode(IsUtilMode), PrepareForLTO(PrepareForLTO) {}
+        IsUtilMode(IsUtilMode), PrepareForLTO(PrepareForLTO),
+        RotateComputable(RotateComputable) {}
   bool processLoop(Loop *L);
 
 private:
@@ -197,6 +199,19 @@ static bool profitableToRotateLoopExitingLatch(Loop *L) {
       continue;
     return true;
   }
+  return false;
+}
+
+// Checks that if loop gets rotated it makes the exit latch count computable.
+// This form is beneficial to runtime loop unrolling as well as loop
+// vectorization, which requires the loop to be bottom-tested.
+static bool rotationMakesLoopComputable(Loop *L, ScalarEvolution *SE) {
+  BasicBlock *Header = L->getHeader();
+  BranchInst *BI = dyn_cast<BranchInst>(Header->getTerminator());
+  assert(BI && BI->isConditional() && "need header with conditional exit");
+  if (SE && isa<SCEVCouldNotCompute>(SE->getExitCount(L, L->getLoopLatch())) &&
+      !isa<SCEVCouldNotCompute>(SE->getExitCount(L, Header)))
+    return true;
   return false;
 }
 
@@ -364,7 +379,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // Rotate if the loop latch was just simplified. Or if it makes the loop exit
   // count computable. Or if we think it will be profitable.
   if (L->isLoopExiting(OrigLatch) && !SimplifiedLatch && IsUtilMode == false &&
-      !profitableToRotateLoopExitingLatch(L))
+      !profitableToRotateLoopExitingLatch(L) && !(RotateComputable &&
+      rotationMakesLoopComputable(L, SE)))
     return Rotated;
 
   // Check size of original header and reject loop if it is very big or we can't
@@ -968,8 +984,9 @@ bool llvm::LoopRotation(Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI,
                         ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
                         const SimplifyQuery &SQ, bool RotationOnly = true,
                         unsigned Threshold = unsigned(-1),
-                        bool IsUtilMode = true, bool PrepareForLTO) {
+                        bool IsUtilMode = true, bool PrepareForLTO,
+                        bool RotateComputable) {
   LoopRotate LR(Threshold, LI, TTI, AC, DT, SE, MSSAU, SQ, RotationOnly,
-                IsUtilMode, PrepareForLTO);
+                IsUtilMode, PrepareForLTO, RotateComputable);
   return LR.processLoop(L);
 }

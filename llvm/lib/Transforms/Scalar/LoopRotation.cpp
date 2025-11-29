@@ -38,9 +38,10 @@ static cl::opt<bool> PrepareForLTOOption(
     cl::desc("Run loop-rotation in the prepare-for-lto stage. This option "
              "should be used for testing only."));
 
-LoopRotatePass::LoopRotatePass(bool EnableHeaderDuplication, bool PrepareForLTO)
+LoopRotatePass::LoopRotatePass(bool EnableHeaderDuplication, bool PrepareForLTO,
+                               bool RotateComputable)
     : EnableHeaderDuplication(EnableHeaderDuplication),
-      PrepareForLTO(PrepareForLTO) {}
+      PrepareForLTO(PrepareForLTO), RotateComputable(RotateComputable) {}
 
 void LoopRotatePass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
@@ -76,7 +77,8 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
     MSSAU = MemorySSAUpdater(AR.MSSA);
   bool Changed = LoopRotation(&L, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE,
                               MSSAU ? &*MSSAU : nullptr, SQ, false, Threshold,
-                              false, PrepareForLTO || PrepareForLTOOption);
+                              false, PrepareForLTO || PrepareForLTOOption,
+                              RotateComputable);
 
   if (!Changed)
     return PreservedAnalyses::all();
