@@ -37,6 +37,10 @@ RangeSelector enclose(RangeSelector Begin, RangeSelector End);
 /// Convenience version of \c range where end-points are bound nodes.
 RangeSelector encloseNodes(std::string BeginID, std::string EndID);
 
+/// Selects the merge of the two ranges, i.e. from min(First.begin,
+/// Second.begin) to max(First.end, Second.end).
+RangeSelector merge(RangeSelector First, RangeSelector Second);
+
 /// DEPRECATED. Use `enclose`.
 inline RangeSelector range(RangeSelector Begin, RangeSelector End) {
   return enclose(std::move(Begin), std::move(End));
