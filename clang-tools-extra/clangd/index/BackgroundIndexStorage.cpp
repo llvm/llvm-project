@@ -45,6 +45,20 @@ public:
     if (EC != OK) {
       elog("Failed to create directory {0} for index storage: {1}",
            DiskShardRoot, EC.message());
+    } else {
+      // Create a .gitignore file in the directory to ignore all files.
+      llvm::SmallString<128> GitignorePath(DiskShardRoot);
+      llvm::sys::path::append(GitignorePath, ".gitignore");
+      if (!llvm::sys::fs::exists(GitignorePath)) {
+        llvm::raw_fd_ostream GitignoreFile(GitignorePath, EC,
+                                           llvm::sys::fs::OF_None);
+        if (EC == OK) {
+          GitignoreFile << "*\n";
+        } else {
+          elog("Failed to create .gitignore in {0}: {1}", DiskShardRoot,
+               EC.message());
+        }
+      }
     }
   }
 
