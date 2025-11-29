@@ -17,6 +17,7 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -766,6 +767,8 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     Type *RefTy = deduceElementTypeHelper(Ref->getPointerOperand(), Visited,
                                           UnknownElemTypeI8);
     maybeAssignPtrType(Ty, I, RefTy, UnknownElemTypeI8);
+  } else if (auto *Ref = dyn_cast<IntToPtrInst>(I)) {
+    maybeAssignPtrType(Ty, I, Ref->getDestTy(), UnknownElemTypeI8);
   } else if (auto *Ref = dyn_cast<BitCastInst>(I)) {
     if (Type *Src = Ref->getSrcTy(), *Dest = Ref->getDestTy();
         isPointerTy(Src) && isPointerTy(Dest))
@@ -834,13 +837,11 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
         if (Ty->isArrayTy())
           Ty = Ty->getArrayElementType();
         else {
-          TargetExtType *BufferTy = cast<TargetExtType>(Ty);
-          assert(BufferTy->getTargetExtName() == "spirv.Layout");
-          Ty = BufferTy->getTypeParameter(0);
           assert(Ty && Ty->isStructTy());
           uint32_t Index = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
           Ty = cast<StructType>(Ty)->getElementType(Index);
         }
+        Ty = reconstitutePeeledArrayType(Ty);
       } else {
         llvm_unreachable("Unknown handle type for spv_resource_getpointer.");
       }
@@ -1391,19 +1392,19 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
       Constant *AggrConst = nullptr;
       Type *ResTy = nullptr;
       if (auto *COp = dyn_cast<ConstantVector>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = COp->getType();
       } else if (auto *COp = dyn_cast<ConstantArray>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = B.getInt32Ty();
       } else if (auto *COp = dyn_cast<ConstantStruct>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = B.getInt32Ty();
       } else if (auto *COp = dyn_cast<ConstantDataArray>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = B.getInt32Ty();
       } else if (auto *COp = dyn_cast<ConstantAggregateZero>(Op)) {
-        AggrConst = cast<Constant>(COp);
+        AggrConst = COp;
         ResTy = Op->getType()->isVectorTy() ? COp->getType() : B.getInt32Ty();
       }
       if (AggrConst) {
@@ -1569,16 +1570,57 @@ Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
   return BrI;
 }
 
-Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
-  if (I.getSourceElementType() == IntegerType::getInt8Ty(CurrF->getContext()) &&
-      TM->getSubtargetImpl()->isLogicalSPIRV()) {
-    Instruction *Result = buildLogicalAccessChainFromGEP(I);
-    if (Result)
-      return Result;
+static bool isFirstIndexZero(const GetElementPtrInst *GEP) {
+  if (GEP->getNumIndices() == 0)
+    return false;
+  if (const auto *CI = dyn_cast<ConstantInt>(GEP->getOperand(1))) {
+    return CI->getZExtValue() == 0;
   }
+  return false;
+}
 
+Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
+
+  if (TM->getSubtargetImpl()->isLogicalSPIRV() && !isFirstIndexZero(&I)) {
+    // Logical SPIR-V cannot use the OpPtrAccessChain instruction. If the first
+    // index of the GEP is not 0, then we need to try to adjust it.
+    //
+    // If the GEP is doing byte addressing, try to rebuild the full access chain
+    // from the type of the pointer.
+    if (I.getSourceElementType() ==
+        IntegerType::getInt8Ty(CurrF->getContext())) {
+      return buildLogicalAccessChainFromGEP(I);
+    }
+
+    // Look for the array-to-pointer decay. If this is the pattern
+    // we can adjust the types, and prepend a 0 to the indices.
+    Value *PtrOp = I.getPointerOperand();
+    Type *SrcElemTy = I.getSourceElementType();
+    Type *DeducedPointeeTy = deduceElementType(PtrOp, true);
+
+    if (auto *ArrTy = dyn_cast<ArrayType>(DeducedPointeeTy)) {
+      if (ArrTy->getElementType() == SrcElemTy) {
+        SmallVector<Value *> NewIndices;
+        Type *FirstIdxType = I.getOperand(1)->getType();
+        NewIndices.push_back(ConstantInt::get(FirstIdxType, 0));
+        for (Value *Idx : I.indices())
+          NewIndices.push_back(Idx);
+
+        SmallVector<Type *, 2> Types = {I.getType(), I.getPointerOperandType()};
+        SmallVector<Value *, 4> Args;
+        Args.push_back(B.getInt1(I.isInBounds()));
+        Args.push_back(I.getPointerOperand());
+        Args.append(NewIndices.begin(), NewIndices.end());
+
+        auto *NewI = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+        replaceAllUsesWithAndErase(B, &I, NewI);
+        return NewI;
+      }
+    }
+  }
+
   SmallVector<Type *, 2> Types = {I.getType(), I.getOperand(0)->getType()};
   SmallVector<Value *, 4> Args;
   Args.push_back(B.getInt1(I.isInBounds()));
@@ -1772,16 +1814,12 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     Value *Pointer = GEPI->getPointerOperand();
     Type *OpTy = nullptr;
 
-    // Knowing the accessed type is mandatory for logical SPIR-V. Sadly,
-    // the GEP source element type should not be used for this purpose, and
-    // the alternative type-scavenging method is not working.
-    // Physical SPIR-V can work around this, but not logical, hence still
-    // try to rely on the broken type scavenging for logical.
-    bool IsRewrittenGEP =
-        GEPI->getSourceElementType() == IntegerType::getInt8Ty(I->getContext());
-    if (IsRewrittenGEP && TM->getSubtargetImpl()->isLogicalSPIRV()) {
-      Value *Src = getPointerRoot(Pointer);
-      OpTy = GR->findDeducedElementType(Src);
+    // Logical SPIR-V is not allowed to use Op*PtrAccessChain instructions. If
+    // the first index is 0, then we can trivially lower to OpAccessChain. If
+    // not we need to try to rewrite the GEP. We avoid adding a pointer cast at
+    // this time, and will rewrite the GEP when visiting it.
+    if (TM->getSubtargetImpl()->isLogicalSPIRV() && !isFirstIndexZero(GEPI)) {
+      return;
     }
 
     // In all cases, fall back to the GEP type if type scavenging failed.
@@ -2028,9 +2066,13 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
 
 void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                              IRBuilder<> &B) {
-  // Skip special artifical variable llvm.global.annotations.
-  if (GV.getName() == "llvm.global.annotations")
+  // Skip special artificial variables.
+  static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
+                                             "llvm.compiler.used"};
+
+  if (ArtificialGlobals.contains(GV.getName()))
     return;
+
   Constant *Init = nullptr;
   if (hasInitializer(&GV)) {
     // Deduce element type and store results in Global Registry.
@@ -2144,7 +2186,9 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
   for (const auto &Op : I->operands()) {
     if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op) ||
         // Check GetElementPtrConstantExpr case.
-        (isa<ConstantExpr>(Op) && isa<GEPOperator>(Op))) {
+        (isa<ConstantExpr>(Op) &&
+         (isa<GEPOperator>(Op) ||
+          (cast<ConstantExpr>(Op)->getOpcode() == CastInst::IntToPtr)))) {
       setInsertPointSkippingPhis(B, I);
       Type *OpTy = Op->getType();
       if (isa<UndefValue>(Op) && OpTy->isAggregateType()) {
@@ -2811,9 +2855,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     GetElementPtrInst *NewGEP = simplifyZeroLengthArrayGepInst(Ref);
     if (NewGEP) {
       Ref->replaceAllUsesWith(NewGEP);
-      if (isInstructionTriviallyDead(Ref))
-        DeadInsts.insert(Ref);
-
+      DeadInsts.insert(Ref);
       Ref = NewGEP;
     }
     if (Type *GepTy = getGEPType(Ref))

@@ -1565,8 +1565,11 @@ void SplitPtrStructs::processConditionals() {
     } else if (isa<SelectInst>(I)) {
       if (MaybeRsrc) {
         if (auto *RsrcInst = dyn_cast<Instruction>(Rsrc)) {
-          ConditionalTemps.push_back(RsrcInst);
-          RsrcInst->replaceAllUsesWith(*MaybeRsrc);
+          // Guard against conditionals that were already folded away.
+          if (RsrcInst != *MaybeRsrc) {
+            ConditionalTemps.push_back(RsrcInst);
+            RsrcInst->replaceAllUsesWith(*MaybeRsrc);
+          }
         }
         for (Value *V : Seen)
           FoundRsrcs[V] = *MaybeRsrc;

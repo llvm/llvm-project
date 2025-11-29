@@ -25,7 +25,7 @@ end
 !PARSE-TREE: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | bool = 'true'
 !PARSE-TREE: | | OmpClause -> Transparent ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 
 
@@ -44,12 +44,12 @@ end
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = task
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Transparent -> OmpTransparentClause -> Scalar -> Integer -> Expr = '0_4'
 !PARSE-TREE: | | | LiteralConstant -> IntLiteralConstant = '0'
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 !PARSE-TREE: | Block
 !PARSE-TREE: | OmpEndDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = task
 !PARSE-TREE: | | OmpClauseList ->
-!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | | Flags = {}
 
 
 subroutine f02
@@ -73,5 +73,6 @@ end
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = taskloop
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Transparent -> OmpTransparentClause -> Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE: | | | LiteralConstant -> IntLiteralConstant = '2'
-!PARSE-TREE: | | Flags = None
-!PARSE-TREE: | DoConstruct
+!PARSE-TREE: | | Flags = {}
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct

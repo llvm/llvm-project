@@ -799,22 +799,20 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
-      auto warnContiguous{[&]() {
-        if (auto source{args[0]->sourceLocation()}) {
-          context.Warn(common::UsageWarning::ConstantIsContiguous, *source,
-              "is_contiguous() is always true for named constants and subobjects of named constants"_warn_en_US);
-        }
-      }};
+      std::optional<bool> knownContiguous;
       if (auto *expr{args[0]->UnwrapExpr()}) {
-        if (auto contiguous{IsContiguous(*expr, context)}) {
-          warnContiguous();
-          return Expr<T>{*contiguous};
-        }
+        knownContiguous = IsContiguous(*expr, context);
       } else if (auto *assumedType{args[0]->GetAssumedTypeDummy()}) {
-        if (auto contiguous{IsContiguous(*assumedType, context)}) {
-          warnContiguous();
-          return Expr<T>{*contiguous};
+        knownContiguous = IsContiguous(*assumedType, context);
+      }
+      if (knownContiguous) {
+        if (*knownContiguous) {
+          if (auto source{args[0]->sourceLocation()}) {
+            context.Warn(common::UsageWarning::ConstantIsContiguous, *source,
+                "is_contiguous() is always true for named constants and subobjects of named constants"_warn_en_US);
+          }
         }
+        return Expr<T>{*knownContiguous};
       }
     }
   } else if (name == "is_iostat_end") {

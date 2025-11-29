@@ -632,41 +632,42 @@ private:
       ParmVarDecl *OldParam, MultiLevelTemplateArgumentList &Args,
       llvm::SmallVectorImpl<TypedefNameDecl *> &MaterializedTypedefs,
       bool TransformingOuterPatterns) {
-    TypeSourceInfo *OldDI = OldParam->getTypeSourceInfo();
-    TypeSourceInfo *NewDI;
-    if (auto PackTL = OldDI->getTypeLoc().getAs<PackExpansionTypeLoc>()) {
+    TypeSourceInfo *OldTSI = OldParam->getTypeSourceInfo();
+    TypeSourceInfo *NewTSI;
+    if (auto PackTL = OldTSI->getTypeLoc().getAs<PackExpansionTypeLoc>()) {
       // Expand out the one and only element in each inner pack.
       Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, 0u);
-      NewDI =
+      NewTSI =
           SemaRef.SubstType(PackTL.getPatternLoc(), Args,
                             OldParam->getLocation(), OldParam->getDeclName());
-      if (!NewDI)
+      if (!NewTSI)
         return nullptr;
-      NewDI =
-          SemaRef.CheckPackExpansion(NewDI, PackTL.getEllipsisLoc(),
+      NewTSI =
+          SemaRef.CheckPackExpansion(NewTSI, PackTL.getEllipsisLoc(),
                                      PackTL.getTypePtr()->getNumExpansions());
     } else
-      NewDI = SemaRef.SubstType(OldDI, Args, OldParam->getLocation(),
-                                OldParam->getDeclName());
-    if (!NewDI)
+      NewTSI = SemaRef.SubstType(OldTSI, Args, OldParam->getLocation(),
+                                 OldParam->getDeclName());
+    if (!NewTSI)
       return nullptr;
 
     // Extract the type. This (for instance) replaces references to typedef
     // members of the current instantiations with the definitions of those
     // typedefs, avoiding triggering instantiation of the deduced type during
     // deduction.
-    NewDI = ExtractTypeForDeductionGuide(
-                SemaRef, MaterializedTypedefs, NestedPattern,
-                TransformingOuterPatterns ? &Args : nullptr)
-                .transform(NewDI);
-
+    NewTSI = ExtractTypeForDeductionGuide(
+                 SemaRef, MaterializedTypedefs, NestedPattern,
+                 TransformingOuterPatterns ? &Args : nullptr)
+                 .transform(NewTSI);
+    if (!NewTSI)
+      return nullptr;
     // Resolving a wording defect, we also inherit default arguments from the
     // constructor.
     ExprResult NewDefArg;
     if (OldParam->hasDefaultArg()) {
       // We don't care what the value is (we won't use it); just create a
       // placeholder to indicate there is a default argument.
-      QualType ParamTy = NewDI->getType();
+      QualType ParamTy = NewTSI->getType();
       NewDefArg = new (SemaRef.Context)
           OpaqueValueExpr(OldParam->getDefaultArgRange().getBegin(),
                           ParamTy.getNonLValueExprType(SemaRef.Context),
@@ -675,13 +676,13 @@ private:
                                                              : VK_PRValue);
     }
     // Handle arrays and functions decay.
-    auto NewType = NewDI->getType();
+    auto NewType = NewTSI->getType();
     if (NewType->isArrayType() || NewType->isFunctionType())
       NewType = SemaRef.Context.getDecayedType(NewType);
 
     ParmVarDecl *NewParam = ParmVarDecl::Create(
         SemaRef.Context, DC, OldParam->getInnerLocStart(),
-        OldParam->getLocation(), OldParam->getIdentifier(), NewType, NewDI,
+        OldParam->getLocation(), OldParam->getIdentifier(), NewType, NewTSI,
         OldParam->getStorageClass(), NewDefArg.get());
     NewParam->setScopeInfo(OldParam->getFunctionScopeDepth(),
                            OldParam->getFunctionScopeIndex());
@@ -996,7 +997,7 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
     // dependent. e.g.
     //   using AliasFoo = Foo<bool>;
     if (const auto *CTSD =
-            dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl())) {
+            dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl())) {
       Template = CTSD->getSpecializedTemplate();
       AliasRhsTemplateArgs = CTSD->getTemplateArgs().asArray();
     }
@@ -1024,6 +1025,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
                                 TypeAliasTemplateDecl *AliasTemplate,
                                 FunctionTemplateDecl *F, SourceLocation Loc) {
   LocalInstantiationScope Scope(SemaRef);
+  Sema::NonSFINAEContext _1(SemaRef);
   Sema::InstantiatingTemplate BuildingDeductionGuides(
       SemaRef, AliasTemplate->getLocation(), F,
       Sema::InstantiatingTemplate::BuildingDeductionGuidesTag{});
@@ -1054,12 +1056,11 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // such that T can be deduced as U.
   auto RType = F->getTemplatedDecl()->getReturnType();
   // The (trailing) return type of the deduction guide.
-  const TemplateSpecializationType *FReturnType =
-      RType->getAs<TemplateSpecializationType>();
+  const auto *FReturnType = RType->getAs<TemplateSpecializationType>();
   if (const auto *ICNT = RType->getAsCanonical<InjectedClassNameType>())
     // implicitly-generated deduction guide.
     FReturnType = cast<TemplateSpecializationType>(
-        ICNT->getOriginalDecl()->getCanonicalTemplateSpecializationType(
+        ICNT->getDecl()->getCanonicalTemplateSpecializationType(
             SemaRef.Context));
   assert(FReturnType && "expected to see a return type");
   // Deduce template arguments of the deduction guide f from the RHS of
@@ -1189,14 +1190,13 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
     // parameter list of a synthesized CTAD guide. See also the FIXME in
     // test/SemaCXX/cxx20-ctad-type-alias.cpp:test25.
     Sema::CheckTemplateArgumentInfo CTAI;
+    for (auto TA : Output.arguments())
+      if (SemaRef.CheckTemplateArgument(
+              TP, TA, F, F->getLocation(), F->getLocation(),
+              /*ArgumentPackIndex=*/-1, CTAI,
+              Sema::CheckTemplateArgumentKind::CTAK_Specified))
+        return nullptr;
     if (Input.getArgument().getKind() == TemplateArgument::Pack) {
-      for (auto TA : Output.arguments()) {
-        if (SemaRef.CheckTemplateArgument(
-                TP, TA, F, F->getLocation(), F->getLocation(),
-                /*ArgumentPackIndex=*/-1, CTAI,
-                Sema::CheckTemplateArgumentKind::CTAK_Specified))
-          return nullptr;
-      }
       // We will substitute the non-deduced template arguments with these
       // transformed (unpacked at this point) arguments, where that substitution
       // requires a pack for the corresponding parameter packs.
@@ -1204,12 +1204,6 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
           TemplateArgument::CreatePackCopy(Context, CTAI.SugaredConverted);
     } else {
       assert(Output.arguments().size() == 1);
-      TemplateArgumentLoc Transformed = Output.arguments()[0];
-      if (SemaRef.CheckTemplateArgument(
-              TP, Transformed, F, F->getLocation(), F->getLocation(),
-              /*ArgumentPackIndex=*/-1, CTAI,
-              Sema::CheckTemplateArgumentKind::CTAK_Specified))
-        return nullptr;
       TemplateArgsForBuildingFPrime[Index] = CTAI.SugaredConverted[0];
     }
   }

@@ -22,7 +22,7 @@ namespace exegesis {
 
 void InitializeX86ExegesisTarget();
 
-constexpr const char kTriple[] = "x86_64-unknown-linux";
+constexpr char kTriple[] = "x86_64-unknown-linux";
 
 class X86TestBase : public ::testing::Test {
 protected:

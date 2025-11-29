@@ -5,10 +5,10 @@ using size_t = decltype(sizeof(0));
 struct A { int x, y; };
 struct B { int x, y; };
 
-void no_tuple_size_1() { auto [x, y] = A(); } // ok, decompose elementwise
+void no_tuple_size_1() { auto [x, y] = A(); } // ok, bind elementwise
 
 namespace std { template<typename T> struct tuple_size; }
-void no_tuple_size_2() { auto [x, y] = A(); } // ok, decompose elementwise
+void no_tuple_size_2() { auto [x, y] = A(); } // ok, bind elementwise
 
 struct Bad1 { int a, b; };
 template<> struct std::tuple_size<Bad1> {};
@@ -16,15 +16,15 @@ void no_tuple_size_3() { auto [x, y] = Bad1(); } // ok, omitting value is valid 
 
 struct Bad2 {};
 template<> struct std::tuple_size<Bad2> { const int value = 5; };
-void no_tuple_size_4() { auto [x, y] = Bad2(); } // expected-error {{cannot decompose this type; 'std::tuple_size<Bad2>::value' is not a valid integral constant expression}}
+void no_tuple_size_4() { auto [x, y] = Bad2(); } // expected-error {{cannot bind this type; 'std::tuple_size<Bad2>::value' is not a valid integral constant expression}}
 
 template<> struct std::tuple_size<A> { static const int value = 3; };
 template<> struct std::tuple_size<B> { enum { value = 3 }; };
 
 void no_get_1() {
   {
-    auto [a0, a1] = A(); // expected-error {{decomposes into 3 elements}}
-    auto [b0, b1] = B(); // expected-error {{decomposes into 3 elements}}
+    auto [a0, a1] = A(); // expected-error {{binds to 3 elements}}
+    auto [b0, b1] = B(); // expected-error {{binds to 3 elements}}
   }
   auto [a0, a1, a2] = A(); // expected-error {{undeclared identifier 'get'}} expected-note {{in implicit initialization of binding declaration 'a0'}}
 }

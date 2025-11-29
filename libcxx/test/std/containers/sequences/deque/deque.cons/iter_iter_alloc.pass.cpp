@@ -12,6 +12,7 @@
 //   deque(InputIterator f, InputIterator l, const allocator_type& a);
 
 #include "asan_testing.h"
+#include <algorithm>
 #include <deque>
 #include <cassert>
 #include <cstddef>
@@ -28,14 +29,12 @@ template <class InputIterator, class Allocator>
 void test(InputIterator f, InputIterator l, const Allocator& a) {
   typedef typename std::iterator_traits<InputIterator>::value_type T;
   typedef std::deque<T, Allocator> C;
-  typedef typename C::const_iterator const_iterator;
   C d(f, l, a);
   assert(d.get_allocator() == a);
   assert(d.size() == static_cast<std::size_t>(std::distance(f, l)));
   assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
   LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
-  for (const_iterator i = d.begin(), e = d.end(); i != e; ++i, ++f)
-    assert(*i == *f);
+  assert(std::equal(d.begin(), d.end(), f));
 }
 
 void basic_test() {

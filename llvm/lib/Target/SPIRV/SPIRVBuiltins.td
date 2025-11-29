@@ -70,6 +70,8 @@ def BindlessINTEL : BuiltinGroup;
 def TernaryBitwiseINTEL : BuiltinGroup;
 def Block2DLoadStore : BuiltinGroup;
 def Pipe : BuiltinGroup;
+def PredicatedLoadStore : BuiltinGroup;
+def BlockingPipes : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -752,6 +754,10 @@ defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadTransformINTEL", OpenC
 defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockPrefetchINTEL", OpenCL_std, Block2DLoadStore, 9, 9, OpSubgroup2DBlockPrefetchINTEL>;
 defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockStoreINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockStoreINTEL>;
 
+// SPV_INTEL_predicated_io builtin records
+defm : DemangledNativeBuiltin<"__spirv_PredicatedLoadINTEL", OpenCL_std, PredicatedLoadStore, 3, 4, OpPredicatedLoadINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_PredicatedStoreINTEL", OpenCL_std, PredicatedLoadStore, 3, 4, OpPredicatedStoreINTEL>;
+
 //===----------------------------------------------------------------------===//
 // Class defining a work/sub group builtin that should be translated into a
 // SPIR-V instruction using the defined properties.
@@ -1169,6 +1175,11 @@ defm : DemangledNativeBuiltin<"clock_read_sub_group", OpenCL_std, KernelClock, 0
 defm : DemangledNativeBuiltin<"clock_read_hilo_device", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
 defm : DemangledNativeBuiltin<"clock_read_hilo_work_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
 defm : DemangledNativeBuiltin<"clock_read_hilo_sub_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+
+//SPV_ALTERA_blocking_pipes
+defm : DemangledNativeBuiltin<"__spirv_WritePipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpWritePipeBlockingALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ReadPipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpReadPipeBlockingALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ReadClockKHR", OpenCL_std, KernelClock, 1, 1, OpReadClockKHR>;
 
 //===----------------------------------------------------------------------===//
 // Class defining an atomic instruction on floating-point numbers.

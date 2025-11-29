@@ -5,12 +5,12 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fno-rtti -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefixes=OGCG-NO-RTTI,OGCG-COMMON --input-file=%t.ll  %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --check-prefixes=CIR-RTTI,CIR-COMMON --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM-RTTI,LLVM-COMMON --input-file=%t-cir.ll  %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=OGCG-RTTI,OGCG-COMMON --input-file=%t.ll  %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t-rtti.cir
+// RUN: FileCheck --check-prefixes=CIR-RTTI,CIR-COMMON --input-file=%t-rtti.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir-rtti.ll
+// RUN: FileCheck --check-prefixes=LLVM-RTTI,LLVM-COMMON --input-file=%t-cir-rtti.ll  %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t-rtti.ll
+// RUN: FileCheck --check-prefixes=OGCG-RTTI,OGCG-COMMON --input-file=%t-rtti.ll  %s
 
 // Note: This test will be expanded to verify VTT emission and VTT implicit
 // argument handling. For now, it's just test the record layout.
@@ -170,7 +170,7 @@ void D::y() {}
 
 // CIR-RTTI:  cir.global{{.*}} @_ZTI1B : !cir.ptr<!u8i>
 
-// LLVM-RTTI: @_ZTI1B = external global ptr
+// LLVM-RTTI: @_ZTI1B = external constant ptr
 
 // OGCG-RTTI: @_ZTI1B = external constant ptr
 
@@ -292,11 +292,11 @@ D::D() {}
 // CIR-COMMON:        %[[VPTR:.*]] = cir.load{{.*}} %[[B_VPTR_ADDR]]
 // CIR-COMMON:        %[[VPTR_ADDR2:.*]] = cir.cast bitcast %[[VPTR]] : !cir.vptr -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[CONST_24:.*]] = cir.const #cir.int<-24>
-// CIR-COMMON:        %[[BASE_OFFSET_ADDR:.*]] = cir.ptr_stride(%[[VPTR_ADDR2]] : !cir.ptr<!u8i>, %[[CONST_24]] : !s64i), !cir.ptr<!u8i>
+// CIR-COMMON:        %[[BASE_OFFSET_ADDR:.*]] = cir.ptr_stride %[[VPTR_ADDR2]], %[[CONST_24]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[BASE_OFFSET_PTR:.*]] = cir.cast bitcast %[[BASE_OFFSET_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
 // CIR-COMMON:        %[[BASE_OFFSET:.*]] = cir.load{{.*}} %[[BASE_OFFSET_PTR]] : !cir.ptr<!s64i>, !s64i
 // CIR-COMMON:        %[[THIS_PTR:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<!rec_B> -> !cir.ptr<!u8i>
-// CIR-COMMON:        %[[BASE_PTR:.*]] = cir.ptr_stride(%[[THIS_PTR]] : !cir.ptr<!u8i>, %[[BASE_OFFSET]] : !s64i), !cir.ptr<!u8i>
+// CIR-COMMON:        %[[BASE_PTR:.*]] = cir.ptr_stride %[[THIS_PTR]], %[[BASE_OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[BASE_CAST:.*]] = cir.cast bitcast %[[BASE_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_B>
 // CIR-COMMON:        %[[BASE_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[BASE_CAST]]
 // CIR-COMMON:        cir.store{{.*}} %[[B_VPTR]], %[[BASE_VPTR_ADDR]]
@@ -358,11 +358,11 @@ D::D() {}
 // CIR-COMMON:        %[[VPTR:.*]] = cir.load{{.*}} %[[C_VPTR_ADDR]]
 // CIR-COMMON:        %[[VPTR_ADDR2:.*]] = cir.cast bitcast %[[VPTR]] : !cir.vptr -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[CONST_24:.*]] = cir.const #cir.int<-24>
-// CIR-COMMON:        %[[BASE_OFFSET_ADDR:.*]] = cir.ptr_stride(%[[VPTR_ADDR2]] : !cir.ptr<!u8i>, %[[CONST_24]] : !s64i), !cir.ptr<!u8i>
+// CIR-COMMON:        %[[BASE_OFFSET_ADDR:.*]] = cir.ptr_stride %[[VPTR_ADDR2]], %[[CONST_24]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[BASE_OFFSET_PTR:.*]] = cir.cast bitcast %[[BASE_OFFSET_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
 // CIR-COMMON:        %[[BASE_OFFSET:.*]] = cir.load{{.*}} %[[BASE_OFFSET_PTR]] : !cir.ptr<!s64i>, !s64i
 // CIR-COMMON:        %[[THIS_PTR:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<!rec_C> -> !cir.ptr<!u8i>
-// CIR-COMMON:        %[[BASE_PTR:.*]] = cir.ptr_stride(%[[THIS_PTR]] : !cir.ptr<!u8i>, %[[BASE_OFFSET]] : !s64i), !cir.ptr<!u8i>
+// CIR-COMMON:        %[[BASE_PTR:.*]] = cir.ptr_stride %[[THIS_PTR]], %[[BASE_OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[BASE_CAST:.*]] = cir.cast bitcast %[[BASE_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_C>
 // CIR-COMMON:        %[[BASE_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[BASE_CAST]]
 // CIR-COMMON:        cir.store{{.*}} %[[C_VPTR]], %[[BASE_VPTR_ADDR]]
@@ -430,11 +430,11 @@ D::D() {}
 // CIR-COMMON:        %[[VPTR2:.*]] = cir.load{{.*}} %[[D_VPTR_ADDR2]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR-COMMON:        %[[VPTR_ADDR2:.*]] = cir.cast bitcast %[[VPTR2]] : !cir.vptr -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[CONST_24:.*]] = cir.const #cir.int<-24> : !s64i
-// CIR-COMMON:        %[[BASE_OFFSET_ADDR:.*]] = cir.ptr_stride(%[[VPTR_ADDR2]] : !cir.ptr<!u8i>, %[[CONST_24]] : !s64i), !cir.ptr<!u8i>
+// CIR-COMMON:        %[[BASE_OFFSET_ADDR:.*]] = cir.ptr_stride %[[VPTR_ADDR2]], %[[CONST_24]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[BASE_OFFSET_PTR:.*]] = cir.cast bitcast %[[BASE_OFFSET_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
 // CIR-COMMON:        %[[BASE_OFFSET:.*]] = cir.load{{.*}} %[[BASE_OFFSET_PTR]] : !cir.ptr<!s64i>, !s64i
 // CIR-COMMON:        %[[THIS_PTR:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<!rec_D> -> !cir.ptr<!u8i>
-// CIR-COMMON:        %[[BASE_PTR:.*]] = cir.ptr_stride(%[[THIS_PTR]] : !cir.ptr<!u8i>, %[[BASE_OFFSET]] : !s64i), !cir.ptr<!u8i>
+// CIR-COMMON:        %[[BASE_PTR:.*]] = cir.ptr_stride %[[THIS_PTR]], %[[BASE_OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR-COMMON:        %[[BASE_CAST:.*]] = cir.cast bitcast %[[BASE_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_D>
 // CIR-COMMON:        %[[BASE_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[BASE_CAST]]
 // CIR-COMMON:        cir.store{{.*}} %[[D_VPTR]], %[[BASE_VPTR_ADDR]]
@@ -445,7 +445,7 @@ D::D() {}
 // CIR-COMMON:        %[[C_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[C_ADDR]] : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        cir.store{{.*}} %[[C_VPTR]], %[[C_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 
-// LLVM-COMMON: define {{.*}} void @_ZN1DC2Ev(ptr %[[THIS_ARG:.*]], ptr %[[VTT_ARG:.*]]) {
+// LLVM-COMMON: define {{.*}} void @_ZN1DC2Ev(ptr %[[THIS_ARG:.*]], ptr %[[VTT_ARG:.*]]){{.*}} {
 // LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM-COMMON:   %[[VTT_ADDR:.*]] = alloca ptr
 // LLVM-COMMON:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
@@ -484,7 +484,7 @@ D::D() {}
 // CIR-COMMON:        %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        cir.store{{.*}} %[[VPTR]], %[[VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 
-// LLVM-COMMON: define {{.*}} void @_ZN1AC2Ev(ptr %[[THIS_ARG:.*]]) {
+// LLVM-COMMON: define {{.*}} void @_ZN1AC2Ev(ptr %[[THIS_ARG:.*]]){{.*}} {
 // LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
 // LLVM-COMMON:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]], align 8
 // LLVM-COMMON:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8

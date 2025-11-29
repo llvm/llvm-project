@@ -372,6 +372,8 @@ public:
     return createCommonLinkage(getContext());
   }
 
+  mlir::StringAttr createExternalLinkage() { return getStringAttr("external"); }
+
   mlir::StringAttr createInternalLinkage() { return getStringAttr("internal"); }
 
   mlir::StringAttr createLinkOnceLinkage() { return getStringAttr("linkonce"); }
@@ -818,7 +820,8 @@ void genScalarAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &lhs,
                          const fir::ExtendedValue &rhs,
                          bool needFinalization = false,
-                         bool isTemporaryLHS = false);
+                         bool isTemporaryLHS = false,
+                         mlir::ArrayAttr accessGroups = {});
 
 /// Assign \p rhs to \p lhs. Both \p rhs and \p lhs must be scalar derived
 /// types. The assignment follows Fortran intrinsic assignment semantic for

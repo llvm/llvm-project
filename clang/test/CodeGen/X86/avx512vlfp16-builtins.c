@@ -17,12 +17,14 @@ _Float16 test_mm_cvtsh_h(__m128h __A) {
   // CHECK: extractelement <8 x half> %{{.*}}, i32 0
   return _mm_cvtsh_h(__A);
 }
+TEST_CONSTEXPR(_mm_cvtsh_h((__m128h){-8.0, 7.0, -6.0, 5.0, -4.0, 3.0, -2.0, 1.0}) == -8.0);
 
 _Float16 test_mm256_cvtsh_h(__m256h __A) {
   // CHECK-LABEL: test_mm256_cvtsh_h
   // CHECK: extractelement <16 x half> %{{.*}}, i32 0
   return _mm256_cvtsh_h(__A);
 }
+TEST_CONSTEXPR(_mm256_cvtsh_h((__m256h){-32.0, 31.0, -30.0, 29.0, -28.0, 27.0, -26.0, 25.0, -24.0, 23.0, -22.0, 21.0, -20.0, 19.0, -18.0, 17.0}) == -32.0);
 
 __m128h test_mm_set_sh(_Float16 __h) {
   // CHECK-LABEL: test_mm_set_sh

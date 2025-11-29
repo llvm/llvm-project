@@ -95,12 +95,7 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
 /// Return the FuncOp called by `callOp`.
 static FuncOp getCalledFunction(CallOpInterface callOp,
                                 SymbolTableCollection &symbolTables) {
-  SymbolRefAttr sym =
-      llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
-  if (!sym)
-    return nullptr;
-  return dyn_cast_or_null<FuncOp>(
-      symbolTables.lookupNearestSymbolFrom(callOp, sym));
+  return dyn_cast_or_null<FuncOp>(callOp.resolveCallableInTable(&symbolTables));
 }
 
 /// Return the FuncOp called by `callOp`.

@@ -84,6 +84,10 @@ LLVM_ABI Libcall getSINCOS(EVT RetVT);
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getSINCOSPI(EVT RetVT);
 
+/// Return the SINCOS_STRET_ value for the given types, or UNKNOWN_LIBCALL if
+/// there is none.
+LLVM_ABI Libcall getSINCOS_STRET(EVT RetVT);
+
 /// getMODF - Return the MODF_* value for the given types, or
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getMODF(EVT RetVT);

@@ -36,6 +36,7 @@ add_flang_library(FIRTransforms
   SimplifyFIROperations.cpp
   OptimizeArrayRepacking.cpp
   ConvertComplexPow.cpp
+  MIFOpConversion.cpp
 
   DEPENDS
   CUFAttrs
@@ -43,6 +44,7 @@ add_flang_library(FIRTransforms
   FIRDialect
   FIROptTransformsPassIncGen
   HLFIROpsIncGen
+  MIFDialect
 
   LINK_LIBS
   CUFAttrs
@@ -56,6 +58,7 @@ add_flang_library(FIRTransforms
   FIRSupport
   FortranSupport
   HLFIRDialect
+  MIFDialect
 
   MLIR_LIBS
   MLIRAffineUtils

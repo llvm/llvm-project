@@ -947,9 +947,8 @@ LazyValueInfoImpl::solveBlockValueSelect(SelectInst *SI, BasicBlock *BB) {
                                                   /*UseBlockValue*/ false));
   }
 
-  ValueLatticeElement Result = TrueVal;
-  Result.mergeIn(FalseVal);
-  return Result;
+  TrueVal.mergeIn(FalseVal);
+  return TrueVal;
 }
 
 std::optional<ConstantRange>
@@ -1778,9 +1777,8 @@ ValueLatticeElement LazyValueInfoImpl::getValueInBlock(Value *V, BasicBlock *BB,
     assert(OptResult && "Value not available after solving");
   }
 
-  ValueLatticeElement Result = *OptResult;
-  LLVM_DEBUG(dbgs() << "  Result = " << Result << "\n");
-  return Result;
+  LLVM_DEBUG(dbgs() << "  Result = " << *OptResult << "\n");
+  return *OptResult;
 }
 
 ValueLatticeElement LazyValueInfoImpl::getValueAt(Value *V, Instruction *CxtI) {

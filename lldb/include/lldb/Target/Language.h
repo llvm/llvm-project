@@ -318,7 +318,9 @@ public:
   ///
   /// This function should only return true if there is a high confidence
   /// that the name actually belongs to this language.
-  virtual bool SymbolNameFitsToLanguage(Mangled name) const { return false; }
+  virtual bool SymbolNameFitsToLanguage(const Mangled &name) const {
+    return false;
+  }
 
   /// An individual data formatter may apply to several types and cross language
   /// boundaries. Each of those languages may want to customize the display of
@@ -404,7 +406,14 @@ public:
   GetLanguageTypeFromString(const char *string) = delete;
   static lldb::LanguageType GetLanguageTypeFromString(llvm::StringRef string);
 
+  /// Returns the internal LLDB name for the specified language. When presenting
+  /// the language name to users, use \ref GetDisplayNameForLanguageType
+  /// instead.
   static const char *GetNameForLanguageType(lldb::LanguageType language);
+
+  /// Returns a user-friendly name for the specified language.
+  static llvm::StringRef
+  GetDisplayNameForLanguageType(lldb::LanguageType language);
 
   static void PrintAllLanguages(Stream &s, const char *prefix,
                                 const char *suffix);

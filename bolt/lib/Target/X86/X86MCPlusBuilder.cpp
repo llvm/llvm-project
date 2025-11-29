@@ -219,6 +219,12 @@ public:
     return getPopSize(Inst) == 0 ? false : true;
   }
 
+  bool isEpilogue(const BinaryBasicBlock &BB) const override {
+    return ::llvm::any_of(BB, [&](const MCInst &Instr) {
+      return isLeave(Instr) || isPop(Instr);
+    });
+  }
+
   bool isTerminateBranch(const MCInst &Inst) const override {
     return Inst.getOpcode() == X86::ENDBR32 || Inst.getOpcode() == X86::ENDBR64;
   }
@@ -2715,7 +2721,7 @@ public:
 
     bool FoundOne = false;
 
-    // Iterate only through src operands that arent also dest operands
+    // Iterate only through src operands that aren't also dest operands
     for (unsigned Index = InstDesc.getNumDefs() + (HasLHS ? 1 : 0),
                   E = InstDesc.getNumOperands();
          Index != E; ++Index) {

@@ -338,7 +338,8 @@ def SIFIVE_X390 : RISCVProcessorModel<"sifive-x390",
                                        FeatureStdExtZvl1024b,
                                        FeatureVendorXSiFivecdiscarddlone,
                                        FeatureVendorXSiFivecflushdlone],
-                                      SiFiveIntelligenceTuneFeatures>;
+                                      !listconcat(SiFiveIntelligenceTuneFeatures,
+                                                  [TuneHasSingleElementVecFP64])>;
 
 defvar SiFiveP400TuneFeatures = [TuneNoDefaultUnroll,
                                  TuneConditionalCompressedMoveFusion,
@@ -632,6 +633,13 @@ def TENSTORRENT_ASCALON_D8 : RISCVProcessorModel<"tt-ascalon-d8",
                                                   FeatureUnalignedVectorMem]),
                                                  [TuneNoDefaultUnroll,
                                                   TuneNLogNVRGather,
+                                                  TuneOptimizedNF2SegmentLoadStore,
+                                                  TuneOptimizedNF3SegmentLoadStore,
+                                                  TuneOptimizedNF4SegmentLoadStore,
+                                                  TuneOptimizedNF5SegmentLoadStore,
+                                                  TuneOptimizedNF6SegmentLoadStore,
+                                                  TuneOptimizedNF7SegmentLoadStore,
+                                                  TuneOptimizedNF8SegmentLoadStore,
                                                   TuneOptimizedZeroStrideLoad,
                                                   TunePostRAScheduler]>;
 

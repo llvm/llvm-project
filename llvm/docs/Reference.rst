@@ -15,6 +15,7 @@ LLVM and API reference documentation.
    BranchWeightMetadata
    Bugpoint
    CalleeTypeMetadata
+   CallGraphSection
    CIBestPractices
    CommandGuide/index
    ContentAddressableStorage
@@ -249,3 +250,7 @@ Additional Topics
 
 :doc:`ContentAddressableStorage`
    A reference guide for using LLVM's CAS library.
+
+:doc:`CIBestPractices`
+   A list of guidelines and best practices to use when working on LLVM's
+   CI systems.

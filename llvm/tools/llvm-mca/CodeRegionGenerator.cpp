@@ -26,7 +26,7 @@ namespace llvm {
 namespace mca {
 
 // This virtual dtor serves as the anchor for the CodeRegionGenerator class.
-CodeRegionGenerator::~CodeRegionGenerator() {}
+CodeRegionGenerator::~CodeRegionGenerator() = default;
 
 Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
     const std::unique_ptr<MCInstPrinter> &IP, bool SkipFailures) {

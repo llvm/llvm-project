@@ -289,6 +289,9 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
 // Get constant integer value of the given ConstReg.
 uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
 
+// Get constant integer value of the given ConstReg, sign-extended.
+int64_t getIConstValSext(Register ConstReg, const MachineRegisterInfo *MRI);
+
 // Check if MI is a SPIR-V specific intrinsic call.
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
 // Check if it's a SPIR-V specific intrinsic call.
@@ -317,6 +320,21 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 // dominators. This should match both the SPIR-V and the MIR requirements.
 // Returns true if the function was changed.
 bool sortBlocks(Function &F);
+
+// Check for peeled array structs and recursively reconstitute them. In HLSL
+// CBuffers, arrays may have padding between the elements, but not after the
+// last element. To represent this in LLVM IR an array [N x T] will be
+// represented as {[N-1 x {T, spirv.Padding}], T}. The function
+// matchPeeledArrayPattern recognizes this pattern retrieving the type {T,
+// spirv.Padding}, and the size N.
+bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
+                             uint64_t &TotalSize);
+
+// This function will turn the type {[N-1 x {T, spirv.Padding}], T} back into
+// [N x {T, spirv.Padding}]. So it can be translated into SPIR-V. The offset
+// decorations will be such that there will be no padding after the array when
+// relevant.
+Type *reconstitutePeeledArrayType(Type *Ty);
 
 inline bool hasInitializer(const GlobalVariable *GV) {
   return GV->hasInitializer() && !isa<UndefValue>(GV->getInitializer());
@@ -556,5 +574,8 @@ unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType);
 MachineBasicBlock::iterator
 getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
+
+std::optional<SPIRV::LinkageType::LinkageType>
+getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

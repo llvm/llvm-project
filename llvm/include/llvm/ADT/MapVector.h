@@ -148,14 +148,28 @@ public:
 
   [[nodiscard]] iterator find(const KeyT &Key) {
     typename MapType::const_iterator Pos = Map.find(Key);
-    return Pos == Map.end()? Vector.end() :
-                            (Vector.begin() + Pos->second);
+    return Pos == Map.end() ? Vector.end() : (Vector.begin() + Pos->second);
   }
 
   [[nodiscard]] const_iterator find(const KeyT &Key) const {
     typename MapType::const_iterator Pos = Map.find(Key);
-    return Pos == Map.end()? Vector.end() :
-                            (Vector.begin() + Pos->second);
+    return Pos == Map.end() ? Vector.end() : (Vector.begin() + Pos->second);
+  }
+
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.
+  [[nodiscard]] ValueT &at(const KeyT &Key) {
+    auto Pos = Map.find(Key);
+    assert(Pos != Map.end() && "MapVector::at failed due to a missing key");
+    return Vector[Pos->second].second;
+  }
+
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.
+  [[nodiscard]] const ValueT &at(const KeyT &Key) const {
+    auto Pos = Map.find(Key);
+    assert(Pos != Map.end() && "MapVector::at failed due to a missing key");
+    return Vector[Pos->second].second;
   }
 
   /// Remove the last element from the vector.

@@ -105,6 +105,8 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     uint32_t LowBits = FullImm & 0xffffffff;
     uint32_t HighBits = (FullImm >> 32) & 0xffffffff;
     MIB.addImm(LowBits).addImm(HighBits);
+    // Asm Printer needs this info to print 64-bit operands correctly
+    MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH64);
     return;
   }
   report_fatal_error("Unsupported constant bitwidth");
@@ -383,6 +385,12 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
   const MachineInstr *MI = getDefInstrMaybeConstant(ConstReg, MRI);
   assert(MI && MI->getOpcode() == TargetOpcode::G_CONSTANT);
   return MI->getOperand(1).getCImm()->getValue().getZExtValue();
+}
+
+int64_t getIConstValSext(Register ConstReg, const MachineRegisterInfo *MRI) {
+  const MachineInstr *MI = getDefInstrMaybeConstant(ConstReg, MRI);
+  assert(MI && MI->getOpcode() == TargetOpcode::G_CONSTANT);
+  return MI->getOperand(1).getCImm()->getSExtValue();
 }
 
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
@@ -1032,6 +1040,90 @@ getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
   // or after OpFunction, if no parameters.
   return VarPos != BB.end() && VarPos->getOpcode() == SPIRV::OpLabel ? ++VarPos
                                                                      : VarPos;
+}
+
+bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
+                             uint64_t &TotalSize) {
+  // An array of N padded structs is represented as {[N-1 x <{T, pad}>], T}.
+  if (Ty->getStructNumElements() != 2)
+    return false;
+
+  Type *FirstElement = Ty->getStructElementType(0);
+  Type *SecondElement = Ty->getStructElementType(1);
+
+  if (!FirstElement->isArrayTy())
+    return false;
+
+  Type *ArrayElementType = FirstElement->getArrayElementType();
+  if (!ArrayElementType->isStructTy() ||
+      ArrayElementType->getStructNumElements() != 2)
+    return false;
+
+  Type *T_in_struct = ArrayElementType->getStructElementType(0);
+  if (T_in_struct != SecondElement)
+    return false;
+
+  auto *Padding_in_struct =
+      dyn_cast<TargetExtType>(ArrayElementType->getStructElementType(1));
+  if (!Padding_in_struct || Padding_in_struct->getName() != "spirv.Padding")
+    return false;
+
+  const uint64_t ArraySize = FirstElement->getArrayNumElements();
+  TotalSize = ArraySize + 1;
+  OriginalElementType = ArrayElementType;
+  return true;
+}
+
+Type *reconstitutePeeledArrayType(Type *Ty) {
+  if (!Ty->isStructTy())
+    return Ty;
+
+  auto *STy = cast<StructType>(Ty);
+  Type *OriginalElementType = nullptr;
+  uint64_t TotalSize = 0;
+  if (matchPeeledArrayPattern(STy, OriginalElementType, TotalSize)) {
+    Type *ResultTy = ArrayType::get(
+        reconstitutePeeledArrayType(OriginalElementType), TotalSize);
+    return ResultTy;
+  }
+
+  SmallVector<Type *, 4> NewElementTypes;
+  bool Changed = false;
+  for (Type *ElementTy : STy->elements()) {
+    Type *NewElementTy = reconstitutePeeledArrayType(ElementTy);
+    if (NewElementTy != ElementTy)
+      Changed = true;
+    NewElementTypes.push_back(NewElementTy);
+  }
+
+  if (!Changed)
+    return Ty;
+
+  Type *ResultTy;
+  if (STy->isLiteral())
+    ResultTy =
+        StructType::get(STy->getContext(), NewElementTypes, STy->isPacked());
+  else {
+    auto *NewTy = StructType::create(STy->getContext(), STy->getName());
+    NewTy->setBody(NewElementTypes, STy->isPacked());
+    ResultTy = NewTy;
+  }
+  return ResultTy;
+}
+
+std::optional<SPIRV::LinkageType::LinkageType>
+getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
+  if (GV.hasLocalLinkage() || GV.hasHiddenVisibility())
+    return std::nullopt;
+
+  if (GV.isDeclarationForLinker())
+    return SPIRV::LinkageType::Import;
+
+  if (GV.hasLinkOnceODRLinkage() &&
+      ST.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr))
+    return SPIRV::LinkageType::LinkOnceODR;
+
+  return SPIRV::LinkageType::Export;
 }
 
 } // namespace llvm

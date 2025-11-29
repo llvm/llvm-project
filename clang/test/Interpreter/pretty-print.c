@@ -75,15 +75,35 @@ int * ptr = (int*)0x123; ptr
 int * null_ptr = (int*)0; null_ptr
 // CHECK-NEXT: (int *) 0x0
 
-// TODO: _Bool, _Complex, _Atomic, and _BitInt
-// union U { int I; float F; } u; u.I = 12; u.I
-// TODO-CHECK-NEXT: (int) 12
-// struct S1{} s1; s1
-// TODO-CHECK-NEXT: (S1 &) @0x{{[0-9a-f]+}}
+union U { int I; float F; } u; u.I = 12; u.I
+// CHECK-NEXT: (int) 12
 
-// struct S2 {int d;} E = {22}; E
-// TODO-CHECK-NEXT: (struct S2 &) @0x{{[0-9a-f]+}}
-// E.d
-// TODO-CHECK-NEXT: (int) 22
+struct S1{} s1; s1
+// CHECK-NEXT: (S1 &) @0x{{[0-9a-f]+}}
+
+struct S2 {int d;} E = {22}; E
+// CHECK-NEXT: (S2 &) @0x{{[0-9a-f]+}}
+
+E.d
+// CHECK-NEXT: (int) 22
+
+// TODO: _Bool, _Complex, _Atomic, and _BitInt
+
+// -----------------------------------------------------------------------------
+// Tentative definition handling (C99 6.9.2)
+// Verify that multiple distinct tentative definitions across inputs no longer
+// conflict. Each variable should emit correctly in its own incremental module.
+// -----------------------------------------------------------------------------
+
+int t1;
+int t2;
+int t3;
+t1 = 1; t2 = 2; t3 = 3;
+t1 + t2 + t3
+// CHECK-NEXT: (int) 6
+
+// A redefinition of an existing tentative variable should still fail.
+int t1;
+// expected-error {{duplicate definition of symbol '_t1'}}
 
 %quit

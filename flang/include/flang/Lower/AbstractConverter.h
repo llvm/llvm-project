@@ -123,6 +123,10 @@ public:
   virtual Fortran::lower::SymMap::StorageDesc
   getSymbolStorage(SymbolRef sym) = 0;
 
+  /// Return the Symbol Map used to map semantics::Symbol to their SSA
+  /// values in the generated MLIR.
+  virtual Fortran::lower::SymMap &getSymbolMap() = 0;
+
   /// Override lowering of expression with pre-lowered values.
   /// Associate mlir::Value to evaluate::Expr. All subsequent call to
   /// genExprXXX() will replace any occurrence of an overridden
@@ -267,6 +271,12 @@ public:
   virtual bool
   isRegisteredDummySymbol(Fortran::semantics::SymbolRef symRef) const = 0;
 
+  /// Get the source-level argument position (1-based) for a dummy symbol.
+  /// Returns 0 if the symbol is not a registered dummy or position is unknown.
+  /// Can only be used reliably during the instantiation of variables.
+  virtual unsigned
+  getDummyArgPosition(const Fortran::semantics::Symbol &sym) const = 0;
+
   /// Returns the FunctionLikeUnit being lowered, if any.
   virtual const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const = 0;
@@ -346,6 +356,11 @@ public:
   virtual const fir::KindMapping &getKindMap() = 0;
 
   virtual Fortran::lower::StatementContext &getFctCtx() = 0;
+
+  /// Generate STAT and ERRMSG from a list of StatOrErrmsg
+  virtual std::pair<mlir::Value, mlir::Value>
+  genStatAndErrmsg(mlir::Location loc,
+                   const std::list<Fortran::parser::StatOrErrmsg> &) = 0;
 
   AbstractConverter(const Fortran::lower::LoweringOptions &loweringOptions)
       : loweringOptions(loweringOptions) {}

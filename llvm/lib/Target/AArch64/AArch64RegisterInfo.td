@@ -980,19 +980,10 @@ class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
 //******************************************************************************
 
 // SVE predicate register classes.
-
-// Note: This hardware mode is enabled in AArch64Subtarget::getHwModeSet()
-// (without the use of the table-gen'd predicates).
-def SMEWithZPRPredicateSpills : HwMode<[Predicate<"false">]>;
-
-def PPRSpillFillRI : RegInfoByHwMode<
-      [DefaultMode,              SMEWithZPRPredicateSpills],
-      [RegInfo<16,16,16>,        RegInfo<16,128,128>]>;
-
 class PPRClass<int firstreg, int lastreg, int step = 1> : RegisterClass<"AArch64",
                                   [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1 ], 16,
                                   (sequence "P%u", firstreg, lastreg, step)> {
-  let RegInfos = PPRSpillFillRI;
+  let Size = 16;
 }
 
 def PPR    : PPRClass<0, 15> {
@@ -1002,7 +993,7 @@ def PPR_3b : PPRClass<0, 7> { // Restricted 3 bit SVE predicate register class.
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PPRRegClassID, 0, 8>";
 }
 def PPR_p8to15 : PPRClass<8, 15> {
-  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PNRRegClassID, 8, 8>";
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PPRRegClassID, 8, 8>";
 }
 
 def PPRMul2 : PPRClass<0, 14, 2>;
@@ -1350,6 +1341,10 @@ def Z_q  : RegisterOperand<ZPR,  "printTypedVectorList<0,'q'>"> {
   let ParserMatchClass = ZPRVectorList<128, 1>;
 }
 
+def ZZ_Any  : RegisterOperand<ZPR2, "printTypedVectorList<0,0>"> {
+  let ParserMatchClass = ZPRVectorList<0, 2>;
+}
+
 def ZZ_b  : RegisterOperand<ZPR2, "printTypedVectorList<0,'b'>"> {
   let ParserMatchClass = ZPRVectorList<8, 2>;
 }
@@ -1368,6 +1363,10 @@ def ZZ_d  : RegisterOperand<ZPR2, "printTypedVectorList<0,'d'>"> {
 
 def ZZ_q  : RegisterOperand<ZPR2, "printTypedVectorList<0,'q'>"> {
   let ParserMatchClass = ZPRVectorList<128, 2>;
+}
+
+def ZZZ_Any  : RegisterOperand<ZPR3, "printTypedVectorList<0,0>"> {
+  let ParserMatchClass = ZPRVectorList<0, 3>;
 }
 
 def ZZZ_b  : RegisterOperand<ZPR3, "printTypedVectorList<0,'b'>"> {

@@ -21,7 +21,6 @@
 
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include <algorithm>
 
 namespace llvm {
 
