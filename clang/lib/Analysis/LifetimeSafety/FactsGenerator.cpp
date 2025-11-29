@@ -168,9 +168,21 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
   }
 }
 
+static bool isStdMove(const FunctionDecl *FD) {
+  return FD && FD->isInStdNamespace() && FD->getIdentifier() &&
+         FD->getName() == "move";
+}
+
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
   handleFunctionCall(CE, CE->getDirectCallee(),
                      {CE->getArgs(), CE->getNumArgs()});
+  // Remember accessPath which moved using std::move.
+  // TODO: If there is need, this could flow-sensitive
+  if (isStdMove(CE->getDirectCallee()))
+    if (CE->getNumArgs() == 1)
+      if (auto *DRE =
+              dyn_cast<DeclRefExpr>(CE->getArg(0)->IgnoreParenImpCasts()))
+        MovedDecls.insert(DRE->getDecl());
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -349,6 +361,8 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   // Iterate through all loans to see if any expire.
   for (const auto &Loan : FactMgr.getLoanMgr().getLoans()) {
     const AccessPath &LoanPath = Loan.Path;
+    if (MovedDecls.contains(LoanPath.D))
+      continue;
     // Check if the loan is for a stack variable and if that variable
     // is the one being destructed.
     if (LoanPath.D == LifetimeEndsVD)
