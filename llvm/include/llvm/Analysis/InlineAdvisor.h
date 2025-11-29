@@ -40,7 +40,12 @@ struct ReplayInlinerSettings;
 /// also permits generating training logs, for offline training.
 ///
 /// - Dynamically load an advisor via a plugin (PluginInlineAdvisorAnalysis)
-enum class InliningAdvisorMode : int { Default, Release, Development };
+enum class InliningAdvisorMode : int {
+  Default,
+  Release,
+  Development,
+  Evolution
+};
 
 // Each entry represents an inline driver.
 enum class InlinePass : int {
