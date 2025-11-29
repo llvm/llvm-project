@@ -1183,6 +1183,9 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
     auto &objects = std::get<omp::ObjectList>(clause.t);
     static std::vector<mlir::Attribute> typeAttrs;
 
+    if (!result.linearVars.size())
+      typeAttrs.clear();
+
     for (const omp::Object &object : objects) {
       semantics::Symbol *sym = object.sym();
       const mlir::Value variable = converter.getSymbolAddress(*sym);
