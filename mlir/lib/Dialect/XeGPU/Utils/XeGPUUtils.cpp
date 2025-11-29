@@ -126,8 +126,8 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     assert(defOp && "result must have a defining op");
 
     // For ConvertLayoutOp, the layout is stored in the targetLayoutAttr
-    if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(defOp))
-      return convertOp.getTargetLayoutAttr();
+    // if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(defOp))
+    //   return convertOp.getTargetLayoutAttr();
 
     // for LoadNdOp, the layout is stored in the tensor descriptor
     if (auto loadNd = dyn_cast<xegpu::LoadNdOp>(defOp))
@@ -137,17 +137,17 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(defOp))
       return loadOp.getLayoutAttr();
 
-    // for StoreMatrixOp, the layout is attached to the property of the op
-    if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(defOp))
-      return storeOp.getLayoutAttr();
-    std::string layoutName = getLayoutName(result);
-    if (defOp->hasAttr(layoutName))
-      return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+    // // for StoreMatrixOp, the layout is attached to the property of the op
+    // if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(defOp))
+    //   return storeOp.getLayoutAttr();
 
     // check for "permament" layout only after "temporary" layout name lookup
     // for backward compatibility
     if (auto loadGatherOp = dyn_cast<xegpu::LoadGatherOp>(defOp))
       return loadGatherOp.getLayoutAttr();
+    std::string layoutName = getLayoutName(result);
+    if (defOp->hasAttr(layoutName))
+      return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
   }
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
@@ -162,26 +162,49 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   return nullptr;
 }
 
+// xegpu::DistributeLayoutAttr
+// xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
+//   Operation *op = opr.getOwner();
+
+//   if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(op))
+//     return loadOp.getLayoutAttr();
+
+//   if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(op))
+//     return storeOp.getLayoutAttr();
+
+//   std::string layoutName = xegpu::getLayoutName(opr);
+//   if (op->hasAttr(layoutName))
+//     return op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+
+//   // check for "permament" layout only after "temporary" layout name lookup
+//   if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
+//     if (auto layout = storeScatterOp.getLayoutAttr())
+//       return layout;
+
+//   return getDistributeLayoutAttr(opr.get());
+// }
+
 xegpu::DistributeLayoutAttr
 xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();
 
-  if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(op))
-    return loadOp.getLayoutAttr();
+  // if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(op))
+  //   return loadOp.getLayoutAttr();
 
   if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(op))
     return storeOp.getLayoutAttr();
-
-  std::string layoutName = xegpu::getLayoutName(opr);
-  if (op->hasAttr(layoutName))
-    return op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
 
   // check for "permament" layout only after "temporary" layout name lookup
   if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
     if (auto layout = storeScatterOp.getLayoutAttr())
       return layout;
 
-  return getDistributeLayoutAttr(opr.get());
+  std::string layoutName = xegpu::getLayoutName(opr);
+  if (op->hasAttr(layoutName))
+    return op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+
+  return nullptr;
+  // return getDistributeLayoutAttr(opr.get());
 }
 
 // Returns the permanent layout attribute for the given result if it's
@@ -286,6 +309,14 @@ void xegpu::removeLayoutAttrs(Operation *op) {
       removeLayoutAttr(opr);
     for (OpResult result : nestOp->getOpResults())
       removeLayoutAttr(result);
+    if (op->hasAttrOfType<DistributeLayoutAttr>("layout"))
+      op->removeAttr("layout");
+    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_a"))
+      op->removeAttr("layout_a");
+    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_b"))
+      op->removeAttr("layout_b");
+    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_cd"))
+      op->removeAttr("layout_cd");
   });
 }
 

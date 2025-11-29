@@ -268,19 +268,19 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
 
 bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   // skip the op if any of its operands or results has workgroup level layouts
-  bool hasWgLayoutOperands =
+  /* bool hasWgLayoutOperands =
       llvm::any_of(op->getOpOperands(), [](OpOperand &opr) {
         xegpu::DistributeLayoutAttr layout =
             xegpu::getDistributeLayoutAttr(opr);
         return layout && layout.isForWorkgroup();
-      });
+      }); */
   bool hasWgLayoutResults =
       llvm::any_of(op->getOpResults(), [](OpResult result) {
         xegpu::DistributeLayoutAttr layout =
             xegpu::getDistributeLayoutAttr(result);
         return layout && layout.isForWorkgroup();
       });
-  if (hasWgLayoutOperands || hasWgLayoutResults) {
+  if (hasWgLayoutResults) {
     LDBG() << "skip unrolling for op with workgroup level layout: " << *op;
     return false;
   }

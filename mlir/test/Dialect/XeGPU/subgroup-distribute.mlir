@@ -137,7 +137,7 @@ gpu.module @xevm_module{
     %offset = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<12> : vector<16xindex>
     %loaded = scf.if %pred -> (vector<16x8xf16>) {
       %3 = xegpu.load %src[%offset], %1 <{chunk_size=8}> {
-        layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
+        layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
       } : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
       scf.yield %3 : vector<16x8xf16>
     } else {
@@ -169,7 +169,7 @@ gpu.module @xevm_module{
     %offset = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<12> : vector<16xindex>
     scf.if %pred  {
       %3 = xegpu.load %src[%offset], %1 <{chunk_size=8}> {
-        layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
+        layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
       } : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
       xegpu.store %3, %src[%offset], %1 <{chunk_size=8}> : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
     }

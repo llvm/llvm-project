@@ -1647,8 +1647,11 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       // Layouts are needed for vector type only.
       if (!isa<VectorType>(operand.get().getType()))
         continue;
-      if (isa<xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>(op))
-        continue;
+      //      if (isa<xegpu::LoadMatrixOp, xegpu::StoreMatrixOp>(op))
+      // xegpu::DpasOp,
+      // xegpu::LoadGatherOp, xegpu::StoreScatterOp,
+      // xegpu::LoadNdOp, xegpu::StoreNdOp>(op))
+      //      continue;
 
       auto layout = xegpu::getDistributeLayoutAttr(operand.get());
       if (!layout) {
@@ -1660,6 +1663,10 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
       xegpu::setDistributeLayoutAttr(operand, layout);
     }
   });
+
+  // dump out the op here
+  // getOperation()->dump();
+
   // Step 2: Move all operations of a GPU function inside
   // gpu.warp_execute_on_lane_0 operation.
   {
