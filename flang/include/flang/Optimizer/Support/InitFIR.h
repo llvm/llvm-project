@@ -32,6 +32,8 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -54,7 +56,8 @@ namespace fir::support {
       mlir::NVVM::NVVMDialect, mlir::gpu::GPUDialect,                          \
       mlir::index::IndexDialect, mif::MIFDialect
 
-#define FLANG_CODEGEN_DIALECT_LIST FIRCodeGenDialect, mlir::LLVM::LLVMDialect
+#define FLANG_CODEGEN_DIALECT_LIST                                             \
+  FIRCodeGenDialect, mlir::memref::MemRefDialect, mlir::LLVM::LLVMDialect
 
 // The definitive list of dialects used by flang.
 #define FLANG_DIALECT_LIST                                                     \
@@ -129,7 +132,11 @@ inline void registerMLIRPassesForFortranTools() {
   mlir::affine::registerAffineLoopTilingPass();
   mlir::affine::registerAffineDataCopyGenerationPass();
 
+  mlir::registerMem2RegPass();
+  mlir::memref::registerMemRefPasses();
+
   mlir::registerLowerAffinePass();
+  mlir::registerReconcileUnrealizedCastsPass();
 }
 
 /// Register the interfaces needed to lower to LLVM IR.

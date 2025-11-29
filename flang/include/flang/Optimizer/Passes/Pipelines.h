@@ -18,10 +18,13 @@
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Tools/CrossToolHelpers.h"
+#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -104,6 +107,9 @@ void addDebugInfoPass(mlir::PassManager &pm,
                       llvm::codegenoptions::DebugInfoKind debugLevel,
                       llvm::OptimizationLevel optLevel,
                       llvm::StringRef inputFilename, int32_t dwarfVersion);
+
+void addFIRToCoreMLIRToLLVMPass(mlir::PassManager &pm,
+                                const MLIRToLLVMPassPipelineConfig &config);
 
 void addFIRToLLVMPass(mlir::PassManager &pm,
                       const MLIRToLLVMPassPipelineConfig &config);

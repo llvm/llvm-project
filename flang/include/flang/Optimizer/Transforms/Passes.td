@@ -90,6 +90,18 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
                         "attribute to scf.parallel (experimental).">];
 }
 
+def FIRToCoreMLIRPass : Pass<"fir-to-core-mlir", "mlir::ModuleOp"> {
+  let summary = "Convert the FIR dialect module to core MLIR dialects.";
+  let description = [{
+    Convert the FIR dialect module to core MLIR dialects.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "fir::FIRCodeGenDialect",
+                           "mlir::scf::SCFDialect",
+                           "mlir::cf::ControlFlowDialect",
+                           "mlir::memref::MemRefDialect",
+                           "mlir::affine::AffineDialect"];
+}
+
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
   let summary = "Annotate constant operands to all FIR operations";
   let description = [{

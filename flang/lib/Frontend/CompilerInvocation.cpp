@@ -1586,6 +1586,10 @@ bool CompilerInvocation::createFromArgs(
     invoc.loweringOpts.setLowerToHighLevelFIR(false);
   }
 
+  // -flang-experimental-lower-through-core-mlir
+  invoc.loweringOpts.setLowerThroughCoreMLIR(args.hasArg(
+      clang::options::OPT_flang_experimental_lower_through_core_mlir));
+
   // -fno-ppc-native-vector-element-order
   if (args.hasArg(clang::options::OPT_fno_ppc_native_vec_elem_order)) {
     invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
