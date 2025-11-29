@@ -121,27 +121,27 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Rp __saturate_cast(_Tp __x) noexcept {
 #if _LIBCPP_STD_VER >= 26
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
   return std::__add_sat(__x, __y);
 }
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp sub_sat(_Tp __x, _Tp __y) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp sub_sat(_Tp __x, _Tp __y) noexcept {
   return std::__sub_sat(__x, __y);
 }
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp mul_sat(_Tp __x, _Tp __y) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp mul_sat(_Tp __x, _Tp __y) noexcept {
   return std::__mul_sat(__x, __y);
 }
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp div_sat(_Tp __x, _Tp __y) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp div_sat(_Tp __x, _Tp __y) noexcept {
   return std::__div_sat(__x, __y);
 }
 
 template <__signed_or_unsigned_integer _Rp, __signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Rp saturate_cast(_Tp __x) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Rp saturate_cast(_Tp __x) noexcept {
   return std::__saturate_cast<_Rp>(__x);
 }
 

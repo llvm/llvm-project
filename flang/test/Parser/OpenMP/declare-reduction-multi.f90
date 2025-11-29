@@ -198,7 +198,8 @@ program omp_examples
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
 !PARSE-TREE: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'sum'
 !PARSE-TREE: | | Flags = None
-!PARSE-TREE: | DoConstruct
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 
   do i = 1, n
      sum%r = sum%r + values(i)%r
@@ -215,7 +216,8 @@ program omp_examples
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Multiply
 !PARSE-TREE: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'prod'
 !PARSE-TREE: | | Flags = None
-!PARSE-TREE: | DoConstruct
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 
   do i = 1, n
      prod%r = prod%r * (values(i)%r+0.6)
@@ -232,7 +234,8 @@ program omp_examples
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> ProcedureDesignator -> Name = 'max'
 !PARSE-TREE: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'big'
 !PARSE-TREE: | | Flags = None
-!PARSE-TREE: | DoConstruct
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 
   do i = 1, n
      big = mymax(values(i), big)
@@ -249,7 +252,8 @@ program omp_examples
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> ProcedureDesignator -> Name = 'min'
 !PARSE-TREE: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'small'
 !PARSE-TREE: | | Flags = None
-!PARSE-TREE: | DoConstruct
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 
   do i = 1, n
      small%r = min(values(i)%r, small%r)

@@ -10,13 +10,18 @@ The ``std`` (or ``posix``) namespace is allowed to be extended with (class or
 function) template specializations that depend on an user-defined type (a type
 that is not defined in the standard system headers).
 
-The check detects the following (user provided) declarations in namespace ``std`` or ``posix``:
+The check detects the following (user provided) declarations in namespace
+``std`` or ``posix``:
 
 - Anything that is not a template specialization.
-- Explicit specializations of any standard library function template or class template, if it does not have any user-defined type as template argument.
-- Explicit specializations of any member function of a standard library class template.
-- Explicit specializations of any member function template of a standard library class or class template.
-- Explicit or partial specialization of any member class template of a standard library class or class template.
+- Explicit specializations of any standard library function template or class
+  template, if it does not have any user-defined type as template argument.
+- Explicit specializations of any member function of a standard library class
+  template.
+- Explicit specializations of any member function template of a standard
+  library class or class template.
+- Explicit or partial specialization of any member class template of a standard
+  library class or class template.
 
 Examples:
 

@@ -15,6 +15,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -25,6 +26,7 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
+using namespace llvm::SCEVPatternMatch;
 
 #define DEBUG_TYPE "iv-descriptors"
 
@@ -270,10 +272,12 @@ bool RecurrenceDescriptor::AddReductionVar(
   // resulting from the type promotion performed by InstCombine.  Vector
   // operations are not limited to the legal integer widths, so we may be able
   // to evaluate the reduction in the narrower width.
-  if (RecurrenceType->isFloatingPointTy()) {
+  // Check the scalar type to handle both scalar and vector types.
+  Type *ScalarTy = RecurrenceType->getScalarType();
+  if (ScalarTy->isFloatingPointTy()) {
     if (!isFloatingPointRecurrenceKind(Kind))
       return false;
-  } else if (RecurrenceType->isIntegerTy()) {
+  } else if (ScalarTy->isIntegerTy()) {
     if (!isIntegerRecurrenceKind(Kind))
       return false;
     if (!isMinMaxRecurrenceKind(Kind))
@@ -719,11 +723,12 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
     if (!SE.isSCEVable(Ty))
       return std::nullopt;
 
-    auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(V));
-    if (!AR || AR->getLoop() != TheLoop)
+    auto *AR = SE.getSCEV(V);
+    const SCEV *Step;
+    if (!match(AR, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step),
+                                       m_SpecificLoop(TheLoop))))
       return std::nullopt;
 
-    const SCEV *Step = AR->getStepRecurrence(SE);
     if ((isFindFirstIVRecurrenceKind(Kind) && !SE.isKnownNegative(Step)) ||
         (isFindLastIVRecurrenceKind(Kind) && !SE.isKnownPositive(Step)))
       return std::nullopt;
@@ -1220,11 +1225,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::Add;
   case RecurKind::Mul:
     return Instruction::Mul;
-  case RecurKind::AnyOf:
-  case RecurKind::FindFirstIVSMin:
-  case RecurKind::FindFirstIVUMin:
-  case RecurKind::FindLastIVSMax:
-  case RecurKind::FindLastIVUMax:
   case RecurKind::Or:
     return Instruction::Or;
   case RecurKind::And:
@@ -1248,6 +1248,13 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMaximumNum:
   case RecurKind::FMinimumNum:
     return Instruction::FCmp;
+  case RecurKind::AnyOf:
+  case RecurKind::FindFirstIVSMin:
+  case RecurKind::FindFirstIVUMin:
+  case RecurKind::FindLastIVSMax:
+  case RecurKind::FindLastIVUMax:
+    // TODO: Set AnyOf and FindIV to Instruction::Select once in-loop reductions
+    // are supported.
   default:
     llvm_unreachable("Unknown recurrence operation");
   }
@@ -1612,39 +1619,29 @@ bool InductionDescriptor::isInductionPHI(
 
   // Check that the PHI is consecutive.
   const SCEV *PhiScev = Expr ? Expr : SE->getSCEV(Phi);
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(PhiScev);
+  const SCEV *Step;
 
-  if (!AR) {
-    LLVM_DEBUG(dbgs() << "LV: PHI is not a poly recurrence.\n");
-    return false;
-  }
-
-  if (AR->getLoop() != TheLoop) {
-    // FIXME: We should treat this as a uniform. Unfortunately, we
-    // don't currently know how to handled uniform PHIs.
+  // FIXME: We are currently matching the specific loop TheLoop; if it doesn't
+  // match, we should treat it as a uniform. Unfortunately, we don't currently
+  // know how to handled uniform PHIs.
+  if (!match(PhiScev, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step),
+                                          m_SpecificLoop(TheLoop)))) {
     LLVM_DEBUG(
-        dbgs() << "LV: PHI is a recurrence with respect to an outer loop.\n");
+        dbgs() << "LV: PHI is not a poly recurrence for requested loop.\n");
     return false;
   }
 
   // This function assumes that InductionPhi is called only on Phi nodes
   // present inside loop headers. Check for the same, and throw an assert if
   // the current Phi is not present inside the loop header.
-  assert(Phi->getParent() == AR->getLoop()->getHeader()
-    && "Invalid Phi node, not present in loop header");
+  assert(Phi->getParent() == TheLoop->getHeader() &&
+         "Invalid Phi node, not present in loop header");
 
   Value *StartValue =
-      Phi->getIncomingValueForBlock(AR->getLoop()->getLoopPreheader());
+      Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader());
 
-  BasicBlock *Latch = AR->getLoop()->getLoopLatch();
+  BasicBlock *Latch = TheLoop->getLoopLatch();
   if (!Latch)
-    return false;
-
-  const SCEV *Step = AR->getStepRecurrence(*SE);
-  // Calculate the pointer stride and check if it is consecutive.
-  // The stride may be a constant or a loop invariant integer value.
-  const SCEVConstant *ConstStep = dyn_cast<SCEVConstant>(Step);
-  if (!ConstStep && !SE->isLoopInvariant(Step, TheLoop))
     return false;
 
   if (PhiTy->isIntegerTy()) {

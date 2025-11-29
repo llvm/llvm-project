@@ -77,6 +77,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fchown
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fchown
+)
+
+add_entrypoint_object(
   fork
   ALIAS
   DEPENDS

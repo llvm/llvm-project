@@ -144,7 +144,7 @@ define amdgpu_kernel void @store_private_offset_i8_max_offset_plus2() #0 {
 ; SICIVI: buffer_store_dword v{{[0-9]+}}, [[ADDR1]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen{{$}}
 
 ; GFX9: global_load_dword [[VADDR:v[0-9]+]],
-; GFX9: v_lshlrev_b32_e32 [[ADDR:v[0-9]+]], 2, [[VADDR]]
+; GFX9: v_lshl_add_u32 [[ADDR:v[0-9]+]], [[VADDR]], 2, s{{[0-9]+}}
 ; GFX9-NOT [[ADDR]]
 ; GFX9: buffer_store_dword v{{[0-9]+}}, [[ADDR]], s{{\[[0-9]+:[0-9]+\]}}, 0 offen offset:32
 define amdgpu_kernel void @store_private_unknown_bits_vaddr() #0 {

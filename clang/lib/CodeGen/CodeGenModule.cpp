@@ -40,13 +40,13 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -1511,6 +1511,9 @@ void CodeGenModule::Release() {
     break;
   case CodeGenOptions::FramePointerKind::Reserved:
     getModule().setFramePointer(llvm::FramePointerKind::Reserved);
+    break;
+  case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
+    getModule().setFramePointer(llvm::FramePointerKind::NonLeafNoReserve);
     break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     getModule().setFramePointer(llvm::FramePointerKind::NonLeaf);
@@ -4104,6 +4107,38 @@ template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *D) {
   return D->isImplicit();
 }
 
+static bool shouldSkipAliasEmission(const CodeGenModule &CGM,
+                                    const ValueDecl *Global) {
+  const LangOptions &LangOpts = CGM.getLangOpts();
+  if (!LangOpts.OpenMPIsTargetDevice && !LangOpts.CUDA)
+    return false;
+
+  const auto *AA = Global->getAttr<AliasAttr>();
+  GlobalDecl AliaseeGD;
+
+  // Check if the aliasee exists, if the aliasee is not found, skip the alias
+  // emission. This is executed for both the host and device.
+  if (!CGM.lookupRepresentativeDecl(AA->getAliasee(), AliaseeGD))
+    return true;
+
+  const auto *AliaseeDecl = dyn_cast<ValueDecl>(AliaseeGD.getDecl());
+  if (LangOpts.OpenMPIsTargetDevice)
+    return !AliaseeDecl ||
+           !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(AliaseeDecl);
+
+  // CUDA / HIP
+  const bool HasDeviceAttr = Global->hasAttr<CUDADeviceAttr>();
+  const bool AliaseeHasDeviceAttr =
+      AliaseeDecl && AliaseeDecl->hasAttr<CUDADeviceAttr>();
+
+  if (LangOpts.CUDAIsDevice)
+    return !HasDeviceAttr || !AliaseeHasDeviceAttr;
+
+  // CUDA / HIP Host
+  // we know that the aliasee exists from above, so we know to emit
+  return false;
+}
+
 bool CodeGenModule::shouldEmitCUDAGlobalVar(const VarDecl *Global) const {
   assert(LangOpts.CUDA && "Should not be called by non-CUDA languages");
   // We need to emit host-side 'shadows' for all global
@@ -4126,8 +4161,11 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
   // If this is an alias definition (which otherwise looks like a declaration)
   // emit it now.
-  if (Global->hasAttr<AliasAttr>())
+  if (Global->hasAttr<AliasAttr>()) {
+    if (shouldSkipAliasEmission(*this, Global))
+      return;
     return EmitAliasDefinition(GD);
+  }
 
   // IFunc like an alias whose value is resolved at runtime by calling resolver.
   if (Global->hasAttr<IFuncAttr>())
@@ -4934,6 +4972,11 @@ void CodeGenModule::setMultiVersionResolverAttributes(llvm::Function *Resolver,
   setGlobalVisibility(Resolver, D);
 
   setDSOLocal(Resolver);
+
+  // The resolver must be exempt from sanitizer instrumentation, as it can run
+  // before the sanitizer is initialized.
+  // (https://github.com/llvm/llvm-project/issues/163369)
+  Resolver->addFnAttr(llvm::Attribute::DisableSanitizerInstrumentation);
 
   // Set the default target-specific attributes, such as PAC and BTI ones on
   // AArch64. Not passing Decl to prevent setting unrelated attributes,

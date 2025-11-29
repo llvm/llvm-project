@@ -115,11 +115,10 @@ SystemZHazardRecognizer::fitsIntoCurrentGroup(SUnit *SU) const {
 }
 
 bool SystemZHazardRecognizer::has4RegOps(const MachineInstr *MI) const {
-  const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
   const MCInstrDesc &MID = MI->getDesc();
   unsigned Count = 0;
   for (unsigned OpIdx = 0; OpIdx < MID.getNumOperands(); OpIdx++) {
-    const TargetRegisterClass *RC = TII->getRegClass(MID, OpIdx, TRI);
+    const TargetRegisterClass *RC = TII->getRegClass(MID, OpIdx);
     if (RC == nullptr)
       continue;
     if (OpIdx >= MID.getNumDefs() &&

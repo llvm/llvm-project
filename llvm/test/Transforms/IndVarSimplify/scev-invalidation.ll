@@ -46,12 +46,12 @@ for.end106:                                       ; preds = %for.cond
 define i32 @test_pr58439(i32 %a) {
 ; CHECK-LABEL: @test_pr58439(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[C_EXT_LCSSA:%.*]] = phi i32 [ 0, [[LOOP]] ]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[C_EXT_LCSSA]], [[OR]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -76,7 +76,6 @@ define i8 @l(i32 %inc, i1 %tobool.not.i) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
-; CHECK-NEXT:    [[AND:%.*]] = and i32 1, [[INC:%.*]]
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[C_05_I:%.*]] = phi i32 [ [[INC_I:%.*]], [[INNER]] ], [ 0, [[OUTER_HEADER]] ]
@@ -87,6 +86,7 @@ define i8 @l(i32 %inc, i1 %tobool.not.i) {
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[C_05_I_LCSSA:%.*]] = phi i32 [ [[C_05_I]], [[INNER]] ]
 ; CHECK-NEXT:    [[LCSSA:%.*]] = phi i32 [ 0, [[INNER]] ]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 1, [[INC:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[AND]] to i8
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C_05_I_LCSSA]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 [[TMP0]], [[TMP1]]
