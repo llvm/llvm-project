@@ -94,7 +94,7 @@ if (FLANG_RT_ENABLE_STATIC OR FLANG_RT_ENABLE_SHARED)
   option(FLANG_RT_INCLUDE_TESTS "Generate build targets for the flang-rt unit and regression-tests." "${LLVM_INCLUDE_TESTS}")
 else ()
   # Tests require at least one of the libraries
-  message(STATUS "Testing disabled without either FLANG_RT_ENABLE_STATIC OR FLANG_RT_ENABLE_SHARED")
+  message(STATUS "Flang-RT testing disabled without either FLANG_RT_ENABLE_STATIC OR FLANG_RT_ENABLE_SHARED")
   set(FLANG_RT_INCLUDE_TESTS OFF)
 endif ()
 
