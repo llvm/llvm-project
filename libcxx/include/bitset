@@ -151,6 +151,7 @@ template <size_t N> struct hash<std::bitset<N>>;
 #  include <__type_traits/integral_constant.h>
 #  include <__type_traits/is_char_like_type.h>
 #  include <__utility/integer_sequence.h>
+#  include <__utility/unreachable.h>
 #  include <climits>
 #  include <stdexcept>
 #  include <string_view>
@@ -191,7 +192,6 @@ protected:
   static const unsigned __bits_per_word = static_cast<unsigned>(sizeof(__storage_type) * CHAR_BIT);
 
   friend class __bit_reference<__bitset>;
-  friend class __bit_const_reference<__bitset>;
   friend class __bit_iterator<__bitset, false>;
   friend class __bit_iterator<__bitset, true>;
   friend struct __bit_array<__bitset>;
@@ -199,7 +199,6 @@ protected:
   __storage_type __first_[_N_words];
 
   typedef __bit_reference<__bitset> reference;
-  typedef __bit_const_reference<__bitset> __const_reference;
   typedef __bit_iterator<__bitset, false> __iterator;
   typedef __bit_iterator<__bitset, true> __const_iterator;
 
@@ -209,14 +208,15 @@ protected:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 reference __make_ref(size_t __pos) _NOEXCEPT {
     return reference(__first_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __const_reference __make_ref(size_t __pos) const _NOEXCEPT {
-    return __const_reference(__first_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);
-  }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __iterator __make_iter(size_t __pos) _NOEXCEPT {
     return __iterator(__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __const_iterator __make_iter(size_t __pos) const _NOEXCEPT {
     return __const_iterator(__first_ + __pos / __bits_per_word, __pos % __bits_per_word);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool __is_set(size_t __pos) const _NOEXCEPT {
+    return __first_[__pos / __bits_per_word] & (__storage_type(1) << __pos % __bits_per_word);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator&=(const __bitset& __v) _NOEXCEPT;
@@ -416,7 +416,6 @@ protected:
   static const unsigned __bits_per_word = static_cast<unsigned>(sizeof(__storage_type) * CHAR_BIT);
 
   friend class __bit_reference<__bitset>;
-  friend class __bit_const_reference<__bitset>;
   friend class __bit_iterator<__bitset, false>;
   friend class __bit_iterator<__bitset, true>;
   friend struct __bit_array<__bitset>;
@@ -424,7 +423,6 @@ protected:
   __storage_type __first_;
 
   typedef __bit_reference<__bitset> reference;
-  typedef __bit_const_reference<__bitset> __const_reference;
   typedef __bit_iterator<__bitset, false> __iterator;
   typedef __bit_iterator<__bitset, true> __const_iterator;
 
@@ -433,9 +431,6 @@ protected:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 reference __make_ref(size_t __pos) _NOEXCEPT {
     return reference(&__first_, __storage_type(1) << __pos);
-  }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __const_reference __make_ref(size_t __pos) const _NOEXCEPT {
-    return __const_reference(&__first_, __storage_type(1) << __pos);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __iterator __make_iter(size_t __pos) _NOEXCEPT {
     // Allow the == case to accommodate the past-the-end iterator.
@@ -446,6 +441,10 @@ protected:
     // Allow the == case to accommodate the past-the-end iterator.
     _LIBCPP_ASSERT_INTERNAL(__pos <= __bits_per_word, "Out of bounds access in the single-word bitset implementation.");
     return __pos != __bits_per_word ? __const_iterator(&__first_, __pos) : __const_iterator(&__first_ + 1, 0);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool __is_set(size_t __pos) const _NOEXCEPT {
+    return __first_ & (__storage_type(1) << __pos);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator&=(const __bitset& __v) _NOEXCEPT;
@@ -556,13 +555,11 @@ protected:
   static const unsigned __bits_per_word = static_cast<unsigned>(sizeof(__storage_type) * CHAR_BIT);
 
   friend class __bit_reference<__bitset>;
-  friend class __bit_const_reference<__bitset>;
   friend class __bit_iterator<__bitset, false>;
   friend class __bit_iterator<__bitset, true>;
   friend struct __bit_array<__bitset>;
 
   typedef __bit_reference<__bitset> reference;
-  typedef __bit_const_reference<__bitset> __const_reference;
   typedef __bit_iterator<__bitset, false> __iterator;
   typedef __bit_iterator<__bitset, true> __const_iterator;
 
@@ -572,14 +569,15 @@ protected:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 reference __make_ref(size_t) _NOEXCEPT {
     return reference(nullptr, 1);
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __const_reference __make_ref(size_t) const _NOEXCEPT {
-    return __const_reference(nullptr, 1);
-  }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __iterator __make_iter(size_t) _NOEXCEPT {
     return __iterator(nullptr, 0);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __const_iterator __make_iter(size_t) const _NOEXCEPT {
     return __const_iterator(nullptr, 0);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool __is_set(size_t) const _NOEXCEPT {
+    std::__libcpp_unreachable();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator&=(const __bitset&) _NOEXCEPT {}
@@ -618,7 +616,6 @@ public:
   static const unsigned __n_words = _Size == 0 ? 0 : (_Size - 1) / (sizeof(size_t) * CHAR_BIT) + 1;
   typedef __bitset<__n_words, _Size> __base;
   typedef typename __base::reference reference;
-  typedef typename __base::__const_reference __const_reference;
 
   // 23.3.5.1 constructors:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bitset() _NOEXCEPT {}
@@ -680,17 +677,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bitset& flip(size_t __pos);
 
   // element access:
-#  ifdef _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator[](size_t __p) const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__p < _Size, "bitset::operator[] index out of bounds");
-    return __base::__make_ref(__p);
+    return __base::__is_set(__p);
   }
-#  else
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __const_reference operator[](size_t __p) const {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__p < _Size, "bitset::operator[] index out of bounds");
-    return __base::__make_ref(__p);
-  }
-#  endif
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 reference operator[](size_t __p) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__p < _Size, "bitset::operator[] index out of bounds");
     return __base::__make_ref(__p);
