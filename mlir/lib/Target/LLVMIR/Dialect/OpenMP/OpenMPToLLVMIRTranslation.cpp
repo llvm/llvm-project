@@ -135,7 +135,6 @@ class LinearClauseProcessor {
 private:
   SmallVector<llvm::Value *> linearPreconditionVars;
   SmallVector<llvm::Value *> linearLoopBodyTemps;
-  SmallVector<llvm::AllocaInst *> linearOrigVars;
   SmallVector<llvm::Value *> linearOrigVal;
   SmallVector<llvm::Value *> linearSteps;
   SmallVector<llvm::Type *> linearVarTypes;
@@ -161,7 +160,6 @@ public:
         builder.CreateAlloca(linearVarTypes[idx], nullptr, ".linear_result");
     linearOrigVal.push_back(moduleTranslation.lookupValue(linearVar));
     linearLoopBodyTemps.push_back(linearLoopBodyTemp);
-    // linearOrigVars.push_back(linearVarAlloca);
   }
 
   // Initialize linear step
