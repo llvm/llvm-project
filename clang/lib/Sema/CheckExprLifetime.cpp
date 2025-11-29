@@ -320,66 +320,6 @@ static bool isStdInitializerListOfPointer(const RecordDecl *RD) {
   return false;
 }
 
-static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
-  if (auto *Conv = dyn_cast_or_null<CXXConversionDecl>(Callee))
-    if (isGslPointerType(Conv->getConversionType()) &&
-        Callee->getParent()->hasAttr<OwnerAttr>())
-      return true;
-  if (!isInStlNamespace(Callee->getParent()))
-    return false;
-  if (!isGslPointerType(Callee->getFunctionObjectParameterType()) &&
-      !isGslOwnerType(Callee->getFunctionObjectParameterType()))
-    return false;
-  if (isPointerLikeType(Callee->getReturnType())) {
-    if (!Callee->getIdentifier())
-      return false;
-    return llvm::StringSwitch<bool>(Callee->getName())
-        .Cases({"begin", "rbegin", "cbegin", "crbegin"}, true)
-        .Cases({"end", "rend", "cend", "crend"}, true)
-        .Cases({"c_str", "data", "get"}, true)
-        // Map and set types.
-        .Cases({"find", "equal_range", "lower_bound", "upper_bound"}, true)
-        .Default(false);
-  }
-  if (Callee->getReturnType()->isReferenceType()) {
-    if (!Callee->getIdentifier()) {
-      auto OO = Callee->getOverloadedOperator();
-      if (!Callee->getParent()->hasAttr<OwnerAttr>())
-        return false;
-      return OO == OverloadedOperatorKind::OO_Subscript ||
-             OO == OverloadedOperatorKind::OO_Star;
-    }
-    return llvm::StringSwitch<bool>(Callee->getName())
-        .Cases({"front", "back", "at", "top", "value"}, true)
-        .Default(false);
-  }
-  return false;
-}
-
-static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
-  if (!FD->getIdentifier() || FD->getNumParams() != 1)
-    return false;
-  const auto *RD = FD->getParamDecl(0)->getType()->getPointeeCXXRecordDecl();
-  if (!FD->isInStdNamespace() || !RD || !RD->isInStdNamespace())
-    return false;
-  if (!RD->hasAttr<PointerAttr>() && !RD->hasAttr<OwnerAttr>())
-    return false;
-  if (FD->getReturnType()->isPointerType() ||
-      isGslPointerType(FD->getReturnType())) {
-    return llvm::StringSwitch<bool>(FD->getName())
-        .Cases({"begin", "rbegin", "cbegin", "crbegin"}, true)
-        .Cases({"end", "rend", "cend", "crend"}, true)
-        .Case("data", true)
-        .Default(false);
-  }
-  if (FD->getReturnType()->isReferenceType()) {
-    return llvm::StringSwitch<bool>(FD->getName())
-        .Cases({"get", "any_cast"}, true)
-        .Default(false);
-  }
-  return false;
-}
-
 // Returns true if the given constructor is a copy-like constructor, such as
 // `Ctor(Owner<U>&&)` or `Ctor(const Owner<U>&)`.
 static bool isCopyLikeConstructor(const CXXConstructorDecl *Ctor) {
@@ -564,7 +504,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       VisitLifetimeBoundArg(Callee, ObjectArg);
     else if (EnableGSLAnalysis) {
       if (auto *CME = dyn_cast<CXXMethodDecl>(Callee);
-          CME && shouldTrackImplicitObjectArg(CME))
+          CME && lifetimes::shouldTrackImplicitObjectArg(CME))
         VisitGSLPointerArg(Callee, ObjectArg);
     }
   }
@@ -605,7 +545,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       VisitLifetimeBoundArg(CanonCallee->getParamDecl(I), Arg);
     else if (EnableGSLAnalysis && I == 0) {
       // Perform GSL analysis for the first argument
-      if (shouldTrackFirstArgument(CanonCallee)) {
+      if (lifetimes::shouldTrackFirstArgument(CanonCallee)) {
         VisitGSLPointerArg(CanonCallee, Arg);
       } else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Call);
                  Ctor && shouldTrackFirstArgumentForConstructor(Ctor)) {

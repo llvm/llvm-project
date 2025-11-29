@@ -38,6 +38,10 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD);
 /// method or because it's a normal assignment operator.
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 
+bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee);
+
+bool shouldTrackFirstArgument(const FunctionDecl *FD);
+
 // Tells whether the type is annotated with [[gsl::Pointer]].
 bool isGslPointerType(QualType QT);
 // Tells whether the type is annotated with [[gsl::Owner]].
