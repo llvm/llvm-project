@@ -1368,6 +1368,14 @@ def CoroAwaitElidableArgument : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def CoroAwaitSuspendDestroy: InheritableAttr {
+  let Spellings = [Clang<"coro_await_suspend_destroy">];
+  let Subjects = SubjectList<[CXXMethod]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [CoroAwaitSuspendDestroyDoc];
+  let SimpleHandler = 1;
+}
+
 // OSObject-based attributes.
 def OSConsumed : InheritableParamAttr {
   let Spellings = [Clang<"os_consumed">];

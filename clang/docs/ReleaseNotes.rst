@@ -360,6 +360,14 @@ Attribute Changes in Clang
   attribute, but `malloc_span` applies not to functions returning pointers, but to functions returning
   span-like structures (i.e. those that contain a pointer field and a size integer field or two pointers).
 
+- Introduced a new attribute ``[[clang::coro_await_suspend_destroy]]``.  When
+  applied to an ``await_suspend(std::coroutine_handle<Promise>)`` member of a
+  coroutine awaiter, it causes suspensions into this awaiter to use a new
+  ``await_suspend_destroy(Promise&)`` method.  The coroutine is then immediately
+  destroyed.  This flow bypasses the original ``await_suspend()`` (though it
+  must contain a compatibility stub), and omits suspend intrinsics.  The net
+  effect is improved code speed & size for "short-circuiting" coroutines.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Diagnostics messages now refer to ``structured binding`` instead of ``decomposition``,
