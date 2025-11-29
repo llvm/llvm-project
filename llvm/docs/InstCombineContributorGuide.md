@@ -338,7 +338,7 @@ complexity and increasing compile-time overhead.
 
 We do not require explicit proof of real-world usefulness for every transform
 -- in most cases the usefulness is fairly "obvious". However, the question may
-come up for complex or unusual folds. Keep this in mind when chosing what you
+come up for complex or unusual folds. Keep this in mind when choosing what you
 work on.
 
 In particular, fixes for fuzzer-generated missed optimization reports will

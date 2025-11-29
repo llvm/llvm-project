@@ -774,7 +774,8 @@ bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
       // Abort if the spill cannot be inserted at the MBB' start
       if (((BC.Entry == SpillPlacement::MustSpill) ||
            (BC.Entry == SpillPlacement::PrefSpill)) &&
-          !SA->canSplitBeforeProlog(BC.Number))
+          SlotIndex::isEarlierInstr(BI.FirstInstr,
+                                    SA->getFirstSplitPoint(BC.Number)))
         return false;
     }
 
@@ -829,7 +830,11 @@ bool RAGreedy::addThroughConstraints(InterferenceCache::Cursor Intf,
     BCS[B].Number = Number;
 
     // Abort if the spill cannot be inserted at the MBB' start
-    if (!SA->canSplitBeforeProlog(Number))
+    MachineBasicBlock *MBB = MF->getBlockNumbered(Number);
+    auto FirstNonDebugInstr = MBB->getFirstNonDebugInstr();
+    if (FirstNonDebugInstr != MBB->end() &&
+        SlotIndex::isEarlierInstr(LIS->getInstructionIndex(*FirstNonDebugInstr),
+                                  SA->getFirstSplitPoint(Number)))
       return false;
     // Interference for the live-in value.
     if (Intf.first() <= Indexes->getMBBStartIdx(Number))
