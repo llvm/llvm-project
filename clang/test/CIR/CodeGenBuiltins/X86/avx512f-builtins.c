@@ -77,3 +77,210 @@ __m512i test_mm512_undefined_epi32(void) {
   // OGCG: ret <8 x i64> zeroinitializer
   return _mm512_undefined_epi32();
 }
+
+__mmask16 test_mm512_kand(__mmask16 A, __mmask16 B) {
+  // CIR-LABEL: _mm512_kand
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+
+  // LLVM-LABEL: _mm512_kand
+  // LLVM: [[L:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[R:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[RES:%.*]] = and <16 x i1> [[L]], [[R]]
+  // LLVM: bitcast <16 x i1> [[RES]] to i16
+
+  // OGCG-LABEL: _mm512_kand
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: and <16 x i1>
+  // OGCG: bitcast <16 x i1> {{.*}} to i16
+  return _mm512_kand(A, B);
+}
+
+__mmask16 test_mm512_kandn(__mmask16 A, __mmask16 B) {
+  // CIR-LABEL: _mm512_kandn
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.unary(not, {{.*}}) : !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.binop(and, {{.*}}, {{.*}}) : !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+
+  // LLVM-LABEL: _mm512_kandn
+  // LLVM: [[L:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[R:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: xor <16 x i1> [[L]], splat (i1 true)
+  // LLVM: and <16 x i1>
+  // LLVM: bitcast <16 x i1> {{.*}} to i16
+
+  // OGCG-LABEL: _mm512_kandn
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: xor <16 x i1>
+  // OGCG: and <16 x i1>
+  // OGCG: bitcast <16 x i1> {{.*}} to i16
+  return _mm512_kandn(A, B);
+}
+
+__mmask16 test_mm512_kor(__mmask16 A, __mmask16 B) {
+  // CIR-LABEL: _mm512_kor
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.binop(or, {{.*}}, {{.*}}) : !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+
+  // LLVM-LABEL: _mm512_kor
+  // LLVM: [[L:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[R:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: or <16 x i1> [[L]], [[R]]
+  // LLVM: bitcast <16 x i1> {{.*}} to i16
+
+  // OGCG-LABEL: _mm512_kor
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: or <16 x i1>
+  // OGCG: bitcast <16 x i1> {{.*}} to i16
+  return _mm512_kor(A, B);
+}
+
+__mmask16 test_mm512_kxnor(__mmask16 A, __mmask16 B) {
+  // CIR-LABEL: _mm512_kxnor
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.unary(not, {{.*}}) : !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+
+  // LLVM-LABEL: _mm512_kxnor
+  // LLVM: [[L:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[R:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[NOT:%.*]] = xor <16 x i1> [[L]], splat (i1 true)
+  // LLVM: [[RES:%.*]] = xor <16 x i1> [[NOT]], [[R]]
+  // LLVM: bitcast <16 x i1> [[RES]] to i16
+
+  // OGCG-LABEL: _mm512_kxnor
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: xor <16 x i1>
+  // OGCG: xor <16 x i1>
+  // OGCG: bitcast <16 x i1> {{.*}} to i16
+  return _mm512_kxnor(A, B);
+}
+
+__mmask16 test_mm512_kxor(__mmask16 A, __mmask16 B) {
+  // CIR-LABEL: _mm512_kxor
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.binop(xor, {{.*}}, {{.*}}) : !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+
+  // LLVM-LABEL: _mm512_kxor
+  // LLVM: [[L:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[R:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: xor <16 x i1> [[L]], [[R]]
+  // LLVM: bitcast <16 x i1> {{.*}} to i16
+
+  // OGCG-LABEL: _mm512_kxor
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: xor <16 x i1>
+  // OGCG: bitcast <16 x i1> {{.*}} to i16
+  return _mm512_kxor(A, B);
+}
+
+__mmask16 test_mm512_knot(__mmask16 A) {
+  // CIR-LABEL: _mm512_knot
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.unary(not, {{.*}}) : !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+
+  // LLVM-LABEL: _mm512_knot
+  // LLVM: bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: xor <16 x i1>
+  // LLVM: bitcast <16 x i1> {{.*}} to i16
+
+  // OGCG-LABEL: _mm512_knot
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: xor <16 x i1>
+  // OGCG: bitcast <16 x i1> {{.*}} to i16
+  return _mm512_knot(A);
+}
+
+// Multiple user-level mask helpers inline to this same kmov builtin.
+// CIR does not implement any special lowering for those helpers.
+//
+// Therefore, testing the builtin (__builtin_ia32_kmov*) directly is
+// sufficient to cover the CIR lowering behavior. Testing each helper
+// individually would add no new CIR paths.
+
+__mmask16 test_kmov_w(__mmask16 A) {
+  // CIR-LABEL: test_kmov_w
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+
+  // LLVM-LABEL: test_kmov_w
+  // LLVM: bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: bitcast <16 x i1> {{.*}} to i16
+
+  // OGCG-LABEL: test_kmov_w
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: bitcast <16 x i1> {{.*}} to i16
+  return __builtin_ia32_kmovw(A);
+}
+
+int test_mm512_kortestc(__mmask16 __A, __mmask16 __B) {
+  // CIR-LABEL: _mm512_kortestc
+  // CIR: [[ALL_ONES:%.*]] = cir.const #cir.int<65535> : !u16i
+  // CIR: [[LHS:%.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[RHS:%.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[OR:%.*]] = cir.binop(or, [[LHS]], [[RHS]]) : !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[OR_INT:%.*]] = cir.cast bitcast [[OR]] : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+  // CIR: [[CMP:%.*]] = cir.cmp(eq, [[OR_INT]], [[ALL_ONES]]) : !u16i, !cir.bool
+  // CIR: cir.cast bool_to_int [[CMP]] : !cir.bool -> !s32i
+
+  // LLVM-LABEL: _mm512_kortestc
+  // LLVM: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[RHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[OR:%.*]] = or <16 x i1> [[LHS]], [[RHS]]
+  // LLVM: [[CAST:%.*]] = bitcast <16 x i1> [[OR]] to i16
+  // LLVM: [[CMP:%.*]] = icmp eq i16 [[CAST]], -1
+  // LLVM: zext i1 [[CMP]] to i32
+
+  // OGCG-LABEL: _mm512_kortestc
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: or <16 x i1> {{.*}}, {{.*}}
+  // OGCG: bitcast <16 x i1> {{.*}} to i16
+  // OGCG: icmp eq i16 {{.*}}, -1
+  // OGCG: zext i1 {{.*}} to i32
+  return _mm512_kortestc(__A,__B);
+}
+
+int test_mm512_kortestz(__mmask16 __A, __mmask16 __B) {
+  // CIR-LABEL: _mm512_kortestz
+  // CIR: [[ZERO:%.*]] = cir.const #cir.int<0> : !u16i
+  // CIR: [[LHS:%.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[RHS:%.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[OR:%.*]] = cir.binop(or, [[LHS]], [[RHS]]) : !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[OR_INT:%.*]] = cir.cast bitcast [[OR]] : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+  // CIR: [[CMP:%.*]] = cir.cmp(eq, [[OR_INT]], [[ZERO]]) : !u16i, !cir.bool
+  // CIR: cir.cast bool_to_int [[CMP]] : !cir.bool -> !s32i
+
+  // LLVM-LABEL: _mm512_kortestz
+  // LLVM: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[RHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[OR:%.*]] = or <16 x i1> [[LHS]], [[RHS]]
+  // LLVM: [[CAST:%.*]] = bitcast <16 x i1> [[OR]] to i16
+  // LLVM: [[CMP:%.*]] = icmp eq i16 [[CAST]], 0
+  // LLVM: zext i1 [[CMP]] to i32
+
+  // OGCG-LABEL: _mm512_kortestz
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: or <16 x i1> {{.*}}, {{.*}}
+  // OGCG: bitcast <16 x i1> {{.*}} to i16
+  // OGCG: icmp eq i16 {{.*}}, 0
+  // OGCG: zext i1 {{.*}} to i32
+  return _mm512_kortestz(__A,__B);
+}
