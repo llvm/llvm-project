@@ -579,13 +579,15 @@ void bad_macro10() {
     int i1 = 0; DUMMY_TOKEN
     if (I1 == 0) {
 // CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
-// FIXME: should be changed to 'if (int i1 = 0; I1 == 0) {'
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (int i1 = 0; I1 == 0) {
         do_some();
     }
     int i2 = 0; DUMMY_TOKEN
     switch (I2) {
 // CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
-// FIXME: should be changed to 'switch (int i2 = 0; I2) {'
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (int i2 = 0; I2) {
         case 0:
             do_some();
             break;

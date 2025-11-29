@@ -50,7 +50,6 @@ AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
 
 } // namespace
 
-
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
   const auto ClassWithDtorDecl = cxxRecordDecl(hasMethod(cxxDestructorDecl()));
   const auto ClassWithDtorType =
@@ -113,8 +112,7 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
 
   const SourceRange RemovalRange = PrevDecl->getSourceRange();
   const bool CanFix =
-      utils::rangeCanBeFixed(RemovalRange, Result.SourceManager) &&
-      !Condition->getBeginLoc().isMacroID();
+      utils::rangeCanBeFixed(RemovalRange, Result.SourceManager);
 
   const StringRef DeclStmtText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(PrevDecl->getSourceRange()),
