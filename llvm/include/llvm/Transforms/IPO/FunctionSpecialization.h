@@ -93,11 +93,14 @@
 #include "llvm/Transforms/Utils/SizeOpts.h"
 
 namespace llvm {
-// Map of potential specializations for each function. The FunctionSpecializer
-// keeps the discovered specialisation opportunities for the module in a single
-// vector, where the specialisations of each function form a contiguous range.
-// This map's value is the beginning and the end of that range.
-using SpecMap = DenseMap<Function *, std::pair<unsigned, unsigned>>;
+struct Spec;
+
+// Map of potential specializations for each function.
+using SpecMap = DenseMap<Function *, SmallVector<unsigned>>;
+
+using CallUserT = SmallMapVector<
+    CallBase *,
+    std::pair<SmallVector<std::pair<unsigned, Constant *>, 4>, Function *>, 4>;
 
 // Just a shorter abbreviation to improve indentation.
 using Cost = InstructionCost;
@@ -124,6 +127,14 @@ struct SpecSig {
   }
 };
 
+enum CallSiteStatusT { AWAITING_PARENT, HAS_PARENT, NO_PARENT };
+
+struct SpecCall {
+  CallBase *CallSite;
+  CallSiteStatusT Status;
+  unsigned Parent;
+};
+
 // Specialization instance.
 struct Spec {
   // Original function.
@@ -141,13 +152,47 @@ struct Spec {
   // Number of instructions in the specialization.
   unsigned CodeSize;
 
-  // List of call sites, matching this specialization.
-  SmallVector<CallBase *> CallSites;
+  // Cumulative function size of the chain
+  unsigned FuncSize;
 
-  Spec(Function *F, const SpecSig &S, unsigned Score, unsigned CodeSize)
-      : F(F), Sig(S), Score(Score), CodeSize(CodeSize) {}
-  Spec(Function *F, const SpecSig &&S, unsigned Score, unsigned CodeSize)
-      : F(F), Sig(S), Score(Score), CodeSize(CodeSize) {}
+  // Latency savings
+  unsigned Latency;
+
+  // Benefit from inlining
+  unsigned InlineScore;
+
+  // List of call sites, matching this specialization.
+  SmallVector<SpecCall> CallSites;
+
+  bool AllChains = true;
+
+  void addCall(SpecCall SC) {
+    CallSites.push_back(SC);
+    AllChains = AllChains && SC.Status != CallSiteStatusT::NO_PARENT;
+  }
+
+  // List Sub-Specializations
+  SmallVector<unsigned> SubSpecs;
+
+  // Index within AllSpecs
+  unsigned Loc = 0;
+
+  bool SpecializeOnOwn = true;
+
+  Spec(Function *F, CallBase *CallSite, const SpecSig &S,
+       CallSiteStatusT Status)
+      : F(F), Clone(nullptr), Sig(S), Score(), CodeSize(), FuncSize(),
+        InlineScore(), CallSites() {
+    addCall({CallSite, Status, /*Parent*/ 0});
+  }
+  Spec(Function *F, CallBase *CallSite, CallSiteStatusT Status)
+      : F(F), Clone(nullptr), Sig(), Score(), CodeSize(), FuncSize(),
+        InlineScore(), CallSites() {
+    addCall({CallSite, Status, /*Parent*/ 0});
+  }
+  Spec(Function *F)
+      : F(F), Clone(nullptr), Sig(), Score(), CodeSize(), FuncSize(),
+        InlineScore(), CallSites() {}
 };
 
 class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
@@ -180,9 +225,11 @@ public:
     return Solver.isBlockExecutable(BB) && !DeadBlocks.contains(BB);
   }
 
-  LLVM_ABI Cost getCodeSizeSavingsForArg(Argument *A, Constant *C);
+  LLVM_ABI Cost getCodeSizeSavingsForArg(Argument *A, Constant *C,
+                                         CallUserT *CallUsers = nullptr);
 
-  LLVM_ABI Cost getCodeSizeSavingsFromPendingPHIs();
+  LLVM_ABI Cost
+  getCodeSizeSavingsFromPendingPHIs(CallUserT *CallUsers = nullptr);
 
   LLVM_ABI Cost getLatencySavingsForKnownConstants();
 
@@ -194,7 +241,9 @@ private:
   bool canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ) const;
 
   Cost getCodeSizeSavingsForUser(Instruction *User, Value *Use = nullptr,
-                                 Constant *C = nullptr);
+                                 Constant *C = nullptr,
+                                 CallUserT *CallUsers = nullptr,
+                                 llvm::Use *UseEdge = nullptr);
 
   Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList);
   Cost estimateSwitchInst(SwitchInst &I);
@@ -247,6 +296,7 @@ class FunctionSpecializer {
 
   SmallPtrSet<Function *, 32> Specializations;
   SmallPtrSet<Function *, 32> DeadFunctions;
+  SmallPtrSet<Function *, 32> VisitedFunctions;
   DenseMap<Function *, CodeMetrics> FunctionMetrics;
   DenseMap<Function *, unsigned> FunctionGrowth;
   unsigned NGlobals = 0;
@@ -295,9 +345,26 @@ private:
   /// @param FuncSize Cost of specializing a function.
   /// @param AllSpecs A vector to add potential specializations to.
   /// @param SM  A map for a function's specialisation range
+  /// @param CurrentChain Current chain of function calls.
   /// @return True, if any potential specializations were found
-  bool findSpecializations(Function *F, unsigned FuncSize,
-                           SmallVectorImpl<Spec> &AllSpecs, SpecMap &SM);
+  bool findSpecializations(unsigned FuncSize, SmallVectorImpl<Spec> &AllSpecs,
+                           SpecMap &SM, Spec &InS,
+                           DenseMap<SpecSig, unsigned> &UniqueSpecs,
+                           SmallPtrSet<Function *, 4> &CurrentChain);
+
+  /// @brief Find specialization opportunities for a given function.
+  /// @param S Specialization to complete, possibly with a Callsite attached.
+  /// @param Chained Is this call part of a chain build?
+  /// @param SM  A map for a function's specialisation range
+  /// @param AllSpecs A vector to add potential specializations to.
+  /// @param UniqueSpecs Map of existing specializations.
+  /// @param CurrentChain Current chain of function calls.
+  /// site.
+  /// @return True, if any potential specializations were found
+  bool runOneSpec(Spec &S, bool Chained, SpecMap &SM,
+                  SmallVectorImpl<Spec> &AllSpecs,
+                  DenseMap<SpecSig, unsigned> &UniqueSpecs,
+                  SmallPtrSet<Function *, 4> CurrentChain);
 
   /// Compute the inlining bonus for replacing argument \p A with constant \p C.
   unsigned getInliningBonus(Argument *A, Constant *C);
@@ -308,7 +375,8 @@ private:
   /// @param F Function to specialize
   /// @param S Which specialization to create
   /// @return The new, cloned function
-  Function *createSpecialization(Function *F, const SpecSig &S);
+  Function *createSpecialization(Function *F, const SpecSig &S,
+                                 ValueToValueMapTy &Mappings);
 
   /// Determine if it is possible to specialise the function for constant values
   /// of the formal parameter \p A.
@@ -320,9 +388,9 @@ private:
 
   /// @brief Find and update calls to \p F, which match a specialization
   /// @param F Orginal function
-  /// @param Begin Start of a range of possibly matching specialisations
-  /// @param End End of a range (exclusive) of possibly matching specialisations
-  void updateCallSites(Function *F, const Spec *Begin, const Spec *End);
+  /// @param Specs Vector of possibly matching specialisations
+  void updateCallSites(Function *F, const SmallVector<unsigned> &Specs,
+                       SmallVector<Spec, 32> AllSpecs);
 };
 } // namespace llvm
 
