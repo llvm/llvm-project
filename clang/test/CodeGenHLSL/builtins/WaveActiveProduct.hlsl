@@ -9,37 +9,37 @@
 
 // CHECK-LABEL: test_int
 int test_int(int expr) {
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.reduce.product.i32([[TY]] %[[#]])
-  // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.reduce.product.i32([[TY]] %[[#]])
+  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.product.i32([[TY]] %[[#]])
+  // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.product.i32([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveActiveProduct(expr);
 }
 
-// CHECK-DXIL: declare [[TY]] @llvm.dx.wave.reduce.product.i32([[TY]]) #[[#attr:]]
-// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.reduce.product.i32([[TY]]) #[[#attr:]]
+// CHECK-DXIL: declare [[TY]] @llvm.dx.wave.product.i32([[TY]]) #[[#attr:]]
+// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.product.i32([[TY]]) #[[#attr:]]
 
 // CHECK-LABEL: test_uint64_t
 uint64_t test_uint64_t(uint64_t expr) {
-  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.reduce.product.i64([[TY]] %[[#]])
-  // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.reduce.uproduct.i64([[TY]] %[[#]])
+  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.product.i64([[TY]] %[[#]])
+  // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.uproduct.i64([[TY]] %[[#]])
   // CHECK:  ret [[TY]] %[[RET]]
   return WaveActiveProduct(expr);
 }
 
-// CHECK-DXIL: declare [[TY]] @llvm.dx.wave.reduce.uproduct.i64([[TY]]) #[[#attr:]]
-// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.reduce.product.i64([[TY]]) #[[#attr:]]
+// CHECK-DXIL: declare [[TY]] @llvm.dx.wave.uproduct.i64([[TY]]) #[[#attr:]]
+// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.product.i64([[TY]]) #[[#attr:]]
 
 // Test basic lowering to runtime function call with array and float value.
 
 // CHECK-LABEL: test_floatv4
 float4 test_floatv4(float4 expr) {
-  // CHECK-SPIRV:  %[[RET1:.*]] = call reassoc nnan ninf nsz arcp afn spir_func [[TY1:.*]] @llvm.spv.wave.reduce.product.v4f32([[TY1]] %[[#]]
-  // CHECK-DXIL:  %[[RET1:.*]] = call reassoc nnan ninf nsz arcp afn [[TY1:.*]] @llvm.dx.wave.reduce.product.v4f32([[TY1]] %[[#]])
+  // CHECK-SPIRV:  %[[RET1:.*]] = call reassoc nnan ninf nsz arcp afn spir_func [[TY1:.*]] @llvm.spv.wave.product.v4f32([[TY1]] %[[#]]
+  // CHECK-DXIL:  %[[RET1:.*]] = call reassoc nnan ninf nsz arcp afn [[TY1:.*]] @llvm.dx.wave.product.v4f32([[TY1]] %[[#]])
   // CHECK:  ret [[TY1]] %[[RET1]]
   return WaveActiveProduct(expr);
 }
 
-// CHECK-DXIL: declare [[TY1]] @llvm.dx.wave.reduce.product.v4f32([[TY1]]) #[[#attr]]
-// CHECK-SPIRV: declare [[TY1]] @llvm.spv.wave.reduce.product.v4f32([[TY1]]) #[[#attr]]
+// CHECK-DXIL: declare [[TY1]] @llvm.dx.wave.product.v4f32([[TY1]]) #[[#attr]]
+// CHECK-SPIRV: declare [[TY1]] @llvm.spv.wave.product.v4f32([[TY1]]) #[[#attr]]
 
 // CHECK: attributes #[[#attr]] = {{{.*}} convergent {{.*}}}

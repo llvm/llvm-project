@@ -263,11 +263,11 @@ static Intrinsic::ID getWaveActiveProductIntrinsic(llvm::Triple::ArchType Arch,
                                                    QualType QT) {
   switch (Arch) {
   case llvm::Triple::spirv:
-    return Intrinsic::spv_wave_reduce_product;
+    return Intrinsic::spv_wave_product;
   case llvm::Triple::dxil: {
     if (QT->isUnsignedIntegerType())
-      return Intrinsic::dx_wave_reduce_uproduct;
-    return Intrinsic::dx_wave_reduce_product;
+      return Intrinsic::dx_wave_uproduct;
+    return Intrinsic::dx_wave_product;
   }
   default:
     llvm_unreachable("Intrinsic WaveActiveProduct"

@@ -13,8 +13,8 @@
 ; CHECK:   %[[#fexpr:]] = OpFunctionParameter %[[#f32]]
 define float @test_float(float %fexpr) {
 entry:
-; CHECK:   %[[#fret:]] = OpGroupNonUniformFMul %[[#f32]] %[[#scope]] Reduce %[[#fexpr]]
-  %0 = call float @llvm.spv.wave.reduce.product.f32(float %fexpr)
+; CHECK:   %[[#fret:]] = OpGroupNonUniformFMul %[[#f32]] %[[#scope]] %[[#fexpr]]
+  %0 = call float @llvm.spv.wave.product.f32(float %fexpr)
   ret float %0
 }
 
@@ -22,8 +22,8 @@ entry:
 ; CHECK:   %[[#iexpr:]] = OpFunctionParameter %[[#uint]]
 define i32 @test_int(i32 %iexpr) {
 entry:
-; CHECK:   %[[#iret:]] = OpGroupNonUniformIMul %[[#uint]] %[[#scope]] Reduce %[[#iexpr]]
-  %0 = call i32 @llvm.spv.wave.reduce.product.i32(i32 %iexpr)
+; CHECK:   %[[#iret:]] = OpGroupNonUniformIMul %[[#uint]] %[[#scope]] %[[#iexpr]]
+  %0 = call i32 @llvm.spv.wave.product.i32(i32 %iexpr)
   ret i32 %0
 }
 
@@ -31,11 +31,11 @@ entry:
 ; CHECK:   %[[#vbexpr:]] = OpFunctionParameter %[[#v4_half]]
 define <4 x half> @test_vhalf(<4 x half> %vbexpr) {
 entry:
-; CHECK:   %[[#vhalfret:]] = OpGroupNonUniformFMul %[[#v4_half]] %[[#scope]] Reduce %[[#vbexpr]]
-  %0 = call <4 x half> @llvm.spv.wave.reduce.product.v4half(<4 x half> %vbexpr)
+; CHECK:   %[[#vhalfret:]] = OpGroupNonUniformFMul %[[#v4_half]] %[[#scope]] %[[#vbexpr]]
+  %0 = call <4 x half> @llvm.spv.wave.product.v4half(<4 x half> %vbexpr)
   ret <4 x half> %0
 }
 
-declare float @llvm.spv.wave.reduce.product.f32(float)
-declare i32 @llvm.spv.wave.reduce.product.i32(i32)
-declare <4 x half> @llvm.spv.wave.reduce.product.v4half(<4 x half>)
+declare float @llvm.spv.wave.product.f32(float)
+declare i32 @llvm.spv.wave.product.i32(i32)
+declare <4 x half> @llvm.spv.wave.product.v4half(<4 x half>)

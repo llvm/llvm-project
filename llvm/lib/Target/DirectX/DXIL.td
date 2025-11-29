@@ -1066,12 +1066,12 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
                    IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>,
                    IntrinArgI8<SignedOpKind_Unsigned>
                  ]>,
-    IntrinSelect<int_dx_wave_reduce_product,
+    IntrinSelect<int_dx_wave_product,
                  [
                    IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Product>,
                    IntrinArgI8<SignedOpKind_Signed>
                  ]>,
-    IntrinSelect<int_dx_wave_reduce_uproduct,
+    IntrinSelect<int_dx_wave_uproduct,
                  [
                    IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Product>,
                    IntrinArgI8<SignedOpKind_Unsigned>

@@ -3569,7 +3569,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveReduceMin(ResVReg, ResType, I, /*IsUnsigned*/ false);
   case Intrinsic::spv_wave_reduce_sum:
     return selectWaveReduceSum(ResVReg, ResType, I);
-  case Intrinsic::spv_wave_reduce_product:
+  case Intrinsic::spv_wave_product:
     return selectWaveReduceProduct(ResVReg, ResType, I);
   case Intrinsic::spv_wave_readlane:
     return selectWaveOpInst(ResVReg, ResType, I,
