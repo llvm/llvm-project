@@ -254,7 +254,8 @@ private:
 
   llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
 
-  uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
+  uint32_t CalculateFprOffset(const RegisterInfo *reg_info,
+                              bool streaming_fpsimd) const;
 
   RegisterInfoPOSIX_arm64 &GetRegisterInfo() const;
 
