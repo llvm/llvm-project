@@ -412,8 +412,12 @@ gpu.module @kernels {
   //         lanes [16, 32) and [48, 64), respectively.
   // CHECK-GFX9: %[[BCAST15:.+]] = amdgpu.dpp %[[A3]] %[[A3]]  row_bcast_15(unit) {row_mask = 10 : i32} : f32
   // CHECK-GFX9: %[[SUM:.+]] = arith.addf %[[A3]], %[[BCAST15]] : f32
-  // CHECK-GFX9: %[[SWIZ:.+]] = amdgpu.swizzle_bitmode %[[SUM]] 0 31 0 : f32
-  // CHECK-GFX9: "test.consume"(%[[SWIZ]]) : (f32) -> ()
+  // CHECK-GFX9: %[[RLANE31:.+]] = rocdl.readlane %[[SUM]]{{.*}}c31
+  // CHECK-GFX9: %[[RLANE63:.+]] = rocdl.readlane %[[SUM]]{{.*}}c63
+  // CHECK-GFX9: %[[LANEID:.+]] = gpu.lane_id
+  // CHECK-GFX9: %[[CMP:.+]] = arith.cmpi ule, %[[LANEID]]{{.*}}c31
+  // CHECK-GFX9: %[[SEL:.+]] = arith.select %[[CMP]], %[[RLANE31]], %[[RLANE63]] : f32
+  // CHECK-GFX9: "test.consume"(%[[SEL]]) : (f32) -> ()
   //
   //   On gfx1030, the final step is to permute the lanes and perform final reduction:
   // CHECK-GFX10: rocdl.permlanex16
