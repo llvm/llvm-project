@@ -330,14 +330,14 @@ struct CodeGenProcModel {
 /// It may be used to describe conditions that appy only to a subset of the
 /// operands of a machine instruction, and the operands subset may not be the
 /// same for all processor models.
-struct PredicateInfo {
+struct SchedulePredicateInfo {
   llvm::APInt ProcModelMask; // A set of processor model indices.
   llvm::APInt OperandMask;   // An operand mask.
   const Record *Predicate;   // MCInstrPredicate definition.
-  PredicateInfo(llvm::APInt CpuMask, llvm::APInt Operands, const Record *Pred)
+  SchedulePredicateInfo(llvm::APInt CpuMask, llvm::APInt Operands, const Record *Pred)
       : ProcModelMask(CpuMask), OperandMask(Operands), Predicate(Pred) {}
 
-  bool operator==(const PredicateInfo &Other) const {
+  bool operator==(const SchedulePredicateInfo &Other) const {
     return ProcModelMask == Other.ProcModelMask &&
            OperandMask == Other.OperandMask && Predicate == Other.Predicate;
   }
@@ -348,7 +348,7 @@ struct PredicateInfo {
 /// There is at least one OpcodeInfo object for every opcode specified by a
 /// TIPredicate definition.
 class OpcodeInfo {
-  std::vector<PredicateInfo> Predicates;
+  std::vector<SchedulePredicateInfo> Predicates;
 
   OpcodeInfo(const OpcodeInfo &Other) = delete;
   OpcodeInfo &operator=(const OpcodeInfo &Other) = delete;
@@ -358,7 +358,7 @@ public:
   OpcodeInfo &operator=(OpcodeInfo &&Other) = default;
   OpcodeInfo(OpcodeInfo &&Other) = default;
 
-  ArrayRef<PredicateInfo> getPredicates() const { return Predicates; }
+  ArrayRef<SchedulePredicateInfo> getPredicates() const { return Predicates; }
 
   void addPredicateForProcModel(const llvm::APInt &CpuMask,
                                 const llvm::APInt &OperandMask,

@@ -467,7 +467,7 @@ void STIPredicateExpander::expandOpcodeGroup(raw_ostream &OS,
                                              const OpcodeGroup &Group,
                                              bool ShouldUpdateOpcodeMask) {
   const OpcodeInfo &OI = Group.getOpcodeInfo();
-  for (const PredicateInfo &PI : OI.getPredicates()) {
+  for (const SchedulePredicateInfo &PI : OI.getPredicates()) {
     const APInt &ProcModelMask = PI.ProcModelMask;
     bool FirstProcID = true;
     for (unsigned I = 0, E = ProcModelMask.getActiveBits(); I < E; ++I) {
