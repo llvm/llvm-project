@@ -106,6 +106,7 @@
 #define readdir __readdir30
 #define readdir_r __readdir_r30
 #define scandir __scandir30
+#define scandirat __scandirat30
 #define setitimer __setitimer50
 #define setlocale __setlocale50
 #define shmctl __shmctl50
@@ -4227,6 +4228,59 @@ INTERCEPTOR(int, scandir, char *dirp, __sanitizer_dirent ***namelist,
 #define INIT_SCANDIR
 #endif
 
+#if SANITIZER_INTERCEPT_SCANDIRAT
+typedef int (*scandirat_filter_f)(const struct __sanitizer_dirent *);
+typedef int (*scandirat_compar_f)(const struct __sanitizer_dirent **,
+                                const struct __sanitizer_dirent **);
+
+static THREADLOCAL scandirat_filter_f scandirat_filter;
+static THREADLOCAL scandirat_compar_f scandirat_compar;
+
+static int wrapped_scandirat_filter(const struct __sanitizer_dirent *dir) {
+  COMMON_INTERCEPTOR_UNPOISON_PARAM(1);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(dir, __sanitizer_dirsiz(dir));
+  return scandirat_filter(dir);
+}
+
+static int wrapped_scandirat_compar(const struct __sanitizer_dirent **a,
+                                  const struct __sanitizer_dirent **b) {
+  COMMON_INTERCEPTOR_UNPOISON_PARAM(2);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(a, sizeof(*a));
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(*a, __sanitizer_dirsiz(*a));
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(b, sizeof(*b));
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(*b, __sanitizer_dirsiz(*b));
+  return scandirat_compar(a, b);
+}
+
+INTERCEPTOR(int, scandirat, int dirfd, char *dirp, __sanitizer_dirent ***namelist,
+            scandirat_filter_f filter, scandirat_compar_f compar) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, scandirat, dirfd, dirp, namelist, filter, compar);
+  if (dirp) COMMON_INTERCEPTOR_READ_RANGE(ctx, dirp, internal_strlen(dirp) + 1);
+  scandirat_filter = filter;
+  scandirat_compar = compar;
+  // FIXME: under ASan the call below may write to freed memory and corrupt
+  // its metadata. See
+  // https://github.com/google/sanitizers/issues/321.
+  int res = REAL(scandirat)(dirfd, dirp, namelist,
+                          filter ? wrapped_scandirat_filter : nullptr,
+                          compar ? wrapped_scandirat_compar : nullptr);
+  scandirat_filter = nullptr;
+  scandirat_compar = nullptr;
+  if (namelist && res > 0) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, namelist, sizeof(*namelist));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *namelist, sizeof(**namelist) * res);
+    for (int i = 0; i < res; ++i)
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (*namelist)[i],
+                                     __sanitizer_dirsiz((*namelist)[i]));
+  }
+  return res;
+}
+#define INIT_SCANDIRAT COMMON_INTERCEPT_FUNCTION(scandirat);
+#else
+#define INIT_SCANDIRAT
+#endif
+
 #if SANITIZER_INTERCEPT_SCANDIR64
 typedef int (*scandir64_filter_f)(const struct __sanitizer_dirent64 *);
 typedef int (*scandir64_compar_f)(const struct __sanitizer_dirent64 **,
@@ -4279,6 +4333,60 @@ INTERCEPTOR(int, scandir64, char *dirp, __sanitizer_dirent64 ***namelist,
 #define INIT_SCANDIR64 COMMON_INTERCEPT_FUNCTION(scandir64);
 #else
 #define INIT_SCANDIR64
+#endif
+
+#if SANITIZER_INTERCEPT_SCANDIRAT64
+typedef int (*scandirat64_filter_f)(const struct __sanitizer_dirent64 *);
+typedef int (*scandirat64_compar_f)(const struct __sanitizer_dirent64 **,
+                                    const struct __sanitizer_dirent64 **);
+
+static THREADLOCAL scandirat64_filter_f scandirat64_filter;
+static THREADLOCAL scandirat64_compar_f scandirat64_compar;
+
+static int wrapped_scandirat64_filter(const struct __sanitizer_dirent64 *dir) {
+  COMMON_INTERCEPTOR_UNPOISON_PARAM(1);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(dir, __sanitizer_dirsiz(dir));
+  return scandirat64_filter(dir);
+}
+
+static int wrapped_scandirat64_compar(const struct __sanitizer_dirent64 **a,
+                                      const struct __sanitizer_dirent64 **b) {
+  COMMON_INTERCEPTOR_UNPOISON_PARAM(2);
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(a, sizeof(*a));
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(*a, __sanitizer_dirsiz(*a));
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(b, sizeof(*b));
+  COMMON_INTERCEPTOR_INITIALIZE_RANGE(*b, __sanitizer_dirsiz(*b));
+  return scandirat64_compar(a, b);
+}
+
+INTERCEPTOR(int, scandirat64, int dirfd, char *dirp, __sanitizer_dirent64 ***namelist,
+            scandirat64_filter_f filter, scandirat64_compar_f compar) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, scandirat64, dirfd, dirp, namelist, filter, compar);
+  if (dirp) COMMON_INTERCEPTOR_READ_RANGE(ctx, dirp, internal_strlen(dirp) + 1);
+  scandirat64_filter = filter;
+  scandirat64_compar = compar;
+  // FIXME: under ASan the call below may write to freed memory and corrupt
+  // its metadata. See
+  // https://github.com/google/sanitizers/issues/321.
+  int res =
+      REAL(scandirat64)(dirfd, dirp, namelist,
+                        filter ? wrapped_scandirat64_filter : nullptr,
+                        compar ? wrapped_scandirat64_compar : nullptr);
+  scandirat64_filter = nullptr;
+  scandirat64_compar = nullptr;
+  if (namelist && res > 0) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, namelist, sizeof(*namelist));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *namelist, sizeof(**namelist) * res);
+    for (int i = 0; i < res; ++i)
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (*namelist)[i],
+                                     __sanitizer_dirsiz((*namelist)[i]));
+  }
+  return res;
+}
+#define INIT_SCANDIRAT64 COMMON_INTERCEPT_FUNCTION(scandirat64);
+#else
+#define INIT_SCANDIRAT64
 #endif
 
 #if SANITIZER_INTERCEPT_GETGROUPS
@@ -10526,7 +10634,9 @@ static void InitializeCommonInterceptors() {
   INIT_STRERROR_R;
   INIT_XPG_STRERROR_R;
   INIT_SCANDIR;
+  INIT_SCANDIRAT;
   INIT_SCANDIR64;
+  INIT_SCANDIRAT64;
   INIT_GETGROUPS;
   INIT_POLL;
   INIT_PPOLL;
