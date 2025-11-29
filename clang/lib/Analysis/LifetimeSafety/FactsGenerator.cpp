@@ -223,6 +223,10 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
     // origin of this UnaryOperator expression.
     killAndFlowOrigin(*UO, *SubExpr);
   }
+  if (UO->getOpcode() == UO_Deref) {
+    const Expr *SubExpr = UO->getSubExpr();
+    killAndFlowOrigin(*UO, *SubExpr);
+  }
 }
 
 void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {

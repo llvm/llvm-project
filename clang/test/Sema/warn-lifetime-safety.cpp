@@ -596,10 +596,10 @@ const int* return_pointer_to_parameter_via_reference(int a, int b, bool cond) {
     const int* d = &c;
     return d;                     // expected-note 2 {{returned here}}
 }
-// FIXME: Dereference of a pointer does not track the reference.
+
 const int& return_pointer_to_parameter_via_reference_1(int a) {
-    const int* d = &a;
-    return *d;
+    const int* d = &a; // expected-warning {{address of stack memory is returned later}}
+    return *d;    // expected-note {{returned here}}
 }
 
 const int& get_ref_to_local() {
@@ -1118,24 +1118,24 @@ struct MyObjStorage {
   const MyObj *end() const { return objs + 1; }
 };
 
-// FIXME: Detect use-after-scope. Dereference pointer does not propagate the origins.
 void range_based_for_use_after_scope() {
   View v;
   {
     MyObjStorage s;
-    for (const MyObj &o : s) {
+    for (const MyObj &o : s) { // expected-warning {{object whose reference is captured does not live long enough}}
       v = o;
     }
-  }
-  v.use();
+  } // expected-note {{destroyed here}}
+  v.use(); // expected-note {{later used here}}
 }
-// FIXME: Detect use-after-return. Dereference pointer does not propagate the origins.
+
 View range_based_for_use_after_return() {
   MyObjStorage s;
-  for (const MyObj &o : s) {
-    return o;
+  for (const MyObj &o : s) { // expected-warning {{address of stack memory is returned later}}
+    return o;  // expected-note {{returned here}}
   }
-  return *s.begin();
+  return *s.begin();  // expected-warning {{address of stack memory is returned later}}
+                      // expected-note@-1 {{returned here}}
 }
 
 void range_based_for_not_reference() {
