@@ -197,3 +197,7 @@ fmmla v1.8h, v2.16b, v3.16b
 .arch_extension f8f32mm
 fmmla v1.4s, v2.16b, v3.16b
 // CHECK: fmmla v1.4s, v2.16b, v3.16b
+
+.arch_extension dit
+msr DIT, #1
+// CHECK: msr DIT, #1
