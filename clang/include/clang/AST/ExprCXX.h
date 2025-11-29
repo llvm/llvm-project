@@ -44,6 +44,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -5509,35 +5510,34 @@ public:
 ///  - an id-expression.
 class CXXReflectExpr : public Expr {
 
-  // Source locations.
-  SourceLocation OperatorLoc;
-  SourceRange OperandRange;
+  // TODO(Reflection): add support for TemplateReference, NamespaceReference and
+  // DeclRefExpr
+  using operand_type = llvm::PointerUnion<const TypeLoc *>;
 
-  CXXReflectExpr(const ASTContext &C, QualType T, QualType Operand);
-  CXXReflectExpr(const ASTContext &C, QualType T, Decl *Operand);
+  SourceLocation CaretCaretLoc;
+  operand_type Operand;
+
+  CXXReflectExpr(SourceLocation CaretCaretLoc, const TypeLoc *TL);
   CXXReflectExpr(EmptyShell Empty);
 
 public:
   static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
-                                SourceLocation OperandLoc, QualType Operand);
-
-  static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
-                                SourceLocation OperandLoc, Decl *Operand);
+                                TypeLoc *TL);
 
   static CXXReflectExpr *CreateEmpty(ASTContext &C);
 
-  SourceLocation getBeginLoc() const LLVM_READONLY { return OperatorLoc; }
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
+        .Case<const TypeLoc *>([](auto *Ptr) { return Ptr->getBeginLoc(); });
+  }
+
   SourceLocation getEndLoc() const LLVM_READONLY {
-    return OperandRange.getEnd();
+    return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
+        .Case<const TypeLoc *>([](auto *Ptr) { return Ptr->getEndLoc(); });
   }
 
   /// Returns location of the '^^'-operator.
-  SourceLocation getOperatorLoc() const { return OperatorLoc; }
-  SourceRange getOperandRange() const { return OperandRange; }
-
-  /// Sets the location of the '^^'-operator.
-  void setOperatorLoc(SourceLocation L) { OperatorLoc = L; }
-  void setOperandRange(SourceRange R) { OperandRange = R; }
+  SourceLocation getOperatorLoc() const { return CaretCaretLoc; }
 
   child_range children() {
     // TODO(Reflection)

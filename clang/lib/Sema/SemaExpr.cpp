@@ -17781,25 +17781,14 @@ void Sema::PushExpressionEvaluationContextForFunction(
   }
 }
 
-ExprResult Sema::ActOnCXXReflectExpr(SourceLocation OpLoc,
-                                     TypeSourceInfo *TSI) {
-  return BuildCXXReflectExpr(OpLoc, TSI->getTypeLoc().getBeginLoc(),
-                             TSI->getType());
+ExprResult Sema::ActOnCXXReflectExpr(SourceLocation CaretCaretLoc,
+                                     TypeLoc *TL) {
+  return BuildCXXReflectExpr(CaretCaretLoc, TL);
 }
 
-ExprResult Sema::ActOnCXXReflectExpr(SourceLocation OpLoc,
-                                     SourceLocation OperandLoc, Decl *D) {
-  return BuildCXXReflectExpr(OpLoc, OperandLoc, D);
-}
-
-ExprResult Sema::BuildCXXReflectExpr(SourceLocation OperatorLoc,
-                                     SourceLocation OperandLoc, QualType T) {
-  return CXXReflectExpr::Create(Context, OperatorLoc, OperandLoc, T);
-}
-
-ExprResult Sema::BuildCXXReflectExpr(SourceLocation OperatorLoc,
-                                     SourceLocation OperandLoc, Decl *D) {
-  return CXXReflectExpr::Create(Context, OperatorLoc, OperandLoc, D);
+ExprResult Sema::BuildCXXReflectExpr(SourceLocation CaretCaretLoc,
+                                     TypeLoc *TL) {
+  return CXXReflectExpr::Create(Context, CaretCaretLoc, TL);
 }
 
 namespace {

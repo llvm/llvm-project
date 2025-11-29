@@ -1939,34 +1939,17 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
   return new (Mem) TypeTraitExpr(EmptyShell(), IsStoredAsBool);
 }
 
-CXXReflectExpr::CXXReflectExpr(const ASTContext &C, QualType T,
-                               QualType Operand)
-    : Expr(CXXReflectExprClass, T, VK_PRValue, OK_Ordinary) {}
-
-CXXReflectExpr::CXXReflectExpr(const ASTContext &C, QualType T, Decl *Operand)
-    : Expr(CXXReflectExprClass, T, VK_PRValue, OK_Ordinary) {}
-
 CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
     : Expr(CXXReflectExprClass, Empty) {}
 
-CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
-                                       SourceLocation OperatorLoc,
-                                       SourceLocation OperandLoc,
-                                       QualType Operand) {
-  CXXReflectExpr *E = new (C) CXXReflectExpr(C, C.VoidTy, Operand);
-  E->setOperatorLoc(OperatorLoc);
-  E->setOperandRange(OperandLoc);
-  return E;
-}
+CXXReflectExpr::CXXReflectExpr(SourceLocation CaretCaretLoc, const TypeLoc *TL)
+    : Expr(CXXReflectExprClass, TL->getType(), VK_PRValue, OK_Ordinary),
+      CaretCaretLoc(CaretCaretLoc), Operand(TL) {}
 
 CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
-                                       SourceLocation OperatorLoc,
-                                       SourceLocation OperandLoc,
-                                       Decl *Operand) {
-  CXXReflectExpr *E = new (C) CXXReflectExpr(C, C.VoidTy, Operand);
-  E->setOperatorLoc(OperatorLoc);
-  E->setOperandRange(OperandLoc);
-  return E;
+                                       SourceLocation CaretCaretLoc,
+                                       TypeLoc *TL) {
+  return new (C) CXXReflectExpr(CaretCaretLoc, TL);
 }
 
 CXXReflectExpr *CXXReflectExpr::CreateEmpty(ASTContext &C) {

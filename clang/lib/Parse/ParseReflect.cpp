@@ -21,33 +21,8 @@ ExprResult Parser::ParseCXXReflectExpression() {
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
   assert(Tok.is(tok::caretcaret) && "expecting reflection operator ^^");
-  SourceLocation DoubleCaretLoc = ConsumeToken();
-
-  CXXScopeSpec SS;
-  if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHasErrors=*/false,
-                                     /*EnteringContext=*/false)) {
-    return ExprError();
-  }
-
+  SourceLocation CaretCaretLoc = ConsumeToken();
   SourceLocation OperandLoc = Tok.getLocation();
-
-  if (Tok.isOneOf(tok::identifier, tok::kw_operator, tok::kw_template,
-                  tok::tilde, tok::annot_template_id)) {
-    // TODO(reflection) : support parsing for
-    // - type-name::
-    // - nested-name-specifier identifier ::
-    // - namespace-name ::
-    // - nested-name-specifier template_opt simple-template-id
-    Diag(OperandLoc, diag::err_cannot_reflect_operand);
-    return ExprError();
-  } else if (SS.isValid() &&
-             SS.getScopeRep().getKind() == NestedNameSpecifier::Kind::Global) {
-    // global namespace ::.
-    Decl *TUDecl = Actions.getASTContext().getTranslationUnitDecl();
-    return Actions.ActOnCXXReflectExpr(DoubleCaretLoc, SourceLocation(),
-                                       TUDecl);
-  }
 
   if (isCXXTypeId(TentativeCXXTypeIdContext::AsReflectionOperand)) {
     TypeResult TR = ParseTypeName(/*TypeOf=*/nullptr);
@@ -63,10 +38,11 @@ ExprResult Parser::ParseCXXReflectExpression() {
     if (!TSI)
       TSI = Actions.getASTContext().getTrivialTypeSourceInfo(QT, OperandLoc);
 
+    TypeLoc TL = TSI->getTypeLoc();
     QualType Canon = QT.getCanonicalType();
-    if (Canon->isBuiltinType()) {
+    if (!TL.isNull() && Canon->isBuiltinType()) {
       // Only supports builtin types for now
-      return Actions.ActOnCXXReflectExpr(DoubleCaretLoc, TSI);
+      return Actions.ActOnCXXReflectExpr(CaretCaretLoc, &TL);
     }
   }
 

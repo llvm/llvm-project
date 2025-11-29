@@ -14737,14 +14737,9 @@ public:
   ///@{
 
 public:
-  ExprResult ActOnCXXReflectExpr(SourceLocation OpLoc, TypeSourceInfo *T);
-  ExprResult ActOnCXXReflectExpr(SourceLocation OpLoc,
-                                 SourceLocation OperandLoc, Decl *D);
+  ExprResult ActOnCXXReflectExpr(SourceLocation OpLoc, TypeLoc *TL);
 
-  ExprResult BuildCXXReflectExpr(SourceLocation OperatorLoc,
-                                 SourceLocation OperandLoc, QualType T);
-  ExprResult BuildCXXReflectExpr(SourceLocation OperatorLoc,
-                                 SourceLocation OperandLoc, Decl *D);
+  ExprResult BuildCXXReflectExpr(SourceLocation OperatorLoc, TypeLoc *TL);
 
 public:
   void PushSatisfactionStackEntry(const NamedDecl *D,
