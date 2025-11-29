@@ -252,6 +252,22 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode *node) {
 }
 
 llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateAndDereference(const ASTNode *node) {
+  auto valobj_or_err = Evaluate(node);
+  if (!valobj_or_err)
+    return valobj_or_err;
+  lldb::ValueObjectSP valobj = *valobj_or_err;
+
+  Status error;
+  if (valobj->GetCompilerType().IsReferenceType()) {
+    valobj = valobj->Dereference(error);
+    if (error.Fail())
+      return error.ToError();
+  }
+  return valobj;
+}
+
+llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const IdentifierNode *node) {
   lldb::DynamicValueType use_dynamic = m_use_dynamic;
 
@@ -477,13 +493,22 @@ Interpreter::Visit(const MemberOfNode *node) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const ArraySubscriptNode *node) {
-  auto lhs_or_err = Evaluate(node->GetBase());
-  if (!lhs_or_err)
-    return lhs_or_err;
-  lldb::ValueObjectSP base = *lhs_or_err;
+  auto base_or_err = Evaluate(node->GetBase());
+  if (!base_or_err)
+    return base_or_err;
+  lldb::ValueObjectSP base = *base_or_err;
+  auto idx_or_err = EvaluateAndDereference(node->GetIndex());
+  if (!idx_or_err)
+    return idx_or_err;
+  lldb::ValueObjectSP idx = *idx_or_err;
+
+  if (!idx->GetCompilerType().IsIntegerOrUnscopedEnumerationType()) {
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "array subscript is not an integer", node->GetLocation());
+  }
 
   StreamString var_expr_path_strm;
-  uint64_t child_idx = node->GetIndex();
+  uint64_t child_idx = idx->GetValueAsUnsigned(0);
   lldb::ValueObjectSP child_valobj_sp;
 
   bool is_incomplete_array = false;
@@ -613,29 +638,38 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
     return child_valobj_sp;
   }
 
-  int64_t signed_child_idx = node->GetIndex();
+  int64_t signed_child_idx = idx->GetValueAsSigned(0);
   return base->GetSyntheticArrayMember(signed_child_idx, true);
 }
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BitFieldExtractionNode *node) {
-  auto lhs_or_err = Evaluate(node->GetBase());
-  if (!lhs_or_err)
-    return lhs_or_err;
-  lldb::ValueObjectSP base = *lhs_or_err;
-  int64_t first_index = node->GetFirstIndex();
-  int64_t last_index = node->GetLastIndex();
+  auto base_or_err = EvaluateAndDereference(node->GetBase());
+  if (!base_or_err)
+    return base_or_err;
+  lldb::ValueObjectSP base = *base_or_err;
+  auto first_idx_or_err = EvaluateAndDereference(node->GetFirstIndex());
+  if (!first_idx_or_err)
+    return first_idx_or_err;
+  lldb::ValueObjectSP first_idx = *first_idx_or_err;
+  auto last_idx_or_err = EvaluateAndDereference(node->GetLastIndex());
+  if (!last_idx_or_err)
+    return last_idx_or_err;
+  lldb::ValueObjectSP last_idx = *last_idx_or_err;
+
+  if (!first_idx->GetCompilerType().IsIntegerOrUnscopedEnumerationType() ||
+      !last_idx->GetCompilerType().IsIntegerOrUnscopedEnumerationType()) {
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "bit index is not an integer", node->GetLocation());
+  }
+
+  int64_t first_index = first_idx->GetValueAsSigned(0);
+  int64_t last_index = last_idx->GetValueAsSigned(0);
 
   // if the format given is [high-low], swap range
   if (first_index > last_index)
     std::swap(first_index, last_index);
 
-  Status error;
-  if (base->GetCompilerType().IsReferenceType()) {
-    base = base->Dereference(error);
-    if (error.Fail())
-      return error.ToError();
-  }
   lldb::ValueObjectSP child_valobj_sp =
       base->GetSyntheticBitFieldChild(first_index, last_index, true);
   if (!child_valobj_sp) {

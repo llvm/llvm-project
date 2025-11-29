@@ -47,6 +47,8 @@ public:
 
 private:
   llvm::Expected<lldb::ValueObjectSP>
+  EvaluateAndDereference(const ASTNode *node);
+  llvm::Expected<lldb::ValueObjectSP>
   Visit(const IdentifierNode *node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const MemberOfNode *node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const UnaryOpNode *node) override;
