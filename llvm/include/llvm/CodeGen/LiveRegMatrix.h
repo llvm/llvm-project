@@ -135,6 +135,11 @@ public:
   /// the assignment and updates VirtRegMap accordingly.
   void unassign(const LiveInterval &VirtReg);
 
+  /// Unassign a virtual register by register number.
+  /// Unlike unassign(LiveInterval&), this safely handles cases where
+  /// the LiveInterval may be in an inconsistent state or about to be deleted.
+  void unassign(Register VirtReg);
+
   /// Returns true if the given \p PhysReg has any live intervals assigned.
   bool isPhysRegUsed(MCRegister PhysReg) const;
 
@@ -170,6 +175,10 @@ public:
   }
 
   Register getOneVReg(unsigned PhysReg) const;
+
+  /// This checks that each LiveInterval referenced in LiveIntervalUnion
+  /// actually exists in LiveIntervals and is not a dangling pointer.
+  bool isValid() const;
 };
 
 class LiveRegMatrixWrapperLegacy : public MachineFunctionPass {
