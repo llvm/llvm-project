@@ -461,10 +461,10 @@ public:
     *strides = SmallVector<int64_t>(spatialRank, 1);
   }
 
-  /// Get affine dimension expression for dimension i.
+  /// Get affine dimension expression for dimension `i`.
   AffineExpr dim(unsigned i) { return getAffineDimExpr(i, ctx); }
 
-  /// Build strided expression: base * stride[idx] + kernel * dilation[idx]
+  /// Build strided expression: base * stride[idx] + kernel * dilation[idx].
   AffineExpr strided(AffineExpr base, AffineExpr kernel, unsigned idx) {
     return base * (*strides)[idx] + kernel * (*dilations)[idx];
   }
@@ -480,8 +480,7 @@ public:
     return *this;
   }
 
-  /// Match expected indexing maps layout.
-  /// Returns *this for method chaining.
+  /// Match expected indexing maps layout. Returns *this for method chaining.
   ConvMatcherBuilder &expectMaps(ArrayRef<ArrayRef<AffineExpr>> maps) {
     if (matched)
       matched = convLayoutMatches(maps, indexingMaps, ctx);
@@ -512,9 +511,9 @@ public:
   }
 };
 
-// ---------------------------------------------
+//===----------------------------------------------------------------------===//
 // Matchers for specific convolution operation.
-// ---------------------------------------------
+//===----------------------------------------------------------------------===//
 
 // #inputMap = affine_map<(W, w) -> (W + w)>
 // #filterMap = affine_map<(W, w) -> (w)>
