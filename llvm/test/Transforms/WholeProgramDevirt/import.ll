@@ -9,11 +9,25 @@
 ; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-branch-funnel.yaml < %s | FileCheck --check-prefixes=CHECK,BRANCH-FUNNEL,BRANCH-FUNNEL-NOVCP %s
 
 ; Cutoff value is not explicitly set. Expect 3 remark messages.
-; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml < %s  2>&1 | grep "single-impl" | count 3
+; RUN: opt -S -passes=wholeprogramdevirt \
+; RUN: -wholeprogramdevirt-summary-action=import \
+; RUN: -pass-remarks=wholeprogramdevirt \
+; RUN: -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml \
+; RUN: < %s 2>&1 | grep "single-impl" | count 3
+;
 ; Cutoff value is set to 1. Expect one remark messages.
-; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-cutoff=1  -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml < %s  2>&1 | grep "single-impl" | count 1
+; RUN: opt -S -passes=wholeprogramdevirt \
+; RUN: -wholeprogramdevirt-summary-action=import -pass-remarks=wholeprogramdevirt \
+; RUN: -wholeprogramdevirt-cutoff=1 \
+; RUN: -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml < %s \
+; RUN: 2>&1 | grep "single-impl" | count 1
+;
 ; Cutoff value is explicitly set to zero. Expect no remark message.
-; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-cutoff=0  -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml < %s 2>&1  | FileCheck -implicit-check-not="remark" %s
+; RUN: opt -S -passes=wholeprogramdevirt \
+; RUN: -wholeprogramdevirt-summary-action=import \
+; RUN: -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-cutoff=0  \
+; RUN: -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml \
+; RUN: < %s 2>&1  | FileCheck -implicit-check-not="remark" %s
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
