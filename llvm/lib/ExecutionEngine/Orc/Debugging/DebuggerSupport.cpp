@@ -36,8 +36,10 @@ Error enableDebuggerSupport(LLJIT &J) {
   switch (TT.getObjectFormat()) {
   case Triple::ELF: {
     Error TargetSymErr = Error::success();
-    ObjLinkingLayer->addPlugin(
-        std::make_unique<ELFDebugObjectPlugin>(ES, false, true, TargetSymErr));
+    auto P =
+        std::make_unique<ELFDebugObjectPlugin>(ES, false, true, TargetSymErr);
+    if (!TargetSymErr)
+      ObjLinkingLayer->addPlugin(std::move(P));
     return TargetSymErr;
   }
   case Triple::MachO: {
