@@ -792,17 +792,6 @@ struct ScalarEnumerationTraits<FormatStyle::SpaceBeforeParensStyle> {
   }
 };
 
-template <> struct MappingTraits<FormatStyle::SpaceInCommentsOptions> {
-  static void mapping(IO &IO, FormatStyle::SpaceInCommentsOptions &Options) {
-    IO.mapOptional("AfterOpeningComment", Options.AfterOpeningComment);
-    IO.mapOptional("BeforeClosingComment", Options.BeforeClosingComment);
-    IO.mapOptional("AfterOpeningParamComment",
-                   Options.AfterOpeningParamComment);
-    IO.mapOptional("BeforeClosingParamComment",
-                   Options.BeforeClosingParamComment);
-  }
-};
-
 template <>
 struct ScalarEnumerationTraits<FormatStyle::SpaceInEmptyBracesStyle> {
   static void enumeration(IO &IO, FormatStyle::SpaceInEmptyBracesStyle &Value) {
@@ -821,6 +810,17 @@ template <> struct ScalarEnumerationTraits<FormatStyle::SpacesInAnglesStyle> {
     // For backward compatibility.
     IO.enumCase(Value, "false", FormatStyle::SIAS_Never);
     IO.enumCase(Value, "true", FormatStyle::SIAS_Always);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::SpacesInCommentsOptions> {
+  static void mapping(IO &IO, FormatStyle::SpacesInCommentsOptions &Options) {
+    IO.mapOptional("AfterOpeningComment", Options.AfterOpeningComment);
+    IO.mapOptional("BeforeClosingComment", Options.BeforeClosingComment);
+    IO.mapOptional("AfterOpeningParamComment",
+                   Options.AfterOpeningParamComment);
+    IO.mapOptional("BeforeClosingParamComment",
+                   Options.BeforeClosingParamComment);
   }
 };
 
@@ -1247,11 +1247,11 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpaceBeforeRangeBasedForLoopColon);
     IO.mapOptional("SpaceBeforeSquareBrackets",
                    Style.SpaceBeforeSquareBrackets);
-    IO.mapOptional("SpaceInComments", Style.SpaceInComments);
     IO.mapOptional("SpaceInEmptyBraces", Style.SpaceInEmptyBraces);
     IO.mapOptional("SpacesBeforeTrailingComments",
                    Style.SpacesBeforeTrailingComments);
     IO.mapOptional("SpacesInAngles", Style.SpacesInAngles);
+    IO.mapOptional("SpacesInComments", Style.SpacesInComments);
     IO.mapOptional("SpacesInContainerLiterals",
                    Style.SpacesInContainerLiterals);
     IO.mapOptional("SpacesInLineCommentPrefix",

@@ -4910,49 +4910,6 @@ struct FormatStyle {
   /// \version 7
   bool SpaceBeforeRangeBasedForLoopColon;
 
-  /// Specifies spacing behavior for different block comment forms.
-  struct SpaceInCommentsOptions {
-    /// Governs the space immediately after ``/*`` in regular block comments.
-    CommentSpaceMode AfterOpeningComment;
-    /// Governs the space before ``*/`` in regular block comments.
-    ///
-    /// .. code-block:: c++
-    ///
-    ///   // BeforeClosingComment: Always
-    ///   auto Value = foo(/* comment */);
-    CommentSpaceMode BeforeClosingComment;
-    /// Governs the space after ``/*`` in parameter comments such as
-    /// ``/*param=*/``.
-    CommentSpaceMode AfterOpeningParamComment;
-    /// Governs the space before ``*/`` in parameter comments.
-    ///
-    /// .. code-block:: c++
-    ///
-    ///   // BeforeClosingParamComment: Never
-    ///   auto Number = foo(/*param=*/42);
-    CommentSpaceMode BeforeClosingParamComment;
-
-    SpaceInCommentsOptions()
-        : AfterOpeningComment(CommentSpaceMode::Leave),
-          BeforeClosingComment(CommentSpaceMode::Leave),
-          AfterOpeningParamComment(CommentSpaceMode::Leave),
-          BeforeClosingParamComment(CommentSpaceMode::Leave) {}
-
-    constexpr bool operator==(const SpaceInCommentsOptions &R) const {
-      return AfterOpeningComment == R.AfterOpeningComment &&
-             BeforeClosingComment == R.BeforeClosingComment &&
-             AfterOpeningParamComment == R.AfterOpeningParamComment &&
-             BeforeClosingParamComment == R.BeforeClosingParamComment;
-    }
-  };
-
-  /// Controls whitespace around block comment delimiters and parameter-style
-  /// inline comments. Each field accepts a ``CommentSpaceMode``: ``Leave``
-  /// (preserve existing spacing, the default), ``Always`` (insert a single
-  /// space), or ``Never`` (remove all spaces).
-  /// \version 21
-  SpaceInCommentsOptions SpaceInComments;
-
   /// This option is **deprecated**. See ``Block`` of ``SpaceInEmptyBraces``.
   /// \version 10
   // bool SpaceInEmptyBlock;
@@ -5041,6 +4998,48 @@ struct FormatStyle {
   /// The SpacesInAnglesStyle to use for template argument lists.
   /// \version 3.4
   SpacesInAnglesStyle SpacesInAngles;
+
+  /// Specifies spacing behavior for different block comment forms.
+  struct SpacesInCommentsOptions {
+    /// Governs the space immediately after ``/*`` in regular block comments.
+    CommentSpaceMode AfterOpeningComment;
+    /// Governs the space before ``*/`` in regular block comments.
+    ///
+    /// .. code-block:: c++
+    ///
+    ///   // BeforeClosingComment: Always
+    ///   auto Value = foo(/* comment */);
+    CommentSpaceMode BeforeClosingComment;
+    /// Governs the space after ``/*`` in parameter comments such as
+    /// ``/*param=*/``.
+    CommentSpaceMode AfterOpeningParamComment;
+    /// Governs the space before ``*/`` in parameter comments.
+    ///
+    /// .. code-block:: c++
+    ///
+    ///   // BeforeClosingParamComment: Never
+    ///   auto Number = foo(/*param=*/42);
+    CommentSpaceMode BeforeClosingParamComment;
+
+    SpacesInCommentsOptions()
+        : AfterOpeningComment(CommentSpaceMode::Leave),
+          BeforeClosingComment(CommentSpaceMode::Leave),
+          AfterOpeningParamComment(CommentSpaceMode::Leave),
+          BeforeClosingParamComment(CommentSpaceMode::Leave) {}
+
+    constexpr bool operator==(const SpacesInCommentsOptions &R) const {
+      return AfterOpeningComment == R.AfterOpeningComment &&
+             BeforeClosingComment == R.BeforeClosingComment &&
+             AfterOpeningParamComment == R.AfterOpeningParamComment &&
+             BeforeClosingParamComment == R.BeforeClosingParamComment;
+    }
+  };
+  /// Controls whitespace around block comment delimiters and parameter-style
+  /// inline comments. Each field accepts a ``CommentSpaceMode``: ``Leave``
+  /// (preserve existing spacing, the default), ``Always`` (insert a single
+  /// space), or ``Never`` (remove all spaces).
+  /// \version 21
+  SpacesInCommentsOptions SpacesInComments;
 
   /// If ``true``, spaces will be inserted around if/for/switch/while
   /// conditions.
@@ -5667,10 +5666,10 @@ struct FormatStyle {
            SpaceBeforeRangeBasedForLoopColon ==
                R.SpaceBeforeRangeBasedForLoopColon &&
            SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
-           SpaceInComments == R.SpaceInComments &&
            SpaceInEmptyBraces == R.SpaceInEmptyBraces &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
+           SpacesInComments == R.SpacesInComments &&
            SpacesInContainerLiterals == R.SpacesInContainerLiterals &&
            SpacesInLineCommentPrefix.Minimum ==
                R.SpacesInLineCommentPrefix.Minimum &&

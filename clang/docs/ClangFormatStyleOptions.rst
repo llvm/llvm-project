@@ -6612,38 +6612,6 @@ the configuration (without a prefix: ``Auto``).
      int a [5];                    vs.      int a[5];
      int a [5][5];                 vs.      int a[5][5];
 
-.. _SpaceInComments:
-
-**SpaceInComments** (``SpaceInCommentsOptions``) :versionbadge:`clang-format 21` :ref:`¶ <SpaceInComments>`
-  Controls whitespace around block comment delimiters and parameter-style
-  inline comments. Each field accepts a ``CommentSpaceMode``: ``Leave``
-  (preserve existing spacing, the default), ``Always`` (insert a single
-  space), or ``Never`` (remove all spaces).
-
-  Nested configuration flags:
-
-  Specifies spacing behavior for different block comment forms.
-
-  * ``CommentSpaceMode AfterOpeningComment`` Governs the space immediately after ``/*`` in regular block comments.
-
-  * ``CommentSpaceMode BeforeClosingComment`` Governs the space before ``*/`` in regular block comments.
-
-    .. code-block:: c++
-
-      // BeforeClosingComment: Always
-      auto Value = foo(/* comment */);
-
-  * ``CommentSpaceMode AfterOpeningParamComment`` Governs the space after ``/*`` in parameter comments such as
-    ``/*param=*/``.
-
-  * ``CommentSpaceMode BeforeClosingParamComment`` Governs the space before ``*/`` in parameter comments.
-
-    .. code-block:: c++
-
-      // BeforeClosingParamComment: Never
-      auto Number = foo(/*param=*/42);
-
-
 .. _SpaceInEmptyBlock:
 
 **SpaceInEmptyBlock** (``Boolean``) :versionbadge:`clang-format 10` :ref:`¶ <SpaceInEmptyBlock>`
@@ -6757,6 +6725,38 @@ the configuration (without a prefix: ``Auto``).
   If ``true``, spaces may be inserted into C style casts.
   This option is **deprecated**. See ``InCStyleCasts`` of
   ``SpacesInParensOptions``.
+
+.. _SpacesInComments:
+
+**SpacesInComments** (``SpacesInCommentsOptions``) :versionbadge:`clang-format 21` :ref:`¶ <SpacesInComments>`
+  Controls whitespace around block comment delimiters and parameter-style
+  inline comments. Each field accepts a ``CommentSpaceMode``: ``Leave``
+  (preserve existing spacing, the default), ``Always`` (insert a single
+  space), or ``Never`` (remove all spaces).
+
+  Nested configuration flags:
+
+  Specifies spacing behavior for different block comment forms.
+
+  * ``CommentSpaceMode AfterOpeningComment`` Governs the space immediately after ``/*`` in regular block comments.
+
+  * ``CommentSpaceMode BeforeClosingComment`` Governs the space before ``*/`` in regular block comments.
+
+    .. code-block:: c++
+
+      // BeforeClosingComment: Always
+      auto Value = foo(/* comment */);
+
+  * ``CommentSpaceMode AfterOpeningParamComment`` Governs the space after ``/*`` in parameter comments such as
+    ``/*param=*/``.
+
+  * ``CommentSpaceMode BeforeClosingParamComment`` Governs the space before ``*/`` in parameter comments.
+
+    .. code-block:: c++
+
+      // BeforeClosingParamComment: Never
+      auto Number = foo(/*param=*/42);
+
 
 .. _SpacesInConditionalStatement:
 

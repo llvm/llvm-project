@@ -688,31 +688,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatementsExceptControlMacros);
 
-  CHECK_PARSE_NESTED_VALUE("AfterOpeningComment: Always", SpaceInComments,
-                           AfterOpeningComment,
-                           FormatStyle::CommentSpaceMode::Always);
-  CHECK_PARSE_NESTED_VALUE("AfterOpeningComment: Never", SpaceInComments,
-                           AfterOpeningComment,
-                           FormatStyle::CommentSpaceMode::Never);
-  CHECK_PARSE_NESTED_VALUE("BeforeClosingComment: Always", SpaceInComments,
-                           BeforeClosingComment,
-                           FormatStyle::CommentSpaceMode::Always);
-  CHECK_PARSE_NESTED_VALUE("BeforeClosingComment: Never", SpaceInComments,
-                           BeforeClosingComment,
-                           FormatStyle::CommentSpaceMode::Never);
-  CHECK_PARSE_NESTED_VALUE("AfterOpeningParamComment: Always", SpaceInComments,
-                           AfterOpeningParamComment,
-                           FormatStyle::CommentSpaceMode::Always);
-  CHECK_PARSE_NESTED_VALUE("AfterOpeningParamComment: Never", SpaceInComments,
-                           AfterOpeningParamComment,
-                           FormatStyle::CommentSpaceMode::Never);
-  CHECK_PARSE_NESTED_VALUE("BeforeClosingParamComment: Always", SpaceInComments,
-                           BeforeClosingParamComment,
-                           FormatStyle::CommentSpaceMode::Always);
-  CHECK_PARSE_NESTED_VALUE("BeforeClosingParamComment: Never", SpaceInComments,
-                           BeforeClosingParamComment,
-                           FormatStyle::CommentSpaceMode::Never);
-
   Style.SpaceInEmptyBraces = FormatStyle::SIEB_Never;
   CHECK_PARSE("SpaceInEmptyBraces: Always", SpaceInEmptyBraces,
               FormatStyle::SIEB_Always);
@@ -1090,6 +1065,31 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               "  Maximum: 1",
               SpacesInLineCommentPrefix.Maximum, 1u);
   EXPECT_EQ(Style.SpacesInLineCommentPrefix.Minimum, 1u);
+
+  CHECK_PARSE_NESTED_VALUE("AfterOpeningComment: Always", SpacesInComments,
+                           AfterOpeningComment,
+                           FormatStyle::CommentSpaceMode::Always);
+  CHECK_PARSE_NESTED_VALUE("AfterOpeningComment: Never", SpacesInComments,
+                           AfterOpeningComment,
+                           FormatStyle::CommentSpaceMode::Never);
+  CHECK_PARSE_NESTED_VALUE("BeforeClosingComment: Always", SpacesInComments,
+                           BeforeClosingComment,
+                           FormatStyle::CommentSpaceMode::Always);
+  CHECK_PARSE_NESTED_VALUE("BeforeClosingComment: Never", SpacesInComments,
+                           BeforeClosingComment,
+                           FormatStyle::CommentSpaceMode::Never);
+  CHECK_PARSE_NESTED_VALUE("AfterOpeningParamComment: Always", SpacesInComments,
+                           AfterOpeningParamComment,
+                           FormatStyle::CommentSpaceMode::Always);
+  CHECK_PARSE_NESTED_VALUE("AfterOpeningParamComment: Never", SpacesInComments,
+                           AfterOpeningParamComment,
+                           FormatStyle::CommentSpaceMode::Never);
+  CHECK_PARSE_NESTED_VALUE("BeforeClosingParamComment: Always",
+                           SpacesInComments, BeforeClosingParamComment,
+                           FormatStyle::CommentSpaceMode::Always);
+  CHECK_PARSE_NESTED_VALUE("BeforeClosingParamComment: Never", SpacesInComments,
+                           BeforeClosingParamComment,
+                           FormatStyle::CommentSpaceMode::Never);
 
   Style.SpacesInAngles = FormatStyle::SIAS_Always;
   CHECK_PARSE("SpacesInAngles: Never", SpacesInAngles, FormatStyle::SIAS_Never);

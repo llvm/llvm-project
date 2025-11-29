@@ -45,11 +45,11 @@ resolveCommentSpaceMode(CommentKind Kind,
 static std::pair<FormatStyle::CommentSpaceMode, FormatStyle::CommentSpaceMode>
 getCommentSpaceModes(CommentKind Kind, const FormatStyle &Style) {
   const auto OpeningMode =
-      resolveCommentSpaceMode(Kind, Style.SpaceInComments.AfterOpeningComment,
-                              Style.SpaceInComments.AfterOpeningParamComment);
+      resolveCommentSpaceMode(Kind, Style.SpacesInComments.AfterOpeningComment,
+                              Style.SpacesInComments.AfterOpeningParamComment);
   const auto ClosingMode =
-      resolveCommentSpaceMode(Kind, Style.SpaceInComments.BeforeClosingComment,
-                              Style.SpaceInComments.BeforeClosingParamComment);
+      resolveCommentSpaceMode(Kind, Style.SpacesInComments.BeforeClosingComment,
+                              Style.SpacesInComments.BeforeClosingParamComment);
   return {OpeningMode, ClosingMode};
 }
 
@@ -649,7 +649,7 @@ BreakableBlockComment::BreakableBlockComment(
         // trailing */. We also need to preserve whitespace, so that */ is
         // correctly indented.
         LastLineNeedsDecoration = false;
-        if (Style.SpaceInComments.BeforeClosingComment !=
+        if (Style.SpacesInComments.BeforeClosingComment !=
             FormatStyle::CommentSpaceMode::Leave) {
           // Align the closing '*/' with the beginning of the comment when
           // spacing is explicitly controlled.

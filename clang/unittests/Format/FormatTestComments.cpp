@@ -4687,31 +4687,31 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
             format(Code, Style));
 }
 
-TEST_F(FormatTestComments, SpaceInBlockComments) {
+TEST_F(FormatTestComments, SpacesInBlockComments) {
   FormatStyle Style = getLLVMStyle();
-  Style.SpaceInComments.AfterOpeningComment =
+  Style.SpacesInComments.AfterOpeningComment =
       FormatStyle::CommentSpaceMode::Always;
   verifyFormat("/* comment */", "/*comment */", Style);
   verifyFormat("/* */", "/*   */", Style);
-  Style.SpaceInComments.AfterOpeningComment =
+  Style.SpacesInComments.AfterOpeningComment =
       FormatStyle::CommentSpaceMode::Never;
   verifyFormat("/*comment */", "/* comment */", Style);
   verifyFormat("/**/", "/*   */", Style);
 
   Style = getLLVMStyle();
-  Style.SpaceInComments.BeforeClosingComment =
+  Style.SpacesInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Always;
   verifyFormat("/* comment */", "/* comment*/", Style);
   verifyFormat("/* */", "/*   */", Style);
-  Style.SpaceInComments.BeforeClosingComment =
+  Style.SpacesInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Never;
   verifyFormat("/* comment*/", "/* comment */", Style);
   verifyFormat("/**/", "/*   */", Style);
 
   Style = getLLVMStyle();
-  Style.SpaceInComments.AfterOpeningComment =
+  Style.SpacesInComments.AfterOpeningComment =
       FormatStyle::CommentSpaceMode::Always;
-  Style.SpaceInComments.BeforeClosingComment =
+  Style.SpacesInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Always;
   verifyFormat("/**doc*/", "/**doc*/", Style);
   verifyFormat("/* comment\n"
@@ -4739,9 +4739,9 @@ TEST_F(FormatTestComments, SpaceInBlockComments) {
   verifyFormat("/* */", "/*   */", Style);
 
   Style = getLLVMStyle();
-  Style.SpaceInComments.AfterOpeningComment =
+  Style.SpacesInComments.AfterOpeningComment =
       FormatStyle::CommentSpaceMode::Never;
-  Style.SpaceInComments.BeforeClosingComment =
+  Style.SpacesInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Never;
   verifyFormat("/** doc */", "/** doc */", Style);
   verifyFormat("/*comment\n"
@@ -4771,43 +4771,43 @@ TEST_F(FormatTestComments, SpaceInBlockComments) {
   Style = getLLVMStyleWithColumns(21);
   Style.ReflowComments = FormatStyle::RCS_Always;
 
-  Style.SpaceInComments.AfterOpeningComment =
+  Style.SpacesInComments.AfterOpeningComment =
       FormatStyle::CommentSpaceMode::Always;
   verifyFormat("/* long long long\n"
                " * long long */",
                "/*long long long long long */", Style);
-  Style.SpaceInComments.AfterOpeningComment =
+  Style.SpacesInComments.AfterOpeningComment =
       FormatStyle::CommentSpaceMode::Never;
   verifyFormat("/*long long long long\n"
                " * long */",
                "/* long long long long long */", Style);
-  Style.SpaceInComments.AfterOpeningComment =
+  Style.SpacesInComments.AfterOpeningComment =
       FormatStyle::CommentSpaceMode::Leave;
 
-  Style.SpaceInComments.BeforeClosingComment =
+  Style.SpacesInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Always;
   verifyFormat("/* long long long\n"
                " * long long */",
                "/* long long long long long*/", Style);
-  Style.SpaceInComments.BeforeClosingComment =
+  Style.SpacesInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Never;
   verifyFormat("/* long long long\n"
                " * long long*/",
                "/* long long long long long */", Style);
-  Style.SpaceInComments.BeforeClosingComment =
+  Style.SpacesInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Leave;
 
-  Style.SpaceInComments.AfterOpeningComment =
+  Style.SpacesInComments.AfterOpeningComment =
       FormatStyle::CommentSpaceMode::Always;
-  Style.SpaceInComments.BeforeClosingComment =
+  Style.SpacesInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Always;
   verifyFormat("/* long long long\n"
                " * long long */",
                "/*long long long long long*/", Style);
 
-  Style.SpaceInComments.AfterOpeningComment =
+  Style.SpacesInComments.AfterOpeningComment =
       FormatStyle::CommentSpaceMode::Never;
-  Style.SpaceInComments.BeforeClosingComment =
+  Style.SpacesInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Never;
   verifyFormat("/*long long long long\n"
                " * long*/",
@@ -4815,32 +4815,32 @@ TEST_F(FormatTestComments, SpaceInBlockComments) {
 
   Style = getLLVMStyleWithColumns(16);
   Style.ReflowComments = FormatStyle::RCS_Always;
-  Style.SpaceInComments.AfterOpeningComment =
+  Style.SpacesInComments.AfterOpeningComment =
       FormatStyle::CommentSpaceMode::Always;
   verifyFormat("/* word word\n"
                " * word*/",
                "/*\tword word word*/", Style);
 
-  Style.SpaceInComments.AfterOpeningComment =
+  Style.SpacesInComments.AfterOpeningComment =
       FormatStyle::CommentSpaceMode::Leave;
-  Style.SpaceInComments.BeforeClosingComment =
+  Style.SpacesInComments.BeforeClosingComment =
       FormatStyle::CommentSpaceMode::Always;
   verifyFormat("/*word word\n"
                " * word */",
                "/*word word word\t*/", Style);
 }
 
-TEST_F(FormatTestComments, SpaceInBlockCommentsParamOverrides) {
+TEST_F(FormatTestComments, SpacesInBlockCommentsParamOverrides) {
   FormatStyle Style = getLLVMStyle();
-  Style.SpaceInComments.AfterOpeningParamComment =
+  Style.SpacesInComments.AfterOpeningParamComment =
       FormatStyle::CommentSpaceMode::Always;
-  Style.SpaceInComments.BeforeClosingParamComment =
+  Style.SpacesInComments.BeforeClosingParamComment =
       FormatStyle::CommentSpaceMode::Always;
   verifyFormat("call(/* Arg= */value);", "call(/*Arg=*/value);", Style);
   verifyFormat("/*comment*/", "/*comment*/", Style);
-  Style.SpaceInComments.AfterOpeningParamComment =
+  Style.SpacesInComments.AfterOpeningParamComment =
       FormatStyle::CommentSpaceMode::Never;
-  Style.SpaceInComments.BeforeClosingParamComment =
+  Style.SpacesInComments.BeforeClosingParamComment =
       FormatStyle::CommentSpaceMode::Never;
   verifyFormat("call(/*Arg=*/value);", "call(/* Arg= */value);", Style);
   verifyFormat("/* comment */", "/* comment */", Style);
