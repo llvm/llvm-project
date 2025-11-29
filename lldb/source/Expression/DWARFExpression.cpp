@@ -861,64 +861,6 @@ ResolveLoadAddress(ExecutionContext *exe_ctx, lldb::ModuleSP &module_sp,
   return load_addr;
 }
 
-static llvm::Error Evaluate_DW_OP_deref(DWARFExpression::Stack &stack,
-                                        ExecutionContext *exe_ctx,
-                                        lldb::ModuleSP module_sp,
-                                        Process *process) {
-  if (stack.empty())
-    return llvm::createStringError("expression stack empty for DW_OP_deref");
-
-  const Value::ValueType value_type = stack.back().GetValueType();
-  switch (value_type) {
-  case Value::ValueType::HostAddress: {
-    void *src = (void *)stack.back().GetScalar().ULongLong();
-    intptr_t ptr;
-    ::memcpy(&ptr, src, sizeof(void *));
-    stack.back().GetScalar() = ptr;
-    stack.back().ClearContext();
-  } break;
-  case Value::ValueType::FileAddress: {
-    auto file_addr = stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-    Address so_addr;
-    auto maybe_load_addr = ResolveLoadAddress(exe_ctx, module_sp, "DW_OP_deref",
-                                              file_addr, so_addr);
-    if (!maybe_load_addr)
-      return maybe_load_addr.takeError();
-    stack.back().GetScalar() = *maybe_load_addr;
-    // Fall through to load address promotion code below.
-  }
-    [[fallthrough]];
-  case Value::ValueType::Scalar:
-    // Promote Scalar to LoadAddress and fall through.
-    stack.back().SetValueType(Value::ValueType::LoadAddress);
-    [[fallthrough]];
-  case Value::ValueType::LoadAddress: {
-    if (!exe_ctx)
-      return llvm::createStringError("NULL execution context for DW_OP_deref");
-    if (!process)
-      return llvm::createStringError("NULL process for DW_OP_deref");
-    lldb::addr_t pointer_addr =
-        stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-    Status error;
-    lldb::addr_t pointer_value =
-        process->ReadPointerFromMemory(pointer_addr, error);
-    if (pointer_value == LLDB_INVALID_ADDRESS)
-      return llvm::joinErrors(
-          llvm::createStringError(
-              "Failed to dereference pointer from 0x%" PRIx64
-              " for DW_OP_deref",
-              pointer_addr),
-          error.takeError());
-    stack.back().GetScalar() = pointer_value;
-    stack.back().ClearContext();
-  } break;
-  case Value::ValueType::Invalid:
-    return llvm::createStringError("invalid value type for DW_OP_deref");
-  }
-
-  return llvm::Error::success();
-}
-
 /// Helper function to move common code used to load sized data from a uint8_t
 /// buffer.
 ///
@@ -937,6 +879,139 @@ static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
     return addr_data.GetMaxU64(&addr_data_offset, size);
   else
     return addr_data.GetAddress(&addr_data_offset);
+}
+
+static llvm::Error Evaluate_DW_OP_deref_size(DWARFExpression::Stack &stack,
+                                             ExecutionContext *exe_ctx,
+                                             lldb::ModuleSP module_sp,
+                                             Process *process, Target *target,
+                                             uint8_t size) {
+  if (stack.empty()) {
+    return llvm::createStringError(
+        "expression stack empty for DW_OP_deref_size");
+  }
+
+  if (size > 8) {
+    return llvm::createStringError(
+        "Invalid address size for DW_OP_deref_size: %d\n", size);
+  }
+  Value::ValueType value_type = stack.back().GetValueType();
+  switch (value_type) {
+  case Value::ValueType::HostAddress: {
+    void *src = (void *)stack.back().GetScalar().ULongLong();
+    intptr_t ptr;
+    ::memcpy(&ptr, src, sizeof(void *));
+    // I can't decide whether the size operand should apply to the bytes in
+    // their
+    // lldb-host endianness or the target endianness.. I doubt this'll ever
+    // come up but I'll opt for assuming big endian regardless.
+    switch (size) {
+    case 1:
+      ptr = ptr & 0xff;
+      break;
+    case 2:
+      ptr = ptr & 0xffff;
+      break;
+    case 3:
+      ptr = ptr & 0xffffff;
+      break;
+    case 4:
+      ptr = ptr & 0xffffffff;
+      break;
+    // the casts are added to work around the case where intptr_t is a 32
+    // bit quantity;
+    // presumably we won't hit the 5..7 cases if (void*) is 32-bits in this
+    // program.
+    case 5:
+      ptr = (intptr_t)ptr & 0xffffffffffULL;
+      break;
+    case 6:
+      ptr = (intptr_t)ptr & 0xffffffffffffULL;
+      break;
+    case 7:
+      ptr = (intptr_t)ptr & 0xffffffffffffffULL;
+      break;
+    default:
+      break;
+    }
+    stack.back().GetScalar() = ptr;
+    stack.back().ClearContext();
+  } break;
+  case Value::ValueType::FileAddress: {
+    auto file_addr = stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+    Address so_addr;
+    auto maybe_load_addr = ResolveLoadAddress(
+        exe_ctx, module_sp, "DW_OP_deref_size", file_addr, so_addr,
+        /*check_sectionoffset=*/true);
+
+    if (!maybe_load_addr)
+      return maybe_load_addr.takeError();
+
+    addr_t load_addr = *maybe_load_addr;
+
+    if (load_addr == LLDB_INVALID_ADDRESS && so_addr.IsSectionOffset()) {
+      uint8_t addr_bytes[8];
+      Status error;
+
+      if (target && target->ReadMemory(so_addr, &addr_bytes, size, error,
+                                       /*force_live_memory=*/false) == size) {
+        ObjectFile *objfile = module_sp->GetObjectFile();
+
+        stack.back().GetScalar() = DerefSizeExtractDataHelper(
+            addr_bytes, size, objfile->GetByteOrder(), size);
+        stack.back().ClearContext();
+        break;
+      } else {
+        return llvm::createStringError(
+            "Failed to dereference pointer for DW_OP_deref_size: "
+            "%s\n",
+            error.AsCString());
+      }
+    }
+    stack.back().GetScalar() = load_addr;
+    // Fall through to load address promotion code below.
+  }
+
+    [[fallthrough]];
+  case Value::ValueType::Scalar:
+    // Promote Scalar to LoadAddress and fall through.
+    stack.back().SetValueType(Value::ValueType::LoadAddress);
+    [[fallthrough]];
+  case Value::ValueType::LoadAddress:
+    if (exe_ctx) {
+      if (process) {
+        lldb::addr_t pointer_addr =
+            stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+        uint8_t addr_bytes[sizeof(lldb::addr_t)];
+        Status error;
+        if (process->ReadMemory(pointer_addr, &addr_bytes, size, error) ==
+            size) {
+
+          stack.back().GetScalar() = DerefSizeExtractDataHelper(
+              addr_bytes, sizeof(addr_bytes), process->GetByteOrder(), size);
+          stack.back().ClearContext();
+        } else {
+          return llvm::createStringError(
+              "Failed to dereference pointer from 0x%" PRIx64
+              " for DW_OP_deref: %s\n",
+              pointer_addr, error.AsCString());
+        }
+      } else {
+
+        return llvm::createStringError("NULL process for DW_OP_deref_size");
+      }
+    } else {
+      return llvm::createStringError(
+          "NULL execution context for DW_OP_deref_size");
+    }
+    break;
+
+  case Value::ValueType::Invalid:
+
+    return llvm::createStringError("invalid value for DW_OP_deref_size");
+  }
+
+  return llvm::Error::success();
 }
 
 llvm::Expected<Value> DWARFExpression::Evaluate(
@@ -1079,8 +1154,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // retrieved from the dereferenced address is the size of an address on the
     // target machine.
     case DW_OP_deref: {
-      if (llvm::Error err =
-              Evaluate_DW_OP_deref(stack, exe_ctx, module_sp, process))
+      size_t size = opcodes.GetAddressByteSize();
+      if (llvm::Error err = Evaluate_DW_OP_deref_size(stack, exe_ctx, module_sp,
+                                                      process, target, size))
         return err;
     } break;
 
@@ -1097,131 +1173,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // the size of an address on the target machine before being pushed on the
     // expression stack.
     case DW_OP_deref_size: {
-      if (stack.empty()) {
-        return llvm::createStringError(
-            "expression stack empty for DW_OP_deref_size");
-      }
-      uint8_t size = opcodes.GetU8(&offset);
-      if (size > 8) {
-        return llvm::createStringError(
-            "Invalid address size for DW_OP_deref_size: %d\n", size);
-      }
-      Value::ValueType value_type = stack.back().GetValueType();
-      switch (value_type) {
-      case Value::ValueType::HostAddress: {
-        void *src = (void *)stack.back().GetScalar().ULongLong();
-        intptr_t ptr;
-        ::memcpy(&ptr, src, sizeof(void *));
-        // I can't decide whether the size operand should apply to the bytes in
-        // their
-        // lldb-host endianness or the target endianness.. I doubt this'll ever
-        // come up but I'll opt for assuming big endian regardless.
-        switch (size) {
-        case 1:
-          ptr = ptr & 0xff;
-          break;
-        case 2:
-          ptr = ptr & 0xffff;
-          break;
-        case 3:
-          ptr = ptr & 0xffffff;
-          break;
-        case 4:
-          ptr = ptr & 0xffffffff;
-          break;
-        // the casts are added to work around the case where intptr_t is a 32
-        // bit quantity;
-        // presumably we won't hit the 5..7 cases if (void*) is 32-bits in this
-        // program.
-        case 5:
-          ptr = (intptr_t)ptr & 0xffffffffffULL;
-          break;
-        case 6:
-          ptr = (intptr_t)ptr & 0xffffffffffffULL;
-          break;
-        case 7:
-          ptr = (intptr_t)ptr & 0xffffffffffffffULL;
-          break;
-        default:
-          break;
-        }
-        stack.back().GetScalar() = ptr;
-        stack.back().ClearContext();
-      } break;
-      case Value::ValueType::FileAddress: {
-        auto file_addr =
-            stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-        Address so_addr;
-        auto maybe_load_addr = ResolveLoadAddress(
-            exe_ctx, module_sp, "DW_OP_deref_size", file_addr, so_addr,
-            /*check_sectionoffset=*/true);
-
-        if (!maybe_load_addr)
-          return maybe_load_addr.takeError();
-
-        addr_t load_addr = *maybe_load_addr;
-
-        if (load_addr == LLDB_INVALID_ADDRESS && so_addr.IsSectionOffset()) {
-          uint8_t addr_bytes[8];
-          Status error;
-
-          if (target &&
-              target->ReadMemory(so_addr, &addr_bytes, size, error,
-                                 /*force_live_memory=*/false) == size) {
-            ObjectFile *objfile = module_sp->GetObjectFile();
-
-            stack.back().GetScalar() = DerefSizeExtractDataHelper(
-                addr_bytes, size, objfile->GetByteOrder(), size);
-            stack.back().ClearContext();
-            break;
-          } else {
-            return llvm::createStringError(
-                "Failed to dereference pointer for DW_OP_deref_size: "
-                "%s\n",
-                error.AsCString());
-          }
-        }
-        stack.back().GetScalar() = load_addr;
-        // Fall through to load address promotion code below.
-      }
-
-        [[fallthrough]];
-      case Value::ValueType::Scalar:
-      case Value::ValueType::LoadAddress:
-        if (exe_ctx) {
-          if (process) {
-            lldb::addr_t pointer_addr =
-                stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-            uint8_t addr_bytes[sizeof(lldb::addr_t)];
-            Status error;
-            if (process->ReadMemory(pointer_addr, &addr_bytes, size, error) ==
-                size) {
-
-              stack.back().GetScalar() =
-                  DerefSizeExtractDataHelper(addr_bytes, sizeof(addr_bytes),
-                                             process->GetByteOrder(), size);
-              stack.back().ClearContext();
-            } else {
-              return llvm::createStringError(
-                  "Failed to dereference pointer from 0x%" PRIx64
-                  " for DW_OP_deref: %s\n",
-                  pointer_addr, error.AsCString());
-            }
-          } else {
-
-            return llvm::createStringError("NULL process for DW_OP_deref_size");
-          }
-        } else {
-          return llvm::createStringError(
-              "NULL execution context for DW_OP_deref_size");
-        }
-        break;
-
-      case Value::ValueType::Invalid:
-
-        return llvm::createStringError("invalid value for DW_OP_deref_size");
-      }
-
+      size_t size = opcodes.GetU8(&offset);
+      if (llvm::Error err = Evaluate_DW_OP_deref_size(stack, exe_ctx, module_sp,
+                                                      process, target, size))
+        return err;
     } break;
 
     // OPCODE: DW_OP_xderef_size
