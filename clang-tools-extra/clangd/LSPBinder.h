@@ -74,7 +74,7 @@ public:
   /// Handler should be e.g. void load(const LoadParams&, Callback<LoadResult>);
   /// LoadParams must be JSON-parseable and LoadResult must be serializable.
   template <typename Param, typename Result, typename ThisT>
-  void command(llvm::StringLiteral Command, ThisT *This,
+  void command(llvm::StringRef Command, ThisT *This,
                void (ThisT::*Handler)(const Param &, Callback<Result>));
 
   template <typename P, typename R>
@@ -155,11 +155,11 @@ void LSPBinder::notification(llvm::StringLiteral Method, ThisT *This,
 }
 
 template <typename Param, typename Result, typename ThisT>
-void LSPBinder::command(llvm::StringLiteral Method, ThisT *This,
+void LSPBinder::command(llvm::StringRef Method, ThisT *This,
                         void (ThisT::*Handler)(const Param &,
                                                Callback<Result>)) {
-  Raw.CommandHandlers[Method] = [Method, Handler, This](JSON RawParams,
-                                                        Callback<JSON> Reply) {
+  Raw.CommandHandlers[Method] = [Method = Method.str(), Handler,
+                                 This](JSON RawParams, Callback<JSON> Reply) {
     auto P = LSPBinder::parse<Param>(RawParams, Method, "command");
     if (!P)
       return Reply(P.takeError());
