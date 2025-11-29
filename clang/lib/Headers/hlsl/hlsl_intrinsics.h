@@ -666,9 +666,16 @@ smoothstep(__detail::HLSL_FIXED_VECTOR<float, N> Min,
   return __detail::smoothstep_vec_impl(Min, Max, X);
 }
 
-inline bool CheckAccessFullyMapped(uint Status) {
-  return static_cast<bool>(Status);
-}
+//===----------------------------------------------------------------------===//
+// CheckAccessFullyMapped builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn bool CheckAccessFullyMapped(uint32 x)
+/// \brief Returns true if the x parameter represents a value that indicates
+/// to the driver that the memory is resident, false otherwise.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_check_access_fully_mapped)
+bool CheckAccessFullyMapped(uint32_t x);
 
 //===----------------------------------------------------------------------===//
 // fwidth builtin
