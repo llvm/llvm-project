@@ -7217,6 +7217,11 @@ static void checkLifetimeBoundAttr(Sema &S, NamedDecl &ND) {
   }
 }
 
+static void checkModularFormatAttr(Sema &S, NamedDecl &ND) {
+  if (ND.hasAttr<ModularFormatAttr>() && !ND.hasAttr<FormatAttr>())
+    S.Diag(ND.getLocation(), diag::err_modular_format_attribute_no_format);
+}
+
 static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
   // Ensure that an auto decl is deduced otherwise the checks below might cache
   // the wrong linkage.
@@ -7229,6 +7234,7 @@ static void checkAttributesAfterMerging(Sema &S, NamedDecl &ND) {
   checkHybridPatchableAttr(S, ND);
   checkInheritableAttr(S, ND);
   checkLifetimeBoundAttr(S, ND);
+  checkModularFormatAttr(S, ND);
 }
 
 static void checkDLLAttributeRedeclaration(Sema &S, NamedDecl *OldDecl,
