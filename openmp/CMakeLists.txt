@@ -165,6 +165,9 @@ endif()
 
 if(LIBOMP_FORTRAN_MODULES)
   add_subdirectory(module)
+else()
+  message(STATUS "Building omp_lib.mod disabled by LIBOMP_FORTRAN_MODULES='${LIBOMP_FORTRAN_MODULES}'; libomp-mod does nothing")
+  add_custom_target(libomp-mod)
 endif()
 
 # Use the current compiler target to determine the appropriate runtime to build.
