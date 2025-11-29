@@ -2671,15 +2671,6 @@ struct PaddingClearer {
     MergeOccuppiedIntervals();
     auto PaddingIntervals =
         GetPaddingIntervals(CGF.getContext().getTypeSize(Ty));
-    llvm::dbgs() << "Occuppied Bits:\n";
-    for (auto [first, last] : OccuppiedIntervals) {
-      llvm::dbgs() << "[" << first << ", " << last << ")\n";
-    }
-    llvm::dbgs() << "Padding Bits:\n";
-    for (auto [first, last] : PaddingIntervals) {
-      llvm::dbgs() << "[" << first << ", " << last << ")\n";
-    }
-
     for (const auto &Interval : PaddingIntervals) {
       ClearPadding(Ptr, Interval);
     }
@@ -2726,16 +2717,11 @@ private:
                        .getDataLayout()
                        .getTypeSizeInBits(Type)
                        .getKnownMinValue();
-    llvm::dbgs() << "clear_padding primitive type. adding Interval ["
-                 << D.StartBitOffset << ", " << D.StartBitOffset + SizeBit
-                 << ")\n";
     OccuppiedIntervals.push_back(
         BitInterval{D.StartBitOffset, D.StartBitOffset + SizeBit});
   }
 
   void VisitArray(const ConstantArrayType *AT, uint64_t StartBitOffset) {
-    llvm::dbgs() << "clear_padding visiting constant array starting from "
-                 << StartBitOffset << "\n";
     for (uint64_t ArrIndex = 0; ArrIndex < AT->getSize().getLimitedValue();
          ++ArrIndex) {
 
@@ -2752,17 +2738,10 @@ private:
 
   void VisitStruct(const CXXRecordDecl *R, uint64_t StartBitOffset,
                    bool VisitVirtualBase) {
-    llvm::dbgs() << "clear_padding visiting struct: "
-                 << R->getQualifiedNameAsString() << " starting from offset "
-                 << StartBitOffset << '\n';
     const auto &DL = CGF.CGM.getModule().getDataLayout();
 
     const ASTRecordLayout &ASTLayout = CGF.getContext().getASTRecordLayout(R);
     if (ASTLayout.hasOwnVFPtr()) {
-      llvm::dbgs()
-          << "clear_padding found vtable ptr. Adding occuppied interval ["
-          << StartBitOffset << ", "
-          << (StartBitOffset + DL.getPointerSizeInBits()) << ")\n";
       OccuppiedIntervals.push_back(BitInterval{
           StartBitOffset, StartBitOffset + DL.getPointerSizeInBits()});
     }
@@ -2771,14 +2750,11 @@ private:
                                const CXXBaseSpecifier &Base, auto GetOffset) {
       auto *BaseRecord = Base.getType()->getAsCXXRecordDecl();
       if (!BaseRecord) {
-        llvm::dbgs() << "Base is not a CXXRecord!\n";
         return;
       }
       auto BaseOffset =
           std::invoke(GetOffset, ASTLayout, BaseRecord).getQuantity();
 
-      llvm::dbgs() << "visiting base at offset " << StartBitOffset << " + "
-                   << BaseOffset * CharWidth << '\n';
       Queue.push_back(Data{StartBitOffset + BaseOffset * CharWidth,
                            Base.getType(), /*VisitVirtualBase*/ false});
     };
@@ -2797,12 +2773,7 @@ private:
 
     for (auto *Field : R->fields()) {
       auto FieldOffset = ASTLayout.getFieldOffset(Field->getFieldIndex());
-      llvm::dbgs() << "visiting field at offset " << StartBitOffset << " + "
-                   << FieldOffset << '\n';
       if (Field->isBitField()) {
-        llvm::dbgs() << "clear_padding found bit field. Adding Interval ["
-                     << StartBitOffset + FieldOffset << " , "
-                     << FieldOffset + Field->getBitWidthValue() << ")\n";
         OccuppiedIntervals.push_back(BitInterval{
             StartBitOffset + FieldOffset,
             StartBitOffset + FieldOffset + Field->getBitWidthValue()});
@@ -2819,10 +2790,6 @@ private:
     auto ElementAlign = CGF.getContext().getTypeAlignInChars(ElementQualType);
     auto ImgOffset = ElementSize.alignTo(ElementAlign);
 
-    llvm::dbgs() << "clear_padding visiting Complex Type. Real from "
-                 << StartBitOffset << "Img from "
-                 << StartBitOffset + ImgOffset.getQuantity() * CharWidth
-                 << "\n";
     Queue.push_back(
         Data{StartBitOffset, ElementQualType, /*VisitVirtualBase*/ true});
     Queue.push_back(Data{StartBitOffset + ImgOffset.getQuantity() * CharWidth,
