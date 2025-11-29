@@ -326,8 +326,10 @@ void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLog) {
     }
   }
 
-  Allocator->printStats();
-  Allocator->printFragmentationInfo();
+  if (TEST_HAS_FAILURE) {
+    Allocator->printStats();
+    Allocator->printFragmentationInfo();
+  }
 }
 
 #define SCUDO_MAKE_BASIC_TEST(SizeLog)                                         \

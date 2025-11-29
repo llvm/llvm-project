@@ -339,6 +339,13 @@ TEST(RangeSelectorTest, NodeOpExpression) {
   EXPECT_THAT_EXPECTED(select(node("id"), Match), HasValue("3"));
 }
 
+TEST(RangeSelectorTest, NodeOpTypeLoc) {
+  StringRef Code = "namespace ns {struct Foo{};} ns::Foo a;";
+  TestMatch Match =
+      matchCode(Code, varDecl(hasTypeLoc(typeLoc().bind("typeloc"))));
+  EXPECT_THAT_EXPECTED(select(node("typeloc"), Match), HasValue("ns::Foo"));
+}
+
 TEST(RangeSelectorTest, StatementOp) {
   StringRef Code = "int f() { return 3; }";
   TestMatch Match = matchCode(Code, expr().bind("id"));

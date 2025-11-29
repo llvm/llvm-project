@@ -267,7 +267,7 @@ void OmpStructureChecker::CheckNestedBlock(const parser::OpenMPLoopConstruct &x,
   for (auto &stmt : body) {
     if (auto *dir{parser::Unwrap<parser::CompilerDirective>(stmt)}) {
       context_.Say(dir->source,
-          "Compiler directives are not allowed inside OpenMP loop constructs"_err_en_US);
+          "Compiler directives are not allowed inside OpenMP loop constructs"_warn_en_US);
     } else if (parser::Unwrap<parser::DoConstruct>(stmt)) {
       ++nestedCount;
     } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(stmt)}) {
@@ -333,6 +333,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
 
   if (llvm::omp::allSimdSet.test(GetContext().directive)) {
     EnterDirectiveNest(SIMDNest);
+  }
+
+  if (CurrentDirectiveIsNested() &&
+      llvm::omp::topTeamsSet.test(GetContext().directive) &&
+      GetContextParent().directive == llvm::omp::Directive::OMPD_target &&
+      !GetDirectiveNest(TargetBlockOnlyTeams)) {
+    context_.Say(GetContextParent().directiveSource,
+        "TARGET construct with nested TEAMS region contains statements or "
+        "directives outside of the TEAMS construct"_err_en_US);
   }
 
   // Combined target loop constructs are target device constructs. Keep track of

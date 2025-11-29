@@ -2142,7 +2142,7 @@ public:
 
     Walk(std::get<OmpDirectiveName>(x.t));
     auto flags{std::get<OmpDirectiveSpecification::Flags>(x.t)};
-    if (flags == OmpDirectiveSpecification::Flags::DeprecatedSyntax) {
+    if (flags.test(OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {
       if (x.DirId() == llvm::omp::Directive::OMPD_flush) {
         // FLUSH clause arglist
         unparseClauses();
@@ -2539,8 +2539,8 @@ public:
   void Unparse(const OpenMPInteropConstruct &x) {
     BeginOpenMP();
     Word("!$OMP INTEROP");
-    using Flags = OmpDirectiveSpecification::Flags;
-    if (std::get<Flags>(x.v.t) == Flags::DeprecatedSyntax) {
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.v.t)};
+    if (flags.test(OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {
       Walk("(", std::get<std::optional<OmpArgumentList>>(x.v.t), ")");
       Walk(" ", std::get<std::optional<OmpClauseList>>(x.v.t));
     } else {
@@ -2679,8 +2679,8 @@ public:
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
     Word("!$OMP FLUSH");
-    using Flags = OmpDirectiveSpecification::Flags;
-    if (std::get<Flags>(x.v.t) == Flags::DeprecatedSyntax) {
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.v.t)};
+    if (flags.test(OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {
       Walk("(", std::get<std::optional<OmpArgumentList>>(x.v.t), ")");
       Walk(" ", std::get<std::optional<OmpClauseList>>(x.v.t));
     } else {

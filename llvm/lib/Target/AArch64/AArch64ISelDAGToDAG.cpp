@@ -1557,7 +1557,10 @@ void AArch64DAGToDAGISel::SelectPtrauthAuth(SDNode *N) {
       extractPtrauthBlendDiscriminators(AUTDisc, CurDAG);
 
   if (!Subtarget->isX16X17Safer()) {
-    SDValue Ops[] = {Val, AUTKey, AUTConstDisc, AUTAddrDisc};
+    std::vector<SDValue> Ops = {Val, AUTKey, AUTConstDisc, AUTAddrDisc};
+    // Copy deactivation symbol if present.
+    if (N->getNumOperands() > 4)
+      Ops.push_back(N->getOperand(4));
 
     SDNode *AUT =
         CurDAG->getMachineNode(AArch64::AUTxMxN, DL, MVT::i64, MVT::i64, Ops);

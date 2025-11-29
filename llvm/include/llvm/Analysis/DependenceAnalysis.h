@@ -355,16 +355,11 @@ public:
 
   Function *getFunction() const { return F; }
 
-  /// getRuntimeAssumptions - Returns all the runtime assumptions under which
-  /// the dependence test is valid.
-  LLVM_ABI SCEVUnionPredicate getRuntimeAssumptions() const;
-
 private:
   AAResults *AA;
   ScalarEvolution *SE;
   LoopInfo *LI;
   Function *F;
-  SmallVector<const SCEVPredicate *, 4> Assumptions;
 
   /// Subscript - This private struct represents a pair of subscripts from
   /// a pair of potentially multi-dimensional array references. We use a
@@ -773,8 +768,8 @@ private:
                       SmallVectorImpl<Subscript> &Pair);
 
   /// Tries to delinearize \p Src and \p Dst access functions for a fixed size
-  /// multi-dimensional array. Calls tryDelinearizeFixedSizeImpl() to
-  /// delinearize \p Src and \p Dst separately,
+  /// multi-dimensional array. Calls delinearizeFixedSizeArray() to delinearize
+  /// \p Src and \p Dst separately,
   bool tryDelinearizeFixedSize(Instruction *Src, Instruction *Dst,
                                const SCEV *SrcAccessFn, const SCEV *DstAccessFn,
                                SmallVectorImpl<const SCEV *> &SrcSubscripts,

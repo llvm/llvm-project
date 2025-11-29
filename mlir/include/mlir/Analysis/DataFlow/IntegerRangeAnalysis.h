@@ -48,7 +48,7 @@ class IntegerRangeAnalysis
 public:
   using SparseForwardDataFlowAnalysis::SparseForwardDataFlowAnalysis;
 
-  /// At an entry point, we cannot reason about interger value ranges.
+  /// At an entry point, we cannot reason about integer value ranges.
   void setToEntryState(IntegerValueRangeLattice *lattice) override {
     propagateIfChanged(lattice, lattice->join(IntegerValueRange::getMaxRange(
                                     lattice->getAnchor())));

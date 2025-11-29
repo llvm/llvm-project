@@ -8721,10 +8721,6 @@ public:
                                        ExprResult &RHS,
                                        SourceLocation QuestionLoc);
 
-  QualType CheckSizelessVectorConditionalTypes(ExprResult &Cond,
-                                               ExprResult &LHS, ExprResult &RHS,
-                                               SourceLocation QuestionLoc);
-
   //// Determines if a type is trivially relocatable
   /// according to the C++26 rules.
   // FIXME: This is in Sema because it requires

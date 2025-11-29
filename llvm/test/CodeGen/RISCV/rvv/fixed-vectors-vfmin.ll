@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfhmin,+v -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN
 
-declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>)
-
 define <2 x half> @vfmin_v2f16_vv(<2 x half> %a, <2 x half> %b) {
 ; ZVFH-LABEL: vfmin_v2f16_vv:
 ; ZVFH:       # %bb.0:
@@ -80,8 +78,6 @@ define <2 x half> @vfmin_v2f16_fv(<2 x half> %a, half %b) {
   %v = call <2 x half> @llvm.minnum.v2f16(<2 x half> %splat, <2 x half> %a)
   ret <2 x half> %v
 }
-
-declare <4 x half> @llvm.minnum.v4f16(<4 x half>, <4 x half>)
 
 define <4 x half> @vfmin_v4f16_vv(<4 x half> %a, <4 x half> %b) {
 ; ZVFH-LABEL: vfmin_v4f16_vv:
@@ -154,8 +150,6 @@ define <4 x half> @vfmin_v4f16_fv(<4 x half> %a, half %b) {
   ret <4 x half> %v
 }
 
-declare <8 x half> @llvm.minnum.v8f16(<8 x half>, <8 x half>)
-
 define <8 x half> @vfmin_v8f16_vv(<8 x half> %a, <8 x half> %b) {
 ; ZVFH-LABEL: vfmin_v8f16_vv:
 ; ZVFH:       # %bb.0:
@@ -226,8 +220,6 @@ define <8 x half> @vfmin_v8f16_fv(<8 x half> %a, half %b) {
   %v = call <8 x half> @llvm.minnum.v8f16(<8 x half> %splat, <8 x half> %a)
   ret <8 x half> %v
 }
-
-declare <16 x half> @llvm.minnum.v16f16(<16 x half>, <16 x half>)
 
 define <16 x half> @vfmin_v16f16_vv(<16 x half> %a, <16 x half> %b) {
 ; ZVFH-LABEL: vfmin_v16f16_vv:
@@ -300,8 +292,6 @@ define <16 x half> @vfmin_v16f16_fv(<16 x half> %a, half %b) {
   ret <16 x half> %v
 }
 
-declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>)
-
 define <2 x float> @vfmin_v2f32_vv(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: vfmin_v2f32_vv:
 ; CHECK:       # %bb.0:
@@ -335,8 +325,6 @@ define <2 x float> @vfmin_v2f32_fv(<2 x float> %a, float %b) {
   %v = call <2 x float> @llvm.minnum.v2f32(<2 x float> %splat, <2 x float> %a)
   ret <2 x float> %v
 }
-
-declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>)
 
 define <4 x float> @vfmin_v4f32_vv(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: vfmin_v4f32_vv:
@@ -372,8 +360,6 @@ define <4 x float> @vfmin_v4f32_fv(<4 x float> %a, float %b) {
   ret <4 x float> %v
 }
 
-declare <8 x float> @llvm.minnum.v8f32(<8 x float>, <8 x float>)
-
 define <8 x float> @vfmin_v8f32_vv(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: vfmin_v8f32_vv:
 ; CHECK:       # %bb.0:
@@ -407,8 +393,6 @@ define <8 x float> @vfmin_v8f32_fv(<8 x float> %a, float %b) {
   %v = call <8 x float> @llvm.minnum.v8f32(<8 x float> %splat, <8 x float> %a)
   ret <8 x float> %v
 }
-
-declare <16 x float> @llvm.minnum.v16f32(<16 x float>, <16 x float>)
 
 define <16 x float> @vfmin_v16f32_vv(<16 x float> %a, <16 x float> %b) {
 ; CHECK-LABEL: vfmin_v16f32_vv:
@@ -444,8 +428,6 @@ define <16 x float> @vfmin_v16f32_fv(<16 x float> %a, float %b) {
   ret <16 x float> %v
 }
 
-declare <2 x double> @llvm.minnum.v2f64(<2 x double>, <2 x double>)
-
 define <2 x double> @vfmin_v2f64_vv(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: vfmin_v2f64_vv:
 ; CHECK:       # %bb.0:
@@ -479,8 +461,6 @@ define <2 x double> @vfmin_v2f64_fv(<2 x double> %a, double %b) {
   %v = call <2 x double> @llvm.minnum.v2f64(<2 x double> %splat, <2 x double> %a)
   ret <2 x double> %v
 }
-
-declare <4 x double> @llvm.minnum.v4f64(<4 x double>, <4 x double>)
 
 define <4 x double> @vfmin_v4f64_vv(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: vfmin_v4f64_vv:
@@ -516,8 +496,6 @@ define <4 x double> @vfmin_v4f64_fv(<4 x double> %a, double %b) {
   ret <4 x double> %v
 }
 
-declare <8 x double> @llvm.minnum.v8f64(<8 x double>, <8 x double>)
-
 define <8 x double> @vfmin_v8f64_vv(<8 x double> %a, <8 x double> %b) {
 ; CHECK-LABEL: vfmin_v8f64_vv:
 ; CHECK:       # %bb.0:
@@ -551,8 +529,6 @@ define <8 x double> @vfmin_v8f64_fv(<8 x double> %a, double %b) {
   %v = call <8 x double> @llvm.minnum.v8f64(<8 x double> %splat, <8 x double> %a)
   ret <8 x double> %v
 }
-
-declare <16 x double> @llvm.minnum.v16f64(<16 x double>, <16 x double>)
 
 define <16 x double> @vfmin_v16f64_vv(<16 x double> %a, <16 x double> %b) {
 ; CHECK-LABEL: vfmin_v16f64_vv:

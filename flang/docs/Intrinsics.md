@@ -1288,6 +1288,40 @@ program chdir_func
 end program chdir_func
 ```
 
+### Non-Standard Intrinsics: FLUSH
+
+#### Description
+`FLUSH(UNIT)` causes all pending I/O operations for the file connected to the
+specified unit to be completed. If `UNIT` is omitted, all units are flushed.
+
+#### Arguments
+
+|            |                                                                                                   |
+|------------|---------------------------------------------------------------------------------------------------|
+| `UNIT`     | (Optional) The unit number of an open file. If omitted, all open units are flushed. The type shall be `INTEGER`. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine
+- **Syntax:** `CALL FLUSH([UNIT])`
+
+#### Example
+```Fortran
+program demo_flush
+  integer :: unit
+
+  ! Flush all units
+  call flush()
+
+  ! Flush specific unit
+  open(unit=10, file='output.dat')
+  write(10, *) 'Data'
+  call flush(10)
+  close(10)
+end program demo_flush
+```
+
 ### Non-Standard Intrinsics: FSEEK and FTELL
 
 #### Description

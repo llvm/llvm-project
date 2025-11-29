@@ -243,16 +243,16 @@ convertModuleFlagValue(StringRef key, ArrayAttr arrayAttr,
 
   if (key == LLVMDialect::getModuleFlagKeyCGProfileName()) {
     for (auto entry : arrayAttr.getAsRange<ModuleFlagCGProfileEntryAttr>()) {
-      llvm::Metadata *fromMetadata =
-          entry.getFrom()
-              ? llvm::ValueAsMetadata::get(moduleTranslation.lookupFunction(
-                    entry.getFrom().getValue()))
-              : nullptr;
-      llvm::Metadata *toMetadata =
-          entry.getTo()
-              ? llvm::ValueAsMetadata::get(
-                    moduleTranslation.lookupFunction(entry.getTo().getValue()))
-              : nullptr;
+      auto getFuncMetadata = [&](FlatSymbolRefAttr sym) -> llvm::Metadata * {
+        if (!sym)
+          return nullptr;
+        if (llvm::Function *fn =
+                moduleTranslation.lookupFunction(sym.getValue()))
+          return llvm::ValueAsMetadata::get(fn);
+        return nullptr;
+      };
+      llvm::Metadata *fromMetadata = getFuncMetadata(entry.getFrom());
+      llvm::Metadata *toMetadata = getFuncMetadata(entry.getTo());
 
       llvm::Metadata *vals[] = {
           fromMetadata, toMetadata,

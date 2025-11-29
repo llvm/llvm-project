@@ -785,6 +785,8 @@ class DebugCommunication(object):
         *,
         program: Optional[str] = None,
         pid: Optional[int] = None,
+        debuggerId: Optional[int] = None,
+        targetId: Optional[int] = None,
         waitFor=False,
         initCommands: Optional[list[str]] = None,
         preRunCommands: Optional[list[str]] = None,
@@ -804,6 +806,10 @@ class DebugCommunication(object):
             args_dict["pid"] = pid
         if program is not None:
             args_dict["program"] = program
+        if debuggerId is not None:
+            args_dict["debuggerId"] = debuggerId
+        if targetId is not None:
+            args_dict["targetId"] = targetId
         if waitFor:
             args_dict["waitFor"] = waitFor
         args_dict["initCommands"] = self.init_commands
@@ -987,7 +993,14 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
+    def request_evaluate(
+        self,
+        expression,
+        frameIndex=0,
+        threadId=None,
+        context=None,
+        is_hex: Optional[bool] = None,
+    ):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
             return []
@@ -997,6 +1010,8 @@ class DebugCommunication(object):
         }
         if context:
             args_dict["context"] = context
+        if is_hex is not None:
+            args_dict["format"] = {"hex": is_hex}
         command_dict = {
             "command": "evaluate",
             "type": "request",
@@ -1250,16 +1265,18 @@ class DebugCommunication(object):
         return response
 
     def request_dataBreakpointInfo(
-        self, variablesReference, name, frameIndex=0, threadId=None
+        self, variablesReference, name, size=None, frameIndex=0, threadId=None
     ):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
             return []
-        args_dict = {
-            "variablesReference": variablesReference,
-            "name": name,
-            "frameId": stackFrame["id"],
-        }
+        args_dict = {"name": name}
+        if size is None:
+            args_dict["variablesReference"] = variablesReference
+            args_dict["frameId"] = stackFrame["id"]
+        else:
+            args_dict["asAddress"] = True
+            args_dict["bytes"] = size
         command_dict = {
             "command": "dataBreakpointInfo",
             "type": "request",

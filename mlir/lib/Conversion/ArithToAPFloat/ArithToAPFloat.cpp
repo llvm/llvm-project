@@ -41,6 +41,29 @@ static FuncOp createFnDecl(OpBuilder &b, SymbolOpInterface symTable,
 }
 
 /// Helper function to look up or create the symbol for a runtime library
+/// function with the given parameter types. Always returns an int64_t.
+static FailureOr<FuncOp>
+lookupOrCreateApFloatFn(OpBuilder &b, SymbolOpInterface symTable,
+                        StringRef name, TypeRange paramTypes,
+                        SymbolTableCollection *symbolTables = nullptr) {
+  auto i64Type = IntegerType::get(symTable->getContext(), 64);
+
+  std::string funcName = (llvm::Twine("_mlir_apfloat_") + name).str();
+  auto funcT = FunctionType::get(b.getContext(), paramTypes, {i64Type});
+  FailureOr<FuncOp> func =
+      lookupFnDecl(symTable, funcName, funcT, symbolTables);
+  // Failed due to type mismatch.
+  if (failed(func))
+    return func;
+  // Successfully matched existing decl.
+  if (*func)
+    return *func;
+
+  return createFnDecl(b, symTable, funcName, funcT,
+                      /*setPrivate=*/true, symbolTables);
+}
+
+/// Helper function to look up or create the symbol for a runtime library
 /// function for a binary arithmetic operation.
 ///
 /// Parameter 1: APFloat semantics
@@ -55,21 +78,14 @@ lookupOrCreateBinaryFn(OpBuilder &b, SymbolOpInterface symTable, StringRef name,
                        SymbolTableCollection *symbolTables = nullptr) {
   auto i32Type = IntegerType::get(symTable->getContext(), 32);
   auto i64Type = IntegerType::get(symTable->getContext(), 64);
+  return lookupOrCreateApFloatFn(b, symTable, name, {i32Type, i64Type, i64Type},
+                                 symbolTables);
+}
 
-  std::string funcName = (llvm::Twine("_mlir_apfloat_") + name).str();
-  FunctionType funcT =
-      FunctionType::get(b.getContext(), {i32Type, i64Type, i64Type}, {i64Type});
-  FailureOr<FuncOp> func =
-      lookupFnDecl(symTable, funcName, funcT, symbolTables);
-  // Failed due to type mismatch.
-  if (failed(func))
-    return func;
-  // Successfully matched existing decl.
-  if (*func)
-    return *func;
-
-  return createFnDecl(b, symTable, funcName, funcT,
-                      /*setPrivate=*/true, symbolTables);
+static Value getSemanticsValue(OpBuilder &b, Location loc, FloatType floatTy) {
+  int32_t sem = llvm::APFloatBase::SemanticsToEnum(floatTy.getFloatSemantics());
+  return arith::ConstantOp::create(b, loc, b.getI32Type(),
+                                   b.getIntegerAttr(b.getI32Type(), sem));
 }
 
 /// Rewrite a binary arithmetic operation to an APFloat function call.
@@ -104,11 +120,7 @@ struct BinaryArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
         arith::BitcastOp::create(rewriter, loc, intWType, op.getRhs()));
 
     // Call APFloat function.
-    int32_t sem =
-        llvm::APFloatBase::SemanticsToEnum(floatTy.getFloatSemantics());
-    Value semValue = arith::ConstantOp::create(
-        rewriter, loc, rewriter.getI32Type(),
-        rewriter.getIntegerAttr(rewriter.getI32Type(), sem));
+    Value semValue = getSemanticsValue(rewriter, loc, floatTy);
     SmallVector<Value> params = {semValue, lhsBits, rhsBits};
     auto resultOp =
         func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
@@ -124,6 +136,176 @@ struct BinaryArithOpToAPFloatConversion final : OpRewritePattern<OpTy> {
 
   SymbolOpInterface symTable;
   const char *APFloatName;
+};
+
+template <typename OpTy>
+struct FpToFpConversion final : OpRewritePattern<OpTy> {
+  FpToFpConversion(MLIRContext *context, SymbolOpInterface symTable,
+                   PatternBenefit benefit = 1)
+      : OpRewritePattern<OpTy>(context, benefit), symTable(symTable) {}
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    // Get APFloat function from runtime library.
+    auto i32Type = IntegerType::get(symTable->getContext(), 32);
+    auto i64Type = IntegerType::get(symTable->getContext(), 64);
+    FailureOr<FuncOp> fn = lookupOrCreateApFloatFn(
+        rewriter, symTable, "convert", {i32Type, i32Type, i64Type});
+    if (failed(fn))
+      return fn;
+
+    rewriter.setInsertionPoint(op);
+    // Cast operands to 64-bit integers.
+    Location loc = op.getLoc();
+    auto inFloatTy = cast<FloatType>(op.getOperand().getType());
+    auto inIntWType = rewriter.getIntegerType(inFloatTy.getWidth());
+    Value operandBits = arith::ExtUIOp::create(
+        rewriter, loc, i64Type,
+        arith::BitcastOp::create(rewriter, loc, inIntWType, op.getOperand()));
+
+    // Call APFloat function.
+    Value inSemValue = getSemanticsValue(rewriter, loc, inFloatTy);
+    auto outFloatTy = cast<FloatType>(op.getType());
+    Value outSemValue = getSemanticsValue(rewriter, loc, outFloatTy);
+    std::array<Value, 3> params = {inSemValue, outSemValue, operandBits};
+    auto resultOp =
+        func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
+                             SymbolRefAttr::get(*fn), params);
+
+    // Truncate result to the original width.
+    auto outIntWType = rewriter.getIntegerType(outFloatTy.getWidth());
+    Value truncatedBits = arith::TruncIOp::create(rewriter, loc, outIntWType,
+                                                  resultOp->getResult(0));
+    rewriter.replaceOp(
+        op, arith::BitcastOp::create(rewriter, loc, outFloatTy, truncatedBits));
+    return success();
+  }
+
+  SymbolOpInterface symTable;
+};
+
+template <typename OpTy>
+struct FpToIntConversion final : OpRewritePattern<OpTy> {
+  FpToIntConversion(MLIRContext *context, SymbolOpInterface symTable,
+                    bool isUnsigned, PatternBenefit benefit = 1)
+      : OpRewritePattern<OpTy>(context, benefit), symTable(symTable),
+        isUnsigned(isUnsigned) {}
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    if (op.getType().getIntOrFloatBitWidth() > 64)
+      return rewriter.notifyMatchFailure(
+          op, "result type > 64 bits is not supported");
+
+    // Get APFloat function from runtime library.
+    auto i1Type = IntegerType::get(symTable->getContext(), 1);
+    auto i32Type = IntegerType::get(symTable->getContext(), 32);
+    auto i64Type = IntegerType::get(symTable->getContext(), 64);
+    FailureOr<FuncOp> fn =
+        lookupOrCreateApFloatFn(rewriter, symTable, "convert_to_int",
+                                {i32Type, i32Type, i1Type, i64Type});
+    if (failed(fn))
+      return fn;
+
+    rewriter.setInsertionPoint(op);
+    // Cast operands to 64-bit integers.
+    Location loc = op.getLoc();
+    auto inFloatTy = cast<FloatType>(op.getOperand().getType());
+    auto inIntWType = rewriter.getIntegerType(inFloatTy.getWidth());
+    Value operandBits = arith::ExtUIOp::create(
+        rewriter, loc, i64Type,
+        arith::BitcastOp::create(rewriter, loc, inIntWType, op.getOperand()));
+
+    // Call APFloat function.
+    Value inSemValue = getSemanticsValue(rewriter, loc, inFloatTy);
+    auto outIntTy = cast<IntegerType>(op.getType());
+    Value outWidthValue = arith::ConstantOp::create(
+        rewriter, loc, i32Type,
+        rewriter.getIntegerAttr(i32Type, outIntTy.getWidth()));
+    Value isUnsignedValue = arith::ConstantOp::create(
+        rewriter, loc, i1Type, rewriter.getIntegerAttr(i1Type, isUnsigned));
+    SmallVector<Value> params = {inSemValue, outWidthValue, isUnsignedValue,
+                                 operandBits};
+    auto resultOp =
+        func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
+                             SymbolRefAttr::get(*fn), params);
+
+    // Truncate result to the original width.
+    Value truncatedBits = arith::TruncIOp::create(rewriter, loc, outIntTy,
+                                                  resultOp->getResult(0));
+    rewriter.replaceOp(op, truncatedBits);
+    return success();
+  }
+
+  SymbolOpInterface symTable;
+  bool isUnsigned;
+};
+
+template <typename OpTy>
+struct IntToFpConversion final : OpRewritePattern<OpTy> {
+  IntToFpConversion(MLIRContext *context, SymbolOpInterface symTable,
+                    bool isUnsigned, PatternBenefit benefit = 1)
+      : OpRewritePattern<OpTy>(context, benefit), symTable(symTable),
+        isUnsigned(isUnsigned) {}
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    if (op.getIn().getType().getIntOrFloatBitWidth() > 64) {
+      return rewriter.notifyMatchFailure(
+          loc, "integer bitwidth > 64 is not supported");
+    }
+
+    // Get APFloat function from runtime library.
+    auto i1Type = IntegerType::get(symTable->getContext(), 1);
+    auto i32Type = IntegerType::get(symTable->getContext(), 32);
+    auto i64Type = IntegerType::get(symTable->getContext(), 64);
+    FailureOr<FuncOp> fn =
+        lookupOrCreateApFloatFn(rewriter, symTable, "convert_from_int",
+                                {i32Type, i32Type, i1Type, i64Type});
+    if (failed(fn))
+      return fn;
+
+    rewriter.setInsertionPoint(op);
+    // Cast operands to 64-bit integers.
+    auto inIntTy = cast<IntegerType>(op.getOperand().getType());
+    Value operandBits = op.getOperand();
+    if (operandBits.getType().getIntOrFloatBitWidth() < 64) {
+      if (isUnsigned) {
+        operandBits =
+            arith::ExtUIOp::create(rewriter, loc, i64Type, operandBits);
+      } else {
+        operandBits =
+            arith::ExtSIOp::create(rewriter, loc, i64Type, operandBits);
+      }
+    }
+
+    // Call APFloat function.
+    auto outFloatTy = cast<FloatType>(op.getType());
+    Value outSemValue = getSemanticsValue(rewriter, loc, outFloatTy);
+    Value inWidthValue = arith::ConstantOp::create(
+        rewriter, loc, i32Type,
+        rewriter.getIntegerAttr(i32Type, inIntTy.getWidth()));
+    Value isUnsignedValue = arith::ConstantOp::create(
+        rewriter, loc, i1Type, rewriter.getIntegerAttr(i1Type, isUnsigned));
+    SmallVector<Value> params = {outSemValue, inWidthValue, isUnsignedValue,
+                                 operandBits};
+    auto resultOp =
+        func::CallOp::create(rewriter, loc, TypeRange(rewriter.getI64Type()),
+                             SymbolRefAttr::get(*fn), params);
+
+    // Truncate result to the original width.
+    auto outIntWType = rewriter.getIntegerType(outFloatTy.getWidth());
+    Value truncatedBits = arith::TruncIOp::create(rewriter, loc, outIntWType,
+                                                  resultOp->getResult(0));
+    Value result =
+        arith::BitcastOp::create(rewriter, loc, outFloatTy, truncatedBits);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+
+  SymbolOpInterface symTable;
+  bool isUnsigned;
 };
 
 namespace {
@@ -147,6 +329,17 @@ void ArithToAPFloatConversionPass::runOnOperation() {
       context, "divide", getOperation());
   patterns.add<BinaryArithOpToAPFloatConversion<arith::RemFOp>>(
       context, "remainder", getOperation());
+  patterns
+      .add<FpToFpConversion<arith::ExtFOp>, FpToFpConversion<arith::TruncFOp>>(
+          context, getOperation());
+  patterns.add<FpToIntConversion<arith::FPToSIOp>>(context, getOperation(),
+                                                   /*isUnsigned=*/false);
+  patterns.add<FpToIntConversion<arith::FPToUIOp>>(context, getOperation(),
+                                                   /*isUnsigned=*/true);
+  patterns.add<IntToFpConversion<arith::SIToFPOp>>(context, getOperation(),
+                                                   /*isUnsigned=*/false);
+  patterns.add<IntToFpConversion<arith::UIToFPOp>>(context, getOperation(),
+                                                   /*isUnsigned=*/true);
   LogicalResult result = success();
   ScopedDiagnosticHandler scopedHandler(context, [&result](Diagnostic &diag) {
     if (diag.getSeverity() == DiagnosticSeverity::Error) {

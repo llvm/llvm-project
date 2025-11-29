@@ -315,3 +315,27 @@ void element_expr_from_rvalue_with_vec_result() {
 // OGCG: %[[TMP_2:.*]] = load <4 x i32>, ptr %[[TMP_2_ADDR]], align 16
 // OGCG: %[[D_VALUE:.*]] = shufflevector <4 x i32> %[[TMP_2]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 // OGCG: store <4 x i32> %[[D_VALUE]], ptr %[[D_ADDR]], align 16
+
+void array_subscript_expr_with_element_expr_base() {
+  vi4 a;
+  a.xyz[1] = 2;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
+// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: %[[A_PTR:.*]] = cir.cast bitcast %0 : !cir.ptr<!cir.vector<4 x !s32i>> -> !cir.ptr<!s32i>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s64i
+// CIR: %[[VEC_MEMBER_EXPR:.*]] = cir.ptr_stride %[[A_PTR]], %[[CONST_0]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
+// CIR: %[[VEC_ELEM_PTR:.*]] = cir.ptr_stride %[[VEC_MEMBER_EXPR]], %[[CONST_1]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CIR: cir.store {{.*}} %[[CONST_2]], %[[VEC_ELEM_PTR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[VEC_MEMBER_EXPR:.*]] = getelementptr i32, ptr %[[A_ADDR]], i64 0
+// LLVM: %[[VEC_ELEM_PTR:.*]] = getelementptr i32, ptr %[[VEC_MEMBER_EXPR]], i64 1
+// LLVM: store i32 2, ptr %[[VEC_ELEM_PTR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[VEC_MEMBER_EXPR:.*]] = getelementptr inbounds i32, ptr %[[A_ADDR]], i64 0
+// OGCG: %[[VEC_ELEM_PTR:.*]] = getelementptr inbounds i32, ptr %[[VEC_MEMBER_EXPR]], i64 1
+// OGCG: store i32 2, ptr %[[VEC_ELEM_PTR]], align 4

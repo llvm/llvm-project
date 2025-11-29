@@ -493,7 +493,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:config",
-        "@llvm_zlib//:zlib",
+        "//third-party:zlib",
     ],
 )
 
@@ -1406,7 +1406,7 @@ cc_library(
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:config",
-        "@llvm_zlib//:zlib",
+        "//third-party:zlib",
     ],
 )
 

@@ -1400,7 +1400,7 @@ def : Pat<(vnot (or (vt LASX256:$xj), (vt LASX256:$xk))),
           (XVNOR_V LASX256:$xj, LASX256:$xk)>;
 // XVANDN_V
 foreach vt = [v32i8, v16i16, v8i32, v4i64] in
-def : Pat<(and (vt (vnot LASX256:$xj)), (vt LASX256:$xk)),
+def : Pat<(loongarch_vandn (vt LASX256:$xj), (vt LASX256:$xk)),
           (XVANDN_V LASX256:$xj, LASX256:$xk)>;
 // XVORN_V
 foreach vt = [v32i8, v16i16, v8i32, v4i64] in
@@ -1447,6 +1447,11 @@ defm : PatXrXr<sra, "XVSRA">;
 defm : PatShiftXrXr<sra, "XVSRA">;
 defm : PatShiftXrSplatUimm<sra, "XVSRAI">;
 
+// XVROTR[I]_{B/H/W/D}
+defm : PatXrXr<rotr, "XVROTR">;
+defm : PatShiftXrXr<rotr, "XVROTR">;
+defm : PatShiftXrSplatUimm<rotr, "XVROTRI">;
+
 // XVCLZ_{B/H/W/D}
 defm : PatXr<ctlz, "XVCLZ">;
 
@@ -1454,25 +1459,25 @@ defm : PatXr<ctlz, "XVCLZ">;
 defm : PatXr<ctpop, "XVPCNT">;
 
 // XVBITCLR_{B/H/W/D}
-def : Pat<(and v32i8:$xj, (vnot (shl vsplat_imm_eq_1, v32i8:$xk))),
+def : Pat<(loongarch_vandn (v32i8 (shl vsplat_imm_eq_1, v32i8:$xk)), v32i8:$xj),
           (v32i8 (XVBITCLR_B v32i8:$xj, v32i8:$xk))>;
-def : Pat<(and v16i16:$xj, (vnot (shl vsplat_imm_eq_1, v16i16:$xk))),
+def : Pat<(loongarch_vandn (v16i16 (shl vsplat_imm_eq_1, v16i16:$xk)), v16i16:$xj),
           (v16i16 (XVBITCLR_H v16i16:$xj, v16i16:$xk))>;
-def : Pat<(and v8i32:$xj, (vnot (shl vsplat_imm_eq_1, v8i32:$xk))),
+def : Pat<(loongarch_vandn (v8i32 (shl vsplat_imm_eq_1, v8i32:$xk)), v8i32:$xj),
           (v8i32 (XVBITCLR_W v8i32:$xj, v8i32:$xk))>;
-def : Pat<(and v4i64:$xj, (vnot (shl vsplat_imm_eq_1, v4i64:$xk))),
+def : Pat<(loongarch_vandn (v4i64 (shl vsplat_imm_eq_1, v4i64:$xk)), v4i64:$xj),
           (v4i64 (XVBITCLR_D v4i64:$xj, v4i64:$xk))>;
-def : Pat<(and v32i8:$xj, (vnot (shl vsplat_imm_eq_1,
-                                     (vsplati8imm7 v32i8:$xk)))),
+def : Pat<(loongarch_vandn (v32i8 (shl vsplat_imm_eq_1,
+                                  (vsplati8imm7 v32i8:$xk))), v32i8:$xj),
           (v32i8 (XVBITCLR_B v32i8:$xj, v32i8:$xk))>;
-def : Pat<(and v16i16:$xj, (vnot (shl vsplat_imm_eq_1,
-                                     (vsplati16imm15 v16i16:$xk)))),
+def : Pat<(loongarch_vandn (v16i16 (shl vsplat_imm_eq_1,
+                                   (vsplati16imm15 v16i16:$xk))), v16i16:$xj),
           (v16i16 (XVBITCLR_H v16i16:$xj, v16i16:$xk))>;
-def : Pat<(and v8i32:$xj, (vnot (shl vsplat_imm_eq_1,
-                                     (vsplati32imm31 v8i32:$xk)))),
+def : Pat<(loongarch_vandn (v8i32 (shl vsplat_imm_eq_1,
+                                  (vsplati32imm31 v8i32:$xk))), v8i32:$xj),
           (v8i32 (XVBITCLR_W v8i32:$xj, v8i32:$xk))>;
-def : Pat<(and v4i64:$xj, (vnot (shl vsplat_imm_eq_1,
-                                     (vsplati64imm63 v4i64:$xk)))),
+def : Pat<(loongarch_vandn (v4i64 (shl vsplat_imm_eq_1,
+                                  (vsplati64imm63 v4i64:$xk))), v4i64:$xj),
           (v4i64 (XVBITCLR_D v4i64:$xj, v4i64:$xk))>;
 
 // XVBITCLRI_{B/H/W/D}

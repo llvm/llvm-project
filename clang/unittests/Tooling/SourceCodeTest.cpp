@@ -510,10 +510,14 @@ TEST(SourceCodeTest, EditInvolvingExpansionIgnoringExpansionShouldFail) {
 #define M1(x) x(1)
 #define M2(x, y) x ## y
 #define M3(x) foobar(x)
+#define M4(x, y) x y
+#define M5(x) x
 int foobar(int);
 int a = M1(foobar);
 int b = M2(foo, bar(2));
 int c = M3(3);
+int d = M4(foobar, (4));
+int e = M5(foobar) (5);
 )cpp");
 
   CallsVisitor Visitor;

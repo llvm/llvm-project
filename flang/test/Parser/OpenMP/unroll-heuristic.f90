@@ -22,7 +22,7 @@ END subroutine openmp_parse_unroll_heuristic
 !PTREE-NEXT: | OmpBeginLoopDirective
 !PTREE-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = unroll
 !PTREE-NEXT: | | OmpClauseList ->
-!PTREE-NEXT: | | Flags = None
+!PTREE-NEXT: | | Flags = {}
 !PTREE-NEXT: | Block
 !PTREE-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 !PTREE-NEXT: | | | NonLabelDoStmt
@@ -43,4 +43,4 @@ END subroutine openmp_parse_unroll_heuristic
 !PTREE-NEXT: | OmpEndLoopDirective
 !PTREE-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = unroll
 !PTREE-NEXT: | | OmpClauseList ->
-!PTREE-NEXT: | | Flags = None
+!PTREE-NEXT: | | Flags = {}
