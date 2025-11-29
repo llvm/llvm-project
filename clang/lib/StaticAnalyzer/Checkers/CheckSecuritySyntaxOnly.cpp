@@ -50,6 +50,8 @@ struct ChecksFilter {
   bool check_UncheckedReturn = false;
   bool check_decodeValueOfObjCType = false;
 
+  bool reportDeprecatedOrUnsafeBufferHandlingInC99AndEarlier = false;
+
   CheckerNameRef checkName_bcmp;
   CheckerNameRef checkName_bcopy;
   CheckerNameRef checkName_bzero;
@@ -754,7 +756,8 @@ void WalkAST::checkDeprecatedOrUnsafeBufferHandling(const CallExpr *CE,
   if (!filter.check_DeprecatedOrUnsafeBufferHandling)
     return;
 
-  if (!BR.getContext().getLangOpts().C11)
+  if (!(BR.getContext().getLangOpts().C11 ||
+        filter.reportDeprecatedOrUnsafeBufferHandlingInC99AndEarlier))
     return;
 
   // Issue a warning. ArgIndex == -1: Deprecated but not unsafe (has size
@@ -1113,5 +1116,20 @@ REGISTER_CHECKER(rand)
 REGISTER_CHECKER(vfork)
 REGISTER_CHECKER(FloatLoopCounter)
 REGISTER_CHECKER(UncheckedReturn)
-REGISTER_CHECKER(DeprecatedOrUnsafeBufferHandling)
+
+void ento::registerDeprecatedOrUnsafeBufferHandling(CheckerManager &Mgr) {
+  SecuritySyntaxChecker *Checker = Mgr.getChecker<SecuritySyntaxChecker>();
+  Checker->filter.check_DeprecatedOrUnsafeBufferHandling = true;
+  Checker->filter.checkName_DeprecatedOrUnsafeBufferHandling =
+      Mgr.getCurrentCheckerName();
+  Checker->filter.reportDeprecatedOrUnsafeBufferHandlingInC99AndEarlier =
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          Mgr.getCurrentCheckerName(), "ReportInC99AndEarlier");
+}
+
+bool ento::shouldRegisterDeprecatedOrUnsafeBufferHandling(
+    const CheckerManager &) {
+  return true;
+}
+
 REGISTER_CHECKER(decodeValueOfObjCType)

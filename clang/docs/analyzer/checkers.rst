@@ -1785,6 +1785,13 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    strncpy(buf, "a", 1); // warn
  }
 
+The ``ReportInC99AndEarlier`` option allows reporting warnings for these functions even when not compiling with C11 standard. These functions became deprecated in C11, but may still be problematic in earlier C standards.
+
+To enable this option, use:
+``-analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportInC99AndEarlier=true``.
+
+By default, this option is set to *false*.
+
 .. _security-MmapWriteExec:
 
 security.MmapWriteExec (C)
