@@ -685,20 +685,111 @@ define void @test_non_const_splat_i32(ptr %ret_ptr, ptr %a_ptr, i32 %elt) {
   ret void
 }
 
-; Intrinsic declarations
-declare <4 x i16> @llvm.sadd.sat.v4i16(<4 x i16>, <4 x i16>)
-declare <4 x i16> @llvm.uadd.sat.v4i16(<4 x i16>, <4 x i16>)
-declare <4 x i16> @llvm.ssub.sat.v4i16(<4 x i16>, <4 x i16>)
-declare <4 x i16> @llvm.usub.sat.v4i16(<4 x i16>, <4 x i16>)
-declare <8 x i8> @llvm.sadd.sat.v8i8(<8 x i8>, <8 x i8>)
-declare <8 x i8> @llvm.uadd.sat.v8i8(<8 x i8>, <8 x i8>)
-declare <8 x i8> @llvm.ssub.sat.v8i8(<8 x i8>, <8 x i8>)
-declare <8 x i8> @llvm.usub.sat.v8i8(<8 x i8>, <8 x i8>)
-declare <4 x i16> @llvm.smin.v4i16(<4 x i16>, <4 x i16>)
-declare <4 x i16> @llvm.smax.v4i16(<4 x i16>, <4 x i16>)
-declare <4 x i16> @llvm.umin.v4i16(<4 x i16>, <4 x i16>)
-declare <4 x i16> @llvm.umax.v4i16(<4 x i16>, <4 x i16>)
-declare <8 x i8> @llvm.smin.v8i8(<8 x i8>, <8 x i8>)
-declare <8 x i8> @llvm.smax.v8i8(<8 x i8>, <8 x i8>)
-declare <8 x i8> @llvm.umin.v8i8(<8 x i8>, <8 x i8>)
-declare <8 x i8> @llvm.umax.v8i8(<8 x i8>, <8 x i8>)
+define void @test_build_vector_i8(ptr %ret_ptr, i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %f, i8 %g, i8 %h) {
+; CHECK-LABEL: test_build_vector_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lbu t0, 0(sp)
+; CHECK-NEXT:    ppack.h a5, a5, a6
+; CHECK-NEXT:    ppack.h a3, a3, a4
+; CHECK-NEXT:    ppack.h a1, a1, a2
+; CHECK-NEXT:    ppack.h a2, a7, t0
+; CHECK-NEXT:    ppack.w a2, a5, a2
+; CHECK-NEXT:    ppack.w a1, a1, a3
+; CHECK-NEXT:    pack a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %v0 = insertelement <8 x i8> poison, i8 %a, i32 0
+  %v1 = insertelement <8 x i8> %v0, i8 %b, i32 1
+  %v2 = insertelement <8 x i8> %v1, i8 %c, i32 2
+  %v3 = insertelement <8 x i8> %v2, i8 %d, i32 3
+  %v4 = insertelement <8 x i8> %v3, i8 %e, i32 4
+  %v5 = insertelement <8 x i8> %v4, i8 %f, i32 5
+  %v6 = insertelement <8 x i8> %v5, i8 %g, i32 6
+  %v7 = insertelement <8 x i8> %v6, i8 %h, i32 7
+  store <8 x i8> %v7, ptr %ret_ptr
+  ret void
+}
+
+define void @test_build_vector_i16(ptr %ret_ptr, i16 %a, i16 %b, i16 %c, i16 %d) {
+; CHECK-LABEL: test_build_vector_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ppack.w a3, a3, a4
+; CHECK-NEXT:    ppack.w a1, a1, a2
+; CHECK-NEXT:    pack a1, a1, a3
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %v0 = insertelement <4 x i16> poison, i16 %a, i32 0
+  %v1 = insertelement <4 x i16> %v0, i16 %b, i32 1
+  %v2 = insertelement <4 x i16> %v1, i16 %c, i32 2
+  %v3 = insertelement <4 x i16> %v2, i16 %d, i32 3
+  store <4 x i16> %v3, ptr %ret_ptr
+  ret void
+}
+
+define void @test_build_vector_i32(ptr %ret_ptr, i32 %a, i32 %b) {
+; CHECK-LABEL: test_build_vector_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pack a1, a1, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %v0 = insertelement <2 x i32> poison, i32 %a, i32 0
+  %v1 = insertelement <2 x i32> %v0, i32 %b, i32 1
+  store <2 x i32> %v1, ptr %ret_ptr
+  ret void
+}
+
+; Test logical shift left immediate for v4i16
+define void @test_pslli_h(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_pslli_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    pslli.h a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <4 x i16>, ptr %a_ptr
+  %res = shl <4 x i16> %a, splat(i16 2)
+  store <4 x i16> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test logical shift left immediate for v8i8
+define void @test_pslli_b(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_pslli_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    pslli.b a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <8 x i8>, ptr %a_ptr
+  %res = shl <8 x i8> %a, splat(i8 2)
+  store <8 x i8> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test logical shift left immediate for v2i32
+define void @test_pslli_w(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_pslli_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    pslli.w a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %res = shl <2 x i32> %a, splat(i32 2)
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
+
+; Test arithmetic saturation shift left immediate for v2i32
+define void @test_psslai_w(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_psslai_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a1, 0(a1)
+; CHECK-NEXT:    psslai.w a1, a1, 2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %res = call <2 x i32> @llvm.sshl.sat.v2i32(<2 x i32> %a, <2 x i32> splat(i32 2))
+  store <2 x i32> %res, ptr %ret_ptr
+  ret void
+}
