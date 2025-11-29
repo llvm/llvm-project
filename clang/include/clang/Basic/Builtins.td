@@ -5048,6 +5048,12 @@ def HLSLWaveActiveAnyTrue : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "bool(bool)";
 }
 
+def HLSLWaveActiveBitOr : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_bit_or"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "unsigned int (unsigned int)";
+}
+
 def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
