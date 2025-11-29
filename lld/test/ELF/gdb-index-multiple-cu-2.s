@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/gdb-index-multiple-cu-2.s -o %t1.o
-# RUN: ld.lld --gdb-index %t.o %t1.o -o %t 2>&1 | count 0
+# RUN: ld.lld --gdb-index %t.o %t1.o -o %t 2>&1 | sed '/missing .debug_gnu_pubnames/d' | count 0
 # RUN: llvm-dwarfdump -gdb-index %t | FileCheck %s
 
 # %t.o has 2 CUs while %t1 has 1, thus _start in %t1.o should have cuIndex 2.
