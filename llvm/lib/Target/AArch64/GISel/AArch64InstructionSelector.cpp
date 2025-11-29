@@ -5118,14 +5118,14 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
   //
   // tst x, y
   if (!CmpInst::isUnsigned(P) && LHSDef &&
-      LHSDef->getOpcode() == TargetOpcode::G_AND) {
+      LHSDef->getOpcode() == TargetOpcode::G_AND &&
+      MRI.hasOneNonDBGUse(LHS.getReg())) {
     // Make sure that the RHS is 0.
     auto ValAndVReg = getIConstantVRegValWithLookThrough(RHS.getReg(), MRI);
     if (!ValAndVReg || ValAndVReg->Value != 0)
       return nullptr;
 
-    return emitTST(LHSDef->getOperand(1),
-                   LHSDef->getOperand(2), MIRBuilder);
+    return emitTST(LHSDef->getOperand(1), LHSDef->getOperand(2), MIRBuilder);
   }
 
   return nullptr;

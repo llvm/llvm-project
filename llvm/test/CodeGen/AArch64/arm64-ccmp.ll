@@ -1050,23 +1050,19 @@ define i32 @deep_or2(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %x, i32 %y) {
 define i32 @multiccmp(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %x, i32 %y) #0 {
 ; CHECK-SD-LABEL: multiccmp:
 ; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    stp x22, x21, [sp, #-48]! ; 16-byte Folded Spill
-; CHECK-SD-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
-; CHECK-SD-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
 ; CHECK-SD-NEXT:    mov x19, x5
 ; CHECK-SD-NEXT:    cmp w0, w1
-; CHECK-SD-NEXT:    cset w20, gt
-; CHECK-SD-NEXT:    cmp w2, w3
-; CHECK-SD-NEXT:    cset w21, ne
-; CHECK-SD-NEXT:    tst w20, w21
+; CHECK-SD-NEXT:    ccmp w2, w3, #4, gt
+; CHECK-SD-NEXT:    cset w20, ne
 ; CHECK-SD-NEXT:    csel w0, w5, w4, ne
 ; CHECK-SD-NEXT:    bl _callee
-; CHECK-SD-NEXT:    tst w20, w21
+; CHECK-SD-NEXT:    cmp w20, #0
 ; CHECK-SD-NEXT:    csel w0, w0, w19, ne
 ; CHECK-SD-NEXT:    bl _callee
-; CHECK-SD-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
-; CHECK-SD-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
-; CHECK-SD-NEXT:    ldp x22, x21, [sp], #48 ; 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: multiccmp:
