@@ -2213,12 +2213,22 @@ static bool interp__builtin_assume_dereferenceable(InterpState &S, CodePtr OpPC,
   assert(Call->getNumArgs() == 2);
 
   APSInt ReqSize = popToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(1)));
-  if (ReqSize.getZExtValue() < 1)
-    return false;
-
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.isZero() || !Ptr.isLive() || !Ptr.isBlockPointer() || Ptr.isPastEnd())
+
+  if (ReqSize.isZero())
+    return true;
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_null)
+        << AK_Read << S.Current->getRange(OpPC);
     return false;
+  }
+  if (!Ptr.isLive() || !Ptr.isBlockPointer())
+    return false;
+  if (Ptr.isPastEnd()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
+        << AK_Read << S.Current->getRange(OpPC);
+    return false;
+  }
 
   const ASTContext &ASTCtx = S.getASTContext();
   const Descriptor *DeclDesc = Ptr.getDeclDesc();
@@ -2230,9 +2240,12 @@ static bool interp__builtin_assume_dereferenceable(InterpState &S, CodePtr OpPC,
   if (ByteOffset > *FullSize)
     return false;
 
-  unsigned RemainingSpace = *FullSize - ByteOffset;
-  if (RemainingSpace < ReqSize.getZExtValue())
+  unsigned AvailSize = *FullSize - ByteOffset;
+  if (AvailSize < ReqSize.getZExtValue()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
+        << AK_Read << S.Current->getRange(OpPC);
     return false;
+  }
 
   return true;
 }
