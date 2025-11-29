@@ -1008,17 +1008,42 @@ InstructionCost RISCVTTIImpl::getScalarizationOverhead(
 }
 
 InstructionCost
+RISCVTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                                       TTI::TargetCostKind CostKind) const {
+  switch (MICA.getID()) {
+  case Intrinsic::experimental_vp_strided_load:
+  case Intrinsic::experimental_vp_strided_store:
+    return getStridedMemoryOpCost(MICA, CostKind);
+  case Intrinsic::masked_compressstore:
+  case Intrinsic::masked_expandload:
+    return getExpandCompressMemoryOpCost(MICA, CostKind);
+  case Intrinsic::vp_scatter:
+  case Intrinsic::vp_gather:
+  case Intrinsic::masked_scatter:
+  case Intrinsic::masked_gather:
+    return getGatherScatterOpCost(MICA, CostKind);
+  case Intrinsic::vp_load:
+  case Intrinsic::vp_store:
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_store:
+    return getMaskedMemoryOpCost(MICA, CostKind);
+  }
+  return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+}
+
+InstructionCost
 RISCVTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                     TTI::TargetCostKind CostKind) const {
-  unsigned Opcode = MICA.getID() == Intrinsic::masked_load ? Instruction::Load
-                                                           : Instruction::Store;
+  unsigned IID = MICA.getID();
+  bool IsLoad = IID == Intrinsic::masked_load || IID == Intrinsic::vp_load;
+  unsigned Opcode = IsLoad ? Instruction::Load : Instruction::Store;
   Type *Src = MICA.getDataType();
   Align Alignment = MICA.getAlignment();
   unsigned AddressSpace = MICA.getAddressSpace();
 
   if (!isLegalMaskedLoadStore(Src, Alignment) ||
       CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getMaskedMemoryOpCost(MICA, CostKind);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   return getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
 }
@@ -1120,19 +1145,24 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
   return MemCost + ShuffleCost;
 }
 
-InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
-    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
+InstructionCost
+RISCVTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                     TTI::TargetCostKind CostKind) const {
+
+  bool IsLoad = MICA.getID() == Intrinsic::masked_gather ||
+                MICA.getID() == Intrinsic::vp_gather;
+  unsigned Opcode = IsLoad ? Instruction::Load : Instruction::Store;
+  Type *DataTy = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  const Instruction *I = MICA.getInst();
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   if ((Opcode == Instruction::Load &&
        !isLegalMaskedGather(DataTy, Align(Alignment))) ||
       (Opcode == Instruction::Store &&
        !isLegalMaskedScatter(DataTy, Align(Alignment))))
-    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't
@@ -1159,7 +1189,7 @@ InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
                  (Opcode == Instruction::Load &&
                   isLegalMaskedExpandLoad(DataTy, Alignment));
   if (!IsLegal || CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getExpandCompressMemoryOpCost(MICA, CostKind);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
   // Example compressstore sequence:
   // vsetivli        zero, 8, e32, m2, ta, ma (ignored)
   // vcompress.vm    v10, v8, v0
@@ -1188,14 +1218,22 @@ InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
          LT.first * getRISCVInstructionCost(Opcodes, LT.second, CostKind);
 }
 
-InstructionCost RISCVTTIImpl::getStridedMemoryOpCost(
-    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
+InstructionCost
+RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                     TTI::TargetCostKind CostKind) const {
+
+  unsigned Opcode = MICA.getID() == Intrinsic::experimental_vp_strided_load
+                        ? Instruction::Load
+                        : Instruction::Store;
+
+  Type *DataTy = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  const Instruction *I = MICA.getInst();
+
   if (((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
        !isLegalStridedLoadStore(DataTy, Alignment)) ||
       (Opcode != Instruction::Load && Opcode != Instruction::Store))
-    return BaseT::getStridedMemoryOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   if (CostKind == TTI::TCK_CodeSize)
     return TTI::TCC_Basic;

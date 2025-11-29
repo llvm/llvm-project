@@ -845,34 +845,6 @@ public:
     return 1;
   }
 
-  virtual InstructionCost
-  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                        TTI::TargetCostKind CostKind) const {
-    return 1;
-  }
-
-  virtual InstructionCost
-  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const {
-    return 1;
-  }
-
-  virtual InstructionCost
-  getExpandCompressMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                                TTI::TargetCostKind CostKind) const {
-    return 1;
-  }
-
-  virtual InstructionCost
-  getStridedMemoryOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const {
-    return InstructionCost::getInvalid();
-  }
-
   virtual InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -932,6 +904,11 @@ public:
   virtual InstructionCost
   getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
                            TTI::TargetCostKind CostKind) const {
+    unsigned IID = MICA.getID();
+    bool IsStrided = IID == Intrinsic::experimental_vp_strided_load ||
+                     IID == Intrinsic::experimental_vp_strided_store;
+    if (IsStrided)
+      return InstructionCost::getInvalid();
     return 1;
   }
   virtual InstructionCost getCallInstrCost(Function *F, Type *RetTy,
