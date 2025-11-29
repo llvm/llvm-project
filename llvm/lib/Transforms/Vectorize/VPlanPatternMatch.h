@@ -469,6 +469,12 @@ inline AllRecipe_match<Instruction::Trunc, Op0_t> m_Trunc(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
+inline match_combine_or<AllRecipe_match<Instruction::Trunc, Op0_t>, Op0_t>
+m_TruncOrSelf(const Op0_t &Op0) {
+  return m_CombineOr(m_Trunc(Op0), Op0);
+}
+
+template <typename Op0_t>
 inline AllRecipe_match<Instruction::ZExt, Op0_t> m_ZExt(const Op0_t &Op0) {
   return m_Unary<Instruction::ZExt, Op0_t>(Op0);
 }
@@ -853,6 +859,11 @@ struct m_Intrinsic_Ty {
 /// Match intrinsic calls like this:
 /// m_Intrinsic<Intrinsic::fabs>(m_VPValue(X), ...)
 template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
+  return IntrinsicID_match(IntrID);
+}
+
+/// Match intrinsic calls with a runtime intrinsic ID.
+inline IntrinsicID_match m_Intrinsic(Intrinsic::ID IntrID) {
   return IntrinsicID_match(IntrID);
 }
 
