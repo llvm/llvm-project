@@ -99,6 +99,11 @@ protected:
   SmallDenseSet<std::pair<const BasicBlock *, const BasicBlock *>, 8> BackEdges;
   bool ComputedBackEdges = false;
 
+  /// Phis we've already pushed a freeze through. If a freeze is reintroduced
+  /// on one of these phis we avoid repeating the transform to prevent
+  /// expensive combine cycles.
+  SmallPtrSet<PHINode *, 16> FreezePhisVisited;
+
 public:
   InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder, Function &F,
                AAResults *AA, AssumptionCache &AC, TargetLibraryInfo &TLI,
