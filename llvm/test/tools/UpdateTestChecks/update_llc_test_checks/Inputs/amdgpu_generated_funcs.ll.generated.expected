@@ -116,13 +116,13 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_addk_i32 s32, 0x600
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, x@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, x@rel32@hi+12
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 2
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 3
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 4
+; CHECK-NEXT:    s_getpc_b64 s[4:5]
+; CHECK-NEXT:    s_add_u32 s4, s4, x@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s5, s5, x@rel32@hi+12
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33
 ; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s33 offset:4
 ; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s33 offset:8
