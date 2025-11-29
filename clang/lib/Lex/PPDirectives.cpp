@@ -3289,7 +3289,7 @@ void Preprocessor::HandleDefineDirective(
       // Warn if defining "__LINE__" and other builtins, per C99 6.10.8/4 and
       // C++ [cpp.predefined]p4, but allow it as an extension.
       if (isLanguageDefinedBuiltin(SourceMgr, OtherMI, II->getName()))
-        Diag(MacroNameTok, diag::ext_pp_redef_builtin_macro);
+        Diag(MacroNameTok, diag::ext_pp_redef_builtin_macro) << MacroNameTok.getIdentifierInfo(); // inserting this diagonstic message into stream.
       // Macros must be identical.  This means all tokens and whitespace
       // separation must be the same.  C99 6.10.3p2.
       else if (!OtherMI->isAllowRedefinitionsWithoutWarning() &&
@@ -3354,7 +3354,7 @@ void Preprocessor::HandleUndefDirective() {
     // Warn if undefining "__LINE__" and other builtins, per C99 6.10.8/4 and
     // C++ [cpp.predefined]p4, but allow it as an extension.
     if (isLanguageDefinedBuiltin(SourceMgr, MI, II->getName()))
-      Diag(MacroNameTok, diag::ext_pp_undef_builtin_macro);
+      Diag(MacroNameTok, diag::ext_pp_undef_builtin_macro) << MacroNameTok.getIdentifierInfo(); // inserting this diagnostic message into it
 
     if (MI->isWarnIfUnused())
       WarnUnusedMacroLocs.erase(MI->getDefinitionLoc());
