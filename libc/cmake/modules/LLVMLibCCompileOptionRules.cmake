@@ -81,9 +81,8 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
   endif()
 
-  if(LIBC_CONF_STRING_UNSAFE_WIDE_READ)
-    list(APPEND config_options "-DLIBC_COPT_STRING_UNSAFE_WIDE_READ")
-  endif()
+  list(APPEND config_options "-DLIBC_COPT_STRING_LENGTH_IMPL=${LIBC_CONF_STRING_LENGTH_IMPL}")
+  list(APPEND config_options "-DLIBC_COPT_FIND_FIRST_CHARACTER_IMPL=${LIBC_CONF_FIND_FIRST_CHARACTER_IMPL}")
 
   if(LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING)
     list(APPEND config_options "-DLIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING")
