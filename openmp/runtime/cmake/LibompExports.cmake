@@ -64,7 +64,7 @@ if(${LIBOMP_OMPT_SUPPORT})
     COMMAND ${CMAKE_COMMAND} -E copy omp-tools.h ${LIBOMP_EXPORTS_CMN_DIR}
   )
 endif()
-if(${LIBOMP_FORTRAN_MODULES})
+if(RUNTIMES_FLANG_MODULES_ENABLED)
   # We cannot attach a POST_BUILD command to libomp-mod, so instead attach it
   # to omp and ensure that libomp-mod is built before by adding a dependency
   add_custom_command(TARGET omp POST_BUILD

@@ -21,9 +21,12 @@ add_library(libomp-mod OBJECT
 )
 set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP/Fortran Modules")
 
+# The following requests explicit building of the Fortran module files
+# Workaround for gfortran to build modules with the
+# omp_sched_monotonic integer parameter
 if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
- target_compile_options(libomp-mod PRIVATE -fno-range-check)
-endif()
+  target_compile_options(libomp-mod PRIVATE -fno-range-check)
+endif ()
 
 flang_module_target(libomp-mod PUBLIC)
 if (FORTRAN_MODULE_DEPS)

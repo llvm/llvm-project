@@ -124,11 +124,8 @@ endif ()
 set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
   "Fortran compiler to use for testing OpenMP runtime libraries.")
 
-if (LLVM_RUNTIMES_BUILD)
-  set(LIBOMP_FORTRAN_MODULES "${RUNTIMES_FLANG_MODULES_ENABLED}" CACHE BOOL
-    "Create Fortran module files? (requires fortran compiler)")
-else ()
-  set(LIBOMP_FORTRAN_MODULES FALSE)
+if (CMAKE_Fortran_COMPILER AND NOT LLVM_RUNTIMES_BUILD)
+  message(WARNING "Building omp_lib.mod requires using LLVM_ENABLE_RUNTIMES=flang-rt\\\;openmp")
 endif ()
 
 # Set up testing infrastructure.
@@ -163,10 +160,10 @@ else()
   get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
 endif()
 
-if(LIBOMP_FORTRAN_MODULES)
+if(LIBOMP_FORTRUNTIMES_FLANG_MODULES_ENABLEDRAN_MODULES)
   add_subdirectory(module)
 else()
-  message(STATUS "Building omp_lib.mod disabled by LIBOMP_FORTRAN_MODULES='${LIBOMP_FORTRAN_MODULES}'; libomp-mod does nothing")
+  message(STATUS "Building omp_lib.mod disabled by RUNTIMES_FLANG_MODULES_ENABLED='${RUNTIMES_FLANG_MODULES_ENABLED}'; libomp-mod does nothing")
   add_custom_target(libomp-mod)
 endif()
 
