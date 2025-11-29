@@ -2743,6 +2743,10 @@ bool GVNPass::processInstruction(Instruction *I) {
     }
     return Changed;
   }
+  if (SelectInst *Select = dyn_cast<SelectInst>(I)) {
+    if (recognizeMinFindingSelectPattern(Select))
+      return true;
+  }
 
   // Instructions with void type don't return a value, so there's
   // no point in trying to find redundancies in them.
@@ -3328,6 +3332,128 @@ void GVNPass::assignValNumForDeadCode() {
       LeaderTable.insert(ValNum, &Inst, BB);
     }
   }
+}
+
+bool GVNPass::transformMinFindingSelectPattern(
+    Loop *L, Type *LoadType, BasicBlock *Preheader, BasicBlock *BB, Value *LHS,
+    Value *RHS, CmpInst *Comparison, SelectInst *Select, Value *BasePtr,
+    Value *IndexVal, Value *OffsetVal) {
+  // Hoist the chain of operations for the second load to preheader.
+  // %min.idx.ext = sext i32 %min.idx to i64
+  // %ptr.float.min = getelementptr float, ptr %0, i64 %min.idx.ext
+  // %ptr.second.load = getelementptr i8, ptr %ptr.float.min, i64 -4
+  // %val.current.min = load float, ptr %ptr.second.load, align 4
+  IRBuilder<> Builder(Preheader->getTerminator());
+
+  PHINode *Phi = dyn_cast<PHINode>(IndexVal);
+  if (!Phi) {
+    LLVM_DEBUG(dbgs() << "GVN: IndexVal is not a PHI node\n");
+    return false;
+  }
+
+  Value *InitialMinIndex = Phi->getIncomingValueForBlock(Preheader);
+
+  // Insert PHI node at the top of this block.
+  // This PHI node will be used to memoize the current minimum value so far.
+  PHINode *KnownMinPhi = PHINode::Create(LoadType, 2, "known_min", BB->begin());
+
+  // Hoist the load and build the necessary operations.
+  // 1. hoist_0 = sext i32 to i64
+  Value *HoistedSExt =
+      Builder.CreateSExt(InitialMinIndex, Builder.getInt64Ty(), "hoist_sext");
+
+  // 2. hoist_gep1 = getelementptr float, ptr BasePtr, i64 HoistedSExt
+  Value *HoistedGEP1 =
+      Builder.CreateGEP(LoadType, BasePtr, HoistedSExt, "hoist_gep1");
+
+  // 3. hoist_gep2 = getelementptr i8, ptr HoistedGEP1, i64 OffsetVal
+  Value *HoistedGEP2 = Builder.CreateGEP(Builder.getInt8Ty(), HoistedGEP1,
+                                         OffsetVal, "hoist_gep2");
+
+  // 4. hoisted_load = load float, ptr HoistedGEP2
+  LoadInst *NewLoad = Builder.CreateLoad(LoadType, HoistedGEP2, "hoisted_load");
+
+  // Let the new load now take the place of the old load.
+  RHS->replaceAllUsesWith(NewLoad);
+  dyn_cast<LoadInst>(RHS)->eraseFromParent();
+
+  // Comparison should now compare the current value and the newly inserted
+  // PHI node.
+  Comparison->setOperand(1, KnownMinPhi);
+
+  // Create new select instruction for selecting the minimum value.
+  IRBuilder<> SelectBuilder(BB->getTerminator());
+  SelectInst *CurrentMinSelect = dyn_cast<SelectInst>(
+      SelectBuilder.CreateSelect(Comparison, LHS, KnownMinPhi, "current_min"));
+
+  // Populate the newly created PHI node
+  // with (hoisted) NewLoad from the preheader and CurrentMinSelect.
+  KnownMinPhi->addIncoming(NewLoad, Preheader);
+  KnownMinPhi->addIncoming(CurrentMinSelect, BB);
+  LLVM_DEBUG(dbgs() << "Transformed the code\n");
+  return true;
+}
+
+bool GVNPass::recognizeMinFindingSelectPattern(SelectInst *Select) {
+  Value *BasePtr = nullptr, *IndexVal = nullptr, *OffsetVal = nullptr;
+  LLVM_DEBUG(
+      dbgs()
+      << "GVN: Analyzing select instruction for minimum finding pattern.\n");
+  LLVM_DEBUG(dbgs() << "GVN: Select: " << *Select << "\n");
+  BasicBlock *BB = Select->getParent();
+
+  // If the block is not in a loop, bail out.
+  Loop *L = LI->getLoopFor(BB);
+  if (!L) {
+    LLVM_DEBUG(dbgs() << "GVN: Could not find loop.\n");
+    return false;
+  }
+
+  // If preheader of the loop is not found, bail out.
+  BasicBlock *Preheader = L->getLoopPreheader();
+  if (!Preheader) {
+    LLVM_DEBUG(dbgs() << "GVN: Could not find loop preheader.\n");
+    return false;
+  }
+  Value *Condition = Select->getCondition();
+  CmpInst *Comparison = dyn_cast<CmpInst>(Condition);
+  if (!Comparison) {
+    LLVM_DEBUG(dbgs() << "GVN: Condition is not a comparison.\n");
+    return false;
+  }
+
+  // Check if this is less-than comparison.
+  CmpInst::Predicate Pred = Comparison->getPredicate();
+  if (Pred != CmpInst::ICMP_SLT && Pred != CmpInst::ICMP_ULT &&
+      Pred != CmpInst::FCMP_OLT && Pred != CmpInst::FCMP_ULT) {
+    LLVM_DEBUG(dbgs() << "GVN: Not a less-than comparison, predicate: " << Pred
+                      << "\n");
+    return false;
+  }
+
+  // Check that both operands are loads.
+  Value *LHS = Comparison->getOperand(0);
+  Value *RHS = Comparison->getOperand(1);
+  if (!isa<LoadInst>(LHS) || !isa<LoadInst>(RHS)) {
+    LLVM_DEBUG(dbgs() << "GVN: Not both operands are loads.\n");
+    return false;
+  }
+
+  if (!match(RHS,
+             m_Load(m_GEP(m_GEP(m_Value(BasePtr), m_SExt(m_Value(IndexVal))),
+                          m_Value(OffsetVal))))) {
+    LLVM_DEBUG(dbgs() << "GVN: Not a required load pattern.\n");
+    return false;
+  }
+  LLVM_DEBUG(dbgs() << "GVN: Found minimum finding pattern in Block: "
+                    << Select->getParent()->getName() << ".\n");
+
+  // Get type of load.
+  Type *LoadType = dyn_cast<LoadInst>(LHS)->getType();
+  LLVM_DEBUG(dbgs() << "GVN: Transforming minimum finding pattern.\n");
+  return transformMinFindingSelectPattern(L, LoadType, Preheader, BB, LHS, RHS,
+                                          Comparison, Select, BasePtr, IndexVal,
+                                          OffsetVal);
 }
 
 class llvm::gvn::GVNLegacyPass : public FunctionPass {
