@@ -50,8 +50,17 @@ AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
 
 } // namespace
 
+
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
-  const auto SingleVarDecl = varDecl().bind("singleVar");
+  const auto ClassWithDtorDecl = cxxRecordDecl(hasMethod(cxxDestructorDecl()));
+  const auto ClassWithDtorType =
+      hasCanonicalType(hasDeclaration(ClassWithDtorDecl));
+  const auto ArrayOfClassWithDtor =
+      hasType(arrayType(hasElementType(ClassWithDtorType)));
+
+  const auto SingleVarDecl =
+      varDecl(unless(anyOf(hasType(ClassWithDtorType), ArrayOfClassWithDtor)))
+          .bind("singleVar");
   const auto RefToBoundVarDecl =
       declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
 

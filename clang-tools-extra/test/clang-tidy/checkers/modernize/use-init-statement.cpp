@@ -4,8 +4,19 @@ void do_some(int i=0);
 int get_with_possible_side_effects();
 enum class INITIALIZE_STATUS { OK, FAIL, PENDING };
 INITIALIZE_STATUS initialize(int& val);
+namespace std {
+    struct mutex {};
+    template<typename Mutex>
+    struct unique_lock {
+        Mutex* m;
+        unique_lock(Mutex& mutex) : m(&mutex) {}
+        ~unique_lock();
+        bool owns_lock() const noexcept { return true; }
+    };
+}
 #define DUMMY_TOKEN // crutch because CHECK-FIXES unable to match empty string
-// TODO: std::lock_guard lock(mx)
+
+// TODO: unit-test for using types
 
 void good() {
     int i1 = 0;
@@ -78,6 +89,62 @@ void good_prev_decl_stmt_not_a_variable() {
     }
 }
 
+void good_unique_lock() {
+    static std::mutex counter_mutex;
+    static int counter;
+
+    std::unique_lock<std::mutex> lock(counter_mutex);
+    if (lock.owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
+void good_unique_lock_nested() {
+    struct Lock { std::unique_lock<std::mutex> l; };
+    static std::mutex counter_mutex;
+    static int counter;
+
+    Lock lock{{counter_mutex}};
+    if (lock.l.owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
+void good_unique_lock_multiple() {
+    static std::mutex counter_mutex;
+    static int counter;
+
+    static std::mutex counter2_mutex;
+    static int counter_2;
+
+    std::unique_lock<std::mutex> lock(counter_mutex);
+    std::unique_lock<std::mutex> lock2(counter2_mutex), *p_loc = &lock;
+    if (lock2.owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
+void good_array_of_unique_lock() {
+    static std::mutex counter_mutex;
+    static int counter;
+
+    static std::mutex counter2_mutex;
+    static int counter2;
+
+    std::unique_lock<std::mutex> lock[2] = {
+        {counter_mutex},
+        {counter2_mutex}
+    };
+    if (lock[0].owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
+
 // TODO: implement structured binding case
 
 void bad1() {
@@ -120,21 +187,16 @@ void bad2() {
     }
 }
 
-// FIXME: implement this case
-// void bad3() {
-//     int i1 = 0;
-//     int ii1 = 0;
-//     if (i1 == 0) {
-//         do_some();
-//     }
-//     int i2 = 0;
-//     int ii2 = 0;
-//     switch (i2) {
-//         case 0:
-//             do_some();
-//             break;
-//     }
-// }
+void bad_user_defined() {
+    struct A { bool operator==(int); };
+    A i1; DUMMY_TOKEN
+    if (i1 == 0) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (A i1; i1 == 0) {
+        do_some();
+    }
+}
 
 void bad_const() {
     const int i1 = 0; DUMMY_TOKEN
@@ -229,6 +291,53 @@ void bad_multiple_not_all_used() {
             do_some();
             break;
     }
+}
+
+// FIXME: implement this case
+// void bad_unique_lock() {
+//     static std::mutex counter_mutex;
+//     static int counter;
+// 
+//     std::unique_lock<std::mutex> lock(counter_mutex);
+//     if (lock.owns_lock()) {
+//         do_some();
+//     }
+// }
+
+void bad_pointer_to_unique_lock() {
+    static std::mutex counter_mutex;
+    static int counter;
+
+    std::unique_lock<std::mutex> lock(counter_mutex);
+
+    ++counter;
+
+    const auto* p_lock = &lock; DUMMY_TOKEN
+    if (p_lock->owns_lock()) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'p_lock' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (const auto* p_lock = &lock; p_lock->owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
+void bad_reference_to_unique_lock() {
+    static std::mutex counter_mutex;
+    static int counter;
+
+    std::unique_lock<std::mutex> lock(counter_mutex);
+
+    ++counter;
+    
+    const auto& r_lock = lock; DUMMY_TOKEN
+    if (r_lock.owns_lock()) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'r_lock' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (const auto& r_lock = lock; r_lock.owns_lock()) {
+        do_some();
+    }
+    ++counter;
 }
 
 #define OPEN_PAREN_I1 (i1
