@@ -709,8 +709,8 @@ let Predicates = [HasVendorXCVmem, IsRV32], AddedComplexity = 1 in {
 
 let Predicates = [HasVendorXCVelw, IsRV32] in {
   def : Pat<(int_riscv_cv_elw_elw (XLenVT GPR:$rs1)), (PseudoCV_ELW GPR:$rs1)>;
-  def : Pat<(int_riscv_cv_elw_elw (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12)),
-            (CV_ELW GPR:$rs1, simm12:$imm12)>;
+  def : Pat<(int_riscv_cv_elw_elw (AddrRegImm (XLenVT GPR:$rs1), simm12_lo:$imm12)),
+            (CV_ELW GPR:$rs1, simm12_lo:$imm12)>;
 }
 
 multiclass PatCoreVBitManip<Intrinsic intr> {
