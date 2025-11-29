@@ -2483,8 +2483,8 @@ static bool AreFCmpOperandsNonNaN(const Instruction *Inst) {
     if (FPOp->hasNoNaNs())
       return true;
 
-  for (const auto &U : Inst->operands())
-    if (!IsKnownNonNaN(U))
+  for (int I = 0; I != 2; ++I)
+    if (!IsKnownNonNaN(Inst->getOperand(I)))
       return false;
 
   return true;
