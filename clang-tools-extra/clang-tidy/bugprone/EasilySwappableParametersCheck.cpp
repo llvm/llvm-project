@@ -1690,8 +1690,9 @@ public:
           TargetIdx.emplace(Idx);
 
       assert(TargetIdx && "Matched, but didn't find index?");
-      TargetParams[PassedParamOfThisFn].insert(
-          {CalledFn->getCanonicalDecl(), *TargetIdx});
+      if (TargetIdx)
+        TargetParams[PassedParamOfThisFn].insert(
+            {CalledFn->getCanonicalDecl(), *TargetIdx});
     }
   }
 
