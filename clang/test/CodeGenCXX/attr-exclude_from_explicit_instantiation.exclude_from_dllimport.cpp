@@ -49,14 +49,58 @@ struct __declspec(dllimport) D {
 template <class T> void D<T>::to_be_imported() noexcept {}
 template <class T> void D<T>::also_to_be_imported() noexcept {}
 
+// Interaction with VTables.
+template <class T>
+struct E {
+  // For the MSVC ABI: this constructor causes implicit instantiation of
+  // the VTable, which should trigger instantiating all virtual member
+  // functions regardless `exclude_from_explicit_instantiation` but currently not.
+  // For the Itanium ABI: Emitting the VTable is suppressed by implicit
+  // instantiation declaration so virtual member functions won't be instantiated.
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION explicit E(int);
+
+  // This constructor doesn't trigger the instantiation of the VTable.
+  // In this case, declaration of virtual member functions are absent too.
+  explicit E(long);
+
+  // The body of this shouldn't be emitted since instantiation is suppressed
+  // by the explicit instantiation declaration.
+  virtual void to_be_imported() noexcept;
+
+  // The body of this should be emitted if the VTable is instantiated, even if
+  // the instantiation of this class template is declared with dllimport.
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION virtual void to_be_instantiated() noexcept;
+
+  // The body of this shouldn't be emitted since that comes from an external DLL.
+  EXCLUDE_FROM_EXPLICIT_INSTANTIATION __declspec(dllimport) virtual void to_be_imported_explicitly() noexcept;
+
+};
+
+template <class T> E<T>::E(int) {}
+template <class T> E<T>::E(long) {}
+template <class T> void E<T>::to_be_imported() noexcept {}
+template <class T> void E<T>::to_be_instantiated() noexcept {}
+
 // MSC: $"?not_to_be_imported@?$C@H@@QEAAXXZ" = comdat any
 // MSC: $"?also_to_be_imported@?$D@H@@QEAAXXZ" = comdat any
 // GNU: $_ZN1CIiE18not_to_be_importedEv = comdat any
 // GNU: $_ZN1DIiE19also_to_be_importedEv = comdat any
+// GNU: @_ZTV1EIiE = external dllimport unnamed_addr
+// GNU: @_ZTV1EIjE = external unnamed_addr
+
+// MSC: @0 = private unnamed_addr constant {{.*}}, comdat($"??_S?$E@H@@6B@")
+// MSC: @1 = private unnamed_addr constant {{.*}}, comdat($"??_7?$E@I@@6B@")
+// MSC: @"??_S?$E@H@@6B@" =
+// MSC: @"??_7?$E@I@@6B@" =
 
 extern template struct __declspec(dllimport) C<int>;
 
 extern template struct D<int>;
+
+extern template struct __declspec(dllimport) E<int>;      // $E@H, 1EIiE
+extern template struct E<unsigned>;                       // $E@I, 1EIjE
+extern template struct __declspec(dllimport) E<long int>; // $E@J, 1EIlE
+extern template struct E<unsigned long int>;              // $E@K, 1EImE
 
 void use() {
   C<int> c;
@@ -82,6 +126,14 @@ void use() {
   // MSC: call void @"?also_to_be_imported@?$D@H@@QEAAXXZ"
   // GNU: call void @_ZN1DIiE19also_to_be_importedEv
   d.also_to_be_imported(); // implicitly instantiated here
+
+  E<int> ei{1};
+
+  E<unsigned> ej{1};
+
+  E<long int> el{1L};
+
+  E<unsigned long int> eu{1L};
 }
 
 // MSC: declare dllimport void @"?to_be_imported@?$C@H@@QEAAXXZ"
@@ -98,3 +150,20 @@ void use() {
 
 // MSC: define linkonce_odr dso_local void @"?also_to_be_imported@?$D@H@@QEAAXXZ"
 // GNU: define linkonce_odr dso_local void @_ZN1DIiE19also_to_be_importedEv
+
+// MSC: declare dllimport noundef ptr @"??0?$E@J@@QEAA@J@Z"
+// MSC: declare dso_local noundef ptr @"??0?$E@K@@QEAA@J@Z"
+// GNU: define linkonce_odr dso_local void @_ZN1EIiEC1Ei
+// GNU: define linkonce_odr dso_local void @_ZN1EIjEC1Ei
+// GNU: declare dllimport void @_ZN1EIlEC1El
+// GNU: declare dso_local void @_ZN1EImEC1El
+// GNU: define linkonce_odr dso_local void @_ZN1EIiEC2Ei
+// GNU: define linkonce_odr dso_local void @_ZN1EIjEC2Ei
+
+// MSC: declare dllimport void @"?to_be_imported@?$E@H@@UEAAXXZ"
+// MSC: declare dso_local void @"?to_be_instantiated@?$E@H@@UEAAXXZ"
+// MSC: declare dllimport void @"?to_be_imported_explicitly@?$E@H@@UEAAXXZ"
+
+// MSC: declare dso_local void @"?to_be_imported@?$E@I@@UEAAXXZ"
+// MSC: declare dso_local void @"?to_be_instantiated@?$E@I@@UEAAXXZ"
+// MSC: declare dllimport void @"?to_be_imported_explicitly@?$E@I@@UEAAXXZ"
