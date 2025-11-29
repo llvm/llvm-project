@@ -2640,6 +2640,8 @@ public:
   // Extended vector type with bool element that is packed. HLSL doesn't pack
   // its bool vectors.
   bool isPackedVectorBoolType(const ASTContext &ctx) const;
+  // Vector type with packed _BitInt elements.
+  bool isBitIntVectorType() const;
   bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
@@ -8663,6 +8665,11 @@ inline bool Type::isExtVectorBoolType() const {
   if (!isExtVectorType())
     return false;
   return cast<ExtVectorType>(CanonicalType)->getElementType()->isBooleanType();
+}
+
+inline bool Type::isBitIntVectorType() const {
+  return isVectorType() &&
+         cast<VectorType>(CanonicalType)->getElementType()->isBitIntType();
 }
 
 inline bool Type::isSubscriptableVectorType() const {
