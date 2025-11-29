@@ -16,8 +16,6 @@ namespace std {
 }
 #define DUMMY_TOKEN // crutch because CHECK-FIXES unable to match empty string
 
-// TODO: unit-test for using types
-
 void good() {
     int i1 = 0;
     if (i1 == 0) {
@@ -135,6 +133,36 @@ void good_array_of_unique_lock() {
     static int counter2;
 
     std::unique_lock<std::mutex> lock[2] = {
+        {counter_mutex},
+        {counter2_mutex}
+    };
+    if (lock[0].owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
+void good_unique_lock_using() {
+    using LockType = std::unique_lock<std::mutex>;
+    static std::mutex counter_mutex;
+    static int counter;
+
+    LockType lock(counter_mutex);
+    if (lock.owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
+void good_array_of_unique_lock_using() {
+    using LockType = std::unique_lock<std::mutex>;
+    static std::mutex counter_mutex;
+    static int counter;
+
+    static std::mutex counter2_mutex;
+    static int counter2;
+
+    LockType lock[2] = {
         {counter_mutex},
         {counter2_mutex}
     };
@@ -335,6 +363,45 @@ void bad_reference_to_unique_lock() {
 // CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'r_lock' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
 // CHECK-FIXES: DUMMY_TOKEN
 // CHECK-FIXES-NEXT: if (const auto& r_lock = lock; r_lock.owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
+void bad_pointer_to_unique_lock_using() {
+    using LockType = std::unique_lock<std::mutex>;
+    static std::mutex counter_mutex;
+    static int counter;
+
+    LockType lock(counter_mutex);
+
+    ++counter;
+
+    using LockPtr = const LockType*;
+    LockPtr p_lock = &lock; DUMMY_TOKEN
+    if (p_lock->owns_lock()) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'p_lock' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (LockPtr p_lock = &lock; p_lock->owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
+void bad_reference_to_unique_lock_using() {
+    using LockType = std::unique_lock<std::mutex>;
+    static std::mutex counter_mutex;
+    static int counter;
+
+    LockType lock(counter_mutex);
+
+    ++counter;
+    
+    const LockType& r_lock = lock; DUMMY_TOKEN
+    if (r_lock.owns_lock()) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'r_lock' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (const LockType& r_lock = lock; r_lock.owns_lock()) {
         do_some();
     }
     ++counter;
