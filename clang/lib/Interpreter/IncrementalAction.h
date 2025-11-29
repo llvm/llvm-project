@@ -74,6 +74,8 @@ public:
 
   /// Generate an LLVM module for the most recent parsed input.
   std::unique_ptr<llvm::Module> GenModule();
+
+  void discardCurrentCodeGenModule();
 };
 
 class InProcessPrintingASTConsumer final : public MultiplexConsumer {

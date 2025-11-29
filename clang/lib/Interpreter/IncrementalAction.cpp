@@ -120,6 +120,17 @@ std::unique_ptr<llvm::Module> IncrementalAction::GenModule() {
   return nullptr;
 }
 
+void IncrementalAction::discardCurrentCodeGenModule() {
+  if (CodeGenerator *CG = getCodeGen()) {
+    if (auto *CurM = CG->GetModule()) {
+      llvm::LLVMContext &Ctx = CurM->getContext();
+      std::string Name = CurM->getName().str();
+      std::unique_ptr<llvm::Module> Dead(CG->ReleaseModule());
+      CG->StartModule(Name, Ctx);
+    }
+  }
+}
+
 CodeGenerator *IncrementalAction::getCodeGen() const {
   FrontendAction *WrappedAct = getWrapped();
   if (!WrappedAct || !WrappedAct->hasIRSupport())
