@@ -955,3 +955,86 @@ exit:
 }
 
 declare i64 @llvm.umax.i64(i64, i64)
+
+define void @outer_iv_used_within_inner_icmp(i32 %k) {
+; CHECK-LABEL: @outer_iv_used_within_inner_icmp(
+; CHECK-NEXT:  for.body.lr.ph:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[K:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[SMAX]], -1
+; CHECK-NEXT:    [[NEW_BOUND:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 2)
+; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
+; CHECK:       outer.header:
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH:%.*]] ], [ [[J_INC:%.*]], [[OUTER_INC:%.*]] ]
+; CHECK-NEXT:    br label [[OUTER_HEADER_SPLIT:%.*]]
+; CHECK:       outer.header.split:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_05:%.*]] = phi i32 [ 0, [[OUTER_HEADER_SPLIT]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[J]], 2
+; CHECK-NEXT:    br i1 true, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[I_05]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[NEW_BOUND]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[OUTER_HEADER_SPLIT_SPLIT:%.*]]
+; CHECK:       outer.header.split.split:
+; CHECK-NEXT:    [[I_05_LCSSA:%.*]] = phi i32 [ [[INC]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[I_05_LCSSA]], [[K]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_BODY_SPLIT_PREHEADER:%.*]], label [[OUTER_INC]]
+; CHECK:       for.body.split.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY_SPLIT:%.*]]
+; CHECK:       for.body.split:
+; CHECK-NEXT:    [[I_05_SPLIT:%.*]] = phi i32 [ [[INC_SPLIT:%.*]], [[FOR_INC_SPLIT:%.*]] ], [ [[I_05_LCSSA]], [[FOR_BODY_SPLIT_PREHEADER]] ]
+; CHECK-NEXT:    [[CMP1_SPLIT:%.*]] = icmp ult i32 [[J]], 2
+; CHECK-NEXT:    br i1 false, label [[IF_THEN_SPLIT:%.*]], label [[IF_ELSE_SPLIT:%.*]]
+; CHECK:       if.else.split:
+; CHECK-NEXT:    br label [[FOR_INC_SPLIT]]
+; CHECK:       if.then.split:
+; CHECK-NEXT:    br label [[FOR_INC_SPLIT]]
+; CHECK:       for.inc.split:
+; CHECK-NEXT:    [[INC_SPLIT]] = add nsw i32 [[I_05_SPLIT]], 1
+; CHECK-NEXT:    [[CMP_SPLIT:%.*]] = icmp slt i32 [[INC_SPLIT]], [[K]]
+; CHECK-NEXT:    br i1 [[CMP_SPLIT]], label [[FOR_BODY_SPLIT]], label [[OUTER_INC_LOOPEXIT:%.*]]
+; CHECK:       outer.inc.loopexit:
+; CHECK-NEXT:    br label [[OUTER_INC]]
+; CHECK:       outer.inc:
+; CHECK-NEXT:    [[J_INC]] = add nsw i32 [[J]], 1
+; CHECK-NEXT:    [[OUTER_CMP:%.*]] = icmp slt i32 [[J_INC]], [[K]]
+; CHECK-NEXT:    br i1 [[OUTER_CMP]], label [[OUTER_HEADER]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+for.body.lr.ph:
+  br label %outer.header
+
+outer.header:
+  %j = phi i32 [ 0, %for.body.lr.ph ], [ %j.inc, %outer.inc ]
+  br label %for.body
+
+for.body:
+  %i.05 = phi i32 [ 0, %outer.header ], [ %inc, %for.inc ]
+  %cmp1 = icmp ult i32 %j, 2
+  br i1 %cmp1, label %if.then, label %if.else
+
+if.then:
+  br label %for.inc
+
+if.else:
+  br label %for.inc
+
+for.inc:
+  %inc = add nsw i32 %i.05, 1
+  %cmp = icmp slt i32 %inc, %k
+  br i1 %cmp, label %for.body, label %outer.inc
+
+outer.inc:
+  %j.inc = add nsw i32 %j, 1
+  %outer.cmp = icmp slt i32 %j.inc, %k
+  br i1 %outer.cmp, label %outer.header, label %for.end
+
+for.end:
+  ret void
+}
