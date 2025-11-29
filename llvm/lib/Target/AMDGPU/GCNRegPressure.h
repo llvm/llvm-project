@@ -234,6 +234,7 @@ public:
 
   /// Whether the current RP is at or below the defined pressure target.
   bool satisfied() const;
+  bool spillsToMemory() const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   friend raw_ostream &operator<<(raw_ostream &OS, const GCNRPTarget &Target) {
