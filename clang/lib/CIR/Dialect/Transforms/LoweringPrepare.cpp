@@ -929,7 +929,7 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
   mlir::Value lt =
       builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
   mlir::Value eq =
-      builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
+      builder.createCompare(loc, CmpOpKind::eq, op.getLhs(), op.getRhs());
 
   mlir::Value transformedResult;
   if (cmpInfo.getOrdering() == CmpOrdering::Strong) {
@@ -942,7 +942,7 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
         loc, op.getType(), cmpInfo.getUnordered().value());
 
     mlir::Value gt =
-        builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
+        builder.createCompare(loc, CmpOpKind::gt, op.getLhs(), op.getRhs());
     mlir::Value selectOnEq = builder.createSelect(loc, eq, eqRes, unorderedRes);
     mlir::Value selectOnGt = builder.createSelect(loc, gt, gtRes, selectOnEq);
     transformedResult = builder.createSelect(loc, lt, ltRes, selectOnGt);
