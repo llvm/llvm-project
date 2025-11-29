@@ -48,6 +48,7 @@ namespace scudo {
 
 template <typename Config> class SizeClassAllocator64 {
 public:
+  using ConfigType = Config;
   typedef typename Config::CompactPtrT CompactPtrT;
   typedef typename Config::SizeClassMap SizeClassMap;
   typedef typename Config::ConditionVariableT ConditionVariableT;

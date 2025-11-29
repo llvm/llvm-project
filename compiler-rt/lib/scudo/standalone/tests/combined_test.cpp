@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <condition_variable>
+#include <cstdio>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -89,26 +90,24 @@ template <typename Config> struct TestAllocator : scudo::Allocator<Config> {
   void operator delete(void *ptr);
 };
 
-constexpr size_t kMaxAlign = std::max({
-  alignof(scudo::Allocator<scudo::DefaultConfig>),
+constexpr size_t kMaxAlign =
+    std::max({alignof(scudo::Allocator<scudo::DefaultConfig>),
 #if SCUDO_CAN_USE_PRIMARY64
-      alignof(scudo::Allocator<scudo::FuchsiaConfig>),
+              alignof(scudo::Allocator<scudo::FuchsiaConfig>),
 #endif
-      alignof(scudo::Allocator<scudo::AndroidConfig>)
-});
+              alignof(scudo::Allocator<scudo::AndroidConfig>)});
 
 #if SCUDO_RISCV64
 // The allocator is over 4MB large. Rather than creating an instance of this on
 // the heap, keep it in a global storage to reduce fragmentation from having to
 // mmap this at the start of every test.
 struct TestAllocatorStorage {
-  static constexpr size_t kMaxSize = std::max({
-    sizeof(scudo::Allocator<scudo::DefaultConfig>),
+  static constexpr size_t kMaxSize =
+      std::max({sizeof(scudo::Allocator<scudo::DefaultConfig>),
 #if SCUDO_CAN_USE_PRIMARY64
-        sizeof(scudo::Allocator<scudo::FuchsiaConfig>),
+                sizeof(scudo::Allocator<scudo::FuchsiaConfig>),
 #endif
-        sizeof(scudo::Allocator<scudo::AndroidConfig>)
-  });
+                sizeof(scudo::Allocator<scudo::AndroidConfig>)});
 
   // To alleviate some problem, let's skip the thread safety analysis here.
   static void *get(size_t size) NO_THREAD_SAFETY_ANALYSIS {
@@ -840,7 +839,8 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ReleaseToOS) {
 
 SCUDO_TYPED_TEST(ScudoCombinedTest, OddEven) {
   auto *Allocator = this->Allocator.get();
-  Allocator->setOption(scudo::Option::MemtagTuning, M_MEMTAG_TUNING_BUFFER_OVERFLOW);
+  Allocator->setOption(scudo::Option::MemtagTuning,
+                       M_MEMTAG_TUNING_BUFFER_OVERFLOW);
 
   if (!Allocator->useMemoryTaggingTestOnly())
     return;
@@ -1078,6 +1078,133 @@ struct TestQuarantineSizeClassConfig {
   static const scudo::uptr MaxBytesCachedLog = 12;
   static const scudo::uptr SizeDelta = 0;
 };
+
+struct TestZeroOnDeallocConfig {
+  static const bool MaySupportMemoryTagging = false;
+  static const bool EnableZeroOnDealloc = true;
+
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;
+  struct Primary {
+    // Tiny allocator, its Primary only serves chunks of four sizes.
+    using SizeClassMap =
+        scudo::FixedSizeClassMap<TestQuarantineSizeClassConfig>;
+    static const scudo::uptr RegionSizeLog = DeathRegionSizeLog;
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    typedef scudo::uptr CompactPtrT;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+    static const scudo::uptr GroupSizeLog = 18;
+  };
+
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+struct TestNoZeroOnDeallocConfig : public TestZeroOnDeallocConfig {
+  static const bool EnableZeroOnDealloc = false;
+};
+
+TEST(ScudoCombinedTest, ZeroOnDeallocDisabled) {
+  // When option `EnableZeroOnDealloc` is false the memeory is not cleared on
+  // deallocation.
+  using AllocatorT = TestAllocator<TestNoZeroOnDeallocConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  constexpr scudo::uptr AllocatedSize = 1024;
+
+  void *P = Allocator->allocate(AllocatedSize, Origin);
+  ASSERT_NE(P, nullptr);
+  memset(P, 'B', AllocatedSize);
+
+  Allocator->deallocate(P, Origin);
+
+  for (scudo::uptr I = 1; I < AllocatedSize; ++I) {
+    // Verifies the memory was left unchanged.
+    ASSERT_EQ(static_cast<char *>(P)[I], 'B') << "at position " << I;
+  }
+}
+
+TEST(ScudoCombinedTest, ZeroOnDeallocEnabled) {
+  // When option `EnableZeroOnDealloc` is true, and the flag
+  // `zero_on_dealloc_max_size` is not set there is no size limit and the memory
+  // is always cleared on deallocation.
+  using AllocatorT = TestAllocator<TestZeroOnDeallocConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  constexpr scudo::uptr AllocatedSize = 1024;
+
+  void *P = Allocator->allocate(AllocatedSize, Origin);
+  ASSERT_NE(P, nullptr);
+  memset(P, 'B', AllocatedSize);
+
+  char *Begin = reinterpret_cast<char *>(Allocator->getBlockBeginTestOnly(P));
+  char *End = reinterpret_cast<char *>(P) + AllocatedSize;
+  // Deallocates and eventually clears the memory.
+  Allocator->deallocate(P, Origin);
+
+  // Verifies the memory was cleared, including the header.
+  for (char *T = Begin; T < End; ++T) {
+    ASSERT_EQ(*T, 0) << "at position=" << T - Begin;
+  }
+}
+
+// Verify that the quarantine exists by default.
+TEST(ScudoCombinedTest, ZeroOnDeallocEnabledAndFlag) {
+  ([]() { // Cleanup on exit scope.
+    for (scudo::uptr FlagValue = 128; FlagValue <= 2048; FlagValue *= 2) {
+      // Set the size limit flag via the environment variable.
+      char Options[256];
+      snprintf(Options, sizeof(Options),
+               "SCUDO_OPTIONS=zero_on_dealloc_max_size=%ld",
+               static_cast<long>(FlagValue));
+      putenv(Options);
+
+      // Creates an allocator, configured from the environment.
+      using AllocatorT = TestAllocator<TestZeroOnDeallocConfig>;
+      auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+      for (scudo::uptr AllocatedSize : {FlagValue / 2, FlagValue}) {
+        // Allocates and sets the memory.
+        void *P = Allocator->allocate(AllocatedSize, Origin);
+        ASSERT_NE(P, nullptr);
+        memset(P, 'B', AllocatedSize);
+
+        char *Begin =
+            reinterpret_cast<char *>(Allocator->getBlockBeginTestOnly(P));
+        char *End = reinterpret_cast<char *>(P) + AllocatedSize;
+        // Deallocates and eventually clears the memory.
+        Allocator->deallocate(P, Origin);
+
+        if (End - Begin <= static_cast<long>(FlagValue)) {
+          // Verifies the memory was cleared, including the header.
+          for (char *T = Begin; T < End; ++T) {
+            ASSERT_EQ(*T, 0)
+                << "at position=" << T - Begin << " for FlagValue=" << FlagValue
+                << " AllocatedSize=" << AllocatedSize;
+          }
+        } else {
+          for (scudo::uptr I = 1; I < AllocatedSize; ++I) {
+            // Verifies the memory was left unchanged.
+            ASSERT_EQ(static_cast<char *>(P)[I], 'B')
+                << "at position " << I << " for FlagValue=" << FlagValue
+                << " AllocatedSize=" << AllocatedSize;
+          }
+        }
+      }
+    }
+  })();
+  // Clear the scudo flag option.
+  unsetenv("SCUDO_OPTIONS");
+}
 
 struct TestQuarantineConfig {
   static const bool MaySupportMemoryTagging = false;

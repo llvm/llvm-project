@@ -61,6 +61,11 @@ BASE_OPTIONAL(const bool, QuarantineDisabled, false)
 // If set to false, return the total available size in the allocation.
 BASE_OPTIONAL(const bool, ExactUsableSize, true)
 
+// Only chunks smaller or equal to this threshold will be zeroed on
+// deallocation. Requires zero on dealloc to be enabled.
+BASE_OPTIONAL(const bool, EnableZeroOnDealloc, false)
+
+
 // PRIMARY_REQUIRED_TYPE(NAME)
 //
 // SizeClassMap to use with the Primary.

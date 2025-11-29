@@ -176,6 +176,8 @@ public:
 
     QuarantineMaxChunkSize =
         static_cast<u32>(getFlags()->quarantine_max_chunk_size);
+    ZeroOnDeallocMaxSize =
+        static_cast<u32>(getFlags()->zero_on_dealloc_max_size);
 
     Stats.init();
     // TODO(chiahungduan): Given that we support setting the default value in
@@ -1033,6 +1035,7 @@ private:
 
   u32 Cookie = 0;
   u32 QuarantineMaxChunkSize = 0;
+  u32 ZeroOnDeallocMaxSize = 0;
 
   GlobalStats Stats;
   PrimaryT Primary;
@@ -1332,17 +1335,25 @@ private:
 
     Chunk::storeHeader(Cookie, Ptr, Header);
 
-    if (BypassQuarantine) {
-      void *BlockBegin;
-      if (LIKELY(!useMemoryTagging<AllocatorConfig>(Options))) {
-        // Must do this after storeHeader because loadHeader uses a tagged ptr.
-        if (allocatorSupportsMemoryTagging<AllocatorConfig>())
-          Ptr = untagPointer(Ptr);
-        BlockBegin = getBlockBegin(Ptr, Header);
-      } else {
-        BlockBegin = retagBlock(Options, TaggedPtr, Ptr, Header, Size, true);
-      }
+    void *BlockBegin;
+    if (LIKELY(!useMemoryTagging<AllocatorConfig>(Options))) {
+      // Must do this after storeHeader because loadHeader uses a tagged ptr.
+      if (allocatorSupportsMemoryTagging<AllocatorConfig>())
+        Ptr = untagPointer(Ptr);
+      BlockBegin = getBlockBegin(Ptr, Header);
+    } else {
+      BlockBegin = retagBlock(Options, TaggedPtr, Ptr, Header, Size, true);
+    }
 
+    if (AllocatorConfig::getEnableZeroOnDealloc()) {
+      uptr length = reinterpret_cast<uptr>(Ptr) + Size -
+                    reinterpret_cast<uptr>(BlockBegin);
+      if (length <= ZeroOnDeallocMaxSize) {
+        memset(BlockBegin, 0, length);
+      }
+    }
+
+    if (BypassQuarantine) {
       const uptr ClassId = Header->ClassId;
       if (LIKELY(ClassId)) {
         bool CacheDrained;
@@ -1361,8 +1372,6 @@ private:
         Secondary.deallocate(Options, BlockBegin);
       }
     } else {
-      if (UNLIKELY(useMemoryTagging<AllocatorConfig>(Options)))
-        retagBlock(Options, TaggedPtr, Ptr, Header, Size, false);
       typename TSDRegistryT::ScopedTSD TSD(TSDRegistry);
       Quarantine.put(&TSD->getQuarantineCache(),
                      QuarantineCallback(*this, TSD->getSizeClassAllocator()),
