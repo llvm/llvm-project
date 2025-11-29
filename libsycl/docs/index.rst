@@ -69,11 +69,17 @@ To build LLVM with libsycl runtime enabled the following script can be used.
   mkdir -p $installprefix
 
   cmake -G Ninja -S $llvm/llvm -B $build_llvm \
-        -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" \
+        -DLLVM_ENABLE_PROJECTS="clang" \
         -DLLVM_INSTALL_UTILS=ON \
         -DCMAKE_INSTALL_PREFIX=$installprefix \
-        -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libsycl;libunwind" \
+        -DLLVM_ENABLE_RUNTIMES="offload;openmp;libsycl" \
         -DCMAKE_BUILD_TYPE=Release
 
   ninja -C $build_llvm install
-  
+
+
+Limitations
+========
+
+SYCL runtime is not tested and is not guaranteed to work on Windows because offloading runtime (liboffload) used by SYCL runtime doesn't currently support Windows.
+The limitation to be revised once liboffload will add support for Windows.

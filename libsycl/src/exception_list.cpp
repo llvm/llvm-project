@@ -7,14 +7,21 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file is a SYCL 2020 standard header file.
+/// This file contains the definition of the SYCL 2020 exception_list class
+/// interface (4.13.2.)
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_SYCL_HPP
-#define _LIBSYCL_SYCL_HPP
-
+// 4.13.2. Exception class interface
+#include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/exception.hpp>
-#include <sycl/__impl/platform.hpp>
 
-#endif // _LIBSYCL_SYCL_HPP
+_LIBSYCL_BEGIN_NAMESPACE_SYCL
+
+exception_list::size_type exception_list::size() const { return MList.size(); }
+
+exception_list::iterator exception_list::begin() const { return MList.begin(); }
+
+exception_list::iterator exception_list::end() const { return MList.cend(); }
+
+_LIBSYCL_END_NAMESPACE_SYCL
