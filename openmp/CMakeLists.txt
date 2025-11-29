@@ -160,7 +160,7 @@ else()
   get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
 endif()
 
-if(LIBOMP_FORTRUNTIMES_FLANG_MODULES_ENABLEDRAN_MODULES)
+if(RUNTIMES_FLANG_MODULES_ENABLED)
   add_subdirectory(module)
 else()
   message(STATUS "Building omp_lib.mod disabled by RUNTIMES_FLANG_MODULES_ENABLED='${RUNTIMES_FLANG_MODULES_ENABLED}'; libomp-mod does nothing")

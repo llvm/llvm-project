@@ -191,28 +191,29 @@ set_property(SOURCE
 )
 
 # Import changes from flang_rt.quadmath
-get_target_property(f128_sources
-  FortranFloat128MathILib INTERFACE_SOURCES
-  )
-if (f128_sources)
-  # The interface may define special macros for Float128Math files,
-  # so we need to propagate them.
-  get_target_property(f128_defs
-    FortranFloat128MathILib INTERFACE_COMPILE_DEFINITIONS
+set(f128_sources "")
+if (TARGET f128_sources)
+  get_target_property(f128_sources
+    FortranFloat128MathILib INTERFACE_SOURCES
     )
-  set_property(SOURCE ${f128_sources}
-    APPEND PROPERTY COMPILE_DEFINITIONS
-    ${f128_defs}
-    )
-  get_target_property(f128_include_dirs
-    FortranFloat128MathILib INTERFACE_INCLUDE_DIRECTORIES
-    )
-  set_property(SOURCE ${f128_sources}
-    APPEND PROPERTY INCLUDE_DIRECTORIES
-    ${f128_include_dirs}
-    )
-else ()
-  set(f128_sources "")
+  if (f128_sources)
+    # The interface may define special macros for Float128Math files,
+    # so we need to propagate them.
+    get_target_property(f128_defs
+      FortranFloat128MathILib INTERFACE_COMPILE_DEFINITIONS
+      )
+    set_property(SOURCE ${f128_sources}
+      APPEND PROPERTY COMPILE_DEFINITIONS
+      ${f128_defs}
+      )
+    get_target_property(f128_include_dirs
+      FortranFloat128MathILib INTERFACE_INCLUDE_DIRECTORIES
+      )
+    set_property(SOURCE ${f128_sources}
+      APPEND PROPERTY INCLUDE_DIRECTORIES
+      ${f128_include_dirs}
+      )
+  endif ()
 endif ()
 
 if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
