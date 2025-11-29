@@ -228,3 +228,59 @@ __mmask16 test_kmov_w(__mmask16 A) {
   // OGCG: bitcast <16 x i1> {{.*}} to i16
   return __builtin_ia32_kmovw(A);
 }
+
+int test_mm512_kortestc(__mmask16 __A, __mmask16 __B) {
+  // CIR-LABEL: _mm512_kortestc
+  // CIR: [[ALL_ONES:%.*]] = cir.const #cir.int<65535> : !u16i
+  // CIR: [[LHS:%.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[RHS:%.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[OR:%.*]] = cir.binop(or, [[LHS]], [[RHS]]) : !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[OR_INT:%.*]] = cir.cast bitcast [[OR]] : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+  // CIR: [[CMP:%.*]] = cir.cmp(eq, [[OR_INT]], [[ALL_ONES]]) : !u16i, !cir.bool
+  // CIR: cir.cast bool_to_int [[CMP]] : !cir.bool -> !s32i
+
+  // LLVM-LABEL: _mm512_kortestc
+  // LLVM: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[RHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[OR:%.*]] = or <16 x i1> [[LHS]], [[RHS]]
+  // LLVM: [[CAST:%.*]] = bitcast <16 x i1> [[OR]] to i16
+  // LLVM: [[CMP:%.*]] = icmp eq i16 [[CAST]], -1
+  // LLVM: zext i1 [[CMP]] to i32
+
+  // OGCG-LABEL: _mm512_kortestc
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: or <16 x i1> {{.*}}, {{.*}}
+  // OGCG: bitcast <16 x i1> {{.*}} to i16
+  // OGCG: icmp eq i16 {{.*}}, -1
+  // OGCG: zext i1 {{.*}} to i32
+  return _mm512_kortestc(__A,__B);
+}
+
+int test_mm512_kortestz(__mmask16 __A, __mmask16 __B) {
+  // CIR-LABEL: _mm512_kortestz
+  // CIR: [[ZERO:%.*]] = cir.const #cir.int<0> : !u16i
+  // CIR: [[LHS:%.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[RHS:%.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[OR:%.*]] = cir.binop(or, [[LHS]], [[RHS]]) : !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: [[OR_INT:%.*]] = cir.cast bitcast [[OR]] : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+  // CIR: [[CMP:%.*]] = cir.cmp(eq, [[OR_INT]], [[ZERO]]) : !u16i, !cir.bool
+  // CIR: cir.cast bool_to_int [[CMP]] : !cir.bool -> !s32i
+
+  // LLVM-LABEL: _mm512_kortestz
+  // LLVM: [[LHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[RHS:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[OR:%.*]] = or <16 x i1> [[LHS]], [[RHS]]
+  // LLVM: [[CAST:%.*]] = bitcast <16 x i1> [[OR]] to i16
+  // LLVM: [[CMP:%.*]] = icmp eq i16 [[CAST]], 0
+  // LLVM: zext i1 [[CMP]] to i32
+
+  // OGCG-LABEL: _mm512_kortestz
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: or <16 x i1> {{.*}}, {{.*}}
+  // OGCG: bitcast <16 x i1> {{.*}} to i16
+  // OGCG: icmp eq i16 {{.*}}, 0
+  // OGCG: zext i1 {{.*}} to i32
+  return _mm512_kortestz(__A,__B);
+}

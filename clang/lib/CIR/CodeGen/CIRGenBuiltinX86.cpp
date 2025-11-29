@@ -757,14 +757,40 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vpcomuw:
   case X86::BI__builtin_ia32_vpcomud:
   case X86::BI__builtin_ia32_vpcomuq:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_kortestcqi:
   case X86::BI__builtin_ia32_kortestchi:
   case X86::BI__builtin_ia32_kortestcsi:
-  case X86::BI__builtin_ia32_kortestcdi:
+  case X86::BI__builtin_ia32_kortestcdi: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    cir::IntType ty = cast<cir::IntType>(ops[0].getType());
+    cir::IntAttr allOnesAttr =
+        cir::IntAttr::get(ty, APInt::getAllOnes(ty.getWidth()));
+    cir::ConstantOp allOnesOp = builder.getConstant(loc, allOnesAttr);
+    mlir::Value orOp = emitX86MaskLogic(builder, loc, cir::BinOpKind::Or, ops);
+    mlir::Value cmp =
+        cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, orOp, allOnesOp);
+    return builder.createCast(cir::CastKind::bool_to_int, cmp,
+                              cgm.convertType(expr->getType()));
+  }
   case X86::BI__builtin_ia32_kortestzqi:
   case X86::BI__builtin_ia32_kortestzhi:
   case X86::BI__builtin_ia32_kortestzsi:
-  case X86::BI__builtin_ia32_kortestzdi:
+  case X86::BI__builtin_ia32_kortestzdi: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    cir::IntType ty = cast<cir::IntType>(ops[0].getType());
+    cir::IntAttr allZerosAttr =
+        cir::IntAttr::get(ty, APInt::getZero(ty.getWidth()));
+    cir::ConstantOp allZerosOp = builder.getConstant(loc, allZerosAttr);
+    mlir::Value orOp = emitX86MaskLogic(builder, loc, cir::BinOpKind::Or, ops);
+    mlir::Value cmp =
+        cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, orOp, allZerosOp);
+    return builder.createCast(cir::CastKind::bool_to_int, cmp,
+                              cgm.convertType(expr->getType()));
+  }
   case X86::BI__builtin_ia32_ktestcqi:
   case X86::BI__builtin_ia32_ktestzqi:
   case X86::BI__builtin_ia32_ktestchi:
@@ -773,10 +799,6 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_ktestzsi:
   case X86::BI__builtin_ia32_ktestcdi:
   case X86::BI__builtin_ia32_ktestzdi:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return {};
   case X86::BI__builtin_ia32_kaddqi:
     return emitX86MaskAddLogic(builder, getLoc(expr->getExprLoc()),
                                "x86.avx512.kadd.b", ops);

@@ -208,3 +208,68 @@ __mmask8 test_kmov_b(__mmask8 A) {
  // OGCG: bitcast <8 x i1> {{.*}} to i8
  return __builtin_ia32_kmovb(A);
 }
+
+
+unsigned char test_kortestc_mask8_u8(__mmask8 __A, __mmask8 __B) {
+// CIR-LABEL: _kortestc_mask8_u8
+// CIR: [[ALL_ONES:%.*]] = cir.const #cir.int<255> : !u8i
+// CIR: [[LHS:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+// CIR: [[RHS:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+// CIR: [[OR:%.*]] = cir.binop(or, [[LHS]], [[RHS]]) : !cir.vector<8 x !cir.int<u, 1>>
+// CIR: [[OR_INT:%.*]] = cir.cast bitcast [[OR]] : !cir.vector<8 x !cir.int<u, 1>> -> !u8i
+// CIR: [[CMP:%.*]] = cir.cmp(eq, [[OR_INT]], [[ALL_ONES]]) : !u8i, !cir.bool
+// CIR: cir.cast bool_to_int [[CMP]] : !cir.bool -> !s32i
+// CIR: cir.cast integral {{.*}} : !s32i -> !u8i
+
+
+// LLVM-LABEL: _kortestc_mask8_u8
+// LLVM: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+// LLVM: [[RHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+// LLVM: [[OR:%.*]] = or <8 x i1> [[LHS]], [[RHS]]
+// LLVM: [[CAST:%.*]] = bitcast <8 x i1> [[OR]] to i8
+// LLVM: [[CMP:%.*]] = icmp eq i8 [[CAST]], -1
+// LLVM: [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
+// LLVM: trunc i32 [[ZEXT]] to i8
+
+// OGCG-LABEL: _kortestc_mask8_u8
+// OGCG: bitcast i8 %{{.*}} to <8 x i1>
+// OGCG: bitcast i8 %{{.*}} to <8 x i1>
+// OGCG: or <8 x i1> {{.*}}, {{.*}}
+// OGCG: bitcast <8 x i1> {{.*}} to i8
+// OGCG: icmp eq i8 {{.*}}, -1
+// OGCG: zext i1 {{.*}} to i32
+// OGCG: trunc i32 {{.*}} to i8
+ return _kortestc_mask8_u8(__A,__B);
+}
+
+unsigned char test_kortestz_mask8_u8(__mmask8 __A, __mmask8 __B) {
+// CIR-LABEL: _kortestz_mask8_u8
+// CIR: [[ZERO:%.*]] = cir.const #cir.int<0> : !u8i
+// CIR: [[LHS:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+// CIR: [[RHS:%.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<u, 1>>
+// CIR: [[OR:%.*]] = cir.binop(or, [[LHS]], [[RHS]]) : !cir.vector<8 x !cir.int<u, 1>>
+// CIR: [[OR_INT:%.*]] = cir.cast bitcast [[OR]] : !cir.vector<8 x !cir.int<u, 1>> -> !u8i
+// CIR: [[CMP:%.*]] = cir.cmp(eq, [[OR_INT]], [[ZERO]]) : !u8i, !cir.bool
+// CIR: cir.cast bool_to_int [[CMP]] : !cir.bool -> !s32i
+// CIR: cir.cast integral {{.*}} : !s32i -> !u8i
+
+
+// LLVM-LABEL: _kortestz_mask8_u8
+// LLVM: [[LHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+// LLVM: [[RHS:%.*]] = bitcast i8 %{{.*}} to <8 x i1>
+// LLVM: [[OR:%.*]] = or <8 x i1> [[LHS]], [[RHS]]
+// LLVM: [[CAST:%.*]] = bitcast <8 x i1> [[OR]] to i8
+// LLVM: [[CMP:%.*]] = icmp eq i8 [[CAST]], 0
+// LLVM: [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
+// LLVM: trunc i32 [[ZEXT]] to i8
+
+// OGCG-LABEL: _kortestz_mask8_u8
+// OGCG: bitcast i8 %{{.*}} to <8 x i1>
+// OGCG: bitcast i8 %{{.*}} to <8 x i1>
+// OGCG: or <8 x i1> {{.*}}, {{.*}}
+// OGCG: bitcast <8 x i1> {{.*}} to i8
+// OGCG: icmp eq i8 {{.*}}, 0
+// OGCG: zext i1 {{.*}} to i32
+// OGCG: trunc i32 {{.*}} to i8
+ return _kortestz_mask8_u8(__A,__B);
+}
