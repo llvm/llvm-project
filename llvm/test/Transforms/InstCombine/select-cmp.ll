@@ -808,5 +808,53 @@ define i1 @icmp_lt_slt(i1 %c, i32 %arg) {
   ret i1 %select
 }
 
+define i32 @fold_ucmp(i32 %0, i32 %1) {
+; CHECK-LABEL: @fold_ucmp(
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.ucmp.i32.i32(i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %3 = icmp eq i32 %0, %1
+  %4 = tail call i32 @llvm.ucmp.i32.i32(i32 %0, i32 %1)
+  %5 = select i1 %3, i32 0, i32 %4
+  ret i32 %5
+}
+
+define i32 @fold_scmp(i32 %0, i32 %1) {
+; CHECK-LABEL: @fold_scmp(
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.scmp.i32.i32(i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %3 = icmp eq i32 %0, %1
+  %4 = tail call i32 @llvm.scmp.i32.i32(i32 %0, i32 %1)
+  %5 = select i1 %3, i32 0, i32 %4
+  ret i32 %5
+}
+
+define i32 @fold_ucmp_negative_test(i32 %0, i32 %1) {
+; CHECK-LABEL: @fold_ucmp_negative_test(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.ucmp.i32.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i32 1, i32 [[TMP4]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %3 = icmp eq i32 %0, %1
+  %4 = tail call i32 @llvm.ucmp.i32.i32(i32 %0, i32 %1)
+  %5 = select i1 %3, i32 1, i32 %4 ; wrong constant
+  ret i32 %5
+}
+
+define i32 @fold_scmp_negative_test(i32 %0, i32 %1) {
+; CHECK-LABEL: @fold_scmp_negative_test(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.scmp.i32.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i32 1, i32 [[TMP4]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %3 = icmp eq i32 %0, %1
+  %4 = tail call i32 @llvm.scmp.i32.i32(i32 %0, i32 %1)
+  %5 = select i1 %3, i32 1, i32 %4 ; wrong constant
+  ret i32 %5
+}
+
 declare void @use(i1)
 declare void @use.i8(i8)
