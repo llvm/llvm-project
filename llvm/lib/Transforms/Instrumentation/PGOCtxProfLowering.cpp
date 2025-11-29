@@ -66,7 +66,12 @@ class CtxInstrumentationLowerer final {
   Function *ReleaseCtx = nullptr;
   GlobalVariable *ExpectedCalleeTLS = nullptr;
   GlobalVariable *CallsiteInfoTLS = nullptr;
-  Constant *CannotBeRootInitializer = nullptr;
+  Type *PointerTy = nullptr;
+  Type *SanitizerMutexType = nullptr;
+  Type *I32Ty = nullptr;
+  Type *I64Ty = nullptr;
+
+  Constant *getFunctionDataInitializer(Function &F, bool HasMusttail);
 
 public:
   CtxInstrumentationLowerer(Module &M, ModuleAnalysisManager &MAM);
@@ -114,42 +119,55 @@ void emitUnsupportedRootError(const Function &F, StringRef Reason) {
 }
 } // namespace
 
+Constant *
+CtxInstrumentationLowerer::getFunctionDataInitializer(Function &F,
+                                                      bool HasMusttail) {
+#define _PTRDECL(_, __) Constant::getNullValue(PointerTy),
+#define _VOLATILE_PTRDECL(_, __) _PTRDECL(_, __)
+#define _MUTEXDECL(_) Constant::getNullValue(SanitizerMutexType),
+#define _ENTRY_ADDRESS                                                         \
+  (ContextRootSet.contains(&F) ? &F : Constant::getNullValue(PointerTy)),
+#define _CONTEXT_ROOT                                                          \
+  (HasMusttail                                                                 \
+       ? Constant::getIntegerValue(                                            \
+             PointerTy,                                                        \
+             APInt(M.getDataLayout().getPointerTypeSizeInBits(PointerTy), 1U)) \
+       : Constant::getNullValue(PointerTy)),
+  return ConstantStruct::get(
+      FunctionDataTy,
+      {CTXPROF_FUNCTION_DATA(_PTRDECL, _CONTEXT_ROOT, _ENTRY_ADDRESS,
+                             _VOLATILE_PTRDECL, _MUTEXDECL)});
+#undef _PTRDECL
+#undef _CONTEXT_ROOT
+#undef _ENTRY_ADDRESS
+#undef _VOLATILE_PTRDECL
+#undef _MUTEXDECL
+}
+
 // set up tie-in with compiler-rt.
 // NOTE!!!
 // These have to match compiler-rt/lib/ctx_profile/CtxInstrProfiling.h
 CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
                                                      ModuleAnalysisManager &MAM)
     : M(M), MAM(MAM) {
-  auto *PointerTy = PointerType::get(M.getContext(), 0);
-  auto *SanitizerMutexType = Type::getInt8Ty(M.getContext());
-  auto *I32Ty = Type::getInt32Ty(M.getContext());
-  auto *I64Ty = Type::getInt64Ty(M.getContext());
+  PointerTy = PointerType::get(M.getContext(), 0);
+  SanitizerMutexType = Type::getInt8Ty(M.getContext());
+  I32Ty = Type::getInt32Ty(M.getContext());
+  I64Ty = Type::getInt64Ty(M.getContext());
 
 #define _PTRDECL(_, __) PointerTy,
 #define _VOLATILE_PTRDECL(_, __) PointerTy,
 #define _CONTEXT_ROOT PointerTy,
+#define _ENTRY_ADDRESS PointerTy,
 #define _MUTEXDECL(_) SanitizerMutexType,
 
   FunctionDataTy = StructType::get(
-      M.getContext(), {CTXPROF_FUNCTION_DATA(_PTRDECL, _CONTEXT_ROOT,
-                                             _VOLATILE_PTRDECL, _MUTEXDECL)});
+      M.getContext(),
+      {CTXPROF_FUNCTION_DATA(_PTRDECL, _CONTEXT_ROOT, _ENTRY_ADDRESS,
+                             _VOLATILE_PTRDECL, _MUTEXDECL)});
 #undef _PTRDECL
 #undef _CONTEXT_ROOT
-#undef _VOLATILE_PTRDECL
-#undef _MUTEXDECL
-
-#define _PTRDECL(_, __) Constant::getNullValue(PointerTy),
-#define _VOLATILE_PTRDECL(_, __) _PTRDECL(_, __)
-#define _MUTEXDECL(_) Constant::getNullValue(SanitizerMutexType),
-#define _CONTEXT_ROOT                                                          \
-  Constant::getIntegerValue(                                                   \
-      PointerTy,                                                               \
-      APInt(M.getDataLayout().getPointerTypeSizeInBits(PointerTy), 1U)),
-  CannotBeRootInitializer = ConstantStruct::get(
-      FunctionDataTy, {CTXPROF_FUNCTION_DATA(_PTRDECL, _CONTEXT_ROOT,
-                                             _VOLATILE_PTRDECL, _MUTEXDECL)});
-#undef _PTRDECL
-#undef _CONTEXT_ROOT
+#undef _ENYTR_ADDRESS
 #undef _VOLATILE_PTRDECL
 #undef _MUTEXDECL
 
@@ -286,9 +304,8 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       // NumCallsites and NumCounters. We declare it here because it's more
       // convenient - we have the Builder.
       ThisContextType = StructType::get(
-          F.getContext(),
-          {ContextNodeTy, ArrayType::get(Builder.getInt64Ty(), NumCounters),
-           ArrayType::get(Builder.getPtrTy(), NumCallsites)});
+          F.getContext(), {ContextNodeTy, ArrayType::get(I64Ty, NumCounters),
+                           ArrayType::get(PointerTy, NumCallsites)});
       // Figure out which way we obtain the context object for this function -
       // if it's an entrypoint, then we call StartCtx, otherwise GetCtx. In the
       // former case, we also set TheRootFunctionData since we need to release
@@ -301,8 +318,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       // treated as a "can't be set as root".
       TheRootFunctionData = new GlobalVariable(
           M, FunctionDataTy, false, GlobalVariable::InternalLinkage,
-          HasMusttail ? CannotBeRootInitializer
-                      : Constant::getNullValue(FunctionDataTy));
+          getFunctionDataInitializer(F, HasMusttail));
 
       if (ContextRootSet.contains(&F)) {
         Context = Builder.CreateCall(
@@ -319,7 +335,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
         });
       }
       // The context could be scratch.
-      auto *CtxAsInt = Builder.CreatePtrToInt(Context, Builder.getInt64Ty());
+      auto *CtxAsInt = Builder.CreatePtrToInt(Context, I64Ty);
       if (NumCallsites > 0) {
         // Figure out which index of the TLS 2-element buffers to use.
         // Scratch context => we use index == 1. Real contexts => index == 0.
@@ -329,8 +345,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
             PointerType::getUnqual(F.getContext()),
             Builder.CreateThreadLocalAddress(ExpectedCalleeTLS), {Index});
         CallsiteInfoTLSAddr = Builder.CreateGEP(
-            Builder.getInt32Ty(),
-            Builder.CreateThreadLocalAddress(CallsiteInfoTLS), {Index});
+            I32Ty, Builder.CreateThreadLocalAddress(CallsiteInfoTLS), {Index});
       }
       // Because the context pointer may have LSB set (to indicate scratch),
       // clear it for the value we use as base address for the counter vector.
@@ -366,10 +381,9 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
           auto *GEP = Builder.CreateGEP(
               ThisContextType, RealContext,
               {Builder.getInt32(0), Builder.getInt32(1), AsStep->getIndex()});
-          Builder.CreateStore(
-              Builder.CreateAdd(Builder.CreateLoad(Builder.getInt64Ty(), GEP),
-                                AsStep->getStep()),
-              GEP);
+          Builder.CreateStore(Builder.CreateAdd(Builder.CreateLoad(I64Ty, GEP),
+                                                AsStep->getStep()),
+                              GEP);
         } break;
         case llvm::Intrinsic::instrprof_callsite:
           // callsite lowering: write the called value in the expected callee
