@@ -635,14 +635,24 @@ void CodeGenFunction::EmitCXXTryStmt(const CXXTryStmt &S) {
     ExitCXXTryStmt(S);
 }
 
+struct TerminateTryScope final : EHScopeStack::Cleanup {
+  void Emit(CodeGenFunction &CGF, Flags flags) override {
+    CGF.EmitSehTryScopeEnd(true);
+  }
+};
+
+struct HandlerInfo {
+  CatchTypeInfo TypeInfo;
+  bool RequiresSehScope;
+};
+
 void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   unsigned NumHandlers = S.getNumHandlers();
-  EHCatchScope *CatchScope = EHStack.pushCatch(NumHandlers);
-
+  unsigned NumHandlerInfos = NumHandlers > 0 ? NumHandlers - 1 : 0;
+  llvm::SmallVector<HandlerInfo> HandlerInfos;
+  HandlerInfos.reserve(NumHandlerInfos);
   for (unsigned I = 0; I != NumHandlers; ++I) {
     const CXXCatchStmt *C = S.getHandler(I);
-
-    llvm::BasicBlock *Handler = createBasicBlock("catch");
     if (C->getExceptionDecl()) {
       // FIXME: Dropping the reference type on the type into makes it
       // impossible to correctly implement catch-by-reference
@@ -660,14 +670,30 @@ void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
       else
         TypeInfo = CGM.getCXXABI().getAddrOfCXXCatchHandlerType(
             CaughtType, C->getCaughtType());
-      CatchScope->setHandler(I, TypeInfo, Handler);
+      HandlerInfos.push_back({TypeInfo, false});
     } else {
+      bool HasEHa = getLangOpts().EHAsynch;
       // No exception decl indicates '...', a catch-all.
-      CatchScope->setHandler(I, CGM.getCXXABI().getCatchAllTypeInfo(), Handler);
+      HandlerInfos.push_back({CGM.getCXXABI().getCatchAllTypeInfo(), HasEHa});
+      // Push, if needed, a terminator for the created SEH __try scope
+      if (HasEHa && !SehTryEndInvokeDest) {
+        EHStack.pushCleanup<TerminateTryScope>(NormalCleanup);
+      }
+    }
+  }
+
+  EHCatchScope *CatchScope = EHStack.pushCatch(NumHandlers);
+
+  for (unsigned I = 0; I < HandlerInfos.size(); ++I) {
+    llvm::BasicBlock *Handler = createBasicBlock("catch");
+    auto HandlerInfo = HandlerInfos[I];
+    CatchScope->setHandler(I, HandlerInfo.TypeInfo, Handler);
+    if (HandlerInfo.RequiresSehScope) {
       // Under async exceptions, catch(...) need to catch HW exception too
       // Mark scope with SehTryBegin as a SEH __try scope
-      if (getLangOpts().EHAsynch)
-        EmitSehTryScopeBegin();
+      EmitSehTryScopeBegin();
+      if (!SehTryEndInvokeDest)
+        SehTryEndInvokeDest = getInvokeDest();
     }
   }
 }
@@ -1675,6 +1701,8 @@ void CodeGenFunction::EmitSEHTryStmt(const SEHTryStmt &S) {
       EmitRuntimeCallOrInvoke(getSehTryBeginFn(CGM));
       if (SEHTryEpilogueStack.size() == 1) // outermost only
         TryBB = Builder.GetInsertBlock();
+      if (!SehTryEndInvokeDest)
+        SehTryEndInvokeDest = getInvokeDest();
     }
 
     EmitStmt(S.getTryBlock());
@@ -2186,6 +2214,10 @@ void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {
   // Otherwise, we must have an __except block.
   const SEHExceptStmt *Except = S.getExceptHandler();
   assert(Except);
+
+  if (getLangOpts().EHAsynch && !SehTryEndInvokeDest)
+    EHStack.pushCleanup<TerminateTryScope>(NormalCleanup);
+
   EHCatchScope *CatchScope = EHStack.pushCatch(1);
   SEHCodeSlotStack.push_back(
       CreateMemTemp(getContext().IntTy, "__exception_code"));

@@ -1329,8 +1329,11 @@ void CodeGenFunction::EmitCXXTemporary(const CXXTemporary *Temporary,
 // Need to set "funclet" in OperandBundle properly for noThrow
 //       intrinsic (see CGCall.cpp)
 static void EmitSehScope(CodeGenFunction &CGF,
-                         llvm::FunctionCallee &SehCppScope) {
-  llvm::BasicBlock *InvokeDest = CGF.getInvokeDest();
+                         llvm::FunctionCallee &SehCppScope,
+                         llvm::BasicBlock *InvokeDest = nullptr) {
+  if (!InvokeDest)
+    InvokeDest = CGF.getInvokeDest();
+
   assert(CGF.Builder.GetInsertBlock() && InvokeDest);
   llvm::BasicBlock *Cont = CGF.createBasicBlock("invoke.cont");
   SmallVector<llvm::OperandBundleDef, 1> BundleList =
@@ -1373,11 +1376,16 @@ void CodeGenFunction::EmitSehTryScopeBegin() {
 }
 
 // Invoke a llvm.seh.try.end at the end of a SEH scope for -EHa
-void CodeGenFunction::EmitSehTryScopeEnd() {
+void CodeGenFunction::EmitSehTryScopeEnd(bool ReuseCachedInvokeDest) {
   assert(getLangOpts().EHAsynch);
   llvm::FunctionType *FTy =
       llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
   llvm::FunctionCallee SehCppScope =
       CGM.CreateRuntimeFunction(FTy, "llvm.seh.try.end");
-  EmitSehScope(*this, SehCppScope);
+  if (ReuseCachedInvokeDest) {
+    EmitSehScope(*this, SehCppScope, SehTryEndInvokeDest);
+    SehTryEndInvokeDest = nullptr;
+  } else {
+    EmitSehScope(*this, SehCppScope);
+  }
 }

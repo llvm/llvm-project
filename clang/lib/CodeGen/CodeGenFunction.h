@@ -2129,6 +2129,9 @@ private:
   /// Terminate funclets keyed by parent funclet pad.
   llvm::MapVector<llvm::Value *, llvm::BasicBlock *> TerminateFunclets;
 
+  /// Unwind destination for try scope end.
+  llvm::BasicBlock *SehTryEndInvokeDest = nullptr;
+
   /// Largest vector width used in ths function. Will be used to create a
   /// function attribute.
   unsigned LargestVectorWidth = 0;
@@ -3241,7 +3244,7 @@ public:
   void EmitSehCppScopeBegin();
   void EmitSehCppScopeEnd();
   void EmitSehTryScopeBegin();
-  void EmitSehTryScopeEnd();
+  void EmitSehTryScopeEnd(bool ReuseCachedInvokeDest = false);
 
   bool EmitLifetimeStart(llvm::Value *Addr);
   void EmitLifetimeEnd(llvm::Value *Addr);

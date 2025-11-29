@@ -341,9 +341,12 @@ void llvm::calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
         // Retrive the new State from seh_try_begin
         State = EHInfo.InvokeStateMap[cast<InvokeInst>(TI)];
       else if (Fn && Fn->isIntrinsic() &&
-               Fn->getIntrinsicID() == Intrinsic::seh_try_end)
-        // end of current state, retrive new state from UnwindMap
+               Fn->getIntrinsicID() == Intrinsic::seh_try_end) {
+        // end of current state, retrieve new state through InvokeStateMap and
+        // UnwindMap
+        State = EHInfo.InvokeStateMap[cast<InvokeInst>(TI)];
         State = EHInfo.SEHUnwindMap[State].ToState;
+      }
     }
     // Continue push successors into worklist
     for (auto *SuccBB : successors(BB)) {
