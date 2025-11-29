@@ -1627,51 +1627,6 @@ static bool interp__builtin_elementwise_abs(InterpState &S, CodePtr OpPC,
 }
 
 /// Can be called with an integer or vector as the first and only parameter.
-static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
-                                                 const InterpFrame *Frame,
-                                                 const CallExpr *Call,
-                                                 unsigned BuiltinID) {
-  assert(Call->getNumArgs() == 1);
-  if (Call->getArg(0)->getType()->isIntegerType()) {
-    APSInt Val = popToAPSInt(S, Call->getArg(0));
-
-    if (BuiltinID == Builtin::BI__builtin_elementwise_popcount) {
-      pushInteger(S, Val.popcount(), Call->getType());
-    } else {
-      pushInteger(S, Val.reverseBits(), Call->getType());
-    }
-    return true;
-  }
-  // Otherwise, the argument must be a vector.
-  assert(Call->getArg(0)->getType()->isVectorType());
-  const Pointer &Arg = S.Stk.pop<Pointer>();
-  assert(Arg.getFieldDesc()->isPrimitiveArray());
-  const Pointer &Dst = S.Stk.peek<Pointer>();
-  assert(Dst.getFieldDesc()->isPrimitiveArray());
-  assert(Arg.getFieldDesc()->getNumElems() ==
-         Dst.getFieldDesc()->getNumElems());
-
-  QualType ElemType = Arg.getFieldDesc()->getElemQualType();
-  PrimType ElemT = *S.getContext().classify(ElemType);
-  unsigned NumElems = Arg.getNumElems();
-
-  // FIXME: Reading from uninitialized vector elements?
-  for (unsigned I = 0; I != NumElems; ++I) {
-    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      if (BuiltinID == Builtin::BI__builtin_elementwise_popcount) {
-        Dst.elem<T>(I) = T::from(Arg.elem<T>(I).toAPSInt().popcount());
-      } else {
-        Dst.elem<T>(I) =
-            T::from(Arg.elem<T>(I).toAPSInt().reverseBits().getZExtValue());
-      }
-    });
-  }
-  Dst.initializeAllElements();
-
-  return true;
-}
-
-/// Can be called with an integer or vector as the first and only parameter.
 static bool interp__builtin_elementwise_countzeroes(InterpState &S,
                                                     CodePtr OpPC,
                                                     const InterpFrame *Frame,
@@ -2407,18 +2362,39 @@ static bool interp__builtin_elementwise_int_unaryop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &)> Fn) {
   assert(Call->getNumArgs() == 1);
-  assert(Call->getType()->isIntegerType());
 
   // Single integer case.
   if (!Call->getArg(0)->getType()->isVectorType()) {
+    assert(Call->getType()->isIntegerType());
     APSInt Src = popToAPSInt(S, Call->getArg(0));
     APInt Result = Fn(Src);
     pushInteger(S, APSInt(std::move(Result), !Src.isSigned()), Call->getType());
     return true;
   }
 
-  // TODO: Add vector integer handling.
-  return false;
+  // Vector case.
+  const Pointer &Arg = S.Stk.pop<Pointer>();
+  assert(Arg.getFieldDesc()->isPrimitiveArray());
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  assert(Dst.getFieldDesc()->isPrimitiveArray());
+  assert(Arg.getFieldDesc()->getNumElems() ==
+         Dst.getFieldDesc()->getNumElems());
+
+  QualType ElemType = Arg.getFieldDesc()->getElemQualType();
+  PrimType ElemT = *S.getContext().classify(ElemType);
+  unsigned NumElems = Arg.getNumElems();
+  bool DestUnsigned = Call->getType()->isUnsignedIntegerOrEnumerationType();
+
+  for (unsigned I = 0; I != NumElems; ++I) {
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      APSInt Src = Arg.elem<T>(I).toAPSInt();
+      APInt Result = Fn(Src);
+      Dst.elem<T>(I) = static_cast<T>(APSInt(std::move(Result), DestUnsigned));
+    });
+  }
+  Dst.initializeAllElements();
+
+  return true;
 }
 
 static bool interp__builtin_elementwise_int_binop(
@@ -4212,9 +4188,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_vector_reduce(S, OpPC, Call, BuiltinID);
 
   case Builtin::BI__builtin_elementwise_popcount:
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Src) {
+          return APInt(Src.getBitWidth(), Src.popcount());
+        });
   case Builtin::BI__builtin_elementwise_bitreverse:
-    return interp__builtin_elementwise_popcount(S, OpPC, Frame, Call,
-                                                BuiltinID);
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Src) { return Src.reverseBits(); });
 
   case Builtin::BI__builtin_elementwise_abs:
     return interp__builtin_elementwise_abs(S, OpPC, Frame, Call, BuiltinID);
