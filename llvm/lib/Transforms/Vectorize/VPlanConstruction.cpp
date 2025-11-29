@@ -1080,9 +1080,10 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
                            FindIVPhiR->getRecurrenceKind()))
       return false;
 
-    assert(match(IVOp, m_TruncOrSelf(m_VPValue(IVOp))) &&
-           isa<VPWidenIntOrFpInductionRecipe>(IVOp) &&
-           "other select operand must be a (truncated) wide induction");
+    // TODO: Support cases where IVOp is the IV increment.
+    if (!match(IVOp, m_TruncOrSelf(m_VPValue(IVOp))) ||
+        !isa<VPWidenIntOrFpInductionRecipe>(IVOp))
+      return false;
 
     CmpInst::Predicate RdxPredicate = [RdxKind]() {
       switch (RdxKind) {

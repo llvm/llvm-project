@@ -656,5 +656,47 @@ exit:
   ret i64 %res
 }
 
+define i64 @test_vectorize_select_umax_idx_inc(ptr %src, i64 %n) {
+; CHECK-LABEL: define i64 @test_vectorize_select_umax_idx_inc(
+; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MAX_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[MAX_VAL]], [[L]]
+; CHECK-NEXT:    [[MAX_VAL_NEXT]] = tail call i64 @llvm.umax.i64(i64 [[MAX_VAL]], i64 [[L]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[MAX_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV_NEXT]], i64 [[MAX_IDX]]
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MAX_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %max.idx = phi i64 [ 0, %entry ], [ %max.idx.next, %loop ]
+  %max.val = phi i64 [ 0, %entry ], [ %max.val.next, %loop ]
+  %gep = getelementptr i64, ptr %src, i64 %iv
+  %l = load i64, ptr %gep
+  %cmp = icmp ule i64 %max.val, %l
+  %max.val.next = tail call i64 @llvm.umax.i64(i64 %max.val, i64 %l)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %max.idx.next = select i1 %cmp, i64 %iv.next, i64 %max.idx
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  %res = phi i64 [ %max.idx.next, %loop ]
+  ret i64 %res
+}
+
 declare i64 @llvm.umax.i64(i64, i64)
 declare i16 @llvm.umax.i16(i16, i16)
