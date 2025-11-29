@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/common/DiagnosticsRendering.h"
+#include "lldb/Host/Terminal.h"
 #include <cstdint>
 
 using namespace lldb_private;
@@ -102,7 +103,7 @@ void RenderDiagnosticDetails(Stream &stream,
   // characters.  In the future it might make sense to move this into
   // Host so it can be customized for a specific platform.
   llvm::StringRef cursor, underline, vbar, joint, hbar, spacer;
-  if (stream.AsRawOstream().colors_enabled()) {
+  if (Terminal::SupportsUnicode()) {
     cursor = "˄";
     underline = "˜";
     vbar = "│";
@@ -231,5 +232,4 @@ void RenderDiagnosticDetails(Stream &stream,
       stream << detail.rendered << '\n';
     }
 }
-
 } // namespace lldb_private

@@ -64,6 +64,17 @@ void RenderDiagnosticDetails(Stream &stream,
                              bool show_inline,
                              llvm::ArrayRef<DiagnosticDetail> details);
 
+/// Returns whether or not the current terminal supports Unicode rendering.
+///
+/// The value is cached after the first computation.
+///
+/// On POSIX systems, we check if the LANG environment variable contains the
+/// substring "UTF-8";
+///
+/// On Windows, we check that we are running from the Windows Terminal
+/// application.
+bool TerminalSupportsUnicode();
+
 class DiagnosticError
     : public llvm::ErrorInfo<DiagnosticError, CloneableECError> {
 public:
