@@ -1463,6 +1463,67 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
 }
 
 //===----------------------------------------------------------------------===//
+// IndirectBrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IndirectBrOp : CIR_Op<"indirectbr", [
+  DeclareOpInterfaceMethods<BranchOpInterface>
+  , SameVariadicOperandSize, Terminator, Pure]> {
+  let summary = "Indirect branch";
+  let description = [{
+    The `cir.indirectbr` operation represents an indirect branch to one of
+    several possible successor blocks. The target block is computed from
+    the value of the given address operand.
+
+    This operation is typically generated when handling constructs like
+    the GCC extension `&&label` combined with an indirect `goto *ptr;`.
+
+    The `poison` attribute is used to mark an `indirectbr` that was created
+    but is known to be invalid for instance, when a label address was
+    taken but no indirect branch was ever emitted.
+
+    Example:
+
+    ```mlir
+      %0 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init]
+      %1 = cir.block_address <@A, "A"> : !cir.ptr<!void>
+      cir.store align(8) %1, %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+      %2 = cir.load align(8) %0 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+      cir.br ^bb1(%2 : !cir.ptr<!void>)
+    ^bb1(%3: !cir.ptr<!void>):
+      cir.indirectbr %3 : <!void>, [
+      ^bb2
+      ]
+    ```
+    or with a poison:
+
+    ```mlir
+      cir.indirectbr %0 poison : <!void>, [
+      ^bb3,
+      ^bb2
+      ]
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VoidPtrType:$addr,
+    UnitAttr:$poison,
+    VariadicOfVariadic<AnyType, "indbr_operand_segments">:$succOperands,
+    DenseI32ArrayAttr:$indbr_operand_segments
+    );
+
+  let successors = (successor VariadicSuccessor<AnySuccessor>:$successors);
+  let assemblyFormat = [{
+    $addr ( `poison` $poison^ )? `:` type($addr) `,`
+    custom<IndirectBrOpSucessors>(ref(type($addr)),
+                                  $successors,
+                                  $succOperands,
+                                  type($succOperands))
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Common loop op definitions
 //===----------------------------------------------------------------------===//
 

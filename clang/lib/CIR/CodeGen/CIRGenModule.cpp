@@ -2498,3 +2498,41 @@ DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
                                          llvm::StringRef feature) {
   return errorNYI(loc.getBegin(), feature) << loc;
 }
+
+void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
+                                   cir::LabelOp label) {
+  auto result = blockAddressInfoToLabel.try_emplace(blockInfo, label);
+  (void)result;
+  assert(result.second &&
+         "attempting to map a blockaddress info that is already mapped");
+}
+
+void CIRGenModule::mapUnresolvedBlockAddress(cir::BlockAddressOp op) {
+  auto result = unresolvedBlockAddressToLabel.insert(op);
+  (void)result;
+  assert(result.second &&
+         "attempting to map a blockaddress operation that is already mapped");
+}
+
+void CIRGenModule::mapResolvedBlockAddress(cir::BlockAddressOp op,
+                                           cir::LabelOp label) {
+  auto result = blockAddressToLabel.try_emplace(op, label);
+  (void)result;
+  assert(result.second &&
+         "attempting to map a blockaddress operation that is already mapped");
+}
+
+void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
+                                              cir::LabelOp newLabel) {
+  auto *it = blockAddressToLabel.find(op);
+  assert(it != blockAddressToLabel.end() &&
+         "trying to update a blockaddress not previously mapped");
+  assert(!it->second && "blockaddress already has a resolved label");
+
+  it->second = newLabel;
+}
+
+cir::LabelOp
+CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
+  return blockAddressInfoToLabel.lookup(blockInfo);
+}
