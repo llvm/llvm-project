@@ -449,6 +449,13 @@ Improvements to Clang's diagnostics
   comparison operators when mixed with bitwise operators in enum value initializers.
   This can be locally disabled by explicitly casting the initializer value.
 
+- Fixed: ``-Wuninitialized`` now emits a warning for uninitialized fixed-size local arrays. For example:
+
+  .. code-block:: c
+
+     int arr[4];
+     int x = arr[2]; // warning: variable 'arr' is uninitialized when used here (#GH165239)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
