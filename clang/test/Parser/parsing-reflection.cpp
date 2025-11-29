@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 %s -std=c++26 -freflection -fsyntax-only -verify
-
-struct X{};
+// expected-no-diagnostics
 
 consteval void test()
 {
