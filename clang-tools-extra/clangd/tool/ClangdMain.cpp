@@ -503,11 +503,12 @@ opt<bool> EnableConfig{
 opt<bool> StrongWorkspaceMode{
     "strong-workspace-mode",
     cat(Features),
-    desc("An alternate mode of operation for clangd, operating more closely to "
-         "the workspace.\n"
+    desc("An alternate mode of operation for clangd, where the clangd instance "
+         "is used to edit a single workspace.\n"
          "When enabled, fallback commands use the workspace directory as their "
          "working directory instead of the parent folder."),
     init(false),
+    Hidden,
 };
 
 opt<bool> UseDirtyHeaders{"use-dirty-headers", cat(Misc),

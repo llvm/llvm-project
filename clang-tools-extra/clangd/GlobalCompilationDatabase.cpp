@@ -64,10 +64,11 @@ GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
   if (FileExtension.empty() || FileExtension == ".h")
     Argv.push_back("-xobjective-c++-header");
   Argv.push_back(std::string(File));
-  tooling::CompileCommand Cmd(
-      WorkingDirectory ? *WorkingDirectory : llvm::sys::path::parent_path(File),
-      llvm::sys::path::filename(File), std::move(Argv),
-      /*Output=*/"");
+  tooling::CompileCommand Cmd(FallbackWorkingDirectory
+                                  ? *FallbackWorkingDirectory
+                                  : llvm::sys::path::parent_path(File),
+                              llvm::sys::path::filename(File), std::move(Argv),
+                              /*Output=*/"");
   Cmd.Heuristic = "clangd fallback";
   return Cmd;
 }
@@ -463,10 +464,12 @@ DirectoryBasedGlobalCompilationDatabase::lookupCDB(
 }
 
 void DirectoryBasedGlobalCompilationDatabase::Options::applyWorkingDirectory(
-    const std::optional<std::string> &&WorkingDirectory) {
+    std::optional<std::string> WorkingDirectory) {
   if (WorkingDirectory)
     this->WorkingDirectory = *WorkingDirectory;
   else {
+    // Fallback to current working directory if workspace path (passed as
+    // WorkingDirectory) is unset
     SmallString<256> CWD;
     llvm::sys::fs::current_path(CWD);
     this->WorkingDirectory = std::string(CWD);

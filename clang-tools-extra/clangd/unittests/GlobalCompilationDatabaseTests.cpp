@@ -77,8 +77,6 @@ static tooling::CompileCommand cmd(llvm::StringRef File, llvm::StringRef Arg) {
 class OverlayCDBTest : public ::testing::Test {
   class BaseCDB : public GlobalCompilationDatabase {
   public:
-    BaseCDB() : GlobalCompilationDatabase(std::nullopt) {}
-
     std::optional<tooling::CompileCommand>
     getCompileCommand(llvm::StringRef File) const override {
       if (File == testPath("foo.cc"))
