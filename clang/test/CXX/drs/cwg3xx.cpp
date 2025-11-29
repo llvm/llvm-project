@@ -397,6 +397,7 @@ namespace cwg324 { // cwg324: 3.6
   // expected-error@-1 {{non-const reference cannot bind to bit-field}}
   int *f = &(true ? s.n : s.n);
   // expected-error@-1 {{address of bit-field requested}}
+  //   expected-note@#cwg324-n {{bit-field is declared here}}
   int &g = (void(), s.n);
   // expected-error@-1 {{non-const reference cannot bind to bit-field 'n'}}
   //   expected-note@#cwg324-n {{bit-field is declared here}}

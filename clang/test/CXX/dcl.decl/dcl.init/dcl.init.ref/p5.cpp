@@ -41,8 +41,8 @@ namespace PR6066 {
 
 namespace test3 {
   struct A {
-    unsigned bitX : 4; // expected-note 3 {{bit-field is declared here}}
-    unsigned bitY : 4; // expected-note {{bit-field is declared here}}
+    unsigned bitX : 4; // expected-note 6 {{bit-field is declared here}}
+    unsigned bitY : 4; // expected-note 2 {{bit-field is declared here}}
     unsigned var;
 
     void foo();
