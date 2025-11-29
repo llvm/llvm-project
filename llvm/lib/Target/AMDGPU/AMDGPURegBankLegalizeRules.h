@@ -38,6 +38,7 @@ bool isAnyPtr(LLT Ty, unsigned Width);
 // be checked.
 enum UniformityLLTOpPredicateID {
   _,
+  PhysReg,
   // scalars
   S1,
   S16,
@@ -233,7 +234,8 @@ enum LoweringMethodID {
   SplitLoad,
   WidenLoad,
   WidenMMOToS32,
-  UnpackAExt
+  UnpackAExt,
+  WaterfallCall
 };
 
 enum FastRulesTypes {
