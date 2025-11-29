@@ -9,6 +9,9 @@ config.target_cflags = "@TSAN_TEST_TARGET_CFLAGS@"
 config.target_arch = "@TSAN_TEST_TARGET_ARCH@"
 config.deflake_threshold = "@TSAN_TEST_DEFLAKE_THRESHOLD@"
 
+# Enable escape analysis.
+config.tsan_enable_escape_analysis = "@TSAN_ENABLE_ESCAPE_ANALYSIS@"
+
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
 
