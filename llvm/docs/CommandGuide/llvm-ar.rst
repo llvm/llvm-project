@@ -187,7 +187,8 @@ section to determine which modifiers are applicable to which operations.
  the *count* parameter allows you to supply a positive whole number that
  selects the instance of the given name, with "1" indicating the first
  instance. If :option:`N` is not specified the first member of that name will
- be selected. If *count* is not supplied, the operation fails.*count* cannot be
+ be selected. If *count* is not supplied, the operation fails.
+ *count* cannot be consumed without :option:`N`.
 
 .. option:: o
 
