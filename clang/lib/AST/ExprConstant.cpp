@@ -11773,6 +11773,10 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
       Elements.push_back(Val.getVectorElt(I));
     return Success(Elements, E);
   }
+  case CK_HLSLMatrixTruncation: {
+    // TODO: See #168935. Add matrix truncation support to expr constant.
+    return Error(E);
+  }
   case CK_HLSLAggregateSplatCast: {
     APValue Val;
     QualType ValTy;
@@ -18433,6 +18437,10 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return Error(E);
     return Success(Val.getVectorElt(0), E);
   }
+  case CK_HLSLMatrixTruncation: {
+    // TODO: See #168935. Add matrix truncation support to expr constant.
+    return Error(E);
+  }
   case CK_HLSLElementwiseCast: {
     SmallVector<APValue> SrcVals;
     SmallVector<QualType> SrcTypes;
@@ -19026,6 +19034,10 @@ bool FloatExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return Error(E);
     return Success(Val.getVectorElt(0), E);
   }
+  case CK_HLSLMatrixTruncation: {
+    // TODO: See #168935. Add matrix truncation support to expr constant.
+    return Error(E);
+  }
   case CK_HLSLElementwiseCast: {
     SmallVector<APValue> SrcVals;
     SmallVector<QualType> SrcTypes;
@@ -19183,6 +19195,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for complex value");

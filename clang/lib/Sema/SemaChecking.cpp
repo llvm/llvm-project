@@ -37,6 +37,7 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -12591,6 +12592,19 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   if (auto VecTy = dyn_cast<VectorType>(Target))
     Target = VecTy->getElementType().getTypePtr();
 
+  if (isa<ConstantMatrixType>(Source)) {
+    if (!isa<ConstantMatrixType>(Target)) {
+      return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_matrix_scalar);
+    } else if (getLangOpts().HLSL &&
+               Target->castAs<ConstantMatrixType>()->getNumElementsFlattened() <
+                   Source->castAs<ConstantMatrixType>()
+                       ->getNumElementsFlattened()) {
+      // Diagnose Matrix truncation but don't return. We may also want to
+      // diagnose an element conversion.
+      DiagnoseImpCast(*this, E, T, CC,
+                      diag::warn_hlsl_impcast_matrix_truncation);
+    }
+  }
   // Strip complex types.
   if (isa<ComplexType>(Source)) {
     if (!isa<ComplexType>(Target)) {
