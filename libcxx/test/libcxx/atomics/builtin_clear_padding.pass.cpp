@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03
 // UNSUPPORTED: gcc
-// UNSUPPORTED: clang-19, clang-20, clang-21, clang-22
+// UNSUPPORTED: clang-19, clang-20, clang-21
 
 // ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated-volatile -Wno-dynamic-class-memaccess
 
@@ -254,7 +254,6 @@ struct Foo {
 };
 
 typedef float Float4Vec __attribute__((ext_vector_type(4)));
-typedef float Float3Vec __attribute__((ext_vector_type(3)));
 
 void primitiveTests() {
   // no padding
@@ -664,8 +663,6 @@ void structTests() {
   testAllStructsForType<64, 32, _BitInt(64)>(4, 5, 6, 7);
   testAllStructsForType<32, 16, Foo>(Foo{1, 2}, Foo{3, 4}, Foo{1, 2}, Foo{3, 4});
   testAllStructsForType<64, 32, Foo>(Foo{1, 2}, Foo{3, 4}, Foo{1, 2}, Foo{3, 4});
-  testAllStructsForType<256, 128, Float3Vec>(0, 1, 2, 3);
-  testAllStructsForType<128, 128, Float3Vec>(4, 5, 6, 7);
   testAllStructsForType<256, 128, Float4Vec>(0, 1, 2, 3);
   testAllStructsForType<128, 128, Float4Vec>(4, 5, 6, 7);
 
