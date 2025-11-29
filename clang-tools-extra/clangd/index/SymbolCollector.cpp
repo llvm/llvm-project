@@ -687,19 +687,17 @@ bool SymbolCollector::handleDeclOccurrence(
                            getRefContainer(ASTNode.Parent, Opts),
                            isSpelled(FileLoc, *ND)});
       // Also collect indirect constructor calls like `make_unique`
-      if (auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D)) {
-        if (FD->isTemplateInstantiation()) {
-          if (auto *PT = FD->getPrimaryTemplate();
-              PT && isLikelyForwardingFunction(PT)) {
-            ForwardingToConstructorVisitor Visitor{};
-            Visitor.TraverseStmt(FD->getBody());
-            for (auto *Constructor : Visitor.Constructors) {
-              addRef(getSymbolIDCached(Constructor),
-                     SymbolRef{FileLoc, FID, Roles,
-                               index::getSymbolInfo(ND).Kind,
-                               getRefContainer(ASTNode.Parent, Opts),
-                               isSpelled(FileLoc, *ND)});
-            }
+      if (auto *FD = llvm::dyn_cast<clang::FunctionDecl>(ASTNode.OrigD);
+          FD && FD->isTemplateInstantiation()) {
+        if (auto *PT = FD->getPrimaryTemplate();
+            PT && isLikelyForwardingFunction(PT)) {
+          ForwardingToConstructorVisitor Visitor{};
+          Visitor.TraverseStmt(FD->getBody());
+          for (auto *Constructor : Visitor.Constructors) {
+            addRef(getSymbolIDCached(Constructor),
+                   SymbolRef{FileLoc, FID, Roles, index::getSymbolInfo(ND).Kind,
+                             getRefContainer(ASTNode.Parent, Opts),
+                             isSpelled(FileLoc, *ND)});
           }
         }
       }
