@@ -147,54 +147,6 @@ InsertPointAnalysis::getLastInsertPointIter(const LiveInterval &CurLI,
   return LIS.getInstructionFromIndex(LIP);
 }
 
-bool InsertPointAnalysis::canSplitBeforeProlog(const LiveInterval &CurLI,
-                                               const MachineBasicBlock &MBB) {
-  const TargetInstrInfo *TII = MBB.getParent()->getSubtarget().getInstrInfo();
-
-  for (auto &MI : MBB) {
-    if (MI.isPHI() || MI.isPosition() || MI.isDebugInstr() ||
-        MI.isPseudoProbe())
-      continue;
-
-    if (!TII->isBasicBlockPrologue(MI))
-      return true;
-
-    for (auto &MO : MI.operands()) {
-      if (!MO.isReg() || !MO.isDef() || !MO.getReg().isVirtual())
-        continue;
-
-      // For the AMDGPU target if a MBB contains exec mask restore preamble,
-      // SplitEditor may get state when it cannot insert a spill instruction
-      // at the begin of the MBB.
-      // E.g. for a MIR
-      // bb.100:
-      //     %1 = S_OR_SAVEEXEC_B64 %2, implicit-def $exec, implicit-def $scc,
-      //          implicit $exec
-      //     ...
-      //     use %1
-      // If the regalloc try to allocate a virtreg to the physreg already
-      // assigned to virtreg %1 and the pyhsreg is computed as the best
-      // candidate for split, it may insert COPY instruction.
-      //  bb.100:
-      //     %1 = S_OR_SAVEEXEC_B64 %2, implicit-def $exec, implicit-def $scc,
-      //          implicit $exec
-      //     %2 = COPY %orig
-      //     ...
-      //     use %1
-      // Thus %1 and %orig still have interference. We may add cost for the
-      // physreg candidate or abandon the candidate.
-      const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-      const TargetRegisterClass *RC = MRI.getRegClass(MO.getReg());
-      const TargetRegisterClass *CurRC = MRI.getRegClass(CurLI.reg());
-      if (TRI->getCommonSubClass(RC, CurRC))
-        return false;
-    }
-  }
-
-  return true;
-}
-
 //===----------------------------------------------------------------------===//
 //                                 Split Analysis
 //===----------------------------------------------------------------------===//
