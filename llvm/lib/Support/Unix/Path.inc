@@ -16,6 +16,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Unix.h"
+
+#include "llvm/Support/IOSandbox.h"
+
 #include <limits.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -366,6 +369,8 @@ ErrorOr<space_info> disk_space(const Twine &Path) {
 }
 
 std::error_code current_path(SmallVectorImpl<char> &result) {
+  sandbox::violationIfEnabled();
+
   result.clear();
 
   const char *pwd = ::getenv("PWD");
@@ -399,6 +404,8 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
 }
 
 std::error_code set_current_path(const Twine &path) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> path_storage;
   StringRef p = path.toNullTerminatedStringRef(path_storage);
 
@@ -561,6 +568,8 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 }
 
 std::error_code is_local(const Twine &Path, bool &Result) {
+  sandbox::violationIfEnabled();
+
   struct STATVFS Vfs;
   if (::STATVFS(const_cast<char *>(Path.str().c_str()), &Vfs))
     return errnoAsErrorCode();
@@ -570,6 +579,8 @@ std::error_code is_local(const Twine &Path, bool &Result) {
 }
 
 std::error_code is_local(int FD, bool &Result) {
+  sandbox::violationIfEnabled();
+
   struct STATVFS Vfs;
   if (::FSTATVFS(FD, &Vfs))
     return errnoAsErrorCode();
@@ -618,6 +629,8 @@ static int convertAccessMode(AccessMode Mode) {
 }
 
 std::error_code access(const Twine &Path, AccessMode Mode) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> PathStorage;
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
 
@@ -637,6 +650,8 @@ std::error_code access(const Twine &Path, AccessMode Mode) {
 }
 
 bool can_execute(const Twine &Path) {
+  sandbox::violationIfEnabled();
+
   return !access(Path, AccessMode::Execute);
 }
 
@@ -646,6 +661,8 @@ bool equivalent(file_status A, file_status B) {
 }
 
 std::error_code equivalent(const Twine &A, const Twine &B, bool &result) {
+  sandbox::violationIfEnabled();
+
   file_status fsA, fsB;
   if (std::error_code ec = status(A, fsA))
     return ec;
@@ -760,6 +777,8 @@ static std::error_code fillStatus(int StatRet, const struct stat &Status,
 }
 
 std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> PathStorage;
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
 
@@ -769,6 +788,8 @@ std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
 }
 
 std::error_code status(int FD, file_status &Result) {
+  sandbox::violationIfEnabled();
+
   struct stat Status;
   int StatRet = ::fstat(FD, &Status);
   return fillStatus(StatRet, Status, Result);
@@ -870,6 +891,8 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
 mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
                                        uint64_t offset, std::error_code &ec)
     : Size(length), Mode(mode) {
+  sandbox::violationIfEnabled();
+
   (void)Mode;
   ec = init(fd, offset, mode);
   if (ec)
@@ -905,6 +928,8 @@ int mapped_file_region::alignment() { return Process::getPageSizeEstimate(); }
 std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
                                                      StringRef path,
                                                      bool follow_symlinks) {
+  sandbox::violationIfEnabled();
+
   SmallString<128> path_null(path);
   DIR *directory = ::opendir(path_null.c_str());
   if (!directory)
@@ -940,6 +965,8 @@ static file_type direntType(dirent *Entry) {
 }
 
 std::error_code detail::directory_iterator_increment(detail::DirIterState &It) {
+  sandbox::violationIfEnabled();
+
   errno = 0;
   dirent *CurDir = ::readdir(reinterpret_cast<DIR *>(It.IterationHandle));
   if (CurDir == nullptr && errno != 0) {
@@ -958,6 +985,8 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &It) {
 }
 
 ErrorOr<basic_file_status> directory_entry::status() const {
+  sandbox::violationIfEnabled();
+
   file_status s;
   if (auto EC = fs::status(Path, s, FollowSymlinks))
     return EC;
@@ -1027,6 +1056,8 @@ static int nativeOpenFlags(CreationDisposition Disp, OpenFlags Flags,
 std::error_code openFile(const Twine &Name, int &ResultFD,
                          CreationDisposition Disp, FileAccess Access,
                          OpenFlags Flags, unsigned Mode) {
+  sandbox::violationIfEnabled();
+
   int OpenFlags = nativeOpenFlags(Disp, Flags, Access);
 
   SmallString<128> Storage;
@@ -1131,6 +1162,7 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
 Expected<int> openNativeFile(const Twine &Name, CreationDisposition Disp,
                              FileAccess Access, OpenFlags Flags,
                              unsigned Mode) {
+  sandbox::violationIfEnabled();
 
   int FD;
   std::error_code EC = openFile(Name, FD, Disp, Access, Flags, Mode);
@@ -1142,6 +1174,8 @@ Expected<int> openNativeFile(const Twine &Name, CreationDisposition Disp,
 std::error_code openFileForRead(const Twine &Name, int &ResultFD,
                                 OpenFlags Flags,
                                 SmallVectorImpl<char> *RealPath) {
+  sandbox::violationIfEnabled();
+
   std::error_code EC =
       openFile(Name, ResultFD, CD_OpenExisting, FA_Read, Flags, 0666);
   if (EC)
@@ -1183,6 +1217,8 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
 
 Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,
                                        SmallVectorImpl<char> *RealPath) {
+  sandbox::violationIfEnabled();
+
   file_t ResultFD;
   std::error_code EC = openFileForRead(Name, ResultFD, Flags, RealPath);
   if (EC)
@@ -1195,6 +1231,8 @@ file_t getStdoutHandle() { return 1; }
 file_t getStderrHandle() { return 2; }
 
 Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
+  sandbox::violationIfEnabled();
+
 #if defined(__APPLE__)
   size_t Size = std::min<size_t>(Buf.size(), INT32_MAX);
 #else
@@ -1217,6 +1255,8 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
 
 Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
                                      uint64_t Offset) {
+  sandbox::violationIfEnabled();
+
 #if defined(__APPLE__)
   size_t Size = std::min<size_t>(Buf.size(), INT32_MAX);
 #else
@@ -1296,6 +1336,8 @@ std::error_code unlockFile(int FD) {
 }
 
 std::error_code closeFile(file_t &F) {
+  sandbox::violationIfEnabled();
+
   file_t TmpF = F;
   F = kInvalidFile;
   return Process::SafelyCloseFileDescriptor(TmpF);
@@ -1343,6 +1385,8 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
 
 std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
                           bool expand_tilde) {
+  sandbox::violationIfEnabled();
+
   dest.clear();
   if (path.isTriviallyEmpty())
     return std::error_code();
