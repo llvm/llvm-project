@@ -69,7 +69,7 @@ Potentially Breaking Changes
   - `CharTypdefsToIgnore` to `CharTypedefsToIgnore` in
     :doc:`bugprone-signed-char-misuse
     <clang-tidy/checks/bugprone/signed-char-misuse>`
-  
+
 - Modified the custom message format of :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` by assigning a special meaning
   to the character ``>`` at the start of the value of the option
@@ -394,7 +394,7 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
-  
+
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check by hiding the default
   suffix when the reason starts with the character `>` in the `CustomFunctions`
@@ -497,7 +497,8 @@ Changes in existing checks
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to correctly match
   when the format string is converted to a different type by an implicit
-  constructor call.
+  constructor call, and fixed a crash when handling format strings
+  containing non-ASCII characters.
 
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
