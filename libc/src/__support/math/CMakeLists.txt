@@ -872,6 +872,26 @@ add_header_library(
 )
 
 add_header_library(
+  expm1
+  HDRS
+    expm1.h
+  DEPENDS
+    .common_constants
+    .exp_constants
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.FPUtil.triple_double
+    libc.src.__support.integer_literals
+    libc.src.__support.macros.optimization
+    libc.src.errno.errno
+)
+
+add_header_library(
   range_reduction_double
   HDRS
     range_reduction_double_common.h
