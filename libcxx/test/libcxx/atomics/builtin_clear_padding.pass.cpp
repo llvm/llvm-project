@@ -33,7 +33,7 @@ void __builtin_clear_padding2(T t) {
   (void)t;
 }
 
-void assert2(bool b){
+void assert2(bool b) {
   //assert(b);
   (void)b;
 }
@@ -307,8 +307,8 @@ void primitiveTests() {
 
     memset(&c1, 42, sizeof(_Complex long double));
     memset(&c2, 0, sizeof(_Complex long double));
-    c1 = 3.0L ;
-    c1 = 3.0L ;
+    c1 = 3.0L;
+    c1 = 3.0L;
     __builtin_clear_padding2(&c1);
     //TODO
   }
