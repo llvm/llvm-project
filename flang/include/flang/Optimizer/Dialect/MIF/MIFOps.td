@@ -37,6 +37,48 @@ def mif_InitOp : mif_Op<"init", []> {
   let assemblyFormat = "`->` type($stat) attr-dict";
 }
 
+def mif_StopOp : mif_Op<"stop", [AttrSizedOperandSegments]> {
+  let summary = "Initiates normal or error termination of the prorgram";
+  let description = [{
+      This operation initiates normal termination for the calling image.
+      It synchronizes all executing images, cleans up the parallel runtime environment, 
+      and then terminates the program. 
+      Calls to this operation do not return. 
+      This operation supports both normal termination at the end of a
+      program, as well as any STOP statements from the user source code.
+  }];
+
+  let arguments = (ins Optional<AnyType>:$stop_code,
+                       Optional<AnyLogicalType>:$quiet);
+
+  let hasVerifier = 1;
+  let assemblyFormat = [{
+    ( `code` $stop_code^ )? ( `quiet` $quiet^ )? 
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_ErrorStopOp : mif_Op<"error_stop", [AttrSizedOperandSegments]> {
+  let summary = "Initiates normal or error termination of the prorgram";
+  let description = [{
+      This operation initiates error termination for all images.
+      This operation immediately terminates the program. 
+      Calls to this operation do not return. 
+      This operation supports error termination, such as from any
+      ERROR STOP statements in the user program.
+  }];
+
+  let arguments = (ins Optional<AnyType>:$stop_code,
+                       Optional<AnyLogicalType>:$quiet);
+
+  let hasVerifier = 1;
+  let assemblyFormat = [{
+    ( `code` $stop_code^ )? ( `quiet` $quiet^ )? 
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+
 //===----------------------------------------------------------------------===//
 // Image Queries
 //===----------------------------------------------------------------------===//
