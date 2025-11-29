@@ -311,6 +311,7 @@ public:
     OpenCL,
     OpenHOS,
     Mlibc,
+    Picolibc,
 
     PAuthTest,
     MTIA,
@@ -865,6 +866,9 @@ public:
            getEnvironment() == Triple::MuslWALI ||
            getEnvironment() == Triple::OpenHOS || isOSLiteOS();
   }
+
+  // Tests whether the environment is picolibc
+  bool isPicolibc() const { return getEnvironment() == Triple::Picolibc; }
 
   /// Tests whether the target is OHOS
   /// LiteOS default enviroment is also OHOS, but omited on triple.
