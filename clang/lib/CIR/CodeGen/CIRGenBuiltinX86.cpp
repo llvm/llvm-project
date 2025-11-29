@@ -84,6 +84,11 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
   }
   return maskVec;
 }
+static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder, mlir::Location loc, mlir::Value source, mlir::Value mask, mlir::Value inputVector, const std::string &id){
+  auto ResultTy = cast<cir::VectorType>(mask.getType());
+  mlir::Value MaskValue = getMaskVecValue(builder, loc, inputVector,  cast<cir::VectorType>(ResultTy).getSize());
+  return emitIntrinsicCallOp(builder, loc, id, ResultTy, source, mask, MaskValue);
+}
 
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
                                                const CallExpr *expr) {
@@ -421,6 +426,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_compressstoreqi128_mask:
   case X86::BI__builtin_ia32_compressstoreqi256_mask:
   case X86::BI__builtin_ia32_compressstoreqi512_mask:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return {};
   case X86::BI__builtin_ia32_expanddf128_mask:
   case X86::BI__builtin_ia32_expanddf256_mask:
   case X86::BI__builtin_ia32_expanddf512_mask:
@@ -438,7 +447,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_expandhi512_mask:
   case X86::BI__builtin_ia32_expandqi128_mask:
   case X86::BI__builtin_ia32_expandqi256_mask:
-  case X86::BI__builtin_ia32_expandqi512_mask:
+  case X86::BI__builtin_ia32_expandqi512_mask:{
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    return emitX86CompressExpand(builder, loc, ops[0], ops[1], ops[2], "x86_avx512_mask_expand");
+  }
   case X86::BI__builtin_ia32_compressdf128_mask:
   case X86::BI__builtin_ia32_compressdf256_mask:
   case X86::BI__builtin_ia32_compressdf512_mask:
@@ -456,7 +468,10 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_compresshi512_mask:
   case X86::BI__builtin_ia32_compressqi128_mask:
   case X86::BI__builtin_ia32_compressqi256_mask:
-  case X86::BI__builtin_ia32_compressqi512_mask:
+  case X86::BI__builtin_ia32_compressqi512_mask:{
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    return emitX86CompressExpand(builder, loc, ops[0], ops[1], ops[2], "x86_avx512_mask_compress");
+  }
   case X86::BI__builtin_ia32_gather3div2df:
   case X86::BI__builtin_ia32_gather3div2di:
   case X86::BI__builtin_ia32_gather3div4df:
