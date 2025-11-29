@@ -190,7 +190,11 @@ void M68kAsmPrinter::emitFunctionBodyStart() {}
 void M68kAsmPrinter::emitFunctionBodyEnd() {}
 
 void M68kAsmPrinter::emitStartOfAsmFile(Module &M) {
-  OutStreamer->emitSyntaxDirective();
+  // m68k assemblers generally don't support .att_syntax so we only emit the
+  // directive for Intel syntax.
+  if (MAI->getAssemblerDialect() == InlineAsm::AD_Intel) {
+    OutStreamer->emitSyntaxDirective("intel", "noprefix");
+  }
 }
 
 void M68kAsmPrinter::emitEndOfAsmFile(Module &M) {}

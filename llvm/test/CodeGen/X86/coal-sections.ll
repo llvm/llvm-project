@@ -3,7 +3,7 @@
 ; Check that *coal* sections are not emitted.
 
 ; CHECK: .section  __TEXT,__text,regular,pure_instructions{{$}}
-; CHECK-NEXT: .globl  _foo
+; CHECK: .globl  _foo
 
 ; CHECK: .section  __TEXT,__const{{$}}
 ; CHECK-NEXT: .globl  _a

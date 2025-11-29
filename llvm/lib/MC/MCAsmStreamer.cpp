@@ -123,7 +123,7 @@ public:
     EmitCommentsAndEOL();
   }
 
-  void emitSyntaxDirective() override;
+  void emitSyntaxDirective(StringRef Syntax, StringRef Options) override;
 
   void EmitCommentsAndEOL();
 
@@ -796,14 +796,12 @@ void MCAsmStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitSyntaxDirective() {
-  if (MAI->getAssemblerDialect() == 1) {
-    OS << "\t.intel_syntax noprefix";
-    EmitEOL();
+void MCAsmStreamer::emitSyntaxDirective(StringRef Syntax, StringRef Options) {
+  OS << "\t." << Syntax << "_syntax";
+  if (!Options.empty()) {
+    OS << " " << Options;
   }
-  // FIXME: Currently emit unprefix'ed registers.
-  // The intel_syntax directive has one optional argument
-  // with may have a value of prefix or noprefix.
+  EmitEOL();
 }
 
 void MCAsmStreamer::beginCOFFSymbolDef(const MCSymbol *Symbol) {
