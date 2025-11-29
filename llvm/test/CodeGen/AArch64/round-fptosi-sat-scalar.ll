@@ -433,3 +433,89 @@ entry:
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
   ret i64 %i
 }
+
+; Round to nearest, ties to even (fcvtns).
+
+define i32 @testnswh(half %a) {
+; CHECK-CVT-LABEL: testnswh:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvt s0, h0
+; CHECK-CVT-NEXT:    frintn s0, s0
+; CHECK-CVT-NEXT:    fcvt h0, s0
+; CHECK-CVT-NEXT:    fcvt s0, h0
+; CHECK-CVT-NEXT:    fcvtzs w0, s0
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-FP16-LABEL: testnswh:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fcvtns w0, h0
+; CHECK-FP16-NEXT:    ret
+entry:
+  %r = call half @llvm.roundeven.f16(half %a)
+  %i = call i32 @llvm.fptosi.sat.i32.f16(half %r)
+  ret i32 %i
+}
+
+define i64 @testnsxh(half %a) {
+; CHECK-CVT-LABEL: testnsxh:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvt s0, h0
+; CHECK-CVT-NEXT:    frintn s0, s0
+; CHECK-CVT-NEXT:    fcvt h0, s0
+; CHECK-CVT-NEXT:    fcvt s0, h0
+; CHECK-CVT-NEXT:    fcvtzs x0, s0
+; CHECK-CVT-NEXT:    ret
+;
+; CHECK-FP16-LABEL: testnsxh:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    fcvtns x0, h0
+; CHECK-FP16-NEXT:    ret
+entry:
+  %r = call half @llvm.roundeven.f16(half %a)
+  %i = call i64 @llvm.fptosi.sat.i64.f16(half %r)
+  ret i64 %i
+}
+
+define i32 @testnsws(float %a) {
+; CHECK-LABEL: testnsws:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtns w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %r = call float @llvm.roundeven.f32(float %a)
+  %i = call i32 @llvm.fptosi.sat.i32.f32(float %r)
+  ret i32 %i
+}
+
+define i64 @testnsxs(float %a) {
+; CHECK-LABEL: testnsxs:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtns x0, s0
+; CHECK-NEXT:    ret
+entry:
+  %r = call float @llvm.roundeven.f32(float %a)
+  %i = call i64 @llvm.fptosi.sat.i64.f32(float %r)
+  ret i64 %i
+}
+
+define i32 @testnswd(double %a) {
+; CHECK-LABEL: testnswd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtns w0, d0
+; CHECK-NEXT:    ret
+entry:
+  %r = call double @llvm.roundeven.f64(double %a)
+  %i = call i32 @llvm.fptosi.sat.i32.f64(double %r)
+  ret i32 %i
+}
+
+define i64 @testnsxd(double %a) {
+; CHECK-LABEL: testnsxd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtns x0, d0
+; CHECK-NEXT:    ret
+entry:
+  %r = call double @llvm.roundeven.f64(double %a)
+  %i = call i64 @llvm.fptosi.sat.i64.f64(double %r)
+  ret i64 %i
+}

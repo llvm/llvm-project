@@ -276,6 +276,18 @@ entry:
   ret i32 %conv
 }
 
+define i32 @testnsws(float %a) {
+; CHECK-LABEL: testnsws:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    frintn s0, s0
+; CHECK-NEXT:    fcvtzs w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %call = call float @llvm.roundeven.f32(float %a)
+  %conv = fptosi float %call to i32
+  ret i32 %conv
+}
+
 define i64 @testasxs(float %a) {
 ; CHECK-LABEL: testasxs:
 ; CHECK:       // %bb.0: // %entry
@@ -283,6 +295,18 @@ define i64 @testasxs(float %a) {
 ; CHECK-NEXT:    ret
 entry:
   %call = call float @llvm.round.f32(float %a)
+  %conv = fptosi float %call to i64
+  ret i64 %conv
+}
+
+define i64 @testnsxs(float %a) {
+; CHECK-LABEL: testnsxs:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    frintn s0, s0
+; CHECK-NEXT:    fcvtzs x0, s0
+; CHECK-NEXT:    ret
+entry:
+  %call = call float @llvm.roundeven.f32(float %a)
   %conv = fptosi float %call to i64
   ret i64 %conv
 }
@@ -298,6 +322,18 @@ entry:
   ret i32 %conv
 }
 
+define i32 @testnswd(double %a) {
+; CHECK-LABEL: testnswd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    frintn d0, d0
+; CHECK-NEXT:    fcvtzs w0, d0
+; CHECK-NEXT:    ret
+entry:
+  %call = call double @llvm.roundeven.f64(double %a)
+  %conv = fptosi double %call to i32
+  ret i32 %conv
+}
+
 define i64 @testasxd(double %a) {
 ; CHECK-LABEL: testasxd:
 ; CHECK:       // %bb.0: // %entry
@@ -305,6 +341,18 @@ define i64 @testasxd(double %a) {
 ; CHECK-NEXT:    ret
 entry:
   %call = call double @llvm.round.f64(double %a)
+  %conv = fptosi double %call to i64
+  ret i64 %conv
+}
+
+define i64 @testnsxd(double %a) {
+; CHECK-LABEL: testnsxd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    frintn d0, d0
+; CHECK-NEXT:    fcvtzs x0, d0
+; CHECK-NEXT:    ret
+entry:
+  %call = call double @llvm.roundeven.f64(double %a)
   %conv = fptosi double %call to i64
   ret i64 %conv
 }
@@ -320,6 +368,18 @@ entry:
   ret i32 %conv
 }
 
+define i32 @testnuws(float %a) {
+; CHECK-LABEL: testnuws:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    frintn s0, s0
+; CHECK-NEXT:    fcvtzu w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %call = call float @llvm.roundeven.f32(float %a)
+  %conv = fptoui float %call to i32
+  ret i32 %conv
+}
+
 define i64 @testauxs(float %a) {
 ; CHECK-LABEL: testauxs:
 ; CHECK:       // %bb.0: // %entry
@@ -327,6 +387,18 @@ define i64 @testauxs(float %a) {
 ; CHECK-NEXT:    ret
 entry:
   %call = call float @llvm.round.f32(float %a)
+  %conv = fptoui float %call to i64
+  ret i64 %conv
+}
+
+define i64 @testnuxs(float %a) {
+; CHECK-LABEL: testnuxs:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    frintn s0, s0
+; CHECK-NEXT:    fcvtzu x0, s0
+; CHECK-NEXT:    ret
+entry:
+  %call = call float @llvm.roundeven.f32(float %a)
   %conv = fptoui float %call to i64
   ret i64 %conv
 }
@@ -342,6 +414,18 @@ entry:
   ret i32 %conv
 }
 
+define i32 @testnuwd(double %a) {
+; CHECK-LABEL: testnuwd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    frintn d0, d0
+; CHECK-NEXT:    fcvtzu w0, d0
+; CHECK-NEXT:    ret
+entry:
+  %call = call double @llvm.roundeven.f64(double %a)
+  %conv = fptoui double %call to i32
+  ret i32 %conv
+}
+
 define i64 @testauxd(double %a) {
 ; CHECK-LABEL: testauxd:
 ; CHECK:       // %bb.0: // %entry
@@ -349,6 +433,18 @@ define i64 @testauxd(double %a) {
 ; CHECK-NEXT:    ret
 entry:
   %call = call double @llvm.round.f64(double %a)
+  %conv = fptoui double %call to i64
+  ret i64 %conv
+}
+
+define i64 @testnuxd(double %a) {
+; CHECK-LABEL: testnuxd:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    frintn d0, d0
+; CHECK-NEXT:    fcvtzu x0, d0
+; CHECK-NEXT:    ret
+entry:
+  %call = call double @llvm.roundeven.f64(double %a)
   %conv = fptoui double %call to i64
   ret i64 %conv
 }
