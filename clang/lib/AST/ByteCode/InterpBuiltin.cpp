@@ -2212,7 +2212,7 @@ static bool interp__builtin_assume_dereferenceable(InterpState &S, CodePtr OpPC,
                                                    const CallExpr *Call) {
   assert(Call->getNumArgs() == 2);
 
-  APSInt ReqSize = popToAPSInt(S.Stk, *S.Ctx.classify(Call->getArg(1)));
+  APSInt ReqSize = popToAPSInt(S, Call->getArg(1));
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
   if (ReqSize.isZero())
@@ -2222,7 +2222,12 @@ static bool interp__builtin_assume_dereferenceable(InterpState &S, CodePtr OpPC,
         << AK_Read << S.Current->getRange(OpPC);
     return false;
   }
-  if (!Ptr.isLive() || !Ptr.isBlockPointer())
+  if (!Ptr.isBlockPointer()) {
+    if (Ptr.isIntegralPointer())
+      return true;
+    return false;
+  }
+  if (!Ptr.isLive())
     return false;
   if (Ptr.isPastEnd()) {
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
