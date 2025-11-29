@@ -6593,6 +6593,11 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
     PHINode *Phi = Reduction.first;
     const RecurrenceDescriptor &RdxDesc = Reduction.second;
 
+    // Multi-use reductions (e.g., used in FindLastIV patterns) are handled
+    // separately and should not be considered for in-loop reductions.
+    if (RdxDesc.hasUsesOutsideReductionChain())
+      continue;
+
     // We don't collect reductions that are type promoted (yet).
     if (RdxDesc.getRecurrenceType() != Phi->getType())
       continue;
@@ -7998,9 +8003,10 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   MapVector<Instruction *,
             SmallVector<std::pair<PartialReductionChain, unsigned>>>
       ChainsByPhi;
-  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars())
-    getScaledReductions(Phi, RdxDesc.getLoopExitInstr(), Range,
-                        ChainsByPhi[Phi]);
+  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+    if (Instruction *RdxExitInstr = RdxDesc.getLoopExitInstr())
+      getScaledReductions(Phi, RdxExitInstr, Range, ChainsByPhi[Phi]);
+  }
 
   // A partial reduction is invalid if any of its extends are used by
   // something that isn't another partial reduction. This is because the
@@ -8221,7 +8227,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       PhiRecipe = new VPReductionPHIRecipe(
           Phi, RdxDesc.getRecurrenceKind(), *StartV,
           getReductionStyle(UseInLoopReduction, UseOrderedReductions,
-                            ScaleFactor));
+                            ScaleFactor),
+          RdxDesc.hasUsesOutsideReductionChain());
     } else {
       // TODO: Currently fixed-order recurrences are modeled as chains of
       // first-order recurrences. If there are no users of the intermediate
@@ -8555,6 +8562,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
 
+  // Apply mandatory transformation to handle reductions with multiple in-loop
+  // uses if possible, bail out otherwise.
+  if (!VPlanTransforms::runPass(VPlanTransforms::handleMultiUseReductions,
+                                *Plan))
+    return nullptr;
   // Apply mandatory transformation to handle FP maxnum/minnum reduction with
   // NaNs if possible, bail out otherwise.
   if (!VPlanTransforms::runPass(VPlanTransforms::handleMaxMinNumReductions,
