@@ -91,7 +91,7 @@ Task bar() {
 // CHECK-NEXT:    %{{.+}} = call token @llvm.coro.save(ptr null)
 // CHECK-NEXT:    call void @llvm.coro.await.suspend.handle
 // CHECK-NEXT:    %{{.+}} = call i8 @llvm.coro.suspend
-// CHECK-NEXT:    switch i8 %{{.+}}, label %coro.ret [
+// CHECK-NEXT:    switch i8 %{{.+}}, label %pre.gvo.conv [
 // CHECK-NEXT:      i8 0, label %[[CASE1_AWAIT_READY]]
 // CHECK-NEXT:      i8 1, label %[[CASE1_AWAIT_CLEANUP:.+]]
 // CHECK-NEXT:    ]
@@ -105,7 +105,7 @@ Task bar() {
 // CHECK-NEXT:    %{{.+}} = call token @llvm.coro.save(ptr null)
 // CHECK-NEXT:    call void @llvm.coro.await.suspend.handle
 // CHECK-NEXT:    %{{.+}} = call i8 @llvm.coro.suspend
-// CHECK-NEXT:    switch i8 %{{.+}}, label %coro.ret [
+// CHECK-NEXT:    switch i8 %{{.+}}, label %pre.gvo.conv [
 // CHECK-NEXT:      i8 0, label %[[CASE2_AWAIT_READY]]
 // CHECK-NEXT:      i8 1, label %[[CASE2_AWAIT_CLEANUP:.+]]
 // CHECK-NEXT:    ]
