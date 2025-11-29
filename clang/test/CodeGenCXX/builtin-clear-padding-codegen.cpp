@@ -15,7 +15,7 @@ struct Empty {};
 // CHECK-NEXT:    ret void
 //
 void testEmpty(Empty *e) {
-  // This should clear the one byte that Emtpy occupies.
+  // This should clear the one byte that Empty occupies.
   __builtin_clear_padding(e);
 }
 
