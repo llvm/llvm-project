@@ -35,14 +35,11 @@
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/TargetParser/AArch64TargetParser.h"
-#include "llvm/TargetParser/X86TargetParser.h"
 #include <algorithm>
 #include <optional>
 #include <utility>
 #include <deque>
 #include <vector>
-#include <sstream>
 
 using namespace clang;
 using namespace CodeGen;
