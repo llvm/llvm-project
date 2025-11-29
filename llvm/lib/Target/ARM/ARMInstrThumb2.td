@@ -2059,6 +2059,7 @@ multiclass thumb2_ld_mult<string asm, InstrItinClass itin,
   def IA :
     T2XI<(outs), (ins GPR:$Rn, pred:$p, reglist:$regs, variable_ops),
          itin, !strconcat(asm, "${p}.w\t$Rn, $regs"), []> {
+    bits<0>  p;
     bits<4>  Rn;
     bits<16> regs;
 
@@ -2074,6 +2075,7 @@ multiclass thumb2_ld_mult<string asm, InstrItinClass itin,
   def IA_UPD :
     T2XIt<(outs GPR:$wb), (ins GPR:$Rn, pred:$p, reglist:$regs, variable_ops),
           itin_upd, !strconcat(asm, "${p}.w\t$Rn!, $regs"), "$Rn = $wb", []> {
+    bits<0>  p;
     bits<4>  Rn;
     bits<16> regs;
 
@@ -2089,6 +2091,7 @@ multiclass thumb2_ld_mult<string asm, InstrItinClass itin,
   def DB :
     T2XI<(outs), (ins GPR:$Rn, pred:$p, reglist:$regs, variable_ops),
          itin, !strconcat(asm, "db${p}\t$Rn, $regs"), []> {
+    bits<0>  p;
     bits<4>  Rn;
     bits<16> regs;
 
@@ -2104,6 +2107,7 @@ multiclass thumb2_ld_mult<string asm, InstrItinClass itin,
   def DB_UPD :
     T2XIt<(outs GPR:$wb), (ins GPR:$Rn, pred:$p, reglist:$regs, variable_ops),
           itin_upd, !strconcat(asm, "db${p}\t$Rn!, $regs"), "$Rn = $wb", []> {
+    bits<0>  p;
     bits<4>  Rn;
     bits<16> regs;
 
@@ -2128,6 +2132,7 @@ multiclass thumb2_st_mult<string asm, InstrItinClass itin,
   def IA :
     T2XI<(outs), (ins GPR:$Rn, pred:$p, reglist:$regs, variable_ops),
          itin, !strconcat(asm, "${p}.w\t$Rn, $regs"), []> {
+    bits<0>  p;
     bits<4>  Rn;
     bits<16> regs;
 
@@ -2146,6 +2151,7 @@ multiclass thumb2_st_mult<string asm, InstrItinClass itin,
   def IA_UPD :
     T2XIt<(outs GPR:$wb), (ins GPR:$Rn, pred:$p, reglist:$regs, variable_ops),
           itin_upd, !strconcat(asm, "${p}.w\t$Rn!, $regs"), "$Rn = $wb", []> {
+    bits<0>  p;
     bits<4>  Rn;
     bits<16> regs;
 
@@ -2164,6 +2170,7 @@ multiclass thumb2_st_mult<string asm, InstrItinClass itin,
   def DB :
     T2XI<(outs), (ins GPR:$Rn, pred:$p, reglist:$regs, variable_ops),
          itin, !strconcat(asm, "db${p}\t$Rn, $regs"), []> {
+    bits<0>  p;
     bits<4>  Rn;
     bits<16> regs;
 
@@ -2182,6 +2189,7 @@ multiclass thumb2_st_mult<string asm, InstrItinClass itin,
   def DB_UPD :
     T2XIt<(outs GPR:$wb), (ins GPR:$Rn, pred:$p, reglist:$regs, variable_ops),
           itin_upd, !strconcat(asm, "db${p}\t$Rn!, $regs"), "$Rn = $wb", []> {
+    bits<0>  p;
     bits<4>  Rn;
     bits<16> regs;
 
@@ -4030,9 +4038,11 @@ def t2TBH : T2I<(outs), (ins (addrmode_tbh $Rn, $Rm):$addr), IIC_Br,
 // FIXME: should be able to write a pattern for ARMBrcond, but can't use
 // a two-value operand where a dag node expects ", "two operands. :(
 let isBranch = 1, isTerminator = 1 in
-def t2Bcc : T2I<(outs), (ins brtarget:$target), IIC_Br,
-                "b", ".w\t$target",
-                [/*(ARMbrcond bb:$target, imm:$cc)*/]>, Sched<[WriteBr]> {
+def t2Bcc : Thumb2XI<(outs), (ins brtarget:$target, pred:$p),
+                     AddrModeNone, 4, IIC_Br,
+                     "b${p}.w\t$target", "",
+                     [/*(ARMbrcond bb:$target, imm:$cc)*/]>,
+            Sched<[WriteBr]> {
   let Inst{31-27} = 0b11110;
   let Inst{15-14} = 0b10;
   let Inst{12} = 0;
@@ -5481,6 +5491,7 @@ class V8_1MI<dag oops, dag iops, AddrMode am, InstrItinClass itin, string asm,
 def t2CLRM : V8_1MI<(outs),
                     (ins pred:$p, reglist_with_apsr:$regs, variable_ops),
                     AddrModeNone, NoItinerary, "clrm${p}", "$regs", "", []> {
+  bits<0> p;
   bits<16> regs;
 
   let Inst{31-16} = 0b1110100010011111;
@@ -5509,6 +5520,7 @@ def t2BF_LabelPseudo
 
 def t2BFi : t2BF<(ins bflabel_u4:$b_label, bflabel_s16:$label, pred:$p),
                  !strconcat("bf", "${p}"), "$b_label, $label"> {
+  bits<0> p;
   bits<4> b_label;
   bits<16> label;
 
@@ -5540,6 +5552,7 @@ def t2BFic : t2BF<(ins bflabel_u4:$b_label, bflabel_s12:$label,
 
 def t2BFr : t2BF<(ins bflabel_u4:$b_label, rGPR:$Rn, pred:$p),
                  !strconcat("bfx", "${p}"), "$b_label, $Rn"> {
+  bits<0> p;
   bits<4> b_label;
   bits<4> Rn;
 
@@ -5551,6 +5564,7 @@ def t2BFr : t2BF<(ins bflabel_u4:$b_label, rGPR:$Rn, pred:$p),
 
 def t2BFLi : t2BF<(ins bflabel_u4:$b_label, bflabel_s18:$label, pred:$p),
                   !strconcat("bfl", "${p}"), "$b_label, $label"> {
+  bits<0> p;
   bits<4> b_label;
   bits<18> label;
 
@@ -5563,6 +5577,7 @@ def t2BFLi : t2BF<(ins bflabel_u4:$b_label, bflabel_s18:$label, pred:$p),
 
 def t2BFLr : t2BF<(ins bflabel_u4:$b_label, rGPR:$Rn, pred:$p),
                   !strconcat("bflx", "${p}"), "$b_label, $Rn"> {
+  bits<0> p;
   bits<4> b_label;
   bits<4> Rn;
 
@@ -5826,6 +5841,7 @@ let Predicates = [IsThumb2, HasV8_1MMainline, HasPACBTI] in {
 def t2PACG : V8_1MI<(outs rGPR:$Rd),
                     (ins pred:$p, GPRnopc:$Rn, GPRnopc:$Rm),
                     AddrModeNone, NoItinerary, "pacg${p}", "$Rd, $Rn, $Rm", "", []> {
+  bits<0> p;
   bits<4> Rd;
   bits<4> Rn;
   bits<4> Rm;
@@ -5841,6 +5857,7 @@ let hasSideEffects = 1 in {
 class PACBTIAut<dag iops, string asm, bit b>
   : V8_1MI<(outs), iops,
            AddrModeNone, NoItinerary, asm, "$Ra, $Rn, $Rm", "", []> {
+  bits<0> p;
   bits<4> Ra;
   bits<4> Rn;
   bits<4> Rm;
