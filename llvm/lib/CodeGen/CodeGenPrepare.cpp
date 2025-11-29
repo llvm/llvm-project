@@ -7512,7 +7512,8 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
 
   // Reject cases that won't be matched as extloads.
   if (!LoadResultVT.bitsGT(TruncVT) || !TruncVT.isRound() ||
-      !TLI->isLoadExtLegal(ISD::ZEXTLOAD, LoadResultVT, TruncVT))
+      !TLI->isLoadExtLegal(ISD::ZEXTLOAD, LoadResultVT, TruncVT,
+                           Load->getPointerAddressSpace()))
     return false;
 
   IRBuilder<> Builder(Load->getNextNode());
