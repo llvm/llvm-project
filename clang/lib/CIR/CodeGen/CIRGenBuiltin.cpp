@@ -211,7 +211,8 @@ static RValue emitBuiltinAlloca(CIRGenFunction &cgf, const CallExpr *e,
       allocaAddr, builder.getVoidPtrTy(cgf.getCIRAllocaAddressSpace())));
 }
 
-static bool shouldCIREmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e, unsigned builtinID) {
+static bool shouldCIREmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
+                                         unsigned builtinID) {
   std::optional<bool> errnoOverriden;
   // ErrnoOverriden is true if math-errno is overriden via the
   // '#pragma float_control(precise, on)'. This pragma disables fast-math,
@@ -223,12 +224,13 @@ static bool shouldCIREmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   }
   // True if 'attribute__((optnone))' is used. This attribute overrides
   // fast-math which implies math-errno.
-  bool optNone = cgf.curFuncDecl && cgf.curFuncDecl->hasAttr<OptimizeNoneAttr>();
+  bool optNone =
+      cgf.curFuncDecl && cgf.curFuncDecl->hasAttr<OptimizeNoneAttr>();
   bool isOptimizationEnabled = cgf.cgm.getCodeGenOpts().OptimizationLevel != 0;
   bool generateFPMathIntrinsics =
       cgf.getContext().BuiltinInfo.shouldGenerateFPMathIntrinsic(
-          builtinID, cgf.cgm.getTriple(), errnoOverriden, cgf.getLangOpts().MathErrno,
-          optNone, isOptimizationEnabled);
+          builtinID, cgf.cgm.getTriple(), errnoOverriden,
+          cgf.getLangOpts().MathErrno, optNone, isOptimizationEnabled);
   return generateFPMathIntrinsics;
 }
 
