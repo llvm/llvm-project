@@ -14,6 +14,7 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenCall.h"
+#include "CIRGenTBAA.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
 #include "clang/AST/ExprCXX.h"

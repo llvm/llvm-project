@@ -61,7 +61,6 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << voidType.getAlias();
       return AliasResult::OverridableAlias;
     }
-
     return AliasResult::NoAlias;
   }
 
@@ -78,6 +77,11 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << dynCastInfoAttr.getAlias();
       return AliasResult::FinalAlias;
     }
+    if (auto tbaaAttr = mlir::dyn_cast<cir::TBAAAttr>(attr)) {
+      os << tbaaAttr.getMnemonic();
+      return AliasResult::OverridableAlias;
+    }
+
     return AliasResult::NoAlias;
   }
 };

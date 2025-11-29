@@ -143,7 +143,8 @@ DeletionKind cir::CopyOp::removeBlockingUses(
     cir::StoreOp::create(builder, getLoc(), reachingDefinition, getDst(),
                          /*isVolatile=*/false,
                          /*alignment=*/mlir::IntegerAttr{},
-                         /*mem-order=*/cir::MemOrderAttr());
+                         /*mem-order=*/cir::MemOrderAttr(),
+                         /*tbaa=*/mlir::ArrayAttr{});
   return DeletionKind::Delete;
 }
 
