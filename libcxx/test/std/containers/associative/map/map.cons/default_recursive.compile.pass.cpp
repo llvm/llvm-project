@@ -10,7 +10,7 @@
 
 // class map
 
-// map();
+// constexpr map();
 
 #include <map>
 
