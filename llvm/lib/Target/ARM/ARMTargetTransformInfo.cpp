@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMTargetTransformInfo.h"
+#include "../ARMCommon/ARMCommonInstCombineIntrinsic.h"
 #include "ARMSubtarget.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "llvm/ADT/APInt.h"
@@ -181,6 +182,28 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
                       Attribute::getWithAlignment(II.getContext(), NewAlign));
     break;
   }
+
+  case Intrinsic::arm_neon_vtbl1:
+  case Intrinsic::arm_neon_vtbl2:
+  case Intrinsic::arm_neon_vtbl3:
+  case Intrinsic::arm_neon_vtbl4:
+    return ARMCommon::simplifyNeonTbl(II, IC, /*IsExtension=*/false);
+
+  case Intrinsic::arm_neon_vtbx1:
+  case Intrinsic::arm_neon_vtbx2:
+  case Intrinsic::arm_neon_vtbx3:
+  case Intrinsic::arm_neon_vtbx4:
+    return ARMCommon::simplifyNeonTbl(II, IC, /*IsExtension=*/true);
+
+  case Intrinsic::arm_neon_vmulls:
+  case Intrinsic::arm_neon_vmullu: {
+    bool IsSigned = IID == Intrinsic::arm_neon_vmulls;
+    return ARMCommon::simplifyNeonMultiply(II, IC, IsSigned);
+  }
+
+  case Intrinsic::arm_neon_aesd:
+  case Intrinsic::arm_neon_aese:
+    return ARMCommon::simplifyAES(II, IC);
 
   case Intrinsic::arm_mve_pred_i2v: {
     Value *Arg = II.getArgOperand(0);
