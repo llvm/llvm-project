@@ -389,13 +389,21 @@ def __nvvm_fma_rn_relu_bf16 : NVPTXBuiltinSMAndPTX<"__bf16(__bf16, __bf16, __bf1
 def __nvvm_fma_rn_bf16x2 : NVPTXBuiltinSMAndPTX<"_Vector<2, __bf16>(_Vector<2, __bf16>, _Vector<2, __bf16>, _Vector<2, __bf16>)", SM_80, PTX70>;
 def __nvvm_fma_rn_relu_bf16x2 : NVPTXBuiltinSMAndPTX<"_Vector<2, __bf16>(_Vector<2, __bf16>, _Vector<2, __bf16>, _Vector<2, __bf16>)", SM_80, PTX70>;
 def __nvvm_fma_rn_ftz_f : NVPTXBuiltin<"float(float, float, float)">;
+def __nvvm_fma_rn_ftz_sat_f : NVPTXBuiltin<"float(float, float, float)">;
 def __nvvm_fma_rn_f : NVPTXBuiltin<"float(float, float, float)">;
+def __nvvm_fma_rn_sat_f : NVPTXBuiltin<"float(float, float, float)">;
 def __nvvm_fma_rz_ftz_f : NVPTXBuiltin<"float(float, float, float)">;
+def __nvvm_fma_rz_ftz_sat_f : NVPTXBuiltin<"float(float, float, float)">;
 def __nvvm_fma_rz_f : NVPTXBuiltin<"float(float, float, float)">;
+def __nvvm_fma_rz_sat_f : NVPTXBuiltin<"float(float, float, float)">;
 def __nvvm_fma_rm_ftz_f : NVPTXBuiltin<"float(float, float, float)">;
+def __nvvm_fma_rm_ftz_sat_f : NVPTXBuiltin<"float(float, float, float)">;
 def __nvvm_fma_rm_f : NVPTXBuiltin<"float(float, float, float)">;
+def __nvvm_fma_rm_sat_f : NVPTXBuiltin<"float(float, float, float)">;
 def __nvvm_fma_rp_ftz_f : NVPTXBuiltin<"float(float, float, float)">;
+def __nvvm_fma_rp_ftz_sat_f : NVPTXBuiltin<"float(float, float, float)">;
 def __nvvm_fma_rp_f : NVPTXBuiltin<"float(float, float, float)">;
+def __nvvm_fma_rp_sat_f : NVPTXBuiltin<"float(float, float, float)">;
 def __nvvm_fma_rn_d : NVPTXBuiltin<"double(double, double, double)">;
 def __nvvm_fma_rz_d : NVPTXBuiltin<"double(double, double, double)">;
 def __nvvm_fma_rm_d : NVPTXBuiltin<"double(double, double, double)">;
@@ -447,18 +455,50 @@ def __nvvm_rsqrt_approx_d : NVPTXBuiltin<"double(double)">;
 // Add
 
 def __nvvm_add_rn_ftz_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_add_rn_ftz_sat_f : NVPTXBuiltin<"float(float, float)">;
 def __nvvm_add_rn_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_add_rn_sat_f : NVPTXBuiltin<"float(float, float)">;
 def __nvvm_add_rz_ftz_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_add_rz_ftz_sat_f : NVPTXBuiltin<"float(float, float)">;
 def __nvvm_add_rz_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_add_rz_sat_f : NVPTXBuiltin<"float(float, float)">;
 def __nvvm_add_rm_ftz_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_add_rm_ftz_sat_f : NVPTXBuiltin<"float(float, float)">;
 def __nvvm_add_rm_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_add_rm_sat_f : NVPTXBuiltin<"float(float, float)">;
 def __nvvm_add_rp_ftz_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_add_rp_ftz_sat_f : NVPTXBuiltin<"float(float, float)">;
 def __nvvm_add_rp_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_add_rp_sat_f : NVPTXBuiltin<"float(float, float)">;
 
 def __nvvm_add_rn_d : NVPTXBuiltin<"double(double, double)">;
 def __nvvm_add_rz_d : NVPTXBuiltin<"double(double, double)">;
 def __nvvm_add_rm_d : NVPTXBuiltin<"double(double, double)">;
 def __nvvm_add_rp_d : NVPTXBuiltin<"double(double, double)">;
+
+// Sub
+
+def __nvvm_sub_rn_ftz_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rn_ftz_sat_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rn_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rn_sat_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rz_ftz_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rz_ftz_sat_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rz_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rz_sat_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rm_ftz_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rm_ftz_sat_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rm_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rm_sat_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rp_ftz_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rp_ftz_sat_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rp_f : NVPTXBuiltin<"float(float, float)">;
+def __nvvm_sub_rp_sat_f : NVPTXBuiltin<"float(float, float)">;
+
+def __nvvm_sub_rn_d : NVPTXBuiltin<"double(double, double)">;
+def __nvvm_sub_rz_d : NVPTXBuiltin<"double(double, double)">;
+def __nvvm_sub_rm_d : NVPTXBuiltin<"double(double, double)">;
+def __nvvm_sub_rp_d : NVPTXBuiltin<"double(double, double)">;
 
 // Convert
 
