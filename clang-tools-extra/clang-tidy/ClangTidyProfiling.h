@@ -37,8 +37,9 @@ private:
   std::optional<StorageParams> Storage;
 
   void printUserFriendlyTable(llvm::raw_ostream &OS, llvm::TimerGroup &TG);
-  void printAsJSON(llvm::raw_ostream &OS, llvm::TimerGroup &TG);
-  void storeProfileData(llvm::TimerGroup &TG);
+  void printAsJSON(llvm::raw_ostream &OS, llvm::TimerGroup &TG,
+                   const StorageParams &Storage);
+  void storeProfileData(llvm::TimerGroup &TG, const StorageParams &Storage);
 
 public:
   llvm::StringMap<llvm::TimeRecord> Records;
