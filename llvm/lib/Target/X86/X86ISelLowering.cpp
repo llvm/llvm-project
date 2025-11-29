@@ -59323,7 +59323,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case X86ISD::ANDNP:
       // TODO: AVX512 targets should only use CombineSubOperand like AVX1/2.
       if (!IsSplat && (VT.is256BitVector() ||
-                       (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
+                       (VT.is512BitVector() && Subtarget.useAVX512Regs()) ||
+                       (EltSizeInBits == 1 && TLI.isTypeLegal(VT)))) {
         // Don't concatenate root AVX1 NOT patterns.
         // TODO: Allow NOT folding if Concat0 succeeds.
         if (Opcode == ISD::XOR && Depth == 0 && !Subtarget.hasInt256() &&
@@ -59333,7 +59334,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           break;
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
         SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
-        if (Concat0 || Concat1 || Subtarget.useAVX512Regs())
+        if (Concat0 || Concat1 ||
+            (EltSizeInBits != 1 && Subtarget.useAVX512Regs()))
           return DAG.getNode(Opcode, DL, VT,
                              Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
                              Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
@@ -59726,6 +59728,14 @@ static SDValue combineCONCAT_VECTORS(SDNode *N, SelectionDAG &DAG,
           return DAG.getBitcast(VT, DAG.getConstant(Constant, SDLoc(N), IntVT));
       }
     }
+
+    // Attempt to merge logic ops if the type is legal.
+    if (TLI.isTypeLegal(VT) && all_of(Ops, [](SDValue Op) {
+          return ISD::isBitwiseLogicOp(Op.getOpcode());
+        }))
+      if (SDValue R = combineConcatVectorOps(SDLoc(N), VT.getSimpleVT(), Ops,
+                                             DAG, Subtarget))
+        return R;
 
     // Don't do anything else for i1 vectors.
     return SDValue();
