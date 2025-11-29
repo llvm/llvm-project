@@ -203,6 +203,8 @@ public:
     return convertType(getContext().getTypeDeclType(t));
   }
 
+  mlir::Type convertTypeForLoadStore(QualType astType, mlir::Type mlirType);
+
   ///  Return the cir::TypeEvaluationKind of QualType \c type.
   static cir::TypeEvaluationKind getEvaluationKind(clang::QualType type);
 
@@ -1783,6 +1785,10 @@ public:
   /// Note: CIR defers most of the special casting to the final lowering passes
   /// to conserve the high level information.
   mlir::Value emitToMemory(mlir::Value value, clang::QualType ty);
+
+  /// EmitFromMemory - Change a scalar value from its memory
+  /// representation to its value representation.
+  mlir::Value emitFromMemory(mlir::Value value, clang::QualType ty);
 
   /// Emit a trap instruction, which is used to abort the program in an abnormal
   /// way, usually for debugging purposes.

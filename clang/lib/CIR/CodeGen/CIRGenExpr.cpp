@@ -547,9 +547,35 @@ LValue CIRGenFunction::emitLValueForFieldInitialization(
 }
 
 mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
-  // Bool has a different representation in memory than in registers,
-  // but in ClangIR, it is simply represented as a cir.bool value.
-  // This function is here as a placeholder for possible future changes.
+  if (auto *atomicTy = ty->getAs<AtomicType>())
+    ty = atomicTy->getValueType();
+
+  if (ty->isExtVectorBoolType()) {
+    cgm.errorNYI("emitToMemory: extVectorBoolType");
+  }
+
+  if (ty->hasBooleanRepresentation() || ty->isBitIntType()) {
+    mlir::Type storeType = convertTypeForLoadStore(ty, value.getType());
+    return builder.createIntCast(value, storeType);
+  }
+
+  return value;
+}
+
+mlir::Value CIRGenFunction::emitFromMemory(mlir::Value value, QualType ty) {
+  if (auto *atomicTy = ty->getAs<AtomicType>())
+    ty = atomicTy->getValueType();
+
+  if (ty->isPackedVectorBoolType(getContext())) {
+    cgm.errorNYI("emitFromMemory: PackedVectorBoolType");
+  }
+
+  if (ty->hasBooleanRepresentation() || ty->isBitIntType() ||
+      ty->isExtVectorBoolType()) {
+    mlir::Type resTy = convertType(ty);
+    return builder.createIntCast(value, resTy);
+  }
+
   return value;
 }
 
