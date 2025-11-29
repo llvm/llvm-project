@@ -319,6 +319,7 @@ CODEGENOPT(SoftFloat         , 1, 0, Benign) ///< -soft-float.
 CODEGENOPT(SpeculativeLoadHardening, 1, 0, Benign) ///< Enable speculative load hardening.
 CODEGENOPT(FineGrainedBitfieldAccesses, 1, 0, Benign) ///< Enable fine-grained bitfield accesses.
 CODEGENOPT(StrictEnums       , 1, 0, Benign) ///< Optimize based on strict enum definition.
+ENUM_CODEGENOPT(LoadBoolFromMem, BoolFromMem, 2, BoolFromMem::Strict, Benign) ///> Optimize based on in-memory bool values being 0 or 1.
 CODEGENOPT(StrictVTablePointers, 1, 0, Benign) ///< Optimize based on the strict vtable pointers
 CODEGENOPT(TimePasses        , 1, 0, Benign) ///< Set when -ftime-report, -ftime-report=, -ftime-report-json, or -stats-file-timers is enabled.
 CODEGENOPT(TimePassesPerRun  , 1, 0, Benign) ///< Set when -ftime-report=per-pass-run is enabled.
