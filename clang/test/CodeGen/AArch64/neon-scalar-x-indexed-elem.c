@@ -56,8 +56,8 @@ float64_t test_vmuld_laneq_f64(float64_t a, float64x2_t b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to double
 // CHECK-NEXT:    [[TMP1:%.*]] = fmul double [[TMP0]], [[B]]
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast double [[TMP1]] to <1 x double>
-// CHECK-NEXT:    ret <1 x double> [[TMP2]]
+// CHECK-NEXT:    [[REF_TMP_I_0_VEC_INSERT:%.*]] = insertelement <1 x double> undef, double [[TMP1]], i32 0
+// CHECK-NEXT:    ret <1 x double> [[REF_TMP_I_0_VEC_INSERT]]
 //
 float64x1_t test_vmul_n_f64(float64x1_t a, float64_t b) {
   return vmul_n_f64(a, b);
@@ -552,12 +552,12 @@ int64_t test_vqdmlsls_laneq_s32(int64_t a, int32_t b, int32x4_t c) {
 // CHECK-LABEL: define dso_local <1 x double> @test_vmulx_lane_f64_0(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 4599917171378402754 to <1 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 4606655882138939123 to <1 x double>
-// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x double> [[TMP0]], i32 0
-// CHECK-NEXT:    [[VGET_LANE9:%.*]] = extractelement <1 x double> [[TMP1]], i32 0
+// CHECK-NEXT:    [[__PROMOTE_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x double> undef, double 0x3FD6304BC43AB5C2, i32 0
+// CHECK-NEXT:    [[__PROMOTE2_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x double> undef, double 0x3FEE211E215AEEF3, i32 0
+// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x double> [[__PROMOTE_SROA_0_0_VEC_INSERT]], i32 0
+// CHECK-NEXT:    [[VGET_LANE9:%.*]] = extractelement <1 x double> [[__PROMOTE2_SROA_0_0_VEC_INSERT]], i32 0
 // CHECK-NEXT:    [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGET_LANE9]])
-// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <1 x double> [[TMP0]], double [[VMULXD_F64_I]], i32 0
+// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <1 x double> [[__PROMOTE_SROA_0_0_VEC_INSERT]], double [[VMULXD_F64_I]], i32 0
 // CHECK-NEXT:    ret <1 x double> [[VSET_LANE]]
 //
 float64x1_t test_vmulx_lane_f64_0() {
@@ -574,13 +574,13 @@ float64x1_t test_vmulx_lane_f64_0() {
 // CHECK-LABEL: define dso_local <1 x double> @test_vmulx_laneq_f64_2(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 4599917171378402754 to <1 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 4606655882138939123 to <1 x double>
-// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <1 x double> [[TMP0]], <1 x double> [[TMP1]], <2 x i32> <i32 0, i32 1>
-// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x double> [[TMP0]], i32 0
+// CHECK-NEXT:    [[__PROMOTE_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x double> undef, double 0x3FD6304BC43AB5C2, i32 0
+// CHECK-NEXT:    [[__PROMOTE2_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x double> undef, double 0x3FEE211E215AEEF3, i32 0
+// CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <1 x double> [[__PROMOTE_SROA_0_0_VEC_INSERT]], <1 x double> [[__PROMOTE2_SROA_0_0_VEC_INSERT]], <2 x i32> <i32 0, i32 1>
+// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <1 x double> [[__PROMOTE_SROA_0_0_VEC_INSERT]], i32 0
 // CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <2 x double> [[SHUFFLE_I]], i32 1
 // CHECK-NEXT:    [[VMULXD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmulx.f64(double [[VGET_LANE]], double [[VGETQ_LANE]])
-// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <1 x double> [[TMP0]], double [[VMULXD_F64_I]], i32 0
+// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <1 x double> [[__PROMOTE_SROA_0_0_VEC_INSERT]], double [[VMULXD_F64_I]], i32 0
 // CHECK-NEXT:    ret <1 x double> [[VSET_LANE]]
 //
 float64x1_t test_vmulx_laneq_f64_2() {
