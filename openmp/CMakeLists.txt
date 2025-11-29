@@ -124,8 +124,9 @@ endif ()
 set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
   "Fortran compiler to use for testing OpenMP runtime libraries.")
 
-set(LIBOMP_FORTRAN_MODULES FALSE CACHE BOOL
-  "Create Fortran module files? (requires fortran compiler)")
+if (CMAKE_Fortran_COMPILER AND NOT LLVM_RUNTIMES_BUILD)
+  message(WARNING "Building omp_lib.mod requires using LLVM_ENABLE_RUNTIMES=flang-rt\\\;openmp")
+endif ()
 
 # Set up testing infrastructure.
 include(OpenMPTesting)
@@ -134,6 +135,8 @@ set(OPENMP_TEST_FLAGS "" CACHE STRING
   "Extra compiler flags to send to the test compiler.")
 set(OPENMP_TEST_OPENMP_FLAGS ${OPENMP_TEST_COMPILER_OPENMP_FLAGS} CACHE STRING
   "OpenMP compiler flag to use for testing OpenMP runtime libraries.")
+set(OPENMP_TEST_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}" CACHE STRING
+  "Additional compiler flags to use for testing Fortran programs (e.g. additional module search paths via -fintrinsic-modules-path )")
 
 set(ENABLE_LIBOMPTARGET ON)
 # Currently libomptarget cannot be compiled on Windows or MacOS X.
@@ -157,13 +160,18 @@ else()
   get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
 endif()
 
+if(RUNTIMES_FLANG_MODULES_ENABLED)
+  add_subdirectory(module)
+else()
+  message(STATUS "Building omp_lib.mod disabled by RUNTIMES_FLANG_MODULES_ENABLED='${RUNTIMES_FLANG_MODULES_ENABLED}'; libomp-mod does nothing")
+  add_custom_target(libomp-mod)
+endif()
+
 # Use the current compiler target to determine the appropriate runtime to build.
 if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx" OR
    "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx")
   add_subdirectory(device)
 else()
-  add_subdirectory(module)
-
   # Build host runtime library, after LIBOMPTARGET variables are set since they
   # are needed to enable time profiling support in the OpenMP runtime.
   add_subdirectory(runtime)
