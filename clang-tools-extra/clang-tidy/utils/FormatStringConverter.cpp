@@ -700,7 +700,6 @@ void FormatStringConverter::finalizeFormatText() {
 /// Append literal parts of the format text, reinstating escapes as required.
 void FormatStringConverter::appendFormatText(const StringRef Text) {
   for (const char Ch : Text) {
-    const auto UCh = static_cast<unsigned char>(Ch);
     if (Ch == '\a')
       StandardFormatString += "\\a";
     else if (Ch == '\b')
@@ -725,10 +724,10 @@ void FormatStringConverter::appendFormatText(const StringRef Text) {
     } else if (Ch == '}') {
       StandardFormatString += "}}";
       FormatStringNeededRewriting = true;
-    } else if (UCh < 32) {
+    } else if (Ch < 32) {
       StandardFormatString += "\\x";
-      StandardFormatString += llvm::hexdigit(UCh >> 4, true);
-      StandardFormatString += llvm::hexdigit(UCh & 0xf, true);
+      StandardFormatString += llvm::hexdigit(Ch >> 4, true);
+      StandardFormatString += llvm::hexdigit(Ch & 0xf, true);
     } else
       StandardFormatString += Ch;
   }
