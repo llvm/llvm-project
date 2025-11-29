@@ -3,8 +3,11 @@ set(CLANGD_TEST_DEPS
   ClangdTests
   clangd-indexer
   split-file
-  IndexBenchmark
   )
+
+if (LLVM_INCLUDE_BENCHMARKS)
+  list(APPEND CLANGD_TEST_DEPS IndexBenchmark)
+endif()
 
 if(CLANGD_BUILD_XPC)
   list(APPEND CLANGD_TEST_DEPS clangd-xpc-test-client)
