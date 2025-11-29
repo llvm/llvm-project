@@ -2524,9 +2524,10 @@ def int_vp_is_fpclass:
 //
 def int_masked_load:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-            [llvm_anyptr_ty,
+            [llvm_anyptr_ty, llvm_i32_ty,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
-            [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+            [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>,
+             NoCapture<ArgIndex<0>>]>;
 
 def int_masked_store:
   DefaultAttrsIntrinsic<[],

@@ -603,6 +603,34 @@ public:
                                       addr.getAlignment().getAsAlign().value());
   }
 
+  /// Create a call to a Masked Load intrinsic.
+  /// \p loc       - expression location
+  /// \p ty        - vector type to load
+  /// \p ptr       - base pointer for the load
+  /// \p alignment - alignment of the source location
+  /// \p mask      - vector of booleans which indicates what vector lanes should
+  ///                be accessed in memory
+  /// \p passThru  - pass-through value that is used to fill the masked-off
+  /// lanes
+  ///                of the result
+  mlir::Value createMaskedLoad(mlir::Location loc, mlir::Type ty,
+                               mlir::Value ptr, llvm::Align alignment,
+                               mlir::Value mask, mlir::Value passThru) {
+
+    assert(mlir::isa<cir::VectorType>(ty) && "Type should be vector");
+    assert(mask && "Mask should not be all-ones (null)");
+
+    if (!passThru)
+      passThru = this->getConstant(loc, cir::PoisonAttr::get(ty));
+
+    mlir::Value ops[] = {ptr, this->getUInt32(int32_t(alignment.value()), loc),
+                         mask, passThru};
+
+    return cir::LLVMIntrinsicCallOp::create(
+               *this, loc, getStringAttr("masked.load"), ty, ops)
+        .getResult();
+  }
+
   cir::VecShuffleOp
   createVecShuffle(mlir::Location loc, mlir::Value vec1, mlir::Value vec2,
                    llvm::ArrayRef<mlir::Attribute> maskAttrs) {
