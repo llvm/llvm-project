@@ -140,10 +140,22 @@ __m128d test_mm_shuffle_pd(__m128d A, __m128d B) {
   // CIR-LABEL: test_mm_shuffle_pd
   // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<2 x !cir.double>) [#cir.int<1> : !s32i, #cir.int<2> : !s32i] : !cir.vector<2 x !cir.double>
 
-  // CHECK-LABEL: test_mm_shuffle_pd
-  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x i32> <i32 1, i32 2>
+  // LLVM-LABEL: test_mm_shuffle_pd
+  // LLVM: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x i32> <i32 1, i32 2>
 
   // OGCG-LABEL: test_mm_shuffle_pd
   // OGCG: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x i32> <i32 1, i32 2>
   return _mm_shuffle_pd(A, B, 1);
+}
+
+__m128i test_mm_shuffle_epi32(__m128i A) {
+	// CIR-LABEL: test_mm_shuffle_epi32
+	// CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}}: !cir.vector<4 x !s32i>) [#cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<4 x !s32i>
+
+    // LLVM-LABEL: test_mm_shuffle_epi32
+	// LLVM: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+
+	// OGCG-LABEL: test_mm_shuffle_epi32
+    // OGCG: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+    return _mm_shuffle_epi32(A, 0x4E);
 }
