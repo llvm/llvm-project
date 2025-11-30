@@ -60,8 +60,10 @@ struct PrintingPolicy {
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
-        SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
-        SuppressScope(false), SuppressUnwrittenScope(false),
+        SuppressTagKeyword(LO.CPlusPlus),
+        SuppressTagKeywordInAnonymousTagNames(false),
+        IncludeTagDefinition(false), SuppressScope(false),
+        SuppressUnwrittenScope(false),
         SuppressInlineNamespace(SuppressInlineNamespaceMode::Redundant),
         SuppressInitializers(false), ConstantArraySizeAsWritten(false),
         AnonymousTagLocations(true), SuppressStrongLifetime(false),
@@ -121,6 +123,7 @@ struct PrintingPolicy {
   /// \endcode
   LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressTagKeyword : 1;
+  unsigned SuppressTagKeywordInAnonymousTagNames : 1;
 
   /// When true, include the body of a tag definition.
   ///

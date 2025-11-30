@@ -2103,7 +2103,7 @@ TEST(Hover, All) {
             HI.NamespaceScope = "";
             // FIXME: This should be `(anon enum)::`
             HI.LocalScope = "";
-            HI.Type = "enum (unnamed)";
+            HI.Type = "enum (unnamed enum)";
             HI.Definition = "ONE";
             HI.Value = "0";
           }},
