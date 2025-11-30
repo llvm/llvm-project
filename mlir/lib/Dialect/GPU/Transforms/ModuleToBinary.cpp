@@ -17,7 +17,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -43,14 +43,14 @@ static void dumpToFile(StringRef dumpDir, const llvm::Twine &filename,
   std::error_code ec;
   llvm::ToolOutputFile output(path, ec, llvm::sys::fs::OF_None);
   if (ec) {
-    LLVM_DEBUG(llvm::dbgs() << "Failed to create file '" << path
-                            << "': " << ec.message() << "\n");
+    LDBG() << "Failed to create file '" << path << "': " << ec.message()
+           << "\n";
     return;
   }
 
   writeContent(output.os());
   output.keep();
-  LLVM_DEBUG(llvm::dbgs() << "Dumped intermediate to: " << path << "\n");
+  LDBG() << "Dumped intermediate to: " << path << "\n";
 }
 
 namespace {
@@ -92,7 +92,7 @@ void GpuModuleToBinaryPass::runOnOperation() {
   for (const std::string &path : linkFiles)
     librariesToLink.push_back(StringAttr::get(&getContext(), path));
 
-  // Create dump directory if specified
+  // Create dump directory if specified.
   if (!dumpIntermediates.empty()) {
     if (std::error_code ec =
             llvm::sys::fs::create_directories(dumpIntermediates)) {
@@ -102,20 +102,20 @@ void GpuModuleToBinaryPass::runOnOperation() {
     }
   }
 
-  // Create callbacks for dumping intermediate artifacts if requested
-  auto initialIRCallback = [&](llvm::Module &module) {
-    dumpToFile(dumpIntermediates, module.getName() + ".initial.ll",
-               [&](llvm::raw_ostream &os) { module.print(os, nullptr); });
+  // Create callbacks for dumping intermediate artifacts if requested.
+  auto initialIRCallback = [&](llvm::Module &mod) {
+    dumpToFile(dumpIntermediates, mod.getName() + ".initial.ll",
+               [&](llvm::raw_ostream &os) { mod.print(os, nullptr); });
   };
 
-  auto linkedIRCallback = [&](llvm::Module &module) {
-    dumpToFile(dumpIntermediates, module.getName() + ".linked.ll",
-               [&](llvm::raw_ostream &os) { module.print(os, nullptr); });
+  auto linkedIRCallback = [&](llvm::Module &mod) {
+    dumpToFile(dumpIntermediates, mod.getName() + ".linked.ll",
+               [&](llvm::raw_ostream &os) { mod.print(os, nullptr); });
   };
 
-  auto optimizedIRCallback = [&](llvm::Module &module) {
-    dumpToFile(dumpIntermediates, module.getName() + ".opt.ll",
-               [&](llvm::raw_ostream &os) { module.print(os, nullptr); });
+  auto optimizedIRCallback = [&](llvm::Module &mod) {
+    dumpToFile(dumpIntermediates, mod.getName() + ".opt.ll",
+               [&](llvm::raw_ostream &os) { mod.print(os, nullptr); });
   };
 
   auto isaCallback = [&](StringRef isa) {
