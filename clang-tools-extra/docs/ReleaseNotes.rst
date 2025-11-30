@@ -191,6 +191,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`readability-inconsistent-ifelse-braces
+  <clang-tidy/checks/readability/inconsistent-ifelse-braces>` check.
+
+  Detects ``if``/``else`` statements where one branch uses braces and the other
+  does not.
+
 - New :doc:`bugprone-derived-method-shadowing-base-method
   <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
 
