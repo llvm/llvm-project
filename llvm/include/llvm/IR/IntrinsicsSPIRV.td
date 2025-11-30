@@ -134,6 +134,8 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_group_memory_barrier_with_group_sync
       : DefaultAttrsIntrinsic<[], [], [IntrConvergent]>;
   def int_spv_discard : DefaultAttrsIntrinsic<[], [], []>;
+  def int_spv_ddx : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
+  def int_spv_ddy : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
   def int_spv_ddx_coarse : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
   def int_spv_ddy_coarse : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
   def int_spv_fwidth : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
