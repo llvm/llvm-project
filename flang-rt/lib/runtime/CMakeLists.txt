@@ -192,7 +192,7 @@ set_property(SOURCE
 
 # Import changes from flang_rt.quadmath
 set(f128_sources "")
-if (TARGET f128_sources)
+if (TARGET FortranFloat128MathILib)
   get_target_property(f128_sources
     FortranFloat128MathILib INTERFACE_SOURCES
     )

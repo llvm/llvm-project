@@ -6,7 +6,7 @@
 #
 #===------------------------------------------------------------------------===#
 
-if (FLANG_RT_ENABLE_STATIC OR FLANG_RT_ENABLE_SHARE)
+if (FLANG_RT_ENABLE_STATIC OR FLANG_RT_ENABLE_SHARED)
   add_subdirectory(quadmath)
   add_subdirectory(runtime)
   if (FLANG_RT_INCLUDE_CUF)
