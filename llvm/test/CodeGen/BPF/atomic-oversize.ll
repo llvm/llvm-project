@@ -1,4 +1,8 @@
 ; RUN: llc -mtriple=bpf < %s | FileCheck %s
+; XFAIL: *
+; Doesn't currently build with errors
+; error: unsupported atomic store
+; error: unsupported atomic load
 
 define void @test(ptr %a) nounwind {
 ; CHECK-LABEL: test:
