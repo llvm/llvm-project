@@ -98,15 +98,12 @@ static std::string extractDeclStmtText(const DeclStmt *PrevDecl,
                                        const SourceManager *SM,
                                        const LangOptions &LangOpts) {
   const SourceRange CuttingRange = PrevDecl->getSourceRange();
-  CharSourceRange DeclCharRange = Lexer::makeFileCharRange(
+  const CharSourceRange DeclCharRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(CuttingRange), *SM, LangOpts);
-
-  if (DeclCharRange.isInvalid())
-    return "";
-
   const StringRef DeclStmtText =
-      Lexer::getSourceText(DeclCharRange, *SM, LangOpts);
-
+      DeclCharRange.isInvalid()
+          ? ""
+          : Lexer::getSourceText(DeclCharRange, *SM, LangOpts);
   return DeclStmtText.empty() ? "" : DeclStmtText.trim().str() + " ";
 }
 
