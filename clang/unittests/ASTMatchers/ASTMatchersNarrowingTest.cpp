@@ -1856,6 +1856,14 @@ TEST_P(ASTMatchersTest, IsStaticStorageClass) {
   EXPECT_TRUE(notMatches("int i = 1;", varDecl(isStaticStorageClass())));
   EXPECT_TRUE(notMatches("extern int i;", varDecl(isStaticStorageClass())));
   EXPECT_TRUE(notMatches("void f() {}", functionDecl(isStaticStorageClass())));
+
+  if (!GetParam().isCXX())
+    return;
+
+  EXPECT_TRUE(matches("static void foo(); void foo() {}",
+                      functionDecl(isDefinition(), isStaticStorageClass())));
+  EXPECT_TRUE(matches("struct A { static void bar(); }; void A::bar() {}",
+                      cxxMethodDecl(isDefinition(), isStaticStorageClass())));
 }
 
 TEST_P(ASTMatchersTest, IsDefaulted) {
