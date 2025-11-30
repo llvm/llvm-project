@@ -42,6 +42,8 @@ f:                                      # @f
 	.seh_stackalloc 32
 	.seh_startepilogue
 	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: starting epilogue (.seh_startepilogue) before prologue has ended (.seh_endprologue) in f
+	.seh_splitchained
+	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: can't split into a new chained region (.seh_splitchained) in the middle of a prolog in f
 	.seh_endprologue
 	nop
 	.seh_endepilogue
