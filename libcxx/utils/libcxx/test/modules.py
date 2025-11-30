@@ -118,12 +118,14 @@ class module_test_generator:
         print(
             f"""\
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: clang-modules-build
 
 // REQUIRES: has-clang-tidy
 
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED: gcc
+
+// C++20 modules are incompatible with Clang modules
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // MODULE_DEPENDENCIES: {self.module}
 

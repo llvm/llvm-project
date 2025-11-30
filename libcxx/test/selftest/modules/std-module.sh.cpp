@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: clang-modules-build
 // UNSUPPORTED: gcc
 
 // TODO: This test is currently written in a way that is specific to libc++, but it's really trying to test a property
@@ -19,6 +18,9 @@
 // Make sure that the compile flags contain the expected elements.
 // The tests only look for the expected components and not the exact flags.
 // Otherwise changing the location of the module would break this test.
+
+// C++20 modules are incompatible with Clang modules
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // MODULE_DEPENDENCIES: std
 

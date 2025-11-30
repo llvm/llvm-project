@@ -15,7 +15,7 @@
 # Some parts of the code like <fstream> use non-standard functions in their implementation,
 # and these functions are not provided when _XOPEN_SOURCE is set to older values. This
 # breaks when building with modules even when we don't use the offending headers directly.
-# UNSUPPORTED: clang-modules-build
+# ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 # The AIX localization support uses some functions as part of their headers that require a
 # recent value of _XOPEN_SOURCE.
