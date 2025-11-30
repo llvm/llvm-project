@@ -576,6 +576,14 @@ __mmask64 test_cvtu64_mask64(__m512i A, __m512i B, unsigned long long C) {
   return _mm512_mask_cmpneq_epu8_mask(_cvtu64_mask64(C), A, B);
 }
 
+TEST_CONSTEXPR(_cvtmask32_u32((__mmask32)0xDEADBEEF) == 0xDEADBEEF);
+TEST_CONSTEXPR(_cvtu32_mask32(0x13579BDF) == (__mmask32)0x13579BDF);
+TEST_CONSTEXPR(_cvtu32_mask32(_cvtmask32_u32((__mmask32)0x2468ACE0)) == (__mmask32)0x2468ACE0);
+
+TEST_CONSTEXPR(_cvtmask64_u64((__mmask64)0x123456789ABCDEF0ULL) == 0x123456789ABCDEF0ULL);
+TEST_CONSTEXPR(_cvtu64_mask64(0x0F0F0F0F0F0F0F0FULL) == (__mmask64)0x0F0F0F0F0F0F0F0FULL);
+TEST_CONSTEXPR(_cvtu64_mask64(_cvtmask64_u64((__mmask64)0xF0F0F0F0F0F0F0F0ULL)) == (__mmask64)0xF0F0F0F0F0F0F0F0ULL);
+
 __mmask32 test_load_mask32(__mmask32 *A, __m512i B, __m512i C) {
   // CHECK-LABEL: test_load_mask32
   // CHECK: [[LOAD:%.*]] = load i32, ptr %{{.*}}
