@@ -67,6 +67,7 @@ public:
     case AMDGPU::EXEC_HI:
     case AMDGPU::SGPR_NULL:
     case AMDGPU::SGPR_NULL64:
+    case AMDGPU::SCC:
       return {};
     default:
       break;
@@ -438,10 +439,127 @@ public:
     return Changed;
   }
 
+  bool runWaitMerging(MachineFunction &MF) {
+    // Perform per-block merging of existing s_waitcnt_depctr instructions.
+    // Track set of SGPR writes before a given wait instruction, and search
+    // for reads of these SGPRs.
+    // Move the wait to just before the read to improve pipelining.
+    // If no related reads occur before subsequent wait then merged waits.
+    const unsigned ConstantMaskBits = AMDGPU::DepCtr::encodeFieldSaSdst(
+        AMDGPU::DepCtr::encodeFieldVaSdst(
+            AMDGPU::DepCtr::encodeFieldVaVcc(0, *ST), 0),
+        0);
+    const unsigned VccLoIdx = *sgprNumber(AMDGPU::VCC_LO, *TRI);
+    const unsigned VccHiIdx = *sgprNumber(AMDGPU::VCC_HI, *TRI);
+    bool Changed = false;
+    for (auto &MBB : MF) {
+      std::bitset<128> WriteSet, PendingSALUWriteSet, PendingVALUWriteSet;
+      MachineInstr *PrevWait = nullptr;
+
+      auto CommitWrites = [&](unsigned Mask) {
+        if (!AMDGPU::DepCtr::decodeFieldSaSdst(Mask))
+          WriteSet |= PendingSALUWriteSet;
+        bool VccLoBit = WriteSet[VccLoIdx];
+        bool VccHiBit = WriteSet[VccHiIdx];
+        if (!AMDGPU::DepCtr::decodeFieldVaSdst(Mask)) {
+          WriteSet |= PendingVALUWriteSet;
+          WriteSet.set(VccLoIdx, VccLoBit);
+          WriteSet.set(VccLoIdx, VccHiBit);
+        }
+        if (!AMDGPU::DepCtr::decodeFieldVaVcc(Mask)) {
+          WriteSet.set(VccLoIdx, VccLoBit | PendingVALUWriteSet[VccLoIdx]);
+          WriteSet.set(VccHiIdx, VccHiBit | PendingVALUWriteSet[VccHiIdx]);
+        }
+        // Clear all pending writes
+        PendingSALUWriteSet.reset();
+        PendingVALUWriteSet.reset();
+      };
+
+      for (MachineBasicBlock::instr_iterator MI = MBB.instr_begin(),
+                                             E = MBB.instr_end();
+           MI != E; ++MI) {
+        if (MI->isMetaInstruction())
+          continue;
+
+        if (MI->getOpcode() == AMDGPU::S_WAITCNT_DEPCTR && !MI->isBundled() &&
+            (MI->getOperand(0).getImm() & ConstantMaskBits) ==
+                ConstantMaskBits) {
+          if (PrevWait) {
+            // Merge previous wait into this one.
+            MachineOperand &MaskOp = MI->getOperand(0);
+            MaskOp.setImm(
+                mergeMasks(PrevWait->getOperand(0).getImm(), MaskOp.getImm()));
+            PrevWait->eraseFromParent();
+            Changed = true;
+          } else {
+            // Starting a new region using fresh write set.
+            WriteSet.reset();
+          }
+          CommitWrites(MI->getOperand(0).getImm());
+          PrevWait = &*MI;
+          continue;
+        }
+
+        // Do not optimize over branches
+        if (PrevWait && (MI->isCall() || MI->isReturn() || MI->isBranch())) {
+          PrevWait->moveBefore(&*MI);
+          PrevWait = nullptr;
+          Changed = true;
+        }
+
+        const bool IsVALU = SIInstrInfo::isVALU(*MI);
+        const bool IsSALU = SIInstrInfo::isSALU(*MI);
+        if (!IsVALU && !IsSALU)
+          continue;
+
+        for (const MachineOperand &Op : MI->operands()) {
+          if (!Op.isReg())
+            continue;
+          Register Reg = Op.getReg();
+          if (!TRI->isSGPRReg(*MRI, Reg))
+            continue;
+
+          auto RegNumber = sgprNumber(Reg, *TRI);
+          if (!RegNumber)
+            continue;
+          unsigned RegN = *RegNumber;
+
+          uint8_t SGPRCount =
+              AMDGPU::getRegBitWidth(*TRI->getRegClassForReg(*MRI, Reg)) / 32;
+
+          if (Op.isDef()) {
+            for (uint8_t RegIdx = 0; RegIdx < SGPRCount; ++RegIdx) {
+              if (IsSALU)
+                PendingSALUWriteSet.set(RegN + RegIdx);
+              else
+                PendingVALUWriteSet.set(RegN + RegIdx);
+            }
+            continue;
+          }
+
+          for (uint8_t RegIdx = 0; RegIdx < SGPRCount && PrevWait; ++RegIdx) {
+            if (!WriteSet[RegN + RegIdx])
+              continue;
+            // Move the wait to here, the last point it can be valid
+            PrevWait->moveBefore(&*MI);
+            PrevWait = nullptr;
+            Changed = true;
+          }
+        }
+      }
+    }
+    return Changed;
+  }
+
   bool run(MachineFunction &MF) {
     ST = &MF.getSubtarget<GCNSubtarget>();
-    if (!ST->hasVALUReadSGPRHazard())
+    if (!ST->hasVALUReadSGPRHazard() && !ST->hasVALUMaskWriteHazard())
       return false;
+
+    TII = ST->getInstrInfo();
+    TRI = ST->getRegisterInfo();
+    MRI = &MF.getRegInfo();
+    DsNopCount = ST->isWave64() ? WAVE64_NOPS : WAVE32_NOPS;
 
     // Parse settings
     EnableSGPRHazardWaits = GlobalEnableSGPRHazardWaits;
@@ -468,10 +586,10 @@ public:
     if (!EnableSGPRHazardWaits)
       return false;
 
-    TII = ST->getInstrInfo();
-    TRI = ST->getRegisterInfo();
-    MRI = &MF.getRegInfo();
-    DsNopCount = ST->isWave64() ? WAVE64_NOPS : WAVE32_NOPS;
+    // VALU mask write hazards have already been handled, but this pass
+    // performs a forward scan optimize them.
+    if (ST->hasVALUMaskWriteHazard())
+      return ST->isWave64() ? runWaitMerging(MF) : false;
 
     auto CallingConv = MF.getFunction().getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CallingConv) &&

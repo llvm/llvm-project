@@ -515,10 +515,10 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[10:11], -1
-; GFX1164-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164-NEXT:    v_readlane_b32 s12, v1, 63
 ; GFX1164-NEXT:    v_readlane_b32 s14, v1, 47
 ; GFX1164-NEXT:    v_writelane_b32 v3, s13, 32
+; GFX1164-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX1164-NEXT:    s_mov_b64 exec, s[10:11]
 ; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
 ; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
