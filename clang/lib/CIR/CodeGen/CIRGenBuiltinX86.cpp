@@ -105,7 +105,7 @@ static mlir::Value emitX86MaskUnpack(CIRGenBuilderTy &builder,
                                      const std::string &intrinsicName,
                                      SmallVectorImpl<mlir::Value> &ops) {
   unsigned numElems = cast<cir::IntType>(ops[0].getType()).getWidth();
-  
+
   // Convert both operands to mask vectors.
   mlir::Value lhs = getMaskVecValue(builder, loc, ops[0], numElems);
   mlir::Value rhs = getMaskVecValue(builder, loc, ops[1], numElems);
@@ -125,14 +125,16 @@ static mlir::Value emitX86MaskUnpack(CIRGenBuilderTy &builder,
   // Create indices for concatenating the vectors.
   // NOTE: Operands are swapped to match the intrinsic definition.
   // After the half extraction, both vectors have numElems/2 elements.
-  // In createVecShuffle(rhsHalf, lhsHalf, indices), indices [0..numElems/2-1] select
-  // from rhsHalf, and indices [numElems/2..numElems-1] select from lhsHalf.
+  // In createVecShuffle(rhsHalf, lhsHalf, indices), indices [0..numElems/2-1]
+  // select from rhsHalf, and indices [numElems/2..numElems-1] select from
+  // lhsHalf.
   SmallVector<mlir::Attribute, 64> concatIndices;
   for (auto i : llvm::seq<unsigned>(0, numElems))
     concatIndices.push_back(cir::IntAttr::get(i32Ty, i));
 
   // Concat the vectors (RHS first, then LHS).
-  mlir::Value res = builder.createVecShuffle(loc, rhsHalf, lhsHalf, concatIndices);
+  mlir::Value res =
+      builder.createVecShuffle(loc, rhsHalf, lhsHalf, concatIndices);
   return builder.createBitcast(res, ops[0].getType());
 }
 
