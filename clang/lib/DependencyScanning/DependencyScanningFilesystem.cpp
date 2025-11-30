@@ -1,4 +1,4 @@
-//===- DependencyScanningFilesystem.cpp - clang-scan-deps fs --------------===//
+//===- DependencyScanningFilesystem.cpp - Optimized Scanning FS -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
+#include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 #include <optional>
 
 using namespace clang;
-using namespace tooling;
 using namespace dependencies;
 
 llvm::ErrorOr<DependencyScanningWorkerFilesystem::TentativeEntry>
