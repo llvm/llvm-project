@@ -103,7 +103,7 @@ class TestSBFrameExtensions(TestBase):
         block_direct = frame.GetBlock()
         self.assertTrue(block_direct.IsValid(), "GetBlock() should return valid block")
         # Verify both blocks are valid and have the same ranges
-        # by comparing their first range start address
+        # by comparing their first range start address.
         block_ranges = block.GetRanges()
         block_direct_ranges = block_direct.GetRanges()
         if block_ranges.GetSize() > 0 and block_direct_ranges.GetSize() > 0:
@@ -132,7 +132,7 @@ class TestSBFrameExtensions(TestBase):
         self.assertEqual(
             name, frame.GetFunctionName(), "name should match GetFunctionName()"
         )
-        # Should be one of our functions
+        # Should be one of our functions.
         self.assertIn(
             name, ["func1", "func2", "main"], "name should be a known function"
         )
@@ -273,10 +273,10 @@ class TestSBFrameExtensions(TestBase):
         frame, _ = self._get_frame()
 
         registers = frame.registers
-        # registers returns an SBValueList that can be iterated
+        # registers returns an SBValueList that can be iterated.
         self.assertTrue(hasattr(registers, "__iter__"), "registers should be iterable")
         registers_direct = frame.GetRegisters()
-        # Compare by iterating and counting
+        # Compare by iterating and counting.
         registers_count = sum(1 for _ in registers)
         registers_direct_count = sum(1 for _ in registers_direct)
         self.assertEqual(
@@ -302,13 +302,13 @@ class TestSBFrameExtensions(TestBase):
 
         register = frame.register
         self.assertIsNotNone(register, "register should not be None")
-        # register is a helper object with __iter__ and __getitem__
+        # register is a helper object with __iter__ and __getitem__.
         reg_names = set()
         for reg in register:
             self.assertTrue(reg.IsValid(), "Register should be valid")
             reg_names.add(reg.name)
 
-        # Test register indexing by name
+        # Test register indexing by name.
         if len(reg_names) > 0:
             first_reg_name = list(reg_names)[0]
             reg_by_name = register[first_reg_name]
@@ -336,7 +336,7 @@ class TestSBFrameExtensions(TestBase):
         """Test SBFrame extension property: parent"""
         frame0, thread = self._get_frame()
 
-        # If there's a parent frame (frame 1), test parent property
+        # If there's a parent frame (frame 1), test parent property.
         if thread.GetNumFrames() > 1:
             frame1 = thread.GetFrameAtIndex(1)
             parent = frame0.parent
@@ -354,10 +354,10 @@ class TestSBFrameExtensions(TestBase):
         """Test SBFrame extension property: child"""
         frame0, thread = self._get_frame()
 
-        # Test child property (should be frame -1, which doesn't exist, so should return invalid)
+        # Test child property (should be frame -1, which doesn't exist, so should return invalid).
         child = frame0.child
-        # Child of frame 0 would be frame -1, which doesn't exist
-        # So it should return an invalid frame
+        # Child of frame 0 would be frame -1, which doesn't exist.
+        # So it should return an invalid frame.
         if thread.GetNumFrames() == 1:
             self.assertFalse(child.IsValid(), "child of only frame should be invalid")
 
@@ -425,8 +425,8 @@ class TestSBFrameExtensions(TestBase):
         """Test SBFrame extension method: var()"""
         frame, _ = self._get_frame()
 
-        # Test var() method with a variable that should exist
-        # First, let's see what variables are available
+        # Test var() method with a variable that should exist.
+        # First, let's see what variables are available.
         all_vars = frame.GetVariables(True, True, True, True)
         if all_vars.GetSize() > 0:
             var_name = all_vars.GetValueAtIndex(0).GetName()
@@ -437,7 +437,7 @@ class TestSBFrameExtensions(TestBase):
                 var_name,
                 f"var('{var_name}') should return the correct variable",
             )
-            # Compare with GetValueForVariablePath
+            # Compare with GetValueForVariablePath.
             var_direct = frame.GetValueForVariablePath(var_name)
             self.assertEqual(
                 var_value.GetName(),
@@ -445,7 +445,7 @@ class TestSBFrameExtensions(TestBase):
                 "var() should match GetValueForVariablePath()",
             )
 
-        # Test var() with non-existent variable
+        # Test var() with non-existent variable.
         invalid_var = frame.var("NonExistentVariable12345")
         self.assertFalse(
             invalid_var.IsValid(), "var() with non-existent variable should be invalid"
@@ -455,7 +455,7 @@ class TestSBFrameExtensions(TestBase):
         """Test SBFrame extension method: get_parent_frame()"""
         frame0, thread = self._get_frame()
 
-        # Test get_parent_frame
+        # Test get_parent_frame.
         if thread.GetNumFrames() > 1:
             parent = frame0.get_parent_frame()
             self.assertTrue(
@@ -468,15 +468,15 @@ class TestSBFrameExtensions(TestBase):
                 "get_parent_frame should return frame 1",
             )
         else:
-            # If there's only one frame, parent should be invalid
+            # If there's only one frame, parent should be invalid.
             parent = frame0.get_parent_frame()
-            # Note: get_parent_frame might return an invalid frame if idx+1 is out of bounds
+            # Note: get_parent_frame might return an invalid frame if idx+1 is out of bounds.
 
     def test_method_get_child_frame(self):
         """Test SBFrame extension method: get_child_frame()"""
         frame0, thread = self._get_frame()
 
-        # Test get_child_frame (frame -1 doesn't exist, so should be invalid)
+        # Test get_child_frame (frame -1 doesn't exist, so should be invalid).
         child = frame0.get_child_frame()
         if thread.GetNumFrames() == 1:
             self.assertFalse(
@@ -487,7 +487,7 @@ class TestSBFrameExtensions(TestBase):
         """Test SBFrame extension special method: __int__"""
         frame0, _ = self._get_frame()
 
-        # Test __int__ (converts frame to its frame ID)
+        # Test __int__ (converts frame to its frame ID).
         frame_id = int(frame0)
         self.assertIsInstance(frame_id, int, "__int__ should return an integer")
         self.assertEqual(
@@ -498,10 +498,10 @@ class TestSBFrameExtensions(TestBase):
         """Test SBFrame extension special method: __hex__"""
         frame0, _ = self._get_frame()
 
-        # Test __hex__ (converts frame to its PC)
-        # Note: __hex__ returns the PC as an integer, not a hex string
+        # Test __hex__ (converts frame to its PC).
+        # Note: __hex__ returns the PC as an integer, not a hex string.
         # In Python 3, hex() builtin calls __index__ if __hex__ doesn't exist,
-        # but since __hex__ is defined, it will be called
+        # but since __hex__ is defined, it will be called.
         pc_hex = frame0.__hex__()
         self.assertIsInstance(pc_hex, int, "__hex__ should return an integer (PC)")
         self.assertEqual(pc_hex, frame0.GetPC(), "__hex__ should return PC")
@@ -510,7 +510,7 @@ class TestSBFrameExtensions(TestBase):
         """Test SBFrame extension special method: __eq__ and __ne__"""
         frame0, thread = self._get_frame()
 
-        # Test __eq__ and __ne__
+        # Test __eq__ and __ne__.
         frame0_copy = thread.GetFrameAtIndex(0)
         self.assertTrue(frame0 == frame0_copy, "Same frame should be equal")
         self.assertFalse(frame0 != frame0_copy, "Same frame should not be not-equal")
@@ -525,8 +525,8 @@ class TestSBFrameExtensions(TestBase):
         frame, _ = self._get_frame()
 
         original_pc = frame.GetPC()
-        # Test that we can set pc (though this might not work on all platforms)
-        # We'll just verify the property exists and can be read
+        # Test that we can set pc (though this might not work on all platforms).
+        # We'll just verify the property exists and can be read.
         pc = frame.pc
         self.assertIsInstance(pc, int, "pc should be readable")
-        # Note: Setting pc might not be supported on all platforms, so we just test reading
+        # Note: Setting pc might not be supported on all platforms, so we just test reading.
