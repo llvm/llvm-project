@@ -466,7 +466,54 @@ Please refer to the [Undefined Behavior Manual](https://llvm.org/docs/UndefinedB
         return report
 
 
-ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper(), UndefGetFormatHelper())
+class TrailingWhitespaceFormatter(FormatHelper):
+    name = "trailing_whitespace"
+    friendly_name = "Trailing whitespace formatter"
+
+    @property
+    def instructions(self) -> str:
+        return f"python3 {self.trailing_whitespace_path} --exclude build " + " ".join(self.files)
+
+    @property
+    def trailing_whitespace_path(self) -> str:
+        if "TRAILING_WHITESPACE" in os.environ:
+            return os.environ["TRAILING_WHITESPACE"]
+        return "llvm/utils/trailing_whitespace.py"
+
+    def has_tool(self) -> bool:
+        return True
+
+    def format_run(self, changed_files: List[str], args: FormatArgs) -> Optional[str]:
+        tw_cmd = [
+            self.trailing_whitespace_path,
+            "--exclude",
+            "build",
+        ]
+        if args.start_rev and args.end_rev:
+            tw_cmd += ["--diff", args.start_rev, args.end_rev]
+        tw_cmd += changed_files
+        if args.verbose:
+            print(f"Running: {sys.executable} {' '.join(tw_cmd)}")
+        self.files = changed_files
+        proc = subprocess.run(
+            [sys.executable] + tw_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        if args.verbose:
+            sys.stdout.write(proc.stderr.decode("utf-8"))
+
+        if proc.returncode != 0:
+            # formatting needed, or the command otherwise failed
+            if args.verbose:
+                print(f"error: {self.name} exited with code {proc.returncode}")
+                # Print the diff in the log so that it is viewable there
+                print(proc.stdout.decode("utf-8"))
+            return proc.stdout.decode("utf-8")
+        else:
+            sys.stdout.write(proc.stdout.decode("utf-8"))
+            return None
+
+
+ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper(), UndefGetFormatHelper(), TrailingWhitespaceFormatter())
 
 
 def hook_main():
