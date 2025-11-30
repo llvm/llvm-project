@@ -42,13 +42,11 @@ body:             |
     %24:sgpr_128 = COPY %1
     %25:sgpr_128 = COPY %1
     %26:sgpr_128 = COPY %1
-    %27:sgpr_128 = COPY %1
     S_BRANCH %bb.1
 
   bb.1:
     liveins: $sgpr96_sgpr97, $sgpr98_sgpr99, $sgpr102_sgpr103
 
-    %27 = IMPLICIT_DEF implicit-def $exec
     %0:sreg_64 = S_OR_SAVEEXEC_B64 $sgpr96_sgpr97, implicit-def $exec, implicit-def $scc, implicit $exec
     $exec = S_XOR_B64_term $exec, %0, implicit-def $scc
     S_CBRANCH_EXECZ %bb.3, implicit $exec
@@ -57,7 +55,6 @@ body:             |
   bb.2:
     liveins: $sgpr98_sgpr99, $sgpr102_sgpr103
 
-    %27 = IMPLICIT_DEF implicit-def $exec
     %0:sreg_64 = S_OR_SAVEEXEC_B64 $sgpr98_sgpr99, implicit-def $exec, implicit-def $scc, implicit $exec
     $exec = S_XOR_B64_term $exec, %0, implicit-def $scc
     S_CBRANCH_EXECZ %bb.3, implicit $exec
@@ -66,7 +63,6 @@ body:             |
   bb.3:
     liveins: $sgpr102_sgpr103
 
-    %27 = IMPLICIT_DEF implicit-def $exec
     %0:sreg_64 = S_OR_SAVEEXEC_B64 $sgpr102_sgpr103, implicit-def $exec, implicit-def $scc, implicit $exec
     $exec = S_XOR_B64_term $exec, %0, implicit-def $scc
     S_BRANCH %bb.4
@@ -85,7 +81,6 @@ body:             |
     S_CMP_EQ_U64 %21.sub0_sub1, %22.sub2_sub3, implicit-def $scc
     S_CMP_EQ_U64 %23.sub0_sub1, %24.sub2_sub3, implicit-def $scc
     S_CMP_EQ_U64 %25.sub0_sub1, %26.sub2_sub3, implicit-def $scc
-    S_CMP_EQ_U64 %26.sub0_sub1, %27.sub2_sub3, implicit-def $scc
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit %0, implicit $vgpr0
 ...
