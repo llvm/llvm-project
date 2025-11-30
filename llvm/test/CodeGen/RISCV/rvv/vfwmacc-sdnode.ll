@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfhmin,+v -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN
 
-declare <vscale x 1 x float> @llvm.fma.v1f32(<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>)
-
 define <vscale x 1 x float> @vfwmacc_vv_nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x half> %vb, <vscale x 1 x half> %vc) {
 ; ZVFH-LABEL: vfwmacc_vv_nxv1f32:
 ; ZVFH:       # %bb.0:
@@ -242,8 +240,6 @@ define <vscale x 1 x float> @vfwnmsac_fv_nxv1f32(<vscale x 1 x float> %va, <vsca
   %vg = call <vscale x 1 x float> @llvm.fma.v1f32(<vscale x 1 x float> %vd, <vscale x 1 x float> %vf, <vscale x 1 x float> %va)
   ret <vscale x 1 x float> %vg
 }
-
-declare <vscale x 2 x float> @llvm.fma.v2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>)
 
 define <vscale x 2 x float> @vfwmacc_vv_nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x half> %vb, <vscale x 2 x half> %vc) {
 ; ZVFH-LABEL: vfwmacc_vv_nxv2f32:
@@ -478,9 +474,6 @@ define <vscale x 2 x float> @vfwnmsac_fv_nxv2f32(<vscale x 2 x float> %va, <vsca
   ret <vscale x 2 x float> %vg
 }
 
-
-declare <vscale x 4 x float> @llvm.fma.v4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>)
-
 define <vscale x 4 x float> @vfwmacc_vv_nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x half> %vb, <vscale x 4 x half> %vc) {
 ; ZVFH-LABEL: vfwmacc_vv_nxv4f32:
 ; ZVFH:       # %bb.0:
@@ -713,8 +706,6 @@ define <vscale x 4 x float> @vfwnmsac_fv_nxv4f32(<vscale x 4 x float> %va, <vsca
   %vg = call <vscale x 4 x float> @llvm.fma.v4f32(<vscale x 4 x float> %vd, <vscale x 4 x float> %vf, <vscale x 4 x float> %va)
   ret <vscale x 4 x float> %vg
 }
-
-declare <vscale x 8 x float> @llvm.fma.v8f32(<vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float>)
 
 define <vscale x 8 x float> @vfwmacc_vv_nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x half> %vb, <vscale x 8 x half> %vc) {
 ; ZVFH-LABEL: vfwmacc_vv_nxv8f32:
@@ -949,8 +940,6 @@ define <vscale x 8 x float> @vfwnmsac_fv_nxv8f32(<vscale x 8 x float> %va, <vsca
   ret <vscale x 8 x float> %vg
 }
 
-declare <vscale x 16 x float> @llvm.fma.v16f32(<vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float>)
-
 define <vscale x 16 x float> @vfwmacc_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x half> %vb, <vscale x 16 x half> %vc) {
 ; ZVFH-LABEL: vfwmacc_vv_nxv16f32:
 ; ZVFH:       # %bb.0:
@@ -1184,8 +1173,6 @@ define <vscale x 16 x float> @vfwnmsac_fv_nxv16f32(<vscale x 16 x float> %va, <v
   ret <vscale x 16 x float> %vg
 }
 
-declare <vscale x 1 x double> @llvm.fma.v1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>)
-
 define <vscale x 1 x double> @vfwmacc_vv_nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x float> %vb, <vscale x 1 x float> %vc) {
 ; CHECK-LABEL: vfwmacc_vv_nxv1f64:
 ; CHECK:       # %bb.0:
@@ -1328,8 +1315,6 @@ define <vscale x 1 x double> @vfwnmsac_fv_nxv1f64(<vscale x 1 x double> %va, <vs
   %vg = call <vscale x 1 x double> @llvm.fma.v1f64(<vscale x 1 x double> %vd, <vscale x 1 x double> %vf, <vscale x 1 x double> %va)
   ret <vscale x 1 x double> %vg
 }
-
-declare <vscale x 2 x double> @llvm.fma.v2f64(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>)
 
 define <vscale x 2 x double> @vfwmacc_vv_nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x float> %vb, <vscale x 2 x float> %vc) {
 ; CHECK-LABEL: vfwmacc_vv_nxv2f64:
@@ -1474,9 +1459,6 @@ define <vscale x 2 x double> @vfwnmsac_fv_nxv2f64(<vscale x 2 x double> %va, <vs
   ret <vscale x 2 x double> %vg
 }
 
-
-declare <vscale x 4 x double> @llvm.fma.v4f64(<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>)
-
 define <vscale x 4 x double> @vfwmacc_vv_nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x float> %vb, <vscale x 4 x float> %vc) {
 ; CHECK-LABEL: vfwmacc_vv_nxv4f64:
 ; CHECK:       # %bb.0:
@@ -1619,8 +1601,6 @@ define <vscale x 4 x double> @vfwnmsac_fv_nxv4f64(<vscale x 4 x double> %va, <vs
   %vg = call <vscale x 4 x double> @llvm.fma.v4f64(<vscale x 4 x double> %vd, <vscale x 4 x double> %vf, <vscale x 4 x double> %va)
   ret <vscale x 4 x double> %vg
 }
-
-declare <vscale x 8 x double> @llvm.fma.v8f64(<vscale x 8 x double>, <vscale x 8 x double>, <vscale x 8 x double>)
 
 define <vscale x 8 x double> @vfwmacc_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x float> %vb, <vscale x 8 x float> %vc) {
 ; CHECK-LABEL: vfwmacc_vv_nxv8f64:

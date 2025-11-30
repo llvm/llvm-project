@@ -1694,6 +1694,12 @@ gentbl_cc_library(
             "-gen-dialect-defs",
             "-dialect=amdgpu",
         ],
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.h.inc": [
+            "-gen-typedef-decls",
+        ],
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc": [
+            "-gen-typedef-defs",
+        ],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h.inc": ["-gen-enum-decls"],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.cpp.inc": ["-gen-enum-defs"],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPU.h.inc": ["-gen-op-decls"],
@@ -4789,6 +4795,7 @@ cc_library(
         ":IR",
         ":InliningUtils",
         ":SideEffectInterfaces",
+        ":UBDialect",
         "//llvm:Support",
     ],
 )
@@ -10112,6 +10119,7 @@ cc_binary(
         "//llvm:TableGen",
         "//llvm:TargetParser",
         "//llvm:config",
+        "//llvm:vt_gen",
     ],
 )
 

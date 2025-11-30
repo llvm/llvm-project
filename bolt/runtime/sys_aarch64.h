@@ -18,10 +18,12 @@
   "stp x24, x25, [sp, #-16]!\n"                                                \
   "stp x26, x27, [sp, #-16]!\n"                                                \
   "stp x28, x29, [sp, #-16]!\n"                                                \
-  "str x30, [sp,#-16]!\n"
+  "mrs x29, nzcv\n"                                                            \
+  "stp x29, x30, [sp, #-16]!\n"
 // Mirrors SAVE_ALL
 #define RESTORE_ALL                                                            \
-  "ldr x30, [sp], #16\n"                                                       \
+  "ldp x29, x30, [sp], #16\n"                                                  \
+  "msr nzcv, x29\n"                                                            \
   "ldp x28, x29, [sp], #16\n"                                                  \
   "ldp x26, x27, [sp], #16\n"                                                  \
   "ldp x24, x25, [sp], #16\n"                                                  \
