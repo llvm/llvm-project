@@ -53,15 +53,16 @@ AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
 } // namespace
 
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
-  const auto ClassWithDtorDecl = cxxRecordDecl(hasMethod(cxxDestructorDecl()));
+  const auto ClassWithDtorDecl =
+      cxxRecordDecl(hasMethod(cxxDestructorDecl().bind("dtorDecl")));
   const auto ClassWithDtorType =
       hasCanonicalType(hasDeclaration(ClassWithDtorDecl));
   const auto ArrayOfClassWithDtor =
       hasType(arrayType(hasElementType(ClassWithDtorType)));
+  const auto HasDtor = anyOf(hasType(ClassWithDtorType), ArrayOfClassWithDtor);
 
   const auto SingleVarDecl =
-      varDecl(unless(anyOf(hasType(ClassWithDtorType), ArrayOfClassWithDtor)))
-          .bind("singleVar");
+      varDecl(anyOf(unless(HasDtor), HasDtor)).bind("singleVar");
   const auto RefToBoundVarDecl =
       declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
 
@@ -85,13 +86,19 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
         unless(equalsBoundNode(StmtName)), hasDescendant(RefToBoundVarDecl))));
 
     return compoundStmt(
-        unless(isInTemplateInstantiation()),
-        hasAdjacentStmts(PrevDeclStmt, StmtMatcherWithCondition),
-        NoOtherVarRefs);
+               unless(isInTemplateInstantiation()),
+               hasAdjacentStmts(PrevDeclStmt, StmtMatcherWithCondition),
+               NoOtherVarRefs)
+        .bind("compound");
   };
 
   Finder->addMatcher(MakeCompoundMatcher(ifStmt, "ifStmt"), this);
   Finder->addMatcher(MakeCompoundMatcher(switchStmt, "switchStmt"), this);
+}
+
+static bool isLastInCompound(const Stmt *S, const CompoundStmt *P) {
+  const auto Statements = P->body();
+  return !Statements.empty() && *std::prev(Statements.end()) == S;
 }
 
 static std::string extractDeclStmtText(const DeclStmt *PrevDecl,
@@ -110,10 +117,17 @@ static std::string extractDeclStmtText(const DeclStmt *PrevDecl,
 void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *If = Result.Nodes.getNodeAs<IfStmt>("ifStmt");
   const auto *Switch = Result.Nodes.getNodeAs<SwitchStmt>("switchStmt");
+  const auto *Dtor = Result.Nodes.getNodeAs<CXXDestructorDecl>("dtorDecl");
   const auto *PrevDecl = Result.Nodes.getNodeAs<DeclStmt>("prevDecl");
   const auto *Condition = Result.Nodes.getNodeAs<Expr>("condition");
+  const auto *Compound = Result.Nodes.getNodeAs<CompoundStmt>("compound");
+  const auto *Statement =
+      If ? static_cast<const Stmt *>(If) : static_cast<const Stmt *>(Switch);
 
-  if (!PrevDecl || !Condition || (!If && !Switch))
+  if (!PrevDecl || !Condition || !Compound || !Statement)
+    return;
+
+  if (Dtor && !isLastInCompound(Statement, Compound))
     return;
 
   auto Diag = diag(PrevDecl->getBeginLoc(),

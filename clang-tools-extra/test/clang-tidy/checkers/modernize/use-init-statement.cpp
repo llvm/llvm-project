@@ -321,16 +321,17 @@ void bad_multiple_not_all_used() {
     }
 }
 
-// FIXME: implement this case
-// void bad_unique_lock() {
-//     static std::mutex counter_mutex;
-//     static int counter;
-// 
-//     std::unique_lock<std::mutex> lock(counter_mutex);
-//     if (lock.owns_lock()) {
-//         do_some();
-//     }
-// }
+void bad_unique_lock() {
+    static std::mutex counter_mutex;
+
+    std::unique_lock<std::mutex> lock(counter_mutex); DUMMY_TOKEN
+    if (lock.owns_lock()) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'lock' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (std::unique_lock<std::mutex> lock(counter_mutex); lock.owns_lock()) {
+        do_some();
+    }
+}
 
 void bad_pointer_to_unique_lock() {
     static std::mutex counter_mutex;
