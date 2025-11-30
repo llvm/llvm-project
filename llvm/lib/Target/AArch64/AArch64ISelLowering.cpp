@@ -30,6 +30,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -13355,6 +13356,20 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
   if (Constraint == "{zt0}") {
     return std::make_pair(unsigned(AArch64::ZT0), &AArch64::ZTRRegClass);
   }
+
+  // Clang will correctly decode the usage of register name aliases into their
+  // official names. However, other frontends like `rustc` do not. This allows
+  // users of these frontends to use the ABI names for registers in LLVM-style
+  // register constraints.
+  //
+  // x31->sp is not included here because it's not a general register and
+  // needs different handling
+  unsigned XRegFromAlias = StringSwitch<unsigned>(Constraint.lower())
+                               .Cases({"{x29}", "{fp}"}, AArch64::FP)
+                               .Cases({"{x30}", "{lr}"}, AArch64::LR)
+                               .Default(AArch64::NoRegister);
+  if (XRegFromAlias != AArch64::NoRegister)
+    return std::make_pair(XRegFromAlias, &AArch64::GPR64RegClass);
 
   // Use the default implementation in TargetLowering to convert the register
   // constraint into a member of a register class.
