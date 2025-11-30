@@ -17,8 +17,7 @@ define <16 x i8> @ugt_1_v16i8(<16 x i8> %0) {
 ; PWR5-NEXT:    vaddubm v3, v2, v3
 ; PWR5-NEXT:    vand v2, v2, v3
 ; PWR5-NEXT:    vxor v3, v3, v3
-; PWR5-NEXT:    vcmpequb v2, v2, v3
-; PWR5-NEXT:    vnot v2, v2
+; PWR5-NEXT:    vcmpgtub v2, v2, v3
 ; PWR5-NEXT:    blr
 ;
 ; PWR6-LABEL: ugt_1_v16i8:
@@ -27,8 +26,7 @@ define <16 x i8> @ugt_1_v16i8(<16 x i8> %0) {
 ; PWR6-NEXT:    vaddubm v3, v2, v3
 ; PWR6-NEXT:    vand v2, v2, v3
 ; PWR6-NEXT:    vxor v3, v3, v3
-; PWR6-NEXT:    vcmpequb v2, v2, v3
-; PWR6-NEXT:    vnot v2, v2
+; PWR6-NEXT:    vcmpgtub v2, v2, v3
 ; PWR6-NEXT:    blr
 ;
 ; PWR7-LABEL: ugt_1_v16i8:
@@ -37,8 +35,7 @@ define <16 x i8> @ugt_1_v16i8(<16 x i8> %0) {
 ; PWR7-NEXT:    vaddubm v3, v2, v3
 ; PWR7-NEXT:    xxland v2, v2, v3
 ; PWR7-NEXT:    xxlxor v3, v3, v3
-; PWR7-NEXT:    vcmpequb v2, v2, v3
-; PWR7-NEXT:    xxlnor v2, v2, v2
+; PWR7-NEXT:    vcmpgtub v2, v2, v3
 ; PWR7-NEXT:    blr
 ;
 ; PWR8-LABEL: ugt_1_v16i8:
@@ -1085,8 +1082,7 @@ define <8 x i16> @ugt_1_v8i16(<8 x i16> %0) {
 ; PWR5-NEXT:    vadduhm v3, v2, v3
 ; PWR5-NEXT:    vand v2, v2, v3
 ; PWR5-NEXT:    vxor v3, v3, v3
-; PWR5-NEXT:    vcmpequh v2, v2, v3
-; PWR5-NEXT:    vnot v2, v2
+; PWR5-NEXT:    vcmpgtuh v2, v2, v3
 ; PWR5-NEXT:    blr
 ;
 ; PWR6-LABEL: ugt_1_v8i16:
@@ -1095,8 +1091,7 @@ define <8 x i16> @ugt_1_v8i16(<8 x i16> %0) {
 ; PWR6-NEXT:    vadduhm v3, v2, v3
 ; PWR6-NEXT:    vand v2, v2, v3
 ; PWR6-NEXT:    vxor v3, v3, v3
-; PWR6-NEXT:    vcmpequh v2, v2, v3
-; PWR6-NEXT:    vnot v2, v2
+; PWR6-NEXT:    vcmpgtuh v2, v2, v3
 ; PWR6-NEXT:    blr
 ;
 ; PWR7-LABEL: ugt_1_v8i16:
@@ -1105,8 +1100,7 @@ define <8 x i16> @ugt_1_v8i16(<8 x i16> %0) {
 ; PWR7-NEXT:    vadduhm v3, v2, v3
 ; PWR7-NEXT:    xxland v2, v2, v3
 ; PWR7-NEXT:    xxlxor v3, v3, v3
-; PWR7-NEXT:    vcmpequh v2, v2, v3
-; PWR7-NEXT:    xxlnor v2, v2, v2
+; PWR7-NEXT:    vcmpgtuh v2, v2, v3
 ; PWR7-NEXT:    blr
 ;
 ; PWR8-LABEL: ugt_1_v8i16:
@@ -4105,8 +4099,7 @@ define <4 x i32> @ugt_1_v4i32(<4 x i32> %0) {
 ; PWR5-NEXT:    vadduwm v3, v2, v3
 ; PWR5-NEXT:    vand v2, v2, v3
 ; PWR5-NEXT:    vxor v3, v3, v3
-; PWR5-NEXT:    vcmpequw v2, v2, v3
-; PWR5-NEXT:    vnot v2, v2
+; PWR5-NEXT:    vcmpgtuw v2, v2, v3
 ; PWR5-NEXT:    blr
 ;
 ; PWR6-LABEL: ugt_1_v4i32:
@@ -4115,8 +4108,7 @@ define <4 x i32> @ugt_1_v4i32(<4 x i32> %0) {
 ; PWR6-NEXT:    vadduwm v3, v2, v3
 ; PWR6-NEXT:    vand v2, v2, v3
 ; PWR6-NEXT:    vxor v3, v3, v3
-; PWR6-NEXT:    vcmpequw v2, v2, v3
-; PWR6-NEXT:    vnot v2, v2
+; PWR6-NEXT:    vcmpgtuw v2, v2, v3
 ; PWR6-NEXT:    blr
 ;
 ; PWR7-LABEL: ugt_1_v4i32:
@@ -4125,8 +4117,7 @@ define <4 x i32> @ugt_1_v4i32(<4 x i32> %0) {
 ; PWR7-NEXT:    vadduwm v3, v2, v3
 ; PWR7-NEXT:    xxland v2, v2, v3
 ; PWR7-NEXT:    xxlxor v3, v3, v3
-; PWR7-NEXT:    vcmpequw v2, v2, v3
-; PWR7-NEXT:    xxlnor v2, v2, v2
+; PWR7-NEXT:    vcmpgtuw v2, v2, v3
 ; PWR7-NEXT:    blr
 ;
 ; PWR8-LABEL: ugt_1_v4i32:
@@ -11971,9 +11962,8 @@ define <2 x i64> @ugt_1_v2i64(<2 x i64> %0) {
 ; PWR7-NEXT:    addis r3, r2, .LCPI100_0@toc@ha
 ; PWR7-NEXT:    addi r3, r3, .LCPI100_0@toc@l
 ; PWR7-NEXT:    xxland v2, v2, vs0
-; PWR7-NEXT:    vcmpequw v2, v2, v3
+; PWR7-NEXT:    vcmpgtuw v2, v2, v3
 ; PWR7-NEXT:    lxvw4x v3, 0, r3
-; PWR7-NEXT:    xxlnor v2, v2, v2
 ; PWR7-NEXT:    vperm v3, v2, v2, v3
 ; PWR7-NEXT:    xxlor v2, v3, v2
 ; PWR7-NEXT:    blr
