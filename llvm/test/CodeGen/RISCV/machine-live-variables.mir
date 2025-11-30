@@ -1,0 +1,76 @@
+# RUN: llc -x mir -mtriple=riscv64 -verify-machineinstrs -riscv-enable-live-variables -debug < %s 2>&1 \
+# RUN: | FileCheck %s
+
+# REQUIRES: asserts
+
+# CHECK: Block: (Number: 0)
+# CHECK:   Live-In:  { $x11 $x12 $x13 $x14 $x15 $x16 $x17 $x11_h $x12_h $x13_h $x14_h $x15_h $x16_h $x17_h $x11_w $x12_w $x13_w $x14_w $x15_w $x16_w $x17_w }
+# CHECK:   Live-Out: { }
+# CHECK:   Use:      { $x11 $x12 $x13 $x14 $x15 $x16 $x17 $x11_h $x12_h $x13_h $x14_h $x15_h $x16_h $x17_h $x11_w $x12_w $x13_w $x14_w $x15_w $x16_w $x17_w }
+# CHECK:   Def:      { $x10 $x11 $x12 $x10_h $x11_h $x12_h $x10_w $x11_w $x12_w }
+
+--- |
+
+  source_filename = "liveness-varargs.ll"
+  target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
+  target triple = "riscv64"
+
+  declare void @notdead(ptr)
+
+  define i32 @va1(ptr %fmt, ...) {
+    %va = alloca ptr, align 8
+    call void @llvm.va_start.p0(ptr %va)
+    %argp.cur = load ptr, ptr %va, align 4
+    %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
+    store ptr %argp.next, ptr %va, align 4
+    %1 = load i32, ptr %argp.cur, align 4
+    call void @llvm.va_end.p0(ptr %va)
+    ret i32 %1
+  }
+
+  declare void @llvm.va_start.p0(ptr) #1
+
+  declare void @llvm.va_end.p0(ptr) #1
+
+  declare void @llvm.va_copy.p0(ptr, ptr) #1
+
+  attributes #0 = { nounwind }
+  attributes #1 = { nocallback nofree nosync nounwind willreturn }
+...
+
+---
+name: va1
+tracksRegLiveness: true
+noVRegs: false
+fixedStack:
+  - { id: 0, offset: 8, size: 8, alignment: 8, isImmutable: false }
+  - { id: 1, offset: 56, size: 56, alignment: 8, isImmutable: true }
+  - { id: 2, offset: 64, size: 8, alignment: 16, isImmutable: true }
+stack:
+  - { id: 0, name: va, size: 2, alignment: 2, stack-id: default }
+
+body: |
+  bb.0:
+    liveins: $x11, $x12, $x13, $x14, $x15, $x16, $x17
+    SD killed renamable $x11, %fixed-stack.1, 0 :: (store (s64) into %fixed-stack.1)
+    SD killed renamable $x12, %fixed-stack.1, 8 :: (store (s64) into %fixed-stack.1 + 8)
+    SD killed renamable $x13, %fixed-stack.1, 16 :: (store (s64) into %fixed-stack.1 + 16)
+    SD killed renamable $x14, %fixed-stack.1, 24 :: (store (s64) into %fixed-stack.1 + 24)
+    renamable $x10 = ADDI %stack.0.va, 0
+    renamable $x11 = ADDI %fixed-stack.1, 0
+    SD killed renamable $x11, %stack.0.va, 0 :: (store (s64) into %ir.va)
+    renamable $x10 = LW killed renamable $x10, 4 :: (dereferenceable load (s32) from %ir.va + 4)
+    renamable $x11 = LWU %stack.0.va, 0 :: (dereferenceable load (s32) from %ir.va)
+    SD killed renamable $x15, %fixed-stack.1, 32 :: (store (s64) into %fixed-stack.1 + 32)
+    SD killed renamable $x16, %fixed-stack.1, 40 :: (store (s64) into %fixed-stack.1 + 40)
+    SD killed renamable $x17, %fixed-stack.1, 48 :: (store (s64) into %fixed-stack.1 + 48)
+    renamable $x10 = SLLI killed renamable $x10, 32
+    renamable $x10 = OR killed renamable $x10, killed renamable $x11
+    renamable $x11 = nuw nusw inbounds ADDI renamable $x10, 4
+    renamable $x12 = SRLI renamable $x11, 32
+    SW killed renamable $x11, %stack.0.va, 0 :: (store (s32) into %ir.va)
+    SW killed renamable $x12, %stack.0.va, 4 :: (store (s32) into %ir.va + 4)
+    renamable $x10 = LW killed renamable $x10, 0 :: (load (s32) from %ir.argp.cur)
+    PseudoRET implicit $x10
+
+...

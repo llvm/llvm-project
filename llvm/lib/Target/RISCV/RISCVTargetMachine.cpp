@@ -108,6 +108,11 @@ static cl::opt<bool> EnableCFIInstrInserter(
     cl::desc("Enable CFI Instruction Inserter for RISC-V"), cl::init(false),
     cl::Hidden);
 
+static cl::opt<bool> EnableRISCVLiveVariables(
+    "riscv-enable-live-variables",
+    cl::desc("Enable Live Variable Analysis for RISC-V"), cl::init(false),
+    cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -120,6 +125,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPostLegalizerCombinerPass(*PR);
   initializeKCFIPass(*PR);
   initializeRISCVDeadRegisterDefinitionsPass(*PR);
+  initializeRISCVLiveVariablesPass(*PR);
   initializeRISCVLateBranchOptPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
@@ -592,6 +598,8 @@ void RISCVPassConfig::addPreEmitPass2() {
 void RISCVPassConfig::addMachineSSAOptimization() {
   addPass(createRISCVVectorPeepholePass());
   addPass(createRISCVFoldMemOffsetPass());
+  if (EnableRISCVLiveVariables)
+    addPass(createRISCVLiveVariablesPass(true));
 
   TargetPassConfig::addMachineSSAOptimization();
 
@@ -629,6 +637,9 @@ void RISCVPassConfig::addPostRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRedundantCopyElimination)
     addPass(createRISCVRedundantCopyEliminationPass());
+
+  if (EnableRISCVLiveVariables)
+    addPass(createRISCVLiveVariablesPass(false));
 }
 
 bool RISCVPassConfig::addILPOpts() {
