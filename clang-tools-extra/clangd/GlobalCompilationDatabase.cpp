@@ -463,8 +463,9 @@ DirectoryBasedGlobalCompilationDatabase::lookupCDB(
   return Result;
 }
 
-void DirectoryBasedGlobalCompilationDatabase::Options::applyFallbackWorkingDirectory(
-    std::optional<std::string> FallbackWorkingDirectory) {
+void DirectoryBasedGlobalCompilationDatabase::Options::
+    applyFallbackWorkingDirectory(
+        std::optional<std::string> FallbackWorkingDirectory) {
   if (FallbackWorkingDirectory)
     this->FallbackWorkingDirectory = *FallbackWorkingDirectory;
   else {
@@ -777,8 +778,8 @@ OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
                        std::vector<std::string> FallbackFlags,
                        CommandMangler Mangler,
                        std::optional<std::string> FallbackWorkingDirectory)
-    : DelegatingCDB(Base, FallbackWorkingDirectory), Mangler(std::move(Mangler)),
-      FallbackFlags(std::move(FallbackFlags)) {}
+    : DelegatingCDB(Base, FallbackWorkingDirectory),
+      Mangler(std::move(Mangler)), FallbackFlags(std::move(FallbackFlags)) {}
 
 std::optional<tooling::CompileCommand>
 OverlayCDB::getCompileCommand(PathRef File) const {
@@ -861,8 +862,9 @@ OverlayCDB::getProjectModules(PathRef File) const {
   return MDB;
 }
 
-DelegatingCDB::DelegatingCDB(const GlobalCompilationDatabase *Base,
-                             std::optional<std::string> FallbackWorkingDirectory)
+DelegatingCDB::DelegatingCDB(
+    const GlobalCompilationDatabase *Base,
+    std::optional<std::string> FallbackWorkingDirectory)
     : GlobalCompilationDatabase(FallbackWorkingDirectory), Base(Base) {
   if (Base)
     BaseChanged = Base->watch([this](const std::vector<std::string> Changes) {
@@ -870,8 +872,9 @@ DelegatingCDB::DelegatingCDB(const GlobalCompilationDatabase *Base,
     });
 }
 
-DelegatingCDB::DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base,
-                             std::optional<std::string> FallbackWorkingDirectory)
+DelegatingCDB::DelegatingCDB(
+    std::unique_ptr<GlobalCompilationDatabase> Base,
+    std::optional<std::string> FallbackWorkingDirectory)
     : DelegatingCDB(Base.get(), FallbackWorkingDirectory) {
   BaseOwner = std::move(Base);
 }

@@ -129,7 +129,8 @@ public:
     // If unset, parent directory of file should be used
     std::optional<std::string> FallbackWorkingDirectory;
 
-    void applyFallbackWorkingDirectory(std::optional<std::string> FallbackWorkingDirectory);
+    void applyFallbackWorkingDirectory(
+        std::optional<std::string> FallbackWorkingDirectory);
   };
 
   DirectoryBasedGlobalCompilationDatabase(const Options &Opts);
