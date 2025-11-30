@@ -2313,10 +2313,8 @@ StmtResult Parser::ParseBreakOrContinueStatement(bool IsContinue) {
       // TODO: Make this a compatibility/extension warning instead once the
       // syntax of this feature is finalised.
       Diag(LabelLoc, diag::err_c2y_labeled_break_continue) << IsContinue;
-    if (!Target) {
+    if (!Target)
       Diag(LabelLoc, diag::err_break_continue_label_not_found) << IsContinue;
-      return StmtError();
-    }
   }
 
   if (IsContinue)
