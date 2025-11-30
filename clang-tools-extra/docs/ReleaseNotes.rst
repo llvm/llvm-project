@@ -236,7 +236,9 @@ New checks
 - New :doc:`modernize-use-init-statement
   <clang-tidy/checks/modernize/use-init-statement>` check.
 
-  FIXME: Write a short description.
+  Finds variable declarations before if/switch statements where the variable is
+  used only in the condition, and suggests moving them into C++17 init
+  statements to narrow variable scope.
 
 - New :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check.

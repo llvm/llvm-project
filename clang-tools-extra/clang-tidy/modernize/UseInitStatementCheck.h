@@ -13,7 +13,9 @@
 
 namespace clang::tidy::modernize {
 
-/// FIXME: Write a short description.
+/// Finds variable declarations before if/switch statements where the variable
+/// is used only in the condition, and suggests moving them into C++17 init
+/// statements to narrow variable scope.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-init-statement.html
