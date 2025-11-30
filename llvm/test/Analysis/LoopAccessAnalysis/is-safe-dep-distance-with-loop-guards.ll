@@ -38,13 +38,55 @@ exit:
   ret void
 }
 
-define void @safe_deps_2_due_to_dependence_distance(i16 %n, ptr %p3, i16 noundef %q, ptr %p1, ptr %p2) {
-; CHECK-LABEL: 'safe_deps_2_due_to_dependence_distance'
+define void @safe_with_rtchecks_loopguards(i16 %n, ptr %p3, i16 noundef %q, ptr %p1, ptr %p2) {
+; CHECK-LABEL: 'safe_with_rtchecks_loopguards'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %arrayidx22 = getelementptr inbounds [2 x i32], ptr %alloca, i16 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %arrayidx33 = getelementptr inbounds i8, ptr %arrayidx22, i16 4
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %arrayidx22 = getelementptr inbounds [2 x i32], ptr %alloca, i16 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %arrayidx42 = getelementptr inbounds [2 x i32], ptr %arrayidx40, i16 %iv
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %arrayidx22 = getelementptr inbounds [2 x i32], ptr %alloca, i16 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %arrayidx53 = getelementptr inbounds i8, ptr %arrayidx42, i16 4
+; CHECK-NEXT:      Check 3:
+; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:          %arrayidx33 = getelementptr inbounds i8, ptr %arrayidx22, i16 4
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %arrayidx42 = getelementptr inbounds [2 x i32], ptr %arrayidx40, i16 %iv
+; CHECK-NEXT:      Check 4:
+; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:          %arrayidx33 = getelementptr inbounds i8, ptr %arrayidx22, i16 4
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %arrayidx53 = getelementptr inbounds i8, ptr %arrayidx42, i16 4
+; CHECK-NEXT:      Check 5:
+; CHECK-NEXT:        Comparing group GRP2:
+; CHECK-NEXT:          %arrayidx42 = getelementptr inbounds [2 x i32], ptr %arrayidx40, i16 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %arrayidx53 = getelementptr inbounds i8, ptr %arrayidx42, i16 4
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %alloca High: (-4 + (8 * %n) + %alloca))
+; CHECK-NEXT:            Member: {%alloca,+,8}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: (4 + %alloca) High: ((8 * %n) + %alloca))
+; CHECK-NEXT:            Member: {(4 + %alloca),+,8}<nuw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: ((8 * %n) + %alloca) High: (-4 + (16 * %n) + %alloca))
+; CHECK-NEXT:            Member: {((8 * %n) + %alloca),+,8}<nw><%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: (4 + (8 * %n) + %alloca) High: ((16 * %n) + %alloca))
+; CHECK-NEXT:            Member: {(4 + (8 * %n) + %alloca),+,8}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
