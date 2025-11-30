@@ -30,7 +30,9 @@ struct __identity {
     return std::forward<_Tp>(__t);
   }
 
+#if _LIBCPP_STD_VER >= 14
   using is_transparent = void;
+#endif
 };
 
 template <>
