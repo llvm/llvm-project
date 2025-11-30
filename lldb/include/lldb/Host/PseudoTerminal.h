@@ -35,11 +35,14 @@ public:
 
   /// Destructor
   ///
-  /// The destructor will close the primary and secondary file descriptors if
-  /// they are valid and ownership has not been released using one of: @li
-  /// PseudoTerminal::ReleasePrimaryFileDescriptor() @li
-  /// PseudoTerminal::ReleaseSaveFileDescriptor()
-  ~PseudoTerminal();
+  /// The destructor will close the primary and secondary file
+  /// descriptor/HANDLEs if they are valid and ownership has not been released
+  /// using PseudoTerminal::Close().
+  virtual ~PseudoTerminal();
+
+  /// Close all the file descriptors or Handles of the PseudoTerminal if they
+  /// are valid.
+  virtual void Close();
 
   /// Close the primary file descriptor if it is valid.
   void ClosePrimaryFileDescriptor();
@@ -59,8 +62,7 @@ public:
   ///
   /// This class will close the file descriptors for the primary/secondary when
   /// the destructor is called. The file handles can be released using either:
-  /// @li PseudoTerminal::ReleasePrimaryFileDescriptor() @li
-  /// PseudoTerminal::ReleaseSaveFileDescriptor()
+  /// @li PseudoTerminal::ReleasePrimaryFileDescriptor()
   ///
   /// \return
   ///     \b Parent process: a child process ID that is greater
@@ -82,6 +84,16 @@ public:
   /// \see PseudoTerminal::ReleasePrimaryFileDescriptor()
   int GetPrimaryFileDescriptor() const;
 
+  /// The primary HANDLE accessor.
+  ///
+  /// This object retains ownership of the primary HANDLE when this
+  /// accessor is used.
+  ///
+  /// \return
+  ///     The primary HANDLE, or INVALID_HANDLE_VALUE if the primary HANDLE is
+  ///     not currently valid.
+  virtual void *GetPrimaryHandle() const { return ((void *)(long long)-1); };
+
   /// The secondary file descriptor accessor.
   ///
   /// This object retains ownership of the secondary file descriptor when this
@@ -96,6 +108,8 @@ public:
   /// \see PseudoTerminal::ReleaseSecondaryFileDescriptor()
   int GetSecondaryFileDescriptor() const;
 
+  virtual void *GetSecondaryHandle() const { return ((void *)(long long)-1); };
+
   /// Get the name of the secondary pseudo terminal.
   ///
   /// A primary pseudo terminal should already be valid prior to
@@ -105,7 +119,17 @@ public:
   ///     The name of the secondary pseudo terminal.
   ///
   /// \see PseudoTerminal::OpenFirstAvailablePrimary()
-  std::string GetSecondaryName() const;
+  virtual std::string GetSecondaryName() const;
+
+  /// The underlying Windows Pseudo Terminal HANDLE's accessor.
+  ///
+  /// This object retains ownership of the ConPTY's HANDLE when this
+  /// accessor is used.
+  ///
+  /// \return
+  ///     The primary HANDLE, or INVALID_HANDLE_VALUE if the primary HANDLE is
+  ///     not currently valid.
+  virtual void *GetPseudoTerminalHandle() { return ((void *)(long long)-1); };
 
   /// Open the first available pseudo terminal.
   ///
@@ -126,7 +150,7 @@ public:
   ///
   /// \see PseudoTerminal::GetPrimaryFileDescriptor() @see
   /// PseudoTerminal::ReleasePrimaryFileDescriptor()
-  llvm::Error OpenFirstAvailablePrimary(int oflag);
+  virtual llvm::Error OpenFirstAvailablePrimary(int oflag);
 
   /// Open the secondary for the current primary pseudo terminal.
   ///

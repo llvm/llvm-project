@@ -118,7 +118,9 @@ public:
 
   bool MonitorProcess() const;
 
-  PseudoTerminal &GetPTY() { return *m_pty; }
+  PseudoTerminal &GetPTY() const { return *m_pty; }
+
+  std::shared_ptr<PseudoTerminal> GetPTYSP() const { return m_pty; }
 
   void SetLaunchEventData(const char *data) { m_event_data.assign(data); }
 
