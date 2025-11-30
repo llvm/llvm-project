@@ -186,7 +186,7 @@ void SILateBranchLowering::expandChainCall(MachineInstr &MI,
   for (int OpIdx = MI.getNumExplicitOperands() - 1; OpIdx >= ExecIdx; --OpIdx)
     MI.removeOperand(OpIdx);
 
-  MI.setDesc(TII->get(AMDGPU::SI_TCRETURN));
+  MI.setDesc(TII->get(AMDGPU::SI_TCRETURN_CHAIN));
 }
 
 void SILateBranchLowering::earlyTerm(MachineInstr &MI,
