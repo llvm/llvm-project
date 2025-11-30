@@ -132,6 +132,7 @@ define amdgpu_kernel void @gws_barrier_vgpr_offset_add(i32 %val) #0 {
 ; LOOP: ds_write_b32
 define amdgpu_kernel void @gws_barrier_save_m0_barrier_constant_offset(i32 %val) #0 {
   store i32 1, ptr addrspace(3) @lds
+  fence release
   call void @llvm.amdgcn.ds.gws.barrier(i32 %val, i32 10)
   store i32 2, ptr addrspace(3) @lds
   ret void
