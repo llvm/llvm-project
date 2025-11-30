@@ -335,9 +335,16 @@ private:
   /// stack objects like arguments so we can't treat them as immutable.
   bool HasTailCall = false;
 
-  /// Not empty, if shrink-wrapping found a better place for the prologue.
+  /// Not null, if shrink-wrapping found a better place for the prologue.
+  MachineBasicBlock *Prolog = nullptr;
+  /// Not null, if shrink-wrapping found a better place for the epilogue.
+  MachineBasicBlock *Epilog = nullptr;
+
+  /// Not empty, if shrink-wrapping found a better place for saving callee
+  /// saves.
   SaveRestorePoints SavePoints;
-  /// Not empty, if shrink-wrapping found a better place for the epilogue.
+  /// Not empty, if shrink-wrapping found a better place for restoring callee
+  /// saves.
   SaveRestorePoints RestorePoints;
 
   /// Size of the UnsafeStack Frame
@@ -828,6 +835,39 @@ public:
   /// \copydoc getCalleeSavedInfo()
   std::vector<CalleeSavedInfo> &getCalleeSavedInfo() { return CSInfo; }
 
+  /// Returns callee saved info vector for provided save point in
+  /// the current function.
+  std::vector<CalleeSavedInfo> getSaveCSInfo(MachineBasicBlock *MBB) const {
+    return SavePoints.lookup(MBB);
+  }
+
+  /// Returns callee saved info vector for provided restore point
+  /// in the current function.
+  const std::vector<CalleeSavedInfo>
+  getRestoreCSInfo(MachineBasicBlock *MBB) const {
+    return RestorePoints.lookup(MBB);
+  }
+
+  MachineBasicBlock *findSpilledIn(const CalleeSavedInfo &Match) const {
+    for (auto [BB, CSIV] : SavePoints) {
+      for (auto &CSI : CSIV) {
+        if (CSI.getReg() == Match.getReg())
+          return BB;
+      }
+    }
+    return nullptr;
+  }
+
+  MachineBasicBlock *findRestoredIn(const CalleeSavedInfo &Match) const {
+    for (auto [BB, CSIV] : RestorePoints) {
+      for (auto &CSI : CSIV) {
+        if (CSI.getReg() == Match.getReg())
+          return BB;
+      }
+    }
+    return nullptr;
+  }
+
   /// Used by prolog/epilog inserter to set the function's callee saved
   /// information.
   void setCalleeSavedInfo(std::vector<CalleeSavedInfo> CSI) {
@@ -850,6 +890,11 @@ public:
   void setRestorePoints(SaveRestorePoints NewRestorePoints) {
     RestorePoints = std::move(NewRestorePoints);
   }
+
+  MachineBasicBlock *getProlog() const { return Prolog; }
+  void setProlog(MachineBasicBlock *BB) { Prolog = BB; }
+  MachineBasicBlock *getEpilog() const { return Epilog; }
+  void setEpilog(MachineBasicBlock *BB) { Epilog = BB; }
 
   void clearSavePoints() { SavePoints.clear(); }
   void clearRestorePoints() { RestorePoints.clear(); }

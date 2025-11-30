@@ -121,9 +121,17 @@ frameInfo:
   hasCalls:        true
   maxCallFrameSize: 0
   savePoint:
-  - point: '%bb.1'
+    - point:           '%bb.1'
+      registers:
+        - '$fp'
+        - '$lr'
+        - '$x28'
   restorePoint:
-  - point: '%bb.1'
+    - point:           '%bb.1'
+      registers:
+        - '$fp'
+        - '$lr'
+        - '$x28'
 stack:
   - { id: 0, size: 16, alignment: 16, stack-id: scalable-vector }
 machineFunctionInfo: {}

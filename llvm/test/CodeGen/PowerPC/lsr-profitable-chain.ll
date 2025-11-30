@@ -8,22 +8,22 @@ define void @foo(ptr readonly %0, ptr %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6
 ; CHECK-NEXT:    cmpd 5, 7
 ; CHECK-NEXT:    bgelr 0
 ; CHECK-NEXT:  # %bb.1: # %.preheader
-; CHECK-NEXT:    std 27, -40(1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi 27, 5, 2
-; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi 28, 5, 3
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi 30, 5, 1
+; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
+; CHECK-NEXT:    addi 28, 5, 3
+; CHECK-NEXT:    std 27, -40(1) # 8-byte Folded Spill
+; CHECK-NEXT:    addi 27, 5, 2
 ; CHECK-NEXT:    mulld 12, 8, 5
 ; CHECK-NEXT:    mulld 0, 9, 8
 ; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi 29, 3, 16
 ; CHECK-NEXT:    sldi 11, 10, 3
-; CHECK-NEXT:    std 22, -80(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 23, -72(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 24, -64(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 25, -56(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 26, -48(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 25, -56(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 24, -64(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 23, -72(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 22, -80(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mulld 30, 8, 30
 ; CHECK-NEXT:    mulld 28, 8, 28
 ; CHECK-NEXT:    mulld 8, 8, 27
@@ -104,15 +104,15 @@ define void @foo(ptr readonly %0, ptr %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6
 ; CHECK-NEXT:    blt 0, .LBB0_5
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_6:
-; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 23, -72(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 22, -80(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 23, -72(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    blr
   %9 = icmp slt i64 %2, %4
   br i1 %9, label %10, label %97
