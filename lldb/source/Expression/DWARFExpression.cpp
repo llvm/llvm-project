@@ -861,12 +861,29 @@ ResolveLoadAddress(ExecutionContext *exe_ctx, lldb::ModuleSP &module_sp,
   return load_addr;
 }
 
-static llvm::Error Evaluate_DW_OP_deref(DWARFExpression::Stack &stack,
-                                        ExecutionContext *exe_ctx,
-                                        lldb::ModuleSP module_sp,
-                                        Process *process) {
+static llvm::Error Evaluate_DW_OP_deref(
+    DWARFExpression::Stack &stack, ExecutionContext *exe_ctx,
+    lldb::ModuleSP module_sp, Process *process,
+    LocationDescriptionKind &dwarf4_location_description_kind) {
   if (stack.empty())
     return llvm::createStringError("expression stack empty for DW_OP_deref");
+
+  // Handle deref of a register or implicit location.
+  // When the current value is a register or implicit location description then
+  // a deref operation should read the value from that location. We eagerly
+  // read the register and implicit values and so its value is already on top of
+  // the stack. We just need to reset the value context and description to their
+  // defaults.
+  if (dwarf4_location_description_kind == Register ||
+      dwarf4_location_description_kind == Implicit) {
+    // Reset context to default values.
+    dwarf4_location_description_kind = Memory;
+    stack.back().ClearContext();
+
+    // The value is already on top of the stack so there is nothing
+    // more to do here.
+    return llvm::Error::success();
+  }
 
   const Value::ValueType value_type = stack.back().GetValueType();
   switch (value_type) {
@@ -1080,7 +1097,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // target machine.
     case DW_OP_deref: {
       if (llvm::Error err =
-              Evaluate_DW_OP_deref(stack, exe_ctx, module_sp, process))
+              Evaluate_DW_OP_deref(stack, exe_ctx, module_sp, process,
+                                   dwarf4_location_description_kind))
         return err;
     } break;
 
@@ -1105,6 +1123,25 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (size > 8) {
         return llvm::createStringError(
             "Invalid address size for DW_OP_deref_size: %d\n", size);
+      }
+
+      // Deref a register or implicit location and truncate the value to `size`
+      // bytes. See the corresponding comment in DW_OP_deref for more details on
+      // why we deref these locations this way.
+      if (dwarf4_location_description_kind == Register ||
+          dwarf4_location_description_kind == Implicit) {
+        // Reset context to default values.
+        dwarf4_location_description_kind = Memory;
+        stack.back().ClearContext();
+
+        // Truncate the value on top of the stack to *size* bytes then
+        // extend to the size of an address (e.g. generic type).
+        Scalar scalar = stack.back().GetScalar();
+        scalar.TruncOrExtendTo(size * 8, /*sign=*/false);
+        scalar.TruncOrExtendTo(opcodes.GetAddressByteSize() * 8,
+                               /*sign=*/false);
+        stack.back().GetScalar() = scalar;
+        break;
       }
       Value::ValueType value_type = stack.back().GetValueType();
       switch (value_type) {
