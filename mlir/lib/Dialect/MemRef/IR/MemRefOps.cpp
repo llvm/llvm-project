@@ -2504,11 +2504,89 @@ LogicalResult ExpandShapeOp::verify() {
   return success();
 }
 
+struct ExpandShapeOpMemRefCastFolder : public OpRewritePattern<ExpandShapeOp> {
+public:
+  using OpRewritePattern<ExpandShapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExpandShapeOp op,
+                                PatternRewriter &rewriter) const override {
+    auto cast = op.getSrc().getDefiningOp<CastOp>();
+    if (!cast)
+      return failure();
+
+    if (!CastOp::canFoldIntoConsumerOp(cast))
+      return failure();
+
+    auto originalOutputShape = op.getMixedOutputShape();
+    auto newOutputShape = originalOutputShape;
+    SmallVector<int64_t> newOutputShapeSizes;
+    SmallVector<Value> newOperands;
+
+    // Convert output shape dims from dynamic to static where possible.
+    for (auto [dimIdx, dimSize] : enumerate(originalOutputShape)) {
+      auto dimVal = dimSize.dyn_cast<Value>();
+      if (!dimVal) {
+        newOutputShapeSizes.push_back(getConstantIntValue(dimSize).value());
+        continue;
+      }
+
+      auto constOp = dimVal.getDefiningOp<arith::ConstantIndexOp>();
+      if (!constOp) {
+        newOperands.push_back(dimVal);
+        newOutputShapeSizes.push_back(ShapedType::kDynamic);
+        continue;
+      }
+
+      newOutputShape[dimIdx] = constOp.getValue();
+      newOutputShapeSizes.push_back(
+          getConstantIntValue(constOp.getValue()).value());
+    }
+
+    if (newOperands.size() == op->getNumOperands())
+      return rewriter.notifyMatchFailure(
+          op, "no static-to-dynamic conversions found");
+
+    auto castSource = cast.getSource();
+    auto castSourceType = llvm::cast<MemRefType>(castSource.getType());
+    auto reassociationIndices = op.getReassociationIndices();
+    for (auto [idx, group] : llvm::enumerate(reassociationIndices)) {
+      int64_t castSourceDynCount = castSourceType.isDynamicDim(idx) ? 1 : 0;
+      auto newOutputShapeSizesSlice =
+          ArrayRef(newOutputShapeSizes).slice(group.front(), group.size());
+      int64_t newOutputDynCount =
+          llvm::count_if(newOutputShapeSizesSlice, ShapedType::isDynamic);
+      if (castSourceDynCount != newOutputDynCount)
+        return rewriter.notifyMatchFailure(
+            op, "folding cast will result in changing dynamicity in "
+                "reassociation group");
+    }
+
+    auto newResultTypeOrFailure = ExpandShapeOp::computeExpandedType(
+        castSourceType, newOutputShapeSizes, reassociationIndices);
+
+    if (failed(newResultTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "could not compute new expanded type after folding cast");
+
+    if (*newResultTypeOrFailure == op.getResultType()) {
+      rewriter.modifyOpInPlace(
+          op, [&]() { op.getSrcMutable().assign(castSource); });
+    } else {
+      Value newOp = ExpandShapeOp::create(rewriter, op->getLoc(),
+                                          *newResultTypeOrFailure, castSource,
+                                          reassociationIndices, newOutputShape);
+      rewriter.replaceOpWithNewOp<CastOp>(op, op.getType(), newOp);
+    }
+    return success();
+  }
+};
+
 void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
   results.add<
       ComposeReassociativeReshapeOps<ExpandShapeOp, ReshapeOpKind::kExpand>,
-      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>>(context);
+      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
+      ExpandShapeOpMemRefCastFolder>(context);
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
