@@ -61,9 +61,6 @@ static bool useCompactUnwind(const Triple &T) {
 }
 
 void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
-  // MachO
-  SupportsWeakOmittedEHFrame = false;
-
   EHFrameSection = Ctx->getMachOSection(
       "__TEXT", "__eh_frame",
       MachO::S_COALESCED | MachO::S_ATTR_NO_TOC |
@@ -1090,7 +1087,6 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
   Ctx = &MCCtx;
 
   // Common.
-  SupportsWeakOmittedEHFrame = true;
   SupportsCompactUnwindWithoutEHFrame = false;
   OmitDwarfIfHaveCompactUnwind = false;
 
