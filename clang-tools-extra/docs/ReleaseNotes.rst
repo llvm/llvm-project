@@ -547,10 +547,6 @@ Changes in existing checks
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
 
-- Improved :doc:`readability-redundant-typename
-  <clang-tidy/checks/readability/redundant-typename>` check to correctly
-  handle dependent types in type aliases.
-
 - Improved :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
