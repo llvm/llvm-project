@@ -1,0 +1,47 @@
+// RUN: %check_clang_tidy -check-suffixes=ALL -std=c++11-or-later %s bugprone-exception-escape %t -- \
+// RUN:     -config='{"CheckOptions": { \
+// RUN:       "bugprone-exception-escape.TreatFunctionsWithoutSpecificationAsThrowing": "All" \
+// RUN:     }}' -- -fexceptions
+// RUN: %check_clang_tidy -check-suffixes=UNDEFINED -std=c++11-or-later %s bugprone-exception-escape %t -- \
+// RUN:     -config='{"CheckOptions": { \
+// RUN:       "bugprone-exception-escape.TreatFunctionsWithoutSpecificationAsThrowing": "OnlyUndefined" \
+// RUN:     }}' -- -fexceptions
+// RUN: %check_clang_tidy -check-suffixes=NONE -std=c++11-or-later %s bugprone-exception-escape %t -- \
+// RUN:     -config='{"CheckOptions": { \
+// RUN:       "bugprone-exception-escape.TreatFunctionsWithoutSpecificationAsThrowing": "None" \
+// RUN:     }}' -- -fexceptions
+
+void unannotated_no_throw_body() {}
+
+void calls_unannotated() noexcept {
+  // CHECK-MESSAGES-ALL: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'calls_unannotated' which should not throw exceptions
+  // CHECK-MESSAGES-UNDEFINED-NOT: warning:
+  // CHECK-MESSAGES-NONE-NOT: warning:
+  unannotated_no_throw_body();
+}
+
+void extern_declared();
+
+void calls_unknown() noexcept {
+  // CHECK-MESSAGES-ALL: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'calls_unknown' which should not throw exceptions
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-2]]:6: warning: an exception may be thrown in function 'calls_unknown' which should not throw exceptions
+  // CHECK-MESSAGES-NONE-NOT: warning:
+  extern_declared();
+}
+
+void definitely_nothrow() noexcept {}
+
+void calls_nothrow() noexcept {
+  // CHECK-MESSAGES-ALL-NOT: warning:
+  // CHECK-MESSAGES-UNDEFINED-NOT: warning:
+  // CHECK-MESSAGES-NONE-NOT: warning:
+  definitely_nothrow();
+}
+
+void explicit_throw() { throw 1; }
+void calls_explicit_throw() noexcept {
+  // CHECK-MESSAGES-ALL: :[[@LINE-1]]:6: warning: an exception may be thrown in function 'calls_explicit_throw' which should not throw exceptions
+  // CHECK-MESSAGES-UNDEFINED: :[[@LINE-2]]:6: warning: an exception may be thrown in function 'calls_explicit_throw' which should not throw exceptions
+  // CHECK-MESSAGES-NONE: :[[@LINE-3]]:6: warning: an exception may be thrown in function 'calls_explicit_throw' which should not throw exceptions
+  explicit_throw();
+}
