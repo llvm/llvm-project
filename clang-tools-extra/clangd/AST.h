@@ -253,6 +253,10 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth = 10);
 /// reference to one (e.g. `Args&...` or `Args&&...`).
 bool isExpandedFromParameterPack(const ParmVarDecl *D);
 
+/// Heuristic that checks if FT is forwarding a parameter pack to another
+/// function. (e.g. `make_unique`).
+bool isLikelyForwardingFunction(FunctionTemplateDecl *FT);
+
 } // namespace clangd
 } // namespace clang
 

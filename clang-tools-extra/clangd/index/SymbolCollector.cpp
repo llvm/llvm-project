@@ -29,6 +29,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -576,6 +577,22 @@ SymbolCollector::getRefContainer(const Decl *Enclosing,
   return Enclosing;
 }
 
+class ForwardingToConstructorVisitor
+    : public RecursiveASTVisitor<ForwardingToConstructorVisitor> {
+public:
+  ForwardingToConstructorVisitor() {}
+
+  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    if (auto *Callee = E->getConstructor()) {
+      Constructors.push_back(Callee);
+    }
+    return true;
+  }
+
+  // Output of this visitor
+  std::vector<CXXConstructorDecl *> Constructors{};
+};
+
 // Always return true to continue indexing.
 bool SymbolCollector::handleDeclOccurrence(
     const Decl *D, index::SymbolRoleSet Roles,
@@ -669,6 +686,21 @@ bool SymbolCollector::handleDeclOccurrence(
       addRef(ID, SymbolRef{FileLoc, FID, Roles, index::getSymbolInfo(ND).Kind,
                            getRefContainer(ASTNode.Parent, Opts),
                            isSpelled(FileLoc, *ND)});
+      // Also collect indirect constructor calls like `make_unique`
+      if (auto *FD = llvm::dyn_cast<clang::FunctionDecl>(ASTNode.OrigD);
+          FD && FD->isTemplateInstantiation()) {
+        if (auto *PT = FD->getPrimaryTemplate();
+            PT && isLikelyForwardingFunction(PT)) {
+          ForwardingToConstructorVisitor Visitor{};
+          Visitor.TraverseStmt(FD->getBody());
+          for (auto *Constructor : Visitor.Constructors) {
+            addRef(getSymbolIDCached(Constructor),
+                   SymbolRef{FileLoc, FID, Roles, index::getSymbolInfo(ND).Kind,
+                             getRefContainer(ASTNode.Parent, Opts),
+                             isSpelled(FileLoc, *ND)});
+          }
+        }
+      }
     }
   }
   // Don't continue indexing if this is a mere reference.
