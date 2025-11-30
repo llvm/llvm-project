@@ -266,6 +266,8 @@ public:
   void VisitCoawaitExpr(const CoawaitExpr *Node);
   void VisitCoreturnStmt(const CoreturnStmt *Node);
   void VisitCompoundStmt(const CompoundStmt *Node);
+  void
+  VisitCXXExpansionStmtInstantiation(const CXXExpansionStmtInstantiation *Node);
   void VisitConstantExpr(const ConstantExpr *Node);
   void VisitCallExpr(const CallExpr *Node);
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node);
@@ -310,6 +312,9 @@ public:
   void VisitSizeOfPackExpr(const SizeOfPackExpr *Node);
   void
   VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *Node);
+  void VisitCXXDestructuringExpansionSelectExpr(
+      const CXXDestructuringExpansionSelectExpr *Node);
+  void VisitCXXExpansionInitListExpr(const CXXExpansionInitListExpr *Node);
   void VisitObjCAtCatchStmt(const ObjCAtCatchStmt *Node);
   void VisitObjCEncodeExpr(const ObjCEncodeExpr *Node);
   void VisitObjCMessageExpr(const ObjCMessageExpr *Node);

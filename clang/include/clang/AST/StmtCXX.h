@@ -22,6 +22,7 @@
 namespace clang {
 
 class VarDecl;
+class CXXExpansionStmtDecl;
 
 /// CXXCatchStmt - This represents a C++ catch block.
 ///
@@ -521,6 +522,483 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CoreturnStmtClass;
+  }
+};
+
+/// CXXExpansionStmtPattern - Base class for an unexpanded C++ expansion
+/// statement.
+///
+/// The main purpose for this class is to store the AST nodes common to all
+/// variants of expansion statements; it also provides storage for additional
+/// subexpressions required by its derived classes. This is to simplify the
+/// implementation of 'children()' and friends.
+///
+/// \see CXXExpansionStmtDecl
+/// \see CXXEnumeratingExpansionStmtPattern
+/// \see CXXIteratingExpansionStmtPattern
+/// \see CXXDestructuringExpansionStmtPattern
+/// \see CXXDependentExpansionStmtPattern
+class CXXExpansionStmtPattern : public Stmt {
+  friend class ASTStmtReader;
+
+  CXXExpansionStmtDecl *ParentDecl;
+  SourceLocation LParenLoc;
+  SourceLocation ColonLoc;
+  SourceLocation RParenLoc;
+
+protected:
+  enum SubStmt {
+    INIT,
+    VAR,
+    BODY,
+    FIRST_CHILD_STMT,
+
+    // CXXDependentExpansionStmtPattern
+    EXPANSION_INITIALIZER = FIRST_CHILD_STMT,
+    COUNT_CXXDependentExpansionStmtPattern,
+
+    // CXXDestructuringExpansionStmtPattern
+    DECOMP_DECL = FIRST_CHILD_STMT,
+    COUNT_CXXDestructuringExpansionStmtPattern,
+
+    // CXXIteratingExpansionStmtPattern
+    RANGE = FIRST_CHILD_STMT,
+    BEGIN,
+    END,
+    COUNT_CXXIteratingExpansionStmtPattern,
+
+    MAX_COUNT = COUNT_CXXIteratingExpansionStmtPattern,
+  };
+
+  // Managing the memory for this properly would be rather complicated, and
+  // expansion statements are fairly uncommon, so just allocate space for the
+  // maximum amount of substatements we could possibly have.
+  Stmt *SubStmts[MAX_COUNT];
+
+  CXXExpansionStmtPattern(StmtClass SC, EmptyShell Empty);
+  CXXExpansionStmtPattern(StmtClass SC, CXXExpansionStmtDecl *ESD, Stmt *Init,
+                          DeclStmt *ExpansionVar, SourceLocation LParenLoc,
+                          SourceLocation ColonLoc, SourceLocation RParenLoc);
+
+public:
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  SourceLocation getColonLoc() const { return ColonLoc; }
+  SourceLocation getRParenLoc() const { return RParenLoc; }
+
+  SourceLocation getBeginLoc() const;
+  SourceLocation getEndLoc() const {
+    return getBody() ? getBody()->getEndLoc() : RParenLoc;
+  }
+
+  bool hasDependentSize() const;
+
+  CXXExpansionStmtDecl *getDecl() { return ParentDecl; }
+  const CXXExpansionStmtDecl *getDecl() const { return ParentDecl; }
+
+  Stmt *getInit() { return SubStmts[INIT]; }
+  const Stmt *getInit() const { return SubStmts[INIT]; }
+  void setInit(Stmt *S) { SubStmts[INIT] = S; }
+
+  VarDecl *getExpansionVariable();
+  const VarDecl *getExpansionVariable() const {
+    return const_cast<CXXExpansionStmtPattern *>(this)->getExpansionVariable();
+  }
+
+  DeclStmt *getExpansionVarStmt() { return cast<DeclStmt>(SubStmts[VAR]); }
+  const DeclStmt *getExpansionVarStmt() const {
+    return cast<DeclStmt>(SubStmts[VAR]);
+  }
+
+  void setExpansionVarStmt(Stmt *S) { SubStmts[VAR] = S; }
+
+  Stmt *getBody() { return SubStmts[BODY]; }
+  const Stmt *getBody() const { return SubStmts[BODY]; }
+  void setBody(Stmt *S) { SubStmts[BODY] = S; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() >= firstCXXExpansionStmtPatternConstant &&
+           T->getStmtClass() <= lastCXXExpansionStmtPatternConstant;
+  }
+
+  child_range children() {
+    return child_range(SubStmts, SubStmts + FIRST_CHILD_STMT);
+  }
+
+  const_child_range children() const {
+    return const_child_range(SubStmts, SubStmts + FIRST_CHILD_STMT);
+  }
+};
+
+/// Represents an unexpanded enumerating expansion statement.
+///
+/// An 'enumerating' expansion statement is one whose expansion-initializer
+/// is a brace-enclosed expression-list; this list is syntactically similar to
+/// an initializer list, but it isn't actually an expression in and of itself
+/// (in that it is never evaluated or emitted) and instead is just treated as
+/// a group of expressions. The expansion initializer of this is always a
+/// 'CXXExpansionInitListExpr'.
+///
+/// Example:
+/// \verbatim
+///   template for (auto x : { 1, 2, 3 }) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// Note that the expression-list may also contain pack expansions, e.g.
+/// '{ 1, xs... }', in which case the expansion size is dependent.
+///
+/// Here, the '{ 1, 2, 3 }' is parsed as a 'CXXExpansionInitListExpr'. This node
+/// handles storing (and pack-expanding) the individual expressions.
+///
+/// Sema then wraps this with a 'CXXExpansionInitListSelectExpr', which also
+/// contains a reference to an integral NTTP that is used as the expansion
+/// index; this index is either dependent (if the expansion-size is dependent),
+/// or set to a value of I in the I-th expansion during the expansion process.
+///
+/// The actual expansion is done by 'BuildCXXExpansionInitListSelectExpr()': for
+/// example, during the 2nd expansion of '{ a, b, c }', I is equal to 1, and
+/// BuildCXXExpansionInitListSelectExpr(), when called via TreeTransform,
+/// 'instantiates' the expression '{ a, b, c }' to just 'b'.
+class CXXEnumeratingExpansionStmtPattern : public CXXExpansionStmtPattern {
+  friend class ASTStmtReader;
+
+public:
+  CXXEnumeratingExpansionStmtPattern(EmptyShell Empty);
+  CXXEnumeratingExpansionStmtPattern(CXXExpansionStmtDecl *ESD, Stmt *Init,
+                                     DeclStmt *ExpansionVar,
+                                     SourceLocation LParenLoc,
+                                     SourceLocation ColonLoc,
+                                     SourceLocation RParenLoc);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXEnumeratingExpansionStmtPatternClass;
+  }
+};
+
+/// Represents an expansion statement whose expansion-initializer is
+/// type-dependent.
+///
+/// This will be instantiated as either a 'CXXIteratingExpansionStmtPattern' or
+/// a 'CXXDestructuringExpansionStmtPattern'. Dependent expansion statements can
+/// never be enumerating; those are always stored as a
+/// 'CXXEnumeratingExpansionStmtPattern', even if the expansion size is
+/// dependent because the expression-list contains a pack.
+///
+/// Example:
+/// \verbatim
+///   template <typename T>
+///   void f() {
+///     template for (auto x : T()) {
+///       // ...
+///     }
+///   }
+/// \endverbatim
+class CXXDependentExpansionStmtPattern : public CXXExpansionStmtPattern {
+  friend class ASTStmtReader;
+
+public:
+  CXXDependentExpansionStmtPattern(EmptyShell Empty);
+  CXXDependentExpansionStmtPattern(CXXExpansionStmtDecl *ESD, Stmt *Init,
+                                   DeclStmt *ExpansionVar,
+                                   Expr *ExpansionInitializer,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation ColonLoc,
+                                   SourceLocation RParenLoc);
+
+  Expr *getExpansionInitializer() {
+    return cast<Expr>(SubStmts[EXPANSION_INITIALIZER]);
+  }
+  const Expr *getExpansionInitializer() const {
+    return cast<Expr>(SubStmts[EXPANSION_INITIALIZER]);
+  }
+  void setExpansionInitializer(Expr *S) { SubStmts[EXPANSION_INITIALIZER] = S; }
+
+  child_range children() {
+    return child_range(SubStmts,
+                       SubStmts + COUNT_CXXDependentExpansionStmtPattern);
+  }
+
+  const_child_range children() const {
+    return const_child_range(SubStmts,
+                             SubStmts + COUNT_CXXDependentExpansionStmtPattern);
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXDependentExpansionStmtPatternClass;
+  }
+};
+
+/// Represents an unexpanded iterating expansion statement.
+///
+/// An 'iterating' expansion statement is one whose expansion-initializer is a
+/// a range (i.e. it has a corresponding 'begin()'/'end()' pair that is
+/// determined based on a number of conditions as stated in [stmt.expand] and
+/// [stmt.ranged]).
+///
+/// The expression used to compute the size of the expansion is not stored and
+/// is only created at the moment of expansion.
+///
+/// Example:
+/// \verbatim
+///   static constexpr std::string_view foo = "1234";
+///   template for (auto x : foo) {
+///     // ...
+///   }
+/// \endverbatim
+class CXXIteratingExpansionStmtPattern : public CXXExpansionStmtPattern {
+  friend class ASTStmtReader;
+
+public:
+  CXXIteratingExpansionStmtPattern(EmptyShell Empty);
+  CXXIteratingExpansionStmtPattern(CXXExpansionStmtDecl *ESD, Stmt *Init,
+                                   DeclStmt *ExpansionVar, DeclStmt *Range,
+                                   DeclStmt *Begin, DeclStmt *End,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation ColonLoc,
+                                   SourceLocation RParenLoc);
+
+  const DeclStmt *getRangeVarStmt() const {
+    return cast<DeclStmt>(SubStmts[RANGE]);
+  }
+  DeclStmt *getRangeVarStmt() { return cast<DeclStmt>(SubStmts[RANGE]); }
+  void setRangeVarStmt(DeclStmt *S) { SubStmts[RANGE] = S; }
+
+  const VarDecl *getRangeVar() const {
+    return cast<VarDecl>(getRangeVarStmt()->getSingleDecl());
+  }
+
+  VarDecl *getRangeVar() {
+    return cast<VarDecl>(getRangeVarStmt()->getSingleDecl());
+  }
+
+  const DeclStmt *getBeginVarStmt() const {
+    return cast<DeclStmt>(SubStmts[BEGIN]);
+  }
+  DeclStmt *getBeginVarStmt() { return cast<DeclStmt>(SubStmts[BEGIN]); }
+  void setBeginVarStmt(DeclStmt *S) { SubStmts[BEGIN] = S; }
+
+  const VarDecl *getBeginVar() const {
+    return cast<VarDecl>(getBeginVarStmt()->getSingleDecl());
+  }
+
+  VarDecl *getBeginVar() {
+    return cast<VarDecl>(getBeginVarStmt()->getSingleDecl());
+  }
+
+  const DeclStmt *getEndVarStmt() const {
+    return cast<DeclStmt>(SubStmts[END]);
+  }
+  DeclStmt *getEndVarStmt() { return cast<DeclStmt>(SubStmts[END]); }
+  void setEndVarStmt(DeclStmt *S) { SubStmts[END] = S; }
+
+  const VarDecl *getEndVar() const {
+    return cast<VarDecl>(getEndVarStmt()->getSingleDecl());
+  }
+
+  VarDecl *getEndVar() {
+    return cast<VarDecl>(getEndVarStmt()->getSingleDecl());
+  }
+
+  child_range children() {
+    return child_range(SubStmts,
+                       SubStmts + COUNT_CXXIteratingExpansionStmtPattern);
+  }
+
+  const_child_range children() const {
+    return const_child_range(SubStmts,
+                             SubStmts + COUNT_CXXIteratingExpansionStmtPattern);
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXIteratingExpansionStmtPatternClass;
+  }
+};
+
+/// Represents an unexpanded destructuring expansion statement.
+///
+/// A 'destructuring' expansion statement is any expansion statement that is
+/// not enumerating or iterating (i.e. destructuring is the last thing we try,
+/// and if it doesn't work, the program is ill-formed).
+///
+/// This essentially involves treating the expansion-initializer as the
+/// initializer of a structured-binding declarations, with the number of
+/// bindings and expansion size determined by the usual means (array size,
+/// std::tuple_size, etc.).
+///
+/// Example:
+/// \verbatim
+///   std::array<int, 3> a {1, 2, 3};
+///   template for (auto x : a) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// Sema wraps the initializer with a CXXDestructuringExpansionSelectExpr, which
+/// selects a binding based on the current expansion index; this is analogous to
+/// how 'CXXExpansionInitListSelectExpr' is used; see the documentation of
+/// 'CXXEnumeratingExpansionStmtPattern' for more details on this.
+class CXXDestructuringExpansionStmtPattern : public CXXExpansionStmtPattern {
+  friend class ASTStmtReader;
+
+public:
+  CXXDestructuringExpansionStmtPattern(EmptyShell Empty);
+  CXXDestructuringExpansionStmtPattern(CXXExpansionStmtDecl *ESD, Stmt *Init,
+                                       DeclStmt *ExpansionVar,
+                                       Stmt *DecompositionDeclStmt,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation ColonLoc,
+                                       SourceLocation RParenLoc);
+
+  Stmt *getDecompositionDeclStmt() { return SubStmts[DECOMP_DECL]; }
+  const Stmt *getDecompositionDeclStmt() const { return SubStmts[DECOMP_DECL]; }
+  void setDecompositionDeclStmt(Stmt *S) { SubStmts[DECOMP_DECL] = S; }
+
+  DecompositionDecl *getDecompositionDecl();
+  const DecompositionDecl *getDecompositionDecl() const {
+    return const_cast<CXXDestructuringExpansionStmtPattern *>(this)
+        ->getDecompositionDecl();
+  }
+
+  child_range children() {
+    return child_range(SubStmts,
+                       SubStmts + COUNT_CXXDestructuringExpansionStmtPattern);
+  }
+
+  const_child_range children() const {
+    return const_child_range(
+        SubStmts, SubStmts + COUNT_CXXDestructuringExpansionStmtPattern);
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXDestructuringExpansionStmtPatternClass;
+  }
+};
+
+/// Represents the code generated for an expanded expansion statement.
+///
+/// This holds 'shared statements' and 'instantiations'; these encode the
+/// general underlying pattern that all expansion statements desugar to:
+///
+/// \verbatim
+/// {
+///   <shared statements>
+///   {
+///     <1st instantiation>
+///   }
+///   ...
+///   {
+///     <n-th instantiation>
+///   }
+/// }
+/// \endverbatim
+///
+/// Here, the only thing that is stored in the AST are the 'shared statements'
+/// and the 'CompoundStmt's that wrap the 'instantiations'. The outer braces
+/// shown above are implicit.
+///
+/// For example, the CXXExpansionStmtInstantiation that corresponds to the
+/// following expansion statement
+///
+/// \verbatim
+///   std::tuple<int, int, int> a{1, 2, 3};
+///   template for (auto x : a) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// would be
+///
+/// \verbatim
+/// {
+///   auto [__u0, __u1, __u2] = a;
+///   {
+///     auto x = __u0;
+///     // ...
+///   }
+///   {
+///     auto x = __u1;
+///     // ...
+///   }
+///   {
+///     auto x = __u2;
+///     // ...
+///   }
+/// }
+/// \endverbatim
+class CXXExpansionStmtInstantiation final
+    : public Stmt,
+      llvm::TrailingObjects<CXXExpansionStmtInstantiation, Stmt *> {
+  friend class ASTStmtReader;
+  friend TrailingObjects;
+
+  SourceLocation BeginLoc;
+  SourceLocation EndLoc;
+
+  // Instantiations are stored first, then shared statements.
+  const unsigned NumInstantiations : 20;
+  const unsigned NumSharedStmts : 3;
+  unsigned ShouldApplyLifetimeExtensionToSharedStmts : 1;
+
+  CXXExpansionStmtInstantiation(EmptyShell Empty, unsigned NumInstantiations,
+                                unsigned NumSharedStmts);
+  CXXExpansionStmtInstantiation(SourceLocation BeginLoc, SourceLocation EndLoc,
+                                ArrayRef<Stmt *> Instantiations,
+                                ArrayRef<Stmt *> SharedStmts,
+                                bool ShouldApplyLifetimeExtensionToSharedStmts);
+
+public:
+  static CXXExpansionStmtInstantiation *
+  Create(ASTContext &C, SourceLocation BeginLoc, SourceLocation EndLoc,
+         ArrayRef<Stmt *> Instantiations, ArrayRef<Stmt *> SharedStmts,
+         bool ShouldApplyLifetimeExtensionToSharedStmts);
+
+  static CXXExpansionStmtInstantiation *CreateEmpty(ASTContext &C,
+                                                    EmptyShell Empty,
+                                                    unsigned NumInstantiations,
+                                                    unsigned NumSharedStmts);
+
+  ArrayRef<Stmt *> getAllSubStmts() const {
+    return getTrailingObjects(getNumSubStmts());
+  }
+
+  MutableArrayRef<Stmt *> getAllSubStmts() {
+    return getTrailingObjects(getNumSubStmts());
+  }
+
+  unsigned getNumSubStmts() const { return NumInstantiations + NumSharedStmts; }
+
+  ArrayRef<Stmt *> getInstantiations() const {
+    return getTrailingObjects(NumInstantiations);
+  }
+
+  ArrayRef<Stmt *> getSharedStmts() const {
+    return getAllSubStmts().drop_front(NumInstantiations);
+  }
+
+  bool shouldApplyLifetimeExtensionToSharedStmts() const {
+    return ShouldApplyLifetimeExtensionToSharedStmts;
+  }
+
+  void setShouldApplyLifetimeExtensionToSharedStmts(bool Apply) {
+    ShouldApplyLifetimeExtensionToSharedStmts = Apply;
+  }
+
+  SourceLocation getBeginLoc() const { return BeginLoc; }
+  SourceLocation getEndLoc() const { return EndLoc; }
+
+  child_range children() {
+    Stmt **S = getTrailingObjects();
+    return child_range(S, S + getNumSubStmts());
+  }
+
+  const_child_range children() const {
+    Stmt *const *S = getTrailingObjects();
+    return const_child_range(S, S + getNumSubStmts());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXExpansionStmtInstantiationClass;
   }
 };
 

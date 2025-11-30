@@ -100,8 +100,9 @@ static inline UnsignedOrNone getStackIndexOfNearestEnclosingCaptureReadyLambda(
     // innermost nested lambda are dependent (otherwise we wouldn't have
     // arrived here) - so we don't yet have a lambda that can capture the
     // variable.
-    if (IsCapturingVariable &&
-        VarToCapture->getDeclContext()->Equals(EnclosingDC))
+    if (IsCapturingVariable && VarToCapture->getDeclContext()
+                                   ->getEnclosingNonExpansionStatementContext()
+                                   ->Equals(EnclosingDC))
       return NoLambdaIsCaptureReady;
 
     // For an enclosing lambda to be capture ready for an entity, all
@@ -126,7 +127,8 @@ static inline UnsignedOrNone getStackIndexOfNearestEnclosingCaptureReadyLambda(
       if (IsCapturingThis && !LSI->isCXXThisCaptured())
         return NoLambdaIsCaptureReady;
     }
-    EnclosingDC = getLambdaAwareParentOfDeclContext(EnclosingDC);
+    EnclosingDC = getLambdaAwareParentOfDeclContext(EnclosingDC)
+                      ->getEnclosingNonExpansionStatementContext();
 
     assert(CurScopeIndex);
     --CurScopeIndex;
@@ -190,11 +192,6 @@ UnsignedOrNone clang::getStackIndexOfNearestEnclosingCaptureCapableLambda(
     return NoLambdaIsCaptureCapable;
 
   const unsigned IndexOfCaptureReadyLambda = *OptionalStackIndex;
-  assert(((IndexOfCaptureReadyLambda != (FunctionScopes.size() - 1)) ||
-          S.getCurGenericLambda()) &&
-         "The capture ready lambda for a potential capture can only be the "
-         "current lambda if it is a generic lambda");
-
   const sema::LambdaScopeInfo *const CaptureReadyLambdaLSI =
       cast<sema::LambdaScopeInfo>(FunctionScopes[IndexOfCaptureReadyLambda]);
 
@@ -248,7 +245,7 @@ CXXRecordDecl *
 Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
                               unsigned LambdaDependencyKind,
                               LambdaCaptureDefault CaptureDefault) {
-  DeclContext *DC = CurContext;
+  DeclContext *DC = CurContext->getEnclosingNonExpansionStatementContext();
 
   bool IsGenericLambda =
       Info && getGenericLambdaTemplateParameterList(getCurLambda(), *this);
@@ -1376,7 +1373,9 @@ void Sema::ActOnLambdaClosureQualifiers(LambdaIntroducer &Intro,
   // odr-use 'this' (in particular, in a default initializer for a non-static
   // data member).
   if (Intro.Default != LCD_None &&
-      !LSI->Lambda->getParent()->isFunctionOrMethod() &&
+      !LSI->Lambda->getParent()
+           ->getEnclosingNonExpansionStatementContext()
+           ->isFunctionOrMethod() &&
       (getCurrentThisType().isNull() ||
        CheckCXXThisCapture(SourceLocation(), /*Explicit=*/true,
                            /*BuildAndDiagnose=*/false)))
@@ -2519,9 +2518,12 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
   while (FDPattern && FD) {
     InstantiationAndPatterns.emplace_back(FDPattern, FD);
 
-    FDPattern =
-        dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FDPattern));
-    FD = dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FD));
+    FDPattern = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(FDPattern)
+            ->getEnclosingNonExpansionStatementContext());
+    FD = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(FD)
+            ->getEnclosingNonExpansionStatementContext());
   }
 
   // Add instantiated parameters and local vars to scopes, starting from the

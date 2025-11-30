@@ -4455,7 +4455,9 @@ LabelDecl *Sema::LookupExistingLabel(IdentifierInfo *II, SourceLocation Loc) {
                                     RedeclarationKind::NotForRedeclaration);
   // If we found a label, check to see if it is in the same context as us.
   // When in a Block, we don't want to reuse a label in an enclosing function.
-  if (!Res || Res->getDeclContext() != CurContext)
+  if (!Res ||
+      Res->getDeclContext()->getEnclosingNonExpansionStatementContext() !=
+          CurContext->getEnclosingNonExpansionStatementContext())
     return nullptr;
   return cast<LabelDecl>(Res);
 }
