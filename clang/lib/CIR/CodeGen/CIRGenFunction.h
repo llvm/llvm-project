@@ -974,6 +974,8 @@ public:
     return false;
   }
 
+  cir::CallOp callWithExceptionCtx = nullptr;
+  void populateUnwindResumeBlock(bool isCleanup, cir::TryOp tryOp);
   void populateEHCatchRegions(EHScopeStack::stable_iterator scope,
                               cir::TryOp tryOp);
 
