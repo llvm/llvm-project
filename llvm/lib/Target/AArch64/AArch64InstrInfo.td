@@ -5830,6 +5830,33 @@ multiclass SIMDTwoVectorFPToIntSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, 
 defm : SIMDTwoVectorFPToIntSatPats<fp_to_sint_sat, fp_to_sint_sat_gi, "FCVTZS">;
 defm : SIMDTwoVectorFPToIntSatPats<fp_to_uint_sat, fp_to_uint_sat_gi, "FCVTZU">;
 
+// Fused round + convert to int patterns for vectors
+multiclass SIMDTwoVectorFPToIntRoundPats<SDNode to_int, SDNode round, string INST> {
+  let Predicates = [HasFullFP16] in {
+  def : Pat<(v4i16 (to_int (round v4f16:$Rn))),
+            (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
+  def : Pat<(v8i16 (to_int (round v8f16:$Rn))),
+            (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
+  }
+  def : Pat<(v2i32 (to_int (round v2f32:$Rn))),
+            (!cast<Instruction>(INST # v2f32) v2f32:$Rn)>;
+  def : Pat<(v4i32 (to_int (round v4f32:$Rn))),
+            (!cast<Instruction>(INST # v4f32) v4f32:$Rn)>;
+  def : Pat<(v2i64 (to_int (round v2f64:$Rn))),
+            (!cast<Instruction>(INST # v2f64) v2f64:$Rn)>;
+}
+
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fceil,      "FCVTPS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fceil,      "FCVTPU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, ffloor,     "FCVTMS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, ffloor,     "FCVTMU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, ftrunc,     "FCVTZS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, ftrunc,     "FCVTZU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fround,     "FCVTAS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fround,     "FCVTAU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, froundeven, "FCVTNS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, froundeven, "FCVTNU">;
+
 def : Pat<(v4i16 (int_aarch64_neon_fcvtzs v4f16:$Rn)), (FCVTZSv4f16 $Rn)>;
 def : Pat<(v8i16 (int_aarch64_neon_fcvtzs v8f16:$Rn)), (FCVTZSv8f16 $Rn)>;
 def : Pat<(v2i32 (int_aarch64_neon_fcvtzs v2f32:$Rn)), (FCVTZSv2f32 $Rn)>;
@@ -6817,14 +6844,16 @@ multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_g
             (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
 }
 
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fceil,  "FCVTPS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fceil,  "FCVTPU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ffloor, "FCVTMS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ffloor, "FCVTMU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ftrunc, "FCVTZS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ftrunc, "FCVTZU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fround, "FCVTAS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fround, "FCVTAU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fceil,      "FCVTPS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fceil,      "FCVTPU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ffloor,     "FCVTMS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ffloor,     "FCVTMU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ftrunc,     "FCVTZS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ftrunc,     "FCVTZU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fround,     "FCVTAS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fround,     "FCVTAU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, froundeven, "FCVTNS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, froundeven, "FCVTNU">;
 
 // f16 -> s16 conversions
 let Predicates = [HasFullFP16] in {
