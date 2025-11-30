@@ -32,7 +32,17 @@ def Const : Attribute<"c">;
 def NoThrow : Attribute<"n">;
 def Pure : Attribute<"U">;
 def ReturnsTwice : Attribute<"j">;
-//  FIXME: gcc has nonnull
+
+class NonNullOptMode<int mode> {
+  int value = mode;
+}
+
+def NonOptimizing : NonNullOptMode<0>;
+def Optimizing    : NonNullOptMode<1>;
+
+class NonNull<NonNullOptMode Mode, list<int> Is> : MultiIndexAttribute<"N:" # Mode.value # ":", Is> {
+  int optMode = Mode.value;
+}
 
 // builtin-specific attributes
 // ---------------------------
