@@ -113,12 +113,15 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 #  include <__cxx03/__config>
 #else
 #  include <__config>
+#  include <__memory/allocator_arg_t.h>
 #  include <__memory/allocator_traits.h>
+#  include <__memory/uses_allocator.h>
 #  include <__memory/uses_allocator_construction.h>
 #  include <__type_traits/common_type.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/integral_constant.h>
 #  include <__type_traits/is_constructible.h>
+#  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_reference.h>
 #  include <__utility/declval.h>
 #  include <__utility/forward.h>
@@ -421,23 +424,56 @@ public:
 #    else
   template <class _Tp, class... _Args>
   _LIBCPP_HIDE_FROM_ABI void construct(_Tp* __p, _Args&&... __args) {
-    __construct(__uses_alloc_ctor<_Tp, inner_allocator_type&, _Args...>(), __p, std::forward<_Args>(__args)...);
+    using _OM = __outermost<outer_allocator_type>;
+#      if _LIBCPP_STD_VER >= 14
+    __uses_allocator_detail::__apply(
+        [__p, this](auto&&... __newargs) {
+          allocator_traits<typename _OM::type>::construct(
+              _OM()(outer_allocator()), __p, std::forward<decltype(__newargs)>(__newargs)...);
+        },
+        __uses_allocator_construction_args<_Tp>::__apply(inner_allocator(), std::forward<_Args>(__args)...));
+#      else
+    if constexpr (!uses_allocator<__remove_cv_t<_Tp>, inner_allocator_type>::value) {
+      static_assert(is_constructible<_Tp, _Args...>::value,
+                    "If uses_allocator_v<T, polymorphic_allocator> is false, T has to be constructible from arguments");
+      allocator_traits<typename _OM::type>::construct(_OM()(outer_allocator()), __p, std::forward<_Args>(__args)...);
+    } else if constexpr (is_constructible<_Tp, allocator_arg_t, const inner_allocator_type&, _Args...>::value) {
+      const auto& __inner_alloc = inner_allocator();
+      allocator_traits<typename _OM::type>::construct(
+          _OM()(outer_allocator()), __p, allocator_arg_t{}, __inner_alloc, std::forward<_Args>(__args)...);
+    } else if constexpr (is_constructible<_Tp, _Args..., const inner_allocator_type&>::value) {
+      const auto& __inner_alloc = inner_allocator();
+      allocator_traits<typename _OM::type>::construct(
+          _OM()(outer_allocator()), __p, std::forward<_Args>(__args)..., __inner_alloc);
+    } else {
+      static_assert(false, "If uses_allocator_v<T, inner_allocator_type> is true, T has to be allocator-constructible");
+    }
+#      endif
   }
 
   template <class _T1, class _T2, class... _Args1, class... _Args2>
   _LIBCPP_HIDE_FROM_ABI void
   construct(pair<_T1, _T2>* __p, piecewise_construct_t, tuple<_Args1...> __x, tuple<_Args2...> __y) {
-    typedef __outermost<outer_allocator_type> _OM;
+    using _OM = __outermost<outer_allocator_type>;
+#      if _LIBCPP_STD_VER >= 14
+    __uses_allocator_detail::__apply(
+        [__p, this](auto&&... __newargs) {
+          allocator_traits<typename _OM::type>::construct(
+              _OM()(outer_allocator()), __p, std::forward<decltype(__newargs)>(__newargs)...);
+        },
+        __uses_allocator_construction_args<pair<_T1, _T2>>::__apply(
+            inner_allocator(),
+            piecewise_construct,
+            tuple<_Args1&&...>(std::move(__x)),
+            tuple<_Args2&&...>(std::move(__y))));
+#      else
     allocator_traits<typename _OM::type>::construct(
         _OM()(outer_allocator()),
         __p,
         piecewise_construct,
-        __transform_tuple(typename __uses_alloc_ctor< _T1, inner_allocator_type&, _Args1... >::type(),
-                          std::move(__x),
-                          __make_index_sequence<sizeof...(_Args1)>()),
-        __transform_tuple(typename __uses_alloc_ctor< _T2, inner_allocator_type&, _Args2... >::type(),
-                          std::move(__y),
-                          __make_index_sequence<sizeof...(_Args2)>()));
+        std::__transform_tuple_using_allocator<_T1>(inner_allocator(), std::move(__x)),
+        std::__transform_tuple_using_allocator<_T2>(inner_allocator(), std::move(__y)));
+#      endif
   }
 
   template <class _T1, class _T2>
@@ -480,46 +516,6 @@ public:
 private:
   _LIBCPP_HIDE_FROM_ABI explicit scoped_allocator_adaptor(
       outer_allocator_type&& __o, inner_allocator_type&& __i) _NOEXCEPT : _Base(std::move(__o), std::move(__i)) {}
-
-  template <class _Tp, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI void __construct(integral_constant<int, 0>, _Tp* __p, _Args&&... __args) {
-    typedef __outermost<outer_allocator_type> _OM;
-    allocator_traits<typename _OM::type>::construct(_OM()(outer_allocator()), __p, std::forward<_Args>(__args)...);
-  }
-
-  template <class _Tp, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI void __construct(integral_constant<int, 1>, _Tp* __p, _Args&&... __args) {
-    typedef __outermost<outer_allocator_type> _OM;
-    allocator_traits<typename _OM::type>::construct(
-        _OM()(outer_allocator()), __p, allocator_arg, inner_allocator(), std::forward<_Args>(__args)...);
-  }
-
-  template <class _Tp, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI void __construct(integral_constant<int, 2>, _Tp* __p, _Args&&... __args) {
-    typedef __outermost<outer_allocator_type> _OM;
-    allocator_traits<typename _OM::type>::construct(
-        _OM()(outer_allocator()), __p, std::forward<_Args>(__args)..., inner_allocator());
-  }
-
-  template <class... _Args, size_t... _Idx>
-  _LIBCPP_HIDE_FROM_ABI tuple<_Args&&...>
-  __transform_tuple(integral_constant<int, 0>, tuple<_Args...>&& __t, __index_sequence<_Idx...>) {
-    return std::forward_as_tuple(std::get<_Idx>(std::move(__t))...);
-  }
-
-  template <class... _Args, size_t... _Idx>
-  _LIBCPP_HIDE_FROM_ABI tuple<allocator_arg_t, inner_allocator_type&, _Args&&...>
-  __transform_tuple(integral_constant<int, 1>, tuple<_Args...>&& __t, __index_sequence<_Idx...>) {
-    using _Tup = tuple<allocator_arg_t, inner_allocator_type&, _Args&&...>;
-    return _Tup(allocator_arg, inner_allocator(), std::get<_Idx>(std::move(__t))...);
-  }
-
-  template <class... _Args, size_t... _Idx>
-  _LIBCPP_HIDE_FROM_ABI tuple<_Args&&..., inner_allocator_type&>
-  __transform_tuple(integral_constant<int, 2>, tuple<_Args...>&& __t, __index_sequence<_Idx...>) {
-    using _Tup = tuple<_Args&&..., inner_allocator_type&>;
-    return _Tup(std::get<_Idx>(std::move(__t))..., inner_allocator());
-  }
 
   template <class...>
   friend class __scoped_allocator_storage;

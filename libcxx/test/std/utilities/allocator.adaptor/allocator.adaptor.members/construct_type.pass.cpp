@@ -59,10 +59,12 @@ void test_bullet_one() {
   POuter.reset();
 }
 
+// `const` is added per LWG3187
+// `allocator_arg_t{}` is used per LWG4312
 // Otherwise, if uses_allocator_v<T, inner_allocator_type> is true and
-// is_constructible_v<T, allocator_arg_t, inner_allocator_type&, Args...> is
+// is_constructible_v<T, allocator_arg_t, const inner_allocator_type&, Args...> is
 // true, calls OUTERMOST_ALLOC_TRAITS(*this)::construct(OUTERMOST (*this), p,
-//     allocator_arg, inner_allocator(), std::forward<Args>(args)...).
+//     allocator_arg_t{}, as_const(inner_allocator()), std::forward<Args>(args)...).
 void test_bullet_two() {
   using VoidAlloc2 = CountingAllocator<void, 2>;
 
@@ -83,13 +85,8 @@ void test_bullet_two() {
     int const& cx = x;
     A.construct(ptr, x, cx, std::move(x));
     assert((checkConstruct<int&, int const&, int&&>(*ptr, UA_AllocArg, I)));
-#if TEST_STD_VER >= 20
     assert((POuter.checkConstruct<std::allocator_arg_t&&, const SA::inner_allocator_type&, int&, int const&, int&&>(
         O, ptr)));
-#else
-    assert((POuter.checkConstruct<std::allocator_arg_t const&, SA::inner_allocator_type&, int&, int const&, int&&>(
-        O, ptr)));
-#endif
     A.destroy(ptr);
     ::operator delete((void*)ptr);
   }
@@ -97,10 +94,11 @@ void test_bullet_two() {
   POuter.reset();
 }
 
+// `const` is added per LWG3187
 // Otherwise, if uses_allocator_v<T, inner_allocator_type> is true and
-// is_constructible_v<T, Args..., inner_allocator_type&> is true, calls
+// is_constructible_v<T, Args..., const inner_allocator_type&> is true, calls
 // OUTERMOST_ALLOC_TRAITS(*this)::construct(OUTERMOST (*this), p,
-//   std::forward<Args>(args)..., inner_allocator()).
+//   std::forward<Args>(args)..., as_const(inner_allocator())).
 void test_bullet_three() {
   using VoidAlloc2 = CountingAllocator<void, 2>;
 
@@ -121,11 +119,7 @@ void test_bullet_three() {
     int const& cx = x;
     A.construct(ptr, x, cx, std::move(x));
     assert((checkConstruct<int&, int const&, int&&>(*ptr, UA_AllocLast, I)));
-#if TEST_STD_VER >= 20
-    assert((POuter.checkConstruct< int&, int const&, int&&, const SA::inner_allocator_type&>(O, ptr)));
-#else
-    assert((POuter.checkConstruct< int&, int const&, int&&, SA::inner_allocator_type&>(O, ptr)));
-#endif
+    assert((POuter.checkConstruct<int&, int const&, int&&, const SA::inner_allocator_type&>(O, ptr)));
     A.destroy(ptr);
     ::operator delete((void*)ptr);
   }
