@@ -496,6 +496,20 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildGlobalValue(const DstOp &Res, const GlobalValue *GV);
 
+  /// Build and insert \p Res = G_TARGET_GLOBAL_VALUE \p GV
+  ///
+  /// G_TARGET_GLOBAL_VALUE materializes the address of the specified global
+  /// into \p Res. It is a version of G_GLOBAL_VALUE for target specific
+  /// legalization of global addresses.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with pointer type
+  ///      in the same address space as \p GV.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildTargetGlobalValue(const DstOp &Res,
+                                             const GlobalValue *GV);
+
   /// Build and insert \p Res = G_CONSTANT_POOL \p Idx
   ///
   /// G_CONSTANT_POOL materializes the address of an object in the constant

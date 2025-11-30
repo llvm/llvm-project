@@ -60,6 +60,16 @@ The address of a global value.
 
   %0(p0) = G_GLOBAL_VALUE @var_local
 
+G_TARGET_GLOBAL_VALUE
+^^^^^^^^^^^^^^^^^^^^^
+
+Like G_GLOBAL_VALUE, but GlobalISel does no folding or anything else with this
+node, and this is valid in the target-specific selection.
+
+.. code-block:: none
+
+  %0(p0) = G_TARGET_GLOBAL_VALUE @var_global
+
 G_PTRAUTH_GLOBAL_VALUE
 ^^^^^^^^^^^^^^^^^^^^^^
 
