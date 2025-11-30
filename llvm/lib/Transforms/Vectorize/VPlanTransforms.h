@@ -325,6 +325,13 @@ struct VPlanTransforms {
   static void hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
                                    const Loop *L);
 
+  /// Sink predicated stores to the same address with complementary predicates
+  /// (P and NOT P) to an unconditional store with select recipes for the
+  /// stored values. This eliminates branching overhead when all paths
+  /// unconditionally store to the same location.
+  static void sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
+                                   const Loop *L);
+
   // Materialize vector trip counts for constants early if it can simply be
   // computed as (Original TC / VF * UF) * VF * UF.
   static void
