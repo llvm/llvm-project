@@ -614,6 +614,7 @@ private:
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerStore128(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFMUL(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerMGATHER(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMSCATTER(SDValue Op, SelectionDAG &DAG) const;
@@ -760,6 +761,7 @@ private:
   SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerMSTORE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerAVG(SDValue Op, SelectionDAG &DAG, unsigned NewOp) const;
 

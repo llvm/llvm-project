@@ -325,10 +325,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   for (auto *a : args.filtered(clang::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
 
-  opts.Reciprocals = clang::driver::tools::parseMRecipOption(diags, args);
+  opts.Reciprocals = clang::parseMRecipOption(diags, args);
 
-  opts.PreferVectorWidth =
-      clang::driver::tools::parseMPreferVectorWidthOption(diags, args);
+  opts.PreferVectorWidth = clang::parseMPreferVectorWidthOption(diags, args);
 
   // -fembed-offload-object option
   for (auto *a : args.filtered(clang::options::OPT_fembed_offload_object_EQ))

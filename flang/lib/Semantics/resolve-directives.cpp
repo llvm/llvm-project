@@ -532,6 +532,9 @@ public:
   void Post(const parser::OmpBeginLoopDirective &) {
     GetContext().withinConstruct = true;
   }
+  bool Pre(const parser::OpenMPMisplacedEndDirective &x) { return false; }
+  bool Pre(const parser::OpenMPInvalidDirective &x) { return false; }
+
   bool Pre(const parser::DoConstruct &);
 
   bool Pre(const parser::OpenMPSectionsConstruct &);
@@ -2416,13 +2419,6 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
         }
       }
       CheckAssocLoopLevel(level, GetAssociatedClause());
-    } else {
-      unsigned version{context_.langOptions().OpenMPVersion};
-      context_.Say(GetContext().directiveSource,
-          "A DO loop must follow the %s directive"_err_en_US,
-          parser::ToUpperCaseLetters(
-              llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
-                  .str()));
     }
   }
 }

@@ -684,7 +684,7 @@ void LoopVectorizationLegality::addInductionPhi(
   // in the vectorized loop body, record them here. All casts could be recorded
   // here for ignoring, but suffices to record only the first (as it is the
   // only one that may bw used outside the cast sequence).
-  const SmallVectorImpl<Instruction *> &Casts = ID.getCastInsts();
+  ArrayRef<Instruction *> Casts = ID.getCastInsts();
   if (!Casts.empty())
     InductionCastsToIgnore.insert(*Casts.begin());
 
@@ -877,6 +877,11 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
       AllowedExit.insert(RedDes.getLoopExitInstr());
       Reductions[Phi] = RedDes;
+      assert((!RedDes.hasUsesOutsideReductionChain() ||
+              RecurrenceDescriptor::isMinMaxRecurrenceKind(
+                  RedDes.getRecurrenceKind())) &&
+             "Only min/max recurrences are allowed to have multiple uses "
+             "currently");
       return true;
     }
 
@@ -2094,24 +2099,6 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 
   for (const auto &Reduction : getReductionVars())
     ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
-
-  // TODO: handle non-reduction outside users when tail is folded by masking.
-  for (auto *AE : AllowedExit) {
-    // Check that all users of allowed exit values are inside the loop or
-    // are the live-out of a reduction.
-    if (ReductionLiveOuts.count(AE))
-      continue;
-    for (User *U : AE->users()) {
-      Instruction *UI = cast<Instruction>(U);
-      if (TheLoop->contains(UI))
-        continue;
-      LLVM_DEBUG(
-          dbgs()
-          << "LV: Cannot fold tail by masking, loop has an outside user for "
-          << *UI << "\n");
-      return false;
-    }
-  }
 
   for (const auto &Entry : getInductionVars()) {
     PHINode *OrigPhi = Entry.first;

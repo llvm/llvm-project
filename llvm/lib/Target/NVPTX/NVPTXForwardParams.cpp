@@ -96,7 +96,7 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
   const MachineOperand *ParamSymbol = Mov.uses().begin();
   assert(ParamSymbol->isSymbol());
 
-  constexpr unsigned LDInstBasePtrOpIdx = 5;
+  constexpr unsigned LDInstBasePtrOpIdx = 6;
   constexpr unsigned LDInstAddrSpaceOpIdx = 2;
   for (auto *LI : LoadInsts) {
     (LI->uses().begin() + LDInstBasePtrOpIdx)
