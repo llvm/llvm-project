@@ -8,12 +8,12 @@
 ; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp-branch-funnel.yaml < %s | FileCheck --check-prefixes=CHECK,VCP,VCP-X86,VCP64,BRANCH-FUNNEL %s
 ; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-branch-funnel.yaml < %s | FileCheck --check-prefixes=CHECK,BRANCH-FUNNEL,BRANCH-FUNNEL-NOVCP %s
 
-; Cutoff value is not explicitly set. Expect 3 remark messages.
+; Devirt calls debug counter is not explicitly set. Expect 3 remark messages.
 ; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml < %s  2>&1 | grep "single-impl" | count 3
-; Cutoff value is set to 1. Expect one remark messages.
-; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-cutoff=1  -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml < %s  2>&1 | grep "single-impl" | count 1
-; Cutoff value is explicitly set to zero. Expect no remark message.
-; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-cutoff=0  -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml < %s 2>&1  | FileCheck -implicit-check-not="remark" %s
+; Devirt calls debug counter is set to 1. Expect one remark messages.
+; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -pass-remarks=wholeprogramdevirt -debug-counter=calls-to-devirt=0  -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml < %s  2>&1 | grep "single-impl" | count 1
+; Devirt calls debug counter is set outside the range of calls. Expect no remark message.
+; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -pass-remarks=wholeprogramdevirt -debug-counter=calls-to-devirt=9999  -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml < %s 2>&1  | FileCheck -implicit-check-not="remark" %s
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
