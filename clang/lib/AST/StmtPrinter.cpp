@@ -2566,6 +2566,11 @@ void StmtPrinter::VisitCXXUnresolvedConstructExpr(
     OS << ')';
 }
 
+void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
+  // TODO(Reflection): Implement this.
+  llvm_unreachable("not implemented yet");
+}
+
 void StmtPrinter::VisitCXXDependentScopeMemberExpr(
                                          CXXDependentScopeMemberExpr *Node) {
   if (!Node->isImplicitAccess()) {

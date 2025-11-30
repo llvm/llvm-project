@@ -44,6 +44,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -5496,6 +5497,58 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == BuiltinBitCastExprClass;
+  }
+};
+
+/// Represents a C++26 reflect expression [expr.reflect]. The operand of the
+/// expression is either:
+///  - :: (global namespace),
+///  - a reflection-name,
+///  - a type-id, or
+///  - an id-expression.
+class CXXReflectExpr : public Expr {
+
+  // TODO(Reflection): add support for TemplateReference, NamespaceReference and
+  // DeclRefExpr
+  using operand_type = llvm::PointerUnion<const TypeLoc *>;
+
+  SourceLocation CaretCaretLoc;
+  operand_type Operand;
+
+  CXXReflectExpr(SourceLocation CaretCaretLoc, const TypeLoc *TL);
+  CXXReflectExpr(EmptyShell Empty);
+
+public:
+  static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
+                                TypeLoc *TL);
+
+  static CXXReflectExpr *CreateEmpty(ASTContext &C);
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
+        .Case<const TypeLoc *>([](auto *Ptr) { return Ptr->getBeginLoc(); });
+  }
+
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
+        .Case<const TypeLoc *>([](auto *Ptr) { return Ptr->getEndLoc(); });
+  }
+
+  /// Returns location of the '^^'-operator.
+  SourceLocation getOperatorLoc() const { return CaretCaretLoc; }
+
+  child_range children() {
+    // TODO(Reflection)
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    // TODO(Reflection)
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXReflectExprClass;
   }
 };
 

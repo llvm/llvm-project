@@ -1939,6 +1939,23 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
   return new (Mem) TypeTraitExpr(EmptyShell(), IsStoredAsBool);
 }
 
+CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
+    : Expr(CXXReflectExprClass, Empty) {}
+
+CXXReflectExpr::CXXReflectExpr(SourceLocation CaretCaretLoc, const TypeLoc *TL)
+    : Expr(CXXReflectExprClass, TL->getType(), VK_PRValue, OK_Ordinary),
+      CaretCaretLoc(CaretCaretLoc), Operand(TL) {}
+
+CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
+                                       SourceLocation CaretCaretLoc,
+                                       TypeLoc *TL) {
+  return new (C) CXXReflectExpr(CaretCaretLoc, TL);
+}
+
+CXXReflectExpr *CXXReflectExpr::CreateEmpty(ASTContext &C) {
+  return new (C) CXXReflectExpr(EmptyShell());
+}
+
 CUDAKernelCallExpr::CUDAKernelCallExpr(Expr *Fn, CallExpr *Config,
                                        ArrayRef<Expr *> Args, QualType Ty,
                                        ExprValueKind VK, SourceLocation RP,

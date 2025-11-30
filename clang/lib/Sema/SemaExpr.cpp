@@ -17788,6 +17788,16 @@ void Sema::PushExpressionEvaluationContextForFunction(
   }
 }
 
+ExprResult Sema::ActOnCXXReflectExpr(SourceLocation CaretCaretLoc,
+                                     TypeLoc *TL) {
+  return BuildCXXReflectExpr(CaretCaretLoc, TL);
+}
+
+ExprResult Sema::BuildCXXReflectExpr(SourceLocation CaretCaretLoc,
+                                     TypeLoc *TL) {
+  return CXXReflectExpr::Create(Context, CaretCaretLoc, TL);
+}
+
 namespace {
 
 const DeclRefExpr *CheckPossibleDeref(Sema &S, const Expr *PossibleDeref) {
