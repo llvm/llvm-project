@@ -12,7 +12,6 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "mlir/Dialect/UB/IR/UBOpsDialect.cpp.inc"
@@ -58,32 +57,7 @@ Operation *UBDialect::materializeConstant(OpBuilder &builder, Attribute value,
   return nullptr;
 }
 
-//===----------------------------------------------------------------------===//
-// PoisonOp
-//===----------------------------------------------------------------------===//
-
 OpFoldResult PoisonOp::fold(FoldAdaptor /*adaptor*/) { return getValue(); }
-
-//===----------------------------------------------------------------------===//
-// UnreachableOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult UnreachableOp::canonicalize(UnreachableOp unreachableOp,
-                                          PatternRewriter &rewriter) {
-  Block *block = unreachableOp->getBlock();
-  if (llvm::hasSingleElement(*block))
-    return rewriter.notifyMatchFailure(
-        unreachableOp, "unreachable op is the only operation in the block");
-
-  // Erase all other operations in the block. They must be dead.
-  for (Operation &op : llvm::make_early_inc_range(*block)) {
-    if (&op == unreachableOp.getOperation())
-      continue;
-    op.dropAllUses();
-    rewriter.eraseOp(&op);
-  }
-  return success();
-}
 
 #include "mlir/Dialect/UB/IR/UBOpsInterfaces.cpp.inc"
 

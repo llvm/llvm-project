@@ -644,7 +644,6 @@ func.func @drop_unreachable_branch_1(%c: i1) {
   "test.foo"() : () -> ()
   return
 ^bb2:
-  "test.bar"() : () -> ()
   ub.unreachable
 }
 
@@ -653,9 +652,7 @@ func.func @drop_unreachable_branch_1(%c: i1) {
 func.func @drop_unreachable_branch_2(%c: i1) {
   cf.cond_br %c, ^bb1, ^bb2
 ^bb1:
-  "test.foo"() : () -> ()
   ub.unreachable
 ^bb2:
-  "test.bar"() : () -> ()
   ub.unreachable
 }

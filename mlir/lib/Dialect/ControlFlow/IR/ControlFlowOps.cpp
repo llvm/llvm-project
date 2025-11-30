@@ -447,6 +447,8 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
   }
 };
 
+/// If the destination block of a conditional branch contains only
+/// ub.unreachable, unconditionally branch to the other destination.
 struct DropUnreachableCondBranch : public OpRewritePattern<CondBranchOp> {
   using OpRewritePattern<CondBranchOp>::OpRewritePattern;
 
