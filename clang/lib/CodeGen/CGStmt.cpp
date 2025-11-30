@@ -2572,24 +2572,49 @@ CodeGenFunction::EmitAsmInput(const TargetInfo::ConstraintInfo &Info,
 static llvm::MDNode *getAsmSrcLocInfo(const StringLiteral *Str,
                                       CodeGenFunction &CGF) {
   SmallVector<llvm::Metadata *, 8> Locs;
-  // Add the location of the first line to the MDNode.
-  Locs.push_back(llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-      CGF.Int64Ty, Str->getBeginLoc().getRawEncoding())));
-  StringRef StrVal = Str->getString();
-  if (!StrVal.empty()) {
-    const SourceManager &SM = CGF.CGM.getContext().getSourceManager();
-    const LangOptions &LangOpts = CGF.CGM.getLangOpts();
-    unsigned StartToken = 0;
-    unsigned ByteOffset = 0;
 
+  // We need these to find the correct location for the first line.
+  StringRef StrVal = Str->getString();
+  const SourceManager &SM = CGF.CGM.getContext().getSourceManager();
+  const LangOptions &LangOpts = CGF.CGM.getLangOpts();
+  unsigned StartToken = 0;
+  unsigned ByteOffset = 0;
+
+  // Add the location of the first line to the MDNode.
+
+  // Find the offset of the first character that isn't horizontal whitespace.
+  size_t FirstLocOffset = StrVal.find_first_not_of(" \t\v\f");
+
+  // If the string is empty or all-whitespace, default to offset 0.
+  if (FirstLocOffset == StringRef::npos)
+    FirstLocOffset = 0;
+
+  SourceLocation FirstLineLoc = Str->getLocationOfByte(
+    FirstLocOffset, SM, LangOpts, CGF.getTarget(), &StartToken, &ByteOffset);
+
+  Locs.push_back(llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+    CGF.Int64Ty, FirstLineLoc.getRawEncoding())));
+
+  if (!StrVal.empty()) {
     // Add the location of the start of each subsequent line of the asm to the
     // MDNode.
     for (unsigned i = 0, e = StrVal.size() - 1; i != e; ++i) {
       if (StrVal[i] != '\n') continue;
+
+      // The next line starts at byte offset i + 1.
+      // Find the first non-horizontal-whitespace at or after this offset.
+      size_t NextLineOffset = StrVal.find_first_not_of(" \t\v\f", i + 1);
+
+      // If the rest of the string is empty or all-whitespace,
+      // just use the location right after the newline (i + 1).
+      if (NextLineOffset == StringRef::npos)
+        NextLineOffset = i + 1;
+
       SourceLocation LineLoc = Str->getLocationOfByte(
-          i + 1, SM, LangOpts, CGF.getTarget(), &StartToken, &ByteOffset);
+        NextLineOffset, SM, LangOpts, CGF.getTarget(), &StartToken, &ByteOffset);
+
       Locs.push_back(llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(CGF.Int64Ty, LineLoc.getRawEncoding())));
+        llvm::ConstantInt::get(CGF.Int64Ty, LineLoc.getRawEncoding())));
     }
   }
 
