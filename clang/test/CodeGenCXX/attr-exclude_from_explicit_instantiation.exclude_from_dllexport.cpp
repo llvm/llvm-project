@@ -1,9 +1,17 @@
-// RUN: %clang_cc1 -triple x86_64-win32 -fms-extensions -emit-llvm -o - %s | FileCheck %s --check-prefixes=MSC --implicit-check-not=to_be_
-// RUN: %clang_cc1 -triple x86_64-mingw                 -emit-llvm -o - %s | FileCheck %s --check-prefixes=GNU --implicit-check-not=to_be_
-// RUN: %clang_cc1 -triple x86_64-cygwin                -emit-llvm -o - %s | FileCheck %s --check-prefixes=GNU --implicit-check-not=to_be_
+// RUN: %clang_cc1 -triple x86_64-win32 -fms-extensions -emit-llvm -o - %s | \
+// RUN:     FileCheck %s --check-prefixes=MSC --implicit-check-not=to_be_ --implicit-check-not=dllexport
+// RUN: %clang_cc1 -triple x86_64-mingw                 -emit-llvm -o - %s | \
+// RUN:     FileCheck %s --check-prefixes=GNU --implicit-check-not=to_be_ --implicit-check-not=dllexport
+// RUN: %clang_cc1 -triple x86_64-cygwin                -emit-llvm -o - %s | \
+// RUN:     FileCheck %s --check-prefixes=GNU --implicit-check-not=to_be_ --implicit-check-not=dllexport
 
 // Test that __declspec(dllexport) doesn't instantiate entities marked with
 // the exclude_from_explicit_instantiation attribute unless marked as dllexport explicitly.
+
+// MSC: ModuleID = {{.*}}exclude_from_dllexport.cpp
+// MSC: source_filename = {{.*}}exclude_from_dllexport.cpp
+// GNU: ModuleID = {{.*}}exclude_from_dllexport.cpp
+// GNU: source_filename = {{.*}}exclude_from_dllexport.cpp
 
 #define EXCLUDE_FROM_EXPLICIT_INSTANTIATION __attribute__((exclude_from_explicit_instantiation))
 
@@ -36,7 +44,9 @@ template <class T> void C<T>::not_to_be_instantiated() noexcept {}
 // GNU: $_ZN1CIiE25to_be_exported_explicitlyEv = comdat any
 // GNU: $_ZN1CIiE18not_to_be_exportedEv = comdat any
 
+// MSC: define weak_odr dso_local dllexport{{.*}} ptr @"??4?$C@H@@QEAAAEAU0@AEBU0@@Z"
 // MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported@?$C@H@@QEAAXXZ"
+// GNU: define weak_odr dso_local dllexport{{.*}} ptr @_ZN1CIiEaSERKS0_
 // GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN1CIiE14to_be_exportedEv
 template struct __declspec(dllexport) C<int>;
 
@@ -50,7 +60,7 @@ void use() {
   // MSC: call void @"?not_to_be_exported@?$C@H@@QEAAXXZ"
   // GNU: call void @_ZN1CIiE18not_to_be_exportedEv
   c.not_to_be_exported(); // implicitly instantiated here
-};
+}
 
 // MSC: define weak_odr dso_local dllexport{{.*}} void @"?to_be_exported_explicitly@?$C@H@@QEAAXXZ"
 // GNU: define weak_odr dso_local dllexport{{.*}} void @_ZN1CIiE25to_be_exported_explicitlyEv

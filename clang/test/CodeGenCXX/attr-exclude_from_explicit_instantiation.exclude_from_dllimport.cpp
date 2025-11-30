@@ -1,9 +1,17 @@
-// RUN: %clang_cc1 -triple x86_64-win32 -fms-extensions -emit-llvm -o - %s | FileCheck %s --check-prefixes=MSC --implicit-check-not=to_be_
-// RUN: %clang_cc1 -triple x86_64-mingw                 -emit-llvm -o - %s | FileCheck %s --check-prefixes=GNU --implicit-check-not=to_be_
-// RUN: %clang_cc1 -triple x86_64-cygwin                -emit-llvm -o - %s | FileCheck %s --check-prefixes=GNU --implicit-check-not=to_be_
+// RUN: %clang_cc1 -triple x86_64-win32 -fms-extensions -emit-llvm -o - %s | \
+// RUN:     FileCheck %s --check-prefixes=MSC --implicit-check-not=to_be_ --implicit-check-not=dllimport
+// RUN: %clang_cc1 -triple x86_64-mingw                 -emit-llvm -o - %s | \
+// RUN:     FileCheck %s --check-prefixes=GNU --implicit-check-not=to_be_ --implicit-check-not=dllimport
+// RUN: %clang_cc1 -triple x86_64-cygwin                -emit-llvm -o - %s | \
+// RUN:     FileCheck %s --check-prefixes=GNU --implicit-check-not=to_be_ --implicit-check-not=dllimport
 
 // Test that __declspec(dllimport) doesn't instantiate entities marked with
 // the exclude_from_explicit_instantiation attribute unless marked as dllimport explicitly.
+
+// MSC: ModuleID = {{.*}}exclude_from_dllimport.cpp
+// MSC: source_filename = {{.*}}exclude_from_dllimport.cpp
+// GNU: ModuleID = {{.*}}exclude_from_dllimport.cpp
+// GNU: source_filename = {{.*}}exclude_from_dllimport.cpp
 
 #define EXCLUDE_FROM_EXPLICIT_INSTANTIATION __attribute__((exclude_from_explicit_instantiation))
 
@@ -46,7 +54,7 @@ void use() {
   // MSC: call void @"?not_to_be_imported@?$C@H@@QEAAXXZ"
   // GNU: call void @_ZN1CIiE18not_to_be_importedEv
   c.not_to_be_imported(); // implicitly instantiated here
-};
+}
 
 // MSC: declare dllimport void @"?to_be_imported@?$C@H@@QEAAXXZ"
 // GNU: declare dllimport void @_ZN1CIiE14to_be_importedEv
