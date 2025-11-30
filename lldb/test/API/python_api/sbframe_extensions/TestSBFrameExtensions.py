@@ -16,7 +16,6 @@ class TestSBFrameExtensions(TestBase):
     def _get_frame(self):
         """Helper method to get a valid frame for testing."""
         self.build()
-        self.setTearDownCleanup()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, "Set breakpoint here", lldb.SBFileSpec(self.source)
         )
