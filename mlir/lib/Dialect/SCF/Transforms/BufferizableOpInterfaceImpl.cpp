@@ -190,6 +190,7 @@ struct ExecuteRegionOpInterface
     // Create new op and move over region.
     auto newOp = scf::ExecuteRegionOp::create(
         rewriter, op->getLoc(), newResultTypes, executeRegionOp.getNoInline());
+    newOp->setAttrs(executeRegionOp->getAttrs());
     newOp.getRegion().takeBody(executeRegionOp.getRegion());
 
     // Bufferize every block.
