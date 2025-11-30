@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPUHAZARDRECOGNIZERS_H
 #define LLVM_LIB_TARGET_AMDGPUHAZARDRECOGNIZERS_H
 
+#include "SIInstrInfo.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
@@ -25,13 +26,14 @@ class MachineFunction;
 class MachineInstr;
 class MachineOperand;
 class MachineRegisterInfo;
-class SIInstrInfo;
 class SIRegisterInfo;
 class GCNSubtarget;
 
 class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
 public:
   typedef function_ref<bool(const MachineInstr &)> IsHazardFn;
+  typedef function_ref<bool(const MachineInstr &, int WaitStates)> IsExpiredFn;
+  typedef function_ref<unsigned int(const MachineInstr &)> GetNumWaitStatesFn;
 
 private:
   // Distinguish if we are called from scheduler or hazard recognizer
@@ -74,7 +76,9 @@ private:
   // used on a newly inserted instruction before returning from PreEmitNoops.
   void runOnInstruction(MachineInstr *MI);
 
-  int getWaitStatesSince(IsHazardFn IsHazard, int Limit);
+  int getWaitStatesSince(
+      IsHazardFn IsHazard, int Limit,
+      GetNumWaitStatesFn GetNumWaitStates = SIInstrInfo::getNumWaitStates);
   int getWaitStatesSinceDef(unsigned Reg, IsHazardFn IsHazardDef, int Limit);
   int getWaitStatesSinceSetReg(IsHazardFn IsHazard, int Limit);
 
@@ -94,6 +98,9 @@ private:
   int checkReadM0Hazards(MachineInstr *SMovRel);
   int checkNSAtoVMEMHazard(MachineInstr *MI);
   int checkFPAtomicToDenormModeHazard(MachineInstr *MI);
+  // emit V_NOP instructions. \p WaitStatesNeeded is the number of V_NOPs we
+  // need to insert, negative means not needed.
+  bool emitVNops(MachineInstr *MI, int WaitStatesNeeded);
   void fixHazards(MachineInstr *MI);
   bool fixVcmpxPermlaneHazards(MachineInstr *MI);
   bool fixVMEMtoScalarWriteHazards(MachineInstr *MI);
@@ -106,7 +113,7 @@ private:
   bool fixVALUTransUseHazard(MachineInstr *MI);
   bool fixVALUTransCoexecutionHazards(MachineInstr *MI);
   bool fixWMMAHazards(MachineInstr *MI);
-  bool fixWMMACoexecutionHazards(MachineInstr *MI);
+  int checkWMMACoexecutionHazards(MachineInstr *MI);
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
