@@ -144,9 +144,11 @@ LogicalResult ModuleToObject::loadBitcodeFilesFromList(
 std::unique_ptr<llvm::Module>
 ModuleToObject::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
   Operation &op = getOperation();
+  StringRef name = "LLVMDialectModule";
   // Try to get nicer name from the operation.
-  auto nameAttr = op.getAttrOfType<StringAttr>("sym_name");
-  StringRef name = nameAttr ? nameAttr.getValue() : "LLVMDialectModule";
+  if (auto symOp = dyn_cast<SymbolOpInterface>(op);
+      symOp && symOp.getNameAttr())
+    name = symOp.getNameAttr().getValue();
   return translateModuleToLLVMIR(&op, llvmContext, name);
 }
 
