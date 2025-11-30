@@ -1,0 +1,97 @@
+name: Release Binaries Windows
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: 'Release Version'
+        required: false
+        type: string
+      upload:
+        description: 'Upload binaries to the release page'
+        required: true
+        default: false
+
+
+permissions:
+  id-token: write
+  attestations: write
+
+jobs:
+  build-windows-release:
+    runs-on: ${{ matrix.runs-on }}
+    if: github.repository_owner == 'llvm'
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on:
+          - depot-windows-2022-16
+          - windows-11-arm
+    steps:
+      - name: Setup crlf
+        shell: bash
+        run: |
+          for f in `find /c/hostedtoolcache/windows/Python/3.9.13/x64/ -iname pyconfig.h`; do
+            cat $f
+          done
+          git config --global core.autocrlf false
+#      - name: Setup Python
+#        id: setup-python
+#        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+#        with:
+#          python-version: '3.9'
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1A
+        with:
+          ref: ${{ (inputs.release-version && format('llvmorg-{0}', inputs.release-version)) || github.sha }}
+      - id: version
+        uses: ./.github/workflows/get-llvm-version
+      - id: variables
+        shell: bash
+        run: |
+          if [ -z "${{ inputs.release-version }}" ]; then
+            version_string="${{ format('{0}.{1}.{2}', steps.version.outputs.major, steps.version.outputs.minor, steps.version.outputs.patch) }}"
+          else
+            version_string="${{inputs.release-version }}"
+          fi
+          case $RUNNER_ARCH in 
+            "X64" )
+              installer_arch="win64"
+              tar_arch="x86_64"
+              installer_dir_arch="amd64"
+              script_options="--x64"
+              ;;
+            "ARM64" )
+              installer_arch="woa64"
+              tar_arch="aarch64"
+              installer_dir_arch="arm64"
+              script_options="--arm64"
+              ;;
+          esac
+          echo "installer-name=LLVM-$version_string-$installer_arch.exe" >> $GITHUB_OUTPUT
+          echo "tar-name=$tar_arch-pc-windows-msvc.tar.xz" >> $GITHUB_OUTPUT 
+          echo "installer-dir=build_$installer_dir_arch" >> $GITHUB_OUTPUT
+          echo "script-options=$script_options" >> $GITHUB_OUTPUT
+          echo "version-string=$version_string" >> $GITHUB_OUTPUT
+      - env:
+          LDFLAGS: "/verbose"
+        run: |
+          subst S: ${{ github.workspace }}
+          cd S:\llvm\utils\release\
+          .\build_llvm_release.bat ${{ steps.variables.outputs.script-options }} --version ${{ steps.variables.outputs.version-string }} --local-python --skip-checkout
+          # Move installer to top-level directory so it is easier to upload.
+          mv llvm_package_${{ steps.variables.outputs.version-string}}\${{ steps.variables.outputs.installer-dir }}\${{ steps.variables.outputs.installer-name }} .
+          mv llvm_package_${{ steps.variables.outputs.version-string}}\${{ steps.variables.outputs.tar-name }} .
+
+      - name: Upload Installer
+        uses: ./.github/workflows/upload-release-artifact
+        with:
+          files: ${{ steps.variables.outputs.installer-name }}
+          upload: false
+      
+      - name: Upload Tar
+        uses: ./.github/workflows/upload-release-artifact
+        with:
+          files: ${{ steps.variables.outputs.tar-name }}
+          upload: false
+

@@ -1,0 +1,92 @@
+name: Upload Release Artifact
+description: >-
+  Upload release artifact along with an attestation.  The action assumes that
+  the llvm-project repository has already been checked out.
+inputs:
+  files:
+    description: >-
+      Files to be uploaded. This can contain bash wildcards.
+    required: true
+  release-version:
+    description: >-
+      The release where the artifact will be attached.
+    required: true
+  upload:
+    description: >-
+      Whether or not to upload the file and attestation to the release.  If this
+      is set to false, then the atteastion will still be generated and attached as
+      an artifact to the workflow, but won't be uploaded to the release.
+    default: true
+  user-token:
+    description: >-
+      Token with premissions to read llvm teams that is used to ensure that
+      the person who triggred the action has permission to upload artifacts.
+      This is required if upload is true.
+    requred: false
+  attestation-name:
+    description: >-
+      This will be used for the artifact name that is attached to the workflow and
+      will be used as the basename for the attestation file which will be called
+      $attestation-name.jsonl.  If this is not set, it will default
+      to the falue of `files`.
+    required: false
+
+
+runs:
+  using: "composite"
+  steps:
+    - name: Collect Variables
+      id: vars
+      shell: bash
+      env:
+        INPUTS_ATTESTATION_NAME: ${{ inputs.attestation-name }}
+        INPUTS_FILES: ${{ inputs.files }}
+      run: |
+        if [ -z "$INPUTS_ATTESTATION_NAME" ]; then
+          name="$INPUTS_FILES"
+        else
+          name="$INPUTS_ATTESTATION_NAME"
+        fi
+        echo "attestation-name=$name" >> $GITHUB_OUTPUT
+    - name: Attest Build Provenance
+      id: provenance
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+      with:
+        subject-path: ${{ inputs.files }}
+
+    - name: Rename attestation file
+      shell: bash
+      run: |
+        mv ${{ steps.provenance.outputs.bundle-path }} ${{ steps.vars.outputs.attestation-name }}.jsonl
+
+    - name: Upload Build Provenance
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      with:
+        name: ${{ steps.vars.outputs.attestation-name }}
+        path: |
+          ${{ inputs.files }}
+          ${{ steps.vars.outputs.attestation-name }}.jsonl
+
+    - name: Install Python Requirements
+      if: inputs.upload == 'true'
+      shell: bash
+      run: |
+        pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+
+    - name: Check Permissions
+      if: inputs.upload == 'true'
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        USER_TOKEN: ${{ inputs.user-token }}
+      shell: bash
+      run: |
+        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
+    - name: Upload Release
+      shell: bash
+      if: inputs.upload == 'true'
+      run: |
+        ./llvm/utils/release/github-upload-release.py \
+        --token ${{ github.token }} \
+        --release ${{ inputs.release-version }} \
+        upload \
+        --files ${{ inputs.files }} ${{ steps.vars.outputs.attestation-name}}.jsonl
