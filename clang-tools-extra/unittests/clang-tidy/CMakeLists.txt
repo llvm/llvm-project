@@ -22,6 +22,7 @@ add_extra_unittest(ClangTidyTests
   ClangTidyDiagnosticConsumerTest.cpp
   ClangTidyOptionsTest.cpp
   DeclRefExprUtilsTest.cpp
+  ExprSequenceTest.cpp
   IncludeCleanerTest.cpp
   IncludeInserterTest.cpp
   GlobListTest.cpp
@@ -39,6 +40,7 @@ add_extra_unittest(ClangTidyTests
 
 clang_target_link_libraries(ClangTidyTests
   PRIVATE
+  clangAnalysis
   clangAST
   clangASTMatchers
   clangBasic
