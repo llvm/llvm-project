@@ -252,6 +252,8 @@ public:
   /// after formatting.
   BreakableStringLiteral(const FormatToken &Tok, unsigned StartColumn,
                          StringRef Prefix, StringRef Postfix,
+                         StringRef ContinuationPrefix,
+                         StringRef ContinuationPostfix,
                          unsigned UnbreakableTailLength, bool InPPDirective,
                          encoding::Encoding Encoding, const FormatStyle &Style);
 
@@ -274,15 +276,21 @@ public:
 protected:
   // The column in which the token starts.
   unsigned StartColumn;
-  // The prefix a line needs after a break in the token.
+  // The prefix a line needs at the start
   StringRef Prefix;
-  // The postfix a line needs before introducing a break.
+  // The postfix a line needs at the end
   StringRef Postfix;
+  // The prefix every line except the first line needs
+  StringRef ContinuationPrefix;
+  // The postfix every line except the last line needs
+  StringRef ContinuationPostfix;
   // The token text excluding the prefix and postfix.
   StringRef Line;
   // Length of the sequence of tokens after this string literal that cannot
   // contain line breaks.
   unsigned UnbreakableTailLength;
+  // Whether the string prefix and postfix should be repeated on each line
+  // when breaking the string.
 };
 
 class BreakableStringLiteralUsingOperators : public BreakableStringLiteral {
