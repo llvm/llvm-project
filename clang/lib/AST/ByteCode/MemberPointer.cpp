@@ -80,13 +80,14 @@ FunctionPointer MemberPointer::toFunctionPointer(const Context &Ctx) const {
   return FunctionPointer(Ctx.getProgram().getFunction(cast<FunctionDecl>(Dcl)));
 }
 
-APValue MemberPointer::toAPValue(const ASTContext &ASTCtx) const {
+APValue MemberPointer::toAPValue(const ASTContext &ASTCtx,
+                                 const Program &P) const {
   if (isZero())
     return APValue(static_cast<ValueDecl *>(nullptr), /*IsDerivedMember=*/false,
                    /*Path=*/{});
 
   if (hasBase())
-    return Base.toAPValue(ASTCtx);
+    return Base.toAPValue(ASTCtx, P);
 
   return APValue(getDecl(), /*IsDerivedMember=*/false,
                  /*Path=*/{});

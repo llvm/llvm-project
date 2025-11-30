@@ -21,6 +21,14 @@
 namespace clang {
 namespace interp {
 
+enum class IntegralKind {
+  Number = 0,
+  Address,
+  BlockAddress,
+  LabelAddress,
+  AddrLabelDiff
+};
+
 /// Helper to compare two comparable types.
 template <typename T> ComparisonCategoryResult Compare(const T &X, const T &Y) {
   if (X < Y)

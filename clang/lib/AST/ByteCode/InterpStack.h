@@ -173,29 +173,21 @@ private:
       return PT_Ptr;
     else if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, Boolean>)
       return PT_Bool;
-    else if constexpr (std::is_same_v<T, int8_t> ||
-                       std::is_same_v<T, Integral<8, true>>)
+    else if constexpr (std::is_same_v<T, Integral<8, true>>)
       return PT_Sint8;
-    else if constexpr (std::is_same_v<T, uint8_t> ||
-                       std::is_same_v<T, Integral<8, false>>)
+    else if constexpr (std::is_same_v<T, Integral<8, false>>)
       return PT_Uint8;
-    else if constexpr (std::is_same_v<T, int16_t> ||
-                       std::is_same_v<T, Integral<16, true>>)
+    else if constexpr (std::is_same_v<T, Integral<16, true>>)
       return PT_Sint16;
-    else if constexpr (std::is_same_v<T, uint16_t> ||
-                       std::is_same_v<T, Integral<16, false>>)
+    else if constexpr (std::is_same_v<T, Integral<16, false>>)
       return PT_Uint16;
-    else if constexpr (std::is_same_v<T, int32_t> ||
-                       std::is_same_v<T, Integral<32, true>>)
+    else if constexpr (std::is_same_v<T, Integral<32, true>>)
       return PT_Sint32;
-    else if constexpr (std::is_same_v<T, uint32_t> ||
-                       std::is_same_v<T, Integral<32, false>>)
+    else if constexpr (std::is_same_v<T, Integral<32, false>>)
       return PT_Uint32;
-    else if constexpr (std::is_same_v<T, int64_t> ||
-                       std::is_same_v<T, Integral<64, true>>)
+    else if constexpr (std::is_same_v<T, Integral<64, true>>)
       return PT_Sint64;
-    else if constexpr (std::is_same_v<T, uint64_t> ||
-                       std::is_same_v<T, Integral<64, false>>)
+    else if constexpr (std::is_same_v<T, Integral<64, false>>)
       return PT_Uint64;
     else if constexpr (std::is_same_v<T, Floating>)
       return PT_Float;
