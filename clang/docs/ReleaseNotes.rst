@@ -449,6 +449,10 @@ Improvements to Clang's diagnostics
   comparison operators when mixed with bitwise operators in enum value initializers.
   This can be locally disabled by explicitly casting the initializer value.
 
+- The warning about static local variables declared inside `inline` 
+  functions is now correctly converted to an error if `-pedantic-errors` is 
+  passed (#GH39524).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
