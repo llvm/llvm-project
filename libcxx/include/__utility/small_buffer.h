@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___UTILITY_SMALL_BUFFER_H
 #define _LIBCPP___UTILITY_SMALL_BUFFER_H
 
+#include <__bit/has_single_bit.h>
 #include <__config>
 #include <__cstddef/byte.h>
 #include <__cstddef/size_t.h>
@@ -38,10 +39,14 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <size_t _BufferSize, size_t _BufferAlignment>
-  requires(_BufferSize > 0 && _BufferAlignment > 0)
 class __small_buffer {
+  static_assert(std::has_single_bit(_BufferAlignment), "Alignment is invalid.");
+  static_assert(_BufferSize >= sizeof(byte*), "Buffer has to be capable of storing a pointer for heap allocations!");
+
 public:
   template <class _Tp, class _Decayed = decay_t<_Tp>>
+  // In theory we require `is_trivially_copyable`, since we're copying the raw object representation. However, we
+  // already assume that the compiler doesn't optimize on this, e.g. in our trivially relocatable optimizations.
   static constexpr bool __fits_in_buffer =
       is_trivially_move_constructible_v<_Decayed> && is_trivially_destructible_v<_Decayed> &&
       sizeof(_Decayed) <= _BufferSize && alignof(_Decayed) <= _BufferAlignment;

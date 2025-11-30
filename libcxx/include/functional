@@ -569,6 +569,10 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #    include <__type_traits/unwrap_ref.h>
 #  endif
 
+#  if _LIBCPP_STD_VER >= 23
+#    include <__functional/move_only_function.h>
+#  endif
+
 #  include <version>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
