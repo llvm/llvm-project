@@ -125,26 +125,31 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
 
-    // For ConvertLayoutOp, the layout is stored in the targetLayoutAttr
-    // if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(defOp))
-    //   return convertOp.getTargetLayoutAttr();
+    // // For ConvertLayoutOp, the layout is stored in the targetLayoutAttr
+    // // if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(defOp))
+    // //   return convertOp.getTargetLayoutAttr();
 
-    // for LoadNdOp, the layout is stored in the tensor descriptor
-    if (auto loadNd = dyn_cast<xegpu::LoadNdOp>(defOp))
-      return getDistributeLayoutAttr(loadNd.getTensorDesc());
+    // // for LoadNdOp, the layout is stored in the tensor descriptor
+    // if (auto loadNd = dyn_cast<xegpu::LoadNdOp>(defOp))
+    //   return getDistributeLayoutAttr(loadNd.getTensorDesc());
 
-    // for LoadMatrixOp, the layout is attached to the property of the op
-    if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(defOp))
-      return loadOp.getLayoutAttr();
+    // // for LoadMatrixOp, the layout is attached to the property of the op
+    // if (auto loadOp = dyn_cast<xegpu::LoadMatrixOp>(defOp))
+    //   return loadOp.getLayoutAttr();
 
-    // // for StoreMatrixOp, the layout is attached to the property of the op
-    // if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(defOp))
-    //   return storeOp.getLayoutAttr();
+    // // // for StoreMatrixOp, the layout is attached to the property of the op
+    // // if (auto storeOp = dyn_cast<xegpu::StoreMatrixOp>(defOp))
+    // //   return storeOp.getLayoutAttr();
 
-    // check for "permament" layout only after "temporary" layout name lookup
-    // for backward compatibility
-    if (auto loadGatherOp = dyn_cast<xegpu::LoadGatherOp>(defOp))
-      return loadGatherOp.getLayoutAttr();
+    // // check for "permament" layout only after "temporary" layout name lookup
+    // // for backward compatibility
+    // if (auto loadGatherOp = dyn_cast<xegpu::LoadGatherOp>(defOp))
+    //   return loadGatherOp.getLayoutAttr();
+
+    if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(defOp)) {
+      return anchorOp.getAnchorLayout();
+    }
+
     std::string layoutName = getLayoutName(result);
     if (defOp->hasAttr(layoutName))
       return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);

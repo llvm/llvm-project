@@ -740,4 +740,24 @@ def XeGPU_MemLayoutAttr : XeGPUAttr<"MemLayout", "mem_layout"> {
 
 }
 
+def AnchorLayoutInterface : OpInterface<"AnchorLayoutInterface"> {
+  let cppNamespace = "::mlir::xegpu";
+
+  let description = [{
+    An attribute interface for accessing anchor layout information.
+    This interface provides a method to retrieve the anchor layout
+    from attributes that implement it.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/"Get the anchor layout attribute.",
+      /*retTy=*/"xegpu::DistributeLayoutAttr", 
+      /*methodName=*/"getAnchorLayout",
+      /*args=*/(ins)
+    >,
+  ];
+
+}
+
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUATTRS_TD
