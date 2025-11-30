@@ -5086,6 +5086,16 @@ struct FormatStyle {
   /// \version 10
   bool SpaceBeforeSquareBrackets;
 
+  /// If ``false``, spaces will be removed between underscore and an opening
+  /// parenthesis. This is specifically for the gettext macro ``_()`` commonly
+  /// used in GNU projects.
+  /// \code
+  ///    true:                                  false:
+  ///    _ (message);                   vs.     _(message);
+  /// \endcode
+  /// \version 19
+  bool SpaceBetweenUnderscoreParens;
+
   /// If ``false``, spaces will be removed before range-based for loop
   /// colon.
   /// \code
@@ -5822,6 +5832,7 @@ struct FormatStyle {
            SpaceBeforeRangeBasedForLoopColon ==
                R.SpaceBeforeRangeBasedForLoopColon &&
            SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
+           SpaceBetweenUnderscoreParens == R.SpaceBetweenUnderscoreParens &&
            SpaceInEmptyBraces == R.SpaceInEmptyBraces &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
