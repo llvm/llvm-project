@@ -577,6 +577,10 @@ struct TupleExpander : SetTheory::Expander {
     const RecTy *RegisterRecTy = RecordRecTy::get(RegisterCl);
     std::vector<StringRef> RegNames =
         Def->getValueAsListOfStrings("RegAsmNames");
+    const int NameStride = Def->getValueAsInt("CompressedTupleNameStride");
+    if (NameStride < 0)
+      PrintFatalError(Def->getLoc(),
+                      "CompressedTupleNameStride must be non-negative");
 
     // Zip them up.
     RecordKeeper &RK = Def->getRecords();
@@ -586,10 +590,17 @@ struct TupleExpander : SetTheory::Expander {
       std::vector<Init *> Tuple;
       for (unsigned i = 0; i != Dim; ++i) {
         const Record *Reg = Lists[i][n];
-        if (i)
+        if (i && !NameStride)
           Name += '_';
         Name += Reg->getName();
         Tuple.push_back(Reg->getDefInit());
+      }
+
+      // Use a compact vector/strided name if the user requested it.
+      if (NameStride) {
+        StringRef NB = Lists[0][n]->getName();
+        StringRef NE = Lists[Dim - 1][n]->getName();
+        Name = (NB + "_TO_" + NE + "_BY_" + Twine(NameStride)).str();
       }
 
       // Take the cost list of the first register in the tuple.
