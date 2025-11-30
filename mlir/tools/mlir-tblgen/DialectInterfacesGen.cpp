@@ -169,8 +169,7 @@ bool DialectInterfaceGenerator::emitInterfaceDecls() {
 //===----------------------------------------------------------------------===//
 
 static mlir::GenRegistration genDecls(
-    "gen-dialect-interface-decls",
-    "Generate dialect interface declarations.",
+    "gen-dialect-interface-decls", "Generate dialect interface declarations.",
     [](const RecordKeeper &records, raw_ostream &os) {
       return DialectInterfaceGenerator(records, os).emitInterfaceDecls();
     });
