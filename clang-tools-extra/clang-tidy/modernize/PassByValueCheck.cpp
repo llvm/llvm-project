@@ -196,11 +196,7 @@ static bool hasRValueOverload(const CXXConstructorDecl *Ctor,
     return true;
   };
 
-  for (const auto *Candidate : Record->ctors()) {
-    if (IsRValueOverload(Candidate))
-      return true;
-  }
-  return false;
+  return llvm::any_of(Record->ctors(), IsRValueOverload);
 }
 
 /// Find all references to \p ParamDecl across all of the
