@@ -167,7 +167,9 @@ multiclass FMA<bit add> {
   // second multiply input.
   defvar m2_cg = !if(add, (id $m2), (fneg $m2));
 
-  defvar unpred_cg = (IRIntBase<"fma", [Vector]> $m1, m2_cg, $addend);
+  defvar fma = strictFPAlt<IRIntBase<"fma", [Vector]>,
+                           IRInt<"fma", [Vector]>>;
+  defvar unpred_cg = (fma $m1, m2_cg, $addend);
   defvar pred_cg   = (IRInt<"fma_predicated", [Vector, Predicate]>
                           $m1, m2_cg, $addend, $pred);
 
@@ -723,7 +725,7 @@ multiclass compare_with_pred<string condname, dag arguments,
        NameOverride<"vcmp" # condname # "q_m" # suffix>;
 }
 
-multiclass compare<string condname, IRBuilder cmpop> {
+multiclass compare<string condname, Builder cmpop> {
   // Make all four variants of a comparison: the vector/vector and
   // vector/scalar forms, each using compare_with_pred to make a
   // predicated and unpredicated version.

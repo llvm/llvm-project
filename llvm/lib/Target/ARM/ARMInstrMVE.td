@@ -3723,6 +3723,10 @@ multiclass MVE_VFMA_fp_multi<string iname, bit fms, MVEVectorVTInfo VTI> {
     if fms then {
       def : Pat<(VTI.Vec (fma (fneg m1), m2, add)),
                 (Inst $add, $m1, $m2)>;
+      def : Pat<(VTI.Vec (int_arm_mve_fma (fneg m1), m2, add)),
+                (Inst $add, $m1, $m2)>;
+      def : Pat<(VTI.Vec (int_arm_mve_fma m1, (fneg m2), add)),
+                (Inst $add, $m1, $m2)>;
       def : Pat<(VTI.Vec (vselect (VTI.Pred VCCR:$pred),
                                   (VTI.Vec (fma (fneg m1), m2, add)),
                                   add)),
@@ -3733,6 +3737,8 @@ multiclass MVE_VFMA_fp_multi<string iname, bit fms, MVEVectorVTInfo VTI> {
                 (Inst $add, $m1, $m2, ARMVCCThen, $pred, zero_reg)>;
     } else {
       def : Pat<(VTI.Vec (fma m1, m2, add)),
+                (Inst $add, $m1, $m2)>;
+      def : Pat<(VTI.Vec (int_arm_mve_fma m1, m2, add)),
                 (Inst $add, $m1, $m2)>;
       def : Pat<(VTI.Vec (vselect (VTI.Pred VCCR:$pred),
                                   (VTI.Vec (fma m1, m2, add)),
@@ -5672,6 +5678,8 @@ multiclass MVE_VFMA_qr_multi<string iname, MVEVectorVTInfo VTI,
     if scalar_addend then {
       def : Pat<(VTI.Vec (fma v1, v2, vs)),
                 (VTI.Vec (Inst v1, v2, is))>;
+      def : Pat<(VTI.Vec (int_arm_mve_fma v1, v2, vs)),
+                (VTI.Vec (Inst v1, v2, is))>;
       def : Pat<(VTI.Vec (vselect (VTI.Pred VCCR:$pred),
                                   (VTI.Vec (fma v1, v2, vs)),
                                   v1)),
@@ -5680,6 +5688,10 @@ multiclass MVE_VFMA_qr_multi<string iname, MVEVectorVTInfo VTI,
       def : Pat<(VTI.Vec (fma v1, vs, v2)),
                 (VTI.Vec (Inst v2, v1, is))>;
       def : Pat<(VTI.Vec (fma vs, v1, v2)),
+                (VTI.Vec (Inst v2, v1, is))>;
+      def : Pat<(VTI.Vec (int_arm_mve_fma v1, vs, v2)),
+                (VTI.Vec (Inst v2, v1, is))>;
+      def : Pat<(VTI.Vec (int_arm_mve_fma vs, v1, v2)),
                 (VTI.Vec (Inst v2, v1, is))>;
       def : Pat<(VTI.Vec (vselect (VTI.Pred VCCR:$pred),
                                   (VTI.Vec (fma vs, v2, v1)),

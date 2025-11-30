@@ -34,7 +34,8 @@ class IRBuilderAddrParam<int index_> : IRBuilderParam<index_>;
 class IRBuilderIntParam<int index_, string type_> : IRBuilderParam<index_> {
   string type = type_;
 }
-class IRBuilderBase {
+class Builder {}
+class IRBuilderBase : Builder {
   // The prefix of the function call, including an open parenthesis.
   string prefix;
 
@@ -166,7 +167,7 @@ def address;
 // Another node class you can use in the codegen dag. This one corresponds to
 // an IR intrinsic function, which has to be specialized to a particular list
 // of types.
-class IRIntBase<string name_, list<Type> params_ = [], bit appendKind_ = 0> {
+class IRIntBase<string name_, list<Type> params_ = [], bit appendKind_ = 0> : Builder {
   string intname = name_;       // base name of the intrinsic
   list<Type> params = params_;  // list of parameter types
 
@@ -214,8 +215,8 @@ def bitsize;
 
 // strictFPAlt allows a node to have different code generation under strict-fp.
 // TODO: The standard node can be IRBuilderBase or IRIntBase.
-class strictFPAlt<IRBuilderBase standard_, IRIntBase strictfp_> {
-  IRBuilderBase standard = standard_;
+class strictFPAlt<Builder standard_, IRIntBase strictfp_> : Builder {
+  Builder standard = standard_;
   IRIntBase strictfp = strictfp_;
 }
 
