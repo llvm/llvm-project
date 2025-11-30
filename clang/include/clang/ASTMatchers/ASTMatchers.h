@@ -95,6 +95,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -5889,7 +5890,6 @@ AST_MATCHER_P(FunctionDecl, hasAnyBody,
           InnerMatcher.matches(*Statement, Finder, Builder));
 }
 
-
 /// Matches compound statements where at least one substatement matches
 /// a given matcher. Also matches StmtExprs that have CompoundStmt as children.
 ///
@@ -5910,6 +5910,30 @@ AST_POLYMORPHIC_MATCHER_P(hasAnySubstatement,
                                           CS->body_end(), Finder,
                                           Builder) != CS->body_end();
 }
+
+/// Matches compound statements that contain adjacent substatements matching
+/// the provided sequence of matchers. Also matches StmtExprs that have
+/// CompoundStmt as children.
+///
+/// Given
+/// \code
+///   { {}; 1+2; }
+/// \endcode
+/// hasAdjSubstatements(compoundStmt(), binaryOperator())
+///   matches '{ {}; 1+2; }'
+/// with compoundStmt()
+///   matching '{}'
+/// with binaryOperator()
+///   matching '1+2'
+///
+///    hasAdjSubstatements(compoundStmt(), binaryOperator(), returnStmt())
+///  Is equivalent to matching a compound statement that contains
+///  a compound statement immediately followed by a binary operator
+///  immediately followed by a return statement.
+extern const internal::VariadicFunction<
+    internal::HasAdjSubstatementsMatcherType, internal::Matcher<Stmt>,
+    internal::hasAdjSubstatementsFunc>
+    hasAdjSubstatements;
 
 /// Checks that a compound statement contains a specific number of
 /// child statements.

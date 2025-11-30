@@ -31,6 +31,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <optional>
@@ -466,6 +467,58 @@ HasOverloadOpNameMatcher
 hasAnyOverloadedOperatorNameFunc(ArrayRef<const StringRef *> NameRefs) {
   return HasOverloadOpNameMatcher(vectorFromRefs(NameRefs));
 }
+
+static std::vector<Matcher<Stmt>>
+vectorFromMatcherRefs(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
+  std::vector<Matcher<Stmt>> Matchers;
+  Matchers.reserve(MatcherRefs.size());
+  for (auto *Matcher : MatcherRefs)
+    Matchers.push_back(*Matcher);
+  return Matchers;
+}
+
+HasAdjSubstatementsMatcherType
+hasAdjSubstatementsFunc(ArrayRef<const Matcher<Stmt> *> MatcherRefs) {
+  return HasAdjSubstatementsMatcherType(vectorFromMatcherRefs(MatcherRefs));
+}
+
+template <typename T, typename ArgT>
+bool HasAdjSubstatementsMatcher<T, ArgT>::matches(
+    const T &Node, ASTMatchFinder *Finder,
+    BoundNodesTreeBuilder *Builder) const {
+  const CompoundStmt *CS = CompoundStmtMatcher<T>::get(Node);
+  if (!CS)
+    return false;
+
+  // Use llvm::search with lambda predicate that matches statements against
+  // matchers and accumulates BoundNodesTreeBuilder state
+  BoundNodesTreeBuilder CurrentBuilder;
+  const auto Found = llvm::search(
+      CS->body(), Matchers,
+      [&](const Stmt *StmtPtr, const Matcher<Stmt> &Matcher) mutable {
+        BoundNodesTreeBuilder StepBuilder;
+        StepBuilder.addMatch(CurrentBuilder);
+        if (!Matcher.matches(*StmtPtr, Finder, &StepBuilder)) {
+          // reset the state
+          CurrentBuilder = {};
+          return false;
+        }
+        // Invalidate the state
+        CurrentBuilder = StepBuilder;
+        return true;
+      });
+
+  if (Found == CS->body_end())
+    return false;
+
+  Builder->addMatch(CurrentBuilder);
+  return true;
+}
+
+template bool HasAdjSubstatementsMatcher<CompoundStmt>::matches(
+    const CompoundStmt &, ASTMatchFinder *, BoundNodesTreeBuilder *) const;
+template bool HasAdjSubstatementsMatcher<StmtExpr>::matches(
+    const StmtExpr &, ASTMatchFinder *, BoundNodesTreeBuilder *) const;
 
 HasNameMatcher::HasNameMatcher(std::vector<std::string> N)
     : UseUnqualifiedMatch(
@@ -1046,6 +1099,10 @@ const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
 const internal::VariadicFunction<internal::HasOpNameMatcher, StringRef,
                                  internal::hasAnyOperatorNameFunc>
     hasAnyOperatorName = {};
+const internal::VariadicFunction<internal::HasAdjSubstatementsMatcherType,
+                                 internal::Matcher<Stmt>,
+                                 internal::hasAdjSubstatementsFunc>
+    hasAdjSubstatements = {};
 const internal::VariadicFunction<internal::HasOverloadOpNameMatcher, StringRef,
                                  internal::hasAnyOverloadedOperatorNameFunc>
     hasAnyOverloadedOperatorName = {};
