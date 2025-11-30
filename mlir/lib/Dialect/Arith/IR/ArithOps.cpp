@@ -1116,6 +1116,18 @@ OpFoldResult arith::MaximumFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_NegInfFloat()))
     return getLhs();
 
+  // max(max(a, b), b) -> max(a, b)
+  // max(max(a, b), a) -> max(a, b)
+  if (auto max = getLhs().getDefiningOp<MaximumFOp>())
+    if (getRhs() == max.getRhs() || getRhs() == max.getLhs())
+      return getLhs();
+
+  // max(a, max(a, b)) -> max(a, b)
+  // max(b, max(a, b)) -> max(a, b)
+  if (auto max = getRhs().getDefiningOp<MaximumFOp>())
+    if (getLhs() == max.getRhs() || getLhs() == max.getLhs())
+      return getRhs();
+
   return constFoldBinaryOp<FloatAttr>(
       adaptor.getOperands(),
       [](const APFloat &a, const APFloat &b) { return llvm::maximum(a, b); });
@@ -1133,6 +1145,18 @@ OpFoldResult arith::MaxNumFOp::fold(FoldAdaptor adaptor) {
   // maxnumf(x, NaN) -> x
   if (matchPattern(adaptor.getRhs(), m_NaNFloat()))
     return getLhs();
+
+  // max(max(a, b), b) -> max(a, b)
+  // max(max(a, b), a) -> max(a, b)
+  if (auto max = getLhs().getDefiningOp<MaxNumFOp>())
+    if (getRhs() == max.getRhs() || getRhs() == max.getLhs())
+      return getLhs();
+
+  // max(a, max(a, b)) -> max(a, b)
+  // max(b, max(a, b)) -> max(a, b)
+  if (auto max = getRhs().getDefiningOp<MaxNumFOp>())
+    if (getLhs() == max.getRhs() || getLhs() == max.getLhs())
+      return getRhs();
 
   return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(), llvm::maxnum);
 }
@@ -1155,6 +1179,30 @@ OpFoldResult MaxSIOp::fold(FoldAdaptor adaptor) {
     if (intValue.isMinSignedValue())
       return getLhs();
   }
+
+  // max(max(a, b), b) -> max(a, b)
+  // max(max(a, b), a) -> max(a, b)
+  if (auto max = getLhs().getDefiningOp<MaxSIOp>())
+    if (getRhs() == max.getRhs() || getRhs() == max.getLhs())
+      return getLhs();
+
+  // max(a, max(a, b)) -> max(a, b)
+  // max(b, max(a, b)) -> max(a, b)
+  if (auto max = getRhs().getDefiningOp<MaxSIOp>())
+    if (getLhs() == max.getRhs() || getLhs() == max.getLhs())
+      return getRhs();
+
+  // max(min(a, b), a) -> a
+  // max(min(b, a), a) -> a
+  if (auto min = getLhs().getDefiningOp<MinSIOp>())
+    if (getRhs() == min.getRhs() || getRhs() == min.getLhs())
+      return getRhs();
+
+  // max(a, min(a, b)) -> a
+  // max(a, min(b, a)) -> a
+  if (auto min = getRhs().getDefiningOp<MinSIOp>())
+    if (getLhs() == min.getRhs() || getLhs() == min.getLhs())
+      return getLhs();
 
   return constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
                                         [](const APInt &a, const APInt &b) {
@@ -1181,6 +1229,30 @@ OpFoldResult MaxUIOp::fold(FoldAdaptor adaptor) {
       return getLhs();
   }
 
+  // max(max(a, b), b) -> max(a, b)
+  // max(max(a, b), a) -> max(a, b)
+  if (auto max = getLhs().getDefiningOp<MaxUIOp>())
+    if (getRhs() == max.getRhs() || getRhs() == max.getLhs())
+      return getLhs();
+
+  // max(a, max(a, b)) -> max(a, b)
+  // max(b, max(a, b)) -> max(a, b)
+  if (auto max = getRhs().getDefiningOp<MaxUIOp>())
+    if (getLhs() == max.getRhs() || getLhs() == max.getLhs())
+      return getRhs();
+
+  // max(min(a, b), a) -> a
+  // max(min(b, a), a) -> a
+  if (auto min = getLhs().getDefiningOp<MinUIOp>())
+    if (getRhs() == min.getRhs() || getRhs() == min.getLhs())
+      return getRhs();
+
+  // max(a, min(a, b)) -> a
+  // max(a, min(b, a)) -> a
+  if (auto min = getRhs().getDefiningOp<MinUIOp>())
+    if (getLhs() == min.getRhs() || getLhs() == min.getLhs())
+      return getLhs();
+
   return constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
                                         [](const APInt &a, const APInt &b) {
                                           return llvm::APIntOps::umax(a, b);
@@ -1200,6 +1272,18 @@ OpFoldResult arith::MinimumFOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_PosInfFloat()))
     return getLhs();
 
+  // min(min(a, b), b) -> min(a, b)
+  // min(min(a, b), a) -> min(a, b)
+  if (auto min = getLhs().getDefiningOp<MinimumFOp>())
+    if (getRhs() == min.getRhs() || getRhs() == min.getLhs())
+      return getLhs();
+
+  // min(a, min(a, b)) -> min(a, b)
+  // min(b, min(a, b)) -> min(a, b)
+  if (auto min = getRhs().getDefiningOp<MinimumFOp>())
+    if (getLhs() == min.getRhs() || getLhs() == min.getLhs())
+      return getRhs();
+
   return constFoldBinaryOp<FloatAttr>(
       adaptor.getOperands(),
       [](const APFloat &a, const APFloat &b) { return llvm::minimum(a, b); });
@@ -1217,6 +1301,18 @@ OpFoldResult arith::MinNumFOp::fold(FoldAdaptor adaptor) {
   // minnumf(x, NaN) -> x
   if (matchPattern(adaptor.getRhs(), m_NaNFloat()))
     return getLhs();
+
+  // min(min(a, b), b) -> min(a, b)
+  // min(min(a, b), a) -> min(a, b)
+  if (auto min = getLhs().getDefiningOp<MinNumFOp>())
+    if (getRhs() == min.getRhs() || getRhs() == min.getLhs())
+      return getLhs();
+
+  // min(a, min(a, b)) -> min(a, b)
+  // min(b, min(a, b)) -> min(a, b)
+  if (auto min = getRhs().getDefiningOp<MinNumFOp>())
+    if (getLhs() == min.getRhs() || getLhs() == min.getLhs())
+      return getRhs();
 
   return constFoldBinaryOp<FloatAttr>(
       adaptor.getOperands(),
@@ -1242,6 +1338,30 @@ OpFoldResult MinSIOp::fold(FoldAdaptor adaptor) {
       return getLhs();
   }
 
+  // min(min(a, b), b) -> min(a, b)
+  // min(min(a, b), a) -> min(a, b)
+  if (auto min = getLhs().getDefiningOp<MinSIOp>())
+    if (getRhs() == min.getRhs() || getRhs() == min.getLhs())
+      return getLhs();
+
+  // min(a, min(a, b)) -> min(a, b)
+  // min(b, min(a, b)) -> min(a, b)
+  if (auto min = getRhs().getDefiningOp<MinSIOp>())
+    if (getLhs() == min.getRhs() || getLhs() == min.getLhs())
+      return getRhs();
+
+  // min(max(a, b), a) -> a
+  // min(max(b, a), a) -> a
+  if (auto max = getLhs().getDefiningOp<MaxSIOp>())
+    if (getRhs() == max.getRhs() || getRhs() == max.getLhs())
+      return getRhs();
+
+  // min(a, max(a, b)) -> a
+  // min(a, max(b, a)) -> a
+  if (auto max = getRhs().getDefiningOp<MaxSIOp>())
+    if (getLhs() == max.getRhs() || getLhs() == max.getLhs())
+      return getLhs();
+
   return constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
                                         [](const APInt &a, const APInt &b) {
                                           return llvm::APIntOps::smin(a, b);
@@ -1266,6 +1386,30 @@ OpFoldResult MinUIOp::fold(FoldAdaptor adaptor) {
     if (intValue.isMaxValue())
       return getLhs();
   }
+
+  // min(min(a, b), b) -> min(a, b)
+  // min(min(a, b), a) -> min(a, b)
+  if (auto min = getLhs().getDefiningOp<MinUIOp>())
+    if (getRhs() == min.getRhs() || getRhs() == min.getLhs())
+      return getLhs();
+
+  // min(a, min(a, b)) -> min(a, b)
+  // min(b, min(a, b)) -> min(a, b)
+  if (auto min = getRhs().getDefiningOp<MinUIOp>())
+    if (getLhs() == min.getRhs() || getLhs() == min.getLhs())
+      return getRhs();
+
+  // min(max(a, b), a) -> a
+  // min(max(b, a), a) -> a
+  if (auto max = getLhs().getDefiningOp<MaxUIOp>())
+    if (getRhs() == max.getRhs() || getRhs() == max.getLhs())
+      return getRhs();
+
+  // min(a, max(a, b)) -> a
+  // min(a, max(b, a)) -> a
+  if (auto max = getRhs().getDefiningOp<MaxUIOp>())
+    if (getLhs() == max.getRhs() || getLhs() == max.getLhs())
+      return getLhs();
 
   return constFoldBinaryOp<IntegerAttr>(adaptor.getOperands(),
                                         [](const APInt &a, const APInt &b) {
