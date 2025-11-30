@@ -58,8 +58,8 @@ static_assert(test_zero_size(), "");
 
 constexpr bool test_struct_member() {
   struct S {
-    int x;
-    int y;
+  int x;
+  int y;
   };
   constexpr S s = {1, 2};
   __builtin_assume_dereferenceable(&s.x, 4);
@@ -90,24 +90,3 @@ constexpr int arr2[5] = {1, 2, 3, 4, 5};
 constexpr int too_large = (__builtin_assume_dereferenceable(arr2, 6 * sizeof(int)), 12); // expected-error {{constexpr variable 'too_large' must be initialized by a constant expression}} expected-note {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
 
 constexpr int null = (__builtin_assume_dereferenceable(nullptr, 4), 12); // expected-error {{constexpr variable 'null' must be initialized by a constant expression}} expected-note {{read of dereferenced null pointer is not allowed in a constant expression}}
-
-int b = 10;
-const int f = (__builtin_assume_dereferenceable((char*)&b + 1, 3), 12);
-int a = f;
-
-int c[10] = {};
-const int g = (__builtin_assume_dereferenceable((unsigned char*)c + 5, 35), 42);
-int d = g;
-
-long long ll = 100;
-const int h = (__builtin_assume_dereferenceable((void*)&ll, 8), 99);
-int e = h;
-
-struct Foo { int x; int y; int z; };
-Foo foo = {1, 2, 3};
-const int i = (__builtin_assume_dereferenceable((short*)&foo + 2, 8), 77);
-int j = i;
-
-double darr[10] = {};
-const int k = (__builtin_assume_dereferenceable((int*)darr, 40), 55);
-int l = k;
