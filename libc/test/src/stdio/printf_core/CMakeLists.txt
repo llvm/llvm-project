@@ -35,4 +35,5 @@ add_libc_unittest(
     libc.src.stdio.printf_core.converter
     libc.src.stdio.printf_core.writer
     libc.src.stdio.printf_core.core_structs
+    libc.hdr.types.wchar_t
 )
