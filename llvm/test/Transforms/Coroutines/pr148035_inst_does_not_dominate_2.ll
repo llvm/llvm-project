@@ -16,25 +16,28 @@ define i8 @"?resuming_on_new_thread@@YA?AUtask@@Vunique_ptr@@@Z"(ptr %0) #0 pers
   invoke void @llvm.seh.try.begin()
           to label %common.ret unwind label %8
 
-common.ret:                                       ; preds = %12, %10, %2
+common.ret:                                       ; preds = %10, %2
   ret i8 0
+
+cleanup.ret:                                      ; preds = %12
+  cleanupret from %13 unwind to caller
 
 8:                                                ; preds = %2
   %9 = catchswitch within none [label %10] unwind label %12
 
 10:                                               ; preds = %8
   %11 = catchpad within %9 [ptr null, i32 0, ptr null]
-  br label %common.ret
+  catchret from %11 to label %common.ret
 
 12:                                               ; preds = %8
   %13 = cleanuppad within none []
   invoke void @llvm.seh.scope.end()
-          to label %common.ret unwind label %14
+          to label %cleanup.ret unwind label %14
 
 14:                                               ; preds = %12, %1
   %15 = cleanuppad within none []
   store i32 0, ptr %0, align 4
-  br label %common.ret
+  cleanupret from %15 unwind to caller
 }
 
 attributes #0 = { presplitcoroutine }

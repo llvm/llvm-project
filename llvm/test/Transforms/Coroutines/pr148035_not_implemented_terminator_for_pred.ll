@@ -15,7 +15,7 @@ define i8 @"?resuming_on_new_thread@@YA?AUtask@@V?$unique_ptr@HU?$default_delete
   invoke void @llvm.seh.try.begin()
           to label %7 unwind label %8
 
-7:                                                ; preds = %2
+7:                                                ; preds = %2, %10
   ret i8 0
 
 8:                                                ; preds = %2
@@ -23,7 +23,7 @@ define i8 @"?resuming_on_new_thread@@YA?AUtask@@V?$unique_ptr@HU?$default_delete
 
 10:                                               ; preds = %8
   %11 = catchpad within %9 [ptr null, i32 0, ptr null]
-  ret i8 0
+  catchret from %11 to label %7
 
 12:                                               ; preds = %8
   %13 = cleanuppad within none []
@@ -31,7 +31,7 @@ define i8 @"?resuming_on_new_thread@@YA?AUtask@@V?$unique_ptr@HU?$default_delete
           to label %14 unwind label %15
 
 14:                                               ; preds = %12
-  ret i8 0
+  cleanupret from %13 unwind to caller
 
 15:                                               ; preds = %12, %1
   %16 = cleanuppad within none []
