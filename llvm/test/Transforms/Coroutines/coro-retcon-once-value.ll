@@ -160,7 +160,7 @@ declare void @print(i32)
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @allocate(i32 16)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CHECK-NEXT:    [[VAL_SPILL_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 8
-; CHECK-NEXT:    store i32 [[VAL:%.*]], ptr [[VAL_SPILL_ADDR]], align 4
+; CHECK-NEXT:    store i32 [[VAL:%.*]], ptr [[VAL_SPILL_ADDR]], align 8
 ; CHECK-NEXT:    store ptr [[ARRAY:%.*]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[ARRAY]], align 4
 ; CHECK-NEXT:    [[LOAD_POS:%.*]] = icmp sgt i32 [[LOAD]], 0
