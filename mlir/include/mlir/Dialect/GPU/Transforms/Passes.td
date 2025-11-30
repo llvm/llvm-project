@@ -113,7 +113,9 @@ def GpuModuleToBinaryPass
     Option<"compilationTarget", "format", "std::string", [{"fatbin"}],
            "The target representation of the compilation process.">,
     Option<"elfSection", "section", "std::string", [{""}],
-           "ELF section where binary is to be located.">
+           "ELF section where binary is to be located.">,
+    Option<"dumpIntermediates", "dump-intermediates", "std::string", [{""}],
+           "Directory to dump intermediate artifacts (LLVM IR, device assembly).">
   ];
 }
 
