@@ -395,10 +395,9 @@ LVScope *LVDWARFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
       if (abbrCode) {
         if (const DWARFAbbreviationDeclaration *AbbrevDecl =
                 TheDIE.getAbbreviationDeclarationPtr())
-          if (AbbrevDecl)
-            for (const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec :
-                 AbbrevDecl->attributes())
-              processOneAttribute(TheDIE, &CurrentEndOffset, AttrSpec);
+          for (const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec :
+               AbbrevDecl->attributes())
+            processOneAttribute(TheDIE, &CurrentEndOffset, AttrSpec);
       }
     };
 
