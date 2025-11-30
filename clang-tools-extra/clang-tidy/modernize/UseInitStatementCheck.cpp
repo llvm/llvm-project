@@ -26,6 +26,8 @@ namespace {
 
 // Matches CompoundStmt that contains a PrevStmt immediately followed by
 // NextStmt
+// FIXME: use hasAdjSubstatements, see
+// https://github.com/llvm/llvm-project/pull/169965
 AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
                ast_matchers::internal::Matcher<Stmt>, DeclMatcher,
                ast_matchers::internal::Matcher<Stmt>, StmtMatcher) {
@@ -92,101 +94,30 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(MakeCompoundMatcher(switchStmt, "switchStmt"), this);
 }
 
+static std::string extractDeclStmtText(const DeclStmt *PrevDecl,
+                                       const SourceManager *SM,
+                                       const LangOptions &LangOpts) {
+  const SourceRange CuttingRange = PrevDecl->getSourceRange();
+  CharSourceRange DeclCharRange = Lexer::makeFileCharRange(
+      CharSourceRange::getTokenRange(CuttingRange), *SM, LangOpts);
+
+  if (DeclCharRange.isInvalid())
+    return "";
+
+  const StringRef DeclStmtText =
+      Lexer::getSourceText(DeclCharRange, *SM, LangOpts);
+
+  return DeclStmtText.empty() ? "" : DeclStmtText.trim().str() + " ";
+}
+
 void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *If = Result.Nodes.getNodeAs<IfStmt>("ifStmt");
   const auto *Switch = Result.Nodes.getNodeAs<SwitchStmt>("switchStmt");
   const auto *PrevDecl = Result.Nodes.getNodeAs<DeclStmt>("prevDecl");
   const auto *Condition = Result.Nodes.getNodeAs<Expr>("condition");
-  const Stmt *Statement = If ? static_cast<const Stmt *>(If) : Switch;
 
-  if (!PrevDecl || !Condition || !Statement)
+  if (!PrevDecl || !Condition || (!If && !Switch))
     return;
-
-  const SourceRange RemovalRange = PrevDecl->getSourceRange();
-#if 0
-  SourceRange ExtendedRange = RemovalRange;
-
-  SourceLocation ExpansionEnd = Result.SourceManager->getExpansionLoc(RemovalRange.getEnd());
-
-  // Создать Lexer для поиска токенов после expansion конца
-  SourceLocation FileStart = Result.SourceManager->getLocForStartOfFile(
-      Result.SourceManager->getFileID(ExpansionEnd));
-  std::pair<FileID, unsigned> LocInfo = Result.SourceManager->getDecomposedLoc(ExpansionEnd);
-  StringRef FileBuffer = Result.SourceManager->getBufferData(LocInfo.first);
-
-  Lexer Lex(ExpansionEnd, getLangOpts(), 
-            FileBuffer.data(), FileBuffer.data() + LocInfo.second, 
-            FileBuffer.data() + FileBuffer.size());
-
-  Token Tok;
-  if (!Lex.LexFromRawLexer(Tok) && Tok.is(tok::semi)) {
-      ExtendedRange.setEnd(Result.SourceManager->getSpellingLoc(Tok.getEndLoc()));
-  }
-#endif
-#if 0
-  // Найти следующую точку с запятой после DeclStmt
-  auto TokPos =
-  Result.SourceManager->getExpansionLoc(RemovalRange.getBegin());
-  do {
-    if (const auto NextToken = Lexer::findNextToken(TokPos, 
-                                                    *Result.SourceManager, 
-                                                    getLangOpts())) {
-        if (NextToken->is(tok::semi)) {
-            ExtendedRange.setEnd(NextToken->getEndLoc());
-            break;
-        }
-        TokPos = NextToken->getLocation();
-    }
-  } while (true);
-#endif
-
-  CharSourceRange DeclCharRange = Lexer::makeFileCharRange(
-      CharSourceRange::getTokenRange(RemovalRange),
-      *Result.SourceManager, getLangOpts());
-
-  // Get the source text using makeFileCharRange to properly handle macros
-  //const CharSourceRange DeclCharRange = Lexer::makeFileCharRange(
-  //    CharSourceRange::getTokenRange(RemovalRange),
-  //    *Result.SourceManager, getLangOpts());
-  
-  bool CanFix = true;
-
-  if (DeclCharRange.isInvalid()) {
-    DeclCharRange = Lexer::makeFileCharRange(
-      CharSourceRange::getTokenRange(RemovalRange),
-      *Result.SourceManager, getLangOpts());
-    if (DeclCharRange.isInvalid())  
-    CanFix = false;
-  }
-  
-  const StringRef DeclStmtText = Lexer::getSourceText(
-      DeclCharRange, *Result.SourceManager, getLangOpts());
-  
-  if (DeclStmtText.empty())
-    CanFix = false;
-
-  const auto NewInitStmt = DeclStmtText.trim().str() +
-                           ("") + " ";
-  // const auto NewInitStmt = normDeclStmtText(DeclStmtText).str() + "; ";
-
-  // Allow the fix if we can extract valid source text. We use makeFileCharRange
-  // to get source text that preserves macros (like MY_INT in types). The
-  // rangeCanBeFixed check ensures basic validity, but we also allow the fix
-  // if the range is entirely within a macro argument (which preserves macros).
-  // Additionally, if we successfully extracted source text using makeFileCharRange,
-  // it means we can preserve macro spelling, so we allow the fix even if
-  // rangeCanBeFixed returns false due to macro expansions in the type.
-  // We check that the begin location is valid and not in a system header.
-  const SourceLocation DeclBegin = RemovalRange.getBegin();
-  const SourceLocation SpellingLoc =
-      Result.SourceManager->getSpellingLoc(DeclBegin);
-  if (CanFix)
-    CanFix =
-        utils::rangeCanBeFixed(RemovalRange, Result.SourceManager) ||
-        utils::rangeIsEntirelyWithinMacroArgument(RemovalRange,
-                                                Result.SourceManager) ||
-        (SpellingLoc.isValid() &&
-        !Result.SourceManager->isInSystemHeader(SpellingLoc));
 
   auto Diag = diag(PrevDecl->getBeginLoc(),
                    "%select{multiple variable|variable %1}0 declaration "
@@ -194,9 +125,16 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
                    "%select{if|switch}2 init statement")
               << (llvm::size(PrevDecl->decls()) == 1)
               << llvm::dyn_cast<VarDecl>(*PrevDecl->decl_begin()) << !If;
+
+  const auto NewInitStmtOpt =
+      extractDeclStmtText(PrevDecl, Result.SourceManager, getLangOpts());
+  const bool CanFix = !NewInitStmtOpt.empty();
+  const SourceRange RemovalRange = PrevDecl->getSourceRange();
+
   if (CanFix)
     Diag << FixItHint::CreateRemoval(RemovalRange)
-         << FixItHint::CreateInsertion(Condition->getBeginLoc(), NewInitStmt);
+         << FixItHint::CreateInsertion(Condition->getBeginLoc(),
+                                       NewInitStmtOpt);
 }
 
 } // namespace clang::tidy::modernize
