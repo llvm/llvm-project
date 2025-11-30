@@ -17,7 +17,16 @@
 #  pragma GCC system_header
 #endif
 
-#if __has_feature(address_sanitizer)
+// _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS determines whether the containers should provide ASAN container
+// overflow checks. Some containers like std::string need stricter requirements in order to enable these
+// checks and also need to check that the library was built with sanitizer support (_LIBCPP_INSTRUMENTED_WITH_ASAN).
+#if __has_feature(address_sanitizer) && !defined(__SANITIZER_DISABLE_CONTAINER_OVERFLOW__)
+#  define _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS 1
+#else
+#  define _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS 0
+#endif
+
+#if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
 
 extern "C" {
 _LIBCPP_EXPORTED_FROM_ABI void
@@ -28,12 +37,12 @@ _LIBCPP_EXPORTED_FROM_ABI int
 __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, const void*, const void*);
 }
 
-#endif // __has_feature(address_sanitizer)
+#endif // _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // ASan choices
-#if __has_feature(address_sanitizer)
+#if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
 #  define _LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS 1
 #endif
 
@@ -57,7 +66,7 @@ _LIBCPP_HIDE_FROM_ABI void __annotate_double_ended_contiguous_container(
     const void* __last_old_contained,
     const void* __first_new_contained,
     const void* __last_new_contained) {
-#if !__has_feature(address_sanitizer)
+#if !_LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
   (void)__first_storage;
   (void)__last_storage;
   (void)__first_old_contained;
@@ -86,7 +95,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __annotate_contiguous_c
     const void* __last_storage,
     const void* __old_last_contained,
     const void* __new_last_contained) {
-#if !__has_feature(address_sanitizer)
+#if !_LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
   (void)__first_storage;
   (void)__last_storage;
   (void)__old_last_contained;
