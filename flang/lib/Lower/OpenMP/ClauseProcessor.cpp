@@ -1241,11 +1241,20 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
       omp::clause::Linear>([&](const omp::clause::Linear &clause,
                                const parser::CharBlock &) {
     auto &objects = std::get<omp::ObjectList>(clause.t);
+    static std::vector<mlir::Attribute> typeAttrs;
+
+    if (!result.linearVars.size())
+      typeAttrs.clear();
+
     for (const omp::Object &object : objects) {
       semantics::Symbol *sym = object.sym();
       const mlir::Value variable = converter.getSymbolAddress(*sym);
       result.linearVars.push_back(variable);
+      mlir::Type ty = converter.genType(*sym);
+      typeAttrs.push_back(mlir::TypeAttr::get(ty));
     }
+    result.linearVarTypes =
+        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
     if (objects.size()) {
       if (auto &mod =
               std::get<std::optional<omp::clause::Linear::StepComplexModifier>>(
