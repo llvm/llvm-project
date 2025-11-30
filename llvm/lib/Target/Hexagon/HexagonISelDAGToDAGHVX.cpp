@@ -948,7 +948,7 @@ namespace llvm {
     void selectRor(SDNode *N);
     void selectVAlign(SDNode *N);
 
-    static SmallVector<uint32_t, 8> getPerfectCompletions(ShuffleMask SM,
+    static SmallVector<uint32_t, 8> getPerfectCompletions(const ShuffleMask &SM,
                                                           unsigned Width);
     static SmallVector<uint32_t, 8> completeToPerfect(
         ArrayRef<uint32_t> Completions, unsigned Width);
@@ -966,22 +966,22 @@ namespace llvm {
       None,
       PackMux,
     };
-    OpRef concats(OpRef Va, OpRef Vb, ResultStack &Results);
+    OpRef concats(const OpRef &Va, const OpRef &Vb, ResultStack &Results);
     OpRef funnels(OpRef Va, OpRef Vb, int Amount, ResultStack &Results);
 
     OpRef packs(ShuffleMask SM, OpRef Va, OpRef Vb, ResultStack &Results,
                 MutableArrayRef<int> NewMask, unsigned Options = None);
-    OpRef packp(ShuffleMask SM, OpRef Va, OpRef Vb, ResultStack &Results,
+    OpRef packp(const ShuffleMask &SM, const OpRef &Va, const OpRef &Vb, ResultStack &Results,
                 MutableArrayRef<int> NewMask);
-    OpRef vmuxs(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
+    OpRef vmuxs(ArrayRef<uint8_t> Bytes, const OpRef &Va, const OpRef &Vb,
                 ResultStack &Results);
-    OpRef vmuxp(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
+    OpRef vmuxp(ArrayRef<uint8_t> Bytes, const OpRef &Va, const OpRef &Vb,
                 ResultStack &Results);
 
-    OpRef shuffs1(ShuffleMask SM, OpRef Va, ResultStack &Results);
-    OpRef shuffs2(ShuffleMask SM, OpRef Va, OpRef Vb, ResultStack &Results);
-    OpRef shuffp1(ShuffleMask SM, OpRef Va, ResultStack &Results);
-    OpRef shuffp2(ShuffleMask SM, OpRef Va, OpRef Vb, ResultStack &Results);
+    OpRef shuffs1(ShuffleMask SM, const OpRef &Va, ResultStack &Results);
+    OpRef shuffs2(const ShuffleMask &SM, const OpRef &Va, const OpRef &Vb, ResultStack &Results);
+    OpRef shuffp1(const ShuffleMask &SM, const OpRef &Va, ResultStack &Results);
+    OpRef shuffp2(const ShuffleMask &SM, const OpRef &Va, const OpRef &Vb, ResultStack &Results);
 
     OpRef butterfly(ShuffleMask SM, OpRef Va, ResultStack &Results);
     OpRef contracting(ShuffleMask SM, OpRef Va, OpRef Vb, ResultStack &Results);
@@ -1048,7 +1048,7 @@ static bool isLowHalfOnly(ArrayRef<int> Mask) {
   return llvm::all_of(Mask.drop_front(L / 2), [](int M) { return M < 0; });
 }
 
-static SmallVector<unsigned, 4> getInputSegmentList(ShuffleMask SM,
+static SmallVector<unsigned, 4> getInputSegmentList(const ShuffleMask &SM,
                                                     unsigned SegLen) {
   assert(isPowerOf2_32(SegLen));
   SmallVector<unsigned, 4> SegList;
@@ -1067,7 +1067,7 @@ static SmallVector<unsigned, 4> getInputSegmentList(ShuffleMask SM,
   return SegList;
 }
 
-static SmallVector<unsigned, 4> getOutputSegmentMap(ShuffleMask SM,
+static SmallVector<unsigned, 4> getOutputSegmentMap(const ShuffleMask &SM,
                                                     unsigned SegLen) {
   // Calculate the layout of the output segments in terms of the input
   // segments.
@@ -1212,7 +1212,7 @@ void HvxSelector::materialize(const ResultStack &Results) {
   DAG.RemoveDeadNodes();
 }
 
-OpRef HvxSelector::concats(OpRef Lo, OpRef Hi, ResultStack &Results) {
+OpRef HvxSelector::concats(const OpRef &Lo, const OpRef &Hi, ResultStack &Results) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
   const SDLoc &dl(Results.InpNode);
   Results.push(TargetOpcode::REG_SEQUENCE, getPairVT(MVT::i8), {
@@ -1495,7 +1495,7 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
 // Va, Vb are vector pairs. If SM only uses two single vectors from Va/Vb,
 // pack these vectors into a pair, and remap SM into NewMask to use the
 // new pair instead.
-OpRef HvxSelector::packp(ShuffleMask SM, OpRef Va, OpRef Vb,
+OpRef HvxSelector::packp(const ShuffleMask &SM, const OpRef &Va, const OpRef &Vb,
                          ResultStack &Results, MutableArrayRef<int> NewMask) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
   SmallVector<unsigned, 4> SegList = getInputSegmentList(SM.Mask, HwLen);
@@ -1532,7 +1532,7 @@ OpRef HvxSelector::packp(ShuffleMask SM, OpRef Va, OpRef Vb,
   return concats(Out[0], Out[1], Results);
 }
 
-OpRef HvxSelector::vmuxs(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
+OpRef HvxSelector::vmuxs(ArrayRef<uint8_t> Bytes, const OpRef &Va, const OpRef &Vb,
                          ResultStack &Results) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
   MVT ByteTy = getSingleVT(MVT::i8);
@@ -1545,7 +1545,7 @@ OpRef HvxSelector::vmuxs(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
   return OpRef::res(Results.top());
 }
 
-OpRef HvxSelector::vmuxp(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
+OpRef HvxSelector::vmuxp(ArrayRef<uint8_t> Bytes, const OpRef &Va, const OpRef &Vb,
                          ResultStack &Results) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
   size_t S = Bytes.size() / 2;
@@ -1554,7 +1554,7 @@ OpRef HvxSelector::vmuxp(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
   return concats(L, H, Results);
 }
 
-OpRef HvxSelector::shuffs1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
+OpRef HvxSelector::shuffs1(ShuffleMask SM, const OpRef &Va, ResultStack &Results) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
   unsigned VecLen = SM.Mask.size();
   assert(HwLen == VecLen);
@@ -1597,7 +1597,7 @@ OpRef HvxSelector::shuffs1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   return butterfly(SM, Va, Results);
 }
 
-OpRef HvxSelector::shuffs2(ShuffleMask SM, OpRef Va, OpRef Vb,
+OpRef HvxSelector::shuffs2(const ShuffleMask &SM, const OpRef &Va, const OpRef &Vb,
                            ResultStack &Results) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
   if (isUndef(SM.Mask))
@@ -1632,7 +1632,7 @@ OpRef HvxSelector::shuffs2(ShuffleMask SM, OpRef Va, OpRef Vb,
   return vmuxs(Bytes, L, R, Results);
 }
 
-OpRef HvxSelector::shuffp1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
+OpRef HvxSelector::shuffp1(const ShuffleMask &SM, const OpRef &Va, ResultStack &Results) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
   int VecLen = SM.Mask.size();
 
@@ -1675,7 +1675,7 @@ OpRef HvxSelector::shuffp1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   return OpRef::fail();
 }
 
-OpRef HvxSelector::shuffp2(ShuffleMask SM, OpRef Va, OpRef Vb,
+OpRef HvxSelector::shuffp2(const ShuffleMask &SM, const OpRef &Va, const OpRef &Vb,
                            ResultStack &Results) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
   if (isUndef(SM.Mask))
@@ -1916,7 +1916,7 @@ bool HvxSelector::scalarizeShuffle(ArrayRef<int> Mask, const SDLoc &dl,
   return true;
 }
 
-SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(ShuffleMask SM,
+SmallVector<uint32_t, 8> HvxSelector::getPerfectCompletions(const ShuffleMask &SM,
                                                             unsigned Width) {
   auto possibilities = [](ArrayRef<uint8_t> Bs, unsigned Width) -> uint32_t {
     unsigned Impossible = ~(1u << Width) + 1;

@@ -393,7 +393,7 @@ struct SysAlias {
   constexpr SysAlias(const char *N, uint16_t E, FeatureBitset F)
       : Name(N), Encoding(E), FeaturesRequired(F) {}
 
-  bool haveFeatures(FeatureBitset ActiveFeatures) const {
+  bool haveFeatures(const FeatureBitset &ActiveFeatures) const {
     return ActiveFeatures[llvm::AArch64::FeatureAll] ||
            (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
   }
@@ -664,7 +664,7 @@ struct PHint {
   unsigned Encoding;
   FeatureBitset FeaturesRequired;
 
-  bool haveFeatures(FeatureBitset ActiveFeatures) const {
+  bool haveFeatures(const FeatureBitset &ActiveFeatures) const {
     return ActiveFeatures[llvm::AArch64::FeatureAll] ||
            (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
   }
@@ -799,7 +799,7 @@ namespace AArch64SysReg {
     bool Writeable;
     FeatureBitset FeaturesRequired;
 
-    bool haveFeatures(FeatureBitset ActiveFeatures) const {
+    bool haveFeatures(const FeatureBitset &ActiveFeatures) const {
       return ActiveFeatures[llvm::AArch64::FeatureAll] ||
              (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
     }
