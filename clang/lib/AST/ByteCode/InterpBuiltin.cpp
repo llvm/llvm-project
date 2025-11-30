@@ -3902,11 +3902,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_rotl:
   case Builtin::BI_lrotl:
   case Builtin::BI_rotl64:
-    return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) {
-          return Value.rotl(Amount);
-        });
-
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
@@ -3915,11 +3910,33 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_rotr16:
   case Builtin::BI_rotr:
   case Builtin::BI_lrotr:
-  case Builtin::BI_rotr64:
+  case Builtin::BI_rotr64: {
+    // Determine if this is a rotate right operation
+    bool IsRotateRight;
+    switch (BuiltinID) {
+    case Builtin::BI__builtin_rotateright8:
+    case Builtin::BI__builtin_rotateright16:
+    case Builtin::BI__builtin_rotateright32:
+    case Builtin::BI__builtin_rotateright64:
+    case Builtin::BI_rotr8:
+    case Builtin::BI_rotr16:
+    case Builtin::BI_rotr:
+    case Builtin::BI_lrotr:
+    case Builtin::BI_rotr64:
+      IsRotateRight = true;
+      break;
+    default:
+      IsRotateRight = false;
+      break;
+    }
+
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) {
-          return Value.rotr(Amount);
+        S, OpPC, Call, [IsRotateRight](const APSInt &Value, APSInt Amount) {
+          Amount = NormalizeRotateAmount(Value, Amount);
+          return IsRotateRight ? Value.rotr(Amount.getZExtValue())
+                               : Value.rotl(Amount.getZExtValue());
         });
+  }
 
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:

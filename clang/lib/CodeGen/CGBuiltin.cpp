@@ -2488,12 +2488,51 @@ RValue CodeGenFunction::emitRotate(const CallExpr *E, bool IsRotateRight) {
   // The builtin's shift arg may have a different type than the source arg and
   // result, but the LLVM intrinsic uses the same type for all values.
   llvm::Type *Ty = Src->getType();
-  ShiftAmt = Builder.CreateIntCast(ShiftAmt, Ty, false);
+  llvm::Type *ShiftTy = ShiftAmt->getType();
+
+  unsigned BitWidth = Ty->getIntegerBitWidth();
+
+  // Normalize shift amount to [0, BitWidth) range to match runtime behavior.
+  // This matches the algorithm in ExprConstant.cpp for constant evaluation.
+  if (BitWidth == 1) {
+    // Rotating a 1-bit value is always a no-op
+    ShiftAmt = ConstantInt::get(ShiftTy, 0);
+  } else {
+    unsigned ShiftAmtBitWidth = ShiftTy->getIntegerBitWidth();
+    bool ShiftAmtIsSigned = E->getArg(1)->getType()->isSignedIntegerType();
+
+    // Choose the wider type for the divisor to avoid truncation
+    llvm::Type *DivisorTy = ShiftAmtBitWidth > BitWidth ? ShiftTy : Ty;
+    llvm::Value *Divisor = ConstantInt::get(DivisorTy, BitWidth);
+
+    // Extend ShiftAmt to match Divisor width if needed
+    if (ShiftAmtBitWidth < DivisorTy->getIntegerBitWidth()) {
+      ShiftAmt = Builder.CreateIntCast(ShiftAmt, DivisorTy, ShiftAmtIsSigned);
+    }
+
+    // Normalize to [0, BitWidth)
+    llvm::Value *RemResult;
+    if (ShiftAmtIsSigned) {
+      RemResult = Builder.CreateSRem(ShiftAmt, Divisor);
+      // Signed remainder can be negative, convert to positive equivalent
+      llvm::Value *Zero = ConstantInt::get(DivisorTy, 0);
+      llvm::Value *IsNegative = Builder.CreateICmpSLT(RemResult, Zero);
+      llvm::Value *PositiveShift = Builder.CreateAdd(RemResult, Divisor);
+      ShiftAmt = Builder.CreateSelect(IsNegative, PositiveShift, RemResult);
+    } else {
+      ShiftAmt = Builder.CreateURem(ShiftAmt, Divisor);
+    }
+
+    // Convert to the source type if needed
+    if (ShiftAmt->getType() != Ty) {
+      ShiftAmt = Builder.CreateIntCast(ShiftAmt, Ty, false);
+    }
+  }
 
   // Rotate is a special case of LLVM funnel shift - 1st 2 args are the same.
   unsigned IID = IsRotateRight ? Intrinsic::fshr : Intrinsic::fshl;
   Function *F = CGM.getIntrinsic(IID, Ty);
-  return RValue::get(Builder.CreateCall(F, { Src, Src, ShiftAmt }));
+  return RValue::get(Builder.CreateCall(F, {Src, Src, ShiftAmt}));
 }
 
 // Map math builtins for long-double to f128 version.
@@ -3612,6 +3651,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
+  case Builtin::BI__builtin_stdc_rotate_left:
   case Builtin::BI_rotl8: // Microsoft variants of rotate left
   case Builtin::BI_rotl16:
   case Builtin::BI_rotl:
@@ -3623,6 +3663,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI__builtin_stdc_rotate_right:
   case Builtin::BI_rotr8: // Microsoft variants of rotate right
   case Builtin::BI_rotr16:
   case Builtin::BI_rotr:
