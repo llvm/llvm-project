@@ -1018,7 +1018,8 @@ RISCVTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
     if (!TLI->isLegalFirstFaultLoad(DataTypeVT, Alignment))
       return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
-    return getMemoryOpCost(Instruction::Load, DataTy, Alignment, 0, CostKind,
+    unsigned AS = MICA.getAddressSpace();
+    return getMemoryOpCost(Instruction::Load, DataTy, Alignment, AS, CostKind,
                            {TTI::OK_AnyValue, TTI::OP_None}, nullptr);
   }
   }
