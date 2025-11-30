@@ -143,6 +143,8 @@ public:
 
   bool shouldConsiderVectorizationRegPressure() const override { return true; }
 
+  bool preferControlFlow() const override { return false; }
+
   InstructionCost
   getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const override;
