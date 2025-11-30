@@ -1980,13 +1980,18 @@ static Value *simplifyAndOrWithICmpEq(unsigned Opcode, Value *Op0, Value *Op1,
   // In the final case (Res == Absorber with inverted predicate), it is safe to
   // refine poison during simplification, but not undef. For simplicity always
   // disable undef-based folds here.
-  if (Value *Res = simplifyWithOpReplaced(Op1, A, B, Q.getWithoutUndef(),
-                                          /* AllowRefinement */ true,
-                                          /* DropFlags */ nullptr, MaxRecurse))
+  // Allow one extra recursion level for this speculative replace+simplify;
+  // because some folds require > MaxRecurse replacements to appear.
+  unsigned LocalMaxRecurse = MaxRecurse ? MaxRecurse + 1 : 1;
+  if (Value *Res =
+          simplifyWithOpReplaced(Op1, A, B, Q.getWithoutUndef(),
+                                 /* AllowRefinement */ true,
+                                 /* DropFlags */ nullptr, LocalMaxRecurse))
     return Simplify(Res);
-  if (Value *Res = simplifyWithOpReplaced(Op1, B, A, Q.getWithoutUndef(),
-                                          /* AllowRefinement */ true,
-                                          /* DropFlags */ nullptr, MaxRecurse))
+  if (Value *Res =
+          simplifyWithOpReplaced(Op1, B, A, Q.getWithoutUndef(),
+                                 /* AllowRefinement */ true,
+                                 /* DropFlags */ nullptr, LocalMaxRecurse))
     return Simplify(Res);
 
   return nullptr;
