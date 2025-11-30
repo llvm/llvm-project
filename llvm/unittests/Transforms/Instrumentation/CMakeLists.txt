@@ -15,4 +15,4 @@ add_llvm_unittest(InstrumentationTests
 
 target_link_libraries(InstrumentationTests PRIVATE LLVMTestingSupport)
 
-set_property(TARGET InstrumentationTests PROPERTY FOLDER "Tests/UnitTests/TransformTests")
+set_property(TARGET InstrumentationTests PROPERTY FOLDER "LLM/Tests/Unit")
