@@ -17,6 +17,12 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/ToolOutputFile.h"
+
+#define DEBUG_TYPE "gpu-module-to-binary"
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -25,6 +31,27 @@ namespace mlir {
 #define GEN_PASS_DEF_GPUMODULETOBINARYPASS
 #include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
 } // namespace mlir
+
+static void dumpToFile(StringRef dumpDir, const llvm::Twine &filename,
+                       function_ref<void(llvm::raw_ostream &)> writeContent) {
+  if (dumpDir.empty())
+    return;
+
+  llvm::SmallString<128> path(dumpDir);
+  llvm::sys::path::append(path, filename);
+
+  std::error_code ec;
+  llvm::ToolOutputFile output(path, ec, llvm::sys::fs::OF_None);
+  if (ec) {
+    LLVM_DEBUG(llvm::dbgs() << "Failed to create file '" << path
+                            << "': " << ec.message() << "\n");
+    return;
+  }
+
+  writeContent(output.os());
+  output.keep();
+  LLVM_DEBUG(llvm::dbgs() << "Dumped intermediate to: " << path << "\n");
+}
 
 namespace {
 class GpuModuleToBinaryPass
@@ -64,8 +91,42 @@ void GpuModuleToBinaryPass::runOnOperation() {
   SmallVector<Attribute> librariesToLink;
   for (const std::string &path : linkFiles)
     librariesToLink.push_back(StringAttr::get(&getContext(), path));
+
+  // Create dump directory if specified
+  if (!dumpIntermediates.empty()) {
+    if (std::error_code ec =
+            llvm::sys::fs::create_directories(dumpIntermediates)) {
+      getOperation()->emitError() << "Failed to create dump directory '"
+                                  << dumpIntermediates << "': " << ec.message();
+      return signalPassFailure();
+    }
+  }
+
+  // Create callbacks for dumping intermediate artifacts if requested
+  auto initialIRCallback = [&](llvm::Module &module) {
+    dumpToFile(dumpIntermediates, module.getName() + ".initial.ll",
+               [&](llvm::raw_ostream &os) { module.print(os, nullptr); });
+  };
+
+  auto linkedIRCallback = [&](llvm::Module &module) {
+    dumpToFile(dumpIntermediates, module.getName() + ".linked.ll",
+               [&](llvm::raw_ostream &os) { module.print(os, nullptr); });
+  };
+
+  auto optimizedIRCallback = [&](llvm::Module &module) {
+    dumpToFile(dumpIntermediates, module.getName() + ".opt.ll",
+               [&](llvm::raw_ostream &os) { module.print(os, nullptr); });
+  };
+
+  auto isaCallback = [&](StringRef isa) {
+    dumpToFile(dumpIntermediates, "kernel.isa",
+               [&](llvm::raw_ostream &os) { os << isa; });
+  };
+
   TargetOptions targetOptions(toolkitPath, librariesToLink, cmdOptions,
-                              elfSection, *targetFormat, lazyTableBuilder);
+                              elfSection, *targetFormat, lazyTableBuilder,
+                              initialIRCallback, linkedIRCallback,
+                              optimizedIRCallback, isaCallback);
   if (failed(transformGpuModulesToBinaries(
           getOperation(), OffloadingLLVMTranslationAttrInterface(nullptr),
           targetOptions)))

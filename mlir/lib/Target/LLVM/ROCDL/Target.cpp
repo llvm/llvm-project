@@ -95,7 +95,11 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     Operation &module, ROCDLTargetAttr target,
     const gpu::TargetOptions &targetOptions)
     : ModuleToObject(module, target.getTriple(), target.getChip(),
-                     target.getFeatures(), target.getO()),
+                     target.getFeatures(), target.getO(),
+                     targetOptions.getInitialLlvmIRCallback(),
+                     targetOptions.getLinkedLlvmIRCallback(),
+                     targetOptions.getOptimizedLlvmIRCallback(),
+                     targetOptions.getISACallback()),
       target(target), toolkitPath(targetOptions.getToolkitPath()),
       librariesToLink(targetOptions.getLibrariesToLink()) {
 
@@ -428,6 +432,10 @@ std::optional<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
     getOperation().emitError() << "failed translating the module to ISA";
     return std::nullopt;
   }
+
+  if (isaCallback)
+    isaCallback(serializedISA.value());
+
 #define DEBUG_TYPE "serialize-to-isa"
   LLVM_DEBUG({
     llvm::dbgs() << "ISA for module: "
