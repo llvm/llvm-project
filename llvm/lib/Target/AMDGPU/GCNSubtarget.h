@@ -1061,6 +1061,8 @@ public:
     return true;
   }
 
+  bool enableSSAMachineScheduler() const override { return true; }
+
   bool useAA() const override;
 
   bool enableSubRegLiveness() const override {
