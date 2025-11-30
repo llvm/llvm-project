@@ -23,30 +23,48 @@ namespace llvm {
 
 class MCSymbolGOFF : public MCSymbol {
   // Associated data area of the section. Needs to be emitted first.
-  MCSectionGOFF *ADA;
+  MCSectionGOFF *ADA = nullptr;
 
-  GOFF::LDAttr LDAttributes;
+  GOFF::ESDExecutable CodeData = GOFF::ESDExecutable::ESD_EXE_Unspecified;
+  GOFF::ESDLinkageType Linkage = GOFF::ESDLinkageType::ESD_LT_XPLink;
 
   enum SymbolFlags : uint16_t {
-    SF_LD = 0x01, // LD attributes are set.
+    SF_Hidden = 0x01, // Symbol is hidden, aka not exported.
+    SF_Weak = 0x02,   // Symbol is weak.
   };
 
 public:
   MCSymbolGOFF(const MCSymbolTableEntry *Name, bool IsTemporary)
       : MCSymbol(Name, IsTemporary) {}
 
-  void setLDAttributes(GOFF::LDAttr Attr) {
-    modifyFlags(SF_LD, SF_LD);
-    LDAttributes = Attr;
-  }
-  GOFF::LDAttr getLDAttributes() const { return LDAttributes; }
-  bool hasLDAttributes() const { return getFlags() & SF_LD; }
+  bool hasLDAttributes() const;
+  bool hasERAttributes() const;
 
   void setADA(MCSectionGOFF *AssociatedDataArea) {
     ADA = AssociatedDataArea;
     AssociatedDataArea->RequiresNonZeroLength = true;
   }
   MCSectionGOFF *getADA() const { return ADA; }
+
+  bool isExternal() const { return IsExternal; }
+  void setExternal(bool Value) const { IsExternal = Value; }
+
+  void setHidden(bool Value = true) {
+    modifyFlags(Value ? SF_Hidden : 0, SF_Hidden);
+  }
+  bool isHidden() const { return getFlags() & SF_Hidden; }
+  bool isExported() const { return !isHidden(); }
+
+  void setWeak(bool Value = true) { modifyFlags(Value ? SF_Weak : 0, SF_Weak); }
+  bool isWeak() const { return getFlags() & SF_Weak; }
+
+  void setCodeData(GOFF::ESDExecutable Value) { CodeData = Value; }
+  GOFF::ESDExecutable getCodeData() const { return CodeData; }
+
+  void setLinkage(GOFF::ESDLinkageType Value) { Linkage = Value; }
+  GOFF::ESDLinkageType getLinkage() const { return Linkage; }
+
+  GOFF::ESDBindingScope getBindingScope() const;
 };
 } // end namespace llvm
 
