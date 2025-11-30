@@ -18669,6 +18669,8 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   SDNodeFlags Flags = N->getFlags();
+  SDNodeFlags FlagsN1 = N1->getFlags();
+
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
 
   if (SDValue R = DAG.simplifyFPBinop(N->getOpcode(), N0, N1, Flags))
@@ -18713,12 +18715,14 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   if (Flags.hasAllowReciprocal()) {
     // If this FDIV is part of a reciprocal square root, it may be folded
     // into a target-specific square root estimate instruction.
-    bool N1AllowReciprocal = N1->getFlags().hasAllowReciprocal();
-    if (N1.getOpcode() == ISD::FSQRT) {
+    // X / sqrt(Y) -> X * rsqrt(Y)
+    bool N1AllowReciprocal = FlagsN1.hasAllowReciprocal();
+    if (N1.getOpcode() == ISD::FSQRT && N1AllowReciprocal) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0)))
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
     } else if (N1.getOpcode() == ISD::FP_EXTEND &&
                N1.getOperand(0).getOpcode() == ISD::FSQRT &&
+               N1.getOperand(0)->getFlags().hasAllowReciprocal() &&
                N1AllowReciprocal) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0))) {
         RV = DAG.getNode(ISD::FP_EXTEND, SDLoc(N1), VT, RV);
@@ -18726,7 +18730,9 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
       }
     } else if (N1.getOpcode() == ISD::FP_ROUND &&
-               N1.getOperand(0).getOpcode() == ISD::FSQRT) {
+               N1.getOperand(0).getOpcode() == ISD::FSQRT &&
+               N1.getOperand(0)->getFlags().hasAllowReciprocal() &&
+               N1AllowReciprocal) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0))) {
         RV = DAG.getNode(ISD::FP_ROUND, SDLoc(N1), VT, RV, N1.getOperand(1));
         AddToWorklist(RV.getNode());
@@ -18746,8 +18752,10 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
       if (Sqrt.getNode()) {
         // If the other multiply operand is known positive, pull it into the
         // sqrt. That will eliminate the division if we convert to an estimate.
-        if (Flags.hasAllowReassociation() && N1.hasOneUse() &&
-            N1->getFlags().hasAllowReassociation() && Sqrt.hasOneUse()) {
+        if (N1.hasOneUse() && Sqrt.hasOneUse() &&
+            Sqrt->getFlags().hasAllowReciprocal() &&
+            Sqrt->getFlags().hasAllowReassociation() &&
+            FlagsN1.hasAllowReciprocal() && FlagsN1.hasAllowReassociation()) {
           SDValue A;
           if (Y.getOpcode() == ISD::FABS && Y.hasOneUse())
             A = Y.getOperand(0);
@@ -18769,7 +18777,10 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
 
         // We found a FSQRT, so try to make this fold:
         // X / (Y * sqrt(Z)) -> X * (rsqrt(Z) / Y)
-        if (SDValue Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0))) {
+        SDValue Rsqrt;
+        if (N1AllowReciprocal && Sqrt->getFlags().hasAllowReciprocal() &&
+            (Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0)))) {
+          Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0));
           SDValue Div = DAG.getNode(ISD::FDIV, SDLoc(N1), VT, Rsqrt, Y);
           AddToWorklist(Div.getNode());
           return DAG.getNode(ISD::FMUL, DL, VT, N0, Div);
