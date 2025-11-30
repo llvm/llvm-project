@@ -5,6 +5,14 @@
 // RUN: value: false}, \
 // RUN: {key: portability-avoid-platform-specific-fundamental-types.WarnOnFloats, \
 // RUN: value: false}]}"
+// RUN: %check_clang_tidy -std=c++11-or-later -check-suffixes=,WIN32 %s \
+// RUN: portability-avoid-platform-specific-fundamental-types %t-win32 -- \
+// RUN: -config="{CheckOptions: \
+// RUN: [{key: portability-avoid-platform-specific-fundamental-types.WarnOnChars, \
+// RUN: value: false}, \
+// RUN: {key: portability-avoid-platform-specific-fundamental-types.WarnOnFloats, \
+// RUN: value: false}]}" \
+// RUN: -- --target=i686-pc-win32
 
 // Mock fixed-width integer types
 // NOLINTBEGIN(portability-avoid-platform-specific-fundamental-types)
@@ -31,8 +39,8 @@ short global_short = 10;
 // CHECK-FIXES: int16_t global_short = 10;
 
 long global_long = 100L;
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent fundamental integer type 'long'; consider using 'int64_t' instead [portability-avoid-platform-specific-fundamental-types]
-// CHECK-MESSAGES: {{.*note: 'int64_t' suggested for compatibility with Unix, which uses 64-bit 'long'.*|^$}}
+// CHECK-MESSAGES-WIN32: :[[@LINE-1]]:1: note: 'int64_t' suggested for compatibility with Unix, which uses 64-bit 'long'
+// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: avoid using platform-dependent fundamental integer type 'long'; consider using 'int64_t' instead [portability-avoid-platform-specific-fundamental-types]
 // CHECK-FIXES: int64_t global_long = 100L;
 
 long long global_long_long = 1000LL;
@@ -48,8 +56,8 @@ unsigned short global_unsigned_short = 10U;
 // CHECK-FIXES: uint16_t global_unsigned_short = 10U;
 
 unsigned long global_unsigned_long = 100UL;
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent fundamental integer type 'unsigned long'; consider using 'uint64_t' instead [portability-avoid-platform-specific-fundamental-types]
-// CHECK-MESSAGES: {{.*note: 'uint64_t' suggested for compatibility with Unix, which uses 64-bit 'unsigned long'.*|^$}}
+// CHECK-MESSAGES-WIN32: :[[@LINE-1]]:1: note: 'uint64_t' suggested for compatibility with Unix, which uses 64-bit 'unsigned long'
+// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: avoid using platform-dependent fundamental integer type 'unsigned long'; consider using 'uint64_t' instead [portability-avoid-platform-specific-fundamental-types]
 // CHECK-FIXES: uint64_t global_unsigned_long = 100UL;
 
 unsigned long long global_unsigned_long_long = 1000ULL;
@@ -95,8 +103,8 @@ int function_returning_int() {
 }
 
 long function_returning_long() {
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: avoid using platform-dependent fundamental integer type 'long'; consider using 'int64_t' instead [portability-avoid-platform-specific-fundamental-types]
-// CHECK-MESSAGES: {{.*note: 'int64_t' suggested for compatibility with Unix, which uses 64-bit 'long'.*|^$}}
+// CHECK-MESSAGES-WIN32: :[[@LINE-1]]:1: note: 'int64_t' suggested for compatibility with Unix, which uses 64-bit 'long'
+// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: avoid using platform-dependent fundamental integer type 'long'; consider using 'int64_t' instead [portability-avoid-platform-specific-fundamental-types]
 // CHECK-FIXES: int64_t function_returning_long() {
     return 100L;
 }
@@ -112,8 +120,8 @@ void test_local_variables() {
     // CHECK-FIXES: int16_t local_short = 5;
     
     unsigned long local_unsigned_long = 200UL;
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: avoid using platform-dependent fundamental integer type 'unsigned long'; consider using 'uint64_t' instead [portability-avoid-platform-specific-fundamental-types]
-    // CHECK-MESSAGES: {{.*note: 'uint64_t' suggested for compatibility with Unix, which uses 64-bit 'unsigned long'.*|^$}}
+    // CHECK-MESSAGES-WIN32: :[[@LINE-1]]:5: note: 'uint64_t' suggested for compatibility with Unix, which uses 64-bit 'unsigned long'
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: avoid using platform-dependent fundamental integer type 'unsigned long'; consider using 'uint64_t' instead [portability-avoid-platform-specific-fundamental-types]
     // CHECK-FIXES: uint64_t local_unsigned_long = 200UL;
     
     // These should not trigger warnings
@@ -136,8 +144,8 @@ struct TestStruct {
     // CHECK-FIXES: int32_t member_int;
     
     long member_long;
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: avoid using platform-dependent fundamental integer type 'long'; consider using 'int64_t' instead [portability-avoid-platform-specific-fundamental-types]
-    // CHECK-MESSAGES: {{.*note: 'int64_t' suggested for compatibility with Unix, which uses 64-bit 'long'.*|^$}}
+    // CHECK-MESSAGES-WIN32: :[[@LINE-1]]:5: note: 'int64_t' suggested for compatibility with Unix, which uses 64-bit 'long'
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: avoid using platform-dependent fundamental integer type 'long'; consider using 'int64_t' instead [portability-avoid-platform-specific-fundamental-types]
     // CHECK-FIXES: int64_t member_long;
     
     // These should not trigger warnings
@@ -163,8 +171,8 @@ typedef int MyInt;
 // CHECK-FIXES: typedef int32_t MyInt;
 
 using MyLong = long;
-// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: avoid using platform-dependent fundamental integer type 'long'; consider using 'int64_t' instead [portability-avoid-platform-specific-fundamental-types]
-// CHECK-MESSAGES: {{.*note: 'int64_t' suggested for compatibility with Unix, which uses 64-bit 'long'.*|^$}}
+// CHECK-MESSAGES-WIN32: :[[@LINE-1]]:16: note: 'int64_t' suggested for compatibility with Unix, which uses 64-bit 'long'
+// CHECK-MESSAGES: :[[@LINE-2]]:16: warning: avoid using platform-dependent fundamental integer type 'long'; consider using 'int64_t' instead [portability-avoid-platform-specific-fundamental-types]
 // CHECK-FIXES: using MyLong = int64_t;
 
 typedef long long customType;
