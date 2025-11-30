@@ -186,6 +186,71 @@ namespace std {
   template<class T>
     optional(T) -> optional<T>;
 
+  template<class T>
+  class optional<T&> { // since C++26
+  public:
+    using value_type     = T;
+    using iterator       = implementation-defined;              // see [optional.ref.iterators]
+
+  public:
+    // [optional.ref.ctor], constructors
+    constexpr optional() noexcept = default;
+    constexpr optional(nullopt_t) noexcept : optional() {}
+    constexpr optional(const optional& rhs) noexcept = default;
+
+    template<class Arg>
+      constexpr explicit optional(in_place_t, Arg&& arg);
+    template<class U>
+      constexpr explicit(see below) optional(U&& u) noexcept(see below);
+    template<class U>
+      constexpr explicit(see below) optional(optional<U>& rhs) noexcept(see below);
+    template<class U>
+      constexpr explicit(see below) optional(const optional<U>& rhs) noexcept(see below);
+    template<class U>
+      constexpr explicit(see below) optional(optional<U>&& rhs) noexcept(see below);
+    template<class U>
+      constexpr explicit(see below) optional(const optional<U>&& rhs) noexcept(see below);
+
+    constexpr ~optional() = default;
+
+    // [optional.ref.assign], assignment
+    constexpr optional& operator=(nullopt_t) noexcept;
+    constexpr optional& operator=(const optional& rhs) noexcept = default;
+
+    template<class U> constexpr T& emplace(U&& u) noexcept(see below);
+
+    // [optional.ref.swap], swap
+    constexpr void swap(optional& rhs) noexcept;
+
+    // [optional.ref.iterators], iterator support
+    constexpr iterator begin() const noexcept;
+    constexpr iterator end() const noexcept;
+
+    // [optional.ref.observe], observers
+    constexpr T*       operator->() const noexcept;
+    constexpr T&       operator*() const noexcept;
+    constexpr explicit operator bool() const noexcept;
+    constexpr bool     has_value() const noexcept;
+    constexpr T&       value() const;                           // freestanding-deleted
+    template<class U = remove_cv_t<T>>
+      constexpr remove_cv_t<T> value_or(U&& u) const;
+
+    // [optional.ref.monadic], monadic operations
+    template<class F> constexpr auto and_then(F&& f) const;
+    template<class F> constexpr optional<invoke_result_t<F, T&>> transform(F&& f) const;
+    template<class F> constexpr optional or_else(F&& f) const;
+
+    // [optional.ref.mod], modifiers
+    constexpr void reset() noexcept;
+
+  private:
+    T* val = nullptr;                                           // exposition only
+
+    // [optional.ref.expos], exposition only helper functions
+    template<class U>
+      constexpr void convert-ref-init-val(U&& u);               // exposition only
+  };
+
 } // namespace std
 
 */
