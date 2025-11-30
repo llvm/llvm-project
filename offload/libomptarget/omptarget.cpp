@@ -294,7 +294,7 @@ int targetDataMapper(ident_t *Loc, DeviceTy &Device, void *ArgBase, void *Arg,
                      int64_t ArgSize, int64_t ArgType, map_var_info_t ArgNames,
                      void *ArgMapper, AsyncInfoTy &AsyncInfo,
                      TargetDataFuncPtrTy TargetDataFunction,
-                     AttachInfoTy *AttachInfo = nullptr) {
+                     StateInfoTy *StateInfo = nullptr) {
   DP("Calling the mapper function " DPxMOD "\n", DPxPTR(ArgMapper));
 
   // The mapper function fills up Components.
@@ -325,7 +325,7 @@ int targetDataMapper(ident_t *Loc, DeviceTy &Device, void *ArgBase, void *Arg,
                               MapperArgsBase.data(), MapperArgs.data(),
                               MapperArgSizes.data(), MapperArgTypes.data(),
                               MapperArgNames.data(), /*arg_mappers*/ nullptr,
-                              AsyncInfo, AttachInfo, /*FromMapper=*/true);
+                              AsyncInfo, StateInfo, /*FromMapper=*/true);
 
   return Rc;
 }
@@ -509,12 +509,12 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                     void **ArgsBase, void **Args, int64_t *ArgSizes,
                     int64_t *ArgTypes, map_var_info_t *ArgNames,
                     void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                    AttachInfoTy *AttachInfo, bool FromMapper) {
-  assert(AttachInfo && "AttachInfo must be available for targetDataBegin for "
-                       "handling ATTACH map-types.");
+                    StateInfoTy *StateInfo, bool FromMapper) {
+  assert(StateInfo && "StateInfo must be available for targetDataBegin for "
+                      "handling ATTACH and TO/TOFROM map-types.");
   // process each input.
   for (int32_t I = 0; I < ArgNum; ++I) {
-    // Ignore private variables and arrays - there is no mapping for them.
+    // Ignore private variables and arrays - there is no mapping for t.attahem.
     if ((ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) ||
         (ArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE))
       continue;
@@ -529,7 +529,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       map_var_info_t ArgName = (!ArgNames) ? nullptr : ArgNames[I];
       int Rc = targetDataMapper(Loc, Device, ArgsBase[I], Args[I], ArgSizes[I],
                                 ArgTypes[I], ArgName, ArgMappers[I], AsyncInfo,
-                                targetDataBegin, AttachInfo);
+                                targetDataBegin, StateInfo);
 
       if (Rc != OFFLOAD_SUCCESS) {
         REPORT("Call to targetDataBegin via targetDataMapper for custom mapper"
@@ -556,7 +556,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // similar to firstprivate (PRIVATE | TO) entries by
       // PrivateArgumentManager.
       if (!IsCorrespondingPointerInit)
-        AttachInfo->AttachEntries.emplace_back(
+        StateInfo->AttachEntries.emplace_back(
             /*PointerBase=*/HstPtrBase, /*PointeeBegin=*/HstPtrBegin,
             /*PointerSize=*/DataSize, /*MapType=*/ArgTypes[I],
             /*PointeeName=*/HstPtrName);
@@ -633,7 +633,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 
       // Track new allocation, for eventual use in attachment decision-making.
       if (PointerTpr.Flags.IsNewEntry && !IsHostPtr)
-        AttachInfo->NewAllocations[HstPtrBase] = sizeof(void *);
+        StateInfo->NewAllocations[HstPtrBase] = sizeof(void *);
 
       DP("There are %zu bytes allocated at target address " DPxMOD " - is%s new"
          "\n",
@@ -654,7 +654,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     auto TPR = Device.getMappingInfo().getTargetPointer(
         HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
         HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
-        HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry());
+        HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry(),
+        /*ReleaseHDTTMap=*/true, StateInfo);
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
@@ -664,11 +665,27 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
              HasPresentModifier ? "'present' map type modifier"
                                 : "device failure or illegal mapping");
       return OFFLOAD_FAIL;
+    } else if (TgtPtrBegin && HasPresentModifier &&
+               StateInfo->wasNewlyAllocated(HstPtrBegin)) {
+      // For "PRESENT" entries, we may have cases like the following:
+      //   int *xp = &x[0];
+      //   map(alloc: x[:]) map(present, alloc: xp[1])
+      // The "PRESENT" entry may be encountered after a previous entry
+      // allocated new storage for the pointer.
+      // To catch such cases, we need to look at any existing allocations
+      // and error out if we have any matching the pointer.
+      MESSAGE("device mapping required by 'present' map type modifier does not "
+              "exist for host address " DPxMOD " (%" PRId64 " bytes)\n",
+              DPxPTR(HstPtrBegin), DataSize);
+      REPORT("Pointer " DPxMOD
+             " was not present on the device upon entry to the region.\n",
+             DPxPTR(HstPtrBegin));
+      return OFFLOAD_FAIL;
     }
 
-    // Track new allocation, for eventual use in attachment decision-making.
+    // Track new allocation, for eventual use in attachment/to decision-making.
     if (TPR.Flags.IsNewEntry && !IsHostPtr && TgtPtrBegin)
-      AttachInfo->NewAllocations[HstPtrBegin] = DataSize;
+      StateInfo->NewAllocations[HstPtrBegin] = DataSize;
 
     DP("There are %" PRId64 " bytes allocated at target address " DPxMOD
        " - is%s new\n",
@@ -751,29 +768,29 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 ///
 /// For this purpose, we insert a data_fence before the first
 /// pointer-attachment, (3), to ensure that all pending transfers finish first.
-int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
+int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                          AsyncInfoTy &AsyncInfo) {
   // Report all tracked allocations from both main loop and ATTACH processing
-  if (!AttachInfo.NewAllocations.empty()) {
+  if (!StateInfo.NewAllocations.empty()) {
     DP("Tracked %u total new allocations:\n",
-       (unsigned)AttachInfo.NewAllocations.size());
-    for ([[maybe_unused]] const auto &Alloc : AttachInfo.NewAllocations) {
+       (unsigned)StateInfo.NewAllocations.size());
+    for ([[maybe_unused]] const auto &Alloc : StateInfo.NewAllocations) {
       DP("  Host ptr: " DPxMOD ", Size: %" PRId64 " bytes\n",
          DPxPTR(Alloc.first), Alloc.second);
     }
   }
 
-  if (AttachInfo.AttachEntries.empty())
+  if (StateInfo.AttachEntries.empty())
     return OFFLOAD_SUCCESS;
 
   DP("Processing %zu deferred ATTACH map entries\n",
-     AttachInfo.AttachEntries.size());
+     StateInfo.AttachEntries.size());
 
   int Ret = OFFLOAD_SUCCESS;
   bool IsFirstPointerAttachment = true;
-  for (size_t EntryIdx = 0; EntryIdx < AttachInfo.AttachEntries.size();
+  for (size_t EntryIdx = 0; EntryIdx < StateInfo.AttachEntries.size();
        ++EntryIdx) {
-    const auto &AttachEntry = AttachInfo.AttachEntries[EntryIdx];
+    const auto &AttachEntry = StateInfo.AttachEntries[EntryIdx];
 
     void **HstPtr = reinterpret_cast<void **>(AttachEntry.PointerBase);
 
@@ -791,14 +808,7 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
 
     // Lambda to check if a pointer was newly allocated
     auto WasNewlyAllocated = [&](void *Ptr, const char *PtrName) {
-      bool IsNewlyAllocated =
-          llvm::any_of(AttachInfo.NewAllocations, [&](const auto &Alloc) {
-            void *AllocPtr = Alloc.first;
-            int64_t AllocSize = Alloc.second;
-            return Ptr >= AllocPtr &&
-                   Ptr < reinterpret_cast<void *>(
-                             reinterpret_cast<char *>(AllocPtr) + AllocSize);
-          });
+      bool IsNewlyAllocated = StateInfo.wasNewlyAllocated(Ptr);
       DP("Attach %s " DPxMOD " was newly allocated: %s\n", PtrName, DPxPTR(Ptr),
          IsNewlyAllocated ? "yes" : "no");
       return IsNewlyAllocated;
@@ -1009,7 +1019,9 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
                   int64_t *ArgTypes, map_var_info_t *ArgNames,
                   void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                  AttachInfoTy *AttachInfo, bool FromMapper) {
+                  StateInfoTy *StateInfo, bool FromMapper) {
+  assert(StateInfo && "StateInfo is required for targetDataEnd for handling "
+                      "FROM data transfers");
   int Ret = OFFLOAD_SUCCESS;
   auto *PostProcessingPtrs = new SmallVector<PostProcessingInfo>();
   // process each input.
@@ -1037,7 +1049,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       map_var_info_t ArgName = (!ArgNames) ? nullptr : ArgNames[I];
       Ret = targetDataMapper(Loc, Device, ArgBases[I], Args[I], ArgSizes[I],
                              ArgTypes[I], ArgName, ArgMappers[I], AsyncInfo,
-                             targetDataEnd);
+                             targetDataEnd, StateInfo);
 
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT("Call to targetDataEnd via targetDataMapper for custom mapper"
@@ -1064,6 +1076,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         HstPtrBegin, DataSize, UpdateRef, HasHoldModifier, !IsImplicit,
         ForceDelete, /*FromDataEnd=*/true);
     void *TgtPtrBegin = TPR.TargetPointer;
+
     if (!TPR.isPresent() && !TPR.isHostPointer() &&
         (DataSize || HasPresentModifier)) {
       DP("Mapping does not exist (%s)\n",
@@ -1103,25 +1116,40 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     if (!TPR.isPresent())
       continue;
 
+    // Track force-deleted pointers so we can use this information if we
+    // encounter FROM entries for the same pointer later on.
+    if (ForceDelete && TPR.Flags.IsLast) {
+      // For assumed-size arrays like map(delete: p[:]), the compiler provides
+      // no size information, so we need to get the actual allocated extent from
+      // the HDTT entry.
+      int64_t AllocatedSize =
+          TPR.getEntry()->HstPtrEnd - TPR.getEntry()->HstPtrBegin;
+      DP("Marking HstPtr=" DPxMOD " for deletion with allocated size=%" PRId64
+         "\n",
+         DPxPTR(HstPtrBegin), AllocatedSize);
+      StateInfo->DeleteEntries[HstPtrBegin] = AllocatedSize;
+    }
+
     // Move data back to the host
     const bool HasAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
     const bool HasFrom = ArgTypes[I] & OMP_TGT_MAPTYPE_FROM;
-    if (HasFrom && (HasAlways || TPR.Flags.IsLast) &&
-        !TPR.Flags.IsHostPointer && DataSize != 0) {
+
+    // Lambda to perform the actual FROM data retrieval from device to host
+    auto PerformFromRetrieval = [&](void *HstPtr, void *TgtPtr, int64_t Size,
+                                    HostDataToTargetTy *Entry) -> int {
       DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
-         DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
+         Size, DPxPTR(TgtPtr), DPxPTR(HstPtr));
       TIMESCOPE_WITH_DETAILS_AND_IDENT(
-          "DevToHost", "Size=" + std::to_string(DataSize) + "B", Loc);
+          "DevToHost", "Size=" + std::to_string(Size) + "B", Loc);
       // Wait for any previous transfer if an event is present.
-      if (void *Event = TPR.getEntry()->getEvent()) {
+      if (void *Event = Entry->getEvent()) {
         if (Device.waitEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
           REPORT("Failed to wait for event " DPxMOD ".\n", DPxPTR(Event));
           return OFFLOAD_FAIL;
         }
       }
 
-      Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, DataSize, AsyncInfo,
-                                TPR.getEntry());
+      int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry);
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT("Copying data from device failed.\n");
         return OFFLOAD_FAIL;
@@ -1133,10 +1161,136 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // copy-back was issued but before it completed. Since the reuse might
       // also copy-back a value we would race.
       if (TPR.Flags.IsLast) {
-        if (TPR.getEntry()->addEventIfNecessary(Device, AsyncInfo) !=
-            OFFLOAD_SUCCESS)
+        if (Entry->addEventIfNecessary(Device, AsyncInfo) != OFFLOAD_SUCCESS)
           return OFFLOAD_FAIL;
       }
+
+      return OFFLOAD_SUCCESS;
+    };
+
+    // Lambda to check if this pointer was previously marked for deletion.
+    // Such a pointer would have had "IsLast" set to true when its DELETE entry
+    // was processed. So, the flag wouldn't be set for any FROM entries seen
+    // later on.
+    // This is needed to handle cases like the following:
+    //   p1 = p2 = &x;
+    //   ... map(delete: p1[:]) map(from: p2[0:1])
+    // The ref-count becomes zero before encountering the FROM entry, but we
+    // still need to do a transfer, if it went from non-zero to zero.
+    //
+    // OpenMP 6.0, sec. 7.9.6 "map Clause", p. 284 L24-26:
+    // If the reference count of the corresponding list item is one or if
+    // the always-modifier or delete-modifier is specified, and if the map
+    // type is from, the original list item is updated as if the list item
+    // appeared in a from clause on a target_update directive.
+    auto WasPreviouslyMarkedForDeletion = [&]() -> bool {
+      // Check if this pointer falls within the range of any deleted entry
+      for (const auto &DeleteEntry : StateInfo->DeleteEntries) {
+        void *DeletePtr = DeleteEntry.first;
+        int64_t DeleteSize = DeleteEntry.second;
+        if (HstPtrBegin >= DeletePtr &&
+            HstPtrBegin < (void *)((char *)DeletePtr + DeleteSize)) {
+          DP("Pointer HstPtr=" DPxMOD
+             " falls within a range previously marked for deletion [" DPxMOD
+             ", " DPxMOD ") with size=%" PRId64 "\n",
+             DPxPTR(HstPtrBegin), DPxPTR(DeletePtr),
+             DPxPTR((char *)DeletePtr + DeleteSize), DeleteSize);
+          return true;
+        }
+      }
+      return false;
+    };
+
+    bool FromCopyBackAlreadyDone =
+        StateInfo->TransferredFromPtrs.contains(HstPtrBegin);
+    bool IsMapFromOnNonHostNonZeroData =
+        HasFrom && !TPR.Flags.IsHostPointer && DataSize != 0;
+    auto IsLastOrHasAlwaysOrWasForceDeleted = [&]() {
+      return TPR.Flags.IsLast || HasAlways || WasPreviouslyMarkedForDeletion();
+    };
+
+    if (!FromCopyBackAlreadyDone && (IsMapFromOnNonHostNonZeroData &&
+                                     IsLastOrHasAlwaysOrWasForceDeleted())) {
+      // Track that we're doing a FROM transfer for this pointer
+      // NOTE: If we don't care about the case of multiple different maps with
+      // from, always, or multiple map(from)s seen after a map(delete), e.g.
+      // ... map(always, from: x) map(always, from: x)
+      // ... map(delete: x) map(from: x) map(from: x)
+      // Then we can forego tacking TransferredFromPtrs.
+      StateInfo->TransferredFromPtrs.insert(HstPtrBegin);
+
+      Ret = PerformFromRetrieval(HstPtrBegin, TgtPtrBegin, DataSize,
+                                 TPR.getEntry());
+      if (Ret != OFFLOAD_SUCCESS)
+        return OFFLOAD_FAIL;
+    } else if (!FromCopyBackAlreadyDone && IsMapFromOnNonHostNonZeroData &&
+               !IsLastOrHasAlwaysOrWasForceDeleted()) {
+      // We can have cases like the following:
+      //   int *xp = &x[0];
+      //  ... map(storage: x[:]) map(from: xp[1:1])
+      //
+      // where it's possible that when the FROM entry is processed, the
+      // ref count is not zero, so no data transfer happens for it. But
+      // the ref-count can go down to zero once all maps have been processed
+      // in which case a transfer should happen.
+      //
+      // So, we keep track of any skipped FROM data-transfers, in case
+      // the ref-count goes down to zero later on.
+      //
+      // This cannot be handled in the compiler for all cases because the
+      // list-items may look very different, as shown in the example above,
+      // which is allowed with OpenMP 6.0:
+      //
+      // OpenMP 6.0, sec. 7.9.6 "map Clause", p. 286 L18-21:
+      // Two list items of the map clauses on the same construct must not share
+      // original storage unless one of the following is true: they are the same
+      // list item, one is the containing structure of the other, at least one
+      // is an assumed-size array, or at least one is implicitly mapped due to
+      // the list item also appearing in a use_device_addr clause.
+      StateInfo->SkippedFromEntries[HstPtrBegin] = DataSize;
+      DP("Skipping FROM map transfer for HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
+         DPxPTR(HstPtrBegin), DataSize);
+    } else if (!FromCopyBackAlreadyDone && TPR.Flags.IsLast) {
+      // Even if this is not a FROM entry, if the ref-count went to
+      // zero (IsLast=true), we should perform any previously skipped FROM
+      // transfers that fall within this entry's range.
+      SmallVector<void *, 32> ToRemove;
+
+      for (auto &SkippedFromEntry : StateInfo->SkippedFromEntries) {
+        void *FromBeginPtr = SkippedFromEntry.first;
+        int64_t FromDataSize = SkippedFromEntry.second;
+        uintptr_t FromBeginPtrInt = (uintptr_t)FromBeginPtr;
+
+        uintptr_t DeleteBeginPtrInt = TPR.getEntry()->HstPtrBegin;
+        uintptr_t DeleteEndPtrInt = TPR.getEntry()->HstPtrEnd;
+
+        // Check if skipped entry overlaps or is contained within current entry
+        if (FromBeginPtrInt >= DeleteBeginPtrInt &&
+            FromBeginPtrInt < DeleteEndPtrInt) {
+          DP("Found skipped FROM entry: HstPtr=" DPxMOD " size=%" PRId64
+             " within region being deleted [" DPxMOD ", " DPxMOD ")\n",
+             DPxPTR(FromBeginPtr), FromDataSize, DPxPTR(DeleteBeginPtrInt),
+             DPxPTR(DeleteEndPtrInt));
+
+          // Calculate offset within the target pointer
+          int64_t Offset = FromBeginPtrInt - DeleteBeginPtrInt;
+          void *FromTgtBeginPtr = (void *)((char *)TgtPtrBegin + Offset);
+
+          // Perform the retrieval for this skipped entry
+          int Ret =
+              PerformFromRetrieval((void *)FromBeginPtrInt, FromTgtBeginPtr,
+                                   FromDataSize, TPR.getEntry());
+          if (Ret != OFFLOAD_SUCCESS)
+            return OFFLOAD_FAIL;
+
+          StateInfo->TransferredFromPtrs.insert(FromBeginPtr);
+          ToRemove.push_back(FromBeginPtr);
+        }
+      }
+
+      // Remove processed entries
+      for (void *Ptr : ToRemove)
+        StateInfo->SkippedFromEntries.erase(Ptr);
     }
 
     // Add pointer to the buffer for post-synchronize processing.
@@ -1315,7 +1469,7 @@ int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                      void **ArgsBase, void **Args, int64_t *ArgSizes,
                      int64_t *ArgTypes, map_var_info_t *ArgNames,
                      void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                     AttachInfoTy *AttachInfo, bool FromMapper) {
+                     StateInfoTy *StateInfo, bool FromMapper) {
   // process each input.
   for (int32_t I = 0; I < ArgNum; ++I) {
     if ((ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) ||
@@ -1806,21 +1960,21 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  // Create AttachInfo for tracking any ATTACH entries, or new-allocations
+  // Create StateInfo for tracking any ATTACH entries, new allocations,
   // when handling the "begin" mapping for a target constructs.
-  AttachInfoTy AttachInfo;
+  StateInfoTy StateInfo;
 
   int Ret = targetDataBegin(Loc, *DeviceOrErr, ArgNum, ArgBases, Args, ArgSizes,
                             ArgTypes, ArgNames, ArgMappers, AsyncInfo,
-                            &AttachInfo, false /*FromMapper=*/);
+                            &StateInfo, false /*FromMapper=*/);
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT("Call to targetDataBegin failed, abort target.\n");
     return OFFLOAD_FAIL;
   }
 
   // Process collected ATTACH entries
-  if (!AttachInfo.AttachEntries.empty()) {
-    Ret = processAttachEntries(*DeviceOrErr, AttachInfo, AsyncInfo);
+  if (!StateInfo.AttachEntries.empty()) {
+    Ret = processAttachEntries(*DeviceOrErr, StateInfo, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT("Failed to process ATTACH entries.\n");
       return OFFLOAD_FAIL;
@@ -1987,9 +2141,14 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
 
+  // Create StateInfo for tracking map(from)s for which ref-count is non-zero
+  // when the entry is encountered.
+  StateInfoTy StateInfo;
+
   // Move data from device.
-  int Ret = targetDataEnd(Loc, *DeviceOrErr, ArgNum, ArgBases, Args, ArgSizes,
-                          ArgTypes, ArgNames, ArgMappers, AsyncInfo);
+  int Ret =
+      targetDataEnd(Loc, *DeviceOrErr, ArgNum, ArgBases, Args, ArgSizes,
+                    ArgTypes, ArgNames, ArgMappers, AsyncInfo, &StateInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT("Call to targetDataEnd failed, abort target.\n");
     return OFFLOAD_FAIL;
