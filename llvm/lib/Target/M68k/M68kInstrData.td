@@ -372,7 +372,6 @@ def MOVM32mp_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.POp>;
 ///                               | EFFECTIVE ADDRESS
 ///  0  1  0  0  0  1  0  0  1  1 |   MODE  |   REG
 /// --------------------------------------------------
-let Defs = [CCR] in {
 class MxMoveToCCR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
     : MxInst<(outs CCRC:$dst), (ins MEMOp:$src), "move.w\t$src, $dst", []> {
   let Inst = (ascend
@@ -383,7 +382,6 @@ class MxMoveToCCR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
 
 class MxMoveToCCRPseudo<MxOperand MEMOp>
     : MxPseudo<(outs CCRC:$dst), (ins MEMOp:$src)>;
-} // let Defs = [CCR]
 
 let mayLoad = 1 in
 foreach AM = MxMoveSupportedAMs in {
@@ -403,7 +401,6 @@ def MOV8cd  : MxMoveToCCRPseudo<MxOp8AddrMode_d.Op>;
 ///                               | EFFECTIVE ADDRESS
 ///  0  1  0  0  0  0  1  0  1  1 |   MODE  |   REG
 /// --------------------------------------------------
-let Uses = [CCR] in {
 class MxMoveFromCCR_R
     : MxInst<(outs MxDRD16:$dst), (ins CCRC:$src), "move.w\t$src, $dst", []>,
       Requires<[ AtLeastM68010 ]> {
@@ -423,7 +420,6 @@ class MxMoveFromCCRPseudo<MxOperand MEMOp>
     : MxPseudo<(outs), (ins MEMOp:$dst, CCRC:$src)>;
 class MxMoveFromCCR_RPseudo<MxOperand MEMOp>
     : MxPseudo<(outs MEMOp:$dst), (ins CCRC:$src)>;
-} // let Uses = [CCR]
 
 let mayStore = 1 in
 foreach AM = MxMoveSupportedAMs in {
@@ -445,7 +441,6 @@ def MOV8dc  : MxMoveFromCCR_RPseudo<MxOp8AddrMode_d.Op>;
 ///                               | EFFECTIVE ADDRESS
 ///  0  1  0  0  0  1  1  0  1  1 |   MODE  |   REG
 /// --------------------------------------------------
-let Defs = [SR] in {
 class MxMoveToSR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
     : MxInst<(outs SRC:$dst), (ins MEMOp:$src), "move.w\t$src, $dst", []> {
   let Inst = (ascend
@@ -453,7 +448,6 @@ class MxMoveToSR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
     SRC_ENC.Supplement
   );
 }
-} // let Defs = [SR]
 
 let mayLoad = 1 in
 foreach AM = MxMoveSupportedAMs in {
@@ -470,22 +464,20 @@ def MOV16sd : MxMoveToSR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
 ///                               | EFFECTIVE ADDRESS
 ///  0  1  0  0  0  0  0  0  1  1 |   MODE  |   REG
 /// --------------------------------------------------
-let Uses = [SR] in {
 class MxMoveFromSR_R
     : MxInst<(outs MxDRD16:$dst), (ins SRC:$src), "move.w\t$src, $dst", []>,
-      Requires<[ AtLeastM68010 ]> {
+      Requires<[ IsM68000 ]> {
   let Inst = (descend 0b0100000011, MxEncAddrMode_d<"dst">.EA);
 }
 
 class MxMoveFromSR_M<MxOperand MEMOp, MxEncMemOp DST_ENC>
     : MxInst<(outs), (ins MEMOp:$dst, SRC:$src), "move.w\t$src, $dst", []>,
-      Requires<[ AtLeastM68010 ]> {
+      Requires<[ IsM68000 ]> {
   let Inst = (ascend
     (descend 0b0100000011, DST_ENC.EA),
     DST_ENC.Supplement
   );
 }
-} // let Uses = [SR]
 
 let mayStore = 1 in
 foreach AM = MxMoveSupportedAMs in {
