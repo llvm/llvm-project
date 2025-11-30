@@ -16,6 +16,8 @@
 
 def SDTRAOBinaryArith : SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisInt<1>]>;
 
+/// RAO arithmetic instructions.
+/// OUTCHAIN = AADD(INCHAIN, PTR, RHS)
 def X86rao_add  : SDNode<"X86ISD::AADD", SDTRAOBinaryArith,
                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def X86rao_or   : SDNode<"X86ISD::AOR",  SDTRAOBinaryArith,
