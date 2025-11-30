@@ -1187,7 +1187,8 @@ bool SimplifyRODataLoads::simplifyRODataLoads(BinaryFunction &BF) {
   uint64_t NumDynamicLocalLoadsFound = 0;
 
   for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
-    for (MCInst &Inst : *BB) {
+    for (auto It = BB->begin(); It != BB->end(); ++It) {
+      const MCInst &Inst = *It;
       unsigned Opcode = Inst.getOpcode();
       const MCInstrDesc &Desc = BC.MII->get(Opcode);
 
@@ -1200,7 +1201,7 @@ bool SimplifyRODataLoads::simplifyRODataLoads(BinaryFunction &BF) {
 
       if (MIB->hasPCRelOperand(Inst)) {
         // Try to find the symbol that corresponds to the PC-relative operand.
-        MCOperand *DispOpI = MIB->getMemOperandDisp(Inst);
+        MCOperand *DispOpI = MIB->getMemOperandDisp(const_cast<MCInst &>(Inst));
         assert(DispOpI != Inst.end() && "expected PC-relative displacement");
         assert(DispOpI->isExpr() &&
                "found PC-relative with non-symbolic displacement");
@@ -1226,28 +1227,53 @@ bool SimplifyRODataLoads::simplifyRODataLoads(BinaryFunction &BF) {
       }
 
       // Get the contents of the section containing the target address of the
-      // memory operand. We are only interested in read-only sections.
+      // memory operand. We are only interested in read-only sections for X86,
+      // for aarch64 the sections can be read-only or executable.
       ErrorOr<BinarySection &> DataSection =
           BC.getSectionForAddress(TargetAddress);
-      if (!DataSection || DataSection->isWritable())
+      if (!DataSection)
         continue;
+
+      if (BC.isX86() && DataSection->isWritable())
+        continue;
+
+      if (DataSection->isText()) {
+        // If data is not part of a function, check if it is part of a global CI
+        // Do not proceed if there aren't data markers for CIs
+        BinaryFunction *BFTgt =
+            BC.getBinaryFunctionContainingAddress(TargetAddress,
+                                                  /*CheckPastEnd*/ false,
+                                                  /*UseMaxSize*/ true);
+        const bool IsInsideFunc =
+            BFTgt && BFTgt->isInConstantIsland(TargetAddress);
+
+        auto CIEndIter = BC.AddressToConstantIslandMap.end();
+        auto CIIter = BC.AddressToConstantIslandMap.find(TargetAddress);
+        if (!IsInsideFunc && CIIter == CIEndIter)
+          continue;
+      }
 
       if (BC.getRelocationAt(TargetAddress) ||
           BC.getDynamicRelocationAt(TargetAddress))
         continue;
 
-      uint32_t Offset = TargetAddress - DataSection->getAddress();
-      StringRef ConstantData = DataSection->getContents();
-
       ++NumLocalLoadsFound;
       if (BB->hasProfile())
         NumDynamicLocalLoadsFound += BB->getExecutionCount();
 
-      if (MIB->replaceMemOperandWithImm(Inst, ConstantData, Offset)) {
-        ++NumLocalLoadsSimplified;
-        if (BB->hasProfile())
-          NumDynamicLocalLoadsSimplified += BB->getExecutionCount();
-      }
+      uint32_t Offset = TargetAddress - DataSection->getAddress();
+      StringRef ConstantData = DataSection->getContents();
+      const InstructionListType Instrs =
+          MIB->materializeConstant(Inst, ConstantData, Offset);
+      if (Instrs.empty())
+        continue;
+
+      auto IIter = BB->findInstruction(&Inst);
+      It = std::next(BB->replaceInstruction(IIter, Instrs), Instrs.size());
+
+      ++NumLocalLoadsSimplified;
+      if (BB->hasProfile())
+        NumDynamicLocalLoadsSimplified += BB->getExecutionCount();
     }
   }
 
@@ -1260,6 +1286,9 @@ bool SimplifyRODataLoads::simplifyRODataLoads(BinaryFunction &BF) {
 }
 
 Error SimplifyRODataLoads::runOnFunctions(BinaryContext &BC) {
+  if (BC.isRISCV())
+    return Error::success();
+
   for (auto &It : BC.getBinaryFunctions()) {
     BinaryFunction &Function = It.second;
     if (shouldOptimize(Function) && simplifyRODataLoads(Function))
