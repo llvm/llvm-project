@@ -1200,7 +1200,13 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     // Use X0, X0 form if the AVL is the same and the SEW+LMUL gives the same
     // VLMAX.
     if (Info.hasSameAVL(PrevInfo) && Info.hasSameVLMAX(PrevInfo)) {
-      auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0X0))
+      auto MI =
+          Info.hasAVLImm()
+              ? BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETIVLI))
+                    .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+                    .addImm(PrevInfo.getAVLImm())
+                    .addImm(Info.encodeVTYPE())
+              : BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0X0))
                     .addReg(RISCV::X0, RegState::Define | RegState::Dead)
                     .addReg(RISCV::X0, RegState::Kill)
                     .addImm(Info.encodeVTYPE())
@@ -1758,6 +1764,15 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
                 AvailableInfo, OldExit);
 }
 
+// If the VL is preserved between PrevMI and NextMI.
+static bool isVLPreserved(const MachineInstr &PrevMI,
+                          const MachineInstr &NextMI) {
+  return RISCVInstrInfo::isVLPreservingConfig(NextMI) ||
+         (PrevMI.getOpcode() == RISCV::PseudoVSETIVLI &&
+          NextMI.getOpcode() == RISCV::PseudoVSETIVLI &&
+          PrevMI.getOperand(1).getImm() == NextMI.getOperand(1).getImm());
+}
+
 // Return true if we can mutate PrevMI to match MI without changing any the
 // fields which would be observed.
 bool RISCVInsertVSETVLI::canMutatePriorConfig(
@@ -1766,7 +1781,7 @@ bool RISCVInsertVSETVLI::canMutatePriorConfig(
   // If the VL values aren't equal, return false if either a) the former is
   // demanded, or b) we can't rewrite the former to be the later for
   // implementation reasons.
-  if (!RISCVInstrInfo::isVLPreservingConfig(MI)) {
+  if (!isVLPreserved(PrevMI, MI)) {
     if (Used.VLAny)
       return false;
 
@@ -1860,7 +1875,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
       }
 
       if (canMutatePriorConfig(MI, *NextMI, Used)) {
-        if (!RISCVInstrInfo::isVLPreservingConfig(*NextMI)) {
+        if (!isVLPreserved(MI, *NextMI)) {
           Register DefReg = NextMI->getOperand(0).getReg();
 
           MI.getOperand(0).setReg(DefReg);

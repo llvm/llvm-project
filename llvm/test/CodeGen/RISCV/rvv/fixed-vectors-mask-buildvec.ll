@@ -489,7 +489,7 @@ define <64 x i1> @buildvec_mask_v64i1() {
 ; RV32-NEXT:    vmv.v.x v0, a0
 ; RV32-NEXT:    lui a0, 748384
 ; RV32-NEXT:    addi a0, a0, 1776
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, tu, ma
 ; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    ret
 ;
@@ -509,7 +509,7 @@ define <64 x i1> @buildvec_mask_v64i1() {
 ; ZVE32F-NEXT:    vmv.v.x v0, a0
 ; ZVE32F-NEXT:    lui a0, 748384
 ; ZVE32F-NEXT:    addi a0, a0, 1776
-; ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; ZVE32F-NEXT:    vmv.s.x v0, a0
 ; ZVE32F-NEXT:    ret
   ret <64 x i1> <i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1>
@@ -532,7 +532,7 @@ define <128 x i1> @buildvec_mask_v128i1() {
 ; RV64-NEXT:    ld a1, %lo(.LCPI20_1)(a1)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v0, a0
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
 ; RV64-NEXT:    vmv.s.x v0, a1
 ; RV64-NEXT:    ret
 ;

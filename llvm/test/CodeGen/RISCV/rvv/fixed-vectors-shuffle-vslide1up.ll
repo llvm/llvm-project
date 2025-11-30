@@ -277,7 +277,7 @@ define <2 x double> @vslide1up_v2f64_inverted(<2 x double> %v, double %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vrgather.vi v9, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -291,7 +291,7 @@ define <4 x i8> @vslide1up_4xi8_inverted(<4 x i8> %v, i8 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, tu, ma
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret

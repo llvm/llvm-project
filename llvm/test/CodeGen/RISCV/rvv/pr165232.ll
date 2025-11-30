@@ -125,7 +125,7 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v19, 0
 ; CHECK-NEXT:    vmclr.m v10
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 0, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v6, 0
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -143,7 +143,7 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:    vmv2r.v v8, v6
 ; CHECK-NEXT:    vmv1r.v v18, v19
 ; CHECK-NEXT:    vmv1r.v v21, v10
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, ma
 ; CHECK-NEXT:    vle32.v v20, (t4)
 ; CHECK-NEXT:    vle32.v v3, (t1)
 ; CHECK-NEXT:    vle32.v v30, (a7)
@@ -152,10 +152,10 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:    vle32.v v2, (t3)
 ; CHECK-NEXT:    vle32.v v31, (a6)
 ; CHECK-NEXT:    vmv1r.v v24, v30
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e64, m2, ta, mu
 ; CHECK-NEXT:    vmflt.vv v21, v8, v6, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v19
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, tu, mu
 ; CHECK-NEXT:    vle32.v v18, (a2)
 ; CHECK-NEXT:    vle32.v v8, (a3)
 ; CHECK-NEXT:    vle32.v v4, (a5)
@@ -194,7 +194,7 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:    vl4r.v v24, (t5) # vscale x 32-byte Folded Reload
 ; CHECK-NEXT:    vsetivli zero, 0, e64, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e64.v v20, (zero), v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg8e32.v v8, (a0)
 ; CHECK-NEXT:    csrr t5, vlenb
 ; CHECK-NEXT:    slli t5, t5, 4
@@ -205,7 +205,7 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:    slli t6, t6, 2
 ; CHECK-NEXT:    add t5, t5, t6
 ; CHECK-NEXT:    vl4r.v v24, (t5) # vscale x 32-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 0, e64, m2, ta, ma
 ; CHECK-NEXT:    vsseg4e64.v v20, (zero)
 ; CHECK-NEXT:    j .LBB0_1
 entry:

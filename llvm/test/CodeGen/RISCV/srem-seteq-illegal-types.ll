@@ -749,7 +749,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    vmsne.vv v0, v8, v10
 ; RV32MV-NEXT:    vmv.v.i v8, 0
 ; RV32MV-NEXT:    vmerge.vim v8, v8, -1, v0
-; RV32MV-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV32MV-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32MV-NEXT:    vslidedown.vi v12, v8, 1
 ; RV32MV-NEXT:    vslidedown.vi v13, v8, 2
 ; RV32MV-NEXT:    vsetivli zero, 1, e32, m2, ta, ma

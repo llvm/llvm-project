@@ -78,7 +78,7 @@ define <4 x i64> @vwsll_vx_i32_v4i64_sext(<4 x i32> %a, i32 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vsext.vf2 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -104,7 +104,7 @@ define <4 x i64> @vwsll_vx_i32_v4i64_zext(<4 x i32> %a, i32 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vzext.vf2 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -129,7 +129,7 @@ define <4 x i64> @vwsll_vx_i16_v4i64_sext(<4 x i32> %a, i16 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vsext.vf4 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -154,7 +154,7 @@ define <4 x i64> @vwsll_vx_i16_v4i64_zext(<4 x i32> %a, i16 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vzext.vf4 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -179,7 +179,7 @@ define <4 x i64> @vwsll_vx_i8_v4i64_sext(<4 x i32> %a, i8 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vsext.vf8 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -204,7 +204,7 @@ define <4 x i64> @vwsll_vx_i8_v4i64_zext(<4 x i32> %a, i8 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vzext.vf8 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -340,7 +340,7 @@ define <8 x i32> @vwsll_vx_i16_v8i32_sext(<8 x i16> %a, i16 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vsext.vf2 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -366,7 +366,7 @@ define <8 x i32> @vwsll_vx_i16_v8i32_zext(<8 x i16> %a, i16 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vzext.vf2 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -391,7 +391,7 @@ define <8 x i32> @vwsll_vx_i8_v8i32_sext(<8 x i16> %a, i8 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vsext.vf4 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -416,7 +416,7 @@ define <8 x i32> @vwsll_vx_i8_v8i32_zext(<8 x i16> %a, i8 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vzext.vf4 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -511,11 +511,11 @@ define <16 x i16> @vwsll_vx_i64_v16i16(<16 x i8> %a, i64 %b) {
 ; RV32-NEXT:    vmv.v.x v16, a0
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vrgather.vi v24, v16, 0
-; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RV32-NEXT:    vzext.vf2 v12, v8
-; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vnsrl.wi v8, v24, 0
-; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RV32-NEXT:    vnsrl.wi v14, v8, 0
 ; RV32-NEXT:    vsll.vv v8, v12, v14
 ; RV32-NEXT:    ret
@@ -524,11 +524,11 @@ define <16 x i16> @vwsll_vx_i64_v16i16(<16 x i8> %a, i64 %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vmv.v.x v16, a0
-; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RV64-NEXT:    vzext.vf2 v12, v8
-; RV64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vnsrl.wi v8, v16, 0
-; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RV64-NEXT:    vnsrl.wi v14, v8, 0
 ; RV64-NEXT:    vsll.vv v8, v12, v14
 ; RV64-NEXT:    ret
@@ -539,11 +539,11 @@ define <16 x i16> @vwsll_vx_i64_v16i16(<16 x i8> %a, i64 %b) {
 ; CHECK-ZVBB-RV32-NEXT:    vmv.v.x v16, a0
 ; CHECK-ZVBB-RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-ZVBB-RV32-NEXT:    vrgather.vi v24, v16, 0
-; CHECK-ZVBB-RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-ZVBB-RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-ZVBB-RV32-NEXT:    vzext.vf2 v12, v8
-; CHECK-ZVBB-RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-ZVBB-RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-ZVBB-RV32-NEXT:    vnsrl.wi v8, v24, 0
-; CHECK-ZVBB-RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-ZVBB-RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-ZVBB-RV32-NEXT:    vnsrl.wi v14, v8, 0
 ; CHECK-ZVBB-RV32-NEXT:    vsll.vv v8, v12, v14
 ; CHECK-ZVBB-RV32-NEXT:    ret
@@ -567,7 +567,7 @@ define <16 x i16> @vwsll_vx_i32_v16i16(<16 x i8> %a, i32 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vnsrl.wi v8, v12, 0
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -613,7 +613,7 @@ define <16 x i16> @vwsll_vx_i8_v16i16_sext(<16 x i8> %a, i8 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vsext.vf2 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -639,7 +639,7 @@ define <16 x i16> @vwsll_vx_i8_v16i16_zext(<16 x i8> %a, i8 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vzext.vf2 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -753,7 +753,7 @@ define <4 x i64> @vwsll_vx_i32_v4i64_v4i8_sext(<4 x i8> %a, i32 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf8 v10, v8
 ; CHECK-NEXT:    vsext.vf2 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -763,7 +763,7 @@ define <4 x i64> @vwsll_vx_i32_v4i64_v4i8_sext(<4 x i8> %a, i32 %b) {
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv.v.x v12, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-ZVBB-NEXT:    vzext.vf8 v10, v8
 ; CHECK-ZVBB-NEXT:    vsext.vf2 v8, v12
 ; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v8
@@ -781,7 +781,7 @@ define <4 x i64> @vwsll_vx_i32_v4i64_v4i8_zext(<4 x i8> %a, i32 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf8 v10, v8
 ; CHECK-NEXT:    vzext.vf2 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -806,7 +806,7 @@ define <4 x i64> @vwsll_vx_i16_v4i64_v4i8_sext(<4 x i8> %a, i16 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf8 v10, v8
 ; CHECK-NEXT:    vsext.vf4 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -816,7 +816,7 @@ define <4 x i64> @vwsll_vx_i16_v4i64_v4i8_sext(<4 x i8> %a, i16 %b) {
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv.v.x v12, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-ZVBB-NEXT:    vzext.vf8 v10, v8
 ; CHECK-ZVBB-NEXT:    vsext.vf4 v8, v12
 ; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v8
@@ -834,7 +834,7 @@ define <4 x i64> @vwsll_vx_i16_v4i64_v4i8_zext(<4 x i8> %a, i16 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf8 v10, v8
 ; CHECK-NEXT:    vzext.vf4 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -859,7 +859,7 @@ define <4 x i64> @vwsll_vx_i8_v4i64_v4i8_sext(<4 x i8> %a, i8 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf8 v10, v8
 ; CHECK-NEXT:    vsext.vf8 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8
@@ -869,7 +869,7 @@ define <4 x i64> @vwsll_vx_i8_v4i64_v4i8_sext(<4 x i8> %a, i8 %b) {
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv.v.x v12, a0
-; CHECK-ZVBB-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-ZVBB-NEXT:    vzext.vf8 v10, v8
 ; CHECK-ZVBB-NEXT:    vsext.vf8 v8, v12
 ; CHECK-ZVBB-NEXT:    vsll.vv v8, v10, v8
@@ -887,7 +887,7 @@ define <4 x i64> @vwsll_vx_i8_v4i64_v4i8_zext(<4 x i8> %a, i8 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf8 v10, v8
 ; CHECK-NEXT:    vzext.vf8 v8, v12
 ; CHECK-NEXT:    vsll.vv v8, v10, v8

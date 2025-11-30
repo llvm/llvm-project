@@ -57,11 +57,11 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, tu, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, m2, tu, mu
 ; CHECK-NEXT:    vsext.vf2 v8, v14, v0.t
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_44)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_44)
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v14, (a0)
 ; CHECK-NEXT:    lui a0, %hi(var_47)
 ; CHECK-NEXT:    addi a0, a0, %lo(var_47)

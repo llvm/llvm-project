@@ -65,7 +65,7 @@ define void @trunc_v4i8_v4i32(ptr %x, ptr %z) {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -81,7 +81,7 @@ define void @trunc_v8i8_v8i32(ptr %x, ptr %z) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret

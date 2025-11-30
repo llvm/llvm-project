@@ -569,7 +569,7 @@ define void @truncstore_v2i32_v2i8(<2 x i32> %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -619,7 +619,7 @@ define void @truncstore_v4i32_v4i8(<4 x i32> %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -669,7 +669,7 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -719,7 +719,7 @@ define void @truncstore_v16i32_v16i8(<16 x i32> %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v12, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v12, 0
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -769,9 +769,9 @@ define void @truncstore_v2i64_v2i8(<2 x i64> %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -785,7 +785,7 @@ define void @truncstore_v2i64_v2i16(<2 x i64> %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -811,9 +811,9 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -827,7 +827,7 @@ define void @truncstore_v4i64_v4i16(<4 x i64> %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -853,9 +853,9 @@ define void @truncstore_v8i64_v8i8(<8 x i64> %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v12, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -869,7 +869,7 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v12, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v12, 0
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -895,9 +895,9 @@ define void @truncstore_v16i64_v16i8(<16 x i64> %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v16, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v16, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v10, v8, 0
 ; CHECK-NEXT:    vse8.v v10, (a0)
 ; CHECK-NEXT:    ret
@@ -911,7 +911,7 @@ define void @truncstore_v16i64_v16i16(<16 x i64> %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v16, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v16, 0
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret

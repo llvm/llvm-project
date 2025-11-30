@@ -7,7 +7,7 @@ define <4 x i8> @test_v4i16_v4i8(<4 x i16> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, zero
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %a = icmp sgt <4 x i16> %x, zeroinitializer
@@ -23,9 +23,9 @@ define <4 x i8> @test_v4i32_v4i8(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, zero
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %a = icmp sgt <4 x i32> %x, zeroinitializer
@@ -41,11 +41,11 @@ define <4 x i8> @test_v4i64_v4i8(<4 x i64> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, zero
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v10, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %a = icmp sgt <4 x i64> %x, zeroinitializer
@@ -61,7 +61,7 @@ define <4 x i16> @test_v4i32_v4i16(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, zero
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %a = icmp sgt <4 x i32> %x, zeroinitializer
@@ -77,9 +77,9 @@ define <4 x i16> @test_v4i64_v4i16(<4 x i64> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vmax.vx v8, v8, zero
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v10, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v10, 0
 ; CHECK-NEXT:    ret
   %a = icmp sgt <4 x i64> %x, zeroinitializer
@@ -95,7 +95,7 @@ define <4 x i32> @test_v4i64_v4i32(<4 x i64> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vmax.vx v10, v8, zero
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v10, 0
 ; CHECK-NEXT:    ret
   %a = icmp sgt <4 x i64> %x, zeroinitializer

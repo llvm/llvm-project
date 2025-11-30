@@ -24,7 +24,7 @@ define <2 x half> @vfptrunc_v2f64_v2f16(<2 x double> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v9
 ; CHECK-NEXT:    ret
   %evec = call <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f64(<2 x double> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -58,7 +58,7 @@ define <4 x half> @vfptrunc_v4f64_v4f16(<4 x double> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v10
 ; CHECK-NEXT:    ret
   %evec = call <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x double> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -92,7 +92,7 @@ define <8 x half> @vfptrunc_v8f64_v8f16(<8 x double> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v12
 ; CHECK-NEXT:    ret
   %evec = call <8 x half> @llvm.experimental.constrained.fptrunc.v8f16.v8f64(<8 x double> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -115,7 +115,7 @@ define <2 x bfloat> @vfptrunc_v2f64_v2bf16(<2 x double> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v9
 ; CHECK-NEXT:    ret
   %evec = call <2 x bfloat> @llvm.experimental.constrained.fptrunc.v2bf16.v2f64(<2 x double> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -138,7 +138,7 @@ define <4 x bfloat> @vfptrunc_v4f64_v4bf16(<4 x double> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v10
 ; CHECK-NEXT:    ret
   %evec = call <4 x bfloat> @llvm.experimental.constrained.fptrunc.v4bf16.v4f64(<4 x double> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -161,7 +161,7 @@ define <8 x bfloat> @vfptrunc_v8f64_v8bf16(<8 x double> %va) strictfp {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v12
 ; CHECK-NEXT:    ret
   %evec = call <8 x bfloat> @llvm.experimental.constrained.fptrunc.v8bf16.v8f64(<8 x double> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")

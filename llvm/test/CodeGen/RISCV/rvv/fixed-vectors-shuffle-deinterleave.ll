@@ -63,7 +63,7 @@ define void @deinterleave4_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a1)
@@ -82,7 +82,7 @@ define void @deinterleave4_8_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 8
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a1)
@@ -234,9 +234,9 @@ define void @deinterleave8_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a1)
@@ -255,9 +255,9 @@ define void @deinterleave8_8_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a1)
@@ -303,7 +303,7 @@ define void @deinterleave4_0_i8_subvec(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -371,7 +371,7 @@ define void @deinterleave4_0_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vnsrl.wi v9, v9, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vnsrl.wi v9, v9, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
@@ -396,7 +396,7 @@ define void @deinterleave4_8_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 8
 ; CHECK-NEXT:    vnsrl.wi v9, v9, 8
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vnsrl.wi v9, v9, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
@@ -419,7 +419,7 @@ define void @deinterleave8_0_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a2)

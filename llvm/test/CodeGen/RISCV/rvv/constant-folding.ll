@@ -18,7 +18,7 @@ define <2 x i16> @fixedlen(<2 x i32> %x) {
 ; CHECK-NEXT:    vsrl.vi v8, v8, 16
 ; CHECK-NEXT:    lui a0, 1048568
 ; CHECK-NEXT:    vand.vx v8, v8, a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v43 = lshr <2 x i32> %x, splat (i32 16)

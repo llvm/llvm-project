@@ -355,7 +355,7 @@ define <2 x i32> @vwaddu_v2i32_v2i8(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v9, (a1)
 ; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, ptr %x
@@ -668,7 +668,7 @@ define <8 x i16> @vwaddu_vx_v8i16_i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
 ; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vwaddu.wv v8, v8, v9
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %x
@@ -723,7 +723,7 @@ define <4 x i32> @vwaddu_vx_v4i32_i32(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vwaddu.wv v8, v8, v9
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %x
@@ -853,7 +853,7 @@ define <2 x i64> @vwaddu_vx_v2i64_i64(ptr %x, ptr %y) nounwind {
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle32.v v9, (a0)
 ; RV64-NEXT:    vmv.v.x v8, a1
-; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vwaddu.wv v8, v8, v9
 ; RV64-NEXT:    ret
   %a = load <2 x i32>, ptr %x
@@ -872,7 +872,7 @@ define <4 x i64> @crash(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    vmv1r.v v11, v8
 ; CHECK-NEXT:    vsext.vf4 v8, v11
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v11, v10
 ; CHECK-NEXT:    vwaddu.wv v8, v8, v11
 ; CHECK-NEXT:    ret
@@ -889,7 +889,7 @@ define <2 x i32> @vwaddu_v2i32_of_v2i8(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v9, (a1)
 ; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, ptr %x
@@ -907,7 +907,7 @@ define <2 x i64> @vwaddu_v2i64_of_v2i8(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v9, (a1)
 ; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vzext.vf4 v8, v10
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, ptr %x
@@ -925,7 +925,7 @@ define <2 x i64> @vwaddu_v2i64_of_v2i16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
 ; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %a = load <2 x i16>, ptr %x

@@ -7,7 +7,7 @@ define void @snork(ptr %arg, <vscale x 2 x i64> %arg1) {
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vmul.vx v8, v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 1
 ; CHECK-NEXT:    vsoxei64.v v10, (a0), v8
 ; CHECK-NEXT:    ret

@@ -501,9 +501,9 @@ define <16 x float> @shuffle_disjoint_lanes(<16 x float> %v, <16 x float> %w) {
 ; CHECK-NEXT:    addi a0, a0, -1366
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vmerge.vvm v12, v12, v8, v0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vsext.vf2 v16, v18
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v8, v12, v16
 ; CHECK-NEXT:    ret
   %out = shufflevector <16 x float> %v, <16 x float> %w, <16 x i32> <i32 11, i32 15, i32 7, i32 3, i32 26, i32 30, i32 22, i32 18, i32 9, i32 13, i32 5, i32 1, i32 24, i32 28, i32 20, i32 16>

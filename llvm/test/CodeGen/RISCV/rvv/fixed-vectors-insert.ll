@@ -789,9 +789,9 @@ define void @insertelt_c6_v8i64_0_add(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vle64.v v12, (a1)
 ; CHECK-NEXT:    li a1, 6
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -802,9 +802,9 @@ define void @insertelt_c6_v8i64_0_add(ptr %x, ptr %y) {
 ; VISNI-NEXT:    vle64.v v8, (a0)
 ; VISNI-NEXT:    vle64.v v12, (a1)
 ; VISNI-NEXT:    li a1, 6
-; VISNI-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
+; VISNI-NEXT:    vsetivli zero, 8, e64, m4, tu, ma
 ; VISNI-NEXT:    vmv.s.x v8, a1
-; VISNI-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; VISNI-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; VISNI-NEXT:    vadd.vv v8, v8, v12
 ; VISNI-NEXT:    vse64.v v8, (a0)
 ; VISNI-NEXT:    ret
@@ -1149,7 +1149,7 @@ define <2 x i8> @pr169017(<4 x i16> %vecinit, <2 x i8> %dst_vec) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, tu, ma
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1158,7 +1158,7 @@ define <2 x i8> @pr169017(<4 x i16> %vecinit, <2 x i8> %dst_vec) {
 ; VISNI:       # %bb.0: # %entry
 ; VISNI-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; VISNI-NEXT:    vmv.x.s a0, v8
-; VISNI-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
+; VISNI-NEXT:    vsetivli zero, 1, e8, mf8, tu, ma
 ; VISNI-NEXT:    vmv.s.x v9, a0
 ; VISNI-NEXT:    vmv1r.v v8, v9
 ; VISNI-NEXT:    ret

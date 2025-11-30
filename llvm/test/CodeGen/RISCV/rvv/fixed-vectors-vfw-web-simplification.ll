@@ -14,7 +14,7 @@ define void @vfwmul_v2f116_multiple_users(ptr %x, ptr %y, ptr %z, <2 x half> %a,
 ; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v11, v8
 ; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v8, v9
 ; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v9, v10
-; NO_FOLDING1-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; NO_FOLDING1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; NO_FOLDING1-NEXT:    vfmul.vv v10, v11, v8
 ; NO_FOLDING1-NEXT:    vfadd.vv v11, v11, v9
 ; NO_FOLDING1-NEXT:    vfsub.vv v8, v8, v9
@@ -28,9 +28,9 @@ define void @vfwmul_v2f116_multiple_users(ptr %x, ptr %y, ptr %z, <2 x half> %a,
 ; NO_FOLDING2-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; NO_FOLDING2-NEXT:    vfwcvt.f.f.v v11, v8
 ; NO_FOLDING2-NEXT:    vfwcvt.f.f.v v8, v9
-; NO_FOLDING2-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; NO_FOLDING2-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; NO_FOLDING2-NEXT:    vfmul.vv v9, v11, v8
-; NO_FOLDING2-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; NO_FOLDING2-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; NO_FOLDING2-NEXT:    vfwadd.wv v11, v11, v10
 ; NO_FOLDING2-NEXT:    vfwsub.wv v8, v8, v10
 ; NO_FOLDING2-NEXT:    vse32.v v9, (a0)
@@ -55,7 +55,7 @@ define void @vfwmul_v2f116_multiple_users(ptr %x, ptr %y, ptr %z, <2 x half> %a,
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v11, v8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v9
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v10
-; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVFHMIN-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfmul.vv v10, v11, v8
 ; ZVFHMIN-NEXT:    vfadd.vv v11, v11, v9
 ; ZVFHMIN-NEXT:    vfsub.vv v8, v8, v9
@@ -82,7 +82,7 @@ define void @vfwmul_v2f32_multiple_users(ptr %x, ptr %y, ptr %z, <2 x float> %a,
 ; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v11, v8
 ; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v8, v9
 ; NO_FOLDING1-NEXT:    vfwcvt.f.f.v v9, v10
-; NO_FOLDING1-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; NO_FOLDING1-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; NO_FOLDING1-NEXT:    vfmul.vv v10, v11, v8
 ; NO_FOLDING1-NEXT:    vfadd.vv v11, v11, v9
 ; NO_FOLDING1-NEXT:    vfsub.vv v8, v8, v9
@@ -96,9 +96,9 @@ define void @vfwmul_v2f32_multiple_users(ptr %x, ptr %y, ptr %z, <2 x float> %a,
 ; NO_FOLDING2-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; NO_FOLDING2-NEXT:    vfwcvt.f.f.v v11, v8
 ; NO_FOLDING2-NEXT:    vfwcvt.f.f.v v8, v9
-; NO_FOLDING2-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; NO_FOLDING2-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; NO_FOLDING2-NEXT:    vfmul.vv v9, v11, v8
-; NO_FOLDING2-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; NO_FOLDING2-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; NO_FOLDING2-NEXT:    vfwadd.wv v11, v11, v10
 ; NO_FOLDING2-NEXT:    vfwsub.wv v8, v8, v10
 ; NO_FOLDING2-NEXT:    vse64.v v9, (a0)
@@ -135,7 +135,7 @@ define void @vfwmacc_v2f32_multiple_users(ptr %x, ptr %y, ptr %z, <2 x float> %a
 ; NO_FOLDING-NEXT:    vfwcvt.f.f.v v12, v8
 ; NO_FOLDING-NEXT:    vfwcvt.f.f.v v8, v9
 ; NO_FOLDING-NEXT:    vfwcvt.f.f.v v9, v10
-; NO_FOLDING-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; NO_FOLDING-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; NO_FOLDING-NEXT:    vfmul.vv v10, v12, v8
 ; NO_FOLDING-NEXT:    vfmadd.vv v12, v9, v11
 ; NO_FOLDING-NEXT:    vfsub.vv v8, v8, v9
@@ -174,7 +174,7 @@ define void @vfwmacc_v2f32_multiple_users_addend_user(ptr %x, ptr %y, ptr %z, <2
 ; NO_FOLDING-NEXT:    vfwcvt.f.f.v v11, v8
 ; NO_FOLDING-NEXT:    vfwcvt.f.f.v v8, v9
 ; NO_FOLDING-NEXT:    vfwcvt.f.f.v v9, v10
-; NO_FOLDING-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; NO_FOLDING-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; NO_FOLDING-NEXT:    vfmul.vv v10, v11, v8
 ; NO_FOLDING-NEXT:    vfmadd.vv v11, v9, v8
 ; NO_FOLDING-NEXT:    vfsub.vv v8, v8, v9
@@ -189,7 +189,7 @@ define void @vfwmacc_v2f32_multiple_users_addend_user(ptr %x, ptr %y, ptr %z, <2
 ; FOLDING-NEXT:    vfwcvt.f.f.v v11, v8
 ; FOLDING-NEXT:    vfwcvt.f.f.v v8, v9
 ; FOLDING-NEXT:    vfwcvt.f.f.v v9, v10
-; FOLDING-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; FOLDING-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; FOLDING-NEXT:    vfmul.vv v10, v11, v8
 ; FOLDING-NEXT:    vfmadd.vv v11, v9, v8
 ; FOLDING-NEXT:    vfsub.vv v8, v8, v9
@@ -216,7 +216,7 @@ define void @vfwmacc_v2f32_addend_user(ptr %x, <2 x float> %a, <2 x float> %b) {
 ; NO_FOLDING-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; NO_FOLDING-NEXT:    vfwcvt.f.f.v v10, v8
 ; NO_FOLDING-NEXT:    vfwcvt.f.f.v v8, v9
-; NO_FOLDING-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; NO_FOLDING-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; NO_FOLDING-NEXT:    vfmadd.vv v8, v10, v8
 ; NO_FOLDING-NEXT:    vse64.v v8, (a0)
 ; NO_FOLDING-NEXT:    ret
@@ -226,7 +226,7 @@ define void @vfwmacc_v2f32_addend_user(ptr %x, <2 x float> %a, <2 x float> %b) {
 ; FOLDING-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; FOLDING-NEXT:    vfwcvt.f.f.v v10, v8
 ; FOLDING-NEXT:    vfwcvt.f.f.v v8, v9
-; FOLDING-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; FOLDING-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; FOLDING-NEXT:    vfmadd.vv v8, v10, v8
 ; FOLDING-NEXT:    vse64.v v8, (a0)
 ; FOLDING-NEXT:    ret

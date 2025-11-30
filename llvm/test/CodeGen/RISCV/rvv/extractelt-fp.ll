@@ -338,7 +338,7 @@ define bfloat @extractelt_nxv8bf16_idx(<vscale x 8 x bfloat> %v, i32 zeroext %id
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
 ; ZVFBFA-NEXT:    vslidedown.vx v8, v8, a0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, m2, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 1, e16alt, m2, ta, ma
 ; ZVFBFA-NEXT:    vfmv.f.s fa0, v8
 ; ZVFBFA-NEXT:    ret
   %r = extractelement <vscale x 8 x bfloat> %v, i32 %idx
@@ -423,7 +423,7 @@ define bfloat @extractelt_nxv16bf16_idx(<vscale x 16 x bfloat> %v, i32 zeroext %
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 1, e16, m4, ta, ma
 ; ZVFBFA-NEXT:    vslidedown.vx v8, v8, a0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, m4, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 1, e16alt, m4, ta, ma
 ; ZVFBFA-NEXT:    vfmv.f.s fa0, v8
 ; ZVFBFA-NEXT:    ret
   %r = extractelement <vscale x 16 x bfloat> %v, i32 %idx
@@ -508,7 +508,7 @@ define bfloat @extractelt_nxv32bf16_idx(<vscale x 32 x bfloat> %v, i32 zeroext %
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    vsetivli zero, 1, e16, m8, ta, ma
 ; ZVFBFA-NEXT:    vslidedown.vx v8, v8, a0
-; ZVFBFA-NEXT:    vsetvli zero, zero, e16alt, m8, ta, ma
+; ZVFBFA-NEXT:    vsetivli zero, 1, e16alt, m8, ta, ma
 ; ZVFBFA-NEXT:    vfmv.f.s fa0, v8
 ; ZVFBFA-NEXT:    ret
   %r = extractelement <vscale x 32 x bfloat> %v, i32 %idx

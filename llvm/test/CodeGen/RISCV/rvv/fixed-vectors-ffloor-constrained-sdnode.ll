@@ -16,11 +16,11 @@ define <1 x half> @floor_v1f16(<1 x half> %x) strictfp {
 ; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    fsrmi a0, 2
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %a = call <1 x half> @llvm.experimental.constrained.floor.v1f16(<1 x half> %x, metadata !"fpexcept.strict")
@@ -39,11 +39,11 @@ define <2 x half> @floor_v2f16(<2 x half> %x) strictfp {
 ; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    fsrmi a0, 2
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %a = call <2 x half> @llvm.experimental.constrained.floor.v2f16(<2 x half> %x, metadata !"fpexcept.strict")
@@ -62,11 +62,11 @@ define <4 x half> @floor_v4f16(<4 x half> %x) strictfp {
 ; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    fsrmi a0, 2
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %a = call <4 x half> @llvm.experimental.constrained.floor.v4f16(<4 x half> %x, metadata !"fpexcept.strict")
@@ -85,11 +85,11 @@ define <8 x half> @floor_v8f16(<8 x half> %x) strictfp {
 ; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    fsrmi a0, 2
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %a = call <8 x half> @llvm.experimental.constrained.floor.v8f16(<8 x half> %x, metadata !"fpexcept.strict")
@@ -108,11 +108,11 @@ define <16 x half> @floor_v16f16(<16 x half> %x) strictfp {
 ; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    fsrmi a0, 2
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
 ; CHECK-NEXT:    ret
   %a = call <16 x half> @llvm.experimental.constrained.floor.v16f16(<16 x half> %x, metadata !"fpexcept.strict")
@@ -154,11 +154,11 @@ define <1 x float> @floor_v1f32(<1 x float> %x) strictfp {
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    fsrmi a0, 2
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %a = call <1 x float> @llvm.experimental.constrained.floor.v1f32(<1 x float> %x, metadata !"fpexcept.strict")
@@ -176,11 +176,11 @@ define <2 x float> @floor_v2f32(<2 x float> %x) strictfp {
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    fsrmi a0, 2
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %a = call <2 x float> @llvm.experimental.constrained.floor.v2f32(<2 x float> %x, metadata !"fpexcept.strict")
@@ -198,11 +198,11 @@ define <4 x float> @floor_v4f32(<4 x float> %x) strictfp {
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    fsrmi a0, 2
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
   %a = call <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float> %x, metadata !"fpexcept.strict")
@@ -220,11 +220,11 @@ define <8 x float> @floor_v8f32(<8 x float> %x) strictfp {
 ; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    fsrmi a0, 2
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v10, v10, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
 ; CHECK-NEXT:    ret
   %a = call <8 x float> @llvm.experimental.constrained.floor.v8f32(<8 x float> %x, metadata !"fpexcept.strict")
@@ -242,11 +242,11 @@ define <16 x float> @floor_v16f32(<16 x float> %x) strictfp {
 ; CHECK-NEXT:    vfabs.v v12, v8
 ; CHECK-NEXT:    vmflt.vf v0, v12, fa5
 ; CHECK-NEXT:    fsrmi a0, 2
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
 ; CHECK-NEXT:    ret
   %a = call <16 x float> @llvm.experimental.constrained.floor.v16f32(<16 x float> %x, metadata !"fpexcept.strict")
@@ -264,11 +264,11 @@ define <1 x double> @floor_v1f64(<1 x double> %x) strictfp {
 ; RV32-NEXT:    vfabs.v v9, v8
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
 ; RV32-NEXT:    fsrmi a0, 2
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -283,11 +283,11 @@ define <1 x double> @floor_v1f64(<1 x double> %x) strictfp {
 ; RV64-NEXT:    fmv.d.x fa5, a0
 ; RV64-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64-NEXT:    fsrmi a0, 2
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
 ; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; RV64-NEXT:    ret
   %a = call <1 x double> @llvm.experimental.constrained.floor.v1f64(<1 x double> %x, metadata !"fpexcept.strict")
@@ -305,11 +305,11 @@ define <2 x double> @floor_v2f64(<2 x double> %x) strictfp {
 ; RV32-NEXT:    vfabs.v v9, v8
 ; RV32-NEXT:    vmflt.vf v0, v9, fa5
 ; RV32-NEXT:    fsrmi a0, 2
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV32-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -324,11 +324,11 @@ define <2 x double> @floor_v2f64(<2 x double> %x) strictfp {
 ; RV64-NEXT:    fmv.d.x fa5, a0
 ; RV64-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64-NEXT:    fsrmi a0, 2
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vfcvt.x.f.v v9, v8, v0.t
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV64-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; RV64-NEXT:    ret
   %a = call <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double> %x, metadata !"fpexcept.strict")
@@ -346,11 +346,11 @@ define <4 x double> @floor_v4f64(<4 x double> %x) strictfp {
 ; RV32-NEXT:    vfabs.v v10, v8
 ; RV32-NEXT:    vmflt.vf v0, v10, fa5
 ; RV32-NEXT:    fsrmi a0, 2
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vfcvt.f.x.v v10, v10, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; RV32-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -365,11 +365,11 @@ define <4 x double> @floor_v4f64(<4 x double> %x) strictfp {
 ; RV64-NEXT:    fmv.d.x fa5, a0
 ; RV64-NEXT:    vmflt.vf v0, v10, fa5
 ; RV64-NEXT:    fsrmi a0, 2
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vfcvt.x.f.v v10, v8, v0.t
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vfcvt.f.x.v v10, v10, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; RV64-NEXT:    vfsgnj.vv v8, v10, v8, v0.t
 ; RV64-NEXT:    ret
   %a = call <4 x double> @llvm.experimental.constrained.floor.v4f64(<4 x double> %x, metadata !"fpexcept.strict")
@@ -387,11 +387,11 @@ define <8 x double> @floor_v8f64(<8 x double> %x) strictfp {
 ; RV32-NEXT:    vfabs.v v12, v8
 ; RV32-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32-NEXT:    fsrmi a0, 2
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV32-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -406,11 +406,11 @@ define <8 x double> @floor_v8f64(<8 x double> %x) strictfp {
 ; RV64-NEXT:    fmv.d.x fa5, a0
 ; RV64-NEXT:    vmflt.vf v0, v12, fa5
 ; RV64-NEXT:    fsrmi a0, 2
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vfcvt.x.f.v v12, v8, v0.t
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vfcvt.f.x.v v12, v12, v0.t
-; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV64-NEXT:    vfsgnj.vv v8, v12, v8, v0.t
 ; RV64-NEXT:    ret
   %a = call <8 x double> @llvm.experimental.constrained.floor.v8f64(<8 x double> %x, metadata !"fpexcept.strict")

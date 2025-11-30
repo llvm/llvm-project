@@ -50,7 +50,7 @@ define void @vpscatter_v2i32_truncstore_v2i8(<2 x i32> %val, <2 x ptr> %ptrs, <2
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV32-NEXT:    vnsrl.wi v8, v8, 0
-; RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; RV32-NEXT:    vnsrl.wi v8, v8, 0
 ; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
@@ -60,7 +60,7 @@ define void @vpscatter_v2i32_truncstore_v2i8(<2 x i32> %val, <2 x ptr> %ptrs, <2
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV64-NEXT:    vnsrl.wi v8, v8, 0
-; RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; RV64-NEXT:    vnsrl.wi v8, v8, 0
 ; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
@@ -75,9 +75,9 @@ define void @vpscatter_v2i64_truncstore_v2i8(<2 x i64> %val, <2 x ptr> %ptrs, <2
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vnsrl.wi v8, v8, 0
-; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV32-NEXT:    vnsrl.wi v8, v8, 0
-; RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; RV32-NEXT:    vnsrl.wi v8, v8, 0
 ; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
@@ -87,9 +87,9 @@ define void @vpscatter_v2i64_truncstore_v2i8(<2 x i64> %val, <2 x ptr> %ptrs, <2
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vnsrl.wi v8, v8, 0
-; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV64-NEXT:    vnsrl.wi v8, v8, 0
-; RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; RV64-NEXT:    vnsrl.wi v8, v8, 0
 ; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
@@ -210,7 +210,7 @@ define void @vpscatter_v2i64_truncstore_v2i16(<2 x i64> %val, <2 x ptr> %ptrs, <
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vnsrl.wi v8, v8, 0
-; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV32-NEXT:    vnsrl.wi v8, v8, 0
 ; RV32-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
@@ -220,7 +220,7 @@ define void @vpscatter_v2i64_truncstore_v2i16(<2 x i64> %val, <2 x ptr> %ptrs, <
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vnsrl.wi v8, v8, 0
-; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; RV64-NEXT:    vnsrl.wi v8, v8, 0
 ; RV64-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
