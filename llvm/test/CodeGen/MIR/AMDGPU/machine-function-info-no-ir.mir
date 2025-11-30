@@ -59,6 +59,7 @@
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
+# FULL-NEXT: RelaxedTBufferOOBMode: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -170,6 +171,7 @@ body:             |
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
+# FULL-NEXT: RelaxedTBufferOOBMode: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -252,6 +254,7 @@ body:             |
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
+# FULL-NEXT: RelaxedTBufferOOBMode: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -335,6 +338,7 @@ body:             |
 # FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: numKernargPreloadSGPRs: 0
 # FULL-NEXT: isWholeWaveFunction: false
+# FULL-NEXT: RelaxedTBufferOOBMode: false
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
