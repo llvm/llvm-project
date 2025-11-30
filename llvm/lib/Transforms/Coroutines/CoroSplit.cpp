@@ -375,7 +375,18 @@ static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
   // If coro.end has an associated bundle, add cleanupret instruction.
   if (auto Bundle = End->getOperandBundle(LLVMContext::OB_funclet)) {
     auto *FromPad = cast<CleanupPadInst>(Bundle->Inputs[0]);
-    auto *CleanupRet = Builder.CreateCleanupRet(FromPad, nullptr);
+
+    // If the terminator is an invoke,
+    // set the cleanupret unwind destination the same as the other edges, to
+    // preserve the invariant of "Unwind edges out of a funclet pad must have
+    // the same unwind dest"
+    BasicBlock *UnwindDest = nullptr;
+    if (auto *Invoke =
+            dyn_cast<InvokeInst>(FromPad->getParent()->getTerminator())) {
+      UnwindDest = Invoke->getUnwindDest();
+    }
+
+    auto *CleanupRet = Builder.CreateCleanupRet(FromPad, UnwindDest);
     End->getParent()->splitBasicBlock(End);
     CleanupRet->getParent()->getTerminator()->eraseFromParent();
   }
@@ -1996,10 +2007,101 @@ void coro::SwitchABI::splitCoroutine(Function &F, coro::Shape &Shape,
   SwitchCoroutineSplitter::split(F, Shape, Clones, TTI);
 }
 
+// Dominance issue fixer for each predecessor satisfying predicate function
+static void
+remapPredecessorIfPredicate(BasicBlock *InitialBlock,
+                            BasicBlock *ReplacementBlock,
+                            std::function<bool(BasicBlock *)> Predicate) {
+
+  SmallVector<BasicBlock *> InitialBlockDominanceViolatingPredecessors;
+
+  auto Predecessors = predecessors(InitialBlock);
+  std::copy_if(Predecessors.begin(), Predecessors.end(),
+               std::back_inserter(InitialBlockDominanceViolatingPredecessors),
+               Predicate);
+
+  // Tailor the predecessor terminator - redirect it to ReplacementBlock.
+  for (auto *InitialBlockDominanceViolatingPredecessor :
+       InitialBlockDominanceViolatingPredecessors) {
+    auto *Terminator =
+        InitialBlockDominanceViolatingPredecessor->getTerminator();
+    if (auto *TerminatorIsInvoke = dyn_cast<InvokeInst>(Terminator)) {
+      if (InitialBlock == TerminatorIsInvoke->getUnwindDest()) {
+        TerminatorIsInvoke->setUnwindDest(ReplacementBlock);
+      } else {
+        TerminatorIsInvoke->setNormalDest(ReplacementBlock);
+      }
+    } else if (auto *TerminatorIsBranch = dyn_cast<BranchInst>(Terminator)) {
+      for (unsigned int SuccessorIdx = 0;
+           SuccessorIdx < TerminatorIsBranch->getNumSuccessors();
+           ++SuccessorIdx) {
+        if (InitialBlock == TerminatorIsBranch->getSuccessor(SuccessorIdx)) {
+          TerminatorIsBranch->setSuccessor(SuccessorIdx, ReplacementBlock);
+        }
+      }
+    } else if (auto *TerminatorIsCleanupReturn =
+                   dyn_cast<CleanupReturnInst>(Terminator)) {
+      TerminatorIsCleanupReturn->setUnwindDest(ReplacementBlock);
+    } else {
+      Terminator->print(dbgs());
+      report_fatal_error("Terminator is not implemented");
+    }
+  }
+}
+
+// Fixer for the "Instruction does not dominate all uses!" bug
+// The fix consists of mapping dominance violating paths (where CoroBegin does
+// not dominate cleanup nodes), duplicating them and setup 2 flows - the one
+// that insertSpills intended to create (using the spill) and another one,
+// preserving the logics of pre-splitting, which would be executed if unwinding
+// happened before CoroBegin
+static void enforceDominationByCoroBegin(Function &F,
+                                         const coro::Shape &Shape) {
+  DominatorTree DT(F);
+  ValueToValueMapTy VMap;
+  BasicBlock *CoroBeginNode = Shape.CoroBegin->getParent();
+
+  // Run is in reversed post order, to enforce visiting predecessors before
+  // successors
+  for (BasicBlock *CurrentBlock :
+       ReversePostOrderTraversal<BasicBlock *>(CoroBeginNode)) {
+    if (DT.dominates(CoroBeginNode, CurrentBlock)) {
+      continue;
+    }
+
+    // The duplicate will become the unspilled alternative
+    auto *UnspilledAlternativeBlock =
+        CloneBasicBlock(CurrentBlock, VMap, ".unspilled_alternative", &F);
+
+    // Remap node instructions
+    for (Instruction &UnspilledAlternativeBlockInstruction :
+         *UnspilledAlternativeBlock) {
+      RemapInstruction(&UnspilledAlternativeBlockInstruction, VMap,
+                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    }
+
+    // Clone only if predecessor breaks dominance against CoroBegin
+    remapPredecessorIfPredicate(
+        CurrentBlock, UnspilledAlternativeBlock,
+        [&DT, &CoroBeginNode](BasicBlock *PredecessorNode) {
+          return !DT.dominates(CoroBeginNode, PredecessorNode);
+        });
+
+    // We changed dominance tree, so recalculate it
+    DT.recalculate(F);
+  }
+}
+
+void coro::SwitchABI::preProcess() {
+  enforceDominationByCoroBegin(this->F, this->Shape);
+}
+
 static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
                              coro::BaseABI &ABI, TargetTransformInfo &TTI,
                              bool OptimizeFrame) {
   PrettyStackTraceFunction prettyStackTrace(F);
+
+  ABI.preProcess();
 
   auto &Shape = ABI.Shape;
   assert(Shape.CoroBegin);
