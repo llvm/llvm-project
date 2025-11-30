@@ -25,6 +25,10 @@ include "llvm/Target/Target.td"
 def FeatureAtomics : SubtargetFeature<"atomics", "HasAtomics", "true",
                                       "Enable Atomics">;
 
+def FeatureBranchHinting :
+      SubtargetFeature<"branch-hinting", "HasBranchHinting", "true",
+                       "Enable branch hints for branch instructions">;
+
 def FeatureBulkMemory :
       SubtargetFeature<"bulk-memory", "HasBulkMemory", "true",
                        "Enable bulk memory operations">;
@@ -146,13 +150,13 @@ def : ProcessorModel<"lime1", NoSchedModel,
 
 // Latest and greatest experimental version of WebAssembly. Bugs included!
 def : ProcessorModel<"bleeding-edge", NoSchedModel,
-                     [FeatureAtomics, FeatureBulkMemory, FeatureBulkMemoryOpt,
-                      FeatureCallIndirectOverlong, FeatureExceptionHandling,
-                      FeatureExtendedConst, FeatureFP16, FeatureGC,
-                      FeatureMultiMemory, FeatureMultivalue, FeatureMutableGlobals,
-                      FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
-                      FeatureReferenceTypes, FeatureSIMD128,
-                      FeatureSignExt, FeatureTailCall]>;
+                      [FeatureAtomics, FeatureBranchHinting, FeatureBulkMemory,
+                       FeatureBulkMemoryOpt, FeatureCallIndirectOverlong,
+                       FeatureExceptionHandling, FeatureExtendedConst, FeatureFP16, FeatureGC,
+                       FeatureMultiMemory, FeatureMultivalue, FeatureMutableGlobals,
+                       FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
+                       FeatureReferenceTypes, FeatureSIMD128, FeatureSignExt,
+                       FeatureTailCall]>;
 
 //===----------------------------------------------------------------------===//
 // Target Declaration

@@ -189,6 +189,23 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
       TargetFeaturesSec->Features.push_back(Feature);
     }
     CustomSec = std::move(TargetFeaturesSec);
+  } else if (WasmSec.Name == "metadata.code.branch_hint") {
+    std::unique_ptr<WasmYAML::BranchHintSection> BranchHintSec =
+        std::make_unique<WasmYAML::BranchHintSection>();
+    for (auto &E : Obj.getBranchHints()) {
+      WasmYAML::CodeMetadataFuncEntry<WasmYAML::BranchHint> FuncEntry;
+      FuncEntry.FuncIdx = E.FuncIdx;
+      for (const auto &[Offset, Size, Data] : E.Hints) {
+        WasmYAML::CodeMetadataItemEntry<WasmYAML::BranchHint> ItemEntry;
+        ItemEntry.Offset = Offset;
+        ItemEntry.Size = Size;
+        ItemEntry.Data =
+            static_cast<WasmYAML::BranchHint>(static_cast<uint8_t>(Data));
+        FuncEntry.Hints.push_back(ItemEntry);
+      }
+      BranchHintSec->Entries.push_back(std::move(FuncEntry));
+    }
+    CustomSec = std::move(BranchHintSec);
   } else {
     CustomSec = std::make_unique<WasmYAML::CustomSection>(WasmSec.Name);
   }

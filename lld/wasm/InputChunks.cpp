@@ -206,7 +206,9 @@ uint64_t InputChunk::getTombstone() const {
   if (const auto *s = dyn_cast<InputSection>(this)) {
     return s->tombstoneValue;
   }
-
+  if (const auto *s = dyn_cast<CodeMetaDataInputSection>(this)) {
+    return s->tombstoneValue;
+  }
   return 0;
 }
 
@@ -589,10 +591,96 @@ uint64_t InputSection::getTombstoneForSection(StringRef name) {
   // 0 is a valid function index.
   if (name.starts_with("llvm.func_attr."))
     return UINT64_C(-1);
-  // Returning 0 means there is no tombstone value for this section, and relocation
-  // will just use the addend.
+  if (name.starts_with("metadata.code."))
+    return UINT64_C(-1);
+  // Returning 0 means there is no tombstone value for this section, and
+  // relocation will just use the addend.
   return 0;
 }
 
+void CodeMetaDataInputSection::finalizeContents() {
+  RelocatedData.resize(data().size());
+  memcpy(RelocatedData.data(), data().data(), data().size());
+  relocate(RelocatedData.data());
+
+  const uint8_t *Buf = RelocatedData.data();
+  const uint8_t *End = Buf + RelocatedData.size();
+
+  const char *Success = nullptr;
+  unsigned NumFunctionsEncodingSize;
+  const unsigned NumFunctions =
+      decodeULEB128(Buf, &NumFunctionsEncodingSize, End, &Success);
+  if (Success != nullptr) {
+    fatal("Failed to decode number of functions in " + name + ": " + Success);
+  }
+  Buf += NumFunctionsEncodingSize;
+
+  for (unsigned i = 0; i < NumFunctions; ++i) {
+    const uint8_t *FunctionStartOffset = Buf;
+
+    unsigned FuncIdxEncodingSize;
+    const unsigned FuncIndex =
+        decodeULEB128(Buf, &FuncIdxEncodingSize, End, &Success);
+    if (Success != nullptr) {
+      fatal("Failed to decode function index in " + name + ": " + Success);
+    }
+    Buf += FuncIdxEncodingSize;
+
+    unsigned NumHintsEncodingSize;
+    const unsigned NumHints =
+        decodeULEB128(Buf, &NumHintsEncodingSize, End, &Success);
+    if (Success != nullptr) {
+      fatal("Failed to decode hint size in " + name + ": " + Success);
+    }
+    Buf += NumHintsEncodingSize;
+    for (unsigned j = 0; j < NumHints; ++j) {
+      unsigned OffsetEncodingSize;
+      decodeULEB128(Buf, &OffsetEncodingSize, End, &Success);
+      if (Success != nullptr) {
+        fatal("Failed to decode hint opcode in " + name + ": " + Success);
+      }
+      Buf += OffsetEncodingSize;
+
+      unsigned HintSizeEncodingSize;
+      const unsigned HintSize =
+          decodeULEB128(Buf, &HintSizeEncodingSize, End, &Success);
+      if (Success != nullptr) {
+        fatal("Failed to decode hint operand in " + name + ": " + Success);
+      }
+      Buf += HintSizeEncodingSize;
+      Buf += HintSize;
+    }
+    // skip entries for removed functions
+    // this is the whole reason we need to parse the hints here again
+    if (FuncIndex == static_cast<uint32_t>(getTombstone())) {
+      continue;
+    }
+    ArrayRef FunctionData(FunctionStartOffset, Buf - FunctionStartOffset);
+    Hints.emplace_back(FunctionData);
+  }
+  assert(Buf == End && "CodeMetaDataInputSection: not all data was consumed");
+}
+
+void CodeMetaDataInputSection::writeTo(uint8_t *Buf) const {
+  // write sorted hints to output buffer
+  // hints are implicitly sorted, since function indices are assigned by
+  // section order
+  for (const auto &ref : Hints) {
+    memcpy(Buf + outSecOff, ref.data(), ref.size());
+    Buf += ref.size();
+  }
+}
+
+uint32_t CodeMetaDataInputSection::getSize() const {
+  uint32_t size = 0;
+  for (const auto &ref : Hints) {
+    size += ref.size();
+  }
+  return size;
+}
+
+uint32_t CodeMetaDataInputSection::getNumFuncHints() const {
+  return Hints.size();
+}
 } // namespace wasm
 } // namespace lld
