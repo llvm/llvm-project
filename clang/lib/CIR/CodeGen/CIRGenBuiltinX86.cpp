@@ -238,11 +238,23 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vec_set_v32qi:
   case X86::BI__builtin_ia32_vec_set_v16hi:
   case X86::BI__builtin_ia32_vec_set_v8si:
-  case X86::BI__builtin_ia32_vec_set_v4di:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return {};
+  case X86::BI__builtin_ia32_vec_set_v4di: {
+    unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+
+    uint64_t index =
+        ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
+
+    index &= numElts - 1;
+
+    cir::ConstantOp indexVal =
+        builder.getUInt64(index, getLoc(expr->getExprLoc()));
+
+    // These builtins exist so we can ensure the index is an ICE and in range.
+    // Otherwise we could just do this in the header file.
+    return cir::VecInsertOp::create(builder, getLoc(expr->getExprLoc()), ops[0],
+                                    ops[1], indexVal);
+  }
+
   case X86::BI_mm_setcsr:
   case X86::BI__builtin_ia32_ldmxcsr: {
     mlir::Location loc = getLoc(expr->getExprLoc());
