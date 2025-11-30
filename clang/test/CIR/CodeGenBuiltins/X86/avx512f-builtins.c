@@ -233,7 +233,9 @@ __mmask16 test_mm512_kunpackb(__mmask16 A, __mmask16 B) {
   // CIR-LABEL: _mm512_kunpackb
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
-  // CIR: cir.call @{{.*}}kunpackb{{.*}}
+  // CIR: cir.vec.shuffle
+  // CIR: cir.vec.shuffle
+  // CIR: cir.vec.shuffle
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
 
   // LLVM-LABEL: _mm512_kunpackb

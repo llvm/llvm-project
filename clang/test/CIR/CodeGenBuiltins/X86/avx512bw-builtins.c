@@ -470,7 +470,9 @@ __mmask32 test_mm512_kunpackw(__mmask32 A, __mmask32 B) {
   // CIR-LABEL: _mm512_kunpackw
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<u, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u32i -> !cir.vector<32 x !cir.int<u, 1>>
-  // CIR: cir.call @{{.*}}kunpackw{{.*}}
+  // CIR: cir.vec.shuffle
+  // CIR: cir.vec.shuffle
+  // CIR: cir.vec.shuffle
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<u, 1>> -> !u32i
 
   // LLVM-LABEL: _mm512_kunpackw
@@ -495,7 +497,9 @@ __mmask64 test_mm512_kunpackd(__mmask64 A, __mmask64 B) {
   // CIR-LABEL: _mm512_kunpackd
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<u, 1>>
   // CIR: cir.cast bitcast {{.*}} : !u64i -> !cir.vector<64 x !cir.int<u, 1>>
-  // CIR: cir.call @{{.*}}kunpackd{{.*}}
+  // CIR: cir.vec.shuffle
+  // CIR: cir.vec.shuffle
+  // CIR: cir.vec.shuffle
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<u, 1>> -> !u64i
 
   // LLVM-LABEL: _mm512_kunpackd
