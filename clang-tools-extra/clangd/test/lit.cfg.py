@@ -1,4 +1,5 @@
 import lit.llvm
+import lit.util
 
 lit.llvm.initialize(lit_config, config)
 lit.llvm.llvm_config.clang_setup()
@@ -36,6 +37,9 @@ if config.clangd_tidy_checks:
 
 if config.have_zlib:
     config.available_features.add("zlib")
+
+if lit.util.pythonize_bool(config.have_benchmarks):
+    config.available_features.add("have-benchmarks")
 
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable
