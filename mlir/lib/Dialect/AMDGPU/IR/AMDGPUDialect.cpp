@@ -41,6 +41,38 @@ using namespace mlir::amdgpu;
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.cpp.inc"
 
+namespace mlir::amdgpu {
+bool hasGlobalMemorySpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return true;
+  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
+  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
+  return false;
+}
+
+bool hasWorkgroupMemorySpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
+  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 3;
+  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == gpu::AddressSpace::Workgroup;
+  return false;
+}
+
+bool hasFatRawBufferMemorySpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
+  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 7;
+  if (auto gpuMemorySpace = dyn_cast<amdgpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == amdgpu::AddressSpace::FatRawBuffer;
+  return false;
+}
+} // namespace mlir::amdgpu
+
 namespace {
 struct AMDGPUInlinerInterface final : DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
@@ -156,36 +188,6 @@ LogicalResult FatRawBufferCastOp::verify() {
     return emitOpError("expected result type to be ")
            << *expectedResultType << " but got " << getResult().getType();
   return success();
-}
-
-static bool hasGlobalMemorySpace(Attribute memorySpace) {
-  if (!memorySpace)
-    return true;
-  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
-    return intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
-  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
-    return gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
-  return false;
-}
-
-static bool hasWorkgroupMemorySpace(Attribute memorySpace) {
-  if (!memorySpace)
-    return false;
-  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
-    return intMemorySpace.getInt() == 3;
-  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
-    return gpuMemorySpace.getValue() == gpu::AddressSpace::Workgroup;
-  return false;
-}
-
-static bool hasFatRawBufferMemorySpace(Attribute memorySpace) {
-  if (!memorySpace)
-    return false;
-  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
-    return intMemorySpace.getInt() == 7;
-  if (auto gpuMemorySpace = dyn_cast<amdgpu::AddressSpaceAttr>(memorySpace))
-    return gpuMemorySpace.getValue() == amdgpu::AddressSpace::FatRawBuffer;
-  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -703,6 +705,157 @@ LogicalResult TransposeLoadOp::verify() {
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MakeDmaBaseOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeDmaBaseOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+  MemRefType dstType = cast<MemRefType>(getDst().getType());
+  bool store_from_lds = hasWorkgroupMemorySpace(srcType.getMemorySpace()) &&
+                        hasGlobalMemorySpace(dstType.getMemorySpace());
+  bool load_to_lds = hasGlobalMemorySpace(srcType.getMemorySpace()) &&
+                     hasWorkgroupMemorySpace(dstType.getMemorySpace());
+  bool is_valid = store_from_lds != load_to_lds;
+  if (!is_valid)
+    return emitOpError("invalid combination of address spaces.");
+
+  Type elementType = srcType.getElementType();
+  int width;
+  if (auto intType = dyn_cast<IntegerType>(elementType)) {
+    width = intType.getWidth();
+  } else if (auto floatType = dyn_cast<FloatType>(elementType)) {
+    width = floatType.getWidth();
+  } else {
+    return emitOpError("element type must have type width");
+  }
+
+  if (!llvm::is_contained({8, 16, 32, 64}, width)) {
+    return emitOpError(
+               "element type must be 1, 2, 4, or 8 bytes long but type was ")
+           << width << " bits long.";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MakeDmaDescriptorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeDmaDescriptorOp::verify() {
+  ArrayRef<int64_t> globalStaticStrides = getGlobalStaticStrides();
+
+  if (globalStaticStrides.empty()) {
+    return emitOpError("strides must not be empty.");
+  }
+  if (globalStaticStrides.back() != 1) {
+    return emitOpError("strides for the innermost dimension must be 1.");
+  }
+
+  ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
+  size_t rank = globalStaticSizes.size();
+  if (rank < 2) {
+    return emitOpError("tensor and tile must be at least of rank 2.");
+  }
+  if (rank > 5) {
+    return emitOpError("tensor and tile must be at most of rank 5.");
+  }
+  if (rank != globalStaticStrides.size()) {
+    return emitOpError("strides and sizes must have same rank.");
+  }
+
+  ArrayRef<int64_t> sharedStaticSizes = getSharedStaticSizes();
+  if (rank != sharedStaticSizes.size()) {
+    return emitOpError("tensor must have same rank as tile.");
+  }
+
+  int elementTypeWidth = getElementTypeWidth();
+  if (!llvm::is_contained({8, 16, 32, 64}, elementTypeWidth)) {
+    return emitOpError(
+               "element type width must be 1, 2, 4 or 8 bytes, but was ")
+           << elementTypeWidth << " bits long";
+  }
+
+  return success();
+}
+
+static bool maybeUpdateDynamicIndexList(
+    ArrayRef<int64_t> staticElements, ArrayRef<Attribute> foldedElements,
+    SmallVector<Value> dynamicElements, SmallVector<int64_t> &newStaticElements,
+    SmallVector<Value> &newDynamicElements) {
+  bool changed = false;
+  int index = 0;
+
+  for (int64_t static_element : staticElements) {
+    if (!ShapedType::isDynamic(static_element)) {
+      newStaticElements.push_back(static_element);
+      continue;
+    }
+
+    Attribute folded_element = foldedElements[index++];
+    if (auto attr = dyn_cast<IntegerAttr>(folded_element)) {
+      newStaticElements.push_back(attr.getInt());
+      changed = true;
+      continue;
+    }
+
+    newStaticElements.push_back(ShapedType::kDynamic);
+    newDynamicElements.push_back(dynamicElements[index]);
+  }
+  return changed;
+}
+
+OpFoldResult MakeDmaDescriptorOp::fold(FoldAdaptor adaptor) {
+  ArrayRef<int64_t> oldGlobalStaticStrides = adaptor.getGlobalStaticStrides();
+  ArrayRef<Attribute> foldedGlobalDynamicStrides =
+      adaptor.getGlobalDynamicStrides();
+  SmallVector<Value> oldGlobalDynamicStrides = getGlobalDynamicStrides();
+
+  SmallVector<int64_t> newGlobalStaticStrides;
+  SmallVector<Value> newGlobalDynamicStrides;
+
+  bool change = maybeUpdateDynamicIndexList(
+      oldGlobalStaticStrides, foldedGlobalDynamicStrides,
+      oldGlobalDynamicStrides, newGlobalStaticStrides, newGlobalDynamicStrides);
+
+  ArrayRef<int64_t> oldGlobalStaticSizes = adaptor.getGlobalStaticSizes();
+  ArrayRef<Attribute> foldedGlobalDynamicSizes =
+      adaptor.getGlobalDynamicSizes();
+  SmallVector<Value> oldGlobalDynamicSizes = getGlobalDynamicSizes();
+
+  SmallVector<int64_t> newGlobalStaticSizes;
+  SmallVector<Value> newGlobalDynamicSizes;
+
+  change |= maybeUpdateDynamicIndexList(
+      oldGlobalStaticSizes, foldedGlobalDynamicSizes, oldGlobalDynamicSizes,
+      newGlobalStaticSizes, newGlobalDynamicSizes);
+
+  ArrayRef<int64_t> oldSharedStaticSizes = adaptor.getSharedStaticSizes();
+  ArrayRef<Attribute> foldedSharedDynamicSizes =
+      adaptor.getSharedDynamicSizes();
+  SmallVector<Value> oldSharedDynamicSizes = getSharedDynamicSizes();
+
+  SmallVector<int64_t> newSharedStaticSizes;
+  SmallVector<Value> newSharedDynamicSizes;
+
+  change |= maybeUpdateDynamicIndexList(
+      oldSharedStaticSizes, foldedSharedDynamicSizes, oldSharedDynamicSizes,
+      newSharedStaticSizes, newSharedDynamicSizes);
+
+  if (change) {
+    setGlobalStaticStrides(newGlobalStaticStrides);
+    getGlobalDynamicStridesMutable().assign(newGlobalDynamicStrides);
+    setGlobalStaticSizes(newGlobalStaticSizes);
+    getGlobalDynamicSizesMutable().assign(newGlobalDynamicSizes);
+    setSharedStaticSizes(newSharedStaticSizes);
+    getSharedDynamicSizesMutable().assign(newSharedDynamicSizes);
+    return getResult();
+  }
+
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
