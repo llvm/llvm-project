@@ -20,7 +20,7 @@ void test1() {
   }).Foo();
 }
 
-// CIR: cir.func dso_local @_Z5test1v()
+// CIR: cir.func {{.*}} @_Z5test1v()
 // CIR:   cir.scope {
 // CIR:     %[[REF_TMP0:.+]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["ref.tmp0"]
 // CIR:     %[[TMP:.+]]      = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["tmp"]
@@ -67,7 +67,7 @@ void cleanup() {
   ({ with_dtor wd; });
 }
 
-// CIR: cir.func dso_local @_Z7cleanupv()
+// CIR: cir.func {{.*}} @_Z7cleanupv()
 // CIR:   cir.scope {
 // CIR:     %[[WD:.+]] = cir.alloca !rec_with_dtor, !cir.ptr<!rec_with_dtor>, ["wd"]
 // CIR:     cir.call @_ZN9with_dtorD1Ev(%[[WD]]) nothrow : (!cir.ptr<!rec_with_dtor>) -> ()
