@@ -2714,6 +2714,32 @@ TEST(FindReferences, NoQueryForLocalSymbols) {
   }
 }
 
+TEST(FindReferences, ForwardingInAST) {
+  Annotations Main(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+
+    struct Test {
+      $Constructor[[T^est]](){}
+    };
+
+    int main() {
+      auto a = std::$Caller[[make_unique]]<Test>();
+    }
+  )cpp");
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+
+  EXPECT_THAT(findReferences(AST, Main.point(), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor")),
+                          rangeIs(Main.range("Caller"))));
+}
+
 TEST(FindReferences, ForwardingInIndex) {
   Annotations Header(R"cpp(
     namespace std {

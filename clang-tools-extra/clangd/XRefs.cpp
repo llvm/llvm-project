@@ -916,6 +916,47 @@ std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
 
 namespace {
 
+class ForwardingToConstructorVisitor
+    : public RecursiveASTVisitor<ForwardingToConstructorVisitor> {
+public:
+  ForwardingToConstructorVisitor(
+      llvm::DenseSet<const CXXConstructorDecl *> &TargetConstructors)
+      : Targets(TargetConstructors) {}
+
+  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
+    if (auto *Callee = E->getConstructor()) {
+      if (Targets.contains(Callee)) {
+        ConstructorFound = true;
+      }
+    }
+    // It is enough to find 1 constructor
+    return !ConstructorFound;
+  }
+
+  // Output of this visitor
+  bool ConstructorFound = false;
+
+private:
+  llvm::DenseSet<const CXXConstructorDecl *> &Targets;
+};
+
+bool forwardsToConstructor(
+    const Decl *D,
+    llvm::DenseSet<const CXXConstructorDecl *> &TargetConstructors) {
+  if (!TargetConstructors.empty()) {
+    if (auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+        FD && FD->isTemplateInstantiation()) {
+      if (auto *PT = FD->getPrimaryTemplate();
+          PT && isLikelyForwardingFunction(PT)) {
+        ForwardingToConstructorVisitor Visitor{TargetConstructors};
+        Visitor.TraverseStmt(FD->getBody());
+        return Visitor.ConstructorFound;
+      }
+    }
+  }
+  return false;
+}
+
 /// Collects references to symbols within the main file.
 class ReferenceFinder : public index::IndexDataConsumer {
 public:
@@ -933,8 +974,12 @@ public:
                   const llvm::ArrayRef<const NamedDecl *> Targets,
                   bool PerToken)
       : PerToken(PerToken), AST(AST) {
-    for (const NamedDecl *ND : Targets)
+    for (const NamedDecl *ND : Targets) {
       TargetDecls.insert(ND->getCanonicalDecl());
+      if (auto *Constructor = llvm::dyn_cast<clang::CXXConstructorDecl>(ND)) {
+        TargetConstructors.insert(Constructor);
+      }
+    }
   }
 
   std::vector<Reference> take() && {
@@ -960,8 +1005,10 @@ public:
                        llvm::ArrayRef<index::SymbolRelation> Relations,
                        SourceLocation Loc,
                        index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
-    if (!TargetDecls.contains(D->getCanonicalDecl()))
+    if (!TargetDecls.contains(D->getCanonicalDecl()) &&
+        !forwardsToConstructor(ASTNode.OrigD, TargetConstructors)) {
       return true;
+    }
     const SourceManager &SM = AST.getSourceManager();
     if (!isInsideMainFile(Loc, SM))
       return true;
@@ -1002,6 +1049,8 @@ private:
   std::vector<Reference> References;
   const ParsedAST &AST;
   llvm::DenseSet<const Decl *> TargetDecls;
+  // Constructors need special handling since they can be hidden behind forwards
+  llvm::DenseSet<const CXXConstructorDecl *> TargetConstructors;
 };
 
 std::vector<ReferenceFinder::Reference>
