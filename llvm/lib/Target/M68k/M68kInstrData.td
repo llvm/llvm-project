@@ -357,12 +357,6 @@ def MOVM32mp_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.POp>;
 
 //===----------------------------------------------------------------------===//
 // MOVE to/from SR/CCR
-//
-// A special care must be taken working with to/from CCR since it is basically
-// word-size SR register truncated for user mode thus it only supports word-size
-// instructions. Plus the original M68000 does not support moves from CCR. So in
-// order to use CCR effectively one MUST use proper byte-size pseudo instructi-
-// ons that will be resolved sometime after RA pass.
 //===----------------------------------------------------------------------===//
 
 /// Move to CCR
@@ -394,7 +388,6 @@ foreach AM = MxMoveSupportedAMs in {
 
 // Only data register is allowed.
 def MOV16cd : MxMoveToCCR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
-def MOV8cd  : MxMoveToCCRPseudo<MxOp8AddrMode_d.Op>;
 
 /// Move from CCR
 /// --------------------------------------------------
@@ -436,7 +429,6 @@ foreach AM = MxMoveSupportedAMs in {
 
 // Only data register is allowed.
 def MOV16dc : MxMoveFromCCR_R;
-def MOV8dc  : MxMoveFromCCR_RPseudo<MxOp8AddrMode_d.Op>;
 
 /// Move to SR
 /// --------------------------------------------------
