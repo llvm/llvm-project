@@ -2256,7 +2256,6 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
     return TTI::CastContextHint::Normal;
   };
 
-  using namespace llvm::VPlanPatternMatch;
   VPValue *Operand = getOperand(0);
   TTI::CastContextHint CCH = TTI::CastContextHint::None;
   // For Trunc/FPTrunc, get the context from the only user.
