@@ -8149,6 +8149,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return V;
     break;
   }
+
   case ISD::SELECT:
   case ISD::VSELECT:
     if (SDValue V = simplifySelect(N1, N2, N3))
