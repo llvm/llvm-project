@@ -42,6 +42,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <iterator>
 #include <utility>
@@ -1810,11 +1811,22 @@ SDValue VectorLegalizer::ExpandVP_FCOPYSIGN(SDNode *Node) {
   return DAG.getNode(ISD::BITCAST, DL, VT, CopiedSign);
 }
 
+// Expand a loop dependence mask.
+// First the difference is taken between the pointers and divided by the element
+// size, to see how many lanes separate them. That difference is then splat and
+// compared with a step vector to produce a mask with lanes less than the
+// difference active and the rest inactive. To capture the case where the
+// pointers are the same (or the source pointer is greater than the sink pointer
+// for write-after-read), the difference is compared to zero and that result is
+// splat to another mask. Those two masks are then ORed to produce the final
+// loop dependence mask.
 SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   SDLoc DL(N);
   SDValue SourceValue = N->getOperand(0);
   SDValue SinkValue = N->getOperand(1);
   SDValue EltSize = N->getOperand(2);
+  unsigned EltSizeInBytes = N->getConstantOperandVal(2);
+  unsigned LaneOffset = N->getConstantOperandVal(3);
 
   bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
   EVT VT = N->getValueType(0);
@@ -1833,10 +1845,29 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
                              IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
 
-  // Create the lane mask
-  EVT SplatVT = VT.changeElementType(PtrVT);
-  SDValue DiffSplat = DAG.getSplat(SplatVT, DL, Diff);
+  // Create the mask with lanes less than the difference active and the rest
+  // inactive. For optimisation reaons we want to minimise the size of the
+  // integer used to splat the difference and add the lane offset. If we keep it
+  // as a 64 bit value then the splat will use lots of vectors unnecessarily.
+  int SplatBitWidth =
+      std::pow(2, Log2_32(VT.getVectorMinNumElements() * EltSizeInBytes) + 1);
+  SplatBitWidth = std::min(SplatBitWidth, 64);
+  EVT SplatVT = VT.changeElementType(MVT::getIntegerVT(SplatBitWidth));
+
+  // Truncate and splat the diff. If this ends up being an unsafe truncate (i.e.
+  // diff > vector length), then it's ignored later on when it's ORed with
+  // abs(diff) >= vector_length.
+  SDValue DiffTrunc = DAG.getExtOrTrunc(!IsReadAfterWrite, Diff, DL,
+                                        SplatVT.getVectorElementType());
+  SDValue DiffSplat = DAG.getSplat(SplatVT, DL, DiffTrunc);
   SDValue VectorStep = DAG.getStepVector(DL, SplatVT);
+  // Add the lane offset. A non-zero lane offset often comes from a
+  // larger-than-legal vector length being split in two.
+  VectorStep = DAG.getNode(
+      ISD::ADD, DL, SplatVT, VectorStep,
+      DAG.getSplat(
+          SplatVT, DL,
+          DAG.getConstant(LaneOffset, DL, SplatVT.getVectorElementType())));
   EVT MaskVT = VT.changeElementType(MVT::i1);
   SDValue DiffMask =
       DAG.getSetCC(DL, MaskVT, VectorStep, DiffSplat, ISD::CondCode::SETULT);
@@ -1847,9 +1878,19 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   if (EltVT.getScalarSizeInBits() > MaskVT.getScalarSizeInBits())
     DiffMask = DAG.getNode(ISD::ANY_EXTEND, DL, VT, DiffMask);
 
-  // Splat the compare result then OR it with the lane mask
   if (CmpVT.getScalarSizeInBits() < EltVT.getScalarSizeInBits())
     Cmp = DAG.getNode(ISD::ZERO_EXTEND, DL, EltVT, Cmp);
+
+  // If the pointer difference was greater than or equal to the max number of
+  // lanes in the mask, then the truncated pointer difference should be ignored
+  // since the truncate could have been unsafe. Use a mask of all active lanes
+  // instead since a pointer difference >= the number of lanes has no loop
+  // depedencies anyway.
+  SDValue AbsDiff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
+  SDValue NumElts = DAG.getConstant(VT.getVectorMinNumElements(), DL, PtrVT);
+  Cmp = DAG.getNode(ISD::OR, DL, CmpVT, Cmp,
+                    DAG.getSetCC(DL, CmpVT, AbsDiff, NumElts, ISD::SETUGE));
+
   SDValue Splat = DAG.getSplat(VT, DL, Cmp);
   return DAG.getNode(ISD::OR, DL, VT, DiffMask, Splat);
 }
