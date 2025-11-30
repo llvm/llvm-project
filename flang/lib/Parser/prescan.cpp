@@ -557,7 +557,7 @@ bool Prescanner::MustSkipToEndOfLine() const {
     return true; // skip over ignored columns in right margin (73:80)
   } else if (*at_ == '!' && !inCharLiteral_ &&
       (!inFixedForm_ || tabInCurrentLine_ || column_ != 6)) {
-    return !IsCompilerDirectiveSentinel(at_);
+    return InCompilerDirective() || !IsCompilerDirectiveSentinel(at_ + 1);
   } else {
     return false;
   }
@@ -843,6 +843,9 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       }
     }
     if (InFixedFormSource()) {
+      SkipSpaces();
+    }
+    if (inFixedForm_ && (IsOpenMPDirective() && parenthesisNesting_ > 0)) {
       SkipSpaces();
     }
     if ((*at_ == '\'' || *at_ == '"') &&
@@ -1642,6 +1645,17 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
       // This is a Continuation line, not an initial directive line.
       return std::nullopt;
     }
+    ++column, ++p;
+  }
+  if (isOpenMPConditional) {
+    for (; column <= fixedFormColumnLimit_; ++column, ++p) {
+      if (IsSpaceOrTab(p)) {
+      } else if (*p == '!') {
+        return std::nullopt; // !$    ! is a comment, not a directive
+      } else {
+        break;
+      }
+    }
   }
   if (const char *ss{IsCompilerDirectiveSentinel(
           sentinel, static_cast<std::size_t>(sp - sentinel))}) {
@@ -1657,8 +1671,17 @@ Prescanner::IsFreeFormCompilerDirectiveLine(const char *start) const {
       p && *p++ == '!') {
     if (auto maybePair{IsCompilerDirectiveSentinel(p)}) {
       auto offset{static_cast<std::size_t>(p - start - 1)};
-      return {LineClassification{LineClassification::Kind::CompilerDirective,
-          offset, maybePair->first}};
+      const char *sentinel{maybePair->first};
+      if ((sentinel[0] == '$' && sentinel[1] == '\0') || sentinel[1] == '@') {
+        if (const char *comment{IsFreeFormComment(maybePair->second)}) {
+          if (*comment == '!') {
+            // Conditional line comment - treat as comment
+            return std::nullopt;
+          }
+        }
+      }
+      return {LineClassification{
+          LineClassification::Kind::CompilerDirective, offset, sentinel}};
     }
   }
   return std::nullopt;

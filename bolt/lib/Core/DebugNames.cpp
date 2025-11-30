@@ -555,7 +555,7 @@ void DWARF5AcceleratorTable::populateAbbrevsMap() {
 
 void DWARF5AcceleratorTable::writeEntry(BOLTDWARF5AccelTableData &Entry) {
   const uint64_t EntryID = getEntryID(Entry);
-  if (EntryRelativeOffsets.find(EntryID) != EntryRelativeOffsets.end())
+  if (EntryRelativeOffsets.contains(EntryID))
     EntryRelativeOffsets[EntryID] = EntriesBuffer->size();
 
   const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =

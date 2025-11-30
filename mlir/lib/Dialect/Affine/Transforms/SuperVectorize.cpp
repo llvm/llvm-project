@@ -1106,10 +1106,7 @@ static bool isUniformDefinition(Value value,
       return false;
   }
 
-  if (!value.getType().isIntOrIndexOrFloat())
-    return false;
-
-  return true;
+  return value.getType().isIntOrIndexOrFloat();
 }
 
 /// Generates a broadcast op for the provided uniform value using the

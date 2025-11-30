@@ -282,6 +282,7 @@ public:
     Declare,
     Value,
     Assign,
+    DeclareValue,
 
     End, ///< Marks the end of the concrete types.
     Any, ///< To indicate all LocationTypes in searches.
@@ -364,6 +365,13 @@ public:
   createDVRDeclare(Value *Address, DILocalVariable *DV, DIExpression *Expr,
                    const DILocation *DI, DbgVariableRecord &InsertBefore);
 
+  LLVM_ABI static DbgVariableRecord *
+  createDVRDeclareValue(Value *Address, DILocalVariable *DV, DIExpression *Expr,
+                        const DILocation *DI);
+  LLVM_ABI static DbgVariableRecord *
+  createDVRDeclareValue(Value *Address, DILocalVariable *DV, DIExpression *Expr,
+                        const DILocation *DI, DbgVariableRecord &InsertBefore);
+
   /// Iterator for ValueAsMetadata that internally uses direct pointer iteration
   /// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the
   /// ValueAsMetadata .
@@ -414,6 +422,7 @@ public:
 
   bool isDbgDeclare() const { return Type == LocationType::Declare; }
   bool isDbgValue() const { return Type == LocationType::Value; }
+  bool isDbgDeclareValue() const { return Type == LocationType::DeclareValue; }
 
   /// Get the locations corresponding to the variable referenced by the debug
   /// info intrinsic.  Depending on the intrinsic, this could be the
@@ -439,12 +448,16 @@ public:
   bool hasValidLocation() const { return getVariableLocationOp(0) != nullptr; }
 
   /// Does this describe the address of a local variable. True for dbg.addr
-  /// and dbg.declare, but not dbg.value, which describes its value.
+  /// and dbg.declare, but not dbg.value or dbg.declare_value, which describes
+  /// its value.
   bool isAddressOfVariable() const { return Type == LocationType::Declare; }
 
   /// Determine if this describes the value of a local variable. It is false for
-  /// dbg.declare, but true for dbg.value, which describes its value.
-  bool isValueOfVariable() const { return Type == LocationType::Value; }
+  /// dbg.declare, but true for dbg.value and dbg.declare_value, which describes
+  /// its value.
+  bool isValueOfVariable() const {
+    return Type == LocationType::Value || Type == LocationType::DeclareValue;
+  }
 
   LocationType getType() const { return Type; }
 
@@ -589,7 +602,7 @@ filterDbgVars(iterator_range<simple_ilist<DbgRecord>::iterator> R) {
 /// date.
 class DbgMarker {
 public:
-  DbgMarker() {}
+  DbgMarker() = default;
   /// Link back to the Instruction that owns this marker. Can be null during
   /// operations that move a marker from one instruction to another.
   Instruction *MarkedInstr = nullptr;

@@ -13,7 +13,7 @@ use omp_lib
 
   !ERROR: A list item in a declarative ALLOCATE cannot have the ALLOCATABLE or POINTER attribute
   !$omp allocate(darray) allocator(omp_default_mem_alloc)
-
+  continue
   !$omp allocate(darray) allocator(omp_default_mem_alloc)
     allocate(darray(a, b))
 

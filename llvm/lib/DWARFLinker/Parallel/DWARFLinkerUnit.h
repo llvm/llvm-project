@@ -28,7 +28,7 @@ using MacroOffset2UnitMapTy = DenseMap<uint64_t, DwarfUnit *>;
 /// Base class for all Dwarf units(Compile unit/Type table unit).
 class DwarfUnit : public OutputSections {
 public:
-  virtual ~DwarfUnit() {}
+  virtual ~DwarfUnit() = default;
   DwarfUnit(LinkingGlobalData &GlobalData, unsigned ID,
             StringRef ClangModuleName)
       : OutputSections(GlobalData), ID(ID), ClangModuleName(ClangModuleName),

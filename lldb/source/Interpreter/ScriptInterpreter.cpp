@@ -136,7 +136,7 @@ SymbolContext ScriptInterpreter::GetOpaqueTypeFromSBSymbolContext(
   return {};
 }
 
-std::optional<MemoryRegionInfo>
+std::optional<lldb_private::MemoryRegionInfo>
 ScriptInterpreter::GetOpaqueTypeFromSBMemoryRegionInfo(
     const lldb::SBMemoryRegionInfo &mem_region) const {
   if (!mem_region.m_opaque_up)
@@ -148,6 +148,11 @@ lldb::ExecutionContextRefSP
 ScriptInterpreter::GetOpaqueTypeFromSBExecutionContext(
     const lldb::SBExecutionContext &exe_ctx) const {
   return exe_ctx.m_exe_ctx_sp;
+}
+
+lldb::StackFrameListSP ScriptInterpreter::GetOpaqueTypeFromSBFrameList(
+    const lldb::SBFrameList &frame_list) const {
+  return frame_list.m_opaque_sp;
 }
 
 lldb::ScriptLanguage

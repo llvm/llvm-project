@@ -1055,18 +1055,18 @@ define void @vst4_v4f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vins.f16 s12, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s3
 ; CHECK-NEXT:    vins.f16 s11, s2
-; CHECK-NEXT:    vmovx.f16 s2, s4
-; CHECK-NEXT:    vins.f16 s4, s6
-; CHECK-NEXT:    vmovx.f16 s6, s6
+; CHECK-NEXT:    vmov.f32 s2, s6
+; CHECK-NEXT:    vmovx.f16 s6, s4
+; CHECK-NEXT:    vins.f16 s4, s2
+; CHECK-NEXT:    vmovx.f16 s2, s2
 ; CHECK-NEXT:    vins.f16 s1, s3
-; CHECK-NEXT:    vins.f16 s2, s6
-; CHECK-NEXT:    vmovx.f16 s6, s7
+; CHECK-NEXT:    vins.f16 s6, s2
+; CHECK-NEXT:    vmovx.f16 s2, s7
 ; CHECK-NEXT:    vmov.f32 s8, s5
-; CHECK-NEXT:    vins.f16 s10, s6
+; CHECK-NEXT:    vins.f16 s10, s2
 ; CHECK-NEXT:    vmov.f32 s9, s1
 ; CHECK-NEXT:    vmov.f32 s5, s0
 ; CHECK-NEXT:    vstrh.16 q2, [r1, #16]
-; CHECK-NEXT:    vmov.f32 s6, s2
 ; CHECK-NEXT:    vmov.f32 s7, s12
 ; CHECK-NEXT:    vstrh.16 q1, [r1]
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
