@@ -99,6 +99,7 @@ static bool ArchSpecificInfo;
 static bool BBAddrMap;
 static bool PrettyPGOAnalysisMap;
 bool ExpandRelocs;
+static bool CallGraphInfo;
 static bool CGProfile;
 static bool Decompress;
 bool Demangle;
@@ -222,6 +223,7 @@ static void parseOptions(const opt::InputArgList &Args) {
     WithColor::warning(errs(), ToolName)
         << "--bb-addr-map must be enabled for --pretty-pgo-analysis-map to "
            "have an effect\n";
+  opts::CallGraphInfo = Args.hasArg(OPT_call_graph_info);
   opts::CGProfile = Args.hasArg(OPT_cg_profile);
   opts::Decompress = Args.hasArg(OPT_decompress);
   opts::Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, false);
@@ -478,6 +480,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
       Dumper->printHashHistograms();
     if (opts::CGProfile)
       Dumper->printCGProfile();
+    if (opts::CallGraphInfo)
+      Dumper->printCallGraphInfo();
     if (opts::BBAddrMap)
       Dumper->printBBAddrMaps(opts::PrettyPGOAnalysisMap);
     if (opts::Addrsig)
