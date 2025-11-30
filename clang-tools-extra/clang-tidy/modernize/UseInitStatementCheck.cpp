@@ -53,6 +53,7 @@ AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
 } // namespace
 
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
+  // Matchers for classes with destructors
   const auto ClassWithDtorDecl =
       cxxRecordDecl(hasMethod(cxxDestructorDecl().bind("dtorDecl")));
   const auto ClassWithDtorType =
@@ -61,24 +62,28 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
       hasType(arrayType(hasElementType(ClassWithDtorType)));
   const auto HasDtor = anyOf(hasType(ClassWithDtorType), ArrayOfClassWithDtor);
 
+  // Matchers for variable declarations
+  const auto SingleVarDeclWithDtor =
+      varDecl(HasDtor).bind("singleVar");
   const auto SingleVarDecl =
-      varDecl(anyOf(unless(HasDtor), HasDtor)).bind("singleVar");
+      varDecl().bind("singleVar");
   const auto RefToBoundVarDecl =
       declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
 
-  // Matcher for the declaration statement that precedes the if/switch
-  const auto PrevDeclStmt = declStmt(forEach(SingleVarDecl)).bind("prevDecl");
-
-  // Matcher for a condition that references the variable from prevDecl
-  const auto ConditionWithVarRef =
-      expr(forEachDescendant(RefToBoundVarDecl)).bind("condition");
+  // Matchers for declaration statements that precede if/switch
+  const auto PrevDeclStmtWithDtor =
+      declStmt(forEach(SingleVarDeclWithDtor)).bind("prevDecl");
+  const auto PrevDeclStmt =
+      declStmt(forEach(SingleVarDecl)).bind("prevDecl");
+  const auto PrevDeclStmtMatcher =
+      anyOf(PrevDeclStmtWithDtor, PrevDeclStmt);
 
   // Helper to create a complete matcher for if/switch statements
   const auto MakeCompoundMatcher = [&](const auto &StmtMatcher,
                                        const std::string &StmtName) {
     const auto StmtMatcherWithCondition =
         StmtMatcher(unless(hasInitStatement(anything())),
-                    hasCondition(ConditionWithVarRef))
+                    hasCondition(expr().bind("condition")))
             .bind(StmtName);
 
     // Ensure the variable is not referenced elsewhere in the compound statement
@@ -87,11 +92,12 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
 
     return compoundStmt(
                unless(isInTemplateInstantiation()),
-               hasAdjacentStmts(PrevDeclStmt, StmtMatcherWithCondition),
+               hasAdjacentStmts(PrevDeclStmtMatcher, StmtMatcherWithCondition),
                NoOtherVarRefs)
         .bind("compound");
   };
 
+  // Register matchers for if and switch statements
   Finder->addMatcher(MakeCompoundMatcher(ifStmt, "ifStmt"), this);
   Finder->addMatcher(MakeCompoundMatcher(switchStmt, "switchStmt"), this);
 }

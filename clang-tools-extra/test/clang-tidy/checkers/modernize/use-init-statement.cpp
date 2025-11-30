@@ -46,25 +46,6 @@ void good_already_has_init_stmt() {
     }
 }
 
-void good_unused_in_condition() {
-    int i = 0;
-
-    int i1 = 0;
-    if (i == 0) {
-        // 'i1' will be placed here by another check
-        do_some(i1);
-    }
-
-    int i2 = 0;
-    switch (i) {
-        case 0: {
-            // 'i2' will be placed here by another check
-            do_some(i2);
-            break;
-        }
-    }
-}
-
 void good_multiple() {
     int i1=0, k1=0, j1=0;
     if (i1 == 0 && k1 == 0 && j1 == 0) {
@@ -212,6 +193,39 @@ void bad2() {
             do_some();
             ++i2;
             break;
+    }
+}
+
+void bad_unused_in_condition() {
+    int i = 0;
+
+    int i1 = 0; DUMMY_TOKEN
+    if (i1 == 0) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (int i1 = 0; i1 == 0) {
+        // 'i1' unable to be placed here by another check
+        do_some(i1);
+    } else {
+        // 'i1' unable to be placed here by another check
+        do_some(i1+1);
+    }
+
+    int i2 = 0; DUMMY_TOKEN
+    switch (i2) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (int i2 = 0; i2) {
+        case 0: {
+            // 'i2' unable to be placed here by another check
+            do_some(i2);
+            break;
+        }
+        case 1: {
+            // 'i2' unable to be placed here by another check
+            do_some(i2+1);
+            break;
+        }
     }
 }
 
