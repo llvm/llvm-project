@@ -3439,6 +3439,9 @@ def err_attribute_only_once_per_parameter : Error<
   "%0 attribute can only be applied once per parameter">;
 def err_mismatched_uuid : Error<"uuid does not match previous declaration">;
 def note_previous_uuid : Note<"previous uuid specified here">;
+def err_return_type_mismatch : Error<
+  "returned parameter has to reference the same type as the return type">;
+def note_return_type : Note<"return type is %0">;
 def warn_attribute_pointers_only : Warning<
   "%0 attribute only applies to%select{| constant}1 pointer arguments">,
   InGroup<IgnoredAttributes>;
@@ -3473,6 +3476,8 @@ def warn_attribute_return_pointers_refs_only : Warning<
 def warn_attribute_pointer_or_reference_only : Warning<
   "%0 attribute only applies to a pointer or reference (%1 is invalid)">,
   InGroup<IgnoredAttributes>;
+def err_attribute_pointer_or_reference_only : Error<
+  warn_attribute_pointer_or_reference_only.Summary>;
 def err_attribute_no_member_pointers : Error<
   "%0 attribute cannot be used with pointers to members">;
 def err_attribute_invalid_implicit_this_argument : Error<

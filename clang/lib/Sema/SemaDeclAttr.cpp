@@ -1375,6 +1375,54 @@ static void handleNoEscapeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) NoEscapeAttr(S.Context, AL));
 }
 
+static void handleReturnsArgumentAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  auto *FD = cast<FunctionDecl>(D);
+
+  ParamIdx Index;
+  if (!S.checkFunctionOrMethodParameterIndex(
+          D, AL, 1, AL.getArgAsExpr(0), Index, /*CanIndexImplicitThis=*/true))
+    return;
+
+  QualType ArgType;
+
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+      MD && MD->isInstance() && Index.getLLVMIndex() == 0) {
+    ArgType = MD->getThisType();
+  } else {
+    ArgType = MD->getParamDecl(Index.getASTIndex())->getType();
+  }
+
+  if (!ArgType->isPointerOrReferenceType()) {
+    S.Diag(D->getBeginLoc(), diag::err_attribute_pointer_or_reference_only)
+        << AL << ArgType;
+    return;
+  }
+
+  ArgType = ArgType->isPointerType() ? ArgType->getPointeeType()
+                                     : ArgType.getNonReferenceType();
+
+  QualType ReturnType = FD->getReturnType();
+
+  if (!ReturnType->isPointerOrReferenceType()) {
+    S.Diag(D->getBeginLoc(), diag::err_return_type_mismatch);
+    S.Diag(FD->getReturnTypeSourceRange().getBegin(), diag::note_return_type)
+        << FD->getReturnType();
+    return;
+  }
+
+  ReturnType = ReturnType->isPointerType() ? ReturnType->getPointeeType()
+                                           : ReturnType.getNonReferenceType();
+
+  if (!S.Context.hasSameType(ReturnType, ArgType)) {
+    S.Diag(D->getBeginLoc(), diag::err_return_type_mismatch);
+    S.Diag(FD->getReturnTypeSourceRange().getBegin(), diag::note_return_type)
+        << FD->getReturnType();
+    return;
+  }
+
+  D->addAttr(ReturnsArgumentAttr::Create(S.Context, Index, AL));
+}
+
 static void handleAssumeAlignedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   Expr *E = AL.getArgAsExpr(0),
        *OE = AL.getNumArgs() > 1 ? AL.getArgAsExpr(1) : nullptr;
@@ -7360,6 +7408,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_NoEscape:
     handleNoEscapeAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_ReturnsArgument:
+    handleReturnsArgumentAttr(S, D, AL);
     break;
   case ParsedAttr::AT_MaybeUndef:
     handleSimpleAttribute<MaybeUndefAttr>(S, D, AL);

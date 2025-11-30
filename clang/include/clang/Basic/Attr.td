@@ -2682,6 +2682,13 @@ def NoEscape : Attr {
   let Documentation = [NoEscapeDocs];
 }
 
+def ReturnsArgument : InheritableAttr {
+  let Spellings = [Clang<"returns_argument">];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [ParamIdxArgument<"ReturnedVal">];
+  let Documentation = [ReturnsArgumentDocs];
+}
+
 def MaybeUndef : InheritableAttr {
   let Spellings = [Clang<"maybe_undef">];
   let Subjects = SubjectList<[ParmVar]>;

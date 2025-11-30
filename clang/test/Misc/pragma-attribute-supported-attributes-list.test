@@ -185,6 +185,7 @@
 // CHECK-NEXT: ReqdWorkGroupSize (SubjectMatchRule_function)
 // CHECK-NEXT: Restrict (SubjectMatchRule_function)
 // CHECK-NEXT: ReturnTypestate (SubjectMatchRule_function, SubjectMatchRule_variable_is_parameter)
+// CHECK-NEXT: ReturnsArgument (SubjectMatchRule_function)
 // CHECK-NEXT: ReturnsNonNull (SubjectMatchRule_objc_method, SubjectMatchRule_function)
 // CHECK-NEXT: ReturnsTwice (SubjectMatchRule_function)
 // CHECK-NEXT: SYCLExternal (SubjectMatchRule_function)
