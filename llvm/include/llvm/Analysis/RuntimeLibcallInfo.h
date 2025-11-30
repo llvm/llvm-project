@@ -14,7 +14,7 @@
 
 namespace llvm {
 
-class LLVM_ABI RuntimeLibraryAnalysis
+class RuntimeLibraryAnalysis
     : public AnalysisInfoMixin<RuntimeLibraryAnalysis> {
 public:
   using Result = RTLIB::RuntimeLibcallsInfo;
