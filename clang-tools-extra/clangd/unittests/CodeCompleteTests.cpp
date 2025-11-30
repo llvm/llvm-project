@@ -4692,6 +4692,35 @@ TEST(CompletionTest, ListExplicitObjectOverloads) {
   }
 }
 
+TEST(CompletionTest, FuzzyMatchMacro) {
+  const auto *const Code = R"cpp(
+  #define gl_foo() 42
+  #define _gl_foo() 42
+  int gl_frob();
+
+  int main() {
+    int x = glf^
+  }
+  )cpp";
+
+  {
+    CodeCompleteOptions Opts{};
+    EXPECT_EQ(Opts.MacroFilter, Config::MacroFilterPolicy::ExactPrefix);
+
+    auto Results = completions(Code, {}, Opts);
+    EXPECT_THAT(Results.Completions, ElementsAre(named("gl_frob")));
+  }
+
+  {
+    CodeCompleteOptions Opts{};
+    Opts.MacroFilter = Config::MacroFilterPolicy::FuzzyMatch;
+
+    auto Results = completions(Code, {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                ElementsAre(named("gl_frob"), named("gl_foo")));
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

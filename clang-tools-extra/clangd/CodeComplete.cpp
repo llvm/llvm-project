@@ -1435,7 +1435,8 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   Clang->setCodeCompletionConsumer(Consumer.release());
 
   if (Input.Preamble.RequiredModules)
-    Input.Preamble.RequiredModules->adjustHeaderSearchOptions(Clang->getHeaderSearchOpts());
+    Input.Preamble.RequiredModules->adjustHeaderSearchOptions(
+        Clang->getHeaderSearchOpts());
 
   SyntaxOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0])) {
@@ -2037,14 +2038,34 @@ private:
   }
 
   std::optional<float> fuzzyScore(const CompletionCandidate &C) {
-    // Macros can be very spammy, so we only support prefix completion.
-    if (((C.SemaResult &&
+    using MacroFilterPolicy = Config::MacroFilterPolicy;
+
+    const auto IsMacroResult =
+        ((C.SemaResult &&
           C.SemaResult->Kind == CodeCompletionResult::RK_Macro) ||
          (C.IndexResult &&
-          C.IndexResult->SymInfo.Kind == index::SymbolKind::Macro)) &&
-        !C.Name.starts_with_insensitive(Filter->pattern()))
-      return std::nullopt;
-    return Filter->match(C.Name);
+          C.IndexResult->SymInfo.Kind == index::SymbolKind::Macro));
+
+    if (!IsMacroResult)
+      return Filter->match(C.Name);
+
+    // macros with leading and trailing underscore are probably spammy
+    switch (Opts.MacroFilter) {
+    case MacroFilterPolicy::ExactPrefix:
+      if (C.Name.starts_with_insensitive(Filter->pattern()))
+        return Filter->match(C.Name);
+      else
+        return std::nullopt;
+    case MacroFilterPolicy::FuzzyMatch:
+      if (!C.Name.starts_with_insensitive("_") &&
+          !C.Name.ends_with_insensitive("_"))
+        return Filter->match(C.Name);
+      else
+        return std::nullopt;
+    }
+    llvm_unreachable("Unhandled MacroFilter option in fuzzyScore.");
+
+    return std::nullopt;
   }
 
   CodeCompletion::Scores
