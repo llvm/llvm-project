@@ -12,10 +12,24 @@
 #ifndef CLANG_CIR_LOWERTOLLVM_H
 #define CLANG_CIR_LOWERTOLLVM_H
 
+#include "mlir/Conversion/PatternRewriter.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+
+namespace cir {
+class SqrtOp;
+}
+
+class CIRToLLVMSqrtOpLowering : public mlir::OpConversionPattern<cir::SqrtOp> {
+public:
+  using mlir::OpConversionPattern<cir::SqrtOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::SqrtOp op, typename cir::SqrtOp::Adaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override;
+};
 
 namespace cir {
 

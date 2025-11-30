@@ -1,4 +1,4 @@
-//====- LowerToLLVM.cpp - Lowering from CIR to LLVMIR ---------------------===//
+﻿//====- LowerToLLVM.cpp - Lowering from CIR to LLVMIR ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,6 +30,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -44,6 +45,96 @@
 
 using namespace cir;
 using namespace llvm;
+using namespace mlir;
+
+static std::string getLLVMIntrinsicNameForType(Type llvmTy) {
+  std::string s;
+  {
+    llvm::raw_string_ostream os(s);
+    llvm::Type *unused = nullptr;
+    os << llvmTy;
+  }
+  if (auto vecTy = llvmTy.dyn_cast<LLVM::LLVMType>()) {
+  }
+  return s;
+}
+
+// Actual lowering
+LogicalResult CIRToLLVMSqrtOpLowering::matchAndRewrite(
+    cir::SqrtOp op, typename cir::SqrtOp::Adaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+
+  Location loc = op.getLoc();
+  MLIRContext *ctx = rewriter.getContext();
+
+  Type cirResTy = op.getResult().getType();
+  Type llvmResTy = getTypeConverter()->convertType(cirResTy);
+  if (!llvmResTy)
+    return op.emitOpError(
+        "expected LLVM dialect result type for cir.sqrt lowering");
+
+  Value operand = adaptor.getInput();
+  Value llvmOperand = operand;
+  if (operand.getType() != llvmResTy) {
+    llvmOperand = rewriter.create<LLVM::BitcastOp>(loc, llvmResTy, operand);
+  }
+
+  // Build the llvm.sqrt.* intrinsic name depending on scalar vs vector result
+  std::string intrinsicName = "llvm.sqrt.";
+  std::string suffix;
+
+  // If the CIR result type is a vector, include the 'vN' part in the suffix.
+  if (auto vec = cirResTy.dyn_cast<cir::VectorType>()) {
+    Type elt = vec.getElementType();
+    if (auto f = elt.dyn_cast<cir::FloatType>()) {
+      unsigned width = f.getWidth();
+      unsigned n = vec.getNumElements();
+      if (width == 32)
+        suffix = "v" + std::to_string(n) + "f32";
+      else if (width == 64)
+        suffix = "v" + std::to_string(n) + "f64";
+      else if (width == 16)
+        suffix = "v" + std::to_string(n) + "f16";
+      else
+        return op.emitOpError("unsupported float width for sqrt");
+    } else {
+      return op.emitOpError("vector element must be floating point for sqrt");
+    }
+  } else if (auto f = cirResTy.dyn_cast<cir::FloatType>()) {
+    // Scalar float
+    unsigned width = f.getWidth();
+    if (width == 32)
+      suffix = "f32";
+    else if (width == 64)
+      suffix = "f64";
+    else if (width == 16)
+      suffix = "f16";
+    else
+      return op.emitOpError("unsupported float width for sqrt");
+  } else {
+    return op.emitOpError("unsupported type for cir.sqrt lowering");
+  }
+
+  intrinsicName += suffix;
+
+  // Ensure the llvm intrinsic function exists at module scope. Insert it at
+  // the start of the module body using an insertion guard.
+  ModuleOp module = op->getParentOfType<ModuleOp>();
+  if (!module.lookupSymbol<LLVM::LLVMFuncOp>(intrinsicName)) {
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(module.getBody());
+    auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmResTy, {llvmResTy},
+                                                    /*isVarArg=*/false);
+    rewriter.create<LLVM::LLVMFuncOp>(loc, intrinsicName, llvmFnType);
+  }
+
+  // Create the call and replace cir.sqrt
+  auto callee = SymbolRefAttr::get(ctx, intrinsicName);
+  rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, llvmResTy, callee,
+                                            ArrayRef<Value>{llvmOperand});
+
+  return mlir::success();
+}
 
 namespace cir {
 namespace direct {

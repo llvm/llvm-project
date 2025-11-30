@@ -848,9 +848,21 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_sqrtsh_round_mask:
   case X86::BI__builtin_ia32_sqrtsd_round_mask:
   case X86::BI__builtin_ia32_sqrtss_round_mask:
+    errorNYI("masked round sqrt builtins");
+    return {};
+  case X86::BI__builtin_ia32_sqrtpd256:
+  case X86::BI__builtin_ia32_sqrtpd:
+  case X86::BI__builtin_ia32_sqrtps256:
+  case X86::BI__builtin_ia32_sqrtps:
+  case X86::BI__builtin_ia32_sqrtph256:
+  case X86::BI__builtin_ia32_sqrtph:
   case X86::BI__builtin_ia32_sqrtph512:
   case X86::BI__builtin_ia32_sqrtps512:
-  case X86::BI__builtin_ia32_sqrtpd512:
+  case X86::BI__builtin_ia32_sqrtpd512: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Value arg = ops[0];
+    return cir::SqrtOp::create(builder, loc, arg.getType(), arg).getResult();
+  }
   case X86::BI__builtin_ia32_pmuludq128:
   case X86::BI__builtin_ia32_pmuludq256:
   case X86::BI__builtin_ia32_pmuludq512:
