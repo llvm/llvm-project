@@ -56,29 +56,45 @@ static const char *getDisplayName(const char *Name) {
   return DName;
 }
 
-static void printTDName(tysan_type_descriptor *td) {
+int getTDName(void *_td, char *buffer, uptr buffer_size, bool assert_on_error) {
+  tysan_type_descriptor *td = (tysan_type_descriptor *)_td;
   if (((sptr)td) <= 0) {
-    Printf("<unknown type>");
-    return;
+    return internal_snprintf(buffer, buffer_size, "<unknown type>");
   }
 
+  uptr written = 0;
   switch (td->Tag) {
   default:
-    CHECK(false && "invalid enum value");
+    if (assert_on_error)
+      CHECK(false && "invalid enum value");
+    else
+      written = internal_snprintf(buffer, buffer_size, "<invalid shadow>");
     break;
   case TYSAN_MEMBER_TD:
-    printTDName(td->Member.Access);
-    if (td->Member.Access != td->Member.Base) {
-      Printf(" (in ");
-      printTDName(td->Member.Base);
-      Printf(" at offset %zu)", td->Member.Offset);
+    written = getTDName(td->Member.Access, buffer, buffer_size, false);
+    if (td->Member.Access != td->Member.Base && written != buffer_size) {
+      written +=
+          internal_snprintf(&buffer[written], buffer_size - written, " (in ");
+      written += getTDName(td->Member.Base, &buffer[written],
+                           buffer_size - written, false);
+      written += internal_snprintf(&buffer[written], buffer_size - written,
+                                   " at offset %zu)", td->Member.Offset);
     }
     break;
   case TYSAN_STRUCT_TD:
-    Printf("%s", getDisplayName(
-                     (char *)(td->Struct.Members + td->Struct.MemberCount)));
+    written = internal_snprintf(
+        buffer, buffer_size, "%s",
+        getDisplayName((char *)(td->Struct.Members + td->Struct.MemberCount)));
     break;
   }
+  return written;
+}
+
+static void printTDName(tysan_type_descriptor *td) {
+  static const uptr nameBufferSize = 512;
+  static char nameBuffer[nameBufferSize];
+  getTDName(td, nameBuffer, nameBufferSize, true);
+  Printf("%s", nameBuffer);
 }
 
 static tysan_type_descriptor *getRootTD(tysan_type_descriptor *TD) {
