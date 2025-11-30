@@ -776,7 +776,7 @@ const Value *Value::stripAndAccumulateConstantOffsets(
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       V = cast<Operator>(V)->getOperand(0);
     } else if (auto *GA = dyn_cast<GlobalAlias>(V)) {
-      if (!GA->isInterposable())
+      if (!GA->isInterposable() && GA->getAliasee())
         V = GA->getAliasee();
     } else if (const auto *Call = dyn_cast<CallBase>(V)) {
         if (const Value *RV = Call->getReturnedArgOperand())
