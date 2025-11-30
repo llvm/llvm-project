@@ -5,14 +5,14 @@ void f(bool b) {
   if (b) [[likely]] return;
   else {
   }
-  // CHECK-MESSAGES: :[[@LINE-3]]:9: warning: <message> [readability-inconsistent-ifelse-braces]
+  // CHECK-MESSAGES: :[[@LINE-3]]:9: warning: statement should have braces [readability-inconsistent-ifelse-braces]
   // CHECK-FIXES: if (b) { {{[[][[]}}likely{{[]][]]}} return;
   // CHECK-FIXES: } else {
 
   if (b) {
   } else [[unlikely]]
     return;
-  // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: <message> [readability-inconsistent-ifelse-braces]
+  // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: statement should have braces [readability-inconsistent-ifelse-braces]
   // CHECK-FIXES: } else { {{[[][[]}}unlikely{{[]][]]}}
 }
 

@@ -10,7 +10,7 @@ void f() {
       do_something("if-single-line");
     else {
     }
-    // CHECK-MESSAGES: :[[@LINE-4]]:21: warning: <message> [readability-inconsistent-ifelse-braces]
+    // CHECK-MESSAGES: :[[@LINE-4]]:21: warning: statement should have braces [readability-inconsistent-ifelse-braces]
     // CHECK-FIXES: if (cond("if1")) {
     // CHECK-FIXES: } else {
   }
@@ -20,14 +20,14 @@ void f() {
       do_something("if-single-line");
     else {
     }
-    // CHECK-MESSAGES: :[[@LINE-4]]:21: warning: <message> [readability-inconsistent-ifelse-braces]
+    // CHECK-MESSAGES: :[[@LINE-4]]:21: warning: statement should have braces [readability-inconsistent-ifelse-braces]
     // CHECK-FIXES: if (cond("if2")) {
     // CHECK-FIXES: } else {
   } else {
     if (cond("if2.1")) {
     } else
       do_something("else-single-line");
-    // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: <message> [readability-inconsistent-ifelse-braces]
+    // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: statement should have braces [readability-inconsistent-ifelse-braces]
     // CHECK-FIXES: } else {
     // CHECK-FIXES: }
   }

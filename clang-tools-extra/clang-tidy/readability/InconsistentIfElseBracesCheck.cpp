@@ -83,7 +83,7 @@ void InconsistentIfElseBracesCheck::emitDiagnostic(
     const utils::BraceInsertionHints Hints =
         utils::getBraceInsertionsHints(S, LangOpts, SM, StartLoc, EndLocHint);
     assert(Hints && Hints.offersFixIts() && "Expected hints or fix-its");
-    diag(Hints.DiagnosticPos, "<message>")
+    diag(Hints.DiagnosticPos, "statement should have braces")
         << Hints.openingBraceFixIt() << Hints.closingBraceFixIt();
   } else {
     diag(StartLoc, "<message-for-macro-expansions>") << StartLoc.isMacroID();
