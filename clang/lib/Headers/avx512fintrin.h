@@ -8069,8 +8069,8 @@ _mm512_kxor(__mmask16 __A, __mmask16 __B) {
 #define _kshiftri_mask16(A, I) \
   ((__mmask16)__builtin_ia32_kshiftrihi((__mmask16)(A), (unsigned int)(I)))
 
-static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
-_cvtmask16_u32(__mmask16 __A) {
+static __inline__ unsigned int
+    __DEFAULT_FN_ATTRS_CONSTEXPR _cvtmask16_u32(__mmask16 __A) {
   return (unsigned int)__builtin_ia32_kmovw((__mmask16)__A);
 }
 

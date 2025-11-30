@@ -178,8 +178,8 @@ _kadd_mask64(__mmask64 __A, __mmask64 __B) {
 #define _kshiftri_mask64(A, I) \
   ((__mmask64)__builtin_ia32_kshiftridi((__mmask64)(A), (unsigned int)(I)))
 
-static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
-_cvtmask32_u32(__mmask32 __A) {
+static __inline__ unsigned int
+    __DEFAULT_FN_ATTRS_CONSTEXPR _cvtmask32_u32(__mmask32 __A) {
   return (unsigned int)__builtin_ia32_kmovd((__mmask32)__A);
 }
 
