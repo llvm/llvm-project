@@ -21,9 +21,13 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "llvm/Support/raw_ostream.h"
+#include <string>
 
 namespace clang::lifetimes {
 
@@ -51,9 +55,14 @@ public:
 
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter);
+                               LifetimeSafetyReporter *Reporter,
+                               LifetimeSafetyStats &Stats, bool CollectStats);
 
 namespace internal {
+
+void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
+                          LifetimeSafetyStats &Stats);
+
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
