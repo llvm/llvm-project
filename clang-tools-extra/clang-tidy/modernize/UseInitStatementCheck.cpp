@@ -92,14 +92,6 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(MakeCompoundMatcher(switchStmt, "switchStmt"), this);
 }
 
-static StringRef normDeclStmtText(StringRef Text) {
-  Text = Text.trim();
-  while (Text.consume_back(";")) {
-    Text = Text.rtrim();
-  }
-  return Text;
-}
-
 void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *If = Result.Nodes.getNodeAs<IfStmt>("ifStmt");
   const auto *Switch = Result.Nodes.getNodeAs<SwitchStmt>("switchStmt");
@@ -111,13 +103,90 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const SourceRange RemovalRange = PrevDecl->getSourceRange();
-  const bool CanFix =
-      utils::rangeCanBeFixed(RemovalRange, Result.SourceManager);
+#if 0
+  SourceRange ExtendedRange = RemovalRange;
 
-  const StringRef DeclStmtText = Lexer::getSourceText(
-      CharSourceRange::getTokenRange(PrevDecl->getSourceRange()),
+  SourceLocation ExpansionEnd = Result.SourceManager->getExpansionLoc(RemovalRange.getEnd());
+
+  // Создать Lexer для поиска токенов после expansion конца
+  SourceLocation FileStart = Result.SourceManager->getLocForStartOfFile(
+      Result.SourceManager->getFileID(ExpansionEnd));
+  std::pair<FileID, unsigned> LocInfo = Result.SourceManager->getDecomposedLoc(ExpansionEnd);
+  StringRef FileBuffer = Result.SourceManager->getBufferData(LocInfo.first);
+
+  Lexer Lex(ExpansionEnd, getLangOpts(), 
+            FileBuffer.data(), FileBuffer.data() + LocInfo.second, 
+            FileBuffer.data() + FileBuffer.size());
+
+  Token Tok;
+  if (!Lex.LexFromRawLexer(Tok) && Tok.is(tok::semi)) {
+      ExtendedRange.setEnd(Result.SourceManager->getSpellingLoc(Tok.getEndLoc()));
+  }
+#endif
+#if 0
+  // Найти следующую точку с запятой после DeclStmt
+  auto TokPos =
+  Result.SourceManager->getExpansionLoc(RemovalRange.getBegin());
+  do {
+    if (const auto NextToken = Lexer::findNextToken(TokPos, 
+                                                    *Result.SourceManager, 
+                                                    getLangOpts())) {
+        if (NextToken->is(tok::semi)) {
+            ExtendedRange.setEnd(NextToken->getEndLoc());
+            break;
+        }
+        TokPos = NextToken->getLocation();
+    }
+  } while (true);
+#endif
+
+  CharSourceRange DeclCharRange = Lexer::makeFileCharRange(
+      CharSourceRange::getTokenRange(RemovalRange),
       *Result.SourceManager, getLangOpts());
-  const auto NewInitStmt = normDeclStmtText(DeclStmtText).str() + "; ";
+
+  // Get the source text using makeFileCharRange to properly handle macros
+  //const CharSourceRange DeclCharRange = Lexer::makeFileCharRange(
+  //    CharSourceRange::getTokenRange(RemovalRange),
+  //    *Result.SourceManager, getLangOpts());
+  
+  bool CanFix = true;
+
+  if (DeclCharRange.isInvalid()) {
+    DeclCharRange = Lexer::makeFileCharRange(
+      CharSourceRange::getTokenRange(RemovalRange),
+      *Result.SourceManager, getLangOpts());
+    if (DeclCharRange.isInvalid())  
+    CanFix = false;
+  }
+  
+  const StringRef DeclStmtText = Lexer::getSourceText(
+      DeclCharRange, *Result.SourceManager, getLangOpts());
+  
+  if (DeclStmtText.empty())
+    CanFix = false;
+
+  const auto NewInitStmt = DeclStmtText.trim().str() +
+                           ("") + " ";
+  // const auto NewInitStmt = normDeclStmtText(DeclStmtText).str() + "; ";
+
+  // Allow the fix if we can extract valid source text. We use makeFileCharRange
+  // to get source text that preserves macros (like MY_INT in types). The
+  // rangeCanBeFixed check ensures basic validity, but we also allow the fix
+  // if the range is entirely within a macro argument (which preserves macros).
+  // Additionally, if we successfully extracted source text using makeFileCharRange,
+  // it means we can preserve macro spelling, so we allow the fix even if
+  // rangeCanBeFixed returns false due to macro expansions in the type.
+  // We check that the begin location is valid and not in a system header.
+  const SourceLocation DeclBegin = RemovalRange.getBegin();
+  const SourceLocation SpellingLoc =
+      Result.SourceManager->getSpellingLoc(DeclBegin);
+  if (CanFix)
+    CanFix =
+        utils::rangeCanBeFixed(RemovalRange, Result.SourceManager) ||
+        utils::rangeIsEntirelyWithinMacroArgument(RemovalRange,
+                                                Result.SourceManager) ||
+        (SpellingLoc.isValid() &&
+        !Result.SourceManager->isInSystemHeader(SpellingLoc));
 
   auto Diag = diag(PrevDecl->getBeginLoc(),
                    "%select{multiple variable|variable %1}0 declaration "

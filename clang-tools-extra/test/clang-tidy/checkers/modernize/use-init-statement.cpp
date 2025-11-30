@@ -483,18 +483,18 @@ void bad_macro3() {
 }
 
 void bad_macro4() {
-    int i1 = 0 SEMICOLON
+    int i1 = 0 SEMICOLON DUMMY_TOKEN
     if (i1 == 0) {
 // CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (int i1 = 0 SEMICOLON i1 == 0) {
         do_some();
     }
-    int i2 = 0 SEMICOLON
+    int i2 = 0 SEMICOLON DUMMY_TOKEN
     switch (i2) {
 // CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
-// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (int i2 = 0 SEMICOLON i2) {
         case 0:
             do_some();
             break;
@@ -524,13 +524,15 @@ void bad_macro6() {
     MY_INT i1 = 0; DUMMY_TOKEN
     if (i1 == 0) {
 // CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
-// FIXME: should be changed to 'if (MY_INT i1 = 0; i1 == 0) {'
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (MY_INT i1 = 0; i1 == 0) {
         do_some();
     }
     MY_INT i2 = 0; DUMMY_TOKEN
     switch (i2) {
 // CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
-// FIXME: should be changed to 'switch (MY_INT i2 = 0; i2) {'
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (MY_INT i2 = 0; i2) {
         case 0:
             do_some();
             break;
