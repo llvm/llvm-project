@@ -2767,7 +2767,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   }
 
   // Apply `nonnull`, `dereferenceable(N)` and `align N` to the `this` argument,
-  // unless this is a thunk function.
+  // unless this is a thunk function. Add dead_on_return to the `this` argument
+  // in base class destructors.
   // FIXME: fix this properly, https://reviews.llvm.org/D100388
   if (FI.isInstanceMethod() && !IRFunctionArgs.hasInallocaArg() &&
       !FI.arg_begin()->type->isVoidPointerType() && !IsThunk) {
@@ -2799,6 +2800,18 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                 /*TBAAInfo=*/nullptr, /*forPointeeType=*/true)
             .getAsAlign();
     Attrs.addAlignmentAttr(Alignment);
+
+    if (isa_and_nonnull<CXXDestructorDecl>(
+            CalleeInfo.getCalleeDecl().getDecl())) {
+      auto *ClassDecl = dyn_cast<CXXRecordDecl>(
+          CalleeInfo.getCalleeDecl().getDecl()->getDeclContext());
+      assert(
+          ClassDecl &&
+          "Expected CXXDestructorDecl to have a CXXRecordDecl as its parent.");
+      if (ClassDecl->getNumBases() == 0 && ClassDecl->getNumVBases() == 0) {
+        Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
+      }
+    }
 
     ArgAttrs[IRArgs.first] = llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }
