@@ -715,7 +715,7 @@ def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive"> {
     This release pattern establishes memory ordering for operations occurring in program 
     order before this arrive instruction by making operations from the current thread 
     visible to subsequent operations in other threads within the CTA. When other threads 
-    perform corresponding acquire operations (like 'mbarrier.test.wait'), they synchronize 
+    perform corresponding acquire operations (like 'mbarrier.test_wait'), they synchronize 
     with this release pattern.
 
     This operation causes the executing thread to signal its arrival at the barrier.
@@ -826,7 +826,7 @@ def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
     pattern establishes memory ordering for operations occurring in program order before 
     this arrive instruction by making operations from the current thread visible to 
     subsequent operations in other threads within the CTA. When other threads perform 
-    corresponding acquire operations (like 'mbarrier.test.wait'), they synchronize with 
+    corresponding acquire operations (like 'mbarrier.test_wait'), they synchronize with 
     this release pattern.
 
     This operation causes the executing thread to signal its arrival at the barrier 
@@ -901,7 +901,7 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
     operations occurring in program order before this arrive instruction by making 
     operations from the current thread visible to subsequent operations in other 
     threads within the CTA. When other threads perform corresponding acquire operations 
-    (like 'mbarrier.test.wait'), they synchronize with this release pattern.
+    (like 'mbarrier.test_wait'), they synchronize with this release pattern.
 
     This operation first performs an expect-tx operation with the specified transaction 
     count, then performs an arrive-on operation with an implicit count of 1. The 
@@ -980,13 +980,10 @@ def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity"
   let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
 }
 
-def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
-  Results<(outs I1:$res)>,
-  Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
-                 I64:$state)> {
+def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test_wait"> {
   let summary = "MBarrier Non-Blocking Test Wait Operation";
   let description = [{
-    The `nvvm.mbarrier.test.wait` operation performs a non-blocking test for the 
+    The `nvvm.mbarrier.test_wait` operation performs a non-blocking test for the 
     completion of a specific phase of an *mbarrier object*. It uses the default
     `.acquire.cta` semantics. This acquire pattern establishes memory ordering for 
     operations occurring in program order after this wait instruction by making 
@@ -1002,9 +999,16 @@ def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
     The operation takes the following operands:
     - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic 
       addressing, but the address must still be in the shared memory space.
-    - `state`: An opaque value returned by a previous `mbarrier.arrive` 
-      operation on the same *mbarrier object* during the current or immediately 
-      preceding phase.
+    - `stateOrPhase`: This argument represents a `state` when it is a 64-bit value
+      and represents a `phase` when it is a 32-bit value. The `state` is an opaque
+      value returned by a previous `mbarrier.arrive` operation on the same
+      *mbarrier object* during the current or immediately preceding phase.
+      The `phase` is an integer specifying the phase parity (0 or 1).
+      Even phases have parity 0, odd phases have parity 1.
+    - `scope`: This specifies the set of threads that directly observe the memory
+      synchronizing effect of the `mbarrier.test_wait` operation.
+    - `relaxed`: When set to true, the `arrive` operation has relaxed memory semantics
+      and does not provide any ordering or visibility guarantees.
 
     The operation returns a boolean value indicating whether the specified phase 
     has completed:
@@ -1031,7 +1035,15 @@ def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)
   }];
 
-  let assemblyFormat = "$addr `,` $state attr-dict `:` type(operands) `->` type($res)";
+  let results = (outs I1:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
+    AnyTypeOf<[I64, I32]>:$stateOrPhase,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
+    DefaultValuedAttr<BoolAttr, "false">:$relaxed);
+
+  let assemblyFormat = "$addr `,` $stateOrPhase attr-dict `:` type(operands) `->` type($res)";
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     static mlir::NVVM::IDArgPair
