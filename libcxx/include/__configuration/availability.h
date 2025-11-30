@@ -84,6 +84,9 @@
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE /* nothing */
+
 #  define _LIBCPP_INTRODUCED_IN_LLVM_21 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_21_ATTRIBUTE /* nothing */
 
@@ -111,6 +114,10 @@
 #elif defined(__APPLE__)
 
 // clang-format off
+
+// LLVM 22 
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22 0
+#  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 21
 // TODO: Fill this in
@@ -316,6 +323,10 @@
 // See https://wg21.link/LWG2233. This requires `std::bad_function_call::what()` to be available in the dylib.
 #define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
 // No attribute, since we've had bad_function_call::what() in the headers before
+
+// Controls whether the internal implementation for text_encoding::environment() -> te_impl::__environment() is available
+#define _LIBCPP_AVAILABILITY_HAS_TE_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_22
+#define _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE
 
 // Define availability attributes that depend on both
 // _LIBCPP_HAS_EXCEPTIONS and _LIBCPP_HAS_RTTI.
