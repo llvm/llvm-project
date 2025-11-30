@@ -1,4 +1,6 @@
 // RUN: llvm-tblgen -gen-riscv-target-def -I %p/../../include %s | FileCheck %s
+// RUN: not llvm-tblgen -gen-riscv-target-def -DINVALID_IMPLY -I %p/../../include %s 2>&1 | FileCheck %s --check-prefix=INVALID-IMPLY
+// RUN: not llvm-tblgen -gen-riscv-target-def -DDUPLICATE -I %p/../../include %s 2>&1 | FileCheck %s --check-prefix=DUPLICATE
 
 include "llvm/Target/Target.td"
 
@@ -24,6 +26,13 @@ class RISCVExperimentalExtension<string name, int major, int minor, string desc,
     : RISCVExtension<"experimental-"#name, major, minor, desc, implies,
                      fieldname, value> {
   let Experimental = true;
+}
+
+class RISCVTuneFeatureBase;
+class RISCVSimpleTuneFeature : RISCVTuneFeatureBase;
+class RISCVTuneFeature<string pos_directive, string neg_directive> : RISCVTuneFeatureBase {
+  string PositiveDirectiveName = pos_directive;
+  string NegativeDirectiveName = neg_directive;
 }
 
 def FeatureStdExtI
@@ -188,3 +197,29 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK-NEXT:     {"i", 0, 8ULL},
 // CHECK-NEXT: };
 // CHECK-NEXT: #endif
+
+#ifdef INVALID_IMPLY
+def TuneFeatureBar : SubtargetFeature<"bar", "HasBar", "true", "TBA">;
+
+def TuneFeatureFoo : SubtargetFeature<"foo", "HasFoo", "true", "TBA",
+                                      [TuneFeatureBar]>,
+                     RISCVSimpleTuneFeature;
+
+// INVALID-IMPLY: error: A RISC-V tune feature can only imply another tune feature
+// INVALID-IMPLY-NEXT: def TuneFeatureBar
+// INVALID-IMPLY: note: implied by this tune feature
+// INVALID-IMPLY-NEXT: def TuneFeatureFoo
+#endif
+
+#ifdef DUPLICATE
+def TuneFeatureBar : SubtargetFeature<"bar", "HasBar", "true", "TBA">,
+                     RISCVTuneFeature<"abc", "def">;
+
+def TuneFeatureFoo : SubtargetFeature<"foo", "HasFoo", "true", "TBA">,
+                     RISCVTuneFeature<"xyz", "abc">;
+
+// DUPLICATE: error: RISC-V tune feature negative directive 'abc' was already defined
+// DUPLICATE-NEXT: def TuneFeatureFoo
+// DUPLICATE: note: Previously defined here
+// DUPLICATE-NEXT: def TuneFeatureBar
+#endif
