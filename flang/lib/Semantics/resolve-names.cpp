@@ -6181,6 +6181,11 @@ bool DeclarationVisitor::Pre(const parser::KindParam &x) {
           parser::Scalar<parser::Integer<parser::Constant<parser::Name>>>>(
           &x.u)}) {
     const auto &name{parser::UnwrapRef<parser::Name>(kind)};
+    // For kind params scope resolution, temporarily turn off equivalence
+    // processing, because for equivalences the name resolution is confined
+    // to the current scope. For kind params that may be used for array
+    // indices, we don't want to limit the name resolution to the current scope.
+    auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
     if (!FindSymbol(name)) {
       Say(name, "Parameter '%s' not found"_err_en_US);
     }
