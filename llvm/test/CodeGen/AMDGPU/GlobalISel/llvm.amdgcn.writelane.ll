@@ -112,12 +112,12 @@ define amdgpu_ps float @test_writelane_imminv2pi_s_v(i32 inreg %lane, i32 %vdst.
 ;
 ; GFX8-LABEL: test_writelane_imminv2pi_s_v:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    v_writelane_b32 v0, 0.15915494, s2
+; GFX8-NEXT:    v_writelane_b32 v0, INV2PI, s2
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: test_writelane_imminv2pi_s_v:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_writelane_b32 v0, 0.15915494, s2
+; GFX10-NEXT:    v_writelane_b32 v0, INV2PI, s2
 ; GFX10-NEXT:    ; return to shader part epilog
   %writelane = call i32 @llvm.amdgcn.writelane(i32 bitcast (float 0x3FC45F3060000000 to i32), i32 %lane, i32 %vdst.in)
   %writelane.cast = bitcast i32 %writelane to float

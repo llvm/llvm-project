@@ -373,7 +373,7 @@ define float @v_test_known_not_snan_sin_input_fmed3_r_i_i_f32(float %a) #0 {
 ; GCN-LABEL: v_test_known_not_snan_sin_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, 0.15915494, v0
+; GCN-NEXT:    v_mul_f32_e32 v0, INV2PI, v0
 ; GCN-NEXT:    v_fract_f32_e32 v0, v0
 ; GCN-NEXT:    v_sin_f32_e32 v0, v0
 ; GCN-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
@@ -388,7 +388,7 @@ define float @v_test_known_not_snan_cos_input_fmed3_r_i_i_f32(float %a) #0 {
 ; GCN-LABEL: v_test_known_not_snan_cos_input_fmed3_r_i_i_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e32 v0, 0.15915494, v0
+; GCN-NEXT:    v_mul_f32_e32 v0, INV2PI, v0
 ; GCN-NEXT:    v_fract_f32_e32 v0, v0
 ; GCN-NEXT:    v_cos_f32_e32 v0, v0
 ; GCN-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0

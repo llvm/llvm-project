@@ -40,7 +40,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX8-NEXT:    flat_load_ushort v0, v[0:1]
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_mul_f16_e32 v0, 0.15915494, v0
+; GFX8-NEXT:    v_mul_f16_e32 v0, INV2PI, v0
 ; GFX8-NEXT:    v_fract_f16_e32 v0, v0
 ; GFX8-NEXT:    v_sin_f16_e32 v2, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
@@ -54,7 +54,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ushort v1, v0, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
+; GFX9-NEXT:    v_mul_f16_e32 v1, INV2PI, v1
 ; GFX9-NEXT:    v_sin_f16_e32 v1, v1
 ; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
@@ -66,7 +66,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_ushort v1, v0, s[2:3]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
+; GFX10-NEXT:    v_mul_f16_e32 v1, INV2PI, v1
 ; GFX10-NEXT:    v_sin_f16_e32 v1, v1
 ; GFX10-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
@@ -78,7 +78,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, 0.15915494, v0.l
+; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, INV2PI, v0.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_sin_f16_e32 v0.l, v0.l
 ; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -91,7 +91,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
+; GFX11-FAKE16-NEXT:    v_mul_f16_e32 v1, INV2PI, v1
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_sin_f16_e32 v1, v1
 ; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
@@ -104,7 +104,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3]
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mul_f16_e32 v0.l, 0.15915494, v0.l
+; GFX12-TRUE16-NEXT:    v_mul_f16_e32 v0.l, INV2PI, v0.l
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_sin_f16_e32 v0.l, v0.l
 ; GFX12-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -117,7 +117,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3]
 ; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-FAKE16-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
+; GFX12-FAKE16-NEXT:    v_mul_f16_e32 v1, INV2PI, v1
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_sin_f16_e32 v1, v1
 ; GFX12-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
@@ -169,7 +169,7 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0x3118
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_mul_f16_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8-NEXT:    v_mul_f16_e32 v0, 0.15915494, v0
+; GFX8-NEXT:    v_mul_f16_e32 v0, INV2PI, v0
 ; GFX8-NEXT:    v_fract_f16_e32 v1, v1
 ; GFX8-NEXT:    v_fract_f16_e32 v0, v0
 ; GFX8-NEXT:    v_sin_f16_sdwa v2, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
@@ -188,7 +188,7 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v1, v0, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mul_f16_e32 v3, 0.15915494, v1
+; GFX9-NEXT:    v_mul_f16_e32 v3, INV2PI, v1
 ; GFX9-NEXT:    v_mul_f16_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-NEXT:    v_sin_f16_e32 v2, v3
 ; GFX9-NEXT:    v_sin_f16_e32 v1, v1
@@ -204,7 +204,7 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dword v1, v0, s[2:3]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_mul_f16_e32 v3, 0.15915494, v1
+; GFX10-NEXT:    v_mul_f16_e32 v3, INV2PI, v1
 ; GFX10-NEXT:    v_mul_f16_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX10-NEXT:    v_sin_f16_e32 v2, v3
 ; GFX10-NEXT:    v_sin_f16_e32 v1, v1
@@ -220,9 +220,9 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX11-TRUE16-NEXT:    global_load_b32 v0, v1, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, 0.15915494, v0.l
+; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.l, INV2PI, v0.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.h, 0.15915494, v2.l
+; GFX11-TRUE16-NEXT:    v_mul_f16_e32 v0.h, INV2PI, v2.l
 ; GFX11-TRUE16-NEXT:    v_sin_f16_e32 v0.l, v0.l
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_sin_f16_e32 v0.h, v0.h
@@ -239,9 +239,9 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX11-FAKE16-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-FAKE16-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
+; GFX11-FAKE16-NEXT:    v_mul_f16_e32 v1, INV2PI, v1
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-FAKE16-NEXT:    v_mul_f16_e32 v2, 0.15915494, v2
+; GFX11-FAKE16-NEXT:    v_mul_f16_e32 v2, INV2PI, v2
 ; GFX11-FAKE16-NEXT:    v_sin_f16_e32 v1, v1
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_sin_f16_e32 v2, v2
@@ -258,9 +258,9 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX12-TRUE16-NEXT:    global_load_b32 v0, v1, s[2:3]
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX12-TRUE16-NEXT:    v_mul_f16_e32 v0.l, 0.15915494, v0.l
+; GFX12-TRUE16-NEXT:    v_mul_f16_e32 v0.l, INV2PI, v0.l
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_mul_f16_e32 v0.h, 0.15915494, v2.l
+; GFX12-TRUE16-NEXT:    v_mul_f16_e32 v0.h, INV2PI, v2.l
 ; GFX12-TRUE16-NEXT:    v_sin_f16_e32 v0.l, v0.l
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_sin_f16_e32 v0.h, v0.h
@@ -276,9 +276,9 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX12-FAKE16-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX12-FAKE16-NEXT:    v_mul_f16_e32 v1, 0.15915494, v1
+; GFX12-FAKE16-NEXT:    v_mul_f16_e32 v1, INV2PI, v1
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-FAKE16-NEXT:    v_mul_f16_e32 v2, 0.15915494, v2
+; GFX12-FAKE16-NEXT:    v_mul_f16_e32 v2, INV2PI, v2
 ; GFX12-FAKE16-NEXT:    v_sin_f16_e32 v1, v1
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_sin_f16_e32 v2, v2

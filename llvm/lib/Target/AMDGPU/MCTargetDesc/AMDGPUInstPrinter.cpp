@@ -537,7 +537,7 @@ static bool printImmediateFP16(uint32_t Imm, const MCSubtargetInfo &STI,
   else if (Imm == 0xC400)
     O << "-4.0";
   else if (Imm == 0x3118 && STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
-    O << "0.15915494";
+    O << "INV2PI";
   else
     return false;
 
@@ -563,7 +563,7 @@ static bool printImmediateBFloat16(uint32_t Imm, const MCSubtargetInfo &STI,
   else if (Imm == 0xC080)
     O << "-4.0";
   else if (Imm == 0x3E22 && STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
-    O << "0.15915494";
+    O << "INV2PI";
   else
     return false;
 
@@ -661,7 +661,7 @@ bool AMDGPUInstPrinter::printImmediateFloat32(uint32_t Imm,
     O << "-4.0";
   else if (Imm == 0x3e22f983 &&
            STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
-    O << "0.15915494";
+    O << "INV2PI";
   else
     return false;
 
@@ -712,7 +712,7 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
     O << "-4.0";
   else if (Imm == 0x3fc45f306dc9c882 &&
            STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
-    O << "0.15915494309189532";
+    O << "INV2PI";
   else
     printLiteral64(Imm, O, IsFP);
 }

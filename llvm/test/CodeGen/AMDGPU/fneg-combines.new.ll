@@ -907,7 +907,7 @@ define float @v_fneg_inv2pi_minnum_f32(float %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; VI-NEXT:    v_min_f32_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_min_f32_e32 v0, INV2PI, v0
 ; VI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minnum.f32(float 0x3FC45F3060000000, float %a)
@@ -927,7 +927,7 @@ define float @v_fneg_neg_inv2pi_minnum_f32(float %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; VI-NEXT:    v_max_f32_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_max_f32_e32 v0, INV2PI, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minnum.f32(float 0xBFC45F3060000000, float %a)
   %fneg = fneg float %min
@@ -947,7 +947,7 @@ define half @v_fneg_inv2pi_minnum_f16(half %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_min_f16_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_min_f16_e32 v0, INV2PI, v0
 ; VI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minnum.f16(half 0xH3118, half %a)
@@ -968,7 +968,7 @@ define half @v_fneg_neg_inv2pi_minnum_f16(half %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f16_e64 v0, -v0, -v0
-; VI-NEXT:    v_max_f16_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_max_f16_e32 v0, INV2PI, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minnum.f16(half 0xHB118, half %a)
   %fneg = fneg half %min
@@ -989,7 +989,7 @@ define double @v_fneg_inv2pi_minnum_f64(double %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; VI-NEXT:    v_min_f64 v[0:1], v[0:1], 0.15915494309189532
+; VI-NEXT:    v_min_f64 v[0:1], v[0:1], INV2PI
 ; VI-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call double @llvm.minnum.f64(double 0x3fc45f306dc9c882, double %a)
@@ -1011,7 +1011,7 @@ define double @v_fneg_neg_inv2pi_minnum_f64(double %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
-; VI-NEXT:    v_max_f64 v[0:1], v[0:1], 0.15915494309189532
+; VI-NEXT:    v_max_f64 v[0:1], v[0:1], INV2PI
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call double @llvm.minnum.f64(double 0xbfc45f306dc9c882, double %a)
   %fneg = fneg double %min
@@ -1056,7 +1056,7 @@ define float @v_fneg_inv2pi_minnum_foldable_use_f32(float %a, float %b) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; VI-NEXT:    v_min_f32_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_min_f32_e32 v0, INV2PI, v0
 ; VI-NEXT:    v_mul_f32_e64 v0, -v0, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minnum.f32(float 0x3FC45F3060000000, float %a)
@@ -1450,7 +1450,7 @@ define float @v_fneg_inv2pi_minimum_f32(float %a) #0 {
 ; VI-LABEL: v_fneg_inv2pi_minimum_f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_min_f32_e32 v1, 0.15915494, v0
+; VI-NEXT:    v_min_f32_e32 v1, INV2PI, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
 ; VI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
@@ -1475,7 +1475,7 @@ define float @v_fneg_neg_inv2pi_minimum_f32(float %a) #0 {
 ; VI-LABEL: v_fneg_neg_inv2pi_minimum_f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f32_e64 v1, -v0, 0.15915494
+; VI-NEXT:    v_max_f32_e64 v1, -v0, INV2PI
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
 ; VI-NEXT:    v_cmp_o_f32_e64 vcc, -v0, -v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
@@ -1500,7 +1500,7 @@ define half @v_fneg_inv2pi_minimum_f16(half %a) #0 {
 ; VI-LABEL: v_fneg_inv2pi_minimum_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_min_f16_e32 v1, 0.15915494, v0
+; VI-NEXT:    v_min_f16_e32 v1, INV2PI, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e00
 ; VI-NEXT:    v_cmp_o_f16_e32 vcc, v0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
@@ -1526,7 +1526,7 @@ define half @v_fneg_neg_inv2pi_minimum_f16(half %a) #0 {
 ; VI-LABEL: v_fneg_neg_inv2pi_minimum_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_e64 v1, -v0, 0.15915494
+; VI-NEXT:    v_max_f16_e64 v1, -v0, INV2PI
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e00
 ; VI-NEXT:    v_cmp_o_f16_e64 vcc, -v0, -v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
@@ -1552,7 +1552,7 @@ define double @v_fneg_inv2pi_minimum_f64(double %a) #0 {
 ; VI-LABEL: v_fneg_inv2pi_minimum_f64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_min_f64 v[2:3], v[0:1], 0.15915494309189532
+; VI-NEXT:    v_min_f64 v[2:3], v[0:1], INV2PI
 ; VI-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v1, 0xfff80000
 ; VI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
@@ -1579,7 +1579,7 @@ define double @v_fneg_neg_inv2pi_minimum_f64(double %a) #0 {
 ; VI-LABEL: v_fneg_neg_inv2pi_minimum_f64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f64 v[2:3], -v[0:1], 0.15915494309189532
+; VI-NEXT:    v_max_f64 v[2:3], -v[0:1], INV2PI
 ; VI-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v1, 0x7ff80000
 ; VI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
@@ -1635,7 +1635,7 @@ define float @v_fneg_inv2pi_minimum_foldable_use_f32(float %a, float %b) #0 {
 ; VI-LABEL: v_fneg_inv2pi_minimum_foldable_use_f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_min_f32_e32 v2, 0.15915494, v0
+; VI-NEXT:    v_min_f32_e32 v2, INV2PI, v0
 ; VI-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
 ; VI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
@@ -2049,7 +2049,7 @@ define float @v_fneg_inv2pi_minimumnum_f32(float %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; VI-NEXT:    v_min_f32_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_min_f32_e32 v0, INV2PI, v0
 ; VI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minimumnum.f32(float 0x3FC45F3060000000, float %a)
@@ -2069,7 +2069,7 @@ define float @v_fneg_neg_inv2pi_minimumnum_f32(float %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mul_f32_e32 v0, -1.0, v0
-; VI-NEXT:    v_max_f32_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_max_f32_e32 v0, INV2PI, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minimumnum.f32(float 0xBFC45F3060000000, float %a)
   %fneg = fneg float %min
@@ -2089,7 +2089,7 @@ define half @v_fneg_inv2pi_minimumnum_f16(half %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_min_f16_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_min_f16_e32 v0, INV2PI, v0
 ; VI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minimumnum.f16(half 0xH3118, half %a)
@@ -2110,7 +2110,7 @@ define half @v_fneg_neg_inv2pi_minimumnum_f16(half %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f16_e64 v0, -v0, -v0
-; VI-NEXT:    v_max_f16_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_max_f16_e32 v0, INV2PI, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minimumnum.f16(half 0xHB118, half %a)
   %fneg = fneg half %min
@@ -2131,7 +2131,7 @@ define double @v_fneg_inv2pi_minimumnum_f64(double %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; VI-NEXT:    v_min_f64 v[0:1], v[0:1], 0.15915494309189532
+; VI-NEXT:    v_min_f64 v[0:1], v[0:1], INV2PI
 ; VI-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call double @llvm.minimumnum.f64(double 0x3fc45f306dc9c882, double %a)
@@ -2153,7 +2153,7 @@ define double @v_fneg_neg_inv2pi_minimumnum_f64(double %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
-; VI-NEXT:    v_max_f64 v[0:1], v[0:1], 0.15915494309189532
+; VI-NEXT:    v_max_f64 v[0:1], v[0:1], INV2PI
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call double @llvm.minimumnum.f64(double 0xbfc45f306dc9c882, double %a)
   %fneg = fneg double %min
@@ -2198,7 +2198,7 @@ define float @v_fneg_inv2pi_minimumnum_foldable_use_f32(float %a, float %b) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; VI-NEXT:    v_min_f32_e32 v0, 0.15915494, v0
+; VI-NEXT:    v_min_f32_e32 v0, INV2PI, v0
 ; VI-NEXT:    v_mul_f32_e64 v0, -v0, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minimumnum.f32(float 0x3FC45F3060000000, float %a)
