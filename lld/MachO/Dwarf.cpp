@@ -25,19 +25,22 @@ std::unique_ptr<DwarfObject> DwarfObject::create(ObjFile *obj) {
   // to get that path. The debugger will locate the debug info via the object
   // file paths that we emit in our STABS symbols, so we don't need to process &
   // emit them ourselves.
-  for (const InputSection *isec : obj->debugSections) {
-    if (StringRef *s =
-            StringSwitch<StringRef *>(isec->getName())
-                .Case(section_names::debugInfo, &dObj->infoSection.Data)
-                .Case(section_names::debugLine, &dObj->lineSection.Data)
-                .Case(section_names::debugStrOffs, &dObj->strOffsSection.Data)
-                .Case(section_names::debugAbbrev, &dObj->abbrevSection)
-                .Case(section_names::debugStr, &dObj->strSection)
-                .Default(nullptr)) {
-      *s = toStringRef(isec->data);
-      hasDwarfInfo = true;
-    }
-  }
+  for (const Section *sec : obj->sections)
+    if (sec->segname == segment_names::dwarf)
+      for (const Subsection &subsec : sec->subsections)
+        if (const InputSection *isec = subsec.isec)
+          if (StringRef *s =
+                  StringSwitch<StringRef *>(isec->getName())
+                      .Case(section_names::debugInfo, &dObj->infoSection.Data)
+                      .Case(section_names::debugLine, &dObj->lineSection.Data)
+                      .Case(section_names::debugStrOffs,
+                            &dObj->strOffsSection.Data)
+                      .Case(section_names::debugAbbrev, &dObj->abbrevSection)
+                      .Case(section_names::debugStr, &dObj->strSection)
+                      .Default(nullptr)) {
+            *s = toStringRef(isec->data);
+            hasDwarfInfo = true;
+          }
 
   if (hasDwarfInfo)
     return dObj;
