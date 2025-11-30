@@ -416,3 +416,34 @@ func.func @test_loops_do_not_get_coalesced() {
 // CHECK-NEXT: }
 // CHECK-NEXT: }
 // CHECK-NEXT: return
+
+// -----
+
+// CHECK-LABEL: func @inner_loop_has_iter_args
+func.func @inner_loop_has_iter_args() {
+  %c17 = arith.constant 17 : index
+  %c79 = arith.constant 79 : index
+  %memref = gpu.alloc  (%c79) : memref<?xi64>
+  affine.for %arg0 = 0 to 79 {
+    %0 = affine.for %arg1 = 0 to 64 iter_args(%arg2 = %memref) -> (memref<?xi64>) {
+      %1 = arith.remui %arg1, %c17 : index
+      %2 = arith.index_cast %arg1 : index to i64
+      memref.store %2, %arg2[%1] : memref<?xi64>
+      affine.yield %arg2 : memref<?xi64>
+    }
+  }
+  return
+}
+
+// CHECK: %[[CONSTANT_0:.*]] = arith.constant 17 : index
+// CHECK: %[[CONSTANT_1:.*]] = arith.constant 79 : index
+// CHECK: %[[ALLOC_0:.*]] = gpu.alloc  (%[[CONSTANT_1]]) : memref<?xi64>
+// CHECK: %[[APPLY_0:.*]] = affine.apply affine_map<() -> (79)>()
+// CHECK: %[[APPLY_1:.*]] = affine.apply affine_map<() -> (64)>()
+// CHECK: %[[APPLY_2:.*]] = affine.apply affine_map<(d0)[s0] -> (d0 * s0)>(%[[APPLY_0]]){{\[}}%[[APPLY_1]]]
+// CHECK:   affine.for %[[IV:.*]] = 0 to %[[APPLY_2]] {
+// CHECK:     %[[APPLY_3:.*]] = affine.apply affine_map<(d0)[s0] -> (d0 mod s0)>(%[[IV]]){{\[}}%[[APPLY_1]]]
+// CHECK:     %[[REMUI_0:.*]] = arith.remui %[[APPLY_3]], %[[CONSTANT_0]] : index
+// CHECK:     %[[INDEX_CAST_0:.*]] = arith.index_cast %[[APPLY_3]] : index to i64
+// CHECK:      memref.store %[[INDEX_CAST_0]], %[[ALLOC_0]]{{\[}}%[[REMUI_0]]] : memref<?xi64>
+// CHECK:   }
