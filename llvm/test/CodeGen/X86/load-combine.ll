@@ -1314,3 +1314,66 @@ define i32 @pr80911_vector_load_multiuse(ptr %ptr, ptr %clobber) nounwind {
   %res = or i32 %e1.ext.shift, %e0.ext
   ret i32 %res
 }
+
+define i64 @test_load_bswap_to_rotate(ptr %p) {
+; CHECK-LABEL: test_load_bswap_to_rotate:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl (%eax), %edx
+; CHECK-NEXT:    movl 4(%eax), %eax
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: test_load_bswap_to_rotate:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    movq (%rdi), %rax
+; CHECK64-NEXT:    rorq $32, %rax
+; CHECK64-NEXT:    retq
+
+  %p.hi = getelementptr inbounds nuw i8, ptr %p, i64 4
+  %lo = load i32, ptr %p
+  %hi = load i32, ptr %p.hi
+  %conv = zext i32 %lo to i64
+  %shl = shl nuw i64 %conv, 32
+  %conv2 = zext i32 %hi to i64
+  %or = or disjoint i64 %shl, %conv2
+  ret i64 %or
+}
+
+define i64 @test_load_rotate_zext(ptr %p) {
+; CHECK-LABEL: test_load_rotate_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl (%eax), %eax
+; CHECK-NEXT:    rorl $8, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    retl
+;
+; CHECK64-LABEL: test_load_rotate_zext:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    movl (%rdi), %eax
+; CHECK64-NEXT:    rorl $8, %eax
+; CHECK64-NEXT:    retq
+  %p1 = getelementptr inbounds i8, ptr %p, i64 1
+  %l1 = load i8, ptr %p1, align 1
+  %e1 = zext i8 %l1 to i64
+
+  %p2 = getelementptr inbounds i8, ptr %p, i64 2
+  %l2 = load i8, ptr %p2, align 1
+  %e2 = zext i8 %l2 to i64
+  %s2 = shl i64 %e2, 8
+
+  %p3 = getelementptr inbounds i8, ptr %p, i64 3
+  %l3 = load i8, ptr %p3, align 1
+  %e3 = zext i8 %l3 to i64
+  %s3 = shl i64 %e3, 16
+
+  %p0 = getelementptr inbounds i8, ptr %p, i64 0
+  %l0 = load i8, ptr %p0, align 1
+  %e0 = zext i8 %l0 to i64
+  %s0 = shl i64 %e0, 24
+
+  %or1 = or i64 %e1, %s2
+  %or2 = or i64 %or1, %s3
+  %or3 = or i64 %or2, %s0
+  ret i64 %or3
+}
