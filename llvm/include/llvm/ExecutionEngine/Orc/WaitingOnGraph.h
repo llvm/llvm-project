@@ -488,8 +488,8 @@ private:
   // Replace individual dependencies with supernode dependencies.
   //
   // For all dependencies in SNs, if the corresponding node is defined in
-  // ElemToSN then remove the individual dependency and add the record the
-  // dependency on the corresponding supernode in SuperNodeDeps.
+  // ElemToSN then remove the individual dependency and record the dependency
+  // on the corresponding supernode in SuperNodeDeps.
   static void hoistDeps(SuperNodeDepsMap &SuperNodeDeps,
                         std::vector<std::unique_ptr<SuperNode>> &SNs,
                         ElemToSuperNodeMap &ElemToSN) {

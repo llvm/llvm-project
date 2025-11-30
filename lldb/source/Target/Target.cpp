@@ -156,8 +156,6 @@ static Status installExecutable(const Installer &installer) {
   return Status();
 }
 
-constexpr std::chrono::milliseconds EvaluateExpressionOptions::default_timeout;
-
 Target::Arch::Arch(const ArchSpec &spec)
     : m_spec(spec),
       m_plugin_up(PluginManager::CreateArchitectureInstance(spec)) {}

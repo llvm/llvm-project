@@ -380,6 +380,59 @@ for.end:
   ret void
 }
 
+define void @loop_with_freeze_and_conditional_srem(ptr %dst, ptr %keyinfo, ptr %invariant.ptr, i32 %divisor) #1 {
+; COMMON-LABEL: define void @loop_with_freeze_and_conditional_srem(
+; COMMON-SAME: ptr [[DST:%.*]], ptr [[KEYINFO:%.*]], ptr [[INVARIANT_PTR:%.*]], i32 [[DIVISOR:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*]]:
+; COMMON-NEXT:    br label %[[LOOP:.*]]
+; COMMON:       [[LOOP]]:
+; COMMON-NEXT:    [[INDEX_NEXT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4
+; COMMON-NEXT:    [[FROZEN:%.*]] = freeze i32 [[LOADED]]
+; COMMON-NEXT:    [[CMP:%.*]] = icmp eq i32 [[FROZEN]], 0
+; COMMON-NEXT:    br i1 [[CMP]], label %[[IF_ZERO:.*]], label %[[IF_NONZERO:.*]]
+; COMMON:       [[IF_ZERO]]:
+; COMMON-NEXT:    store i32 0, ptr [[KEYINFO]], align 4
+; COMMON-NEXT:    br label %[[LOOP_LATCH]]
+; COMMON:       [[IF_NONZERO]]:
+; COMMON-NEXT:    [[TMP11:%.*]] = srem i32 1, [[DIVISOR]]
+; COMMON-NEXT:    store i32 [[TMP11]], ptr [[DST]], align 4
+; COMMON-NEXT:    br label %[[LOOP_LATCH]]
+; COMMON:       [[LOOP_LATCH]]:
+; COMMON-NEXT:    [[IV_NEXT]] = add i64 [[INDEX_NEXT]], 1
+; COMMON-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
+; COMMON-NEXT:    br i1 [[TMP16]], label %[[EXIT:.*]], label %[[LOOP]]
+; COMMON:       [[EXIT]]:
+; COMMON-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop.latch, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %loaded = load i32, ptr %invariant.ptr, align 4
+  %frozen = freeze i32 %loaded
+  %cmp = icmp eq i32 %frozen, 0
+  br i1 %cmp, label %if.zero, label %if.nonzero
+
+if.zero:                                          ; preds = %loop
+  store i32 0, ptr %keyinfo, align 4
+  br label %loop.latch
+
+if.nonzero:                                       ; preds = %loop
+  %rem = srem i32 1, %divisor
+  store i32 %rem, ptr %dst, align 4
+  br label %loop.latch
+
+loop.latch:                                       ; preds = %if.nonzero, %if.zero
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, 32
+  br i1 %exitcond, label %exit, label %loop
+
+exit:                                             ; preds = %loop.latch
+  ret void
+}
+
 attributes #0 = { "target-features"="+neon,+sve" vscale_range(1,16) }
 
 declare void @llvm.assume(i1 noundef)

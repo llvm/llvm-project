@@ -63,9 +63,11 @@ class VPBuilder {
   }
 
   VPInstruction *createInstruction(unsigned Opcode,
-                                   ArrayRef<VPValue *> Operands, DebugLoc DL,
+                                   ArrayRef<VPValue *> Operands,
+                                   const VPIRMetadata &MD, DebugLoc DL,
                                    const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstruction(Opcode, Operands, DL, Name));
+    return tryInsertInstruction(
+        new VPInstruction(Opcode, Operands, {}, MD, DL, Name));
   }
 
 public:
@@ -150,17 +152,18 @@ public:
   /// its underlying Instruction.
   VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
                               Instruction *Inst = nullptr,
+                              const VPIRFlags &Flags = {},
+                              const VPIRMetadata &MD = {},
+                              DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
-    DebugLoc DL = DebugLoc::getUnknown();
-    if (Inst)
-      DL = Inst->getDebugLoc();
-    VPInstruction *NewVPInst = createInstruction(Opcode, Operands, DL, Name);
+    VPInstruction *NewVPInst = tryInsertInstruction(
+        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name));
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
   VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
                               DebugLoc DL, const Twine &Name = "") {
-    return createInstruction(Opcode, Operands, DL, Name);
+    return createInstruction(Opcode, Operands, {}, DL, Name);
   }
   VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
                               const VPIRFlags &Flags,
@@ -174,8 +177,8 @@ public:
                               Type *ResultTy, const VPIRFlags &Flags = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
-    return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Operands, ResultTy, Flags, DL, Name));
+    return tryInsertInstruction(new VPInstructionWithType(
+        Opcode, Operands, ResultTy, Flags, {}, DL, Name));
   }
 
   VPInstruction *createOverflowingOp(
@@ -189,13 +192,14 @@ public:
   VPInstruction *createNot(VPValue *Operand,
                            DebugLoc DL = DebugLoc::getUnknown(),
                            const Twine &Name = "") {
-    return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
+    return createInstruction(VPInstruction::Not, {Operand}, {}, DL, Name);
   }
 
   VPInstruction *createAnd(VPValue *LHS, VPValue *RHS,
                            DebugLoc DL = DebugLoc::getUnknown(),
                            const Twine &Name = "") {
-    return createInstruction(Instruction::BinaryOps::And, {LHS, RHS}, DL, Name);
+    return createInstruction(Instruction::BinaryOps::And, {LHS, RHS}, {}, DL,
+                             Name);
   }
 
   VPInstruction *createOr(VPValue *LHS, VPValue *RHS,
@@ -210,20 +214,18 @@ public:
   VPInstruction *createLogicalAnd(VPValue *LHS, VPValue *RHS,
                                   DebugLoc DL = DebugLoc::getUnknown(),
                                   const Twine &Name = "") {
-    return tryInsertInstruction(
-        new VPInstruction(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name));
+    return createNaryOp(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name);
   }
 
   VPInstruction *
   createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
                DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "",
                std::optional<FastMathFlags> FMFs = std::nullopt) {
-    auto *Select =
-        FMFs ? new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
-                                 *FMFs, {}, DL, Name)
-             : new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
-                                 DL, Name);
-    return tryInsertInstruction(Select);
+    if (!FMFs)
+      return createNaryOp(Instruction::Select, {Cond, TrueVal, FalseVal}, DL,
+                          Name);
+    return tryInsertInstruction(new VPInstruction(
+        Instruction::Select, {Cond, TrueVal, FalseVal}, *FMFs, {}, DL, Name));
   }
 
   /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A
@@ -306,7 +308,7 @@ public:
                                   const VPIRFlags &Flags = {},
                                   const VPIRMetadata &Metadata = {}) {
     return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Op, ResultTy, DL, Flags, Metadata));
+        new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
   }
 
   VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
@@ -328,7 +330,7 @@ public:
     else if (Opcode == Instruction::ZExt)
       Flags = VPIRFlags::NonNegFlagsTy(false);
     return tryInsertInstruction(
-        new VPWidenCastRecipe(Opcode, Op, ResultTy, Flags));
+        new VPWidenCastRecipe(Opcode, Op, ResultTy, nullptr, Flags));
   }
 
   VPScalarIVStepsRecipe *

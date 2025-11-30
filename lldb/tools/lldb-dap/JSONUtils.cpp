@@ -11,6 +11,7 @@
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolRequests.h"
 #include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
@@ -817,10 +818,10 @@ VariableDescription::VariableDescription(lldb::SBValue v,
   evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
 }
 
-std::string VariableDescription::GetResult(llvm::StringRef context) {
+std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
   // In repl context, the results can be displayed as multiple lines so more
   // detailed descriptions can be returned.
-  if (context != "repl")
+  if (context != protocol::eEvaluateContextRepl)
     return display_value;
 
   if (!v.IsValid())

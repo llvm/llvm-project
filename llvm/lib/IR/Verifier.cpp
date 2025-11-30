@@ -190,6 +190,9 @@ private:
     case DbgVariableRecord::LocationType::Declare:
       *OS << "declare";
       break;
+    case DbgVariableRecord::LocationType::DeclareValue:
+      *OS << "declare_value";
+      break;
     case DbgVariableRecord::LocationType::Assign:
       *OS << "assign";
       break;
@@ -1158,6 +1161,7 @@ void Verifier::visitMetadataAsValue(const MetadataAsValue &MDV, Function *F) {
 static bool isType(const Metadata *MD) { return !MD || isa<DIType>(MD); }
 static bool isScope(const Metadata *MD) { return !MD || isa<DIScope>(MD); }
 static bool isDINode(const Metadata *MD) { return !MD || isa<DINode>(MD); }
+static bool isMDTuple(const Metadata *MD) { return !MD || isa<MDTuple>(MD); }
 
 void Verifier::visitDILocation(const DILocation &N) {
   CheckDI(N.getRawScope() && isa<DILocalScope>(N.getRawScope()),
@@ -1320,6 +1324,30 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
   if (N.getTag() == dwarf::DW_TAG_ptr_to_member_type) {
     CheckDI(isType(N.getRawExtraData()), "invalid pointer to member type", &N,
             N.getRawExtraData());
+  } else if (N.getTag() == dwarf::DW_TAG_template_alias) {
+    CheckDI(isMDTuple(N.getRawExtraData()), "invalid template parameters", &N,
+            N.getRawExtraData());
+  } else if (N.getTag() == dwarf::DW_TAG_inheritance ||
+             N.getTag() == dwarf::DW_TAG_member ||
+             N.getTag() == dwarf::DW_TAG_variable) {
+    auto *ExtraData = N.getRawExtraData();
+    auto IsValidExtraData = [&]() {
+      if (ExtraData == nullptr)
+        return true;
+      if (isa<ConstantAsMetadata>(ExtraData) || isa<MDString>(ExtraData) ||
+          isa<DIObjCProperty>(ExtraData))
+        return true;
+      if (auto *Tuple = dyn_cast<MDTuple>(ExtraData)) {
+        if (Tuple->getNumOperands() != 1)
+          return false;
+        return isa_and_nonnull<ConstantAsMetadata>(Tuple->getOperand(0).get());
+      }
+      return false;
+    };
+    CheckDI(IsValidExtraData(),
+            "extraData must be ConstantAsMetadata, MDString, DIObjCProperty, "
+            "or MDTuple with single ConstantAsMetadata operand",
+            &N, ExtraData);
   }
 
   if (N.getTag() == dwarf::DW_TAG_set_type) {
@@ -7058,6 +7086,7 @@ void Verifier::visit(DbgVariableRecord &DVR) {
 
   CheckDI(DVR.getType() == DbgVariableRecord::LocationType::Value ||
               DVR.getType() == DbgVariableRecord::LocationType::Declare ||
+              DVR.getType() == DbgVariableRecord::LocationType::DeclareValue ||
               DVR.getType() == DbgVariableRecord::LocationType::Assign,
           "invalid #dbg record type", &DVR, DVR.getType(), BB, F);
 

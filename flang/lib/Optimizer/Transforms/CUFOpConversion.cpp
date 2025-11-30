@@ -651,31 +651,8 @@ struct CUFDataTransferOpConversion
       }
 
       mlir::Type i64Ty = builder.getI64Type();
-      mlir::Value nbElement;
-      if (op.getShape()) {
-        llvm::SmallVector<mlir::Value> extents;
-        if (auto shapeOp =
-                mlir::dyn_cast<fir::ShapeOp>(op.getShape().getDefiningOp())) {
-          extents = shapeOp.getExtents();
-        } else if (auto shapeShiftOp = mlir::dyn_cast<fir::ShapeShiftOp>(
-                       op.getShape().getDefiningOp())) {
-          for (auto i : llvm::enumerate(shapeShiftOp.getPairs()))
-            if (i.index() & 1)
-              extents.push_back(i.value());
-        }
-
-        nbElement = fir::ConvertOp::create(rewriter, loc, i64Ty, extents[0]);
-        for (unsigned i = 1; i < extents.size(); ++i) {
-          auto operand =
-              fir::ConvertOp::create(rewriter, loc, i64Ty, extents[i]);
-          nbElement =
-              mlir::arith::MulIOp::create(rewriter, loc, nbElement, operand);
-        }
-      } else {
-        if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(dstTy))
-          nbElement = builder.createIntegerConstant(
-              loc, i64Ty, seqTy.getConstantArraySize());
-      }
+      mlir::Value nbElement =
+          cuf::computeElementCount(rewriter, loc, op.getShape(), dstTy, i64Ty);
       unsigned width = 0;
       if (fir::isa_derived(fir::unwrapSequenceType(dstTy))) {
         mlir::Type structTy =

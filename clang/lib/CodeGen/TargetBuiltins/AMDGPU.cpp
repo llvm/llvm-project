@@ -12,9 +12,9 @@
 
 #include "CGBuiltin.h"
 #include "CodeGenFunction.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"

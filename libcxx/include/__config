@@ -546,6 +546,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DEPRECATED_(m)
 #  endif
 
+#  if defined(__DEPRECATED) && __DEPRECATED && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+#    define _LIBCPP_DIAGNOSE_DEPRECATED_HEADERS 1
+#  else
+#    define _LIBCPP_DIAGNOSE_DEPRECATED_HEADERS 0
+#  endif
+
 #  if !defined(_LIBCPP_CXX03_LANG)
 #    define _LIBCPP_DEPRECATED_IN_CXX11 _LIBCPP_DEPRECATED
 #  else

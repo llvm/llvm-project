@@ -508,12 +508,12 @@ void SetupPythonRuntimeLibrary() {
   if (AddPythonDLLToSearchPath() && IsPythonDLLInPath())
     return;
 #endif
-  llvm::errs() << "error: unable to find '"
-               << LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME << "'.\n";
+  WithColor::error() << "unable to find '"
+                     << LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME << "'.\n";
   return;
 #elif defined(LLDB_PYTHON_DLL_RELATIVE_PATH)
   if (!AddPythonDLLToSearchPath())
-    llvm::errs() << "error: unable to find the Python runtime library.\n";
+    WithColor::error() << "unable to find the Python runtime library.\n";
 #endif
 }
 #endif

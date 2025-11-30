@@ -671,6 +671,20 @@ define void @test_pasubu_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
   ret void
 }
 
+; Test for splat
+define void @test_non_const_splat_i32(ptr %ret_ptr, ptr %a_ptr, i32 %elt) {
+; CHECK-LABEL: test_non_const_splat_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    padd.ws a1, zero, a2
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %insert = insertelement <2 x i32> poison, i32 %elt, i32 0
+  %splat = shufflevector <2 x i32> %insert, <2 x i32> poison, <2 x i32> zeroinitializer
+  store <2 x i32> %splat, ptr %ret_ptr
+  ret void
+}
+
 ; Intrinsic declarations
 declare <4 x i16> @llvm.sadd.sat.v4i16(<4 x i16>, <4 x i16>)
 declare <4 x i16> @llvm.uadd.sat.v4i16(<4 x i16>, <4 x i16>)

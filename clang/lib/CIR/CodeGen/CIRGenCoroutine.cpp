@@ -22,6 +22,10 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 struct clang::CIRGen::CGCoroData {
+  // What is the current await expression kind and how many
+  // await/yield expressions were encountered so far.
+  // These are used to generate pretty labels for await expressions in LLVM IR.
+  cir::AwaitKind currentAwaitKind = cir::AwaitKind::Init;
   // Stores the __builtin_coro_id emitted in the function so that we can supply
   // it as the first argument to other builtins.
   cir::CallOp coroId = nullptr;
@@ -249,7 +253,114 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
       emitAnyExprToMem(s.getReturnValue(), returnValue,
                        s.getReturnValue()->getType().getQualifiers(),
                        /*isInit*/ true);
+
+    assert(!cir::MissingFeatures::ehCleanupScope());
+    // FIXME(cir): EHStack.pushCleanup<CallCoroEnd>(EHCleanup);
+    curCoro.data->currentAwaitKind = cir::AwaitKind::Init;
+    if (emitStmt(s.getInitSuspendStmt(), /*useCurrentScope=*/true).failed())
+      return mlir::failure();
     assert(!cir::MissingFeatures::emitBodyAndFallthrough());
   }
   return mlir::success();
+}
+// Given a suspend expression which roughly looks like:
+//
+//   auto && x = CommonExpr();
+//   if (!x.await_ready()) {
+//      x.await_suspend(...); (*)
+//   }
+//   x.await_resume();
+//
+// where the result of the entire expression is the result of x.await_resume()
+//
+//   (*) If x.await_suspend return type is bool, it allows to veto a suspend:
+//      if (x.await_suspend(...))
+//        llvm_coro_suspend();
+//
+// This is more higher level than LLVM codegen, for that one see llvm's
+// docs/Coroutines.rst for more details.
+namespace {
+struct LValueOrRValue {
+  LValue lv;
+  RValue rv;
+};
+} // namespace
+
+static LValueOrRValue
+emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
+                      CoroutineSuspendExpr const &s, cir::AwaitKind kind,
+                      AggValueSlot aggSlot, bool ignoreResult,
+                      mlir::Block *scopeParentBlock,
+                      mlir::Value &tmpResumeRValAddr, bool forLValue) {
+  [[maybe_unused]] mlir::LogicalResult awaitBuild = mlir::success();
+  LValueOrRValue awaitRes;
+
+  CIRGenFunction::OpaqueValueMapping binder =
+      CIRGenFunction::OpaqueValueMapping(cgf, s.getOpaqueValue());
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  [[maybe_unused]] cir::AwaitOp awaitOp = cir::AwaitOp::create(
+      builder, cgf.getLoc(s.getSourceRange()), kind,
+      /*readyBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        builder.createCondition(
+            cgf.createDummyValue(loc, cgf.getContext().BoolTy));
+      },
+      /*suspendBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        cir::YieldOp::create(builder, loc);
+      },
+      /*resumeBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        cir::YieldOp::create(builder, loc);
+      });
+
+  assert(awaitBuild.succeeded() && "Should know how to codegen");
+  return awaitRes;
+}
+
+static RValue emitSuspendExpr(CIRGenFunction &cgf,
+                              const CoroutineSuspendExpr &e,
+                              cir::AwaitKind kind, AggValueSlot aggSlot,
+                              bool ignoreResult) {
+  RValue rval;
+  mlir::Location scopeLoc = cgf.getLoc(e.getSourceRange());
+
+  // Since we model suspend / resume as an inner region, we must store
+  // resume scalar results in a tmp alloca, and load it after we build the
+  // suspend expression. An alternative way to do this would be to make
+  // every region return a value when promise.return_value() is used, but
+  // it's a bit awkward given that resume is the only region that actually
+  // returns a value.
+  mlir::Block *currEntryBlock = cgf.curLexScope->getEntryBlock();
+  [[maybe_unused]] mlir::Value tmpResumeRValAddr;
+
+  // No need to explicitly wrap this into a scope since the AST already uses a
+  // ExprWithCleanups, which will wrap this into a cir.scope anyways.
+  rval = emitSuspendExpression(cgf, *cgf.curCoro.data, e, kind, aggSlot,
+                               ignoreResult, currEntryBlock, tmpResumeRValAddr,
+                               /*forLValue*/ false)
+             .rv;
+
+  if (ignoreResult || rval.isIgnored())
+    return rval;
+
+  if (rval.isScalar()) {
+    rval = RValue::get(cir::LoadOp::create(cgf.getBuilder(), scopeLoc,
+                                           rval.getValue().getType(),
+                                           tmpResumeRValAddr));
+  } else if (rval.isAggregate()) {
+    // This is probably already handled via AggSlot, remove this assertion
+    // once we have a testcase and prove all pieces work.
+    cgf.cgm.errorNYI("emitSuspendExpr Aggregate");
+  } else { // complex
+    cgf.cgm.errorNYI("emitSuspendExpr Complex");
+  }
+  return rval;
+}
+
+RValue CIRGenFunction::emitCoawaitExpr(const CoawaitExpr &e,
+                                       AggValueSlot aggSlot,
+                                       bool ignoreResult) {
+  return emitSuspendExpr(*this, e, curCoro.data->currentAwaitKind, aggSlot,
+                         ignoreResult);
 }

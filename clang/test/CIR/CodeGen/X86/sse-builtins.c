@@ -16,6 +16,35 @@
 
 #include <immintrin.h>
 
+void test_mm_setcsr(unsigned int A) {
+  // CIR-LABEL: test_mm_setcsr
+  // CIR: cir.store {{.*}}, {{.*}} : !u32i
+  // CIR: cir.call_llvm_intrinsic "x86.sse.ldmxcsr" {{.*}} : (!cir.ptr<!u32i>) -> !void
+
+  // LLVM-LABEL: test_mm_setcsr
+  // LLVM: store i32
+  // LLVM: call void @llvm.x86.sse.ldmxcsr(ptr {{.*}})
+
+  // OGCG-LABEL: test_mm_setcsr
+  // OGCG: store i32
+  // OGCG: call void @llvm.x86.sse.ldmxcsr(ptr {{.*}})
+  _mm_setcsr(A);
+}
+
+unsigned int test_mm_getcsr(void) {
+  // CIR-LABEL: test_mm_getcsr
+  // CIR: cir.call_llvm_intrinsic "x86.sse.stmxcsr" %{{.*}} : (!cir.ptr<!u32i>) -> !void
+  // CIR: cir.load {{.*}} : !cir.ptr<!u32i>, !u32i
+
+  // LLVM-LABEL: test_mm_getcsr
+  // LLVM: call void @llvm.x86.sse.stmxcsr(ptr %{{.*}})
+  // LLVM: load i32
+
+  // OGCG-LABEL: test_mm_getcsr
+  // OGCG: call void @llvm.x86.sse.stmxcsr(ptr %{{.*}})
+  // OGCG: load i32
+  return _mm_getcsr();
+}
 
 void test_mm_sfence(void) {
   // CIR-LABEL: test_mm_sfence
@@ -25,4 +54,20 @@ void test_mm_sfence(void) {
   // CIR: {{%.*}} = cir.call_llvm_intrinsic "x86.sse.sfence" : () -> !void
   // LLVM: call void @llvm.x86.sse.sfence()
   // OGCG: call void @llvm.x86.sse.sfence()
+}
+
+__m128 test_mm_undefined_ps(void) {
+  // CIR-LABEL: _mm_undefined_ps
+  // CIR: %[[A:.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.double>
+  // CIR: %{{.*}} = cir.cast bitcast %[[A]] : !cir.vector<2 x !cir.double> -> !cir.vector<4 x !cir.float>
+  // CIR: cir.return %{{.*}} : !cir.vector<4 x !cir.float>
+
+  // LLVM-LABEL: test_mm_undefined_ps
+  // LLVM: store <4 x float> zeroinitializer, ptr %[[A:.*]], align 16
+  // LLVM: %{{.*}} = load <4 x float>, ptr %[[A]], align 16
+  // LLVM: ret <4 x float> %{{.*}}
+
+  // OGCG-LABEL: test_mm_undefined_ps
+  // OGCG: ret <4 x float> zeroinitializer
+  return _mm_undefined_ps();
 }

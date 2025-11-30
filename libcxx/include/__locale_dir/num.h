@@ -23,6 +23,7 @@
 #include <__locale_dir/scan_keyword.h>
 #include <__memory/unique_ptr.h>
 #include <__system_error/errc.h>
+#include <__type_traits/is_signed.h>
 #include <cerrno>
 #include <ios>
 #include <streambuf>

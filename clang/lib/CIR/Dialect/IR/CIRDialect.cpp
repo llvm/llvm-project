@@ -12,9 +12,11 @@
 
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
@@ -289,7 +291,10 @@ void cir::ConditionOp::getSuccessorRegions(
     regions.emplace_back(getOperation(), loopOp->getResults());
   }
 
-  assert(!cir::MissingFeatures::awaitOp());
+  // Parent is an await: condition may branch to resume or suspend regions.
+  auto await = cast<AwaitOp>(getOperation()->getParentOp());
+  regions.emplace_back(&await.getResume(), await.getResume().getArguments());
+  regions.emplace_back(&await.getSuspend(), await.getSuspend().getArguments());
 }
 
 MutableOperandRange
@@ -299,8 +304,7 @@ cir::ConditionOp::getMutableSuccessorOperands(RegionSuccessor point) {
 }
 
 LogicalResult cir::ConditionOp::verify() {
-  assert(!cir::MissingFeatures::awaitOp());
-  if (!isa<LoopOpInterface>(getOperation()->getParentOp()))
+  if (!isa<LoopOpInterface, AwaitOp>(getOperation()->getParentOp()))
     return emitOpError("condition must be within a conditional region");
   return success();
 }
@@ -1658,6 +1662,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
+  mlir::StringAttr specialMemberAttr = getCxxSpecialMemberAttrName(state.name);
 
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
     state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
@@ -1756,6 +1761,23 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     return success();
   };
 
+  // Parse CXXSpecialMember attribute
+  if (parser.parseOptionalKeyword("special_member").succeeded()) {
+    cir::CXXCtorAttr ctorAttr;
+    cir::CXXDtorAttr dtorAttr;
+    cir::CXXAssignAttr assignAttr;
+    if (parser.parseLess().failed())
+      return failure();
+    if (parser.parseOptionalAttribute(ctorAttr).has_value())
+      state.addAttribute(specialMemberAttr, ctorAttr);
+    else if (parser.parseOptionalAttribute(dtorAttr).has_value())
+      state.addAttribute(specialMemberAttr, dtorAttr);
+    else if (parser.parseOptionalAttribute(assignAttr).has_value())
+      state.addAttribute(specialMemberAttr, assignAttr);
+    if (parser.parseGreater().failed())
+      return failure();
+  }
+
   if (parseGlobalDtorCtor("global_ctor", [&](std::optional<int> priority) {
         mlir::IntegerAttr globalCtorPriorityAttr =
             builder.getI32IntegerAttr(priority.value_or(65535));
@@ -1833,6 +1855,56 @@ bool cir::FuncOp::isDeclaration() {
   return false;
 }
 
+bool cir::FuncOp::isCXXSpecialMemberFunction() {
+  return getCxxSpecialMemberAttr() != nullptr;
+}
+
+bool cir::FuncOp::isCxxConstructor() {
+  auto attr = getCxxSpecialMemberAttr();
+  return attr && dyn_cast<CXXCtorAttr>(attr);
+}
+
+bool cir::FuncOp::isCxxDestructor() {
+  auto attr = getCxxSpecialMemberAttr();
+  return attr && dyn_cast<CXXDtorAttr>(attr);
+}
+
+bool cir::FuncOp::isCxxSpecialAssignment() {
+  auto attr = getCxxSpecialMemberAttr();
+  return attr && dyn_cast<CXXAssignAttr>(attr);
+}
+
+std::optional<CtorKind> cir::FuncOp::getCxxConstructorKind() {
+  mlir::Attribute attr = getCxxSpecialMemberAttr();
+  if (attr) {
+    if (auto ctor = dyn_cast<CXXCtorAttr>(attr))
+      return ctor.getCtorKind();
+  }
+  return std::nullopt;
+}
+
+std::optional<AssignKind> cir::FuncOp::getCxxSpecialAssignKind() {
+  mlir::Attribute attr = getCxxSpecialMemberAttr();
+  if (attr) {
+    if (auto assign = dyn_cast<CXXAssignAttr>(attr))
+      return assign.getAssignKind();
+  }
+  return std::nullopt;
+}
+
+bool cir::FuncOp::isCxxTrivialMemberFunction() {
+  mlir::Attribute attr = getCxxSpecialMemberAttr();
+  if (attr) {
+    if (auto ctor = dyn_cast<CXXCtorAttr>(attr))
+      return ctor.getIsTrivial();
+    if (auto dtor = dyn_cast<CXXDtorAttr>(attr))
+      return dtor.getIsTrivial();
+    if (auto assign = dyn_cast<CXXAssignAttr>(attr))
+      return assign.getIsTrivial();
+  }
+  return false;
+}
+
 mlir::Region *cir::FuncOp::getCallableRegion() {
   // TODO(CIR): This function will have special handling for aliases and a
   // check for an external function, once those features have been upstreamed.
@@ -1883,6 +1955,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << ")";
   }
 
+  if (auto specialMemberAttr = getCxxSpecialMember()) {
+    p << " special_member<";
+    p.printAttribute(*specialMemberAttr);
+    p << '>';
+  }
+
   if (auto globalCtorPriority = getGlobalCtorPriority()) {
     p << " global_ctor";
     if (globalCtorPriority.value() != 65535)
@@ -1910,24 +1988,60 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
 mlir::LogicalResult cir::FuncOp::verify() {
 
+  if (!isDeclaration() && getCoroutine()) {
+    bool foundAwait = false;
+    this->walk([&](Operation *op) {
+      if (auto await = dyn_cast<AwaitOp>(op)) {
+        foundAwait = true;
+        return;
+      }
+    });
+    if (!foundAwait)
+      return emitOpError()
+             << "coroutine body must use at least one cir.await op";
+  }
+
   llvm::SmallSet<llvm::StringRef, 16> labels;
   llvm::SmallSet<llvm::StringRef, 16> gotos;
-
+  llvm::SmallSet<llvm::StringRef, 16> blockAddresses;
+  bool invalidBlockAddress = false;
   getOperation()->walk([&](mlir::Operation *op) {
     if (auto lab = dyn_cast<cir::LabelOp>(op)) {
       labels.insert(lab.getLabel());
     } else if (auto goTo = dyn_cast<cir::GotoOp>(op)) {
       gotos.insert(goTo.getLabel());
+    } else if (auto blkAdd = dyn_cast<cir::BlockAddressOp>(op)) {
+      if (blkAdd.getBlockAddrInfoAttr().getFunc().getAttr() != getSymName()) {
+        // Stop the walk early, no need to continue
+        invalidBlockAddress = true;
+        return mlir::WalkResult::interrupt();
+      }
+      blockAddresses.insert(blkAdd.getBlockAddrInfoAttr().getLabel());
     }
+    return mlir::WalkResult::advance();
   });
 
+  if (invalidBlockAddress)
+    return emitOpError() << "blockaddress references a different function";
+
+  llvm::SmallSet<llvm::StringRef, 16> mismatched;
   if (!labels.empty() || !gotos.empty()) {
-    llvm::SmallSet<llvm::StringRef, 16> mismatched =
-        llvm::set_difference(gotos, labels);
+    mismatched = llvm::set_difference(gotos, labels);
 
     if (!mismatched.empty())
       return emitOpError() << "goto/label mismatch";
   }
+
+  mismatched.clear();
+
+  if (!labels.empty() || !blockAddresses.empty()) {
+    mismatched = llvm::set_difference(blockAddresses, labels);
+
+    if (!mismatched.empty())
+      return emitOpError()
+             << "expects an existing label target in the referenced function";
+  }
+
   return success();
 }
 
@@ -2125,6 +2239,61 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
         return previous.getInput();
 
   return {};
+}
+//===----------------------------------------------------------------------===//
+// AwaitOp
+//===----------------------------------------------------------------------===//
+
+void cir::AwaitOp::build(OpBuilder &builder, OperationState &result,
+                         cir::AwaitKind kind, BuilderCallbackRef readyBuilder,
+                         BuilderCallbackRef suspendBuilder,
+                         BuilderCallbackRef resumeBuilder) {
+  result.addAttribute(getKindAttrName(result.name),
+                      cir::AwaitKindAttr::get(builder.getContext(), kind));
+  {
+    OpBuilder::InsertionGuard guard(builder);
+    Region *readyRegion = result.addRegion();
+    builder.createBlock(readyRegion);
+    readyBuilder(builder, result.location);
+  }
+
+  {
+    OpBuilder::InsertionGuard guard(builder);
+    Region *suspendRegion = result.addRegion();
+    builder.createBlock(suspendRegion);
+    suspendBuilder(builder, result.location);
+  }
+
+  {
+    OpBuilder::InsertionGuard guard(builder);
+    Region *resumeRegion = result.addRegion();
+    builder.createBlock(resumeRegion);
+    resumeBuilder(builder, result.location);
+  }
+}
+
+void cir::AwaitOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // If any index all the underlying regions branch back to the parent
+  // operation.
+  if (!point.isParent()) {
+    regions.push_back(
+        RegionSuccessor(getOperation(), getOperation()->getResults()));
+    return;
+  }
+
+  // TODO: retrieve information from the promise and only push the
+  // necessary ones. Example: `std::suspend_never` on initial or final
+  // await's might allow suspend region to be skipped.
+  regions.push_back(RegionSuccessor(&this->getReady()));
+  regions.push_back(RegionSuccessor(&this->getSuspend()));
+  regions.push_back(RegionSuccessor(&this->getResume()));
+}
+
+LogicalResult cir::AwaitOp::verify() {
+  if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
+    return emitOpError("ready region must end with cir.condition");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -2880,12 +2880,36 @@ __mmask64 test_mm512_movepi8_mask(__m512i __A) {
   return _mm512_movepi8_mask(__A); 
 }
 
+TEST_CONSTEXPR(_mm512_movepi8_mask(
+    ((__m512i)(__v64qi){0, 1, char(129), 3, 4, 5, 6, 7,
+                        8, 9, 10, 11, 12, 13, 14, 15,
+                        16, 17, 18, 19, 20, 21, 22, 23,
+                        24, 25, 26, 27, 28, 29, 30, 31,
+                        32, 33, 34, 35, 36, 37, 38, 39,
+                        40, 41, 42, 43, 44, 45, 46, 47,
+                        48, 49, 50, 51, 52, 53, 54, 55,
+                        56, 57, 58, 59, 60, 61, 62, char(255)})
+) == (__mmask64)0x8000000000000004);
+
+
 __m512i test_mm512_movm_epi8(__mmask64 __A) {
   // CHECK-LABEL: test_mm512_movm_epi8
   // CHECK:  %{{.*}} = bitcast i64 %{{.*}} to <64 x i1>
   // CHECK:  %vpmovm2.i = sext <64 x i1> %{{.*}} to <64 x i8>
   return _mm512_movm_epi8(__A); 
 }
+
+TEST_CONSTEXPR(_mm512_movepi8_mask(
+    ((__m512i)(__v64qi){0, 1, char(129), 3, 4, 5, 6, 7,
+                        8, 9, 10, 11, 12, 13, 14, 15,
+                        16, 17, 18, 19, 20, 21, 22, 23,
+                        24, 25, 26, 27, 28, 29, 30, 31,
+                        32, 33, 34, 35, 36, 37, 38, 39,
+                        40, 41, 42, 43, 44, 45, 46, 47,
+                        48, 49, 50, 51, 52, 53, 54, 55,
+                        56, 57, 58, 59, 60, 61, 62, char(255)})
+) == (__mmask64)0x8000000000000004);
+
 
 __m512i test_mm512_movm_epi16(__mmask32 __A) {
   // CHECK-LABEL: test_mm512_movm_epi16
@@ -3131,6 +3155,13 @@ __mmask32 test_mm512_movepi16_mask(__m512i __A) {
   // CHECK: [[CMP:%.*]] = icmp slt <32 x i16> %{{.*}}, zeroinitializer
   return _mm512_movepi16_mask(__A); 
 }
+
+TEST_CONSTEXPR(_mm512_movepi16_mask(
+    ((__m512i)(__v32hi){0, 1, short(32768), 3, 4, 5, 6, 7,
+                        8, 9, 10, 11, 12, 13, 14, 15,
+                        16, 17, 18, 19, 20, 21, 22, 23,
+                        24, 25, 26, 27, 28, 29, 30, short(32768)})
+) == (__mmask32)0x80000004);
 
 void test_mm512_mask_cvtepi16_storeu_epi8 (void * __P, __mmask32 __M, __m512i __A)
 {

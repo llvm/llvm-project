@@ -787,9 +787,8 @@ static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_hsub_ps(__m256 __a,
 ///      1: Bits [127:64] of the source are copied to bits [127:64] of the
 ///         returned vector.
 /// \returns A 128-bit vector of [2 x double] containing the copied values.
-static __inline __m128d __DEFAULT_FN_ATTRS128
-_mm_permutevar_pd(__m128d __a, __m128i __c)
-{
+static __inline __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_permutevar_pd(__m128d __a, __m128i __c) {
   return (__m128d)__builtin_ia32_vpermilvarpd((__v2df)__a, (__v2di)__c);
 }
 
@@ -826,9 +825,8 @@ _mm_permutevar_pd(__m128d __a, __m128i __c)
 ///      1: Bits [255:192] of the source are copied to bits [255:192] of the
 ///    returned vector.
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_permutevar_pd(__m256d __a, __m256i __c)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_permutevar_pd(__m256d __a, __m256i __c) {
   return (__m256d)__builtin_ia32_vpermilvarpd256((__v4df)__a, (__v4di)__c);
 }
 
@@ -881,9 +879,8 @@ _mm256_permutevar_pd(__m256d __a, __m256i __c)
 ///      11: Bits [127:96] of the source are copied to bits [127:96] of the
 ///          returned vector.
 /// \returns A 128-bit vector of [4 x float] containing the copied values.
-static __inline __m128 __DEFAULT_FN_ATTRS128
-_mm_permutevar_ps(__m128 __a, __m128i __c)
-{
+static __inline __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_permutevar_ps(__m128 __a, __m128i __c) {
   return (__m128)__builtin_ia32_vpermilvarps((__v4sf)__a, (__v4si)__c);
 }
 
@@ -972,9 +969,8 @@ _mm_permutevar_ps(__m128 __a, __m128i __c)
 ///      11: Bits [255:224] of the source are copied to bits [255:224] of the
 ///          returned vector.
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_permutevar_ps(__m256 __a, __m256i __c)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_permutevar_ps(__m256 __a, __m256i __c) {
   return (__m256)__builtin_ia32_vpermilvarps256((__v8sf)__a, (__v8si)__c);
 }
 
