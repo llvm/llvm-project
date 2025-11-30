@@ -4092,22 +4092,106 @@ void Parser::ParseDeclarationSpecifiers(
                                          PrevSpec, DiagID, Policy);
       isStorageClass = true;
       break;
-    case tok::kw_auto:
-      if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
-        if (isKnownToBeTypeSpecifier(GetLookAheadToken(1))) {
+    case tok::kw_auto: {
+      const Token &LA = GetLookAheadToken(1);
+      if (isKnownToBeTypeSpecifier(LA) || LA.is(tok::annot_typename)) {
+        // 'auto' cannot be combined with a type specifier, except in C23 and
+        // C++98.
+        if (getLangOpts().CPlusPlus11 || getLangOpts().OpenCL) {
+          // In C++11+ or OpenCL, 'auto' cannot be combined with a type
+          // specifier.
+          isInvalid = true;
+          PrevSpec = Tok.getIdentifierInfo()->getNameStart();
+          DiagID = diag::err_auto_type_specifier;
+          DS.SetTypeSpecError();
+        } else {
+          // In C++98 or C, 'auto' can be a storage class specifier with a type.
           isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                              PrevSpec, DiagID, Policy);
-          if (!isInvalid && !getLangOpts().C23)
-            Diag(Tok, diag::ext_auto_storage_class)
-              << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
-        } else
+          isStorageClass = true;
+        }
+      } else {
+        // 'auto' is not followed by a type specifier.
+        if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
+          // In C++11+ or C23, 'auto' is a type specifier (type deduction).
           isInvalid = DS.SetTypeSpecType(DeclSpec::TST_auto, Loc, PrevSpec,
                                          DiagID, Policy);
-      } else
-        isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
-                                           PrevSpec, DiagID, Policy);
-      isStorageClass = true;
-      break;
+        } else {
+          // In C (not C++11+ and not C23), 'auto' is a storage class specifier.
+          isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
+                                             PrevSpec, DiagID, Policy);
+          isStorageClass = true;
+        }
+      }
+      // Only if Next token is a known type name (typedef, template param, etc
+      // ) Check this only if we set 'auto' as a type specifier and haven't
+      // already detected an error. Only check in simple declaration contexts
+      // to avoid false positives with member pointers, out-of-line
+      // definitions, etc. Only check when we're sure it's a simple variable
+      // declaration: 'auto Type variable_name' where the identifier is
+      // followed by another identifier (the variable name), not by '(', '::',
+      //  '<', '[', etc.
+      if (getLangOpts().CPlusPlus11 && !isInvalid &&
+          DS.getTypeSpecType() == DeclSpec::TST_auto &&
+          (DSContext == DeclSpecContext::DSC_normal ||
+           DSContext == DeclSpecContext::DSC_top_level ||
+           DSContext == DeclSpecContext::DSC_class)) {
+        // Re-check the lookahead token in case it was annotated
+        const Token &NextLA = GetLookAheadToken(1);
+
+        // Check for builtin type keywords (int, void, char, etc.)
+        if (NextLA.isOneOf(tok::kw_int, tok::kw_void, tok::kw_char,
+                           tok::kw_char8_t, tok::kw_char16_t, tok::kw_char32_t,
+                           tok::kw_wchar_t, tok::kw_bool, tok::kw_float,
+                           tok::kw_double, tok::kw__Bool, tok::kw___bool,
+                           tok::kw_half, tok::kw___bf16, tok::kw__ExtInt,
+                           tok::kw__BitInt)) {
+          // Builtin type after 'auto' => always an error in C++11+
+          Diag(NextLA.getLocation(), diag::err_auto_type_specifier);
+
+          DS.SetTypeSpecError();
+          ConsumeToken(); // Consume 'auto'
+          ConsumeToken(); // Consume the builtin type token
+          goto DoneWithDeclSpec;
+        }
+
+        // Check for identifier types
+        if (NextLA.is(tok::identifier)) {
+          // Check what comes after the identifier to determine if this is a
+          // simple variable declaration or something more complex.
+          const Token &AfterNext = GetLookAheadToken(2);
+          // Skip if followed by: '(', '::', '<', '[', '*', '&', etc.
+          // Only check if followed by another identifier (variable name).
+          // Don't check if followed by '=' because 'auto Type = value' is
+          // ambiguous: Type could be a variable name that happens to share a
+          // name with a type.
+          if (AfterNext.isOneOf(tok::l_paren, tok::coloncolon, tok::less,
+                                tok::l_square, tok::star, tok::amp, tok::ampamp,
+                                tok::kw_const, tok::kw_volatile,
+                                tok::kw_restrict, tok::equal)) {
+            // Complex declarator or ambiguous case - skip the check
+          } else if (AfterNext.is(tok::identifier)) {
+            // This looks like a simple variable declaration: 'auto Type name'
+            // Query Sema: Is this identifier a known-type at this point?
+            IdentifierInfo *II = NextLA.getIdentifierInfo();
+            ParsedType TypeRep = Actions.getTypeName(
+                *II, NextLA.getLocation(), getCurScope(), nullptr, false, false,
+                nullptr, false, false,
+                isClassTemplateDeductionContext(DSContext));
+
+            if (TypeRep) {
+              // We have 'auto' followed by a known type => always an error in
+              // C++11+
+              Diag(NextLA.getLocation(), diag::err_auto_type_specifier);
+              DS.SetTypeSpecError();
+              ConsumeToken(); // Consume 'auto'
+              ConsumeToken(); // Consume the type name token
+              goto DoneWithDeclSpec;
+            }
+          }
+        }
+      }
+    } break;
     case tok::kw___auto_type:
       Diag(Tok, diag::ext_auto_type);
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_auto_type, Loc, PrevSpec,
