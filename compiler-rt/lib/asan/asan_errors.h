@@ -249,6 +249,67 @@ struct ErrorAllocationSizeTooBig : ErrorBase {
   void Print();
 };
 
+struct ErrorMmapAddrOverflow : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr start;
+  uptr length;
+  ErrorMmapAddrOverflow() = default;
+  ErrorMmapAddrOverflow(u32 tid, BufferedStackTrace *stack_, uptr start_, uptr len)
+      : ErrorBase(tid, 10, "bad-mmap-overflow"), 
+        stack(stack_), 
+        start(start_), 
+        length(len) {}
+  void Print();
+};
+
+struct ErrorMmapShadowOverlap : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr start, end;
+  ErrorMmapShadowOverlap() = default;
+  ErrorMmapShadowOverlap(u32 tid, BufferedStackTrace *stack_, uptr start_, uptr end_)
+      : ErrorBase(tid, 10, "bad-mmap-overlap"), 
+        stack(stack_), 
+        start(start_), 
+        end(end_) {}
+  void Print();
+};
+
+struct ErrorMmapOutsideRange : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr start, end;
+  ErrorMmapOutsideRange() = default;
+  ErrorMmapOutsideRange(u32 tid, BufferedStackTrace *stack_, uptr start_, uptr end_)
+      : ErrorBase(tid, 10, "bad-mmap-out-of-range"), 
+        stack(stack_), 
+        start(start_), 
+        end(end_) {}
+  void Print();
+};
+
+struct ErrorMunmapShadowOverlap : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr start, end;
+  ErrorMunmapShadowOverlap() = default;
+  ErrorMunmapShadowOverlap(u32 tid, BufferedStackTrace *stack_, uptr start_, uptr end_)
+      : ErrorBase(tid, 10, "bad-munmap-overlap"), 
+        stack(stack_), 
+        start(start_), 
+        end(end_) {}
+  void Print();
+};
+
+struct ErrorMunmapOutsideRange : ErrorBase {
+  const BufferedStackTrace *stack;
+  uptr start, end;
+  ErrorMunmapOutsideRange() = default;
+  ErrorMunmapOutsideRange(u32 tid, BufferedStackTrace *stack_, uptr start_, uptr end_)
+      : ErrorBase(tid, 10, "bad-munmap-out-of-range"), 
+        stack(stack_), 
+        start(start_), 
+        end(end_) {}
+  void Print();
+};
+
 struct ErrorRssLimitExceeded : ErrorBase {
   const BufferedStackTrace *stack;
 
@@ -433,6 +494,11 @@ struct ErrorGeneric : ErrorBase {
   macro(InvalidAlignedAllocAlignment)                      \
   macro(InvalidPosixMemalignAlignment)                     \
   macro(AllocationSizeTooBig)                              \
+  macro(MmapAddrOverflow)                                  \
+  macro(MmapShadowOverlap)                                 \
+  macro(MmapOutsideRange)                                  \
+  macro(MunmapShadowOverlap)                               \
+  macro(MunmapOutsideRange)                                \
   macro(RssLimitExceeded)                                  \
   macro(OutOfMemory)                                       \
   macro(StringFunctionMemoryRangesOverlap)                 \
