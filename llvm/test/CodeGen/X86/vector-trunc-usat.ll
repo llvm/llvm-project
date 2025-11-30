@@ -1383,9 +1383,6 @@ define <8 x i16> @trunc_usat_v8i32_v8i16(<8 x i32> %a0) {
 ;
 ; SSE41-LABEL: trunc_usat_v8i32_v8i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm2 = [65535,0,65535,0,65535,0,65535,0]
-; SSE41-NEXT:    pminud %xmm2, %xmm1
-; SSE41-NEXT:    pminud %xmm2, %xmm0
 ; SSE41-NEXT:    packusdw %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -3424,9 +3421,6 @@ define <16 x i8> @trunc_usat_v16i16_v16i8(<16 x i16> %a0) {
 ;
 ; SSE41-LABEL: trunc_usat_v16i16_v16i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; SSE41-NEXT:    pminuw %xmm2, %xmm1
-; SSE41-NEXT:    pminuw %xmm2, %xmm0
 ; SSE41-NEXT:    packuswb %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;

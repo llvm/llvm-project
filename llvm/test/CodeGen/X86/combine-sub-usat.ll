@@ -251,18 +251,12 @@ define <8 x i16> @combine_trunc_v8i32_v8i16(<8 x i16> %a0, <8 x i32> %a1) {
 ;
 ; SSE41-LABEL: combine_trunc_v8i32_v8i16:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm3 = [65535,0,65535,0,65535,0,65535,0]
-; SSE41-NEXT:    pminud %xmm3, %xmm2
-; SSE41-NEXT:    pminud %xmm3, %xmm1
 ; SSE41-NEXT:    packusdw %xmm2, %xmm1
 ; SSE41-NEXT:    psubusw %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: combine_trunc_v8i32_v8i16:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pmovsxbw {{.*#+}} xmm3 = [65535,0,65535,0,65535,0,65535,0]
-; SSE42-NEXT:    pminud %xmm3, %xmm2
-; SSE42-NEXT:    pminud %xmm3, %xmm1
 ; SSE42-NEXT:    packusdw %xmm2, %xmm1
 ; SSE42-NEXT:    psubusw %xmm1, %xmm0
 ; SSE42-NEXT:    retq
