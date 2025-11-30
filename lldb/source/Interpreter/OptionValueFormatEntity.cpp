@@ -122,3 +122,7 @@ void OptionValueFormatEntity::AutoComplete(CommandInterpreter &interpreter,
                                            CompletionRequest &request) {
   FormatEntity::AutoComplete(request);
 }
+
+std::string OptionValueFormatEntity::GetEscapedDefaultFormatStr() const {
+  return EscapeBackticks(m_default_format);
+}
