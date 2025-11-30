@@ -30,6 +30,9 @@ understand some terms and definitions for readers who are not familiar with the
 C++ feature. This document is not a tutorial on C++; it only introduces
 necessary concepts to better understand use of modules in a project.
 
+A high level overview of modules can be found on the
+`Modules (C++) <https://en.wikipedia.org/wiki/Modules_(C++)>`_ page on Wikipedia.
+
 Background and terminology
 --------------------------
 
