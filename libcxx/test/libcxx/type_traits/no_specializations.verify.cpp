@@ -53,6 +53,11 @@ SPECIALIZE_TRAIT(unwrap_reference); // expected-error {{cannot be specialized}}
 SPECIALIZE_TRAIT(unwrap_ref_decay); // expected-error {{cannot be specialized}}
 #  endif
 
+#  if TEST_STD_VER >= 26
+template <>
+struct std::apply_result<S, S>; // expected-error {{cannot be specialized}}
+#  endif
+
 #  undef SPECIALIZE_TRAIT
 #  define SPECIALIZE_UTT(Trait)                                                                                        \
     template <>                                                                                                        \
@@ -161,7 +166,9 @@ SPECIALIZE_BTT(reference_converts_from_temporary);   // expected-error 2 {{canno
 #  endif
 
 #  if TEST_STD_VER >= 26
-SPECIALIZE_BTT(is_virtual_base_of); // expected-error 2 {{cannot be specialized}}
+SPECIALIZE_BTT(is_applicable);         // expected-error 2 {{cannot be specialized}}
+SPECIALIZE_BTT(is_nothrow_applicable); // expected-error 2 {{cannot be specialized}}
+SPECIALIZE_BTT(is_virtual_base_of);    // expected-error 2 {{cannot be specialized}}
 #  endif
 
 #  undef SPECIALIZE_UTT
