@@ -311,6 +311,14 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
   }
 
   if (auto *CB = dyn_cast_or_null<CallBase>(UseInst)) {
+    if (auto *CU = dyn_cast_or_null<CallBase>(DefInst)) {
+      MemoryEffects CBME = CB->getMemoryEffects();
+      MemoryEffects CUME = CU->getMemoryEffects();
+      if (CBME.onlyAccessesInaccessibleMem() ||
+          CUME.onlyAccessesInaccessibleMem())
+        if ((CBME & CUME & MemoryEffects::writeOnly()).onlyReadsMemory())
+          return false;
+    }
     ModRefInfo I = AA.getModRefInfo(DefInst, CB);
     return isModOrRefSet(I);
   }
