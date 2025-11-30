@@ -25,6 +25,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <optional>
 
 #define DEBUG_TYPE "analysis-utils"
@@ -1158,10 +1159,12 @@ unsigned MemRefRegion::getRank() const {
 }
 
 std::optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
-    SmallVectorImpl<int64_t> *shape, SmallVectorImpl<AffineMap> *lbs) const {
+    SmallVectorImpl<int64_t> *shape, SmallVectorImpl<AffineMap> *lbs,
+    ArrayRef<int64_t> minShape) const {
   auto memRefType = cast<MemRefType>(memref.getType());
   MLIRContext *context = memref.getContext();
   unsigned rank = memRefType.getRank();
+  assert(minShape.empty() || minShape.size() == rank);
   if (shape)
     shape->reserve(rank);
 
@@ -1203,12 +1206,14 @@ std::optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
       lb = AffineMap::get(/*dimCount=*/0, cstWithShapeBounds.getNumSymbolVars(),
                           /*result=*/getAffineConstantExpr(0, context));
     }
-    numElements *= diffConstant;
+    int64_t finalDiff =
+        minShape.empty() ? diffConstant : std::max(diffConstant, minShape[d]);
+    numElements *= finalDiff;
     // Populate outputs if available.
     if (lbs)
       lbs->push_back(lb);
     if (shape)
-      shape->push_back(diffConstant);
+      shape->push_back(finalDiff);
   }
   return numElements;
 }

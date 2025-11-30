@@ -28,6 +28,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <iomanip>
 #include <optional>
 #include <sstream>
@@ -376,10 +377,28 @@ static Value createPrivateMemRef(AffineForOp forOp,
   SmallVector<int64_t, 4> newShape;
   SmallVector<AffineMap, 4> lbs;
   lbs.reserve(rank);
-  // Query 'region' for 'newShape' and lower bounds of MemRefRegion accessed
-  // by 'srcStoreOpInst' at depth 'dstLoopDepth'.
+  SmallVector<int64_t, 4> minShape;
+  ArrayRef<int64_t> minShapeRef;
+  if (auto vectorStore = dyn_cast<AffineVectorStoreOp>(srcStoreOp)) {
+    ArrayRef<int64_t> vectorShape = vectorStore.getVectorType().getShape();
+    unsigned vectorRank = vectorShape.size();
+    if (vectorRank > rank) {
+      LDBG() << "Private memref creation unsupported for vector store with "
+             << "rank greater than memref rank";
+      return nullptr;
+    }
+    minShape.assign(rank, 0);
+    for (unsigned i = 0; i < vectorRank; ++i) {
+      unsigned memDim = rank - vectorRank + i;
+      int64_t vecDim = vectorShape[i];
+      assert(!ShapedType::isDynamic(vecDim) &&
+             "vector store should have static shape");
+      minShape[memDim] = std::max(minShape[memDim], vecDim);
+    }
+    minShapeRef = minShape;
+  }
   std::optional<int64_t> numElements =
-      region.getConstantBoundingSizeAndShape(&newShape, &lbs);
+      region.getConstantBoundingSizeAndShape(&newShape, &lbs, minShapeRef);
   assert(numElements && "non-constant number of elts in local buffer");
 
   const FlatAffineValueConstraints *cst = region.getConstraints();
