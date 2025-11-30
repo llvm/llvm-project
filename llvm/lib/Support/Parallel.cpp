@@ -57,6 +57,7 @@ public:
     if (S.UseJobserver)
       TheJobserver = JobserverClient::getInstance();
 
+    ThreadsCreatedFuture = ThreadsCreated.get_future();
     ThreadCount = S.compute_thread_count();
     // Spawn all but one of the threads in another thread as spawning threads
     // can take a while.
@@ -84,23 +85,27 @@ public:
   void stop() {
     {
       std::lock_guard<std::mutex> Lock(Mutex);
-      if (Stop)
-        return;
       Stop = true;
     }
-    Cond.notify_all();
-    ThreadsCreated.get_future().wait();
-  }
 
-  ~ThreadPoolExecutor() override {
-    stop();
+    Cond.notify_all();
+    ThreadsCreatedFuture.wait();
+
+    std::vector<std::thread> ThreadsToJoin;
+    {
+      std::lock_guard<std::mutex> Lock(Mutex);
+      ThreadsToJoin.swap(Threads);
+    }
+
     std::thread::id CurrentThreadId = std::this_thread::get_id();
-    for (std::thread &T : Threads)
+    for (std::thread &T : ThreadsToJoin)
       if (T.get_id() == CurrentThreadId)
         T.detach();
       else
         T.join();
   }
+
+  ~ThreadPoolExecutor() override { stop(); }
 
   struct Creator {
     static void *call() { return new ThreadPoolExecutor(strategy); }
@@ -187,6 +192,7 @@ private:
   std::mutex Mutex;
   std::condition_variable Cond;
   std::promise<void> ThreadsCreated;
+  std::future<void> ThreadsCreatedFuture;
   std::vector<std::thread> Threads;
   unsigned ThreadCount;
 
