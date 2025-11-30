@@ -1598,6 +1598,9 @@ void DwarfUnit::constructSubrangeDIE(DIE &DW_Subrange, const DISubrangeType *SR,
     if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound)) {
       if (auto *VarDIE = getDIE(BV))
         addDIEEntry(DW_Subrange, Attr, *VarDIE);
+    } else if (auto *DT = dyn_cast_if_present<DIDerivedType *>(Bound)) {
+      if (auto *DTDIE = getDIE(DT))
+        addDIEEntry(DW_Subrange, Attr, *DTDIE);
     } else if (auto *BE = dyn_cast_if_present<DIExpression *>(Bound)) {
       addBlock(DW_Subrange, Attr, BE);
     } else if (auto *BI = dyn_cast_if_present<ConstantInt *>(Bound)) {
