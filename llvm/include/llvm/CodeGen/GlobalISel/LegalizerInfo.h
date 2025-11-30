@@ -314,6 +314,16 @@ LLVM_ABI LegalityPredicate scalarWiderThan(unsigned TypeIdx, unsigned Size);
 LLVM_ABI LegalityPredicate scalarOrEltNarrowerThan(unsigned TypeIdx,
                                                    unsigned Size);
 
+/// True iff the specified type index is a vector with a number of elements
+/// that's greater than the given size.
+LLVM_ABI LegalityPredicate vectorElementCountIsGreaterThan(unsigned TypeIdx,
+                                                           unsigned Size);
+
+/// True iff the specified type index is a vector with a number of elements
+/// that's less than or equal to the given size.
+LLVM_ABI LegalityPredicate
+vectorElementCountIsLessThanOrEqualTo(unsigned TypeIdx, unsigned Size);
+
 /// True iff the specified type index is a scalar or a vector with an element
 /// type that's wider than the given size.
 LLVM_ABI LegalityPredicate scalarOrEltWiderThan(unsigned TypeIdx,
