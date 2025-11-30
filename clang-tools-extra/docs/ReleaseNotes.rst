@@ -556,6 +556,12 @@ Changes in existing checks
   <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check to
   generate correct fix-its for forms without a space after the directive.
 
+- Improved :doc:`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by adding
+  a new (off-by-default) option `AllowFalseEvaluated`, which allows marking
+  move constructors with ``noexcept(expr)`` even if ``expr``
+  evaluates to ``false``.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
