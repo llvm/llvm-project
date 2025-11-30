@@ -4722,6 +4722,16 @@ def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   }];
 }
 
+def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
+  let summary = "Computes the floating-point floor value";
+  let description = [{
+    `cir.floor` computes the floor of a floating-point operand and returns
+    a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Variadic Operations
 //===----------------------------------------------------------------------===//
