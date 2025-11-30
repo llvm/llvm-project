@@ -1,3 +1,12 @@
+if (HAVE_LIBPTHREAD)
+  list(APPEND extra_libs pthread)
+endif ()
+
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  add_definitions("-D_AIX")
+  add_definitions("-D_ALL_SOURCE")
+endif()
+
 # We need to include the llvm components we depend on manually, as liblldb does
 # not re-export those.
 set(LLVM_LINK_COMPONENTS Support)

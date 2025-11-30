@@ -129,7 +129,12 @@ FileSpec HostInfoBase::GetShlibDir() {
       g_fields->m_lldb_so_dir = FileSpec();
     Log *log = GetLog(LLDBLog::Host);
     LLDB_LOG(log, "shlib dir -> `{0}`", g_fields->m_lldb_so_dir);
-  });
+#if (_AIX)
+    if (!g_fields->m_lldb_so_dir)
+    g_fields->m_lldb_so_dir = FileSpec("/usr/bin/");
+    LLDB_LOG(log, "shlib dir -> `{0}`", g_fields->m_lldb_so_dir);
+#endif
+    });
   return g_fields->m_lldb_so_dir;
 }
 
