@@ -24,6 +24,12 @@ class MoveAutoInitPass : public PassInfoMixin<MoveAutoInitPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
+
+/// Move entry block initializations of allocas closer to their guarded users.
+class MoveEntryAllocaInitPass : public PassInfoMixin<MoveEntryAllocaInitPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_MOVEAUTOINIT_H
