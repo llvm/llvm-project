@@ -638,7 +638,7 @@ dependencies::initializeScanInstanceDependencyCollector(
 }
 
 bool DependencyScanningAction::runInvocation(
-    std::unique_ptr<CompilerInvocation> Invocation,
+    std::string Executable, std::unique_ptr<CompilerInvocation> Invocation,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     DiagnosticConsumer *DiagConsumer) {
@@ -654,9 +654,12 @@ bool DependencyScanningAction::runInvocation(
   if (Scanned) {
     // Scanning runs once for the first -cc1 invocation in a chain of driver
     // jobs. For any dependent jobs, reuse the scanning result and just
-    // update the LastCC1Arguments to correspond to the new invocation.
+    // update the new invocation.
     // FIXME: to support multi-arch builds, each arch requires a separate scan
-    setLastCC1Arguments(std::move(OriginalInvocation));
+    if (MDC)
+      MDC->applyDiscoveredDependencies(OriginalInvocation);
+    Consumer.handleBuildCommand(
+        {Executable, OriginalInvocation.getCC1CommandLine()});
     return true;
   }
 
@@ -701,8 +704,12 @@ bool DependencyScanningAction::runInvocation(
   // ExecuteAction is responsible for calling finish.
   DiagConsumerFinished = true;
 
-  if (Result)
-    setLastCC1Arguments(std::move(OriginalInvocation));
+  if (Result) {
+    if (MDC)
+      MDC->applyDiscoveredDependencies(OriginalInvocation);
+    Consumer.handleBuildCommand(
+        {Executable, OriginalInvocation.getCC1CommandLine()});
+  }
 
   return Result;
 }
