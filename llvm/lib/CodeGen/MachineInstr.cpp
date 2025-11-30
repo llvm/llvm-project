@@ -1415,7 +1415,9 @@ bool MachineInstr::isDead(const MachineRegisterInfo &MRI,
     Register Reg = MO.getReg();
     if (Reg.isPhysical()) {
       // Don't delete live physreg defs, or any reserved register defs.
-      if (!LivePhysRegs || !LivePhysRegs->available(Reg) || MRI.isReserved(Reg))
+      if ((!(MRI.tracksLiveness() && MO.isDead()) &&
+           (!LivePhysRegs || !LivePhysRegs->available(Reg))) ||
+          MRI.isReserved(Reg))
         return false;
     } else {
       if (MO.isDead())
