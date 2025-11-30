@@ -1582,8 +1582,7 @@ define amdgpu_kernel void @soff1_voff1_negative(i32 %soff) {
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-SDAG-NEXT:    v_add_u32_e32 v0, s0, v0
-; GFX942-SDAG-NEXT:    v_add_u32_e32 v0, -1, v0
-; GFX942-SDAG-NEXT:    scratch_store_byte v0, v1, off sc0 sc1
+; GFX942-SDAG-NEXT:    scratch_store_byte v0, v1, off offset:-1 sc0 sc1
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-SDAG-NEXT:    s_endpgm
 ;
@@ -1593,8 +1592,8 @@ define amdgpu_kernel void @soff1_voff1_negative(i32 %soff) {
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_add3_u32 v0, s0, v0, -1
-; GFX942-GISEL-NEXT:    scratch_store_byte v0, v1, off sc0 sc1
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v0, s0, v0
+; GFX942-GISEL-NEXT:    scratch_store_byte v0, v1, off offset:-1 sc0 sc1
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-GISEL-NEXT:    s_endpgm
 ;
