@@ -106,6 +106,10 @@ class TargetRegisterClass;
       // Node used to generate an MTC1 i32 to f64 instruction
       MTC1_D64,
 
+      // Nodes used to access FCR31 (fcsr)
+      ReadFCSR,
+      WriteFCSR,
+
       // Floating Point Conditional Moves
       CMovFP_T,
       CMovFP_F,
@@ -573,6 +577,8 @@ class TargetRegisterClass;
     SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFSETCC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
