@@ -14,6 +14,8 @@ add_clang_library(clangIncludeCleaner STATIC
   ClangDriverOptions
   )
 
+target_include_directories(clangIncludeCleaner PUBLIC ../include)
+
 clang_target_link_libraries(clangIncludeCleaner
   PRIVATE
   clangAST

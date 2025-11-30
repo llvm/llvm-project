@@ -34,6 +34,7 @@ add_clang_library(clangDaemonTweaks OBJECT
   SwapIfBranches.cpp
 
   LINK_LIBS
+  clangIncludeCleaner
   clangAST
   clangBasic
   clangDaemon
