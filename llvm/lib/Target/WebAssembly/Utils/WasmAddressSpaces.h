@@ -40,6 +40,9 @@ inline bool isWasmVarAddressSpace(unsigned AS) {
 inline bool isValidAddressSpace(unsigned AS) {
   return isDefaultAddressSpace(AS) || isWasmVarAddressSpace(AS);
 }
+inline bool isExternrefAddressSpace(unsigned AS) {
+  return AS == WASM_ADDRESS_SPACE_EXTERNREF;
+}
 
 } // namespace WebAssembly
 

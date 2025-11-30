@@ -818,6 +818,19 @@ TableSymbol *SymbolTable::createDefinedIndirectFunctionTable(StringRef name) {
   return sym;
 }
 
+TableSymbol *SymbolTable::createDefinedExternrefTable(StringRef name) {
+  const uint32_t invalidIndex = -1;
+  WasmLimits limits{0, 0, 0, 0}; // Set by the writer.
+  WasmTableType type{ValType::EXTERNREF, limits};
+  WasmTable desc{invalidIndex, type, name};
+  InputTable *table = make<InputTable>(desc, nullptr);
+  uint32_t flags = ctx.arg.exportTable ? 0 : WASM_SYMBOL_VISIBILITY_HIDDEN;
+  TableSymbol *sym = addSyntheticTable(name, flags, table);
+  sym->markLive();
+  sym->forceExport = ctx.arg.exportTable;
+  return sym;
+}
+
 // Whether or not we need an indirect function table is usually a function of
 // whether an input declares a need for it.  However sometimes it's possible for
 // no input to need the indirect function table, but then a late
@@ -856,6 +869,36 @@ TableSymbol *SymbolTable::resolveIndirectFunctionTable(bool required) {
 
   // An indirect function table will only be present in the symbol table if
   // needed by a reloc; if we get here, we don't need one.
+  return nullptr;
+}
+
+TableSymbol *SymbolTable::resolveExternrefTable() {
+  Symbol *existing = find(externrefTableName);
+  if (existing) {
+    if (!isa<TableSymbol>(existing)) {
+      error(Twine("reserved symbol must be of type table: `") +
+            externrefTableName + "`");
+      return nullptr;
+    }
+    if (existing->isDefined()) {
+      error(Twine("reserved symbol must not be defined in input files: `") +
+            externrefTableName + "`");
+      return nullptr;
+    }
+  }
+
+  if (ctx.arg.importTable) {
+    if (existing) {
+      existing->importModule = defaultModule;
+      existing->importName = externrefTableName;
+      return cast<TableSymbol>(existing);
+    }
+  } else if ((existing && existing->isLive())) {
+    // A defined table is required. The existing table is
+    // guaranteed to be undefined due to the check above.
+    return createDefinedExternrefTable(externrefTableName);
+  }
+
   return nullptr;
 }
 
