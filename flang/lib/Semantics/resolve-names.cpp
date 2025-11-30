@@ -2153,6 +2153,10 @@ public:
   void Post(const parser::AssignedGotoStmt &);
   void Post(const parser::CompilerDirective &);
 
+  bool Pre(const parser::ArrayElement &);
+  bool Pre(const parser::Substring &);
+  bool Pre(const parser::CoindexedNamedObject &);
+
   // These nodes should never be reached: they are handled in ProgramUnit
   bool Pre(const parser::MainProgram &) {
     llvm_unreachable("This node is handled in ProgramUnit");
@@ -6181,11 +6185,6 @@ bool DeclarationVisitor::Pre(const parser::KindParam &x) {
           parser::Scalar<parser::Integer<parser::Constant<parser::Name>>>>(
           &x.u)}) {
     const auto &name{parser::UnwrapRef<parser::Name>(kind)};
-    // For kind params scope resolution, temporarily turn off equivalence
-    // processing, because for equivalences the name resolution is confined
-    // to the current scope. For kind params that may be used for array
-    // indices, we don't want to limit the name resolution to the current scope.
-    auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
     if (!FindSymbol(name)) {
       Say(name, "Parameter '%s' not found"_err_en_US);
     }
@@ -8757,7 +8756,10 @@ const parser::Name *DeclarationVisitor::ResolveDesignator(
       common::visitors{
           [&](const parser::DataRef &x) { return ResolveDataRef(x); },
           [&](const parser::Substring &x) {
-            Walk(std::get<parser::SubstringRange>(x.t).t);
+            {
+              auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
+              Walk(std::get<parser::SubstringRange>(x.t).t);
+            }
             return ResolveDataRef(std::get<parser::DataRef>(x.t));
           },
       },
@@ -8773,7 +8775,10 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
             return ResolveStructureComponent(y.value());
           },
           [&](const Indirection<parser::ArrayElement> &y) {
-            Walk(y.value().subscripts);
+            {
+              auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
+              Walk(y.value().subscripts);
+            }
             const parser::Name *name{ResolveDataRef(y.value().base)};
             if (name && name->symbol) {
               if (!IsProcedure(*name->symbol)) {
@@ -8787,7 +8792,10 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
             return name;
           },
           [&](const Indirection<parser::CoindexedNamedObject> &y) {
-            Walk(y.value().imageSelector);
+            {
+              auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
+              Walk(y.value().imageSelector);
+            }
             return ResolveDataRef(y.value().base);
           },
       },
@@ -10220,6 +10228,33 @@ template <typename A> std::set<SourceName> GetUses(const A &x) {
     }
   }
   return uses;
+}
+
+bool ResolveNamesVisitor::Pre(const parser::ArrayElement &x) {
+  Walk(x.base);
+  {
+    auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
+    Walk(x.subscripts);
+  }
+  return false;
+}
+
+bool ResolveNamesVisitor::Pre(const parser::Substring &x) {
+  {
+    auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
+    Walk(std::get<parser::SubstringRange>(x.t).t);
+  }
+  Walk(std::get<parser::DataRef>(x.t));
+  return false;
+}
+
+bool ResolveNamesVisitor::Pre(const parser::CoindexedNamedObject &x) {
+  Walk(x.base);
+  {
+    auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
+    Walk(x.imageSelector);
+  }
+  return false;
 }
 
 bool ResolveNamesVisitor::Pre(const parser::Program &x) {
