@@ -511,7 +511,7 @@ protected:
   Mode OptMode;
 
   /// Current target configuration. Controls how the pass handles errors.
-  const TargetPassConfig *TPC;
+  bool GlobalISelAbortNotEnabled;
 
   /// Assign the register bank of each operand of \p MI.
   /// \return True on success, false otherwise.

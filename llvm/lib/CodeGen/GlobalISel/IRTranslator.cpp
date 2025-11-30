@@ -111,17 +111,16 @@ INITIALIZE_PASS_END(IRTranslator, DEBUG_TYPE, "IRTranslator LLVM IR -> MI",
                 false, false)
 
 static void reportTranslationError(MachineFunction &MF,
-                                   const TargetPassConfig &TPC,
                                    OptimizationRemarkEmitter &ORE,
                                    OptimizationRemarkMissed &R) {
   MF.getProperties().setFailedISel();
 
   // Print the function name explicitly if we don't have a debug location (which
   // makes the diagnostic less useful) or if we're going to emit a raw error.
-  if (!R.getLocation().isValid() || TPC.isGlobalISelAbortEnabled())
+  if (!R.getLocation().isValid() || isGlobalISelAbortEnabled(MF))
     R << (" (in function: " + MF.getName() + ")").str();
 
-  if (TPC.isGlobalISelAbortEnabled())
+  if (isGlobalISelAbortEnabled(MF))
     report_fatal_error(Twine(R.getMsg()));
   else
     ORE.emit(R);
@@ -242,7 +241,7 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
                                  MF->getFunction().getSubprogram(),
                                  &MF->getFunction().getEntryBlock());
       R << "unable to translate constant: " << ore::NV("Type", Val.getType());
-      reportTranslationError(*MF, *TPC, *ORE, R);
+      reportTranslationError(*MF, *ORE, R);
       return *VRegs;
     }
   }
@@ -279,7 +278,7 @@ Align IRTranslator::getMemOpAlign(const Instruction &I) {
 
   OptimizationRemarkMissed R("gisel-irtranslator", "", &I);
   R << "unable to translate memop: " << ore::NV("Opcode", &I);
-  reportTranslationError(*MF, *TPC, *ORE, R);
+  reportTranslationError(*MF, *ORE, R);
   return Align(1);
 }
 
@@ -4147,7 +4146,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
     R << "unable to translate in big endian mode";
-    reportTranslationError(*MF, *TPC, *ORE, R);
+    reportTranslationError(*MF, *ORE, R);
     return false;
   }
 
@@ -4191,7 +4190,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
                                F.getSubprogram(), &F.getEntryBlock());
     R << "unable to lower function: "
       << ore::NV("Prototype", F.getFunctionType());
-    reportTranslationError(*MF, *TPC, *ORE, R);
+    reportTranslationError(*MF, *ORE, R);
     return false;
   }
 
@@ -4214,7 +4213,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
                                F.getSubprogram(), &F.getEntryBlock());
     R << "unable to lower arguments: "
       << ore::NV("Prototype", F.getFunctionType());
-    reportTranslationError(*MF, *TPC, *ORE, R);
+    reportTranslationError(*MF, *ORE, R);
     return false;
   }
 
@@ -4265,7 +4264,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
           R << ": '" << InstStrStorage << "'";
         }
 
-        reportTranslationError(*MF, *TPC, *ORE, R);
+        reportTranslationError(*MF, *ORE, R);
         return false;
       }
 
@@ -4273,7 +4272,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
         OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                    BB->getTerminator()->getDebugLoc(), BB);
         R << "unable to translate basic block";
-        reportTranslationError(*MF, *TPC, *ORE, R);
+        reportTranslationError(*MF, *ORE, R);
         return false;
       }
     }

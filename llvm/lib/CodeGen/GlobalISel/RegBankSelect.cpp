@@ -83,7 +83,7 @@ void RegBankSelect::init(MachineFunction &MF) {
   assert(RBI && "Cannot work without RegisterBankInfo");
   MRI = &MF.getRegInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
-  TPC = &getAnalysis<TargetPassConfig>();
+  GlobalISelAbortNotEnabled = !isGlobalISelAbortEnabled(MF);
   if (OptMode != Mode::Fast) {
     MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
     MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
@@ -308,7 +308,7 @@ const RegisterBankInfo::InstructionMapping &RegBankSelect::findBestMapping(
         RepairPts.emplace_back(std::move(RepairPt));
     }
   }
-  if (!BestMapping && !TPC->isGlobalISelAbortEnabled()) {
+  if (!BestMapping && GlobalISelAbortNotEnabled) {
     // If none of the mapping worked that means they are all impossible.
     // Thus, pick the first one and set an impossible repairing point.
     // It will trigger the failed isel mode.
@@ -708,7 +708,7 @@ bool RegBankSelect::assignRegisterBanks(MachineFunction &MF) {
         continue;
 
       if (!assignInstr(MI)) {
-        reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
+        reportGISelFailure(MF, *MORE, "gisel-regbankselect",
                            "unable to map instruction", MI);
         return false;
       }
@@ -722,7 +722,7 @@ bool RegBankSelect::checkFunctionIsLegal(MachineFunction &MF) const {
 #ifndef NDEBUG
   if (!DisableGISelLegalityCheck) {
     if (const MachineInstr *MI = machineFunctionIsIllegal(MF)) {
-      reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
+      reportGISelFailure(MF, *MORE, "gisel-regbankselect",
                          "instruction is not legal", *MI);
       return false;
     }
