@@ -428,9 +428,9 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(p6) = COPY $vgpr0
     ; GCN-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p6)
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GCN-NEXT: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[PTRTOINT]](s32), [[C]](s32)
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[MV]](p4)
+    ; GCN-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](s32)
+    ; GCN-NEXT: [[INTTOPTR:%[0-9]+]]:_(p4) = G_INTTOPTR [[ZEXT]](s64)
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[INTTOPTR]](p4)
     %0:_(p6) = COPY $vgpr0
     %1:_(p4) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
@@ -485,9 +485,9 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(p6) = COPY $vgpr0
     ; GCN-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p6)
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; GCN-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[C]](s32)
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[MV]](p0)
+    ; GCN-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](s32)
+    ; GCN-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[ZEXT]](s64)
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[INTTOPTR]](p0)
     %0:_(p6) = COPY $vgpr0
     %1:_(p0) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
