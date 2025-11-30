@@ -42,6 +42,9 @@ public:
   /// the command line.
   std::vector<std::string> featuresAsWritten;
 
+  /// The default target features.
+  std::string targetFeatureStr;
+
   /// The real KINDs disabled for this target
   std::vector<int> disabledRealKinds;
 
