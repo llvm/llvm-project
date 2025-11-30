@@ -4,13 +4,13 @@
 ; RUN: | FileCheck %s --check-prefixes=CHECK,ZVFHMIN
 ; RUN: opt < %s -passes=slp-vectorizer -mtriple=riscv64 \
 ; RUN: -mattr=+v,+zvfh,+zvfbfmin -riscv-v-slp-max-vf=0 -S \
-; RUN: | FileCheck %s --check-prefixes=CHECK,ZVFH
+; RUN: | FileCheck %s --check-prefixes=CHECK,ZVFH,ZVFHDEFAULT
 ; RUN: opt < %s -passes=slp-vectorizer -mtriple=riscv64 \
 ; RUN: -mattr=+v,+zvl256b,+zvfh,+zvfbfmin -riscv-v-slp-max-vf=0 -S \
-; RUN: | FileCheck %s --check-prefixes=CHECK,ZVFH
+; RUN: | FileCheck %s --check-prefixes=CHECK,ZVFH,ZVFH256
 ; RUN: opt < %s -passes=slp-vectorizer -mtriple=riscv64 \
 ; RUN: -mattr=+v,+zvl512b,+zvfh,+zvfbfmin -riscv-v-slp-max-vf=0 -S \
-; RUN: | FileCheck %s --check-prefixes=CHECK,ZVFH
+; RUN: | FileCheck %s --check-prefixes=CHECK,ZVFH,ZVFH512
 
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
 target triple = "riscv64"
@@ -335,17 +335,37 @@ entry:
 }
 
 define void @reduce_or_2() {
-; CHECK-LABEL: @reduce_or_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 0, 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <32 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0>, i64 [[TMP1]], i32 15
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <32 x i64> [[TMP2]], <32 x i64> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 15, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <32 x i64> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> [[TMP4]])
-; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP7:%.*]], label [[TMP6:%.*]]
-; CHECK:       6:
-; CHECK-NEXT:    ret void
-; CHECK:       7:
-; CHECK-NEXT:    ret void
+; ZVFHMIN-LABEL: @reduce_or_2(
+; ZVFHMIN-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> zeroinitializer)
+; ZVFHMIN-NEXT:    br i1 [[TMP1]], label [[TMP3:%.*]], label [[TMP2:%.*]]
+; ZVFHMIN:       2:
+; ZVFHMIN-NEXT:    ret void
+; ZVFHMIN:       3:
+; ZVFHMIN-NEXT:    ret void
+;
+; ZVFHDEFAULT-LABEL: @reduce_or_2(
+; ZVFHDEFAULT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> zeroinitializer)
+; ZVFHDEFAULT-NEXT:    br i1 [[TMP1]], label [[TMP3:%.*]], label [[TMP2:%.*]]
+; ZVFHDEFAULT:       2:
+; ZVFHDEFAULT-NEXT:    ret void
+; ZVFHDEFAULT:       3:
+; ZVFHDEFAULT-NEXT:    ret void
+;
+; ZVFH256-LABEL: @reduce_or_2(
+; ZVFH256-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> zeroinitializer)
+; ZVFH256-NEXT:    br i1 [[TMP1]], label [[TMP3:%.*]], label [[TMP2:%.*]]
+; ZVFH256:       2:
+; ZVFH256-NEXT:    ret void
+; ZVFH256:       3:
+; ZVFH256-NEXT:    ret void
+;
+; ZVFH512-LABEL: @reduce_or_2(
+; ZVFH512-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> zeroinitializer)
+; ZVFH512-NEXT:    br i1 [[TMP1]], label [[TMP3:%.*]], label [[TMP2:%.*]]
+; ZVFH512:       2:
+; ZVFH512-NEXT:    ret void
+; ZVFH512:       3:
+; ZVFH512-NEXT:    ret void
 ;
   %1 = shl i64 0, 0
   %2 = icmp ult i64 0, 0

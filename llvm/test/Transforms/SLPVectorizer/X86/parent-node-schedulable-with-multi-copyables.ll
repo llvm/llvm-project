@@ -5,13 +5,13 @@ define i64 @test(ptr %arg1, i64 %alloca.promoted344, i8 %load.311.i, i1 %load1.i
 ; CHECK-LABEL: define i64 @test(
 ; CHECK-SAME: ptr [[ARG1:%.*]], i64 [[ALLOCA_PROMOTED344:%.*]], i8 [[LOAD_311_I:%.*]], i1 [[LOAD1_I:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> <i8 0, i8 0, i8 0, i8 poison>, i8 [[LOAD_311_I]], i32 3
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8> <i8 poison, i8 poison, i8 0, i8 0>, i8 [[LOAD_311_I]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i8> <i8 0, i8 0, i8 0, i8 poison, i8 0, i8 0, i8 0, i8 0>, i8 [[LOAD_311_I]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i8> <i8 poison, i8 poison, i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison>, i8 [[LOAD_311_I]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[ALLOCA_PROMOTED344]], i32 0
 ; CHECK-NEXT:    br label %[[BB2:.*]]
 ; CHECK:       [[BB2]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i64> [ zeroinitializer, %[[BB]] ], [ [[TMP28:%.*]], %[[BB12_8_I:.*]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <8 x i8> [ zeroinitializer, %[[BB]] ], [ [[TMP29:%.*]], %[[BB12_8_I]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <8 x i8> [ zeroinitializer, %[[BB]] ], [ [[TMP24:%.*]], %[[BB12_8_I]] ]
 ; CHECK-NEXT:    br i1 [[LOAD1_I]], label %[[SPAM_EXIT:.*]], label %[[BB4_LR_PH_I:.*]]
 ; CHECK:       [[BB4_LR_PH_I]]:
 ; CHECK-NEXT:    br i1 true, label %[[BB3_I_I_PEEL:.*]], label %[[EGGS_EXIT_I_PEEL:.*]]
@@ -27,55 +27,51 @@ define i64 @test(ptr %arg1, i64 %alloca.promoted344, i8 %load.311.i, i1 %load1.i
 ; CHECK-NEXT:    br label %[[EGGS_EXIT_I_PEEL]]
 ; CHECK:       [[EGGS_EXIT_I_PEEL]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i64> [ [[TMP10]], %[[BB3_I_I_PEEL]] ], [ zeroinitializer, %[[BB4_LR_PH_I]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i64> [[TMP11]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP13:%.*]] = trunc <4 x i64> [[TMP12]] to <4 x i8>
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i64> [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i64> [[TMP11]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc <8 x i64> [[TMP12]] to <8 x i8>
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <8 x i64> [[TMP12]], i32 1
 ; CHECK-NEXT:    br label %[[SPAM_EXIT]]
 ; CHECK:       [[SPAM_EXIT]]:
 ; CHECK-NEXT:    [[GETELEMENTPTR_I_I_PROMOTED346:%.*]] = phi i64 [ [[TMP14]], %[[EGGS_EXIT_I_PEEL]] ], [ 0, %[[BB2]] ]
 ; CHECK-NEXT:    [[LOAD_8_I:%.*]] = phi i8 [ 0, %[[EGGS_EXIT_I_PEEL]] ], [ 1, %[[BB2]] ]
-; CHECK-NEXT:    [[TMP15:%.*]] = phi <4 x i8> [ [[TMP13]], %[[EGGS_EXIT_I_PEEL]] ], [ zeroinitializer, %[[BB2]] ]
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i8> [[TMP15]], <4 x i8> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP15:%.*]] = phi <8 x i8> [ [[TMP13]], %[[EGGS_EXIT_I_PEEL]] ], [ zeroinitializer, %[[BB2]] ]
 ; CHECK-NEXT:    br i1 [[LOAD1_I]], label %[[BB12_8_I]], label %[[BB12_1_THREAD_I:.*]]
 ; CHECK:       [[BB12_1_THREAD_I]]:
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i8> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i8> [[TMP4]], i32 2
 ; CHECK-NEXT:    [[ICMP5_3_I:%.*]] = icmp eq i8 [[TMP17]], 0
 ; CHECK-NEXT:    br i1 [[ICMP5_3_I]], label %[[BB12_3_I:.*]], label %[[BB8_3_I:.*]]
 ; CHECK:       [[BB8_3_I]]:
 ; CHECK-NEXT:    br label %[[BB12_3_I]]
 ; CHECK:       [[BB12_3_I]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <8 x i8> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <8 x i8> [[TMP4]], i32 7
 ; CHECK-NEXT:    [[ICMP5_4_I:%.*]] = icmp eq i8 [[TMP18]], 0
 ; CHECK-NEXT:    br i1 [[ICMP5_4_I]], label %[[BB12_4_I:.*]], label %[[BB8_4_I:.*]]
 ; CHECK:       [[BB8_4_I]]:
 ; CHECK-NEXT:    br label %[[BB12_4_I]]
 ; CHECK:       [[BB12_4_I]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <8 x i8> [[TMP4]], i32 2
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <8 x i8> [[TMP4]], i32 5
 ; CHECK-NEXT:    [[ICMP5_5_I:%.*]] = icmp eq i8 [[TMP19]], 0
 ; CHECK-NEXT:    br i1 [[ICMP5_5_I]], label %[[BB12_5_I:.*]], label %[[BB8_5_I:.*]]
 ; CHECK:       [[BB8_5_I]]:
 ; CHECK-NEXT:    br label %[[BB12_5_I]]
 ; CHECK:       [[BB12_5_I]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i8> [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i8> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[ICMP5_7_I:%.*]] = icmp eq i8 [[TMP20]], 0
 ; CHECK-NEXT:    br i1 [[ICMP5_7_I]], label %[[BB12_7_I:.*]], label %[[BB8_7_I:.*]]
 ; CHECK:       [[BB8_7_I]]:
 ; CHECK-NEXT:    br label %[[BB12_7_I]]
 ; CHECK:       [[BB12_7_I]]:
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <8 x i8> [[TMP4]], i32 4
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <8 x i8> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[ICMP5_8_I:%.*]] = icmp eq i8 [[TMP21]], 0
 ; CHECK-NEXT:    br i1 [[ICMP5_8_I]], label %[[BB12_8_I]], label %[[BB8_8_I:.*]]
 ; CHECK:       [[BB8_8_I]]:
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP1]], i8 [[LOAD_8_I]], i32 1
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i8> poison, i8 [[LOAD_8_I]], i32 0
-; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <8 x i8> [[TMP4]], <8 x i8> poison, <4 x i32> <i32 poison, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x i8> [[TMP23]], <4 x i8> [[TMP24]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <8 x i8> [[TMP1]], i8 [[LOAD_8_I]], i32 1
+; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <8 x i8> [[TMP25]], <8 x i8> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 11, i32 12, i32 14>
+; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <8 x i8> [[TMP22]], <8 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 1, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    br label %[[BB12_8_I]]
 ; CHECK:       [[BB12_8_I]]:
-; CHECK-NEXT:    [[TMP26:%.*]] = phi <4 x i8> [ [[TMP0]], %[[BB12_7_I]] ], [ [[TMP22]], %[[BB8_8_I]] ], [ [[TMP15]], %[[SPAM_EXIT]] ]
-; CHECK-NEXT:    [[TMP27:%.*]] = phi <4 x i8> [ zeroinitializer, %[[BB12_7_I]] ], [ [[TMP25]], %[[BB8_8_I]] ], [ [[TMP16]], %[[SPAM_EXIT]] ]
+; CHECK-NEXT:    [[TMP24]] = phi <8 x i8> [ [[TMP0]], %[[BB12_7_I]] ], [ [[TMP23]], %[[BB8_8_I]] ], [ [[TMP15]], %[[SPAM_EXIT]] ]
 ; CHECK-NEXT:    [[TMP28]] = insertelement <2 x i64> [[TMP2]], i64 [[GETELEMENTPTR_I_I_PROMOTED346]], i32 1
-; CHECK-NEXT:    [[TMP29]] = shufflevector <4 x i8> [[TMP26]], <4 x i8> [[TMP27]], <8 x i32> <i32 2, i32 7, i32 5, i32 0, i32 1, i32 3, i32 4, i32 6>
 ; CHECK-NEXT:    br label %[[BB2]]
 ;
 bb:
