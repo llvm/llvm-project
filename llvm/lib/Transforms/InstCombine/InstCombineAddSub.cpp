@@ -1660,6 +1660,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return replaceInstUsesWith(I, Constant::getNullValue(I.getType()));
 
   // sext(A < B) + zext(A > B) => ucmp/scmp(A, B)
+  // sext(A <= B) + zext(A >= B) => ucmp/scmp(A, B)
   CmpPredicate LTPred, GTPred;
   if (match(&I,
             m_c_Add(m_SExt(m_c_ICmp(LTPred, m_Value(A), m_Value(B))),
@@ -1670,13 +1671,56 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       std::swap(A, B);
     }
 
-    if (ICmpInst::isLT(LTPred) && ICmpInst::isGT(GTPred) &&
-        ICmpInst::isSigned(LTPred) == ICmpInst::isSigned(GTPred))
+    if (ICmpInst::isSigned(LTPred) == ICmpInst::isSigned(GTPred)) {
+      Intrinsic::ID IID =
+          ICmpInst::isSigned(LTPred) ? Intrinsic::scmp : Intrinsic::ucmp;
+
+      // Handle strict inequalities: sext(A < B) + zext(A > B) => scmp/ucmp(A,
+      // B)
+      if (ICmpInst::isLT(LTPred) && ICmpInst::isGT(GTPred)) {
+        return replaceInstUsesWith(I, Builder.CreateIntrinsic(Ty, IID, {A, B}));
+      }
+
+      // Handle non-strict inequalities: sext(A <= B) + zext(A >= B) =>
+      // scmp/ucmp(A, B)
+      if (ICmpInst::isLE(LTPred) && ICmpInst::isGE(GTPred)) {
+        return replaceInstUsesWith(I, Builder.CreateIntrinsic(Ty, IID, {A, B}));
+      }
+    }
+  }
+
+  // Handle constant case: sext/zext(x > C1) + zext/sext(x < C2) where C2 = C1 +
+  // 2 This represents (x >= C1+1) - (x <= C1+1) => scmp/ucmp(x, C1+1)
+  Value *X;
+  ConstantInt *Const1, *Const2;
+  CmpPredicate Pred1, Pred2;
+  if (match(&I,
+            m_c_Add(
+                m_SExt(m_ICmp(Pred1, m_Value(X), m_ConstantInt(Const1))),
+                m_ZExt(m_ICmp(Pred2, m_Deferred(X), m_ConstantInt(Const2))))) &&
+      X->getType()->isIntOrIntVectorTy()) {
+
+    // Case 1: sext(x > C1) + zext(x < C2) where C2 = C1 + 2
+    if (ICmpInst::isGT(Pred1) && ICmpInst::isLT(Pred2) &&
+        Const2->getValue() == Const1->getValue() + 2) {
+      Intrinsic::ID IID =
+          ICmpInst::isSigned(Pred1) ? Intrinsic::scmp : Intrinsic::ucmp;
+      Constant *C1Plus1 =
+          ConstantInt::get(Const1->getType(), Const1->getValue() + 1);
       return replaceInstUsesWith(
-          I, Builder.CreateIntrinsic(
-                 Ty,
-                 ICmpInst::isSigned(LTPred) ? Intrinsic::scmp : Intrinsic::ucmp,
-                 {A, B}));
+          I, Builder.CreateIntrinsic(Ty, IID, {X, C1Plus1}));
+    }
+
+    // Case 2: sext(x < C1) + zext(x > C2) where C1 = C2 + 2
+    if (ICmpInst::isLT(Pred1) && ICmpInst::isGT(Pred2) &&
+        Const1->getValue() == Const2->getValue() + 2) {
+      Intrinsic::ID IID =
+          ICmpInst::isSigned(Pred1) ? Intrinsic::scmp : Intrinsic::ucmp;
+      Constant *C2Plus1 =
+          ConstantInt::get(Const2->getType(), Const2->getValue() + 1);
+      return replaceInstUsesWith(
+          I, Builder.CreateIntrinsic(Ty, IID, {X, C2Plus1}));
+    }
   }
 
   // A+B --> A|B iff A and B have no bits set in common.
