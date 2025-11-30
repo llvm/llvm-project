@@ -232,6 +232,37 @@ static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
+
+  auto operandETy = getElementTypeOrSelf(opType);
+  unsigned bitWidth = operandETy.getIntOrFloatBitWidth();
+  unsigned mantissaWidth =
+      llvm::cast<FloatType>(operandETy).getFPMantissaWidth() - 1;
+  unsigned exponentWidth = bitWidth - mantissaWidth - 1;
+
+  Type iTy = rewriter.getIntegerType(bitWidth);
+  if (auto shapedTy = dyn_cast<ShapedType>(opType))
+    iTy = shapedTy.clone(iTy);
+
+  Value cMantissaWidth = createIntConst(op->getLoc(), iTy, mantissaWidth, b);
+  Value cBias =
+      createIntConst(op->getLoc(), iTy, (1ull << (exponentWidth - 1)) - 1, b);
+  Value cExpMask =
+      createIntConst(op->getLoc(), iTy, (1ull << exponentWidth) - 1, b);
+
+  // Any floating-point value with an unbiased exponent ≥ `mantissaWidth`
+  // falls into one of these categories:
+  //   - a large finite value (|x| ≥ 2^mantissaWidth), where all representable
+  //     numbers are already integral, or
+  //   - a special value (NaN or ±Inf), which also satisfies this exponent
+  //     condition.
+  // For all such cases, `ceilf(x)` is defined to return `x` directly.
+  Value operandBitcast = arith::BitcastOp::create(b, iTy, operand);
+  Value operandExp = arith::AndIOp::create(
+      b, arith::ShRUIOp::create(b, operandBitcast, cMantissaWidth), cExpMask);
+  Value operandBiasedExp = arith::SubIOp::create(b, operandExp, cBias);
+  Value isSpecialValOrLargeVal = arith::CmpIOp::create(
+      b, arith::CmpIPredicate::sge, operandBiasedExp, cMantissaWidth);
+
   Value fpFixedConvert = createTruncatedFPValue(operand, b);
 
   // Creating constants for later use.
@@ -243,7 +274,8 @@ static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
   Value incrValue =
       arith::SelectOp::create(b, op->getLoc(), gtCheck, one, zero);
 
-  Value ret = arith::AddFOp::create(b, opType, fpFixedConvert, incrValue);
+  Value add = arith::AddFOp::create(b, opType, fpFixedConvert, incrValue);
+  Value ret = arith::SelectOp::create(b, isSpecialValOrLargeVal, operand, add);
   rewriter.replaceOp(op, ret);
   return success();
 }
