@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
+
 // <optional>
 
 // constexpr optional(const optional<T>& rhs);
@@ -21,24 +22,18 @@
 using std::optional;
 
 template <class T, class... InitArgs>
-void test(InitArgs&&... args) {
-  const optional<T> rhs(std::forward<InitArgs>(args)...);
-  bool rhs_engaged = static_cast<bool>(rhs);
-  optional<T> lhs  = rhs;
-  assert(static_cast<bool>(lhs) == rhs_engaged);
-  if (rhs_engaged)
-    assert(*lhs == *rhs);
+constexpr bool test(InitArgs&&... args) {
+  static_assert(std::is_trivially_copy_constructible_v<T> ==
+                std::is_trivially_copy_constructible_v<std::optional<T>>); // requirement
+  const optional<T> lhs(std::forward<InitArgs>(args)...);
+  optional<T> rhs(lhs);
+  assert(lhs.has_value() == rhs.has_value());
+  assert(lhs.has_value() ? *lhs == *rhs : true);
+
+  return true;
 }
 
-template <class T, class... InitArgs>
-constexpr bool constexpr_test(InitArgs&&... args) {
-  static_assert(std::is_trivially_copy_constructible_v<T>, ""); // requirement
-  const optional<T> rhs(std::forward<InitArgs>(args)...);
-  optional<T> lhs = rhs;
-  return (lhs.has_value() == rhs.has_value()) && (lhs.has_value() ? *lhs == *rhs : true);
-}
-
-void test_throwing_ctor() {
+TEST_CONSTEXPR_CXX26 bool test_throwing_ctor() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   struct Z {
     Z() : count(0) {}
@@ -57,6 +52,8 @@ void test_throwing_ctor() {
     assert(i == 6);
   }
 #endif
+
+  return true;
 }
 
 template <class T, class... InitArgs>
@@ -69,8 +66,26 @@ void test_ref(InitArgs&&... args) {
     assert(&(*lhs) == &(*rhs));
 }
 
+#if TEST_STD_VER >= 26
+struct X {
+  int copy_count = 0;
+
+  constexpr X() {}
+  constexpr X(const X&) { copy_count++; }
+};
+
+constexpr void test_ref() {
+  {
+    X x{};
+    std::optional<X&> o1(x);
+    std::optional<X&> o2(o1);
+    assert(o1.has_value() && o2.has_value());
+    assert(x.copy_count == 0);
+    assert(&*o1 == &*o2);
+  }
+}
+
 void test_reference_extension() {
-#if defined(_LIBCPP_VERSION) && 0 // FIXME these extensions are currently disabled.
   using T = TestTypes::TestType;
   T::reset();
   {
@@ -99,24 +114,60 @@ void test_reference_extension() {
   }
   assert(T::alive == 0);
   assert(T::destroyed == 1);
-  {
-    static_assert(!std::is_copy_constructible<std::optional<T&&>>::value, "");
-    static_assert(!std::is_copy_constructible<std::optional<T const&&>>::value, "");
-  }
-#endif
-}
 
-int main(int, char**) {
+#  if 0 // FIXME: optional<T&&> is not allowed.
+  {
+    static_assert(!std::is_copy_constructible<std::optional<T&&>>::value);
+    static_assert(!std::is_copy_constructible<std::optional<T const&&>>::value);
+  }
+#  endif
+}
+#endif
+
+constexpr bool test() {
   test<int>();
   test<int>(3);
-  static_assert(constexpr_test<int>(), "");
-  static_assert(constexpr_test<int>(3), "");
+  test<const int>(42);
+  test<TrivialTestTypes::TestType>();
+  test<TrivialTestTypes::TestType>(42);
+
+  // FIXME: Why is this in ctor copy.pass.cpp?
+  {
+    constexpr std::optional<int> o1{4};
+    constexpr std::optional<int> o2 = o1;
+    static_assert(*o2 == 4, "");
+  }
 
   {
-    const optional<const int> o(42);
-    optional<const int> o2(o);
-    assert(*o2 == 42);
+    // LWG3836 https://wg21.link/LWG3836
+    // std::optional<bool> conversion constructor optional(const optional<U>&)
+    // should take precedence over optional(U&&) with operator bool
+    {
+      std::optional<bool> o1(false);
+      std::optional<bool> o2(o1);
+      assert(!o2.value());
+    }
   }
+
+#if TEST_STD_VER >= 26
+  test_ref();
+
+  // TODO: Enable once P3068R6 is implemented
+#  if 0
+  test_throwing_ctor();
+#  endif
+#endif
+
+  return true;
+}
+
+void test_rt() {
+  { // FIXME: Shouldn't this be able to pass in a constexpr context since C++17?
+    using T = ConstexprTestTypes::TestType;
+    test<T>();
+    test<T>(42);
+  }
+
   {
     using T = TestTypes::TestType;
     T::reset();
@@ -126,7 +177,9 @@ int main(int, char**) {
     assert(lhs.has_value() == false);
     assert(T::alive == 0);
   }
+
   TestTypes::TestType::reset();
+
   {
     using T = TestTypes::TestType;
     T::reset();
@@ -139,36 +192,26 @@ int main(int, char**) {
     assert(T::copy_constructed == 1);
     assert(T::alive == 2);
   }
+
   TestTypes::TestType::reset();
-  {
-    using namespace ConstexprTestTypes;
-    test<TestType>();
-    test<TestType>(42);
-  }
-  {
-    using namespace TrivialTestTypes;
-    test<TestType>();
-    test<TestType>(42);
-  }
+
   {
     test_throwing_ctor();
   }
+
+#if TEST_STD_VER >= 26
   {
     test_reference_extension();
   }
-  {
-    constexpr std::optional<int> o1{4};
-    constexpr std::optional<int> o2 = o1;
-    static_assert(*o2 == 4, "");
-  }
+#endif
+}
 
-  // LWG3836 https://wg21.link/LWG3836
-  // std::optional<bool> conversion constructor optional(const optional<U>&)
-  // should take precedence over optional(U&&) with operator bool
+int main(int, char**) {
+  test();
+  static_assert(test());
+
   {
-    std::optional<bool> o1(false);
-    std::optional<bool> o2(o1);
-    assert(!o2.value());
+    test_rt();
   }
 
   return 0;

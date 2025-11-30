@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++17
+
 // <optional>
-// UNSUPPORTED: c++03, c++11, c++14
 
 // template<class T>
 //   optional(T) -> optional<T>;
@@ -17,47 +18,41 @@
 
 #include "test_macros.h"
 
-struct A {};
+struct A {
+  friend constexpr bool operator==(const A&, const A&) { return true; }
+};
 
-int main(int, char**) {
-  //  Test the explicit deduction guides
-  {
-    //  optional(T)
-    std::optional opt(5);
-    ASSERT_SAME_TYPE(decltype(opt), std::optional<int>);
-    assert(static_cast<bool>(opt));
-    assert(*opt == 5);
-  }
+template <typename T>
+constexpr void test_deduct(T arg) {
+  std::optional opt(arg);
 
-  {
-    //  optional(T)
-    std::optional opt(A{});
-    ASSERT_SAME_TYPE(decltype(opt), std::optional<A>);
-    assert(static_cast<bool>(opt));
-  }
+  ASSERT_SAME_TYPE(decltype(opt), std::optional<T>);
+  assert(static_cast<bool>(opt));
+  assert(*opt == arg);
+}
+
+constexpr bool test() {
+  //  optional(T)
+  test_deduct<int>(5);
+  test_deduct<A>(A{});
 
   {
     //  optional(const T&);
     const int& source = 5;
-    std::optional opt(source);
-    ASSERT_SAME_TYPE(decltype(opt), std::optional<int>);
-    assert(static_cast<bool>(opt));
-    assert(*opt == 5);
+    test_deduct<int>(source);
   }
 
   {
     //  optional(T*);
     const int* source = nullptr;
-    std::optional opt(source);
-    ASSERT_SAME_TYPE(decltype(opt), std::optional<const int*>);
-    assert(static_cast<bool>(opt));
-    assert(*opt == nullptr);
+    test_deduct<const int*>(source);
   }
 
   {
     //  optional(T[]);
     int source[] = {1, 2, 3};
     std::optional opt(source);
+
     ASSERT_SAME_TYPE(decltype(opt), std::optional<int*>);
     assert(static_cast<bool>(opt));
     assert((*opt)[0] == 1);
@@ -68,10 +63,18 @@ int main(int, char**) {
     //  optional(optional);
     std::optional<char> source('A');
     std::optional opt(source);
+
     ASSERT_SAME_TYPE(decltype(opt), std::optional<char>);
     assert(static_cast<bool>(opt) == static_cast<bool>(source));
     assert(*opt == *source);
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  static_assert(test());
 
   return 0;
 }
