@@ -411,6 +411,17 @@ func.func @concat_fold_cast(%arg0: tensor<?x1xf32>) -> tensor<?x?xf32> {
 
 // -----
 
+// CHECK-LABEL: @fold_cast_into_table
+func.func @fold_cast_into_table(%arg0: tensor<6x256xi8>, %arg1: tensor<256xi8>) -> tensor<?x256xi8> {
+  // CHECK:           %[[VAL_0:.*]] = tosa.table %arg0, %arg1 : (tensor<6x256xi8>, tensor<256xi8>) -> tensor<6x256xi8>
+  // CHECK:           tensor.cast %[[VAL_0]] : tensor<6x256xi8> to tensor<?x256xi8>
+  %0 = tensor.cast %arg0 : tensor<6x256xi8> to tensor<?x256xi8>
+  %1 = tosa.table %0, %arg1 : (tensor<?x256xi8>, tensor<256xi8>) -> tensor<?x256xi8>
+  return %1 : tensor<?x256xi8>
+}
+
+// -----
+
 // CHECK-LABEL: @conv2d_stride_2
 func.func @conv2d_stride_2(%arg0: tensor<4x11x11x2xf32>) -> tensor<4x6x6x3xf32> {
   // CHECK: tosa.conv2d
