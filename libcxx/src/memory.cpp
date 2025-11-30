@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
-#ifdef _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
+#if !defined(_LIBCPP_OBJECT_FORMAT_COFF) && !defined(_LIBCPP_OBJECT_FORMAT_XCOFF) &&                                   \
+    _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 5
 #  define _LIBCPP_SHARED_PTR_DEFINE_LEGACY_INLINE_FUNCTIONS
 #endif
 
