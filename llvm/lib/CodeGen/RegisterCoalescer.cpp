@@ -507,6 +507,15 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
       if (Src == Dst && SrcSub != DstSub)
         return false;
 
+      // The implicit-def of the super register is zero extended.
+      for (unsigned I = MI->getDesc().getNumOperands(),
+                    E = MI->getNumOperands();
+           I != E; ++I) {
+        const MachineOperand &MO = MI->getOperand(I);
+        if (MO.isReg() && MO.isDef() && MO.getReg() == Dst)
+          return false;
+      }
+
       NewRC = TRI.getCommonSuperRegClass(SrcRC, SrcSub, DstRC, DstSub, SrcIdx,
                                          DstIdx);
       if (!NewRC)
