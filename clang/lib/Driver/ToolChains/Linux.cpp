@@ -107,10 +107,12 @@ std::string Linux::getMultiarchTriple(const Driver &D,
     switch (TargetEnvironment) {
     default:
       return TargetTriple.str();
+    case llvm::Triple::SF:
     case llvm::Triple::GNUSF:
     case llvm::Triple::MuslSF:
       FPFlavor = "sf";
       break;
+    case llvm::Triple::F32:
     case llvm::Triple::GNUF32:
     case llvm::Triple::MuslF32:
       FPFlavor = "f32";
