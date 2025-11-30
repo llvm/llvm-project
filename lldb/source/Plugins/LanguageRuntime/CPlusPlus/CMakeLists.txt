@@ -11,4 +11,4 @@ add_lldb_library(lldbPluginCPPRuntime
 )
 
 add_subdirectory(ItaniumABI)
-#add_subdirectory(MicrosoftABI)
+add_subdirectory(MicrosoftABI)

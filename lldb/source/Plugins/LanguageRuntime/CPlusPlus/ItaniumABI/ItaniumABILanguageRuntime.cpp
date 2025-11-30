@@ -397,9 +397,9 @@ TypeAndOrName ItaniumABILanguageRuntime::FixUpDynamicType(
 LanguageRuntime *
 ItaniumABILanguageRuntime::CreateInstance(Process *process,
                                           lldb::LanguageType language) {
-  // FIXME: We have to check the process and make sure we actually know that
-  // this process supports
-  // the Itanium ABI.
+  if (ShouldUseMicrosoftABI(process))
+    return nullptr;
+
   if (language == eLanguageTypeC_plus_plus ||
       language == eLanguageTypeC_plus_plus_03 ||
       language == eLanguageTypeC_plus_plus_11 ||
