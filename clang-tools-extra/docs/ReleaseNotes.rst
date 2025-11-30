@@ -556,6 +556,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check to
   generate correct fix-its for forms without a space after the directive.
 
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check by correctly recognizes 
+  const member functions returning lvalues as side-effect-free, preventing 
+  missed transformations.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
