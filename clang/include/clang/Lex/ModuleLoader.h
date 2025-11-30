@@ -160,6 +160,11 @@ public:
   virtual bool lookupMissingImports(StringRef Name,
                                     SourceLocation TriggerLoc) = 0;
 
+  /// Load C++20 Header-Unit received from IPC it the
+  /// Header-Unit is not already loaded.
+  virtual Module *loadIPCReceivedHeaderUnit(StringRef FileName,
+                                            SourceLocation ImportLoc) = 0;
+
   bool HadFatalFailure = false;
 };
 
@@ -185,6 +190,11 @@ public:
   bool lookupMissingImports(StringRef Name,
                             SourceLocation TriggerLoc) override {
     return false;
+  }
+
+  Module *loadIPCReceivedHeaderUnit(StringRef FileName,
+                                    SourceLocation ImportLoc) override {
+    return nullptr;
   }
 };
 
