@@ -266,6 +266,10 @@ protected:
 
   bool SupportsMemoryTagging() override;
 
+  /// \returns true if the process doesn't need the client to disable
+  /// breakpoints before issuing a resume operation.
+  bool SupportsResumeWithoutDisablingBreakpoints() override;
+
   /// Broadcaster event bits definitions.
   enum {
     eBroadcastBitAsyncContinue = (1 << 0),
