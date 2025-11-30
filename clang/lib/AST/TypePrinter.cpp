@@ -1532,16 +1532,21 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
       OS << ' ';
   }
 
+  const IdentifierInfo *II = D->getIdentifier();
+  const bool PrintingCanonicalAnonName =
+      !II && Policy.CanonicalAnonymousEntities;
+
   if (!Policy.FullyQualifiedName && !T->isCanonicalUnqualified()) {
     T->getQualifier().print(OS, Policy);
   } else if (!Policy.SuppressScope) {
     // Compute the full nested-name-specifier for this type.
     // In C, this will always be empty except when the type
     // being printed is anonymous within other Record.
-    D->printNestedNameSpecifier(OS, Policy);
+    D->printNestedNameSpecifier(
+        OS, Policy, /*AllowFunctionContext=*/PrintingCanonicalAnonName);
   }
 
-  if (const IdentifierInfo *II = D->getIdentifier())
+  if (II)
     OS << II->getName();
   else if (TypedefNameDecl *Typedef = D->getTypedefNameForAnonDecl()) {
     assert(Typedef->getIdentifier() && "Typedef without identifier?");
@@ -1554,19 +1559,23 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
     if (isa<CXXRecordDecl>(D) && cast<CXXRecordDecl>(D)->isLambda()) {
       OS << "lambda";
       HasKindDecoration = true;
-    } else if ((isa<RecordDecl>(D) && cast<RecordDecl>(D)->isAnonymousStructOrUnion())) {
+    } else if ((isa<RecordDecl>(D) &&
+                cast<RecordDecl>(D)->isAnonymousStructOrUnion())) {
       OS << "anonymous";
     } else {
       OS << "unnamed";
     }
 
-    if (Policy.AnonymousTagLocations) {
-      // Suppress the redundant tag keyword if we just printed one.
-      // We don't have to worry about ElaboratedTypes here because you can't
-      // refer to an anonymous type with one.
-      if (!HasKindDecoration)
-        OS << " " << D->getKindName();
+    if (PrintingCanonicalAnonName)
+      OS << D->getASTContext().getManglingNumber(D);
 
+    // Suppress the redundant tag keyword if we just printed one.
+    // We don't have to worry about ElaboratedTypes here because you can't
+    // refer to an anonymous type with one.
+    if (!HasKindDecoration)
+      OS << " " << D->getKindName();
+
+    if (Policy.AnonymousTagLocations && !PrintingCanonicalAnonName) {
       PresumedLoc PLoc = D->getASTContext().getSourceManager().getPresumedLoc(
           D->getLocation());
       if (PLoc.isValid()) {

@@ -422,6 +422,7 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
   PP.UsePreferredNames = false;
   PP.AlwaysIncludeTypeForTemplateArgument = true;
   PP.UseEnumerators = false;
+  PP.CanonicalAnonymousEntities = true;
 
   // Apply -fdebug-prefix-map.
   PP.Callbacks = &PrintCB;
