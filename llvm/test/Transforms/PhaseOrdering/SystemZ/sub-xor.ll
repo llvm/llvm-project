@@ -53,8 +53,8 @@ define dso_local zeroext i32 @foo(ptr noundef %a) #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ADD_PTR_7]], align 4, !tbaa [[INT_TBAA3]]
 ; CHECK-NEXT:    [[ADD_7]] = add i32 [[TMP7]], [[ADD_6]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_7]] = add nuw nsw i64 [[INDVARS_IV]], 8
-; CHECK-NEXT:    [[EXITCOND_NOT_7:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_7]], 32
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT_7]], label %[[FOR_BODY4_1:.*]], label %[[FOR_BODY4]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    [[CMP2_NOT_7:%.*]] = icmp eq i64 [[INDVARS_IV]], 24
+; CHECK-NEXT:    br i1 [[CMP2_NOT_7]], label %[[FOR_BODY4_1:.*]], label %[[FOR_BODY4]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[FOR_BODY4_1]]:
 ; CHECK-NEXT:    [[INDVARS_IV_1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_1_7:%.*]], %[[FOR_BODY4_1]] ], [ 0, %[[FOR_BODY4]] ]
 ; CHECK-NEXT:    [[SUM_11_1:%.*]] = phi i32 [ [[ADD_1_7:%.*]], %[[FOR_BODY4_1]] ], [ [[ADD_7]], %[[FOR_BODY4]] ]
@@ -92,8 +92,8 @@ define dso_local zeroext i32 @foo(ptr noundef %a) #0 {
 ; CHECK-NEXT:    [[TMP23:%.*]] = shl i32 [[TMP22]], 1
 ; CHECK-NEXT:    [[ADD_1_7]] = add i32 [[TMP23]], [[SUM_11_1]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_1_7]] = add nuw nsw i64 [[INDVARS_IV_1]], 8
-; CHECK-NEXT:    [[EXITCOND_1_NOT_7:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_1_7]], 32
-; CHECK-NEXT:    br i1 [[EXITCOND_1_NOT_7]], label %[[FOR_BODY4_2:.*]], label %[[FOR_BODY4_1]], !llvm.loop [[LOOP7]]
+; CHECK-NEXT:    [[CMP2_1_NOT_7:%.*]] = icmp eq i64 [[INDVARS_IV_1]], 24
+; CHECK-NEXT:    br i1 [[CMP2_1_NOT_7]], label %[[FOR_BODY4_2:.*]], label %[[FOR_BODY4_1]], !llvm.loop [[LOOP7]]
 ; CHECK:       [[FOR_BODY4_2]]:
 ; CHECK-NEXT:    [[INDVARS_IV_2:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_2_7:%.*]], %[[FOR_BODY4_2]] ], [ 0, %[[FOR_BODY4_1]] ]
 ; CHECK-NEXT:    [[SUM_11_2:%.*]] = phi i32 [ [[ADD_2_7:%.*]], %[[FOR_BODY4_2]] ], [ [[ADD_1_7]], %[[FOR_BODY4_1]] ]
@@ -138,8 +138,8 @@ define dso_local zeroext i32 @foo(ptr noundef %a) #0 {
 ; CHECK-NEXT:    [[MUL_2_7:%.*]] = mul i32 [[TMP31]], 3
 ; CHECK-NEXT:    [[ADD_2_7]] = add i32 [[MUL_2_7]], [[ADD_2_6]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_2_7]] = add nuw nsw i64 [[INDVARS_IV_2]], 8
-; CHECK-NEXT:    [[EXITCOND_2_NOT_7:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_2_7]], 32
-; CHECK-NEXT:    br i1 [[EXITCOND_2_NOT_7]], label %[[FOR_INC5_2:.*]], label %[[FOR_BODY4_2]], !llvm.loop [[LOOP7]]
+; CHECK-NEXT:    [[CMP2_2_NOT_7:%.*]] = icmp eq i64 [[INDVARS_IV_2]], 24
+; CHECK-NEXT:    br i1 [[CMP2_2_NOT_7]], label %[[FOR_INC5_2:.*]], label %[[FOR_BODY4_2]], !llvm.loop [[LOOP7]]
 ; CHECK:       [[FOR_INC5_2]]:
 ; CHECK-NEXT:    ret i32 [[ADD_2_7]]
 ;
