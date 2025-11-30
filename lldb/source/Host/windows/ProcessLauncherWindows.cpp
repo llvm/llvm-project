@@ -21,42 +21,63 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static void CreateEnvironmentBuffer(const Environment &env,
-                                    std::vector<char> &buffer) {
-  // The buffer is a list of null-terminated UTF-16 strings, followed by an
-  // extra L'\0' (two bytes of 0).  An empty environment must have one
-  // empty string, followed by an extra L'\0'.
+/// Create a UTF-16 environment block to use with CreateProcessW.
+///
+/// The buffer is a sequence of null-terminated UTF-16 strings, followed by an
+/// extra L'\0' (two bytes of 0). An empty environment must have one
+/// empty string, followed by an extra L'\0'.
+///
+/// The keys are sorted to comply with the CreateProcess API calling convention.
+///
+/// Ensure that the resulting buffer is used in conjunction with
+/// CreateProcessW and be sure that dwCreationFlags includes
+/// CREATE_UNICODE_ENVIRONMENT.
+///
+/// \param env The Environment object to convert.
+/// \returns The sorted sequence of environment variables and their values,
+/// separated by null terminators. The vector is guaranteed to never be empty.
+static std::vector<wchar_t> CreateEnvironmentBufferW(const Environment &env) {
+  std::vector<std::wstring> env_entries;
   for (const auto &KV : env) {
-    std::wstring warg;
-    if (llvm::ConvertUTF8toWide(Environment::compose(KV), warg)) {
-      buffer.insert(
-          buffer.end(), reinterpret_cast<const char *>(warg.c_str()),
-          reinterpret_cast<const char *>(warg.c_str() + warg.size() + 1));
-    }
+    std::wstring wentry;
+    if (llvm::ConvertUTF8toWide(Environment::compose(KV), wentry))
+      env_entries.push_back(std::move(wentry));
   }
-  // One null wchar_t (to end the block) is two null bytes
-  buffer.push_back(0);
-  buffer.push_back(0);
-  // Insert extra two bytes, just in case the environment was empty.
-  buffer.push_back(0);
-  buffer.push_back(0);
+  std::sort(env_entries.begin(), env_entries.end(),
+            [](const std::wstring &a, const std::wstring &b) {
+              return _wcsicmp(a.c_str(), b.c_str()) < 0;
+            });
+
+  std::vector<wchar_t> buffer;
+  for (const auto &env_entry : env_entries) {
+    buffer.insert(buffer.end(), env_entry.begin(), env_entry.end());
+    buffer.push_back(L'\0');
+  }
+
+  if (buffer.empty())
+    buffer.push_back(L'\0'); // If there are no environment variables, we have
+                             // to ensure there are 4 zero bytes in the buffer.
+  buffer.push_back(L'\0');
+
+  return buffer;
 }
 
-static bool GetFlattenedWindowsCommandString(Args args, std::wstring &command) {
+/// Flattens an Args object into a Windows command-line wide string.
+///
+/// Returns an empty string if args is empty.
+///
+/// \param args The Args object to flatten.
+/// \returns A wide string containing the flattened command line.
+static llvm::ErrorOr<std::wstring>
+GetFlattenedWindowsCommandStringW(Args args) {
   if (args.empty())
-    return false;
+    return L"";
 
   std::vector<llvm::StringRef> args_ref;
   for (auto &entry : args.entries())
     args_ref.push_back(entry.ref());
 
-  llvm::ErrorOr<std::wstring> result =
-      llvm::sys::flattenWindowsCommandLine(args_ref);
-  if (result.getError())
-    return false;
-
-  command = *result;
-  return true;
+  return llvm::sys::flattenWindowsCommandLine(args_ref);
 }
 
 HostProcess
@@ -65,9 +86,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   error.Clear();
 
   std::string executable;
-  std::vector<char> environment;
-  STARTUPINFOEX startupinfoex = {};
-  STARTUPINFO &startupinfo = startupinfoex.StartupInfo;
+  STARTUPINFOEXW startupinfoex = {};
+  STARTUPINFOW &startupinfo = startupinfoex.StartupInfo;
   PROCESS_INFORMATION pi = {};
 
   HANDLE stdin_handle = GetStdioHandle(launch_info, STDIN_FILENO);
@@ -149,28 +169,32 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   if (launch_info.GetFlags().Test(eLaunchFlagDisableSTDIO))
     flags &= ~CREATE_NEW_CONSOLE;
 
-  LPVOID env_block = nullptr;
-  ::CreateEnvironmentBuffer(launch_info.GetEnvironment(), environment);
-  env_block = environment.data();
+  std::vector<wchar_t> environment =
+      CreateEnvironmentBufferW(launch_info.GetEnvironment());
 
-  executable = launch_info.GetExecutableFile().GetPath();
-  std::wstring wcommandLine;
-  GetFlattenedWindowsCommandString(launch_info.GetArguments(), wcommandLine);
-
-  std::wstring wexecutable, wworkingDirectory;
-  llvm::ConvertUTF8toWide(executable, wexecutable);
-  llvm::ConvertUTF8toWide(launch_info.GetWorkingDirectory().GetPath(),
-                          wworkingDirectory);
+  auto wcommandLineOrErr =
+      GetFlattenedWindowsCommandStringW(launch_info.GetArguments());
+  if (!wcommandLineOrErr) {
+    error = Status(wcommandLineOrErr.getError());
+    return HostProcess();
+  }
+  std::wstring wcommandLine = *wcommandLineOrErr;
   // If the command line is empty, it's best to pass a null pointer to tell
   // CreateProcessW to use the executable name as the command line.  If the
   // command line is not empty, its contents may be modified by CreateProcessW.
   WCHAR *pwcommandLine = wcommandLine.empty() ? nullptr : &wcommandLine[0];
 
+  std::wstring wexecutable, wworkingDirectory;
+  llvm::ConvertUTF8toWide(launch_info.GetExecutableFile().GetPath(),
+                          wexecutable);
+  llvm::ConvertUTF8toWide(launch_info.GetWorkingDirectory().GetPath(),
+                          wworkingDirectory);
+
   BOOL result = ::CreateProcessW(
       wexecutable.c_str(), pwcommandLine, NULL, NULL,
-      /*bInheritHandles=*/!inherited_handles.empty(), flags, env_block,
+      /*bInheritHandles=*/!inherited_handles.empty(), flags, environment.data(),
       wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
-      reinterpret_cast<STARTUPINFO *>(&startupinfoex), &pi);
+      reinterpret_cast<STARTUPINFOW *>(&startupinfoex), &pi);
 
   if (!result) {
     // Call GetLastError before we make any other system calls.
