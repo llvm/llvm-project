@@ -1870,8 +1870,24 @@ AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
       Loc.Size.getValue().getKnownMinValue() * 8 > TLI.getIntSize())
     return AliasResult::NoAlias;
 
-  if (isIdentifiedFunctionLocal(getUnderlyingObject(Loc.Ptr)))
+  const Value *Object = getUnderlyingObject(Loc.Ptr);
+  if (isIdentifiedFunctionLocal(Object))
     return AliasResult::NoAlias;
+
+  if (auto *GV = dyn_cast<GlobalVariable>(Object)) {
+    // Errno cannot alias internal/private globals.
+    if (GV->hasLocalLinkage())
+      return AliasResult::NoAlias;
+
+    // Neither can it alias external globals which are known not to represent
+    // errno.
+    if (GV->hasExternalLinkage() && !TLI.mayBeErrnoGlobal(GV))
+      return AliasResult::NoAlias;
+
+    // A non-thread-local global cannot alias a thread-local errno.
+    if (!GV->isThreadLocal() && TLI.isErrnoThreadLocal())
+      return AliasResult::NoAlias;
+  }
   return AliasResult::MayAlias;
 }
 

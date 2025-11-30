@@ -703,6 +703,16 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
   }
 }
 
+TEST_F(TargetLibraryInfoTest, IsErrnoThreadLocal) {
+  EXPECT_TRUE(TargetLibraryInfoImpl(Triple("x86_64-unknown-linux-gnu")).isErrnoThreadLocal());
+  EXPECT_TRUE(TargetLibraryInfoImpl(Triple("arm64-apple-macosx")).isErrnoThreadLocal());
+  EXPECT_TRUE(TargetLibraryInfoImpl(Triple("x86_64-pc-windows-msvc")).isErrnoThreadLocal());
+  EXPECT_TRUE(TargetLibraryInfoImpl(Triple("x86_64-unknown-freebsd")).isErrnoThreadLocal());
+
+  EXPECT_FALSE(TargetLibraryInfoImpl(Triple("arm-none-eabi")).isErrnoThreadLocal());
+  EXPECT_FALSE(TargetLibraryInfoImpl(Triple("aarch64-unknown-unknown")).isErrnoThreadLocal());
+}
+
 namespace {
 
 /// Creates TLI for AArch64 and uses it to get the LibFunc names for the given

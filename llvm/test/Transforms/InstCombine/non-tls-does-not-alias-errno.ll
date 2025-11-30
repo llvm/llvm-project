@@ -11,8 +11,7 @@ define i32 @does_not_alias_errno_global_known_tls(float %f) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store i32 42, ptr @errno, align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call float @sinf(float [[F]])
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr @errno, align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 42
 ;
 entry:
   store i32 42, ptr @errno, align 4

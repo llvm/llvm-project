@@ -158,8 +158,7 @@ define i32 @does_not_alias_errno_internal_global(float %f) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store i32 42, ptr @internal_g, align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call float @sinf(float [[F]])
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr @internal_g, align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 42
 ;
 entry:
   store i32 42, ptr @internal_g, align 4
@@ -178,8 +177,7 @@ define i32 @does_not_alias_errno_external_global_known_by_name(float %f) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store i32 42, ptr @external_g, align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call float @sinf(float [[F]])
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr @external_g, align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 42
 ;
 entry:
   store i32 42, ptr @external_g, align 4
