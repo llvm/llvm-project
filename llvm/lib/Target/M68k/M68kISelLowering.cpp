@@ -633,7 +633,6 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain = EmitTailCallLoadRetAddr(DAG, RetFI, Chain, IsTailCall, FPDiff, DL);
 
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
-  SmallVector<SDValue, 8> MemOpChains;
   SDValue StackPtr;
 
   // Walk the register/memloc assignments, inserting copies/loads.  In the case
@@ -689,13 +688,9 @@ SDValue M68kTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         StackPtr = DAG.getCopyFromReg(Chain, DL, RegInfo->getStackRegister(),
                                       getPointerTy(DAG.getDataLayout()));
       }
-      MemOpChains.push_back(
-          LowerMemOpCallTo(Chain, StackPtr, Arg, DL, DAG, VA, Flags));
+      Chain = LowerMemOpCallTo(Chain, StackPtr, Arg, DL, DAG, VA, Flags);
     }
   }
-
-  if (!MemOpChains.empty())
-    Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
 
   // FIXME Make sure PIC style GOT works as expected
   // The only time GOT is really needed is for Medium-PIC static data
