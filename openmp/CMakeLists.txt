@@ -6,6 +6,7 @@ set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 # Add path for custom modules
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
@@ -95,6 +96,25 @@ endif()
 # Check and set up common compiler flags.
 include(config-ix)
 include(HandleOpenMPOptions)
+include(LibompUtils)
+include(LibompHandleFlags)
+
+
+# Set libomp version
+set(LIBOMP_VERSION_MAJOR 5)
+set(LIBOMP_VERSION_MINOR 0)
+
+# Set the OpenMP Year and Month associated with version
+set(LIBOMP_OMP_YEAR_MONTH 201611)
+
+# Get the build number from kmp_version.cpp
+libomp_get_build_number("${CMAKE_CURRENT_SOURCE_DIR}/runtime" LIBOMP_VERSION_BUILD)
+math(EXPR LIBOMP_VERSION_BUILD_YEAR "${LIBOMP_VERSION_BUILD}/10000")
+math(EXPR LIBOMP_VERSION_BUILD_MONTH_DAY "${LIBOMP_VERSION_BUILD}%10000")
+
+# Currently don't record any timestamps
+set(LIBOMP_BUILD_DATE "No_Timestamp")
+
 
 # Check for flang
 set(OPENMP_TEST_Fortran_COMPILER_default "")
@@ -103,6 +123,9 @@ if (CMAKE_Fortran_COMPILER)
 endif ()
 set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
   "Fortran compiler to use for testing OpenMP runtime libraries.")
+
+set(LIBOMP_FORTRAN_MODULES FALSE CACHE BOOL
+  "Create Fortran module files? (requires fortran compiler)")
 
 # Set up testing infrastructure.
 include(OpenMPTesting)
@@ -139,6 +162,8 @@ if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx" OR
    "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx")
   add_subdirectory(device)
 else()
+  add_subdirectory(module)
+
   # Build host runtime library, after LIBOMPTARGET variables are set since they
   # are needed to enable time profiling support in the OpenMP runtime.
   add_subdirectory(runtime)
