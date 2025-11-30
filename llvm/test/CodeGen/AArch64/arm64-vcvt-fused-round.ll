@@ -13,8 +13,7 @@
 define <2 x i32> @fcvtas_2s(<2 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtas_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frinta v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzs v0.2s, v0.2s
+; CHECK-NEXT:    fcvtas v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x float> @llvm.round.v2f32(<2 x float> %A)
   %tmp2 = fptosi <2 x float> %tmp1 to <2 x i32>
@@ -24,8 +23,7 @@ define <2 x i32> @fcvtas_2s(<2 x float> %A) nounwind {
 define <4 x i32> @fcvtas_4s(<4 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtas_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frinta v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    fcvtas v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %tmp1 = call <4 x float> @llvm.round.v4f32(<4 x float> %A)
   %tmp2 = fptosi <4 x float> %tmp1 to <4 x i32>
@@ -35,8 +33,7 @@ define <4 x i32> @fcvtas_4s(<4 x float> %A) nounwind {
 define <2 x i64> @fcvtas_2d(<2 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtas_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frinta v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    fcvtas v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x double> @llvm.round.v2f64(<2 x double> %A)
   %tmp2 = fptosi <2 x double> %tmp1 to <2 x i64>
@@ -50,8 +47,7 @@ define <2 x i64> @fcvtas_2d(<2 x double> %A) nounwind {
 define <2 x i32> @fcvtau_2s(<2 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtau_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frinta v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-NEXT:    fcvtau v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x float> @llvm.round.v2f32(<2 x float> %A)
   %tmp2 = fptoui <2 x float> %tmp1 to <2 x i32>
@@ -61,8 +57,7 @@ define <2 x i32> @fcvtau_2s(<2 x float> %A) nounwind {
 define <4 x i32> @fcvtau_4s(<4 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtau_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frinta v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    fcvtau v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %tmp1 = call <4 x float> @llvm.round.v4f32(<4 x float> %A)
   %tmp2 = fptoui <4 x float> %tmp1 to <4 x i32>
@@ -72,8 +67,7 @@ define <4 x i32> @fcvtau_4s(<4 x float> %A) nounwind {
 define <2 x i64> @fcvtau_2d(<2 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtau_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frinta v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
+; CHECK-NEXT:    fcvtau v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x double> @llvm.round.v2f64(<2 x double> %A)
   %tmp2 = fptoui <2 x double> %tmp1 to <2 x i64>
@@ -87,8 +81,7 @@ define <2 x i64> @fcvtau_2d(<2 x double> %A) nounwind {
 define <2 x i32> @fcvtns_2s(<2 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtns_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzs v0.2s, v0.2s
+; CHECK-NEXT:    fcvtns v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x float> @llvm.roundeven.v2f32(<2 x float> %A)
   %tmp2 = fptosi <2 x float> %tmp1 to <2 x i32>
@@ -98,8 +91,7 @@ define <2 x i32> @fcvtns_2s(<2 x float> %A) nounwind {
 define <4 x i32> @fcvtns_4s(<4 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtns_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    fcvtns v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %tmp1 = call <4 x float> @llvm.roundeven.v4f32(<4 x float> %A)
   %tmp2 = fptosi <4 x float> %tmp1 to <4 x i32>
@@ -109,8 +101,7 @@ define <4 x i32> @fcvtns_4s(<4 x float> %A) nounwind {
 define <2 x i64> @fcvtns_2d(<2 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtns_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    fcvtns v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x double> @llvm.roundeven.v2f64(<2 x double> %A)
   %tmp2 = fptosi <2 x double> %tmp1 to <2 x i64>
@@ -124,8 +115,7 @@ define <2 x i64> @fcvtns_2d(<2 x double> %A) nounwind {
 define <2 x i32> @fcvtnu_2s(<2 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtnu_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-NEXT:    fcvtnu v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x float> @llvm.roundeven.v2f32(<2 x float> %A)
   %tmp2 = fptoui <2 x float> %tmp1 to <2 x i32>
@@ -135,8 +125,7 @@ define <2 x i32> @fcvtnu_2s(<2 x float> %A) nounwind {
 define <4 x i32> @fcvtnu_4s(<4 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtnu_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    fcvtnu v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %tmp1 = call <4 x float> @llvm.roundeven.v4f32(<4 x float> %A)
   %tmp2 = fptoui <4 x float> %tmp1 to <4 x i32>
@@ -146,8 +135,7 @@ define <4 x i32> @fcvtnu_4s(<4 x float> %A) nounwind {
 define <2 x i64> @fcvtnu_2d(<2 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtnu_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintn v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
+; CHECK-NEXT:    fcvtnu v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x double> @llvm.roundeven.v2f64(<2 x double> %A)
   %tmp2 = fptoui <2 x double> %tmp1 to <2 x i64>
@@ -161,8 +149,7 @@ define <2 x i64> @fcvtnu_2d(<2 x double> %A) nounwind {
 define <2 x i32> @fcvtms_2s(<2 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtms_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintm v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzs v0.2s, v0.2s
+; CHECK-NEXT:    fcvtms v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x float> @llvm.floor.v2f32(<2 x float> %A)
   %tmp2 = fptosi <2 x float> %tmp1 to <2 x i32>
@@ -172,8 +159,7 @@ define <2 x i32> @fcvtms_2s(<2 x float> %A) nounwind {
 define <4 x i32> @fcvtms_4s(<4 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtms_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintm v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    fcvtms v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %tmp1 = call <4 x float> @llvm.floor.v4f32(<4 x float> %A)
   %tmp2 = fptosi <4 x float> %tmp1 to <4 x i32>
@@ -183,8 +169,7 @@ define <4 x i32> @fcvtms_4s(<4 x float> %A) nounwind {
 define <2 x i64> @fcvtms_2d(<2 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtms_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintm v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    fcvtms v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x double> @llvm.floor.v2f64(<2 x double> %A)
   %tmp2 = fptosi <2 x double> %tmp1 to <2 x i64>
@@ -198,8 +183,7 @@ define <2 x i64> @fcvtms_2d(<2 x double> %A) nounwind {
 define <2 x i32> @fcvtmu_2s(<2 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtmu_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintm v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-NEXT:    fcvtmu v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x float> @llvm.floor.v2f32(<2 x float> %A)
   %tmp2 = fptoui <2 x float> %tmp1 to <2 x i32>
@@ -209,8 +193,7 @@ define <2 x i32> @fcvtmu_2s(<2 x float> %A) nounwind {
 define <4 x i32> @fcvtmu_4s(<4 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtmu_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintm v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    fcvtmu v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %tmp1 = call <4 x float> @llvm.floor.v4f32(<4 x float> %A)
   %tmp2 = fptoui <4 x float> %tmp1 to <4 x i32>
@@ -220,8 +203,7 @@ define <4 x i32> @fcvtmu_4s(<4 x float> %A) nounwind {
 define <2 x i64> @fcvtmu_2d(<2 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtmu_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintm v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
+; CHECK-NEXT:    fcvtmu v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x double> @llvm.floor.v2f64(<2 x double> %A)
   %tmp2 = fptoui <2 x double> %tmp1 to <2 x i64>
@@ -235,8 +217,7 @@ define <2 x i64> @fcvtmu_2d(<2 x double> %A) nounwind {
 define <2 x i32> @fcvtps_2s(<2 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtps_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintp v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzs v0.2s, v0.2s
+; CHECK-NEXT:    fcvtps v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x float> @llvm.ceil.v2f32(<2 x float> %A)
   %tmp2 = fptosi <2 x float> %tmp1 to <2 x i32>
@@ -246,8 +227,7 @@ define <2 x i32> @fcvtps_2s(<2 x float> %A) nounwind {
 define <4 x i32> @fcvtps_4s(<4 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtps_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintp v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    fcvtps v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %tmp1 = call <4 x float> @llvm.ceil.v4f32(<4 x float> %A)
   %tmp2 = fptosi <4 x float> %tmp1 to <4 x i32>
@@ -257,8 +237,7 @@ define <4 x i32> @fcvtps_4s(<4 x float> %A) nounwind {
 define <2 x i64> @fcvtps_2d(<2 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtps_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintp v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    fcvtps v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x double> @llvm.ceil.v2f64(<2 x double> %A)
   %tmp2 = fptosi <2 x double> %tmp1 to <2 x i64>
@@ -272,8 +251,7 @@ define <2 x i64> @fcvtps_2d(<2 x double> %A) nounwind {
 define <2 x i32> @fcvtpu_2s(<2 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtpu_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintp v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-NEXT:    fcvtpu v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x float> @llvm.ceil.v2f32(<2 x float> %A)
   %tmp2 = fptoui <2 x float> %tmp1 to <2 x i32>
@@ -283,8 +261,7 @@ define <2 x i32> @fcvtpu_2s(<2 x float> %A) nounwind {
 define <4 x i32> @fcvtpu_4s(<4 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtpu_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintp v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    fcvtpu v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %tmp1 = call <4 x float> @llvm.ceil.v4f32(<4 x float> %A)
   %tmp2 = fptoui <4 x float> %tmp1 to <4 x i32>
@@ -294,8 +271,7 @@ define <4 x i32> @fcvtpu_4s(<4 x float> %A) nounwind {
 define <2 x i64> @fcvtpu_2d(<2 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtpu_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintp v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
+; CHECK-NEXT:    fcvtpu v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x double> @llvm.ceil.v2f64(<2 x double> %A)
   %tmp2 = fptoui <2 x double> %tmp1 to <2 x i64>
@@ -309,7 +285,6 @@ define <2 x i64> @fcvtpu_2d(<2 x double> %A) nounwind {
 define <2 x i32> @fcvtzs_2s(<2 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtzs_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintz v0.2s, v0.2s
 ; CHECK-NEXT:    fcvtzs v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x float> @llvm.trunc.v2f32(<2 x float> %A)
@@ -320,7 +295,6 @@ define <2 x i32> @fcvtzs_2s(<2 x float> %A) nounwind {
 define <4 x i32> @fcvtzs_4s(<4 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtzs_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintz v0.4s, v0.4s
 ; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %tmp1 = call <4 x float> @llvm.trunc.v4f32(<4 x float> %A)
@@ -331,7 +305,6 @@ define <4 x i32> @fcvtzs_4s(<4 x float> %A) nounwind {
 define <2 x i64> @fcvtzs_2d(<2 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtzs_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintz v0.2d, v0.2d
 ; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x double> @llvm.trunc.v2f64(<2 x double> %A)
@@ -346,7 +319,6 @@ define <2 x i64> @fcvtzs_2d(<2 x double> %A) nounwind {
 define <2 x i32> @fcvtzu_2s(<2 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtzu_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintz v0.2s, v0.2s
 ; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x float> @llvm.trunc.v2f32(<2 x float> %A)
@@ -357,7 +329,6 @@ define <2 x i32> @fcvtzu_2s(<2 x float> %A) nounwind {
 define <4 x i32> @fcvtzu_4s(<4 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtzu_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintz v0.4s, v0.4s
 ; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %tmp1 = call <4 x float> @llvm.trunc.v4f32(<4 x float> %A)
@@ -368,7 +339,6 @@ define <4 x i32> @fcvtzu_4s(<4 x float> %A) nounwind {
 define <2 x i64> @fcvtzu_2d(<2 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtzu_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintz v0.2d, v0.2d
 ; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x double> @llvm.trunc.v2f64(<2 x double> %A)
@@ -393,8 +363,7 @@ define <4 x i16> @fcvtas_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtas_4h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frinta v0.4h, v0.4h
-; CHECK-FP16-NEXT:    fcvtzs v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtas v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <4 x half> @llvm.round.v4f16(<4 x half> %A)
   %tmp2 = fptosi <4 x half> %tmp1 to <4 x i16>
@@ -419,8 +388,7 @@ define <8 x i16> @fcvtas_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtas_8h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frinta v0.8h, v0.8h
-; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtas v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <8 x half> @llvm.round.v8f16(<8 x half> %A)
   %tmp2 = fptosi <8 x half> %tmp1 to <8 x i16>
@@ -440,8 +408,7 @@ define <4 x i16> @fcvtau_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtau_4h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frinta v0.4h, v0.4h
-; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtau v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <4 x half> @llvm.round.v4f16(<4 x half> %A)
   %tmp2 = fptoui <4 x half> %tmp1 to <4 x i16>
@@ -466,8 +433,7 @@ define <8 x i16> @fcvtau_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtau_8h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frinta v0.8h, v0.8h
-; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtau v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <8 x half> @llvm.round.v8f16(<8 x half> %A)
   %tmp2 = fptoui <8 x half> %tmp1 to <8 x i16>
@@ -487,8 +453,7 @@ define <4 x i16> @fcvtns_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtns_4h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintn v0.4h, v0.4h
-; CHECK-FP16-NEXT:    fcvtzs v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtns v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <4 x half> @llvm.roundeven.v4f16(<4 x half> %A)
   %tmp2 = fptosi <4 x half> %tmp1 to <4 x i16>
@@ -513,8 +478,7 @@ define <8 x i16> @fcvtns_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtns_8h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintn v0.8h, v0.8h
-; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtns v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <8 x half> @llvm.roundeven.v8f16(<8 x half> %A)
   %tmp2 = fptosi <8 x half> %tmp1 to <8 x i16>
@@ -534,8 +498,7 @@ define <4 x i16> @fcvtnu_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtnu_4h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintn v0.4h, v0.4h
-; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtnu v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <4 x half> @llvm.roundeven.v4f16(<4 x half> %A)
   %tmp2 = fptoui <4 x half> %tmp1 to <4 x i16>
@@ -560,8 +523,7 @@ define <8 x i16> @fcvtnu_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtnu_8h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintn v0.8h, v0.8h
-; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtnu v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <8 x half> @llvm.roundeven.v8f16(<8 x half> %A)
   %tmp2 = fptoui <8 x half> %tmp1 to <8 x i16>
@@ -581,8 +543,7 @@ define <4 x i16> @fcvtms_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtms_4h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintm v0.4h, v0.4h
-; CHECK-FP16-NEXT:    fcvtzs v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtms v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <4 x half> @llvm.floor.v4f16(<4 x half> %A)
   %tmp2 = fptosi <4 x half> %tmp1 to <4 x i16>
@@ -607,8 +568,7 @@ define <8 x i16> @fcvtms_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtms_8h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintm v0.8h, v0.8h
-; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtms v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <8 x half> @llvm.floor.v8f16(<8 x half> %A)
   %tmp2 = fptosi <8 x half> %tmp1 to <8 x i16>
@@ -628,8 +588,7 @@ define <4 x i16> @fcvtmu_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtmu_4h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintm v0.4h, v0.4h
-; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtmu v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <4 x half> @llvm.floor.v4f16(<4 x half> %A)
   %tmp2 = fptoui <4 x half> %tmp1 to <4 x i16>
@@ -654,8 +613,7 @@ define <8 x i16> @fcvtmu_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtmu_8h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintm v0.8h, v0.8h
-; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtmu v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <8 x half> @llvm.floor.v8f16(<8 x half> %A)
   %tmp2 = fptoui <8 x half> %tmp1 to <8 x i16>
@@ -675,8 +633,7 @@ define <4 x i16> @fcvtps_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtps_4h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintp v0.4h, v0.4h
-; CHECK-FP16-NEXT:    fcvtzs v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtps v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <4 x half> @llvm.ceil.v4f16(<4 x half> %A)
   %tmp2 = fptosi <4 x half> %tmp1 to <4 x i16>
@@ -701,8 +658,7 @@ define <8 x i16> @fcvtps_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtps_8h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintp v0.8h, v0.8h
-; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtps v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <8 x half> @llvm.ceil.v8f16(<8 x half> %A)
   %tmp2 = fptosi <8 x half> %tmp1 to <8 x i16>
@@ -722,8 +678,7 @@ define <4 x i16> @fcvtpu_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtpu_4h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintp v0.4h, v0.4h
-; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtpu v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <4 x half> @llvm.ceil.v4f16(<4 x half> %A)
   %tmp2 = fptoui <4 x half> %tmp1 to <4 x i16>
@@ -748,8 +703,7 @@ define <8 x i16> @fcvtpu_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtpu_8h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintp v0.8h, v0.8h
-; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtpu v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <8 x half> @llvm.ceil.v8f16(<8 x half> %A)
   %tmp2 = fptoui <8 x half> %tmp1 to <8 x i16>
@@ -769,7 +723,6 @@ define <4 x i16> @fcvtzs_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtzs_4h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintz v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    fcvtzs v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <4 x half> @llvm.trunc.v4f16(<4 x half> %A)
@@ -795,7 +748,6 @@ define <8 x i16> @fcvtzs_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtzs_8h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintz v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <8 x half> @llvm.trunc.v8f16(<8 x half> %A)
@@ -816,7 +768,6 @@ define <4 x i16> @fcvtzu_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtzu_4h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintz v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <4 x half> @llvm.trunc.v4f16(<4 x half> %A)
@@ -842,7 +793,6 @@ define <8 x i16> @fcvtzu_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtzu_8h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    frintz v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    ret
   %tmp1 = call <8 x half> @llvm.trunc.v8f16(<8 x half> %A)
