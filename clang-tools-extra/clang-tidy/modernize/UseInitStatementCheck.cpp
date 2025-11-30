@@ -97,8 +97,7 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static bool isLastInCompound(const Stmt *S, const CompoundStmt *P) {
-  const auto Statements = P->body();
-  return !Statements.empty() && *std::prev(Statements.end()) == S;
+  return !P->body_empty() && P->body_back() == S;
 }
 
 static std::string extractDeclStmtText(const DeclStmt *PrevDecl,
@@ -115,14 +114,13 @@ static std::string extractDeclStmtText(const DeclStmt *PrevDecl,
 }
 
 void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *If = Result.Nodes.getNodeAs<IfStmt>("ifStmt");
-  const auto *Switch = Result.Nodes.getNodeAs<SwitchStmt>("switchStmt");
+  const auto *If = Result.Nodes.getNodeAs<Stmt>("ifStmt");
+  const auto *Switch = Result.Nodes.getNodeAs<Stmt>("switchStmt");
   const auto *Dtor = Result.Nodes.getNodeAs<CXXDestructorDecl>("dtorDecl");
   const auto *PrevDecl = Result.Nodes.getNodeAs<DeclStmt>("prevDecl");
   const auto *Condition = Result.Nodes.getNodeAs<Expr>("condition");
   const auto *Compound = Result.Nodes.getNodeAs<CompoundStmt>("compound");
-  const auto *Statement =
-      If ? static_cast<const Stmt *>(If) : static_cast<const Stmt *>(Switch);
+  const auto *Statement = If ? If : Switch;
 
   if (!PrevDecl || !Condition || !Compound || !Statement)
     return;
