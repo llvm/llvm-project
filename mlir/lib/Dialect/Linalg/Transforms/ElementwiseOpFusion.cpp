@@ -493,6 +493,12 @@ public:
         });
       }
       rewriter.eraseOp(genericOp);
+      // If after fusion, the producer no longer has uses, erase it. Usually the
+      // greedy pattern driver takes care of this, however if the producer
+      // contains ops with memory effects it won't be considered trivially dead.
+      if (producer->use_empty())
+        rewriter.eraseOp(producer);
+
       return success();
     }
     return failure();
