@@ -40,6 +40,10 @@ constexpr void testType() {
 
 constexpr bool test() {
   testType<SomeInt>();
+#ifndef TEST_HAS_NO_INT128
+  testType<__int128_t>();
+  testType<__uint128_t>();
+#endif
   testType<long long>();
   testType<unsigned long long>();
   testType<signed long>();
