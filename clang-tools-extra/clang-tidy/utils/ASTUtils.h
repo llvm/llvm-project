@@ -45,6 +45,9 @@ bool areStatementsIdentical(const Stmt *FirstStmt, const Stmt *SecondStmt,
 const IndirectFieldDecl *
 findOutermostIndirectFieldDeclForField(const FieldDecl *FD);
 
+// Undoes any pointer, reference or array indirections to get to the base type
+const Type *unwrapPointee(const Type *T);
+
 } // namespace clang::tidy::utils
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_ASTUTILS_H
