@@ -536,7 +536,8 @@ int f262(void) {
   struct aa a262 = {{1, 2, 3, 4}, 0};
   a262.s2 = strdup("hello");
   char input[] = {'a', 'b', 'c', 'd'};
-  memcpy(a262.s1, input, -1); // expected-warning{{'memcpy' will always overflow; destination buffer has size 16, but size argument is 18446744073709551615}}
+  memcpy(a262.s1, input, -1); // expected-warning{{'memcpy' will always overflow; destination buffer has size 16, but size argument is 18446744073709551615}} \
+                                         // expected-warning{{'memcpy' will always over-read; source buffer has size 4, but size argument is 18446744073709551615}}
   clang_analyzer_eval(a262.s1[0] == 1); // expected-warning{{UNKNOWN}}\
   expected-warning{{Potential leak of memory pointed to by 'a262.s2'}}
   clang_analyzer_eval(a262.s1[1] == 1); // expected-warning{{UNKNOWN}}

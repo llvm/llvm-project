@@ -93,6 +93,9 @@ void memcpy1 (void) {
   char dst[10];
 
   memcpy(dst, src, 5); // expected-warning{{Memory copy function accesses out-of-bound array element}}
+#ifndef VARIANT
+  // expected-warning@-2{{memcpy' will always over-read; source buffer has size 4, but size argument is 5}}
+#endif
 }
 
 void memcpy2 (void) {
@@ -117,6 +120,9 @@ void memcpy4 (void) {
   char dst[10];
 
   memcpy(dst+2, src+2, 3); // expected-warning{{Memory copy function accesses out-of-bound array element}}
+#ifndef VARIANT
+  // expected-warning@-2{{memcpy' will always over-read; source buffer has size 2, but size argument is 3}}
+#endif
 }
 
 void memcpy5(void) {
@@ -219,6 +225,9 @@ void mempcpy1 (void) {
   char dst[10];
 
   mempcpy(dst, src, 5); // expected-warning{{Memory copy function accesses out-of-bound array element}}
+#ifndef VARIANT
+  // expected-warning@-2{{mempcpy' will always over-read; source buffer has size 4, but size argument is 5}}
+#endif
 }
 
 void mempcpy2 (void) {
@@ -243,6 +252,9 @@ void mempcpy4 (void) {
   char dst[10];
 
   mempcpy(dst+2, src+2, 3); // expected-warning{{Memory copy function accesses out-of-bound array element}}
+#ifndef VARIANT
+  // expected-warning@-2{{mempcpy' will always over-read; source buffer has size 2, but size argument is 3}}
+#endif
 }
 
 void mempcpy5(void) {
@@ -384,6 +396,9 @@ void memmove1 (void) {
   char dst[10];
 
   memmove(dst, src, 5); // expected-warning{{out-of-bound}}
+#ifndef VARIANT
+  // expected-warning@-2{{memmove' will always over-read; source buffer has size 4, but size argument is 5}}
+#endif
 }
 
 void memmove2 (void) {
