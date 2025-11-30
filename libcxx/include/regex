@@ -1666,7 +1666,7 @@ void __end_marked_subexpression<_CharT>::__exec(__state& __s) const {
 
 // __back_ref
 
-template <class _CharT>
+template <class _CharT, bool _UnmatchedAlwaysSucceed>
 class __back_ref : public __owns_one_state<_CharT> {
   typedef __owns_one_state<_CharT> base;
 
@@ -1680,8 +1680,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
-template <class _CharT>
-void __back_ref<_CharT>::__exec(__state& __s) const {
+template <class _CharT, bool _UnmatchedAlwaysSucceed>
+void __back_ref<_CharT, _UnmatchedAlwaysSucceed>::__exec(__state& __s) const {
   if (__mexp_ > __s.__sub_matches_.size())
     std::__throw_regex_error<regex_constants::error_backref>();
   sub_match<const _CharT*>& __sm = __s.__sub_matches_[__mexp_ - 1];
@@ -1695,6 +1695,9 @@ void __back_ref<_CharT>::__exec(__state& __s) const {
       __s.__do_   = __state::__reject;
       __s.__node_ = nullptr;
     }
+  } else if constexpr (_UnmatchedAlwaysSucceed) {
+    __s.__do_   = __state::__accept_but_not_consume;
+    __s.__node_ = this->first();;
   } else {
     __s.__do_   = __state::__reject;
     __s.__node_ = nullptr;
@@ -1703,7 +1706,7 @@ void __back_ref<_CharT>::__exec(__state& __s) const {
 
 // __back_ref_icase
 
-template <class _CharT, class _Traits>
+template <class _CharT, class _Traits, bool _UnmatchedAlwaysSucceed>
 class __back_ref_icase : public __owns_one_state<_CharT> {
   typedef __owns_one_state<_CharT> base;
 
@@ -1719,8 +1722,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
-template <class _CharT, class _Traits>
-void __back_ref_icase<_CharT, _Traits>::__exec(__state& __s) const {
+template <class _CharT, class _Traits, bool _UnmatchedAlwaysSucceed>
+void __back_ref_icase<_CharT, _Traits, _UnmatchedAlwaysSucceed>::__exec(__state& __s) const {
   sub_match<const _CharT*>& __sm = __s.__sub_matches_[__mexp_ - 1];
   if (__sm.matched) {
     ptrdiff_t __len = __sm.second - __sm.first;
@@ -1737,6 +1740,11 @@ void __back_ref_icase<_CharT, _Traits>::__exec(__state& __s) const {
       __s.__node_ = nullptr;
     }
   } else {
+    if constexpr (_UnmatchedAlwaysSucceed) {
+      __s.__do_   = __state::__accept_but_not_consume;
+      __s.__node_ = this->first();
+      return;
+    }
   __not_equal:
     __s.__do_   = __state::__reject;
     __s.__node_ = nullptr;
@@ -1745,7 +1753,7 @@ void __back_ref_icase<_CharT, _Traits>::__exec(__state& __s) const {
 
 // __back_ref_collate
 
-template <class _CharT, class _Traits>
+template <class _CharT, class _Traits, bool _UnmatchedAlwaysSucceed>
 class __back_ref_collate : public __owns_one_state<_CharT> {
   typedef __owns_one_state<_CharT> base;
 
@@ -1761,8 +1769,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
-template <class _CharT, class _Traits>
-void __back_ref_collate<_CharT, _Traits>::__exec(__state& __s) const {
+template <class _CharT, class _Traits, bool _UnmatchedAlwaysSucceed>
+void __back_ref_collate<_CharT, _Traits, _UnmatchedAlwaysSucceed>::__exec(__state& __s) const {
   sub_match<const _CharT*>& __sm = __s.__sub_matches_[__mexp_ - 1];
   if (__sm.matched) {
     ptrdiff_t __len = __sm.second - __sm.first;
@@ -1779,6 +1787,11 @@ void __back_ref_collate<_CharT, _Traits>::__exec(__state& __s) const {
       __s.__node_ = nullptr;
     }
   } else {
+    if constexpr (_UnmatchedAlwaysSucceed) {
+      __s.__do_   = __state::__accept_but_not_consume;
+      __s.__node_ = this->first();
+      return;
+    }
   __not_equal:
     __s.__do_   = __state::__reject;
     __s.__node_ = nullptr;
@@ -2563,6 +2576,7 @@ private:
                    bool __greedy       = true);
   __bracket_expression<_CharT, _Traits>* __start_matching_list(bool __negate);
   void __push_char(value_type __c);
+  template <bool _UnmatchedAlwaysSucceed = false>
   void __push_back_ref(int __i);
   void __push_alternation(__owns_one_state<_CharT>* __sa, __owns_one_state<_CharT>* __sb);
   void __push_begin_marked_subexpression();
@@ -3805,7 +3819,7 @@ basic_regex<_CharT, _Traits>::__parse_decimal_escape(_ForwardIterator __first, _
       }
       if (__v == 0 || __v > mark_count())
         std::__throw_regex_error<regex_constants::error_backref>();
-      __push_back_ref(__v);
+      __push_back_ref<true>(__v);
     }
   }
   return __first;
@@ -4147,13 +4161,14 @@ void basic_regex<_CharT, _Traits>::__push_word_boundary(bool __invert) {
 }
 
 template <class _CharT, class _Traits>
+template <bool _UnmatchedAlwaysSucceed>
 void basic_regex<_CharT, _Traits>::__push_back_ref(int __i) {
   if (flags() & icase)
-    __end_->first() = new __back_ref_icase<_CharT, _Traits>(__traits_, __i, __end_->first());
+    __end_->first() = new __back_ref_icase<_CharT, _Traits, _UnmatchedAlwaysSucceed>(__traits_, __i, __end_->first());
   else if (flags() & collate)
-    __end_->first() = new __back_ref_collate<_CharT, _Traits>(__traits_, __i, __end_->first());
+    __end_->first() = new __back_ref_collate<_CharT, _Traits, _UnmatchedAlwaysSucceed>(__traits_, __i, __end_->first());
   else
-    __end_->first() = new __back_ref<_CharT>(__i, __end_->first());
+    __end_->first() = new __back_ref<_CharT, _UnmatchedAlwaysSucceed>(__i, __end_->first());
   __end_ = static_cast<__owns_one_state<_CharT>*>(__end_->first());
 }
 
