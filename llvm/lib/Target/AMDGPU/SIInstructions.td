@@ -2677,6 +2677,14 @@ def : AMDGPUPat <
                $src1), sub1)
 >;
 
+def : GCNPat<(UniformBinFrag<rotr> i32:$src0, i32:$src1),
+  (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src0, sub0, $src0, sub1), (S_AND_B32 $src1, (i32 31))), sub0))
+>;
+
+def : GCNPat<(UniformBinFrag<rotr> i32:$src0, (i32 ShiftAmt32Imm:$src1)),
+  (i32 (EXTRACT_SUBREG (S_LSHR_B64 (REG_SEQUENCE SReg_64, $src0, sub0, $src0, sub1), $src1), sub0))
+>;
+
 let True16Predicate = NotHasTrue16BitInsts in {
 let SubtargetPredicate = isNotGFX9Plus in {
 def : ROTRPattern <V_ALIGNBIT_B32_e64>;
