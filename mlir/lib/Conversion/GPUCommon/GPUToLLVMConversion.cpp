@@ -709,6 +709,50 @@ isAsyncWithOneDependency(ConversionPatternRewriter &rewriter,
   return success();
 }
 
+static LogicalResult prepareHostRegisterUnregisterArguments(
+    Operation *op, Value value, Value adaptorValue,
+    const LLVMTypeConverter *typeConverter, ConversionPatternRewriter &rewriter,
+    SmallVectorImpl<Value> &arguments, SmallVectorImpl<Type> &elementTypes) {
+  Location loc = op->getLoc();
+  auto valueType = value.getType();
+
+  if (auto memRefType = dyn_cast<MemRefType>(valueType)) {
+    Type elementType = memRefType.getElementType();
+    elementTypes.push_back(elementType);
+    Type llvmIntPtrType = IntegerType::get(
+        rewriter.getContext(), typeConverter->getPointerBitwidth(0));
+    Value rank = rewriter.create<LLVM::ConstantOp>(
+        loc, llvmIntPtrType,
+        rewriter.getIntegerAttr(llvmIntPtrType, memRefType.getRank()));
+    Value descriptor = adaptorValue;
+    Value descriptorPtr;
+    bool useBarePtrCallConv = typeConverter->getOptions().useBarePtrCallConv;
+
+    if (useBarePtrCallConv) {
+      if (!LLVMTypeConverter::canConvertToBarePtr(memRefType)) {
+        return op->emitError(
+            "cannot lower memref with bare pointer calling convention");
+      }
+
+      if (isa<LLVM::LLVMPointerType>(descriptor.getType()))
+        descriptor = MemRefDescriptor::fromStaticShape(
+            rewriter, loc, *typeConverter, memRefType, descriptor);
+
+      descriptorPtr =
+          typeConverter->promoteOneMemRefDescriptor(loc, descriptor, rewriter);
+    } else {
+      descriptorPtr =
+          typeConverter->promoteOneMemRefDescriptor(loc, descriptor, rewriter);
+    }
+    arguments.push_back(rank);
+    arguments.push_back(descriptorPtr);
+  } else {
+    return rewriter.notifyMatchFailure(op, "expected memref operand");
+  }
+
+  return success();
+}
+
 LogicalResult ConvertHostRegisterOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::HostRegisterOp hostRegisterOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
@@ -716,14 +760,15 @@ LogicalResult ConvertHostRegisterOpToGpuRuntimeCallPattern::matchAndRewrite(
   if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)))
     return failure();
 
+  SmallVector<Value> arguments;
+  SmallVector<Type> elementTypes;
+  if (failed(prepareHostRegisterUnregisterArguments(
+          op, hostRegisterOp.getValue(), adaptor.getValue(), getTypeConverter(),
+          rewriter, arguments, elementTypes)))
+    return failure(); // Error already emitted or match failure notified
+
   Location loc = op->getLoc();
-
-  auto memRefType = hostRegisterOp.getValue().getType();
-  auto elementType = cast<UnrankedMemRefType>(memRefType).getElementType();
-  auto elementSize = getSizeInBytes(loc, elementType, rewriter);
-
-  auto arguments = getTypeConverter()->promoteOperands(
-      loc, op->getOperands(), adaptor.getOperands(), rewriter);
+  auto elementSize = getSizeInBytes(loc, elementTypes.front(), rewriter);
   arguments.push_back(elementSize);
   hostRegisterCallBuilder.create(loc, rewriter, arguments);
 
@@ -738,14 +783,15 @@ LogicalResult ConvertHostUnregisterOpToGpuRuntimeCallPattern::matchAndRewrite(
   if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)))
     return failure();
 
+  SmallVector<Value> arguments;
+  SmallVector<Type> elementTypes;
+  if (failed(prepareHostRegisterUnregisterArguments(
+          op, hostUnregisterOp.getValue(), adaptor.getValue(),
+          getTypeConverter(), rewriter, arguments, elementTypes)))
+    return failure(); // Error already emitted or match failure notified
+
   Location loc = op->getLoc();
-
-  auto memRefType = hostUnregisterOp.getValue().getType();
-  auto elementType = cast<UnrankedMemRefType>(memRefType).getElementType();
-  auto elementSize = getSizeInBytes(loc, elementType, rewriter);
-
-  auto arguments = getTypeConverter()->promoteOperands(
-      loc, op->getOperands(), adaptor.getOperands(), rewriter);
+  auto elementSize = getSizeInBytes(loc, elementTypes.front(), rewriter);
   arguments.push_back(elementSize);
   hostUnregisterCallBuilder.create(loc, rewriter, arguments);
 
