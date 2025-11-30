@@ -7,11 +7,8 @@ define void @rotl_v16i8(ptr %dst, ptr %src, i8 signext %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vreplgr2vr.b $vr1, $a2
-; CHECK-NEXT:    vrepli.b $vr2, 8
-; CHECK-NEXT:    vsub.b $vr2, $vr2, $vr1
-; CHECK-NEXT:    vsll.b $vr1, $vr0, $vr1
-; CHECK-NEXT:    vsrl.b $vr0, $vr0, $vr2
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vneg.b $vr1, $vr1
+; CHECK-NEXT:    vrotr.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %src
@@ -30,11 +27,7 @@ define void @rotr_v16i8(ptr %dst, ptr %src, i8 signext %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vreplgr2vr.b $vr1, $a2
-; CHECK-NEXT:    vrepli.b $vr2, 8
-; CHECK-NEXT:    vsub.b $vr2, $vr2, $vr1
-; CHECK-NEXT:    vsrl.b $vr1, $vr0, $vr1
-; CHECK-NEXT:    vsll.b $vr0, $vr0, $vr2
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vrotr.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %src
@@ -52,9 +45,7 @@ define void @rotr_v16i8_imm(ptr %dst, ptr %src) nounwind {
 ; CHECK-LABEL: rotr_v16i8_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vsrli.b $vr1, $vr0, 2
-; CHECK-NEXT:    vslli.b $vr0, $vr0, 6
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vrotri.b $vr0, $vr0, 2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i8>, ptr %src
@@ -70,11 +61,8 @@ define void @rotl_v8i16(ptr %dst, ptr %src, i16 signext %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vreplgr2vr.h $vr1, $a2
-; CHECK-NEXT:    vrepli.h $vr2, 16
-; CHECK-NEXT:    vsub.h $vr2, $vr2, $vr1
-; CHECK-NEXT:    vsll.h $vr1, $vr0, $vr1
-; CHECK-NEXT:    vsrl.h $vr0, $vr0, $vr2
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vneg.h $vr1, $vr1
+; CHECK-NEXT:    vrotr.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i16>, ptr %src
@@ -93,11 +81,7 @@ define void @rotr_v8i16(ptr %dst, ptr %src, i16 signext %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vreplgr2vr.h $vr1, $a2
-; CHECK-NEXT:    vrepli.h $vr2, 16
-; CHECK-NEXT:    vsub.h $vr2, $vr2, $vr1
-; CHECK-NEXT:    vsrl.h $vr1, $vr0, $vr1
-; CHECK-NEXT:    vsll.h $vr0, $vr0, $vr2
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vrotr.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i16>, ptr %src
@@ -115,9 +99,7 @@ define void @rotr_v8i16_imm(ptr %dst, ptr %src) nounwind {
 ; CHECK-LABEL: rotr_v8i16_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vsrli.h $vr1, $vr0, 2
-; CHECK-NEXT:    vslli.h $vr0, $vr0, 14
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vrotri.h $vr0, $vr0, 2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i16>, ptr %src
@@ -133,11 +115,8 @@ define void @rotl_v4i32(ptr %dst, ptr %src, i32 signext %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vreplgr2vr.w $vr1, $a2
-; CHECK-NEXT:    vrepli.w $vr2, 32
-; CHECK-NEXT:    vsub.w $vr2, $vr2, $vr1
-; CHECK-NEXT:    vsll.w $vr1, $vr0, $vr1
-; CHECK-NEXT:    vsrl.w $vr0, $vr0, $vr2
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vneg.w $vr1, $vr1
+; CHECK-NEXT:    vrotr.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i32>, ptr %src
@@ -156,11 +135,7 @@ define void @rotr_v4i32(ptr %dst, ptr %src, i32 signext %a0) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vreplgr2vr.w $vr1, $a2
-; CHECK-NEXT:    vrepli.w $vr2, 32
-; CHECK-NEXT:    vsub.w $vr2, $vr2, $vr1
-; CHECK-NEXT:    vsrl.w $vr1, $vr0, $vr1
-; CHECK-NEXT:    vsll.w $vr0, $vr0, $vr2
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vrotr.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i32>, ptr %src
@@ -178,9 +153,7 @@ define void @rotr_v4i32_imm(ptr %dst, ptr %src) nounwind {
 ; CHECK-LABEL: rotr_v4i32_imm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vsrli.w $vr1, $vr0, 2
-; CHECK-NEXT:    vslli.w $vr0, $vr0, 30
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vrotri.w $vr0, $vr0, 2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i32>, ptr %src
@@ -196,13 +169,9 @@ define void @rotl_v2i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA32-NEXT:    vreplvei.d $vr1, $vr1, 0
-; LA32-NEXT:    vrepli.d $vr2, 64
-; LA32-NEXT:    vsub.d $vr2, $vr2, $vr1
-; LA32-NEXT:    vsll.d $vr1, $vr0, $vr1
-; LA32-NEXT:    vsrl.d $vr0, $vr0, $vr2
-; LA32-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
+; LA32-NEXT:    vneg.d $vr1, $vr1
+; LA32-NEXT:    vrotr.d $vr0, $vr0, $vr1
 ; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
@@ -210,11 +179,8 @@ define void @rotl_v2i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vld $vr0, $a1, 0
 ; LA64-NEXT:    vreplgr2vr.d $vr1, $a2
-; LA64-NEXT:    vrepli.d $vr2, 64
-; LA64-NEXT:    vsub.d $vr2, $vr2, $vr1
-; LA64-NEXT:    vsll.d $vr1, $vr0, $vr1
-; LA64-NEXT:    vsrl.d $vr0, $vr0, $vr2
-; LA64-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA64-NEXT:    vneg.d $vr1, $vr1
+; LA64-NEXT:    vrotr.d $vr0, $vr0, $vr1
 ; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
   %v0 = load <2 x i64>, ptr %src
@@ -233,13 +199,8 @@ define void @rotr_v2i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a3, 1
-; LA32-NEXT:    vreplvei.d $vr1, $vr1, 0
-; LA32-NEXT:    vrepli.d $vr2, 64
-; LA32-NEXT:    vsub.d $vr2, $vr2, $vr1
-; LA32-NEXT:    vsrl.d $vr1, $vr0, $vr1
-; LA32-NEXT:    vsll.d $vr0, $vr0, $vr2
-; LA32-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 2
+; LA32-NEXT:    vrotr.d $vr0, $vr0, $vr1
 ; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
@@ -247,11 +208,7 @@ define void @rotr_v2i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vld $vr0, $a1, 0
 ; LA64-NEXT:    vreplgr2vr.d $vr1, $a2
-; LA64-NEXT:    vrepli.d $vr2, 64
-; LA64-NEXT:    vsub.d $vr2, $vr2, $vr1
-; LA64-NEXT:    vsrl.d $vr1, $vr0, $vr1
-; LA64-NEXT:    vsll.d $vr0, $vr0, $vr2
-; LA64-NEXT:    vor.v $vr0, $vr1, $vr0
+; LA64-NEXT:    vrotr.d $vr0, $vr0, $vr1
 ; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
   %v0 = load <2 x i64>, ptr %src
@@ -266,14 +223,20 @@ define void @rotr_v2i64(ptr %dst, ptr %src, i64 %a0) nounwind {
 }
 
 define void @rotr_v2i64_imm(ptr %dst, ptr %src) nounwind {
-; CHECK-LABEL: rotr_v2i64_imm:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vsrli.d $vr1, $vr0, 2
-; CHECK-NEXT:    vslli.d $vr0, $vr0, 62
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vst $vr0, $a0, 0
-; CHECK-NEXT:    ret
+; LA32-LABEL: rotr_v2i64_imm:
+; LA32:       # %bb.0:
+; LA32-NEXT:    vld $vr0, $a1, 0
+; LA32-NEXT:    vrepli.w $vr1, -62
+; LA32-NEXT:    vrotr.d $vr0, $vr0, $vr1
+; LA32-NEXT:    vst $vr0, $a0, 0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: rotr_v2i64_imm:
+; LA64:       # %bb.0:
+; LA64-NEXT:    vld $vr0, $a1, 0
+; LA64-NEXT:    vrotri.d $vr0, $vr0, 2
+; LA64-NEXT:    vst $vr0, $a0, 0
+; LA64-NEXT:    ret
   %v0 = load <2 x i64>, ptr %src
   %b = lshr <2 x i64> %v0, splat (i64 2)
   %c = shl <2 x i64> %v0, splat (i64 62)
