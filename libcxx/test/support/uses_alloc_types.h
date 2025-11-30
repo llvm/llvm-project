@@ -12,6 +12,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <memory>
+#include <utility>
 
 #include "test_macros.h"
 #include "test_workarounds.h"
@@ -334,5 +335,17 @@ public:
   template <class... Args, EnableIfB<sizeof...(Args) == Arity + 1> = false>
   NotUsesAllocator(Args&&... args) : Base(AllocLastTag{}, std::forward<Args>(args)...) {}
 };
+
+////////////////////////////////////////////////////////////////////////////////
+
+// P0591R4 changed the uses-allocator construction to pack `piecewise_construct` into a `tuple` by value first, so
+// `allocator_traits<A>::construct` receives `piecewise_construct_t&&`.
+// Until C++20, `piecewise_construct` is directly passed to `allocator_traits<A>::construct` and thus the latter
+// received `const piecewise_construct_t&`.
+#if TEST_STD_VER >= 20
+using piecewise_construct_ref_t = std::piecewise_construct_t&&;
+#else
+using piecewise_construct_ref_t = const std::piecewise_construct_t&;
+#endif
 
 #endif /* USES_ALLOC_TYPES_H */
