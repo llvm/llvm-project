@@ -273,3 +273,14 @@ void useRight() {
 }
 
 } // namespace gh121676
+
+void testComment() {
+  int box_depth = 10;
+  int max_depth = 5;
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // limit the depth to max
+  if (box_depth > max_depth) // limit the depth to max
+  {
+    box_depth = max_depth;
+  }
+}
