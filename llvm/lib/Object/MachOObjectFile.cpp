@@ -2690,6 +2690,8 @@ StringRef MachOObjectFile::getFileFormatName() const {
       return "Mach-O arm64 (ILP32)";
     case MachO::CPU_TYPE_POWERPC:
       return "Mach-O 32-bit ppc";
+    case MachO::CPU_TYPE_RISCV:
+      return "Mach-O 32-bit RISC-V";
     default:
       return "Mach-O 32-bit unknown";
     }
@@ -2723,6 +2725,8 @@ Triple::ArchType MachOObjectFile::getArch(uint32_t CPUType, uint32_t CPUSubType)
     return Triple::ppc;
   case MachO::CPU_TYPE_POWERPC64:
     return Triple::ppc64;
+  case MachO::CPU_TYPE_RISCV:
+    return Triple::riscv32;
   default:
     return Triple::UnknownArch;
   }
@@ -2857,6 +2861,15 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
       if (ArchFlag)
         *ArchFlag = "ppc64";
       return Triple("ppc64-apple-darwin");
+    default:
+      return Triple();
+    }
+  case MachO::CPU_TYPE_RISCV:
+    switch (CPUSubType & ~MachO::CPU_SUBTYPE_MASK) {
+    case MachO::CPU_SUBTYPE_RISCV_ALL:
+      if (ArchFlag)
+        *ArchFlag = "riscv32";
+      return Triple("riscv32-apple-macho");
     default:
       return Triple();
     }
