@@ -196,6 +196,9 @@ let AdditionalPredicates = [NotInMicroMips] in {
   }
 
   // Instantiation of conditional move patterns.
+  def : MipsPat<(add GPR64:$gp, (select GPR32:$cond, (MipsGPRel tglobaladdr:$T), (MipsGPRel tglobaladdr:$F))),
+              (MOVN_I_I64 (i64 (DADDiu GPR64:$gp, tglobaladdr:$T)), GPR32:$cond, (i64 (DADDiu GPR64:$gp, tglobaladdr:$F)))>, ISA_MIPS3, ABI_N64;
+
   defm : MovzPats0<GPR32, GPR32, MOVZ_I_I, SLT, SLTu, SLTi, SLTiu>,
          INSN_MIPS4_32_NOT_32R6_64R6;
   defm : MovzPats1<GPR32, GPR32, MOVZ_I_I, XOR>, INSN_MIPS4_32_NOT_32R6_64R6;
