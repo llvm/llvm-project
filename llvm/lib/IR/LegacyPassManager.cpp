@@ -1342,7 +1342,7 @@ void FPPassManager::cleanup() {
 char FPPassManager::ID = 0;
 /// Print passes managed by this manager
 void FPPassManager::dumpPassStructure(unsigned Offset) {
-  dbgs().indent(Offset*2) << "FunctionPass Manager\n";
+  dbgs().indent(Offset * 2) << getPassName() << '\n';
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
     FunctionPass *FP = getContainedPass(Index);
     FP->dumpPassStructure(Offset + 1);
