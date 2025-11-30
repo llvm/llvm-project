@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+//===- InProcessModuleCache.h - Implicit Module Cache -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_INPROCESSMODULECACHE_H
-#define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_INPROCESSMODULECACHE_H
+#ifndef LLVM_CLANG_DEPENDENCYSCANNING_INPROCESSMODULECACHE_H
+#define LLVM_CLANG_DEPENDENCYSCANNING_INPROCESSMODULECACHE_H
 
 #include "clang/Serialization/ModuleCache.h"
 #include "llvm/ADT/StringMap.h"
@@ -16,8 +16,8 @@
 #include <shared_mutex>
 
 namespace clang {
-namespace tooling {
 namespace dependencies {
+
 struct ModuleCacheEntry {
   std::shared_mutex CompilationMutex;
   std::atomic<std::time_t> Timestamp = 0;
@@ -30,8 +30,8 @@ struct ModuleCacheEntries {
 
 IntrusiveRefCntPtr<ModuleCache>
 makeInProcessModuleCache(ModuleCacheEntries &Entries);
+
 } // namespace dependencies
-} // namespace tooling
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_DEPENDENCYSCANNING_INPROCESSMODULECACHE_H

@@ -22,16 +22,51 @@ module root1 { header "root1.h"}
 // This is here to verify that the "root" directory doesn't clash with name of
 // the "root" module.
 
+//--- main.cpp
+
 //--- cdb.json.template
+[{
+  "file": "",
+  "directory": "DIR",
+  "command": "clang -fmodules -fmodules-cache-path=DIR/cache -I DIR -x c main.cpp"
+}]
+
+// RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-names=root,root1,direct > %t/result.json
+// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+
+//--- cdb.no-input.json.template
 [{
   "file": "",
   "directory": "DIR",
   "command": "clang -fmodules -fmodules-cache-path=DIR/cache -I DIR -x c"
 }]
 
-// RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-names=root,root1,direct > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+// RUN: sed "s|DIR|%/t|g" %t/cdb.no-input.json.template > %t/cdb.no-input.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.no-input.json -format experimental-full -module-names=root,root1,direct > %t/result.no-input.json
+// RUN: cat %t/result.no-input.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+
+//--- cdb.cc1.json.template
+[{
+  "file": "",
+  "directory": "DIR",
+  "command": "clang -cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -I DIR -x c main.cpp"
+}]
+
+// RUN: sed "s|DIR|%/t|g" %t/cdb.cc1.json.template > %t/cdb.cc1.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.cc1.json -format experimental-full -module-names=root,root1,direct > %t/result.cc1.json
+// RUN: cat %t/result.cc1.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+
+//--- cdb.cc1.no-input.json.template
+[{
+  "file": "",
+  "directory": "DIR",
+  "command": "clang -cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -I DIR -x c"
+}]
+
+// RUN: sed "s|DIR|%/t|g" %t/cdb.cc1.no-input.json.template > %t/cdb.cc1.no-input.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.cc1.no-input.json -format experimental-full -module-names=root,root1,direct > %t/result.cc1.no-input.json
+// RUN: cat %t/result.cc1.no-input.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [

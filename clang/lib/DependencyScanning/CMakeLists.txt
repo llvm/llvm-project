@@ -9,7 +9,7 @@ add_clang_library(clangDependencyScanning
   DependencyScanningFilesystem.cpp
   DependencyScanningService.cpp
   DependencyScanningWorker.cpp
-  DependencyScanningTool.cpp
+  DependencyScanningUtils.cpp
   DependencyScannerImpl.cpp
   InProcessModuleCache.cpp
   ModuleDepCollector.cpp
@@ -18,9 +18,7 @@ add_clang_library(clangDependencyScanning
   ClangDriverOptions
 
   LINK_LIBS
-  clangAST
   clangBasic
-  clangDriver
   clangFrontend
   clangLex
   clangSerialization
