@@ -137,10 +137,9 @@ public:
         EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
         EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
         ForceDwarfFrameSection(false), XRayFunctionIndex(true),
-        DebugStrictDwarf(false), Hotpatch(false),
-        PPCGenScalarMASSEntries(false), JMCInstrument(false),
-        EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
-        VerifyArgABICompliance(true),
+        DebugStrictDwarf(false), PPCGenScalarMASSEntries(false),
+        JMCInstrument(false), EnableCFIFixup(false), MisExpect(false),
+        XCOFFReadOnlyPointers(false), VerifyArgABICompliance(true),
         FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
 
   /// DisableFramePointerElim - This returns true if frame pointer elimination
@@ -339,9 +338,6 @@ public:
   /// When set to true, don't use DWARF extensions in later DWARF versions.
   /// By default, it is set to false.
   unsigned DebugStrictDwarf : 1;
-
-  /// Emit the hotpatch flag in CodeView debug.
-  unsigned Hotpatch : 1;
 
   /// Enables scalar MASS conversions
   unsigned PPCGenScalarMASSEntries : 1;
