@@ -1163,6 +1163,21 @@ public:
 
   virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
 
+  // New API for uniformity classification
+  // Targets should override this to provide target-specific uniformity analysis
+  // The default implementation returns Default (conservative behavior)
+  virtual InstructionUniformity getInstructionUniformity(const Value *V) const {
+    return InstructionUniformity::Default;
+  }
+
+  // Custom uniformity check for instructions marked as Custom
+  // Override this to provide complex uniformity rules based on which operands
+  // are uniform
+  virtual bool isUniform(const Instruction *I,
+                         const SmallBitVector &UniformArgs) const {
+    return false; // Conservative: assume divergent
+  }
+
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
   // In case of a vector it returns the min required size for one element.

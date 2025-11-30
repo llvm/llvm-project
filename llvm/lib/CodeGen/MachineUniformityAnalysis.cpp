@@ -8,6 +8,7 @@
 
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -53,13 +54,19 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
   for (const MachineBasicBlock &block : F) {
     for (const MachineInstr &instr : block) {
       auto uniformity = InstrInfo.getInstructionUniformity(instr);
-      if (uniformity == InstructionUniformity::AlwaysUniform) {
-        addUniformOverride(instr);
-        continue;
-      }
-
-      if (uniformity == InstructionUniformity::NeverUniform) {
+      switch (uniformity) {
+      case InstructionUniformity::NeverUniform:
         markDivergent(instr);
+        break;
+      case InstructionUniformity::AlwaysUniform:
+        addUniformOverride(instr);
+        break;
+      case InstructionUniformity::Custom:
+        // Instructions requiring custom uniformity analysis based on operands
+        addUniformInstruction(&instr, uniformity);
+        break;
+      case InstructionUniformity::Default:
+        break;
       }
     }
   }
@@ -146,6 +153,28 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::isDivergentUse(
   auto *DefInstr = Def->getParent();
   auto *UseInstr = U.getParent();
   return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
+}
+
+template <>
+bool GenericUniformityAnalysisImpl<MachineSSAContext>::isCustomUniform(
+    const MachineInstr &MI) const {
+  const auto &InstrInfo = *F.getSubtarget().getInstrInfo();
+
+  // Build bitvector of uniform register use operands
+  SmallVector<const MachineOperand *, 4> RegUseOps;
+  for (const MachineOperand &MO : MI.uses()) {
+    if (MO.isReg() && MO.getReg().isVirtual()) {
+      RegUseOps.push_back(&MO);
+    }
+  }
+
+  SmallBitVector UniformArgs(RegUseOps.size());
+  for (unsigned i = 0; i < RegUseOps.size(); ++i) {
+    UniformArgs[i] = !isDivergentUse(*RegUseOps[i]);
+  }
+
+  // Query target-specific uniformity callback
+  return InstrInfo.isUniform(MI, UniformArgs);
 }
 
 // This ensures explicit instantiation of

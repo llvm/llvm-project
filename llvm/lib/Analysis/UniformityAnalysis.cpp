@@ -8,6 +8,8 @@
 
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
+#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/Uniformity.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -31,13 +33,25 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::markDefsDivergent(
 
 template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
   for (auto &I : instructions(F)) {
-    if (TTI->isSourceOfDivergence(&I))
+    InstructionUniformity IU = TTI->getInstructionUniformity(&I);
+    switch (IU) {
+    case InstructionUniformity::NeverUniform:
       markDivergent(I);
-    else if (TTI->isAlwaysUniform(&I))
+      break;
+    case InstructionUniformity::AlwaysUniform:
       addUniformOverride(I);
+      break;
+    case InstructionUniformity::Custom:
+      // Instructions requiring custom uniformity analysis based on operands
+      addUniformInstruction(&I, IU);
+      break;
+    case InstructionUniformity::Default:
+      break;
+    }
   }
   for (auto &Arg : F.args()) {
-    if (TTI->isSourceOfDivergence(&Arg)) {
+    if (TTI->getInstructionUniformity(&Arg) ==
+        InstructionUniformity::NeverUniform) {
       markDivergent(&Arg);
     }
   }
@@ -99,6 +113,19 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::isDivergentUse(
     return isTemporalDivergent(*UseInstr->getParent(), *DefInstr);
   }
   return false;
+}
+
+template <>
+bool GenericUniformityAnalysisImpl<SSAContext>::isCustomUniform(
+    const Instruction &I) const {
+  // Build bitvector of uniform operands
+  SmallBitVector UniformArgs(I.getNumOperands());
+  for (unsigned OpIdx = 0; OpIdx < I.getNumOperands(); ++OpIdx) {
+    UniformArgs[OpIdx] = !isDivergentUse(I.getOperandUse(OpIdx));
+  }
+
+  // Query target-specific uniformity callback
+  return TTI->isUniform(&I, UniformArgs);
 }
 
 // This ensures explicit instantiation of

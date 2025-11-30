@@ -302,6 +302,11 @@ public:
   /// together under a single i32 value. Otherwise fall back to base
   /// implementation.
   unsigned getNumberOfParts(Type *Tp) const override;
+
+  InstructionUniformity getInstructionUniformity(const Value *V) const override;
+
+  bool isUniform(const Instruction *I,
+                 const SmallBitVector &UniformArgs) const override;
 };
 
 } // end namespace llvm
