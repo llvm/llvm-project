@@ -25,6 +25,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -62,7 +63,6 @@ static cl::opt<unsigned> MaxLoadsPerMemcmpOptSize(
 
 namespace {
 
-
 // This class provides helper functions to expand a memcmp library call into an
 // inline expansion.
 class MemCmpExpansion {
@@ -92,8 +92,7 @@ class MemCmpExpansion {
   // 1x1-byte load, which would be represented as [{16, 0}, {16, 16}, {1, 32}.
   struct LoadEntry {
     LoadEntry(unsigned LoadSize, uint64_t Offset)
-        : LoadSize(LoadSize), Offset(Offset) {
-    }
+        : LoadSize(LoadSize), Offset(Offset) {}
 
     // The size of the load for this block, in bytes.
     unsigned LoadSize;
@@ -488,6 +487,8 @@ void MemCmpExpansion::emitLoadCompareBlockMultipleLoads(unsigned BlockIndex,
   // continue to next LoadCmpBlock or EndBlock.
   BasicBlock *BB = Builder.GetInsertBlock();
   BranchInst *CmpBr = BranchInst::Create(ResBlock.BB, NextBB, Cmp);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CmpBr, DEBUG_TYPE,
+                                              CI->getFunction());
   Builder.Insert(CmpBr);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, ResBlock.BB},
@@ -552,6 +553,8 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned BlockIndex) {
   // to next LoadCmpBlock or EndBlock.
   BasicBlock *BB = Builder.GetInsertBlock();
   BranchInst *CmpBr = BranchInst::Create(NextBB, ResBlock.BB, Cmp);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CmpBr, DEBUG_TYPE,
+                                              CI->getFunction());
   Builder.Insert(CmpBr);
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, NextBB},
@@ -592,6 +595,8 @@ void MemCmpExpansion::emitMemCmpResultBlock() {
   Value *Res =
       Builder.CreateSelect(Cmp, Constant::getAllOnesValue(Builder.getInt32Ty()),
                            ConstantInt::get(Builder.getInt32Ty(), 1));
+  setExplicitlyUnknownBranchWeightsIfProfiled(*cast<Instruction>(Res),
+                                              DEBUG_TYPE, CI->getFunction());
 
   PhiRes->addIncoming(Res, ResBlock.BB);
   BranchInst *NewBr = BranchInst::Create(EndBlock);
@@ -724,7 +729,8 @@ Value *MemCmpExpansion::getMemCmpExpansion() {
     // calculate which source was larger. The calculation requires the
     // two loaded source values of each load compare block.
     // These will be saved in the phi nodes created by setupResultBlockPHINodes.
-    if (!IsUsedForZeroCmp) setupResultBlockPHINodes();
+    if (!IsUsedForZeroCmp)
+      setupResultBlockPHINodes();
 
     // Create the number of required load compare basic blocks.
     createLoadCmpBlocks();
@@ -853,15 +859,14 @@ static bool expandMemCmp(CallInst *CI, const TargetTransformInfo *TTI,
   const bool IsUsedForZeroCmp =
       IsBCmp || isOnlyUsedInZeroEqualityComparison(CI);
   bool OptForSize = llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI);
-  auto Options = TTI->enableMemCmpExpansion(OptForSize,
-                                            IsUsedForZeroCmp);
-  if (!Options) return false;
+  auto Options = TTI->enableMemCmpExpansion(OptForSize, IsUsedForZeroCmp);
+  if (!Options)
+    return false;
 
   if (MemCmpEqZeroNumLoadsPerBlock.getNumOccurrences())
     Options.NumLoadsPerBlock = MemCmpEqZeroNumLoadsPerBlock;
 
-  if (OptForSize &&
-      MaxLoadsPerMemcmpOptSize.getNumOccurrences())
+  if (OptForSize && MaxLoadsPerMemcmpOptSize.getNumOccurrences())
     Options.MaxNumLoads = MaxLoadsPerMemcmpOptSize;
 
   if (!OptForSize && MaxLoadsPerMemcmp.getNumOccurrences())
@@ -907,13 +912,14 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
-    if (skipFunction(F)) return false;
+    if (skipFunction(F))
+      return false;
 
     auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
     if (!TPC) {
       return false;
     }
-    const TargetLowering* TL =
+    const TargetLowering *TL =
         TPC->getTM<TargetMachine>().getSubtargetImpl(F)->getTargetLowering();
 
     const TargetLibraryInfo *TLI =
@@ -921,9 +927,9 @@ public:
     const TargetTransformInfo *TTI =
         &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-    auto *BFI = (PSI && PSI->hasProfileSummary()) ?
-           &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI() :
-           nullptr;
+    auto *BFI = (PSI && PSI->hasProfileSummary())
+                    ? &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI()
+                    : nullptr;
     DominatorTree *DT = nullptr;
     if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
       DT = &DTWP->getDomTree();
@@ -969,7 +975,7 @@ PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
   if (DT)
     DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
-  const DataLayout& DL = F.getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   bool MadeChanges = false;
   for (auto BBIt = F.begin(); BBIt != F.end();) {
     if (runOnBlock(*BBIt, TLI, TTI, TL, DL, PSI, BFI, DTU ? &*DTU : nullptr)) {
