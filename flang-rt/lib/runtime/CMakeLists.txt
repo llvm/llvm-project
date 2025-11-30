@@ -193,10 +193,11 @@ set_property(SOURCE
 # Import changes from flang_rt.quadmath
 set(f128_sources "")
 if (TARGET FortranFloat128MathILib)
-  get_target_property(f128_sources
+  get_target_property(_propval
     FortranFloat128MathILib INTERFACE_SOURCES
     )
-  if (f128_sources)
+  if (_propval)
+    set(f128_sources "${_propval}")
     # The interface may define special macros for Float128Math files,
     # so we need to propagate them.
     get_target_property(f128_defs
