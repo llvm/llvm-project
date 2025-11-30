@@ -246,6 +246,87 @@ define <4 x float> @vtrnQf(ptr %A, ptr %B) nounwind {
 	ret <4 x float> %tmp5
 }
 
+define <8 x i8> @vtrni8_8first(ptr %A, ptr %B) nounwind {
+; CHECKLE-LABEL: vtrni8_8first:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    ldr d0, [x0]
+; CHECKLE-NEXT:    ldr d1, [x1]
+; CHECKLE-NEXT:    trn1 v2.8b, v1.8b, v0.8b
+; CHECKLE-NEXT:    trn2 v0.8b, v0.8b, v1.8b
+; CHECKLE-NEXT:    add v0.8b, v2.8b, v0.8b
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: vtrni8_8first:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    ld1 { v0.8b }, [x0]
+; CHECKBE-NEXT:    ld1 { v1.8b }, [x1]
+; CHECKBE-NEXT:    trn1 v2.8b, v1.8b, v0.8b
+; CHECKBE-NEXT:    trn2 v0.8b, v0.8b, v1.8b
+; CHECKBE-NEXT:    add v0.8b, v2.8b, v0.8b
+; CHECKBE-NEXT:    rev64 v0.8b, v0.8b
+; CHECKBE-NEXT:    ret
+	%tmp1 = load <8 x i8>, ptr %A
+	%tmp2 = load <8 x i8>, ptr %B
+	%tmp3 = shufflevector <8 x i8> %tmp1, <8 x i8> %tmp2, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
+	%tmp4 = shufflevector <8 x i8> %tmp1, <8 x i8> %tmp2, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
+        %tmp5 = add <8 x i8> %tmp3, %tmp4
+	ret <8 x i8> %tmp5
+}
+
+define <8 x i8> @vtrni8_9first(ptr %A, ptr %B) nounwind {
+; CHECKLE-LABEL: vtrni8_9first:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    ldr d0, [x0]
+; CHECKLE-NEXT:    ldr d1, [x1]
+; CHECKLE-NEXT:    trn1 v2.8b, v1.8b, v0.8b
+; CHECKLE-NEXT:    trn2 v0.8b, v1.8b, v0.8b
+; CHECKLE-NEXT:    add v0.8b, v2.8b, v0.8b
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: vtrni8_9first:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    ld1 { v0.8b }, [x0]
+; CHECKBE-NEXT:    ld1 { v1.8b }, [x1]
+; CHECKBE-NEXT:    trn1 v2.8b, v1.8b, v0.8b
+; CHECKBE-NEXT:    trn2 v0.8b, v1.8b, v0.8b
+; CHECKBE-NEXT:    add v0.8b, v2.8b, v0.8b
+; CHECKBE-NEXT:    rev64 v0.8b, v0.8b
+; CHECKBE-NEXT:    ret
+	%tmp1 = load <8 x i8>, ptr %A
+	%tmp2 = load <8 x i8>, ptr %B
+	%tmp3 = shufflevector <8 x i8> %tmp1, <8 x i8> %tmp2, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
+	%tmp4 = shufflevector <8 x i8> %tmp1, <8 x i8> %tmp2, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
+        %tmp5 = add <8 x i8> %tmp3, %tmp4
+	ret <8 x i8> %tmp5
+}
+
+define <8 x i8> @vtrni8_89first_undef(ptr %A, ptr %B) nounwind {
+; CHECKLE-LABEL: vtrni8_89first_undef:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    ldr d0, [x0]
+; CHECKLE-NEXT:    ldr d1, [x1]
+; CHECKLE-NEXT:    trn1 v2.8b, v1.8b, v0.8b
+; CHECKLE-NEXT:    trn2 v0.8b, v1.8b, v0.8b
+; CHECKLE-NEXT:    add v0.8b, v2.8b, v0.8b
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: vtrni8_89first_undef:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    ld1 { v0.8b }, [x0]
+; CHECKBE-NEXT:    ld1 { v1.8b }, [x1]
+; CHECKBE-NEXT:    trn1 v2.8b, v1.8b, v0.8b
+; CHECKBE-NEXT:    trn2 v0.8b, v1.8b, v0.8b
+; CHECKBE-NEXT:    add v0.8b, v2.8b, v0.8b
+; CHECKBE-NEXT:    rev64 v0.8b, v0.8b
+; CHECKBE-NEXT:    ret
+	%tmp1 = load <8 x i8>, ptr %A
+	%tmp2 = load <8 x i8>, ptr %B
+	%tmp3 = shufflevector <8 x i8> %tmp1, <8 x i8> %tmp2, <8 x i32> <i32 8, i32 0, i32 poison, i32 2, i32 poison, i32 4, i32 14, i32 6>
+	%tmp4 = shufflevector <8 x i8> %tmp1, <8 x i8> %tmp2, <8 x i32> <i32 9, i32 1, i32 poison, i32 3, i32 13, i32 5, i32 15, i32 poison>
+        %tmp5 = add <8 x i8> %tmp3, %tmp4
+	ret <8 x i8> %tmp5
+}
+
 ; Undef shuffle indices (even at the start of the shuffle mask) should not prevent matching to VTRN:
 
 define <8 x i8> @vtrni8_undef(ptr %A, ptr %B) nounwind {
