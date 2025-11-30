@@ -422,6 +422,9 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIRDisableCIRVerifier : 1;
 
+  /// List of ClangIR semantic analysis passes to enable
+  std::vector<std::string> ClangIRAnalysisList;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
