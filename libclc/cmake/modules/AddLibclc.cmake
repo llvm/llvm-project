@@ -28,7 +28,7 @@ function(compile_to_bc)
   get_filename_component( FILE_EXT ${ARG_INPUT} EXT )
   if( NOT ${FILE_EXT} STREQUAL ".ll" )
     # Pass '-c' when not running the preprocessor
-    set( PP_OPTS -c )
+    set( PP_OPTS -c -include opencl-c-base.h )
   else()
     set( PP_OPTS -E;-P )
     set( TMP_SUFFIX .tmp )
