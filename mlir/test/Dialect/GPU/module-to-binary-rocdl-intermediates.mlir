@@ -1,5 +1,5 @@
 // REQUIRES: host-supports-amdgpu
-// RUN: rm -rf %t || true
+// RUN: rm -rf %t
 // RUN: mlir-opt %s --gpu-module-to-binary='format=isa dump-intermediates=%t' | FileCheck %s
 // RUN: test -f %t/kernel_module.initial.ll
 // RUN: test -f %t/kernel_module.linked.ll
