@@ -10,7 +10,7 @@
 
 @globalVar = common dso_local local_unnamed_addr global i32 0, align 4
 @externGlobalVar = external local_unnamed_addr global i32, align 4
-@indirectCall = common dso_local local_unnamed_addr global ptr null, align 8
+@indirectCall = common dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 
 ; This funcion needs to remain as noinline.
 ; The compiler needs to know this function is local but must be forced to call

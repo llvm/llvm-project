@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=inline -S | FileCheck %s
 
-@g0 = global ptr null, align 8
+@g0 = global ptr zeroinitializer, align 8
 declare ptr @foo0()
 
 define ptr @callee0_autoreleaseRV() {

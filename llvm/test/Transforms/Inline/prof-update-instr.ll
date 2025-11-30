@@ -2,8 +2,8 @@
 ; Checks if inliner updates VP metadata for indrect call instructions
 ; with instrumentation based profile.
 
-@func = global ptr null
-@func2 = global ptr null
+@func = global ptr zeroinitializer
+@func2 = global ptr zeroinitializer
 
 ; CHECK: define void @callee(i32 %n) !prof ![[ENTRY_COUNT:[0-9]*]]
 define void  @callee(i32 %n) !prof !15 {

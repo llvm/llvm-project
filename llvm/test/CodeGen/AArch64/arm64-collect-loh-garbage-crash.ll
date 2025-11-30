@@ -14,7 +14,7 @@
 
 declare i32 @_ZN5H4ISP11H4ISPDevice32ISP_SelectBestMIPIFrequencyIndexEjPj(ptr)
 
-@pH4ISPDevice = hidden global ptr null, align 8
+@pH4ISPDevice = hidden global ptr zeroinitializer, align 8
 
 ; CHECK-LABEL: _foo:
 ; CHECK: ret

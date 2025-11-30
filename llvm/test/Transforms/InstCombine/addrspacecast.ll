@@ -173,7 +173,7 @@ end:
 
 define void @constant_fold_null() #0 {
 ; CHECK-LABEL: @constant_fold_null(
-; CHECK-NEXT:    store i32 7, ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4)), align 4
+; CHECK-NEXT:    store i32 7, ptr addrspace(4) null, align 4
 ; CHECK-NEXT:    ret void
 ;
   %cast = addrspacecast ptr addrspace(3) null to ptr addrspace(4)
@@ -191,7 +191,7 @@ define ptr addrspace(4) @constant_fold_undef() #0 {
 
 define <4 x ptr addrspace(4)> @constant_fold_null_vector() #0 {
 ; CHECK-LABEL: @constant_fold_null_vector(
-; CHECK-NEXT:    ret <4 x ptr addrspace(4)> <ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4))>
+; CHECK-NEXT:    ret <4 x ptr addrspace(4)> zeroinitializer
 ;
   %cast = addrspacecast <4 x ptr addrspace(3)> zeroinitializer to <4 x ptr addrspace(4)>
   ret <4 x ptr addrspace(4)> %cast

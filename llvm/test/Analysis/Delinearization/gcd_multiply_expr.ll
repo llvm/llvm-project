@@ -20,7 +20,7 @@
 
 @g = common global i32 0, align 4
 @h = common global i32 0, align 4
-@f = common global ptr null, align 4
+@f = common global ptr zeroinitializer, align 4
 @a = common global i32 0, align 4
 @b = common global i32 0, align 4
 @c = common global i32 0, align 4

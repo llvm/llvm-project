@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %struct.A = type { i8 }
 %struct.B = type { i8 }
-@foo = common global ptr null, align 8
+@foo = common global ptr zeroinitializer, align 8
 
 define i32 @func1(ptr %x, ...) {
 entry:

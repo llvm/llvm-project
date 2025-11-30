@@ -32,7 +32,7 @@
 ; HIP-NEXT: @llvm.compiler.used = appending global [1 x ptr] [ptr @__dummy.llvm_offload_entries], section "llvm.metadata"
 ; HIP-NEXT: @.fatbin_image = internal constant {{.*}}, section ".hip_fatbin"
 ; HIP-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1212764230, i32 1, ptr @.fatbin_image, ptr null }, section ".hipFatBinSegment", align 8
-; HIP-NEXT: @.hip.binary_handle = internal global ptr null
+; HIP-NEXT: @.hip.binary_handle = internal global ptr zeroinitializer
 ; HIP-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.hip.fatbin_reg, ptr null }]
 
 ;      HIP: define internal void @.hip.fatbin_reg() section ".text.startup" {
@@ -60,7 +60,7 @@
 ; CUDA-NEXT: @llvm.compiler.used = appending global [1 x ptr] [ptr @__dummy.llvm_offload_entries], section "llvm.metadata"
 ; CUDA-NEXT: @.fatbin_image = internal constant {{.*}}, section ".nv_fatbin"
 ; CUDA-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1180844977, i32 1, ptr @.fatbin_image, ptr null }, section ".nvFatBinSegment", align 8
-; CUDA-NEXT: @.cuda.binary_handle = internal global ptr null
+; CUDA-NEXT: @.cuda.binary_handle = internal global ptr zeroinitializer
 ; CUDA-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.cuda.fatbin_reg, ptr null }]
 
 ;      CUDA: define internal void @.cuda.fatbin_reg() section ".text.startup" {

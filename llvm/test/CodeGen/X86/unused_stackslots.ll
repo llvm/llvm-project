@@ -6,10 +6,10 @@ target triple = "x86_64-unknown-linux-gnu"
 %struct.ImageParameters = type { i32, i32, [0 x [16 x i16]] }
 %struct.InputParameters = type { i32, i32 }
 
-@c = common global ptr null, align 8
-@a = common global ptr null, align 8
+@c = common global ptr zeroinitializer, align 8
+@a = common global ptr zeroinitializer, align 8
 @d = common global [6 x i32] zeroinitializer, align 16
-@b = common global ptr null, align 8
+@b = common global ptr zeroinitializer, align 8
 @e = common global [4 x i32] zeroinitializer, align 16
 
 ; It is not easy to check there is no unused holes in stack allocated for spills,

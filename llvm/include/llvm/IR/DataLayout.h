@@ -84,6 +84,11 @@ public:
     /// for additional metadata (e.g. AMDGPU buffer fat pointers with bounds
     /// and other flags or CHERI capabilities that contain bounds+permissions).
     uint32_t IndexBitWidth;
+    /// The value of the nullptr in this address space. It can be three values:
+    /// all-zeros, all-ones, or std::nullopt. Since we don't have a way to
+    /// represent an arbitrary bit pattern, we use std::nullopt to represent the
+    /// case where the nullptr value is neither 0 nor -1.
+    std::optional<APInt> NullPtrValue;
     /// Pointers in this address space don't have a well-defined bitwise
     /// representation (e.g. they may be relocated by a copying garbage
     /// collector and thus have different addresses at different times).
@@ -162,8 +167,8 @@ private:
   /// Sets or updates the specification for pointer in the given address space.
   void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
                       Align PrefAlign, uint32_t IndexBitWidth,
-                      bool HasUnstableRepr, bool HasExternalState,
-                      StringRef AddrSpaceName);
+                      std::optional<APInt> NullPtrValue, bool HasUnstableRepr,
+                      bool HasExternalState, StringRef AddrSpaceName);
 
   /// Internal helper to get alignment for integer of given bitwidth.
   LLVM_ABI Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
@@ -708,6 +713,11 @@ public:
   ///
   /// This includes an explicitly requested alignment (if the global has one).
   LLVM_ABI Align getPreferredAlign(const GlobalVariable *GV) const;
+
+  /// Returns the value of the nullptr in the given address space.
+  LLVM_ABI std::optional<APInt> getNullPtrValue(unsigned AddrSpace) const {
+    return getPointerSpec(AddrSpace).NullPtrValue;
+  }
 };
 
 inline DataLayout *unwrap(LLVMTargetDataRef P) {

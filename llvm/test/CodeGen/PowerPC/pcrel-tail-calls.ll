@@ -13,7 +13,7 @@
 ; most calls.
 
 @Func = external local_unnamed_addr global ptr, align 8
-@FuncLocal = common dso_local local_unnamed_addr global ptr null, align 8
+@FuncLocal = common dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 
 ; No calls in this function but we assign the function pointers.
 define dso_local void @AssignFuncPtr() local_unnamed_addr {

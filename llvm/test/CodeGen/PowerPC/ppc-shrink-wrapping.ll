@@ -681,8 +681,8 @@ end:
 @lock = common global i32 0, align 4
 @htindex = common global i32 0, align 4
 @stride = common global i32 0, align 4
-@ht = common global ptr null, align 8
-@he = common global ptr null, align 8
+@ht = common global ptr zeroinitializer, align 8
+@he = common global ptr zeroinitializer, align 8
 
 ; Test for a bug that was caused when save point was equal to restore point.
 ; Function Attrs: nounwind

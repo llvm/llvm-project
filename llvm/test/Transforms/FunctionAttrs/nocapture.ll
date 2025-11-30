@@ -2,7 +2,7 @@
 ; RUN: opt -passes=function-attrs -S < %s | FileCheck --check-prefixes=COMMON,FNATTRS %s
 ; RUN: opt -passes=attributor-light -S < %s | FileCheck --check-prefixes=COMMON,ATTRIBUTOR %s
 
-@g = global ptr null		; <ptr> [#uses=1]
+@g = global ptr zeroinitializer		; <ptr> [#uses=1]
 
 define ptr @c1(ptr %q) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -742,7 +742,7 @@ entry:
   ret void
 }
 
-@g2 = global ptr null
+@g2 = global ptr zeroinitializer
 define void @captureLaunder(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: readwrite, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define void @captureLaunder
@@ -786,7 +786,7 @@ entry:
   ret void
 }
 
-@g3 = global ptr null
+@g3 = global ptr zeroinitializer
 define void @captureStrip(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define void @captureStrip

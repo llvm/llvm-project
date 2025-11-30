@@ -21,7 +21,8 @@ define amdgpu_kernel void @widget(ptr addrspace(1) %arg, i1 %arg1, ptr addrspace
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %bb19
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    ds_write_b32 v1, v1
+; CHECK-NEXT:    v_mov_b32_e32 v2, -1
+; CHECK-NEXT:    ds_write_b32 v2, v1
 ; CHECK-NEXT:  .LBB0_2: ; %bb20
 ; CHECK-NEXT:    s_mov_b32 s0, exec_lo
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

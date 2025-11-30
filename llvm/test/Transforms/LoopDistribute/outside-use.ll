@@ -12,11 +12,11 @@
 ;     sum += C[i];
 ;   }
 
-@B = common global ptr null, align 8
-@A = common global ptr null, align 8
-@C = common global ptr null, align 8
-@D = common global ptr null, align 8
-@E = common global ptr null, align 8
+@B = common global ptr zeroinitializer, align 8
+@A = common global ptr zeroinitializer, align 8
+@C = common global ptr zeroinitializer, align 8
+@D = common global ptr zeroinitializer, align 8
+@E = common global ptr zeroinitializer, align 8
 @SUM = common global i32 0, align 8
 
 define void @f() {

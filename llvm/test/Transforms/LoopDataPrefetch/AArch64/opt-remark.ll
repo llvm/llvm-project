@@ -24,7 +24,7 @@ target triple = "arm64-apple-ios5.0.0"
 
 %struct.MyStruct = type { i32, [2044 x i8] }
 
-@my_struct = common global ptr null, align 8
+@my_struct = common global ptr zeroinitializer, align 8
 
 define i32 @f(ptr nocapture readnone %p, i32 %N) !dbg !6 {
 entry:

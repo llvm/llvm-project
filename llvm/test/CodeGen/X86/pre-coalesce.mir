@@ -5,10 +5,10 @@
   source_filename = "<stdin>"
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
-  
-  @b = common local_unnamed_addr global ptr null, align 8
+
+  @b = common local_unnamed_addr global ptr zeroinitializer, align 8
   @a = common local_unnamed_addr global i32 0, align 4
-  
+
   define i32 @foo() local_unnamed_addr {
   entry:
     %t0 = load ptr, ptr @b, align 8
@@ -16,10 +16,10 @@
     %cmp4 = icmp eq i8 %t1, 0
     %t2 = load i32, ptr @a, align 4
     br i1 %cmp4, label %while.end, label %while.body.preheader
-  
+
   while.body.preheader:                             ; preds = %entry
     br label %while.body
-  
+
   while.body:                                       ; preds = %while.body, %while.body.preheader
     %t3 = phi i32 [ %add3, %while.body ], [ %t2, %while.body.preheader ]
     %t4 = phi i8 [ %t5, %while.body ], [ %t1, %while.body.preheader ]
@@ -30,7 +30,7 @@
     %t5 = load i8, ptr %t0, align 1
     %cmp = icmp eq i8 %t5, 0
     br i1 %cmp, label %while.end, label %while.body
-  
+
   while.end:                                        ; preds = %while.body, %entry
     %.lcssa = phi i32 [ %t2, %entry ], [ %add3, %while.body ]
     ret i32 %.lcssa
@@ -52,7 +52,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: gr64 }
   - { id: 1, class: gr8 }
   - { id: 2, class: gr32 }
@@ -67,7 +67,7 @@ registers:
   - { id: 11, class: gr32 }
   - { id: 12, class: gr8 }
   - { id: 13, class: gr32 }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -88,11 +88,11 @@ body:             |
     TEST8rr %12, %12, implicit-def $eflags
     %11 = MOV32rm $rip, 1, $noreg, @a, $noreg :: (dereferenceable load (s32) from @a)
     JCC_1 %bb.1, 5, implicit killed $eflags
-  
+
   bb.4:
     %10 = COPY %11
     JMP_1 %bb.3
-  
+
   bb.1.while.body.preheader:
 
   bb.2.while.body:
@@ -107,7 +107,7 @@ body:             |
     %11 = COPY %10
     JCC_1 %bb.2, 5, implicit killed $eflags
     JMP_1 %bb.3
-  
+
   bb.3.while.end:
     $eax = COPY %10
     RET 0, killed $eax

@@ -18,7 +18,7 @@
 ;;
         %FileType = type { i32, [256 x i8], i32, i32, i32, i32 }
 @OutputFiles = external global [16 x %FileType]         ; <ptr> [#uses=1]
-@Output = internal global ptr null               ; <ptr> [#uses=1]
+@Output = internal global ptr zeroinitializer               ; <ptr> [#uses=1]
 
 define internal i32 @OpenOutput(ptr %filename.1) {
 entry:

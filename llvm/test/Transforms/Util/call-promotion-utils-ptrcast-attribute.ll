@@ -3,7 +3,7 @@
 ; Test that CallPromotionUtils will promote calls which require pointer cast
 ; safely, i.e. drop incompatible attributes.
 
-@foo = common global ptr null, align 8
+@foo = common global ptr zeroinitializer, align 8
 
 ; casting to i64 and pointer attribute at callsite dropped.
 define i64 @func2(i64 %a) {

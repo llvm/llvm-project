@@ -6,7 +6,7 @@
 ; CHECK: Ltmp1:                                  ## Block address taken
 
 @a = common global i32 0, align 4
-@p = common global ptr null, align 8
+@p = common global ptr zeroinitializer, align 8
 
 define void @foo() noreturn nounwind uwtable ssp {
 entry:

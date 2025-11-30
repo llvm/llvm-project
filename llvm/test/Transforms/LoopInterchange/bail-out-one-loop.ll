@@ -5,9 +5,9 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 
 @N = dso_local global i32 0, align 4
-@a = dso_local global ptr null, align 8
-@b = dso_local global ptr null, align 8
-@c = dso_local global ptr null, align 8
+@a = dso_local global ptr zeroinitializer, align 8
+@b = dso_local global ptr zeroinitializer, align 8
+@c = dso_local global ptr zeroinitializer, align 8
 
 ; Loop interchange should not run delinearization
 ; for one loop case and should bail out early.

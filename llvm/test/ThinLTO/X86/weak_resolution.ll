@@ -58,9 +58,9 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; MOD1-INT: @linkonceodrvarInSingleModule = internal global
 ; MOD1-INT: @weakodrvarInSingleModule = internal global
 ; MOD1-INT: @weakvarInSingleModule = internal global
-@linkonceodrvarInSingleModule = linkonce_odr dso_local global ptr null, align 8
-@weakodrvarInSingleModule = weak_odr dso_local global ptr null, align 8
-@weakvarInSingleModule = weak dso_local global ptr null, align 8
+@linkonceodrvarInSingleModule = linkonce_odr dso_local global ptr zeroinitializer, align 8
+@weakodrvarInSingleModule = weak_odr dso_local global ptr zeroinitializer, align 8
+@weakvarInSingleModule = weak dso_local global ptr zeroinitializer, align 8
 
 ;; Function with an alias are resolved to weak_odr in prevailing module, but
 ;; not optimized in non-prevailing module (illegal to have an

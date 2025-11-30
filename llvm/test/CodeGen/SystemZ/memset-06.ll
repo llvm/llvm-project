@@ -3,7 +3,7 @@
 ; Test that the EXRL target instruction is emitted successfully (before text
 ; section is closed).
 
-@a = dso_local global ptr null, align 8, !dbg !0
+@a = dso_local global ptr zeroinitializer, align 8, !dbg !0
 @j = dso_local global i32 0, align 4, !dbg !5
 
 define void @fun() !dbg !14 {

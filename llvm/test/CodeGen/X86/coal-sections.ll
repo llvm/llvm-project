@@ -13,7 +13,7 @@
 
 @a = weak_odr constant [4 x i32] [i32 1, i32 2, i32 3, i32 4], align 16
 @b = weak global i32 5, align 4
-@g = common global ptr null, align 8
+@g = common global ptr zeroinitializer, align 8
 
 ; Function Attrs: nounwind ssp uwtable
 define weak ptr @foo() {

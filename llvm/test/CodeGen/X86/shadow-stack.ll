@@ -25,7 +25,7 @@
 ;; }
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-@buf = common local_unnamed_addr global ptr null, align 8
+@buf = common local_unnamed_addr global ptr zeroinitializer, align 8
 
 ; Functions that use LongJmp should fix the Shadow Stack using previosuly saved
 ; ShadowStackPointer in the input buffer.

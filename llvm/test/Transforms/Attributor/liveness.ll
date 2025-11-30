@@ -27,13 +27,13 @@ declare i32 @bar() nosync readnone
 ; TUNIT: @dead_with_blockaddress_users.l = constant [2 x ptr] [ptr inttoptr (i32 1 to ptr), ptr inttoptr (i32 1 to ptr)]
 ; TUNIT: @a1 = common global i8 0, align 8
 ; TUNIT: @a2 = common global i8 0, align 16
-; TUNIT: @e = global ptr null
+; TUNIT: @e = global ptr zeroinitializer
 ; TUNIT: @p = global i8 0
 ;.
 ; CGSCC: @dead_with_blockaddress_users.l = constant [2 x ptr] [ptr blockaddress(@dead_with_blockaddress_users, %lab0), ptr blockaddress(@dead_with_blockaddress_users, %end)]
 ; CGSCC: @a1 = common global i8 0, align 8
 ; CGSCC: @a2 = common global i8 0, align 16
-; CGSCC: @e = global ptr null
+; CGSCC: @e = global ptr zeroinitializer
 ; CGSCC: @p = global i8 0
 ;.
 define internal i32 @dead_internal_func(i32 %0) {
@@ -2500,7 +2500,7 @@ indirectgoto:                                     ; preds = %lab0, %entry
 
 %struct.a = type { ptr }
 
-@e = global ptr null
+@e = global ptr zeroinitializer
 
 define i32 @main() {
 ; CHECK-LABEL: define {{[^@]+}}@main() {

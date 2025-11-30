@@ -5,7 +5,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @.str = internal unnamed_addr constant { [17 x i8], [47 x i8] } { [17 x i8] c"0123456789ABCDEF\00", [47 x i8] zeroinitializer }, align 32
 @b = common local_unnamed_addr global i32 0, align 4
-@a = common local_unnamed_addr global ptr null, align 8
+@a = common local_unnamed_addr global ptr zeroinitializer, align 8
 @__sancov_gen_cov = private global [9 x i32] zeroinitializer
 
 ; Function Attrs: nounwind sanitize_address

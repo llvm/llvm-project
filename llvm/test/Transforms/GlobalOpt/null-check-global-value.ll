@@ -2,7 +2,7 @@
 
 %sometype = type { ptr }
 
-@map = internal unnamed_addr global ptr null, align 8
+@map = internal unnamed_addr global ptr zeroinitializer, align 8
 
 define void @Init() {
 ; CHECK-LABEL: @Init(

@@ -25634,10 +25634,13 @@ private:
                                               : Mask) dbgs()
                                          << I << " ";
                  dbgs() << "> of " << VectorizedValue << ". (HorRdx)\n");
-      if (NeedShuffle)
+      if (NeedShuffle) {
+        assert(!VectorizedValue->getType()->isPointerTy() &&
+               "don't expect a pointer type");
         VectorizedValue = Builder.CreateShuffleVector(
-            VectorizedValue,
-            ConstantVector::getNullValue(VectorizedValue->getType()), Mask);
+            VectorizedValue, Constant::getNullValue(VectorizedValue->getType()),
+            Mask);
+      }
       return VectorizedValue;
     }
     case RecurKind::FAdd: {

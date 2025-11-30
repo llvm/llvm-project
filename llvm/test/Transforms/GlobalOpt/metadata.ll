@@ -3,7 +3,7 @@
 ; PR6112 - When globalopt does RAUW(@G, %G), the metadata reference should drop
 ; to null.  Function local metadata that references @G from a different function
 ; to that containing %G should likewise drop to null.
-@G = internal global ptr null
+@G = internal global ptr zeroinitializer
 
 define i32 @main(i32 %argc, ptr %argv) norecurse {
 ; CHECK-LABEL: @main(

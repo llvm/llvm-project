@@ -1353,7 +1353,7 @@ TEST(InstructionsTest, ShuffleMaskIsReplicationMask) {
       for (int OpVF : seq_inclusive(VF, 2 * VF + 1)) {
         LLVMContext Ctx;
         Type *OpVFTy = FixedVectorType::get(IntegerType::getInt1Ty(Ctx), OpVF);
-        Value *Op = ConstantVector::getNullValue(OpVFTy);
+        Value *Op = Constant::getNullValue(OpVFTy);
         ShuffleVectorInst *SVI = new ShuffleVectorInst(Op, Op, ReplicatedMask);
         EXPECT_EQ(SVI->isReplicationMask(GuessedReplicationFactor, GuessedVF),
                   OpVF == VF);

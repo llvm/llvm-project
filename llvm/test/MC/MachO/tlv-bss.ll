@@ -24,7 +24,7 @@
 ;         return Tls<long>::val;
 ; }
 
-@_ZN3TlsIlE3valE = weak_odr thread_local global ptr null, align 8
+@_ZN3TlsIlE3valE = weak_odr thread_local global ptr zeroinitializer, align 8
 
 ; Function Attrs: nounwind ssp uwtable
 define ptr @_Z1fi(i32 %x) #0 {

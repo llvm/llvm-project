@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=cortex-m3 | FileCheck %s
 
-@foo = common global ptr null, align 4
+@foo = common global ptr zeroinitializer, align 4
 
 ; Make sure in the presence of a tail call, r9 doesn't get used to hold
 ; the destination address. It's callee-saved in AAPCS.

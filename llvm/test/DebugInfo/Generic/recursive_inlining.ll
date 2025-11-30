@@ -86,7 +86,7 @@ source_filename = "test/DebugInfo/Generic/recursive_inlining.ll"
 
 %struct.C = type { i32 }
 
-@x = global ptr null, align 8, !dbg !0
+@x = global ptr zeroinitializer, align 8, !dbg !0
 
 ; Function Attrs: nounwind
 define void @_Z3fn6v() #0 !dbg !20 {

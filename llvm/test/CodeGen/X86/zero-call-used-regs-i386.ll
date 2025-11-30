@@ -10,7 +10,7 @@
 @mas_data_end_type = dso_local local_unnamed_addr global i32 0, align 4
 @ma_meta_end_mn_0_0_0_0_0_0 = dso_local local_unnamed_addr global i8 0, align 1
 @mt_pivots_0 = dso_local local_unnamed_addr global i8 0, align 1
-@mas_data_end___trans_tmp_2 = dso_local local_unnamed_addr global ptr null, align 4
+@mas_data_end___trans_tmp_2 = dso_local local_unnamed_addr global ptr zeroinitializer, align 4
 @mt_slots_0 = dso_local local_unnamed_addr global i8 0, align 1
 
 define dso_local zeroext i1 @test1(ptr nocapture noundef readonly %0) local_unnamed_addr "zero-call-used-regs"="used-gpr" nounwind {

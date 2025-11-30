@@ -4,7 +4,7 @@
 
 %struct.interrupt_frame = type { i32, i32, i32, i32, i32 }
 
-@sink_address = global ptr null
+@sink_address = global ptr zeroinitializer
 @sink_i32 = global i32 0
 
 

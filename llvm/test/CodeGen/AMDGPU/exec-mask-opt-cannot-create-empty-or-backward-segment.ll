@@ -29,7 +29,8 @@ define amdgpu_kernel void @cannot_create_empty_or_backwards_segment(i1 %arg, i1 
 ; CHECK-NEXT:    s_and_b64 s[4:5], exec, s[4:5]
 ; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[10:11]
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, -1
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_1: ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[18:19], 0
@@ -96,8 +97,8 @@ define amdgpu_kernel void @cannot_create_empty_or_backwards_segment(i1 %arg, i1 
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_15
 ; CHECK-NEXT:  ; %bb.14: ; %bb15
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    buffer_store_dword v0, off, s[24:27], 0 offset:4
-; CHECK-NEXT:    buffer_store_dword v0, off, s[24:27], 0
+; CHECK-NEXT:    buffer_store_dword v1, v0, s[24:27], 0 offen
+; CHECK-NEXT:    buffer_store_dword v1, off, s[24:27], 0 offset:3
 ; CHECK-NEXT:  .LBB0_15: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[20:21], 0

@@ -12,9 +12,9 @@ define void @bar(<8 x i16> %arg, ptr %p) nounwind {
   ret void
 }
 
-@zptr8 = common global ptr null, align 8
-@zptr16 = common global ptr null, align 8
-@zptr32 = common global ptr null, align 8
+@zptr8 = common global ptr zeroinitializer, align 8
+@zptr16 = common global ptr zeroinitializer, align 8
+@zptr32 = common global ptr zeroinitializer, align 8
 
 define void @fct32(i32 %arg, i64 %var) {
 ; CHECK-LABEL: fct32:

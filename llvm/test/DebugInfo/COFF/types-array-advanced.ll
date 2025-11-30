@@ -49,7 +49,7 @@
 ; CHECK:     ElementType: int (0x74)
 ; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 0
-; CHECK:     Name: 
+; CHECK:     Name:
 ; CHECK:   }
 ; CHECK:   Pointer (0x1004) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
@@ -67,21 +67,21 @@
 ; CHECK:     ElementType: char (0x70)
 ; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 7
-; CHECK:     Name: 
+; CHECK:     Name:
 ; CHECK:   }
 ; CHECK:   Array (0x1006) {
 ; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
 ; CHECK:     ElementType: 0x1005
 ; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 35
-; CHECK:     Name: 
+; CHECK:     Name:
 ; CHECK:   }
 ; CHECK:   Array (0x1007) {
 ; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
 ; CHECK:     ElementType: 0x1006
 ; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 70
-; CHECK:     Name: 
+; CHECK:     Name:
 ; CHECK:   }
 ; CHECK:   Struct (0x1008) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
@@ -102,7 +102,7 @@
 ; CHECK:     ElementType: incomplete_struct (0x1008)
 ; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 12
-; CHECK:     Name: 
+; CHECK:     Name:
 ; CHECK:   }
 ; CHECK:   Pointer (0x100A) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
@@ -162,7 +162,7 @@
 ; CHECK:     ElementType: const volatile int (0x100F)
 ; CHECK:     IndexType: unsigned long (0x22)
 ; CHECK:     SizeOf: 16
-; CHECK:     Name: 
+; CHECK:     Name:
 ; CHECK:   }
 ; CHECK: ]
 
@@ -173,7 +173,7 @@ target triple = "i686-pc-windows-msvc18.0.31101"
 %struct.incomplete_struct = type { i32 }
 
 @"\01?multi_dim_arr@@3PAY146DA" = global [2 x [5 x [7 x i8]]] zeroinitializer, align 1, !dbg !0
-@"\01?p_incomplete_struct_arr@@3PAY02Uincomplete_struct@@A" = global ptr null, align 4, !dbg !6
+@"\01?p_incomplete_struct_arr@@3PAY02Uincomplete_struct@@A" = global ptr zeroinitializer, align 4, !dbg !6
 @"\01?incomplete_struct_arr@@3PAUincomplete_struct@@A" = global [3 x %struct.incomplete_struct] zeroinitializer, align 4, !dbg !16
 @"\01?typedef_arr@@3SDHD" = constant [4 x i32] zeroinitializer, align 4, !dbg !18
 

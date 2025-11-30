@@ -192,6 +192,8 @@ public:
 
   LLVM_ABI static Constant *getNullValue(Type *Ty);
 
+  LLVM_ABI static Constant *getZeroValue(Type *Ty);
+
   /// @returns the value for an integer or vector of integer constant of the
   /// given type that has all its bits set to true.
   /// Get the all ones value

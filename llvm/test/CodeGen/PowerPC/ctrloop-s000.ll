@@ -22,8 +22,8 @@ target triple = "powerpc64-unknown-linux-gnu"
 @e = common global [16000 x double] zeroinitializer, align 32
 @tt = common global [256 x [256 x double]] zeroinitializer, align 32
 @indx = common global [16000 x i32] zeroinitializer, align 32
-@xx = common global ptr null, align 8
-@yy = common global ptr null, align 8
+@xx = common global ptr zeroinitializer, align 8
+@yy = common global ptr zeroinitializer, align 8
 
 define i32 @s000() nounwind {
 entry:

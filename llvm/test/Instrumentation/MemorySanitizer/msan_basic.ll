@@ -356,7 +356,7 @@ define void @FuncWithPhi(ptr nocapture %a, ptr %b, ptr nocapture %c) nounwind uw
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], ptrtoint (ptr null to i64)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP3]], -1
@@ -401,7 +401,7 @@ define void @FuncWithPhi(ptr nocapture %a, ptr %b, ptr nocapture %c) nounwind uw
 ; ORIGIN-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[B]] to i64
-; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 0
+; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], ptrtoint (ptr null to i64)
 ; ORIGIN-NEXT:    [[TMP4:%.*]] = or i64 [[TMP0]], 0
 ; ORIGIN-NEXT:    [[TMP5:%.*]] = icmp ne i64 [[TMP4]], 0
 ; ORIGIN-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP4]], -1
@@ -465,7 +465,7 @@ define void @FuncWithPhi(ptr nocapture %a, ptr %b, ptr nocapture %c) nounwind uw
 ; CALLS-NEXT:    [[TMP5:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; CALLS-NEXT:    call void @llvm.donothing()
 ; CALLS-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[B]] to i64
-; CALLS-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 0
+; CALLS-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], ptrtoint (ptr null to i64)
 ; CALLS-NEXT:    [[TMP8:%.*]] = or i64 [[TMP0]], 0
 ; CALLS-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CALLS-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP8]], -1
@@ -2090,8 +2090,8 @@ define <2 x i1> @ICmpSLT_vector_Zero(<2 x ptr> %x) nounwind uwtable readnone san
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i64> [[TMP1]], splat (i64 -1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i64> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i64> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i64> [[TMP5]], splat (i64 -9223372036854775808)
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult <2 x i64> [[TMP6]], splat (i64 -9223372036854775808)
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i64> [[TMP5]], <i64 xor (i64 extractelement (<2 x i64> ptrtoint (<2 x ptr> zeroinitializer to <2 x i64>), i32 0), i64 -9223372036854775808), i64 xor (i64 extractelement (<2 x i64> ptrtoint (<2 x ptr> zeroinitializer to <2 x i64>), i32 1), i64 -9223372036854775808)>
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult <2 x i64> [[TMP6]], <i64 xor (i64 extractelement (<2 x i64> ptrtoint (<2 x ptr> zeroinitializer to <2 x i64>), i32 0), i64 -9223372036854775808), i64 xor (i64 extractelement (<2 x i64> ptrtoint (<2 x ptr> zeroinitializer to <2 x i64>), i32 1), i64 -9223372036854775808)>
 ; CHECK-NEXT:    [[TMP17:%.*]] = xor <2 x i1> [[TMP9]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp slt <2 x ptr> [[X]], zeroinitializer
 ; CHECK-NEXT:    store <2 x i1> [[TMP17]], ptr @__msan_retval_tls, align 8
@@ -2107,8 +2107,8 @@ define <2 x i1> @ICmpSLT_vector_Zero(<2 x ptr> %x) nounwind uwtable readnone san
 ; ORIGIN-NEXT:    [[TMP5:%.*]] = xor <2 x i64> [[TMP1]], splat (i64 -1)
 ; ORIGIN-NEXT:    [[TMP6:%.*]] = and <2 x i64> [[TMP4]], [[TMP5]]
 ; ORIGIN-NEXT:    [[TMP7:%.*]] = or <2 x i64> [[TMP4]], [[TMP1]]
-; ORIGIN-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i64> [[TMP6]], splat (i64 -9223372036854775808)
-; ORIGIN-NEXT:    [[TMP17:%.*]] = icmp ult <2 x i64> [[TMP7]], splat (i64 -9223372036854775808)
+; ORIGIN-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i64> [[TMP6]], <i64 xor (i64 extractelement (<2 x i64> ptrtoint (<2 x ptr> zeroinitializer to <2 x i64>), i32 0), i64 -9223372036854775808), i64 xor (i64 extractelement (<2 x i64> ptrtoint (<2 x ptr> zeroinitializer to <2 x i64>), i32 1), i64 -9223372036854775808)>
+; ORIGIN-NEXT:    [[TMP17:%.*]] = icmp ult <2 x i64> [[TMP7]], <i64 xor (i64 extractelement (<2 x i64> ptrtoint (<2 x ptr> zeroinitializer to <2 x i64>), i32 0), i64 -9223372036854775808), i64 xor (i64 extractelement (<2 x i64> ptrtoint (<2 x ptr> zeroinitializer to <2 x i64>), i32 1), i64 -9223372036854775808)>
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = xor <2 x i1> [[TMP10]], [[TMP17]]
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = icmp slt <2 x ptr> [[X]], zeroinitializer
 ; ORIGIN-NEXT:    store <2 x i1> [[TMP18]], ptr @__msan_retval_tls, align 8
@@ -2125,8 +2125,8 @@ define <2 x i1> @ICmpSLT_vector_Zero(<2 x ptr> %x) nounwind uwtable readnone san
 ; CALLS-NEXT:    [[TMP5:%.*]] = xor <2 x i64> [[TMP1]], splat (i64 -1)
 ; CALLS-NEXT:    [[TMP6:%.*]] = and <2 x i64> [[TMP4]], [[TMP5]]
 ; CALLS-NEXT:    [[TMP7:%.*]] = or <2 x i64> [[TMP4]], [[TMP1]]
-; CALLS-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i64> [[TMP6]], splat (i64 -9223372036854775808)
-; CALLS-NEXT:    [[TMP17:%.*]] = icmp ult <2 x i64> [[TMP7]], splat (i64 -9223372036854775808)
+; CALLS-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i64> [[TMP6]], <i64 xor (i64 extractelement (<2 x i64> ptrtoint (<2 x ptr> zeroinitializer to <2 x i64>), i32 0), i64 -9223372036854775808), i64 xor (i64 extractelement (<2 x i64> ptrtoint (<2 x ptr> zeroinitializer to <2 x i64>), i32 1), i64 -9223372036854775808)>
+; CALLS-NEXT:    [[TMP17:%.*]] = icmp ult <2 x i64> [[TMP7]], <i64 xor (i64 extractelement (<2 x i64> ptrtoint (<2 x ptr> zeroinitializer to <2 x i64>), i32 0), i64 -9223372036854775808), i64 xor (i64 extractelement (<2 x i64> ptrtoint (<2 x ptr> zeroinitializer to <2 x i64>), i32 1), i64 -9223372036854775808)>
 ; CALLS-NEXT:    [[TMP18:%.*]] = xor <2 x i1> [[TMP10]], [[TMP17]]
 ; CALLS-NEXT:    [[TMP19:%.*]] = icmp slt <2 x ptr> [[X]], zeroinitializer
 ; CALLS-NEXT:    store <2 x i1> [[TMP18]], ptr @__msan_retval_tls, align 8
@@ -2746,7 +2746,7 @@ define void @VAStart(i32 %x, ...) sanitize_memory {
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP7]], i8 -1, i64 4, i1 false)
-; CHECK-NEXT:    [[VA:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CHECK-NEXT:    [[VA:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[VA]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i64 [[TMP8]], 87960930222080
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
@@ -2799,7 +2799,7 @@ define void @VAStart(i32 %x, ...) sanitize_memory {
 ; ORIGIN-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
 ; ORIGIN-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP9]], i8 -1, i64 4, i1 false)
 ; ORIGIN-NEXT:    call void @__msan_set_alloca_origin_with_descr(ptr [[X_ADDR]], i64 4, ptr @[[GLOB4:[0-9]+]], ptr @[[GLOB5:[0-9]+]])
-; ORIGIN-NEXT:    [[VA:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; ORIGIN-NEXT:    [[VA:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; ORIGIN-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[VA]] to i64
 ; ORIGIN-NEXT:    [[TMP14:%.*]] = xor i64 [[TMP13]], 87960930222080
 ; ORIGIN-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to ptr
@@ -2873,7 +2873,7 @@ define void @VAStart(i32 %x, ...) sanitize_memory {
 ; CALLS-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
 ; CALLS-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP9]], i8 -1, i64 4, i1 false)
 ; CALLS-NEXT:    call void @__msan_set_alloca_origin_with_descr(ptr [[X_ADDR]], i64 4, ptr @[[GLOB4:[0-9]+]], ptr @[[GLOB5:[0-9]+]])
-; CALLS-NEXT:    [[VA:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
+; CALLS-NEXT:    [[VA:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16
 ; CALLS-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[VA]] to i64
 ; CALLS-NEXT:    [[TMP14:%.*]] = xor i64 [[TMP13]], 87960930222080
 ; CALLS-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to ptr

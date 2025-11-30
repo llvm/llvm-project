@@ -12,7 +12,7 @@ target triple = "nvptx64-nvidia-cuda"
 @v_u128_zero = internal addrspace(1) global i128 0, align 16
 @v_i128_max = internal addrspace(1) global i128 0, align 16
 @v_i128_min = internal addrspace(1) global i128 0, align 16
-@v64 = internal addrspace(1) global ptr null, align 8
+@v64 = internal addrspace(1) global ptr zeroinitializer, align 8
 
 define void @test_corner_values() {
 ; CHECK-LABEL: test_corner_values(

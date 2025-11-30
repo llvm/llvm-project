@@ -7,7 +7,6 @@ define internal void @outlined0() {
 ; CHECK-LABEL: define {{[^@]+}}@outlined0
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    call void @func() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block() #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
@@ -18,14 +17,6 @@ bb:
 }
 
 define internal void @func() {
-; CHECK: Function Attrs: nosync nounwind
-; CHECK-LABEL: define {{[^@]+}}@func
-; CHECK-SAME: () #[[ATTR1]] {
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = load ptr, ptr addrspace(5) null, align 4294967296
-; CHECK-NEXT:    store i64 0, ptr [[I]], align 8
-; CHECK-NEXT:    ret void
-;
 bb:
   %i = load ptr, ptr addrspacecast (ptr addrspace(5) null to ptr), align 4294967296
   store i64 0, ptr %i, align 8
@@ -35,7 +26,7 @@ bb:
 define internal void @outlined1() {
 ; CHECK: Function Attrs: nosync nounwind
 ; CHECK-LABEL: define {{[^@]+}}@outlined1
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       common.ret:

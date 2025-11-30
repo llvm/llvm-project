@@ -8,7 +8,7 @@
 ; CHECK-NEXT:   %tmp3 = load ptr, ptr @P
 ; CHECK-NEXT:   br label %for.body
 
-@P = common global ptr null
+@P = common global ptr zeroinitializer
 
 define void @foo(i64 %n) nounwind {
 entry:

@@ -4,14 +4,14 @@
 ; REQUIRES: amdgpu-registered-target
 
 @dst = dso_local addrspace(1) externally_initialized global i32 0, align 4
-@g1 = dso_local addrspace(1) externally_initialized global ptr null, align 4
+@g1 = dso_local addrspace(1) externally_initialized global ptr zeroinitializer, align 4
 @g2 = dso_local addrspace(1) externally_initialized global i32 0, align 4
 @s1 = dso_local addrspace(3) global i32 undef, align 4
 @s2 = dso_local addrspace(3) global i32 undef, align 4
 
 ;.
 ; CHECK: @dst = dso_local addrspace(1) externally_initialized global i32 0, align 4
-; CHECK: @g1 = dso_local addrspace(1) externally_initialized global ptr null, align 4
+; CHECK: @g1 = dso_local addrspace(1) externally_initialized global ptr zeroinitializer, align 4
 ; CHECK: @g2 = dso_local addrspace(1) externally_initialized global i32 0, align 4
 ; CHECK: @s1 = dso_local addrspace(3) global i32 undef, align 4
 ; CHECK: @s2 = dso_local addrspace(3) global i32 undef, align 4

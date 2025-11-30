@@ -24,8 +24,8 @@ define amdgpu_kernel void @scaledregtest() local_unnamed_addr {
 ; CHECK-NEXT:    [[SCEVGEP6]] = getelementptr i8, ptr addrspace(5) [[LSR_IV5]], i32 8
 ; CHECK-NEXT:    br label [[FOR_BODY_1]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[LSR_IV12:%.*]] = phi ptr [ [[SCEVGEP13]], [[FOR_BODY]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV10:%.*]] = phi ptr addrspace(5) [ [[SCEVGEP11]], [[FOR_BODY]] ], [ null, [[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV12:%.*]] = phi ptr [ [[SCEVGEP13]], [[FOR_BODY]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV10:%.*]] = phi ptr addrspace(5) [ [[SCEVGEP11]], [[FOR_BODY]] ], [ zeroinitializer, [[ENTRY]] ]
 ; CHECK-NEXT:    [[SCEVGEP11]] = getelementptr i8, ptr addrspace(5) [[LSR_IV10]], i32 64
 ; CHECK-NEXT:    [[SCEVGEP13]] = getelementptr i8, ptr [[LSR_IV12]], i64 64
 ; CHECK-NEXT:    br i1 false, label [[LOOPEXIT]], label [[FOR_BODY]]
@@ -58,7 +58,7 @@ for.body:
 define protected amdgpu_kernel void @baseregtest(i32 %n, i32 %lda, i1 %arg) local_unnamed_addr {
 ; CHECK-LABEL: @baseregtest(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %arg, label [[EXIT:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[EXIT:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 3

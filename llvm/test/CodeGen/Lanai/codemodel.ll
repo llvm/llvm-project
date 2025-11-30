@@ -33,7 +33,7 @@ entry:
 	ret i32 %0
 }
 
-@y = local_unnamed_addr global ptr null, section ".ldata,block", align 8
+@y = local_unnamed_addr global ptr zeroinitializer, section ".ldata,block", align 8
 
 define i32 @foo2() nounwind readonly {
 entry:

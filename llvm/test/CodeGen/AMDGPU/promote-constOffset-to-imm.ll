@@ -2559,12 +2559,8 @@ entry:
 define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX8-LABEL: negativeoffsetnullptr:
 ; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_load_dword s1, s[4:5], 0xec
-; GFX8-NEXT:    s_add_u32 s0, 0, -1
-; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_addc_u32 s1, s1, -1
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NEXT:    v_mov_b32_e32 v0, -1
+; GFX8-NEXT:    v_mov_b32_e32 v1, -1
 ; GFX8-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX8-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -2578,32 +2574,27 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX8-NEXT:  ; %bb.2: ; %end
 ; GFX8-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: negativeoffsetnullptr:
-; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    v_add_co_u32_e64 v0, vcc, -1, 0
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
-; GFX9-NEXT:    flat_load_ubyte v0, v[0:1]
-; GFX9-NEXT:    s_mov_b64 s[0:1], 0
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
-; GFX9-NEXT:  .LBB8_1: ; %branch
-; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    s_and_b64 s[2:3], exec, vcc
-; GFX9-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
-; GFX9-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; GFX9-NEXT:    s_cbranch_execnz .LBB8_1
-; GFX9-NEXT:  ; %bb.2: ; %end
-; GFX9-NEXT:    s_endpgm
+; GFX900-LABEL: negativeoffsetnullptr:
+; GFX900:       ; %bb.0: ; %entry
+; GFX900-NEXT:    v_mov_b32_e32 v0, -1
+; GFX900-NEXT:    v_mov_b32_e32 v1, -1
+; GFX900-NEXT:    flat_load_ubyte v0, v[0:1]
+; GFX900-NEXT:    s_mov_b64 s[0:1], 0
+; GFX900-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
+; GFX900-NEXT:  .LBB8_1: ; %branch
+; GFX900-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX900-NEXT:    s_and_b64 s[2:3], exec, vcc
+; GFX900-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
+; GFX900-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX900-NEXT:    s_cbranch_execnz .LBB8_1
+; GFX900-NEXT:  ; %bb.2: ; %end
+; GFX900-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: negativeoffsetnullptr:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX10-NEXT:    s_add_u32 s0, 0, -1
-; GFX10-NEXT:    s_addc_u32 s1, s1, -1
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    v_mov_b32_e32 v1, s1
+; GFX10-NEXT:    v_mov_b32_e32 v0, -1
+; GFX10-NEXT:    v_mov_b32_e32 v1, -1
 ; GFX10-NEXT:    s_mov_b32 s0, 0
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -2617,12 +2608,26 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX10-NEXT:  ; %bb.2: ; %end
 ; GFX10-NEXT:    s_endpgm
 ;
+; GFX90A-LABEL: negativeoffsetnullptr:
+; GFX90A:       ; %bb.0: ; %entry
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], -1, -1
+; GFX90A-NEXT:    flat_load_ubyte v0, v[0:1]
+; GFX90A-NEXT:    s_mov_b64 s[0:1], 0
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_cmp_eq_u16_e32 vcc, 0, v0
+; GFX90A-NEXT:  .LBB8_1: ; %branch
+; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX90A-NEXT:    s_and_b64 s[2:3], exec, vcc
+; GFX90A-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
+; GFX90A-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX90A-NEXT:    s_cbranch_execnz .LBB8_1
+; GFX90A-NEXT:  ; %bb.2: ; %end
+; GFX90A-NEXT:    s_endpgm
+;
 ; GFX11-TRUE16-LABEL: negativeoffsetnullptr:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
-; GFX11-TRUE16-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX11-TRUE16-NEXT:    v_add_co_u32 v0, s0, -1, 0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, -1
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, -1
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX11-TRUE16-NEXT:    flat_load_d16_u8 v0, v[0:1]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -2639,10 +2644,8 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ;
 ; GFX11-FAKE16-LABEL: negativeoffsetnullptr:
 ; GFX11-FAKE16:       ; %bb.0: ; %entry
-; GFX11-FAKE16-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX11-FAKE16-NEXT:    v_add_co_u32 v0, s0, -1, 0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, s1, s0
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, -1
+; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, -1
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, 0
 ; GFX11-FAKE16-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

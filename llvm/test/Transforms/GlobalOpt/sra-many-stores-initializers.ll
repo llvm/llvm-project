@@ -5,12 +5,12 @@
 
 @global.20ptr = internal global %struct.20ptr zeroinitializer
 
-@c = global ptr null
+@c = global ptr zeroinitializer
 
 ;.
-; CHECK: @[[C:[a-zA-Z0-9_$"\\.-]+]] = global ptr null
+; CHECK: @[[C:[a-zA-Z0-9_$"\\.-]+]] = global ptr zeroinitializer
 ; CHECK: @[[GLOBAL_20PTR_3:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global [[STRUCT_20PTR:%.*]] { ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr @c, ptr null, ptr null, ptr null, ptr @c }
-; CHECK: @[[GLOBAL_20PTR_4_16:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global ptr null
+; CHECK: @[[GLOBAL_20PTR_4_16:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global ptr zeroinitializer
 ;.
 define void @store_initializer() {
 ; CHECK-LABEL: @store_initializer(

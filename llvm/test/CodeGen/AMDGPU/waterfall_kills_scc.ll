@@ -24,10 +24,11 @@ define amdgpu_kernel void  @foo(i1 %cmp1) {
 ; GFX906-NEXT:    s_mov_b32 s15, 0xe00000
 ; GFX906-NEXT:    s_add_u32 s12, s12, s11
 ; GFX906-NEXT:    s_addc_u32 s13, s13, 0
-; GFX906-NEXT:    buffer_load_dword v3, off, s[12:15], 0
-; GFX906-NEXT:    buffer_load_dword v4, off, s[12:15], 0 offset:4
-; GFX906-NEXT:    buffer_load_dword v5, off, s[12:15], 0 offset:8
-; GFX906-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:12
+; GFX906-NEXT:    v_mov_b32_e32 v7, -1
+; GFX906-NEXT:    buffer_load_dword v3, v7, s[12:15], 0 offen
+; GFX906-NEXT:    buffer_load_dword v4, off, s[12:15], 0 offset:3
+; GFX906-NEXT:    buffer_load_dword v5, off, s[12:15], 0 offset:7
+; GFX906-NEXT:    buffer_load_dword v6, off, s[12:15], 0 offset:11
 ; GFX906-NEXT:    s_load_dword s2, s[4:5], 0x24
 ; GFX906-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x1c
 ; GFX906-NEXT:    s_mov_b32 s4, 0

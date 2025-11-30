@@ -22,7 +22,7 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; CHECK-LABEL: define i8 @test_load8
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    call void @__hwasan_load1(i64 [[TMP0]])
 ; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4

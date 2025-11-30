@@ -20,9 +20,9 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; CHECK-NEXT: Against group
 ; CHECK-NEXT:   %arrayidxA = getelementptr inbounds i16, ptr %a, i64 %indvar
 
-@B = common global ptr null, align 8
-@A = common global ptr null, align 8
-@C = common global ptr null, align 8
+@B = common global ptr zeroinitializer, align 8
+@A = common global ptr zeroinitializer, align 8
+@C = common global ptr zeroinitializer, align 8
 
 define void @f(i64 %offset) {
 entry:

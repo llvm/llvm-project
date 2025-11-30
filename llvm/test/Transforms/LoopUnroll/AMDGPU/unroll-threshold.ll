@@ -12,8 +12,8 @@
 ; CHECK: br i1 %cmp
 ; CHECK: ret void
 
-@in = internal unnamed_addr global ptr null, align 8
-@out = internal unnamed_addr global ptr null, align 8
+@in = internal unnamed_addr global ptr zeroinitializer, align 8
+@out = internal unnamed_addr global ptr zeroinitializer, align 8
 
 define void @unroll_default() {
 entry:

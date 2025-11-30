@@ -5,7 +5,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 	%struct.s_bb = type { i32, i32, i32, i32 }
 	%struct.s_net = type { ptr, i32, ptr, float, float }
 	%struct.s_placer_opts = type { i32, float, i32, i32, ptr, i32, i32 }
-@net = internal global ptr null		; <ptr> [#uses=4]
+@net = internal global ptr zeroinitializer		; <ptr> [#uses=4]
 
 define fastcc void @alloc_and_load_placement_structs(i32 %place_cost_type, i32 %num_regions, float %place_cost_exp, ptr nocapture %old_region_occ_x, ptr nocapture %old_region_occ_y, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5, i1 %c6, i1 %c7, i1 %c8, i1 %c9, i1 %c10, i1 %c11, i1 %c12) nounwind ssp {
 entry:

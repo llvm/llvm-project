@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-linux -relocation-model=static | FileCheck %s
 
-@ptr = dso_local global ptr null
+@ptr = dso_local global ptr zeroinitializer
 @dst = dso_local global [131072 x i32] zeroinitializer
 
 define dso_local void @foo() nounwind {

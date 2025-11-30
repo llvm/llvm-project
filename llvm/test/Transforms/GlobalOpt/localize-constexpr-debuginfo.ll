@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@_ZL1x = internal global ptr null, align 8, !dbg !0
+@_ZL1x = internal global ptr zeroinitializer, align 8, !dbg !0
 
 define i32 @main(i32 %argc, ptr %argv) norecurse !dbg !18 {
 ; CHECK: define i32 @main

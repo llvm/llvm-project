@@ -5,7 +5,7 @@ define amdgpu_kernel void @icmp_test() {
 ; CHECK-LABEL: icmp_test:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    v_cmp_eq_u16_e64 s[0:1], 0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, -1
 ; CHECK-NEXT:    s_cmp_eq_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -24,7 +24,7 @@ define amdgpu_kernel void @fcmp_test(half %x, half %y) {
 ; CHECK-LABEL: fcmp_test:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, -1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_lshr_b32 s1, s0, 16
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
@@ -46,7 +46,7 @@ define amdgpu_kernel void @ballot_test(half %x, half %y) {
 ; CHECK-LABEL: ballot_test:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, -1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_lshr_b32 s1, s0, 16
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)

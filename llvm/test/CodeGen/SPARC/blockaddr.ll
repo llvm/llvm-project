@@ -8,7 +8,7 @@
 ;
 ; copied from test/CodeGen/Mips/blockaddr.ll and modified for SPARC
 ;
-@reg = common global ptr null, align 4
+@reg = common global ptr zeroinitializer, align 4
 
 define ptr @dummy(ptr %x) nounwind readnone noinline {
 entry:

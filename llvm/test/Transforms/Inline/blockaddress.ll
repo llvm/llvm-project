@@ -7,7 +7,7 @@
 ; CHECK: store ptr blockaddress(@doit, %here), ptr %pptr, align 8
 
 @i = global i32 1, align 4
-@ptr1 = common global ptr null, align 8
+@ptr1 = common global ptr zeroinitializer, align 8
 
 define void @doit(ptr nocapture %pptr, i32 %cond) nounwind uwtable {
 entry:

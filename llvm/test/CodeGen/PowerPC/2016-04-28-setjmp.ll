@@ -2,7 +2,7 @@
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 
-@ptr = common global ptr null, align 8
+@ptr = common global ptr zeroinitializer, align 8
 
 ; Verify there's no junk between these two instructions from misemitted
 ; EH_SjLj_Setup.

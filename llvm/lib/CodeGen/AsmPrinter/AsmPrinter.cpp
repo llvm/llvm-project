@@ -4301,8 +4301,15 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
       return emitGlobalConstantFP(CFP, AP);
   }
 
-  if (isa<ConstantPointerNull>(CV)) {
-    AP.OutStreamer->emitIntValue(0, Size);
+  if (auto *NullPtr = dyn_cast<ConstantPointerNull>(CV)) {
+    if (std::optional<APInt> NullPtrVal =
+            DL.getNullPtrValue(NullPtr->getType()->getPointerAddressSpace())) {
+      AP.OutStreamer->emitIntValue(NullPtrVal->getSExtValue(), Size);
+    } else {
+      // We fall back to the default behavior of emitting a zero value if we
+      // can't get the null pointer value from the data layout.
+      AP.OutStreamer->emitIntValue(0, Size);
+    }
     return;
   }
 

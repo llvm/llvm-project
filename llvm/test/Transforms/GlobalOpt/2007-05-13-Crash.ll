@@ -6,8 +6,8 @@ target triple = "i686-apple-darwin8"
         %struct.__CFDictionary = type opaque
         %struct.__CFString = type opaque
         %struct.__builtin_CFString = type { ptr, i32, ptr, i32 }
-@_ZZ19SFLGetVisibilityKeyvE19_kSFLLVisibilityKey = internal global ptr null             ; <ptr> [#uses=2]
-@_ZZ22SFLGetAlwaysVisibleKeyvE22_kSFLLAlwaysVisibleKey = internal global ptr null               ; <ptr> [#uses=7]
+@_ZZ19SFLGetVisibilityKeyvE19_kSFLLVisibilityKey = internal global ptr zeroinitializer             ; <ptr> [#uses=2]
+@_ZZ22SFLGetAlwaysVisibleKeyvE22_kSFLLAlwaysVisibleKey = internal global ptr zeroinitializer               ; <ptr> [#uses=7]
 @0 = internal constant %struct.__builtin_CFString {
     ptr @__CFConstantStringClassReference,
     i32 1992,
@@ -15,7 +15,7 @@ target triple = "i686-apple-darwin8"
     i32 13 }, section "__DATA,__cfstring"               ; <ptr>:0 [#uses=1]
 @__CFConstantStringClassReference = external global [0 x i32]           ; <ptr> [#uses=1]
 @.str = internal constant [14 x i8] c"AlwaysVisible\00"         ; <ptr> [#uses=1]
-@_ZZ21SFLGetNeverVisibleKeyvE21_kSFLLNeverVisibleKey = internal global ptr null         ; <ptr> [#uses=2]
+@_ZZ21SFLGetNeverVisibleKeyvE21_kSFLLNeverVisibleKey = internal global ptr zeroinitializer         ; <ptr> [#uses=2]
 
 define ptr @_Z19SFLGetVisibilityKeyv() {
 entry:

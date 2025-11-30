@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes=globalopt
 
 @V = global float 1.200000e+01          ; <ptr> [#uses=1]
-@G = internal global ptr null          ; <ptr> [#uses=2]
+@G = internal global ptr zeroinitializer          ; <ptr> [#uses=2]
 
 define i32 @user() {
         %P = load ptr, ptr @G              ; <ptr> [#uses=1]

@@ -15,7 +15,7 @@
 %struct.ap = type { i32, i32 }
 
 @ch = common global %struct.f zeroinitializer, align 8
-@j = common global ptr null, align 8
+@j = common global ptr zeroinitializer, align 8
 @ck = common global i32 0, align 4
 @h = common global i32 0, align 4
 @.str = private unnamed_addr constant [1 x i8] zeroinitializer, align 1

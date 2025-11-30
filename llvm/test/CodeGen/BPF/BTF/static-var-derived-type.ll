@@ -11,9 +11,9 @@
 ; Compilation flag:
 ;   clang -target bpf -O2 -g -S -emit-llvm test.c
 
-@v1 = internal global ptr null, align 8, !dbg !0
-@v2 = internal global ptr null, align 8, !dbg !8
-@v3 = internal global ptr null, align 8, !dbg !14
+@v1 = internal global ptr zeroinitializer, align 8, !dbg !0
+@v2 = internal global ptr zeroinitializer, align 8, !dbg !8
+@v3 = internal global ptr zeroinitializer, align 8, !dbg !14
 @v4 = internal constant ptr null, align 8, !dbg !19
 
 ; Function Attrs: norecurse nounwind

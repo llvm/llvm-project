@@ -24,7 +24,7 @@
 
 
 ; COMPATIBLE:         @ConstantExpr = internal global i64 ptrtoint (ptr @needs_gws to i64)
-; INCOMPATIBLE:       @ConstantExpr = internal global i64 0
+; INCOMPATIBLE:       @ConstantExpr = internal global i64 ptrtoint (ptr null to i64)
 @ConstantExpr = internal global i64 ptrtoint (ptr @needs_gws to i64)
 
 

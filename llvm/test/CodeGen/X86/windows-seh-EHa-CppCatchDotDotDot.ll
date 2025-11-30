@@ -68,9 +68,9 @@ $"??_C@_0N@LJHFFAKD@?5in?5A?5ctor?5?6?$AA@" = comdat any
 
 $"??_C@_0N@HMNCGOCN@?5in?5A?5dtor?5?6?$AA@" = comdat any
 
-@"?pt1@@3PEAHEA" = dso_local global ptr null, align 8
-@"?pt2@@3PEAHEA" = dso_local global ptr null, align 8
-@"?pt3@@3PEAHEA" = dso_local global ptr null, align 8
+@"?pt1@@3PEAHEA" = dso_local global ptr zeroinitializer, align 8
+@"?pt2@@3PEAHEA" = dso_local global ptr zeroinitializer, align 8
+@"?pt3@@3PEAHEA" = dso_local global ptr zeroinitializer, align 8
 @"?g@@3HA" = dso_local global i32 0, align 4
 @"??_C@_0BJ@EIKFKKLB@?5in?5catch?$CI?4?4?4?$CJ?5funclet?5?6?$AA@" = linkonce_odr dso_local unnamed_addr constant [25 x i8] c" in catch(...) funclet \0A\00", comdat, align 1
 @"??_7type_info@@6B@" = external constant ptr

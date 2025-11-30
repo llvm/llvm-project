@@ -35,7 +35,7 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-@g = dso_local local_unnamed_addr global ptr null, align 8, !dbg !0
+@g = dso_local local_unnamed_addr global ptr zeroinitializer, align 8, !dbg !0
 
 ; Function Attrs: mustprogress uwtable
 define dso_local noundef i32 @_Z1fii(i32 noundef %a, i32 noundef %b) local_unnamed_addr #0 !dbg !12 {

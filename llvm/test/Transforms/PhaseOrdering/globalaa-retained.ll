@@ -3,7 +3,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64"
 
 @v = internal unnamed_addr global i32 0, align 4
-@p = common global ptr null, align 8
+@p = common global ptr zeroinitializer, align 8
 
 
 ; This test checks that a number of loads and stores are eliminated,

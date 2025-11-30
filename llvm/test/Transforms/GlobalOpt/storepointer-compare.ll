@@ -1,10 +1,10 @@
 ; RUN: opt < %s -passes=globalopt -S | FileCheck %s
 ; CHECK: call void @Actual
 
-; Check that a comparison does not prevent an indirect call from being made 
+; Check that a comparison does not prevent an indirect call from being made
 ; direct.  The global will still remain, but indirect call elim is still good.
 
-@G = internal global ptr null              ; <ptr> [#uses=2]
+@G = internal global ptr zeroinitializer              ; <ptr> [#uses=2]
 
 define internal void @Actual() {
         ret void

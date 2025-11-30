@@ -97,7 +97,7 @@
   %class.b = type { ptr, ptr }
   %struct.a = type opaque
 
-  @n = local_unnamed_addr global ptr null, align 8
+  @n = local_unnamed_addr global ptr zeroinitializer, align 8
   @o = global i32 0, align 4
 
   define linkonce_odr void @_ZN1sC2Ei(ptr, i32) unnamed_addr #0 align 2 !dbg !4 {

@@ -14,10 +14,10 @@ target datalayout = "p:16:32:64" ; 16-bit pointers with 32-bit ABI alignment and
 ; preferred alignment from the datalayout.
 
 ;.
-; CHECK: @[[A_4:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr null, align 8
-; CHECK: @[[A_5:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr null, align 8
-; CHECK: @[[A_6:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr null, align 16
-; CHECK: @[[A_7:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr null, align 8
+; CHECK: @[[A_4:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr zeroinitializer, align 8
+; CHECK: @[[A_5:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr zeroinitializer, align 8
+; CHECK: @[[A_6:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr zeroinitializer, align 16
+; CHECK: @[[A_7:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr externally_initialized global ptr zeroinitializer, align 8
 ;.
 define ptr @reduce_align_0() {
 ; CHECK-LABEL: @reduce_align_0(

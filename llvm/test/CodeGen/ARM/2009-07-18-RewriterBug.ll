@@ -4,7 +4,7 @@
 %struct.VEC2 = type { double, double, double }
 %struct.VERTEX = type { %struct.VEC2, ptr, ptr }
 %struct.edge_rec = type { ptr, ptr, i32, ptr }
-@avail_edge = internal global ptr null
+@avail_edge = internal global ptr zeroinitializer
 @_2E_str7 = internal constant [21 x i8] c"ERROR: Only 1 point!\00", section "__TEXT,__cstring,cstring_literals", align 1
 @llvm.used = appending global [1 x ptr] [ptr @build_delaunay], section "llvm.metadata"
 

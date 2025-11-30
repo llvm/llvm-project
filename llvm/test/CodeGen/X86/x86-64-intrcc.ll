@@ -3,7 +3,7 @@
 
 %struct.interrupt_frame = type { i64, i64, i64, i64, i64 }
 
-@sink_address = dso_local global ptr null
+@sink_address = dso_local global ptr zeroinitializer
 @sink_i32 = dso_local global i64 0
 
 ; Spills rax, putting original esp at +8.

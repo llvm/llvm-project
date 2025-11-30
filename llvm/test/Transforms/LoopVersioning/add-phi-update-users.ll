@@ -18,7 +18,7 @@
 
 @a = dso_local global i16 0, align 1
 @b = dso_local global i16 0, align 1
-@c = dso_local global ptr null, align 1
+@c = dso_local global ptr zeroinitializer, align 1
 
 define void @f1() {
 ; CHECK-LABEL: define void @f1() {

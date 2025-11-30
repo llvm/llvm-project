@@ -25,7 +25,7 @@ define i1 @lt_signed_to_large_unsigned(i8 %SB) {
 ; PR28011 - https://llvm.org/bugs/show_bug.cgi?id=28011
 ; The above transform only applies to scalar integers; it shouldn't be attempted for constant expressions or vectors.
 
-@a = common global ptr null
+@a = common global ptr zeroinitializer
 @b = common global [1 x i32] zeroinitializer
 
 define i1 @PR28011(i16 %a) {

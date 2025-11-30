@@ -3352,7 +3352,11 @@ as follows:
     default address space 0. The value of ``<as>`` must be in the range [1,2^24).
     The optional ``<flags>`` are used to specify properties of pointers in this
     address space: the character ``u`` marks pointers as having an unstable
-    representation, and ``e`` marks pointers having external state. See
+    representation, and ``e`` marks pointers having external state. ``z`` marks the
+    value of the nullptr as all-zeros (default behavior if it is not specified);
+    ``o`` marks the value of the nullptr as all-ones; ``c`` marks the value of
+    the nullptr as custom (neither all-zeros nor all-ones), such that LLVM will
+    not be able to fold various casts involving nullptr. See
     :ref:`Non-Integral Pointer Types <nointptrtype>`. The ``<name>`` is an
     optional name of that address space, surrounded by ``(`` and ``)``. If the
     name is specified, it must be unique to that address space and cannot be

@@ -12,7 +12,7 @@
 ; RUN: verify-uselistorder %s
 
 @.LC0 = internal global [4 x i8] c"foo\00"		; <ptr> [#uses=1]
-@X = global ptr null		; <ptr> [#uses=0]
+@X = global ptr zeroinitializer		; <ptr> [#uses=0]
 
 declare i32 @puts(ptr)
 

@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=arm64-apple-ios7.0 -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -global-isel=1 -mtriple=arm64-apple-ios7.0 -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-@ptr = global ptr null
+@ptr = global ptr zeroinitializer
 
 define <8 x i8> @test_v8i8_pre_load(ptr %addr) {
 ; CHECK-LABEL: test_v8i8_pre_load:
@@ -13997,7 +13997,7 @@ define <4 x i32> @test_inc_cycle(<4 x i32> %vec, ptr %in) {
   ret <4 x i32> %newvec
 }
 
-@var = global ptr null
+@var = global ptr zeroinitializer
 
 define i8 @load_single_extract_variable_index_i8(ptr %A, i32 %idx) {
 ; CHECK-SD-LABEL: load_single_extract_variable_index_i8:

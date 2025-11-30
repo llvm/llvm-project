@@ -649,7 +649,7 @@ define i1 @or(i32 %x) {
 
 ; Do not simplify if we cannot guarantee that the ConstantExpr is a non-zero
 ; constant.
-@GV = common global ptr null
+@GV = common global ptr zeroinitializer
 define i1 @or_constexp(i32 %x) {
 ; CHECK-LABEL: @or_constexp(
 ; CHECK-NEXT:  entry:

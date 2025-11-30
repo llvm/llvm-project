@@ -40,7 +40,7 @@ target triple = "aarch64-apple-ios"
 %struct.B = type { i8 }
 
 @a = global i64 0, align 8, !dbg !0
-@b = global ptr null, align 8, !dbg !4
+@b = global ptr zeroinitializer, align 8, !dbg !4
 
 define void @_Z3f131A(ptr nocapture readonly %p1) !dbg !32 {
 entry:

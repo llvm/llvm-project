@@ -3,7 +3,7 @@
 ; This tests the assignemnt of non-pointer to global address
 ; (assert due to D106589).
 
-@a162 = internal global ptr null, align 1
+@a162 = internal global ptr zeroinitializer, align 1
 
 define void @f363() {
 ; CHECK-LABEL: @f363(

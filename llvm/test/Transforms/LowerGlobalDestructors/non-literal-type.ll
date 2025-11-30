@@ -10,19 +10,19 @@ declare void @dtor()
 @llvm.global_dtors = appending global [1 x %ty] [%ty {i32 65535, ptr @dtor, ptr zeroinitializer }], align 8
 
 ;.
-; CHECK: @[[__DSO_HANDLE:[a-zA-Z0-9_$"\\.-]+]] = extern_weak hidden constant i8
-; CHECK: @[[LLVM_GLOBAL_CTORS:[a-zA-Z0-9_$"\\.-]+]] = appending global [2 x %ty] [[[TY:%.*]] { i32 65535, ptr @ctor, ptr null }, [[TY]] { i32 65535, ptr @register_call_dtors, ptr null }]
+; CHECK: @__dso_handle = extern_weak hidden constant i8
+; CHECK: @llvm.global_ctors = appending global [2 x %ty] [%ty { i32 65535, ptr @ctor, ptr zeroinitializer }, %ty { i32 65535, ptr @register_call_dtors., ptr zeroinitializer }]
 ;.
-; CHECK-LABEL: define private void @call_dtors
+; CHECK-LABEL: define private void @call_dtors.
 ; CHECK-SAME: (ptr [[TMP0:%.*]]) {
 ; CHECK-NEXT:  body:
 ; CHECK-NEXT:    call void @dtor()
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define private void @register_call_dtors() {
+; CHECK-LABEL: define private void @register_call_dtors.() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @__cxa_atexit(ptr @call_dtors, ptr null, ptr @__dso_handle)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @__cxa_atexit(ptr @call_dtors., ptr null, ptr @__dso_handle)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i32 [[CALL]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[FAIL:%.*]], label [[RETURN:%.*]]
 ; CHECK:       fail:

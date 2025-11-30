@@ -4,8 +4,8 @@
 @i = constant i32 1, align 4
 @f = constant float 0x3FF19999A0000000, align 4
 @cmp = common global i32 0, align 4
-@resf = common global ptr null, align 8
-@resi = common global ptr null, align 8
+@resf = common global ptr zeroinitializer, align 8
+@resi = common global ptr zeroinitializer, align 8
 
 define i32 @foo() {
 entry:

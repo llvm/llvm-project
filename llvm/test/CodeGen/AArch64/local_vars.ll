@@ -11,7 +11,7 @@
 ; implemented.
 
 @var = global i64 0
-@local_addr = global ptr null
+@local_addr = global ptr zeroinitializer
 
 declare void @foo()
 

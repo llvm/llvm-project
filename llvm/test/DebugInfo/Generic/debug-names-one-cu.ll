@@ -48,8 +48,8 @@
 
 ; VERIFY: No errors.
 
-@foobar = common dso_local global ptr null, align 8, !dbg !0
-@someA_B = common dso_local global ptr null, align 8, !dbg !18
+@foobar = common dso_local global ptr zeroinitializer, align 8, !dbg !0
+@someA_B = common dso_local global ptr zeroinitializer, align 8, !dbg !18
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!7, !8, !9}

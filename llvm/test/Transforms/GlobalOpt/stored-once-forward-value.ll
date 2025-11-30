@@ -8,7 +8,7 @@
 @g5 = internal unnamed_addr global i32 0
 @g6 = internal unnamed_addr global i32 0
 @g7 = internal unnamed_addr global i32 0
-@g8 = internal unnamed_addr global ptr null
+@g8 = internal unnamed_addr global ptr zeroinitializer
 @tl = internal thread_local unnamed_addr global i32 0
 
 declare void @b()

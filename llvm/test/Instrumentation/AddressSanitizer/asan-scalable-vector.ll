@@ -7,13 +7,16 @@ define void @test() #1 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CTX_PG:%.*]] = alloca <vscale x 16 x i1>, align 2
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CTX_PG]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr inttoptr (i64 17592186044416 to ptr), align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 ptrtoint (ptr null to i64), 3
+; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP3]], 17592186044416
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB2:.*]], label %[[BB3:.*]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    call void @__asan_report_store8(i64 0) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[BB5:.*]], label %[[BB6:.*]]
+; CHECK:       [[BB5]]:
+; CHECK-NEXT:    call void @__asan_report_store8(i64 ptrtoint (ptr null to i64)) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB3]]:
+; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    store ptr [[CTX_PG]], ptr null, align 8
 ; CHECK-NEXT:    ret void
 ;

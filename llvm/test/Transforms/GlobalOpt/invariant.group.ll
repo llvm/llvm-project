@@ -9,7 +9,7 @@
 @tmp = global i32 0
 @tmp2 = global i32 0
 @tmp3 = global i32 0
-@ptrToTmp3 = global ptr null
+@ptrToTmp3 = global ptr zeroinitializer
 
 define i32 @TheAnswerToLifeTheUniverseAndEverything() {
   ret i32 42
@@ -78,8 +78,8 @@ enter:
 }
 
 @tmp5 = global i32 0
-@tmp6 = global ptr null
-; CHECK: @tmp6 = local_unnamed_addr global ptr null
+@tmp6 = global ptr zeroinitializer
+; CHECK: @tmp6 = local_unnamed_addr global ptr zeroinitializer
 
 define ptr @_dont_return_param(ptr %p) {
   %p2 = call ptr @llvm.launder.invariant.group(ptr %p)

@@ -79,7 +79,7 @@ entry:
 
 @lsrc = internal global i8 0, align 4
 @ldst = internal global i8 0, align 4
-@lptr = internal global ptr null, align 8
+@lptr = internal global ptr zeroinitializer, align 8
 
 define dso_preemptable void @bar1() {
 ; CHECK-PIC-LABEL: bar1:

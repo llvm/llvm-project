@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes='function(loop-simplify),loop-extract'  -S | FileCheck %s
 
-@label = common local_unnamed_addr global ptr null
+@label = common local_unnamed_addr global ptr zeroinitializer
 
 ; CHECK: define
 ; no outlined function

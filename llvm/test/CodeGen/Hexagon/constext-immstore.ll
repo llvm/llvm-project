@@ -13,7 +13,7 @@
 @g3 = private unnamed_addr constant [3 x i8] c"if\00", align 1
 @g4 = global [4 x %s.0] [%s.0 { i8 1, i8 38, ptr @g0, i8 1, i32 8, ptr null, ptr null }, %s.0 { i8 2, i8 124, ptr @g1, i8 1, i32 7, ptr null, ptr null }, %s.0 { i8 3, i8 62, ptr @g2, i8 1, i32 1, ptr null, ptr null }, %s.0 { i8 4, i8 60, ptr @g3, i8 1, i32 1, ptr null, ptr null }], align 8
 @g5 = internal global [64 x i8] zeroinitializer, align 8
-@g6 = internal unnamed_addr global ptr null, align 4
+@g6 = internal unnamed_addr global ptr zeroinitializer, align 4
 
 ; Function Attrs: nounwind
 define ptr @f0() #0 {

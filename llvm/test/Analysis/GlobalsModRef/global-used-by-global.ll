@@ -2,7 +2,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-@a = internal global ptr null, align 8
+@a = internal global ptr zeroinitializer, align 8
 @b = global ptr @a, align 8
 @c = global ptr @a, align 8
 @d = common global i32 0, align 4

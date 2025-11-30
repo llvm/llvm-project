@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=mipsel -relocation-model=pic | FileCheck %s
 
-@caller.sf1 = internal unnamed_addr global ptr null, align 4
+@caller.sf1 = internal unnamed_addr global ptr zeroinitializer, align 4
 @gf1 = external global ptr
 @.str = private unnamed_addr constant [3 x i8] c"f2\00"
 

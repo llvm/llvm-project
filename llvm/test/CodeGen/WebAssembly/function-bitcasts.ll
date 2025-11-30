@@ -106,7 +106,7 @@ define void @test_varargs() {
 
 ; Don't use wrappers when the value is stored in memory
 
-@global_func = hidden local_unnamed_addr global ptr null
+@global_func = hidden local_unnamed_addr global ptr zeroinitializer
 
 ; CHECK-LABEL: test_store:
 ; CHECK:      i32.const   $push[[L0:[0-9]+]]=, 0{{$}}

@@ -10,7 +10,7 @@
 
 %struct.t1 = type { ptr }
 
-@a1 = common dso_local local_unnamed_addr global ptr null, align 8, !dbg !0
+@a1 = common dso_local local_unnamed_addr global ptr zeroinitializer, align 8, !dbg !0
 @b1 = common dso_local local_unnamed_addr global %struct.t1 zeroinitializer, align 8, !dbg !6
 
 ; Function Attrs: nounwind readnone

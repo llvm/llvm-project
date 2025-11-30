@@ -242,7 +242,7 @@ define i1 @consistent_nocapture_offset() {
   ret i1 %cmp
 }
 
-@gp = global ptr null, align 8
+@gp = global ptr zeroinitializer, align 8
 
 define i1 @consistent_nocapture_through_global() {
 ; CHECK-LABEL: @consistent_nocapture_through_global(

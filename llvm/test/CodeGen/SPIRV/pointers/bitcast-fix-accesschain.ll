@@ -26,7 +26,7 @@
 %struct.S = type { i32 }
 %struct.__wrapper_class = type { [7 x %struct.S] }
 
-@G_elem = global ptr null
+@G_elem = global ptr zeroinitializer
 @G_data = global i64 0
 
 define spir_kernel void @foo1(ptr noundef byval(%struct.__wrapper_class) align 4 %_arg_Arr) {

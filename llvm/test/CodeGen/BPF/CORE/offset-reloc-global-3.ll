@@ -16,7 +16,7 @@ target triple = "bpf"
 
 %struct.v3 = type { i32, i32 }
 
-@g = dso_local local_unnamed_addr global ptr null, section "stats", align 8, !dbg !0
+@g = dso_local local_unnamed_addr global ptr zeroinitializer, section "stats", align 8, !dbg !0
 
 ; Function Attrs: nounwind
 define dso_local i32 @test() local_unnamed_addr !dbg !17 {

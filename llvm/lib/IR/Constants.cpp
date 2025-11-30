@@ -72,16 +72,34 @@ bool Constant::isNegativeZeroValue() const {
 }
 
 // Return true iff this constant is positive zero (floating point), negative
-// zero (floating point), or a null value.
+// zero (floating point), zero-value pointer, or a null value.
 bool Constant::isZeroValue() const {
+  // We can no longer safely say that a ConstantPointerNull is a zero value.
+  if (isa<ConstantPointerNull>(this))
+    return false;
+
   // Floating point values have an explicit -0.0 value.
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
     return CFP->isZero();
+
+  // Zero value pointer is a constant expression of inttoptr(0).
+  if (const auto *CE = dyn_cast<ConstantExpr>(this)) {
+    if (CE->getOpcode() == Instruction::IntToPtr) {
+      Constant *SrcCI = cast<Constant>(CE->getOperand(0));
+      // We don't need to check the bitwise value since it is zext or truncate
+      // for inttoptr(0) so it doesn't matter.
+      if (SrcCI->isZeroValue())
+        return true;
+    }
+  }
 
   // Check for constant splat vectors of 1 values.
   if (getType()->isVectorTy())
     if (const auto *SplatCFP = dyn_cast_or_null<ConstantFP>(getSplatValue()))
       return SplatCFP->isZero();
+
+  if (isa<ConstantAggregateZero>(this))
+    return true;
 
   // Otherwise, just use +0.0.
   return isNullValue();
@@ -100,8 +118,14 @@ bool Constant::isNullValue() const {
 
   // constant zero is zero for aggregates, cpnull is null for pointers, none for
   // tokens.
-  return isa<ConstantAggregateZero>(this) || isa<ConstantPointerNull>(this) ||
-         isa<ConstantTokenNone>(this) || isa<ConstantTargetNone>(this);
+  if (isa<ConstantPointerNull>(this) || isa<ConstantTokenNone>(this) ||
+      isa<ConstantTargetNone>(this))
+    return true;
+
+  if (auto *CA = dyn_cast<ConstantAggregate>(this))
+    return CA->isNullValue();
+
+  return false;
 }
 
 bool Constant::isAllOnesValue() const {
@@ -386,7 +410,10 @@ bool Constant::containsConstantExpression() const {
   return false;
 }
 
-/// Constructor to create a '0' constant of arbitrary type.
+/// Constructor that creates a null constant of any type. For most types, this
+/// means a constant with value '0', but for pointer types, it represents a
+/// nullptr constant. A nullptr isn't always a zero-value pointer in certain
+/// address spaces on some targets.
 Constant *Constant::getNullValue(Type *Ty) {
   switch (Ty->getTypeID()) {
   case Type::IntegerTyID:
@@ -403,10 +430,12 @@ Constant *Constant::getNullValue(Type *Ty) {
   case Type::PointerTyID:
     return ConstantPointerNull::get(cast<PointerType>(Ty));
   case Type::StructTyID:
+    return ConstantStruct::getNullValue(cast<StructType>(Ty));
   case Type::ArrayTyID:
+    return ConstantArray::getNullValue(cast<ArrayType>(Ty));
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID:
-    return ConstantAggregateZero::get(Ty);
+    return ConstantVector::getNullValue(cast<VectorType>(Ty));
   case Type::TokenTyID:
     return ConstantTokenNone::get(Ty->getContext());
   case Type::TargetExtTyID:
@@ -414,6 +443,24 @@ Constant *Constant::getNullValue(Type *Ty) {
   default:
     // Function, Label, or Opaque type?
     llvm_unreachable("Cannot create a null constant of that type!");
+  }
+}
+
+/// Constructor that creates a zero constant of any type. For most types, this
+/// is equivalent to getNullValue. For pointer types, it creates an inttoptr
+/// constant expression.
+Constant *Constant::getZeroValue(Type *Ty) {
+  switch (Ty->getTypeID()) {
+  case Type::PointerTyID:
+    return ConstantExpr::getIntToPtr(
+        ConstantInt::get(Type::getInt8Ty(Ty->getContext()), 0), Ty);
+  case Type::StructTyID:
+  case Type::ArrayTyID:
+  case Type::FixedVectorTyID:
+  case Type::ScalableVectorTyID:
+    return ConstantAggregateZero::get(Ty);
+  default:
+    return Constant::getNullValue(Ty);
   }
 }
 
@@ -752,7 +799,7 @@ static bool constantIsDead(const Constant *C, bool RemoveDeadUsers) {
     ReplaceableMetadataImpl::SalvageDebugInfo(*C);
     const_cast<Constant *>(C)->destroyConstant();
   }
-  
+
   return true;
 }
 
@@ -1154,12 +1201,12 @@ void ConstantFP::destroyConstantImpl() {
 
 Constant *ConstantAggregateZero::getSequentialElement() const {
   if (auto *AT = dyn_cast<ArrayType>(getType()))
-    return Constant::getNullValue(AT->getElementType());
-  return Constant::getNullValue(cast<VectorType>(getType())->getElementType());
+    return Constant::getZeroValue(AT->getElementType());
+  return Constant::getZeroValue(cast<VectorType>(getType())->getElementType());
 }
 
 Constant *ConstantAggregateZero::getStructElement(unsigned Elt) const {
-  return Constant::getNullValue(getType()->getStructElementType(Elt));
+  return Constant::getZeroValue(getType()->getStructElementType(Elt));
 }
 
 Constant *ConstantAggregateZero::getElementValue(Constant *C) const {
@@ -1325,6 +1372,19 @@ ConstantAggregate::ConstantAggregate(Type *T, ValueTy VT,
   }
 }
 
+bool ConstantAggregate::isNullValue() const {
+  if (getType()->isVectorTy()) {
+    Constant *V = getSplatValue();
+    return V && V->isNullValue();
+  }
+
+  for (unsigned I = 0; I < getNumOperands(); ++I) {
+    if (!getOperand(I)->isNullValue())
+      return false;
+  }
+  return true;
+}
+
 ConstantArray::ConstantArray(ArrayType *T, ArrayRef<Constant *> V,
                              AllocInfo AllocInfo)
     : ConstantAggregate(T, ConstantArrayVal, V, AllocInfo) {
@@ -1410,11 +1470,11 @@ Constant *ConstantStruct::get(StructType *ST, ArrayRef<Constant*> V) {
   if (!V.empty()) {
     isUndef = isa<UndefValue>(V[0]);
     isPoison = isa<PoisonValue>(V[0]);
-    isZero = V[0]->isNullValue();
+    isZero = V[0]->isZeroValue();
     // PoisonValue inherits UndefValue, so its check is not necessary.
     if (isUndef || isZero) {
       for (Constant *C : V) {
-        if (!C->isNullValue())
+        if (!C->isZeroValue())
           isZero = false;
         if (!isa<PoisonValue>(C))
           isPoison = false;
@@ -1455,7 +1515,7 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   // If this is an all-undef or all-zero vector, return a
   // ConstantAggregateZero or UndefValue.
   Constant *C = V[0];
-  bool isZero = C->isNullValue();
+  bool isZero = C->isZeroValue();
   bool isUndef = isa<UndefValue>(C);
   bool isPoison = isa<PoisonValue>(C);
   bool isSplatFP = UseConstantFPForFixedLengthSplat && isa<ConstantFP>(C);
@@ -2732,7 +2792,7 @@ Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty,
       case Instruction::Add: // X + 0 = X
       case Instruction::Or:  // X | 0 = X
       case Instruction::Xor: // X ^ 0 = X
-        return Constant::getNullValue(Ty);
+        return Constant::getZeroValue(Ty);
       case Instruction::Mul: // X * 1 = X
         return ConstantInt::get(Ty, 1);
       case Instruction::And: // X & -1 = X
@@ -2756,7 +2816,7 @@ Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty,
     case Instruction::LShr: // X >>u 0 = X
     case Instruction::AShr: // X >> 0 = X
     case Instruction::FSub: // X - 0.0 = X
-      return Constant::getNullValue(Ty);
+      return Constant::getZeroValue(Ty);
     case Instruction::SDiv: // X / 1 = X
     case Instruction::UDiv: // X /u 1 = X
       return ConstantInt::get(Ty, 1);
@@ -2770,7 +2830,7 @@ Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty,
 Constant *ConstantExpr::getIntrinsicIdentity(Intrinsic::ID ID, Type *Ty) {
   switch (ID) {
   case Intrinsic::umax:
-    return Constant::getNullValue(Ty);
+    return Constant::getZeroValue(Ty);
   case Intrinsic::umin:
     return Constant::getAllOnesValue(Ty);
   case Intrinsic::smax:
@@ -2804,7 +2864,7 @@ Constant *ConstantExpr::getBinOpAbsorber(unsigned Opcode, Type *Ty,
 
   case Instruction::And: // 0 & X = 0
   case Instruction::Mul: // 0 * X = 0
-    return Constant::getNullValue(Ty);
+    return Constant::getZeroValue(Ty);
   }
 
   // AllowLHSConstant must be set.
@@ -2821,7 +2881,7 @@ Constant *ConstantExpr::getBinOpAbsorber(unsigned Opcode, Type *Ty,
   case Instruction::UDiv: // 0 /u X = 0
   case Instruction::URem: // 0 %u X = 0
   case Instruction::SRem: // 0 %s X = 0
-    return Constant::getNullValue(Ty);
+    return Constant::getZeroValue(Ty);
   }
 }
 
@@ -3357,6 +3417,12 @@ Value *ConstantArray::handleOperandChangeImpl(Value *From, Value *To) {
       Values, this, From, ToC, NumUpdated, OperandNo);
 }
 
+Constant *ConstantArray::getNullValue(ArrayType *T) {
+  return ConstantArray::get(
+      T, SmallVector<Constant *>(T->getNumElements(),
+                                 Constant::getNullValue(T->getElementType())));
+}
+
 Value *ConstantStruct::handleOperandChangeImpl(Value *From, Value *To) {
   assert(isa<Constant>(To) && "Cannot make Constant refer to non-constant!");
   Constant *ToC = cast<Constant>(To);
@@ -3393,6 +3459,14 @@ Value *ConstantStruct::handleOperandChangeImpl(Value *From, Value *To) {
       Values, this, From, ToC, NumUpdated, OperandNo);
 }
 
+Constant *ConstantStruct::getNullValue(StructType *T) {
+  SmallVector<Constant *> Values;
+  Values.reserve(T->getNumElements());
+  for (unsigned I = 0; I < T->getNumElements(); ++I)
+    Values.push_back(Constant::getNullValue(T->getElementType(I)));
+  return ConstantStruct::get(T, Values);
+}
+
 Value *ConstantVector::handleOperandChangeImpl(Value *From, Value *To) {
   assert(isa<Constant>(To) && "Cannot make Constant refer to non-constant!");
   Constant *ToC = cast<Constant>(To);
@@ -3417,6 +3491,11 @@ Value *ConstantVector::handleOperandChangeImpl(Value *From, Value *To) {
   // Update to the new value.
   return getContext().pImpl->VectorConstants.replaceOperandsInPlace(
       Values, this, From, ToC, NumUpdated, OperandNo);
+}
+
+Constant *ConstantVector::getNullValue(VectorType *T) {
+  return ConstantVector::getSplat(T->getElementCount(),
+                                  Constant::getNullValue(T->getElementType()));
 }
 
 Value *ConstantExpr::handleOperandChangeImpl(Value *From, Value *ToV) {

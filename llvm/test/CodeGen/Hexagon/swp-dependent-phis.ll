@@ -10,7 +10,7 @@
 ;In some cases, SU0 is scheduled earlier than SU1 resulting in bad
 ;IR as we do not have a value that can be used by SU2.
 
-@global = common dso_local local_unnamed_addr global ptr null, align 4
+@global = common dso_local local_unnamed_addr global ptr zeroinitializer, align 4
 @global.1 = common dso_local local_unnamed_addr global i32 0, align 4
 @global.2 = common dso_local local_unnamed_addr global i16 0, align 2
 @global.3 = common dso_local local_unnamed_addr global i16 0, align 2

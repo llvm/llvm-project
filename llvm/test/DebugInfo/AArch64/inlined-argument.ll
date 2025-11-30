@@ -35,7 +35,7 @@ target triple = "arm64-apple-ios5.0.0"
 %struct.t = type { ptr }
 %struct.q = type { ptr, i64 }
 
-@tt = common local_unnamed_addr global ptr null, align 8, !dbg !0
+@tt = common local_unnamed_addr global ptr zeroinitializer, align 8, !dbg !0
 
 ; Function Attrs: norecurse nounwind readonly ssp uwtable
 define i32 @g(ptr nocapture readonly %t, i64 %r) local_unnamed_addr !dbg !21 {

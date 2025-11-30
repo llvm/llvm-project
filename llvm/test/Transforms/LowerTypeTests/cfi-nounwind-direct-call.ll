@@ -20,7 +20,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux"
 
-@catch_ptr = local_unnamed_addr global ptr null, align 8
+@catch_ptr = local_unnamed_addr global ptr zeroinitializer, align 8
 @llvm.used = appending global [1 x ptr] [ptr @__cfi_check_fail], section "llvm.metadata"
 
 ; Function Attrs: minsize mustprogress nofree norecurse nosync nounwind optsize willreturn memory(none)

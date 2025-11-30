@@ -1,7 +1,7 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s \
 ; RUN:   -verify-machineinstrs | FileCheck %s
 
-@b = dso_local local_unnamed_addr global ptr null, align 8
+@b = dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 @a = dso_local local_unnamed_addr global i8 0, align 1
 
 define void @testADDEPromoteResult() {

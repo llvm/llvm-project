@@ -9,7 +9,7 @@ source_filename = "test/DebugInfo/X86/objc-fwd-decl.ll"
 
 %0 = type opaque
 
-@a = common global ptr null, align 8, !dbg !0
+@a = common global ptr zeroinitializer, align 8, !dbg !0
 
 !llvm.dbg.cu = !{!5}
 !llvm.module.flags = !{!8, !9, !10, !11, !12, !13}

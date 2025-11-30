@@ -4,7 +4,7 @@
 
 @a = common dso_local global i32 0, align 4
 @c = common dso_local local_unnamed_addr global i8 0, align 1
-@b = common dso_local local_unnamed_addr global ptr null, align 8
+@b = common dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 
 define dso_local void @e() {
 ; X86-LABEL: e:

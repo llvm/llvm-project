@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -fast-isel %s -o - -start-before=stack-protector -stop-after=stack-protector  | FileCheck %s
 
-@var = global ptr null
+@var = global ptr zeroinitializer
 
 declare void @callee()
 

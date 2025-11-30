@@ -34,7 +34,7 @@ source_filename = "tr1.f90"
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
 
-@"IF_TEST$A" = internal global ptr null, align 8, !dbg !0
+@"IF_TEST$A" = internal global ptr zeroinitializer, align 8, !dbg !0
 @0 = internal unnamed_addr constant i32 65536
 @1 = internal unnamed_addr constant i32 2
 

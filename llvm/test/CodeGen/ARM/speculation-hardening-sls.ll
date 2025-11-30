@@ -178,7 +178,7 @@ entry:
 }
 
 ; verify calling through a function pointer.
-@a = dso_local local_unnamed_addr global ptr null, align 8
+@a = dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 @b = dso_local local_unnamed_addr global i32 0, align 4
 define dso_local void @indirect_call_global() local_unnamed_addr {
 ; CHECK-LABEL: indirect_call_global:

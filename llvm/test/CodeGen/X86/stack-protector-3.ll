@@ -91,12 +91,12 @@
 ; ModuleID = 't.c'
 ;--- existedGV.ll
 
-@__woof = dso_local local_unnamed_addr global ptr null, align 8
+@__woof = dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 
 ;--- main.ll
 
 @.str = private unnamed_addr constant [14 x i8] c"stackoverflow\00", align 1
-@a = dso_local local_unnamed_addr global ptr null, align 8
+@a = dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 
 ; Function Attrs: nounwind sspreq uwtable writeonly
 define dso_local i32 @main() local_unnamed_addr #0 {

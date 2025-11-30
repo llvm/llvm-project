@@ -5,7 +5,7 @@ target triple = "hexagon"
 
 %s.0 = type { i32 }
 
-@g0 = internal unnamed_addr global ptr null, section ".data.............", align 4
+@g0 = internal unnamed_addr global ptr zeroinitializer, section ".data.............", align 4
 @g1 = internal global i32 0, section ".data.............", align 4
 
 ; Function Attrs: nounwind

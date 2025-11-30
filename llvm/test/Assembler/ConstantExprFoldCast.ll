@@ -5,10 +5,10 @@
 
 ; CHECK-NOT: bitcast
 ; CHECK-NOT: trunc
-; CHECK: addrspacecast
-; CHECK: addrspacecast
+; CHECK: ptr addrspace(1) null
+; CHECK: ptr null
 
-@A = global ptr null  ; Cast null -> fold
+@A = global ptr zeroinitializer  ; Cast null -> fold
 @B = global ptr @A   ; Cast to same type -> fold
 @C = global i32 trunc (i64 42 to i32)        ; Integral casts
 @D = global ptr @C  ; cast of cast ptr->ptr

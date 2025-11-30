@@ -22,7 +22,7 @@ module asm "classical GAS"
 @protected = protected global i32 23
 @section = global i32 27, section ".custom"
 @align = global i32 31, align 4
-@nullptr = global ptr null
+@nullptr = global ptr zeroinitializer
 
 @const_gep = global ptr getelementptr (i32, ptr @var, i64 2)
 @const_inbounds_gep = global ptr getelementptr inbounds (i32, ptr @var, i64 1)

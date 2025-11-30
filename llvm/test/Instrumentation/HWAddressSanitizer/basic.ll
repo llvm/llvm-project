@@ -98,7 +98,7 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define i8 @test_load8
 ; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 0, i64 0)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret i8 [[B]]
@@ -106,7 +106,7 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define i8 @test_load8
 ; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
@@ -230,7 +230,7 @@ define i16 @test_load16(ptr %a) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define i16 @test_load16
 ; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 1, i64 0)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i16, ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret i16 [[B]]
@@ -238,7 +238,7 @@ define i16 @test_load16(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define i16 @test_load16
 ; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
@@ -362,7 +362,7 @@ define i32 @test_load32(ptr %a) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define i32 @test_load32
 ; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 2, i64 0)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i32, ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret i32 [[B]]
@@ -370,7 +370,7 @@ define i32 @test_load32(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define i32 @test_load32
 ; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
@@ -494,7 +494,7 @@ define i64 @test_load64(ptr %a) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define i64 @test_load64
 ; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 3, i64 0)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i64, ptr [[A]], align 8
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret i64 [[B]]
@@ -502,7 +502,7 @@ define i64 @test_load64(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define i64 @test_load64
 ; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
@@ -626,7 +626,7 @@ define i128 @test_load128(ptr %a) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define i128 @test_load128
 ; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 4, i64 0)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i128, ptr [[A]], align 16
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret i128 [[B]]
@@ -634,7 +634,7 @@ define i128 @test_load128(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define i128 @test_load128
 ; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
@@ -722,7 +722,7 @@ define i40 @test_load40(ptr %a) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define i40 @test_load40
 ; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @__hwasan_loadN(i64 [[TMP0]], i64 5)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i40, ptr [[A]], align 4
@@ -731,7 +731,7 @@ define i40 @test_load40(ptr %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define i40 @test_load40
 ; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void @__hwasan_loadN_noabort(i64 [[TMP0]], i64 5)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[B:%.*]] = load i40, ptr [[A]], align 4
@@ -827,7 +827,7 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define void @test_store8
 ; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 16, i64 0)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i8 [[B]], ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret void
@@ -835,7 +835,7 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define void @test_store8
 ; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
@@ -959,7 +959,7 @@ define void @test_store16(ptr %a, i16 %b) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define void @test_store16
 ; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 17, i64 0)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i16 [[B]], ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret void
@@ -967,7 +967,7 @@ define void @test_store16(ptr %a, i16 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define void @test_store16
 ; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
@@ -1091,7 +1091,7 @@ define void @test_store32(ptr %a, i32 %b) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define void @test_store32
 ; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 18, i64 0)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i32 [[B]], ptr [[A]], align 4
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret void
@@ -1099,7 +1099,7 @@ define void @test_store32(ptr %a, i32 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define void @test_store32
 ; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
@@ -1223,7 +1223,7 @@ define void @test_store64(ptr %a, i64 %b) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define void @test_store64
 ; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 19, i64 0)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i64 [[B]], ptr [[A]], align 8
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret void
@@ -1231,7 +1231,7 @@ define void @test_store64(ptr %a, i64 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define void @test_store64
 ; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
@@ -1355,7 +1355,7 @@ define void @test_store128(ptr %a, i128 %b) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define void @test_store128
 ; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i128 [[B:%.*]]) #[[ATTR0]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 20, i64 0)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i128 [[B]], ptr [[A]], align 16
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    ret void
@@ -1363,7 +1363,7 @@ define void @test_store128(ptr %a, i128 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define void @test_store128
 ; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i128 [[B:%.*]]) #[[ATTR0]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 56
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
@@ -1451,7 +1451,7 @@ define void @test_store40(ptr %a, i40 %b) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define void @test_store40
 ; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i40 [[B:%.*]]) #[[ATTR0]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @__hwasan_storeN(i64 [[TMP0]], i64 5)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i40 [[B]], ptr [[A]], align 4
@@ -1460,7 +1460,7 @@ define void @test_store40(ptr %a, i40 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define void @test_store40
 ; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i40 [[B:%.*]]) #[[ATTR0]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void @__hwasan_storeN_noabort(i64 [[TMP0]], i64 5)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i40 [[B]], ptr [[A]], align 4
@@ -1520,7 +1520,7 @@ define void @test_store_unaligned(ptr %a, i64 %b) sanitize_hwaddress {
 ; ABORT-ZERO-BASED-SHADOW-LABEL: define void @test_store_unaligned
 ; ABORT-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; ABORT-ZERO-BASED-SHADOW-NEXT:  entry:
-; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    call void @__hwasan_storeN(i64 [[TMP0]], i64 8)
 ; ABORT-ZERO-BASED-SHADOW-NEXT:    store i64 [[B]], ptr [[A]], align 4
@@ -1529,7 +1529,7 @@ define void @test_store_unaligned(ptr %a, i64 %b) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW-LABEL: define void @test_store_unaligned
 ; RECOVER-ZERO-BASED-SHADOW-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:  entry:
-; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    call void @__hwasan_storeN_noabort(i64 [[TMP0]], i64 8)
 ; RECOVER-ZERO-BASED-SHADOW-NEXT:    store i64 [[B]], ptr [[A]], align 4

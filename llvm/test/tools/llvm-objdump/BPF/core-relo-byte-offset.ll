@@ -52,7 +52,7 @@
 ; CHECK: CO-RE <byte_off> [[[#bar]]] struct bar::f.k[7].b (0:0:1:7:1)
 ; CHECK: CO-RE <byte_off> [[[#bar]]] struct bar::[1].f.k[7].b (1:0:1:7:1)
 
-@g = dso_local global ptr null, align 8, !dbg !0
+@g = dso_local global ptr zeroinitializer, align 8, !dbg !0
 @"llvm.bar:0:0$0:0" = external global i64, !llvm.preserve.access.index !14 #0
 @"llvm.bar:0:8$0:0:1" = external global i64, !llvm.preserve.access.index !14 #0
 @"llvm.bar:0:4$0:0:0" = external global i64, !llvm.preserve.access.index !14 #0

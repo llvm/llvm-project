@@ -238,7 +238,7 @@ let test_constants () =
   ignore (define_global "const_all_ones" c m);
 
   group "pointer null"; begin
-    (* CHECK: const_pointer_null = global ptr null
+    (* CHECK: const_pointer_null = global ptr zeroinitializer
      *)
     let c = const_pointer_null (pointer_type context) in
     ignore (define_global "const_pointer_null" c m);

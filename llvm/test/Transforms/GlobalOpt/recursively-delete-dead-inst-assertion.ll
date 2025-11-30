@@ -5,7 +5,7 @@
 ; a constant in the meantime. Make sure this does not cause an assertion
 ; failure.
 
-@a = internal global ptr null
+@a = internal global ptr zeroinitializer
 @b = internal global ptr @a
 
 define void @test() {

@@ -22,7 +22,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %struct.anon = type { i32 }
 
-@b = dso_local local_unnamed_addr global ptr null, align 8, !dbg !0
+@b = dso_local local_unnamed_addr global ptr zeroinitializer, align 8, !dbg !0
 @c = dso_local local_unnamed_addr global i32 0, align 4, !dbg !6
 
 define dso_local void @d() local_unnamed_addr !dbg !17 {

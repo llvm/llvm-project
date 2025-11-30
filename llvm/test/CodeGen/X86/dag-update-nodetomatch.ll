@@ -16,7 +16,7 @@
 @x2 = local_unnamed_addr global i32 0, align 4
 @x3 = local_unnamed_addr global i32 0, align 4
 @x4 = local_unnamed_addr global i32 0, align 4
-@x5 = local_unnamed_addr global ptr null, align 8
+@x5 = local_unnamed_addr global ptr zeroinitializer, align 8
 
 ; Check that compiler does not crash.
 ; Test for PR30775

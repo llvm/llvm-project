@@ -30,12 +30,12 @@
 ; CHECK:	mov	rdx, offset X
 ; CHECK:	mov	qword ptr [PX], rdx
 
-@PZ = common dso_local global ptr null, align 8
+@PZ = common dso_local global ptr zeroinitializer, align 8
 @Z = common dso_local global [4 x i8] zeroinitializer, align 1
 @X = common dso_local global [4 x i8] zeroinitializer, align 1
-@PX = common dso_local global ptr null, align 8
+@PX = common dso_local global ptr zeroinitializer, align 8
 @Y = common dso_local global [4 x i8] zeroinitializer, align 1
-@PY = common dso_local global ptr null, align 8
+@PY = common dso_local global ptr zeroinitializer, align 8
 
 define dso_local ptr @test057(i64 %x) {
 entry:

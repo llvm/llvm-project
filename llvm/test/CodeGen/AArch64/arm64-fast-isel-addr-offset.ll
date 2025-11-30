@@ -32,7 +32,7 @@ entry:
 
 ; Load an address with a ridiculously large offset.
 ; rdar://12505553
-@pd2 = common global ptr null, align 8
+@pd2 = common global ptr zeroinitializer, align 8
 
 define signext i8 @foo3() nounwind ssp {
 entry:

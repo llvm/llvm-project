@@ -44,7 +44,7 @@ define i32 @t3() "frame-pointer"="all" {
         ret i32 %tmp6
 }
 
-@g = common global ptr null
+@g = common global ptr zeroinitializer
 
 define void @t4(i32 %a0, i32 %a1, i32 %a2) "frame-pointer"="all" {
 ; ALL-LABEL: t4:

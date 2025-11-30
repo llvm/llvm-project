@@ -119,7 +119,7 @@
   ptr @needs_dot8_insts
 ]
 
-; GFX7: @ConstantExpr = internal global i64 0
+; GFX7: @ConstantExpr = internal global i64 ptrtoint (ptr null to i64)
 @ConstantExpr = internal global i64 ptrtoint (ptr @needs_dpp to i64)
 
 define void @needs_dpp(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) #0 {

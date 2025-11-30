@@ -5,7 +5,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 @.str = private unnamed_addr constant [5 x i8] c"moo\0A\00", align 1
-@p = dso_local global ptr null, align 8
+@p = dso_local global ptr zeroinitializer, align 8
 @cond = dso_local global i8 0, align 1
 @str = private unnamed_addr constant [4 x i8] c"moo\00", align 1
 

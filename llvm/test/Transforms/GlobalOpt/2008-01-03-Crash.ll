@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes=globalopt | llvm-dis
 ; PR1896
 
-@indirect1 = internal global ptr null		; <ptr> [#uses=2]
+@indirect1 = internal global ptr zeroinitializer		; <ptr> [#uses=2]
 
 declare void @indirectmarked(i32)
 

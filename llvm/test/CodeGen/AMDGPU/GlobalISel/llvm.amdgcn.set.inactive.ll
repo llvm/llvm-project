@@ -433,7 +433,7 @@ define amdgpu_kernel void @set_inactive_p3(ptr addrspace(1) %out, ptr addrspace(
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, v1, s[4:5]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -1, v1, s[4:5]
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
@@ -454,7 +454,7 @@ define amdgpu_kernel void @set_inactive_p5(ptr addrspace(1) %out, ptr addrspace(
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, v1, s[4:5]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -1, v1, s[4:5]
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000

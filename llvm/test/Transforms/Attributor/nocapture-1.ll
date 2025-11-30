@@ -2,13 +2,13 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-annotate-decl-cs  -S < %s | FileCheck %s --check-prefixes=CHECK,TUNIT
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
-@g = global ptr null		; <ptr> [#uses=1]
+@g = global ptr zeroinitializer		; <ptr> [#uses=1]
 
 ;.
-; CHECK: @g = global ptr null
+; CHECK: @g = global ptr zeroinitializer
 ; CHECK: @lookup_table = global [2 x i1] [i1 false, i1 true]
-; CHECK: @g2 = global ptr null
-; CHECK: @g3 = global ptr null
+; CHECK: @g2 = global ptr zeroinitializer
+; CHECK: @g3 = global ptr zeroinitializer
 ;.
 define ptr @c1(ptr %q) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -629,7 +629,7 @@ entry:
   ret void
 }
 
-@g2 = global ptr null
+@g2 = global ptr zeroinitializer
 define void @captureLaunder(ptr %p) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@captureLaunder
@@ -673,7 +673,7 @@ entry:
   ret void
 }
 
-@g3 = global ptr null
+@g3 = global ptr zeroinitializer
 define void @captureStrip(ptr %p) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@captureStrip

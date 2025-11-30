@@ -5,7 +5,7 @@
 
 ; STATS-NOT: 1 pipeliner   - Number of loops software pipelined
 
-@g0 = common global ptr null, align 4
+@g0 = common global ptr zeroinitializer, align 4
 
 ; Function Attrs: nounwind
 define void @f0(i32 %a0, i32 %a1, i32 %a2) #0 {

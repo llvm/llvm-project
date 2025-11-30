@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 ; Do not inline calls with variable-sized alloca.
 
-@q = common global ptr null
+@q = common global ptr zeroinitializer
 
 define ptr @a(i32 %i) nounwind {
 ; CHECK-LABEL: define ptr @a

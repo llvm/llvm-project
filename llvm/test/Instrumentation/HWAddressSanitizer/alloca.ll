@@ -69,7 +69,7 @@ define void @test_alloca() sanitize_hwaddress !dbg !15 {
 ; ZERO-BASED-SHADOW-LABEL: define void @test_alloca(
 ; ZERO-BASED-SHADOW-SAME: ) #[[ATTR0:[0-9]+]] personality ptr @__hwasan_personality_thunk !dbg [[DBG8:![0-9]+]] {
 ; ZERO-BASED-SHADOW-NEXT:  entry:
-; ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ZERO-BASED-SHADOW-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 20
@@ -160,7 +160,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ;.
 ; DYNAMIC-SHADOW: [[META0]] = !{ptr @hwasan.note}
 ; DYNAMIC-SHADOW: [[META1:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META2:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META3:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-; DYNAMIC-SHADOW: [[META2]] = !DIFile(filename: "alloca.cpp", directory: {{.*}})
+; DYNAMIC-SHADOW: [[META2]] = !DIFile(filename: "{{.*}}alloca.cpp", directory: {{.*}})
 ; DYNAMIC-SHADOW: [[META3]] = !{}
 ; DYNAMIC-SHADOW: [[META4:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 4}
 ; DYNAMIC-SHADOW: [[META5:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
@@ -177,7 +177,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ;.
 ; ZERO-BASED-SHADOW: [[META0]] = !{ptr @hwasan.note}
 ; ZERO-BASED-SHADOW: [[META1:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META2:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META3:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-; ZERO-BASED-SHADOW: [[META2]] = !DIFile(filename: "alloca.cpp", directory: {{.*}})
+; ZERO-BASED-SHADOW: [[META2]] = !DIFile(filename: "{{.*}}alloca.cpp", directory: {{.*}})
 ; ZERO-BASED-SHADOW: [[META3]] = !{}
 ; ZERO-BASED-SHADOW: [[META4:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 4}
 ; ZERO-BASED-SHADOW: [[META5:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}

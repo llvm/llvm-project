@@ -6,7 +6,7 @@
 ; Enable tailcall optimization for iOS 5.0
 ; rdar://9120031
 
-@t = weak global ptr null           ; <ptr> [#uses=1]
+@t = weak global ptr zeroinitializer           ; <ptr> [#uses=1]
 
 declare void @g(i32, i32, i32, i32)
 

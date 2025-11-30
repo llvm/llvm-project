@@ -14,7 +14,7 @@ entry:
   ret i32 %a
 }
 
-@helper = global ptr null, align 4
+@helper = global ptr zeroinitializer, align 4
 
 define i32 @test_indirect() #0 {
 entry:

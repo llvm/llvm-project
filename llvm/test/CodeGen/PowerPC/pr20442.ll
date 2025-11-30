@@ -14,8 +14,8 @@ target triple = "powerpc-unknown-linux-gnu"
 %struct.anon = type { i32 }
 %struct.anon.0 = type { i32 }
 
-@b = common global ptr null, align 4
-@a = common global ptr null, align 4
+@b = common global ptr zeroinitializer, align 4
+@a = common global ptr zeroinitializer, align 4
 
 ; Function Attrs: nounwind readonly uwtable
 define i32 @fn1() #0 {

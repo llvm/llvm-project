@@ -9,17 +9,17 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: @x = global ptr null, align 8
+; CHECK: @x = global ptr zeroinitializer, align 8
 @x = global ptr @f, align 8
 
-; CHECK: @x2 = global ptr null, align 8
+; CHECK: @x2 = global ptr zeroinitializer, align 8
 @x2 = global ptr @f, align 8
 
-; CHECK: @x3 = internal global ptr null, align 8
+; CHECK: @x3 = internal global ptr zeroinitializer, align 8
 @x3 = internal constant ptr @f, align 8
 
 ; f + addend
-; CHECK: @x4 = global ptr null, align 8
+; CHECK: @x4 = global ptr zeroinitializer, align 8
 @x4 = global ptr getelementptr (i8, ptr @f, i64 42), align 8
 
 ; aggregate initializer

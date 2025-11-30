@@ -5,7 +5,7 @@
 ; Make it easier to verify that alignment is correct/optimal:
 ; 16-bit pointers with 32-bit ABI alignment and 128-bit preferred alignment
 
-target datalayout = "p:16:32:128" 
+target datalayout = "p:16:32:128"
 
 %struct.ButtonInitData = type { ptr }
 
@@ -19,7 +19,7 @@ target datalayout = "p:16:32:128"
 
 ; Choose the preferred alignment.
 
-; CHECK: @[[_ZL14BUTTONINITDATA_0_0:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global ptr null, align 16
+; CHECK: @[[_ZL14BUTTONINITDATA_0_0:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global ptr zeroinitializer, align 16
 ;.
 define internal void @__cxx_global_var_init() section "__TEXT,__StaticInit,regular,pure_instructions" {
   %1 = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_41", !invariant.load !2009

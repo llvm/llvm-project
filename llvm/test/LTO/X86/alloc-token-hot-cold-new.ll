@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare ptr @_Znwm(i64)
 
-@sink = global ptr null
+@sink = global ptr zeroinitializer
 
 ; CHECK-LABEL: <main>:
 ; CHECK: callq

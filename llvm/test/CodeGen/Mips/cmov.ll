@@ -7,7 +7,7 @@
 ; RUN: llc -mtriple=mips64el -mcpu=mips64r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMP
 
 @i1 = global [3 x i32] [i32 1, i32 2, i32 3], align 4
-@i3 = common global ptr null, align 4
+@i3 = common global ptr zeroinitializer, align 4
 
 ; ALL-LABEL: cmov1:
 

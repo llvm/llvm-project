@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=thumbv7-linux -mattr=+thumb2 | FileCheck %s -check-prefix=LINUX
 ; XFAIL: *
 
-@t = weak global ptr null           ; <ptr> [#uses=1]
+@t = weak global ptr zeroinitializer           ; <ptr> [#uses=1]
 
 declare void @g(i32, i32, i32, i32)
 

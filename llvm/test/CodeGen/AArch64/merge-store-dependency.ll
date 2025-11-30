@@ -4,7 +4,7 @@
 ; PR26827 - Merge stores causes wrong dependency.
 %struct1 = type { ptr, ptr, i32, i32, i16, i16, ptr, ptr }
 @gv0 = internal unnamed_addr global i32 0, align 4
-@gv1 = internal unnamed_addr global ptr null, align 8
+@gv1 = internal unnamed_addr global ptr zeroinitializer, align 8
 
 define void @test(ptr %fde, i32 %fd, ptr %func, ptr %arg) uwtable {
 ;CHECK-LABEL: test

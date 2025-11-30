@@ -1499,6 +1499,21 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
     llvm_unreachable("Missing case");
   case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
+    // If the input is a nullptr, we can fold it to the corresponding nullptr
+    // value.
+    if (Opcode == Instruction::PtrToInt && C->isNullValue()) {
+      if (std::optional<APInt> NullPtrValue = DL.getNullPtrValue(
+              C->getType()->getScalarType()->getPointerAddressSpace())) {
+        if (NullPtrValue->isZero()) {
+          return Constant::getZeroValue(DestTy);
+        } else if (NullPtrValue->isAllOnes()) {
+          return ConstantInt::get(
+              DestTy, NullPtrValue->zextOrTrunc(DestTy->getScalarSizeInBits()));
+        } else {
+          llvm_unreachable("invalid nullptr value");
+        }
+      }
+    }
     if (auto *CE = dyn_cast<ConstantExpr>(C)) {
       Constant *FoldedValue = nullptr;
       // If the input is an inttoptr, eliminate the pair.  This requires knowing
@@ -1545,6 +1560,13 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
     }
     break;
   case Instruction::IntToPtr:
+    // We can fold it to a null pointer if the input is the nullptr value.
+    if (std::optional<APInt> NullPtrValue = DL.getNullPtrValue(
+            DestTy->getScalarType()->getPointerAddressSpace())) {
+      if ((NullPtrValue->isZero() && C->isZeroValue()) ||
+          (NullPtrValue->isAllOnes() && C->isAllOnesValue()))
+        return Constant::getNullValue(DestTy);
+    }
     // If the input is a ptrtoint, turn the pair into a ptr to ptr bitcast if
     // the int size is >= the ptr size and the address spaces are the same.
     // This requires knowing the width of a pointer, so it can't be done in
@@ -1563,6 +1585,24 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
       }
     }
     break;
+  case Instruction::AddrSpaceCast:
+    // A null pointer (`ptr addrspace(N) null` in IR presentation,
+    // `ConstantPointerNull` in LLVM class, not `nullptr` in C/C++) used to
+    // represent a zero-value pointer in the corresponding address space.
+    // Therefore, we can't simply fold an address space cast of a null pointer
+    // from one address space to another, because on some targets, the nullptr
+    // of an address space could be non-zero.
+    //
+    // Recently, the semantic of `ptr addrspace(N) null` is changed to represent
+    // the actual nullptr in the corresponding address space. It can be zero or
+    // non-zero, depending on the target. Therefore, we can fold an address
+    // space cast of a nullptr from one address space to another.
+
+    // If the input is a nullptr, we can fold it to the corresponding
+    // nullptr in the destination address space.
+    if (C->isNullValue())
+      return Constant::getNullValue(DestTy);
+    [[fallthrough]];
   case Instruction::Trunc:
   case Instruction::ZExt:
   case Instruction::SExt:
@@ -1572,7 +1612,6 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
   case Instruction::SIToFP:
   case Instruction::FPToUI:
   case Instruction::FPToSI:
-  case Instruction::AddrSpaceCast:
     break;
   case Instruction::BitCast:
     return FoldBitCast(C, DestTy, DL);

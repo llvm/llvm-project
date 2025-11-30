@@ -15,7 +15,7 @@ target triple = "armv7-pc-linux-android"
 ; CHECK: !36 = !DILocation(line: 3, column: 11, scope: !17, inlinedAt: !37)
 ; CHECK: !37 = distinct !DILocation(line: 6, scope: !27)
 
-@addr = common local_unnamed_addr global ptr null, align 4, !dbg !0
+@addr = common local_unnamed_addr global ptr zeroinitializer, align 4, !dbg !0
 
 ; Function Attrs: norecurse nounwind readonly safestack
 define ptr @__safestack_pointer_address() local_unnamed_addr #0 !dbg !17 {

@@ -19,7 +19,7 @@ entry:
 ; PR6760
 %T = type { [5 x i32] }
 
-@switch_inf = internal global ptr null
+@switch_inf = internal global ptr zeroinitializer
 
 define void @test(ptr %arch_file, i32 %route_type) {
 entry:
@@ -29,12 +29,12 @@ entry:
   store ptr %C, ptr @switch_inf, align 8
   unreachable
 
-bb.nph.i: 
+bb.nph.i:
   %scevgep.i539 = getelementptr i8, ptr %C, i64 4
   unreachable
 
 xx:
-  %E = load ptr, ptr @switch_inf, align 8 
+  %E = load ptr, ptr @switch_inf, align 8
   unreachable
 }
 
@@ -42,7 +42,7 @@ declare noalias ptr @malloc(i64) nounwind
 
 
 ; PR8063
-@permute_bitrev.bitrev = internal global ptr null, align 8
+@permute_bitrev.bitrev = internal global ptr zeroinitializer, align 8
 define void @permute_bitrev() nounwind {
 entry:
   %tmp = load ptr, ptr @permute_bitrev.bitrev, align 8
@@ -65,7 +65,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
 
 ; PR9856
-@g_52 = internal global ptr null, align 8
+@g_52 = internal global ptr zeroinitializer, align 8
 @g_90 = external global ptr, align 8
 
 define void @icmp_user_of_stored_once() nounwind ssp {

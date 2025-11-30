@@ -4,7 +4,7 @@
 
 --- |
 
-  @addr = global ptr null
+  @addr = global ptr zeroinitializer
 
   define void @test() {
   entry:

@@ -22,7 +22,7 @@
 ]
 
 ; EXTIMG:         @ConstantExpr = internal global i64 ptrtoint (ptr @needs_extimg to i64)
-; NOEXTIMG:       @ConstantExpr = internal global i64 0
+; NOEXTIMG:       @ConstantExpr = internal global i64 ptrtoint (ptr null to i64)
 
 @ConstantExpr = internal global i64 ptrtoint (ptr @needs_extimg to i64)
 

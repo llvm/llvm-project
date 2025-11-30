@@ -10,7 +10,7 @@
 %b = type { %c }
 %c = type { i32, i32, [31 x i8] }
 
-@global_ptr = dso_local local_unnamed_addr global ptr null, align 8
+@global_ptr = dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 @global_int = dso_local local_unnamed_addr global i32 0, align 4
 
 define dso_local void @testcase(ptr nocapture %arg){

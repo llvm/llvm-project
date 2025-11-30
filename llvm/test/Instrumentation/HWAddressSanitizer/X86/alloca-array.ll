@@ -9,7 +9,7 @@ declare void @use(ptr, ptr)
 define void @test_alloca() sanitize_hwaddress {
 ; CHECK-LABEL: define void @test_alloca
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] personality ptr @__hwasan_personality_thunk {
-; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 20

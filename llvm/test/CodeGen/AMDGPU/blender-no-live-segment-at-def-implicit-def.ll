@@ -73,11 +73,12 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_mov_b32 s50, s48
 ; CHECK-NEXT:    s_mov_b32 s51, s48
 ; CHECK-NEXT:  .LBB0_8: ; %if.end294.i.i
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:12
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:8
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, -1
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:11
+; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:7
+; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:3
 ; CHECK-NEXT:  .LBB0_9: ; %kernel_direct_lighting.exit
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x20
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s48

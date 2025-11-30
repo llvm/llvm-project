@@ -126,6 +126,38 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
   if (isa<PoisonValue>(V))
     return PoisonValue::get(DestTy);
 
+  if (opc == Instruction::IntToPtr) {
+    // We can't fold inttoptr(0) to ConstantPointerNull without checking the
+    // target data layout. However, since data layout is not available here, we
+    // can't do this.
+    if (V->isZeroValue())
+      return nullptr;
+    // If the input is a ptrtoint(0), we can fold it to the corresponding zero
+    // value pointer.
+    if (auto *CE = dyn_cast<ConstantExpr>(V)) {
+      if (CE->getOpcode() == Instruction::PtrToInt &&
+          CE->getOperand(0)->isZeroValue())
+        return Constant::getZeroValue(DestTy);
+    }
+  }
+  if (opc == Instruction::PtrToInt) {
+    // Similarly, we can't fold ptrtoint(nullptr) to null.
+    if (V->isNullValue())
+      return nullptr;
+    // If the input is a inttoptr(0), we can fold it to the corresponding
+    // zero value.
+    if (auto *CE = dyn_cast<ConstantExpr>(V)) {
+      if (CE->getOpcode() == Instruction::IntToPtr &&
+          CE->getOperand(0)->isZeroValue())
+        return Constant::getZeroValue(DestTy);
+    }
+  }
+  // However, since the recent change of the semantic of `ptr addrspace(N)
+  // null`, we can fold address space cast of a nullptr to the corresponding
+  // nullptr in the destination address space.
+  if (opc == Instruction::AddrSpaceCast && V->isNullValue())
+    return Constant::getNullValue(DestTy);
+
   if (isa<UndefValue>(V)) {
     // zext(undef) = 0, because the top bits will be zero.
     // sext(undef) = 0, because the top bits will all be the same.
@@ -256,7 +288,8 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
 Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond,
                                               Constant *V1, Constant *V2) {
   // Check for i1 and vector true/false conditions.
-  if (Cond->isNullValue()) return V2;
+  if (Cond->isZeroValue())
+    return V2;
   if (Cond->isAllOnesValue()) return V1;
 
   // If the condition is a vector constant, fold the result elementwise.

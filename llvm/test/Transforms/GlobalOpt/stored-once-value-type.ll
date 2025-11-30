@@ -6,7 +6,7 @@
 
 %T = type { ptr }
 
-@0 = internal global ptr null
+@0 = internal global ptr zeroinitializer
 
 define void @a() {
 ; CHECK-LABEL: @a(

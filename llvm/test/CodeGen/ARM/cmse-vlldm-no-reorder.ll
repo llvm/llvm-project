@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=thumbv8m.main -mcpu=cortex-m33 --float-abi=hard %s -o - | \
 ; RUN:   FileCheck %s
 
-@g = hidden local_unnamed_addr global ptr null, align 4
+@g = hidden local_unnamed_addr global ptr zeroinitializer, align 4
 @a = hidden local_unnamed_addr global float 0.000000e+00, align 4
 
 define hidden void @f() local_unnamed_addr #0 {

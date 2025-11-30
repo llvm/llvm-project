@@ -2362,7 +2362,7 @@ define void @test_umin(i64 %0, i64 %idxprom, ptr %x, ptr %y) {
 ; OPT-LABEL: @test_umin(
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [32 x [8 x i64]], ptr [[Y:%.*]], i64 0, i64 [[IDXPROM:%.*]]
-; OPT-NEXT:    [[SPEC_SELECT:%.*]] = tail call i64 @llvm.umin.i64(i64 sub (i64 ptrtoint (ptr addrspacecast (ptr addrspace(4) inttoptr (i64 32 to ptr addrspace(4)) to ptr) to i64), i64 ptrtoint (ptr addrspacecast (ptr addrspace(4) null to ptr) to i64)), i64 56)
+; OPT-NEXT:    [[SPEC_SELECT:%.*]] = tail call i64 @llvm.umin.i64(i64 sub (i64 ptrtoint (ptr addrspacecast (ptr addrspace(4) inttoptr (i64 32 to ptr addrspace(4)) to ptr) to i64), i64 ptrtoint (ptr null to i64)), i64 56)
 ; OPT-NEXT:    [[TMP2:%.*]] = and i64 [[SPEC_SELECT]], 15
 ; OPT-NEXT:    [[TMP3:%.*]] = sub i64 [[SPEC_SELECT]], [[TMP2]]
 ; OPT-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0

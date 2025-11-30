@@ -4,7 +4,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 ;; Heap SROA has been removed. This tests we don't perform heap SROA.
 ; CHECK: @X =
 	%struct.foo = type { i32, i32 }
-@X = internal global ptr null
+@X = internal global ptr zeroinitializer
 
 define void @bar(i64 %Size) nounwind noinline {
 entry:
@@ -18,7 +18,7 @@ declare noalias ptr @malloc(i64)
 
 define i32 @baz() nounwind readonly noinline {
 bb1.thread:
-	%0 = load ptr, ptr @X, align 4		
+	%0 = load ptr, ptr @X, align 4
 	br label %bb1
 
 bb1:		; preds = %bb1, %bb1.thread
@@ -26,9 +26,9 @@ bb1:		; preds = %bb1, %bb1.thread
 	%sum.0.reg2mem.0 = phi i32 [ 0, %bb1.thread ], [ %3, %bb1 ]
 	%1 = getelementptr %struct.foo, ptr %0, i32 %i.0.reg2mem.0, i32 0
 	%2 = load i32, ptr %1, align 4
-	%3 = add i32 %2, %sum.0.reg2mem.0	
-	%indvar.next = add i32 %i.0.reg2mem.0, 1	
-	%exitcond = icmp eq i32 %indvar.next, 1200		
+	%3 = add i32 %2, %sum.0.reg2mem.0
+	%indvar.next = add i32 %i.0.reg2mem.0, 1
+	%exitcond = icmp eq i32 %indvar.next, 1200
 	br i1 %exitcond, label %bb2, label %bb1
 
 bb2:		; preds = %bb1

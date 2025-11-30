@@ -13,9 +13,9 @@
 ; Verify that we didn't distribute by checking that we still have the original
 ; number of branches.
 
-@A = common global ptr null, align 8
-@B = common global ptr null, align 8
-@C = common global ptr null, align 8
+@A = common global ptr zeroinitializer, align 8
+@B = common global ptr zeroinitializer, align 8
+@C = common global ptr zeroinitializer, align 8
 
 define void @f() {
 ; CHECK-LABEL: define void @f() {

@@ -1874,8 +1874,18 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
                          getValue(CPA->getDiscriminator()));
     }
 
-    if (isa<ConstantPointerNull>(C))
-      return DAG.getConstant(0, getCurSDLoc(), VT);
+    if (auto *NullPtr = dyn_cast<ConstantPointerNull>(C)) {
+      const DataLayout &DL = DAG.getDataLayout();
+      if (std::optional<APInt> NullPtrValue =
+              DL.getNullPtrValue(NullPtr->getType()->getAddressSpace())) {
+        if (NullPtrValue->isZero())
+          return DAG.getConstant(0, getCurSDLoc(), VT);
+        else if (NullPtrValue->isAllOnes())
+          return DAG.getAllOnesConstant(getCurSDLoc(), VT);
+        else
+          llvm_unreachable("unknown null pointer value");
+      }
+    }
 
     if (match(C, m_VScale()))
       return DAG.getVScale(getCurSDLoc(), VT, APInt(VT.getSizeInBits(), 1));

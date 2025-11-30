@@ -2,8 +2,8 @@
 
 target triple = "aarch64"
 
-@global_function = internal unnamed_addr global ptr null, align 8
-@global_array = common unnamed_addr global ptr null, align 8
+@global_function = internal unnamed_addr global ptr zeroinitializer, align 8
+@global_array = common unnamed_addr global ptr zeroinitializer, align 8
 
 ; This test checks that we propagate the functions through an internal global
 ; variable, and attach !callees metadata to the call. Such metadata can enable

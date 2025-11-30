@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=arm64-apple-ios7.0 | FileCheck %s
 ; RUN: llc -global-isel < %s -mtriple=arm64-apple-ios7.0 | FileCheck %s
 
-@t = weak global ptr null
+@t = weak global ptr zeroinitializer
 @x = external global i32, align 4
 
 define void @t2() {

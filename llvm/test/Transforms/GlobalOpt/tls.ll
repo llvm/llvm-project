@@ -6,7 +6,7 @@ declare void @signal()
 declare void @start_thread(ptr)
 
 @x = internal thread_local global [100 x i32] zeroinitializer, align 16
-@ip = internal global ptr null, align 8
+@ip = internal global ptr zeroinitializer, align 8
 
 ; PR14309: GlobalOpt would think that the value of @ip is always the address of
 ; x[1]. However, that address is different for different threads so @ip cannot

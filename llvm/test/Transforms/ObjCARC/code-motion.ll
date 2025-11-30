@@ -4,7 +4,7 @@ declare void @alterRefCount()
 declare void @use(ptr)
 declare void @readOnlyFunc(ptr, ptr)
 
-@g0 = global ptr null, align 8
+@g0 = global ptr zeroinitializer, align 8
 
 ; Check that ARC optimizer doesn't reverse the order of the retain call and the
 ; release call when there are debug instructions.

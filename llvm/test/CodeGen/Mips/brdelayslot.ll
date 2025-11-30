@@ -96,7 +96,7 @@ declare void @foo7(double, float)
 ; STATICO1:      jalr ${{[0-9]+}}
 ; STATICO1-NEXT: sw ${{[0-9]+}}, %lo(g1)
 
-@foo9 = common global ptr null, align 4
+@foo9 = common global ptr zeroinitializer, align 4
 
 define i32 @foo8(i32 %a) nounwind {
 entry:

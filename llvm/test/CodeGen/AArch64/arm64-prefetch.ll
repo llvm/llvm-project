@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
 ; RUN: llc -O0 --global-isel-abort=1 < %s -mtriple=arm64-eabi | FileCheck %s
 
-@a = common global ptr null, align 8
+@a = common global ptr zeroinitializer, align 8
 
 define void @test(i32 %i, i32 %j) nounwind ssp {
 entry:

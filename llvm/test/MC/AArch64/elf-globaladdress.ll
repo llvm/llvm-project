@@ -27,7 +27,7 @@ define dso_local void @loadstore() {
     ret void
 }
 
-@globaddr = dso_local global ptr null
+@globaddr = dso_local global ptr zeroinitializer
 
 define dso_local void @address() {
     store ptr @var64, ptr @globaddr

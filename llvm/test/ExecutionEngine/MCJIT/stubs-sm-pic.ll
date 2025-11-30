@@ -11,7 +11,7 @@ entry:
 
 ; Test PR3043: @test should have the same address before and after
 ; it's JIT-compiled.
-@funcPtr = common global ptr null, align 4
+@funcPtr = common global ptr zeroinitializer, align 4
 @lcaic_failure = internal constant [46 x i8] c"@lazily_compiled_address_is_consistent failed\00"
 
 define void @lazily_compiled_address_is_consistent() nounwind {

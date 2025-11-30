@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=mips < %s | FileCheck %s
 
-@t = common global ptr null, align 4
+@t = common global ptr zeroinitializer, align 4
 
 define void @f() nounwind {
 entry:

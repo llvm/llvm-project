@@ -12,7 +12,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-LABEL: define void @test_alloca
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] personality ptr @__hwasan_personality_thunk {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr zeroinitializer)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 57

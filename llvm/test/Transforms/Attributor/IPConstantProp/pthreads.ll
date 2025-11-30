@@ -23,13 +23,13 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 %union.pthread_attr_t = type { i64, [48 x i8] }
 
-@GlobalVPtr = common dso_local global ptr null, align 8
+@GlobalVPtr = common dso_local global ptr zeroinitializer, align 8
 
 ; FIXME: nocapture & noalias for @GlobalVPtr in %call1
 ; FIXME: nocapture & noalias for %alloc2 in %call3
 
 ;.
-; CHECK: @GlobalVPtr = common dso_local global ptr null, align 8
+; CHECK: @GlobalVPtr = common dso_local global ptr zeroinitializer, align 8
 ;.
 define dso_local i32 @main() {
 ; TUNIT-LABEL: define {{[^@]+}}@main() {

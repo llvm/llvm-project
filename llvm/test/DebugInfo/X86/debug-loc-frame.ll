@@ -43,7 +43,7 @@ source_filename = "frame.c"
 @data = dso_local global i32 17, align 4, !dbg !0
 @sum = dso_local local_unnamed_addr global i32 0, align 4, !dbg !6
 @zero = dso_local local_unnamed_addr global i32 0, align 4, !dbg !9
-@ptr = common dso_local local_unnamed_addr global ptr null, align 8, !dbg !11
+@ptr = common dso_local local_unnamed_addr global ptr zeroinitializer, align 8, !dbg !11
 
 define dso_local i32 @main() local_unnamed_addr !dbg !17 {
 entry:

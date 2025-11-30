@@ -5,7 +5,7 @@
 %struct.anon.1 = type { i32 }
 
 @i = common global i32 0, align 4
-@b = common global ptr null, align 8
+@b = common global ptr zeroinitializer, align 8
 @c = common global i32 0, align 4
 @a = common global i32 0, align 4
 @h = common global i32 0, align 4

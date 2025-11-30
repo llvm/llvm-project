@@ -15,7 +15,7 @@
 ; REMARK4: remark: <unknown>:0:0: Promote indirect call to sub with count 200 out of 400
 ; REMARK5: remark: <unknown>:0:0: Promote indirect call to add with count 200 out of 200
 
-@math = dso_local local_unnamed_addr global ptr null, align 8
+@math = dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 
 define dso_local i32 @add(i32 noundef %a, i32 noundef %b) !prof !34 {
 entry:

@@ -2,7 +2,7 @@
 ; RUN: %if x86-registered-target %{ opt --passes=slp-vectorizer -mtriple=x86_64-unknown-linux-gnu -o - -S < %s | FileCheck %s %}
 ; RUN: %if aarch64-registered-target %{ opt --passes=slp-vectorizer -mtriple=aarch64-unknown-linux-gnu -o - -S < %s | FileCheck %s %}
 
-@b = common dso_local global ptr null, align 8
+@b = common dso_local global ptr zeroinitializer, align 8
 @e = common dso_local global float 0.000000e+00, align 4
 @c = common dso_local global float 0.000000e+00, align 4
 @g = common dso_local global float 0.000000e+00, align 4

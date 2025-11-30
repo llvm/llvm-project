@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a53 -enable-aa-sched-mi | FileCheck %s
 ; Check that the scheduler moves the load from a[1] past the store into a[2].
-@a = common global ptr null, align 8
+@a = common global ptr zeroinitializer, align 8
 @m = common global i32 0, align 4
 
 ; Function Attrs: nounwind

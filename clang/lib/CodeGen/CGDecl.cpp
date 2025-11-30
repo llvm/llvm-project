@@ -1218,8 +1218,9 @@ void CodeGenFunction::emitStoresForConstant(const VarDecl &D, Address Loc,
     if (IsAutoInit)
       I->addAnnotationMetadata("auto-init");
 
-    bool valueAlreadyCorrect =
-        constant->isNullValue() || isa<llvm::UndefValue>(constant);
+    bool valueAlreadyCorrect = constant->isNullValue() ||
+                               constant->isZeroValue() ||
+                               isa<llvm::UndefValue>(constant);
     if (!valueAlreadyCorrect) {
       Loc = Loc.withElementType(Ty);
       emitStoresForInitAfterBZero(constant, Loc, isVolatile, IsAutoInit);

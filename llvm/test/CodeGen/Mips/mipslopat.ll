@@ -1,8 +1,8 @@
-; This test does not check the machine code output.   
-; RUN: llc -mtriple=mips < %s 
+; This test does not check the machine code output.
+; RUN: llc -mtriple=mips < %s
 
-@stat_vol_ptr_int = internal global ptr null, align 4
-@stat_ptr_vol_int = internal global ptr null, align 4
+@stat_vol_ptr_int = internal global ptr zeroinitializer, align 4
+@stat_ptr_vol_int = internal global ptr zeroinitializer, align 4
 
 define void @simple_vol_file() nounwind {
 entry:

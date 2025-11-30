@@ -1,6 +1,6 @@
 ; RUN: opt -passes=globalopt -S -o - < %s | FileCheck %s
 
-@glbl = internal global ptr null
+@glbl = internal global ptr zeroinitializer
 
 define void @test1a() {
 ; CHECK-LABEL: @test1a(

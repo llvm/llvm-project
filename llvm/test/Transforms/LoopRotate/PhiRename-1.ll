@@ -22,7 +22,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 	%struct.table = type { ptr, ptr, ptr, [2 x ptr], ptr }
 @outfile = external global ptr		; <ptr> [#uses=1]
 @str1 = external constant [11 x i8]		; <ptr> [#uses=1]
-@operators = weak global ptr null		; <ptr> [#uses=1]
+@operators = weak global ptr zeroinitializer		; <ptr> [#uses=1]
 
 
 

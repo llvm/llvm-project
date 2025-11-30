@@ -54,7 +54,7 @@ $"??_C@_0N@GFONDMMJ@in?5B2?5Dtor?5?6?$AA@" = comdat any
 $"??_C@_0N@HCJGCIIK@in?5B3?5Dtor?5?6?$AA@" = comdat any
 
 @"?xxxx@@3HA" = dso_local global i32 0, align 4
-@"?ptr@@3PEAHEA" = dso_local global ptr null, align 8
+@"?ptr@@3PEAHEA" = dso_local global ptr zeroinitializer, align 8
 @"??_C@_0N@FMGAAAAM@in?5B1?5Dtor?5?6?$AA@" = linkonce_odr dso_local unnamed_addr constant [13 x i8] c"in B1 Dtor \0A\00", comdat, align 1
 @"??_C@_0N@GFONDMMJ@in?5B2?5Dtor?5?6?$AA@" = linkonce_odr dso_local unnamed_addr constant [13 x i8] c"in B2 Dtor \0A\00", comdat, align 1
 @"??_C@_0N@HCJGCIIK@in?5B3?5Dtor?5?6?$AA@" = linkonce_odr dso_local unnamed_addr constant [13 x i8] c"in B3 Dtor \0A\00", comdat, align 1

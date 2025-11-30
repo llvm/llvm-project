@@ -5,7 +5,7 @@
 
   @b = common dso_local local_unnamed_addr global i32 0, align 4
   @d = common dso_local local_unnamed_addr global i32 0, align 4
-  @e = common dso_local local_unnamed_addr global ptr null, align 8
+  @e = common dso_local local_unnamed_addr global ptr zeroinitializer, align 8
   @c = common dso_local local_unnamed_addr global i32 0, align 4
   @a = common dso_local local_unnamed_addr global [1 x i32] zeroinitializer, align 4
 

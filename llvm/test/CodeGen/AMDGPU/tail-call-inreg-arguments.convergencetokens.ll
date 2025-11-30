@@ -22,7 +22,7 @@ define void @tail_call_i64_inreg_uniform_in_vgpr_convergence_tokens() #0 {
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[CONVERGENCECTRL_ENTRY:%[0-9]+]]:sreg_64 = CONVERGENCECTRL_ENTRY
-  ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
   ; CHECK-NEXT:   [[DS_READ_B64_gfx9_:%[0-9]+]]:vreg_64 = DS_READ_B64_gfx9 killed [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (load (s64) from `ptr addrspace(3) null`, addrspace 3)
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[DS_READ_B64_gfx9_]].sub1
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[DS_READ_B64_gfx9_]].sub0

@@ -5,7 +5,7 @@
 @ptr = external global ptr		; <ptr> [#uses=1]
 @src = external global [0 x i32]		; <ptr> [#uses=1]
 @dst = external global [0 x i32]		; <ptr> [#uses=1]
-@lptr = internal global ptr null		; <ptr> [#uses=1]
+@lptr = internal global ptr zeroinitializer		; <ptr> [#uses=1]
 @ldst = internal global [500 x i32] zeroinitializer, align 32		; <ptr> [#uses=1]
 @lsrc = internal global [500 x i32] zeroinitializer, align 32		; <ptr> [#uses=0]
 @bsrc = internal global [500000 x i32] zeroinitializer, align 32		; <ptr> [#uses=0]

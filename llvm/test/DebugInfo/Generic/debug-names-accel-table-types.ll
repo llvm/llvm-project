@@ -19,8 +19,8 @@
 ; SAME-NAME: Name count: 5
 
 ; The accelarator should only have one entry for the three following names.
-; SAME-NAME: "SameName" 
-; SAME-NAME-NOT: "SameName" 
+; SAME-NAME: "SameName"
+; SAME-NAME-NOT: "SameName"
 
 ; DIFFERENT-NAME: "DifferentName"
 ; DIFFERENT-NAME-NOT: "DifferentName"
@@ -33,8 +33,8 @@
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
-@q = common global i8* null, align 8, !dbg !102
-@r = common global i8* null, align 8, !dbg !105
+@q = common global i8* zeroinitializer, align 8, !dbg !102
+@r = common global i8* zeroinitializer, align 8, !dbg !105
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!6, !7}

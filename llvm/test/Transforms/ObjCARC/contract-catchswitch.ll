@@ -9,7 +9,7 @@ declare i32 @__CxxFrameHandler3(...)
 declare dllimport void @llvm.objc.release(ptr) local_unnamed_addr
 declare dllimport ptr @llvm.objc.retain(ptr returned) local_unnamed_addr
 
-@p = global ptr null, align 4
+@p = global ptr zeroinitializer, align 4
 
 declare void @f() local_unnamed_addr
 

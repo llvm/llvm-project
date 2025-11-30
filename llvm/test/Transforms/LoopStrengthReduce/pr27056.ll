@@ -19,12 +19,12 @@ define void @b_copy_ctor() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[CALL_I_NOEXC:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[LSR_IV2:%.*]] = inttoptr i64 [[LSR_IV]] to ptr
 ; CHECK-NEXT:    invoke void @a_copy_ctor()
-; CHECK-NEXT:    to label [[CALL_I_NOEXC]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[CALL_I_NOEXC]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       call.i.noexc:
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -16
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       catch.dispatch:
-; CHECK-NEXT:    [[TMP2:%.*]] = catchswitch within none [label %catch] unwind to caller
+; CHECK-NEXT:    [[TMP2:%.*]] = catchswitch within none [label [[CATCH:%.*]]] unwind to caller
 ; CHECK:       catch:
 ; CHECK-NEXT:    [[TMP3:%.*]] = catchpad within [[TMP2]] [ptr null, i32 64, ptr null]
 ; CHECK-NEXT:    [[CMP16:%.*]] = icmp eq ptr [[LSR_IV2]], null

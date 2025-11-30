@@ -5264,7 +5264,7 @@ define i8 @selects_freeze_poison_parameter(i8 noundef %x, i1 %cond1, i1 %cond2) 
   ret i8 %conj
 }
 
-@glb = global ptr null
+@glb = global ptr zeroinitializer
 
 define void @select_freeze_poison_global(ptr %addr.tgt, i1 %cond) {
 ; CHECK-LABEL: define void @select_freeze_poison_global(

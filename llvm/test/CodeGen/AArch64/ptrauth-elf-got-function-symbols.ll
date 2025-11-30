@@ -28,7 +28,7 @@
 ; OBJ-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
 ; OBJ:              0000000000000000     0 FUNC    GLOBAL DEFAULT   UND bar
 
-@fptr = private global ptr null
+@fptr = private global ptr zeroinitializer
 
 define void @foo() {
   store ptr ptrauth (ptr @bar, i32 0), ptr @fptr

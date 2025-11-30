@@ -407,7 +407,7 @@ return:                                           ; preds = %if.end, %land.lhs.t
 
 %struct.Struct = type { i64, i64 }
 
-@glob = internal unnamed_addr global ptr null, align 8
+@glob = internal unnamed_addr global ptr zeroinitializer, align 8
 
 declare ptr @Update(ptr) #1
 

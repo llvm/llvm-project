@@ -19,7 +19,7 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=ampere1a -mattr=-fuse-literals | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=ampere1b -mattr=-fuse-literals | FileCheck %s
 
-@g = common local_unnamed_addr global ptr null, align 8
+@g = common local_unnamed_addr global ptr zeroinitializer, align 8
 
 define dso_local ptr @addldr(i32 %a, i32 %b) {
 ; CHECK-LABEL: addldr:

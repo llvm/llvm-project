@@ -27,9 +27,9 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; CHECK-NEXT: Against group
 ; CHECK-NEXT:   %arrayidxC = getelementptr inbounds i16, ptr %c, i64 %storemerge3
 
-@B = common global ptr null, align 8
-@A = common global ptr null, align 8
-@C = common global ptr null, align 8
+@B = common global ptr zeroinitializer, align 8
+@A = common global ptr zeroinitializer, align 8
+@C = common global ptr zeroinitializer, align 8
 
 define void @f() {
 entry:

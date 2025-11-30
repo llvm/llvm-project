@@ -1,7 +1,7 @@
 ; RUN: opt -passes=globalopt -S < %s | FileCheck %s
 
 %s = type { i32 }
-@g = internal global ptr null, align 8
+@g = internal global ptr zeroinitializer, align 8
 
 ; Test code pattern for:
 ;   class s { int a; s() { a = 1;} };

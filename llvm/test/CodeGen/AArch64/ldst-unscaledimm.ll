@@ -9,7 +9,7 @@
 @var_float = dso_local global float 0.0
 @var_double = dso_local global double 0.0
 
-@varptr = dso_local global ptr null
+@varptr = dso_local global ptr zeroinitializer
 
 define dso_local void @ldst_8bit() {
 ; CHECK-LABEL: ldst_8bit:

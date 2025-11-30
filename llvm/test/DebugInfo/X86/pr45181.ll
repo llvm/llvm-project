@@ -17,7 +17,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 %struct.r = type opaque
 
 @o = local_unnamed_addr global i32 0, align 4, !dbg !0
-@p = local_unnamed_addr global ptr null, align 8, !dbg !42
+@p = local_unnamed_addr global ptr zeroinitializer, align 8, !dbg !42
 
 ; Function Attrs: optsize ssp uwtable
 define void @_ZN2aa2aq2arEv(ptr %this) local_unnamed_addr #0 align 2 !dbg !50 {

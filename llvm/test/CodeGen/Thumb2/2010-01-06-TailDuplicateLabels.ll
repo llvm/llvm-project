@@ -14,7 +14,7 @@ target triple = "thumbv7-apple-darwin10"
 @_ZN3WTFL8heap_keyE = internal global i32 0       ; <ptr> [#uses=1]
 @_ZN3WTFL10tsd_initedE.b = internal global i1 false ; <ptr> [#uses=2]
 @_ZN3WTFL13pageheap_lockE = internal global %struct.SpinLock { %struct.PlatformMutex { i32 850045863, [40 x i8] zeroinitializer } } ; <ptr> [#uses=1]
-@_ZN3WTFL12thread_heapsE = internal global ptr null ; <ptr> [#uses=1]
+@_ZN3WTFL12thread_heapsE = internal global ptr zeroinitializer ; <ptr> [#uses=1]
 @llvm.used = appending global [1 x ptr] [ptr @_ZN3WTF20TCMalloc_ThreadCache22CreateCacheIfNecessaryEv], section "llvm.metadata" ; <ptr> [#uses=0]
 
 define ptr @_ZN3WTF20TCMalloc_ThreadCache22CreateCacheIfNecessaryEv() nounwind {

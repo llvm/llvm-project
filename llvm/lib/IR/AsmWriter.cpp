@@ -1829,6 +1829,15 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
       }
     }
 
+    // Use zeroinitializer for inttoptr(0) constant expression.
+    if (CE->getOpcode() == Instruction::IntToPtr) {
+      Constant *SrcCI = cast<Constant>(CE->getOperand(0));
+      if (SrcCI->isZeroValue()) {
+        Out << "zeroinitializer";
+        return;
+      }
+    }
+
     Out << CE->getOpcodeName();
     writeOptimizationInfo(Out, CE);
     Out << " (";

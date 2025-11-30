@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-linux-gnux32 -relocation-model=pic -asm-verbose=false -post-RA-scheduler=false -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,CHECK-X32
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-linux-gnux32 -relocation-model=pic -asm-verbose=false -post-RA-scheduler=false -fast-isel -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,CHECK-X32
 
-@ptr = external global ptr 
-@dst = external global i32 
-@src = external global i32 
+@ptr = external global ptr
+@dst = external global i32
+@src = external global i32
 
 define void @test0() nounwind {
 entry:
@@ -12,7 +12,7 @@ entry:
     %tmp.s = load i32, ptr @src
     store i32 %tmp.s, ptr @dst
     ret void
-    
+
 ; CHECK-LABEL:	test0:
 ; CHECK-I686:	calll	.L0$pb
 ; CHECK-I686-NEXT:	.L0$pb:
@@ -28,7 +28,7 @@ entry:
 ; CHECK-X32:	retq
 }
 
-@ptr2 = global ptr null
+@ptr2 = global ptr zeroinitializer
 @dst2 = global i32 0
 @src2 = global i32 0
 
@@ -38,7 +38,7 @@ entry:
     %tmp.s = load i32, ptr @src2
     store i32 %tmp.s, ptr @dst2
     ret void
-    
+
 ; CHECK-LABEL:	test1:
 ; CHECK-I686:	calll	.L1$pb
 ; CHECK-I686-NEXT:	.L1$pb:
@@ -81,7 +81,7 @@ entry:
 
 }
 
-@pfoo = external global ptr 
+@pfoo = external global ptr
 
 define void @test3() nounwind {
 entry:
@@ -121,7 +121,7 @@ entry:
 declare void @foo(...)
 
 
-@ptr6 = internal global ptr null
+@ptr6 = internal global ptr zeroinitializer
 @dst6 = internal global i32 0
 @src6 = internal global i32 0
 
@@ -131,7 +131,7 @@ entry:
     %tmp.s = load i32, ptr @src6
     store i32 %tmp.s, ptr @dst6
     ret void
-    
+
 ; CHECK-LABEL:	test5:
 ; CHECK-I686:	calll	.L5$pb
 ; CHECK-I686-NEXT:	.L5$pb:
@@ -162,7 +162,7 @@ entry:
 ; CHECK-LABEL:	test6:
 ; CHECK-I686:	calll .L6$pb
 ; CHECK-I686:	.L6$pb:
-; CHECK-I686:	addl	$_GLOBAL_OFFSET_TABLE_+(.L{{.*}}-.L6$pb), 
+; CHECK-I686:	addl	$_GLOBAL_OFFSET_TABLE_+(.L{{.*}}-.L6$pb),
 ; CHECK-I686:	fldl	.LCPI6_0@GOTOFF(
 ; CHECK-X32:		.LCPI6_0(%rip),
 }
@@ -211,7 +211,7 @@ bb11:
 bb12:
     tail call void(...) @foo6()
     ret void
-    
+
 ; CHECK-LABEL:	test7:
 ; CHECK-I686:	calll	.L7$pb
 ; CHECK-I686:	.L7$pb:
@@ -254,16 +254,16 @@ declare void @foo4(...)
 declare void @foo5(...)
 
 ;; Check TLS references
-@tlsptrgd = thread_local global ptr null
+@tlsptrgd = thread_local global ptr zeroinitializer
 @tlsdstgd = thread_local global i32 0
 @tlssrcgd = thread_local global i32 0
-@tlsptrld = thread_local(localdynamic) global ptr null
+@tlsptrld = thread_local(localdynamic) global ptr zeroinitializer
 @tlsdstld = thread_local(localdynamic) global i32 0
 @tlssrcld = thread_local(localdynamic) global i32 0
-@tlsptrie = thread_local(initialexec) global ptr null
+@tlsptrie = thread_local(initialexec) global ptr zeroinitializer
 @tlsdstie = thread_local(initialexec) global i32 0
 @tlssrcie = thread_local(initialexec) global i32 0
-@tlsptrle = thread_local(localexec) global ptr null
+@tlsptrle = thread_local(localexec) global ptr zeroinitializer
 @tlsdstle = thread_local(localexec) global i32 0
 @tlssrcle = thread_local(localexec) global i32 0
 

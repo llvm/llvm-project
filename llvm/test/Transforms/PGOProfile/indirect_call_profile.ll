@@ -56,7 +56,7 @@ entry:
   ret void
 }
 
-@bar2 = global ptr null, align 8
+@bar2 = global ptr zeroinitializer, align 8
 @_ZTIi = external constant ptr
 
 define i32 @foo2(i32 %arg, ptr nocapture readnone %arg1) personality ptr @__gxx_personality_v0 {

@@ -193,7 +193,7 @@ define i32 @ptrtoint_very_short() {
 define <2 x i160> @ptrtoint_vec() {
 ; CHECK-LABEL: define <2 x i160> @ptrtoint_vec
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    ret <2 x i160> zeroinitializer
+; CHECK-NEXT:    ret <2 x i160> ptrtoint (<2 x ptr addrspace(7)> zeroinitializer to <2 x i160>)
 ;
   ret <2 x i160> ptrtoint (<2 x ptr addrspace(7)> zeroinitializer to <2 x i160>)
 }

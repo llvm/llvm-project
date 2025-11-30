@@ -15,7 +15,7 @@
 @g1 = common global %s.0 zeroinitializer, align 4
 @g2 = common global i32 0, align 4
 @g3 = common global i32 0, align 4
-@g4 = common global ptr null, align 4
+@g4 = common global ptr zeroinitializer, align 4
 @g5 = common global i32 0, align 4
 @g6 = common global i32 0, align 4
 

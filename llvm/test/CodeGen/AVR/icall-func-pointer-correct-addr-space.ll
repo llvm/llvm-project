@@ -1,7 +1,7 @@
 ; RUN: llc -mattr=lpm,lpmw < %s -mtriple=avr | FileCheck %s
 
 @callbackPtr = common global ptr addrspace(1) null, align 8
-@myValuePtr = common global ptr null, align 8
+@myValuePtr = common global ptr zeroinitializer, align 8
 
 @externalConstant = external global i16, align 2
 

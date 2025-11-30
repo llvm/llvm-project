@@ -58,8 +58,8 @@
 
 ; IR: _Z3fooi
 ; IR: _Z3fooi.memprof.1
-; IR: "memprof"="notcold" 
-; IR: "memprof"="cold" 
+; IR: "memprof"="notcold"
+; IR: "memprof"="cold"
 
 ;--- b.ll
 ; ModuleID = 'b.cpp'
@@ -187,7 +187,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 target triple = "x86_64-unknown-linux-gnu"
 
 @b = dso_local local_unnamed_addr global i32 10, align 4
-@a = dso_local local_unnamed_addr global ptr null, align 8
+@a = dso_local local_unnamed_addr global ptr zeroinitializer, align 8
 
 ; Function Attrs: mustprogress norecurse uwtable
 define dso_local noundef i32 @main() local_unnamed_addr #0 !dbg !9 {

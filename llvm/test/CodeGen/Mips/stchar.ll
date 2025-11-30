@@ -2,8 +2,8 @@
 ; RUN: llc  -mtriple=mipsel -mattr=mips16 -relocation-model=pic -O3 < %s | FileCheck %s -check-prefix=16_b
 
 @.str = private unnamed_addr constant [9 x i8] c"%hd %c \0A\00", align 1
-@sp = common global ptr null, align 4
-@cp = common global ptr null, align 4
+@sp = common global ptr zeroinitializer, align 4
+@cp = common global ptr zeroinitializer, align 4
 
 declare i32 @printf(ptr nocapture, ...) nounwind
 

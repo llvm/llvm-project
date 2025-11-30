@@ -227,7 +227,7 @@ KBBlockZero.exit:                                 ; preds = %bb2.i
   indirectbr ptr %p8, [label %KBBlockZero_return_1, label %KBBlockZero_return_0]
 }
 
-@foo = global ptr null
+@foo = global ptr zeroinitializer
 define i32 @t4(i32 %x, ptr %p_foo) {
 ; CHECK-LABEL: t4:
 ; CHECK:       @ %bb.0: @ %entry

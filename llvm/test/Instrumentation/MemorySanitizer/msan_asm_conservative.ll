@@ -19,10 +19,10 @@ target triple = "x86_64-unknown-linux-gnu"
 @pair1 = common dso_local global %struct.pair zeroinitializer, align 4
 @c2 = common dso_local global i8 0, align 1
 @c1 = common dso_local global i8 0, align 1
-@memcpy_d1 = common dso_local global ptr null, align 8
-@memcpy_d2 = common dso_local global ptr null, align 8
-@memcpy_s1 = common dso_local global ptr null, align 8
-@memcpy_s2 = common dso_local global ptr null, align 8
+@memcpy_d1 = common dso_local global ptr zeroinitializer, align 8
+@memcpy_d2 = common dso_local global ptr zeroinitializer, align 8
+@memcpy_s1 = common dso_local global ptr zeroinitializer, align 8
+@memcpy_s2 = common dso_local global ptr zeroinitializer, align 8
 @large = common dso_local global %struct.pair zeroinitializer, align 4
 
 ; The functions below were generated from a C source that contains declarations like follows:

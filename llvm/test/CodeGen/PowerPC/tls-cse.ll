@@ -11,7 +11,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 %"class.llvm::PrettyStackTraceEntry" = type { ptr, ptr }
 
 @_ZTVN4llvm21PrettyStackTraceEntryE = unnamed_addr constant [5 x ptr] [ptr null, ptr null, ptr @_ZN4llvm21PrettyStackTraceEntryD2Ev, ptr @_ZN4llvm21PrettyStackTraceEntryD0Ev, ptr @__cxa_pure_virtual], align 8
-@_ZL20PrettyStackTraceHead = internal thread_local unnamed_addr global ptr null, align 8
+@_ZL20PrettyStackTraceHead = internal thread_local unnamed_addr global ptr zeroinitializer, align 8
 @.str = private unnamed_addr constant [87 x i8] c"PrettyStackTraceHead == this && \22Pretty stack trace entry destruction is out of order\22\00", align 1
 @.str1 = private unnamed_addr constant [64 x i8] c"/home/wschmidt/llvm/llvm-test2/lib/Support/PrettyStackTrace.cpp\00", align 1
 @__PRETTY_FUNCTION__._ZN4llvm21PrettyStackTraceEntryD2Ev = private unnamed_addr constant [62 x i8] c"virtual llvm::PrettyStackTraceEntry::~PrettyStackTraceEntry()\00", align 1

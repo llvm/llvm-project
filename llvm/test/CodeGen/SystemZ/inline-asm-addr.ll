@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=s390x-linux-gnu < %s | FileCheck %s
 
 @Addr = global i64 0, align 8
-@A = global ptr null, align 8
+@A = global ptr zeroinitializer, align 8
 @Idx = global i64 0, align 8
 
 define i64 @fun_BD12_Q() {
