@@ -86,9 +86,9 @@ public:
   /// Construct a dependency scanning worker.
   ///
   /// @param Service The parent service. Must outlive the worker.
-  /// @param FS The filesystem for the worker to use.
+  /// @param BaseFS The filesystem for the worker to use.
   DependencyScanningWorker(DependencyScanningService &Service,
-                           llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+                           IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
 
   ~DependencyScanningWorker();
 
@@ -157,31 +157,26 @@ public:
                                        DependencyActionController &Controller);
   bool finalizeCompilerInstance();
 
-  llvm::vfs::FileSystem &getVFS() const { return *BaseFS; }
+  llvm::vfs::FileSystem &getVFS() const { return *DepFS; }
 
 private:
   /// The parent dependency scanning service.
   DependencyScanningService &Service;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
-  /// The file system to be used during the scan.
-  /// This is either \c FS passed in the constructor (when performing canonical
-  /// preprocessing), or \c DepFS (when performing dependency directives scan).
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS;
-  /// When performing dependency directives scan, this is the caching (and
-  /// dependency-directives-extracting) filesystem overlaid on top of \c FS
-  /// (passed in the constructor).
-  llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
+  /// This is the caching (and optionally dependency-directives-providing) VFS
+  /// overlaid on top of the base VFS passed in the constructor.
+  IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
 
   friend CompilerInstanceWithContext;
   std::unique_ptr<CompilerInstanceWithContext> CIWithContext;
 
-  /// Private helper functions.
-  bool scanDependencies(StringRef WorkingDirectory,
-                        const std::vector<std::string> &CommandLine,
-                        DependencyConsumer &Consumer,
-                        DependencyActionController &Controller,
-                        DiagnosticConsumer &DC,
-                        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+  /// Actually carries out the scan. If \c OverlayFS is provided, it must be
+  /// based on top of DepFS.
+  bool scanDependencies(
+      StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
+      DependencyConsumer &Consumer, DependencyActionController &Controller,
+      DiagnosticConsumer &DC,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 };
 
 } // end namespace dependencies

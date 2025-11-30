@@ -524,8 +524,8 @@ bool dependencies::initializeScanCompilerInstance(
   // Create a new FileManager to match the invocation's FileSystemOptions.
   ScanInstance.createFileManager();
 
-  // Use the dependency scanning optimized file system if requested to do so.
-  if (DepFS) {
+  // Use DepFS for getting the dependency directives if requested to do so.
+  if (Service.getMode() == ScanningMode::DependencyDirectivesScan) {
     DepFS->resetBypassedPathPrefix();
     SmallString<256> ModulesCachePath;
     normalizeModuleCachePath(ScanInstance.getFileManager(),
@@ -717,7 +717,7 @@ bool CompilerInstanceWithContext::initialize(DiagnosticConsumer *DC) {
   }
 
   std::tie(OverlayFS, CommandLine) = initVFSForByNameScanning(
-      Worker.BaseFS, CommandLine, CWD, "ScanningByName");
+      Worker.DepFS, CommandLine, CWD, "ScanningByName");
 
   DiagEngineWithCmdAndOpts = std::make_unique<DignosticsEngineWithDiagOpts>(
       CommandLine, OverlayFS, *DiagConsumer);

@@ -18,7 +18,7 @@ using namespace dependencies;
 
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS)
     : Service(Service) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   // We need to read object files from PCH built outside the scanner.
@@ -28,19 +28,11 @@ DependencyScanningWorker::DependencyScanningWorker(
   PCHContainerOps->registerWriter(std::make_unique<RawPCHContainerWriter>());
 
   if (Service.shouldTraceVFS())
-    FS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(std::move(FS));
+    BaseFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
+        std::move(BaseFS));
 
-  switch (Service.getMode()) {
-  case ScanningMode::DependencyDirectivesScan:
-    DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-        Service.getSharedCache(), FS);
-    BaseFS = DepFS;
-    break;
-  case ScanningMode::CanonicalPreprocessing:
-    DepFS = nullptr;
-    BaseFS = FS;
-    break;
-  }
+  DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
+      Service.getSharedCache(), std::move(BaseFS));
 }
 
 DependencyScanningWorker::~DependencyScanningWorker() = default;
@@ -102,7 +94,18 @@ bool DependencyScanningWorker::scanDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
     DependencyConsumer &Consumer, DependencyActionController &Controller,
     DiagnosticConsumer &DC,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = DepFS;
+  if (OverlayFS) {
+#ifndef NDEBUG
+    bool SawDepFS = false;
+    OverlayFS->visit(
+        [&](llvm::vfs::FileSystem &VFS) { SawDepFS |= &VFS == DepFS.get(); });
+    assert(SawDepFS && "OverlayFS not based on DepFS");
+#endif
+    FS = std::move(OverlayFS);
+  }
+
   DignosticsEngineWithDiagOpts DiagEngineWithCmdAndOpts(CommandLine, FS, DC);
   DependencyScanningAction Action(Service, WorkingDirectory, Consumer,
                                   Controller, DepFS);
@@ -158,13 +161,13 @@ bool DependencyScanningWorker::computeDependencies(
     DiagnosticConsumer &DC, std::optional<llvm::MemoryBufferRef> TUBuffer) {
   if (TUBuffer) {
     auto [FinalFS, FinalCommandLine] = initVFSForTUBufferScanning(
-        BaseFS, CommandLine, WorkingDirectory, *TUBuffer);
+        DepFS, CommandLine, WorkingDirectory, *TUBuffer);
     return scanDependencies(WorkingDirectory, FinalCommandLine, Consumer,
                             Controller, DC, FinalFS);
   } else {
-    BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
+    DepFS->setCurrentWorkingDirectory(WorkingDirectory);
     return scanDependencies(WorkingDirectory, CommandLine, Consumer, Controller,
-                            DC, BaseFS);
+                            DC);
   }
 }
 
