@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   ConvertConv2DToImg2Col.cpp
   DataLayoutPropagation.cpp
   DecomposeLinalgOps.cpp
+  DecomposeConv2DToConv1D.cpp
   Detensorize.cpp
   DropUnitDims.cpp
   ElementwiseOpFusion.cpp
