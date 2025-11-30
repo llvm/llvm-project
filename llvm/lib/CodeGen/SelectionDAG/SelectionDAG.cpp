@@ -8761,8 +8761,8 @@ static SDValue getMemcpyLoadsAndStores(
         unsigned GlueIter = 0;
 
         for (unsigned cnt = 0; cnt < NumberLdChain; ++cnt) {
-          unsigned IndexFrom = NumLdStInMemcpy - GlueIter - GluedLdStLimit;
-          unsigned IndexTo   = NumLdStInMemcpy - GlueIter;
+          unsigned IndexFrom = GlueIter;
+          unsigned IndexTo = GlueIter + GluedLdStLimit;
 
           chainLoadsAndStoresForMemcpy(DAG, dl, OutChains, IndexFrom, IndexTo,
                                        OutLoadChains, OutStoreChains);
@@ -8771,9 +8771,9 @@ static SDValue getMemcpyLoadsAndStores(
 
         // Residual ld/st.
         if (RemainingLdStInMemcpy) {
-          chainLoadsAndStoresForMemcpy(DAG, dl, OutChains, 0,
-                                        RemainingLdStInMemcpy, OutLoadChains,
-                                        OutStoreChains);
+          chainLoadsAndStoresForMemcpy(DAG, dl, OutChains, GlueIter,
+                                       NumLdStInMemcpy, OutLoadChains,
+                                       OutStoreChains);
         }
       }
     }
