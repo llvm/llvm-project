@@ -37,6 +37,7 @@
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -45,17 +46,33 @@ using namespace llvm;
 
 namespace {
 
+static bool isImmConstant(const MachineOperand &Op, int64_t Val) {
+  return Op.isImm() && Op.getImm() == Val;
+}
+
 class GCNPreRAOptimizationsImpl {
 private:
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
   LiveIntervals *LIS;
+  MachineLoopInfo *MLI;
 
   bool processReg(Register Reg);
 
+  bool isSingleUseVReg(Register Reg) const {
+    return Reg.isVirtual() && MRI->hasOneUse(Reg);
+  }
+
+  bool isConstMove(MachineInstr &MI, int64_t C) const {
+    return TII->isFoldableCopy(MI) && isImmConstant(MI.getOperand(1), C);
+  }
+
+  bool revertConditionalFMAPattern(MachineInstr &FMAInstr);
+
 public:
-  GCNPreRAOptimizationsImpl(LiveIntervals *LS) : LIS(LS) {}
+  GCNPreRAOptimizationsImpl(LiveIntervals *LS, MachineLoopInfo *MLI)
+      : LIS(LS), MLI(MLI) {}
   bool run(MachineFunction &MF);
 };
 
@@ -75,6 +92,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -84,6 +102,7 @@ public:
 INITIALIZE_PASS_BEGIN(GCNPreRAOptimizationsLegacy, DEBUG_TYPE,
                       "AMDGPU Pre-RA optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(GCNPreRAOptimizationsLegacy, DEBUG_TYPE,
                     "Pre-RA optimizations", false, false)
 
@@ -229,14 +248,16 @@ bool GCNPreRAOptimizationsLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
   LiveIntervals *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  return GCNPreRAOptimizationsImpl(LIS).run(MF);
+  MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  return GCNPreRAOptimizationsImpl(LIS, MLI).run(MF);
 }
 
 PreservedAnalyses
 GCNPreRAOptimizationsPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
   LiveIntervals *LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  GCNPreRAOptimizationsImpl(LIS).run(MF);
+  MachineLoopInfo *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  GCNPreRAOptimizationsImpl(LIS, MLI).run(MF);
   return PreservedAnalyses::all();
 }
 
@@ -258,6 +279,15 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
       continue;
 
     Changed |= processReg(Reg);
+  }
+
+  if (ST.shouldUseConditionalSubToFMAF64()) {
+    for (MachineBasicBlock &MBB : MF) {
+      for (MachineInstr &MI : make_early_inc_range(MBB)) {
+        if (MI.getOpcode() == AMDGPU::V_FMAC_F64_e32)
+          Changed |= revertConditionalFMAPattern(MI);
+      }
+    }
   }
 
   if (!ST.useRealTrue16Insts())
@@ -294,4 +324,179 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   }
 
   return Changed;
+}
+
+/// Revert conditional subtraction to conditional FMA optimization happened
+/// earlier in the selector. The reason is that the optimization uses more
+/// instructions and registers to hold constants than original pattern and after
+/// rematerializer it becomes clear if those constants are shared with other
+/// code.
+///
+/// Detects a pattern where an FMA is used to conditionally subtract a value:
+///   FMA(dst, cond ? -1.0 : 0.0, value, accum) -> accum - (cond ? value : 0)
+///
+/// Pattern detected:
+///   v_mov_b32_e32 vNegOneHi, 0xbff00000   ; -1.0 high bits (single use)
+///   v_mov_b32_e32 vMul.lo, 0                             ; (single use)
+///   v_cndmask_b32_e64 vMul.hi, 0, vNegOneHi, vCondReg    ; (single use)
+///   v_fmac_f64_e32 vDst[0:1], vMul[0:1], vValue[0:1], vAccum[0:1]
+///
+/// Transformed to (3 instructions instead of 4, lower register pressure):
+///   v_cndmask_b32_e64 vCondValue.lo, 0, vValue.lo, vCondReg
+///   v_cndmask_b32_e64 vCondValue.hi, 0, vValue.hi, vCondReg
+///   v_add_f64_e64 vDst[0:1], vAccum[0:1], -vCondValue[0:1]
+///
+/// For loops: if both constants are initialized before the loop where the
+/// v_fmac resides, we keep the original pattern. Ignoring case when v_fmac and
+/// v_cndmask aren't in the same loop context as the selector doesn't generate
+/// the pattern if v_cndmask is loop invariant.
+bool GCNPreRAOptimizationsImpl::revertConditionalFMAPattern(
+    MachineInstr &FMAInstr) {
+  assert(FMAInstr.getOpcode() == AMDGPU::V_FMAC_F64_e32);
+
+  MachineOperand *MulOp = TII->getNamedOperand(FMAInstr, AMDGPU::OpName::src0);
+  assert(MulOp);
+  if (!MulOp->isReg() || !isSingleUseVReg(MulOp->getReg()))
+    return false;
+
+  // Find subregister definitions for the 64-bit multiplicand register
+  MachineInstr *MulLoDefMI = nullptr;
+  MachineInstr *MulHiDefMI = nullptr;
+
+  for (auto &DefMI : MRI->def_instructions(MulOp->getReg())) {
+    if (DefMI.getOperand(0).getSubReg() == AMDGPU::sub0) {
+      MulLoDefMI = &DefMI;
+    } else if (DefMI.getOperand(0).getSubReg() == AMDGPU::sub1) {
+      MulHiDefMI = &DefMI;
+    }
+  }
+
+  if (!MulLoDefMI || !isConstMove(*MulLoDefMI, 0))
+    return false;
+
+  if (!MulHiDefMI || MulHiDefMI->getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
+    return false;
+
+  MachineInstr *CndMaskMI = MulHiDefMI;
+  MachineOperand *CndMaskFalseOp =
+      TII->getNamedOperand(*CndMaskMI, AMDGPU::OpName::src0);
+  assert(CndMaskFalseOp);
+  if (!isImmConstant(*CndMaskFalseOp, 0))
+    return false;
+
+  MachineOperand *CndMaskTrueOp =
+      TII->getNamedOperand(*CndMaskMI, AMDGPU::OpName::src1);
+  assert(CndMaskTrueOp);
+  if (!isSingleUseVReg(CndMaskTrueOp->getReg()))
+    return false;
+
+  // Check that the true operand is -1.0's high 32 bits (0xbff00000)
+  MachineOperand *NegOneHiDef = MRI->getOneDef(CndMaskTrueOp->getReg());
+  if (!NegOneHiDef ||
+      !isConstMove(*NegOneHiDef->getParent(), -1074790400 /* 0xbff00000 */))
+    return false;
+
+  MachineInstr *NegOneHiMovMI = NegOneHiDef->getParent();
+
+  if (MachineLoop *L = MLI->getLoopFor(FMAInstr.getParent())) {
+    // The selector skips optimization if 'select' is loop invariant, so this is
+    // more like an assert.
+    if (MLI->getLoopFor(CndMaskMI->getParent()) != L)
+      return false;
+
+    // If both constants are initialized before the loop it's still beneficial
+    // to keep the pattern.
+    if (MLI->getLoopFor(NegOneHiMovMI->getParent()) != L &&
+        MLI->getLoopFor(MulLoDefMI->getParent()) != L)
+      return false;
+  }
+
+  // Perform the revert
+  auto *DstOpnd = TII->getNamedOperand(FMAInstr, AMDGPU::OpName::vdst);
+  auto *ValueOpnd = TII->getNamedOperand(FMAInstr, AMDGPU::OpName::src1);
+  auto *AccumOpnd = TII->getNamedOperand(FMAInstr, AMDGPU::OpName::src2);
+  auto *CondOpnd = TII->getNamedOperand(*CndMaskMI, AMDGPU::OpName::src2);
+  assert(DstOpnd && ValueOpnd && AccumOpnd && CondOpnd);
+
+  Register DstReg = DstOpnd->getReg();
+  Register ValueReg = ValueOpnd->getReg();
+  Register AccumReg = AccumOpnd->getReg();
+  Register CondReg = CondOpnd->getReg();
+
+  // Create a new 64-bit register for the conditional value
+  Register CondValueReg =
+      MRI->createVirtualRegister(MRI->getRegClass(ValueReg));
+
+  MachineBasicBlock::iterator InsertPt = FMAInstr.getIterator();
+  DebugLoc DL = FMAInstr.getDebugLoc();
+
+  // Build: vCondValue.lo = condition ? vValue.lo : 0
+  MachineBasicBlock *MBB = FMAInstr.getParent();
+  MachineInstr *SelLo =
+      BuildMI(*MBB, InsertPt, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64))
+          .addReg(CondValueReg, RegState::DefineNoRead, AMDGPU::sub0)
+          .addImm(0)                         // src0_modifiers
+          .addImm(0)                         // src0 (false value = 0)
+          .addImm(0)                         // src1_modifiers
+          .addReg(ValueReg, 0, AMDGPU::sub0) // src1 (true value = vValue.lo)
+          .addReg(CondReg)                   // condition
+          .getInstr();
+
+  // Build: vCondValue.hi = condition ? vValue.hi : 0
+  MachineInstr *SelHi =
+      BuildMI(*MBB, InsertPt, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64))
+          .addReg(CondValueReg, RegState::Define, AMDGPU::sub1)
+          .addImm(0)                         // src0_modifiers
+          .addImm(0)                         // src0 (false value = 0)
+          .addImm(0)                         // src1_modifiers
+          .addReg(ValueReg, 0, AMDGPU::sub1) // src1 (true value = vValue.hi)
+          .addReg(CondReg)                   // condition
+          .getInstr();
+
+  // Build: vDst = vAccum - vCondValue (negation via src1_modifiers bit)
+  MachineInstr *Sub =
+      BuildMI(*MBB, InsertPt, DL, TII->get(AMDGPU::V_ADD_F64_e64))
+          .addReg(DstReg, RegState::Define)
+          .addImm(0)            // src0_modifiers
+          .addReg(AccumReg)     // src0 (accumulator)
+          .addImm(1)            // src1_modifiers (negation bit)
+          .addReg(CondValueReg) // src1 (negated conditional value)
+          .addImm(0)            // clamp
+          .addImm(0)            // omod
+          .getInstr();
+
+  // Delete the old instructions
+  for (MachineInstr *MI : {&FMAInstr, MulLoDefMI, CndMaskMI, NegOneHiMovMI}) {
+    LIS->RemoveMachineInstrFromMaps(*MI);
+    MI->eraseFromParent();
+  }
+
+  LIS->InsertMachineInstrInMaps(*SelLo);
+  LIS->InsertMachineInstrInMaps(*SelHi);
+  LIS->InsertMachineInstrInMaps(*Sub);
+
+  // Removed registers.
+  LIS->removeInterval(MulOp->getReg());
+  LIS->removeInterval(CndMaskTrueOp->getReg());
+
+  // Reused registers.
+  LIS->removeInterval(CondReg);
+  LIS->createAndComputeVirtRegInterval(CondReg);
+
+  LIS->removeInterval(DstReg);
+  LIS->createAndComputeVirtRegInterval(DstReg);
+
+  // Update AccumReg if it's different from DstReg.
+  if (AccumReg != DstReg) {
+    LIS->removeInterval(AccumReg);
+    LIS->createAndComputeVirtRegInterval(AccumReg);
+  }
+
+  LIS->removeInterval(ValueReg);
+  LIS->createAndComputeVirtRegInterval(ValueReg);
+
+  // New register.
+  LIS->createAndComputeVirtRegInterval(CondValueReg);
+
+  return true;
 }

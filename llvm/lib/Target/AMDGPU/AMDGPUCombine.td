@@ -130,6 +130,20 @@ def sign_extension_in_reg : GICombineRule<
          [{ return matchCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }]),
   (apply [{ applyCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }])>;
 
+def cond_sub_to_fma_matchdata : GIDefMatchData<"ConditionalSubToFMAMatchInfo">;
+
+// Optimize conditional subtraction patterns to FMA:
+//   result = a - (cond ? c : 0.0)     -> fma(select(cond, -1.0, 0.0), c, a)
+//   result = a + (cond ? -c : 0.0)    -> fma(select(cond, -1.0, 0.0), c, a)
+//   result = a + (-(cond ? c : 0.0))  -> fma(select(cond, -1.0, 0.0), c, a)
+//
+// Only enabled for f64 when shouldUseConditionalSubToFMAF64() is true.
+def cond_sub_to_fma : GICombineRule<
+  (defs root:$fsub_or_fadd, cond_sub_to_fma_matchdata:$matchinfo),
+  (match (wip_match_opcode G_FSUB, G_FADD):$fsub_or_fadd,
+         [{ return matchConditionalSubToFMA(*${fsub_or_fadd}, ${matchinfo}); }]),
+  (apply [{ applyConditionalSubToFMA(*${fsub_or_fadd}, ${matchinfo}); }])>;
+
 // Do the following combines :
 // fmul x, select(y, A, B)   -> fldexp (x, select i32 (y, a, b))
 // fmul x, select(y, -A, -B) -> fldexp ((fneg x), select i32 (y, a, b))
@@ -228,7 +242,7 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
   [all_combines, gfx6gfx7_combines, gfx8_combines, combine_fmul_with_select_to_fldexp,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
    rcp_sqrt_to_rsq, fdiv_by_sqrt_to_rsq_f16, sign_extension_in_reg, smulu64,
-   binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
+   cond_sub_to_fma, binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
