@@ -242,7 +242,7 @@ void SPIRVGlobalRegistry::invalidateMachineInstr(MachineInstr *MI) {
   // remove.
 
   const SPIRVSubtarget &ST = MI->getMF()->getSubtarget<SPIRVSubtarget>();
-  const SPIRVInstrInfo *TII = ST.getInstrInfo();
+  [[maybe_unused]] const SPIRVInstrInfo *TII = ST.getInstrInfo();
   assert(!TII->isAliasingInstr(*MI) &&
          "Cannot invalidate aliasing instructions.");
   assert(MI->getOpcode() != SPIRV::OpFunction &&
