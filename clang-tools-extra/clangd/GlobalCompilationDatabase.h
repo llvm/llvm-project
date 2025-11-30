@@ -127,9 +127,9 @@ public:
     std::optional<Path> CompileCommandsDir;
     // Working directory for fallback commands
     // If unset, parent directory of file should be used
-    std::optional<std::string> WorkingDirectory;
+    std::optional<std::string> FallbackWorkingDirectory;
 
-    void applyWorkingDirectory(std::optional<std::string> WorkingDirectory);
+    void applyFallbackWorkingDirectory(std::optional<std::string> FallbackWorkingDirectory);
   };
 
   DirectoryBasedGlobalCompilationDatabase(const Options &Opts);

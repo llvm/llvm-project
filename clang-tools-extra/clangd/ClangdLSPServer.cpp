@@ -555,7 +555,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       CDBOpts.CompileCommandsDir = Dir;
     CDBOpts.ContextProvider = Opts.ContextProvider;
     if (Opts.StrongWorkspaceMode)
-      CDBOpts.applyWorkingDirectory(std::move(Opts.WorkspaceRoot));
+      CDBOpts.applyFallbackWorkingDirectory(Opts.WorkspaceRoot);
     BaseCDB =
         std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
   }

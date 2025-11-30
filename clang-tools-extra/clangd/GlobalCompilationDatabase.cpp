@@ -351,7 +351,7 @@ bool DirectoryBasedGlobalCompilationDatabase::DirectoryCache::load(
 
 DirectoryBasedGlobalCompilationDatabase::
     DirectoryBasedGlobalCompilationDatabase(const Options &Opts)
-    : GlobalCompilationDatabase(Opts.WorkingDirectory), Opts(Opts),
+    : GlobalCompilationDatabase(Opts.FallbackWorkingDirectory), Opts(Opts),
       Broadcaster(std::make_unique<BroadcastThread>(*this)) {
   if (!this->Opts.ContextProvider)
     this->Opts.ContextProvider = [](llvm::StringRef) {
@@ -463,16 +463,16 @@ DirectoryBasedGlobalCompilationDatabase::lookupCDB(
   return Result;
 }
 
-void DirectoryBasedGlobalCompilationDatabase::Options::applyWorkingDirectory(
-    std::optional<std::string> WorkingDirectory) {
-  if (WorkingDirectory)
-    this->WorkingDirectory = *WorkingDirectory;
+void DirectoryBasedGlobalCompilationDatabase::Options::applyFallbackWorkingDirectory(
+    std::optional<std::string> FallbackWorkingDirectory) {
+  if (FallbackWorkingDirectory)
+    this->FallbackWorkingDirectory = *FallbackWorkingDirectory;
   else {
     // Fallback to current working directory if workspace path (passed as
-    // WorkingDirectory) is unset
+    // FallbackWorkingDirectory) is unset
     SmallString<256> CWD;
     llvm::sys::fs::current_path(CWD);
-    this->WorkingDirectory = std::string(CWD);
+    this->FallbackWorkingDirectory = std::string(CWD);
   }
 }
 
@@ -776,8 +776,8 @@ DirectoryBasedGlobalCompilationDatabase::getProjectModules(PathRef File) const {
 OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
                        std::vector<std::string> FallbackFlags,
                        CommandMangler Mangler,
-                       std::optional<std::string> WorkingDirectory)
-    : DelegatingCDB(Base, WorkingDirectory), Mangler(std::move(Mangler)),
+                       std::optional<std::string> FallbackWorkingDirectory)
+    : DelegatingCDB(Base, FallbackWorkingDirectory), Mangler(std::move(Mangler)),
       FallbackFlags(std::move(FallbackFlags)) {}
 
 std::optional<tooling::CompileCommand>
@@ -862,8 +862,8 @@ OverlayCDB::getProjectModules(PathRef File) const {
 }
 
 DelegatingCDB::DelegatingCDB(const GlobalCompilationDatabase *Base,
-                             std::optional<std::string> WorkingDirectory)
-    : GlobalCompilationDatabase(WorkingDirectory), Base(Base) {
+                             std::optional<std::string> FallbackWorkingDirectory)
+    : GlobalCompilationDatabase(FallbackWorkingDirectory), Base(Base) {
   if (Base)
     BaseChanged = Base->watch([this](const std::vector<std::string> Changes) {
       OnCommandChanged.broadcast(Changes);
@@ -871,8 +871,8 @@ DelegatingCDB::DelegatingCDB(const GlobalCompilationDatabase *Base,
 }
 
 DelegatingCDB::DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base,
-                             std::optional<std::string> WorkingDirectory)
-    : DelegatingCDB(Base.get(), WorkingDirectory) {
+                             std::optional<std::string> FallbackWorkingDirectory)
+    : DelegatingCDB(Base.get(), FallbackWorkingDirectory) {
   BaseOwner = std::move(Base);
 }
 

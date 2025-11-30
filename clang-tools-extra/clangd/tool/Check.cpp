@@ -170,7 +170,7 @@ public:
     log("Loading compilation database...");
     DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
     if (Opts.StrongWorkspaceMode)
-      CDBOpts.applyWorkingDirectory(std::move(Opts.WorkspaceRoot));
+      CDBOpts.applyFallbackWorkingDirectory(Opts.WorkspaceRoot);
     CDBOpts.CompileCommandsDir =
         Config::current().CompileFlags.CDBSearch.FixedCDBPath;
     BaseCDB =
@@ -183,7 +183,7 @@ public:
 
     CDB = std::make_unique<OverlayCDB>(
         BaseCDB.get(), std::vector<std::string>{}, std::move(Mangler),
-        CDBOpts.WorkingDirectory);
+        CDBOpts.FallbackWorkingDirectory);
 
     if (auto TrueCmd = CDB->getCompileCommand(File)) {
       Cmd = std::move(*TrueCmd);

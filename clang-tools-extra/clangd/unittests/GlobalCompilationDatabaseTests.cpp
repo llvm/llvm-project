@@ -58,8 +58,8 @@ TEST(GlobalCompilationDatabaseTest, FallbackCommand) {
 TEST(GlobalCompilationDatabaseTest, FallbackWorkingDirectory) {
   MockFS TFS;
   DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
-  CDBOpts.applyWorkingDirectory(testPath("foo"));
-  EXPECT_EQ(CDBOpts.WorkingDirectory, testPath("foo"));
+  CDBOpts.applyFallbackWorkingDirectory(testPath("foo"));
+  EXPECT_EQ(CDBOpts.FallbackWorkingDirectory, testPath("foo"));
 
   DirectoryBasedGlobalCompilationDatabase DB(CDBOpts);
   auto Cmd = DB.getFallbackCommand(testPath("foo/src/bar.cc"));
