@@ -1817,7 +1817,16 @@ public:
           }
         }
       }
-
+      if (ICA.getID() == Intrinsic::vp_load_ff) {
+        Type *RetTy = ICA.getReturnType();
+        Type *DataTy = cast<StructType>(RetTy)->getElementType(0);
+        Align Alignment;
+        if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+          Alignment = VPI->getPointerAlignment().valueOrOne();
+        return thisT()->getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(ICA.getID(), DataTy, Alignment),
+            CostKind);
+      }
       if (ICA.getID() == Intrinsic::vp_scatter) {
         if (ICA.isTypeBasedOnly()) {
           IntrinsicCostAttributes MaskedScatter(
@@ -3076,6 +3085,8 @@ public:
     case Intrinsic::masked_compressstore:
     case Intrinsic::masked_expandload:
       return thisT()->getExpandCompressMemoryOpCost(MICA, CostKind);
+    case Intrinsic::vp_load_ff:
+      return InstructionCost::getInvalid();
     default:
       llvm_unreachable("unexpected intrinsic");
     }
