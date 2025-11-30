@@ -41,16 +41,54 @@ struct FoldTransposePattern : public OpRewritePattern<ElementwiseOp> {
       AffineMap map = op.getMatchingIndexingMap(operand);
       auto transposeOp = operand->get().getDefiningOp<TransposeOp>();
 
-      if (!map.isIdentity() || !transposeOp) {
+      if (!transposeOp) {
         // push in original operand and its map.
         newIns.push_back(operand->get());
         newMaps.push_back(map);
         continue;
       }
       newIns.push_back(transposeOp.getInput());
-      // push in transposeOp's inverse permutation map.
-      newMaps.push_back(transposeOp.getMatchingIndexingMap(
-          transposeOp.getDpsInputOperand(0)));
+      // push in composed affine map.
+      newMaps.push_back(
+          transposeOp.getMatchingIndexingMap(transposeOp.getDpsInputOperand(0))
+              .compose(map));
+      changed = true;
+    }
+    if (!changed)
+      return failure();
+    newMaps.push_back(op.getIndexingMapsArray().back());
+
+    rewriter.replaceOpWithNewOp<ElementwiseOp>(
+        op, newIns, op.getDpsInits()[0], op.getKindAttr(),
+        rewriter.getAffineMapArrayAttr(newMaps));
+    return success();
+  }
+};
+
+struct FoldBroadcastPattern : public OpRewritePattern<ElementwiseOp> {
+  using OpRewritePattern<ElementwiseOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ElementwiseOp op,
+                                PatternRewriter &rewriter) const override {
+    bool changed = false;
+    SmallVector<Value> newIns;
+    SmallVector<AffineMap> newMaps;
+    for (OpOperand *operand : op.getDpsInputOperands()) {
+      AffineMap map = op.getMatchingIndexingMap(operand);
+      auto broadcastOp = operand->get().getDefiningOp<BroadcastOp>();
+
+      if (!broadcastOp) {
+        // push in original operand and its map.
+        newIns.push_back(operand->get());
+        newMaps.push_back(map);
+        continue;
+      }
+
+      newIns.push_back(broadcastOp.getInput());
+      // push in composed affine map.
+      newMaps.push_back(
+          broadcastOp.getMatchingIndexingMap(broadcastOp.getDpsInputOperand(0))
+              .compose(map));
       changed = true;
     }
     if (!changed)
@@ -84,4 +122,5 @@ struct LinalgFoldIntoElementwisePass
 void mlir::linalg::populateLinalgFoldIntoElementwisePatterns(
     RewritePatternSet &patterns) {
   patterns.add<FoldTransposePattern>(patterns.getContext());
+  patterns.add<FoldBroadcastPattern>(patterns.getContext());
 }
