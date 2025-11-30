@@ -297,6 +297,22 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
+    if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R)) {
+      VPBuilder Builder(VPR);
+      auto *Prev = cast<VPVectorPointerRecipe>(getValueForPart(VPR, Part - 1))
+                       ->getOperand(1);
+      VPValue *Increment = &Plan.getVF();
+      Type *IncTy = TypeInfo.inferScalarType(Increment);
+      Increment = Builder.createScalarZExtOrTrunc(
+          Increment, TypeInfo.inferScalarType(Prev), IncTy,
+          DebugLoc::getCompilerGenerated());
+      VPIRFlags Flags = VPIRFlags::WrapFlagsTy(true, true);
+      VPInstruction *Add = Builder.createNaryOp(
+          Instruction::Add, {Prev, Increment}, Flags, VPR->getDebugLoc());
+      Copy->setOperand(0, VPR->getOperand(0));
+      Copy->setOperand(1, Add);
+      continue;
+    }
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {
       auto *Phi = dyn_cast<VPReductionPHIRecipe>(R.getOperand(0));
       if (Phi && Phi->isOrdered()) {
@@ -314,12 +330,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     // Add operand indicating the part to generate code for, to recipes still
     // requiring it.
     if (isa<VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe,
-            VPVectorPointerRecipe, VPVectorEndPointerRecipe>(Copy) ||
+            VPVectorEndPointerRecipe>(Copy) ||
         match(Copy,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
       Copy->addOperand(getConstantInt(Part));
 
-    if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))
+    if (isa<VPVectorEndPointerRecipe>(R))
       Copy->setOperand(0, R.getOperand(0));
   }
 }
