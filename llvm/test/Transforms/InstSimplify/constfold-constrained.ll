@@ -164,23 +164,24 @@ entry:
   ret double %result
 }
 
-; Verify that trunc(SNAN) is folded to QNAN if the exception behavior mode is 'ignore'.
+; Verify that trunc(SNAN) is not folded if the exception behavior mode is 'ignore'.
 define double @nonfinite_02() #0 {
 ; CHECK-LABEL: @nonfinite_02(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.trunc.f64(double 0x7FF4000000000000, metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    ret double [[RESULT]]
 ;
 entry:
   %result = call double @llvm.experimental.constrained.trunc.f64(double 0x7ff4000000000000, metadata !"fpexcept.ignore") #0
   ret double %result
 }
 
-; Verify that trunc(QNAN) is folded even if the exception behavior mode is not 'ignore'.
+; Verify that trunc(QNAN) is not folded if the exception behavior mode is not 'ignore'.
 define double @nonfinite_03() #0 {
 ; CHECK-LABEL: @nonfinite_03(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.trunc.f64(double 0x7FF8000000000000, metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double [[RESULT]]
 ;
 entry:
   %result = call double @llvm.experimental.constrained.trunc.f64(double 0x7ff8000000000000, metadata !"fpexcept.strict") #0
@@ -451,7 +452,8 @@ entry:
 define i1 @cmp_eq_03() #0 {
 ; CHECK-LABEL: @cmp_eq_03(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.000000e+00, double 0x7FF8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 entry:
   %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.0, double 0x7ff8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
@@ -461,7 +463,8 @@ entry:
 define i1 @cmp_eq_04() #0 {
 ; CHECK-LABEL: @cmp_eq_04(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.000000e+00, double 0x7FF4000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 entry:
   %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 2.0, double 0x7ff4000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
@@ -471,7 +474,8 @@ entry:
 define i1 @cmp_eq_05() #0 {
 ; CHECK-LABEL: @cmp_eq_05(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.000000e+00, double 0x7FF8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 entry:
   %result = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.0, double 0x7ff8000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
@@ -481,7 +485,8 @@ entry:
 define i1 @cmp_eq_06() #0 {
 ; CHECK-LABEL: @cmp_eq_06(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.000000e+00, double 0x7FF4000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #[[ATTR0]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 entry:
   %result = call i1 @llvm.experimental.constrained.fcmps.f64(double 2.0, double 0x7ff4000000000000, metadata !"oeq", metadata !"fpexcept.ignore") #0
@@ -516,7 +521,7 @@ define i1 @cmp_eq_nan_03() #0 {
 ; CHECK-LABEL: @cmp_eq_nan_03(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RESULT:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double 0x7FF8000000000000, double 1.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 entry:
   %result = call i1 @llvm.experimental.constrained.fcmp.f64(double 0x7ff8000000000000, double 1.0, metadata !"oeq", metadata !"fpexcept.strict") #0

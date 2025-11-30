@@ -136,8 +136,9 @@ define float @callatan2_flush_to_zero() {
 
 define float @callatan2_NaN() {
 ; CHECK-LABEL: @callatan2_NaN(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
-;
+; CHECK-NEXT:    [[CALL:%.*]] = call float @atan2f(float 0x7FF8000000000000, float 0x7FF8000000000000)
+; CHECK-NEXT:    ret float [[CALL]]
+
   %call = call float @atan2f(float 0x7FF8000000000000, float 0x7FF8000000000000)
   ret float %call
 }
