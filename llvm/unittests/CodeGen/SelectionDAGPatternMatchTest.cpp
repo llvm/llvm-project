@@ -842,6 +842,16 @@ TEST_F(SelectionDAGPatternMatchTest, matchReassociatableOp) {
   EXPECT_TRUE(sd_match(
       MUL, m_ReassociatableMul(m_Value(), m_Value(), m_Value(), m_Value())));
 
+  // (Op0 + Op1) + Op0 binds correctly, allowing commutation
+  SDValue ADD010 = DAG->getNode(ISD::ADD, DL, Int32VT, ADD01, Op0);
+  SDValue A, B;
+  EXPECT_TRUE(sd_match(
+      ADD010, m_ReassociatableAdd(m_Value(A), m_Value(B), m_Deferred(A))));
+  EXPECT_TRUE(sd_match(
+      ADD010, m_ReassociatableAdd(m_Value(A), m_Value(B), m_Deferred(B))));
+  EXPECT_FALSE(sd_match(
+      ADD010, m_ReassociatableAdd(m_Value(A), m_Deferred(A), m_Deferred(A))));
+
   // Op0 * (Op1 * (Op2 * Op3))
   SDValue MUL123 = DAG->getNode(ISD::MUL, DL, Int32VT, Op1, MUL23);
   SDValue MUL0123 = DAG->getNode(ISD::MUL, DL, Int32VT, Op0, MUL123);
