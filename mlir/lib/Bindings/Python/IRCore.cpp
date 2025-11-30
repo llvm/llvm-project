@@ -1411,9 +1411,10 @@ nb::object PyOperation::create(std::string_view name,
   }
 
   // Construct the operation.
+  PyMlirContext::ErrorCapture errors(location.getContext());
   MlirOperation operation = mlirOperationCreate(&state);
   if (!operation.ptr)
-    throw nb::value_error("Operation creation failed");
+    throw MLIRError("Operation creation failed", errors.take());
   PyOperationRef created =
       PyOperation::createDetached(location.getContext(), operation);
   maybeInsertOperation(created, maybeIp);

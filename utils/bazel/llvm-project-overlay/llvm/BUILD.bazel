@@ -327,7 +327,7 @@ cc_library(
         # We unconditionally depend on the custom LLVM zlib wrapper. This will
         # be an empty library unless zlib is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
-        "@llvm_zlib//:zlib",
+        "//third-party:zlib",
         # We unconditionally depend on the custom LLVM zstd wrapper. This will
         # be an empty library unless zstd is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
@@ -2379,10 +2379,7 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/ARM/ARMGenSubtargetInfo.inc",
             ),
             (
-                [
-                    "-gen-disassembler",
-                    "-ignore-non-decodable-operands",
-                ],
+                ["-gen-disassembler"],
                 "lib/Target/ARM/ARMGenDisassemblerTables.inc",
             ),
         ],

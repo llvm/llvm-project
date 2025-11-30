@@ -829,6 +829,7 @@ module std [system] {
     module simd_utils                             { header "__algorithm/simd_utils.h" }
     module sort_heap                              { header "__algorithm/sort_heap.h" }
     module sort                                   { header "__algorithm/sort.h" }
+    module specialized_algorithms                 { header "__algorithm/specialized_algorithms.h" }
     module stable_partition                       { header "__algorithm/stable_partition.h" }
     module stable_sort {
       header "__algorithm/stable_sort.h"

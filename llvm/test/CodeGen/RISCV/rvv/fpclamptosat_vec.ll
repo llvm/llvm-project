@@ -3569,8 +3569,6 @@ entry:
   ret <2 x i64> %conv6
 }
 
-
-
 ; i32 saturate
 
 define <2 x i32> @stest_f64i32_mm(<2 x double> %x) {
@@ -7214,21 +7212,3 @@ entry:
   ret <4 x i32> %spec.store.select7
 }
 
-declare <2 x i32> @llvm.smin.v2i32(<2 x i32>, <2 x i32>)
-declare <2 x i32> @llvm.smax.v2i32(<2 x i32>, <2 x i32>)
-declare <2 x i32> @llvm.umin.v2i32(<2 x i32>, <2 x i32>)
-declare <4 x i32> @llvm.smin.v4i32(<4 x i32>, <4 x i32>)
-declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
-declare <4 x i32> @llvm.umin.v4i32(<4 x i32>, <4 x i32>)
-declare <8 x i32> @llvm.smin.v8i32(<8 x i32>, <8 x i32>)
-declare <8 x i32> @llvm.smax.v8i32(<8 x i32>, <8 x i32>)
-declare <8 x i32> @llvm.umin.v8i32(<8 x i32>, <8 x i32>)
-declare <2 x i64> @llvm.smin.v2i64(<2 x i64>, <2 x i64>)
-declare <2 x i64> @llvm.smax.v2i64(<2 x i64>, <2 x i64>)
-declare <2 x i64> @llvm.umin.v2i64(<2 x i64>, <2 x i64>)
-declare <4 x i64> @llvm.smin.v4i64(<4 x i64>, <4 x i64>)
-declare <4 x i64> @llvm.smax.v4i64(<4 x i64>, <4 x i64>)
-declare <4 x i64> @llvm.umin.v4i64(<4 x i64>, <4 x i64>)
-declare <2 x i128> @llvm.smin.v2i128(<2 x i128>, <2 x i128>)
-declare <2 x i128> @llvm.smax.v2i128(<2 x i128>, <2 x i128>)
-declare <2 x i128> @llvm.umin.v2i128(<2 x i128>, <2 x i128>)
