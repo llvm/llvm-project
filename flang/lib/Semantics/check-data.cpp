@@ -273,7 +273,7 @@ void DataChecker::Leave(const parser::EntityDecl &decl) {
 }
 
 void DataChecker::CompileDataInitializationsIntoInitializers() {
-  ConvertToInitializers(inits_, exprAnalyzer_);
+  ConvertToInitializers(inits_, exprAnalyzer_, /*processScopes=*/true);
 }
 
 } // namespace Fortran::semantics
