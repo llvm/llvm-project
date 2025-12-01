@@ -4948,8 +4948,17 @@ recurse:
 
   case Expr::CXXReflectExprClass: {
     // TODO(Reflection): implement this after introducing std::meta::info
-    // and add info in APValue
-    [[fallthrough]];
+    NotPrimaryExpr();
+    if (!NullOut) {
+      // As bad as this diagnostic is, it's better than crashing.
+      DiagnosticsEngine &Diags = Context.getDiags();
+      unsigned DiagID = Diags.getCustomDiagID(
+          DiagnosticsEngine::Error, "cannot yet mangle expression type %0");
+      Diags.Report(E->getExprLoc(), DiagID)
+          << E->getStmtClassName() << E->getSourceRange();
+      return;
+    }
+    break;
   }
 
   // FIXME: invent manglings for all these.
