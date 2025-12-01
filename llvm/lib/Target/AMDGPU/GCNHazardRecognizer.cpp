@@ -190,6 +190,12 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (checkFPAtomicToDenormModeHazard(MI) > 0)
     return HazardType;
 
+  // Hazards which cannot be mitigated with S_NOPs.
+  if (!IsHazardRecognizerMode) {
+    if (checkWMMACoexecutionHazards(MI) > 0)
+      return Hazard;
+  }
+
   if (ST.hasNoDataDepHazard())
     return NoHazard;
 
