@@ -5164,6 +5164,26 @@ void LoongArchTargetLowering::ReplaceNodeResults(
       }
     }
 
+    // Only v4i64->v4i16/v4i8 and v8i32->v8i8 will reach the code below.
+    if (InBits == 256 && (InVT == MVT::v4i64 || InVT == MVT::v8i32)) {
+      if ((InEltVT.getSizeInBits() % EltVT.getSizeInBits()) != 0)
+        return;
+
+      MVT DWidenVT = EltVT == MVT::i16 ? MVT::v16i16 : MVT::v32i8;
+      unsigned WidenNumElts = DWidenVT.getVectorNumElements();
+      int Scale = InEltVT.getSizeInBits() / EltVT.getSizeInBits();
+      SmallVector<int, 32> TruncMask(WidenNumElts, -1);
+      for (unsigned I = 0; I < MinElts; ++I)
+        TruncMask[I] = Scale * I;
+
+      SDValue CastIn = DAG.getBitcast(DWidenVT, In);
+      SDValue Result =
+          DAG.getVectorShuffle(DWidenVT, DL, CastIn, CastIn, TruncMask);
+      Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, WidenVT, Result,
+                                    DAG.getVectorIdxConstant(0, DL)));
+      return;
+    }
+
     break;
   }
   }
