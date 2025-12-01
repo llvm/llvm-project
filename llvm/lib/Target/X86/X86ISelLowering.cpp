@@ -59464,6 +59464,12 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(VT, Ops, 0));
       }
       break;
+    case X86ISD::FRCP:
+    case X86ISD::FRSQRT:
+      if (!IsSplat && VT.is256BitVector()) {
+        return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(VT, Ops, 0));
+      }
+      break;
     case X86ISD::HADD:
     case X86ISD::HSUB:
     case X86ISD::FHADD:

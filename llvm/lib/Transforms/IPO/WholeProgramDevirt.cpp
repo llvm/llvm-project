@@ -99,6 +99,7 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -130,6 +131,8 @@ STATISTIC(NumUniqueRetVal, "Number of unique return value optimizations");
 STATISTIC(NumVirtConstProp1Bit,
           "Number of 1 bit virtual constant propagations");
 STATISTIC(NumVirtConstProp, "Number of virtual constant propagations");
+DEBUG_COUNTER(CallsToDevirt, "calls-to-devirt",
+              "Controls how many calls should be devirtualized.");
 
 namespace llvm {
 
@@ -218,14 +221,6 @@ static cl::opt<bool> WholeProgramDevirtKeepUnreachableFunction(
     "wholeprogramdevirt-keep-unreachable-function",
     cl::desc("Regard unreachable functions as possible devirtualize targets."),
     cl::Hidden, cl::init(true));
-
-/// If explicitly specified, the devirt module pass will stop transformation
-/// once the total number of devirtualizations reach the cutoff value. Setting
-/// this option to 0 explicitly will do 0 devirtualization.
-static cl::opt<unsigned> WholeProgramDevirtCutoff(
-    "wholeprogramdevirt-cutoff",
-    cl::desc("Max number of devirtualizations for devirt module pass"),
-    cl::init(0));
 
 /// Mechanism to add runtime checking of devirtualization decisions, optionally
 /// trapping or falling back to indirect call on any that are not correct.
@@ -376,9 +371,6 @@ VirtualCallTarget::VirtualCallTarget(GlobalValue *Fn, const TypeMemberInfo *TM)
       WasDevirt(false) {}
 
 namespace {
-
-// Tracks the number of devirted calls in the IR transformation.
-static unsigned NumDevirtCalls = 0;
 
 // A slot in a set of virtual tables. The TypeID identifies the set of virtual
 // tables, and the ByteOffset is the offset in bytes from the address point to
@@ -1216,15 +1208,13 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         continue;
 
       // Stop when the number of devirted calls reaches the cutoff.
-      if (WholeProgramDevirtCutoff.getNumOccurrences() > 0 &&
-          NumDevirtCalls >= WholeProgramDevirtCutoff)
-        return;
+      if (!DebugCounter::shouldExecute(CallsToDevirt))
+        continue;
 
       if (RemarksEnabled)
         VCallSite.emitRemark("single-impl",
                              TheFn->stripPointerCasts()->getName(), OREGetter);
       NumSingleImpl++;
-      NumDevirtCalls++;
       auto &CB = VCallSite.CB;
       assert(!CB.getCalledFunction() && "devirtualizing direct call?");
       IRBuilder<> Builder(&CB);

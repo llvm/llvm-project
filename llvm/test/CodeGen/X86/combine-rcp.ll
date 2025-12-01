@@ -14,9 +14,9 @@ define <8 x float> @concat_rcp_v8f32_v4f32(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; AVX-LABEL: concat_rcp_v8f32_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vrcpps %xmm0, %xmm0
-; AVX-NEXT:    vrcpps %xmm1, %xmm1
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    vrcpps %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %v0 = call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> %a0)
   %v1 = call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> %a1)
@@ -36,23 +36,23 @@ define <16 x float> @concat_rcp_v16f32_v4f32(<4 x float> %a0, <4 x float> %a1, <
 ;
 ; AVX1OR2-LABEL: concat_rcp_v16f32_v4f32:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vrcpps %xmm0, %xmm0
-; AVX1OR2-NEXT:    vrcpps %xmm1, %xmm1
-; AVX1OR2-NEXT:    vrcpps %xmm2, %xmm2
-; AVX1OR2-NEXT:    vrcpps %xmm3, %xmm3
+; AVX1OR2-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX1OR2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vrcpps %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm1
+; AVX1OR2-NEXT:    vrcpps %ymm1, %ymm1
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: concat_rcp_v16f32_v4f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vrcpps %xmm0, %xmm0
-; AVX512-NEXT:    vrcpps %xmm1, %xmm1
-; AVX512-NEXT:    vrcpps %xmm2, %xmm2
-; AVX512-NEXT:    vrcpps %xmm3, %xmm3
-; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512-NEXT:    vrcpps %ymm0, %ymm0
+; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm1
+; AVX512-NEXT:    vrcpps %ymm1, %ymm1
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %v0 = call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> %a0)
   %v1 = call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> %a1)
