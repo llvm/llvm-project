@@ -52,8 +52,6 @@ define i64 @sra_i64_zext(i64 %v, i32 %x) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 63
-; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i64.extend_i32_u
 ; CHECK-NEXT:    i64.shr_s
 ; CHECK-NEXT:    # fallthrough-return
@@ -82,8 +80,6 @@ define i64 @srl_i64_zext(i64 %v, i32 %x) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 63
-; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i64.extend_i32_u
 ; CHECK-NEXT:    i64.shr_u
 ; CHECK-NEXT:    # fallthrough-return
