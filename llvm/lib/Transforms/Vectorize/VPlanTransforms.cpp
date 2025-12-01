@@ -4295,7 +4295,7 @@ canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink) {
     return false;
 
   // When sinking a group of stores, all members of the group alias each other.
-  // Skip them  during the alias checks.
+  // Skip them during the alias checks.
   SmallPtrSet<VPRecipeBase *, 4> StoresToSinkSet(StoresToSink.begin(),
                                                  StoresToSink.end());
 

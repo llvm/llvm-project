@@ -966,3 +966,124 @@ loop.latch:
 exit:
   ret void
 }
+
+; Test with 3 predicated stores to the same address, but with different
+; (non-complementary) predicates.
+define void @test_three_stores_with_different_predicates(ptr %dst, ptr %src, ptr %cond) {
+; CHECK-LABEL: define void @test_three_stores_with_different_predicates(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], ptr [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 400
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[COND]], i64 400
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[COND]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE11:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[COND]], i32 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4, !alias.scope [[META85:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 11)
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP0]]
+; CHECK-NEXT:    store i32 1, ptr [[TMP5]], align 4, !alias.scope [[META88:![0-9]+]], !noalias [[META85]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK:       [[PRED_STORE_CONTINUE]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3:.*]]
+; CHECK:       [[PRED_STORE_IF2]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP1]]
+; CHECK-NEXT:    store i32 1, ptr [[TMP7]], align 4, !alias.scope [[META88]], !noalias [[META85]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE3]]
+; CHECK:       [[PRED_STORE_CONTINUE3]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = xor <2 x i1> [[TMP3]], splat (i1 true)
+; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i1> [[TMP3]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 10)
+; CHECK-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[TMP9]], <2 x i1> [[TMP10]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP11]], i32 0
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]]
+; CHECK:       [[PRED_STORE_IF4]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP0]]
+; CHECK-NEXT:    store i32 2, ptr [[TMP13]], align 4, !alias.scope [[META88]], !noalias [[META85]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
+; CHECK:       [[PRED_STORE_CONTINUE5]]:
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP11]], i32 1
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7:.*]]
+; CHECK:       [[PRED_STORE_IF6]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP1]]
+; CHECK-NEXT:    store i32 2, ptr [[TMP15]], align 4, !alias.scope [[META88]], !noalias [[META85]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE7]]
+; CHECK:       [[PRED_STORE_CONTINUE7]]:
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 9)
+; CHECK-NEXT:    [[TMP17:%.*]] = select <2 x i1> [[TMP9]], <2 x i1> [[TMP16]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP17]], i32 0
+; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_STORE_IF8:.*]], label %[[PRED_STORE_CONTINUE9:.*]]
+; CHECK:       [[PRED_STORE_IF8]]:
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP0]]
+; CHECK-NEXT:    store i32 3, ptr [[TMP19]], align 4, !alias.scope [[META88]], !noalias [[META85]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE9]]
+; CHECK:       [[PRED_STORE_CONTINUE9]]:
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x i1> [[TMP17]], i32 1
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[PRED_STORE_IF10:.*]], label %[[PRED_STORE_CONTINUE11]]
+; CHECK:       [[PRED_STORE_IF10]]:
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP1]]
+; CHECK-NEXT:    store i32 3, ptr [[TMP21]], align 4, !alias.scope [[META88]], !noalias [[META85]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE11]]
+; CHECK:       [[PRED_STORE_CONTINUE11]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i32 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP90:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br [[EXIT:label %.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.cond = getelementptr inbounds i32, ptr %cond, i32 %iv
+  %c = load i32, ptr %gep.cond, align 4
+  %c.0 = icmp ule i32 %c, 11
+  br i1 %c.0, label %then.0, label %continue.0
+
+then.0:
+  %gep.dst.then.0 = getelementptr inbounds i32, ptr %dst, i32 %iv
+  store i32 1, ptr %gep.dst.then.0, align 4
+  br label %continue.0
+
+continue.0:
+  %c.1 = icmp ule i32 %c, 10
+  br i1 %c.1, label %then.1, label %continue.1
+
+then.1:
+  %gep.dst.then.1 = getelementptr inbounds i32, ptr %dst, i32 %iv
+  store i32 2, ptr %gep.dst.then.1, align 4
+  br label %continue.1
+
+continue.1:
+  %c.2 = icmp ule i32 %c, 9
+  br i1 %c.2, label %then.2, label %loop.latch
+
+then.2:
+  %gep.dst.then.2 = getelementptr inbounds i32, ptr %dst, i32 %iv
+  store i32 3, ptr %gep.dst.then.2, align 4
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
