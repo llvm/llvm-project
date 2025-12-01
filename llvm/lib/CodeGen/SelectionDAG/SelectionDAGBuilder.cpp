@@ -3536,6 +3536,8 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
                           {LLVMContext::OB_deopt, LLVMContext::OB_funclet});
     visitInlineAsm(I);
   } else {
+    assert(!I.hasOperandBundles() &&
+           "Can't have operand bundles for intrinsics");
     visitCallBrIntrinsic(I);
   }
   CopyToExportRegsIfNeeded(&I);

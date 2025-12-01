@@ -3077,12 +3077,13 @@ bool IRTranslator::translateCallBr(const User &U,
   const CallBrInst &I = cast<CallBrInst>(U);
   MachineBasicBlock *CallBrMBB = &MIRBuilder.getMBB();
 
-  // FIXME: inline asm is not yet supported for callbr in GlobalISel. As soon as
-  // we add support, we need to handle the indirect asm targets, see
-  // SelectionDAGBuilder::visitCallBr().
   Intrinsic::ID IID = I.getIntrinsicID();
-  if (I.isInlineAsm())
+  if (I.isInlineAsm()) {
+    // FIXME: inline asm is not yet supported for callbr in GlobalISel. As soon
+    // as we add support, we need to handle the indirect asm targets, see
+    // SelectionDAGBuilder::visitCallBr().
     return false;
+  }
   if (!translateIntrinsic(I, IID, MIRBuilder))
     return false;
 

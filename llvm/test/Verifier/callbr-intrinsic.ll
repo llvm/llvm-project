@@ -1,4 +1,4 @@
-; RUN: not opt -S %s -passes=verify 2>&1 | FileCheck %s
+; RUN: not opt -S %s 2>&1 | FileCheck %s
 
 declare void @llvm.amdgcn.kill(i1)
 
