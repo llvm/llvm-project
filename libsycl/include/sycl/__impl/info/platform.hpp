@@ -15,39 +15,34 @@
 #define _LIBSYCL___IMPL_INFO_PLATFORM_HPP
 
 #include <sycl/__impl/detail/config.hpp>
+#include <sycl/__impl/info/desc_base.hpp>
 
 #include <string>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
+class platform;
+
+namespace detail {
+template <typename T>
+using is_platform_info_desc_t = typename is_info_desc<T, platform>::return_type;
+} // namespace detail
+
 // A.1. Platform information descriptors
 namespace info {
 namespace platform {
-#define __SYCL_PARAM_TRAITS_SPEC(DescType, Desc, ReturnT)                      \
-  struct Desc {                                                                \
-    using return_type = ReturnT;                                               \
-  };
-
 // 4.6.2.4. Information descriptors
-#include <sycl/__impl/info/platform.def>
-
-#undef __SYCL_PARAM_TRAITS_SPEC
+struct version : detail::info_desc_tag<version, sycl::platform> {
+  using return_type = std::string;
+};
+struct name : detail::info_desc_tag<name, sycl::platform> {
+  using return_type = std::string;
+};
+struct vendor : detail::info_desc_tag<vendor, sycl::platform> {
+  using return_type = std::string;
+};
 } // namespace platform
 } // namespace info
-
-namespace detail {
-template <typename T> struct is_platform_info_desc : std::false_type {};
-
-#define __SYCL_PARAM_TRAITS_SPEC(DescType, Desc, ReturnT)                      \
-  template <>                                                                  \
-  struct is_##DescType##_info_desc<info::DescType::Desc> : std::true_type {    \
-    using return_type = info::DescType::Desc::return_type;                     \
-  };
-
-#include <sycl/__impl/info/platform.def>
-
-#undef __SYCL_PARAM_TRAITS_SPEC
-} // namespace detail
 
 _LIBSYCL_END_NAMESPACE_SYCL
 

@@ -52,6 +52,27 @@ void call_and_throw(FunctionType &Function, ArgsT &&...Args) {
 
 backend convertBackend(ol_platform_backend_t Backend);
 
+/// Helper to map SYCL information descriptors to OL_<HANDLE>_INFO_<SMTH>. To be
+/// used like:
+///
+/// using Map = info_ol_mapping<ol_foo_info_t>;
+/// constexpr auto olInfo = map_info_desc<FromDesc, ol_foo_info_t>(
+///                                            Map::M<DescVal0>{OL_FOO_INFO_VAL0},
+///                                            Map::M<DescVal1>{OL_FOO_INFO_VAL1},
+///                                            ...)
+template <typename To> struct info_ol_mapping {
+  template <typename From> struct M {
+    To value;
+    constexpr M(To value) : value(value) {}
+  };
+};
+template <typename From, typename To, typename... Ts>
+constexpr To map_info_desc(typename info_ol_mapping<To>::template M<Ts>... ms) {
+  return std::get<typename info_ol_mapping<To>::template M<From>>(
+             std::tuple{ms...})
+      .value;
+}
+
 } // namespace detail
 
 _LIBSYCL_END_NAMESPACE_SYCL

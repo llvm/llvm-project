@@ -1,8 +1,0 @@
-#ifndef __SYCL_PARAM_TRAITS_SPEC
-static_assert(false, "__SYCL_PARAM_TRAITS_SPEC is required but not defined");
-#endif
-
-// 4.6.2.4. Information descriptors
-__SYCL_PARAM_TRAITS_SPEC(platform, version, std::string)
-__SYCL_PARAM_TRAITS_SPEC(platform, name, std::string)
-__SYCL_PARAM_TRAITS_SPEC(platform, vendor, std::string)

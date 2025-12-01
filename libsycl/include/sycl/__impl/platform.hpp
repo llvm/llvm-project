@@ -76,7 +76,7 @@ public:
   ///
   /// The return type depends on information being queried.
   template <typename Param>
-  typename detail::is_platform_info_desc<Param>::return_type get_info() const;
+  detail::is_platform_info_desc_t<Param> get_info() const;
 
   // template <typename Param>
   // typename detail::is_backend_info_desc<Param>::return_type

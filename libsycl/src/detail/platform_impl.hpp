@@ -88,15 +88,23 @@ public:
   template <typename Param> typename Param::return_type get_info() const {
     // for now we have only std::string properties
     static_assert(std::is_same_v<typename Param::return_type, std::string>);
-    constexpr ol_platform_info_t OffloadCode = getOffloadInfo<Param>();
+
+    using namespace info::platform;
+    using Map = info_ol_mapping<ol_platform_info_t>;
+
+    constexpr ol_platform_info_t olInfo =
+        map_info_desc<Param, ol_platform_info_t>(
+            Map::M<version>{OL_PLATFORM_INFO_VERSION},
+            Map::M<name>{OL_PLATFORM_INFO_NAME},
+            Map::M<vendor>{OL_PLATFORM_INFO_VENDOR_NAME});
 
     size_t ExpectedSize = 0;
-    call_and_throw(olGetPlatformInfoSize, MOffloadPlatform, OffloadCode,
+    call_and_throw(olGetPlatformInfoSize, MOffloadPlatform, olInfo,
                    &ExpectedSize);
     std::string Result;
     Result.resize(ExpectedSize - 1);
-    call_and_throw(olGetPlatformInfo, MOffloadPlatform, OffloadCode,
-                   ExpectedSize, Result.data());
+    call_and_throw(olGetPlatformInfo, MOffloadPlatform, olInfo, ExpectedSize,
+                   Result.data());
     return Result;
   }
 
