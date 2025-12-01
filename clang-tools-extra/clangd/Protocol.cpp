@@ -859,6 +859,8 @@ llvm::json::Value toJSON(const SymbolInformation &P) {
   };
   if (P.score)
     O["score"] = *P.score;
+  if(!P.tags.empty())
+    O["tags"] = P.tags;
   return std::move(O);
 }
 

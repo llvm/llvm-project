@@ -24,7 +24,10 @@
 # CHECK-NEXT:          "uri": "file://{{.*}}/vector.h"
 # CHECK-NEXT:        },
 # CHECK-NEXT:        "name": "vector",
-# CHECK-NEXT:        "score": {{.*}}
+# CHECK-NEXT:        "score": {{.*}},
+# CHECK-NEXT:        "tags": [
+# CHECK-NEXT:          18
+# CHECK-NEXT:        ]
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ]
 # CHECK-NEXT:}
