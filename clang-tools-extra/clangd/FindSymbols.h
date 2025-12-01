@@ -14,13 +14,17 @@
 
 #include "Protocol.h"
 #include "index/Symbol.h"
-#include "clang/AST/Decl.h"
 #include "llvm/ADT/StringRef.h"
+#include "clang/AST/Decl.h"
 
 namespace clang {
+class NamedDecl;
+
 namespace clangd {
 class ParsedAST;
 class SymbolIndex;
+struct Symbol;
+struct SymbolLocation;
 
 /// A bitmask type representing symbol tags supported by LSP.
 /// \see
