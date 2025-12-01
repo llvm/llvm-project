@@ -8,13 +8,12 @@
 
 #include "src/sys/resource/setrlimit.h"
 
+#include "hdr/types/struct_rlimit.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include <sys/resource.h> // For struct rlimit
-#include <sys/syscall.h>  // For syscall numbers.
+#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 

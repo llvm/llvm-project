@@ -317,11 +317,11 @@ OpenACCTileClause *OpenACCTileClause::Create(const ASTContext &C,
 OpenACCPrivateClause *
 OpenACCPrivateClause::Create(const ASTContext &C, SourceLocation BeginLoc,
                              SourceLocation LParenLoc, ArrayRef<Expr *> VarList,
-                             ArrayRef<VarDecl *> InitRecipes,
+                             ArrayRef<OpenACCPrivateRecipe> InitRecipes,
                              SourceLocation EndLoc) {
   assert(VarList.size() == InitRecipes.size());
-  void *Mem =
-      C.Allocate(OpenACCPrivateClause::totalSizeToAlloc<Expr *, VarDecl *>(
+  void *Mem = C.Allocate(
+      OpenACCPrivateClause::totalSizeToAlloc<Expr *, OpenACCPrivateRecipe>(
           VarList.size(), InitRecipes.size()));
   return new (Mem)
       OpenACCPrivateClause(BeginLoc, LParenLoc, VarList, InitRecipes, EndLoc);
@@ -506,11 +506,17 @@ OpenACCDeviceTypeClause *OpenACCDeviceTypeClause::Create(
 OpenACCReductionClause *OpenACCReductionClause::Create(
     const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
     OpenACCReductionOperator Operator, ArrayRef<Expr *> VarList,
-    ArrayRef<OpenACCReductionRecipe> Recipes,
+    ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
     SourceLocation EndLoc) {
-  void *Mem = C.Allocate(
-      OpenACCReductionClause::totalSizeToAlloc<Expr *, OpenACCReductionRecipe>(
-          VarList.size(), Recipes.size()));
+  size_t NumCombiners = llvm::accumulate(
+      Recipes, 0, [](size_t Num, const OpenACCReductionRecipeWithStorage &R) {
+        return Num + R.CombinerRecipes.size();
+      });
+
+  void *Mem = C.Allocate(OpenACCReductionClause::totalSizeToAlloc<
+                         Expr *, OpenACCReductionRecipe,
+                         OpenACCReductionRecipe::CombinerRecipe>(
+      VarList.size(), Recipes.size(), NumCombiners));
   return new (Mem) OpenACCReductionClause(BeginLoc, LParenLoc, Operator,
                                           VarList, Recipes, EndLoc);
 }

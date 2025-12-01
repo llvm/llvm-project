@@ -101,6 +101,7 @@ inline constexpr bool isSignedType(PrimType T) {
 
 enum class CastKind : uint8_t {
   Reinterpret,
+  ReinterpretLike,
   Volatile,
   Dynamic,
 };
@@ -110,6 +111,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   switch (CK) {
   case interp::CastKind::Reinterpret:
     OS << "reinterpret_cast";
+    break;
+  case interp::CastKind::ReinterpretLike:
+    OS << "reinterpret_like";
     break;
   case interp::CastKind::Volatile:
     OS << "volatile";
@@ -272,14 +276,4 @@ static inline bool aligned(const void *P) {
     }                                                                          \
   } while (0)
 
-#define COMPOSITE_TYPE_SWITCH(Expr, B, D)                                      \
-  do {                                                                         \
-    switch (Expr) {                                                            \
-      TYPE_SWITCH_CASE(PT_Ptr, B)                                              \
-    default: {                                                                 \
-      D;                                                                       \
-      break;                                                                   \
-    }                                                                          \
-    }                                                                          \
-  } while (0)
 #endif

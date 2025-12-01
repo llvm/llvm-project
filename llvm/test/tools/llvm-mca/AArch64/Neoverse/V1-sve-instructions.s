@@ -2649,7 +2649,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      5     0.50                         2     V1UnitV,V1UnitV01                          BFMLALT_ZZZI               bfmlalt	z0.s, z1.h, z2.h[7]
 # CHECK-NEXT:  1      5     0.50                         2     V1UnitV,V1UnitV01                          BFMLALT_ZZZI               bfmlalt	z0.s, z1.h, z7.h[7]
 # CHECK-NEXT:  1      5     0.50                         2     V1UnitV,V1UnitV01                          BFMLALT_ZZZ                bfmlalt	z14.s, z10.h, z21.h
-# CHECK-NEXT:  1      5     0.50                         3     V1UnitV,V1UnitV01                          BFMMLA_ZZZ                 bfmmla	z0.s, z1.h, z2.h
+# CHECK-NEXT:  1      5     0.50                         3     V1UnitV,V1UnitV01                          BFMMLA_ZZZ_HtoS            bfmmla	z0.s, z1.h, z2.h
 # CHECK-NEXT:  1      1     1.00                         1     V1UnitI,V1UnitM,V1UnitM0                   BIC_PPzPP                  bic	p0.b, p0/z, p0.b, p0.b
 # CHECK-NEXT:  1      1     1.00                         1     V1UnitI,V1UnitM,V1UnitM0                   BIC_PPzPP                  bic	p15.b, p15/z, p15.b, p15.b
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          BIC_ZZZ                    bic	z0.d, z0.d, z0.d
@@ -3991,19 +3991,19 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ANDS_PPzPP                 movs	p0.b, p0/z, p0.b
 # CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ORRS_PPzPP                 movs	p15.b, p15.b
 # CHECK-NEXT:  2      2     2.00                         2     V1UnitI[2],V1UnitM[2],V1UnitM0[2]          ANDS_PPzPP                 movs	p15.b, p15/z, p15.b
-# CHECK-NEXT:  1      1     0.07                  U      1                                                MRS                        mrs	x3, ID_AA64ZFR0_EL1
-# CHECK-NEXT:  1      1     0.07                  U      1                                                MRS                        mrs	x3, ZCR_EL1
-# CHECK-NEXT:  1      1     0.07                  U      1                                                MRS                        mrs	x3, ZCR_EL12
-# CHECK-NEXT:  1      1     0.07                  U      1                                                MRS                        mrs	x3, ZCR_EL2
-# CHECK-NEXT:  1      1     0.07                  U      1                                                MRS                        mrs	x3, ZCR_EL3
-# CHECK-NEXT:  1      1     0.07                  U      1                                                MSR                        msr	ZCR_EL1, x3
+# CHECK-NEXT:  1      1     0.13                  U      1                                                MRS                        mrs	x3, ID_AA64ZFR0_EL1
+# CHECK-NEXT:  1      1     0.13                  U      1                                                MRS                        mrs	x3, ZCR_EL1
+# CHECK-NEXT:  1      1     0.13                  U      1                                                MRS                        mrs	x3, ZCR_EL12
+# CHECK-NEXT:  1      1     0.13                  U      1                                                MRS                        mrs	x3, ZCR_EL2
+# CHECK-NEXT:  1      1     0.13                  U      1                                                MRS                        mrs	x3, ZCR_EL3
+# CHECK-NEXT:  1      1     0.13                  U      1                                                MSR                        msr	ZCR_EL1, x3
 # CHECK-NEXT:  2      5     2.00                         2     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] MSB_ZPmZZ_D          msb	z0.d, p0/m, z0.d, z0.d
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MSB_ZPmZZ_B                msb	z18.b, p1/m, z27.b, z0.b
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MSB_ZPmZZ_H                msb	z27.h, p5/m, z23.h, z1.h
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MSB_ZPmZZ_S                msb	z26.s, p2/m, z0.s, z2.s
-# CHECK-NEXT:  1      1     0.07                  U      1                                                MSR                        msr	ZCR_EL12, x3
-# CHECK-NEXT:  1      1     0.07                  U      1                                                MSR                        msr	ZCR_EL2, x3
-# CHECK-NEXT:  1      1     0.07                  U      1                                                MSR                        msr	ZCR_EL3, x3
+# CHECK-NEXT:  1      1     0.13                  U      1                                                MSR                        msr	ZCR_EL12, x3
+# CHECK-NEXT:  1      1     0.13                  U      1                                                MSR                        msr	ZCR_EL2, x3
+# CHECK-NEXT:  1      1     0.13                  U      1                                                MSR                        msr	ZCR_EL3, x3
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MUL_ZPmZ_B                 mul	z0.b, p7/m, z0.b, z31.b
 # CHECK-NEXT:  2      5     2.00                         5     V1UnitV[2],V1UnitV0[2],V1UnitV01[2],V1UnitV02[2] MUL_ZPmZ_D           mul	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      4     1.00                         4     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       MUL_ZPmZ_H                 mul	z0.h, p7/m, z0.h, z31.h
@@ -4228,10 +4228,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      12    7.00                         12    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] SDIV_ZPmZ_S          sdiv	z0.s, p7/m, z0.s, z31.s
 # CHECK-NEXT:  1      20    7.00                         20    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] SDIVR_ZPmZ_D         sdivr	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      12    7.00                         12    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] SDIVR_ZPmZ_S         sdivr	z0.s, p7/m, z0.s, z31.s
-# CHECK-NEXT:  1      4     1.00                         1     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       SDOT_ZZZI_D                sdot	z0.d, z1.h, z15.h[1]
-# CHECK-NEXT:  1      4     1.00                         1     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       SDOT_ZZZ_D                 sdot	z0.d, z1.h, z31.h
-# CHECK-NEXT:  1      3     0.50                         1     V1UnitV,V1UnitV01                          SDOT_ZZZ_S                 sdot	z0.s, z1.b, z31.b
-# CHECK-NEXT:  1      3     0.50                         1     V1UnitV,V1UnitV01                          SDOT_ZZZI_S                sdot	z0.s, z1.b, z7.b[3]
+# CHECK-NEXT:  1      4     1.00                         1     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       SDOT_ZZZI_HtoD             sdot	z0.d, z1.h, z15.h[1]
+# CHECK-NEXT:  1      4     1.00                         1     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       SDOT_ZZZ_HtoD              sdot	z0.d, z1.h, z31.h
+# CHECK-NEXT:  1      3     0.50                         1     V1UnitV,V1UnitV01                          SDOT_ZZZ_BtoS              sdot	z0.s, z1.b, z31.b
+# CHECK-NEXT:  1      3     0.50                         1     V1UnitV,V1UnitV01                          SDOT_ZZZI_BtoS             sdot	z0.s, z1.b, z7.b[3]
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SEL_ZPZZ_B                 sel	z23.b, p11, z13.b, z8.b
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SEL_ZPZZ_D                 sel	z23.d, p11, z13.d, z8.d
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          SEL_ZPZZ_H                 sel	z23.h, p11, z13.h, z8.h
@@ -4708,11 +4708,11 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      12    7.00                         12    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] UDIV_ZPmZ_S          udiv	z0.s, p7/m, z0.s, z31.s
 # CHECK-NEXT:  1      20    7.00                         20    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] UDIVR_ZPmZ_D         udivr	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      12    7.00                         12    V1UnitV[7],V1UnitV0[7],V1UnitV01[7],V1UnitV02[7] UDIVR_ZPmZ_S         udivr	z0.s, p7/m, z0.s, z31.s
-# CHECK-NEXT:  1      4     1.00                         1     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       UDOT_ZZZI_D                udot	z0.d, z1.h, z15.h[1]
-# CHECK-NEXT:  1      4     1.00                         1     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       UDOT_ZZZ_D                 udot	z0.d, z1.h, z31.h
+# CHECK-NEXT:  1      4     1.00                         1     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       UDOT_ZZZI_HtoD             udot	z0.d, z1.h, z15.h[1]
+# CHECK-NEXT:  1      4     1.00                         1     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       UDOT_ZZZ_HtoD              udot	z0.d, z1.h, z31.h
 # CHECK-NEXT:  1      3     1.00                         3     V1UnitV,V1UnitV0,V1UnitV01,V1UnitV02       UCVTF_ZPmZ_StoD            ucvtf	z24.d, p5/m, z9.s
-# CHECK-NEXT:  1      3     0.50                         1     V1UnitV,V1UnitV01                          UDOT_ZZZ_S                 udot	z0.s, z1.b, z31.b
-# CHECK-NEXT:  1      3     0.50                         1     V1UnitV,V1UnitV01                          UDOT_ZZZI_S                udot	z0.s, z1.b, z7.b[3]
+# CHECK-NEXT:  1      3     0.50                         1     V1UnitV,V1UnitV01                          UDOT_ZZZ_BtoS              udot	z0.s, z1.b, z31.b
+# CHECK-NEXT:  1      3     0.50                         1     V1UnitV,V1UnitV01                          UDOT_ZZZI_BtoS             udot	z0.s, z1.b, z7.b[3]
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UMAX_ZI_B                  umax	z0.b, z0.b, #0
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UMAX_ZPmZ_B                umax	z31.b, p7/m, z31.b, z31.b
 # CHECK-NEXT:  1      2     0.50                         2     V1UnitV,V1UnitV01                          UMAX_ZI_B                  umax	z31.b, z31.b, #255

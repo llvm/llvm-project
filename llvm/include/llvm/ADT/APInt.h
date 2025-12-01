@@ -77,7 +77,7 @@ inline APInt operator-(APInt);
 ///
 class [[nodiscard]] APInt {
 public:
-  typedef uint64_t WordType;
+  using WordType = uint64_t;
 
   /// Byte size of a word.
   static constexpr unsigned APINT_WORD_SIZE = sizeof(WordType);
@@ -151,9 +151,10 @@ public:
   /// deprecated because this constructor is prone to ambiguity with the
   /// APInt(unsigned, uint64_t, bool) constructor.
   ///
-  /// If this overload is ever deleted, care should be taken to prevent calls
-  /// from being incorrectly captured by the APInt(unsigned, uint64_t, bool)
-  /// constructor.
+  /// Once all uses of this constructor are migrated to other constructors,
+  /// consider marking this overload ""= delete" to prevent calls from being
+  /// incorrectly bound to the APInt(unsigned, uint64_t, bool) constructor.
+  [[deprecated("Use other constructors of APInt")]]
   LLVM_ABI APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]);
 
   /// Construct an APInt from a string representation.
@@ -2438,6 +2439,27 @@ LLVM_ABI APInt fshl(const APInt &Hi, const APInt &Lo, const APInt &Shift);
 /// (3) fshr(i8 0, i8 255, i8 8)  = 255 (0b11111111)
 /// (4) fshr(i8 255, i8 0, i8 9)  = fshr(i8 255, i8 0, i8 1) // 9 % 8
 LLVM_ABI APInt fshr(const APInt &Hi, const APInt &Lo, const APInt &Shift);
+
+/// Perform a carry-less multiply, also known as XOR multiplication, and return
+/// low-bits. All arguments and result have the same bitwidth.
+///
+/// Examples:
+/// (1) clmul(i4 1, i4 2)   = 2
+/// (2) clmul(i4 5, i4 6)   = 14
+/// (3) clmul(i4 -4, i4 2)  = -8
+/// (4) clmul(i4 -4, i4 -5) = 4
+LLVM_ABI APInt clmul(const APInt &LHS, const APInt &RHS);
+
+/// Perform a reversed carry-less multiply.
+///
+/// clmulr(a, b) = bitreverse(clmul(bitreverse(a), bitreverse(b)))
+LLVM_ABI APInt clmulr(const APInt &LHS, const APInt &RHS);
+
+/// Perform a carry-less multiply, and return high-bits. All arguments and
+/// result have the same bitwidth.
+///
+/// clmulh(a, b) = clmulr(a, b) >> 1
+LLVM_ABI APInt clmulh(const APInt &LHS, const APInt &RHS);
 
 } // namespace APIntOps
 

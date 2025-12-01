@@ -1,4 +1,4 @@
-//===-- FunctionSizeCheck.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -181,14 +181,14 @@ void FunctionSizeCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Count the lines including whitespace and comments. Really simple.
   if (const Stmt *Body = Func->getBody()) {
-    SourceManager *SM = Result.SourceManager;
+    const SourceManager *SM = Result.SourceManager;
     if (SM->isWrittenInSameFile(Body->getBeginLoc(), Body->getEndLoc())) {
       FI.Lines = SM->getSpellingLineNumber(Body->getEndLoc()) -
                  SM->getSpellingLineNumber(Body->getBeginLoc());
     }
   }
 
-  unsigned ActualNumberParameters = Func->getNumParams();
+  const unsigned ActualNumberParameters = Func->getNumParams();
 
   if ((LineThreshold && FI.Lines > LineThreshold) ||
       (StatementThreshold && FI.Statements > StatementThreshold) ||

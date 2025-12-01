@@ -75,11 +75,6 @@ inline const bool __has_specialization_v<_Tp, sizeof(_Tp) * 0> = true;
 template <class _Iterator>
 inline const bool __is_segmented_iterator_v = __has_specialization_v<__segmented_iterator_traits<_Iterator> >;
 
-template <class _SegmentedIterator>
-struct __has_random_access_local_iterator
-    : __has_random_access_iterator_category<
-          typename __segmented_iterator_traits< _SegmentedIterator >::__local_iterator > {};
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___SEGMENTED_ITERATOR_H

@@ -8,8 +8,6 @@
 
 // constexpr bool operator[](size_t pos) const; // constexpr since C++23
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <bitset>
 #include <cassert>
 #include <cstddef>

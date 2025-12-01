@@ -65,6 +65,9 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   ::std::optional< ::llvm::APFloat > getSomeAttr2();
 // CHECK:   ::mlir::Region &getSomeRegion() {
 // CHECK:   ::mlir::RegionRange getSomeRegions() {
+// CHECK-NEXT:     return odsRegions.drop_front(1);
+// CHECK:   ::mlir::RegionRange getRegions() {
+// CHECK-NEXT:     return odsRegions;
 // CHECK: };
 // CHECK: }
 
@@ -151,10 +154,6 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // DEFS-LABEL: NS::AOp definitions
 
 // Check that `getAttrDictionary()` is used when not using properties.
-
-// DECLS: ::mlir::RegionRange AOpGenericAdaptorBase::getSomeRegions()
-// DECLS-NEXT: return odsRegions.drop_front(1);
-// DECLS: ::mlir::RegionRange AOpGenericAdaptorBase::getRegions()
 
 // Check AttrSizedOperandSegments
 // ---
@@ -543,3 +542,12 @@ def _BOp : NS_Op<"_op_with_leading_underscore_and_no_namespace", []>;
 
 // REDUCE_EXC-NOT: NS::AOp declarations
 // REDUCE_EXC-LABEL: NS::BOp declarations
+
+// CHECK-LABEL: _TypeInferredPropOp declarations
+def _TypeInferredPropOp : NS_Op<"type_inferred_prop_op_with_properties", [
+    AllTypesMatch<["value", "result"]>
+  ]> {
+  let arguments = (ins Property<"unsigned">:$prop, AnyType:$value);
+  let results = (outs AnyType:$result);
+  let hasCustomAssemblyFormat = 1;
+}

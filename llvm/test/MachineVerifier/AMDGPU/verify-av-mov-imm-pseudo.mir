@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -run-pass=none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 ---
 name: invalid_av_mov_b32_imm_pseudo
 tracksRegLiveness: true

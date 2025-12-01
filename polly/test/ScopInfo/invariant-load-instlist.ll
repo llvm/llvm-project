@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s
 
 ; The load is a required invariant load and at the same time used in a store.
 ; Polly used to add two MemoryAccesses for it which caused an assertion to fail.

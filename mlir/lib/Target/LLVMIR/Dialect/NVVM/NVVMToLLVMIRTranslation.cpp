@@ -36,9 +36,6 @@ using mlir::LLVM::detail::createIntrinsicCall;
 static llvm::Intrinsic::ID getReduxIntrinsicId(llvm::Type *resultType,
                                                NVVM::ReduxKind kind,
                                                bool hasAbs, bool hasNaN) {
-  if (!(resultType->isIntegerTy(32) || resultType->isFloatTy()))
-    llvm_unreachable("unsupported data type for redux");
-
   switch (kind) {
   case NVVM::ReduxKind::ADD:
     return llvm::Intrinsic::nvvm_redux_sync_add;
@@ -253,8 +250,8 @@ getStMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
 /// Return the intrinsic ID associated with st.bulk for the given address type.
 static llvm::Intrinsic::ID
 getStBulkIntrinsicId(LLVM::LLVMPointerType addrType) {
-  bool isSharedMemory =
-      addrType.getAddressSpace() == NVVM::NVVMMemorySpace::kSharedMemorySpace;
+  bool isSharedMemory = addrType.getAddressSpace() ==
+                        static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
   return isSharedMemory ? llvm::Intrinsic::nvvm_st_bulk_shared_cta
                         : llvm::Intrinsic::nvvm_st_bulk;
 }
@@ -292,6 +289,20 @@ static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
     llvm_unreachable("Unknown scope for uni-directional fence.proxy operation");
   }
   llvm_unreachable("Unsupported proxy kinds");
+}
+
+static unsigned getMembarIntrinsicID(NVVM::MemScopeKind scope) {
+  switch (scope) {
+  case NVVM::MemScopeKind::CTA:
+    return llvm::Intrinsic::nvvm_membar_cta;
+  case NVVM::MemScopeKind::CLUSTER:
+    return llvm::Intrinsic::nvvm_fence_sc_cluster;
+  case NVVM::MemScopeKind::GPU:
+    return llvm::Intrinsic::nvvm_membar_gl;
+  case NVVM::MemScopeKind::SYS:
+    return llvm::Intrinsic::nvvm_membar_sys;
+  }
+  llvm_unreachable("Unknown scope for memory barrier");
 }
 
 #define TCGEN05LD(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_ld_##SHAPE##_##NUM
@@ -483,51 +494,10 @@ public:
     llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
     llvm::Function *llvmFunc =
         moduleTranslation.lookupFunction(funcOp.getName());
-    llvm::NamedMDNode *nvvmAnnotations =
-        moduleTranslation.getOrInsertNamedModuleMetadata("nvvm.annotations");
 
     if (attribute.getName() == NVVM::NVVMDialect::getGridConstantAttrName()) {
-      llvm::MDNode *gridConstantMetaData = nullptr;
-
-      // Check if a 'grid_constant' metadata node exists for the given function
-      for (llvm::MDNode *opnd : llvm::reverse(nvvmAnnotations->operands())) {
-        if (opnd->getNumOperands() == 3 &&
-            opnd->getOperand(0) == llvm::ValueAsMetadata::get(llvmFunc) &&
-            opnd->getOperand(1) ==
-                llvm::MDString::get(llvmContext, "grid_constant")) {
-          gridConstantMetaData = opnd;
-          break;
-        }
-      }
-
-      // 'grid_constant' is a function-level meta data node with a list of
-      // integers, where each integer n denotes that the nth parameter has the
-      // grid_constant annotation (numbering from 1). This requires aggregating
-      // the indices of the individual parameters that have this attribute.
-      llvm::Type *i32 = llvm::IntegerType::get(llvmContext, 32);
-      if (gridConstantMetaData == nullptr) {
-        // Create a new 'grid_constant' metadata node
-        SmallVector<llvm::Metadata *> gridConstMetadata = {
-            llvm::ValueAsMetadata::getConstant(
-                llvm::ConstantInt::get(i32, argIdx + 1))};
-        llvm::Metadata *llvmMetadata[] = {
-            llvm::ValueAsMetadata::get(llvmFunc),
-            llvm::MDString::get(llvmContext, "grid_constant"),
-            llvm::MDNode::get(llvmContext, gridConstMetadata)};
-        llvm::MDNode *llvmMetadataNode =
-            llvm::MDNode::get(llvmContext, llvmMetadata);
-        nvvmAnnotations->addOperand(llvmMetadataNode);
-      } else {
-        // Append argIdx + 1 to the 'grid_constant' argument list
-        if (auto argList =
-                dyn_cast<llvm::MDTuple>(gridConstantMetaData->getOperand(2))) {
-          llvm::TempMDTuple clonedArgList = argList->clone();
-          clonedArgList->push_back((llvm::ValueAsMetadata::getConstant(
-              llvm::ConstantInt::get(i32, argIdx + 1))));
-          gridConstantMetaData->replaceOperandWith(
-              2, llvm::MDNode::replaceWithUniqued(std::move(clonedArgList)));
-        }
-      }
+      llvmFunc->addParamAttr(
+          argIdx, llvm::Attribute::get(llvmContext, "nvvm.grid_constant"));
     }
     return success();
   }

@@ -2400,8 +2400,8 @@ define i32 @test_udot_v25i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    .cfi_offset w30, -88
 ; CHECK-GI-NEXT:    .cfi_offset w29, -96
 ; CHECK-GI-NEXT:    ldp q2, q1, [x1]
-; CHECK-GI-NEXT:    fmov s0, wzr
-; CHECK-GI-NEXT:    str w2, [sp, #12] // 4-byte Folded Spill
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
+; CHECK-GI-NEXT:    str w2, [sp, #12] // 4-byte Spill
 ; CHECK-GI-NEXT:    mov b6, v2.b[3]
 ; CHECK-GI-NEXT:    mov b7, v2.b[4]
 ; CHECK-GI-NEXT:    mov b16, v2.b[5]
@@ -2548,7 +2548,7 @@ define i32 @test_udot_v25i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    mov v16.h[3], w10
 ; CHECK-GI-NEXT:    uxtb w10, w3
 ; CHECK-GI-NEXT:    mov v6.h[4], w18
-; CHECK-GI-NEXT:    ldr w18, [sp, #4] // 4-byte Folded Reload
+; CHECK-GI-NEXT:    ldr w18, [sp, #4] // 4-byte Reload
 ; CHECK-GI-NEXT:    mov v7.h[3], w9
 ; CHECK-GI-NEXT:    uxtb w9, w16
 ; CHECK-GI-NEXT:    uxtb w16, w22
@@ -2560,7 +2560,7 @@ define i32 @test_udot_v25i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    ldp x22, x21, [sp, #80] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v16.h[4], w16
 ; CHECK-GI-NEXT:    mov v7.h[4], w13
-; CHECK-GI-NEXT:    ldr w13, [sp, #8] // 4-byte Folded Reload
+; CHECK-GI-NEXT:    ldr w13, [sp, #8] // 4-byte Reload
 ; CHECK-GI-NEXT:    mov v6.h[5], w9
 ; CHECK-GI-NEXT:    uxtb w9, w1
 ; CHECK-GI-NEXT:    mov v3.h[5], w11
@@ -2654,7 +2654,7 @@ define i32 @test_udot_v25i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    mov v17.s[2], wzr
 ; CHECK-GI-NEXT:    mov v3.s[3], w8
 ; CHECK-GI-NEXT:    mov v4.s[3], w9
-; CHECK-GI-NEXT:    ldr w9, [sp, #12] // 4-byte Folded Reload
+; CHECK-GI-NEXT:    ldr w9, [sp, #12] // 4-byte Reload
 ; CHECK-GI-NEXT:    mov v5.s[3], w15
 ; CHECK-GI-NEXT:    mov v6.s[3], w17
 ; CHECK-GI-NEXT:    mov v7.s[3], w18
@@ -2710,7 +2710,7 @@ define i32 @test_udot_v25i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GI-NEXT:    .cfi_offset w19, -16
 ; CHECK-GI-NEXT:    ldp q2, q1, [x0]
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    umov w15, v2.b[0]
 ; CHECK-GI-NEXT:    umov w17, v2.b[4]
 ; CHECK-GI-NEXT:    umov w0, v2.b[8]
@@ -2830,8 +2830,8 @@ define i32 @test_sdot_v25i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    .cfi_offset w30, -88
 ; CHECK-GI-NEXT:    .cfi_offset w29, -96
 ; CHECK-GI-NEXT:    ldp q2, q1, [x1]
-; CHECK-GI-NEXT:    fmov s0, wzr
-; CHECK-GI-NEXT:    str w2, [sp, #12] // 4-byte Folded Spill
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
+; CHECK-GI-NEXT:    str w2, [sp, #12] // 4-byte Spill
 ; CHECK-GI-NEXT:    mov b5, v2.b[2]
 ; CHECK-GI-NEXT:    mov b6, v2.b[3]
 ; CHECK-GI-NEXT:    mov b7, v2.b[4]
@@ -2982,7 +2982,7 @@ define i32 @test_sdot_v25i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    sxtb w8, w16
 ; CHECK-GI-NEXT:    sxtb w16, w3
 ; CHECK-GI-NEXT:    mov v6.h[4], w11
-; CHECK-GI-NEXT:    ldr w11, [sp, #4] // 4-byte Folded Reload
+; CHECK-GI-NEXT:    ldr w11, [sp, #4] // 4-byte Reload
 ; CHECK-GI-NEXT:    mov v3.h[5], w9
 ; CHECK-GI-NEXT:    sxtb w9, w15
 ; CHECK-GI-NEXT:    sxtb w15, w27
@@ -2997,7 +2997,7 @@ define i32 @test_sdot_v25i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    sxtb w10, w26
 ; CHECK-GI-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v6.h[5], w8
-; CHECK-GI-NEXT:    ldr w8, [sp, #8] // 4-byte Folded Reload
+; CHECK-GI-NEXT:    ldr w8, [sp, #8] // 4-byte Reload
 ; CHECK-GI-NEXT:    mov v7.h[5], w10
 ; CHECK-GI-NEXT:    sxtb w10, w12
 ; CHECK-GI-NEXT:    sxtb w12, w18
@@ -3085,7 +3085,7 @@ define i32 @test_sdot_v25i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    mov v17.s[2], wzr
 ; CHECK-GI-NEXT:    mov v3.s[3], w8
 ; CHECK-GI-NEXT:    mov v4.s[3], w9
-; CHECK-GI-NEXT:    ldr w9, [sp, #12] // 4-byte Folded Reload
+; CHECK-GI-NEXT:    ldr w9, [sp, #12] // 4-byte Reload
 ; CHECK-GI-NEXT:    mov v5.s[3], w16
 ; CHECK-GI-NEXT:    mov v6.s[3], w17
 ; CHECK-GI-NEXT:    mov v7.s[3], w18
@@ -3360,12 +3360,12 @@ define i32 @test_sdot_v25i8_double(<25 x i8> %a, <25 x i8> %b, <25 x i8> %c, <25
 ; CHECK-GI-NEXT:    sbfx w9, w11, #8, #8
 ; CHECK-GI-NEXT:    lsl w11, w3, #8
 ; CHECK-GI-NEXT:    sbfx w14, w14, #8, #8
-; CHECK-GI-NEXT:    fmov s1, wzr
+; CHECK-GI-NEXT:    movi d1, #0000000000000000
 ; CHECK-GI-NEXT:    lsl w10, w10, #8
 ; CHECK-GI-NEXT:    mov v4.h[1], w8
 ; CHECK-GI-NEXT:    ldr w8, [sp, #152]
 ; CHECK-GI-NEXT:    sbfx w11, w11, #8, #8
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    mov v2.h[2], w9
 ; CHECK-GI-NEXT:    ldr w9, [sp, #40]
 ; CHECK-GI-NEXT:    sbfx w10, w10, #8, #8
@@ -4012,25 +4012,24 @@ define i32 @test_sdot_v25i8_double_nomla(<25 x i8> %a, <25 x i8> %b, <25 x i8> %
 ; CHECK-GI-NEXT:    sxtb w8, w4
 ; CHECK-GI-NEXT:    sxtb w10, w10
 ; CHECK-GI-NEXT:    ldr w14, [sp, #448]
-; CHECK-GI-NEXT:    fmov s1, wzr
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    fmov s3, w8
 ; CHECK-GI-NEXT:    sxtb w8, w2
 ; CHECK-GI-NEXT:    fmov s5, w10
 ; CHECK-GI-NEXT:    mov v2.s[1], w9
 ; CHECK-GI-NEXT:    sxtb w9, w5
 ; CHECK-GI-NEXT:    ldr w10, [sp, #80]
-; CHECK-GI-NEXT:    mov v1.s[1], wzr
-; CHECK-GI-NEXT:    mov v0.s[1], wzr
 ; CHECK-GI-NEXT:    mov v3.s[1], w9
 ; CHECK-GI-NEXT:    ldr w9, [sp, #16]
 ; CHECK-GI-NEXT:    sxtb w10, w10
+; CHECK-GI-NEXT:    mov v1.s[1], wzr
+; CHECK-GI-NEXT:    mov v0.s[1], wzr
 ; CHECK-GI-NEXT:    mov v2.s[2], w8
 ; CHECK-GI-NEXT:    sxtb w9, w9
 ; CHECK-GI-NEXT:    ldr w8, [sp, #24]
 ; CHECK-GI-NEXT:    fmov s6, w10
 ; CHECK-GI-NEXT:    ldr w10, [sp, #64]
-; CHECK-GI-NEXT:    mov v1.s[2], wzr
 ; CHECK-GI-NEXT:    mov v3.s[2], w11
 ; CHECK-GI-NEXT:    fmov s4, w9
 ; CHECK-GI-NEXT:    sxtb w8, w8
@@ -4039,7 +4038,7 @@ define i32 @test_sdot_v25i8_double_nomla(<25 x i8> %a, <25 x i8> %b, <25 x i8> %
 ; CHECK-GI-NEXT:    sxtb w10, w10
 ; CHECK-GI-NEXT:    mov v2.s[3], w12
 ; CHECK-GI-NEXT:    ldr w12, [sp, #88]
-; CHECK-GI-NEXT:    mov v0.s[2], wzr
+; CHECK-GI-NEXT:    mov v1.s[2], wzr
 ; CHECK-GI-NEXT:    mov v4.s[1], w8
 ; CHECK-GI-NEXT:    ldr w8, [sp, #120]
 ; CHECK-GI-NEXT:    sxtb w9, w9
@@ -4063,7 +4062,7 @@ define i32 @test_sdot_v25i8_double_nomla(<25 x i8> %a, <25 x i8> %b, <25 x i8> %
 ; CHECK-GI-NEXT:    ldr w10, [sp, #136]
 ; CHECK-GI-NEXT:    sxtb w13, w13
 ; CHECK-GI-NEXT:    sxtb w9, w9
-; CHECK-GI-NEXT:    mov v1.s[3], wzr
+; CHECK-GI-NEXT:    mov v0.s[2], wzr
 ; CHECK-GI-NEXT:    mov v7.s[1], w8
 ; CHECK-GI-NEXT:    sxtb w10, w10
 ; CHECK-GI-NEXT:    ldr w8, [sp, #72]
@@ -4072,8 +4071,9 @@ define i32 @test_sdot_v25i8_double_nomla(<25 x i8> %a, <25 x i8> %b, <25 x i8> %
 ; CHECK-GI-NEXT:    mov v4.s[3], w9
 ; CHECK-GI-NEXT:    ldr w9, [sp, #360]
 ; CHECK-GI-NEXT:    sxtb w8, w8
-; CHECK-GI-NEXT:    mov v0.s[3], wzr
+; CHECK-GI-NEXT:    mov v1.s[3], wzr
 ; CHECK-GI-NEXT:    sxtb w13, w13
+; CHECK-GI-NEXT:    mov v0.s[3], wzr
 ; CHECK-GI-NEXT:    add v2.4s, v2.4s, v3.4s
 ; CHECK-GI-NEXT:    mov v7.s[2], w12
 ; CHECK-GI-NEXT:    ldr w12, [sp, #352]
@@ -4562,13 +4562,13 @@ define i32 @test_udot_v33i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    .cfi_offset w30, -88
 ; CHECK-GI-NEXT:    .cfi_offset w29, -96
 ; CHECK-GI-NEXT:    ldp q7, q16, [x1]
-; CHECK-GI-NEXT:    fmov s5, wzr
-; CHECK-GI-NEXT:    str w2, [sp, #12] // 4-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s6, wzr
-; CHECK-GI-NEXT:    fmov s0, wzr
-; CHECK-GI-NEXT:    fmov s1, wzr
-; CHECK-GI-NEXT:    fmov s3, wzr
-; CHECK-GI-NEXT:    fmov s2, wzr
+; CHECK-GI-NEXT:    movi d5, #0000000000000000
+; CHECK-GI-NEXT:    str w2, [sp, #12] // 4-byte Spill
+; CHECK-GI-NEXT:    movi d6, #0000000000000000
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
+; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    movi d3, #0000000000000000
+; CHECK-GI-NEXT:    movi d2, #0000000000000000
 ; CHECK-GI-NEXT:    mov b23, v7.b[7]
 ; CHECK-GI-NEXT:    mov b17, v7.b[1]
 ; CHECK-GI-NEXT:    fmov w11, s7
@@ -4623,7 +4623,7 @@ define i32 @test_udot_v33i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    uxtb w10, w21
 ; CHECK-GI-NEXT:    mov v7.h[2], w9
 ; CHECK-GI-NEXT:    uxtb w9, w13
-; CHECK-GI-NEXT:    str s20, [sp] // 4-byte Folded Spill
+; CHECK-GI-NEXT:    str s20, [sp] // 4-byte Spill
 ; CHECK-GI-NEXT:    mov b25, v16.b[10]
 ; CHECK-GI-NEXT:    fmov w25, s18
 ; CHECK-GI-NEXT:    uxtb w22, w22
@@ -4791,11 +4791,11 @@ define i32 @test_udot_v33i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    uxtb w11, w7
 ; CHECK-GI-NEXT:    fmov w8, s26
 ; CHECK-GI-NEXT:    mov v19.h[4], w15
-; CHECK-GI-NEXT:    ldr w15, [sp] // 4-byte Folded Reload
+; CHECK-GI-NEXT:    ldr w15, [sp] // 4-byte Reload
 ; CHECK-GI-NEXT:    mov v21.h[7], w17
 ; CHECK-GI-NEXT:    uxtb w17, w6
 ; CHECK-GI-NEXT:    mov v22.h[4], w11
-; CHECK-GI-NEXT:    ldr w11, [sp, #8] // 4-byte Folded Reload
+; CHECK-GI-NEXT:    ldr w11, [sp, #8] // 4-byte Reload
 ; CHECK-GI-NEXT:    uxtb w8, w8
 ; CHECK-GI-NEXT:    uxtb w15, w15
 ; CHECK-GI-NEXT:    fmov w13, s30
@@ -4812,7 +4812,7 @@ define i32 @test_udot_v33i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    fmov w12, s31
 ; CHECK-GI-NEXT:    mov v17.h[7], w11
 ; CHECK-GI-NEXT:    uxtb w11, w13
-; CHECK-GI-NEXT:    ldr w13, [sp, #4] // 4-byte Folded Reload
+; CHECK-GI-NEXT:    ldr w13, [sp, #4] // 4-byte Reload
 ; CHECK-GI-NEXT:    mov v20.h[5], w17
 ; CHECK-GI-NEXT:    mov v23.h[7], w8
 ; CHECK-GI-NEXT:    fmov w9, s27
@@ -4822,7 +4822,7 @@ define i32 @test_udot_v33i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    mov v19.h[6], w11
 ; CHECK-GI-NEXT:    fmov w12, s16
 ; CHECK-GI-NEXT:    fmov w11, s7
-; CHECK-GI-NEXT:    fmov s4, wzr
+; CHECK-GI-NEXT:    movi d4, #0000000000000000
 ; CHECK-GI-NEXT:    uxtb w9, w9
 ; CHECK-GI-NEXT:    mov v20.h[6], w10
 ; CHECK-GI-NEXT:    umov w10, v24.h[0]
@@ -4917,7 +4917,7 @@ define i32 @test_udot_v33i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    mov v1.s[3], wzr
 ; CHECK-GI-NEXT:    mov v3.s[3], wzr
 ; CHECK-GI-NEXT:    mov v21.s[3], w9
-; CHECK-GI-NEXT:    ldr w9, [sp, #12] // 4-byte Folded Reload
+; CHECK-GI-NEXT:    ldr w9, [sp, #12] // 4-byte Reload
 ; CHECK-GI-NEXT:    mov v2.s[3], wzr
 ; CHECK-GI-NEXT:    mov v23.s[2], w11
 ; CHECK-GI-NEXT:    umov w11, v19.h[7]
@@ -4991,13 +4991,13 @@ define i32 @test_udot_v33i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK-GI-NEXT:    .cfi_offset w19, -8
 ; CHECK-GI-NEXT:    .cfi_offset w20, -16
 ; CHECK-GI-NEXT:    ldp q7, q19, [x0]
-; CHECK-GI-NEXT:    fmov s1, wzr
+; CHECK-GI-NEXT:    movi d1, #0000000000000000
 ; CHECK-GI-NEXT:    ldrb w10, [x0, #32]
-; CHECK-GI-NEXT:    fmov s0, wzr
-; CHECK-GI-NEXT:    fmov s3, wzr
-; CHECK-GI-NEXT:    fmov s2, wzr
-; CHECK-GI-NEXT:    fmov s5, wzr
-; CHECK-GI-NEXT:    fmov s4, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
+; CHECK-GI-NEXT:    movi d3, #0000000000000000
+; CHECK-GI-NEXT:    movi d2, #0000000000000000
+; CHECK-GI-NEXT:    movi d5, #0000000000000000
+; CHECK-GI-NEXT:    movi d4, #0000000000000000
 ; CHECK-GI-NEXT:    umov w15, v7.b[8]
 ; CHECK-GI-NEXT:    umov w2, v7.b[12]
 ; CHECK-GI-NEXT:    umov w16, v7.b[9]
@@ -5022,13 +5022,13 @@ define i32 @test_udot_v33i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK-GI-NEXT:    mov v17.s[1], w16
 ; CHECK-GI-NEXT:    mov v18.s[1], w4
 ; CHECK-GI-NEXT:    umov w4, v19.b[4]
+; CHECK-GI-NEXT:    movi d6, #0000000000000000
 ; CHECK-GI-NEXT:    umov w6, v19.b[1]
 ; CHECK-GI-NEXT:    umov w7, v19.b[5]
-; CHECK-GI-NEXT:    umov w19, v19.b[9]
 ; CHECK-GI-NEXT:    mov v7.s[1], w9
 ; CHECK-GI-NEXT:    mov v16.s[1], w14
+; CHECK-GI-NEXT:    umov w19, v19.b[9]
 ; CHECK-GI-NEXT:    umov w20, v19.b[13]
-; CHECK-GI-NEXT:    fmov s6, wzr
 ; CHECK-GI-NEXT:    umov w12, v19.b[2]
 ; CHECK-GI-NEXT:    umov w8, v19.b[3]
 ; CHECK-GI-NEXT:    mov v17.s[2], w3
@@ -5164,13 +5164,13 @@ define i32 @test_sdot_v33i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    .cfi_offset w30, -88
 ; CHECK-GI-NEXT:    .cfi_offset w29, -96
 ; CHECK-GI-NEXT:    ldp q7, q16, [x1]
-; CHECK-GI-NEXT:    fmov s1, wzr
-; CHECK-GI-NEXT:    str w2, [sp, #12] // 4-byte Folded Spill
-; CHECK-GI-NEXT:    fmov s3, wzr
-; CHECK-GI-NEXT:    fmov s2, wzr
-; CHECK-GI-NEXT:    fmov s5, wzr
-; CHECK-GI-NEXT:    fmov s4, wzr
-; CHECK-GI-NEXT:    fmov s6, wzr
+; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    str w2, [sp, #12] // 4-byte Spill
+; CHECK-GI-NEXT:    movi d3, #0000000000000000
+; CHECK-GI-NEXT:    movi d2, #0000000000000000
+; CHECK-GI-NEXT:    movi d5, #0000000000000000
+; CHECK-GI-NEXT:    movi d4, #0000000000000000
+; CHECK-GI-NEXT:    movi d6, #0000000000000000
 ; CHECK-GI-NEXT:    mov b19, v7.b[3]
 ; CHECK-GI-NEXT:    mov b23, v7.b[7]
 ; CHECK-GI-NEXT:    mov b17, v7.b[1]
@@ -5386,7 +5386,7 @@ define i32 @test_sdot_v33i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    sxtb w13, w6
 ; CHECK-GI-NEXT:    mov v20.h[7], w17
 ; CHECK-GI-NEXT:    mov v21.h[4], w9
-; CHECK-GI-NEXT:    ldr w9, [sp, #8] // 4-byte Folded Reload
+; CHECK-GI-NEXT:    ldr w9, [sp, #8] // 4-byte Reload
 ; CHECK-GI-NEXT:    mov v22.h[5], w18
 ; CHECK-GI-NEXT:    mov b25, v17.b[14]
 ; CHECK-GI-NEXT:    fmov w26, s27
@@ -5397,7 +5397,7 @@ define i32 @test_sdot_v33i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    sxtb w10, w11
 ; CHECK-GI-NEXT:    sxtb w11, w16
 ; CHECK-GI-NEXT:    mov v21.h[5], w8
-; CHECK-GI-NEXT:    ldr w8, [sp, #4] // 4-byte Folded Reload
+; CHECK-GI-NEXT:    ldr w8, [sp, #4] // 4-byte Reload
 ; CHECK-GI-NEXT:    sxtb w15, w26
 ; CHECK-GI-NEXT:    ldp x26, x25, [sp, #48] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    sxtb w8, w8
@@ -5454,7 +5454,7 @@ define i32 @test_sdot_v33i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    smov w8, v20.h[7]
 ; CHECK-GI-NEXT:    sxth w9, w9
 ; CHECK-GI-NEXT:    mov v16.s[1], w12
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    fmov s19, w15
 ; CHECK-GI-NEXT:    smov w15, v22.h[6]
 ; CHECK-GI-NEXT:    mov v1.s[1], wzr
@@ -5507,7 +5507,7 @@ define i32 @test_sdot_v33i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ; CHECK-GI-NEXT:    smov w14, v18.h[3]
 ; CHECK-GI-NEXT:    smov w15, v18.h[7]
 ; CHECK-GI-NEXT:    fmov s18, w9
-; CHECK-GI-NEXT:    ldr w9, [sp, #12] // 4-byte Folded Reload
+; CHECK-GI-NEXT:    ldr w9, [sp, #12] // 4-byte Reload
 ; CHECK-GI-NEXT:    mov v17.s[2], w13
 ; CHECK-GI-NEXT:    smov w12, v24.h[3]
 ; CHECK-GI-NEXT:    smov w13, v24.h[7]
@@ -5848,7 +5848,7 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x29, [sp, #64] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x29, [sp, #64] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -5900,28 +5900,28 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    sbfx w15, w15, #8, #8
 ; CHECK-GI-NEXT:    mov v23.h[2], w8
 ; CHECK-GI-NEXT:    ldr w8, [sp, #112]
-; CHECK-GI-NEXT:    fmov s19, wzr
+; CHECK-GI-NEXT:    movi d19, #0000000000000000
 ; CHECK-GI-NEXT:    sbfx w9, w9, #8, #8
 ; CHECK-GI-NEXT:    sbfx w11, w11, #8, #8
-; CHECK-GI-NEXT:    fmov s21, wzr
+; CHECK-GI-NEXT:    movi d21, #0000000000000000
 ; CHECK-GI-NEXT:    mov v22.h[3], w10
 ; CHECK-GI-NEXT:    ldr w10, [sp, #144]
 ; CHECK-GI-NEXT:    lsl w8, w8, #8
-; CHECK-GI-NEXT:    fmov s16, wzr
-; CHECK-GI-NEXT:    fmov s18, wzr
-; CHECK-GI-NEXT:    fmov s17, wzr
+; CHECK-GI-NEXT:    movi d16, #0000000000000000
+; CHECK-GI-NEXT:    movi d18, #0000000000000000
+; CHECK-GI-NEXT:    movi d17, #0000000000000000
 ; CHECK-GI-NEXT:    lsl w10, w10, #8
 ; CHECK-GI-NEXT:    mov v23.h[3], w9
 ; CHECK-GI-NEXT:    sbfx w8, w8, #8, #8
 ; CHECK-GI-NEXT:    ldr w9, [sp, #120]
-; CHECK-GI-NEXT:    fmov s20, wzr
-; CHECK-GI-NEXT:    fmov s6, wzr
+; CHECK-GI-NEXT:    movi d20, #0000000000000000
+; CHECK-GI-NEXT:    movi d6, #0000000000000000
 ; CHECK-GI-NEXT:    sbfx w10, w10, #8, #8
 ; CHECK-GI-NEXT:    mov v22.h[4], w11
 ; CHECK-GI-NEXT:    lsl w11, w5, #8
 ; CHECK-GI-NEXT:    lsl w9, w9, #8
-; CHECK-GI-NEXT:    fmov s7, wzr
-; CHECK-GI-NEXT:    fmov s2, wzr
+; CHECK-GI-NEXT:    movi d7, #0000000000000000
+; CHECK-GI-NEXT:    movi d2, #0000000000000000
 ; CHECK-GI-NEXT:    fmov s24, w10
 ; CHECK-GI-NEXT:    mov v23.h[4], w8
 ; CHECK-GI-NEXT:    ldr w8, [sp, #160]
@@ -5929,8 +5929,8 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    ldr w10, [sp, #168]
 ; CHECK-GI-NEXT:    sbfx w9, w9, #8, #8
 ; CHECK-GI-NEXT:    lsl w8, w8, #8
-; CHECK-GI-NEXT:    fmov s4, wzr
-; CHECK-GI-NEXT:    fmov s3, wzr
+; CHECK-GI-NEXT:    movi d4, #0000000000000000
+; CHECK-GI-NEXT:    movi d3, #0000000000000000
 ; CHECK-GI-NEXT:    mov v24.h[1], w12
 ; CHECK-GI-NEXT:    lsl w12, w6, #8
 ; CHECK-GI-NEXT:    mov v22.h[5], w11
@@ -5941,8 +5941,8 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    ldr w11, [sp, #184]
 ; CHECK-GI-NEXT:    ldr w9, [sp, #192]
 ; CHECK-GI-NEXT:    sbfx w10, w10, #8, #8
-; CHECK-GI-NEXT:    fmov s5, wzr
-; CHECK-GI-NEXT:    fmov s1, wzr
+; CHECK-GI-NEXT:    movi d5, #0000000000000000
+; CHECK-GI-NEXT:    movi d1, #0000000000000000
 ; CHECK-GI-NEXT:    mov v24.h[2], w8
 ; CHECK-GI-NEXT:    mov v22.h[6], w12
 ; CHECK-GI-NEXT:    ldr w12, [sp, #208]
@@ -5951,7 +5951,7 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    lsl w9, w9, #8
 ; CHECK-GI-NEXT:    lsl w12, w12, #8
 ; CHECK-GI-NEXT:    ldr w8, [sp, #200]
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    lsl w13, w13, #8
 ; CHECK-GI-NEXT:    sbfx w9, w9, #8, #8
 ; CHECK-GI-NEXT:    mov v19.s[1], wzr
@@ -6599,7 +6599,7 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    add v4.4s, v5.4s, v7.4s
 ; CHECK-GI-NEXT:    add v5.4s, v16.4s, v17.4s
 ; CHECK-GI-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    ldr x29, [sp, #64] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x29, [sp, #64] // 8-byte Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    add v2.4s, v3.4s, v6.4s
 ; CHECK-GI-NEXT:    add v1.4s, v23.4s, v1.4s
@@ -6793,7 +6793,7 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-GI-NEXT:    stp d13, d12, [sp, #-64]! // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    stp d11, d10, [sp, #16] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x29, [sp, #48] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x29, [sp, #48] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -6813,10 +6813,10 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-GI-NEXT:    fmov s23, w12
 ; CHECK-GI-NEXT:    sxtb w10, w10
 ; CHECK-GI-NEXT:    sxtb w12, w7
-; CHECK-GI-NEXT:    fmov s18, wzr
+; CHECK-GI-NEXT:    movi d18, #0000000000000000
 ; CHECK-GI-NEXT:    sxtb w8, w8
-; CHECK-GI-NEXT:    fmov s19, wzr
-; CHECK-GI-NEXT:    fmov s20, wzr
+; CHECK-GI-NEXT:    movi d19, #0000000000000000
+; CHECK-GI-NEXT:    movi d20, #0000000000000000
 ; CHECK-GI-NEXT:    mov v22.s[1], w9
 ; CHECK-GI-NEXT:    sxtb w9, w2
 ; CHECK-GI-NEXT:    mov v23.s[1], w13
@@ -6825,10 +6825,10 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-GI-NEXT:    sxtb w11, w6
 ; CHECK-GI-NEXT:    ldr w13, [sp, #232]
 ; CHECK-GI-NEXT:    mov v18.s[1], wzr
-; CHECK-GI-NEXT:    mov v19.s[1], wzr
+; CHECK-GI-NEXT:    movi d21, #0000000000000000
 ; CHECK-GI-NEXT:    fmov s25, w8
 ; CHECK-GI-NEXT:    ldr w8, [sp, #80]
-; CHECK-GI-NEXT:    fmov s21, wzr
+; CHECK-GI-NEXT:    mov v19.s[1], wzr
 ; CHECK-GI-NEXT:    mov v22.s[2], w9
 ; CHECK-GI-NEXT:    mov v24.s[1], w10
 ; CHECK-GI-NEXT:    sxtb w10, w3
@@ -6837,10 +6837,10 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-GI-NEXT:    sxtb w8, w8
 ; CHECK-GI-NEXT:    ldr w11, [sp, #136]
 ; CHECK-GI-NEXT:    mov v18.s[2], wzr
-; CHECK-GI-NEXT:    mov v19.s[2], wzr
+; CHECK-GI-NEXT:    movi d6, #0000000000000000
 ; CHECK-GI-NEXT:    sxtb w9, w9
-; CHECK-GI-NEXT:    fmov s6, wzr
-; CHECK-GI-NEXT:    fmov s7, wzr
+; CHECK-GI-NEXT:    mov v19.s[2], wzr
+; CHECK-GI-NEXT:    movi d7, #0000000000000000
 ; CHECK-GI-NEXT:    mov v22.s[3], w10
 ; CHECK-GI-NEXT:    ldr w10, [sp, #128]
 ; CHECK-GI-NEXT:    mov v24.s[2], w8
@@ -6855,7 +6855,7 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-GI-NEXT:    sxtb w8, w8
 ; CHECK-GI-NEXT:    fmov s26, w10
 ; CHECK-GI-NEXT:    ldr w10, [sp, #144]
-; CHECK-GI-NEXT:    mov v18.s[3], wzr
+; CHECK-GI-NEXT:    movi d5, #0000000000000000
 ; CHECK-GI-NEXT:    mov v25.s[2], w9
 ; CHECK-GI-NEXT:    ldr w9, [sp, #120]
 ; CHECK-GI-NEXT:    sxtb w12, w12
@@ -6872,14 +6872,14 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-GI-NEXT:    ldr w9, [sp, #192]
 ; CHECK-GI-NEXT:    add v22.4s, v22.4s, v23.4s
 ; CHECK-GI-NEXT:    mov v27.s[1], w8
-; CHECK-GI-NEXT:    mov v19.s[3], wzr
-; CHECK-GI-NEXT:    fmov s5, wzr
+; CHECK-GI-NEXT:    movi d16, #0000000000000000
+; CHECK-GI-NEXT:    movi d17, #0000000000000000
 ; CHECK-GI-NEXT:    mov v26.s[2], w10
 ; CHECK-GI-NEXT:    ldr w10, [sp, #200]
 ; CHECK-GI-NEXT:    sxtb w9, w9
-; CHECK-GI-NEXT:    fmov s16, wzr
-; CHECK-GI-NEXT:    fmov s17, wzr
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
+; CHECK-GI-NEXT:    movi d1, #0000000000000000
+; CHECK-GI-NEXT:    movi d3, #0000000000000000
 ; CHECK-GI-NEXT:    sxtb w8, w10
 ; CHECK-GI-NEXT:    sxtb w10, w12
 ; CHECK-GI-NEXT:    fmov s28, w9
@@ -6936,7 +6936,7 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-GI-NEXT:    fmov s9, w12
 ; CHECK-GI-NEXT:    sxtb w11, w11
 ; CHECK-GI-NEXT:    sxtb w10, w10
-; CHECK-GI-NEXT:    fmov s1, wzr
+; CHECK-GI-NEXT:    movi d2, #0000000000000000
 ; CHECK-GI-NEXT:    sxtb w9, w9
 ; CHECK-GI-NEXT:    mov v30.s[3], w8
 ; CHECK-GI-NEXT:    ldr w8, [sp, #632]
@@ -6948,10 +6948,10 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-GI-NEXT:    ldr w10, [sp, #688]
 ; CHECK-GI-NEXT:    sxtb w11, w11
 ; CHECK-GI-NEXT:    sxtb w8, w8
-; CHECK-GI-NEXT:    fmov s3, wzr
+; CHECK-GI-NEXT:    movi d4, #0000000000000000
 ; CHECK-GI-NEXT:    sxtb w9, w9
 ; CHECK-GI-NEXT:    sxtb w10, w10
-; CHECK-GI-NEXT:    fmov s2, wzr
+; CHECK-GI-NEXT:    mov v18.s[3], wzr
 ; CHECK-GI-NEXT:    mov v9.s[2], w11
 ; CHECK-GI-NEXT:    ldr w11, [sp, #664]
 ; CHECK-GI-NEXT:    mov v10.s[1], w8
@@ -6963,7 +6963,7 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-GI-NEXT:    ldr w10, [sp, #672]
 ; CHECK-GI-NEXT:    sxtb w8, w8
 ; CHECK-GI-NEXT:    sxtb w9, w9
-; CHECK-GI-NEXT:    fmov s4, wzr
+; CHECK-GI-NEXT:    mov v19.s[3], wzr
 ; CHECK-GI-NEXT:    mov v11.s[1], w11
 ; CHECK-GI-NEXT:    sxtb w10, w10
 ; CHECK-GI-NEXT:    mov v20.s[1], wzr
@@ -7077,7 +7077,7 @@ define i32 @test_sdot_v33i8_double_nomla(<33 x i8> %a, <33 x i8> %b, <33 x i8> %
 ; CHECK-GI-NEXT:    add v7.4s, v7.4s, v17.4s
 ; CHECK-GI-NEXT:    add v16.4s, v20.4s, v21.4s
 ; CHECK-GI-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-GI-NEXT:    ldr x29, [sp, #48] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x29, [sp, #48] // 8-byte Reload
 ; CHECK-GI-NEXT:    add v0.4s, v18.4s, v0.4s
 ; CHECK-GI-NEXT:    add v2.4s, v3.4s, v4.4s
 ; CHECK-GI-NEXT:    add v3.4s, v5.4s, v6.4s
@@ -7121,15 +7121,15 @@ define i32 @test_udot_v48i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ;
 ; CHECK-GI-LABEL: test_udot_v48i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr q7, [x0, #32]
 ; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr q17, [x1, #32]
 ; CHECK-GI-NEXT:    ldp q4, q5, [x0]
-; CHECK-GI-NEXT:    mov v0.s[1], wzr
 ; CHECK-GI-NEXT:    ldp q6, q16, [x1]
+; CHECK-GI-NEXT:    mov v0.s[1], wzr
 ; CHECK-GI-NEXT:    udot v2.4s, v17.16b, v7.16b
 ; CHECK-GI-NEXT:    udot v1.4s, v6.16b, v4.16b
 ; CHECK-GI-NEXT:    udot v3.4s, v16.16b, v5.16b
@@ -7169,7 +7169,7 @@ define i32 @test_udot_v48i8_nomla(ptr nocapture readonly %a1) {
 ;
 ; CHECK-GI-LABEL: test_udot_v48i8_nomla:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    movi v1.16b, #1
 ; CHECK-GI-NEXT:    ldr q7, [x0, #32]
 ; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
@@ -7212,15 +7212,15 @@ define i32 @test_sdot_v48i8(ptr nocapture readonly %a, ptr nocapture readonly %b
 ;
 ; CHECK-GI-LABEL: test_sdot_v48i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr q7, [x0, #32]
 ; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-GI-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ldr q17, [x1, #32]
 ; CHECK-GI-NEXT:    ldp q4, q5, [x0]
-; CHECK-GI-NEXT:    mov v0.s[1], wzr
 ; CHECK-GI-NEXT:    ldp q6, q16, [x1]
+; CHECK-GI-NEXT:    mov v0.s[1], wzr
 ; CHECK-GI-NEXT:    sdot v2.4s, v17.16b, v7.16b
 ; CHECK-GI-NEXT:    sdot v1.4s, v6.16b, v4.16b
 ; CHECK-GI-NEXT:    sdot v3.4s, v16.16b, v5.16b
@@ -7639,7 +7639,7 @@ define i32 @test_sdot_v48i8_double(<48 x i8> %a, <48 x i8> %b, <48 x i8> %c, <48
 ; CHECK-GI-NEXT:    fmov s2, w0
 ; CHECK-GI-NEXT:    ldr w11, [sp, #208]
 ; CHECK-GI-NEXT:    ldr w8, [sp, #216]
-; CHECK-GI-NEXT:    fmov s1, wzr
+; CHECK-GI-NEXT:    movi d1, #0000000000000000
 ; CHECK-GI-NEXT:    fmov s3, w10
 ; CHECK-GI-NEXT:    ldr w10, [sp, #336]
 ; CHECK-GI-NEXT:    ldr w12, [sp, #720]
@@ -7663,7 +7663,7 @@ define i32 @test_sdot_v48i8_double(<48 x i8> %a, <48 x i8> %b, <48 x i8> %c, <48
 ; CHECK-GI-NEXT:    ldr w11, [sp, #16]
 ; CHECK-GI-NEXT:    mov v7.b[1], w9
 ; CHECK-GI-NEXT:    ldr w9, [sp, #480]
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    mov v6.b[1], w8
 ; CHECK-GI-NEXT:    ldr w8, [sp, #96]
 ; CHECK-GI-NEXT:    mov v4.b[2], w10
@@ -8271,7 +8271,7 @@ define i32 @test_sdot_v48i8_double_nomla(<48 x i8> %a, <48 x i8> %b, <48 x i8> %
 ; CHECK-GI-NEXT:    fmov s2, w0
 ; CHECK-GI-NEXT:    ldr w10, [sp, #216]
 ; CHECK-GI-NEXT:    ldr w12, [sp, #848]
-; CHECK-GI-NEXT:    fmov s1, wzr
+; CHECK-GI-NEXT:    movi d1, #0000000000000000
 ; CHECK-GI-NEXT:    fmov s4, w9
 ; CHECK-GI-NEXT:    fmov s3, w11
 ; CHECK-GI-NEXT:    ldr w11, [sp, #720]
@@ -8295,7 +8295,7 @@ define i32 @test_sdot_v48i8_double_nomla(<48 x i8> %a, <48 x i8> %b, <48 x i8> %
 ; CHECK-GI-NEXT:    mov v2.b[2], w2
 ; CHECK-GI-NEXT:    mov v3.b[2], w10
 ; CHECK-GI-NEXT:    ldr w10, [sp, #864]
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    mov v7.b[1], w11
 ; CHECK-GI-NEXT:    ldr w11, [sp, #992]
 ; CHECK-GI-NEXT:    mov v4.b[2], w8
@@ -8901,7 +8901,7 @@ define i32 @test_usdot_v64i8_double(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <6
 ; CHECK-GI-NEXT:    stp d13, d12, [sp, #176] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    stp d11, d10, [sp, #192] // 16-byte Folded Spill
 ; CHECK-GI-NEXT:    stp d9, d8, [sp, #208] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    str x29, [sp, #224] // 8-byte Folded Spill
+; CHECK-GI-NEXT:    str x29, [sp, #224] // 8-byte Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 240
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
 ; CHECK-GI-NEXT:    .cfi_offset b8, -24
@@ -8914,7 +8914,7 @@ define i32 @test_usdot_v64i8_double(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <6
 ; CHECK-GI-NEXT:    .cfi_offset b15, -80
 ; CHECK-GI-NEXT:    ushll v31.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    ushll2 v8.8h, v0.16b, #0
-; CHECK-GI-NEXT:    ldr x29, [sp, #224] // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x29, [sp, #224] // 8-byte Reload
 ; CHECK-GI-NEXT:    sshll v11.8h, v4.8b, #0
 ; CHECK-GI-NEXT:    sshll2 v12.8h, v4.16b, #0
 ; CHECK-GI-NEXT:    ushll v9.8h, v1.8b, #0
@@ -8944,7 +8944,7 @@ define i32 @test_usdot_v64i8_double(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <6
 ; CHECK-GI-NEXT:    smlal2 v27.4s, v10.8h, v14.8h
 ; CHECK-GI-NEXT:    smull v26.4s, v0.4h, v4.4h
 ; CHECK-GI-NEXT:    ushll v31.8h, v25.8b, #0
-; CHECK-GI-NEXT:    str q19, [sp, #144] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    str q19, [sp, #144] // 16-byte Spill
 ; CHECK-GI-NEXT:    ushll2 v25.8h, v25.16b, #0
 ; CHECK-GI-NEXT:    ushll v8.8h, v22.8b, #0
 ; CHECK-GI-NEXT:    stp q2, q1, [sp] // 32-byte Folded Spill
@@ -8956,9 +8956,9 @@ define i32 @test_usdot_v64i8_double(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <6
 ; CHECK-GI-NEXT:    stp q4, q20, [sp, #112] // 32-byte Folded Spill
 ; CHECK-GI-NEXT:    ushll2 v20.8h, v18.16b, #0
 ; CHECK-GI-NEXT:    sshll v11.8h, v17.8b, #0
-; CHECK-GI-NEXT:    str q27, [sp, #32] // 16-byte Folded Spill
-; CHECK-GI-NEXT:    ldr q28, [sp, #112] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldr q27, [sp, #48] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    str q27, [sp, #32] // 16-byte Spill
+; CHECK-GI-NEXT:    ldr q28, [sp, #112] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q27, [sp, #48] // 16-byte Reload
 ; CHECK-GI-NEXT:    sshll2 v19.8h, v17.16b, #0
 ; CHECK-GI-NEXT:    sshll v12.8h, v16.8b, #0
 ; CHECK-GI-NEXT:    sshll2 v18.8h, v16.16b, #0
@@ -8978,19 +8978,19 @@ define i32 @test_usdot_v64i8_double(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <6
 ; CHECK-GI-NEXT:    smull v1.4s, v10.4h, v14.4h
 ; CHECK-GI-NEXT:    smull v0.4s, v20.4h, v29.4h
 ; CHECK-GI-NEXT:    smlal2 v26.4s, v27.8h, v28.8h
-; CHECK-GI-NEXT:    ldr q28, [sp, #80] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldr q27, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q28, [sp, #80] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q27, [sp, #16] // 16-byte Reload
 ; CHECK-GI-NEXT:    smlal2 v15.4s, v3.8h, v7.8h
 ; CHECK-GI-NEXT:    ldp q7, q3, [sp, #128] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    smlal2 v23.4s, v27.8h, v28.8h
-; CHECK-GI-NEXT:    ldr q28, [sp, #64] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    ldr q27, [sp] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q28, [sp, #64] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q27, [sp] // 16-byte Reload
 ; CHECK-GI-NEXT:    smlal2 v17.4s, v31.8h, v11.8h
 ; CHECK-GI-NEXT:    smlal2 v6.4s, v25.8h, v19.8h
 ; CHECK-GI-NEXT:    smlal2 v16.4s, v8.8h, v12.8h
 ; CHECK-GI-NEXT:    smlal2 v24.4s, v27.8h, v28.8h
 ; CHECK-GI-NEXT:    smlal2 v4.4s, v22.8h, v18.8h
-; CHECK-GI-NEXT:    ldr q18, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q18, [sp, #32] // 16-byte Reload
 ; CHECK-GI-NEXT:    smlal2 v5.4s, v9.8h, v13.8h
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #208] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #176] // 16-byte Folded Reload
@@ -8999,7 +8999,7 @@ define i32 @test_usdot_v64i8_double(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <6
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #192] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    smlal2 v0.4s, v20.8h, v29.8h
 ; CHECK-GI-NEXT:    add v3.4s, v3.4s, v7.4s
-; CHECK-GI-NEXT:    ldr q7, [sp, #96] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q7, [sp, #96] // 16-byte Reload
 ; CHECK-GI-NEXT:    add v19.4s, v24.4s, v15.4s
 ; CHECK-GI-NEXT:    ldp d15, d14, [sp, #160] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    add v7.4s, v7.4s, v18.4s

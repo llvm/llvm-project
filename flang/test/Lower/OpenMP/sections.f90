@@ -79,7 +79,7 @@ program sample
 end program sample
 
 !CHECK: func @_QPfirstprivate(%[[ARG:.*]]: !fir.ref<f32> {fir.bindc_name = "alpha"}) {
-!CHECK:   %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFfirstprivateEalpha"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>) 
+!CHECK:   %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFfirstprivateEalpha"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>) 
 !CHECK:   %[[PRIVATE_ALPHA:.*]] = fir.alloca f32 {bindc_name = "alpha", pinned, uniq_name = "_QFfirstprivateEalpha"}
 !CHECK:   %[[PRIVATE_ALPHA_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_ALPHA]] {uniq_name = "_QFfirstprivateEalpha"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:   %[[TEMP:.*]] = fir.load %[[ARG_DECL]]#0 : !fir.ref<f32>
@@ -264,7 +264,7 @@ subroutine lastprivate2()
 end subroutine
 
 !CHECK-LABEL: func @_QPlastprivate_common
-!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_commonEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} storage(%{{.*}}[0]) {uniq_name = "_QFlastprivate_commonEi"} : (!fir.ref<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[I_PRIV:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_commonEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.sections
 !CHECK: omp.section

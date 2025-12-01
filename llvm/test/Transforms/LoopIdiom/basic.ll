@@ -682,10 +682,7 @@ define void @PR14241(ptr %s, i64 %size) {
 ; CHECK-NEXT:    [[END_PTR:%.*]] = getelementptr inbounds i32, ptr [[S:%.*]], i64 [[END_IDX]]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[S]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[SIZE]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -8
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP0]], -4
 ; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 4 [[S]], ptr align 4 [[SCEVGEP]], i64 [[TMP4]], i1 false)
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
@@ -1623,5 +1620,5 @@ define noalias ptr @_ZN8CMSPULog9beginImplEja(ptr nocapture writeonly %0) local_
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.

@@ -1,4 +1,4 @@
-//===--- UnnamedNamespaceInHeaderCheck.cpp - clang-tidy ---------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,7 +28,7 @@ void UnnamedNamespaceInHeaderCheck::registerMatchers(
 void UnnamedNamespaceInHeaderCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *N = Result.Nodes.getNodeAs<NamespaceDecl>("anonymousNamespace");
-  SourceLocation Loc = N->getBeginLoc();
+  const SourceLocation Loc = N->getBeginLoc();
   if (!Loc.isValid())
     return;
 

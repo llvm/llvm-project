@@ -520,42 +520,41 @@ define amdgpu_kernel void @s_exp_v2f32(ptr addrspace(1) %out, <2 x float> %in) {
 ;
 ; SI-SDAG-LABEL: s_exp_v2f32:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x9
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v0, 0x3fb8aa3b
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x32a5705f
-; SI-SDAG-NEXT:    s_mov_b32 s3, 0xf000
-; SI-SDAG-NEXT:    s_mov_b32 s2, -1
 ; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-SDAG-NEXT:    v_mul_f32_e32 v2, s7, v0
+; SI-SDAG-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; SI-SDAG-NEXT:    v_mul_f32_e32 v2, s5, v0
 ; SI-SDAG-NEXT:    v_rndne_f32_e32 v3, v2
-; SI-SDAG-NEXT:    v_fma_f32 v4, s7, v0, -v2
+; SI-SDAG-NEXT:    v_fma_f32 v4, s5, v0, -v2
 ; SI-SDAG-NEXT:    v_sub_f32_e32 v2, v2, v3
-; SI-SDAG-NEXT:    v_fma_f32 v4, s7, v1, v4
+; SI-SDAG-NEXT:    v_fma_f32 v4, s5, v1, v4
 ; SI-SDAG-NEXT:    v_add_f32_e32 v2, v2, v4
-; SI-SDAG-NEXT:    v_mul_f32_e32 v5, s6, v0
-; SI-SDAG-NEXT:    v_exp_f32_e32 v2, v2
+; SI-SDAG-NEXT:    v_mul_f32_e32 v5, s4, v0
 ; SI-SDAG-NEXT:    v_cvt_i32_f32_e32 v3, v3
+; SI-SDAG-NEXT:    v_exp_f32_e32 v2, v2
 ; SI-SDAG-NEXT:    v_rndne_f32_e32 v6, v5
-; SI-SDAG-NEXT:    v_fma_f32 v0, s6, v0, -v5
+; SI-SDAG-NEXT:    v_fma_f32 v0, s4, v0, -v5
 ; SI-SDAG-NEXT:    v_sub_f32_e32 v7, v5, v6
-; SI-SDAG-NEXT:    v_fma_f32 v0, s6, v1, v0
+; SI-SDAG-NEXT:    v_fma_f32 v0, s4, v1, v0
 ; SI-SDAG-NEXT:    v_add_f32_e32 v0, v7, v0
 ; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
 ; SI-SDAG-NEXT:    v_cvt_i32_f32_e32 v5, v6
 ; SI-SDAG-NEXT:    v_ldexp_f32_e32 v2, v2, v3
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v3, 0xc2ce8ed0
-; SI-SDAG-NEXT:    v_cmp_nlt_f32_e32 vcc, s7, v3
+; SI-SDAG-NEXT:    v_cmp_nlt_f32_e32 vcc, s5, v3
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v4, 0x42b17218
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v6, 0x7f800000
-; SI-SDAG-NEXT:    v_cmp_ngt_f32_e32 vcc, s7, v4
+; SI-SDAG-NEXT:    v_cmp_ngt_f32_e32 vcc, s5, v4
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v1, v6, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, v0, v5
-; SI-SDAG-NEXT:    v_cmp_nlt_f32_e32 vcc, s6, v3
+; SI-SDAG-NEXT:    v_cmp_nlt_f32_e32 vcc, s4, v3
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; SI-SDAG-NEXT:    v_cmp_ngt_f32_e32 vcc, s6, v4
-; SI-SDAG-NEXT:    s_mov_b32 s0, s4
-; SI-SDAG-NEXT:    s_mov_b32 s1, s5
+; SI-SDAG-NEXT:    v_cmp_ngt_f32_e32 vcc, s4, v4
+; SI-SDAG-NEXT:    s_mov_b32 s3, 0xf000
+; SI-SDAG-NEXT:    s_mov_b32 s2, -1
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v0, v6, v0, vcc
 ; SI-SDAG-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-SDAG-NEXT:    s_endpgm
@@ -3224,72 +3223,6 @@ define float @v_exp_f32_fast(float %in) {
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
   %result = call fast float @llvm.exp.f32(float %in)
-  ret float %result
-}
-
-define float @v_exp_f32_approx_fn_attr(float %in) "approx-func-fp-math"="true" {
-; GCN-SDAG-LABEL: v_exp_f32_approx_fn_attr:
-; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2aeac50
-; GCN-SDAG-NEXT:    v_add_f32_e32 v1, 0x42800000, v0
-; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GCN-SDAG-NEXT:    v_mul_f32_e32 v0, 0x3fb8aa3b, v0
-; GCN-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; GCN-SDAG-NEXT:    v_mul_f32_e32 v1, 0x114b4ea4, v0
-; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GCN-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GCN-GISEL-LABEL: v_exp_f32_approx_fn_attr:
-; GCN-GISEL:       ; %bb.0:
-; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2aeac50
-; GCN-GISEL-NEXT:    v_add_f32_e32 v2, 0x42800000, v0
-; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; GCN-GISEL-NEXT:    v_mul_f32_e32 v0, 0x3fb8aa3b, v0
-; GCN-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; GCN-GISEL-NEXT:    v_mul_f32_e32 v1, 0x114b4ea4, v0
-; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GCN-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; SI-SDAG-LABEL: v_exp_f32_approx_fn_attr:
-; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xc2aeac50
-; SI-SDAG-NEXT:    v_add_f32_e32 v1, 0x42800000, v0
-; SI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; SI-SDAG-NEXT:    v_mul_f32_e32 v0, 0x3fb8aa3b, v0
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; SI-SDAG-NEXT:    v_mul_f32_e32 v1, 0x114b4ea4, v0
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; SI-GISEL-LABEL: v_exp_f32_approx_fn_attr:
-; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2aeac50
-; SI-GISEL-NEXT:    v_add_f32_e32 v2, 0x42800000, v0
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; SI-GISEL-NEXT:    v_mul_f32_e32 v0, 0x3fb8aa3b, v0
-; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_mul_f32_e32 v1, 0x114b4ea4, v0
-; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp_f32_approx_fn_attr:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp_f32_approx_fn_attr:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
-  %result = call float @llvm.exp.f32(float %in)
   ret float %result
 }
 
@@ -6077,8 +6010,7 @@ define half @v_exp_f16_fast(half %in) {
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, 0x3dc5
-; SI-GISEL-NEXT:    v_mul_f32_e32 v0, v0, v1
+; SI-GISEL-NEXT:    v_mul_f32_e32 v0, 0x3fb8a000, v0
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
@@ -6578,10 +6510,9 @@ define <2 x half> @v_exp_v2f16_fast(<2 x half> %in) {
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, 0x3dc5
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-GISEL-NEXT:    v_mul_f32_e32 v0, v0, v2
-; SI-GISEL-NEXT:    v_mul_f32_e32 v1, v1, v2
+; SI-GISEL-NEXT:    v_mul_f32_e32 v0, 0x3fb8a000, v0
+; SI-GISEL-NEXT:    v_mul_f32_e32 v1, 0x3fb8a000, v1
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -6775,12 +6706,11 @@ define <3 x half> @v_exp_v3f16_afn(<3 x half> %in) {
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v3, 0x3dc5
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-GISEL-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SI-GISEL-NEXT:    v_mul_f32_e32 v0, v0, v3
-; SI-GISEL-NEXT:    v_mul_f32_e32 v1, v1, v3
-; SI-GISEL-NEXT:    v_mul_f32_e32 v2, v2, v3
+; SI-GISEL-NEXT:    v_mul_f32_e32 v0, 0x3fb8a000, v0
+; SI-GISEL-NEXT:    v_mul_f32_e32 v1, 0x3fb8a000, v1
+; SI-GISEL-NEXT:    v_mul_f32_e32 v2, 0x3fb8a000, v2
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2

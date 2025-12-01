@@ -56,6 +56,7 @@ struct MachineIRBuilderState {
   MDNode *PCSections = nullptr;
   /// MMRA Metadata to be set on any instruction we create.
   MDNode *MMRA = nullptr;
+  Value *DS = nullptr;
 
   /// \name Fields describing the insertion point.
   /// @{
@@ -369,6 +370,7 @@ public:
     State.II = MI.getIterator();
     setPCSections(MI.getPCSections());
     setMMRAMetadata(MI.getMMRAMetadata());
+    setDeactivationSymbol(MI.getDeactivationSymbol());
   }
   /// @}
 
@@ -404,6 +406,9 @@ public:
 
   /// Set the PC sections metadata to \p MD for all the next build instructions.
   void setMMRAMetadata(MDNode *MMRA) { State.MMRA = MMRA; }
+
+  Value *getDeactivationSymbol() { return State.DS; }
+  void setDeactivationSymbol(Value *DS) { State.DS = DS; }
 
   /// Get the current instruction's MMRA metadata.
   MDNode *getMMRAMetadata() { return State.MMRA; }
@@ -2184,6 +2189,13 @@ public:
     return buildInstr(TargetOpcode::G_FSINCOS, {Sin, Cos}, {Src}, Flags);
   }
 
+  /// Build and insert \p Fract, \p Int = G_FMODF \p Src
+  MachineInstrBuilder buildModf(const DstOp &Fract, const DstOp &Int,
+                                const SrcOp &Src,
+                                std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FMODF, {Fract, Int}, {Src}, Flags);
+  }
+
   /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1
   MachineInstrBuilder buildFCopysign(const DstOp &Dst, const SrcOp &Src0,
                                      const SrcOp &Src1) {
@@ -2461,6 +2473,11 @@ public:
   /// Build and insert \p Dst = G_GET_ROUNDING
   MachineInstrBuilder buildGetRounding(const DstOp &Dst) {
     return buildInstr(TargetOpcode::G_GET_ROUNDING, {Dst}, {});
+  }
+
+  /// Build and insert G_SET_ROUNDING
+  MachineInstrBuilder buildSetRounding(const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_SET_ROUNDING, {}, {Src});
   }
 
   virtual MachineInstrBuilder

@@ -641,9 +641,8 @@ static EnumDecl *findEnumForBlockReturn(Expr *E) {
   }
 
   //   - it is an expression of that formal enum type.
-  if (const EnumType *ET = E->getType()->getAs<EnumType>()) {
-    return ET->getOriginalDecl()->getDefinitionOrSelf();
-  }
+  if (auto *ED = E->getType()->getAsEnumDecl())
+    return ED;
 
   // Otherwise, nope.
   return nullptr;
@@ -1440,16 +1439,16 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   TypeSourceInfo *MethodTyInfo = getLambdaType(
       *this, Intro, ParamInfo, getCurScope(), TypeLoc, ExplicitResultType);
 
-  LSI->ExplicitParams = ParamInfo.getNumTypeObjects() != 0;
-
-  if (ParamInfo.isFunctionDeclarator() != 0 &&
-      !FTIHasSingleVoidParameter(ParamInfo.getFunctionTypeInfo())) {
+  if (ParamInfo.isFunctionDeclarator() != 0) {
     const auto &FTI = ParamInfo.getFunctionTypeInfo();
-    Params.reserve(Params.size());
-    for (unsigned I = 0; I < FTI.NumParams; ++I) {
-      auto *Param = cast<ParmVarDecl>(FTI.Params[I].Param);
-      Param->setScopeInfo(0, Params.size());
-      Params.push_back(Param);
+    LSI->ExplicitParams = FTI.getLParenLoc().isValid();
+    if (!FTIHasSingleVoidParameter(FTI)) {
+      Params.reserve(Params.size());
+      for (unsigned I = 0; I < FTI.NumParams; ++I) {
+        auto *Param = cast<ParmVarDecl>(FTI.Params[I].Param);
+        Param->setScopeInfo(0, Params.size());
+        Params.push_back(Param);
+      }
     }
   }
 

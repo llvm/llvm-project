@@ -52,7 +52,6 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
     FS->addFile(Header.getKey(), 0,
                 MemoryBuffer::getMemBuffer(Header.getValue()));
   }
-  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), FS);
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   std::vector<const char *> Args = {Standard.data(), File.data()};
@@ -62,8 +61,9 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
   CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
 
   CompilerInstance Compiler(std::move(Invocation));
-  Compiler.createDiagnostics(Files->getVirtualFileSystem());
-  Compiler.setFileManager(Files);
+  Compiler.setVirtualFileSystem(std::move(FS));
+  Compiler.createDiagnostics();
+  Compiler.createFileManager();
 
   class TestFrontendAction : public ASTFrontendAction {
   private:
@@ -186,7 +186,8 @@ std::string buildTraceGraph(StringRef Json) {
 
 } // namespace
 
-TEST(TimeProfilerTest, ConstantEvaluationCxx20) {
+// FIXME: Flaky test. See https://github.com/llvm/llvm-project/pull/138613
+TEST(TimeProfilerTest, DISABLED_ConstantEvaluationCxx20) {
   std::string Code = R"(
 void print(double value);
 

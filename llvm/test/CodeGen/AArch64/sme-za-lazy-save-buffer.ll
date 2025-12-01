@@ -12,81 +12,41 @@ entry:
 }
 
 define float @multi_bb_stpidr2_save_required(i32 %a, float %b, float %c) "aarch64_inout_za" {
-; CHECK-LABEL: multi_bb_stpidr2_save_required:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x8, x8, x8, x9
-; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    stur x8, [x29, #-16]
-; CHECK-NEXT:    sturh wzr, [x29, #-6]
-; CHECK-NEXT:    stur wzr, [x29, #-4]
-; CHECK-NEXT:    cbz w0, .LBB1_2
-; CHECK-NEXT:  // %bb.1: // %use_b
-; CHECK-NEXT:    fmov s1, #4.00000000
-; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    b .LBB1_5
-; CHECK-NEXT:  .LBB1_2: // %use_c
-; CHECK-NEXT:    fmov s0, s1
-; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    sub x9, x29, #16
-; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x9
-; CHECK-NEXT:    bl cosf
-; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-NEXT:    sub x0, x29, #16
-; CHECK-NEXT:    cbnz x8, .LBB1_4
-; CHECK-NEXT:  // %bb.3: // %use_c
-; CHECK-NEXT:    bl __arm_tpidr2_restore
-; CHECK-NEXT:  .LBB1_4: // %use_c
-; CHECK-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEXT:  .LBB1_5: // %exit
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
-; CHECK-NEXT:    ret
-;
-; CHECK-NEWLOWERING-LABEL: multi_bb_stpidr2_save_required:
-; CHECK-NEWLOWERING:       // %bb.0:
-; CHECK-NEWLOWERING-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEWLOWERING-NEXT:    mov x29, sp
-; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #16
-; CHECK-NEWLOWERING-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEWLOWERING-NEXT:    .cfi_offset w30, -8
-; CHECK-NEWLOWERING-NEXT:    .cfi_offset w29, -16
-; CHECK-NEWLOWERING-NEXT:    rdsvl x8, #1
-; CHECK-NEWLOWERING-NEXT:    mov x9, sp
-; CHECK-NEWLOWERING-NEXT:    msub x9, x8, x8, x9
-; CHECK-NEWLOWERING-NEXT:    mov sp, x9
-; CHECK-NEWLOWERING-NEXT:    sub x10, x29, #16
-; CHECK-NEWLOWERING-NEXT:    stp x9, x8, [x29, #-16]
-; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, x10
-; CHECK-NEWLOWERING-NEXT:    cbz w0, .LBB1_2
-; CHECK-NEWLOWERING-NEXT:  // %bb.1: // %use_b
-; CHECK-NEWLOWERING-NEXT:    fmov s1, #4.00000000
-; CHECK-NEWLOWERING-NEXT:    fadd s0, s0, s1
-; CHECK-NEWLOWERING-NEXT:    b .LBB1_3
-; CHECK-NEWLOWERING-NEXT:  .LBB1_2: // %use_c
-; CHECK-NEWLOWERING-NEXT:    fmov s0, s1
-; CHECK-NEWLOWERING-NEXT:    bl cosf
-; CHECK-NEWLOWERING-NEXT:  .LBB1_3: // %exit
-; CHECK-NEWLOWERING-NEXT:    smstart za
-; CHECK-NEWLOWERING-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-NEWLOWERING-NEXT:    sub x0, x29, #16
-; CHECK-NEWLOWERING-NEXT:    cbnz x8, .LBB1_5
-; CHECK-NEWLOWERING-NEXT:  // %bb.4: // %exit
-; CHECK-NEWLOWERING-NEXT:    bl __arm_tpidr2_restore
-; CHECK-NEWLOWERING-NEXT:  .LBB1_5: // %exit
-; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEWLOWERING-NEXT:    mov sp, x29
-; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
-; CHECK-NEWLOWERING-NEXT:    ret
+; CHECK-COMMON-LABEL: multi_bb_stpidr2_save_required:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    mov x29, sp
+; CHECK-COMMON-NEXT:    sub sp, sp, #16
+; CHECK-COMMON-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-COMMON-NEXT:    .cfi_offset w30, -8
+; CHECK-COMMON-NEXT:    .cfi_offset w29, -16
+; CHECK-COMMON-NEXT:    rdsvl x8, #1
+; CHECK-COMMON-NEXT:    mov x9, sp
+; CHECK-COMMON-NEXT:    msub x9, x8, x8, x9
+; CHECK-COMMON-NEXT:    mov sp, x9
+; CHECK-COMMON-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-COMMON-NEXT:    cbz w0, .LBB1_2
+; CHECK-COMMON-NEXT:  // %bb.1: // %use_b
+; CHECK-COMMON-NEXT:    fmov s1, #4.00000000
+; CHECK-COMMON-NEXT:    fadd s0, s0, s1
+; CHECK-COMMON-NEXT:    b .LBB1_5
+; CHECK-COMMON-NEXT:  .LBB1_2: // %use_c
+; CHECK-COMMON-NEXT:    fmov s0, s1
+; CHECK-COMMON-NEXT:    sub x8, x29, #16
+; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, x8
+; CHECK-COMMON-NEXT:    bl cosf
+; CHECK-COMMON-NEXT:    smstart za
+; CHECK-COMMON-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-COMMON-NEXT:    sub x0, x29, #16
+; CHECK-COMMON-NEXT:    cbnz x8, .LBB1_4
+; CHECK-COMMON-NEXT:  // %bb.3: // %use_c
+; CHECK-COMMON-NEXT:    bl __arm_tpidr2_restore
+; CHECK-COMMON-NEXT:  .LBB1_4: // %use_c
+; CHECK-COMMON-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-COMMON-NEXT:  .LBB1_5: // %exit
+; CHECK-COMMON-NEXT:    mov sp, x29
+; CHECK-COMMON-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ret
   %cmp = icmp ne i32 %a, 0
   br i1 %cmp, label %use_b, label %use_c
 
@@ -103,7 +63,6 @@ exit:
   ret float %ret
 }
 
-; FIXME: This is missing stack probes with -aarch64-new-sme-abi.
 define float @multi_bb_stpidr2_save_required_stackprobe(i32 %a, float %b, float %c) "aarch64_inout_za" "probe-stack"="inline-asm" "stack-probe-size"="65536" {
 ; CHECK-LABEL: multi_bb_stpidr2_save_required_stackprobe:
 ; CHECK:       // %bb.0:
@@ -115,20 +74,18 @@ define float @multi_bb_stpidr2_save_required_stackprobe(i32 %a, float %b, float 
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x8, x8, x8, x9
+; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:  .LBB2_1: // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    sub sp, sp, #16, lsl #12 // =65536
-; CHECK-NEXT:    cmp sp, x8
+; CHECK-NEXT:    cmp sp, x9
 ; CHECK-NEXT:    b.le .LBB2_3
 ; CHECK-NEXT:  // %bb.2: // in Loop: Header=BB2_1 Depth=1
 ; CHECK-NEXT:    str xzr, [sp]
 ; CHECK-NEXT:    b .LBB2_1
 ; CHECK-NEXT:  .LBB2_3:
-; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    ldr xzr, [sp]
-; CHECK-NEXT:    stur x8, [x29, #-16]
-; CHECK-NEXT:    sturh wzr, [x29, #-6]
-; CHECK-NEXT:    stur wzr, [x29, #-4]
+; CHECK-NEXT:    stp x9, x8, [x29, #-16]
 ; CHECK-NEXT:    cbz w0, .LBB2_5
 ; CHECK-NEXT:  // %bb.4: // %use_b
 ; CHECK-NEXT:    fmov s1, #4.00000000
@@ -136,10 +93,8 @@ define float @multi_bb_stpidr2_save_required_stackprobe(i32 %a, float %b, float 
 ; CHECK-NEXT:    b .LBB2_8
 ; CHECK-NEXT:  .LBB2_5: // %use_c
 ; CHECK-NEXT:    fmov s0, s1
-; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    sub x9, x29, #16
-; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x9
+; CHECK-NEXT:    sub x8, x29, #16
+; CHECK-NEXT:    msr TPIDR2_EL0, x8
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
@@ -164,27 +119,36 @@ define float @multi_bb_stpidr2_save_required_stackprobe(i32 %a, float %b, float 
 ; CHECK-NEWLOWERING-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEWLOWERING-NEXT:    rdsvl x8, #1
 ; CHECK-NEWLOWERING-NEXT:    mov x9, sp
-; CHECK-NEWLOWERING-NEXT:    msub x9, x8, x8, x9
-; CHECK-NEWLOWERING-NEXT:    mov sp, x9
 ; CHECK-NEWLOWERING-NEXT:    sub x10, x29, #16
-; CHECK-NEWLOWERING-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-NEWLOWERING-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, x10
-; CHECK-NEWLOWERING-NEXT:    cbz w0, .LBB2_2
-; CHECK-NEWLOWERING-NEXT:  // %bb.1: // %use_b
+; CHECK-NEWLOWERING-NEXT:  .LBB2_1: // =>This Inner Loop Header: Depth=1
+; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #16, lsl #12 // =65536
+; CHECK-NEWLOWERING-NEXT:    cmp sp, x9
+; CHECK-NEWLOWERING-NEXT:    b.le .LBB2_3
+; CHECK-NEWLOWERING-NEXT:  // %bb.2: // in Loop: Header=BB2_1 Depth=1
+; CHECK-NEWLOWERING-NEXT:    str xzr, [sp]
+; CHECK-NEWLOWERING-NEXT:    b .LBB2_1
+; CHECK-NEWLOWERING-NEXT:  .LBB2_3:
+; CHECK-NEWLOWERING-NEXT:    mov sp, x9
+; CHECK-NEWLOWERING-NEXT:    ldr xzr, [sp]
+; CHECK-NEWLOWERING-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-NEWLOWERING-NEXT:    cbz w0, .LBB2_5
+; CHECK-NEWLOWERING-NEXT:  // %bb.4: // %use_b
 ; CHECK-NEWLOWERING-NEXT:    fmov s1, #4.00000000
 ; CHECK-NEWLOWERING-NEXT:    fadd s0, s0, s1
-; CHECK-NEWLOWERING-NEXT:    b .LBB2_3
-; CHECK-NEWLOWERING-NEXT:  .LBB2_2: // %use_c
+; CHECK-NEWLOWERING-NEXT:    b .LBB2_6
+; CHECK-NEWLOWERING-NEXT:  .LBB2_5: // %use_c
 ; CHECK-NEWLOWERING-NEXT:    fmov s0, s1
 ; CHECK-NEWLOWERING-NEXT:    bl cosf
-; CHECK-NEWLOWERING-NEXT:  .LBB2_3: // %exit
+; CHECK-NEWLOWERING-NEXT:  .LBB2_6: // %exit
 ; CHECK-NEWLOWERING-NEXT:    smstart za
 ; CHECK-NEWLOWERING-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEWLOWERING-NEXT:    sub x0, x29, #16
-; CHECK-NEWLOWERING-NEXT:    cbnz x8, .LBB2_5
-; CHECK-NEWLOWERING-NEXT:  // %bb.4: // %exit
+; CHECK-NEWLOWERING-NEXT:    cbnz x8, .LBB2_8
+; CHECK-NEWLOWERING-NEXT:  // %bb.7: // %exit
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_tpidr2_restore
-; CHECK-NEWLOWERING-NEXT:  .LBB2_5: // %exit
+; CHECK-NEWLOWERING-NEXT:  .LBB2_8: // %exit
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x29
 ; CHECK-NEWLOWERING-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload

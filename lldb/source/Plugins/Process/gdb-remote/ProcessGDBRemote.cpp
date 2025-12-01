@@ -86,6 +86,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -2762,6 +2763,108 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
   return 0;
 }
 
+llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+ProcessGDBRemote::ReadMemoryRanges(
+    llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+    llvm::MutableArrayRef<uint8_t> buffer) {
+  if (!m_gdb_comm.GetMultiMemReadSupported())
+    return Process::ReadMemoryRanges(ranges, buffer);
+
+  llvm::Expected<StringExtractorGDBRemote> response =
+      SendMultiMemReadPacket(ranges);
+  if (!response) {
+    LLDB_LOG_ERROR(GetLog(GDBRLog::Process), response.takeError(),
+                   "MultiMemRead error response: {0}");
+    return Process::ReadMemoryRanges(ranges, buffer);
+  }
+
+  llvm::StringRef response_str = response->GetStringRef();
+  const unsigned expected_num_ranges = ranges.size();
+  llvm::Expected<llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>>
+      parsed_response =
+          ParseMultiMemReadPacket(response_str, buffer, expected_num_ranges);
+  if (!parsed_response) {
+    LLDB_LOG_ERROR(GetLog(GDBRLog::Process), parsed_response.takeError(),
+                   "MultiMemRead error parsing response: {0}");
+    return Process::ReadMemoryRanges(ranges, buffer);
+  }
+  return std::move(*parsed_response);
+}
+
+llvm::Expected<StringExtractorGDBRemote>
+ProcessGDBRemote::SendMultiMemReadPacket(
+    llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges) {
+  std::string packet_str;
+  llvm::raw_string_ostream stream(packet_str);
+  stream << "MultiMemRead:ranges:";
+
+  auto range_to_stream = [&](auto range) {
+    // the "-" marker omits the '0x' prefix.
+    stream << llvm::formatv("{0:x-},{1:x-}", range.base, range.size);
+  };
+  llvm::interleave(ranges, stream, range_to_stream, ",");
+  stream << ";";
+
+  StringExtractorGDBRemote response;
+  GDBRemoteCommunication::PacketResult packet_result =
+      m_gdb_comm.SendPacketAndWaitForResponse(packet_str.data(), response,
+                                              GetInterruptTimeout());
+  if (packet_result != GDBRemoteCommunication::PacketResult::Success)
+    return llvm::createStringError(
+        llvm::formatv("MultiMemRead failed to send packet: '{0}'", packet_str));
+
+  if (response.IsErrorResponse())
+    return llvm::createStringError(
+        llvm::formatv("MultiMemRead failed: '{0}'", response.GetStringRef()));
+
+  if (!response.IsNormalResponse())
+    return llvm::createStringError(llvm::formatv(
+        "MultiMemRead unexpected response: '{0}'", response.GetStringRef()));
+
+  return response;
+}
+
+llvm::Expected<llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>>
+ProcessGDBRemote::ParseMultiMemReadPacket(llvm::StringRef response_str,
+                                          llvm::MutableArrayRef<uint8_t> buffer,
+                                          unsigned expected_num_ranges) {
+  // The sizes and the data are separated by a `;`.
+  auto [sizes_str, memory_data] = response_str.split(';');
+  if (sizes_str.size() == response_str.size())
+    return llvm::createStringError(llvm::formatv(
+        "MultiMemRead response missing field separator ';' in: '{0}'",
+        response_str));
+
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results;
+
+  // Sizes are separated by a `,`.
+  for (llvm::StringRef size_str : llvm::split(sizes_str, ',')) {
+    uint64_t read_size;
+    if (size_str.getAsInteger(16, read_size))
+      return llvm::createStringError(llvm::formatv(
+          "MultiMemRead response has invalid size string: {0}", size_str));
+
+    if (memory_data.size() < read_size)
+      return llvm::createStringError(
+          llvm::formatv("MultiMemRead response did not have enough data, "
+                        "requested sizes: {0}",
+                        sizes_str));
+
+    llvm::StringRef region_to_read = memory_data.take_front(read_size);
+    memory_data = memory_data.drop_front(read_size);
+
+    assert(buffer.size() >= read_size);
+    llvm::MutableArrayRef<uint8_t> region_to_write =
+        buffer.take_front(read_size);
+    buffer = buffer.drop_front(read_size);
+
+    memcpy(region_to_write.data(), region_to_read.data(), read_size);
+    read_results.push_back(region_to_write);
+  }
+
+  return read_results;
+}
+
 bool ProcessGDBRemote::SupportsMemoryTagging() {
   return m_gdb_comm.GetMemoryTaggingSupported();
 }
@@ -3569,6 +3672,12 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     }
   }
 #endif
+
+  if (!FileSystem::Instance().Exists(debugserver_path))
+    return Status::FromErrorString("could not find '" DEBUGSERVER_BASENAME
+                                   "'. Please ensure it is properly installed "
+                                   "and available in your PATH");
+
   debugserver_launch_info.SetExecutableFile(debugserver_path,
                                             /*add_exe_file_as_first_arg=*/true);
 
@@ -5773,7 +5882,7 @@ public:
   CommandObjectProcessGDBRemotePacketMonitor(CommandInterpreter &interpreter)
       : CommandObjectRaw(interpreter, "process plugin packet monitor",
                          "Send a qRcmd packet through the GDB remote protocol "
-                         "and print the response."
+                         "and print the response. "
                          "The argument passed to this command will be hex "
                          "encoded into a valid 'qRcmd' packet, sent and the "
                          "response will be printed.") {}

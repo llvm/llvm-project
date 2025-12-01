@@ -3,7 +3,21 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Library to parse JUnit XML files and return a markdown report."""
 
+from typing import TypedDict, Optional
+import platform
+
 from junitparser import JUnitXml, Failure
+
+
+# This data structure should match the definition in llvm-zorg in
+# premerge/advisor/advisor_lib.py
+# TODO(boomanaiden154): Drop the Optional here and switch to str | None when
+# we require Python 3.10.
+class FailureExplanation(TypedDict):
+    name: str
+    explained: bool
+    reason: Optional[str]
+
 
 SEE_BUILD_FILE_STR = "Download the build's log file to see the details."
 UNRELATED_FAILURES_STR = (
@@ -27,6 +41,13 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
             # We hit the end of the log without finding a build failure, go to
             # the next log.
             return failures
+        # If we are doing a build with LLVM_ENABLE_RUNTIMES, we can have nested
+        # ninja invocations. The sub-ninja will print that a subcommand failed,
+        # and then the outer ninja will list the command that failed. We should
+        # ignore the outer failure.
+        if ninja_log[index - 1].startswith("ninja: build stopped:"):
+            index += 1
+            continue
         # We are trying to parse cases like the following:
         #
         # [4/5] test/4.stamp
@@ -34,10 +55,12 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
         # touch test/4.stamp
         #
         # index will point to the line that starts with Failed:. The progress
-        # indicator is the line before this ([4/5] test/4.stamp) and contains a pretty
-        # printed version of the target being built (test/4.stamp). We use this line
-        # and remove the progress information to get a succinct name for the target.
-        failing_action = ninja_log[index - 1].split("] ")[1]
+        # indicator is sometimes the line before this ([4/5] test/4.stamp) and
+        # will contain a pretty printed version of the target being built
+        # (test/4.stamp) when accurate. We instead parse the failed line rather
+        # than the progress indicator as the progress indicator may not be
+        # aligned with the failure.
+        failing_action = ninja_log[index].split("FAILED: ")[1]
         failure_log = []
         while (
             index < len(ninja_log)
@@ -73,16 +96,29 @@ def find_failure_in_ninja_logs(ninja_logs: list[list[str]]) -> list[tuple[str, s
     return failures
 
 
-def _format_ninja_failures(ninja_failures: list[tuple[str, str]]) -> list[str]:
-    """Formats ninja failures into summary views for the report."""
+def _format_failures(
+    failures: list[tuple[str, str]], failure_explanations: dict[str, FailureExplanation]
+) -> list[str]:
+    """Formats failures into summary views for the report."""
     output = []
-    for build_failure in ninja_failures:
+    for build_failure in failures:
         failed_action, failure_message = build_failure
+        failure_explanation = None
+        if failed_action in failure_explanations:
+            failure_explanation = failure_explanations[failed_action]
+        output.append("<details>")
+        if failure_explanation:
+            output.extend(
+                [
+                    f"<summary>{failed_action} (Likely Already Failing)</summary>" "",
+                    failure_explanation["reason"],
+                    "",
+                ]
+            )
+        else:
+            output.extend([f"<summary>{failed_action}</summary>", ""])
         output.extend(
             [
-                "<details>",
-                f"<summary>{failed_action}</summary>",
-                "",
                 "```",
                 failure_message,
                 "```",
@@ -90,6 +126,24 @@ def _format_ninja_failures(ninja_failures: list[tuple[str, str]]) -> list[str]:
             ]
         )
     return output
+
+
+def get_failures(junit_objects) -> dict[str, list[tuple[str, str]]]:
+    failures = {}
+    for results in junit_objects:
+        for testsuite in results:
+            for test in testsuite:
+                if (
+                    not test.is_passed
+                    and test.result
+                    and isinstance(test.result[0], Failure)
+                ):
+                    if failures.get(testsuite.name) is None:
+                        failures[testsuite.name] = []
+                    failures[testsuite.name].append(
+                        (test.classname + "/" + test.name, test.result[0].text)
+                    )
+    return failures
 
 
 # Set size_limit to limit the byte size of the report. The default is 1MB as this
@@ -105,29 +159,24 @@ def generate_report(
     ninja_logs: list[list[str]],
     size_limit=1024 * 1024,
     list_failures=True,
+    failure_explanations_list: list[FailureExplanation] = [],
 ):
-    failures = {}
+    failures = get_failures(junit_objects)
     tests_run = 0
     tests_skipped = 0
     tests_failed = 0
+
+    failure_explanations: dict[str, FailureExplanation] = {}
+    for failure_explanation in failure_explanations_list:
+        if not failure_explanation["explained"]:
+            continue
+        failure_explanations[failure_explanation["name"]] = failure_explanation
 
     for results in junit_objects:
         for testsuite in results:
             tests_run += testsuite.tests
             tests_skipped += testsuite.skipped
             tests_failed += testsuite.failures
-
-            for test in testsuite:
-                if (
-                    not test.is_passed
-                    and test.result
-                    and isinstance(test.result[0], Failure)
-                ):
-                    if failures.get(testsuite.name) is None:
-                        failures[testsuite.name] = []
-                    failures[testsuite.name].append(
-                        (test.classname + "/" + test.name, test.result[0].text)
-                    )
 
     report = [f"# {title}", ""]
 
@@ -161,7 +210,7 @@ def generate_report(
                         "",
                     ]
                 )
-                report.extend(_format_ninja_failures(ninja_failures))
+                report.extend(_format_failures(ninja_failures, failure_explanations))
                 report.extend(
                     [
                         "",
@@ -197,18 +246,7 @@ def generate_report(
 
         for testsuite_name, failures in failures.items():
             report.extend(["", f"### {testsuite_name}"])
-            for name, output in failures:
-                report.extend(
-                    [
-                        "<details>",
-                        f"<summary>{name}</summary>",
-                        "",
-                        "```",
-                        output,
-                        "```",
-                        "</details>",
-                    ]
-                )
+            report.extend(_format_failures(failures, failure_explanations))
     elif return_code != 0:
         # No tests failed but the build was in a failed state. Bring this to the user's
         # attention.
@@ -233,7 +271,7 @@ def generate_report(
                     "",
                 ]
             )
-            report.extend(_format_ninja_failures(ninja_failures))
+            report.extend(_format_failures(ninja_failures, failure_explanations))
 
     if failures or return_code != 0:
         report.extend(["", UNRELATED_FAILURES_STR])
@@ -251,7 +289,7 @@ def generate_report(
     return report
 
 
-def generate_report_from_files(title, return_code, build_log_files):
+def load_info_from_files(build_log_files):
     junit_files = [
         junit_file for junit_file in build_log_files if junit_file.endswith(".xml")
     ]
@@ -264,6 +302,19 @@ def generate_report_from_files(title, return_code, build_log_files):
             ninja_logs.append(
                 [log_line.strip() for log_line in ninja_log_file_handle.readlines()]
             )
-    return generate_report(
-        title, return_code, [JUnitXml.fromfile(p) for p in junit_files], ninja_logs
-    )
+    return [JUnitXml.fromfile(p) for p in junit_files], ninja_logs
+
+
+def generate_report_from_files(title, return_code, build_log_files):
+    junit_objects, ninja_logs = load_info_from_files(build_log_files)
+    return generate_report(title, return_code, junit_objects, ninja_logs)
+
+
+def compute_platform_title() -> str:
+    logo = ":window:" if platform.system() == "Windows" else ":penguin:"
+    # On Linux the machine value is x86_64 on Windows it is AMD64.
+    if platform.machine() == "x86_64" or platform.machine() == "AMD64":
+        arch = "x64"
+    else:
+        arch = platform.machine()
+    return f"{logo} {platform.system()} {arch} Test Results"

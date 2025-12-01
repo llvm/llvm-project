@@ -455,6 +455,18 @@ public:
       QualType OperandTy;
       llvm::SMTExprRef OperandExp =
           getSymExpr(Solver, Ctx, USE->getOperand(), &OperandTy, hasComparison);
+
+      // When the operand is a bool expr, but the operator is an integeral
+      // operator, casting the bool expr to the integer before creating the
+      // unary operator.
+      // E.g. -(5 && a)
+      if (OperandTy == Ctx.BoolTy && OperandTy != *RetTy &&
+          (*RetTy)->isIntegerType()) {
+        OperandExp = fromCast(Solver, OperandExp, (*RetTy),
+                              Ctx.getTypeSize(*RetTy), OperandTy, 1);
+        OperandTy = (*RetTy);
+      }
+
       llvm::SMTExprRef UnaryExp =
           OperandTy->isRealFloatingType()
               ? fromFloatUnOp(Solver, USE->getOpcode(), OperandExp)

@@ -29,7 +29,7 @@ protected:
   MCWinCOFFObjectTargetWriter(unsigned Machine_);
 
 public:
-  virtual ~MCWinCOFFObjectTargetWriter() = default;
+  ~MCWinCOFFObjectTargetWriter() override = default;
 
   Triple::ObjectFormatType getFormat() const override { return Triple::COFF; }
   static bool classof(const MCObjectTargetWriter *W) {

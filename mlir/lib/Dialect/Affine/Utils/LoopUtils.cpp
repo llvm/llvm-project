@@ -1339,6 +1339,15 @@ bool mlir::affine::isValidLoopInterchangePermutation(
   unsigned maxLoopDepth = loops.size();
   if (maxLoopDepth == 1)
     return true;
+
+  // We cannot guarantee the validity of the interchange if the loops have
+  // iter_args, since the dependence analysis does not take them into account.
+  // Conservatively return false in such cases.
+  if (llvm::any_of(loops, [](AffineForOp loop) {
+        return loop.getNumIterOperands() > 0;
+      }))
+    return false;
+
   // Gather dependence components for dependences between all ops in loop nest
   // rooted at 'loops[0]', at loop depths in range [1, maxLoopDepth].
   std::vector<SmallVector<DependenceComponent, 2>> depCompsVec;
@@ -1348,7 +1357,7 @@ bool mlir::affine::isValidLoopInterchangePermutation(
 
 /// Returns true if `loops` is a perfectly nested loop nest, where loops appear
 /// in it from outermost to innermost.
-bool LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]] bool
 mlir::affine::isPerfectlyNested(ArrayRef<AffineForOp> loops) {
   assert(!loops.empty() && "no loops provided");
 
@@ -1702,6 +1711,12 @@ LogicalResult mlir::affine::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
   outermost.getBody()->getOperations().splice(
       Block::iterator(secondOutermostLoop.getOperation()),
       innermost.getBody()->getOperations());
+  for (auto [iter, init] :
+       llvm::zip_equal(secondOutermostLoop.getRegionIterArgs(),
+                       secondOutermostLoop.getInits())) {
+    iter.replaceAllUsesWith(init);
+    iter.dropAllUses();
+  }
   secondOutermostLoop.erase();
   return success();
 }
@@ -1911,8 +1926,7 @@ generatePointWiseCopy(Location loc, Value memref, Value fastMemRef,
   return copyNestRoot;
 }
 
-static InFlightDiagnostic LLVM_ATTRIBUTE_UNUSED
-emitRemarkForBlock(Block &block) {
+[[maybe_unused]] static InFlightDiagnostic emitRemarkForBlock(Block &block) {
   return block.getParentOp()->emitRemark();
 }
 

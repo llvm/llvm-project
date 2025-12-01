@@ -66,3 +66,12 @@ module m
     purefun2 = 1
   end
 end module
+
+module m2
+  use iso_c_binding
+  ! In this context (structure constructor from intrinsic module being used directly
+  ! in another module), emit only a warning, since this module might have originally
+  ! been a module file that was converted back into Fortran.
+  !WARNING: PRIVATE name '__address' is accessible only within module '__fortran_builtins'
+  type(c_ptr) :: p = c_ptr(0)
+end

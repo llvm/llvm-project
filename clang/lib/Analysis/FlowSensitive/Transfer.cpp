@@ -610,7 +610,15 @@ public:
       // Even if the copy/move constructor call is elidable, we choose to copy
       // the record in all cases (which isn't wrong, just potentially not
       // optimal).
-      copyRecord(*ArgLoc, Loc, Env);
+      //
+      // To handle cases of base class initializers in constructors, where a
+      // sibling derived class can be used to initialize a shared-base-class
+      // subobject through a DerivedToBase cast, intentionally copy only the
+      // parts of `ArgLoc` that are part of the base class being initialized.
+      // This is necessary because the type of `Loc` in these cases is the
+      // derived type ultimately being constructed, not the type of the base
+      // class subobject.
+      copyRecord(*ArgLoc, Loc, Env, S->getType());
       return;
     }
 
@@ -649,7 +657,12 @@ public:
       if (LocSrc == nullptr || LocDst == nullptr)
         return;
 
-      copyRecord(*LocSrc, *LocDst, Env);
+      // If the destination object here is of a derived class, `Arg0` may be a
+      // cast of that object to a base class, and the source object may be of a
+      // sibling derived class. To handle these cases, ensure we are copying
+      // only the fields for `Arg0`'s type, not the type of the underlying
+      // `RecordStorageLocation`.
+      copyRecord(*LocSrc, *LocDst, Env, Arg0->getType());
 
       // The assignment operator can have an arbitrary return type. We model the
       // return value only if the return type is the same as or a base class of
@@ -756,8 +769,29 @@ public:
       StorageLocation *TrueLoc = TrueEnv->getStorageLocation(*S->getTrueExpr());
       StorageLocation *FalseLoc =
           FalseEnv->getStorageLocation(*S->getFalseExpr());
-      if (TrueLoc == FalseLoc && TrueLoc != nullptr)
+      if (TrueLoc == FalseLoc && TrueLoc != nullptr) {
         Env.setStorageLocation(*S, *TrueLoc);
+      } else if (!S->getType()->isRecordType()) {
+        // Ideally, we would have something like an "alias set" to say that the
+        // result StorageLocation can be either of the locations from the
+        // TrueEnv or FalseEnv. Then, when this ConditionalOperator is
+        // (a) used in an LValueToRValue cast, the value is the join of all of
+        //     the values in the alias set.
+        // (b) or, used in an assignment to the resulting LValue, the assignment
+        //     *may* update all of the locations in the alias set.
+        // For now, we do the simpler thing of creating a new StorageLocation
+        // and joining the values right away, handling only case (a).
+        // Otherwise, the dataflow framework needs to be updated be able to
+        // represent alias sets and weak updates (for the "may").
+        if (Value *Val = Environment::joinValues(
+                S->getType(), TrueEnv->getValue(*S->getTrueExpr()), *TrueEnv,
+                FalseEnv->getValue(*S->getFalseExpr()), *FalseEnv, Env,
+                Model)) {
+          StorageLocation &Loc = Env.createStorageLocation(*S);
+          Env.setStorageLocation(*S, Loc);
+          Env.setValue(Loc, *Val);
+        }
+      }
     } else if (!S->getType()->isRecordType()) {
       // The conditional operator can evaluate to either of the values of the
       // two branches. To model this, join these two values together to yield

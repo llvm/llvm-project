@@ -23,29 +23,29 @@ using namespace llvm;
 namespace {
 
 struct Context {
-  const char *TripleName = "systemz-unknown";
+  static constexpr char TripleName[] = "systemz-unknown";
+  Triple TT;
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<MCContext> Ctx;
   std::unique_ptr<MCSubtargetInfo> STI;
   std::unique_ptr<MCDisassembler> DisAsm;
 
-  Context() {
+  Context() : TT(TripleName) {
     LLVMInitializeSystemZTargetInfo();
     LLVMInitializeSystemZTargetMC();
     LLVMInitializeSystemZDisassembler();
 
     // If we didn't build SystemZ, do not run the test.
     std::string Error;
-    const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     if (!TheTarget)
       return;
 
-    MRI.reset(TheTarget->createMCRegInfo(TripleName));
-    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCTargetOptions()));
-    STI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
-    Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(), MRI.get(),
-                                      STI.get());
+    MRI.reset(TheTarget->createMCRegInfo(TT));
+    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TT, MCTargetOptions()));
+    STI.reset(TheTarget->createMCSubtargetInfo(TT, "", ""));
+    Ctx = std::make_unique<MCContext>(TT, MAI.get(), MRI.get(), STI.get());
 
     DisAsm.reset(TheTarget->createMCDisassembler(*STI, *Ctx));
   }
@@ -61,7 +61,7 @@ Context &getContext() {
 class SystemZMCSymbolizerTest : public MCSymbolizer {
 public:
   SystemZMCSymbolizerTest(MCContext &MC) : MCSymbolizer(MC, nullptr) {}
-  ~SystemZMCSymbolizerTest() {}
+  ~SystemZMCSymbolizerTest() override = default;
 
   bool tryAddingSymbolicOperand([[maybe_unused]] MCInst &Inst,
                                 [[maybe_unused]] raw_ostream &CStream,

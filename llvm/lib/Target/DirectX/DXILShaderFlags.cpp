@@ -94,8 +94,30 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_reduce_usum:
   case Intrinsic::dx_wave_reduce_max:
   case Intrinsic::dx_wave_reduce_umax:
+  case Intrinsic::dx_wave_reduce_min:
+  case Intrinsic::dx_wave_reduce_umin:
     return true;
   }
+}
+
+// Checks to see if the status bit from a load with status
+// instruction is ever extracted. If it is, the module needs
+// to have the TiledResources shader flag set.
+bool checkIfStatusIsExtracted(const IntrinsicInst &II) {
+  [[maybe_unused]] Intrinsic::ID IID = II.getIntrinsicID();
+  assert(IID == Intrinsic::dx_resource_load_typedbuffer ||
+         IID == Intrinsic::dx_resource_load_rawbuffer &&
+             "unexpected intrinsic ID");
+  for (const User *U : II.users()) {
+    if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(U)) {
+      // Resource load operations return a {result, status} pair.
+      // Check if we extract the status
+      if (EVI->getNumIndices() == 1 && EVI->getIndices()[0] == 1)
+        return true;
+    }
+  }
+
+  return false;
 }
 
 /// Update the shader flags mask based on the given instruction.
@@ -162,7 +184,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     }
   }
 
-  if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+  if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
     switch (II->getIntrinsicID()) {
     default:
       break;
@@ -190,6 +212,13 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
       if (RTI.isTyped())
         CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
+      if (!CSF.TiledResources && checkIfStatusIsExtracted(*II))
+        CSF.TiledResources = true;
+      break;
+    }
+    case Intrinsic::dx_resource_load_rawbuffer: {
+      if (!CSF.TiledResources && checkIfStatusIsExtracted(*II))
+        CSF.TiledResources = true;
       break;
     }
     }

@@ -7,15 +7,24 @@
 define signext i32 @test1(ptr %buffer1, ptr %buffer2) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    ori $a2, $zero, 16
-; CHECK-NEXT:    pcaddu18i $ra, %call36(memcmp)
-; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ld.d $a2, $a0, 0
+; CHECK-NEXT:    ld.d $a3, $a1, 0
+; CHECK-NEXT:    revb.d $a2, $a2
+; CHECK-NEXT:    revb.d $a3, $a3
+; CHECK-NEXT:    bne $a2, $a3, .LBB0_3
+; CHECK-NEXT:  # %bb.1: # %loadbb1
+; CHECK-NEXT:    ld.d $a0, $a0, 8
+; CHECK-NEXT:    ld.d $a1, $a1, 8
+; CHECK-NEXT:    revb.d $a2, $a0
+; CHECK-NEXT:    revb.d $a3, $a1
+; CHECK-NEXT:    bne $a2, $a3, .LBB0_3
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    move $a0, $zero
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB0_3: # %res_block
+; CHECK-NEXT:    sltu $a0, $a2, $a3
+; CHECK-NEXT:    sub.d $a0, $zero, $a0
+; CHECK-NEXT:    ori $a0, $a0, 1
 ; CHECK-NEXT:    ret
 entry:
   %call = call signext i32 @memcmp(ptr %buffer1, ptr %buffer2, i64 16)

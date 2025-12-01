@@ -1,4 +1,4 @@
-//===--- ProBoundsArrayToPointerDecayCheck.cpp - clang-tidy----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,7 +35,7 @@ AST_MATCHER_P(Expr, hasParentIgnoringImpCasts,
               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
   const Expr *E = &Node;
   do {
-    DynTypedNodeList Parents = Finder->getASTContext().getParents(*E);
+    const DynTypedNodeList Parents = Finder->getASTContext().getParents(*E);
     if (Parents.size() != 1)
       return false;
     E = Parents[0].get<Expr>();

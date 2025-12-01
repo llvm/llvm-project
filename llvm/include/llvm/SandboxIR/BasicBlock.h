@@ -78,7 +78,7 @@ class BasicBlock : public Value {
   }
 
 public:
-  ~BasicBlock() = default;
+  ~BasicBlock() override = default;
   /// For isa/dyn_cast.
   static bool classof(const Value *From) {
     return From->getSubclassID() == Value::ClassID::Block;
@@ -104,7 +104,7 @@ public:
 
 #ifndef NDEBUG
   void verify() const final;
-  void dumpOS(raw_ostream &OS) const final;
+  LLVM_ABI_FOR_TEST void dumpOS(raw_ostream &OS) const final;
 #endif
 };
 

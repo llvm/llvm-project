@@ -39,8 +39,7 @@ void addTosaToLinalgPasses(
         TosaToLinalgNamedOptions(),
     // Note: Default to 'none' level unless otherwise specified.
     std::optional<tosa::TosaValidationOptions> validationOptions =
-        tosa::TosaValidationOptions{
-            {"none"}, {"none"}, false, false, tosa::TosaLevelEnum::None});
+        tosa::TosaValidationOptions{false, false});
 
 /// Populates TOSA to linalg pipelines
 /// Currently, this includes only the "tosa-to-linalg-pipeline".
