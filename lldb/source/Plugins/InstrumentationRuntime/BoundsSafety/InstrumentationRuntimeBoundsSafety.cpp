@@ -41,11 +41,9 @@ constexpr llvm::StringLiteral
 constexpr llvm::StringLiteral
     BoundsSafetySoftTrapStr("__bounds_safety_soft_trap_s");
 
-const std::vector<std::string> &getBoundsSafetySoftTrapRuntimeFuncs() {
-  static std::vector<std::string> Funcs = {BoundsSafetySoftTrapMinimal.str(),
-                                           BoundsSafetySoftTrapStr.str()};
-
-  return Funcs;
+constexpr std::array<llvm::StringLiteral, 2>
+getBoundsSafetySoftTrapRuntimeFuncs() {
+  return {BoundsSafetySoftTrapMinimal, BoundsSafetySoftTrapStr};
 }
 
 #define SOFT_TRAP_CATEGORY_PREFIX "Soft "
@@ -374,14 +372,15 @@ bool InstrumentationRuntimeBoundsSafety::CheckIfRuntimeIsValid(
 
     if (module_sp->FindFirstSymbolWithNameAndType(test_sym,
                                                   lldb::eSymbolTypeAny)) {
-      LLDB_LOG(log_category, "found \"{0}\" in {1}", SoftTrapFunc.c_str(),
-               module_sp->GetObjectName().AsCString("<unknown>"));
+      LLDB_LOG(log_category, "found \"{0}\" in {1}",
+               test_sym.AsCString("<unknown symbol>"),
+               module_sp->GetObjectName().AsCString("<unknown module>"));
       return true;
     }
   }
   LLDB_LOG(log_category,
            "did not find BoundsSafety soft trap functions in module {0}",
-           module_sp->GetObjectName().AsCString("<unknown>"));
+           module_sp->GetObjectName().AsCString("<unknown module>"));
   return false;
 }
 
@@ -429,10 +428,14 @@ void InstrumentationRuntimeBoundsSafety::Activate() {
   if (!process_sp)
     return LogBeforeReturn<void>("could not get process during Activate()");
 
+  std::vector<std::string> breakpoints;
+  for (auto &breakpoint_func : getBoundsSafetySoftTrapRuntimeFuncs())
+    breakpoints.emplace_back(breakpoint_func);
+
   BreakpointSP breakpoint = process_sp->GetTarget().CreateBreakpoint(
       /*containingModules=*/nullptr,
-      /*containingSourceFiles=*/nullptr, getBoundsSafetySoftTrapRuntimeFuncs(),
-      eFunctionNameTypeFull, eLanguageTypeUnknown,
+      /*containingSourceFiles=*/nullptr, breakpoints, eFunctionNameTypeFull,
+      eLanguageTypeUnknown,
       /*m_offset=*/0,
       /*skip_prologue*/ eLazyBoolNo,
       /*internal=*/true,
