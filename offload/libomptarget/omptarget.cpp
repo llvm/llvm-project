@@ -705,7 +705,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         if (ArgTypes[I] & OMP_TGT_MAPTYPE_FB_NULLIFY) {
           TgtPtrBase = reinterpret_cast<void *>(
               reinterpret_cast<uintptr_t>(nullptr) - Delta);
-          DP("Returning offsetted null pointer " DPxMOD " as fallback (lookup failed)\n",
+          DP("Returning offsetted null pointer " DPxMOD
+             " as fallback (lookup failed)\n",
              DPxPTR(TgtPtrBase));
         } else {
           TgtPtrBase = reinterpret_cast<void *>(
