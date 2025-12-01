@@ -1478,9 +1478,6 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
                                19 + 2 * I + 1, 16 * I);
     }
   }
-  // CR=2 is yet undocumented, see
-  // https://github.com/MicrosoftDocs/cpp-docs/pull/4202 for upstream
-  // progress on getting it documented.
   if (RF.CR() == 2)
     SW.startLine() << "pacibsp\n";
   SW.startLine() << "end\n";

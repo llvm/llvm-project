@@ -157,7 +157,8 @@ public:
         Alignment(Alignment) {}
 
   LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
-                                      Align Alignment, unsigned AddressSpace)
+                                      Align Alignment,
+                                      unsigned AddressSpace = 0)
       : DataTy(DataTy), IID(Id), AddressSpace(AddressSpace),
         Alignment(Alignment) {}
 

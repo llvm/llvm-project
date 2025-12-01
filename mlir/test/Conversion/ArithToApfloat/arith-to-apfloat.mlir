@@ -198,3 +198,68 @@ func.func @uitofp(%arg0: i32) {
   %0 = arith.uitofp %arg0 : i32 to f4E2M1FN
   return
 }
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_compare(i32, i64, i64) -> i8
+// CHECK: %[[sem:.*]] = arith.constant 18 : i32
+// CHECK: %[[cmp:.*]] = call @_mlir_apfloat_compare(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i8
+// CHECK: %[[c3:.*]] = arith.constant 3 : i8
+// CHECK: %[[is_unordered:.*]] = arith.cmpi eq, %[[cmp]], %[[c3]] : i8
+// CHECK: %[[c0:.*]] = arith.constant 0 : i8
+// CHECK: %[[is_lt:.*]] = arith.cmpi eq, %[[cmp]], %[[c0]] : i8
+// CHECK: arith.ori %[[is_unordered]], %[[is_lt]] : i1
+func.func @cmpf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
+  %0 = arith.cmpf "ult", %arg0, %arg1 : f4E2M1FN
+  return
+}
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_neg(i32, i64) -> i64
+// CHECK: %[[sem:.*]] = arith.constant 2 : i32
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_neg(%[[sem]], %{{.*}}) : (i32, i64) -> i64
+func.func @negf(%arg0: f32) {
+  %0 = arith.negf %arg0 : f32
+  return
+}
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_minimum(i32, i64, i64) -> i64
+// CHECK: %[[sem:.*]] = arith.constant 2 : i32
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_minimum(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
+func.func @minimumf(%arg0: f32, %arg1: f32) {
+  %0 = arith.minimumf %arg0, %arg1 : f32
+  return
+}
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_maximum(i32, i64, i64) -> i64
+// CHECK: %[[sem:.*]] = arith.constant 2 : i32
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_maximum(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
+func.func @maximumf(%arg0: f32, %arg1: f32) {
+  %0 = arith.maximumf %arg0, %arg1 : f32
+  return
+}
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_minnum(i32, i64, i64) -> i64
+// CHECK: %[[sem:.*]] = arith.constant 2 : i32
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_minnum(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
+func.func @minnumf(%arg0: f32, %arg1: f32) {
+  %0 = arith.minnumf %arg0, %arg1 : f32
+  return
+}
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_maxnum(i32, i64, i64) -> i64
+// CHECK: %[[sem:.*]] = arith.constant 2 : i32
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_maxnum(%[[sem]], %{{.*}}, %{{.*}}) : (i32, i64, i64) -> i64
+func.func @maxnumf(%arg0: f32, %arg1: f32) {
+  %0 = arith.maxnumf %arg0, %arg1 : f32
+  return
+}

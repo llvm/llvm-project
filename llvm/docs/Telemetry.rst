@@ -32,7 +32,7 @@ Important notes
 * There is no concrete implementation of a Telemetry library in upstream LLVM.
   We only provide the abstract API here. Any tool that wants telemetry will
   implement one.
-  
+
   The rationale for this is that all the tools in LLVM are very different in
   what they care about (what/where/when to instrument data). Hence, it might not
   be practical to have a single implementation.
@@ -41,16 +41,16 @@ Important notes
 
 * No implementation of Telemetry in upstream LLVM shall store any of the
   collected data due to privacy and security reasons:
-  
+
   * Different organizations have different privacy models:
-  
+
     * Which data is sensitive, which is not?
     * Whether it is acceptable for instrumented data to be stored anywhere?
       (to a local file, what not?)
-      
+
   * Data ownership and data collection consents are hard to accommodate from
     LLVM developers' point of view:
-  
+
     * E.g., data collected by Telemetry is not necessarily owned by the user
       of an LLVM tool with Telemetry enabled, hence the user's consent to data
       collection is not meaningful. On the other hand, LLVM developers have no
@@ -75,7 +75,7 @@ The framework consists of four important classes:
   It is up to the vendor to decide which pieces of data to forward and where
   to forward them to for their final storage.
 * ``llvm::telemetry::Config``: Configurations for the ``Manager``.
-  
+
 .. image:: llvm_telemetry_design.png
 
 How to implement and interact with the API
@@ -123,7 +123,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     void write(StringRef KeyName, unsigned long Value) override {
       writeHelper(KeyName, Value);
     }
-    
+
     void write(StringRef KeyName, unsigned long long Value) override {
       writeHelper(KeyName, Value);
     }
@@ -131,12 +131,12 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     void write(StringRef KeyName, StringRef Value) override {
       writeHelper(KeyName, Value);
     }
- 
+
     void beginObject(StringRef KeyName) override {
       Children.push_back(json::Object());
       ChildrenNames.push_back(KeyName.str());
     }
-    
+
     void endObject() override {
       assert(!Children.empty() && !ChildrenNames.empty());
       json::Value Val = json::Value(std::move(Children.back()));
@@ -146,7 +146,7 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
       ChildrenNames.pop_back();
       writeHelper(Name, std::move(Val));
     }
-    
+
     Error finalize() override {
       if (!Started)
         return createStringError("Serializer not currently in use");
@@ -167,10 +167,10 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     std::vector<json::Object> Children;
     std::vector<std::string> ChildrenNames;
   };
-       
-  class MyManager : public telemery::Manager {
+
+  class MyManager : public telemetry::Manager {
   public:
-  static std::unique_ptr<MyManager> createInstatnce(telemetry::Config *Config) {
+  static std::unique_ptr<MyManager> createInstance(telemetry::Config *Config) {
     // If Telemetry is not enabled, then just return null;
     if (!Config->EnableTelemetry)
       return nullptr;
@@ -182,19 +182,19 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     Entry->SessionId = SessionId;
     return Error::success();
   }
-  
+
   // You can also define additional instrumentation points.
   void logStartup(TelemetryInfo *Entry) {
     // Add some additional data to entry.
     Entry->Msg = "Some message";
     dispatch(Entry);
   }
-  
+
   void logAdditionalPoint(TelemetryInfo *Entry) {
     // .... code here
   }
-  
-  private:    
+
+  private:
     const std::string SessionId;
   };
 
@@ -203,11 +203,11 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
     Error receiveEntry(const TelemetryInfo *Entry) override {
       if (Error Err = Serializer.init())
         return Err;
-      
+
       Entry->serialize(Serializer);
       if (Error Err = Serializer.finalize())
         return Err;
-      
+
       json::Object Copied = *Serializer.getOutputObject();
       // Send the `Copied` object to wherever.
       return Error::success();
@@ -220,16 +220,16 @@ To use Telemetry in your tool, you need to provide a concrete implementation of 
   // This defines a custom TelemetryInfo that has an additional Msg field.
   struct MyTelemetryInfo : public telemetry::TelemetryInfo {
     std::string Msg;
-    
+
     Error serialize(Serializer &Serializer) const override {
       TelemetryInfo::serialize(serializer);
       Serializer.writeString("MyMsg", Msg);
     }
-      
+
     // Note: implement getKind() and classof() to support dyn_cast operations.
   };
 
-    
+
 2) Use the library in your tool.
 
 Logging the tool init-process:
@@ -241,10 +241,10 @@ Logging the tool init-process:
   telemetry::Config MyConfig = makeConfig(); // Build up the appropriate Config struct here.
   auto Manager = MyManager::createInstance(&MyConfig);
 
-  
+
   // Any other tool's init code can go here.
   // ...
-  
+
   // Finally, take a snapshot of the time now so we know how long it took the
   // init process to finish.
   auto EndTime = std::chrono::time_point<std::chrono::steady_clock>::now();

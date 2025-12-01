@@ -958,6 +958,8 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_ADX);
   if (HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512IFMA);
+  if (HasLeaf7 && ((EBX >> 23) & 1))
+    setFeature(FEATURE_CLFLUSHOPT);
   if (HasLeaf7 && ((EBX >> 24) & 1))
     setFeature(FEATURE_CLWB);
   if (HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save)
