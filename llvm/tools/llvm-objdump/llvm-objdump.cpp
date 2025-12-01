@@ -3549,7 +3549,6 @@ static void mcpuHelp() {
           unwrapOrError(createBinary(Filename), Filename);
       Binary *Bin = OBinary.getBinary();
       if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin)) {
-      if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin)) {
         TheTriple = Obj->makeTriple();
         break;
       }
