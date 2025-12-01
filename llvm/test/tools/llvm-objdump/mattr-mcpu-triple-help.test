@@ -10,7 +10,8 @@
 # CHECK-DISASM: file format elf32-littlearm
 # CHECK-SECTION-HEADER: Sections:
 # CHECK-SECTION-HEADER: Idx Name            Size     VMA      Type
-# CHECK-FILE-ISSUE: 'a.out': No such file or directory
+## Don't check the OS-dependent message "No such file or directory".
+# CHECK-FILE-ISSUE: error: 'a.out':
 
 --- !ELF
 FileHeader:
