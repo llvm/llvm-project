@@ -126,7 +126,7 @@ template <typename T, typename... ArgTys>
 }
 
 template <typename... ArgTys>
-[[nodiscard]] ComputedStopInfo LogBeforeReturnCSI(ArgTys &&...Args) {
+[[nodiscard]] ComputedStopInfo LogFailedCSI(ArgTys &&...Args) {
   return LogBeforeReturn<ComputedStopInfo>(Args...);
 }
 
@@ -135,15 +135,14 @@ InstrumentationBoundsSafetyStopInfo::ComputeStopReasonAndSuggestedStackFrame(
     bool &warning_emitted_for_failure) {
   ThreadSP thread_sp = GetThread();
   if (!thread_sp)
-    return LogBeforeReturnCSI("failed to get thread while stopped");
+    return LogFailedCSI("failed to get thread while stopped");
 
   lldb::user_id_t debugger_id =
       thread_sp->GetProcess()->GetTarget().GetDebugger().GetID();
 
   StackFrameSP parent_sf = thread_sp->GetStackFrameAtIndex(1);
   if (!parent_sf)
-    return LogBeforeReturnCSI(
-        "got nullptr when fetching stackframe at index 1");
+    return LogFailedCSI("got nullptr when fetching stackframe at index 1");
 
   if (parent_sf->HasDebugInformation())
     return ComputeStopReasonAndSuggestedStackFrameWithDebugInfo(
@@ -173,7 +172,7 @@ ComputedStopInfo InstrumentationBoundsSafetyStopInfo::
   auto MaybeTrapReason =
       clang::CodeGen::DemangleTrapReasonInDebugInfo(TrapReasonFuncName);
   if (!MaybeTrapReason.has_value())
-    return LogBeforeReturnCSI(
+    return LogFailedCSI(
         "clang::CodeGen::DemangleTrapReasonInDebugInfo(\"{0}\") call failed",
         TrapReasonFuncName);
 
@@ -210,8 +209,7 @@ ComputedStopInfo InstrumentationBoundsSafetyStopInfo::
 
   StackFrameSP softtrap_sf = thread_sp->GetStackFrameAtIndex(0);
   if (!softtrap_sf)
-    return LogBeforeReturnCSI(
-        "got nullptr when fetching stackframe at index 0");
+    return LogFailedCSI("got nullptr when fetching stackframe at index 0");
   llvm::StringRef trap_reason_func_name = softtrap_sf->GetFunctionName();
 
   if (trap_reason_func_name == BoundsSafetySoftTrapMinimal) {
@@ -245,14 +243,14 @@ ComputedStopInfo InstrumentationBoundsSafetyStopInfo::
   // describing the trap or a nullptr.
   if (trap_reason_func_name != BoundsSafetySoftTrapStr) {
     assert(0 && "hit breakpoint for unexpected function name");
-    return LogBeforeReturnCSI(
+    return LogFailedCSI(
         "unexpected function name. Expected \"{0}\" but got \"{1}\"",
         BoundsSafetySoftTrapStr.data(), trap_reason_func_name.data());
   }
 
   RegisterContextSP rc = thread_sp->GetRegisterContext();
   if (!rc)
-    return LogBeforeReturnCSI("failed to get register context");
+    return LogFailedCSI("failed to get register context");
 
   // FIXME: LLDB should have an API that tells us for the current target if
   // `LLDB_REGNUM_GENERIC_ARG1` can be used.
@@ -261,7 +259,7 @@ ComputedStopInfo InstrumentationBoundsSafetyStopInfo::
   // work.
   ProcessSP process = thread_sp->GetProcess();
   if (!process)
-    return LogBeforeReturnCSI("failed to get process");
+    return LogFailedCSI("failed to get process");
 
   switch (process->GetTarget().GetArchitecture().GetCore()) {
   case ArchSpec::eCore_x86_32_i386:
@@ -287,15 +285,15 @@ ComputedStopInfo InstrumentationBoundsSafetyStopInfo::
   const RegisterInfo *arg0_info = rc->GetRegisterInfo(
       lldb::RegisterKind::eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
   if (!arg0_info)
-    return LogBeforeReturnCSI(
+    return LogFailedCSI(
         "failed to get register info for LLDB_REGNUM_GENERIC_ARG1");
   RegisterValue reg_value;
   if (!rc->ReadRegister(arg0_info, reg_value))
-    return LogBeforeReturnCSI("failed to read register {0}", arg0_info->name);
+    return LogFailedCSI("failed to read register {0}", arg0_info->name);
   uint64_t reg_value_as_int = reg_value.GetAsUInt64(UINT64_MAX);
   if (reg_value_as_int == UINT64_MAX)
-    return LogBeforeReturnCSI("failed to read register {0} as a UInt64",
-                              arg0_info->name);
+    return LogFailedCSI("failed to read register {0} as a UInt64",
+                        arg0_info->name);
 
   if (reg_value_as_int == 0) {
     // nullptr arg. The compiler will pass that if no trap reason string was
@@ -315,8 +313,8 @@ ComputedStopInfo InstrumentationBoundsSafetyStopInfo::
   thread_sp->GetProcess()->ReadCStringFromMemory(reg_value_as_int, out_string,
                                                  error_status);
   if (error_status.Fail())
-    return LogBeforeReturnCSI("failed to read C string from address {0}",
-                              (void *)reg_value_as_int);
+    return LogFailedCSI("failed to read C string from address {0}",
+                        (void *)reg_value_as_int);
 
   LLDB_LOG(GetLog(LLDBLog::InstrumentationRuntime),
            "read C string from {0} found in register {1}: \"{2}\"",
