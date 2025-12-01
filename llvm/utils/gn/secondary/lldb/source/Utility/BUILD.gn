@@ -60,6 +60,7 @@ static_library("Utility") {
     "UserIDResolver.cpp",
     "VASprintf.cpp",
     "VMRange.cpp",
+    "VirtualDataExtractor.cpp",
     "XcodeSDK.cpp",
     "ZipFile.cpp",
   ]

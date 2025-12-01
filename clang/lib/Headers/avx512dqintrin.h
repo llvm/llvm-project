@@ -123,12 +123,12 @@ _kadd_mask16(__mmask16 __A, __mmask16 __B) {
 #define _kshiftri_mask8(A, I) \
   ((__mmask8)__builtin_ia32_kshiftriqi((__mmask8)(A), (unsigned int)(I)))
 
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
-_cvtmask8_u32(__mmask8 __A) {
+static __inline__ unsigned int
+    __DEFAULT_FN_ATTRS_CONSTEXPR _cvtmask8_u32(__mmask8 __A) {
   return (unsigned int)__builtin_ia32_kmovb((__mmask8)__A);
 }
 
-static __inline__ __mmask8 __DEFAULT_FN_ATTRS
+static __inline__ __mmask8 __DEFAULT_FN_ATTRS_CONSTEXPR
 _cvtu32_mask8(unsigned int __A) {
   return (__mmask8)__builtin_ia32_kmovb((__mmask8)__A);
 }

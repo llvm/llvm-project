@@ -2353,6 +2353,26 @@ TEST_P(ASTMatchersTest, ReferenceTypeLocTest_BindsToAnyRvalueReferenceTypeLoc) {
   EXPECT_TRUE(matches("float&& r = 3.0;", matcher));
 }
 
+TEST_P(ASTMatchersTest, ArrayTypeLocTest_BindsToAnyArrayTypeLoc) {
+  auto matcher = varDecl(hasName("x"), hasTypeLoc(arrayTypeLoc()));
+  EXPECT_TRUE(matches("int x[3];", matcher));
+  EXPECT_TRUE(matches("float x[3];", matcher));
+  EXPECT_TRUE(matches("char x[3];", matcher));
+  EXPECT_TRUE(matches("void* x[3];", matcher));
+  EXPECT_TRUE(matches("const int x[3] = {1, 2, 3};", matcher));
+  EXPECT_TRUE(matches("int x[3][4];", matcher));
+  EXPECT_TRUE(matches("void foo(int x[]);", matcher));
+  EXPECT_TRUE(matches("int a[] = {1, 2}; void foo() {int x[a[0]];}", matcher));
+}
+
+TEST_P(ASTMatchersTest, ArrayTypeLocTest_DoesNotBindToNonArrayTypeLoc) {
+  auto matcher = varDecl(hasName("x"), hasTypeLoc(arrayTypeLoc()));
+  EXPECT_TRUE(notMatches("int x;", matcher));
+  EXPECT_TRUE(notMatches("float x;", matcher));
+  EXPECT_TRUE(notMatches("char x;", matcher));
+  EXPECT_TRUE(notMatches("void* x;", matcher));
+}
+
 TEST_P(ASTMatchersTest,
        TemplateSpecializationTypeLocTest_BindsToVarDeclTemplateSpecialization) {
   if (!GetParam().isCXX()) {
