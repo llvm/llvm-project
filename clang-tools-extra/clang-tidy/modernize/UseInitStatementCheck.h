@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USEINITSTATEMENTCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "../GlobList.h"
 
 namespace clang::tidy::modernize {
 
@@ -21,23 +22,22 @@ namespace clang::tidy::modernize {
 /// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-init-statement.html
 class UseInitStatementCheck : public ClangTidyCheck {
 public:
-  UseInitStatementCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context),
-        StrictMode(Options.get("StrictMode", true)) {}
-
+  UseInitStatementCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-
-  void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
-    Options.store(Opts, "StrictMode", StrictMode);
-  }
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus17;
   }
 
 private:
+  bool isSingleVarWithSafeDestructor(
+      const ast_matchers::MatchFinder::MatchResult &Result) const;
+
   const bool StrictMode;
+  const llvm::StringRef SafeDestructorTypes;
+  const GlobList SafeDestructorTypesGlobList;
 };
 
 } // namespace clang::tidy::modernize

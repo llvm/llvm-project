@@ -10,6 +10,8 @@
 #include "../utils/ASTUtils.h"
 #include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/QualTypeNames.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -50,7 +52,21 @@ AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
              }) != Statements.end();
 }
 
+// FIXME: support other std:: types, like std::vector
+const auto DefaultSafeDestructorTypes = "-*,::std::*string,::std::*string_view,::boost::*string,::boost::*string_view,::boost::*string_ref";
 } // namespace
+
+UseInitStatementCheck::UseInitStatementCheck(StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      StrictMode(Options.get("StrictMode", true)),
+      SafeDestructorTypes(Options.get("SafeDestructorTypes",
+                                        DefaultSafeDestructorTypes)),
+      SafeDestructorTypesGlobList(SafeDestructorTypes) {}
+
+void UseInitStatementCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "StrictMode", StrictMode);
+  Options.store(Opts, "SafeDestructorTypes", SafeDestructorTypes);
+}
 
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
   // Matchers for classes with destructors
@@ -119,6 +135,25 @@ static std::string extractDeclStmtText(const DeclStmt *PrevDecl,
   return DeclStmtText.empty() ? "" : DeclStmtText.trim().str() + " ";
 }
 
+bool UseInitStatementCheck::isSingleVarWithSafeDestructor(
+    const MatchFinder::MatchResult &Result) const {
+  if (SafeDestructorTypes.empty())
+    return false;
+
+  const auto *SingleVar = Result.Nodes.getNodeAs<VarDecl>("singleVar");
+  if (!SingleVar)
+    return false;
+
+  const QualType VarType = SingleVar->getType();
+  const PrintingPolicy Policy(Result.Context->getLangOpts());
+  const std::string TypeName = TypeName::getFullyQualifiedName(
+      VarType.getUnqualifiedType(), *Result.Context, Policy,
+      /*WithGlobalNsPrefix=*/true);
+
+  // Check if the type name matches any of the safe types using GlobList
+  return SafeDestructorTypesGlobList.contains(TypeName);
+}
+
 void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *If = Result.Nodes.getNodeAs<Stmt>("ifStmt");
   const auto *Switch = Result.Nodes.getNodeAs<Stmt>("switchStmt");
@@ -136,7 +171,7 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   if (!StrictMode && IsLast)
     return;
 
-  if (Dtor && !IsLast)
+  if (Dtor && !IsLast && !isSingleVarWithSafeDestructor(Result))
     return;
 
   auto Diag = diag(PrevDecl->getBeginLoc(),
@@ -146,7 +181,7 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
               << (llvm::size(PrevDecl->decls()) == 1)
               << llvm::dyn_cast<VarDecl>(*PrevDecl->decl_begin()) << !If;
 
-  const auto NewInitStmtOpt =
+  const std::string NewInitStmtOpt =
       extractDeclStmtText(PrevDecl, Result.SourceManager, getLangOpts());
   const bool CanFix = !NewInitStmtOpt.empty();
   const SourceRange RemovalRange = PrevDecl->getSourceRange();

@@ -13,6 +13,12 @@ namespace std {
         ~unique_lock();
         bool owns_lock() const noexcept { return true; }
     };
+    class string {
+    public:
+        string() {}
+        ~string() {}
+        bool empty() const { return true; }
+    };
 }
 #define DUMMY_TOKEN // crutch because CHECK-FIXES unable to match empty string
 
@@ -609,4 +615,15 @@ void bad_macro10() {
             do_some();
             break;
     }
+}
+
+void bad_safe_string_default() {
+    std::string str; DUMMY_TOKEN
+    if (str.empty()) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'str' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (std::string str; str.empty()) {
+        do_some();
+    }
+    do_some(); // Additional statement after if
 }
