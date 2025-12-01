@@ -1,8 +1,9 @@
-; XFAIL: *
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown < %s | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown < %s -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=VALIDATOR %}
 ;
 ; _Z3miniii is not a valid OpenCL intrinsic, do not treat it like one.
+;
+; VALIDATOR: Invalid instruction OpExtInst starting at word {{[0-9]+}}: expected no more operands after 7 words, but stated word count is 8
 
 define spir_kernel void @ill_1() {
 ; CHECK-LABEL:   OpFunction %{{[0-9]+}} None %{{[0-9]+}} ; -- Begin function ill_1
