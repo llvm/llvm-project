@@ -4808,7 +4808,8 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   BasicBlock *Header = L->getHeader();
   if (Header == L->getLoopLatch()) {
     // Estimate the size of the loop.
-    unsigned Size, Width=10;
+    unsigned Size;
+    unsigned Width=10;
     if (!isLoopSizeWithinBudget(L, TTI, Width, &Size))
       return;
 
