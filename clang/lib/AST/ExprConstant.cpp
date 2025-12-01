@@ -12954,6 +12954,30 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
+  case X86::BI__builtin_ia32_undef128:
+  case X86::BI__builtin_ia32_undef256:
+  case X86::BI__builtin_ia32_undef512: {
+    // Undefined builtins return zero-initialized vectors in constexpr contexts
+    const auto *VTy = E->getType()->castAs<VectorType>();
+    unsigned NumElts = VTy->getNumElements();
+    QualType EltTy = VTy->getElementType();
+    
+    SmallVector<APValue, 16> Elements;
+    Elements.reserve(NumElts);
+    
+    if (EltTy->isIntegerType()) {
+      APSInt Zero(Info.Ctx.getTypeSize(EltTy), EltTy->isUnsignedIntegerType());
+      for (unsigned I = 0; I < NumElts; ++I)
+        Elements.push_back(APValue(Zero));
+    } else {
+      APFloat Zero(Info.Ctx.getFloatTypeSemantics(EltTy));
+      for (unsigned I = 0; I < NumElts; ++I)
+        Elements.push_back(APValue(Zero));
+    }
+    
+    return Success(APValue(Elements.data(), Elements.size()), E);
+  }
+
   case X86::BI__builtin_ia32_cvtsd2ss: {
     APValue VecA, VecB;
     if (!EvaluateAsRValue(Info, E->getArg(0), VecA) ||

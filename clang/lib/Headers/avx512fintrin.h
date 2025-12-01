@@ -207,8 +207,7 @@ _mm512_undefined(void)
   return (__m512)__builtin_ia32_undef512();
 }
 
-static __inline__ __m512 __DEFAULT_FN_ATTRS512
-_mm512_undefined_ps(void) {
+static __inline__ __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_undefined_ps(void) {
   return (__m512)__builtin_ia32_undef512();
 }
 
