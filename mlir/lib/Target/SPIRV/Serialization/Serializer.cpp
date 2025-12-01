@@ -1443,7 +1443,20 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
         assert(branchCondOp.getFalseTarget() == block);
         blockOperands = branchCondOp.getFalseTargetOperands();
       }
-
+      assert(!blockOperands->empty() &&
+             "expected non-empty block operand range");
+      predecessors.emplace_back(spirvPredecessor, *blockOperands);
+    } else if (auto switchOp = dyn_cast<spirv::SwitchOp>(terminator)) {
+      std::optional<OperandRange> blockOperands;
+      if (block == switchOp.getDefaultTarget()) {
+        blockOperands = switchOp.getDefaultOperands();
+      } else {
+        SuccessorRange targets = switchOp.getTargets();
+        auto it = llvm::find(targets, block);
+        assert(it != targets.end());
+        size_t index = std::distance(targets.begin(), it);
+        blockOperands = switchOp.getTargetOperands(index);
+      }
       assert(!blockOperands->empty() &&
              "expected non-empty block operand range");
       predecessors.emplace_back(spirvPredecessor, *blockOperands);
