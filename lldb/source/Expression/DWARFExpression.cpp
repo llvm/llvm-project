@@ -861,14 +861,13 @@ ResolveLoadAddress(ExecutionContext *exe_ctx, lldb::ModuleSP &module_sp,
   return load_addr;
 }
 
-/// Helper function to move common code used to load sized data from a uint8_t
-/// buffer.
+/// @brief Helper function to load sized data from a uint8_t buffer.
 ///
-/// \param addr_bytes uint8_t buffer containg raw data
-/// \param size_addr_bytes how large is the underlying raw data
-/// \param byte_order what is the byter order of the underlyig data
-/// \param size How much of the underlying data we want to use
-/// \return The underlying data converted into a Scalar
+/// @param addr_bytes The buffer containing raw data.
+/// @param size_addr_bytes How large is the underlying raw data.
+/// @param byte_order What is the byte order of the underlying data.
+/// @param size How much of the underlying data we want to use.
+/// @return The underlying data converted into a Scalar.
 static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
                                          size_t size_addr_bytes,
                                          ByteOrder byte_order, size_t size) {
@@ -877,8 +876,7 @@ static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
   lldb::offset_t addr_data_offset = 0;
   if (size <= 8)
     return addr_data.GetMaxU64(&addr_data_offset, size);
-  else
-    return addr_data.GetAddress(&addr_data_offset);
+  return addr_data.GetAddress(&addr_data_offset);
 }
 
 static llvm::Error Evaluate_DW_OP_deref_size(DWARFExpression::Stack &stack,
