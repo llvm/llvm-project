@@ -83,6 +83,8 @@ public:
   bool GetUseSwiftClangImporter() const;
   bool GetUseSwiftDWARFImporter() const;
   bool SetUseSwiftDWARFImporter(bool new_value);
+  bool GetUseSwiftExplicitModuleLoader() const;
+  bool SetUseSwiftExplicitModuleLoader(bool new_value);
   bool GetSwiftValidateTypeSystem() const;
   bool GetSwiftTypeSystemFallback() const;
   bool GetSwiftLoadConformances() const;
