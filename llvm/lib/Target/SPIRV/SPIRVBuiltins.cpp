@@ -1154,6 +1154,29 @@ static unsigned getNumSizeComponents(SPIRVType *imgType) {
   return arrayed ? numComps + 1 : numComps;
 }
 
+static bool builtinMayNeedPromotionToVec(uint32_t BuiltinNumber) {
+  switch (BuiltinNumber) {
+  case SPIRV::OpenCLExtInst::s_min:
+  case SPIRV::OpenCLExtInst::u_min:
+  case SPIRV::OpenCLExtInst::s_max:
+  case SPIRV::OpenCLExtInst::u_max:
+  case SPIRV::OpenCLExtInst::fmax:
+  case SPIRV::OpenCLExtInst::fmin:
+  case SPIRV::OpenCLExtInst::fmax_common:
+  case SPIRV::OpenCLExtInst::fmin_common:
+  case SPIRV::OpenCLExtInst::s_clamp:
+  case SPIRV::OpenCLExtInst::fclamp:
+  case SPIRV::OpenCLExtInst::u_clamp:
+  case SPIRV::OpenCLExtInst::mix:
+  case SPIRV::OpenCLExtInst::step:
+  case SPIRV::OpenCLExtInst::smoothstep:
+    return true;
+  default:
+    break;
+  }
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Implementation functions for each builtin group
 //===----------------------------------------------------------------------===//
@@ -1179,16 +1202,37 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
                  : SPIRV::OpenCLExtInst::fmax;
   }
 
+  Register ReturnTypeId = GR->getSPIRVTypeID(Call->ReturnType);
+  SmallVector<Register> Arguments;
+  unsigned ResultElementCount =
+      GR->getScalarOrVectorComponentCount(ReturnTypeId);
+  bool MayNeedPromotionToVec =
+      builtinMayNeedPromotionToVec(Number) && ResultElementCount > 1;
+  for (Register Argument : Call->Arguments) {
+    Register PromotedArg = Argument;
+    SPIRVType *ArgumentType = GR->getSPIRVTypeForVReg(Argument);
+    if (MayNeedPromotionToVec && ArgumentType != Call->ReturnType) {
+      PromotedArg = createVirtualRegister(Call->ReturnType, GR, MIRBuilder);
+      auto VecBroadcast = MIRBuilder.buildInstr(SPIRV::OpCompositeConstruct)
+                              .addDef(PromotedArg)
+                              .addUse(ReturnTypeId);
+      for (unsigned I = 0; I != ResultElementCount; ++I)
+        VecBroadcast.addUse(Argument);
+    }
+    Arguments.push_back(PromotedArg);
+  }
+
   // Build extended instruction.
   auto MIB =
       MIRBuilder.buildInstr(SPIRV::OpExtInst)
           .addDef(Call->ReturnRegister)
-          .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+          .addUse(ReturnTypeId)
           .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::OpenCL_std))
           .addImm(Number);
 
-  for (auto Argument : Call->Arguments)
+  for (Register Argument : Arguments)
     MIB.addUse(Argument);
+
   MIB.getInstr()->copyIRFlags(CB);
   if (OrigNumber == SPIRV::OpenCLExtInst::fmin_common ||
       OrigNumber == SPIRV::OpenCLExtInst::fmax_common) {
