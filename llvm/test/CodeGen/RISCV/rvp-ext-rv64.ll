@@ -815,8 +815,8 @@ define void @test_psll_ws(ptr %ret_ptr, ptr %a_ptr, i32 %shamt) {
 ; CHECK-NEXT:    sd a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i32>, ptr %a_ptr
-  %insert = insertelement <2 x i32> undef, i32 %shamt, i32 0
-  %b = shufflevector <2 x i32> %insert, <2 x i32> undef, <2 x i32> zeroinitializer
+  %insert = insertelement <2 x i32> poison, i32 %shamt, i32 0
+  %b = shufflevector <2 x i32> %insert, <2 x i32> poison, <2 x i32> zeroinitializer
   %res = shl <2 x i32> %a, %b
   store <2 x i32> %res, ptr %ret_ptr
   ret void

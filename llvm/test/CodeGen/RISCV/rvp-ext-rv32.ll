@@ -647,8 +647,8 @@ define void @test_psll_hs(ptr %ret_ptr, ptr %a_ptr, i16 %shamt) {
 ; CHECK-NEXT:    sw a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i16>, ptr %a_ptr
-  %insert = insertelement <2 x i16> undef, i16 %shamt, i32 0
-  %b = shufflevector <2 x i16> %insert, <2 x i16> undef, <2 x i32> zeroinitializer
+  %insert = insertelement <2 x i16> poison, i16 %shamt, i32 0
+  %b = shufflevector <2 x i16> %insert, <2 x i16> poison, <2 x i32> zeroinitializer
   %res = shl <2 x i16> %a, %b
   store <2 x i16> %res, ptr %ret_ptr
   ret void
@@ -662,8 +662,8 @@ define void @test_psll_bs(ptr %ret_ptr, ptr %a_ptr, i8 %shamt) {
 ; CHECK-NEXT:    sw a1, 0(a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i8>, ptr %a_ptr
-  %insert = insertelement <4 x i8> undef, i8 %shamt, i32 0
-  %b = shufflevector <4 x i8> %insert, <4 x i8> undef, <4 x i32> zeroinitializer
+  %insert = insertelement <4 x i8> poison, i8 %shamt, i32 0
+  %b = shufflevector <4 x i8> %insert, <4 x i8> poison, <4 x i32> zeroinitializer
   %res = shl <4 x i8> %a, %b
   store <4 x i8> %res, ptr %ret_ptr
   ret void
