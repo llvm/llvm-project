@@ -2154,8 +2154,6 @@ public:
   void Post(const parser::CompilerDirective &);
 
   bool Pre(const parser::ArrayElement &);
-  bool Pre(const parser::Substring &);
-  bool Pre(const parser::CoindexedNamedObject &);
 
   // These nodes should never be reached: they are handled in ProgramUnit
   bool Pre(const parser::MainProgram &) {
@@ -8756,10 +8754,7 @@ const parser::Name *DeclarationVisitor::ResolveDesignator(
       common::visitors{
           [&](const parser::DataRef &x) { return ResolveDataRef(x); },
           [&](const parser::Substring &x) {
-            {
-              auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
-              Walk(std::get<parser::SubstringRange>(x.t).t);
-            }
+            Walk(std::get<parser::SubstringRange>(x.t).t);
             return ResolveDataRef(std::get<parser::DataRef>(x.t));
           },
       },
@@ -8776,6 +8771,8 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
           },
           [&](const Indirection<parser::ArrayElement> &y) {
             {
+              // Turn off "in EQUIVALENCE" check for array indexing, because
+              // the indices themselves are not part of the EQUIVALENCE.
               auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
               Walk(y.value().subscripts);
             }
@@ -8792,10 +8789,7 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
             return name;
           },
           [&](const Indirection<parser::CoindexedNamedObject> &y) {
-            {
-              auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
-              Walk(y.value().imageSelector);
-            }
+            Walk(y.value().imageSelector);
             return ResolveDataRef(y.value().base);
           },
       },
@@ -10233,26 +10227,10 @@ template <typename A> std::set<SourceName> GetUses(const A &x) {
 bool ResolveNamesVisitor::Pre(const parser::ArrayElement &x) {
   Walk(x.base);
   {
+    // Turn off "in EQUIVALENCE" check for array indexing, because
+    // the indices themselves are not part of the EQUIVALENCE.
     auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
     Walk(x.subscripts);
-  }
-  return false;
-}
-
-bool ResolveNamesVisitor::Pre(const parser::Substring &x) {
-  {
-    auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
-    Walk(std::get<parser::SubstringRange>(x.t).t);
-  }
-  Walk(std::get<parser::DataRef>(x.t));
-  return false;
-}
-
-bool ResolveNamesVisitor::Pre(const parser::CoindexedNamedObject &x) {
-  Walk(x.base);
-  {
-    auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
-    Walk(x.imageSelector);
   }
   return false;
 }
