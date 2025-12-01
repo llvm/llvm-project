@@ -179,11 +179,23 @@ AArch64PrologueEpilogueCommon::convertCalleeSaveRestoreToSPPrePostIncDec(
   (void)Success;
   assert(Success && "unknown load/store opcode");
 
+  const auto *TRI = Subtarget.getRegisterInfo();
   // If the first store isn't right where we want SP then we can't fold the
   // update in so create a normal arithmetic instruction instead.
+  //
+  // On Windows, some register pairs involving LR can't be folded because
+  // there isn't a corresponding unwind opcode. (Note that packed unwind expects
+  // a sequence like "sub sp, sp, #16; stp x19, lr, [sp]; sub sp, sp, #16",
+  // but we currently generate "sub sp, sp, #32; stp x19, lr, [sp, #16]". We
+  // could handle that here, but it's not clearly profitable; it saves up to
+  // 4 words of xdata, but it costs 2 instructions.)
   if (MBBI->getOperand(MBBI->getNumOperands() - 1).getImm() != 0 ||
       CSStackSizeInc < MinOffset * (int64_t)Scale.getFixedValue() ||
-      CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue()) {
+      CSStackSizeInc > MaxOffset * (int64_t)Scale.getFixedValue() ||
+      (NeedsWinCFI &&
+       (NewOpc == AArch64::LDPXpost || NewOpc == AArch64::STPXpre) &&
+       TRI->getEncodingValue(MBBI->getOperand(0).getReg()) + 1 !=
+           TRI->getEncodingValue(MBBI->getOperand(1).getReg()))) {
     // If we are destroying the frame, make sure we add the increment after the
     // last frame operation.
     if (FrameFlag == MachineInstr::FrameDestroy) {
