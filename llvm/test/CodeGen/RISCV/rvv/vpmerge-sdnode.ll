@@ -1148,8 +1148,10 @@ define <vscale x 8 x i64> @vpmerge_vx_nxv8i64(i64 %a, <vscale x 8 x i64> %vb, <v
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli zero, a2, e64, m8, tu, mu
-; RV32-NEXT:    vlse64.v v8, (a0), zero, v0.t
+; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; RV32-NEXT:    vlse64.v v16, (a0), zero
+; RV32-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
+; RV32-NEXT:    vmerge.vvm v8, v8, v16, v0
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret

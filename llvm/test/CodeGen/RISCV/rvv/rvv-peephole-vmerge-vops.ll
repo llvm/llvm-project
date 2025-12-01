@@ -859,17 +859,19 @@ define void @test_dag_loop() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 0, e8, m4, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmv.v.i v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, m4, tu, mu
-; CHECK-NEXT:    vssubu.vx v12, v8, zero, v0.t
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vsetivli zero, 1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v8, (zero)
+; CHECK-NEXT:    vmv4r.v v20, v16
+; CHECK-NEXT:    vsetivli zero, 0, e8, m4, tu, mu
+; CHECK-NEXT:    vssubu.vx v20, v16, zero, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmseq.vv v0, v12, v8
+; CHECK-NEXT:    vmseq.vv v0, v20, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m8, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m8, tu, mu
-; CHECK-NEXT:    vle16.v v8, (zero), v0.t
-; CHECK-NEXT:    vse16.v v8, (zero)
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vsetvli zero, zero, e16, m8, tu, ma
+; CHECK-NEXT:    vmerge.vvm v16, v16, v8, v0
+; CHECK-NEXT:    vse16.v v16, (zero)
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 32 x i16> @llvm.riscv.vle.nxv32i16.i64(<vscale x 32 x i16> poison, ptr null, i64 1)
