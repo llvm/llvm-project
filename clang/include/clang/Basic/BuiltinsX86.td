@@ -21,15 +21,15 @@ def rdtscp : X86Builtin<"unsigned long long int(unsigned int*)">;
 
 // Undefined Values
 def undef128 : X86Builtin<"_Vector<2, double>()"> {
-  let Attributes = [Const, NoThrow, Constexpr, RequiredVectorWidth<128>];
+  let Attributes = [Const, NoThrow, RequiredVectorWidth<128>];
 }
 
 def undef256 : X86Builtin<"_Vector<4, double>()"> {
-  let Attributes = [Const, NoThrow, Constexpr, RequiredVectorWidth<256>];
+  let Attributes = [Const, NoThrow, RequiredVectorWidth<256>];
 }
 
 def undef512 : X86Builtin<"_Vector<8, double>()"> {
-  let Attributes = [Const, NoThrow, Constexpr, RequiredVectorWidth<512>];
+  let Attributes = [Const, NoThrow, RequiredVectorWidth<512>];
 }
 
 // FLAGS

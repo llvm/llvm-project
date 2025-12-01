@@ -1892,7 +1892,7 @@ _mm_loadr_ps(const float *__p)
 /// This intrinsic has no corresponding instruction.
 ///
 /// \returns A 128-bit vector of [4 x float] containing undefined values.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_undefined_ps(void)
 {
   return (__m128)__builtin_ia32_undef128();

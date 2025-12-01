@@ -207,7 +207,7 @@ _mm512_undefined(void)
   return (__m512)__builtin_ia32_undef512();
 }
 
-static __inline__ __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_undefined_ps(void) {
+static __inline__ __m512 __DEFAULT_FN_ATTRS512 _mm512_undefined_ps(void) {
   return (__m512)__builtin_ia32_undef512();
 }
 
@@ -3490,7 +3490,7 @@ _mm512_mask_cvtepu32lo_pd(__m512d __W, __mmask8 __U, __m512i __A) {
 static __inline__ __m256 __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_cvtpd_ps(__m512d __A) {
   return (__m256) __builtin_ia32_cvtpd2ps512_mask ((__v8df) __A,
-                (__v8sf) _mm256_undefined_ps (),
+                (__v8sf) _mm256_setzero_ps (),
                 (__mmask8) -1,
                 _MM_FROUND_CUR_DIRECTION);
 }
