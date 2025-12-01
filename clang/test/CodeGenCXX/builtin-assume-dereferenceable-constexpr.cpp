@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++14 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++14 -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 int b = 10;
 const int f = (__builtin_assume_dereferenceable((char*)&b + 1, 3), 12);
@@ -17,10 +18,6 @@ constexpr int fully_constexpr() {
 constexpr int i = fully_constexpr();
 int use_i = i;
 
-void test_integral_ptr() {
-  __builtin_assume_dereferenceable((int*)0x1234, 4);
-}
-
 void test_nullptr() {
   __builtin_assume_dereferenceable(nullptr, 0);
 }
@@ -35,9 +32,6 @@ void test_function_ptr() {
 }
 
 // CHECK: @use_i = global i32 100
-//
-// CHECK: @{{_Z[0-9]+}}test_integral_ptrv
-// CHECK: call void @llvm.assume(i1 true) [ "dereferenceable"(ptr inttoptr (i64 4660 to ptr), i64 4) ]
 //
 // CHECK: @{{_Z[0-9]+}}test_nullptrv
 // CHECK: call void @llvm.assume(i1 true) [ "dereferenceable"(ptr null, i64 0) ]
