@@ -33,6 +33,7 @@ resources at `Wikipedia
 <https://en.cppreference.com/w/cpp/language/modules.html>`_ and `cppreference
 <https://en.wikipedia.org/wiki/Modules_(C++)>`_ can provide more background
 information about modules if needed.
+
 Background and terminology
 --------------------------
 
