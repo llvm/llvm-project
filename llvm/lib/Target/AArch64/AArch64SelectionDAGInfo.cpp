@@ -164,6 +164,7 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
   TargetLowering::ArgListTy Args;
   Args.emplace_back(Op0, PointerType::getUnqual(*DAG.getContext()));
 
+  bool UsesResult = false;
   RTLIB::Libcall NewLC;
   switch (LC) {
   case RTLIB::MEMCPY: {
@@ -183,6 +184,7 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
     break;
   }
   case RTLIB::MEMCHR: {
+    UsesResult = true;
     NewLC = RTLIB::SC_MEMCHR;
     Args.emplace_back(DAG.getZExtOrTrunc(Op1, DL, MVT::i32),
                       Type::getInt32Ty(*DAG.getContext()));
@@ -202,9 +204,7 @@ SDValue AArch64SelectionDAGInfo::EmitStreamingCompatibleMemLibCall(
       TLI->getLibcallCallingConv(NewLC), RetTy, Symbol, std::move(Args));
 
   auto [Result, ChainOut] = TLI->LowerCallTo(CLI);
-  if (LC == RTLIB::MEMCHR)
-    return DAG.getMergeValues({Result, ChainOut}, DL);
-  return ChainOut;
+  return UsesResult ? DAG.getMergeValues({Result, ChainOut}, DL) : ChainOut;
 }
 
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
