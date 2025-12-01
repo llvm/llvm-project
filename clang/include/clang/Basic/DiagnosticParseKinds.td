@@ -1853,7 +1853,7 @@ def err_placeholder_expected_auto_or_decltype_auto : Error<
 
 let CategoryName = "Reflection Diagnostics" in {
 def err_cannot_reflect_operand : Error<
-  "expected reflectable entity">;
+  "unknown or unimplemented reflectable entity">;
 }
 
 def warn_max_tokens : Warning<
