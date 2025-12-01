@@ -1425,14 +1425,13 @@ bool MachineBasicBlock::canSplitCriticalEdge(const MachineBasicBlock *Succ,
   // where both sides of the branches are always executed.
 
   if (MF->getTarget().requiresStructuredCFG()) {
+    if (!MLI)
+      return false;
+    const MachineLoop *L = MLI->getLoopFor(Succ);
     // If `Succ` is a loop header, splitting the critical edge will not
     // break structured CFG.
-    if (MLI) {
-      const MachineLoop *L = MLI->getLoopFor(Succ);
-      return L && L->getHeader() == Succ;
-    }
-
-    return false;
+    if (!L || L->getHeader() != Succ)
+      return false;
   }
 
   // Do we have an Indirect jump with a jumptable that we can rewrite?
@@ -1459,6 +1458,7 @@ bool MachineBasicBlock::canSplitCriticalEdge(const MachineBasicBlock *Succ,
                       << printMBBReference(*this) << '\n');
     return false;
   }
+
   return true;
 }
 
