@@ -428,6 +428,17 @@ void bad_reference_to_unique_lock_using() {
     ++counter;
 }
 
+void bad_safe_string_default() {
+    std::string str; DUMMY_TOKEN
+    if (str.empty()) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'str' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (std::string str; str.empty()) {
+        do_some();
+    }
+    do_some(); // Additional statement after if
+}
+
 #define OPEN_PAREN_I1 (i1
 #define OPEN_PAREN_I2 (i2
 #define OPEN_PAREN_F() (
@@ -615,15 +626,4 @@ void bad_macro10() {
             do_some();
             break;
     }
-}
-
-void bad_safe_string_default() {
-    std::string str; DUMMY_TOKEN
-    if (str.empty()) {
-// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'str' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
-// CHECK-FIXES: DUMMY_TOKEN
-// CHECK-FIXES-NEXT: if (std::string str; str.empty()) {
-        do_some();
-    }
-    do_some(); // Additional statement after if
 }
