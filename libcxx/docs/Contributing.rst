@@ -311,6 +311,9 @@ To do so, you will need to create a PR in the llvm-zorg repository and wait for 
 merged. Once that change has been merged, an LLVM premerge maintainer (a Google employee)
 must use terraform to apply the change to the running GKE cluster.
 
+.. note:: When you update the ``libcxx_runner_image``, also make sure to update the
+          ``libcxx/utils/ci/run-buildbot-container`` script to contain the new image.
+
 
 Monitoring premerge testing performance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
