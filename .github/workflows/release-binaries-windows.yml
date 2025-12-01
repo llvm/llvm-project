@@ -69,7 +69,7 @@ jobs:
               ;;
           esac
           echo "installer-name=LLVM-$version_string-$installer_arch.exe" >> $GITHUB_OUTPUT
-          echo "tar-name=$tar_arch-pc-windows-msvc.tar.xz" >> $GITHUB_OUTPUT 
+          echo "tar-name=clang+llvm-$version_string-$tar_arch-pc-windows-msvc.tar.xz" >> $GITHUB_OUTPUT 
           echo "installer-dir=build_$installer_dir_arch" >> $GITHUB_OUTPUT
           echo "script-options=$script_options" >> $GITHUB_OUTPUT
           echo "version-string=$version_string" >> $GITHUB_OUTPUT
