@@ -9,7 +9,7 @@ This check helps to adopt the C++17 feature that allows variable initialization 
 
 Examples
 --------
-пш
+
 .. code-block:: c++
 
   // Variable declaration before if - will be detected
