@@ -273,7 +273,9 @@ def generate_report(
             )
             report.extend(_format_failures(ninja_failures, failure_explanations))
     else:
-        report.extend(["", ":white_check_mark: The build succeeded and all tests passed."])
+        report.extend(
+            ["", ":white_check_mark: The build succeeded and all tests passed."]
+        )
 
     if failures or return_code != 0:
         report.extend(["", UNRELATED_FAILURES_STR])
