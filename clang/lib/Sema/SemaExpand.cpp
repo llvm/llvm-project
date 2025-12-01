@@ -316,6 +316,17 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
         RParenLoc);
   }
 
+  if (RequireCompleteType(ExpansionInitializer->getExprLoc(),
+                          ExpansionInitializer->getType(),
+                          diag::err_expansion_stmt_incomplete))
+    return StmtError();
+
+  if (ExpansionInitializer->getType()->isVariableArrayType()) {
+    Diag(ExpansionInitializer->getExprLoc(), diag::err_expansion_stmt_vla)
+        << ExpansionInitializer->getType();
+    return StmtError();
+  }
+
   // Otherwise, if it can be an iterating expansion statement, it is one.
   DeclRefExpr *Index = BuildIndexDRE(*this, ESD);
   IterableExpansionStmtData Data = TryBuildIterableExpansionStmtInitializer(
