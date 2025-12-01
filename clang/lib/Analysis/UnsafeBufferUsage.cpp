@@ -1650,11 +1650,27 @@ static bool hasAnyBoundsAttributes(const FunctionDecl *FD) {
          });
 }
 
+// Constant fold a conditional expression 'cond ? A : B' to
+// - 'A', if 'cond' has constant true value;
+// - 'B', if 'cond' has constant false value.
+static const Expr *tryConstantFoldConditionalExpr(const Expr *E,
+                                                  const ASTContext &Ctx) {
+  // FIXME: more places can use this function
+  if (const auto *CE = dyn_cast<ConditionalOperator>(E)) {
+    bool CondEval;
+
+    if (CE->getCond()->EvaluateAsBooleanCondition(CondEval, Ctx))
+      return CondEval ? CE->getLHS() : CE->getRHS();
+  }
+  return E;
+}
+
 // A pointer type expression is known to be null-terminated, if
 //  1. it is a string literal or `PredefinedExpr` (e.g., `__func__`);
 //  2. it has the form: E.c_str(), for any expression E of `std::string` type;
 //  3. it has `__null_terminated` type
 static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
+  Ptr = tryConstantFoldConditionalExpr(Ptr, Ctx);
   if (isa<clang::StringLiteral>(Ptr->IgnoreParenImpCasts()))
     return true;
   if (isa<PredefinedExpr>(Ptr->IgnoreParenImpCasts()))
