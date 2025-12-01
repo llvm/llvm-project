@@ -1024,9 +1024,8 @@ LLVMErrorRef LLVMOrcCreateObjectLinkingLayerWithInProcessMemoryManager(
   assert(Result && "Result must not be null");
   assert(ES && "ES must not be null");
   auto MM = jitlink::InProcessMemoryManager::Create();
-  if (!MM) {
+  if (!MM)
     return wrap(MM.takeError());
-  }
   *Result = wrap(new ObjectLinkingLayer(*unwrap(ES), std::move(*MM)));
   return LLVMErrorSuccess;
 }
