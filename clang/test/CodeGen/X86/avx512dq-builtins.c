@@ -378,13 +378,14 @@ unsigned int test_cvtmask8_u32(__m512i A, __m512i B) {
   return _cvtmask8_u32(_mm512_cmpneq_epu64_mask(A, B));
 }
 
+TEST_CONSTEXPR(_cvtmask8_u32((__mmask8)0x5A) == 0x5A);
+
 __mmask8 test_cvtu32_mask8(__m512i A, __m512i B, unsigned int C) {
   // CHECK-LABEL: test_cvtu32_mask8
   // CHECK: trunc i32 %{{.*}} to i8
   return _mm512_mask_cmpneq_epu64_mask(_cvtu32_mask8(C), A, B);
 }
 
-TEST_CONSTEXPR(_cvtmask8_u32((__mmask8)0x5A) == 0x5A);
 TEST_CONSTEXPR(_cvtu32_mask8(0xB7) == (__mmask8)0xB7);
 TEST_CONSTEXPR(_cvtu32_mask8(_cvtmask8_u32((__mmask8)0xDE)) == (__mmask8)0xDE);
 
