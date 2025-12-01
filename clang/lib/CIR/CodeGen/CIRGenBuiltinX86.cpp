@@ -880,16 +880,16 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_prolq128:
   case X86::BI__builtin_ia32_prolq256:
   case X86::BI__builtin_ia32_prolq512:
-    return emitX86FunnelShift(this->getBuilder(), getLoc(expr->getExprLoc()),
-                              ops[0], ops[0], ops[1], false);
+    return emitX86FunnelShift(builder, getLoc(expr->getExprLoc()), ops[0],
+                              ops[0], ops[1], false);
   case X86::BI__builtin_ia32_prord128:
   case X86::BI__builtin_ia32_prord256:
   case X86::BI__builtin_ia32_prord512:
   case X86::BI__builtin_ia32_prorq128:
   case X86::BI__builtin_ia32_prorq256:
   case X86::BI__builtin_ia32_prorq512:
-    return emitX86FunnelShift(this->getBuilder(), getLoc(expr->getExprLoc()),
-                              ops[0], ops[0], ops[1], true);
+    return emitX86FunnelShift(builder, getLoc(expr->getExprLoc()), ops[0],
+                              ops[0], ops[1], true);
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
   case X86::BI__builtin_ia32_selectb_512:
