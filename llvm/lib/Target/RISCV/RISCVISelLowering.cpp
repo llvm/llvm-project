@@ -8605,6 +8605,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDLoc DL(Op);
       SmallVector<SDValue, 2> Results;
 
+      // We have patterns for scalar/immediate shift amount, so no lowering
+      // needed.
       if (Src1.getNode()->getOpcode() == ISD::SPLAT_VECTOR)
         return Op;
 
