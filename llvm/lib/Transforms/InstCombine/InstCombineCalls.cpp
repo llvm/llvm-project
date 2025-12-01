@@ -1175,20 +1175,16 @@ static Instruction *moveAddAfterMinMax(IntrinsicInst *II,
                   : BinaryOperator::CreateNUWAdd(NewMinMax, Add->getOperand(1));
 }
 
-/// Returns weather the it holds for (X LOp Y) ROp Z -> (X ROp Z) LOp (Y ROp Z)
-
 static bool rightDistributesOverLeft(Instruction::BinaryOps ROp, bool HasNUW,
                                      bool HasNSW, Intrinsic::ID LOp) {
   switch (LOp) {
   case Intrinsic::umax:
-    if (HasNUW && (ROp == Instruction::AShr || ROp == Instruction::LShr ||
-                   ROp == Instruction::UDiv || ROp == Instruction::Mul ||
-                   ROp == Instruction::Add))
+    if ((HasNUW && (ROp == Instruction::UDiv || ROp == Instruction::Mul ||
+                   ROp == Instruction::Add)) || ROp == Instruction::AShr || ROp == Instruction::LShr )
       return true;
     return false;
   case Intrinsic::umin:
-    if (HasNUW && (ROp == Instruction::AShr || ROp == Instruction::LShr ||
-                   ROp == Instruction::UDiv || ROp == Instruction::Sub))
+    if ((HasNUW && (ROp == Instruction::UDiv || ROp == Instruction::Sub)) || ROp == Instruction::AShr || ROp == Instruction::LShr)
       return true;
     return false;
   case Intrinsic::smax:
@@ -1203,7 +1199,7 @@ static bool rightDistributesOverLeft(Instruction::BinaryOps ROp, bool HasNUW,
 
 ///  Try canonicalize max(max(X,C1) binop C2, C3) -> max(X binop C2, max(C1
 ///  binop C2, C3))
-/// -> max(X binop C2, C4)  //
+/// -> max(X binop C2, C4) 
 
 static Instruction *reduceMinMax(IntrinsicInst *II,
                                  InstCombiner::BuilderTy &Builder,
@@ -1253,13 +1249,8 @@ static Instruction *reduceMinMax(IntrinsicInst *II,
 
   // Set overflow flags on new binary operation
   if (auto *NewBinInst = dyn_cast<Instruction>(NewBinOp)) {
-    if (IsSigned) {
-      NewBinInst->setHasNoSignedWrap(true);
-      NewBinInst->setHasNoUnsignedWrap(false);
-    } else {
-      NewBinInst->setHasNoUnsignedWrap(true);
-      NewBinInst->setHasNoSignedWrap(false);
-    }
+    NewBinInst->setHasNoSignedWrap(IsSigned);
+    NewBinInst->setHasNoUnsignedWrap(!IsSigned);
   }
 
   // Create constant for C4
