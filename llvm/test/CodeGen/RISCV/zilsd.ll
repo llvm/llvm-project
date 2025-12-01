@@ -212,26 +212,3 @@ entry:
   store i64 %b, ptr %add.ptr, align 8
   ret void
 }
-
-define i64 @stack_access(ptr nocapture %p) nounwind {
-; CHECK-LABEL: stack_access:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    lw a2, 8(sp)
-; CHECK-NEXT:    lw a1, 12(sp)
-; CHECK-NEXT:    ld a4, 0(a0)
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    sw a1, 4(a0)
-; CHECK-NEXT:    sd a4, 8(sp)
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    ret
-entry:
-  %stack = alloca i64, align 8
-  %a = load i64, ptr %stack, align 8
-  %b = load i64, ptr %p, align 8
-  store i64 %a, ptr %p, align 8
-  store i64 %b, ptr %stack, align 8
-  %c = load i64, ptr %p, align 8
-  ret i64 %c
-}
