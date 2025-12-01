@@ -795,6 +795,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 
     // Update scalar users of IV to use Step instead.
     if (!HasOnlyVectorVFs) {
+      assert(!Plan.hasScalableVF() &&
+             "plans containing a scalar VF cannot also include scalable VFs");
       WideIV->replaceAllUsesWith(Steps);
     } else {
       bool HasScalableVF = Plan.hasScalableVF();
