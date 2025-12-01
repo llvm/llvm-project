@@ -167,6 +167,37 @@ static llvm::APSInt convertBoolVectorToInt(const Pointer &Val) {
   return Result;
 }
 
+// Strict double -> float conversion used for X86 PD2PS/cvtsd2ss intrinsics.
+// Reject NaN/Inf/Subnormal inputs and any lossy/inexact conversions.
+static bool convertDoubleToFloatStrict(APFloat Src, Floating &Dst, InterpState &S,
+                                const Expr *DiagExpr) {
+  if (Src.isInfinity()) {
+    if (S.diagnosing())
+      S.CCEDiag(DiagExpr, diag::note_constexpr_float_arithmetic) << 0;
+    return false;
+  }
+  if (Src.isNaN()) {
+    if (S.diagnosing())
+      S.CCEDiag(DiagExpr, diag::note_constexpr_float_arithmetic) << 1;
+    return false;
+  }
+  APFloat Val = Src;
+  bool LosesInfo = false;
+  APFloat::opStatus Status = Val.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &LosesInfo);
+  if (LosesInfo || Val.isDenormal()) {
+    if (S.diagnosing())
+      S.CCEDiag(DiagExpr, diag::note_constexpr_float_arithmetic_strict);
+    return false;
+  }
+  if (Status != APFloat::opOK) {
+    if (S.diagnosing())
+      S.CCEDiag(DiagExpr, diag::note_invalid_subexpr_in_const_expr);
+    return false;
+  }
+  Dst.copy(Val);
+  return true;
+}
+
 static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
                                                   const InterpFrame *Frame,
                                                   const CallExpr *Call) {
@@ -3359,6 +3390,140 @@ static bool interp__builtin_ia32_cvt_vec2mask(InterpState &S, CodePtr OpPC,
   pushInteger(S, RetMask, Call->getType());
   return true;
 }
+static bool interp__builtin_ia32_cvtsd2ss(InterpState &S, CodePtr OpPC,
+                                         const CallExpr *Call) {
+  assert(Call->getNumArgs() == 2);
+
+  const Pointer &B = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+  if (!CheckLoad(S, OpPC, A) || !CheckLoad(S, OpPC, B))
+    return false;
+
+  const auto *DstVTy = Call->getType()->castAs<VectorType>();
+  unsigned NumElems = DstVTy->getNumElements();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  // Copy all elements from A to Dst
+  for (unsigned I = 0; I != NumElems; ++I)
+    Dst.elem<Floating>(I) = A.elem<Floating>(I);
+
+  // Convert element 0 from double to float
+  Floating Conv = S.allocFloat(
+      S.getASTContext().getFloatTypeSemantics(S.getASTContext().FloatTy));
+  APFloat SrcD = B.elem<Floating>(0).getAPFloat();
+  if (!convertDoubleToFloatStrict(SrcD, Conv, S, Call))
+    return false;
+  Dst.elem<Floating>(0) = Conv;
+
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_ia32_cvtsd2ss_round_mask(InterpState &S,
+                                                      CodePtr OpPC,
+                                                      const CallExpr *Call) {
+  assert(Call->getNumArgs() == 5);
+
+  // Pop in reverse order: rounding, mask, src, b, a
+  APSInt Rounding = popToAPSInt(S, Call->getArg(4)->getType());
+  APSInt MaskInt = popToAPSInt(S, Call->getArg(3)->getType());
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  const Pointer &B = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+  if (!CheckLoad(S, OpPC, A) || !CheckLoad(S, OpPC, B) || !CheckLoad(S, OpPC, Src))
+    return false;
+
+  const auto *DstVTy = Call->getType()->castAs<VectorType>();
+  unsigned NumElems = DstVTy->getNumElements();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  // Copy all elements from A to Dst
+  for (unsigned I = 0; I != NumElems; ++I)
+    Dst.elem<Floating>(I) = A.elem<Floating>(I);
+
+  // If mask bit 0 is set, convert element 0 from double to float; otherwise use Src
+  if (MaskInt.getZExtValue() & 0x1) {
+    Floating Conv = S.allocFloat(
+        S.getASTContext().getFloatTypeSemantics(S.getASTContext().FloatTy));
+    APFloat SrcD = B.elem<Floating>(0).getAPFloat();
+    if (!convertDoubleToFloatStrict(SrcD, Conv, S, Call))
+      return false;
+    Dst.elem<Floating>(0) = Conv;
+  } else {
+    Dst.elem<Floating>(0) = Src.elem<Floating>(0);
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
+                                          const CallExpr *Call,
+                                          unsigned BuiltinID) {
+  bool IsMasked = (BuiltinID == X86::BI__builtin_ia32_cvtpd2ps_mask ||
+                   BuiltinID == X86::BI__builtin_ia32_cvtpd2ps512_mask);
+  bool HasRounding = (BuiltinID == X86::BI__builtin_ia32_cvtpd2ps512_mask);
+  
+  APSInt MaskVal(1, false);
+  Pointer PassThrough;
+  Pointer SrcPd;
+  APSInt Rounding;
+  
+  if (IsMasked) {
+    // Pop in reverse order
+    if (HasRounding) {
+      // For 512: rounding, mask, passthrough, source
+      Rounding = popToAPSInt(S, Call->getArg(3)->getType());
+      MaskVal = popToAPSInt(S, Call->getArg(2)->getType());
+      PassThrough = S.Stk.pop<Pointer>();
+      SrcPd = S.Stk.pop<Pointer>();
+    } else {
+      // For VL: mask, passthrough, source
+      MaskVal = popToAPSInt(S, Call->getArg(2)->getType());
+      PassThrough = S.Stk.pop<Pointer>();
+      SrcPd = S.Stk.pop<Pointer>();
+    }
+    
+    if (!CheckLoad(S, OpPC, PassThrough))
+      return false;
+  } else {
+    // Pop source only
+    SrcPd = S.Stk.pop<Pointer>();
+  }
+  
+  if (!CheckLoad(S, OpPC, SrcPd))
+    return false;
+
+  const auto *RetVTy = Call->getType()->castAs<VectorType>();
+  unsigned RetElems = RetVTy->getNumElements();
+  unsigned SrcElems = SrcPd.getNumElems();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  // Initialize destination with passthrough or zeros
+  for (unsigned I = 0; I != RetElems; ++I) {
+    if (IsMasked) {
+      Dst.elem<Floating>(I) = PassThrough.elem<Floating>(I);
+    } else {
+      Dst.elem<Floating>(I) = Floating(APFloat(0.0f));
+    }
+  }
+
+  // Convert double to float for enabled elements (only process source elements that exist)
+  for (unsigned I = 0; I != SrcElems; ++I) {
+    if (IsMasked && (((MaskVal.getZExtValue() >> I) & 0x1) == 0))
+      continue;
+
+    APFloat SrcD = SrcPd.elem<Floating>(I).getAPFloat();
+    Floating Conv = S.allocFloat(
+        S.getASTContext().getFloatTypeSemantics(S.getASTContext().FloatTy));
+    if (!convertDoubleToFloatStrict(SrcD, Conv, S, Call))
+      return false;
+    Dst.elem<Floating>(I) = Conv;
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
 
 static bool interp__builtin_ia32_shuffle_generic(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
@@ -5168,6 +5333,17 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cvtq2mask256:
   case X86::BI__builtin_ia32_cvtq2mask512:
     return interp__builtin_ia32_cvt_vec2mask(S, OpPC, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_cvtsd2ss:
+    return interp__builtin_ia32_cvtsd2ss(S, OpPC, Call);
+
+  case X86::BI__builtin_ia32_cvtsd2ss_round_mask:
+    return interp__builtin_ia32_cvtsd2ss_round_mask(S, OpPC, Call);
+  case X86::BI__builtin_ia32_cvtpd2ps:
+  case X86::BI__builtin_ia32_cvtpd2ps256:
+  case X86::BI__builtin_ia32_cvtpd2ps_mask:
+  case X86::BI__builtin_ia32_cvtpd2ps512_mask:
+    return interp__builtin_ia32_cvtpd2ps(S, OpPC, Call, BuiltinID);
 
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpw128_mask:
