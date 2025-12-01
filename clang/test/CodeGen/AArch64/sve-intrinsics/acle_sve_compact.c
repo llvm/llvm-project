@@ -14,12 +14,6 @@
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
-#ifdef __ARM_FEATURE_SME
-#define STREAMING __arm_streaming
-#else
-#define STREAMING
-#endif
-
 // CHECK-LABEL: @test_svcompact_s32(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])

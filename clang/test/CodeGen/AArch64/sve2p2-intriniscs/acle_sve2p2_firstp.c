@@ -7,6 +7,7 @@
 
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -target-feature +sve2p2 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -target-feature +sve2p2 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -target-feature +sme2p2 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 #ifdef __ARM_FEATURE_SME
 #include "arm_sme.h"
