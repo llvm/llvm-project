@@ -35,18 +35,22 @@
 // scope's TBAA tree.
 // RUN: fir-opt --fir-add-alias-tags %s | FileCheck %s
 
-// CHECK: #[[$ATTR_0:.+]] = #llvm.tbaa_root<id = "Flang function root _QMmPtest - Scope 2">
-// CHECK: #[[$ATTR_1:.+]] = #llvm.tbaa_root<id = "Flang function root _QMmPtest">
-// CHECK: #[[$ATTR_2:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[$ATTR_0]], 0>}>
-// CHECK: #[[$ATTR_3:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[$ATTR_1]], 0>}>
-// CHECK: #[[$ATTR_4:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[$ATTR_2]], 0>}>
-// CHECK: #[[$ATTR_5:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[$ATTR_3]], 0>}>
-// CHECK: #[[$ATTR_6:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[$ATTR_4]], 0>}>
-// CHECK: #[[$ATTR_7:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[$ATTR_5]], 0>}>
-// CHECK: #[[$ATTR_9:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmFbarEthis", members = {<#[[$ATTR_6]], 0>}>
-// CHECK: #[[$ATTR_10:.+]] = #llvm.tbaa_type_desc<id = "allocated data", members = {<#[[$ATTR_7]], 0>}>
-// CHECK: #[[$ATTR_12:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_9]], access_type = #[[$ATTR_9]], offset = 0>
-// CHECK: #[[$ATTR_13:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_10]], access_type = #[[$ATTR_10]], offset = 0>
+// CHECK: #[[$SCOPE_2:.+]] = #llvm.tbaa_root<id = "Flang function root _QMmPtest - Scope 2">
+// CHECK: #[[$SCOPE_1:.+]] = #llvm.tbaa_root<id = "Flang function root _QMmPtest">
+// CHECK: #[[$ANY_ACCESS2:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[$SCOPE_2]], 0>}>
+// CHECK: #[[$ANY_ACCESS1:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[$SCOPE_1]], 0>}>
+// CHECK: #[[$ANY_DATA2:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[$ANY_ACCESS2]], 0>}>
+// CHECK: #[[$ANY_DATA1:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[$ANY_ACCESS1]], 0>}>
+// CHECK: #[[$DUMMY_ARG2:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[$ANY_DATA2]], 0>}>
+// CHECK: #[[$ALLOCATED_DATA1:.+]] = #llvm.tbaa_type_desc<id = "allocated data", members = {<#[[$ANY_DATA1]], 0>}>
+// CHECK: #[[$DUMMY_ARG1:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[$ANY_DATA1]], 0>}>
+// CHECK: #[[$ALLOCATED_DATA1_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[$ALLOCATED_DATA1]], access_type = #[[$ALLOCATED_DATA1]], offset = 0>
+// CHECK: #[[$BAR_THIS2:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmFbarEthis", members = {<#[[$DUMMY_ARG2]], 0>}>
+// CHECK: #[[$TEST_VAR1:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QMmFtestEvar", members = {<#[[$ALLOCATED_DATA1]], 0>}>
+// CHECK: #[[$TEST_ARG1:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QMmFtestEarg", members = {<#[[$DUMMY_ARG1]], 0>}>
+// CHECK: #[[$BAR_THIS2_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[$BAR_THIS2]], access_type = #[[$BAR_THIS2]], offset = 0>
+// CHECK: #[[$TEST_VAR1_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[$TEST_VAR1]], access_type = #[[$TEST_VAR1]], offset = 0>
+// CHECK: #[[$TEST_ARG2_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[$TEST_ARG1]], access_type = #[[$TEST_ARG1]], offset = 0>
 
 // CHECK-LABEL:   func.func @_QMmPtest(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<f32> {fir.bindc_name = "arg"}) {
@@ -61,10 +65,10 @@
 // CHECK:           %[[VAL_10:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_11:.*]] = fir.declare %[[VAL_9]] dummy_scope %[[VAL_10]] {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QMmFbarEthis"} : (!fir.class<!fir.type<_QMmTt{x:f32}>>, !fir.dscope) -> !fir.class<!fir.type<_QMmTt{x:f32}>>
 // CHECK:           %[[VAL_12:.*]] = fir.coordinate_of %[[VAL_11]], x : (!fir.class<!fir.type<_QMmTt{x:f32}>>) -> !fir.ref<f32>
-// CHECK:           fir.store %[[VAL_0]] to %[[VAL_12]] {tbaa = [#[[$ATTR_12]]]} : !fir.ref<f32>
+// CHECK:           fir.store %[[VAL_0]] to %[[VAL_12]] {tbaa = [#[[$BAR_THIS2_TAG]]]} : !fir.ref<f32>
 // CHECK:           %[[VAL_13:.*]] = fir.declare %[[VAL_1]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.type<_QMmTt{x:f32}>>) -> !fir.ref<!fir.type<_QMmTt{x:f32}>>
 // CHECK:           %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_13]], x : (!fir.ref<!fir.type<_QMmTt{x:f32}>>) -> !fir.ref<f32>
-// CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_14]] {tbaa = [#[[$ATTR_13]]]} : !fir.ref<f32>
+// CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_14]] {tbaa = [#[[$ALLOCATED_DATA1_TAG]]]} : !fir.ref<f32>
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
 func.func @_QMmPtest(%arg0: !fir.ref<f32> {fir.bindc_name = "arg"}) {
   %cst = arith.constant 1.000000e+00 : f32
