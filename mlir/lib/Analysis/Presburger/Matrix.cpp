@@ -261,8 +261,7 @@ void Matrix<T>::moveColumns(unsigned srcPos, unsigned num, unsigned dstPos) {
   if (num == 0)
     return;
 
-  int offset = dstPos - srcPos;
-  if (offset == 0)
+  if (dstPos == srcPos)
     return;
 
   assert(srcPos + num <= getNumColumns() &&
@@ -272,18 +271,16 @@ void Matrix<T>::moveColumns(unsigned srcPos, unsigned num, unsigned dstPos) {
 
   unsigned numRows = getNumRows();
 
-  if (offset > 0) {
-    // Shift the matrix left, because start < end, that std::rotate(start,
-    // middle, end) turns the range [start, end] to [middle, end) + [start,
-    // middle).
+  if (dstPos > srcPos) {
+    // std::rotate(start, middle, end) permutes the elements of [start, end] to
+    // [middle, end) + [start, middle).
     for (unsigned i = 0; i < numRows; ++i) {
       std::rotate(&at(i, srcPos), &at(i, srcPos) + num, &at(i, dstPos) + num);
     }
     return;
   }
-  // Shift the matrix right. because end < start, that std::rotate(start,
-  // middle, end) turns the range [start, end] to [middle, start) + [end,
-  // middle).
+  // std::rotate(start, middle, end) permutes the elements of [start, end] to
+  // [middle, start) + [end, middle).
   for (unsigned i = 0; i < numRows; ++i) {
     std::rotate(&at(i, dstPos), &at(i, srcPos), &at(i, srcPos) + num);
   }
