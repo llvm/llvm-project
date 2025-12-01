@@ -111,15 +111,16 @@ const EnumEntry<uint32_t> MachOHeaderFileTypes[] = {
 };
 
 const EnumEntry<uint32_t> MachOHeaderCpuTypes[] = {
-  { "Any"       , static_cast<uint32_t>(MachO::CPU_TYPE_ANY) },
-  { "X86"       , MachO::CPU_TYPE_X86       },
-  { "X86-64"    , MachO::CPU_TYPE_X86_64    },
-  { "Mc98000"   , MachO::CPU_TYPE_MC98000   },
-  { "Arm"       , MachO::CPU_TYPE_ARM       },
-  { "Arm64"     , MachO::CPU_TYPE_ARM64     },
-  { "Sparc"     , MachO::CPU_TYPE_SPARC     },
-  { "PowerPC"   , MachO::CPU_TYPE_POWERPC   },
-  { "PowerPC64" , MachO::CPU_TYPE_POWERPC64 },
+    {"Any", static_cast<uint32_t>(MachO::CPU_TYPE_ANY)},
+    {"X86", MachO::CPU_TYPE_X86},
+    {"X86-64", MachO::CPU_TYPE_X86_64},
+    {"Mc98000", MachO::CPU_TYPE_MC98000},
+    {"Arm", MachO::CPU_TYPE_ARM},
+    {"Arm64", MachO::CPU_TYPE_ARM64},
+    {"Arm64 (ILP32)", MachO::CPU_TYPE_ARM64_32},
+    {"Sparc", MachO::CPU_TYPE_SPARC},
+    {"PowerPC", MachO::CPU_TYPE_POWERPC},
+    {"PowerPC64", MachO::CPU_TYPE_POWERPC64},
 };
 
 const EnumEntry<uint32_t> MachOHeaderCpuSubtypesX86[] = {
@@ -164,6 +165,10 @@ const EnumEntry<uint32_t> MachOHeaderCpuSubtypesARM[] = {
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V6M),
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V7M),
   LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM_V7EM),
+};
+
+const EnumEntry<uint32_t> MachOHeaderCpuSubtypesARM64_32[] = {
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64_32_V8),
 };
 
 const EnumEntry<uint32_t> MachOHeaderCpuSubtypesARM64[] = {
@@ -452,6 +457,10 @@ void MachODumper::printFileHeaders(const MachHeader &Header) {
     break;
   case MachO::CPU_TYPE_ARM64:
     W.printEnum("CpuSubType", subtype, ArrayRef(MachOHeaderCpuSubtypesARM64));
+    break;
+  case MachO::CPU_TYPE_ARM64_32:
+    W.printEnum("CpuSubType", subtype,
+                ArrayRef(MachOHeaderCpuSubtypesARM64_32));
     break;
   case MachO::CPU_TYPE_POWERPC64:
   default:
