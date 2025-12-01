@@ -245,7 +245,7 @@ public:
   /// \param NumThreads The value corresponding to the num_threads clause, if
   /// any, or nullptr.
   /// \param NumThreadsModifier The modifier of the num_threads clause, if
-  /// any, ignored otherwise. Currently unused on the device.
+  /// any, ignored otherwise.
   /// \param Severity The severity corresponding to the num_threads clause, if
   /// any, ignored otherwise. Currently unused on the device.
   /// \param Message The message string corresponding to the num_threads clause,
