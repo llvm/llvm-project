@@ -2301,7 +2301,7 @@ struct AMDGPUMakeDmaBaseLowering
     Value castForGlobalAddr =
         LLVM::PtrToIntOp::create(rewriter, loc, i64, globalPtr);
 
-    Value mask = createI64Constant(rewriter, loc, 0x1FFFFFFFFFFFFFF);
+    Value mask = createI64Constant(rewriter, loc, (1ull << 57) - 1);
     Value first57BitsOfGlobalAddr =
         LLVM::AndOp::create(rewriter, loc, castForGlobalAddr, mask);
     Value shift = LLVM::LShrOp::create(rewriter, loc, first57BitsOfGlobalAddr,
