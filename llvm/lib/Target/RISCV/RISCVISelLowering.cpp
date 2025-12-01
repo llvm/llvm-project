@@ -9584,6 +9584,50 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (SDValue V = lowerSelectToBinOp(Op.getNode(), DAG, Subtarget))
     return V;
 
+  // When there is no cost for GPR <-> FPR, we can use zicond select for
+  // floating value when CondV is int type
+  bool FPinGPR = Subtarget.hasStdExtZfinx();
+
+  // We can handle FGPR without spliting into hi/lo parts
+  bool FitsInGPR = TypeSize::isKnownLE(VT.getSizeInBits(),
+                                       Subtarget.getXLenVT().getSizeInBits());
+
+  bool UseZicondForFPSel = Subtarget.hasStdExtZicond() && FPinGPR &&
+                           VT.isFloatingPoint() && FitsInGPR;
+
+  if (UseZicondForFPSel) {
+
+    auto CastToInt = [&](SDValue V) -> SDValue {
+      // Treat +0.0 as int 0 to enable single 'czero' instruction generation.
+      if (isNullFPConstant(V))
+        return DAG.getConstant(0, DL, XLenVT);
+
+      if (VT == MVT::f16)
+        return DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, V);
+
+      if (VT == MVT::f32 && Subtarget.is64Bit())
+        return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenVT, V);
+
+      return DAG.getBitcast(XLenVT, V);
+    };
+
+    SDValue TrueVInt = CastToInt(TrueV);
+    SDValue FalseVInt = CastToInt(FalseV);
+
+    // Emit integer SELECT (lowers to Zicond)
+    SDValue ResultInt =
+        DAG.getNode(ISD::SELECT, DL, XLenVT, CondV, TrueVInt, FalseVInt);
+
+    // Convert back to floating VT
+    if (VT == MVT::f32 && Subtarget.is64Bit())
+      return DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, VT, ResultInt);
+
+    if (VT == MVT::f16)
+      return DAG.getNode(RISCVISD::FMV_H_X, DL, VT, ResultInt);
+
+    return DAG.getBitcast(VT, ResultInt);
+  }
+
   // When Zicond or XVentanaCondOps is present, emit CZERO_EQZ and CZERO_NEZ
   // nodes to implement the SELECT. Performing the lowering here allows for
   // greater control over when CZERO_{EQZ/NEZ} are used vs another branchless
@@ -10699,7 +10743,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
         VecVT != MVT::v4i8 && VecVT != MVT::v2i32)
       return SDValue();
     SDValue Extracted = DAG.getBitcast(XLenVT, Vec);
-    unsigned ElemWidth = EltVT.getSizeInBits();
+    unsigned ElemWidth = VecVT.getVectorElementType().getSizeInBits();
     SDValue Shamt = DAG.getNode(ISD::MUL, DL, XLenVT, Idx,
                                 DAG.getConstant(ElemWidth, DL, XLenVT));
     return DAG.getNode(ISD::SRL, DL, XLenVT, Extracted, Shamt);
