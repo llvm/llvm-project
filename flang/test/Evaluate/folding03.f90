@@ -83,6 +83,8 @@ module real_tests
   real(4), parameter :: r4_pinf = 1._4/0._4
   !WARN: warning: division by zero [-Wfolding-exception]
   real(4), parameter :: r4_ninf = -1._4/0._4
+  !WARN: warning: Invalid argument to SQRT() [-Wfolding-value-checks]
+  real(4), parameter :: r4_sqrtneg = sqrt(-1._4)
 
   logical, parameter :: test_r4_nan_parentheses1 = .NOT.(((r4_nan)).EQ.r4_nan)
   logical, parameter :: test_r4_nan_parentheses2 = .NOT.(((r4_nan)).LT.r4_nan)
@@ -155,6 +157,8 @@ module real_tests
   TEST_ISNAN(r4_nan_add5)
   real(4), parameter :: r4_nan_add6 = r4_nan + r4_nan
   TEST_ISNAN(r4_nan_add6)
+  real(4), parameter :: r4_nan_sqrt = sqrt(r4_nan)
+  TEST_ISNAN(r4_nan_sqrt)
 
   !WARN: warning: overflow on multiplication [-Wfolding-exception]
   logical, parameter :: test_inf_r4_mult1 = (1.5_4*r4_pmax).eq.(r4_pinf)

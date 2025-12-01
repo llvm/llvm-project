@@ -130,13 +130,13 @@ void ObjectFileBreakpad::CreateSections(SectionList &unified_section_list) {
 
   std::optional<Record::Kind> current_section;
   offset_t section_start;
-  llvm::StringRef text = toStringRef(m_data.GetData());
+  llvm::StringRef text = toStringRef(m_data_nsp->GetData());
   uint32_t next_section_id = 1;
   auto maybe_add_section = [&](const uint8_t *end_ptr) {
     if (!current_section)
       return; // We have been called before parsing the first line.
 
-    offset_t end_offset = end_ptr - m_data.GetDataStart();
+    offset_t end_offset = end_ptr - m_data_nsp->GetDataStart();
     auto section_sp = std::make_shared<Section>(
         GetModule(), this, next_section_id++,
         ConstString(toString(*current_section)), eSectionTypeOther,
@@ -162,8 +162,8 @@ void ObjectFileBreakpad::CreateSections(SectionList &unified_section_list) {
     maybe_add_section(line.bytes_begin());
     // And start a new one.
     current_section = next_section;
-    section_start = line.bytes_begin() - m_data.GetDataStart();
+    section_start = line.bytes_begin() - m_data_nsp->GetDataStart();
   }
   // Finally, add the last section.
-  maybe_add_section(m_data.GetDataEnd());
+  maybe_add_section(m_data_nsp->GetDataEnd());
 }

@@ -108,7 +108,7 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
 }
 
 LIBC_INLINE void *FreeListHeap::allocate(size_t size) {
-  return allocate_impl(alignof(max_align_t), size);
+  return allocate_impl(Block::MIN_ALIGN, size);
 }
 
 LIBC_INLINE void *FreeListHeap::aligned_allocate(size_t alignment,
@@ -121,8 +121,8 @@ LIBC_INLINE void *FreeListHeap::aligned_allocate(size_t alignment,
   if (size % alignment != 0)
     return nullptr;
 
-  // The minimum alignment supported by Block is max_align_t.
-  alignment = cpp::max(alignment, alignof(max_align_t));
+  // The minimum alignment supported by Block is MIN_ALIGN.
+  alignment = cpp::max(alignment, Block::MIN_ALIGN);
 
   return allocate_impl(alignment, size);
 }

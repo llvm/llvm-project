@@ -264,31 +264,31 @@ class MockGDBServerResponder:
 
         return self.other(packet)
 
-    def qsProcessInfo(self):
+    def qsProcessInfo(self) -> str:
         return "E04"
 
-    def qfProcessInfo(self, packet):
+    def qfProcessInfo(self, packet) -> str:
         return "E04"
 
-    def jGetLoadedDynamicLibrariesInfos(self, packet):
+    def jGetLoadedDynamicLibrariesInfos(self, packet) -> str:
         return ""
 
-    def qGetWorkingDir(self):
+    def qGetWorkingDir(self) -> str:
         return "2f"
 
-    def qOffsets(self):
+    def qOffsets(self) -> str:
         return ""
 
-    def qProcessInfo(self):
+    def qProcessInfo(self) -> str:
         return ""
 
-    def qHostInfo(self):
+    def qHostInfo(self) -> str:
         return "ptrsize:8;endian:little;"
 
-    def qEcho(self, num: int):
+    def qEcho(self, num: int) -> str:
         return "E04"
 
-    def qQueryGDBServer(self):
+    def qQueryGDBServer(self) -> str:
         return "E04"
 
     def interrupt(self):
@@ -300,10 +300,10 @@ class MockGDBServerResponder:
     def vCont(self, packet):
         raise self.UnexpectedPacketException()
 
-    def A(self, packet):
+    def A(self, packet) -> str:
         return ""
 
-    def D(self, packet):
+    def D(self, packet) -> str:
         return "OK"
 
     def readRegisters(self) -> str:
@@ -312,40 +312,40 @@ class MockGDBServerResponder:
     def readRegister(self, register: int) -> str:
         return "00000000"
 
-    def writeRegisters(self, registers_hex):
+    def writeRegisters(self, registers_hex) -> str:
         return "OK"
 
-    def writeRegister(self, register, value_hex):
+    def writeRegister(self, register, value_hex) -> str:
         return "OK"
 
-    def readMemory(self, addr, length):
+    def readMemory(self, addr, length) -> str:
         return "00" * length
 
-    def x(self, addr, length):
+    def x(self, addr, length) -> str:
         return ""
 
-    def writeMemory(self, addr, data_hex):
+    def writeMemory(self, addr, data_hex) -> str:
         return "OK"
 
-    def qSymbol(self, symbol_args):
+    def qSymbol(self, symbol_args) -> str:
         return "OK"
 
-    def qSupported(self, client_supported):
+    def qSupported(self, client_supported) -> str:
         return "qXfer:features:read+;PacketSize=3fff;QStartNoAckMode+"
 
-    def qfThreadInfo(self):
+    def qfThreadInfo(self) -> str:
         return "l"
 
-    def qsThreadInfo(self):
+    def qsThreadInfo(self) -> str:
         return "l"
 
-    def qC(self):
+    def qC(self) -> str:
         return "QC0"
 
-    def QEnableErrorStrings(self):
+    def QEnableErrorStrings(self) -> str:
         return "OK"
 
-    def haltReason(self):
+    def haltReason(self) -> str:
         # SIGINT is 2, return type is 2 digit hex string
         return "S02"
 
@@ -360,50 +360,50 @@ class MockGDBServerResponder:
     def vAttach(self, pid):
         raise self.UnexpectedPacketException()
 
-    def selectThread(self, op, thread_id):
+    def selectThread(self, op, thread_id) -> str:
         return "OK"
 
-    def setBreakpoint(self, packet):
+    def setBreakpoint(self, packet) -> str:
         raise self.UnexpectedPacketException()
 
-    def threadStopInfo(self, threadnum):
+    def threadStopInfo(self, threadnum) -> str:
         return ""
 
-    def other(self, packet):
+    def other(self, packet) -> str:
         # empty string means unsupported
         return ""
 
-    def QThreadSuffixSupported(self):
+    def QThreadSuffixSupported(self) -> str:
         return ""
 
-    def QListThreadsInStopReply(self):
+    def QListThreadsInStopReply(self) -> str:
         return ""
 
-    def qMemoryRegionInfo(self, addr):
+    def qMemoryRegionInfo(self, addr) -> str:
         return ""
 
-    def qPathComplete(self):
+    def qPathComplete(self) -> str:
         return ""
 
-    def vFile(self, packet):
+    def vFile(self, packet) -> str:
         return ""
 
-    def vRun(self, packet):
+    def vRun(self, packet) -> str:
         return ""
 
     def qLaunchGDBServer(self, host):
         raise self.UnexpectedPacketException()
 
-    def qLaunchSuccess(self):
+    def qLaunchSuccess(self) -> str:
         return ""
 
-    def QEnvironment(self, packet):
+    def QEnvironment(self, packet) -> str:
         return "OK"
 
-    def QEnvironmentHexEncoded(self, packet):
+    def QEnvironmentHexEncoded(self, packet) -> str:
         return "OK"
 
-    def qRegisterInfo(self, num):
+    def qRegisterInfo(self, num) -> str:
         return ""
 
     def k(self):

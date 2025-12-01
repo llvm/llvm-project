@@ -300,8 +300,8 @@ bool ObjectFileCOFF::ParseHeader() {
 
   std::lock_guard<std::recursive_mutex> guard(module->GetMutex());
 
-  m_data.SetByteOrder(eByteOrderLittle);
-  m_data.SetAddressByteSize(GetAddressByteSize());
+  m_data_nsp->SetByteOrder(eByteOrderLittle);
+  m_data_nsp->SetAddressByteSize(GetAddressByteSize());
 
   return true;
 }

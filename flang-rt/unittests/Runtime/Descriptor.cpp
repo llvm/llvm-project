@@ -9,6 +9,7 @@
 #include "flang-rt/runtime/descriptor.h"
 #include "tools.h"
 #include "gtest/gtest.h"
+#include <regex>
 
 using namespace Fortran::runtime;
 
@@ -157,4 +158,116 @@ TEST(Descriptor, FixedStride) {
   descriptor.GetDimension(2).SetExtent(0);
   EXPECT_TRUE(descriptor.IsContiguous());
   EXPECT_EQ(descriptor.FixedStride().value_or(-666), 0);
+}
+
+static std::string getAddrFilteredContent(FILE *fin) {
+  rewind(fin);
+  std::ostringstream content;
+  char buffer[1024];
+  size_t bytes_read;
+  while ((bytes_read = fread(buffer, 1, sizeof(buffer), fin)) > 0) {
+    content.write(buffer, bytes_read);
+  }
+  return std::regex_replace(
+      content.str(), std::regex("(0x[0-9a-fA-F]*)"), "[address]");
+}
+
+TEST(Descriptor, Dump) {
+  StaticDescriptor<4> staticDesc[2];
+  Descriptor &descriptor{staticDesc[0].descriptor()};
+  using Type = std::int32_t;
+  Type data[8][8][8];
+  constexpr int four{static_cast<int>(sizeof data[0][0][0])};
+  TypeCode integer{TypeCategory::Integer, four};
+  // Scalar
+  descriptor.Establish(integer, four, data, 0);
+  FILE *tmpf = tmpfile();
+  ASSERT_TRUE(tmpf) << "tmpfile returned NULL";
+  auto resetTmpFile = [tmpf]() {
+    rewind(tmpf);
+    ftruncate(fileno(tmpf), 0);
+  };
+
+  descriptor.Dump(tmpf, /*dumpRawType=*/false);
+  // also dump as CFI type
+  descriptor.Dump(tmpf, /*dumpRawType=*/true);
+  std::string output = getAddrFilteredContent(tmpf);
+  ASSERT_STREQ(output.c_str(),
+      "Descriptor @ [address]:\n"
+      "  base_addr [address]\n"
+      "  elem_len  4\n"
+      "  version   20240719\n"
+      "  scalar\n"
+      "  type      9 \"INTEGER(kind=4)\"\n"
+      "  attribute 0\n"
+      "  extra     0\n"
+      "    addendum  0\n"
+      "    alloc_idx 0\n"
+      "Descriptor @ [address]:\n"
+      "  base_addr [address]\n"
+      "  elem_len  4\n"
+      "  version   20240719\n"
+      "  scalar\n"
+      "  type      9 \"CFI_type_int32_t\"\n"
+      "  attribute 0\n"
+      "  extra     0\n"
+      "    addendum  0\n"
+      "    alloc_idx 0\n");
+
+  // Contiguous matrix (0:7, 0:7)
+  SubscriptValue extent[3]{8, 8, 8};
+  descriptor.Establish(integer, four, data, 2, extent);
+  resetTmpFile();
+  descriptor.Dump(tmpf, /*dumpRawType=*/false);
+  output = getAddrFilteredContent(tmpf);
+  ASSERT_STREQ(output.c_str(),
+      "Descriptor @ [address]:\n"
+      "  base_addr [address]\n"
+      "  elem_len  4\n"
+      "  version   20240719\n"
+      "  rank      2\n"
+      "  type      9 \"INTEGER(kind=4)\"\n"
+      "  attribute 0\n"
+      "  extra     0\n"
+      "    addendum  0\n"
+      "    alloc_idx 0\n"
+      "  dim[0] lower_bound 0\n"
+      "         extent      8\n"
+      "         sm          4\n"
+      "  dim[1] lower_bound 0\n"
+      "         extent      8\n"
+      "         sm          32\n");
+
+  TypeCode real{TypeCategory::Real, four};
+  // Discontiguous real 3-D array (0:7, 0:6:2, 0:6:2)
+  descriptor.Establish(real, four, data, 3, extent);
+  descriptor.GetDimension(1).SetExtent(4);
+  descriptor.GetDimension(1).SetByteStride(8 * 2 * four);
+  descriptor.GetDimension(2).SetExtent(4);
+  descriptor.GetDimension(2).SetByteStride(8 * 8 * 2 * four);
+
+  resetTmpFile();
+  descriptor.Dump(tmpf, /*dumpRawType=*/false);
+  output = getAddrFilteredContent(tmpf);
+  ASSERT_STREQ(output.c_str(),
+      "Descriptor @ [address]:\n"
+      "  base_addr [address]\n"
+      "  elem_len  4\n"
+      "  version   20240719\n"
+      "  rank      3\n"
+      "  type      27 \"REAL(kind=4)\"\n"
+      "  attribute 0\n"
+      "  extra     0\n"
+      "    addendum  0\n"
+      "    alloc_idx 0\n"
+      "  dim[0] lower_bound 0\n"
+      "         extent      8\n"
+      "         sm          4\n"
+      "  dim[1] lower_bound 0\n"
+      "         extent      4\n"
+      "         sm          64\n"
+      "  dim[2] lower_bound 0\n"
+      "         extent      4\n"
+      "         sm          512\n");
+  fclose(tmpf);
 }

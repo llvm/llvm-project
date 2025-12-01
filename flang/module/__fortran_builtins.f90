@@ -28,6 +28,9 @@ module __fortran_builtins
   intrinsic :: __builtin_c_f_pointer
   public :: __builtin_c_f_pointer
 
+  intrinsic :: __builtin_show_descriptor
+  public :: __builtin_show_descriptor
+
   intrinsic :: sizeof ! extension
   public :: sizeof
 
