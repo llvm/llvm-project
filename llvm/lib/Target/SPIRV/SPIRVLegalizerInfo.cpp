@@ -160,6 +160,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
         return IsExtendedInts && Ty.isValid();
       };
 
+  // The universal validation rules in the SPIR-V specification state that
+  // vector sizes are typically limited to 2, 3, or 4. However, larger vector
+  // sizes (8 and 16) are enabled when the Kernel capability is present. For
+  // shader execution models, vector sizes are strictly limited to 4. In
+  // non-shader contexts, vector sizes of 8 and 16 are also permitted, but
+  // arbitrary sizes (e.g., 6 or 11) are not.
   uint32_t MaxVectorSize = ST.isShader() ? 4 : 16;
 
   for (auto Opc : getTypeFoldingSupportedOpcodes()) {
