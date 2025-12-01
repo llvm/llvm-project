@@ -379,11 +379,8 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(Triple::OSType OS) {
   if (!Binary)
     OpenFlags |= sys::fs::OF_TextWithCRLF;
   auto FDOut = std::make_unique<ToolOutputFile>(OutputFilename, EC, OpenFlags);
-  if (EC) {
+  if (EC)
     reportError(EC.message());
-    return nullptr;
-  }
-
   return FDOut;
 }
 // BEGIN MCCAS
