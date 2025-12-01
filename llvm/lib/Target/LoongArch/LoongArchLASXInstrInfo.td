@@ -1447,6 +1447,11 @@ defm : PatXrXr<sra, "XVSRA">;
 defm : PatShiftXrXr<sra, "XVSRA">;
 defm : PatShiftXrSplatUimm<sra, "XVSRAI">;
 
+// XVROTR[I]_{B/H/W/D}
+defm : PatXrXr<rotr, "XVROTR">;
+defm : PatShiftXrXr<rotr, "XVROTR">;
+defm : PatShiftXrSplatUimm<rotr, "XVROTRI">;
+
 // XVCLZ_{B/H/W/D}
 defm : PatXr<ctlz, "XVCLZ">;
 

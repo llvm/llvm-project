@@ -498,6 +498,10 @@ public:
     VlaSizePair(mlir::Value num, QualType ty) : numElts(num), type(ty) {}
   };
 
+  /// Return the number of elements for a single dimension
+  /// for the given array type.
+  VlaSizePair getVLAElements1D(const VariableArrayType *vla);
+
   /// Returns an MLIR::Value+QualType pair that corresponds to the size,
   /// in non-variably-sized elements, of a variable length array type,
   /// plus that largest non-variably-sized element type.  Assumes that

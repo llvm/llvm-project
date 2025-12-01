@@ -7003,6 +7003,19 @@ AST_MATCHER_P(ReferenceTypeLoc, hasReferentLoc, internal::Matcher<TypeLoc>,
   return ReferentMatcher.matches(Node.getPointeeLoc(), Finder, Builder);
 }
 
+/// Matches `ArrayTypeLoc`s.
+///
+/// Given
+/// \code
+///   int a[] = {1, 2};
+///   int b[3];
+///   void f() { int c[a[0]]; }
+/// \endcode
+/// arrayTypeLoc()
+///   matches "int a[]", "int b[3]" and "int c[a[0]]".
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, ArrayTypeLoc>
+    arrayTypeLoc;
+
 /// Matches template specialization `TypeLoc`s.
 ///
 /// Given
