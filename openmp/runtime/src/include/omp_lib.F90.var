@@ -215,6 +215,8 @@
 
         integer (kind=omp_interop_kind), parameter, public :: omp_interop_none = 0
 
+        integer (kind=omp_integer_kind), parameter, public :: omp_invalid_device = -2
+
         interface
 
 !         ***
@@ -416,6 +418,20 @@
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_device_num
           end function omp_get_device_num
+
+          function omp_get_uid_from_device(device_num) bind(c)
+            use, intrinsic :: iso_c_binding, only: c_ptr
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind), value :: device_num
+            type(c_ptr) omp_get_uid_from_device
+          end function omp_get_uid_from_device
+
+          function omp_get_device_from_uid(device_uid) bind(c)
+            use, intrinsic :: iso_c_binding, only: c_ptr
+            use omp_lib_kinds
+            type(c_ptr), value :: device_uid
+            integer (kind=omp_integer_kind) omp_get_device_from_uid
+          end function omp_get_device_from_uid
 
           function omp_pause_resource(kind, device_num) bind(c)
             use omp_lib_kinds
@@ -1099,6 +1115,8 @@
         public :: omp_is_initial_device
         public :: omp_get_initial_device
         public :: omp_get_device_num
+        public :: omp_get_uid_from_device
+        public :: omp_get_device_from_uid
         public :: omp_pause_resource
         public :: omp_pause_resource_all
         public :: omp_get_supported_active_levels
