@@ -47,6 +47,10 @@ func.func @entry() {
   %negated = arith.negf %cvt : f8E4M3FN
   vector.print %negated : f8E4M3FN
 
+  // CHECK-NEXT: -2.25
+  %min = arith.minimumf %cvt, %negated : f8E4M3FN
+  vector.print %min : f8E4M3FN
+
   // CHECK-NEXT: 1
   %cmp1 = arith.cmpf "olt", %cvt, %c1 : f8E4M3FN
   vector.print %cmp1 : i1
