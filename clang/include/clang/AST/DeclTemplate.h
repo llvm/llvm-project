@@ -3432,18 +3432,18 @@ public:
 /// \see CXXExpansionStmtInstantiation
 class CXXExpansionStmtDecl : public Decl, public DeclContext {
   CXXExpansionStmtPattern *Expansion = nullptr;
-  TemplateParameterList *TParams;
+  NonTypeTemplateParmDecl *IndexNTTP = nullptr;
   CXXExpansionStmtInstantiation *Instantiations = nullptr;
 
   CXXExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
-                       TemplateParameterList *TParams);
+                       NonTypeTemplateParmDecl *NTTP);
 
 public:
   friend class ASTDeclReader;
 
   static CXXExpansionStmtDecl *Create(ASTContext &C, DeclContext *DC,
                                       SourceLocation Loc,
-                                      TemplateParameterList *TParams);
+                                      NonTypeTemplateParmDecl *NTTP);
   static CXXExpansionStmtDecl *CreateDeserialized(ASTContext &C,
                                                   GlobalDeclID ID);
 
@@ -3462,10 +3462,10 @@ public:
     Instantiations = S;
   }
 
-  NonTypeTemplateParmDecl *getIndexTemplateParm() const {
-    return cast<NonTypeTemplateParmDecl>(TParams->getParam(0));
+  NonTypeTemplateParmDecl *getIndexTemplateParm() { return IndexNTTP; }
+  const NonTypeTemplateParmDecl *getIndexTemplateParm() const {
+    return IndexNTTP;
   }
-  TemplateParameterList *getTemplateParameters() const { return TParams; }
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 

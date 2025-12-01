@@ -1718,9 +1718,8 @@ clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
         cast<FunctionDecl>(D)->getTemplateSpecializationInfo()->getTemplate(),
         Index);
   case Decl::Kind::CXXExpansionStmt:
-    return {
-        cast<CXXExpansionStmtDecl>(D)->getTemplateParameters()->getParam(Index),
-        {}};
+    assert(Index == 0 && "expansion stmts only have a single template param");
+    return {cast<CXXExpansionStmtDecl>(D)->getIndexTemplateParm(), {}};
   default:
     llvm_unreachable("Unhandled templated declaration kind");
   }
@@ -1794,14 +1793,14 @@ const Decl &clang::adjustDeclToTemplate(const Decl &D) {
 }
 
 CXXExpansionStmtDecl::CXXExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
-                                           TemplateParameterList *TParams)
+                                           NonTypeTemplateParmDecl *NTTP)
     : Decl(CXXExpansionStmt, DC, Loc), DeclContext(CXXExpansionStmt),
-      TParams(TParams) {}
+      IndexNTTP(NTTP) {}
 
 CXXExpansionStmtDecl *
 CXXExpansionStmtDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation Loc,
-                             TemplateParameterList *TParams) {
-  return new (C, DC) CXXExpansionStmtDecl(DC, Loc, TParams);
+                             NonTypeTemplateParmDecl *NTTP) {
+  return new (C, DC) CXXExpansionStmtDecl(DC, Loc, NTTP);
 }
 CXXExpansionStmtDecl *
 CXXExpansionStmtDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {

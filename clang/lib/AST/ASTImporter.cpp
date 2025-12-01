@@ -2879,14 +2879,14 @@ ASTNodeImporter::VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D) {
   Error Err = Error::success();
   auto ToLocation = importChecked(Err, D->getLocation());
   auto ToExpansion = importChecked(Err, D->getExpansionPattern());
-  auto ToTemplateParams = importChecked(Err, D->getTemplateParameters());
+  auto ToIndex = importChecked(Err, D->getIndexTemplateParm());
   auto ToInstantiations = importChecked(Err, D->getInstantiations());
   if (Err)
     return std::move(Err);
 
   CXXExpansionStmtDecl *ToD;
   if (GetImportedOrCreateDecl(ToD, D, Importer.getToContext(), DC, ToLocation,
-                              ToTemplateParams))
+                              ToIndex))
     return ToD;
 
   ToD->setExpansionPattern(ToExpansion);

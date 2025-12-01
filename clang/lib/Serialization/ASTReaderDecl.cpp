@@ -2775,7 +2775,7 @@ void ASTDeclReader::VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D) {
   D->Expansion = cast<CXXExpansionStmtPattern>(Record.readStmt());
   D->Instantiations =
       cast_or_null<CXXExpansionStmtInstantiation>(Record.readStmt());
-  D->TParams = Record.readTemplateParameterList();
+  D->IndexNTTP = cast<NonTypeTemplateParmDecl>(Record.readDeclRef());
 }
 
 void ASTDeclReader::VisitEmptyDecl(EmptyDecl *D) {

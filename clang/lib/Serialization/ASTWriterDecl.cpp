@@ -2193,7 +2193,7 @@ void ASTDeclWriter::VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D) {
   VisitDecl(D);
   Record.AddStmt(D->getExpansionPattern());
   Record.AddStmt(D->getInstantiations());
-  Record.AddTemplateParameterList(D->getTemplateParameters());
+  Record.AddDeclRef(D->getIndexTemplateParm());
   Code = serialization::DECL_EXPANSION_STMT;
 }
 
