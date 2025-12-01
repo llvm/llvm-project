@@ -15,6 +15,7 @@
 #ifndef __AVXVNNIINT16INTRIN_H
 #define __AVXVNNIINT16INTRIN_H
 
+// clang-format off
 /// Multiply groups of 2 adjacent pairs of signed 16-bit integers in \a __A with
 ///    corresponding unsigned 16-bit integers in \a __B, producing 2 intermediate
 ///    signed 16-bit results. Sum these 2 results with the corresponding
@@ -45,10 +46,12 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
+// clang-format on
 #define _mm_dpwsud_epi32(__W, __A, __B)                                        \
-  ((__m128i)__builtin_ia32_vpdpwsud128((__v4si)(__W), (__v4si)(__A),           \
-                                       (__v4si)(__B)))
+  ((__m128i)__builtin_ia32_vpdpwsud128((__v4si)(__W), (__v8hi)(__A),           \
+                                       (__v8hu)(__B)))
 
+// clang-format off
 /// Multiply groups of 2 adjacent pairs of signed 16-bit integers in \a __A with
 ///    corresponding unsigned 16-bit integers in \a __B, producing 2 intermediate
 ///    signed 16-bit results. Sum these 2 results with the corresponding
@@ -79,10 +82,12 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
+// clang-format on
 #define _mm256_dpwsud_epi32(__W, __A, __B)                                     \
-  ((__m256i)__builtin_ia32_vpdpwsud256((__v8si)(__W), (__v8si)(__A),           \
-                                       (__v8si)(__B)))
+  ((__m256i)__builtin_ia32_vpdpwsud256((__v8si)(__W), (__v16hi)(__A),          \
+                                       (__v16hu)(__B)))
 
+// clang-format off
 /// Multiply groups of 2 adjacent pairs of signed 16-bit integers in \a __A with
 ///    corresponding unsigned 16-bit integers in \a __B, producing 2 intermediate
 ///    signed 16-bit results. Sum these 2 results with the corresponding
@@ -114,10 +119,13 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
+// clang-format on
+/// Multiply groups of 2 adjacent pairs of signed 16-bit integers in \a __A with
 #define _mm_dpwsuds_epi32(__W, __A, __B)                                       \
-  ((__m128i)__builtin_ia32_vpdpwsuds128((__v4si)(__W), (__v4si)(__A),          \
-                                        (__v4si)(__B)))
+  ((__m128i)__builtin_ia32_vpdpwsuds128((__v4si)(__W), (__v8hi)(__A),          \
+                                        (__v8hu)(__B)))
 
+// clang-format off
 /// Multiply groups of 2 adjacent pairs of signed 16-bit integers in \a __A with
 ///    corresponding unsigned 16-bit integers in \a __B, producing 2 intermediate
 ///    signed 16-bit results. Sum these 2 results with the corresponding
@@ -149,10 +157,12 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
+// clang-format on
 #define _mm256_dpwsuds_epi32(__W, __A, __B)                                    \
-  ((__m256i)__builtin_ia32_vpdpwsuds256((__v8si)(__W), (__v8si)(__A),          \
-                                        (__v8si)(__B)))
+  ((__m256i)__builtin_ia32_vpdpwsuds256((__v8si)(__W), (__v16hi)(__A),         \
+                                        (__v16hu)(__B)))
 
+// clang-format off
 /// Multiply groups of 2 adjacent pairs of unsigned 16-bit integers in \a __A with
 ///    corresponding signed 16-bit integers in \a __B, producing 2 intermediate
 ///    signed 16-bit results. Sum these 2 results with the corresponding
@@ -183,10 +193,12 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
+// clang-format on
 #define _mm_dpwusd_epi32(__W, __A, __B)                                        \
-  ((__m128i)__builtin_ia32_vpdpwusd128((__v4si)(__W), (__v4si)(__A),           \
-                                       (__v4si)(__B)))
+  ((__m128i)__builtin_ia32_vpdpwusd128((__v4si)(__W), (__v8hu)(__A),           \
+                                       (__v8hi)(__B)))
 
+// clang-format off
 /// Multiply groups of 2 adjacent pairs of unsigned 16-bit integers in \a __A with
 ///    corresponding signed 16-bit integers in \a __B, producing 2 intermediate
 ///    signed 16-bit results. Sum these 2 results with the corresponding
@@ -217,10 +229,12 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
+// clang-format on
 #define _mm256_dpwusd_epi32(__W, __A, __B)                                     \
-  ((__m256i)__builtin_ia32_vpdpwusd256((__v8si)(__W), (__v8si)(__A),           \
-                                       (__v8si)(__B)))
+  ((__m256i)__builtin_ia32_vpdpwusd256((__v8si)(__W), (__v16hu)(__A),          \
+                                       (__v16hi)(__B)))
 
+// clang-format off
 /// Multiply groups of 2 adjacent pairs of unsigned 16-bit integers in \a __A with
 ///    corresponding signed 16-bit integers in \a __B, producing 2 intermediate
 ///    signed 16-bit results. Sum these 2 results with the corresponding
@@ -233,7 +247,7 @@
 /// __m128i _mm_dpwusds_epi32(__m128i __W, __m128i __A, __m128i __B)
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPDPWSUDS instruction.
+/// This intrinsic corresponds to the \c VPDPWUSDS instruction.
 ///
 /// \param __W
 ///    A 128-bit vector of [4 x int].
@@ -252,10 +266,12 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
+// clang-format on
 #define _mm_dpwusds_epi32(__W, __A, __B)                                       \
-  ((__m128i)__builtin_ia32_vpdpwusds128((__v4si)(__W), (__v4si)(__A),          \
-                                        (__v4si)(__B)))
+  ((__m128i)__builtin_ia32_vpdpwusds128((__v4si)(__W), (__v8hu)(__A),          \
+                                        (__v8hi)(__B)))
 
+// clang-format off
 /// Multiply groups of 2 adjacent pairs of unsigned 16-bit integers in \a __A with
 ///    corresponding signed 16-bit integers in \a __B, producing 2 intermediate
 ///    signed 16-bit results. Sum these 2 results with the corresponding
@@ -268,7 +284,7 @@
 /// __m256i _mm256_dpwsuds_epi32(__m256i __W, __m256i __A, __m256i __B)
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPDPWSUDS instruction.
+/// This intrinsic corresponds to the \c VPDPWUSDS instruction.
 ///
 /// \param __W
 ///    A 256-bit vector of [8 x int].
@@ -287,10 +303,12 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
+// clang-format on
 #define _mm256_dpwusds_epi32(__W, __A, __B)                                    \
-  ((__m256i)__builtin_ia32_vpdpwusds256((__v8si)(__W), (__v8si)(__A),          \
-                                        (__v8si)(__B)))
+  ((__m256i)__builtin_ia32_vpdpwusds256((__v8si)(__W), (__v16hu)(__A),         \
+                                        (__v16hi)(__B)))
 
+// clang-format off
 /// Multiply groups of 2 adjacent pairs of unsigned 16-bit integers in \a __A with
 ///    corresponding unsigned 16-bit integers in \a __B, producing 2 intermediate
 ///    signed 16-bit results. Sum these 2 results with the corresponding
@@ -305,13 +323,13 @@
 /// This intrinsic corresponds to the \c VPDPWUUD instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [4 x unsigned int].
+///    A 128-bit vector of [4 x int].
 /// \param __A
 ///    A 128-bit vector of [8 x unsigned short].
 /// \param __B
 ///    A 128-bit vector of [8 x unsigned short].
 /// \returns
-///    A 128-bit vector of [4 x unsigned int].
+///    A 128-bit vector of [4 x int].
 ///
 /// \code{.operation}
 /// FOR j := 0 to 3
@@ -321,10 +339,12 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
+// clang-format on
 #define _mm_dpwuud_epi32(__W, __A, __B)                                        \
-  ((__m128i)__builtin_ia32_vpdpwuud128((__v4si)(__W), (__v4si)(__A),           \
-                                       (__v4si)(__B)))
+  ((__m128i)__builtin_ia32_vpdpwuud128((__v4si)(__W), (__v8hu)(__A),           \
+                                       (__v8hu)(__B)))
 
+// clang-format off
 /// Multiply groups of 2 adjacent pairs of unsigned 16-bit integers in \a __A with
 ///    corresponding unsigned 16-bit integers in \a __B, producing 2 intermediate
 ///    signed 16-bit results. Sum these 2 results with the corresponding
@@ -339,13 +359,13 @@
 /// This intrinsic corresponds to the \c VPDPWUUD instruction.
 ///
 /// \param __W
-///    A 256-bit vector of [8 x unsigned int].
+///    A 256-bit vector of [8 x int].
 /// \param __A
 ///    A 256-bit vector of [16 x unsigned short].
 /// \param __B
 ///    A 256-bit vector of [16 x unsigned short].
 /// \returns
-///    A 256-bit vector of [8 x unsigned int].
+///    A 256-bit vector of [8 x int].
 ///
 /// \code{.operation}
 /// FOR j := 0 to 7
@@ -355,10 +375,12 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
+// clang-format on
 #define _mm256_dpwuud_epi32(__W, __A, __B)                                     \
-  ((__m256i)__builtin_ia32_vpdpwuud256((__v8si)(__W), (__v8si)(__A),           \
-                                       (__v8si)(__B)))
+  ((__m256i)__builtin_ia32_vpdpwuud256((__v8si)(__W), (__v16hu)(__A),          \
+                                       (__v16hu)(__B)))
 
+// clang-format off
 /// Multiply groups of 2 adjacent pairs of unsigned 16-bit integers in \a __A with
 ///    corresponding unsigned 16-bit integers in \a __B, producing 2 intermediate
 ///    signed 16-bit results. Sum these 2 results with the corresponding
@@ -371,16 +393,16 @@
 /// __m128i _mm_dpwsuds_epi32(__m128i __W, __m128i __A, __m128i __B)
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPDPWSUDS instruction.
+/// This intrinsic corresponds to the \c VPDPWUUDS instruction.
 ///
 /// \param __W
-///    A 128-bit vector of [4 x unsigned int].
+///    A 128-bit vector of [4 x int].
 /// \param __A
 ///    A 128-bit vector of [8 x unsigned short].
 /// \param __B
 ///    A 128-bit vector of [8 x unsigned short].
 /// \returns
-///    A 128-bit vector of [4 x unsigned int].
+///    A 128-bit vector of [4 x int].
 ///
 /// \code{.operation}
 /// FOR j := 0 to 3
@@ -390,10 +412,12 @@
 /// ENDFOR
 /// dst[MAX:128] := 0
 /// \endcode
+// clang-format on
 #define _mm_dpwuuds_epi32(__W, __A, __B)                                       \
-  ((__m128i)__builtin_ia32_vpdpwuuds128((__v4si)(__W), (__v4si)(__A),          \
-                                        (__v4si)(__B)))
+  ((__m128i)__builtin_ia32_vpdpwuuds128((__v4si)(__W), (__v8hu)(__A),          \
+                                        (__v8hu)(__B)))
 
+// clang-format off
 /// Multiply groups of 2 adjacent pairs of unsigned 16-bit integers in \a __A with
 ///    corresponding unsigned 16-bit integers in \a __B, producing 2 intermediate
 ///    signed 16-bit results. Sum these 2 results with the corresponding
@@ -406,16 +430,16 @@
 /// __m256i _mm256_dpwuuds_epi32(__m256i __W, __m256i __A, __m256i __B)
 /// \endcode
 ///
-/// This intrinsic corresponds to the \c VPDPWSUDS instruction.
+/// This intrinsic corresponds to the \c VPDPWUUDS instruction.
 ///
 /// \param __W
-///    A 256-bit vector of [8 x unsigned int].
+///    A 256-bit vector of [8 x int].
 /// \param __A
 ///    A 256-bit vector of [16 x unsigned short].
 /// \param __B
 ///    A 256-bit vector of [16 x unsigned short].
 /// \returns
-///    A 256-bit vector of [8 x unsigned int].
+///    A 256-bit vector of [8 x int].
 ///
 /// \code{.operation}
 /// FOR j := 0 to 7
@@ -425,8 +449,9 @@
 /// ENDFOR
 /// dst[MAX:256] := 0
 /// \endcode
+// clang-format on
 #define _mm256_dpwuuds_epi32(__W, __A, __B)                                    \
-  ((__m256i)__builtin_ia32_vpdpwuuds256((__v8si)(__W), (__v8si)(__A),          \
-                                        (__v8si)(__B)))
+  ((__m256i)__builtin_ia32_vpdpwuuds256((__v8si)(__W), (__v16hu)(__A),         \
+                                        (__v16hu)(__B)))
 
 #endif // __AVXVNNIINT16INTRIN_H
