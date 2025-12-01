@@ -8683,6 +8683,15 @@ private:
       if (llvm::is_contained(C->getMotionModifiers(),
                              OMPC_MOTION_MODIFIER_present))
         Kind = Present;
+      if (llvm::is_contained(C->getMotionModifiers(),
+                             OMPC_MOTION_MODIFIER_iterator)) {
+        if (auto *IteratorExpr = dyn_cast<OMPIteratorExpr>(
+                C->getIteratorModifier()->IgnoreParenImpCasts())) {
+          const auto *VD = cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
+          CGF.EmitVarDecl(*VD);
+        }
+      }
+
       const auto *EI = C->getVarRefs().begin();
       for (const auto L : C->component_lists()) {
         InfoGen(std::get<0>(L), Kind, std::get<1>(L), OMPC_MAP_to, {},
@@ -8699,6 +8708,15 @@ private:
       if (llvm::is_contained(C->getMotionModifiers(),
                              OMPC_MOTION_MODIFIER_present))
         Kind = Present;
+      if (llvm::is_contained(C->getMotionModifiers(),
+                             OMPC_MOTION_MODIFIER_iterator)) {
+        if (auto *IteratorExpr = dyn_cast<OMPIteratorExpr>(
+                C->getIteratorModifier()->IgnoreParenImpCasts())) {
+          const auto *VD = cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
+          CGF.EmitVarDecl(*VD);
+        }
+      }
+
       const auto *EI = C->getVarRefs().begin();
       for (const auto L : C->component_lists()) {
         InfoGen(std::get<0>(L), Kind, std::get<1>(L), OMPC_MAP_from, {},
