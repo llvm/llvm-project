@@ -71,17 +71,19 @@ Options
 Limitations
 -----------
 
-    The ``SafeDestructorTypes`` option does not include ``std::vector`` and
-    other standard containers by default, because while the container itself
-    has a safe destructor, it may contain elements with unsafe destructors.
+* The check does not guarantee correct fixes for template code.
 
-    For example, ``std::vector<std::unique_lock<std::mutex>>`` has an unsafe
-    destructor because the ``std::unique_lock`` elements perform mutex
-    unlocking during destruction.
+* The ``SafeDestructorTypes`` option does not include ``std::vector`` and
+  other standard containers by default, because while the container itself
+  has a safe destructor, it may contain elements with unsafe destructors.
 
-    For this reason, it is not recommended to manually add ``std::vector`` or
-    other container types to the ``SafeDestructorTypes`` list, as the safety
-    depends on the contained element types rather than the container itself.
+  For example, ``std::vector<std::unique_lock<std::mutex>>`` has an unsafe
+  destructor because the ``std::unique_lock`` elements perform mutex
+  unlocking during destruction.
+
+  For this reason, it is not recommended to manually add ``std::vector`` or
+  other container types to the ``SafeDestructorTypes`` list, as the safety
+  depends on the contained element types rather than the container itself.
 
 Requirements
 ------------

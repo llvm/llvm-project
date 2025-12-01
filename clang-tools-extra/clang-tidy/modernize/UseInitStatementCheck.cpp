@@ -107,7 +107,7 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
         unless(equalsBoundNode(StmtName)), hasDescendant(RefToBoundVarDecl))));
 
     return compoundStmt(
-               unless(isInTemplateInstantiation()),
+               unless(isExpansionInSystemHeader()),
                hasAdjacentStmts(PrevDeclStmtMatcher, StmtMatcherWithCondition),
                NoOtherVarRefs)
         .bind("compound");
