@@ -1033,21 +1033,24 @@ define <2 x i128> @lshr_v2i128(<2 x i128> %0, <2 x i128> %1){
     ret <2 x i128> %3
 }
 
-define <2 x i8> @pr168848() {
+define <2 x i8> @pr168848(<2 x i1> %shift) {
 ; CHECK-SD-LABEL: pr168848:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v0.2s, #1
+; CHECK-SD-NEXT:    movi v1.2s, #1
+; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ushl v0.2s, v1.2s, v0.2s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: pr168848:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v1.2s, #1
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    mov w9, #0 // =0x0
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    fmov s1, w9
-; CHECK-GI-NEXT:    mov v0.b[1], w8
-; CHECK-GI-NEXT:    mov v1.b[1], w9
-; CHECK-GI-NEXT:    ushl v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    mov v1.b[1], w8
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    ushl v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    umov w8, v0.b[0]
 ; CHECK-GI-NEXT:    umov w9, v0.b[1]
 ; CHECK-GI-NEXT:    fmov s0, w8
@@ -1055,8 +1058,8 @@ define <2 x i8> @pr168848() {
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
-  %zeroes = zext <2 x i1> zeroinitializer to <2 x i32>
-  %ones = shl <2 x i32> splat (i32 1), %zeroes
+  %shift.zext = zext <2 x i1> %shift to <2 x i32>
+  %ones = shl <2 x i32> splat (i32 1), %shift.zext
   %ones.trunc = trunc <2 x i32> %ones to <2 x i8>
   ret <2 x i8> %ones.trunc
 }
