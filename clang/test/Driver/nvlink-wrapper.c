@@ -42,7 +42,7 @@ int baz() { return y + x; }
 //
 // Check that we forward any unrecognized argument to 'nvlink'.
 //
-// RUN: clang-nvlink-wrapper --dry-run -arch sm_52 %t-u.o -foo -o a.out 2>&1 \
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object -arch sm_52 %t-u.o -foo -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARGS
 // ARGS: nvlink{{.*}} -arch sm_52 -foo -o a.out [[INPUT:.+]].cubin
 
@@ -51,14 +51,17 @@ int baz() { return y + x; }
 // `libx.a` and `liby.a` because extern weak symbols do not extract and `libz.a`
 // is not used at all.
 //
-// RUN: clang-nvlink-wrapper --dry-run %t-x.a %t-u.a %t-y.a %t-z.a %t-w.a %t.o \
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t-x.a %t-u.a %t-y.a %t-z.a %t-w.a %t.o \
 // RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=LINK
+// RUN: clang-nvlink-wrapper --dry-run %t-x.a %t-u.a %t-y.a %t-z.a %t-w.a %t.o \
+// RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=FORWARD
 // LINK: nvlink{{.*}} -arch sm_52 -o a.out [[INPUT:.+]].cubin {{.*}}-x-{{.*}}.cubin{{.*}}-y-{{.*}}.cubin
+// FORWARD: nvlink{{.*}} -arch sm_52 -o a.out [[INPUT:.+]].cubin {{.*}}-x-{{.*}}.o {{.*}}-u-{{.*}}.o {{.*}}-y-{{.*}}.o {{.*}}-z-{{.*}}.o {{.*}}-w-{{.*}}.o
 
 //
 // Same as above but we use '--undefined' to forcibly extract 'libz.a'
 //
-// RUN: clang-nvlink-wrapper --dry-run %t-x.a %t-u.a %t-y.a %t-z.a %t-w.a %t.o \
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t-x.a %t-u.a %t-y.a %t-z.a %t-w.a %t.o \
 // RUN:   -u z -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=LINK
 // UNDEFINED: nvlink{{.*}} -arch sm_52 -o a.out [[INPUT:.+]].cubin {{.*}}-x-{{.*}}.cubin{{.*}}-y-{{.*}}.cubin{{.*}}-z-{{.*}}.cubin
 
@@ -66,7 +69,7 @@ int baz() { return y + x; }
 // Check that the LTO interface works and properly preserves symbols used in a
 // regular object file.
 //
-// RUN: clang-nvlink-wrapper --dry-run %t.o %t-u.o %t-y.a \
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object %t.o %t-u.o %t-y.a \
 // RUN:   -arch sm_52 -o a.out 2>&1 | FileCheck %s --check-prefix=LTO
 // LTO: ptxas{{.*}} -m64 -c [[PTX:.+]].s -O3 -arch sm_52 -o [[CUBIN:.+]].cubin
 // LTO: nvlink{{.*}} -arch sm_52 -o a.out [[CUBIN]].cubin {{.*}}-u-{{.*}}.cubin {{.*}}-y-{{.*}}.cubin

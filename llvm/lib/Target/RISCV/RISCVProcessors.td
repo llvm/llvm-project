@@ -141,7 +141,7 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
                                      RocketModel>;
 
 defvar SiFive7TuneFeatures = [TuneSiFive7, TuneNoDefaultUnroll,
-                              TuneShortForwardBranchOpt,
+                              TuneShortForwardBranchIALU,
                               TunePostRAScheduler];
 def SIFIVE_7 : RISCVTuneProcessorModel<"sifive-7-series",
                                        SiFive7Model, SiFive7TuneFeatures>;
@@ -805,7 +805,7 @@ def ANDES_AX25 : RISCVProcessorModel<"andes-ax25",
 
 defvar Andes45TuneFeatures = [TuneAndes45,
                               TuneNoDefaultUnroll,
-                              TuneShortForwardBranchOpt,
+                              TuneShortForwardBranchIALU,
                               TunePostRAScheduler];
 
 def ANDES_45 : RISCVTuneProcessorModel<"andes-45-series",

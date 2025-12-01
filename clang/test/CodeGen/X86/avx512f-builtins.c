@@ -9589,12 +9589,17 @@ unsigned int test_cvtmask16_u32(__m512i A, __m512i B) {
   return _cvtmask16_u32(_mm512_cmpneq_epu32_mask(A, B));
 }
 
+TEST_CONSTEXPR(_cvtmask16_u32((__mmask16)0xBEEF) == 0xBEEF);
+
 __mmask16 test_cvtu32_mask16(__m512i A, __m512i B, unsigned int C) {
   // CHECK-LABEL: test_cvtu32_mask16
   // CHECK: trunc i32 %{{.*}} to i16
   // CHECK: bitcast i16 %{{.*}} to <16 x i1>
   return _mm512_mask_cmpneq_epu32_mask(_cvtu32_mask16(C), A, B);
 }
+
+TEST_CONSTEXPR(_cvtu32_mask16(0xCAFE) == (__mmask16)0xCAFE);
+TEST_CONSTEXPR(_cvtu32_mask16(_cvtmask16_u32((__mmask16)0x1357)) == (__mmask16)0x1357);
 
 __mmask16 test_load_mask16(__mmask16 *A, __m512i B, __m512i C) {
   // CHECK-LABEL: test_load_mask16

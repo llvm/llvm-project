@@ -11046,14 +11046,30 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   }
 
   if (getLangOpts().CUDA) {
-    IdentifierInfo *II = NewFD->getIdentifier();
-    if (II && II->isStr(CUDA().getConfigureFuncName()) &&
-        !NewFD->isInvalidDecl() &&
-        NewFD->getDeclContext()->getRedeclContext()->isTranslationUnit()) {
-      if (!R->castAs<FunctionType>()->getReturnType()->isScalarType())
-        Diag(NewFD->getLocation(), diag::err_config_scalar_return)
-            << CUDA().getConfigureFuncName();
-      Context.setcudaConfigureCallDecl(NewFD);
+    if (IdentifierInfo *II = NewFD->getIdentifier()) {
+      if (II->isStr(CUDA().getConfigureFuncName()) && !NewFD->isInvalidDecl() &&
+          NewFD->getDeclContext()->getRedeclContext()->isTranslationUnit()) {
+        if (!R->castAs<FunctionType>()->getReturnType()->isScalarType())
+          Diag(NewFD->getLocation(), diag::err_config_scalar_return)
+              << CUDA().getConfigureFuncName();
+        Context.setcudaConfigureCallDecl(NewFD);
+      }
+      if (II->isStr(CUDA().getGetParameterBufferFuncName()) &&
+          !NewFD->isInvalidDecl() &&
+          NewFD->getDeclContext()->getRedeclContext()->isTranslationUnit()) {
+        if (!R->castAs<FunctionType>()->getReturnType()->isPointerType())
+          Diag(NewFD->getLocation(), diag::err_config_pointer_return)
+              << CUDA().getConfigureFuncName();
+        Context.setcudaGetParameterBufferDecl(NewFD);
+      }
+      if (II->isStr(CUDA().getLaunchDeviceFuncName()) &&
+          !NewFD->isInvalidDecl() &&
+          NewFD->getDeclContext()->getRedeclContext()->isTranslationUnit()) {
+        if (!R->castAs<FunctionType>()->getReturnType()->isScalarType())
+          Diag(NewFD->getLocation(), diag::err_config_scalar_return)
+              << CUDA().getConfigureFuncName();
+        Context.setcudaLaunchDeviceDecl(NewFD);
+      }
     }
   }
 
