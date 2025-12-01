@@ -1561,4 +1561,36 @@ void foo(int arg) {
 }
 
 #endif
+// RUN: %clang_cc1 -DCK26 -verify -Wno-vla -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix CK26 --check-prefix CK26-64
+// RUN: %clang_cc1 -DCK26 -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s  --check-prefix CK26 --check-prefix CK26-64
+// RUN: %clang_cc1 -DCK26 -fopenmp-version=51 -verify -Wno-vla -fopenmp -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s  --check-prefix CK26 --check-prefix CK26-32
+// RUN: %clang_cc1 -DCK26 -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s  --check-prefix CK26 --check-prefix CK26-32
+
+// RUN: %clang_cc1 -DCK26 -verify -Wno-vla -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK26 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK26 -verify -Wno-vla -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// RUN: %clang_cc1 -DCK26 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -std=c++11 -triple i386-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY19 %s
+// SIMD-ONLY19-NOT: {{__kmpc|__tgt}}
+#ifdef CK26
+void foo() {
+int a[10];
+#pragma omp target update to(iterator(int it = 0:10) : a[it])
+// CK26-LABEL: define {{.+}}foo
+// CK26: %[[ITER:[a-zA-Z0-9_]+]] = alloca i32, align 4
+// CK26: %[[LOAD2:.*]] = load i32, ptr %[[ITER]], align 4
+}
+
+void foo1() {
+int a[10];
+#pragma omp target update from(iterator(int it = 0:10) : a[it])
+// CK26-LABEL: define {{.+}}foo1
+// CK26: %[[ITER:[a-zA-Z0-9_]+]] = alloca i32, align 4
+// CK26: %[[LOAD2:.*]] = load i32, ptr %[[ITER]], align 4
+}
+
+#endif
 #endif
