@@ -16897,6 +16897,16 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
   }
 
+  case X86::BI__builtin_ia32_kmovb:
+  case X86::BI__builtin_ia32_kmovw:
+  case X86::BI__builtin_ia32_kmovd:
+  case X86::BI__builtin_ia32_kmovq: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+    return Success(Val, E);
+  }
+
   case clang::X86::BI__builtin_ia32_vec_ext_v4hi:
   case clang::X86::BI__builtin_ia32_vec_ext_v16qi:
   case clang::X86::BI__builtin_ia32_vec_ext_v8hi:

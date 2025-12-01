@@ -561,20 +561,30 @@ unsigned int test_cvtmask32_u32(__m512i A, __m512i B) {
   return _cvtmask32_u32(_mm512_cmpneq_epu16_mask(A, B));
 }
 
+TEST_CONSTEXPR(_cvtmask32_u32((__mmask32)0xDEADBEEF) == 0xDEADBEEF);
+
 unsigned long long test_cvtmask64_u64(__m512i A, __m512i B) {
   // CHECK-LABEL: test_cvtmask64_u64
   return _cvtmask64_u64(_mm512_cmpneq_epu8_mask(A, B));
 }
+
+TEST_CONSTEXPR(_cvtmask64_u64((__mmask64)0x123456789ABCDEF0ULL) == 0x123456789ABCDEF0ULL);
 
 __mmask32 test_cvtu32_mask32(__m512i A, __m512i B, unsigned int C) {
   // CHECK-LABEL: test_cvtu32_mask32
   return _mm512_mask_cmpneq_epu16_mask(_cvtu32_mask32(C), A, B);
 }
 
+TEST_CONSTEXPR(_cvtu32_mask32(0x13579BDF) == (__mmask32)0x13579BDF);
+TEST_CONSTEXPR(_cvtu32_mask32(_cvtmask32_u32((__mmask32)0x2468ACE0)) == (__mmask32)0x2468ACE0);
+
 __mmask64 test_cvtu64_mask64(__m512i A, __m512i B, unsigned long long C) {
   // CHECK-LABEL: test_cvtu64_mask64
   return _mm512_mask_cmpneq_epu8_mask(_cvtu64_mask64(C), A, B);
 }
+
+TEST_CONSTEXPR(_cvtu64_mask64(0x0F0F0F0F0F0F0F0FULL) == (__mmask64)0x0F0F0F0F0F0F0F0FULL);
+TEST_CONSTEXPR(_cvtu64_mask64(_cvtmask64_u64((__mmask64)0xF0F0F0F0F0F0F0F0ULL)) == (__mmask64)0xF0F0F0F0F0F0F0F0ULL);
 
 __mmask32 test_load_mask32(__mmask32 *A, __m512i B, __m512i C) {
   // CHECK-LABEL: test_load_mask32
