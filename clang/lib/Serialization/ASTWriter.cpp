@@ -6531,14 +6531,6 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
         Record.AddDeclRef(Update.getDecl());
         break;
 
-      case DeclUpdateKind::CXXResolvedDtorArrayDelete:
-        Record.AddDeclRef(Update.getDecl());
-        break;
-
-      case DeclUpdateKind::CXXResolvedDtorGlobArrayDelete:
-        Record.AddDeclRef(Update.getDecl());
-        break;
-
       case DeclUpdateKind::CXXResolvedExceptionSpec: {
         auto prototype =
           cast<FunctionDecl>(D)->getType()->castAs<FunctionProtoType>();
@@ -7612,34 +7604,6 @@ void ASTWriter::ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
   });
 }
 
-void ASTWriter::ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
-                                            const FunctionDecl *ArrayDelete) {
-  if (Chain && Chain->isProcessingUpdateRecords())
-    return;
-  assert(!WritingAST && "Already writing the AST!");
-  assert(ArrayDelete && "Not given an operator delete");
-  if (!Chain)
-    return;
-  Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
-    DeclUpdates[D].push_back(
-        DeclUpdate(DeclUpdateKind::CXXResolvedDtorArrayDelete, ArrayDelete));
-  });
-}
-
-void ASTWriter::ResolvedOperatorGlobArrayDelete(
-    const CXXDestructorDecl *DD, const FunctionDecl *GlobArrayDelete) {
-  if (Chain && Chain->isProcessingUpdateRecords())
-    return;
-  assert(!WritingAST && "Already writing the AST!");
-  assert(GlobArrayDelete && "Not given an operator delete");
-  if (!Chain)
-    return;
-  Chain->forEachImportedKeyDecl(DD, [&](const Decl *D) {
-    DeclUpdates[D].push_back(DeclUpdate(
-        DeclUpdateKind::CXXResolvedDtorGlobArrayDelete, GlobArrayDelete));
-  });
-}
-
 void ASTWriter::CompletedImplicitDefinition(const FunctionDecl *D) {
   if (Chain && Chain->isProcessingUpdateRecords()) return;
   assert(!WritingAST && "Already writing the AST!");
@@ -8453,6 +8417,8 @@ void OMPClauseWriter::VisitOMPToClause(OMPToClause *C) {
   for (unsigned I = 0; I < NumberOfOMPMotionModifiers; ++I) {
     Record.push_back(C->getMotionModifier(I));
     Record.AddSourceLocation(C->getMotionModifierLoc(I));
+    if (C->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+      Record.AddStmt(C->getIteratorModifier());
   }
   Record.AddNestedNameSpecifierLoc(C->getMapperQualifierLoc());
   Record.AddDeclarationNameInfo(C->getMapperIdInfo());
@@ -8483,6 +8449,8 @@ void OMPClauseWriter::VisitOMPFromClause(OMPFromClause *C) {
   for (unsigned I = 0; I < NumberOfOMPMotionModifiers; ++I) {
     Record.push_back(C->getMotionModifier(I));
     Record.AddSourceLocation(C->getMotionModifierLoc(I));
+    if (C->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+      Record.AddStmt(C->getIteratorModifier());
   }
   Record.AddNestedNameSpecifierLoc(C->getMapperQualifierLoc());
   Record.AddDeclarationNameInfo(C->getMapperIdInfo());

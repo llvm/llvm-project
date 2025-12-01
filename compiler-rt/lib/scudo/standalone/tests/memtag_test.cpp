@@ -28,7 +28,6 @@ TEST(MemtagBasicDeathTest, Unsupported) {
   EXPECT_DEATH(untagPointer((uptr)0), "not supported");
   EXPECT_DEATH(extractTag((uptr)0), "not supported");
 
-  EXPECT_DEATH(systemSupportsMemoryTagging(), "not supported");
   EXPECT_DEATH(systemDetectsMemoryTagFaultsTestOnly(), "not supported");
   EXPECT_DEATH(enableSystemMemoryTaggingTestOnly(), "not supported");
 

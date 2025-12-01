@@ -3288,6 +3288,9 @@ static SDValue getAsCarry(const TargetLowering &TLI, SDValue V,
 
   // First, peel away TRUNCATE/ZERO_EXTEND/AND nodes due to legalization.
   while (true) {
+    if (ForceCarryReconstruction && V.getValueType() == MVT::i1)
+      return V;
+
     if (V.getOpcode() == ISD::TRUNCATE || V.getOpcode() == ISD::ZERO_EXTEND) {
       V = V.getOperand(0);
       continue;
@@ -3301,9 +3304,6 @@ static SDValue getAsCarry(const TargetLowering &TLI, SDValue V,
       V = V.getOperand(0);
       continue;
     }
-
-    if (ForceCarryReconstruction && V.getValueType() == MVT::i1)
-      return V;
 
     break;
   }
@@ -23469,6 +23469,10 @@ SDValue DAGCombiner::combineInsertEltToShuffle(SDNode *N, unsigned InsIndex) {
   EVT SubVecVT = SubVec.getValueType();
   EVT VT = DestVec.getValueType();
   unsigned NumSrcElts = SubVecVT.getVectorNumElements();
+  // Bail out if the inserted value is larger than the vector element, as
+  // insert_vector_elt performs an implicit truncation in this case.
+  if (InsertVal.getValueType() != VT.getVectorElementType())
+    return SDValue();
   // If the source only has a single vector element, the cost of creating adding
   // it to a vector is likely to exceed the cost of a insert_vector_elt.
   if (NumSrcElts == 1)
