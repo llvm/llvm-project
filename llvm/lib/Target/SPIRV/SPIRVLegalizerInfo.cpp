@@ -178,7 +178,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .alwaysLegal();
 
   getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
-      .legalIf(vectorElementCountIsLessThanOrEqualTo(1, MaxVectorSize))
       .moreElementsToNextPow2(1)
       .fewerElementsIf(vectorElementCountIsGreaterThan(1, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
@@ -426,6 +425,21 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   verify(*ST.getInstrInfo());
 }
 
+static bool legalizeExtractVectorElt(LegalizerHelper &Helper, MachineInstr &MI,
+                                     SPIRVGlobalRegistry *GR) {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register IdxReg = MI.getOperand(2).getReg();
+
+  MIRBuilder
+      .buildIntrinsic(Intrinsic::spv_extractelt, ArrayRef<Register>{DstReg})
+      .addUse(SrcReg)
+      .addUse(IdxReg);
+  MI.eraseFromParent();
+  return true;
+}
+
 static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpvType,
                                 LegalizerHelper &Helper,
                                 MachineRegisterInfo &MRI,
@@ -449,6 +463,8 @@ bool SPIRVLegalizerInfo::legalizeCustom(
     return true;
   case TargetOpcode::G_BITCAST:
     return legalizeBitcast(Helper, MI);
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
+    return legalizeExtractVectorElt(Helper, MI, GR);
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return legalizeIntrinsic(Helper, MI);
