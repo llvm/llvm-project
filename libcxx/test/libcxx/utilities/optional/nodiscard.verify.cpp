@@ -49,7 +49,7 @@ struct CRVal {
 void test() {
   std::bad_optional_access ex;
 
-  ex.what(); // expect-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  ex.what(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   std::optional<int> opt;
   const std::optional<int> cOpt;
