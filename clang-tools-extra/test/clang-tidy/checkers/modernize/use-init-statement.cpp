@@ -85,6 +85,17 @@ void good_unique_lock() {
     ++counter;
 }
 
+void good_unique_lock_lifetime_extension() {
+    static std::mutex counter_mutex;
+    static int counter;
+
+    const auto& lock = std::unique_lock<std::mutex>{counter_mutex};
+    if (lock.owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
 void good_unique_lock_nested() {
     struct Lock { std::unique_lock<std::mutex> l; };
     static std::mutex counter_mutex;
@@ -159,8 +170,6 @@ void good_array_of_unique_lock_using() {
     ++counter;
 }
 
-
-// TODO: implement structured binding case
 
 void bad1() {
     int i1 = 0; DUMMY_TOKEN

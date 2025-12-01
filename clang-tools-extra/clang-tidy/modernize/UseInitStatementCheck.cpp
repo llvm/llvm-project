@@ -99,12 +99,14 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
   const auto ArrayOfClassWithDtor =
       hasType(arrayType(hasElementType(ClassWithDtorType)));
   const auto HasDtor = anyOf(hasType(ClassWithDtorType), ArrayOfClassWithDtor);
+  const auto CheckLTE =
+      optionally(hasInitializer(expr(hasDescendant(expr(materializeTemporaryExpr().bind("lte"))))));
 
   // Matchers for variable declarations
   const auto SingleVarDeclWithDtor =
-      varDecl(HasDtor).bind("singleVar");
+      varDecl(HasDtor, CheckLTE).bind("singleVar");
   const auto SingleVarDecl =
-      varDecl().bind("singleVar");
+      varDecl(CheckLTE).bind("singleVar");
   const auto RefToBoundVarDecl =
       declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
 
@@ -191,6 +193,7 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *If = Result.Nodes.getNodeAs<Stmt>("ifStmt");
   const auto *Switch = Result.Nodes.getNodeAs<Stmt>("switchStmt");
   const auto *Dtor = Result.Nodes.getNodeAs<CXXDestructorDecl>("dtorDecl");
+  const auto *LTE = Result.Nodes.getNodeAs<MaterializeTemporaryExpr>("lte");
   const auto *PrevDecl = Result.Nodes.getNodeAs<DeclStmt>("prevDecl");
   const auto *Condition = Result.Nodes.getNodeAs<Expr>("condition");
   const auto *Compound = Result.Nodes.getNodeAs<CompoundStmt>("compound");
@@ -205,6 +208,9 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   if (Dtor && !IsLast && !isSingleVarWithSafeDestructor(Result))
+    return;
+
+  if (LTE)
     return;
 
   auto Diag = diag(PrevDecl->getBeginLoc(),

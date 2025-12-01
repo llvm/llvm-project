@@ -75,6 +75,17 @@ void good_unique_lock() {
     ++counter;
 }
 
+void good_unique_lock_lifetime_extension() {
+    struct Locks { unique_lock_t l; };
+    static std::mutex lock;
+    static int counter = 0;
+    const auto& [l] = Locks{unique_lock_t{lock}};
+    if (l.owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
 void good_unique_lock_multiple() {
     struct Locks { unique_lock_t first; unique_lock_t second; };
     static std::mutex lock1;
