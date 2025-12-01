@@ -1525,9 +1525,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT : {MVT::v16i8, MVT::v8i8, MVT::v4i16, MVT::v2i32})
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Custom);
 
-    for (auto VT : {MVT::v8f16, MVT::v4f32, MVT::v2f64}) {
+    for (auto VT : {MVT::v8f16, MVT::v4f32, MVT::v2f64})
       setOperationAction(ISD::FMA, VT, Custom);
-    }
   }
 
   if (Subtarget->isSVEorStreamingSVEAvailable()) {
@@ -7743,7 +7742,10 @@ SDValue AArch64TargetLowering::LowerFMA(SDValue Op, SelectionDAG &DAG) const {
 
   // Bail early if we're definitely not looking to merge FNEGs into the FMA.
   if (!VT.isFixedLengthVector() || OpC.getOpcode() != ISD::FNEG) {
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
+    if (VT.isScalableVector() || VT.getScalarType() == MVT::bf16 ||
+        useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
+    return Op; // Fallback to NEON lowering.
   }
 
   // Convert FMA/FNEG nodes to SVE to enable the following patterns:
@@ -7753,13 +7755,18 @@ SDValue AArch64TargetLowering::LowerFMA(SDValue Op, SelectionDAG &DAG) const {
   SDValue Pg = getPredicateForVector(DAG, DL, VT);
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
 
-  for (SDValue *Op : {&OpA, &OpB, &OpC}) {
-    // Reuse `LowerToPredicatedOp` but drop the subsequent `extract_subvector`
-    *Op = Op->getOpcode() == ISD::FNEG
-              ? LowerToPredicatedOp(*Op, DAG, AArch64ISD::FNEG_MERGE_PASSTHRU)
-                    ->getOperand(0)
-              : convertToScalableVector(DAG, ContainerVT, *Op);
-  }
+  // Reuse `LowerToPredicatedOp` but drop the subsequent `extract_subvector`
+  OpA = OpA.getOpcode() == ISD::FNEG
+            ? LowerToPredicatedOp(OpA, DAG, AArch64ISD::FNEG_MERGE_PASSTHRU)
+                  ->getOperand(0)
+            : convertToScalableVector(DAG, ContainerVT, OpA);
+  OpB = OpB.getOpcode() == ISD::FNEG
+            ? LowerToPredicatedOp(OpB, DAG, AArch64ISD::FNEG_MERGE_PASSTHRU)
+                  ->getOperand(0)
+            : convertToScalableVector(DAG, ContainerVT, OpB);
+  OpC = LowerToPredicatedOp(OpC, DAG, AArch64ISD::FNEG_MERGE_PASSTHRU)
+            ->getOperand(0);
+
   SDValue ScalableRes =
       DAG.getNode(AArch64ISD::FMA_PRED, DL, ContainerVT, Pg, OpA, OpB, OpC);
   return convertFromScalableVector(DAG, VT, ScalableRes);

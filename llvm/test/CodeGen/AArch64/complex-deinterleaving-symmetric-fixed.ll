@@ -7,18 +7,13 @@ define <4 x double> @simple_symmetric_muladd2(<4 x double> %a, <4 x double> %b) 
 ; CHECK-LABEL: simple_symmetric_muladd2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x8, #-7378697629483820647 // =0x9999999999999999
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
-; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; CHECK-NEXT:    movk x8, #39322
 ; CHECK-NEXT:    movk x8, #16393, lsl #48
 ; CHECK-NEXT:    dup v4.2d, x8
-; CHECK-NEXT:    fmad z0.d, p0/m, z4.d, z2.d
-; CHECK-NEXT:    fmad z1.d, p0/m, z4.d, z3.d
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-NEXT:    fmla v2.2d, v4.2d, v0.2d
+; CHECK-NEXT:    fmla v3.2d, v4.2d, v1.2d
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    mov v1.16b, v3.16b
 ; CHECK-NEXT:    ret
 entry:
   %ext00 = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>
@@ -48,11 +43,10 @@ define <8 x double> @simple_symmetric_muladd4(<8 x double> %a, <8 x double> %b) 
 ; CHECK-NEXT:    zip1 v17.2d, v5.2d, v7.2d
 ; CHECK-NEXT:    zip2 v5.2d, v5.2d, v7.2d
 ; CHECK-NEXT:    dup v6.2d, x8
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    fmla z3.d, p0/m, z16.d, z6.d
-; CHECK-NEXT:    fmla z4.d, p0/m, z0.d, z6.d
-; CHECK-NEXT:    fmla z17.d, p0/m, z2.d, z6.d
-; CHECK-NEXT:    fmla z5.d, p0/m, z1.d, z6.d
+; CHECK-NEXT:    fmla v3.2d, v6.2d, v16.2d
+; CHECK-NEXT:    fmla v4.2d, v6.2d, v0.2d
+; CHECK-NEXT:    fmla v17.2d, v6.2d, v2.2d
+; CHECK-NEXT:    fmla v5.2d, v6.2d, v1.2d
 ; CHECK-NEXT:    zip1 v0.2d, v3.2d, v4.2d
 ; CHECK-NEXT:    zip2 v2.2d, v3.2d, v4.2d
 ; CHECK-NEXT:    zip1 v1.2d, v17.2d, v5.2d
