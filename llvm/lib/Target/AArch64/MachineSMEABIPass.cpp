@@ -660,7 +660,7 @@ MachineSMEABI::findStateChangeInsertionPoint(
     // Find places where NZCV is available, but keep looking for locations where
     // both NZCV and X0 are available, which can avoid some copies.
     if (!(CurrentPhysLiveRegs & LiveRegs::NZCV))
-      BestCandidate = {I, getPhysLiveRegs(LiveUnits)};
+      BestCandidate = {I, CurrentPhysLiveRegs};
     if (CurrentPhysLiveRegs == LiveRegs::None)
       break;
   }
