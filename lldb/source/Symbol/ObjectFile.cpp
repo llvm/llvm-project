@@ -254,13 +254,14 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
     : ModuleChild(module_sp),
       m_file(), // This file could be different from the original module's file
       m_type(eTypeInvalid), m_strata(eStrataInvalid),
-      m_file_offset(file_offset), m_length(length), m_data(), m_process_wp(),
+      m_file_offset(file_offset), m_length(length),
+      m_data_nsp(std::make_shared<DataExtractor>()), m_process_wp(),
       m_memory_addr(LLDB_INVALID_ADDRESS), m_sections_up(), m_symtab_up(),
       m_symtab_once_up(new llvm::once_flag()) {
   if (file_spec_ptr)
     m_file = *file_spec_ptr;
   if (data_sp)
-    m_data.SetData(data_sp, data_offset, length);
+    m_data_nsp->SetData(data_sp, data_offset, length);
   Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log,
             "%p ObjectFile::ObjectFile() module = %p (%s), file = %s, "
@@ -275,11 +276,12 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
                        const ProcessSP &process_sp, lldb::addr_t header_addr,
                        DataBufferSP header_data_sp)
     : ModuleChild(module_sp), m_file(), m_type(eTypeInvalid),
-      m_strata(eStrataInvalid), m_file_offset(0), m_length(0), m_data(),
-      m_process_wp(process_sp), m_memory_addr(header_addr), m_sections_up(),
-      m_symtab_up(), m_symtab_once_up(new llvm::once_flag()) {
+      m_strata(eStrataInvalid), m_file_offset(0), m_length(0),
+      m_data_nsp(std::make_shared<DataExtractor>()), m_process_wp(process_sp),
+      m_memory_addr(header_addr), m_sections_up(), m_symtab_up(),
+      m_symtab_once_up(new llvm::once_flag()) {
   if (header_data_sp)
-    m_data.SetData(header_data_sp, 0, header_data_sp->GetByteSize());
+    m_data_nsp->SetData(header_data_sp, 0, header_data_sp->GetByteSize());
   Log *log = GetLog(LLDBLog::Object);
   LLDB_LOGF(log,
             "%p ObjectFile::ObjectFile() module = %p (%s), process = %p, "
@@ -476,16 +478,16 @@ WritableDataBufferSP ObjectFile::ReadMemory(const ProcessSP &process_sp,
 
 size_t ObjectFile::GetData(lldb::offset_t offset, size_t length,
                            DataExtractor &data) const {
-  // The entire file has already been mmap'ed into m_data, so just copy from
+  // The entire file has already been mmap'ed into m_data_nsp, so just copy from
   // there as the back mmap buffer will be shared with shared pointers.
-  return data.SetData(m_data, offset, length);
+  return data.SetData(*m_data_nsp.get(), offset, length);
 }
 
 size_t ObjectFile::CopyData(lldb::offset_t offset, size_t length,
                             void *dst) const {
-  // The entire file has already been mmap'ed into m_data, so just copy from
+  // The entire file has already been mmap'ed into m_data_nsp, so just copy from
   // there Note that the data remains in target byte order.
-  return m_data.CopyData(offset, length, dst);
+  return m_data_nsp->CopyData(offset, length, dst);
 }
 
 size_t ObjectFile::ReadSectionData(Section *section,

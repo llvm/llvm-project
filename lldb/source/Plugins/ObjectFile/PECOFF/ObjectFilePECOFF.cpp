@@ -396,7 +396,7 @@ bool ObjectFilePECOFF::CreateBinary() {
   Log *log = GetLog(LLDBLog::Object);
 
   auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
-      toStringRef(m_data.GetData()), m_file.GetFilename().GetStringRef()));
+      toStringRef(m_data_nsp->GetData()), m_file.GetFilename().GetStringRef()));
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
                    "Failed to create binary for file ({1}): {0}", m_file);
@@ -442,20 +442,20 @@ bool ObjectFilePECOFF::ParseHeader() {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     m_sect_headers.clear();
-    m_data.SetByteOrder(eByteOrderLittle);
+    m_data_nsp->SetByteOrder(eByteOrderLittle);
     lldb::offset_t offset = 0;
 
-    if (ParseDOSHeader(m_data, m_dos_header)) {
+    if (ParseDOSHeader(*m_data_nsp.get(), m_dos_header)) {
       offset = m_dos_header.e_lfanew;
-      uint32_t pe_signature = m_data.GetU32(&offset);
+      uint32_t pe_signature = m_data_nsp->GetU32(&offset);
       if (pe_signature != IMAGE_NT_SIGNATURE)
         return false;
-      if (ParseCOFFHeader(m_data, &offset, m_coff_header)) {
+      if (ParseCOFFHeader(*m_data_nsp.get(), &offset, m_coff_header)) {
         if (m_coff_header.hdrsize > 0)
           ParseCOFFOptionalHeader(&offset);
         ParseSectionHeaders(offset);
       }
-      m_data.SetAddressByteSize(GetAddressByteSize());
+      m_data_nsp->SetAddressByteSize(GetAddressByteSize());
       return true;
     }
   }
@@ -602,57 +602,63 @@ bool ObjectFilePECOFF::ParseCOFFOptionalHeader(lldb::offset_t *offset_ptr) {
   const lldb::offset_t end_offset = *offset_ptr + m_coff_header.hdrsize;
   if (*offset_ptr < end_offset) {
     success = true;
-    m_coff_header_opt.magic = m_data.GetU16(offset_ptr);
-    m_coff_header_opt.major_linker_version = m_data.GetU8(offset_ptr);
-    m_coff_header_opt.minor_linker_version = m_data.GetU8(offset_ptr);
-    m_coff_header_opt.code_size = m_data.GetU32(offset_ptr);
-    m_coff_header_opt.data_size = m_data.GetU32(offset_ptr);
-    m_coff_header_opt.bss_size = m_data.GetU32(offset_ptr);
-    m_coff_header_opt.entry = m_data.GetU32(offset_ptr);
-    m_coff_header_opt.code_offset = m_data.GetU32(offset_ptr);
+    m_coff_header_opt.magic = m_data_nsp->GetU16(offset_ptr);
+    m_coff_header_opt.major_linker_version = m_data_nsp->GetU8(offset_ptr);
+    m_coff_header_opt.minor_linker_version = m_data_nsp->GetU8(offset_ptr);
+    m_coff_header_opt.code_size = m_data_nsp->GetU32(offset_ptr);
+    m_coff_header_opt.data_size = m_data_nsp->GetU32(offset_ptr);
+    m_coff_header_opt.bss_size = m_data_nsp->GetU32(offset_ptr);
+    m_coff_header_opt.entry = m_data_nsp->GetU32(offset_ptr);
+    m_coff_header_opt.code_offset = m_data_nsp->GetU32(offset_ptr);
 
     const uint32_t addr_byte_size = GetAddressByteSize();
 
     if (*offset_ptr < end_offset) {
       if (m_coff_header_opt.magic == OPT_HEADER_MAGIC_PE32) {
         // PE32 only
-        m_coff_header_opt.data_offset = m_data.GetU32(offset_ptr);
+        m_coff_header_opt.data_offset = m_data_nsp->GetU32(offset_ptr);
       } else
         m_coff_header_opt.data_offset = 0;
 
       if (*offset_ptr < end_offset) {
         m_coff_header_opt.image_base =
-            m_data.GetMaxU64(offset_ptr, addr_byte_size);
-        m_coff_header_opt.sect_alignment = m_data.GetU32(offset_ptr);
-        m_coff_header_opt.file_alignment = m_data.GetU32(offset_ptr);
-        m_coff_header_opt.major_os_system_version = m_data.GetU16(offset_ptr);
-        m_coff_header_opt.minor_os_system_version = m_data.GetU16(offset_ptr);
-        m_coff_header_opt.major_image_version = m_data.GetU16(offset_ptr);
-        m_coff_header_opt.minor_image_version = m_data.GetU16(offset_ptr);
-        m_coff_header_opt.major_subsystem_version = m_data.GetU16(offset_ptr);
-        m_coff_header_opt.minor_subsystem_version = m_data.GetU16(offset_ptr);
-        m_coff_header_opt.reserved1 = m_data.GetU32(offset_ptr);
-        m_coff_header_opt.image_size = m_data.GetU32(offset_ptr);
-        m_coff_header_opt.header_size = m_data.GetU32(offset_ptr);
-        m_coff_header_opt.checksum = m_data.GetU32(offset_ptr);
-        m_coff_header_opt.subsystem = m_data.GetU16(offset_ptr);
-        m_coff_header_opt.dll_flags = m_data.GetU16(offset_ptr);
+            m_data_nsp->GetMaxU64(offset_ptr, addr_byte_size);
+        m_coff_header_opt.sect_alignment = m_data_nsp->GetU32(offset_ptr);
+        m_coff_header_opt.file_alignment = m_data_nsp->GetU32(offset_ptr);
+        m_coff_header_opt.major_os_system_version =
+            m_data_nsp->GetU16(offset_ptr);
+        m_coff_header_opt.minor_os_system_version =
+            m_data_nsp->GetU16(offset_ptr);
+        m_coff_header_opt.major_image_version = m_data_nsp->GetU16(offset_ptr);
+        m_coff_header_opt.minor_image_version = m_data_nsp->GetU16(offset_ptr);
+        m_coff_header_opt.major_subsystem_version =
+            m_data_nsp->GetU16(offset_ptr);
+        m_coff_header_opt.minor_subsystem_version =
+            m_data_nsp->GetU16(offset_ptr);
+        m_coff_header_opt.reserved1 = m_data_nsp->GetU32(offset_ptr);
+        m_coff_header_opt.image_size = m_data_nsp->GetU32(offset_ptr);
+        m_coff_header_opt.header_size = m_data_nsp->GetU32(offset_ptr);
+        m_coff_header_opt.checksum = m_data_nsp->GetU32(offset_ptr);
+        m_coff_header_opt.subsystem = m_data_nsp->GetU16(offset_ptr);
+        m_coff_header_opt.dll_flags = m_data_nsp->GetU16(offset_ptr);
         m_coff_header_opt.stack_reserve_size =
-            m_data.GetMaxU64(offset_ptr, addr_byte_size);
+            m_data_nsp->GetMaxU64(offset_ptr, addr_byte_size);
         m_coff_header_opt.stack_commit_size =
-            m_data.GetMaxU64(offset_ptr, addr_byte_size);
+            m_data_nsp->GetMaxU64(offset_ptr, addr_byte_size);
         m_coff_header_opt.heap_reserve_size =
-            m_data.GetMaxU64(offset_ptr, addr_byte_size);
+            m_data_nsp->GetMaxU64(offset_ptr, addr_byte_size);
         m_coff_header_opt.heap_commit_size =
-            m_data.GetMaxU64(offset_ptr, addr_byte_size);
-        m_coff_header_opt.loader_flags = m_data.GetU32(offset_ptr);
-        uint32_t num_data_dir_entries = m_data.GetU32(offset_ptr);
+            m_data_nsp->GetMaxU64(offset_ptr, addr_byte_size);
+        m_coff_header_opt.loader_flags = m_data_nsp->GetU32(offset_ptr);
+        uint32_t num_data_dir_entries = m_data_nsp->GetU32(offset_ptr);
         m_coff_header_opt.data_dirs.clear();
         m_coff_header_opt.data_dirs.resize(num_data_dir_entries);
         uint32_t i;
         for (i = 0; i < num_data_dir_entries; i++) {
-          m_coff_header_opt.data_dirs[i].vmaddr = m_data.GetU32(offset_ptr);
-          m_coff_header_opt.data_dirs[i].vmsize = m_data.GetU32(offset_ptr);
+          m_coff_header_opt.data_dirs[i].vmaddr =
+              m_data_nsp->GetU32(offset_ptr);
+          m_coff_header_opt.data_dirs[i].vmsize =
+              m_data_nsp->GetU32(offset_ptr);
         }
 
         m_image_base = m_coff_header_opt.image_base;
@@ -684,8 +690,8 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
   if (!size)
     return {};
 
-  if (m_data.ValidOffsetForDataOfSize(offset, size))
-    return DataExtractor(m_data, offset, size);
+  if (m_data_nsp->ValidOffsetForDataOfSize(offset, size))
+    return DataExtractor(*m_data_nsp.get(), offset, size);
 
   ProcessSP process_sp(m_process_wp.lock());
   DataExtractor data;
@@ -759,7 +765,7 @@ llvm::StringRef ObjectFilePECOFF::GetSectionName(const section_header_t &sect) {
       return "";
     lldb::offset_t string_file_offset =
         m_coff_header.symoff + (m_coff_header.nsyms * 18) + stroff;
-    if (const char *name = m_data.GetCStr(&string_file_offset))
+    if (const char *name = m_data_nsp->GetCStr(&string_file_offset))
       return name;
     return "";
   }
