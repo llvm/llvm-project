@@ -338,8 +338,15 @@ TEST(RangeSelectorTest, MergeOp) {
   RangeSelector R = merge(node("a0"), node("a1"));
   TestMatch Match = matchCode(Code, Matcher);
   EXPECT_THAT_EXPECTED(select(R, Match), HasValue("3, 7"));
-  R = merge(node("a2"), node("a1"));
-  EXPECT_THAT_EXPECTED(select(R, Match), HasValue("7 /* comment */, 9"));
+  // Test the merge of two non-contiguous and out-of-order token-ranges.
+  R = merge(node("a2"), node("a0"));
+  EXPECT_THAT_EXPECTED(select(R, Match), HasValue("3, 7 /* comment */, 9"));
+  // Test the merge of a token-range (expr node) with a char-range (before).
+  R = merge(node("a1"), before(node("a0")));
+  EXPECT_THAT_EXPECTED(select(R, Match), HasValue("3, 7"));
+  // Test the merge of two char-ranges.
+  R = merge(before(node("a0")), before(node("a1")));
+  EXPECT_THAT_EXPECTED(select(R, Match), HasValue("3, "));
 }
 
 TEST(RangeSelectorTest, MergeOpParsed) {
