@@ -79,7 +79,9 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
                                           const auto &RefToBoundMatcher) {
     const auto StmtMatcherWithCondition =
         StmtMatcher(unless(hasInitStatement(anything())),
-                    hasCondition(expr().bind("condition")))
+                    hasCondition(expr().bind("condition")),
+                    optionally(hasConditionVariableStatement(
+                        declStmt().bind("condDeclStmt"))))
             .bind(StmtName);
 
     // Ensure the variable is not referenced elsewhere in the compound statement
@@ -209,6 +211,7 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *LTE = Result.Nodes.getNodeAs<MaterializeTemporaryExpr>("lte");
   const auto *PrevDecl = Result.Nodes.getNodeAs<DeclStmt>("prevDecl");
   const auto *Condition = Result.Nodes.getNodeAs<Expr>("condition");
+  const auto *CondDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("condDeclStmt");
   const auto *Compound = Result.Nodes.getNodeAs<CompoundStmt>("compound");
   const auto *Statement = If ? If : Switch;
 
@@ -239,10 +242,15 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const bool CanFix = !NewInitStmtOpt.empty();
   const SourceRange RemovalRange = PrevDecl->getSourceRange();
 
-  if (CanFix)
+  if (CanFix) {
+    // Determine the insertion point: if the condition contains a declaration,
+    // insert before that declaration; otherwise insert before the condition.
+    const SourceLocation InsertionLoc =
+        CondDeclStmt ? CondDeclStmt->getBeginLoc() : Condition->getBeginLoc();
+
     Diag << FixItHint::CreateRemoval(RemovalRange)
-         << FixItHint::CreateInsertion(Condition->getBeginLoc(),
-                                       NewInitStmtOpt);
+         << FixItHint::CreateInsertion(InsertionLoc, NewInitStmtOpt);
+  }
 }
 
 } // namespace clang::tidy::modernize

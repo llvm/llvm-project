@@ -448,6 +448,25 @@ void bad_safe_string_default() {
     do_some(); // Additional statement after if
 }
 
+void bad_condition_with_declaration() {
+    int i1 = 0; DUMMY_TOKEN
+    if (int j = i1+1) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (int i1 = 0; int j = i1+1) {
+        do_some();
+    }
+    int i2 = 0; DUMMY_TOKEN
+    switch (int j = i2+1) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (int i2 = 0; int j = i2+1) {
+        case 0:
+            do_some();
+            break;
+    }
+}
+
 #define OPEN_PAREN_I1 (i1
 #define OPEN_PAREN_I2 (i2
 #define OPEN_PAREN_F() (
