@@ -571,6 +571,8 @@ Fortran::lower::genCallOpAndResult(
         !cuf::isCUDADeviceContext(builder.getRegion())) {
       for (auto [oper, arg] :
            llvm::zip(operands, caller.getPassedArguments())) {
+        if (arg.testTKR(Fortran::common::IgnoreTKR::Contiguous))
+          continue;
         if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(oper.getType())) {
           const Fortran::semantics::Symbol *sym = caller.getDummySymbol(arg);
           if (sym && Fortran::evaluate::IsCUDADeviceSymbol(*sym))
@@ -698,9 +700,21 @@ Fortran::lower::genCallOpAndResult(
       callResult = dispatch.getResult(0);
   } else {
     // Standard procedure call with fir.call.
+    fir::FortranInlineEnumAttr inlineAttr;
+
+    if (caller.getCallDescription().hasNoInline())
+      inlineAttr = fir::FortranInlineEnumAttr::get(
+          builder.getContext(), fir::FortranInlineEnum::no_inline);
+    else if (caller.getCallDescription().hasInlineHint())
+      inlineAttr = fir::FortranInlineEnumAttr::get(
+          builder.getContext(), fir::FortranInlineEnum::inline_hint);
+    else if (caller.getCallDescription().hasAlwaysInline())
+      inlineAttr = fir::FortranInlineEnumAttr::get(
+          builder.getContext(), fir::FortranInlineEnum::always_inline);
     auto call = fir::CallOp::create(
         builder, loc, funcType.getResults(), funcSymbolAttr, operands,
-        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs);
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr,
+        /*accessGroups=*/mlir::ArrayAttr{});
 
     callNumResults = call.getNumResults();
     if (callNumResults != 0)
@@ -1283,10 +1297,14 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     Fortran::evaluate::FoldingContext &foldingContext{
         callContext.converter.getFoldingContext()};
 
-    bool suggestCopyIn = Fortran::evaluate::MayNeedCopy(
-        arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/false);
-    bool suggestCopyOut = Fortran::evaluate::MayNeedCopy(
-        arg.entity, arg.characteristics, foldingContext, /*forCopyOut=*/true);
+    bool suggestCopyIn = Fortran::evaluate::ActualArgNeedsCopy(
+                             arg.entity, arg.characteristics, foldingContext,
+                             /*forCopyOut=*/false)
+                             .value_or(true);
+    bool suggestCopyOut = Fortran::evaluate::ActualArgNeedsCopy(
+                              arg.entity, arg.characteristics, foldingContext,
+                              /*forCopyOut=*/true)
+                              .value_or(true);
     mustDoCopyIn = actual.isArray() && suggestCopyIn;
     mustDoCopyOut = actual.isArray() && suggestCopyOut;
   }

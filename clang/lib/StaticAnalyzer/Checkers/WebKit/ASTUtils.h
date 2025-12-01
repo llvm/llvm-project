@@ -56,6 +56,7 @@ bool tryToFindPtrOrigin(
     const clang::Expr *E, bool StopAtFirstRefCountedObj,
     std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
     std::function<bool(const clang::QualType)> isSafePtrType,
+    std::function<bool(const clang::Decl *)> isSafeGlobalDecl,
     std::function<bool(const clang::Expr *, bool)> callback);
 
 /// For \p E referring to a ref-countable/-counted pointer/reference we return

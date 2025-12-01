@@ -23,8 +23,7 @@ concept has_iterator_aliases = requires {
 
 static_assert(has_iterator_aliases<std::optional<int>>);
 static_assert(has_iterator_aliases<std::optional<const int>>);
-
-// TODO: Uncomment these once P2988R12 is implemented, as they would be testing optional<T&>
-
-// static_assert(!has_iterator_aliases<std::optional<int (&)[]>>);
-// static_assert(!has_iterator_aliases<std::optional<void (&)(int, char)>>);
+static_assert(has_iterator_aliases<std::optional<int&>>);
+static_assert(has_iterator_aliases<std::optional<const int&>>);
+static_assert(!has_iterator_aliases<std::optional<int (&)[1]>>);
+static_assert(!has_iterator_aliases<std::optional<int (&)()>>);

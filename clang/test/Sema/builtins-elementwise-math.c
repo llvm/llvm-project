@@ -645,6 +645,42 @@ void test_builtin_elementwise_exp10(int i, float f, double d, float4 v, int3 iv,
   // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }
 
+void test_builtin_elementwise_ldexp(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+
+  struct Foo s = __builtin_elementwise_ldexp(f, i);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  f = __builtin_elementwise_ldexp();
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 0}}
+
+  f = __builtin_elementwise_ldexp(f);
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 1}}
+
+  f = __builtin_elementwise_ldexp(f, i, i);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+
+  f = __builtin_elementwise_ldexp(i, i);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int')}}
+
+  f = __builtin_elementwise_ldexp(f, f);
+  // expected-error@-1 {{2nd argument must be a scalar or vector of integer types (was 'float')}}
+
+  f = __builtin_elementwise_ldexp(v, iv);
+  // expected-error@-1 {{vector operands do not have the same number of elements ('float4' (vector of 4 'float' values) and 'int3' (vector of 3 'int' values))}}
+
+  v = __builtin_elementwise_ldexp(v, i);
+  // expected-error@-1 {{vector operands do not have the same number of elements ('float4' (vector of 4 'float' values) and 'int')}}
+
+  v = __builtin_elementwise_ldexp(f, iv);
+  // expected-error@-1 {{vector operands do not have the same number of elements ('float' and 'int3' (vector of 3 'int' values))}}
+
+  f = __builtin_elementwise_ldexp(u, i);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'unsigned int')}}
+
+  f = __builtin_elementwise_ldexp(uv, i);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+}
+
 void test_builtin_elementwise_floor(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
 
   struct Foo s = __builtin_elementwise_floor(f);

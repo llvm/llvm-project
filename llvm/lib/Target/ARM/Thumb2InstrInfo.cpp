@@ -46,7 +46,7 @@ PreferNoCSEL("prefer-no-csel", cl::Hidden,
              cl::init(false));
 
 Thumb2InstrInfo::Thumb2InstrInfo(const ARMSubtarget &STI)
-    : ARMBaseInstrInfo(STI), RI(STI) {}
+    : ARMBaseInstrInfo(STI, RI), RI(STI) {}
 
 /// Return the noop instruction to use for a noop.
 MCInst Thumb2InstrInfo::getNop() const {
@@ -165,7 +165,6 @@ void Thumb2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator I,
                                           Register SrcReg, bool isKill, int FI,
                                           const TargetRegisterClass *RC,
-                                          const TargetRegisterInfo *TRI,
                                           Register VReg,
                                           MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
@@ -197,20 +196,22 @@ void Thumb2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     }
 
     MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::t2STRDi8));
-    AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill), TRI);
-    AddDReg(MIB, SrcReg, ARM::gsub_1, 0, TRI);
+    AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill));
+    AddDReg(MIB, SrcReg, ARM::gsub_1, 0);
     MIB.addFrameIndex(FI).addImm(0).addMemOperand(MMO).add(predOps(ARMCC::AL));
     return;
   }
 
-  ARMBaseInstrInfo::storeRegToStackSlot(MBB, I, SrcReg, isKill, FI, RC, TRI,
+  ARMBaseInstrInfo::storeRegToStackSlot(MBB, I, SrcReg, isKill, FI, RC,
                                         Register());
 }
 
-void Thumb2InstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
-    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void Thumb2InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator I,
+                                           Register DestReg, int FI,
+                                           const TargetRegisterClass *RC,
+                                           Register VReg,
+                                           MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -238,8 +239,8 @@ void Thumb2InstrInfo::loadRegFromStackSlot(
     }
 
     MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(ARM::t2LDRDi8));
-    AddDReg(MIB, DestReg, ARM::gsub_0, RegState::DefineNoRead, TRI);
-    AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead, TRI);
+    AddDReg(MIB, DestReg, ARM::gsub_0, RegState::DefineNoRead);
+    AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead);
     MIB.addFrameIndex(FI).addImm(0).addMemOperand(MMO).add(predOps(ARMCC::AL));
 
     if (DestReg.isPhysical())
@@ -247,8 +248,7 @@ void Thumb2InstrInfo::loadRegFromStackSlot(
     return;
   }
 
-  ARMBaseInstrInfo::loadRegFromStackSlot(MBB, I, DestReg, FI, RC, TRI,
-                                         Register());
+  ARMBaseInstrInfo::loadRegFromStackSlot(MBB, I, DestReg, FI, RC, Register());
 }
 
 void Thumb2InstrInfo::expandLoadStackGuard(
@@ -564,7 +564,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   bool isSub = false;
 
   MachineFunction &MF = *MI.getParent()->getParent();
-  const TargetRegisterClass *RegClass = TII.getRegClass(Desc, FrameRegIdx, TRI);
+  const TargetRegisterClass *RegClass = TII.getRegClass(Desc, FrameRegIdx);
 
   // Memory operands in inline assembly always use AddrModeT2_i12.
   if (Opcode == ARM::INLINEASM || Opcode == ARM::INLINEASM_BR)
@@ -801,6 +801,16 @@ int llvm::findFirstVPTPredOperandIdx(const MachineInstr &MI) {
   for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
     if (ARM::isVpred(MCID.operands()[i].OperandType))
       return i;
+
+  return -1;
+}
+
+int llvm::findVPTInactiveOperandIdx(const MachineInstr &MI) {
+  const MCInstrDesc &MCID = MI.getDesc();
+
+  for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
+    if (MCID.operands()[i].OperandType == ARM::OPERAND_VPRED_R)
+      return i + ARM::SUBOP_vpred_r_inactive;
 
   return -1;
 }

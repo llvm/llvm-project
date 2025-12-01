@@ -35,7 +35,7 @@ static Value createConst(Location loc, Type type, int value,
 }
 
 /// Create a float constant.
-static Value createFloatConst(Location loc, Type type, APFloat value,
+static Value createFloatConst(Location loc, Type type, const APFloat &value,
                               PatternRewriter &rewriter) {
   auto attr = rewriter.getFloatAttr(getElementTypeOrSelf(type), value);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
@@ -387,12 +387,15 @@ struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Value c0x1 = createConst(loc, i4Ty, 0x1, rewriter);
     Value c0x2 = createConst(loc, i4Ty, 0x2, rewriter);
     Value c0x4 = createConst(loc, i4Ty, 0x4, rewriter);
+    Value c0x7 = createConst(loc, i4Ty, 0x7, rewriter);
+
+    Value i4BitsNoSign = arith::AndIOp::create(b, i4Bits, c0x7);
 
     // Set last Exponent bit and Mantissa.
     Value c0x00000014 = createConst(loc, i32Ty, 0x14, rewriter);
-    Value bits1To24 = arith::ShLIOp::create(b, i4Bits, c0x2);
+    Value bits1To24 = arith::ShLIOp::create(b, i4BitsNoSign, c0x2);
     Value isHalf =
-        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, i4Bits, c0x1);
+        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, i4BitsNoSign, c0x1);
     bits1To24 = arith::SelectOp::create(b, isHalf, c0x0, bits1To24);
     bits1To24 = arith::ExtUIOp::create(b, i32Ty, bits1To24);
     bits1To24 = arith::ShLIOp::create(b, bits1To24, c0x00000014);
@@ -402,11 +405,11 @@ struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Value highExpBits = createConst(loc, i32Ty, 0x40000000, rewriter);
     Value lowExpBits = createConst(loc, i32Ty, 0x3f000000, rewriter);
     Value useLargerExp =
-        arith::CmpIOp::create(b, arith::CmpIPredicate::uge, i4Bits, c0x4);
+        arith::CmpIOp::create(b, arith::CmpIPredicate::uge, i4BitsNoSign, c0x4);
     Value bits25To31 =
         arith::SelectOp::create(b, useLargerExp, highExpBits, lowExpBits);
     Value zeroExp =
-        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, i4Bits, c0x0);
+        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, i4BitsNoSign, c0x0);
     bits25To31 = arith::SelectOp::create(b, zeroExp, zeroExpBits, bits25To31);
 
     // Set sign.

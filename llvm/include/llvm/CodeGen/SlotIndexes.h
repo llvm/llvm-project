@@ -467,14 +467,25 @@ class raw_ostream;
       return getMBBRange(mbb).first;
     }
 
-    /// Returns the last index in the given basic block number.
+    /// Returns the index past the last valid index in the given basic block.
     SlotIndex getMBBEndIdx(unsigned Num) const {
       return getMBBRange(Num).second;
     }
 
-    /// Returns the last index in the given basic block.
+    /// Returns the index past the last valid index in the given basic block.
     SlotIndex getMBBEndIdx(const MachineBasicBlock *mbb) const {
       return getMBBRange(mbb).second;
+    }
+
+    /// Returns the last valid index in the given basic block.
+    /// This index corresponds to the dead slot of the last non-debug
+    /// instruction and can be used to find live-out ranges of the block. Note
+    /// that getMBBEndIdx returns the start index of the next block, which is
+    /// also used as the start index for segments with phi-def values. If the
+    /// basic block doesn't contain any non-debug instructions, this returns
+    /// the same as getMBBStartIdx.getDeadSlot().
+    SlotIndex getMBBLastIdx(const MachineBasicBlock *MBB) const {
+      return getMBBEndIdx(MBB).getPrevSlot();
     }
 
     /// Iterator over the idx2MBBMap (sorted pairs of slot index of basic block

@@ -373,8 +373,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   }
 
   // RecordTypes are cached and processed specially.
-  if (const RecordType *RT = dyn_cast<RecordType>(Ty))
-    return ConvertRecordDeclType(RT->getOriginalDecl()->getDefinitionOrSelf());
+  if (const auto *RT = dyn_cast<RecordType>(Ty))
+    return ConvertRecordDeclType(RT->getDecl()->getDefinitionOrSelf());
 
   llvm::Type *CachedType = nullptr;
   auto TCI = TypeCache.find(Ty);

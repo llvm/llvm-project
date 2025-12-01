@@ -302,6 +302,15 @@ func.func @assume_alignment(%0: memref<4x4xf16>) {
   return
 }
 
+// CHECK-LABEL: func @distinct_objects
+// CHECK-SAME: (%[[ARG0:.*]]: memref<?xf16>, %[[ARG1:.*]]: memref<?xf32>, %[[ARG2:.*]]: memref<?xf64>)
+func.func @distinct_objects(%arg0: memref<?xf16>, %arg1: memref<?xf32>, %arg2: memref<?xf64>) -> (memref<?xf16>, memref<?xf32>, memref<?xf64>) {
+  // CHECK:  %[[RES:.*]]:3 = memref.distinct_objects %[[ARG0]], %[[ARG1]], %[[ARG2]] : memref<?xf16>, memref<?xf32>, memref<?xf64>
+  %1, %2, %3 = memref.distinct_objects %arg0, %arg1, %arg2 : memref<?xf16>, memref<?xf32>, memref<?xf64>
+  // CHECK:  return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2 : memref<?xf16>, memref<?xf32>, memref<?xf64>
+  return %1, %2, %3 : memref<?xf16>, memref<?xf32>, memref<?xf64>
+}
+
 // CHECK-LABEL: func @expand_collapse_shape_static
 func.func @expand_collapse_shape_static(
     %arg0: memref<3x4x5xf32>,

@@ -350,16 +350,16 @@ def MissingNamesOp : TestOp<"missing_names"> {
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
   // CHECK: @builtins.property
-  // CHECK: def f32(self) -> _ods_ir.Value:
+  // CHECK: def f32(self) -> _ods_ir.Value[_ods_ir.FloatType]:
   // CHECK:   return self.operation.operands[1]
   let arguments = (ins I32, F32:$f32, I64);
 
   // CHECK: @builtins.property
-  // CHECK: def i32(self) -> _ods_ir.OpResult:
+  // CHECK: def i32(self) -> _ods_ir.OpResult[_ods_ir.IntegerType]:
   // CHECK:   return self.operation.results[0]
   //
   // CHECK: @builtins.property
-  // CHECK: def i64(self) -> _ods_ir.OpResult:
+  // CHECK: def i64(self) -> _ods_ir.OpResult[_ods_ir.IntegerType]:
   // CHECK:   return self.operation.results[2]
   let results = (outs I32:$i32, AnyFloat, I64:$i64);
 }
@@ -590,20 +590,20 @@ def SimpleOp : TestOp<"simple"> {
   // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip)
 
   // CHECK: @builtins.property
-  // CHECK: def i32(self) -> _ods_ir.Value:
+  // CHECK: def i32(self) -> _ods_ir.Value[_ods_ir.IntegerType]:
   // CHECK:   return self.operation.operands[0]
   //
   // CHECK: @builtins.property
-  // CHECK: def f32(self) -> _ods_ir.Value:
+  // CHECK: def f32(self) -> _ods_ir.Value[_ods_ir.FloatType]:
   // CHECK:   return self.operation.operands[1]
   let arguments = (ins I32:$i32, F32:$f32);
 
   // CHECK: @builtins.property
-  // CHECK: def i64(self) -> _ods_ir.OpResult:
+  // CHECK: def i64(self) -> _ods_ir.OpResult[_ods_ir.IntegerType]:
   // CHECK:   return self.operation.results[0]
   //
   // CHECK: @builtins.property
-  // CHECK: def f64(self) -> _ods_ir.OpResult:
+  // CHECK: def f64(self) -> _ods_ir.OpResult[_ods_ir.FloatType]:
   // CHECK:   return self.operation.results[1]
   let results = (outs I64:$i64, AnyFloat:$f64);
 }

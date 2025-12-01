@@ -276,7 +276,7 @@ protected:
   /// Returns the element at the given slice index. Supports negative indices
   /// by taking elements in inverse order. Returns a nullptr object if out
   /// of bounds.
-  nanobind::typed<nanobind::object, ElementTy> getItem(intptr_t index) {
+  nanobind::object getItem(intptr_t index) {
     // Negative indices mean we count from the end.
     index = wrapIndex(index);
     if (index < 0) {
@@ -395,7 +395,6 @@ public:
   /// Hook for derived classes willing to bind more methods.
   static void bindDerived(ClassTy &) {}
 
-private:
   intptr_t startIndex;
   intptr_t length;
   intptr_t step;

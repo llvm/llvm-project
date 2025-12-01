@@ -38,7 +38,7 @@ public:
         AnyResumeFnPtrTy(PointerType::getUnqual(Context)) {}
   void lowerEarlyIntrinsics(Function &F);
 };
-}
+} // namespace
 
 // Replace a direct call to coro.resume or coro.destroy with an indirect call to
 // an address returned by coro.subfn.addr intrinsic. This is done so that

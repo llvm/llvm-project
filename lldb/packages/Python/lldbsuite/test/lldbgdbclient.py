@@ -10,7 +10,7 @@ class GDBRemoteTestBase(TestBase):
     Base class for GDB client tests.
 
     This class will setup and start a mock GDB server for the test to use.
-    It also provides assertPacketLogContains, which simplifies the checking
+    It also provides assertPacketLogReceived, which simplifies the checking
     of packets sent by the client.
     """
 
@@ -60,30 +60,32 @@ class GDBRemoteTestBase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         return process
 
-    def assertPacketLogContains(self, packets, log=None):
+    def assertPacketLogReceived(self, packets, log: PacketLog = None):
         """
-        Assert that the mock server's packet log contains the given packets.
+        Assert that the mock server's packet log received the given packets.
 
         The packet log includes all packets sent by the client and received
-        by the server.  This fuction makes it easy to verify that the client
+        by the server.  This function makes it easy to verify that the client
         sent the expected packets to the server.
 
         The check does not require that the packets be consecutive, but does
         require that they are ordered in the log as they ordered in the arg.
         """
         if log is None:
-            log = self.server.responder.packetLog
+            received = self.server.responder.packetLog.get_received()
+        else:
+            received = log.get_received()
         i = 0
         j = 0
 
-        while i < len(packets) and j < len(log):
-            if log[j] == packets[i]:
+        while i < len(packets) and j < len(received):
+            if received[j] == packets[i]:
                 i += 1
             j += 1
         if i < len(packets):
             self.fail(
                 "Did not receive: %s\nLast 10 packets:\n\t%s"
-                % (packets[i], "\n\t".join(log))
+                % (packets[i], "\n\t".join(received))
             )
 
 

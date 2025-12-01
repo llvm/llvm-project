@@ -57,7 +57,7 @@ DEFINE_STRUCT(bool64)
 // CHECK-128-SAME: ptr noundef readonly captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-128-NEXT:  [[ENTRY:.*:]]
 // CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 1
-// CHECK-128-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[Y]], align 1, !tbaa [[CHAR_TBAA6:![0-9]+]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[Y]], align 1, !tbaa [[CHAR_TBAA10:![0-9]+]]
 // CHECK-128-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x i8> @llvm.vector.insert.nxv1i8.v1i8(<vscale x 1 x i8> poison, <1 x i8> [[TMP0]], i64 0)
 // CHECK-128-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 1 x i8> [[CAST_SCALABLE]] to <vscale x 8 x i1>
 // CHECK-128-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> [[TMP1]], i64 0)
@@ -74,7 +74,7 @@ vbool32_t read_bool32(struct struct_bool32 *s) {
 // CHECK-128-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 8 x i1> [[TMP0]] to <vscale x 1 x i8>
 // CHECK-128-NEXT:    [[CAST_FIXED:%.*]] = tail call <1 x i8> @llvm.vector.extract.v1i8.nxv1i8(<vscale x 1 x i8> [[TMP1]], i64 0)
 // CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 1
-// CHECK-128-NEXT:    store <1 x i8> [[CAST_FIXED]], ptr [[Y]], align 1, !tbaa [[CHAR_TBAA6]]
+// CHECK-128-NEXT:    store <1 x i8> [[CAST_FIXED]], ptr [[Y]], align 1, !tbaa [[CHAR_TBAA10]]
 // CHECK-128-NEXT:    ret void
 //
 void write_bool32(struct struct_bool32 *s, vbool32_t x) {
@@ -85,7 +85,7 @@ void write_bool32(struct struct_bool32 *s, vbool32_t x) {
 // CHECK-128-SAME: ptr noundef readonly captures(none) [[S:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-128-NEXT:  [[ENTRY:.*:]]
 // CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 1
-// CHECK-128-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[Y]], align 1, !tbaa [[CHAR_TBAA6]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[Y]], align 1, !tbaa [[CHAR_TBAA10]]
 // CHECK-128-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x i8> @llvm.vector.insert.nxv1i8.v1i8(<vscale x 1 x i8> poison, <1 x i8> [[TMP0]], i64 0)
 // CHECK-128-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 1 x i8> [[CAST_SCALABLE]] to <vscale x 8 x i1>
 // CHECK-128-NEXT:    [[TMP2:%.*]] = tail call <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv8i1(<vscale x 8 x i1> [[TMP1]], i64 0)
@@ -102,14 +102,14 @@ vbool64_t read_bool64(struct struct_bool64 *s) {
 // CHECK-128-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 8 x i1> [[TMP0]] to <vscale x 1 x i8>
 // CHECK-128-NEXT:    [[CAST_FIXED:%.*]] = tail call <1 x i8> @llvm.vector.extract.v1i8.nxv1i8(<vscale x 1 x i8> [[TMP1]], i64 0)
 // CHECK-128-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 1
-// CHECK-128-NEXT:    store <1 x i8> [[CAST_FIXED]], ptr [[Y]], align 1, !tbaa [[CHAR_TBAA6]]
+// CHECK-128-NEXT:    store <1 x i8> [[CAST_FIXED]], ptr [[Y]], align 1, !tbaa [[CHAR_TBAA10]]
 // CHECK-128-NEXT:    ret void
 //
 void write_bool64(struct struct_bool64 *s, vbool64_t x) {
   s->y[0] = x;
 }
 //.
-// CHECK-128: [[CHAR_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-// CHECK-128: [[META7]] = !{!"omnipotent char", [[META8:![0-9]+]], i64 0}
-// CHECK-128: [[META8]] = !{!"Simple C/C++ TBAA"}
+// CHECK-128: [[META8:![0-9]+]] = !{!"omnipotent char", [[META9:![0-9]+]], i64 0}
+// CHECK-128: [[META9]] = !{!"Simple C/C++ TBAA"}
+// CHECK-128: [[CHAR_TBAA10]] = !{[[META8]], [[META8]], i64 0}
 //.

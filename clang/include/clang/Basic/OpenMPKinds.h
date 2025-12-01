@@ -211,6 +211,13 @@ enum OpenMPAdjustArgsOpKind {
   OMPC_ADJUST_ARGS_unknown,
 };
 
+/// OpenMP 6.1 need_device modifier
+enum OpenMPNeedDevicePtrModifier {
+#define OPENMP_NEED_DEVICE_PTR_KIND(Name) OMPC_NEED_DEVICE_PTR_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_NEED_DEVICE_PTR_unknown,
+};
+
 /// OpenMP bindings for the 'bind' clause.
 enum OpenMPBindClauseKind {
 #define OPENMP_BIND_KIND(Name) OMPC_BIND_##Name,
@@ -222,6 +229,20 @@ enum OpenMPGrainsizeClauseModifier {
 #define OPENMP_GRAINSIZE_MODIFIER(Name) OMPC_GRAINSIZE_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_GRAINSIZE_unknown
+};
+
+enum OpenMPDynGroupprivateClauseModifier {
+#define OPENMP_DYN_GROUPPRIVATE_MODIFIER(Name) OMPC_DYN_GROUPPRIVATE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DYN_GROUPPRIVATE_unknown
+};
+
+enum OpenMPDynGroupprivateClauseFallbackModifier {
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown = OMPC_DYN_GROUPPRIVATE_unknown,
+#define OPENMP_DYN_GROUPPRIVATE_FALLBACK_MODIFIER(Name)                        \
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_last
 };
 
 enum OpenMPNumTasksClauseModifier {
@@ -248,6 +269,13 @@ enum OpenMPAllocateClauseModifier {
 #define OPENMP_ALLOCATE_MODIFIER(Name) OMPC_ALLOCATE_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_ALLOCATE_unknown
+};
+
+/// OpenMP modifiers for 'threadset' clause.
+enum OpenMPThreadsetKind {
+#define OPENMP_THREADSET_KIND(Name) OMPC_THREADSET_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_THREADSET_unknown
 };
 
 /// Number of allowed allocate-modifiers.
@@ -311,6 +339,14 @@ bool isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind);
 /// 'omp target exit data'
 /// otherwise - false.
 bool isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind);
+
+/// Checks if the specified directive is a map-entering target directive.
+/// \param DKind Specified directive.
+/// \return true - the directive is a map-entering target directive like
+/// 'omp target', 'omp target data', 'omp target enter data',
+/// 'omp target parallel', etc. (excludes 'omp target exit data', 'omp target
+/// update') otherwise - false.
+bool isOpenMPTargetMapEnteringDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified composite/combined directive constitutes a teams
 /// directive in the outermost nest.  For example
@@ -381,6 +417,13 @@ bool isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind);
 /// \param DKind Specified directive.
 /// \return True iff the directive is a loop transformation.
 bool isOpenMPCanonicalLoopNestTransformationDirective(
+    OpenMPDirectiveKind DKind);
+
+/// Checks if the specified directive is a loop transformation directive that
+/// applies to a canonical loop sequence.
+/// \param DKind Specified directive.
+/// \return True iff the directive is a loop transformation.
+bool isOpenMPCanonicalLoopSequenceTransformationDirective(
     OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is a loop transformation directive.

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -mcpu=hexagonv60 -enable-pipeliner < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv60 -enable-pipeliner -terminal-rule=0 < %s | FileCheck %s
 
 ; From coremark. Test that we pipeline the matrix multiplication bitextract
 ; function. The pipelined code should have two packets.
