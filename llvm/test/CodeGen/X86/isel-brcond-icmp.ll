@@ -763,12 +763,10 @@ define i32 @icmp_ne(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
-; SDAG-NEXT:    je LBB11_1
-; SDAG-NEXT:  ## %bb.2: ## %bb1
-; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{[l|q]}}
-; SDAG-NEXT:  LBB11_1: ## %bb2
+; SDAG-NEXT:    jne LBB11_2
+; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
+; SDAG-NEXT:  LBB11_2: ## %bb1
 ; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_ne:
@@ -815,12 +813,10 @@ define i32 @icmp_ugt(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
-; SDAG-NEXT:    je LBB12_1
-; SDAG-NEXT:  ## %bb.2: ## %bb1
-; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{[l|q]}}
-; SDAG-NEXT:  LBB12_1: ## %bb2
+; SDAG-NEXT:    jne LBB12_2
+; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
+; SDAG-NEXT:  LBB12_2: ## %bb1
 ; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_ugt:
@@ -919,12 +915,10 @@ define i32 @icmp_ult(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
-; SDAG-NEXT:    je LBB14_1
-; SDAG-NEXT:  ## %bb.2: ## %bb1
-; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{[l|q]}}
-; SDAG-NEXT:  LBB14_1: ## %bb2
+; SDAG-NEXT:    jne LBB14_2
+; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
+; SDAG-NEXT:  LBB14_2: ## %bb1
 ; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_ult:
@@ -1023,12 +1017,10 @@ define i32 @icmp_sgt(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
-; SDAG-NEXT:    je LBB16_1
-; SDAG-NEXT:  ## %bb.2: ## %bb1
-; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{[l|q]}}
-; SDAG-NEXT:  LBB16_1: ## %bb2
+; SDAG-NEXT:    jne LBB16_2
+; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
+; SDAG-NEXT:  LBB16_2: ## %bb1
 ; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_sgt:
@@ -1127,12 +1119,10 @@ define i32 @icmp_slt(i32 %x) {
 ; SDAG:       ## %bb.0:
 ; SDAG-NEXT:    xorl %eax, %eax
 ; SDAG-NEXT:    testb %al, %al
-; SDAG-NEXT:    je LBB18_1
-; SDAG-NEXT:  ## %bb.2: ## %bb1
-; SDAG-NEXT:    xorl %eax, %eax
-; SDAG-NEXT:    ret{{[l|q]}}
-; SDAG-NEXT:  LBB18_1: ## %bb2
+; SDAG-NEXT:    jne LBB18_2
+; SDAG-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-NEXT:    movl $1, %eax
+; SDAG-NEXT:  LBB18_2: ## %bb1
 ; SDAG-NEXT:    ret{{[l|q]}}
 ;
 ; FASTISEL-LABEL: icmp_slt:

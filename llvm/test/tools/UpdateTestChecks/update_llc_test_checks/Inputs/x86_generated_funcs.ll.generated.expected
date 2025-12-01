@@ -89,7 +89,6 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
 ; CHECK-NEXT:  .LBB0_6:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $20, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8

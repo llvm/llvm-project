@@ -533,12 +533,10 @@ define i32 @fcmp_ogt1(float %x) {
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    xorl %eax, %eax
 ; SDAG-X64-NEXT:    testb %al, %al
-; SDAG-X64-NEXT:    je LBB16_1
-; SDAG-X64-NEXT:  ## %bb.2: ## %bb1
-; SDAG-X64-NEXT:    xorl %eax, %eax
-; SDAG-X64-NEXT:    retq
-; SDAG-X64-NEXT:  LBB16_1: ## %bb2
+; SDAG-X64-NEXT:    jne LBB16_2
+; SDAG-X64-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-X64-NEXT:    movl $1, %eax
+; SDAG-X64-NEXT:  LBB16_2: ## %bb1
 ; SDAG-X64-NEXT:    retq
 ;
 ; FASTISEL-X64-LABEL: fcmp_ogt1:
@@ -671,12 +669,10 @@ define i32 @fcmp_olt1(float %x) {
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    xorl %eax, %eax
 ; SDAG-X64-NEXT:    testb %al, %al
-; SDAG-X64-NEXT:    je LBB20_1
-; SDAG-X64-NEXT:  ## %bb.2: ## %bb1
-; SDAG-X64-NEXT:    xorl %eax, %eax
-; SDAG-X64-NEXT:    retq
-; SDAG-X64-NEXT:  LBB20_1: ## %bb2
+; SDAG-X64-NEXT:    jne LBB20_2
+; SDAG-X64-NEXT:  ## %bb.1: ## %bb2
 ; SDAG-X64-NEXT:    movl $1, %eax
+; SDAG-X64-NEXT:  LBB20_2: ## %bb1
 ; SDAG-X64-NEXT:    retq
 ;
 ; FASTISEL-X64-LABEL: fcmp_olt1:
@@ -811,7 +807,6 @@ define i32 @fcmp_one1(float %x) {
 ; SDAG-X64-NEXT:    testb %al, %al
 ; SDAG-X64-NEXT:    je LBB24_1
 ; SDAG-X64-NEXT:  ## %bb.2: ## %bb1
-; SDAG-X64-NEXT:    xorl %eax, %eax
 ; SDAG-X64-NEXT:    retq
 ; SDAG-X64-NEXT:  LBB24_1: ## %bb2
 ; SDAG-X64-NEXT:    movl $1, %eax

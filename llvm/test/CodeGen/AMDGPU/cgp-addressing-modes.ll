@@ -72,8 +72,7 @@ done:
 ; GCN-LABEL: {{^}}test_sink_global_small_max_mubuf_offset:
 ; GCN: s_and_saveexec_b64
 ; SICIVI: buffer_load_sbyte {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4095{{$}}
-; GFX9: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
-; GFX9: global_load_sbyte {{v[0-9]+}}, [[ZERO]], {{s\[[0-9]+:[0-9]+\]}} offset:4095{{$}}
+; GFX9: global_load_sbyte {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}} offset:4095{{$}}
 ; GCN: {{^}}.LBB2_2:
 ; GCN: s_or_b64 exec
 define amdgpu_kernel void @test_sink_global_small_max_mubuf_offset(ptr addrspace(1) %out, ptr addrspace(1) %in) {
