@@ -4707,16 +4707,20 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
                      "Minimum NVVM target SM version is sm_20");
   }
 
-  gpuModuleOp->walk([&](Operation *op) {
-    if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
-      const NVVMCheckSMVersion requirement = reqOp.getRequiredMinSMVersion();
-      if (!requirement.isCompatibleWith(targetSMVersion)) {
-        op->emitOpError() << "is not supported on " << getChip();
-        return WalkResult::interrupt();
-      }
-    }
-    return WalkResult::advance();
-  });
+  if (gpuModuleOp
+          ->walk([&](Operation *op) {
+            if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
+              const NVVMCheckSMVersion requirement =
+                  reqOp.getRequiredMinSMVersion();
+              if (!requirement.isCompatibleWith(targetSMVersion)) {
+                op->emitOpError() << "is not supported on " << getChip();
+                return WalkResult::interrupt();
+              }
+            }
+            return WalkResult::advance();
+          })
+          .wasInterrupted())
+    return failure();
 
   return success();
 }
