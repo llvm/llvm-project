@@ -52,8 +52,8 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
         MCInst &Inst = *It;
         if (BC.MIB->isCFI(Inst))
           continue;
-        auto RAState = BC.MIB->getRAState(Inst);
-        if (!RAState) {
+        std::optional<bool> RAState = BC.MIB->getRAState(Inst);
+        if (!RAState.has_value()) {
           BC.errs() << "BOLT-ERROR: unknown RAState after inferUnknownStates "
                     << " in function " << BF.getPrintName() << "\n";
           PassFailed = true;
@@ -74,6 +74,20 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
   }
 }
 
+void InsertNegateRAState::inferUnknownStates(BinaryFunction &BF) {
+  BinaryContext &BC = BF.getBinaryContext();
+
+  // Fill in missing RAStates in simple cases (inside BBs).
+  for (BinaryBasicBlock &BB : BF) {
+    fillUnknownStateInBB(BC, BB);
+  }
+  // BasicBlocks which are made entirely of "new instructions" (instructions
+  // without RAState annotation) are stubs, and do not have correct unwind info.
+  // We should iterate in layout order and fill them based on previous known
+  // RAState.
+  fillUnknownStubs(BF);
+}
+
 void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
                                                      FunctionFragment &FF) {
   BinaryContext &BC = BF.getBinaryContext();
@@ -92,8 +106,8 @@ void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
   // If a function is already split in the input, the first FF can also start
   // with Signed state. This covers that scenario as well.
   auto II = (*FirstNonEmpty)->getFirstNonPseudo();
-  auto RAState = BC.MIB->getRAState(*II);
-  if (!RAState) {
+  std::optional<bool> RAState = BC.MIB->getRAState(*II);
+  if (!RAState.has_value()) {
     BC.errs() << "BOLT-ERROR: unknown RAState after inferUnknownStates "
               << " in function " << BF.getPrintName() << "\n";
     PassFailed = true;
@@ -104,32 +118,119 @@ void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
                          MCCFIInstruction::createNegateRAState(nullptr));
 }
 
-void InsertNegateRAState::inferUnknownStates(BinaryFunction &BF) {
+std::optional<bool>
+InsertNegateRAState::getFirstKnownRAState(BinaryContext &BC,
+                                          BinaryBasicBlock &BB) {
+  for (const MCInst &Inst : BB) {
+    if (BC.MIB->isCFI(Inst))
+      continue;
+    std::optional<bool> RAState = BC.MIB->getRAState(Inst);
+    if (RAState.has_value())
+      return RAState;
+  }
+  return std::nullopt;
+}
+
+bool InsertNegateRAState::isUnknownBlock(BinaryContext &BC,
+                                         BinaryBasicBlock &BB) {
+  std::optional<bool> FirstRAState = getFirstKnownRAState(BC, BB);
+  return !FirstRAState.has_value();
+}
+
+void InsertNegateRAState::fillUnknownStateInBB(BinaryContext &BC,
+                                               BinaryBasicBlock &BB) {
+
+  auto First = BB.getFirstNonPseudo();
+  if (First == BB.end())
+    return;
+  // If the first instruction has unknown RAState, we should copy the first
+  // known RAState.
+  std::optional<bool> RAState = BC.MIB->getRAState(*First);
+  if (!RAState.has_value()) {
+    std::optional<bool> FirstRAState = getFirstKnownRAState(BC, BB);
+    if (!FirstRAState.has_value())
+      // We fill unknown BBs later.
+      return;
+
+    BC.MIB->setRAState(*First, *FirstRAState);
+  }
+
+  // At this point we know the RAState of the first instruction,
+  // so we can propagate the RAStates to all subsequent unknown instructions.
+  MCInst Prev = *First;
+  for (auto It = First + 1; It != BB.end(); ++It) {
+    MCInst &Inst = *It;
+    if (BC.MIB->isCFI(Inst))
+      continue;
+
+    // No need to check for nullopt: we only entered this loop after the first
+    // instruction had its RAState set, and RAState is always set for the
+    // previous instruction in the previous iteration of the loop.
+    std::optional<bool> PrevRAState = BC.MIB->getRAState(Prev);
+
+    std::optional<bool> RAState = BC.MIB->getRAState(Inst);
+    if (!RAState.has_value()) {
+      if (BC.MIB->isPSignOnLR(Prev))
+        PrevRAState = true;
+      else if (BC.MIB->isPAuthOnLR(Prev))
+        PrevRAState = false;
+      BC.MIB->setRAState(Inst, *PrevRAState);
+    }
+    Prev = Inst;
+  }
+}
+
+void InsertNegateRAState::markUnknownBlock(BinaryContext &BC,
+                                           BinaryBasicBlock &BB, bool State) {
+  // If we call this when an Instruction has either kRASigned or kRAUnsigned
+  // annotation, setRASigned or setRAUnsigned would fail.
+  assert(isUnknownBlock(BC, BB) &&
+         "markUnknownBlock should only be called on unknown blocks");
+  for (MCInst &Inst : BB) {
+    if (BC.MIB->isCFI(Inst))
+      continue;
+    BC.MIB->setRAState(Inst, State);
+  }
+}
+
+void InsertNegateRAState::fillUnknownStubs(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   bool FirstIter = true;
   MCInst PrevInst;
-  for (BinaryBasicBlock &BB : BF) {
-    for (MCInst &Inst : BB) {
-      if (BC.MIB->isCFI(Inst))
-        continue;
-
-      auto RAState = BC.MIB->getRAState(Inst);
-      if (!FirstIter && !RAState) {
-        if (BC.MIB->isPSignOnLR(PrevInst))
-          RAState = true;
-        else if (BC.MIB->isPAuthOnLR(PrevInst))
-          RAState = false;
-        else {
-          auto PrevRAState = BC.MIB->getRAState(PrevInst);
-          RAState = PrevRAState ? *PrevRAState : false;
-        }
-        BC.MIB->setRAState(Inst, *RAState);
-      } else {
+  for (FunctionFragment &FF : BF.getLayout().fragments()) {
+    for (BinaryBasicBlock *BB : FF) {
+      if (FirstIter) {
         FirstIter = false;
-        if (!RAState)
-          BC.MIB->setRAState(Inst, BF.getInitialRAState());
+        if (isUnknownBlock(BC, *BB))
+          // If the first BasicBlock is unknown, the function's entry RAState
+          // should be used.
+          markUnknownBlock(BC, *BB, BF.getInitialRAState());
+      } else if (isUnknownBlock(BC, *BB)) {
+        // As explained in issue #160989, the unwind info is incorrect for
+        // stubs. Indicating the correct RAState without the rest of the unwind
+        // info being correct is not useful. Instead, we copy the RAState from
+        // the previous instruction.
+        std::optional<bool> PrevRAState = BC.MIB->getRAState(PrevInst);
+        if (!PrevRAState.has_value()) {
+          // No non-cfi instruction encountered in the function yet.
+          // This means the RAState is the same as at the function entry.
+          markUnknownBlock(BC, *BB, BF.getInitialRAState());
+          continue;
+        }
+
+        if (BC.MIB->isPSignOnLR(PrevInst))
+          PrevRAState = true;
+        else if (BC.MIB->isPAuthOnLR(PrevInst))
+          PrevRAState = false;
+        markUnknownBlock(BC, *BB, *PrevRAState);
       }
-      PrevInst = Inst;
+      // This function iterates on BasicBlocks, so the PrevInst has to be
+      // updated to the last instruction of the current BasicBlock. If the
+      // BasicBlock is empty, or only has PseudoInstructions, PrevInst will not
+      // be updated.
+      auto Last = BB->getLastNonPseudo();
+      if (Last != BB->rend())
+        PrevInst = *Last;
     }
   }
 }
