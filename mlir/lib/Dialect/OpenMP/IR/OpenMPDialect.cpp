@@ -4525,7 +4525,8 @@ static ParseResult parseNumTeamsMultiDimClause(
   // If dims not specified but we have values, it's implicitly unidimensional
   if (!dims.has_value() && values.size() != 1) {
     return parser.emitError(parser.getCurrentLocation())
-           << "expected 1 value without dims modifier, got " << values.size();
+           << "expected 1 value without dims modifier, but got "
+           << values.size() << " values";
   }
 
   // Convert to IntegerAttr

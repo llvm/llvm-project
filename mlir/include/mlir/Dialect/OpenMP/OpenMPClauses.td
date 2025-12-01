@@ -1533,7 +1533,7 @@ class OpenMP_UseDevicePtrClauseSkip<
 def OpenMP_UseDevicePtrClause : OpenMP_UseDevicePtrClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
-// V6.2: Multidimensional `num_teams` clause with dims modifier
+// V6.1: Multidimensional `num_teams` clause with dims modifier
 //===----------------------------------------------------------------------===//
 
 class OpenMP_NumTeamsMultiDimClauseSkip<
