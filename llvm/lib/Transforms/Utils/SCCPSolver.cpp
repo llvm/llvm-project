@@ -2109,10 +2109,10 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
 
       ConstantRange Count = getValueState(CountArg)
                                 .asConstantRange(CountArg->getType(), false)
-                                .zextOrTrunc(BitWidth);
+                                .zeroExtend(BitWidth);
       ConstantRange MaxLanes = getValueState(VF)
                                    .asConstantRange(VF->getType(), false)
-                                   .zextOrTrunc(BitWidth);
+                                   .zeroExtend(BitWidth);
       if (Scalable)
         MaxLanes =
             MaxLanes.multiply(getVScaleRange(II->getFunction(), BitWidth));
@@ -2126,7 +2126,7 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
       if (Count.icmp(CmpInst::ICMP_ULE, MaxLanes))
         Result = Count;
 
-      Result = Result.zextOrTrunc(II->getType()->getScalarSizeInBits());
+      Result = Result.truncate(II->getType()->getScalarSizeInBits());
       return (void)mergeInValue(ValueState[II], II,
                                 ValueLatticeElement::getRange(Result));
     }
