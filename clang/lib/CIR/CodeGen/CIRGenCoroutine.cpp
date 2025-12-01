@@ -278,7 +278,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
 
 static bool memberCallExpressionCanThrow(const Expr *e) {
   if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
-    if (const FunctionProtoType *proto =
+    if (const auto *proto =
             ce->getMethodDecl()->getType()->getAs<FunctionProtoType>())
       if (isNoexceptExceptionSpec(proto->getExceptionSpecType()) &&
           proto->canThrow() == CT_Cannot)
