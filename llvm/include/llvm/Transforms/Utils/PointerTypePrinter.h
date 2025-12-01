@@ -9,12 +9,13 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Utils/PointerTypeHelpers.h"
 
 namespace llvm {
   class PointerTypePrinter {
   private:
     raw_ostream &OS;
-    DenseMap<Value *, std::shared_ptr<MyTy>> pointerTypeMap;
+    PointerTypeHelpers helper;
     void printFunction(Function &F);
     void printBasicBlock(BasicBlock &B);
     void printInstruction(Instruction &I);
@@ -23,7 +24,7 @@ namespace llvm {
 
   public:
     PointerTypePrinter(raw_ostream &Out) : OS(Out) {}
-    void loadPointerTypeMap(DenseMap<Value *, std::shared_ptr<MyTy>>);
+    void load(PointerTypeHelpers helper);
     void printModule(Module &M);
   };
 }

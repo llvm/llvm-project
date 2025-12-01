@@ -266,6 +266,21 @@ std::string MyBasicTy::to_string() {
   case Type::DoubleTyID: {
     return "double";
   }
+  case Type::HalfTyID: {
+    return "half";
+  }
+  case Type::BFloatTyID: {
+    return "bfloat";
+  }
+  case Type::X86_FP80TyID: {
+    return "x86_fp80";
+  }
+  case Type::FP128TyID: {
+    return "fp128";
+  }
+  case Type::PPC_FP128TyID: {
+    return "ppc_fp128";
+  }
   default:
     return "not_added";
   }
@@ -304,7 +319,7 @@ MyStructTy::MyStructTy(Type *_struct, DenseMap<Type *, std::shared_ptr<MyTy>> st
     name = structTy->getName();
   } else {
     name = ""; 
-  }  
+  }
   int cnt = structTy->getNumElements();
   for (auto i = 0; i < cnt; i++) {
     auto ty = structTy->getElementType(i);
@@ -316,9 +331,13 @@ MyStructTy::MyStructTy(Type *_struct, DenseMap<Type *, std::shared_ptr<MyTy>> st
     }
     elementTy.push_back(mTy);
   }
+  opaque = structTy->isOpaque();
 }
 
+bool MyStructTy::isOpaque() const { return opaque; }
+
 std::shared_ptr<MyTy> MyStructTy::getElementTy(int index) {
+  assert(getElementCnt() > index);                  
   return elementTy[index];
 }
 

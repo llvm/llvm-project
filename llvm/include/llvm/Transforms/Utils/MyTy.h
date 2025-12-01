@@ -90,12 +90,14 @@ namespace llvm {
     private:
         SmallVector<std::shared_ptr<MyTy>> elementTy;
         std::string name;
+        bool opaque;
 
 	public:
         MyStructTy(Type *, DenseMap<Type *, std::shared_ptr<MyTy>>);
         std::shared_ptr<MyTy> getElementTy(int index = 0);
         std::string to_string() override;
         bool hasName() const;
+        bool isOpaque() const;
         int getElementCnt();
         void update(std::shared_ptr<MyTy> inner) override;
         void updateElement(std::shared_ptr<MyTy> ty, int index = 0);

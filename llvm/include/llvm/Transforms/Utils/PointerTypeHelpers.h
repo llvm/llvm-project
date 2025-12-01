@@ -38,6 +38,7 @@ namespace llvm {
     void processInFunction(Function& F);
     DenseMap<Value *, std::shared_ptr<MyTy>> getPtm();
     void initializeGlobalInfo(Module& M);
+    DenseMap<Type *, std::shared_ptr<MyTy>> getStructInfo();
   };
 }
 

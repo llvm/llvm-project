@@ -15,6 +15,13 @@ DenseMap<Value*, std::shared_ptr<MyTy>> PointerTypeHelpers::getPtm() {
 
 void PointerTypeHelpers::initializeGlobalInfo(Module& M) {
   initializeStructInfo(M);
+  for (auto &gl : M.globals()) {
+    if (gl.getType()->isPointerTy() || gl.getType()->isArrayTy() ||
+        gl.getType()->isStructTy()) {
+      auto val = static_cast<Value *>(&gl);
+      addPtm(val, toMyTy(val->getType()));
+    }
+  }
 }
 
 void PointerTypeHelpers::visitFunction(Function& F) {
@@ -243,4 +250,8 @@ void PointerTypeHelpers::initializeStructInfo(Module& M) {
   for (auto st : M.getIdentifiedStructTypes()) {
     structInfo[st] = std::make_shared<MyStructTy>(st, structInfo);
   }
+}
+
+DenseMap<Type*, std::shared_ptr<MyTy>> PointerTypeHelpers::getStructInfo() {
+  return structInfo;
 }

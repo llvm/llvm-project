@@ -6,6 +6,40 @@ void PointerTypePrinter::printModule(Module& M) {
   OS << "target datalayout = \"" << M.getDataLayoutStr() << "\"\n";
   OS << "target triple = \"" << M.getTargetTriple().str() << "\"\n\n";
 
+  for (auto st : M.getIdentifiedStructTypes()) {
+    st->print(OS, false, true);
+    OS << " = type { ";
+    auto mst = MyTy::ptr_cast<MyStructTy>(helper.getStructInfo()[st]);
+    auto cnt = mst->getElementCnt();
+    if (cnt != 0) {
+      OS << mst->getElementTy()->to_string();
+      for (auto i = 1u; i < cnt; i++) {
+        OS << ", " << mst->getElementTy(i)->to_string();
+      }
+      OS << " ";
+    }
+    OS << "}\n";
+  }
+  
+  if (M.getIdentifiedStructTypes().size()) {
+    OS << "\n";
+  }
+
+  for (auto &gl : M.globals()) {
+    printValue(&gl);
+    OS << " = ";
+    printType(&gl, gl.getType());
+    OS << " ";
+    if (gl.hasInitializer()) {
+      printValue(gl.getInitializer());
+    }
+    OS << "\n";
+  }
+
+  if (M.global_size()) {
+    OS << "\n";
+  }
+
   for (Function &F : M) {
     printFunction(F);
   }
@@ -27,13 +61,20 @@ void PointerTypePrinter::printFunction(Function& F) {
     printType(&*Arg, Arg->getType());
     OS << " %" << Arg->getName();
   }
-  OS << ")";
+  OS << ") ";
 
   if (F.isDeclaration()) {
     OS << "\n\n";
   } else {
-    OS << " {\n";
+    auto begin = true;
     for (BasicBlock &B : F) {
+      B.printAsOperand(OS, false);
+      if (begin) {
+        OS << " {\n";
+        begin = false;
+      } else {
+        OS << ":\n";
+      }
       printBasicBlock(B);
     }
     OS << "}\n\n";
@@ -41,8 +82,6 @@ void PointerTypePrinter::printFunction(Function& F) {
 }
 
 void PointerTypePrinter::printBasicBlock(BasicBlock& B) {
-  B.printAsOperand(OS, false);
-  OS << ":\n";
   for (Instruction &I : B) {
     printInstruction(I);
   }
@@ -60,13 +99,14 @@ void PointerTypePrinter::printInstruction(Instruction& I) {
   OS << I.getOpcodeName() << " ";
 
   if (!I.getType()->isVoidTy()) {
+    auto ptm = helper.getPtm();
     if (I.getOpcode() == Instruction::GetElementPtr) {
       auto *GI = static_cast<GetElementPtrInst *>(&I);
-      OS << MyTy::ptr_cast<MyPointerTy>(pointerTypeMap[GI->getPointerOperand()])
+      OS << MyTy::ptr_cast<MyPointerTy>(ptm[GI->getPointerOperand()])
                 ->getInner()->to_string();
     } else if (I.getOpcode() == Instruction::Alloca) {
       Value *v = static_cast<Value *>(&I);
-      OS << MyTy::ptr_cast<MyPointerTy>(pointerTypeMap[v])
+      OS << MyTy::ptr_cast<MyPointerTy>(ptm[v])
                 ->getInner()->to_string();
     } else {
       Value *v = static_cast<Value *>(&I);
@@ -94,16 +134,14 @@ void PointerTypePrinter::printValue(Value *V) {
 }
 
 void PointerTypePrinter::printType(Value *V, Type *T) {
-  if (pointerTypeMap.contains(V)) {
-    OS << pointerTypeMap[V]->to_string();
+  auto ptm = helper.getPtm();
+  if (ptm.contains(V)) {
+    OS << ptm[V]->to_string();
   } else {
     T->print(OS);
   }
 }
 
-void PointerTypePrinter::loadPointerTypeMap(
-    DenseMap< Value *, std::shared_ptr<MyTy> > m) {
-  for (auto &entry : m) {
-    pointerTypeMap.insert(entry);
-  }
+void PointerTypePrinter::load(PointerTypeHelpers helper) {
+  this->helper = helper;
 }

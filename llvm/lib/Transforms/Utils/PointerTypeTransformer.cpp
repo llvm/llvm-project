@@ -15,7 +15,7 @@ PreservedAnalyses PointerTypeTransformerPass::run(Module& M,
     helper.processInFunction(F);
   }
 
-  printer.loadPointerTypeMap(helper.getPtm());
+  printer.load(helper);
   printer.printModule(M);
   
   return PreservedAnalyses::all();
