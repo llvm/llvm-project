@@ -2099,8 +2099,10 @@ SDValue SelectionDAG::getVScale(const SDLoc &DL, EVT VT, APInt MulImm) {
   return getNode(ISD::VSCALE, DL, VT, getConstant(MulImm, DL, VT));
 }
 
-/// \returns a value of type \p VT that represents the runtime value of \p X,
-/// i.e. scaled by vscale if it's scalable, or a fixed constant otherwise.
+/// \returns a value of type \p VT that represents the runtime value of \p
+/// Quantity, i.e. scaled by vscale if it's scalable, or a fixed constant
+/// otherwise. Quantity should be a FixedOrScalableQuantity, i.e. ElementCount
+/// or TypeSize.
 template <typename Ty>
 static SDValue getFixedOrScalableQuantity(SelectionDAG &DAG, const SDLoc &DL,
                                           EVT VT, Ty Quantity) {
