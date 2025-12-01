@@ -12543,6 +12543,8 @@ void OMPClauseReader::VisitOMPToClause(OMPToClause *C) {
     C->setMotionModifier(
         I, static_cast<OpenMPMotionModifierKind>(Record.readInt()));
     C->setMotionModifierLoc(I, Record.readSourceLocation());
+    if (C->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+      C->setIteratorModifier(Record.readExpr());
   }
   C->setMapperQualifierLoc(Record.readNestedNameSpecifierLoc());
   C->setMapperIdInfo(Record.readDeclarationNameInfo());
@@ -12599,6 +12601,8 @@ void OMPClauseReader::VisitOMPFromClause(OMPFromClause *C) {
     C->setMotionModifier(
         I, static_cast<OpenMPMotionModifierKind>(Record.readInt()));
     C->setMotionModifierLoc(I, Record.readSourceLocation());
+    if (C->getMotionModifier(I) == OMPC_MOTION_MODIFIER_iterator)
+      C->setIteratorModifier(Record.readExpr());
   }
   C->setMapperQualifierLoc(Record.readNestedNameSpecifierLoc());
   C->setMapperIdInfo(Record.readDeclarationNameInfo());
