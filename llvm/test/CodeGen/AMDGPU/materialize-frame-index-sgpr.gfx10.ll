@@ -15,7 +15,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc() #0 {
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s5, s32, 0x80880
 ; GFX10_1-NEXT:    buffer_store_dword v1, off, s[0:3], s5 ; 4-byte Folded Spill
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    v_lshrrev_b32_e64 v0, 5, s32
 ; GFX10_1-NEXT:    v_writelane_b32 v1, s55, 0
@@ -34,7 +34,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc() #0 {
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s5, s32, 0x80880
 ; GFX10_1-NEXT:    buffer_load_dword v1, off, s[0:3], s5 ; 4-byte Folded Reload
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10_1-NEXT:    s_setpc_b64 s[30:31]
@@ -106,20 +106,20 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc() #0 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_store_b32 off, v1, s32 offset:16388 ; 4-byte Folded Spill
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s0, 0, exec_lo
 ; GFX12-NEXT:    v_writelane_b32 v1, s55, 0
 ; GFX12-NEXT:    s_add_co_ci_u32 s0, s32, 0x4000
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s32
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_bitcmp1_b32 s0, 0
 ; GFX12-NEXT:    s_bitset0_b32 s0, 0
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use alloca0 v0
 ; GFX12-NEXT:    ;;#ASMEND
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 s55, s0
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use s55, scc
@@ -127,7 +127,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc() #0 {
 ; GFX12-NEXT:    v_readlane_b32 s55, v1, 0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_load_b32 v1, off, s32 offset:16388 ; 4-byte Folded Reload
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -233,7 +233,7 @@ define void @scalar_mov_materializes_frame_index_dead_scc() #0 {
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s5, s32, 0x80880
 ; GFX10_1-NEXT:    buffer_store_dword v1, off, s[0:3], s5 ; 4-byte Folded Spill
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    v_writelane_b32 v1, s55, 0
 ; GFX10_1-NEXT:    v_lshrrev_b32_e64 v0, 5, s32
@@ -250,7 +250,7 @@ define void @scalar_mov_materializes_frame_index_dead_scc() #0 {
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s5, s32, 0x80880
 ; GFX10_1-NEXT:    buffer_load_dword v1, off, s[0:3], s5 ; 4-byte Folded Reload
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10_1-NEXT:    s_setpc_b64 s[30:31]
@@ -317,12 +317,12 @@ define void @scalar_mov_materializes_frame_index_dead_scc() #0 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_store_b32 off, v1, s32 offset:16388 ; 4-byte Folded Spill
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    v_writelane_b32 v1, s55, 0
 ; GFX12-NEXT:    s_add_co_i32 s0, s32, 0x4000
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s32
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 s55, s0
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use alloca0 v0
@@ -333,7 +333,7 @@ define void @scalar_mov_materializes_frame_index_dead_scc() #0 {
 ; GFX12-NEXT:    v_readlane_b32 s55, v1, 0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_load_b32 v1, off, s32 offset:16388 ; 4-byte Folded Reload
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -431,7 +431,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc_fp() #1 {
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s6, s33, 0x80880
 ; GFX10_1-NEXT:    buffer_store_dword v1, off, s[0:3], s6 ; 4-byte Folded Spill
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    v_lshrrev_b32_e64 v0, 5, s33
 ; GFX10_1-NEXT:    v_writelane_b32 v1, s55, 0
@@ -452,7 +452,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc_fp() #1 {
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s6, s33, 0x80880
 ; GFX10_1-NEXT:    buffer_load_dword v1, off, s[0:3], s6 ; 4-byte Folded Reload
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    s_mov_b32 s33, s5
 ; GFX10_1-NEXT:    s_waitcnt vmcnt(0)
@@ -536,20 +536,20 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc_fp() #1 {
 ; GFX12-NEXT:    s_mov_b32 s33, s32
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_store_b32 off, v1, s33 offset:16388 ; 4-byte Folded Spill
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_addk_co_i32 s32, 0x4040
 ; GFX12-NEXT:    s_and_b32 s0, 0, exec_lo
 ; GFX12-NEXT:    v_writelane_b32 v1, s55, 0
 ; GFX12-NEXT:    s_add_co_ci_u32 s0, s33, 0x4000
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s33
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_bitcmp1_b32 s0, 0
 ; GFX12-NEXT:    s_bitset0_b32 s0, 0
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use alloca0 v0
 ; GFX12-NEXT:    ;;#ASMEND
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 s55, s0
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use s55, scc
@@ -558,11 +558,11 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc_fp() #1 {
 ; GFX12-NEXT:    s_mov_b32 s32, s33
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_load_b32 v1, off, s33 offset:16388 ; 4-byte Folded Reload
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_mov_b32 s33, s1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: scalar_mov_materializes_frame_index_unavailable_scc_fp:
@@ -679,7 +679,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc_small_offset() 
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s5, s32, 0x80800
 ; GFX10_1-NEXT:    buffer_store_dword v0, off, s[0:3], s5 ; 4-byte Folded Spill
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    v_lshrrev_b32_e64 v1, 5, s32
 ; GFX10_1-NEXT:    v_writelane_b32 v0, s55, 0
@@ -693,7 +693,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc_small_offset() 
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s5, s32, 0x80800
 ; GFX10_1-NEXT:    buffer_load_dword v0, off, s[0:3], s5 ; 4-byte Folded Reload
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10_1-NEXT:    s_setpc_b64 s[30:31]
@@ -756,7 +756,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc_small_offset() 
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_store_b32 off, v0, s32 offset:16384 ; 4-byte Folded Spill
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    v_writelane_b32 v0, s55, 0
 ; GFX12-NEXT:    s_mov_b32 s55, s32
@@ -768,7 +768,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc_small_offset() 
 ; GFX12-NEXT:    v_readlane_b32 s55, v0, 0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_load_b32 v0, off, s32 offset:16384 ; 4-byte Folded Reload
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -855,7 +855,7 @@ define void @scalar_mov_materializes_frame_index_available_scc_small_offset() #0
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s5, s32, 0x80800
 ; GFX10_1-NEXT:    buffer_store_dword v0, off, s[0:3], s5 ; 4-byte Folded Spill
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    v_writelane_b32 v0, s55, 0
 ; GFX10_1-NEXT:    s_lshr_b32 s55, s32, 5
@@ -867,7 +867,7 @@ define void @scalar_mov_materializes_frame_index_available_scc_small_offset() #0
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s5, s32, 0x80800
 ; GFX10_1-NEXT:    buffer_load_dword v0, off, s[0:3], s5 ; 4-byte Folded Reload
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10_1-NEXT:    s_setpc_b64 s[30:31]
@@ -924,7 +924,7 @@ define void @scalar_mov_materializes_frame_index_available_scc_small_offset() #0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_store_b32 off, v0, s32 offset:16384 ; 4-byte Folded Spill
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    v_writelane_b32 v0, s55, 0
 ; GFX12-NEXT:    s_mov_b32 s55, s32
@@ -935,7 +935,7 @@ define void @scalar_mov_materializes_frame_index_available_scc_small_offset() #0
 ; GFX12-NEXT:    v_readlane_b32 s55, v0, 0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_load_b32 v0, off, s32 offset:16384 ; 4-byte Folded Reload
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -1016,7 +1016,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc_small_offset_fp
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s6, s33, 0x80800
 ; GFX10_1-NEXT:    buffer_store_dword v0, off, s[0:3], s6 ; 4-byte Folded Spill
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    v_lshrrev_b32_e64 v1, 5, s33
 ; GFX10_1-NEXT:    v_writelane_b32 v0, s55, 0
@@ -1032,7 +1032,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc_small_offset_fp
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s6, s33, 0x80800
 ; GFX10_1-NEXT:    buffer_load_dword v0, off, s[0:3], s6 ; 4-byte Folded Reload
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    s_mov_b32 s33, s5
 ; GFX10_1-NEXT:    s_waitcnt vmcnt(0)
@@ -1107,7 +1107,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc_small_offset_fp
 ; GFX12-NEXT:    s_mov_b32 s33, s32
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_store_b32 off, v0, s33 offset:16384 ; 4-byte Folded Spill
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    v_writelane_b32 v0, s55, 0
 ; GFX12-NEXT:    s_addk_co_i32 s32, 0x4040
@@ -1120,11 +1120,11 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc_small_offset_fp
 ; GFX12-NEXT:    s_mov_b32 s32, s33
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_load_b32 v0, off, s33 offset:16384 ; 4-byte Folded Reload
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_mov_b32 s33, s1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: scalar_mov_materializes_frame_index_unavailable_scc_small_offset_fp:
@@ -1226,7 +1226,7 @@ define void @scalar_mov_materializes_frame_index_available_scc_small_offset_fp()
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s5, -1
 ; GFX10_1-NEXT:    s_add_i32 s6, s33, 0x80800
 ; GFX10_1-NEXT:    buffer_store_dword v0, off, s[0:3], s6 ; 4-byte Folded Spill
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s5
 ; GFX10_1-NEXT:    v_writelane_b32 v0, s55, 0
 ; GFX10_1-NEXT:    s_add_i32 s32, s32, 0x81000
@@ -1240,7 +1240,7 @@ define void @scalar_mov_materializes_frame_index_available_scc_small_offset_fp()
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s5, -1
 ; GFX10_1-NEXT:    s_add_i32 s6, s33, 0x80800
 ; GFX10_1-NEXT:    buffer_load_dword v0, off, s[0:3], s6 ; 4-byte Folded Reload
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s5
 ; GFX10_1-NEXT:    s_mov_b32 s33, s4
 ; GFX10_1-NEXT:    s_waitcnt vmcnt(0)
@@ -1309,7 +1309,7 @@ define void @scalar_mov_materializes_frame_index_available_scc_small_offset_fp()
 ; GFX12-NEXT:    s_mov_b32 s33, s32
 ; GFX12-NEXT:    s_xor_saveexec_b32 s1, -1
 ; GFX12-NEXT:    scratch_store_b32 off, v0, s33 offset:16384 ; 4-byte Folded Spill
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX12-NEXT:    v_writelane_b32 v0, s55, 0
 ; GFX12-NEXT:    s_addk_co_i32 s32, 0x4040
@@ -1321,11 +1321,11 @@ define void @scalar_mov_materializes_frame_index_available_scc_small_offset_fp()
 ; GFX12-NEXT:    v_readlane_b32 s55, v0, 0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s1, -1
 ; GFX12-NEXT:    scratch_load_b32 v0, off, s33 offset:16384 ; 4-byte Folded Reload
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX12-NEXT:    s_mov_b32 s33, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: scalar_mov_materializes_frame_index_available_scc_small_offset_fp:
@@ -1417,7 +1417,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc__gep_immoffset(
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s5, s32, 0x100800
 ; GFX10_1-NEXT:    buffer_store_dword v1, off, s[0:3], s5 ; 4-byte Folded Spill
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    v_writelane_b32 v1, s55, 0
 ; GFX10_1-NEXT:    v_lshrrev_b32_e64 v0, 5, s32
@@ -1435,7 +1435,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc__gep_immoffset(
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s5, s32, 0x100800
 ; GFX10_1-NEXT:    buffer_load_dword v1, off, s[0:3], s5 ; 4-byte Folded Reload
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10_1-NEXT:    s_setpc_b64 s[30:31]
@@ -1502,7 +1502,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc__gep_immoffset(
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_store_b32 off, v1, s32 offset:32768 ; 4-byte Folded Spill
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    v_writelane_b32 v1, s55, 0
 ; GFX12-NEXT:    s_add_co_i32 s55, s32, 0x43ec
@@ -1517,7 +1517,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc__gep_immoffset(
 ; GFX12-NEXT:    v_readlane_b32 s55, v1, 0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_load_b32 v1, off, s32 offset:32768 ; 4-byte Folded Reload
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -1616,7 +1616,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc__gep_sgpr_offse
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s5, s32, 0x100800
 ; GFX10_1-NEXT:    buffer_store_dword v1, off, s[0:3], s5 ; 4-byte Folded Spill
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    v_writelane_b32 v1, s55, 0
 ; GFX10_1-NEXT:    v_lshrrev_b32_e64 v0, 5, s32
@@ -1635,7 +1635,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc__gep_sgpr_offse
 ; GFX10_1-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10_1-NEXT:    s_add_i32 s5, s32, 0x100800
 ; GFX10_1-NEXT:    buffer_load_dword v1, off, s[0:3], s5 ; 4-byte Folded Reload
-; GFX10_1-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10_1-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10_1-NEXT:    s_setpc_b64 s[30:31]
@@ -1705,12 +1705,12 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc__gep_sgpr_offse
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s1, -1
 ; GFX12-NEXT:    scratch_store_b32 off, v1, s32 offset:32768 ; 4-byte Folded Spill
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX12-NEXT:    v_writelane_b32 v1, s55, 0
 ; GFX12-NEXT:    s_add_co_i32 s1, s32, 0x4000
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s32
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_lshl2_add_u32 s55, s0, s1
 ; GFX12-NEXT:    s_and_b32 s0, 0, exec_lo
 ; GFX12-NEXT:    ;;#ASMSTART
@@ -1722,7 +1722,7 @@ define void @scalar_mov_materializes_frame_index_unavailable_scc__gep_sgpr_offse
 ; GFX12-NEXT:    v_readlane_b32 s55, v1, 0
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_load_b32 v1, off, s32 offset:32768 ; 4-byte Folded Reload
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]

@@ -300,6 +300,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(!cir::MissingFeatures::fastMathFlags());
     return emitUnaryMaybeConstrainedFPBuiltin<cir::ExpOp>(*this, *e);
 
+  case Builtin::BIexp2:
+  case Builtin::BIexp2f:
+  case Builtin::BIexp2l:
+  case Builtin::BI__builtin_exp2:
+  case Builtin::BI__builtin_exp2f:
+  case Builtin::BI__builtin_exp2f16:
+  case Builtin::BI__builtin_exp2l:
+  case Builtin::BI__builtin_exp2f128:
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::Exp2Op>(*this, *e);
+
   case Builtin::BIfabs:
   case Builtin::BIfabsf:
   case Builtin::BIfabsl:
@@ -502,9 +513,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return getUndefRValue(e->getType());
 
   case Builtin::BI__builtin_coro_frame: {
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_frame NYI");
-    assert(!cir::MissingFeatures::coroutineFrame());
-    return getUndefRValue(e->getType());
+    return emitCoroutineFrame();
   }
   case Builtin::BI__builtin_coro_free:
   case Builtin::BI__builtin_coro_size: {

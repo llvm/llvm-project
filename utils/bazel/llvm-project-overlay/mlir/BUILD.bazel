@@ -1694,6 +1694,12 @@ gentbl_cc_library(
             "-gen-dialect-defs",
             "-dialect=amdgpu",
         ],
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.h.inc": [
+            "-gen-typedef-decls",
+        ],
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc": [
+            "-gen-typedef-defs",
+        ],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h.inc": ["-gen-enum-decls"],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.cpp.inc": ["-gen-enum-defs"],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPU.h.inc": ["-gen-op-decls"],
@@ -2610,8 +2616,13 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/X86Vector/TransformOps/*.h"]),
     includes = ["include"],
     deps = [
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
         ":TransformDialect",
+        ":TransformDialectInterfaces",
         ":VectorDialect",
+        ":X86VectorDialect",
         ":X86VectorTransformOpsIncGen",
         ":X86VectorTransforms",
     ],
@@ -2628,6 +2639,9 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":LinalgDialect",
+        ":LinalgInterfaces",
+        ":Pass",
+        ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
         ":X86VectorDialect",
@@ -4430,6 +4444,7 @@ cc_library(
         ":SCFIncGen",
         ":SideEffectInterfaces",
         ":TensorDialect",
+        ":TransformUtils",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -4781,6 +4796,7 @@ cc_library(
         ":IR",
         ":InliningUtils",
         ":SideEffectInterfaces",
+        ":UBDialect",
         "//llvm:Support",
     ],
 )
@@ -10104,6 +10120,7 @@ cc_binary(
         "//llvm:TableGen",
         "//llvm:TargetParser",
         "//llvm:config",
+        "//llvm:vt_gen",
     ],
 )
 
