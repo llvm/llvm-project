@@ -3267,6 +3267,9 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
 
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue();
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue(mlir::acc::DeviceType deviceType);
+
+    // Add an entry to the 'seq' attribute for each additional device types.
+    void addSeq(MLIRContext *, llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{
