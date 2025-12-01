@@ -28,7 +28,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[$ATTR_0:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest1">
 // CHECK: #[[$ATTR_1:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[$ATTR_0]], 0>}>
 // CHECK: #[[$ATTR_2:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[$ATTR_1]], 0>}>
-// CHECK: #[[$ATTR_4:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[$ATTR_2]], 0>}>
+// CHECK: #[[$ATTR_3:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[$ATTR_2]], 0>}>
+// CHECK: #[[$ATTR_4:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[$ATTR_3]], 0>}>
 // CHECK: #[[$ATTR_5:.+]] = #llvm.tbaa_type_desc<id = "global data/common1_", members = {<#[[$ATTR_4]], 0>}>
 // CHECK: #[[$ATTR_6:.+]] = #llvm.tbaa_type_desc<id = "global data/common1_/bytes_4_to_7", members = {<#[[$ATTR_5]], 0>}>
 // CHECK: #[[$ATTR_7:.+]] = #llvm.tbaa_type_desc<id = "global data/common1_/bytes_0_to_3", members = {<#[[$ATTR_5]], 0>}>
@@ -65,7 +66,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[$ATTR_10:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest2">
 // CHECK: #[[$ATTR_11:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[$ATTR_10]], 0>}>
 // CHECK: #[[$ATTR_12:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[$ATTR_11]], 0>}>
-// CHECK: #[[$ATTR_14:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[$ATTR_12]], 0>}>
+// CHECK: #[[$ATTR_13:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[$ATTR_12]], 0>}>
+// CHECK: #[[$ATTR_14:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[$ATTR_13]], 0>}>
 // CHECK: #[[$ATTR_15:.+]] = #llvm.tbaa_type_desc<id = "global data/common2_", members = {<#[[$ATTR_14]], 0>}>
 // CHECK: #[[$ATTR_16:.+]] = #llvm.tbaa_type_desc<id = "global data/common2_/bytes_0_to_3", members = {<#[[$ATTR_15]], 0>}>
 // CHECK: #[[$ATTR_18:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_16]], access_type = #[[$ATTR_16]], offset = 0>
@@ -116,13 +118,14 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[ANYACC3INNER:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT3INNER]], 0>}>
 // CHECK: #[[ANYDATA3:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANYACC3]], 0>}>
 // CHECK: #[[ANYDATA3INNER:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANYACC3INNER]], 0>}>
-// CHECK: #[[GLOBALDATA3:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[ANYDATA3]], 0>}>
+// CHECK: #[[TARGETDATA3:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[ANYDATA3]], 0>}>
 // CHECK: #[[DUMMYARG3INNER:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[ANYDATA3INNER]], 0>}>
-// CHECK: #[[GLOBALDATA3COMMON3:.+]] = #llvm.tbaa_type_desc<id = "global data/common3_", members = {<#[[GLOBALDATA3]], 0>}>
+// CHECK: #[[GLOBALDATA3:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[TARGETDATA3]], 0>}>
 // CHECK: #[[DUMMYD:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtest3FinnerEd", members = {<#[[DUMMYARG3INNER]], 0>}>
 // CHECK: #[[DUMMYC:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtest3FinnerEc", members = {<#[[DUMMYARG3INNER]], 0>}>
 // CHECK: #[[DUMMYDTAG:.+]] = #llvm.tbaa_tag<base_type = #[[DUMMYD]], access_type = #[[DUMMYD]], offset = 0>
 // CHECK: #[[DUMMYCTAG:.+]] = #llvm.tbaa_tag<base_type = #[[DUMMYC]], access_type = #[[DUMMYC]], offset = 0>
+// CHECK: #[[GLOBALDATA3COMMON3:.+]] = #llvm.tbaa_type_desc<id = "global data/common3_", members = {<#[[GLOBALDATA3]], 0>}>
 // CHECK: #[[GLOBALB:.+]] = #llvm.tbaa_type_desc<id = "global data/common3_/bytes_4_to_7", members = {<#[[GLOBALDATA3COMMON3]], 0>}>
 // CHECK: #[[GLOBALA:.+]] = #llvm.tbaa_type_desc<id = "global data/common3_/bytes_0_to_3", members = {<#[[GLOBALDATA3COMMON3]], 0>}>
 // CHECK: #[[GLOBALBTAG:.+]] = #llvm.tbaa_tag<base_type = #[[GLOBALB]], access_type = #[[GLOBALB]], offset = 0>
@@ -177,8 +180,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[INNER4ANYACC:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[INNER4ROOT]], 0>}>
 // CHECK: #[[TEST4ANYDATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[TEST4ANYCC]], 0>}>
 // CHECK: #[[INNER4ANYDATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[INNER4ANYACC]], 0>}>
-// CHECK: #[[TEST4GLOBAL:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[TEST4ANYDATA]], 0>}>
-// CHECK: #[[INNER4GLOBAL:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[INNER4ANYDATA]], 0>}>
+// CHECK: #[[TEST4TARGET:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[TEST4ANYDATA]], 0>}>
+// CHECK: #[[INNER4TARGET:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[INNER4ANYDATA]], 0>}>
+// CHECK: #[[TEST4GLOBAL:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[TEST4TARGET]], 0>}>
+// CHECK: #[[INNER4GLOBAL:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[INNER4TARGET]], 0>}>
 // CHECK: #[[TEST4COMMON:.+]] = #llvm.tbaa_type_desc<id = "global data/common4_", members = {<#[[TEST4GLOBAL]], 0>}>
 // CHECK: #[[INNER4COMMON:.+]] = #llvm.tbaa_type_desc<id = "global data/common4_", members = {<#[[INNER4GLOBAL]], 0>}>
 // CHECK: #[[TEST4B:.+]] = #llvm.tbaa_type_desc<id = "global data/common4_/bytes_4_to_7", members = {<#[[TEST4COMMON]], 0>}>
@@ -224,7 +229,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[TEST5ROOT:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest5">
 // CHECK: #[[TEST5ANYACC:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[TEST5ROOT]], 0>}>
 // CHECK: #[[TEST5ANYDATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[TEST5ANYACC]], 0>}>
-// CHECK: #[[TEST5GLOBAL:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[TEST5ANYDATA]], 0>}>
+// CHECK: #[[TEST5TARGET:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[TEST5ANYDATA]], 0>}>
+// CHECK: #[[TEST5GLOBAL:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[TEST5TARGET]], 0>}>
 // CHECK: #[[TEST5COMMON5:.+]] = #llvm.tbaa_type_desc<id = "global data/common5_", members = {<#[[TEST5GLOBAL]], 0>}>
 // CHECK: #[[TEST5COMMON5TAG:.+]] = #llvm.tbaa_tag<base_type = #[[TEST5COMMON5]], access_type = #[[TEST5COMMON5]], offset = 0>
 // CHECK: #[[TEST5A:.+]] = #llvm.tbaa_type_desc<id = "global data/common5_/bytes_0_to_3", members = {<#[[TEST5COMMON5]], 0>}>
@@ -282,7 +288,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[$ATTR_0:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest6">
 // CHECK: #[[$ATTR_1:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[$ATTR_0]], 0>}>
 // CHECK: #[[$ATTR_2:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[$ATTR_1]], 0>}>
-// CHECK: #[[$ATTR_4:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[$ATTR_2]], 0>}>
+// CHECK: #[[$ATTR_3:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[$ATTR_2]], 0>}>
+// CHECK: #[[$ATTR_4:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[$ATTR_3]], 0>}>
 // CHECK: #[[$ATTR_5:.+]] = #llvm.tbaa_type_desc<id = "global data/block_", members = {<#[[$ATTR_4]], 0>}>
 // CHECK: #[[$ATTR_6:.+]] = #llvm.tbaa_type_desc<id = "global data/block_/bytes_0_to_79", members = {<#[[$ATTR_5]], 0>}>
 // CHECK: #[[$ATTR_7:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_6]], access_type = #[[$ATTR_6]], offset = 0>
@@ -347,8 +354,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[$ATTR_74:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[$ATTR_73]], 0>}>
 // CHECK: #[[$ATTR_75:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[$ATTR_74]], 0>}>
 // CHECK: #[[$ATTR_76:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[$ATTR_75]], 0>}>
-// CHECK: #[[$ATTR_78:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[$ATTR_75]], 0>}>
 // CHECK: #[[$ATTR_77:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_76]], access_type = #[[$ATTR_76]], offset = 0>
+// CHECK: #[[$ATTR_78:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[$ATTR_76]], 0>}>
 // CHECK: #[[$ATTR_79:.+]] = #llvm.tbaa_type_desc<id = "global data/block_", members = {<#[[$ATTR_78]], 0>}>
 // CHECK: #[[$ATTR_80:.+]] = #llvm.tbaa_type_desc<id = "global data/block_/bytes_40_to_43", members = {<#[[$ATTR_79]], 0>}>
 // CHECK: #[[$ATTR_81:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_80]], access_type = #[[$ATTR_80]], offset = 0>
@@ -418,10 +425,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // CHECK: #[[$ATTR_82:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest8">
 // CHECK: #[[$ATTR_83:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[$ATTR_82]], 0>}>
 // CHECK: #[[$ATTR_84:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[$ATTR_83]], 0>}>
-// CHECK: #[[$ATTR_87:.+]] = #llvm.tbaa_type_desc<id = "allocated data", members = {<#[[$ATTR_84]], 0>}>
 // CHECK: #[[$ATTR_85:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[$ATTR_84]], 0>}>
-// CHECK: #[[$ATTR_88:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_87]], access_type = #[[$ATTR_87]], offset = 0>
 // CHECK: #[[$ATTR_86:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_85]], access_type = #[[$ATTR_85]], offset = 0>
+// CHECK: #[[$ATTR_87:.+]] = #llvm.tbaa_type_desc<id = "allocated data", members = {<#[[$ATTR_85]], 0>}>
+// CHECK: #[[$ATTR_88:.+]] = #llvm.tbaa_tag<base_type = #[[$ATTR_87]], access_type = #[[$ATTR_87]], offset = 0>
 // CHECK-LABEL:   func.func @_QPtest8() {
 // CHECK:           fir.load %{{[0-9]+}} : !fir.ref<!fir.box<!fir.ptr<f32>>>
 // CHECK:           fir.load %{{[0-9]+}} {tbaa = [#[[$ATTR_86]]]} : !fir.ptr<f32>
