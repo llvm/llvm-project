@@ -40,11 +40,9 @@ dumpToFile(Operation *op, StringRef dumpDir, const llvm::Twine &filename,
 
   std::error_code ec;
   llvm::ToolOutputFile output(path, ec, llvm::sys::fs::OF_None);
-  if (ec) {
-    op->emitError() << "Failed to create file '" << path
-                    << "': " << ec.message();
-    return failure();
-  }
+  if (ec)
+    return op->emitError() << "Failed to create file '" << path
+                           << "': " << ec.message();
 
   writeContent(output.os());
   output.keep();
