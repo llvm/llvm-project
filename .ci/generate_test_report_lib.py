@@ -184,8 +184,8 @@ def generate_report(
         if return_code == 0:
             report.extend(
                 [
-                    "The build succeeded and no tests ran. This is expected in some "
-                    "build configurations."
+                    ":white_check_mark: The build succeeded and no tests ran. "
+                    "This is expected in some build configurations."
                 ]
             )
         else:
@@ -272,6 +272,10 @@ def generate_report(
                 ]
             )
             report.extend(_format_failures(ninja_failures, failure_explanations))
+    else:
+        report.extend(
+            ["", ":white_check_mark: The build succeeded and all tests passed."]
+        )
 
     if failures or return_code != 0:
         report.extend(["", UNRELATED_FAILURES_STR])
