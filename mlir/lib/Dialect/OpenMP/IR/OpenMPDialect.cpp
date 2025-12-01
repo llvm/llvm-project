@@ -4490,14 +4490,14 @@ void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 }
 
 //===----------------------------------------------------------------------===//
-// Parser and printer for NumTeamsMultiDim Clause (with dims modifier)
+// Parser and printer for Clauses with dims modifier
 //===----------------------------------------------------------------------===//
-// num_teams_multi_dim(dims(3): %v0, %v1, %v2 : i32, i32, i32) Or:
-// num_teams_multi_dim(%v : i32)
-static ParseResult parseNumTeamsMultiDimClause(
-    OpAsmParser &parser, IntegerAttr &dimsAttr,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    SmallVectorImpl<Type> &types) {
+// clause_name(dims(3): %v0, %v1, %v2 : i32, i32, i32)
+// clause_name(%v : i32)
+static ParseResult
+parseDimsModifier(OpAsmParser &parser, IntegerAttr &dimsAttr,
+                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+                  SmallVectorImpl<Type> &types) {
   std::optional<int64_t> dims;
   // Try to parse optional dims modifier: dims(N):
   if (succeeded(parser.parseOptionalKeyword("dims"))) {
@@ -4536,9 +4536,9 @@ static ParseResult parseNumTeamsMultiDimClause(
   return success();
 }
 
-static void printNumTeamsMultiDimClause(OpAsmPrinter &p, Operation *op,
-                                        IntegerAttr dimsAttr,
-                                        OperandRange values, TypeRange types) {
+static void printDimsModifier(OpAsmPrinter &p, Operation *op,
+                              IntegerAttr dimsAttr, OperandRange values,
+                              TypeRange types) {
   // Print dims modifier if present
   if (dimsAttr) {
     p << "dims(" << dimsAttr.getInt() << "): ";
