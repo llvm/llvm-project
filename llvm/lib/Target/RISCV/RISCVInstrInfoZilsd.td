@@ -54,7 +54,6 @@ def PseudoLD_RV32_OPT :
   let hasSideEffects = false;
   let mayLoad = true;
   let mayStore = false;
-  let isCodeGenOnly = true;
   let Size = 8; // Might become two LWs
   let hasPostISelHook = true;
 }
@@ -65,7 +64,6 @@ def PseudoSD_RV32_OPT :
   let hasSideEffects = false;
   let mayLoad = false;
   let mayStore = true;
-  let isCodeGenOnly = true;
   let Size = 8; // Might become two SWs
   let hasPostISelHook = true;
 }
