@@ -24,7 +24,7 @@ LFI aims for the following goals:
 * Performance: LFI aims for minimal overhead vs. unsandboxed code.
 * Security: The LFI runtime and compiler elements aim to be simple and
   verifiable when possible.
-* Usability: LFI aims to make it easy as possible to used retrofit sandboxing,
+* Usability: LFI aims to make it as easy as possible to retrofit sandboxing,
   i.e., to migrate from unsandboxed to sandboxed libraries with minimal effort.
 
 When building a program for the LFI target the compiler is designed to ensure
@@ -116,10 +116,10 @@ Control flow
 ~~~~~~~~~~~~
 
 Indirect branches get rewritten to branch through register ``x28``, which must
-always contain an address within the sandbox. An ``add`` is used to safely load
-``x28`` with the destination address. Since ``ret`` uses ``x30`` by default,
-which already must contain an address within the sandbox, it does not require
-any rewrite.
+always contain an address within the sandbox. An ``add`` is used to safely
+update ``x28`` with the destination address. Since ``ret`` uses ``x30`` by
+default, which already must contain an address within the sandbox, it does not
+require any rewrite.
 
 +--------------------+---------------------------+
 |      Original      |         Rewritten         |
@@ -220,7 +220,7 @@ Stack pointer modification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When the stack pointer is modified, we write the modified value to a temporary,
-before loading it back into ``sp`` with a safe ``add``.
+before moving it back into ``sp`` with a safe ``add``.
 
 +------------------------------+-------------------------------+
 |           Original           |           Rewritten           |
