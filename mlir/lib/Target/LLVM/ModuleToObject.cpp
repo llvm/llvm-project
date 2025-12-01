@@ -36,10 +36,11 @@ using namespace mlir::LLVM;
 
 ModuleToObject::ModuleToObject(
     Operation &module, StringRef triple, StringRef chip, StringRef features,
-    int optLevel, function_ref<void(llvm::Module &)> initialLlvmIRCallback,
-    function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
-    function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
-    function_ref<void(StringRef)> isaCallback)
+    int optLevel,
+    function_ref<LogicalResult(llvm::Module &)> initialLlvmIRCallback,
+    function_ref<LogicalResult(llvm::Module &)> linkedLlvmIRCallback,
+    function_ref<LogicalResult(llvm::Module &)> optimizedLlvmIRCallback,
+    function_ref<LogicalResult(StringRef)> isaCallback)
     : module(module), triple(triple), chip(chip), features(features),
       optLevel(optLevel), initialLlvmIRCallback(initialLlvmIRCallback),
       linkedLlvmIRCallback(linkedLlvmIRCallback),
@@ -254,8 +255,12 @@ std::optional<SmallVector<char, 0>> ModuleToObject::run() {
   }
   setDataLayoutAndTriple(*llvmModule);
 
-  if (initialLlvmIRCallback)
-    initialLlvmIRCallback(*llvmModule);
+  if (initialLlvmIRCallback) {
+    if (failed(initialLlvmIRCallback(*llvmModule))) {
+      getOperation().emitError() << "InitialLLVMIRCallback failed.";
+      return std::nullopt;
+    }
+  }
 
   // Link bitcode files.
   handleModulePreLink(*llvmModule);
@@ -269,15 +274,23 @@ std::optional<SmallVector<char, 0>> ModuleToObject::run() {
     handleModulePostLink(*llvmModule);
   }
 
-  if (linkedLlvmIRCallback)
-    linkedLlvmIRCallback(*llvmModule);
+  if (linkedLlvmIRCallback) {
+    if (failed(linkedLlvmIRCallback(*llvmModule))) {
+      getOperation().emitError() << "LinkedLLVMIRCallback failed.";
+      return std::nullopt;
+    }
+  }
 
   // Optimize the module.
   if (failed(optimizeModule(*llvmModule, optLevel)))
     return std::nullopt;
 
-  if (optimizedLlvmIRCallback)
-    optimizedLlvmIRCallback(*llvmModule);
+  if (optimizedLlvmIRCallback) {
+    if (failed(optimizedLlvmIRCallback(*llvmModule))) {
+      getOperation().emitError() << "OptimizedLLVMIRCallback failed.";
+      return std::nullopt;
+    }
+  }
 
   // Return the serialized object.
   return moduleToObject(*llvmModule);
