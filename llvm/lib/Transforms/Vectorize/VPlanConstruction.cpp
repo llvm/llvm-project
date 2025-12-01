@@ -13,10 +13,12 @@
 
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
+#include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
+#include "VPlanUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -1120,7 +1122,48 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   return true;
 }
 
-bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
+/// Try to convert FindLastIV to FindFirstIV reduction when using a strict
+/// predicate. Returns the new FindFirstIVPhiR on success, nullptr on failure.
+static VPReductionPHIRecipe *
+tryConvertToFindFirstIV(VPlan &Plan, VPReductionPHIRecipe *FindLastIVPhiR,
+                        VPValue *IVOp, ScalarEvolution &SE, const Loop *L) {
+  Type *Ty = VPTypeAnalysis(Plan).inferScalarType(FindLastIVPhiR);
+  unsigned NumBits = Ty->getIntegerBitWidth();
+
+  // Determine the reduction kind and sentinel based on the IV range.
+  RecurKind NewKind;
+  VPValue *NewSentinel;
+  auto *AR = cast<SCEVAddRecExpr>(vputils::getSCEVExprForVPValue(IVOp, SE, L));
+  if (RecurrenceDescriptor::isValidIVRangeForFindIV(
+          AR, /*IsSigned=*/true, /*IsFindFirstIV=*/true, SE)) {
+    NewKind = RecurKind::FindFirstIVSMin;
+    NewSentinel = Plan.getConstantInt(APInt::getSignedMaxValue(NumBits));
+  } else if (RecurrenceDescriptor::isValidIVRangeForFindIV(
+                 AR, /*IsSigned=*/false, /*IsFindFirstIV=*/true, SE)) {
+    NewKind = RecurKind::FindFirstIVUMin;
+    NewSentinel = Plan.getConstantInt(APInt::getMaxValue(NumBits));
+  } else {
+    return nullptr;
+  }
+
+  // Create the new FindFirstIV reduction recipe.
+  assert(!FindLastIVPhiR->isInLoop() && !FindLastIVPhiR->isOrdered());
+  ReductionStyle Style = RdxUnordered{FindLastIVPhiR->getVFScaleFactor()};
+  auto *FindFirstIVPhiR =
+      new VPReductionPHIRecipe(nullptr, NewKind, *NewSentinel, Style,
+                               FindLastIVPhiR->hasUsesOutsideReductionChain());
+  FindFirstIVPhiR->addOperand(FindLastIVPhiR->getBackedgeValue());
+
+  FindFirstIVPhiR->insertBefore(FindLastIVPhiR);
+  VPInstruction *FindLastIVResult =
+      findUserOf<VPInstruction::ComputeFindIVResult>(FindLastIVPhiR);
+  FindLastIVPhiR->replaceAllUsesWith(FindFirstIVPhiR);
+  FindLastIVResult->setOperand(2, NewSentinel);
+  return FindFirstIVPhiR;
+}
+
+bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan, ScalarEvolution &SE,
+                                               const Loop *L) {
   for (auto &PhiR : make_early_inc_range(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
     auto *MinMaxPhiR = dyn_cast<VPReductionPHIRecipe>(&PhiR);
@@ -1203,33 +1246,41 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
                            FindIVPhiR->getRecurrenceKind()))
       return false;
 
+    assert(!FindIVPhiR->isInLoop() && !FindIVPhiR->isOrdered() &&
+           "cannot handle inloop/ordered reductions yet");
+
     // TODO: Support cases where IVOp is the IV increment.
     if (!match(IVOp, m_TruncOrSelf(m_VPValue(IVOp))) ||
         !isa<VPWidenIntOrFpInductionRecipe>(IVOp))
       return false;
 
-    CmpInst::Predicate RdxPredicate = [RdxKind]() {
+    // Check if the predicate is compatible with the reduction kind.
+    bool IsValidPredicate = [RdxKind, Pred]() {
       switch (RdxKind) {
       case RecurKind::UMin:
-        return CmpInst::ICMP_UGE;
+        return Pred == CmpInst::ICMP_UGE || Pred == CmpInst::ICMP_UGT;
       case RecurKind::UMax:
-        return CmpInst::ICMP_ULE;
+        return Pred == CmpInst::ICMP_ULE || Pred == CmpInst::ICMP_ULT;
       case RecurKind::SMax:
-        return CmpInst::ICMP_SLE;
+        return Pred == CmpInst::ICMP_SLE || Pred == CmpInst::ICMP_SLT;
       case RecurKind::SMin:
-        return CmpInst::ICMP_SGE;
+        return Pred == CmpInst::ICMP_SGE || Pred == CmpInst::ICMP_SGT;
       default:
         llvm_unreachable("unhandled recurrence kind");
       }
     }();
 
-    // TODO: Strict predicates need to find the first IV value for which the
-    // predicate holds, not the last.
-    if (Pred != RdxPredicate)
+    if (!IsValidPredicate)
       return false;
 
-    assert(!FindIVPhiR->isInLoop() && !FindIVPhiR->isOrdered() &&
-           "cannot handle inloop/ordered reductions yet");
+    // For strict predicates, transform try to convert FindLastIV to
+    // FindFirstIV.
+    bool IsStrictPredicate = ICmpInst::isLT(Pred) || ICmpInst::isGT(Pred);
+    if (IsStrictPredicate) {
+      FindIVPhiR = tryConvertToFindFirstIV(Plan, FindIVPhiR, IVOp, SE, L);
+      if (!FindIVPhiR)
+        return false;
+    }
 
     // The reduction using MinMaxPhiR needs adjusting to compute the correct
     // result:

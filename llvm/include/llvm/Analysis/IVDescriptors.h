@@ -28,6 +28,7 @@ class Loop;
 class PredicatedScalarEvolution;
 class ScalarEvolution;
 class SCEV;
+class SCEVAddRecExpr;
 class StoreInst;
 
 /// These are the kinds of recurrences that we support.
@@ -309,6 +310,11 @@ public:
     return isFindFirstIVRecurrenceKind(Kind) ||
            isFindLastIVRecurrenceKind(Kind);
   }
+
+  /// Returns true if \p AR's range is valid for either FindFirstIV or
+  /// FindLastIV reductions i.e. if the sentinel value is outside \p AR's range.
+  static bool isValidIVRangeForFindIV(const SCEVAddRecExpr *AR, bool IsSigned,
+                                      bool IsFindFirstIV, ScalarEvolution &SE);
 
   /// Returns the type of the recurrence. This type can be narrower than the
   /// actual type of the Phi if the recurrence has been type-promoted.

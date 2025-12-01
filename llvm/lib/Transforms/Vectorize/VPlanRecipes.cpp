@@ -163,6 +163,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return cast<VPExpressionRecipe>(this)->mayHaveSideEffects();
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
+  case VPReductionPHISC:
   case VPPredInstPHISC:
   case VPVectorEndPointerSC:
     return false;
