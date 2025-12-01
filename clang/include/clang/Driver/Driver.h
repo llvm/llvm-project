@@ -823,6 +823,7 @@ private:
   llvm::ErrorOr<bool>
   ScanInputsForCXX20ModulesUsage(const InputList &Inputs) const;
 
+public: // for Swift.
   /// Retrieves a ToolChain for a particular \p Target triple.
   ///
   /// Will cache ToolChains for the life of the driver object, and create them
