@@ -274,6 +274,34 @@ LogicalResult MBarrierArriveDropOp::verify() {
                                     getRes());
 }
 
+LogicalResult MBarrierArriveExpectTxOp::verify() {
+  // The inline-ptx version of this Op does not support all features.
+  // With predicate, this Op lowers to inline-ptx. So, verify and
+  // error-out if there are unsupported features.
+  if (getPredicate()) {
+    if (getScope() != NVVM::MemScopeKind::CTA)
+      return emitError("mbarrier scope must be CTA when using predicate");
+
+    if (isPtrInSharedClusterSpace(getAddr()))
+      return emitError("mbarrier in shared_cluster space is not supported when "
+                       "using predicate");
+
+    if (getRes())
+      return emitError("return-value is not supported when using predicate");
+
+    if (getRelaxed() == true)
+      return emitError("mbarrier with relaxed semantics is not supported when "
+                       "using predicate");
+  }
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
+                                    getRes());
+}
+
+LogicalResult MBarrierArriveDropExpectTxOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
+                                    getRes());
+}
+
 LogicalResult MBarrierExpectTxOp::verify() {
   return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
 }
@@ -2574,6 +2602,87 @@ mlir::NVVM::IDArgPair MBarrierArriveDropOp::getIntrinsicIDAndArgs(
                : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
 
   return {id, {mbar, count}};
+}
+
+bool MBarrierArriveExpectTxOp::getAsmValues(
+    RewriterBase &rewriter,
+    llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
+        &asmValues) {
+  // Add all the operands but not the attrs to the asmValues list.
+  // The attrs here are used to generate the right variants for
+  // intrinsics-lowering. So, we ignore them while generating inline-PTX.
+  for (auto val : getOperands())
+    asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Read});
+
+  return false;
+}
+
+mlir::NVVM::IDArgPair MBarrierArriveExpectTxOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierArriveExpectTxOp>(op);
+
+  bool isClusterSpace = isPtrInSharedClusterSpace(thisOp.getAddr());
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: Space
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isClusterSpace ? 1 : 0);
+
+  // clang-format off
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_scope_cluster_space_cluster};
+  static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_expect_tx_relaxed_scope_cluster_space_cluster};
+  // clang-format on
+  auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
+
+  // Tidy-up the Intrinsic Args
+  llvm::Value *txcount = mt.lookupValue(thisOp.getTxcount());
+  llvm::Value *mbar = mt.lookupValue(thisOp.getAddr());
+  bool needCast = isPtrInGenericSpace(thisOp.getAddr());
+  if (needCast)
+    mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
+
+  return {id, {mbar, txcount}};
+}
+
+mlir::NVVM::IDArgPair MBarrierArriveDropExpectTxOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierArriveDropExpectTxOp>(op);
+
+  bool isClusterSpace = isPtrInSharedClusterSpace(thisOp.getAddr());
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: Space
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isClusterSpace ? 1 : 0);
+
+  // clang-format off
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_scope_cluster_space_cluster};
+  static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cta_space_cluster,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_arrive_drop_expect_tx_relaxed_scope_cluster_space_cluster};
+  // clang-format on
+  auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
+
+  // Tidy-up the Intrinsic Args
+  llvm::Value *txcount = mt.lookupValue(thisOp.getTxcount());
+  llvm::Value *mbar = mt.lookupValue(thisOp.getAddr());
+  bool needCast = isPtrInGenericSpace(thisOp.getAddr());
+  if (needCast)
+    mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
+
+  return {id, {mbar, txcount}};
 }
 
 mlir::NVVM::IDArgPair MBarrierArriveNocompleteOp::getIntrinsicIDAndArgs(
