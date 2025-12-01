@@ -236,10 +236,8 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
       case Intrinsic::coro_id:
         if (auto *CII = cast<CoroIdInst>(&I)) {
           if (CII->getInfo().isPreSplit()) {
-            // The frontend uses Switch-Resumed ABI should emit
-            // `presplitcoroutine` attribute for the coroutine.
-            if (!F.isPresplitCoroutine())
-              F.setPresplitCoroutine();
+            // Infer `presplitcoroutine` attribute for Switch-Resumed ABI
+            F.setPresplitCoroutine();
             setCannotDuplicate(CII);
             CII->setCoroutineSelf();
             CoroId = cast<CoroIdInst>(&I);

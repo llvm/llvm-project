@@ -975,9 +975,6 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
       cast<ReturnStmt>(Ret)->setRetValue(PreviousRetValue);
   }
 
-  // LLVM require the frontend to mark the coroutine.
-  CurFn->setPresplitCoroutine();
-
   if (CXXRecordDecl *RD = FnRetTy->getAsCXXRecordDecl();
       RD && RD->hasAttr<CoroOnlyDestroyWhenCompleteAttr>())
     CurFn->setCoroDestroyOnlyWhenComplete();
