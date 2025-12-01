@@ -145,7 +145,6 @@ DWARF:
             - Value:           0x0000000000000001
         - AbbrCode:        0x00000000
 )";
-
   YAMLModuleTester t(yamldata);
   ASSERT_TRUE((bool)t.GetDwarfUnit());
 
