@@ -59463,7 +59463,9 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case ISD::FTRUNC:
     case ISD::FRINT:
     case ISD::FNEARBYINT:
+    case ISD::FROUND:
     case ISD::FROUNDEVEN:
+    case ISD::FFLOOR:
       if (!IsSplat && (VT.is256BitVector() ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
         return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(VT, Ops, 0));

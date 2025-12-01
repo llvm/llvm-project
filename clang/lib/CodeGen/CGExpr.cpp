@@ -2575,6 +2575,32 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
                                              bool isInit) {
   if (!Dst.isSimple()) {
     if (Dst.isVectorElt()) {
+      if (getLangOpts().HLSL) {
+        // HLSL allows direct access to vector elements, so storing to
+        // individual elements of a vector through VectorElt is handled as
+        // separate store instructions.
+        Address DstAddr = Dst.getVectorAddress();
+        llvm::Type *DestAddrTy = DstAddr.getElementType();
+        llvm::Type *ElemTy = DestAddrTy->getScalarType();
+        CharUnits ElemAlign = CharUnits::fromQuantity(
+            CGM.getDataLayout().getPrefTypeAlign(ElemTy));
+
+        assert(ElemTy->getScalarSizeInBits() >= 8 &&
+               "vector element type must be at least byte-sized");
+
+        llvm::Value *Val = Src.getScalarVal();
+        if (Val->getType()->getPrimitiveSizeInBits() <
+            ElemTy->getScalarSizeInBits())
+          Val = Builder.CreateZExt(Val, ElemTy->getScalarType());
+
+        llvm::Value *Idx = Dst.getVectorIdx();
+        llvm::Value *Zero = llvm::ConstantInt::get(Int32Ty, 0);
+        Address DstElemAddr =
+            Builder.CreateGEP(DstAddr, {Zero, Idx}, DestAddrTy, ElemAlign);
+        Builder.CreateStore(Val, DstElemAddr, Dst.isVolatileQualified());
+        return;
+      }
+
       // Read/modify/write the vector, inserting the new element.
       llvm::Value *Vec = Builder.CreateLoad(Dst.getVectorAddress(),
                                             Dst.isVolatileQualified());
