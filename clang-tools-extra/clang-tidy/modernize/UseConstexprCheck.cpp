@@ -24,12 +24,9 @@ AST_MATCHER(FunctionDecl, locationPermitsConstexpr) {
       Finder->getASTContext().getSourceManager().isInMainFile(
           Node.getLocation());
 
-  if (IsInMainFile && Node.hasExternalFormalLinkage())
-    return false;
-  if (!IsInMainFile && !Node.isInlined())
-    return false;
-
-  return true;
+  if (IsInMainFile)
+    return !Node.hasExternalFormalLinkage();
+  return Node.isInlined();
 }
 
 AST_MATCHER(Expr, isCXX11ConstantExpr) {
@@ -57,11 +54,9 @@ AST_MATCHER(Decl, hasNoRedecl) {
 AST_MATCHER(Decl, allRedeclsInSameFile) {
   const SourceManager &SM = Finder->getASTContext().getSourceManager();
   const SourceLocation L = Node.getLocation();
-  for (const Decl *ReDecl : Node.redecls()) {
-    if (!SM.isWrittenInSameFile(L, ReDecl->getLocation()))
-      return false;
-  }
-  return true;
+  return llvm::all_of(Node.redecls(), [&](const Decl *ReDecl) {
+    return SM.isWrittenInSameFile(L, ReDecl->getLocation());
+  });
 }
 } // namespace
 
@@ -69,17 +64,14 @@ static bool
 satisfiesConstructorPropertiesUntil20(const CXXConstructorDecl *Ctor,
                                       ASTContext &Ctx) {
   const CXXRecordDecl *Rec = Ctor->getParent();
-  llvm::SmallPtrSet<const RecordDecl *, 8> Bases{};
-  for (const CXXBaseSpecifier Base : Rec->bases())
-    Bases.insert(Base.getType()->getAsRecordDecl());
 
-  llvm::SmallPtrSet<const FieldDecl *, 8> Fields{Rec->field_begin(),
-                                                 Rec->field_end()};
+  llvm::SmallPtrSet<const FieldDecl *, 8> UninitializedFields{
+      Rec->field_begin(), Rec->field_end()};
   llvm::SmallPtrSet<const FieldDecl *, 4> Indirects{};
 
   for (const CXXCtorInitializer *const Init : Ctor->inits()) {
-    const Type *InitType = Init->getBaseClass();
-    if (InitType && InitType->isRecordType()) {
+    if (const Type *InitType = Init->getBaseClass();
+        InitType && InitType->isRecordType()) {
       const auto *ConstructingInit =
           llvm::dyn_cast<CXXConstructExpr>(Init->getInit());
       if (ConstructingInit &&
@@ -87,10 +79,8 @@ satisfiesConstructorPropertiesUntil20(const CXXConstructorDecl *Ctor,
         return false;
     }
 
-    if (Init->isBaseInitializer()) {
-      Bases.erase(Init->getBaseClass()->getAsRecordDecl());
+    if (Init->isBaseInitializer())
       continue;
-    }
 
     if (Init->isMemberInitializer()) {
       const FieldDecl *Field = Init->getMember();
@@ -98,8 +88,7 @@ satisfiesConstructorPropertiesUntil20(const CXXConstructorDecl *Ctor,
       if (Field->isAnonymousStructOrUnion())
         Indirects.insert(Field);
 
-      Fields.erase(Field);
-      continue;
+      UninitializedFields.erase(Field);
     }
   }
 
@@ -116,13 +105,10 @@ satisfiesConstructorPropertiesUntil20(const CXXConstructorDecl *Ctor,
       return false;
 
     for (const NamedDecl *ND : IField->chain())
-      Fields.erase(llvm::dyn_cast<FieldDecl>(ND));
+      UninitializedFields.erase(llvm::dyn_cast<FieldDecl>(ND));
   }
 
-  if (!Fields.empty())
-    return false;
-
-  return true;
+  return UninitializedFields.empty();
 }
 
 static bool isLiteralType(QualType QT, const ASTContext &Ctx,
@@ -161,10 +147,12 @@ static bool isLiteralType(const Type *T, const ASTContext &Ctx,
         }))
       return false;
 
-    for (const CXXBaseSpecifier Base : Rec->bases()) {
-      if (!isLiteralType(Base.getType(), Ctx, ConservativeLiteralType))
-        return false;
-    }
+    const auto AllBaseClassesAreLiteralTypes =
+        llvm::all_of(Rec->bases(), [&](const CXXBaseSpecifier &Base) {
+          return isLiteralType(Base.getType(), Ctx, ConservativeLiteralType);
+        });
+    if (!AllBaseClassesAreLiteralTypes)
+      return false;
   }
 
   if (const Type *ArrayElementType = T->getArrayElementTypeNoTypeQual())
@@ -193,17 +181,9 @@ static bool satisfiesProperties11(
       !AddConstexprToMethodOfClassWithoutConstexprConstructor)
     return false;
 
-  if (Method &&
-      (Method->isVirtual() ||
-       !match(cxxMethodDecl(hasBody(cxxTryStmt())), *Method, Ctx).empty()))
-    return false;
-
   if (const auto *Ctor = llvm::dyn_cast<CXXConstructorDecl>(FDecl);
       Ctor && (!satisfiesConstructorPropertiesUntil20(Ctor, Ctx) ||
-               llvm::any_of(Ctor->getParent()->bases(),
-                            [](const CXXBaseSpecifier &Base) {
-                              return Base.isVirtual();
-                            })))
+               Ctor->getParent()->getNumVBases() > 0))
     return false;
 
   if (const auto *Dtor = llvm::dyn_cast<CXXDestructorDecl>(FDecl);
@@ -213,9 +193,12 @@ static bool satisfiesProperties11(
   if (!isLiteralType(FDecl->getReturnType(), Ctx, ConservativeLiteralType))
     return false;
 
-  for (const ParmVarDecl *Param : FDecl->parameters())
-    if (!isLiteralType(Param->getType(), Ctx, ConservativeLiteralType))
-      return false;
+  const bool OnlyHasParametersOfLiteralType =
+      llvm::all_of(FDecl->parameters(), [&](const ParmVarDecl *Param) {
+        return isLiteralType(Param->getType(), Ctx, ConservativeLiteralType);
+      });
+  if (!OnlyHasParametersOfLiteralType)
+    return false;
 
   class Visitor11 : public clang::RecursiveASTVisitor<Visitor11> {
   public:
@@ -225,10 +208,7 @@ static bool satisfiesProperties11(
     Visitor11(ASTContext &Ctx, bool ConservativeLiteralType)
         : Ctx(Ctx), ConservativeLiteralType(ConservativeLiteralType) {}
 
-    bool WalkUpFromNullStmt(NullStmt *) {
-      Possible = false;
-      return false;
-    }
+    bool WalkUpFromNullStmt(NullStmt *) { return false; }
     bool WalkUpFromDeclStmt(DeclStmt *DS) {
       for (const Decl *D : DS->decls())
         if (!llvm::isa<StaticAssertDecl, TypedefNameDecl, UsingDecl,
@@ -336,10 +316,7 @@ static bool satisfiesProperties11(
 
   Visitor11 V{Ctx, ConservativeLiteralType};
   V.TraverseDecl(const_cast<FunctionDecl *>(FDecl));
-  if (!V.Possible)
-    return false;
-
-  return true;
+  return V.Possible;
 }
 
 namespace {
@@ -368,12 +345,10 @@ AST_MATCHER_P(VarDecl, satisfiesVariableProperties, bool,
   if (!isLiteralType(QT, Ctx, ConservativeLiteralType))
     return false;
 
-  const bool IsDeclaredInsideConstexprFunction = std::invoke([&Node]() {
+  const bool IsDeclaredInsideConstexprFunction = [&Node]() {
     const auto *Func = llvm::dyn_cast<FunctionDecl>(Node.getDeclContext());
-    if (!Func)
-      return false;
-    return Func->isConstexpr();
-  });
+    return Func && Func->isConstexpr();
+  }();
 
   if (Node.isStaticLocal() && IsDeclaredInsideConstexprFunction)
     return false;
@@ -386,10 +361,8 @@ AST_MATCHER_P(VarDecl, satisfiesVariableProperties, bool,
   if (ArrayOrPtrElement)
     RDecl = ArrayOrPtrElement->getAsCXXRecordDecl();
 
-  if (RDecl && (!RDecl->hasDefinition() || !RDecl->hasConstexprDestructor()))
-    return false;
-
-  return true;
+  return !(RDecl &&
+           (!RDecl->hasDefinition() || !RDecl->hasConstexprDestructor()));
 }
 } // namespace
 
@@ -398,7 +371,7 @@ void UseConstexprCheck::registerMatchers(MatchFinder *Finder) {
       functionDecl(
           isDefinition(),
           unless(anyOf(isConstexpr(), isImplicit(), hasExternalFormalLinkage(),
-                       isInMacro(), isMain(), isInStdNamespace(),
+                       isInMacro(), isMain(), isDeleted(), isInStdNamespace(),
                        isExpansionInSystemHeader(), isExternC(),
                        cxxMethodDecl(ofClass(cxxRecordDecl(isLambda()))))),
           locationPermitsConstexpr(), allRedeclsInSameFile(),
@@ -467,8 +440,8 @@ void UseConstexprCheck::onEndOfTranslationUnit() {
                                            FunctionReplacement);
   }
 
-  const auto MaybeRemoveConst = [&, this](DiagnosticBuilder &Diag,
-                                          const VarDecl *Var) {
+  const auto MaybeRemoveConst = [&](DiagnosticBuilder &Diag,
+                                    const VarDecl *Var) {
     // Since either of the locs can be in a macro, use `makeFileCharRange` to be
     // sure that we have a consistent `CharSourceRange`, located entirely in the
     // source file.

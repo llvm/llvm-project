@@ -38,7 +38,7 @@ Options
 .. option:: ConservativeLiteralType
 
   With this option enabled, only literal types that can be constructed at
-  compile-time are considered to supoprt ``constexpr``.
+  compile-time are considered to support ``constexpr``.
 
   .. code-block:: c++
 
@@ -49,7 +49,7 @@ Options
     };
 
   This type is a literal type, but can not be constructed at compile-time.
-  With `ConservativeLiteralType` equal to `true`, variables or funtions
+  With :option:`ConservativeLiteralType` equal to `true`, variables or functions
   with this type are not diagnosed to add ``constexpr``. Default is
   `true`.
 

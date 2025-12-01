@@ -59,6 +59,8 @@ namespace function {
   // CHECK-FIXES-11: static constexpr int f5(Empty x) { return 0; }
 
   static int f6(Empty x) { ; return 0; }
+  // CHECK-MESSAGES-11: :[[@LINE-1]]:14: warning: declare function 'f6' as 'constexpr'
+  // CHECK-FIXES-11: static constexpr int f6(Empty x) { ; return 0; }
 
   static int f7(Empty x) { static_assert(0 == 0, ""); return 0; }
   // CHECK-MESSAGES-11: :[[@LINE-1]]:14: warning: declare function 'f7' as 'constexpr'
@@ -231,6 +233,8 @@ namespace function_non_literal_ref {
   // CHECK-FIXES-11-CLT: static constexpr int f5(NonLiteral& x) { return 0; }
 
   static int f6(NonLiteral& x) { ; return 0; }
+  // CHECK-MESSAGES-11-CLT: :[[@LINE-1]]:14: warning: declare function 'f6' as 'constexpr'
+  // CHECK-FIXES-11-CLT: static constexpr int f6(NonLiteral& x) { ; return 0; }
 
   static int f7(NonLiteral& x) { static_assert(0 == 0, ""); return 0; }
   // CHECK-MESSAGES-11-CLT: :[[@LINE-1]]:14: warning: declare function 'f7' as 'constexpr'
