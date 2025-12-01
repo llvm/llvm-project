@@ -2886,11 +2886,11 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
 
 unsigned LoopVectorizationCostModel::getPredBlockCostDivisor(
     TargetTransformInfo::TargetCostKind CostKind, const BasicBlock *BB) const {
+  if (CostKind == TTI::TCK_CodeSize)
+    return 1;
   // If the block wasn't originally predicated then return early to avoid
   // computing BlockFrequencyInfo unnecessarily.
   if (!Legal->blockNeedsPredication(BB))
-    return 1;
-  if (CostKind == TTI::TCK_CodeSize)
     return 1;
 
   BlockFrequencyInfo *BFI = GetBFI();
