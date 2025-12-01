@@ -246,7 +246,7 @@ private:
       bool isGPUBinHandleSymbol = Name.starts_with(GPUBinHandlePrefix);
 
       // Handling for defined symbols
-      if (!isUndefined && !isHidden) {
+      if (!isUndefined) {
         if (isFatBinSymbol && !isHidden) {
           DefinedFatBinSymbols.insert(Name.str());
           FatBinSymbols.erase(Name.str());
