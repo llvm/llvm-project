@@ -441,11 +441,6 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
       }
     }
   }
-  SCEVUnionPredicate Assumptions = DA->getRuntimeAssumptions();
-  if (!Assumptions.isAlwaysTrue()) {
-    OS << "Runtime Assumptions:\n";
-    Assumptions.print(OS, 0);
-  }
 }
 
 void DependenceAnalysisWrapperPass::print(raw_ostream &OS,
@@ -2587,33 +2582,17 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   const SCEV *DstConst = Coefficients;
 
   APInt ExtraGCD = APInt::getZero(BitWidth);
-  const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
+  const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
+  if (!Delta)
+    return false;
   LLVM_DEBUG(dbgs() << "    Delta = " << *Delta << "\n");
   const SCEVConstant *Constant = dyn_cast<SCEVConstant>(Delta);
-  if (const SCEVAddExpr *Sum = dyn_cast<SCEVAddExpr>(Delta)) {
-    // If Delta is a sum of products, we may be able to make further progress.
-    for (const SCEV *Operand : Sum->operands()) {
-      if (isa<SCEVConstant>(Operand)) {
-        assert(!Constant && "Surprised to find multiple constants");
-        Constant = cast<SCEVConstant>(Operand);
-      } else if (const SCEVMulExpr *Product = dyn_cast<SCEVMulExpr>(Operand)) {
-        // Search for constant operand to participate in GCD;
-        // If none found; return false.
-        std::optional<APInt> ConstOp = getConstanCoefficient(Product);
-        if (!ConstOp)
-          return false;
-        ExtraGCD = APIntOps::GreatestCommonDivisor(ExtraGCD, ConstOp->abs());
-      } else
-        return false;
-    }
-  }
   if (!Constant)
     return false;
   APInt ConstDelta = cast<SCEVConstant>(Constant)->getAPInt();
   LLVM_DEBUG(dbgs() << "    ConstDelta = " << ConstDelta << "\n");
   if (ConstDelta == 0)
     return false;
-  RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ExtraGCD);
   LLVM_DEBUG(dbgs() << "    RunningGCD = " << RunningGCD << "\n");
   APInt Remainder = ConstDelta.srem(RunningGCD);
   if (Remainder != 0) {
@@ -3384,10 +3363,6 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
          Inv.invalidate<LoopAnalysis>(F, PA);
 }
 
-SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() const {
-  return SCEVUnionPredicate(Assumptions, *SE);
-}
-
 // depends -
 // Returns NULL if there is no dependence.
 // Otherwise, return a Dependence with as many details as possible.
@@ -3488,20 +3463,10 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                                         SCEVUnionPredicate(Assume, *SE));
   }
 
-  if (!Assume.empty()) {
-    if (!UnderRuntimeAssumptions)
-      return std::make_unique<Dependence>(Src, Dst,
-                                          SCEVUnionPredicate(Assume, *SE));
-    // Add non-redundant assumptions.
-    unsigned N = Assumptions.size();
-    for (const SCEVPredicate *P : Assume) {
-      bool Implied = false;
-      for (unsigned I = 0; I != N && !Implied; I++)
-        if (Assumptions[I]->implies(P, *SE))
-          Implied = true;
-      if (!Implied)
-        Assumptions.push_back(P);
-    }
+  if (!Assume.empty() && !UnderRuntimeAssumptions) {
+    // Runtime assumptions needed but not allowed.
+    return std::make_unique<Dependence>(Src, Dst,
+                                        SCEVUnionPredicate(Assume, *SE));
   }
 
   unsigned Pairs = 1;

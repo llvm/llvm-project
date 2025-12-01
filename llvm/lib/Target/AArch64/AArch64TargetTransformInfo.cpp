@@ -926,8 +926,20 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (ICA.getArgs().empty())
       break;
 
-    // TODO: Add handling for fshl where third argument is not a constant.
     const TTI::OperandValueInfo OpInfoZ = TTI::getOperandInfo(ICA.getArgs()[2]);
+
+    // ROTR / ROTL is a funnel shift with equal first and second operand. For
+    // ROTR on integer registers (i32/i64) this can be done in a single ror
+    // instruction. A fshl with a non-constant shift uses a neg + ror.
+    if (RetTy->isIntegerTy() && ICA.getArgs()[0] == ICA.getArgs()[1] &&
+        (RetTy->getPrimitiveSizeInBits() == 32 ||
+         RetTy->getPrimitiveSizeInBits() == 64)) {
+      InstructionCost NegCost =
+          (ICA.getID() == Intrinsic::fshl && !OpInfoZ.isConstant()) ? 1 : 0;
+      return 1 + NegCost;
+    }
+
+    // TODO: Add handling for fshl where third argument is not a constant.
     if (!OpInfoZ.isConstant())
       break;
 
@@ -6067,7 +6079,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   if (LT.second.isFixedLengthVector() &&
       LT.second.getVectorNumElements() == Mask.size() &&
       (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
-      (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+      (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused, Unused) ||
        isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        isREVMask(Mask, LT.second.getScalarSizeInBits(),
                  LT.second.getVectorNumElements(), 16) ||

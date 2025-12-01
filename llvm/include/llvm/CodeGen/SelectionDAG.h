@@ -1185,11 +1185,17 @@ public:
   SDValue getPOISON(EVT VT) { return getNode(ISD::POISON, SDLoc(), VT); }
 
   /// Return a node that represents the runtime scaling 'MulImm * RuntimeVL'.
-  LLVM_ABI SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
-                             bool ConstantFold = true);
+  LLVM_ABI SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm);
 
-  LLVM_ABI SDValue getElementCount(const SDLoc &DL, EVT VT, ElementCount EC,
-                                   bool ConstantFold = true);
+  LLVM_ABI SDValue getElementCount(const SDLoc &DL, EVT VT, ElementCount EC);
+
+  LLVM_ABI SDValue getTypeSize(const SDLoc &DL, EVT VT, TypeSize TS);
+
+  /// Return a vector with the first 'Len' lanes set to true and remaining lanes
+  /// set to false. The mask's ValueType is the same as when comparing vectors
+  /// of type VT.
+  LLVM_ABI SDValue getMaskFromElementCount(const SDLoc &DL, EVT VT,
+                                           ElementCount Len);
 
   /// Return a GLOBAL_OFFSET_TABLE node. This does not have a useful SDLoc.
   SDValue getGLOBAL_OFFSET_TABLE(EVT VT) {

@@ -2071,6 +2071,9 @@ public:
   static inline bool classof(const VPValue *V) {
     return isa<VPHeaderPHIRecipe>(V->getDefiningRecipe());
   }
+  static inline bool classof(const VPSingleDefRecipe *R) {
+    return isa<VPHeaderPHIRecipe>(static_cast<const VPRecipeBase *>(R));
+  }
 
   /// Generate the phi nodes.
   void execute(VPTransformState &State) override = 0;
@@ -2136,7 +2139,7 @@ public:
     return R && classof(R);
   }
 
-  static inline bool classof(const VPHeaderPHIRecipe *R) {
+  static inline bool classof(const VPSingleDefRecipe *R) {
     return classof(static_cast<const VPRecipeBase *>(R));
   }
 
@@ -2432,19 +2435,27 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
 
   ReductionStyle Style;
 
+  /// The phi is part of a multi-use reduction (e.g., used in FindLastIV
+  /// patterns for argmin/argmax).
+  /// TODO: Also support cases where the phi itself has a single use, but its
+  /// compare has multiple uses.
+  bool HasUsesOutsideReductionChain;
+
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
-                       ReductionStyle Style)
+                       ReductionStyle Style,
+                       bool HasUsesOutsideReductionChain = false)
       : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start), Kind(Kind),
-        Style(Style) {}
+        Style(Style),
+        HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {}
 
   ~VPReductionPHIRecipe() override = default;
 
   VPReductionPHIRecipe *clone() override {
     auto *R = new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
-        *getOperand(0), Style);
+        *getOperand(0), Style, HasUsesOutsideReductionChain);
     R->addOperand(getBackedgeValue());
     return R;
   }
@@ -2480,6 +2491,11 @@ public:
 
   /// Returns true if the reduction outputs a vector with a scaled down VF.
   bool isPartialReduction() const { return getVFScaleFactor() > 1; }
+
+  /// Returns true, if the phi is part of a multi-use reduction.
+  bool hasUsesOutsideReductionChain() const {
+    return HasUsesOutsideReductionChain;
+  }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
