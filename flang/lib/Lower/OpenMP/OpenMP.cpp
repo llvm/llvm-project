@@ -2538,8 +2538,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     // has_device_addr entry each own a unique MapInfoOp user, keeping
     // MapInfoFinalization happy while still wiring the symbol into
     // has_device_addr when the user didn’t spell it explicitly.
-    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-    auto insertionPt = builder.saveInsertionPoint();
+    auto insertionPt = firOpBuilder.saveInsertionPoint();
     auto alreadyPresent = [&](const semantics::Symbol *sym) {
       return llvm::any_of(hasDeviceAddrSyms, [&](const semantics::Symbol *s) {
         return s && sym && s->GetUltimate() == sym->GetUltimate();
@@ -2548,24 +2547,23 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
     for (auto [idx, sym] : llvm::enumerate(isDevicePtrSyms)) {
       mlir::Value mapVal = clauseOps.isDevicePtrVars[idx];
-      if (!sym || !mapVal)
-        continue;
+      assert(sym && "expected symbol for is_device_ptr");
+      assert(mapVal && "expected map value for is_device_ptr");
       auto mapInfo = mapVal.getDefiningOp<mlir::omp::MapInfoOp>();
-      if (!mapInfo)
-        continue;
+      assert(mapInfo && "expected map info op");
 
       if (!alreadyPresent(sym)) {
         clauseOps.hasDeviceAddrVars.push_back(mapVal);
         hasDeviceAddrSyms.push_back(sym);
       }
 
-      builder.setInsertionPointAfter(mapInfo);
-      auto clonedOp = builder.clone(*mapInfo.getOperation());
+      firOpBuilder.setInsertionPointAfter(mapInfo);
+      auto clonedOp = firOpBuilder.clone(*mapInfo.getOperation());
       auto clonedMapInfo = mlir::dyn_cast<mlir::omp::MapInfoOp>(clonedOp);
       assert(clonedMapInfo && "expected cloned map info op");
       clauseOps.isDevicePtrVars[idx] = clonedMapInfo.getResult();
     }
-    builder.restoreInsertionPoint(insertionPt);
+    firOpBuilder.restoreInsertionPoint(insertionPt);
   }
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,

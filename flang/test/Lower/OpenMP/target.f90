@@ -572,7 +572,7 @@ end subroutine omp_target_device_addr
 
 !CHECK-LABEL: func.func @_QPomp_target_is_device_ptr() {
 subroutine omp_target_is_device_ptr
-   use iso_c_binding, only: c_associated, c_ptr
+   use iso_c_binding, only: c_ptr
    implicit none
    integer :: i
    integer :: arr(4)
@@ -588,7 +588,7 @@ subroutine omp_target_is_device_ptr
    !CHECK-SAME: has_device_addr(%[[P_STORAGE]] ->
    !CHECK-SAME: map_entries({{.*}}%[[ARR_MAP]] ->
    !$omp target is_device_ptr(p)
-      if (c_associated(p)) i = i + 1
+      i = i + 1
       arr(1) = i
    !$omp end target
    !CHECK: omp.terminator
