@@ -3288,6 +3288,9 @@ static SDValue getAsCarry(const TargetLowering &TLI, SDValue V,
 
   // First, peel away TRUNCATE/ZERO_EXTEND/AND nodes due to legalization.
   while (true) {
+    if (ForceCarryReconstruction && V.getValueType() == MVT::i1)
+      return V;
+
     if (V.getOpcode() == ISD::TRUNCATE || V.getOpcode() == ISD::ZERO_EXTEND) {
       V = V.getOperand(0);
       continue;
@@ -3301,9 +3304,6 @@ static SDValue getAsCarry(const TargetLowering &TLI, SDValue V,
       V = V.getOperand(0);
       continue;
     }
-
-    if (ForceCarryReconstruction && V.getValueType() == MVT::i1)
-      return V;
 
     break;
   }

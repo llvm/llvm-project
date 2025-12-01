@@ -268,7 +268,7 @@ implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device                       | use_device_ptr/addr preserve host address when lookup fails  | :good:`done`             | https://github.com/llvm/llvm-project/pull/169438                      |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device                       | iterators in map clause or motion clauses                    | :none:`unclaimed`        |                                                                       |
+| device                       | iterators in map clause or motion clauses                    | :none:`done`             | https://github.com/llvm/llvm-project/pull/159112                      |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device                       | indirect clause on declare target directive                  | :part:`In Progress`      |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
@@ -582,6 +582,8 @@ implementation.
 | need_device_addr modifier for adjust_args clause            | :part:`partial`           | :none:`unclaimed`         | Parsing/Sema: https://github.com/llvm/llvm-project/pull/143442           |
 |                                                             |                           |                           |               https://github.com/llvm/llvm-project/pull/149586           |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
+| need_device_ptr modifier for adjust_args clause             | :part:`unclaimed`         | :none:`unclaimed`         |                                                                          |
++-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Prescriptive num_threads                                    | :good:`done`              | :none:`unclaimed`         |  https://github.com/llvm/llvm-project/pull/160659                        |
 |                                                             |                           |                           |  https://github.com/llvm/llvm-project/pull/146403                        |
 |                                                             |                           |                           |  https://github.com/llvm/llvm-project/pull/146404                        |
@@ -633,7 +635,9 @@ implementation.
 |                                                             |                           |                           | RT: @abhinavgaba (https://github.com/llvm/llvm-project/pull/149036,      |
 |                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/158370)                        |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-
+| need_device_ptr modifier for adjust_args clause             | :part:`partial`           | :none:`unclaimed`         | Clang Parsing/Sema: https://github.com/llvm/llvm-project/pull/168905     |
+|                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/169558                         |
++-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 
 OpenMP Extensions
 =================
