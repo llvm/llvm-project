@@ -34,7 +34,7 @@ subroutine mapType_array
 end subroutine mapType_array
 
 !CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 8]
-!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 288]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 33]
 subroutine mapType_is_device_ptr
   use iso_c_binding, only : c_ptr
   type(c_ptr) :: p

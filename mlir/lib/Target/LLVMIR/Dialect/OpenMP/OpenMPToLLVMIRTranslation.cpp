@@ -3830,6 +3830,9 @@ convertClauseMapFlags(omp::ClauseMapFlags mlirFlags) {
   auto mapTypeToBool = [&mlirFlags](omp::ClauseMapFlags flag) {
     return (mlirFlags & flag) == flag;
   };
+  const bool hasExplicitMap =
+      (mlirFlags & ~omp::ClauseMapFlags::is_device_ptr) !=
+      omp::ClauseMapFlags::none;
 
   llvm::omp::OpenMPOffloadMappingFlags mapType =
       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
@@ -3872,7 +3875,8 @@ convertClauseMapFlags(omp::ClauseMapFlags mlirFlags) {
 
   if (mapTypeToBool(omp::ClauseMapFlags::is_device_ptr)) {
     mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
-    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL;
+    if (!hasExplicitMap)
+      mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL;
   }
 
   return mapType;
@@ -4025,8 +4029,11 @@ static void collectMapDataFromMapOperands(
         mapData.Mappers.push_back(nullptr);
       }
     } else {
+      // For is_device_ptr we need the map type to propagate so the runtime
+      // can materialize the device-side copy of the pointer container.
       mapData.Types.push_back(
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+          isDevicePtr ? mapType
+                      : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
       mapData.Mappers.push_back(nullptr);
     }
     mapData.Names.push_back(LLVM::createMappingInformation(

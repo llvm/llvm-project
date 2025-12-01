@@ -1145,8 +1145,11 @@ bool ClauseProcessor::processIsDevicePtr(
       [&](const omp::clause::IsDevicePtr &clause,
           const parser::CharBlock &source) {
         mlir::Location location = converter.genLocation(source);
+        // Force a map so the descriptor is materialized on the device with the
+        // device address inside.
         mlir::omp::ClauseMapFlags mapTypeBits =
-            mlir::omp::ClauseMapFlags::is_device_ptr;
+            mlir::omp::ClauseMapFlags::is_device_ptr |
+            mlir::omp::ClauseMapFlags::to;
         processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
                           parentMemberIndices, result.isDevicePtrVars,
                           isDeviceSyms);
