@@ -74,7 +74,7 @@ protected:
 
   void SetUp() override {
 #ifdef _WIN32
-    if (GetWindowsOSVersion() < llvm::VersionTuple(10, 0, 0, 17763))
+    if (llvm::GetWindowsOSVersion() < llvm::VersionTuple(10, 0, 0, 17763))
       GTEST_SKIP() << "CAS tests skipped on older windows version";
 #endif
     NextCASIndex = 0;
