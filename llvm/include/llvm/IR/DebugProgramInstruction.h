@@ -282,7 +282,6 @@ public:
     Declare,
     Value,
     Assign,
-    CoroFrameEntry,
 
     End, ///< Marks the end of the concrete types.
     Any, ///< To indicate all LocationTypes in searches.
@@ -365,14 +364,6 @@ public:
   createDVRDeclare(Value *Address, DILocalVariable *DV, DIExpression *Expr,
                    const DILocation *DI, DbgVariableRecord &InsertBefore);
 
-  LLVM_ABI static DbgVariableRecord *
-  createDVRCoroFrameEntry(Value *Address, DILocalVariable *DV,
-                          DIExpression *Expr, const DILocation *DI);
-  LLVM_ABI static DbgVariableRecord *
-  createDVRCoroFrameEntry(Value *Address, DILocalVariable *DV,
-                          DIExpression *Expr, const DILocation *DI,
-                          DbgVariableRecord &InsertBefore);
-
   /// Iterator for ValueAsMetadata that internally uses direct pointer iteration
   /// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the
   /// ValueAsMetadata .
@@ -423,9 +414,6 @@ public:
 
   bool isDbgDeclare() const { return Type == LocationType::Declare; }
   bool isDbgValue() const { return Type == LocationType::Value; }
-  bool isDbgCoroFrameEntry() const {
-    return Type == LocationType::CoroFrameEntry;
-  }
 
   /// Get the locations corresponding to the variable referenced by the debug
   /// info intrinsic.  Depending on the intrinsic, this could be the
