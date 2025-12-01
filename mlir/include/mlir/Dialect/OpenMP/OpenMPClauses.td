@@ -1533,7 +1533,7 @@ class OpenMP_UseDevicePtrClauseSkip<
 def OpenMP_UseDevicePtrClause : OpenMP_UseDevicePtrClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
-// V6.1: Multidimensional `num_teams` clause with dims modifier
+// V6.1: `num_teams` clause with dims modifier
 //===----------------------------------------------------------------------===//
 
 class OpenMP_NumTeamsMultiDimClauseSkip<
@@ -1547,7 +1547,7 @@ class OpenMP_NumTeamsMultiDimClauseSkip<
   );
 
   let optAssemblyFormat = [{
-    `num_teams_multi_dim` `(` custom<NumTeamsMultiDimClause>($num_teams_dims,
+    `num_teams_multi_dim` `(` custom<DimsModifier>($num_teams_dims,
                                                     $num_teams_values,
                                                     type($num_teams_values)) `)`
   }];
