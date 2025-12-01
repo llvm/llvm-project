@@ -282,7 +282,7 @@ public:
                        modifiedStrides[modifiedStrides.size() - 2]),
         innerLaneData);
 
-    // If the source is a static memref, we need to extract the pointer to
+    // If the source is a memref, we need to extract the pointer to
     // base address.
     if (memrefType) {
       auto extractOp = memref::ExtractAlignedPointerAsIndexOp::create(
