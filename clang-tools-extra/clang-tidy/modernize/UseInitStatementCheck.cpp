@@ -62,12 +62,14 @@ UseInitStatementCheck::UseInitStatementCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       StrictMode(Options.get("StrictMode", true)),
+      IgnoreConditionVariableStatements(Options.get("IgnoreConditionVariableStatements", false)),
       SafeDestructorTypes(
           Options.get("SafeDestructorTypes", DefaultSafeDestructorTypes)),
       SafeDestructorTypesGlobList(SafeDestructorTypes) {}
 
 void UseInitStatementCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
+  Options.store(Opts, "IgnoreConditionVariableStatements", IgnoreConditionVariableStatements);
   Options.store(Opts, "SafeDestructorTypes", SafeDestructorTypes);
 }
 
@@ -223,6 +225,9 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   if (!StrictMode && IsLast)
     return;
 
+  if (IgnoreConditionVariableStatements && CondDeclStmt)
+    return;
+
   if (Dtor && !IsLast && !isSingleVarWithSafeDestructor(Result))
     return;
 
@@ -240,9 +245,9 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const std::string NewInitStmtOpt =
       extractDeclStmtText(PrevDecl, Result.SourceManager, getLangOpts());
   const bool CanFix = !NewInitStmtOpt.empty();
-  const SourceRange RemovalRange = PrevDecl->getSourceRange();
 
   if (CanFix) {
+    const SourceRange RemovalRange = PrevDecl->getSourceRange();
     // Determine the insertion point: if the condition contains a declaration,
     // insert before that declaration; otherwise insert before the condition.
     const SourceLocation InsertionLoc =

@@ -52,6 +52,24 @@ Options
     In strict mode, the check prioritizes consistent use of C++17 init
     statements for readability, even when scope isn't affected.
 
+.. option:: IgnoreConditionVariableStatements
+
+    When ``true``, the check will not suggest transformations for variable
+    declarations that precede ``if`` or ``switch`` statements that already have
+    a condition variable statement. When ``false`` (default), the check may
+    suggest moving a variable declaration into an init statement even when the
+    statement already has a condition variable statement.
+
+    For example, with ``IgnoreConditionVariableStatements`` set to ``true``,
+    the check will not suggest transforming:
+
+    .. code-block:: c++
+
+      auto x = getX();
+      if (auto y = getY()) {
+          // ...
+      }
+
 .. option:: SafeDestructorTypes
 
     A comma-separated list of type name patterns (glob patterns) that are

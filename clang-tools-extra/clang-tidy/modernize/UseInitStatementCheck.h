@@ -38,6 +38,7 @@ private:
       const ast_matchers::MatchFinder::MatchResult &Result) const;
 
   const bool StrictMode;
+  const bool IgnoreConditionVariableStatements;
   const llvm::StringRef SafeDestructorTypes;
   const GlobList SafeDestructorTypesGlobList;
 };
