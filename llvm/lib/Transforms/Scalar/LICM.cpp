@@ -1540,7 +1540,7 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
     SafetyInfo->insertInstructionTo(&I, ExitBlock);
     I.moveBefore(*ExitBlock, ExitBlock->getFirstInsertionPt());
     if (SE)
-      SE->forgetBlockAndLoopDispositions(&I);
+      SE->forgetValue(&I);
 
     // Update MemorySSA.
     if (auto *OldMA = MSSAU.getMemorySSA()->getMemoryAccess(&I)) {
