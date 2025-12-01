@@ -18,9 +18,9 @@ define i32 @shl_i32(i32 %v, i32 %x) {
   ret i32 %a
 }
 
-define i64 @shl_i64_i32(i64 %v, i32 %x) {
-; CHECK-LABEL: shl_i64_i32:
-; CHECK:         .functype shl_i64_i32 (i64, i32) -> (i64)
+define i64 @shl_i64_zext(i64 %v, i32 %x) {
+; CHECK-LABEL: shl_i64_zext:
+; CHECK:         .functype shl_i64_zext (i64, i32) -> (i64)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
