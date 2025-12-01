@@ -429,8 +429,8 @@ TEST_F(OpenMPIRBuilderTest, CreateCancel) {
                        OMPBuilder.createCancel(Loc, nullptr, OMPD_parallel));
   Builder.restoreIP(NewIP);
   EXPECT_FALSE(M->global_empty());
-  EXPECT_EQ(M->size(), 4U);
-  EXPECT_EQ(F->size(), 4U);
+  EXPECT_EQ(M->size(), 3U);
+  EXPECT_EQ(F->size(), 5U);
   EXPECT_EQ(BB->size(), 4U);
 
   CallInst *GTID = dyn_cast<CallInst>(&BB->front());
@@ -450,23 +450,16 @@ TEST_F(OpenMPIRBuilderTest, CreateCancel) {
   Instruction *CancelBBTI = Cancel->getParent()->getTerminator();
   EXPECT_EQ(CancelBBTI->getNumSuccessors(), 2U);
   EXPECT_EQ(CancelBBTI->getSuccessor(0), NewIP.getBlock());
-  EXPECT_EQ(CancelBBTI->getSuccessor(1)->size(), 3U);
-  CallInst *GTID1 = dyn_cast<CallInst>(&CancelBBTI->getSuccessor(1)->front());
-  EXPECT_NE(GTID1, nullptr);
-  EXPECT_EQ(GTID1->arg_size(), 1U);
-  EXPECT_EQ(GTID1->getCalledFunction()->getName(), "__kmpc_global_thread_num");
-  EXPECT_FALSE(GTID1->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(GTID1->getCalledFunction()->doesNotFreeMemory());
-  CallInst *Barrier = dyn_cast<CallInst>(GTID1->getNextNode());
-  EXPECT_NE(Barrier, nullptr);
-  EXPECT_EQ(Barrier->arg_size(), 2U);
-  EXPECT_EQ(Barrier->getCalledFunction()->getName(), "__kmpc_cancel_barrier");
-  EXPECT_FALSE(Barrier->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(Barrier->getCalledFunction()->doesNotFreeMemory());
-  EXPECT_TRUE(Barrier->use_empty());
+  EXPECT_EQ(CancelBBTI->getSuccessor(1)->size(), 1U);
   EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getNumSuccessors(),
             1U);
-  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0), CBB);
+  // cancel branch instruction (1) -> .cncl -> .fini -> CBB
+  EXPECT_EQ(CancelBBTI->getSuccessor(1)
+                ->getTerminator()
+                ->getSuccessor(0)
+                ->getTerminator()
+                ->getSuccessor(0),
+            CBB);
 
   EXPECT_EQ(cast<CallInst>(Cancel)->getArgOperand(1), GTID);
 
@@ -499,7 +492,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
   Builder.restoreIP(NewIP);
   EXPECT_FALSE(M->global_empty());
   EXPECT_EQ(M->size(), 4U);
-  EXPECT_EQ(F->size(), 7U);
+  EXPECT_EQ(F->size(), 10U);
   EXPECT_EQ(BB->size(), 1U);
   ASSERT_TRUE(isa<BranchInst>(BB->getTerminator()));
   ASSERT_EQ(BB->getTerminator()->getNumSuccessors(), 2U);
@@ -525,23 +518,15 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
   EXPECT_EQ(CancelBBTI->getSuccessor(0)->size(), 1U);
   EXPECT_EQ(CancelBBTI->getSuccessor(0)->getUniqueSuccessor(),
             NewIP.getBlock());
-  EXPECT_EQ(CancelBBTI->getSuccessor(1)->size(), 3U);
-  CallInst *GTID1 = dyn_cast<CallInst>(&CancelBBTI->getSuccessor(1)->front());
-  EXPECT_NE(GTID1, nullptr);
-  EXPECT_EQ(GTID1->arg_size(), 1U);
-  EXPECT_EQ(GTID1->getCalledFunction()->getName(), "__kmpc_global_thread_num");
-  EXPECT_FALSE(GTID1->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(GTID1->getCalledFunction()->doesNotFreeMemory());
-  CallInst *Barrier = dyn_cast<CallInst>(GTID1->getNextNode());
-  EXPECT_NE(Barrier, nullptr);
-  EXPECT_EQ(Barrier->arg_size(), 2U);
-  EXPECT_EQ(Barrier->getCalledFunction()->getName(), "__kmpc_cancel_barrier");
-  EXPECT_FALSE(Barrier->getCalledFunction()->doesNotAccessMemory());
-  EXPECT_FALSE(Barrier->getCalledFunction()->doesNotFreeMemory());
-  EXPECT_TRUE(Barrier->use_empty());
+  EXPECT_EQ(CancelBBTI->getSuccessor(1)->size(), 1U);
   EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getNumSuccessors(),
             1U);
-  EXPECT_EQ(CancelBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0), CBB);
+  EXPECT_EQ(CancelBBTI->getSuccessor(1)
+                ->getTerminator()
+                ->getSuccessor(0)
+                ->getTerminator()
+                ->getSuccessor(0),
+            CBB);
 
   EXPECT_EQ(cast<CallInst>(Cancel)->getArgOperand(1), GTID);
 
@@ -573,7 +558,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
   Builder.restoreIP(NewIP);
   EXPECT_FALSE(M->global_empty());
   EXPECT_EQ(M->size(), 3U);
-  EXPECT_EQ(F->size(), 4U);
+  EXPECT_EQ(F->size(), 5U);
   EXPECT_EQ(BB->size(), 4U);
 
   CallInst *GTID = dyn_cast<CallInst>(&BB->front());
@@ -596,7 +581,11 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
   EXPECT_EQ(BarrierBBTI->getSuccessor(1)->size(), 1U);
   EXPECT_EQ(BarrierBBTI->getSuccessor(1)->getTerminator()->getNumSuccessors(),
             1U);
-  EXPECT_EQ(BarrierBBTI->getSuccessor(1)->getTerminator()->getSuccessor(0),
+  EXPECT_EQ(BarrierBBTI->getSuccessor(1)
+                ->getTerminator()
+                ->getSuccessor(0)
+                ->getTerminator()
+                ->getSuccessor(0),
             CBB);
 
   EXPECT_EQ(cast<CallInst>(Barrier)->getArgOperand(1), GTID);
@@ -1323,8 +1312,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
 
   EXPECT_EQ(NumBodiesGenerated, 1U);
   EXPECT_EQ(NumPrivatizedVars, 0U);
-  EXPECT_EQ(NumFinalizationPoints, 2U);
-  EXPECT_TRUE(FakeDestructor->hasNUses(2));
+  EXPECT_EQ(NumFinalizationPoints, 1U);
+  EXPECT_TRUE(FakeDestructor->hasNUses(1));
 
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();
@@ -2961,7 +2950,8 @@ TEST_F(OpenMPIRBuilderTest, MasterDirective) {
   BranchInst *EntryBr = cast<BranchInst>(EntryBB->getTerminator());
   EXPECT_TRUE(EntryBr->isConditional());
   EXPECT_EQ(EntryBr->getSuccessor(0), ThenBB);
-  BasicBlock *ExitBB = ThenBB->getUniqueSuccessor();
+  BasicBlock *FinalizeBB = ThenBB->getUniqueSuccessor();
+  BasicBlock *ExitBB = FinalizeBB->getUniqueSuccessor();
   EXPECT_EQ(EntryBr->getSuccessor(1), ExitBB);
 
   CmpInst *CondInst = cast<CmpInst>(EntryBr->getCondition());
@@ -2973,7 +2963,7 @@ TEST_F(OpenMPIRBuilderTest, MasterDirective) {
   EXPECT_TRUE(isa<GlobalVariable>(MasterEntryCI->getArgOperand(0)));
 
   CallInst *MasterEndCI = nullptr;
-  for (auto &FI : *ThenBB) {
+  for (auto &FI : *FinalizeBB) {
     Instruction *cur = &FI;
     if (isa<CallInst>(cur)) {
       MasterEndCI = cast<CallInst>(cur);
@@ -3044,7 +3034,8 @@ TEST_F(OpenMPIRBuilderTest, MaskedDirective) {
   BranchInst *EntryBr = cast<BranchInst>(EntryBB->getTerminator());
   EXPECT_TRUE(EntryBr->isConditional());
   EXPECT_EQ(EntryBr->getSuccessor(0), ThenBB);
-  BasicBlock *ExitBB = ThenBB->getUniqueSuccessor();
+  BasicBlock *FinalizeBB = ThenBB->getUniqueSuccessor();
+  BasicBlock *ExitBB = FinalizeBB->getUniqueSuccessor();
   EXPECT_EQ(EntryBr->getSuccessor(1), ExitBB);
 
   CmpInst *CondInst = cast<CmpInst>(EntryBr->getCondition());
@@ -3056,7 +3047,7 @@ TEST_F(OpenMPIRBuilderTest, MaskedDirective) {
   EXPECT_TRUE(isa<GlobalVariable>(MaskedEntryCI->getArgOperand(0)));
 
   CallInst *MaskedEndCI = nullptr;
-  for (auto &FI : *ThenBB) {
+  for (auto &FI : *FinalizeBB) {
     Instruction *cur = &FI;
     if (isa<CallInst>(cur)) {
       MaskedEndCI = cast<CallInst>(cur);
@@ -3109,6 +3100,9 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
                                 FINICB_WRAPPER(FiniCB), "testCRT", nullptr));
   Builder.restoreIP(AfterIP);
 
+  BasicBlock *FinalizeBB = EntryBB->getUniqueSuccessor();
+  EXPECT_NE(FinalizeBB, nullptr);
+
   CallInst *CriticalEntryCI = nullptr;
   for (auto &EI : *EntryBB) {
     Instruction *cur = &EI;
@@ -3125,7 +3119,7 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
   EXPECT_TRUE(isa<GlobalVariable>(CriticalEntryCI->getArgOperand(0)));
 
   CallInst *CriticalEndCI = nullptr;
-  for (auto &FI : *EntryBB) {
+  for (auto &FI : *FinalizeBB) {
     Instruction *cur = &FI;
     if (isa<CallInst>(cur)) {
       CriticalEndCI = cast<CallInst>(cur);
@@ -3360,6 +3354,9 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveThreads) {
                                           FINICB_WRAPPER(FiniCB), true));
   Builder.restoreIP(AfterIP);
 
+  BasicBlock *FinalizeBB = EntryBB->getUniqueSuccessor();
+  EXPECT_NE(FinalizeBB, nullptr);
+
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
@@ -3382,7 +3379,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveThreads) {
   EXPECT_TRUE(isa<GlobalVariable>(OrderedEntryCI->getArgOperand(0)));
 
   CallInst *OrderedEndCI = nullptr;
-  for (auto &FI : *EntryBB) {
+  for (auto &FI : *FinalizeBB) {
     Instruction *Cur = &FI;
     if (isa<CallInst>(Cur)) {
       OrderedEndCI = cast<CallInst>(Cur);
@@ -3558,7 +3555,8 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
   BranchInst *EntryBr = cast<BranchInst>(EntryBB->getTerminator());
   EXPECT_TRUE(EntryBr->isConditional());
   EXPECT_EQ(EntryBr->getSuccessor(0), ThenBB);
-  BasicBlock *ExitBB = ThenBB->getUniqueSuccessor();
+  BasicBlock *FinalizeBB = ThenBB->getUniqueSuccessor();
+  BasicBlock *ExitBB = FinalizeBB->getUniqueSuccessor();
   EXPECT_EQ(EntryBr->getSuccessor(1), ExitBB);
 
   CmpInst *CondInst = cast<CmpInst>(EntryBr->getCondition());
@@ -3570,7 +3568,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirective) {
   EXPECT_TRUE(isa<GlobalVariable>(SingleEntryCI->getArgOperand(0)));
 
   CallInst *SingleEndCI = nullptr;
-  for (auto &FI : *ThenBB) {
+  for (auto &FI : *FinalizeBB) {
     Instruction *cur = &FI;
     if (isa<CallInst>(cur)) {
       SingleEndCI = cast<CallInst>(cur);
@@ -3652,7 +3650,8 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
   BranchInst *EntryBr = cast<BranchInst>(EntryBB->getTerminator());
   EXPECT_TRUE(EntryBr->isConditional());
   EXPECT_EQ(EntryBr->getSuccessor(0), ThenBB);
-  BasicBlock *ExitBB = ThenBB->getUniqueSuccessor();
+  BasicBlock *FinalizeBB = ThenBB->getUniqueSuccessor();
+  BasicBlock *ExitBB = FinalizeBB->getUniqueSuccessor();
   EXPECT_EQ(EntryBr->getSuccessor(1), ExitBB);
 
   CmpInst *CondInst = cast<CmpInst>(EntryBr->getCondition());
@@ -3664,7 +3663,7 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveNowait) {
   EXPECT_TRUE(isa<GlobalVariable>(SingleEntryCI->getArgOperand(0)));
 
   CallInst *SingleEndCI = nullptr;
-  for (auto &FI : *ThenBB) {
+  for (auto &FI : *FinalizeBB) {
     Instruction *cur = &FI;
     if (isa<CallInst>(cur)) {
       SingleEndCI = cast<CallInst>(cur);
@@ -3776,7 +3775,8 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
   BranchInst *EntryBr = cast<BranchInst>(EntryBB->getTerminator());
   EXPECT_TRUE(EntryBr->isConditional());
   EXPECT_EQ(EntryBr->getSuccessor(0), ThenBB);
-  BasicBlock *ExitBB = ThenBB->getUniqueSuccessor();
+  BasicBlock *FinalizeBB = ThenBB->getUniqueSuccessor();
+  BasicBlock *ExitBB = FinalizeBB->getUniqueSuccessor();
   EXPECT_EQ(EntryBr->getSuccessor(1), ExitBB);
 
   CmpInst *CondInst = cast<CmpInst>(EntryBr->getCondition());
@@ -3795,25 +3795,28 @@ TEST_F(OpenMPIRBuilderTest, SingleDirectiveCopyPrivate) {
   EXPECT_EQ(PrivLI->getPointerOperand(), PrivAI);
   // icmp
   EXPECT_TRUE(ThenBBI.next<ICmpInst>());
+
+  // check FinalizeBB
+  BBInstIter FinalizeBBI(FinalizeBB);
   // store 1, DidIt
-  auto *DidItSI = ThenBBI.next<StoreInst>();
+  auto *DidItSI = FinalizeBBI.next<StoreInst>();
   EXPECT_NE(DidItSI, nullptr);
   EXPECT_EQ(DidItSI->getValueOperand(),
             ConstantInt::get(Type::getInt32Ty(Ctx), 1));
   Value *DidIt = DidItSI->getPointerOperand();
   // call __kmpc_end_single
-  auto *SingleEndCI = ThenBBI.next<CallInst>();
+  auto *SingleEndCI = FinalizeBBI.next<CallInst>();
   EXPECT_NE(SingleEndCI, nullptr);
   EXPECT_EQ(SingleEndCI->getCalledFunction()->getName(), "__kmpc_end_single");
   EXPECT_EQ(SingleEndCI->arg_size(), 2U);
   EXPECT_TRUE(isa<GlobalVariable>(SingleEndCI->getArgOperand(0)));
   EXPECT_EQ(SingleEndCI->getArgOperand(1), SingleEntryCI->getArgOperand(1));
   // br ExitBB
-  auto *ExitBBBI = ThenBBI.next<BranchInst>();
+  auto *ExitBBBI = FinalizeBBI.next<BranchInst>();
   EXPECT_NE(ExitBBBI, nullptr);
   EXPECT_TRUE(ExitBBBI->isUnconditional());
   EXPECT_EQ(ExitBBBI->getOperand(0), ExitBB);
-  EXPECT_FALSE(ThenBBI.hasNext());
+  EXPECT_FALSE(FinalizeBBI.hasNext());
 
   // check ExitBB
   BBInstIter ExitBBI(ExitBB);
