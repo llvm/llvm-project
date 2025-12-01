@@ -1101,7 +1101,7 @@ DNBGetLibrariesInfoForAddresses(nub_process_t pid,
 JSONGenerator::ObjectSP DNBGetSharedCacheInfo(nub_process_t pid) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
-    return procSP->GetSharedCacheInfo(pid);
+    return procSP->GetInferiorSharedCacheInfo(pid);
   }
   return JSONGenerator::ObjectSP();
 }
