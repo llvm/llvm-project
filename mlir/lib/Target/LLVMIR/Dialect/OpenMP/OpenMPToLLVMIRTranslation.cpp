@@ -7143,21 +7143,33 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::Value *resultPtr;
 
   if (shouldAllocate) {
-    // Get the size of the variable
-    llvm::Type *varType = globalValue->getValueType();
-    llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
-    llvm::DataLayout DL = llvmModule->getDataLayout();
-    uint64_t typeSize = DL.getTypeAllocSize(varType);
-    // Call omp_alloc_shared to allocate memory for groupprivate variable.
-    llvm::FunctionCallee allocSharedFn = ompBuilder->getOrCreateRuntimeFunction(
-        *llvmModule, llvm::omp::OMPRTL___kmpc_alloc_shared);
-    // Call runtime to allocate shared memory for this group
-    resultPtr = builder.CreateCall(allocSharedFn, {builder.getInt64(typeSize)});
-  } else {
-    // Use original global address when not allocating group-private storage
-    resultPtr = moduleTranslation.lookupValue(symAddr);
-    if (!resultPtr)
+    if (isTargetDevice) {
+      // Get the size of the variable
+      llvm::Type *varType = globalValue->getValueType();
+      llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+      // Create a llvm global variable in shared memory
+      llvm::Triple targetTriple = llvm::Triple(llvmModule->getTargetTriple());
+      if (targetTriple.isAMDGCN() || targetTriple.isNVPTX()) {
+        // Shared address space is 3 for amdgpu and nvptx targets.
+        unsigned sharedAddressSpace = 3;
+        llvm::GlobalVariable *sharedVar = new llvm::GlobalVariable(
+            *llvmModule, varType, false, llvm::GlobalValue::InternalLinkage,
+            llvm::PoisonValue::get(varType), globalValue->getName(), nullptr,
+            llvm::GlobalValue::NotThreadLocal, sharedAddressSpace, false);
+        resultPtr = sharedVar;
+      } else {
+        return opInst.emitError()
+               << "Groupprivate operation is not supported for this target: "
+               << targetTriple.str();
+      }
+    } else {
+      // Use original global address when allocating on host device.
+      // TODO: Add support for allocating group-private storage on host device.
       resultPtr = globalValue;
+    }
+  } else {
+    // Use original global address when not allocating group-private storage.
+    resultPtr = globalValue;
   }
 
   moduleTranslation.mapValue(opInst.getResult(0), resultPtr);
