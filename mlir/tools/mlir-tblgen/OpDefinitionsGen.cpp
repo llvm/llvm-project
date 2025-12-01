@@ -2644,7 +2644,7 @@ void OpEmitter::genInlineCreateBody(
     interleave(
         nonBuilderStateArgsList,
         [&](StringRef name) {
-          nonBuilderStateArgsOS << "static_cast<decltype(" << name << ")>("
+          nonBuilderStateArgsOS << "std::forward<decltype(" << name << ")>("
                                 << name << ')';
         },
         [&] { nonBuilderStateArgsOS << ", "; });
