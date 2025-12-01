@@ -457,6 +457,10 @@ def err_expansion_stmt_requires_range : Error<
   "expansion statement must be a range-based for loop">;
 def err_expansion_stmt_requires_cxx2c : Error<
   "expansion statements are only supported in C++2c">;
+def err_for_template : Error<
+  "'for template' is invalid; use 'template for' instead">;
+def err_expansion_stmt_invalid_kw : Error<
+  "'template %0' is invalid">;
 
 def err_expected_case_before_expression: Error<
   "expected 'case' keyword before expression">;

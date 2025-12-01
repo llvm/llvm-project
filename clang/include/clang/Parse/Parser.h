@@ -4189,7 +4189,7 @@ private:
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
                            bool FailImmediatelyOnInvalidExpr = false,
-                           bool StopAtRBraceAfterComma = false);
+                           bool ParsingExpansionInitList = false);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
@@ -7531,7 +7531,8 @@ public:
   ///       expansion-init-list
   /// \endverbatim
   StmtResult ParseExpansionStatement(SourceLocation *TrailingElseLoc,
-                                     LabelDecl *PrecedingLabel);
+                                     LabelDecl *PrecedingLabel,
+                                     SourceLocation TemplateLoc);
 
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,

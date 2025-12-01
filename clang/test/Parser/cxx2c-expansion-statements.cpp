@@ -40,7 +40,9 @@ void bad() {
   template for (3 : "error") // expected-error {{expansion statement declaration must declare a variable}} \
                                 expected-error {{expansion statement must be a range-based for loop}} expected-error {{TODO (expansion statements)}}
     ;
-  template while (true) {} // expected-error {{expected '<' after 'template'}}
+  template while (true) {} // expected-error {{'template while' is invalid}}
+  template do {} while (true); // expected-error {{'template do' is invalid}}
+  for template (int x : {}) {} // expected-error {{'for template' is invalid; use 'template for' instead}} expected-error {{TODO (expansion statements)}}
 }
 
 void good() {

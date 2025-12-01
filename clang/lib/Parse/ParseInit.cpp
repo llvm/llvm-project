@@ -522,11 +522,10 @@ ExprResult Parser::ParseExpansionInitList() {
 
   ExprVector InitExprs;
 
-  // CWG 3061: Accept a trailing comma here.
   if (!Tok.is(tok::r_brace) &&
       ParseExpressionList(InitExprs, /*ExpressionStarts=*/{},
                           /*FailImmediatelyOnInvalidExpr=*/false,
-                          /*StopAtRBraceAfterComma=*/true)) {
+                          /*ParsingExpansionInitList=*/true)) {
     T.consumeClose();
     return ExprError();
   }

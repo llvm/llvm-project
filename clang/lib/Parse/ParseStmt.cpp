@@ -271,7 +271,23 @@ Retry:
         return ParseForStatement(TrailingElseLoc, PrecedingLabel);
       }
 
-      return ParseExpansionStatement(TrailingElseLoc, PrecedingLabel);
+      SourceLocation TemplateLoc = ConsumeToken();
+      return ParseExpansionStatement(TrailingElseLoc, PrecedingLabel,
+                                     TemplateLoc);
+    }
+
+    // Since 'template for' is a thing, users might reasonably try to write
+    // 'template while' or something like that; diagnose that here for better
+    // QOI (and basically just ignore the 'template' token for error recovery).
+    if (NextToken().isOneOf(tok::kw_while, tok::kw_do)) {
+      bool IsWhile = NextToken().is(tok::kw_while);
+      Diag(Tok.getLocation(), diag::err_expansion_stmt_invalid_kw)
+          << (IsWhile ? "while" : "do");
+
+      ConsumeToken();
+      if (IsWhile)
+        return ParseWhileStatement(TrailingElseLoc, PrecedingLabel);
+      return ParseDoStatement(PrecedingLabel);
     }
 
     SourceLocation DeclEnd;
@@ -304,6 +320,19 @@ Retry:
     SemiError = "do/while";
     break;
   case tok::kw_for:                 // C99 6.8.5.3: for-statement
+    // Correct 'for template' to 'template for'.
+    if (NextToken().is(tok::kw_template)) {
+      Diag(Tok.getLocation(), diag::err_for_template)
+          << FixItHint::CreateReplacement(
+                 SourceRange(Tok.getLocation(), NextToken().getEndLoc()),
+                 "template for");
+      Tok.setKind(tok::kw_template);
+      SourceLocation TemplateLoc = ConsumeToken();
+      Tok.setKind(tok::kw_for);
+      return ParseExpansionStatement(TrailingElseLoc, PrecedingLabel,
+                                     TemplateLoc);
+    }
+
     return ParseForStatement(TrailingElseLoc, PrecedingLabel);
 
   case tok::kw_goto:                // C99 6.8.6.1: goto-statement
@@ -2706,9 +2735,9 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
 }
 
 StmtResult Parser::ParseExpansionStatement(SourceLocation *TrailingElseLoc,
-                                           LabelDecl *PrecedingLabel) {
-  assert(Tok.is(tok::kw_template) && NextToken().is(tok::kw_for));
-  SourceLocation TemplateLoc = ConsumeToken();
+                                           LabelDecl *PrecedingLabel,
+                                           SourceLocation TemplateLoc) {
+  assert(Tok.is(tok::kw_for));
   DiagCompat(TemplateLoc, diag_compat::expansion_statements);
 
   CXXExpansionStmtDecl *ExpansionDecl =
