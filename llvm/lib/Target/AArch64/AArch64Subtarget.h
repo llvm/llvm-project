@@ -93,8 +93,6 @@ protected:
 
   bool EnableSubregLiveness;
 
-  bool AggressiveInterleaving = false;
-
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
 
