@@ -284,7 +284,7 @@ public:
 
     // If the source is a static memref, we need to extract the pointer to
     // base address.
-    if (memrefType && memrefType.hasStaticShape()) {
+    if (memrefType) {
       auto extractOp = memref::ExtractAlignedPointerAsIndexOp::create(
           rewriter, createNdOp.getLoc(), source);
       source = arith::IndexCastOp::create(rewriter, createNdOp.getLoc(),
