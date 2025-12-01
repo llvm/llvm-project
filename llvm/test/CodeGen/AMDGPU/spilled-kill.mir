@@ -1,9 +1,9 @@
-# RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs -start-before=prologepilog -stop-after=postrapseudos -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs --run-pass=postrapseudos -o - %s | FileCheck -check-prefix=GCN %s
 
-# This testcase shows the necessity of adding an undef flag to the $sgpr source when
+# This test shows the necessity of adding an undef flag to the $sgpr source when
 # creating a V_WRITELANE_B32.
 #
-# The prologepilog pass will create a:
+# The prologepilog creates:
 #
 #   $exec = S_MOV_B64 killed $sgpr4_sgpr5
 #
@@ -29,30 +29,10 @@ machineFunctionInfo:
     - '$vgpr62'
 body:             |
   bb.0:
-    successors: %bb.3(0x40000000), %bb.1(0x40000000)
-  
+    $sgpr4_sgpr5 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    $exec = S_MOV_B64 killed $sgpr4_sgpr5
     renamable $sgpr4 = IMPLICIT_DEF
     $vgpr62 = SI_SPILL_S32_TO_VGPR $sgpr5, 1, killed $vgpr62, implicit $sgpr4_sgpr5
-    S_CBRANCH_EXECZ %bb.1, implicit $exec
-    S_BRANCH %bb.3
-  
-  bb.1:
-    successors: %bb.2(0x40000000), %bb.4(0x40000000)
-  
-    S_CBRANCH_EXECZ %bb.4, implicit $exec
-    S_BRANCH %bb.2
-  
-  bb.2:
-    successors: %bb.4(0x80000000)
-  
-    S_BRANCH %bb.4
-  
-  bb.3:
-    successors: %bb.1(0x80000000)
-  
-    S_BRANCH %bb.1
-  
-  bb.4:
-  
     SI_RETURN
 ...
+
