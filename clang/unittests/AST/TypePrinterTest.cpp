@@ -341,3 +341,22 @@ TEST(TypePrinter, NestedNameSpecifiers) {
         Policy.AnonymousTagLocations = false;
       }));
 }
+
+TEST(TypePrinter, NestedNameSpecifiersTypedef) {
+  constexpr char Code[] = R"cpp(
+    typedef union {
+      struct {
+        struct {
+          unsigned int baz;
+        } bar;
+      };
+    } foo;
+  )cpp";
+
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {}, fieldDecl(hasName("bar"), hasType(qualType().bind("id"))),
+      "struct foo::(anonymous struct)::(unnamed)", [](PrintingPolicy &Policy) {
+        Policy.FullyQualifiedName = true;
+        Policy.AnonymousTagLocations = false;
+      }));
+}
