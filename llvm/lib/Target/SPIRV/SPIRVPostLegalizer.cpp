@@ -316,8 +316,6 @@ static void registerSpirvTypeForNewInstructions(MachineFunction &MF,
 static bool hasAssignType(Register Reg, MachineRegisterInfo &MRI) {
   for (MachineInstr &UseInstr : MRI.use_nodbg_instructions(Reg)) {
     if (UseInstr.getOpcode() == SPIRV::ASSIGN_TYPE) {
-      LLVM_DEBUG(dbgs() << "  Instruction already has an ASSIGN_TYPE use: "
-                        << UseInstr);
       return true;
     }
   }
@@ -376,8 +374,10 @@ static void ensureAssignTypeForTypeFolding(MachineFunction &MF,
       LLVM_DEBUG(dbgs() << "Processing instruction: " << MI);
 
       Register ResultRegister = MI.defs().begin()->getReg();
-      if (hasAssignType(ResultRegister, MRI))
+      if (hasAssignType(ResultRegister, MRI)) {
+        LLVM_DEBUG(dbgs() << "  Instruction already has ASSIGN_TYPE\n");
         continue;
+      }
 
       SPIRVType *ResultType = GR->getSPIRVTypeForVReg(ResultRegister);
       assert(ResultType);
