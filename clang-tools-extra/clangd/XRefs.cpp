@@ -1831,7 +1831,8 @@ static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   }
   HierarchyItem HI;
   HI.name = std::string(S.Name);
-  HI.detail = (S.Scope + S.Name).str();
+  HI.detail = S.Scope.empty() ? std::string()
+                              : S.Scope.drop_back(2).str(); // Trailing "::"
   HI.kind = indexSymbolKindToSymbolKind(S.SymInfo.Kind);
   HI.selectionRange = Loc->range;
   // FIXME: Populate 'range' correctly
