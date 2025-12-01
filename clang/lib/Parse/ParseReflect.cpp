@@ -20,7 +20,7 @@ ExprResult Parser::ParseCXXReflectExpression() {
   // TODO(reflection) : support parsing for more reflect-expressions.
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
-  assert(Tok.is(tok::caretcaret) );
+  assert(Tok.is(tok::caretcaret));
   SourceLocation CaretCaretLoc = ConsumeToken();
   SourceLocation OperandLoc = Tok.getLocation();
 
