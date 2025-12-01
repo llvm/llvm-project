@@ -1,6 +1,5 @@
 // REQUIRES: hexagon-registered-target
-// REQUIRES: rt_lib
-// RUN: %clang++ -g -S -fenable-ripple --target=hexagon -mhvx -mv85 -emit-llvm -mllvm -ripple-disable-link %s -o - 2>&1 | FileCheck %s
+// RUN: %clang++ -g -S -fenable-ripple --target=hexagon -mhvx -mv79 -emit-llvm -mllvm -ripple-disable-link %s -o - 2>&1 | FileCheck %s
 
 #include <ripple.h>
 #include <ripple/HVX_Narrow_Shift.h>
