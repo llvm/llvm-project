@@ -1458,7 +1458,6 @@ bool MachineBasicBlock::canSplitCriticalEdge(const MachineBasicBlock *Succ,
                       << printMBBReference(*this) << '\n');
     return false;
   }
-
   return true;
 }
 
