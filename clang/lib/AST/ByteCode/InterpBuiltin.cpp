@@ -3404,7 +3404,7 @@ static bool interp__builtin_ia32_cvtsd2ss(InterpState &S, CodePtr OpPC,
   unsigned NumElems = DstVTy->getNumElements();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  // Copy all elements from A to Dst
+  // Copy all elements from A to Dst.
   for (unsigned I = 0; I != NumElems; ++I)
     Dst.elem<Floating>(I) = A.elem<Floating>(I);
 
