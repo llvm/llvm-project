@@ -343,8 +343,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                 allPtrs);
 
   getActionDefinitionsBuilder(G_ATOMICRMW_XCHG)
-      .legalForCartesianProduct(allFloatScalarsAndF16Vector2AndVector4s,
-                                allPtrs);
+      .legalForCartesianProduct(allFloatAndIntScalarsAndPtrs, allPtrs);
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS).lower();
   // TODO: add proper legalization rules.
