@@ -18,6 +18,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
+#include "lldb/Utility/NonNullSharedPtr.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
@@ -777,6 +778,8 @@ public:
   std::string GetObjectName() const;
 
 protected:
+  typedef NonNullSharedPtr<lldb_private::DataExtractor> DataExtractorNSP;
+
   // Member variables.
   FileSpec m_file;
   Type m_type;
@@ -786,11 +789,10 @@ protected:
   lldb::addr_t m_length; ///< The length of this object file if it is known (can
                          ///be zero if length is unknown or can't be
                          ///determined).
-  lldb::DataExtractorSP
-      m_data_sp; ///< The data for this object file so things
-                 ///< can be parsed lazily.  This shared pointer
-                 ///< will always have a DataExtractor object,
-                 ///< although it may only be default-constructed.
+  DataExtractorNSP m_data_sp; ///< The data for this object file so things
+                              ///< can be parsed lazily.  This shared pointer
+                              ///< will always have a DataExtractor object,
+                              ///< although it may only be default-constructed.
   lldb::ProcessWP m_process_wp;
   /// Set if the object file only exists in memory.
   const lldb::addr_t m_memory_addr;
