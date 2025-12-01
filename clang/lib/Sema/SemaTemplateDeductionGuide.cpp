@@ -1025,6 +1025,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
                                 TypeAliasTemplateDecl *AliasTemplate,
                                 FunctionTemplateDecl *F, SourceLocation Loc) {
   LocalInstantiationScope Scope(SemaRef);
+  Sema::NonSFINAEContext _1(SemaRef);
   Sema::InstantiatingTemplate BuildingDeductionGuides(
       SemaRef, AliasTemplate->getLocation(), F,
       Sema::InstantiatingTemplate::BuildingDeductionGuidesTag{});

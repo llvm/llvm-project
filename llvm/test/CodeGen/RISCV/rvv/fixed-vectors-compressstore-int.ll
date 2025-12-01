@@ -2,7 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+v -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
 
-declare void @llvm.masked.compressstore.v1i8(<1 x i8>, ptr, <1 x i1>)
 define void @compressstore_v1i8(ptr %base, <1 x i8> %v, <1 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v1i8:
 ; CHECK:       # %bb.0:
@@ -16,7 +15,6 @@ define void @compressstore_v1i8(ptr %base, <1 x i8> %v, <1 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v2i8(<2 x i8>, ptr, <2 x i1>)
 define void @compressstore_v2i8(ptr %base, <2 x i8> %v, <2 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v2i8:
 ; CHECK:       # %bb.0:
@@ -30,7 +28,6 @@ define void @compressstore_v2i8(ptr %base, <2 x i8> %v, <2 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v4i8(<4 x i8>, ptr, <4 x i1>)
 define void @compressstore_v4i8(ptr %base, <4 x i8> %v, <4 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v4i8:
 ; CHECK:       # %bb.0:
@@ -44,7 +41,6 @@ define void @compressstore_v4i8(ptr %base, <4 x i8> %v, <4 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v8i8(<8 x i8>, ptr, <8 x i1>)
 define void @compressstore_v8i8(ptr %base, <8 x i8> %v, <8 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v8i8:
 ; CHECK:       # %bb.0:
@@ -58,7 +54,6 @@ define void @compressstore_v8i8(ptr %base, <8 x i8> %v, <8 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v1i16(<1 x i16>, ptr, <1 x i1>)
 define void @compressstore_v1i16(ptr %base, <1 x i16> %v, <1 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v1i16:
 ; CHECK:       # %bb.0:
@@ -72,7 +67,6 @@ define void @compressstore_v1i16(ptr %base, <1 x i16> %v, <1 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v2i16(<2 x i16>, ptr, <2 x i1>)
 define void @compressstore_v2i16(ptr %base, <2 x i16> %v, <2 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v2i16:
 ; CHECK:       # %bb.0:
@@ -86,7 +80,6 @@ define void @compressstore_v2i16(ptr %base, <2 x i16> %v, <2 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v4i16(<4 x i16>, ptr, <4 x i1>)
 define void @compressstore_v4i16(ptr %base, <4 x i16> %v, <4 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v4i16:
 ; CHECK:       # %bb.0:
@@ -100,7 +93,6 @@ define void @compressstore_v4i16(ptr %base, <4 x i16> %v, <4 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v8i16(<8 x i16>, ptr, <8 x i1>)
 define void @compressstore_v8i16(ptr %base, <8 x i16> %v, <8 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v8i16:
 ; CHECK:       # %bb.0:
@@ -114,7 +106,6 @@ define void @compressstore_v8i16(ptr %base, <8 x i16> %v, <8 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v1i32(<1 x i32>, ptr, <1 x i1>)
 define void @compressstore_v1i32(ptr %base, <1 x i32> %v, <1 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v1i32:
 ; CHECK:       # %bb.0:
@@ -128,7 +119,6 @@ define void @compressstore_v1i32(ptr %base, <1 x i32> %v, <1 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v2i32(<2 x i32>, ptr, <2 x i1>)
 define void @compressstore_v2i32(ptr %base, <2 x i32> %v, <2 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v2i32:
 ; CHECK:       # %bb.0:
@@ -142,7 +132,6 @@ define void @compressstore_v2i32(ptr %base, <2 x i32> %v, <2 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v4i32(<4 x i32>, ptr, <4 x i1>)
 define void @compressstore_v4i32(ptr %base, <4 x i32> %v, <4 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v4i32:
 ; CHECK:       # %bb.0:
@@ -156,7 +145,6 @@ define void @compressstore_v4i32(ptr %base, <4 x i32> %v, <4 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v8i32(<8 x i32>, ptr, <8 x i1>)
 define void @compressstore_v8i32(ptr %base, <8 x i32> %v, <8 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v8i32:
 ; CHECK:       # %bb.0:
@@ -170,7 +158,6 @@ define void @compressstore_v8i32(ptr %base, <8 x i32> %v, <8 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v1i64(<1 x i64>, ptr, <1 x i1>)
 define void @compressstore_v1i64(ptr %base, <1 x i64> %v, <1 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v1i64:
 ; CHECK:       # %bb.0:
@@ -184,7 +171,6 @@ define void @compressstore_v1i64(ptr %base, <1 x i64> %v, <1 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v2i64(<2 x i64>, ptr, <2 x i1>)
 define void @compressstore_v2i64(ptr %base, <2 x i64> %v, <2 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v2i64:
 ; CHECK:       # %bb.0:
@@ -198,7 +184,6 @@ define void @compressstore_v2i64(ptr %base, <2 x i64> %v, <2 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v4i64(<4 x i64>, ptr, <4 x i1>)
 define void @compressstore_v4i64(ptr %base, <4 x i64> %v, <4 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v4i64:
 ; CHECK:       # %bb.0:
@@ -212,7 +197,6 @@ define void @compressstore_v4i64(ptr %base, <4 x i64> %v, <4 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.compressstore.v8i64(<8 x i64>, ptr, <8 x i1>)
 define void @compressstore_v8i64(ptr %base, <8 x i64> %v, <8 x i1> %mask) {
 ; CHECK-LABEL: compressstore_v8i64:
 ; CHECK:       # %bb.0:

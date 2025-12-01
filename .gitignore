@@ -54,9 +54,11 @@ autoconf/autom4te.cache
 /cmake-build*
 # Coding assistants' stuff
 /CLAUDE.md
-/.claude/
+.claude/
 /GEMINI.md
-/.gemini/
+.gemini/
+AGENTS.md
+.codex/
 
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).

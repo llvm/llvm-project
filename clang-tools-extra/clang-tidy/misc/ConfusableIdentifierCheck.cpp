@@ -53,10 +53,9 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
   const char *Curr = Name.data();
   const char *End = Curr + Name.size();
   while (Curr < End) {
-
     const char *Prev = Curr;
     UTF32 CodePoint = 0;
-    ConversionResult Result = convertUTF8Sequence(
+    const ConversionResult Result = convertUTF8Sequence(
         reinterpret_cast<const UTF8 **>(&Curr),
         reinterpret_cast<const UTF8 *>(End), &CodePoint, strictConversion);
     if (Result != conversionOK) {
@@ -64,7 +63,7 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
       break;
     }
 
-    StringRef Key(Prev, Curr - Prev);
+    const StringRef Key(Prev, Curr - Prev);
     auto *Where = llvm::lower_bound(ConfusableEntries, CodePoint,
                                     [](decltype(ConfusableEntries[0]) X,
                                        UTF32 Y) { return X.codepoint < Y; });
@@ -183,7 +182,7 @@ void ConfusableIdentifierCheck::addDeclToCheck(const NamedDecl *ND,
   if (!NDII)
     return;
 
-  StringRef NDName = NDII->getName();
+  const StringRef NDName = NDII->getName();
   if (NDName.empty())
     return;
 
@@ -216,7 +215,7 @@ void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
     // the same skeleton.
     for (const IdentifierInfo *II : Idents) {
       for (auto [OuterND, OuterParent] : NameToDecls[II]) {
-        for (Entry Inner : DeclsWithinContext[OuterParent]) {
+        for (const Entry Inner : DeclsWithinContext[OuterParent]) {
           // Don't complain if the identifiers are the same.
           if (OuterND->getIdentifier() == Inner.ND->getIdentifier())
             continue;

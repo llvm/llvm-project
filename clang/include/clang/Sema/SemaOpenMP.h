@@ -1174,6 +1174,8 @@ public:
     int ExtraModifier = -1; ///< Additional modifier for linear, map, depend or
                             ///< lastprivate clause.
     int OriginalSharingModifier = 0; // Default is shared
+    int NeedDevicePtrModifier = 0;
+    SourceLocation NeedDevicePtrModifierLoc;
     SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
         MapTypeModifiers;
     SmallVector<SourceLocation, NumberOfOMPMapClauseModifiers>
@@ -1349,7 +1351,7 @@ public:
   OMPClause *
   ActOnOpenMPToClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
                       ArrayRef<SourceLocation> MotionModifiersLoc,
-                      CXXScopeSpec &MapperIdScopeSpec,
+                      Expr *IteratorModifier, CXXScopeSpec &MapperIdScopeSpec,
                       DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
                       ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
                       ArrayRef<Expr *> UnresolvedMappers = {});
@@ -1357,7 +1359,7 @@ public:
   OMPClause *
   ActOnOpenMPFromClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
                         ArrayRef<SourceLocation> MotionModifiersLoc,
-                        CXXScopeSpec &MapperIdScopeSpec,
+                        Expr *IteratorModifier, CXXScopeSpec &MapperIdScopeSpec,
                         DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
                         ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
                         ArrayRef<Expr *> UnresolvedMappers = {});
@@ -1410,6 +1412,13 @@ public:
   OMPClause *ActOnOpenMPXDynCGroupMemClause(Expr *Size, SourceLocation StartLoc,
                                             SourceLocation LParenLoc,
                                             SourceLocation EndLoc);
+
+  /// Called on a well-formed 'dyn_groupprivate' clause.
+  OMPClause *ActOnOpenMPDynGroupprivateClause(
+      OpenMPDynGroupprivateClauseModifier M1,
+      OpenMPDynGroupprivateClauseFallbackModifier M2, Expr *Size,
+      SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation M1Loc,
+      SourceLocation M2Loc, SourceLocation EndLoc);
 
   /// Called on well-formed 'doacross' clause.
   OMPClause *

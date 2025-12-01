@@ -55,6 +55,10 @@ void AMDGPUDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"
       >();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc"
+      >();
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
@@ -343,15 +347,41 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 LogicalResult ScaledExtPacked816Op::verify() {
   int blockSize = getBlockSize();
-  assert((blockSize == 16 || blockSize == 32) && "invalid block size");
+  assert(llvm::is_contained({16, 32}, blockSize) && "invalid block size");
+
   int firstScaleByte = getFirstScaleByte();
-  if (blockSize == 16 && !llvm::is_contained({0, 1}, firstScaleByte)) {
-    return emitOpError(
-        "blockSize of 16 can only have firstScaleByte be 0 or 1.");
-  }
-  if (blockSize == 32 && !llvm::is_contained({0, 2}, firstScaleByte)) {
-    return emitOpError(
-        "blockSize of 32 can only have firstScaleByte be 0 or 2.");
+  int firstScaleLane = getFirstScaleLane();
+  auto sourceType = cast<VectorType>(getSource().getType());
+  Type elementType = sourceType.getElementType();
+  auto floatType = cast<FloatType>(elementType);
+  unsigned bitWidth = floatType.getWidth();
+
+  assert(llvm::is_contained(llvm::ArrayRef<unsigned>{4, 6, 8}, bitWidth));
+
+  const bool is_fp8 = bitWidth == 8;
+  const bool is_block_16 = blockSize == 16;
+
+  if (!is_fp8) {
+    if (is_block_16) {
+      if (!llvm::is_contained({0, 1}, firstScaleByte)) {
+        return emitOpError("blockSize of 16 can only have firstScaleByte be 0 "
+                           "or 1 for f4 and f6.");
+      }
+    } else {
+      if (!llvm::is_contained({0, 2}, firstScaleByte)) {
+        return emitOpError("blockSize of 32 can only have firstScaleByte be 0 "
+                           "or 2 for f4 and f6.");
+      }
+    }
+  } else {
+    if (is_block_16) {
+      bool is_valid = ((firstScaleLane == 0) && (firstScaleByte == 0)) ||
+                      ((firstScaleLane == 1) && (firstScaleByte == 2));
+      if (!is_valid) {
+        return emitOpError("blockSize of 16 can only have (firstScaleLane, "
+                           "firstScaleByte) be (0, 0) or (1, 2) for f8.");
+      }
+    }
   }
 
   return success();
@@ -812,6 +842,9 @@ void ScaledMFMAOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"

@@ -211,8 +211,8 @@ template <> struct CustomMappingTraits<BBNumberMap> {
   }
 
   static void output(IO &YamlIO, BBNumberMap &SrcToUnwindDest) {
-    for (auto KV : SrcToUnwindDest)
-      YamlIO.mapRequired(std::to_string(KV.first).c_str(), KV.second);
+    for (auto [Src, Dest] : SrcToUnwindDest)
+      YamlIO.mapRequired(std::to_string(Src), Dest);
   }
 };
 

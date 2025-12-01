@@ -81,7 +81,7 @@ public:
 
   /// Rewrite all uses and simplify the inserted PHI nodes.
   /// Use this method to preserve behavior when replacing SSAUpdater.
-  void RewriteAndOptimizeAllUses(DominatorTree &DT);
+  LLVM_ABI_FOR_TEST void RewriteAndOptimizeAllUses(DominatorTree &DT);
 };
 
 } // end namespace llvm

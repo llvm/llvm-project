@@ -108,7 +108,7 @@ static bool containsReg(SmallSetVector<Register, 32> LocalDefsV,
                         const TargetRegisterInfo *TRI) {
   if (Reg.isPhysical()) {
     for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-      if (!LocalDefsP[Unit])
+      if (!LocalDefsP[static_cast<unsigned>(Unit)])
         return false;
 
     return true;
@@ -143,6 +143,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   SmallSet<Register, 8> KilledUseSet;
   SmallSet<Register, 8> UndefUseSet;
   SmallVector<std::pair<Register, Register>> TiedOperands;
+  SmallVector<MachineInstr *> MemMIs;
   for (auto MII = FirstMI; MII != LastMI; ++MII) {
     // Debug instructions have no effects to track.
     if (MII->isDebugInstr())
@@ -188,7 +189,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (LocalDefs.insert(Reg)) {
         if (!MO.isDead() && Reg.isPhysical()) {
           for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-            LocalDefsP.set(Unit);
+            LocalDefsP.set(static_cast<unsigned>(Unit));
         }
       } else {
         if (!MO.isDead()) {
@@ -206,6 +207,9 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       MIB.setMIFlag(MachineInstr::FrameSetup);
     if (MII->getFlag(MachineInstr::FrameDestroy))
       MIB.setMIFlag(MachineInstr::FrameDestroy);
+
+    if (MII->mayLoadOrStore())
+      MemMIs.push_back(&*MII);
   }
 
   for (Register Reg : LocalDefs) {
@@ -231,6 +235,8 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
     assert(UseIdx < ExternUses.size());
     MIB->tieOperands(DefIdx, LocalDefs.size() + UseIdx);
   }
+
+  MIB->cloneMergedMemRefs(MF, MemMIs);
 }
 
 /// finalizeBundle - Same functionality as the previous finalizeBundle except

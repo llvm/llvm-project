@@ -21,7 +21,6 @@
 #include "llvm/Demangle/StringViewExtras.h"
 #include "llvm/Demangle/Utility.h"
 
-#include <array>
 #include <cctype>
 #include <cstdio>
 #include <optional>

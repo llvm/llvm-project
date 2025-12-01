@@ -6,19 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CODEGEN_LIBCALLLOWERINGINFO_H
+#define LLVM_CODEGEN_LIBCALLLOWERINGINFO_H
+
 #include "llvm/IR/RuntimeLibcalls.h"
 
 namespace llvm {
 
+class TargetSubtargetInfo;
+
 class LibcallLoweringInfo {
 private:
-  LLVM_ABI const RTLIB::RuntimeLibcallsInfo &RTLCI;
+  const RTLIB::RuntimeLibcallsInfo &RTLCI;
   /// Stores the implementation choice for each each libcall.
-  LLVM_ABI RTLIB::LibcallImpl LibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {
+  RTLIB::LibcallImpl LibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {
       RTLIB::Unsupported};
 
 public:
-  LLVM_ABI LibcallLoweringInfo(const RTLIB::RuntimeLibcallsInfo &RTLCI);
+  LLVM_ABI LibcallLoweringInfo(const RTLIB::RuntimeLibcallsInfo &RTLCI,
+                               const TargetSubtargetInfo &Subtarget);
+
+  const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallsInfo() const {
+    return RTLCI;
+  }
 
   /// Get the libcall routine name for the specified libcall.
   // FIXME: This should be removed. Only LibcallImpl should have a name.
@@ -64,3 +74,5 @@ public:
 };
 
 } // end namespace llvm
+
+#endif // LLVM_CODEGEN_LIBCALLLOWERINGINFO_H
