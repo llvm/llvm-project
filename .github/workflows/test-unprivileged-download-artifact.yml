@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [ upload-test-artifact ]
     steps:
-      - name: Chekcout LLVM
+      - name: Checkout LLVM
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           sparse-checkout: |

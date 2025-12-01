@@ -73,8 +73,8 @@ ObjectFileJIT::ObjectFileJIT(const lldb::ModuleSP &module_sp,
     : ObjectFile(module_sp, nullptr, 0, 0, DataBufferSP(), 0), m_delegate_wp() {
   if (delegate_sp) {
     m_delegate_wp = delegate_sp;
-    m_data.SetByteOrder(delegate_sp->GetByteOrder());
-    m_data.SetAddressByteSize(delegate_sp->GetAddressByteSize());
+    m_data_nsp->SetByteOrder(delegate_sp->GetByteOrder());
+    m_data_nsp->SetAddressByteSize(delegate_sp->GetAddressByteSize());
   }
 }
 
@@ -85,12 +85,14 @@ bool ObjectFileJIT::ParseHeader() {
   return false;
 }
 
-ByteOrder ObjectFileJIT::GetByteOrder() const { return m_data.GetByteOrder(); }
+ByteOrder ObjectFileJIT::GetByteOrder() const {
+  return m_data_nsp->GetByteOrder();
+}
 
 bool ObjectFileJIT::IsExecutable() const { return false; }
 
 uint32_t ObjectFileJIT::GetAddressByteSize() const {
-  return m_data.GetAddressByteSize();
+  return m_data_nsp->GetAddressByteSize();
 }
 
 void ObjectFileJIT::ParseSymtab(Symtab &symtab) {
