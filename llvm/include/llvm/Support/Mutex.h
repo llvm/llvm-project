@@ -63,12 +63,12 @@ namespace llvm
     };
 
     /// Mutex - A standard, always enforced mutex.
-    typedef SmartMutex<false> Mutex;
+    using Mutex = SmartMutex<false>;
 
     template <bool mt_only>
     using SmartScopedLock = std::lock_guard<SmartMutex<mt_only>>;
 
-    typedef SmartScopedLock<false> ScopedLock;
+    using ScopedLock = SmartScopedLock<false>;
   }
 }
 

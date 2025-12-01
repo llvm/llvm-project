@@ -58,7 +58,9 @@ struct DebugLine {
 };
 
 /// Map from a selection/loop's header block to its merge (and continue) target.
-using BlockMergeInfoMap = DenseMap<Block *, BlockMergeInfo>;
+/// Use `MapVector<>` to ensure a deterministic iteration order with a pointer
+/// key.
+using BlockMergeInfoMap = llvm::MapVector<Block *, BlockMergeInfo>;
 
 /// A "deferred struct type" is a struct type with one or more member types not
 /// known when the Deserializer first encounters the struct. This happens, for
@@ -471,6 +473,9 @@ private:
 
   /// Processes a SPIR-V OpPhi instruction with the given `operands`.
   LogicalResult processPhi(ArrayRef<uint32_t> operands);
+
+  /// Processes a SPIR-V OpSwitch instruction with the given `operands`.
+  LogicalResult processSwitch(ArrayRef<uint32_t> operands);
 
   /// Creates block arguments on predecessors previously recorded when handling
   /// OpPhi instructions.

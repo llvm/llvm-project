@@ -101,18 +101,18 @@
 // NEW-SAME: "--image=file=[[OBJ_DEV_A_803]],triple=amdgcn-amd-amdhsa,arch=gfx803,kind=hip"
 // NEW-SAME: "--image=file=[[OBJ_DEV_A_900]],triple=amdgcn-amd-amdhsa,arch=gfx900,kind=hip"
 
+// NEW: [[WRAPPER:".*clang-linker-wrapper]]"
+// NEW-SAME: "--emit-fatbin-only"
+// NEW-SAME: "-o" "[[HIPFB_A:.*.hipfb]]" "[[PACKAGE_A]]"
+
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // OLD-SAME: {{.*}} "-fcuda-include-gpubinary" "[[BUNDLE_A]]"
-// NEW-SAME: {{.*}} "-fembed-offload-object=[[PACKAGE_A]]"
-// OLD-SAME: {{.*}} "-o" [[A_OBJ_HOST:".*o"]] "-x" "hip"
-// NEW-SAME: {{.*}} "-o" [[A_OBJ_HOST_TMP:".*o"]] "-x" "hip"
+// NEW-SAME: {{.*}} "-fcuda-include-gpubinary" "[[HIPFB_A]]"
+// CHECK-SAME: {{.*}} "-o" [[A_OBJ_HOST:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
-
-// NEW: [[WRAPPER:".*clang-linker-wrapper]]" {{.*}}"--host-triple=x86_64-unknown-linux-gnu"
-// NEW:   "--linker-path={{.*}}" "-o" [[A_OBJ_HOST:".*o"]] [[A_OBJ_HOST_TMP]] "-r"
 
 //
 // Compile device code in b.hip to code object for gfx803.
@@ -173,18 +173,18 @@
 // NEW-SAME: "--image=file=[[OBJ_DEV_B_803]],triple=amdgcn-amd-amdhsa,arch=gfx803,kind=hip"
 // NEW-SAME: "--image=file=[[OBJ_DEV_B_900]],triple=amdgcn-amd-amdhsa,arch=gfx900,kind=hip"
 
+// NEW: [[WRAPPER:".*clang-linker-wrapper]]"
+// NEW-SAME: "--emit-fatbin-only"
+// NEW-SAME: "-o" "[[HIPFB_B:.*.hipfb]]" "[[PACKAGE_B]]"
+
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // OLD-SAME: {{.*}} "-fcuda-include-gpubinary" "[[BUNDLE_B]]"
-// NEW-SAME: {{.*}} "-fembed-offload-object=[[PACKAGE_B]]"
-// OLD-SAME: {{.*}} "-o" [[B_OBJ_HOST:".*o"]] "-x" "hip"
-// NEW-SAME: {{.*}} "-o" [[B_OBJ_HOST_TMP:".*o"]] "-x" "hip"
+// NEW-SAME: {{.*}} "-fcuda-include-gpubinary" "[[HIPFB_B]]"
+// CHECK-SAME: {{.*}} "-o" [[B_OBJ_HOST:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
-
-// NEW: [[WRAPPER:".*clang-linker-wrapper]]" {{.*}}"--host-triple=x86_64-unknown-linux-gnu"
-// NEW:   "--linker-path={{.*}}" "-o" [[B_OBJ_HOST:".*o"]] [[B_OBJ_HOST_TMP]] "-r"
 
 //
 // Link host objects.
@@ -214,3 +214,10 @@
 // AMDGCNSPIRV: {{".*clang-offload-bundler.*"}} "-type=o"
 // AMDGCNSPIRV-SAME: "-targets={{.*}}hipv4-spirv64-amd-amdhsa--amdgcnspirv,hipv4-amdgcn-amd-amdhsa--gfx900"
 // AMDGCNSPIRV-SAME: "-input=[[AMDGCNSPV_CO]]" "-input=[[GFX900_CO]]"
+
+// Check verbose printing with the new driver.
+// RUN: %clang -### --target=x86_64-linux-gnu -fno-gpu-rdc -nogpulib -nogpuinc \
+// RUN:   --offload-new-driver --offload-arch=gfx908 -v %s 2>&1 | FileCheck %s --check-prefix=VERBOSE
+// VERBOSE: clang-linker-wrapper
+// VERBOSE-NOT: --device-compiler=amdgcn-amd-amdhsa=-v {{.*}}-o {{.*}}.hipfb
+// VERBOSE-NOT: --wrapper-verbose {{.*}}-o {{.*}}.hipfb

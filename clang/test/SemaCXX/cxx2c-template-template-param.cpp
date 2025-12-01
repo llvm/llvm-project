@@ -350,3 +350,87 @@ template <A<concept missing<int>> T> // expected-error {{expected expression}} \
                                      // expected-error {{expected unqualified-id}}
 auto f();
 }
+
+namespace concept_arg_normalization {
+
+template <typename T,
+          template <typename...> concept C1>
+concept one = (C1<T>); // #concept-arg-one
+
+template <typename T>
+concept A = true; // #concept-arg-A
+
+template <typename T>
+concept BetterA = A<T> && true;
+
+template <typename T>
+concept B = true; // #concept-arg-B
+
+template <typename T>
+concept False = false; // #concept-arg-False
+
+template <typename T>
+requires one<T, A>
+void f1(T){} // #concept-arg-f1-1
+
+template <typename T>
+requires one<T, B>
+void f1(T){} // #concept-arg-f1-2
+
+template <typename T>
+requires one<T, A>
+void f2(T){}
+
+template <typename T>
+requires one<T, BetterA>
+void f2(T){}
+
+
+template <template <typename> concept CT>
+requires one<int, A>
+void f3(){} // #concept-arg-f3-1
+
+template <template <typename> concept CT>
+requires one<int, CT>
+void f3(){} // #concept-arg-f3-2
+
+template <typename T>
+requires one<T, False> void f4(T){} // #concept-arg-f4
+
+
+void test() {
+    f1(0);
+    // expected-error@-1 {{call to 'f1' is ambiguous}}
+    // expected-note@#concept-arg-f1-1{{candidate function [with T = int]}}
+    // expected-note@#concept-arg-f1-2{{candidate function [with T = int]}}
+    // expected-note@#concept-arg-A {{similar constraint expressions not considered equivalent}}
+    // expected-note@#concept-arg-B {{similar constraint expression here}}
+    f2(0);
+
+    f3<BetterA>();
+    // expected-error@-1 {{call to 'f3' is ambiguous}}
+    // expected-note@#concept-arg-f3-1 {{candidate function [with CT = concept_arg_normalization::BetterA]}}
+    // expected-note@#concept-arg-f3-2 {{candidate function [with CT = concept_arg_normalization::BetterA]}}
+
+static_assert(one<int, A>);
+static_assert(one<int, False>);
+// expected-error@-1 {{static assertion failed}} \
+// expected-note@-1 {{because 'one<int, False>' evaluated to false}}
+// expected-note@#concept-arg-one {{because 'int' does not satisfy 'False'}}
+// expected-note@#concept-arg-False {{because 'false' evaluated to false}}
+
+f4(0);
+// expected-error@-1 {{no matching function for call to 'f4'}}
+// expected-note@#concept-arg-f4 {{candidate template ignored: constraints not satisfied [with T = int]}}
+// expected-note@#concept-arg-f4 {{because 'one<int, False>'}}
+// expected-note@#concept-arg-one {{because 'int' does not satisfy 'False'}}
+// expected-note@#concept-arg-False {{because 'false' evaluated to false}}
+
+}
+
+template <typename T, template <typename...> concept C1>
+concept TestBinary = T::a || C1<T>;
+static_assert(TestBinary<int, A>);
+
+
+}

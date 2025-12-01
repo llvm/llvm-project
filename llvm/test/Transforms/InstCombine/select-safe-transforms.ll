@@ -58,15 +58,15 @@ define i1 @cond_eq_or_const(i8 %X, i8 %Y) !prof !0 {
   ret i1 %res
 }
 
-define i1 @xor_and(i1 %c, i32 %X, i32 %Y) {
+define i1 @xor_and(i1 %c, i32 %X, i32 %Y) !prof !0 {
 ; CHECK-LABEL: @xor_and(
 ; CHECK-NEXT:    [[COMP:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_C]], i1 true, i1 [[COMP]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_C]], i1 true, i1 [[COMP]], !prof [[PROF2:![0-9]+]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %comp = icmp ult i32 %X, %Y
-  %sel = select i1 %c, i1 %comp, i1 false
+  %sel = select i1 %c, i1 %comp, i1 false, !prof !1
   %res = xor i1 %sel, true
   ret i1 %res
 }
@@ -97,15 +97,15 @@ define <2 x i1> @xor_and3(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
   ret <2 x i1> %res
 }
 
-define i1 @xor_or(i1 %c, i32 %X, i32 %Y) {
+define i1 @xor_or(i1 %c, i32 %X, i32 %Y) !prof !0 {
 ; CHECK-LABEL: @xor_or(
 ; CHECK-NEXT:    [[COMP:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_C]], i1 [[COMP]], i1 false
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_C]], i1 [[COMP]], i1 false, !prof [[PROF2]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %comp = icmp ult i32 %X, %Y
-  %sel = select i1 %c, i1 true, i1 %comp
+  %sel = select i1 %c, i1 true, i1 %comp, !prof !1
   %res = xor i1 %sel, true
   ret i1 %res
 }
@@ -256,27 +256,27 @@ define <2 x i1> @not_logical_or2(i1 %b, <2 x i32> %a) {
   ret <2 x i1> %and
 }
 
-define i1 @bools_logical_commute0(i1 %a, i1 %b, i1 %c) {
+define i1 @bools_logical_commute0(i1 %a, i1 %b, i1 %c) !prof !0 {
 ; CHECK-LABEL: @bools_logical_commute0(
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]], !prof [[PROF2]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %c, -1
-  %and1 = select i1 %not, i1 %a, i1 false
-  %and2 = select i1 %c, i1 %b, i1 false
-  %or = select i1 %and1, i1 true, i1 %and2
+  %and1 = select i1 %not, i1 %a, i1 false, !prof!1
+  %and2 = select i1 %c, i1 %b, i1 false, !prof !2
+  %or = select i1 %and1, i1 true, i1 %and2, !prof !3
   ret i1 %or
 }
 
-define i1 @bools_logical_commute0_and1(i1 %a, i1 %b, i1 %c) {
+define i1 @bools_logical_commute0_and1(i1 %a, i1 %b, i1 %c) !prof !0 {
 ; CHECK-LABEL: @bools_logical_commute0_and1(
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]], !prof [[PROF1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %c, -1
   %and1 = and i1 %not, %a
-  %and2 = select i1 %c, i1 %b, i1 false
-  %or = select i1 %and1, i1 true, i1 %and2
+  %and2 = select i1 %c, i1 %b, i1 false, !prof !1
+  %or = select i1 %and1, i1 true, i1 %and2, !prof !2
   ret i1 %or
 }
 
@@ -292,15 +292,15 @@ define i1 @bools_logical_commute0_and2(i1 %a, i1 %b, i1 %c) {
   ret i1 %or
 }
 
-define i1 @bools_logical_commute0_and1_and2(i1 %a, i1 %b, i1 %c) {
+define i1 @bools_logical_commute0_and1_and2(i1 %a, i1 %b, i1 %c) !prof !0 {
 ; CHECK-LABEL: @bools_logical_commute0_and1_and2(
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[B:%.*]], i1 [[A:%.*]], !prof [[PROF3:![0-9]+]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %c, -1
   %and1 = and i1 %not, %a
   %and2 = and i1 %c, %b
-  %or = select i1 %and1, i1 true, i1 %and2
+  %or = select i1 %and1, i1 true, i1 %and2, !prof !1
   ret i1 %or
 }
 
@@ -457,27 +457,27 @@ define i1 @bools_logical_commute3_and1_and2(i1 %b, i1 %c) {
   ret i1 %or
 }
 
-define i1 @bools2_logical_commute0(i1 %a, i1 %b, i1 %c) {
+define i1 @bools2_logical_commute0(i1 %a, i1 %b, i1 %c) !prof !0 {
 ; CHECK-LABEL: @bools2_logical_commute0(
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]], !prof [[PROF1]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %c, -1
-  %and1 = select i1 %c, i1 %a, i1 false
-  %and2 = select i1 %not, i1 %b, i1 false
-  %or = select i1 %and1, i1 true, i1 %and2
+  %and1 = select i1 %c, i1 %a, i1 false, !prof !1
+  %and2 = select i1 %not, i1 %b, i1 false, !prof !2
+  %or = select i1 %and1, i1 true, i1 %and2, !prof !3
   ret i1 %or
 }
 
-define i1 @bools2_logical_commute0_and1(i1 %a, i1 %b, i1 %c) {
+define i1 @bools2_logical_commute0_and1(i1 %a, i1 %b, i1 %c) !prof !0 {
 ; CHECK-LABEL: @bools2_logical_commute0_and1(
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]], !prof [[PROF2]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %c, -1
   %and1 = and i1 %c, %a
-  %and2 = select i1 %not, i1 %b, i1 false
-  %or = select i1 %and1, i1 true, i1 %and2
+  %and2 = select i1 %not, i1 %b, i1 false, !prof !1
+  %or = select i1 %and1, i1 true, i1 %and2, !prof !2
   ret i1 %or
 }
 
@@ -493,15 +493,15 @@ define i1 @bools2_logical_commute0_and2(i1 %a, i1 %b, i1 %c) {
   ret i1 %or
 }
 
-define i1 @bools2_logical_commute0_and1_and2(i1 %a, i1 %b, i1 %c) {
+define i1 @bools2_logical_commute0_and1_and2(i1 %a, i1 %b, i1 %c) !prof !0 {
 ; CHECK-LABEL: @bools2_logical_commute0_and1_and2(
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]], !prof [[PROF3]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %c, -1
   %and1 = and i1 %c, %a
   %and2 = and i1 %not, %b
-  %or = select i1 %and1, i1 true, i1 %and2
+  %or = select i1 %and1, i1 true, i1 %and2, !prof !1
   ret i1 %or
 }
 
@@ -799,7 +799,11 @@ define <2 x i1> @not_logical_and2(i1 %b, <2 x i32> %a) {
 
 !0 = !{!"function_entry_count", i64 1000}
 !1 = !{!"branch_weights", i32 2, i32 3}
+!2 = !{!"branch_weights", i32 5, i32 7}
+!3 = !{!"branch_weights", i32 11, i32 13}
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 2, i32 3}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 3, i32 2}
+; CHECK: [[PROF3]] = !{!"unknown", !"instcombine"}
 ;.

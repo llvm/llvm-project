@@ -897,9 +897,9 @@ class HTMLGenerator : public Generator {
 public:
   static const char *Format;
 
-  llvm::Error generateDocs(StringRef RootDir,
-                           llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                           const ClangDocContext &CDCtx) override;
+  llvm::Error generateDocumentation(
+      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+      const ClangDocContext &CDCtx, std::string DirName) override;
   llvm::Error createResources(ClangDocContext &CDCtx) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
@@ -907,10 +907,9 @@ public:
 
 const char *HTMLGenerator::Format = "html";
 
-llvm::Error
-HTMLGenerator::generateDocs(StringRef RootDir,
-                            llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                            const ClangDocContext &CDCtx) {
+llvm::Error HTMLGenerator::generateDocumentation(
+    StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+    const ClangDocContext &CDCtx, std::string DirName) {
   // Track which directories we already tried to create.
   llvm::StringSet<> CreatedDirs;
 

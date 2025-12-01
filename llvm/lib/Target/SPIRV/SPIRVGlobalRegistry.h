@@ -464,7 +464,7 @@ private:
   SPIRVType *getOpTypeForwardPointer(SPIRV::StorageClass::StorageClass SC,
                                      MachineIRBuilder &MIRBuilder);
 
-  SPIRVType *getOpTypeFunction(SPIRVType *RetType,
+  SPIRVType *getOpTypeFunction(const FunctionType *Ty, SPIRVType *RetType,
                                const SmallVectorImpl<SPIRVType *> &ArgTypes,
                                MachineIRBuilder &MIRBuilder);
 
@@ -548,14 +548,12 @@ public:
                                 MachineIRBuilder &MIRBuilder);
   Register getOrCreateUndef(MachineInstr &I, SPIRVType *SpvType,
                             const SPIRVInstrInfo &TII);
-  Register buildGlobalVariable(Register Reg, SPIRVType *BaseType,
-                               StringRef Name, const GlobalValue *GV,
-                               SPIRV::StorageClass::StorageClass Storage,
-                               const MachineInstr *Init, bool IsConst,
-                               bool HasLinkageTy,
-                               SPIRV::LinkageType::LinkageType LinkageType,
-                               MachineIRBuilder &MIRBuilder,
-                               bool IsInstSelector);
+  Register buildGlobalVariable(
+      Register Reg, SPIRVType *BaseType, StringRef Name, const GlobalValue *GV,
+      SPIRV::StorageClass::StorageClass Storage, const MachineInstr *Init,
+      bool IsConst,
+      const std::optional<SPIRV::LinkageType::LinkageType> &LinkageType,
+      MachineIRBuilder &MIRBuilder, bool IsInstSelector);
   Register getOrCreateGlobalVariableWithBinding(const SPIRVType *VarType,
                                                 uint32_t Set, uint32_t Binding,
                                                 StringRef Name,
@@ -612,6 +610,8 @@ public:
                                          Type *ElemType,
                                          SPIRV::StorageClass::StorageClass SC,
                                          bool IsWritable, bool EmitIr = false);
+
+  SPIRVType *getOrCreatePaddingType(MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOrCreateLayoutType(MachineIRBuilder &MIRBuilder,
                                    const TargetExtType *T, bool EmitIr = false);

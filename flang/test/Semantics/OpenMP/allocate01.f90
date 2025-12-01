@@ -15,9 +15,9 @@ use omp_lib
     integer :: a, b
     real, dimension (:,:), allocatable :: darray
 
-    !ERROR: List items must be declared in the same scoping unit in which the ALLOCATE directive appears
+    !ERROR: A list item on a declarative ALLOCATE must be declared in the same scope in which the directive appears
     !$omp allocate(y)
-        print *, a
+    print *, a
 
     !WARNING: The executable form of the OpenMP ALLOCATE directive has been deprecated, please use ALLOCATORS instead [-Wopen-mp-usage]
     !$omp allocate(x) allocator(omp_default_mem_alloc)

@@ -84,12 +84,12 @@ void StaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *AssertExprRoot =
       Result.Nodes.getNodeAs<BinaryOperator>("assertExprRoot");
   const auto *CastExpr = Result.Nodes.getNodeAs<CStyleCastExpr>("castExpr");
-  SourceLocation AssertExpansionLoc = CondStmt->getBeginLoc();
+  const SourceLocation AssertExpansionLoc = CondStmt->getBeginLoc();
 
   if (!AssertExpansionLoc.isValid() || !AssertExpansionLoc.isMacroID())
     return;
 
-  StringRef MacroName =
+  const StringRef MacroName =
       Lexer::getImmediateMacroName(AssertExpansionLoc, SM, Opts);
 
   if (MacroName != "assert" || Condition->isValueDependent() ||
@@ -99,19 +99,20 @@ void StaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
 
   // False literal is not the result of macro expansion.
   if (IsAlwaysFalse && (!CastExpr || CastExpr->getType()->isPointerType())) {
-    SourceLocation FalseLiteralLoc =
+    const SourceLocation FalseLiteralLoc =
         SM.getImmediateSpellingLoc(IsAlwaysFalse->getExprLoc());
     if (!FalseLiteralLoc.isMacroID())
       return;
 
-    StringRef FalseMacroName =
+    const StringRef FalseMacroName =
         Lexer::getImmediateMacroName(FalseLiteralLoc, SM, Opts);
     if (FalseMacroName.compare_insensitive("false") == 0 ||
         FalseMacroName.compare_insensitive("null") == 0)
       return;
   }
 
-  SourceLocation AssertLoc = SM.getImmediateMacroCallerLoc(AssertExpansionLoc);
+  const SourceLocation AssertLoc =
+      SM.getImmediateMacroCallerLoc(AssertExpansionLoc);
 
   SmallVector<FixItHint, 4> FixItHints;
   SourceLocation LastParenLoc;

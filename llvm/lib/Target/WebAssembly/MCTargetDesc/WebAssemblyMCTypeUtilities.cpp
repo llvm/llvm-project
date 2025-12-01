@@ -23,7 +23,7 @@ std::optional<wasm::ValType> WebAssembly::parseType(StringRef Type) {
       .Case("i64", wasm::ValType::I64)
       .Case("f32", wasm::ValType::F32)
       .Case("f64", wasm::ValType::F64)
-      .Cases("v128", "i8x16", "i16x8", "i32x4", "i64x2", "f32x4", "f64x2",
+      .Cases({"v128", "i8x16", "i16x8", "i32x4", "i64x2", "f32x4", "f64x2"},
              wasm::ValType::V128)
       .Case("funcref", wasm::ValType::FUNCREF)
       .Case("externref", wasm::ValType::EXTERNREF)

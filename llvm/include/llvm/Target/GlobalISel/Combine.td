@@ -484,13 +484,6 @@ def propagate_undef_shuffle_mask: GICombineRule<
          [{ return Helper.matchUndefShuffleVectorMask(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
-// Replace a G_SHUFFLE_VECTOR with a G_EXTRACT_VECTOR_ELT.
-def shuffle_to_extract: GICombineRule<
-  (defs root:$root),
-  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
-         [{ return Helper.matchShuffleToExtract(*${root}); }]),
-  (apply [{ Helper.applyShuffleToExtract(*${root}); }])>;
-
   // Replace an insert/extract element of an out of bounds index with undef.
   def insert_extract_vec_elt_out_of_bounds : GICombineRule<
   (defs root:$root),
@@ -695,6 +688,7 @@ def constant_fold_fabs : constant_fold_unary_fp_op_rule<G_FABS>;
 def constant_fold_fsqrt : constant_fold_unary_fp_op_rule<G_FSQRT>;
 def constant_fold_flog2 : constant_fold_unary_fp_op_rule<G_FLOG2>;
 def constant_fold_fptrunc : constant_fold_unary_fp_op_rule<G_FPTRUNC>;
+def constant_fold_fpext : constant_fold_unary_fp_op_rule<G_FPEXT>;
 
 // Fold constant zero int to fp conversions.
 class itof_const_zero_fold_rule<Instruction opcode> : GICombineRule <
@@ -713,6 +707,7 @@ def constant_fold_fp_ops : GICombineGroup<[
   constant_fold_fsqrt,
   constant_fold_flog2,
   constant_fold_fptrunc,
+  constant_fold_fpext,
   itof_const_zero_fold_si,
   itof_const_zero_fold_ui
 ]>;
@@ -926,6 +921,15 @@ def merge_of_x_and_zero : GICombineRule <
          [{ return Helper.matchMergeXAndZero(*${MI}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${MI}, ${matchinfo}); }])>;
 
+// Transform build_vector(unmerge(src, 0), ... unmerge(src, n), undef, ..., undef)
+// => concat_vectors(src, undef)
+def combine_build_unmerge : GICombineRule<
+  (defs root:$root, register_matchinfo:$unmergeSrc),
+  (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
+         [{ return Helper.matchCombineBuildUnmerge(*${root}, MRI, ${unmergeSrc}); }]),
+  (apply [{ Helper.applyCombineBuildUnmerge(*${root}, MRI, B, ${unmergeSrc}); }])
+>;
+
 def merge_combines: GICombineGroup<[
   unmerge_anyext_build_vector,
   unmerge_merge,
@@ -935,7 +939,8 @@ def merge_combines: GICombineGroup<[
   unmerge_dead_to_trunc,
   unmerge_zext_to_zext,
   merge_of_x_and_undef,
-  merge_of_x_and_zero
+  merge_of_x_and_zero,
+  combine_build_unmerge
 ]>;
 
 // Under certain conditions, transform:
@@ -1018,9 +1023,17 @@ def extract_vec_elt_combines : GICombineGroup<[
 def funnel_shift_from_or_shift : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_OR):$root,
-    [{ return Helper.matchOrShiftToFunnelShift(*${root}, ${info}); }]),
+    [{ return Helper.matchOrShiftToFunnelShift(*${root}, false, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])
 >;
+
+def funnel_shift_from_or_shift_constants_are_legal : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_OR):$root,
+    [{ return Helper.matchOrShiftToFunnelShift(*${root}, true, ${info}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])
+>;
+
 
 def funnel_shift_to_rotate : GICombineRule<
   (defs root:$root),
@@ -1672,8 +1685,7 @@ def combine_shuffle_concat : GICombineRule<
 // Combines shuffles of vector into build_vector
 def combine_shuffle_vector_to_build_vector : GICombineRule<
   (defs root:$root),
-  (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root,
-    [{ return Helper.matchCombineShuffleToBuildVector(*${root}); }]),
+  (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
   (apply [{ Helper.applyCombineShuffleToBuildVector(*${root}); }])>;
 
 def insert_vector_element_idx_undef : GICombineRule<

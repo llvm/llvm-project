@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/Config/llvm-config.h"
@@ -45,32 +46,30 @@
 using namespace llvm;
 using namespace opt_tool;
 
-namespace llvm {
-cl::opt<bool> DebugifyEach(
+cl::opt<bool> llvm::DebugifyEach(
     "debugify-each",
     cl::desc("Start each pass with debugify and end it with check-debugify"));
 
-cl::opt<std::string>
-    DebugifyExport("debugify-export",
-                   cl::desc("Export per-pass debugify statistics to this file"),
-                   cl::value_desc("filename"));
+cl::opt<std::string> llvm::DebugifyExport(
+    "debugify-export",
+    cl::desc("Export per-pass debugify statistics to this file"),
+    cl::value_desc("filename"));
 
-cl::opt<bool> VerifyEachDebugInfoPreserve(
+cl::opt<bool> llvm::VerifyEachDebugInfoPreserve(
     "verify-each-debuginfo-preserve",
     cl::desc("Start each pass with collecting and end it with checking of "
              "debug info preservation."));
 
+cl::opt<std::string> llvm::VerifyDIPreserveExport(
+    "verify-di-preserve-export",
+    cl::desc("Export debug info preservation failures into "
+             "specified (JSON) file (should be abs path as we use"
+             " append mode to insert new JSON objects)"),
+    cl::value_desc("filename"), cl::init(""));
+
 static cl::opt<bool> EnableLoopFusion("enable-loopfusion", cl::init(false),
                                       cl::Hidden,
                                       cl::desc("Enable the LoopFuse Pass"));
-cl::opt<std::string>
-    VerifyDIPreserveExport("verify-di-preserve-export",
-                   cl::desc("Export debug info preservation failures into "
-                            "specified (JSON) file (should be abs path as we use"
-                            " append mode to insert new JSON objects)"),
-                   cl::value_desc("filename"), cl::init(""));
-
-} // namespace llvm
 
 enum class DebugLogging { None, Normal, Verbose, Quiet };
 
@@ -353,10 +352,10 @@ static void registerEPCallbacks(PassBuilder &PB) {
 
 bool llvm::runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
-    ToolOutputFile *Out, ToolOutputFile *ThinLTOLinkOut,
-    ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins,
-    ArrayRef<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks,
+    RTLIB::RuntimeLibcallsInfo &RTLCI, ToolOutputFile *Out,
+    ToolOutputFile *ThinLTOLinkOut, ToolOutputFile *OptRemarkFile,
+    StringRef PassPipeline, ArrayRef<PassPlugin> PassPlugins,
+    ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks,
     OutputKind OK, VerifierKind VK, bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
     bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
@@ -418,6 +417,7 @@ bool llvm::runPassPipeline(
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
+  MAM.registerPass([&] { return RuntimeLibraryAnalysis(std::move(RTLCI)); });
 
   PassInstrumentationCallbacks PIC;
   PrintPassOptions PrintPassOpts;

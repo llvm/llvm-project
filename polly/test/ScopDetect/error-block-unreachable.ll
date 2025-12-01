@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s
 
 ; Verify that the scop detection does not crash on inputs with unreachable
 ; blocks. Earlier we crashed when detecting error blocks.

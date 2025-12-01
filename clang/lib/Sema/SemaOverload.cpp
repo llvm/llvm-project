@@ -1825,20 +1825,34 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
     return ICS;
   }
 
-  if (S.getLangOpts().HLSL && ToType->isHLSLAttributedResourceType() &&
-      FromType->isHLSLAttributedResourceType()) {
-    auto *ToResType = cast<HLSLAttributedResourceType>(ToType);
-    auto *FromResType = cast<HLSLAttributedResourceType>(FromType);
-    if (S.Context.hasSameUnqualifiedType(ToResType->getWrappedType(),
-                                         FromResType->getWrappedType()) &&
-        S.Context.hasSameUnqualifiedType(ToResType->getContainedType(),
-                                         FromResType->getContainedType()) &&
-        ToResType->getAttrs() == FromResType->getAttrs()) {
-      ICS.setStandard();
-      ICS.Standard.setAsIdentityConversion();
-      ICS.Standard.setFromType(FromType);
-      ICS.Standard.setAllToTypes(ToType);
-      return ICS;
+  if (S.getLangOpts().HLSL) {
+    // Handle conversion of the HLSL resource types.
+    const Type *FromTy = FromType->getUnqualifiedDesugaredType();
+    if (FromTy->isHLSLAttributedResourceType()) {
+      // Attributed resource types can convert to other attributed
+      // resource types with the same attributes and contained types,
+      // or to __hlsl_resource_t without any attributes.
+      bool CanConvert = false;
+      const Type *ToTy = ToType->getUnqualifiedDesugaredType();
+      if (ToTy->isHLSLAttributedResourceType()) {
+        auto *ToResType = cast<HLSLAttributedResourceType>(ToTy);
+        auto *FromResType = cast<HLSLAttributedResourceType>(FromTy);
+        if (S.Context.hasSameUnqualifiedType(ToResType->getWrappedType(),
+                                             FromResType->getWrappedType()) &&
+            S.Context.hasSameUnqualifiedType(ToResType->getContainedType(),
+                                             FromResType->getContainedType()) &&
+            ToResType->getAttrs() == FromResType->getAttrs())
+          CanConvert = true;
+      } else if (ToTy->isHLSLResourceType()) {
+        CanConvert = true;
+      }
+      if (CanConvert) {
+        ICS.setStandard();
+        ICS.Standard.setAsIdentityConversion();
+        ICS.Standard.setFromType(FromType);
+        ICS.Standard.setAllToTypes(ToType);
+        return ICS;
+      }
     }
   }
 
@@ -2532,15 +2546,12 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
 
   SCS.setToType(2, FromType);
 
-  // If we have not converted the argument type to the parameter type,
-  // this is a bad conversion sequence, unless we're resolving an overload in C.
-  //
-  // Permit conversions from a function without `cfi_unchecked_callee` to a
-  // function with `cfi_unchecked_callee`.
-  if (CanonFrom == CanonTo || S.AddingCFIUncheckedCallee(CanonFrom, CanonTo))
+  if (CanonFrom == CanonTo)
     return true;
 
-  if ((S.getLangOpts().CPlusPlus || !InOverloadResolution))
+  // If we have not converted the argument type to the parameter type,
+  // this is a bad conversion sequence, unless we're resolving an overload in C.
+  if (S.getLangOpts().CPlusPlus || !InOverloadResolution)
     return false;
 
   ExprResult ER = ExprResult{From};
@@ -2594,7 +2605,7 @@ IsTransparentUnionStandardConversion(Sema &S, Expr* From,
   if (!UT)
     return false;
   // The field to initialize within the transparent union.
-  const RecordDecl *UD = UT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *UD = UT->getDecl()->getDefinitionOrSelf();
   if (!UD->hasAttr<TransparentUnionAttr>())
     return false;
   // It's compatible if the expression matches any of the fields.
@@ -3973,7 +3984,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     if (!S.isCompleteType(From->getExprLoc(), ToType)) {
       // We're not going to find any constructors.
     } else if (auto *ToRecordDecl =
-                   dyn_cast<CXXRecordDecl>(ToRecordType->getOriginalDecl())) {
+                   dyn_cast<CXXRecordDecl>(ToRecordType->getDecl())) {
       ToRecordDecl = ToRecordDecl->getDefinitionOrSelf();
 
       Expr **Args = &From;
@@ -4048,7 +4059,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
   } else if (const RecordType *FromRecordType =
                  From->getType()->getAsCanonical<RecordType>()) {
     if (auto *FromRecordDecl =
-            dyn_cast<CXXRecordDecl>(FromRecordType->getOriginalDecl())) {
+            dyn_cast<CXXRecordDecl>(FromRecordType->getDecl())) {
       FromRecordDecl = FromRecordDecl->getDefinitionOrSelf();
       // Add all of the conversion functions as candidates.
       const auto &Conversions = FromRecordDecl->getVisibleConversionFunctions();
@@ -6840,7 +6851,7 @@ ExprResult Sema::PerformContextualImplicitConversion(
   UnresolvedSet<4>
       ViableConversions; // These are *potentially* viable in C++1y.
   UnresolvedSet<4> ExplicitConversions;
-  const auto &Conversions = cast<CXXRecordDecl>(RecordTy->getOriginalDecl())
+  const auto &Conversions = cast<CXXRecordDecl>(RecordTy->getDecl())
                                 ->getDefinitionOrSelf()
                                 ->getVisibleConversionFunctions();
 
@@ -10194,9 +10205,7 @@ public:
 
       if (S.getLangOpts().CPlusPlus11) {
         for (QualType EnumTy : CandidateTypes[ArgIdx].enumeration_types()) {
-          if (!EnumTy->castAsCanonical<EnumType>()
-                   ->getOriginalDecl()
-                   ->isScoped())
+          if (!EnumTy->castAsCanonical<EnumType>()->getDecl()->isScoped())
             continue;
 
           if (!AddedTypes.insert(S.Context.getCanonicalType(EnumTy)).second)
@@ -13210,7 +13219,10 @@ void OverloadCandidateSet::NoteCandidates(
 
   auto Cands = CompleteCandidates(S, OCD, Args, OpLoc, Filter);
 
-  S.Diag(PD.first, PD.second, shouldDeferDiags(S, Args, OpLoc));
+  {
+    Sema::DeferDiagsRAII RAII{S, shouldDeferDiags(S, Args, OpLoc)};
+    S.Diag(PD.first, PD.second);
+  }
 
   // In WebAssembly we don't want to emit further diagnostics if a table is
   // passed as an argument to a function.
@@ -13273,10 +13285,10 @@ void OverloadCandidateSet::NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
   // inform the future value of S.Diags.getNumOverloadCandidatesToShow().
   S.Diags.overloadCandidatesShown(CandsShown);
 
-  if (I != E)
-    S.Diag(OpLoc, diag::note_ovl_too_many_candidates,
-           shouldDeferDiags(S, Args, OpLoc))
-        << int(E - I);
+  if (I != E) {
+    Sema::DeferDiagsRAII RAII{S, shouldDeferDiags(S, Args, OpLoc)};
+    S.Diag(OpLoc, diag::note_ovl_too_many_candidates) << int(E - I);
+  }
 }
 
 static SourceLocation

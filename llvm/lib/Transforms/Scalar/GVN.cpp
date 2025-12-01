@@ -170,9 +170,7 @@ struct llvm::GVNPass::Expression {
   }
 };
 
-namespace llvm {
-
-template <> struct DenseMapInfo<GVNPass::Expression> {
+template <> struct llvm::DenseMapInfo<GVNPass::Expression> {
   static inline GVNPass::Expression getEmptyKey() { return ~0U; }
   static inline GVNPass::Expression getTombstoneKey() { return ~1U; }
 
@@ -187,8 +185,6 @@ template <> struct DenseMapInfo<GVNPass::Expression> {
     return LHS == RHS;
   }
 };
-
-} // end namespace llvm
 
 /// Represents a particular available value that we know how to materialize.
 /// Materialization of an AvailableValue never fails.  An AvailableValue is
@@ -2160,6 +2156,9 @@ bool GVNPass::processLoad(LoadInst *L) {
   if (!L->isUnordered())
     return false;
 
+  if (L->getType()->isTokenLikeTy())
+    return false;
+
   if (L->use_empty()) {
     salvageAndRemoveInstruction(L);
     return true;
@@ -2213,11 +2212,11 @@ bool GVNPass::processMaskedLoad(IntrinsicInst *I) {
   if (!DepInst || !Dep.isLocal() || !Dep.isDef())
     return false;
 
-  Value *Mask = I->getOperand(2);
-  Value *Passthrough = I->getOperand(3);
+  Value *Mask = I->getOperand(1);
+  Value *Passthrough = I->getOperand(2);
   Value *StoreVal;
-  if (!match(DepInst, m_MaskedStore(m_Value(StoreVal), m_Value(), m_Value(),
-                                    m_Specific(Mask))) ||
+  if (!match(DepInst,
+             m_MaskedStore(m_Value(StoreVal), m_Value(), m_Specific(Mask))) ||
       StoreVal->getType() != I->getType())
     return false;
 

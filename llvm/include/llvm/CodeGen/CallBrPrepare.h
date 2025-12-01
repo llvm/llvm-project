@@ -15,7 +15,7 @@ namespace llvm {
 
 class CallBrPreparePass : public PassInfoMixin<CallBrPreparePass> {
 public:
-  PreservedAnalyses run(Function &Fn, FunctionAnalysisManager &FAM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

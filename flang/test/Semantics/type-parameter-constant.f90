@@ -10,6 +10,6 @@ end type
    !ERROR: Value of KIND type parameter 'r' must be constant
    !WARNING: specification expression refers to local object 'six' (initialized and saved) [-Wsaved-local-in-spec-expr]
    !WARNING: specification expression refers to local object 'twenty_three' (initialized and saved) [-Wsaved-local-in-spec-expr]
-   type(a(six, twenty_three)) :: a2 
+   type(a(six, twenty_three)) :: a2
    print *, a1%data%kind
 end

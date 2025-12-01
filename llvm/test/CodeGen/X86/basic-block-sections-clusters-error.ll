@@ -69,6 +69,20 @@
 ; RUN: echo 'g 0:4,1:2:3' >> %t15
 ; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t15 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR15
 ; CHECK-ERROR15: LLVM ERROR: invalid profile {{.*}} at line 4: unsigned integer expected: '2:3'
+; RUN: echo 'v1' > %t16
+; RUN: echo 'f dummy1' >> %t16
+; RUN: echo 'c 0 1' >> %t16
+; RUN: echo 'g 0:4,1:2' >> %t16
+; RUN: echo 'h a:1111111111111111 1:ffffffffffffffff' >> %t16
+; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t16 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR16
+; CHECK-ERROR16: LLVM ERROR: invalid profile {{.*}} at line 5: unsigned integer expected: 'a'
+; RUN: echo 'v1' > %t17
+; RUN: echo 'f dummy1' >> %t17
+; RUN: echo 'c 0 1' >> %t17
+; RUN: echo 'g 0:4,1:2' >> %t17
+; RUN: echo 'h 0:111111111111111g 1:ffffffffffffffff' >> %t17
+; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t17 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR17
+; CHECK-ERROR17: LLVM ERROR: invalid profile {{.*}} at line 5: unsigned integer expected in hex format: '111111111111111g'
 
 
 define i32 @dummy1(i32 %x, i32 %y, i32 %z) {

@@ -243,6 +243,25 @@ public:
   }
 };
 
+/// The dx.Padding target extension type
+///
+/// `target("dx.Padding", NumBytes)`
+class PaddingExtType : public TargetExtType {
+public:
+  PaddingExtType() = delete;
+  PaddingExtType(const PaddingExtType &) = delete;
+  PaddingExtType &operator=(const PaddingExtType &) = delete;
+
+  unsigned getNumBytes() const { return getIntParameter(0); }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.Padding";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
 //===----------------------------------------------------------------------===//
 
 class ResourceTypeInfo {
@@ -274,6 +293,7 @@ public:
 
   struct TypedInfo {
     dxil::ElementType ElementTy;
+    dxil::ElementType DXILStorageTy;
     uint32_t ElementCount;
 
     bool operator==(const TypedInfo &RHS) const {

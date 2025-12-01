@@ -1183,3 +1183,31 @@ namespace VirtualFunctionCallThroughArrayElem {
   static_assert(a[2][3].foo()); // both-error {{not an integral constant expression}} \
                                 // both-note {{virtual function called on object 'a[2][3]' whose dynamic type is not constant}}
 }
+
+namespace NonPureVirtualCall {
+  struct A {
+    constexpr virtual void call(int) = 0;
+    constexpr void call2() { call(0); }
+  };
+
+  struct B : A {
+    constexpr void call(int) override {}
+  };
+
+  consteval void check() {
+    B b;
+    b.call2();
+  }
+
+  int main() { check(); }
+}
+
+namespace DyamicCast {
+  struct X {
+    virtual constexpr ~X() {}
+  };
+  struct Y : X {};
+  constexpr Y y;
+  constexpr const X *p = &y;
+  constexpr const Y *q = dynamic_cast<const Y*>(p);
+}

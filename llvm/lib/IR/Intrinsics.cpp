@@ -32,6 +32,7 @@
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/IntrinsicsXCore.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
@@ -601,6 +602,12 @@ bool Intrinsic::isOverloaded(ID id) {
 #undef GET_INTRINSIC_OVERLOAD_TABLE
 }
 
+bool Intrinsic::hasPrettyPrintedArgs(ID id){
+#define GET_INTRINSIC_PRETTY_PRINT_TABLE
+#include "llvm/IR/IntrinsicImpl.inc"
+#undef GET_INTRINSIC_PRETTY_PRINT_TABLE
+}
+
 /// Table of per-target intrinsic name tables.
 #define GET_INTRINSIC_TARGET_DATA
 #include "llvm/IR/IntrinsicImpl.inc"
@@ -725,6 +732,19 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
   // There can never be multiple globals with the same name of different types,
   // because intrinsics must be a specific type.
   auto *FT = getType(M->getContext(), id, Tys);
+  Function *F = cast<Function>(
+      M->getOrInsertFunction(
+           Tys.empty() ? getName(id) : getName(id, Tys, M, FT), FT)
+          .getCallee());
+  if (F->getFunctionType() == FT)
+    return F;
+
+  // It's possible that a declaration for this intrinsic already exists with an
+  // incorrect signature, if the signature has changed, but this particular
+  // declaration has not been auto-upgraded yet. In that case, rename the
+  // invalid declaration and insert a new one with the correct signature. The
+  // invalid declaration will get upgraded later.
+  F->setName(F->getName() + ".invalid");
   return cast<Function>(
       M->getOrInsertFunction(
            Tys.empty() ? getName(id) : getName(id, Tys, M, FT), FT)
@@ -1129,3 +1149,7 @@ Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
   assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }
+
+#define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+#include "llvm/IR/IntrinsicImpl.inc"
+#undef GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS

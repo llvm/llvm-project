@@ -354,9 +354,15 @@ private:
 
 public:
   // [stringbuf.cons] constructors:
-  _LIBCPP_HIDE_FROM_ABI basic_stringbuf() : __hm_(nullptr), __mode_(ios_base::in | ios_base::out) {}
+  _LIBCPP_HIDE_FROM_ABI basic_stringbuf() : __hm_(nullptr), __mode_(ios_base::in | ios_base::out) {
+    // it is implementation-defined whether we initialize eback() & friends to nullptr, and libc++ doesn't
+    __init_buf_ptrs();
+  }
 
-  _LIBCPP_HIDE_FROM_ABI explicit basic_stringbuf(ios_base::openmode __wch) : __hm_(nullptr), __mode_(__wch) {}
+  _LIBCPP_HIDE_FROM_ABI explicit basic_stringbuf(ios_base::openmode __wch) : __hm_(nullptr), __mode_(__wch) {
+    // it is implementation-defined whether we initialize eback() & friends to nullptr, and libc++ doesn't
+    __init_buf_ptrs();
+  }
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_stringbuf(const string_type& __s,
                                                  ios_base::openmode __wch = ios_base::in | ios_base::out)

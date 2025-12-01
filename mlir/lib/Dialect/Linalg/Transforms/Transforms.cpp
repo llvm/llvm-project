@@ -232,10 +232,9 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
 
   // 2. Compute the permutation vector to shuffle packed shape into the shape
   // before any outer or inner permutations have been applied.
-  PackingMetadata packingMetadata = computePackingMetadata(
-      packedTensorType.getRank(), packOp.getInnerDimsPos());
+  PackingMetadata packingMetadata;
   SmallVector<int64_t> packedToStripMinedShapePerm =
-      getPackInverseDestPerm(packOp);
+      getPackInverseDestPerm(packOp, packingMetadata);
 
   // 3. Compute the stripMinedShape: this is the packed shape before any outer
   // or inner permutations have been applied.
@@ -495,13 +494,14 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
     if (failed(maybePackedDimForEachOperand))
       return failure();
     packedOperandsDims.packedDimForEachOperand = *maybePackedDimForEachOperand;
-    listOfPackedOperandsDim.pushBack(std::move(packedOperandsDims));
 
     LDBG() << "++++ After pack size #" << i << ": " << packedSizes[i];
     LDBG() << "maps: " << llvm::interleaved(indexingMaps);
     LDBG() << "iterators: " << llvm::interleaved(iteratorTypes);
     LDBG() << "packedDimForEachOperand: "
            << llvm::interleaved(packedOperandsDims.packedDimForEachOperand);
+
+    listOfPackedOperandsDim.pushBack(std::move(packedOperandsDims));
   }
 
   // Step 2. Propagate packing to all LinalgOp operands.
@@ -1134,22 +1134,42 @@ getPackUnpackRankReducedPerm(ArrayRef<int64_t> shape,
 
 LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
     linalg::PackOp packOp, PatternRewriter &rewriter) const {
-  // TODO: support the case that outer dimensions are not all 1s. A
-  // tensor.expand_shape will be generated in this case.
-  if (llvm::any_of(packOp.getAllOuterDims(),
+  if (llvm::any_of(packOp.getTiledOuterDims(),
                    [](int64_t dim) { return dim != 1; })) {
     return rewriter.notifyMatchFailure(
         packOp, "not all outer dimensions of the result are 1s");
   }
 
-  Attribute zeroIdxAttr = rewriter.getIndexAttr(0);
-  Attribute oneIdxAttr = rewriter.getIndexAttr(1);
+  ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
+  auto outerDimsPerm = packOp.getOuterDimsPerm();
+
+  // Verify that there are no:
+  //   * non-unit + un-tiled-outer-dims,
+  // that are permuted. Supporting such cases would require refining the logic
+  // that generates the Transpose Op.
+  if (!llvm::all_of(outerDimsPerm, [&innerDimsPos, &packOp](int64_t dim) {
+        static int prev = 0;
+        // Skip tiled dims - these can be permuted.
+        if (llvm::is_contained(innerDimsPos, dim))
+          return true;
+
+        // Check whether this dim has been permuted. Permuting unit dims is fine
+        // as that's effectively a no-op.
+        if (dim < prev && (packOp.getType().getShape()[prev] != 1 ||
+                           packOp.getType().getShape()[dim] != 1))
+          return false;
+
+        prev = dim;
+        return true;
+      })) {
+    return rewriter.notifyMatchFailure(
+        packOp, "At least one non-unit and un-tiled outer dim is permuted, "
+                "this is not supported ATM!");
+  }
+
   Location loc = packOp.getLoc();
 
   int64_t srcRank = packOp.getSourceRank();
-  int64_t destRank = packOp.getDestRank();
-  ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
-  int64_t numberOfTiles = innerDimsPos.size();
 
   // 1. Get the input that is going to be packed. If the input requires padding,
   // add a padding operation and return that as the input.
@@ -1160,10 +1180,13 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   //    %transposed_tile = linalg.transpose ins(%source_or_padded_source),
   //                                        outs(%init)
   // Assumptions made:
-  //  - All outer dims are 1 - the corresponding transposition order doesn't
-  //     matter, but requires all dim indices to be present.
+  //  - All tiled outer dims are 1 - the corresponding transposition order
+  //    doesn't matter, but requires all dim indices to be present.
+  //  - Un-tiled outer dims remain un-permuted.
 
-  // 2.1 Get the permutation for linalg.transpose
+  // 2.1 Get the permutation for linalg.transpose:
+  //   [ untiled-dims, inner-dims-pos ]
+  // Note, this logic assumes that the untiled dims are not permuted.
   SmallVector<int64_t> srcPermForTranspose;
   for (int64_t i = 0; i < srcRank; i++) {
     // We assume the `k` dimensions of the inner dim position, where `k` is the
@@ -1179,9 +1202,21 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   }
   srcPermForTranspose.append(innerDimsPos.begin(), innerDimsPos.end());
 
-  // 2.2 Create the init tensor for linalg.transpose with the correct shape
-  SmallVector<OpFoldResult> shapeForEmptyOp(srcRank - numberOfTiles,
-                                            oneIdxAttr);
+  // 2.2 Create the init tensor for linalg.transpose with the correct shape:
+  //    [ untiled-dims, tiled-dims ]
+  ShapedType inputTy = cast<ShapedType>(input.getType());
+  SmallVector<OpFoldResult> shapeForEmptyOp;
+  for (int64_t i = 0; i < srcRank; i++) {
+    if (llvm::is_contained(innerDimsPos, i)) {
+      // The tiled dims are appended after this loop.
+      continue;
+    }
+    if (inputTy.isStaticDim(i))
+      shapeForEmptyOp.push_back(rewriter.getIndexAttr(inputTy.getShape()[i]));
+    else
+      shapeForEmptyOp.emplace_back(
+          tensor::DimOp::create(rewriter, loc, input, i).getResult());
+  }
   shapeForEmptyOp.append(packOp.getMixedTiles());
 
   // getMixedTiles() may contain Values pointing to constant ops, not the
@@ -1204,25 +1239,30 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   auto transposedOp = linalg::TransposeOp::create(rewriter, loc, input, empty,
                                                   srcPermForTranspose);
 
-  // 3. Insert the inner tile to the destination:
+  // 3. Insert the inner tile into the destination tensor:
   //  %inserted_tile = tensor.insert_slice(%transposed_tile)
-  SmallVector<OpFoldResult> writeStrides(destRank, oneIdxAttr);
-  SmallVector<OpFoldResult> writeOffsets(destRank, zeroIdxAttr);
-  // Outer dims are all 1s!
-  SmallVector<OpFoldResult> writeSizes(destRank - numberOfTiles, oneIdxAttr);
-  SmallVector<int64_t> writeShape;
 
-  for (auto tileSize : packOp.getMixedTiles()) {
-    auto [tileSizeStatic, tileSizeOfr] =
-        getSimplifiedOfrAndStaticSizePair(tileSize, rewriter);
-    writeSizes.push_back(tileSizeOfr);
-    writeShape.push_back(tileSizeStatic);
+  // Compute the sizes attribute:
+  //    [ outer-dims, tile-sizes ]
+  // Note that the output from the transpose Op excludes the tiled outer dims.
+  // However, given the assumption that:
+  //  * all tiled outer dims == 1,
+  // we can just use a rank-expanding tensor.insert_slice.
+  SmallVector<OpFoldResult> writeSizes;
+  for (auto size : packOp.getAllOuterDims()) {
+    writeSizes.push_back(rewriter.getIndexAttr(size));
   }
 
-  // 4. Replace tensor.packOp with tensor.insert_slice created above
+  for (auto tileSize : packOp.getMixedTiles()) {
+    auto [_, tileSizeOfr] =
+        getSimplifiedOfrAndStaticSizePair(tileSize, rewriter);
+    writeSizes.push_back(tileSizeOfr);
+  }
+
   auto insert = tensor::InsertSliceOp::create(
-      rewriter, loc, transposedOp.getResult()[0], packOp.getDest(),
-      writeOffsets, writeSizes, writeStrides);
+      rewriter, loc, transposedOp.getResult()[0], packOp.getDest(), writeSizes);
+
+  // 4. Replace tensor.packOp with tensor.insert_slice created above
   rewriter.replaceOp(packOp, insert.getResult());
 
   return success();
@@ -1230,7 +1270,6 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
 
 LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
     linalg::UnPackOp unpackOp, PatternRewriter &rewriter) const {
-  int64_t srcRank = unpackOp.getSourceRank();
   int64_t destRank = unpackOp.getDestRank();
   ArrayRef<int64_t> srcShape = unpackOp.getSourceType().getShape();
   ArrayRef<int64_t> innerDimsPos = unpackOp.getInnerDimsPos();
@@ -1247,7 +1286,6 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
   Value source = unpackOp.getSource();
   DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
       unpackOp.getDimAndTileMapping();
-  Attribute zeroIdxAttr = rewriter.getIndexAttr(0);
   Attribute oneIdxAttr = rewriter.getIndexAttr(1);
 
   // The shape for ExtractSliceOp. Note that this will consist of 3 blocks of
@@ -1258,9 +1296,6 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
   // outer-tiled-dims being all 1), this will be
   //    [ outer-untiled-dims, tile-sizes ]
   SmallVector<OpFoldResult> extractSliceSizes;
-  // The offset and strides attributes for ExtractSliceOp.
-  SmallVector<OpFoldResult> extractSliceOffsets(srcRank, zeroIdxAttr);
-  SmallVector<OpFoldResult> extractSliceStrides(srcRank, oneIdxAttr);
 
   // Shape for EmptyOp that's used as the init value for TransposeOp below.
   // This should be:
@@ -1315,8 +1350,7 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
   Type elemType = unpackOp.getSourceType().getElementType();
   auto readType = RankedTensorType::get(readShapeForExtractSlice, elemType);
   Value innerTile = tensor::ExtractSliceOp::create(
-      rewriter, loc, readType, unpackOp.getSource(), extractSliceOffsets,
-      extractSliceSizes, extractSliceStrides);
+      rewriter, loc, readType, unpackOp.getSource(), extractSliceSizes);
 
   // 2. Transpose the tile to match the outer corresponding tile order.
   SmallVector<int64_t> perm = getPackUnpackRankReducedPerm(
@@ -1332,9 +1366,6 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
 
   // 3. Handle in-complete tiles if needed. It truncates trailing data from the
   // transposed tile.
-  int numLoops = shapeForEmptyOp.size();
-  SmallVector<OpFoldResult> tileStrides(numLoops, oneIdxAttr);
-  SmallVector<OpFoldResult> tileOffsets(numLoops, zeroIdxAttr);
   SmallVector<OpFoldResult> tileSizes;
   ArrayRef<int64_t> destShape = unpackOp.getDestType().getShape();
   for (auto i : llvm::seq<unsigned>(0, destRank)) {
@@ -1344,13 +1375,11 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
   }
 
   auto partialTile =
-      tensor::ExtractSliceOp::create(rewriter, loc, transposedOp.getResult()[0],
-                                     tileOffsets, tileSizes, tileStrides);
+      tensor::ExtractSliceOp::create(rewriter, loc, RankedTensorType(),
+                                     transposedOp.getResult()[0], tileSizes);
 
   // 4. Insert the result to the destination tensor.
   SmallVector<OpFoldResult> writeSizes;
-  SmallVector<OpFoldResult> writeStrides(destRank, oneIdxAttr);
-  SmallVector<OpFoldResult> writeOffsets(destRank, zeroIdxAttr);
   for (int i = 0, idx = 0; i < destRank; ++i) {
     if (dimAndTileMapping.count(i) || destShape[i] != 1)
       writeSizes.push_back(tileSizes[idx++]);
@@ -1358,8 +1387,7 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
       writeSizes.push_back(oneIdxAttr);
   }
   auto insert = tensor::InsertSliceOp::create(rewriter, loc, partialTile,
-                                              unpackOp.getDest(), writeOffsets,
-                                              writeSizes, writeStrides);
+                                              unpackOp.getDest(), writeSizes);
   rewriter.replaceOp(unpackOp, insert.getResult());
 
   return success();

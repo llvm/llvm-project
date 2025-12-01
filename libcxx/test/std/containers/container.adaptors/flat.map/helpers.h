@@ -15,6 +15,7 @@
 #include <vector>
 #include <flat_map>
 #include <ranges>
+#include <type_traits>
 
 #include "../flat_helpers.h"
 #include "test_allocator.h"

@@ -14,7 +14,7 @@ from typing import (
 )
 import functools
 import json
-from libcxx.header_information import module_c_headers, module_headers, header_restrictions, headers_not_available, libcxx_root
+from libcxx.header_information import headers_not_available
 
 
 def get_libcxx_paths():
@@ -195,7 +195,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_atomic_ref",
-            "values": {"c++20": 201806},
+            "values": {
+                "c++20": 201806,
+                "c++26": 202411,  # P2835R7: Expose std::atomic_ref 's object address
+            },
             "headers": ["atomic"],
         },
         {
@@ -364,6 +367,16 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_dynamic_alloc",
             "values": {"c++20": 201907},
             "headers": ["memory"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_flat_map",
+            "values": {"c++26": 202502},
+            "headers": ["flat_map"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_flat_set",
+            "values": {"c++26": 202502},
+            "headers": ["flat_set"],
         },
         {
             "name": "__cpp_lib_constexpr_forward_list",
@@ -860,7 +873,8 @@ feature_test_macros = [
                 "c++26": 202306  # P2641R4 Checking if a union alternative is active
             },
             "headers": ["type_traits"],
-            "unimplemented": True,
+            "test_suite_guard": "__has_builtin(__builtin_is_within_lifetime)",
+            "libcxx_guard": "__has_builtin(__builtin_is_within_lifetime)",
         },
         {
             "name": "__cpp_lib_jthread",
@@ -1003,6 +1017,7 @@ feature_test_macros = [
                 "c++17": 201606,
                 "c++20": 202106,  # P2231R1 Missing constexpr in std::optional and std::variant
                 "c++23": 202110,  # P0798R8 Monadic operations for std::optional + LWG3621 Remove feature-test macro __cpp_lib_monadic_optional
+                "c++26": 202506,  # P2988R12: std::optional<T&>
             },
             "headers": ["optional"],
         },

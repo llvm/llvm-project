@@ -236,6 +236,7 @@ Expected<GraphDiffRenderer> GraphDiffRenderer::Factory::getGraphDiffRenderer() {
 
   return R;
 }
+
 // Returns the Relative change With respect to LeftStat between LeftStat
 // and RightStat.
 static double statRelDiff(const GraphDiffRenderer::TimeStat &LeftStat,
@@ -363,9 +364,8 @@ void GraphDiffRenderer::exportGraphAsDOT(raw_ostream &OS, StatType EdgeLabel,
   StringMap<int32_t> VertexNo;
 
   int i = 0;
-  for (const auto &V : G.vertices()) {
+  for (const auto &V : G.vertices())
     VertexNo[V.first] = i++;
-  }
 
   ColorHelper H(ColorHelper::DivergingScheme::PiYG);
 

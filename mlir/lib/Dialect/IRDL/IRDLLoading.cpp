@@ -169,7 +169,7 @@ LogicalResult getSegmentSizes(Operation *op, StringRef elemName,
 LogicalResult getOperandSegmentSizes(Operation *op,
                                      ArrayRef<Variadicity> variadicities,
                                      SmallVectorImpl<int> &segmentSizes) {
-  return getSegmentSizes(op, "operand", "operand_segment_sizes",
+  return getSegmentSizes(op, "operand", "operandSegmentSizes",
                          op->getNumOperands(), variadicities, segmentSizes);
 }
 
@@ -180,7 +180,7 @@ LogicalResult getOperandSegmentSizes(Operation *op,
 LogicalResult getResultSegmentSizes(Operation *op,
                                     ArrayRef<Variadicity> variadicities,
                                     SmallVectorImpl<int> &segmentSizes) {
-  return getSegmentSizes(op, "result", "result_segment_sizes",
+  return getSegmentSizes(op, "result", "resultSegmentSizes",
                          op->getNumResults(), variadicities, segmentSizes);
 }
 
