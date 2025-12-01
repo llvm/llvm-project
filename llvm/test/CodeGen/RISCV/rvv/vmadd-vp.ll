@@ -476,10 +476,8 @@ define <vscale x 64 x i8> @vmadd_vv_nxv64i8(<vscale x 64 x i8> %a, <vscale x 64 
 ; CHECK-LABEL: vmadd_vv_nxv64i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8r.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vmacc.vv v24, v8, v16
-; CHECK-NEXT:    vsetvli zero, zero, e8, m8, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v24, v0
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, mu
+; CHECK-NEXT:    vmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %x = call <vscale x 64 x i8> @llvm.vp.mul.nxv64i8(<vscale x 64 x i8> %a, <vscale x 64 x i8> %b, <vscale x 64 x i1> splat (i1 -1), i32 %evl)
   %y = call <vscale x 64 x i8> @llvm.vp.add.nxv64i8(<vscale x 64 x i8> %x, <vscale x 64 x i8> %c, <vscale x 64 x i1> splat (i1 -1), i32 %evl)
@@ -491,10 +489,8 @@ define <vscale x 64 x i8> @vmadd_vv_nxv64i8_unmasked(<vscale x 64 x i8> %a, <vsc
 ; CHECK-LABEL: vmadd_vv_nxv64i8_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8r.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vmacc.vv v24, v8, v16
-; CHECK-NEXT:    vsetvli zero, zero, e8, m8, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v24
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
+; CHECK-NEXT:    vmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %x = call <vscale x 64 x i8> @llvm.vp.mul.nxv64i8(<vscale x 64 x i8> %a, <vscale x 64 x i8> %b, <vscale x 64 x i1> splat (i1 -1), i32 %evl)
   %y = call <vscale x 64 x i8> @llvm.vp.add.nxv64i8(<vscale x 64 x i8> %x, <vscale x 64 x i8> %c, <vscale x 64 x i1> splat (i1 -1), i32 %evl)
@@ -534,9 +530,8 @@ define <vscale x 64 x i8> @vmadd_vv_nxv64i8_ta(<vscale x 64 x i8> %a, <vscale x 
 ; CHECK-LABEL: vmadd_vv_nxv64i8_ta:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8r.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vmacc.vv v24, v8, v16
-; CHECK-NEXT:    vmerge.vvm v8, v8, v24, v0
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, mu
+; CHECK-NEXT:    vmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %x = call <vscale x 64 x i8> @llvm.vp.mul.nxv64i8(<vscale x 64 x i8> %a, <vscale x 64 x i8> %b, <vscale x 64 x i1> splat (i1 -1), i32 %evl)
   %y = call <vscale x 64 x i8> @llvm.vp.add.nxv64i8(<vscale x 64 x i8> %x, <vscale x 64 x i8> %c, <vscale x 64 x i1> splat (i1 -1), i32 %evl)
@@ -952,10 +947,8 @@ define <vscale x 32 x i16> @vmadd_vv_nxv32i16(<vscale x 32 x i16> %a, <vscale x 
 ; CHECK-LABEL: vmadd_vv_nxv32i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re16.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; CHECK-NEXT:    vmacc.vv v24, v8, v16
-; CHECK-NEXT:    vsetvli zero, zero, e16, m8, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v24, v0
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, tu, mu
+; CHECK-NEXT:    vmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %x = call <vscale x 32 x i16> @llvm.vp.mul.nxv32i16(<vscale x 32 x i16> %a, <vscale x 32 x i16> %b, <vscale x 32 x i1> splat (i1 -1), i32 %evl)
   %y = call <vscale x 32 x i16> @llvm.vp.add.nxv32i16(<vscale x 32 x i16> %x, <vscale x 32 x i16> %c, <vscale x 32 x i1> splat (i1 -1), i32 %evl)
@@ -967,10 +960,8 @@ define <vscale x 32 x i16> @vmadd_vv_nxv32i16_unmasked(<vscale x 32 x i16> %a, <
 ; CHECK-LABEL: vmadd_vv_nxv32i16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re16.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; CHECK-NEXT:    vmacc.vv v24, v8, v16
-; CHECK-NEXT:    vsetvli zero, zero, e16, m8, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v24
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, tu, ma
+; CHECK-NEXT:    vmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %x = call <vscale x 32 x i16> @llvm.vp.mul.nxv32i16(<vscale x 32 x i16> %a, <vscale x 32 x i16> %b, <vscale x 32 x i1> splat (i1 -1), i32 %evl)
   %y = call <vscale x 32 x i16> @llvm.vp.add.nxv32i16(<vscale x 32 x i16> %x, <vscale x 32 x i16> %c, <vscale x 32 x i1> splat (i1 -1), i32 %evl)
@@ -1010,9 +1001,8 @@ define <vscale x 32 x i16> @vmadd_vv_nxv32i16_ta(<vscale x 32 x i16> %a, <vscale
 ; CHECK-LABEL: vmadd_vv_nxv32i16_ta:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re16.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; CHECK-NEXT:    vmacc.vv v24, v8, v16
-; CHECK-NEXT:    vmerge.vvm v8, v8, v24, v0
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
+; CHECK-NEXT:    vmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %x = call <vscale x 32 x i16> @llvm.vp.mul.nxv32i16(<vscale x 32 x i16> %a, <vscale x 32 x i16> %b, <vscale x 32 x i1> splat (i1 -1), i32 %evl)
   %y = call <vscale x 32 x i16> @llvm.vp.add.nxv32i16(<vscale x 32 x i16> %x, <vscale x 32 x i16> %c, <vscale x 32 x i1> splat (i1 -1), i32 %evl)
@@ -1350,10 +1340,8 @@ define <vscale x 16 x i32> @vmadd_vv_nxv16i32(<vscale x 16 x i32> %a, <vscale x 
 ; CHECK-LABEL: vmadd_vv_nxv16i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re32.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; CHECK-NEXT:    vmacc.vv v24, v8, v16
-; CHECK-NEXT:    vsetvli zero, zero, e32, m8, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v24, v0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, mu
+; CHECK-NEXT:    vmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %x = call <vscale x 16 x i32> @llvm.vp.mul.nxv16i32(<vscale x 16 x i32> %a, <vscale x 16 x i32> %b, <vscale x 16 x i1> splat (i1 -1), i32 %evl)
   %y = call <vscale x 16 x i32> @llvm.vp.add.nxv16i32(<vscale x 16 x i32> %x, <vscale x 16 x i32> %c, <vscale x 16 x i1> splat (i1 -1), i32 %evl)
@@ -1365,10 +1353,8 @@ define <vscale x 16 x i32> @vmadd_vv_nxv16i32_unmasked(<vscale x 16 x i32> %a, <
 ; CHECK-LABEL: vmadd_vv_nxv16i32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re32.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; CHECK-NEXT:    vmacc.vv v24, v8, v16
-; CHECK-NEXT:    vsetvli zero, zero, e32, m8, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v24
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, ma
+; CHECK-NEXT:    vmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %x = call <vscale x 16 x i32> @llvm.vp.mul.nxv16i32(<vscale x 16 x i32> %a, <vscale x 16 x i32> %b, <vscale x 16 x i1> splat (i1 -1), i32 %evl)
   %y = call <vscale x 16 x i32> @llvm.vp.add.nxv16i32(<vscale x 16 x i32> %x, <vscale x 16 x i32> %c, <vscale x 16 x i1> splat (i1 -1), i32 %evl)
@@ -1408,9 +1394,8 @@ define <vscale x 16 x i32> @vmadd_vv_nxv16i32_ta(<vscale x 16 x i32> %a, <vscale
 ; CHECK-LABEL: vmadd_vv_nxv16i32_ta:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re32.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; CHECK-NEXT:    vmacc.vv v24, v8, v16
-; CHECK-NEXT:    vmerge.vvm v8, v8, v24, v0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
+; CHECK-NEXT:    vmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %x = call <vscale x 16 x i32> @llvm.vp.mul.nxv16i32(<vscale x 16 x i32> %a, <vscale x 16 x i32> %b, <vscale x 16 x i1> splat (i1 -1), i32 %evl)
   %y = call <vscale x 16 x i32> @llvm.vp.add.nxv16i32(<vscale x 16 x i32> %x, <vscale x 16 x i32> %c, <vscale x 16 x i1> splat (i1 -1), i32 %evl)
@@ -1802,10 +1787,8 @@ define <vscale x 8 x i64> @vmadd_vv_nxv8i64(<vscale x 8 x i64> %a, <vscale x 8 x
 ; CHECK-LABEL: vmadd_vv_nxv8i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re64.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; CHECK-NEXT:    vmacc.vv v24, v8, v16
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v24, v0
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, tu, mu
+; CHECK-NEXT:    vmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %x = call <vscale x 8 x i64> @llvm.vp.mul.nxv8i64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %b, <vscale x 8 x i1> splat (i1 -1), i32 %evl)
   %y = call <vscale x 8 x i64> @llvm.vp.add.nxv8i64(<vscale x 8 x i64> %x, <vscale x 8 x i64> %c, <vscale x 8 x i1> splat (i1 -1), i32 %evl)
@@ -1817,10 +1800,8 @@ define <vscale x 8 x i64> @vmadd_vv_nxv8i64_unmasked(<vscale x 8 x i64> %a, <vsc
 ; CHECK-LABEL: vmadd_vv_nxv8i64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re64.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; CHECK-NEXT:    vmacc.vv v24, v8, v16
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v24
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, tu, ma
+; CHECK-NEXT:    vmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %x = call <vscale x 8 x i64> @llvm.vp.mul.nxv8i64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %b, <vscale x 8 x i1> splat (i1 -1), i32 %evl)
   %y = call <vscale x 8 x i64> @llvm.vp.add.nxv8i64(<vscale x 8 x i64> %x, <vscale x 8 x i64> %c, <vscale x 8 x i1> splat (i1 -1), i32 %evl)
@@ -1838,9 +1819,8 @@ define <vscale x 8 x i64> @vmadd_vx_nxv8i64(<vscale x 8 x i64> %a, i64 %b, <vsca
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
-; RV32-NEXT:    vmadd.vv v24, v8, v16
-; RV32-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
-; RV32-NEXT:    vmerge.vvm v8, v8, v24, v0
+; RV32-NEXT:    vsetvli zero, zero, e64, m8, tu, mu
+; RV32-NEXT:    vmadd.vv v8, v24, v16, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
@@ -1868,9 +1848,8 @@ define <vscale x 8 x i64> @vmadd_vx_nxv8i64_unmasked(<vscale x 8 x i64> %a, i64 
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
-; RV32-NEXT:    vmadd.vv v24, v8, v16
 ; RV32-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
-; RV32-NEXT:    vmv.v.v v8, v24
+; RV32-NEXT:    vmadd.vv v8, v24, v16
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
@@ -1892,9 +1871,8 @@ define <vscale x 8 x i64> @vmadd_vv_nxv8i64_ta(<vscale x 8 x i64> %a, <vscale x 
 ; CHECK-LABEL: vmadd_vv_nxv8i64_ta:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re64.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; CHECK-NEXT:    vmacc.vv v24, v8, v16
-; CHECK-NEXT:    vmerge.vvm v8, v8, v24, v0
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; CHECK-NEXT:    vmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
   %x = call <vscale x 8 x i64> @llvm.vp.mul.nxv8i64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %b, <vscale x 8 x i1> splat (i1 -1), i32 %evl)
   %y = call <vscale x 8 x i64> @llvm.vp.add.nxv8i64(<vscale x 8 x i64> %x, <vscale x 8 x i64> %c, <vscale x 8 x i1> splat (i1 -1), i32 %evl)
@@ -1910,10 +1888,9 @@ define <vscale x 8 x i64> @vmadd_vx_nxv8i64_ta(<vscale x 8 x i64> %a, i64 %b, <v
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
-; RV32-NEXT:    vmadd.vv v24, v8, v16
-; RV32-NEXT:    vmerge.vvm v8, v8, v24, v0
+; RV32-NEXT:    vmadd.vv v8, v24, v16, v0.t
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
