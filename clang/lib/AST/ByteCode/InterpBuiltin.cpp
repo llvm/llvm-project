@@ -3404,13 +3404,13 @@ static bool interp__builtin_ia32_cvtsd2ss(InterpState &S, CodePtr OpPC,
   unsigned NumElems = DstVTy->getNumElements();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  // Copy all elements from A to Dst
-  for (unsigned I = 0; I != NumElems; ++I)
+  // Copy all elements except lane 0 (overwritten below) from A to Dst.
+  for (unsigned I = 1; I < NumElems; ++I)
     Dst.elem<Floating>(I) = A.elem<Floating>(I);
 
-  // Convert element 0 from double to float
+  // Convert element 0 from double to float.
   Floating Conv = S.allocFloat(
-      S.getASTContext().getFloatTypeSemantics(S.getASTContext().FloatTy));
+      S.getASTContext().getFloatTypeSemantics(DstVTy->getElementType()));
   APFloat SrcD = B.elem<Floating>(0).getAPFloat();
   if (!convertDoubleToFloatStrict(SrcD, Conv, S, Call))
     return false;
@@ -3425,9 +3425,8 @@ static bool interp__builtin_ia32_cvtsd2ss_round_mask(InterpState &S,
                                                      const CallExpr *Call) {
   assert(Call->getNumArgs() == 5);
 
-  // Pop in reverse order: rounding, mask, src, b, a
-  APSInt Rounding = popToAPSInt(S, Call->getArg(4)->getType());
-  APSInt MaskInt = popToAPSInt(S, Call->getArg(3)->getType());
+  APSInt Rounding = popToAPSInt(S, Call->getArg(4));
+  APSInt MaskInt = popToAPSInt(S, Call->getArg(3));
   const Pointer &Src = S.Stk.pop<Pointer>();
   const Pointer &B = S.Stk.pop<Pointer>();
   const Pointer &A = S.Stk.pop<Pointer>();
@@ -3439,17 +3438,17 @@ static bool interp__builtin_ia32_cvtsd2ss_round_mask(InterpState &S,
   unsigned NumElems = DstVTy->getNumElements();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  // Copy all elements from A to Dst
-  for (unsigned I = 0; I != NumElems; ++I)
+  // Copy all elements except lane 0 (overwritten below) from A to Dst.
+  for (unsigned I = 1; I < NumElems; ++I)
     Dst.elem<Floating>(I) = A.elem<Floating>(I);
 
   // If mask bit 0 is set, convert element 0 from double to float; otherwise use
-  // Src
+  // Src.
   if (MaskInt.getZExtValue() & 0x1) {
     Floating Conv = S.allocFloat(
-        S.getASTContext().getFloatTypeSemantics(S.getASTContext().FloatTy));
-    APFloat SrcD = B.elem<Floating>(0).getAPFloat();
-    if (!convertDoubleToFloatStrict(SrcD, Conv, S, Call))
+        S.getASTContext().getFloatTypeSemantics(DstVTy->getElementType()));
+    APFloat Src = B.elem<Floating>(0).getAPFloat();
+    if (!convertDoubleToFloatStrict(Src, Conv, S, Call))
       return false;
     Dst.elem<Floating>(0) = Conv;
   } else {
@@ -3467,60 +3466,55 @@ static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
                    BuiltinID == X86::BI__builtin_ia32_cvtpd2ps512_mask);
   bool HasRounding = (BuiltinID == X86::BI__builtin_ia32_cvtpd2ps512_mask);
 
-  APSInt MaskVal(1, false);
+  APSInt MaskVal;
   Pointer PassThrough;
-  Pointer SrcPd;
+  Pointer Src;
   APSInt Rounding;
 
   if (IsMasked) {
-    // Pop in reverse order
+    // Pop in reverse order.
     if (HasRounding) {
-      // For 512: rounding, mask, passthrough, source
-      Rounding = popToAPSInt(S, Call->getArg(3)->getType());
-      MaskVal = popToAPSInt(S, Call->getArg(2)->getType());
+      Rounding = popToAPSInt(S, Call->getArg(3));
+      MaskVal = popToAPSInt(S, Call->getArg(2));
       PassThrough = S.Stk.pop<Pointer>();
-      SrcPd = S.Stk.pop<Pointer>();
+      Src = S.Stk.pop<Pointer>();
     } else {
-      // For VL: mask, passthrough, source
       MaskVal = popToAPSInt(S, Call->getArg(2)->getType());
       PassThrough = S.Stk.pop<Pointer>();
-      SrcPd = S.Stk.pop<Pointer>();
+      Src = S.Stk.pop<Pointer>();
     }
 
     if (!CheckLoad(S, OpPC, PassThrough))
       return false;
   } else {
-    // Pop source only
-    SrcPd = S.Stk.pop<Pointer>();
+    // Pop source only.
+    Src = S.Stk.pop<Pointer>();
   }
 
-  if (!CheckLoad(S, OpPC, SrcPd))
+  if (!CheckLoad(S, OpPC, Src))
     return false;
 
   const auto *RetVTy = Call->getType()->castAs<VectorType>();
   unsigned RetElems = RetVTy->getNumElements();
-  unsigned SrcElems = SrcPd.getNumElems();
+  unsigned SrcElems = Src.getNumElems();
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
-  // Initialize destination with passthrough or zeros
-  for (unsigned I = 0; I != RetElems; ++I) {
-    if (IsMasked) {
+  // Initialize destination with passthrough or zeros.
+  for (unsigned I = 0; I != RetElems; ++I)
+    if (IsMasked)
       Dst.elem<Floating>(I) = PassThrough.elem<Floating>(I);
-    } else {
+    else
       Dst.elem<Floating>(I) = Floating(APFloat(0.0f));
-    }
-  }
 
-  // Convert double to float for enabled elements (only process source elements
-  // that exist)
+  // Convert double to float for enabled elements (only process source elements that exist).
   for (unsigned I = 0; I != SrcElems; ++I) {
-    if (IsMasked && (((MaskVal.getZExtValue() >> I) & 0x1) == 0))
+    if (IsMasked && !MaskVal[I])
       continue;
 
-    APFloat SrcD = SrcPd.elem<Floating>(I).getAPFloat();
+    APFloat Src = Src.elem<Floating>(I).getAPFloat();
     Floating Conv = S.allocFloat(
-        S.getASTContext().getFloatTypeSemantics(S.getASTContext().FloatTy));
-    if (!convertDoubleToFloatStrict(SrcD, Conv, S, Call))
+        S.getASTContext().getFloatTypeSemantics(RetVTy->getElementType()));
+    if (!convertDoubleToFloatStrict(Src, Conv, S, Call))
       return false;
     Dst.elem<Floating>(I) = Conv;
   }
