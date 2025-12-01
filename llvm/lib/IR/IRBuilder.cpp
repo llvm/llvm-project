@@ -157,8 +157,9 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
           ActualBundlesRef = ActualBundles;
         }
         if (IsFPConstrained) {
-          // Due to potential reading FP exception bits, in strictfp mode the
-          // memory effects must include read/write access to FPE.
+          // Due to potential setting FP exception bits, in modes other than
+          // the default, the memory effects must include read/write access
+          // to FPE.
           MemoryEffects FME = Func->getMemoryEffects();
           NeedUpdateMemoryEffects = !FME.doesAccessInaccessibleMem();
         }

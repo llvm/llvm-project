@@ -3288,6 +3288,7 @@ value, which can have one of the following:
 ::
 
     "ignore"
+    "maytrap"
     "strict"
 
 If the argument is "ignore", floating-point exceptions raised by the call are not
@@ -3302,6 +3303,10 @@ have been raised by the original code must also be raised by the transformed cod
 unless it can be proven unobservable. No new observable floating-point exceptions
 may be introduced. This value may only be used only in functions with
 ``strictfp`` attribute.
+
+The value "maytrap" is almost same as "strict", but transformations are not
+required to preserve all exceptions that are implied by the original code. For
+example, exceptions may be potentially hidden by constant folding.
 
 .. _moduleasm:
 
