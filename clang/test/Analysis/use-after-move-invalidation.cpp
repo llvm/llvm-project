@@ -15,7 +15,7 @@ class Foo {
   std::unique_ptr<C> up;
   void opaqueMemberFun();
 
-  void testOpaqueMeth() {
+  void testOpaqueMemberFun() {
     auto tmp = std::move(up);
     opaqueMemberFun(); // clears region state
     (void)up->memberFun(); // no-warning
