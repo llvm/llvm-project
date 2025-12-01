@@ -3544,15 +3544,15 @@ static void mcpuHelp() {
     // when disassembling them.
     if (Disassemble)
       return;
-    for (std::string Filename : InputFilenames) {
-      OwningBinary<Binary> OBinary =
-          unwrapOrError(createBinary(Filename), Filename);
-      Binary *Bin = OBinary.getBinary();
-      if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin)) {
-        TheTriple = Obj->makeTriple();
-        break;
-      }
-    }
+    if (InputFilenames.size() != 1)
+      reportWarning("When multiple files are specified, only the first file is "
+                    "used to retrieve the help message.",
+                    InputFilenames[0]);
+    OwningBinary<Binary> OBinary =
+        unwrapOrError(createBinary(InputFilenames[0]), InputFilenames[0]);
+    Binary *Bin = OBinary.getBinary();
+    if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin))
+      TheTriple = Obj->makeTriple();
   }
 
   const Target *DummyTarget = TargetRegistry::lookupTarget(TheTriple, Error);

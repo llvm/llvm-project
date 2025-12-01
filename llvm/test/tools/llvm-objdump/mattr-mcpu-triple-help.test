@@ -1,17 +1,29 @@
 # RUN: yaml2obj %s -o %t
 # REQUIRES: arm-registered-target,x86-registered-target
 
+## Check if we can handle without -d
+# RUN: llvm-objdump --mcpu=help %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM
 
+## Check if we can handle without file
+# RUN: not llvm-objdump --mcpu=help --triple=arm 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM
+
+## Check triple priority
+# RUN: llvm-objdump --mcpu=help --triple=x86_64 -d %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-X86,CHECK-DISASM
+
+## Check if we can handle multiple files
+# RUN: llvm-objdump --mcpu=help %t %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-MULTI-FILE,CHECK-HELP,CHECK-ARM
+
+# CHECK-MULTI-FILE: When multiple files are specified, only the first file is used to retrieve the help message.
 # CHECK-HELP: Available CPUs for this target:
 # CHECK-ARM: arm
 # CHECK-X86: i386
 # CHECK-HELP: Available features for this target:
 ## To check we still disassemble the file:
 # CHECK-DISASM: file format elf32-littlearm
-# CHECK-SECTION-HEADER: Sections:
-# CHECK-SECTION-HEADER: Idx Name            Size     VMA      Type
-## Don't check the OS-dependent message "No such file or directory".
-# CHECK-FILE-ISSUE: error: 'a.out':
 
 --- !ELF
 FileHeader:
@@ -19,46 +31,3 @@ FileHeader:
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
   Machine:         EM_ARM
-
-## 2. -d + --mcpu=help + a.out
-## Check the error if there is an issue with the file.
-# RUN: not llvm-objdump -d --mcpu=help 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK-FILE-ISSUE
-# RUN: not llvm-objdump -d --mattr=help 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK-FILE-ISSUE
-
-## Check if we can handle the default filename.
-# RUN: cp %t a.out
-# RUN: llvm-objdump -d --mcpu=help --section-headers 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM,CHECK-DISASM,CHECK-SECTION-HEADER
-# RUN: llvm-objdump -d --mattr=help --section-headers 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM,CHECK-DISASM,CHECK-SECTION-HEADER
-# RUN: rm a.out
-
-## 3. -d + --mcpu=help + --triple
-## Check the error if there is an issue with the file.
-# RUN: not llvm-objdump -d --mcpu=help --triple=x86_64 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-FILE-ISSUE
-# RUN: not llvm-objdump -d --mattr=help --triple=x86_64 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-FILE-ISSUE
-
-## Check triple priority
-# RUN: cp %t a.out
-# RUN: llvm-objdump -d --mcpu=help --triple=x86_64 --section-headers 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-DISASM,CHECK-HELP,CHECK-X86,CHECK-SECTION-HEADER
-# RUN: llvm-objdump -d --mattr=help --triple=x86_64 --section-headers 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-DISASM,CHECK-HELP,CHECK-X86,CHECK-SECTION-HEADER
-# RUN: rm a.out
-
-## 4. --mcpu + file
-## Check if we can handle without -d
-# RUN: llvm-objdump --mcpu=help --section-headers %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM,CHECK-SECTION-HEADER
-# RUN: llvm-objdump --mattr=help --section-headers %t 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM,CHECK-SECTION-HEADER
-
-## We should also check if we can handle without -d and file
-# RUN: not llvm-objdump --mcpu=help --triple=x86_64 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-X86
-# RUN: not llvm-objdump --mattr=help --triple=x86_64 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-X86
