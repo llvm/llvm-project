@@ -169,7 +169,8 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackInvokedWithInitialLLVMIR)) {
 
   std::string initialLLVMIR;
   auto initialCallback =
-      [&initialLLVMIR](llvm::Module &module) -> LogicalResult {
+      [&initialLLVMIR](Operation * /*op*/,
+                       llvm::Module &module) -> LogicalResult {
     llvm::raw_string_ostream ros(initialLLVMIR);
     module.print(ros, nullptr);
     return success();
@@ -198,7 +199,8 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackInvokedWithLinkedLLVMIR)) {
   auto targetAttr = dyn_cast<gpu::TargetAttrInterface>(target);
 
   std::string linkedLLVMIR;
-  auto linkedCallback = [&linkedLLVMIR](llvm::Module &module) -> LogicalResult {
+  auto linkedCallback = [&linkedLLVMIR](Operation * /*op*/,
+                                        llvm::Module &module) -> LogicalResult {
     llvm::raw_string_ostream ros(linkedLLVMIR);
     module.print(ros, nullptr);
     return success();
@@ -229,7 +231,8 @@ TEST_F(MLIRTargetLLVM,
 
   std::string optimizedLLVMIR;
   auto optimizedCallback =
-      [&optimizedLLVMIR](llvm::Module &module) -> LogicalResult {
+      [&optimizedLLVMIR](Operation * /*op*/,
+                         llvm::Module &module) -> LogicalResult {
     llvm::raw_string_ostream ros(optimizedLLVMIR);
     module.print(ros, nullptr);
     return success();
@@ -257,7 +260,8 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackFailedWithInitialLLVMIR)) {
   IntegerAttr target = builder.getI32IntegerAttr(0);
   auto targetAttr = dyn_cast<gpu::TargetAttrInterface>(target);
 
-  auto initialCallback = [](llvm::Module & /*module*/) -> LogicalResult {
+  auto initialCallback = [](Operation * /*op*/,
+                            llvm::Module & /*module*/) -> LogicalResult {
     return failure();
   };
 
@@ -281,7 +285,8 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackFailedWithLinkedLLVMIR)) {
   IntegerAttr target = builder.getI32IntegerAttr(0);
   auto targetAttr = dyn_cast<gpu::TargetAttrInterface>(target);
 
-  auto linkedCallback = [](llvm::Module & /*module*/) -> LogicalResult {
+  auto linkedCallback = [](Operation * /*op*/,
+                           llvm::Module & /*module*/) -> LogicalResult {
     return failure();
   };
 
@@ -305,7 +310,8 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(CallbackFailedWithOptimizedLLVMIR)) {
   IntegerAttr target = builder.getI32IntegerAttr(0);
   auto targetAttr = dyn_cast<gpu::TargetAttrInterface>(target);
 
-  auto optimizedCallback = [](llvm::Module & /*module*/) -> LogicalResult {
+  auto optimizedCallback = [](Operation * /*op*/,
+                              llvm::Module & /*module*/) -> LogicalResult {
     return failure();
   };
 

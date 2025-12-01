@@ -55,10 +55,13 @@ public:
       StringRef cmdOptions = {}, StringRef elfSection = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
       function_ref<SymbolTable *()> getSymbolTableCallback = {},
-      function_ref<LogicalResult(llvm::Module &)> initialLlvmIRCallback = {},
-      function_ref<LogicalResult(llvm::Module &)> linkedLlvmIRCallback = {},
-      function_ref<LogicalResult(llvm::Module &)> optimizedLlvmIRCallback = {},
-      function_ref<LogicalResult(StringRef)> isaCallback = {});
+      function_ref<LogicalResult(Operation *op, llvm::Module &)>
+          initialLlvmIRCallback = {},
+      function_ref<LogicalResult(Operation *op, llvm::Module &)>
+          linkedLlvmIRCallback = {},
+      function_ref<LogicalResult(Operation *op, llvm::Module &)>
+          optimizedLlvmIRCallback = {},
+      function_ref<LogicalResult(Operation *op, StringRef)> isaCallback = {});
 
   /// Returns the typeID.
   TypeID getTypeID() const;
@@ -97,20 +100,22 @@ public:
 
   /// Returns the callback invoked with the initial LLVM IR for the device
   /// module.
-  function_ref<LogicalResult(llvm::Module &)> getInitialLlvmIRCallback() const;
+  function_ref<LogicalResult(Operation *op, llvm::Module &)>
+  getInitialLlvmIRCallback() const;
 
   /// Returns the callback invoked with LLVM IR for the device module
   /// after linking the device libraries.
-  function_ref<LogicalResult(llvm::Module &)> getLinkedLlvmIRCallback() const;
+  function_ref<LogicalResult(Operation *op, llvm::Module &)>
+  getLinkedLlvmIRCallback() const;
 
   /// Returns the callback invoked with LLVM IR for the device module after
   /// LLVM optimizations but before codegen.
-  function_ref<LogicalResult(llvm::Module &)>
+  function_ref<LogicalResult(Operation *op, llvm::Module &)>
   getOptimizedLlvmIRCallback() const;
 
   /// Returns the callback invoked with the target ISA for the device,
   /// for example PTX assembly.
-  function_ref<LogicalResult(StringRef)> getISACallback() const;
+  function_ref<LogicalResult(Operation *op, StringRef)> getISACallback() const;
 
   /// Returns the default compilation target: `CompilationTarget::Fatbin`.
   static CompilationTarget getDefaultCompilationTarget();
@@ -128,10 +133,13 @@ protected:
       StringRef elfSection = {},
       CompilationTarget compilationTarget = getDefaultCompilationTarget(),
       function_ref<SymbolTable *()> getSymbolTableCallback = {},
-      function_ref<LogicalResult(llvm::Module &)> initialLlvmIRCallback = {},
-      function_ref<LogicalResult(llvm::Module &)> linkedLlvmIRCallback = {},
-      function_ref<LogicalResult(llvm::Module &)> optimizedLlvmIRCallback = {},
-      function_ref<LogicalResult(StringRef)> isaCallback = {});
+      function_ref<LogicalResult(Operation *op, llvm::Module &)>
+          initialLlvmIRCallback = {},
+      function_ref<LogicalResult(Operation *op, llvm::Module &)>
+          linkedLlvmIRCallback = {},
+      function_ref<LogicalResult(Operation *op, llvm::Module &)>
+          optimizedLlvmIRCallback = {},
+      function_ref<LogicalResult(Operation *op, StringRef)> isaCallback = {});
 
   /// Path to the target toolkit.
   std::string toolkitPath;
@@ -154,19 +162,22 @@ protected:
   function_ref<SymbolTable *()> getSymbolTableCallback;
 
   /// Callback invoked with the initial LLVM IR for the device module.
-  function_ref<LogicalResult(llvm::Module &)> initialLlvmIRCallback;
+  function_ref<LogicalResult(Operation *op, llvm::Module &)>
+      initialLlvmIRCallback;
 
   /// Callback invoked with LLVM IR for the device module after
   /// linking the device libraries.
-  function_ref<LogicalResult(llvm::Module &)> linkedLlvmIRCallback;
+  function_ref<LogicalResult(Operation *op, llvm::Module &)>
+      linkedLlvmIRCallback;
 
   /// Callback invoked with LLVM IR for the device module after
   /// LLVM optimizations but before codegen.
-  function_ref<LogicalResult(llvm::Module &)> optimizedLlvmIRCallback;
+  function_ref<LogicalResult(Operation *op, llvm::Module &)>
+      optimizedLlvmIRCallback;
 
   /// Callback invoked with the target ISA for the device,
   /// for example PTX assembly.
-  function_ref<LogicalResult(StringRef)> isaCallback;
+  function_ref<LogicalResult(Operation *op, StringRef)> isaCallback;
 
 private:
   TypeID typeID;

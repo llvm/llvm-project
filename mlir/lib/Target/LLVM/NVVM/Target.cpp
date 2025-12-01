@@ -707,12 +707,9 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
     return std::nullopt;
   }
 
-  if (isaCallback) {
-    if (failed(isaCallback(serializedISA.value()))) {
-      getOperation().emitError() << "ISACallback failed.";
+  if (isaCallback)
+    if (failed(isaCallback(getOperation(), serializedISA.value())))
       return std::nullopt;
-    }
-  }
 
 #define DEBUG_TYPE "serialize-to-isa"
   LDBG() << "PTX for module: " << getOperation().getNameAttr() << "\n"

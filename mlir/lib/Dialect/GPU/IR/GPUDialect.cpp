@@ -2652,10 +2652,13 @@ TargetOptions::TargetOptions(
     StringRef cmdOptions, StringRef elfSection,
     CompilationTarget compilationTarget,
     function_ref<SymbolTable *()> getSymbolTableCallback,
-    function_ref<LogicalResult(llvm::Module &)> initialLlvmIRCallback,
-    function_ref<LogicalResult(llvm::Module &)> linkedLlvmIRCallback,
-    function_ref<LogicalResult(llvm::Module &)> optimizedLlvmIRCallback,
-    function_ref<LogicalResult(StringRef)> isaCallback)
+    function_ref<LogicalResult(Operation *op, llvm::Module &)>
+        initialLlvmIRCallback,
+    function_ref<LogicalResult(Operation *op, llvm::Module &)>
+        linkedLlvmIRCallback,
+    function_ref<LogicalResult(Operation *op, llvm::Module &)>
+        optimizedLlvmIRCallback,
+    function_ref<LogicalResult(Operation *op, StringRef)> isaCallback)
     : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, librariesToLink,
                     cmdOptions, elfSection, compilationTarget,
                     getSymbolTableCallback, initialLlvmIRCallback,
@@ -2667,10 +2670,13 @@ TargetOptions::TargetOptions(
     StringRef cmdOptions, StringRef elfSection,
     CompilationTarget compilationTarget,
     function_ref<SymbolTable *()> getSymbolTableCallback,
-    function_ref<LogicalResult(llvm::Module &)> initialLlvmIRCallback,
-    function_ref<LogicalResult(llvm::Module &)> linkedLlvmIRCallback,
-    function_ref<LogicalResult(llvm::Module &)> optimizedLlvmIRCallback,
-    function_ref<LogicalResult(StringRef)> isaCallback)
+    function_ref<LogicalResult(Operation *op, llvm::Module &)>
+        initialLlvmIRCallback,
+    function_ref<LogicalResult(Operation *op, llvm::Module &)>
+        linkedLlvmIRCallback,
+    function_ref<LogicalResult(Operation *op, llvm::Module &)>
+        optimizedLlvmIRCallback,
+    function_ref<LogicalResult(Operation *op, StringRef)> isaCallback)
     : toolkitPath(toolkitPath.str()), librariesToLink(librariesToLink),
       cmdOptions(cmdOptions.str()), elfSection(elfSection.str()),
       compilationTarget(compilationTarget),
@@ -2696,22 +2702,23 @@ SymbolTable *TargetOptions::getSymbolTable() const {
   return getSymbolTableCallback ? getSymbolTableCallback() : nullptr;
 }
 
-function_ref<LogicalResult(llvm::Module &)>
+function_ref<LogicalResult(Operation *op, llvm::Module &)>
 TargetOptions::getInitialLlvmIRCallback() const {
   return initialLlvmIRCallback;
 }
 
-function_ref<LogicalResult(llvm::Module &)>
+function_ref<LogicalResult(Operation *op, llvm::Module &)>
 TargetOptions::getLinkedLlvmIRCallback() const {
   return linkedLlvmIRCallback;
 }
 
-function_ref<LogicalResult(llvm::Module &)>
+function_ref<LogicalResult(Operation *op, llvm::Module &)>
 TargetOptions::getOptimizedLlvmIRCallback() const {
   return optimizedLlvmIRCallback;
 }
 
-function_ref<LogicalResult(StringRef)> TargetOptions::getISACallback() const {
+function_ref<LogicalResult(Operation *op, StringRef)>
+TargetOptions::getISACallback() const {
   return isaCallback;
 }
 
