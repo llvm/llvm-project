@@ -67,7 +67,7 @@ runs:
         name: ${{ steps.vars.outputs.attestation-name }}
         path: |
           ${{ inputs.files }}
-          ${{(inputs.upload == 'true' && format('{}.jsonl', steps.vars.outputs.attestation-name)) || '' }}
+          ${{(inputs.upload == 'true' && format('{0}.jsonl', steps.vars.outputs.attestation-name)) || '' }}
 
     - name: Install Python Requirements
       if: inputs.upload == 'true'
