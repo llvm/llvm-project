@@ -41,38 +41,6 @@ using namespace mlir::amdgpu;
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.cpp.inc"
 
-namespace mlir::amdgpu {
-bool hasGlobalMemorySpace(Attribute memorySpace) {
-  if (!memorySpace)
-    return true;
-  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
-    return intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
-  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
-    return gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
-  return false;
-}
-
-bool hasWorkgroupMemorySpace(Attribute memorySpace) {
-  if (!memorySpace)
-    return false;
-  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
-    return intMemorySpace.getInt() == 3;
-  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
-    return gpuMemorySpace.getValue() == gpu::AddressSpace::Workgroup;
-  return false;
-}
-
-bool hasFatRawBufferMemorySpace(Attribute memorySpace) {
-  if (!memorySpace)
-    return false;
-  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
-    return intMemorySpace.getInt() == 7;
-  if (auto gpuMemorySpace = dyn_cast<amdgpu::AddressSpaceAttr>(memorySpace))
-    return gpuMemorySpace.getValue() == amdgpu::AddressSpace::FatRawBuffer;
-  return false;
-}
-} // namespace mlir::amdgpu
-
 namespace {
 struct AMDGPUInlinerInterface final : DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
@@ -188,6 +156,36 @@ LogicalResult FatRawBufferCastOp::verify() {
     return emitOpError("expected result type to be ")
            << *expectedResultType << " but got " << getResult().getType();
   return success();
+}
+
+static bool hasGlobalMemorySpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return true;
+  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
+  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
+  return false;
+}
+
+static bool hasWorkgroupMemorySpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
+  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 3;
+  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == gpu::AddressSpace::Workgroup;
+  return false;
+}
+
+static bool hasFatRawBufferMemorySpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
+  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 7;
+  if (auto gpuMemorySpace = dyn_cast<amdgpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == amdgpu::AddressSpace::FatRawBuffer;
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
