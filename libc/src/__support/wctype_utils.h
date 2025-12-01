@@ -10,8 +10,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 
 #include "hdr/types/wchar_t.h"
-#include "hdr/types/wint_t.h"
-#include "src/__support/CPP/optional.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 
@@ -582,30 +580,6 @@ LIBC_INLINE static constexpr bool isspace(wchar_t wch) {
 LIBC_INLINE static constexpr bool
 is_char_or_wchar(wchar_t ch, [[maybe_unused]] char, wchar_t wc_value) {
   return (ch == wc_value);
-}
-
-// ------------------------------------------------------
-// Rationale: Since these classification functions are
-// called in other functions, we will avoid the overhead
-// of a function call by inlining them.
-// ------------------------------------------------------
-
-LIBC_INLINE cpp::optional<int> wctob(wint_t c) {
-  // This needs to be translated to EOF at the callsite. This is to avoid
-  // including stdio.h in this file.
-  // The standard states that wint_t may either be an alias of wchar_t or
-  // an alias of an integer type, different platforms define this type with
-  // different signedness. This is equivalent to `(c > 127) || (c < 0)` but also
-  // works without -Wtype-limits warnings when `wint_t` is unsigned.
-  if ((c & ~127) != 0)
-    return cpp::nullopt;
-  return static_cast<int>(c);
-}
-
-LIBC_INLINE cpp::optional<wint_t> btowc(int c) {
-  if (c > 127 || c < 0)
-    return cpp::nullopt;
-  return static_cast<wint_t>(c);
 }
 
 } // namespace internal
