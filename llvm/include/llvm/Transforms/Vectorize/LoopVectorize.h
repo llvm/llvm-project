@@ -145,7 +145,7 @@ public:
   LoopInfo *LI;
   TargetTransformInfo *TTI;
   DominatorTree *DT;
-  std::function<BlockFrequencyInfo *()> GetBFI;
+  std::function<BlockFrequencyInfo &()> GetBFI;
   TargetLibraryInfo *TLI;
   DemandedBits *DB;
   AssumptionCache *AC;

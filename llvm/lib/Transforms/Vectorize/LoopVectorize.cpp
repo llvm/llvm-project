@@ -874,7 +874,7 @@ public:
                              const TargetLibraryInfo *TLI, DemandedBits *DB,
                              AssumptionCache *AC,
                              OptimizationRemarkEmitter *ORE,
-                             std::function<BlockFrequencyInfo *()> GetBFI,
+                             std::function<BlockFrequencyInfo &()> GetBFI,
                              const Function *F, const LoopVectorizeHints *Hints,
                              InterleavedAccessInfo &IAI, bool OptForSize)
       : ScalarEpilogueStatus(SEL), TheLoop(L), PSE(PSE), LI(LI), Legal(Legal),
@@ -1725,7 +1725,7 @@ public:
   /// A function to lazily fetch BlockFrequencyInfo. This avoids computing it
   /// unless necessary, e.g. when the loop isn't legal to vectorize or when
   /// there is no predication.
-  std::function<BlockFrequencyInfo *()> GetBFI;
+  std::function<BlockFrequencyInfo &()> GetBFI;
 
   const Function *TheFunction;
 
@@ -2893,9 +2893,9 @@ unsigned LoopVectorizationCostModel::getPredBlockCostDivisor(
   if (!Legal->blockNeedsPredication(BB))
     return 1;
 
-  BlockFrequencyInfo *BFI = GetBFI();
-  uint64_t HeaderFreq = BFI->getBlockFreq(TheLoop->getHeader()).getFrequency();
-  uint64_t BBFreq = BFI->getBlockFreq(BB).getFrequency();
+  BlockFrequencyInfo &BFI = GetBFI();
+  uint64_t HeaderFreq = BFI.getBlockFreq(TheLoop->getHeader()).getFrequency();
+  uint64_t BBFreq = BFI.getBlockFreq(BB).getFrequency();
   assert(HeaderFreq >= BBFreq &&
          "Header has smaller block freq than dominated BB?");
   return HeaderFreq / BBFreq;
@@ -9182,7 +9182,7 @@ static bool processLoopInVPlanNativePath(
     LoopVectorizationLegality *LVL, TargetTransformInfo *TTI,
     TargetLibraryInfo *TLI, DemandedBits *DB, AssumptionCache *AC,
     OptimizationRemarkEmitter *ORE,
-    std::function<BlockFrequencyInfo *()> GetBFI, bool OptForSize,
+    std::function<BlockFrequencyInfo &()> GetBFI, bool OptForSize,
     LoopVectorizeHints &Hints, LoopVectorizationRequirements &Requirements) {
 
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
@@ -9898,7 +9898,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Query this against the original loop and save it here because the profile
   // of the original loop header may change as the transformation happens.
   bool OptForSize = llvm::shouldOptimizeForSize(
-      L->getHeader(), PSI, PSI && PSI->hasProfileSummary() ? GetBFI() : nullptr,
+      L->getHeader(), PSI,
+      PSI && PSI->hasProfileSummary() ? &GetBFI() : nullptr,
       PGSOQueryType::IRPass);
 
   // Check if it is legal to vectorize the loop.
@@ -10355,7 +10356,9 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
 
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  GetBFI = [&AM, &F]() { return &AM.getResult<BlockFrequencyAnalysis>(F); };
+  GetBFI = [&AM, &F]() -> BlockFrequencyInfo & {
+    return AM.getResult<BlockFrequencyAnalysis>(F);
+  };
   LoopVectorizeResult Result = runImpl(F);
   if (!Result.MadeAnyChange)
     return PreservedAnalyses::all();
