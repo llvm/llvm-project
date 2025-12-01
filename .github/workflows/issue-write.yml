@@ -8,6 +8,7 @@ on:
       - "PR Request Release Note"
       - "Code lint"
       - "CI Checks"
+      - "Test Issue Write"
     types:
       - completed
 
