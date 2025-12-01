@@ -439,7 +439,6 @@ void updateRegType(Register Reg, Type *Ty, SPIRVType *SpvType,
   if (!MRI.getType(Reg).isValid())
     MRI.setType(Reg, GR->getRegType(SpvType));
   GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
-  return;
 }
 
 void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
