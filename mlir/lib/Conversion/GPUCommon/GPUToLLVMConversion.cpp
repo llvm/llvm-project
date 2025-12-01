@@ -721,8 +721,8 @@ static LogicalResult prepareHostRegisterUnregisterArguments(
     elementTypes.push_back(elementType);
     Type llvmIntPtrType = IntegerType::get(
         rewriter.getContext(), typeConverter->getPointerBitwidth(0));
-    Value rank = rewriter.create<LLVM::ConstantOp>(
-        loc, llvmIntPtrType,
+    Value rank = LLVM::ConstantOp::create(
+        rewriter, loc, llvmIntPtrType,
         rewriter.getIntegerAttr(llvmIntPtrType, memRefType.getRank()));
     Value descriptor = adaptorValue;
     Value descriptorPtr;
