@@ -23,10 +23,14 @@ FileHeader:
 ## Check the error if there is an issue with the file.
 # RUN: not llvm-objdump -d --mcpu=help 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-FILE-ISSUE
+# RUN: not llvm-objdump -d --mattr=help 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHECK-FILE-ISSUE
 
 ## Check if we can handle the default filename.
 # RUN: cp %t a.out
 # RUN: llvm-objdump -d --mcpu=help --section-headers 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM,CHECK-DISASM,CHECK-SECTION-HEADER
+# RUN: llvm-objdump -d --mattr=help --section-headers 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM,CHECK-DISASM,CHECK-SECTION-HEADER
 # RUN: rm a.out
 
@@ -34,10 +38,14 @@ FileHeader:
 ## Check the error if there is an issue with the file.
 # RUN: not llvm-objdump -d --mcpu=help --triple=x86_64 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-FILE-ISSUE
+# RUN: not llvm-objdump -d --mattr=help --triple=x86_64 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-FILE-ISSUE
 
 ## Check triple priority
 # RUN: cp %t a.out
 # RUN: llvm-objdump -d --mcpu=help --triple=x86_64 --section-headers 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-DISASM,CHECK-HELP,CHECK-X86,CHECK-SECTION-HEADER
+# RUN: llvm-objdump -d --mattr=help --triple=x86_64 --section-headers 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK-DISASM,CHECK-HELP,CHECK-X86,CHECK-SECTION-HEADER
 # RUN: rm a.out
 
@@ -45,7 +53,11 @@ FileHeader:
 ## Check if we can handle without -d
 # RUN: llvm-objdump --mcpu=help --section-headers %t 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM,CHECK-SECTION-HEADER
+# RUN: llvm-objdump --mattr=help --section-headers %t 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-ARM,CHECK-SECTION-HEADER
 
 ## We should also check if we can handle without -d and file
 # RUN: not llvm-objdump --mcpu=help --triple=x86_64 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-X86
+# RUN: not llvm-objdump --mattr=help --triple=x86_64 2>&1 \
 # RUN:   | FileCheck %s --check-prefixes=CHECK-HELP,CHECK-X86

@@ -3856,11 +3856,15 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
       !DisassembleSymbols.empty())
     Disassemble = true;
 
+  const bool PrintCpuHelp =
+      MCPU == "help" ||
+      std::find(MAttrs.begin(), MAttrs.end(), "help") != MAttrs.end();
+
   if (!ArchiveHeaders && !Disassemble && DwarfDumpType == DIDT_Null &&
       !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
       !Relocations && !SectionHeaders && !SectionContents && !SymbolTable &&
       !DynamicSymbolTable && !UnwindInfo && !FaultMapSection && !Offloading &&
-      MCPU != "help" &&
+      !PrintCpuHelp &&
       !(MachOOpt &&
         (Bind || DataInCode || ChainedFixups || DyldInfo || DylibId ||
          DylibsUsed || ExportsTrie || FirstPrivateHeader ||
@@ -3871,7 +3875,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
     return 2;
   }
 
-  if (MCPU == "help")
+  if (PrintCpuHelp)
     mcpuHelp();
 
   DisasmSymbolSet.insert_range(DisassembleSymbols);
