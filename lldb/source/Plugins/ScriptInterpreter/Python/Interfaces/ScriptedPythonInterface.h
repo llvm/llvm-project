@@ -74,7 +74,8 @@ public:
       if (!class_dict.HasKey(method_name))
         SET_CASE_AND_CONTINUE(method_name,
                               AbstractMethodCheckerCases::eNotImplemented)
-      auto callable_or_err = class_dict.GetItem(method_name);
+      llvm::Expected<PythonObject> callable_or_err =
+          class_dict.GetItem(method_name);
       if (!callable_or_err) {
         llvm::consumeError(callable_or_err.takeError());
         SET_CASE_AND_CONTINUE(method_name,

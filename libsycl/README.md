@@ -17,4 +17,4 @@ TODO
 
 # License
 
-See [LICENSE](./LICENSE.TXT) for details.
+See [LICENSE](./LICENSE.txt) for details.
