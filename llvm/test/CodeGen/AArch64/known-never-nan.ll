@@ -12,7 +12,7 @@ define float @fmaxnm(i32 %i1, i32 %i2) #0 {
 ; CHECK-NEXT:    fadd s0, s0, s2
 ; CHECK-NEXT:    fadd s1, s1, s3
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    fcsel s0, s0, s1, pl
+; CHECK-NEXT:    fcsel s0, s0, s1, ge
 ; CHECK-NEXT:    ret
   %f1 = uitofp i32 %i1 to float
   %fadd1 = fadd float %f1, 11.0
