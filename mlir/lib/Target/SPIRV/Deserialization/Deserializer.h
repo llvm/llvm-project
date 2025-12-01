@@ -58,7 +58,9 @@ struct DebugLine {
 };
 
 /// Map from a selection/loop's header block to its merge (and continue) target.
-using BlockMergeInfoMap = DenseMap<Block *, BlockMergeInfo>;
+/// Use `MapVector<>` to ensure a deterministic iteration order with a pointer
+/// key.
+using BlockMergeInfoMap = llvm::MapVector<Block *, BlockMergeInfo>;
 
 /// A "deferred struct type" is a struct type with one or more member types not
 /// known when the Deserializer first encounters the struct. This happens, for
