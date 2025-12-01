@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -verify
+// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -Wno-vla-cxx-extension -verify
 namespace std {
 template <typename T>
 struct initializer_list {
@@ -470,7 +470,7 @@ void overload_set(int); // expected-note 2 {{possible target for call}}
 void overload_set(long); // expected-note 2 {{possible target for call}}
 
 void invalid_types() {
-  template for (auto x : void()) {} // expected-error {{cannot expand expression of type 'void'}}
+  template for (auto x : void()) {} // expected-error {{cannot expand expression of incomplete type 'void'}}
   template for (auto x : 1) {} // expected-error {{cannot expand expression of type 'int'}}
   template for (auto x : 1.f) {} // expected-error {{cannot expand expression of type 'float'}}
   template for (auto x : 'c') {} // expected-error {{cannot expand expression of type 'char'}}
@@ -1040,3 +1040,43 @@ void init_list_bad() {
   template for (auto y : {{1}, {2}, {3, {4}}, {{{5}}}}); // expected-error {{cannot deduce actual type for variable 'y' with type 'auto' from initializer list}} \
                                                             expected-note {{in instantiation of expansion statement requested here}}
 }
+
+// Test that the init statement is evaluated even if the expansion statement
+// expands to nothing.
+constexpr int init_stmt_empty_expansion() {
+  static constexpr String empty{""};
+  int x = 0;
+  template for (int _ = x += 1; auto i : {}) {}
+  template for (int _ = x += 2; auto i : empty) {}
+  template for (int _ = x += 3; auto i : Empty()) {}
+  return x;
+}
+
+static_assert(init_stmt_empty_expansion() == 6);
+
+void vla(int n) {
+  int a[n];
+  template for (int x : a) {} // expected-error {{cannot expand variable length array type 'int[n]'}}
+}
+
+template <typename T>
+void template_vla(T& a) { // expected-note {{variably modified type 'int[n]' cannot be used as a template argument}}
+  template for (int x : a) {}
+}
+
+void instantiate_template_vla(int n) {
+  int a[n];
+  template_vla(a); // expected-error {{no matching function for call to 'template_vla'}}
+}
+
+struct Incomplete; // expected-note 2 {{forward declaration of 'Incomplete'}}
+void incomplete_type(Incomplete& s) {
+  template for (int x : s) {} // expected-error {{cannot expand expression of incomplete type 'Incomplete'}}
+}
+
+template <typename T>
+void dependent_incomplete_type(T& s) {
+  template for (int x : s) {} // expected-error {{cannot expand expression of incomplete type 'Incomplete'}}
+}
+
+template void dependent_incomplete_type<Incomplete>(Incomplete&); // expected-note {{in instantiation of function template specialization 'dependent_incomplete_type<Incomplete>' requested here}}
