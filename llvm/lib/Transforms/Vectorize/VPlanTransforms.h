@@ -321,7 +321,8 @@ struct VPlanTransforms {
 
   /// Hoist predicated loads from the same address to the loop entry block, if
   /// they are guaranteed to execute on both paths (i.e., in replicate regions
-  /// with complementary masks P and NOT P).
+  /// with complementary masks P and NOT P). Consecutive loads are widened into
+  /// vector loads.
   static void hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
                                    const Loop *L);
 
