@@ -183,6 +183,25 @@ define void @test_input_imm() {
   ret void
 }
 
+@var = global i64 0, align 8
+define void @test_immediate_constraint_sym() {
+  ; CHECK-LABEL: name: test_immediate_constraint_sym
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   INLINEASM &"#TEST $0", 9 /* sideeffect mayload attdialect */, 13 /* imm */, @var
+  ; CHECK-NEXT:   RET_ReallyLR
+  call void asm sideeffect "#TEST $0", "i"(ptr @var)
+  ret void
+}
+
+define void @test_s_constraint() {
+  ; CHECK-LABEL: name: test_s_constraint
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   INLINEASM &"#TEST $0", 9 /* sideeffect mayload attdialect */, 13 /* imm */, @var
+  ; CHECK-NEXT:   RET_ReallyLR
+  call void asm sideeffect "#TEST $0", "s"(ptr @var)
+  ret void
+}
+
 define zeroext i8 @test_input_register(ptr %src) nounwind {
   ; CHECK-LABEL: name: test_input_register
   ; CHECK: bb.1.entry:
