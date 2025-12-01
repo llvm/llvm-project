@@ -185,3 +185,31 @@ define zeroext i4 @func3(i4 zeroext %x, i4 zeroext %y) nounwind {
   %tmp = call i4 @llvm.usub.sat.i4(i4 %x, i4 %y);
   ret i4 %tmp;
 }
+
+define signext i32 @sat_dec_i32(i32 signext %x) nounwind {
+; RV32I-LABEL: sat_dec_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    snez a1, a0
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: sat_dec_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    snez a1, a0
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV32IZbb-LABEL: sat_dec_i32:
+; RV32IZbb:       # %bb.0:
+; RV32IZbb-NEXT:    snez a1, a0
+; RV32IZbb-NEXT:    sub a0, a0, a1
+; RV32IZbb-NEXT:    ret
+;
+; RV64IZbb-LABEL: sat_dec_i32:
+; RV64IZbb:       # %bb.0:
+; RV64IZbb-NEXT:    snez a1, a0
+; RV64IZbb-NEXT:    subw a0, a0, a1
+; RV64IZbb-NEXT:    ret
+  %tmp = call i32 @llvm.usub.sat.i32(i32 %x, i32 1)
+  ret i32 %tmp
+}
