@@ -24,5 +24,17 @@ void test_redecl(void) {
   redecl("hello");
 }
 
+int order1(const char *fmt, ...) __attribute__((modular_format(__modular_printf, "__printf", "a", "b"), format(printf, 1, 2)));
+int order2(const char *fmt, ...) __attribute__((modular_format(__modular_printf, "__printf", "b", "a"), format(printf, 1, 2)));
+
+// CHECK-LABEL: define dso_local void @test_order(
+// CHECK:    {{.*}} = call i32 (ptr, ...) @order1(ptr noundef @.str) #[[ATTR_ORDER:[0-9]+]]
+// CHECK:    {{.*}} = call i32 (ptr, ...) @order2(ptr noundef @.str) #[[ATTR_ORDER]]
+void test_order(void) {
+  order1("hello");
+  order2("hello");
+}
+
 // CHECK: attributes #[[ATTR]] = { "modular-format"="printf,1,2,__modular_printf,__printf,float" }
 // CHECK: attributes #[[ATTR_REDECL]] = { "modular-format"="printf,1,2,__second_impl,__second,three,two" }
+// CHECK: attributes #[[ATTR_ORDER]] = { "modular-format"="printf,1,2,__modular_printf,__printf,a,b" }
