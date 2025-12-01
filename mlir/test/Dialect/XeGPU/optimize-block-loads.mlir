@@ -282,7 +282,7 @@ gpu.func @array_length(%arg0: vector<8x16xf16>, %arg1: memref<256x256xf16>, %arg
 // -----
 // CHECK-LABEL: gpu.func @dynamic_memref(
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf16>, %{{.*}}: vector<8x16xf16>) -> vector<8x16xf32> {
-// CHECK-DAG:     %[[C32:.*]] = arith.constant 16 : index
+// CHECK-DAG:     %[[C16:.*]] = arith.constant 16 : index
 // CHECK-DAG:     %[[C32:.*]] = arith.constant 32 : index
 // CHECK-NEXT:    %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG0]] : memref<?x?xf16> -> index
 // CHECK-NEXT:    %[[T0:.*]] = arith.index_cast %[[PTR]] : index to i64
