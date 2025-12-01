@@ -1,11 +1,11 @@
 ;; Check that llvm.bitreverse.* intrinsics are lowered for
 ;; 2/4-bit scalar and vector types.
 
-; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_arbitrary_precision_integers,+SPV_KHR_bit_instructions %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_arbitrary_precision_integers,+SPV_KHR_bit_instructions %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers,+SPV_KHR_bit_instructions %s -o - | FileCheck %s
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers,+SPV_KHR_bit_instructions %s -o - -filetype=obj | spirv-val %}
 
-; CHECK: OpCapability ArbitraryPrecisionIntegersINTEL
-; CHECK: OpExtension "SPV_INTEL_arbitrary_precision_integers"
+; CHECK: OpCapability ArbitraryPrecisionIntegersALTERA
+; CHECK: OpExtension "SPV_ALTERA_arbitrary_precision_integers"
 
 ; CHECK-DAG: %[[#I4:]] = OpTypeInt 4 0
 ; CHECK-DAG: %[[#I2:]] = OpTypeInt 2 0
