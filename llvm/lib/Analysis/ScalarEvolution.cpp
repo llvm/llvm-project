@@ -3505,9 +3505,8 @@ const SCEV *ScalarEvolution::getUDivExpr(const SCEV *LHS,
             // {X,+,N}/C => {(X - X%N),+,N}/C preserves division results even
             // if wrapping occurs, as the division results remain equivalent for
             // all offsets in [[(X - X%N), X).
-            bool CanFoldWithWrap = StepInt.isStrictlyPositive() &&
-                                   StartInt.ult(StepInt) && // X < N
-                                   StepInt.sle(DivInt) &&   // N <= C
+            bool CanFoldWithWrap = StartInt.ult(StepInt) && // X < N
+                                   StepInt.ule(DivInt) &&   // N <= C
                                    StepInt.isPowerOf2() && DivInt.isPowerOf2();
             if (StartRem != 0 && (NoWrap || CanFoldWithWrap)) {
               const SCEV *NewLHS = getAddRecExpr(
