@@ -81,7 +81,6 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
   let description = [{
     Convert FIR structured control flow ops to SCF dialect.
   }];
-  let constructor = "::fir::createFIRToSCFPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::scf::SCFDialect"
   ];

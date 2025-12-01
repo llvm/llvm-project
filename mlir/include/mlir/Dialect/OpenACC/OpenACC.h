@@ -180,6 +180,11 @@ static constexpr StringLiteral getRoutineInfoAttrName() {
   return StringLiteral("acc.routine_info");
 }
 
+/// Used to check whether the current operation is an `acc routine`
+inline bool isAccRoutineOp(mlir::Operation *op) {
+  return op->hasAttr(mlir::acc::getRoutineInfoAttrName());
+}
+
 static constexpr StringLiteral getFromDefaultClauseAttrName() {
   return StringLiteral("acc.from_default");
 }

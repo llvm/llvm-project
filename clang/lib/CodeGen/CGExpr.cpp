@@ -3819,6 +3819,8 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
   bool NeedsAbortSuffix =
       IsFatal && RecoverKind != CheckRecoverableKind::Unrecoverable;
   bool MinimalRuntime = CGF.CGM.getCodeGenOpts().SanitizeMinimalRuntime;
+  bool HandlerPreserveAllRegs =
+      CGF.CGM.getCodeGenOpts().SanitizeHandlerPreserveAllRegs;
   const SanitizerHandlerInfo &CheckInfo = SanitizerHandlers[CheckHandler];
   const StringRef CheckName = CheckInfo.Name;
   std::string FnName = "__ubsan_handle_" + CheckName.str();
@@ -3828,6 +3830,8 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
     FnName += "_minimal";
   if (NeedsAbortSuffix)
     FnName += "_abort";
+  if (HandlerPreserveAllRegs && !NeedsAbortSuffix)
+    FnName += "_preserve";
   bool MayReturn =
       !IsFatal || RecoverKind == CheckRecoverableKind::AlwaysRecoverable;
 
@@ -3848,6 +3852,10 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
             (CGF.CurCodeDecl && CGF.CurCodeDecl->hasAttr<OptimizeNoneAttr>());
   if (NoMerge)
     HandlerCall->addFnAttr(llvm::Attribute::NoMerge);
+  if (HandlerPreserveAllRegs && !NeedsAbortSuffix) {
+    // N.B. there is also a clang::CallingConv which is not what we want here.
+    HandlerCall->setCallingConv(llvm::CallingConv::PreserveAll);
+  }
   if (!MayReturn) {
     HandlerCall->setDoesNotReturn();
     CGF.Builder.CreateUnreachable();
