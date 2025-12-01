@@ -490,8 +490,8 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
       OMPBuilder.createCancel(Loc, Builder.getTrue(), OMPD_parallel));
   Builder.restoreIP(NewIP);
   EXPECT_FALSE(M->global_empty());
-  EXPECT_EQ(M->size(), 3U);
-  EXPECT_EQ(F->size(), 8U);
+  EXPECT_EQ(M->size(), 4U);
+  EXPECT_EQ(F->size(), 10U);
   EXPECT_EQ(BB->size(), 1U);
   ASSERT_TRUE(isa<BranchInst>(BB->getTerminator()));
   ASSERT_EQ(BB->getTerminator()->getNumSuccessors(), 2U);
