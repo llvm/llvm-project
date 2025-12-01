@@ -171,9 +171,8 @@ bool CXXExpansionStmtPattern::hasDependentSize() const {
 
   if (auto *Iterating = dyn_cast<CXXIteratingExpansionStmtPattern>(this)) {
     const Expr *Begin = Iterating->getBeginVar()->getInit();
-    const Expr *End = Iterating->getBeginVar()->getInit();
-    return Begin->isTypeDependent() || Begin->isValueDependent() ||
-           End->isTypeDependent() || End->isValueDependent();
+    const Expr *End = Iterating->getEndVar()->getInit();
+    return Begin->isInstantiationDependent() || End->isInstantiationDependent();
   }
 
   if (isa<CXXDestructuringExpansionStmtPattern>(this))
