@@ -2868,7 +2868,7 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
   return success();
 }
 
-LogicalResult spirv::Deserializer::splitConditionalBlocks() {
+LogicalResult spirv::Deserializer::splitSelectionHeader() {
   // Create a copy, so we can modify keys in the original.
   BlockMergeInfoMap blockMergeInfoCopy = blockMergeInfo;
   for (auto it = blockMergeInfoCopy.begin(), e = blockMergeInfoCopy.end();
@@ -2885,7 +2885,7 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
     Operation *terminator = block->getTerminator();
     assert(terminator);
 
-    if (!isa<spirv::BranchConditionalOp>(terminator))
+    if (!isa<spirv::BranchConditionalOp, spirv::SwitchOp>(terminator))
       continue;
 
     // Check if the current header block is a merge block of another construct.
@@ -2895,10 +2895,10 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
         splitHeaderMergeBlock = true;
     }
 
-    // Do not split a block that only contains a conditional branch, unless it
-    // is also a merge block of another construct - in that case we want to
-    // split the block. We do not want two constructs to share header / merge
-    // block.
+    // Do not split a block that only contains a conditional branch / switch,
+    // unless it is also a merge block of another construct - in that case we
+    // want to split the block. We do not want two constructs to share header /
+    // merge block.
     if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock) {
       Block *newBlock = block->splitBlock(terminator);
       OpBuilder builder(block, block->end());
@@ -2936,7 +2936,7 @@ LogicalResult spirv::Deserializer::structurizeControlFlow() {
     logger.startLine() << "\n";
   });
 
-  if (failed(splitConditionalBlocks())) {
+  if (failed(splitSelectionHeader())) {
     return failure();
   }
 
