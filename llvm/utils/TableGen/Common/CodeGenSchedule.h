@@ -334,7 +334,8 @@ struct SchedulePredicateInfo {
   llvm::APInt ProcModelMask; // A set of processor model indices.
   llvm::APInt OperandMask;   // An operand mask.
   const Record *Predicate;   // MCInstrPredicate definition.
-  SchedulePredicateInfo(llvm::APInt CpuMask, llvm::APInt Operands, const Record *Pred)
+  SchedulePredicateInfo(llvm::APInt CpuMask, llvm::APInt Operands,
+                        const Record *Pred)
       : ProcModelMask(CpuMask), OperandMask(Operands), Predicate(Pred) {}
 
   bool operator==(const SchedulePredicateInfo &Other) const {
