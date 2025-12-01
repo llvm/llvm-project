@@ -1821,7 +1821,7 @@ bool RISCVInstrInfo::analyzeSelect(const MachineInstr &MI,
   Cond.push_back(MI.getOperand(2));
   Cond.push_back(MI.getOperand(3));
   // We can only fold when we support short forward branch opt.
-  Optimizable = STI.hasShortForwardBranchOpt();
+  Optimizable = STI.hasShortForwardBranchIALU();
   return false;
 }
 
@@ -1831,7 +1831,7 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
                                bool PreferFalse) const {
   assert(MI.getOpcode() == RISCV::PseudoCCMOVGPR &&
          "Unknown select instruction");
-  if (!STI.hasShortForwardBranchOpt())
+  if (!STI.hasShortForwardBranchIALU())
     return nullptr;
 
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();

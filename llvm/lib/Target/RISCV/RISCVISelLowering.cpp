@@ -453,7 +453,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ABS, XLenVT, Legal);
     if (Subtarget.is64Bit())
       setOperationAction(ISD::ABS, MVT::i32, Custom);
-  } else if (Subtarget.hasShortForwardBranchOpt()) {
+  } else if (Subtarget.hasShortForwardBranchIALU()) {
     // We can use PseudoCCSUB to implement ABS.
     setOperationAction(ISD::ABS, XLenVT, Legal);
   } else if (Subtarget.is64Bit()) {
@@ -9509,7 +9509,7 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
 static SDValue
 foldBinOpIntoSelectIfProfitable(SDNode *BO, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
-  if (Subtarget.hasShortForwardBranchOpt())
+  if (Subtarget.hasShortForwardBranchIALU())
     return SDValue();
 
   unsigned SelOpNo = 0;
@@ -21013,7 +21013,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     // (select (x < 0), y, z)  -> x >> (XLEN - 1) & (y - z) + z
     // (select (x >= 0), y, z) -> x >> (XLEN - 1) & (z - y) + y
-    if (!Subtarget.hasShortForwardBranchOpt() && isa<ConstantSDNode>(TrueV) &&
+    if (!Subtarget.hasShortForwardBranchIALU() && isa<ConstantSDNode>(TrueV) &&
         isa<ConstantSDNode>(FalseV) && isNullConstant(RHS) &&
         (CCVal == ISD::CondCode::SETLT || CCVal == ISD::CondCode::SETGE)) {
       if (CCVal == ISD::CondCode::SETGE)
@@ -25607,7 +25607,7 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
     return SDValue(N, 0); // Lower SDIV as SDIV
 
   // Only perform this transform if short forward branch opt is supported.
-  if (!Subtarget.hasShortForwardBranchOpt())
+  if (!Subtarget.hasShortForwardBranchIALU())
     return SDValue();
   EVT VT = N->getValueType(0);
   if (!(VT == MVT::i32 || (VT == MVT::i64 && Subtarget.is64Bit())))
