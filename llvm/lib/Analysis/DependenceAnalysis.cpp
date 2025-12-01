@@ -2591,7 +2591,6 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   LLVM_DEBUG(dbgs() << "    ConstDelta = " << ConstDelta << "\n");
   if (ConstDelta == 0)
     return false;
-  RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ExtraGCD);
   LLVM_DEBUG(dbgs() << "    RunningGCD = " << RunningGCD << "\n");
   APInt Remainder = ConstDelta.srem(RunningGCD);
   if (Remainder != 0) {
