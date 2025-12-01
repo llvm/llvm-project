@@ -2517,29 +2517,22 @@ public:
     if (!CastOp::canFoldIntoConsumerOp(cast))
       return failure();
 
-    auto originalOutputShape = op.getMixedOutputShape();
-    auto newOutputShape = originalOutputShape;
+    SmallVector<OpFoldResult> originalOutputShape = op.getMixedOutputShape();
+    SmallVector<OpFoldResult> newOutputShape = originalOutputShape;
     SmallVector<int64_t> newOutputShapeSizes;
     SmallVector<Value> newOperands;
 
     // Convert output shape dims from dynamic to static where possible.
     for (auto [dimIdx, dimSize] : enumerate(originalOutputShape)) {
-      auto dimVal = dimSize.dyn_cast<Value>();
-      if (!dimVal) {
-        newOutputShapeSizes.push_back(getConstantIntValue(dimSize).value());
+      auto sizeOpt = getConstantIntValue(dimSize);
+      if (sizeOpt.has_value()) {
+        newOutputShapeSizes.push_back(sizeOpt.value());
+        newOutputShape[dimIdx] = rewriter.getIndexAttr(sizeOpt.value());
         continue;
       }
 
-      auto constOp = dimVal.getDefiningOp<arith::ConstantIndexOp>();
-      if (!constOp) {
-        newOperands.push_back(dimVal);
-        newOutputShapeSizes.push_back(ShapedType::kDynamic);
-        continue;
-      }
-
-      newOutputShape[dimIdx] = constOp.getValue();
-      newOutputShapeSizes.push_back(
-          getConstantIntValue(constOp.getValue()).value());
+      newOperands.push_back(llvm::cast<Value>(dimSize));
+      newOutputShapeSizes.push_back(ShapedType::kDynamic);
     }
 
     if (newOperands.size() == op->getNumOperands())
