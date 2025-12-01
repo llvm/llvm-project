@@ -195,11 +195,10 @@ generateUnconstrainedCodeTemplates(const InstructionTemplate &Variant,
 }
 
 std::mt19937 &randomGenerator() {
-  unsigned RandomSeed = RandomGeneratorSeed;
   static std::random_device RandomDevice;
-  if (RandomSeed == 0) {
-    RandomSeed = RandomDevice();
-  }
+  unsigned RandomSeed = RandomGeneratorSeed.getNumOccurrences()
+                            ? RandomGeneratorSeed
+                            : RandomDevice();
   LLVM_DEBUG(dbgs() << "Using random seed " << RandomSeed << ".\n");
   static std::mt19937 RandomGenerator(RandomSeed);
   return RandomGenerator;
