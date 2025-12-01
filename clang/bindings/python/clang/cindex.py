@@ -4383,8 +4383,8 @@ def register_functions(lib: CDLL, ignore_errors: bool) -> None:
 
 
 class Config:
-    library_path = None
-    library_file: str | None = None
+    library_path: str | None = os.environ.get("LIBCLANG_LIBRARY_PATH")
+    library_file: str | None = os.environ.get("LIBCLANG_LIBRARY_FILE")
     compatibility_check = True
     loaded = False
 
