@@ -1048,20 +1048,13 @@ enum NodeType {
   LRINT,
   LLRINT,
 
-  /// FMINNUM/FMAXNUM - Perform floating-point minimum maximum on two values,
-  /// following IEEE-754 definitions except for signed zero behavior.
+  /// FMINNUM/FMAXNUM - Perform floating-point minimum or maximum on two
+  /// values.
   ///
-  /// If one input is a signaling NaN, returns a quiet NaN. This matches
-  /// IEEE-754 2008's minNum/maxNum behavior for signaling NaNs (which differs
-  /// from 2019).
+  /// In the case where a single input is a NaN (either signaling or quiet),
+  /// the non-NaN input is returned.
   ///
-  /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
-  /// 2019's minimumNumber/maximumNumber.
-  ///
-  /// Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
-  /// so arithmetic feeding into a minnum/maxnum can produce inconsistent
-  /// results. FMAXIMUN/FMINIMUM or FMAXIMUMNUM/FMINIMUMNUM may be better choice
-  /// for non-distinction of sNaN/qNaN handling.
+  /// The return value of (FMINNUM 0.0, -0.0) could be either 0.0 or -0.0.
   FMINNUM,
   FMAXNUM,
 
@@ -1075,9 +1068,6 @@ enum NodeType {
   ///
   /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
   /// 2019's minimumNumber/maximumNumber.
-  ///
-  /// Deprecated, and will be removed soon, as FMINNUM/FMAXNUM have the same
-  /// semantics now.
   FMINNUM_IEEE,
   FMAXNUM_IEEE,
 
