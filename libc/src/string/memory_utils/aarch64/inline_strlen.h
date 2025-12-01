@@ -15,7 +15,6 @@
 #include <arm_neon.h>
 #include <stddef.h> // size_t
 namespace LIBC_NAMESPACE_DECL {
-namespace arch_vector {
 namespace neon {
 [[maybe_unused]] LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static size_t
 string_length(const char *src) {
@@ -94,11 +93,11 @@ namespace sve {
   return len;
 }
 } // namespace sve
-} // namespace LIBC_NAMESPACE_DECL::arch_vector
 } // namespace LIBC_NAMESPACE_DECL
 #endif // LIBC_TARGET_CPU_HAS_SVE
 
-namespace LIBC_NAMESPACE_DECL::arch_vector {
+namespace LIBC_NAMESPACE_DECL {
+namespace internal::arch_vector {
 [[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
 #ifdef LIBC_TARGET_CPU_HAS_SVE
   return sve::string_length(src);
@@ -106,5 +105,6 @@ namespace LIBC_NAMESPACE_DECL::arch_vector {
   return neon::string_length(src);
 #endif
 }
-} // namespace LIBC_NAMESPACE_DECL::arch_vector
+} // namespace internal::arch_vector
+} // namespace LIBC_NAMESPACE_DECL
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_STRLEN_H
