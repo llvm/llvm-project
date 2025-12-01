@@ -26,6 +26,11 @@
 
 using namespace llvm;
 
+cl::opt<std::string>
+    llvm::CFGFontName("cfg-fontname", cl::Hidden,
+                      cl::desc("The name of a font to use for the DOT"
+                               " file (defaults to Courier)"));
+
 static cl::opt<std::string>
     CFGFuncName("cfg-func-name", cl::Hidden,
                 cl::desc("The name of a function (or its substring)"
