@@ -1191,6 +1191,12 @@ public:
 
   LLVM_ABI SDValue getTypeSize(const SDLoc &DL, EVT VT, TypeSize TS);
 
+  /// Return a vector with the first 'Len' lanes set to true and remaining lanes
+  /// set to false. The mask's ValueType is the same as when comparing vectors
+  /// of type VT.
+  LLVM_ABI SDValue getMaskFromElementCount(const SDLoc &DL, EVT VT,
+                                           ElementCount Len);
+
   /// Return a GLOBAL_OFFSET_TABLE node. This does not have a useful SDLoc.
   SDValue getGLOBAL_OFFSET_TABLE(EVT VT) {
     return getNode(ISD::GLOBAL_OFFSET_TABLE, SDLoc(), VT);
