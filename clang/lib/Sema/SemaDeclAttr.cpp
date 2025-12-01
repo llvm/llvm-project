@@ -6665,8 +6665,8 @@ static bool isSanitizerAttributeAllowedOnGlobals(StringRef Sanitizer) {
          Sanitizer == "memtag";
 }
 
-static void handleSectionMemtagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  D->addAttr(SectionMemtagAttr::CreateImplicit(S.Context, AL));
+static void handleForceMemtagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  D->addAttr(ForceMemtagAttr::CreateImplicit(S.Context, AL));
 }
 
 static void handleNoSanitizeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -7942,8 +7942,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_PtGuardedVar:
     handlePtGuardedVarAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_SectionMemtag:
-    handleSectionMemtagAttr(S, D, AL);
+  case ParsedAttr::AT_ForceMemtag:
+    handleForceMemtagAttr(S, D, AL);
     break;
   case ParsedAttr::AT_NoSanitize:
     handleNoSanitizeAttr(S, D, AL);

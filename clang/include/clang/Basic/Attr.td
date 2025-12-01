@@ -3927,10 +3927,10 @@ def X86ForceAlignArgPointer : InheritableAttr, TargetSpecificAttr<TargetAnyX86> 
   let Documentation = [X86ForceAlignArgPointerDocs];
 }
 
-def SectionMemtag : InheritableAttr {
-  let Spellings = [ClangGCC<"section_memtag">];
+def ForceMemtag : InheritableAttr {
+  let Spellings = [ClangGCC<"force_memtag">];
   let Subjects = SubjectList<[GlobalVar]>;
-  let Documentation = [SectionMemtagDocs];
+  let Documentation = [ForceMemtagDocs];
 }
 
 def NoSanitize : InheritableAttr {

@@ -3955,7 +3955,7 @@ bool CodeGenModule::isInNoSanitizeList(SanitizerMask Kind,
 }
 
 bool CodeGenModule::userForcedSectionMemtag(llvm::GlobalVariable *GV) const {
-  return GV->getMetadata("section_memtag") != nullptr;
+  return GV->getMetadata("force_memtag") != nullptr;
 }
 
 bool CodeGenModule::imbueXRayAttrs(llvm::Function *Fn, SourceLocation Loc,
@@ -6334,8 +6334,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (NeedsGlobalCtor || NeedsGlobalDtor)
     EmitCXXGlobalVarDeclInitFunc(D, GV, NeedsGlobalCtor);
 
-  if (D->hasAttr<SectionMemtagAttr>()) {
-    GV->setMetadata("section_memtag", llvm::MDNode::get(GV->getContext(), {}));
+  if (D->hasAttr<ForceMemtagAttr>()) {
+    GV->setMetadata("force_memtag", llvm::MDNode::get(GV->getContext(), {}));
   }
   SanitizerMD->reportGlobal(GV, *D, NeedsGlobalCtor);
 

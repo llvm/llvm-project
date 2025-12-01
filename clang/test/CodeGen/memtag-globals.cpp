@@ -11,7 +11,7 @@
 
 int global;
 int __attribute__((__section__("my_section"))) section_global;
-int __attribute__((__section__("my_section"))) __attribute__((section_memtag)) section_global_tagged;
+int __attribute__((__section__("my_section"))) __attribute__((force_memtag)) section_global_tagged;
 int __attribute__((no_sanitize("memtag"))) attributed_global;
 int __attribute__((disable_sanitizer_instrumentation)) disable_instrumentation_global;
 int ignorelisted_global;
@@ -31,8 +31,8 @@ void func() {
 // CHECK:     @{{.*}}section_global{{.*}} ={{.*}} sanitize_memtag
 
 // In order to opt-in memory tagging in globals in sections,
-// __attribute__((section_memtag)) must be used.
-// CHECK:     @{{.*}}section_global_tagged{{.*}} ={{.*}} sanitize_memtag,{{.*}} !section_memtag
+// __attribute__((force_memtag)) must be used.
+// CHECK:     @{{.*}}section_global_tagged{{.*}} ={{.*}} sanitize_memtag,{{.*}} !force_memtag
 
 // CHECK:     @{{.*}}attributed_global{{.*}} =
 // CHECK-NOT: sanitize_memtag
