@@ -2449,6 +2449,18 @@ templateName()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt;</td><td class="name" onclick="toggle('arrayTypeLoc0')"><a name="arrayTypeLoc0Anchor">arrayTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ArrayTypeLoc.html">ArrayTypeLoc</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="arrayTypeLoc0"><pre>Matches `ArrayTypeLoc`s.
+
+Given
+  int a[] = {1, 2};
+  int b[3];
+  void f() { int c[a[0]]; }
+arrayTypeLoc()
+  matches "int a[]", "int b[3]" and "int c[a[0]]".
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt;</td><td class="name" onclick="toggle('pointerTypeLoc0')"><a name="pointerTypeLoc0Anchor">pointerTypeLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1PointerTypeLoc.html">PointerTypeLoc</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="pointerTypeLoc0"><pre>Matches pointer `TypeLoc`s.
 

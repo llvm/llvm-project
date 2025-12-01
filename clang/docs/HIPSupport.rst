@@ -376,6 +376,43 @@ Example Usage
       basePtr->virtualFunction(); // Allowed since obj is constructed in device code
    }
 
+Alias Attribute Support
+=======================
+
+Clang supports alias attributes in HIP code, allowing creation of alternative names for functions and variables. 
+ - Aliases work with ``__host__``, ``__device__``, and ``__host__ __device__`` functions and variables.
+ - The alias attribute uses the syntax ``__attribute__((alias("target_name")))``. Both weak and strong aliases are supported.
+ - Outside of ``extern "C"``, the alias target must use the mangled name of the aliasee
+ - The alias is only emitted if the aliasee is emitted on the same side (ie __host__ or __device__), otherwise it is ignored.
+
+Example Usage
+-------------
+
+.. code-block:: c++
+
+   extern "C" {
+     // Host function alias
+     int __HostFunc(void) { return 0; }
+     int HostFunc(void) __attribute__((weak, alias("__HostFunc")));
+
+     // Device function alias
+     __device__ int __DeviceFunc(void) { return 1; }
+     __device__ int DeviceFunc(void) __attribute__((weak, alias("__DeviceFunc")));
+
+     // Host-device function alias
+     __host__ __device__ int __BothFunc(void) { return 2; }
+     __host__ __device__ int BothFunc(void) __attribute__((alias("__BothFunc")));
+
+     // Variable alias
+     int __host_var = 3;
+     extern int __attribute__((weak, alias("__host_var"))) host_var;
+   }
+   // Mangled / overload alias
+   __host__ __device__ float __Four(float f) { return 2.0f * f; }
+   __host__ __device__ int Four(void) __attribute__((weak, alias("_Z6__Fourv")));
+   __host__ __device__ float Four(float f) __attribute__((weak, alias("_Z6__Fourf")));
+
+
 Host and Device Attributes of Default Destructors
 ===================================================
 

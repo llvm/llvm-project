@@ -54,6 +54,12 @@ void printf_deceptive_newline() {
   // CHECK-FIXES: std::println("Hello");
 }
 
+void printf_utf8_text() {
+  printf("你好世界\n");
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println("你好世界");
+}
+
 void printf_crlf_newline() {
   printf("Hello\r\n");
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::print' instead of 'printf' [modernize-use-std-print]
@@ -301,6 +307,12 @@ void fprintf_simple() {
   fprintf(stderr, "Hello");
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::print' instead of 'fprintf' [modernize-use-std-print]
   // CHECK-FIXES: std::print(stderr, "Hello");
+}
+
+void fprintf_utf8_text() {
+  fprintf(stderr, "你好世界\n");
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'fprintf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println(stderr, "你好世界");
 }
 
 void std_printf_simple() {

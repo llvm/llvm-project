@@ -67,17 +67,7 @@ struct DirectiveNameScope {
   template <typename T>
   static OmpDirectiveName GetOmpDirectiveName(const T &x) {
     if constexpr (WrapperTrait<T>) {
-      if constexpr (std::is_same_v<T, OpenMPCancelConstruct> ||
-          std::is_same_v<T, OpenMPCancellationPointConstruct> ||
-          std::is_same_v<T, OpenMPDepobjConstruct> ||
-          std::is_same_v<T, OpenMPFlushConstruct> ||
-          std::is_same_v<T, OpenMPInteropConstruct> ||
-          std::is_same_v<T, OpenMPSimpleStandaloneConstruct> ||
-          std::is_same_v<T, OpenMPGroupprivate>) {
-        return x.v.DirName();
-      } else {
-        return GetOmpDirectiveName(x.v);
-      }
+      return GetOmpDirectiveName(x.v);
     } else if constexpr (TupleTrait<T>) {
       if constexpr (std::is_base_of_v<OmpBlockConstruct, T>) {
         return std::get<OmpBeginDirective>(x.t).DirName();
