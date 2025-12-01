@@ -48,11 +48,8 @@ Sema::ActOnCXXExpansionStmtDecl(unsigned TemplateDepth,
 CXXExpansionStmtDecl *
 Sema::BuildCXXExpansionStmtDecl(DeclContext *Ctx, SourceLocation TemplateKWLoc,
                                 NonTypeTemplateParmDecl *NTTP) {
-  auto *TParamList = TemplateParameterList::Create(
-      Context, TemplateKWLoc, TemplateKWLoc, {NTTP}, TemplateKWLoc,
-      /*RequiresClause=*/nullptr);
   auto *Result =
-      CXXExpansionStmtDecl::Create(Context, Ctx, TemplateKWLoc, TParamList);
+      CXXExpansionStmtDecl::Create(Context, Ctx, TemplateKWLoc, NTTP);
   Ctx->addDecl(Result);
   return Result;
 }
