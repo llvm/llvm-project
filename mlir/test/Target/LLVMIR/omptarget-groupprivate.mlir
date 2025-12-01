@@ -31,11 +31,15 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
   llvm.mlir.global internal @global_nohost() : i32
 }
 
+// CHECK-DAG: @global_a = internal global i32 undef
+// CHECK-DAG: @global_any = internal global i32 undef
+// CHECK-DAG: @global_host = internal global i32 undef
+// CHECK-DAG: @global_nohost = internal global i32 undef
+// CHECK-DAG: {{.*}} = internal addrspace(3) global i32 poison
+// CHECK-DAG: {{.*}} = internal addrspace(3) global i32 poison
 // CHECK: define {{.*}} amdgpu_kernel void @__omp_offloading_{{.*}}_{{.*}}__QQmain_{{.*}}(ptr %{{.*}}, ptr %{{.*}}) #{{[0-9]+}} {
 // CHECK-LABEL:  omp.target:
 // CHECK-NEXT :    %[[LOAD:.*]] = load i32, ptr %{{.*}}, align 4
-// CHECK-NEXT :    %[[ALLOC_any:.*]] = call ptr @__kmpc_alloc_shared(i64 4)
-// CHECK-NEXT :    store i32 %[[LOAD]], ptr %[[ALLOC_any]], align 4
+// CHECK-NEXT :    store i32 %[[LOAD]], ptr addrspace(3) {{.*}}, align 4
 // CHECK-NEXT :    store i32 %[[LOAD]], ptr @global_host, align 4
-// CHECK-NEXT :    %[[ALLOC_NOHOST:.*]] = call ptr @__kmpc_alloc_shared(i64 4)
-// CHECK-NEXT :    store i32 %[[LOAD]], ptr %[[ALLOC_NOHOST]], align 4
+// CHECK-NEXT :    store i32 %[[LOAD]], ptr addrspace(3) {{.*}}, align 4
