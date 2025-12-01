@@ -12,6 +12,9 @@
 plugin list instrumentation-runtime.BoundsSafety
 # CHECK: [+] BoundsSafety
 
+# Emit logging so that the code has test coverage
+log enable lldb instrumentation-runtime
+
 run
 
 # CHECK: * thread #{{.*}} stop reason = Soft Bounds check failed{{$}}
