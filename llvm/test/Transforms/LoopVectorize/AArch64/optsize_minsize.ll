@@ -210,8 +210,7 @@ define void @tail_predicate_without_optsize(ptr %p, i8 %a, i8 %b, i8 %c, i32 %n)
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = extractelement <16 x i1> [[TMP0]], i32 0
 ; DEFAULT-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; DEFAULT:       [[PRED_STORE_IF]]:
-; DEFAULT-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 0
-; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP9]]
+; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = extractelement <16 x i8> [[TMP7]], i32 0
 ; DEFAULT-NEXT:    store i8 [[TMP11]], ptr [[TMP10]], align 1
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE]]
