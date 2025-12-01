@@ -1553,7 +1553,7 @@ int FTN_STDCALL FTN_GET_DEVICE_NUM(void) {
 const char *FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_UID_FROM_DEVICE)(int device_num)
     KMP_WEAK_ATTRIBUTE_EXTERNAL;
 const char *FTN_STDCALL
-    KMP_EXPAND_NAME(FTN_GET_UID_FROM_DEVICE)(int device_num) {
+KMP_EXPAND_NAME(FTN_GET_UID_FROM_DEVICE)(int device_num) {
 #if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return nullptr;
 #else
@@ -1567,7 +1567,7 @@ const char *FTN_STDCALL
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_DEVICE_FROM_UID)(const char *device_uid)
     KMP_WEAK_ATTRIBUTE_EXTERNAL;
 int FTN_STDCALL
-    KMP_EXPAND_NAME(FTN_GET_DEVICE_FROM_UID)(const char *device_uid) {
+KMP_EXPAND_NAME(FTN_GET_DEVICE_FROM_UID)(const char *device_uid) {
 #if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
   return omp_invalid_device;
 #else
