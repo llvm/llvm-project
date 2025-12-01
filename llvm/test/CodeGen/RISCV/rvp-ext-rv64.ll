@@ -495,6 +495,18 @@ define void @test_extract_vector_32(ptr %ret_ptr, ptr %a_ptr) {
   ret void
 }
 
+define void @test_extract_vector_32_elem1(ptr %ret_ptr, ptr %a_ptr) {
+; CHECK-LABEL: test_extract_vector_32_elem1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a1, 4(a1)
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  %a = load <2 x i32>, ptr %a_ptr
+  %extracted = extractelement <2 x i32> %a, i32 1
+  store i32 %extracted, ptr %ret_ptr
+  ret void
+}
+
 ; Test basic add/sub operations for v2i32 (RV64 only)
 define void @test_padd_w(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 ; CHECK-LABEL: test_padd_w:
