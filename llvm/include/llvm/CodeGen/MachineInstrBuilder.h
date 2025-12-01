@@ -432,6 +432,15 @@ public:
     return *this;
   }
 
+  /// Inserts the newly-built instruction after the given position in the
+  /// given MachineBasicBlock.
+  const MachineInstrBuilder &insertAfter(MachineInstr *MInstr) const {
+    MachineBasicBlock *MBB = MInstr->getParent();
+    MachineBasicBlock::iterator I = MInstr->getIterator();
+    MBB->insertAfter(I, MI);
+    return *this;
+  }
+
   bool constrainAllUses(const TargetInstrInfo &TII,
                         const TargetRegisterInfo &TRI,
                         const RegisterBankInfo &RBI) const {
@@ -514,20 +523,6 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
   MachineInstr *MI = MF.CreateMachineInstr(MCID, MIMD.getDL());
   BB.insert(I, MI);
   return MachineInstrBuilder(MF, MI).copyMIMetadata(MIMD);
-}
-
-/// This version of the builder inserts the newly-built instruction after the
-/// given position in the given MachineBasicBlock, and does NOT take a
-/// destination register.
-inline MachineInstrBuilder BuildMIAfter(MachineBasicBlock &BB,
-                                        MachineBasicBlock::iterator I,
-                                        const MIMetadata &MIMD,
-                                        const MCInstrDesc &MCID) {
-  MachineFunction &MF = *BB.getParent();
-  MachineInstr *MI = MF.CreateMachineInstr(MCID, MIMD.getDL());
-  BB.insertAfter(I, MI);
-  return MachineInstrBuilder(MF, MI)
-      .copyMIMetadata(MIMD);
 }
 
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,

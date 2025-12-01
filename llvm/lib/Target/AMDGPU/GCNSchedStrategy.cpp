@@ -1966,7 +1966,7 @@ bool RewriteScheduleStage::initHeuristics(
         continue;
 
       int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode());
-      assert(ReplacementOp != -1)
+      assert(ReplacementOp != -1);
 
       RewriteCands.push_back({&MI, MI.getOpcode()});
       MI.setDesc(TII->get(ReplacementOp));
@@ -2256,10 +2256,10 @@ bool RewriteScheduleStage::rewrite(
           // Do not create redundant copies.
           if (ReachingDefCopyMap[Src2Reg].insert(RD).second) {
             MachineInstrBuilder VGPRCopy =
-                BuildMIAfter(*RD->getParent(), RD->getIterator(),
-                             RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
+                BuildMI(DAG.MF, RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
                     .addDef(MappedReg, 0, 0)
-                    .addUse(Src2Reg, 0, 0);
+                    .addUse(Src2Reg, 0, 0)
+                    .insertAfter(RD);
             DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
 
             // If this reaching def was the last MI in the region, update the
@@ -2338,10 +2338,10 @@ bool RewriteScheduleStage::rewrite(
         // Do not create reundant copies.
         if (ReachingDefCopyMap[DstReg].insert(RD).second) {
           MachineInstrBuilder VGPRCopy =
-              BuildMIAfter(*RD->getParent(), RD->getIterator(),
-                           RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
+              BuildMI(DAG.MF, RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
                   .addDef(MappedReg, 0, 0)
-                  .addUse(DstReg, 0, 0);
+                  .addUse(DstReg, 0, 0)
+                  .insertAfter(RD);
           DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
 
           // If this reaching def was the last MI in the region, update the
@@ -2418,10 +2418,10 @@ bool RewriteScheduleStage::rewrite(
 
       // If this UseInst was the first MI in the region, update the region
       // boundaries.
-      if (LastMIToRegion.contains(UseInst)) {
+      if (FirstMIToRegion.contains(UseInst)) {
         unsigned UpdateRegion = FirstMIToRegion[UseInst];
         DAG.Regions[UpdateRegion].first = VGPRCopy;
-        LastMIToRegion.erase(UseInst);
+        FirstMIToRegion.erase(UseInst);
       }
 
       // Replace the operand for all users.
@@ -2468,6 +2468,8 @@ bool RewriteScheduleStage::rewrite(
 
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++)
     DAG.LiveIns[Region] = LiveInUpdater.getLiveRegsForRegionIdx(Region);
+
+  DAG.Pressure[RegionIdx] = DAG.getRealRegPressure(RegionIdx);
 
   return true;
 }
