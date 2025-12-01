@@ -1019,16 +1019,16 @@ LLVMOrcLLJITGetObjTransformLayer(LLVMOrcLLJITRef J) {
   return wrap(&unwrap(J)->getObjTransformLayer());
 }
 
-LLVMOrcObjectLayerRef
-LLVMOrcCreateObjectLinkingLayerWithInProcessMemoryManager(
-    LLVMOrcExecutionSessionRef ES) {
+LLVMErrorRef LLVMOrcCreateObjectLinkingLayerWithInProcessMemoryManager(
+    LLVMOrcObjectLayerRef *Result, LLVMOrcExecutionSessionRef ES) {
+  assert(Result && "Result must not be null");
   assert(ES && "ES must not be null");
-  auto mm = jitlink::InProcessMemoryManager::Create();
-  if (!mm) {
-    unwrap(ES)->reportError(mm.takeError());
-    return nullptr;
+  auto MM = jitlink::InProcessMemoryManager::Create();
+  if (!MM) {
+    return wrap(MM.takeError());
   }
-  return wrap(new ObjectLinkingLayer(*unwrap(ES), std::move(*mm)));
+  *Result = wrap(new ObjectLinkingLayer(*unwrap(ES), std::move(*MM)));
+  return LLVMErrorSuccess;
 }
 
 LLVMOrcObjectLayerRef
