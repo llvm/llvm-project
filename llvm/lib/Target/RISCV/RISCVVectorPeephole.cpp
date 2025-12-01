@@ -421,6 +421,12 @@ bool RISCVVectorPeephole::convertSameMaskVMergeToVMv(MachineInstr &MI) {
     return false;
   MachineInstr *True = MRI->getVRegDef(MI.getOperand(3).getReg());
 
+  // Peek through COPY.
+  if (True && True->isCopy()) {
+    if (Register TrueReg = True->getOperand(1).getReg(); TrueReg.isVirtual())
+      True = MRI->getVRegDef(TrueReg);
+  }
+
   if (!True || True->getParent() != MI.getParent())
     return false;
 
@@ -722,7 +728,15 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   Register TrueReg = MI.getOperand(3).getReg();
   if (!TrueReg.isVirtual() || !MRI->hasOneUse(TrueReg))
     return false;
-  MachineInstr &True = *MRI->getUniqueVRegDef(TrueReg);
+  MachineInstr *TrueMI = MRI->getUniqueVRegDef(TrueReg);
+  // Peek through COPY.
+  if (TrueMI->isCopy()) {
+    if (TrueReg = TrueMI->getOperand(1).getReg();
+        TrueReg.isVirtual() && MRI->hasOneUse(TrueReg))
+      TrueMI = MRI->getVRegDef(TrueReg);
+  }
+
+  MachineInstr &True = *TrueMI;
   if (True.getParent() != MI.getParent())
     return false;
   const MachineOperand &MaskOp = MI.getOperand(4);
