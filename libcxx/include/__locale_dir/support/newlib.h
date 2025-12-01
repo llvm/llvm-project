@@ -10,7 +10,9 @@
 #define _LIBCPP___LOCALE_DIR_SUPPORT_NEWLIB_H
 
 #include <__config>
-#include <clocale>
+#include <__cstddef/size_t.h>
+#include <__std_mbstate_t.h>
+#include <clocale> // std::lconv
 #include <cstdio>
 #include <cstdlib>
 #include <ctype.h>
@@ -46,9 +48,19 @@ struct __locale_guard {
 //
 // Locale management
 //
+#define _LIBCPP_COLLATE_MASK LC_COLLATE_MASK
+#define _LIBCPP_CTYPE_MASK LC_CTYPE_MASK
+#define _LIBCPP_MONETARY_MASK LC_MONETARY_MASK
+#define _LIBCPP_NUMERIC_MASK LC_NUMERIC_MASK
+#define _LIBCPP_TIME_MASK LC_TIME_MASK
+#define _LIBCPP_MESSAGES_MASK LC_MESSAGES_MASK
+#define _LIBCPP_ALL_MASK LC_ALL_MASK
+#define _LIBCPP_LC_ALL LC_ALL
 
-using __locale_t _LIBCPP_NODEBUG = locale_t;
-using __lconv_t _LIBCPP_NODEBUG  = lconv;
+using __locale_t _LIBCPP_NODEBUG = ::locale_t;
+
+#if defined(_LIBCPP_BUILDING_LIBRARY)
+using __lconv_t _LIBCPP_NODEBUG = std::lconv;
 
 inline _LIBCPP_HIDE_FROM_ABI __locale_t __newlocale(int __category_mask, const char* __locale, __locale_t __base) {
   return ::newlocale(__category_mask, __locale, __base);
@@ -64,20 +76,11 @@ inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) {
   __locale_guard __current(__loc);
   return std::localeconv();
 }
-
-#define _LIBCPP_COLLATE_MASK LC_COLLATE_MASK
-#define _LIBCPP_CTYPE_MASK LC_CTYPE_MASK
-#define _LIBCPP_MONETARY_MASK LC_MONETARY_MASK
-#define _LIBCPP_NUMERIC_MASK LC_NUMERIC_MASK
-#define _LIBCPP_TIME_MASK LC_TIME_MASK
-#define _LIBCPP_MESSAGES_MASK LC_MESSAGES_MASK
-#define _LIBCPP_ALL_MASK LC_ALL_MASK
-#define _LIBCPP_LC_ALL LC_ALL
+#endif // _LIBCPP_BUILDING_LIBRARY
 
 //
 // Strtonum functions
 //
-
 inline _LIBCPP_HIDE_FROM_ABI float __strtof(const char* __nptr, char** __endptr, __locale_t __loc) {
   return ::strtof_l(__nptr, __endptr, __loc);
 }
@@ -90,23 +93,9 @@ inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __
   return ::strtold_l(__nptr, __endptr, __loc);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long long __strtoll(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return ::strtoll_l(__nptr, __endptr, __base, __loc);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-__strtoull(const char* __nptr, char** __endptr, int __base, __locale_t __loc) {
-  return ::strtoull_l(__nptr, __endptr, __base, __loc);
-}
-
 //
 // Character manipulation functions
 //
-
-inline _LIBCPP_HIDE_FROM_ABI int __isdigit(int __c, __locale_t __loc) { return isdigit_l(__c, __loc); }
-
-inline _LIBCPP_HIDE_FROM_ABI int __isxdigit(int __c, __locale_t __loc) { return isxdigit_l(__c, __loc); }
-
 #if defined(_LIBCPP_BUILDING_LIBRARY)
 inline _LIBCPP_HIDE_FROM_ABI int __toupper(int __c, __locale_t __loc) { return toupper_l(__c, __loc); }
 
@@ -158,15 +147,14 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __wcsxfrm(wchar_t* __dest, const wchar_t* __
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-inline _LIBCPP_HIDE_FROM_ABI
-size_t __strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
+inline _LIBCPP_HIDE_FROM_ABI size_t
+__strftime(char* __s, size_t __max, const char* __format, const struct tm* __tm, __locale_t __loc) {
   return strftime_l(__s, __max, __format, __tm, __loc);
 }
 
 //
 // Other functions
 //
-
 inline _LIBCPP_HIDE_FROM_ABI decltype(MB_CUR_MAX) __mb_len_max(__locale_t __loc) {
   __locale_guard __current(__loc);
   return MB_CUR_MAX;
@@ -249,20 +237,6 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
   va_end(__va);
   return __res;
 }
-
-#ifndef _LIBCPP_COMPILER_GCC // GCC complains that this can't be always_inline due to C-style varargs
-_LIBCPP_HIDE_FROM_ABI
-#endif
-inline _LIBCPP_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __sscanf(
-    const char* __s, __locale_t __loc, const char* __format, ...) {
-  va_list __va;
-  va_start(__va, __format);
-  __locale_guard __current(__loc);
-  int __res = std::vsscanf(__s, __format, __va);
-  va_end(__va);
-  return __res;
-}
-
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
