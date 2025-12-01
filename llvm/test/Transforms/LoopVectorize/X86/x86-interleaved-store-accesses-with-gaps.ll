@@ -181,8 +181,7 @@ define dso_local void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr 
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[WIDE_MASKED_LOAD7:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr align 2 [[TMP19]], <4 x i1> [[TMP0]], <4 x i16> poison)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP20:%.*]] = or disjoint <4 x i64> [[TMP2]], splat (i64 1)
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP21:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP21]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if8:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP20]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP22]]
@@ -190,8 +189,7 @@ define dso_local void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr 
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP24]], ptr [[TMP23]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE9]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue9:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = extractelement <4 x i1> [[TMP0]], i64 1
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP25]], label [[PRED_STORE_IF10:%.*]], label [[PRED_STORE_CONTINUE11:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF10:%.*]], label [[PRED_STORE_CONTINUE11:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if10:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = extractelement <4 x i64> [[TMP20]], i64 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP26]]
@@ -199,8 +197,7 @@ define dso_local void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr 
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP28]], ptr [[TMP27]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE11]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue11:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = extractelement <4 x i1> [[TMP0]], i64 2
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP29]], label [[PRED_STORE_IF12:%.*]], label [[PRED_STORE_CONTINUE13:%.*]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF12:%.*]], label [[PRED_STORE_CONTINUE13:%.*]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if12:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = extractelement <4 x i64> [[TMP20]], i64 2
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP30]]
@@ -208,8 +205,7 @@ define dso_local void @test2(ptr noalias nocapture %points, i32 %numPoints, ptr 
 ; DISABLED_MASKED_STRIDED-NEXT:    store i16 [[TMP32]], ptr [[TMP31]], align 2
 ; DISABLED_MASKED_STRIDED-NEXT:    br label [[PRED_STORE_CONTINUE13]]
 ; DISABLED_MASKED_STRIDED:       pred.store.continue13:
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = extractelement <4 x i1> [[TMP0]], i64 3
-; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP33]], label [[PRED_STORE_IF14:%.*]], label [[PRED_STORE_CONTINUE15]]
+; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP15]], label [[PRED_STORE_IF14:%.*]], label [[PRED_STORE_CONTINUE15]]
 ; DISABLED_MASKED_STRIDED:       pred.store.if14:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP34:%.*]] = extractelement <4 x i64> [[TMP20]], i64 3
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i16, ptr [[POINTS]], i64 [[TMP34]]

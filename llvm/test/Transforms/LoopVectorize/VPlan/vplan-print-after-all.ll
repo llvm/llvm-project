@@ -41,6 +41,8 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::materializePacksAndUnpacks
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::materializeBroadcasts
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::replicateByVF
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::unrollReplicateRegions
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::mergeBlocksIntoPredecessors
 ; CHECK: VPlan for loop in 'foo' after printFinalVPlan
 
 ; Also verify that VPlans are actually printed (we aren't interested in the
