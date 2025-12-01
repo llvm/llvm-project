@@ -841,6 +841,8 @@ ConstantRange ConstantRange::zeroExtend(uint32_t DstTySize) const {
   if (isEmptySet()) return getEmpty(DstTySize);
 
   unsigned SrcTySize = getBitWidth();
+  if (DstTySize == SrcTySize)
+    return *this;
   assert(SrcTySize < DstTySize && "Not a value extension");
   if (isFullSet() || isUpperWrapped()) {
     // Change into [0, 1 << src bit width)
@@ -858,6 +860,8 @@ ConstantRange ConstantRange::signExtend(uint32_t DstTySize) const {
   if (isEmptySet()) return getEmpty(DstTySize);
 
   unsigned SrcTySize = getBitWidth();
+  if (DstTySize == SrcTySize)
+    return *this;
   assert(SrcTySize < DstTySize && "Not a value extension");
 
   // special case: [X, INT_MIN) -- not really wrapping around
@@ -874,6 +878,8 @@ ConstantRange ConstantRange::signExtend(uint32_t DstTySize) const {
 
 ConstantRange ConstantRange::truncate(uint32_t DstTySize,
                                       unsigned NoWrapKind) const {
+  if (DstTySize == getBitWidth())
+    return *this;
   assert(getBitWidth() > DstTySize && "Not a value truncation");
   if (isEmptySet())
     return getEmpty(DstTySize);
