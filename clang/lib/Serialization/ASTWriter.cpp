@@ -2095,11 +2095,11 @@ namespace {
 
     struct data_type {
       data_type(const HeaderFileInfo &HFI,
-                const std::vector<const Module *> &Includers,
+                std::vector<const Module *> &&Includers,
                 ArrayRef<ModuleMap::KnownHeader> KnownHeaders,
                 UnresolvedModule Unresolved)
-          : HFI(HFI), Includers(Includers), KnownHeaders(KnownHeaders),
-            Unresolved(Unresolved) {}
+          : HFI(HFI), Includers(std::move(Includers)),
+            KnownHeaders(KnownHeaders), Unresolved(Unresolved) {}
 
       HeaderFileInfo HFI;
       std::vector<const Module *> Includers;
@@ -2157,10 +2157,11 @@ namespace {
       endian::Writer LE(Out, llvm::endianness::little);
       uint64_t Start = Out.tell(); (void)Start;
 
-      unsigned char Flags = (Data.HFI.isImport << 5)
-                          | (Writer.isWritingStdCXXNamedModules() ? 0 :
-                             Data.HFI.isPragmaOnce << 4)
-                          | (Data.HFI.DirInfo << 1);
+      unsigned char Flags =
+          (Data.HFI.isImport << 5) |
+          (Writer.isWritingStdCXXNamedModules() ? 0
+                                                : Data.HFI.isPragmaOnce << 4) |
+          (Data.HFI.DirInfo << 1);
       LE.write<uint8_t>(Flags);
 
       if (Data.HFI.LazyControllingMacro.isID())
@@ -2308,8 +2309,10 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       Filename, File->getSize(), getTimestampForOutput(*File)
     };
     HeaderFileInfoTrait::data_type Data = {
-      *HFI, Includers, HS.getModuleMap().findResolvedModulesForHeader(*File), {}
-    };
+        *HFI,
+        std::move(Includers),
+        HS.getModuleMap().findResolvedModulesForHeader(*File),
+        {}};
     Generator.insert(Key, Data, GeneratorTrait);
     ++NumHeaderSearchEntries;
   }
