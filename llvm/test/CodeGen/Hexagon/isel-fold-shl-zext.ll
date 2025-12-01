@@ -15,11 +15,10 @@ define dso_local void @foo(i64* nocapture noundef %buf, i32 %a, i32 %b) local_un
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = addasl(r2,r1,#1)
 ; CHECK-NEXT:     r3 = asl(r1,#1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = addasl(r2,r1,#1)
+; CHECK-NEXT:     r2 += add(r3,r3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31
