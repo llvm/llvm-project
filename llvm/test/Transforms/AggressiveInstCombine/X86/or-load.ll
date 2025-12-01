@@ -2505,3 +2505,56 @@ entry:
   %or = or disjoint i32 %shl, %conv.2
   ret i32 %or
 }
+
+@g = global i64 1060856922120
+
+; Make sure we use the correct memory location for alias analysis.
+define i64 @loadcombine_consecutive_mayalias(ptr %p) {
+; LE-LABEL: @loadcombine_consecutive_mayalias(
+; LE-NEXT:  entry:
+; LE-NEXT:    [[LOAD3:%.*]] = load i32, ptr [[P:%.*]], align 4
+; LE-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; LE-NEXT:    store i8 0, ptr getelementptr inbounds nuw (i8, ptr @g, i64 4), align 4
+; LE-NEXT:    [[LOAD2:%.*]] = load i32, ptr [[GEP1]], align 4
+; LE-NEXT:    [[TMP0:%.*]] = zext i32 [[LOAD2]] to i64
+; LE-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 32
+; LE-NEXT:    [[ZEXT3:%.*]] = zext i32 [[LOAD3]] to i64
+; LE-NEXT:    [[LOAD1:%.*]] = or i64 [[TMP1]], [[ZEXT3]]
+; LE-NEXT:    [[RES:%.*]] = lshr i64 [[LOAD1]], 32
+; LE-NEXT:    ret i64 [[RES]]
+;
+; BE-LABEL: @loadcombine_consecutive_mayalias(
+; BE-NEXT:  entry:
+; BE-NEXT:    [[LOAD1:%.*]] = load i32, ptr [[P:%.*]], align 4
+; BE-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; BE-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[P]], i64 5
+; BE-NEXT:    store i8 0, ptr getelementptr inbounds nuw (i8, ptr @g, i64 4), align 4
+; BE-NEXT:    [[LOAD2:%.*]] = load i8, ptr [[GEP1]], align 4
+; BE-NEXT:    [[LOAD3:%.*]] = load i24, ptr [[GEP2]], align 1
+; BE-NEXT:    [[ZEXT1:%.*]] = zext i24 [[LOAD3]] to i64
+; BE-NEXT:    [[SHL1:%.*]] = shl i64 [[ZEXT1]], 40
+; BE-NEXT:    [[ZEXT2:%.*]] = zext i8 [[LOAD2]] to i64
+; BE-NEXT:    [[SHL2:%.*]] = shl i64 [[ZEXT2]], 32
+; BE-NEXT:    [[OR1:%.*]] = or i64 [[SHL1]], [[SHL2]]
+; BE-NEXT:    [[ZEXT3:%.*]] = zext i32 [[LOAD1]] to i64
+; BE-NEXT:    [[OR2:%.*]] = or i64 [[OR1]], [[ZEXT3]]
+; BE-NEXT:    [[RES:%.*]] = lshr i64 [[OR2]], 32
+; BE-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %load1 = load i32, ptr %p, align 4
+  %gep1 = getelementptr i8, ptr %p, i64 4
+  %gep2 = getelementptr i8, ptr %p, i64 5
+  store i8 0, ptr getelementptr inbounds nuw (i8, ptr @g, i64 4), align 4
+  %load2 = load i8, ptr %gep1, align 4
+  %load3 = load i24, ptr %gep2, align 1
+  %zext1 = zext i24 %load3 to i64
+  %shl1 = shl i64 %zext1, 40
+  %zext2 = zext i8 %load2 to i64
+  %shl2 = shl i64 %zext2, 32
+  %or1 = or i64 %shl1, %shl2
+  %zext3 = zext i32 %load1 to i64
+  %or2 = or i64 %or1, %zext3
+  %res = lshr i64 %or2, 32
+  ret i64 %res
+}
