@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-ast>' -disable-output < %s | FileCheck %s --check-prefix=AST
-; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=AST
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
 
 ; TODO: FIXME: Simplify the context.
 ; AST: if (n >= 1 && 0 == n <= -1)

@@ -137,6 +137,15 @@ void fir::runtime::genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
   fir::CallOp::create(builder, loc, runtimeFunc, args);
 }
 
+void fir::runtime::genFlush(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Value unit) {
+  auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Flush)>(loc, builder);
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, runtimeFunc.getFunctionType(), unit);
+
+  fir::CallOp::create(builder, loc, runtimeFunc, args);
+}
+
 void fir::runtime::genFree(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value ptr) {
   auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Free)>(loc, builder);
@@ -460,4 +469,11 @@ mlir::Value fir::runtime::genChdir(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args =
       fir::runtime::createArguments(builder, loc, func.getFunctionType(), name);
   return fir::CallOp::create(builder, loc, func, args).getResult(0);
+}
+
+void fir::runtime::genShowDescriptor(fir::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Value descAddr) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(ShowDescriptor)>(loc, builder)};
+  fir::CallOp::create(builder, loc, func, descAddr);
 }

@@ -32,6 +32,22 @@ A list of non-standard directives supported by Flang
     end
   end interface
 ```
+  Note that it's not allowed to pass array actual argument to `ignore_trk(R)`
+  dummy argument that is a scalar with `VALUE` attribute, for example:
+```
+  interface
+    subroutine s(b)
+      !dir$ ignore_tkr(r) b
+      integer, value :: b
+    end
+  end interface
+  integer :: a(5)
+  call s(a)
+```
+  The reason for this limitation is that scalars with `VALUE` attribute can
+  be passed in registers, so it's not clear how lowering should handle this
+  case. (Passing scalar actual argument to `ignore_tkr(R)` dummy argument
+  that is a scalar with `VALUE` attribute is allowed.)
 * `!dir$ assume_aligned desginator:alignment`, where designator is a variable,
   maybe with array indices, and alignment is what the compiler should assume the
   alignment to be. E.g A:64 or B(1,1,1):128. The alignment should be a power of 2,
@@ -52,6 +68,9 @@ A list of non-standard directives supported by Flang
   integer that specifying the unrolling factor. When `N` is `0` or `1`, the loop
   should not be unrolled at all. If `N` is omitted the optimizer will
   selects the number of times to unroll the loop.
+* `!dir$ prefetch designator[, designator]...`, where the designator list can be
+  a variable or an array reference. This directive is used to insert a hint to
+  the code generator to prefetch instructions for memory references.
 * `!dir$ novector` disabling vectorization on the following loop.
 * `!dir$ nounroll` disabling unrolling on the following loop.
 * `!dir$ nounroll_and_jam` disabling unrolling and jamming on the following loop.

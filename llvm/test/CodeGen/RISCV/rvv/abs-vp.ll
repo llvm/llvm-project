@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+m -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK
 
-declare <vscale x 1 x i8> @llvm.vp.abs.nxv1i8(<vscale x 1 x i8>, i1 immarg, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x i8> @vp_abs_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv1i8:
 ; CHECK:       # %bb.0:
@@ -27,8 +25,6 @@ define <vscale x 1 x i8> @vp_abs_nxv1i8_unmasked(<vscale x 1 x i8> %va, i32 zero
   %v = call <vscale x 1 x i8> @llvm.vp.abs.nxv1i8(<vscale x 1 x i8> %va, i1 false, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i8> %v
 }
-
-declare <vscale x 2 x i8> @llvm.vp.abs.nxv2i8(<vscale x 2 x i8>, i1 immarg, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x i8> @vp_abs_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv2i8:
@@ -52,8 +48,6 @@ define <vscale x 2 x i8> @vp_abs_nxv2i8_unmasked(<vscale x 2 x i8> %va, i32 zero
   ret <vscale x 2 x i8> %v
 }
 
-declare <vscale x 4 x i8> @llvm.vp.abs.nxv4i8(<vscale x 4 x i8>, i1 immarg, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x i8> @vp_abs_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv4i8:
 ; CHECK:       # %bb.0:
@@ -75,8 +69,6 @@ define <vscale x 4 x i8> @vp_abs_nxv4i8_unmasked(<vscale x 4 x i8> %va, i32 zero
   %v = call <vscale x 4 x i8> @llvm.vp.abs.nxv4i8(<vscale x 4 x i8> %va, i1 false, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i8> %v
 }
-
-declare <vscale x 8 x i8> @llvm.vp.abs.nxv8i8(<vscale x 8 x i8>, i1 immarg, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i8> @vp_abs_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv8i8:
@@ -100,8 +92,6 @@ define <vscale x 8 x i8> @vp_abs_nxv8i8_unmasked(<vscale x 8 x i8> %va, i32 zero
   ret <vscale x 8 x i8> %v
 }
 
-declare <vscale x 16 x i8> @llvm.vp.abs.nxv16i8(<vscale x 16 x i8>, i1 immarg, <vscale x 16 x i1>, i32)
-
 define <vscale x 16 x i8> @vp_abs_nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv16i8:
 ; CHECK:       # %bb.0:
@@ -123,8 +113,6 @@ define <vscale x 16 x i8> @vp_abs_nxv16i8_unmasked(<vscale x 16 x i8> %va, i32 z
   %v = call <vscale x 16 x i8> @llvm.vp.abs.nxv16i8(<vscale x 16 x i8> %va, i1 false, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x i8> %v
 }
-
-declare <vscale x 32 x i8> @llvm.vp.abs.nxv32i8(<vscale x 32 x i8>, i1 immarg, <vscale x 32 x i1>, i32)
 
 define <vscale x 32 x i8> @vp_abs_nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv32i8:
@@ -148,8 +136,6 @@ define <vscale x 32 x i8> @vp_abs_nxv32i8_unmasked(<vscale x 32 x i8> %va, i32 z
   ret <vscale x 32 x i8> %v
 }
 
-declare <vscale x 64 x i8> @llvm.vp.abs.nxv64i8(<vscale x 64 x i8>, i1 immarg, <vscale x 64 x i1>, i32)
-
 define <vscale x 64 x i8> @vp_abs_nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv64i8:
 ; CHECK:       # %bb.0:
@@ -171,8 +157,6 @@ define <vscale x 64 x i8> @vp_abs_nxv64i8_unmasked(<vscale x 64 x i8> %va, i32 z
   %v = call <vscale x 64 x i8> @llvm.vp.abs.nxv64i8(<vscale x 64 x i8> %va, i1 false, <vscale x 64 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 64 x i8> %v
 }
-
-declare <vscale x 1 x i16> @llvm.vp.abs.nxv1i16(<vscale x 1 x i16>, i1 immarg, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i16> @vp_abs_nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv1i16:
@@ -196,8 +180,6 @@ define <vscale x 1 x i16> @vp_abs_nxv1i16_unmasked(<vscale x 1 x i16> %va, i32 z
   ret <vscale x 1 x i16> %v
 }
 
-declare <vscale x 2 x i16> @llvm.vp.abs.nxv2i16(<vscale x 2 x i16>, i1 immarg, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i16> @vp_abs_nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv2i16:
 ; CHECK:       # %bb.0:
@@ -219,8 +201,6 @@ define <vscale x 2 x i16> @vp_abs_nxv2i16_unmasked(<vscale x 2 x i16> %va, i32 z
   %v = call <vscale x 2 x i16> @llvm.vp.abs.nxv2i16(<vscale x 2 x i16> %va, i1 false, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i16> %v
 }
-
-declare <vscale x 4 x i16> @llvm.vp.abs.nxv4i16(<vscale x 4 x i16>, i1 immarg, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x i16> @vp_abs_nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv4i16:
@@ -244,8 +224,6 @@ define <vscale x 4 x i16> @vp_abs_nxv4i16_unmasked(<vscale x 4 x i16> %va, i32 z
   ret <vscale x 4 x i16> %v
 }
 
-declare <vscale x 8 x i16> @llvm.vp.abs.nxv8i16(<vscale x 8 x i16>, i1 immarg, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x i16> @vp_abs_nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv8i16:
 ; CHECK:       # %bb.0:
@@ -267,8 +245,6 @@ define <vscale x 8 x i16> @vp_abs_nxv8i16_unmasked(<vscale x 8 x i16> %va, i32 z
   %v = call <vscale x 8 x i16> @llvm.vp.abs.nxv8i16(<vscale x 8 x i16> %va, i1 false, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i16> %v
 }
-
-declare <vscale x 16 x i16> @llvm.vp.abs.nxv16i16(<vscale x 16 x i16>, i1 immarg, <vscale x 16 x i1>, i32)
 
 define <vscale x 16 x i16> @vp_abs_nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv16i16:
@@ -292,8 +268,6 @@ define <vscale x 16 x i16> @vp_abs_nxv16i16_unmasked(<vscale x 16 x i16> %va, i3
   ret <vscale x 16 x i16> %v
 }
 
-declare <vscale x 32 x i16> @llvm.vp.abs.nxv32i16(<vscale x 32 x i16>, i1 immarg, <vscale x 32 x i1>, i32)
-
 define <vscale x 32 x i16> @vp_abs_nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv32i16:
 ; CHECK:       # %bb.0:
@@ -315,8 +289,6 @@ define <vscale x 32 x i16> @vp_abs_nxv32i16_unmasked(<vscale x 32 x i16> %va, i3
   %v = call <vscale x 32 x i16> @llvm.vp.abs.nxv32i16(<vscale x 32 x i16> %va, i1 false, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x i16> %v
 }
-
-declare <vscale x 1 x i32> @llvm.vp.abs.nxv1i32(<vscale x 1 x i32>, i1 immarg, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i32> @vp_abs_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv1i32:
@@ -340,8 +312,6 @@ define <vscale x 1 x i32> @vp_abs_nxv1i32_unmasked(<vscale x 1 x i32> %va, i32 z
   ret <vscale x 1 x i32> %v
 }
 
-declare <vscale x 2 x i32> @llvm.vp.abs.nxv2i32(<vscale x 2 x i32>, i1 immarg, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x i32> @vp_abs_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv2i32:
 ; CHECK:       # %bb.0:
@@ -363,8 +333,6 @@ define <vscale x 2 x i32> @vp_abs_nxv2i32_unmasked(<vscale x 2 x i32> %va, i32 z
   %v = call <vscale x 2 x i32> @llvm.vp.abs.nxv2i32(<vscale x 2 x i32> %va, i1 false, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i32> %v
 }
-
-declare <vscale x 4 x i32> @llvm.vp.abs.nxv4i32(<vscale x 4 x i32>, i1 immarg, <vscale x 4 x i1>, i32)
 
 define <vscale x 4 x i32> @vp_abs_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv4i32:
@@ -388,8 +356,6 @@ define <vscale x 4 x i32> @vp_abs_nxv4i32_unmasked(<vscale x 4 x i32> %va, i32 z
   ret <vscale x 4 x i32> %v
 }
 
-declare <vscale x 8 x i32> @llvm.vp.abs.nxv8i32(<vscale x 8 x i32>, i1 immarg, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x i32> @vp_abs_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv8i32:
 ; CHECK:       # %bb.0:
@@ -411,8 +377,6 @@ define <vscale x 8 x i32> @vp_abs_nxv8i32_unmasked(<vscale x 8 x i32> %va, i32 z
   %v = call <vscale x 8 x i32> @llvm.vp.abs.nxv8i32(<vscale x 8 x i32> %va, i1 false, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i32> %v
 }
-
-declare <vscale x 16 x i32> @llvm.vp.abs.nxv16i32(<vscale x 16 x i32>, i1 immarg, <vscale x 16 x i1>, i32)
 
 define <vscale x 16 x i32> @vp_abs_nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv16i32:
@@ -436,8 +400,6 @@ define <vscale x 16 x i32> @vp_abs_nxv16i32_unmasked(<vscale x 16 x i32> %va, i3
   ret <vscale x 16 x i32> %v
 }
 
-declare <vscale x 1 x i64> @llvm.vp.abs.nxv1i64(<vscale x 1 x i64>, i1 immarg, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x i64> @vp_abs_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv1i64:
 ; CHECK:       # %bb.0:
@@ -459,8 +421,6 @@ define <vscale x 1 x i64> @vp_abs_nxv1i64_unmasked(<vscale x 1 x i64> %va, i32 z
   %v = call <vscale x 1 x i64> @llvm.vp.abs.nxv1i64(<vscale x 1 x i64> %va, i1 false, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i64> %v
 }
-
-declare <vscale x 2 x i64> @llvm.vp.abs.nxv2i64(<vscale x 2 x i64>, i1 immarg, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x i64> @vp_abs_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv2i64:
@@ -484,8 +444,6 @@ define <vscale x 2 x i64> @vp_abs_nxv2i64_unmasked(<vscale x 2 x i64> %va, i32 z
   ret <vscale x 2 x i64> %v
 }
 
-declare <vscale x 4 x i64> @llvm.vp.abs.nxv4i64(<vscale x 4 x i64>, i1 immarg, <vscale x 4 x i1>, i32)
-
 define <vscale x 4 x i64> @vp_abs_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv4i64:
 ; CHECK:       # %bb.0:
@@ -507,8 +465,6 @@ define <vscale x 4 x i64> @vp_abs_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32 z
   %v = call <vscale x 4 x i64> @llvm.vp.abs.nxv4i64(<vscale x 4 x i64> %va, i1 false, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i64> %v
 }
-
-declare <vscale x 7 x i64> @llvm.vp.abs.nxv7i64(<vscale x 7 x i64>, i1 immarg, <vscale x 7 x i1>, i32)
 
 define <vscale x 7 x i64> @vp_abs_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv7i64:
@@ -532,8 +488,6 @@ define <vscale x 7 x i64> @vp_abs_nxv7i64_unmasked(<vscale x 7 x i64> %va, i32 z
   ret <vscale x 7 x i64> %v
 }
 
-declare <vscale x 8 x i64> @llvm.vp.abs.nxv8i64(<vscale x 8 x i64>, i1 immarg, <vscale x 8 x i1>, i32)
-
 define <vscale x 8 x i64> @vp_abs_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv8i64:
 ; CHECK:       # %bb.0:
@@ -555,8 +509,6 @@ define <vscale x 8 x i64> @vp_abs_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32 z
   %v = call <vscale x 8 x i64> @llvm.vp.abs.nxv8i64(<vscale x 8 x i64> %va, i1 false, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i64> %v
 }
-
-declare <vscale x 16 x i64> @llvm.vp.abs.nxv16i64(<vscale x 16 x i64>, i1 immarg, <vscale x 16 x i1>, i32)
 
 define <vscale x 16 x i64> @vp_abs_nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_abs_nxv16i64:

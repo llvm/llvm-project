@@ -98,6 +98,20 @@ public:
     return true;
   }
 
+  bool isGVIndirectSymbol(const GlobalValue *GV) const {
+    if (!shouldAssumeDSOLocal(GV))
+      return true;
+
+    // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
+    // the section that is being relocated. This means we have to use o load
+    // even for GVs that are known to be local to the dso.
+    if (getTargetTriple().isOSBinFormatMachO() && isPositionIndependent() &&
+        (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
+      return true;
+
+    return false;
+  }
+
   yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;
   yaml::MachineFunctionInfo *
   convertFuncInfoToYAML(const MachineFunction &MF) const override;
