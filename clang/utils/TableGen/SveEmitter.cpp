@@ -267,6 +267,7 @@ public:
   unsigned getSplatIdx() const {
     unsigned I = 1, Param = 0;
     for (; I < Proto.size(); ++I, ++Param) {
+      assert(Proto[I] != '4' && "Handling for '4' prototype modifier not implemented");
       if (Proto[I] == 'a' || Proto[I] == 'j' || Proto[I] == 'f' ||
           Proto[I] == 'r' || Proto[I] == 'K' || Proto[I] == 'L' ||
           Proto[I] == 'R' || Proto[I] == '@' || Proto[I] == '!')
@@ -274,8 +275,6 @@ public:
 
       if (Proto[I] == '2')
         Param += 1;
-      if (Proto[I] == '4')
-        Param += 3;
 
       // Multivector modifier can be skipped
       if (Proto[I] == '.') {
