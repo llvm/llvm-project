@@ -34,7 +34,8 @@ public:
 private:
   bool isSingleVarWithSafeDestructor(
       const ast_matchers::MatchFinder::MatchResult &Result) const;
-  int getKindOfMatchedDeclStmt(const ast_matchers::MatchFinder::MatchResult &Result) const;
+  int getKindOfMatchedDeclStmt(
+      const ast_matchers::MatchFinder::MatchResult &Result) const;
 
   const bool StrictMode;
   const llvm::StringRef SafeDestructorTypes;

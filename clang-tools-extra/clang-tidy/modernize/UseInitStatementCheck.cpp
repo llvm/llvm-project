@@ -53,14 +53,17 @@ AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
 }
 
 // FIXME: support other std:: types, like std::vector
-const auto DefaultSafeDestructorTypes = "-*,::std::*string,::std::*string_view,::boost::*string,::boost::*string_view,::boost::*string_ref";
+const auto DefaultSafeDestructorTypes =
+    "-*,::std::*string,::std::*string_view,::boost::*string,::boost::*string_"
+    "view,::boost::*string_ref";
 } // namespace
 
-UseInitStatementCheck::UseInitStatementCheck(StringRef Name, ClangTidyContext *Context)
+UseInitStatementCheck::UseInitStatementCheck(StringRef Name,
+                                             ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       StrictMode(Options.get("StrictMode", true)),
-      SafeDestructorTypes(Options.get("SafeDestructorTypes",
-                                        DefaultSafeDestructorTypes)),
+      SafeDestructorTypes(
+          Options.get("SafeDestructorTypes", DefaultSafeDestructorTypes)),
       SafeDestructorTypesGlobList(SafeDestructorTypes) {}
 
 void UseInitStatementCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -69,12 +72,11 @@ void UseInitStatementCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
-
   // Helper to create a complete matcher for if/switch statements
   const auto MakeCompoundStmtMatcher = [](const auto &StmtMatcher,
-                                       const std::string &StmtName,
-                                       const auto &PrevStmtMatcher,
-                                       const auto &RefToBoundMatcher) {
+                                          const std::string &StmtName,
+                                          const auto &PrevStmtMatcher,
+                                          const auto &RefToBoundMatcher) {
     const auto StmtMatcherWithCondition =
         StmtMatcher(unless(hasInitStatement(anything())),
                     hasCondition(expr().bind("condition")))
@@ -99,14 +101,13 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
   const auto ArrayOfClassWithDtor =
       hasType(arrayType(hasElementType(ClassWithDtorType)));
   const auto HasDtor = anyOf(hasType(ClassWithDtorType), ArrayOfClassWithDtor);
-  const auto CheckLTE =
-      optionally(hasInitializer(expr(hasDescendant(expr(materializeTemporaryExpr().bind("lte"))))));
+  const auto CheckLTE = optionally(hasInitializer(
+      expr(hasDescendant(expr(materializeTemporaryExpr().bind("lte"))))));
 
   // Matchers for variable declarations
   const auto SingleVarDeclWithDtor =
       varDecl(HasDtor, CheckLTE).bind("singleVar");
-  const auto SingleVarDecl =
-      varDecl(CheckLTE).bind("singleVar");
+  const auto SingleVarDecl = varDecl(CheckLTE).bind("singleVar");
   const auto RefToBoundVarDecl =
       declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
 
@@ -115,14 +116,18 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
     // Matchers for declaration statements that precede if/switch
     const auto PrevDeclStmtWithDtor =
         declStmt(forEach(SingleVarDeclWithDtor)).bind("prevDecl");
-    const auto PrevDeclStmt =
-        declStmt(forEach(SingleVarDecl)).bind("prevDecl");
-    const auto PrevDeclStmtMatcher =
-        anyOf(PrevDeclStmtWithDtor, PrevDeclStmt);
+    const auto PrevDeclStmt = declStmt(forEach(SingleVarDecl)).bind("prevDecl");
+    const auto PrevDeclStmtMatcher = anyOf(PrevDeclStmtWithDtor, PrevDeclStmt);
 
     // Register matchers for if and switch statements
-    Finder->addMatcher(MakeCompoundStmtMatcher(ifStmt, "ifStmt", PrevDeclStmtMatcher, RefToBoundVarDecl), this);
-    Finder->addMatcher(MakeCompoundStmtMatcher(switchStmt, "switchStmt", PrevDeclStmtMatcher, RefToBoundVarDecl), this);
+    Finder->addMatcher(MakeCompoundStmtMatcher(ifStmt, "ifStmt",
+                                               PrevDeclStmtMatcher,
+                                               RefToBoundVarDecl),
+                       this);
+    Finder->addMatcher(MakeCompoundStmtMatcher(switchStmt, "switchStmt",
+                                               PrevDeclStmtMatcher,
+                                               RefToBoundVarDecl),
+                       this);
   }
 
   // C++17 structured binding as previous statement
@@ -130,17 +135,24 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
     const auto DecompositionDecl =
         decompositionDecl(forEach(bindingDecl().bind("bindingDecl")));
     const auto PrevDecomposeStmtWithDtor =
-        declStmt(has(DecompositionDecl), has(SingleVarDeclWithDtor)).bind("prevDecl");
-    const auto PrevDecomposeStmt = declStmt(
-        has(DecompositionDecl),
-        has(SingleVarDecl)).bind("prevDecl");
-    const auto PrevDecomposeStmtMatcher = anyOf(PrevDecomposeStmtWithDtor, PrevDecomposeStmt);
+        declStmt(has(DecompositionDecl), has(SingleVarDeclWithDtor))
+            .bind("prevDecl");
+    const auto PrevDecomposeStmt =
+        declStmt(has(DecompositionDecl), has(SingleVarDecl)).bind("prevDecl");
+    const auto PrevDecomposeStmtMatcher =
+        anyOf(PrevDecomposeStmtWithDtor, PrevDecomposeStmt);
     const auto RefToBoundVarDecl =
         declRefExpr(to(bindingDecl(equalsBoundNode("bindingDecl"))));
 
     // Register matchers for if and switch statements
-    Finder->addMatcher(MakeCompoundStmtMatcher(ifStmt, "ifStmt", PrevDecomposeStmtMatcher, RefToBoundVarDecl), this);
-    Finder->addMatcher(MakeCompoundStmtMatcher(switchStmt, "switchStmt", PrevDecomposeStmtMatcher, RefToBoundVarDecl), this);
+    Finder->addMatcher(MakeCompoundStmtMatcher(ifStmt, "ifStmt",
+                                               PrevDecomposeStmtMatcher,
+                                               RefToBoundVarDecl),
+                       this);
+    Finder->addMatcher(MakeCompoundStmtMatcher(switchStmt, "switchStmt",
+                                               PrevDecomposeStmtMatcher,
+                                               RefToBoundVarDecl),
+                       this);
   }
 }
 
@@ -180,7 +192,8 @@ bool UseInitStatementCheck::isSingleVarWithSafeDestructor(
   return SafeDestructorTypesGlobList.contains(TypeName);
 }
 
-int UseInitStatementCheck::getKindOfMatchedDeclStmt(const MatchFinder::MatchResult &Result) const {
+int UseInitStatementCheck::getKindOfMatchedDeclStmt(
+    const MatchFinder::MatchResult &Result) const {
   const auto *BD = Result.Nodes.getNodeAs<BindingDecl>("bindingDecl");
   if (BD)
     return 0;
@@ -214,7 +227,8 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   auto Diag = diag(PrevDecl->getBeginLoc(),
-                   "%select{structured binding|multiple variable|variable %1}0 declaration "
+                   "%select{structured binding|multiple variable|variable %1}0 "
+                   "declaration "
                    "before %select{if|switch}2 statement could be moved into "
                    "%select{if|switch}2 init statement")
               << getKindOfMatchedDeclStmt(Result)
