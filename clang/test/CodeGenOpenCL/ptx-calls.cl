@@ -12,7 +12,7 @@ void device_function() {
 // CHECK-LABEL: define dso_local ptx_kernel void @kernel_function(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR1:[0-9]+]] !kernel_arg_addr_space [[META7:![0-9]+]] !kernel_arg_access_qual [[META7]] !kernel_arg_type [[META7]] !kernel_arg_base_type [[META7]] !kernel_arg_type_qual [[META7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    ret void
 //
 __kernel void kernel_function() {
   device_function();

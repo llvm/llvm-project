@@ -277,7 +277,9 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
     }
   }
   // Attach kernel metadata directly if compiling for NVPTX.
-  if (FD->hasAttr<DeviceKernelAttr>())
+  // NOTE: Don't set kernel calling convention for handled OpenCL kernel,
+  // otherwise the stub version of kernel would be incorrect.
+  if (FD->hasAttr<DeviceKernelAttr>() && !M.getLangOpts().OpenCL)
     F->setCallingConv(getDeviceKernelCallingConv());
 }
 
