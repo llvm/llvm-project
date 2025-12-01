@@ -5,4 +5,4 @@ define i6 @getConstantI6() {
   ret i6 2
 }
 
-; CHECK: OpExtension "SPV_INTEL_arbitrary_precision_integers"
+; CHECK: OpExtension "SPV_ALTERA_arbitrary_precision_integers"

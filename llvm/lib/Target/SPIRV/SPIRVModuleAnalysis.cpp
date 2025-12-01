@@ -1692,6 +1692,27 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformRotateKHR);
     Reqs.addCapability(SPIRV::Capability::GroupNonUniform);
     break;
+  case SPIRV::OpFixedCosALTERA:
+  case SPIRV::OpFixedSinALTERA:
+  case SPIRV::OpFixedCosPiALTERA:
+  case SPIRV::OpFixedSinPiALTERA:
+  case SPIRV::OpFixedExpALTERA:
+  case SPIRV::OpFixedLogALTERA:
+  case SPIRV::OpFixedRecipALTERA:
+  case SPIRV::OpFixedSqrtALTERA:
+  case SPIRV::OpFixedSinCosALTERA:
+  case SPIRV::OpFixedSinCosPiALTERA:
+  case SPIRV::OpFixedRsqrtALTERA:
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_ALTERA_arbitrary_precision_fixed_point))
+      report_fatal_error("This instruction requires the "
+                         "following SPIR-V extension: "
+                         "SPV_ALTERA_arbitrary_precision_fixed_point",
+                         false);
+    Reqs.addExtension(
+        SPIRV::Extension::SPV_ALTERA_arbitrary_precision_fixed_point);
+    Reqs.addCapability(SPIRV::Capability::ArbitraryPrecisionFixedPointALTERA);
+    break;
   case SPIRV::OpGroupIMulKHR:
   case SPIRV::OpGroupFMulKHR:
   case SPIRV::OpGroupBitwiseAndKHR:

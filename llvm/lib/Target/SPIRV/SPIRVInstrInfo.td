@@ -999,3 +999,27 @@ def OpReadPipeBlockingALTERA :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$p
                    "OpReadPipeBlockingALTERA $pipe $pointer $packetSize $packetAlignment">;
 def OpWritePipeBlockingALTERA :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
                    "OpWritePipeBlockingALTERA $pipe $pointer $packetSize $packetAlignment">;
+
+//SPV_ALTERA_arbitrary_precision_fixed_point
+def OpFixedSqrtALTERA: Op<5923, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSqrtALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedRecipALTERA: Op<5924, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedRecipALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedRsqrtALTERA: Op<5925, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedRsqrtALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinALTERA: Op<5926, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedCosALTERA: Op<5927, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedCosALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinCosALTERA: Op<5928, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinCosALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinPiALTERA: Op<5929, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinPiALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedCosPiALTERA: Op<5930, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedCosPiALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinCosPiALTERA: Op<5931, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinCosPiALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedLogALTERA: Op<5932, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedLogALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedExpALTERA: Op<5933, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedExpALTERA $result_type $input $sign $l $rl $q $o">;

@@ -1711,6 +1711,12 @@ LogicalResult mlir::affine::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
   outermost.getBody()->getOperations().splice(
       Block::iterator(secondOutermostLoop.getOperation()),
       innermost.getBody()->getOperations());
+  for (auto [iter, init] :
+       llvm::zip_equal(secondOutermostLoop.getRegionIterArgs(),
+                       secondOutermostLoop.getInits())) {
+    iter.replaceAllUsesWith(init);
+    iter.dropAllUses();
+  }
   secondOutermostLoop.erase();
   return success();
 }
