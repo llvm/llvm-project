@@ -305,6 +305,13 @@ static cl::opt<std::string> InstrumentColdFuncOnlyPath(
              "with --pgo-instrument-cold-function-only)"),
     cl::Hidden);
 
+// TODO: There is a similar flag in WPD pass, we should consolidate them by
+// parsing the option only once in PassBuilder and share it across both places.
+static cl::opt<bool> EnableDevirtualizeSpeculatively(
+    "enable-devirtualize-speculatively",
+    cl::desc("Enable speculative devirtualization optimization"),
+    cl::init(false));
+
 extern cl::opt<std::string> UseCtxProfile;
 extern cl::opt<bool> PGOInstrumentColdFunctionOnly;
 
@@ -326,7 +333,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   MergeFunctions = EnableMergeFunctions;
   InlinerThreshold = -1;
   EagerlyInvalidateAnalyses = EnableEagerlyInvalidateAnalyses;
-  DevirtualizeSpeculatively = false;
+  DevirtualizeSpeculatively = EnableDevirtualizeSpeculatively;
 }
 
 namespace llvm {
