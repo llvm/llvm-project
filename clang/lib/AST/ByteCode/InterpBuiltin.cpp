@@ -3506,7 +3506,8 @@ static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
     else
       Dst.elem<Floating>(I) = Floating(APFloat(0.0f));
 
-  // Convert double to float for enabled elements (only process source elements that exist).
+  // Convert double to float for enabled elements (only process source elements
+  // that exist).
   for (unsigned I = 0; I != SrcElems; ++I) {
     if (IsMasked && !MaskVal[I])
       continue;
