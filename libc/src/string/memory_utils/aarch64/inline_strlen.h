@@ -14,7 +14,8 @@
 #include "src/__support/CPP/bit.h" // countr_zero
 #include <arm_neon.h>
 #include <stddef.h> // size_t
-namespace LIBC_NAMESPACE_DECL::arch_vector {
+namespace LIBC_NAMESPACE_DECL {
+namespace arch_vector {
 namespace neon {
 [[maybe_unused]] LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static size_t
 string_length(const char *src) {
@@ -44,7 +45,7 @@ string_length(const char *src) {
   }
 }
 } // namespace neon
-} // namespace LIBC_NAMESPACE_DECL::arch_vector
+} // namespace arch_vector
 #endif // __ARM_NEON
 
 #ifdef LIBC_TARGET_CPU_HAS_SVE
@@ -94,6 +95,7 @@ namespace sve {
 }
 } // namespace sve
 } // namespace LIBC_NAMESPACE_DECL::arch_vector
+} // namespace LIBC_NAMESPACE_DECL
 #endif // LIBC_TARGET_CPU_HAS_SVE
 
 namespace LIBC_NAMESPACE_DECL::arch_vector {
