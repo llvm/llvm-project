@@ -213,3 +213,13 @@ func.func @cmpf(%arg0: f4E2M1FN, %arg1: f4E2M1FN) {
   %0 = arith.cmpf "ult", %arg0, %arg1 : f4E2M1FN
   return
 }
+
+// -----
+
+// CHECK: func.func private @_mlir_apfloat_neg(i32, i64) -> i64
+// CHECK: %[[sem:.*]] = arith.constant 2 : i32
+// CHECK: %[[res:.*]] = call @_mlir_apfloat_neg(%[[sem]], %{{.*}}) : (i32, i64) -> i64
+func.func @negf(%arg0: f32) {
+  %0 = arith.negf %arg0 : f32
+  return
+}
