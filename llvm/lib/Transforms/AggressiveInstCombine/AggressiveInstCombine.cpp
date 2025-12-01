@@ -710,9 +710,17 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   MemoryLocation Loc;
   if (!Start->comesBefore(End)) {
     std::swap(Start, End);
-    Loc = MemoryLocation::get(End);
+    // If LOps.RootInsert comes after LI2, since we use LI2 as the new insert
+    // point, we should make sure whether the memory region accessed by LOps
+    // isn't modified.
     if (LOps.FoundRoot)
-      Loc = Loc.getWithNewSize(LOps.LoadSize);
+      Loc = MemoryLocation(
+          LOps.Root->getPointerOperand(),
+          LocationSize::precise(DL.getTypeStoreSize(
+              IntegerType::get(LI1->getContext(), LOps.LoadSize))),
+          LOps.AATags);
+    else
+      Loc = MemoryLocation::get(End);
   } else
     Loc = MemoryLocation::get(End);
   unsigned NumScanned = 0;

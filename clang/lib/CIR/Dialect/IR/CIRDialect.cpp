@@ -1920,6 +1920,20 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       return failure();
   }
 
+  // Parse the rest of the attributes.
+  NamedAttrList parsedAttrs;
+  if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
+    return failure();
+
+  for (StringRef disallowed : cir::FuncOp::getAttributeNames()) {
+    if (parsedAttrs.get(disallowed))
+      return parser.emitError(loc, "attribute '")
+             << disallowed
+             << "' should not be specified in the explicit attribute list";
+  }
+
+  state.attributes.append(parsedAttrs);
+
   // Parse the optional function body.
   auto *body = state.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
@@ -2072,6 +2086,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (cir::InlineAttr inlineAttr = getInlineKindAttr()) {
     p << " inline(" << cir::stringifyInlineKind(inlineAttr.getValue()) << ")";
   }
+
+  function_interface_impl::printFunctionAttributes(
+      p, *this, cir::FuncOp::getAttributeNames());
 
   // Print the body if this is not an external function.
   Region &body = getOperation()->getRegion(0);
