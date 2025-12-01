@@ -267,8 +267,8 @@ public:
     return *static_cast<DerivedT *>(this);
   }
   using BaseT::operator-;
-  template <bool Enabled = bool(BaseT::IsRandomAccess),
-            std::enable_if_t<Enabled, int> = 0>
+  template <bool Enabled = BaseT::IsRandomAccess,
+            typename = std::enable_if_t<Enabled>>
   difference_type operator-(const DerivedT &RHS) const {
     static_assert(
         BaseT::IsRandomAccess,
