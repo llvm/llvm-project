@@ -22,14 +22,22 @@ namespace clang::tidy::modernize {
 class UseInitStatementCheck : public ClangTidyCheck {
 public:
   UseInitStatementCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context),
+        StrictMode(Options.get("StrictMode", true)) {}
 
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
+    Options.store(Opts, "StrictMode", StrictMode);
+  }
+
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus17;
   }
+
+private:
+  const bool StrictMode;
 };
 
 } // namespace clang::tidy::modernize

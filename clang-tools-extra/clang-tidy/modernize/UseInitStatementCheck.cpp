@@ -131,7 +131,12 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   if (!PrevDecl || !Condition || !Compound || !Statement)
     return;
 
-  if (Dtor && !isLastInCompound(Statement, Compound))
+  const bool IsLast = isLastInCompound(Statement, Compound);
+
+  if (!StrictMode && IsLast)
+    return;
+
+  if (Dtor && !IsLast)
     return;
 
   auto Diag = diag(PrevDecl->getBeginLoc(),
