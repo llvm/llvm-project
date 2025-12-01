@@ -2317,7 +2317,7 @@ struct AMDGPUMakeDmaBaseLowering
     Value c3 = createI32Constant(rewriter, loc, 3);
 
     Type v4i32 = this->typeConverter->convertType(VectorType::get(4, i32));
-    Value result = LLVM::UndefOp::create(rewriter, loc, v4i32);
+    Value result = LLVM::PoisonOp::create(rewriter, loc, v4i32);
     result = LLVM::InsertElementOp::create(rewriter, loc, result, c0, c0);
     result = LLVM::InsertElementOp::create(rewriter, loc, result,
                                            castForLdsAddr, c1);
