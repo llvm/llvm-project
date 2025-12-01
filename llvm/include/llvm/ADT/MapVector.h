@@ -100,8 +100,8 @@ public:
   }
 
   [[nodiscard]] inline auto keys() { return make_first_range(Vector); }
-  [[nodiscard]] inline auto values() { return make_second_range(Vector); }
   [[nodiscard]] inline auto keys() const { return make_first_range(Vector); }
+  [[nodiscard]] inline auto values() { return make_second_range(Vector); }
   [[nodiscard]] inline auto values() const { return make_second_range(Vector); }
 
   // Returns a copy of the value.  Only allowed if ValueT is copyable.
