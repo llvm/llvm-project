@@ -304,14 +304,6 @@ struct ScalarEnumerationTraits<FormatStyle::BreakTemplateDeclarationsStyle> {
   }
 };
 
-template <> struct ScalarEnumerationTraits<FormatStyle::CommentSpaceMode> {
-  static void enumeration(IO &IO, FormatStyle::CommentSpaceMode &Value) {
-    IO.enumCase(Value, "Leave", FormatStyle::CommentSpaceMode::Leave);
-    IO.enumCase(Value, "Always", FormatStyle::CommentSpaceMode::Always);
-    IO.enumCase(Value, "Never", FormatStyle::CommentSpaceMode::Never);
-  }
-};
-
 template <> struct ScalarEnumerationTraits<FormatStyle::DAGArgStyle> {
   static void enumeration(IO &IO, FormatStyle::DAGArgStyle &Value) {
     IO.enumCase(Value, "DontBreak", FormatStyle::DAS_DontBreak);
@@ -813,14 +805,11 @@ template <> struct ScalarEnumerationTraits<FormatStyle::SpacesInAnglesStyle> {
   }
 };
 
-template <> struct MappingTraits<FormatStyle::SpacesInCommentsOptions> {
-  static void mapping(IO &IO, FormatStyle::SpacesInCommentsOptions &Options) {
-    IO.mapOptional("AfterOpeningComment", Options.AfterOpeningComment);
-    IO.mapOptional("BeforeClosingComment", Options.BeforeClosingComment);
-    IO.mapOptional("AfterOpeningParamComment",
-                   Options.AfterOpeningParamComment);
-    IO.mapOptional("BeforeClosingParamComment",
-                   Options.BeforeClosingParamComment);
+template <> struct ScalarEnumerationTraits<FormatStyle::SpacesInCommentsStyle> {
+  static void enumeration(IO &IO, FormatStyle::SpacesInCommentsStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::SICS_Never);
+    IO.enumCase(Value, "Always", FormatStyle::SICS_Always);
+    IO.enumCase(Value, "Leave", FormatStyle::SICS_Leave);
   }
 };
 
@@ -1747,6 +1736,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceInEmptyBraces = FormatStyle::SIEB_Never;
   LLVMStyle.SpacesBeforeTrailingComments = 1;
   LLVMStyle.SpacesInAngles = FormatStyle::SIAS_Never;
+  LLVMStyle.SpacesInComments = FormatStyle::SICS_Leave;
   LLVMStyle.SpacesInContainerLiterals = true;
   LLVMStyle.SpacesInLineCommentPrefix = {
       /*Minimum=*/1, /*Maximum=*/std::numeric_limits<unsigned>::max()};

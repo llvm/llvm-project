@@ -6728,34 +6728,33 @@ the configuration (without a prefix: ``Auto``).
 
 .. _SpacesInComments:
 
-**SpacesInComments** (``SpacesInCommentsOptions``) :versionbadge:`clang-format 21` :ref:`¶ <SpacesInComments>`
-  Controls whitespace around block comment delimiters and parameter-style
-  inline comments. Each field accepts a ``CommentSpaceMode``: ``Leave``
-  (preserve existing spacing, the default), ``Always`` (insert a single
-  space), or ``Never`` (remove all spaces).
+**SpacesInComments** (``SpacesInCommentsStyle``) :versionbadge:`clang-format 21` :ref:`¶ <SpacesInComments>`
+  Controls whitespace around block comment delimiters.
 
-  Nested configuration flags:
+  Possible values:
 
-  Specifies spacing behavior for different block comment forms.
-
-  * ``CommentSpaceMode AfterOpeningComment`` Governs the space immediately after ``/*`` in regular block comments.
-
-  * ``CommentSpaceMode BeforeClosingComment`` Governs the space before ``*/`` in regular block comments.
+  * ``SICS_Never`` (in configuration: ``Never``)
+    Ensure no space is present in block comments.
 
     .. code-block:: c++
 
-      // BeforeClosingComment: Always
-      auto Value = foo(/* comment */);
+      /*comment*/
 
-  * ``CommentSpaceMode AfterOpeningParamComment`` Governs the space after ``/*`` in parameter comments such as
-    ``/*param=*/``.
-
-  * ``CommentSpaceMode BeforeClosingParamComment`` Governs the space before ``*/`` in parameter comments.
+  * ``SICS_Always`` (in configuration: ``Always``)
+    Ensure a space is present in block comments.
 
     .. code-block:: c++
 
-      // BeforeClosingParamComment: Never
-      auto Number = foo(/*param=*/42);
+      /* comment */
+
+  * ``SICS_Leave`` (in configuration: ``Leave``)
+    Preserve existing spaces, making no formatting changes.
+
+    .. code-block:: c++
+
+      /* comment */
+      /*comment*/
+
 
 
 .. _SpacesInConditionalStatement:

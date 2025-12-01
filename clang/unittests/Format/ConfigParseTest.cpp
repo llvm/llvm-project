@@ -1066,30 +1066,13 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               SpacesInLineCommentPrefix.Maximum, 1u);
   EXPECT_EQ(Style.SpacesInLineCommentPrefix.Minimum, 1u);
 
-  CHECK_PARSE_NESTED_VALUE("AfterOpeningComment: Always", SpacesInComments,
-                           AfterOpeningComment,
-                           FormatStyle::CommentSpaceMode::Always);
-  CHECK_PARSE_NESTED_VALUE("AfterOpeningComment: Never", SpacesInComments,
-                           AfterOpeningComment,
-                           FormatStyle::CommentSpaceMode::Never);
-  CHECK_PARSE_NESTED_VALUE("BeforeClosingComment: Always", SpacesInComments,
-                           BeforeClosingComment,
-                           FormatStyle::CommentSpaceMode::Always);
-  CHECK_PARSE_NESTED_VALUE("BeforeClosingComment: Never", SpacesInComments,
-                           BeforeClosingComment,
-                           FormatStyle::CommentSpaceMode::Never);
-  CHECK_PARSE_NESTED_VALUE("AfterOpeningParamComment: Always", SpacesInComments,
-                           AfterOpeningParamComment,
-                           FormatStyle::CommentSpaceMode::Always);
-  CHECK_PARSE_NESTED_VALUE("AfterOpeningParamComment: Never", SpacesInComments,
-                           AfterOpeningParamComment,
-                           FormatStyle::CommentSpaceMode::Never);
-  CHECK_PARSE_NESTED_VALUE("BeforeClosingParamComment: Always",
-                           SpacesInComments, BeforeClosingParamComment,
-                           FormatStyle::CommentSpaceMode::Always);
-  CHECK_PARSE_NESTED_VALUE("BeforeClosingParamComment: Never", SpacesInComments,
-                           BeforeClosingParamComment,
-                           FormatStyle::CommentSpaceMode::Never);
+  Style.SpacesInComments = FormatStyle::SICS_Leave;
+  CHECK_PARSE("SpacesInComments: Never", SpacesInComments,
+              FormatStyle::SICS_Never);
+  CHECK_PARSE("SpacesInComments: Always", SpacesInComments,
+              FormatStyle::SICS_Always);
+  CHECK_PARSE("SpacesInComments: Leave", SpacesInComments,
+              FormatStyle::SICS_Leave);
 
   Style.SpacesInAngles = FormatStyle::SIAS_Always;
   CHECK_PARSE("SpacesInAngles: Never", SpacesInAngles, FormatStyle::SIAS_Never);

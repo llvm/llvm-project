@@ -2510,18 +2510,6 @@ struct FormatStyle {
   /// \version 19
   BreakTemplateDeclarationsStyle BreakTemplateDeclarations;
 
-  /// Defines how clang-format should treat spaces around block comment
-  /// delimiters and specialized inline comments (such as parameter name
-  /// annotations). The default `Leave` mode preserves existing whitespace.
-  enum class CommentSpaceMode : int8_t {
-    /// Preserve existing whitespace, making no formatting changes.
-    Leave,
-    /// Ensure exactly one space is present.
-    Always,
-    /// Ensure no space is present.
-    Never,
-  };
-
   /// If ``true``, consecutive namespace declarations will be on the same
   /// line. If ``false``, each namespace is declared on a new line.
   /// \code
@@ -5000,46 +4988,27 @@ struct FormatStyle {
   SpacesInAnglesStyle SpacesInAngles;
 
   /// Specifies spacing behavior for different block comment forms.
-  struct SpacesInCommentsOptions {
-    /// Governs the space immediately after ``/*`` in regular block comments.
-    CommentSpaceMode AfterOpeningComment;
-    /// Governs the space before ``*/`` in regular block comments.
-    ///
-    /// .. code-block:: c++
-    ///
-    ///   // BeforeClosingComment: Always
-    ///   auto Value = foo(/* comment */);
-    CommentSpaceMode BeforeClosingComment;
-    /// Governs the space after ``/*`` in parameter comments such as
-    /// ``/*param=*/``.
-    CommentSpaceMode AfterOpeningParamComment;
-    /// Governs the space before ``*/`` in parameter comments.
-    ///
-    /// .. code-block:: c++
-    ///
-    ///   // BeforeClosingParamComment: Never
-    ///   auto Number = foo(/*param=*/42);
-    CommentSpaceMode BeforeClosingParamComment;
-
-    SpacesInCommentsOptions()
-        : AfterOpeningComment(CommentSpaceMode::Leave),
-          BeforeClosingComment(CommentSpaceMode::Leave),
-          AfterOpeningParamComment(CommentSpaceMode::Leave),
-          BeforeClosingParamComment(CommentSpaceMode::Leave) {}
-
-    constexpr bool operator==(const SpacesInCommentsOptions &R) const {
-      return AfterOpeningComment == R.AfterOpeningComment &&
-             BeforeClosingComment == R.BeforeClosingComment &&
-             AfterOpeningParamComment == R.AfterOpeningParamComment &&
-             BeforeClosingParamComment == R.BeforeClosingParamComment;
-    }
+  enum SpacesInCommentsStyle : int8_t {
+    /// Ensure no space is present in block comments.
+    /// \code
+    ///   /*comment*/
+    /// \endcode
+    SICS_Never,
+    /// Ensure a space is present in block comments.
+    /// \code
+    ///   /* comment */
+    /// \endcode
+    SICS_Always,
+    /// Preserve existing spaces, making no formatting changes.
+    /// \code
+    ///   /* comment */
+    ///   /*comment*/
+    /// \endcode
+    SICS_Leave
   };
-  /// Controls whitespace around block comment delimiters and parameter-style
-  /// inline comments. Each field accepts a ``CommentSpaceMode``: ``Leave``
-  /// (preserve existing spacing, the default), ``Always`` (insert a single
-  /// space), or ``Never`` (remove all spaces).
+  /// Controls whitespace around block comment delimiters.
   /// \version 21
-  SpacesInCommentsOptions SpacesInComments;
+  SpacesInCommentsStyle SpacesInComments;
 
   /// If ``true``, spaces will be inserted around if/for/switch/while
   /// conditions.
