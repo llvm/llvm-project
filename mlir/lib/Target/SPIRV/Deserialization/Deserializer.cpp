@@ -2831,6 +2831,23 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
             branchCondOp.getFalseBlock());
 
       branchCondOp.erase();
+    } else if (auto switchOp = dyn_cast<spirv::SwitchOp>(op)) {
+      if (target == switchOp.getDefaultTarget()) {
+        SmallVector<ValueRange> targetOperands(switchOp.getTargetOperands());
+        DenseIntElementsAttr literals =
+            switchOp.getLiterals().value_or(DenseIntElementsAttr());
+        spirv::SwitchOp::create(
+            opBuilder, switchOp.getLoc(), switchOp.getSelector(),
+            switchOp.getDefaultTarget(), blockArgs, literals,
+            switchOp.getTargets(), targetOperands);
+        switchOp.erase();
+      } else {
+        SuccessorRange targets = switchOp.getTargets();
+        auto it = llvm::find(targets, target);
+        assert(it != targets.end());
+        size_t index = std::distance(targets.begin(), it);
+        switchOp.getTargetOperandsMutable(index).assign(blockArgs);
+      }
     } else {
       return emitError(unknownLoc, "unimplemented terminator for Phi creation");
     }
@@ -2923,9 +2940,6 @@ LogicalResult spirv::Deserializer::structurizeControlFlow() {
     return failure();
   }
 
-  // TODO: This loop is non-deterministic. Iteration order may vary between runs
-  // for the same shader as the key to the map is a pointer. See:
-  // https://github.com/llvm/llvm-project/issues/128547
   while (!blockMergeInfo.empty()) {
     Block *headerBlock = blockMergeInfo.begin()->first;
     BlockMergeInfo mergeInfo = blockMergeInfo.begin()->second;
