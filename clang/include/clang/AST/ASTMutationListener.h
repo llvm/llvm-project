@@ -90,6 +90,15 @@ public:
   virtual void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
                                           const FunctionDecl *GlobDelete) {}
 
+  /// A virtual destructor's operator array delete has been resolved.
+  virtual void ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
+                                           const FunctionDecl *ArrayDelete) {}
+
+  /// A virtual destructor's operator global array delete has been resolved.
+  virtual void
+  ResolvedOperatorGlobArrayDelete(const CXXDestructorDecl *DD,
+                                  const FunctionDecl *GlobArrayDelete) {}
+
   /// An implicit member got a definition.
   virtual void CompletedImplicitDefinition(const FunctionDecl *D) {}
 
