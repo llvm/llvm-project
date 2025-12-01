@@ -808,6 +808,25 @@ def s17imm64 : Operand<i64> {
   let DecoderMethod = "decodeSImmOperand<16>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
+def PPCS32ImmAsmOperand : AsmOperandClass {
+  let Name = "S32Imm";
+  let PredicateMethod = "isS32Imm";
+  let RenderMethod = "addImmOperands";
+}
+def s32imm : Operand<i64> {
+  let PrintMethod = "printS32ImmOperand";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_imm32>";
+  let ParserMatchClass = PPCS32ImmAsmOperand;
+  let DecoderMethod = "decodeSImmOperand<32>";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def s32imm_pcrel : Operand<i64> {
+  let PrintMethod = "printS32ImmOperand";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_pcrel32>";
+  let ParserMatchClass = PPCS32ImmAsmOperand;
+  let DecoderMethod = "decodeSImmOperand<32>";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
 def PPCS34ImmAsmOperand : AsmOperandClass {
   let Name = "S34Imm";
   let PredicateMethod = "isS34Imm";
@@ -903,6 +922,10 @@ def crbitm: Operand<i8> {
 def PPCRegGxRCNoR0Operand : AsmOperandClass {
   let Name = "RegGxRCNoR0"; let PredicateMethod = "isRegNumber";
 }
+
+def ppc_ptr_rc : RegClassByHwMode<
+  [PPC32, PPC64],
+  [GPRC, G8RC]>;
 
 def ptr_rc_nor0_by_hwmode : RegClassByHwMode<
   [PPC32, PPC64],

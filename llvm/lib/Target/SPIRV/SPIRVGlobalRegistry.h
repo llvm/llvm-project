@@ -611,6 +611,8 @@ public:
                                          SPIRV::StorageClass::StorageClass SC,
                                          bool IsWritable, bool EmitIr = false);
 
+  SPIRVType *getOrCreatePaddingType(MachineIRBuilder &MIRBuilder);
+
   SPIRVType *getOrCreateLayoutType(MachineIRBuilder &MIRBuilder,
                                    const TargetExtType *T, bool EmitIr = false);
 

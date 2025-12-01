@@ -51,6 +51,8 @@ mlir::Value genDsecnds(fir::FirOpBuilder &builder, mlir::Location loc,
 void genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
               mlir::Value values, mlir::Value time);
 
+void genFlush(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value unit);
+
 void genFree(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value ptr);
 
 mlir::Value genFseek(fir::FirOpBuilder &builder, mlir::Location loc,

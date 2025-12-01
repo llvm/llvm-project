@@ -41,9 +41,9 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    [[STEP_ADD2:%.*]] = fadd fast <8 x float> [[STEP_ADD]], splat (float 4.000000e+00)
 ; AUTO_VEC-NEXT:    [[STEP_ADD3:%.*]] = fadd fast <8 x float> [[STEP_ADD2]], splat (float 4.000000e+00)
 ; AUTO_VEC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
-; AUTO_VEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 8
-; AUTO_VEC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 16
-; AUTO_VEC-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 24
+; AUTO_VEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 8
+; AUTO_VEC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 16
+; AUTO_VEC-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 24
 ; AUTO_VEC-NEXT:    store <8 x float> [[VEC_IND]], ptr [[TMP1]], align 4
 ; AUTO_VEC-NEXT:    store <8 x float> [[STEP_ADD]], ptr [[TMP2]], align 4
 ; AUTO_VEC-NEXT:    store <8 x float> [[STEP_ADD2]], ptr [[TMP3]], align 4
@@ -208,9 +208,9 @@ define double @external_use_with_fast_math(ptr %a, i64 %n) {
 ; AUTO_VEC-NEXT:    [[STEP_ADD_2:%.*]] = fadd fast <4 x double> [[STEP_ADD]], splat (double 1.200000e+01)
 ; AUTO_VEC-NEXT:    [[STEP_ADD_3:%.*]] = fadd fast <4 x double> [[STEP_ADD_2]], splat (double 1.200000e+01)
 ; AUTO_VEC-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[A]], i64 [[INDEX]]
-; AUTO_VEC-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[TMP1]], i32 4
-; AUTO_VEC-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[TMP1]], i32 8
-; AUTO_VEC-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[TMP1]], i32 12
+; AUTO_VEC-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[TMP1]], i64 4
+; AUTO_VEC-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[TMP1]], i64 8
+; AUTO_VEC-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[TMP1]], i64 12
 ; AUTO_VEC-NEXT:    store <4 x double> [[VEC_IND]], ptr [[TMP1]], align 8
 ; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD]], ptr [[TMP2]], align 8
 ; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD_2]], ptr [[TMP3]], align 8
@@ -326,9 +326,9 @@ define void @fadd_reassoc_FMF(ptr nocapture %p, i32 %N) {
 ; AUTO_VEC-NEXT:    [[STEP_ADD2:%.*]] = fadd reassoc <8 x float> [[STEP_ADD]], splat (float 3.360000e+02)
 ; AUTO_VEC-NEXT:    [[STEP_ADD3:%.*]] = fadd reassoc <8 x float> [[STEP_ADD2]], splat (float 3.360000e+02)
 ; AUTO_VEC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 [[INDEX]]
-; AUTO_VEC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 8
-; AUTO_VEC-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 16
-; AUTO_VEC-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 24
+; AUTO_VEC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 8
+; AUTO_VEC-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 16
+; AUTO_VEC-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 24
 ; AUTO_VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
 ; AUTO_VEC-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x float>, ptr [[TMP3]], align 4
 ; AUTO_VEC-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x float>, ptr [[TMP4]], align 4
