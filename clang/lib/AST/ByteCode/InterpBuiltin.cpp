@@ -169,8 +169,8 @@ static llvm::APSInt convertBoolVectorToInt(const Pointer &Val) {
 
 // Strict double -> float conversion used for X86 PD2PS/cvtsd2ss intrinsics.
 // Reject NaN/Inf/Subnormal inputs and any lossy/inexact conversions.
-static bool convertDoubleToFloatStrict(APFloat Src, Floating &Dst, InterpState &S,
-                                const Expr *DiagExpr) {
+static bool convertDoubleToFloatStrict(APFloat Src, Floating &Dst,
+                                       InterpState &S, const Expr *DiagExpr) {
   if (Src.isInfinity()) {
     if (S.diagnosing())
       S.CCEDiag(DiagExpr, diag::note_constexpr_float_arithmetic) << 0;
@@ -183,7 +183,8 @@ static bool convertDoubleToFloatStrict(APFloat Src, Floating &Dst, InterpState &
   }
   APFloat Val = Src;
   bool LosesInfo = false;
-  APFloat::opStatus Status = Val.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &LosesInfo);
+  APFloat::opStatus Status = Val.convert(
+      APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &LosesInfo);
   if (LosesInfo || Val.isDenormal()) {
     if (S.diagnosing())
       S.CCEDiag(DiagExpr, diag::note_constexpr_float_arithmetic_strict);
@@ -3391,7 +3392,7 @@ static bool interp__builtin_ia32_cvt_vec2mask(InterpState &S, CodePtr OpPC,
   return true;
 }
 static bool interp__builtin_ia32_cvtsd2ss(InterpState &S, CodePtr OpPC,
-                                         const CallExpr *Call) {
+                                          const CallExpr *Call) {
   assert(Call->getNumArgs() == 2);
 
   const Pointer &B = S.Stk.pop<Pointer>();
@@ -3420,8 +3421,8 @@ static bool interp__builtin_ia32_cvtsd2ss(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_ia32_cvtsd2ss_round_mask(InterpState &S,
-                                                      CodePtr OpPC,
-                                                      const CallExpr *Call) {
+                                                     CodePtr OpPC,
+                                                     const CallExpr *Call) {
   assert(Call->getNumArgs() == 5);
 
   // Pop in reverse order: rounding, mask, src, b, a
@@ -3430,7 +3431,8 @@ static bool interp__builtin_ia32_cvtsd2ss_round_mask(InterpState &S,
   const Pointer &Src = S.Stk.pop<Pointer>();
   const Pointer &B = S.Stk.pop<Pointer>();
   const Pointer &A = S.Stk.pop<Pointer>();
-  if (!CheckLoad(S, OpPC, A) || !CheckLoad(S, OpPC, B) || !CheckLoad(S, OpPC, Src))
+  if (!CheckLoad(S, OpPC, A) || !CheckLoad(S, OpPC, B) ||
+      !CheckLoad(S, OpPC, Src))
     return false;
 
   const auto *DstVTy = Call->getType()->castAs<VectorType>();
@@ -3441,7 +3443,8 @@ static bool interp__builtin_ia32_cvtsd2ss_round_mask(InterpState &S,
   for (unsigned I = 0; I != NumElems; ++I)
     Dst.elem<Floating>(I) = A.elem<Floating>(I);
 
-  // If mask bit 0 is set, convert element 0 from double to float; otherwise use Src
+  // If mask bit 0 is set, convert element 0 from double to float; otherwise use
+  // Src
   if (MaskInt.getZExtValue() & 0x1) {
     Floating Conv = S.allocFloat(
         S.getASTContext().getFloatTypeSemantics(S.getASTContext().FloatTy));
@@ -3463,12 +3466,12 @@ static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
   bool IsMasked = (BuiltinID == X86::BI__builtin_ia32_cvtpd2ps_mask ||
                    BuiltinID == X86::BI__builtin_ia32_cvtpd2ps512_mask);
   bool HasRounding = (BuiltinID == X86::BI__builtin_ia32_cvtpd2ps512_mask);
-  
+
   APSInt MaskVal(1, false);
   Pointer PassThrough;
   Pointer SrcPd;
   APSInt Rounding;
-  
+
   if (IsMasked) {
     // Pop in reverse order
     if (HasRounding) {
@@ -3483,14 +3486,14 @@ static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
       PassThrough = S.Stk.pop<Pointer>();
       SrcPd = S.Stk.pop<Pointer>();
     }
-    
+
     if (!CheckLoad(S, OpPC, PassThrough))
       return false;
   } else {
     // Pop source only
     SrcPd = S.Stk.pop<Pointer>();
   }
-  
+
   if (!CheckLoad(S, OpPC, SrcPd))
     return false;
 
@@ -3508,7 +3511,8 @@ static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
     }
   }
 
-  // Convert double to float for enabled elements (only process source elements that exist)
+  // Convert double to float for enabled elements (only process source elements
+  // that exist)
   for (unsigned I = 0; I != SrcElems; ++I) {
     if (IsMasked && (((MaskVal.getZExtValue() >> I) & 0x1) == 0))
       continue;
