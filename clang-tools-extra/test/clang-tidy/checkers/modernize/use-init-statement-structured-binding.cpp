@@ -22,7 +22,6 @@ namespace std {
         T first;
         U second;
         pair() : first(), second() {}
-        //~pair() {}
     };
 }
 #define DUMMY_TOKEN // crutch because CHECK-FIXES unable to match empty string
@@ -30,13 +29,11 @@ namespace std {
 struct Point {
     int x, y;
     Point() : x(0), y(0) {}
-    // ~Point() {}
 };
 
 struct TupleLike {
     int a, b, c;
     TupleLike() : a(0), b(0), c(0) {}
-    // ~TupleLike() {}
 };
 
 void good() {
@@ -62,6 +59,76 @@ void good_already_has_init_stmt() {
     if (int i = 0; a == 0) {
         do_some();
     }
+}
+
+
+using unique_lock_t = std::unique_lock<std::mutex>;
+
+void good_unique_lock() {
+    struct Locks { unique_lock_t l; };
+    static std::mutex lock;
+    static int counter = 0;
+    auto [l] = Locks{unique_lock_t{lock}};
+    if (l.owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
+void good_unique_lock_multiple() {
+    struct Locks { unique_lock_t first; unique_lock_t second; };
+    static std::mutex lock1;
+    static int counter1 = 0;
+
+    static std::mutex lock2;
+    static int counter2 = 0;
+
+    auto locks = Locks{unique_lock_t{lock1}, unique_lock_t{lock2}};
+    auto [l1, l2] = locks;
+    if (l1.owns_lock()) {
+        do_some();
+    }
+    ++counter1;
+}
+
+void good_unique_lock_multiple_different() {
+    struct Locks { unique_lock_t l; int value; };
+    static std::mutex lock;
+    static int counter = 0;
+
+    auto locks = Locks{unique_lock_t{lock}, 100};
+    auto [l, value] = locks;
+    if (l.owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
+void good_unique_lock_const() {
+    struct Locks { unique_lock_t l; };
+    static std::mutex lock;
+    static int counter = 0;
+    const auto [l] = Locks{unique_lock_t{lock}};
+    if (l.owns_lock()) {
+        do_some();
+    }
+    ++counter;
+}
+
+void good_unique_lock_multiple_const() {
+    struct Locks { unique_lock_t first; unique_lock_t second; };
+    static std::mutex lock1;
+    static int counter1 = 0;
+
+    static std::mutex lock2;
+    static int counter2 = 0;
+
+    auto locks = Locks{unique_lock_t{lock1}, unique_lock_t{lock2}};
+    const auto [l1, l2] = locks;
+    if (l1.owns_lock()) {
+        do_some();
+    }
+    ++counter1;
 }
 
 void bad1() {
