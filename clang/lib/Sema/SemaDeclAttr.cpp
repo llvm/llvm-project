@@ -6978,16 +6978,27 @@ static void handleModularFormat(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!S.checkStringLiteralArgumentAttr(AL, 1, ImplName))
     return;
   SmallVector<StringRef> Aspects;
+  llvm::DenseSet<StringRef> SeenAspects;
+  bool HasDuplicate = false;
   for (unsigned I = 2, E = AL.getNumArgs(); I != E; ++I) {
     StringRef Aspect;
     if (!S.checkStringLiteralArgumentAttr(AL, I, Aspect))
       return;
+    if (!SeenAspects.insert(Aspect).second) {
+      S.Diag(AL.getArgAsExpr(I)->getExprLoc(),
+             diag::err_modular_format_duplicate_aspect)
+          << Aspect;
+      HasDuplicate = true;
+      continue;
+    }
     Aspects.push_back(Aspect);
   }
 
-  // Store aspects sorted and without duplicates.
+  if (HasDuplicate)
+    return;
+
+  // Store aspects sorted.
   llvm::sort(Aspects);
-  Aspects.erase(llvm::unique(Aspects), Aspects.end());
 
   D->addAttr(::new (S.Context) ModularFormatAttr(
       S.Context, AL, AL.getArgAsIdent(0)->getIdentifierInfo(), ImplName,

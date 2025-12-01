@@ -13066,6 +13066,9 @@ def err_get_vtable_pointer_requires_complete_type
 def err_modular_format_attribute_no_format
     : Error<"'modular_format' attribute requires 'format' attribute">;
 
+def err_modular_format_duplicate_aspect
+    : Error<"duplicate aspect '%0' in 'modular_format' attribute">;
+
 // SYCL-specific diagnostics
 def warn_sycl_kernel_num_of_template_params : Warning<
   "'sycl_kernel' attribute only applies to a function template with at least"
