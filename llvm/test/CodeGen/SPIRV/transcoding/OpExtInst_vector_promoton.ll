@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | not spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ;
 ; Some OpenCL builtins have mixed vector-scalar variants, but OpExtInt only supports
 ; versions where all the arguments have the same type.
@@ -165,19 +165,6 @@ entry:
   ret void
 }
 
-define spir_kernel void @ill_1() {
-; CHECK-LABEL:   OpFunction %{{[0-9]+}} None %{{[0-9]+}} ; -- Begin function ill_1
-; CHECK-NEXT:    OpLabel
-; This is wrong, we should generate a regular call
-; CHECK-NEXT:    %{{[0-9]+}} = OpExtInst %{{[0-9]+}} %{{[0-9]+}} s_min %{{[0-9]+}} %{{[0-9]+}} %{{[0-9]+}}
-; CHECK-NEXT:    OpReturn
-; CHECK-NEXT:    OpFunctionEnd
-; CHECK-NEXT:    ; -- End function
-entry:
-  tail call spir_func void @_Z3miniii(i32 1, i32 2, i32 3)
-  ret void
-}
-
 declare spir_func <2 x i32> @_Z3minDv2_ii(<2 x i32>, i32)
 declare spir_func <2 x i32> @_Z3minDv2_jj(<2 x i32>, i32)
 declare spir_func <2 x i32> @_Z3maxDv2_ii(<2 x i32>, i32)
@@ -190,4 +177,3 @@ declare spir_func <2 x float> @_Z5clampDv2_fff(<2 x float>, float)
 declare spir_func <2 x float> @_Z3mixDv2_fS_f(<2 x float>, <2 x float>, float)
 declare spir_func <2 x float> @_Z10smoothstepffDv2_f(float, float, <2 x float>)
 declare spir_func void @_Z3minv()
-declare spir_func i32 @_Z3miniii(i32, i32, i32)
