@@ -10,7 +10,6 @@
 #include "EventHelper.h"
 #include "JSONUtils.h"
 #include "RequestHandler.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace lldb_dap {
 
