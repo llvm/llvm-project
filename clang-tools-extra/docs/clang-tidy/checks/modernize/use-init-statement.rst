@@ -3,9 +3,13 @@
 modernize-use-init-statement
 ============================
 
-Finds variable declarations that immediately precede ``if`` or ``switch`` statements where the variable isn't used after the statement, and suggests moving them into C++17 init statements.
+Finds variable declarations that immediately precede ``if`` or ``switch``
+statements where the variable isn't used after the statement, and suggests
+moving them into C++17 init statements.
 
-This check helps to adopt the C++17 feature that allows variable initialization within ``if`` and ``switch`` statements, narrowing variable scope and improving code readability.
+This check helps to adopt the C++17 feature that allows variable initialization
+within ``if`` and ``switch`` statements, narrowing variable scope and improving
+code readability.
 
 Examples
 --------
@@ -38,9 +42,15 @@ Options
 
 .. option:: StrictMode
 
-   When ``true`` (default), the check will suggest transformations even in cases where moving the variable into the init statement doesn't reduce its scope. This includes situations where the variable is already in an inner scope (like inside a loop body or nested block). When ``false``, the check only suggests transformations when scope reduction would occur.
+    When ``true`` (default), the check will suggest transformations even in
+    cases where moving the variable into the init statement doesn't reduce its
+    scope. This includes situations where the variable is already in an inner
+    scope (like inside a loop body or nested block).
+    When ``false``, the check only suggests transformations when scope
+    reduction would occur.
 
-   In strict mode, the check prioritizes consistent use of C++17 init statements for readability, even when scope isn't affected.
+    In strict mode, the check prioritizes consistent use of C++17 init
+    statements for readability, even when scope isn't affected.
 
 Requirements
 ------------
