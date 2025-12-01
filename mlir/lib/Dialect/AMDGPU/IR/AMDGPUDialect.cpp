@@ -712,15 +712,16 @@ LogicalResult TransposeLoadOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult MakeDmaBaseOp::verify() {
-  MemRefType srcType = cast<MemRefType>(getSrc().getType());
-  MemRefType dstType = cast<MemRefType>(getDst().getType());
-  bool store_from_lds = hasWorkgroupMemorySpace(srcType.getMemorySpace()) &&
-                        hasGlobalMemorySpace(dstType.getMemorySpace());
-  bool load_to_lds = hasGlobalMemorySpace(srcType.getMemorySpace()) &&
-                     hasWorkgroupMemorySpace(dstType.getMemorySpace());
-  bool is_valid = store_from_lds != load_to_lds;
-  if (!is_valid)
-    return emitOpError("invalid combination of address spaces.");
+  MemRefType ldsType = cast<MemRefType>(getLds().getType());
+  MemRefType globalType = cast<MemRefType>(getGlobal().getType());
+  if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace())) {
+    return emitOpError(
+        "lds memref must have workgroup address space attribute.");
+  }
+  if (!hasGlobalMemorySpace(globalType.getMemorySpace())) {
+    return emitOpError(
+        "global memref must have global address space attribute.");
+  }
   return success();
 }
 

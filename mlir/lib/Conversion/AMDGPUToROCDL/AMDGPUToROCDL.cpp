@@ -2280,31 +2280,26 @@ struct AMDGPUMakeDmaBaseLowering
 
     Location loc = op.getLoc();
 
-    ValueRange srcIndices = adaptor.getSrcIndices();
-    Value src = adaptor.getSrc();
-    auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
+    ValueRange ldsIndices = adaptor.getLdsIndices();
+    Value lds = adaptor.getLds();
+    auto ldsMemRefType = cast<MemRefType>(op.getLds().getType());
 
-    Value srcPtr =
-        getStridedElementPtr(rewriter, loc, srcMemRefType, src, srcIndices);
+    Value ldsPtr =
+        getStridedElementPtr(rewriter, loc, ldsMemRefType, lds, ldsIndices);
 
-    ValueRange dstIndices = adaptor.getDstIndices();
-    Value dst = adaptor.getDst();
-    auto dstMemRefType = cast<MemRefType>(op.getDst().getType());
+    ValueRange globalIndices = adaptor.getGlobalIndices();
+    Value global = adaptor.getGlobal();
+    auto globalMemRefType = cast<MemRefType>(op.getGlobal().getType());
 
-    Value dstPtr =
-        getStridedElementPtr(rewriter, loc, dstMemRefType, dst, dstIndices);
-
-    bool storeFrom = hasWorkgroupMemorySpace(srcMemRefType.getMemorySpace());
-    Value ldsAddr = storeFrom ? srcPtr : dstPtr;
-    Value globalAddr = storeFrom ? dstPtr : srcPtr;
+    Value globalPtr = getStridedElementPtr(rewriter, loc, globalMemRefType,
+                                           global, globalIndices);
 
     Type i32 = rewriter.getI32Type();
     Type i64 = rewriter.getI64Type();
 
-    Value castForLdsAddr =
-        LLVM::PtrToIntOp::create(rewriter, loc, i32, ldsAddr);
+    Value castForLdsAddr = LLVM::PtrToIntOp::create(rewriter, loc, i32, ldsPtr);
     Value castForGlobalAddr =
-        LLVM::PtrToIntOp::create(rewriter, loc, i64, globalAddr);
+        LLVM::PtrToIntOp::create(rewriter, loc, i64, globalPtr);
 
     Value mask = createI64Constant(rewriter, loc, 0x1FFFFFFFFFFFFFF);
     Value first57BitsOfGlobalAddr =

@@ -171,39 +171,10 @@ func.func @amdgpu.scaled_ext_packed816_invalid_dst_elem_type(%v: vector<16xf6E3M
 
 // CHECK-LABEL: func @make_dma_base
 // CHECK-SAME: (%[[IDX:.+]]: index, %[[MEM:.+]]: memref<8xi32, 1>, %[[SMEM:.+]]: memref<8xi32, 3>)
-func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>, %smem: memref<8xi32,#gpu_lds_addrspace>) -> (!amdgpu.tdm_base<i32>, !amdgpu.tdm_base<i32>) {
+func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>, %smem: memref<8xi32,#gpu_lds_addrspace>) -> (!amdgpu.tdm_base<i32>) {
   // CHECK-DAG: %[[INT:.+]] = builtin.unrealized_conversion_cast %[[IDX]] : index to i64
   // CHECK-DAG: %[[MEMREF_DESC_MEM:.+]] = builtin.unrealized_conversion_cast %[[MEM]] : memref<8xi32, 1>
   // CHECK-DAG: %[[MEMREF_DESC_SMEM:.+]] = builtin.unrealized_conversion_cast %[[SMEM]] : memref<8xi32, 3>
-
-  // CHECK-DAG: %[[MEM_BASE_PTR:.+]] = llvm.extractvalue %[[MEMREF_DESC_MEM]][1] : !llvm.struct<(ptr<1>
-  // CHECK-DAG: %[[SMEM_BASE_PTR:.+]] = llvm.extractvalue %[[MEMREF_DESC_SMEM]][1] : !llvm.struct<(ptr<3>
-
-  // CHECK-DAG: %[[MEM_BASE_OFFSET:.+]] = llvm.getelementptr %[[MEM_BASE_PTR]][%[[INT]]]
-  // CHECK-DAG: %[[SMEM_BASE_OFFSET:.+]] = llvm.getelementptr %[[SMEM_BASE_PTR]][%[[INT]]]
-
-  // CHECK-DAG: %[[MEM_INT:.+]] = llvm.ptrtoint %[[MEM_BASE_OFFSET]] : !llvm.ptr<1> to i64
-  // CHECK-DAG: %[[SMEM_INT:.+]] = llvm.ptrtoint %[[SMEM_BASE_OFFSET]] : !llvm.ptr<3> to i32
-
-  // CHECK-DAG: %[[MASK:.+]] = llvm.mlir.constant(144115188075855871 : i64) : i64
-  // CHECK: %[[MEM_INT_LOW_57:.+]] = llvm.and %[[MEM_INT]], %[[MASK]]
-  // CHECK: %[[C32:.+]] = llvm.mlir.constant(32 : i64) : i64
-  // CHECK: %[[SHIFT:.+]] = llvm.lshr %[[MEM_INT_LOW_57]], %[[C32]]
-  // CHECK-DAG: %[[MEM_INT_LOW:.+]] = llvm.trunc %[[MEM_INT_LOW_57]] : i64 to i32
-  // CHECK-DAG: %[[MEM_INT_HIGH:.+]] = llvm.trunc %[[SHIFT]] : i64 to i32
-
-  // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32) : i32
-  // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK-DAG: %[[C2:.+]] = llvm.mlir.constant(2 : i32) : i32
-  // CHECK-DAG: %[[C3:.+]] = llvm.mlir.constant(3 : i32) : i32
-
-  // CHECK: %[[V4I32_0_0:.+]] = llvm.mlir.undef : vector<4xi32>
-  // CHECK: %[[V4I32_0_1:.+]] = llvm.insertelement %[[C0]], %[[V4I32_0_0]][%[[C0]] : i32]
-  // CHECK: %[[V4I32_0_2:.+]] = llvm.insertelement %[[SMEM_INT]], %[[V4I32_0_1]][%[[C1]] : i32]
-  // CHECK: %[[V4I32_0_3:.+]] = llvm.insertelement %[[MEM_INT_LOW]], %[[V4I32_0_2]][%[[C2]] : i32]
-  // CHECK: %[[V4I32_0_4:.+]] = llvm.insertelement %[[MEM_INT_HIGH]], %[[V4I32_0_3]][%[[C3]] : i32]
-
-  %0 = amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, #gpu_global_addrspace>, memref<8xi32, #gpu_lds_addrspace> -> !amdgpu.tdm_base<i32>
 
   // CHECK-DAG: %[[MEM_BASE_PTR:.+]] = llvm.extractvalue %[[MEMREF_DESC_MEM]][1] : !llvm.struct<(ptr<1>
   // CHECK-DAG: %[[SMEM_BASE_PTR:.+]] = llvm.extractvalue %[[MEMREF_DESC_SMEM]][1] : !llvm.struct<(ptr<3>
@@ -232,7 +203,7 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>
   // CHECK: %[[V4I32_1_3:.+]] = llvm.insertelement %[[MEM_INT_LOW]], %[[V4I32_1_2]][%[[C2]] : i32]
   // CHECK: %[[V4I32_1_4:.+]] = llvm.insertelement %[[MEM_INT_HIGH]], %[[V4I32_1_3]][%[[C3]] : i32]
 
-  %1 = amdgpu.make_dma_base %smem[%idx], %mem[%idx] : memref<8xi32, #gpu_lds_addrspace>, memref<8xi32, #gpu_global_addrspace> -> !amdgpu.tdm_base<i32>
+  %0 = amdgpu.make_dma_base %smem[%idx], %mem[%idx] : memref<8xi32, #gpu_lds_addrspace>, memref<8xi32, #gpu_global_addrspace> -> !amdgpu.tdm_base<i32>
 
-  func.return %0, %1 : !amdgpu.tdm_base<i32>, !amdgpu.tdm_base<i32>
+  func.return %0 : !amdgpu.tdm_base<i32>
 }

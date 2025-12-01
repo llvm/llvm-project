@@ -1230,10 +1230,10 @@ def AMDGPU_ScaledMFMAOp :
 def AMDGPU_MakeDmaBaseOp :
     AMDGPU_Op<"make_dma_base", [Pure, AttrSizedOperandSegments]>,
     Arguments<(ins
-                   Arg<AnyMemRef, "buffer to read from">:$src,
-                   Variadic<Index>:$src_indices,
-                   Arg<AnyMemRef, "buffer to write to">:$dst,
-                   Variadic<Index>:$dst_indices)>,
+                   Arg<AnyMemRef, "buffer to read from">:$lds,
+                   Variadic<Index>:$lds_indices,
+                   Arg<AnyMemRef, "buffer to write to">:$global,
+                   Variadic<Index>:$global_indices)>,
     Results<(outs AMDGPU_TDMBaseType: $base)> {
 
   // TODO:
@@ -1250,7 +1250,7 @@ def AMDGPU_MakeDmaBaseOp :
     For example:
 
     ```mlir
-      %base = amdgpu.make_dma_base %src[%idx0], %dst[%idx1] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+      %base = amdgpu.make_dma_base %lds[%idx0, %idx1], %global[%idx2, %idx3] : memref<64x64xi32, #gpu.address_space<workgroup>>, memref<64x64xi32> -> !amdgpu.tdm_base<i32>
       %descriptor = amdgpu.make_dma_descriptor %base globalSize [2, 2] globalStride [2, 1] sharedSize [2, 2] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
       amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
     ```
@@ -1279,7 +1279,7 @@ def AMDGPU_MakeDmaBaseOp :
   }];
 
   let assemblyFormat = [{
-    $src `[` $src_indices `]` `,` $dst `[` $dst_indices `]` attr-dict `:` type($src) `,` type($dst) `->` type(results)
+    $lds `[` $lds_indices `]` `,` $global `[` $global_indices `]` attr-dict `:` type($lds) `,` type($global) `->` type(results)
   }];
 
   let hasVerifier = 1;
