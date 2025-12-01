@@ -14,9 +14,9 @@ define <8 x float> @concat_sqrt_v8f32_v4f32(<4 x float> %a0, <4 x float> %a1) {
 ;
 ; AVX-LABEL: concat_sqrt_v8f32_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtps %xmm0, %xmm0
-; AVX-NEXT:    vsqrtps %xmm1, %xmm1
+; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    vsqrtps %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %v0 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %a0)
   %v1 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %a1)
@@ -35,23 +35,22 @@ define <16 x float> @concat_sqrt_v16f32_v4f32(<4 x float> %a0, <4 x float> %a1, 
 ;
 ; AVX1OR2-LABEL: concat_sqrt_v16f32_v4f32:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vsqrtps %xmm0, %xmm0
-; AVX1OR2-NEXT:    vsqrtps %xmm1, %xmm1
-; AVX1OR2-NEXT:    vsqrtps %xmm2, %xmm2
-; AVX1OR2-NEXT:    vsqrtps %xmm3, %xmm3
+; AVX1OR2-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX1OR2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1OR2-NEXT:    vsqrtps %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm1
+; AVX1OR2-NEXT:    vsqrtps %ymm1, %ymm1
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: concat_sqrt_v16f32_v4f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vsqrtps %xmm0, %xmm0
-; AVX512-NEXT:    vsqrtps %xmm1, %xmm1
-; AVX512-NEXT:    vsqrtps %xmm2, %xmm2
-; AVX512-NEXT:    vsqrtps %xmm3, %xmm3
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512-NEXT:    vsqrtps %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %v0 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %a0)
   %v1 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %a1)
@@ -80,9 +79,9 @@ define <16 x float> @concat_sqrt_v16f32_v8f32(<8 x float> %a0, <8 x float> %a1) 
 ;
 ; AVX512-LABEL: concat_sqrt_v16f32_v8f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vsqrtps %ymm0, %ymm0
-; AVX512-NEXT:    vsqrtps %ymm1, %ymm1
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vsqrtps %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %v0 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> %a0)
   %v1 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> %a1)
