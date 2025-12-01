@@ -127,8 +127,6 @@ static mlir::Value emitVecInsert(CIRGenBuilderTy &builder, mlir::Location loc,
 
   cir::ConstantOp indexVal = builder.getUInt64(index, loc);
 
-  // These builtins exist so we can ensure the index is an ICE and in range.
-  // Otherwise we could just do this in the header file.
   return cir::VecInsertOp::create(builder, loc, vec, value, indexVal);
 }
 
