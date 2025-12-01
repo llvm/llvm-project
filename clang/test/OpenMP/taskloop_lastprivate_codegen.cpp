@@ -397,7 +397,7 @@ int main() {
 // No destructors must be called for private copies of s_arr and var.
 // CHECK-NOT: getelementptr inbounds nuw [[PRIVATES_TMAIN_TY]], ptr [[PRIVATES]], i{{.+}} 0, i{{.+}} 2
 // CHECK-NOT: getelementptr inbounds nuw [[PRIVATES_TMAIN_TY]], ptr [[PRIVATES]], i{{.+}} 0, i{{.+}} 3
-// CHECK: call void [[S_INT_TY_DESTR:@.+]](ptr noundef
+// CHECK: call void [[S_INT_TY_DESTR:@.+]](ptr dead_on_return
 // CHECK-NOT: getelementptr inbounds nuw [[PRIVATES_TMAIN_TY]], ptr [[PRIVATES]], i{{.+}} 0, i{{.+}} 2
 // CHECK-NOT: getelementptr inbounds nuw [[PRIVATES_TMAIN_TY]], ptr [[PRIVATES]], i{{.+}} 0, i{{.+}} 3
 // CHECK: ret
