@@ -460,10 +460,8 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   const auto &Strides =
     LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
 
-  bool CanAddPredicate = !llvm::shouldOptimizeForSize(
-      TheLoop->getHeader(), PSI, BFI, PGSOQueryType::IRPass);
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides,
-                            CanAddPredicate, false)
+                            AllowRuntimeSCEVChecks, false)
                    .value_or(0);
   if (Stride == 1 || Stride == -1)
     return Stride;
@@ -686,7 +684,7 @@ void LoopVectorizationLegality::addInductionPhi(
   // in the vectorized loop body, record them here. All casts could be recorded
   // here for ignoring, but suffices to record only the first (as it is the
   // only one that may bw used outside the cast sequence).
-  const SmallVectorImpl<Instruction *> &Casts = ID.getCastInsts();
+  ArrayRef<Instruction *> Casts = ID.getCastInsts();
   if (!Casts.empty())
     InductionCastsToIgnore.insert(*Casts.begin());
 
@@ -879,6 +877,11 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
       AllowedExit.insert(RedDes.getLoopExitInstr());
       Reductions[Phi] = RedDes;
+      assert((!RedDes.hasUsesOutsideReductionChain() ||
+              RecurrenceDescriptor::isMinMaxRecurrenceKind(
+                  RedDes.getRecurrenceKind())) &&
+             "Only min/max recurrences are allowed to have multiple uses "
+             "currently");
       return true;
     }
 

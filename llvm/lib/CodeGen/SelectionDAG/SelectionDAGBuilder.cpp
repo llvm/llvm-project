@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
@@ -1097,14 +1098,15 @@ RegsForValue::getRegsAndSizes() const {
 }
 
 void SelectionDAGBuilder::init(GCFunctionInfo *gfi, BatchAAResults *aa,
-                               AssumptionCache *ac,
-                               const TargetLibraryInfo *li) {
+                               AssumptionCache *ac, const TargetLibraryInfo *li,
+                               const TargetTransformInfo &TTI) {
   BatchAA = aa;
   AC = ac;
   GFI = gfi;
   LibInfo = li;
   Context = DAG.getContext();
   LPadToCallSiteMap.clear();
+  this->TTI = &TTI;
   SL->init(DAG.getTargetLoweringInfo(), TM, DAG.getDataLayout());
   AssignmentTrackingEnabled = isAssignmentTrackingEnabled(
       *DAG.getMachineFunction().getFunction().getParent());
@@ -2589,10 +2591,6 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
     if (!LhsDeps.contains(RhsI))
       RhsDeps.try_emplace(RhsI, false);
 
-  const auto &TLI = DAG.getTargetLoweringInfo();
-  const auto &TTI =
-      TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
-
   InstructionCost CostOfIncluding = 0;
   // See if this instruction will need to computed independently of whether RHS
   // is.
@@ -2632,8 +2630,8 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
     // RHS condition. Use latency because we are essentially trying to calculate
     // the cost of the dependency chain.
     // Possible TODO: We could try to estimate ILP and make this more precise.
-    CostOfIncluding +=
-        TTI.getInstructionCost(InsPair.first, TargetTransformInfo::TCK_Latency);
+    CostOfIncluding += TTI->getInstructionCost(
+        InsPair.first, TargetTransformInfo::TCK_Latency);
 
     if (CostOfIncluding > CostThresh)
       return false;
@@ -3976,7 +3974,10 @@ void SelectionDAGBuilder::visitFPExt(const User &I) {
   SDValue N = getValue(I.getOperand(0));
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getNode(ISD::FP_EXTEND, getCurSDLoc(), DestVT, N));
+  SDNodeFlags Flags;
+  if (auto *TruncInst = dyn_cast<FPMathOperator>(&I))
+    Flags.copyFMF(*TruncInst);
+  setValue(&I, DAG.getNode(ISD::FP_EXTEND, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitFPToUI(const User &I) {
@@ -4912,10 +4913,9 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
       LocationSize::beforeOrAfterPointer(), Alignment, I.getAAMetadata());
 
   const auto &TLI = DAG.getTargetLoweringInfo();
-  const auto &TTI =
-      TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
+
   SDValue StoreNode =
-      !IsCompressing && TTI.hasConditionalLoadStoreForType(
+      !IsCompressing && TTI->hasConditionalLoadStoreForType(
                             I.getArgOperand(0)->getType(), /*IsStore=*/true)
           ? TLI.visitMaskedStore(DAG, sdl, getMemoryRoot(), MMO, Ptr, Src0,
                                  Mask)
@@ -5064,20 +5064,22 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   auto MMOFlags = MachineMemOperand::MOLoad;
   if (I.hasMetadata(LLVMContext::MD_nontemporal))
     MMOFlags |= MachineMemOperand::MONonTemporal;
+  if (I.hasMetadata(LLVMContext::MD_invariant_load))
+    MMOFlags |= MachineMemOperand::MOInvariant;
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), Alignment, AAInfo, Ranges);
 
   const auto &TLI = DAG.getTargetLoweringInfo();
-  const auto &TTI =
-      TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
+
   // The Load/Res may point to different values and both of them are output
   // variables.
   SDValue Load;
   SDValue Res;
-  if (!IsExpanding && TTI.hasConditionalLoadStoreForType(Src0Operand->getType(),
-                                                         /*IsStore=*/false))
+  if (!IsExpanding &&
+      TTI->hasConditionalLoadStoreForType(Src0Operand->getType(),
+                                          /*IsStore=*/false))
     Res = TLI.visitMaskedLoad(DAG, sdl, InChain, MMO, Load, Ptr, Src0, Mask);
   else
     Res = Load =
@@ -5373,6 +5375,14 @@ SmallVector<SDValue, 8> SelectionDAGBuilder::getTargetIntrinsicOperands(
       Ops.push_back(
           DAG.getTargetConstantFP(*cast<ConstantFP>(Arg), SDLoc(), VT));
     }
+  }
+
+  if (std::optional<OperandBundleUse> Bundle =
+          I.getOperandBundle(LLVMContext::OB_deactivation_symbol)) {
+    auto *Sym = Bundle->Inputs[0].get();
+    SDValue SDSym = getValue(Sym);
+    SDSym = DAG.getDeactivationSymbol(cast<GlobalValue>(Sym));
+    Ops.push_back(SDSym);
   }
 
   if (std::optional<OperandBundleUse> Bundle =
@@ -9115,6 +9125,11 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
     ConvControlToken = getValue(Token);
   }
 
+  GlobalValue *DeactivationSymbol = nullptr;
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_deactivation_symbol)) {
+    DeactivationSymbol = cast<GlobalValue>(Bundle->Inputs[0].get());
+  }
+
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(getCurSDLoc())
       .setChain(getRoot())
@@ -9124,7 +9139,8 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
       .setIsPreallocated(
           CB.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
       .setCFIType(CFIType)
-      .setConvergenceControlToken(ConvControlToken);
+      .setConvergenceControlToken(ConvControlToken)
+      .setDeactivationSymbol(DeactivationSymbol);
 
   // Set the pointer authentication info if we have it.
   if (PAI) {
@@ -9744,7 +9760,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
        LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
        LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
-       LLVMContext::OB_convergencectrl});
+       LLVMContext::OB_convergencectrl, LLVMContext::OB_deactivation_symbol});
 
   SDValue Callee = getValue(I.getCalledOperand());
 
@@ -10734,8 +10750,22 @@ SDValue SelectionDAGBuilder::lowerNoFPClassToAssertNoFPClass(
   if (Classes == fcNone)
     return Op;
 
-  return DAG.getNode(ISD::AssertNoFPClass, SDLoc(Op), Op.getValueType(), Op,
-                     DAG.getTargetConstant(Classes, SDLoc(), MVT::i32));
+  SDLoc SL = getCurSDLoc();
+  SDValue TestConst = DAG.getTargetConstant(Classes, SDLoc(), MVT::i32);
+
+  if (Op.getOpcode() != ISD::MERGE_VALUES) {
+    return DAG.getNode(ISD::AssertNoFPClass, SL, Op.getValueType(), Op,
+                       TestConst);
+  }
+
+  SmallVector<SDValue, 8> Ops(Op.getNumOperands());
+  for (unsigned I = 0, E = Ops.size(); I != E; ++I) {
+    SDValue MergeOp = Op.getOperand(I);
+    Ops[I] = DAG.getNode(ISD::AssertNoFPClass, SL, MergeOp.getValueType(),
+                         MergeOp, TestConst);
+  }
+
+  return DAG.getMergeValues(Ops, SL);
 }
 
 /// Populate a CallLowerinInfo (into \p CLI) based on the properties of

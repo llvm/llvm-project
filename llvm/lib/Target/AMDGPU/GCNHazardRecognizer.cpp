@@ -643,7 +643,7 @@ int GCNHazardRecognizer::getWaitStatesSinceSetReg(IsHazardFn IsHazard,
 static void addRegUnits(const SIRegisterInfo &TRI, BitVector &BV,
                         MCRegister Reg) {
   for (MCRegUnit Unit : TRI.regunits(Reg))
-    BV.set(Unit);
+    BV.set(static_cast<unsigned>(Unit));
 }
 
 static void addRegsToSet(const SIRegisterInfo &TRI,
@@ -1354,7 +1354,7 @@ bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII->get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0));
+      .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0, ST));
   return true;
 }
 
@@ -1487,7 +1487,7 @@ bool GCNHazardRecognizer::fixVcmpxExecWARHazard(MachineInstr *MI) {
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII->get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0));
+      .addImm(AMDGPU::DepCtr::encodeFieldSaSdst(0, ST));
   return true;
 }
 
@@ -1502,9 +1502,8 @@ static bool shouldRunLdsBranchVmemWARHazardFixup(const MachineFunction &MF,
   bool HasVmem = false;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      HasLds |= SIInstrInfo::isDS(MI);
-      HasVmem |= (SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
-                 SIInstrInfo::isSegmentSpecificFLAT(MI);
+      HasLds |= SIInstrInfo::isDS(MI) || SIInstrInfo::isLDSDMA(MI);
+      HasVmem |= SIInstrInfo::isVMEM(MI);
       if (HasLds && HasVmem)
         return true;
     }
@@ -1526,10 +1525,9 @@ bool GCNHazardRecognizer::fixLdsBranchVmemWARHazard(MachineInstr *MI) {
   assert(!ST.hasExtendedWaitCounts());
 
   auto IsHazardInst = [](const MachineInstr &MI) {
-    if (SIInstrInfo::isDS(MI))
+    if (SIInstrInfo::isDS(MI) || SIInstrInfo::isLDSDMA(MI))
       return 1;
-    if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
-        SIInstrInfo::isSegmentSpecificFLAT(MI))
+    if (SIInstrInfo::isVMEM(MI))
       return 2;
     return 0;
   };
@@ -1653,7 +1651,7 @@ bool GCNHazardRecognizer::fixLdsDirectVMEMHazard(MachineInstr *MI) {
   } else {
     BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
             TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-        .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0));
+        .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0, ST));
   }
 
   return true;
@@ -1811,7 +1809,7 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(AMDGPU::DepCtr::encodeFieldVaVdst(0));
+      .addImm(AMDGPU::DepCtr::encodeFieldVaVdst(0, ST));
 
   return true;
 }
@@ -1897,7 +1895,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
   // avoided.
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-      .addImm(AMDGPU::DepCtr::encodeFieldVaVdst(0));
+      .addImm(AMDGPU::DepCtr::encodeFieldVaVdst(0, ST));
 
   return true;
 }
@@ -3406,7 +3404,8 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   };
 
   const unsigned ConstantMaskBits = AMDGPU::DepCtr::encodeFieldSaSdst(
-      AMDGPU::DepCtr::encodeFieldVaSdst(AMDGPU::DepCtr::encodeFieldVaVcc(0), 0),
+      AMDGPU::DepCtr::encodeFieldVaSdst(AMDGPU::DepCtr::encodeFieldVaVcc(0, ST),
+                                        0),
       0);
   auto UpdateStateFn = [&](StateType &State, const MachineInstr &I) {
     switch (I.getOpcode()) {
@@ -3458,9 +3457,9 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
 
   // Compute counter mask
   unsigned DepCtr =
-      IsVALU ? (IsVCC(HazardReg) ? AMDGPU::DepCtr::encodeFieldVaVcc(0)
-                                 : AMDGPU::DepCtr::encodeFieldVaSdst(0))
-             : AMDGPU::DepCtr::encodeFieldSaSdst(0);
+      IsVALU ? (IsVCC(HazardReg) ? AMDGPU::DepCtr::encodeFieldVaVcc(0, ST)
+                                 : AMDGPU::DepCtr::encodeFieldVaSdst(0, ST))
+             : AMDGPU::DepCtr::encodeFieldSaSdst(0, ST);
 
   // Try to merge previous waits into this one for regions with no SGPR reads.
   if (!WaitInstrs.empty()) {
@@ -3725,7 +3724,7 @@ bool GCNHazardRecognizer::fixScratchBaseForwardingHazard(MachineInstr *MI) {
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII->get(AMDGPU::S_WAITCNT_DEPCTR))
       .addImm(AMDGPU::DepCtr::encodeFieldVaSdst(
-          AMDGPU::DepCtr::encodeFieldSaSdst(0), 0));
+          AMDGPU::DepCtr::encodeFieldSaSdst(0, ST), 0));
   return true;
 }
 

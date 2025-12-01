@@ -18,6 +18,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -110,8 +111,24 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
     // NOTE(cir): CodeGen allows record types to be memcpy'd if applicable,
     // whereas ClangIR wants to represent all object construction explicitly.
     if (!baseElementTy->isRecordType()) {
-      cgf.cgm.errorNYI(memberInit->getSourceRange(),
-                       "emitMemberInitializer: array of non-record type");
+      unsigned srcArgIndex =
+          cgf.cgm.getCXXABI().getSrcArgforCopyCtor(constructor, args);
+      cir::LoadOp srcPtr = cgf.getBuilder().createLoad(
+          cgf.getLoc(memberInit->getSourceLocation()),
+          cgf.getAddrOfLocalVar(args[srcArgIndex]));
+      LValue thisRhslv = cgf.makeNaturalAlignAddrLValue(srcPtr, recordTy);
+      LValue src = cgf.emitLValueForFieldInitialization(thisRhslv, field,
+                                                        field->getName());
+
+      // Copy the aggregate.
+      cgf.emitAggregateCopy(lhs, src, fieldType,
+                            cgf.getOverlapForFieldInit(field),
+                            lhs.isVolatileQualified());
+      // Ensure that we destroy the objects if an exception is thrown later in
+      // the constructor.
+      QualType::DestructionKind dtorKind = fieldType.isDestructedType();
+      assert(!cgf.needsEHCleanup(dtorKind) &&
+             "Arrays of non-record types shouldn't need EH cleanup");
       return;
     }
   }
@@ -786,6 +803,8 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
          "Body of an implicit assignment operator should be compound stmt.");
   const auto *rootCS = cast<CompoundStmt>(rootS);
 
+  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), assignOp);
+
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::runCleanupsScope());
 
@@ -1108,6 +1127,25 @@ mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
         loc, builder.getPointerTo(cgm.voidPtrTy),
         mlir::FlatSymbolRefAttr::get(vtt.getSymNameAttr()), subVTTIndex);
   }
+}
+
+Address CIRGenFunction::getAddressOfDerivedClass(
+    mlir::Location loc, Address baseAddr, const CXXRecordDecl *derived,
+    llvm::iterator_range<CastExpr::path_const_iterator> path,
+    bool nullCheckValue) {
+  assert(!path.empty() && "Base path should not be empty!");
+
+  QualType derivedTy = getContext().getCanonicalTagType(derived);
+  mlir::Type derivedValueTy = convertType(derivedTy);
+  CharUnits nonVirtualOffset =
+      cgm.computeNonVirtualBaseClassOffset(derived, path);
+
+  // Note that in OG, no offset (nonVirtualOffset.getQuantity() == 0) means it
+  // just gives the address back. In CIR a `cir.derived_class` is created and
+  // made into a nop later on during lowering.
+  return builder.createDerivedClassAddr(loc, baseAddr, derivedValueTy,
+                                        nonVirtualOffset.getQuantity(),
+                                        /*assumeNotNull=*/!nullCheckValue);
 }
 
 Address CIRGenFunction::getAddressOfBaseClass(

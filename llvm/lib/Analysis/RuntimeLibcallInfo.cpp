@@ -15,7 +15,9 @@ AnalysisKey RuntimeLibraryAnalysis::Key;
 
 RTLIB::RuntimeLibcallsInfo
 RuntimeLibraryAnalysis::run(const Module &M, ModuleAnalysisManager &) {
-  return RTLIB::RuntimeLibcallsInfo(M);
+  if (!LibcallsInfo)
+    LibcallsInfo = RTLIB::RuntimeLibcallsInfo(M);
+  return *LibcallsInfo;
 }
 
 INITIALIZE_PASS(RuntimeLibraryInfoWrapper, "runtime-library-info",

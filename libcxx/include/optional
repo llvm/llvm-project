@@ -238,7 +238,6 @@ namespace std {
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_destructible.h>
 #  include <__type_traits/is_trivially_relocatable.h>
-#  include <__type_traits/is_unbounded_array.h>
 #  include <__type_traits/negation.h>
 #  include <__type_traits/reference_constructs_from_temporary.h>
 #  include <__type_traits/remove_const.h>

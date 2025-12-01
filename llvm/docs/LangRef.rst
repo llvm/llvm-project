@@ -333,11 +333,14 @@ added in the future:
     (e.g., by passing things in registers). This calling convention
     allows the target to use whatever tricks it wants to produce fast
     code for the target, without having to conform to an externally
-    specified ABI (Application Binary Interface). `Tail calls can only
-    be optimized when this, the tailcc, the GHC or the HiPE convention is
-    used. <CodeGenerator.html#tail-call-optimization>`_ This calling
-    convention does not support varargs and requires the prototype of all
-    callees to exactly match the prototype of the function definition.
+    specified ABI (Application Binary Interface). Targets may use different
+    implementations according to different features. In this case, a
+    TTI interface ``useFastCCForInternalCall`` must return false when
+    any caller functions and the callee belong to different implementations.
+    `Tail calls can only be optimized when this, the tailcc, the GHC or the
+    HiPE convention is used. <CodeGenerator.html#tail-call-optimization>`_
+    This calling convention does not support varargs and requires the prototype
+    of all callees to exactly match the prototype of the function definition.
 "``coldcc``" - The cold calling convention
     This calling convention attempts to make code in the caller as
     efficient as possible under the assumption that the call is not
@@ -439,7 +442,7 @@ added in the future:
 "``preserve_allcc``" - The `PreserveAll` calling convention
     This calling convention attempts to make the code in the caller even less
     intrusive than the `PreserveMost` calling convention. This calling
-    convention also behaves identical to the `C` calling convention on how
+    convention also behaves identically to the `C` calling convention on how
     arguments and return values are passed, but it uses a different set of
     caller/callee-saved registers. This removes the burden of saving and
     recovering a large register set before and after the call in the caller. If
@@ -479,7 +482,7 @@ added in the future:
     preserving as many registers as possible (all the registers that are
     preserved on the fast path, composed of the entry and exit blocks).
 
-    This calling convention behaves identical to the `C` calling convention on
+    This calling convention behaves identically to the `C` calling convention on
     how arguments and return values are passed, but it uses a different set of
     caller/callee-saved registers.
 
@@ -691,7 +694,7 @@ correctly in a target-specific way.
 
 An example of pointers with non-address bits are the AMDGPU buffer descriptors
 which are 160 bits: a 128-bit fat pointer and a 32-bit offset.
-Similarly, CHERI capabilities contain a 32 or 64 bit address as well as the
+Similarly, CHERI capabilities contain a 32- or 64-bit address as well as the
 same number of metadata bits, but unlike the AMDGPU buffer descriptors they have
 external state in addition to non-address bits.
 
@@ -2178,7 +2181,8 @@ For example:
     This attribute specifies the possible memory effects of the call-site or
     function. It allows specifying the possible access kinds (``none``,
     ``read``, ``write``, or ``readwrite``) for the possible memory location
-    kinds (``argmem``, ``inaccessiblemem``, ``errnomem``, as well as a default).
+    kinds (``argmem``, ``inaccessiblemem``, ``errnomem``, ``target_mem0``,
+    ``target_mem1``, as well as a default).
     It is best understood by example:
 
     - ``memory(none)``: Does not access any memory.
@@ -2220,6 +2224,11 @@ For example:
       accessing inaccessible memory itself). Inaccessible memory is often used
       to model control dependencies of intrinsics.
     - ``errnomem``: This refers to accesses to the ``errno`` variable.
+    - ``target_mem#`` : These refer to target specific state that cannot be
+      accessed by any other means. # is a number between 0 and 1 inclusive.
+      Note: The target_mem locations are experimental and intended for internal
+      testing only. They must not be used in production code.
+
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
       don't currently have a dedicated location kind (e.g., accesses to globals
@@ -3224,6 +3233,24 @@ Convergence Control Operand Bundles
 A "convergencectrl" operand bundle is only valid on a ``convergent`` operation.
 When present, the operand bundle must contain exactly one value of token type.
 See the :doc:`ConvergentOperations` document for details.
+
+.. _deactivationsymbol:
+
+Deactivation Symbol Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A ``"deactivation-symbol"`` operand bundle is valid on the following
+instructions (AArch64 only):
+
+- Call to a normal function with ``notail`` attribute and a first argument and
+  return value of type ``ptr``.
+- Call to ``llvm.ptrauth.sign`` or ``llvm.ptrauth.auth`` intrinsics.
+
+This operand bundle specifies that if the deactivation symbol is defined
+to a valid value for the target, the marked instruction will return the
+value of its first argument instead of calling the specified function
+or intrinsic. This is achieved with ``PATCHINST`` relocations on the
+target instructions (see the AArch64 psABI for details).
 
 .. _moduleasm:
 
@@ -5275,7 +5302,7 @@ need to refer to the actual function body.
 Pointer Authentication Constants
 --------------------------------
 
-``ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC]?]?)``
+``ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC[, ptr DS]?]?]?)``
 
 A '``ptrauth``' constant represents a pointer with a cryptographic
 authentication signature embedded into some bits, as described in the
@@ -5303,6 +5330,11 @@ Otherwise, the expression is equivalent to:
     %tmp1 = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr ADDRDISC to i64), i64 DISC)
     %tmp2 = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr CST to i64), i32 KEY, i64 %tmp1)
     %val = inttoptr i64 %tmp2 to ptr
+
+If the deactivation symbol operand ``DS`` has a non-null value,
+the semantics are as if a :ref:`deactivation-symbol operand bundle
+<deactivationsymbol>` were added to the ``llvm.ptrauth.sign`` intrinsic
+calls above, with ``DS`` as the only operand.
 
 .. _constantexprs:
 
@@ -8053,6 +8085,21 @@ pass should record the new estimates by calling
 ``llvm.loop.estimated_trip_count`` metadata.  Once this metadata is present on a
 loop, ``llvm::getLoopEstimatedTripCount`` returns its value instead of
 estimating the trip count from the loop's ``branch_weights`` metadata.
+
+Zero
+""""
+
+Some passes set ``llvm.loop.estimated_trip_count`` to 0.  For example, after
+peeling 10 or more iterations from a loop with an estimated trip count of 10,
+``llvm.loop.estimated_trip_count`` becomes 0 on the remaining loop.  It
+indicates that, each time execution reaches the peeled iterations, execution is
+estimated to exit them without reaching the remaining loop's header.
+
+Even if the probability of reaching a loop's header is low, if it is reached, it
+is the start of an iteration.  Consequently, some passes historically assume
+that ``llvm::getLoopEstimatedTripCount`` always returns a positive count or
+``std::nullopt``.  Thus, it returns ``std::nullopt`` when
+``llvm.loop.estimated_trip_count`` is 0.
 
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -17251,8 +17298,9 @@ LLVM Implementation:
 """"""""""""""""""""
 
 LLVM implements all ISO C flavors as listed in this table, except in the
-default floating-point environment exceptions are ignored. The constrained
-versions of the intrinsics respect the exception behavior.
+default floating-point environment exceptions are ignored and return value
+is non-deterministic if one or both inputs are sNaN. The constrained
+versions of the intrinsics respect the exception behavior and sNaN.
 
 .. list-table::
    :header-rows: 1
@@ -17284,7 +17332,7 @@ versions of the intrinsics respect the exception behavior.
      - qNaN, invalid exception
 
    * - ``+0.0 vs -0.0``
-     - +0.0(max)/-0.0(min)
+     - either one
      - +0.0(max)/-0.0(min)
      - +0.0(max)/-0.0(min)
 
@@ -17328,30 +17376,22 @@ type.
 
 Semantics:
 """"""""""
-Follows the semantics of minNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
-of this intrinsic. As for signaling NaNs, per the minNum semantics, if either operand is sNaN,
-the result is qNaN. This matches the recommended behavior for the libm
-function ``fmin``, although not all implementations have implemented these recommended behaviors.
 
-If either operand is a qNaN, returns the other non-NaN operand. Returns NaN only if both operands are
-NaN or if either operand is sNaN. Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
-so arithmetic feeding into a minnum can produce inconsistent results. For example,
-``minnum(fadd(sNaN, -0.0), 1.0)`` can produce qNaN or 1.0 depending on whether ``fadd`` is folded.
+Follows the IEEE-754-2008 semantics for minNum, except for handling of
+signaling NaNs. This matches the behavior of libm's fmin.
 
-IEEE-754-2008 defines minNum, and it was removed in IEEE-754-2019. As the replacement, IEEE-754-2019
-defines :ref:`minimumNumber <i_minimumnum>`.
+If either operand is a NaN, returns the other non-NaN operand. Returns
+NaN only if both operands are NaN. If the operands compare equal,
+returns either one of the operands. For example, this means that
+fmin(+0.0, -0.0) non-deterministically returns either operand (-0.0
+or 0.0).
 
-If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
-and IEEE-754-2008: the result of ``minnum(-0.0, +0.0)`` may be either -0.0 or +0.0.
-
-Some architectures, such as ARMv8 (FMINNM), LoongArch (fmin), MIPSr6 (min.fmt), PowerPC/VSX (xsmindp),
-have instructions that match these semantics exactly; thus it is quite simple for these architectures.
-Some architectures have similar ones while they are not exact equivalent. Such as x86 implements ``MINPS``,
-which implements the semantics of C code ``a<b?a:b``: NUM vs qNaN always return qNaN. ``MINPS`` can be used
-if ``nsz`` and ``nnan`` are given.
-
-For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
-even in the same release of a single libm implementation.
+Unlike the IEEE-754-2008 behavior, this does not distinguish between
+signaling and quiet NaN inputs. If a target's implementation follows
+the standard and returns a quiet NaN if either input is a signaling
+NaN, the intrinsic lowering is responsible for quieting the inputs to
+correctly return the non-NaN input (e.g. by using the equivalent of
+``llvm.canonicalize``).
 
 .. _i_maxnum:
 
@@ -17388,30 +17428,21 @@ type.
 
 Semantics:
 """"""""""
-Follows the semantics of maxNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
-of this intrinsic. As for signaling NaNs, per the maxNum semantics, if either operand is sNaN,
-the result is qNaN. This matches the recommended behavior for the libm
-function ``fmax``, although not all implementations have implemented these recommended behaviors.
+Follows the IEEE-754-2008 semantics for maxNum except for the handling of
+signaling NaNs. This matches the behavior of libm's fmax.
 
-If either operand is a qNaN, returns the other non-NaN operand. Returns NaN only if both operands are
-NaN or if either operand is sNaN. Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
-so arithmetic feeding into a maxnum can produce inconsistent results. For example,
-``maxnum(fadd(sNaN, -0.0), 1.0)`` can produce qNaN or 1.0 depending on whether ``fadd`` is folded.
+If either operand is a NaN, returns the other non-NaN operand. Returns
+NaN only if both operands are NaN. If the operands compare equal,
+returns either one of the operands. For example, this means that
+fmax(+0.0, -0.0) non-deterministically returns either operand (-0.0
+or 0.0).
 
-IEEE-754-2008 defines maxNum, and it was removed in IEEE-754-2019. As the replacement, IEEE-754-2019
-defines :ref:`maximumNumber <i_maximumnum>`.
-
-If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
-and IEEE-754-2008: the result of maxnum(-0.0, +0.0) may be either -0.0 or +0.0.
-
-Some architectures, such as ARMv8 (FMAXNM), LoongArch (fmax), MIPSr6 (max.fmt), PowerPC/VSX (xsmaxdp),
-have instructions that match these semantics exactly; thus it is quite simple for these architectures.
-Some architectures have similar ones while they are not exact equivalent. Such as x86 implements ``MAXPS``,
-which implements the semantics of C code ``a>b?a:b``: NUM vs qNaN always return qNaN. ``MAXPS`` can be used
-if ``nsz`` and ``nnan`` are given.
-
-For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
-even in the same release of a single libm implementation.
+Unlike the IEEE-754-2008 behavior, this does not distinguish between
+signaling and quiet NaN inputs. If a target's implementation follows
+the standard and returns a quiet NaN if either input is a signaling
+NaN, the intrinsic lowering is responsible for quieting the inputs to
+correctly return the non-NaN input (e.g. by using the equivalent of
+``llvm.canonicalize``).
 
 .. _i_minimum:
 
@@ -19600,7 +19631,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.canonicalize.*``' intrinsic returns the platform specific canonical
+The '``llvm.canonicalize.*``' intrinsic returns the platform-specific canonical
 encoding of a floating-point number. This canonicalization is useful for
 implementing certain numeric primitives such as frexp. The canonical encoding is
 defined by IEEE-754-2008 to be:
@@ -20295,8 +20326,12 @@ The '``llvm.vector.reduce.fmax.*``' intrinsics do a floating-point
 matches the element-type of the vector input.
 
 This instruction has the same comparison semantics as the '``llvm.maxnum.*``'
-intrinsic.  If the intrinsic call has the ``nnan`` fast-math flag, then the
-operation can assume that NaNs are not present in the input vector.
+intrinsic. That is, the result will always be a number unless all elements of
+the vector are NaN. For a vector with maximum element magnitude 0.0 and
+containing both +0.0 and -0.0 elements, the sign of the result is unspecified.
+
+If the intrinsic call has the ``nnan`` fast-math flag, then the operation can
+assume that NaNs are not present in the input vector.
 
 Arguments:
 """"""""""
@@ -20324,8 +20359,12 @@ The '``llvm.vector.reduce.fmin.*``' intrinsics do a floating-point
 matches the element-type of the vector input.
 
 This instruction has the same comparison semantics as the '``llvm.minnum.*``'
-intrinsic. If the intrinsic call has the ``nnan`` fast-math flag, then the
-operation can assume that NaNs are not present in the input vector.
+intrinsic. That is, the result will always be a number unless all elements of
+the vector are NaN. For a vector with minimum element magnitude 0.0 and
+containing both +0.0 and -0.0 elements, the sign of the result is unspecified.
+
+If the intrinsic call has the ``nnan`` fast-math flag, then the operation can
+assume that NaNs are not present in the input vector.
 
 Arguments:
 """"""""""
@@ -20459,6 +20498,9 @@ is unspecified, this intrinsic will assume floating-point reassociation and
 contraction can be leveraged to implement the reduction, which may result in
 variations to the results due to reordering or by lowering to different
 instructions (including combining multiple instructions into a single one).
+
+Vector Manipulation Intrinsics
+------------------------------
 
 '``llvm.vector.insert``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -20659,45 +20701,6 @@ Arguments:
 All arguments must be vectors of the same type whereby their logical
 concatenation matches the result type.
 
-'``llvm.experimental.cttz.elts``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ```llvm.experimental.cttz.elts```
-on any vector of integer elements, both fixed width and scalable.
-
-::
-
-      declare i8 @llvm.experimental.cttz.elts.i8.v8i1(<8 x i1> <src>, i1 <is_zero_poison>)
-
-Overview:
-"""""""""
-
-The '``llvm.experimental.cttz.elts``' intrinsic counts the number of trailing
-zero elements of a vector.
-
-Arguments:
-""""""""""
-
-The first argument is the vector to be counted. This argument must be a vector
-with integer element type. The return type must also be an integer type which is
-wide enough to hold the maximum number of elements of the source vector. The
-behavior of this intrinsic is undefined if the return type is not wide enough
-for the number of elements in the input vector.
-
-The second argument is a constant flag that indicates whether the intrinsic
-returns a valid result if the first argument is all zero. If the first argument
-is all zero and the second argument is true, the result is poison.
-
-Semantics:
-""""""""""
-
-The '``llvm.experimental.cttz.elts``' intrinsic counts the trailing (least
-significant) zero elements in a vector. If ``src == 0`` the result is the
-number of elements in the input vector.
-
 '``llvm.vector.splice``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -20773,6 +20776,48 @@ Arguments:
 """"""""""
 
 None.
+
+Experimental Vector Intrinsics
+------------------------------
+
+'``llvm.experimental.cttz.elts``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ```llvm.experimental.cttz.elts```
+on any vector of integer elements, both fixed width and scalable.
+
+::
+
+      declare i8 @llvm.experimental.cttz.elts.i8.v8i1(<8 x i1> <src>, i1 <is_zero_poison>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.cttz.elts``' intrinsic counts the number of trailing
+zero elements of a vector.
+
+Arguments:
+""""""""""
+
+The first argument is the vector to be counted. This argument must be a vector
+with integer element type. The return type must also be an integer type which is
+wide enough to hold the maximum number of elements of the source vector. The
+behavior of this intrinsic is undefined if the return type is not wide enough
+for the number of elements in the input vector.
+
+The second argument is a constant flag that indicates whether the intrinsic
+returns a valid result if the first argument is all zero. If the first argument
+is all zero and the second argument is true, the result is poison.
+
+Semantics:
+""""""""""
+
+The '``llvm.experimental.cttz.elts``' intrinsic counts the trailing (least
+significant) zero elements in a vector. If ``src == 0`` the result is the
+number of elements in the input vector.
 
 
 '``llvm.experimental.get.vector.length``' Intrinsic
@@ -22706,7 +22751,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Predicated floating-point IEEE-754-2008 minNum of two vectors of floating-point values.
+Predicated floating-point IEEE-754 minNum of two vectors of floating-point values.
 
 
 Arguments:
@@ -22755,7 +22800,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Predicated floating-point IEEE-754-2008 maxNum of two vectors of floating-point values.
+Predicated floating-point IEEE-754 maxNum of two vectors of floating-point values.
 
 
 Arguments:
@@ -24054,7 +24099,10 @@ result type. If only ``nnan`` is set then the neutral value is ``-Infinity``.
 
 This instruction has the same comparison semantics as the
 :ref:`llvm.vector.reduce.fmax <int_vector_reduce_fmax>` intrinsic (and thus the
-'``llvm.maxnum.*``' intrinsic).
+'``llvm.maxnum.*``' intrinsic). That is, the result will always be a number
+unless all elements of the vector and the starting value are ``NaN``. For a
+vector with maximum element magnitude ``0.0`` and containing both ``+0.0`` and
+``-0.0`` elements, the sign of the result is unspecified.
 
 To ignore the start value, the neutral value can be used.
 
@@ -24121,7 +24169,10 @@ result type. If only ``nnan`` is set then the neutral value is ``+Infinity``.
 
 This instruction has the same comparison semantics as the
 :ref:`llvm.vector.reduce.fmin <int_vector_reduce_fmin>` intrinsic (and thus the
-'``llvm.minnum.*``' intrinsic).
+'``llvm.minnum.*``' intrinsic). That is, the result will always be a number
+unless all elements of the vector and the starting value are ``NaN``. For a
+vector with maximum element magnitude ``0.0`` and containing both ``+0.0`` and
+``-0.0`` elements, the sign of the result is unspecified.
 
 To ignore the start value, the neutral value can be used.
 
@@ -24677,7 +24728,7 @@ Examples:
 
 .. _int_vp_load_ff:
 
-'``llvm.vp.load_ff``' Intrinsic
+'``llvm.vp.load.ff``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -28993,7 +29044,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows the IEEE-754-2008 semantics for maxNum.
+This function follows the IEEE-754 semantics for maxNum.
 
 
 '``llvm.experimental.constrained.minnum``' Intrinsic
@@ -29025,7 +29076,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows the IEEE-754-2008 semantics for minNum.
+This function follows the IEEE-754 semantics for minNum.
 
 
 '``llvm.experimental.constrained.maximum``' Intrinsic

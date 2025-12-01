@@ -163,7 +163,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; FORCED-TF-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FORCED-TF:       middle.block:
 ; FORCED-TF-NEXT:    [[TMP26:%.*]] = xor <4 x i1> [[TMP8]], splat (i1 true)
-; FORCED-TF-NEXT:    [[TMP27:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP26]], i1 true)
+; FORCED-TF-NEXT:    [[TMP27:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP26]], i1 false)
 ; FORCED-TF-NEXT:    [[TMP28:%.*]] = sub i64 [[TMP27]], 1
 ; FORCED-TF-NEXT:    [[TMP29:%.*]] = extractelement <4 x ptr> [[TMP16]], i64 [[TMP28]]
 ; FORCED-TF-NEXT:    br label [[END:%.*]]
@@ -242,7 +242,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP26:%.*]] = xor <4 x i1> [[TMP8]], splat (i1 true)
-; CHECK-NEXT:    [[TMP27:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP26]], i1 true)
+; CHECK-NEXT:    [[TMP27:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP26]], i1 false)
 ; CHECK-NEXT:    [[TMP28:%.*]] = sub i64 [[TMP27]], 1
 ; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x ptr> [[TMP16]], i64 [[TMP28]]
 ; CHECK-NEXT:    br label [[END:%.*]]

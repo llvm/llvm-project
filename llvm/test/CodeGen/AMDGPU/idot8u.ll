@@ -199,7 +199,7 @@ define amdgpu_kernel void @udot8_acc32(ptr addrspace(1) %src1,
 ; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX10-DL-NEXT:    global_load_dword v2, v0, s[2:3]
-; GFX10-DL-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-DL-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-DL-NEXT:    s_load_dword s0, s[6:7], 0x0
 ; GFX10-DL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -1755,7 +1755,7 @@ define amdgpu_kernel void @udot8_multiuses_mul1(ptr addrspace(1) %src1,
 ; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX10-DL-NEXT:    global_load_dword v2, v0, s[2:3]
-; GFX10-DL-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-DL-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-DL-NEXT:    s_load_dword s0, s[6:7], 0x0
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-DL-NEXT:    v_and_b32_e32 v8, 15, v1
@@ -2058,7 +2058,7 @@ define amdgpu_kernel void @udot8_acc32_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX10-DL-NEXT:    global_load_dword v2, v0, s[2:3]
-; GFX10-DL-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-DL-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-DL-NEXT:    s_load_dword s0, s[6:7], 0x0
 ; GFX10-DL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -3278,7 +3278,7 @@ define amdgpu_kernel void @udot8_variant1(ptr addrspace(1) %v1addr,
 ; GFX10-DL-NEXT:    s_clause 0x1
 ; GFX10-DL-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX10-DL-NEXT:    global_load_dword v2, v0, s[2:3]
-; GFX10-DL-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-DL-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-DL-NEXT:    s_load_dword s0, s[6:7], 0x0
 ; GFX10-DL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

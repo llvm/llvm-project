@@ -5,9 +5,9 @@
 ; RUN: echo 'v1' > %t
 ; RUN: echo 'f _Z3foob' >> %t
 ;;
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t  > %bbsections
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections > %orig
-; RUN: diff -u %orig %bbsections
+; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t  > %t.bbsections
+; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections > %t.orig
+; RUN: diff -u %t.orig %t.bbsections
 
 define i32 @_Z3foob(i1 zeroext %0) nounwind {
   %2 = alloca i32, align 4

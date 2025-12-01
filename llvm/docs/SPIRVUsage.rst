@@ -216,7 +216,7 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
    * - ``SPV_KHR_float_controls``
      - Provides new execution modes to control floating-point computations by overriding an implementation’s default behavior for rounding modes, denormals, signed zero, and infinities.
    * - ``SPV_KHR_integer_dot_product``
-     - Adds instructions for dot product operations on integer vectors with optional accumulation. Integer vectors includes 4-component vector of 8 bit integers and 4-component vectors of 8 bit integers packed into 32-bit integers.
+     - Adds instructions for dot product operations on integer vectors with optional accumulation. Integer vectors includes 4-component vector of 8-bit integers and 4-component vectors of 8-bit integers packed into 32-bit integers.
    * - ``SPV_KHR_linkonce_odr``
      - Allows to use the LinkOnceODR linkage type that lets a function or global variable to be merged with other functions or global variables of the same name when linkage occurs.
    * - ``SPV_KHR_no_integer_wrap_decoration``

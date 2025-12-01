@@ -11,6 +11,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanHelpers.h"
+#include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 #define DEBUG_TYPE "vplan"
 
@@ -289,10 +291,10 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
               [](const auto *R) { return R->getScalarType(); })
           .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
                 VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-                VPVectorEndPointerRecipe, VPWidenCanonicalIVRecipe,
-                VPPartialReductionRecipe>([this](const VPRecipeBase *R) {
-            return inferScalarType(R->getOperand(0));
-          })
+                VPVectorEndPointerRecipe, VPWidenCanonicalIVRecipe>(
+              [this](const VPRecipeBase *R) {
+                return inferScalarType(R->getOperand(0));
+              })
           // VPInstructionWithType must be handled before VPInstruction.
           .Case<VPInstructionWithType, VPWidenIntrinsicRecipe,
                 VPWidenCastRecipe>(
@@ -327,8 +329,7 @@ void llvm::collectEphemeralRecipesForVPlan(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || !match(RepR->getUnderlyingInstr(),
-                          PatternMatch::m_Intrinsic<Intrinsic::assume>()))
+      if (!RepR || !match(RepR, m_Intrinsic<Intrinsic::assume>()))
         continue;
       Worklist.push_back(RepR);
       EphRecipes.insert(RepR);
@@ -562,11 +563,12 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
           // fewer lanes than the VF.
           unsigned ScaleFactor =
               vputils::getVFScaleFactor(VPV->getDefiningRecipe());
-          ElementCount VF = VFs[J].divideCoefficientBy(ScaleFactor);
-          LLVM_DEBUG(if (VF != VFs[J]) {
-            dbgs() << "LV(REG): Scaled down VF from " << VFs[J] << " to " << VF
-                   << " for " << *R << "\n";
-          });
+          ElementCount VF = VFs[J];
+          if (ScaleFactor > 1) {
+            VF = VFs[J].divideCoefficientBy(ScaleFactor);
+            LLVM_DEBUG(dbgs() << "LV(REG): Scaled down VF from " << VFs[J]
+                              << " to " << VF << " for " << *R << "\n";);
+          }
 
           Type *ScalarTy = TypeInfo.inferScalarType(VPV);
           unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);

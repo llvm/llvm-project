@@ -1126,7 +1126,8 @@ lldb::LanguageType SymbolFileNativePDB::ParseLanguage(CompileUnit &comp_unit) {
 }
 
 void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
-  auto *section_list = m_objfile_sp->GetSectionList();
+  auto *section_list =
+      m_objfile_sp->GetModule()->GetObjectFile()->GetSectionList();
   if (!section_list)
     return;
 
