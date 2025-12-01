@@ -119,13 +119,17 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
     return Type::getIntNTy(Ctx, 64);
-  case VPInstruction::ExtractLastElement:
-  case VPInstruction::ExtractLastLanePerPart:
+  case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractPenultimateElement: {
     Type *BaseTy = inferScalarType(R->getOperand(0));
     if (auto *VecTy = dyn_cast<VectorType>(BaseTy))
       return VecTy->getElementType();
     return BaseTy;
+  }
+  case VPInstruction::ExtractLastPart: {
+    // Element type of ExtractLastPart is equal to the element type of its
+    // operand.
+    return inferScalarType(R->getOperand(0));
   }
   case VPInstruction::LogicalAnd:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
@@ -540,11 +544,14 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
       SmallMapVector<unsigned, unsigned, 4> RegUsage;
 
       for (auto *VPV : OpenIntervals) {
-        // Skip values that weren't present in the original loop.
-        // TODO: Remove after removing the legacy
+        // Skip artificial values or values that weren't present in the original
+        // loop.
+        // TODO: Remove skipping values that weren't present in the original
+        // loop after removing the legacy
         // LoopVectorizationCostModel::calculateRegisterUsage
         if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe,
-                VPBranchOnMaskRecipe>(VPV))
+                VPBranchOnMaskRecipe>(VPV) ||
+            match(VPV, m_ExtractLastPart(m_VPValue())))
           continue;
 
         if (VFs[J].isScalar() ||
