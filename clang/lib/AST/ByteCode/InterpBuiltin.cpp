@@ -1921,6 +1921,10 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   if (PtrA.isDummy() || PtrB.isDummy())
     return false;
 
+  if (!CheckRange(S, OpPC, PtrA, AK_Read) ||
+      !CheckRange(S, OpPC, PtrB, AK_Read))
+    return false;
+
   // Now, read both pointers to a buffer and compare those.
   BitcastBuffer BufferA(
       Bits(ASTCtx.getTypeSize(ElemTypeA) * PtrA.getNumElems()));
