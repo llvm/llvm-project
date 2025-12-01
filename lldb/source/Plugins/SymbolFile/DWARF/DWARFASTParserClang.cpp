@@ -623,6 +623,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
     switch (tag) {
     case DW_TAG_typedef:
+    case DW_TAG_template_alias:
     case DW_TAG_base_type:
     case DW_TAG_pointer_type:
     case DW_TAG_reference_type:
@@ -748,7 +749,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
   TypeSP type_sp;
   CompilerType clang_type;
 
-  if (tag == DW_TAG_typedef) {
+  if (tag == DW_TAG_typedef || tag == DW_TAG_template_alias) {
     // DeclContext will be populated when the clang type is materialized in
     // Type::ResolveCompilerType.
     PrepareContextToReceiveMembers(
@@ -836,6 +837,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     encoding_data_type = Type::eEncodingIsRValueReferenceUID;
     break;
   case DW_TAG_typedef:
+  case DW_TAG_template_alias:
     encoding_data_type = Type::eEncodingIsTypedefUID;
     break;
   case DW_TAG_const_type:
