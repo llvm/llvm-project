@@ -16,6 +16,7 @@
 #include <memory>
 
 #ifdef _WIN32
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
 #endif
 
