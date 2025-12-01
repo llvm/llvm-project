@@ -1,5 +1,5 @@
 // RUN: mlir-opt -test-linalg-drop-unit-dims --split-input-file %s | FileCheck %s
-// RUN: mlir-opt -test-linalg-drop-unit-dims="preserve-encoding" --split-input-file %s | FileCheck %s --check-prefix=PRESERVE
+// RUN: mlir-opt -test-linalg-drop-unit-dims="collapse-encoded" --split-input-file %s | FileCheck %s --check-prefix=PRESERVE
 
 // Drop only the outermost unit dimension (controlled using a control function)
 func.func @drop_outermost_unit_dims(%arg0: tensor<1x1x42xf32>) -> tensor<1x1x42xf32> {

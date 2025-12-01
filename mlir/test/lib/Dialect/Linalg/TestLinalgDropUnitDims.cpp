@@ -96,9 +96,9 @@ struct TestLinalgDropUnitDims
       : PassWrapper(pass) {}
 
   Option<bool> preserveEncoding{
-      *this, "preserve-encoding",
+      *this, "collapse-encoded",
       llvm::cl::desc(
-          "Preserve tensor encodings when collapsing unit dimensions"),
+          "Collapse tensors with encodings and unit extend dimensions"),
       llvm::cl::init(false)};
 
   void getDependentDialects(DialectRegistry &registry) const override {

@@ -564,17 +564,16 @@ struct ControlDropUnitDims {
     };
     auto indexingMap = op.getMatchingIndexingMap(opOperand);
     SmallVector<int64_t> shape = op.getStaticOperandShape(opOperand);
-    if (!hasCollapsibleType(*opOperand)) {
-      AffineMap newIndexingMap = indexingMap.replaceDimsAndSymbols(
-          dimReplacements, ArrayRef<AffineExpr>{}, oldDimsToNewDimsMap.size(),
-          0);
-      UnitExtentReplacementInfo info;
-      info.indexMap = newIndexingMap;
-      info.targetShape = llvm::to_vector(shape);
-      return info;
+    if (hasCollapsibleType(*opOperand)) {
+      return control.dropUnitExtentFromOperandMetadata(
+          context, op, opOperand, oldDimsToNewDimsMap, dimReplacements);
     }
-    return control.dropUnitExtentFromOperandMetadata(
-        context, op, opOperand, oldDimsToNewDimsMap, dimReplacements);
+    AffineMap newIndexingMap = indexingMap.replaceDimsAndSymbols(
+        dimReplacements, ArrayRef<AffineExpr>{}, oldDimsToNewDimsMap.size(), 0);
+    UnitExtentReplacementInfo info;
+    info.indexMap = newIndexingMap;
+    info.targetShape = llvm::to_vector(shape);
+    return info;
   };
 
   using CollapseValueFnTy = std::function<Value(
