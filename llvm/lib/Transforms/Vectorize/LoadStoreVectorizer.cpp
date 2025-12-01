@@ -946,72 +946,79 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
         }
       }
 
-      // The vectorizer does not support non-power-of-2 element count vectors.
-      // Extend the chain to the next power-of-2 if the current chain:
-      //  1. Does not have a power-of-2 element count
-      //  2. Would be legal to vectorize if the element count was extended to
-      //     the next power-of-2
       Chain ExtendingLoadsStores;
-      if (NumVecElems < TargetVF && !isPowerOf2_32(NumVecElems) &&
-          VecElemBits >= 8) {
-        // TargetVF may be a lot higher than NumVecElems,
-        // so only extend to the next power of 2.
-        assert(VecElemBits % 8 == 0);
-        unsigned VecElemBytes = VecElemBits / 8;
-        unsigned NewNumVecElems = PowerOf2Ceil(NumVecElems);
-        unsigned NewSizeBytes = VecElemBytes * NewNumVecElems;
-
-        assert(isPowerOf2_32(TargetVF) &&
-               "TargetVF expected to be a power of 2");
-        assert(NewNumVecElems <= TargetVF && "Should not extend past TargetVF");
-
-        LLVM_DEBUG(dbgs() << "LSV: attempting to extend chain of "
-                          << NumVecElems << " "
-                          << (IsLoadChain ? "loads" : "stores") << " to "
-                          << NewNumVecElems << " elements\n");
-        // Only artificially increase the chain if it would be AllowedAndFast
-        // and if the resulting masked load/store will be legal for the target.
-        if (accessIsAllowedAndFast(NewSizeBytes, AS, Alignment, VecElemBits) &&
-            (IsLoadChain ? TTI.isLegalMaskedLoad(
-                               FixedVectorType::get(VecElemTy, NewNumVecElems),
-                               Alignment, AS, TTI::MaskKind::ConstantMask)
-                         : TTI.isLegalMaskedStore(
-                               FixedVectorType::get(VecElemTy, NewNumVecElems),
-                               Alignment, AS, TTI::MaskKind::ConstantMask))) {
-          LLVM_DEBUG(dbgs()
-                     << "LSV: extending " << (IsLoadChain ? "load" : "store")
-                     << " chain of " << NumVecElems << " "
-                     << (IsLoadChain ? "loads" : "stores")
-                     << " with total byte size of " << SizeBytes << " to "
-                     << NewNumVecElems << " "
-                     << (IsLoadChain ? "loads" : "stores")
-                     << " with total byte size of " << NewSizeBytes
-                     << ", TargetVF=" << TargetVF << " \n");
-
-          // Create (NewNumVecElems - NumVecElems) extra elements.
-          // We are basing each extra element on CBegin, which means the offsets
-          // should be based on SizeBytes, which represents the
-          // offset from CBegin to the current end of the chain.
-          unsigned ASPtrBits = DL.getIndexSizeInBits(AS);
-          for (unsigned I = 0; I < (NewNumVecElems - NumVecElems); I++) {
-            ChainElem NewElem = createExtraElementAfter(
-                C[CBegin], VecElemTy,
-                APInt(ASPtrBits, SizeBytes + I * VecElemBytes), "Extend");
-            ExtendingLoadsStores.push_back(NewElem);
-          }
-
-          // Update the size and number of elements for upcoming checks.
-          SizeBytes = NewSizeBytes;
-          NumVecElems = NewNumVecElems;
-        }
-      }
-
       if (!accessIsAllowedAndFast(SizeBytes, AS, Alignment, VecElemBits)) {
-        LLVM_DEBUG(
-            dbgs() << "LSV: splitChainByAlignment discarding candidate chain "
-                      "because its alignment is not AllowedAndFast: "
-                   << Alignment.value() << "\n");
-        continue;
+        // If we have a non-power-of-2 element count, attempt to extend the
+        // chain to the next power-of-2 if it makes the access allowed and
+        // fast.
+        bool AllowedAndFast = false;
+        if (NumVecElems < TargetVF && !isPowerOf2_32(NumVecElems) &&
+            VecElemBits >= 8) {
+          // TargetVF may be a lot higher than NumVecElems,
+          // so only extend to the next power of 2.
+          assert(VecElemBits % 8 == 0);
+          unsigned VecElemBytes = VecElemBits / 8;
+          unsigned NewNumVecElems = PowerOf2Ceil(NumVecElems);
+          unsigned NewSizeBytes = VecElemBytes * NewNumVecElems;
+
+          assert(isPowerOf2_32(TargetVF) &&
+                 "TargetVF expected to be a power of 2");
+          assert(NewNumVecElems <= TargetVF &&
+                 "Should not extend past TargetVF");
+
+          LLVM_DEBUG(dbgs()
+                     << "LSV: attempting to extend chain of " << NumVecElems
+                     << " " << (IsLoadChain ? "loads" : "stores") << " to "
+                     << NewNumVecElems << " elements\n");
+          bool IsLegalToExtend =
+              IsLoadChain ? TTI.isLegalMaskedLoad(
+                                FixedVectorType::get(VecElemTy, NewNumVecElems),
+                                Alignment, AS, TTI::MaskKind::ConstantMask)
+                          : TTI.isLegalMaskedStore(
+                                FixedVectorType::get(VecElemTy, NewNumVecElems),
+                                Alignment, AS, TTI::MaskKind::ConstantMask);
+          // Only artificially increase the chain if it would be AllowedAndFast
+          // and if the resulting masked load/store will be legal for the
+          // target.
+          if (IsLegalToExtend &&
+              accessIsAllowedAndFast(NewSizeBytes, AS, Alignment,
+                                     VecElemBits)) {
+            LLVM_DEBUG(dbgs()
+                       << "LSV: extending " << (IsLoadChain ? "load" : "store")
+                       << " chain of " << NumVecElems << " "
+                       << (IsLoadChain ? "loads" : "stores")
+                       << " with total byte size of " << SizeBytes << " to "
+                       << NewNumVecElems << " "
+                       << (IsLoadChain ? "loads" : "stores")
+                       << " with total byte size of " << NewSizeBytes
+                       << ", TargetVF=" << TargetVF << " \n");
+
+            // Create (NewNumVecElems - NumVecElems) extra elements.
+            // We are basing each extra element on CBegin, which means the
+            // offsets should be based on SizeBytes, which represents the offset
+            // from CBegin to the current end of the chain.
+            unsigned ASPtrBits = DL.getIndexSizeInBits(AS);
+            for (unsigned I = 0; I < (NewNumVecElems - NumVecElems); I++) {
+              ChainElem NewElem = createExtraElementAfter(
+                  C[CBegin], VecElemTy,
+                  APInt(ASPtrBits, SizeBytes + I * VecElemBytes), "Extend");
+              ExtendingLoadsStores.push_back(NewElem);
+            }
+
+            // Update the size and number of elements for upcoming checks.
+            SizeBytes = NewSizeBytes;
+            NumVecElems = NewNumVecElems;
+            AllowedAndFast = true;
+          }
+        }
+        if (!AllowedAndFast) {
+          // We were not able to achieve legality by extending the chain.
+          LLVM_DEBUG(dbgs()
+                     << "LSV: splitChainByAlignment discarding candidate chain "
+                        "because its alignment is not AllowedAndFast: "
+                     << Alignment.value() << "\n");
+          continue;
+        }
       }
 
       if ((IsLoadChain &&
