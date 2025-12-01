@@ -342,6 +342,7 @@ typedef std::shared_ptr<lldb_private::CompileUnit> CompUnitSP;
 typedef std::shared_ptr<lldb_private::DataBuffer> DataBufferSP;
 typedef std::shared_ptr<lldb_private::WritableDataBuffer> WritableDataBufferSP;
 typedef std::shared_ptr<lldb_private::DataExtractor> DataExtractorSP;
+typedef std::unique_ptr<lldb_private::DataExtractor> DataExtractorUP;
 typedef std::shared_ptr<lldb_private::Debugger> DebuggerSP;
 typedef std::weak_ptr<lldb_private::Debugger> DebuggerWP;
 typedef std::shared_ptr<lldb_private::Disassembler> DisassemblerSP;
