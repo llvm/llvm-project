@@ -235,14 +235,17 @@ void NextUseResult::getFromSortedRecords(
     const LaneBitmask UseMask = P.first;
     LLVM_DEBUG(dbgs() << "  UseMask : [" << PrintLaneMask(UseMask) << "]\n");
 
-    // Require full coverage: a use contributes only if it covers the queried
-    // lanes.
-    if ((Mask & UseMask) == Mask) {
+    // Check for any overlap between the queried mask and the use mask.
+    // This handles both subregister and superregister uses:
+    // - If UseMask covers Mask: superregister use (e.g., querying sub0, finding full reg)
+    // - If Mask covers UseMask: subregister use (e.g., querying full reg, finding sub0)
+    // - If they overlap partially: partial overlap (both are valid uses)
+    if ((Mask & UseMask).any()) {
       // Use materializeForRank for three-tier ranking system
       int64_t Stored = static_cast<int64_t>(P.second);
       D = materializeForRank(Stored, SnapshotOffset);
 
-      break; // first covering record is the nearest for this snapshot
+      break; // first overlapping record is the nearest for this snapshot
     }
   }
 }

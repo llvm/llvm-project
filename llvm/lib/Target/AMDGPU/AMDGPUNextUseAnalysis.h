@@ -1,9 +1,15 @@
-//===- AMDGPUNextUseAnalysis.h ----------------------------------------*- C++-
-//*-===//
+//===-- AMDGPUNextUseAnalysis.h - Next Use Analysis ------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+/// \file
+/// This file defines the Next Use Analysis for AMDGPU targets, which computes
+/// distances to next uses of virtual registers to guide register allocation
+/// and spilling decisions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -224,7 +230,7 @@ class NextUseResult {
 
 public:
 private:
-  DenseMap<unsigned, SetVector<VRegMaskPair>> UsedInBlock;
+  DenseMap<unsigned, VRegMaskPairSet> UsedInBlock;
   DenseMap<int, int> LoopExits;
   // Signed tag used to mark "outside current loop" in stored values.
   // Must be >> any finite distance you can accumulate in one function.
@@ -396,7 +402,7 @@ public:
                           : getNextUseDistance(I, VMP) == Infinity;
   }
 
-  SetVector<VRegMaskPair> &usedInBlock(MachineBasicBlock &MBB) {
+  VRegMaskPairSet &usedInBlock(MachineBasicBlock &MBB) {
     return UsedInBlock[MBB.getNumber()];
   }
 
