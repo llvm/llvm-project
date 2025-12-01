@@ -247,7 +247,27 @@ _LIBUNWIND_HIDDEN int __unw_get_proc_info(unw_cursor_t *cursor,
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_get_proc_info, unw_get_proc_info)
 
-/// Resume execution at cursor position (aka longjump).
+/// Rebalance the execution flow by injecting the right amount of `ret`
+/// instruction relatively to the amount of `walkedFrames` then resume execution
+/// at cursor position (aka longjump).
+_LIBUNWIND_HIDDEN int __unw_resume_with_frames_walked(unw_cursor_t *cursor,
+                                                      unsigned walkedFrames) {
+  _LIBUNWIND_TRACE_API("__unw_resume(cursor=%p, walkedFrames=%u)",
+                       static_cast<void *>(cursor), walkedFrames);
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+  // Inform the ASan runtime that now might be a good time to clean stuff up.
+  __asan_handle_no_return();
+#endif
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  co->setWalkedFrames(walkedFrames);
+#endif
+  return __unw_resume(cursor);
+}
+_LIBUNWIND_WEAK_ALIAS(__unw_resume_with_frames_walked,
+                      unw_resume_with_frames_walked)
+
+/// Legacy function. Resume execution at cursor position (aka longjump).
 _LIBUNWIND_HIDDEN int __unw_resume(unw_cursor_t *cursor) {
   _LIBUNWIND_TRACE_API("__unw_resume(cursor=%p)", static_cast<void *>(cursor));
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
@@ -389,6 +409,41 @@ void __unw_remove_dynamic_eh_frame_section(unw_word_t eh_frame_start) {
 }
 
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
+
+/// Maps the UNW_* error code to a textual representation
+_LIBUNWIND_HIDDEN const char *__unw_strerror(int error_code) {
+  switch (error_code) {
+  case UNW_ESUCCESS:
+    return "no error";
+  case UNW_EUNSPEC:
+    return "unspecified (general) error";
+  case UNW_ENOMEM:
+    return "out of memory";
+  case UNW_EBADREG:
+    return "bad register number";
+  case UNW_EREADONLYREG:
+    return "attempt to write read-only register";
+  case UNW_ESTOPUNWIND:
+    return "stop unwinding";
+  case UNW_EINVALIDIP:
+    return "invalid IP";
+  case UNW_EBADFRAME:
+    return "bad frame";
+  case UNW_EINVAL:
+    return "unsupported operation or bad value";
+  case UNW_EBADVERSION:
+    return "unwind info has unsupported version";
+  case UNW_ENOINFO:
+    return "no unwind info found";
+#if defined(_LIBUNWIND_TARGET_AARCH64) && !defined(_LIBUNWIND_IS_NATIVE_ONLY)
+  case UNW_ECROSSRASIGNING:
+    return "cross unwind with return address signing";
+#endif
+  }
+  return "invalid error code";
+}
+_LIBUNWIND_WEAK_ALIAS(__unw_strerror, unw_strerror)
+
 #endif // !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__)
 
 #ifdef __APPLE__

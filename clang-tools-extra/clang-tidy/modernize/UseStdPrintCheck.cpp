@@ -36,7 +36,6 @@ UseStdPrintCheck::UseStdPrintCheck(StringRef Name, ClangTidyContext *Context)
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()),
       MaybeHeaderToInclude(Options.get("PrintHeader")) {
-
   if (PrintfLikeFunctions.empty() && FprintfLikeFunctions.empty()) {
     PrintfLikeFunctions.emplace_back("::printf");
     PrintfLikeFunctions.emplace_back("absl::PrintF");

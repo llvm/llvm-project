@@ -15,6 +15,7 @@
 #define LLVM_TARGET_TARGETOPTIONS_H
 
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/IR/SystemLibraries.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -408,6 +409,9 @@ public:
 
   /// Which debugger to tune for.
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
+
+  /// Vector math library to use.
+  VectorLibrary VecLib = VectorLibrary::NoLibrary;
 
 private:
   /// Flushing mode to assume in default FP environment.

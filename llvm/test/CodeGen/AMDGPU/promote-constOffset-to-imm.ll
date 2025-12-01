@@ -719,8 +719,8 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v2, vcc
 ; GFX90A-NEXT:    v_add_co_u32_e32 v2, vcc, 0x5000, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], 0, 0
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 0x7f
+; GFX90A-NEXT:    v_pk_mov_b32 v[4:5], 0, 0
 ; GFX90A-NEXT:    s_movk_i32 s0, 0xd000
 ; GFX90A-NEXT:    s_movk_i32 s1, 0xe000
 ; GFX90A-NEXT:    s_movk_i32 s2, 0xf000
@@ -2659,7 +2659,7 @@ define amdgpu_kernel void @negativeoffsetnullptr(ptr %buffer) {
 ; GFX11-FAKE16-NEXT:    s_endpgm
 entry:
   %null = select i1 false, ptr %buffer, ptr addrspacecast (ptr addrspace(5) null to ptr)
-  %gep = getelementptr i8, ptr %null, i64 -1
+  %gep = getelementptr inbounds i8, ptr %null, i64 -1
   %ld = load i8, ptr %gep
   %cmp = icmp eq i8 %ld, 0
   br label %branch

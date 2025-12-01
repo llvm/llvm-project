@@ -70,6 +70,8 @@ namespace {
 // If lower=[a], higher=[a, a], [a] reshaped into [1, a].
 // If lower=[a], target=[a, b, a], [a] reshaped into [1, 1, a].
 // If lower=[], target=[a, b, c], [] reshaped into [1, 1, 1].
+// If lower=[c], higher=[?, ?, c], [c] reshaped into [1, 1, c].
+// If lower=[?], higher=[?, ?, ?], [?] reshaped into [1, 1, ?].
 LogicalResult
 computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
                      ArrayRef<int64_t> lowerRankShape,
@@ -87,7 +89,12 @@ computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
     higherRankDim = higherRankShape[i + rankDiff];
     lowerRankDim = lowerRankShape[i];
 
-    if (lowerRankDim != 1 && higherRankDim != 1 &&
+    auto isStaticDimAndNotEqualToOne = [](int64_t dim) {
+      return dim != 1 && dim != ShapedType::kDynamic;
+    };
+
+    if (isStaticDimAndNotEqualToOne(lowerRankDim) &&
+        isStaticDimAndNotEqualToOne(higherRankDim) &&
         lowerRankDim != higherRankDim)
       return failure();
 
@@ -216,22 +223,23 @@ mlir::tosa::convertFromIntAttr(const DenseElementsAttr &attr, const int rank) {
 
 bool mlir::tosa::hasUniqueConstantScatterIndices(
     ShapedType indicesType, DenseIntElementsAttr indicesAttr) {
-  llvm::ArrayRef<int64_t> const indicesShape = indicesType.getShape();
+  const llvm::ArrayRef<int64_t> indicesShape = indicesType.getShape();
   const unsigned int indicesRank = indicesShape.size();
   const unsigned int lastDimSize = indicesShape[indicesRank - 1];
 
   // check each batch of indices from the flat indicesAttr values
   // for duplicates
-  auto const indicesValues = indicesAttr.getValues<int32_t>();
+  auto const indicesValues = indicesAttr.getValues<APInt>();
   assert(
       (indicesValues.size() % lastDimSize == 0) &&
       "Constant indices data length should be a multiple of indicesShape[-1]");
 
-  std::vector<uint64_t> indices(lastDimSize);
+  std::vector<APInt> indices(lastDimSize);
   for (auto beg = indicesValues.begin(); beg < indicesValues.end();
        beg += lastDimSize) {
     std::copy(beg, beg + lastDimSize, indices.begin());
-    std::sort(indices.begin(), indices.end());
+    std::sort(indices.begin(), indices.end(),
+              [](const APInt &a, const APInt &b) { return a.slt(b); });
     if (std::adjacent_find(indices.begin(), indices.end()) != indices.end()) {
       // found duplicate values in indices in batch
       return false;

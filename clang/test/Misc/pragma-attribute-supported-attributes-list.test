@@ -102,6 +102,7 @@
 // CHECK-NEXT: MIGServerRoutine (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_block)
 // CHECK-NEXT: MSConstexpr (SubjectMatchRule_function)
 // CHECK-NEXT: MSStruct (SubjectMatchRule_record)
+// CHECK-NEXT: MallocSpan (SubjectMatchRule_function)
 // CHECK-NEXT: MaybeUndef (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: MicroMips (SubjectMatchRule_function)
 // CHECK-NEXT: MinSize (SubjectMatchRule_function, SubjectMatchRule_objc_method)

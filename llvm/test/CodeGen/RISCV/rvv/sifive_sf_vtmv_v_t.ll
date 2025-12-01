@@ -9,8 +9,6 @@
 ; RUN:   -mattr=+xsfmm32a -mattr=+xsfmm32a8f -mattr=+xsfmm32a4i -mattr=+xsfmm64a64f \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
-declare <vscale x 32 x bfloat> @llvm.riscv.sf.vtmv.v.t.nxv32bf16.iXLen(iXLen, iXLen)
-
 define <vscale x 32 x bfloat> @test_sf_vtmv_v_t_bf16m8(iXLen %tss, iXLen %vl) {
 ; CHECK-LABEL: test_sf_vtmv_v_t_bf16m8:
 ; CHECK:       # %bb.0: # %entry
@@ -21,8 +19,6 @@ define <vscale x 32 x bfloat> @test_sf_vtmv_v_t_bf16m8(iXLen %tss, iXLen %vl) {
    %0 = call <vscale x 32 x bfloat> @llvm.riscv.sf.vtmv.v.t.nxv32bf16.iXLen(iXLen %tss, iXLen %vl)
    ret <vscale x 32 x bfloat> %0
 }
-
-declare <vscale x 32 x half> @llvm.riscv.sf.vtmv.v.t.nxv32f16.iXLen(iXLen, iXLen)
 
 define <vscale x 32 x half> @test_sf_vtmv_v_t_f16(iXLen %tss, iXLen %vl) {
 ; CHECK-LABEL: test_sf_vtmv_v_t_f16:
@@ -35,8 +31,6 @@ define <vscale x 32 x half> @test_sf_vtmv_v_t_f16(iXLen %tss, iXLen %vl) {
    ret <vscale x 32 x half> %0
 }
 
-declare <vscale x 16 x float> @llvm.riscv.sf.vtmv.v.t.nxv16f32.iXLen(iXLen, iXLen)
-
 define <vscale x 16 x float> @test_sf_vtmv_v_t_f32(iXLen %tss, iXLen %vl) {
 ; CHECK-LABEL: test_sf_vtmv_v_t_f32:
 ; CHECK:       # %bb.0: # %entry
@@ -47,8 +41,6 @@ define <vscale x 16 x float> @test_sf_vtmv_v_t_f32(iXLen %tss, iXLen %vl) {
    %0 = call <vscale x 16 x float> @llvm.riscv.sf.vtmv.v.t.nxv16f32.iXLen(iXLen %tss, iXLen %vl)
    ret <vscale x 16 x float> %0
 }
-
-declare <vscale x 8 x double> @llvm.riscv.sf.vtmv.v.t.nxv8f64.iXLen(iXLen, iXLen)
 
 define <vscale x 8 x double> @test_sf_vtmv_v_t_f64(iXLen %tss, iXLen %vl) {
 ; CHECK-LABEL: test_sf_vtmv_v_t_f64:
@@ -61,8 +53,6 @@ define <vscale x 8 x double> @test_sf_vtmv_v_t_f64(iXLen %tss, iXLen %vl) {
    ret <vscale x 8 x double> %0
 }
 
-declare <vscale x 64 x i8> @llvm.riscv.sf.vtmv.v.t.nxv64i8.iXLen(iXLen, iXLen)
-
 define <vscale x 64 x i8> @test_sf_vtmv_v_t_i8(iXLen %tss, iXLen %vl) {
 ; CHECK-LABEL: test_sf_vtmv_v_t_i8:
 ; CHECK:       # %bb.0: # %entry
@@ -73,8 +63,6 @@ define <vscale x 64 x i8> @test_sf_vtmv_v_t_i8(iXLen %tss, iXLen %vl) {
    %0 = call <vscale x 64 x i8> @llvm.riscv.sf.vtmv.v.t.nxv64i8.iXLen(iXLen %tss, iXLen %vl)
    ret <vscale x 64 x i8> %0
 }
-
-declare <vscale x 32 x i16> @llvm.riscv.sf.vtmv.v.t.nxv32i16.iXLen(iXLen, iXLen)
 
 define <vscale x 32 x i16> @test_sf_vtmv_v_t_i16(iXLen %tss, iXLen %vl) {
 ; CHECK-LABEL: test_sf_vtmv_v_t_i16:
@@ -87,8 +75,6 @@ define <vscale x 32 x i16> @test_sf_vtmv_v_t_i16(iXLen %tss, iXLen %vl) {
    ret <vscale x 32 x i16> %0
 }
 
-declare <vscale x 16 x i32> @llvm.riscv.sf.vtmv.v.t.nxv16i32.iXLen(iXLen, iXLen)
-
 define <vscale x 16 x i32> @test_sf_vtmv_v_t_i32(iXLen %tss, iXLen %vl) {
 ; CHECK-LABEL: test_sf_vtmv_v_t_i32:
 ; CHECK:       # %bb.0: # %entry
@@ -99,8 +85,6 @@ define <vscale x 16 x i32> @test_sf_vtmv_v_t_i32(iXLen %tss, iXLen %vl) {
    %0 = call <vscale x 16 x i32> @llvm.riscv.sf.vtmv.v.t.nxv16i32.iXLen(iXLen %tss, iXLen %vl)
    ret <vscale x 16 x i32> %0
 }
-
-declare <vscale x 8 x i64> @llvm.riscv.sf.vtmv.v.t.nxv8i64.iXLen(iXLen, iXLen)
 
 define <vscale x 8 x i64> @test_sf_vtmv_v_t_i64(iXLen %tss, iXLen %vl) {
 ; CHECK-LABEL: test_sf_vtmv_v_t_i64:

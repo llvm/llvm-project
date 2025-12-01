@@ -189,7 +189,7 @@ struct OperandsSignature {
   /// are supported, false otherwise.
   ///
   bool initialize(TreePatternNode &InstPatNode, const CodeGenTarget &Target,
-                  MVT::SimpleValueType VT, ImmPredicateSet &ImmediatePredicates,
+                  MVT VT, ImmPredicateSet &ImmediatePredicates,
                   const CodeGenRegisterClass *OrigDstRC) {
     if (InstPatNode.isLeaf())
       return false;
@@ -367,8 +367,8 @@ class FastISelMap {
   // A multimap is needed instead of a "plain" map because the key is
   // the instruction's complexity (an int) and they are not unique.
   using PredMap = std::multimap<int, InstructionMemo>;
-  using RetPredMap = std::map<MVT::SimpleValueType, PredMap>;
-  using TypeRetPredMap = std::map<MVT::SimpleValueType, RetPredMap>;
+  using RetPredMap = std::map<MVT, PredMap>;
+  using TypeRetPredMap = std::map<MVT, RetPredMap>;
   using OpcodeTypeRetPredMap = std::map<StringRef, TypeRetPredMap>;
   using OperandsOpcodeTypeRetPredMap =
       std::map<OperandsSignature, OpcodeTypeRetPredMap>;
@@ -376,8 +376,7 @@ class FastISelMap {
   OperandsOpcodeTypeRetPredMap SimplePatterns;
 
   // This is used to check that there are no duplicate predicates
-  std::set<std::tuple<OperandsSignature, StringRef, MVT::SimpleValueType,
-                      MVT::SimpleValueType, std::string>>
+  std::set<std::tuple<OperandsSignature, StringRef, MVT, MVT, std::string>>
       SimplePatternsCheck;
 
   std::map<OperandsSignature, std::vector<OperandsSignature>>
@@ -440,7 +439,7 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
     const Record *Op = Dst.getOperator();
     if (!Op->isSubClassOf("Instruction"))
       continue;
-    CodeGenInstruction &Inst = CGP.getTargetInfo().getInstruction(Op);
+    const CodeGenInstruction &Inst = CGP.getTargetInfo().getInstruction(Op);
     if (Inst.Operands.empty())
       continue;
 
@@ -501,10 +500,10 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
 
     const Record *InstPatOp = InstPatNode.getOperator();
     StringRef OpcodeName = CGP.getSDNodeInfo(InstPatOp).getEnumName();
-    MVT::SimpleValueType RetVT = MVT::isVoid;
+    MVT RetVT = MVT::isVoid;
     if (InstPatNode.getNumTypes())
       RetVT = InstPatNode.getSimpleType(0);
-    MVT::SimpleValueType VT = RetVT;
+    MVT VT = RetVT;
     if (InstPatNode.getNumChildren()) {
       assert(InstPatNode.getChild(0).getNumTypes() == 1);
       VT = InstPatNode.getChild(0).getSimpleType(0);
