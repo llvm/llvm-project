@@ -69,7 +69,7 @@ public:
         else if (const auto *OEF = F->getAs<OriginEscapesFact>())
           checkAnnotations(OEF);
     issuePendingWarnings();
-    issueAnnotationWarnings();
+    suggestAnnotations();
   }
 
   /// Checks if an escaping origin holds a placeholder loan, indicating a
@@ -154,7 +154,7 @@ public:
     }
   }
 
-  void issueAnnotationWarnings() {
+  void suggestAnnotations() {
     if (!Reporter)
       return;
     for (const auto &[PVD, EscapeExpr] : AnnotationWarningsMap)

@@ -64,6 +64,31 @@ View reassigned_to_another_parameter (
   return a;       // expected-note {{param returned here}} 
 }
 
+struct ReturnsSelf {
+  const ReturnsSelf& get() const {
+    return *this;
+  }
+};
+
+struct ViewProvider {
+  MyObj data;
+  View getView() const {
+    return data;
+  }
+};
+
+// FIXME: Fails to generate lifetime suggestions for the implicit 'this' parameter, as this feature is not yet implemented.
+void test_get_on_temporary() {
+  const ReturnsSelf& s_ref = ReturnsSelf().get();
+  (void)s_ref;
+}
+
+// FIXME: Fails to generate lifetime suggestions for the implicit 'this' parameter, as this feature is not yet implemented.
+void test_getView_on_temporary() {
+  View sv = ViewProvider{1}.getView();
+  (void)sv;
+}
+
 //===----------------------------------------------------------------------===//
 // Negative Test Cases
 //===----------------------------------------------------------------------===//
