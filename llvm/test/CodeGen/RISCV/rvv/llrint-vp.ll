@@ -14,7 +14,6 @@ define <vscale x 1 x i64> @llrint_nxv1i64_nxv1f32(<vscale x 1 x float> %x, <vsca
   %a = call <vscale x 1 x i64> @llvm.vp.llrint.nxv1i64.nxv1f32(<vscale x 1 x float> %x, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %a
 }
-declare <vscale x 1 x i64> @llvm.vp.llrint.nxv1i64.nxv1f32(<vscale x 1 x float>, <vscale x 1 x i1>, i32)
 
 define <vscale x 2 x i64> @llrint_nxv2i64_nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: llrint_nxv2i64_nxv2f32:
@@ -26,7 +25,6 @@ define <vscale x 2 x i64> @llrint_nxv2i64_nxv2f32(<vscale x 2 x float> %x, <vsca
   %a = call <vscale x 2 x i64> @llvm.vp.llrint.nxv2i64.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %a
 }
-declare <vscale x 2 x i64> @llvm.vp.llrint.nxv2i64.nxv2f32(<vscale x 2 x float>, <vscale x 2 x i1>, i32)
 
 define <vscale x 4 x i64> @llrint_nxv4i64_nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: llrint_nxv4i64_nxv4f32:
@@ -38,7 +36,6 @@ define <vscale x 4 x i64> @llrint_nxv4i64_nxv4f32(<vscale x 4 x float> %x, <vsca
   %a = call <vscale x 4 x i64> @llvm.vp.llrint.nxv4i64.nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i64> %a
 }
-declare <vscale x 4 x i64> @llvm.vp.llrint.nxv4i64.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, i32)
 
 define <vscale x 8 x i64> @llrint_nxv8i64_nxv8f32(<vscale x 8 x float> %x, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: llrint_nxv8i64_nxv8f32:
@@ -50,7 +47,6 @@ define <vscale x 8 x i64> @llrint_nxv8i64_nxv8f32(<vscale x 8 x float> %x, <vsca
   %a = call <vscale x 8 x i64> @llvm.vp.llrint.nxv8i64.nxv8f32(<vscale x 8 x float> %x, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i64> %a
 }
-declare <vscale x 8 x i64> @llvm.vp.llrint.nxv8i64.nxv8f32(<vscale x 8 x float>, <vscale x 8 x i1>, i32)
 
 define <vscale x 16 x i64> @llrint_nxv16i64_nxv16f32(<vscale x 16 x float> %x, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: llrint_nxv16i64_nxv16f32:
@@ -78,7 +74,6 @@ define <vscale x 16 x i64> @llrint_nxv16i64_nxv16f32(<vscale x 16 x float> %x, <
   %a = call <vscale x 16 x i64> @llvm.vp.llrint.nxv16i64.nxv16f32(<vscale x 16 x float> %x, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i64> %a
 }
-declare <vscale x 16 x i64> @llvm.vp.llrint.nxv16i64.nxv16f32(<vscale x 16 x float>, <vscale x 16 x i1>, i32)
 
 define <vscale x 1 x i64> @llrint_nxv1i64_nxv1f64(<vscale x 1 x double> %x, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: llrint_nxv1i64_nxv1f64:
@@ -89,7 +84,6 @@ define <vscale x 1 x i64> @llrint_nxv1i64_nxv1f64(<vscale x 1 x double> %x, <vsc
   %a = call <vscale x 1 x i64> @llvm.vp.llrint.nxv1i64.nxv1f64(<vscale x 1 x double> %x, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %a
 }
-declare <vscale x 1 x i64> @llvm.vp.llrint.nxv1i64.nxv1f64(<vscale x 1 x double>, <vscale x 1 x i1>, i32)
 
 define <vscale x 2 x i64> @llrint_nxv2i64_nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: llrint_nxv2i64_nxv2f64:
@@ -100,7 +94,6 @@ define <vscale x 2 x i64> @llrint_nxv2i64_nxv2f64(<vscale x 2 x double> %x, <vsc
   %a = call <vscale x 2 x i64> @llvm.vp.llrint.nxv2i64.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %a
 }
-declare <vscale x 2 x i64> @llvm.vp.llrint.nxv2i64.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32)
 
 define <vscale x 4 x i64> @llrint_nxv4i64_nxv4f64(<vscale x 4 x double> %x, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: llrint_nxv4i64_nxv4f64:
@@ -111,7 +104,6 @@ define <vscale x 4 x i64> @llrint_nxv4i64_nxv4f64(<vscale x 4 x double> %x, <vsc
   %a = call <vscale x 4 x i64> @llvm.vp.llrint.nxv4i64.nxv4f64(<vscale x 4 x double> %x, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i64> %a
 }
-declare <vscale x 4 x i64> @llvm.vp.llrint.nxv4i64.nxv4f64(<vscale x 4 x double>, <vscale x 4 x i1>, i32)
 
 define <vscale x 8 x i64> @llrint_nxv8i64_nxv8f64(<vscale x 8 x double> %x, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: llrint_nxv8i64_nxv8f64:
@@ -122,4 +114,3 @@ define <vscale x 8 x i64> @llrint_nxv8i64_nxv8f64(<vscale x 8 x double> %x, <vsc
   %a = call <vscale x 8 x i64> @llvm.vp.llrint.nxv8i64.nxv8f64(<vscale x 8 x double> %x, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i64> %a
 }
-declare <vscale x 8 x i64> @llvm.vp.llrint.nxv8i64.nxv8f64(<vscale x 8 x double>, <vscale x 8 x i1>, i32)

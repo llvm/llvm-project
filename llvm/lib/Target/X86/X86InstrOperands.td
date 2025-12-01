@@ -6,9 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+def x86_ptr_rc : RegClassByHwMode<
+  [X86_32, X86_64, X86_64_X32],
+  [GR32, GR64, LOW32_ADDR_ACCESS]>;
+
 // A version of ptr_rc which excludes SP, ESP, and RSP. This is used for
 // the index operand of an address, to conform to x86 encoding restrictions.
-def ptr_rc_nosp : PointerLikeRegClass<1>;
+def ptr_rc_nosp : RegClassByHwMode<
+  [X86_32, X86_64, X86_64_X32],
+  [GR32_NOSP, GR64_NOSP, GR32_NOSP]>;
 
 // *mem - Operand definitions for the funky X86 addressing mode operands.
 //
@@ -53,7 +59,7 @@ class X86MemOperand<string printMethod,
                     AsmOperandClass parserMatchClass = X86MemAsmOperand,
                     int size = 0> : Operand<iPTR> {
   let PrintMethod = printMethod;
-  let MIOperandInfo = (ops ptr_rc, i8imm, ptr_rc_nosp, i32imm, SEGMENT_REG);
+  let MIOperandInfo = (ops x86_ptr_rc, i8imm, ptr_rc_nosp, i32imm, SEGMENT_REG);
   let ParserMatchClass = parserMatchClass;
   let OperandType = "OPERAND_MEMORY";
   int Size = size;
@@ -63,7 +69,7 @@ class X86MemOperand<string printMethod,
 class X86VMemOperand<RegisterClass RC, string printMethod,
                      AsmOperandClass parserMatchClass, int size = 0>
     : X86MemOperand<printMethod, parserMatchClass, size> {
-  let MIOperandInfo = (ops ptr_rc, i8imm, RC, i32imm, SEGMENT_REG);
+  let MIOperandInfo = (ops x86_ptr_rc, i8imm, RC, i32imm, SEGMENT_REG);
 }
 
 def anymem : X86MemOperand<"printMemReference">;
@@ -113,8 +119,14 @@ def sdmem : X86MemOperand<"printqwordmem", X86Mem64AsmOperand>;
 
 // A version of i8mem for use on x86-64 and x32 that uses a NOREX GPR instead
 // of a plain GPR, so that it doesn't potentially require a REX prefix.
-def ptr_rc_norex : PointerLikeRegClass<2>;
-def ptr_rc_norex_nosp : PointerLikeRegClass<3>;
+def ptr_rc_norex : RegClassByHwMode<
+  [X86_32, X86_64, X86_64_X32],
+  [GR32_NOREX, GR64_NOREX, GR32_NOREX]>;
+
+def ptr_rc_norex_nosp : RegClassByHwMode<
+  [X86_32, X86_64, X86_64_X32],
+  [GR32_NOREX_NOSP, GR64_NOREX_NOSP, GR32_NOREX_NOSP]>;
+
 
 def i8mem_NOREX : X86MemOperand<"printbytemem", X86Mem8AsmOperand, 8> {
   let MIOperandInfo = (ops ptr_rc_norex, i8imm, ptr_rc_norex_nosp, i32imm,
@@ -123,7 +135,9 @@ def i8mem_NOREX : X86MemOperand<"printbytemem", X86Mem8AsmOperand, 8> {
 
 // GPRs available for tailcall.
 // It represents GR32_TC, GR64_TC or GR64_TCW64.
-def ptr_rc_tailcall : PointerLikeRegClass<4>;
+def ptr_rc_tailcall : RegClassByHwMode<
+  [X86_32, X86_64, X86_64_X32],
+  [GR32_TC, GR64_TC, GR64_TC]>;
 
 // Special i32mem for addresses of load folding tail calls. These are not
 // allowed to use callee-saved registers since they must be scheduled
@@ -139,6 +153,11 @@ def i32mem_TC : X86MemOperand<"printdwordmem", X86Mem32AsmOperand, 32> {
 def i64mem_TC : X86MemOperand<"printqwordmem", X86Mem64AsmOperand, 64> {
   let MIOperandInfo = (ops ptr_rc_tailcall, i8imm,
                        ptr_rc_tailcall, i32imm, SEGMENT_REG);
+}
+
+def i64mem_w64TC : X86MemOperand<"printqwordmem", X86Mem64AsmOperand, 64> {
+  let MIOperandInfo = (ops GR64_TCW64, i8imm,
+                       GR64_TCW64, i32imm, SEGMENT_REG);
 }
 
 // Special parser to detect 16-bit mode to select 16-bit displacement.
@@ -265,12 +284,12 @@ let RenderMethod = "addMemOffsOperands" in {
 
 class X86SrcIdxOperand<string printMethod, AsmOperandClass parserMatchClass>
     : X86MemOperand<printMethod, parserMatchClass> {
-  let MIOperandInfo = (ops ptr_rc, SEGMENT_REG);
+  let MIOperandInfo = (ops x86_ptr_rc, SEGMENT_REG);
 }
 
 class X86DstIdxOperand<string printMethod, AsmOperandClass parserMatchClass>
     : X86MemOperand<printMethod, parserMatchClass> {
-  let MIOperandInfo = (ops ptr_rc);
+  let MIOperandInfo = (ops x86_ptr_rc);
 }
 
 def srcidx8  : X86SrcIdxOperand<"printSrcIdx8",  X86SrcIdx8Operand>;
@@ -516,11 +535,4 @@ def VK8Pair : RegisterOperand<VK8PAIR, "printVKPair"> {
 
 def VK16Pair : RegisterOperand<VK16PAIR, "printVKPair"> {
   let ParserMatchClass = VK16PairAsmOperand;
-}
-
-let RenderMethod = "addTILEPairOperands" in
-  def TILEPairAsmOperand : AsmOperandClass { let Name = "TILEPair"; }
-
-def TILEPair : RegisterOperand<TILEPAIR, "printTILEPair"> {
-  let ParserMatchClass = TILEPairAsmOperand;
 }

@@ -77,7 +77,7 @@ let Command = "breakpoint list" in {
   // FIXME: We need to add an "internal" command, and then add this sort of
   // thing to it. But I need to see it for now, and don't want to wait.
   def blist_internal : Option<"internal", "i">,
-                       Desc<"Show debugger ${i}nternal breakpoints">;
+                       Desc<"Show debugger ${i}nternal breakpoints.">;
   def blist_brief : Option<"brief", "b">,
                     Group<1>,
                     Desc<"Give a ${b}rief description of the breakpoint (no "
@@ -1173,6 +1173,11 @@ let Command = "process launch" in {
         Arg<"Boolean">,
         Desc<"Set whether to shell expand arguments to the process when "
              "launching.">;
+  def process_launch_memory_tagging
+      : Option<"memory-tagging", "M">,
+        Desc<"Set whether to explicitly enable memory tagging when launching "
+             "the process.  Requires hardware support.  "
+             "(Only supported on Darwin.)">;
 }
 
 let Command = "process attach" in {
@@ -1681,7 +1686,7 @@ let Command = "target modules lookup" in {
                                        "match, if a best match is available.">;
 }
 
-let Command = "target stop hook add" in {
+let Command = "target stop_hook add" in {
   def target_stop_hook_add_one_liner
       : Option<"one-liner", "o">,
         GroupRange<1, 3>,
@@ -1755,6 +1760,12 @@ let Command = "target stop hook add" in {
              "may happen very early on - before the loader has run. You can "
              "use this option if you do not want some stop-hooks to run then. "
              "Defaults to true.">;
+}
+
+let Command = "target stop_hook list" in {
+  def target_stop_hook_list_internal
+      : Option<"internal", "i">,
+        Desc<"Show debugger ${i}nternal stop hooks.">;
 }
 
 let Command = "thread backtrace" in {

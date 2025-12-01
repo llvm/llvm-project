@@ -130,26 +130,57 @@ DecodeMatrixTileListRegisterClass(MCInst &Inst, unsigned RegMask,
   return Success;
 }
 
-static const MCPhysReg MatrixZATileDecoderTable[5][16] = {
-    {AArch64::ZAB0},
-    {AArch64::ZAH0, AArch64::ZAH1},
-    {AArch64::ZAS0, AArch64::ZAS1, AArch64::ZAS2, AArch64::ZAS3},
-    {AArch64::ZAD0, AArch64::ZAD1, AArch64::ZAD2, AArch64::ZAD3, AArch64::ZAD4,
-     AArch64::ZAD5, AArch64::ZAD6, AArch64::ZAD7},
-    {AArch64::ZAQ0, AArch64::ZAQ1, AArch64::ZAQ2, AArch64::ZAQ3, AArch64::ZAQ4,
-     AArch64::ZAQ5, AArch64::ZAQ6, AArch64::ZAQ7, AArch64::ZAQ8, AArch64::ZAQ9,
-     AArch64::ZAQ10, AArch64::ZAQ11, AArch64::ZAQ12, AArch64::ZAQ13,
-     AArch64::ZAQ14, AArch64::ZAQ15}};
+static DecodeStatus DecodeZTRRegisterClass(MCInst &Inst,
+                                           const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(AArch64::ZT0));
+  return Success;
+}
 
-template <unsigned NumBitsForTile>
-static DecodeStatus DecodeMatrixTile(MCInst &Inst, unsigned RegNo,
-                                     uint64_t Address,
-                                     const MCDisassembler *Decoder) {
-  unsigned LastReg = (1 << NumBitsForTile) - 1;
-  if (RegNo > LastReg)
-    return Fail;
-  Inst.addOperand(
-      MCOperand::createReg(MatrixZATileDecoderTable[NumBitsForTile][RegNo]));
+static DecodeStatus DecodeMPRRegisterClass(MCInst &Inst,
+                                           const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(AArch64::ZA));
+  return Success;
+}
+
+static DecodeStatus DecodeMPR8RegisterClass(MCInst &Inst,
+                                            const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(AArch64::ZAB0));
+  return Success;
+}
+
+static DecodeStatus DecodeMPR16RegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  MCRegister Reg =
+      AArch64MCRegisterClasses[AArch64::MPR16RegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return Success;
+}
+
+static DecodeStatus DecodeMPR32RegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  MCRegister Reg =
+      AArch64MCRegisterClasses[AArch64::MPR32RegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return Success;
+}
+
+static DecodeStatus DecodeMPR64RegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  MCRegister Reg =
+      AArch64MCRegisterClasses[AArch64::MPR64RegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return Success;
+}
+
+static DecodeStatus DecodeMPR128RegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  MCRegister Reg =
+      AArch64MCRegisterClasses[AArch64::MPR128RegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
   return Success;
 }
 
@@ -198,11 +229,7 @@ static DecodeStatus DecodePCRelLabel16(MCInst &Inst, unsigned Imm,
 static DecodeStatus DecodePCRelLabel19(MCInst &Inst, unsigned Imm,
                                        uint64_t Addr,
                                        const MCDisassembler *Decoder) {
-  int64_t ImmVal = Imm;
-
-  // Sign-extend 19-bit immediate.
-  if (ImmVal & (1 << (19 - 1)))
-    ImmVal |= ~((1LL << 19) - 1);
+  int64_t ImmVal = SignExtend64<19>(Imm);
 
   if (!Decoder->tryAddingSymbolicOperand(
           Inst, ImmVal * 4, Addr, Inst.getOpcode() != AArch64::LDRXl, 0, 0, 4))
@@ -212,11 +239,7 @@ static DecodeStatus DecodePCRelLabel19(MCInst &Inst, unsigned Imm,
 
 static DecodeStatus DecodePCRelLabel9(MCInst &Inst, unsigned Imm, uint64_t Addr,
                                       const MCDisassembler *Decoder) {
-  int64_t ImmVal = Imm;
-
-  // Sign-extend 9-bit immediate.
-  if (ImmVal & (1 << (9 - 1)))
-    ImmVal |= ~((1LL << 9) - 1);
+  int64_t ImmVal = SignExtend64<9>(Imm);
 
   if (!Decoder->tryAddingSymbolicOperand(Inst, (ImmVal * 4), Addr,
                                          /*IsBranch=*/true, 0, 0, 4))
@@ -533,12 +556,7 @@ static DecodeStatus DecodeSignedLdStInstruction(MCInst &Inst, uint32_t insn,
                                                 const MCDisassembler *Decoder) {
   unsigned Rt = fieldFromInstruction(insn, 0, 5);
   unsigned Rn = fieldFromInstruction(insn, 5, 5);
-  int64_t offset = fieldFromInstruction(insn, 12, 9);
-
-  // offset is a 9-bit signed immediate, so sign extend it to
-  // fill the unsigned.
-  if (offset & (1 << (9 - 1)))
-    offset |= ~((1LL << 9) - 1);
+  int64_t offset = SignExtend64<9>(fieldFromInstruction(insn, 12, 9));
 
   // First operand is always the writeback to the address register, if needed.
   switch (Inst.getOpcode()) {
@@ -835,13 +853,8 @@ static DecodeStatus DecodePairLdStInstruction(MCInst &Inst, uint32_t insn,
   unsigned Rt = fieldFromInstruction(insn, 0, 5);
   unsigned Rn = fieldFromInstruction(insn, 5, 5);
   unsigned Rt2 = fieldFromInstruction(insn, 10, 5);
-  int64_t offset = fieldFromInstruction(insn, 15, 7);
+  int64_t offset = SignExtend64<7>(fieldFromInstruction(insn, 15, 7));
   bool IsLoad = fieldFromInstruction(insn, 22, 1);
-
-  // offset is a 7-bit signed immediate, so sign extend it to
-  // fill the unsigned.
-  if (offset & (1 << (7 - 1)))
-    offset |= ~((1LL << 7) - 1);
 
   unsigned Opcode = Inst.getOpcode();
   bool NeedsDisjointWritebackTransfer = false;
@@ -1211,12 +1224,8 @@ static DecodeStatus DecodeAdrInstruction(MCInst &Inst, uint32_t insn,
                                          uint64_t Addr,
                                          const MCDisassembler *Decoder) {
   unsigned Rd = fieldFromInstruction(insn, 0, 5);
-  int64_t imm = fieldFromInstruction(insn, 5, 19) << 2;
-  imm |= fieldFromInstruction(insn, 29, 2);
-
-  // Sign-extend the 21-bit immediate.
-  if (imm & (1 << (21 - 1)))
-    imm |= ~((1LL << 21) - 1);
+  int64_t imm = SignExtend64<21>((fieldFromInstruction(insn, 5, 19) << 2) |
+                                 fieldFromInstruction(insn, 29, 2));
 
   DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(Inst, Rd, Addr,
                                                              Decoder);
@@ -1270,11 +1279,7 @@ static DecodeStatus DecodeAddSubImmShift(MCInst &Inst, uint32_t insn,
 static DecodeStatus DecodeUnconditionalBranch(MCInst &Inst, uint32_t insn,
                                               uint64_t Addr,
                                               const MCDisassembler *Decoder) {
-  int64_t imm = fieldFromInstruction(insn, 0, 26);
-
-  // Sign-extend the 26-bit immediate.
-  if (imm & (1 << (26 - 1)))
-    imm |= ~((1LL << 26) - 1);
+  int64_t imm = SignExtend64<26>(fieldFromInstruction(insn, 0, 26));
 
   if (!Decoder->tryAddingSymbolicOperand(Inst, imm * 4, Addr, true, 0, 0, 4))
     Inst.addOperand(MCOperand::createImm(imm));
@@ -1337,11 +1342,7 @@ static DecodeStatus DecodeTestAndBranch(MCInst &Inst, uint32_t insn,
   uint64_t Rt = fieldFromInstruction(insn, 0, 5);
   uint64_t bit = fieldFromInstruction(insn, 31, 1) << 5;
   bit |= fieldFromInstruction(insn, 19, 5);
-  int64_t dst = fieldFromInstruction(insn, 5, 14);
-
-  // Sign-extend 14-bit immediate.
-  if (dst & (1 << (14 - 1)))
-    dst |= ~((1LL << 14) - 1);
+  int64_t dst = SignExtend64<14>(fieldFromInstruction(insn, 5, 14));
 
   if (fieldFromInstruction(insn, 31, 1) == 0)
     DecodeSimpleRegisterClass<AArch64::GPR32RegClassID, 0, 32>(Inst, Rt, Addr,
@@ -1419,6 +1420,11 @@ DecodeSVELogicalImmInstruction(MCInst &Inst, uint32_t insn, uint64_t Addr,
     DecodeSimpleRegisterClass<AArch64::ZPRRegClassID, 0, 32>(Inst, Zdn, Addr,
                                                              Decoder);
   Inst.addOperand(MCOperand::createImm(imm));
+  return Success;
+}
+
+static DecodeStatus DecodeZeroImm(MCInst &Inst, const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createImm(0));
   return Success;
 }
 
@@ -1526,6 +1532,32 @@ static DecodeStatus DecodeSETMemOpInstruction(MCInst &Inst, uint32_t insn,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeSETMemGoOpInstruction(MCInst &Inst, uint32_t insn,
+                                                uint64_t Addr,
+                                                const MCDisassembler *Decoder) {
+  unsigned Rd = fieldFromInstruction(insn, 0, 5);
+  unsigned Rn = fieldFromInstruction(insn, 5, 5);
+
+  // None of the registers may alias: if they do, then the instruction is not
+  // merely unpredictable but actually entirely unallocated.
+  if (Rd == Rn)
+    return MCDisassembler::Fail;
+
+  // Rd and Rn register operands are written back, so they appear
+  // twice in the operand list, once as outputs and once as inputs.
+  if (!DecodeSimpleRegisterClass<AArch64::GPR64commonRegClassID, 0, 31>(
+          Inst, Rd, Addr, Decoder) ||
+      !DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(
+          Inst, Rn, Addr, Decoder) ||
+      !DecodeSimpleRegisterClass<AArch64::GPR64commonRegClassID, 0, 31>(
+          Inst, Rd, Addr, Decoder) ||
+      !DecodeSimpleRegisterClass<AArch64::GPR64RegClassID, 0, 32>(
+          Inst, Rn, Addr, Decoder))
+    return MCDisassembler::Fail;
+
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodePRFMRegInstruction(MCInst &Inst, uint32_t insn,
                                              uint64_t Addr,
                                              const MCDisassembler *Decoder) {
@@ -1570,6 +1602,7 @@ DecodeSMESpillFillInstruction(MCInst &Inst, uint32_t Bits, uint64_t Addr,
   unsigned RnBits = fieldFromInstruction(Bits, 5, 5);
   unsigned Imm4Bits = fieldFromInstruction(Bits, 0, 4);
 
+  DecodeMPRRegisterClass(Inst, Decoder);
   DecodeSimpleRegisterClass<AArch64::MatrixIndexGPR32_12_15RegClassID, 0, 4>(
       Inst, RvBits, Addr, Decoder);
   Inst.addOperand(MCOperand::createImm(Imm4Bits));
@@ -1613,33 +1646,6 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
   for (const auto *Table : Tables) {
     DecodeStatus Result =
         decodeInstruction(Table, MI, Insn, Address, this, STI);
-
-    const MCInstrDesc &Desc = MCII->get(MI.getOpcode());
-
-    // For Scalable Matrix Extension (SME) instructions that have an implicit
-    // operand for the accumulator (ZA) or implicit immediate zero which isn't
-    // encoded, manually insert operand.
-    for (unsigned i = 0; i < Desc.getNumOperands(); i++) {
-      if (Desc.operands()[i].OperandType == MCOI::OPERAND_REGISTER) {
-        switch (Desc.operands()[i].RegClass) {
-        default:
-          break;
-        case AArch64::MPRRegClassID:
-          MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZA));
-          break;
-        case AArch64::MPR8RegClassID:
-          MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZAB0));
-          break;
-        case AArch64::ZTRRegClassID:
-          MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZT0));
-          break;
-        }
-      } else if (Desc.operands()[i].OperandType ==
-                 AArch64::OPERAND_IMPLICIT_IMM_0) {
-        MI.insert(MI.begin() + i, MCOperand::createImm(0));
-      }
-    }
-
     if (Result != MCDisassembler::Fail)
       return Result;
   }

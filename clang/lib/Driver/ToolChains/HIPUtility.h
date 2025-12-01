@@ -16,6 +16,8 @@ namespace driver {
 namespace tools {
 namespace HIP {
 
+const char *getTempFile(Compilation &C, StringRef Prefix, StringRef Extension);
+
 // Construct command for creating HIP fatbin.
 void constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
                                StringRef OutputFileName,

@@ -19,8 +19,10 @@
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/CPP/type_traits.h" // cpp::is_same_v
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/string/memory_utils/inline_memcpy.h"
 
 #if defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
 #if LIBC_HAS_VECTOR_TYPE
@@ -118,15 +120,15 @@ template <typename T> LIBC_INLINE size_t string_length(const T *src) {
 }
 
 template <typename Word>
-[[gnu::no_sanitize_address]] LIBC_INLINE void *
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE void *
 find_first_character_wide_read(const unsigned char *src, unsigned char ch,
                                size_t n) {
   const unsigned char *char_ptr = src;
   size_t cur = 0;
 
   // Step 1: read 1 byte at a time to align to block size
-  for (; reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0 && cur < n;
-       ++char_ptr, ++cur) {
+  for (; cur < n && reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0;
+       ++cur, ++char_ptr) {
     if (*char_ptr == ch)
       return const_cast<unsigned char *>(char_ptr);
   }
@@ -134,18 +136,18 @@ find_first_character_wide_read(const unsigned char *src, unsigned char ch,
   const Word ch_mask = repeat_byte<Word>(ch);
 
   // Step 2: read blocks
-  for (const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
-       !has_zeroes<Word>((*block_ptr) ^ ch_mask) && cur < n;
-       ++block_ptr, cur += sizeof(Word)) {
-    char_ptr = reinterpret_cast<const unsigned char *>(block_ptr);
-  }
+  const Word *block_ptr = reinterpret_cast<const Word *>(char_ptr);
+  for (; cur < n && !has_zeroes<Word>((*block_ptr) ^ ch_mask);
+       cur += sizeof(Word), ++block_ptr)
+    ;
+  char_ptr = reinterpret_cast<const unsigned char *>(block_ptr);
 
   // Step 3: find the match in the block
-  for (; *char_ptr != ch && cur < n; ++char_ptr, ++cur) {
+  for (; cur < n && *char_ptr != ch; ++cur, ++char_ptr) {
     ;
   }
 
-  if (*char_ptr != ch || cur >= n)
+  if (cur >= n || *char_ptr != ch)
     return static_cast<void *>(nullptr);
 
   return const_cast<unsigned char *>(char_ptr);
@@ -242,7 +244,7 @@ LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
   if (!size)
     return len;
   size_t n = len < size - 1 ? len : size - 1;
-  __builtin_memcpy(dst, src, n);
+  inline_memcpy(dst, src, n);
   dst[n] = '\0';
   return len;
 }

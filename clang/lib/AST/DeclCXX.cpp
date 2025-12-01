@@ -2314,7 +2314,7 @@ bool CXXRecordDecl::mayBeAbstract() const {
 
   for (const auto &B : bases()) {
     const auto *BaseDecl = cast<CXXRecordDecl>(
-        B.getType()->castAsCanonical<RecordType>()->getOriginalDecl());
+        B.getType()->castAsCanonical<RecordType>()->getDecl());
     if (BaseDecl->isAbstract())
       return true;
   }
@@ -3116,6 +3116,22 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
     First->OperatorDeleteThisArg = ThisArg;
     if (auto *L = getASTMutationListener())
       L->ResolvedOperatorDelete(First, OD, ThisArg);
+  }
+}
+
+void CXXDestructorDecl::setOperatorGlobalDelete(FunctionDecl *OD) {
+  // FIXME: C++23 [expr.delete] specifies that the delete operator will be
+  // a usual deallocation function declared at global scope. A convenient
+  // function to assert that is lacking; Sema::isUsualDeallocationFunction()
+  // only works for CXXMethodDecl.
+  assert(!OD ||
+         (OD->getDeclName().getCXXOverloadedOperator() == OO_Delete &&
+          OD->getDeclContext()->getRedeclContext()->isTranslationUnit()));
+  auto *Canonical = cast<CXXDestructorDecl>(getCanonicalDecl());
+  if (!Canonical->OperatorGlobalDelete) {
+    Canonical->OperatorGlobalDelete = OD;
+    if (auto *L = getASTMutationListener())
+      L->ResolvedOperatorGlobDelete(Canonical, OD);
   }
 }
 

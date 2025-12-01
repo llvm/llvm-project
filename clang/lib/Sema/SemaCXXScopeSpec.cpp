@@ -31,8 +31,7 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
   const TagType *TagTy = dyn_cast<TagType>(T->getCanonicalTypeInternal());
   if (!isa_and_present<RecordType, InjectedClassNameType>(TagTy))
     return nullptr;
-  auto *RD =
-      cast<CXXRecordDecl>(TagTy->getOriginalDecl())->getDefinitionOrSelf();
+  auto *RD = cast<CXXRecordDecl>(TagTy->getDecl())->getDefinitionOrSelf();
   if (isa<InjectedClassNameType>(TagTy) ||
       RD->isCurrentInstantiation(CurContext))
     return RD;
@@ -121,7 +120,7 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
         }
       } else if (const auto *RecordT = dyn_cast<RecordType>(NNSType)) {
         // The nested name specifier refers to a member of a class template.
-        return RecordT->getOriginalDecl()->getDefinitionOrSelf();
+        return RecordT->getDecl()->getDefinitionOrSelf();
       }
     }
 
@@ -220,10 +219,11 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
 ///
 bool Sema::RequireCompleteEnumDecl(EnumDecl *EnumD, SourceLocation L,
                                    CXXScopeSpec *SS) {
-  if (EnumD->isCompleteDefinition()) {
+  if (EnumDecl *Def = EnumD->getDefinition();
+      Def && Def->isCompleteDefinition()) {
     // If we know about the definition but it is not visible, complain.
     NamedDecl *SuggestedDef = nullptr;
-    if (!hasReachableDefinition(EnumD, &SuggestedDef,
+    if (!hasReachableDefinition(Def, &SuggestedDef,
                                 /*OnlyNeedComplete*/ false)) {
       // If the user is going to see an error here, recover by making the
       // definition visible.
@@ -780,6 +780,11 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
 
   if (!Found.empty()) {
     const auto *ND = Found.getAsSingle<NamedDecl>();
+    if (!ND) {
+      Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
+          << IdInfo.Identifier << getLangOpts().CPlusPlus;
+      return true;
+    }
     if (::ExtendNestedNameSpecifier(*this, SS, ND, IdInfo.IdentifierLoc,
                                     IdInfo.CCLoc)) {
       const Type *T = SS.getScopeRep().getAsType();
@@ -896,64 +901,15 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
   if (SS.isInvalid())
     return true;
 
-  TemplateName Template = OpaqueTemplate.get();
-
   // Translate the parser's template argument list in our AST format.
   TemplateArgumentListInfo TemplateArgs(LAngleLoc, RAngleLoc);
   translateTemplateArguments(TemplateArgsIn, TemplateArgs);
 
-  DependentTemplateName *DTN = Template.getAsDependentTemplateName();
-  if (DTN && DTN->getName().getIdentifier()) {
-    // Handle a dependent template specialization for which we cannot resolve
-    // the template name.
-    assert(DTN->getQualifier() == SS.getScopeRep());
-    QualType T = Context.getDependentTemplateSpecializationType(
-        ElaboratedTypeKeyword::None,
-        {SS.getScopeRep(), DTN->getName().getIdentifier(),
-         TemplateKWLoc.isValid()},
-        TemplateArgs.arguments());
-
-    // Create source-location information for this type.
-    TypeLocBuilder Builder;
-    DependentTemplateSpecializationTypeLoc SpecTL
-      = Builder.push<DependentTemplateSpecializationTypeLoc>(T);
-    SpecTL.setElaboratedKeywordLoc(SourceLocation());
-    SpecTL.setQualifierLoc(SS.getWithLocInContext(Context));
-    SpecTL.setTemplateKeywordLoc(TemplateKWLoc);
-    SpecTL.setTemplateNameLoc(TemplateNameLoc);
-    SpecTL.setLAngleLoc(LAngleLoc);
-    SpecTL.setRAngleLoc(RAngleLoc);
-    for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
-      SpecTL.setArgLocInfo(I, TemplateArgs[I].getLocInfo());
-
-    SS.clear();
-    SS.Make(Context, Builder.getTypeLocInContext(Context, T), CCLoc);
-    return false;
-  }
-
-  // If we assumed an undeclared identifier was a template name, try to
-  // typo-correct it now.
-  if (Template.getAsAssumedTemplateName() &&
-      resolveAssumedTemplateNameAsType(S, Template, TemplateNameLoc))
-    return true;
-
-  TemplateDecl *TD = Template.getAsTemplateDecl();
-  if (Template.getAsOverloadedTemplate() || DTN ||
-      isa<FunctionTemplateDecl>(TD) || isa<VarTemplateDecl>(TD)) {
-    SourceRange R(TemplateNameLoc, RAngleLoc);
-    if (SS.getRange().isValid())
-      R.setBegin(SS.getRange().getBegin());
-
-    Diag(CCLoc, diag::err_non_type_template_in_nested_name_specifier)
-        << isa_and_nonnull<VarTemplateDecl>(TD) << Template << R;
-    NoteAllFoundTemplates(Template);
-    return true;
-  }
-
   // We were able to resolve the template name to an actual template.
   // Build an appropriate nested-name-specifier.
-  QualType T = CheckTemplateIdType(ElaboratedTypeKeyword::None, Template,
-                                   TemplateNameLoc, TemplateArgs);
+  QualType T = CheckTemplateIdType(
+      ElaboratedTypeKeyword::None, OpaqueTemplate.get(), TemplateNameLoc,
+      TemplateArgs, /*Scope=*/S, /*ForNestedNameSpecifier=*/true);
   if (T.isNull())
     return true;
 
@@ -961,7 +917,7 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
   // nested name specifiers.
   if (!T->isDependentType() && !isa<TagType>(T.getCanonicalType())) {
     Diag(TemplateNameLoc, diag::err_nested_name_spec_non_tag) << T;
-    NoteAllFoundTemplates(Template);
+    NoteAllFoundTemplates(OpaqueTemplate.get());
     return true;
   }
 

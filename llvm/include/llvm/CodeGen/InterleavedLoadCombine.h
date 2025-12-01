@@ -20,7 +20,7 @@ class InterleavedLoadCombinePass
   const TargetMachine *TM;
 
 public:
-  explicit InterleavedLoadCombinePass(const TargetMachine *TM) : TM(TM) {}
+  explicit InterleavedLoadCombinePass(const TargetMachine &TM) : TM(&TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 

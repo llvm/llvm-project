@@ -29,6 +29,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
+#include "llvm/CodeGen/LiveStacks.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
@@ -42,6 +44,9 @@ namespace {
 STATISTIC(NumMFMAsRewrittenToAGPR,
           "Number of MFMA instructions rewritten to use AGPR form");
 
+/// Map from spill slot frame index to list of instructions which reference it.
+using SpillReferenceMap = DenseMap<int, SmallVector<MachineInstr *, 4>>;
+
 class AMDGPURewriteAGPRCopyMFMAImpl {
   MachineFunction &MF;
   const GCNSubtarget &ST;
@@ -51,6 +56,7 @@ class AMDGPURewriteAGPRCopyMFMAImpl {
   VirtRegMap &VRM;
   LiveRegMatrix &LRM;
   LiveIntervals &LIS;
+  LiveStacks &LSS;
   const RegisterClassInfo &RegClassInfo;
 
   bool attemptReassignmentsToAGPR(SmallSetVector<Register, 4> &InterferingRegs,
@@ -59,10 +65,11 @@ class AMDGPURewriteAGPRCopyMFMAImpl {
 public:
   AMDGPURewriteAGPRCopyMFMAImpl(MachineFunction &MF, VirtRegMap &VRM,
                                 LiveRegMatrix &LRM, LiveIntervals &LIS,
+                                LiveStacks &LSS,
                                 const RegisterClassInfo &RegClassInfo)
       : MF(MF), ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()),
         TRI(*ST.getRegisterInfo()), MRI(MF.getRegInfo()), VRM(VRM), LRM(LRM),
-        LIS(LIS), RegClassInfo(RegClassInfo) {}
+        LIS(LIS), LSS(LSS), RegClassInfo(RegClassInfo) {}
 
   bool isRewriteCandidate(const MachineInstr &MI) const {
     return TII.isMAI(MI) && AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode()) != -1;
@@ -103,6 +110,22 @@ public:
 
   bool tryFoldCopiesToAGPR(Register VReg, MCRegister AssignedAGPR) const;
   bool tryFoldCopiesFromAGPR(Register VReg, MCRegister AssignedAGPR) const;
+
+  /// Replace spill instruction \p SpillMI which loads/stores from/to \p SpillFI
+  /// with a COPY to the replacement register value \p VReg.
+  void replaceSpillWithCopyToVReg(MachineInstr &SpillMI, int SpillFI,
+                                  Register VReg) const;
+
+  /// Create a map from frame index to use instructions for spills. If a use of
+  /// the frame index does not consist only of spill instructions, it will not
+  /// be included in the map.
+  void collectSpillIndexUses(ArrayRef<LiveInterval *> StackIntervals,
+                             SpillReferenceMap &Map) const;
+
+  /// Attempt to unspill VGPRs by finding a free register and replacing the
+  /// spill instructions with copies.
+  void eliminateSpillsOfReassignedVGPRs() const;
+
   bool run(MachineFunction &MF) const;
 };
 
@@ -391,6 +414,139 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryFoldCopiesFromAGPR(
   return MadeChange;
 }
 
+void AMDGPURewriteAGPRCopyMFMAImpl::replaceSpillWithCopyToVReg(
+    MachineInstr &SpillMI, int SpillFI, Register VReg) const {
+  const DebugLoc &DL = SpillMI.getDebugLoc();
+  MachineBasicBlock &MBB = *SpillMI.getParent();
+  MachineInstr *NewCopy;
+  if (SpillMI.mayStore()) {
+    NewCopy = BuildMI(MBB, SpillMI, DL, TII.get(TargetOpcode::COPY), VReg)
+                  .add(SpillMI.getOperand(0));
+  } else {
+    NewCopy = BuildMI(MBB, SpillMI, DL, TII.get(TargetOpcode::COPY))
+                  .add(SpillMI.getOperand(0))
+                  .addReg(VReg);
+  }
+
+  LIS.ReplaceMachineInstrInMaps(SpillMI, *NewCopy);
+  SpillMI.eraseFromParent();
+}
+
+void AMDGPURewriteAGPRCopyMFMAImpl::collectSpillIndexUses(
+    ArrayRef<LiveInterval *> StackIntervals, SpillReferenceMap &Map) const {
+
+  SmallSet<int, 4> NeededFrameIndexes;
+  for (const LiveInterval *LI : StackIntervals)
+    NeededFrameIndexes.insert(LI->reg().stackSlotIndex());
+
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      for (MachineOperand &MO : MI.operands()) {
+        if (!MO.isFI() || !NeededFrameIndexes.count(MO.getIndex()))
+          continue;
+
+        if (TII.isVGPRSpill(MI)) {
+          SmallVector<MachineInstr *, 4> &References = Map[MO.getIndex()];
+          References.push_back(&MI);
+          break;
+        }
+
+        // Verify this was really a spill instruction, if it's not just ignore
+        // all uses.
+
+        // TODO: This should probably be verifier enforced.
+        NeededFrameIndexes.erase(MO.getIndex());
+        Map.erase(MO.getIndex());
+      }
+    }
+  }
+}
+
+void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
+  unsigned NumSlots = LSS.getNumIntervals();
+  if (NumSlots == 0)
+    return;
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  SmallVector<LiveInterval *, 32> StackIntervals;
+  StackIntervals.reserve(NumSlots);
+
+  for (auto &[Slot, LI] : LSS) {
+    if (!MFI.isSpillSlotObjectIndex(Slot) || MFI.isDeadObjectIndex(Slot))
+      continue;
+
+    const TargetRegisterClass *RC = LSS.getIntervalRegClass(Slot);
+    if (TRI.hasVGPRs(RC))
+      StackIntervals.push_back(&LI);
+  }
+
+  sort(StackIntervals, [](const LiveInterval *A, const LiveInterval *B) {
+    // The ordering has to be strictly weak.
+    /// Sort heaviest intervals first to prioritize their unspilling
+    if (A->weight() != B->weight())
+      return A->weight() > B->weight();
+
+    if (A->getSize() != B->getSize())
+      return A->getSize() > B->getSize();
+
+    // Tie breaker by number to avoid need for stable sort
+    return A->reg().stackSlotIndex() < B->reg().stackSlotIndex();
+  });
+
+  // FIXME: The APIs for dealing with the LiveInterval of a frame index are
+  // cumbersome. LiveStacks owns its LiveIntervals which refer to stack
+  // slots. We cannot use the usual LiveRegMatrix::assign and unassign on these,
+  // and must create a substitute virtual register to do so. This makes
+  // incremental updating here difficult; we need to actually perform the IR
+  // mutation to get the new vreg references in place to compute the register
+  // LiveInterval to perform an assignment to track the new interference
+  // correctly, and we can't simply migrate the LiveInterval we already have.
+  //
+  // To avoid walking through the entire function for each index, pre-collect
+  // all the instructions slot referencess.
+
+  DenseMap<int, SmallVector<MachineInstr *, 4>> SpillSlotReferences;
+  collectSpillIndexUses(StackIntervals, SpillSlotReferences);
+
+  for (LiveInterval *LI : StackIntervals) {
+    int Slot = LI->reg().stackSlotIndex();
+    auto SpillReferences = SpillSlotReferences.find(Slot);
+    if (SpillReferences == SpillSlotReferences.end())
+      continue;
+
+    const TargetRegisterClass *RC = LSS.getIntervalRegClass(Slot);
+
+    LLVM_DEBUG(dbgs() << "Trying to eliminate " << printReg(Slot, &TRI)
+                      << " by reassigning\n");
+
+    ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(RC);
+
+    for (MCPhysReg PhysReg : AllocOrder) {
+      if (LRM.checkInterference(*LI, PhysReg) != LiveRegMatrix::IK_Free)
+        continue;
+
+      LLVM_DEBUG(dbgs() << "Reassigning " << *LI << " to "
+                        << printReg(PhysReg, &TRI) << '\n');
+
+      const TargetRegisterClass *RC = LSS.getIntervalRegClass(Slot);
+      Register NewVReg = MRI.createVirtualRegister(RC);
+
+      for (MachineInstr *SpillMI : SpillReferences->second)
+        replaceSpillWithCopyToVReg(*SpillMI, Slot, NewVReg);
+
+      // TODO: We should be able to transfer the information from the stack
+      // slot's LiveInterval without recomputing from scratch with the
+      // replacement vreg uses.
+      LiveInterval &NewLI = LIS.createAndComputeVirtRegInterval(NewVReg);
+      VRM.grow();
+      LRM.assign(NewLI, PhysReg);
+      MFI.RemoveStackObject(Slot);
+      break;
+    }
+  }
+}
+
 bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
   // This only applies on subtargets that have a configurable AGPR vs. VGPR
   // allocation.
@@ -417,6 +573,12 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
       MadeChange = true;
   }
 
+  // If we've successfully rewritten some MFMAs, we've alleviated some VGPR
+  // pressure. See if we can eliminate some spills now that those registers are
+  // more available.
+  if (MadeChange)
+    eliminateSpillsOfReassignedVGPRs();
+
   return MadeChange;
 }
 
@@ -440,10 +602,13 @@ public:
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addRequired<VirtRegMapWrapperLegacy>();
     AU.addRequired<LiveRegMatrixWrapperLegacy>();
+    AU.addRequired<LiveStacksWrapperLegacy>();
 
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<VirtRegMapWrapperLegacy>();
     AU.addPreserved<LiveRegMatrixWrapperLegacy>();
+    AU.addPreserved<LiveStacksWrapperLegacy>();
+
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -456,6 +621,7 @@ INITIALIZE_PASS_BEGIN(AMDGPURewriteAGPRCopyMFMALegacy, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
 INITIALIZE_PASS_END(AMDGPURewriteAGPRCopyMFMALegacy, DEBUG_TYPE,
                     "AMDGPU Rewrite AGPR-Copy-MFMA", false, false)
 
@@ -474,8 +640,8 @@ bool AMDGPURewriteAGPRCopyMFMALegacy::runOnMachineFunction(
   auto &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
   auto &LRM = getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
   auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-
-  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, RegClassInfo);
+  auto &LSS = getAnalysis<LiveStacksWrapperLegacy>().getLS();
+  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RegClassInfo);
   return Impl.run(MF);
 }
 
@@ -485,13 +651,15 @@ AMDGPURewriteAGPRCopyMFMAPass::run(MachineFunction &MF,
   VirtRegMap &VRM = MFAM.getResult<VirtRegMapAnalysis>(MF);
   LiveRegMatrix &LRM = MFAM.getResult<LiveRegMatrixAnalysis>(MF);
   LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  LiveStacks &LSS = MFAM.getResult<LiveStacksAnalysis>(MF);
   RegisterClassInfo RegClassInfo;
   RegClassInfo.runOnMachineFunction(MF);
 
-  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, RegClassInfo);
+  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RegClassInfo);
   if (!Impl.run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
+  PA.preserve<LiveStacksAnalysis>();
   return PA;
 }

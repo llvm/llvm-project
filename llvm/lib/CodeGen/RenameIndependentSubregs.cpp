@@ -306,6 +306,7 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
     const IntEqClasses &Classes,
     const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
     const SmallVectorImpl<LiveInterval*> &Intervals) const {
+  const TargetRegisterInfo &TRI = TII->getRegisterInfo();
   BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
   const SlotIndexes &Indexes = *LIS->getSlotIndexes();
   for (size_t I = 0, E = Intervals.size(); I < E; ++I) {
@@ -313,6 +314,25 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
     Register Reg = LI.reg();
 
     LI.removeEmptySubRanges();
+
+    // Try to establish a single subregister which covers all uses.
+    // Note: this is assuming the selected subregister will only be
+    // used for fixing up live intervals issues created by this pass.
+    LaneBitmask UsedMask, UnusedMask;
+    for (LiveInterval::SubRange &SR : LI.subranges())
+      UsedMask |= SR.LaneMask;
+    SmallVector<unsigned> SubRegIdxs;
+    unsigned Flags = 0;
+    unsigned SubReg = 0;
+    // TODO: Handle SubRegIdxs.size() > 1
+    if (TRI.getCoveringSubRegIndexes(MRI->getRegClass(Reg), UsedMask,
+                                     SubRegIdxs) &&
+        SubRegIdxs.size() == 1) {
+      SubReg = SubRegIdxs.front();
+      Flags = RegState::Undef;
+    } else {
+      UnusedMask = MRI->getMaxLaneMaskForVReg(Reg) & ~UsedMask;
+    }
 
     // There must be a def (or live-in) before every use. Splitting vregs may
     // violate this principle as the splitted vreg may not have a definition on
@@ -336,19 +356,18 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
           MachineBasicBlock::iterator InsertPos =
             llvm::findPHICopyInsertPoint(PredMBB, &MBB, Reg);
           const MCInstrDesc &MCDesc = TII->get(TargetOpcode::IMPLICIT_DEF);
-          MachineInstrBuilder ImpDef = BuildMI(*PredMBB, InsertPos,
-                                               DebugLoc(), MCDesc, Reg);
+          MachineInstrBuilder ImpDef =
+              BuildMI(*PredMBB, InsertPos, DebugLoc(), MCDesc)
+                  .addDef(Reg, Flags, SubReg);
           SlotIndex DefIdx = LIS->InsertMachineInstrInMaps(*ImpDef);
           SlotIndex RegDefIdx = DefIdx.getRegSlot();
-          LaneBitmask Mask = MRI->getMaxLaneMaskForVReg(Reg);
           for (LiveInterval::SubRange &SR : LI.subranges()) {
-            Mask = Mask & ~SR.LaneMask;
             VNInfo *SRVNI = SR.getNextValue(RegDefIdx, Allocator);
             SR.addSegment(LiveRange::Segment(RegDefIdx, PredEnd, SRVNI));
           }
-
-          if (!Mask.none()) {
-            LiveInterval::SubRange *SR = LI.createSubRange(Allocator, Mask);
+          if (!UnusedMask.none()) {
+            LiveInterval::SubRange *SR =
+                LI.createSubRange(Allocator, UnusedMask);
             SR->createDeadDef(RegDefIdx, Allocator);
           }
         }

@@ -16,19 +16,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+xtheadbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64XTHEADBB
 
-declare i8 @llvm.cttz.i8(i8, i1)
-declare i16 @llvm.cttz.i16(i16, i1)
-declare i32 @llvm.cttz.i32(i32, i1)
-declare i64 @llvm.cttz.i64(i64, i1)
-declare i8 @llvm.ctlz.i8(i8, i1)
-declare i16 @llvm.ctlz.i16(i16, i1)
-declare i32 @llvm.ctlz.i32(i32, i1)
-declare i64 @llvm.ctlz.i64(i64, i1)
-declare i8 @llvm.ctpop.i8(i8)
-declare i16 @llvm.ctpop.i16(i16)
-declare i32 @llvm.ctpop.i32(i32)
-declare i64 @llvm.ctpop.i64(i64)
-
 define i8 @test_cttz_i8(i8 %a) nounwind {
 ; RV32_NOZBB-LABEL: test_cttz_i8:
 ; RV32_NOZBB:       # %bb.0:
@@ -1375,9 +1362,9 @@ define i32 @test_ctlz_i32(i32 %a) nounwind {
 ;
 ; RV64XTHEADBB-LABEL: test_ctlz_i32:
 ; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    not a0, a0
-; RV64XTHEADBB-NEXT:    slli a0, a0, 32
-; RV64XTHEADBB-NEXT:    th.ff0 a0, a0
+; RV64XTHEADBB-NEXT:    th.extu a0, a0, 31, 0
+; RV64XTHEADBB-NEXT:    th.ff1 a0, a0
+; RV64XTHEADBB-NEXT:    addi a0, a0, -32
 ; RV64XTHEADBB-NEXT:    ret
   %tmp = call i32 @llvm.ctlz.i32(i32 %a, i1 false)
   ret i32 %tmp
@@ -2004,9 +1991,8 @@ define i32 @test_ctlz_i32_zero_undef(i32 %a) nounwind {
 ;
 ; RV64XTHEADBB-LABEL: test_ctlz_i32_zero_undef:
 ; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    not a0, a0
 ; RV64XTHEADBB-NEXT:    slli a0, a0, 32
-; RV64XTHEADBB-NEXT:    th.ff0 a0, a0
+; RV64XTHEADBB-NEXT:    th.ff1 a0, a0
 ; RV64XTHEADBB-NEXT:    ret
   %tmp = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
   ret i32 %tmp

@@ -17,6 +17,7 @@
 #include "OpGenHelpers.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
+#include "mlir/TableGen/Builder.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
@@ -24,18 +25,27 @@
 #include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Property.h"
+#include "mlir/TableGen/Region.h"
 #include "mlir/TableGen/SideEffects.h"
+#include "mlir/TableGen/Successor.h"
 #include "mlir/TableGen/Trait.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -379,9 +389,8 @@ public:
   Formatter emitErrorPrefix() const {
     return [this](raw_ostream &os) -> raw_ostream & {
       if (emitForOp)
-        return os << "emitOpError(";
-      return os << formatv("emitError(loc, \"'{0}' op \"",
-                           op.getOperationName());
+        return os << "emitOpError(\"";
+      return os << formatv("emitError(loc, \"'{0}' op ", op.getOperationName());
     };
   }
 
@@ -789,6 +798,14 @@ private:
   Method *genOpInterfaceMethod(const tblgen::InterfaceMethod &method,
                                bool declaration = true);
 
+  // Generate a `using` declaration for the op interface method to include
+  // the default implementation from the interface trait.
+  // This is needed when the interface defines multiple methods with the same
+  // name, but some have a default implementation and some don't.
+  UsingDeclaration *
+  genOpInterfaceMethodUsingDecl(const tblgen::InterfaceTrait *opTrait,
+                                const tblgen::InterfaceMethod &method);
+
   // Generate the side effect interface methods.
   void genSideEffectInterfaceMethods();
 
@@ -815,6 +832,10 @@ private:
 
   // Helper for emitting op code.
   OpOrAdaptorHelper emitHelper;
+
+  // Keep track of the interface using declarations that have been generated to
+  // avoid duplicates.
+  llvm::StringSet<> interfaceUsingNames;
 };
 
 } // namespace
@@ -927,7 +948,7 @@ genAttributeVerifier(const OpOrAdaptorHelper &emitHelper, FmtContext &ctx,
   // {4}: Attribute/constraint description.
   const char *const verifyAttrInline = R"(
   if ({0} && !({1}))
-    return {2}"attribute '{3}' failed to satisfy constraint: {4}");
+    return {2}attribute '{3}' failed to satisfy constraint: {4}");
 )";
   // Verify the attribute using a uniqued constraint. Can only be used within
   // the context of an op.
@@ -980,10 +1001,11 @@ while (true) {{
         (constraintFn = staticVerifierEmitter.getAttrConstraintFn(attr))) {
       body << formatv(verifyAttrUnique, *constraintFn, varName, attrName);
     } else {
-      body << formatv(verifyAttrInline, varName,
-                      tgfmt(condition, &ctx.withSelf(varName)),
-                      emitHelper.emitErrorPrefix(), attrName,
-                      escapeString(attr.getSummary()));
+      body << formatv(
+          verifyAttrInline, varName, tgfmt(condition, &ctx.withSelf(varName)),
+          emitHelper.emitErrorPrefix(), attrName,
+          buildErrorStreamingString(attr.getSummary(), ctx.withSelf(varName),
+                                    ErrorStreamType::InsideOpError));
     }
   };
 
@@ -1004,7 +1026,7 @@ while (true) {{
           it.first);
       if (metadata.isRequired)
         body << formatv(
-            "if (!tblgen_{0}) return {1}\"requires attribute '{0}'\");\n",
+            "if (!tblgen_{0}) return {1}requires attribute '{0}'\");\n",
             it.first, emitHelper.emitErrorPrefix());
     }
   } else {
@@ -1086,7 +1108,7 @@ static void genPropertyVerifier(
   // {3}: Property description.
   const char *const verifyPropertyInline = R"(
   if (!({0}))
-    return {1}"property '{2}' failed to satisfy constraint: {3}");
+    return {1}property '{2}' failed to satisfy constraint: {3}");
 )";
 
   // Verify the property using a uniqued constraint. Can only be used
@@ -1130,9 +1152,12 @@ static void genPropertyVerifier(
     if (uniquedFn.has_value() && emitHelper.isEmittingForOp())
       body << formatv(verifyPropertyUniqued, *uniquedFn, varName, prop.name);
     else
-      body << formatv(
-          verifyPropertyInline, tgfmt(rawCondition, &ctx.withSelf(varName)),
-          emitHelper.emitErrorPrefix(), prop.name, prop.prop.getSummary());
+      body << formatv(verifyPropertyInline,
+                      tgfmt(rawCondition, &ctx.withSelf(varName)),
+                      emitHelper.emitErrorPrefix(), prop.name,
+                      buildErrorStreamingString(
+                          prop.prop.getSummary(), ctx.withSelf(varName),
+                          ErrorStreamType::InsideOpError));
   }
 }
 
@@ -1616,7 +1641,7 @@ void OpEmitter::genPropertiesSupport() {
   // Hashing for the property
 
   const char *propHashFmt = R"decl(
-  auto hash_{0} = [] (const auto &propStorage) -> llvm::hash_code {
+  auto hash_{0}_ = [] (const auto &propStorage) -> llvm::hash_code {
     using ::llvm::hash_value;
     return {1};
   };
@@ -1642,7 +1667,7 @@ void OpEmitter::genPropertiesSupport() {
         if (const auto *namedProperty =
                 llvm::dyn_cast_if_present<const NamedProperty *>(attrOrProp)) {
           if (!namedProperty->prop.getHashPropertyCall().empty()) {
-            hashMethod << "\n    hash_" << namedProperty->name << "(prop."
+            hashMethod << "\n    hash_" << namedProperty->name << "_(prop."
                        << namedProperty->name << ")";
           } else {
             hashMethod << "\n    hash_value(prop." << namedProperty->name
@@ -2619,11 +2644,13 @@ void OpEmitter::genInlineCreateBody(
     interleaveComma(nonBuilderStateArgsList, nonBuilderStateArgsOS);
     nonBuilderStateArgs = ", " + nonBuilderStateArgs;
   }
-  cWithLoc->body() << llvm::formatv(inlineCreateBody, locParamName,
-                                    nonBuilderStateArgs,
-                                    opClass.getClassName());
-  cImplicitLoc->body() << llvm::formatv(inlineCreateBodyImplicitLoc,
-                                        nonBuilderStateArgs);
+  if (cWithLoc)
+    cWithLoc->body() << llvm::formatv(inlineCreateBody, locParamName,
+                                      nonBuilderStateArgs,
+                                      opClass.getClassName());
+  if (cImplicitLoc)
+    cImplicitLoc->body() << llvm::formatv(inlineCreateBodyImplicitLoc,
+                                          nonBuilderStateArgs);
 }
 
 void OpEmitter::genSeparateArgParamBuilder() {
@@ -3104,8 +3131,8 @@ void OpEmitter::genBuilder() {
     std::optional<StringRef> body = builder.getBody();
     auto properties = body ? Method::Static : Method::StaticDeclaration;
     auto *method = opClass.addMethod("void", "build", properties, arguments);
-    if (body)
-      ERROR_IF_PRUNED(method, "build", op);
+
+    ERROR_IF_PRUNED(method, "build", op);
 
     if (method)
       method->setDeprecated(builder.getDeprecatedMessage());
@@ -3500,9 +3527,9 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
         body << "(" << operandName << " ? 1 : 0)";
       } else if (operand.isVariadicOfVariadic()) {
         body << llvm::formatv(
-            "static_cast<int32_t>(std::accumulate({0}.begin(), {0}.end(), 0, "
+            "llvm::accumulate({0}, int32_t(0), "
             "[](int32_t curSum, ::mlir::ValueRange range) {{ return curSum + "
-            "static_cast<int32_t>(range.size()); }))",
+            "static_cast<int32_t>(range.size()); })",
             operandName);
       } else {
         body << "static_cast<int32_t>(" << getArgumentName(op, i) << ".size())";
@@ -3672,8 +3699,10 @@ void OpEmitter::genOpInterfaceMethods(const tblgen::InterfaceTrait *opTrait) {
     // Don't declare if the method has a default implementation and the op
     // didn't request that it always be declared.
     if (method.getDefaultImplementation() &&
-        !alwaysDeclaredMethods.count(method.getName()))
+        !alwaysDeclaredMethods.count(method.getName())) {
+      genOpInterfaceMethodUsingDecl(opTrait, method);
       continue;
+    }
     // Interface methods are allowed to overlap with existing methods, so don't
     // check if pruned.
     (void)genOpInterfaceMethod(method);
@@ -3690,6 +3719,17 @@ Method *OpEmitter::genOpInterfaceMethod(const InterfaceMethod &method,
                (declaration ? Method::Declaration : Method::None);
   return opClass.addMethod(method.getReturnType(), method.getName(), props,
                            std::move(paramList));
+}
+
+UsingDeclaration *
+OpEmitter::genOpInterfaceMethodUsingDecl(const tblgen::InterfaceTrait *opTrait,
+                                         const InterfaceMethod &method) {
+  std::string name = (llvm::Twine(opTrait->getFullyQualifiedTraitName()) + "<" +
+                      op.getCppClassName() + ">::" + method.getName())
+                         .str();
+  if (interfaceUsingNames.insert(name).second)
+    return opClass.declare<UsingDeclaration>(std::move(name));
+  return nullptr;
 }
 
 void OpEmitter::genOpInterfaceMethods() {
@@ -4800,11 +4840,9 @@ void OpOperandAdaptorEmitter::emitDef(
 }
 
 /// Emit the class declarations or definitions for the given op defs.
-static void
-emitOpClasses(const RecordKeeper &records,
-              const std::vector<const Record *> &defs, raw_ostream &os,
-              const StaticVerifierFunctionEmitter &staticVerifierEmitter,
-              bool emitDecl) {
+static void emitOpClasses(
+    const RecordKeeper &records, ArrayRef<const Record *> defs, raw_ostream &os,
+    const StaticVerifierFunctionEmitter &staticVerifierEmitter, bool emitDecl) {
   if (defs.empty())
     return;
 
@@ -4839,23 +4877,19 @@ emitOpClasses(const RecordKeeper &records,
 
 /// Emit the declarations for the provided op classes.
 static void emitOpClassDecls(const RecordKeeper &records,
-                             const std::vector<const Record *> &defs,
-                             raw_ostream &os) {
+                             ArrayRef<const Record *> defs, raw_ostream &os) {
   // First emit forward declaration for each class, this allows them to refer
   // to each others in traits for example.
-  for (auto *def : defs) {
+  for (const Record *def : defs) {
     Operator op(*def);
     NamespaceEmitter emitter(os, op.getCppNamespace());
-    std::string comments = tblgen::emitSummaryAndDescComments(
-        op.getSummary(), op.getDescription());
-    if (!comments.empty()) {
-      os << comments << "\n";
-    }
+    tblgen::emitSummaryAndDescComments(os, op.getSummary(),
+                                       op.getDescription());
     os << "class " << op.getCppClassName() << ";\n";
   }
 
   // Emit the op class declarations.
-  IfDefScope scope("GET_OP_CLASSES", os);
+  IfDefEmitter scope(os, "GET_OP_CLASSES");
   if (defs.empty())
     return;
   StaticVerifierFunctionEmitter staticVerifierEmitter(os, records);
@@ -4876,7 +4910,7 @@ static void emitOpClassDefs(const RecordKeeper &records,
                                                       constraintPrefix);
   os << formatv(opCommentHeader, "Local Utility Method", "Definitions");
   staticVerifierEmitter.collectOpConstraints(defs);
-  staticVerifierEmitter.emitOpConstraints(defs);
+  staticVerifierEmitter.emitOpConstraints();
 
   // Emit the classes.
   emitOpClasses(records, defs, os, staticVerifierEmitter,
@@ -4898,7 +4932,7 @@ static bool emitOpDecls(const RecordKeeper &records, raw_ostream &os) {
     return false;
 
   Dialect dialect = Operator(defs.front()).getDialect();
-  NamespaceEmitter ns(os, dialect);
+  DialectNamespaceEmitter ns(os, dialect);
 
   const char *const opRegistrationHook =
       "void register{0}Operations{1}({2}::{0} *dialect);\n";
@@ -4921,7 +4955,7 @@ static void emitOpDefShard(const RecordKeeper &records,
   std::string shardGuard = "GET_OP_DEFS_";
   std::string indexStr = std::to_string(shardIndex);
   shardGuard += indexStr;
-  IfDefScope scope(shardGuard, os);
+  IfDefEmitter scope(os, shardGuard);
 
   // Emit the op registration hook in the first shard.
   const char *const opRegistrationHook =
@@ -4962,14 +4996,14 @@ static bool emitOpDefs(const RecordKeeper &records, raw_ostream &os) {
   // If no shard was requested, emit the regular op list and class definitions.
   if (shardedDefs.size() == 1) {
     {
-      IfDefScope scope("GET_OP_LIST", os);
+      IfDefEmitter scope(os, "GET_OP_LIST");
       interleave(
           defs, os,
           [&](const Record *def) { os << Operator(def).getQualCppClassName(); },
           ",\n");
     }
     {
-      IfDefScope scope("GET_OP_CLASSES", os);
+      IfDefEmitter scope(os, "GET_OP_CLASSES");
       emitOpClassDefs(records, defs, os);
     }
     return false;

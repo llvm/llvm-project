@@ -16,6 +16,7 @@
 // template<class F> constexpr auto and_then(F&&) const&&;
 
 #include <cassert>
+#include <concepts>
 #include <optional>
 
 #include "test_macros.h"
@@ -257,8 +258,94 @@ constexpr bool test() {
   return true;
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test_ref() {
+  // Test & overload
+  {
+    // Without & qualifier on F's operator()
+    {
+      int j = 42;
+      std::optional<int&> i{j};
+      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(LVal{});
+
+      assert(r == 1);
+      assert(i.and_then(NOLVal{}) == std::nullopt);
+    }
+
+    //With & qualifier on F's operator()
+    {
+      int j = 42;
+      std::optional<int&> i{j};
+      RefQual l{};
+      NORefQual nl{};
+      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(l);
+
+      assert(r == 1);
+      assert(i.and_then(nl) == std::nullopt);
+    }
+  }
+
+  // Test const& overload
+  {
+    // Without & qualifier on F's operator()
+    {
+      int j = 42;
+      std::optional<const int&> i{j};
+      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(CLVal{});
+
+      assert(r == 1);
+      assert(i.and_then(NOCLVal{}) == std::nullopt);
+    }
+
+    //With & qualifier on F's operator()
+    {
+      int j = 42;
+      const std::optional<int&> i{j};
+      const CRefQual l{};
+      const NOCRefQual nl{};
+      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(l);
+
+      assert(r == 1);
+      assert(i.and_then(nl) == std::nullopt);
+    }
+  }
+  // Test && overload
+  {
+    //With & qualifier on F's operator()
+    {
+      int j = 42;
+      std::optional<int&> i{j};
+      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(RVRefQual{});
+
+      assert(r == 1);
+      assert(i.and_then(NORVRefQual{}) == std::nullopt);
+    }
+  }
+
+  // Test const&& overload
+  {
+    //With & qualifier on F's operator()
+    {
+      int j = 42;
+      const std::optional<int&> i{j};
+      const RVCRefQual l{};
+      const NORVCRefQual nl{};
+      std::same_as<std::optional<int>> decltype(auto) r = i.and_then(std::move(l));
+
+      assert(r == 1);
+      assert(i.and_then(std::move(nl)) == std::nullopt);
+    }
+  }
+  return true;
+}
+#endif
+
 int main(int, char**) {
   test();
   static_assert(test());
+#if TEST_STD_VER >= 26
+  test_ref();
+  static_assert(test_ref());
+#endif
   return 0;
 }

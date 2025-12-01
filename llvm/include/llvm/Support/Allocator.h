@@ -380,7 +380,7 @@ private:
 
 /// The standard BumpPtrAllocator which just uses the default template
 /// parameters.
-typedef BumpPtrAllocatorImpl<> BumpPtrAllocator;
+using BumpPtrAllocator = BumpPtrAllocatorImpl<>;
 
 /// A BumpPtrAllocator that allows only elements of a specific type to be
 /// allocated.

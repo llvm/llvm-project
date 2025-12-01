@@ -83,6 +83,8 @@ mark_as_advanced(COMPILER_RT_BUILD_ORC)
 option(COMPILER_RT_BUILD_GWP_ASAN "Build GWP-ASan, and link it into SCUDO" ON)
 mark_as_advanced(COMPILER_RT_BUILD_GWP_ASAN)
 option(COMPILER_RT_ENABLE_CET "Build Compiler RT with CET enabled" OFF)
+option(COMPILER_RT_ASAN_UNIT_TESTS_USE_HOST_RUNTIME "Build asan unit tests without depending upon a just-built asan runtime" OFF)
+mark_as_advanced(COMPILER_RT_ASAN_UNIT_TESTS_USE_HOST_RUNTIME)
 
 option(COMPILER_RT_SCUDO_STANDALONE_SYSROOT_PATH "Set custom sysroot for building SCUDO standalone" OFF)
 mark_as_advanced(COMPILER_RT_SCUDO_STANDALONE_SYSROOT_PATH)
@@ -313,7 +315,7 @@ include(config-ix)
 # Setup Compiler Flags
 #================================
 
-# fcf-protection is a gcc/clang option for CET support on Linux platforms.
+# fcf-protection is a gcc/clang option for CET support on some ELF platforms.
 # We need to handle MSVC CET option on Windows platforms.
 if (NOT MSVC)
   if (COMPILER_RT_ENABLE_CET AND NOT COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
@@ -602,6 +604,10 @@ string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}
 # ...we need it to build some runtimes and tests so readd it where appropriate.
 list(APPEND COMPILER_RT_COMMON_CFLAGS ${stdlib_flag})
 list(APPEND COMPILER_RT_COMMON_LINK_FLAGS ${stdlib_flag})
+
+# Add assembler flags for execute-only code generation. C and C++ flags should have already
+# been added to CMAKE_C_FLAGS and CMAKE_CXX_FLAGS.
+append_string_if(RUNTIMES_EXECUTE_ONLY_CODE -DCOMPILER_RT_EXECUTE_ONLY_CODE CMAKE_ASM_FLAGS)
 
 # TODO: There's a lot of duplication across lib/*/tests/CMakeLists.txt files,
 # move some of the common flags to COMPILER_RT_UNITTEST_CFLAGS.

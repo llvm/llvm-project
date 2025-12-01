@@ -172,8 +172,8 @@ define dso_local i32 @pow2minuspow2(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; RV32IM-LABEL: pow2minuspow2:
 ; RV32IM:       # %bb.0: # %entry
 ; RV32IM-NEXT:    slli a2, a1, 7
-; RV32IM-NEXT:    slli a1, a1, 9
-; RV32IM-NEXT:    sub a1, a1, a2
+; RV32IM-NEXT:    slli a1, a1, 8
+; RV32IM-NEXT:    add a1, a1, a2
 ; RV32IM-NEXT:    add a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
@@ -361,8 +361,8 @@ define dso_local i32 @shladdc1c2(i32 %a, i32 %b) local_unnamed_addr #0 {
 ;
 ; RV32IMXQCIAC-LABEL: shladdc1c2:
 ; RV32IMXQCIAC:       # %bb.0: # %entry
-; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a1, 5
-; RV32IMXQCIAC-NEXT:    slli a0, a0, 26
+; RV32IMXQCIAC-NEXT:    slli a1, a1, 26
+; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a1, 31
 ; RV32IMXQCIAC-NEXT:    ret
 ;
 ; RV32IZBAMXQCIAC-LABEL: shladdc1c2:
@@ -598,4 +598,24 @@ define i32 @add_shl_moreOneUse_4(i32 %x) {
   %mul = shl i32 %or, 31
   %add = add i32 %mul, %or
   ret i32 %add
+}
+
+define i32 @select65(i1 zeroext %x) {
+; RV32IM-LABEL: select65:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    neg a0, a0
+; RV32IM-NEXT:    andi a0, a0, 65
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: select65:
+; RV32IMXQCIAC:       # %bb.0:
+; RV32IMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 6
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: select65:
+; RV32IZBAMXQCIAC:       # %bb.0:
+; RV32IZBAMXQCIAC-NEXT:    qc.shladd a0, a0, a0, 6
+; RV32IZBAMXQCIAC-NEXT:    ret
+  %select = select i1 %x, i32 65, i32 0
+  ret i32 %select
 }

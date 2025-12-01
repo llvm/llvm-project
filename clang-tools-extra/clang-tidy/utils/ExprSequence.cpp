@@ -1,4 +1,4 @@
-//===---------- ExprSequence.cpp - clang-tidy -----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,13 +29,13 @@ static SmallVector<const Stmt *, 1> getParentStmts(const Stmt *S,
                                                    ASTContext *Context) {
   SmallVector<const Stmt *, 1> Result;
 
-  TraversalKindScope RAII(*Context, TK_AsIs);
+  const TraversalKindScope RAII(*Context, TK_AsIs);
   DynTypedNodeList Parents = Context->getParents(*S);
 
   SmallVector<DynTypedNode, 1> NodesToProcess(Parents.begin(), Parents.end());
 
   while (!NodesToProcess.empty()) {
-    DynTypedNode Node = NodesToProcess.back();
+    const DynTypedNode Node = NodesToProcess.back();
     NodesToProcess.pop_back();
 
     if (const auto *S = Node.get<Stmt>()) {
@@ -49,10 +49,8 @@ static SmallVector<const Stmt *, 1> getParentStmts(const Stmt *S,
   return Result;
 }
 
-namespace {
-
-bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
-                         ASTContext *Context) {
+static bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
+                                ASTContext *Context) {
   if (Descendant == Ancestor)
     return true;
   return llvm::any_of(getParentStmts(Descendant, Context),
@@ -61,15 +59,15 @@ bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
                       });
 }
 
-bool isDescendantOfArgs(const Stmt *Descendant, const CallExpr *Call,
-                        ASTContext *Context) {
+static bool isDescendantOfArgs(const Stmt *Descendant, const CallExpr *Call,
+                               ASTContext *Context) {
   return llvm::any_of(Call->arguments(),
                       [Descendant, Context](const Expr *Arg) {
                         return isDescendantOrEqual(Descendant, Arg, Context);
                       });
 }
 
-llvm::SmallVector<const InitListExpr *>
+static llvm::SmallVector<const InitListExpr *>
 getAllInitListForms(const InitListExpr *InitList) {
   llvm::SmallVector<const InitListExpr *> Result = {InitList};
   if (const InitListExpr *AltForm = InitList->getSyntacticForm())
@@ -78,8 +76,6 @@ getAllInitListForms(const InitListExpr *InitList) {
     Result.push_back(AltForm);
   return Result;
 }
-
-} // namespace
 
 ExprSequence::ExprSequence(const CFG *TheCFG, const Stmt *Root,
                            ASTContext *TheContext)
@@ -99,7 +95,8 @@ bool ExprSequence::inSequence(const Stmt *Before, const Stmt *After) const {
       return true;
   }
 
-  SmallVector<const Stmt *, 1> BeforeParents = getParentStmts(Before, Context);
+  const SmallVector<const Stmt *, 1> BeforeParents =
+      getParentStmts(Before, Context);
 
   // Since C++17, the callee of a call expression is guaranteed to be sequenced
   // before all of the arguments.

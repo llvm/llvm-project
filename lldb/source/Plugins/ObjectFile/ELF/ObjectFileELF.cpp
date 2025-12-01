@@ -130,6 +130,29 @@ private:
 
   RelocUnion reloc;
 };
+
+lldb::SectionSP MergeSections(lldb::SectionSP lhs, lldb::SectionSP rhs) {
+  assert(lhs && rhs);
+
+  lldb::ModuleSP lhs_module_parent = lhs->GetModule();
+  lldb::ModuleSP rhs_module_parent = rhs->GetModule();
+  assert(lhs_module_parent && rhs_module_parent);
+
+  // Do a sanity check, these should be the same.
+  if (lhs->GetFileAddress() != rhs->GetFileAddress())
+    lhs_module_parent->ReportWarning(
+        "Mismatch addresses for section {0} when "
+        "merging with {1}, expected: {2:x}, "
+        "actual: {3:x}",
+        lhs->GetTypeAsCString(),
+        rhs_module_parent->GetFileSpec().GetPathAsConstString().GetCString(),
+        lhs->GetByteSize(), rhs->GetByteSize());
+
+  // We want to take the greater of two sections. If LHS and RHS are both
+  // SHT_NOBITS, we should default to LHS. If RHS has a bigger section,
+  // indicating it has data that wasn't stripped, we should take that instead.
+  return rhs->GetFileSize() > lhs->GetFileSize() ? rhs : lhs;
+}
 } // end anonymous namespace
 
 ELFRelocation::ELFRelocation(unsigned type) {
@@ -826,6 +849,24 @@ bool ObjectFileELF::ParseHeader() {
 }
 
 UUID ObjectFileELF::GetUUID() {
+  if (m_uuid)
+    return m_uuid;
+
+  // Try loading note info from any PT_NOTE program headers. This is more
+  // friendly to ELF files that have no section headers, like ELF files that
+  // are loaded from memory.
+  for (const ELFProgramHeader &H : ProgramHeaders()) {
+    if (H.p_type == llvm::ELF::PT_NOTE) {
+      DataExtractor note_data = GetSegmentData(H);
+      if (note_data.GetByteSize()) {
+        lldb_private::ArchSpec arch_spec;
+        RefineModuleDetailsFromNote(note_data, arch_spec, m_uuid);
+        if (m_uuid)
+          return m_uuid;
+      }
+    }
+  }
+
   // Need to parse the section list to get the UUIDs, so make sure that's been
   // done.
   if (!ParseSectionHeaders() && GetType() != ObjectFile::eTypeCoreFile)
@@ -1660,7 +1701,7 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
       .Case(".ARM.exidx", eSectionTypeARMexidx)
       .Case(".ARM.extab", eSectionTypeARMextab)
       .Case(".ctf", eSectionTypeDebug)
-      .Cases(".data", ".tdata", eSectionTypeData)
+      .Cases({".data", ".tdata"}, eSectionTypeData)
       .Case(".eh_frame", eSectionTypeEHFrame)
       .Case(".gnu_debugaltlink", eSectionTypeDWARFGNUDebugAltLink)
       .Case(".gosymtab", eSectionTypeGoSymtab)
@@ -1949,10 +1990,10 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     provider.AddSection(std::move(*InfoOr), std::move(section_sp));
   }
 
-  // For eTypeDebugInfo files, the Symbol Vendor will take care of updating the
-  // unified section list.
-  if (GetType() != eTypeDebugInfo)
-    unified_section_list = *m_sections_up;
+  // Merge the two adding any new sections, and overwriting any existing
+  // sections that are SHT_NOBITS
+  unified_section_list =
+      SectionList::Merge(unified_section_list, *m_sections_up, MergeSections);
 
   // If there's a .gnu_debugdata section, we'll try to read the .symtab that's
   // embedded in there and replace the one in the original object file (if any).
@@ -2717,9 +2758,8 @@ static void ApplyELF64ABS64Relocation(Symtab *symtab, ELFRelocation &rel,
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-    uint64_t *dst = reinterpret_cast<uint64_t *>(
-        data_buffer->GetBytes() + rel_section->GetFileOffset() +
-        ELFRelocation::RelocOffset64(rel));
+    void *const dst = data_buffer->GetBytes() + rel_section->GetFileOffset() +
+                      ELFRelocation::RelocOffset64(rel);
     uint64_t val_offset = value + ELFRelocation::RelocAddend64(rel);
     memcpy(dst, &val_offset, sizeof(uint64_t));
   }
@@ -2744,9 +2784,8 @@ static void ApplyELF64ABS32Relocation(Symtab *symtab, ELFRelocation &rel,
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-    uint32_t *dst = reinterpret_cast<uint32_t *>(
-        data_buffer->GetBytes() + rel_section->GetFileOffset() +
-        ELFRelocation::RelocOffset32(rel));
+    void *const dst = data_buffer->GetBytes() + rel_section->GetFileOffset() +
+                      ELFRelocation::RelocOffset32(rel);
     memcpy(dst, &truncated_addr, sizeof(uint32_t));
   }
 }

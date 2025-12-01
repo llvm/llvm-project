@@ -180,4 +180,14 @@ TEST_F(SymbolStringPoolTest, SymbolStringPoolEntryUnsafe) {
   EXPECT_EQ(getRefCount(A), 1U);
 }
 
+TEST_F(SymbolStringPoolTest, Hashing) {
+  auto A = SP.intern("a");
+  auto B = NonOwningSymbolStringPtr(A);
+
+  hash_code AHash = hash_value(A);
+  hash_code BHash = hash_value(B);
+
+  EXPECT_EQ(AHash, BHash);
+}
+
 } // namespace

@@ -168,6 +168,7 @@ public:
   virtual bool relaxAlign(MCFragment &F, unsigned &Size) { return false; }
   virtual bool relaxDwarfLineAddr(MCFragment &) const { return false; }
   virtual bool relaxDwarfCFA(MCFragment &) const { return false; }
+  virtual bool relaxSFrameCFA(MCFragment &) const { return false; }
 
   // Defined by linker relaxation targets to possibly emit LEB128 relocations
   // and set Value at the relocated location.
@@ -199,7 +200,7 @@ public:
 
   // Return true if fragment offsets have been adjusted and an extra layout
   // iteration is needed.
-  virtual bool finishLayout(const MCAssembler &Asm) const { return false; }
+  virtual bool finishLayout() const { return false; }
 
   /// Generate the compact unwind encoding for the CFI instructions.
   virtual uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,

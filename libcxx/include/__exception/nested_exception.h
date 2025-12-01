@@ -73,7 +73,7 @@ template <class _Tp>
   __throw_with_nested<_Tp,
                       _Up,
                       is_class<_Up>::value && !is_base_of<nested_exception, _Up>::value &&
-                          !__libcpp_is_final<_Up>::value>::__do_throw(std::forward<_Tp>(__t));
+                          !__is_final_v<_Up> >::__do_throw(std::forward<_Tp>(__t));
 #else
   ((void)__t);
   // FIXME: Make this abort

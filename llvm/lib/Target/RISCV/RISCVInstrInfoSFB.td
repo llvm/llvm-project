@@ -60,8 +60,19 @@ class SFBALU_rr
 class SFBALU_ri
     : Pseudo<(outs GPR:$dst),
              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
-                  simm12:$imm), []>,
+                  simm12_lo:$imm), []>,
       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
+class SFBLUI
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev,
+                  uimm20_lui:$imm), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
@@ -106,11 +117,18 @@ def PseudoCCSRA : SFBALU_rr;
 def PseudoCCAND : SFBALU_rr;
 def PseudoCCOR  : SFBALU_rr;
 def PseudoCCXOR : SFBALU_rr;
+def PseudoCCMAX : SFBALU_rr;
+def PseudoCCMIN : SFBALU_rr;
+def PseudoCCMAXU : SFBALU_rr;
+def PseudoCCMINU : SFBALU_rr;
+def PseudoCCMUL : SFBALU_rr;
 
 def PseudoCCADDI : SFBALU_ri;
 def PseudoCCANDI : SFBALU_ri;
 def PseudoCCORI  : SFBALU_ri;
 def PseudoCCXORI : SFBALU_ri;
+
+def PseudoCCLUI : SFBLUI;
 
 def PseudoCCSLLI : SFBShift_ri;
 def PseudoCCSRLI : SFBShift_ri;

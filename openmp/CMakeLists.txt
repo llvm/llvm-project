@@ -71,18 +71,11 @@ else()
   endif()
 
   if (NOT MSVC)
-    set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
-    set(OPENMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++)
+    set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang)
+    set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++)
   else()
-    set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang.exe)
-    set(OPENMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++.exe)
-  endif()
-
-  # Check for flang
-  if (NOT MSVC)
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang)
-  else()
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang.exe)
+    set(OPENMP_TEST_C_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang.exe)
+    set(OPENMP_TEST_CXX_COMPILER ${LLVM_TOOLS_BINARY_DIR}/clang++.exe)
   endif()
 
   # Set fortran test compiler if flang is found
@@ -99,17 +92,17 @@ else()
   set(CMAKE_CXX_EXTENSIONS NO)
 endif()
 
-# Targeting the GPU directly requires a few flags to make CMake happy.
-if("${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn")
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
-elseif("${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^nvptx")
-  set(CMAKE_REQUIRED_FLAGS
-      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
-endif()
-
 # Check and set up common compiler flags.
 include(config-ix)
 include(HandleOpenMPOptions)
+
+# Check for flang
+set(OPENMP_TEST_Fortran_COMPILER_default "")
+if (CMAKE_Fortran_COMPILER)
+  set(OPENMP_TEST_Fortran_COMPILER_default "${CMAKE_Fortran_COMPILER}")
+endif ()
+set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
+  "Fortran compiler to use for testing OpenMP runtime libraries.")
 
 # Set up testing infrastructure.
 include(OpenMPTesting)

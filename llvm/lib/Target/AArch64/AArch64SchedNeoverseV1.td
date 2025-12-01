@@ -19,7 +19,9 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseV1Model : SchedMachineModel {
-  let IssueWidth            =  15; // Maximum micro-ops dispatch rate.
+  let IssueWidth            =   8; // This value comes from the decode bandwidth
+                                   // and empirical measurements showed that this
+                                   // value is better.
   let MicroOpBufferSize     = 256; // Micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  11; // Cycles cost of branch mispredicted.
@@ -92,6 +94,7 @@ def : WriteRes<WriteHint,    []> { let Latency = 1; }
 let Latency = 0, NumMicroOps = 0 in
 def V1Write_0c_0Z : SchedWriteRes<[]>;
 
+def V1Write_0c : SchedWriteRes<[]> { let Latency = 0; }
 
 //===----------------------------------------------------------------------===//
 // Define generic 1 micro-op types
@@ -471,6 +474,17 @@ def V1Write_11c_9L01_9S_9V : SchedWriteRes<[V1UnitL01, V1UnitL01, V1UnitL01,
                                             V1UnitV, V1UnitV, V1UnitV]>;
 
 //===----------------------------------------------------------------------===//
+// Define predicate-controlled types
+
+def V1Write_0or1c_1I : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [V1Write_0c]>,
+                      SchedVar<NoSchedPred,      [V1Write_1c_1I]>]>;
+
+def V1Write_0or3c_1M0 : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [V1Write_0c]>,
+                      SchedVar<NoSchedPred,      [V1Write_3c_1M0]>]>;
+
+//===----------------------------------------------------------------------===//
 // Define forwarded types
 
 // NOTE: SOG, p. 20, n. 2: Accumulator forwarding is not supported for
@@ -601,6 +615,7 @@ def : InstRW<[V1Write_1c_1I_1Flg],
                         "^(ADC|SBC)S[WX]r$",
                         "^ANDS[WX]ri$",
                         "^(AND|BIC)S[WX]rr$")>;
+def : InstRW<[V1Write_0or1c_1I], (instregex "^MOVZ[WX]i$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, V1Write_2c_1M>;
@@ -621,7 +636,8 @@ def               : InstRW<[V1WriteISRegS],
                            (instregex "^(ADD|SUB)S(([WX]r[sx])|Xrx64)$")>;
 
 // Logical, shift, no flagset
-def : InstRW<[V1Write_1c_1I], (instregex "^(AND|BIC|EON|EOR|ORN|ORR)[WX]rs$")>;
+def : InstRW<[V1Write_1c_1I], (instregex "^(AND|BIC|EON|EOR|ORN)[WX]rs$")>;
+def : InstRW<[V1Write_0or1c_1I], (instregex "^ORR[WX]rs$")>;
 
 // Logical, shift, flagset
 def : InstRW<[V1Write_2c_1M_1Flg], (instregex "^(AND|BIC)S[WX]rs$")>;
@@ -1553,14 +1569,14 @@ def : InstRW<[V1Write_20c7_1V0], (instregex "^[SU]DIVR?_ZPmZ_D",
                                              "^[SU]DIV_ZPZZ_D")>;
 
 // Dot product, 8 bit
-def : InstRW<[V1Wr_ZDOTB, V1Rd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_S$")>;
+def : InstRW<[V1Wr_ZDOTB, V1Rd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_BtoS$")>;
 
 // Dot product, 8 bit, using signed and unsigned integers
 def : InstRW<[V1Wr_ZUDOTB, V1Rd_ZUDOTB],
              (instrs SUDOT_ZZZI, USDOT_ZZZ, USDOT_ZZZI)>;
 
 // Dot product, 16 bit
-def : InstRW<[V1Wr_ZDOTH, V1Rd_ZDOTH], (instregex "^[SU]DOT_ZZZI?_D$")>;
+def : InstRW<[V1Wr_ZDOTH, V1Rd_ZDOTH], (instregex "^[SU]DOT_ZZZI?_HtoD$")>;
 
 // Duplicate, immediate and indexed form
 def : InstRW<[V1Write_2c_1V01], (instregex "^DUP_ZI_[BHSD]$",
@@ -1806,7 +1822,7 @@ def : InstRW<[V1Write_4c_1V0], (instrs BFCVT_ZPmZ, BFCVTNT_ZPmZ)>;
 def : InstRW<[V1Wr_ZBFDOT, V1Rd_ZBFDOT], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 
 // Matrix multiply accumulate
-def : InstRW<[V1Wr_ZBFMMA, V1Rd_ZBFMMA], (instrs BFMMLA_ZZZ)>;
+def : InstRW<[V1Wr_ZBFMMA, V1Rd_ZBFMMA], (instrs BFMMLA_ZZZ_HtoS)>;
 
 // Multiply accumulate long
 def : InstRW<[V1Wr_ZBFMAL, V1Rd_ZBFMAL], (instregex "^BFMLAL[BT]_ZZZ(I)?$")>;

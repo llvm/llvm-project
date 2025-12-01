@@ -188,7 +188,8 @@ createDecl(PatternRewriter &builder, SymbolTable &symbolTable,
   OpBuilder::InsertionGuard guard(builder);
   Type type = reduce.getOperands()[reductionIndex].getType();
   auto decl = omp::DeclareReductionOp::create(builder, reduce.getLoc(),
-                                              "__scf_reduction", type);
+                                              "__scf_reduction", type,
+                                              /*byref_element_type=*/{});
   symbolTable.insert(decl);
 
   builder.createBlock(&decl.getInitializerRegion(),
@@ -492,8 +493,10 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 
         // Create loop nest and populate region with contents of scf.parallel.
         auto loopOp = omp::LoopNestOp::create(
-            rewriter, parallelOp.getLoc(), parallelOp.getLowerBound(),
-            parallelOp.getUpperBound(), parallelOp.getStep());
+            rewriter, parallelOp.getLoc(), parallelOp.getLowerBound().size(),
+            parallelOp.getLowerBound(), parallelOp.getUpperBound(),
+            parallelOp.getStep(), /*loop_inclusive=*/false,
+            /*tile_sizes=*/nullptr);
 
         rewriter.inlineRegionBefore(parallelOp.getRegion(), loopOp.getRegion(),
                                     loopOp.getRegion().begin());

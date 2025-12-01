@@ -293,9 +293,8 @@ void LoopVectorizeHints::getHintsFromMetadata() {
 }
 
 void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
-  if (!Name.starts_with(Prefix()))
+  if (!Name.consume_front(Prefix()))
     return;
-  Name = Name.substr(Prefix().size(), StringRef::npos);
 
   const ConstantInt *C = mdconst::dyn_extract<ConstantInt>(Arg);
   if (!C)
@@ -461,10 +460,9 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   const auto &Strides =
     LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
 
-  bool CanAddPredicate = !llvm::shouldOptimizeForSize(
-      TheLoop->getHeader(), PSI, BFI, PGSOQueryType::IRPass);
-  int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, Strides,
-                            CanAddPredicate, false).value_or(0);
+  int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides,
+                            AllowRuntimeSCEVChecks, false)
+                   .value_or(0);
   if (Stride == 1 || Stride == -1)
     return Stride;
   return 0;
@@ -686,7 +684,7 @@ void LoopVectorizationLegality::addInductionPhi(
   // in the vectorized loop body, record them here. All casts could be recorded
   // here for ignoring, but suffices to record only the first (as it is the
   // only one that may bw used outside the cast sequence).
-  const SmallVectorImpl<Instruction *> &Casts = ID.getCastInsts();
+  ArrayRef<Instruction *> Casts = ID.getCastInsts();
   if (!Casts.empty())
     InductionCastsToIgnore.insert(*Casts.begin());
 
@@ -879,6 +877,11 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
       AllowedExit.insert(RedDes.getLoopExitInstr());
       Reductions[Phi] = RedDes;
+      assert((!RedDes.hasUsesOutsideReductionChain() ||
+              RecurrenceDescriptor::isMinMaxRecurrenceKind(
+                  RedDes.getRecurrenceKind())) &&
+             "Only min/max recurrences are allowed to have multiple uses "
+             "currently");
       return true;
     }
 
@@ -1643,6 +1646,19 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
       return false;
   }
 
+  // The latch must be terminated by a BranchInst.
+  BasicBlock *Latch = Lp->getLoopLatch();
+  if (Latch && !isa<BranchInst>(Latch->getTerminator())) {
+    reportVectorizationFailure(
+        "The loop latch terminator is not a BranchInst",
+        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
+        ORE, TheLoop);
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
+  }
+
   return Result;
 }
 
@@ -1878,11 +1894,11 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
 
   // Make sure that the load address is not loop invariant; we want an
   // address calculation that we can rotate to the next vector iteration.
-  const SCEV *PtrScev = PSE.getSE()->getSCEV(Ptr);
-  if (!isa<SCEVAddRecExpr>(PtrScev)) {
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(PSE.getSE()->getSCEV(Ptr));
+  if (!AR || AR->getLoop() != TheLoop || !AR->isAffine()) {
     reportVectorizationFailure(
         "Uncountable exit condition depends on load with an address that is "
-        "not an add recurrence",
+        "not an add recurrence in the loop",
         "EarlyExitLoadInvariantAddress", ORE, TheLoop);
     return false;
   }
@@ -1903,11 +1919,12 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   SafetyInfo.computeLoopSafetyInfo(TheLoop);
   // We need to know that load will be executed before we can hoist a
   // copy out to run just before the first iteration.
-  // FIXME: Currently, other restrictions prevent us from reaching this point
-  //        with a loop where the uncountable exit condition is determined
-  //        by a conditional load.
-  assert(SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop) &&
-         "Unhandled control flow in uncountable exit loop with side effects");
+  if (!SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop)) {
+    reportVectorizationFailure(
+        "Load for uncountable exit not guaranteed to execute",
+        "ConditionalUncountableExitLoad", ORE, TheLoop);
+    return false;
+  }
 
   // Prohibit any potential aliasing with any instruction in the loop which
   // might store to memory.
@@ -2082,24 +2099,6 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 
   for (const auto &Reduction : getReductionVars())
     ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
-
-  // TODO: handle non-reduction outside users when tail is folded by masking.
-  for (auto *AE : AllowedExit) {
-    // Check that all users of allowed exit values are inside the loop or
-    // are the live-out of a reduction.
-    if (ReductionLiveOuts.count(AE))
-      continue;
-    for (User *U : AE->users()) {
-      Instruction *UI = cast<Instruction>(U);
-      if (TheLoop->contains(UI))
-        continue;
-      LLVM_DEBUG(
-          dbgs()
-          << "LV: Cannot fold tail by masking, loop has an outside user for "
-          << *UI << "\n");
-      return false;
-    }
-  }
 
   for (const auto &Entry : getInductionVars()) {
     PHINode *OrigPhi = Entry.first;
