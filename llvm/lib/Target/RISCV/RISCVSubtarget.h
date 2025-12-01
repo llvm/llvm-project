@@ -208,7 +208,7 @@ public:
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
     return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||
-           hasShortForwardBranchOpt();
+           hasShortForwardBranchIALU();
   }
 
   bool hasShlAdd(int64_t ShAmt) const {
