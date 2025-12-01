@@ -41,7 +41,7 @@ public:
     eValid
   };
 
-  struct AbstrackMethodCheckerPayload {
+  struct AbstractMethodCheckerPayload {
 
     struct InvalidArgumentCountPayload {
       InvalidArgumentCountPayload(size_t required, size_t actual)
@@ -55,13 +55,13 @@ public:
     std::variant<std::monostate, InvalidArgumentCountPayload> payload;
   };
 
-  llvm::Expected<std::map<llvm::StringLiteral, AbstrackMethodCheckerPayload>>
+  llvm::Expected<std::map<llvm::StringLiteral, AbstractMethodCheckerPayload>>
   CheckAbstractMethodImplementation(
       const python::PythonDictionary &class_dict) const {
 
     using namespace python;
 
-    std::map<llvm::StringLiteral, AbstrackMethodCheckerPayload> checker;
+    std::map<llvm::StringLiteral, AbstractMethodCheckerPayload> checker;
 #define SET_CASE_AND_CONTINUE(method_name, case)                               \
   {                                                                            \
     checker[method_name] = {case, {}};                                         \
@@ -74,7 +74,8 @@ public:
       if (!class_dict.HasKey(method_name))
         SET_CASE_AND_CONTINUE(method_name,
                               AbstractMethodCheckerCases::eNotImplemented)
-      auto callable_or_err = class_dict.GetItem(method_name);
+      llvm::Expected<PythonObject> callable_or_err =
+          class_dict.GetItem(method_name);
       if (!callable_or_err) {
         llvm::consumeError(callable_or_err.takeError());
         SET_CASE_AND_CONTINUE(method_name,
@@ -102,7 +103,7 @@ public:
       } else {
         checker[method_name] = {
             AbstractMethodCheckerCases::eInvalidArgumentCount,
-            AbstrackMethodCheckerPayload::InvalidArgumentCountPayload(
+            AbstractMethodCheckerPayload::InvalidArgumentCountPayload(
                 requirement.min_arg_count, arg_info.max_positional_args)};
       }
     }
@@ -291,7 +292,7 @@ public:
       case AbstractMethodCheckerCases::eInvalidArgumentCount: {
         auto &payload_variant = method_checker.second.payload;
         if (!std::holds_alternative<
-                AbstrackMethodCheckerPayload::InvalidArgumentCountPayload>(
+                AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
                 payload_variant)) {
           abstract_method_errors = llvm::joinErrors(
               std::move(abstract_method_errors),
@@ -300,7 +301,7 @@ public:
                   obj_class_name.GetString(), method_checker.first)));
         } else {
           auto payload = std::get<
-              AbstrackMethodCheckerPayload::InvalidArgumentCountPayload>(
+              AbstractMethodCheckerPayload::InvalidArgumentCountPayload>(
               payload_variant);
           abstract_method_errors = llvm::joinErrors(
               std::move(abstract_method_errors),
