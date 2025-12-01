@@ -44,7 +44,7 @@ string_length(const char *src) {
   }
 }
 } // namespace neon
-} // namespace arch_vector
+} // namespace LIBC_NAMESPACE_DECL
 #endif // __ARM_NEON
 
 #ifdef LIBC_TARGET_CPU_HAS_SVE
