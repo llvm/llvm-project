@@ -8,7 +8,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test import lldbutil
 
 
-class TestFrameVarDILPointerArithmetic(TestBase):
+class TestFrameVarDILExprPointerArithmetic(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_pointer_arithmetic(self):
