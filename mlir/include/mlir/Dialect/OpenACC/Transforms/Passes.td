@@ -136,4 +136,20 @@ def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
   ];
 }
 
+def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
+  let summary = "Legalize OpenACC serial constructs";
+  let description = [{
+    This pass converts `acc.serial` constructs into `acc.parallel` constructs
+    with `num_gangs(1)`, `num_workers(1)`, and `vector_length(1)`.
+
+    This transformation simplifies processing of acc regions by unifying the
+    handling of serial and parallel constructs. Since an OpenACC serial region
+    executes sequentially (like a parallel region with a single gang, worker,
+    and vector), this conversion is semantically equivalent while enabling code
+    reuse in later compilation stages.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect",
+      "mlir::arith::ArithDialect"];
+}
+
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

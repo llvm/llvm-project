@@ -594,6 +594,24 @@ func.func @fuse_by_collapsing_pad(%arg0 : tensor<2x12x5x336x9xi32>) -> tensor<8x
 
 // -----
 
+func.func @no_fuse_by_collapsing_pad_non_constant_padding(%arg0 : tensor<2x12xi32>) -> tensor<8x3x4xi32> {
+  %expand = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [2, 3, 4] : tensor<2x12xi32> into tensor<2x3x4xi32>
+  %cst = arith.constant 0 : i32
+  %padded_0 = tensor.pad %expand low[1, 0, 0] high[5, 0, 0] {
+  ^bb0(%arg1: index, %arg2: index, %arg3: index):
+    %pad_val = arith.index_cast %arg1 : index to i32
+    tensor.yield %pad_val : i32
+  } : tensor<2x3x4xi32> to tensor<8x3x4xi32>
+  return %padded_0 : tensor<8x3x4xi32>
+}
+//      CHECK: func @no_fuse_by_collapsing_pad_non_constant_padding(
+// CHECK-SAME:   %[[ARG0:.+]]: tensor<2x12xi32>)
+//      CHECK:   %[[EXPAND:.+]] = tensor.expand_shape %[[ARG0]]
+//      CHECK:   %[[PAD:.+]] = tensor.pad %[[EXPAND]]
+//      CHECK:   return %[[PAD]]
+
+// -----
+
 func.func @no_fuse_by_collapsing_pad(%arg0 : tensor<2x12x5x336x9xi32>) -> tensor<8x5x4x17x6x7x8x14xi32> {
   %expand = tensor.expand_shape %arg0 [[0], [1, 2], [3], [4, 5, 6], [7]] output_shape [2, 3, 4, 5, 6, 7, 8, 9] : tensor<2x12x5x336x9xi32> into tensor<2x3x4x5x6x7x8x9xi32>
   %cst = arith.constant 0 : i32
@@ -638,6 +656,63 @@ func.func @fuse_by_collapsing_dynamic_pad(%arg0 : tensor<?x?x?x?xf32>,
 //      CHECK:   %[[EXPAND:.+]] = tensor.expand_shape %[[PAD]] {{\[}}[0], [1, 2], [3], [4, 5]]
 // CHECK-SAME:       output_shape [%[[PAD_SIZE0]], %[[S1]], %[[S2]], %[[PAD_SIZE1]], %[[S4]], %[[S5]]] : tensor<?x?x?x?xf32> into tensor<?x?x?x?x?x?xf32>
 //      CHECK:   return %[[EXPAND]]
+
+// -----
+
+func.func @collapse_shape_with_producer_pad(%arg0: tensor<2x3x4x5x6x7x8x9xi32>) -> tensor<8x12x17x336x14xi32> {
+  %cst = arith.constant 0 : i32
+  %padded = tensor.pad %arg0 low[1, 0, 0, 8, 0, 0, 0, 3] high[5, 0, 0, 4, 0, 0, 0, 2] {
+  ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index,
+       %arg5: index, %arg6: index, %arg7: index, %arg8: index):
+    tensor.yield %cst : i32
+  } : tensor<2x3x4x5x6x7x8x9xi32> to tensor<8x3x4x17x6x7x8x14xi32>
+  %collapsed = tensor.collapse_shape %padded [[0], [1, 2], [3], [4, 5, 6], [7]]
+    : tensor<8x3x4x17x6x7x8x14xi32> into tensor<8x12x17x336x14xi32>
+  return %collapsed : tensor<8x12x17x336x14xi32>
+}
+//      CHECK: func @collapse_shape_with_producer_pad
+// CHECK-SAME:   %[[ARG0:.+]]: tensor<2x3x4x5x6x7x8x9xi32>
+//      CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape %[[ARG0]] {{\[}}[0], [1, 2], [3], [4, 5, 6], [7]]
+//      CHECK:   %[[PAD:.+]] = tensor.pad %[[COLLAPSE]] low[1, 0, 8, 0, 3] high[5, 0, 4, 0, 2]
+//      CHECK:   return %[[PAD]]
+
+// -----
+
+func.func @collapse_shape_with_producer_pad_dynamic(%arg0: tensor<?x?x?x?x?x?xf32>,
+    %l0 : index, %l1 : index, %h0 : index, %h1 : index) -> tensor<?x?x?x?xf32> {
+  %cst = arith.constant 0.0 : f32
+  %padded = tensor.pad %arg0 low[%l0, 0, 0, %l1, 0, 0] high[%h0, 0, 0, %h1, 0, 0] {
+  ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index, %arg6: index):
+    tensor.yield %cst : f32
+  } : tensor<?x?x?x?x?x?xf32> to tensor<?x?x?x?x?x?xf32>
+  %collapsed = tensor.collapse_shape %padded [[0], [1, 2], [3], [4, 5]]
+    : tensor<?x?x?x?x?x?xf32> into tensor<?x?x?x?xf32>
+  return %collapsed : tensor<?x?x?x?xf32>
+}
+//      CHECK: func @collapse_shape_with_producer_pad_dynamic
+// CHECK-SAME:   %[[ARG0:.+]]: tensor<?x?x?x?x?x?xf32>
+// CHECK-SAME:   %[[L0:.+]]: index, %[[L1:.+]]: index, %[[H0:.+]]: index, %[[H1:.+]]: index
+//      CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape %[[ARG0]] {{\[}}[0], [1, 2], [3], [4, 5]]
+//      CHECK:   %[[PAD:.+]] = tensor.pad %[[COLLAPSE]] low[%[[L0]], 0, %[[L1]], 0] high[%[[H0]], 0, %[[H1]], 0]
+//      CHECK:   return %[[PAD]]
+
+// -----
+
+func.func @collapse_shape_with_producer_pad_non_constant_padding(%arg0 : tensor<2x3x4xi32>) -> tensor<8x12xi32> {
+  %cst = arith.constant 0 : i32
+  %padded_0 = tensor.pad %arg0 low[1, 0, 0] high[5, 0, 0] {
+  ^bb0(%arg1: index, %arg2: index, %arg3: index):
+    %pad_val = arith.index_cast %arg1 : index to i32
+    tensor.yield %pad_val : i32
+  } : tensor<2x3x4xi32> to tensor<8x3x4xi32>
+  %collapsed = tensor.collapse_shape %padded_0 [[0], [1, 2]] : tensor<8x3x4xi32> into tensor<8x12xi32>
+  return %collapsed : tensor<8x12xi32>
+}
+//      CHECK: func @collapse_shape_with_producer_pad_non_constant_padding(
+// CHECK-SAME:   %[[ARG0:.+]]: tensor<2x3x4xi32>)
+//      CHECK:   %[[PAD:.+]] = tensor.pad %[[ARG0]]
+//      CHECK:   %[[COLLAPSED:.+]] = tensor.collapse_shape %[[PAD]]
+//      CHECK:   return %[[COLLAPSED]]
 
 // -----
 // Static problem sizes. Checks all aspects of fusion by collapsing with bubbling up collapse shapes.

@@ -557,8 +557,9 @@ public:
     target.addLegalOp<cuf::StreamCastOp>();
     cuf::populateCUFToFIRConversionPatterns(typeConverter, *dl, symtab,
                                             patterns);
-    cuf::populateCUFAllocationConversionPatterns(typeConverter, *dl, symtab,
-                                                 patterns);
+    if (allocationConversion)
+      cuf::populateCUFAllocationConversionPatterns(typeConverter, *dl, symtab,
+                                                   patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(ctx),
