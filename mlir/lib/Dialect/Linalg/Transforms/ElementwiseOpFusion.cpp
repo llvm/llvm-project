@@ -1058,7 +1058,10 @@ computeExpandedPadding(tensor::PadOp padOp, ArrayRef<int64_t> expandedShape,
                        PatternRewriter &rewriter) {
   // If the padding value depends on the index values of the pad operation,
   // then it may not be valid to expand the dimensions, since it will change
-  // the index values on which the padding value depends.
+  // the index values on which the padding value depends. This is not currently
+  // supported by the pad expansion patterns, but it could be implemented
+  // similarly to the expansion of linalg.generic ops with linalg.index ops in
+  // the body, as is done in `updateExpandedGenericOpRegion`.
   if (!padOp.getConstantPaddingValue())
     return failure();
 
@@ -2034,7 +2037,10 @@ computeCollapsedPadding(tensor::PadOp padOp,
                         PatternRewriter &rewriter) {
   // If the padding value depends on the index values of the pad operation,
   // then it may not be valid to collapse the dimensions, since it will change
-  // the index values on which the padding value depends.
+  // the index values on which the padding value depends. This is not currently
+  // supported by the pad collapsing patterns, but it could be implemented
+  // similarly to the collapsing of linalg.generic ops with linalg.index ops in
+  // the body, as is done in `generateCollapsedIndexingRegion`.
   if (!padOp.getConstantPaddingValue())
     return failure();
 
