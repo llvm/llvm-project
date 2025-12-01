@@ -533,11 +533,7 @@ public:
 /// subexpressions required by its derived classes. This is to simplify the
 /// implementation of 'children()' and friends.
 ///
-/// \see CXXExpansionStmtDecl
-/// \see CXXEnumeratingExpansionStmtPattern
-/// \see CXXIteratingExpansionStmtPattern
-/// \see CXXDestructuringExpansionStmtPattern
-/// \see CXXDependentExpansionStmtPattern
+/// \see CXXExpansionStmtDecl for more documentation on expansion statements.
 class CXXExpansionStmtPattern : public Stmt {
   friend class ASTStmtReader;
 
@@ -878,24 +874,27 @@ public:
 /// Represents the code generated for an expanded expansion statement.
 ///
 /// This holds 'shared statements' and 'instantiations'; these encode the
-/// general underlying pattern that all expansion statements desugar to:
+/// general underlying pattern that all expansion statements desugar to. Note
+/// that only the inner '{}' (i.e. those marked as 'Actual "CompoundStmt"'
+/// below) are actually present as 'CompoundStmt's in the AST; the outer braces
+/// that wrap everything do *not* correspond to an actual 'CompoundStmt' and are
+/// implicit in the sense that we simply push a scope when evaluating or
+/// emitting IR for a 'CXXExpansionStmtInstantiation'.
+///
+/// The 'instantiations' are precisely these inner compound statements.
 ///
 /// \verbatim
-/// {
+/// { // Not actually present in the AST.
 ///   <shared statements>
-///   {
+///   { // Actual 'CompoundStmt'.
 ///     <1st instantiation>
 ///   }
 ///   ...
-///   {
+///   { // Actual 'CompoundStmt'.
 ///     <n-th instantiation>
 ///   }
 /// }
 /// \endverbatim
-///
-/// Here, the only thing that is stored in the AST are the 'shared statements'
-/// and the 'CompoundStmt's that wrap the 'instantiations'. The outer braces
-/// shown above are implicit.
 ///
 /// For example, the CXXExpansionStmtInstantiation that corresponds to the
 /// following expansion statement
@@ -926,6 +925,19 @@ public:
 ///   }
 /// }
 /// \endverbatim
+///
+/// There are two reasons why this needs to exist and why we don't just store a
+/// list of instantiations in some other node:
+///
+///   1. We need custom codegen to handle break/continue in expansion statements
+///      properly, so it can't just be a compound statement.
+///
+///   2. The expansions are created after both the pattern and the
+///      'CXXExpansionStmtDecl', so we can't just store them as trailing data in
+///      either of those nodes (because we don't know how many expansions there
+///      will be when those notes are allocated).
+///
+/// \see CXXExpansionStmtDecl
 class CXXExpansionStmtInstantiation final
     : public Stmt,
       llvm::TrailingObjects<CXXExpansionStmtInstantiation, Stmt *> {

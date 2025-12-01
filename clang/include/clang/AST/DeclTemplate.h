@@ -3375,7 +3375,18 @@ public:
 /// 'CXXExpansionStmtInstantiation' is. The latter is also what's used for
 /// codegen and constant evaluation.
 ///
-/// For example, if the user writes the following expansion statement:
+/// There are three kinds of expansion statements; they correspond to three
+/// derived classes of 'CXXExpansionStmtPattern'. There is also a fourth derived
+/// class that is used if we don't know what kind of expansion statement we're
+/// dealing with (because the thing we're expanding is dependent). See the
+/// comment on those classes for more information about how they work:
+///
+///   1. CXXEnumeratingExpansionStmtPattern
+///   2. CXXIteratingExpansionStmtPattern
+///   3. CXXDestructuringExpansionStmtPattern
+///   4. CXXDependentExpansionStmtPattern
+///
+/// As an example, if the user writes the following expansion statement:
 /// \verbatim
 ///   std::tuple<int, int, int> a{1, 2, 3};
 ///   template for (auto x : a) {
@@ -3389,28 +3400,33 @@ public:
 /// 'a'.
 ///
 /// After expansion, we end up with a 'CXXExpansionStmtInstantiation' that
-/// contains a DecompositionDecl and 3 CompoundStmts, one for each expansion:
+/// is *equivalent* to the AST shown below. Note that only the inner '{}' (i.e.
+/// those marked as 'Actual "CompoundStmt"' below) are actually present as
+/// 'CompoundStmt's in the AST; the outer braces that wrap everything do *not*
+/// correspond to an actual 'CompoundStmt' and are implicit in the sense that we
+/// simply push a scope when evaluating or emitting IR for a
+/// 'CXXExpansionStmtInstantiation'.
 ///
 /// \verbatim
-/// {
+/// { // Not actually present in the AST.
 ///   auto [__u0, __u1, __u2] = a;
-///   {
+///   { // Actual 'CompoundStmt'.
 ///     auto x = __u0;
 ///     // ...
 ///   }
-///   {
+///   { // Actual 'CompoundStmt'.
 ///     auto x = __u1;
 ///     // ...
 ///   }
-///   {
+///   { // Actual 'CompoundStmt'.
 ///     auto x = __u2;
 ///     // ...
 ///   }
 /// }
 /// \endverbatim
 ///
-/// The outer braces shown above are implicit; we don't actually create another
-/// CompoundStmt wrapping everything.
+/// See the documentation around 'CXXExpansionStmtInstantiation' for more notes
+/// as to why this node exist and how it is used.
 ///
 /// \see CXXExpansionStmtPattern
 /// \see CXXExpansionStmtInstantiation

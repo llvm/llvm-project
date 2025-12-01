@@ -5501,6 +5501,19 @@ public:
 
 /// Represents an expansion-init-list of an enumerating expansion statement.
 ///
+/// For example, in
+/// \verbatim
+///   template for (auto x : { 1, 2, 3 }) {
+///     // ...
+///   }
+/// \endverbatim
+///
+/// the '{ 1, 2, 3 }' part is parsed and stored as a 'CXXExpansionInitListExpr';
+/// syntactically, this *looks* very similar to an initializer list, but it
+/// isn't actually an expression: '{ 1, 2, 3 }' as a whole is never evaluated
+/// or emitted, only the individual expressions '1', '2', and '3' are. We still
+/// represent it as an expression in the AST for simplicity.
+///
 /// \see CXXEnumeratingExpansionStmtPattern
 class CXXExpansionInitListExpr final
     : public Expr,
