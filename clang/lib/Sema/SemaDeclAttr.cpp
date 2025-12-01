@@ -6973,6 +6973,24 @@ static void handleVTablePointerAuthentication(Sema &S, Decl *D,
       CustomDiscriminationValue));
 }
 
+static bool modularFormatIsSame(const ModularFormatAttr *Existing,
+                                IdentifierInfo *ModularImplFn,
+                                StringRef ImplName,
+                                ArrayRef<StringRef> Aspects) {
+  if (Existing->getModularImplFn() != ModularImplFn)
+    return false;
+  if (Existing->getImplName() != ImplName)
+    return false;
+  if (Existing->aspects_size() != Aspects.size())
+    return false;
+  unsigned I = 0;
+  for (const auto &ExistingAspect : Existing->aspects()) {
+    if (ExistingAspect != Aspects[I++])
+      return false;
+  }
+  return true;
+}
+
 static void handleModularFormat(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef ImplName;
   if (!S.checkStringLiteralArgumentAttr(AL, 1, ImplName))
@@ -7000,8 +7018,18 @@ static void handleModularFormat(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Store aspects sorted.
   llvm::sort(Aspects);
 
+  IdentifierInfo *ModularImplFn = AL.getArgAsIdent(0)->getIdentifierInfo();
+
+  if (const auto *Existing = D->getAttr<ModularFormatAttr>()) {
+    if (!modularFormatIsSame(Existing, ModularImplFn, ImplName, Aspects)) {
+      S.Diag(AL.getLoc(), diag::warn_duplicate_attribute) << AL;
+      S.Diag(Existing->getLocation(), diag::note_conflicting_attribute);
+    }
+    D->dropAttr<ModularFormatAttr>();
+  }
+
   D->addAttr(::new (S.Context) ModularFormatAttr(
-      S.Context, AL, AL.getArgAsIdent(0)->getIdentifierInfo(), ImplName,
+      S.Context, AL, ModularImplFn, ImplName,
       Aspects.data(), Aspects.size()));
 }
 
