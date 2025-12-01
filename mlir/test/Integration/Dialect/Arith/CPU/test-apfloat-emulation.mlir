@@ -44,6 +44,10 @@ func.func @entry() {
   vector.print %cvt : f8E4M3FN
 
   // CHECK-NEXT: 1
+  %cmp1 = arith.cmpf "olt", %cvt, %c1 : f8E4M3FN
+  vector.print %cmp1 : i1
+
+  // CHECK-NEXT: 1
   // Bit pattern: 01, interpreted as signed integer: 1
   %cvt_int_signed = arith.fptosi %cvt : f8E4M3FN to i2
   vector.print %cvt_int_signed : i2
