@@ -706,6 +706,44 @@ LogicalResult TransposeLoadOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// MakeDmaDescriptorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeDmaDescriptorOp::verify() {
+  ArrayRef<int64_t> globalStaticStrides = getGlobalStaticStrides();
+
+  if (globalStaticStrides.empty()) {
+    return emitOpError("strides must not be empty.");
+  }
+  if (globalStaticStrides.back() != 1) {
+    return emitOpError("strides for the innermost dimension must be 1.");
+  }
+
+  ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
+  size_t rank = globalStaticSizes.size();
+  if (rank != globalStaticStrides.size()) {
+    return emitOpError("strides and sizes must have same rank.");
+  }
+
+  ArrayRef<int64_t> sharedStaticSizes = getSharedStaticSizes();
+  if (rank != sharedStaticSizes.size()) {
+    return emitOpError("tensor must have same rank as tile.");
+  }
+
+  if (Value atomicBarrierAddress = getAtomicBarrierAddress()) {
+    MemRefType atomicBarrierAddressType =
+        cast<MemRefType>(atomicBarrierAddress.getType());
+    bool barrierInLDS =
+        hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
+    if (!barrierInLDS) {
+      return emitOpError("atomic barrier address must be in LDS.");
+    }
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ScaledMFMAOp
 //===----------------------------------------------------------------------===//
 
