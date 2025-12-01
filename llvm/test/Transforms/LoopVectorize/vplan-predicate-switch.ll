@@ -20,67 +20,69 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, vector.ph ], [ vp<[[CAN_IV_NEXT:%.+]]>, default.2 ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, vector.ph ], [ vp<[[CAN_IV_NEXT:%.+]]>, pred.store.continue{{.*}} ]
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, ir<2>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT vp<[[PTR]]>.1 = ptradd ir<%start>, vp<[[STEPS]]>
-; CHECK-NEXT:   EMIT vp<[[PTR_VEC:%.+]]> = buildvector vp<[[PTR]]>, vp<[[PTR]]>.1
 ; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[PTR]]>
 ; CHECK-NEXT:   EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, ir<-12>
 ; CHECK-NEXT:   EMIT vp<[[C2:%.+]]> = icmp eq ir<%l>, ir<13>
 ; CHECK-NEXT:   EMIT vp<[[OR_CASES:%.+]]> = or vp<[[C1]]>, vp<[[C2]]>
 ; CHECK-NEXT:   EMIT vp<[[DEFAULT_MASK:%.+]]> = not vp<[[OR_CASES]]>
-; CHECK-NEXT: Successor(s): pred.store
+; CHECK-NEXT:   EMIT vp<[[C2_LANE0:%.+]]> = extractelement vp<[[C2]]>, ir<0>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[C2_LANE0]]>
+; CHECK-NEXT: Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
-; CHECK-NEXT: <xVFxUF> pred.store: {
-; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<[[C2]]>
-; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
+; CHECK-NEXT: pred.store.if:
+; CHECK-NEXT:   CLONE store ir<0>, vp<[[PTR]]>
+; CHECK-NEXT: Successor(s): pred.store.continue
 ; CHECK-EMPTY:
-; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE store ir<0>, vp<[[PTR_VEC]]>
-; CHECK-NEXT:   Successor(s): pred.store.continue
+; CHECK-NEXT: pred.store.continue:
+; CHECK-NEXT:   EMIT vp<[[C2_LANE1:%.+]]> = extractelement vp<[[C2]]>, ir<1>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[C2_LANE1]]>
+; CHECK-NEXT: Successor(s): pred.store.if{{.*}}, pred.store.continue{{.*}}
 ; CHECK-EMPTY:
-; CHECK-NEXT:   pred.store.continue:
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): if.then.2.0
+; CHECK-NEXT: pred.store.if{{.*}}:
+; CHECK-NEXT:   CLONE store ir<0>, vp<[[PTR]]>.1
+; CHECK-NEXT: Successor(s): pred.store.continue{{.*}}
 ; CHECK-EMPTY:
-; CHECK-NEXT: if.then.2.0:
-; CHECK-NEXT: Successor(s): pred.store
+; CHECK-NEXT: pred.store.continue{{.*}}:
+; CHECK-NEXT:   EMIT vp<[[C1_LANE0:%.+]]> = extractelement vp<[[C1]]>, ir<0>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[C1_LANE0]]>
+; CHECK-NEXT: Successor(s): pred.store.if{{.*}}, pred.store.continue{{.*}}
 ; CHECK-EMPTY:
-; CHECK-NEXT: <xVFxUF> pred.store: {
-; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<[[C1]]>
-; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
+; CHECK-NEXT: pred.store.if{{.*}}:
+; CHECK-NEXT:   CLONE store ir<42>, vp<[[PTR]]>
+; CHECK-NEXT: Successor(s): pred.store.continue{{.*}}
 ; CHECK-EMPTY:
-; CHECK-NEXT:     pred.store.if:
-; CHECK-NEXT:     REPLICATE store ir<42>, vp<[[PTR_VEC]]>
-; CHECK-NEXT:   Successor(s): pred.store.continue
+; CHECK-NEXT: pred.store.continue{{.*}}:
+; CHECK-NEXT:   EMIT vp<[[C1_LANE1:%.+]]> = extractelement vp<[[C1]]>, ir<1>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[C1_LANE1]]>
+; CHECK-NEXT: Successor(s): pred.store.if{{.*}}, pred.store.continue{{.*}}
 ; CHECK-EMPTY:
-; CHECK-NEXT:   pred.store.continue:
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): if.then.1.1
+; CHECK-NEXT: pred.store.if{{.*}}:
+; CHECK-NEXT:   CLONE store ir<42>, vp<[[PTR]]>.1
+; CHECK-NEXT: Successor(s): pred.store.continue{{.*}}
 ; CHECK-EMPTY:
-; CHECK-NEXT: if.then.1.1:
-; CHECK-NEXT: Successor(s): pred.store
+; CHECK-NEXT: pred.store.continue{{.*}}:
+; CHECK-NEXT:   EMIT vp<[[DEFAULT_MASK_LANE0:%.+]]> = extractelement vp<[[DEFAULT_MASK]]>, ir<0>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[DEFAULT_MASK_LANE0]]>
+; CHECK-NEXT: Successor(s): pred.store.if{{.*}}, pred.store.continue{{.*}}
 ; CHECK-EMPTY:
-; CHECK-NEXT: <xVFxUF> pred.store: {
-; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<[[DEFAULT_MASK]]>
-; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
+; CHECK-NEXT: pred.store.if{{.*}}:
+; CHECK-NEXT:   CLONE store ir<2>, vp<[[PTR]]>
+; CHECK-NEXT: Successor(s): pred.store.continue{{.*}}
 ; CHECK-EMPTY:
-; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE store ir<2>, vp<[[PTR_VEC]]>
-; CHECK-NEXT:   Successor(s): pred.store.continue
+; CHECK-NEXT: pred.store.continue{{.*}}:
+; CHECK-NEXT:   EMIT vp<[[DEFAULT_MASK_LANE1:%.+]]> = extractelement vp<[[DEFAULT_MASK]]>, ir<1>
+; CHECK-NEXT:   EMIT branch-on-cond vp<[[DEFAULT_MASK_LANE1]]>
+; CHECK-NEXT: Successor(s): pred.store.if{{.*}}, pred.store.continue{{.*}}
 ; CHECK-EMPTY:
-; CHECK-NEXT:   pred.store.continue:
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): default.2
+; CHECK-NEXT: pred.store.if{{.*}}:
+; CHECK-NEXT:   CLONE store ir<2>, vp<[[PTR]]>.1
+; CHECK-NEXT: Successor(s): pred.store.continue{{.*}}
 ; CHECK-EMPTY:
-; CHECK-NEXT: default.2:
+; CHECK-NEXT: pred.store.continue{{.*}}:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<2>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT: Successor(s): middle.block, vector.body

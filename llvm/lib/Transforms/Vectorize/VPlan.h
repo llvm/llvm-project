@@ -3813,8 +3813,9 @@ public:
         getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
         hasFastMathFlags() ? getFastMathFlags() : FastMathFlags(),
         getDebugLoc());
-    if (getNumOperands() == 4)
-      NewR->addOperand(getOperand(3));
+    // Add start index operand, if present.
+    for (VPValue *Op : drop_begin(operands(), 3))
+      NewR->addOperand(Op);
     return NewR;
   }
 

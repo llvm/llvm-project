@@ -131,9 +131,8 @@ define void @preserve_flags_narrowing_extends_and_truncs(ptr noalias %A, ptr noa
 ; CHECK-NEXT:    [[TMP33:%.*]] = zext <4 x i8> [[TMP31]] to <4 x i64>
 ; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 0
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <4 x i64> [[TMP32]], i32 0
-; CHECK-NEXT:    store i64 [[TMP35]], ptr [[TMP34]], align 4
+; CHECK-NEXT:    store i64 [[TMP35]], ptr [[C]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]

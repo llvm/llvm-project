@@ -64,7 +64,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFCOMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
 ; TFCOMMON-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[PRED_STORE_CONTINUE6]] ]
 ; TFCOMMON-NEXT:    [[LD:%.*]] = load double, ptr [[P2:%.*]], align 8
-; TFCOMMON-NEXT:    [[TMP5:%.*]] = tail call double @llvm.exp.f64(double [[LD]]) #[[ATTR2:[0-9]+]]
+; TFCOMMON-NEXT:    [[TMP5:%.*]] = tail call double @llvm.exp.f64(double [[LD]]) #[[ATTR3:[0-9]+]]
 ; TFCOMMON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i64 0
 ; TFCOMMON-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; TFCOMMON-NEXT:    [[TMP9:%.*]] = fcmp ogt <2 x double> [[TMP8]], zeroinitializer
@@ -80,7 +80,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFCOMMON-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i32 1
 ; TFCOMMON-NEXT:    br i1 [[TMP14]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE6]]
 ; TFCOMMON:       pred.store.if1:
-; TFCOMMON-NEXT:    [[TMP19:%.*]] = extractelement <2 x double> [[PREDPHI]], i32 0
+; TFCOMMON-NEXT:    [[TMP19:%.*]] = extractelement <2 x double> [[PREDPHI]], i32 1
 ; TFCOMMON-NEXT:    store double [[TMP19]], ptr [[P]], align 8
 ; TFCOMMON-NEXT:    br label [[PRED_STORE_CONTINUE6]]
 ; TFCOMMON:       pred.store.continue2:
@@ -106,7 +106,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[PRED_STORE_CONTINUE9]] ]
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi <2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY1]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT10:%.*]], [[PRED_STORE_CONTINUE9]] ]
 ; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = load double, ptr [[P2:%.*]], align 8
-; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = tail call double @llvm.exp.f64(double [[TMP4]]) #[[ATTR2:[0-9]+]]
+; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = tail call double @llvm.exp.f64(double [[TMP4]]) #[[ATTR3:[0-9]+]]
 ; TFA_INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i64 0
 ; TFA_INTERLEAVE-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; TFA_INTERLEAVE-NEXT:    [[TMP14:%.*]] = fcmp ogt <2 x double> [[TMP12]], zeroinitializer
@@ -122,7 +122,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    [[TMP29:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i32 1
 ; TFA_INTERLEAVE-NEXT:    br i1 [[TMP29]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
 ; TFA_INTERLEAVE:       pred.store.if3:
-; TFA_INTERLEAVE-NEXT:    [[TMP22:%.*]] = extractelement <2 x double> [[PREDPHI3]], i32 0
+; TFA_INTERLEAVE-NEXT:    [[TMP22:%.*]] = extractelement <2 x double> [[PREDPHI3]], i32 1
 ; TFA_INTERLEAVE-NEXT:    store double [[TMP22]], ptr [[P]], align 8
 ; TFA_INTERLEAVE-NEXT:    br label [[PRED_STORE_CONTINUE5]]
 ; TFA_INTERLEAVE:       pred.store.continue4:
@@ -136,7 +136,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    [[TMP25:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK2]], i32 1
 ; TFA_INTERLEAVE-NEXT:    br i1 [[TMP25]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9]]
 ; TFA_INTERLEAVE:       pred.store.if7:
-; TFA_INTERLEAVE-NEXT:    [[TMP34:%.*]] = extractelement <2 x double> [[PREDPHI3]], i32 0
+; TFA_INTERLEAVE-NEXT:    [[TMP34:%.*]] = extractelement <2 x double> [[PREDPHI3]], i32 1
 ; TFA_INTERLEAVE-NEXT:    store double [[TMP34]], ptr [[P]], align 8
 ; TFA_INTERLEAVE-NEXT:    br label [[PRED_STORE_CONTINUE9]]
 ; TFA_INTERLEAVE:       pred.store.continue8:

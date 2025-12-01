@@ -549,10 +549,6 @@ define void @predicated_store(ptr %p, i32 %x, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[TMP12]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x ptr> [[TMP13]], ptr [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x ptr> [[TMP19]], ptr [[TMP4]], i32 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x ptr> [[TMP25]], ptr [[TMP6]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP4]], align 8
@@ -634,10 +630,8 @@ define void @predicated_store(ptr %p, i32 %x, i64 %n) {
 ; INTER-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP3]], i32 0
 ; INTER-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; INTER:       [[PRED_STORE_IF]]:
-; INTER-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 0
-; INTER-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[TMP7]], i32 0
 ; INTER-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[STRIDED_VEC]], i32 0
-; INTER-NEXT:    store i32 [[TMP6]], ptr [[TMP5]], align 8
+; INTER-NEXT:    store i32 [[TMP6]], ptr [[TMP2]], align 8
 ; INTER-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; INTER:       [[PRED_STORE_CONTINUE]]:
 ; INTER-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP3]], i32 1
