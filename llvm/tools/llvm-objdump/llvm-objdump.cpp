@@ -3856,9 +3856,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
       !DisassembleSymbols.empty())
     Disassemble = true;
 
-  const bool PrintCpuHelp =
-      MCPU == "help" ||
-      std::find(MAttrs.begin(), MAttrs.end(), "help") != MAttrs.end();
+  const bool PrintCpuHelp = (MCPU == "help" || is_contained(MAttrs, "help"));
 
   if (!ArchiveHeaders && !Disassemble && DwarfDumpType == DIDT_Null &&
       !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
