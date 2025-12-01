@@ -183,6 +183,11 @@ def NoCallback : EnumAttr<"nocallback", IntersectAnd, [FnAttr]>;
 /// Specify how the pointer may be captured.
 def Captures : IntAttr<"captures", IntersectCustom, [ParamAttr]>;
 
+/// Result will not be undef or poison if all arguments are not undef and not
+/// poison.
+def NoCreateUndefOrPoison
+    : EnumAttr<"nocreateundeforpoison", IntersectAnd, [FnAttr]>;
+
 /// Function is not a source of divergence.
 def NoDivergenceSource : EnumAttr<"nodivergencesource", IntersectAnd, [FnAttr]>;
 

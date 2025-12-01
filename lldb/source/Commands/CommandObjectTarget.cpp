@@ -60,6 +60,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -5121,6 +5122,15 @@ public:
       : CommandObjectParsed(interpreter, "target stop-hook delete",
                             "Delete a stop-hook.",
                             "target stop-hook delete [<idx>]") {
+    SetHelpLong(
+        R"(
+Deletes the stop hook by index.
+
+At any given stop, all enabled stop hooks that pass the stop filter will
+get a chance to run.  That means if one stop-hook deletes another stop hook 
+while executing, the deleted stop hook will still fire for the stop at which 
+it was deleted.
+        )");
     AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
   }
 

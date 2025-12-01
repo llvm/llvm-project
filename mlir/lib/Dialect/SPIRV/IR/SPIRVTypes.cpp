@@ -731,7 +731,7 @@ std::optional<int64_t> SPIRVType::getSizeInBytes() {
           return *elementSize * type.getNumElements();
         return std::nullopt;
       })
-      .Default(std::optional<int64_t>());
+      .Default(std::nullopt);
 }
 
 //===----------------------------------------------------------------------===//

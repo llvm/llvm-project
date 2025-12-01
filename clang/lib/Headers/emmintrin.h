@@ -241,8 +241,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS_CONSTEXPR _mm_div_pd(__m128d __a,
 ///    bits are copied from the upper 64 bits of operand \a __a.
 static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sqrt_sd(__m128d __a,
                                                          __m128d __b) {
-  __m128d __c = __builtin_ia32_sqrtsd((__v2df)__b);
-  return __extension__(__m128d){__c[0], __a[1]};
+  return __extension__(__m128d){__builtin_elementwise_sqrt(__b[0]), __a[1]};
 }
 
 /// Calculates the square root of the each of two values stored in a
@@ -257,7 +256,7 @@ static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sqrt_sd(__m128d __a,
 /// \returns A 128-bit vector of [2 x double] containing the square roots of the
 ///    values in the operand.
 static __inline__ __m128d __DEFAULT_FN_ATTRS _mm_sqrt_pd(__m128d __a) {
-  return __builtin_ia32_sqrtpd((__v2df)__a);
+  return __builtin_elementwise_sqrt(__a);
 }
 
 /// Compares lower 64-bit double-precision values of both operands, and
@@ -2783,8 +2782,8 @@ _mm_slli_epi16(__m128i __a, int __count) {
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to left-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sll_epi16(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sll_epi16(__m128i __a, __m128i __count) {
   return (__m128i)__builtin_ia32_psllw128((__v8hi)__a, (__v8hi)__count);
 }
 
@@ -2819,8 +2818,8 @@ _mm_slli_epi32(__m128i __a, int __count) {
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to left-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sll_epi32(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sll_epi32(__m128i __a, __m128i __count) {
   return (__m128i)__builtin_ia32_pslld128((__v4si)__a, (__v4si)__count);
 }
 
@@ -2855,8 +2854,8 @@ _mm_slli_epi64(__m128i __a, int __count) {
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to left-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the left-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sll_epi64(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sll_epi64(__m128i __a, __m128i __count) {
   return __builtin_ia32_psllq128((__v2di)__a, (__v2di)__count);
 }
 
@@ -2893,8 +2892,8 @@ _mm_srai_epi16(__m128i __a, int __count) {
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sra_epi16(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sra_epi16(__m128i __a, __m128i __count) {
   return (__m128i)__builtin_ia32_psraw128((__v8hi)__a, (__v8hi)__count);
 }
 
@@ -2931,8 +2930,8 @@ _mm_srai_epi32(__m128i __a, int __count) {
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sra_epi32(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sra_epi32(__m128i __a, __m128i __count) {
   return (__m128i)__builtin_ia32_psrad128((__v4si)__a, (__v4si)__count);
 }
 
@@ -2992,8 +2991,8 @@ _mm_srli_epi16(__m128i __a, int __count) {
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srl_epi16(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srl_epi16(__m128i __a, __m128i __count) {
   return (__m128i)__builtin_ia32_psrlw128((__v8hi)__a, (__v8hi)__count);
 }
 
@@ -3028,8 +3027,8 @@ _mm_srli_epi32(__m128i __a, int __count) {
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srl_epi32(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srl_epi32(__m128i __a, __m128i __count) {
   return (__m128i)__builtin_ia32_psrld128((__v4si)__a, (__v4si)__count);
 }
 
@@ -3064,8 +3063,8 @@ _mm_srli_epi64(__m128i __a, int __count) {
 ///    A 128-bit integer vector in which bits [63:0] specify the number of bits
 ///    to right-shift each value in operand \a __a.
 /// \returns A 128-bit integer vector containing the right-shifted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_srl_epi64(__m128i __a,
-                                                           __m128i __count) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_srl_epi64(__m128i __a, __m128i __count) {
   return __builtin_ia32_psrlq128((__v2di)__a, (__v2di)__count);
 }
 

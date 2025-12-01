@@ -94,6 +94,8 @@ enum OpenMPOffloadingDeclareTargetFlags {
   OMP_DECLARE_TARGET_INDIRECT = 0x08,
   /// This is an entry corresponding to a requirement to be registered.
   OMP_REGISTER_REQUIRES = 0x10,
+  /// Mark the entry global as being an indirect vtable.
+  OMP_DECLARE_TARGET_INDIRECT_VTABLE = 0x20,
 };
 
 enum TargetAllocTy : int32_t {
@@ -102,10 +104,6 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_SHARED,
   TARGET_ALLOC_DEFAULT,
 };
-
-inline KernelArgsTy CTorDTorKernelArgs = {
-    1,       0, nullptr,   nullptr,   nullptr,   nullptr, nullptr,
-    nullptr, 0, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}, 0};
 
 struct DeviceTy;
 

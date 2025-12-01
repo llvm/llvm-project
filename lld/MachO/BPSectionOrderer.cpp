@@ -118,6 +118,10 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
         auto *isec = subsec.isec;
         if (!isec || isec->data.empty() || !isec->data.data())
           continue;
+        // CString section order is handled by
+        // {Deduplicated}CStringSection::finalizeContents()
+        if (isa<CStringInputSection>(isec) || isec->isFinal)
+          continue;
         // ConcatInputSections are entirely live or dead, so the offset is
         // irrelevant.
         if (isa<ConcatInputSection>(isec) && !isec->isLive(0))
