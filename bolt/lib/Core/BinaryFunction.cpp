@@ -1044,8 +1044,10 @@ MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address) {
 
   // For AArch64, check if this address is part of a constant island.
   if (BC.isAArch64()) {
-    if (MCSymbol *IslandSym = getOrCreateIslandAccess(Address))
+    if (MCSymbol *IslandSym = getOrCreateIslandAccess(Address)) {
+      Labels[Offset] = IslandSym;
       return IslandSym;
+    }
   }
 
   if (Offset == getSize())
@@ -1925,7 +1927,8 @@ bool BinaryFunction::validateExternalBranch(uint64_t TargetAddress) {
       return true;
 
     if (TargetFunction->CurrentState == State::Disassembled &&
-        !TargetFunction->getInstructionAtOffset(TargetOffset))
+        (!TargetFunction->getInstructionAtOffset(TargetOffset) ||
+         getSizeOfDataInCodeAt(TargetOffset)))
       IsValid = false;
   } else {
     if (!BC.getSectionForAddress(TargetAddress))
@@ -1959,15 +1962,14 @@ bool BinaryFunction::validateInternalBranch() {
     if (!Offset || (Offset > getSize()))
       continue;
 
-    if (getInstructionAtOffset(Offset))
-      continue;
-
-    BC.errs() << "BOLT-WARNING: corrupted control flow detected in function "
-              << *this << ", an internal branch/call targets an invalid "
-              << "instruction at address 0x"
-              << Twine::utohexstr(getAddress() + Offset) << "\n";
-    setIgnored();
-    return false;
+    if (!getInstructionAtOffset(Offset) || getSizeOfDataInCodeAt(Offset)) {
+      BC.errs() << "BOLT-WARNING: corrupted control flow detected in function "
+                << *this << ", an internal branch/call targets an invalid "
+                << "instruction at address 0x"
+                << Twine::utohexstr(getAddress() + Offset) << "\n";
+      setIgnored();
+      return false;
+    }
   }
 
   return true;
