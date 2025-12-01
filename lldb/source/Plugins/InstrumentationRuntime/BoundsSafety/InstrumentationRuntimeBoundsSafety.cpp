@@ -123,8 +123,7 @@ InstrumentationBoundsSafetyStopInfo::InstrumentationBoundsSafetyStopInfo(
 // Helper functions to make it convenient to log a failure and then return.
 template <typename T, typename... ArgTys>
 [[nodiscard]] T LogBeforeReturn(ArgTys &&...Args) {
-  Log *log_category = GetLog(LLDBLog::InstrumentationRuntime);
-  LLDB_LOG(log_category, Args...);
+  LLDB_LOG(GetLog(LLDBLog::InstrumentationRuntime), Args...);
   return T();
 }
 
