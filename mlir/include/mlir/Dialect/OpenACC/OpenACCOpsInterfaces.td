@@ -72,6 +72,8 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
       "isConstant", (ins), [{
         return false;
       }]>,
+    InterfaceMethod<"Get the initialization region (returns nullptr if none)",
+      "::mlir::Region*", "getInitRegion", (ins)>,
   ];
 }
 

@@ -9,6 +9,12 @@
 #ifndef LLVM_LIBC_TYPES_CLOCKID_T_H
 #define LLVM_LIBC_TYPES_CLOCKID_T_H
 
+#if defined(__APPLE__)
+// Darwin provides its own defintion for clockid_t . Use that to prevent
+// redeclaration errors and correctness.
+#include <_time.h>
+#else
 typedef int clockid_t;
+#endif // __APPLE__
 
 #endif // LLVM_LIBC_TYPES_CLOCKID_T_H
