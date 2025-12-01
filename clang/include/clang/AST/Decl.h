@@ -4524,6 +4524,11 @@ public:
     return field_begin() == field_end();
   }
 
+  /// Returns the number of fields (non-static data members) in this record.
+  unsigned getNumFields() const {
+    return std::distance(field_begin(), field_end());
+  }
+
   /// noload_fields - Iterate over the fields stored in this record
   /// that are currently loaded; don't attempt to retrieve anything
   /// from an external source.
