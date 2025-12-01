@@ -137,6 +137,7 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
                                            VirtualBaseClassRecord &base) {
   AddBaseClassForTypeIndex(base.BaseType, base.getAccess(), base.VTableIndex);
+  m_any_virtual_base = true;
 
   return Error::success();
 }
@@ -335,6 +336,12 @@ void UdtRecordCompleter::complete() {
 
   if (auto *record_decl = llvm::dyn_cast<clang::CXXRecordDecl>(&m_tag_decl)) {
     m_ast_builder.GetClangASTImporter().SetRecordLayout(record_decl, m_layout);
+  }
+
+  if (auto meta = m_ast_builder.clang().GetMetadata(&m_tag_decl)) {
+    meta->SetIsDynamicCXXType(meta->GetIsDynamicCXXType().value_or(false) ||
+                              m_any_virtual_base);
+    m_ast_builder.clang().SetMetadata(&m_tag_decl, *meta);
   }
 }
 
