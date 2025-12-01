@@ -1454,24 +1454,52 @@ __m128d test_mm_permutevar_pd(__m128d A, __m128i B) {
   // CHECK: call {{.*}}<2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_permutevar_pd(A, B);
 }
+TEST_CONSTEXPR(match_m128d(
+  _mm_permutevar_pd(
+    ((__m128d){0.0, 1.0}),
+    ((__m128i){0b10, 0b00})
+  ),
+  1.0, 0.0
+));
 
 __m256d test_mm256_permutevar_pd(__m256d A, __m256i B) {
   // CHECK-LABEL: test_mm256_permutevar_pd
   // CHECK: call {{.*}}<4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %{{.*}}, <4 x i64> %{{.*}})
   return _mm256_permutevar_pd(A, B);
 }
+TEST_CONSTEXPR(match_m256d(
+  _mm256_permutevar_pd(
+    ((__m256d){0.0, 1.0, 2.0, 3.0}),
+    ((__m256i){0b10, 0b00, 0b00, 0b10})
+  ),
+  1.0, 0.0, 2.0, 3.0
+));
 
 __m128 test_mm_permutevar_ps(__m128 A, __m128i B) {
   // CHECK-LABEL: test_mm_permutevar_ps
   // CHECK: call {{.*}}<4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_permutevar_ps(A, B);
 }
+TEST_CONSTEXPR(match_m128(
+  _mm_permutevar_ps(
+    ((__m128){0.0, 1.0, 2.0, 3.0}),
+    ((__m128i)(__v4si){0b11, 0b10, 0b01, 0b00})
+  ),
+  3.0, 2.0, 1.0, 0.0
+));
 
 __m256 test_mm256_permutevar_ps(__m256 A, __m256i B) {
   // CHECK-LABEL: test_mm256_permutevar_ps
   // CHECK: call {{.*}}<8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %{{.*}}, <8 x i32> %{{.*}})
   return _mm256_permutevar_ps(A, B);
 }
+TEST_CONSTEXPR(match_m256(
+  _mm256_permutevar_ps(
+    ((__m256){0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0}),
+    ((__m256i)(__v8si){0b11, 0b10, 0b01, 0b00, 0b01, 0b00, 0b11, 0b10})
+  ),
+  3.0, 2.0, 1.0, 0.0, 5.0, 4.0, 7.0, 6.0
+));
 
 __m256 test_mm256_rcp_ps(__m256 A) {
   // CHECK-LABEL: test_mm256_rcp_ps

@@ -2171,21 +2171,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateBitCast(Res, Ops[0]->getType());
   }
 
-  case X86::BI__builtin_ia32_sqrtss:
-  case X86::BI__builtin_ia32_sqrtsd: {
-    Value *A = Builder.CreateExtractElement(Ops[0], (uint64_t)0);
-    Function *F;
-    if (Builder.getIsFPConstrained()) {
-      CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
-      F = CGM.getIntrinsic(Intrinsic::experimental_constrained_sqrt,
-                           A->getType());
-      A = Builder.CreateConstrainedFPCall(F, {A});
-    } else {
-      F = CGM.getIntrinsic(Intrinsic::sqrt, A->getType());
-      A = Builder.CreateCall(F, {A});
-    }
-    return Builder.CreateInsertElement(Ops[0], A, (uint64_t)0);
-  }
   case X86::BI__builtin_ia32_sqrtsh_round_mask:
   case X86::BI__builtin_ia32_sqrtsd_round_mask:
   case X86::BI__builtin_ia32_sqrtss_round_mask: {
@@ -2225,40 +2210,29 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     A = EmitX86ScalarSelect(*this, Ops[3], A, Src);
     return Builder.CreateInsertElement(Ops[0], A, (uint64_t)0);
   }
-  case X86::BI__builtin_ia32_sqrtpd256:
-  case X86::BI__builtin_ia32_sqrtpd:
-  case X86::BI__builtin_ia32_sqrtps256:
-  case X86::BI__builtin_ia32_sqrtps:
-  case X86::BI__builtin_ia32_sqrtph256:
-  case X86::BI__builtin_ia32_sqrtph:
   case X86::BI__builtin_ia32_sqrtph512:
-  case X86::BI__builtin_ia32_vsqrtbf16256:
-  case X86::BI__builtin_ia32_vsqrtbf16:
-  case X86::BI__builtin_ia32_vsqrtbf16512:
   case X86::BI__builtin_ia32_sqrtps512:
   case X86::BI__builtin_ia32_sqrtpd512: {
-    if (Ops.size() == 2) {
-      unsigned CC = cast<llvm::ConstantInt>(Ops[1])->getZExtValue();
-      // Support only if the rounding mode is 4 (AKA CUR_DIRECTION),
-      // otherwise keep the intrinsic.
-      if (CC != 4) {
-        Intrinsic::ID IID;
+    unsigned CC = cast<llvm::ConstantInt>(Ops[1])->getZExtValue();
+    // Support only if the rounding mode is 4 (AKA CUR_DIRECTION),
+    // otherwise keep the intrinsic.
+    if (CC != 4) {
+      Intrinsic::ID IID;
 
-        switch (BuiltinID) {
-        default:
-          llvm_unreachable("Unsupported intrinsic!");
-        case X86::BI__builtin_ia32_sqrtph512:
-          IID = Intrinsic::x86_avx512fp16_sqrt_ph_512;
-          break;
-        case X86::BI__builtin_ia32_sqrtps512:
-          IID = Intrinsic::x86_avx512_sqrt_ps_512;
-          break;
-        case X86::BI__builtin_ia32_sqrtpd512:
-          IID = Intrinsic::x86_avx512_sqrt_pd_512;
-          break;
-        }
-        return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
+      switch (BuiltinID) {
+      default:
+        llvm_unreachable("Unsupported intrinsic!");
+      case X86::BI__builtin_ia32_sqrtph512:
+        IID = Intrinsic::x86_avx512fp16_sqrt_ph_512;
+        break;
+      case X86::BI__builtin_ia32_sqrtps512:
+        IID = Intrinsic::x86_avx512_sqrt_ps_512;
+        break;
+      case X86::BI__builtin_ia32_sqrtpd512:
+        IID = Intrinsic::x86_avx512_sqrt_pd_512;
+        break;
       }
+      return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
     }
     if (Builder.getIsFPConstrained()) {
       CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
@@ -2796,8 +2770,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID IID = Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128;
     return Builder.CreateCall(CGM.getIntrinsic(IID), Ops);
   }
-  case X86::BI__builtin_ia32_cvtsbf162ss_32:
-    return Builder.CreateFPExt(Ops[0], Builder.getFloatTy());
 
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {

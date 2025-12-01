@@ -156,7 +156,6 @@ static StatementMatcher makeArrayLoopMatcher() {
 /// Client code will need to make sure that:
 ///   - The two containers on which 'begin' and 'end' are called are the same.
 static StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
-
   auto BeginNameMatcher = IsReverse ? hasAnyName("rbegin", "crbegin")
                                     : hasAnyName("begin", "cbegin");
   auto BeginNameMatcherStd = IsReverse
@@ -563,7 +562,6 @@ LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
       UseCxx20IfAvailable(Options.get("UseCxx20ReverseRanges", true)),
       ReverseFunction(Options.get("MakeReverseRangeFunction", "")),
       ReverseHeader(Options.get("MakeReverseRangeHeader", "")) {
-
   if (ReverseFunction.empty() && !ReverseHeader.empty()) {
     configurationDiag(
         "modernize-loop-convert: 'MakeReverseRangeHeader' is set but "
