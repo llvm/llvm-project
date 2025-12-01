@@ -749,6 +749,16 @@ LogicalResult MakeDmaDescriptorOp::verify() {
     return emitOpError("tensor must have same rank as tile.");
   }
 
+  if (Value atomicBarrierAddress = getAtomicBarrierAddress()) {
+    MemRefType atomicBarrierAddressType =
+        cast<MemRefType>(atomicBarrierAddress.getType());
+    bool barrierInLDS =
+        hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
+    if (!barrierInLDS) {
+      return emitOpError("atomic barrier address must be in LDS.");
+    }
+  }
+
   return success();
 }
 
