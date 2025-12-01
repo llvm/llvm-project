@@ -15,6 +15,12 @@
 #ifndef HEADER
 #define HEADER
 
+typedef void **omp_impex_t;
+extern const omp_impex_t omp_not_impex;
+extern const omp_impex_t omp_import;
+extern const omp_impex_t omp_export;
+extern const omp_impex_t omp_impex;
+
 // CHECK-LABEL: @main
 int main(int argc, char **argv) {
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(ptr [[DEFLOC:@.+]])

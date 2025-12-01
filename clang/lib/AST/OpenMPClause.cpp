@@ -1915,6 +1915,15 @@ OMPThreadLimitClause *OMPThreadLimitClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPThreadLimitClause(N);
 }
 
+OMPTransparentClause *OMPTransparentClause::Create(const ASTContext &C,
+                                                   SourceLocation StartLoc,
+                                                   SourceLocation LParenLoc,
+                                                   SourceLocation EndLoc,
+                                                   Expr *Transparent) {
+  return new (C) OMPTransparentClause(Transparent, StartLoc,
+                                                    LParenLoc, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -2047,10 +2056,9 @@ void OMPClausePrinter::VisitOMPThreadsetClause(OMPThreadsetClause *Node) {
 }
 
 void OMPClausePrinter::VisitOMPTransparentClause(OMPTransparentClause *Node) {
-  OS << "transparent("
-     << getOpenMPSimpleClauseTypeName(OMPC_transparent,
-                                      Node->getTransparentKind())
-     << ")";
+  OS << "transparent(";
+  Node->getTransparent()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
 }
 
 void OMPClausePrinter::VisitOMPProcBindClause(OMPProcBindClause *Node) {

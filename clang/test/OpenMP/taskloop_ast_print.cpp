@@ -12,6 +12,12 @@
 #ifndef HEADER
 #define HEADER
 
+typedef void **omp_impex_t;
+extern const omp_impex_t omp_not_impex;
+extern const omp_impex_t omp_import;
+extern const omp_impex_t omp_export;
+extern const omp_impex_t omp_impex;
+
 void foo() {}
 
 template <class T, int N>

@@ -1532,6 +1532,8 @@ class OMPTransparentClause final : public OMPClause {
   /// \param K Argument of clause.
   void setTransparentKind(OpenMPTransparentKind K) { Kind = K; }
 
+  Stmt *Transparent = nullptr;
+
   /// Set argument location.
   ///
   /// \param KLoc Argument location.
@@ -1550,17 +1552,19 @@ public:
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPTransparentClause(OpenMPTransparentKind A, SourceLocation ALoc,
-                       SourceLocation StartLoc, SourceLocation LParenLoc,
-                       SourceLocation EndLoc)
+  OMPTransparentClause(Expr *Transparent, SourceLocation StartLoc,
+                       SourceLocation LParenLoc, SourceLocation EndLoc)
       : OMPClause(llvm::omp::OMPC_transparent, StartLoc, EndLoc),
-        LParenLoc(LParenLoc), Kind(A), KindLoc(ALoc) {}
+        LParenLoc(LParenLoc), Transparent(Transparent) {}
 
   /// Build an empty clause.
   OMPTransparentClause()
       : OMPClause(llvm::omp::OMPC_transparent, SourceLocation(),
                   SourceLocation()) {}
 
+  static OMPTransparentClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                                      SourceLocation LParenLoc,
+                                      SourceLocation EndLoc, Expr *Transparent);
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
 
@@ -1569,6 +1573,8 @@ public:
 
   /// Returns location of clause kind.
   SourceLocation getTransparentKindLoc() const { return KindLoc; }
+
+  Expr *getTransparent() { return cast<Expr>(Transparent); }
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());

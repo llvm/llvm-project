@@ -16,6 +16,12 @@
 typedef void *omp_depend_t;
 typedef unsigned long omp_event_handle_t;
 
+typedef void **omp_impex_t;
+extern const omp_impex_t omp_not_impex;
+extern const omp_impex_t omp_import;
+extern const omp_impex_t omp_export;
+extern const omp_impex_t omp_impex;
+
 void foo() {}
 
 struct S1 {
@@ -157,6 +163,14 @@ T tmain(T argc, T *argv) {
 
 enum Enum {};
 
+#ifdef OMP60
+typedef void **omp_impex_t;
+extern const omp_impex_t omp_not_impex;
+extern const omp_impex_t omp_import;
+extern const omp_impex_t omp_export;
+extern const omp_impex_t omp_impex;
+#endif
+
 int main(int argc, char **argv) {
   long x;
   int b = argc, c, d, e, f, g;
@@ -164,6 +178,9 @@ int main(int argc, char **argv) {
   int arr[10], arr1[argc];
   omp_depend_t y;
   omp_event_handle_t evt;
+#ifdef OMP60
+  omp_impex_t v = omp_import;
+#endif
 #pragma omp threadprivate(a)
   Enum ee;
 // CHECK: Enum ee;
@@ -210,16 +227,28 @@ int main(int argc, char **argv) {
 #pragma omp task transparent(omp_import)
 #pragma omp task transparent(omp_export)
 #pragma omp task transparent(omp_impex)
+#pragma omp task transparent(omp_import)
+#pragma omp task transparent(v)
+#pragma omp task transparent(v ? omp_import : omp_export)
+#pragma omp task transparent(omp_import + 0)
+#pragma omp task transparent((v))
   foo();
+
 #endif
   // CHECK60: #pragma omp task threadset(omp_pool)
   // CHECK60: #pragma omp task threadset(omp_team)
   // CHECK60-NEXT: foo();
   // CHECK60: #pragma omp task transparent(omp_not_impex)
-  // CHECK60: #pragma omp task transparent(omp_import)
-  // CHECK60: #pragma omp task transparent(omp_export)
-  // CHECK60: #pragma omp task transparent(omp_impex)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_import)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_export)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_impex)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_import)
+  // CHECK60-NEXT: #pragma omp task transparent(v)
+  // CHECK60-NEXT: #pragma omp task transparent(v ? omp_import : omp_export)
+  // CHECK60-NEXT: #pragma omp task transparent(omp_import + 0)
+  // CHECK60-NEXT: #pragma omp task transparent((v))
   // CHECK60-NEXT: foo();
+
   return tmain<int, 5>(b, &b) + tmain<long, 1>(x, &x);
 }
 

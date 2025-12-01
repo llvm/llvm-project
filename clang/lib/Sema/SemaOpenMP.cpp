@@ -350,6 +350,7 @@ private:
   QualType OMPEventHandleT;
   /// omp_alloctrait_t type.
   QualType OMPAlloctraitT;
+  QualType OMPImpexT;
   /// Expression for the predefined allocators.
   Expr *OMPPredefinedAllocators[OMPAllocateDeclAttr::OMPUserDefinedMemAlloc] = {
       nullptr};
@@ -358,6 +359,7 @@ private:
   SourceLocation AtomicLocation;
   /// Vector of declare variant construct traits.
   SmallVector<llvm::omp::TraitProperty, 8> ConstructTraits;
+  Expr *OMPPredefinedImpex[OMPImpexDeclAttr::OMPUserDefinedImpex] = {nullptr};
 
 public:
   explicit DSAStackTy(Sema &S) : SemaRef(S) {}
@@ -388,6 +390,18 @@ public:
   void setOMPEventHandleT(QualType Ty) { OMPEventHandleT = Ty; }
   /// Gets omp_event_handle_t type.
   QualType getOMPEventHandleT() const { return OMPEventHandleT; }
+
+  /// Returns the current value of OMPImpexT.
+  QualType getOMPImpexT() { return OMPImpexT; }
+
+  /// Sets the OMPImpexT to the provided QualType Ty.
+  void setOMPImpexT(QualType Ty) { OMPImpexT = Ty; }
+
+  // Maps the ImpexType to the provided expression (Impex) and
+  // stores the mapping in the OMPPredefinedImpex.
+  void setImpex(OMPImpexDeclAttr::ImpexTypeTy ImpexType, Expr *Impex) {
+    OMPPredefinedImpex[ImpexType] = Impex;
+  }
 
   bool isClauseParsingMode() const { return ClauseKindMode != OMPC_unknown; }
   OpenMPClauseKind getClauseParsingMode() const {
@@ -16532,6 +16546,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_holds:
     Res = ActOnOpenMPHoldsClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_transparent:
+    Res = ActOnOpenMPTransparentClause(Expr, StartLoc, LParenLoc, EndLoc);
+    break;
   case OMPC_dyn_groupprivate:
   case OMPC_grainsize:
   case OMPC_num_tasks:
@@ -17223,11 +17240,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
     Res = ActOnOpenMPThreadsetClause(static_cast<OpenMPThreadsetKind>(Argument),
                                      ArgumentLoc, StartLoc, LParenLoc, EndLoc);
     break;
-  case OMPC_transparent:
-    Res = ActOnOpenMPTransparentClause(
-        static_cast<OpenMPTransparentKind>(Argument), ArgumentLoc, StartLoc,
-        LParenLoc, EndLoc);
-    break;
   case OMPC_if:
   case OMPC_final:
   case OMPC_num_threads:
@@ -17384,21 +17396,75 @@ OMPClause *SemaOpenMP::ActOnOpenMPThreadsetClause(OpenMPThreadsetKind Kind,
       OMPThreadsetClause(Kind, KindLoc, StartLoc, LParenLoc, EndLoc);
 }
 
-OMPClause *SemaOpenMP::ActOnOpenMPTransparentClause(OpenMPTransparentKind Kind,
-                                                    SourceLocation KindLoc,
+/// Tries to find omp_impex_t type.
+static bool findOMPImpexT(Sema &S, SourceLocation Loc, DSAStackTy *Stack) {
+  if (!Stack->getOMPImpexT().isNull())
+    return true;
+  // Set the omp_impex_t type.
+  IdentifierInfo *II = &S.PP.getIdentifierTable().get("omp_impex_t");
+  ParsedType PT = S.getTypeName(*II, Loc, S.getCurScope());
+  if (!PT.getAsOpaquePtr() || PT.get().isNull()) {
+	S.Diag(Loc, diag::err_omp_implied_type_not_found) << "omp_impex_t";
+	return false;
+  }
+  QualType ImpexTy = PT.get();
+  ImpexTy.addConst();
+  Stack->setOMPImpexT(ImpexTy);
+
+  bool ErrorFound = false;
+  for (int I = 0; I < OMPImpexDeclAttr::OMPUserDefinedImpex; ++I) {
+    auto ImpexT = static_cast<OMPImpexDeclAttr::ImpexTypeTy>(I);
+    StringRef Impex = OMPImpexDeclAttr::ConvertImpexTypeTyToStr(ImpexT);
+    DeclarationName ImpexName = &S.getASTContext().Idents.get(Impex);
+    auto *VD = dyn_cast_or_null<ValueDecl>(
+        S.LookupSingleName(S.TUScope, ImpexName, Loc, Sema::LookupAnyName));
+    if (!VD) {
+      ErrorFound = true;
+      break;
+    }
+    QualType ImpexType =
+        VD->getType().getNonLValueExprType(S.getASTContext());
+    ExprResult Res = S.BuildDeclRefExpr(VD, ImpexType, VK_LValue, Loc);
+    if (!Res.isUsable()) {
+      ErrorFound = true;
+      break;
+    }
+    Res = S.PerformImplicitConversion(Res.get(), ImpexTy,
+                                      AssignmentAction::Initializing,
+                                      /*AllowExplicit=*/true);
+    if (!Res.isUsable()) {
+      ErrorFound = true;
+      break;
+    }
+    Stack->setImpex(ImpexT, Res.get());
+  }
+  if (ErrorFound) {
+    S.Diag(Loc, diag::err_omp_implied_type_not_found)
+        << "omp_impex_t";
+    return false;
+  }
+
+  return true;
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPTransparentClause(Expr *Transparent,
                                                     SourceLocation StartLoc,
                                                     SourceLocation LParenLoc,
                                                     SourceLocation EndLoc) {
-  if (Kind == OMPC_TRANSPARENT_unknown) {
-    Diag(KindLoc, diag::err_omp_unexpected_clause_value)
-        << getListOfPossibleValues(OMPC_transparent, /*First=*/0,
-                                   /*Last=*/unsigned(OMPC_TRANSPARENT_unknown))
-        << getOpenMPClauseName(OMPC_transparent);
+  if (!findOMPImpexT(SemaRef, Transparent->getExprLoc(), DSAStack))
     return nullptr;
-  }
+  ExprResult TR = SemaRef.DefaultLvalueConversion(Transparent);
+  if (TR.isInvalid())
+    return nullptr;
 
-  return new (getASTContext())
-      OMPTransparentClause(Kind, KindLoc, StartLoc, LParenLoc, EndLoc);
+  TR = SemaRef.PerformImplicitConversion(TR.get(), DSAStack->getOMPImpexT(),
+                                         AssignmentAction::Initializing,
+                                         /*AllowExplicit=*/true);
+  if (TR.isInvalid())
+    return nullptr;
+
+  return OMPTransparentClause::Create(getASTContext(), StartLoc, LParenLoc,
+                                      EndLoc, TR.get());
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPProcBindClause(ProcBindKind Kind,

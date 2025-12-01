@@ -982,8 +982,7 @@ public:
                                         SourceLocation LParenLoc,
                                         SourceLocation EndLoc);
   /// Called on well-formed 'transparent' clause.
-  OMPClause *ActOnOpenMPTransparentClause(OpenMPTransparentKind Kind,
-                                          SourceLocation KindLoc,
+  OMPClause *ActOnOpenMPTransparentClause(Expr *Transparent,
                                           SourceLocation StartLoc,
                                           SourceLocation LParenLoc,
                                           SourceLocation EndLoc);
