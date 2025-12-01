@@ -373,6 +373,7 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
     Info.score = Relevance.NameMatch > std::numeric_limits<float>::epsilon()
                      ? Score / Relevance.NameMatch
                      : QualScore;
+    Info.tags = getSymbolTags(Sym);
     Top.push({Score, std::move(Info)});
   });
   for (auto &R : std::move(Top).items())
