@@ -816,8 +816,7 @@ CGHLSLRuntime::handleStructSemanticLoad(
   const llvm::StructType *ST = cast<StructType>(Type);
   const clang::RecordDecl *RD = Decl->getType()->getAsRecordDecl();
 
-  assert(std::distance(RD->field_begin(), RD->field_end()) ==
-         ST->getNumElements());
+  assert(RD->getNumFields() == ST->getNumElements());
 
   llvm::Value *Aggregate = llvm::PoisonValue::get(Type);
   auto FieldDecl = RD->field_begin();
@@ -849,8 +848,7 @@ CGHLSLRuntime::handleStructSemanticStore(
     RD = Decl->getType()->getAsRecordDecl();
   assert(RD);
 
-  assert(std::distance(RD->field_begin(), RD->field_end()) ==
-         ST->getNumElements());
+  assert(RD->getNumFields() == ST->getNumElements());
 
   auto FieldDecl = RD->field_begin();
   for (unsigned I = 0; I < ST->getNumElements(); ++I) {
