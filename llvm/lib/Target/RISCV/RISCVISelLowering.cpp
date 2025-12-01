@@ -519,11 +519,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
     } else {
       VTs.append({MVT::v2i16, MVT::v4i8});
+      setOperationAction(ISD::BUILD_VECTOR, MVT::v4i8, Custom);
     }
     setOperationAction(ISD::UADDSAT, VTs, Legal);
     setOperationAction(ISD::SADDSAT, VTs, Legal);
     setOperationAction(ISD::USUBSAT, VTs, Legal);
     setOperationAction(ISD::SSUBSAT, VTs, Legal);
+    setOperationAction(ISD::SSHLSAT, VTs, Legal);
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
     setOperationAction({ISD::ABDS, ISD::ABDU}, VTs, Legal);
     setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
@@ -4433,6 +4435,33 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   MVT XLenVT = Subtarget.getXLenVT();
 
   SDLoc DL(Op);
+
+  if (Subtarget.isRV32() && Subtarget.enablePExtCodeGen()) {
+    if (VT != MVT::v4i8)
+      return SDValue();
+
+    // <4 x i8> BUILD_VECTOR a, b, c, d -> PACK(PPACK.DH pair(a, b), pair(c, d))
+    SDValue Val0 =
+        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(0));
+    SDValue Val1 =
+        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(1));
+    SDValue Val2 =
+        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(2));
+    SDValue Val3 =
+        DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(3));
+    SDValue PackDH =
+        DAG.getNode(RISCVISD::PPACK_DH, DL, {MVT::v2i16, MVT::v2i16},
+                    {Val0, Val1, Val2, Val3});
+
+    return DAG.getNode(
+        ISD::BITCAST, DL, MVT::v4i8,
+        SDValue(
+            DAG.getMachineNode(
+                RISCV::PACK, DL, MVT::i32,
+                {DAG.getNode(ISD::BITCAST, DL, MVT::i32, PackDH.getValue(0)),
+                 DAG.getNode(ISD::BITCAST, DL, MVT::i32, PackDH.getValue(1))}),
+            0));
+  }
 
   // Proper support for f16 requires Zvfh. bf16 always requires special
   // handling. We need to cast the scalar to integer and create an integer
@@ -9555,6 +9584,50 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (SDValue V = lowerSelectToBinOp(Op.getNode(), DAG, Subtarget))
     return V;
 
+  // When there is no cost for GPR <-> FPR, we can use zicond select for
+  // floating value when CondV is int type
+  bool FPinGPR = Subtarget.hasStdExtZfinx();
+
+  // We can handle FGPR without spliting into hi/lo parts
+  bool FitsInGPR = TypeSize::isKnownLE(VT.getSizeInBits(),
+                                       Subtarget.getXLenVT().getSizeInBits());
+
+  bool UseZicondForFPSel = Subtarget.hasStdExtZicond() && FPinGPR &&
+                           VT.isFloatingPoint() && FitsInGPR;
+
+  if (UseZicondForFPSel) {
+
+    auto CastToInt = [&](SDValue V) -> SDValue {
+      // Treat +0.0 as int 0 to enable single 'czero' instruction generation.
+      if (isNullFPConstant(V))
+        return DAG.getConstant(0, DL, XLenVT);
+
+      if (VT == MVT::f16)
+        return DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, V);
+
+      if (VT == MVT::f32 && Subtarget.is64Bit())
+        return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenVT, V);
+
+      return DAG.getBitcast(XLenVT, V);
+    };
+
+    SDValue TrueVInt = CastToInt(TrueV);
+    SDValue FalseVInt = CastToInt(FalseV);
+
+    // Emit integer SELECT (lowers to Zicond)
+    SDValue ResultInt =
+        DAG.getNode(ISD::SELECT, DL, XLenVT, CondV, TrueVInt, FalseVInt);
+
+    // Convert back to floating VT
+    if (VT == MVT::f32 && Subtarget.is64Bit())
+      return DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, VT, ResultInt);
+
+    if (VT == MVT::f16)
+      return DAG.getNode(RISCVISD::FMV_H_X, DL, VT, ResultInt);
+
+    return DAG.getBitcast(VT, ResultInt);
+  }
+
   // When Zicond or XVentanaCondOps is present, emit CZERO_EQZ and CZERO_NEZ
   // nodes to implement the SELECT. Performing the lowering here allows for
   // greater control over when CZERO_{EQZ/NEZ} are used vs another branchless
@@ -10670,7 +10743,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
         VecVT != MVT::v4i8 && VecVT != MVT::v2i32)
       return SDValue();
     SDValue Extracted = DAG.getBitcast(XLenVT, Vec);
-    unsigned ElemWidth = EltVT.getSizeInBits();
+    unsigned ElemWidth = VecVT.getVectorElementType().getSizeInBits();
     SDValue Shamt = DAG.getNode(ISD::MUL, DL, XLenVT, Idx,
                                 DAG.getConstant(ElemWidth, DL, XLenVT));
     return DAG.getNode(ISD::SRL, DL, XLenVT, Extracted, Shamt);
@@ -20822,7 +20895,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // Undo this and sink the fneg so we match more fmsub/fnmadd patterns.
     if (sd_match(N, m_FMul(m_Value(X), m_OneUse(m_FNeg(m_Value(Y))))))
       return DAG.getNode(ISD::FNEG, DL, VT,
-                         DAG.getNode(ISD::FMUL, DL, VT, X, Y));
+                         DAG.getNode(ISD::FMUL, DL, VT, X, Y, N->getFlags()),
+                         N->getFlags());
 
     // fmul X, (copysign 1.0, Y) -> fsgnjx X, Y
     SDValue N0 = N->getOperand(0);
@@ -25321,6 +25395,22 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
 
   // Only support fixed vectors if we know the minimum vector size.
   if (DataType.isFixedLengthVector() && !Subtarget.useRVVForFixedLengthVectors())
+    return false;
+
+  EVT ScalarType = DataType.getScalarType();
+  if (!isLegalElementTypeForRVV(ScalarType))
+    return false;
+
+  if (!Subtarget.enableUnalignedVectorMem() &&
+      Alignment < ScalarType.getStoreSize())
+    return false;
+
+  return true;
+}
+
+bool RISCVTargetLowering::isLegalFirstFaultLoad(EVT DataType,
+                                                Align Alignment) const {
+  if (!Subtarget.hasVInstructions())
     return false;
 
   EVT ScalarType = DataType.getScalarType();

@@ -9,8 +9,6 @@
 ; RUN:   -mattr=+xsfmm32a -mattr=+xsfmm32a8f -mattr=+xsfmm32a4i -mattr=+xsfmm64a64f \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
-declare iXLen @llvm.riscv.sf.vsettnt.iXLen(iXLen, iXLen, iXLen)
-
 define iXLen @test_sf_vsettnt_e8w1(iXLen %tn) {
 ; CHECK-LABEL: test_sf_vsettnt_e8w1:
 ; CHECK:       # %bb.0: # %entry

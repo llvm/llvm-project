@@ -1174,6 +1174,8 @@ public:
     int ExtraModifier = -1; ///< Additional modifier for linear, map, depend or
                             ///< lastprivate clause.
     int OriginalSharingModifier = 0; // Default is shared
+    int NeedDevicePtrModifier = 0;
+    SourceLocation NeedDevicePtrModifierLoc;
     SmallVector<OpenMPMapModifierKind, NumberOfOMPMapClauseModifiers>
         MapTypeModifiers;
     SmallVector<SourceLocation, NumberOfOMPMapClauseModifiers>

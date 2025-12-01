@@ -20,11 +20,13 @@
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/OpenMP/Clauses.h"
+#include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Lower/SymbolMap.h"
@@ -568,14 +570,9 @@ getCollapsedLoopEval(lower::pft::Evaluation &eval, int collapseValue) {
   if (collapseValue == 0)
     return &eval;
 
-  lower::pft::Evaluation *curEval = &eval.getFirstNestedEvaluation();
-  for (int i = 1; i < collapseValue; i++) {
-    // The nested evaluations should be DoConstructs (i.e. they should form
-    // a loop nest). Each DoConstruct is a tuple <NonLabelDoStmt, Block,
-    // EndDoStmt>.
-    assert(curEval->isA<parser::DoConstruct>());
-    curEval = &*std::next(curEval->getNestedEvaluations().begin());
-  }
+  lower::pft::Evaluation *curEval = &eval;
+  for (int i = 0; i < collapseValue; i++)
+    curEval = getNestedDoConstruct(*curEval);
   return curEval;
 }
 
@@ -3586,19 +3583,32 @@ processReductionCombiner(lower::AbstractConverter &converter,
   const parser::OmpStylizedInstance::Instance &instance =
       std::get<parser::OmpStylizedInstance::Instance>(combinerInstance.t);
 
-  const auto *as = std::get_if<parser::AssignmentStmt>(&instance.u);
-  if (!as) {
-    TODO(converter.getCurrentLocation(),
-         "A combiner that is a subroutine call is not yet supported");
+  std::optional<semantics::SomeExpr> evalExprOpt;
+  if (const auto *as = std::get_if<parser::AssignmentStmt>(&instance.u)) {
+    auto &expr = std::get<parser::Expr>(as->t);
+    evalExprOpt = makeExpr(expr, semaCtx);
+  } else if (const auto *call = std::get_if<parser::CallStmt>(&instance.u)) {
+    if (call->typedCall) {
+      const auto &procRef = *call->typedCall;
+      evalExprOpt = semantics::SomeExpr{procRef};
+    } else {
+      TODO(converter.getCurrentLocation(),
+           "CallStmt without typedCall is not yet supported");
+    }
+  } else {
+    TODO(converter.getCurrentLocation(), "Unsupported combiner instance type");
   }
-  auto &expr = std::get<parser::Expr>(as->t);
-  genCombinerCB = [&](fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Type type, mlir::Value lhs, mlir::Value rhs,
-                      bool isByRef) {
-    const auto &evalExpr = makeExpr(expr, semaCtx);
+
+  assert(evalExprOpt.has_value() && "evalExpr must be initialized");
+  semantics::SomeExpr evalExpr = *evalExprOpt;
+
+  genCombinerCB = [&, evalExpr](fir::FirOpBuilder &builder, mlir::Location loc,
+                                mlir::Type type, mlir::Value lhs,
+                                mlir::Value rhs, bool isByRef) {
     lower::SymMapScope scope(symTable);
     const std::list<parser::OmpStylizedDeclaration> &declList =
         std::get<std::list<parser::OmpStylizedDeclaration>>(combinerInstance.t);
+    mlir::Value ompOutVar;
     for (const parser::OmpStylizedDeclaration &decl : declList) {
       auto &name = std::get<parser::ObjectName>(decl.var.t);
       mlir::Value addr = lhs;
@@ -3621,15 +3631,32 @@ processReductionCombiner(lower::AbstractConverter &converter,
       auto declareOp =
           hlfir::DeclareOp::create(builder, loc, addr, name.ToString(), nullptr,
                                    {}, nullptr, nullptr, 0, attributes);
+      if (name.ToString() == "omp_out")
+        ompOutVar = declareOp.getResult(0);
       symTable.addVariableDefinition(*name.symbol, declareOp);
     }
 
     lower::StatementContext stmtCtx;
-    mlir::Value result = fir::getBase(
-        convertExprToValue(loc, converter, evalExpr, symTable, stmtCtx));
-    if (auto refType = llvm::dyn_cast<fir::ReferenceType>(result.getType()))
-      if (lhs.getType() == refType.getElementType())
-        result = fir::LoadOp::create(builder, loc, result);
+    mlir::Value result = common::visit(
+        common::visitors{
+            [&](const evaluate::ProcedureRef &procRef) -> mlir::Value {
+              convertCallToHLFIR(loc, converter, procRef, std::nullopt,
+                                 symTable, stmtCtx);
+              auto outVal = fir::LoadOp::create(builder, loc, ompOutVar);
+              return outVal;
+            },
+            [&](const auto &expr) -> mlir::Value {
+              mlir::Value exprResult = fir::getBase(convertExprToValue(
+                  loc, converter, evalExpr, symTable, stmtCtx));
+              // Optional load may be generated if we get a reference to the
+              // reduction type.
+              if (auto refType =
+                      llvm::dyn_cast<fir::ReferenceType>(exprResult.getType()))
+                if (lhs.getType() == refType.getElementType())
+                  exprResult = fir::LoadOp::create(builder, loc, exprResult);
+              return exprResult;
+            }},
+        evalExpr.u);
     stmtCtx.finalizeAndPop();
     if (isByRef) {
       fir::StoreOp::create(builder, loc, result, lhs);
