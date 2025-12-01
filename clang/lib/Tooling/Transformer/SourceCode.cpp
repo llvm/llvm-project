@@ -86,8 +86,12 @@ llvm::Error clang::tooling::validateEditRange(const CharSourceRange &Range,
   return validateRange(Range, SM, /*AllowSystemHeaders=*/false);
 }
 
-static bool spelledInMacroDefinition(SourceLocation Loc,
-                                     const SourceManager &SM) {
+// Returns the location of the top-level macro argument that is the spelling for
+// the expansion `Loc` is from. If `Loc` is spelled in the macro definition,
+// returns an invalid `SourceLocation`.
+static SourceLocation getMacroArgumentSpellingLoc(SourceLocation Loc,
+                                                  const SourceManager &SM) {
+  assert(Loc.isMacroID() && "Location must be in a macro");
   while (Loc.isMacroID()) {
     const auto &Expansion = SM.getSLocEntry(SM.getFileID(Loc)).getExpansion();
     if (Expansion.isMacroArgExpansion()) {
@@ -95,10 +99,22 @@ static bool spelledInMacroDefinition(SourceLocation Loc,
       // in a macro expansion.
       Loc = Expansion.getSpellingLoc();
     } else {
-      return true;
+      return {};
     }
   }
-  return false;
+  return Loc;
+}
+
+static bool spelledInMacroDefinition(CharSourceRange Range,
+                                     const SourceManager &SM) {
+  if (Range.getBegin().isMacroID() && Range.getEnd().isMacroID()) {
+    // Check whether the range is entirely within a single macro argument.
+    auto B = getMacroArgumentSpellingLoc(Range.getBegin(), SM);
+    auto E = getMacroArgumentSpellingLoc(Range.getEnd(), SM);
+    return B.isInvalid() || B != E;
+  }
+
+  return Range.getBegin().isMacroID() || Range.getEnd().isMacroID();
 }
 
 // Returns the expansion char-range of `Loc` if `Loc` is a split token. For
@@ -158,8 +174,7 @@ static CharSourceRange getRange(const CharSourceRange &EditRange,
     Range = Lexer::makeFileCharRange(EditRange, SM, LangOpts);
   } else {
     auto AdjustedRange = getRangeForSplitTokens(EditRange, SM, LangOpts);
-    if (spelledInMacroDefinition(AdjustedRange.getBegin(), SM) ||
-        spelledInMacroDefinition(AdjustedRange.getEnd(), SM))
+    if (spelledInMacroDefinition(AdjustedRange, SM))
       return {};
 
     auto B = SM.getSpellingLoc(AdjustedRange.getBegin());
