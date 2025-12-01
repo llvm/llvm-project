@@ -754,6 +754,12 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
   //
   // where the size of the outermost dimension is unknown (UNK).
 
+  auto AddOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
+    if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/true, A, B))
+      return nullptr;
+    return SE.getAddExpr(A, B);
+  };
+
   auto MulOverflow = [&](const SCEV *A, const SCEV *B) -> const SCEV * {
     if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/true, A, B))
       return nullptr;
@@ -790,7 +796,9 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
   //         (S_n - 1)
   //       = (S_2 * ... * S_n) * I_1 +
   //         (S_2 * ... * S_n) - 1  (can be proven by induction)
+  //       = Min + (S_2 * ... * S_n) - 1
   //
+  // NOTE: I_1 can be negative, so Min is not just 0.
   const SCEV *Prod = SE.getOne(Sizes[0]->getType());
   for (const SCEV *Size : Sizes) {
     Prod = MulOverflow(Prod, Size);
@@ -801,9 +809,13 @@ bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
   if (!Min)
     return false;
 
-  // Over-approximate Max as Prod * I_1 + Prod (ignoring the -1).
-  if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/true, Min,
-                          Subscripts[0]))
+  // We have already checked that Min and Prod don't overflow, so it's enough
+  // to check whether Min + Prod - 1 doesn't overflow.
+  const SCEV *MaxPlusOne = AddOverflow(Min, Prod);
+  if (!MaxPlusOne)
+    return false;
+  if (!SE.willNotOverflow(Instruction::Sub, /*IsSigned=*/true, MaxPlusOne,
+                          SE.getOne(MaxPlusOne->getType())))
     return false;
 
   return true;
