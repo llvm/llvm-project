@@ -89,7 +89,7 @@ define void @gcdmiv_delta_ovfl(ptr %A) {
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - none!
+; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*|<]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
 ;
