@@ -117,6 +117,11 @@ public:
   // variable has been instantiated.
   virtual void HandleCXXStaticMemberVarInstantiation(VarDecl *D) {}
 
+  /// Callback to handle the end-of-translation unit attachment of OpenACC
+  /// routine declaration information.
+  virtual void HandleOpenACCRoutineReference(const FunctionDecl *FD,
+                                             const OpenACCRoutineDecl *RD) {}
+
   /// Callback involved at the end of a translation unit to
   /// notify the consumer that a vtable for the given C++ class is
   /// required.
