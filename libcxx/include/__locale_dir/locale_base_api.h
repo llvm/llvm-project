@@ -118,7 +118,7 @@
 #    include <__locale_dir/support/fuchsia.h>
 #  elif defined(__linux__)
 #    include <__locale_dir/support/linux.h>
-#  elif _LIBCPP_HAS_NEWLIB_LIBC
+#  elif _LIBCPP_LIBC_NEWLIB
 #    include <__locale_dir/support/newlib.h>
 #  else
 
