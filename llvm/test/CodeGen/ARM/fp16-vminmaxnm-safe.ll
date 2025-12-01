@@ -483,9 +483,9 @@ define half @fp16_vminmaxnm_neg0(half %a) {
 ; CHECK-NEXT:    vldr.16 s0, .LCPI23_0
 ; CHECK-NEXT:    vmov.f16 s2, r0
 ; CHECK-NEXT:    vminnm.f16 s2, s2, s0
-; CHECK-NEXT:    vcmp.f16 s0, s2
+; CHECK-NEXT:    vcmp.f16 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselge.f16 s0, s0, s2
+; CHECK-NEXT:    vselgt.f16 s0, s2, s0
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 1
