@@ -196,6 +196,15 @@ private:
 
   /// Interface to emit optimization remarks.
   OptimizationRemarkEmitter &ORE;
+
+  /// Reports a condition where loop vectorization is disallowed: prints
+  /// \p DebugMsg for debugging purposes along with the corresponding
+  /// optimization remark \p RemarkName, with \p RemarkMsg as the user-facing
+  /// message. The loop \p L is used for the location of the remark.
+  void reportDisallowedVectorization(const StringRef DebugMsg,
+                                     const StringRef RemarkName,
+                                     const StringRef RemarkMsg,
+                                     const Loop *L) const;
 };
 
 /// This holds vectorization requirements that must be verified late in
