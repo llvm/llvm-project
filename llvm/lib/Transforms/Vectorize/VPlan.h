@@ -422,6 +422,7 @@ public:
     VPWidenCastSC,
     VPWidenGEPSC,
     VPWidenIntrinsicSC,
+    VPWidenMemIntrinsicSC,
     VPWidenStridedLoadSC,
     VPWidenLoadEVLSC,
     VPWidenLoadSC,
@@ -629,6 +630,7 @@ public:
     case VPRecipeBase::VPInterleaveEVLSC:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
+    case VPRecipeBase::VPWidenMemIntrinsicSC:
     case VPRecipeBase::VPWidenStridedLoadSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
@@ -1902,6 +1904,98 @@ protected:
   /// Print the recipe.
   LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/// A recipe for widening vector memory intrinsics.
+class VPWidenMemIntrinsicRecipe : public VPRecipeBase,
+                                  public VPIRMetadata{
+  Instruction &Ingredient;
+
+  /// Alignment information for this memory access.
+  Align Alignment;
+
+  /// ID of the vector intrinsic to widen.
+  Intrinsic::ID VectorIntrinsicID;
+
+  /// Scalar return type of the intrinsic.
+  Type *ResultTy;
+
+  /// True if the intrinsic may read from memory.
+  bool MayReadFromMemory;
+
+  /// True if the intrinsic may read write to memory.
+  bool MayWriteToMemory;
+
+  /// True if the intrinsic may have side-effects.
+  bool MayHaveSideEffects;
+
+public:
+  // TODO: support StoreInst for strided store
+  VPWidenMemIntrinsicRecipe(LoadInst &LI, Intrinsic::ID VectorIntrinsicID,
+                            ArrayRef<VPValue *> CallArguments,
+                            const VPIRMetadata &MD = {},
+                            DebugLoc DL = DebugLoc::getUnknown())
+      : VPRecipeBase(VPRecipeBase::VPWidenMemIntrinsicSC, CallArguments, DL),
+        VPIRMetadata(MD), Ingredient(LI), Alignment(LI.getAlign()),
+        VectorIntrinsicID(VectorIntrinsicID), ResultTy(LI.getType()),
+        MayReadFromMemory(LI.mayReadFromMemory()),
+        MayHaveSideEffects(LI.mayHaveSideEffects()) {
+    new VPRecipeValue(this, &LI);
+  }
+
+  ~VPWidenMemIntrinsicRecipe() override = default;
+
+  VPWidenMemIntrinsicRecipe *clone() override {
+    return new VPWidenMemIntrinsicRecipe(*cast<LoadInst>(&Ingredient),
+                                         VectorIntrinsicID, operands(), *this,
+                                         getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPWidenMemIntrinsicSC)
+
+  /// Produce a widened version of the vector memory intrinsic.
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this vector memory intrinsic.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+  /// Return the ID of the intrinsic.
+  Intrinsic::ID getVectorIntrinsicID() const { return VectorIntrinsicID; }
+
+  /// Return the scalar return type of the intrinsic.
+  Type *getResultType() const { return ResultTy; }
+
+  /// Return to name of the intrinsic as string.
+  StringRef getIntrinsicName() const {
+    return Intrinsic::getBaseName(VectorIntrinsicID);
+  }
+
+  /// Returns true if the intrinsic may read from memory.
+  bool mayReadFromMemory() const { return MayReadFromMemory; }
+
+  /// Returns true if the intrinsic may write to memory.
+  bool mayWriteToMemory() const { return MayWriteToMemory; }
+
+  /// Returns true if the intrinsic may have side-effects.
+  bool mayHaveSideEffects() const { return MayHaveSideEffects; }
+
+  unsigned getMemoryPointerParamPos() const;
+
+  unsigned getMaskParamPos() const;
+
+  void setMask(VPValue *Mask) { setOperand(getMaskParamPos(), Mask); }
+
+  VPValue *getMask() const { return getOperand(getMaskParamPos()); }
+
+  bool usesFirstLaneOnly(const VPValue *Op) const override;
+
+protected:
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override;
 #endif
 };
 
@@ -4177,6 +4271,8 @@ static inline auto castToVPIRMetadata(RecipeBasePtrTy R) -> DstTy {
     return cast<VPWidenCastRecipe>(R);
   case VPRecipeBase::VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(R);
+  case VPRecipeBase::VPWidenMemIntrinsicSC:
+    return cast<VPWidenMemIntrinsicRecipe>(R);
   case VPRecipeBase::VPWidenCallSC:
     return cast<VPWidenCallRecipe>(R);
   case VPRecipeBase::VPReplicateSC:

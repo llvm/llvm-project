@@ -167,6 +167,9 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         .Case([&](const VPWidenIntrinsicRecipe *S) {
           return VerifyEVLUse(*S, S->getNumOperands() - 1);
         })
+        .Case([&](const VPWidenMemIntrinsicRecipe *S) {
+          return VerifyEVLUse(*S, S->getNumOperands() - 1);
+        })
         .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe,
               VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe,
               VPWidenStridedLoadRecipe>(
