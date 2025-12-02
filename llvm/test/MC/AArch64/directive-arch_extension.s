@@ -213,3 +213,8 @@ autiasppc #0
 .arch_extension wfxt
 wfit x0
 // CHECK: wfit x0
+
+.arch armv8-a
+.arch_extension ssve-fexpa
+fexpa z0.s, z31.s
+// CHECK: fexpa z0.s, z31.s
