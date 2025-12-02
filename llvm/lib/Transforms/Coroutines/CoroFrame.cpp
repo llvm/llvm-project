@@ -1185,13 +1185,10 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
         // processed by coro::salvageDebugInfo() by the Cloner. However, convert
         // it to a dbg.declare to make sure future passes don't have to deal
         // with a dbg.coroframe_entry.
-        auto *VAM = ValueAsMetadata::get(CurrentReload);
-        Type *Ty = VAM->getValue()->getType();
         DbgVariableRecord *NewDVR = new DbgVariableRecord(
             ValueAsMetadata::get(CurrentReload), DDI->getVariable(),
             DDI->getExpression(), DDI->getDebugLoc(),
-            Ty->isPointerTy() ? DbgVariableRecord::LocationType::Declare
-                              : DbgVariableRecord::LocationType::Value);
+            DbgVariableRecord::LocationType::Declare);
         Builder.GetInsertPoint()->getParent()->insertDbgRecordBefore(
             NewDVR, Builder.GetInsertPoint());
         // This dbg.coroframe_entry is for the main function entry point.  It
@@ -2063,16 +2060,8 @@ void coro::salvageDebugInfo(
       // If there is a dbg.coroframe_entry being reinserted, insert it as a
       // dbg.declare instead, so that subsequent passes don't have to deal with
       // a dbg.coroframe_entry.
-      if (DVR.getType() == DbgVariableRecord::LocationType::CoroFrameEntry) {
-        auto *MD = DVR.getRawLocation();
-        if (auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
-          Type *Ty = VAM->getValue()->getType();
-          if (Ty->isPointerTy())
-            DVR.Type = DbgVariableRecord::LocationType::Declare;
-          else
-            DVR.Type = DbgVariableRecord::LocationType::Value;
-        }
-      }
+      if (DVR.getType() == DbgVariableRecord::LocationType::CoroFrameEntry)
+        DVR.Type = DbgVariableRecord::LocationType::Declare;
       (*InsertPt)->getParent()->insertDbgRecordBefore(&DVR, *InsertPt);
     }
   }
