@@ -773,6 +773,11 @@ static DiagnosedSilenceableFailure checkMappingSpec(
     std::optional<TransformOpInterface> transformOp, scf::ForallOp forallOp,
     ArrayRef<int64_t> numParallelIterations, ArrayRef<int64_t> blockOrGridSizes,
     int factor, bool useLinearMapping = false) {
+  if (llvm::any_of(blockOrGridSizes, [](int64_t i) { return i <= 0; })) {
+    return definiteFailureHelper(
+        transformOp, forallOp,
+        "block/grid sizes must be strictly positive");
+  }
   if (!useLinearMapping && blockOrGridSizes.front() % factor != 0) {
     auto diag = definiteFailureHelper(
         transformOp, forallOp,
@@ -780,15 +785,19 @@ static DiagnosedSilenceableFailure checkMappingSpec(
             Twine(factor));
     return diag;
   }
-  if (computeProduct(numParallelIterations) * factor >
-      computeProduct(blockOrGridSizes)) {
+  bool hasZeroParallelIteration =
+      llvm::any_of(numParallelIterations, [](int64_t i) { return i == 0; });
+  int64_t required = hasZeroParallelIteration
+                         ? 0
+                         : computeProduct(numParallelIterations) * factor;
+  int64_t available = computeProduct(blockOrGridSizes);
+  if (required > available) {
     auto diag = definiteFailureHelper(
         transformOp, forallOp,
         Twine("the number of required parallel resources (blocks or "
               "threads) ") +
-            Twine(computeProduct(numParallelIterations) * factor) +
-            " overflows the number of available resources " +
-            Twine(computeProduct(blockOrGridSizes)));
+            Twine(required) + " overflows the number of available resources " +
+            Twine(available));
     return diag;
   }
   return DiagnosedSilenceableFailure::success();
