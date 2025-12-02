@@ -173,8 +173,7 @@ TEST(Descriptor, Dump) {
   TypeCode integer{TypeCategory::Integer, four};
   // Scalar
   descriptor.Establish(integer, four, data, 0);
-  FILE *tmpf = nullptr;
-  tmpf = tmpfile();
+  FILE *tmpf{tmpfile()};
   ASSERT_TRUE(tmpf) << "tmpfile returned NULL";
   auto resetTmpFile = [tmpf]() {
     fflush(tmpf);
@@ -200,7 +199,7 @@ TEST(Descriptor, Dump) {
   descriptor.Dump(tmpf, /*dumpRawType=*/false);
   // also dump as CFI type
   descriptor.Dump(tmpf, /*dumpRawType=*/true);
-  std::string output = getAddrFilteredContent();
+  std::string output{getAddrFilteredContent()};
   ASSERT_STREQ(output.c_str(),
       "Descriptor @ [addr]:\n"
       "  base_addr [addr]\n"
