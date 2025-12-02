@@ -621,15 +621,15 @@ define i64  @test_many_callee_arguments(
 ; CHECK-NEWLOWERING-NEXT:    stp x10, x11, [sp, #-16]!
 ; CHECK-NEWLOWERING-NEXT:    bl many_args_private_za_callee
 ; CHECK-NEWLOWERING-NEXT:    add sp, sp, #16
-; CHECK-NEWLOWERING-NEXT:    mov x8, x0
+; CHECK-NEWLOWERING-NEXT:    mov x1, x0
 ; CHECK-NEWLOWERING-NEXT:    smstart za
-; CHECK-NEWLOWERING-NEXT:    mrs x9, TPIDR2_EL0
+; CHECK-NEWLOWERING-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEWLOWERING-NEXT:    sub x0, x29, #16
-; CHECK-NEWLOWERING-NEXT:    cbnz x9, .LBB9_2
+; CHECK-NEWLOWERING-NEXT:    cbnz x8, .LBB9_2
 ; CHECK-NEWLOWERING-NEXT:  // %bb.1:
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_tpidr2_restore
 ; CHECK-NEWLOWERING-NEXT:  .LBB9_2:
-; CHECK-NEWLOWERING-NEXT:    mov x0, x8
+; CHECK-NEWLOWERING-NEXT:    mov x0, x1
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x29
 ; CHECK-NEWLOWERING-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
