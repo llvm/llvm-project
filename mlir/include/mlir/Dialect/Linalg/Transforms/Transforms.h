@@ -524,6 +524,13 @@ struct ControlDropUnitDims {
   RankReductionStrategy rankReductionStrategy =
       RankReductionStrategy::ReassociativeReshape;
 
+  /// Struct to describe how to transform an operand after dropping unit extend
+  /// dimensions. The \c indexMap field contains the updated affine map that
+  /// relates the new (reduced) iteration space to the operand's dimensions. The
+  /// \c targetShape field specifies the new shape of the operand after
+  /// collapsing unit-extent dimensions, and the \c reassociation field provides
+  /// the grouping of dimensions needed for reshape operations when using the
+  /// reassociative reshape strategy.
   struct UnitExtentReplacementInfo {
     AffineMap indexMap;
     SmallVector<ReassociationIndices> reassociation;
@@ -532,7 +539,19 @@ struct ControlDropUnitDims {
 
   using DimensionMapping = llvm::SmallDenseMap<unsigned, unsigned>;
 
+  /// Instances of this type are used to control which dimensions of an operand
+  /// are considered for dropping unit extent dimensions. The parameter to the
+  /// function is the operation itself, the expected return is a list of
+  /// dimensions to consider for dropping unit extent dimensions. If the
+  /// operation should not be have any dimensions dropped, implementations
+  /// should return an empty list.
   using ControlFnTy = std::function<SmallVector<unsigned>(Operation *)>;
+
+  /// Function to control which dimensions, if any, are to be considered for
+  /// dropping unit extent dimensions. The default behavior is to consider all
+  /// dimensions of a \c linalg.generic or \c tensor.pad operation for dropping.
+  /// Users of the \ref dropUnitDims interface can override the default behavior
+  /// by setting this member to their own implementation.
   ControlFnTy controlFn = [](Operation *op) {
     if (auto genericOp = dyn_cast_or_null<GenericOp>(op)) {
       return llvm::to_vector(llvm::seq<unsigned>(0, genericOp.getNumLoops()));
@@ -544,14 +563,35 @@ struct ControlDropUnitDims {
     return SmallVector<unsigned>{};
   };
 
+  /// Instances of this type are used to control how the different operands of
+  /// an operation are treated while dropping unit extent dimensions. The
+  /// function receives the operation and operand currently being processed, in
+  /// addition to the control struct and MLIR context. It also receives a
+  /// mapping of old dimensions to new dimensions resulting from dropping unit
+  /// extent dimensions on the operation and and a list of \c AffineExpr with
+  /// the updated dimensions or 0 for dimensions that were dropped.
+  /// The function returns a struct that describes how to transform the operand
+  /// after dropping unit dimensions.
   using ComputeOperandShapeAndMapFnTy = std::function<UnitExtentReplacementInfo(
       const ControlDropUnitDims &, MLIRContext *, IndexingMapOpInterface,
       OpOperand *, DimensionMapping &, ArrayRef<AffineExpr>)>;
+
+  /// Function to control how an operand should be transformed after dropping
+  /// unit extend dimensions from the owning operation. The default behavior is
+  /// to drop unit extent dimensions from the shape and update the affine map
+  /// accordingly for either (a) \c memref with identity layout or (b) \c tensor
+  /// without encoding. Operands with other types retain their shape and affine
+  /// map, with 0 for the dimensions dropped from the operation.
+  /// Users of the \ref dropUnitDims interface can override the default behavior
+  /// by setting this member to their own implementation.
   ComputeOperandShapeAndMapFnTy computeOperandShapeAndMapFn =
       [](const ControlDropUnitDims &control, MLIRContext *context,
          IndexingMapOpInterface op, OpOperand *opOperand,
          DimensionMapping &oldDimsToNewDimsMap,
          ArrayRef<AffineExpr> dimReplacements) -> UnitExtentReplacementInfo {
+    // Only memref with identity layout and tensor without an encoding are
+    // considered for collapsing them, i.e., drop unit extent dimensions from
+    // their shape and updating the affine map accordingly.
     auto hasCollapsibleType = [](OpOperand &operand) {
       Type operandType = operand.get().getType();
       if (auto memrefOperandType = dyn_cast_or_null<MemRefType>(operandType)) {
@@ -562,12 +602,17 @@ struct ControlDropUnitDims {
       }
       return false;
     };
-    auto indexingMap = op.getMatchingIndexingMap(opOperand);
-    SmallVector<int64_t> shape = op.getStaticOperandShape(opOperand);
+    // For types that are considered collapsible, update the shape and affine
+    // map.
     if (hasCollapsibleType(*opOperand)) {
       return control.dropUnitExtentFromOperandMetadata(
           context, op, opOperand, oldDimsToNewDimsMap, dimReplacements);
     }
+    // For other types, keep their existing shape and update the affine map with
+    // 0-entries for all dimensions that were dropped from the owning operation
+    // of this operand.
+    auto indexingMap = op.getMatchingIndexingMap(opOperand);
+    SmallVector<int64_t> shape = op.getStaticOperandShape(opOperand);
     AffineMap newIndexingMap = indexingMap.replaceDimsAndSymbols(
         dimReplacements, ArrayRef<AffineExpr>{}, oldDimsToNewDimsMap.size(), 0);
     UnitExtentReplacementInfo info;
@@ -576,9 +621,21 @@ struct ControlDropUnitDims {
     return info;
   };
 
+  /// Instances of this type are used to control how operand values are
+  /// collapsed after dropping unit extent dimensions. Next to the control
+  /// struct, rewriter and location, the function receives the operand value to
+  /// collapse, the new target shape and how old dimensions should be grouped.
+  /// The function needs to insert the necessary operations to collapse the
+  /// operand to the target shape and returns the new operand value.
   using CollapseValueFnTy = std::function<Value(
       const ControlDropUnitDims &, RewriterBase &, Location, Value,
       ArrayRef<int64_t>, ArrayRef<ReassociationIndices>)>;
+
+  /// Function to control how operands are collapsed into their new target shape
+  /// after dropping unit extent dimensions. The default behavior \see
+  /// ControlDropUnitDims::collapseValue.
+  /// Users of the \ref dropUnitDims interface can override the default behavior
+  /// by setting this member to their own implementation.
   CollapseValueFnTy collapseValueFn =
       [](const ControlDropUnitDims &control, RewriterBase &rewriter,
          Location loc, Value operand, ArrayRef<int64_t> targetShape,
@@ -587,9 +644,22 @@ struct ControlDropUnitDims {
                                  reassociation);
   };
 
+  /// Instances of this type are used to control how result values are expanded
+  /// into their original shape after dropping unit extent dimensions. Next to
+  /// the control construct, rewriter and location, the function recieves the
+  /// result value, the original value to replace and and information on how the
+  /// new dimensions were grouped.
+  /// The function needs to insert the necessary operations to expand the
+  /// result to the original shape and returns the new result value.
   using ExpandValueFnTy =
       std::function<Value(const ControlDropUnitDims &, RewriterBase &, Location,
                           Value, Value, ArrayRef<ReassociationIndices>)>;
+
+  /// Function to control how results are expanded into their original shape
+  /// after dropping unit extent dimensions. The default behavior \see
+  /// ControlDropUnitDims::expandValue.
+  /// Users of the \ref dropUnitDims interface can override the default behavior
+  /// by setting this member to their own implementation.
   ExpandValueFnTy expandValueFn =
       [](const ControlDropUnitDims &control, RewriterBase &rewriter,
          Location loc, Value result, Value origDest,

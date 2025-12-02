@@ -77,6 +77,19 @@ LogicalResult dropOutermostUnitDimsWithEncoding(RewriterBase &rewriter,
                                            reassociation);
   };
 
+  // Attach test attribute to expand operations
+  options.expandValueFn =
+      [](const linalg::ControlDropUnitDims &control, RewriterBase &rewriter,
+         Location loc, Value result, Value origDest,
+         ArrayRef<ReassociationIndices> reassociation) -> Value {
+    auto origResultType = cast<RankedTensorType>(origDest.getType());
+    auto expandOp = tensor::ExpandShapeOp::create(rewriter, loc, origResultType,
+                                                  result, reassociation);
+    expandOp->setDiscardableAttr("test.unit_dims_expanded",
+                                 rewriter.getUnitAttr());
+    return expandOp.getResult();
+  };
+
   FailureOr<linalg::DropUnitDimsResult> result =
       linalg::dropUnitDims(rewriter, genericOp, options);
   if (failed(result)) {
