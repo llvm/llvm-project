@@ -10,8 +10,24 @@
 // Properties: guard="sve,(sve2p2|sme2p2)" streaming_guard="sme,(sve2p2|sme2p2)" flags="feature-dependent"
 
 void test(void) {
+  svbfloat16_t svbfloat16_t_val;
   svbool_t svbool_t_val;
+  svfloat16_t svfloat16_t_val;
+  svfloat32_t svfloat32_t_val;
+  svfloat64_t svfloat64_t_val;
 
+  svcvtlt_f32_f16_z(svbool_t_val, svfloat16_t_val);
+  svcvtlt_f32_z(svbool_t_val, svfloat16_t_val);
+  svcvtlt_f64_f32_z(svbool_t_val, svfloat32_t_val);
+  svcvtlt_f64_z(svbool_t_val, svfloat32_t_val);
+  svcvtnt_bf16_f32_z(svbfloat16_t_val, svbool_t_val, svfloat32_t_val);
+  svcvtnt_bf16_z(svbfloat16_t_val, svbool_t_val, svfloat32_t_val);
+  svcvtnt_f16_f32_z(svfloat16_t_val, svbool_t_val, svfloat32_t_val);
+  svcvtnt_f16_z(svfloat16_t_val, svbool_t_val, svfloat32_t_val);
+  svcvtnt_f32_f64_z(svfloat32_t_val, svbool_t_val, svfloat64_t_val);
+  svcvtnt_f32_z(svfloat32_t_val, svbool_t_val, svfloat64_t_val);
+  svcvtxnt_f32_f64_z(svfloat32_t_val, svbool_t_val, svfloat64_t_val);
+  svcvtxnt_f32_z(svfloat32_t_val, svbool_t_val, svfloat64_t_val);
   svfirstp_b8(svbool_t_val, svbool_t_val);
   svfirstp_b16(svbool_t_val, svbool_t_val);
   svfirstp_b32(svbool_t_val, svbool_t_val);
@@ -23,8 +39,24 @@ void test(void) {
 }
 
 void test_streaming(void) __arm_streaming{
+  svbfloat16_t svbfloat16_t_val;
   svbool_t svbool_t_val;
+  svfloat16_t svfloat16_t_val;
+  svfloat32_t svfloat32_t_val;
+  svfloat64_t svfloat64_t_val;
 
+  svcvtlt_f32_f16_z(svbool_t_val, svfloat16_t_val);
+  svcvtlt_f32_z(svbool_t_val, svfloat16_t_val);
+  svcvtlt_f64_f32_z(svbool_t_val, svfloat32_t_val);
+  svcvtlt_f64_z(svbool_t_val, svfloat32_t_val);
+  svcvtnt_bf16_f32_z(svbfloat16_t_val, svbool_t_val, svfloat32_t_val);
+  svcvtnt_bf16_z(svbfloat16_t_val, svbool_t_val, svfloat32_t_val);
+  svcvtnt_f16_f32_z(svfloat16_t_val, svbool_t_val, svfloat32_t_val);
+  svcvtnt_f16_z(svfloat16_t_val, svbool_t_val, svfloat32_t_val);
+  svcvtnt_f32_f64_z(svfloat32_t_val, svbool_t_val, svfloat64_t_val);
+  svcvtnt_f32_z(svfloat32_t_val, svbool_t_val, svfloat64_t_val);
+  svcvtxnt_f32_f64_z(svfloat32_t_val, svbool_t_val, svfloat64_t_val);
+  svcvtxnt_f32_z(svfloat32_t_val, svbool_t_val, svfloat64_t_val);
   svfirstp_b8(svbool_t_val, svbool_t_val);
   svfirstp_b16(svbool_t_val, svbool_t_val);
   svfirstp_b32(svbool_t_val, svbool_t_val);
@@ -36,8 +68,24 @@ void test_streaming(void) __arm_streaming{
 }
 
 void test_streaming_compatible(void) __arm_streaming_compatible{
+  svbfloat16_t svbfloat16_t_val;
   svbool_t svbool_t_val;
+  svfloat16_t svfloat16_t_val;
+  svfloat32_t svfloat32_t_val;
+  svfloat64_t svfloat64_t_val;
 
+  svcvtlt_f32_f16_z(svbool_t_val, svfloat16_t_val);
+  svcvtlt_f32_z(svbool_t_val, svfloat16_t_val);
+  svcvtlt_f64_f32_z(svbool_t_val, svfloat32_t_val);
+  svcvtlt_f64_z(svbool_t_val, svfloat32_t_val);
+  svcvtnt_bf16_f32_z(svbfloat16_t_val, svbool_t_val, svfloat32_t_val);
+  svcvtnt_bf16_z(svbfloat16_t_val, svbool_t_val, svfloat32_t_val);
+  svcvtnt_f16_f32_z(svfloat16_t_val, svbool_t_val, svfloat32_t_val);
+  svcvtnt_f16_z(svfloat16_t_val, svbool_t_val, svfloat32_t_val);
+  svcvtnt_f32_f64_z(svfloat32_t_val, svbool_t_val, svfloat64_t_val);
+  svcvtnt_f32_z(svfloat32_t_val, svbool_t_val, svfloat64_t_val);
+  svcvtxnt_f32_f64_z(svfloat32_t_val, svbool_t_val, svfloat64_t_val);
+  svcvtxnt_f32_z(svfloat32_t_val, svbool_t_val, svfloat64_t_val);
   svfirstp_b8(svbool_t_val, svbool_t_val);
   svfirstp_b16(svbool_t_val, svbool_t_val);
   svfirstp_b32(svbool_t_val, svbool_t_val);

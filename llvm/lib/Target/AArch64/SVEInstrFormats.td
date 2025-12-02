@@ -2902,9 +2902,12 @@ multiclass sve2_fp_convert_up_long_z<string asm, string op> {
   defm : SVE_3_Op_UndefZero_Pat<nxv2f64, !cast<SDPatternOperator>(op # _f64f32), nxv2f64, nxv2i1, nxv4f32, !cast<Instruction>(NAME # _StoD)>;
 }
 
-multiclass sve2_fp_convert_down_narrow_z<string asm> {
+multiclass sve2_fp_convert_down_narrow_z<string asm, string op> {
   def _StoH : sve2_fp_convert_precision<0b1000, 0b0, asm,  ZPR16, ZPR32, /*destructive*/ true>;
   def _DtoS : sve2_fp_convert_precision<0b1110, 0b0, asm,  ZPR32, ZPR64, /*destructive*/ true>;
+
+  def : SVE_3_Op_Pat<nxv8f16, !cast<SDPatternOperator>(op # _f16f32), nxv8f16, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _StoH)>;
+  def : SVE_3_Op_Pat<nxv4f32, !cast<SDPatternOperator>(op # _f32f64), nxv4f32, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoS)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -9556,10 +9559,16 @@ multiclass sve_bfloat_convert<string asm, SDPatternOperator op, SDPatternOperato
   def : SVE_1_Op_Passthru_Round_Pat<nxv2bf16, ir_op, nxv2i1, nxv2f32, !cast<Instruction>(NAME)>;
 }
 
-multiclass sve_bfloat_convert_top<string asm,  SDPatternOperator op> {
-  def NAME : sve2_fp_convert_precision<0b1010, 0b1, asm, ZPR16, ZPR32>;
+multiclass sve_bfloat_convert_top<string asm, SDPatternOperator ir_op, bit op = true, bit destructive = op> {
+  def NAME : sve2_fp_convert_precision<0b1010, op, asm, ZPR16, ZPR32, destructive>;
 
-  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8bf16, nxv4i1, nxv4f32, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Pat<nxv8bf16, ir_op, nxv8bf16, nxv4i1, nxv4f32, !cast<Instruction>(NAME)>;
+}
+
+multiclass sve_float_convert_top<string asm, SDPatternOperator ir_op> {
+  def _StoD : sve2_fp_convert_precision<0b0010, 0b0, asm, ZPR32, ZPR64, /*destructive*/ true>;
+
+  def : SVE_3_Op_Pat<nxv4f32, ir_op, nxv4f32, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _StoD)>;
 }
 
 //===----------------------------------------------------------------------===//
