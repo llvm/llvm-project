@@ -149,82 +149,30 @@ static MCInst loadFPImmediate(MCRegister Reg, unsigned RegBitWidth,
   return Instructions;
 }
 
-// Generates instructions to load an immediate value into a DD Reg
+// Generates instructions to load an immediate value into a DD, DDD, DDDD,
+// QQ, QQQ or QQQQ Reg
 static std::vector<MCInst>
-loadDDRegImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
-  MCRegister RegDD0 = AArch64::D0 + (Reg - AArch64::D0_D1);
-  MCRegister RegDD1 = AArch64::D0 + ((Reg - AArch64::D0_D1 + 1) % 32);
+loadDQ234RegImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value,
+                      MCRegister BaseReg, unsigned RegCount) {
+  MCRegister RegDorQ0 = AArch64::D0;
+  if (RegBitWidth == 128)
+    RegDorQ0 = AArch64::Q0;
 
-  MCInst LoadDD0 = loadFPImmediate(RegDD0, RegBitWidth, Value);
-  MCInst LoadDD1 = loadFPImmediate(RegDD1, RegBitWidth, Value);
-  return {LoadDD0, LoadDD1};
-}
+  MCRegister RegDQ0 = RegDorQ0 + ((Reg - BaseReg + 0) % 32);
+  MCRegister RegDQ1 = RegDorQ0 + ((Reg - BaseReg + 1) % 32);
+  MCRegister RegDQ2 = RegDorQ0 + ((Reg - BaseReg + 2) % 32);
+  MCRegister RegDQ3 = RegDorQ0 + ((Reg - BaseReg + 3) % 32);
 
-// Generates instructions to load an immediate value into a DDD Reg
-static std::vector<MCInst>
-loadDDDRegImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
-  MCRegister RegDDD0 = AArch64::D0 + (Reg - AArch64::D0_D1_D2);
-  MCRegister RegDDD1 = AArch64::D0 + ((Reg - AArch64::D0_D1_D2 + 1) % 32);
-  MCRegister RegDDD2 = AArch64::D0 + ((Reg - AArch64::D0_D1_D2 + 2) % 32);
-
-  MCInst LoadDDD0 = loadFPImmediate(RegDDD0, RegBitWidth, Value);
-  MCInst LoadDDD1 = loadFPImmediate(RegDDD1, RegBitWidth, Value);
-  MCInst LoadDDD2 = loadFPImmediate(RegDDD2, RegBitWidth, Value);
-  return {LoadDDD0, LoadDDD1, LoadDDD2};
-}
-
-// Generates instructions to load an immediate value into a DDDD Reg
-static std::vector<MCInst>
-loadDDDDRegImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
-  MCRegister RegDDDD0 = AArch64::D0 + (Reg - AArch64::D0_D1_D2_D3);
-  MCRegister RegDDDD1 = AArch64::D0 + ((Reg - AArch64::D0_D1_D2_D3 + 1) % 32);
-  MCRegister RegDDDD2 = AArch64::D0 + ((Reg - AArch64::D0_D1_D2_D3 + 2) % 32);
-  MCRegister RegDDDD3 = AArch64::D0 + ((Reg - AArch64::D0_D1_D2_D3 + 3) % 32);
-
-  MCInst LoadDDDD0 = loadFPImmediate(RegDDDD0, RegBitWidth, Value);
-  MCInst LoadDDDD1 = loadFPImmediate(RegDDDD1, RegBitWidth, Value);
-  MCInst LoadDDDD2 = loadFPImmediate(RegDDDD2, RegBitWidth, Value);
-  MCInst LoadDDDD3 = loadFPImmediate(RegDDDD3, RegBitWidth, Value);
-  return {LoadDDDD0, LoadDDDD1, LoadDDDD2, LoadDDDD3};
-}
-
-// Generates instructions to load an immediate value into a QQ Reg
-static std::vector<MCInst>
-loadQQRegImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
-  MCRegister RegQQ0 = AArch64::Q0 + (Reg - AArch64::Q0_Q1);
-  MCRegister RegQQ1 = AArch64::Q0 + ((Reg - AArch64::Q0_Q1 + 1) % 32);
-
-  MCInst LoadQQ0 = loadFPImmediate(RegQQ0, RegBitWidth, Value);
-  MCInst LoadQQ1 = loadFPImmediate(RegQQ1, RegBitWidth, Value);
-  return {LoadQQ0, LoadQQ1};
-}
-
-// Generates instructions to load an immediate value into a QQQ Reg
-static std::vector<MCInst>
-loadQQQRegImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
-  MCRegister RegQQQ0 = AArch64::Q0 + (Reg - AArch64::Q0_Q1_Q2);
-  MCRegister RegQQQ1 = AArch64::Q0 + ((Reg - AArch64::Q0_Q1_Q2 + 1) % 32);
-  MCRegister RegQQQ2 = AArch64::Q0 + ((Reg - AArch64::Q0_Q1_Q2 + 2) % 32);
-
-  MCInst LoadQQQ0 = loadFPImmediate(RegQQQ0, RegBitWidth, Value);
-  MCInst LoadQQQ1 = loadFPImmediate(RegQQQ1, RegBitWidth, Value);
-  MCInst LoadQQQ2 = loadFPImmediate(RegQQQ2, RegBitWidth, Value);
-  return {LoadQQQ0, LoadQQQ1, LoadQQQ2};
-}
-
-// Generates instructions to load an immediate value into a QQQQ Reg
-static std::vector<MCInst>
-loadQQQQRegImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
-  MCRegister RegQQQQ0 = AArch64::Q0 + (Reg - AArch64::Q0_Q1_Q2_Q3);
-  MCRegister RegQQQQ1 = AArch64::Q0 + ((Reg - AArch64::Q0_Q1_Q2_Q3 + 1) % 32);
-  MCRegister RegQQQQ2 = AArch64::Q0 + ((Reg - AArch64::Q0_Q1_Q2_Q3 + 2) % 32);
-  MCRegister RegQQQQ3 = AArch64::Q0 + ((Reg - AArch64::Q0_Q1_Q2_Q3 + 3) % 32);
-
-  MCInst LoadQQQQ0 = loadFPImmediate(RegQQQQ0, RegBitWidth, Value);
-  MCInst LoadQQQQ1 = loadFPImmediate(RegQQQQ1, RegBitWidth, Value);
-  MCInst LoadQQQQ2 = loadFPImmediate(RegQQQQ2, RegBitWidth, Value);
-  MCInst LoadQQQQ3 = loadFPImmediate(RegQQQQ3, RegBitWidth, Value);
-  return {LoadQQQQ0, LoadQQQQ1, LoadQQQQ2, LoadQQQQ3};
+  MCInst LoadDQ0 = loadFPImmediate(RegDQ0, RegBitWidth, Value);
+  MCInst LoadDQ1 = loadFPImmediate(RegDQ1, RegBitWidth, Value);
+  if (RegCount == 2)
+    return {LoadDQ0, LoadDQ1};
+  MCInst LoadDQ2 = loadFPImmediate(RegDQ2, RegBitWidth, Value);
+  if (RegCount == 3)
+    return {LoadDQ0, LoadDQ1, LoadDQ2};
+  MCInst LoadDQ3 = loadFPImmediate(RegDQ3, RegBitWidth, Value);
+  assert((RegCount == 4) && "ExpectedRegCount 2, 3 or 4");
+  return {LoadDQ0, LoadDQ1, LoadDQ2, LoadDQ3};
 }
 
 // Generates instructions to load immediate in the flags register
@@ -302,17 +250,17 @@ private:
     if (AArch64::XSeqPairsClassRegClass.contains(Reg))
       return {loadXSeqPairImmediate(Reg, 64, Value)};
     if (AArch64::DDRegClass.contains(Reg))
-      return {loadDDRegImmediate(Reg, 64, Value)};
+      return loadDQ234RegImmediate(Reg, 64, Value, AArch64::D0_D1, 2);
     if (AArch64::DDDRegClass.contains(Reg))
-      return {loadDDDRegImmediate(Reg, 64, Value)};
+      return loadDQ234RegImmediate(Reg, 64, Value, AArch64::D0_D1_D2, 3);
     if (AArch64::DDDDRegClass.contains(Reg))
-      return {loadDDDDRegImmediate(Reg, 64, Value)};
+      return loadDQ234RegImmediate(Reg, 64, Value, AArch64::D0_D1_D2_D3, 4);
     if (AArch64::QQRegClass.contains(Reg))
-      return {loadQQRegImmediate(Reg, 128, Value)};
+      return loadDQ234RegImmediate(Reg, 128, Value, AArch64::Q0_Q1, 2);
     if (AArch64::QQQRegClass.contains(Reg))
-      return {loadQQQRegImmediate(Reg, 128, Value)};
+      return loadDQ234RegImmediate(Reg, 128, Value, AArch64::Q0_Q1_Q2, 3);
     if (AArch64::QQQQRegClass.contains(Reg))
-      return {loadQQQQRegImmediate(Reg, 128, Value)};
+      return loadDQ234RegImmediate(Reg, 128, Value, AArch64::Q0_Q1_Q2_Q3, 4);
     // TODO if (AArch64::PNRRegClass.contains(Reg))
     // TODO if (AArch64::ZPRRegClass.contains(Reg))
     // TODO if (AArch64::ZPR2RegClass.contains(Reg))
@@ -396,6 +344,7 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
     AssignedValue = MCOperand::createImm(0);
     return Error::success();
   case llvm::AArch64::OPERAND_SHIFTED_REGISTER:
+    // TODO it would be better if these operands were randomized
     AssignedValue = MCOperand::createReg(0);
     return Error::success();
   case llvm::AArch64::OPERAND_SHIFTED_IMMEDIATE:
