@@ -7486,12 +7486,11 @@ TEST_F(FormatTest, ExpressionIndentationBreakingBeforeOperators) {
                "};",
                Style);
   verifyFormat("return abc\n"
-               "         ? foo(\n"
-               "             a,\n"
-               "             b,\n"
-               "             bar(\n"
-               "               abc))\n"
-               "         : g(abc);",
+               "       ? foo(\n"
+               "           a,\n"
+               "           b,\n"
+               "           bar(abc))\n"
+               "       : g(abc);",
                Style);
 }
 
@@ -9495,20 +9494,20 @@ TEST_F(FormatTest, BreaksConditionalExpressions) {
                "    : aaaaaaaaaaaaaaaaaaaaaaaaaaa;");
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa aaaaaa =\n"
                "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-               "        ? aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-               "        : aaaaaaaaaaaaaaaa;");
+               "    ? aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "    : aaaaaaaaaaaaaaaa;");
   verifyFormat(
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa == aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
       "    ? aaaaaaaaaaaaaaa\n"
       "    : aaaaaaaaaaaaaaa;");
   verifyFormat("f(aaaaaaaaaaaaaaaa == // force break\n"
-               "          aaaaaaaaa\n"
-               "      ? b\n"
-               "      : c);");
+               "      aaaaaaaaa\n"
+               "  ? b\n"
+               "  : c);");
   verifyFormat("return aaaa == bbbb\n"
-               "           // comment\n"
-               "           ? aaaa\n"
-               "           : bbbb;");
+               "       // comment\n"
+               "       ? aaaa\n"
+               "       : bbbb;");
   verifyFormat("unsigned Indent =\n"
                "    format(TheLine.First,\n"
                "           IndentForLevel[TheLine.Level] >= 0\n"
@@ -9517,21 +9516,20 @@ TEST_F(FormatTest, BreaksConditionalExpressions) {
                "           TheLine.InPPDirective, PreviousEndOfLineColumn);",
                getLLVMStyleWithColumns(60));
   verifyFormat("bool aaaaaa = aaaaaaaaaaaaa //\n"
-               "                  ? aaaaaaaaaaaaaaa\n"
-               "                  : bbbbbbbbbbbbbbb //\n"
-               "                        ? ccccccccccccccc\n"
-               "                        : ddddddddddddddd;");
+               "              ? aaaaaaaaaaaaaaa\n"
+               "              : bbbbbbbbbbbbbbb //\n"
+               "                    ? ccccccccccccccc\n"
+               "                    : ddddddddddddddd;");
   verifyFormat("bool aaaaaa = aaaaaaaaaaaaa //\n"
-               "                  ? aaaaaaaaaaaaaaa\n"
-               "                  : (bbbbbbbbbbbbbbb //\n"
-               "                         ? ccccccccccccccc\n"
-               "                         : ddddddddddddddd);");
-  verifyFormat(
-      "int aaaaaaaaaaaaaaaaaaaaaaaaaaa = aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-      "                                      ? aaaaaaaaaaaaaaaaaaaaaaaaa +\n"
-      "                                            aaaaaaaaaaaaaaaaaaaaa +\n"
-      "                                            aaaaaaaaaaaaaaaaaaaaa\n"
-      "                                      : aaaaaaaaaa;");
+               "              ? aaaaaaaaaaaaaaa\n"
+               "              : (bbbbbbbbbbbbbbb //\n"
+               "                 ? ccccccccccccccc\n"
+               "                 : ddddddddddddddd);");
+  verifyFormat("int aaaaaaaaaaaaaaaaaaaaaaaaaaa =\n"
+               "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "    ? aaaaaaaaaaaaaaaaaaaaaaaaa + aaaaaaaaaaaaaaaaaaaaa + "
+               "aaaaaaaaaaaaaaaaaaaaa\n"
+               "    : aaaaaaaaaa;");
   verifyFormat(
       "aaaaaa = aaaaaaaaaaaa ? aaaaaaaaaa ? aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
       "                                   : aaaaaaaaaaaaaaaaaaaaaa\n"
@@ -9565,23 +9563,23 @@ TEST_F(FormatTest, BreaksConditionalExpressions) {
 
   // Assignments in conditional expressions. Apparently not uncommon :-(.
   verifyFormat("return a != b\n"
-               "           // comment\n"
-               "           ? a = b\n"
-               "           : a = b;");
+               "       // comment\n"
+               "       ? a = b\n"
+               "       : a = b;");
   verifyFormat("return a != b\n"
-               "           // comment\n"
-               "           ? a = a != b\n"
-               "                     // comment\n"
-               "                     ? a = b\n"
-               "                     : a\n"
-               "           : a;");
+               "       // comment\n"
+               "       ? a = a != b\n"
+               "             // comment\n"
+               "             ? a = b\n"
+               "             : a\n"
+               "       : a;");
   verifyFormat("return a != b\n"
-               "           // comment\n"
-               "           ? a\n"
-               "           : a = a != b\n"
-               "                     // comment\n"
-               "                     ? a = b\n"
-               "                     : a;");
+               "       // comment\n"
+               "       ? a\n"
+               "       : a = a != b\n"
+               "             // comment\n"
+               "             ? a = b\n"
+               "             : a;");
 
   // Chained conditionals
   FormatStyle Style = getLLVMStyleWithColumns(70);
@@ -9616,26 +9614,26 @@ TEST_F(FormatTest, BreaksConditionalExpressions) {
                "                        : (aaa ? bbb : ccc);",
                Style);
   verifyFormat(
-      "return aaaaaaaaaaaaaaaa ? (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
-      "                                             : cccccccccccccccccc)\n"
+      "return aaaaaaaaaaaaaaaa\n"
+      "       ? (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb : cccccccccccccccccc)\n"
       "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
       "                        : 3333333333333333;",
       Style);
   verifyFormat(
-      "return aaaaaaaaa        ? (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
-      "                                             : cccccccccccccccccc)\n"
+      "return aaaaaaaaa\n"
+      "       ? (aaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb : cccccccccccccccccc)\n"
       "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
       "                        : 3333333333333333;",
       Style);
   verifyFormat(
-      "return aaaaaaaaa        ? a = (aaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
-      "                                             : dddddddddddddddddd)\n"
+      "return aaaaaaaaa\n"
+      "       ? a = (aaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb : dddddddddddddddddd)\n"
       "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
       "                        : 3333333333333333;",
       Style);
   verifyFormat(
-      "return aaaaaaaaa        ? a + (aaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
-      "                                             : dddddddddddddddddd)\n"
+      "return aaaaaaaaa\n"
+      "       ? a + (aaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb : dddddddddddddddddd)\n"
       "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
       "                        : 3333333333333333;",
       Style);
@@ -9673,27 +9671,27 @@ TEST_F(FormatTest, BreaksConditionalExpressions) {
       "                        : 3333333333333333;",
       Style);
   verifyFormat(
-      "return aaaaaaaaaaaaaaaa ? aaaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
-      "                                             : cccccccccccccccccc\n"
+      "return aaaaaaaaaaaaaaaa\n"
+      "       ? aaaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb : cccccccccccccccccc\n"
       "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
       "                        : 3333333333333333;",
       Style);
   verifyFormat(
-      "return aaaaaaaaaaaaaaaa ? aaaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
-      "                          : cccccccccccccccc ? dddddddddddddddddd\n"
-      "                                             : eeeeeeeeeeeeeeeeee\n"
+      "return aaaaaaaaaaaaaaaa ? aaaaaaaaaaaaaaaaaa     ? bbbbbbbbbbbbbbbbbb\n"
+      "                              : cccccccccccccccc ? dddddddddddddddddd\n"
+      "                                                 : eeeeeeeeeeeeeeeeee\n"
       "       : bbbbbbbbbbbbbb ? 2222222222222222\n"
       "                        : 3333333333333333;",
       Style);
   verifyFormat("return aaaaaaaaaaaaaaaaaaaaa\n"
-               "           ? (aaaaaaaaaaaaaaaaaa   ? bbbbbbbbbbbbbbbbbb\n"
-               "              : cccccccccccccccccc ? dddddddddddddddddd\n"
-               "                                   : eeeeeeeeeeeeeeeeee)\n"
+               "       ? (aaaaaaaaaaaaaaaaaa   ? bbbbbbbbbbbbbbbbbb\n"
+               "          : cccccccccccccccccc ? dddddddddddddddddd\n"
+               "                               : eeeeeeeeeeeeeeeeee)\n"
                "       : bbbbbbbbbbbbbbbbbbb ? 2222222222222222\n"
                "                             : 3333333333333333;",
                Style);
   verifyFormat("return aaaaaaaaaaaaaaaaaaaaaaaaa\n"
-               "           ? aaaaaaaaaaaaaaaaaa ? bbbbbbbbbbbbbbbbbb\n"
+               "       ? aaaaaaaaaaaaaaaaaa     ? bbbbbbbbbbbbbbbbbb\n"
                "             : cccccccccccccccc ? dddddddddddddddddd\n"
                "                                : eeeeeeeeeeeeeeeeee\n"
                "       : bbbbbbbbbbbbbbbbbbbbbbb ? 2222222222222222\n"
@@ -27435,11 +27433,11 @@ TEST_F(FormatTest, MultilineLambdaInConditional) {
 
   Style = getLLVMStyleWithColumns(60);
   verifyFormat("auto aLengthyIdentifier = oneExpressionSoThatWeBreak\n"
-               "                              ? []() {\n"
-               "                                  ;\n"
-               "                                  return 5;\n"
-               "                                }()\n"
-               "                              : 2;",
+               "                          ? []() {\n"
+               "                              ;\n"
+               "                              return 5;\n"
+               "                            }()\n"
+               "                          : 2;",
                Style);
   verifyFormat("auto aLengthyIdentifier =\n"
                "    oneExpressionSoThatWeBreak ? 2 : []() {\n"
@@ -27458,11 +27456,11 @@ TEST_F(FormatTest, MultilineLambdaInConditional) {
                Style);
   verifyFormat("auto aLengthyIdentifier =\n"
                "    oneExpressionSoThatWeBreak\n"
-               "        ? 2\n"
-               "        : []() {\n"
-               "            ;\n"
-               "            return 5;\n"
-               "          };",
+               "    ? 2\n"
+               "    : []() {\n"
+               "        ;\n"
+               "        return 5;\n"
+               "      };",
                Style);
 }
 
