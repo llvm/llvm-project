@@ -374,11 +374,30 @@ static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
   return true;
 }
 
+static void
+lowerConstrainedFmuladd(IntrinsicInst *II,
+                        SmallVector<Instruction *> &EraseFromParent) {
+  auto *FPI = cast<ConstrainedFPIntrinsic>(II);
+  Value *A = FPI->getArgOperand(0);
+  Value *Mul = FPI->getArgOperand(1);
+  Value *Add = FPI->getArgOperand(2);
+  IRBuilder<> Builder(II->getParent());
+  Builder.SetInsertPoint(II);
+  std::optional<RoundingMode> Rounding = FPI->getRoundingMode();
+  Value *Product = Builder.CreateFMul(A, Mul, II->getName() + ".mul");
+  Value *Result = Builder.CreateConstrainedFPBinOp(
+      Intrinsic::experimental_constrained_fadd, Product, Add, {},
+      II->getName() + ".add", nullptr, Rounding);
+  II->replaceAllUsesWith(Result);
+  EraseFromParent.push_back(II);
+}
+
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
 // or calls to proper generated functions. Returns True if F was modified.
 bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
   const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
+  SmallVector<Instruction *> EraseFromParent;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
       auto Call = dyn_cast<CallInst>(&I);
@@ -420,9 +439,15 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         lowerPtrAnnotation(II);
         Changed = true;
         break;
+      case Intrinsic::experimental_constrained_fmuladd:
+        lowerConstrainedFmuladd(II, EraseFromParent);
+        Changed = true;
+        break;
       }
     }
   }
+  for (auto *I : EraseFromParent)
+    I->eraseFromParent();
   return Changed;
 }
 
