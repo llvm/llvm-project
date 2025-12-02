@@ -417,6 +417,10 @@ class UnclusteredHighRPStage : public GCNSchedStage {
 private:
   // Save the initial occupancy before starting this stage.
   unsigned InitialOccupancy;
+  // Save the temporary target occupancy before starting this stage.
+  unsigned TempTargetOccupancy;
+  // Track whether any region was scheduled by this stage.
+  bool IsAnyRegionScheduled;
 
 public:
   bool initGCNSchedStage() override;

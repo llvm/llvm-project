@@ -139,7 +139,8 @@ constexpr Parser<OpenACCDeclarativeConstruct> openaccDeclarativeConstruct;
 constexpr Parser<OpenMPConstruct> openmpConstruct;
 constexpr Parser<OpenMPExecDirective> openmpExecDirective;
 constexpr Parser<OpenMPDeclarativeConstruct> openmpDeclarativeConstruct;
-constexpr Parser<OmpEndLoopDirective> ompEndLoopDirective;
+constexpr Parser<OpenMPMisplacedEndDirective> openmpMisplacedEndDirective;
+constexpr Parser<OpenMPInvalidDirective> openmpInvalidDirective;
 constexpr Parser<IntrinsicVectorTypeSpec> intrinsicVectorTypeSpec; // Extension
 constexpr Parser<VectorTypeSpec> vectorTypeSpec; // Extension
 constexpr Parser<UnsignedTypeSpec> unsignedTypeSpec; // Extension

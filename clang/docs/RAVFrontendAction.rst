@@ -101,7 +101,7 @@ Accessing the SourceManager and ASTContext
 ==========================================
 
 Some of the information about the AST, like source locations and global
-identifier information, are not stored in the AST nodes themselves, but
+identifier information, is not stored in the AST nodes themselves, but
 in the ASTContext and its associated source manager. To retrieve them we
 need to hand the ASTContext into our RecursiveASTVisitor implementation.
 

@@ -2265,11 +2265,11 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
     newLb[d] = lbFloorDivisor;
     newUb[d] = -lbFloorDivisor;
     // Copy over the symbolic part + constant term.
-    std::copy(minLb.begin(), minLb.end(), newLb.begin() + getNumDimVars());
+    llvm::copy(minLb, newLb.begin() + getNumDimVars());
     std::transform(newLb.begin() + getNumDimVars(), newLb.end(),
                    newLb.begin() + getNumDimVars(),
                    std::negate<DynamicAPInt>());
-    std::copy(maxUb.begin(), maxUb.end(), newUb.begin() + getNumDimVars());
+    llvm::copy(maxUb, newUb.begin() + getNumDimVars());
 
     boundingLbs.emplace_back(newLb);
     boundingUbs.emplace_back(newUb);

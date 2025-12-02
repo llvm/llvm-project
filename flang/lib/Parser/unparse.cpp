@@ -1879,6 +1879,7 @@ public:
             [&](const CompilerDirective::NoInline &) {
               Word("!DIR$ NOINLINE");
             },
+            [&](const CompilerDirective::IVDep &) { Word("!DIR$ IVDEP"); },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());
@@ -2141,7 +2142,7 @@ public:
 
     Walk(std::get<OmpDirectiveName>(x.t));
     auto flags{std::get<OmpDirectiveSpecification::Flags>(x.t)};
-    if (flags == OmpDirectiveSpecification::Flags::DeprecatedSyntax) {
+    if (flags.test(OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {
       if (x.DirId() == llvm::omp::Directive::OMPD_flush) {
         // FLUSH clause arglist
         unparseClauses();
@@ -2285,6 +2286,11 @@ public:
     using Modifier = OmpAlignedClause::Modifier;
     Walk(std::get<OmpObjectList>(x.t));
     Walk(": ", std::get<std::optional<std::list<Modifier>>>(x.t));
+  }
+  void Unparse(const OmpFallbackModifier &x) {
+    Word("FALLBACK(");
+    Walk(x.v);
+    Put(")");
   }
   void Unparse(const OmpDynGroupprivateClause &x) {
     using Modifier = OmpDynGroupprivateClause::Modifier;
@@ -2533,8 +2539,8 @@ public:
   void Unparse(const OpenMPInteropConstruct &x) {
     BeginOpenMP();
     Word("!$OMP INTEROP");
-    using Flags = OmpDirectiveSpecification::Flags;
-    if (std::get<Flags>(x.v.t) == Flags::DeprecatedSyntax) {
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.v.t)};
+    if (flags.test(OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {
       Walk("(", std::get<std::optional<OmpArgumentList>>(x.v.t), ")");
       Walk(" ", std::get<std::optional<OmpClauseList>>(x.v.t));
     } else {
@@ -2673,8 +2679,8 @@ public:
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
     Word("!$OMP FLUSH");
-    using Flags = OmpDirectiveSpecification::Flags;
-    if (std::get<Flags>(x.v.t) == Flags::DeprecatedSyntax) {
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.v.t)};
+    if (flags.test(OmpDirectiveSpecification::Flag::DeprecatedSyntax)) {
       Walk("(", std::get<std::optional<OmpArgumentList>>(x.v.t), ")");
       Walk(" ", std::get<std::optional<OmpClauseList>>(x.v.t));
     } else {
@@ -2700,11 +2706,15 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPLoopConstruct &x) {
-    Walk(std::get<OmpBeginLoopDirective>(x.t));
-    Walk(std::get<std::optional<std::variant<DoConstruct,
-            common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t));
-    Walk(std::get<std::optional<OmpEndLoopDirective>>(x.t));
+  void Unparse(const OpenMPMisplacedEndDirective &x) {
+    Unparse(static_cast<const OmpEndDirective &>(x));
+  }
+  void Unparse(const OpenMPInvalidDirective &x) {
+    BeginOpenMP();
+    Word("!$OMP ");
+    Put(parser::ToUpperCaseLetters(x.source.ToString()));
+    Put("\n");
+    EndOpenMP();
   }
   void Unparse(const BasedPointer &x) {
     Put('('), Walk(std::get<0>(x.t)), Put(","), Walk(std::get<1>(x.t));
@@ -2795,6 +2805,7 @@ public:
       OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpExpectation, Value) // OMP motion-expectation
+  WALK_NESTED_ENUM(OmpFallbackModifier, Value) // OMP fallback-modifier
   WALK_NESTED_ENUM(OmpInteropType, Value) // OMP InteropType
   WALK_NESTED_ENUM(OmpOrderClause, Ordering) // OMP ordering
   WALK_NESTED_ENUM(OmpOrderModifier, Value) // OMP order-modifier

@@ -69,6 +69,12 @@ static cl::opt<bool> UseMIPSCCMovInsn("use-riscv-mips-ccmov",
                                       cl::desc("Use 'mips.ccmov' instruction"),
                                       cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnablePExtCodeGen(
+    "enable-p-ext-codegen",
+    cl::desc("Turn on P Extension codegen(This is a temporary switch where "
+             "only partial codegen is currently supported)"),
+    cl::init(false), cl::Hidden);
+
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -82,6 +88,8 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
 
   if (TuneCPU.empty())
     TuneCPU = CPU;
+  if (TuneCPU == "generic")
+    TuneCPU = Is64Bit ? "generic-rv64" : "generic-rv32";
 
   TuneInfo = RISCVTuneInfoTable::getRISCVTuneInfo(TuneCPU);
   // If there is no TuneInfo for this CPU, we fail back to generic.
@@ -104,7 +112,7 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
       RVVVectorBitsMin(RVVVectorBitsMin), RVVVectorBitsMax(RVVVectorBitsMax),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
-      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
+      InstrInfo(*this), TLInfo(TM, *this) {
   TSInfo = std::make_unique<RISCVSelectionDAGInfo>();
 }
 
@@ -143,6 +151,10 @@ const RISCVRegisterBankInfo *RISCVSubtarget::getRegBankInfo() const {
 
 bool RISCVSubtarget::useConstantPoolForLargeInts() const {
   return !RISCVDisableUsingConstantPoolForLargeInts;
+}
+
+bool RISCVSubtarget::enablePExtCodeGen() const {
+  return HasStdExtP && EnablePExtCodeGen;
 }
 
 unsigned RISCVSubtarget::getMaxBuildIntsCost() const {

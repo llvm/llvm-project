@@ -3,7 +3,8 @@
 bugprone-unused-return-value
 ============================
 
-Warns on unused function return values. The checked functions can be configured.
+Warns on unused function return values. The checked functions can be
+configured.
 
 Operator overloading with assignment semantics are ignored.
 

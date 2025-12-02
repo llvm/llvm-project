@@ -7,7 +7,7 @@ we still handle the remaining locations correctly.
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test.decorators import skipIfWindows, skipIfRemote
+from lldbsuite.test.decorators import skipIfWindows
 import os
 
 
@@ -19,7 +19,6 @@ class TestLocationsAfterRebuild(TestBase):
 
     # On Windows we cannot remove a file that lldb is debugging.
     @skipIfWindows
-    @skipIfRemote
     def test_remaining_location_spec(self):
         """If we rebuild a couple of times some of the old locations
         get removed.  Make sure the command-line breakpoint id
@@ -55,6 +54,24 @@ class TestLocationsAfterRebuild(TestBase):
             self, target, bkpt
         )
 
+        # After enabling locate_module callback for main executables,
+        # the number of locations may vary depending on the platform.
+        num_locs = bkpt.GetNumLocations()
         bkpt_id = bkpt.GetID()
-        loc_string = f"{bkpt_id}.3"
-        self.runCmd(f"break disable {loc_string}")
+
+        self.assertGreater(
+            num_locs,
+            0,
+            f"Expected at least one breakpoint location, but found {num_locs}",
+        )
+
+        # Iterate through all valid locations and verify we can disable each one.
+        # This tests that breakpoint location IDs remain valid after rebuilds.
+        for loc_idx in range(num_locs):
+            loc = bkpt.GetLocationAtIndex(loc_idx)
+            self.assertTrue(loc.IsValid(), f"Location at index {loc_idx} is not valid")
+
+            # Get the actual location ID from the location object
+            loc_id = loc.GetID()
+            loc_string = f"{bkpt_id}.{loc_id}"
+            self.runCmd(f"break disable {loc_string}")

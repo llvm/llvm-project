@@ -114,7 +114,7 @@ Register llvm::constrainOperandRegClass(
   // Assume physical registers are properly constrained.
   assert(Reg.isVirtual() && "PhysReg not implemented");
 
-  const TargetRegisterClass *OpRC = TII.getRegClass(II, OpIdx, &TRI);
+  const TargetRegisterClass *OpRC = TII.getRegClass(II, OpIdx);
   // Some of the target independent instructions, like COPY, may not impose any
   // register class constraints on some of their operands: If it's a use, we can
   // skip constraining as the instruction defining the register would constrain
@@ -768,8 +768,12 @@ llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
     C1.copySign(C2);
     return C1;
   case TargetOpcode::G_FMINNUM:
+    if (C1.isSignaling() || C2.isSignaling())
+      return std::nullopt;
     return minnum(C1, C2);
   case TargetOpcode::G_FMAXNUM:
+    if (C1.isSignaling() || C2.isSignaling())
+      return std::nullopt;
     return maxnum(C1, C2);
   case TargetOpcode::G_FMINIMUM:
     return minimum(C1, C2);

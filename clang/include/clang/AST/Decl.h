@@ -2335,7 +2335,7 @@ public:
   }
 
   void setDefaultedOrDeletedInfo(DefaultedOrDeletedFunctionInfo *Info);
-  DefaultedOrDeletedFunctionInfo *getDefalutedOrDeletedInfo() const;
+  DefaultedOrDeletedFunctionInfo *getDefaultedOrDeletedInfo() const;
 
   /// Whether this function is variadic.
   bool isVariadic() const;
@@ -4522,6 +4522,11 @@ public:
   // Whether there are any fields (non-static data members) in this record.
   bool field_empty() const {
     return field_begin() == field_end();
+  }
+
+  /// Returns the number of fields (non-static data members) in this record.
+  unsigned getNumFields() const {
+    return std::distance(field_begin(), field_end());
   }
 
   /// noload_fields - Iterate over the fields stored in this record
