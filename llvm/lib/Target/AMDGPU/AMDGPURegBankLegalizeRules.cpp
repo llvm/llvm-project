@@ -243,7 +243,7 @@ UniformityLLTOpPredicateID LLTToBId(LLT Ty) {
   return _;
 }
 
-const RegBankLLTMapping &
+const RegBankLLTMapping *
 SetOfRulesForOpcode::findMappingForMI(const MachineInstr &MI,
                                       const MachineRegisterInfo &MRI,
                                       const MachineUniformityInfo &MUI) const {
@@ -260,17 +260,16 @@ SetOfRulesForOpcode::findMappingForMI(const MachineInstr &MI,
       Slot = getFastPredicateSlot(LLTToId(MRI.getType(Reg)));
 
     if (Slot != -1)
-      return MUI.isUniform(Reg) ? Uni[Slot] : Div[Slot];
+      return MUI.isUniform(Reg) ? &Uni[Slot] : &Div[Slot];
   }
 
   // Slow search for more complex rules.
   for (const RegBankLegalizeRule &Rule : Rules) {
     if (Rule.Predicate.match(MI, MUI, MRI))
-      return Rule.OperandMapping;
+      return &Rule.OperandMapping;
   }
 
-  LLVM_DEBUG(dbgs() << "MI: "; MI.dump(););
-  llvm_unreachable("None of the rules defined for MI's opcode matched MI");
+  return nullptr;
 }
 
 void SetOfRulesForOpcode::addRule(RegBankLegalizeRule Rule) {
@@ -353,7 +352,7 @@ RegBankLegalizeRules::addRulesForIOpcs(std::initializer_list<unsigned> OpcList,
   return RuleSetInitializer(OpcList, IRulesAlias, IRules, FastTypes);
 }
 
-const SetOfRulesForOpcode &
+const SetOfRulesForOpcode *
 RegBankLegalizeRules::getRulesForOpc(MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
   if (Opc == AMDGPU::G_INTRINSIC || Opc == AMDGPU::G_INTRINSIC_CONVERGENT ||
@@ -361,19 +360,15 @@ RegBankLegalizeRules::getRulesForOpc(MachineInstr &MI) const {
       Opc == AMDGPU::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS) {
     unsigned IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
     auto IRAIt = IRulesAlias.find(IntrID);
-    if (IRAIt == IRulesAlias.end()) {
-      LLVM_DEBUG(dbgs() << "MI: "; MI.dump(););
-      llvm_unreachable("No rules defined for intrinsic opcode");
-    }
-    return IRules.at(IRAIt->second);
+    if (IRAIt == IRulesAlias.end())
+      return nullptr;
+    return &IRules.at(IRAIt->second);
   }
 
   auto GRAIt = GRulesAlias.find(Opc);
-  if (GRAIt == GRulesAlias.end()) {
-    LLVM_DEBUG(dbgs() << "MI: "; MI.dump(););
-    llvm_unreachable("No rules defined for generic opcode");
-  }
-  return GRules.at(GRAIt->second);
+  if (GRAIt == GRulesAlias.end())
+    return nullptr;
+  return &GRules.at(GRAIt->second);
 }
 
 // Syntactic sugar wrapper for predicate lambda that enables '&&', '||' and '!'.
