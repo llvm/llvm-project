@@ -169,6 +169,34 @@ void BitcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<MergeComplexBitcast, MergeArithBitcast>(context);
 }
 
+struct FoldComplexDivWithNaN final : OpRewritePattern<complex::DivOp> {
+  using OpRewritePattern<complex::DivOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(complex::DivOp op,
+                                PatternRewriter &rewriter) const override {
+    if (auto constant = op->getOperand(0).getDefiningOp<ConstantOp>()) {
+      mlir::ArrayAttr arrayAttr = constant.getValue();
+      if (!arrayAttr || arrayAttr.size() != 2)
+        return failure();
+
+      APFloat real = cast<FloatAttr>(arrayAttr[0]).getValue();
+      APFloat imag = cast<FloatAttr>(arrayAttr[1]).getValue();
+      if (real.isNaN() || imag.isNaN()) {
+        Attribute nanValue = real.isNaN() ? arrayAttr[0] : arrayAttr[1];
+        rewriter.replaceOpWithNewOp<complex::ConstantOp>(
+            op, op.getType(), rewriter.getArrayAttr({nanValue, nanValue}));
+        return success();
+      }
+    }
+    return failure();
+  };
+};
+
+void DivOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                        MLIRContext *context) {
+  results.add<FoldComplexDivWithNaN>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // CreateOp
 //===----------------------------------------------------------------------===//
