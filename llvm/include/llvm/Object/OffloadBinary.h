@@ -123,21 +123,16 @@ public:
 
   static uint64_t getAlignment() { return 8; }
 
-  ImageKind getOnlyImageKind() const {
-    assert(getEntriesCount() == 1 && "Expected exactly one entry.");
-    return Entries[0].first->TheImageKind;
-  }
-
-  OffloadKind getOffloadKind() const { return Entries[0].first->TheOffloadKind; }
+  ImageKind getImageKind() const { return Entries[Index].first->TheImageKind; }
+  OffloadKind getOffloadKind() const { return Entries[Index].first->TheOffloadKind; }
   uint32_t getVersion() const { return TheHeader->Version; }
-  uint32_t getFlags() const { return Entries[0].first->Flags; }
   uint64_t getSize() const { return TheHeader->Size; }
   uint64_t getEntriesCount() const { return TheHeader->EntriesCount; }
 
   StringRef getTriple() const { return getString("triple"); }
   StringRef getArch() const { return getString("arch"); }
   StringRef getImage() const {
-    return StringRef(&Buffer[Entries[0].first->ImageOffset], Entries[0].first->ImageSize);
+    return StringRef(&Buffer[Entries[Index].first->ImageOffset], Entries[Index].first->ImageSize);
   }
 
   // Iterator access to all entries in the binary
@@ -154,9 +149,9 @@ public:
   }
 
   // Iterator over all the key and value pairs in the binary.
-  string_iterator_range strings() const { return Entries[0].second; }
+  string_iterator_range strings() const { return Entries[Index].second; }
 
-  StringRef getString(StringRef Key) const { return Entries[0].second.lookup(Key); }
+  StringRef getString(StringRef Key) const { return Entries[Index].second.lookup(Key); }
 
   static bool classof(const Binary *V) { return V->isOffloadFile(); }
 
@@ -189,6 +184,8 @@ private:
   const char *Buffer;
   /// Location of the header within the binary.
   const Header *TheHeader;
+  /// Index of Entry represented by the current object.
+  const uint64_t Index;
 };
 
 /// A class to contain the binary information for a single OffloadBinary that
