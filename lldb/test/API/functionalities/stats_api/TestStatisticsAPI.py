@@ -205,5 +205,5 @@ class TestStatsAPI(TestBase):
         debug_stats = json.loads(stream.GetData())
         self.assertTrue("targets" in debug_stats)
         target_info = debug_stats["targets"][0]
-        self.assertTrue("coreFilePath" in target_info)
-        self.assertEqual(target_info["coreFilePath"], minidump_path)
+        self.assertTrue("coreFile" in target_info)
+        self.assertEqual(target_info["coreFile"], os.path.basename(minidump_path))
