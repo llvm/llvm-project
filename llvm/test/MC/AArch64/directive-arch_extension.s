@@ -201,3 +201,15 @@ fmmla v1.4s, v2.16b, v3.16b
 .arch_extension dit
 msr DIT, #1
 // CHECK: msr DIT, #1
+
+.arch_extension brbe
+brb iall
+// CHECK: brb iall
+
+.arch_extension pauth-lr
+autiasppc #0
+// CHECK: autiasppc #0
+
+.arch_extension wfxt
+wfit x0
+// CHECK: wfit x0

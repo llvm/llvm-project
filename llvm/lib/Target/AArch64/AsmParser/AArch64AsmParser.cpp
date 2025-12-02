@@ -3955,6 +3955,9 @@ static const struct Extension {
     {"tev", {AArch64::FeatureTEV}},
     {"btie", {AArch64::FeatureBTIE}},
     {"dit", {AArch64::FeatureDIT}},
+    {"brbe", {AArch64::FeatureBRBE}},
+    {"pauth-lr", {AArch64::FeaturePAuthLR}},
+    {"wfxt", {AArch64::FeatureWFxT}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
