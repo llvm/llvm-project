@@ -786,7 +786,7 @@ static bool CombineEquivalencedInitialization(
     combinedSymbol.set(Symbol::Flag::CompilerCreated);
     inits.emplace(&combinedSymbol, std::move(combined));
     auto &details{combinedSymbol.get<ObjectEntityDetails>()};
-    combinedSymbol.set_offset(first.offset());
+    combinedSymbol.set_offset(first.offsetOpt());
     combinedSymbol.set_size(bytes);
     std::size_t minElementBytes{
         ComputeMinElementBytes(associated, foldingContext)};

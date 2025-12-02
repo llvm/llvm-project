@@ -874,10 +874,24 @@ public:
   Scope *scope() { return scope_; }
   const Scope *scope() const { return scope_; }
   void set_scope(Scope *scope) { scope_ = scope; }
-  std::size_t size() const { return size_; }
+  std::optional<std::size_t> sizeOpt() const { return size_; }
+  std::size_t size() const { 
+    // NOTE: I tried to insert the following check, but there are places where we are
+    // relying on the fact that the size is 0 if it is not set.
+    // CHECK(size_.has_value());
+    return size_.value_or(0); 
+  }
   void set_size(std::size_t size) { size_ = size; }
-  std::size_t offset() const { return offset_; }
+  void set_size(std::optional<std::size_t> size) { size_ = size; }
+  std::optional<std::size_t> offsetOpt() const { return offset_; }
+  std::size_t offset() const { 
+    // NOTE: I tried to insert the following check, but there are places where we are
+    // relying on the fact that the offset is 0 if it is not set.
+    // CHECK(offset_.has_value());
+    return offset_.value_or(0); 
+  }
   void set_offset(std::size_t offset) { offset_ = offset; }
+  void set_offset(std::optional<std::size_t> offset) { offset_ = offset; }
   // Give the symbol a name with a different source location but same chars.
   void ReplaceName(const SourceName &);
   static std::string OmpFlagToClauseName(Flag ompFlag);
@@ -986,8 +1000,8 @@ private:
   Attrs implicitAttrs_; // subset of attrs_ that were not explicit
   Flags flags_;
   Scope *scope_{nullptr};
-  std::size_t size_{0}; // size in bytes
-  std::size_t offset_{0}; // byte offset in scope or common block
+  std::optional<std::size_t> size_; // size in bytes
+  std::optional<std::size_t> offset_; // byte offset in scope or common block
   Details details_;
 
   Symbol() {} // only created in class Symbols

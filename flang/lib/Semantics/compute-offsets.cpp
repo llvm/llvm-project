@@ -152,7 +152,8 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   // disjoint EQUIVALENCE storage sequence.
   for (auto &[symbol, dep] : dependents_) {
     dep = Resolve(dep);
-    CHECK(symbol->size() == 0);
+    //CHECK(symbol->size() == 0);
+    CHECK(!symbol->sizeOpt().has_value());
     auto symInfo{GetSizeAndAlignment(*symbol, true)};
     symbol->set_size(symInfo.size);
     Symbol &base{*dep.symbol};
@@ -211,6 +212,10 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
     }
   }
   for (auto &[symbol, dep] : dependents_) {
+    if (!dep.symbol->offsetOpt().has_value()) {
+      llvm::errs() << "Symbol " << dep.symbol->name() << " has no offset\n";
+    }
+    CHECK(dep.symbol->offsetOpt().has_value());
     symbol->set_offset(dep.symbol->offset() + dep.offset);
     if (const auto *block{FindCommonBlockContaining(*dep.symbol)}) {
       symbol->get<ObjectEntityDetails>().set_commonBlock(*block);
@@ -281,6 +286,7 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
       } else {
         eqIter = equivalenceBlock_.find(base);
         base.get<ObjectEntityDetails>().set_commonBlock(commonBlock);
+        CHECK(symbol.offsetOpt().has_value());
         base.set_offset(symbol.offset() - dep.offset);
         previous.emplace(base);
       }
@@ -301,7 +307,7 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
 
 void ComputeOffsetsHelper::DoEquivalenceBlockBase(
     Symbol &symbol, SizeAndAlignment &blockInfo) {
-  if (symbol.size() > blockInfo.size) {
+  if (symbol.sizeOpt().has_value() && symbol.size() > blockInfo.size) {
     blockInfo.size = symbol.size();
   }
 }
@@ -393,11 +399,14 @@ std::size_t ComputeOffsetsHelper::ComputeOffset(
 
 std::size_t ComputeOffsetsHelper::DoSymbol(
     Symbol &symbol, std::optional<const size_t> newAlign) {
+  // Symbols such as the main program and modules.
   if (!symbol.has<ObjectEntityDetails>() && !symbol.has<ProcEntityDetails>()) {
     return 0;
   }
   SizeAndAlignment s{GetSizeAndAlignment(symbol, true)};
   if (s.size == 0) {
+    symbol.set_size(0);
+    symbol.set_offset(offset_);
     return 0;
   }
   std::size_t previousOffset{offset_};
