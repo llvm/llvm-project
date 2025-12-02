@@ -1702,10 +1702,12 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
                        GlobalValue::PrivateLinkage,
                        M.getDataLayout().getProgramAddressSpace(),
                        ".cfi.jumptable", &M);
+  JumpTableFn->addFnAttr(Attribute::Naked);
+
   ArrayType *JumpTableEntryType = ArrayType::get(Int8Ty, EntrySize);
   ArrayType *JumpTableType =
       ArrayType::get(JumpTableEntryType, Functions.size());
-  auto JumpTable = ConstantExpr::getPointerCast(
+  auto *JumpTable = ConstantExpr::getPointerCast(
       JumpTableFn, PointerType::getUnqual(M.getContext()));
 
   lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
