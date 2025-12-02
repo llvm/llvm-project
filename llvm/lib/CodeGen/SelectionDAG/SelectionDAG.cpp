@@ -7390,8 +7390,12 @@ SDValue SelectionDAG::foldConstantFPMath(unsigned Opcode, const SDLoc &DL,
       C1.copySign(C2);
       return getConstantFP(C1, DL, VT);
     case ISD::FMINNUM:
+      if (C1.isSignaling() || C2.isSignaling())
+        return SDValue();
       return getConstantFP(minnum(C1, C2), DL, VT);
     case ISD::FMAXNUM:
+      if (C1.isSignaling() || C2.isSignaling())
+        return SDValue();
       return getConstantFP(maxnum(C1, C2), DL, VT);
     case ISD::FMINIMUM:
       return getConstantFP(minimum(C1, C2), DL, VT);
