@@ -745,10 +745,9 @@ func.func @test_to_tensor_without_restrict_works(
 
 // -----
 
-// Forum example: to_buffer (to_memref) + external memref call + to_tensor
-// This mirrors the IR discussed in the MLIR forum thread:
-// "Bufferization fails in the presence of `bufferization.to_memref`
-//  and `bufferization.to_tensor`".
+// Example: to_buffer (to_memref) + external memref call + to_tensor
+// Ensure that to_buffer/to_tensor around an external memref call do not crash
+// the one-shot bufferization pipeline.
 //
 // CHECK-LABEL: func @forum_to_tensor_to_buffer_example(
 //  CHECK-SAME:     %[[ARG0:.*]]: memref<2xf32
