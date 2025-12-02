@@ -858,33 +858,6 @@ void DependenceAnalysis::Result::abandonDependences() {
     Deps.release();
 }
 
-DependenceAnalysis::Result
-DependenceAnalysis::run(Scop &S, ScopAnalysisManager &SAM,
-                        ScopStandardAnalysisResults &SAR) {
-  return {S, {}};
-}
-
-AnalysisKey DependenceAnalysis::Key;
-
-PreservedAnalyses
-DependenceInfoPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
-                               ScopStandardAnalysisResults &SAR,
-                               SPMUpdater &U) {
-  auto &DI = SAM.getResult<DependenceAnalysis>(S, SAR);
-
-  if (auto d = DI.D[OptAnalysisLevel].get()) {
-    d->print(OS);
-    return PreservedAnalyses::all();
-  }
-
-  // Otherwise create the dependences on-the-fly and print them
-  Dependences D(S.getSharedIslCtx(), OptAnalysisLevel);
-  D.calculateDependences(S);
-  D.print(OS);
-
-  return PreservedAnalyses::all();
-}
-
 DependenceAnalysis::Result polly::runDependenceAnalysis(Scop &S) {
   DependenceAnalysis::Result Result{S, {}};
   return Result;

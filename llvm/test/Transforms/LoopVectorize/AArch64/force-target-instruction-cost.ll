@@ -62,7 +62,7 @@ define void @test_iv_cost(ptr %ptr.start, i8 %a, i64 %b) {
 ; COST1:       [[VECTOR_BODY]]:
 ; COST1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COST1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[INDEX]]
-; COST1-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 16
+; COST1-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 16
 ; COST1-NEXT:    store <16 x i8> zeroinitializer, ptr [[NEXT_GEP]], align 1
 ; COST1-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP0]], align 1
 ; COST1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
@@ -328,7 +328,7 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; COST1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP1]], i64 0
 ; COST1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; COST1-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[X]], i64 [[INDEX]]
-; COST1-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr [[TMP2]], i32 2
+; COST1-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr [[TMP2]], i64 2
 ; COST1-NEXT:    store <2 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 8
 ; COST1-NEXT:    store <2 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP3]], align 8
 ; COST1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -377,6 +377,59 @@ for.body:
   br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:
+  ret void
+}
+
+define void @loop_with_freeze_and_conditional_srem(ptr %dst, ptr %keyinfo, ptr %invariant.ptr, i32 %divisor) {
+; COMMON-LABEL: define void @loop_with_freeze_and_conditional_srem(
+; COMMON-SAME: ptr [[DST:%.*]], ptr [[KEYINFO:%.*]], ptr [[INVARIANT_PTR:%.*]], i32 [[DIVISOR:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*]]:
+; COMMON-NEXT:    br label %[[LOOP:.*]]
+; COMMON:       [[LOOP]]:
+; COMMON-NEXT:    [[INDEX_NEXT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4
+; COMMON-NEXT:    [[FROZEN:%.*]] = freeze i32 [[LOADED]]
+; COMMON-NEXT:    [[CMP:%.*]] = icmp eq i32 [[FROZEN]], 0
+; COMMON-NEXT:    br i1 [[CMP]], label %[[IF_ZERO:.*]], label %[[IF_NONZERO:.*]]
+; COMMON:       [[IF_ZERO]]:
+; COMMON-NEXT:    store i32 0, ptr [[KEYINFO]], align 4
+; COMMON-NEXT:    br label %[[LOOP_LATCH]]
+; COMMON:       [[IF_NONZERO]]:
+; COMMON-NEXT:    [[TMP11:%.*]] = srem i32 1, [[DIVISOR]]
+; COMMON-NEXT:    store i32 [[TMP11]], ptr [[DST]], align 4
+; COMMON-NEXT:    br label %[[LOOP_LATCH]]
+; COMMON:       [[LOOP_LATCH]]:
+; COMMON-NEXT:    [[IV_NEXT]] = add i64 [[INDEX_NEXT]], 1
+; COMMON-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
+; COMMON-NEXT:    br i1 [[TMP16]], label %[[EXIT:.*]], label %[[LOOP]]
+; COMMON:       [[EXIT]]:
+; COMMON-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop.latch, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %loaded = load i32, ptr %invariant.ptr, align 4
+  %frozen = freeze i32 %loaded
+  %cmp = icmp eq i32 %frozen, 0
+  br i1 %cmp, label %if.zero, label %if.nonzero
+
+if.zero:                                          ; preds = %loop
+  store i32 0, ptr %keyinfo, align 4
+  br label %loop.latch
+
+if.nonzero:                                       ; preds = %loop
+  %rem = srem i32 1, %divisor
+  store i32 %rem, ptr %dst, align 4
+  br label %loop.latch
+
+loop.latch:                                       ; preds = %if.nonzero, %if.zero
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv, 32
+  br i1 %exitcond, label %exit, label %loop
+
+exit:                                             ; preds = %loop.latch
   ret void
 }
 

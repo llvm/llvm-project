@@ -15,7 +15,6 @@
 #include "polly/DependenceInfo.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
-#include "polly/ScopPass.h"
 #include "polly/Support/ISLTools.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -449,48 +448,7 @@ runMaximalStaticExpansionImpl(Scop &S, OptimizationRemarkEmitter &ORE,
   Impl->expand();
   return Impl;
 }
-
-static PreservedAnalyses runMSEUsingNPM(Scop &S, ScopAnalysisManager &SAM,
-                                        ScopStandardAnalysisResults &SAR,
-                                        raw_ostream *OS) {
-  OptimizationRemarkEmitter ORE(&S.getFunction());
-
-  auto &DI = SAM.getResult<DependenceAnalysis>(S, SAR);
-  auto &D = DI.getDependences(Dependences::AL_Reference);
-
-  std::unique_ptr<MaximalStaticExpansionImpl> Impl =
-      runMaximalStaticExpansionImpl(S, ORE, D);
-
-  if (OS) {
-    *OS << "Printing analysis 'Polly - Maximal static expansion of SCoP' for "
-           "region: '"
-        << S.getName() << "' in function '" << S.getFunction().getName()
-        << "':\n";
-
-    if (Impl) {
-      *OS << "MSE result:\n";
-      Impl->print(*OS);
-    }
-  }
-
-  return PreservedAnalyses::all();
-}
-
 } // namespace
-
-PreservedAnalyses
-MaximalStaticExpansionPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                ScopStandardAnalysisResults &SAR,
-                                SPMUpdater &) {
-  return runMSEUsingNPM(S, SAM, SAR, nullptr);
-}
-
-PreservedAnalyses
-MaximalStaticExpansionPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                       ScopStandardAnalysisResults &SAR,
-                                       SPMUpdater &) {
-  return runMSEUsingNPM(S, SAM, SAR, &OS);
-}
 
 void polly::runMaximalStaticExpansion(Scop &S, DependenceAnalysis::Result &DI) {
   OptimizationRemarkEmitter ORE(&S.getFunction());

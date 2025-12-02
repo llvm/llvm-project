@@ -119,21 +119,6 @@ function(add_gen_header target_name)
     DEPFILE ${dep_file}
     COMMENT "Generating header ${ADD_GEN_HDR_GEN_HDR} from ${yaml_file}"
   )
-  if(LIBC_TARGET_OS_IS_GPU)
-    file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls)
-    file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls/gpu)
-    set(decl_out_file ${LIBC_INCLUDE_DIR}/llvm-libc-decls/${relative_path})
-    add_custom_command(
-      OUTPUT ${decl_out_file}
-      COMMAND ${Python3_EXECUTABLE} "${LIBC_SOURCE_DIR}/utils/hdrgen/yaml_to_classes.py"
-              ${yaml_file}
-              --export-decls
-              ${entry_points}
-              --output_dir ${decl_out_file}
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      DEPENDS ${yaml_file}
-    )
-  endif()
 
   if(ADD_GEN_HDR_DEPENDS)
     get_fq_deps_list(fq_deps_list ${ADD_GEN_HDR_DEPENDS})

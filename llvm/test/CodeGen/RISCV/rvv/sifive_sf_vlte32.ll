@@ -9,8 +9,6 @@
 ; RUN:   -mattr=+xsfmm32a -mattr=+xsfmm32a8f -mattr=+xsfmm32a4i -mattr=+xsfmm64a64f \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
-declare void @llvm.riscv.sf.vlte32.iXLen(iXLen, ptr, iXLen)
-
 define dso_local void @test_sf_vlte32(iXLen %tss, ptr %base, iXLen %vl) {
 ; CHECK-LABEL: test_sf_vlte32:
 ; CHECK:       # %bb.0: # %entry

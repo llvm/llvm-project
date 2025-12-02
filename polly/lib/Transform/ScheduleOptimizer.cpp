@@ -52,6 +52,7 @@
 #include "polly/MatmulOptimizer.h"
 #include "polly/Options.h"
 #include "polly/ScheduleTreeTransform.h"
+#include "polly/ScopInfo.h"
 #include "polly/Support/ISLOStream.h"
 #include "polly/Support/ISLTools.h"
 #include "llvm/ADT/Sequence.h"
@@ -965,44 +966,6 @@ static void runScheduleOptimizerPrinter(raw_ostream &OS,
 }
 
 } // namespace
-
-static llvm::PreservedAnalyses
-runIslScheduleOptimizerUsingNPM(Scop &S, ScopAnalysisManager &SAM,
-                                ScopStandardAnalysisResults &SAR, SPMUpdater &U,
-                                raw_ostream *OS) {
-  DependenceAnalysis::Result &Deps = SAM.getResult<DependenceAnalysis>(S, SAR);
-  auto GetDeps = [&Deps](Dependences::AnalysisLevel) -> const Dependences & {
-    return Deps.getDependences(Dependences::AL_Statement);
-  };
-  OptimizationRemarkEmitter ORE(&S.getFunction());
-  TargetTransformInfo *TTI = &SAR.TTI;
-  isl::schedule LastSchedule;
-  bool DepsChanged = false;
-  runIslScheduleOptimizerImpl(S, GetDeps, TTI, &ORE, LastSchedule, DepsChanged);
-  if (DepsChanged)
-    Deps.abandonDependences();
-
-  if (OS) {
-    *OS << "Printing analysis 'Polly - Optimize schedule of SCoP' for region: '"
-        << S.getName() << "' in function '" << S.getFunction().getName()
-        << "':\n";
-    runScheduleOptimizerPrinter(*OS, LastSchedule);
-  }
-  return PreservedAnalyses::all();
-}
-
-llvm::PreservedAnalyses
-IslScheduleOptimizerPass::run(Scop &S, ScopAnalysisManager &SAM,
-                              ScopStandardAnalysisResults &SAR, SPMUpdater &U) {
-  return runIslScheduleOptimizerUsingNPM(S, SAM, SAR, U, nullptr);
-}
-
-llvm::PreservedAnalyses
-IslScheduleOptimizerPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                     ScopStandardAnalysisResults &SAR,
-                                     SPMUpdater &U) {
-  return runIslScheduleOptimizerUsingNPM(S, SAM, SAR, U, &OS);
-}
 
 void polly::runIslScheduleOptimizer(Scop &S, TargetTransformInfo *TTI,
                                     DependenceAnalysis::Result &Deps) {

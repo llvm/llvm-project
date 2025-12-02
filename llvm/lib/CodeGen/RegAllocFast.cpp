@@ -284,7 +284,7 @@ private:
   /// Mark a physreg as used in this instruction.
   void markRegUsedInInstr(MCPhysReg PhysReg) {
     for (MCRegUnit Unit : TRI->regunits(PhysReg))
-      UsedInInstr[Unit] = InstrGen | 1;
+      UsedInInstr[static_cast<unsigned>(Unit)] = InstrGen | 1;
   }
 
   // Check if physreg is clobbered by instruction's regmask(s).
@@ -299,7 +299,8 @@ private:
     if (LookAtPhysRegUses && isClobberedByRegMasks(PhysReg))
       return true;
     for (MCRegUnit Unit : TRI->regunits(PhysReg))
-      if (UsedInInstr[Unit] >= (InstrGen | !LookAtPhysRegUses))
+      if (UsedInInstr[static_cast<unsigned>(Unit)] >=
+          (InstrGen | !LookAtPhysRegUses))
         return true;
     return false;
   }
@@ -308,15 +309,16 @@ private:
   /// This is only used by the special livethrough handling code.
   void markPhysRegUsedInInstr(MCRegister PhysReg) {
     for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
-      assert(UsedInInstr[Unit] <= InstrGen && "non-phys use before phys use?");
-      UsedInInstr[Unit] = InstrGen;
+      assert(UsedInInstr[static_cast<unsigned>(Unit)] <= InstrGen &&
+             "non-phys use before phys use?");
+      UsedInInstr[static_cast<unsigned>(Unit)] = InstrGen;
     }
   }
 
   /// Remove mark of physical register being used in the instruction.
   void unmarkRegUsedInInstr(MCRegister PhysReg) {
     for (MCRegUnit Unit : TRI->regunits(PhysReg))
-      UsedInInstr[Unit] = 0;
+      UsedInInstr[static_cast<unsigned>(Unit)] = 0;
   }
 
   enum : unsigned {

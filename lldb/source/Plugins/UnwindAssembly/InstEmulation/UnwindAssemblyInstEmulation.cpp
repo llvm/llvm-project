@@ -63,7 +63,7 @@ static void DumpUnwindRowsToLog(Log *log, AddressRange range,
 }
 
 static void DumpInstToLog(Log *log, Instruction &inst,
-                          InstructionList inst_list) {
+                          const InstructionList &inst_list) {
   if (!log || !log->GetVerbose())
     return;
   const bool show_address = true;
@@ -174,8 +174,10 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
     m_inst_emulator_up->SetInstruction(inst->GetOpcode(), inst->GetAddress(),
                                        nullptr);
+    const EmulateInstruction::InstructionCondition new_condition =
+        m_inst_emulator_up->GetInstructionCondition();
 
-    if (last_condition != m_inst_emulator_up->GetInstructionCondition()) {
+    if (last_condition != new_condition) {
       // If the last instruction was conditional with a different condition
       // than the current condition then restore the state.
       if (last_condition != EmulateInstruction::UnconditionalCondition) {
@@ -190,7 +192,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
       condition_block_start_state = it;
     }
 
-    last_condition = m_inst_emulator_up->GetInstructionCondition();
+    last_condition = new_condition;
 
     m_inst_emulator_up->EvaluateInstruction(
         eEmulateInstructionOptionIgnoreConditions);
@@ -210,11 +212,11 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     if (m_curr_row_modified) {
       // Save the modified row if we don't already have a CFI row in the
       // current address
-      if (saved_unwind_states.count(current_offset +
-                                    inst->GetOpcode().GetByteSize()) == 0) {
-        m_state.row.SetOffset(current_offset + inst->GetOpcode().GetByteSize());
-        saved_unwind_states.emplace(
-            current_offset + inst->GetOpcode().GetByteSize(), m_state);
+      const lldb::addr_t next_inst_offset =
+          current_offset + inst->GetOpcode().GetByteSize();
+      if (saved_unwind_states.count(next_inst_offset) == 0) {
+        m_state.row.SetOffset(next_inst_offset);
+        saved_unwind_states.emplace(next_inst_offset, m_state);
       }
     }
   }
@@ -505,12 +507,12 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
   case EmulateInstruction::eContextRelativeBranchImmediate: {
     if (context.GetInfoType() == EmulateInstruction::eInfoTypeISAAndImmediate &&
         context.info.ISAAndImmediate.unsigned_data32 > 0) {
-      m_forward_branch_offset =
-          context.info.ISAAndImmediateSigned.signed_data32;
+      m_forward_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeISAAndImmediateSigned &&
                context.info.ISAAndImmediateSigned.signed_data32 > 0) {
-      m_forward_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
+      m_forward_branch_offset =
+          context.info.ISAAndImmediateSigned.signed_data32;
     } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeImmediate &&
                context.info.unsigned_immediate > 0) {

@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUISELDAGTODAG_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUISELDAGTODAG_H
 
+#include "AMDGPUSelectionDAGInfo.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIModeRegisterDefaults.h"
