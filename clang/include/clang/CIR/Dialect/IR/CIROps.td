@@ -4704,7 +4704,7 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
   }];
 }
 
-def CIR_VACopyOp : CIR_Op<"va.copy"> {
+def CIR_VACopyOp : CIR_Op<"va_copy"> {
   let summary = "Copied a variable argument list";
   let description = [{
     The `cir.copy` operation models the C/C++ va_copy macro.
@@ -4720,7 +4720,7 @@ def CIR_VACopyOp : CIR_Op<"va.copy"> {
     %p = cir.cast array_to_ptrdecay %args
           : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
           -> !cir.ptr<!rec___va_list_tag>
-    cir.va.copy %p to %dst
+    cir.va_copy %p to %dst
           : (!cir.ptr<!rec___va_list_tag>, !cir.ptr<!rec___va_list_tag>)
     ```
   }];
