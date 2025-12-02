@@ -521,7 +521,7 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
   // We need to launch and attach to the process.
   launch_info.GetFlags().Set(eLaunchFlagDebug);
   if (!process_sp)
-    return process_sp;
+    return nullptr;
   error = process_sp->Launch(launch_info);
   if (error.Success())
     process_sp->SetPseudoTerminalHandle(launch_info.GetPTYSP());

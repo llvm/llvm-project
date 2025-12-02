@@ -31,7 +31,7 @@ llvm::Error PseudoTerminalWindows::OpenFirstAvailablePrimary(int oflag) {
   HANDLE hOutputWrite = INVALID_HANDLE_VALUE;
 
   wchar_t pipe_name[MAX_PATH];
-  swprintf(pipe_name, MAX_PATH, L"\\\\.\\pipe\\conpty-%d-%p",
+  swprintf(pipe_name, MAX_PATH, L"\\\\.\\pipe\\conpty-lldb-%d-%p",
            GetCurrentProcessId(), this);
 
   hOutputRead =
