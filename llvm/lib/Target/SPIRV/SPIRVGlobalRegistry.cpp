@@ -884,13 +884,10 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
     });
   } else {
     if (!ST.isShader()) {
-      Function &Fn = MIRBuilder.getMF().getFunction();
-      Fn.getContext().diagnose(DiagnosticInfoUnsupported(
-          Fn,
+      llvm::reportFatalUsageError(
           "Runtime arrays are not allowed in non-shader "
-          "SPIR-V modules",
-          MIRBuilder.getDebugLoc()));
-      return ElemType;
+          "SPIR-V modules");
+      return nullptr;
     }
     ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
       return MIRBuilder.buildInstr(SPIRV::OpTypeRuntimeArray)

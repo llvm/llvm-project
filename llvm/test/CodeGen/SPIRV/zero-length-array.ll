@@ -15,7 +15,7 @@
 
 
 ; For non-compute, error.
-; CHECK-ERR: in function foo void (): Runtime arrays are not allowed in non-shader SPIR-V modules
+; CHECK-ERR: LLVM ERROR: Runtime arrays are not allowed in non-shader SPIR-V modules
 
 define spir_func void @foo() {
 entry:
