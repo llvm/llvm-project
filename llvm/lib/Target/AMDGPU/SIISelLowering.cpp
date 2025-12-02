@@ -15511,36 +15511,6 @@ unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
   return 0;
 }
 
-// Check if an FADD node should be contracted into a fused operation.
-// Returns true if the FADD has only one use, or if all uses are contractable
-// FADD/FSUB operations that would allow the FADD to be eliminated.
-static bool shouldContractFAdd(SDValue FAdd, SelectionDAG &DAG) {
-  if (FAdd->hasOneUse())
-    return true;
-
-  // Check if all uses are contractable fadd or fsub operations
-  const TargetOptions &Options = DAG.getTarget().Options;
-  for (const auto *User : FAdd->users()) {
-    bool IsContractable = false;
-    if (User->getOpcode() == ISD::FADD || User->getOpcode() == ISD::FSUB) {
-      // Check if we can get a fused opcode for this user
-      if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-          (User->getFlags().hasAllowContract() &&
-           FAdd->getFlags().hasAllowContract())) {
-        // Verify that FAdd is used as an operand that would be contracted
-        if (User->getOperand(0) == FAdd || User->getOperand(1) == FAdd) {
-          IsContractable = true;
-        }
-      }
-    }
-
-    if (!IsContractable)
-      return false; // Found a use that won't be contracted
-  }
-
-  return true; // All uses can be contracted
-}
-
 // For a reassociatable opcode perform:
 // op x, (op y, z) -> op (op x, z), y, if x and z are uniform
 SDValue SITargetLowering::reassociateScalarOps(SDNode *N,
@@ -16417,9 +16387,7 @@ SDValue SITargetLowering::performFAddCombine(SDNode *N,
   // fadd (fadd (a, a), b) -> mad 2.0, a, b
   if (LHS.getOpcode() == ISD::FADD) {
     SDValue A = LHS.getOperand(0);
-    // Only contract if fadd(a,a) has one use or all uses are contractable,
-    // avoiding duplication of the fadd without reducing total operations.
-    if (A == LHS.getOperand(1) && shouldContractFAdd(LHS, DAG)) {
+    if (A == LHS.getOperand(1)) {
       unsigned FusedOp = getFusedOpcode(DAG, N, LHS.getNode());
       if (FusedOp != 0) {
         const SDValue Two = DAG.getConstantFP(2.0, SL, VT);
@@ -16431,9 +16399,7 @@ SDValue SITargetLowering::performFAddCombine(SDNode *N,
   // fadd (b, fadd (a, a)) -> mad 2.0, a, b
   if (RHS.getOpcode() == ISD::FADD) {
     SDValue A = RHS.getOperand(0);
-    // Only contract if fadd(a,a) has one use or all uses are contractable,
-    // avoiding duplication of the fadd without reducing total operations.
-    if (A == RHS.getOperand(1) && shouldContractFAdd(RHS, DAG)) {
+    if (A == RHS.getOperand(1)) {
       unsigned FusedOp = getFusedOpcode(DAG, N, RHS.getNode());
       if (FusedOp != 0) {
         const SDValue Two = DAG.getConstantFP(2.0, SL, VT);
@@ -16465,9 +16431,7 @@ SDValue SITargetLowering::performFSubCombine(SDNode *N,
   if (LHS.getOpcode() == ISD::FADD) {
     // (fsub (fadd a, a), c) -> mad 2.0, a, (fneg c)
     SDValue A = LHS.getOperand(0);
-    // Only contract if fadd(a,a) has one use or all uses are contractable,
-    // avoiding duplication of the fadd without reducing total operations.
-    if (A == LHS.getOperand(1) && shouldContractFAdd(LHS, DAG)) {
+    if (A == LHS.getOperand(1)) {
       unsigned FusedOp = getFusedOpcode(DAG, N, LHS.getNode());
       if (FusedOp != 0) {
         const SDValue Two = DAG.getConstantFP(2.0, SL, VT);
@@ -16482,9 +16446,7 @@ SDValue SITargetLowering::performFSubCombine(SDNode *N,
     // (fsub c, (fadd a, a)) -> mad -2.0, a, c
 
     SDValue A = RHS.getOperand(0);
-    // Only contract if fadd(a,a) has one use or all uses are contractable,
-    // avoiding duplication of the fadd without reducing total operations.
-    if (A == RHS.getOperand(1) && shouldContractFAdd(RHS, DAG)) {
+    if (A == RHS.getOperand(1)) {
       unsigned FusedOp = getFusedOpcode(DAG, N, RHS.getNode());
       if (FusedOp != 0) {
         const SDValue NegTwo = DAG.getConstantFP(-2.0, SL, VT);

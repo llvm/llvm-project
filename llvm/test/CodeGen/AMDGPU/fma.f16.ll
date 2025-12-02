@@ -670,14 +670,7 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-<<<<<<< HEAD
-; GFX12-SDAG-TRUE16-NEXT:    s_movk_i32 s0, 0x211e
-; GFX12-SDAG-TRUE16-NEXT:    v_pk_mul_f16 v1, 0x291e, v0 op_sel_hi:[0,1]
-; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-TRUE16-NEXT:    v_pk_fma_f16 v0, 0x291e, v0, s0 op_sel_hi:[0,1,0]
-=======
 ; GFX12-SDAG-TRUE16-NEXT:    v_pk_mul_f16 v0, 0x291e, v0 op_sel_hi:[0,1]
->>>>>>> 3849d5e6a9db (Initital commit)
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-TRUE16-NEXT:    v_pk_add_f16 v1, 0x211e, v0 op_sel_hi:[0,1]
 ; GFX12-SDAG-TRUE16-NEXT:    v_pk_min_num_f16 v1, v0, v1
@@ -697,14 +690,7 @@ define <2 x i32> @test_D139469_v2f16(<2 x half> %arg) {
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-<<<<<<< HEAD
-; GFX12-SDAG-FAKE16-NEXT:    s_movk_i32 s0, 0x211e
-; GFX12-SDAG-FAKE16-NEXT:    v_pk_mul_f16 v1, 0x291e, v0 op_sel_hi:[0,1]
-; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-FAKE16-NEXT:    v_pk_fma_f16 v0, 0x291e, v0, s0 op_sel_hi:[0,1,0]
-=======
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_mul_f16 v0, 0x291e, v0 op_sel_hi:[0,1]
->>>>>>> 3849d5e6a9db (Initital commit)
 ; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_add_f16 v1, 0x211e, v0 op_sel_hi:[0,1]
 ; GFX12-SDAG-FAKE16-NEXT:    v_pk_min_num_f16 v0, v0, v1
