@@ -465,7 +465,7 @@ void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
                          xegpu::CachePolicyAttr l3_hint) {
 
   return build(builder, state, tensorDesc, ValueRange(), DenseI64ArrayAttr(),
-               l1_hint, l2_hint, l3_hint);
+               l1_hint, l2_hint, l3_hint, /*anchor_layout=*/nullptr);
 }
 
 void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
@@ -480,7 +480,7 @@ void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
 
   build(builder, state, tensorDesc, dynamicOffsets, staticOffsetsAttr, l1_hint,
-        l2_hint, l3_hint);
+        l2_hint, l3_hint, /*anchor_layout=*/nullptr);
 }
 
 LogicalResult PrefetchNdOp::verify() {
@@ -519,7 +519,7 @@ void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
 
   return build(builder, state, retType, tensorDesc, ValueRange(),
                DenseI64ArrayAttr(), packed, transpose, l1_hint, l2_hint,
-               l3_hint);
+               l3_hint, /*anchor_layout=*/nullptr);
 }
 
 void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
@@ -535,7 +535,8 @@ void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
 
   build(builder, state, retType, tensorDesc, dynamicOffsets, staticOffsetsAttr,
-        packed, transpose, l1_hint, l2_hint, l3_hint);
+        packed, transpose, l1_hint, l2_hint, l3_hint,
+        /*anchor_layout=*/nullptr);
 }
 
 LogicalResult LoadNdOp::verify() {
@@ -638,7 +639,8 @@ void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
                       xegpu::CachePolicyAttr l3_hint) {
 
   return build(builder, state, value, tensorDesc, ValueRange(),
-               DenseI64ArrayAttr(), l1_hint, l2_hint, l3_hint);
+               DenseI64ArrayAttr(), l1_hint, l2_hint, l3_hint,
+               /*anchor_layout=*/nullptr);
 }
 
 void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
@@ -653,7 +655,7 @@ void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
 
   build(builder, state, value, tensorDesc, dynamicOffsets, staticOffsetsAttr,
-        l1_hint, l2_hint, l3_hint);
+        l1_hint, l2_hint, l3_hint, /*anchor_layout=*/nullptr);
 }
 
 LogicalResult StoreNdOp::verify() {
@@ -826,7 +828,7 @@ void PrefetchOp::build(OpBuilder &builder, OperationState &state, Value source,
                        xegpu::CachePolicyAttr l2_hint,
                        xegpu::CachePolicyAttr l3_hint) {
   build(builder, state, source, Value(), l1_hint, l2_hint, l3_hint,
-        IntegerAttr{});
+        IntegerAttr{}, /*anchor_layout=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -876,7 +878,7 @@ void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
                          xegpu::CachePolicyAttr l2_hint,
                          xegpu::CachePolicyAttr l3_hint) {
   build(builder, state, valueType, source, Value(), mask, IntegerAttr(),
-        l1_hint, l2_hint, l3_hint, /*layout=*/nullptr);
+        l1_hint, l2_hint, l3_hint, /*anchor_layout=*/nullptr);
 }
 
 void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
@@ -892,7 +894,7 @@ void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
   auto offset = vector::FromElementsOp::create(builder, loc, type, values);
 
   build(builder, state, valueType, source, offset, mask, chunk_size, l1_hint,
-        l2_hint, l3_hint, /*layout=*/nullptr);
+        l2_hint, l3_hint, /*anchor_layout=*/nullptr);
 }
 
 void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
@@ -960,7 +962,7 @@ void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
                            xegpu::CachePolicyAttr l2_hint,
                            xegpu::CachePolicyAttr l3_hint) {
   build(builder, state, value, dest, Value(), mask, IntegerAttr(), l1_hint,
-        l2_hint, l3_hint, /*layout=*/nullptr);
+        l2_hint, l3_hint, /*anchor_layout=*/nullptr);
 }
 
 void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
@@ -978,7 +980,7 @@ void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
 
   // Call the correct builder overload that does not expect result types.
   build(builder, state, value, dest, offset, mask, chunk_size, l1_hint, l2_hint,
-        l3_hint, /*layout=*/nullptr);
+        l3_hint, /*anchor_layout=*/nullptr);
 }
 
 void StoreScatterOp::build(

@@ -737,44 +737,6 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   return nullptr;
 }
 
-/// Convert a table lookup to shufflevector if the mask is constant.
-/// This could benefit tbl1 if the mask is { 7,6,5,4,3,2,1,0 }, in
-/// which case we could lower the shufflevector with rev64 instructions
-/// as it's actually a byte reverse.
-static Value *simplifyNeonTbl1(const IntrinsicInst &II,
-                               InstCombiner::BuilderTy &Builder) {
-  // Bail out if the mask is not a constant.
-  auto *C = dyn_cast<Constant>(II.getArgOperand(1));
-  if (!C)
-    return nullptr;
-
-  auto *VecTy = cast<FixedVectorType>(II.getType());
-  unsigned NumElts = VecTy->getNumElements();
-
-  // Only perform this transformation for <8 x i8> vector types.
-  if (!VecTy->getElementType()->isIntegerTy(8) || NumElts != 8)
-    return nullptr;
-
-  int Indexes[8];
-
-  for (unsigned I = 0; I < NumElts; ++I) {
-    Constant *COp = C->getAggregateElement(I);
-
-    if (!COp || !isa<ConstantInt>(COp))
-      return nullptr;
-
-    Indexes[I] = cast<ConstantInt>(COp)->getLimitedValue();
-
-    // Make sure the mask indices are in range.
-    if ((unsigned)Indexes[I] >= NumElts)
-      return nullptr;
-  }
-
-  auto *V1 = II.getArgOperand(0);
-  auto *V2 = Constant::getNullValue(V1->getType());
-  return Builder.CreateShuffleVector(V1, V2, ArrayRef(Indexes));
-}
-
 // Returns true iff the 2 intrinsics have the same operands, limiting the
 // comparison to the first NumOperands.
 static bool haveSameOperands(const IntrinsicInst &I, const IntrinsicInst &E,
@@ -3077,6 +3039,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::ptrauth_auth:
   case Intrinsic::ptrauth_resign: {
+    // We don't support this optimization on intrinsic calls with deactivation
+    // symbols, which are represented using operand bundles.
+    if (II->hasOperandBundles())
+      break;
+
     // (sign|resign) + (auth|resign) can be folded by omitting the middle
     // sign+auth component if the key and discriminator match.
     bool NeedSign = II->getIntrinsicID() == Intrinsic::ptrauth_resign;
@@ -3088,6 +3055,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // whatever we replace this sequence with.
     Value *AuthKey = nullptr, *AuthDisc = nullptr, *BasePtr;
     if (const auto *CI = dyn_cast<CallBase>(Ptr)) {
+      // We don't support this optimization on intrinsic calls with deactivation
+      // symbols, which are represented using operand bundles.
+      if (CI->hasOperandBundles())
+        break;
+
       BasePtr = CI->getArgOperand(0);
       if (CI->getIntrinsicID() == Intrinsic::ptrauth_sign) {
         if (CI->getArgOperand(1) != Key || CI->getArgOperand(2) != Disc)
@@ -3110,9 +3082,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (NeedSign && isa<ConstantInt>(II->getArgOperand(4))) {
         auto *SignKey = cast<ConstantInt>(II->getArgOperand(3));
         auto *SignDisc = cast<ConstantInt>(II->getArgOperand(4));
-        auto *SignAddrDisc = ConstantPointerNull::get(Builder.getPtrTy());
+        auto *Null = ConstantPointerNull::get(Builder.getPtrTy());
         auto *NewCPA = ConstantPtrAuth::get(CPA->getPointer(), SignKey,
-                                            SignDisc, SignAddrDisc);
+                                            SignDisc, /*AddrDisc=*/Null,
+                                            /*DeactivationSymbol=*/Null);
         replaceInstUsesWith(
             *II, ConstantExpr::getPointerCast(NewCPA, II->getType()));
         return eraseInstFromFunction(*II);
@@ -3154,72 +3127,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Function *NewFn =
         Intrinsic::getOrInsertDeclaration(II->getModule(), NewIntrin);
     return CallInst::Create(NewFn, CallArgs);
-  }
-  case Intrinsic::arm_neon_vtbl1:
-  case Intrinsic::aarch64_neon_tbl1:
-    if (Value *V = simplifyNeonTbl1(*II, Builder))
-      return replaceInstUsesWith(*II, V);
-    break;
-
-  case Intrinsic::arm_neon_vmulls:
-  case Intrinsic::arm_neon_vmullu:
-  case Intrinsic::aarch64_neon_smull:
-  case Intrinsic::aarch64_neon_umull: {
-    Value *Arg0 = II->getArgOperand(0);
-    Value *Arg1 = II->getArgOperand(1);
-
-    // Handle mul by zero first:
-    if (isa<ConstantAggregateZero>(Arg0) || isa<ConstantAggregateZero>(Arg1)) {
-      return replaceInstUsesWith(CI, ConstantAggregateZero::get(II->getType()));
-    }
-
-    // Check for constant LHS & RHS - in this case we just simplify.
-    bool Zext = (IID == Intrinsic::arm_neon_vmullu ||
-                 IID == Intrinsic::aarch64_neon_umull);
-    VectorType *NewVT = cast<VectorType>(II->getType());
-    if (Constant *CV0 = dyn_cast<Constant>(Arg0)) {
-      if (Constant *CV1 = dyn_cast<Constant>(Arg1)) {
-        Value *V0 = Builder.CreateIntCast(CV0, NewVT, /*isSigned=*/!Zext);
-        Value *V1 = Builder.CreateIntCast(CV1, NewVT, /*isSigned=*/!Zext);
-        return replaceInstUsesWith(CI, Builder.CreateMul(V0, V1));
-      }
-
-      // Couldn't simplify - canonicalize constant to the RHS.
-      std::swap(Arg0, Arg1);
-    }
-
-    // Handle mul by one:
-    if (Constant *CV1 = dyn_cast<Constant>(Arg1))
-      if (ConstantInt *Splat =
-              dyn_cast_or_null<ConstantInt>(CV1->getSplatValue()))
-        if (Splat->isOne())
-          return CastInst::CreateIntegerCast(Arg0, II->getType(),
-                                             /*isSigned=*/!Zext);
-
-    break;
-  }
-  case Intrinsic::arm_neon_aesd:
-  case Intrinsic::arm_neon_aese:
-  case Intrinsic::aarch64_crypto_aesd:
-  case Intrinsic::aarch64_crypto_aese:
-  case Intrinsic::aarch64_sve_aesd:
-  case Intrinsic::aarch64_sve_aese: {
-    Value *DataArg = II->getArgOperand(0);
-    Value *KeyArg  = II->getArgOperand(1);
-
-    // Accept zero on either operand.
-    if (!match(KeyArg, m_ZeroInt()))
-      std::swap(KeyArg, DataArg);
-
-    // Try to use the builtin XOR in AESE and AESD to eliminate a prior XOR
-    Value *Data, *Key;
-    if (match(KeyArg, m_ZeroInt()) &&
-        match(DataArg, m_Xor(m_Value(Data), m_Value(Key)))) {
-      replaceOperand(*II, 0, Data);
-      replaceOperand(*II, 1, Key);
-      return II;
-    }
-    break;
   }
   case Intrinsic::hexagon_V6_vandvrt:
   case Intrinsic::hexagon_V6_vandvrt_128B: {
@@ -4004,6 +3911,27 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                     ConstantInt::get(OpTy, Op1->usub_sat(*Op0))}));
     }
     break;
+  }
+  case Intrinsic::experimental_get_vector_length: {
+    // get.vector.length(Cnt, MaxLanes) --> Cnt when Cnt <= MaxLanes
+    unsigned BitWidth =
+        std::max(II->getArgOperand(0)->getType()->getScalarSizeInBits(),
+                 II->getType()->getScalarSizeInBits());
+    ConstantRange Cnt =
+        computeConstantRangeIncludingKnownBits(II->getArgOperand(0), false,
+                                               SQ.getWithInstruction(II))
+            .zextOrTrunc(BitWidth);
+    ConstantRange MaxLanes = cast<ConstantInt>(II->getArgOperand(1))
+                                 ->getValue()
+                                 .zextOrTrunc(Cnt.getBitWidth());
+    if (cast<ConstantInt>(II->getArgOperand(2))->isOne())
+      MaxLanes = MaxLanes.multiply(
+          getVScaleRange(II->getFunction(), Cnt.getBitWidth()));
+
+    if (Cnt.icmp(CmpInst::ICMP_ULE, MaxLanes))
+      return replaceInstUsesWith(
+          *II, Builder.CreateZExtOrTrunc(II->getArgOperand(0), II->getType()));
+    return nullptr;
   }
   default: {
     // Handle target specific intrinsics

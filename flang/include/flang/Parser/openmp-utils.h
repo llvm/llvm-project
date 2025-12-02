@@ -67,17 +67,7 @@ struct DirectiveNameScope {
   template <typename T>
   static OmpDirectiveName GetOmpDirectiveName(const T &x) {
     if constexpr (WrapperTrait<T>) {
-      if constexpr (std::is_same_v<T, OpenMPCancelConstruct> ||
-          std::is_same_v<T, OpenMPCancellationPointConstruct> ||
-          std::is_same_v<T, OpenMPDepobjConstruct> ||
-          std::is_same_v<T, OpenMPFlushConstruct> ||
-          std::is_same_v<T, OpenMPInteropConstruct> ||
-          std::is_same_v<T, OpenMPSimpleStandaloneConstruct> ||
-          std::is_same_v<T, OpenMPGroupprivate>) {
-        return x.v.DirName();
-      } else {
-        return GetOmpDirectiveName(x.v);
-      }
+      return GetOmpDirectiveName(x.v);
     } else if constexpr (TupleTrait<T>) {
       if constexpr (std::is_base_of_v<OmpBlockConstruct, T>) {
         return std::get<OmpBeginDirective>(x.t).DirName();
@@ -125,6 +115,17 @@ const OpenMPConstruct *GetOmp(const ExecutionPartConstruct &x);
 
 const OpenMPLoopConstruct *GetOmpLoop(const ExecutionPartConstruct &x);
 const DoConstruct *GetDoConstruct(const ExecutionPartConstruct &x);
+
+// Is the template argument "Statement<T>" for some T?
+template <typename T> struct IsStatement {
+  static constexpr bool value{false};
+};
+template <typename T> struct IsStatement<Statement<T>> {
+  static constexpr bool value{true};
+};
+
+std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &x);
+std::optional<Label> GetFinalLabel(const OpenMPConstruct &x);
 
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause);
 
