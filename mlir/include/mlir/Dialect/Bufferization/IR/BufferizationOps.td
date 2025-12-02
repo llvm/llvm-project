@@ -478,6 +478,24 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
     bool isWritable(Value value, const AnalysisState &state);
 
+    AliasingValueList getAliasingValues(OpOperand &opOperand,
+                                        const AnalysisState &state) const {
+      // The output tensor aliases with the input memref.
+      return {{const_cast<ToTensorOp *>(this)->getResult(), BufferRelation::Equivalent}};
+    }
+
+    bool bufferizesToMemoryRead(OpOperand &opOperand,
+                                const AnalysisState &state) const {
+      // to_tensor reads from the memref.
+      return true;
+    }
+
+    bool bufferizesToMemoryWrite(OpOperand &opOperand,
+                                 const AnalysisState &state) const {
+      // to_tensor does not write to the memref.
+      return false;
+    }
+
     FailureOr<BufferLikeType> getBufferType(
         Value value, const BufferizationOptions &options,
         const BufferizationState &state, SmallVector<Value> &invocationStack) {
@@ -551,7 +569,8 @@ def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
 
     AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state) const {
-      return {};
+      // The output memref aliases with the input tensor.
+      return {{const_cast<ToBufferOp *>(this)->getResult(), BufferRelation::Equivalent}};
     }
 
     LogicalResult bufferize(RewriterBase &rewriter,

@@ -74,10 +74,10 @@ func.func @scf_while_non_equiv_yield(%arg0: tensor<5xi1>,
 
 // -----
 
-func.func @to_tensor_op_unsupported(%m: memref<?xf32>, %idx: index) -> (f32) {
-  // expected-error @+1 {{to_tensor ops without `restrict` are not supported by One-Shot Analysis}}
+// Note: to_tensor without restrict is now supported with proper alias analysis.
+// This test verifies that to_tensor ops work correctly without restrict.
+func.func @to_tensor_without_restrict_works(%m: memref<?xf32>, %idx: index) -> (f32) {
   %0 = bufferization.to_tensor %m : memref<?xf32> to tensor<?xf32>
-
   %1 = tensor.extract %0[%idx] : tensor<?xf32>
   return %1 : f32
 }
@@ -85,9 +85,8 @@ func.func @to_tensor_op_unsupported(%m: memref<?xf32>, %idx: index) -> (f32) {
 // -----
 
 // Test case: to_tensor without restrict attribute that returns a tensor
+// This should now work correctly with alias analysis.
 func.func @test_to_tensor_without_restrict(%m: memref<?xf32>) -> tensor<?xf32> {
-  // to_tensor without restrict should cause an error
-  // expected-error @+1 {{to_tensor ops without `restrict` are not supported by One-Shot Analysis}}
   %t = bufferization.to_tensor %m : memref<?xf32> to tensor<?xf32>
   return %t : tensor<?xf32>
 }

@@ -1205,15 +1205,27 @@ checkPreBufferizationAssumptions(Operation *op, const DominanceInfo &domInfo,
     if (!options.isOpAllowed(op.getOperation()))
       return WalkResult::advance();
 
-    // Input IR may not contain any ToTensorOps without the "restrict"
-    // attribute. Such tensors may alias any other tensor, which is currently
-    // not handled in the analysis.
+    // Set up alias relationships for to_tensor and to_buffer ops.
     if (auto toTensorOp = dyn_cast<ToTensorOp>(op.getOperation())) {
-      if (!toTensorOp.getRestrict() && !toTensorOp->getUses().empty()) {
-        op->emitOpError("to_tensor ops without `restrict` are not supported by "
-                        "One-Shot Analysis");
-        return WalkResult::interrupt();
-      }
+      Value inputMemRef = toTensorOp.getBuffer();
+      Value outputTensor = toTensorOp.getResult();
+      // Union alias sets: the output tensor aliases with the input memref.
+      state.unionAliasSets(outputTensor, inputMemRef);
+      // Handle recursive aliasing: if input memref already aliases with other
+      // tensors, propagate those aliases to the output tensor.
+      state.applyOnAliases(inputMemRef, [&](Value alias) {
+        state.unionAliasSets(outputTensor, alias);
+      });
+    } else if (auto toBufferOp = dyn_cast<ToBufferOp>(op.getOperation())) {
+      Value inputTensor = toBufferOp.getTensor();
+      Value outputMemRef = toBufferOp.getResult();
+      // Union alias sets: the output memref aliases with the input tensor.
+      state.unionAliasSets(outputMemRef, inputTensor);
+      // Handle recursive aliasing: if input tensor already aliases with other
+      // memrefs, propagate those aliases to the output memref.
+      state.applyOnAliases(inputTensor, [&](Value alias) {
+        state.unionAliasSets(outputMemRef, alias);
+      });
     }
 
     for (OpOperand &opOperand : op->getOpOperands()) {

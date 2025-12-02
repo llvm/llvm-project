@@ -727,6 +727,24 @@ func.func @test_to_buffer_copy(
 
 // -----
 
+// Test case: to_tensor without restrict works correctly
+// Verify that to_tensor without restrict can be used without errors
+// CHECK-LABEL: func @test_to_tensor_without_restrict_works(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32,
+func.func @test_to_tensor_without_restrict_works(
+    %m: memref<?xf32>, %idx: index) -> f32 {
+  // to_tensor without restrict should work with alias analysis
+  %t = bufferization.to_tensor %m : memref<?xf32> to tensor<?xf32>
+  // Read from tensor - should read from the original memref due to alias
+  %result = tensor.extract %t[%idx] : tensor<?xf32>
+  // CHECK: memref.load %[[arg0]]
+  // CHECK-NOT: memref.alloc
+  // CHECK-NOT: memref.copy
+  return %result : f32
+}
+
+// -----
+
 // Note: The cf.br canonicalizes away, so there's nothing to check here. There
 // is a detailed test in ControlFlow/bufferize.mlir.
 
