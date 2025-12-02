@@ -873,14 +873,14 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   case llvm::Triple::Miss:
   case llvm::Triple::Callable:
     if (const auto *NT = FD->getAttr<HLSLNumThreadsAttr>()) {
-      DiagnoseAttrStageMismatch(NT, ST,
+      diagnoseAttrStageMismatch(NT, ST,
                                 {llvm::Triple::Compute,
                                  llvm::Triple::Amplification,
                                  llvm::Triple::Mesh});
       FD->setInvalidDecl();
     }
     if (const auto *WS = FD->getAttr<HLSLWaveSizeAttr>()) {
-      DiagnoseAttrStageMismatch(WS, ST,
+      diagnoseAttrStageMismatch(WS, ST,
                                 {llvm::Triple::Compute,
                                  llvm::Triple::Amplification,
                                  llvm::Triple::Mesh});
@@ -954,7 +954,8 @@ void SemaHLSL::checkSemanticAnnotation(
       SemanticName == "SV_GROUPID") {
 
     if (ST != llvm::Triple::Compute)
-      DiagnoseAttrStageMismatch(SemanticAttr, ST, {llvm::Triple::Compute});
+      diagnoseSemanticStageMismatch(SemanticAttr, ST, IsInput,
+                                    {{llvm::Triple::Compute, IOType::In}});
 
     if (SemanticAttr->getSemanticIndex() != 0) {
       std::string PrettyName =
@@ -969,10 +970,15 @@ void SemaHLSL::checkSemanticAnnotation(
   if (SemanticName == "SV_POSITION") {
     // SV_Position can be an input or output in vertex shaders,
     // but only an input in pixel shaders.
-    if (ST == llvm::Triple::Vertex || (ST == llvm::Triple::Pixel && IsInput))
-      return;
-    DiagnoseAttrStageMismatch(SemanticAttr, ST,
-                              {llvm::Triple::Pixel, llvm::Triple::Vertex});
+    diagnoseSemanticStageMismatch(SemanticAttr, ST, IsInput,
+                                  {{llvm::Triple::Vertex, IOType::InOut},
+                                   {llvm::Triple::Pixel, IOType::In}});
+    return;
+  }
+
+  if (SemanticName == "SV_TARGET") {
+    diagnoseSemanticStageMismatch(SemanticAttr, ST, IsInput,
+                                  {{llvm::Triple::Pixel, IOType::Out}});
     return;
   }
 
@@ -982,7 +988,7 @@ void SemaHLSL::checkSemanticAnnotation(
     llvm_unreachable("Unknown SemanticAttr");
 }
 
-void SemaHLSL::DiagnoseAttrStageMismatch(
+void SemaHLSL::diagnoseAttrStageMismatch(
     const Attr *A, llvm::Triple::EnvironmentType Stage,
     std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages) {
   SmallVector<StringRef, 8> StageStrings;
@@ -994,6 +1000,50 @@ void SemaHLSL::DiagnoseAttrStageMismatch(
   Diag(A->getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
       << A->getAttrName() << llvm::Triple::getEnvironmentTypeName(Stage)
       << (AllowedStages.size() != 1) << join(StageStrings, ", ");
+}
+
+void SemaHLSL::diagnoseSemanticStageMismatch(
+    const Attr *A, llvm::Triple::EnvironmentType Stage, bool IsInput,
+    std::initializer_list<SemanticStageInfo> Allowed) {
+
+  for (auto &Case : Allowed) {
+    if (Case.Stage != Stage)
+      continue;
+
+    if (IsInput && Case.AllowedIOTypesMask & IOType::In)
+      return;
+    if (!IsInput && Case.AllowedIOTypesMask & IOType::Out)
+      return;
+
+    SmallVector<std::string, 8> ValidCases;
+    llvm::transform(
+        Allowed, std::back_inserter(ValidCases), [](SemanticStageInfo Case) {
+          SmallVector<std::string, 2> ValidType;
+          if (Case.AllowedIOTypesMask & IOType::In)
+            ValidType.push_back("input");
+          if (Case.AllowedIOTypesMask & IOType::Out)
+            ValidType.push_back("output");
+          return std::string(
+                     HLSLShaderAttr::ConvertEnvironmentTypeToStr(Case.Stage)) +
+                 " " + join(ValidType, "/");
+        });
+    Diag(A->getLoc(), diag::err_hlsl_semantic_unsupported_iotype_for_stage)
+        << A->getAttrName() << (IsInput ? "input" : "output")
+        << llvm::Triple::getEnvironmentTypeName(Case.Stage)
+        << join(ValidCases, ", ");
+    return;
+  }
+
+  SmallVector<StringRef, 8> StageStrings;
+  llvm::transform(
+      Allowed, std::back_inserter(StageStrings), [](SemanticStageInfo Case) {
+        return StringRef(
+            HLSLShaderAttr::ConvertEnvironmentTypeToStr(Case.Stage));
+      });
+
+  Diag(A->getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
+      << A->getAttrName() << llvm::Triple::getEnvironmentTypeName(Stage)
+      << (Allowed.size() != 1) << join(StageStrings, ", ");
 }
 
 template <CastKind Kind>
@@ -1788,6 +1838,16 @@ void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
   }
 
   if (SemanticName == "SV_POSITION") {
+    const auto *VT = ValueType->getAs<VectorType>();
+    if (!ValueType->hasFloatingRepresentation() ||
+        (VT && VT->getNumElements() > 4))
+      Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
+          << AL << "float/float1/float2/float3/float4";
+    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
+    return;
+  }
+
+  if (SemanticName == "SV_TARGET") {
     const auto *VT = ValueType->getAs<VectorType>();
     if (!ValueType->hasFloatingRepresentation() ||
         (VT && VT->getNumElements() > 4))
