@@ -416,9 +416,7 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
   const Function &F = MF.getFunction();
   const DataLayout &DL = F.getDataLayout();
 
-  // This isn't really a constant pool but close enough.
-  MachinePointerInfo PtrInfo(MF.getPSVManager().getConstantPool(),
-                             AMDGPUAS::CONSTANT_ADDRESS);
+  MachinePointerInfo PtrInfo = getKernargSegmentPtrInfo(B.getMF());
 
   LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
 
