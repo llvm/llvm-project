@@ -251,8 +251,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK-DAG: %[[C6:.+]] = llvm.mlir.constant(6 : i32)
   // CHECK-DAG: %[[C7:.+]] = llvm.mlir.constant(7 : i32)
 
-  // CHECK: %[[SIZE:.+]] = llvm.mlir.constant(16 : i32)
-  // CHECK: %[[SGPR0:.+]] = llvm.shl %[[C2]], %[[SIZE]]
+  // CHECK-DAG: %[[SGPR0:.+]] = llvm.mlir.constant(131072 : i32)
 
   // CHECK-DAG: %[[TENSOR_DIM_0:.+]] = llvm.mlir.constant(64 : i32)
   // CHECK-DAG: %[[C16:.+]] = llvm.mlir.constant(16 : i32)

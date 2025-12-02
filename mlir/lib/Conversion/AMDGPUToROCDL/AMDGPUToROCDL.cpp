@@ -2371,24 +2371,24 @@ struct AMDGPUMakeDmaDescriptorLowering
     // Compute data_size.
     int elementTypeWidthInBytes = op.getElementTypeWidth() / 8;
 
-    Value dataSize;
+    int dataSize;
     switch (elementTypeWidthInBytes) {
     case 1:
-      dataSize = consts[0];
+      dataSize = 0;
       break;
     case 2:
-      dataSize = consts[1];
+      dataSize = 1;
       break;
     case 4:
-      dataSize = consts[2];
+      dataSize = 2;
       break;
     case 8:
-      dataSize = consts[3];
+      dataSize = 3;
       break;
     default:
       llvm_unreachable("Invalid element size.");
     }
-    return setValueAtOffset(rewriter, loc, sgpr0, dataSize, 16);
+    return createI32Constant(rewriter, loc, dataSize << 16);
   }
 
   Value setAtomicBarrier(MakeDmaDescriptorOp op, OpAdaptor adaptor,
