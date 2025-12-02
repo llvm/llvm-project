@@ -2073,8 +2073,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (Subtarget.hasVBMI2()) {
       for (auto VT : {MVT::v32i16, MVT::v16i32, MVT::v8i64}) {
-        setOperationAction(ISD::FSHL, VT, Custom);
-        setOperationAction(ISD::FSHR, VT, Custom);
+        setOperationAction(ISD::FSHL, VT, Legal);
+        setOperationAction(ISD::FSHR, VT, Legal);
       }
 
       setOperationAction(ISD::ROTL, MVT::v32i16, Custom);
@@ -2089,8 +2089,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (!Subtarget.useSoftFloat() && Subtarget.hasVBMI2()) {
     for (auto VT : {MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::v16i16, MVT::v8i32,
                     MVT::v4i64}) {
-      setOperationAction(ISD::FSHL, VT, Custom);
-      setOperationAction(ISD::FSHR, VT, Custom);
+      setOperationAction(ISD::FSHL, VT, Subtarget.hasVLX() ? Legal : Custom);
+      setOperationAction(ISD::FSHR, VT, Subtarget.hasVLX() ? Legal : Custom);
     }
   }
 
@@ -2709,6 +2709,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::STRICT_FP_EXTEND,
                        ISD::FP_ROUND,
                        ISD::STRICT_FP_ROUND,
+                       ISD::FSHL,
+                       ISD::FSHR,
                        ISD::INTRINSIC_VOID,
                        ISD::INTRINSIC_WO_CHAIN,
                        ISD::INTRINSIC_W_CHAIN});
@@ -31322,19 +31324,15 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     bool IsCstSplat = X86::isConstantSplat(Amt, APIntShiftAmt);
     unsigned NumElts = VT.getVectorNumElements();
 
-    if (Subtarget.hasVBMI2() && EltSizeInBits > 8) {
-
-      if (IsCstSplat) {
-        if (IsFSHR)
-          std::swap(Op0, Op1);
-        uint64_t ShiftAmt = APIntShiftAmt.urem(EltSizeInBits);
-        SDValue Imm = DAG.getTargetConstant(ShiftAmt, DL, MVT::i8);
-        return getAVX512Node(IsFSHR ? X86ISD::VSHRD : X86ISD::VSHLD, DL, VT,
-                             {Op0, Op1, Imm}, DAG, Subtarget);
-      }
+    // For non-VLX VBMI2 targets, widen 128/256-bit to 512-bit so
+    // the rest of the lowering/isel can select the VBMI2 forms.
+    // Only Custom types (v8i16, v4i32, v2i64, v16i16, v8i32, v4i64) can
+    // reach LowerFunnelShift with VBMI2 but no VLX, so no type check needed.
+    if (Subtarget.hasVBMI2() && !Subtarget.hasVLX() && EltSizeInBits > 8) {
       return getAVX512Node(IsFSHR ? ISD::FSHR : ISD::FSHL, DL, VT,
                            {Op0, Op1, Amt}, DAG, Subtarget);
     }
+
     assert((VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8 ||
             VT == MVT::v8i16 || VT == MVT::v16i16 || VT == MVT::v32i16 ||
             VT == MVT::v4i32 || VT == MVT::v8i32 || VT == MVT::v16i32) &&
@@ -57637,6 +57635,40 @@ static SDValue combineFP_TO_xINT_SAT(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Combiner: turn uniform-constant splat funnel shifts into VSHLD/VSHRD
+static SDValue combineFunnelShift(SDNode *N, SelectionDAG &DAG,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  const X86Subtarget &Subtarget) {
+  SDLoc DL(N);
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Amt = N->getOperand(2);
+  EVT VT = Op0.getValueType();
+
+  if (!VT.isVector())
+    return SDValue();
+
+  // Only combine if the operation is legal for this type.
+  // This ensures we don't try to convert types that need to be
+  // widened/promoted.
+  if (!DAG.getTargetLoweringInfo().isOperationLegal(N->getOpcode(), VT))
+    return SDValue();
+
+  unsigned EltSize = VT.getScalarSizeInBits();
+  APInt ShiftVal;
+  if (!X86::isConstantSplat(Amt, ShiftVal))
+    return SDValue();
+
+  uint64_t ModAmt = ShiftVal.urem(EltSize);
+  SDValue Imm = DAG.getTargetConstant(ModAmt, DL, MVT::i8);
+  bool IsFSHR = N->getOpcode() == ISD::FSHR;
+
+  if (IsFSHR)
+    std::swap(Op0, Op1);
+  unsigned Opcode = IsFSHR ? X86ISD::VSHRD : X86ISD::VSHLD;
+  return DAG.getNode(Opcode, DL, VT, {Op0, Op1, Imm});
+}
+
 static bool needCarryOrOverflowFlag(SDValue Flags) {
   assert(Flags.getValueType() == MVT::i32 && "Unexpected VT!");
 
@@ -59395,6 +59427,31 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         }
       }
       break;
+    case ISD::SETCC:
+      if (!IsSplat && EltSizeInBits == 1 &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op0.getOperand(0).getValueType() ==
+                       Op.getOperand(0).getValueType() &&
+                   Op0.getOperand(2) == Op.getOperand(2);
+          })) {
+        EVT SrcVT = Op0.getOperand(0).getValueType();
+        EVT NewSrcVT = EVT::getVectorVT(Ctx, SrcVT.getScalarType(),
+                                        NumOps * SrcVT.getVectorNumElements());
+        unsigned SrcSizeInBits = SrcVT.getScalarSizeInBits();
+        if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(NewSrcVT) &&
+            (NewSrcVT.is256BitVector() ||
+             (NewSrcVT.is512BitVector() && Subtarget.useAVX512Regs() &&
+              (SrcSizeInBits >= 32 || Subtarget.useBWIRegs())))) {
+          SDValue LHS = CombineSubOperand(NewSrcVT.getSimpleVT(), Ops, 0);
+          SDValue RHS = CombineSubOperand(NewSrcVT.getSimpleVT(), Ops, 1);
+          if (LHS || RHS)
+            return DAG.getNode(Opcode, DL, VT,
+                               LHS ? LHS : ConcatSubOperand(NewSrcVT, Ops, 0),
+                               RHS ? RHS : ConcatSubOperand(NewSrcVT, Ops, 1),
+                               Op0.getOperand(2));
+        }
+      }
+      break;
     case ISD::CTPOP:
     case ISD::CTTZ:
     case ISD::CTLZ:
@@ -59759,13 +59816,16 @@ static SDValue combineCONCAT_VECTORS(SDNode *N, SelectionDAG &DAG,
       }
     }
 
-    // Attempt to merge logic ops if the type is legal.
-    if (TLI.isTypeLegal(VT) && all_of(Ops, [](SDValue Op) {
-          return ISD::isBitwiseLogicOp(Op.getOpcode());
-        }))
+    // Attempt to merge comparison/logic ops if the type is legal.
+    if (TLI.isTypeLegal(VT) &&
+        (all_of(Ops, [](SDValue Op) { return Op.getOpcode() == ISD::SETCC; }) ||
+         all_of(Ops, [](SDValue Op) {
+           return ISD::isBitwiseLogicOp(Op.getOpcode());
+         }))) {
       if (SDValue R = combineConcatVectorOps(SDLoc(N), VT.getSimpleVT(), Ops,
                                              DAG, Subtarget))
         return R;
+    }
 
     // Don't do anything else for i1 vectors.
     return SDValue();
@@ -61279,6 +61339,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::INTRINSIC_VOID:  return combineINTRINSIC_VOID(N, DAG, DCI);
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT: return combineFP_TO_xINT_SAT(N, DAG, Subtarget);
+  case ISD::FSHL:
+  case ISD::FSHR: return combineFunnelShift(N, DAG, DCI, Subtarget);
     // clang-format on
   }
 

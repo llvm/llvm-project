@@ -66,7 +66,6 @@
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
-#include "llvm/Transforms/Instrumentation/AllocToken.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
@@ -233,17 +232,6 @@ public:
                     BackendConsumer *BC);
 };
 } // namespace
-
-static AllocTokenOptions getAllocTokenOptions(const LangOptions &LangOpts,
-                                              const CodeGenOptions &CGOpts) {
-  AllocTokenOptions Opts;
-  if (LangOpts.AllocTokenMode)
-    Opts.Mode = *LangOpts.AllocTokenMode;
-  Opts.MaxTokens = LangOpts.AllocTokenMax;
-  Opts.Extended = CGOpts.SanitizeAllocTokenExtended;
-  Opts.FastABI = CGOpts.SanitizeAllocTokenFastABI;
-  return Opts;
-}
 
 static SanitizerCoverageOptions
 getSancovOptsFromCGOpts(const CodeGenOptions &CGOpts) {
@@ -873,23 +861,6 @@ static void addSanitizers(const Triple &TargetTriple,
   }
 }
 
-static void addAllocTokenPass(const Triple &TargetTriple,
-                              const CodeGenOptions &CodeGenOpts,
-                              const LangOptions &LangOpts, PassBuilder &PB) {
-  PB.registerOptimizerLastEPCallback([&](ModulePassManager &MPM,
-                                         OptimizationLevel Level,
-                                         ThinOrFullLTOPhase) {
-    if (Level == OptimizationLevel::O0 &&
-        LangOpts.Sanitize.has(SanitizerKind::AllocToken)) {
-      // The default pass builder only infers libcall function attrs when
-      // optimizing, so we insert it here because we need it for accurate
-      // memory allocation function detection with -fsanitize=alloc-token.
-      MPM.addPass(InferFunctionAttrsPass());
-    }
-    MPM.addPass(AllocTokenPass(getAllocTokenOptions(LangOpts, CodeGenOpts)));
-  });
-}
-
 void EmitAssemblyHelper::RunOptimizationPipeline(
     BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
     std::unique_ptr<llvm::ToolOutputFile> &ThinLinkOS, BackendConsumer *BC) {
@@ -1141,12 +1112,23 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
         FPM.addPass(BoundsCheckingPass(Options));
       });
 
-    // Don't add sanitizers if we are here from ThinLTO PostLink. That already
-    // done on PreLink stage.
     if (!IsThinLTOPostLink) {
+      // Most sanitizers only run during PreLink stage.
       addSanitizers(TargetTriple, CodeGenOpts, LangOpts, PB);
       addKCFIPass(TargetTriple, LangOpts, PB);
-      addAllocTokenPass(TargetTriple, CodeGenOpts, LangOpts, PB);
+
+      PB.registerPipelineStartEPCallback(
+          [&](ModulePassManager &MPM, OptimizationLevel Level) {
+            if (Level == OptimizationLevel::O0 &&
+                LangOpts.Sanitize.has(SanitizerKind::AllocToken)) {
+              // With the default O0 pipeline, LibFunc attrs are not inferred,
+              // so we insert it here because we need it for accurate memory
+              // allocation function detection with -fsanitize=alloc-token.
+              // Note: This could also be added to the default O0 pipeline, but
+              // has a non-trivial effect on generated IR size (attributes).
+              MPM.addPass(InferFunctionAttrsPass());
+            }
+          });
     }
 
     if (std::optional<GCOVOptions> Options =

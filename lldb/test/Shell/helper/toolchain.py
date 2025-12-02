@@ -226,7 +226,7 @@ def use_support_substitutions(config):
         except OSError:
             res = -1
         if res == 0 and out:
-            sdk_path = str(out)
+            sdk_path = out.decode("utf-8")
             llvm_config.lit_config.note("using SDKROOT: %r" % sdk_path)
             host_flags += ["-isysroot", sdk_path]
     elif sys.platform != "win32":
