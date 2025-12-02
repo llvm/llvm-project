@@ -203,10 +203,20 @@ VoidTask silly_task() {
 // CIR:     %[[CoroHandleVoidReload:.*]] = cir.load{{.*}} %[[CoroHandleVoidAddr]] : !cir.ptr<![[CoroHandleVoid]]>, ![[CoroHandleVoid]]
 // CIR:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SuspendAlwaysAddr]], %[[CoroHandleVoidReload]])
 // CIR:     cir.yield
+
+// Third region `resume` handles coroutine resuming logic.
+
 // CIR:   }, resume : {
+// CIR:     cir.call @_ZNSt14suspend_always12await_resumeEv(%[[SuspendAlwaysAddr]])
 // CIR:     cir.yield
 // CIR:   },)
 // CIR: }
+
+// Since we already tested cir.await guts above, the remaining checks for:
+// - The actual user written co_await
+// - The promise call
+// - The final suspend co_await
+// - Return
 
 folly::coro::Task<int> byRef(const std::string& s) {
   co_return s.size();
@@ -245,6 +255,8 @@ folly::coro::Task<int> byRef(const std::string& s) {
 // CIR:       %[[CoroHandleVoidReload:.*]] = cir.load{{.*}} %[[CoroHandleVoidAddr]] : !cir.ptr<![[CoroHandleVoid]]>, ![[CoroHandleVoid]]
 // CIR:       cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SuspendAlwaysAddr]], %[[CoroHandleVoidReload]])
 // CIR:       cir.yield
-// CIR:      }, resume : {
-// CIR:        cir.yield
-// CIR:      },)
+// CIR:       }, resume : {
+// CIR:         cir.call @_ZNSt14suspend_always12await_resumeEv(%[[SuspendAlwaysAddr]])
+// CIR:         cir.yield
+// CIR:       },)
+// CIR:     }
