@@ -345,4 +345,118 @@ void bad_safe_string_default2() {
     do_some(); // Additional statement after if
 }
 
+void bad_prevents_redeclaration1() {
+    int arr[2] = {1, 2};
+    auto [a1, b1] = arr;
+    if (int a1 = arr[0]) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        do_some();
+    }
+
+    int arr2[2] = {1, 2};
+    auto [a2, b2] = arr2;
+    switch (int b2 = arr[1])
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+    {
+    case 0:
+        do_some();
+        break;
+    }
+}
+
+void bad_prevents_redeclaration2() {
+    int arr[2] = {1, 2};
+    auto [a1, b1] = arr;
+    if (a1) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        int arr_inner[2] = {1, 2};
+        auto [a1, b1] = arr_inner;
+        do_some(a1);
+    }
+
+//     int arr2[2] = {1, 2};
+//     auto [a2, b2] = arr2; DUMMY_TOKEN
+//     switch (a2) {
+// // FIXME: warning and fixit must be provided
+//         case 0: {
+//             int arr_inner[2] = {1, 2};
+//             auto [a2, b2] = arr_inner;
+//             do_some(a2);
+//             break;
+//         }
+//     }
+}
+
+void bad_prevents_redeclaration3() {
+    int arr[2] = {1, 2};
+    auto [a1, b1] = arr;
+    if (a1) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        do_some();
+    } else {
+        int arr_inner[2] = {1, 2};
+        auto [a1, b1] = arr_inner;
+        do_some(a1);
+    }
+
+//     int arr2[2] = {1, 2};
+//     auto [a2, b2] = arr2; DUMMY_TOKEN
+//     switch (a2) {
+// // // FIXME: warning and fixit must be provided
+//         case 0: {
+//             do_some();
+//             break;
+//         }
+//         case 1: {
+//             int arr_inner[2] = {1, 2};
+//             auto [a2, b2] = arr_inner;
+//             do_some(a2);
+//             break;
+//         }
+//     }
+}
+
+void bad_prevents_redeclaration4() {
+    int arr[2] = {1, 2};
+    auto [a1, b1] = arr;
+    if (a1) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: structured binding declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        int arr_inner1[2] = {1, 2};
+        auto [a1, b1] = arr_inner1;
+        do_some(a1+1);
+    } else {
+        int arr_inner2[2] = {1, 2};
+        auto [a1, b1] = arr_inner2;
+        do_some(a1+2);
+    }
+
+//     int arr2[2] = {1, 2};
+//     auto [a2, b2] = arr2; DUMMY_TOKEN
+//     switch (a2) {
+// // // FIXME: warning and fixit must be provided
+//         case 0: {
+//             int arr_inner1[2] = {1, 2};
+//             auto [a2, b2] = arr_inner1;
+//             do_some(a2+1);
+//             break;
+//         }
+//         case 1: {
+//             int arr_inner2[2] = {1, 2};
+//             auto [a2, b2] = arr_inner2;
+//             do_some(a2+2);
+//             break;
+//         }
+//     }
+}
+
 

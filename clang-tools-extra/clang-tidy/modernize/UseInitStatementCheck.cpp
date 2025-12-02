@@ -54,6 +54,22 @@ AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
 
 AST_MATCHER(Decl, isTemplate) { return Node.isTemplated(); }
 
+AST_MATCHER_P(VarDecl, hasSameNameAsBoundNode,
+              std::string, BindingID) {
+  auto VarName = Node.getNameAsString();
+
+  return Builder->removeBindings(
+      [this, VarName](const clang::ast_matchers::internal::BoundNodesMap &Nodes) {
+        const DynTypedNode &BN = Nodes.getNode(this->BindingID);
+        if (const auto *ND = BN.get<NamedDecl>()) {
+          if (!isa<BindingDecl, VarDecl>(ND))
+            return true;
+          return ND->getName() != VarName;
+        }
+        return true;
+      });
+}
+
 // FIXME: support other std:: types, like std::vector
 const auto DefaultSafeDestructorTypes =
     "-*,::std::*string,::std::*string_view,::boost::*string,::boost::*string_"
@@ -81,9 +97,13 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
                                           const std::string &StmtName,
                                           const auto &PrevStmtMatcher,
                                           const auto &RefToBoundMatcher) {
+    const auto HasConflict = hasDescendant(
+        varDecl(anyOf(hasSameNameAsBoundNode("singleVar"), hasSameNameAsBoundNode("bindingDecl"))).bind("conflict"));
+
     const auto StmtMatcherWithCondition =
         StmtMatcher(unless(hasInitStatement(anything())),
                     hasCondition(expr().bind("condition")),
+                    optionally(HasConflict),
                     optionally(hasConditionVariableStatement(
                         declStmt().bind("condDeclStmt"))))
             .bind(StmtName);
@@ -214,6 +234,7 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Switch = Result.Nodes.getNodeAs<Stmt>("switchStmt");
   const auto *Dtor = Result.Nodes.getNodeAs<CXXDestructorDecl>("dtorDecl");
   const auto *LTE = Result.Nodes.getNodeAs<MaterializeTemporaryExpr>("lte");
+  const auto *Conflict = Result.Nodes.getNodeAs<VarDecl>("conflict");
   const auto *PrevDecl = Result.Nodes.getNodeAs<DeclStmt>("prevDecl");
   const auto *Condition = Result.Nodes.getNodeAs<Expr>("condition");
   const auto *CondDeclStmt = Result.Nodes.getNodeAs<DeclStmt>("condDeclStmt");
@@ -247,7 +268,7 @@ void UseInitStatementCheck::check(const MatchFinder::MatchResult &Result) {
 
   const std::string NewInitStmtOpt =
       extractDeclStmtText(PrevDecl, Result.SourceManager, getLangOpts());
-  const bool CanFix = !NewInitStmtOpt.empty();
+  const bool CanFix = !NewInitStmtOpt.empty() && !Conflict;
 
   if (CanFix) {
     const SourceRange RemovalRange = PrevDecl->getSourceRange();

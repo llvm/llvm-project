@@ -501,6 +501,104 @@ void bad_condition_with_declaration() {
     }
 }
 
+void bad_prevents_redeclaration1() {
+    int i1 = 0;
+    if (int i1 = 0) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        do_some();
+    }
+
+    int i2 = 0;
+    switch (int i2 = 0)
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+    {
+    case 0:
+        do_some();
+        break;
+    }
+}
+
+void bad_prevents_redeclaration2() {
+    int i1 = 0;
+    if (i1) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        int i1 = 0;
+        do_some(i1);
+    }
+
+//     int i2 = 0; DUMMY_TOKEN
+//     switch (i2) {
+// // // FIXME: warning and fixit must be provided
+//         case 0: {
+//             int i2 = 0;
+//             do_some(i2);
+//             break;
+//         }
+//     }
+}
+
+void bad_prevents_redeclaration3() {
+    int i1 = 0;
+    if (i1) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        do_some();
+    } else {
+        int i1 = 0;
+        do_some(i1);
+    }
+
+//     int i2 = 0; DUMMY_TOKEN
+//     switch (i2) {
+// // // FIXME: warning and fixit must be provided
+//         case 0: {
+//             do_some();
+//             break;
+//         }
+//         case 1: {
+//             int i2 = 0;
+//             do_some(i2);
+//             break;
+//         }
+//     }
+}
+
+void bad_prevents_redeclaration4() {
+    int i1 = 0;
+    if (i1) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+// CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
+        int i1 = 0;
+        do_some(i1+1);
+    } else {
+        int i1 = 0;
+        do_some(i1+2);
+    }
+
+//     int i2 = 0; DUMMY_TOKEN
+//     switch (i2) {
+// // // FIXME: warning and fixit must be provided
+//         case 0: {
+//             int i2 = 0;
+//             do_some(i2+1);
+//             break;
+//         }
+//         case 1: {
+//             int i2 = 0;
+//             do_some(i2+2);
+//             break;
+//         }
+//     }
+}
+
 #define OPEN_PAREN_I1 (i1
 #define OPEN_PAREN_I2 (i2
 #define OPEN_PAREN_F() (
