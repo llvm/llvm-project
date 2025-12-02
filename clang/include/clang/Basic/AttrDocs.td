@@ -8981,6 +8981,18 @@ The descriptor set is optional and defaults to 0 if not provided.
   }];
 }
 
+def HLSLVkLocationDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Attribute used for specifying the location number for the stage input/output
+variables. Allowed on function parameters, function returns, and struct
+fields. This parameter has no effect when used outside of an entrypoint
+parameter/parameter field/return value.
+
+This attribute maps to the 'Location' SPIR-V decoration.
+  }];
+}
+
 def WebAssemblyFuncrefDocs : Documentation {
   let Category = DocCatType;
   let Content = [{

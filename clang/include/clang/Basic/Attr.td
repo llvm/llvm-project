@@ -508,7 +508,7 @@ def TargetMicrosoftRecordLayout : TargetArch<["x86", "x86_64", "arm", "thumb",
   let CustomCode = [{ Target.hasMicrosoftRecordLayout() }];
 }
 
-def TargetMustTailAvaiable:  TargetSpec {
+def TargetMustTailAvailable:  TargetSpec {
   let CustomCode = [{ Target.hasMustTail() }];
 }
 
@@ -1917,7 +1917,7 @@ def NoMerge : DeclOrStmtAttr {
                              "functions, statements and variables">;
 }
 
-def MustTail : StmtAttr, TargetSpecificAttr<TargetMustTailAvaiable> {
+def MustTail : StmtAttr, TargetSpecificAttr<TargetMustTailAvailable> {
   let Spellings = [Clang<"musttail">];
   let Documentation = [MustTailDocs];
   let Subjects = SubjectList<[ReturnStmt], ErrorDiag, "return statements">;
@@ -5170,6 +5170,14 @@ def HLSLVkConstantId : InheritableAttr {
   let Subjects = SubjectList<[ExternalGlobalVar]>;
   let LangOpts = [HLSL];
   let Documentation = [VkConstantIdDocs];
+}
+
+def HLSLVkLocation : HLSLAnnotationAttr {
+  let Spellings = [CXX11<"vk", "location">];
+  let Args = [IntArgument<"Location">];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkLocationDocs];
 }
 
 def RandomizeLayout : InheritableAttr {
