@@ -37,12 +37,13 @@ cl::opt<bool> ShowSourceLocations("show-source-locations",
                                   cl::desc("Print source locations."),
                                   cl::cat(ProfGenCategory));
 
-cl::opt<bool>
-    LoadFunctionFromSymbol("load-function-from-symbol", cl::init(true),
-                           cl::desc("Gather additional binary function info "
-                                    "from symbols (e.g. .symtab) in case "
-                                    "dwarf info is incomplete."),
-                           cl::cat(ProfGenCategory));
+cl::opt<bool> LoadFunctionFromSymbol(
+    "load-function-from-symbol", cl::init(true),
+    cl::desc(
+        "Gather additional binary function info from symbols (e.g. .symtab) in "
+        "case dwarf info is incomplete. Only support binaries in ELF format "
+        "with pseudo probe, for other formats, this flag will be a no-op."),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
     ShowCanonicalFnName("show-canonical-fname",
@@ -850,12 +851,17 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
        // Compiler/LTO internal
        ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."});
   StringRef FileName = Obj->getFileName();
+  // Only apply this to ELF binary. e.g. COFF file format doesn't have `size`
+  // field in the symbol table.
+  bool IsELFObject = isa<ELFObjectFileBase>(Obj);
+  if (!IsELFObject)
+    return;
   for (const SymbolRef &Symbol : Obj->symbols()) {
     const SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName);
     const uint64_t StartAddr = unwrapOrError(Symbol.getAddress(), FileName);
     const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
     uint64_t Size = 0;
-    if (isa<ELFObjectFileBase>(Symbol.getObject())) {
+    if (LLVM_LIKELY(IsELFObject)) {
       ELFSymbolRef ElfSymbol(Symbol);
       Size = ElfSymbol.getSize();
     }
@@ -878,7 +884,8 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
       auto &Func = Ret.first->second;
       if (Ret.second) {
         Func.FuncName = Ret.first->first;
-        HashBinaryFunctions[MD5Hash(StringRef(SymName))] = &Func;
+        HashBinaryFunctions[Function::getGUIDAssumingExternalLinkage(SymName)] =
+            &Func;
       }
 
       Func.NameStatus = DwarfNameStatus::Missing;
@@ -909,8 +916,8 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
              "Mismatched function range");
 
       Range->Func->NameStatus = DwarfNameStatus::Mismatch;
-      AlternativeFunctionGUIDs.emplace(Range->Func,
-                                       MD5Hash(StringRef(SymName)));
+      AlternativeFunctionGUIDs.emplace(
+          Range->Func, Function::getGUIDAssumingExternalLinkage(SymName));
 
     } else if (StartAddr != Range->StartAddress &&
                EndAddr != Range->EndAddress) {
@@ -923,7 +930,6 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
                            << " indicates another range ("
                            << format("%8" PRIx64, Range->StartAddress) << ", "
                            << format("%8" PRIx64, Range->EndAddress) << ")\n";
-      llvm_unreachable("invalid function range");
     }
   }
 }
