@@ -114,12 +114,12 @@ def icmp_sgt: IRBuilder<"CreateICmpSGT">;
 def icmp_sge: IRBuilder<"CreateICmpSGE">;
 def icmp_slt: IRBuilder<"CreateICmpSLT">;
 def icmp_sle: IRBuilder<"CreateICmpSLE">;
-def fcmp_eq: IRBuilder<"CreateFCmpOEQ">;
-def fcmp_ne: IRBuilder<"CreateFCmpUNE">; // not O: it must return true on NaNs
-def fcmp_gt: IRBuilder<"CreateFCmpOGT">;
-def fcmp_ge: IRBuilder<"CreateFCmpOGE">;
-def fcmp_ult: IRBuilder<"CreateFCmpULT">;
-def fcmp_ule: IRBuilder<"CreateFCmpULE">;
+def fcmp_eq_node: IRBuilder<"CreateFCmpOEQ">;
+def fcmp_ne_node: IRBuilder<"CreateFCmpUNE">; // not O: it must return true on NaNs
+def fcmp_gt_node: IRBuilder<"CreateFCmpOGT">;
+def fcmp_ge_node: IRBuilder<"CreateFCmpOGE">;
+def fcmp_ult_node: IRBuilder<"CreateFCmpULT">;
+def fcmp_ule_node: IRBuilder<"CreateFCmpULE">;
 def splat: CGHelperFn<"ARMMVEVectorSplat">;
 def select: IRBuilder<"CreateSelect">;
 def fneg: IRBuilder<"CreateFNeg">;
@@ -593,6 +593,18 @@ def fminnm : strictFPAlt<IRIntBase<"minnum", [Vector]>,
                          IRInt<"vminnm", [Vector]>>;
 def fmaxnm : strictFPAlt<IRIntBase<"maxnum", [Vector]>,
                          IRInt<"vmaxnm", [Vector]>>;
+def fcmp_eq  : strictFPAlt<fcmp_eq_node,
+                           IRInt<"cmp_eq", [Predicate, Vector]>>;
+def fcmp_ne  : strictFPAlt<fcmp_ne_node,
+                           IRInt<"cmp_ne", [Predicate, Vector]>>;
+def fcmp_gt  : strictFPAlt<fcmp_gt_node,
+                           IRInt<"cmp_gt", [Predicate, Vector]>>;
+def fcmp_ge  : strictFPAlt<fcmp_ge_node,
+                           IRInt<"cmp_ge", [Predicate, Vector]>>;
+def fcmp_ult : strictFPAlt<fcmp_ult_node,
+                           IRInt<"cmp_lt", [Predicate, Vector]>>;
+def fcmp_ule : strictFPAlt<fcmp_ule_node,
+                           IRInt<"cmp_le", [Predicate, Vector]>>;
 
 // -----------------------------------------------------------------------------
 // Convenience lists of parameter types. 'T' is just a container record, so you
