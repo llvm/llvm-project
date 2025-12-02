@@ -5346,7 +5346,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case X86::BI__builtin_ia32_cvtsd2ss_round_mask:
     return interp__builtin_ia32_cvtsd2ss_round_mask(S, OpPC, Call);
-  
+
   case X86::BI__builtin_ia32_cvtpd2ps:
   case X86::BI__builtin_ia32_cvtpd2ps256:
   case X86::BI__builtin_ia32_cvtpd2ps_mask:
