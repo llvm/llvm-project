@@ -32,9 +32,9 @@ jobs:
       - name: Setup crlf
         shell: bash
         run: |
-#          for f in `find /c/hostedtoolcache/windows/Python/3.9.13/x64/ -iname pyconfig.h`; do
-#            cat $f
-#          done
+          #for f in `find /c/hostedtoolcache/windows/Python/3.9.13/x64/ -iname pyconfig.h`; do
+          #  cat $f
+          #done
           git config --global core.autocrlf false
 #      - name: Setup Python
 #        id: setup-python
