@@ -37,6 +37,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/LinkAllIR.h"
 #include "llvm/LinkAllPasses.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
@@ -516,6 +517,8 @@ optMain(int argc, char **argv,
 
   codegen::MaybeEnableStatistics();
 
+  StringRef ABIName = mc::getABIName(); // FIXME: Handle module flag.
+
   // Load the input module...
   auto SetDataLayout = [&](StringRef IRTriple,
                            StringRef IRLayout) -> std::optional<std::string> {
@@ -541,7 +544,7 @@ optMain(int argc, char **argv,
 
     Triple TT(TripleStr);
 
-    std::string Str = TT.computeDataLayout();
+    std::string Str = TT.computeDataLayout(ABIName);
     if (Str.empty()) {
       errs() << argv[0]
              << ": warning: failed to infer data layout from target triple\n";
@@ -677,9 +680,7 @@ optMain(int argc, char **argv,
 
   RTLIB::RuntimeLibcallsInfo RTLCI(ModuleTriple, codegen::getExceptionModel(),
                                    codegen::getFloatABIForCalls(),
-                                   codegen::getEABIVersion(),
-                                   "", // FIXME: Get ABI name from MCOptions
-                                   VecLib);
+                                   codegen::getEABIVersion(), ABIName, VecLib);
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
