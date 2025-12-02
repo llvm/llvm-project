@@ -18,6 +18,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
+#include "lldb/Utility/NonNullSharedPtr.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
@@ -418,7 +419,7 @@ public:
   /// Attempts to parse the object header.
   ///
   /// This function is used as a test to see if a given plug-in instance can
-  /// parse the header data already contained in ObjectFile::m_data. If an
+  /// parse the header data already contained in ObjectFile::m_data_nsp. If an
   /// object file parser does not recognize that magic bytes in a header,
   /// false should be returned and the next plug-in can attempt to parse an
   /// object file.
@@ -780,6 +781,8 @@ public:
   std::string GetObjectName() const;
 
 protected:
+  typedef NonNullSharedPtr<lldb_private::DataExtractor> DataExtractorNSP;
+
   // Member variables.
   FileSpec m_file;
   Type m_type;
@@ -789,8 +792,10 @@ protected:
   lldb::addr_t m_length; ///< The length of this object file if it is known (can
                          ///be zero if length is unknown or can't be
                          ///determined).
-  DataExtractor
-      m_data; ///< The data for this object file so things can be parsed lazily.
+  DataExtractorNSP m_data_nsp; ///< The data for this object file so things
+                               ///< can be parsed lazily.  This shared pointer
+                               ///< will always have a DataExtractor object,
+                               ///< although it may only be default-constructed.
   lldb::ProcessWP m_process_wp;
   /// Set if the object file only exists in memory.
   const lldb::addr_t m_memory_addr;
