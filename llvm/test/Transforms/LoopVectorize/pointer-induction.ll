@@ -38,8 +38,8 @@ define void @a(ptr readnone %b) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x ptr> [[TMP22]], ptr [[NEXT_GEP3]], i32 2
 ; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x ptr> [[TMP23]], ptr [[NEXT_GEP4]], i32 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[NEXT_GEP]], i64 -1
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i32 -3
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP25]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <4 x i8> [[REVERSE]], zeroinitializer

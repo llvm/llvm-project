@@ -2564,9 +2564,9 @@ def CIR_FuncOp : CIR_Op<"func", [
     Similarly, for global destructors both `global_dtor` and
     `global_dtor(<priority>)` are available.
 
-    The `inline(never)` keyword marks a function that should not be inlined.
-    The `inline(always)` keyword marks a function that should always be inlined.
-    The `inline(hint)` keyword suggests that the function should be inlined.
+    The `no_inline` attribute marks a function that should not be inlined.
+    The `always_inline` attribute marks a function that should always be inlined.
+    The `inline_hint` attribute suggests that the function should be inlined.
 
     Example:
 
@@ -2580,7 +2580,10 @@ def CIR_FuncOp : CIR_Op<"func", [
 
     // Linkage information
     cir.func linkonce_odr @some_method(...)
-    ```
+
+    // Inline information
+    cir.func no_inline @some_method(...)
+    
     // Builtin function
     cir.func builtin @__builtin_coro_end(!cir.ptr<i8>, !cir.bool) -> !cir.bool
     // Coroutine
@@ -2592,26 +2595,29 @@ def CIR_FuncOp : CIR_Op<"func", [
     ```
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name,
-                       CIR_VisibilityAttr:$global_visibility,
-                       TypeAttrOf<CIR_FuncType>:$function_type,
-                       UnitAttr:$builtin,
-                       UnitAttr:$coroutine,
-                       UnitAttr:$lambda,
-                       UnitAttr:$no_proto,
-                       UnitAttr:$dso_local,
-                       DefaultValuedAttr<CIR_GlobalLinkageKind,
-                                         "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
-                       OptionalAttr<CIR_InlineAttr>:$inline_kind,
-                       OptionalAttr<StrAttr>:$sym_visibility,
-                       UnitAttr:$comdat,
-                       OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs,
-                       OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-                       CIR_OptionalPriorityAttr:$global_ctor_priority,
-                       CIR_OptionalPriorityAttr:$global_dtor_priority,
-                       OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
-   );
+  let arguments = (ins 
+    SymbolNameAttr:$sym_name,
+    CIR_VisibilityAttr:$global_visibility,
+    TypeAttrOf<CIR_FuncType>:$function_type,
+    UnitAttr:$builtin,
+    UnitAttr:$coroutine,
+    OptionalAttr<CIR_InlineKind>:$inline_kind,
+    UnitAttr:$lambda,
+    UnitAttr:$no_proto,
+    UnitAttr:$dso_local,
+    DefaultValuedAttr<
+      CIR_GlobalLinkageKind,
+      "cir::GlobalLinkageKind::ExternalLinkage"
+    >:$linkage,
+    OptionalAttr<StrAttr>:$sym_visibility,
+    UnitAttr:$comdat,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs,
+    OptionalAttr<FlatSymbolRefAttr>:$aliasee,
+    CIR_OptionalPriorityAttr:$global_ctor_priority,
+    CIR_OptionalPriorityAttr:$global_dtor_priority,
+    OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
+  );
 
   let regions = (region AnyRegion:$body);
 
@@ -2728,7 +2734,7 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
 }
 
 //===----------------------------------------------------------------------===//
-// CallOp
+// CallOp and TryCallOp
 //===----------------------------------------------------------------------===//
 
 def CIR_SideEffect : CIR_I32EnumAttr<
@@ -2851,6 +2857,96 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
         $_state.addAttribute("callee", callee);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
+    }]>
+  ];
+}
+
+def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
+  Terminator
+]> {
+  let summary = "try_call operation";
+  let description = [{
+    Similar to `cir.call` but requires two destination blocks,
+    one which is used if the call returns without throwing an
+    exception (the "normal" destination) and another which is used
+    if an exception is thrown (the "unwind" destination). 
+
+    This operation is used only after the CFG flatterning pass.
+
+    Example:
+
+    ```mlir
+    // Before CFG flattening
+    cir.try {
+      %call = cir.call @division(%a, %b) : () -> !s32i
+      cir.yield
+    } catch all {
+      cir.yield
+    }
+
+    // After CFG flattening
+    %call = cir.try_call @division(%a, %b) ^normalDest, ^unwindDest
+      : (f32, f32) -> f32
+    ^normalDest:
+      cir.br ^afterTryBlock
+    ^unwindDest:
+      %exception_ptr, %type_id = cir.eh.inflight_exception
+      cir.br ^catchHandlerBlock(%exception_ptr : !cir.ptr<!void>)
+    ^catchHandlerBlock:
+      ...
+    ```
+  }];
+
+  let arguments = commonArgs;
+  let results = (outs Optional<CIR_AnyType>:$result);
+  let successors = (successor 
+    AnySuccessor:$normalDest,
+    AnySuccessor:$unwindDest
+  );
+
+  let skipDefaultBuilders = 1;
+  let hasLLVMLowering = false;
+
+  let builders = [
+    OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
+                "mlir::Type":$resType,
+               "mlir::Block *":$normalDest,
+               "mlir::Block *":$unwindDest,
+               CArg<"mlir::ValueRange", "{}">:$callOperands,
+               CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
+      $_state.addOperands(callOperands);
+
+      if (callee)
+        $_state.addAttribute("callee", callee);
+      if (resType && !isa<VoidType>(resType))
+        $_state.addTypes(resType);
+
+      $_state.addAttribute("side_effect",
+        SideEffectAttr::get($_builder.getContext(), sideEffect));
+
+      // Handle branches
+      $_state.addSuccessors(normalDest);
+      $_state.addSuccessors(unwindDest);
+    }]>,
+    OpBuilder<(ins "mlir::Value":$ind_target,
+               "FuncType":$fn_type,
+               "mlir::Block *":$normalDest,
+               "mlir::Block *":$unwindDest,
+               CArg<"mlir::ValueRange", "{}">:$callOperands,
+               CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
+      ::llvm::SmallVector<mlir::Value, 4> finalCallOperands({ind_target});
+      finalCallOperands.append(callOperands.begin(), callOperands.end());
+      $_state.addOperands(finalCallOperands);
+
+      if (!fn_type.hasVoidReturn())
+        $_state.addTypes(fn_type.getReturnType());
+
+      $_state.addAttribute("side_effect",
+        SideEffectAttr::get($_builder.getContext(), sideEffect));
+
+      // Handle branches
+      $_state.addSuccessors(normalDest);
+      $_state.addSuccessors(unwindDest);
     }]>
   ];
 }
@@ -4612,11 +4708,31 @@ def CIR_ExpOp : CIR_UnaryFPToFPBuiltinOp<"exp", "ExpOp"> {
   }];
 }
 
+def CIR_Exp2Op : CIR_UnaryFPToFPBuiltinOp<"exp2", "Exp2Op"> {
+  let summary = "Computes the floating-point base-2 exponential value";
+  let description = [{
+    `cir.exp2` computes the base-2 exponential of a floating-point operand and
+     returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   let summary = "Computes the floating-point absolute value";
   let description = [{
     `cir.fabs` computes the absolute value of a floating-point operand
     and returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
+  let summary = "Computes the floating-point floor value";
+  let description = [{
+    `cir.floor` computes the floor of a floating-point operand and returns
+    a result of the same type.
 
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
@@ -4701,6 +4817,37 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
 
   let assemblyFormat = [{
     $arg_list attr-dict `:` type(operands)
+  }];
+}
+
+def CIR_VACopyOp : CIR_Op<"va_copy"> {
+  let summary = "Copied a variable argument list";
+  let description = [{
+    The `cir.copy` operation models the C/C++ va_copy macro.
+    The variable argument list passed as the `$src_list` is copied to an
+    unitialized `va_list` in the destination operand. The next argument that
+    can be extracted from the copied list is the same as the next argument in
+    the source list. The copied list must be destroyed with `va_end`.
+
+    Example:
+
+    ```mlir
+    // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %p = cir.cast array_to_ptrdecay %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+          -> !cir.ptr<!rec___va_list_tag>
+    cir.va_copy %p to %dst
+          : (!cir.ptr<!rec___va_list_tag>, !cir.ptr<!rec___va_list_tag>)
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_PointerType:$dst_list,
+    CIR_PointerType:$src_list
+  );
+
+  let assemblyFormat = [{
+    $src_list `to` $dst_list attr-dict `:` type(operands)
   }];
 }
 
