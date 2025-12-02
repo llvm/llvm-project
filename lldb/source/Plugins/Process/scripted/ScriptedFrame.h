@@ -43,6 +43,11 @@ public:
   const char *GetFunctionName() override;
   const char *GetDisplayFunctionName() override;
 
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || StackFrame::isA(ClassID);
+  }
+  static bool classof(const StackFrame *obj) { return obj->isA(&ID); }
+
 private:
   void CheckInterpreterAndScriptObject() const;
   lldb::ScriptedFrameInterfaceSP GetInterface() const;
@@ -55,6 +60,8 @@ private:
   lldb::ScriptedFrameInterfaceSP m_scripted_frame_interface_sp;
   lldb_private::StructuredData::GenericSP m_script_object_sp;
   std::shared_ptr<DynamicRegisterInfo> m_register_info_sp;
+
+  static char ID;
 };
 
 } // namespace lldb_private
