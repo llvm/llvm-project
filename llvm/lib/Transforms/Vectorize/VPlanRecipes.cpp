@@ -2527,8 +2527,8 @@ void VPVectorEndPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-  Value *Step = State.get(getOffset(), true);
-  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Step, "",
+  Value *Offset = State.get(getOffset(), true);
+  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Offset, "",
                                        getGEPNoWrapFlags());
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
