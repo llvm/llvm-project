@@ -37,8 +37,9 @@ inferIteratorsFromOutMap(AffineMap map) {
 
 // Returns true if the operation is in VNNI layout.
 // Optionally, the check can be constrained to a specific VNNI blocking factor.
-bool mlir::x86vector::isInVnniLayout(Operation *op, ArrayRef<AffineMap> indexingMaps,
-                           std::optional<unsigned> blockingFactor) {
+bool mlir::x86vector::isInVnniLayout(Operation *op,
+                                     ArrayRef<AffineMap> indexingMaps,
+                                     std::optional<unsigned> blockingFactor) {
   // Narrow down type operations - VNNI only applies to contractions.
   FailureOr<linalg::ContractionDimensions> dims =
       linalg::inferContractionDims(indexingMaps);
