@@ -98,7 +98,7 @@ define i32 @sink_after_dead_inst(ptr %A.ptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i16> [[TMP0]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A_PTR]], i16 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP3]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP3]], i64 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -108,25 +108,8 @@ define i32 @sink_after_dead_inst(ptr %A.ptr) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i32> [[TMP2]], i32 2
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[FOR:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[FOR_PREV:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[FOR]], 15
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i1 [[CMP]], true
-; CHECK-NEXT:    [[VEC_DEAD:%.*]] = and i1 [[C]], true
-; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
-; CHECK-NEXT:    [[B1:%.*]] = or i16 [[IV_NEXT]], [[IV_NEXT]]
-; CHECK-NEXT:    [[B3:%.*]] = and i1 [[CMP]], [[C]]
-; CHECK-NEXT:    [[FOR_PREV]] = zext i16 [[B1]] to i32
-; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[B3]] to i32
-; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr i32, ptr [[A_PTR]], i16 [[IV]]
-; CHECK-NEXT:    store i32 0, ptr [[A_GEP]], align 4
-; CHECK-NEXT:    br i1 [[VEC_DEAD]], label %[[FOR_END]], label %[[LOOP]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[FOR_LCSSA:%.*]] = phi i32 [ [[FOR]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[FOR_LCSSA]]
+; CHECK-NEXT:    ret i32 [[VECTOR_RECUR_EXTRACT_FOR_PHI]]
 ;
 entry:
   br label %loop
@@ -177,7 +160,7 @@ define void @sink_dead_inst(ptr %a) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <4 x i16> [[TMP5]], splat (i16 10)
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub <4 x i16> [[TMP6]], splat (i16 10)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[A]], i16 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i16, ptr [[TMP9]], i32 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i16, ptr [[TMP9]], i64 4
 ; CHECK-NEXT:    store <4 x i16> [[TMP7]], ptr [[TMP9]], align 2
 ; CHECK-NEXT:    store <4 x i16> [[TMP8]], ptr [[TMP11]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8

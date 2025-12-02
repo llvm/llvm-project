@@ -37,7 +37,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -46,7 +46,6 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include <memory>
 
 using namespace mlir;
 using namespace llvm;
@@ -617,6 +616,12 @@ performActions(raw_ostream &os,
   AsmState asmState(op.get(), OpPrintingFlags(), /*locationMap=*/nullptr,
                     &fallbackResourceMap);
   os << OpWithState(op.get(), asmState) << '\n';
+
+  // This is required if the remark policy is final. Otherwise, the remarks are
+  // not emitted.
+  if (remark::detail::RemarkEngine *engine = ctx.getRemarkEngine())
+    engine->getRemarkEmittingPolicy()->finalize();
+
   return success();
 }
 
@@ -676,17 +681,8 @@ processBuffer(raw_ostream &os, std::unique_ptr<MemoryBuffer> ownedBuffer,
   return success();
 }
 
-std::pair<std::string, std::string>
-mlir::registerAndParseCLIOptions(int argc, char **argv,
-                                 llvm::StringRef toolName,
-                                 DialectRegistry &registry) {
-  static cl::opt<std::string> inputFilename(
-      cl::Positional, cl::desc("<input file>"), cl::init("-"));
-
-  static cl::opt<std::string> outputFilename("o", cl::desc("Output filename"),
-                                             cl::value_desc("filename"),
-                                             cl::init("-"));
-  // Register any command line options.
+std::string mlir::registerCLIOptions(llvm::StringRef toolName,
+                                     DialectRegistry &registry) {
   MlirOptMainConfig::registerCLOptions(registry);
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
@@ -701,9 +697,27 @@ mlir::registerAndParseCLIOptions(int argc, char **argv,
     interleaveComma(registry.getDialectNames(), os,
                     [&](auto name) { os << name; });
   }
-  // Parse pass names in main to ensure static initialization completed.
+  return helpHeader;
+}
+
+std::pair<std::string, std::string>
+mlir::parseCLIOptions(int argc, char **argv, llvm::StringRef helpHeader) {
+  static cl::opt<std::string> inputFilename(
+      cl::Positional, cl::desc("<input file>"), cl::init("-"));
+
+  static cl::opt<std::string> outputFilename("o", cl::desc("Output filename"),
+                                             cl::value_desc("filename"),
+                                             cl::init("-"));
   cl::ParseCommandLineOptions(argc, argv, helpHeader);
   return std::make_pair(inputFilename.getValue(), outputFilename.getValue());
+}
+
+std::pair<std::string, std::string>
+mlir::registerAndParseCLIOptions(int argc, char **argv,
+                                 llvm::StringRef toolName,
+                                 DialectRegistry &registry) {
+  auto helpHeader = registerCLIOptions(toolName, registry);
+  return parseCLIOptions(argc, argv, helpHeader);
 }
 
 static LogicalResult printRegisteredDialects(DialectRegistry &registry) {

@@ -62,6 +62,7 @@ ELF_RELOC(R_AARCH64_LD64_GOTPAGE_LO15,               0x139)
 ELF_RELOC(R_AARCH64_PLT32,                           0x13a)
 ELF_RELOC(R_AARCH64_GOTPCREL32,                      0x13b)
 ELF_RELOC(R_AARCH64_PATCHINST,                       0x13c)
+ELF_RELOC(R_AARCH64_FUNCINIT64,                      0x13d)
 // General dynamic TLS relocations
 ELF_RELOC(R_AARCH64_TLSGD_ADR_PREL21,                0x200)
 ELF_RELOC(R_AARCH64_TLSGD_ADR_PAGE21,                0x201)

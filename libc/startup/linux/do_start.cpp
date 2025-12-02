@@ -9,6 +9,7 @@
 #include "config/linux/app.h"
 #include "hdr/stdint_proxy.h"
 #include "include/llvm-libc-macros/link-macros.h"
+#include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
@@ -88,17 +89,19 @@ void teardown_main_tls() { cleanup_tls(tls.addr, tls.size); }
   // denoted by an AT_NULL entry.
   ElfW(Phdr) *program_hdr_table = nullptr;
   uintptr_t program_hdr_count = 0;
-  app.auxv_ptr = reinterpret_cast<AuxEntry *>(env_end_marker + 1);
-  for (auto *aux_entry = app.auxv_ptr; aux_entry->id != AT_NULL; ++aux_entry) {
-    switch (aux_entry->id) {
+  auxv::Vector::initialize_unsafe(
+      reinterpret_cast<const auxv::Entry *>(env_end_marker + 1));
+  auxv::Vector auxvec;
+  for (const auto &aux_entry : auxvec) {
+    switch (aux_entry.type) {
     case AT_PHDR:
-      program_hdr_table = reinterpret_cast<ElfW(Phdr) *>(aux_entry->value);
+      program_hdr_table = reinterpret_cast<ElfW(Phdr) *>(aux_entry.val);
       break;
     case AT_PHNUM:
-      program_hdr_count = aux_entry->value;
+      program_hdr_count = aux_entry.val;
       break;
     case AT_PAGESZ:
-      app.page_size = aux_entry->value;
+      app.page_size = aux_entry.val;
       break;
     default:
       break; // TODO: Read other useful entries from the aux vector.

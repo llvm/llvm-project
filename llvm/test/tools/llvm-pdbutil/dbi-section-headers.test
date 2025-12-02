@@ -1,0 +1,131 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --section-headers --section-map %t.pdb | FileCheck --check-prefix=CHECK-YAML2PDB %s
+
+# RUN: llvm-pdbutil pdb2yaml --section-headers %t.pdb > %t.yaml
+# RUN: FileCheck --input-file=%t.yaml --check-prefix=CHECK-PDB2YAML %s
+
+# CHECK-YAML2PDB:                      Section Headers
+# CHECK-YAML2PDB:  SECTION HEADER #1
+# CHECK-YAML2PDB:     .text name
+# CHECK-YAML2PDB:        47 virtual size
+# CHECK-YAML2PDB:      1000 virtual address
+# CHECK-YAML2PDB:       200 size of raw data
+# CHECK-YAML2PDB:       400 file pointer to raw data
+# CHECK-YAML2PDB:         0 file pointer to relocation table
+# CHECK-YAML2PDB:         0 file pointer to line numbers
+# CHECK-YAML2PDB:         0 number of relocations
+# CHECK-YAML2PDB:         0 number of line numbers
+# CHECK-YAML2PDB:  60000020 flags
+# CHECK-YAML2PDB:           IMAGE_SCN_CNT_CODE
+# CHECK-YAML2PDB:           IMAGE_SCN_MEM_EXECUTE
+# CHECK-YAML2PDB:           IMAGE_SCN_MEM_READ
+
+# CHECK-YAML2PDB:  SECTION HEADER #2
+# CHECK-YAML2PDB:    .rdata name
+# CHECK-YAML2PDB:        64 virtual size
+# CHECK-YAML2PDB:      2000 virtual address
+# CHECK-YAML2PDB:       200 size of raw data
+# CHECK-YAML2PDB:       600 file pointer to raw data
+# CHECK-YAML2PDB:         0 file pointer to relocation table
+# CHECK-YAML2PDB:         0 file pointer to line numbers
+# CHECK-YAML2PDB:         0 number of relocations
+# CHECK-YAML2PDB:         0 number of line numbers
+# CHECK-YAML2PDB:  40000040 flags
+# CHECK-YAML2PDB:           IMAGE_SCN_CNT_INITIALIZED_DATA
+# CHECK-YAML2PDB:           IMAGE_SCN_MEM_READ
+
+# CHECK-YAML2PDB:  SECTION HEADER #3
+# CHECK-YAML2PDB:    .pdata name
+# CHECK-YAML2PDB:        18 virtual size
+# CHECK-YAML2PDB:      3000 virtual address
+# CHECK-YAML2PDB:       200 size of raw data
+# CHECK-YAML2PDB:       800 file pointer to raw data
+# CHECK-YAML2PDB:         0 file pointer to relocation table
+# CHECK-YAML2PDB:         0 file pointer to line numbers
+# CHECK-YAML2PDB:         0 number of relocations
+# CHECK-YAML2PDB:         0 number of line numbers
+# CHECK-YAML2PDB:  40000040 flags
+# CHECK-YAML2PDB:           IMAGE_SCN_CNT_INITIALIZED_DATA
+# CHECK-YAML2PDB:           IMAGE_SCN_MEM_READ
+
+# CHECK-YAML2PDB:                        Section Map
+# CHECK-YAML2PDB:  Section 0000 | ovl = 0, group = 0, frame = 1, name = 65535
+# CHECK-YAML2PDB:                 class = 65535, offset = 0, size = 71
+# CHECK-YAML2PDB:                 flags = read | execute | 32 bit addr | selector
+# CHECK-YAML2PDB:  Section 0001 | ovl = 0, group = 0, frame = 2, name = 65535
+# CHECK-YAML2PDB:                 class = 65535, offset = 0, size = 100
+# CHECK-YAML2PDB:                 flags = read | 32 bit addr | selector
+# CHECK-YAML2PDB:  Section 0002 | ovl = 0, group = 0, frame = 3, name = 65535
+# CHECK-YAML2PDB:                 class = 65535, offset = 0, size = 24
+# CHECK-YAML2PDB:                 flags = read | 32 bit addr | selector
+# CHECK-YAML2PDB:  Section 0003 | ovl = 0, group = 0, frame = 4, name = 65535
+# CHECK-YAML2PDB:                 class = 65535, offset = 0, size = 4294967295
+# CHECK-YAML2PDB:                 flags = 32 bit addr | absolute addr
+
+# CHECK-PDB2YAML:DbiStream:
+# CHECK-PDB2YAML:  SectionHeaders:
+# CHECK-PDB2YAML:    - Name:            .text
+# CHECK-PDB2YAML:      VirtualSize:     71
+# CHECK-PDB2YAML:      VirtualAddress:  4096
+# CHECK-PDB2YAML:      SizeOfRawData:   512
+# CHECK-PDB2YAML:      PointerToRawData: 1024
+# CHECK-PDB2YAML:      PointerToRelocations: 0
+# CHECK-PDB2YAML:      PointerToLinenumbers: 0
+# CHECK-PDB2YAML:      NumberOfRelocations: 0
+# CHECK-PDB2YAML:      NumberOfLinenumbers: 0
+# CHECK-PDB2YAML:      Characteristics: 1610612768
+# CHECK-PDB2YAML:    - Name:            .rdata
+# CHECK-PDB2YAML:      VirtualSize:     100
+# CHECK-PDB2YAML:      VirtualAddress:  8192
+# CHECK-PDB2YAML:      SizeOfRawData:   512
+# CHECK-PDB2YAML:      PointerToRawData: 1536
+# CHECK-PDB2YAML:      PointerToRelocations: 0
+# CHECK-PDB2YAML:      PointerToLinenumbers: 0
+# CHECK-PDB2YAML:      NumberOfRelocations: 0
+# CHECK-PDB2YAML:      NumberOfLinenumbers: 0
+# CHECK-PDB2YAML:      Characteristics: 1073741888
+# CHECK-PDB2YAML:    - Name:            .pdata
+# CHECK-PDB2YAML:      VirtualSize:     24
+# CHECK-PDB2YAML:      VirtualAddress:  12288
+# CHECK-PDB2YAML:      SizeOfRawData:   512
+# CHECK-PDB2YAML:      PointerToRawData: 2048
+# CHECK-PDB2YAML:      PointerToRelocations: 0
+# CHECK-PDB2YAML:      PointerToLinenumbers: 0
+# CHECK-PDB2YAML:      NumberOfRelocations: 0
+# CHECK-PDB2YAML:      NumberOfLinenumbers: 0
+# CHECK-PDB2YAML:      Characteristics: 1073741888
+
+---
+DbiStream:
+  SectionHeaders:
+    - Name:            .text
+      VirtualSize:     71
+      VirtualAddress:  4096
+      SizeOfRawData:   512
+      PointerToRawData: 1024
+      PointerToRelocations: 0
+      PointerToLinenumbers: 0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      Characteristics: 1610612768
+    - Name:            .rdata
+      VirtualSize:     100
+      VirtualAddress:  8192
+      SizeOfRawData:   512
+      PointerToRawData: 1536
+      PointerToRelocations: 0
+      PointerToLinenumbers: 0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      Characteristics: 1073741888
+    - Name:            .pdata
+      VirtualSize:     24
+      VirtualAddress:  12288
+      SizeOfRawData:   512
+      PointerToRawData: 2048
+      PointerToRelocations: 0
+      PointerToLinenumbers: 0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      Characteristics: 1073741888
+...

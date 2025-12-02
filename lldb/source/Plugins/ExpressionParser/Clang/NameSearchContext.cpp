@@ -153,7 +153,7 @@ NameSearchContext::AddTypeDecl(const CompilerType &clang_type) {
 
       return (NamedDecl *)typedef_name_decl;
     } else if (const TagType *tag_type = qual_type->getAs<TagType>()) {
-      TagDecl *tag_decl = tag_type->getOriginalDecl()->getDefinitionOrSelf();
+      TagDecl *tag_decl = tag_type->getDecl()->getDefinitionOrSelf();
 
       m_decls.push_back(tag_decl);
 

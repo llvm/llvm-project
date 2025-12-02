@@ -128,8 +128,11 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallTypeScript(
 
   PyObject *pfunc_impl = nullptr;
 
-  if (pyfunct_wrapper && *pyfunct_wrapper &&
-      PyFunction_Check(*pyfunct_wrapper)) {
+  if (pyfunct_wrapper && *pyfunct_wrapper
+#ifndef Py_LIMITED_API
+      && PyFunction_Check(*pyfunct_wrapper)
+#endif
+      ) {
     pfunc_impl = (PyObject *)(*pyfunct_wrapper);
     if (pfunc_impl->ob_refcnt == 1) {
       Py_XDECREF(pfunc_impl);
@@ -312,7 +315,7 @@ PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetChildAtIndex(PyObj
   return result.release();
 }
 
-int lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
+uint32_t lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
     PyObject * implementor, const char *child_name) {
   PyErr_Cleaner py_err_cleaner(true);
 
@@ -415,6 +418,30 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBBreakpoint(PyObject *
 
   int valid_cast =
       SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBBreakpoint, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrame(PyObject * data) {
+  lldb::SBFrame *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBFrame, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBBreakpointLocation(PyObject * data) {
+  lldb::SBBreakpointLocation *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBBreakpointLocation, 0);
 
   if (valid_cast == -1)
     return NULL;
@@ -525,6 +552,18 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyOb
 
   int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
                                    SWIGTYPE_p_lldb__SBExecutionContext, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data) {
+  lldb::SBFrameList *sb_ptr = NULL;
+
+  int valid_cast = SWIG_ConvertPtr(data, (void **)&sb_ptr,
+                                   SWIGTYPE_p_lldb__SBFrameList, 0);
 
   if (valid_cast == -1)
     return NULL;

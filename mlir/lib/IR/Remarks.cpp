@@ -81,9 +81,10 @@ void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
     os << "Function=" << getFunction() << " | ";
 
   if (printLocation) {
-    if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(getLocation()))
+    if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(getLocation())) {
       os << " @" << flc.getFilename() << ":" << flc.getLine() << ":"
          << flc.getColumn();
+    }
   }
 
   printArgs(os, getArgs());
@@ -227,8 +228,9 @@ InFlightRemark RemarkEngine::emitOptimizationRemarkAnalysis(Location loc,
 
 void RemarkEngine::reportImpl(const Remark &remark) {
   // Stream the remark
-  if (remarkStreamer)
+  if (remarkStreamer) {
     remarkStreamer->streamOptimizationRemark(remark);
+  }
 
   // Print using MLIR's diagnostic
   if (printAsEmitRemarks)
@@ -246,6 +248,21 @@ RemarkEngine::~RemarkEngine() {
 
   if (remarkStreamer)
     remarkStreamer->finalize();
+}
+
+llvm::LogicalResult RemarkEngine::initialize(
+    std::unique_ptr<MLIRRemarkStreamerBase> streamer,
+    std::unique_ptr<RemarkEmittingPolicyBase> remarkEmittingPolicy,
+    std::string *errMsg) {
+
+  remarkStreamer = std::move(streamer);
+
+  auto reportFunc =
+      std::bind(&RemarkEngine::reportImpl, this, std::placeholders::_1);
+  remarkEmittingPolicy->initialize(ReportFn(std::move(reportFunc)));
+
+  this->remarkEmittingPolicy = std::move(remarkEmittingPolicy);
+  return success();
 }
 
 /// Returns true if filter is already anchored like ^...$
@@ -298,21 +315,6 @@ RemarkEngine::RemarkEngine(bool printAsEmitRemarks,
     analysisFilter = buildFilter(cats, cats.analysis);
   if (cats.failed)
     failedFilter = buildFilter(cats, cats.failed);
-}
-
-llvm::LogicalResult RemarkEngine::initialize(
-    std::unique_ptr<MLIRRemarkStreamerBase> streamer,
-    std::unique_ptr<RemarkEmittingPolicyBase> remarkEmittingPolicy,
-    std::string *errMsg) {
-
-  remarkStreamer = std::move(streamer);
-
-  // Capture `this`. Ensure RemarkEngine is not moved after this.
-  auto reportFunc = [this](const Remark &r) { this->reportImpl(r); };
-  remarkEmittingPolicy->initialize(ReportFn(std::move(reportFunc)));
-
-  this->remarkEmittingPolicy = std::move(remarkEmittingPolicy);
-  return success();
 }
 
 llvm::LogicalResult mlir::remark::enableOptimizationRemarks(

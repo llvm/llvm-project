@@ -4,14 +4,14 @@
 // =============
 void a(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}void a(int i) {;}{{$}}
+// CHECK-FIXES: void a(int i) {;}
 
 #if __STDC_VERSION__ < 202311L
 static void b(); // In C before C23, forward declarations can leave out parameters.
 #endif
 static void b(int i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}static void b() {;}{{$}}
+// CHECK-FIXES: static void b() {;}
 
 // Unchanged cases
 // ===============

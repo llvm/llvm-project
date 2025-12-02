@@ -305,9 +305,12 @@ void Instrumentation::instrumentIndirectTarget(BinaryBasicBlock &BB,
                  : IndCallHandlerExitBBFunction->getSymbol(),
       IndCallSiteID, &*BC.Ctx);
 
-  Iter = BB.eraseInstruction(Iter);
-  Iter = insertInstructions(CounterInstrs, BB, Iter);
-  --Iter;
+  if (!BC.isAArch64()) {
+    Iter = BB.eraseInstruction(Iter);
+    Iter = insertInstructions(CounterInstrs, BB, Iter);
+    --Iter;
+  } else
+    Iter = insertInstructions(CounterInstrs, BB, Iter);
 }
 
 bool Instrumentation::instrumentOneTarget(
@@ -753,6 +756,8 @@ void Instrumentation::createAuxiliaryFunctions(BinaryContext &BC) {
       createSimpleFunction("__bolt_fini_trampoline",
                            BC.MIB->createReturnInstructionList(BC.Ctx.get()));
     }
+    if (BC.isAArch64())
+      BC.MIB->createInstrCounterIncrFunc(BC);
   }
 }
 

@@ -1011,6 +1011,20 @@ module attributes { transform.target_tag = "start_here" } {
     } -> tensor<1x1x4xf32>
     return
   }
+
+  func.func @generic_none(%arg0: tensor<128x128xi32>, %arg1: tensor<128x128xi32>, %arg2: tensor<128x128xi32>) {
+    %0 = linalg.generic {
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                       affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>],
+      iterator_types = ["parallel", "parallel", "reduction"]}
+      ins(%arg0, %arg1 : tensor<128x128xi32>, tensor<128x128xi32>)
+      outs(%arg2 : tensor<128x128xi32>) {
+      ^bb0(%in: i32, %in_0: i32, %out: i32):
+        linalg.yield %out : i32
+      } -> tensor<128x128xi32>
+    return
+  }
 }
 
 // -----

@@ -18,13 +18,10 @@
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
-#include <optional>
 
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Value.h"
-
-#include <functional>
 
 namespace mlir::remark {
 
@@ -438,6 +435,11 @@ public:
              std::unique_ptr<RemarkEmittingPolicyBase> remarkEmittingPolicy,
              std::string *errMsg);
 
+  /// Get the remark emitting policy.
+  RemarkEmittingPolicyBase *getRemarkEmittingPolicy() const {
+    return remarkEmittingPolicy.get();
+  }
+
   /// Report a remark.
   void report(const Remark &&remark);
 
@@ -484,6 +486,7 @@ public:
   RemarkEmittingPolicyAll();
 
   void reportRemark(const detail::Remark &remark) override {
+    assert(reportImpl && "reportImpl is not set");
     reportImpl(remark);
   }
   void finalize() override {}
@@ -495,29 +498,20 @@ private:
   /// user can intercept them for custom processing via a registered callback,
   /// otherwise they will be reported on engine destruction.
   llvm::DenseSet<detail::Remark> postponedRemarks;
-  /// Optional user callback for intercepting postponed remarks.
-  std::function<void(const detail::Remark &)> postponedRemarkCallback;
 
 public:
   RemarkEmittingPolicyFinal();
-
-  /// Register a callback to intercept postponed remarks before they are
-  /// reported. The callback will be invoked for each postponed remark in
-  /// finalize().
-  void
-  setPostponedRemarkCallback(std::function<void(const detail::Remark &)> cb) {
-    postponedRemarkCallback = std::move(cb);
-  }
 
   void reportRemark(const detail::Remark &remark) override {
     postponedRemarks.erase(remark);
     postponedRemarks.insert(remark);
   }
+
   void finalize() override {
+    assert(reportImpl && "reportImpl is not set");
     for (auto &remark : postponedRemarks) {
-      if (postponedRemarkCallback)
-        postponedRemarkCallback(remark);
-      reportImpl(remark);
+      if (reportImpl)
+        reportImpl(remark);
     }
   }
 };

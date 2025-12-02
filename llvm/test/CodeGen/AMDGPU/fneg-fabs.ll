@@ -215,13 +215,13 @@ define amdgpu_kernel void @fneg_fabsf_v2f32(ptr addrspace(1) %out, <2 x float> %
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_bitset1_b32 s3, 31
-; VI-NEXT:    s_bitset1_b32 s2, 31
-; VI-NEXT:    v_mov_b32_e32 v3, s1
-; VI-NEXT:    v_mov_b32_e32 v0, s2
-; VI-NEXT:    v_mov_b32_e32 v1, s3
-; VI-NEXT:    v_mov_b32_e32 v2, s0
-; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    s_or_b32 s0, s3, 0x80000000
+; VI-NEXT:    s_or_b32 s1, s2, 0x80000000
+; VI-NEXT:    v_mov_b32_e32 v2, s1
+; VI-NEXT:    v_mov_b32_e32 v3, s0
+; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %in)
   %fsub = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %fabs

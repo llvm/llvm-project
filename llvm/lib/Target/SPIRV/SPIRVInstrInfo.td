@@ -763,7 +763,38 @@ def OpGetDefaultQueue: Op<303, (outs ID:$res), (ins TYPE:$type),
 def OpBuildNDRange: Op<304, (outs ID:$res), (ins TYPE:$type, ID:$GWS, ID:$LWS, ID:$GWO),
                   "$res = OpBuildNDRange $type $GWS $LWS $GWO">;
 
-// TODO: 3.42.23. Pipe Instructions
+// 3.42.23. Pipe Instructions
+
+def OpReadPipe: Op<274, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpReadPipe $type $Pipe $Pointer $PcktSize $PcktAlign">;
+def OpWritePipe: Op<275, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpWritePipe $type $Pipe $Pointer $PcktSize $PcktAlign">;
+def OpReservedReadPipe : Op<276, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$ReserveId, ID:$Index, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpReservedReadPipe $type $Pipe $ReserveId $Index $Pointer $PcktSize $PcktAlign">;
+def OpReservedWritePipe : Op<277, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$ReserveId, ID:$Index, ID:$Pointer, ID:$PcktSize, ID:$PcktAlign), 
+                  "$res = OpReservedWritePipe $type $Pipe $ReserveId $Index $Pointer $PcktSize $PcktAlign">;
+def OpReserveReadPipePackets : Op<278, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$NumPckts, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpReserveReadPipePackets $type $Pipe $NumPckts $PcktSize $PcktAlign">;
+def OpReserveWritePipePackets : Op<279, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$NumPckts, ID:$PcktSize, ID:$PcktAlign),
+                  "$res = OpReserveWritePipePackets $type $Pipe $NumPckts $PcktSize $PcktAlign">;
+def OpCommitReadPipe : Op<280, (outs), (ins ID:$Pipe, ID:$ReserveId, ID:$PcktSize, ID:$PcktAlign),
+                  "OpCommitReadPipe $Pipe $ReserveId $PcktSize $PcktAlign">;
+def OpCommitWritePipe : Op<281, (outs), (ins ID:$Pipe, ID:$ReserveId, ID:$PcktSize, ID:$PcktAlign),
+                  "OpCommitWritePipe $Pipe $ReserveId $PcktSize $PcktAlign">;
+def OpIsValidReserveId : Op<282, (outs ID:$res), (ins TYPE:$type, ID:$ReserveId),
+                  "$res = OpIsValidReserveId $type $ReserveId">;
+def OpGetNumPipePackets : Op<283, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$PacketSize, ID:$PacketAlign),
+                  "$res = OpGetNumPipePackets $type $Pipe $PacketSize $PacketAlign">;
+def OpGetMaxPipePackets : Op<284, (outs ID:$res), (ins TYPE:$type, ID:$Pipe, ID:$PacketSize, ID:$PacketAlign),
+                  "$res = OpGetMaxPipePackets $type $Pipe $PacketSize $PacketAlign">;
+def OpGroupReserveReadPipePackets : Op<285, (outs ID:$res), (ins TYPE:$type, ID:$Scope, ID:$Pipe, ID:$NumPckts, ID:$PacketSize, ID:$PacketAlign),
+                  "$res = OpGroupReserveReadPipePackets $type $Scope $Pipe $NumPckts $PacketSize $PacketAlign">;
+def OpGroupReserveWritePipePackets : Op<286, (outs ID:$res), (ins TYPE:$type, ID:$Scope, ID:$Pipe, ID:$NumPckts, ID:$PacketSize, ID:$PacketAlign),
+                  "$res = OpGroupReserveWritePipePackets $type $Scope $Pipe $NumPckts $PacketSize $PacketAlign">;
+def OpGroupCommitReadPipe : Op<287, (outs), (ins ID:$Scope, ID:$Pipe, ID:$ReserveId, ID:$PacketSize, ID:$PacketAlign),
+                  "OpGroupCommitReadPipe $Scope $Pipe $ReserveId $PacketSize $PacketAlign">;
+def OpGroupCommitWritePipe : Op<288, (outs), (ins ID:$Scope, ID:$Pipe, ID:$ReserveId, ID:$PacketSize, ID:$PacketAlign),
+                  "OpGroupCommitWritePipe $Scope $Pipe $ReserveId $PacketSize $PacketAlign">;
 
 // 3.42.24. Non-Uniform Instructions
 
@@ -956,3 +987,39 @@ def OpSubgroup2DBlockPrefetchINTEL: Op<6234, (outs), (ins ID:$element_size, ID:$
 def OpSubgroup2DBlockStoreINTEL: Op<6235, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
                   ID:$block_count, ID:$src_ptr, ID:$dst_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord),
                   "OpSubgroup2DBlockStoreINTEL $element_size $block_width $block_height $block_count $src_ptr $dst_base_ptr $memory_width $memory_height $memory_pitch $coord">;
+
+// SPV_INTEL_predicated_io
+def OpPredicatedLoadINTEL: Op<6528, (outs ID:$res), (ins TYPE:$resType, ID:$ptr, ID:$predicate, ID:$default_value, variable_ops),
+                  "$res = OpPredicatedLoadINTEL $resType $ptr $predicate $default_value">;
+def OpPredicatedStoreINTEL: Op<6529, (outs), (ins ID:$ptr, ID:$object, ID:$predicate, variable_ops),
+                  "OpPredicatedStoreINTEL $ptr $object $predicate">;
+
+//SPV_ALTERA_blocking_pipes
+def OpReadPipeBlockingALTERA :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+                   "OpReadPipeBlockingALTERA $pipe $pointer $packetSize $packetAlignment">;
+def OpWritePipeBlockingALTERA :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+                   "OpWritePipeBlockingALTERA $pipe $pointer $packetSize $packetAlignment">;
+
+//SPV_ALTERA_arbitrary_precision_fixed_point
+def OpFixedSqrtALTERA: Op<5923, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSqrtALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedRecipALTERA: Op<5924, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedRecipALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedRsqrtALTERA: Op<5925, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedRsqrtALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinALTERA: Op<5926, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedCosALTERA: Op<5927, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedCosALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinCosALTERA: Op<5928, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinCosALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinPiALTERA: Op<5929, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinPiALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedCosPiALTERA: Op<5930, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedCosPiALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedSinCosPiALTERA: Op<5931, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedSinCosPiALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedLogALTERA: Op<5932, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedLogALTERA $result_type $input $sign $l $rl $q $o">;
+def OpFixedExpALTERA: Op<5933, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
+      "$res = OpFixedExpALTERA $result_type $input $sign $l $rl $q $o">;

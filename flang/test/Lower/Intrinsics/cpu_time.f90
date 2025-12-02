@@ -8,4 +8,3 @@ subroutine cpu_time_test(t)
     ! CHECK: fir.store %[[result32]] to %arg0 : !fir.ref<f32>
     call cpu_time(t)
   end subroutine
-  

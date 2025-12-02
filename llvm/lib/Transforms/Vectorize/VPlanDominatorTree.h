@@ -39,7 +39,6 @@ class VPDominatorTree : public DominatorTreeBase<VPBlockBase, false> {
   using Base = DominatorTreeBase<VPBlockBase, false>;
 
 public:
-  VPDominatorTree() = default;
   explicit VPDominatorTree(VPlan &Plan) { recalculate(Plan); }
 
   /// Returns true if \p A properly dominates \p B.

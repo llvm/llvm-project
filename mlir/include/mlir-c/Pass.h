@@ -92,6 +92,18 @@ mlirPassManagerEnableVerifier(MlirPassManager passManager, bool enable);
 MLIR_CAPI_EXPORTED void
 mlirPassManagerEnableTiming(MlirPassManager passManager);
 
+/// Enumerated type of pass display modes.
+/// Mainly used in mlirPassManagerEnableStatistics.
+typedef enum {
+  MLIR_PASS_DISPLAY_MODE_LIST,
+  MLIR_PASS_DISPLAY_MODE_PIPELINE,
+} MlirPassDisplayMode;
+
+/// Enable pass statistics.
+MLIR_CAPI_EXPORTED void
+mlirPassManagerEnableStatistics(MlirPassManager passManager,
+                                MlirPassDisplayMode displayMode);
+
 /// Nest an OpPassManager under the top-level PassManager, the nested
 /// passmanager will only run on operations matching the provided name.
 /// The returned OpPassManager will be destroyed when the parent is destroyed.

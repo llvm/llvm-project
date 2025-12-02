@@ -109,10 +109,15 @@ public:
     return MC->contains(Reg1.asMCReg(), Reg2.asMCReg());
   }
 
-  /// Return the cost of copying a value between two registers in this class.
-  /// A negative number means the register class is very expensive
-  /// to copy e.g. status flag register classes.
-  int getCopyCost() const { return MC->getCopyCost(); }
+  /// Return the cost of copying a value between two registers in this class. If
+  /// this is the maximum value, the register may be impossible to copy.
+  uint8_t getCopyCost() const { return MC->getCopyCost(); }
+
+  /// \return true if register class is very expensive to copy e.g. status flag
+  /// register classes.
+  bool expensiveOrImpossibleToCopy() const {
+    return MC->getCopyCost() == std::numeric_limits<uint8_t>::max();
+  }
 
   /// Return true if this register class may be used to create virtual
   /// registers.
@@ -275,7 +280,7 @@ protected:
                      unsigned Mode = 0);
 
 public:
-  virtual ~TargetRegisterInfo();
+  ~TargetRegisterInfo() override;
 
   /// Return the number of registers for the function. (may overestimate)
   virtual unsigned getNumSupportedRegs(const MachineFunction &) const {
@@ -953,7 +958,7 @@ public:
   TypeSize getRegSizeInBits(Register Reg, const MachineRegisterInfo &MRI) const;
 
   /// Get the weight in units of pressure for this register unit.
-  virtual unsigned getRegUnitWeight(unsigned RegUnit) const = 0;
+  virtual unsigned getRegUnitWeight(MCRegUnit RegUnit) const = 0;
 
   /// Get the number of dimensions of register pressure.
   virtual unsigned getNumRegPressureSets() const = 0;
@@ -973,7 +978,7 @@ public:
 
   /// Get the dimensions of register pressure impacted by this register unit.
   /// Returns a -1 terminated array of pressure set IDs.
-  virtual const int *getRegUnitPressureSets(unsigned RegUnit) const = 0;
+  virtual const int *getRegUnitPressureSets(MCRegUnit RegUnit) const = 0;
 
   /// Get the scale factor of spill weight for this register class.
   virtual float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const;
@@ -1441,11 +1446,11 @@ LLVM_ABI Printable printReg(Register Reg,
 ///   fp0~st7 - Dual roots.
 ///
 /// Usage: OS << printRegUnit(Unit, TRI) << '\n';
-LLVM_ABI Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI);
+LLVM_ABI Printable printRegUnit(MCRegUnit Unit, const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print virtual registers and physical
 /// registers on a \ref raw_ostream.
-LLVM_ABI Printable printVRegOrUnit(unsigned VRegOrUnit,
+LLVM_ABI Printable printVRegOrUnit(VirtRegOrUnit VRegOrUnit,
                                    const TargetRegisterInfo *TRI);
 
 /// Create Printable object to print register classes or register banks

@@ -151,7 +151,6 @@ TEST(Remark, TestNoOutputOptimizationRemark) {
 
   std::string categoryFailName("myImportantCategory");
   std::string myPassname1("myPass1");
-  std::string funcName("myFunc");
   SmallString<64> tmpPathStorage;
   sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
                             /*MakeAbsolute=*/true);
@@ -274,9 +273,6 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
   std::string categoryInline("Inliner");
   std::string myPassname1("myPass1");
   std::string myPassname2("myPass2");
-  std::string funcName("myFunc");
-
-  std::string seenMsg = "";
 
   {
     MLIRContext context;
@@ -330,8 +326,6 @@ TEST(Remark, TestRemarkFinal) {
   const auto *pass4Msg = "I succeeded too";
 
   std::string categoryLoopunroll("LoopUnroll");
-
-  std::string seenMsg = "";
 
   {
     MLIRContext context;

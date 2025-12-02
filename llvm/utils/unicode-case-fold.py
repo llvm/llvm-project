@@ -21,11 +21,7 @@ from __future__ import print_function
 
 import sys
 import re
-
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
+from urllib.request import urlopen
 
 
 # This variable will body of the mappings function

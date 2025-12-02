@@ -7,7 +7,7 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets %t.exe | FileCheck -check-prefix=PRE-BOLT %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets %t.bolt | FileCheck -check-prefix=POST-BOLT %s
 
-## This test checks we correclty re-generate .debug_str_offsets when there are type units that have an offset not shared with CU.
+## This test checks we correctly re-generate .debug_str_offsets when there are type units that have an offset not shared with CU.
 
 # PRE-BOLT: .debug_str_offsets contents
 # PRE-BOLT-NEXT: Contribution size = 24, Format = DWARF32, Version = 5

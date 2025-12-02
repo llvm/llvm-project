@@ -68,13 +68,13 @@ define amdgpu_kernel void @s_fneg_v2f32(ptr addrspace(1) nocapture %out, <2 x fl
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_xor_b32 s3, s3, 0x80000000
-; VI-NEXT:    s_xor_b32 s2, s2, 0x80000000
-; VI-NEXT:    v_mov_b32_e32 v3, s1
-; VI-NEXT:    v_mov_b32_e32 v0, s2
-; VI-NEXT:    v_mov_b32_e32 v1, s3
-; VI-NEXT:    v_mov_b32_e32 v2, s0
-; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    s_xor_b32 s0, s3, 0x80000000
+; VI-NEXT:    s_xor_b32 s1, s2, 0x80000000
+; VI-NEXT:    v_mov_b32_e32 v2, s1
+; VI-NEXT:    v_mov_b32_e32 v3, s0
+; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_fneg_v2f32:
