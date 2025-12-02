@@ -122,7 +122,7 @@ func.func @map_nested_forall_to_threads_dynamic_trip_count(%x: memref<2 x 32 x f
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    // expected-error @below {{Trying to map to fewer GPU threads than loop iterations but overprovisioning is not yet supported. Try additional tiling before mapping or map to more threads.}}
+    // expected-error @below {{requires statically sized, normalized forall op}}
     transform.gpu.map_nested_forall_to_threads %funcop block_dims = [128, 4, 1] : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
