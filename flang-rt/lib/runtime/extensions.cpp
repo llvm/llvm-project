@@ -163,6 +163,17 @@ void FORTRAN_PROCEDURE_NAME(flush)(const int &unit) {
   Cookie cookie{IONAME(BeginFlush)(unit, __FILE__, __LINE__)};
   IONAME(EndIoStatement)(cookie);
 }
+
+void RTNAME(Flush)(int unit) {
+  // We set the `unit == -1` on the `flush()` case, so flush all units.
+  if (unit < 0) {
+    Terminator terminator{__FILE__, __LINE__};
+    IoErrorHandler handler{terminator};
+    ExternalFileUnit::FlushAll(handler);
+    return;
+  }
+  FORTRAN_PROCEDURE_NAME(flush)(unit);
+}
 } // namespace io
 
 // CALL FDATE(DATE)
@@ -397,6 +408,14 @@ std::int64_t RTNAME(time)() { return time(nullptr); }
 
 // MCLOCK: returns accumulated CPU time in ticks
 std::int32_t FORTRAN_PROCEDURE_NAME(mclock)() { return std::clock(); }
+
+void RTNAME(ShowDescriptor)(const Fortran::runtime::Descriptor *descr) {
+  if (descr) {
+    descr->Dump(stderr, /*dumpRawType=*/false);
+  } else {
+    std::fprintf(stderr, "NULL\n");
+  }
+}
 
 // Extension procedures related to I/O
 

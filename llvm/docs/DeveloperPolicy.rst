@@ -526,7 +526,10 @@ Most commonly these reviewers will provide the necessary approval, but approvals
 from other LLVM committers are also acceptable. Those reviewing the application are
 confirming that you have indeed had three patches committed, and that based on interactions
 on those reviews and elsewhere in the LLVM community they have no concern about you
-adhering to our Developer Policy and Code of Conduct.
+adhering to our Developer Policy and Code of Conduct. Reviewers should clearly state their
+reasoning for accepting or rejecting the request, and finish with a clear statement such
+as "I approve of this request", "LGTM", or "I do not approve of this request".
+
 
 If approved, a GitHub invitation will be sent to your
 GitHub account. In case you don't get notification from GitHub, go to

@@ -755,7 +755,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
       RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
                          TM.Options.FloatABIType, TM.Options.EABIVersion,
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
-      Libcalls(RuntimeLibcallInfo) {
+      Libcalls(RuntimeLibcallInfo, STI) {
   initActions();
 
   // Perform these initializations only once.
