@@ -34,6 +34,15 @@ LLVMModuleRef mlirTranslateModuleToLLVMIR(MlirOperation module,
   return moduleRef;
 }
 
+char *mlirTranslateModuleToLLVMIRToString(MlirOperation module) {
+  LLVMContextRef llvmCtx = LLVMContextCreate();
+  LLVMModuleRef llvmModule = mlirTranslateModuleToLLVMIR(module, llvmCtx);
+  char *llvmir = LLVMPrintModuleToString(llvmModule);
+  LLVMDisposeModule(llvmModule);
+  LLVMContextDispose(llvmCtx);
+  return llvmir;
+}
+
 DEFINE_C_API_PTR_METHODS(MlirTypeFromLLVMIRTranslator,
                          mlir::LLVM::TypeFromLLVMIRTranslator)
 

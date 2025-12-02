@@ -12,7 +12,7 @@
 #include "src/signal/sigprocmask.h"
 
 namespace LIBC_NAMESPACE_DECL {
-[[gnu::returns_twice]] int sigsetjmp_epilogue(jmp_buf buffer, int retval) {
+[[gnu::returns_twice]] int sigsetjmp_epilogue(sigjmp_buf buffer, int retval) {
   syscall_impl<long>(sigprocmask, SIG_SETMASK,
                      /* set= */ retval ? &buffer->sigmask : nullptr,
                      /* old_set= */ retval ? nullptr : &buffer->sigmask);

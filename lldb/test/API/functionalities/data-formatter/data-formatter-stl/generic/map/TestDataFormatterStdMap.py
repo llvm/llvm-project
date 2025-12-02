@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdMapDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         TestBase.setUp(self)
         ns = "ndk" if lldbplatformutil.target_is_android() else ""
@@ -21,7 +23,7 @@ class StdMapDataFormatterTestCase(TestBase):
         ]
         return ValueCheck(children=pair_children)
 
-    def do_test(self):
+    def do_test(self, *, supports_end_iter=False):
         """Test that that file and class static variables display correctly."""
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
@@ -143,6 +145,9 @@ class StdMapDataFormatterTestCase(TestBase):
                 ValueCheck(name="second", value="0"),
             ],
         )
+        if supports_end_iter:
+            self.expect("frame variable it_end", substrs=["= end"])
+            self.expect("frame variable const_it_end", substrs=["= end"])
 
         # check that MightHaveChildren() gets it right
         self.assertTrue(
@@ -343,3 +348,9 @@ class StdMapDataFormatterTestCase(TestBase):
             dictionary={"USE_LIBSTDCPP": 1, "CXXFLAGS_EXTRAS": "-D_GLIBCXX_DEBUG"}
         )
         self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
+        self.do_test(supports_end_iter=True)

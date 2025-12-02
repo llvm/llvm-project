@@ -22,12 +22,8 @@ if (CMAKE_CROSSCOMPILING)
   return ()
 endif ()
 
-if (NOT TARGET llvm_gtest)
-  message(WARNING "Flang-RT unittests disabled due to GTest being unavailable; "
-                  "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
-  return ()
-endif ()
-
+# Make the targets default_gtest and default_gtest_main available.
+build_gtest()
 
 add_dependencies(flang-rt-test-depends
   FlangRTUnitTests
@@ -60,6 +56,36 @@ function(add_flangrt_unittest_offload_properties target)
   endif()
 endfunction()
 
+# flang-rt on Windows requires compiler-rt for some symbols. For binaries built
+# with flang this dependency is added by the flang driver, but since the unit
+# tests are built with clang we need to add the dependency manually.
+function(add_flangrt_dependent_libs target)
+  if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (FLANG_RT_BUILTINS_LIBRARY)
+      target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>" "$<$<COMPILE_LANGUAGE:CXX,C>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
+    endif ()
+  endif ()
+  if (MSVC AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+    if (FLANG_RT_BUILTINS_LIBRARY)
+      target_compile_options(${target} PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "$<$<COMPILE_LANGUAGE:Fortran>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
+    else ()
+      message(WARNING "Did not find libclang_rt.builtins.lib.
+        LLVM may emit builtins that are not implemented in msvcrt/ucrt and
+        instead falls back to builtins from Compiler-RT. Linking with ${tgtname}
+        may result in a linker error.")
+    endif ()
+  elseif (APPLE)
+    # Clang on Darwin enables non-POSIX extensions by default.
+    # This causes some macros to leak, such as HUGE from <math.h>, which
+    # causes some conflicts with Flang symbols (but not with Flang-RT, for
+    # now).
+    # It also causes some Flang-RT extensions to be disabled, such as fdate,
+    # that checks for _POSIX_C_SOURCE.
+    # Setting _POSIX_C_SOURCE avoids these issues.
+    target_compile_options(${target} PRIVATE "-D_POSIX_C_SOURCE=200809")
+  endif ()
+endfunction()
+
 
 function(add_flangrt_unittest test_dirname)
   cmake_parse_arguments(ARG
@@ -72,14 +98,7 @@ function(add_flangrt_unittest test_dirname)
 
   target_link_libraries(${test_dirname} PRIVATE ${ARG_LINK_LIBS})
   add_flangrt_unittest_offload_properties(${test_dirname})
-
-  # Required because LLVMSupport is compiled with this option.
-  # FIXME: According to CMake documentation, this is the default. Why is it
-  #        needed? LLVM's add_unittest doesn't set it either.
-  set_target_properties(${test_dirname}
-      PROPERTIES
-        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
-    )
+  add_flangrt_dependent_libs(${test_dirname})
 endfunction()
 
 function(add_flangrt_nongtest_unittest test_name)
@@ -99,6 +118,7 @@ function(add_flangrt_nongtest_unittest test_name)
   set_target_properties(${test_name}${suffix} PROPERTIES FOLDER "Flang-RT/Tests/Unit")
 
   target_link_libraries(${test_name}${suffix} PRIVATE NonGTestTesting ${ARG_LINK_LIBS})
+  add_flangrt_dependent_libs(${test_name}${suffix})
 
   if(NOT ARG_SLOW_TEST)
     add_dependencies(FlangRTUnitTests ${test_name}${suffix})

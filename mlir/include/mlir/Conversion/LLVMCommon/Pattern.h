@@ -19,16 +19,14 @@ class CallOpInterface;
 
 namespace LLVM {
 namespace detail {
-/// Handle generically setting flags as native properties on LLVM operations.
-void setNativeProperties(Operation *op, IntegerOverflowFlags overflowFlags);
-
 /// Replaces the given operation "op" with a new operation of type "targetOp"
 /// and given operands.
-LogicalResult oneToOneRewrite(
-    Operation *op, StringRef targetOp, ValueRange operands,
-    ArrayRef<NamedAttribute> targetAttrs,
-    const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
-    IntegerOverflowFlags overflowFlags = IntegerOverflowFlags::none);
+LogicalResult oneToOneRewrite(Operation *op, StringRef targetOp,
+                              ValueRange operands,
+                              ArrayRef<NamedAttribute> targetAttrs,
+                              Attribute propertiesAttr,
+                              const LLVMTypeConverter &typeConverter,
+                              ConversionPatternRewriter &rewriter);
 
 /// Replaces the given operation "op" with a call to an LLVM intrinsic with the
 /// specified name "intrinsic" and operands.
@@ -183,10 +181,20 @@ protected:
                          ArrayRef<Value> sizes, ArrayRef<Value> strides,
                          ConversionPatternRewriter &rewriter) const;
 
+  /// Copies the given unranked memory descriptor to heap-allocated memory (if
+  /// toDynamic is true) or to stack-allocated memory (otherwise) and returns
+  /// the new descriptor. Also frees the previously used memory (that is assumed
+  /// to be heap-allocated) if toDynamic is false. Returns a "null" SSA value
+  /// on failure.
+  Value copyUnrankedDescriptor(OpBuilder &builder, Location loc,
+                               UnrankedMemRefType memRefType, Value operand,
+                               bool toDynamic) const;
+
   /// Copies the memory descriptor for any operands that were unranked
   /// descriptors originally to heap-allocated memory (if toDynamic is true) or
-  /// to stack-allocated memory (otherwise). Also frees the previously used
-  /// memory (that is assumed to be heap-allocated) if toDynamic is false.
+  /// to stack-allocated memory (otherwise). The vector of descriptors is
+  /// updated in place. Also frees the previously used memory (that is assumed
+  /// to be heap-allocated) if toDynamic is false.
   LogicalResult copyUnrankedDescriptors(OpBuilder &builder, Location loc,
                                         TypeRange origTypes,
                                         SmallVectorImpl<Value> &operands,
@@ -233,9 +241,7 @@ public:
   virtual LogicalResult
   matchAndRewrite(SourceOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const {
-    SmallVector<Value> oneToOneOperands =
-        getOneToOneAdaptorOperands(adaptor.getOperands());
-    return matchAndRewrite(op, OpAdaptor(oneToOneOperands, adaptor), rewriter);
+    return dispatchTo1To1(*this, op, adaptor, rewriter);
   }
 
 private:
@@ -276,7 +282,7 @@ public:
   virtual LogicalResult
   matchAndRewrite(SourceOp op, ArrayRef<ValueRange> operands,
                   ConversionPatternRewriter &rewriter) const {
-    return matchAndRewrite(op, getOneToOneAdaptorOperands(operands), rewriter);
+    return dispatchTo1To1(*this, op, operands, rewriter);
   }
 
 private:
@@ -299,9 +305,9 @@ public:
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    return LLVM::detail::oneToOneRewrite(op, TargetOp::getOperationName(),
-                                         adaptor.getOperands(), op->getAttrs(),
-                                         *this->getTypeConverter(), rewriter);
+    return LLVM::detail::oneToOneRewrite(
+        op, TargetOp::getOperationName(), adaptor.getOperands(), op->getAttrs(),
+        /*propertiesAttr=*/Attribute{}, *this->getTypeConverter(), rewriter);
   }
 };
 

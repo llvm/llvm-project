@@ -34,8 +34,7 @@ define i64 @callee_not_avx(<4 x i64> %arg) noinline {
   ret i64 %v
 }
 
-; This call also shouldn't be inlined, as we don't know whether callee_unknown
-; is ABI compatible or not.
+; This call also shouldn't be inlined, as caller_not_avx2 is not ABI compatible.
 define void @caller_avx2() "target-features"="+avx" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_avx2
 ; CHECK-SAME: () #[[ATTR0]] {
@@ -55,6 +54,29 @@ define internal void @caller_not_avx2() {
   ret void
 }
 
+; Should be inlined, as caller_avx7 is ABI compatible. The fact that we don't
+; know anything about callee_unknown doesn't matter, as it is the caller that
+; determines the ABI as far as target features are concerned.
+define void @caller_avx6() "target-features"="+avx" {
+; CHECK-LABEL: define {{[^@]+}}@caller_avx6
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @callee_unknown(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+; CHECK-NEXT:    ret void
+;
+  call void @caller_avx7()
+  ret void
+}
+
+define void @caller_avx7() "target-features"="+avx" {
+; CHECK-LABEL: define {{[^@]+}}@caller_avx7
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @callee_unknown(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+; CHECK-NEXT:    ret void
+;
+  call i64 @callee_unknown(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+  ret void
+}
+
 declare i64 @callee_unknown(<4 x i64>)
 
 ; This call should get inlined, because we assume that intrinsics are always
@@ -62,19 +84,23 @@ declare i64 @callee_unknown(<4 x i64>)
 define void @caller_avx3() "target-features"="+avx" {
 ; CHECK-LABEL: define {{[^@]+}}@caller_avx3
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.some_intrinsic(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+; CHECK-NEXT:    [[V_I:%.*]] = load <4 x i64>, ptr @g, align 32
+; CHECK-NEXT:    [[V2_I:%.*]] = call <4 x i64> @llvm.abs.v4i64(<4 x i64> [[V_I]], i1 false)
+; CHECK-NEXT:    store <4 x i64> [[V2_I]], ptr @g, align 32
 ; CHECK-NEXT:    ret void
 ;
   call void @caller_not_avx3()
   ret void
 }
 
+@g = external global <4 x i64>
+
 define internal void @caller_not_avx3() {
-  call i64 @llvm.some_intrinsic(<4 x i64> <i64 0, i64 1, i64 2, i64 3>)
+  %v = load <4 x i64>, ptr @g
+  %v2 = call <4 x i64> @llvm.abs(<4 x i64> %v, i1 false)
+  store <4 x i64> %v2, ptr @g
   ret void
 }
-
-declare i64 @llvm.some_intrinsic(<4 x i64>)
 
 ; This call should get inlined, because only simple types are involved.
 define void @caller_avx4() "target-features"="+avx" {

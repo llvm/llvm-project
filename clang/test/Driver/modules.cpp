@@ -7,7 +7,7 @@
 // RUN: %clang -std=c++2a -x c++-module --precompile %t/foo.cpp -o %t/foo.pcm -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE
 // RUN: %clang -std=gnu++2a -x c++-module --precompile %t/foo.cpp -o %t/foo-gnu.pcm -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE
 //
-// CHECK-PRECOMPILE: -cc1 {{.*}} -emit-module-interface
+// CHECK-PRECOMPILE: -cc1 {{.*}} -emit-module-interface 
 // CHECK-PRECOMPILE-SAME: -o {{.*}}.pcm
 // CHECK-PRECOMPILE-SAME: -x c++
 // CHECK-PRECOMPILE-SAME: foo.cpp
@@ -34,12 +34,18 @@
 
 // Check combining precompile and compile steps works.
 //
-// RUN: %clang -std=c++2a -x c++-module %t/foo.cpp -S -o %t/foo2.pcm.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE --check-prefix=CHECK-COMPILE
+// RUN: %clang -std=c++2a -x c++-module -fno-modules-reduced-bmi %t/foo.cpp -S -o %t/foo2.pcm.o -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE --check-prefix=CHECK-COMPILE
 
 // Check that .cppm is treated as a module implicitly.
 //
 // RUN: cp %t/foo.cpp %t/foo.cppm
 // RUN: %clang -std=c++2a --precompile %t/foo.cppm -o %t/foo.pcm -v 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE
+
+// RUN: %clang -std=c++20 -x c++-module %t/foo.cpp --precompile -o %t/foo.pcm -### 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE-WO-MODULE-OUTPUT
+// CHECK-PRECOMPILE-WO-MODULE-OUTPUT-NOT: -fmodule-output=
+
+// RUN: %clang -std=c++20 -x c++-module %t/foo.cpp --precompile -fmodule-output=%t/foo.reduced.pcm -o %t/foo.pcm -### 2>&1 | FileCheck %s --check-prefix=CHECK-PRECOMPILE-WT-MODULE-OUTPUT
+// CHECK-PRECOMPILE-WT-MODULE-OUTPUT: -fmodule-output=
 
 //--- foo.cpp
 export module foo;

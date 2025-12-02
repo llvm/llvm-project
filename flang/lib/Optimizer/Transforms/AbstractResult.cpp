@@ -137,9 +137,9 @@ public:
     auto buffer = saveResult.getMemref();
     mlir::Value arg = buffer;
     if (mustEmboxResult(result.getType(), shouldBoxResult))
-      arg = rewriter.create<fir::EmboxOp>(
-          loc, argType, buffer, saveResult.getShape(), /*slice*/ mlir::Value{},
-          saveResult.getTypeparams());
+      arg = fir::EmboxOp::create(rewriter, loc, argType, buffer,
+                                 saveResult.getShape(), /*slice*/ mlir::Value{},
+                                 saveResult.getTypeparams());
 
     llvm::SmallVector<mlir::Type> newResultTypes;
     bool isResultBuiltinCPtr = fir::isa_builtin_cptr_type(result.getType());
@@ -155,8 +155,8 @@ public:
         if (!isResultBuiltinCPtr)
           newOperands.emplace_back(arg);
         newOperands.append(op.getOperands().begin(), op.getOperands().end());
-        newOp = rewriter.create<fir::CallOp>(loc, *op.getCallee(),
-                                             newResultTypes, newOperands);
+        newOp = fir::CallOp::create(rewriter, loc, *op.getCallee(),
+                                    newResultTypes, newOperands);
       } else {
         // Indirect calls.
         llvm::SmallVector<mlir::Type> newInputTypes;
@@ -169,13 +169,13 @@ public:
 
         llvm::SmallVector<mlir::Value> newOperands;
         newOperands.push_back(
-            rewriter.create<fir::ConvertOp>(loc, newFuncTy, op.getOperand(0)));
+            fir::ConvertOp::create(rewriter, loc, newFuncTy, op.getOperand(0)));
         if (!isResultBuiltinCPtr)
           newOperands.push_back(arg);
         newOperands.append(op.getOperands().begin() + 1,
                            op.getOperands().end());
-        newOp = rewriter.create<fir::CallOp>(loc, mlir::SymbolRefAttr{},
-                                             newResultTypes, newOperands);
+        newOp = fir::CallOp::create(rewriter, loc, mlir::SymbolRefAttr{},
+                                    newResultTypes, newOperands);
       }
     }
 
@@ -191,8 +191,8 @@ public:
         passArgPos =
             rewriter.getI32IntegerAttr(*op.getPassArgPos() + passArgShift);
       // TODO: propagate argument and result attributes (need to be shifted).
-      newOp = rewriter.create<fir::DispatchOp>(
-          loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
+      newOp = fir::DispatchOp::create(
+          rewriter, loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
           op.getOperands()[0], newOperands, passArgPos,
           /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
           op.getProcedureAttrsAttr());
@@ -280,7 +280,7 @@ processReturnLikeOp(OpTy ret, mlir::Value newArg,
     // register pass, this is possible for fir.box results, or fir.record
     // with no length parameters. Simply store the result in the result
     // storage. at the return point.
-    rewriter.create<fir::StoreOp>(loc, resultValue, newArg);
+    fir::StoreOp::create(rewriter, loc, resultValue, newArg);
     rewriter.replaceOpWithNewOp<OpTy>(ret);
   }
   // Delete result old local storage if unused.
@@ -337,8 +337,8 @@ public:
       newFuncTy = getCPtrFunctionType(oldFuncTy);
     else
       newFuncTy = getNewFunctionType(oldFuncTy, shouldBoxResult);
-    auto newAddrOf = rewriter.create<fir::AddrOfOp>(addrOf.getLoc(), newFuncTy,
-                                                    addrOf.getSymbol());
+    auto newAddrOf = fir::AddrOfOp::create(rewriter, addrOf.getLoc(), newFuncTy,
+                                           addrOf.getSymbol());
     // Rather than converting all op a function pointer might transit through
     // (e.g calls, stores, loads, converts...), cast new type to the abstract
     // type. A conversion will be added when calling indirect calls of abstract
@@ -397,7 +397,7 @@ public:
         if (mustEmboxResult(resultType, shouldBoxResult)) {
           auto bufferType = fir::ReferenceType::get(resultType);
           rewriter.setInsertionPointToStart(&func.front());
-          newArg = rewriter.create<fir::BoxAddrOp>(loc, bufferType, newArg);
+          newArg = fir::BoxAddrOp::create(rewriter, loc, bufferType, newArg);
         }
         patterns.insert<ReturnOpConversion>(context, newArg);
         target.addDynamicallyLegalOp<mlir::func::ReturnOp>(

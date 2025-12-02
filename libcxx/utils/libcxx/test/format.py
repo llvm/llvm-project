@@ -12,13 +12,15 @@ import lit.formats
 import os
 import re
 
+THIS_FILE = os.path.abspath(__file__)
+LIBCXX_UTILS = os.path.dirname(os.path.dirname(os.path.dirname(THIS_FILE)))
 
 def _getTempPaths(test):
     """
-    Return the values to use for the %T and %t substitutions, respectively.
+    Return the values to use for the %{temp} and %t substitutions, respectively.
 
     The difference between this and Lit's default behavior is that we guarantee
-    that %T is a path unique to the test being run.
+    that %{temp} is a path unique to the test being run.
     """
     tmpDir, _ = lit.TestRunner.getTempPaths(test)
     _, testName = os.path.split(test.getExecPath())
@@ -34,11 +36,14 @@ def _checkBaseSubstitutions(substitutions):
 
 def _executeScriptInternal(test, litConfig, commands):
     """
-    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands)
+    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands), or an appropriate lit.Test.Result
+    in case of an error while parsing the script.
 
     TODO: This really should be easier to access from Lit itself
     """
     parsedCommands = parseScript(test, preamble=commands)
+    if isinstance(parsedCommands, lit.Test.Result):
+        return parsedCommands
 
     _, tmpBase = _getTempPaths(test)
     execDir = os.path.dirname(test.getExecPath())
@@ -65,7 +70,8 @@ def parseScript(test, preamble):
     """
     Extract the script from a test, with substitutions applied.
 
-    Returns a list of commands ready to be executed.
+    Returns a list of commands ready to be executed, or an appropriate lit.Test.Result in case of error
+    while parsing the script (this includes the script being unsupported).
 
     - test
         The lit.Test to parse.
@@ -86,13 +92,14 @@ def parseScript(test, preamble):
     #       errors, which doesn't make sense for clang-verify tests because we may want to check
     #       for specific warning diagnostics.
     _checkBaseSubstitutions(substitutions)
+    substitutions.append(("%{temp}", tmpDir))
     substitutions.append(
         ("%{build}", "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe")
     )
     substitutions.append(
         (
             "%{verify}",
-            "%{cxx} %s %{flags} %{compile_flags} -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
+            "%{cxx} %s %{flags} %{compile_flags} -U_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
         )
     )
     substitutions.append(("%{run}", "%{exec} %t.exe"))
@@ -143,7 +150,7 @@ def parseScript(test, preamble):
     # that file to the execution directory. Execute the copy from %S to allow
     # relative paths from the test directory.
     for dep in fileDependencies:
-        script += ["%dbg(SETUP) cd %S && cp {} %T".format(dep)]
+        script += ["%dbg(SETUP) cd %S && cp {} %{{temp}}".format(dep)]
     script += preamble
     script += scriptInTest
 
@@ -171,11 +178,11 @@ def parseScript(test, preamble):
                 "%dbg(MODULE std.compat) %{cxx} %{flags} "
                 f"{compileFlags} "
                 "-Wno-reserved-module-identifier -Wno-reserved-user-defined-literal "
-                "-fmodule-file=std=%T/std.pcm " # The std.compat module imports std.
-                "--precompile -o %T/std.compat.pcm -c %{module-dir}/std.compat.cppm",
+                "-fmodule-file=std=%{temp}/std.pcm " # The std.compat module imports std.
+                "--precompile -o %{temp}/std.compat.pcm -c %{module-dir}/std.compat.cppm",
             )
             moduleCompileFlags.extend(
-                ["-fmodule-file=std.compat=%T/std.compat.pcm", "%T/std.compat.pcm"]
+                ["-fmodule-file=std.compat=%{temp}/std.compat.pcm", "%{temp}/std.compat.pcm"]
             )
 
         # Make sure the std module is built before std.compat. Libc++'s
@@ -188,9 +195,9 @@ def parseScript(test, preamble):
             "%dbg(MODULE std) %{cxx} %{flags} "
             f"{compileFlags} "
             "-Wno-reserved-module-identifier -Wno-reserved-user-defined-literal "
-            "--precompile -o %T/std.pcm -c %{module-dir}/std.cppm",
+            "--precompile -o %{temp}/std.pcm -c %{module-dir}/std.cppm",
         )
-        moduleCompileFlags.extend(["-fmodule-file=std=%T/std.pcm", "%T/std.pcm"])
+        moduleCompileFlags.extend(["-fmodule-file=std=%{temp}/std.pcm", "%{temp}/std.pcm"])
 
         # Add compile flags required for the modules.
         substitutions = config._appendToSubstitution(
@@ -254,6 +261,10 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
         %{run}
             Equivalent to `%{exec} %t.exe`. This is intended to be used
             in conjunction with the %{build} substitution.
+
+        %{temp}
+            This substitution expands to a non-existent temporary path unique to the test.
+            It is typically used to create a temporary directory.
     """
 
     def getTestsForPath(self, testSuite, pathInSuite, litConfig, localConfig):
@@ -348,8 +359,12 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{benchmark_flags} %{link_flags} -o %t.exe",
             ]
             if "enable-benchmarks=run" in test.config.available_features:
-                steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_out=%T/benchmark-result.json --benchmark_out_format=json"]
+                steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_out=%{temp}/benchmark-result.json --benchmark_out_format=json"]
+                parse_results = os.path.join(LIBCXX_UTILS, 'parse-google-benchmark-results')
+                steps += [f"{parse_results} %{{temp}}/benchmark-result.json --output-format=lnt > %{{temp}}/results.lnt"]
             return self._executeShTest(test, litConfig, steps)
+        elif re.search('[.]gen[.][^.]+$', filename): # This only happens when a generator test is not supported
+            return self._executeShTest(test, litConfig, [])
         else:
             return lit.Test.Result(
                 lit.Test.UNRESOLVED, "Unknown test suffix for '{}'".format(filename)
@@ -381,11 +396,19 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
         generatorExecDir = os.path.dirname(testSuite.getExecPath(pathInSuite))
         os.makedirs(generatorExecDir, exist_ok=True)
 
-        # Run the generator test
+        # Run the generator test. It's possible for this to fail for two reasons: the generator test
+        # is unsupported or the generator ran but failed at runtime -- handle both. In the first case,
+        # we return the generator test itself, since it should produce the same result when run after
+        # test suite generation. In the second case, it's a true error so we report it.
         steps = [] # Steps must already be in the script
-        (out, err, exitCode, _, _) = _executeScriptInternal(generator, litConfig, steps)
+        result = _executeScriptInternal(generator, litConfig, steps)
+        if isinstance(result, lit.Test.Result):
+            yield generator
+            return
+
+        (out, err, exitCode, _, _) = result
         if exitCode != 0:
-            raise RuntimeError(f"Error while trying to generate gen test\nstdout:\n{out}\n\nstderr:\n{err}")
+            raise RuntimeError(f"Error while trying to generate gen test {'/'.join(pathInSuite)}\nstdout:\n{out}\n\nstderr:\n{err}")
 
         # Split the generated output into multiple files and generate one test for each file
         for subfile, content in self._splitFile(out):

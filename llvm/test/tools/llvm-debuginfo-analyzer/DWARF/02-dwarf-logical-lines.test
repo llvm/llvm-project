@@ -42,7 +42,7 @@
 ; ONE-NEXT: [003]                 {Code} 'addq	$0x10, %rsp'
 ; ONE-NEXT: [003]                 {Code} 'popq	%rbp'
 ; ONE-NEXT: [003]                 {Code} 'retq'
-; ONE-NEXT: [003]     6           {Line}
+; ONE-NEXT: [002]     6         {Line}
 ; ONE-EMPTY:
 ; ONE-NEXT: Logical View:
 ; ONE-NEXT: [000]           {File} 'hello-world-dwarf-gcc.o' -> elf64-x86-64
@@ -64,4 +64,4 @@
 ; ONE-NEXT: [003]     7           {Line}
 ; ONE-NEXT: [003]                 {Code} 'popq	%rbp'
 ; ONE-NEXT: [003]                 {Code} 'retq'
-; ONE-NEXT: [003]     7           {Line}
+; ONE-NEXT: [002]     7         {Line}

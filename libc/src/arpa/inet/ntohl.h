@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_ARPA_INET_NTOHL_H
 #define LLVM_LIBC_SRC_ARPA_INET_NTOHL_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/macros/config.h"
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

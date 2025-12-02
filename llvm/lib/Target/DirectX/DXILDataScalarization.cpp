@@ -29,20 +29,6 @@ static const int MaxVecSize = 4;
 
 using namespace llvm;
 
-// Recursively creates an array-like version of a given vector type.
-static Type *equivalentArrayTypeFromVector(Type *T) {
-  if (auto *VecTy = dyn_cast<VectorType>(T))
-    return ArrayType::get(VecTy->getElementType(),
-                          dyn_cast<FixedVectorType>(VecTy)->getNumElements());
-  if (auto *ArrayTy = dyn_cast<ArrayType>(T)) {
-    Type *NewElementType =
-        equivalentArrayTypeFromVector(ArrayTy->getElementType());
-    return ArrayType::get(NewElementType, ArrayTy->getNumElements());
-  }
-  // If it's not a vector or array, return the original type.
-  return T;
-}
-
 class DXILDataScalarizationLegacy : public ModulePass {
 
 public:
@@ -121,10 +107,23 @@ DataScalarizerVisitor::lookupReplacementGlobal(Value *CurrOperand) {
 static bool isVectorOrArrayOfVectors(Type *T) {
   if (isa<VectorType>(T))
     return true;
-  if (ArrayType *ArrType = dyn_cast<ArrayType>(T))
-    return isa<VectorType>(ArrType->getElementType()) ||
-           isVectorOrArrayOfVectors(ArrType->getElementType());
+  if (ArrayType *ArrayTy = dyn_cast<ArrayType>(T))
+    return isVectorOrArrayOfVectors(ArrayTy->getElementType());
   return false;
+}
+
+// Recursively creates an array-like version of a given vector type.
+static Type *equivalentArrayTypeFromVector(Type *T) {
+  if (auto *VecTy = dyn_cast<VectorType>(T))
+    return ArrayType::get(VecTy->getElementType(),
+                          dyn_cast<FixedVectorType>(VecTy)->getNumElements());
+  if (auto *ArrayTy = dyn_cast<ArrayType>(T)) {
+    Type *NewElementType =
+        equivalentArrayTypeFromVector(ArrayTy->getElementType());
+    return ArrayType::get(NewElementType, ArrayTy->getNumElements());
+  }
+  // If it's not a vector or array, return the original type.
+  return T;
 }
 
 bool DataScalarizerVisitor::visitAllocaInst(AllocaInst &AI) {
@@ -135,7 +134,7 @@ bool DataScalarizerVisitor::visitAllocaInst(AllocaInst &AI) {
   IRBuilder<> Builder(&AI);
   Type *NewType = equivalentArrayTypeFromVector(AllocatedType);
   AllocaInst *ArrAlloca =
-      Builder.CreateAlloca(NewType, nullptr, AI.getName() + ".scalarize");
+      Builder.CreateAlloca(NewType, nullptr, AI.getName() + ".scalarized");
   ArrAlloca->setAlignment(AI.getAlign());
   AI.replaceAllUsesWith(ArrAlloca);
   AI.eraseFromParent();
@@ -301,41 +300,53 @@ bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 }
 
 bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-  Value *PtrOperand = GEPI.getPointerOperand();
-  Type *OrigGEPType = GEPI.getSourceElementType();
-  Type *NewGEPType = OrigGEPType;
-  bool NeedsTransform = false;
+  GEPOperator *GOp = cast<GEPOperator>(&GEPI);
+  Value *PtrOperand = GOp->getPointerOperand();
+  Type *GEPType = GOp->getSourceElementType();
 
-  if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand)) {
-    NewGEPType = NewGlobal->getValueType();
-    PtrOperand = NewGlobal;
-    NeedsTransform = true;
-  } else if (AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrOperand)) {
-    Type *AllocatedType = Alloca->getAllocatedType();
-    // Only transform if the allocated type is an array
-    if (AllocatedType != OrigGEPType && isa<ArrayType>(AllocatedType)) {
-      NewGEPType = AllocatedType;
-      NeedsTransform = true;
-    }
+  // Replace a GEP ConstantExpr pointer operand with a GEP instruction so that
+  // it can be visited
+  if (auto *PtrOpGEPCE = dyn_cast<ConstantExpr>(PtrOperand);
+      PtrOpGEPCE && PtrOpGEPCE->getOpcode() == Instruction::GetElementPtr) {
+    GetElementPtrInst *OldGEPI =
+        cast<GetElementPtrInst>(PtrOpGEPCE->getAsInstruction());
+    OldGEPI->insertBefore(GEPI.getIterator());
+
+    IRBuilder<> Builder(&GEPI);
+    SmallVector<Value *> Indices(GEPI.indices());
+    Value *NewGEP =
+        Builder.CreateGEP(GEPI.getSourceElementType(), OldGEPI, Indices,
+                          GEPI.getName(), GEPI.getNoWrapFlags());
+    assert(isa<GetElementPtrInst>(NewGEP) &&
+           "Expected newly-created GEP to be an instruction");
+    GetElementPtrInst *NewGEPI = cast<GetElementPtrInst>(NewGEP);
+
+    GEPI.replaceAllUsesWith(NewGEPI);
+    GEPI.eraseFromParent();
+    visitGetElementPtrInst(*OldGEPI);
+    visitGetElementPtrInst(*NewGEPI);
+    return true;
   }
 
-  // Scalar geps should remain scalars geps. The dxil-flatten-arrays pass will
-  // convert these scalar geps into flattened array geps
-  if (!isa<ArrayType>(OrigGEPType))
-    NewGEPType = OrigGEPType;
+  Type *NewGEPType = equivalentArrayTypeFromVector(GEPType);
+  Value *NewPtrOperand = PtrOperand;
+  if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand))
+    NewPtrOperand = NewGlobal;
 
-  // Note: We bail if this isn't a gep touched via alloca or global
-  // transformations
+  bool NeedsTransform = NewPtrOperand != PtrOperand || NewGEPType != GEPType;
   if (!NeedsTransform)
     return false;
 
   IRBuilder<> Builder(&GEPI);
-  SmallVector<Value *, MaxVecSize> Indices(GEPI.indices());
+  SmallVector<Value *, MaxVecSize> Indices(GOp->idx_begin(), GOp->idx_end());
+  Value *NewGEP = Builder.CreateGEP(NewGEPType, NewPtrOperand, Indices,
+                                    GOp->getName(), GOp->getNoWrapFlags());
 
-  Value *NewGEP = Builder.CreateGEP(NewGEPType, PtrOperand, Indices,
-                                    GEPI.getName(), GEPI.getNoWrapFlags());
-  GEPI.replaceAllUsesWith(NewGEP);
-  GEPI.eraseFromParent();
+  GOp->replaceAllUsesWith(NewGEP);
+
+  if (auto *OldGEPI = dyn_cast<GetElementPtrInst>(GOp))
+    OldGEPI->eraseFromParent();
+
   return true;
 }
 

@@ -10,6 +10,7 @@
 #define MLIR_REDUCER_REDUCTIONPATTERNINTERFACE_H
 
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/Reducer/Tester.h"
 
 namespace mlir {
 
@@ -47,10 +48,17 @@ public:
   /// replacing an operation with a constant.
   virtual void populateReductionPatterns(RewritePatternSet &patterns) const = 0;
 
+  /// This method extends `populateReductionPatterns` by allowing reduction
+  /// patterns to use a `Tester` instance. Some reduction patterns may need to
+  /// run tester to determine whether certain transformations preserve the
+  /// "interesting" behavior of the program. This is mostly useful when pattern
+  /// should choose between multiple modifications.
+  virtual void populateReductionPatternsWithTester(RewritePatternSet &patterns,
+                                                   Tester &tester) const {}
+
 protected:
   DialectReductionPatternInterface(Dialect *dialect) : Base(dialect) {}
 };
-
 } // namespace mlir
 
 #endif // MLIR_REDUCER_REDUCTIONPATTERNINTERFACE_H

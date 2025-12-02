@@ -17,7 +17,6 @@
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
@@ -336,7 +335,7 @@ void GOFFWriter::defineSymbols() {
   unsigned Ordinal = 0;
   // Process all sections.
   for (MCSection &S : Asm) {
-    auto &Section = cast<MCSectionGOFF>(S);
+    auto &Section = static_cast<MCSectionGOFF &>(S);
     Section.setOrdinal(++Ordinal);
     defineSectionSymbols(Section);
   }
@@ -345,7 +344,7 @@ void GOFFWriter::defineSymbols() {
   for (const MCSymbol &Sym : Asm.symbols()) {
     if (Sym.isTemporary())
       continue;
-    auto &Symbol = cast<MCSymbolGOFF>(Sym);
+    auto &Symbol = static_cast<const MCSymbolGOFF &>(Sym);
     if (Symbol.hasLDAttributes()) {
       Symbol.setIndex(++Ordinal);
       defineLabel(Symbol);
@@ -441,7 +440,7 @@ public:
     SetBuffer(Buffer, sizeof(Buffer));
   }
 
-  ~TextStream() { flush(); }
+  ~TextStream() override { flush(); }
 };
 } // namespace
 
@@ -521,7 +520,7 @@ GOFFObjectWriter::GOFFObjectWriter(
     std::unique_ptr<MCGOFFObjectTargetWriter> MOTW, raw_pwrite_stream &OS)
     : TargetObjectWriter(std::move(MOTW)), OS(OS) {}
 
-GOFFObjectWriter::~GOFFObjectWriter() {}
+GOFFObjectWriter::~GOFFObjectWriter() = default;
 
 uint64_t GOFFObjectWriter::writeObject() {
   uint64_t Size = GOFFWriter(OS, *Asm).writeObject();

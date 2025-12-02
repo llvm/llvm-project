@@ -19,13 +19,13 @@ void fir::runtime::genExit(fir::FirOpBuilder &builder, mlir::Location loc,
   auto exitFunc = fir::runtime::getRuntimeFunc<mkRTKey(Exit)>(loc, builder);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, exitFunc.getFunctionType(), status);
-  builder.create<fir::CallOp>(loc, exitFunc, args);
+  fir::CallOp::create(builder, loc, exitFunc, args);
 }
 
 void fir::runtime::genAbort(fir::FirOpBuilder &builder, mlir::Location loc) {
   mlir::func::FuncOp abortFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Abort)>(loc, builder);
-  builder.create<fir::CallOp>(loc, abortFunc, mlir::ValueRange{});
+  fir::CallOp::create(builder, loc, abortFunc, mlir::ValueRange{});
 }
 
 void fir::runtime::genReportFatalUserError(fir::FirOpBuilder &builder,
@@ -41,5 +41,5 @@ void fir::runtime::genReportFatalUserError(fir::FirOpBuilder &builder,
   mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, funcTy, msgVal, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, crashFunc, args);
+  fir::CallOp::create(builder, loc, crashFunc, args);
 }

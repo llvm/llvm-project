@@ -289,9 +289,6 @@ public:
     /// An Expression (optional) that performs the writeback with any required
     /// casting.
     const Expr *WritebackExpr;
-
-    // Size for optional lifetime end on the temporary.
-    llvm::Value *LifetimeSz;
   };
 
   struct CallArgCleanup {
@@ -321,9 +318,8 @@ public:
   }
 
   void addWriteback(LValue srcLV, Address temporary, llvm::Value *toUse,
-                    const Expr *writebackExpr = nullptr,
-                    llvm::Value *lifetimeSz = nullptr) {
-    Writeback writeback = {srcLV, temporary, toUse, writebackExpr, lifetimeSz};
+                    const Expr *writebackExpr = nullptr) {
+    Writeback writeback = {srcLV, temporary, toUse, writebackExpr};
     Writebacks.push_back(writeback);
   }
 
@@ -414,10 +410,10 @@ public:
 /// This is useful for adding attrs to bitcode modules that you want to link
 /// with but don't control, such as CUDA's libdevice.  When linking with such
 /// a bitcode library, you might want to set e.g. its functions'
-/// "unsafe-fp-math" attribute to match the attr of the functions you're
+/// "denormal-fp-math" attribute to match the attr of the functions you're
 /// codegen'ing.  Otherwise, LLVM will interpret the bitcode module's lack of
-/// unsafe-fp-math attrs as tantamount to unsafe-fp-math=false, and then LLVM
-/// will propagate unsafe-fp-math=false up to every transitive caller of a
+/// denormal-fp-math attrs as tantamount to denormal-fp-math=ieee, and then LLVM
+/// will propagate denormal-fp-math=ieee up to every transitive caller of a
 /// function in the bitcode library!
 ///
 /// With the exception of fast-math attrs, this will only make the attributes
@@ -456,6 +452,12 @@ inline FnInfoOpts &operator&=(FnInfoOpts &A, FnInfoOpts B) {
   A = A & B;
   return A;
 }
+
+struct DisableDebugLocationUpdates {
+  CodeGenFunction &CGF;
+  DisableDebugLocationUpdates(CodeGenFunction &CGF);
+  ~DisableDebugLocationUpdates();
+};
 
 } // end namespace CodeGen
 } // end namespace clang

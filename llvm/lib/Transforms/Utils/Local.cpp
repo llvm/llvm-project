@@ -275,7 +275,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       Builder.CreateBr(TheOnlyDest);
       BasicBlock *BB = SI->getParent();
 
-      SmallSet<BasicBlock *, 8> RemovedSuccessors;
+      SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
 
       // Remove entries from PHI nodes which we no longer branch to...
       BasicBlock *SuccToKeep = TheOnlyDest;
@@ -343,7 +343,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     if (auto *BA =
           dyn_cast<BlockAddress>(IBI->getAddress()->stripPointerCasts())) {
       BasicBlock *TheOnlyDest = BA->getBasicBlock();
-      SmallSet<BasicBlock *, 8> RemovedSuccessors;
+      SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
 
       // Insert the new branch.
       Builder.CreateBr(TheOnlyDest);
@@ -481,17 +481,15 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
       return true;
 
     if (II->isLifetimeStartOrEnd()) {
-      auto *Arg = II->getArgOperand(1);
-      // Lifetime intrinsics are dead when their right-hand is undef.
-      if (isa<UndefValue>(Arg))
+      auto *Arg = II->getArgOperand(0);
+      if (isa<PoisonValue>(Arg))
         return true;
-      // If the right-hand is an alloc, global, or argument and the only uses
-      // are lifetime intrinsics then the intrinsics are dead.
-      if (isa<AllocaInst>(Arg) || isa<GlobalValue>(Arg) || isa<Argument>(Arg))
-        return llvm::all_of(Arg->uses(), [](Use &Use) {
-          return isa<LifetimeIntrinsic>(Use.getUser());
-        });
-      return false;
+
+      // If the only uses of the alloca are lifetime intrinsics, then the
+      // intrinsics are dead.
+      return llvm::all_of(Arg->uses(), [](Use &Use) {
+        return isa<LifetimeIntrinsic>(Use.getUser());
+      });
     }
 
     // Assumptions are dead if their condition is trivially true.
@@ -610,10 +608,8 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
 }
 
 bool llvm::replaceDbgUsesWithUndef(Instruction *I) {
-  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(DbgUsers, I, &DPUsers);
-  assert(DbgUsers.empty());
+  findDbgUsers(I, DPUsers);
   for (auto *DVR : DPUsers)
     DVR->setKillLocation();
   return !DPUsers.empty();
@@ -1603,10 +1599,8 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
   // Since we can't guarantee that the original dbg.declare intrinsic
   // is removed by LowerDbgDeclare(), we need to make sure that we are
   // not inserting the same dbg.value intrinsic over and over.
-  SmallVector<DbgValueInst *, 1> DbgValues;
   SmallVector<DbgVariableRecord *, 1> DbgVariableRecords;
-  findDbgValues(DbgValues, APN, &DbgVariableRecords);
-  assert(DbgValues.empty());
+  findDbgValues(APN, DbgVariableRecords);
   for (DbgVariableRecord *DVR : DbgVariableRecords) {
     assert(is_contained(DVR->location_ops(), APN));
     if ((DVR->getVariable() == DIVar) && (DVR->getExpression() == DIExpr))
@@ -1987,10 +1981,8 @@ static void updateOneDbgValueForAlloca(const DebugLoc &Loc,
 
 void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                     DIBuilder &Builder, int Offset) {
-  SmallVector<DbgValueInst *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgValues(DbgUsers, AI, &DPUsers);
-  assert(DbgUsers.empty());
+  findDbgValues(AI, DPUsers);
 
   // Replace any DbgVariableRecords that use this alloca.
   for (DbgVariableRecord *DVR : DPUsers)
@@ -2002,11 +1994,9 @@ void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
 /// Where possible to salvage debug information for \p I do so.
 /// If not possible mark undef.
 void llvm::salvageDebugInfo(Instruction &I) {
-  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(DbgUsers, &I, &DPUsers);
-  assert(DbgUsers.empty());
-  salvageDebugInfoForDbgValues(I, DbgUsers, DPUsers);
+  findDbgUsers(&I, DPUsers);
+  salvageDebugInfoForDbgValues(I, DPUsers);
 }
 
 template <typename T> static void salvageDbgAssignAddress(T *Assign) {
@@ -2044,18 +2034,14 @@ template <typename T> static void salvageDbgAssignAddress(T *Assign) {
   }
 }
 
-void llvm::salvageDebugInfoForDbgValues(
-    Instruction &I, ArrayRef<DbgVariableIntrinsic *> DbgUsers,
-    ArrayRef<DbgVariableRecord *> DPUsers) {
+void llvm::salvageDebugInfoForDbgValues(Instruction &I,
+                                        ArrayRef<DbgVariableRecord *> DPUsers) {
   // These are arbitrary chosen limits on the maximum number of values and the
   // maximum size of a debug expression we can salvage up to, used for
   // performance reasons.
   const unsigned MaxDebugArgs = 16;
   const unsigned MaxExpressionSize = 128;
   bool Salvaged = false;
-
-  // We should never see debug intrinsics nowadays.
-  assert(DbgUsers.empty());
 
   for (auto *DVR : DPUsers) {
     if (DVR->isDbgAssign()) {
@@ -2343,15 +2329,10 @@ static bool rewriteDebugUsers(
     Instruction &From, Value &To, Instruction &DomPoint, DominatorTree &DT,
     function_ref<DbgValReplacement(DbgVariableRecord &DVR)> RewriteDVRExpr) {
   // Find debug users of From.
-  SmallVector<DbgVariableIntrinsic *, 1> Users;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(Users, &From, &DPUsers);
-  if (Users.empty() && DPUsers.empty())
+  findDbgUsers(&From, DPUsers);
+  if (DPUsers.empty())
     return false;
-
-  // Ignore intrinsic-users: they are no longer supported and should never
-  // appear.
-  assert(Users.empty());
 
   // Prevent use-before-def of To.
   bool Changed = false;
@@ -2454,8 +2435,8 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
   // Handle integer-to-integer widening and narrowing.
   // FIXME: Use DW_OP_convert when it's available everywhere.
   if (FromTy->isIntegerTy() && ToTy->isIntegerTy()) {
-    uint64_t FromBits = FromTy->getPrimitiveSizeInBits();
-    uint64_t ToBits = ToTy->getPrimitiveSizeInBits();
+    uint64_t FromBits = FromTy->getIntegerBitWidth();
+    uint64_t ToBits = ToTy->getIntegerBitWidth();
     assert(FromBits != ToBits && "Unexpected no-op conversion");
 
     // When the width of the result grows, assume that a debugger will only
@@ -2537,7 +2518,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool PreserveLCSSA,
   if (MSSAU)
     MSSAU->changeToUnreachable(I);
 
-  SmallSet<BasicBlock *, 8> UniqueSuccessors;
+  SmallPtrSet<BasicBlock *, 8> UniqueSuccessors;
 
   // Loop over all of the successors, removing BB's entry from any PHI
   // nodes.
@@ -3044,6 +3025,19 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         // Preserve !nosanitize if both K and J have it.
         K->setMetadata(Kind, JMD);
         break;
+      case LLVMContext::MD_captures:
+        K->setMetadata(
+            Kind, MDNode::fromCaptureComponents(
+                      K->getContext(), MDNode::toCaptureComponents(JMD) |
+                                           MDNode::toCaptureComponents(KMD)));
+        break;
+      case LLVMContext::MD_alloc_token:
+        // Preserve !alloc_token if both K and J have it, and they are equal.
+        if (KMD == JMD)
+          K->setMetadata(Kind, JMD);
+        else
+          K->setMetadata(Kind, nullptr);
+        break;
       }
   }
   // Set !invariant.group from J if J has it. If both instructions have it
@@ -3106,54 +3100,70 @@ void llvm::combineAAMetadata(Instruction *K, const Instruction *J) {
   combineMetadata(K, J, /*DoesKMove=*/true, /*AAOnly=*/true);
 }
 
-void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
+void llvm::copyMetadataForAccess(Instruction &DestI, Instruction &SourceI) {
   SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
-  Source.getAllMetadata(MD);
-  MDBuilder MDB(Dest.getContext());
-  Type *NewType = Dest.getType();
-  const DataLayout &DL = Source.getDataLayout();
+  SourceI.getAllMetadata(MD);
+  MDBuilder MDB(DestI.getContext());
+  Type *NewType = DestI.getType();
+
+  // Only needed for range metadata on loads.
+  const DataLayout *DL = nullptr;
+  const LoadInst *LSource = dyn_cast<LoadInst>(&SourceI);
+  if (LSource)
+    DL = &LSource->getDataLayout();
+
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
     MDNode *N = MDPair.second;
-    // Note, essentially every kind of metadata should be preserved here! This
-    // routine is supposed to clone a load instruction changing *only its type*.
-    // The only metadata it makes sense to drop is metadata which is invalidated
-    // when the pointer type changes. This should essentially never be the case
-    // in LLVM, but we explicitly switch over only known metadata to be
-    // conservatively correct. If you are adding metadata to LLVM which pertains
-    // to loads, you almost certainly want to add it here.
+
     switch (ID) {
+    // Applies to both loads and stores as-is.
     case LLVMContext::MD_dbg:
-    case LLVMContext::MD_tbaa:
     case LLVMContext::MD_prof:
-    case LLVMContext::MD_fpmath:
     case LLVMContext::MD_tbaa_struct:
-    case LLVMContext::MD_invariant_load:
     case LLVMContext::MD_alias_scope:
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_nontemporal:
-    case LLVMContext::MD_mem_parallel_loop_access:
     case LLVMContext::MD_access_group:
     case LLVMContext::MD_noundef:
     case LLVMContext::MD_noalias_addrspace:
-      // All of these directly apply.
-      Dest.setMetadata(ID, N);
+    case LLVMContext::MD_mem_parallel_loop_access:
+      DestI.setMetadata(ID, N);
+      break;
+
+    // Load-only metadata.
+    case LLVMContext::MD_fpmath:
+    case LLVMContext::MD_invariant_load:
+      if (isa<LoadInst>(DestI))
+        DestI.setMetadata(ID, N);
       break;
 
     case LLVMContext::MD_nonnull:
-      copyNonnullMetadata(Source, N, Dest);
+      if (auto *LDest = dyn_cast<LoadInst>(&DestI)) {
+        if (LSource)
+          copyNonnullMetadata(*LSource, N, *LDest);
+      }
       break;
 
     case LLVMContext::MD_align:
     case LLVMContext::MD_dereferenceable:
     case LLVMContext::MD_dereferenceable_or_null:
-      // These only directly apply if the new type is also a pointer.
+      // Applies to both loads and stores only if the new type is also a
+      // pointer.
       if (NewType->isPointerTy())
-        Dest.setMetadata(ID, N);
+        DestI.setMetadata(ID, N);
       break;
 
     case LLVMContext::MD_range:
-      copyRangeMetadata(DL, Source, N, Dest);
+      if (auto *LDest = dyn_cast<LoadInst>(&DestI)) {
+        if (LSource && DL)
+          copyRangeMetadata(*DL, *LSource, N, *LDest);
+      }
+      break;
+
+    case LLVMContext::MD_tbaa:
+      if (isa<LoadInst>(DestI))
+        DestI.setMetadata(ID, N);
       break;
     }
   }
@@ -3202,9 +3212,8 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   combineMetadataForCSE(ReplInst, I, false);
 }
 
-template <typename RootType, typename ShouldReplaceFn>
+template <typename ShouldReplaceFn>
 static unsigned replaceDominatedUsesWith(Value *From, Value *To,
-                                         const RootType &Root,
                                          const ShouldReplaceFn &ShouldReplace) {
   assert(From->getType() == To->getType());
 
@@ -3213,7 +3222,7 @@ static unsigned replaceDominatedUsesWith(Value *From, Value *To,
     auto *II = dyn_cast<IntrinsicInst>(U.getUser());
     if (II && II->getIntrinsicID() == Intrinsic::fake_use)
       continue;
-    if (!ShouldReplace(Root, U))
+    if (!ShouldReplace(U))
       continue;
     LLVM_DEBUG(dbgs() << "Replace dominated use of '";
                From->printAsOperand(dbgs());
@@ -3242,39 +3251,49 @@ unsigned llvm::replaceNonLocalUsesWith(Instruction *From, Value *To) {
 unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
                                         DominatorTree &DT,
                                         const BasicBlockEdge &Root) {
-  auto Dominates = [&DT](const BasicBlockEdge &Root, const Use &U) {
-    return DT.dominates(Root, U);
-  };
-  return ::replaceDominatedUsesWith(From, To, Root, Dominates);
+  auto Dominates = [&](const Use &U) { return DT.dominates(Root, U); };
+  return ::replaceDominatedUsesWith(From, To, Dominates);
 }
 
 unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
                                         DominatorTree &DT,
                                         const BasicBlock *BB) {
-  auto Dominates = [&DT](const BasicBlock *BB, const Use &U) {
-    return DT.dominates(BB, U);
-  };
-  return ::replaceDominatedUsesWith(From, To, BB, Dominates);
+  auto Dominates = [&](const Use &U) { return DT.dominates(BB, U); };
+  return ::replaceDominatedUsesWith(From, To, Dominates);
+}
+
+unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
+                                        DominatorTree &DT,
+                                        const Instruction *I) {
+  auto Dominates = [&](const Use &U) { return DT.dominates(I, U); };
+  return ::replaceDominatedUsesWith(From, To, Dominates);
 }
 
 unsigned llvm::replaceDominatedUsesWithIf(
     Value *From, Value *To, DominatorTree &DT, const BasicBlockEdge &Root,
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
-  auto DominatesAndShouldReplace =
-      [&DT, &ShouldReplace, To](const BasicBlockEdge &Root, const Use &U) {
-        return DT.dominates(Root, U) && ShouldReplace(U, To);
-      };
-  return ::replaceDominatedUsesWith(From, To, Root, DominatesAndShouldReplace);
+  auto DominatesAndShouldReplace = [&](const Use &U) {
+    return DT.dominates(Root, U) && ShouldReplace(U, To);
+  };
+  return ::replaceDominatedUsesWith(From, To, DominatesAndShouldReplace);
 }
 
 unsigned llvm::replaceDominatedUsesWithIf(
     Value *From, Value *To, DominatorTree &DT, const BasicBlock *BB,
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
-  auto DominatesAndShouldReplace = [&DT, &ShouldReplace,
-                                    To](const BasicBlock *BB, const Use &U) {
+  auto DominatesAndShouldReplace = [&](const Use &U) {
     return DT.dominates(BB, U) && ShouldReplace(U, To);
   };
-  return ::replaceDominatedUsesWith(From, To, BB, DominatesAndShouldReplace);
+  return ::replaceDominatedUsesWith(From, To, DominatesAndShouldReplace);
+}
+
+unsigned llvm::replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const Instruction *I,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
+  auto DominatesAndShouldReplace = [&](const Use &U) {
+    return DT.dominates(I, U) && ShouldReplace(U, To);
+  };
+  return ::replaceDominatedUsesWith(From, To, DominatesAndShouldReplace);
 }
 
 bool llvm::callsGCLeafFunction(const CallBase *Call,
@@ -3356,10 +3375,8 @@ void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
 }
 
 void llvm::dropDebugUsers(Instruction &I) {
-  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(DbgUsers, &I, &DPUsers);
-  assert(DbgUsers.empty());
+  findDbgUsers(&I, DPUsers);
   for (auto *DVR : DPUsers)
     DVR->eraseFromParent();
 }
@@ -3370,8 +3387,11 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
   // retain their original debug locations (DILocations) and debug intrinsic
   // instructions.
   //
-  // Doing so would degrade the debugging experience and adversely affect the
-  // accuracy of profiling information.
+  // Doing so would degrade the debugging experience.
+  //
+  // FIXME: Issue #152767: debug info should also be the same as the
+  // original branch, **if** the user explicitly indicated that (for sampling
+  // PGO)
   //
   // Currently, when hoisting the instructions, we take the following actions:
   // - Remove their debug intrinsic instructions.
@@ -3412,7 +3432,11 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   // Create integer constant expression.
   auto createIntegerExpression = [&DIB](const Constant &CV) -> DIExpression * {
     const APInt &API = cast<ConstantInt>(&CV)->getValue();
-    std::optional<int64_t> InitIntOpt = API.trySExtValue();
+    std::optional<int64_t> InitIntOpt;
+    if (API.getBitWidth() == 1)
+      InitIntOpt = API.tryZExtValue();
+    else
+      InitIntOpt = API.trySExtValue();
     return InitIntOpt ? DIB.createConstantValueExpression(
                             static_cast<uint64_t>(*InitIntOpt))
                       : nullptr;
@@ -3425,8 +3449,8 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   if (FP && Ty.isFloatingPointTy() && Ty.getScalarSizeInBits() <= 64) {
     const APFloat &APF = FP->getValueAPF();
     APInt const &API = APF.bitcastToAPInt();
-    if (auto Temp = API.getZExtValue())
-      return DIB.createConstantValueExpression(static_cast<uint64_t>(Temp));
+    if (uint64_t Temp = API.getZExtValue())
+      return DIB.createConstantValueExpression(Temp);
     return DIB.createConstantValueExpression(*API.getRawData());
   }
 
@@ -3866,14 +3890,18 @@ void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
 
 bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   const auto *Op = I->getOperand(OpIdx);
-  // We can't have a PHI with a metadata type.
-  if (Op->getType()->isMetadataTy())
+  // We can't have a PHI with a metadata or token type.
+  if (Op->getType()->isMetadataTy() || Op->getType()->isTokenLikeTy())
     return false;
 
   // swifterror pointers can only be used by a load, store, or as a swifterror
   // argument; swifterror pointers are not allowed to be used in select or phi
   // instructions.
   if (Op->isSwiftError())
+    return false;
+
+  // Cannot replace alloca argument with phi/select.
+  if (I->isLifetimeStartOrEnd())
     return false;
 
   // Early exit.

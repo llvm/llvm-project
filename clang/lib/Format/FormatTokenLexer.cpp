@@ -93,12 +93,6 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
     auto &Tok = *Tokens.back();
     const auto NewlinesBefore = Tok.NewlinesBefore;
     switch (FormatOff) {
-    case FO_CurrentLine:
-      if (NewlinesBefore == 0)
-        Tok.Finalized = true;
-      else
-        FormatOff = FO_None;
-      break;
     case FO_NextLine:
       if (NewlinesBefore > 1) {
         FormatOff = FO_None;
@@ -107,6 +101,13 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
         FormatOff = FO_CurrentLine;
       }
       break;
+    case FO_CurrentLine:
+      if (NewlinesBefore == 0) {
+        Tok.Finalized = true;
+        break;
+      }
+      FormatOff = FO_None;
+      [[fallthrough]];
     default:
       if (!FormattingDisabled && FormatOffRegex.match(Tok.TokenText)) {
         if (Tok.is(tok::comment) &&
@@ -317,11 +318,18 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                            {tok::equal, tok::greater},
                            {tok::star, tok::greater},
                            {tok::pipeequal, tok::greater},
-                           {tok::pipe, tok::arrow},
-                           {tok::hash, tok::minus, tok::hash},
-                           {tok::hash, tok::equal, tok::hash}},
+                           {tok::pipe, tok::arrow}},
                           TT_BinaryOperator) ||
         Tokens.back()->is(tok::arrow)) {
+      Tokens.back()->ForcedPrecedence = prec::Comma;
+      return;
+    }
+    if (Tokens.size() >= 3 &&
+        Tokens[Tokens.size() - 3]->is(Keywords.kw_verilogHash) &&
+        Tokens[Tokens.size() - 2]->isOneOf(tok::minus, tok::equal) &&
+        Tokens[Tokens.size() - 1]->is(Keywords.kw_verilogHash) &&
+        tryMergeTokens(3, TT_BinaryOperator)) {
+      Tokens.back()->setFinalizedType(TT_BinaryOperator);
       Tokens.back()->ForcedPrecedence = prec::Comma;
       return;
     }
@@ -733,7 +741,7 @@ void FormatTokenLexer::tryParseJavaTextBlock() {
 // its text if successful.
 void FormatTokenLexer::tryParseJSRegexLiteral() {
   FormatToken *RegexToken = Tokens.back();
-  if (!RegexToken->isOneOf(tok::slash, tok::slashequal))
+  if (RegexToken->isNoneOf(tok::slash, tok::slashequal))
     return;
 
   FormatToken *Prev = nullptr;
@@ -1041,7 +1049,7 @@ void FormatTokenLexer::handleTemplateStrings() {
 
 void FormatTokenLexer::tryParsePythonComment() {
   FormatToken *HashToken = Tokens.back();
-  if (!HashToken->isOneOf(tok::hash, tok::hashhash))
+  if (HashToken->isNoneOf(tok::hash, tok::hashhash))
     return;
   // Turn the remainder of this line into a comment.
   const char *CommentBegin =
@@ -1198,7 +1206,7 @@ void FormatTokenLexer::truncateToken(size_t NewLen) {
 /// Count the length of leading whitespace in a token.
 static size_t countLeadingWhitespace(StringRef Text) {
   // Basically counting the length matched by this regex.
-  // "^([\n\r\f\v \t]|(\\\\|\\?\\?/)[\n\r])+"
+  // "^([\n\r\f\v \t]|\\\\[\n\r])+"
   // Directly using the regex turned out to be slow. With the regex
   // version formatting all files in this directory took about 1.25
   // seconds. This version took about 0.5 seconds.
@@ -1222,13 +1230,6 @@ static size_t countLeadingWhitespace(StringRef Text) {
         break;
       // Splice found, consume it.
       Cur = Lookahead + 1;
-    } else if (Cur[0] == '?' && Cur[1] == '?' && Cur[2] == '/' &&
-               (Cur[3] == '\n' || Cur[3] == '\r')) {
-      // Newlines can also be escaped by a '?' '?' '/' trigraph. By the way, the
-      // characters are quoted individually in this comment because if we write
-      // them together some compilers warn that we have a trigraph in the code.
-      assert(End - Cur >= 4);
-      Cur += 4;
     } else {
       break;
     }
@@ -1300,22 +1301,16 @@ FormatToken *FormatTokenLexer::getNextToken() {
             Style.TabWidth - (Style.TabWidth ? Column % Style.TabWidth : 0);
         break;
       case '\\':
-      case '?':
-      case '/':
-        // The text was entirely whitespace when this loop was entered. Thus
-        // this has to be an escape sequence.
-        assert(Text.substr(i, 4) == "\?\?/\r" ||
-               Text.substr(i, 4) == "\?\?/\n" ||
-               (i >= 1 && (Text.substr(i - 1, 4) == "\?\?/\r" ||
-                           Text.substr(i - 1, 4) == "\?\?/\n")) ||
-               (i >= 2 && (Text.substr(i - 2, 4) == "\?\?/\r" ||
-                           Text.substr(i - 2, 4) == "\?\?/\n")) ||
-               (Text[i] == '\\' && [&]() -> bool {
-                 size_t j = i + 1;
-                 while (j < Text.size() && isHorizontalWhitespace(Text[j]))
-                   ++j;
-                 return j < Text.size() && (Text[j] == '\n' || Text[j] == '\r');
-               }()));
+        // The code preceding the loop and in the countLeadingWhitespace
+        // function guarantees that Text is entirely whitespace, not including
+        // comments but including escaped newlines. So the character shows up,
+        // then it has to be in an escape sequence.
+        assert([&]() -> bool {
+          size_t j = i + 1;
+          while (j < Text.size() && isHorizontalWhitespace(Text[j]))
+            ++j;
+          return j < Text.size() && (Text[j] == '\n' || Text[j] == '\r');
+        }());
         InEscape = true;
         break;
       default:

@@ -54,6 +54,22 @@ private:
   Visit(const ArraySubscriptNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BitFieldExtractionNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const IntegerLiteralNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const FloatLiteralNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const BooleanLiteralNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode *node) override;
+
+  /// Perform usual unary conversions on a value. At the moment this
+  /// includes array-to-pointer and integral promotion for eligible types.
+  llvm::Expected<lldb::ValueObjectSP>
+  UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location);
+  llvm::Expected<CompilerType>
+  PickIntegerType(lldb::TypeSystemSP type_system,
+                  std::shared_ptr<ExecutionContextScope> ctx,
+                  const IntegerLiteralNode *literal);
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;

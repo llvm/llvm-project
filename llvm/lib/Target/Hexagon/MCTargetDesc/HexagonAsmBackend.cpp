@@ -402,8 +402,7 @@ public:
   }
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &,
-                  MutableArrayRef<char> Data, uint64_t FixupValue,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t FixupValue, bool IsResolved) override;
 
   bool isInstRelaxable(MCInst const &HMI) const {
     const MCInstrDesc &MCID = HexagonMCInstrInfo::getDesc(*MCII, HMI);
@@ -570,9 +569,9 @@ public:
     return true;
   }
 
-  bool finishLayout(const MCAssembler &Asm) const override {
+  bool finishLayout() const override {
     SmallVector<MCFragment *> Frags;
-    for (MCSection &Sec : Asm) {
+    for (MCSection &Sec : *Asm) {
       Frags.clear();
       for (MCFragment &F : Sec)
         Frags.push_back(&F);
@@ -581,7 +580,7 @@ public:
         default:
           break;
         case MCFragment::FT_Align: {
-          auto Size = Asm.computeFragmentSize(*Frags[J]);
+          auto Size = Asm->computeFragmentSize(*Frags[J]);
           for (auto K = J; K != 0 && Size >= HEXAGON_PACKET_SIZE;) {
             --K;
             switch (Frags[K]->getKind()) {
@@ -598,14 +597,14 @@ public:
               MCInst Inst = RF.getInst();
 
               const bool WouldTraverseLabel = llvm::any_of(
-                  Asm.symbols(), [&Asm, &RF, &Inst](MCSymbol const &sym) {
+                  Asm->symbols(), [&RF, &Inst, Asm = Asm](MCSymbol const &sym) {
                     uint64_t Offset = 0;
-                    const bool HasOffset = Asm.getSymbolOffset(sym, Offset);
+                    const bool HasOffset = Asm->getSymbolOffset(sym, Offset);
                     const unsigned PacketSizeBytes =
                         HexagonMCInstrInfo::bundleSize(Inst) *
                         HEXAGON_INSTR_SIZE;
                     const bool OffsetPastSym =
-                        Offset <= (Asm.getFragmentOffset(RF) + PacketSizeBytes);
+                        Offset <= Asm->getFragmentOffset(RF) + PacketSizeBytes;
                     return !sym.isVariable() && Offset != 0 && HasOffset &&
                            OffsetPastSym;
                   });
@@ -632,7 +631,7 @@ public:
                                             *RF.getSubtargetInfo(), Inst);
               //assert(!Error);
               (void)Error;
-              ReplaceInstruction(Asm.getEmitter(), RF, Inst);
+              ReplaceInstruction(Asm->getEmitter(), RF, Inst);
               Size = 0; // Only look back one instruction
               break;
             }
@@ -649,8 +648,7 @@ public:
 } // namespace
 
 void HexagonAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                   const MCValue &Target,
-                                   MutableArrayRef<char> Data,
+                                   const MCValue &Target, uint8_t *InstAddr,
                                    uint64_t FixupValue, bool IsResolved) {
   if (IsResolved && shouldForceRelocation(Fixup))
     IsResolved = false;
@@ -667,10 +665,9 @@ void HexagonAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
 
   // LLVM gives us an encoded value, we have to convert it back
   // to a real offset before we can use it.
-  uint32_t Offset = Fixup.getOffset();
   unsigned NumBytes = getFixupKindNumBytes(Kind);
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
-  char *InstAddr = Data.data() + Offset;
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   Value = adjustFixupValue(Kind, FixupValue);
   if (!Value)
@@ -757,8 +754,8 @@ void HexagonAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
       uint32_t OldData = 0; for (unsigned i = 0; i < NumBytes; i++) OldData |=
                             (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
       dbgs() << "\tBValue=0x"; dbgs().write_hex(Value) << ": AValue=0x";
-      dbgs().write_hex(FixupValue)
-      << ": Offset=" << Offset << ": Size=" << Data.size() << ": OInst=0x";
+      dbgs().write_hex(FixupValue) << ": Offset=" << Fixup.getOffset()
+                                   << ": Size=" << F.getSize() << ": OInst=0x";
       dbgs().write_hex(OldData) << ": Reloc=0x"; dbgs().write_hex(Reloc););
 
   // For each byte of the fragment that the fixup touches, mask in the

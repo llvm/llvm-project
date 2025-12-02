@@ -57,19 +57,23 @@ const char *const passRegistrationCode = R"(
 //===----------------------------------------------------------------------===//
 // {0} Registration
 //===----------------------------------------------------------------------===//
+#ifdef {1}
 
 inline void register{0}() {{
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {{
-    return {1};
+    return {2};
   });
 }
 
 // Old registration code, kept for temporary backwards compatibility.
 inline void register{0}Pass() {{
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {{
-    return {1};
+    return {2};
   });
 }
+
+#undef {1}
+#endif // {1}
 )";
 
 /// The code snippet used to generate a function to register all passes in a
@@ -116,6 +120,10 @@ static std::string getPassDeclVarName(const Pass &pass) {
   return "GEN_PASS_DECL_" + pass.getDef()->getName().upper();
 }
 
+static std::string getPassRegistrationVarName(const Pass &pass) {
+  return "GEN_PASS_REGISTRATION_" + pass.getDef()->getName().upper();
+}
+
 /// Emit the code to be included in the public header of the pass.
 static void emitPassDecls(const Pass &pass, raw_ostream &os) {
   StringRef passName = pass.getDef()->getName();
@@ -143,18 +151,25 @@ static void emitPassDecls(const Pass &pass, raw_ostream &os) {
 /// PassRegistry.
 static void emitRegistrations(llvm::ArrayRef<Pass> passes, raw_ostream &os) {
   os << "#ifdef GEN_PASS_REGISTRATION\n";
+  os << "// Generate registrations for all passes.\n";
+  for (const Pass &pass : passes)
+    os << "#define " << getPassRegistrationVarName(pass) << "\n";
+  os << "#endif // GEN_PASS_REGISTRATION\n";
 
   for (const Pass &pass : passes) {
+    std::string passName = pass.getDef()->getName().str();
+    std::string passEnableVarName = getPassRegistrationVarName(pass);
+
     std::string constructorCall;
     if (StringRef constructor = pass.getConstructor(); !constructor.empty())
       constructorCall = constructor.str();
     else
-      constructorCall = formatv("create{0}()", pass.getDef()->getName()).str();
-
-    os << formatv(passRegistrationCode, pass.getDef()->getName(),
+      constructorCall = formatv("create{0}()", passName).str();
+    os << formatv(passRegistrationCode, passName, passEnableVarName,
                   constructorCall);
   }
 
+  os << "#ifdef GEN_PASS_REGISTRATION\n";
   os << formatv(passGroupRegistrationCode, groupName);
 
   for (const Pass &pass : passes)
@@ -195,7 +210,7 @@ public:
   }
   ::llvm::StringRef getArgument() const override { return "{2}"; }
 
-  ::llvm::StringRef getDescription() const override { return "{3}"; }
+  ::llvm::StringRef getDescription() const override { return R"PD({3})PD"; }
 
   /// Returns the derived pass name.
   static constexpr ::llvm::StringLiteral getPassName() {
@@ -271,9 +286,9 @@ static void emitPassOptionDecls(const Pass &pass, raw_ostream &os) {
     os.indent(2) << "::mlir::Pass::"
                  << (opt.isListOption() ? "ListOption" : "Option");
 
-    os << formatv(R"(<{0}> {1}{{*this, "{2}", ::llvm::cl::desc("{3}"))",
+    os << formatv(R"(<{0}> {1}{{*this, "{2}", ::llvm::cl::desc(R"PO({3})PO"))",
                   opt.getType(), opt.getCppVariableName(), opt.getArgument(),
-                  opt.getDescription());
+                  opt.getDescription().trim());
     if (std::optional<StringRef> defaultVal = opt.getDefaultValue())
       os << ", ::llvm::cl::init(" << defaultVal << ")";
     if (std::optional<StringRef> additionalFlags = opt.getAdditionalFlags())
@@ -285,9 +300,10 @@ static void emitPassOptionDecls(const Pass &pass, raw_ostream &os) {
 /// Emit the declarations for each of the pass statistics.
 static void emitPassStatisticDecls(const Pass &pass, raw_ostream &os) {
   for (const PassStatistic &stat : pass.getStatistics()) {
-    os << formatv("  ::mlir::Pass::Statistic {0}{{this, \"{1}\", \"{2}\"};\n",
-                  stat.getCppVariableName(), stat.getName(),
-                  stat.getDescription());
+    os << formatv(
+        "  ::mlir::Pass::Statistic {0}{{this, \"{1}\", R\"PS({2})PS\"};\n",
+        stat.getCppVariableName(), stat.getName(),
+        stat.getDescription().trim());
   }
 }
 
@@ -320,7 +336,7 @@ static void emitPassDefs(const Pass &pass, raw_ostream &os) {
 
   os << "namespace impl {\n";
   os << formatv(baseClassBegin, passName, pass.getBaseClass(),
-                pass.getArgument(), pass.getSummary(),
+                pass.getArgument(), pass.getSummary().trim(),
                 dependentDialectRegistrations);
 
   if (ArrayRef<PassOption> options = pass.getOptions(); !options.empty()) {
@@ -393,7 +409,7 @@ public:
   }
   ::llvm::StringRef getArgument() const override { return "{2}"; }
 
-  ::llvm::StringRef getDescription() const override { return "{3}"; }
+  ::llvm::StringRef getDescription() const override { return R"PD({3})PD"; }
 
   /// Returns the derived pass name.
   static constexpr ::llvm::StringLiteral getPassName() {
@@ -439,7 +455,7 @@ static void emitOldPassDecl(const Pass &pass, raw_ostream &os) {
         "\n    ");
   }
   os << formatv(oldPassDeclBegin, defName, pass.getBaseClass(),
-                pass.getArgument(), pass.getSummary(),
+                pass.getArgument(), pass.getSummary().trim(),
                 dependentDialectRegistrations);
   emitPassOptionDecls(pass, os);
   emitPassStatisticDecls(pass, os);

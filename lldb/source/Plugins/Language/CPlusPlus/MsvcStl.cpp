@@ -112,6 +112,33 @@ static bool formatStringImpl(ValueObject &valobj, Stream &stream,
   return true;
 }
 
+template <StringPrinter::StringElementType element_type>
+static bool formatStringViewImpl(ValueObject &valobj, Stream &stream,
+                                 const TypeSummaryOptions &summary_options,
+                                 std::string prefix_token) {
+  auto data_sp = valobj.GetChildMemberWithName("_Mydata");
+  auto size_sp = valobj.GetChildMemberWithName("_Mysize");
+  if (!data_sp || !size_sp)
+    return false;
+
+  bool success = false;
+  uint64_t size = size_sp->GetValueAsUnsigned(0, &success);
+  if (!success) {
+    stream << "Summary Unavailable";
+    return true;
+  }
+
+  StreamString scratch_stream;
+  success = StringBufferSummaryProvider<element_type>(
+      scratch_stream, summary_options, data_sp, size, prefix_token);
+
+  if (success)
+    stream << scratch_stream.GetData();
+  else
+    stream << "Summary Unavailable";
+  return true;
+}
+
 bool lldb_private::formatters::IsMsvcStlStringType(ValueObject &valobj) {
   std::vector<uint32_t> indexes;
   return valobj.GetCompilerType().GetIndexOfChildMemberWithName("_Mypair", true,
@@ -152,4 +179,40 @@ bool lldb_private::formatters::MsvcStlStringSummaryProvider<
                               const TypeSummaryOptions &summary_options) {
   return MsvcStlStringSummaryProviderImpl<StringElementType::UTF32>(
       valobj, stream, summary_options, "U");
+}
+
+bool lldb_private::formatters::MsvcStlWStringViewSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options) {
+  return formatStringViewImpl<StringElementType::UTF16>(valobj, stream,
+                                                        summary_options, "L");
+}
+
+template <>
+bool lldb_private::formatters::MsvcStlStringViewSummaryProvider<
+    StringElementType::ASCII>(ValueObject &valobj, Stream &stream,
+                              const TypeSummaryOptions &summary_options) {
+  return formatStringViewImpl<StringElementType::ASCII>(valobj, stream,
+                                                        summary_options, "");
+}
+template <>
+bool lldb_private::formatters::MsvcStlStringViewSummaryProvider<
+    StringElementType::UTF8>(ValueObject &valobj, Stream &stream,
+                             const TypeSummaryOptions &summary_options) {
+  return formatStringViewImpl<StringElementType::UTF8>(valobj, stream,
+                                                       summary_options, "u8");
+}
+template <>
+bool lldb_private::formatters::MsvcStlStringViewSummaryProvider<
+    StringElementType::UTF16>(ValueObject &valobj, Stream &stream,
+                              const TypeSummaryOptions &summary_options) {
+  return formatStringViewImpl<StringElementType::UTF16>(valobj, stream,
+                                                        summary_options, "u");
+}
+template <>
+bool lldb_private::formatters::MsvcStlStringViewSummaryProvider<
+    StringElementType::UTF32>(ValueObject &valobj, Stream &stream,
+                              const TypeSummaryOptions &summary_options) {
+  return formatStringViewImpl<StringElementType::UTF32>(valobj, stream,
+                                                        summary_options, "U");
 }

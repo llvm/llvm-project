@@ -62,8 +62,8 @@ define hidden void @pointer_phi_v4i32_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw <4 x i32> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[NEXT_GEP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
-; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
+; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_09:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 996, [[VECTOR_BODY]] ]
@@ -106,18 +106,18 @@ define hidden void @pointer_phi_v4i32_add3(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 12, i32 24, i32 36>
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[B]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP0]], i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 48
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
-; CHECK-NEXT:    br i1 [[TMP2]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
+; CHECK-NEXT:    br i1 [[TMP4]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_09:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 996, [[VECTOR_BODY]] ]
@@ -212,8 +212,8 @@ define hidden void @pointer_phi_v8i16_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i16> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <8 x i16> [[TMP1]], ptr [[NEXT_GEP5]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
-; CHECK-NEXT:    br i1 [[TMP2]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
+; CHECK-NEXT:    br i1 [[TMP4]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_011:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[I_010:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 992, [[VECTOR_BODY]] ]
@@ -495,8 +495,8 @@ define hidden void @pointer_phi_v4f32_add2(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[TMP0:%.*]] = fadd fast <4 x float> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[NEXT_GEP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
-; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
+; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_09:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 996, [[VECTOR_BODY]] ]
@@ -539,18 +539,18 @@ define hidden void @pointer_phi_v4f32_add3(ptr noalias nocapture readonly %A, pt
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 12, i32 24, i32 36>
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[B]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> [[TMP0]], i32 4, <4 x i1> splat (i1 true), <4 x float> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true), <4 x float> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <4 x float> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 48
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
-; CHECK-NEXT:    br i1 [[TMP2]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 996
+; CHECK-NEXT:    br i1 [[TMP4]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_09:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 996, [[VECTOR_BODY]] ]
@@ -642,8 +642,8 @@ define hidden void @pointer_phi_v4half_add2(ptr noalias nocapture readonly %A, p
 ; CHECK-NEXT:    [[TMP0:%.*]] = fadd fast <8 x half> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <8 x half> [[TMP0]], ptr [[NEXT_GEP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
-; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
+; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_09:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 992, [[VECTOR_BODY]] ]
@@ -696,8 +696,8 @@ define hidden void @pointer_phi_v4half_add3(ptr noalias nocapture readonly %A, p
 ; CHECK-NEXT:    [[TMP0:%.*]] = fadd fast <8 x half> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    store <8 x half> [[TMP0]], ptr [[NEXT_GEP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
-; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 992
+; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_09:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ [[IND_END]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 992, [[VECTOR_BODY]] ]
@@ -743,14 +743,14 @@ define hidden void @pointer_phi_v4i32_uf2(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 24, i32 48, i32 72>
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 96, i32 120, i32 144, i32 168>
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, <4 x ptr> [[TMP0]], i32 96
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[B]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP0]], i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP1]], i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP1]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER5]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 16
@@ -808,18 +808,18 @@ define hidden void @pointer_phi_v4i32_uf4(ptr noalias nocapture readonly %A, ptr
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], [[ENTRY]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 24, i32 48, i32 72>
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 96, i32 120, i32 144, i32 168>
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 192, i32 216, i32 240, i32 264>
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 288, i32 312, i32 336, i32 360>
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, <4 x ptr> [[TMP0]], i32 96
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <4 x ptr> [[TMP0]], i32 192
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <4 x ptr> [[TMP0]], i32 288
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[B]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP0]], i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP1]], i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER8:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP2]], i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER9:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP3]], i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP1]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER8:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP2]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER9:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP3]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER7]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_GATHER8]], [[BROADCAST_SPLAT]]
@@ -880,24 +880,24 @@ define hidden void @mult_ptr_iv(ptr noalias nocapture readonly %x, ptr noalias n
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ], [ [[X]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ], [ [[X]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI5:%.*]] = phi ptr [ [[PTR_IND6:%.*]], [[VECTOR_BODY]] ], [ [[Z]], [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[POINTER_PHI5]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, <4 x ptr> [[TMP0]], i32 1
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> [[TMP0]], i32 1, <4 x i1> splat (i1 true), <4 x i8> poison), !alias.scope [[META28:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[TMP0]], <4 x i1> splat (i1 true), <4 x i8> poison), !alias.scope [[META28:![0-9]+]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, <4 x ptr> [[TMP0]], i32 2
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> [[TMP2]], i32 1, <4 x i1> splat (i1 true), <4 x i8> poison), !alias.scope [[META28]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER8:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> [[TMP3]], i32 1, <4 x i1> splat (i1 true), <4 x i8> poison), !alias.scope [[META28]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER7:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[TMP2]], <4 x i1> splat (i1 true), <4 x i8> poison), !alias.scope [[META28]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER8:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[TMP3]], <4 x i1> splat (i1 true), <4 x i8> poison), !alias.scope [[META28]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i8> [[WIDE_MASKED_GATHER]], splat (i8 10)
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i8> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER7]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i8> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER8]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, <4 x ptr> [[TMP1]], i32 1
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP4]], <4 x ptr> [[TMP1]], i32 1, <4 x i1> splat (i1 true)), !alias.scope [[META31:![0-9]+]], !noalias [[META28]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP4]], <4 x ptr> align 1 [[TMP1]], <4 x i1> splat (i1 true)), !alias.scope [[META31:![0-9]+]], !noalias [[META28]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, <4 x ptr> [[TMP1]], i32 2
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP5]], <4 x ptr> [[TMP7]], i32 1, <4 x i1> splat (i1 true)), !alias.scope [[META31]], !noalias [[META28]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP6]], <4 x ptr> [[TMP8]], i32 1, <4 x i1> splat (i1 true)), !alias.scope [[META31]], !noalias [[META28]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP5]], <4 x ptr> align 1 [[TMP7]], <4 x i1> splat (i1 true)), !alias.scope [[META31]], !noalias [[META28]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP6]], <4 x ptr> align 1 [[TMP8]], <4 x i1> splat (i1 true)), !alias.scope [[META31]], !noalias [[META28]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 12
 ; CHECK-NEXT:    [[PTR_IND6]] = getelementptr i8, ptr [[POINTER_PHI5]], i32 12

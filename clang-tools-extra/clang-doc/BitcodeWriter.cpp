@@ -210,6 +210,7 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {REFERENCE_TYPE, {"RefType", &genIntAbbrev}},
           {REFERENCE_PATH, {"Path", &genStringAbbrev}},
           {REFERENCE_FIELD, {"Field", &genIntAbbrev}},
+          {REFERENCE_FILE, {"File", &genStringAbbrev}},
           {TEMPLATE_PARAM_CONTENTS, {"Contents", &genStringAbbrev}},
           {TEMPLATE_SPECIALIZATION_OF,
            {"SpecializationOf", &genSymbolIdAbbrev}},
@@ -286,7 +287,7 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Reference Block
         {BI_REFERENCE_BLOCK_ID,
          {REFERENCE_USR, REFERENCE_NAME, REFERENCE_QUAL_NAME, REFERENCE_TYPE,
-          REFERENCE_PATH, REFERENCE_FIELD}},
+          REFERENCE_PATH, REFERENCE_FIELD, REFERENCE_FILE}},
         // Template Blocks.
         {BI_TEMPLATE_BLOCK_ID, {}},
         {BI_TEMPLATE_PARAM_BLOCK_ID, {TEMPLATE_PARAM_CONTENTS}},
@@ -301,8 +302,6 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         {BI_FRIEND_BLOCK_ID, {FRIEND_IS_CLASS}}};
 
 // AbbreviationMap
-
-constexpr unsigned char BitCodeConstants::Signature[];
 
 void ClangDocBitcodeWriter::AbbreviationMap::add(RecordId RID,
                                                  unsigned AbbrevID) {
@@ -479,6 +478,7 @@ void ClangDocBitcodeWriter::emitBlock(const Reference &R, FieldId Field) {
   emitRecord((unsigned)R.RefType, REFERENCE_TYPE);
   emitRecord(R.Path, REFERENCE_PATH);
   emitRecord((unsigned)Field, REFERENCE_FIELD);
+  emitRecord(R.DocumentationFileName, REFERENCE_FILE);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const FriendInfo &R) {

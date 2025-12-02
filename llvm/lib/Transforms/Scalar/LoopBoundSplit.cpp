@@ -21,8 +21,7 @@
 
 #define DEBUG_TYPE "loop-bound-split"
 
-namespace llvm {
-
+using namespace llvm;
 using namespace PatternMatch;
 
 namespace {
@@ -358,8 +357,7 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
   IRBuilder<> Builder(&PostLoopPreHeader->front());
 
   // Update phi nodes in header of post-loop.
-  bool isExitingLatch =
-      (L.getExitingBlock() == L.getLoopLatch()) ? true : false;
+  bool isExitingLatch = L.getExitingBlock() == L.getLoopLatch();
   Value *ExitingCondLCSSAPhi = nullptr;
   for (PHINode &PN : L.getHeader()->phis()) {
     // Create LCSSA phi node in preheader of post-loop.
@@ -472,8 +470,7 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
 PreservedAnalyses LoopBoundSplitPass::run(Loop &L, LoopAnalysisManager &AM,
                                           LoopStandardAnalysisResults &AR,
                                           LPMUpdater &U) {
-  Function &F = *L.getHeader()->getParent();
-  (void)F;
+  [[maybe_unused]] Function &F = *L.getHeader()->getParent();
 
   LLVM_DEBUG(dbgs() << "Spliting bound of loop in " << F.getName() << ": " << L
                     << "\n");
@@ -486,5 +483,3 @@ PreservedAnalyses LoopBoundSplitPass::run(Loop &L, LoopAnalysisManager &AM,
 
   return getLoopPassPreservedAnalyses();
 }
-
-} // end namespace llvm

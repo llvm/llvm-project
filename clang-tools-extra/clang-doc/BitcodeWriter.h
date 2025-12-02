@@ -16,12 +16,8 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_BITCODEWRITER_H
 
 #include "Representation.h"
-#include "clang/AST/AST.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
-#include <initializer_list>
 #include <vector>
 
 namespace clang {
@@ -140,6 +136,7 @@ enum RecordId {
   REFERENCE_TYPE,
   REFERENCE_PATH,
   REFERENCE_FIELD,
+  REFERENCE_FILE,
   TEMPLATE_PARAM_CONTENTS,
   TEMPLATE_SPECIALIZATION_OF,
   TYPEDEF_USR,

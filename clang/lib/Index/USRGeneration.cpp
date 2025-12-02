@@ -653,14 +653,14 @@ bool USRGenerator::GenLoc(const Decl *D, bool IncludeOffset) {
 }
 
 static void printQualifier(llvm::raw_ostream &Out, const LangOptions &LangOpts,
-                           NestedNameSpecifier *NNS) {
+                           NestedNameSpecifier NNS) {
   // FIXME: Encode the qualifier, don't just print it.
   PrintingPolicy PO(LangOpts);
   PO.SuppressTagKeyword = true;
   PO.SuppressUnwrittenScope = true;
   PO.ConstantArraySizeAsWritten = false;
   PO.AnonymousTagLocations = false;
-  NNS->print(Out, PO);
+  NNS.print(Out, PO);
 }
 
 void USRGenerator::VisitType(QualType T) {
@@ -910,9 +910,13 @@ void USRGenerator::VisitType(QualType T) {
       continue;
     }
     if (const TagType *TT = T->getAs<TagType>()) {
-      Out << '$';
-      VisitTagDecl(TT->getDecl());
-      return;
+      if (const auto *ICNT = dyn_cast<InjectedClassNameType>(TT)) {
+        T = ICNT->getDecl()->getCanonicalTemplateSpecializationType(Ctx);
+      } else {
+        Out << '$';
+        VisitTagDecl(TT->getDecl());
+        return;
+      }
     }
     if (const ObjCInterfaceType *OIT = T->getAs<ObjCInterfaceType>()) {
       Out << '$';
@@ -926,7 +930,8 @@ void USRGenerator::VisitType(QualType T) {
         VisitObjCProtocolDecl(Prot);
       return;
     }
-    if (const TemplateTypeParmType *TTP = T->getAs<TemplateTypeParmType>()) {
+    if (const TemplateTypeParmType *TTP =
+            T->getAsCanonical<TemplateTypeParmType>()) {
       Out << 't' << TTP->getDepth() << '.' << TTP->getIndex();
       return;
     }
@@ -944,10 +949,6 @@ void USRGenerator::VisitType(QualType T) {
       printQualifier(Out, LangOpts, DNT->getQualifier());
       Out << ':' << DNT->getIdentifier()->getName();
       return;
-    }
-    if (const InjectedClassNameType *InjT = T->getAs<InjectedClassNameType>()) {
-      T = InjT->getInjectedSpecializationType();
-      continue;
     }
     if (const auto *VT = T->getAs<VectorType>()) {
       Out << (T->isExtVectorType() ? ']' : '[');

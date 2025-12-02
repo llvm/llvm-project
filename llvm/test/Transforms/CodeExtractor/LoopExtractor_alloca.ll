@@ -30,16 +30,16 @@ entry:
   br label %loop1
 
 loop1:
-  call void @llvm.lifetime.start.p0(i64 4, ptr %v1)
+  call void @llvm.lifetime.start.p0(ptr %v1)
   %r1 = call i32 @foo(ptr %v1)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %v1)
+  call void @llvm.lifetime.end.p0(ptr %v1)
   %cmp1 = icmp ne i32 %r1, 0
   br i1 %cmp1, label %loop1, label %loop2
 
 loop2:
-  call void @llvm.lifetime.start.p0(i64 4, ptr %v2)
+  call void @llvm.lifetime.start.p0(ptr %v2)
   %r2 = call i32 @foo(ptr %v2)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %v2)
+  call void @llvm.lifetime.end.p0(ptr %v2)
   %cmp2 = icmp ne i32 %r2, 0
   br i1 %cmp2, label %loop2, label %exit
 
@@ -49,6 +49,6 @@ exit:
 
 declare i32 @foo(ptr)
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)

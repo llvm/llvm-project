@@ -78,7 +78,7 @@ namespace {
 ///  ```
 struct MultiReduceToContract
     : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp reduceOp,
                                 PatternRewriter &rewriter) const override {
@@ -138,7 +138,7 @@ struct MultiReduceToContract
 ///  ```
 struct CombineContractABTranspose final
     : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
@@ -202,7 +202,7 @@ struct CombineContractABTranspose final
 /// ```
 struct CombineContractResultTranspose final
     : public OpRewritePattern<vector::TransposeOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransposeOp resTOp,
                                 PatternRewriter &rewriter) const override {
@@ -381,8 +381,8 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
   if (getUnusedDimsBitVector({maps[0], maps[1]}).any())
     return failure();
 
-  Operation *newOp = rewriter.create<vector::ContractionOp>(
-      contractOp.getLoc(), lhs, rhs, contractOp.getAcc(),
+  Operation *newOp = vector::ContractionOp::create(
+      rewriter, contractOp.getLoc(), lhs, rhs, contractOp.getAcc(),
       rewriter.getAffineMapArrayAttr(maps), rewriter.getArrayAttr(iterators));
 
   // Handle the mask.
@@ -410,9 +410,8 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
           oldMaskType.getScalableDims().drop_front(unusedDimsBitVector.count());
       VectorType maskOpType =
           VectorType::get(newShape, rewriter.getI1Type(), newShapeScalableDims);
-      mask = rewriter
-                 .create<vector::ShapeCastOp>(contractOp.getLoc(), maskOpType,
-                                              maskingOp.getMask())
+      mask = vector::ShapeCastOp::create(rewriter, contractOp.getLoc(),
+                                         maskOpType, maskingOp.getMask())
                  .getResult();
     }
 
@@ -534,8 +533,8 @@ struct ReorderElementwiseOpsOnTranspose final
         // This is a constant. Create a reverse transpose op for it.
         auto vectorType =
             srcType.clone(cast<VectorType>(operand.getType()).getElementType());
-        srcValues.push_back(rewriter.create<vector::TransposeOp>(
-            operand.getLoc(), vectorType, operand, invOrder));
+        srcValues.push_back(vector::TransposeOp::create(
+            rewriter, operand.getLoc(), vectorType, operand, invOrder));
       }
     }
 
@@ -569,7 +568,7 @@ static SmallVector<int64_t> getIntValueVector(ArrayAttr arrayAttr) {
 //   %2 = vector.extract %1[1] : f16 from vector<2xf16>
 struct BubbleDownVectorBitCastForExtract
     : public OpRewritePattern<vector::ExtractOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
@@ -577,7 +576,7 @@ struct BubbleDownVectorBitCastForExtract
     if (extractOp.getSourceVectorType().getRank() != 1)
       return failure();
 
-    auto castOp = extractOp.getVector().getDefiningOp<vector::BitCastOp>();
+    auto castOp = extractOp.getSource().getDefiningOp<vector::BitCastOp>();
     if (!castOp)
       return failure();
 
@@ -601,27 +600,27 @@ struct BubbleDownVectorBitCastForExtract
 
     // Get the first element of the mixed position as integer.
     auto mixedPos = extractOp.getMixedPosition();
-    if (mixedPos.size() > 0 && !isa<Attribute>(mixedPos[0]))
+    if (!mixedPos.empty() && !isa<Attribute>(mixedPos[0]))
       return failure();
     uint64_t index = cast<IntegerAttr>(cast<Attribute>(mixedPos[0])).getInt();
 
     // Get the single scalar (as a vector) in the source value that packs the
     // desired scalar. E.g. extract vector<1xf32> from vector<4xf32>
     Location loc = extractOp.getLoc();
-    Value packedValue = rewriter.create<vector::ExtractOp>(
-        loc, castOp.getSource(), index / expandRatio);
+    Value packedValue = vector::ExtractOp::create(
+        rewriter, loc, castOp.getSource(), index / expandRatio);
     Type packedVecType = VectorType::get(/*shape=*/{1}, packedValue.getType());
-    Value zero = rewriter.create<arith::ConstantOp>(
-        loc, packedVecType, rewriter.getZeroAttr(packedVecType));
-    packedValue = rewriter.create<vector::InsertOp>(loc, packedValue, zero,
-                                                    /*position=*/0);
+    Value zero = arith::ConstantOp::create(rewriter, loc, packedVecType,
+                                           rewriter.getZeroAttr(packedVecType));
+    packedValue = vector::InsertOp::create(rewriter, loc, packedValue, zero,
+                                           /*position=*/0);
 
     // Cast it to a vector with the desired scalar's type.
     // E.g. f32 -> vector<2xf16>
     VectorType packedType =
         VectorType::get({expandRatio}, castDstType.getElementType());
     Value castedValue =
-        rewriter.create<vector::BitCastOp>(loc, packedType, packedValue);
+        vector::BitCastOp::create(rewriter, loc, packedType, packedValue);
 
     // Finally extract the desired scalar.
     rewriter.replaceOpWithNewOp<vector::ExtractOp>(extractOp, castedValue,
@@ -644,11 +643,11 @@ struct BubbleDownVectorBitCastForExtract
 //   %1 = vector.bitcast %0 : vector<2xf32> to vector<4xf16>
 struct BubbleDownBitCastForStridedSliceExtract
     : public OpRewritePattern<vector::ExtractStridedSliceOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ExtractStridedSliceOp extractOp,
                                 PatternRewriter &rewriter) const override {
-    auto castOp = extractOp.getVector().getDefiningOp<vector::BitCastOp>();
+    auto castOp = extractOp.getSource().getDefiningOp<vector::BitCastOp>();
     if (!castOp)
       return failure();
 
@@ -700,9 +699,9 @@ struct BubbleDownBitCastForStridedSliceExtract
     VectorType newExtractType =
         VectorType::get(dims, castSrcType.getElementType());
 
-    auto newExtractOp = rewriter.create<vector::ExtractStridedSliceOp>(
-        extractOp.getLoc(), newExtractType, castOp.getSource(), newOffsets,
-        newSizes, extractOp.getStrides());
+    auto newExtractOp = vector::ExtractStridedSliceOp::create(
+        rewriter, extractOp.getLoc(), newExtractType, castOp.getSource(),
+        newOffsets, newSizes, extractOp.getStrides());
 
     rewriter.replaceOpWithNewOp<vector::BitCastOp>(
         extractOp, extractOp.getType(), newExtractOp);
@@ -722,7 +721,7 @@ struct BubbleDownBitCastForStridedSliceExtract
 //   %2 = vector.insert %0, %1 [4] : vector<16xi8> into vector<8x16xi8>
 //
 struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::BitCastOp bitcastOp,
                                 PatternRewriter &rewriter) const override {
@@ -761,8 +760,9 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
         isNumElemsShrink ? srcDims.back() / ratio : srcDims.back() * ratio;
     VectorType newCastSrcType =
         VectorType::get(srcDims, castDstType.getElementType());
-    auto newCastSrcOp = rewriter.create<vector::BitCastOp>(
-        bitcastOp.getLoc(), newCastSrcType, insertOp.getValueToStore());
+    auto newCastSrcOp =
+        vector::BitCastOp::create(rewriter, bitcastOp.getLoc(), newCastSrcType,
+                                  insertOp.getValueToStore());
 
     SmallVector<int64_t> dstDims(insertOp.getDestVectorType().getShape());
     dstDims.back() =
@@ -771,8 +771,8 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
         VectorType::get(dstDims, castDstType.getElementType());
 
     // Bitcast the destination.
-    auto newCastDstOp = rewriter.create<vector::BitCastOp>(
-        bitcastOp.getLoc(), newCastDstType, insertOp.getDest());
+    auto newCastDstOp = vector::BitCastOp::create(
+        rewriter, bitcastOp.getLoc(), newCastDstType, insertOp.getDest());
 
     // Generate new insert.
     rewriter.replaceOpWithNewOp<vector::InsertOp>(
@@ -794,7 +794,7 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
 //          offsets = [0], strides = [1]} : vector<2xf32> into vector<4xf32>
 struct BubbleUpBitCastForStridedSliceInsert
     : public OpRewritePattern<vector::BitCastOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::BitCastOp bitcastOp,
                                 PatternRewriter &rewriter) const override {
@@ -852,8 +852,9 @@ struct BubbleUpBitCastForStridedSliceInsert
     VectorType newCastSrcType =
         VectorType::get(srcDims, castDstType.getElementType());
 
-    auto newCastSrcOp = rewriter.create<vector::BitCastOp>(
-        bitcastOp.getLoc(), newCastSrcType, insertOp.getValueToStore());
+    auto newCastSrcOp =
+        vector::BitCastOp::create(rewriter, bitcastOp.getLoc(), newCastSrcType,
+                                  insertOp.getValueToStore());
 
     SmallVector<int64_t> dstDims =
         llvm::to_vector<4>(insertOp.getDestVectorType().getShape());
@@ -861,8 +862,8 @@ struct BubbleUpBitCastForStridedSliceInsert
     VectorType newCastDstType =
         VectorType::get(dstDims, castDstType.getElementType());
 
-    auto newCastDstOp = rewriter.create<vector::BitCastOp>(
-        bitcastOp.getLoc(), newCastDstType, insertOp.getDest());
+    auto newCastDstOp = vector::BitCastOp::create(
+        rewriter, bitcastOp.getLoc(), newCastDstType, insertOp.getDest());
 
     rewriter.replaceOpWithNewOp<vector::InsertStridedSliceOp>(
         bitcastOp, bitcastOp.getType(), newCastSrcOp, newCastDstOp, newOffsets,
@@ -877,7 +878,7 @@ struct BubbleUpBitCastForStridedSliceInsert
 // This transforms IR like:
 //   %1 = vector.bitcast %0: vector<8xf16> to vector<4xf32>
 // Into:
-//   %cst = vector.splat %c0_f32 : vector<4xf32>
+//   %cst = vector.broadcast %c0_f32 : f32 to vector<4xf32>
 //   %1 = vector.extract_strided_slice %0 {
 //          offsets = [0], sizes = [4], strides = [1]
 //        } : vector<8xf16> to vector<4xf16>
@@ -891,7 +892,7 @@ struct BubbleUpBitCastForStridedSliceInsert
 //   %7 = vector.insert_strided_slice %6, %cst {
 //          offsets = [2], strides = [1]} : vector<2xf32> into vector<4xf32>
 struct BreakDownVectorBitCast : public OpRewritePattern<vector::BitCastOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
 public:
   BreakDownVectorBitCast(MLIRContext *context,
@@ -936,9 +937,9 @@ public:
     Type elemType = castDstType.getElementType();
     assert(elemType.isSignlessIntOrIndexOrFloat());
 
-    Value zero = rewriter.create<arith::ConstantOp>(
-        loc, elemType, rewriter.getZeroAttr(elemType));
-    Value res = rewriter.create<SplatOp>(loc, castDstType, zero);
+    Value zero = arith::ConstantOp::create(rewriter, loc, elemType,
+                                           rewriter.getZeroAttr(elemType));
+    Value res = BroadcastOp::create(rewriter, loc, castDstType, zero);
 
     SmallVector<int64_t> sliceShape = {castDstLastDim};
     SmallVector<int64_t> strides = {1};
@@ -947,13 +948,13 @@ public:
                         castDstType.getElementType());
 
     for (int i = 0, e = shrinkRatio; i < e; ++i) {
-      Value extracted = rewriter.create<ExtractStridedSliceOp>(
-          loc, bitcastOp.getSource(), ArrayRef<int64_t>{i * castDstLastDim},
-          sliceShape, strides);
+      Value extracted = ExtractStridedSliceOp::create(
+          rewriter, loc, bitcastOp.getSource(),
+          ArrayRef<int64_t>{i * castDstLastDim}, sliceShape, strides);
       Value bitcast =
-          rewriter.create<BitCastOp>(loc, newCastDstType, extracted);
-      res = rewriter.create<InsertStridedSliceOp>(
-          loc, bitcast, res,
+          BitCastOp::create(rewriter, loc, newCastDstType, extracted);
+      res = InsertStridedSliceOp::create(
+          rewriter, loc, bitcast, res,
           ArrayRef<int64_t>{i * castDstLastDim / shrinkRatio}, strides);
     }
     rewriter.replaceOp(bitcastOp, res);
@@ -964,7 +965,43 @@ private:
   std::function<bool(BitCastOp)> controlFn;
 };
 
-/// Reorders elementwise(broadcast/splat) to broadcast(elementwise). Ex:
+static bool haveSameShapeAndScaling(Type t, Type u) {
+  auto tVec = dyn_cast<VectorType>(t);
+  auto uVec = dyn_cast<VectorType>(u);
+  if (!tVec) {
+    return !uVec;
+  }
+  if (!uVec) {
+    return false;
+  }
+  return tVec.getShape() == uVec.getShape() &&
+         tVec.getScalableDims() == uVec.getScalableDims();
+}
+
+/// If `type` is shaped, clone it with `newElementType`. Otherwise,
+/// return `newElementType`.
+static Type cloneOrReplace(Type type, Type newElementType) {
+  if (auto shapedType = dyn_cast<ShapedType>(type)) {
+    return shapedType.clone(newElementType);
+  }
+  return newElementType;
+}
+
+/// If `value` is the result of a broadcast operation, return the input
+/// of the broadcast operation.
+static Value getBroadcastLikeSource(Value value) {
+
+  Operation *op = value.getDefiningOp();
+  if (!op)
+    return {};
+
+  if (auto broadcast = dyn_cast<vector::BroadcastOp>(op))
+    return broadcast.getSource();
+
+  return {};
+}
+
+/// Reorders elementwise(broadcast) to broadcast(elementwise). Ex:
 ///
 /// Example:
 /// ```
@@ -977,9 +1014,6 @@ private:
 /// %r = arith.addi %arg0, %arg1 : index
 /// %b = vector.broadcast %r : index to vector<1x4xindex>
 /// ```
-///
-/// Both `vector.broadcast` and `vector.splat` are supported as broadcasting
-/// ops.
 struct ReorderElementwiseOpsOnBroadcast final
     : public OpTraitRewritePattern<OpTrait::Elementwise> {
   using OpTraitRewritePattern::OpTraitRewritePattern;
@@ -987,16 +1021,14 @@ struct ReorderElementwiseOpsOnBroadcast final
                                 PatternRewriter &rewriter) const override {
     if (op->getNumResults() != 1)
       return failure();
-    if (!llvm::isa<ShapedType>(op->getResults()[0].getType()))
+    auto resultType = dyn_cast<VectorType>(op->getResult(0).getType());
+    if (!resultType)
       return failure();
     if (!OpTrait::hasElementwiseMappableTraits(op))
       return rewriter.notifyMatchFailure(
           op, "Op doesn't have ElementwiseMappableTraits");
     if (op->getNumOperands() == 0)
       return failure();
-    if (op->getResults()[0].getType() != op->getOperand(0).getType())
-      return rewriter.notifyMatchFailure(op,
-                                         "result and operand type mismatch");
     if (isa<vector::FMAOp>(op)) {
       return rewriter.notifyMatchFailure(
           op,
@@ -1004,45 +1036,71 @@ struct ReorderElementwiseOpsOnBroadcast final
           "might be a scalar");
     }
 
-    // Get the type of the lhs operand
-    auto *lhsBcastOrSplat = op->getOperand(0).getDefiningOp();
-    if (!lhsBcastOrSplat ||
-        !isa<vector::BroadcastOp, vector::SplatOp>(*lhsBcastOrSplat))
-      return failure();
-    auto lhsBcastOrSplatType = lhsBcastOrSplat->getOperand(0).getType();
+    Type resultElemType = resultType.getElementType();
 
-    // Make sure that all operands are broadcast from identical types:
-    //  * scalar (`vector.broadcast` + `vector.splat`), or
+    // Get the type of the first non-constant operand
+    Value broadcastSource;
+    for (Value operand : op->getOperands()) {
+      Operation *definingOp = operand.getDefiningOp();
+      if (!definingOp)
+        return failure();
+      if (definingOp->hasTrait<OpTrait::ConstantLike>())
+        continue;
+      broadcastSource = getBroadcastLikeSource(operand);
+      break;
+    }
+    if (!broadcastSource)
+      return failure();
+    Type unbroadcastResultType =
+        cloneOrReplace(broadcastSource.getType(), resultElemType);
+
+    // Make sure that all operands are broadcast from identically-shaped types:
+    //  * scalar (`vector.broadcast`), or
     //  * vector (`vector.broadcast`).
     // Otherwise the re-ordering wouldn't be safe.
-    if (!llvm::all_of(op->getOperands(), [&lhsBcastOrSplatType](Value val) {
-          auto bcast = val.getDefiningOp<vector::BroadcastOp>();
-          if (bcast)
-            return (bcast.getOperand().getType() == lhsBcastOrSplatType);
-          auto splat = val.getDefiningOp<vector::SplatOp>();
-          if (splat)
-            return (splat.getOperand().getType() == lhsBcastOrSplatType);
-          return false;
+    if (!llvm::all_of(op->getOperands(), [broadcastSource](Value val) {
+          if (auto source = getBroadcastLikeSource(val))
+            return haveSameShapeAndScaling(source.getType(),
+                                           broadcastSource.getType());
+          SplatElementsAttr splatConst;
+          return matchPattern(val, m_Constant(&splatConst));
         })) {
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op,
+          "not all operands are constants or broadcasts from the same type");
     }
 
     // Collect the source values before broadcasting
     SmallVector<Value> srcValues;
     srcValues.reserve(op->getNumOperands());
     for (Value operand : op->getOperands()) {
-      srcValues.push_back(operand.getDefiningOp()->getOperand(0));
+      SplatElementsAttr splatConst;
+      if (matchPattern(operand, m_Constant(&splatConst))) {
+        Attribute newConst;
+        Type elementType = getElementTypeOrSelf(operand.getType());
+        Type newType = cloneOrReplace(unbroadcastResultType, elementType);
+        if (auto newTypeShaped = dyn_cast<ShapedType>(newType)) {
+          newConst = splatConst.resizeSplat(newTypeShaped);
+        } else {
+          newConst = splatConst.getSplatValue<Attribute>();
+        }
+        Operation *newConstOp =
+            operand.getDefiningOp()->getDialect()->materializeConstant(
+                rewriter, newConst, newType, operand.getLoc());
+        srcValues.push_back(newConstOp->getResult(0));
+      } else {
+        srcValues.push_back(operand.getDefiningOp()->getOperand(0));
+      }
     }
 
     // Create the "elementwise" Op
     Operation *elementwiseOp =
         rewriter.create(op->getLoc(), op->getName().getIdentifier(), srcValues,
-                        lhsBcastOrSplatType, op->getAttrs());
+                        unbroadcastResultType, op->getAttrs());
 
     // Replace the original Op with the elementwise Op
-    auto vectorType = op->getResultTypes()[0];
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-        op, vectorType, elementwiseOp->getResults());
+        op, resultType, elementwiseOp->getResults());
 
     return success();
   }
@@ -1067,11 +1125,11 @@ struct ReorderElementwiseOpsOnBroadcast final
 class ExtractOpFromElementwise final
     : public OpRewritePattern<vector::ExtractOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ExtractOp op,
                                 PatternRewriter &rewriter) const override {
-    Operation *eltwise = op.getVector().getDefiningOp();
+    Operation *eltwise = op.getSource().getDefiningOp();
 
     // TODO: vector::FMAOp is not an ElemetwiseMappable even if it claims to be,
     // as it doesn't support scalars.
@@ -1103,7 +1161,7 @@ public:
     Location loc = eltwise->getLoc();
     SmallVector<OpFoldResult> pos = op.getMixedPosition();
     for (Value arg : eltwise->getOperands()) {
-      Value newArg = rewriter.create<vector::ExtractOp>(loc, arg, pos);
+      Value newArg = vector::ExtractOp::create(rewriter, loc, arg, pos);
       mapping.map(arg, newArg);
     }
 
@@ -1142,11 +1200,11 @@ static bool isSupportedMemSinkElementType(Type type) {
 /// ```
 class ExtractOpFromLoad final : public OpRewritePattern<vector::ExtractOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ExtractOp op,
                                 PatternRewriter &rewriter) const override {
-    auto loadOp = op.getVector().getDefiningOp<vector::LoadOp>();
+    auto loadOp = op.getSource().getDefiningOp<vector::LoadOp>();
     if (!loadOp)
       return rewriter.notifyMatchFailure(op, "expected a load op");
 
@@ -1207,21 +1265,20 @@ public:
   }
 };
 
-/// Pattern to rewrite vector.store(vector.splat) -> vector/memref.store.
+/// Pattern to rewrite vector.store(vector.broadcast) -> vector/memref.store.
 ///
 /// Example:
 /// ```
-/// %0 = vector.splat %arg2 : vector<1xf32>
+/// %0 = vector.broadcast %arg2 : f32 to vector<1xf32>
 /// vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<1xf32>
 /// ```
 /// Gets converted to:
 /// ```
 /// memref.store %arg2, %arg0[%arg1] : memref<?xf32>
 /// ```
-class StoreOpFromSplatOrBroadcast final
-    : public OpRewritePattern<vector::StoreOp> {
+class StoreOpFromBroadcast final : public OpRewritePattern<vector::StoreOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::StoreOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1238,15 +1295,17 @@ public:
       return rewriter.notifyMatchFailure(
           op, "only 1-element vectors are supported");
 
-    Operation *splat = op.getValueToStore().getDefiningOp();
-    if (!isa_and_present<vector::BroadcastOp, vector::SplatOp>(splat))
-      return rewriter.notifyMatchFailure(op, "neither a splat nor a broadcast");
+    Value toStore = op.getValueToStore();
+    Value source = getBroadcastLikeSource(toStore);
+    if (!source)
+      return rewriter.notifyMatchFailure(
+          op, "value to store is not from a broadcast");
 
-    // Checking for single use so we can remove splat.
-    if (!splat->hasOneUse())
+    // Checking for single use so we can remove broadcast.
+    Operation *broadcast = toStore.getDefiningOp();
+    if (!broadcast->hasOneUse())
       return rewriter.notifyMatchFailure(op, "expected single op use");
 
-    Value source = splat->getOperand(0);
     Value base = op.getBase();
     ValueRange indices = op.getIndices();
 
@@ -1255,7 +1314,7 @@ public:
     } else {
       rewriter.replaceOpWithNewOp<memref::StoreOp>(op, source, base, indices);
     }
-    rewriter.eraseOp(splat);
+    rewriter.eraseOp(broadcast);
     return success();
   }
 };
@@ -1292,19 +1351,19 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
     indicesAttr = rewriter.getI64VectorAttr(
         llvm::to_vector<4>(llvm::seq<int64_t>(0, dim)));
   }
-  Value indices = rewriter.create<arith::ConstantOp>(loc, indicesAttr);
+  Value indices = arith::ConstantOp::create(rewriter, loc, indicesAttr);
   // Add in an offset if requested.
   if (off) {
     Value o = getValueOrCreateCastToIndexLike(rewriter, loc, idxType, *off);
-    Value ov = rewriter.create<vector::SplatOp>(loc, indices.getType(), o);
-    indices = rewriter.create<arith::AddIOp>(loc, ov, indices);
+    Value ov = vector::BroadcastOp::create(rewriter, loc, indices.getType(), o);
+    indices = arith::AddIOp::create(rewriter, loc, ov, indices);
   }
   // Construct the vector comparison.
   Value bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType, b);
   Value bounds =
-      rewriter.create<vector::SplatOp>(loc, indices.getType(), bound);
-  return rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, indices,
-                                        bounds);
+      vector::BroadcastOp::create(rewriter, loc, indices.getType(), bound);
+  return arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
+                               indices, bounds);
 }
 
 template <typename ConcreteOp>
@@ -1335,15 +1394,15 @@ public:
     Value off = xferOp.getIndices()[lastIndex];
     Value dim =
         vector::createOrFoldDimOp(rewriter, loc, xferOp.getBase(), lastIndex);
-    Value b = rewriter.create<arith::SubIOp>(loc, dim.getType(), dim, off);
-    Value mask = rewriter.create<vector::CreateMaskOp>(
-        loc,
+    Value b = arith::SubIOp::create(rewriter, loc, dim.getType(), dim, off);
+    Value mask = vector::CreateMaskOp::create(
+        rewriter, loc,
         VectorType::get(vtp.getShape(), rewriter.getI1Type(),
                         vtp.getScalableDims()),
         b);
     if (xferOp.getMask()) {
       // Intersect the in-bounds with the mask specified as an op parameter.
-      mask = rewriter.create<arith::AndIOp>(loc, mask, xferOp.getMask());
+      mask = arith::AndIOp::create(rewriter, loc, mask, xferOp.getMask());
     }
 
     rewriter.modifyOpInPlace(xferOp, [&]() {
@@ -1410,7 +1469,7 @@ static bool allI1ConstantValuesSetTo(arith::ConstantOp constantOp, bool value) {
 /// InstCombine seems to handle vectors with multiple elements but not the
 /// single element ones.
 struct FoldI1Select : public OpRewritePattern<arith::SelectOp> {
-  using OpRewritePattern<arith::SelectOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::SelectOp selectOp,
                                 PatternRewriter &rewriter) const override {
@@ -1494,7 +1553,7 @@ getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
 /// Drop inner most contiguous unit dimensions from transfer_read operand.
 class DropInnerMostUnitDimsTransferRead
     : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
@@ -1548,12 +1607,13 @@ class DropInnerMostUnitDimsTransferRead
         strides);
     ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
         readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
-    Value rankedReducedView = rewriter.create<memref::SubViewOp>(
-        loc, resultMemrefType, readOp.getBase(), offsets, sizes, strides);
+    Value rankedReducedView =
+        memref::SubViewOp::create(rewriter, loc, resultMemrefType,
+                                  readOp.getBase(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
         cast<ShapedType>(rankedReducedView.getType()), resultTargetVecType);
-    Value result = rewriter.create<vector::TransferReadOp>(
-        loc, resultTargetVecType, rankedReducedView,
+    Value result = vector::TransferReadOp::create(
+        rewriter, loc, resultTargetVecType, rankedReducedView,
         readOp.getIndices().drop_back(dimsToDrop), AffineMapAttr::get(permMap),
         readOp.getPadding(),
         // TODO: support mask.
@@ -1584,7 +1644,7 @@ class DropInnerMostUnitDimsTransferRead
 /// Note, this pattern will not collapse "scalable unit" dims (i.e. `[1]`).
 class DropInnerMostUnitDimsTransferWrite
     : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
@@ -1639,8 +1699,9 @@ class DropInnerMostUnitDimsTransferWrite
     ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
         writeOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
 
-    Value rankedReducedView = rewriter.create<memref::SubViewOp>(
-        loc, resultMemrefType, writeOp.getBase(), offsets, sizes, strides);
+    Value rankedReducedView =
+        memref::SubViewOp::create(rewriter, loc, resultMemrefType,
+                                  writeOp.getBase(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
         cast<ShapedType>(rankedReducedView.getType()), resultTargetVecType);
 
@@ -1660,7 +1721,7 @@ class DropInnerMostUnitDimsTransferWrite
 /// with the RHS transposed) lowering.
 struct CanonicalizeContractMatmulToMMT final
     : OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   using FilterConstraintType =
       std::function<LogicalResult(vector::ContractionOp op)>;
@@ -1708,21 +1769,21 @@ struct CanonicalizeContractMatmulToMMT final
     auto createTranspose = [&rewriter, loc](Value mat) -> Value {
       if (auto sext = mat.getDefiningOp<arith::ExtSIOp>()) {
         Value trans =
-            rewriter.create<vector::TransposeOp>(loc, sext.getIn(), perm);
+            vector::TransposeOp::create(rewriter, loc, sext.getIn(), perm);
         VectorType newType =
             cast<VectorType>(trans.getType())
                 .clone(cast<VectorType>(mat.getType()).getElementType());
-        return rewriter.create<arith::ExtSIOp>(loc, newType, trans);
+        return arith::ExtSIOp::create(rewriter, loc, newType, trans);
       }
       if (auto zext = mat.getDefiningOp<arith::ExtUIOp>()) {
         Value trans =
-            rewriter.create<vector::TransposeOp>(loc, zext.getIn(), perm);
+            vector::TransposeOp::create(rewriter, loc, zext.getIn(), perm);
         VectorType newType =
             VectorType::get(cast<VectorType>(trans.getType()).getShape(),
                             cast<VectorType>(mat.getType()).getElementType());
-        return rewriter.create<arith::ExtUIOp>(loc, newType, trans);
+        return arith::ExtUIOp::create(rewriter, loc, newType, trans);
       }
-      return rewriter.create<vector::TransposeOp>(loc, mat, perm);
+      return vector::TransposeOp::create(rewriter, loc, mat, perm);
     };
 
     if (maps == infer({{m, k}, {k, n}, {m, n}})) {
@@ -1777,7 +1838,7 @@ private:
 template <typename ExtOp>
 struct FoldArithExtIntoContractionOp
     : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
@@ -1810,7 +1871,7 @@ struct FoldArithExtIntoContractionOp
 /// %b = vector.reduction <add> %a, %acc
 /// ```
 struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ReductionOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1836,8 +1897,8 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
       vAdd = rewriter.createOrFold<arith::AddIOp>(
           loc, parentReduction.getVector(), op.getVector());
     } else {
-      vAdd = rewriter.create<arith::AddFOp>(loc, parentReduction.getVector(),
-                                            op.getVector());
+      vAdd = arith::AddFOp::create(rewriter, loc, parentReduction.getVector(),
+                                   op.getVector());
     }
     rewriter.replaceOpWithNewOp<vector::ReductionOp>(op, op.getKind(), vAdd,
                                                      parentReduction.getAcc());
@@ -1925,7 +1986,7 @@ struct DropUnitDimFromElementwiseOps final
       if (newVType == opVectorType)
         return rewriter.notifyMatchFailure(op, "No unit dimension to remove.");
 
-      auto opSC = rewriter.create<vector::ShapeCastOp>(loc, newVType, operand);
+      auto opSC = vector::ShapeCastOp::create(rewriter, loc, newVType, operand);
       newOperands.push_back(opSC);
     }
 
@@ -1965,7 +2026,7 @@ struct DropUnitDimFromElementwiseOps final
 ///  ```
 struct DropUnitDimsFromTransposeOp final
     : OpRewritePattern<vector::TransposeOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
@@ -2004,11 +2065,11 @@ struct DropUnitDimsFromTransposeOp final
 
     Location loc = op.getLoc();
     // Drop the unit dims via shape_cast.
-    auto dropDimsShapeCast = rewriter.create<vector::ShapeCastOp>(
-        loc, sourceTypeWithoutUnitDims, op.getVector());
+    auto dropDimsShapeCast = vector::ShapeCastOp::create(
+        rewriter, loc, sourceTypeWithoutUnitDims, op.getVector());
     // Create the new transpose.
     auto transposeWithoutUnitDims =
-        rewriter.create<vector::TransposeOp>(loc, dropDimsShapeCast, newPerm);
+        vector::TransposeOp::create(rewriter, loc, dropDimsShapeCast, newPerm);
     // Restore the unit dims via shape cast.
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
         op, op.getResultVectorType(), transposeWithoutUnitDims);
@@ -2042,7 +2103,7 @@ struct DropUnitDimsFromTransposeOp final
 ///    : vector<[4]x4xf32> to vector<[4]x1x1x4xf32>
 ///  ```
 struct DropUnitDimsFromScfForOp final : OpRewritePattern<scf::ForOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(scf::ForOp forOp,
                                 PatternRewriter &rewriter) const override {
@@ -2059,7 +2120,7 @@ struct DropUnitDimsFromScfForOp final : OpRewritePattern<scf::ForOp> {
 
       // Create a new ForOp with that iter operand replaced.
       auto castFn = [](OpBuilder &b, Location loc, Type type, Value source) {
-        return b.create<vector::ShapeCastOp>(loc, type, source);
+        return vector::ShapeCastOp::create(b, loc, type, source);
       };
 
       Value replacement =
@@ -2087,7 +2148,7 @@ struct DropUnitDimsFromScfForOp final : OpRewritePattern<scf::ForOp> {
 /// %c = vector.reduction <add> %b, %acc
 /// ```
 struct ReduceRedundantZero final : OpRewritePattern<vector::ReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ReductionOp op,
                                 PatternRewriter &rewriter) const override {
@@ -2111,8 +2172,8 @@ struct ReduceRedundantZero final : OpRewritePattern<vector::ReductionOp> {
     if (!matchPattern(addLhs.getRhs(), m_AnyZeroFloat()))
       return failure();
 
-    auto newAdd = rewriter.create<arith::AddFOp>(vAdd.getLoc(), addLhs.getLhs(),
-                                                 vAdd.getRhs());
+    auto newAdd = arith::AddFOp::create(rewriter, vAdd.getLoc(),
+                                        addLhs.getLhs(), vAdd.getRhs());
     rewriter.replaceOpWithNewOp<vector::ReductionOp>(op, op.getKind(), newAdd,
                                                      op.getAcc());
     return success();
@@ -2154,8 +2215,8 @@ struct BreakDownVectorReduction final : OpRewritePattern<vector::ReductionOp> {
     Location loc = op.getLoc();
     SmallVector<Value> extracted(numElems, nullptr);
     for (auto [idx, extractedElem] : llvm::enumerate(extracted))
-      extractedElem = rewriter.create<vector::ExtractOp>(
-          loc, op.getVector(), static_cast<int64_t>(idx));
+      extractedElem = vector::ExtractOp::create(rewriter, loc, op.getVector(),
+                                                static_cast<int64_t>(idx));
 
     Value res = extracted.front();
     for (auto extractedElem : llvm::drop_begin(extracted))
@@ -2206,7 +2267,7 @@ struct FoldArithToVectorOuterProduct : public OpRewritePattern<MulOpType> {
 
   LogicalResult matchAndRewrite(MulOpType mulOp,
                                 PatternRewriter &rewriter) const override {
-    auto resType = llvm::cast<VectorType>(mulOp.getResult().getType());
+    auto resType = llvm::dyn_cast<VectorType>(mulOp.getResult().getType());
     if (!resType)
       return failure();
     if (resType.getRank() != 2)
@@ -2234,8 +2295,8 @@ struct FoldArithToVectorOuterProduct : public OpRewritePattern<MulOpType> {
       if (!broadcastedRhs || !isValidBroadcastSource(broadcastedRhs))
         return failure();
 
-      return rewriter.create<vector::OuterProductOp>(
-          mulOp->getLoc(), resType, broadcastedLhs.getSource(),
+      return vector::OuterProductOp::create(
+          rewriter, mulOp->getLoc(), resType, broadcastedLhs.getSource(),
           broadcastedRhs.getSource(), Value(), vector::CombiningKind::ADD);
     };
 
@@ -2323,8 +2384,8 @@ void mlir::vector::populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
 void mlir::vector::populateSinkVectorMemOpsPatterns(RewritePatternSet &patterns,
                                                     PatternBenefit benefit) {
   // TODO: Consider converting these patterns to canonicalizations.
-  patterns.add<ExtractOpFromLoad, StoreOpFromSplatOrBroadcast>(
-      patterns.getContext(), benefit);
+  patterns.add<ExtractOpFromLoad, StoreOpFromBroadcast>(patterns.getContext(),
+                                                        benefit);
 }
 
 void mlir::vector::populateChainedVectorReductionFoldingPatterns(

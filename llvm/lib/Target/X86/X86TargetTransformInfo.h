@@ -132,6 +132,7 @@ public:
   /// @{
 
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
+  unsigned getRegisterClassForType(bool Vector, Type *Ty) const override;
   bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const override;
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
@@ -182,8 +183,7 @@ public:
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const override;
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const override;
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
@@ -194,8 +194,9 @@ public:
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
                        const TTI::PointersChainInfo &Info, Type *AccessTy,
                        TTI::TargetCostKind CostKind) const override;
-  InstructionCost getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
-                                            const SCEV *Ptr) const override;
+  InstructionCost
+  getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE, const SCEV *Ptr,
+                            TTI::TargetCostKind CostKind) const override;
 
   std::optional<Instruction *>
   instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override;
@@ -266,10 +267,14 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
   bool canMacroFuseCmp() const override;
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned AddressSpace) const override;
-  bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned AddressSpace) const override;
+  bool
+  isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
+                    TTI::MaskKind MaskKind =
+                        TTI::MaskKind::VariableOrConstantMask) const override;
+  bool
+  isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddressSpace,
+                     TTI::MaskKind MaskKind =
+                         TTI::MaskKind::VariableOrConstantMask) const override;
   bool isLegalNTLoad(Type *DataType, Align Alignment) const override;
   bool isLegalNTStore(Type *DataType, Align Alignment) const override;
   bool isLegalBroadcastLoad(Type *ElementTy,
@@ -294,7 +299,7 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const override;
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
-                             const ArrayRef<Type *> &Type) const override;
+                             ArrayRef<Type *> Type) const override;
 
   uint64_t getMaxMemIntrinsicInlineSizeThreshold() const override {
     return ST->getMaxInlineSizeThreshold();
@@ -316,6 +321,8 @@ public:
 
   unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
                              Type *ScalarValTy) const override;
+
+  bool useFastCCForInternalCall(Function &F) const override;
 
 private:
   bool supportsGather() const;

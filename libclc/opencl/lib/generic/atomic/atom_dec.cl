@@ -6,37 +6,33 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <clc/atomic/clc_atomic_dec.h>
 #include <clc/opencl/atomic/atom_dec.h>
-#include <clc/opencl/atomic/atom_sub.h>
-#include <clc/opencl/atomic/atomic_dec.h>
 
-#define IMPL(AS, TYPE)                                                         \
+// Non-volatile overloads are for backward compatibility with OpenCL 1.0.
+
+#define __CLC_IMPL(AS, TYPE)                                                   \
   _CLC_OVERLOAD _CLC_DEF TYPE atom_dec(volatile AS TYPE *p) {                  \
-    return atomic_dec(p);                                                      \
+    return __clc_atomic_dec(p, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);       \
+  }                                                                            \
+  _CLC_OVERLOAD _CLC_DEF TYPE atom_dec(AS TYPE *p) {                           \
+    return atom_dec((volatile AS TYPE *)p);                                    \
   }
 
 #ifdef cl_khr_global_int32_base_atomics
-IMPL(global, int)
-IMPL(global, unsigned int)
+__CLC_IMPL(global, int)
+__CLC_IMPL(global, unsigned int)
 #endif // cl_khr_global_int32_base_atomics
 #ifdef cl_khr_local_int32_base_atomics
-IMPL(local, int)
-IMPL(local, unsigned int)
+__CLC_IMPL(local, int)
+__CLC_IMPL(local, unsigned int)
 #endif // cl_khr_local_int32_base_atomics
-
-#undef IMPL
 
 #ifdef cl_khr_int64_base_atomics
 
-#define IMPL(AS, TYPE)                                                         \
-  _CLC_OVERLOAD _CLC_DEF TYPE atom_dec(volatile AS TYPE *p) {                  \
-    return atom_sub(p, (TYPE)1);                                               \
-  }
-
-IMPL(global, long)
-IMPL(global, unsigned long)
-IMPL(local, long)
-IMPL(local, unsigned long)
-#undef IMPL
+__CLC_IMPL(global, long)
+__CLC_IMPL(global, unsigned long)
+__CLC_IMPL(local, long)
+__CLC_IMPL(local, unsigned long)
 
 #endif // cl_khr_int64_base_atomics

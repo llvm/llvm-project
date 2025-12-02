@@ -71,7 +71,7 @@ static FailureOr<TransferMask> getMaskOp(Operation *loadOp) {
   if (auto extractOp =
           transferRead.getMask().getDefiningOp<vector::ExtractOp>())
     if (auto maskOp =
-            extractOp.getVector().getDefiningOp<vector::CreateMaskOp>())
+            extractOp.getSource().getDefiningOp<vector::CreateMaskOp>())
       return TransferMask{maskOp,
                           SmallVector<int64_t>(extractOp.getStaticPosition())};
 
@@ -109,17 +109,17 @@ static Value buildNumReadElements(OpBuilder &b, Location loc,
   for (auto [pos, sz] : llvm::zip(transferMask->extractPosition,
                                   transferMask->createMaskOp->getOperands())) {
     Value cmp =
-        b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
-                                b.create<arith::ConstantIndexOp>(loc, pos), sz);
+        arith::CmpIOp::create(b, loc, arith::CmpIPredicate::slt,
+                              arith::ConstantIndexOp::create(b, loc, pos), sz);
     if (!cond) {
       cond = cmp;
       continue;
     }
-    cond = b.create<arith::AndIOp>(loc, cmp, cond);
+    cond = arith::AndIOp::create(b, loc, cmp, cond);
   }
-  return b.create<arith::SelectOp>(
-      loc, cond, transferMask->createMaskOp->getOperands().back(),
-      b.create<arith::ConstantIndexOp>(loc, 0));
+  return arith::SelectOp::create(
+      b, loc, cond, transferMask->createMaskOp->getOperands().back(),
+      arith::ConstantIndexOp::create(b, loc, 0));
 }
 
 /// Return "true" if the conversion to async copy is supported by "async copy".
@@ -251,8 +251,9 @@ void nvgpu::createAsyncGroups(RewriterBase &rewriter, Operation *op,
       int64_t sizeInBytes =
           (dstMemref.getElementTypeBitWidth() * numElements) / 8;
       // bypass_l1 only possible with 16 byte transfer.
-      Value token = rewriter.create<nvgpu::DeviceAsyncCopyOp>(
-          writeOp->getLoc(), nvgpu::DeviceAsyncTokenType::get(op->getContext()),
+      Value token = nvgpu::DeviceAsyncCopyOp::create(
+          rewriter, writeOp->getLoc(),
+          nvgpu::DeviceAsyncTokenType::get(op->getContext()),
           /*dst=*/storeBase, /*dstIndices=*/nvgpu::getIndices(writeOp),
           /*src=*/loadBase,
           /*srcIndices=*/nvgpu::getIndices(readOp),
@@ -264,11 +265,11 @@ void nvgpu::createAsyncGroups(RewriterBase &rewriter, Operation *op,
     }
 
     // Create the group and wait for it right after.
-    Value groupToken = rewriter.create<nvgpu::DeviceAsyncCreateGroupOp>(
-        op->getLoc(), nvgpu::DeviceAsyncTokenType::get(op->getContext()),
-        tokens);
-    rewriter.create<nvgpu::DeviceAsyncWaitOp>(op->getLoc(), groupToken,
-                                              nullptr);
+    Value groupToken = nvgpu::DeviceAsyncCreateGroupOp::create(
+        rewriter, op->getLoc(),
+        nvgpu::DeviceAsyncTokenType::get(op->getContext()), tokens);
+    nvgpu::DeviceAsyncWaitOp::create(rewriter, op->getLoc(), groupToken,
+                                     nullptr);
     // Clean up old stores.
     for (Operation *writeOp : group)
       rewriter.eraseOp(writeOp);

@@ -522,15 +522,14 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__config>
 #  include <__functional/is_transparent.h>
 #  include <__functional/operations.h>
-#  include <__fwd/set.h>
 #  include <__iterator/erase_if_container.h>
 #  include <__iterator/iterator_traits.h>
-#  include <__iterator/ranges_iterator_traits.h>
 #  include <__iterator/reverse_iterator.h>
 #  include <__memory/allocator.h>
 #  include <__memory/allocator_traits.h>
 #  include <__memory_resource/polymorphic_allocator.h>
 #  include <__node_handle>
+#  include <__ranges/access.h>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
 #  include <__ranges/from_range.h>
@@ -538,7 +537,6 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__type_traits/container_traits.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
-#  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
@@ -570,7 +568,10 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Key, class _Compare, class _Allocator>
+template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
+class multiset;
+
+template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class set {
 public:
   // types:
@@ -660,22 +661,20 @@ public:
       : set(from_range, std::forward<_Range>(__range), key_compare(), __a) {}
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI set(const set& __s) : __tree_(__s.__tree_) { insert(__s.begin(), __s.end()); }
+  _LIBCPP_HIDE_FROM_ABI set(const set& __s) = default;
 
   _LIBCPP_HIDE_FROM_ABI set& operator=(const set& __s) = default;
 
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI set(set&& __s) noexcept(is_nothrow_move_constructible<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI set(set&& __s) = default;
 #  endif // _LIBCPP_CXX03_LANG
 
   _LIBCPP_HIDE_FROM_ABI explicit set(const allocator_type& __a) : __tree_(__a) {}
 
-  _LIBCPP_HIDE_FROM_ABI set(const set& __s, const allocator_type& __a) : __tree_(__s.__tree_.value_comp(), __a) {
-    insert(__s.begin(), __s.end());
-  }
+  _LIBCPP_HIDE_FROM_ABI set(const set& __s, const allocator_type& __alloc) : __tree_(__s.__tree_, __alloc) {}
 
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI set(set&& __s, const allocator_type& __a);
+  _LIBCPP_HIDE_FROM_ABI set(set&& __s, const allocator_type& __alloc) : __tree_(std::move(__s.__tree_), __alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI set(initializer_list<value_type> __il, const value_compare& __comp = value_compare())
       : __tree_(__comp) {
@@ -697,10 +696,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI set& operator=(set&& __s) noexcept(is_nothrow_move_assignable<__base>::value) {
-    __tree_ = std::move(__s.__tree_);
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI set& operator=(set&& __s) = default;
 #  endif // _LIBCPP_CXX03_LANG
 
   _LIBCPP_HIDE_FROM_ABI ~set() { static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
@@ -732,28 +728,24 @@ public:
   }
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __p, _Args&&... __args) {
-    return __tree_.__emplace_hint_unique(__p, std::forward<_Args>(__args)...);
+    return __tree_.__emplace_hint_unique(__p, std::forward<_Args>(__args)...).first;
   }
 #  endif // _LIBCPP_CXX03_LANG
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __v) { return __tree_.__emplace_unique(__v); }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v) {
-    return __tree_.__emplace_hint_unique(__p, __v);
+    return __tree_.__emplace_hint_unique(__p, __v).first;
   }
 
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __f, _InputIterator __l) {
-    for (const_iterator __e = cend(); __f != __l; ++__f)
-      __tree_.__emplace_hint_unique(__e, *__f);
+  _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __first, _InputIterator __last) {
+    __tree_.__insert_range_unique(__first, __last);
   }
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
-    const_iterator __end = cend();
-    for (auto&& __element : __range) {
-      __tree_.__emplace_hint_unique(__end, std::forward<decltype(__element)>(__element));
-    }
+    __tree_.__insert_range_unique(ranges::begin(__range), ranges::end(__range));
   }
 #  endif
 
@@ -763,7 +755,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __v) {
-    return __tree_.__emplace_hint_unique(__p, std::move(__v));
+    return __tree_.__emplace_hint_unique(__p, std::move(__v)).first;
   }
 
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
@@ -853,30 +845,40 @@ public:
   }
 #  endif // _LIBCPP_STD_VER >= 20
 
-  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __k) { return __tree_.lower_bound(__k); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __k) const { return __tree_.lower_bound(__k); }
+  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __k) { return __tree_.__lower_bound_unique(__k); }
+
+  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __k) const {
+    return __tree_.__lower_bound_unique(__k);
+  }
+
+  // The transparent versions of the lookup functions use the _multi version, since a non-element key is allowed to
+  // match multiple elements.
 #  if _LIBCPP_STD_VER >= 14
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _K2& __k) {
-    return __tree_.lower_bound(__k);
+    return __tree_.__lower_bound_multi(__k);
   }
 
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _K2& __k) const {
-    return __tree_.lower_bound(__k);
+    return __tree_.__lower_bound_multi(__k);
   }
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __k) { return __tree_.upper_bound(__k); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __k) const { return __tree_.upper_bound(__k); }
+  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __k) { return __tree_.__upper_bound_unique(__k); }
+
+  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __k) const {
+    return __tree_.__upper_bound_unique(__k);
+  }
+
 #  if _LIBCPP_STD_VER >= 14
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _K2& __k) {
-    return __tree_.upper_bound(__k);
+    return __tree_.__upper_bound_multi(__k);
   }
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _K2& __k) const {
-    return __tree_.upper_bound(__k);
+    return __tree_.__upper_bound_multi(__k);
   }
 #  endif
 
@@ -900,20 +902,20 @@ public:
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
-          class _Compare   = less<__iter_value_type<_InputIterator>>,
-          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
+          class _Compare   = less<__iterator_value_type<_InputIterator>>,
+          class _Allocator = allocator<__iterator_value_type<_InputIterator>>,
           class            = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value, void>,
-          class            = enable_if_t<!__is_allocator<_Compare>::value, void>>
+          class            = enable_if_t<__is_allocator_v<_Allocator>>,
+          class            = enable_if_t<!__is_allocator_v<_Compare>>>
 set(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
-    -> set<__iter_value_type<_InputIterator>, _Compare, _Allocator>;
+    -> set<__iterator_value_type<_InputIterator>, _Compare, _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Compare   = less<ranges::range_value_t<_Range>>,
           class _Allocator = allocator<ranges::range_value_t<_Range>>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value, void>,
-          class            = enable_if_t<!__is_allocator<_Compare>::value, void>>
+          class            = enable_if_t<__is_allocator_v<_Allocator>>,
+          class            = enable_if_t<!__is_allocator_v<_Compare>>>
 set(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator())
     -> set<ranges::range_value_t<_Range>, _Compare, _Allocator>;
 #    endif
@@ -921,41 +923,26 @@ set(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator())
 template <class _Key,
           class _Compare   = less<_Key>,
           class _Allocator = allocator<_Key>,
-          class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
+          class            = enable_if_t<!__is_allocator_v<_Compare>>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 set(initializer_list<_Key>, _Compare = _Compare(), _Allocator = _Allocator()) -> set<_Key, _Compare, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
-          class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-set(_InputIterator,
-    _InputIterator,
-    _Allocator) -> set<__iter_value_type<_InputIterator>, less<__iter_value_type<_InputIterator>>, _Allocator>;
+          class = enable_if_t<__is_allocator_v<_Allocator>>>
+set(_InputIterator, _InputIterator, _Allocator)
+    -> set<__iterator_value_type<_InputIterator>, less<__iterator_value_type<_InputIterator>>, _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
-template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-set(from_range_t,
-    _Range&&,
-    _Allocator) -> set<ranges::range_value_t<_Range>, less<ranges::range_value_t<_Range>>, _Allocator>;
+template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
+set(from_range_t, _Range&&, _Allocator)
+    -> set<ranges::range_value_t<_Range>, less<ranges::range_value_t<_Range>>, _Allocator>;
 #    endif
 
-template <class _Key, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+template <class _Key, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 set(initializer_list<_Key>, _Allocator) -> set<_Key, less<_Key>, _Allocator>;
 #  endif
-
-#  ifndef _LIBCPP_CXX03_LANG
-
-template <class _Key, class _Compare, class _Allocator>
-set<_Key, _Compare, _Allocator>::set(set&& __s, const allocator_type& __a) : __tree_(std::move(__s.__tree_), __a) {
-  if (__a != __s.get_allocator()) {
-    const_iterator __e = cend();
-    while (!__s.empty())
-      insert(__e, std::move(__s.__tree_.remove(__s.begin())->__value_));
-  }
-}
-
-#  endif // _LIBCPP_CXX03_LANG
 
 template <class _Key, class _Compare, class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI bool
@@ -1119,24 +1106,17 @@ public:
       : multiset(from_range, std::forward<_Range>(__range), key_compare(), __a) {}
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI multiset(const multiset& __s)
-      : __tree_(__s.__tree_.value_comp(),
-                __alloc_traits::select_on_container_copy_construction(__s.__tree_.__alloc())) {
-    insert(__s.begin(), __s.end());
-  }
+  _LIBCPP_HIDE_FROM_ABI multiset(const multiset& __s) = default;
 
   _LIBCPP_HIDE_FROM_ABI multiset& operator=(const multiset& __s) = default;
 
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s) noexcept(is_nothrow_move_constructible<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s) = default;
 
-  _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s, const allocator_type& __a);
+  _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s, const allocator_type& __a) : __tree_(std::move(__s.__tree_), __a) {}
 #  endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI explicit multiset(const allocator_type& __a) : __tree_(__a) {}
-  _LIBCPP_HIDE_FROM_ABI multiset(const multiset& __s, const allocator_type& __a)
-      : __tree_(__s.__tree_.value_comp(), __a) {
-    insert(__s.begin(), __s.end());
-  }
+  _LIBCPP_HIDE_FROM_ABI multiset(const multiset& __s, const allocator_type& __a) : __tree_(__s.__tree_, __a) {}
 
 #  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI multiset(initializer_list<value_type> __il, const value_compare& __comp = value_compare())
@@ -1160,10 +1140,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI multiset& operator=(multiset&& __s) _NOEXCEPT_(is_nothrow_move_assignable<__base>::value) {
-    __tree_ = std::move(__s.__tree_);
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI multiset& operator=(multiset&& __s) = default;
 #  endif // _LIBCPP_CXX03_LANG
 
   _LIBCPP_HIDE_FROM_ABI ~multiset() {
@@ -1207,18 +1184,14 @@ public:
   }
 
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __f, _InputIterator __l) {
-    for (const_iterator __e = cend(); __f != __l; ++__f)
-      __tree_.__emplace_hint_multi(__e, *__f);
+  _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __first, _InputIterator __last) {
+    __tree_.__insert_range_multi(__first, __last);
   }
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
-    const_iterator __end = cend();
-    for (auto&& __element : __range) {
-      __tree_.__emplace_hint_multi(__end, std::forward<decltype(__element)>(__element));
-    }
+    __tree_.__insert_range_multi(ranges::begin(__range), ranges::end(__range));
   }
 #  endif
 
@@ -1318,30 +1291,38 @@ public:
   }
 #  endif // _LIBCPP_STD_VER >= 20
 
-  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __k) { return __tree_.lower_bound(__k); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __k) const { return __tree_.lower_bound(__k); }
+  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __k) { return __tree_.__lower_bound_multi(__k); }
+
+  _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __k) const {
+    return __tree_.__lower_bound_multi(__k);
+  }
+
 #  if _LIBCPP_STD_VER >= 14
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _K2& __k) {
-    return __tree_.lower_bound(__k);
+    return __tree_.__lower_bound_multi(__k);
   }
 
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _K2& __k) const {
-    return __tree_.lower_bound(__k);
+    return __tree_.__lower_bound_multi(__k);
   }
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __k) { return __tree_.upper_bound(__k); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __k) const { return __tree_.upper_bound(__k); }
+  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __k) { return __tree_.__upper_bound_multi(__k); }
+
+  _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __k) const {
+    return __tree_.__upper_bound_multi(__k);
+  }
+
 #  if _LIBCPP_STD_VER >= 14
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _K2& __k) {
-    return __tree_.upper_bound(__k);
+    return __tree_.__upper_bound_multi(__k);
   }
   template <typename _K2, enable_if_t<__is_transparent_v<_Compare, _K2>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _K2& __k) const {
-    return __tree_.upper_bound(__k);
+    return __tree_.__upper_bound_multi(__k);
   }
 #  endif
 
@@ -1365,20 +1346,20 @@ public:
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
-          class _Compare   = less<__iter_value_type<_InputIterator>>,
-          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
+          class _Compare   = less<__iterator_value_type<_InputIterator>>,
+          class _Allocator = allocator<__iterator_value_type<_InputIterator>>,
           class            = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value, void>,
-          class            = enable_if_t<!__is_allocator<_Compare>::value, void>>
+          class            = enable_if_t<__is_allocator_v<_Allocator>>,
+          class            = enable_if_t<!__is_allocator_v<_Compare>>>
 multiset(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
-    -> multiset<__iter_value_type<_InputIterator>, _Compare, _Allocator>;
+    -> multiset<__iterator_value_type<_InputIterator>, _Compare, _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Compare   = less<ranges::range_value_t<_Range>>,
           class _Allocator = allocator<ranges::range_value_t<_Range>>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value, void>,
-          class            = enable_if_t<!__is_allocator<_Compare>::value, void>>
+          class            = enable_if_t<__is_allocator_v<_Allocator>>,
+          class            = enable_if_t<!__is_allocator_v<_Compare>>>
 multiset(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator())
     -> multiset<ranges::range_value_t<_Range>, _Compare, _Allocator>;
 #    endif
@@ -1386,43 +1367,27 @@ multiset(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator(
 template <class _Key,
           class _Compare   = less<_Key>,
           class _Allocator = allocator<_Key>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value, void>,
-          class            = enable_if_t<!__is_allocator<_Compare>::value, void>>
-multiset(initializer_list<_Key>,
-         _Compare   = _Compare(),
-         _Allocator = _Allocator()) -> multiset<_Key, _Compare, _Allocator>;
+          class            = enable_if_t<__is_allocator_v<_Allocator>>,
+          class            = enable_if_t<!__is_allocator_v<_Compare>>>
+multiset(initializer_list<_Key>, _Compare = _Compare(), _Allocator = _Allocator())
+    -> multiset<_Key, _Compare, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
-          class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+          class = enable_if_t<__is_allocator_v<_Allocator>>>
 multiset(_InputIterator, _InputIterator, _Allocator)
-    -> multiset<__iter_value_type<_InputIterator>, less<__iter_value_type<_InputIterator>>, _Allocator>;
+    -> multiset<__iterator_value_type<_InputIterator>, less<__iterator_value_type<_InputIterator>>, _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
-template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-multiset(from_range_t,
-         _Range&&,
-         _Allocator) -> multiset<ranges::range_value_t<_Range>, less<ranges::range_value_t<_Range>>, _Allocator>;
+template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
+multiset(from_range_t, _Range&&, _Allocator)
+    -> multiset<ranges::range_value_t<_Range>, less<ranges::range_value_t<_Range>>, _Allocator>;
 #    endif
 
-template <class _Key, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
+template <class _Key, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 multiset(initializer_list<_Key>, _Allocator) -> multiset<_Key, less<_Key>, _Allocator>;
 #  endif
-
-#  ifndef _LIBCPP_CXX03_LANG
-
-template <class _Key, class _Compare, class _Allocator>
-multiset<_Key, _Compare, _Allocator>::multiset(multiset&& __s, const allocator_type& __a)
-    : __tree_(std::move(__s.__tree_), __a) {
-  if (__a != __s.get_allocator()) {
-    const_iterator __e = cend();
-    while (!__s.empty())
-      insert(__e, std::move(__s.__tree_.remove(__s.begin())->__value_));
-  }
-}
-
-#  endif // _LIBCPP_CXX03_LANG
 
 template <class _Key, class _Compare, class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI bool

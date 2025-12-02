@@ -24,6 +24,7 @@ class Type;
 class IntegerType;
 class FloatType;
 class FunctionType;
+class GraphType;
 class IndexType;
 class MemRefType;
 class VectorType;
@@ -81,6 +82,7 @@ public:
   IntegerType getIntegerType(unsigned width);
   IntegerType getIntegerType(unsigned width, bool isSigned);
   FunctionType getFunctionType(TypeRange inputs, TypeRange results);
+  GraphType getGraphType(TypeRange inputs, TypeRange results);
   TupleType getTupleType(TypeRange elementTypes);
   NoneType getNoneType();
 
@@ -500,6 +502,7 @@ private:
 public:
   /// Create an operation of specific op type at the current insertion point.
   template <typename OpTy, typename... Args>
+  [[deprecated("Use OpTy::create instead")]]
   OpTy create(Location location, Args &&...args) {
     OperationState state(location,
                          getCheckRegisteredInfo<OpTy>(location.getContext()));
@@ -513,6 +516,12 @@ public:
   /// Create an operation of specific op type at the current insertion point,
   /// and immediately try to fold it. This functions populates 'results' with
   /// the results of the operation.
+  ///
+  /// Note: This performs opportunistic eager folding during IR construction.
+  /// The folders are designed to operate efficiently on canonical IR, which
+  /// this API does not enforce. Complete folding isn't only expected in the
+  /// context of canonicalization which intertwine folders with pattern
+  /// rewrites until fixed-point.
   template <typename OpTy, typename... Args>
   void createOrFold(SmallVectorImpl<Value> &results, Location location,
                     Args &&...args) {
@@ -552,7 +561,7 @@ public:
   template <typename OpTy, typename... Args>
   std::enable_if_t<OpTy::template hasTrait<OpTrait::ZeroResults>(), OpTy>
   createOrFold(Location location, Args &&...args) {
-    auto op = create<OpTy>(location, std::forward<Args>(args)...);
+    auto op = OpTy::create(*this, location, std::forward<Args>(args)...);
     SmallVector<Value, 0> unused;
     (void)tryFold(op.getOperation(), unused);
 
@@ -662,7 +671,7 @@ public:
   /// location.
   template <typename OpTy, typename... Args>
   OpTy create(Args &&...args) {
-    return OpBuilder::create<OpTy>(curLoc, std::forward<Args>(args)...);
+    return OpTy::create(*this, curLoc, std::forward<Args>(args)...);
   }
 
   /// Create an operation of specific op type at the current insertion point,

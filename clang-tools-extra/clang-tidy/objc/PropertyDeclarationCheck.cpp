@@ -1,4 +1,4 @@
-//===--- PropertyDeclarationCheck.cpp - clang-tidy-------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,17 +27,23 @@ enum NamingStyle {
   CategoryProperty = 2,
 };
 
+} // namespace
+
 /// For now we will only fix 'CamelCase' or 'abc_CamelCase' property to
 /// 'camelCase' or 'abc_camelCase'. For other cases the users need to
 /// come up with a proper name by their own.
 /// FIXME: provide fix for snake_case to snakeCase
-FixItHint generateFixItHint(const ObjCPropertyDecl *Decl, NamingStyle Style) {
+static FixItHint generateFixItHint(const ObjCPropertyDecl *Decl,
+                                   NamingStyle Style) {
   auto Name = Decl->getName();
   auto NewName = Decl->getName().str();
   size_t Index = 0;
   if (Style == CategoryProperty) {
-    Index = Name.find_first_of('_') + 1;
-    NewName.replace(0, Index - 1, Name.substr(0, Index - 1).lower());
+    const size_t UnderScorePos = Name.find_first_of('_');
+    if (UnderScorePos != llvm::StringRef::npos) {
+      Index = UnderScorePos + 1;
+      NewName.replace(0, Index - 1, Name.substr(0, Index - 1).lower());
+    }
   }
   if (Index < Name.size()) {
     NewName[Index] = tolower(NewName[Index]);
@@ -50,7 +56,7 @@ FixItHint generateFixItHint(const ObjCPropertyDecl *Decl, NamingStyle Style) {
   return {};
 }
 
-std::string validPropertyNameRegex(bool UsedInMatcher) {
+static std::string validPropertyNameRegex(bool UsedInMatcher) {
   // Allow any of these names:
   // foo
   // fooBar
@@ -68,18 +74,18 @@ std::string validPropertyNameRegex(bool UsedInMatcher) {
   //
   // aRbITRaRyCapS is allowed to avoid generating false positives for names
   // like isVitaminBSupplement, CProgrammingLanguage, and isBeforeM.
-  std::string StartMatcher = UsedInMatcher ? "::" : "^";
+  const std::string StartMatcher = UsedInMatcher ? "::" : "^";
   return StartMatcher + "([a-z]|[A-Z][A-Z0-9])[a-z0-9A-Z]*$";
 }
 
-bool hasCategoryPropertyPrefix(llvm::StringRef PropertyName) {
+static bool hasCategoryPropertyPrefix(llvm::StringRef PropertyName) {
   auto RegexExp =
       llvm::Regex("^[a-zA-Z][a-zA-Z0-9]*_[a-zA-Z0-9][a-zA-Z0-9_]+$");
   return RegexExp.match(PropertyName);
 }
 
-bool prefixedPropertyNameValid(llvm::StringRef PropertyName) {
-  size_t Start = PropertyName.find_first_of('_');
+static bool prefixedPropertyNameValid(llvm::StringRef PropertyName) {
+  const size_t Start = PropertyName.find_first_of('_');
   assert(Start != llvm::StringRef::npos && Start + 1 < PropertyName.size());
   auto Prefix = PropertyName.substr(0, Start);
   if (Prefix.lower() != Prefix) {
@@ -88,7 +94,6 @@ bool prefixedPropertyNameValid(llvm::StringRef PropertyName) {
   auto RegexExp = llvm::Regex(llvm::StringRef(validPropertyNameRegex(false)));
   return RegexExp.match(PropertyName.substr(Start + 1));
 }
-} // namespace
 
 void PropertyDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(objcPropertyDecl(
@@ -110,8 +115,9 @@ void PropertyDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
       hasCategoryPropertyPrefix(MatchedDecl->getName())) {
     if (!prefixedPropertyNameValid(MatchedDecl->getName()) ||
         CategoryDecl->IsClassExtension()) {
-      NamingStyle Style = CategoryDecl->IsClassExtension() ? StandardProperty
-                                                           : CategoryProperty;
+      const NamingStyle Style = CategoryDecl->IsClassExtension()
+                                    ? StandardProperty
+                                    : CategoryProperty;
       diag(MatchedDecl->getLocation(),
            "property name '%0' not using lowerCamelCase style or not prefixed "
            "in a category, according to the Apple Coding Guidelines")

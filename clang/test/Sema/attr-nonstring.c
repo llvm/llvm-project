@@ -229,3 +229,11 @@ struct Outer o2[] = {
     }
   }
 };
+
+// The attribute also works with a pointer type, not just an array type.
+__attribute__((nonstring)) char *ptr1;
+__attribute__((nonstring)) const unsigned char *ptr2;
+struct GH150951 {
+  __attribute__((nonstring)) char *ptr1;
+  __attribute__((nonstring)) const unsigned char *ptr2;
+};

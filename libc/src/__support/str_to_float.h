@@ -16,6 +16,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
 
 #include "hdr/errno_macros.h" // For ERANGE
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
@@ -32,8 +33,7 @@
 #include "src/__support/str_to_integer.h"
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
-
-#include <stdint.h>
+#include "src/__support/wctype_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -335,9 +335,9 @@ constexpr int32_t NUM_POWERS_OF_TWO =
 // the Eisel-Lemire algorithm fails, it's slower but more accurate. It's based
 // on the Simple Decimal Conversion algorithm by Nigel Tao, described at this
 // link: https://nigeltao.github.io/blog/2020/parse-number-f64-simple.html
-template <class T>
+template <typename T, typename CharType>
 LIBC_INLINE FloatConvertReturn<T> simple_decimal_conversion(
-    const char *__restrict numStart,
+    const CharType *__restrict numStart,
     const size_t num_len = cpp::numeric_limits<size_t>::max(),
     RoundDirection round = RoundDirection::Nearest) {
   using FPBits = typename fputil::FPBits<T>;
@@ -677,12 +677,11 @@ template <> LIBC_INLINE constexpr int32_t get_lower_bound<double>() {
 // Takes a mantissa and base 10 exponent and converts it into its closest
 // floating point type T equivalient. First we try the Eisel-Lemire algorithm,
 // then if that fails then we fall back to a more accurate algorithm for
-// accuracy. The resulting mantissa and exponent are placed in outputMantissa
-// and outputExp2.
-template <class T>
+// accuracy.
+template <typename T, typename CharType>
 LIBC_INLINE FloatConvertReturn<T> decimal_exp_to_float(
     ExpandedFloat<T> init_num, bool truncated, RoundDirection round,
-    const char *__restrict numStart,
+    const CharType *__restrict numStart,
     const size_t num_len = cpp::numeric_limits<size_t>::max()) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
@@ -861,36 +860,42 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
   return output;
 }
 
-// checks if the next 4 characters of the string pointer are the start of a
+// Checks if the first characters of the string pointer are the start of a
 // hexadecimal floating point number. Does not advance the string pointer.
-LIBC_INLINE bool is_float_hex_start(const char *__restrict src,
-                                    const char decimalPoint) {
-  if (!(src[0] == '0' && tolower(src[1]) == 'x')) {
+template <typename CharType>
+LIBC_INLINE static bool is_float_hex_start(const CharType *__restrict src) {
+  if (!is_char_or_wchar(src[0], '0', L'0') ||
+      !is_char_or_wchar(tolower(src[1]), 'x', L'x')) {
     return false;
   }
   size_t first_digit = 2;
-  if (src[2] == decimalPoint) {
+  if (src[2] == constants<CharType>::DECIMAL_POINT) {
     ++first_digit;
   }
   return isalnum(src[first_digit]) && b36_char_to_int(src[first_digit]) < 16;
 }
 
-// Takes the start of a string representing a decimal float, as well as the
-// local decimalPoint. It returns if it suceeded in parsing any digits, and if
-// the return value is true then the outputs are pointer to the end of the
-// number, and the mantissa and exponent for the closest float T representation.
-// If the return value is false, then it is assumed that there is no number
-// here.
-template <class T>
-LIBC_INLINE StrToNumResult<ExpandedFloat<T>>
-decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
-                        RoundDirection round) {
+// Verifies that first prefix_len characters of str, when lowercased, match the
+// specified prefix.
+template <typename CharType>
+LIBC_INLINE static bool tolower_starts_with(const CharType *str,
+                                            size_t prefix_len,
+                                            const CharType *prefix) {
+  for (size_t i = 0; i < prefix_len; ++i) {
+    if (tolower(str[i]) != prefix[i])
+      return false;
+  }
+  return true;
+}
+
+// Attempts parsing a decimal floating point number at the start of the string.
+template <typename T, typename CharType>
+LIBC_INLINE static StrToNumResult<ExpandedFloat<T>>
+decimal_string_to_float(const CharType *__restrict src, RoundDirection round) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
   constexpr uint32_t BASE = 10;
-  constexpr char EXPONENT_MARKER = 'e';
-
   bool truncated = false;
   bool seen_digit = false;
   bool after_decimal = false;
@@ -927,7 +932,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
       ++index;
       continue;
     }
-    if (src[index] == DECIMAL_POINT) {
+    if (src[index] == constants<CharType>::DECIMAL_POINT) {
       if (after_decimal) {
         break; // this means that src[index] points to a second decimal point,
                // ending the number.
@@ -944,13 +949,10 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
     return output;
 
   // TODO: When adding max length argument, handle the case of a trailing
-  // EXPONENT MARKER, see scanf for more details.
-  if (tolower(src[index]) == EXPONENT_MARKER) {
-    bool has_sign = false;
-    if (src[index + 1] == '+' || src[index + 1] == '-') {
-      has_sign = true;
-    }
-    if (isdigit(src[index + 1 + static_cast<size_t>(has_sign)])) {
+  // exponent marker, see scanf for more details.
+  if (tolower(src[index]) == constants<CharType>::DECIMAL_EXPONENT_MARKER) {
+    int sign = get_sign(src + index + 1);
+    if (isdigit(src[index + 1 + static_cast<size_t>(sign != 0)])) {
       ++index;
       auto result = strtointeger<int32_t>(src + index, 10);
       if (result.has_error())
@@ -986,22 +988,16 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
   return output;
 }
 
-// Takes the start of a string representing a hexadecimal float, as well as the
-// local decimal point. It returns if it suceeded in parsing any digits, and if
-// the return value is true then the outputs are pointer to the end of the
-// number, and the mantissa and exponent for the closest float T representation.
-// If the return value is false, then it is assumed that there is no number
-// here.
-template <class T>
-LIBC_INLINE StrToNumResult<ExpandedFloat<T>>
-hexadecimal_string_to_float(const char *__restrict src,
-                            const char DECIMAL_POINT, RoundDirection round) {
+// Attempts parsing a hexadecimal floating point number at the start of the
+// string.
+template <typename T, typename CharType>
+LIBC_INLINE static StrToNumResult<ExpandedFloat<T>>
+hexadecimal_string_to_float(const CharType *__restrict src,
+                            RoundDirection round) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
   constexpr uint32_t BASE = 16;
-  constexpr char EXPONENT_MARKER = 'p';
-
   bool truncated = false;
   bool seen_digit = false;
   bool after_decimal = false;
@@ -1039,7 +1035,7 @@ hexadecimal_string_to_float(const char *__restrict src,
       ++index;
       continue;
     }
-    if (src[index] == DECIMAL_POINT) {
+    if (src[index] == constants<CharType>::DECIMAL_POINT) {
       if (after_decimal) {
         break; // this means that src[index] points to a second decimal point,
                // ending the number.
@@ -1058,12 +1054,9 @@ hexadecimal_string_to_float(const char *__restrict src,
   // Convert the exponent from having a base of 16 to having a base of 2.
   exponent *= 4;
 
-  if (tolower(src[index]) == EXPONENT_MARKER) {
-    bool has_sign = false;
-    if (src[index + 1] == '+' || src[index + 1] == '-') {
-      has_sign = true;
-    }
-    if (isdigit(src[index + 1 + static_cast<size_t>(has_sign)])) {
+  if (tolower(src[index]) == constants<CharType>::HEX_EXPONENT_MARKER) {
+    int sign = get_sign(src + index + 1);
+    if (isdigit(src[index + 1 + static_cast<size_t>(sign != 0)])) {
       ++index;
       auto result = strtointeger<int32_t>(src + index, 10);
       if (result.has_error())
@@ -1099,21 +1092,21 @@ hexadecimal_string_to_float(const char *__restrict src,
   return output;
 }
 
-template <class T>
+template <typename T, typename CharType>
 LIBC_INLINE typename fputil::FPBits<T>::StorageType
-nan_mantissa_from_ncharseq(const cpp::string_view ncharseq) {
+nan_mantissa_from_ncharseq(const CharType *str, size_t len) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
   StorageType nan_mantissa = 0;
 
-  if (ncharseq.data() != nullptr && isdigit(ncharseq[0])) {
+  if (len > 0 && isdigit(str[0])) {
     StrToNumResult<StorageType> strtoint_result =
-        strtointeger<StorageType>(ncharseq.data(), 0);
+        strtointeger<StorageType>(str, 0, len);
     if (!strtoint_result.has_error())
       nan_mantissa = strtoint_result.value;
 
-    if (strtoint_result.parsed_len != static_cast<ptrdiff_t>(ncharseq.size()))
+    if (strtoint_result.parsed_len != static_cast<ptrdiff_t>(len))
       nan_mantissa = 0;
   }
 
@@ -1124,59 +1117,44 @@ nan_mantissa_from_ncharseq(const cpp::string_view ncharseq) {
 // is used as the backend for all of the string to float functions.
 // TODO: Add src_len member to match strtointeger.
 // TODO: Next, move from char* and length to string_view
-template <class T>
-LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
+template <typename T, typename CharType>
+LIBC_INLINE StrToNumResult<T>
+strtofloatingpoint(const CharType *__restrict src) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 
   FPBits result = FPBits();
   bool seen_digit = false;
-  char sign = '+';
-
   int error = 0;
 
   size_t index = first_non_whitespace(src);
+  int sign = get_sign(src + index);
+  bool is_positive = (sign >= 0);
+  index += (sign != 0);
 
-  if (src[index] == '+' || src[index] == '-') {
-    sign = src[index];
-    ++index;
-  }
-
-  if (sign == '-') {
+  if (sign < 0) {
     result.set_sign(Sign::NEG);
   }
 
-  static constexpr char DECIMAL_POINT = '.';
-  static const char *inf_string = "infinity";
-  static const char *nan_string = "nan";
-
-  if (isdigit(src[index]) || src[index] == DECIMAL_POINT) { // regular number
+  if (isdigit(src[index]) ||
+      src[index] == constants<CharType>::DECIMAL_POINT) { // regular number
     int base = 10;
-    if (is_float_hex_start(src + index, DECIMAL_POINT)) {
+    if (is_float_hex_start(src + index)) {
       base = 16;
       index += 2;
       seen_digit = true;
     }
 
     RoundDirection round_direction = RoundDirection::Nearest;
-
     switch (fputil::quick_get_round()) {
     case FE_TONEAREST:
       round_direction = RoundDirection::Nearest;
       break;
     case FE_UPWARD:
-      if (sign == '+') {
-        round_direction = RoundDirection::Up;
-      } else {
-        round_direction = RoundDirection::Down;
-      }
+      round_direction = is_positive ? RoundDirection::Up : RoundDirection::Down;
       break;
     case FE_DOWNWARD:
-      if (sign == '+') {
-        round_direction = RoundDirection::Down;
-      } else {
-        round_direction = RoundDirection::Up;
-      }
+      round_direction = is_positive ? RoundDirection::Down : RoundDirection::Up;
       break;
     case FE_TOWARDZERO:
       round_direction = RoundDirection::Down;
@@ -1185,58 +1163,53 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
 
     StrToNumResult<ExpandedFloat<T>> parse_result({0, 0});
     if (base == 16) {
-      parse_result = hexadecimal_string_to_float<T>(src + index, DECIMAL_POINT,
-                                                    round_direction);
+      parse_result =
+          hexadecimal_string_to_float<T>(src + index, round_direction);
     } else { // base is 10
-      parse_result = decimal_string_to_float<T>(src + index, DECIMAL_POINT,
-                                                round_direction);
+      parse_result = decimal_string_to_float<T>(src + index, round_direction);
     }
     seen_digit = parse_result.parsed_len != 0;
     result.set_mantissa(parse_result.value.mantissa);
     result.set_biased_exponent(parse_result.value.exponent);
     index += parse_result.parsed_len;
     error = parse_result.error;
-  } else if (tolower(src[index]) == 'n') { // NaN
-    if (tolower(src[index + 1]) == nan_string[1] &&
-        tolower(src[index + 2]) == nan_string[2]) {
-      seen_digit = true;
-      index += 3;
-      StorageType nan_mantissa = 0;
-      // this handles the case of `NaN(n-character-sequence)`, where the
-      // n-character-sequence is made of 0 or more letters, numbers, or
-      // underscore characters in any order.
-      if (src[index] == '(') {
-        size_t left_paren = index;
+  } else if (tolower_starts_with(src + index, 3,
+                                 constants<CharType>::NAN_STRING)) {
+    // NAN
+    seen_digit = true;
+    index += 3;
+    StorageType nan_mantissa = 0;
+    // this handles the case of `NaN(n-character-sequence)`, where the
+    // n-character-sequence is made of 0 or more letters, numbers, or
+    // underscore characters in any order.
+    if (is_char_or_wchar(src[index], '(', L'(')) {
+      size_t left_paren = index;
+      ++index;
+      while (isalnum(src[index]) || is_char_or_wchar(src[index], '_', L'_'))
         ++index;
-        while (isalnum(src[index]) || src[index] == '_')
-          ++index;
-        if (src[index] == ')') {
-          ++index;
-          nan_mantissa = nan_mantissa_from_ncharseq<T>(
-              cpp::string_view(src + (left_paren + 1), index - left_paren - 2));
-        } else {
-          index = left_paren;
-        }
-      }
-      result = FPBits(result.quiet_nan(result.sign(), nan_mantissa));
-    }
-  } else if (tolower(src[index]) == 'i') { // INF
-    if (tolower(src[index + 1]) == inf_string[1] &&
-        tolower(src[index + 2]) == inf_string[2]) {
-      seen_digit = true;
-      result = FPBits(result.inf(result.sign()));
-      if (tolower(src[index + 3]) == inf_string[3] &&
-          tolower(src[index + 4]) == inf_string[4] &&
-          tolower(src[index + 5]) == inf_string[5] &&
-          tolower(src[index + 6]) == inf_string[6] &&
-          tolower(src[index + 7]) == inf_string[7]) {
-        // if the string is "INFINITY" then consume 8 characters.
-        index += 8;
+      if (is_char_or_wchar(src[index], ')', L')')) {
+        ++index;
+        nan_mantissa = nan_mantissa_from_ncharseq<T>(src + (left_paren + 1),
+                                                     index - left_paren - 2);
       } else {
-        index += 3;
+        index = left_paren;
       }
     }
+    result = FPBits(result.quiet_nan(result.sign(), nan_mantissa));
+  } else if (tolower_starts_with(src + index, 8,
+                                 constants<CharType>::INF_STRING)) {
+    // INFINITY
+    seen_digit = true;
+    result = FPBits(result.inf(result.sign()));
+    index += 8;
+  } else if (tolower_starts_with(src + index, 3,
+                                 constants<CharType>::INF_STRING)) {
+    // INF
+    seen_digit = true;
+    result = FPBits(result.inf(result.sign()));
+    index += 3;
   }
+
   if (!seen_digit) { // If there is nothing to actually parse, then return 0.
     return {T(0), 0, error};
   }
@@ -1263,7 +1236,7 @@ template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
     ++index;
 
   if (arg[index] == '\0')
-    nan_mantissa = nan_mantissa_from_ncharseq<T>(cpp::string_view(arg, index));
+    nan_mantissa = nan_mantissa_from_ncharseq<T>(arg, index);
 
   result = FPBits::quiet_nan(Sign::POS, nan_mantissa);
   return {result.get_val(), 0, error};

@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/Config/llvm-config.h"
@@ -40,33 +41,35 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Debugify.h"
+#include "llvm/Transforms/Utils/ProfileVerify.h"
 
 using namespace llvm;
 using namespace opt_tool;
 
-namespace llvm {
-cl::opt<bool> DebugifyEach(
+cl::opt<bool> llvm::DebugifyEach(
     "debugify-each",
     cl::desc("Start each pass with debugify and end it with check-debugify"));
 
-cl::opt<std::string>
-    DebugifyExport("debugify-export",
-                   cl::desc("Export per-pass debugify statistics to this file"),
-                   cl::value_desc("filename"));
+cl::opt<std::string> llvm::DebugifyExport(
+    "debugify-export",
+    cl::desc("Export per-pass debugify statistics to this file"),
+    cl::value_desc("filename"));
 
-cl::opt<bool> VerifyEachDebugInfoPreserve(
+cl::opt<bool> llvm::VerifyEachDebugInfoPreserve(
     "verify-each-debuginfo-preserve",
     cl::desc("Start each pass with collecting and end it with checking of "
              "debug info preservation."));
 
-cl::opt<std::string>
-    VerifyDIPreserveExport("verify-di-preserve-export",
-                   cl::desc("Export debug info preservation failures into "
-                            "specified (JSON) file (should be abs path as we use"
-                            " append mode to insert new JSON objects)"),
-                   cl::value_desc("filename"), cl::init(""));
+cl::opt<std::string> llvm::VerifyDIPreserveExport(
+    "verify-di-preserve-export",
+    cl::desc("Export debug info preservation failures into "
+             "specified (JSON) file (should be abs path as we use"
+             " append mode to insert new JSON objects)"),
+    cl::value_desc("filename"), cl::init(""));
 
-} // namespace llvm
+static cl::opt<bool> EnableLoopFusion("enable-loopfusion", cl::init(false),
+                                      cl::Hidden,
+                                      cl::desc("Enable the LoopFuse Pass"));
 
 enum class DebugLogging { None, Normal, Verbose, Quiet };
 
@@ -349,35 +352,33 @@ static void registerEPCallbacks(PassBuilder &PB) {
 
 bool llvm::runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
-    ToolOutputFile *Out, ToolOutputFile *ThinLTOLinkOut,
-    ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins,
-    ArrayRef<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks,
+    RTLIB::RuntimeLibcallsInfo &RTLCI, ToolOutputFile *Out,
+    ToolOutputFile *ThinLTOLinkOut, ToolOutputFile *OptRemarkFile,
+    StringRef PassPipeline, ArrayRef<PassPlugin> PassPlugins,
+    ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks,
     OutputKind OK, VerifierKind VK, bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
     bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
-    bool UnifiedLTO) {
-  auto FS = vfs::getRealFileSystem();
+    bool EnableProfcheck, bool UnifiedLTO) {
   std::optional<PGOOptions> P;
   switch (PGOKindFlag) {
   case InstrGen:
-    P = PGOOptions(ProfileFile, "", "", MemoryProfileFile, FS,
-                   PGOOptions::IRInstr, PGOOptions::NoCSAction,
-                   PGOColdFuncAttr);
+    P = PGOOptions(ProfileFile, "", "", MemoryProfileFile, PGOOptions::IRInstr,
+                   PGOOptions::NoCSAction, PGOColdFuncAttr);
     break;
   case InstrUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
+    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile,
                    PGOOptions::IRUse, PGOOptions::NoCSAction, PGOColdFuncAttr);
     break;
   case SampleUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
+    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile,
                    PGOOptions::SampleUse, PGOOptions::NoCSAction,
                    PGOColdFuncAttr);
     break;
   case NoPGO:
     if (DebugInfoForProfiling || PseudoProbeForProfiling ||
         !MemoryProfileFile.empty())
-      P = PGOOptions("", "", "", MemoryProfileFile, FS, PGOOptions::NoAction,
+      P = PGOOptions("", "", "", MemoryProfileFile, PGOOptions::NoAction,
                      PGOOptions::NoCSAction, PGOColdFuncAttr,
                      DebugInfoForProfiling, PseudoProbeForProfiling);
     else
@@ -399,7 +400,7 @@ bool llvm::runPassPipeline(
         P->CSProfileGenFile = CSProfileGenFile;
       } else
         P = PGOOptions("", CSProfileGenFile, ProfileRemappingFile,
-                       /*MemoryProfile=*/"", FS, PGOOptions::NoAction,
+                       /*MemoryProfile=*/"", PGOOptions::NoAction,
                        PGOOptions::CSIRInstr);
     } else /* CSPGOKindFlag == CSInstrUse */ {
       if (!P) {
@@ -416,6 +417,7 @@ bool llvm::runPassPipeline(
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
+  MAM.registerPass([&] { return RuntimeLibraryAnalysis(std::move(RTLCI)); });
 
   PassInstrumentationCallbacks PIC;
   PrintPassOptions PrintPassOpts;
@@ -445,6 +447,7 @@ bool llvm::runPassPipeline(
   // option has been enabled.
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.UnifiedLTO = UnifiedLTO;
+  PTO.LoopFusion = EnableLoopFusion;
   PassBuilder PB(TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
@@ -487,7 +490,8 @@ bool llvm::runPassPipeline(
   if (VerifyDIPreserve)
     MPM.addPass(NewPMDebugifyPass(DebugifyMode::OriginalDebugInfo, "",
                                   &DebugInfoBeforePass));
-
+  if (EnableProfcheck)
+    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileInjectorPass()));
   // Add passes according to the -passes options.
   if (!PassPipeline.empty()) {
     if (auto Err = PB.parsePassPipeline(MPM, PassPipeline)) {
@@ -504,6 +508,8 @@ bool llvm::runPassPipeline(
     MPM.addPass(NewPMCheckDebugifyPass(
         false, "", nullptr, DebugifyMode::OriginalDebugInfo,
         &DebugInfoBeforePass, VerifyDIPreserveExport));
+  if (EnableProfcheck)
+    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileVerifierPass()));
 
   // Add any relevant output pass at the end of the pipeline.
   switch (OK) {

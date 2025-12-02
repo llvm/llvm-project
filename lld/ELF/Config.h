@@ -278,6 +278,7 @@ struct Config {
   llvm::StringRef dtltoDistributor;
   llvm::SmallVector<llvm::StringRef, 0> dtltoDistributorArgs;
   llvm::StringRef dtltoCompiler;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerPrependArgs;
   llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
   llvm::SmallVector<llvm::StringRef, 0> undefined;
   llvm::SmallVector<SymbolVersion, 0> dynamicList;
@@ -358,7 +359,7 @@ struct Config {
   bool optRemarksWithHotness;
   bool picThunk;
   bool pie;
-  bool printGcSections;
+  llvm::StringRef printGcSections;
   bool printIcfSections;
   bool printMemoryUsage;
   std::optional<uint64_t> randomizeSectionPadding;
@@ -404,6 +405,7 @@ struct Config {
   bool zIfuncNoplt;
   bool zInitfirst;
   bool zInterpose;
+  bool zKeepDataSectionPrefix;
   bool zKeepTextSectionPrefix;
   bool zLrodataAfterBss;
   bool zNoBtCfi;
@@ -701,6 +703,8 @@ struct Ctx : CommonLinkerContext {
   std::unique_ptr<llvm::TarWriter> tar;
   // InputFile for linker created symbols with no source location.
   InputFile *internalFile = nullptr;
+  // Dummy Undefined for relocations without a symbol.
+  Undefined *dummySym = nullptr;
   // True if symbols can be exported (isExported) or preemptible.
   bool hasDynsym = false;
   // True if SHT_LLVM_SYMPART is used.
