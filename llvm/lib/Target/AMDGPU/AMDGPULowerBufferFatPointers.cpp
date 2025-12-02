@@ -1035,7 +1035,7 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
       LoadInst *NewLI = IRB.CreateAlignedLoad(
           LoadableType, NewPtr, commonAlignment(OrigLI.getAlign(), ByteOffset),
           Name + ".off." + Twine(ByteOffset));
-      copyMetadataForAccess(*NewLI, OrigLI);
+      copyMetadataForLoad(*NewLI, OrigLI);
       NewLI->setAAMetadata(
           AANodes.adjustForAccess(ByteOffset, LoadableType, DL));
       NewLI->setAtomic(OrigLI.getOrdering(), OrigLI.getSyncScopeID());
