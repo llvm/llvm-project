@@ -924,11 +924,39 @@ foreach bitsVal = [8, 32, 64, 128] in {
     let arguments = !con(args, baseArgs);
     let assemblyFormat = [{
       $globalPtr `,`  $ldsPtr `,` $offset `,` $aux
-      attr-dict `:` type($globalPtr) `,` type($ldsPtr)
+      attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
     }];
     let description = [{
       Asynchronously loads }] # !cast<string>(bitsVal) # [{ bits of data from a global memory pointer
       to a Local Data Share (LDS) pointer.
+
+      Available on gfx1250+.
+    }];
+
+    let extraClassDefinition = [{
+      ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+        return {getGlobalPtr(), getLdsPtr()};
+      }
+    }];
+  }
+}
+
+foreach bitsVal = [8, 32, 64, 128] in {
+  defvar bitsStr = "b" # !cast<string>(bitsVal);
+  def ROCDL_ClusterLoadAsyncToLDS # !toupper(bitsStr) # Op :
+    ROCDL_IntrOp<"cluster.load.async.to.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3, 4], ["offset", "cpol", "mask"]> {
+    dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
+                   Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                   I32Attr:$offset,
+                   I32Attr:$cpol,
+                   I32Attr:$mask);
+    let arguments = !con(args, baseArgs);
+    let assemblyFormat = [{
+      $globalPtr `,`  $ldsPtr `,` $offset `,` $cpol `,` $mask
+      attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
+    }];
+    let description = [{
+      Broadcasts memory load of }] # !cast<string>(bitsVal) # [{ bits of data for a cluster of workgroups.
 
       Available on gfx1250+.
     }];

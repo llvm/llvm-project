@@ -237,8 +237,9 @@ static llvm::Expected<Value> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                       DWARFExpression::Delegate *unit = nullptr,
                                       ExecutionContext *exe_ctx = nullptr,
                                       RegisterContext *reg_ctx = nullptr) {
-  DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
-                          /*addr_size*/ 4);
+  DataExtractor extractor(
+      expr.data(), expr.size(), lldb::eByteOrderLittle,
+      /*addr_size*/ exe_ctx ? exe_ctx->GetAddressByteSize() : 4);
 
   return DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp, extractor, unit,
                                    lldb::eRegisterKindLLDB,
