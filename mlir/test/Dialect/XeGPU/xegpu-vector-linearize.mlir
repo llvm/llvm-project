@@ -168,8 +168,7 @@ func.func @broadcast_stretch_in_middle(%arg0: vector<4x1x2xf32>) -> vector<4x3x2
 // CHECK: %4 = vector.extract %arg1[0, 0]
 // CHECK: %5 = arith.addi %4, %c1
 // CHECK: %6 = scf.if %3 -> (vector<3xf32>) {
-// CHECK:   %{{.*}} = vector.load %arg0[%c0, %5] : memref<?x?xf32>, vector<1xf32>
-// CHECK:   %{{.*}} = vector.extract {{.*}}[0] : f32
+// CHECK:   %{{.*}} = memref.load %arg0[%c0, %5] : memref<?x?xf32>
 // CHECK:   %{{.*}} = vector.insert {{.*}}, %2 [0] : f32 into vector<3xf32>
 // CHECK:   scf.yield {{.*}} : vector<3xf32>
 // CHECK: } else {

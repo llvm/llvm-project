@@ -2226,6 +2226,99 @@ public:
   }
 };
 
+/// Check if the element type is suitable for vector.load/store sinking.
+/// Element type must be index or byte-aligned integer or floating-point type.
+static bool isSupportedMemSinkElementType(Type type) {
+  if (isa<IndexType>(type))
+    return true;
+
+  return type.isIntOrFloat() && type.getIntOrFloatBitWidth() % 8 == 0;
+}
+
+/// Pattern to rewrite `vector.extract(vector.load) -> vector/memref.load.
+/// Only index and byte-aligned integer and floating-point element types are
+/// supported for now.
+///
+/// Example:
+/// ```
+///  vector.load %arg0[%arg1] : memref<?xf32>, vector<4xf32>
+///  vector.extract %0[1] : f32 from vector<4xf32>
+/// ```
+/// Gets converted to:
+/// ```
+/// %c1 = arith.constant 1 : index
+/// %0 = arith.addi %arg1, %c1 overflow<nsw> : index
+/// %1 = memref.load %arg0[%0] : memref<?xf32>
+/// ```
+///
+/// Note, this is consider beneficial only in single-use cases.
+class ExtractOpFromLoad final : public OpRewritePattern<ExtractOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(vector::ExtractOp op,
+                                PatternRewriter &rewriter) const override {
+    auto loadOp = op.getSource().getDefiningOp<vector::LoadOp>();
+    if (!loadOp)
+      return rewriter.notifyMatchFailure(op, "expected a load op");
+
+    // Checking for single use so we won't duplicate load ops.
+    if (!loadOp->hasOneUse())
+      return rewriter.notifyMatchFailure(op, "expected single op use");
+
+    VectorType loadVecType = loadOp.getVectorType();
+    if (loadVecType.isScalable())
+      return rewriter.notifyMatchFailure(op,
+                                         "scalable vectors are not supported");
+
+    MemRefType memType = loadOp.getMemRefType();
+
+    // Non-byte-aligned types are tricky and may require special handling,
+    // ignore them for now.
+    if (!isSupportedMemSinkElementType(memType.getElementType()))
+      return rewriter.notifyMatchFailure(op, "unsupported element type");
+
+    int64_t rankOffset = memType.getRank() - loadVecType.getRank();
+    if (rankOffset < 0)
+      return rewriter.notifyMatchFailure(op, "unsupported ranks combination");
+
+    auto extractVecType = dyn_cast<VectorType>(op.getResult().getType());
+    int64_t finalRank = 0;
+    if (extractVecType)
+      finalRank = extractVecType.getRank();
+
+    SmallVector<Value> indices = loadOp.getIndices();
+    SmallVector<OpFoldResult> extractPos = op.getMixedPosition();
+
+    // There may be memory stores between the load and the extract op, so we
+    // need to make sure that the new load op is inserted at the same place as
+    // the original load op.
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(loadOp);
+    Location loc = loadOp.getLoc();
+    ArithIndexingBuilder idxBuilderf(rewriter, loc);
+    for (auto i : llvm::seq<int64_t>(rankOffset, indices.size() - finalRank)) {
+      OpFoldResult pos = extractPos[i - rankOffset];
+      if (isZeroInteger(pos))
+        continue;
+
+      Value offset = getValueOrCreateConstantIndexOp(rewriter, loc, pos);
+      indices[i] = idxBuilderf.add(indices[i], offset);
+    }
+
+    Value base = loadOp.getBase();
+    if (extractVecType) {
+      rewriter.replaceOpWithNewOp<vector::LoadOp>(op, extractVecType, base,
+                                                  indices);
+    } else {
+      rewriter.replaceOpWithNewOp<memref::LoadOp>(op, base, indices);
+    }
+    // We checked for single use so we can safely erase the load op.
+    rewriter.eraseOp(loadOp);
+    return success();
+  }
+};
+
 // Pattern to rewrite a ExtractOp(CreateMask) -> CreateMask.
 class ExtractOpFromCreateMask final : public OpRewritePattern<ExtractOp> {
 public:
@@ -2363,7 +2456,9 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
+  results
+      .add<ExtractOpFromBroadcast, ExtractOpFromCreateMask, ExtractOpFromLoad>(
+          context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
 }

@@ -2384,8 +2384,7 @@ void mlir::vector::populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
 void mlir::vector::populateSinkVectorMemOpsPatterns(RewritePatternSet &patterns,
                                                     PatternBenefit benefit) {
   // TODO: Consider converting these patterns to canonicalizations.
-  patterns.add<ExtractOpFromLoad, StoreOpFromBroadcast>(patterns.getContext(),
-                                                        benefit);
+  patterns.add<StoreOpFromBroadcast>(patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateChainedVectorReductionFoldingPatterns(
