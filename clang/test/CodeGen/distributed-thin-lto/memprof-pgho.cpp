@@ -1,6 +1,8 @@
 // Test end-to-end ThinLTO optimization pipeline with PGHO, that it does not
 // interfere with other allocation instrumentation features.
 //
+// REQUIRES: x86-registered-target
+//
 // RUN: split-file %s %t
 // RUN: llvm-profdata merge %t/memprof.yaml -o %t/use.memprofdata
 //
