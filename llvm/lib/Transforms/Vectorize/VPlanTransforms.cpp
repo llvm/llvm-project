@@ -769,7 +769,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
     // Replace wide pointer inductions which have only their scalars used by
     // PtrAdd(IndStart, ScalarIVSteps (0, Step)).
     if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(&Phi)) {
-      if (!PtrIV->onlyScalarsGenerated(Plan.hasScalableVF()))
+      if (!Plan.hasScalarVFOnly() &&
+          !PtrIV->onlyScalarsGenerated(Plan.hasScalableVF()))
         continue;
 
       VPValue *PtrAdd = scalarizeVPWidenPointerInduction(PtrIV, Plan, Builder);
@@ -793,12 +794,19 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
         WideIV->getDebugLoc(), Builder);
 
     // Update scalar users of IV to use Step instead.
-    if (!HasOnlyVectorVFs)
+    if (!HasOnlyVectorVFs) {
+      assert(!Plan.hasScalableVF() &&
+             "plans containing a scalar VF cannot also include scalable VFs");
       WideIV->replaceAllUsesWith(Steps);
-    else
-      WideIV->replaceUsesWithIf(Steps, [WideIV](VPUser &U, unsigned) {
-        return U.usesScalars(WideIV);
-      });
+    } else {
+      bool HasScalableVF = Plan.hasScalableVF();
+      WideIV->replaceUsesWithIf(Steps,
+                                [WideIV, HasScalableVF](VPUser &U, unsigned) {
+                                  if (HasScalableVF)
+                                    return U.usesFirstLaneOnly(WideIV);
+                                  return U.usesScalars(WideIV);
+                                });
+    }
   }
 }
 
