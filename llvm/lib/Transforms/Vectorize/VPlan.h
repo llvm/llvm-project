@@ -1967,15 +1967,21 @@ protected:
 };
 
 /// A recipe to compute the pointers for widened memory accesses of
-/// SourceElementTy.
+/// SourceElementTy. The recipe produces a GEP when executed, but has different
+/// semantics from a plain GEP; the pointer and initial offset (which should be
+/// the constant zero, passed as ZeroOffset) are used while unrolling: for every
+/// unrolled copy of the recipe, the offset is VF + the offset of the previous
+/// copy. When no unrolling is in effect, this recipe can be optimized away, as
+/// it is just a GEP x, 0.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, VPValue *Offset, Type *SourceElementTy,
-                        GEPNoWrapFlags GEPFlags, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, {Ptr, Offset}, GEPFlags,
-                            DL),
+  VPVectorPointerRecipe(VPValue *Ptr, VPValue *ZeroOffset,
+                        Type *SourceElementTy, GEPNoWrapFlags GEPFlags,
+                        DebugLoc DL)
+      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, {Ptr, ZeroOffset},
+                            GEPFlags, DL),
         SourceElementTy(SourceElementTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
