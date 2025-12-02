@@ -1221,7 +1221,7 @@ public:
   /// for which our chosen predication strategy is scalarization (i.e. we
   /// don't have an alternate strategy such as masking available).
   /// \p VF is the vectorization factor that will be used to vectorize \p I.
-  bool isScalarWithPredication(Instruction *I, ElementCount VF) const;
+  bool isScalarWithPredication(Instruction *I, ElementCount VF);
 
   /// Returns true if \p I is an instruction that needs to be predicated
   /// at runtime.  The result is independent of the predication mechanism.
@@ -1241,15 +1241,14 @@ public:
   /// every iteration of the loop header.
   inline unsigned
   getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
-                          const BasicBlock *BB) const;
+                          const BasicBlock *BB);
 
   /// Return the costs for our two available strategies for lowering a
   /// div/rem operation which requires speculating at least one lane.
   /// First result is for scalarization (will be invalid for scalable
   /// vectors); second is for the safe-divisor strategy.
   std::pair<InstructionCost, InstructionCost>
-  getDivRemSpeculationCost(Instruction *I,
-                           ElementCount VF) const;
+  getDivRemSpeculationCost(Instruction *I, ElementCount VF);
 
   /// Returns true if \p I is a memory instruction with consecutive memory
   /// access that can be widened.
@@ -1726,6 +1725,12 @@ public:
   /// unless necessary, e.g. when the loop isn't legal to vectorize or when
   /// there is no predication.
   std::function<BlockFrequencyInfo &()> GetBFI;
+  BlockFrequencyInfo *BFI = nullptr;
+  BlockFrequencyInfo &getBFI() {
+    if (!BFI)
+      BFI = &GetBFI();
+    return *BFI;
+  }
 
   const Function *TheFunction;
 
@@ -2790,8 +2795,8 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
   Scalars[VF].insert_range(Worklist);
 }
 
-bool LoopVectorizationCostModel::isScalarWithPredication(
-    Instruction *I, ElementCount VF) const {
+bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
+                                                         ElementCount VF) {
   if (!isPredicatedInst(I))
     return false;
 
@@ -2885,7 +2890,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
 }
 
 unsigned LoopVectorizationCostModel::getPredBlockCostDivisor(
-    TargetTransformInfo::TargetCostKind CostKind, const BasicBlock *BB) const {
+    TargetTransformInfo::TargetCostKind CostKind, const BasicBlock *BB) {
   if (CostKind == TTI::TCK_CodeSize)
     return 1;
   // If the block wasn't originally predicated then return early to avoid
@@ -2893,9 +2898,9 @@ unsigned LoopVectorizationCostModel::getPredBlockCostDivisor(
   if (!Legal->blockNeedsPredication(BB))
     return 1;
 
-  BlockFrequencyInfo &BFI = GetBFI();
-  uint64_t HeaderFreq = BFI.getBlockFreq(TheLoop->getHeader()).getFrequency();
-  uint64_t BBFreq = BFI.getBlockFreq(BB).getFrequency();
+  uint64_t HeaderFreq =
+      getBFI().getBlockFreq(TheLoop->getHeader()).getFrequency();
+  uint64_t BBFreq = getBFI().getBlockFreq(BB).getFrequency();
   assert(HeaderFreq >= BBFreq &&
          "Header has smaller block freq than dominated BB?");
   return HeaderFreq / BBFreq;
@@ -2903,7 +2908,7 @@ unsigned LoopVectorizationCostModel::getPredBlockCostDivisor(
 
 std::pair<InstructionCost, InstructionCost>
 LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
-                                                    ElementCount VF) const {
+                                                     ElementCount VF) {
   assert(I->getOpcode() == Instruction::UDiv ||
          I->getOpcode() == Instruction::SDiv ||
          I->getOpcode() == Instruction::SRem ||
