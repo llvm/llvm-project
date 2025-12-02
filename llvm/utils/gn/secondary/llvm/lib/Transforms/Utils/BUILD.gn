@@ -8,7 +8,6 @@ static_library("Utils") {
   ]
   sources = [
     "AMDGPUEmitPrintf.cpp",
-    "ARMCommonInstCombineIntrinsic.cpp",
     "ASanStackFrameLayout.cpp",
     "AddDiscriminators.cpp",
     "AssumeBundleBuilder.cpp",

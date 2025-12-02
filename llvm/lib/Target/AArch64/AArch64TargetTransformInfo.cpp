@@ -25,7 +25,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
-#include "llvm/Transforms/Utils/ARMCommonInstCombineIntrinsic.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include <algorithm>
@@ -2874,18 +2873,6 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_neon_fmaxnm:
   case Intrinsic::aarch64_neon_fminnm:
     return instCombineMaxMinNM(IC, II);
-  case Intrinsic::aarch64_neon_tbl1:
-    return ARMCommon::simplifyNeonTbl1(II, IC);
-  case Intrinsic::aarch64_neon_smull:
-  case Intrinsic::aarch64_neon_umull: {
-    bool IsSigned = IID == Intrinsic::aarch64_neon_smull;
-    return ARMCommon::simplifyNeonMultiply(II, IC, IsSigned);
-  }
-  case Intrinsic::aarch64_crypto_aesd:
-  case Intrinsic::aarch64_crypto_aese:
-  case Intrinsic::aarch64_sve_aesd:
-  case Intrinsic::aarch64_sve_aese:
-    return ARMCommon::simplifyAES(II, IC);
   case Intrinsic::aarch64_sve_convert_from_svbool:
     return instCombineConvertFromSVBool(IC, II);
   case Intrinsic::aarch64_sve_dup:
