@@ -2964,7 +2964,7 @@ void SchedBoundary::bumpNode(SUnit *SU) {
   unsigned NextCycle = CurrCycle;
   switch (SchedModel->getMicroOpBufferSize()) {
   case 0:
-    // assert(ReadyCycle <= CurrCycle && "Broken PendingQueue");
+    assert(ReadyCycle <= CurrCycle && "Broken PendingQueue");
     break;
   case 1:
     if (ReadyCycle > NextCycle) {
