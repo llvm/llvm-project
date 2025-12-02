@@ -9994,24 +9994,25 @@ bool LLParser::parseAliasSummary(std::string Name, GlobalValue::GUID GUID,
 
   ValueInfo AliaseeVI;
   unsigned GVId;
-  if (parseGVReference(AliaseeVI, GVId))
-    return true;
+  auto AS = std::make_unique<AliasSummary>(GVFlags);
+  AS->setModulePath(ModulePath);
+
+  if (!EatIfPresent(lltok::kw_null)) {
+    if (parseGVReference(AliaseeVI, GVId))
+      return true;
+
+    // Record forward reference if the aliasee is not parsed yet.
+    if (AliaseeVI.getRef() == FwdVIRef) {
+      ForwardRefAliasees[GVId].emplace_back(AS.get(), Loc);
+    } else {
+      auto Summary = Index->findSummaryInModule(AliaseeVI, ModulePath);
+      assert(Summary && "Aliasee must be a definition");
+      AS->setAliasee(AliaseeVI, Summary);
+    }
+  }
 
   if (parseToken(lltok::rparen, "expected ')' here"))
     return true;
-
-  auto AS = std::make_unique<AliasSummary>(GVFlags);
-
-  AS->setModulePath(ModulePath);
-
-  // Record forward reference if the aliasee is not parsed yet.
-  if (AliaseeVI.getRef() == FwdVIRef) {
-    ForwardRefAliasees[GVId].emplace_back(AS.get(), Loc);
-  } else {
-    auto Summary = Index->findSummaryInModule(AliaseeVI, ModulePath);
-    assert(Summary && "Aliasee must be a definition");
-    AS->setAliasee(AliaseeVI, Summary);
-  }
 
   return addGlobalValueToIndex(Name, GUID,
                                (GlobalValue::LinkageTypes)GVFlags.Linkage, ID,
