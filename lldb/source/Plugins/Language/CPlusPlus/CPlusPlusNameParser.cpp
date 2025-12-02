@@ -421,11 +421,9 @@ bool CPlusPlusNameParser::ConsumeOperator() {
     if (m_next_token_index + 1 < m_tokens.size()) {
       // Look ahead two tokens.
       const clang::Token n_token = m_tokens[m_next_token_index + 1];
-      const tok::TokenKind n_token_kind = n_token.getKind();
       // If we find `(`, `<` or `[` then this is indeed operator<< no need for
       // fix.
-      if (n_token_kind != tok::l_paren && n_token_kind != tok::less &&
-          n_token_kind != tok::l_square) {
+      if (!n_token.isOneOf(tok::l_paren, tok::less, tok::l_square)) {
         clang::Token tmp_tok{};
         tmp_tok.startToken();
         tmp_tok.setLength(1);
