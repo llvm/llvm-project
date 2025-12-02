@@ -185,15 +185,15 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>
   // CHECK-DAG: %[[MEM_INT:.+]] = llvm.ptrtoint %[[MEM_BASE_OFFSET]] : !llvm.ptr<1> to i64
   // CHECK-DAG: %[[SMEM_INT:.+]] = llvm.ptrtoint %[[SMEM_BASE_OFFSET]] : !llvm.ptr<3> to i32
 
-  // CHECK-DAG: %[[MASK:.+]] = llvm.mlir.constant(144115188075855871 : i64) : i64
-  // CHECK: %[[MEM_INT_LOW_57:.+]] = llvm.and %[[MEM_INT]], %[[MASK]]
-  // CHECK: %[[C32:.+]] = llvm.mlir.constant(32 : i64) : i64
-  // CHECK: %[[SHIFT:.+]] = llvm.lshr %[[MEM_INT_LOW_57]], %[[C32]]
-  // CHECK-DAG: %[[MEM_INT_LOW:.+]] = llvm.trunc %[[MEM_INT_LOW_57]] : i64 to i32
-  // CHECK-DAG: %[[MEM_INT_HIGH:.+]] = llvm.trunc %[[SHIFT]] : i64 to i32
+  // CHECK: %[[MEM_INT_LOW:.+]] = llvm.trunc %[[MEM_INT]] : i64 to i32
+  // CHECK-DAG: %[[SHIFT:.+]] = llvm.mlir.constant(32 : i64)
+  // CHECK: %[[SHIFTED_MEM_INT:.+]] = llvm.lshr %[[MEM_INT]], %[[SHIFT]]
+  // CHECK: %[[MEM_INT_HIGH:.+]] = llvm.trunc %[[SHIFTED_MEM_INT]] : i64 to i32
+  // CHECK-DAG: %[[MASK:.+]] = llvm.mlir.constant(33554431 : i32)
+  // CHECK: %[[VALID_MEM_INT_HIGH:.+]] = llvm.and %[[MEM_INT_HIGH]], %[[MASK]]
 
-  // CHECK-DAG: %[[TYPE_MASK:.+]] = llvm.mlir.constant(-2147483648 : i32)
-  // CHECK: %[[MEM_INT_HIGH_TYPE:.+]] = llvm.or %[[MEM_INT_HIGH]], %[[TYPE_MASK]]
+  // CHECK-DAG: %[[TYPE_FIELD:.+]] = llvm.mlir.constant(-2147483648 : i32)
+  // CHECK: %[[MEM_INT_HIGH_TYPE:.+]] = llvm.or %[[VALID_MEM_INT_HIGH]], %[[TYPE_FIELD]]
 
   // CHECK-DAG: %[[C0:.+]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK-DAG: %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32

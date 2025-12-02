@@ -2301,19 +2301,20 @@ struct AMDGPUMakeDmaBaseLowering
     Value castForGlobalAddr =
         LLVM::PtrToIntOp::create(rewriter, loc, i64, globalPtr);
 
-    Value mask = createI64Constant(rewriter, loc, (1ull << 57) - 1);
-    Value first57BitsOfGlobalAddr =
-        LLVM::AndOp::create(rewriter, loc, castForGlobalAddr, mask);
-    Value shift = LLVM::LShrOp::create(rewriter, loc, first57BitsOfGlobalAddr,
+    Value lowHalf =
+        LLVM::TruncOp::create(rewriter, loc, i32, castForGlobalAddr);
+
+    Value shift = LLVM::LShrOp::create(rewriter, loc, castForGlobalAddr,
                                        createI64Constant(rewriter, loc, 32));
 
-    Value lowHalf =
-        LLVM::TruncOp::create(rewriter, loc, i32, first57BitsOfGlobalAddr);
     Value highHalf = LLVM::TruncOp::create(rewriter, loc, i32, shift);
+
+    Value mask = createI32Constant(rewriter, loc, (1ull << 25) - 1);
+    Value validHighHalf = LLVM::AndOp::create(rewriter, loc, highHalf, mask);
 
     Value typeField = createI32Constant(rewriter, loc, 2 << 30);
     Value highHalfPlusType =
-        LLVM::OrOp::create(rewriter, loc, highHalf, typeField);
+        LLVM::OrOp::create(rewriter, loc, validHighHalf, typeField);
 
     Value c0 = createI32Constant(rewriter, loc, 0);
     Value c1 = createI32Constant(rewriter, loc, 1);
