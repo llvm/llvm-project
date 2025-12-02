@@ -2980,10 +2980,13 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     assert((DestTy->isConstantMatrixType() || DestTy->isBuiltinType()) &&
            "Destination type must be a matrix or builtin type.");
     Value *Mat = Visit(E);
-    auto *MatTy = DestTy->getAs<ConstantMatrixType>();
+    unsigned NumCols = 1;
+    unsigned NumRows = 1;
     SmallVector<int> Mask;
-    unsigned NumCols = MatTy->getNumColumns();
-    unsigned NumRows = MatTy->getNumRows();
+    if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
+      NumCols = MatTy->getNumColumns();
+      NumRows = MatTy->getNumRows();
+    }
     unsigned ColOffset = NumCols;
     if (auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>())
       ColOffset = SrcMatTy->getNumColumns();
