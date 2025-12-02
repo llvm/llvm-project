@@ -52,8 +52,7 @@ struct [[ =u ]] h2{}; // expected-error {{call to deleted constructor of 'U'}}
                       // expected-note@#del-U {{'U' has been explicitly marked deleted here}}
 
 // Non structural
-struct [[="notstructural"]] h3{}; // expected-error {{C++26 annotation attribute requires an expression usable as a template argument}} \
-                                     expected-note {{reference to string literal is not allowed in a template argument}}
+struct [[="notstructural"]] h3{}; // expected-error {{C++26 annotation attribute requires a value of structural type}}
 
 // Pointer into string literal
 struct [[=&"foo"[0]]] h4{}; // expected-error {{C++26 annotation attribute requires an expression usable as a template argument}} \

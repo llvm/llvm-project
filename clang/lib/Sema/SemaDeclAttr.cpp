@@ -6413,7 +6413,9 @@ static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   Expr *CE = AL.getArgAsExpr(0);
   // Let E be the expression std​::​meta​::​reflect_constant(CE). E
   // shall be a constant expression; the result of E is the underlying constant
-  // of the annotation.
+  // of the annotation. Among other requirements it means for class type we need
+  // to check they are copy constructible, hence we'll perform a copy init
+  // sequence and observe its success.
   if (CE->isLValue()) {
     if (CE->getType()->isRecordType()) {
       InitializedEntity Entity = InitializedEntity::InitializeTemporary(
@@ -6441,31 +6443,33 @@ static void handleCxx26AnnotationAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   Result.Diag = &Notes;
 
   if (!CE->isValueDependent()) {
-    ConstantExprKind CEKind =
-        (CE->getType()->isClassType()
-             ? ConstantExprKind::ClassTemplateArgument
-             : ConstantExprKind::NonClassTemplateArgument);
-
-    // Argument to annotation must be usable as template argument.
-    if (!CE->EvaluateAsConstantExpr(Result, S.Context, CEKind)) {
-      S.Diag(CE->getBeginLoc(), diag::err_attribute_argument_type)
-          << "C++26 annotation" << /*template arg=*/4 << CE->getSourceRange();
-      for (auto P : Notes)
-        S.Diag(P.first, P.second);
-
-      return;
-    }
-    // Argument to annotation must evaluate to structural type.
+    // Argument to annotation must be of structural type.
     if (!CE->getType()->isStructuralType()) {
       S.Diag(CE->getBeginLoc(), diag::err_attribute_argument_type)
           << "C++26 annotation" << /*value or structural type*/ 5
           << CE->getSourceRange();
       return;
     }
+    // Argument to annotation must be usable as template argument.
+    ConstantExprKind CEKind =
+        (CE->getType()->isClassType()
+             ? ConstantExprKind::ClassTemplateArgument
+             : ConstantExprKind::NonClassTemplateArgument);
+    if (!CE->EvaluateAsConstantExpr(Result, S.Context, CEKind)) {
+      S.Diag(CE->getBeginLoc(), diag::err_attribute_argument_type)
+          << "C++26 annotation" << /*template arg=*/4 << CE->getSourceRange();
+      for (auto P : Notes)
+        S.Diag(P.first, P.second);
+      return;
+    }
   }
   auto *Annot = CXX26AnnotationAttr::Create(S.Context, CE, AL);
-  Annot->setValue(Result.Val);
-  Annot->setEqLoc(AL.getLoc());
+  // We have evaluated the expression so we can set the annotation value.
+  // Otherwise we'll leave it to instantiation to resolve it.
+  if (Result.Val.hasValue()) {
+    Annot->setValue(Result.Val);
+    Annot->setEqLoc(AL.getLoc());
+  }
   D->addAttr(Annot);
 }
 
