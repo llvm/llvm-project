@@ -28,6 +28,7 @@ namespace lldb {
 class SBAttachInfo;
 class SBBreakpoint;
 class SBBreakpointLocation;
+class SBBroadcaster;
 class SBCommandInterpreter;
 class SBCommandReturnObject;
 class SBCommunication;

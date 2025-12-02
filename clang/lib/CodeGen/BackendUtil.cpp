@@ -239,7 +239,8 @@ static AllocTokenOptions getAllocTokenOptions(const LangOptions &LangOpts,
   AllocTokenOptions Opts;
   if (LangOpts.AllocTokenMode)
     Opts.Mode = *LangOpts.AllocTokenMode;
-  Opts.MaxTokens = LangOpts.AllocTokenMax;
+  if (LangOpts.AllocTokenMax)
+    Opts.MaxTokens = *LangOpts.AllocTokenMax;
   Opts.Extended = CGOpts.SanitizeAllocTokenExtended;
   Opts.FastABI = CGOpts.SanitizeAllocTokenFastABI;
   return Opts;
@@ -1134,6 +1135,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                   CodeGenOpts.SanitizeMinimalRuntime),
               /*MayReturn=*/
               CodeGenOpts.SanitizeRecover.has(SanitizerKind::LocalBounds),
+              /*HandlerPreserveAllRegs=*/
+              static_cast<bool>(CodeGenOpts.SanitizeHandlerPreserveAllRegs),
           };
         }
         FPM.addPass(BoundsCheckingPass(Options));
