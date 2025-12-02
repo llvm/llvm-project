@@ -252,10 +252,10 @@ LogicalResult CpAsyncBulkGlobalToSharedClusterOp::verify() {
 static LogicalResult verifyMBarrierArriveLikeOp(Operation *op, Value addr,
                                                 NVVM::MemScopeKind scope,
                                                 Value retVal = nullptr) {
-  bool isSharedCluster = isPtrInSharedClusterSpace(addr);
   if (scope != NVVM::MemScopeKind::CTA && scope != NVVM::MemScopeKind::CLUSTER)
     return op->emitError("mbarrier scope must be either CTA or Cluster");
 
+  bool isSharedCluster = isPtrInSharedClusterSpace(addr);
   bool hasRetValue = static_cast<bool>(retVal);
   if (isSharedCluster && hasRetValue)
     return op->emitError(
@@ -307,6 +307,10 @@ LogicalResult MBarrierExpectTxOp::verify() {
 }
 
 LogicalResult MBarrierCompleteTxOp::verify() {
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
+}
+
+LogicalResult MBarrierTestWaitOp::verify() {
   return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
 }
 
@@ -2718,16 +2722,34 @@ mlir::NVVM::IDArgPair MBarrierArriveDropNocompleteOp::getIntrinsicIDAndArgs(
 mlir::NVVM::IDArgPair MBarrierTestWaitOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::MBarrierTestWaitOp>(op);
-  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
-  llvm::Intrinsic::ID id = isShared
-                               ? llvm::Intrinsic::nvvm_mbarrier_test_wait_shared
-                               : llvm::Intrinsic::nvvm_mbarrier_test_wait;
-  // Fill the Intrinsic Args
-  llvm::SmallVector<llvm::Value *> args;
-  args.push_back(mt.lookupValue(thisOp.getAddr()));
-  args.push_back(mt.lookupValue(thisOp.getState()));
+  bool isPhaseParity = thisOp.getStateOrPhase().getType().isInteger(32);
+  bool isClusterScope = thisOp.getScope() == NVVM::MemScopeKind::CLUSTER;
+  // bit-0: isPhaseParity
+  // bit-1: Scope
+  size_t index = ((isClusterScope ? 1 : 0) << 1) | (isPhaseParity ? 1 : 0);
 
-  return {id, std::move(args)};
+  // clang-format off
+  static constexpr llvm::Intrinsic::ID IDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_scope_cluster_space_cta};
+  static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_relaxed_scope_cluster_space_cta};
+  // clang-format on
+  auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
+
+  // Tidy-up the Intrinsic Args
+  llvm::Value *mbar = mt.lookupValue(thisOp.getAddr());
+  llvm::Value *input = mt.lookupValue(thisOp.getStateOrPhase());
+  bool needCast = isPtrInGenericSpace(thisOp.getAddr());
+  if (needCast)
+    mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
+
+  return {id, {mbar, input}};
 }
 
 mlir::NVVM::IDArgPair CpAsyncMBarrierArriveOp::getIntrinsicIDAndArgs(
