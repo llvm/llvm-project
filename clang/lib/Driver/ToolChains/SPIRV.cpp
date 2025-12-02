@@ -74,16 +74,14 @@ void SPIRV::constructLLVMLinkCommand(Compilation &C, const Tool &T,
                                      const JobAction &JA,
                                      const InputInfo &Output,
                                      const InputInfoList &Inputs,
-                                     const llvm::opt::ArgStringList &Args) {
-  // Construct llvm-link command.
-  // The output from llvm-link is a bitcode file.
+                                     const llvm::opt::ArgList &Args) {
+
   ArgStringList LlvmLinkArgs;
 
-  assert(!Inputs.empty() && "Must have at least one input.");
-
-  LlvmLinkArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
     LlvmLinkArgs.push_back(Input.getFilename());
+
+  tools::constructLlvmLinkCommand(C, T, JA, Inputs, LlvmLinkArgs, Output, Args);
 
   const char *LlvmLink =
       C.getArgs().MakeArgString(T.getToolChain().GetProgramPath("llvm-link"));
@@ -144,7 +142,7 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                  const ArgList &Args,
                                  const char *LinkingOutput) const {
   if (JA.getType() == types::TY_LLVM_BC) {
-    constructLLVMLinkCommand(C, *this, JA, Output, Inputs, {});
+    constructLLVMLinkCommand(C, *this, JA, Output, Inputs, Args);
     return;
   }
   const ToolChain &ToolChain = getToolChain();

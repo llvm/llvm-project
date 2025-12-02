@@ -312,6 +312,14 @@ void setComplexRange(const Driver &D, StringRef NewOpt,
                      LangOptions::ComplexRangeKind NewRange, StringRef &LastOpt,
                      LangOptions::ComplexRangeKind &Range);
 
+void constructLlvmLinkCommand(Compilation &C, const Tool &T,
+                              const JobAction &JA,
+                              const InputInfoList &JobInputs,
+                              const llvm::opt::ArgStringList &LinkerInputs,
+                              const InputInfo &Output,
+                              const llvm::opt::ArgList &Args,
+                              const char *OutputFilename = nullptr);
+
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang
