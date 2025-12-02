@@ -225,26 +225,26 @@ define amdgpu_kernel void @s_exp2_v2f32(ptr addrspace(1) %out, <2 x float> %in) 
 ; VI-SDAG-LABEL: s_exp2_v2f32:
 ; VI-SDAG:       ; %bb.0:
 ; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0xc2fc0000
-; VI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0xc2fc0000
+; VI-SDAG-NEXT:    v_mov_b32_e32 v3, 0x42800000
 ; VI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v0
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
-; VI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
-; VI-SDAG-NEXT:    v_add_f32_e32 v2, s3, v2
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
+; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s3, v2
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v3, vcc
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
+; VI-SDAG-NEXT:    v_add_f32_e32 v4, s3, v4
+; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v2
+; VI-SDAG-NEXT:    v_exp_f32_e32 v4, v4
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v3, vcc
+; VI-SDAG-NEXT:    v_add_f32_e32 v2, s2, v2
 ; VI-SDAG-NEXT:    v_exp_f32_e32 v2, v2
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; VI-SDAG-NEXT:    v_add_f32_e32 v0, s2, v0
-; VI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
-; VI-SDAG-NEXT:    s_cselect_b32 s3, 0xffffffc0, 0
-; VI-SDAG-NEXT:    v_ldexp_f32 v1, v2, s3
-; VI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
-; VI-SDAG-NEXT:    s_cselect_b32 s2, 0xffffffc0, 0
-; VI-SDAG-NEXT:    v_mov_b32_e32 v3, s1
-; VI-SDAG-NEXT:    v_ldexp_f32 v0, v0, s2
-; VI-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; VI-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
+; VI-SDAG-NEXT:    v_ldexp_f32 v3, v4, s0
+; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
+; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffffc0, 0
+; VI-SDAG-NEXT:    v_ldexp_f32 v2, v2, s0
+; VI-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-SDAG-NEXT:    s_endpgm
 ;
 ; VI-GISEL-LABEL: s_exp2_v2f32:
@@ -1485,7 +1485,7 @@ define float @v_exp2_f32_fast(float %in) {
   ret float %result
 }
 
-define float @v_exp2_f32_unsafe_math_attr(float %in) "unsafe-fp-math"="true" {
+define float @v_exp2_f32_unsafe_math_attr(float %in) {
 ; SI-SDAG-LABEL: v_exp2_f32_unsafe_math_attr:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

@@ -45,6 +45,7 @@ static_library("Support") {
     "ARMAttributeParser.cpp",
     "ARMBuildAttributes.cpp",
     "ARMWinEH.cpp",
+    "AllocToken.cpp",
     "Allocator.cpp",
     "AutoConvert.cpp",
     "BalancedPartitioning.cpp",
@@ -189,6 +190,7 @@ static_library("Support") {
     "regfree.c",
     "regstrlcpy.c",
     "xxhash.cpp",
+    "zOSLibFunctions.cpp",
 
     # System
     "Atomic.cpp",

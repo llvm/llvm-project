@@ -1247,7 +1247,7 @@ public:
     return DefIterator == Other.DefIterator;
   }
 
-  typename std::iterator_traits<BaseT>::reference operator*() const {
+  std::iterator_traits<BaseT>::reference operator*() const {
     assert(DefIterator != OriginalAccess->defs_end() &&
            "Tried to access past the end of our iterator");
     return CurrentPair;

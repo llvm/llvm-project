@@ -11,8 +11,6 @@
 
 #include <__config>
 #include <__cstddef/size_t.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/type_list.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -21,10 +19,10 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct __align_type {
-  static const size_t value = _LIBCPP_PREFERRED_ALIGNOF(_Tp);
-  typedef _Tp type;
-};
+struct _ALIGNAS(_LIBCPP_PREFERRED_ALIGNOF(_Tp)) _AlignedAsT {};
+
+template <class... _Args>
+struct __max_align_impl : _AlignedAsT<_Args>... {};
 
 struct __struct_double {
   long double __lx;
@@ -33,41 +31,16 @@ struct __struct_double4 {
   double __lx[4];
 };
 
-using __all_types _LIBCPP_NODEBUG =
-    __type_list<__align_type<unsigned char>,
-                __align_type<unsigned short>,
-                __align_type<unsigned int>,
-                __align_type<unsigned long>,
-                __align_type<unsigned long long>,
-                __align_type<double>,
-                __align_type<long double>,
-                __align_type<__struct_double>,
-                __align_type<__struct_double4>,
-                __align_type<int*> >;
+inline const size_t __aligned_storage_max_align =
+    _LIBCPP_ALIGNOF(__max_align_impl<unsigned long long, double, long double, __struct_double, __struct_double4, int*>);
 
-template <class _TL, size_t _Len>
-struct __find_max_align;
+template <size_t _Len>
+inline const size_t __aligned_storage_alignment =
+    _Len > __aligned_storage_max_align
+        ? __aligned_storage_max_align
+        : size_t(1) << ((sizeof(size_t) * __CHAR_BIT__) - __builtin_clzg(_Len) - 1);
 
-template <class _Head, size_t _Len>
-struct __find_max_align<__type_list<_Head>, _Len> : public integral_constant<size_t, _Head::value> {};
-
-template <size_t _Len, size_t _A1, size_t _A2>
-struct __select_align {
-private:
-  static const size_t __min = _A2 < _A1 ? _A2 : _A1;
-  static const size_t __max = _A1 < _A2 ? _A2 : _A1;
-
-public:
-  static const size_t value = _Len < __max ? __min : __max;
-};
-
-template <class _Head, class... _Tail, size_t _Len>
-struct __find_max_align<__type_list<_Head, _Tail...>, _Len>
-    : public integral_constant<
-          size_t,
-          __select_align<_Len, _Head::value, __find_max_align<__type_list<_Tail...>, _Len>::value>::value> {};
-
-template <size_t _Len, size_t _Align = __find_max_align<__all_types, _Len>::value>
+template <size_t _Len, size_t _Align = __aligned_storage_alignment<_Len> >
 struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_NO_SPECIALIZATIONS aligned_storage {
   union _ALIGNAS(_Align) type {
     unsigned char __data[(_Len + _Align - 1) / _Align * _Align];
@@ -77,7 +50,7 @@ struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_NO_SPECIALIZATIONS aligned_storage {
 #if _LIBCPP_STD_VER >= 14
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-template <size_t _Len, size_t _Align = __find_max_align<__all_types, _Len>::value>
+template <size_t _Len, size_t _Align = __aligned_storage_alignment<_Len> >
 using aligned_storage_t _LIBCPP_DEPRECATED_IN_CXX23 = typename aligned_storage<_Len, _Align>::type;
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 

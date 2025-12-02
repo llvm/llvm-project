@@ -1076,8 +1076,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     if (T.isPODType(C) || T->isObjCLifetimeType())
       return true;
     if (CXXRecordDecl *RD = C.getBaseElementType(T)->getAsCXXRecordDecl()) {
-      if (RD->hasTrivialDefaultConstructor() &&
-          !RD->hasNonTrivialDefaultConstructor())
+      if (RD->hasTrivialDefaultConstructor())
         return true;
 
       bool FoundConstructor = false;
@@ -1165,14 +1164,26 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     const CXXDestructorDecl *Dtor = RD->getDestructor();
     if (UnqualT->isAggregateType() && (!Dtor || !Dtor->isUserProvided()))
       return true;
-    if (RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted())) {
-      for (CXXConstructorDecl *Ctr : RD->ctors()) {
-        if (Ctr->isIneligibleOrNotSelected() || Ctr->isDeleted())
-          continue;
-        if (Ctr->isTrivial())
-          return true;
-      }
+    bool HasTrivialNonDeletedDtr =
+        RD->hasTrivialDestructor() && (!Dtor || !Dtor->isDeleted());
+    if (!HasTrivialNonDeletedDtr)
+      return false;
+    for (CXXConstructorDecl *Ctr : RD->ctors()) {
+      if (Ctr->isIneligibleOrNotSelected() || Ctr->isDeleted())
+        continue;
+      if (Ctr->isTrivial())
+        return true;
     }
+    if (RD->needsImplicitDefaultConstructor() &&
+        RD->hasTrivialDefaultConstructor() &&
+        !RD->hasNonTrivialDefaultConstructor())
+      return true;
+    if (RD->needsImplicitCopyConstructor() && RD->hasTrivialCopyConstructor() &&
+        !RD->defaultedCopyConstructorIsDeleted())
+      return true;
+    if (RD->needsImplicitMoveConstructor() && RD->hasTrivialMoveConstructor() &&
+        !RD->defaultedMoveConstructorIsDeleted())
+      return true;
     return false;
   }
   case UTT_IsIntangibleType:
@@ -1200,76 +1211,6 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
                                     const TypeSourceInfo *Lhs,
                                     const TypeSourceInfo *Rhs,
                                     SourceLocation KeyLoc);
-
-static ExprResult CheckConvertibilityForTypeTraits(
-    Sema &Self, const TypeSourceInfo *Lhs, const TypeSourceInfo *Rhs,
-    SourceLocation KeyLoc, llvm::BumpPtrAllocator &OpaqueExprAllocator) {
-
-  QualType LhsT = Lhs->getType();
-  QualType RhsT = Rhs->getType();
-
-  // C++0x [meta.rel]p4:
-  //   Given the following function prototype:
-  //
-  //     template <class T>
-  //       typename add_rvalue_reference<T>::type create();
-  //
-  //   the predicate condition for a template specialization
-  //   is_convertible<From, To> shall be satisfied if and only if
-  //   the return expression in the following code would be
-  //   well-formed, including any implicit conversions to the return
-  //   type of the function:
-  //
-  //     To test() {
-  //       return create<From>();
-  //     }
-  //
-  //   Access checking is performed as if in a context unrelated to To and
-  //   From. Only the validity of the immediate context of the expression
-  //   of the return-statement (including conversions to the return type)
-  //   is considered.
-  //
-  // We model the initialization as a copy-initialization of a temporary
-  // of the appropriate type, which for this expression is identical to the
-  // return statement (since NRVO doesn't apply).
-
-  // Functions aren't allowed to return function or array types.
-  if (RhsT->isFunctionType() || RhsT->isArrayType())
-    return ExprError();
-
-  // A function definition requires a complete, non-abstract return type.
-  if (!Self.isCompleteType(Rhs->getTypeLoc().getBeginLoc(), RhsT) ||
-      Self.isAbstractType(Rhs->getTypeLoc().getBeginLoc(), RhsT))
-    return ExprError();
-
-  // Compute the result of add_rvalue_reference.
-  if (LhsT->isObjectType() || LhsT->isFunctionType())
-    LhsT = Self.Context.getRValueReferenceType(LhsT);
-
-  // Build a fake source and destination for initialization.
-  InitializedEntity To(InitializedEntity::InitializeTemporary(RhsT));
-  Expr *From = new (OpaqueExprAllocator.Allocate<OpaqueValueExpr>())
-      OpaqueValueExpr(KeyLoc, LhsT.getNonLValueExprType(Self.Context),
-                      Expr::getValueKindForType(LhsT));
-  InitializationKind Kind =
-      InitializationKind::CreateCopy(KeyLoc, SourceLocation());
-
-  // Perform the initialization in an unevaluated context within a SFINAE
-  // trap at translation unit scope.
-  EnterExpressionEvaluationContext Unevaluated(
-      Self, Sema::ExpressionEvaluationContext::Unevaluated);
-  Sema::SFINAETrap SFINAE(Self, /*ForValidityCheck=*/true);
-  Sema::ContextRAII TUContext(Self, Self.Context.getTranslationUnitDecl());
-  InitializationSequence Init(Self, To, Kind, From);
-  if (Init.Failed())
-    return ExprError();
-
-  ExprResult Result = Init.Perform(Self, To, Kind, From);
-  if (Result.isInvalid() || SFINAE.hasErrorOccurred())
-    return ExprError();
-
-  return Result;
-}
 
 static APValue EvaluateSizeTTypeTrait(Sema &S, TypeTrait Kind,
                                       SourceLocation KWLoc,
@@ -1431,9 +1372,8 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
           S.Context.getPointerType(T.getNonReferenceType()));
       TypeSourceInfo *UPtr = S.Context.CreateTypeSourceInfo(
           S.Context.getPointerType(U.getNonReferenceType()));
-      return !CheckConvertibilityForTypeTraits(S, UPtr, TPtr, RParenLoc,
-                                               OpaqueExprAllocator)
-                  .isInvalid();
+      return S.BuiltinIsConvertible(UPtr->getType(), TPtr->getType(),
+                                    RParenLoc);
     }
 
     if (Kind == clang::TT_IsNothrowConstructible)
@@ -1613,9 +1553,9 @@ bool Sema::BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT,
 
   // Unions are never base classes, and never have base classes.
   // It doesn't matter if they are complete or not. See PR#41843
-  if (lhsRecord && lhsRecord->getOriginalDecl()->isUnion())
+  if (lhsRecord && lhsRecord->getDecl()->isUnion())
     return false;
-  if (rhsRecord && rhsRecord->getOriginalDecl()->isUnion())
+  if (rhsRecord && rhsRecord->getDecl()->isUnion())
     return false;
 
   if (lhsRecord == rhsRecord)
@@ -1629,8 +1569,8 @@ bool Sema::BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT,
                           diag::err_incomplete_type_used_in_type_trait_expr))
     return false;
 
-  return cast<CXXRecordDecl>(rhsRecord->getOriginalDecl())
-      ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getOriginalDecl()));
+  return cast<CXXRecordDecl>(rhsRecord->getDecl())
+      ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getDecl()));
 }
 
 static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
@@ -1670,9 +1610,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
                                  diag::err_incomplete_type))
       return false;
 
-    return cast<CXXRecordDecl>(DerivedRecord->getOriginalDecl())
-        ->isVirtuallyDerivedFrom(
-            cast<CXXRecordDecl>(BaseRecord->getOriginalDecl()));
+    return cast<CXXRecordDecl>(DerivedRecord->getDecl())
+        ->isVirtuallyDerivedFrom(cast<CXXRecordDecl>(BaseRecord->getDecl()));
   }
   case BTT_IsSame:
     return Self.Context.hasSameType(LhsT, RhsT);
@@ -1685,20 +1624,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
   }
   case BTT_IsConvertible:
   case BTT_IsConvertibleTo:
-  case BTT_IsNothrowConvertible: {
-    if (RhsT->isVoidType())
-      return LhsT->isVoidType();
-    llvm::BumpPtrAllocator OpaqueExprAllocator;
-    ExprResult Result = CheckConvertibilityForTypeTraits(Self, Lhs, Rhs, KeyLoc,
-                                                         OpaqueExprAllocator);
-    if (Result.isInvalid())
-      return false;
-
-    if (BTT != BTT_IsNothrowConvertible)
-      return true;
-
-    return Self.canThrow(Result.get()) == CT_Cannot;
-  }
+  case BTT_IsNothrowConvertible:
+    return Self.BuiltinIsConvertible(LhsT, RhsT, KeyLoc,
+                                     BTT == BTT_IsNothrowConvertible);
 
   case BTT_IsAssignable:
   case BTT_IsNothrowAssignable:

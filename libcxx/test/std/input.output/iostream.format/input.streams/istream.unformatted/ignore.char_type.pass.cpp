@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Requires 396145d in the built library.
-// XFAIL: using-built-library-before-llvm-9
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // <istream>

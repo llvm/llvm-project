@@ -136,7 +136,8 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
           const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
           unsigned RegMaskSize =
               MachineOperand::getRegMaskSize(TRI->getNumRegs());
-          const uint32_t *RegMask = MO.getRegMask();
+          const uint32_t *RegMask =
+              MO.isRegMask() ? MO.getRegMask() : MO.getRegLiveOut();
           std::vector<llvm::stable_hash> RegMaskHashes(RegMask,
                                                        RegMask + RegMaskSize);
           return stable_hash_combine(MO.getType(), MO.getTargetFlags(),

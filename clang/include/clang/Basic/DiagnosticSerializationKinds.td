@@ -86,6 +86,10 @@ def remark_module_import : Remark<
   "importing module '%0'%select{| into '%3'}2 from '%1'">,
   ShowInSystemHeader,
   InGroup<ModuleImport>;
+def remark_module_validation : Remark<
+  "validating %0 input files in module '%1' from '%2'">,
+  ShowInSystemHeader,
+  InGroup<ModuleValidation>;
 
 def err_imported_module_not_found : Error<
     "module '%0' in precompiled file '%1' %select{(imported by precompiled file '%2') |}4"

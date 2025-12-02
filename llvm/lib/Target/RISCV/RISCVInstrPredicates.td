@@ -14,6 +14,10 @@
 // otherwise.
 def VLDSX0Pred : MCSchedPredicate<CheckRegOperand<3, X0>>;
 
+// This scheduling predicate is true when subtarget feature TuneHasSingleElementVecFP64
+// is enabled.
+def SingleElementVecFP64SchedPred : FeatureSchedPredicate<TuneHasSingleElementVecFP64>;
+
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 def isSEXT_W
     : TIIPredicate<"isSEXT_W",
@@ -74,7 +78,41 @@ def isVectorConfigInstr
                        PseudoVSETVLI,
                        PseudoVSETVLIX0,
                        PseudoVSETVLIX0X0,
-                       PseudoVSETIVLI
+                       PseudoVSETIVLI,
+                       PseudoSF_VSETTNT,
+                       PseudoSF_VSETTNTX0,
+                       PseudoSF_VSETTNTX0X0
+                     ]>>>;
+
+// Returns true if this is a PseudoSF_VSETTNT* instructions.
+def isXSfmmVectorConfigTNInstr
+    : TIIPredicate<"isXSfmmVectorConfigTNInstr",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       PseudoSF_VSETTNT,
+                       PseudoSF_VSETTNTX0,
+                       PseudoSF_VSETTNTX0X0
+                     ]>>>;
+
+// Returns true if this is PseudoSF_VSETTM or PseudoSF_VSETTK.
+def isXSfmmVectorConfigTMTKInstr
+    : TIIPredicate<"isXSfmmVectorConfigTMTKInstr",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       PseudoSF_VSETTM,
+                       PseudoSF_VSETTK
+                     ]>>>;
+
+// Returns true if this is a XSfmm vector configuration instruction.
+def isXSfmmVectorConfigInstr
+    : TIIPredicate<"isXSfmmVectorConfigInstr",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       PseudoSF_VSETTNT,
+                       PseudoSF_VSETTNTX0,
+                       PseudoSF_VSETTNTX0X0,
+                       PseudoSF_VSETTM,
+                       PseudoSF_VSETTK
                      ]>>>;
 
 // Return true if this is 'vsetvli x0, x0, vtype' which preserves

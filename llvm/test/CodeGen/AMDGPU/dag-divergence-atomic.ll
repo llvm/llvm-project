@@ -120,19 +120,19 @@ define protected amdgpu_kernel void @nand(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_load_dword s6, s[0:1], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s6
+; CHECK-NEXT:    v_mov_b32_e32 v1, s6
 ; CHECK-NEXT:  .LBB5_1: ; %atomicrmw.start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_mov_b32_e32 v3, v0
-; CHECK-NEXT:    v_bfi_b32 v2, v3, -2, -1
-; CHECK-NEXT:    global_atomic_cmpswap v0, v1, v[2:3], s[0:1] glc
+; CHECK-NEXT:    v_bfi_b32 v0, v1, -2, -1
+; CHECK-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -421,19 +421,19 @@ define protected amdgpu_kernel void @fadd(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_load_dword s6, s[0:1], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s6
+; CHECK-NEXT:    v_mov_b32_e32 v1, s6
 ; CHECK-NEXT:  .LBB18_1: ; %atomicrmw.start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_mov_b32_e32 v3, v0
-; CHECK-NEXT:    v_add_f32_e32 v2, 1.0, v3
-; CHECK-NEXT:    global_atomic_cmpswap v0, v1, v[2:3], s[0:1] glc
+; CHECK-NEXT:    v_add_f32_e32 v0, 1.0, v1
+; CHECK-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB18_1
 ; CHECK-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -458,19 +458,19 @@ define protected amdgpu_kernel void @fsub(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_load_dword s6, s[0:1], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s6
+; CHECK-NEXT:    v_mov_b32_e32 v1, s6
 ; CHECK-NEXT:  .LBB19_1: ; %atomicrmw.start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_mov_b32_e32 v3, v0
-; CHECK-NEXT:    v_add_f32_e32 v2, -1.0, v3
-; CHECK-NEXT:    global_atomic_cmpswap v0, v1, v[2:3], s[0:1] glc
+; CHECK-NEXT:    v_add_f32_e32 v0, -1.0, v1
+; CHECK-NEXT:    global_atomic_cmpswap v0, v2, v[0:1], s[0:1] glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v3
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
+; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB19_1
 ; CHECK-NEXT:  ; %bb.2: ; %atomicrmw.end

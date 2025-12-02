@@ -44,6 +44,11 @@ enum class RemarkFormat {
   REMARK_FORMAT_BITSTREAM,
 };
 
+enum class RemarkPolicy {
+  REMARK_POLICY_ALL,
+  REMARK_POLICY_FINAL,
+};
+
 /// Configuration options for the mlir-opt tool.
 /// This is intended to help building tools like mlir-opt by collecting the
 /// supported options.
@@ -242,6 +247,8 @@ public:
 
   /// Set the reproducer output filename
   RemarkFormat getRemarkFormat() const { return remarkFormatFlag; }
+  /// Set the remark policy to use.
+  RemarkPolicy getRemarkPolicy() const { return remarkPolicyFlag; }
   /// Set the remark format to use.
   std::string getRemarksAllFilter() const { return remarksAllFilterFlag; }
   /// Set the remark output file.
@@ -265,6 +272,8 @@ protected:
 
   /// Remark format
   RemarkFormat remarkFormatFlag = RemarkFormat::REMARK_FORMAT_STDOUT;
+  /// Remark policy
+  RemarkPolicy remarkPolicyFlag = RemarkPolicy::REMARK_POLICY_ALL;
   /// Remark file to output to
   std::string remarksOutputFileFlag = "";
   /// Remark filters
@@ -349,6 +358,20 @@ protected:
 /// used to pass in a callback to setup a default pass pipeline to be applied on
 /// the loaded IR.
 using PassPipelineFn = llvm::function_ref<LogicalResult(PassManager &pm)>;
+
+/// Register basic command line options.
+/// - toolName is used for the header displayed by `--help`.
+/// - registry should contain all the dialects that can be parsed in the source.
+/// - return std::string for help header.
+std::string registerCLIOptions(llvm::StringRef toolName,
+                               DialectRegistry &registry);
+
+/// Parse command line options.
+/// - helpHeader is used for the header displayed by `--help`.
+/// - return std::pair<std::string, std::string> for
+///   inputFilename and outputFilename command line option values.
+std::pair<std::string, std::string> parseCLIOptions(int argc, char **argv,
+                                                    llvm::StringRef helpHeader);
 
 /// Register and parse command line options.
 /// - toolName is used for the header displayed by `--help`.

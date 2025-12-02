@@ -582,48 +582,45 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
                                               bool GetLast,
                                               AggValueSlot AggSlot) {
 
-  const Stmt *ExprResult = S.getStmtExprResult();
-  assert((!GetLast || (GetLast && ExprResult)) &&
-         "If GetLast is true then the CompoundStmt must have a StmtExprResult");
+  for (CompoundStmt::const_body_iterator I = S.body_begin(),
+                                         E = S.body_end() - GetLast;
+       I != E; ++I)
+    EmitStmt(*I);
 
   Address RetAlloca = Address::invalid();
-
-  for (auto *CurStmt : S.body()) {
-    if (GetLast && ExprResult == CurStmt) {
-      // We have to special case labels here.  They are statements, but when put
-      // at the end of a statement expression, they yield the value of their
-      // subexpression.  Handle this by walking through all labels we encounter,
-      // emitting them before we evaluate the subexpr.
-      // Similar issues arise for attributed statements.
-      while (!isa<Expr>(ExprResult)) {
-        if (const auto *LS = dyn_cast<LabelStmt>(ExprResult)) {
-          EmitLabel(LS->getDecl());
-          ExprResult = LS->getSubStmt();
-        } else if (const auto *AS = dyn_cast<AttributedStmt>(ExprResult)) {
-          // FIXME: Update this if we ever have attributes that affect the
-          // semantics of an expression.
-          ExprResult = AS->getSubStmt();
-        } else {
-          llvm_unreachable("unknown value statement");
-        }
-      }
-
-      EnsureInsertPoint();
-
-      const Expr *E = cast<Expr>(ExprResult);
-      QualType ExprTy = E->getType();
-      if (hasAggregateEvaluationKind(ExprTy)) {
-        EmitAggExpr(E, AggSlot);
+  if (GetLast) {
+    // We have to special case labels here.  They are statements, but when put
+    // at the end of a statement expression, they yield the value of their
+    // subexpression.  Handle this by walking through all labels we encounter,
+    // emitting them before we evaluate the subexpr.
+    // Similar issues arise for attributed statements.
+    const Stmt *LastStmt = S.body_back();
+    while (!isa<Expr>(LastStmt)) {
+      if (const auto *LS = dyn_cast<LabelStmt>(LastStmt)) {
+        EmitLabel(LS->getDecl());
+        LastStmt = LS->getSubStmt();
+      } else if (const auto *AS = dyn_cast<AttributedStmt>(LastStmt)) {
+        // FIXME: Update this if we ever have attributes that affect the
+        // semantics of an expression.
+        LastStmt = AS->getSubStmt();
       } else {
-        // We can't return an RValue here because there might be cleanups at
-        // the end of the StmtExpr.  Because of that, we have to emit the result
-        // here into a temporary alloca.
-        RetAlloca = CreateMemTemp(ExprTy);
-        EmitAnyExprToMem(E, RetAlloca, Qualifiers(),
-                         /*IsInit*/ false);
+        llvm_unreachable("unknown value statement");
       }
+    }
+
+    EnsureInsertPoint();
+
+    const Expr *E = cast<Expr>(LastStmt);
+    QualType ExprTy = E->getType();
+    if (hasAggregateEvaluationKind(ExprTy)) {
+      EmitAggExpr(E, AggSlot);
     } else {
-      EmitStmt(CurStmt);
+      // We can't return an RValue here because there might be cleanups at
+      // the end of the StmtExpr.  Because of that, we have to emit the result
+      // here into a temporary alloca.
+      RetAlloca = CreateMemTemp(ExprTy);
+      EmitAnyExprToMem(E, RetAlloca, Qualifiers(),
+                       /*IsInit*/ false);
     }
   }
 
@@ -2674,7 +2671,8 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
               const llvm::ArrayRef<LValue> ResultRegDests,
               const llvm::ArrayRef<QualType> ResultRegQualTys,
               const llvm::BitVector &ResultTypeRequiresCast,
-              const llvm::BitVector &ResultRegIsFlagReg) {
+              const std::vector<std::optional<std::pair<unsigned, unsigned>>>
+                  &ResultBounds) {
   CGBuilderTy &Builder = CGF.Builder;
   CodeGenModule &CGM = CGF.CGM;
   llvm::LLVMContext &CTX = CGF.getLLVMContext();
@@ -2685,18 +2683,20 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
   // ResultRegDests can be also populated by addReturnRegisterOutputs() above,
   // in which case its size may grow.
   assert(ResultTypeRequiresCast.size() <= ResultRegDests.size());
-  assert(ResultRegIsFlagReg.size() <= ResultRegDests.size());
+  assert(ResultBounds.size() <= ResultRegDests.size());
 
   for (unsigned i = 0, e = RegResults.size(); i != e; ++i) {
     llvm::Value *Tmp = RegResults[i];
     llvm::Type *TruncTy = ResultTruncRegTypes[i];
 
-    if ((i < ResultRegIsFlagReg.size()) && ResultRegIsFlagReg[i]) {
-      // Target must guarantee the Value `Tmp` here is lowered to a boolean
-      // value.
-      llvm::Constant *Two = llvm::ConstantInt::get(Tmp->getType(), 2);
+    if ((i < ResultBounds.size()) && ResultBounds[i].has_value()) {
+      const auto [LowerBound, UpperBound] = ResultBounds[i].value();
+      // FIXME: Support for nonzero lower bounds not yet implemented.
+      assert(LowerBound == 0 && "Output operand lower bound is not zero.");
+      llvm::Constant *UpperBoundConst =
+          llvm::ConstantInt::get(Tmp->getType(), UpperBound);
       llvm::Value *IsBooleanValue =
-          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, Two);
+          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, UpperBoundConst);
       llvm::Function *FnAssume = CGM.getIntrinsic(llvm::Intrinsic::assume);
       Builder.CreateCall(FnAssume, IsBooleanValue);
     }
@@ -2825,7 +2825,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   std::vector<llvm::Type *> ArgElemTypes;
   std::vector<llvm::Value*> Args;
   llvm::BitVector ResultTypeRequiresCast;
-  llvm::BitVector ResultRegIsFlagReg;
+  std::vector<std::optional<std::pair<unsigned, unsigned>>> ResultBounds;
 
   // Keep track of inout constraints.
   std::string InOutConstraints;
@@ -2883,8 +2883,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
 
-      bool IsFlagReg = llvm::StringRef(OutputConstraint).starts_with("{@cc");
-      ResultRegIsFlagReg.push_back(IsFlagReg);
+      ResultBounds.emplace_back(Info.getOutputOperandBounds());
 
       llvm::Type *Ty = ConvertTypeForMem(QTy);
       const bool RequiresCast = Info.allowsRegister() &&
@@ -3231,7 +3230,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
   EmitAsmStores(*this, S, RegResults, ResultRegTypes, ResultTruncRegTypes,
                 ResultRegDests, ResultRegQualTys, ResultTypeRequiresCast,
-                ResultRegIsFlagReg);
+                ResultBounds);
 
   // If this is an asm goto with outputs, repeat EmitAsmStores, but with a
   // different insertion point; one for each indirect destination and with
@@ -3242,7 +3241,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       Builder.SetInsertPoint(Succ, --(Succ->end()));
       EmitAsmStores(*this, S, CBRRegResults[Succ], ResultRegTypes,
                     ResultTruncRegTypes, ResultRegDests, ResultRegQualTys,
-                    ResultTypeRequiresCast, ResultRegIsFlagReg);
+                    ResultTypeRequiresCast, ResultBounds);
     }
   }
 }

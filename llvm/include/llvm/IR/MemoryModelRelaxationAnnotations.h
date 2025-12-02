@@ -21,7 +21,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
-#include <tuple> // for std::pair
+
+#include <utility>
 
 namespace llvm {
 

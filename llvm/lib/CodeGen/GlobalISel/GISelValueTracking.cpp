@@ -112,7 +112,7 @@ APInt GISelValueTracking::getKnownOnes(Register R) {
   return getKnownBits(R).One;
 }
 
-LLVM_ATTRIBUTE_UNUSED static void
+[[maybe_unused]] static void
 dumpResult(const MachineInstr &MI, const KnownBits &Known, unsigned Depth) {
   dbgs() << "[" << Depth << "] Compute known bits: " << MI << "[" << Depth
          << "] Computed for: " << MI << "[" << Depth << "] Known: 0x"
@@ -247,6 +247,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
       const MachineOperand &Src = MI.getOperand(Idx);
       Register SrcReg = Src.getReg();
+      LLT SrcTy = MRI.getType(SrcReg);
       // Look through trivial copies and phis but don't look through trivial
       // copies or phis of the form `%1:(s32) = OP %0:gpr32`, known-bits
       // analysis is currently unable to determine the bit width of a
@@ -255,9 +256,15 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       // We can't use NoSubRegister by name as it's defined by each target but
       // it's always defined to be 0 by tablegen.
       if (SrcReg.isVirtual() && Src.getSubReg() == 0 /*NoSubRegister*/ &&
-          MRI.getType(SrcReg).isValid()) {
+          SrcTy.isValid()) {
+        // In case we're forwarding from a vector register to a non-vector
+        // register we need to update the demanded elements to reflect this
+        // before recursing.
+        APInt NowDemandedElts = SrcTy.isFixedVector() && !DstTy.isFixedVector()
+                                    ? APInt::getAllOnes(SrcTy.getNumElements())
+                                    : DemandedElts; // Known to be APInt(1, 1)
         // For COPYs we don't do anything, don't increase the depth.
-        computeKnownBitsImpl(SrcReg, Known2, DemandedElts,
+        computeKnownBitsImpl(SrcReg, Known2, NowDemandedElts,
                              Depth + (Opcode != TargetOpcode::COPY));
         Known2 = Known2.anyextOrTrunc(BitWidth);
         Known = Known.intersectWith(Known2);
@@ -342,6 +349,22 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
                          Depth + 1);
     Known = KnownBits::mul(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_UMULH: {
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::mulhu(Known, Known2);
+    break;
+  }
+  case TargetOpcode::G_SMULH: {
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::mulhs(Known, Known2);
     break;
   }
   case TargetOpcode::G_SELECT: {
@@ -586,6 +609,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(3).getReg(), WidthKnown, DemandedElts,
                          Depth + 1);
+    OffsetKnown = OffsetKnown.sext(BitWidth);
+    WidthKnown = WidthKnown.sext(BitWidth);
     Known = extractBits(BitWidth, SrcOpKnown, OffsetKnown, WidthKnown);
     // Sign extend the extracted value using shift left and arithmetic shift
     // right.
@@ -623,6 +648,38 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     unsigned PossibleLZ = SrcOpKnown.countMaxLeadingZeros();
     unsigned LowBits = llvm::bit_width(PossibleLZ);
     Known.Zero.setBitsFrom(LowBits);
+    break;
+  }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
+    Register InVec = Extract.getVectorReg();
+    Register EltNo = Extract.getIndexReg();
+
+    auto ConstEltNo = getIConstantVRegVal(EltNo, MRI);
+
+    LLT VecVT = MRI.getType(InVec);
+    // computeKnownBits not yet implemented for scalable vectors.
+    if (VecVT.isScalableVector())
+      break;
+
+    const unsigned EltBitWidth = VecVT.getScalarSizeInBits();
+    const unsigned NumSrcElts = VecVT.getNumElements();
+    // A return type different from the vector's element type may lead to
+    // issues with pattern selection. Bail out to avoid that.
+    if (BitWidth > EltBitWidth)
+      break;
+
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+
+    // If we know the element index, just demand that vector element, else for
+    // an unknown element index, ignore DemandedElts and demand them all.
+    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+    if (ConstEltNo && ConstEltNo->ult(NumSrcElts))
+      DemandedSrcElts =
+          APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+
+    computeKnownBitsImpl(InVec, Known, DemandedSrcElts, Depth + 1);
     break;
   }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
@@ -1957,6 +2014,81 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
         return TyBits;
     }
 
+    break;
+  }
+  case TargetOpcode::G_SUB: {
+    Register Src2 = MI.getOperand(2).getReg();
+    unsigned Src2NumSignBits =
+        computeNumSignBits(Src2, DemandedElts, Depth + 1);
+    if (Src2NumSignBits == 1)
+      return 1; // Early out.
+
+    // Handle NEG.
+    Register Src1 = MI.getOperand(1).getReg();
+    KnownBits Known1 = getKnownBits(Src1, DemandedElts, Depth);
+    if (Known1.isZero()) {
+      KnownBits Known2 = getKnownBits(Src2, DemandedElts, Depth);
+      // If the input is known to be 0 or 1, the output is 0/-1, which is all
+      // sign bits set.
+      if ((Known2.Zero | 1).isAllOnes())
+        return TyBits;
+
+      // If the input is known to be positive (the sign bit is known clear),
+      // the output of the NEG has, at worst, the same number of sign bits as
+      // the input.
+      if (Known2.isNonNegative()) {
+        FirstAnswer = Src2NumSignBits;
+        break;
+      }
+
+      // Otherwise, we treat this like a SUB.
+    }
+
+    unsigned Src1NumSignBits =
+        computeNumSignBits(Src1, DemandedElts, Depth + 1);
+    if (Src1NumSignBits == 1)
+      return 1; // Early Out.
+
+    // Sub can have at most one carry bit.  Thus we know that the output
+    // is, at worst, one more bit than the inputs.
+    FirstAnswer = std::min(Src1NumSignBits, Src2NumSignBits) - 1;
+    break;
+  }
+  case TargetOpcode::G_ADD: {
+    Register Src2 = MI.getOperand(2).getReg();
+    unsigned Src2NumSignBits =
+        computeNumSignBits(Src2, DemandedElts, Depth + 1);
+    if (Src2NumSignBits <= 2)
+      return 1; // Early out.
+
+    Register Src1 = MI.getOperand(1).getReg();
+    unsigned Src1NumSignBits =
+        computeNumSignBits(Src1, DemandedElts, Depth + 1);
+    if (Src1NumSignBits == 1)
+      return 1; // Early Out.
+
+    // Special case decrementing a value (ADD X, -1):
+    KnownBits Known2 = getKnownBits(Src2, DemandedElts, Depth);
+    if (Known2.isAllOnes()) {
+      KnownBits Known1 = getKnownBits(Src1, DemandedElts, Depth);
+      // If the input is known to be 0 or 1, the output is 0/-1, which is all
+      // sign bits set.
+      if ((Known1.Zero | 1).isAllOnes())
+        return TyBits;
+
+      // If we are subtracting one from a positive number, there is no carry
+      // out of the result.
+      if (Known1.isNonNegative()) {
+        FirstAnswer = Src1NumSignBits;
+        break;
+      }
+
+      // Otherwise, we treat this like an ADD.
+    }
+
+    // Add can have at most one carry bit.  Thus we know that the output
+    // is, at worst, one more bit than the inputs.
+    FirstAnswer = std::min(Src1NumSignBits, Src2NumSignBits) - 1;
     break;
   }
   case TargetOpcode::G_FCMP:

@@ -232,7 +232,7 @@ public:
     bool ignoreARC =
         !PD->isReadOnly() && PD->getSetterKind() == ObjCPropertyDecl::Assign;
     auto IsUnsafePtr = isUnsafePtr(QT, ignoreARC);
-    return {IsUnsafePtr && *IsUnsafePtr, PropType};
+    return {IsUnsafePtr && *IsUnsafePtr && !PD->isRetaining(), PropType};
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {

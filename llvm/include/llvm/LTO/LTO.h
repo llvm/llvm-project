@@ -105,12 +105,6 @@ setupStatsFile(StringRef StatsFilename);
 /// ordered indices to elements in the input array.
 LLVM_ABI std::vector<int> generateModulesOrdering(ArrayRef<BitcodeModule *> R);
 
-/// Updates MemProf attributes (and metadata) based on whether the index
-/// has recorded that we are linking with allocation libraries containing
-/// the necessary APIs for downstream transformations.
-LLVM_ABI void updateMemProfAttributes(Module &Mod,
-                                      const ModuleSummaryIndex &Index);
-
 class LTO;
 struct SymbolResolution;
 
@@ -323,6 +317,8 @@ LLVM_ABI ThinBackend createInProcessThinBackend(
 /// distributor.
 /// RemoteCompiler specifies the path to a Clang executable to be invoked for
 /// the backend jobs.
+/// RemoteCompilerPrependArgs specifies a list of prepend arguments to be
+/// applied to the backend compilations.
 /// RemoteCompilerArgs specifies a list of arguments to be applied to the
 /// backend compilations.
 /// SaveTemps is a debugging tool that prevents temporary files created by this
@@ -332,6 +328,7 @@ LLVM_ABI ThinBackend createOutOfProcessThinBackend(
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
     StringRef LinkerOutputFile, StringRef Distributor,
     ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+    ArrayRef<StringRef> RemoteCompilerPrependArgs,
     ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps);
 
 /// This ThinBackend writes individual module indexes to files, instead of
@@ -465,6 +462,19 @@ private:
     ModuleMapType ModuleMap;
     // The bitcode modules to compile, if specified by the LTO Config.
     std::optional<ModuleMapType> ModulesToCompile;
+
+    void setPrevailingModuleForGUID(GlobalValue::GUID GUID, StringRef Module) {
+      PrevailingModuleForGUID[GUID] = Module;
+    }
+    bool isPrevailingModuleForGUID(GlobalValue::GUID GUID,
+                                   StringRef Module) const {
+      auto It = PrevailingModuleForGUID.find(GUID);
+      return It != PrevailingModuleForGUID.end() && It->second == Module;
+    }
+
+  private:
+    // Make this private so all accesses must go through above accessor methods
+    // to avoid inadvertently creating new entries on lookups.
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
   } ThinLTO;
 

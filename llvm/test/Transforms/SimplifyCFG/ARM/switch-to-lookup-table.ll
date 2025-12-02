@@ -15,8 +15,8 @@
 ; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @c1, ptr @c2, ptr @c3]
 ; ENABLE:      @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @g1, ptr @g2, ptr @g3]
 ; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @g1, ptr @g2, ptr @g3]
-; ENABLE:      @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @f1, ptr @f2, ptr @f3]
-; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @f1, ptr @f2, ptr @f3]
+; ENABLE:      @{{.*}} = private unnamed_addr constant [4 x ptr] [ptr @f1, ptr @f2, ptr @f3, ptr @f4]
+; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [4 x ptr] [ptr @f1, ptr @f2, ptr @f3, ptr @f4]
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7a--none-eabi"

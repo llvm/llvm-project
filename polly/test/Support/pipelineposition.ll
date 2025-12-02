@@ -1,8 +1,6 @@
-; RUN: opt %loadNPMPolly -O3 -polly -polly-position=early                    -disable-output -debug-only=polly-scops < %s 2>&1 | FileCheck %s --check-prefix=NOINLINE
-; RUN: opt %loadNPMPolly -O3 -polly -polly-position=early -polly-run-inliner -disable-output -debug-only=polly-scops < %s 2>&1 | FileCheck %s --check-prefix=INLINED1
-; RUN: opt %loadNPMPolly -O3 -polly -polly-position=before-vectorizer        -disable-output -debug-only=polly-scops < %s 2>&1 | FileCheck %s --check-prefix=INLINED3
-;
-; REQUIRES: asserts
+; RUN: opt %loadNPMPolly -O3 -polly -polly-position=early                    -disable-output -polly-print-scops < %s 2>&1 | FileCheck %s --check-prefix=NOINLINE
+; RUN: opt %loadNPMPolly -O3 -polly -polly-position=early -polly-run-inliner -disable-output -polly-print-scops < %s 2>&1 | FileCheck %s --check-prefix=INLINED1
+; RUN: opt %loadNPMPolly -O3 -polly -polly-position=before-vectorizer        -disable-output -polly-print-scops < %s 2>&1 | FileCheck %s --check-prefix=INLINED3
 ;
 ; void callee(int n, double A[], int i) {
 ;   for (int j = 0; j < n; j += 1)

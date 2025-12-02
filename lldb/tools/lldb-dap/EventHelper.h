@@ -11,6 +11,8 @@
 
 #include "DAPForward.h"
 #include "Protocol/ProtocolEvents.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 
@@ -35,9 +37,30 @@ void SendContinuedEvent(DAP &dap);
 void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process);
 
 void SendInvalidatedEvent(
-    DAP &dap, llvm::ArrayRef<protocol::InvalidatedEventBody::Area> areas);
+    DAP &dap, llvm::ArrayRef<protocol::InvalidatedEventBody::Area> areas,
+    lldb::tid_t tid = LLDB_INVALID_THREAD_ID);
 
 void SendMemoryEvent(DAP &dap, lldb::SBValue variable);
+
+/// Event thread function that handles debugger events for multiple DAP sessions
+/// sharing the same debugger instance. This runs in its own thread and
+/// dispatches events to the appropriate DAP instance.
+///
+/// \param debugger The debugger instance to listen for events from.
+/// \param broadcaster The broadcaster for stop event thread notifications.
+/// \param client_name The client name for thread naming/logging purposes.
+/// \param log The log instance for logging.
+void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
+                 llvm::StringRef client_name, Log *log);
+
+/// Event handler functions called by EventThread.
+/// These handlers extract the necessary objects from events and find the
+/// appropriate DAP instance to handle them.
+void HandleProcessEvent(const lldb::SBEvent &event, bool &done, Log *log);
+void HandleTargetEvent(const lldb::SBEvent &event, Log *log);
+void HandleBreakpointEvent(const lldb::SBEvent &event, Log *log);
+void HandleThreadEvent(const lldb::SBEvent &event, Log *log);
+void HandleDiagnosticEvent(const lldb::SBEvent &event, Log *log);
 
 } // namespace lldb_dap
 

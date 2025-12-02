@@ -6,7 +6,7 @@
 
 // REQUIRES: lld
 
-// RUN: %clang %s -target x86_64-pc-linux -gdwarf-5 -fdebug-types-section \
+// RUN: %clangxx %s -target x86_64-pc-linux -gdwarf-5 -fdebug-types-section \
 // RUN:   -gpubnames -fno-limit-debug-info -c -o %t.o
 // RUN: ld.lld %t.o -o %t
 // RUN: %lldb %t -o "type lookup stype" -b | FileCheck %s --check-prefix=BASE

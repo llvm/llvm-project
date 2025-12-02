@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/XRay/FileHeaderReader.h"
 
-namespace llvm {
-namespace xray {
+using namespace llvm;
+using namespace llvm::xray;
 
 // Populates the FileHeader reference by reading the first 32 bytes of the file.
-Expected<XRayFileHeader> readBinaryFormatHeader(DataExtractor &HeaderExtractor,
-                                                uint64_t &OffsetPtr) {
+Expected<XRayFileHeader>
+xray::readBinaryFormatHeader(DataExtractor &HeaderExtractor,
+                             uint64_t &OffsetPtr) {
   // FIXME: Maybe deduce whether the data is little or big-endian using some
   // magic bytes in the beginning of the file?
 
@@ -68,6 +69,3 @@ Expected<XRayFileHeader> readBinaryFormatHeader(DataExtractor &HeaderExtractor,
   OffsetPtr += 16;
   return std::move(FileHeader);
 }
-
-} // namespace xray
-} // namespace llvm

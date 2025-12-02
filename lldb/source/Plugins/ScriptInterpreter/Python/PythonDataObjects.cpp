@@ -810,6 +810,17 @@ bool PythonCallable::Check(PyObject *py_obj) {
   if (!py_obj)
     return false;
 
+  PythonObject python_obj(PyRefType::Borrowed, py_obj);
+
+  // Handle staticmethod/classmethod descriptors by extracting the
+  // `__func__` attribute.
+  if (python_obj.HasAttribute("__func__")) {
+    PythonObject function_obj = python_obj.GetAttributeValue("__func__");
+    if (!function_obj.IsAllocated())
+      return false;
+    return PyCallable_Check(function_obj.release());
+  }
+
   return PyCallable_Check(py_obj);
 }
 

@@ -113,7 +113,6 @@ namespace ptr_to_ptr_to_retained {
   // expected-warning@-1{{Instance variable 'dispatch' in 'AnotherObject' is a retainable type 'dispatch_queue_t'}}
 }
 @property(nonatomic, readonly, strong) NSString *prop_string;
-// expected-warning@-1{{Property 'prop_string' in 'AnotherObject' is a raw pointer to retainable type 'NSString'; member variables must be a RetainPtr}}
 @property(nonatomic, readonly) NSString *prop_safe;
 @end
 
@@ -132,7 +131,6 @@ namespace ptr_to_ptr_to_retained {
   // expected-warning@-1{{Instance variable 'os_dispatch' in 'DerivedObject' is a retainable type 'dispatch_queue_t'}}
 }
 @property(nonatomic, strong) NSNumber *prop_number;
-// expected-warning@-1{{Property 'prop_number' in 'DerivedObject' is a raw pointer to retainable type 'NSNumber'; member variables must be a RetainPtr}}
 @property(nonatomic, readonly) NSString *prop_string;
 @end
 
@@ -178,12 +176,12 @@ NS_REQUIRES_PROPERTY_DEFINITIONS
 }
 @property(nonatomic, readonly, strong) NSString *prop_string1;
 @property(nonatomic, readonly, strong) NSString *prop_string2;
-// expected-warning@-1{{Property 'prop_string2' in 'NoSynthObject' is a raw pointer to retainable type 'NSString'}}
 @property(nonatomic, assign) NSString *prop_string3;
 // expected-warning@-1{{Property 'prop_string3' in 'NoSynthObject' is a raw pointer to retainable type 'NSString'; member variables must be a RetainPtr}}
 @property(nonatomic, unsafe_unretained) NSString *prop_string4;
 // expected-warning@-1{{Property 'prop_string4' in 'NoSynthObject' is a raw pointer to retainable type 'NSString'; member variables must be a RetainPtr}}
-@property(nonatomic, readonly, strong) NSString *dispatch;
+@property(nonatomic, copy) NSString *prop_string5;
+@property(nonatomic, readonly, strong) dispatch_queue_t dispatch;
 @end
 
 @implementation NoSynthObject
@@ -193,6 +191,7 @@ NS_REQUIRES_PROPERTY_DEFINITIONS
 @synthesize prop_string2;
 @synthesize prop_string3;
 @synthesize prop_string4;
+@synthesize prop_string5;
 - (dispatch_queue_t)dispatch {
   return nil;
 }
