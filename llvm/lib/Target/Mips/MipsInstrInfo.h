@@ -55,7 +55,10 @@ public:
     BT_Indirect    // One indirct branch.
   };
 
-  explicit MipsInstrInfo(const MipsSubtarget &STI, unsigned UncondBrOpc);
+  explicit MipsInstrInfo(const MipsSubtarget &STI, const MipsRegisterInfo &RI,
+                         unsigned UncondBrOpc);
+
+  MCInst getNop() const override;
 
   static const MipsInstrInfo *create(MipsSubtarget &STI);
 
@@ -128,7 +131,10 @@ public:
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should
   /// always be able to get register info as well (through this method).
-  virtual const MipsRegisterInfo &getRegisterInfo() const = 0;
+  const MipsRegisterInfo &getRegisterInfo() const {
+    return static_cast<const MipsRegisterInfo &>(
+        TargetInstrInfo::getRegisterInfo());
+  }
 
   virtual unsigned getOppositeBranchOpc(unsigned Opc) const = 0;
 
@@ -141,31 +147,28 @@ public:
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override {
-    storeRegToStack(MBB, MBBI, SrcReg, isKill, FrameIndex, RC, TRI, 0, Flags);
+    storeRegToStack(MBB, MBBI, SrcReg, isKill, FrameIndex, RC, 0, Flags);
   }
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override {
-    loadRegFromStack(MBB, MBBI, DestReg, FrameIndex, RC, TRI, 0, Flags);
+    loadRegFromStack(MBB, MBBI, DestReg, FrameIndex, RC, 0, Flags);
   }
 
   virtual void
   storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                   Register SrcReg, bool isKill, int FrameIndex,
-                  const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-                  int64_t Offset,
+                  const TargetRegisterClass *RC, int64_t Offset,
                   MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const = 0;
 
   virtual void loadRegFromStack(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, int64_t Offset,
+      int FrameIndex, const TargetRegisterClass *RC, int64_t Offset,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const = 0;
 
   virtual void adjustStackPtr(unsigned SP, int64_t Amount,

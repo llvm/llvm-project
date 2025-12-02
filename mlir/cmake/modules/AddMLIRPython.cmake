@@ -99,6 +99,118 @@ function(declare_mlir_python_sources name)
   endif()
 endfunction()
 
+# Function: mlir_generate_type_stubs
+# Turns on automatic type stub generation for extension modules.
+# Specifically, performs add_custom_command to run nanobind's stubgen on an extension module.
+#
+# Arguments:
+#   MODULE_NAME: The fully-qualified name of the extension module (used for importing in python).
+#   DEPENDS_TARGETS: List of targets these type stubs depend on being built; usually corresponding to the
+#     specific extension module (e.g., something like StandalonePythonModules.extension._standaloneDialectsNanobind.dso)
+#     and the core bindings extension module (e.g., something like StandalonePythonModules.extension._mlir.dso).
+#   OUTPUT_DIR: The root output directory to emit the type stubs into.
+#   OUTPUTS: List of expected outputs.
+#   DEPENDS_TARGET_SRC_DEPS: List of cpp sources for extension library (for generating a DEPFILE).
+#   IMPORT_PATHS: List of paths to add to PYTHONPATH for stubgen.
+#   PATTERN_FILE: (Optional) Pattern file (see https://nanobind.readthedocs.io/en/latest/typing.html#pattern-files).
+#   VERBOSE: Emit logging/status messages during stub generation (default: OFF).
+# Outputs:
+#   NB_STUBGEN_CUSTOM_TARGET: The target corresponding to generation which other targets can depend on.
+function(mlir_generate_type_stubs)
+  cmake_parse_arguments(ARG
+    "VERBOSE"
+    "MODULE_NAME;OUTPUT_DIR;PATTERN_FILE"
+    "IMPORT_PATHS;DEPENDS_TARGETS;OUTPUTS;DEPENDS_TARGET_SRC_DEPS"
+    ${ARGN})
+
+  # for people doing find_package(nanobind)
+  if(EXISTS ${nanobind_DIR}/../src/stubgen.py)
+    set(NB_STUBGEN "${nanobind_DIR}/../src/stubgen.py")
+  elseif(EXISTS ${nanobind_DIR}/../stubgen.py)
+    set(NB_STUBGEN "${nanobind_DIR}/../stubgen.py")
+  # for people using FetchContent_Declare and FetchContent_MakeAvailable
+  elseif(EXISTS ${nanobind_SOURCE_DIR}/src/stubgen.py)
+    set(NB_STUBGEN "${nanobind_SOURCE_DIR}/src/stubgen.py")
+  elseif(EXISTS ${nanobind_SOURCE_DIR}/stubgen.py)
+    set(NB_STUBGEN "${nanobind_SOURCE_DIR}/stubgen.py")
+  else()
+    message(FATAL_ERROR "mlir_generate_type_stubs(): could not locate 'stubgen.py'!")
+  endif()
+
+  file(REAL_PATH "${NB_STUBGEN}" NB_STUBGEN)
+  set(_import_paths)
+  foreach(_import_path IN LISTS ARG_IMPORT_PATHS)
+    file(REAL_PATH "${_import_path}" _import_path)
+    list(APPEND _import_paths "-i;${_import_path}")
+  endforeach()
+  set(_nb_stubgen_cmd
+      "${Python_EXECUTABLE}"
+      "${NB_STUBGEN}"
+      --module
+      "${ARG_MODULE_NAME}"
+      "${_import_paths}"
+      --recursive
+      --include-private
+      --output-dir
+      "${ARG_OUTPUT_DIR}")
+  if(NOT ARG_VERBOSE)
+    list(APPEND _nb_stubgen_cmd "--quiet")
+  endif()
+  if(ARG_PATTERN_FILE)
+    list(APPEND _nb_stubgen_cmd "-p;${ARG_PATTERN_FILE}")
+    list(APPEND ARG_DEPENDS_TARGETS "${ARG_PATTERN_FILE}")
+  endif()
+
+  list(TRANSFORM ARG_OUTPUTS PREPEND "${ARG_OUTPUT_DIR}/" OUTPUT_VARIABLE _generated_type_stubs)
+  set(_depfile "${ARG_OUTPUT_DIR}/${ARG_MODULE_NAME}.d")
+  if ((NOT EXISTS ${_depfile}) AND ARG_DEPENDS_TARGET_SRC_DEPS)
+    list(JOIN ARG_DEPENDS_TARGET_SRC_DEPS " " _depfiles)
+    list(TRANSFORM _generated_type_stubs APPEND ": ${_depfiles}" OUTPUT_VARIABLE _depfiles)
+    list(JOIN _depfiles "\n" _depfiles)
+    file(GENERATE OUTPUT "${_depfile}" CONTENT "${_depfiles}")
+  endif()
+
+  if(ARG_VERBOSE)
+    message(STATUS "Generating type-stubs outputs ${_generated_type_stubs}")
+  endif()
+
+  # If PYTHONPATH is set and points to the build location of the python package then when stubgen runs, _mlir will get
+  # imported twice and bad things will happen (e.g., Assertion `!instance && “PyGlobals already constructed”’).
+  # This happens because mlir is a namespace package and the importer/loader can't distinguish between
+  # mlir._mlir_libs._mlir and _mlir_libs._mlir imported from CWD.
+  # So try to filter out any entries in PYTHONPATH that end in "MLIR_BINDINGS_PYTHON_INSTALL_PREFIX/.."
+  # (e.g., python_packages/mlir_core/).
+  set(_pythonpath "$ENV{PYTHONPATH}")
+  cmake_path(CONVERT "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/.." TO_NATIVE_PATH_LIST _install_prefix NORMALIZE)
+  if(WIN32)
+    set(_path_sep ";")
+    set(_trailing_sep "\\")
+  else()
+    set(_path_sep ":")
+    set(_trailing_sep "/")
+    # `;` is the CMake list delimiter so Windows paths are automatically lists
+    # and Unix paths can be made into lists by replacing `:` with `;`
+    string(REPLACE "${_path_sep}" ";" _pythonpath "${_pythonpath}")
+  endif()
+  string(REGEX REPLACE "${_trailing_sep}$" "" _install_prefix "${_install_prefix}")
+  list(FILTER _pythonpath EXCLUDE REGEX "(${_install_prefix}|${_install_prefix}${_trailing_sep})$")
+  # Note, ${_pythonpath} is a list but "${_pythonpath}" is not a list - it's a string with ";" chars in it.
+  string(JOIN "${_path_sep}" _pythonpath ${_pythonpath})
+  add_custom_command(
+    OUTPUT ${_generated_type_stubs}
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH="${_pythonpath}" ${_nb_stubgen_cmd}
+    WORKING_DIRECTORY "${CMAKE_CURRENT_FUNCTION_LIST_DIR}"
+    DEPENDS "${ARG_DEPENDS_TARGETS}"
+    DEPFILE "${_depfile}"
+    COMMENT "Generating type stubs using: ${_nb_stubgen_cmd}"
+  )
+
+  list(JOIN ARG_DEPENDS_TARGETS "." _name)
+  set(_name "${_name}.${ARG_MODULE_NAME}.type_stubs")
+  add_custom_target("${_name}" DEPENDS ${_generated_type_stubs})
+  set(NB_STUBGEN_CUSTOM_TARGET "${_name}" PARENT_SCOPE)
+endfunction()
+
 # Function: declare_mlir_python_extension
 # Declares a buildable python extension from C++ source files. The built
 # module is considered a python source file and included as everything else.
@@ -676,40 +788,42 @@ function(add_mlir_python_extension libname extname)
       # Avoid some warnings from upstream nanobind.
       # If a superproject set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES, let
       # the super project handle compile options as it wishes.
-      set(nanobind_target "nanobind-static")
-      if (NOT TARGET ${nanobind_target})
-        # Get correct nanobind target name: nanobind-static-ft or something else
-        # It is set by nanobind_add_module function according to the passed options
-        get_property(all_targets DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
-
-        # Iterate over the list of targets
-        foreach(target ${all_targets})
-          # Check if the target name matches the given string
-          if("${target}" MATCHES "nanobind-")
-            set(nanobind_target "${target}")
-          endif()
-        endforeach()
-
-        if (NOT TARGET ${nanobind_target})
-          message(FATAL_ERROR "Could not find nanobind target to set compile options to")
-        endif()
-      endif()
-      target_compile_options(${nanobind_target}
+      get_property(NB_LIBRARY_TARGET_NAME TARGET ${libname} PROPERTY LINK_LIBRARIES)
+      target_compile_options(${NB_LIBRARY_TARGET_NAME}
         PRIVATE
-          -Wno-cast-qual
-          -Wno-zero-length-array
-          -Wno-nested-anon-types
           -Wno-c++98-compat-extra-semi
+          -Wno-cast-qual
           -Wno-covered-switch-default
-          ${eh_rtti_enable}
-      )
+          -Wno-deprecated-literal-operator
+          -Wno-nested-anon-types
+          -Wno-unused-parameter
+          -Wno-zero-length-array
+          -Wno-missing-field-initializers
+          ${eh_rtti_enable})
+
+      target_compile_options(${libname}
+        PRIVATE
+          -Wno-c++98-compat-extra-semi
+          -Wno-cast-qual
+          -Wno-covered-switch-default
+          -Wno-deprecated-literal-operator
+          -Wno-nested-anon-types
+          -Wno-unused-parameter
+          -Wno-zero-length-array
+          -Wno-missing-field-initializers
+          ${eh_rtti_enable})
     endif()
 
     if(APPLE)
       # NanobindAdaptors.h uses PyClassMethod_New to build `pure_subclass`es but nanobind
       # doesn't declare this API as undefined in its linker flags. So we need to declare it as such
       # for downstream users that do not do something like `-undefined dynamic_lookup`.
-      target_link_options(${libname} PUBLIC "LINKER:-U,_PyClassMethod_New")
+      # Same for the rest.
+      target_link_options(${libname} PUBLIC
+        "LINKER:-U,_PyClassMethod_New"
+        "LINKER:-U,_PyCode_Addr2Location"
+        "LINKER:-U,_PyFrame_GetLasti"
+      )
     endif()
   endif()
 

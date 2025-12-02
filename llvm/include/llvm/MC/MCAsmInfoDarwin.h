@@ -21,6 +21,9 @@ namespace llvm {
 class MCAsmInfoDarwin : public MCAsmInfo {
 public:
   explicit MCAsmInfoDarwin();
+  void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
+                            raw_ostream &) const final;
+  bool useCodeAlign(const MCSection &Sec) const final;
 
   /// True if the section is atomized using the symbols in it.
   /// This is false if the section is atomized based on its contents (MachO' __TEXT,__cstring for

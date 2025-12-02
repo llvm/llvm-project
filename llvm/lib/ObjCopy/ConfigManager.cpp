@@ -10,8 +10,15 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 
-namespace llvm {
-namespace objcopy {
+using namespace llvm;
+using namespace llvm::objcopy;
+
+Expected<const ELFConfig &> ConfigManager::getELFConfig() const {
+  if (!Common.ExtractSection.empty())
+    return createStringError(llvm::errc::invalid_argument,
+                             "option is not supported for ELF");
+  return ELF;
+}
 
 Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
   if (!Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
@@ -27,7 +34,7 @@ Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
       Common.DiscardMode == DiscardType::Locals ||
       !Common.SymbolsToAdd.empty() || Common.GapFill != 0 ||
       Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||
-      !Common.ChangeSectionAddress.empty())
+      !Common.ChangeSectionAddress.empty() || !Common.ExtractSection.empty())
     return createStringError(llvm::errc::invalid_argument,
                              "option is not supported for COFF");
 
@@ -48,7 +55,7 @@ Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
       Common.DiscardMode == DiscardType::Locals ||
       !Common.SymbolsToAdd.empty() || Common.GapFill != 0 ||
       Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||
-      !Common.ChangeSectionAddress.empty())
+      !Common.ChangeSectionAddress.empty() || !Common.ExtractSection.empty())
     return createStringError(llvm::errc::invalid_argument,
                              "option is not supported for MachO");
 
@@ -69,7 +76,7 @@ Expected<const WasmConfig &> ConfigManager::getWasmConfig() const {
       !Common.SetSectionFlags.empty() || !Common.SetSectionType.empty() ||
       !Common.SymbolsToRename.empty() || Common.GapFill != 0 ||
       Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||
-      !Common.ChangeSectionAddress.empty())
+      !Common.ChangeSectionAddress.empty() || !Common.ExtractSection.empty())
     return createStringError(llvm::errc::invalid_argument,
                              "only flags for section dumping, removal, and "
                              "addition are supported");
@@ -99,7 +106,7 @@ Expected<const XCOFFConfig &> ConfigManager::getXCOFFConfig() const {
       Common.Weaken || Common.StripUnneeded || Common.DecompressDebugSections ||
       Common.GapFill != 0 || Common.PadTo != 0 ||
       Common.ChangeSectionLMAValAll != 0 ||
-      !Common.ChangeSectionAddress.empty()) {
+      !Common.ChangeSectionAddress.empty() || !Common.ExtractSection.empty()) {
     return createStringError(
         llvm::errc::invalid_argument,
         "no flags are supported yet, only basic copying is allowed");
@@ -108,5 +115,24 @@ Expected<const XCOFFConfig &> ConfigManager::getXCOFFConfig() const {
   return XCOFF;
 }
 
-} // end namespace objcopy
-} // end namespace llvm
+Expected<const DXContainerConfig &>
+ConfigManager::getDXContainerConfig() const {
+  // All other flags are either supported or not applicable for DXContainer
+  // object files and will be silently ignored.
+  if (!Common.AddGnuDebugLink.empty() || !Common.SplitDWO.empty() ||
+      !Common.AllocSectionsPrefix.empty() ||
+      Common.DiscardMode != DiscardType::None || !Common.AddSection.empty() ||
+      !Common.KeepSection.empty() || !Common.SectionsToRename.empty() ||
+      !Common.SetSectionAlignment.empty() || !Common.SetSectionFlags.empty() ||
+      !Common.SetSectionType.empty() || Common.ExtractDWO ||
+      Common.OnlyKeepDebug || Common.StripAllGNU || Common.StripDWO ||
+      Common.StripDebug || Common.StripNonAlloc || Common.StripSections ||
+      Common.StripUnneeded || Common.DecompressDebugSections ||
+      Common.GapFill != 0 || Common.PadTo != 0 ||
+      Common.ChangeSectionLMAValAll != 0 ||
+      !Common.ChangeSectionAddress.empty()) {
+    return createStringError(llvm::errc::invalid_argument,
+                             "option is not supported for DXContainer");
+  }
+  return DXContainer;
+}

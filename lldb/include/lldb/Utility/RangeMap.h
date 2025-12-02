@@ -216,7 +216,7 @@ public:
 
   void Sort() {
     if (m_entries.size() > 1)
-      std::stable_sort(m_entries.begin(), m_entries.end());
+      llvm::stable_sort(m_entries);
   }
 
 #ifdef ASSERT_RANGEMAP_ARE_SORTED
@@ -465,6 +465,10 @@ public:
 
   RangeDataVector(Compare compare = Compare()) : m_compare(compare) {}
 
+  RangeDataVector(std::initializer_list<AugmentedEntry> entries,
+                  Compare compare = Compare())
+      : m_entries(entries), m_compare(compare) {}
+
   ~RangeDataVector() = default;
 
   void Append(const Entry &entry) { m_entries.emplace_back(entry); }
@@ -484,14 +488,14 @@ public:
 
   void Sort() {
     if (m_entries.size() > 1)
-      std::stable_sort(m_entries.begin(), m_entries.end(),
-                       [&compare = m_compare](const Entry &a, const Entry &b) {
-                         if (a.base != b.base)
-                           return a.base < b.base;
-                         if (a.size != b.size)
-                           return a.size < b.size;
-                         return compare(a.data, b.data);
-                       });
+      llvm::stable_sort(m_entries,
+                        [&compare = m_compare](const Entry &a, const Entry &b) {
+                          if (a.base != b.base)
+                            return a.base < b.base;
+                          if (a.size != b.size)
+                            return a.size < b.size;
+                          return compare(a.data, b.data);
+                        });
     if (!m_entries.empty())
       ComputeUpperBounds(0, m_entries.size());
   }

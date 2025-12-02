@@ -1,5 +1,6 @@
-// REQUIRES: aarch64-registered-target
+// REQUIRES: aarch64-registered-target,aarch64-host,system-linux
 // RUN: %clang --target=aarch64 --print-enabled-extensions -mcpu=grace | FileCheck --strict-whitespace --implicit-check-not=FEAT_ %s
+// RUN: env LLVM_CPUINFO=%S/../Inputs/cpunative/grace %clang --target=aarch64 --print-enabled-extensions -mcpu=native | FileCheck --strict-whitespace --implicit-check-not=FEAT_ %s
 
 // CHECK: Extensions enabled for the given AArch64 target
 // CHECK-EMPTY:
@@ -54,8 +55,8 @@
 // CHECK-NEXT:     FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions
 // CHECK-NEXT:     FEAT_SVE_AES, FEAT_SVE_PMULL128                        Enable SVE AES and quadword SVE polynomial multiply instructions
 // CHECK-NEXT:     FEAT_SVE_BitPerm                                       Enable bit permutation SVE2 instructions
-// CHECK-NEXT:     FEAT_SVE_SHA3                                          Enable SHA3 SVE2 instructions
-// CHECK-NEXT:     FEAT_SVE_SM4                                           Enable SM4 SVE2 instructions
+// CHECK-NEXT:     FEAT_SVE_SHA3                                          Enable SVE SHA3 instructions
+// CHECK-NEXT:     FEAT_SVE_SM4                                           Enable SVE SM4 instructions
 // CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance instructions
 // CHECK-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension

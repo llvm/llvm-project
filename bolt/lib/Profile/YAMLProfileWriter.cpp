@@ -129,50 +129,62 @@ YAMLProfileWriter::convertPseudoProbeDesc(const MCPseudoProbeDecoder &Decoder) {
   return {Desc, InlineTree};
 }
 
-std::vector<yaml::bolt::PseudoProbeInfo>
-YAMLProfileWriter::convertNodeProbes(NodeIdToProbes &NodeProbes) {
-  struct BlockProbeInfoHasher {
-    size_t operator()(const yaml::bolt::PseudoProbeInfo &BPI) const {
-      return llvm::hash_combine(llvm::hash_combine_range(BPI.BlockProbes),
-                                llvm::hash_combine_range(BPI.CallProbes),
-                                llvm::hash_combine_range(BPI.IndCallProbes));
+void YAMLProfileWriter::BlockProbeCtx::addBlockProbe(
+    const InlineTreeMapTy &Map, const MCDecodedPseudoProbe &Probe,
+    uint32_t ProbeOffset) {
+  auto It = Map.find(Probe.getInlineTreeNode());
+  if (It == Map.end())
+    return;
+  auto NodeId = It->second;
+  uint32_t Index = Probe.getIndex();
+  if (Probe.isCall())
+    CallProbes[ProbeOffset] =
+        Call{Index, NodeId, Probe.isIndirectCall(), false};
+  else
+    NodeToProbes[NodeId].emplace_back(Index);
+}
+
+void YAMLProfileWriter::BlockProbeCtx::finalize(
+    yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+  // Hash block probes by vector
+  struct ProbeHasher {
+    size_t operator()(const ArrayRef<uint64_t> Probes) const {
+      return llvm::hash_combine_range(Probes);
     }
   };
 
-  // Check identical BlockProbeInfo structs and merge them
-  std::unordered_map<yaml::bolt::PseudoProbeInfo, std::vector<uint32_t>,
-                     BlockProbeInfoHasher>
-      BPIToNodes;
-  for (auto &[NodeId, Probes] : NodeProbes) {
-    yaml::bolt::PseudoProbeInfo BPI;
-    BPI.BlockProbes = std::vector(Probes[0].begin(), Probes[0].end());
-    BPI.IndCallProbes = std::vector(Probes[1].begin(), Probes[1].end());
-    BPI.CallProbes = std::vector(Probes[2].begin(), Probes[2].end());
-    BPIToNodes[BPI].push_back(NodeId);
+  // Check identical block probes and merge them
+  std::unordered_map<std::vector<uint64_t>, std::vector<uint32_t>, ProbeHasher>
+      ProbesToNodes;
+  for (auto &[NodeId, Probes] : NodeToProbes) {
+    llvm::sort(Probes);
+    ProbesToNodes[Probes].emplace_back(NodeId);
   }
-
-  auto handleMask = [](const auto &Ids, auto &Vec, auto &Mask) {
-    for (auto Id : Ids)
-      if (Id > 64)
-        Vec.emplace_back(Id);
-      else
-        Mask |= 1ull << (Id - 1);
-  };
-
-  // Add to YAML with merged nodes/block mask optimizations
-  std::vector<yaml::bolt::PseudoProbeInfo> YamlProbes;
-  YamlProbes.reserve(BPIToNodes.size());
-  for (const auto &[BPI, Nodes] : BPIToNodes) {
-    auto &YamlBPI = YamlProbes.emplace_back(yaml::bolt::PseudoProbeInfo());
-    YamlBPI.CallProbes = BPI.CallProbes;
-    YamlBPI.IndCallProbes = BPI.IndCallProbes;
-    if (Nodes.size() == 1)
-      YamlBPI.InlineTreeIndex = Nodes.front();
-    else
-      YamlBPI.InlineTreeNodes = Nodes;
-    handleMask(BPI.BlockProbes, YamlBPI.BlockProbes, YamlBPI.BlockMask);
+  for (auto &[Probes, Nodes] : ProbesToNodes) {
+    llvm::sort(Nodes);
+    YamlBB.PseudoProbes.emplace_back(
+        yaml::bolt::PseudoProbeInfo{Probes, Nodes});
   }
-  return YamlProbes;
+  for (yaml::bolt::CallSiteInfo &CSI : YamlBB.CallSites) {
+    auto It = CallProbes.find(CSI.Offset);
+    if (It == CallProbes.end())
+      continue;
+    Call &Probe = It->second;
+    CSI.Probe = Probe.Id;
+    CSI.InlineTreeNode = Probe.Node;
+    CSI.Indirect = Probe.Indirect;
+    Probe.Used = true;
+  }
+  for (const auto &[Offset, Probe] : CallProbes) {
+    if (Probe.Used)
+      continue;
+    yaml::bolt::CallSiteInfo CSI;
+    CSI.Offset = Offset;
+    CSI.Probe = Probe.Id;
+    CSI.InlineTreeNode = Probe.Node;
+    CSI.Indirect = Probe.Indirect;
+    YamlBB.CallSites.emplace_back(CSI);
+  }
 }
 
 std::tuple<std::vector<yaml::bolt::InlineTreeNode>,
@@ -215,7 +227,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   const MCPseudoProbeDecoder *PseudoProbeDecoder =
       opts::ProfileWritePseudoProbes ? BC.getPseudoProbeDecoder() : nullptr;
 
-  const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
+  const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_BRANCH;
 
   // Prepare function and block hashes
   BF.computeHash(UseDFS);
@@ -226,6 +238,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
+  YamlBF.ExternEntryCount = BF.getExternEntryCount();
   DenseMap<const MCDecodedPseudoProbeInlineTree *, uint32_t> InlineTreeNodeId;
   if (PseudoProbeDecoder && BF.getGUID()) {
     std::tie(YamlBF.InlineTree, InlineTreeNodeId) =
@@ -303,9 +316,8 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
       }
       // Sort targets in a similar way to getBranchData, see Location::operator<
       llvm::sort(CSTargets, [](const auto &RHS, const auto &LHS) {
-        if (RHS.first != LHS.first)
-          return RHS.first < LHS.first;
-        return RHS.second.Offset < LHS.second.Offset;
+        return std::tie(RHS.first, RHS.second.Offset) <
+               std::tie(LHS.first, LHS.second.Offset);
       });
       for (auto &KV : CSTargets)
         YamlBB.CallSites.push_back(KV.second);
@@ -343,12 +355,13 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
       const AddressProbesMap &ProbeMap =
           PseudoProbeDecoder->getAddress2ProbesMap();
       const uint64_t FuncAddr = BF.getAddress();
-      const std::pair<uint64_t, uint64_t> &BlockRange =
-          BB->getInputAddressRange();
-      const std::pair<uint64_t, uint64_t> BlockAddrRange = {
-          FuncAddr + BlockRange.first, FuncAddr + BlockRange.second};
-      auto Probes = ProbeMap.find(BlockAddrRange.first, BlockAddrRange.second);
-      YamlBB.PseudoProbes = writeBlockProbes(Probes, InlineTreeNodeId);
+      auto [Start, End] = BB->getInputAddressRange();
+      Start += FuncAddr;
+      End += FuncAddr;
+      BlockProbeCtx Ctx;
+      for (const MCDecodedPseudoProbe &Probe : ProbeMap.find(Start, End))
+        Ctx.addBlockProbe(InlineTreeNodeId, Probe, Probe.getAddress() - Start);
+      Ctx.finalize(YamlBB);
     }
 
     YamlBF.Blocks.emplace_back(YamlBB);
@@ -382,7 +395,7 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   StringSet<> EventNames = RI.getProfileReader()->getEventNames();
   if (!EventNames.empty()) {
     std::string Sep;
-    for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames) {
+    for (const StringMapEntry<EmptyStringSetTag> &EventEntry : EventNames) {
       BP.Header.EventNames += Sep + EventEntry.first().str();
       Sep = ",";
     }

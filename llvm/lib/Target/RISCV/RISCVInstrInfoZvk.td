@@ -206,8 +206,6 @@ let Predicates = [HasStdExtZvksh], RVVConstraint = VS2Constraint in {
 //===----------------------------------------------------------------------===//
 
 defvar I32IntegerVectors = !filter(vti, AllIntegerVectors, !eq(vti.SEW, 32));
-defvar I32I64IntegerVectors = !filter(vti, AllIntegerVectors,
-                                      !or(!eq(vti.SEW, 32), !eq(vti.SEW, 64)));
 
 class ZvkI32IntegerVectors<string vd_lmul> {
   list<VTypeInfo> vs2_types = !cond(!eq(vd_lmul, "M8")  : !filter(vti, I32IntegerVectors, !le(vti.LMul.octuple, 32)),
@@ -230,9 +228,8 @@ class ZvkMxSet<string vd_lmul> {
 }
 
 class VPseudoBinaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass> :
-      Pseudo<(outs RetClass:$rd_wb),
-        (ins RetClass:$rd, OpClass:$rs2, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
-        RISCVVPseudo {
+      RISCVVPseudo<(outs RetClass:$rd_wb),
+        (ins RetClass:$rd, OpClass:$rs2, AVL:$vl, sew:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -246,10 +243,9 @@ class VPseudoBinaryNoMask_Zvk<DAGOperand RetClass, VReg OpClass> :
 class VPseudoTernaryNoMask_Zvk<VReg RetClass,
                                VReg Op1Class,
                                DAGOperand Op2Class> :
-        Pseudo<(outs RetClass:$rd_wb),
+        RISCVVPseudo<(outs RetClass:$rd_wb),
                (ins RetClass:$rd, Op1Class:$rs2, Op2Class:$rs1,
-                    AVL:$vl, sew:$sew, vec_policy:$policy), []>,
-        RISCVVPseudo {
+                    AVL:$vl, sew:$sew, vec_policy:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1128,16 +1124,16 @@ let Predicates = [HasStdExtZvkned] in {
   defm : VPatUnaryV_S_NoMaskVectorCrypto<"int_riscv_vaesz", "PseudoVAESZ", I32IntegerVectors>;
 } // Predicates = [HasStdExtZvkned]
 
-let Predicates = [HasStdExtZvknha] in {
+let Predicates = [HasStdExtZvknhaOrZvknhb] in {
   defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ch", "PseudoVSHA2CH", I32IntegerVectors>;
-  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CH", I32IntegerVectors>;
+  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CL", I32IntegerVectors>;
   defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ms", "PseudoVSHA2MS", I32IntegerVectors, isSEWAware=true>;
 } // Predicates = [HasStdExtZvknha]
 
 let Predicates = [HasStdExtZvknhb] in {
-  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ch", "PseudoVSHA2CH", I32I64IntegerVectors>;
-  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CH", I32I64IntegerVectors>;
-  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ms", "PseudoVSHA2MS", I32I64IntegerVectors, isSEWAware=true>;
+  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ch", "PseudoVSHA2CH", I64IntegerVectors>;
+  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CL", I64IntegerVectors>;
+  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ms", "PseudoVSHA2MS", I64IntegerVectors, isSEWAware=true>;
 } // Predicates = [HasStdExtZvknhb]
 
 let Predicates = [HasStdExtZvksed] in {

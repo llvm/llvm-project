@@ -19,9 +19,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
 
 using namespace llvm;
 using namespace llvm::SPIRV;
@@ -98,7 +96,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
 void SPIRVInstPrinter::recordOpExtInstImport(const MCInst *MI) {
   MCRegister Reg = MI->getOperand(0).getReg();
   auto Name = getSPIRVStringOperand(*MI, 1);
-  auto Set = getExtInstSetFromString(Name);
+  auto Set = getExtInstSetFromString(std::move(Name));
   ExtInstSetIDs.insert({Reg, Set});
 }
 
@@ -169,6 +167,36 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
               MI, FirstVariableIndex, OS);
           printRemainingVariableOps(MI, FirstVariableIndex + 1, OS);
           break;
+        case SPIRV::OpSwitch:
+          if (MI->getFlags() & SPIRV::INST_PRINTER_WIDTH64) {
+            // In binary format 64-bit types are split into two 32-bit operands,
+            // but in text format combine these into a single 64-bit value as
+            // this is what tools such as spirv-as require.
+            const unsigned NumOps = MI->getNumOperands();
+            for (unsigned OpIdx = NumFixedOps; OpIdx < NumOps;) {
+              if (OpIdx + 1 >= NumOps || !MI->getOperand(OpIdx).isImm() ||
+                  !MI->getOperand(OpIdx + 1).isImm()) {
+                llvm_unreachable("Unexpected OpSwitch operands");
+                continue;
+              }
+              OS << ' ';
+              uint64_t LowBits = MI->getOperand(OpIdx).getImm();
+              uint64_t HighBits = MI->getOperand(OpIdx + 1).getImm();
+              uint64_t CombinedValue = (HighBits << 32) | LowBits;
+              OS << formatImm(CombinedValue);
+              OpIdx += 2;
+
+              // Next should be the label
+              if (OpIdx < NumOps) {
+                OS << ' ';
+                printOperand(MI, OpIdx, OS);
+                OpIdx++;
+              }
+            }
+          } else {
+            printRemainingVariableOps(MI, NumFixedOps, OS);
+          }
+          break;
         case SPIRV::OpImageSampleImplicitLod:
         case SPIRV::OpImageSampleDrefImplicitLod:
         case SPIRV::OpImageSampleProjImplicitLod:
@@ -212,6 +240,7 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         case SPIRV::OpConstantF:
           // The last fixed operand along with any variadic operands that follow
           // are part of the variable value.
+          assert(NumFixedOps > 0 && "Expected at least one fixed operand");
           printOpConstantVarOps(MI, NumFixedOps - 1, OS);
           break;
         case SPIRV::OpCooperativeMatrixMulAddKHR: {
@@ -239,6 +268,60 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
               }
             }
             OS << Buffer;
+          }
+          break;
+        }
+        case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumFixedOps >= NumOps)
+            break;
+          OS << ' ';
+          const unsigned Flags = MI->getOperand(NumOps - 1).getImm();
+          if (Flags == 0) {
+            printSymbolicOperand<
+                OperandCategory::MatrixMultiplyAccumulateOperandsOperand>(
+                MI, NumOps - 1, OS);
+          } else {
+            std::string Buffer;
+            for (unsigned Mask = 0x1;
+                 Mask <= SPIRV::MatrixMultiplyAccumulateOperands::
+                             MatrixBPackedBFloat16INTEL;
+                 Mask <<= 1) {
+              if (Flags & Mask) {
+                if (!Buffer.empty())
+                  Buffer += '|';
+                Buffer += getSymbolicOperandMnemonic(
+                    OperandCategory::MatrixMultiplyAccumulateOperandsOperand,
+                    Mask);
+              }
+            }
+            OS << Buffer;
+          }
+          break;
+        }
+        case SPIRV::OpSDot:
+        case SPIRV::OpUDot:
+        case SPIRV::OpSUDot:
+        case SPIRV::OpSDotAccSat:
+        case SPIRV::OpUDotAccSat:
+        case SPIRV::OpSUDotAccSat: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumOps > NumFixedOps) {
+            OS << ' ';
+            printSymbolicOperand<OperandCategory::PackedVectorFormatsOperand>(
+                MI, NumOps - 1, OS);
+            break;
+          }
+          break;
+        }
+        case SPIRV::OpPredicatedLoadINTEL:
+        case SPIRV::OpPredicatedStoreINTEL: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumOps > NumFixedOps) {
+            OS << ' ';
+            printSymbolicOperand<OperandCategory::MemoryOperandOperand>(
+                MI, NumOps - 1, OS);
+            break;
           }
           break;
         }
@@ -342,34 +425,26 @@ void SPIRVInstPrinter::printUnknownType(const MCInst *MI, raw_ostream &O) {
   printRemainingVariableOps(MI, NumFixedOps, O, true);
 }
 
-static void printExpr(const MCExpr *Expr, raw_ostream &O) {
-#ifndef NDEBUG
-  const MCSymbolRefExpr *SRE;
-
-  if (const MCBinaryExpr *BE = dyn_cast<MCBinaryExpr>(Expr))
-    SRE = cast<MCSymbolRefExpr>(BE->getLHS());
-  else
-    SRE = cast<MCSymbolRefExpr>(Expr);
-
-  MCSymbolRefExpr::VariantKind Kind = SRE->getKind();
-
-  assert(Kind == MCSymbolRefExpr::VK_None);
-#endif
-  O << *Expr;
-}
-
 void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                     raw_ostream &O) {
   if (OpNo < MI->getNumOperands()) {
     const MCOperand &Op = MI->getOperand(OpNo);
     if (Op.isReg())
       O << '%' << (getIDFromRegister(Op.getReg().id()) + 1);
-    else if (Op.isImm())
-      O << formatImm((int64_t)Op.getImm());
-    else if (Op.isDFPImm())
+    else if (Op.isImm()) {
+      int64_t Imm = Op.getImm();
+      // For OpVectorShuffle:
+      // A Component literal may also be FFFFFFFF, which means the corresponding
+      // result component has no source and is undefined.
+      // LLVM representation of poison/undef becomes -1 when lowered to MI.
+      if (MI->getOpcode() == SPIRV::OpVectorShuffle && Imm == -1)
+        O << "0xFFFFFFFF";
+      else
+        O << formatImm(Imm);
+    } else if (Op.isDFPImm())
       O << formatImm((double)Op.getDFPImm());
     else if (Op.isExpr())
-      printExpr(Op.getExpr(), O);
+      MAI.printExpr(O, *Op.getExpr());
     else
       llvm_unreachable("Unexpected operand type");
   }

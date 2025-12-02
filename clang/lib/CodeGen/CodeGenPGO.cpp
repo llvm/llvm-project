@@ -58,9 +58,10 @@ enum PGOHashVersion : unsigned {
   PGO_HASH_V1,
   PGO_HASH_V2,
   PGO_HASH_V3,
+  PGO_HASH_V4,
 
   // Keep this set to the latest hash version.
-  PGO_HASH_LATEST = PGO_HASH_V3
+  PGO_HASH_LATEST = PGO_HASH_V4
 };
 
 namespace {
@@ -152,7 +153,9 @@ static PGOHashVersion getPGOHashVersion(llvm::IndexedInstrProfReader *PGOReader,
     return PGO_HASH_V1;
   if (PGOReader->getVersion() <= 5)
     return PGO_HASH_V2;
-  return PGO_HASH_V3;
+  if (PGOReader->getVersion() <= 12)
+    return PGO_HASH_V3;
+  return PGO_HASH_V4;
 }
 
 /// A RecursiveASTVisitor that fills a map of statements to PGO counters.
@@ -972,7 +975,7 @@ void PGOHash::combine(HashType Type) {
   if (Count && Count % NumTypesPerWord == 0) {
     using namespace llvm::support;
     uint64_t Swapped =
-        endian::byte_swap<uint64_t, llvm::endianness::little>(Working);
+        endian::byte_swap<uint64_t>(Working, llvm::endianness::little);
     MD5.update(llvm::ArrayRef((uint8_t *)&Swapped, sizeof(Swapped)));
     Working = 0;
   }
@@ -999,7 +1002,7 @@ uint64_t PGOHash::finalize() {
     } else {
       using namespace llvm::support;
       uint64_t Swapped =
-          endian::byte_swap<uint64_t, llvm::endianness::little>(Working);
+          endian::byte_swap<uint64_t>(Working, llvm::endianness::little);
       MD5.update(llvm::ArrayRef((uint8_t *)&Swapped, sizeof(Swapped)));
     }
   }
@@ -1099,6 +1102,8 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   assert(Walker.NextCounter > 0 && "no entry counter mapped for decl");
   NumRegionCounters = Walker.NextCounter;
   FunctionHash = Walker.Hash.finalize();
+  if (HashVersion >= PGO_HASH_V4)
+    FunctionHash &= llvm::NamedInstrProfRecord::FUNC_HASH_MASK;
 }
 
 bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {
@@ -1423,8 +1428,7 @@ void CodeGenPGO::loadRegionCounts(llvm::IndexedInstrProfReader *PGOReader,
                                   bool IsInMainFile) {
   CGM.getPGOStats().addVisited(IsInMainFile);
   RegionCounts.clear();
-  llvm::Expected<llvm::InstrProfRecord> RecordExpected =
-      PGOReader->getInstrProfRecord(FuncName, FunctionHash);
+  auto RecordExpected = PGOReader->getInstrProfRecord(FuncName, FunctionHash);
   if (auto E = RecordExpected.takeError()) {
     auto IPE = std::get<0>(llvm::InstrProfError::take(std::move(E)));
     if (IPE == llvm::instrprof_error::unknown_function)
@@ -1486,7 +1490,7 @@ CodeGenFunction::createProfileWeights(ArrayRef<uint64_t> Weights) const {
     return nullptr;
 
   // Check for empty weights.
-  uint64_t MaxWeight = *std::max_element(Weights.begin(), Weights.end());
+  uint64_t MaxWeight = *llvm::max_element(Weights);
   if (MaxWeight == 0)
     return nullptr;
 
@@ -1505,9 +1509,9 @@ CodeGenFunction::createProfileWeights(ArrayRef<uint64_t> Weights) const {
 llvm::MDNode *
 CodeGenFunction::createProfileWeightsForLoop(const Stmt *Cond,
                                              uint64_t LoopCount) const {
-  if (!PGO.haveRegionCounts())
+  if (!PGO->haveRegionCounts())
     return nullptr;
-  std::optional<uint64_t> CondCount = PGO.getStmtCount(Cond);
+  std::optional<uint64_t> CondCount = PGO->getStmtCount(Cond);
   if (!CondCount || *CondCount == 0)
     return nullptr;
   return createProfileWeights(LoopCount,
@@ -1520,7 +1524,59 @@ void CodeGenFunction::incrementProfileCounter(const Stmt *S,
       !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
       !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
     auto AL = ApplyDebugLocation::CreateArtificial(*this);
-    PGO.emitCounterSetOrIncrement(Builder, S, StepV);
+    PGO->emitCounterSetOrIncrement(Builder, S, StepV);
   }
-  PGO.setCurrentStmt(S);
+  PGO->setCurrentStmt(S);
+}
+
+std::pair<bool, bool> CodeGenFunction::getIsCounterPair(const Stmt *S) const {
+  return PGO->getIsCounterPair(S);
+}
+void CodeGenFunction::markStmtAsUsed(bool Skipped, const Stmt *S) {
+  PGO->markStmtAsUsed(Skipped, S);
+}
+void CodeGenFunction::markStmtMaybeUsed(const Stmt *S) {
+  PGO->markStmtMaybeUsed(S);
+}
+
+void CodeGenFunction::maybeCreateMCDCCondBitmap() {
+  if (isMCDCCoverageEnabled()) {
+    PGO->emitMCDCParameters(Builder);
+    MCDCCondBitmapAddr = CreateIRTemp(getContext().UnsignedIntTy, "mcdc.addr");
+  }
+}
+void CodeGenFunction::maybeResetMCDCCondBitmap(const Expr *E) {
+  if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
+    PGO->emitMCDCCondBitmapReset(Builder, E, MCDCCondBitmapAddr);
+    PGO->setCurrentStmt(E);
+  }
+}
+void CodeGenFunction::maybeUpdateMCDCTestVectorBitmap(const Expr *E) {
+  if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
+    PGO->emitMCDCTestVectorBitmapUpdate(Builder, E, MCDCCondBitmapAddr, *this);
+    PGO->setCurrentStmt(E);
+  }
+}
+
+void CodeGenFunction::maybeUpdateMCDCCondBitmap(const Expr *E,
+                                                llvm::Value *Val) {
+  if (isMCDCCoverageEnabled()) {
+    PGO->emitMCDCCondBitmapUpdate(Builder, E, MCDCCondBitmapAddr, Val, *this);
+    PGO->setCurrentStmt(E);
+  }
+}
+
+uint64_t CodeGenFunction::getProfileCount(const Stmt *S) {
+  return PGO->getStmtCount(S).value_or(0);
+}
+
+/// Set the profiler's current count.
+void CodeGenFunction::setCurrentProfileCount(uint64_t Count) {
+  PGO->setCurrentRegionCount(Count);
+}
+
+/// Get the profiler's current count. This is generally the count for the most
+/// recently incremented counter.
+uint64_t CodeGenFunction::getCurrentProfileCount() {
+  return PGO->getCurrentRegionCount();
 }

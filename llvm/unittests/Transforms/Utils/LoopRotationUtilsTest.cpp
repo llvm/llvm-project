@@ -79,7 +79,7 @@ deopt.exit:
   LoopInfo LI(DT);
   AssumptionCache AC(*F);
   TargetTransformInfo TTI(M->getDataLayout());
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   ScalarEvolution SE(*F, TLI, AC, DT, LI);
   SimplifyQuery SQ(M->getDataLayout());
@@ -150,7 +150,7 @@ deopt.exit:
   LoopInfo LI(DT);
   AssumptionCache AC(*F);
   TargetTransformInfo TTI(M->getDataLayout());
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   ScalarEvolution SE(*F, TLI, AC, DT, LI);
   SimplifyQuery SQ(M->getDataLayout());

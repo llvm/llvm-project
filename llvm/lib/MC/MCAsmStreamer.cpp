@@ -17,7 +17,6 @@
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -29,7 +28,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
@@ -182,7 +180,7 @@ public:
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 
-  void emitAssemblerFlag(MCAssemblerFlag Flag) override;
+  void emitSubsectionsViaSymbols() override;
   void emitLinkerOptions(ArrayRef<std::string> Options) override;
   void emitDataRegion(MCDataRegionType Kind) override;
   void emitVersionMin(MCVersionMinType Kind, unsigned Major, unsigned Minor,
@@ -270,8 +268,8 @@ public:
                               std::optional<int64_t> Value, unsigned ValueSize,
                               unsigned MaxBytesToEmit);
 
-  void emitValueToAlignment(Align Alignment, int64_t Value = 0,
-                            unsigned ValueSize = 1,
+  void emitValueToAlignment(Align Alignment, int64_t Fill = 0,
+                            uint8_t FillLen = 1,
                             unsigned MaxBytesToEmit = 0) override;
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
@@ -297,7 +295,7 @@ public:
                              unsigned Flags, unsigned Isa,
                              unsigned Discriminator, StringRef FileName,
                              StringRef Location = {}) override;
-  virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
+  void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
 
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
 
@@ -346,7 +344,7 @@ public:
   void emitIdent(StringRef IdentString) override;
   void emitCFIBKeyFrame() override;
   void emitCFIMTETaggedFrame() override;
-  void emitCFISections(bool EH, bool Debug) override;
+  void emitCFISections(bool EH, bool Debug, bool SFrame) override;
   void emitCFIDefCfa(int64_t Register, int64_t Offset, SMLoc Loc) override;
   void emitCFIDefCfaOffset(int64_t Offset, SMLoc Loc) override;
   void emitCFIDefCfaRegister(int64_t Register, SMLoc Loc) override;
@@ -391,6 +389,8 @@ public:
   void emitWinCFIEndProlog(SMLoc Loc) override;
   void emitWinCFIBeginEpilogue(SMLoc Loc) override;
   void emitWinCFIEndEpilogue(SMLoc Loc) override;
+  void emitWinCFIUnwindV2Start(SMLoc Loc) override;
+  void emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) override;
 
   void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                         SMLoc Loc) override;
@@ -406,13 +406,8 @@ public:
                        const MCPseudoProbeInlineStack &InlineStack,
                        MCSymbol *FnSym) override;
 
-  void emitBundleAlignMode(Align Alignment) override;
-  void emitBundleLock(bool AlignToEnd) override;
-  void emitBundleUnlock() override;
-
-  std::optional<std::pair<bool, std::string>>
-  emitRelocDirective(const MCExpr &Offset, StringRef Name, const MCExpr *Expr,
-                     SMLoc Loc, const MCSubtargetInfo &STI) override;
+  void emitRelocDirective(const MCExpr &Offset, StringRef Name,
+                          const MCExpr *Expr, SMLoc Loc) override;
 
   void emitAddrsig() override;
   void emitAddrsigSym(const MCSymbol *Sym) override;
@@ -536,8 +531,8 @@ void MCAsmStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
     if (MCTargetStreamer *TS = getTargetStreamer()) {
       TS->changeSection(Cur.first, Section, Subsection, OS);
     } else {
-      Section->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS,
-                                    Subsection);
+      MAI->printSwitchToSection(*Section, Subsection,
+                                getContext().getTargetTriple(), OS);
     }
   }
   MCStreamer::switchSection(Section, Subsection);
@@ -547,7 +542,7 @@ bool MCAsmStreamer::popSection() {
   if (!MCStreamer::popSection())
     return false;
   auto [Sec, Subsec] = getCurrentSection();
-  Sec->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS, Subsec);
+  MAI->printSwitchToSection(*Sec, Subsec, getContext().getTargetTriple(), OS);
   return true;
 }
 
@@ -564,6 +559,12 @@ void MCAsmStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
 
 void MCAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCStreamer::emitLabel(Symbol, Loc);
+  // FIXME: Fix CodeGen/AArch64/arm64ec-varargs.ll. emitLabel is followed by
+  // setVariableValue, leading to an assertion failure if setOffset(0) is
+  // called.
+  if (!Symbol->isVariable() &&
+      getContext().getObjectFileType() != MCContext::IsCOFF)
+    Symbol->setOffset(0);
 
   Symbol->print(OS, MAI);
   OS << MAI->getLabelSuffix();
@@ -595,15 +596,8 @@ void MCAsmStreamer::emitGNUAttribute(unsigned Tag, unsigned Value) {
   OS << "\t.gnu_attribute " << Tag << ", " << Value << "\n";
 }
 
-void MCAsmStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
-  switch (Flag) {
-  case MCAF_SyntaxUnified:         OS << "\t.syntax unified"; break;
-  case MCAF_SubsectionsViaSymbols: OS << ".subsections_via_symbols"; break;
-  case MCAF_Code16:                OS << '\t'<< MAI->getCode16Directive();break;
-  case MCAF_Code32:                OS << '\t'<< MAI->getCode32Directive();break;
-  case MCAF_Code64:                OS << '\t'<< MAI->getCode64Directive();break;
-  }
-  EmitEOL();
+void MCAsmStreamer::emitSubsectionsViaSymbols() {
+  OS << ".subsections_via_symbols\n";
 }
 
 void MCAsmStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
@@ -689,20 +683,14 @@ void MCAsmStreamer::emitDarwinTargetVariantBuildVersion(
 }
 
 void MCAsmStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
-  // Do not emit a .set on inlined target assignments.
-  bool EmitSet = true;
-  if (auto *E = dyn_cast<MCTargetExpr>(Value))
-    if (E->inlineAssignedExpr())
-      EmitSet = false;
-  if (EmitSet) {
+  bool UseSet = MAI->usesSetToEquateSymbol();
+  if (UseSet)
     OS << ".set ";
-    Symbol->print(OS, MAI);
-    OS << ", ";
-    Value->print(OS, MAI);
+  Symbol->print(OS, MAI);
+  OS << (UseSet ? ", " : " = ");
+  MAI->printExpr(OS, *Value);
 
-    EmitEOL();
-  }
-
+  EmitEOL();
   MCStreamer::emitAssignment(Symbol, Value);
 }
 
@@ -711,7 +699,7 @@ void MCAsmStreamer::emitConditionalAssignment(MCSymbol *Symbol,
   OS << ".lto_set_conditional ";
   Symbol->print(OS, MAI);
   OS << ", ";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   EmitEOL();
 }
 
@@ -908,14 +896,14 @@ void MCAsmStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
 
   // Print symbol's rename (original name contains invalid character(s)) if
   // there is one.
-  MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(CsectSym);
+  auto *XSym = static_cast<MCSymbolXCOFF *>(CsectSym);
   if (XSym->hasRename())
     emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
 }
 
 void MCAsmStreamer::emitXCOFFSymbolLinkageWithVisibility(
     MCSymbol *Symbol, MCSymbolAttr Linkage, MCSymbolAttr Visibility) {
-
+  auto &Sym = static_cast<MCSymbolXCOFF &>(*Symbol);
   switch (Linkage) {
   case MCSA_Global:
     OS << MAI->getGlobalDirective();
@@ -955,9 +943,8 @@ void MCAsmStreamer::emitXCOFFSymbolLinkageWithVisibility(
 
   // Print symbol's rename (original name contains invalid character(s)) if
   // there is one.
-  if (cast<MCSymbolXCOFF>(Symbol)->hasRename())
-    emitXCOFFRenameDirective(Symbol,
-                             cast<MCSymbolXCOFF>(Symbol)->getSymbolTableName());
+  if (Sym.hasRename())
+    emitXCOFFRenameDirective(&Sym, Sym.getSymbolTableName());
 }
 
 void MCAsmStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
@@ -1063,7 +1050,7 @@ void MCAsmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
   OS << "\t.size\t";
   Symbol->print(OS, MAI);
   OS << ", ";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   EmitEOL();
 }
 
@@ -1081,9 +1068,11 @@ void MCAsmStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
 
   // Print symbol's rename (original name contains invalid character(s)) if
   // there is one.
-  MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(Symbol);
-  if (XSym && XSym->hasRename())
-    emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
+  if (getContext().isXCOFF()) {
+    auto *XSym = static_cast<MCSymbolXCOFF *>(Symbol);
+    if (XSym && XSym->hasRename())
+      emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
+  }
 }
 
 void MCAsmStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -1116,7 +1105,7 @@ void MCAsmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
   // Note: a .zerofill directive does not switch sections.
   OS << ".zerofill ";
 
-  assert(Section->getVariant() == MCSection::SV_MachO &&
+  assert(getContext().getObjectFileType() == MCContext::IsMachO &&
          ".zerofill is a Mach-O specific directive");
   // This is a mach-o specific directive.
 
@@ -1141,7 +1130,7 @@ void MCAsmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 
   // Instead of using the Section we'll just use the shortcut.
 
-  assert(Section->getVariant() == MCSection::SV_MachO &&
+  assert(getContext().getObjectFileType() == MCContext::IsMachO &&
          ".zerofill is a Mach-O specific directive");
   // This is a mach-o specific directive and section.
 
@@ -1226,7 +1215,7 @@ void MCAsmStreamer::PrintQuotedString(StringRef Data, raw_ostream &OS) const {
         continue;
       }
 
-      if (isPrint((unsigned char)C)) {
+      if (isPrint(C)) {
         OS << (char)C;
         continue;
       }
@@ -1397,7 +1386,7 @@ void MCAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   if (MCTargetStreamer *TS = getTargetStreamer()) {
     TS->emitValue(Value);
   } else {
-    Value->print(OS, MAI);
+    MAI->printExpr(OS, *Value);
     EmitEOL();
   }
 }
@@ -1409,7 +1398,7 @@ void MCAsmStreamer::emitULEB128Value(const MCExpr *Value) {
     return;
   }
   OS << "\t.uleb128 ";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   EmitEOL();
 }
 
@@ -1420,7 +1409,7 @@ void MCAsmStreamer::emitSLEB128Value(const MCExpr *Value) {
     return;
   }
   OS << "\t.sleb128 ";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   EmitEOL();
 }
 
@@ -1435,7 +1424,7 @@ void MCAsmStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
     if (!MAI->isAIX() || FillValue == 0) {
       // FIXME: Emit location directives
       OS << ZeroDirective;
-      NumBytes.print(OS, MAI);
+      MAI->printExpr(OS, NumBytes);
       if (FillValue != 0)
         OS << ',' << (int)FillValue;
       EmitEOL();
@@ -1458,7 +1447,7 @@ void MCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
                              int64_t Expr, SMLoc Loc) {
   // FIXME: Emit location directives
   OS << "\t.fill\t";
-  NumValues.print(OS, MAI);
+  MAI->printExpr(OS, NumValues);
   OS << ", " << Size << ", 0x";
   OS.write_hex(truncateToSize(Expr, 4));
   EmitEOL();
@@ -1534,10 +1523,10 @@ void MCAsmStreamer::emitAlignmentDirective(uint64_t ByteAlignment,
   EmitEOL();
 }
 
-void MCAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
-                                         unsigned ValueSize,
+void MCAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
+                                         uint8_t FillLen,
                                          unsigned MaxBytesToEmit) {
-  emitAlignmentDirective(Alignment.value(), Value, ValueSize, MaxBytesToEmit);
+  emitAlignmentDirective(Alignment.value(), Fill, FillLen, MaxBytesToEmit);
 }
 
 void MCAsmStreamer::emitCodeAlignment(Align Alignment,
@@ -1556,7 +1545,7 @@ void MCAsmStreamer::emitValueToOffset(const MCExpr *Offset,
                                       SMLoc Loc) {
   // FIXME: Verify that Offset is associated with the current section.
   OS << ".org ";
-  Offset->print(OS, MAI);
+  MAI->printExpr(OS, *Offset);
   OS << ", " << (unsigned)Value;
   EmitEOL();
 }
@@ -1917,15 +1906,24 @@ void MCAsmStreamer::emitIdent(StringRef IdentString) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFISections(bool EH, bool Debug) {
-  MCStreamer::emitCFISections(EH, Debug);
+void MCAsmStreamer::emitCFISections(bool EH, bool Debug, bool SFrame) {
+  MCStreamer::emitCFISections(EH, Debug, SFrame);
   OS << "\t.cfi_sections ";
+  bool C = false;
   if (EH) {
     OS << ".eh_frame";
-    if (Debug)
-      OS << ", .debug_frame";
-  } else if (Debug) {
+    C = true;
+  }
+  if (Debug) {
+    if (C)
+      OS << ", ";
     OS << ".debug_frame";
+    C = true;
+  }
+  if (SFrame) {
+    if (C)
+      OS << ", ";
+    OS << ".sframe";
   }
 
   EmitEOL();
@@ -2305,6 +2303,20 @@ void MCAsmStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
   EmitEOL();
 }
 
+void MCAsmStreamer::emitWinCFIUnwindV2Start(SMLoc Loc) {
+  MCStreamer::emitWinCFIUnwindV2Start(Loc);
+
+  OS << "\t.seh_unwindv2start";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) {
+  MCStreamer::emitWinCFIUnwindVersion(Version, Loc);
+
+  OS << "\t.seh_unwindversion " << (unsigned)Version;
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
                                        const MCSymbolRefExpr *To,
                                        uint64_t Count) {
@@ -2327,6 +2339,9 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
     return;
 
   getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
+
+  // RISC-V instructions are always little-endian, even on BE systems.
+  bool ForceLE = getContext().getTargetTriple().isRISCV();
 
   // If we are showing fixups, create symbolic markers in the encoded
   // representation. We do this by making a per-bit map to the fixup item index,
@@ -2382,7 +2397,10 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
         unsigned Bit = (Code[i] >> j) & 1;
 
         unsigned FixupBit;
-        if (MAI->isLittleEndian())
+        // RISC-V instructions are always little-endian.
+        // The FixupMap is indexed by actual bit positions in the LE
+        // instruction.
+        if (MAI->isLittleEndian() || ForceLE)
           FixupBit = i * 8 + j;
         else
           FixupBit = i * 8 + (7-j);
@@ -2401,19 +2419,29 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
     MCFixup &F = Fixups[i];
     OS << "  fixup " << char('A' + i) << " - "
        << "offset: " << F.getOffset() << ", value: ";
-    F.getValue()->print(OS, MAI);
+    MAI->printExpr(OS, *F.getValue());
     auto Kind = F.getKind();
     if (mc::isRelocation(Kind))
       OS << ", relocation type: " << Kind;
-    else
-      OS << ", kind: "
-         << getAssembler().getBackend().getFixupKindInfo(Kind).Name;
+    else {
+      OS << ", kind: ";
+      auto Info = getAssembler().getBackend().getFixupKindInfo(Kind);
+      if (F.isPCRel() && StringRef(Info.Name).starts_with("FK_Data_"))
+        OS << "FK_PCRel_" << (Info.TargetSize / 8);
+      else
+        OS << Info.Name;
+    }
     OS << '\n';
   }
 }
 
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
+  if (CurFrag) {
+    MCSection *Sec = getCurrentSectionOnly();
+    Sec->setHasInstructions(true);
+  }
+
   if (MAI->isAIX() && CurFrag)
     // Now that a machine instruction has been assembled into this section, make
     // a line entry for any .loc directive that has been seen.
@@ -2453,41 +2481,22 @@ void MCAsmStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   for (const auto &Site : InlineStack)
     OS << " @ " << std::get<0>(Site) << ":" << std::get<1>(Site);
 
-  OS << " " << FnSym->getName();
+  OS << " ";
+  FnSym->print(OS, MAI);
 
   EmitEOL();
 }
 
-void MCAsmStreamer::emitBundleAlignMode(Align Alignment) {
-  OS << "\t.bundle_align_mode " << Log2(Alignment);
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitBundleLock(bool AlignToEnd) {
-  OS << "\t.bundle_lock";
-  if (AlignToEnd)
-    OS << " align_to_end";
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitBundleUnlock() {
-  OS << "\t.bundle_unlock";
-  EmitEOL();
-}
-
-std::optional<std::pair<bool, std::string>>
-MCAsmStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
-                                  const MCExpr *Expr, SMLoc,
-                                  const MCSubtargetInfo &STI) {
+void MCAsmStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
+                                       const MCExpr *Expr, SMLoc) {
   OS << "\t.reloc ";
-  Offset.print(OS, MAI);
+  MAI->printExpr(OS, Offset);
   OS << ", " << Name;
   if (Expr) {
     OS << ", ";
-    Expr->print(OS, MAI);
+    MAI->printExpr(OS, *Expr);
   }
   EmitEOL();
-  return std::nullopt;
 }
 
 void MCAsmStreamer::emitAddrsig() {

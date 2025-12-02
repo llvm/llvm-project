@@ -32,8 +32,8 @@ body:             |
     ; X86-NEXT: [[ICMP:%[0-9]+]]:_(s8) = G_ICMP intpred(eq), [[OR]](s32), [[C]]
     ; X86-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[OR1]](s32)
     ; X86-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; X86-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[CTTZ_ZERO_UNDEF]], [[C2]]
-    ; X86-NEXT: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[C]], [[C]], [[UADDO1]]
+    ; X86-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s8) = G_UADDO [[CTTZ_ZERO_UNDEF]], [[C2]]
+    ; X86-NEXT: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s8) = G_UADDE [[C]], [[C]], [[UADDO1]]
     ; X86-NEXT: [[CTTZ_ZERO_UNDEF1:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[OR]](s32)
     ; X86-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
     ; X86-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
@@ -97,8 +97,8 @@ body:             |
     ; X86-NEXT: [[ICMP:%[0-9]+]]:_(s8) = G_ICMP intpred(eq), [[UV]](s32), [[C]]
     ; X86-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[UV1]](s32)
     ; X86-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; X86-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[CTTZ_ZERO_UNDEF]], [[C1]]
-    ; X86-NEXT: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[C]], [[C]], [[UADDO1]]
+    ; X86-NEXT: [[UADDO:%[0-9]+]]:_(s32), [[UADDO1:%[0-9]+]]:_(s8) = G_UADDO [[CTTZ_ZERO_UNDEF]], [[C1]]
+    ; X86-NEXT: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s8) = G_UADDE [[C]], [[C]], [[UADDO1]]
     ; X86-NEXT: [[CTTZ_ZERO_UNDEF1:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_UNDEF [[UV]](s32)
     ; X86-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s8)
     ; X86-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1

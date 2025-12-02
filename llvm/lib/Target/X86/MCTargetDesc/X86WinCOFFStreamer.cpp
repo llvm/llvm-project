@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/X86MCExpr.h"
 #include "X86MCTargetDesc.h"
 #include "X86TargetStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -66,7 +65,7 @@ void X86WinCOFFStreamer::emitCVFPOData(const MCSymbol *ProcSym, SMLoc Loc) {
 }
 
 void X86WinCOFFStreamer::finishImpl() {
-  emitFrames(nullptr);
+  emitFrames();
   emitWindowsUnwindTables();
 
   MCWinCOFFStreamer::finishImpl();

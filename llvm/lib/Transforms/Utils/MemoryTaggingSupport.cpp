@@ -155,34 +155,15 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
     return;
   }
   if (auto *II = dyn_cast<LifetimeIntrinsic>(&Inst)) {
-    AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
-    if (!AI) {
-      Info.UnrecognizedLifetimes.push_back(&Inst);
-      return;
-    }
-    if (getAllocaInterestingness(*AI) != AllocaInterestingness::kInteresting)
+    AllocaInst *AI = dyn_cast<AllocaInst>(II->getArgOperand(0));
+    if (!AI ||
+        getAllocaInterestingness(*AI) != AllocaInterestingness::kInteresting)
       return;
     if (II->getIntrinsicID() == Intrinsic::lifetime_start)
       Info.AllocasToInstrument[AI].LifetimeStart.push_back(II);
     else
       Info.AllocasToInstrument[AI].LifetimeEnd.push_back(II);
     return;
-  }
-  if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
-    auto AddIfInteresting = [&](Value *V) {
-      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
-        if (getAllocaInterestingness(*AI) !=
-            AllocaInterestingness::kInteresting)
-          return;
-        AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
-        auto &DVIVec = AInfo.DbgVariableIntrinsics;
-        if (DVIVec.empty() || DVIVec.back() != DVI)
-          DVIVec.push_back(DVI);
-      }
-    };
-    for_each(DVI->location_ops(), AddIfInteresting);
-    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
-      AddIfInteresting(DAI->getAddress());
   }
 
   Instruction *ExitUntag = getUntagLocationIfFunctionExit(Inst);
@@ -248,13 +229,7 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   NewAI->setSwiftError(Info.AI->isSwiftError());
   NewAI->copyMetadata(*Info.AI);
 
-  Value *NewPtr = NewAI;
-
-  // TODO: Remove when typed pointers dropped
-  if (Info.AI->getType() != NewAI->getType())
-    NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI->getIterator());
-
-  Info.AI->replaceAllUsesWith(NewPtr);
+  Info.AI->replaceAllUsesWith(NewAI);
   Info.AI->eraseFromParent();
   Info.AI = NewAI;
 }
@@ -290,14 +265,11 @@ Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot) {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
   // in Bionic's libc/private/bionic_tls.h.
-  Function *ThreadPointerFunc =
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::thread_pointer);
+  Function *ThreadPointerFunc = Intrinsic::getOrInsertDeclaration(
+      M, Intrinsic::thread_pointer,
+      IRB.getPtrTy(M->getDataLayout().getDefaultGlobalsAddressSpace()));
   return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
                                 IRB.CreateCall(ThreadPointerFunc), 8 * Slot);
-}
-
-static DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
-  return dyn_cast<DbgAssignIntrinsic>(DVI);
 }
 
 static DbgVariableRecord *DynCastToDbgAssign(DbgVariableRecord *DVR) {
@@ -305,10 +277,7 @@ static DbgVariableRecord *DynCastToDbgAssign(DbgVariableRecord *DVR) {
 }
 
 void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag) {
-  // Helper utility for adding DW_OP_LLVM_tag_offset to debug-info records,
-  // abstracted over whether they're intrinsic-stored or DbgVariableRecord
-  // stored.
-  auto AnnotateDbgRecord = [&](auto *DPtr) {
+  auto AnnotateDbgRecord = [&](DbgVariableRecord *DPtr) {
     // Prepend "tag_offset, N" to the dwarf expression.
     // Tag offset logically applies to the alloca pointer, and it makes sense
     // to put it at the beginning of the expression.
@@ -324,7 +293,6 @@ void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag) {
     }
   };
 
-  llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
   llvm::for_each(Info.DbgVariableRecords, AnnotateDbgRecord);
 }
 

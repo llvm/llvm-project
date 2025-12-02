@@ -15,7 +15,7 @@
 
 namespace llvm {
 
-class SystemZTTIImpl : public BasicTTIImplBase<SystemZTTIImpl> {
+class SystemZTTIImpl final : public BasicTTIImplBase<SystemZTTIImpl> {
   typedef BasicTTIImplBase<SystemZTTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;
@@ -65,9 +65,6 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
 
-  bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const override;
-
   /// @}
 
   /// \name Vector TTI Implementations
@@ -102,9 +99,9 @@ public:
       ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const override;
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-                 ArrayRef<const Value *> Args = {},
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
   unsigned getVectorTruncCost(Type *SrcTy, Type *DstTy) const;
   unsigned getVectorBitmaskConversionCost(Type *SrcTy, Type *DstTy) const;

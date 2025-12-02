@@ -3,7 +3,7 @@
 // Only check the overall shape of the code and the presence of relevant
 // runtime calls. Actual IR checking is done at the OpenMPIRBuilder level.
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.data_layout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8", llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true } {
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.data_layout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8", llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true } {
   omp.private {type = private} @_QFEj_private_i32 : i32
   omp.declare_reduction @add_reduction_f32 : f32 init {
   ^bb0(%arg0: f32):
@@ -109,19 +109,19 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK: icmp eq i32 %[[MASTER]], 1
 // CHECK: i1 %{{.+}}, label %[[THEN:[A-Za-z0-9_.]*]], label %[[DONE:[A-Za-z0-9_.]*]]
 // CHECK: [[THEN]]:
-// CHECK-NEXT: %[[FINAL_RHS0:[A-Za-z0-9_.]*]] = load double
 // CHECK-NEXT: %[[FINAL_LHS0:[A-Za-z0-9_.]*]] = load double
+// CHECK-NEXT: %[[FINAL_RHS0:[A-Za-z0-9_.]*]] = load double
 // CHECK-NEXT: %[[FINAL_RESULT0:[A-Za-z0-9_.]*]] = fadd contract double %[[FINAL_LHS0]], %[[FINAL_RHS0]]
 // CHECK-NEXT: store double %[[FINAL_RESULT0]]
-// CHECK-NEXT: %[[FINAL_RHS1:[A-Za-z0-9_.]*]] = load double
 // CHECK-NEXT: %[[FINAL_LHS1:[A-Za-z0-9_.]*]] = load double
+// CHECK-NEXT: %[[FINAL_RHS1:[A-Za-z0-9_.]*]] = load double
 // CHECK-NEXT: %[[FINAL_RESULT1:[A-Za-z0-9_.]*]] = fadd contract double %[[FINAL_LHS1]], %[[FINAL_RHS1]]
 // CHECK-NEXT: store double %[[FINAL_RESULT1]]
-// CHECK-NEXT: %[[FINAL_RHS2:[A-Za-z0-9_.]*]] = load float
 // CHECK-NEXT: %[[FINAL_LHS2:[A-Za-z0-9_.]*]] = load float
+// CHECK-NEXT: %[[FINAL_RHS2:[A-Za-z0-9_.]*]] = load float
 // CHECK-NEXT: %[[FINAL_RESULT2:[A-Za-z0-9_.]*]] = fadd contract float %[[FINAL_LHS2]], %[[FINAL_RHS2]]
 // CHECK-NEXT: store float %[[FINAL_RESULT2]]
-// CHECK-NEXT: %[[FINAL_RHS3:[A-Za-z0-9_.]*]] = load float
 // CHECK-NEXT: %[[FINAL_LHS3:[A-Za-z0-9_.]*]] = load float
+// CHECK-NEXT: %[[FINAL_RHS3:[A-Za-z0-9_.]*]] = load float
 // CHECK-NEXT: %[[FINAL_RESULT3:[A-Za-z0-9_.]*]] = fadd contract float %[[FINAL_LHS3]], %[[FINAL_RHS3]]
 // CHECK-NEXT: store float %[[FINAL_RESULT3]]

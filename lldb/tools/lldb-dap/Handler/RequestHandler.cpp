@@ -51,53 +51,30 @@ static uint32_t SetLaunchFlag(uint32_t flags, bool flag,
   return flags;
 }
 
-// Both attach and launch take either a sourcePath or a sourceMap
-// argument (or neither), from which we need to set the target.source-map.
-void BaseRequestHandler::SetSourceMapFromArguments(
-    const llvm::json::Object &arguments) const {
-  const char *sourceMapHelp =
-      "source must be be an array of two-element arrays, "
-      "each containing a source and replacement path string.\n";
-
-  std::string sourceMapCommand;
-  llvm::raw_string_ostream strm(sourceMapCommand);
-  strm << "settings set target.source-map ";
-  const auto sourcePath = GetString(arguments, "sourcePath").value_or("");
-
-  // sourceMap is the new, more general form of sourcePath and overrides it.
-  constexpr llvm::StringRef sourceMapKey = "sourceMap";
-
-  if (const auto *sourceMapArray = arguments.getArray(sourceMapKey)) {
-    for (const auto &value : *sourceMapArray) {
-      const auto *mapping = value.getAsArray();
-      if (mapping == nullptr || mapping->size() != 2 ||
-          (*mapping)[0].kind() != llvm::json::Value::String ||
-          (*mapping)[1].kind() != llvm::json::Value::String) {
-        dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
-        return;
-      }
-      const auto mapFrom = GetAsString((*mapping)[0]);
-      const auto mapTo = GetAsString((*mapping)[1]);
-      strm << "\"" << mapFrom << "\" \"" << mapTo << "\" ";
+static void
+SetupIORedirection(const std::vector<std::optional<std::string>> &stdio,
+                   lldb::SBLaunchInfo &launch_info) {
+  size_t n = std::max(stdio.size(), static_cast<size_t>(3));
+  for (size_t i = 0; i < n; i++) {
+    std::optional<std::string> path;
+    if (stdio.size() <= i)
+      path = stdio.back();
+    else
+      path = stdio[i];
+    if (!path)
+      continue;
+    switch (i) {
+    case 0:
+      launch_info.AddOpenFileAction(i, path->c_str(), true, false);
+      break;
+    case 1:
+    case 2:
+      launch_info.AddOpenFileAction(i, path->c_str(), false, true);
+      break;
+    default:
+      launch_info.AddOpenFileAction(i, path->c_str(), true, true);
+      break;
     }
-  } else if (const auto *sourceMapObj = arguments.getObject(sourceMapKey)) {
-    for (const auto &[key, value] : *sourceMapObj) {
-      if (value.kind() == llvm::json::Value::String) {
-        strm << "\"" << key.str() << "\" \"" << GetAsString(value) << "\" ";
-      }
-    }
-  } else {
-    if (ObjectContainsKey(arguments, sourceMapKey)) {
-      dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
-      return;
-    }
-    if (sourcePath.empty())
-      return;
-    // Do any source remapping needed before we create our targets
-    strm << "\".\" \"" << sourcePath << "\"";
-  }
-  if (!sourceMapCommand.empty()) {
-    dap.RunLLDBCommands("Setting source map:", {sourceMapCommand});
   }
 }
 
@@ -108,8 +85,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
     return llvm::make_error<DAPError>("Cannot use runInTerminal, feature is "
                                       "not supported by the connected client");
 
-  if (!arguments.configuration.program ||
-      arguments.configuration.program->empty())
+  if (arguments.configuration.program.empty())
     return llvm::make_error<DAPError>(
         "program must be set to when using runInTerminal");
 
@@ -130,8 +106,9 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 #endif
 
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
-      *arguments.configuration.program, arguments.args, arguments.env,
-      arguments.cwd.value_or(""), comm_file.m_path, debugger_pid);
+      arguments.configuration.program, arguments.args, arguments.env,
+      arguments.cwd, comm_file.m_path, debugger_pid, arguments.stdio,
+      arguments.console == protocol::eConsoleExternalTerminal);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
 
@@ -180,11 +157,12 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 void BaseRequestHandler::Run(const Request &request) {
   // If this request was cancelled, send a cancelled response.
   if (dap.IsCancelled(request)) {
-    Response cancelled{/*request_seq=*/request.seq,
-                       /*command=*/request.command,
-                       /*success=*/false,
-                       /*message=*/eResponseMessageCancelled,
-                       /*body=*/std::nullopt};
+    Response cancelled{
+        /*request_seq=*/request.seq,
+        /*command=*/request.command,
+        /*success=*/false,
+        /*message=*/eResponseMessageCancelled,
+    };
     dap.Send(cancelled);
     return;
   }
@@ -204,16 +182,15 @@ void BaseRequestHandler::Run(const Request &request) {
 
 llvm::Error BaseRequestHandler::LaunchProcess(
     const protocol::LaunchRequestArguments &arguments) const {
-  auto launchCommands = arguments.launchCommands;
+  const std::vector<std::string> &launchCommands = arguments.launchCommands;
 
   // Instantiate a launch info instance for the target.
   auto launch_info = dap.target.GetLaunchInfo();
 
   // Grab the current working directory if there is one and set it in the
   // launch info.
-  const auto cwd = arguments.cwd.value_or("");
-  if (!cwd.empty())
-    launch_info.SetWorkingDirectory(cwd.data());
+  if (!arguments.cwd.empty())
+    launch_info.SetWorkingDirectory(arguments.cwd.data());
 
   // Extract any extra arguments and append them to our program arguments for
   // when we launch
@@ -227,6 +204,9 @@ llvm::Error BaseRequestHandler::LaunchProcess(
       env.Set(kv.first().data(), kv.second.c_str(), true);
     launch_info.SetEnvironment(env, true);
   }
+
+  if (!arguments.stdio.empty() && !arguments.disableSTDIO)
+    SetupIORedirection(arguments.stdio, launch_info);
 
   launch_info.SetDetachOnError(arguments.detachOnError);
   launch_info.SetShellExpandArguments(arguments.shellExpandArguments);
@@ -244,14 +224,14 @@ llvm::Error BaseRequestHandler::LaunchProcess(
     // about process state changes during the launch.
     ScopeSyncMode scope_sync_mode(dap.debugger);
 
-    if (arguments.runInTerminal) {
+    if (arguments.console != protocol::eConsoleInternal) {
       if (llvm::Error err = RunInTerminal(dap, arguments))
         return err;
     } else if (launchCommands.empty()) {
       lldb::SBError error;
       dap.target.Launch(launch_info, error);
       if (error.Fail())
-        return llvm::make_error<DAPError>(error.GetCString());
+        return ToError(error);
     } else {
       // Set the launch info so that run commands can access the configured
       // launch details.
@@ -267,18 +247,10 @@ llvm::Error BaseRequestHandler::LaunchProcess(
 
   // Make sure the process is launched and stopped at the entry point before
   // proceeding.
-  lldb::SBError error = dap.WaitForProcessToStop(arguments.timeout);
+  lldb::SBError error =
+      dap.WaitForProcessToStop(arguments.configuration.timeout);
   if (error.Fail())
-    return llvm::make_error<DAPError>(error.GetCString());
-
-  // Clients can request a baseline of currently existing threads after
-  // we acknowledge the configurationDone request.
-  // Client requests the baseline of currently existing threads after
-  // a successful or attach by sending a 'threads' request
-  // right after receiving the configurationDone response.
-  // Obtain the list of threads before we resume the process
-  dap.initial_thread_list =
-      GetThreads(dap.target.GetProcess(), dap.thread_format);
+    return ToError(error);
 
   return llvm::Error::success();
 }

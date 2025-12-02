@@ -7,21 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "Cuda.h"
-#include "CommonArgs.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatAdapters.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
@@ -91,6 +88,8 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_126;
   if (raw_version < 12090)
     return CudaVersion::CUDA_128;
+  if (raw_version < 13000)
+    return CudaVersion::CUDA_129;
   return CudaVersion::NEW;
 }
 
@@ -154,16 +153,16 @@ CudaInstallationDetector::CudaInstallationDetector(
   std::initializer_list<const char *> Versions = {"8.0", "7.5", "7.0"};
   auto &FS = D.getVFS();
 
-  if (Args.hasArg(clang::driver::options::OPT_cuda_path_EQ)) {
+  if (Args.hasArg(options::OPT_cuda_path_EQ)) {
     Candidates.emplace_back(
-        Args.getLastArgValue(clang::driver::options::OPT_cuda_path_EQ).str());
+        Args.getLastArgValue(options::OPT_cuda_path_EQ).str());
   } else if (HostTriple.isOSWindows()) {
     for (const char *Ver : Versions)
       Candidates.emplace_back(
           D.SysRoot + "/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v" +
           Ver);
   } else {
-    if (!Args.hasArg(clang::driver::options::OPT_cuda_path_ignore_env)) {
+    if (!Args.hasArg(options::OPT_cuda_path_ignore_env)) {
       // Try to find ptxas binary. If the executable is located in a directory
       // called 'bin/', its parent directory might be a good guess for a valid
       // CUDA installation.
@@ -305,7 +304,8 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
     CC1Args.push_back(DriverArgs.MakeArgString(P));
   }
 
-  if (DriverArgs.hasArg(options::OPT_nogpuinc))
+  if (!DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                          true))
     return;
 
   if (!isValid()) {
@@ -549,22 +549,16 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
     auto *A = II.getAction();
     assert(A->getInputs().size() == 1 &&
            "Device offload action is expected to have a single input");
-    const char *gpu_arch_str = A->getOffloadingArch();
-    assert(gpu_arch_str &&
+    StringRef GpuArch = A->getOffloadingArch();
+    assert(!GpuArch.empty() &&
            "Device action expected to have associated a GPU architecture!");
-    OffloadArch gpu_arch = StringToOffloadArch(gpu_arch_str);
 
-    if (II.getType() == types::TY_PP_Asm &&
-        !shouldIncludePTX(Args, gpu_arch_str))
+    if (II.getType() == types::TY_PP_Asm && !shouldIncludePTX(Args, GpuArch))
       continue;
-    // We need to pass an Arch of the form "sm_XX" for cubin files and
-    // "compute_XX" for ptx.
-    const char *Arch = (II.getType() == types::TY_PP_Asm)
-                           ? OffloadArchToVirtualArchString(gpu_arch)
-                           : gpu_arch_str;
-    CmdArgs.push_back(
-        Args.MakeArgString(llvm::Twine("--image=profile=") + Arch +
-                           ",file=" + getToolChain().getInputFilename(II)));
+    StringRef Kind = (II.getType() == types::TY_PP_Asm) ? "ptx" : "elf";
+    CmdArgs.push_back(Args.MakeArgString(
+        "--image3=kind=" + Kind + ",sm=" + GpuArch.drop_front(3) +
+        ",file=" + getToolChain().getInputFilename(II)));
   }
 
   for (const auto &A : Args.getAllArgValues(options::OPT_Xcuda_fatbinary))
@@ -617,9 +611,12 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(
         "--pxtas-path=" + Args.getLastArgValue(options::OPT_ptxas_path_EQ)));
 
-  if (Args.hasArg(options::OPT_cuda_path_EQ))
-    CmdArgs.push_back(Args.MakeArgString(
-        "--cuda-path=" + Args.getLastArgValue(options::OPT_cuda_path_EQ)));
+  if (Args.hasArg(options::OPT_cuda_path_EQ) || TC.CudaInstallation.isValid()) {
+    StringRef CudaPath = Args.getLastArgValue(
+        options::OPT_cuda_path_EQ,
+        llvm::sys::path::parent_path(TC.CudaInstallation.getBinPath()));
+    CmdArgs.push_back(Args.MakeArgString("--cuda-path=" + CudaPath));
+  }
 
   // Add paths specified in LIBRARY_PATH environment variable as -L options.
   addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
@@ -630,7 +627,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   if (C.getDriver().isUsingLTO())
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs,
                   C.getDriver().getLTOMode() == LTOK_Thin);
 
   // Forward the PTX features if the nvlink-wrapper needs it.
@@ -685,6 +682,7 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(129, 88);
     CASE_CUDA_VERSION(128, 87);
     CASE_CUDA_VERSION(126, 85);
     CASE_CUDA_VERSION(125, 85);
@@ -780,6 +778,16 @@ void NVPTXToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadingKind) const {}
 
+void NVPTXToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                               ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
+}
+
 bool NVPTXToolChain::supportsDebugInfoOption(const llvm::opt::Arg *A) const {
   const Option &O = A->getOption();
   return (O.matches(options::OPT_gN_Group) &&
@@ -812,12 +820,12 @@ Expected<SmallVector<std::string>>
 NVPTXToolChain::getSystemGPUArchs(const ArgList &Args) const {
   // Detect NVIDIA GPUs availible on the system.
   std::string Program;
-  if (Arg *A = Args.getLastArg(options::OPT_nvptx_arch_tool_EQ))
+  if (Arg *A = Args.getLastArg(options::OPT_offload_arch_tool_EQ))
     Program = A->getValue();
   else
     Program = GetProgramPath("nvptx-arch");
 
-  auto StdoutOrErr = executeToolChainProgram(Program);
+  auto StdoutOrErr = getDriver().executeProgram({Program});
   if (!StdoutOrErr)
     return StdoutOrErr.takeError();
 
@@ -931,7 +939,8 @@ llvm::DenormalMode CudaToolChain::getDefaultDenormalModeForType(
 void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                        ArgStringList &CC1Args) const {
   // Check our CUDA version if we're going to include the CUDA headers.
-  if (!DriverArgs.hasArg(options::OPT_nogpuinc) &&
+  if (DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                         true) &&
       !DriverArgs.hasArg(options::OPT_no_cuda_version_check)) {
     StringRef Arch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
     assert(!Arch.empty() && "Must have an explicit GPU arch.");
@@ -1004,7 +1013,9 @@ void CudaToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                               ArgStringList &CC1Args) const {
   HostTC.AddClangSystemIncludeArgs(DriverArgs, CC1Args);
 
-  if (!DriverArgs.hasArg(options::OPT_nogpuinc) && CudaInstallation.isValid())
+  if (DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                         true) &&
+      CudaInstallation.isValid())
     CC1Args.append(
         {"-internal-isystem",
          DriverArgs.MakeArgString(CudaInstallation.getIncludePath())});

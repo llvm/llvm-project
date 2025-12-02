@@ -94,7 +94,7 @@ getDWOFilenames(StringRef ExecFilename) {
         dwarf::toString(Die.find(dwarf::DW_AT_comp_dir), "");
     if (!DWOCompDir.empty()) {
       SmallString<16> DWOPath(DWOName);
-      sys::fs::make_absolute(DWOCompDir, DWOPath);
+      sys::path::make_absolute(DWOCompDir, DWOPath);
       if (!sys::fs::exists(DWOPath) && sys::fs::exists(DWOName))
         DWOPaths.push_back(std::move(DWOName));
       else
@@ -125,6 +125,9 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver{A};
   OnCuIndexOverflow OverflowOptValue = OnCuIndexOverflow::HardStop;
+  Dwarf64StrOffsetsPromotion Dwarf64StrOffsetsValue =
+      Dwarf64StrOffsetsPromotion::Disabled;
+
   opt::InputArgList Args =
       Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
         llvm::errs() << Msg << '\n';
@@ -156,6 +159,27 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
       } else {
         llvm::errs() << "invalid value for --continue-on-cu-index-overflow"
                      << ContinueOption << '\n';
+        exit(1);
+      }
+    }
+  }
+
+  if (Arg *Arg = Args.getLastArg(OPT_dwarf64StringOffsets,
+                                 OPT_dwarf64StringOffsets_EQ)) {
+    if (Arg->getOption().matches(OPT_dwarf64StringOffsets)) {
+      Dwarf64StrOffsetsValue = Dwarf64StrOffsetsPromotion::Enabled;
+    } else {
+      std::string OptValue = Arg->getValue();
+      if (OptValue == "disabled") {
+        Dwarf64StrOffsetsValue = Dwarf64StrOffsetsPromotion::Disabled;
+      } else if (OptValue == "enabled") {
+        Dwarf64StrOffsetsValue = Dwarf64StrOffsetsPromotion::Enabled;
+      } else if (OptValue == "always") {
+        Dwarf64StrOffsetsValue = Dwarf64StrOffsetsPromotion::Always;
+      } else {
+        llvm::errs()
+            << "invalid value for --dwarf64-str-offsets-promotion. Valid "
+               "values are one of: \"enabled\", \"disabled\" or \"always\".\n";
         exit(1);
       }
     }
@@ -217,20 +241,21 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   if (!TheTarget)
     return error(ErrorStr, Context);
   std::string TripleName = ErrOrTriple->getTriple();
+  Triple TheTriple(TripleName);
 
   // Create all the MC Objects.
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
     return error(Twine("no register info for target ") + TripleName, Context);
 
   MCTargetOptions MCOptions = llvm::mc::InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI)
     return error("no asm info for target " + TripleName, Context);
 
   std::unique_ptr<MCSubtargetInfo> MSTI(
-      TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+      TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
   if (!MSTI)
     return error("no subtarget info for target " + TripleName, Context);
 
@@ -273,7 +298,8 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   if (!MS)
     return error("no object streamer for target " + TripleName, Context);
 
-  if (auto Err = write(*MS, DWOFilenames, OverflowOptValue)) {
+  if (auto Err =
+          write(*MS, DWOFilenames, OverflowOptValue, Dwarf64StrOffsetsValue)) {
     logAllUnhandledErrors(std::move(Err), WithColor::error());
     return 1;
   }

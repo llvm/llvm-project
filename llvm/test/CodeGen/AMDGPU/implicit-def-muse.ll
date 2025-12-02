@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -stop-after=amdgpu-isel -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -stop-after=amdgpu-isel -o - %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn -stop-after=amdgpu-isel -enable-new-pm -o - %s | FileCheck %s
 
 ; CHECK-LABEL: vcopy_i1_undef

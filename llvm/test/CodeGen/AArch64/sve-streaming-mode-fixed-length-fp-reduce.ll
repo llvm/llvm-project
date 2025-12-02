@@ -980,10 +980,10 @@ define float @fmaxv_v8f32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    ldp s3, s2, [sp]
 ; NONEON-NOSVE-NEXT:    fmaxnm s0, s2, s0
 ; NONEON-NOSVE-NEXT:    fmaxnm s1, s3, s1
-; NONEON-NOSVE-NEXT:    ldp s2, s4, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldp s3, s4, [sp, #8]
 ; NONEON-NOSVE-NEXT:    fmaxnm s0, s1, s0
-; NONEON-NOSVE-NEXT:    ldp s3, s1, [sp, #24]
-; NONEON-NOSVE-NEXT:    fmaxnm s2, s2, s3
+; NONEON-NOSVE-NEXT:    ldp s2, s1, [sp, #24]
+; NONEON-NOSVE-NEXT:    fmaxnm s2, s3, s2
 ; NONEON-NOSVE-NEXT:    fmaxnm s1, s4, s1
 ; NONEON-NOSVE-NEXT:    fmaxnm s0, s0, s2
 ; NONEON-NOSVE-NEXT:    fmaxnm s0, s0, s1
@@ -1310,10 +1310,10 @@ define float @fminv_v8f32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    ldp s3, s2, [sp]
 ; NONEON-NOSVE-NEXT:    fminnm s0, s2, s0
 ; NONEON-NOSVE-NEXT:    fminnm s1, s3, s1
-; NONEON-NOSVE-NEXT:    ldp s2, s4, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldp s3, s4, [sp, #8]
 ; NONEON-NOSVE-NEXT:    fminnm s0, s1, s0
-; NONEON-NOSVE-NEXT:    ldp s3, s1, [sp, #24]
-; NONEON-NOSVE-NEXT:    fminnm s2, s2, s3
+; NONEON-NOSVE-NEXT:    ldp s2, s1, [sp, #24]
+; NONEON-NOSVE-NEXT:    fminnm s2, s3, s2
 ; NONEON-NOSVE-NEXT:    fminnm s1, s4, s1
 ; NONEON-NOSVE-NEXT:    fminnm s0, s0, s2
 ; NONEON-NOSVE-NEXT:    fminnm s0, s0, s1
@@ -1640,10 +1640,10 @@ define float @fmaximumv_v8f32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    ldp s3, s2, [sp]
 ; NONEON-NOSVE-NEXT:    fmax s0, s2, s0
 ; NONEON-NOSVE-NEXT:    fmax s1, s3, s1
-; NONEON-NOSVE-NEXT:    ldp s2, s4, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldp s3, s4, [sp, #8]
 ; NONEON-NOSVE-NEXT:    fmax s0, s1, s0
-; NONEON-NOSVE-NEXT:    ldp s3, s1, [sp, #24]
-; NONEON-NOSVE-NEXT:    fmax s2, s2, s3
+; NONEON-NOSVE-NEXT:    ldp s2, s1, [sp, #24]
+; NONEON-NOSVE-NEXT:    fmax s2, s3, s2
 ; NONEON-NOSVE-NEXT:    fmax s1, s4, s1
 ; NONEON-NOSVE-NEXT:    fmax s0, s0, s2
 ; NONEON-NOSVE-NEXT:    fmax s0, s0, s1
@@ -1970,10 +1970,10 @@ define float @fminimumv_v8f32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    ldp s3, s2, [sp]
 ; NONEON-NOSVE-NEXT:    fmin s0, s2, s0
 ; NONEON-NOSVE-NEXT:    fmin s1, s3, s1
-; NONEON-NOSVE-NEXT:    ldp s2, s4, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldp s3, s4, [sp, #8]
 ; NONEON-NOSVE-NEXT:    fmin s0, s1, s0
-; NONEON-NOSVE-NEXT:    ldp s3, s1, [sp, #24]
-; NONEON-NOSVE-NEXT:    fmin s2, s2, s3
+; NONEON-NOSVE-NEXT:    ldp s2, s1, [sp, #24]
+; NONEON-NOSVE-NEXT:    fmin s2, s3, s2
 ; NONEON-NOSVE-NEXT:    fmin s1, s4, s1
 ; NONEON-NOSVE-NEXT:    fmin s0, s0, s2
 ; NONEON-NOSVE-NEXT:    fmin s0, s0, s1

@@ -20,7 +20,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Signals.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -213,9 +216,12 @@ private:
   ImutAVLTree *next = nullptr;
 
   unsigned height : 28;
-  bool IsMutable : 1;
-  bool IsDigestCached : 1;
-  bool IsCanonicalized : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsMutable : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsDigestCached : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsCanonicalized : 1;
 
   value_type value;
   uint32_t digest = 0;
@@ -527,7 +533,7 @@ protected:
   /// add_internal - Creates a new tree that includes the specified
   ///  data and the data from the original tree.  If the original tree
   ///  already contained the data item, the original tree is returned.
-  TreeTy* add_internal(value_type_ref V, TreeTy* T) {
+  TreeTy *add_internal(value_type_ref V, TreeTy *T) {
     if (isEmpty(T))
       return createNode(T, V, T);
     assert(!T->isMutable());
@@ -535,19 +541,34 @@ protected:
     key_type_ref K = ImutInfo::KeyOfValue(V);
     key_type_ref KCurrent = ImutInfo::KeyOfValue(getValue(T));
 
-    if (ImutInfo::isEqual(K,KCurrent))
+    if (ImutInfo::isEqual(K, KCurrent)) {
+      // If both key and value are same, return the original tree.
+      if (ImutInfo::isDataEqual(ImutInfo::DataOfValue(V),
+                                ImutInfo::DataOfValue(getValue(T))))
+        return T;
+      // Otherwise create a new node with the new value.
       return createNode(getLeft(T), V, getRight(T));
-    else if (ImutInfo::isLess(K,KCurrent))
-      return balanceTree(add_internal(V, getLeft(T)), getValue(T), getRight(T));
+    }
+
+    TreeTy *NewL = getLeft(T);
+    TreeTy *NewR = getRight(T);
+    if (ImutInfo::isLess(K, KCurrent))
+      NewL = add_internal(V, NewL);
     else
-      return balanceTree(getLeft(T), getValue(T), add_internal(V, getRight(T)));
+      NewR = add_internal(V, NewR);
+
+    // If no changes were made, return the original tree. Otherwise, balance the
+    // tree and return the new root.
+    return NewL == getLeft(T) && NewR == getRight(T)
+               ? T
+               : balanceTree(NewL, getValue(T), NewR);
   }
 
   /// remove_internal - Creates a new tree that includes all the data
   ///  from the original tree except the specified data.  If the
   ///  specified data did not exist in the original tree, the original
   ///  tree is returned.
-  TreeTy* remove_internal(key_type_ref K, TreeTy* T) {
+  TreeTy *remove_internal(key_type_ref K, TreeTy *T) {
     if (isEmpty(T))
       return T;
 
@@ -555,15 +576,21 @@ protected:
 
     key_type_ref KCurrent = ImutInfo::KeyOfValue(getValue(T));
 
-    if (ImutInfo::isEqual(K,KCurrent)) {
+    if (ImutInfo::isEqual(K, KCurrent))
       return combineTrees(getLeft(T), getRight(T));
-    } else if (ImutInfo::isLess(K,KCurrent)) {
-      return balanceTree(remove_internal(K, getLeft(T)),
-                                            getValue(T), getRight(T));
-    } else {
-      return balanceTree(getLeft(T), getValue(T),
-                         remove_internal(K, getRight(T)));
-    }
+
+    TreeTy *NewL = getLeft(T);
+    TreeTy *NewR = getRight(T);
+    if (ImutInfo::isLess(K, KCurrent))
+      NewL = remove_internal(K, NewL);
+    else
+      NewR = remove_internal(K, NewR);
+
+    // If no changes were made, return the original tree. Otherwise, balance the
+    // tree and return the new root.
+    return NewL == getLeft(T) && NewR == getRight(T)
+               ? T
+               : balanceTree(NewL, getValue(T), NewR);
   }
 
   TreeTy* combineTrees(TreeTy* L, TreeTy* R) {
@@ -608,9 +635,7 @@ public:
     // if find a collision compare those trees by their contents.
     unsigned digest = TNew->computeDigest();
     TreeTy *&entry = Cache[maskCacheIndex(digest)];
-    do {
-      if (!entry)
-        break;
+    if (entry) {
       for (TreeTy *T = entry ; T != nullptr; T = T->next) {
         // Compare the Contents('T') with Contents('TNew')
         typename TreeTy::iterator TI = T->begin(), TE = T->end();
@@ -626,7 +651,6 @@ public:
       entry->prev = TNew;
       TNew->next = entry;
     }
-    while (false);
 
     entry = TNew;
     TNew->IsCanonicalized = true;
@@ -904,8 +928,7 @@ struct ImutProfileInfo<T*> {
 /// ImutContainerInfo - Generic definition of comparison operations for
 ///   elements of immutable containers that defaults to using
 ///   std::equal_to<> and std::less<> to perform comparison of elements.
-template <typename T>
-struct ImutContainerInfo : public ImutProfileInfo<T> {
+template <typename T> struct ImutContainerInfo : ImutProfileInfo<T> {
   using value_type = typename ImutProfileInfo<T>::value_type;
   using value_type_ref = typename ImutProfileInfo<T>::value_type_ref;
   using key_type = value_type;
@@ -930,8 +953,7 @@ struct ImutContainerInfo : public ImutProfileInfo<T> {
 /// ImutContainerInfo - Specialization for pointer values to treat pointers
 ///  as references to unique objects.  Pointers are thus compared by
 ///  their addresses.
-template <typename T>
-struct ImutContainerInfo<T*> : public ImutProfileInfo<T*> {
+template <typename T> struct ImutContainerInfo<T *> : ImutProfileInfo<T *> {
   using value_type = typename ImutProfileInfo<T*>::value_type;
   using value_type_ref = typename ImutProfileInfo<T*>::value_type_ref;
   using key_type = value_type;

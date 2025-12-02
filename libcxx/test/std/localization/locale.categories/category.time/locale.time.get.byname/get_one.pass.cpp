@@ -23,8 +23,10 @@
 // iter_type get(iter_type s, iter_type end, ios_base& f,
 //               ios_base::iostate& err, tm *t, char format, char modifier = 0) const;
 
-#include <locale>
 #include <cassert>
+#include <ctime>
+#include <locale>
+
 #include "test_macros.h"
 #include "test_iterators.h"
 

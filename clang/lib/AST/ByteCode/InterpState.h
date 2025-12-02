@@ -15,6 +15,7 @@
 
 #include "Context.h"
 #include "DynamicAllocator.h"
+#include "Floating.h"
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
@@ -53,34 +54,30 @@ public:
   InterpState(const InterpState &) = delete;
   InterpState &operator=(const InterpState &) = delete;
 
+  bool diagnosing() const { return getEvalStatus().Diag != nullptr; }
+
   // Stack frame accessors.
-  Frame *getSplitFrame() { return Parent.getCurrentFrame(); }
   Frame *getCurrentFrame() override;
   unsigned getCallStackDepth() override {
     return Current ? (Current->getDepth() + 1) : 1;
   }
-  const Frame *getBottomFrame() const override {
-    return Parent.getBottomFrame();
-  }
+  const Frame *getBottomFrame() const override { return &BottomFrame; }
 
   // Access objects from the walker context.
   Expr::EvalStatus &getEvalStatus() const override {
     return Parent.getEvalStatus();
   }
-  ASTContext &getASTContext() const override { return Parent.getASTContext(); }
+  ASTContext &getASTContext() const override { return Ctx.getASTContext(); }
+  const LangOptions &getLangOpts() const {
+    return Ctx.getASTContext().getLangOpts();
+  }
 
   // Forward status checks and updates to the walker.
-  bool checkingForUndefinedBehavior() const override {
-    return Parent.checkingForUndefinedBehavior();
-  }
   bool keepEvaluatingAfterFailure() const override {
     return Parent.keepEvaluatingAfterFailure();
   }
   bool keepEvaluatingAfterSideEffect() const override {
     return Parent.keepEvaluatingAfterSideEffect();
-  }
-  bool checkingPotentialConstantExpression() const override {
-    return Parent.checkingPotentialConstantExpression();
   }
   bool noteUndefinedBehavior() override {
     return Parent.noteUndefinedBehavior();
@@ -95,9 +92,6 @@ public:
   }
   bool hasPriorDiagnostic() override { return Parent.hasPriorDiagnostic(); }
   bool noteSideEffect() override { return Parent.noteSideEffect(); }
-
-  /// Reports overflow and return true if evaluation should continue.
-  bool reportOverflow(const Expr *E, const llvm::APSInt &Value);
 
   /// Deallocates a pointer.
   void deallocate(Block *B);
@@ -115,7 +109,13 @@ public:
 
   void setEvalLocation(SourceLocation SL) { this->EvalLocation = SL; }
 
-  DynamicAllocator &getAllocator() { return Alloc; }
+  DynamicAllocator &getAllocator() {
+    if (!Alloc) {
+      Alloc = std::make_unique<DynamicAllocator>();
+    }
+
+    return *Alloc;
+  }
 
   /// Diagnose any dynamic allocations that haven't been freed yet.
   /// Will return \c false if there were any allocations to diagnose,
@@ -123,6 +123,35 @@ public:
   bool maybeDiagnoseDanglingAllocations();
 
   StdAllocatorCaller getStdAllocatorCaller(StringRef Name) const;
+
+  void *allocate(size_t Size, unsigned Align = 8) const {
+    if (!Allocator)
+      Allocator.emplace();
+    return Allocator->Allocate(Size, Align);
+  }
+  template <typename T> T *allocate(size_t Num = 1) const {
+    return static_cast<T *>(allocate(Num * sizeof(T), alignof(T)));
+  }
+
+  template <typename T> T allocAP(unsigned BitWidth) {
+    unsigned NumWords = APInt::getNumWords(BitWidth);
+    if (NumWords == 1)
+      return T(BitWidth);
+    uint64_t *Mem = (uint64_t *)this->allocate(NumWords * sizeof(uint64_t));
+    // std::memset(Mem, 0, NumWords * sizeof(uint64_t)); // Debug
+    return T(Mem, BitWidth);
+  }
+
+  Floating allocFloat(const llvm::fltSemantics &Sem) {
+    if (Floating::singleWord(Sem))
+      return Floating(llvm::APFloatBase::SemanticsToEnum(Sem));
+
+    unsigned NumWords =
+        APInt::getNumWords(llvm::APFloatBase::getSizeInBits(Sem));
+    uint64_t *Mem = (uint64_t *)this->allocate(NumWords * sizeof(uint64_t));
+    // std::memset(Mem, 0, NumWords * sizeof(uint64_t)); // Debug
+    return Floating(Mem, llvm::APFloatBase::SemanticsToEnum(Sem));
+  }
 
 private:
   friend class EvaluationResult;
@@ -134,7 +163,7 @@ private:
   /// Reference to the offset-source mapping.
   SourceMapper *M;
   /// Allocator used for dynamic allocations performed via the program.
-  DynamicAllocator Alloc;
+  std::unique_ptr<DynamicAllocator> Alloc;
 
 public:
   /// Reference to the module containing all bytecode.
@@ -159,6 +188,12 @@ public:
   llvm::SmallVector<
       std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>
       SeenGlobalTemporaries;
+
+  /// List of blocks we're currently running either constructors or destructors
+  /// for.
+  llvm::SmallVector<const Block *> InitializingBlocks;
+
+  mutable std::optional<llvm::BumpPtrAllocator> Allocator;
 };
 
 class InterpStateCCOverride final {

@@ -36,11 +36,9 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -119,6 +117,11 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
     return BD->getBody();
   else if (const auto *FunTmpl = dyn_cast_or_null<FunctionTemplateDecl>(D))
     return FunTmpl->getTemplatedDecl()->getBody();
+  else if (const auto *VD = dyn_cast_or_null<VarDecl>(D)) {
+    if (VD->isFileVarDecl()) {
+      return const_cast<Stmt *>(dyn_cast_or_null<Stmt>(VD->getInit()));
+    }
+  }
 
   llvm_unreachable("unknown code decl");
 }

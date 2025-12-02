@@ -105,7 +105,9 @@ add_subdirectory(Index)
 add_subdirectory(InstallAPI)
 add_subdirectory(Serialization)
 add_subdirectory(Support)
-
+if (CLANG_ENABLE_CIR)
+  add_subdirectory(CIR)
+endif()
 
 # If we're doing a single merged clang unit test binary, add that target after
 # all the previous subdirectories have been processed.
@@ -115,6 +117,7 @@ get_property(LINK_LIBS GLOBAL PROPERTY CLANG_UNITTEST_LINK_LIBS)
 get_property(LLVM_COMPONENTS GLOBAL PROPERTY CLANG_UNITTEST_LLVM_COMPONENTS)
 add_distinct_clang_unittest(AllClangUnitTests
   ${SRCS}
+  AllClangUnitTests.cpp
   CLANG_LIBS
   ${CLANG_LIBS}
   LINK_LIBS

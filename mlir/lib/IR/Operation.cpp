@@ -18,8 +18,8 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
 #include <optional>
@@ -375,9 +375,6 @@ llvm::hash_code Operation::hashProperties() {
 // Operation Ordering
 //===----------------------------------------------------------------------===//
 
-constexpr unsigned Operation::kInvalidOrderIdx;
-constexpr unsigned Operation::kOrderStride;
-
 /// Given an operation 'other' that is within the same parent block, return
 /// whether the current operation is before 'other' in the operation list
 /// of the parent block.
@@ -463,28 +460,26 @@ void Operation::updateOrderIfNecessary() {
 //===----------------------------------------------------------------------===//
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(pointer n) -> node_type * {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getNodePtr(pointer n) -> node_type * {
   return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getNodePtr(const_pointer n)
-    -> const node_type * {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getNodePtr(const_pointer n) -> const node_type * {
   return NodeAccess::getNodePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(node_type *n) -> pointer {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getValuePtr(node_type *n) -> pointer {
   return NodeAccess::getValuePtr<OptionsT>(n);
 }
 
 auto llvm::ilist_detail::SpecificNodeAccess<
-    typename llvm::ilist_detail::compute_node_options<
-        ::mlir::Operation>::type>::getValuePtr(const node_type *n)
-    -> const_pointer {
+    llvm::ilist_detail::compute_node_options<::mlir::Operation>::type>::
+    getValuePtr(const node_type *n) -> const_pointer {
   return NodeAccess::getValuePtr<OptionsT>(n);
 }
 
@@ -810,13 +805,16 @@ void OpState::genericPrintProperties(OpAsmPrinter &p, Attribute properties,
     ArrayRef<NamedAttribute> attrs = dictAttr.getValue();
     llvm::SmallDenseSet<StringRef> elidedAttrsSet(elidedProps.begin(),
                                                   elidedProps.end());
-    bool atLeastOneAttr = llvm::any_of(attrs, [&](NamedAttribute attr) {
-      return !elidedAttrsSet.contains(attr.getName().strref());
-    });
-    if (atLeastOneAttr) {
-      p << "<";
-      p.printOptionalAttrDict(dictAttr.getValue(), elidedProps);
-      p << ">";
+    auto filteredAttrs =
+        llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
+          return !elidedAttrsSet.contains(attr.getName().strref());
+        });
+    if (!filteredAttrs.empty()) {
+      p << "<{";
+      interleaveComma(filteredAttrs, p, [&](NamedAttribute attr) {
+        p.printNamedAttribute(attr);
+      });
+      p << "}>";
     }
   } else {
     p << "<" << properties << ">";
@@ -1272,10 +1270,7 @@ LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
     return op->emitOpError("'")
            << attrName << "' attribute cannot have negative elements";
 
-  size_t totalCount =
-      std::accumulate(sizes.begin(), sizes.end(), 0,
-                      [](unsigned all, int32_t one) { return all + one; });
-
+  size_t totalCount = llvm::sum_of(sizes, size_t(0));
   if (totalCount != expectedCount)
     return op->emitOpError()
            << valueGroupName << " count (" << expectedCount

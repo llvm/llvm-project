@@ -274,6 +274,9 @@ llvm::raw_ostream &TypeAndShape::Dump(llvm::raw_ostream &o) const {
     }
     o << ')';
   }
+  if (isPossibleSequenceAssociation_) {
+    o << " isPossibleSequenceAssociation";
+  }
   return o;
 }
 
@@ -282,17 +285,26 @@ bool DummyDataObject::operator==(const DummyDataObject &that) const {
       coshape == that.coshape && cudaDataAttr == that.cudaDataAttr;
 }
 
+static bool IsOkWithSequenceAssociation(
+    const TypeAndShape &t1, const TypeAndShape &t2) {
+  return t1.isPossibleSequenceAssociation() &&
+      (t2.isPossibleSequenceAssociation() || t2.CanBeSequenceAssociated());
+}
+
 bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
     std::string *whyNot, std::optional<std::string> *warning) const {
-  bool possibleWarning{false};
-  if (!ShapesAreCompatible(
-          type.shape(), actual.type.shape(), &possibleWarning)) {
-    if (whyNot) {
-      *whyNot = "incompatible dummy data object shapes";
+  if (!IsOkWithSequenceAssociation(type, actual.type) &&
+      !IsOkWithSequenceAssociation(actual.type, type)) {
+    bool possibleWarning{false};
+    if (!ShapesAreCompatible(
+            type.shape(), actual.type.shape(), &possibleWarning)) {
+      if (whyNot) {
+        *whyNot = "incompatible dummy data object shapes";
+      }
+      return false;
+    } else if (warning && possibleWarning) {
+      *warning = "distinct dummy data object shapes";
     }
-    return false;
-  } else if (warning && possibleWarning) {
-    *warning = "distinct dummy data object shapes";
   }
   // Treat deduced dummy character type as if it were assumed-length character
   // to avoid useless "implicit interfaces have distinct type" warnings from
@@ -343,10 +355,29 @@ bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
       }
     }
   }
-  if (!IdenticalSignificantAttrs(attrs, actual.attrs) ||
+  if (!attrs.test(Attr::DeducedFromActual) &&
+      !actual.attrs.test(Attr::DeducedFromActual) &&
       type.attrs() != actual.type.attrs()) {
     if (whyNot) {
+      *whyNot = "incompatible dummy data object shape attributes";
+      auto differences{type.attrs() ^ actual.type.attrs()};
+      auto sep{": "s};
+      differences.IterateOverMembers([&](TypeAndShape::Attr x) {
+        *whyNot += sep + std::string{TypeAndShape::EnumToString(x)};
+        sep = ", ";
+      });
+    }
+    return false;
+  }
+  if (!IdenticalSignificantAttrs(attrs, actual.attrs)) {
+    if (whyNot) {
       *whyNot = "incompatible dummy data object attributes";
+      auto differences{attrs ^ actual.attrs};
+      auto sep{": "s};
+      differences.IterateOverMembers([&](DummyDataObject::Attr x) {
+        *whyNot += sep + std::string{EnumToString(x)};
+        sep = ", ";
+      });
     }
     return false;
   }
@@ -369,7 +400,7 @@ bool DummyDataObject::IsCompatibleWith(const DummyDataObject &actual,
   }
   if (!attrs.test(Attr::Value) &&
       !common::AreCompatibleCUDADataAttrs(cudaDataAttr, actual.cudaDataAttr,
-          ignoreTKR, warning,
+          ignoreTKR,
           /*allowUnifiedMatchingRule=*/false,
           /*=isHostDeviceProcedure*/ false)) {
     if (whyNot) {
@@ -427,7 +458,7 @@ std::optional<DummyDataObject> DummyDataObject::Characterize(
 }
 
 bool DummyDataObject::CanBePassedViaImplicitInterface(
-    std::string *whyNot) const {
+    std::string *whyNot, bool checkCUDA) const {
   if ((attrs &
           Attrs{Attr::Allocatable, Attr::Asynchronous, Attr::Optional,
               Attr::Pointer, Attr::Target, Attr::Value, Attr::Volatile})
@@ -451,7 +482,7 @@ bool DummyDataObject::CanBePassedViaImplicitInterface(
       *whyNot = "a dummy argument is polymorphic";
     }
     return false; // 15.4.2.2(3)(f)
-  } else if (cudaDataAttr) {
+  } else if (checkCUDA && cudaDataAttr) {
     if (whyNot) {
       *whyNot = "a dummy argument has a CUDA data attribute";
     }
@@ -900,6 +931,15 @@ std::optional<DummyArgument> DummyArgument::FromActual(std::string &&name,
                 type->set_type(DynamicType{
                     type->type().GetDerivedTypeSpec(), /*poly=*/false});
               }
+              if (type->type().category() == TypeCategory::Character &&
+                  type->type().kind() == 1) {
+                type->set_isPossibleSequenceAssociation(true);
+              } else if (const Symbol * array{IsArrayElement(expr)}) {
+                type->set_isPossibleSequenceAssociation(
+                    IsContiguous(*array, context).value_or(false));
+              } else {
+                type->set_isPossibleSequenceAssociation(expr.Rank() > 0);
+              }
               DummyDataObject obj{std::move(*type)};
               obj.attrs.set(DummyDataObject::Attr::DeducedFromActual);
               return std::make_optional<DummyArgument>(
@@ -972,9 +1012,10 @@ common::Intent DummyArgument::GetIntent() const {
       u);
 }
 
-bool DummyArgument::CanBePassedViaImplicitInterface(std::string *whyNot) const {
+bool DummyArgument::CanBePassedViaImplicitInterface(
+    std::string *whyNot, bool checkCUDA) const {
   if (const auto *object{std::get_if<DummyDataObject>(&u)}) {
-    return object->CanBePassedViaImplicitInterface(whyNot);
+    return object->CanBePassedViaImplicitInterface(whyNot, checkCUDA);
   } else if (const auto *proc{std::get_if<DummyProcedure>(&u)}) {
     return proc->CanBePassedViaImplicitInterface(whyNot);
   } else {
@@ -1461,7 +1502,8 @@ std::optional<Procedure> Procedure::FromActuals(const ProcedureDesignator &proc,
   return callee;
 }
 
-bool Procedure::CanBeCalledViaImplicitInterface(std::string *whyNot) const {
+bool Procedure::CanBeCalledViaImplicitInterface(
+    std::string *whyNot, bool checkCUDA) const {
   if (attrs.test(Attr::Elemental)) {
     if (whyNot) {
       *whyNot = "the procedure is elemental";
@@ -1484,7 +1526,7 @@ bool Procedure::CanBeCalledViaImplicitInterface(std::string *whyNot) const {
     return false;
   } else {
     for (const DummyArgument &arg : dummyArguments) {
-      if (!arg.CanBePassedViaImplicitInterface(whyNot)) {
+      if (!arg.CanBePassedViaImplicitInterface(whyNot, checkCUDA)) {
         return false;
       }
     }
@@ -1776,7 +1818,7 @@ bool DistinguishUtils::Distinguishable(
       x.intent != common::Intent::In) {
     return true;
   } else if (!common::AreCompatibleCUDADataAttrs(x.cudaDataAttr, y.cudaDataAttr,
-                 x.ignoreTKR | y.ignoreTKR, nullptr,
+                 x.ignoreTKR | y.ignoreTKR,
                  /*allowUnifiedMatchingRule=*/false,
                  /*=isHostDeviceProcedure*/ false)) {
     return true;

@@ -10,7 +10,6 @@ add_lldb_unittest(UtilityTests
   DataBufferTest.cpp
   DataEncoderTest.cpp
   DataExtractorTest.cpp
-  DiagnosticsRenderingTest.cpp
   EnvironmentTest.cpp
   EventTest.cpp
   FileSpecListTest.cpp
@@ -48,16 +47,17 @@ add_lldb_unittest(UtilityTests
   UserIDResolverTest.cpp
   UUIDTest.cpp
   VASprintfTest.cpp
+  VirtualDataExtractorTest.cpp
   VMRangeTest.cpp
   XcodeSDKTest.cpp
 
+  LINK_COMPONENTS
+    Support
+    TargetParser
   LINK_LIBS
       lldbUtility
       lldbUtilityHelpers
       LLVMTestingSupport
-  LINK_COMPONENTS
-    Support
-    TargetParser
   )
 
 set(test_inputs

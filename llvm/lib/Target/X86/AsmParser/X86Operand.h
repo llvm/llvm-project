@@ -107,8 +107,7 @@ struct X86Operand final : public MCParsedAsmOperand {
   /// getOffsetOfLoc - Get the location of the offset operator.
   SMLoc getOffsetOfLoc() const override { return OffsetOfLoc; }
 
-  void print(raw_ostream &OS) const override {
-
+  void print(raw_ostream &OS, const MCAsmInfo &) const override {
     auto PrintImmValue = [&](const MCExpr *Val, const char *VName) {
       if (Val->getKind() == MCExpr::Constant) {
         if (auto Imm = cast<MCConstantExpr>(Val)->getValue())
@@ -616,37 +615,6 @@ struct X86Operand final : public MCParsedAsmOperand {
     case X86::K6:
     case X86::K7:
       Reg = X86::K6_K7;
-      break;
-    }
-    Inst.addOperand(MCOperand::createReg(Reg));
-  }
-
-  bool isTILEPair() const {
-    return Kind == Register &&
-           X86MCRegisterClasses[X86::TILERegClassID].contains(getReg());
-  }
-
-  void addTILEPairOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    MCRegister Reg = getReg();
-    switch (Reg.id()) {
-    default:
-      llvm_unreachable("Invalid tile register!");
-    case X86::TMM0:
-    case X86::TMM1:
-      Reg = X86::TMM0_TMM1;
-      break;
-    case X86::TMM2:
-    case X86::TMM3:
-      Reg = X86::TMM2_TMM3;
-      break;
-    case X86::TMM4:
-    case X86::TMM5:
-      Reg = X86::TMM4_TMM5;
-      break;
-    case X86::TMM6:
-    case X86::TMM7:
-      Reg = X86::TMM6_TMM7;
       break;
     }
     Inst.addOperand(MCOperand::createReg(Reg));

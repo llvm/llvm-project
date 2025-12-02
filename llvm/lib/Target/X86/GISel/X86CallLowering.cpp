@@ -69,13 +69,13 @@ public:
                  CCValAssign::LocInfo LocInfo,
                  const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
                  CCState &State) override {
-    bool Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
+    bool Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, Info.Ty, State);
     StackSize = State.getStackSize();
 
     static const MCPhysReg XMMArgRegs[] = {X86::XMM0, X86::XMM1, X86::XMM2,
                                            X86::XMM3, X86::XMM4, X86::XMM5,
                                            X86::XMM6, X86::XMM7};
-    if (!Info.IsFixed)
+    if (Flags.isVarArg())
       NumXMMRegs = State.getFirstUnallocated(XMMArgRegs);
 
     return Res;
@@ -280,8 +280,7 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     if (Arg.hasAttribute(Attribute::ByVal) ||
         Arg.hasAttribute(Attribute::InReg) ||
         Arg.hasAttribute(Attribute::SwiftSelf) ||
-        Arg.hasAttribute(Attribute::SwiftError) ||
-        Arg.hasAttribute(Attribute::Nest) || VRegs[Idx].size() > 1)
+        Arg.hasAttribute(Attribute::SwiftError) || VRegs[Idx].size() > 1)
       return false;
 
     if (Arg.hasAttribute(Attribute::StructRet)) {
@@ -363,7 +362,8 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                      Info.CallConv, Info.IsVarArg))
     return false;
 
-  bool IsFixed = Info.OrigArgs.empty() ? true : Info.OrigArgs.back().IsFixed;
+  bool IsFixed =
+      Info.OrigArgs.empty() ? true : !Info.OrigArgs.back().Flags[0].isVarArg();
   if (STI.is64Bit() && !IsFixed && !STI.isCallingConvWin64(Info.CallConv)) {
     // From AMD64 ABI document:
     // For calls that may call functions that use varargs or stdargs

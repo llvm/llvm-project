@@ -1267,9 +1267,10 @@ CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
   return matching_namespace;
 }
 
-void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
-  ForEachSymbolFile("Dumping clang AST", [&s](SymbolFileDWARF &oso_dwarf) {
-    oso_dwarf.DumpClangAST(s);
+void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s, llvm::StringRef filter,
+                                           bool show_color) {
+  ForEachSymbolFile("Dumping clang AST", [&](SymbolFileDWARF &oso_dwarf) {
+    oso_dwarf.DumpClangAST(s, filter, show_color);
     // The underlying assumption is that DumpClangAST(...) will obtain the
     // AST from the underlying TypeSystem and therefore we only need to do
     // this once and can stop after the first iteration hence we return true.
@@ -1278,7 +1279,8 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
 }
 
 bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
-    lldb_private::StructuredData::Dictionary &d, bool errors_only) {
+    lldb_private::StructuredData::Dictionary &d, bool errors_only,
+    bool load_all_debug_info) {
   StructuredData::Array separate_debug_info_files;
   const uint32_t cu_count = GetNumCompileUnits();
   for (uint32_t cu_idx = 0; cu_idx < cu_count; ++cu_idx) {
@@ -1600,4 +1602,15 @@ void SymbolFileDWARFDebugMap::GetCompileOptions(
     oso_dwarf.GetCompileOptions(args);
     return IterationAction::Continue;
   });
+}
+
+llvm::Expected<SymbolContext>
+SymbolFileDWARFDebugMap::ResolveFunctionCallLabel(FunctionCallLabel &label) {
+  const uint64_t oso_idx = GetOSOIndexFromUserID(label.symbol_id);
+  SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
+  if (!oso_dwarf)
+    return llvm::createStringError(llvm::formatv(
+        "couldn't find symbol file for {0} in debug-map.", label));
+
+  return oso_dwarf->ResolveFunctionCallLabel(label);
 }

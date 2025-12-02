@@ -16,9 +16,10 @@
 
 using namespace llvm;
 
-MCDXContainerTargetWriter::~MCDXContainerTargetWriter() {}
+MCDXContainerTargetWriter::~MCDXContainerTargetWriter() = default;
 
-uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t DXContainerObjectWriter::writeObject() {
+  auto &Asm = *this->Asm;
   // Start the file size as the header plus the size of the part offsets.
   // Presently DXContainer files usually contain 7-10 parts. Reserving space for
   // 16 part offsets gives us a little room for growth.
@@ -86,7 +87,7 @@ uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm) {
       dxbc::ProgramHeader Header;
       memset(reinterpret_cast<void *>(&Header), 0, sizeof(dxbc::ProgramHeader));
 
-      const Triple &TT = Asm.getContext().getTargetTriple();
+      const Triple &TT = getContext().getTargetTriple();
       VersionTuple Version = TT.getOSVersion();
       uint8_t MajorVersion = static_cast<uint8_t>(Version.getMajor());
       uint8_t MinorVersion =

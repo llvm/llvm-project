@@ -304,13 +304,9 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
 
     ModuleSP exe_module_sp;
     if (platform_sp) {
-      FileSpecList executable_search_paths(
-          Target::GetDefaultExecutableSearchPaths());
       ModuleSpec module_spec(file, arch);
-      error = platform_sp->ResolveExecutable(module_spec, exe_module_sp,
-                                             executable_search_paths.GetSize()
-                                                 ? &executable_search_paths
-                                                 : nullptr);
+      module_spec.SetTarget(target_sp);
+      error = platform_sp->ResolveExecutable(module_spec, exe_module_sp);
     }
 
     if (error.Success() && exe_module_sp) {
@@ -382,8 +378,8 @@ bool TargetList::DeleteTarget(TargetSP &target_sp) {
 TargetSP TargetList::FindTargetWithExecutableAndArchitecture(
     const FileSpec &exe_file_spec, const ArchSpec *exe_arch_ptr) const {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find_if(m_target_list.begin(), m_target_list.end(),
-      [&exe_file_spec, exe_arch_ptr](const TargetSP &item) {
+  auto it = llvm::find_if(
+      m_target_list, [&exe_file_spec, exe_arch_ptr](const TargetSP &item) {
         Module *exe_module = item->GetExecutableModulePointer();
         if (!exe_module ||
             !FileSpec::Match(exe_file_spec, exe_module->GetFileSpec()))
@@ -401,11 +397,10 @@ TargetSP TargetList::FindTargetWithExecutableAndArchitecture(
 
 TargetSP TargetList::FindTargetWithProcessID(lldb::pid_t pid) const {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find_if(m_target_list.begin(), m_target_list.end(),
-      [pid](const TargetSP &item) {
-        auto *process_ptr = item->GetProcessSP().get();
-        return process_ptr && (process_ptr->GetID() == pid);
-      });
+  auto it = llvm::find_if(m_target_list, [pid](const TargetSP &item) {
+    auto *process_ptr = item->GetProcessSP().get();
+    return process_ptr && (process_ptr->GetID() == pid);
+  });
 
   if (it != m_target_list.end())
     return *it;
@@ -419,15 +414,26 @@ TargetSP TargetList::FindTargetWithProcess(Process *process) const {
     return target_sp;
 
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find_if(m_target_list.begin(), m_target_list.end(),
-      [process](const TargetSP &item) {
-        return item->GetProcessSP().get() == process;
-      });
+  auto it = llvm::find_if(m_target_list, [process](const TargetSP &item) {
+    return item->GetProcessSP().get() == process;
+  });
 
   if (it != m_target_list.end())
     target_sp = *it;
 
   return target_sp;
+}
+
+TargetSP TargetList::FindTargetByGloballyUniqueID(lldb::user_id_t id) const {
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+  auto it = llvm::find_if(m_target_list, [id](const TargetSP &item) {
+    return item->GetGloballyUniqueID() == id;
+  });
+
+  if (it != m_target_list.end())
+    return *it;
+
+  return TargetSP();
 }
 
 TargetSP TargetList::GetTargetSP(Target *target) const {
@@ -436,8 +442,9 @@ TargetSP TargetList::GetTargetSP(Target *target) const {
     return target_sp;
 
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find_if(m_target_list.begin(), m_target_list.end(),
-      [target](const TargetSP &item) { return item.get() == target; });
+  auto it = llvm::find_if(m_target_list, [target](const TargetSP &item) {
+    return item.get() == target;
+  });
   if (it != m_target_list.end())
     target_sp = *it;
 

@@ -27,6 +27,8 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 
+#include <atomic>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "arm-pseudo"
@@ -51,8 +53,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override {
@@ -160,8 +161,8 @@ namespace {
     friend bool operator<(const NEONLdStTableEntry &TE, unsigned PseudoOpc) {
       return TE.PseudoOpc < PseudoOpc;
     }
-    friend bool LLVM_ATTRIBUTE_UNUSED operator<(unsigned PseudoOpc,
-                                                const NEONLdStTableEntry &TE) {
+    [[maybe_unused]] friend bool operator<(unsigned PseudoOpc,
+                                           const NEONLdStTableEntry &TE) {
       return PseudoOpc < TE.PseudoOpc;
     }
   };
@@ -2300,6 +2301,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       for (unsigned i = 2, e = MBBI->getNumOperands(); i != e; ++i)
         NewMI->addOperand(MBBI->getOperand(i));
 
+      NewMI->setCFIType(*MBB.getParent(), MI.getCFIType());
+
       // Update call info and delete the pseudo instruction TCRETURN.
       if (MI.isCandidateForAdditionalCallInfo())
         MI.getMF()->moveAdditionalCallInfo(&MI, &*NewMI);
@@ -2543,9 +2546,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     }
     case ARM::Int_eh_sjlj_dispatchsetup: {
       MachineFunction &MF = *MI.getParent()->getParent();
-      const ARMBaseInstrInfo *AII =
-        static_cast<const ARMBaseInstrInfo*>(TII);
-      const ARMBaseRegisterInfo &RI = AII->getRegisterInfo();
+      const ARMBaseRegisterInfo &RI = TII->getRegisterInfo();
       // For functions using a base pointer, we rematerialize it (via the frame
       // pointer) here since eh.sjlj.setjmp and eh.sjlj.longjmp don't do it
       // for us. Otherwise, expand to nothing.

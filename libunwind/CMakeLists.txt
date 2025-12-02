@@ -145,6 +145,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   if(LIBUNWIND_LIBDIR_SUBDIR)
     string(APPEND LIBUNWIND_TARGET_SUBDIR /${LIBUNWIND_LIBDIR_SUBDIR})
   endif()
+  cmake_path(NORMAL_PATH LIBUNWIND_TARGET_SUBDIR)
   set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBUNWIND_TARGET_SUBDIR})
   set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBUNWIND_TARGET_SUBDIR} CACHE STRING
       "Path where built libunwind libraries should be installed.")
@@ -180,6 +181,8 @@ include(HandleLibunwindFlags)
 
 # Configure compiler.
 include(config-ix)
+
+include(HandleLibC) # Setup the C library flags
 
 if (LIBUNWIND_USE_COMPILER_RT AND NOT LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
   list(APPEND LIBUNWIND_LINK_FLAGS "-rtlib=compiler-rt")
@@ -327,6 +330,10 @@ if (C_SUPPORTS_COMMENT_LIB_PRAGMA)
   if (LIBUNWIND_HAS_PTHREAD_LIB)
     add_definitions(-D_LIBUNWIND_LINK_PTHREAD_LIB)
   endif()
+endif()
+
+if (RUNTIMES_EXECUTE_ONLY_CODE)
+  add_compile_definitions(_LIBUNWIND_EXECUTE_ONLY_CODE)
 endif()
 
 #===============================================================================

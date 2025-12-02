@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -38,6 +39,47 @@ public:
   }
 
 private:
+  template <typename T> struct TypeOf {
+    static constexpr std::string_view get() {
+#if defined(__GNUC__)
+#define DUMP_EXPR_SHOW_TYPE
+      std::string_view v(__PRETTY_FUNCTION__);
+      // Extract the "xyz" from the "pretty function" string:
+      // "... [with T = xyz; std::string_view = ...]"
+#ifdef __clang__
+      std::string_view front("[T = ");
+      std::string_view back("]");
+#else
+      std::string_view front("[with T = ");
+      std::string_view back("; std::string_view =");
+#endif
+
+#elif defined(_MSC_VER)
+#define DUMP_EXPR_SHOW_TYPE
+      std::string_view v(__FUNCSIG__);
+      // Extract the "xyz" from the "pretty function" string:
+      // "...TypeOf<xyz>::get(void)"
+      std::string_view front("TypeOf<");
+      std::string_view back(">::get(void)");
+
+#endif
+
+#if defined(DUMP_EXPR_SHOW_TYPE)
+#undef DUMP_EXPR_SHOW_TYPE
+      if (auto fpos{v.find(front)}; fpos != v.npos) {
+        v.remove_prefix(fpos + front.size());
+        if (auto bpos{v.find(back)}; bpos != v.npos) {
+          v.remove_suffix(v.size() - bpos);
+          return v;
+        }
+      }
+#endif
+      return "";
+    }
+
+    static constexpr std::string_view name{TypeOf<T>::get()};
+  };
+
   template <typename A, bool C> void Show(const common::Indirection<A, C> &x) {
     Show(x.value());
   }
@@ -76,7 +118,7 @@ private:
   void Show(const evaluate::NullPointer &);
   template <typename T> void Show(const evaluate::Constant<T> &x) {
     if constexpr (T::category == common::TypeCategory::Derived) {
-      Indent("derived constant");
+      Indent("derived constant "s + std::string(TypeOf<T>::name));
       for (const auto &map : x.values()) {
         for (const auto &pair : map) {
           Show(pair.second.value());
@@ -84,7 +126,7 @@ private:
       }
       Outdent();
     } else {
-      Print("constant");
+      Print("constant "s + std::string(TypeOf<T>::name));
     }
   }
   void Show(const Symbol &symbol);
@@ -102,7 +144,7 @@ private:
   void Show(const evaluate::Substring &x);
   void Show(const evaluate::ComplexPart &x);
   template <typename T> void Show(const evaluate::Designator<T> &x) {
-    Indent("designator");
+    Indent("designator "s + std::string(TypeOf<T>::name));
     Show(x.u);
     Outdent();
   }
@@ -117,7 +159,7 @@ private:
     Outdent();
   }
   template <typename T> void Show(const evaluate::FunctionRef<T> &x) {
-    Indent("function ref");
+    Indent("function ref "s + std::string(TypeOf<T>::name));
     Show(x.proc());
     Show(x.arguments());
     Outdent();
@@ -127,14 +169,14 @@ private:
   }
   template <typename T>
   void Show(const evaluate::ArrayConstructorValues<T> &x) {
-    Indent("array constructor value");
+    Indent("array constructor value "s + std::string(TypeOf<T>::name));
     for (auto &v : x) {
       Show(v);
     }
     Outdent();
   }
   template <typename T> void Show(const evaluate::ImpliedDo<T> &x) {
-    Indent("implied do");
+    Indent("implied do "s + std::string(TypeOf<T>::name));
     Show(x.lower());
     Show(x.upper());
     Show(x.stride());
@@ -148,20 +190,20 @@ private:
   void Show(const evaluate::StructureConstructor &x);
   template <typename D, typename R, typename O>
   void Show(const evaluate::Operation<D, R, O> &op) {
-    Indent("unary op");
+    Indent("unary op "s + std::string(TypeOf<D>::name));
     Show(op.left());
     Outdent();
   }
   template <typename D, typename R, typename LO, typename RO>
   void Show(const evaluate::Operation<D, R, LO, RO> &op) {
-    Indent("binary op");
+    Indent("binary op "s + std::string(TypeOf<D>::name));
     Show(op.left());
     Show(op.right());
     Outdent();
   }
   void Show(const evaluate::Relational<evaluate::SomeType> &x);
   template <typename T> void Show(const evaluate::Expr<T> &x) {
-    Indent("expr T");
+    Indent("expr <" + std::string(TypeOf<T>::name) + ">");
     Show(x.u);
     Outdent();
   }

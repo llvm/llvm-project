@@ -12,7 +12,6 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Filesystem.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
@@ -473,7 +472,7 @@ bool ARM::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
     // Bit 0 == 1 denotes Thumb state, it is not part of the range.
     dst &= ~0x1;
 
-  int64_t offset = dst - src;
+  int64_t offset = llvm::SignExtend64<32>(dst - src);
   switch (type) {
   case R_ARM_PC24:
   case R_ARM_PLT32:
@@ -1318,11 +1317,11 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
   // with its corresponding special symbol __acle_se_<sym>.
   parallelForEach(ctx.objectFiles, [&](InputFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
-    for (size_t i = 0, e = syms.size(); i != e; ++i) {
-      StringRef symName = syms[i]->getName();
+    for (Symbol *&sym : syms) {
+      StringRef symName = sym->getName();
       auto it = ctx.symtab->cmseSymMap.find(symName);
       if (it != ctx.symtab->cmseSymMap.end())
-        syms[i] = it->second.acleSeSym;
+        sym = it->second.acleSeSym;
     }
   });
 }
@@ -1489,7 +1488,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   const uint64_t fileSize =
       sectionHeaderOff + shnum * sizeof(typename ELFT::Shdr);
   const unsigned flags =
-      ctx.arg.mmapOutputFile ? 0 : (unsigned)FileOutputBuffer::F_no_mmap;
+      ctx.arg.mmapOutputFile ? (unsigned)FileOutputBuffer::F_mmap : 0;
   unlinkAsync(ctx.arg.cmseOutputLib);
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.cmseOutputLib, fileSize, flags);

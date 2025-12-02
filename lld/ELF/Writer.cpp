@@ -285,7 +285,6 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
 static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Demote symbols");
   DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
-  bool maybePreemptible = ctx.sharedFiles.size() || ctx.arg.shared;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (auto *d = dyn_cast<Defined>(sym)) {
       if (d->section && !d->section->isLive())
@@ -301,9 +300,8 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
       }
     }
 
-    if (maybePreemptible)
-      sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
-                           computeIsPreemptible(ctx, *sym);
+    sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
+                         computeIsPreemptible(ctx, *sym);
   }
 }
 
@@ -555,6 +553,19 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
   }
 }
 
+// Returns true if this is a variant of .data.rel.ro.
+static bool isRelRoDataSection(Ctx &ctx, StringRef secName) {
+  if (!secName.consume_front(".data.rel.ro"))
+    return false;
+  if (secName.empty())
+    return true;
+  // If -z keep-data-section-prefix is specified, additionally allow
+  // '.data.rel.ro.hot' and '.data.rel.ro.unlikely'.
+  if (ctx.arg.zKeepDataSectionPrefix)
+    return secName == ".hot" || secName == ".unlikely";
+  return false;
+}
+
 // Today's loaders have a feature to make segments read-only after
 // processing dynamic relocations to enhance security. PT_GNU_RELRO
 // is defined for that.
@@ -631,7 +642,7 @@ static bool isRelroSection(Ctx &ctx, const OutputSection *sec) {
   // magic section names.
   StringRef s = sec->name;
 
-  bool abiAgnostic = s == ".data.rel.ro" || s == ".bss.rel.ro" ||
+  bool abiAgnostic = isRelRoDataSection(ctx, s) || s == ".bss.rel.ro" ||
                      s == ".ctors" || s == ".dtors" || s == ".jcr" ||
                      s == ".eh_frame" || s == ".fini_array" ||
                      s == ".init_array" || s == ".preinit_array";
@@ -653,15 +664,17 @@ enum RankFlags {
   RF_NOT_ADDR_SET = 1 << 27,
   RF_NOT_ALLOC = 1 << 26,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
+  RF_LARGE_EXEC_WRITE = 1 << 16,
   RF_LARGE_ALT = 1 << 15,
   RF_WRITE = 1 << 14,
   RF_EXEC_WRITE = 1 << 13,
   RF_EXEC = 1 << 12,
   RF_RODATA = 1 << 11,
-  RF_LARGE = 1 << 10,
-  RF_NOT_RELRO = 1 << 9,
-  RF_NOT_TLS = 1 << 8,
-  RF_BSS = 1 << 7,
+  RF_LARGE_EXEC = 1 << 10,
+  RF_LARGE = 1 << 9,
+  RF_NOT_RELRO = 1 << 8,
+  RF_NOT_TLS = 1 << 7,
+  RF_BSS = 1 << 6,
 };
 
 unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
@@ -691,6 +704,7 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
   // places.
   bool isExec = osec.flags & SHF_EXECINSTR;
   bool isWrite = osec.flags & SHF_WRITE;
+  bool isLarge = osec.flags & SHF_X86_64_LARGE && ctx.arg.emachine == EM_X86_64;
 
   if (!isWrite && !isExec) {
     // Among PROGBITS sections, place .lrodata further from .text.
@@ -698,7 +712,7 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
     // layout has one extra PT_LOAD, but alleviates relocation overflow
     // pressure for absolute relocations referencing small data from -fno-pic
     // relocatable files.
-    if (osec.flags & SHF_X86_64_LARGE && ctx.arg.emachine == EM_X86_64)
+    if (isLarge)
       rank |= ctx.arg.zLrodataAfterBss ? RF_LARGE_ALT : 0;
     else
       rank |= ctx.arg.zLrodataAfterBss ? 0 : RF_LARGE;
@@ -722,7 +736,13 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
     else
       rank |= RF_RODATA;
   } else if (isExec) {
-    rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
+    // Place readonly .ltext before .lrodata and writable .ltext after .lbss to
+    // keep writable and readonly segments separate.
+    if (isLarge) {
+      rank |= isWrite ? RF_LARGE_EXEC_WRITE : RF_LARGE_EXEC;
+    } else {
+      rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
+    }
   } else {
     rank |= RF_WRITE;
     // The TLS initialization block needs to be a single contiguous block. Place
@@ -737,7 +757,7 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
     // alleviates relocation overflow pressure.
     // For -z lrodata-after-bss, place .lbss/.lrodata/.ldata after .bss.
     // .bss/.lbss being adjacent reuses the NOBITS size optimization.
-    if (osec.flags & SHF_X86_64_LARGE && ctx.arg.emachine == EM_X86_64) {
+    if (isLarge) {
       rank |= ctx.arg.zLrodataAfterBss
                   ? (osec.type == SHT_NOBITS ? 1 : RF_LARGE_ALT)
                   : RF_LARGE;
@@ -1030,7 +1050,7 @@ findOrphanPos(Ctx &ctx, SmallVectorImpl<SectionCommand *>::iterator b,
   // This matches bfd's behavior and is convenient when the linker script fully
   // specifies the start of the file, but doesn't care about the end (the non
   // alloc sections for example).
-  if (std::find_if(i, e, isOutputSecWithInputSections) == e)
+  if (std::none_of(i, e, isOutputSecWithInputSections))
     return e;
 
   while (i != e && shouldSkip(*i))
@@ -1475,15 +1495,14 @@ static void randomizeSectionPadding(Ctx &ctx) {
       if (auto *isd = dyn_cast<InputSectionDescription>(bc)) {
         SmallVector<InputSection *, 0> tmp;
         if (os->ptLoad != curPtLoad) {
-          tmp.push_back(make<RandomizePaddingSection>(
-              ctx, g() % ctx.arg.maxPageSize, os));
+          tmp.push_back(
+              make<PaddingSection>(ctx, g() % ctx.arg.maxPageSize, os));
           curPtLoad = os->ptLoad;
         }
         for (InputSection *isec : isd->sections) {
           // Probability of inserting padding is 1 in 16.
           if (g() % 16 == 0)
-            tmp.push_back(
-                make<RandomizePaddingSection>(ctx, isec->addralign, os));
+            tmp.push_back(make<PaddingSection>(ctx, isec->addralign, os));
           tmp.push_back(isec);
         }
         isd->sections = std::move(tmp);
@@ -1521,8 +1540,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   if (ctx.arg.randomizeSectionPadding)
     randomizeSectionPadding(ctx);
 
+  // Iterate until a fixed point is reached, skipping relocatable links since
+  // the final addresses are unavailable.
   uint32_t pass = 0, assignPasses = 0;
-  for (;;) {
+  while (!ctx.arg.relocatable) {
     bool changed = ctx.target->needsThunks
                        ? tc.createThunks(pass, ctx.outputSections)
                        : ctx.target->relaxOnce(pass);
@@ -1566,9 +1587,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
               if (isInt<32>(reloc.sym->getVA(ctx, reloc.addend)))
                 return false;
               part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
-                                      reloc.offset,
-                                      DynamicReloc::AddendOnlyWithTargetVA,
-                                      *reloc.sym, reloc.addend, R_ABS});
+                                      reloc.offset, false, *reloc.sym,
+                                      reloc.addend, R_ABS});
               return true;
             });
         changed |= (it != part.relrAuthDyn->relocs.end());
@@ -1614,17 +1634,32 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     for (OutputSection *sec : ctx.outputSections)
       sec->addr = 0;
 
-  // If addrExpr is set, the address may not be a multiple of the alignment.
-  // Warn because this is error-prone.
-  for (SectionCommand *cmd : ctx.script->sectionCommands)
-    if (auto *osd = dyn_cast<OutputDesc>(cmd)) {
-      OutputSection *osec = &osd->osec;
-      if (osec->addr % osec->addralign != 0)
-        Warn(ctx) << "address (0x" << Twine::utohexstr(osec->addr)
-                  << ") of section " << osec->name
-                  << " is not a multiple of alignment (" << osec->addralign
-                  << ")";
+  uint64_t imageBase = ctx.script->hasSectionsCommand || ctx.arg.relocatable
+                           ? 0
+                           : ctx.target->getImageBase();
+  for (SectionCommand *cmd : ctx.script->sectionCommands) {
+    auto *osd = dyn_cast<OutputDesc>(cmd);
+    if (!osd)
+      continue;
+    OutputSection *osec = &osd->osec;
+    // Error if the address is below the image base when SECTIONS is absent
+    // (e.g. when -Ttext is specified and smaller than the default target image
+    // base for no-pie).
+    if (osec->addr < imageBase && (osec->flags & SHF_ALLOC)) {
+      Err(ctx) << "section '" << osec->name << "' address (0x"
+               << Twine::utohexstr(osec->addr)
+               << ") is smaller than image base (0x"
+               << Twine::utohexstr(imageBase) << "); specify --image-base";
     }
+
+    // If addrExpr is set, the address may not be a multiple of the alignment.
+    // Warn because this is error-prone.
+    if (osec->addr % osec->addralign != 0)
+      Warn(ctx) << "address (0x" << Twine::utohexstr(osec->addr)
+                << ") of section " << osec->name
+                << " is not a multiple of alignment (" << osec->addralign
+                << ")";
+  }
 
   // Sizes are no longer allowed to grow, so all allowable spills have been
   // taken. Remove any leftover potential spills.
@@ -2908,8 +2943,8 @@ template <class ELFT> void Writer<ELFT>::openFile() {
   unsigned flags = 0;
   if (!ctx.arg.relocatable)
     flags |= FileOutputBuffer::F_executable;
-  if (!ctx.arg.mmapOutputFile)
-    flags |= FileOutputBuffer::F_no_mmap;
+  if (ctx.arg.mmapOutputFile)
+    flags |= FileOutputBuffer::F_mmap;
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.outputFile, fileSize, flags);
 
@@ -2960,9 +2995,12 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
       if (p->p_type == PT_LOAD)
         last = p.get();
 
-    if (last && (last->p_flags & PF_X))
-      last->p_memsz = last->p_filesz =
-          alignToPowerOf2(last->p_filesz, ctx.arg.maxPageSize);
+    if (last && (last->p_flags & PF_X)) {
+      last->p_filesz = alignToPowerOf2(last->p_filesz, ctx.arg.maxPageSize);
+      // p_memsz might be larger than the aligned p_filesz due to trailing BSS
+      // sections. Don't decrease it.
+      last->p_memsz = std::max(last->p_memsz, last->p_filesz);
+    }
   }
 }
 

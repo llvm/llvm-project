@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Instructions.h"
+#include "llvm-c/Core.h"
 #include "llvm/ADT/CombinationGenerator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -26,13 +27,11 @@
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm-c/Core.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 #include <memory>
-
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace llvm {
 namespace {
@@ -607,82 +606,101 @@ TEST(InstructionTest, ConstrainedTrans) {
 
 TEST(InstructionsTest, isEliminableCastPair) {
   LLVMContext C;
+  DataLayout DL1("p1:32:32-p2:64:64:64:32");
 
-  Type* Int16Ty = Type::getInt16Ty(C);
-  Type* Int32Ty = Type::getInt32Ty(C);
-  Type* Int64Ty = Type::getInt64Ty(C);
-  Type *Int64PtrTy = PointerType::get(C, 0);
+  Type *Int16Ty = Type::getInt16Ty(C);
+  Type *Int32Ty = Type::getInt32Ty(C);
+  Type *Int64Ty = Type::getInt64Ty(C);
+  Type *PtrTy64 = PointerType::get(C, 0);
+  Type *PtrTy32 = PointerType::get(C, 1);
+  Type *PtrTy64_32 = PointerType::get(C, 2);
 
   // Source and destination pointers have same size -> bitcast.
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::PtrToInt,
-                                           CastInst::IntToPtr,
-                                           Int64PtrTy, Int64Ty, Int64PtrTy,
-                                           Int32Ty, nullptr, Int32Ty),
+                                           CastInst::IntToPtr, PtrTy32, Int64Ty,
+                                           PtrTy32, &DL1),
             CastInst::BitCast);
 
-  // Source and destination have unknown sizes, but the same address space and
-  // the intermediate int is the maximum pointer size -> bitcast
+  // Source and destination have unknown sizes.
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::PtrToInt,
-                                           CastInst::IntToPtr,
-                                           Int64PtrTy, Int64Ty, Int64PtrTy,
-                                           nullptr, nullptr, nullptr),
-            CastInst::BitCast);
-
-  // Source and destination have unknown sizes, but the same address space and
-  // the intermediate int is not the maximum pointer size -> nothing
-  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::PtrToInt,
-                                           CastInst::IntToPtr,
-                                           Int64PtrTy, Int32Ty, Int64PtrTy,
-                                           nullptr, nullptr, nullptr),
+                                           CastInst::IntToPtr, PtrTy32, Int64Ty,
+                                           PtrTy32, nullptr),
             0U);
 
   // Middle pointer big enough -> bitcast.
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
-                                           CastInst::PtrToInt,
-                                           Int64Ty, Int64PtrTy, Int64Ty,
-                                           nullptr, Int64Ty, nullptr),
+                                           CastInst::PtrToInt, Int64Ty, PtrTy64,
+                                           Int64Ty, &DL1),
             CastInst::BitCast);
 
   // Middle pointer too small -> fail.
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
-                                           CastInst::PtrToInt,
-                                           Int64Ty, Int64PtrTy, Int64Ty,
-                                           nullptr, Int32Ty, nullptr),
+                                           CastInst::PtrToInt, Int64Ty, PtrTy32,
+                                           Int64Ty, &DL1),
             0U);
+
+  // Destination larger than source. Pointer type same as destination.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int16Ty, PtrTy64,
+                                           Int64Ty, &DL1),
+            CastInst::ZExt);
+
+  // Destination larger than source. Pointer type different from destination.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int16Ty, PtrTy32,
+                                           Int64Ty, &DL1),
+            CastInst::ZExt);
+
+  // Destination smaller than source. Pointer type same as source.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int64Ty, PtrTy64,
+                                           Int16Ty, &DL1),
+            CastInst::Trunc);
+
+  // Destination smaller than source. Pointer type different from source.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int64Ty, PtrTy32,
+                                           Int16Ty, &DL1),
+            CastInst::Trunc);
+
+  // ptrtoaddr with address size != pointer size. Truncating case.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToAddr, Int64Ty,
+                                           PtrTy64_32, Int32Ty, &DL1),
+            CastInst::Trunc);
+
+  // ptrtoaddr with address size != pointer size. Non-truncating case.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToAddr, Int32Ty,
+                                           PtrTy64_32, Int32Ty, &DL1),
+            CastInst::BitCast);
 
   // Test that we don't eliminate bitcasts between different address spaces,
   // or if we don't have available pointer size information.
-  DataLayout DL("e-p:32:32:32-p1:16:16:16-p2:64:64:64-i1:8:8-i8:8:8-i16:16:16"
-                "-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64"
-                "-v128:128:128-a:0:64-s:64:64-f80:128:128-n8:16:32:64-S128");
+  DataLayout DL2("e-p:32:32:32-p1:16:16:16-p2:64:64:64-i1:8:8-i8:8:8-i16:16:16"
+                 "-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64"
+                 "-v128:128:128-a:0:64-s:64:64-f80:128:128-n8:16:32:64-S128");
 
   Type *Int64PtrTyAS1 = PointerType::get(C, 1);
   Type *Int64PtrTyAS2 = PointerType::get(C, 2);
 
-  IntegerType *Int16SizePtr = DL.getIntPtrType(C, 1);
-  IntegerType *Int64SizePtr = DL.getIntPtrType(C, 2);
-
   // Cannot simplify inttoptr, addrspacecast
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
-                                           CastInst::AddrSpaceCast,
-                                           Int16Ty, Int64PtrTyAS1, Int64PtrTyAS2,
-                                           nullptr, Int16SizePtr, Int64SizePtr),
+                                           CastInst::AddrSpaceCast, Int16Ty,
+                                           Int64PtrTyAS1, Int64PtrTyAS2, &DL2),
             0U);
 
   // Cannot simplify addrspacecast, ptrtoint
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::AddrSpaceCast,
-                                           CastInst::PtrToInt,
-                                           Int64PtrTyAS1, Int64PtrTyAS2, Int16Ty,
-                                           Int64SizePtr, Int16SizePtr, nullptr),
+                                           CastInst::PtrToInt, Int64PtrTyAS1,
+                                           Int64PtrTyAS2, Int16Ty, &DL2),
             0U);
 
   // Pass since the bitcast address spaces are the same
-  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
-                                           CastInst::BitCast,
-                                           Int16Ty, Int64PtrTyAS1, Int64PtrTyAS1,
-                                           nullptr, nullptr, nullptr),
+  EXPECT_EQ(CastInst::isEliminableCastPair(
+                CastInst::IntToPtr, CastInst::BitCast, Int16Ty, Int64PtrTyAS1,
+                Int64PtrTyAS1, nullptr),
             CastInst::IntToPtr);
-
 }
 
 TEST(InstructionsTest, CloneCall) {
@@ -1451,8 +1469,6 @@ TEST(InstructionsTest, GetSplat) {
 
 TEST(InstructionsTest, SkipDebug) {
   LLVMContext C;
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = false;
   std::unique_ptr<Module> M = parseIR(C,
                                       R"(
       declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -1479,16 +1495,17 @@ TEST(InstructionsTest, SkipDebug) {
   )");
   ASSERT_TRUE(M);
   Function *F = cast<Function>(M->getNamedValue("f"));
+  // This test wants to see dbg.values.
+  F->convertFromNewDbgValues();
   BasicBlock &BB = F->front();
 
   // The first non-debug instruction is the terminator.
   auto *Term = BB.getTerminator();
-  EXPECT_EQ(Term, BB.begin()->getNextNonDebugInstruction());
+  EXPECT_EQ(Term, BB.begin()->getNextNode());
   EXPECT_EQ(Term->getIterator(), skipDebugIntrinsics(BB.begin()));
 
   // After the terminator, there are no non-debug instructions.
-  EXPECT_EQ(nullptr, Term->getNextNonDebugInstruction());
-  UseNewDbgInfoFormat = OldDbgValueMode;
+  EXPECT_EQ(nullptr, Term->getNextNode());
 }
 
 TEST(InstructionsTest, PhiMightNotBeFPMathOperator) {
@@ -1935,6 +1952,23 @@ TEST(InstructionsTest, CmpPredicate) {
   EXPECT_EQ(P0, R0);
   EXPECT_EQ(P1, R1);
   EXPECT_EQ(P2, R2);
+}
+
+TEST(InstructionsTest, StripAndAccumulateConstantOffset) {
+  LLVMContext C;
+  DataLayout DL;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+  define void @foo(ptr %ptr, i64 %offset) {
+    %gep = getelementptr inbounds [1 x i8], ptr %ptr, i64 4, i64 %offset
+    ret void
+  })");
+  ASSERT_TRUE(M);
+  Value *GEP = &M->getFunction("foo")->getEntryBlock().front();
+  APInt Offset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+  Value *Stripped = GEP->stripAndAccumulateConstantOffsets(
+      DL, Offset, /*AllowNonInBounds=*/true);
+  EXPECT_EQ(Stripped, GEP);
+  EXPECT_TRUE(Offset.isZero());
 }
 
 } // end anonymous namespace

@@ -6,15 +6,15 @@
 int __attribute__((target_clones("lse+aes", "sve2"))) ftc(void) { return 0; }
 int __attribute__((target_clones("sha2", "sha2+memtag", " default "))) ftc_def(void) { return 1; }
 int __attribute__((target_clones("sha2", "default"))) ftc_dup1(void) { return 2; }
-int __attribute__((target_clones("fp", "crc+dotprod"))) ftc_dup2(void) { return 3; }
-int __attribute__((target_clones("memtag", "bti"))) ftc_dup3(void) { return 4; }
+int __attribute__((target_clones("fp", "crc+dotprod", "default"))) ftc_dup2(void) { return 3; }
+int __attribute__((target_clones("memtag", "bti", "default"))) ftc_dup3(void) { return 4; }
 int foo() {
   return ftc() + ftc_def() + ftc_dup1() + ftc_dup2() + ftc_dup3();
 }
 
 inline int __attribute__((target_clones("rng+simd", "rcpc", "sve2-aes+wfxt"))) ftc_inline1(void) { return 1; }
 inline int __attribute__((target_clones("fp16", "fcma+sve2-bitperm", "default"))) ftc_inline2(void);
-inline int __attribute__((target_clones("bti", "sve+sb"))) ftc_inline3(void) { return 3; }
+inline int __attribute__((target_clones("bti", "sve+sb", "default"))) ftc_inline3(void) { return 3; }
 
 int __attribute__((target_clones("default"))) ftc_direct(void) { return 4; }
 
@@ -27,23 +27,19 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK: @ftc = weak_odr ifunc i32 (), ptr @ftc.resolver
 // CHECK: @ftc_def = weak_odr ifunc i32 (), ptr @ftc_def.resolver
 // CHECK: @ftc_dup1 = weak_odr ifunc i32 (), ptr @ftc_dup1.resolver
 // CHECK: @ftc_dup2 = weak_odr ifunc i32 (), ptr @ftc_dup2.resolver
 // CHECK: @ftc_dup3 = weak_odr ifunc i32 (), ptr @ftc_dup3.resolver
 // CHECK: @ftc_inline2 = weak_odr ifunc i32 (), ptr @ftc_inline2.resolver
-// CHECK: @ftc_inline1 = weak_odr ifunc i32 (), ptr @ftc_inline1.resolver
 // CHECK: @ftc_inline3 = weak_odr ifunc i32 (), ptr @ftc_inline3.resolver
 //.
 // CHECK-MTE-BTI: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK-MTE-BTI: @ftc = weak_odr ifunc i32 (), ptr @ftc.resolver
 // CHECK-MTE-BTI: @ftc_def = weak_odr ifunc i32 (), ptr @ftc_def.resolver
 // CHECK-MTE-BTI: @ftc_dup1 = weak_odr ifunc i32 (), ptr @ftc_dup1.resolver
 // CHECK-MTE-BTI: @ftc_dup2 = weak_odr ifunc i32 (), ptr @ftc_dup2.resolver
 // CHECK-MTE-BTI: @ftc_dup3 = weak_odr ifunc i32 (), ptr @ftc_dup3.resolver
 // CHECK-MTE-BTI: @ftc_inline2 = weak_odr ifunc i32 (), ptr @ftc_inline2.resolver
-// CHECK-MTE-BTI: @ftc_inline1 = weak_odr ifunc i32 (), ptr @ftc_inline1.resolver
 // CHECK-MTE-BTI: @ftc_inline3 = weak_odr ifunc i32 (), ptr @ftc_inline3.resolver
 //.
 // CHECK: Function Attrs: noinline nounwind optnone
@@ -60,28 +56,6 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret i32 0
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@ftc.resolver() comdat {
-// CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @__init_cpu_features_resolver()
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 69793284352
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 69793284352
-// CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
-// CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @ftc._Msve2
-// CHECK:       resolver_else:
-// CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 33664
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 33664
-// CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
-// CHECK-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
-// CHECK:       resolver_return1:
-// CHECK-NEXT:    ret ptr @ftc._MaesMlse
-// CHECK:       resolver_else2:
-// CHECK-NEXT:    ret ptr @ftc.default
-//
-//
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_def._Msha2
 // CHECK-SAME: () #[[ATTR2:[0-9]+]] {
@@ -96,7 +70,110 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@ftc_def.resolver() comdat {
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_def.default
+// CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup1._Msha2
+// CHECK-SAME: () #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 2
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup1.default
+// CHECK-SAME: () #[[ATTR4]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 2
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup2._Mfp
+// CHECK-SAME: () #[[ATTR5:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 3
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup2._McrcMdotprod
+// CHECK-SAME: () #[[ATTR6:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 3
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup2.default
+// CHECK-SAME: () #[[ATTR4]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 3
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup3._Mmemtag
+// CHECK-SAME: () #[[ATTR7:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 4
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup3._Mbti
+// CHECK-SAME: () #[[ATTR8:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 4
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup3.default
+// CHECK-SAME: () #[[ATTR4]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 4
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@foo
+// CHECK-SAME: () #[[ATTR9:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @ftc()
+// CHECK-NEXT:    [[CALL1:%.*]] = call i32 @ftc_def()
+// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
+// CHECK-NEXT:    [[CALL2:%.*]] = call i32 @ftc_dup1()
+// CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
+// CHECK-NEXT:    [[CALL4:%.*]] = call i32 @ftc_dup2()
+// CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[ADD3]], [[CALL4]]
+// CHECK-NEXT:    [[CALL6:%.*]] = call i32 @ftc_dup3()
+// CHECK-NEXT:    [[ADD7:%.*]] = add nsw i32 [[ADD5]], [[CALL6]]
+// CHECK-NEXT:    ret i32 [[ADD7]]
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_direct
+// CHECK-SAME: () #[[ATTR9]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 4
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@main
+// CHECK-SAME: () #[[ATTR9]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @ftc_inline1()
+// CHECK-NEXT:    [[CALL1:%.*]] = call i32 @ftc_inline2()
+// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
+// CHECK-NEXT:    [[CALL2:%.*]] = call i32 @ftc_inline3()
+// CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
+// CHECK-NEXT:    [[CALL4:%.*]] = call i32 @ftc_direct()
+// CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[ADD3]], [[CALL4]]
+// CHECK-NEXT:    ret i32 [[ADD5]]
+//
+//
+// CHECK-LABEL: define {{[^@]+}}@ftc_def.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER:[0-9]+]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -118,14 +195,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret ptr @ftc_def.default
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup1._Msha2
-// CHECK-SAME: () #[[ATTR2]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 2
-//
-//
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup1.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup1.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -139,21 +210,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret ptr @ftc_dup1.default
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup2._Mfp
-// CHECK-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 3
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup2._McrcMdotprod
-// CHECK-SAME: () #[[ATTR5:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 3
-//
-//
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup2.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup2.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -175,21 +233,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-NEXT:    ret ptr @ftc_dup2.default
 //
 //
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup3._Mmemtag
-// CHECK-SAME: () #[[ATTR6:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 4
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup3._Mbti
-// CHECK-SAME: () #[[ATTR7:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 4
-//
-//
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup3.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@ftc_dup3.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -212,101 +257,28 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@foo
-// CHECK-SAME: () #[[ATTR8:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @ftc()
-// CHECK-NEXT:    [[CALL1:%.*]] = call i32 @ftc_def()
-// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
-// CHECK-NEXT:    [[CALL2:%.*]] = call i32 @ftc_dup1()
-// CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
-// CHECK-NEXT:    [[CALL4:%.*]] = call i32 @ftc_dup2()
-// CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[ADD3]], [[CALL4]]
-// CHECK-NEXT:    [[CALL6:%.*]] = call i32 @ftc_dup3()
-// CHECK-NEXT:    [[ADD7:%.*]] = add nsw i32 [[ADD5]], [[CALL6]]
-// CHECK-NEXT:    ret i32 [[ADD7]]
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_direct
-// CHECK-SAME: () #[[ATTR8]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 4
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@main
-// CHECK-SAME: () #[[ATTR8]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @ftc_inline1()
-// CHECK-NEXT:    [[CALL1:%.*]] = call i32 @ftc_inline2()
-// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
-// CHECK-NEXT:    [[CALL2:%.*]] = call i32 @ftc_inline3()
-// CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
-// CHECK-NEXT:    [[CALL4:%.*]] = call i32 @ftc_direct()
-// CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[ADD3]], [[CALL4]]
-// CHECK-NEXT:    ret i32 [[ADD5]]
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc.default
-// CHECK-SAME: () #[[ATTR9:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 0
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_def.default
-// CHECK-SAME: () #[[ATTR9]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup1.default
-// CHECK-SAME: () #[[ATTR9]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 2
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup2.default
-// CHECK-SAME: () #[[ATTR9]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 3
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_dup3.default
-// CHECK-SAME: () #[[ATTR9]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 4
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline2._Mfp16
-// CHECK-SAME: () #[[ATTR10:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR12:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline2._MfcmaMsve2-bitperm
-// CHECK-SAME: () #[[ATTR11:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR13:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline2.default
-// CHECK-SAME: () #[[ATTR9]] {
+// CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@ftc_inline2.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@ftc_inline2.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -330,84 +302,48 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline1._MrngMsimd
-// CHECK-SAME: () #[[ATTR12:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_inline1._Mrcpc
-// CHECK-SAME: () #[[ATTR13:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_inline1._Msve2-aesMwfxt
 // CHECK-SAME: () #[[ATTR14:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@ftc_inline1.default
-// CHECK-SAME: () #[[ATTR9]] {
+// CHECK-LABEL: define {{[^@]+}}@ftc_inline1._Mrcpc
+// CHECK-SAME: () #[[ATTR15:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@ftc_inline1.resolver() comdat {
-// CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @__init_cpu_features_resolver()
-// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 18014743180706560
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 18014743180706560
-// CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
-// CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @ftc_inline1._Msve2-aesMwfxt
-// CHECK:       resolver_else:
-// CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 4194304
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 4194304
-// CHECK-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
-// CHECK-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
-// CHECK:       resolver_return1:
-// CHECK-NEXT:    ret ptr @ftc_inline1._Mrcpc
-// CHECK:       resolver_else2:
-// CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 769
-// CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 769
-// CHECK-NEXT:    [[TMP11:%.*]] = and i1 true, [[TMP10]]
-// CHECK-NEXT:    br i1 [[TMP11]], label [[RESOLVER_RETURN3:%.*]], label [[RESOLVER_ELSE4:%.*]]
-// CHECK:       resolver_return3:
-// CHECK-NEXT:    ret ptr @ftc_inline1._MrngMsimd
-// CHECK:       resolver_else4:
-// CHECK-NEXT:    ret ptr @ftc_inline1.default
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@ftc_inline1._Msve2-aesMwfxt
+// CHECK-SAME: () #[[ATTR16:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline3._Mbti
-// CHECK-SAME: () #[[ATTR7]] {
+// CHECK-SAME: () #[[ATTR8]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline3._MsbMsve
-// CHECK-SAME: () #[[ATTR15:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR17:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@ftc_inline3.default
-// CHECK-SAME: () #[[ATTR9]] {
+// CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@ftc_inline3.resolver() comdat {
+// CHECK-LABEL: define {{[^@]+}}@ftc_inline3.resolver()
+// CHECK-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -517,28 +453,6 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret i32 0
 //
 //
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc.resolver() comdat {
-// CHECK-MTE-BTI-NEXT:  resolver_entry:
-// CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
-// CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-MTE-BTI-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 69793284352
-// CHECK-MTE-BTI-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 69793284352
-// CHECK-MTE-BTI-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
-// CHECK-MTE-BTI-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
-// CHECK-MTE-BTI:       resolver_return:
-// CHECK-MTE-BTI-NEXT:    ret ptr @ftc._Msve2
-// CHECK-MTE-BTI:       resolver_else:
-// CHECK-MTE-BTI-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-MTE-BTI-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 33664
-// CHECK-MTE-BTI-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 33664
-// CHECK-MTE-BTI-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
-// CHECK-MTE-BTI-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
-// CHECK-MTE-BTI:       resolver_return1:
-// CHECK-MTE-BTI-NEXT:    ret ptr @ftc._MaesMlse
-// CHECK-MTE-BTI:       resolver_else2:
-// CHECK-MTE-BTI-NEXT:    ret ptr @ftc.default
-//
-//
 // CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_def._Msha2
 // CHECK-MTE-BTI-SAME: () #[[ATTR2:[0-9]+]] {
@@ -553,7 +467,110 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret i32 1
 //
 //
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_def.resolver() comdat {
+// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_def.default
+// CHECK-MTE-BTI-SAME: () #[[ATTR4:[0-9]+]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    ret i32 1
+//
+//
+// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup1._Msha2
+// CHECK-MTE-BTI-SAME: () #[[ATTR2]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    ret i32 2
+//
+//
+// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup1.default
+// CHECK-MTE-BTI-SAME: () #[[ATTR4]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    ret i32 2
+//
+//
+// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup2._Mfp
+// CHECK-MTE-BTI-SAME: () #[[ATTR5:[0-9]+]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    ret i32 3
+//
+//
+// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup2._McrcMdotprod
+// CHECK-MTE-BTI-SAME: () #[[ATTR6:[0-9]+]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    ret i32 3
+//
+//
+// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup2.default
+// CHECK-MTE-BTI-SAME: () #[[ATTR4]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    ret i32 3
+//
+//
+// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3._Mmemtag
+// CHECK-MTE-BTI-SAME: () #[[ATTR7:[0-9]+]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    ret i32 4
+//
+//
+// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3._Mbti
+// CHECK-MTE-BTI-SAME: () #[[ATTR8:[0-9]+]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    ret i32 4
+//
+//
+// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3.default
+// CHECK-MTE-BTI-SAME: () #[[ATTR4]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    ret i32 4
+//
+//
+// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@foo
+// CHECK-MTE-BTI-SAME: () #[[ATTR9:[0-9]+]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    [[CALL:%.*]] = call i32 @ftc()
+// CHECK-MTE-BTI-NEXT:    [[CALL1:%.*]] = call i32 @ftc_def()
+// CHECK-MTE-BTI-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
+// CHECK-MTE-BTI-NEXT:    [[CALL2:%.*]] = call i32 @ftc_dup1()
+// CHECK-MTE-BTI-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
+// CHECK-MTE-BTI-NEXT:    [[CALL4:%.*]] = call i32 @ftc_dup2()
+// CHECK-MTE-BTI-NEXT:    [[ADD5:%.*]] = add nsw i32 [[ADD3]], [[CALL4]]
+// CHECK-MTE-BTI-NEXT:    [[CALL6:%.*]] = call i32 @ftc_dup3()
+// CHECK-MTE-BTI-NEXT:    [[ADD7:%.*]] = add nsw i32 [[ADD5]], [[CALL6]]
+// CHECK-MTE-BTI-NEXT:    ret i32 [[ADD7]]
+//
+//
+// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_direct
+// CHECK-MTE-BTI-SAME: () #[[ATTR9]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    ret i32 4
+//
+//
+// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@main
+// CHECK-MTE-BTI-SAME: () #[[ATTR9]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// CHECK-MTE-BTI-NEXT:    store i32 0, ptr [[RETVAL]], align 4
+// CHECK-MTE-BTI-NEXT:    [[CALL:%.*]] = call i32 @ftc_inline1()
+// CHECK-MTE-BTI-NEXT:    [[CALL1:%.*]] = call i32 @ftc_inline2()
+// CHECK-MTE-BTI-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
+// CHECK-MTE-BTI-NEXT:    [[CALL2:%.*]] = call i32 @ftc_inline3()
+// CHECK-MTE-BTI-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
+// CHECK-MTE-BTI-NEXT:    [[CALL4:%.*]] = call i32 @ftc_direct()
+// CHECK-MTE-BTI-NEXT:    [[ADD5:%.*]] = add nsw i32 [[ADD3]], [[CALL4]]
+// CHECK-MTE-BTI-NEXT:    ret i32 [[ADD5]]
+//
+//
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_def.resolver()
+// CHECK-MTE-BTI-SAME: #[[ATTR_RESOLVER:[0-9]+]] comdat {
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -575,14 +592,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_def.default
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup1._Msha2
-// CHECK-MTE-BTI-SAME: () #[[ATTR2]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 2
-//
-//
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup1.resolver() comdat {
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup1.resolver()
+// CHECK-MTE-BTI-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -596,21 +607,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_dup1.default
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup2._Mfp
-// CHECK-MTE-BTI-SAME: () #[[ATTR4:[0-9]+]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 3
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup2._McrcMdotprod
-// CHECK-MTE-BTI-SAME: () #[[ATTR5:[0-9]+]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 3
-//
-//
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup2.resolver() comdat {
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup2.resolver()
+// CHECK-MTE-BTI-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -632,21 +630,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_dup2.default
 //
 //
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3._Mmemtag
-// CHECK-MTE-BTI-SAME: () #[[ATTR6:[0-9]+]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 4
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3._Mbti
-// CHECK-MTE-BTI-SAME: () #[[ATTR7:[0-9]+]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 4
-//
-//
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3.resolver() comdat {
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3.resolver()
+// CHECK-MTE-BTI-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -669,101 +654,28 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 //
 //
 // CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@foo
-// CHECK-MTE-BTI-SAME: () #[[ATTR8:[0-9]+]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    [[CALL:%.*]] = call i32 @ftc()
-// CHECK-MTE-BTI-NEXT:    [[CALL1:%.*]] = call i32 @ftc_def()
-// CHECK-MTE-BTI-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
-// CHECK-MTE-BTI-NEXT:    [[CALL2:%.*]] = call i32 @ftc_dup1()
-// CHECK-MTE-BTI-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
-// CHECK-MTE-BTI-NEXT:    [[CALL4:%.*]] = call i32 @ftc_dup2()
-// CHECK-MTE-BTI-NEXT:    [[ADD5:%.*]] = add nsw i32 [[ADD3]], [[CALL4]]
-// CHECK-MTE-BTI-NEXT:    [[CALL6:%.*]] = call i32 @ftc_dup3()
-// CHECK-MTE-BTI-NEXT:    [[ADD7:%.*]] = add nsw i32 [[ADD5]], [[CALL6]]
-// CHECK-MTE-BTI-NEXT:    ret i32 [[ADD7]]
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_direct
-// CHECK-MTE-BTI-SAME: () #[[ATTR8]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 4
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@main
-// CHECK-MTE-BTI-SAME: () #[[ATTR8]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK-MTE-BTI-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK-MTE-BTI-NEXT:    [[CALL:%.*]] = call i32 @ftc_inline1()
-// CHECK-MTE-BTI-NEXT:    [[CALL1:%.*]] = call i32 @ftc_inline2()
-// CHECK-MTE-BTI-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
-// CHECK-MTE-BTI-NEXT:    [[CALL2:%.*]] = call i32 @ftc_inline3()
-// CHECK-MTE-BTI-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
-// CHECK-MTE-BTI-NEXT:    [[CALL4:%.*]] = call i32 @ftc_direct()
-// CHECK-MTE-BTI-NEXT:    [[ADD5:%.*]] = add nsw i32 [[ADD3]], [[CALL4]]
-// CHECK-MTE-BTI-NEXT:    ret i32 [[ADD5]]
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc.default
-// CHECK-MTE-BTI-SAME: () #[[ATTR9:[0-9]+]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 0
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_def.default
-// CHECK-MTE-BTI-SAME: () #[[ATTR9]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 1
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup1.default
-// CHECK-MTE-BTI-SAME: () #[[ATTR9]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 2
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup2.default
-// CHECK-MTE-BTI-SAME: () #[[ATTR9]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 3
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_dup3.default
-// CHECK-MTE-BTI-SAME: () #[[ATTR9]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 4
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline2._Mfp16
-// CHECK-MTE-BTI-SAME: () #[[ATTR10:[0-9]+]] {
+// CHECK-MTE-BTI-SAME: () #[[ATTR12:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 2
 //
 //
 // CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline2._MfcmaMsve2-bitperm
-// CHECK-MTE-BTI-SAME: () #[[ATTR11:[0-9]+]] {
+// CHECK-MTE-BTI-SAME: () #[[ATTR13:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 2
 //
 //
 // CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline2.default
-// CHECK-MTE-BTI-SAME: () #[[ATTR9]] {
+// CHECK-MTE-BTI-SAME: () #[[ATTR4]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 2
 //
 //
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline2.resolver() comdat {
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline2.resolver()
+// CHECK-MTE-BTI-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -787,84 +699,48 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 //
 // CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1._MrngMsimd
-// CHECK-MTE-BTI-SAME: () #[[ATTR12:[0-9]+]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 1
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1._Mrcpc
-// CHECK-MTE-BTI-SAME: () #[[ATTR13:[0-9]+]] {
-// CHECK-MTE-BTI-NEXT:  entry:
-// CHECK-MTE-BTI-NEXT:    ret i32 1
-//
-//
-// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1._Msve2-aesMwfxt
 // CHECK-MTE-BTI-SAME: () #[[ATTR14:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 1
 //
 //
 // CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1.default
-// CHECK-MTE-BTI-SAME: () #[[ATTR9]] {
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1._Mrcpc
+// CHECK-MTE-BTI-SAME: () #[[ATTR15:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 1
 //
 //
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1.resolver() comdat {
-// CHECK-MTE-BTI-NEXT:  resolver_entry:
-// CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
-// CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-MTE-BTI-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 18014743180706560
-// CHECK-MTE-BTI-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 18014743180706560
-// CHECK-MTE-BTI-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
-// CHECK-MTE-BTI-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
-// CHECK-MTE-BTI:       resolver_return:
-// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline1._Msve2-aesMwfxt
-// CHECK-MTE-BTI:       resolver_else:
-// CHECK-MTE-BTI-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-MTE-BTI-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 4194304
-// CHECK-MTE-BTI-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 4194304
-// CHECK-MTE-BTI-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
-// CHECK-MTE-BTI-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
-// CHECK-MTE-BTI:       resolver_return1:
-// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline1._Mrcpc
-// CHECK-MTE-BTI:       resolver_else2:
-// CHECK-MTE-BTI-NEXT:    [[TMP8:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-MTE-BTI-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], 769
-// CHECK-MTE-BTI-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 769
-// CHECK-MTE-BTI-NEXT:    [[TMP11:%.*]] = and i1 true, [[TMP10]]
-// CHECK-MTE-BTI-NEXT:    br i1 [[TMP11]], label [[RESOLVER_RETURN3:%.*]], label [[RESOLVER_ELSE4:%.*]]
-// CHECK-MTE-BTI:       resolver_return3:
-// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline1._MrngMsimd
-// CHECK-MTE-BTI:       resolver_else4:
-// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline1.default
+// CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline1._Msve2-aesMwfxt
+// CHECK-MTE-BTI-SAME: () #[[ATTR16:[0-9]+]] {
+// CHECK-MTE-BTI-NEXT:  entry:
+// CHECK-MTE-BTI-NEXT:    ret i32 1
 //
 //
 // CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3._Mbti
-// CHECK-MTE-BTI-SAME: () #[[ATTR7]] {
+// CHECK-MTE-BTI-SAME: () #[[ATTR8]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 3
 //
 //
 // CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3._MsbMsve
-// CHECK-MTE-BTI-SAME: () #[[ATTR15:[0-9]+]] {
+// CHECK-MTE-BTI-SAME: () #[[ATTR17:[0-9]+]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 3
 //
 //
 // CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
 // CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3.default
-// CHECK-MTE-BTI-SAME: () #[[ATTR9]] {
+// CHECK-MTE-BTI-SAME: () #[[ATTR4]] {
 // CHECK-MTE-BTI-NEXT:  entry:
 // CHECK-MTE-BTI-NEXT:    ret i32 3
 //
 //
-// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3.resolver() comdat {
+// CHECK-MTE-BTI-LABEL: define {{[^@]+}}@ftc_inline3.resolver()
+// CHECK-MTE-BTI-SAME: #[[ATTR_RESOLVER]] comdat {
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -885,6 +761,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI:       resolver_else2:
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline3.default
 //
+// CHECK: attributes #[[ATTR_RESOLVER]] = { disable_sanitizer_instrumentation }
+// CHECK-MTE-BTI: attributes #[[ATTR_RESOLVER]] = { disable_sanitizer_instrumentation }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

@@ -327,6 +327,8 @@ LLVM_13 {
     clang_getRange;
     clang_getRangeEnd;
     clang_getRangeStart;
+    clang_getRemappings;
+    clang_getRemappingsFromFileList;
     clang_getResultType;
     clang_getSkippedRanges;
     clang_getSpecializedCursorTemplate;
@@ -387,6 +389,9 @@ LLVM_13 {
     clang_parseTranslationUnit;
     clang_parseTranslationUnit2;
     clang_parseTranslationUnit2FullArgv;
+    clang_remap_dispose;
+    clang_remap_getFilenames;
+    clang_remap_getNumFiles;
     clang_reparseTranslationUnit;
     clang_saveTranslationUnit;
     clang_sortCodeCompletionResults;
@@ -435,12 +440,21 @@ LLVM_20 {
     clang_getTypePrettyPrinted;
     clang_isBeforeInTranslationUnit;
     clang_visitCXXBaseClasses;
-    clang_visitCXXMethods;
 };
 
 LLVM_21 {
   global:
     clang_getFullyQualifiedName;
+    clang_visitCXXMethods;
+    clang_Cursor_getGCCAssemblyTemplate;
+    clang_Cursor_isGCCAssemblyHasGoto;
+    clang_Cursor_getGCCAssemblyNumOutputs;
+    clang_Cursor_getGCCAssemblyNumInputs;
+    clang_Cursor_getGCCAssemblyInput;
+    clang_Cursor_getGCCAssemblyOutput;
+    clang_Cursor_getGCCAssemblyNumClobbers;
+    clang_Cursor_getGCCAssemblyClobber;
+    clang_Cursor_isGCCAssemblyVolatile;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

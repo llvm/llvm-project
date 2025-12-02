@@ -117,7 +117,11 @@ namespace {
     /// IsAnalyzed      - True if BB has been analyzed (info is still valid).
     /// IsEnqueued      - True if BB has been enqueued to be ifcvt'ed.
     /// IsBrAnalyzable  - True if analyzeBranch() returns false.
-    /// HasFallThrough  - True if BB may fallthrough to the following BB.
+    /// HasFallThrough  - True if BB has fallthrough to the following BB.
+    ///                   Note that BB may have a fallthrough if both
+    ///                   !HasFallThrough and !IsBrAnalyzable is true. Also note
+    ///                   that blockNeverFallThrough() can be used to prove that
+    ///                   there is no fall through.
     /// IsUnpredicable  - True if BB is known to be unpredicable.
     /// ClobbersPred    - True if BB could modify predicates (e.g. has
     ///                   cmp, call, etc.)
@@ -125,7 +129,10 @@ namespace {
     /// ExtraCost       - Extra cost for multi-cycle instructions.
     /// ExtraCost2      - Some instructions are slower when predicated
     /// BB              - Corresponding MachineBasicBlock.
-    /// TrueBB / FalseBB- See analyzeBranch().
+    /// TrueBB / FalseBB- See analyzeBranch(), but note that FalseBB can be set
+    ///                   by AnalyzeBranches even if there is a fallthrough. So
+    ///                   it doesn't correspond exactly to the result from
+    ///                   TTI::analyzeBranch.
     /// BrCond          - Conditions for end of block conditional branches.
     /// Predicate       - Predicate used in the BB.
     struct BBInfo {
@@ -217,8 +224,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
   private:
@@ -396,6 +402,21 @@ namespace {
     /// Returns true if Block ends without a terminator.
     bool blockAlwaysFallThrough(BBInfo &BBI) const {
       return BBI.IsBrAnalyzable && BBI.TrueBB == nullptr;
+    }
+
+    /// Returns true if Block is known not to fallthrough to the following BB.
+    bool blockNeverFallThrough(BBInfo &BBI) const {
+      // Trust "HasFallThrough" if we could analyze branches.
+      if (BBI.IsBrAnalyzable)
+        return !BBI.HasFallThrough;
+      // If this is the last MBB in the function, or if the textual successor
+      // isn't in the successor list, then there is no fallthrough.
+      MachineFunction::iterator PI = BBI.BB->getIterator();
+      MachineFunction::iterator I = std::next(PI);
+      if (I == BBI.BB->getParent()->end() || !PI->isSuccessor(&*I))
+        return true;
+      // Could not prove that there is no fallthrough.
+      return false;
     }
 
     /// Used to sort if-conversion candidates.
@@ -1477,7 +1498,7 @@ static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
   // Before stepping forward past MI, remember which regs were live
   // before MI. This is needed to set the Undef flag only when reg is
   // dead.
-  SparseSet<MCPhysReg, identity<MCPhysReg>> LiveBeforeMI;
+  SparseSet<MCPhysReg, MCPhysReg> LiveBeforeMI;
   LiveBeforeMI.setUniverse(TRI->getNumRegs());
   for (unsigned Reg : Redefs)
     LiveBeforeMI.insert(Reg);
@@ -1716,9 +1737,8 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
     // Only merge them if the true block does not fallthrough to the false
     // block. By not merging them, we make it possible to iteratively
     // ifcvt the blocks.
-    if (!HasEarlyExit &&
-        NextMBB.pred_size() == 1 && !NextBBI->HasFallThrough &&
-        !NextMBB.hasAddressTaken()) {
+    if (!HasEarlyExit && NextMBB.pred_size() == 1 &&
+        blockNeverFallThrough(*NextBBI) && !NextMBB.hasAddressTaken()) {
       MergeBlocks(BBI, *NextBBI);
       FalseBBDead = true;
     } else {
@@ -2053,8 +2073,8 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
     BBI.BB->removeSuccessor(FalseBBI.BB, true);
 
     BBInfo &TailBBI = BBAnalysis[TailBB->getNumber()];
-    bool CanMergeTail = !TailBBI.HasFallThrough &&
-      !TailBBI.BB->hasAddressTaken();
+    bool CanMergeTail =
+        blockNeverFallThrough(TailBBI) && !TailBBI.BB->hasAddressTaken();
     // The if-converted block can still have a predicated terminator
     // (e.g. a predicated return). If that is the case, we cannot merge
     // it with the tail block.

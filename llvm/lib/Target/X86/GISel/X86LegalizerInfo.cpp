@@ -17,9 +17,11 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
@@ -43,6 +45,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   bool HasDQI = Subtarget.hasAVX512() && Subtarget.hasDQI();
   bool HasBWI = Subtarget.hasAVX512() && Subtarget.hasBWI();
   bool UseX87 = !Subtarget.useSoftFloat() && Subtarget.hasX87();
+  bool HasPOPCNT = Subtarget.hasPOPCNT();
+  bool HasLZCNT = Subtarget.hasLZCNT();
+  bool HasBMI = Subtarget.hasBMI();
 
   const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
   const LLT s1 = LLT::scalar(1);
@@ -55,7 +60,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT sMaxScalar = Subtarget.is64Bit() ? s64 : s32;
   const LLT v2s32 = LLT::fixed_vector(2, 32);
   const LLT v4s8 = LLT::fixed_vector(4, 8);
-
 
   const LLT v16s8 = LLT::fixed_vector(16, 8);
   const LLT v8s16 = LLT::fixed_vector(8, 16);
@@ -82,33 +86,53 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // todo: AVX512 bool vector predicate types
 
   // implicit/constants
-  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        // 32/64-bits needs support for s64/s128 to handle cases:
-        // s64 = EXTEND (G_IMPLICIT_DEF s32) -> s64 = G_IMPLICIT_DEF
-        // s128 = EXTEND (G_IMPLICIT_DEF s32/s64) -> s128 = G_IMPLICIT_DEF
-        return typeInSet(0, {p0, s1, s8, s16, s32, s64})(Query) ||
-               (Is64Bit && typeInSet(0, {s128})(Query));
-      });
+  // 32/64-bits needs support for s64/s128 to handle cases:
+  // s64 = EXTEND (G_IMPLICIT_DEF s32) -> s64 = G_IMPLICIT_DEF
+  // s128 = EXTEND (G_IMPLICIT_DEF s32/s64) -> s128 = G_IMPLICIT_DEF
+  getActionDefinitionsBuilder(
+      {G_IMPLICIT_DEF, G_PHI, G_FREEZE, G_CONSTANT_FOLD_BARRIER})
+      .legalFor({p0, s1, s8, s16, s32, s64})
+      .legalFor(UseX87, {s80})
+      .legalFor(Is64Bit, {s128})
+      .legalFor(HasSSE2, {v16s8, v8s16, v4s32, v2s64})
+      .legalFor(HasAVX, {v32s8, v16s16, v8s32, v4s64})
+      .legalFor(HasAVX512, {v64s8, v32s16, v16s32, v8s64})
+      .widenScalarOrEltToNextPow2(0, /*Min=*/8)
+      .clampScalarOrElt(0, s8, sMaxScalar)
+      .moreElementsToNextPow2(0)
+      .clampMinNumElements(0, s8, 16)
+      .clampMinNumElements(0, s16, 8)
+      .clampMinNumElements(0, s32, 4)
+      .clampMinNumElements(0, s64, 2)
+      .clampMaxNumElements(0, s8, HasAVX512 ? 64 : (HasAVX ? 32 : 16))
+      .clampMaxNumElements(0, s16, HasAVX512 ? 32 : (HasAVX ? 16 : 8))
+      .clampMaxNumElements(0, s32, HasAVX512 ? 16 : (HasAVX ? 8 : 4))
+      .clampMaxNumElements(0, s64, HasAVX512 ? 8 : (HasAVX ? 4 : 2))
+      .clampMaxNumElements(0, p0,
+                           Is64Bit ? s64MaxVector.getNumElements()
+                                   : s32MaxVector.getNumElements())
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
   getActionDefinitionsBuilder(G_CONSTANT)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typeInSet(0, {p0, s8, s16, s32})(Query) ||
-               (Is64Bit && typeInSet(0, {s64})(Query));
-      })
+      .legalFor({p0, s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
-  getActionDefinitionsBuilder({G_LROUND, G_LLROUND, G_FCOS,  G_FCOSH,  G_FACOS,
-                               G_FSIN,   G_FSINH,   G_FASIN, G_FTAN,   G_FTANH,
-                               G_FATAN,  G_FATAN2,  G_FPOW,  G_FEXP,   G_FEXP2,
-                               G_FEXP10, G_FLOG,    G_FLOG2, G_FLOG10, G_FPOWI})
+  getActionDefinitionsBuilder({G_LROUND,  G_LLROUND, G_FCOS,  G_FCOSH,  G_FACOS,
+                               G_FSIN,    G_FSINH,   G_FASIN, G_FTAN,   G_FTANH,
+                               G_FATAN,   G_FATAN2,  G_FPOW,  G_FEXP,   G_FEXP2,
+                               G_FEXP10,  G_FLOG,    G_FLOG2, G_FLOG10, G_FPOWI,
+                               G_FSINCOS, G_FCEIL,   G_FFLOOR})
       .libcall();
 
   getActionDefinitionsBuilder(G_FSQRT)
       .legalFor(HasSSE1 || UseX87, {s32})
       .legalFor(HasSSE2 || UseX87, {s64})
       .legalFor(UseX87, {s80});
+
+  getActionDefinitionsBuilder({G_GET_ROUNDING, G_SET_ROUNDING})
+      .customFor({s32});
 
   // merge/unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -145,23 +169,18 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         });
   }
 
+  getActionDefinitionsBuilder({G_UMIN, G_UMAX, G_SMIN, G_SMAX})
+      .widenScalarToNextPow2(0, /*Min=*/32)
+      .lower();
+
   // integer addition/subtraction
   getActionDefinitionsBuilder({G_ADD, G_SUB})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        if (typeInSet(0, {s8, s16, s32})(Query))
-          return true;
-        if (Is64Bit && typeInSet(0, {s64})(Query))
-          return true;
-        if (HasSSE2 && typeInSet(0, {v16s8, v8s16, v4s32, v2s64})(Query))
-          return true;
-        if (HasAVX2 && typeInSet(0, {v32s8, v16s16, v8s32, v4s64})(Query))
-          return true;
-        if (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query))
-          return true;
-        if (HasBWI && typeInSet(0, {v64s8, v32s16})(Query))
-          return true;
-        return false;
-      })
+      .legalFor({s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
+      .legalFor(HasSSE2, {v16s8, v8s16, v4s32, v2s64})
+      .legalFor(HasAVX2, {v32s8, v16s16, v8s32, v4s64})
+      .legalFor(HasAVX512, {v16s32, v8s64})
+      .legalFor(HasBWI, {v64s8, v32s16})
       .clampMinNumElements(0, s8, 16)
       .clampMinNumElements(0, s16, 8)
       .clampMinNumElements(0, s32, 4)
@@ -175,38 +194,24 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarize(0);
 
   getActionDefinitionsBuilder({G_UADDE, G_UADDO, G_USUBE, G_USUBO})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typePairInSet(0, 1, {{s8, s1}, {s16, s1}, {s32, s1}})(Query) ||
-               (Is64Bit && typePairInSet(0, 1, {{s64, s1}})(Query));
-      })
+      .legalFor({{s8, s8}, {s16, s8}, {s32, s8}})
+      .legalFor(Is64Bit, {{s64, s8}})
       .widenScalarToNextPow2(0, /*Min=*/32)
       .clampScalar(0, s8, sMaxScalar)
-      .clampScalar(1, s1, s1)
+      .clampScalar(1, s8, s8)
       .scalarize(0);
 
   // integer multiply
   getActionDefinitionsBuilder(G_MUL)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        if (typeInSet(0, {s8, s16, s32})(Query))
-          return true;
-        if (Is64Bit && typeInSet(0, {s64})(Query))
-          return true;
-        if (HasSSE2 && typeInSet(0, {v8s16})(Query))
-          return true;
-        if (HasSSE41 && typeInSet(0, {v4s32})(Query))
-          return true;
-        if (HasAVX2 && typeInSet(0, {v16s16, v8s32})(Query))
-          return true;
-        if (HasAVX512 && typeInSet(0, {v16s32})(Query))
-          return true;
-        if (HasDQI && typeInSet(0, {v8s64})(Query))
-          return true;
-        if (HasDQI && HasVLX && typeInSet(0, {v2s64, v4s64})(Query))
-          return true;
-        if (HasBWI && typeInSet(0, {v32s16})(Query))
-          return true;
-        return false;
-      })
+      .legalFor({s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
+      .legalFor(HasSSE2, {v8s16})
+      .legalFor(HasSSE41, {v4s32})
+      .legalFor(HasAVX2, {v16s16, v8s32})
+      .legalFor(HasAVX512, {v16s32})
+      .legalFor(HasDQI, {v8s64})
+      .legalFor(HasDQI && HasVLX, {v2s64, v4s64})
+      .legalFor(HasBWI, {v32s16})
       .clampMinNumElements(0, s16, 8)
       .clampMinNumElements(0, s32, 4)
       .clampMinNumElements(0, s64, HasVLX ? 2 : 8)
@@ -218,47 +223,33 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarize(0);
 
   getActionDefinitionsBuilder({G_SMULH, G_UMULH})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typeInSet(0, {s8, s16, s32})(Query) ||
-               (Is64Bit && typeInSet(0, {s64})(Query));
-      })
+      .legalFor({s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
       .widenScalarToNextPow2(0, /*Min=*/32)
       .clampScalar(0, s8, sMaxScalar)
       .scalarize(0);
 
   // integer divisions
   getActionDefinitionsBuilder({G_SDIV, G_SREM, G_UDIV, G_UREM})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typeInSet(0, {s8, s16, s32})(Query) ||
-               (Is64Bit && typeInSet(0, {s64})(Query));
-      })
+      .legalFor({s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
       .libcallFor({s64})
       .clampScalar(0, s8, sMaxScalar);
 
   // integer shifts
   getActionDefinitionsBuilder({G_SHL, G_LSHR, G_ASHR})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typePairInSet(0, 1, {{s8, s8}, {s16, s8}, {s32, s8}})(Query) ||
-               (Is64Bit && typePairInSet(0, 1, {{s64, s8}})(Query));
-      })
+      .legalFor({{s8, s8}, {s16, s8}, {s32, s8}})
+      .legalFor(Is64Bit, {{s64, s8}})
       .clampScalar(0, s8, sMaxScalar)
       .clampScalar(1, s8, s8);
 
   // integer logic
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        if (typeInSet(0, {s8, s16, s32})(Query))
-          return true;
-        if (Is64Bit && typeInSet(0, {s64})(Query))
-          return true;
-        if (HasSSE2 && typeInSet(0, {v16s8, v8s16, v4s32, v2s64})(Query))
-          return true;
-        if (HasAVX && typeInSet(0, {v32s8, v16s16, v8s32, v4s64})(Query))
-          return true;
-        if (HasAVX512 && typeInSet(0, {v64s8, v32s16, v16s32, v8s64})(Query))
-          return true;
-        return false;
-      })
+      .legalFor({s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
+      .legalFor(HasSSE2, {v16s8, v8s16, v4s32, v2s64})
+      .legalFor(HasAVX, {v32s8, v16s16, v8s32, v4s64})
+      .legalFor(HasAVX512, {v64s8, v32s16, v16s32, v8s64})
       .clampMinNumElements(0, s8, 16)
       .clampMinNumElements(0, s16, 8)
       .clampMinNumElements(0, s32, 4)
@@ -282,68 +273,41 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // bswap
   getActionDefinitionsBuilder(G_BSWAP)
-      .legalIf([=](const LegalityQuery &Query) {
-        return Query.Types[0] == s32 ||
-               (Subtarget.is64Bit() && Query.Types[0] == s64);
-      })
+      .legalFor({s32})
+      .legalFor(Is64Bit, {s64})
       .widenScalarToNextPow2(0, /*Min=*/32)
       .clampScalar(0, s32, sMaxScalar);
 
   // popcount
   getActionDefinitionsBuilder(G_CTPOP)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return Subtarget.hasPOPCNT() &&
-               (typePairInSet(0, 1, {{s16, s16}, {s32, s32}})(Query) ||
-                (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
-      })
+      .legalFor(HasPOPCNT, {{s16, s16}, {s32, s32}})
+      .legalFor(HasPOPCNT && Is64Bit, {{s64, s64}})
       .widenScalarToNextPow2(1, /*Min=*/16)
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);
 
   // count leading zeros (LZCNT)
   getActionDefinitionsBuilder(G_CTLZ)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return Subtarget.hasLZCNT() &&
-               (typePairInSet(0, 1, {{s16, s16}, {s32, s32}})(Query) ||
-                (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
-      })
+      .legalFor(HasLZCNT, {{s16, s16}, {s32, s32}})
+      .legalFor(HasLZCNT && Is64Bit, {{s64, s64}})
       .widenScalarToNextPow2(1, /*Min=*/16)
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);
 
   // count trailing zeros
-  getActionDefinitionsBuilder({G_CTTZ_ZERO_UNDEF, G_CTTZ})
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return (Query.Opcode == G_CTTZ_ZERO_UNDEF || Subtarget.hasBMI()) &&
-               (typePairInSet(0, 1, {{s16, s16}, {s32, s32}})(Query) ||
-                (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query)));
-      })
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF)
+      .legalFor({{s16, s16}, {s32, s32}})
+      .legalFor(Is64Bit, {{s64, s64}})
       .widenScalarToNextPow2(1, /*Min=*/16)
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);
 
-  // control flow
-  getActionDefinitionsBuilder(G_PHI)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typeInSet(0, {s8, s16, s32, p0})(Query) ||
-               (UseX87 && typeIs(0, s80)(Query)) ||
-               (Is64Bit && typeIs(0, s64)(Query)) ||
-               (HasSSE1 && typeInSet(0, {v16s8, v8s16, v4s32, v2s64})(Query)) ||
-               (HasAVX && typeInSet(0, {v32s8, v16s16, v8s32, v4s64})(Query)) ||
-               (HasAVX512 &&
-                typeInSet(0, {v64s8, v32s16, v16s32, v8s64})(Query));
-      })
-      .clampMinNumElements(0, s8, 16)
-      .clampMinNumElements(0, s16, 8)
-      .clampMinNumElements(0, s32, 4)
-      .clampMinNumElements(0, s64, 2)
-      .clampMaxNumElements(0, s8, HasAVX512 ? 64 : (HasAVX ? 32 : 16))
-      .clampMaxNumElements(0, s16, HasAVX512 ? 32 : (HasAVX ? 16 : 8))
-      .clampMaxNumElements(0, s32, HasAVX512 ? 16 : (HasAVX ? 8 : 4))
-      .clampMaxNumElements(0, s64, HasAVX512 ? 8 : (HasAVX ? 4 : 2))
-      .widenScalarToNextPow2(0, /*Min=*/32)
-      .clampScalar(0, s8, sMaxScalar)
-      .scalarize(0);
+  getActionDefinitionsBuilder(G_CTTZ)
+      .legalFor(HasBMI, {{s16, s16}, {s32, s32}})
+      .legalFor(HasBMI && Is64Bit, {{s64, s64}})
+      .widenScalarToNextPow2(1, /*Min=*/16)
+      .clampScalar(1, s16, sMaxScalar)
+      .scalarSameSizeAs(0, 1);
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
@@ -361,10 +325,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder(G_CONSTANT_POOL).legalFor({p0});
 
   getActionDefinitionsBuilder(G_PTR_ADD)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return typePairInSet(0, 1, {{p0, s32}})(Query) ||
-               (Is64Bit && typePairInSet(0, 1, {{p0, s64}})(Query));
-      })
+      .legalFor({{p0, s32}})
+      .legalFor(Is64Bit, {{p0, s64}})
       .widenScalarToNextPow2(1, /*Min*/ 32)
       .clampScalar(1, s32, sMaxScalar);
 
@@ -423,23 +385,27 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   for (unsigned Op : {G_SEXTLOAD, G_ZEXTLOAD}) {
     auto &Action = getActionDefinitionsBuilder(Op);
-    Action.legalForTypesWithMemDesc({{s16, p0, s8, 1},
-                                     {s32, p0, s8, 1},
-                                     {s32, p0, s16, 1}});
+    Action.legalForTypesWithMemDesc(
+        {{s16, p0, s8, 1}, {s32, p0, s8, 1}, {s32, p0, s16, 1}});
     if (Is64Bit)
-      Action.legalForTypesWithMemDesc({{s64, p0, s8, 1},
-                                       {s64, p0, s16, 1},
-                                       {s64, p0, s32, 1}});
+      Action.legalForTypesWithMemDesc(
+          {{s64, p0, s8, 1}, {s64, p0, s16, 1}, {s64, p0, s32, 1}});
     // TODO - SSE41/AVX2/AVX512F/AVX512BW vector extensions
   }
 
   // sext, zext, and anyext
-  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
-      .legalIf([=](const LegalityQuery &Query) {
-        return typeInSet(0, {s8, s16, s32})(Query) ||
-          (Query.Opcode == G_ANYEXT && Query.Types[0] == s128) ||
-          (Is64Bit && Query.Types[0] == s64);
-      })
+  getActionDefinitionsBuilder(G_ANYEXT)
+      .legalFor({s8, s16, s32, s128})
+      .legalFor(Is64Bit, {s64})
+      .widenScalarToNextPow2(0, /*Min=*/8)
+      .clampScalar(0, s8, sMaxScalar)
+      .widenScalarToNextPow2(1, /*Min=*/8)
+      .clampScalar(1, s8, sMaxScalar)
+      .scalarize(0);
+
+  getActionDefinitionsBuilder({G_SEXT, G_ZEXT})
+      .legalFor({s8, s16, s32})
+      .legalFor(Is64Bit, {s64})
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar)
       .widenScalarToNextPow2(1, /*Min=*/8)
@@ -450,21 +416,22 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // fp constants
   getActionDefinitionsBuilder(G_FCONSTANT)
-      .legalIf([=](const LegalityQuery &Query) -> bool {
-        return (typeInSet(0, {s32, s64})(Query)) ||
-               (UseX87 && typeInSet(0, {s80})(Query));
-      });
+      .legalFor({s32, s64})
+      .legalFor(UseX87, {s80});
 
   // fp arithmetic
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
-      .legalIf([=](const LegalityQuery &Query) {
-        return (typeInSet(0, {s32, s64})(Query)) ||
-               (HasSSE1 && typeInSet(0, {v4s32})(Query)) ||
-               (HasSSE2 && typeInSet(0, {v2s64})(Query)) ||
-               (HasAVX && typeInSet(0, {v8s32, v4s64})(Query)) ||
-               (HasAVX512 && typeInSet(0, {v16s32, v8s64})(Query)) ||
-               (UseX87 && typeInSet(0, {s80})(Query));
-      });
+      .legalFor({s32, s64})
+      .legalFor(HasSSE1, {v4s32})
+      .legalFor(HasSSE2, {v2s64})
+      .legalFor(HasAVX, {v8s32, v4s64})
+      .legalFor(HasAVX512, {v16s32, v8s64})
+      .legalFor(UseX87, {s80});
+
+  getActionDefinitionsBuilder(G_FABS)
+      .legalFor(UseX87, {s80})
+      .legalFor(UseX87 && !Is64Bit, {s64})
+      .lower();
 
   // fp comparison
   getActionDefinitionsBuilder(G_FCMP)
@@ -476,45 +443,36 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1);
 
   // fp conversions
-  getActionDefinitionsBuilder(G_FPEXT).legalIf([=](const LegalityQuery &Query) {
-    return (HasSSE2 && typePairInSet(0, 1, {{s64, s32}})(Query)) ||
-           (HasAVX && typePairInSet(0, 1, {{v4s64, v4s32}})(Query)) ||
-           (HasAVX512 && typePairInSet(0, 1, {{v8s64, v8s32}})(Query));
-  });
+  getActionDefinitionsBuilder(G_FPEXT)
+      .legalFor(HasSSE2, {{s64, s32}})
+      .legalFor(HasAVX, {{v4s64, v4s32}})
+      .legalFor(HasAVX512, {{v8s64, v8s32}});
 
-  getActionDefinitionsBuilder(G_FPTRUNC).legalIf(
-      [=](const LegalityQuery &Query) {
-        return (HasSSE2 && typePairInSet(0, 1, {{s32, s64}})(Query)) ||
-               (HasAVX && typePairInSet(0, 1, {{v4s32, v4s64}})(Query)) ||
-               (HasAVX512 && typePairInSet(0, 1, {{v8s32, v8s64}})(Query));
-      });
+  getActionDefinitionsBuilder(G_FPTRUNC)
+      .legalFor(HasSSE2, {{s32, s64}})
+      .legalFor(HasAVX, {{v4s32, v4s64}})
+      .legalFor(HasAVX512, {{v8s32, v8s64}});
 
   getActionDefinitionsBuilder(G_SITOFP)
-      .legalIf([=](const LegalityQuery &Query) {
-        return (HasSSE1 &&
-                (typePairInSet(0, 1, {{s32, s32}})(Query) ||
-                 (Is64Bit && typePairInSet(0, 1, {{s32, s64}})(Query)))) ||
-               (HasSSE2 &&
-                (typePairInSet(0, 1, {{s64, s32}})(Query) ||
-                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query))));
-      })
-      .clampScalar(1, s32, sMaxScalar)
+      .legalFor(HasSSE1, {{s32, s32}})
+      .legalFor(HasSSE1 && Is64Bit, {{s32, s64}})
+      .legalFor(HasSSE2, {{s64, s32}})
+      .legalFor(HasSSE2 && Is64Bit, {{s64, s64}})
+      .clampScalar(1, (UseX87 && !HasSSE1) ? s16 : s32, sMaxScalar)
       .widenScalarToNextPow2(1)
+      .customForCartesianProduct(UseX87, {s32, s64, s80}, {s16, s32, s64})
       .clampScalar(0, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder(G_FPTOSI)
-      .legalIf([=](const LegalityQuery &Query) {
-        return (HasSSE1 &&
-                (typePairInSet(0, 1, {{s32, s32}})(Query) ||
-                 (Is64Bit && typePairInSet(0, 1, {{s64, s32}})(Query)))) ||
-               (HasSSE2 &&
-                (typePairInSet(0, 1, {{s32, s64}})(Query) ||
-                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query))));
-      })
-      .clampScalar(1, s32, HasSSE2 ? s64 : s32)
+      .legalFor(HasSSE1, {{s32, s32}})
+      .legalFor(HasSSE1 && Is64Bit, {{s64, s32}})
+      .legalFor(HasSSE2, {{s32, s64}})
+      .legalFor(HasSSE2 && Is64Bit, {{s64, s64}})
+      .clampScalar(0, (UseX87 && !HasSSE1) ? s16 : s32, sMaxScalar)
       .widenScalarToNextPow2(0)
-      .clampScalar(0, s32, sMaxScalar)
+      .customForCartesianProduct(UseX87, {s16, s32, s64}, {s32, s64, s80})
+      .clampScalar(1, s32, HasSSE2 ? s64 : s32)
       .widenScalarToNextPow2(1);
 
   // For G_UITOFP and G_FPTOUI without AVX512, we have to custom legalize types
@@ -525,10 +483,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // For AVX512 we simply widen types as there is direct mapping from opcodes
   // to asm instructions.
   getActionDefinitionsBuilder(G_UITOFP)
-      .legalIf([=](const LegalityQuery &Query) {
-        return HasAVX512 && typeInSet(0, {s32, s64})(Query) &&
-               typeInSet(1, {s32, s64})(Query);
-      })
+      .legalFor(HasAVX512, {{s32, s32}, {s32, s64}, {s64, s32}, {s64, s64}})
       .customIf([=](const LegalityQuery &Query) {
         return !HasAVX512 &&
                ((HasSSE1 && typeIs(0, s32)(Query)) ||
@@ -548,10 +503,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1);
 
   getActionDefinitionsBuilder(G_FPTOUI)
-      .legalIf([=](const LegalityQuery &Query) {
-        return HasAVX512 && typeInSet(0, {s32, s64})(Query) &&
-               typeInSet(1, {s32, s64})(Query);
-      })
+      .legalFor(HasAVX512, {{s32, s32}, {s32, s64}, {s64, s32}, {s64, s64}})
       .customIf([=](const LegalityQuery &Query) {
         return !HasAVX512 &&
                ((HasSSE1 && typeIs(1, s32)(Query)) ||
@@ -609,47 +561,39 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // todo: only permit dst types up to max legal vector register size?
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
-      .legalIf([=](const LegalityQuery &Query) {
-        return (HasSSE1 && typePairInSet(1, 0,
-                                         {{v16s8, v32s8},
-                                          {v8s16, v16s16},
-                                          {v4s32, v8s32},
-                                          {v2s64, v4s64}})(Query)) ||
-               (HasAVX && typePairInSet(1, 0,
-                                        {{v16s8, v64s8},
-                                         {v32s8, v64s8},
-                                         {v8s16, v32s16},
-                                         {v16s16, v32s16},
-                                         {v4s32, v16s32},
-                                         {v8s32, v16s32},
-                                         {v2s64, v8s64},
-                                         {v4s64, v8s64}})(Query));
-      });
+      .legalFor(
+          HasSSE1,
+          {{v32s8, v16s8}, {v16s16, v8s16}, {v8s32, v4s32}, {v4s64, v2s64}})
+      .legalFor(HasAVX, {{v64s8, v16s8},
+                         {v64s8, v32s8},
+                         {v32s16, v8s16},
+                         {v32s16, v16s16},
+                         {v16s32, v4s32},
+                         {v16s32, v8s32},
+                         {v8s64, v2s64},
+                         {v8s64, v4s64}});
 
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({{s8, s32}, {s16, s32}, {s32, s32}, {s64, s32}, {p0, s32}})
+      .legalFor({{s16, s32}, {s32, s32}, {p0, s32}})
+      .legalFor(!HasCMOV, {{s8, s32}})
+      .legalFor(Is64Bit, {{s64, s32}})
+      .legalFor(UseX87, {{s80, s32}})
+      .clampScalar(1, s32, s32)
       .widenScalarToNextPow2(0, /*Min=*/8)
-      .clampScalar(0, HasCMOV ? s16 : s8, sMaxScalar)
-      .clampScalar(1, s32, s32);
+      .clampScalar(0, HasCMOV ? s16 : s8, sMaxScalar);
 
   // memory intrinsics
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
-  getActionDefinitionsBuilder({G_DYN_STACKALLOC,
-                               G_STACKSAVE,
-                               G_STACKRESTORE}).lower();
+  getActionDefinitionsBuilder({G_DYN_STACKALLOC, G_STACKSAVE, G_STACKRESTORE})
+      .lower();
 
   // fp intrinsics
-  getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
+  getActionDefinitionsBuilder({G_INTRINSIC_ROUNDEVEN, G_INTRINSIC_TRUNC})
       .scalarize(0)
       .minScalar(0, LLT::scalar(32))
       .libcall();
-
-  getActionDefinitionsBuilder({G_FREEZE, G_CONSTANT_FOLD_BARRIER})
-    .legalFor({s8, s16, s32, s64, p0})
-    .widenScalarToNextPow2(0, /*Min=*/8)
-    .clampScalar(0, s8, sMaxScalar);
 
   getLegacyLegalizerInfo().computeTables();
   verify(*STI.getInstrInfo());
@@ -671,8 +615,72 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeUITOFP(MI, MRI, Helper);
   case TargetOpcode::G_STORE:
     return legalizeNarrowingStore(MI, MRI, Helper);
+  case TargetOpcode::G_SITOFP:
+    return legalizeSITOFP(MI, MRI, Helper);
+  case TargetOpcode::G_FPTOSI:
+    return legalizeFPTOSI(MI, MRI, Helper);
+  case TargetOpcode::G_GET_ROUNDING:
+    return legalizeGETROUNDING(MI, MRI, Helper);
+  case TargetOpcode::G_SET_ROUNDING:
+    return legalizeSETROUNDING(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
+}
+
+bool X86LegalizerInfo::legalizeSITOFP(MachineInstr &MI,
+                                      MachineRegisterInfo &MRI,
+                                      LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineFunction &MF = *MI.getMF();
+  auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
+
+  assert((SrcTy.getSizeInBits() == 16 || SrcTy.getSizeInBits() == 32 ||
+          SrcTy.getSizeInBits() == 64) &&
+         "Unexpected source type for SITOFP in X87 mode.");
+
+  TypeSize MemSize = SrcTy.getSizeInBytes();
+  MachinePointerInfo PtrInfo;
+  Align Alignmt = Helper.getStackTemporaryAlignment(SrcTy);
+  auto SlotPointer = Helper.createStackTemporary(MemSize, Alignmt, PtrInfo);
+  MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOStore, MemSize, Align(MemSize));
+
+  // Store the integer value on the FPU stack.
+  MIRBuilder.buildStore(Src, SlotPointer, *StoreMMO);
+
+  MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, MemSize, Align(MemSize));
+  MIRBuilder.buildInstr(X86::G_FILD)
+      .addDef(Dst)
+      .addUse(SlotPointer.getReg(0))
+      .addMemOperand(LoadMMO);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeFPTOSI(MachineInstr &MI,
+                                      MachineRegisterInfo &MRI,
+                                      LegalizerHelper &Helper) const {
+  MachineFunction &MF = *MI.getMF();
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
+
+  TypeSize MemSize = DstTy.getSizeInBytes();
+  MachinePointerInfo PtrInfo;
+  Align Alignmt = Helper.getStackTemporaryAlignment(DstTy);
+  auto SlotPointer = Helper.createStackTemporary(MemSize, Alignmt, PtrInfo);
+  MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOStore, MemSize, Align(MemSize));
+
+  MIRBuilder.buildInstr(X86::G_FIST)
+      .addUse(Src)
+      .addUse(SlotPointer.getReg(0))
+      .addMemOperand(StoreMMO);
+
+  MIRBuilder.buildLoad(Dst, SlotPointer, PtrInfo, Align(MemSize));
+  MI.eraseFromParent();
+  return true;
 }
 
 bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
@@ -778,6 +786,210 @@ bool X86LegalizerInfo::legalizeNarrowingStore(MachineInstr &MI,
   Helper.Observer.changingInstr(Store);
   Store.setMemRefs(MF, {NewMMO});
   Helper.Observer.changedInstr(Store);
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeGETROUNDING(MachineInstr &MI,
+                                           MachineRegisterInfo &MRI,
+                                           LegalizerHelper &Helper) const {
+  /*
+   The rounding mode is in bits 11:10 of FPSR, and has the following
+   settings:
+     00 Round to nearest
+     01 Round to -inf
+     10 Round to +inf
+     11 Round to 0
+
+  GET_ROUNDING, on the other hand, expects the following:
+    -1 Undefined
+     0 Round to 0
+     1 Round to nearest
+     2 Round to +inf
+     3 Round to -inf
+
+  To perform the conversion, we use a packed lookup table of the four 2-bit
+  values that we can index by FPSP[11:10]
+    0x2d --> (0b00,10,11,01) --> (0,2,3,1) >> FPSR[11:10]
+
+    (0x2d >> ((FPSR >> 9) & 6)) & 3
+  */
+
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineFunction &MF = MIRBuilder.getMF();
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  const LLT s8 = LLT::scalar(8);
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
+
+  // Save FP Control Word to stack slot
+  int MemSize = 2;
+  Align Alignment = Align(2);
+  MachinePointerInfo PtrInfo;
+  auto StackTemp = Helper.createStackTemporary(TypeSize::getFixed(MemSize),
+                                               Alignment, PtrInfo);
+  Register StackPtr = StackTemp.getReg(0);
+
+  auto StoreMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
+                                          MemSize, Alignment);
+
+  // Store FP Control Word to stack slot using G_FNSTCW16
+  MIRBuilder.buildInstr(X86::G_FNSTCW16)
+      .addUse(StackPtr)
+      .addMemOperand(StoreMMO);
+
+  // Load FP Control Word from stack slot
+  auto LoadMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
+                                         MemSize, Alignment);
+
+  auto CWD32 =
+      MIRBuilder.buildZExt(s32, MIRBuilder.buildLoad(s16, StackPtr, *LoadMMO));
+  auto Shifted8 = MIRBuilder.buildTrunc(
+      s8, MIRBuilder.buildLShr(s32, CWD32, MIRBuilder.buildConstant(s8, 9)));
+  auto Masked32 = MIRBuilder.buildZExt(
+      s32, MIRBuilder.buildAnd(s8, Shifted8, MIRBuilder.buildConstant(s8, 6)));
+
+  // LUT is a packed lookup table (0x2d) used to map the 2-bit x87 FPU rounding
+  // mode (from bits 11:10 of the control word) to the values expected by
+  // GET_ROUNDING. The mapping is performed by shifting LUT right by the
+  // extracted rounding mode and masking the result with 3 to obtain the final
+  auto LUT = MIRBuilder.buildConstant(s32, 0x2d);
+  auto LUTShifted = MIRBuilder.buildLShr(s32, LUT, Masked32);
+  auto RetVal =
+      MIRBuilder.buildAnd(s32, LUTShifted, MIRBuilder.buildConstant(s32, 3));
+  auto RetValTrunc = MIRBuilder.buildZExtOrTrunc(DstTy, RetVal);
+
+  MIRBuilder.buildCopy(Dst, RetValTrunc);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
+                                           MachineRegisterInfo &MRI,
+                                           LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineFunction &MF = MIRBuilder.getMF();
+  Register Src = MI.getOperand(0).getReg();
+  const LLT s8 = LLT::scalar(8);
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
+
+  // Allocate stack slot for control word and MXCSR (4 bytes).
+  int MemSize = 4;
+  Align Alignment = Align(4);
+  MachinePointerInfo PtrInfo;
+  auto StackTemp = Helper.createStackTemporary(TypeSize::getFixed(MemSize),
+                                               Alignment, PtrInfo);
+  Register StackPtr = StackTemp.getReg(0);
+
+  auto StoreMMO =
+      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore, 2, Align(2));
+  MIRBuilder.buildInstr(X86::G_FNSTCW16)
+      .addUse(StackPtr)
+      .addMemOperand(StoreMMO);
+
+  auto LoadMMO =
+      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad, 2, Align(2));
+  auto CWD16 = MIRBuilder.buildLoad(s16, StackPtr, *LoadMMO);
+
+  // Clear RM field (bits 11:10)
+  auto ClearedCWD =
+      MIRBuilder.buildAnd(s16, CWD16, MIRBuilder.buildConstant(s16, 0xf3ff));
+
+  // Check if Src is a constant
+  auto *SrcDef = MRI.getVRegDef(Src);
+  Register RMBits;
+  Register MXCSRRMBits;
+
+  if (SrcDef && SrcDef->getOpcode() == TargetOpcode::G_CONSTANT) {
+    uint64_t RM = getIConstantFromReg(Src, MRI).getZExtValue();
+    int FieldVal = X86::getRoundingModeX86(RM);
+
+    if (FieldVal == X86::rmInvalid) {
+      FieldVal = X86::rmToNearest;
+      LLVMContext &C = MF.getFunction().getContext();
+      C.diagnose(DiagnosticInfoUnsupported(
+          MF.getFunction(), "rounding mode is not supported by X86 hardware",
+          DiagnosticLocation(MI.getDebugLoc()), DS_Error));
+      return false;
+    }
+
+    FieldVal = FieldVal << 3;
+    RMBits = MIRBuilder.buildConstant(s16, FieldVal).getReg(0);
+    MXCSRRMBits = MIRBuilder.buildConstant(s32, FieldVal).getReg(0);
+  } else {
+    // Convert Src (rounding mode) to bits for control word
+    // (0xc9 << (2 * Src + 4)) & 0xc00
+    auto Src32 = MIRBuilder.buildZExtOrTrunc(s32, Src);
+    auto ShiftAmt = MIRBuilder.buildAdd(
+        s32, MIRBuilder.buildShl(s32, Src32, MIRBuilder.buildConstant(s32, 1)),
+        MIRBuilder.buildConstant(s32, 4));
+    auto ShiftAmt8 = MIRBuilder.buildTrunc(s8, ShiftAmt);
+    auto Shifted = MIRBuilder.buildShl(s16, MIRBuilder.buildConstant(s16, 0xc9),
+                                       ShiftAmt8);
+    RMBits =
+        MIRBuilder.buildAnd(s16, Shifted, MIRBuilder.buildConstant(s16, 0xc00))
+            .getReg(0);
+
+    // For non-constant case, we still need to compute MXCSR bits dynamically
+    auto RMBits32 = MIRBuilder.buildZExt(s32, RMBits);
+    MXCSRRMBits =
+        MIRBuilder.buildShl(s32, RMBits32, MIRBuilder.buildConstant(s32, 3))
+            .getReg(0);
+  }
+  // Update rounding mode bits
+  auto NewCWD =
+      MIRBuilder.buildOr(s16, ClearedCWD, RMBits, MachineInstr::Disjoint);
+
+  // Store new FP Control Word to stack
+  auto StoreNewMMO =
+      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore, 2, Align(2));
+  MIRBuilder.buildStore(NewCWD, StackPtr, *StoreNewMMO);
+
+  // Load FP control word from the slot using G_FLDCW16
+  auto LoadNewMMO =
+      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad, 2, Align(2));
+  MIRBuilder.buildInstr(X86::G_FLDCW16)
+      .addUse(StackPtr)
+      .addMemOperand(LoadNewMMO);
+
+  if (Subtarget.hasSSE1()) {
+    // Store MXCSR to stack (use STMXCSR)
+    auto StoreMXCSRMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOStore, 4, Align(4));
+    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS)
+        .addIntrinsicID(Intrinsic::x86_sse_stmxcsr)
+        .addUse(StackPtr)
+        .addMemOperand(StoreMXCSRMMO);
+
+    // Load MXCSR from stack
+    auto LoadMXCSRMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOLoad, 4, Align(4));
+    auto MXCSR = MIRBuilder.buildLoad(s32, StackPtr, *LoadMXCSRMMO);
+
+    // Clear RM field (bits 14:13)
+    auto ClearedMXCSR = MIRBuilder.buildAnd(
+        s32, MXCSR, MIRBuilder.buildConstant(s32, 0xffff9fff));
+
+    // Update rounding mode bits
+    auto NewMXCSR = MIRBuilder.buildOr(s32, ClearedMXCSR, MXCSRRMBits);
+
+    // Store new MXCSR to stack
+    auto StoreNewMXCSRMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOStore, 4, Align(4));
+    MIRBuilder.buildStore(NewMXCSR, StackPtr, *StoreNewMXCSRMMO);
+
+    // Load MXCSR from stack (use LDMXCSR)
+    auto LoadNewMXCSRMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOLoad, 4, Align(4));
+    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS)
+        .addIntrinsicID(Intrinsic::x86_sse_ldmxcsr)
+        .addUse(StackPtr)
+        .addMemOperand(LoadNewMXCSRMMO);
+  }
+
+  MI.eraseFromParent();
   return true;
 }
 

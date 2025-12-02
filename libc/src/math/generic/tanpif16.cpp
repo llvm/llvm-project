@@ -9,13 +9,13 @@
 #include "src/math/tanpif16.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "sincosf16_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math/sincosf16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -39,6 +39,7 @@ constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANPIF16_EXCEPTS{{
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, tanpif16, (float16 x)) {
+  using namespace sincosf16_internal;
   using FPBits = typename fputil::FPBits<float16>;
   FPBits xbits(x);
 

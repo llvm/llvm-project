@@ -9,8 +9,10 @@
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITLinkRedirectableSymbolManager.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/CodeGen.h"
@@ -24,7 +26,7 @@ using namespace llvm::jitlink;
 
 class ReOptimizeLayerTest : public testing::Test {
 public:
-  ~ReOptimizeLayerTest() {
+  ~ReOptimizeLayerTest() override {
     if (ES)
       if (auto Err = ES->endSession())
         ES->reportError(std::move(Err));
@@ -41,7 +43,7 @@ protected:
 
     // COFF-ARM64 is not supported yet
     auto Triple = JTMB->getTargetTriple();
-    if (Triple.isOSBinFormatCOFF() && Triple.isAArch64())
+    if (Triple.isOSBinFormatCOFF())
       GTEST_SKIP();
 
     // SystemZ is not supported yet.
@@ -57,6 +59,10 @@ protected:
 
     // RISC-V is not supported yet
     if (Triple.isRISCV())
+      GTEST_SKIP();
+
+    // ARM is not supported yet.
+    if (Triple.isARM())
       GTEST_SKIP();
 
     auto EPC = SelfExecutorProcessControl::Create();
@@ -79,8 +85,11 @@ protected:
 
     ES = std::make_unique<ExecutionSession>(std::move(*EPC));
     JD = &ES->createBareJITDylib("main");
+
     ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-        *ES, std::make_unique<InProcessMemoryManager>(*PageSize));
+        *ES, std::make_unique<MapperJITLinkMemoryManager>(
+                 10 * 1024 * 1024,
+                 std::make_unique<InProcessMemoryMapper>(*PageSize)));
     DL = std::make_unique<DataLayout>(std::move(*DLOrErr));
 
     auto TM = JTMB->createTargetMachine();
@@ -167,8 +176,8 @@ TEST_F(ReOptimizeLayerTest, BasicReOptimization) {
       });
   EXPECT_THAT_ERROR(ROLayer->reigsterRuntimeFunctions(*JD), Succeeded());
 
-  ThreadSafeContext Ctx(std::make_unique<LLVMContext>());
-  auto M = std::make_unique<Module>("<main>", *Ctx.getContext());
+  auto Ctx = std::make_unique<LLVMContext>();
+  auto M = std::make_unique<Module>("<main>", *Ctx);
   M->setTargetTriple(Triple(sys::getProcessTriple()));
 
   (void)createRetFunction(M.get(), "main", 42);

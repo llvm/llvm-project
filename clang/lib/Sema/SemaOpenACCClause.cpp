@@ -198,8 +198,16 @@ class SemaOpenACCClauseVisitor {
       Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::AlwaysOut);
       Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::Readonly);
       Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::Zero);
+      Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::Capture);
       return Mods;
     };
+
+    // The 'capture' modifier is only valid on copyin, copyout, and create on
+    // structured data or compute constructs (which also includes combined).
+    bool IsStructuredDataOrCompute =
+        Clause.getDirectiveKind() == OpenACCDirectiveKind::Data ||
+        isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) ||
+        isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind());
 
     switch (Clause.getClauseKind()) {
     default:
@@ -207,22 +215,33 @@ class SemaOpenACCClauseVisitor {
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
     case OpenACCClauseKind::PresentOrCopy:
+      // COPY: Capture always
       return Check(OpenACCModifierKind::Always | OpenACCModifierKind::AlwaysIn |
-                   OpenACCModifierKind::AlwaysOut);
+                   OpenACCModifierKind::AlwaysOut |
+                   OpenACCModifierKind::Capture);
     case OpenACCClauseKind::CopyIn:
     case OpenACCClauseKind::PCopyIn:
     case OpenACCClauseKind::PresentOrCopyIn:
+      // COPYIN: Capture only struct.data & compute
       return Check(OpenACCModifierKind::Always | OpenACCModifierKind::AlwaysIn |
-                   OpenACCModifierKind::Readonly);
+                   OpenACCModifierKind::Readonly |
+                   (IsStructuredDataOrCompute ? OpenACCModifierKind::Capture
+                                              : OpenACCModifierKind::Invalid));
     case OpenACCClauseKind::CopyOut:
     case OpenACCClauseKind::PCopyOut:
     case OpenACCClauseKind::PresentOrCopyOut:
-      return Check(OpenACCModifierKind::Always | OpenACCModifierKind::AlwaysIn |
-                   OpenACCModifierKind::Zero);
+      // COPYOUT: Capture only struct.data & compute
+      return Check(OpenACCModifierKind::Always |
+                   OpenACCModifierKind::AlwaysOut | OpenACCModifierKind::Zero |
+                   (IsStructuredDataOrCompute ? OpenACCModifierKind::Capture
+                                              : OpenACCModifierKind::Invalid));
     case OpenACCClauseKind::Create:
     case OpenACCClauseKind::PCreate:
     case OpenACCClauseKind::PresentOrCreate:
-      return Check(OpenACCModifierKind::Zero);
+      // CREATE: Capture only struct.data & compute
+      return Check(OpenACCModifierKind::Zero |
+                   (IsStructuredDataOrCompute ? OpenACCModifierKind::Capture
+                                              : OpenACCModifierKind::Invalid));
     }
     llvm_unreachable("didn't return from switch above?");
   }
@@ -776,9 +795,15 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitPrivateClause(
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
 
-  return OpenACCPrivateClause::Create(Ctx, Clause.getBeginLoc(),
-                                      Clause.getLParenLoc(),
-                                      Clause.getVarList(), Clause.getEndLoc());
+  llvm::SmallVector<OpenACCPrivateRecipe> InitRecipes;
+
+  // Assemble the recipes list.
+  for (const Expr *VarExpr : Clause.getVarList())
+    InitRecipes.push_back(SemaRef.CreatePrivateInitRecipe(VarExpr));
+
+  return OpenACCPrivateClause::Create(
+      Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getVarList(),
+      InitRecipes, Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitFirstPrivateClause(
@@ -787,9 +812,15 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitFirstPrivateClause(
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
 
+  llvm::SmallVector<OpenACCFirstPrivateRecipe> InitRecipes;
+
+  // Assemble the recipes list.
+  for (const Expr *VarExpr : Clause.getVarList())
+    InitRecipes.push_back(SemaRef.CreateFirstPrivateInitRecipe(VarExpr));
+
   return OpenACCFirstPrivateClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getVarList(),
-      Clause.getEndLoc());
+      InitRecipes, Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitNoCreateClause(
@@ -1021,13 +1052,17 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWaitClause(
 OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
 
-  // Based on discussions, having more than 1 'architecture' on a 'set' is
-  // nonsensical, so we're going to fix the standard to reflect this.  Implement
-  // the limitation, since the Dialect requires this.
-  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Set &&
+  // OpenACC Pull #550 (https://github.com/OpenACC/openacc-spec/pull/550)
+  // clarified that Init, Shutdown, and Set only support a single architecture.
+  // Though the dialect only requires it for 'set' as far as we know, we'll just
+  // implement all 3 here.
+  if ((Clause.getDirectiveKind() == OpenACCDirectiveKind::Init ||
+       Clause.getDirectiveKind() == OpenACCDirectiveKind::Shutdown ||
+       Clause.getDirectiveKind() == OpenACCDirectiveKind::Set) &&
       Clause.getDeviceTypeArchitectures().size() > 1) {
     SemaRef.Diag(Clause.getDeviceTypeArchitectures()[1].getLoc(),
-                 diag::err_acc_device_type_multiple_archs);
+                 diag::err_acc_device_type_multiple_archs)
+        << Clause.getDirectiveKind();
     return nullptr;
   }
 
@@ -1271,9 +1306,11 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorClause(
       switch (SemaRef.getActiveComputeConstructInfo().Kind) {
       case OpenACCDirectiveKind::Invalid:
       case OpenACCDirectiveKind::Parallel:
+      case OpenACCDirectiveKind::ParallelLoop:
         // No restriction on when 'parallel' can contain an argument.
         break;
       case OpenACCDirectiveKind::Serial:
+      case OpenACCDirectiveKind::SerialLoop:
         // GCC disallows this, and there is no real good reason for us to permit
         // it, so disallow until we come up with a use case that makes sense.
         DiagIntArgInvalid(SemaRef, IntExpr, "length", OpenACCClauseKind::Vector,
@@ -1281,7 +1318,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorClause(
                           SemaRef.getActiveComputeConstructInfo().Kind);
         IntExpr = nullptr;
         break;
-      case OpenACCDirectiveKind::Kernels: {
+      case OpenACCDirectiveKind::Kernels:
+      case OpenACCDirectiveKind::KernelsLoop: {
         const auto *Itr =
             llvm::find_if(SemaRef.getActiveComputeConstructInfo().Clauses,
                           llvm::IsaPred<OpenACCVectorLengthClause>);
@@ -1332,6 +1370,12 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorClause(
       break;
     case OpenACCDirectiveKind::ParallelLoop:
       break;
+    case OpenACCDirectiveKind::Invalid:
+      // This can happen when the directive was not recognized, but we continued
+      // anyway.  Since there is a lot of stuff that can happen (including
+      // 'allow anything' in the parallel loop case), just skip all checking and
+      // continue.
+      break;
     }
   }
 
@@ -1369,6 +1413,14 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitWorkerClause(
     switch (Clause.getDirectiveKind()) {
     default:
       llvm_unreachable("Invalid directive kind for this clause");
+    case OpenACCDirectiveKind::Invalid:
+      // This can happen in cases where the directive was not recognized but we
+      // continued anyway.  Kernels allows kind of any integer argument, so we
+      // can assume it is that (rather than marking the argument invalid like
+      // with parallel/serial/routine), and just continue as if nothing
+      // happened.  We'll skip the 'kernels' checking vs num-workers, since this
+      // MIGHT be something else.
+      break;
     case OpenACCDirectiveKind::Loop:
       switch (SemaRef.getActiveComputeConstructInfo().Kind) {
       case OpenACCDirectiveKind::Invalid:
@@ -1720,18 +1772,24 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
   }
 
   SmallVector<Expr *> ValidVars;
+  SmallVector<OpenACCReductionRecipeWithStorage> Recipes;
 
   for (Expr *Var : Clause.getVarList()) {
     ExprResult Res = SemaRef.CheckReductionVar(Clause.getDirectiveKind(),
                                                Clause.getReductionOp(), Var);
 
-    if (Res.isUsable())
+    if (Res.isUsable()) {
       ValidVars.push_back(Res.get());
+
+      Recipes.push_back(SemaRef.CreateReductionInitRecipe(
+          Clause.getReductionOp(), Res.get()));
+    }
   }
 
   return SemaRef.CheckReductionClause(
       ExistingClauses, Clause.getDirectiveKind(), Clause.getBeginLoc(),
       Clause.getLParenLoc(), Clause.getReductionOp(), ValidVars,
+      Recipes,
       Clause.getEndLoc());
 }
 
@@ -1833,13 +1891,6 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   if (DiagnoseAllowedClauses(Clause.getDirectiveKind(), Clause.getClauseKind(),
                              Clause.getBeginLoc()))
     return nullptr;
-  //// Diagnose that we don't support this clause on this directive.
-  // if (!doesClauseApplyToDirective(Clause.getDirectiveKind(),
-  //                                 Clause.getClauseKind())) {
-  //   Diag(Clause.getBeginLoc(), diag::err_acc_clause_appertainment)
-  //       << Clause.getDirectiveKind() << Clause.getClauseKind();
-  //   return nullptr;
-  // }
 
   if (const auto *DevTypeClause = llvm::find_if(
           ExistingClauses, llvm::IsaPred<OpenACCDeviceTypeClause>);
@@ -1857,6 +1908,90 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   return Result;
 }
 
+bool SemaOpenACC::CheckReductionVarType(Expr *VarExpr) {
+  SourceLocation VarLoc = VarExpr->getBeginLoc();
+
+  SmallVector<PartialDiagnosticAt> Notes;
+  // The standard isn't clear how many levels of 'array element' or 'subarray'
+  // are permitted, but we can handle as many as we need, so we'll strip them
+  // off here. This will result in CurType being the actual 'type' of the
+  // expression, which is what we are looking to check.
+  QualType CurType = isa<ArraySectionExpr>(VarExpr)
+                         ? cast<ArraySectionExpr>(VarExpr)->getElementType()
+                         : VarExpr->getType();
+
+  // This can happen when we have a dependent type in an array element that the
+  // above function has tried to 'unwrap'. Since this can only happen with
+  // dependence, just let it go.
+  if (CurType.isNull())
+    return false;
+
+  // If we are still an array type, we allow 1 level of 'unpeeling' of the
+  // array.  The standard isn't clear here whether this is allowed, but
+  // array-of-valid-things makes sense.
+  if (auto *AT = getASTContext().getAsArrayType(CurType)) {
+    // If we're already the array type, peel off the array and leave the element
+    // type.
+    PartialDiagnostic PD = PDiag(diag::note_acc_reduction_array)
+                           << diag::OACCReductionArray::ArrayTy << CurType;
+    Notes.push_back({VarLoc, PD});
+    CurType = AT->getElementType();
+  }
+
+  auto IsValidMemberOfComposite = [](QualType Ty) {
+    return !Ty->isAnyComplexType() &&
+           (Ty->isDependentType() ||
+            (Ty->isScalarType() && !Ty->isPointerType()));
+  };
+
+  auto EmitDiags = [&](SourceLocation Loc, PartialDiagnostic PD) {
+    Diag(Loc, PD);
+
+    for (auto [Loc, PD] : Notes)
+      Diag(Loc, PD);
+
+    return Diag(VarLoc, diag::note_acc_reduction_type_summary);
+  };
+
+  // If the type is already scalar, or is dependent, just give up.
+  if (IsValidMemberOfComposite(CurType)) {
+    // Nothing to do here, is valid.
+  } else if (auto *RD = CurType->getAsRecordDecl()) {
+    if (!RD->isStruct() && !RD->isClass())
+      return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                   << RD
+                                   << diag::OACCReductionTy::NotClassStruct);
+
+    if (!RD->isCompleteDefinition())
+      return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                   << RD << diag::OACCReductionTy::NotComplete);
+
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+        CXXRD && !CXXRD->isAggregate())
+      return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                   << CXXRD << diag::OACCReductionTy::NotAgg);
+
+    for (FieldDecl *FD : RD->fields()) {
+      if (!IsValidMemberOfComposite(FD->getType())) {
+        PartialDiagnostic PD =
+            PDiag(diag::note_acc_reduction_member_of_composite)
+            << FD->getName() << RD->getName();
+        Notes.push_back({FD->getBeginLoc(), PD});
+        // TODO: member here.note_acc_reduction_member_of_composite
+        return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                     << FD->getType()
+                                     << diag::OACCReductionTy::MemberNotScalar);
+      }
+    }
+  } else {
+    return EmitDiags(VarLoc, PDiag(diag::err_acc_reduction_type)
+                                 << CurType
+                                 << diag::OACCReductionTy::NotScalar);
+  }
+
+  return false;
+}
+
 /// OpenACC 3.3 section 2.5.15:
 /// At a mininmum, the supported data types include ... the numerical data types
 /// in C, C++, and Fortran.
@@ -1867,54 +2002,12 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
 ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
                                           OpenACCReductionOperator ReductionOp,
                                           Expr *VarExpr) {
+  // For now, we only support 'scalar' types, or composites/arrays of scalar
+  // types.
   VarExpr = VarExpr->IgnoreParenCasts();
 
-  auto TypeIsValid = [](QualType Ty) {
-    return Ty->isDependentType() || Ty->isScalarType();
-  };
-
-  if (isa<ArraySectionExpr>(VarExpr)) {
-    Expr *ASExpr = VarExpr;
-    QualType BaseTy = ArraySectionExpr::getBaseOriginalType(ASExpr);
-    QualType EltTy = getASTContext().getBaseElementType(BaseTy);
-
-    if (!TypeIsValid(EltTy)) {
-      Diag(VarExpr->getExprLoc(), diag::err_acc_reduction_type)
-          << EltTy << /*Sub array base type*/ 1;
-      return ExprError();
-    }
-  } else if (auto *RD = VarExpr->getType()->getAsRecordDecl()) {
-    if (!RD->isStruct() && !RD->isClass()) {
-      Diag(VarExpr->getExprLoc(), diag::err_acc_reduction_composite_type)
-          << /*not class or struct*/ 0 << VarExpr->getType();
-      return ExprError();
-    }
-
-    if (!RD->isCompleteDefinition()) {
-      Diag(VarExpr->getExprLoc(), diag::err_acc_reduction_composite_type)
-          << /*incomplete*/ 1 << VarExpr->getType();
-      return ExprError();
-    }
-    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
-        CXXRD && !CXXRD->isAggregate()) {
-      Diag(VarExpr->getExprLoc(), diag::err_acc_reduction_composite_type)
-          << /*aggregate*/ 2 << VarExpr->getType();
-      return ExprError();
-    }
-
-    for (FieldDecl *FD : RD->fields()) {
-      if (!TypeIsValid(FD->getType())) {
-        Diag(VarExpr->getExprLoc(),
-             diag::err_acc_reduction_composite_member_type);
-        Diag(FD->getLocation(), diag::note_acc_reduction_composite_member_loc);
-        return ExprError();
-      }
-    }
-  } else if (!TypeIsValid(VarExpr->getType())) {
-    Diag(VarExpr->getExprLoc(), diag::err_acc_reduction_type)
-        << VarExpr->getType() << /*Sub array base type*/ 0;
+  if (CheckReductionVarType(VarExpr))
     return ExprError();
-  }
 
   // OpenACC3.3: 2.9.11: Reduction clauses on nested constructs for the same
   // reduction 'var' must have the same reduction operator.
@@ -2037,6 +2130,12 @@ SemaOpenACC::CheckGangExpr(ArrayRef<const OpenACCClause *> ExistingClauses,
     default:
       llvm_unreachable("Non compute construct in active compute construct?");
     }
+  case OpenACCDirectiveKind::Invalid:
+    // This can happen in cases where the the directive was not recognized but
+    // we continued anyway. Since the validity checking is all-over the place
+    // (it can be a star/integer, or a constant expr depending on the tag), we
+    // just give up and return an ExprError here.
+    return ExprError();
   default:
     llvm_unreachable("Invalid directive kind for a Gang clause");
   }
@@ -2090,7 +2189,8 @@ OpenACCClause *SemaOpenACC::CheckReductionClause(
     ArrayRef<const OpenACCClause *> ExistingClauses,
     OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
     SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
-    ArrayRef<Expr *> Vars, SourceLocation EndLoc) {
+    ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
+    SourceLocation EndLoc) {
   if (DirectiveKind == OpenACCDirectiveKind::Loop ||
       isOpenACCCombinedDirectiveKind(DirectiveKind)) {
     // OpenACC 3.3 2.9.11: A reduction clause may not appear on a loop directive
@@ -2119,7 +2219,7 @@ OpenACCClause *SemaOpenACC::CheckReductionClause(
   }
 
   auto *Ret = OpenACCReductionClause::Create(
-      getASTContext(), BeginLoc, LParenLoc, ReductionOp, Vars, EndLoc);
+      getASTContext(), BeginLoc, LParenLoc, ReductionOp, Vars, Recipes, EndLoc);
   return Ret;
 }
 
@@ -2149,13 +2249,23 @@ SemaOpenACC::CheckLinkClauseVarList(ArrayRef<Expr *> VarExprs) {
       continue;
     }
 
+    Expr *OrigExpr = VarExpr;
+
+    while (isa<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
+      if (auto *ASE = dyn_cast<ArraySectionExpr>(VarExpr))
+        VarExpr = ASE->getBase()->IgnoreParenImpCasts();
+      else
+        VarExpr =
+            cast<ArraySubscriptExpr>(VarExpr)->getBase()->IgnoreParenImpCasts();
+    }
+
     const auto *DRE = cast<DeclRefExpr>(VarExpr);
     const VarDecl *Var = dyn_cast<VarDecl>(DRE->getDecl());
 
     if (!Var || !Var->hasExternalStorage())
       Diag(VarExpr->getBeginLoc(), diag::err_acc_link_not_extern);
     else
-      NewVarList.push_back(VarExpr);
+      NewVarList.push_back(OrigExpr);
   }
 
   return NewVarList;
@@ -2204,7 +2314,13 @@ bool SemaOpenACC::CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause,
         continue;
       }
     } else {
-      const auto *DRE = cast<DeclRefExpr>(VarExpr);
+
+      const Expr *VarExprTemp = VarExpr;
+
+      while (const auto *ASE = dyn_cast<ArraySectionExpr>(VarExprTemp))
+        VarExprTemp = ASE->getBase()->IgnoreParenImpCasts();
+
+      const auto *DRE = cast<DeclRefExpr>(VarExprTemp);
       if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
         CurDecl = Var->getCanonicalDecl();
 

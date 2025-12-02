@@ -1,13 +1,11 @@
-import os
+"""
+Test lldb-dap command hooks
+"""
 
-import dap_server
 import lldbdap_testcase
-from lldbsuite.test import lldbtest, lldbutil
 from lldbsuite.test.decorators import *
 
 
-# DAP tests are flakey, see https://github.com/llvm/llvm-project/issues/137660.
-@skip
 class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
     def test_command_directive_quiet_on_success(self):
         program = self.getBuildArtifact("a.out")
@@ -25,7 +23,6 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             exitCommands=["?" + command_quiet, command_not_quiet],
         )
         full_output = self.collect_console(
-            timeout_secs=1.0,
             pattern=command_not_quiet,
         )
         self.assertNotIn(command_quiet, full_output)
@@ -53,7 +50,6 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             expectFailure=True,
         )
         full_output = self.collect_console(
-            timeout_secs=1.0,
             pattern=command_abort_on_error,
         )
         self.assertNotIn(command_quiet, full_output)
@@ -77,14 +73,12 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
         )
         command_abort_on_error = "settings set foo bar"
         program = self.build_and_create_debug_adapter_for_attach()
-        self.attach(
-            program,
+        resp = self.attach(
+            program=program,
             attachCommands=["?!" + command_quiet, "!" + command_abort_on_error],
             expectFailure=True,
         )
-        full_output = self.collect_console(
-            timeout_secs=1.0,
-            pattern=command_abort_on_error,
-        )
+        self.assertFalse(resp["success"], "expected 'attach' failure")
+        full_output = self.collect_console(pattern=command_abort_on_error)
         self.assertNotIn(command_quiet, full_output)
         self.assertIn(command_abort_on_error, full_output)

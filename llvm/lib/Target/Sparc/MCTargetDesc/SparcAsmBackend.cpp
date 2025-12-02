@@ -12,7 +12,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
@@ -50,6 +49,18 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
     return (d16hi << 20) | d16lo;
   }
 
+  case ELF::R_SPARC_WDISP10: {
+    // FIXME this really should be an error reporting check.
+    assert((Value & 0x3) == 0);
+
+    // 7.17 Compare and Branch
+    // Inst{20-19} = d10hi;
+    // Inst{12-5}  = d10lo;
+    unsigned d10hi = (Value >> 10) & 0x3;
+    unsigned d10lo = (Value >> 2) & 0xff;
+    return (d10hi << 19) | (d10lo << 5);
+  }
+
   case ELF::R_SPARC_HIX22:
     return (~Value >> 10) & 0x3fffff;
 
@@ -60,6 +71,9 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
 
   case Sparc::fixup_sparc_13:
     return Value & 0x1fff;
+
+  case ELF::R_SPARC_5:
+    return Value & 0x1f;
 
   case ELF::R_SPARC_LOX10:
     return (Value & 0x3ff) | 0x1c00;
@@ -97,171 +111,162 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
 }
 
 namespace {
-  class SparcAsmBackend : public MCAsmBackend {
-  protected:
-    bool Is64Bit;
-    bool IsV8Plus;
+class SparcAsmBackend : public MCAsmBackend {
+protected:
+  bool Is64Bit;
+  bool IsV8Plus;
 
-  public:
-    SparcAsmBackend(const MCSubtargetInfo &STI)
-        : MCAsmBackend(STI.getTargetTriple().isLittleEndian()
-                           ? llvm::endianness::little
-                           : llvm::endianness::big),
-          Is64Bit(STI.getTargetTriple().isArch64Bit()),
-          IsV8Plus(STI.hasFeature(Sparc::FeatureV8Plus)) {}
+public:
+  SparcAsmBackend(const MCSubtargetInfo &STI)
+      : MCAsmBackend(STI.getTargetTriple().isLittleEndian()
+                         ? llvm::endianness::little
+                         : llvm::endianness::big),
+        Is64Bit(STI.getTargetTriple().isArch64Bit()),
+        IsV8Plus(STI.hasFeature(Sparc::FeatureV8Plus)) {}
 
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
-    std::optional<MCFixupKind> getFixupKind(StringRef Name) const override {
-      unsigned Type;
-      Type = llvm::StringSwitch<unsigned>(Name)
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override {
+
+    // If the count is not 4-byte aligned, we must be writing data into the
+    // text section (otherwise we have unaligned instructions, and thus have
+    // far bigger problems), so just write zeros instead.
+    OS.write_zeros(Count % 4);
+
+    uint64_t NumNops = Count / 4;
+    for (uint64_t i = 0; i != NumNops; ++i)
+      support::endian::write<uint32_t>(OS, 0x01000000, Endian);
+
+    return true;
+  }
+};
+
+class ELFSparcAsmBackend : public SparcAsmBackend {
+  Triple::OSType OSType;
+
+public:
+  ELFSparcAsmBackend(const MCSubtargetInfo &STI, Triple::OSType OSType)
+      : SparcAsmBackend(STI), OSType(OSType) {}
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(OSType);
+    return createSparcELFObjectWriter(Is64Bit, IsV8Plus, OSABI);
+  }
+};
+} // end anonymous namespace
+
+std::optional<MCFixupKind> SparcAsmBackend::getFixupKind(StringRef Name) const {
+  unsigned Type;
+  Type = llvm::StringSwitch<unsigned>(Name)
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/Sparc.def"
 #undef ELF_RELOC
-                 .Case("BFD_RELOC_NONE", ELF::R_SPARC_NONE)
-                 .Case("BFD_RELOC_8", ELF::R_SPARC_8)
-                 .Case("BFD_RELOC_16", ELF::R_SPARC_16)
-                 .Case("BFD_RELOC_32", ELF::R_SPARC_32)
-                 .Case("BFD_RELOC_64", ELF::R_SPARC_64)
-                 .Default(-1u);
-      if (Type == -1u)
-        return std::nullopt;
-      return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
-    }
+             .Case("BFD_RELOC_NONE", ELF::R_SPARC_NONE)
+             .Case("BFD_RELOC_8", ELF::R_SPARC_8)
+             .Case("BFD_RELOC_16", ELF::R_SPARC_16)
+             .Case("BFD_RELOC_32", ELF::R_SPARC_32)
+             .Case("BFD_RELOC_64", ELF::R_SPARC_64)
+             .Default(-1u);
+  if (Type == -1u)
+    return std::nullopt;
+  return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
+}
 
-    MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
-      // clang-format off
-      const static MCFixupKindInfo InfosBE[Sparc::NumTargetFixupKinds] = {
-        // name                    offset bits  flags
-        { "fixup_sparc_call30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_13",        19,     13,  0 },
-      };
-
-      const static MCFixupKindInfo InfosLE[Sparc::NumTargetFixupKinds] = {
-        // name                    offset bits  flags
-        { "fixup_sparc_call30",     0,     30,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_13",         0,     13,  0 },
-      };
-      // clang-format on
-
-      if (!mc::isRelocation(Kind)) {
-        if (Kind < FirstTargetFixupKind)
-          return MCAsmBackend::getFixupKindInfo(Kind);
-        assert(unsigned(Kind - FirstTargetFixupKind) <
-                   Sparc::NumTargetFixupKinds &&
-               "Invalid kind!");
-        if (Endian == llvm::endianness::little)
-          return InfosLE[Kind - FirstTargetFixupKind];
-
-        return InfosBE[Kind - FirstTargetFixupKind];
-      }
-
-      MCFixupKindInfo Info{};
-      switch (uint16_t(Kind)) {
-      case ELF::R_SPARC_PC10:
-        Info = {"", 22, 10, MCFixupKindInfo::FKF_IsPCRel};
-        break;
-      case ELF::R_SPARC_PC22:
-        Info = {"", 10, 22, MCFixupKindInfo::FKF_IsPCRel};
-        break;
-      case ELF::R_SPARC_WDISP16:
-        Info = {"", 0, 32, MCFixupKindInfo::FKF_IsPCRel};
-        break;
-      case ELF::R_SPARC_WDISP19:
-        Info = {"", 13, 19, MCFixupKindInfo::FKF_IsPCRel};
-        break;
-      case ELF::R_SPARC_WDISP22:
-        Info = {"", 10, 22, MCFixupKindInfo::FKF_IsPCRel};
-        break;
-
-      case ELF::R_SPARC_HI22:
-        Info = {"", 10, 22, 0};
-        break;
-      case ELF::R_SPARC_LO10:
-        Info = {"", 22, 10, 0};
-        break;
-      case ELF::R_SPARC_HH22:
-        Info = {"", 10, 22, 0};
-        break;
-      case ELF::R_SPARC_HM10:
-        Info = {"", 22, 10, 0};
-        break;
-      case ELF::R_SPARC_LM22:
-        Info = {"", 10, 22, 0};
-        break;
-      case ELF::R_SPARC_HIX22:
-        Info = {"", 10, 22, 0};
-        break;
-      case ELF::R_SPARC_LOX10:
-        Info = {"", 19, 13, 0};
-        break;
-      }
-      if (Endian == llvm::endianness::little)
-        Info.TargetOffset = 32 - Info.TargetOffset - Info.TargetSize;
-      return Info;
-    }
-
-    bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
-                               const MCValue &,
-                               const MCSubtargetInfo *) override {
-      return false;
-    }
-
-    void relaxInstruction(MCInst &Inst,
-                          const MCSubtargetInfo &STI) const override {
-      // FIXME.
-      llvm_unreachable("relaxInstruction() unimplemented");
-    }
-
-    bool writeNopData(raw_ostream &OS, uint64_t Count,
-                      const MCSubtargetInfo *STI) const override {
-
-      // If the count is not 4-byte aligned, we must be writing data into the
-      // text section (otherwise we have unaligned instructions, and thus have
-      // far bigger problems), so just write zeros instead.
-      OS.write_zeros(Count % 4);
-
-      uint64_t NumNops = Count / 4;
-      for (uint64_t i = 0; i != NumNops; ++i)
-        support::endian::write<uint32_t>(OS, 0x01000000, Endian);
-
-      return true;
-    }
+MCFixupKindInfo SparcAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  // clang-format off
+  const static MCFixupKindInfo InfosBE[Sparc::NumTargetFixupKinds] = {
+      // name                    offset bits flags
+      {"fixup_sparc_call30",     2,     30,  0},
+      {"fixup_sparc_13",        19,     13,  0},
   };
 
-  class ELFSparcAsmBackend : public SparcAsmBackend {
-    Triple::OSType OSType;
-  public:
-    ELFSparcAsmBackend(const MCSubtargetInfo &STI, Triple::OSType OSType)
-        : SparcAsmBackend(STI), OSType(OSType) {}
-
-    void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                    const MCValue &Target, MutableArrayRef<char> Data,
-                    uint64_t Value, bool IsResolved,
-                    const MCSubtargetInfo *STI) const override {
-      if (!IsResolved)
-        return;
-      Value = adjustFixupValue(Fixup.getKind(), Value);
-
-      unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
-      unsigned Offset = Fixup.getOffset();
-      // For each byte of the fragment that the fixup touches, mask in the bits
-      // from the fixup value. The Value has been "split up" into the
-      // appropriate bitfields above.
-      for (unsigned i = 0; i != NumBytes; ++i) {
-        unsigned Idx =
-            Endian == llvm::endianness::little ? i : (NumBytes - 1) - i;
-        Data[Offset + Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
-      }
-    }
-
-    std::unique_ptr<MCObjectTargetWriter>
-    createObjectTargetWriter() const override {
-      uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(OSType);
-      return createSparcELFObjectWriter(Is64Bit, IsV8Plus, OSABI);
-    }
+  const static MCFixupKindInfo InfosLE[Sparc::NumTargetFixupKinds] = {
+      // name                    offset bits flags
+      {"fixup_sparc_call30",     0,     30,  0},
+      {"fixup_sparc_13",         0,     13,  0},
   };
+  // clang-format on
 
-} // end anonymous namespace
+  if (!mc::isRelocation(Kind)) {
+    if (Kind < FirstTargetFixupKind)
+      return MCAsmBackend::getFixupKindInfo(Kind);
+    assert(unsigned(Kind - FirstTargetFixupKind) < Sparc::NumTargetFixupKinds &&
+           "Invalid kind!");
+    if (Endian == llvm::endianness::little)
+      return InfosLE[Kind - FirstTargetFixupKind];
+
+    return InfosBE[Kind - FirstTargetFixupKind];
+  }
+
+  MCFixupKindInfo Info{};
+  switch (uint16_t(Kind)) {
+  case ELF::R_SPARC_PC10:
+    Info = {"", 22, 10, 0};
+    break;
+  case ELF::R_SPARC_PC22:
+    Info = {"", 10, 22, 0};
+    break;
+  case ELF::R_SPARC_WDISP10:
+    Info = {"", 0, 32, 0};
+    break;
+  case ELF::R_SPARC_WDISP16:
+    Info = {"", 0, 32, 0};
+    break;
+  case ELF::R_SPARC_WDISP19:
+    Info = {"", 13, 19, 0};
+    break;
+  case ELF::R_SPARC_WDISP22:
+    Info = {"", 10, 22, 0};
+    break;
+
+  case ELF::R_SPARC_HI22:
+    Info = {"", 10, 22, 0};
+    break;
+  case ELF::R_SPARC_LO10:
+    Info = {"", 22, 10, 0};
+    break;
+  case ELF::R_SPARC_HH22:
+    Info = {"", 10, 22, 0};
+    break;
+  case ELF::R_SPARC_HM10:
+    Info = {"", 22, 10, 0};
+    break;
+  case ELF::R_SPARC_LM22:
+    Info = {"", 10, 22, 0};
+    break;
+  case ELF::R_SPARC_HIX22:
+    Info = {"", 10, 22, 0};
+    break;
+  case ELF::R_SPARC_LOX10:
+    Info = {"", 19, 13, 0};
+    break;
+  }
+  if (Endian == llvm::endianness::little)
+    Info.TargetOffset = 32 - Info.TargetOffset - Info.TargetSize;
+  return Info;
+}
+
+void SparcAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                                 const MCValue &Target, uint8_t *Data,
+                                 uint64_t Value, bool IsResolved) {
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
+  if (!IsResolved)
+    return;
+  Value = adjustFixupValue(Fixup.getKind(), Value);
+
+  unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
+  // For each byte of the fragment that the fixup touches, mask in the
+  // bits from the fixup value.
+  for (unsigned i = 0; i != NumBytes; ++i) {
+    unsigned Idx = Endian == llvm::endianness::little ? i : (NumBytes - 1) - i;
+    Data[Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
+  }
+}
 
 MCAsmBackend *llvm::createSparcAsmBackend(const Target &T,
                                           const MCSubtargetInfo &STI,

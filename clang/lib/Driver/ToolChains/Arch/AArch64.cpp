@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "../CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/Host.h"
@@ -51,6 +50,25 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
       Triple.getArch() == llvm::Triple::aarch64) {
     // Apple Silicon macs default to M1 CPUs.
     return "apple-m1";
+  }
+
+  if (Triple.getOS() == llvm::Triple::IOS) {
+    assert(!Triple.isSimulatorEnvironment() && "iossim should be mac-like");
+    // iOS 26 only runs on apple-a12 and later CPUs.
+    if (!Triple.isOSVersionLT(26))
+      return "apple-a12";
+    // arm64 (non-e) iOS 18 only runs on apple-a10 and later CPUs.
+    if (!Triple.isOSVersionLT(18) && !Triple.isArm64e())
+      return "apple-a10";
+  }
+
+  if (Triple.isWatchOS()) {
+    assert(!Triple.isSimulatorEnvironment() && "watchossim should be mac-like");
+    // arm64_32/arm64e watchOS requires S4 before watchOS 26, S6 after.
+    if (Triple.getArch() == llvm::Triple::aarch64_32 || Triple.isArm64e())
+      return Triple.isOSVersionLT(26) ? "apple-s4" : "apple-s6";
+    // arm64 (non-e, non-32) watchOS comes later, and requires S9 anyway.
+    return "apple-s9";
   }
 
   if (Triple.isXROS()) {
@@ -157,39 +175,18 @@ static bool
 getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
                                      const ArgList &Args,
                                      std::vector<StringRef> &Features) {
-  std::string MtuneLowerCase = Mtune.lower();
   // Check CPU name is valid, but ignore any extensions on it.
+  std::string MtuneLowerCase = Mtune.lower();
   llvm::AArch64::ExtensionSet Extensions;
   StringRef Tune;
-  if (!DecodeAArch64Mcpu(D, MtuneLowerCase, Tune, Extensions))
-    return false;
-
-  // Handle CPU name is 'native'.
-  if (MtuneLowerCase == "native")
-    MtuneLowerCase = std::string(llvm::sys::getHostCPUName());
-
-  // 'cyclone' and later have zero-cycle register moves and zeroing.
-  if (MtuneLowerCase == "cyclone" ||
-      StringRef(MtuneLowerCase).starts_with("apple")) {
-    Features.push_back("+zcm");
-    Features.push_back("+zcz");
-  }
-
-  return true;
+  return DecodeAArch64Mcpu(D, MtuneLowerCase, Tune, Extensions);
 }
 
 static bool
 getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
                                     const ArgList &Args,
                                     std::vector<StringRef> &Features) {
-  StringRef CPU;
-  // Check CPU name is valid, but ignore any extensions on it.
-  llvm::AArch64::ExtensionSet DecodedFeature;
-  std::string McpuLowerCase = Mcpu.lower();
-  if (!DecodeAArch64Mcpu(D, McpuLowerCase, CPU, DecodedFeature))
-    return false;
-
-  return getAArch64MicroArchFeaturesFromMtune(D, CPU, Args, Features);
+  return getAArch64MicroArchFeaturesFromMtune(D, Mcpu, Args, Features);
 }
 
 void aarch64::getAArch64TargetFeatures(const Driver &D,
@@ -225,7 +222,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     // Default to 'A' profile if the architecture is not specified.
     success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions);
 
-  if (success && (A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)))
+  if (success && (A = Args.getLastArg(options::OPT_mtune_EQ)))
     success =
         getAArch64MicroArchFeaturesFromMtune(D, A->getValue(), Args, Features);
   else if (success && (A = Args.getLastArg(options::OPT_mcpu_EQ)))
@@ -469,23 +466,17 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     Features.push_back("+no-bti-at-return-twice");
 }
 
-void aarch64::setPAuthABIInTriple(const Driver &D, const ArgList &Args,
-                                  llvm::Triple &Triple) {
-  Arg *ABIArg = Args.getLastArg(options::OPT_mabi_EQ);
-  bool HasPAuthABI =
-      ABIArg ? (StringRef(ABIArg->getValue()) == "pauthtest") : false;
+/// Is the triple {aarch64.aarch64_be}-none-elf?
+bool aarch64::isAArch64BareMetal(const llvm::Triple &Triple) {
+  if (Triple.getArch() != llvm::Triple::aarch64 &&
+      Triple.getArch() != llvm::Triple::aarch64_be)
+    return false;
 
-  switch (Triple.getEnvironment()) {
-  case llvm::Triple::UnknownEnvironment:
-    if (HasPAuthABI)
-      Triple.setEnvironment(llvm::Triple::PAuthTest);
-    break;
-  case llvm::Triple::PAuthTest:
-    break;
-  default:
-    if (HasPAuthABI)
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << ABIArg->getAsString(Args) << Triple.getTriple();
-    break;
-  }
+  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
+    return false;
+
+  if (Triple.getOS() != llvm::Triple::UnknownOS)
+    return false;
+
+  return Triple.getEnvironmentName() == "elf";
 }

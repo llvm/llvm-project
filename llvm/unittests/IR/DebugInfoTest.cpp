@@ -19,14 +19,13 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #include "gtest/gtest.h"
 
 using namespace llvm;
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   SMDiagnostic Err;
@@ -186,14 +185,55 @@ TEST(MetadataTest, DeleteInstUsedByDbgRecord) {
   Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
 
   // Find the dbg.value using %b.
-  SmallVector<DbgValueInst *, 1> DVIs;
   SmallVector<DbgVariableRecord *, 1> DVRs;
-  findDbgValues(DVIs, &I, &DVRs);
+  findDbgValues(&I, DVRs);
 
   // Delete %b. The dbg.value should now point to undef.
   I.eraseFromParent();
   EXPECT_EQ(DVRs[0]->getNumVariableLocationOps(), 1u);
   EXPECT_TRUE(isa<UndefValue>(DVRs[0]->getValue(0)));
+}
+
+TEST(MetadataTest, GlobalConstantMetadataUsedByDbgRecord) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    @x = dso_local global i32 0, align 4
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+
+    define i16 @f(i16 %a) !dbg !6 {
+      %b = add i16 %a, 1, !dbg !11
+      call void @llvm.dbg.declare(metadata ptr @x, metadata !9, metadata !DIExpression()), !dbg !11
+      call void @llvm.dbg.value(metadata ptr @x, metadata !9, metadata !DIExpression()), !dbg !11
+      ret i16 0, !dbg !11
+    }
+
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  // Find the global @x
+  Value *V = M->getNamedValue("x");
+
+  // Find the dbg.value
+  auto DVRs = findDVRDeclares(V);
+  auto DVRVs = findDVRValues(V);
+
+  EXPECT_EQ(DVRs[0]->getNumVariableLocationOps(), 1u);
+  EXPECT_TRUE(DVRVs.size() == 1);
+  EXPECT_FALSE(isa<UndefValue>(DVRs[0]->getValue(0)));
 }
 
 TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
@@ -240,8 +280,6 @@ TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
 // Duplicate of above test, but in DbgVariableRecord representation.
 TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
   LLVMContext C;
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = true;
 
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
@@ -271,9 +309,8 @@ TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
   Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
 
   // Find the DbgVariableRecords using %b.
-  SmallVector<DbgValueInst *, 2> DVIs;
   SmallVector<DbgVariableRecord *, 2> DVRs;
-  findDbgValues(DVIs, &I, &DVRs);
+  findDbgValues(&I, DVRs);
   ASSERT_EQ(DVRs.size(), 2u);
 
   // Delete %b. The DbgVariableRecord should now point to undef.
@@ -284,23 +321,19 @@ TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
   EXPECT_EQ(DVRs[1]->getNumVariableLocationOps(), 2u);
   EXPECT_TRUE(isa<UndefValue>(DVRs[1]->getVariableLocationOp(1)));
   EXPECT_TRUE(DVRs[1]->isKillLocation());
-  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 // Ensure that the order of dbg.value intrinsics returned by findDbgValues, and
 // their corresponding DbgVariableRecord representation, are consistent.
 TEST(MetadataTest, OrderingOfDbgVariableRecords) {
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = false;
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
       %b = add i16 %a, 1, !dbg !11
-      call void @llvm.dbg.value(metadata i16 %b, metadata !9, metadata !DIExpression()), !dbg !11
-      call void @llvm.dbg.value(metadata i16 %b, metadata !12, metadata !DIExpression()), !dbg !11
+        #dbg_value(i16 %b, !9, !DIExpression(), !11)
+        #dbg_value(i16 %b, !12, !DIExpression(), !11)
       ret i16 0, !dbg !11
     }
-    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
     attributes #0 = { nounwind readnone speculatable willreturn }
 
     !llvm.dbg.cu = !{!0}
@@ -321,35 +354,20 @@ TEST(MetadataTest, OrderingOfDbgVariableRecords) {
 
   Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
 
-  SmallVector<DbgValueInst *, 2> DVIs;
   SmallVector<DbgVariableRecord *, 2> DVRs;
-  findDbgValues(DVIs, &I, &DVRs);
-  ASSERT_EQ(DVIs.size(), 2u);
-  ASSERT_EQ(DVRs.size(), 0u);
+
+  findDbgValues(&I, DVRs);
+  ASSERT_EQ(DVRs.size(), 2u);
 
   // The correct order of dbg.values is given by their use-list, which becomes
   // the reverse order of creation. Thus the dbg.values should come out as
   // "bar" and then "foo".
-  DILocalVariable *Var0 = DVIs[0]->getVariable();
+  const DILocalVariable *Var0 = DVRs[0]->getVariable();
   EXPECT_TRUE(Var0->getName() == "bar");
-  DILocalVariable *Var1 = DVIs[1]->getVariable();
-  EXPECT_TRUE(Var1->getName() == "foo");
-
-  // Now try again, but in DbgVariableRecord form.
-  DVIs.clear();
-
-  M->convertToNewDbgValues();
-  findDbgValues(DVIs, &I, &DVRs);
-  ASSERT_EQ(DVIs.size(), 0u);
-  ASSERT_EQ(DVRs.size(), 2u);
-
-  Var0 = DVRs[0]->getVariable();
-  EXPECT_TRUE(Var0->getName() == "bar");
-  Var1 = DVRs[1]->getVariable();
+  const DILocalVariable *Var1 = DVRs[1]->getVariable();
   EXPECT_TRUE(Var1->getName() == "foo");
 
   M->convertFromNewDbgValues();
-  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 TEST(DIBuilder, CreateFile) {
@@ -391,7 +409,8 @@ TEST(DIBuilder, CreateFortranArrayTypeWithAttributes) {
 
   DIFile *F = DIB.createFile("main.c", "/");
   DICompileUnit *CU = DIB.createCompileUnit(
-      dwarf::DW_LANG_C, DIB.createFile("main.c", "/"), "llvm-c", true, "", 0);
+      DISourceLanguageName(dwarf::DW_LANG_C), DIB.createFile("main.c", "/"),
+      "llvm-c", true, "", 0);
 
   DIVariable *DataLocation =
       DIB.createTempGlobalVariableFwdDecl(CU, "dl", "_dl", F, 1, nullptr, true);
@@ -535,16 +554,14 @@ TEST(DIBuilder, FixedPointType) {
   EXPECT_TRUE(Ty->getTag() == dwarf::DW_TAG_base_type);
 }
 
-TEST(DbgAssignIntrinsicTest, replaceVariableLocationOp) {
+TEST(DbgAssignRecordTest, replaceVariableLocationOp) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define dso_local void @fun(i32 %v1, ptr %p1, ptr %p2) !dbg !7 {
     entry:
-      call void @llvm.dbg.assign(metadata i32 %v1, metadata !14, metadata !DIExpression(), metadata !17, metadata ptr %p1, metadata !DIExpression()), !dbg !16
+        #dbg_assign(i32 %v1, !14, !DIExpression(), !17, ptr %p1, !DIExpression(), !16)
       ret void
     }
-
-    declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
     !llvm.dbg.cu = !{!0}
     !llvm.module.flags = !{!3}
@@ -611,27 +628,27 @@ TEST(AssignmentTrackingTest, Utils) {
   std::unique_ptr<Module> M = parseIR(C, R"(
     define dso_local void @fun1() !dbg !7 {
     entry:
-      call void @llvm.dbg.assign(metadata i32 undef, metadata !10, metadata !DIExpression(), metadata !12, metadata i32 undef, metadata !DIExpression()), !dbg !13
+        #dbg_assign(i32 undef, !10, !DIExpression(), !12, i32 undef, !DIExpression(), !13)
       %local = alloca i32, align 4, !DIAssignID !12
-      call void @llvm.dbg.assign(metadata i32 undef, metadata !16, metadata !DIExpression(), metadata !12, metadata i32 undef, metadata !DIExpression()), !dbg !15
+        #dbg_assign(i32 undef, !16, !DIExpression(), !12, i32 undef, !DIExpression(), !15)
+        #dbg_assign(i32 undef, !16, !DIExpression(), !25, i32 undef, !DIExpression(), !15)
+        #dbg_assign(i32 undef, !16, !DIExpression(), !25, i32 undef, !DIExpression(), !15)
       ret void, !dbg !15
     }
 
     define dso_local void @fun2() !dbg !17 {
     entry:
       %local = alloca i32, align 4, !DIAssignID !20
-      call void @llvm.dbg.assign(metadata i32 undef, metadata !18, metadata !DIExpression(), metadata !20, metadata i32 undef, metadata !DIExpression()), !dbg !19
+        #dbg_assign(i32 undef, !18, !DIExpression(), !20, i32 undef, !DIExpression(), !19)
       ret void, !dbg !19
     }
 
     define dso_local void @fun3() !dbg !21 {
     entry:
       %local = alloca i32, align 4, !DIAssignID !24
-      call void @llvm.dbg.assign(metadata i32 undef, metadata !22, metadata !DIExpression(), metadata !24, metadata i32* undef, metadata !DIExpression()), !dbg !23
+        #dbg_assign(i32 undef, !22, !DIExpression(), !24, i32* undef, !DIExpression(), !23)
       ret void
     }
-
-    declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
     !llvm.dbg.cu = !{!0}
     !llvm.module.flags = !{!3, !4, !5}
@@ -662,6 +679,7 @@ TEST(AssignmentTrackingTest, Utils) {
     !22 = !DILocalVariable(name: "local4", scope: !21, file: !1, line: 2, type: !11)
     !23 = !DILocation(line: 4, column: 1, scope: !21)
     !24 = distinct !DIAssignID()
+    !25 = distinct !DIAssignID()
     )");
 
   // Check the test IR isn't malformed.
@@ -922,8 +940,6 @@ TEST(AssignmentTrackingTest, InstrMethods) {
 // dbg.values that have been converted to a non-instruction format.
 TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   LLVMContext C;
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = false;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
       call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
@@ -952,6 +968,12 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
     !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
     !11 = !DILocation(line: 1, column: 1, scope: !6)
 )");
+
+  // The IR above will be autoupgraded to debug records: but this test is about
+  // the conversion routines, so convert it back. This test will have value
+  // going forwards for the purpose of testing the conversion routine, which
+  // some compatibility tools (DXIL?) wish to use.
+  M->convertFromNewDbgValues();
 
   // Find the first dbg.value,
   Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
@@ -1007,7 +1029,6 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   Instruction *RetInst = &*std::next(FirstInst->getIterator());
 
   // Set-up DbgMarkers in this block.
-  ExitBlock->IsNewDbgInfoFormat = true;
   ExitBlock->createMarker(FirstInst);
   ExitBlock->createMarker(RetInst);
 
@@ -1098,14 +1119,10 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   // The record of those trailing DbgVariableRecords would dangle and cause an
   // assertion failure if it lived until the end of the LLVMContext.
   ExitBlock->deleteTrailingDbgRecords();
-  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   LLVMContext C;
-
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = false;
 
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
@@ -1136,18 +1153,17 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
     !11 = !DILocation(line: 1, column: 1, scope: !6)
 )");
 
-  // For the purpose of this test, set and un-set the command line option
-  // corresponding to UseNewDbgInfoFormat, but only after parsing, to ensure
-  // that the IR starts off in the old format.
-  UseNewDbgInfoFormat = true;
+  // This test exists to check we can convert back and forth between old and new
+  // debug info formats (dbg.value intrinsics versus #dbg_value records).
+  // We're ripping out support for debug intrinsics, but the conversions will
+  // live on in bitcode autoupgrade and possibly DXIL autodowngrade. Thus, this
+  // test is still valuable. Begin by starting in the intrinsic format:
+  M->convertFromNewDbgValues();
 
-  // Check that the conversion routines and utilities between dbg.value
-  // debug-info format and DbgVariableRecords works.
   Function *F = M->getFunction("f");
   BasicBlock *BB1 = &F->getEntryBlock();
   // First instruction should be a dbg.value.
   EXPECT_TRUE(isa<DbgValueInst>(BB1->front()));
-  EXPECT_FALSE(BB1->IsNewDbgInfoFormat);
   // Validating the block for DbgVariableRecords / DbgMarkers shouldn't fail --
   // there's no data stored right now.
   bool BrokenDebugInfo = false;
@@ -1155,15 +1171,8 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   EXPECT_FALSE(Error);
   EXPECT_FALSE(BrokenDebugInfo);
 
-  // Function and module should be marked as not having the new format too.
-  EXPECT_FALSE(F->IsNewDbgInfoFormat);
-  EXPECT_FALSE(M->IsNewDbgInfoFormat);
-
   // Now convert.
   M->convertToNewDbgValues();
-  EXPECT_TRUE(M->IsNewDbgInfoFormat);
-  EXPECT_TRUE(F->IsNewDbgInfoFormat);
-  EXPECT_TRUE(BB1->IsNewDbgInfoFormat);
 
   // There should now be no dbg.value instructions!
   // Ensure the first instruction exists, the test all of them.
@@ -1200,7 +1209,6 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   // There should be no DbgVariableRecords / DbgMarkers in the second block, but
   // it should be marked as being in the new format.
   BasicBlock *BB2 = BB1->getNextNode();
-  EXPECT_TRUE(BB2->IsNewDbgInfoFormat);
   for (auto &Inst : *BB2)
     // Either there should be no marker, or it should be empty.
     EXPECT_TRUE(!Inst.DebugMarker ||
@@ -1227,9 +1235,6 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
 
   // Convert everything back to the "old" format and ensure it's right.
   M->convertFromNewDbgValues();
-  EXPECT_FALSE(M->IsNewDbgInfoFormat);
-  EXPECT_FALSE(F->IsNewDbgInfoFormat);
-  EXPECT_FALSE(BB1->IsNewDbgInfoFormat);
 
   EXPECT_EQ(BB1->size(), 4u);
   ASSERT_TRUE(isa<DbgValueInst>(BB1->front()));
@@ -1244,8 +1249,82 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   EXPECT_EQ(DVI1->getExpression(), Expr1);
   EXPECT_EQ(DVI2->getVariable(), DLV2);
   EXPECT_EQ(DVI2->getExpression(), Expr2);
+}
 
-  UseNewDbgInfoFormat = OldDbgValueMode;
+TEST(MetadataTest, InlinedAtMethodsWithMultipleLevels) {
+  LLVMContext C;
+
+  // Create IR with 3 levels of inlining:
+  // main() calls inline1() which calls inline2() which calls inline3()
+  // We'll test from the perspective of code in inline3()
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define void @main() !dbg !10 {
+      ret void, !dbg !20
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
+    !1 = !DIFile(filename: "test.c", directory: "/test")
+    !2 = !{i32 2, !"Debug Info Version", i32 3}
+
+    ; Subprograms for each function in the call chain
+    !10 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 100, unit: !0)
+    !11 = distinct !DISubprogram(name: "inline1", scope: !1, file: !1, line: 200, unit: !0)
+    !12 = distinct !DISubprogram(name: "inline2", scope: !1, file: !1, line: 300, unit: !0)
+    !13 = distinct !DISubprogram(name: "inline3", scope: !1, file: !1, line: 400, unit: !0)
+
+    ; Location in inline3 (line 401), inlined at location !21
+    !20 = !DILocation(line: 401, column: 5, scope: !13, inlinedAt: !21)
+
+    ; Location in inline2 (line 301) where inline3 was called, inlined at !22
+    !21 = !DILocation(line: 301, column: 10, scope: !12, inlinedAt: !22)
+
+    ; Location in inline1 (line 201) where inline2 was called, inlined at !23
+    !22 = !DILocation(line: 201, column: 15, scope: !11, inlinedAt: !23)
+
+    ; Location in main (line 101) where inline1 was called (no more inlinedAt)
+    !23 = !DILocation(line: 101, column: 3, scope: !10)
+  )");
+
+  ASSERT_TRUE(M);
+
+  Function *MainFunc = M->getFunction("main");
+  ASSERT_TRUE(MainFunc);
+  Instruction &RetInst = MainFunc->getEntryBlock().front();
+
+  // Use getDebugLoc() to get the location from the ret instruction.
+  const DILocation *InnermostLoc = RetInst.getDebugLoc().get();
+  ASSERT_TRUE(InnermostLoc);
+
+  // Test getScope() - should return the immediate scope (inline3).
+  DILocalScope *ImmediateScope = InnermostLoc->getScope();
+  ASSERT_TRUE(ImmediateScope);
+  EXPECT_TRUE(isa<DISubprogram>(ImmediateScope));
+  EXPECT_EQ(cast<DISubprogram>(ImmediateScope)->getName(), "inline3");
+
+  // Test getInlinedAt() - should return the next level in the inlining chain.
+  const DILocation *NextLevel = InnermostLoc->getInlinedAt();
+  ASSERT_TRUE(NextLevel);
+  EXPECT_EQ(NextLevel->getLine(), 301u);
+  EXPECT_EQ(cast<DISubprogram>(NextLevel->getScope())->getName(), "inline2");
+
+  // Test getInlinedAtLocation() - should return the outermost location.
+  const DILocation *OutermostLoc = InnermostLoc->getInlinedAtLocation();
+  ASSERT_TRUE(OutermostLoc);
+  EXPECT_EQ(OutermostLoc->getLine(), 101u);
+  EXPECT_EQ(OutermostLoc->getColumn(), 3u);
+  EXPECT_EQ(OutermostLoc->getInlinedAt(), nullptr);
+  EXPECT_EQ(cast<DISubprogram>(OutermostLoc->getScope())->getName(), "main");
+
+  // Test getInlinedAtScope() - should return the scope of the outermost
+  // location.
+  DILocalScope *InlinedAtScope = InnermostLoc->getInlinedAtScope();
+  ASSERT_TRUE(InlinedAtScope);
+  EXPECT_TRUE(isa<DISubprogram>(InlinedAtScope));
+  EXPECT_EQ(cast<DISubprogram>(InlinedAtScope)->getName(), "main");
+  EXPECT_EQ(InlinedAtScope, OutermostLoc->getScope());
 }
 
 // Test that the hashing function for DISubprograms representing methods produce
@@ -1257,8 +1336,8 @@ TEST(DIBuilder, HashingDISubprogram) {
   DIBuilder DIB(*M);
 
   DIFile *F = DIB.createFile("main.c", "/");
-  DICompileUnit *CU =
-      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "Test", false, "", 0);
+  DICompileUnit *CU = DIB.createCompileUnit(
+      DISourceLanguageName(dwarf::DW_LANG_C), F, "Test", false, "", 0);
 
   llvm::TempDIType ForwardDeclaredType =
       llvm::TempDIType(DIB.createReplaceableCompositeType(
@@ -1303,8 +1382,8 @@ TEST(DIBuilder, CompositeTypes) {
   DIBuilder DIB(*M);
 
   DIFile *F = DIB.createFile("main.c", "/");
-  DICompileUnit *CU =
-      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "Test", false, "", 0);
+  DICompileUnit *CU = DIB.createCompileUnit(
+      DISourceLanguageName(dwarf::DW_LANG_C), F, "Test", false, "", 0);
 
   DICompositeType *Class =
       DIB.createClassType(CU, "MyClass", F, 0, 8, 8, 0, {}, nullptr, {}, 0,
@@ -1334,6 +1413,35 @@ TEST(DIBuilder, CompositeTypes) {
   DICompositeType *Enum = DIB.createEnumerationType(
       CU, "MyEnum", F, 0, 8, 8, {}, nullptr, 0, "EnumUniqueIdentifier");
   EXPECT_EQ(Enum->getTag(), dwarf::DW_TAG_enumeration_type);
+}
+
+TEST(DIBuilder, DynamicOffsetAndSize) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+  DIScope *Scope = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
+      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+  DIFile *F = DIB.createFile("main.adb", "/");
+
+  DIVariable *Len = DIB.createAutoVariable(Scope, "length", F, 0, nullptr,
+                                           false, DINode::FlagZero, 0);
+
+  DICompositeType *Struct = DIB.createStructType(
+      Scope, "some_record", F, 18, Len, 8, DINode::FlagZero, nullptr, {});
+  EXPECT_EQ(Struct->getTag(), dwarf::DW_TAG_structure_type);
+
+  SmallVector<uint64_t, 4> ops;
+  ops.push_back(llvm::dwarf::DW_OP_push_object_address);
+  DIExpression::appendOffset(ops, 3);
+  ops.push_back(llvm::dwarf::DW_OP_deref);
+  DIExpression *Expr = DIB.createExpression(ops);
+
+  DIDerivedType *Field = DIB.createMemberType(Scope, "field", F, 23, Len, 0,
+                                              Expr, DINode::FlagZero, Struct);
+
+  EXPECT_EQ(Field->getRawOffsetInBits(), Expr);
+  EXPECT_EQ(Field->getRawSizeInBits(), Len);
 }
 
 } // end namespace

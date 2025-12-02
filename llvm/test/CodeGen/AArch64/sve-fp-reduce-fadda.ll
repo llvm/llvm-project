@@ -49,12 +49,11 @@ define half @fadda_nxv6f16(<vscale x 6 x half> %v, half %s) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov w8, #32768 // =0x8000
+; CHECK-NEXT:    dupm z2.h, #0x8000
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    mov z2.h, w8
 ; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    st1h { z2.d }, p0, [sp, #3, mul vl]
 ; CHECK-NEXT:    ptrue p0.h
@@ -73,16 +72,15 @@ define half @fadda_nxv10f16(<vscale x 10 x half> %v, half %s) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $h2 killed $h2 def $z2
-; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    str z1, [sp]
+; CHECK-NEXT:    addvl x8, sp, #1
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    fadda h2, p0, h2, z0.h
-; CHECK-NEXT:    mov z0.h, w8
-; CHECK-NEXT:    addvl x8, sp, #1
+; CHECK-NEXT:    dupm z0.h, #0x8000
 ; CHECK-NEXT:    st1h { z0.d }, p1, [sp, #1, mul vl]
 ; CHECK-NEXT:    ldr z1, [sp]
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
@@ -105,11 +103,10 @@ define half @fadda_nxv12f16(<vscale x 12 x half> %v, half %s) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $h2 killed $h2 def $z2
-; CHECK-NEXT:    mov w8, #32768 // =0x8000
+; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    fadda h2, p0, h2, z0.h
-; CHECK-NEXT:    uunpklo z0.s, z1.h
-; CHECK-NEXT:    mov z1.h, w8
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    dupm z0.h, #0x8000
+; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
 ; CHECK-NEXT:    fadda h2, p0, h2, z0.h
 ; CHECK-NEXT:    fmov s0, s2
 ; CHECK-NEXT:    ret

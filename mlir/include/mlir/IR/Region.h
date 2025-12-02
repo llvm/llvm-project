@@ -353,7 +353,7 @@ class RegionRange
 public:
   using RangeBaseT::RangeBaseT;
 
-  RegionRange(MutableArrayRef<Region> regions = std::nullopt);
+  RegionRange(MutableArrayRef<Region> regions = {});
 
   template <typename Arg, typename = std::enable_if_t<std::is_constructible<
                               ArrayRef<std::unique_ptr<Region>>, Arg>::value>>
@@ -378,6 +378,8 @@ private:
   /// Allow access to `offset_base` and `dereference_iterator`.
   friend RangeBaseT;
 };
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, Region &region);
 
 } // namespace mlir
 

@@ -22,6 +22,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -141,12 +142,12 @@ public:
     return *this;
   }
 
-  bool invalidate(Function &, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(Function &, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &);
 
-  void releaseMemory();
+  LLVM_ABI void releaseMemory();
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   /// Get an edge's probability, relative to other out-edges of the Src.
   ///
@@ -154,31 +155,32 @@ public:
   /// (0%) and one (100%) of this edge executing, relative to other edges
   /// leaving the 'Src' block. The returned probability is never zero, and can
   /// only be one if the source block has only one successor.
-  BranchProbability getEdgeProbability(const BasicBlock *Src,
-                                       unsigned IndexInSuccessors) const;
+  LLVM_ABI BranchProbability
+  getEdgeProbability(const BasicBlock *Src, unsigned IndexInSuccessors) const;
 
   /// Get the probability of going from Src to Dst.
   ///
   /// It returns the sum of all probabilities for edges from Src to Dst.
-  BranchProbability getEdgeProbability(const BasicBlock *Src,
-                                       const BasicBlock *Dst) const;
+  LLVM_ABI BranchProbability getEdgeProbability(const BasicBlock *Src,
+                                                const BasicBlock *Dst) const;
 
-  BranchProbability getEdgeProbability(const BasicBlock *Src,
-                                       const_succ_iterator Dst) const;
+  LLVM_ABI BranchProbability getEdgeProbability(const BasicBlock *Src,
+                                                const_succ_iterator Dst) const;
 
   /// Test if an edge is hot relative to other out-edges of the Src.
   ///
   /// Check whether this edge out of the source block is 'hot'. We define hot
   /// as having a relative probability > 80%.
-  bool isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const;
+  LLVM_ABI bool isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const;
 
   /// Print an edge's probability.
   ///
   /// Retrieves an edge's probability similarly to \see getEdgeProbability, but
   /// then prints that probability to the provided stream. That stream is then
   /// returned.
-  raw_ostream &printEdgeProbability(raw_ostream &OS, const BasicBlock *Src,
-                                    const BasicBlock *Dst) const;
+  LLVM_ABI raw_ostream &printEdgeProbability(raw_ostream &OS,
+                                             const BasicBlock *Src,
+                                             const BasicBlock *Dst) const;
 
 public:
   /// Set the raw probabilities for all edges from the given block.
@@ -186,29 +188,30 @@ public:
   /// This allows a pass to explicitly set edge probabilities for a block. It
   /// can be used when updating the CFG to update the branch probability
   /// information.
-  void setEdgeProbability(const BasicBlock *Src,
-                          const SmallVectorImpl<BranchProbability> &Probs);
+  LLVM_ABI void
+  setEdgeProbability(const BasicBlock *Src,
+                     const SmallVectorImpl<BranchProbability> &Probs);
 
   /// Copy outgoing edge probabilities from \p Src to \p Dst.
   ///
   /// This allows to keep probabilities unset for the destination if they were
   /// unset for source.
-  void copyEdgeProbabilities(BasicBlock *Src, BasicBlock *Dst);
+  LLVM_ABI void copyEdgeProbabilities(BasicBlock *Src, BasicBlock *Dst);
 
   /// Swap outgoing edges probabilities for \p Src with branch terminator
-  void swapSuccEdgesProbabilities(const BasicBlock *Src);
+  LLVM_ABI void swapSuccEdgesProbabilities(const BasicBlock *Src);
 
   static BranchProbability getBranchProbStackProtector(bool IsLikely) {
     static const BranchProbability LikelyProb((1u << 20) - 1, 1u << 20);
     return IsLikely ? LikelyProb : LikelyProb.getCompl();
   }
 
-  void calculate(const Function &F, const LoopInfo &LI,
-                 const TargetLibraryInfo *TLI, DominatorTree *DT,
-                 PostDominatorTree *PDT);
+  LLVM_ABI void calculate(const Function &F, const LoopInfo &LI,
+                          const TargetLibraryInfo *TLI, DominatorTree *DT,
+                          PostDominatorTree *PDT);
 
   /// Forget analysis results for the given basic block.
-  void eraseBlock(const BasicBlock *BB);
+  LLVM_ABI void eraseBlock(const BasicBlock *BB);
 
   // Data structure to track SCCs for handling irreducible loops.
   class SccInfo {
@@ -237,12 +240,12 @@ public:
     SccBlockTypeMaps SccBlocks;
 
   public:
-    explicit SccInfo(const Function &F);
+    LLVM_ABI explicit SccInfo(const Function &F);
 
     /// If \p BB belongs to some SCC then ID of that SCC is returned, otherwise
     /// -1 is returned. If \p BB belongs to more than one SCC at the same time
     /// result is undefined.
-    int getSCCNum(const BasicBlock *BB) const;
+    LLVM_ABI int getSCCNum(const BasicBlock *BB) const;
     /// Returns true if \p BB is a 'header' block in SCC with \p SccNum ID,
     /// false otherwise.
     bool isSCCHeader(const BasicBlock *BB, int SccNum) const {
@@ -256,18 +259,18 @@ public:
     /// Fills in \p Enters vector with all such blocks that don't belong to
     /// SCC with \p SccNum ID but there is an edge to a block belonging to the
     /// SCC.
-    void getSccEnterBlocks(int SccNum,
-                           SmallVectorImpl<BasicBlock *> &Enters) const;
+    LLVM_ABI void
+    getSccEnterBlocks(int SccNum, SmallVectorImpl<BasicBlock *> &Enters) const;
     /// Fills in \p Exits vector with all such blocks that don't belong to
     /// SCC with \p SccNum ID but there is an edge from a block belonging to the
     /// SCC.
-    void getSccExitBlocks(int SccNum,
-                          SmallVectorImpl<BasicBlock *> &Exits) const;
+    LLVM_ABI void getSccExitBlocks(int SccNum,
+                                   SmallVectorImpl<BasicBlock *> &Exits) const;
 
   private:
     /// Returns \p BB's type according to classification given by SccBlockType
     /// enum. Please note that \p BB must belong to SSC with \p SccNum ID.
-    uint32_t getSccBlockType(const BasicBlock *BB, int SccNum) const;
+    LLVM_ABI uint32_t getSccBlockType(const BasicBlock *BB, int SccNum) const;
     /// Calculates \p BB's type and stores it in internal data structures for
     /// future use. Please note that \p BB must belong to SSC with \p SccNum ID.
     void calculateSccBlockType(const BasicBlock *BB, int SccNum);
@@ -297,8 +300,8 @@ private:
   /// Helper class to keep basic block along with its loop data information.
   class LoopBlock {
   public:
-    explicit LoopBlock(const BasicBlock *BB, const LoopInfo &LI,
-                       const SccInfo &SccI);
+    LLVM_ABI explicit LoopBlock(const BasicBlock *BB, const LoopInfo &LI,
+                                const SccInfo &SccI);
 
     const BasicBlock *getBlock() const { return BB; }
     BasicBlock *getBlock() { return const_cast<BasicBlock *>(BB); }
@@ -408,8 +411,8 @@ private:
   std::optional<uint32_t> getInitialEstimatedBlockWeight(const BasicBlock *BB);
 
   // Computes estimated weights for all blocks in \p F.
-  void computeEestimateBlockWeight(const Function &F, DominatorTree *DT,
-                                   PostDominatorTree *PDT);
+  void estimateBlockWeights(const Function &F, DominatorTree *DT,
+                            PostDominatorTree *PDT);
 
   /// Based on computed weights by \p computeEstimatedBlockWeight set
   /// probabilities on branches.
@@ -425,14 +428,14 @@ class BranchProbabilityAnalysis
     : public AnalysisInfoMixin<BranchProbabilityAnalysis> {
   friend AnalysisInfoMixin<BranchProbabilityAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   /// Provide the result type for this analysis pass.
   using Result = BranchProbabilityInfo;
 
   /// Run the analysis pass over a function and produce BPI.
-  BranchProbabilityInfo run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI BranchProbabilityInfo run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Printer pass for the \c BranchProbabilityAnalysis results.
@@ -443,13 +446,13 @@ class BranchProbabilityPrinterPass
 public:
   explicit BranchProbabilityPrinterPass(raw_ostream &OS) : OS(OS) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c BranchProbabilityInfo.
-class BranchProbabilityInfoWrapperPass : public FunctionPass {
+class LLVM_ABI BranchProbabilityInfoWrapperPass : public FunctionPass {
   BranchProbabilityInfo BPI;
 
 public:

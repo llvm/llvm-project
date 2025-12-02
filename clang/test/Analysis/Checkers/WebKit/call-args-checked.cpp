@@ -32,6 +32,26 @@ static void baz() {
 
 } // namespace call_args_checked
 
+namespace call_args_member {
+
+void consume(CheckedObj&);
+
+struct WrapperObj {
+  CheckedObj checked;
+  CheckedObj& checkedRef;
+  void foo() {
+    consume(checked);
+    consume(checkedRef);
+    // expected-warning@-1{{Call argument is unchecked and unsafe [alpha.webkit.UncheckedCallArgsChecker]}}
+  }
+  void bar(WrapperObj& other) {
+    consume(other.checked);
+    // expected-warning@-1{{Call argument is unchecked and unsafe [alpha.webkit.UncheckedCallArgsChecker]}}
+  }
+};
+
+} // namespace call_args_checked
+
 namespace call_args_default {
 
 void someFunction(RefCountableAndCheckable* = makeObj());
@@ -51,6 +71,15 @@ CheckedObj* provide();
 void foo() {
   CheckedPtr<CheckedObj> ptr;
   ptr = provide();
+}
+
+}
+
+namespace call_with_std_move {
+
+void consume(CheckedObj&&);
+void foo(CheckedObj&& obj) {
+  consume(std::move(obj));
 }
 
 }

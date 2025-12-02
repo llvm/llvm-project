@@ -21,24 +21,19 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/Wasm.h"
-#include "llvm/BinaryFormat/WasmTraits.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/xxhash.h"
 
 #include <cstdarg>
-#include <map>
 #include <optional>
 
 #define DEBUG_TYPE "lld"
@@ -581,7 +576,7 @@ void Writer::populateTargetFeatures() {
 
   if (ctx.isPic) {
     // This should not be necessary because all PIC objects should
-    // contain the mutable-globals feature.
+    // contain the `mutable-globals` feature.
     // TODO (https://github.com/llvm/llvm-project/issues/51681)
     allowed.insert("mutable-globals");
   }
@@ -708,10 +703,12 @@ void Writer::checkImportExportTargetFeatures() {
       }
     }
     for (const Symbol *sym : out.exportSec->exportedSymbols) {
-      if (isa<GlobalSymbol>(sym)) {
-        error(Twine("mutable global exported but 'mutable-globals' feature "
-                    "not present in inputs: `") +
-              toString(*sym) + "`. Use --no-check-features to suppress.");
+      if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
+        if (global->getGlobalType()->Mutable) {
+          error(Twine("mutable global exported but 'mutable-globals' feature "
+                      "not present in inputs: `") +
+                toString(*sym) + "`. Use --no-check-features to suppress.");
+        }
       }
     }
   }
@@ -787,6 +784,9 @@ void Writer::calculateExports() {
   unsigned globalIndex =
       out.importSec->getNumImportedGlobals() + out.globalSec->numGlobals();
 
+  bool hasMutableGlobals =
+      out.targetFeaturesSec->features.count("mutable-globals") > 0;
+
   for (Symbol *sym : symtab->symbols()) {
     if (!sym->isExported())
       continue;
@@ -804,7 +804,8 @@ void Writer::calculateExports() {
       }
       export_ = {name, WASM_EXTERNAL_FUNCTION, f->getExportedFunctionIndex()};
     } else if (auto *g = dyn_cast<DefinedGlobal>(sym)) {
-      if (g->getGlobalType()->Mutable && !g->getFile() && !g->forceExport) {
+      if (!hasMutableGlobals && g->getGlobalType()->Mutable && !g->getFile() &&
+          !g->isExportedExplicit()) {
         // Avoid exporting mutable globals are linker synthesized (e.g.
         // __stack_pointer or __tls_base) unless they are explicitly exported
         // from the command line.
@@ -1050,18 +1051,18 @@ void Writer::createOutputSegments() {
   }
 
   // Sort segments by type, placing .bss last
-  std::stable_sort(segments.begin(), segments.end(),
-                   [](const OutputSegment *a, const OutputSegment *b) {
-                     auto order = [](StringRef name) {
-                       return StringSwitch<int>(name)
-                           .StartsWith(".tdata", 0)
-                           .StartsWith(".rodata", 1)
-                           .StartsWith(".data", 2)
-                           .StartsWith(".bss", 4)
-                           .Default(3);
-                     };
-                     return order(a->name) < order(b->name);
-                   });
+  llvm::stable_sort(segments,
+                    [](const OutputSegment *a, const OutputSegment *b) {
+                      auto order = [](StringRef name) {
+                        return StringSwitch<int>(name)
+                            .StartsWith(".tdata", 0)
+                            .StartsWith(".rodata", 1)
+                            .StartsWith(".data", 2)
+                            .StartsWith(".bss", 4)
+                            .Default(3);
+                      };
+                      return order(a->name) < order(b->name);
+                    });
 
   for (size_t i = 0; i < segments.size(); ++i)
     segments[i]->index = i;

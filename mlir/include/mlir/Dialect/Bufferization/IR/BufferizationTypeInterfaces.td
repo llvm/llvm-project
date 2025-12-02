@@ -21,10 +21,30 @@ def Bufferization_TensorLikeTypeInterface
   let description = [{
     Indicates that this type is a tensor type (similarly to a MLIR builtin
     tensor) for bufferization purposes.
-
-    The interface currently has no methods as it is used by types to opt into
-    being supported by the bufferization procedures.
   }];
+
+  let methods = [
+    InterfaceMethod<[{
+        Returns a BufferLike type for this TensorLike type.
+      }],
+      /*retTy=*/"::mlir::FailureOr<::mlir::bufferization::BufferLikeType>",
+      /*methodName=*/"getBufferType",
+      /*args=*/(ins
+        "const ::mlir::bufferization::BufferizationOptions &":$options,
+        "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError
+      )
+    >,
+    InterfaceMethod<[{
+        Returns whether a BufferLike type is compatible to this TensorLike type.
+        The BufferLike type is assumed to be created by getBufferType().
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"verifyCompatibleBufferType",
+      /*args=*/(ins
+        "::mlir::bufferization::BufferLikeType":$bufferType,
+        "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
+    >
+  ];
 }
 
 def Bufferization_BufferLikeTypeInterface

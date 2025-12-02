@@ -7,7 +7,7 @@ define void @foo(<2 x float> %0) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[2],ymm0[2]
+; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3,4,5],ymm0[6,7]
 ; CHECK-NEXT:    vcvtps2phx %ymm0, %xmm0
 ; CHECK-NEXT:    vmovlps %xmm0, 0
 ; CHECK-NEXT:    vzeroupper

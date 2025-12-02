@@ -544,8 +544,6 @@ template <class Value, class Hash, class Pred, class Alloc>
 #  include <__iterator/distance.h>
 #  include <__iterator/erase_if_container.h>
 #  include <__iterator/iterator_traits.h>
-#  include <__iterator/ranges_iterator_traits.h>
-#  include <__memory/addressof.h>
 #  include <__memory/allocator.h>
 #  include <__memory/allocator_traits.h>
 #  include <__memory_resource/polymorphic_allocator.h>
@@ -558,7 +556,6 @@ template <class Value, class Hash, class Pred, class Alloc>
 #  include <__type_traits/invoke.h>
 #  include <__type_traits/is_allocator.h>
 #  include <__type_traits/is_integral.h>
-#  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
@@ -703,10 +700,10 @@ public:
 #  endif
 
   _LIBCPP_HIDE_FROM_ABI explicit unordered_set(const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI unordered_set(const unordered_set& __u);
+  _LIBCPP_HIDE_FROM_ABI unordered_set(const unordered_set& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_set(const unordered_set& __u, const allocator_type& __a);
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI unordered_set(unordered_set&& __u) _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
+  _LIBCPP_HIDE_FROM_ABI unordered_set(unordered_set&& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_set(unordered_set&& __u, const allocator_type& __a);
   _LIBCPP_HIDE_FROM_ABI unordered_set(initializer_list<value_type> __il);
   _LIBCPP_HIDE_FROM_ABI
@@ -733,13 +730,9 @@ public:
     static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
   }
 
-  _LIBCPP_HIDE_FROM_ABI unordered_set& operator=(const unordered_set& __u) {
-    __table_ = __u.__table_;
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI unordered_set& operator=(const unordered_set& __u) = default;
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI unordered_set& operator=(unordered_set&& __u)
-      _NOEXCEPT_(is_nothrow_move_assignable<__table>::value);
+  _LIBCPP_HIDE_FROM_ABI unordered_set& operator=(unordered_set&& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_set& operator=(initializer_list<value_type> __il);
 #  endif // _LIBCPP_CXX03_LANG
 
@@ -769,13 +762,13 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(value_type&& __x) {
-    return __table_.__insert_unique(std::move(__x));
+    return __table_.__emplace_unique(std::move(__x));
   }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator, value_type&& __x) { return insert(std::move(__x)).first; }
 
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
 #  endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __x) { return __table_.__insert_unique(__x); }
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __x) { return __table_.__emplace_unique(__x); }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator, const value_type& __x) { return insert(__x).first; }
   template <class _InputIterator>
@@ -785,7 +778,7 @@ public:
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
     for (auto&& __element : __range) {
-      __table_.__insert_unique(std::forward<decltype(__element)>(__element));
+      __table_.__emplace_unique(std::forward<decltype(__element)>(__element));
     }
   }
 #  endif
@@ -917,47 +910,48 @@ public:
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
-          class _Hash      = hash<__iter_value_type<_InputIterator>>,
-          class _Pred      = equal_to<__iter_value_type<_InputIterator>>,
-          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
+          class _Hash      = hash<__iterator_value_type<_InputIterator>>,
+          class _Pred      = equal_to<__iterator_value_type<_InputIterator>>,
+          class _Allocator = allocator<__iterator_value_type<_InputIterator>>,
           class            = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class            = enable_if_t<!__is_allocator<_Hash>::value>,
+          class            = enable_if_t<!__is_allocator_v<_Hash>>,
           class            = enable_if_t<!is_integral<_Hash>::value>,
-          class            = enable_if_t<!__is_allocator<_Pred>::value>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value>>
+          class            = enable_if_t<!__is_allocator_v<_Pred>>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_set(_InputIterator,
               _InputIterator,
               typename allocator_traits<_Allocator>::size_type = 0,
               _Hash                                            = _Hash(),
               _Pred                                            = _Pred(),
-              _Allocator = _Allocator()) -> unordered_set<__iter_value_type<_InputIterator>, _Hash, _Pred, _Allocator>;
+              _Allocator                                       = _Allocator())
+    -> unordered_set<__iterator_value_type<_InputIterator>, _Hash, _Pred, _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Hash      = hash<ranges::range_value_t<_Range>>,
           class _Pred      = equal_to<ranges::range_value_t<_Range>>,
           class _Allocator = allocator<ranges::range_value_t<_Range>>,
-          class            = enable_if_t<!__is_allocator<_Hash>::value>,
+          class            = enable_if_t<!__is_allocator_v<_Hash>>,
           class            = enable_if_t<!is_integral<_Hash>::value>,
-          class            = enable_if_t<!__is_allocator<_Pred>::value>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value>>
-unordered_set(
-    from_range_t,
-    _Range&&,
-    typename allocator_traits<_Allocator>::size_type = 0,
-    _Hash                                            = _Hash(),
-    _Pred                                            = _Pred(),
-    _Allocator = _Allocator()) -> unordered_set<ranges::range_value_t<_Range>, _Hash, _Pred, _Allocator>; // C++23
+          class            = enable_if_t<!__is_allocator_v<_Pred>>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
+unordered_set(from_range_t,
+              _Range&&,
+              typename allocator_traits<_Allocator>::size_type = 0,
+              _Hash                                            = _Hash(),
+              _Pred                                            = _Pred(),
+              _Allocator                                       = _Allocator())
+    -> unordered_set<ranges::range_value_t<_Range>, _Hash, _Pred, _Allocator>; // C++23
 #    endif
 
 template <class _Tp,
           class _Hash      = hash<_Tp>,
           class _Pred      = equal_to<_Tp>,
           class _Allocator = allocator<_Tp>,
-          class            = enable_if_t<!__is_allocator<_Hash>::value>,
+          class            = enable_if_t<!__is_allocator_v<_Hash>>,
           class            = enable_if_t<!is_integral<_Hash>::value>,
-          class            = enable_if_t<!__is_allocator<_Pred>::value>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value>>
+          class            = enable_if_t<!__is_allocator_v<_Pred>>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_set(initializer_list<_Tp>,
               typename allocator_traits<_Allocator>::size_type = 0,
               _Hash                                            = _Hash(),
@@ -967,33 +961,36 @@ unordered_set(initializer_list<_Tp>,
 template <class _InputIterator,
           class _Allocator,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_set(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Allocator)
-    -> unordered_set<__iter_value_type<_InputIterator>,
-                     hash<__iter_value_type<_InputIterator>>,
-                     equal_to<__iter_value_type<_InputIterator>>,
+    -> unordered_set<__iterator_value_type<_InputIterator>,
+                     hash<__iterator_value_type<_InputIterator>>,
+                     equal_to<__iterator_value_type<_InputIterator>>,
                      _Allocator>;
 
 template <class _InputIterator,
           class _Hash,
           class _Allocator,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class = enable_if_t<!__is_allocator<_Hash>::value>,
+          class = enable_if_t<!__is_allocator_v<_Hash>>,
           class = enable_if_t<!is_integral<_Hash>::value>,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_set(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
-    -> unordered_set<__iter_value_type<_InputIterator>, _Hash, equal_to<__iter_value_type<_InputIterator>>, _Allocator>;
+    -> unordered_set<__iterator_value_type<_InputIterator>,
+                     _Hash,
+                     equal_to<__iterator_value_type<_InputIterator>>,
+                     _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
 
-template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value>>
+template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_set(from_range_t, _Range&&, typename allocator_traits<_Allocator>::size_type, _Allocator)
     -> unordered_set<ranges::range_value_t<_Range>,
                      hash<ranges::range_value_t<_Range>>,
                      equal_to<ranges::range_value_t<_Range>>,
                      _Allocator>;
 
-template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value>>
+template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_set(from_range_t, _Range&&, _Allocator)
     -> unordered_set<ranges::range_value_t<_Range>,
                      hash<ranges::range_value_t<_Range>>,
@@ -1003,24 +1000,24 @@ unordered_set(from_range_t, _Range&&, _Allocator)
 template <ranges::input_range _Range,
           class _Hash,
           class _Allocator,
-          class = enable_if_t<!__is_allocator<_Hash>::value>,
+          class = enable_if_t<!__is_allocator_v<_Hash>>,
           class = enable_if_t<!is_integral<_Hash>::value>,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_set(from_range_t, _Range&&, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
     -> unordered_set<ranges::range_value_t<_Range>, _Hash, equal_to<ranges::range_value_t<_Range>>, _Allocator>;
 
 #    endif
 
-template <class _Tp, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value>>
+template <class _Tp, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_set(initializer_list<_Tp>, typename allocator_traits<_Allocator>::size_type, _Allocator)
     -> unordered_set<_Tp, hash<_Tp>, equal_to<_Tp>, _Allocator>;
 
 template <class _Tp,
           class _Hash,
           class _Allocator,
-          class = enable_if_t<!__is_allocator<_Hash>::value>,
+          class = enable_if_t<!__is_allocator_v<_Hash>>,
           class = enable_if_t<!is_integral<_Hash>::value>,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_set(initializer_list<_Tp>, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
     -> unordered_set<_Tp, _Hash, equal_to<_Tp>, _Allocator>;
 #  endif
@@ -1071,12 +1068,6 @@ template <class _Value, class _Hash, class _Pred, class _Alloc>
 inline unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(const allocator_type& __a) : __table_(__a) {}
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(const unordered_set& __u) : __table_(__u.__table_) {
-  __table_.__rehash_unique(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(const unordered_set& __u, const allocator_type& __a)
     : __table_(__u.__table_, __a) {
   __table_.__rehash_unique(__u.bucket_count());
@@ -1086,17 +1077,12 @@ unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(const unordered_set& 
 #  ifndef _LIBCPP_CXX03_LANG
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(unordered_set&& __u)
-    _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
-    : __table_(std::move(__u.__table_)) {}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(unordered_set&& __u, const allocator_type& __a)
     : __table_(std::move(__u.__table_), __a) {
   if (__a != __u.get_allocator()) {
     iterator __i = __u.begin();
     while (__u.size() != 0)
-      __table_.__insert_unique(std::move(__u.__table_.remove(__i++)->__get_value()));
+      __table_.__emplace_unique(std::move(__u.__table_.remove(__i++)->__get_value()));
   }
 }
 
@@ -1127,14 +1113,6 @@ unordered_set<_Value, _Hash, _Pred, _Alloc>::unordered_set(
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 inline unordered_set<_Value, _Hash, _Pred, _Alloc>&
-unordered_set<_Value, _Hash, _Pred, _Alloc>::operator=(unordered_set&& __u)
-    _NOEXCEPT_(is_nothrow_move_assignable<__table>::value) {
-  __table_ = std::move(__u.__table_);
-  return *this;
-}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline unordered_set<_Value, _Hash, _Pred, _Alloc>&
 unordered_set<_Value, _Hash, _Pred, _Alloc>::operator=(initializer_list<value_type> __il) {
   __table_.__assign_unique(__il.begin(), __il.end());
   return *this;
@@ -1146,7 +1124,7 @@ template <class _Value, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
 inline void unordered_set<_Value, _Hash, _Pred, _Alloc>::insert(_InputIterator __first, _InputIterator __last) {
   for (; __first != __last; ++__first)
-    __table_.__insert_unique(*__first);
+    __table_.__emplace_unique(*__first);
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
@@ -1196,6 +1174,8 @@ struct __container_traits<unordered_set<_Value, _Hash, _Pred, _Alloc> > {
   //  inserting a single element, the insertion has no effect.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
       __is_nothrow_invocable_v<_Hash, const _Value&>;
+
+  static _LIBCPP_CONSTEXPR const bool __reservable = true;
 };
 
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>, class _Alloc = allocator<_Value> >
@@ -1306,11 +1286,10 @@ public:
 #  endif
 
   _LIBCPP_HIDE_FROM_ABI explicit unordered_multiset(const allocator_type& __a);
-  _LIBCPP_HIDE_FROM_ABI unordered_multiset(const unordered_multiset& __u);
+  _LIBCPP_HIDE_FROM_ABI unordered_multiset(const unordered_multiset& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_multiset(const unordered_multiset& __u, const allocator_type& __a);
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI unordered_multiset(unordered_multiset&& __u)
-      _NOEXCEPT_(is_nothrow_move_constructible<__table>::value);
+  _LIBCPP_HIDE_FROM_ABI unordered_multiset(unordered_multiset&& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_multiset(unordered_multiset&& __u, const allocator_type& __a);
   _LIBCPP_HIDE_FROM_ABI unordered_multiset(initializer_list<value_type> __il);
   _LIBCPP_HIDE_FROM_ABI unordered_multiset(
@@ -1337,13 +1316,9 @@ public:
     static_assert(sizeof(std::__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
   }
 
-  _LIBCPP_HIDE_FROM_ABI unordered_multiset& operator=(const unordered_multiset& __u) {
-    __table_ = __u.__table_;
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI unordered_multiset& operator=(const unordered_multiset& __u) = default;
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI unordered_multiset& operator=(unordered_multiset&& __u)
-      _NOEXCEPT_(is_nothrow_move_assignable<__table>::value);
+  _LIBCPP_HIDE_FROM_ABI unordered_multiset& operator=(unordered_multiset&& __u) = default;
   _LIBCPP_HIDE_FROM_ABI unordered_multiset& operator=(initializer_list<value_type> __il);
 #  endif // _LIBCPP_CXX03_LANG
 
@@ -1372,17 +1347,17 @@ public:
     return __table_.__emplace_hint_multi(__p, std::forward<_Args>(__args)...);
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(value_type&& __x) { return __table_.__insert_multi(std::move(__x)); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(value_type&& __x) { return __table_.__emplace_multi(std::move(__x)); }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __x) {
-    return __table_.__insert_multi(__p, std::move(__x));
+    return __table_.__emplace_hint_multi(__p, std::move(__x));
   }
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return __table_.__insert_multi(__x); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return __table_.__emplace_multi(__x); }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __x) {
-    return __table_.__insert_multi(__p, __x);
+    return __table_.__emplace_hint_multi(__p, __x);
   }
 
   template <class _InputIterator>
@@ -1392,7 +1367,7 @@ public:
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
     for (auto&& __element : __range) {
-      __table_.__insert_multi(std::forward<decltype(__element)>(__element));
+      __table_.__emplace_multi(std::forward<decltype(__element)>(__element));
     }
   }
 #  endif
@@ -1524,31 +1499,31 @@ public:
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
-          class _Hash      = hash<__iter_value_type<_InputIterator>>,
-          class _Pred      = equal_to<__iter_value_type<_InputIterator>>,
-          class _Allocator = allocator<__iter_value_type<_InputIterator>>,
+          class _Hash      = hash<__iterator_value_type<_InputIterator>>,
+          class _Pred      = equal_to<__iterator_value_type<_InputIterator>>,
+          class _Allocator = allocator<__iterator_value_type<_InputIterator>>,
           class            = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class            = enable_if_t<!__is_allocator<_Hash>::value>,
+          class            = enable_if_t<!__is_allocator_v<_Hash>>,
           class            = enable_if_t<!is_integral<_Hash>::value>,
-          class            = enable_if_t<!__is_allocator<_Pred>::value>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value>>
+          class            = enable_if_t<!__is_allocator_v<_Pred>>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_multiset(
     _InputIterator,
     _InputIterator,
     typename allocator_traits<_Allocator>::size_type = 0,
     _Hash                                            = _Hash(),
     _Pred                                            = _Pred(),
-    _Allocator = _Allocator()) -> unordered_multiset<__iter_value_type<_InputIterator>, _Hash, _Pred, _Allocator>;
+    _Allocator = _Allocator()) -> unordered_multiset<__iterator_value_type<_InputIterator>, _Hash, _Pred, _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Hash      = hash<ranges::range_value_t<_Range>>,
           class _Pred      = equal_to<ranges::range_value_t<_Range>>,
           class _Allocator = allocator<ranges::range_value_t<_Range>>,
-          class            = enable_if_t<!__is_allocator<_Hash>::value>,
+          class            = enable_if_t<!__is_allocator_v<_Hash>>,
           class            = enable_if_t<!is_integral<_Hash>::value>,
-          class            = enable_if_t<!__is_allocator<_Pred>::value>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value>>
+          class            = enable_if_t<!__is_allocator_v<_Pred>>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_multiset(
     from_range_t,
     _Range&&,
@@ -1562,10 +1537,10 @@ template <class _Tp,
           class _Hash      = hash<_Tp>,
           class _Pred      = equal_to<_Tp>,
           class _Allocator = allocator<_Tp>,
-          class            = enable_if_t<!__is_allocator<_Hash>::value>,
+          class            = enable_if_t<!__is_allocator_v<_Hash>>,
           class            = enable_if_t<!is_integral<_Hash>::value>,
-          class            = enable_if_t<!__is_allocator<_Pred>::value>,
-          class            = enable_if_t<__is_allocator<_Allocator>::value>>
+          class            = enable_if_t<!__is_allocator_v<_Pred>>,
+          class            = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_multiset(initializer_list<_Tp>,
                    typename allocator_traits<_Allocator>::size_type = 0,
                    _Hash                                            = _Hash(),
@@ -1575,36 +1550,36 @@ unordered_multiset(initializer_list<_Tp>,
 template <class _InputIterator,
           class _Allocator,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_multiset(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Allocator)
-    -> unordered_multiset<__iter_value_type<_InputIterator>,
-                          hash<__iter_value_type<_InputIterator>>,
-                          equal_to<__iter_value_type<_InputIterator>>,
+    -> unordered_multiset<__iterator_value_type<_InputIterator>,
+                          hash<__iterator_value_type<_InputIterator>>,
+                          equal_to<__iterator_value_type<_InputIterator>>,
                           _Allocator>;
 
 template <class _InputIterator,
           class _Hash,
           class _Allocator,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class = enable_if_t<!__is_allocator<_Hash>::value>,
+          class = enable_if_t<!__is_allocator_v<_Hash>>,
           class = enable_if_t<!is_integral<_Hash>::value>,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_multiset(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
-    -> unordered_multiset<__iter_value_type<_InputIterator>,
+    -> unordered_multiset<__iterator_value_type<_InputIterator>,
                           _Hash,
-                          equal_to<__iter_value_type<_InputIterator>>,
+                          equal_to<__iterator_value_type<_InputIterator>>,
                           _Allocator>;
 
 #    if _LIBCPP_STD_VER >= 23
 
-template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value>>
+template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_multiset(from_range_t, _Range&&, typename allocator_traits<_Allocator>::size_type, _Allocator)
     -> unordered_multiset<ranges::range_value_t<_Range>,
                           hash<ranges::range_value_t<_Range>>,
                           equal_to<ranges::range_value_t<_Range>>,
                           _Allocator>;
 
-template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value>>
+template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_multiset(from_range_t, _Range&&, _Allocator)
     -> unordered_multiset<ranges::range_value_t<_Range>,
                           hash<ranges::range_value_t<_Range>>,
@@ -1614,24 +1589,24 @@ unordered_multiset(from_range_t, _Range&&, _Allocator)
 template <ranges::input_range _Range,
           class _Hash,
           class _Allocator,
-          class = enable_if_t<!__is_allocator<_Hash>::value>,
+          class = enable_if_t<!__is_allocator_v<_Hash>>,
           class = enable_if_t<!is_integral<_Hash>::value>,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_multiset(from_range_t, _Range&&, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
     -> unordered_multiset<ranges::range_value_t<_Range>, _Hash, equal_to<ranges::range_value_t<_Range>>, _Allocator>;
 
 #    endif
 
-template <class _Tp, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value>>
+template <class _Tp, class _Allocator, class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_multiset(initializer_list<_Tp>, typename allocator_traits<_Allocator>::size_type, _Allocator)
     -> unordered_multiset<_Tp, hash<_Tp>, equal_to<_Tp>, _Allocator>;
 
 template <class _Tp,
           class _Hash,
           class _Allocator,
-          class = enable_if_t<!__is_allocator<_Hash>::value>,
+          class = enable_if_t<!__is_allocator_v<_Hash>>,
           class = enable_if_t<!is_integral<_Hash>::value>,
-          class = enable_if_t<__is_allocator<_Allocator>::value>>
+          class = enable_if_t<__is_allocator_v<_Allocator>>>
 unordered_multiset(initializer_list<_Tp>, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
     -> unordered_multiset<_Tp, _Hash, equal_to<_Tp>, _Allocator>;
 #  endif
@@ -1684,13 +1659,6 @@ inline unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(cons
     : __table_(__a) {}
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(const unordered_multiset& __u)
-    : __table_(__u.__table_) {
-  __table_.__rehash_multi(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
     const unordered_multiset& __u, const allocator_type& __a)
     : __table_(__u.__table_, __a) {
@@ -1701,18 +1669,13 @@ unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
 #  ifndef _LIBCPP_CXX03_LANG
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(unordered_multiset&& __u)
-    _NOEXCEPT_(is_nothrow_move_constructible<__table>::value)
-    : __table_(std::move(__u.__table_)) {}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
 unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
     unordered_multiset&& __u, const allocator_type& __a)
     : __table_(std::move(__u.__table_), __a) {
   if (__a != __u.get_allocator()) {
     iterator __i = __u.begin();
     while (__u.size() != 0)
-      __table_.__insert_multi(std::move(__u.__table_.remove(__i++)->__get_value()));
+      __table_.__emplace_multi(std::move(__u.__table_.remove(__i++)->__get_value()));
   }
 }
 
@@ -1743,14 +1706,6 @@ unordered_multiset<_Value, _Hash, _Pred, _Alloc>::unordered_multiset(
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
 inline unordered_multiset<_Value, _Hash, _Pred, _Alloc>&
-unordered_multiset<_Value, _Hash, _Pred, _Alloc>::operator=(unordered_multiset&& __u)
-    _NOEXCEPT_(is_nothrow_move_assignable<__table>::value) {
-  __table_ = std::move(__u.__table_);
-  return *this;
-}
-
-template <class _Value, class _Hash, class _Pred, class _Alloc>
-inline unordered_multiset<_Value, _Hash, _Pred, _Alloc>&
 unordered_multiset<_Value, _Hash, _Pred, _Alloc>::operator=(initializer_list<value_type> __il) {
   __table_.__assign_multi(__il.begin(), __il.end());
   return *this;
@@ -1762,7 +1717,7 @@ template <class _Value, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
 inline void unordered_multiset<_Value, _Hash, _Pred, _Alloc>::insert(_InputIterator __first, _InputIterator __last) {
   for (; __first != __last; ++__first)
-    __table_.__insert_multi(*__first);
+    __table_.__emplace_multi(*__first);
 }
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
@@ -1816,6 +1771,8 @@ struct __container_traits<unordered_multiset<_Value, _Hash, _Pred, _Alloc> > {
   //  inserting a single element, the insertion has no effect.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
       __is_nothrow_invocable_v<_Hash, const _Value&>;
+
+  static _LIBCPP_CONSTEXPR const bool __reservable = true;
 };
 
 _LIBCPP_END_NAMESPACE_STD

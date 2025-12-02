@@ -16,8 +16,7 @@
 #pragma omp variant begin // expected-error {{expected an OpenMP directive}}
 #pragma omp declare variant end // expected-error {{function declaration is expected after 'declare variant' directive}}
 #pragma omp begin declare variant // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
-#pragma omp end declare variant
-// TODO: Issue an error message
+#pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
 #pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
 #pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
 #pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
@@ -27,11 +26,11 @@ int foo(void);
 const int var;
 
 #pragma omp begin declare variant // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
-#pragma omp end declare variant
+#pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
 #pragma omp begin declare variant xxx // omp50-error {{expected 'match' clause on 'omp declare variant' directive}} omp51-error {{expected 'match', 'adjust_args', or 'append_args' clause on 'omp declare variant' directive}}
-#pragma omp end declare variant
+#pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
 #pragma omp begin declare variant match // expected-error {{expected '(' after 'match'}}
-#pragma omp end declare variant
+#pragma omp end declare variant // expected-error {{'#pragma omp end declare variant' with no matching '#pragma omp begin declare variant'}}
 #pragma omp begin declare variant match( // expected-error {{expected ')'}} expected-warning {{expected identifier or string literal describing a context set; set skipped}} expected-note {{context set options are: 'construct' 'device' 'target_device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}} expected-note {{to match this '('}}
 #pragma omp end declare variant
 #pragma omp begin declare variant match() // expected-warning {{expected identifier or string literal describing a context set; set skipped}} expected-note {{context set options are: 'construct' 'device' 'target_device' 'implementation' 'user'}} expected-note {{the ignored set spans until here}}
@@ -84,7 +83,7 @@ const int var;
 #pragma omp end declare variant
 #pragma omp begin declare variant match(device={kind(score cpu)}) // expected-error {{expected '(' after 'score'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('<invalid>'); score ignored}}
 #pragma omp end declare variant
-#pragma omp begin declare variant match(device = {kind(score(ibm) }) // expected-error {{use of undeclared identifier 'ibm'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('<recovery-expr>()'); score ignored}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'host' 'nohost' 'cpu' 'gpu' 'fpga' 'any'}} expected-note {{to match this '('}}
+#pragma omp begin declare variant match(device = {kind(score(ibm) }) // expected-error {{use of undeclared identifier 'ibm'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('<invalid>'); score ignored}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{context property options are: 'host' 'nohost' 'cpu' 'gpu' 'fpga' 'any'}} expected-note {{to match this '('}}
 #pragma omp end declare variant
 #pragma omp begin declare variant match(device={kind(score(2 gpu)}) // expected-error {{expected ')'}} expected-error {{expected ')'}} expected-warning {{expected '':'' after the score expression; '':'' assumed}} expected-warning {{the context selector 'kind' in the context set 'device' cannot have a score ('2'); score ignored}} expected-warning {{expected identifier or string literal describing a context property; property skipped}} expected-note {{to match this '('}} expected-note {{context property options are: 'host' 'nohost' 'cpu' 'gpu' 'fpga' 'any'}} expected-note {{to match this '('}}
 #pragma omp end declare variant

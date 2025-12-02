@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -ast-dump -o - %s | FileCheck %s
 
 struct EmptyStruct {
 };
@@ -153,7 +153,7 @@ cbuffer CB {
   static float SV;
   // CHECK: VarDecl {{.*}} s7 'EmptyStruct' callinit
   EmptyStruct s7;
-  // CHECK: VarDecl {{.*}} Buf 'RWBuffer<float>':'hlsl::RWBuffer<float>' static callinit
+  // CHECK: VarDecl {{.*}} Buf 'RWBuffer<float>':'hlsl::RWBuffer<float>' callinit
   RWBuffer<float> Buf;
   // CHECK: VarDecl {{.*}} ea 'EmptyArrayTypedef':'float[10][0]'
   EmptyArrayTypedef ea;

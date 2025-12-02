@@ -29,8 +29,7 @@ class SPIRVTargetLowering : public TargetLowering {
 
 public:
   explicit SPIRVTargetLowering(const TargetMachine &TM,
-                               const SPIRVSubtarget &ST)
-      : TargetLowering(TM), STI(ST) {}
+                               const SPIRVSubtarget &ST);
 
   // Stop IRTranslator breaking up FMA instrs to preserve types information.
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
@@ -71,6 +70,11 @@ public:
                                       EVT ConditionVT) const override {
     return ConditionVT.getSimpleVT();
   }
+
+  bool enforcePtrTypeCompatibility(MachineInstr &I, unsigned PtrOpIdx,
+                                   unsigned OpIdx) const;
+  bool insertLogicalCopyOnResult(MachineInstr &I,
+                                 SPIRVType *NewResultType) const;
 };
 } // namespace llvm
 

@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // TODO FMT __builtin_memcpy isn't constexpr in GCC
-// UNSUPPORTED: gcc-14
+// UNSUPPORTED: gcc-14, gcc-15
 
 // <format>
 
@@ -41,13 +41,10 @@ struct Tester {
   constexpr Tester(const char (&r)[N]) { __builtin_memcpy(text, r, N); }
   char text[N];
 
-  // The size of the array shouldn't include the NUL character.
-  static const std::size_t size = N - 1;
-
   template <class CharT>
   void
   test(const std::basic_string<CharT>& expected, const std::basic_string_view<CharT>& fmt, std::size_t offset) const {
-    using Str = CharT[size];
+    using Str = CharT[N];
     std::basic_format_parse_context<CharT> parse_ctx{fmt};
     std::formatter<Str, CharT> formatter;
     static_assert(std::semiregular<decltype(formatter)>);
@@ -57,16 +54,25 @@ struct Tester {
     assert(std::to_address(it) == std::to_address(fmt.end()) - offset);
 
     std::basic_string<CharT> result;
-    auto out = std::back_inserter(result);
+    auto out         = std::back_inserter(result);
     using FormatCtxT = std::basic_format_context<decltype(out), CharT>;
 
-    std::basic_string<CharT> buffer{text, text + N};
-    // Note not too found of this hack
-    Str* data = reinterpret_cast<Str*>(const_cast<CharT*>(buffer.c_str()));
-
-    FormatCtxT format_ctx =
-        test_format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(*data));
-    formatter.format(*data, format_ctx);
+    if constexpr (std::is_same_v<CharT, char>) {
+      FormatCtxT format_ctx =
+          test_format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(text));
+      formatter.format(text, format_ctx);
+    }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    else {
+      Str buffer;
+      for (std::size_t i = 0; i != N; ++i) {
+        buffer[i] = static_cast<CharT>(text[i]);
+      }
+      FormatCtxT format_ctx =
+          test_format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(buffer));
+      formatter.format(buffer, format_ctx);
+    }
+#endif
     assert(result == expected);
   }
 
@@ -118,8 +124,8 @@ template <class CharT>
 void test_array() {
   test_helper_wrapper<" azAZ09,./<>?">(STR(" azAZ09,./<>?"), STR("}"));
 
-  std::basic_string<CharT> s(CSTR("abc\0abc"), 7);
-  test_helper_wrapper<"abc\0abc">(s, STR("}"));
+  // Contents after embedded null terminator are not formatted.
+  test_helper_wrapper<"abc\0abc">(STR("abc"), STR("}"));
 
   test_helper_wrapper<"world">(STR("world"), STR("}"));
   test_helper_wrapper<"world">(STR("world"), STR("_>}"));

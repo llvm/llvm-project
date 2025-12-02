@@ -2035,3 +2035,176 @@ define i32 @or_xor_and_commuted3(i32 %x, i32 %y, i32 %z) {
   %or1 = or i32 %xor, %yy
   ret i32 %or1
 }
+
+define i1 @or_truncs(i8 %x) {
+; CHECK-LABEL: @or_truncs(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[OR1:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[OR1]]
+;
+  %trunc1 = trunc i8 %x to i1
+  %trunc2 = trunc i8 %x to i1
+  %or1 = or i1 %trunc1, %trunc2
+  ret i1 %or1
+}
+
+define i32 @or_zext_constant(i8 %a) {
+; CHECK-LABEL: @or_zext_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[AND:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %zext = zext i8 %a to i32
+  %or = or i32 %zext, 1
+  ret i32 %or
+}
+
+define i32 @or_zext_minus_constant(i8 %a) {
+; CHECK-LABEL: @or_zext_minus_constant(
+; CHECK-NEXT:    [[OR:%.*]] = zext i8 [[TMP1:%.*]] to i32
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[OR]], -9
+; CHECK-NEXT:    ret i32 [[OR1]]
+;
+  %zext = zext i8 %a to i32
+  %or = or i32 %zext, -9
+  ret i32 %or
+}
+
+define i32 @or_zext_nneg_constant(i8 %a) {
+; CHECK-LABEL: @or_zext_nneg_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], 9
+; CHECK-NEXT:    [[AND:%.*]] = zext nneg i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %zext = zext nneg i8 %a to i32
+  %or = or i32 %zext, 9
+  ret i32 %or
+}
+
+define <4 x i32> @or_zext_nneg_constant_splat(<4 x i8> %a) {
+; CHECK-LABEL: @or_zext_nneg_constant_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i8> [[A:%.*]], splat (i8 9)
+; CHECK-NEXT:    [[OR:%.*]] = zext nneg <4 x i8> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %zext = zext nneg <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %zext, splat (i32 9)
+  ret <4 x i32> %or
+}
+
+define i32 @or_zext_nneg_minus_constant(i8 %a) {
+; CHECK-LABEL: @or_zext_nneg_minus_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], -9
+; CHECK-NEXT:    [[ZEXT:%.*]] = sext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[ZEXT]]
+;
+  %zext = zext nneg i8 %a to i32
+  %or = or i32 %zext, -9
+  ret i32 %or
+}
+
+define <4 x i32> @or_zext_nneg_minus_constant_splat(<4 x i8> %a) {
+; CHECK-LABEL: @or_zext_nneg_minus_constant_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i8> [[A:%.*]], splat (i8 -9)
+; CHECK-NEXT:    [[OR:%.*]] = sext <4 x i8> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %zext = zext nneg <4 x i8> %a to <4 x i32>
+  %or = or <4 x i32> %zext, splat (i32 -9)
+  ret <4 x i32> %or
+}
+
+define i8 @or_positive_minus_non_positive_to_abs(i8 %a){
+; CHECK-LABEL: @or_positive_minus_non_positive_to_abs(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.abs.i8(i8 [[A:%.*]], i1 false)
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %b = icmp sgt i8 %a, 0
+  %mask = sext i1 %b to i8
+  %neg = sub i8 0, %a
+  %mask_inv = xor i8 %mask, -1
+  %c = and i8 %neg, %mask_inv
+  %d = and i8 %a, %mask
+  %or = or i8 %c, %d
+  ret i8 %or
+}
+
+; TODO: Fold to smax https://alive2.llvm.org/ce/z/wDiDh2
+define i8 @or_select_smax_neg_to_abs(i8 %a){
+; CHECK-LABEL: @or_select_smax_neg_to_abs(
+; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i8 [[A:%.*]], 0
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i8 0, [[A]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[SGT0]], i8 0, i8 [[NEG]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %sgt0 = icmp sgt i8 %a, 0
+  %neg = sub nsw i8 0, %a
+  %sel = select i1 %sgt0, i8 0, i8 %neg
+  ret i8 %sel
+}
+
+; TODO: Fold to abs https://alive2.llvm.org/ce/z/DybfHG
+define i8 @or_select_smax_smax_to_abs(i8 %a){
+; CHECK-LABEL: @or_select_smax_smax_to_abs(
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i8 0, [[A:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.smax.i8(i8 [[NEG]], i8 0)
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.smax.i8(i8 [[A]], i8 0)
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SEL]], [[MAX]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %neg = sub nsw i8 0, %a
+  %sel = call i8 @llvm.smax.i8(i8 %neg, i8 0)
+  %max = call i8 @llvm.smax.i8(i8 %a, i8 0)
+  %or = or i8 %sel, %max
+  ret i8 %or
+}
+
+declare i8 @llvm.abs.i8(i8, i1)
+declare <2 x i8> @llvm.abs.v2i8(<2 x i8>, i1)
+
+define <2 x i8> @or_sgt_select_smax_to_abs(<2 x i8> %a){
+; CHECK-LABEL: @or_sgt_select_smax_to_abs(
+; CHECK-NEXT:    [[OR:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[A:%.*]], i1 false)
+; CHECK-NEXT:    ret <2 x i8> [[OR]]
+;
+  %sgt0 = icmp sgt <2 x i8> %a, zeroinitializer
+  %neg = sub <2 x i8> zeroinitializer, %a
+  %sel = select <2 x i1> %sgt0, <2 x i8> zeroinitializer, <2 x i8> %neg
+  %max = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %a, <2 x i8> zeroinitializer)
+  %or = or <2 x i8> %sel, %max
+  ret <2 x i8> %or
+}
+
+define <2 x i8> @or_slt_select_smax_to_abs(<2 x i8> %a){
+; CHECK-LABEL: @or_slt_select_smax_to_abs(
+; CHECK-NEXT:    [[OR:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[A:%.*]], i1 false)
+; CHECK-NEXT:    ret <2 x i8> [[OR]]
+;
+  %slt0 = icmp slt <2 x i8> %a, zeroinitializer
+  %neg = sub <2 x i8> zeroinitializer, %a
+  %sel = select <2 x i1> %slt0, <2 x i8> %neg, <2 x i8> zeroinitializer
+  %max = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %a, <2 x i8> zeroinitializer)
+  %or = or <2 x i8> %sel, %max
+  ret <2 x i8> %or
+}
+
+; negative test - %d has multiple uses. %or is not folded to abs.
+
+define <2 x i8> @or_select_smax_multi_uses(<2 x i8> %a){
+; CHECK-LABEL: @or_select_smax_multi_uses(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt <2 x i8> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[A]]
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[B]], <2 x i8> zeroinitializer, <2 x i8> [[NEG]]
+; CHECK-NEXT:    [[D:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[A]], <2 x i8> zeroinitializer)
+; CHECK-NEXT:    [[OR1:%.*]] = or <2 x i8> [[C]], [[D]]
+; CHECK-NEXT:    [[OR:%.*]] = add <2 x i8> [[OR1]], [[D]]
+; CHECK-NEXT:    ret <2 x i8> [[OR]]
+;
+  %sgt0 = icmp sgt <2 x i8> %a, zeroinitializer
+  %neg = sub <2 x i8> zeroinitializer, %a
+  %sel = select <2 x i1> %sgt0, <2 x i8> zeroinitializer, <2 x i8> %neg
+  %max = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %a, <2 x i8> zeroinitializer)
+  %or = or <2 x i8> %sel, %max
+  %add = add <2 x i8> %or, %max
+  ret <2 x i8> %add
+}

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexperimental-new-constant-interpreter -std=c++20 -verify=both,expected -fcxx-exceptions %s -DNEW_INTERP
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,ref -fcxx-exceptions %s
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,expected -fcxx-exceptions %s -DNEW_INTERP -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,ref      -fcxx-exceptions %s
 
 void test_alignas_operand() {
   alignas(8) char dummy;
@@ -122,8 +122,8 @@ static_assert(!b4);
 constexpr auto bar(const char *p) { return p + __builtin_strlen(p); }
 constexpr auto b5 = bar(p1) == p1;
 static_assert(!b5);
-constexpr auto b6 = bar(p1) == ""; // ref-error {{must be initialized by a constant expression}} \
-                                   // ref-note {{comparison of addresses of potentially overlapping literals}}
+constexpr auto b6 = bar(p1) == ""; // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{comparison of addresses of potentially overlapping literals}}
 constexpr auto b7 = bar(p1) + 1 == ""; // both-error {{must be initialized by a constant expression}} \
                                        // both-note {{comparison against pointer '&"test1"[6]' that points past the end of a complete object has unspecified value}}
 
@@ -996,4 +996,218 @@ namespace NastyChar {
 
   template <ToNastyChar t> constexpr auto to_nasty_char() { return t; }
   constexpr auto result = to_nasty_char<"12345">();
+}
+
+namespace TempDtor {
+  struct A {
+    int n;
+  };
+  constexpr A &&a_ref = A(); // both-note {{temporary created here}}
+  constexpr void destroy_extern_2() { // both-error {{never produces a constant expression}}
+    a_ref.~A(); // both-note {{destruction of temporary is not allowed in a constant expression outside the expression that created the temporary}}
+  }
+}
+
+namespace OnePastEndDtor {
+  struct A {int n; };
+  constexpr void destroy_past_end() { // both-error {{never produces a constant expression}}
+    A a;
+    (&a+1)->~A(); // both-note {{destruction of dereferenced one-past-the-end pointer}}
+  }
+}
+
+namespace Virtual {
+  struct NonZeroOffset { int padding = 123; };
+
+  constexpr void assert(bool b) { if (!b) throw 0; }
+
+  // Ensure that we pick the right final overrider during construction.
+  struct A {
+    virtual constexpr char f() const { return 'A'; }
+    char a = f();
+    constexpr ~A() { assert(f() == 'A'); }
+  };
+  struct NoOverrideA : A {};
+  struct B : NonZeroOffset, NoOverrideA {
+    virtual constexpr char f() const { return 'B'; }
+    char b = f();
+    constexpr ~B() { assert(f() == 'B'); }
+  };
+  struct NoOverrideB : B {};
+  struct C : NonZeroOffset, A {
+    virtual constexpr char f() const { return 'C'; }
+    A *pba;
+    char c = ((A*)this)->f();
+    char ba = pba->f();
+    constexpr C(A *pba) : pba(pba) {}
+    constexpr ~C() { assert(f() == 'C'); }
+  };
+  struct D : NonZeroOffset, NoOverrideB, C { // both-warning {{inaccessible}}
+    virtual constexpr char f() const { return 'D'; }
+    char d = f();
+    constexpr D() : C((B*)this) {}
+    constexpr ~D() { assert(f() == 'D'); }
+  };
+  constexpr int n = (D(), 0);
+
+  constexpr D d;
+  static_assert(((B&)d).a == 'A');
+  static_assert(((C&)d).a == 'A');
+  static_assert(d.b == 'B');
+  static_assert(d.c == 'C');
+  // During the construction of C, the dynamic type of B's A is B.
+  static_assert(d.ba == 'B'); // expected-error {{failed}} \
+                              // expected-note {{expression evaluates to}}
+  static_assert(d.d == 'D');
+  static_assert(d.f() == 'D');
+  constexpr const A &a = (B&)d;
+  constexpr const B &b = d;
+  static_assert(a.f() == 'D');
+  static_assert(b.f() == 'D');
+
+
+  class K {
+  public:
+    int a = f();
+
+    virtual constexpr int f() const { return 10; }
+  };
+
+  K k;
+  static_assert(k.f() == 10); // both-error {{not an integral constant expression}} \
+                              // both-note {{virtual function called on object 'k' whose dynamic type is not constant}}
+
+  void f() {
+    constexpr K k;
+    static_assert(k.f() == 10);
+  }
+
+  void f2() {
+    K k;
+    static_assert(k.f() == 10); // both-error {{not an integral constant expression}} \
+                                // both-note {{virtual function called on object 'k' whose dynamic type is not constant}}
+  }
+  
+  static_assert(K().f() == 10);
+
+  void f3() {
+    static_assert(K().f() == 10);
+  }
+
+  class L : public K {
+  public:
+    int b = f();
+    int c =((L*)this)->f();
+  };
+
+  constexpr L l;
+  static_assert(l.a == 10);
+  static_assert(l.b == 10);
+  static_assert(l.c == 10);
+  static_assert(l.f() == 10);
+
+  struct M {
+    K& mk = k;
+  };
+  static_assert(M{}.mk.f() == 10); // both-error {{not an integral constant expression}} \
+                                   // both-note {{virtual function called on object 'k' whose dynamic type is not constant}}
+
+  struct N {
+    K* mk = &k;
+  };
+  static_assert(N{}.mk->f() == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{virtual function called on object 'k' whose dynamic type is not constant}}
+
+  extern K o;
+  static_assert(o.f() == 10); // both-error {{not an integral constant expression}} \
+                              // both-note {{virtual function called on object 'o' whose dynamic type is not constant}}
+  static K p;
+  static_assert(p.f() == 10); // both-error {{not an integral constant expression}} \
+                              // both-note {{virtual function called on object 'p' whose dynamic type is not constant}}
+  
+  void f4() {
+    static K p;
+    static_assert(p.f() == 10); // both-error {{not an integral constant expression}} \
+                                // both-note {{virtual function called on object 'p' whose dynamic type is not constant}}
+  }
+  
+  const K q;
+  static_assert(q.f() == 10); // both-error {{not an integral constant expression}} \
+                              // both-note {{virtual function called on object 'q' whose dynamic type is not constant}}
+
+  void f5() {
+    const K q;
+    static_assert(q.f() == 10); // both-error {{not an integral constant expression}} \
+                                // both-note {{virtual function called on object 'q' whose dynamic type is not constant}}
+  }
+}
+
+namespace DiscardedTrivialCXXConstructExpr {
+  struct S {
+    constexpr S(int a) : x(a) {}
+    int x;
+  };
+
+  constexpr int foo(int x) { // ref-error {{never produces a constant expression}}
+    throw S(3); // both-note {{not valid in a constant expression}} \
+                // ref-note {{not valid in a constant expression}}
+    return 1;
+  }
+
+  constexpr int y = foo(12); // both-error {{must be initialized by a constant expression}} \
+                             // both-note {{in call to}}
+}
+
+namespace VirtualFunctionCallThroughArrayElem {
+  struct X {
+    constexpr virtual int foo() const {
+      return 3;
+    }
+  };
+  constexpr X xs[5];
+  static_assert(xs[3].foo() == 3);
+
+  constexpr X xs2[1][2];
+  static_assert(xs2[0].foo() == 3); // both-error {{is not a structure or union}}
+  static_assert(xs2[0][0].foo() == 3);
+
+  struct Y: public X {
+    constexpr int foo() const override {
+      return 1;
+    }
+  };
+  constexpr Y ys[20];
+  static_assert(ys[12].foo() == static_cast<const X&>(ys[12]).foo());
+
+  X a[3][4];
+  static_assert(a[2][3].foo()); // both-error {{not an integral constant expression}} \
+                                // both-note {{virtual function called on object 'a[2][3]' whose dynamic type is not constant}}
+}
+
+namespace NonPureVirtualCall {
+  struct A {
+    constexpr virtual void call(int) = 0;
+    constexpr void call2() { call(0); }
+  };
+
+  struct B : A {
+    constexpr void call(int) override {}
+  };
+
+  consteval void check() {
+    B b;
+    b.call2();
+  }
+
+  int main() { check(); }
+}
+
+namespace DyamicCast {
+  struct X {
+    virtual constexpr ~X() {}
+  };
+  struct Y : X {};
+  constexpr Y y;
+  constexpr const X *p = &y;
+  constexpr const Y *q = dynamic_cast<const Y*>(p);
 }

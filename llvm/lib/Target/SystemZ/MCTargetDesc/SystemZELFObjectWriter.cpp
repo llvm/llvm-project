@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/SystemZMCExpr.h"
+#include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "MCTargetDesc/SystemZMCFixups.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -32,10 +32,11 @@ public:
 
 protected:
   // Override MCELFObjectTargetWriter.
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                               unsigned Type) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
+  bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
+  unsigned getAbsoluteReloc(SMLoc Loc, unsigned Kind) const;
+  unsigned getPCRelReloc(SMLoc Loc, unsigned Kind) const;
 };
 
 } // end anonymous namespace
@@ -45,7 +46,8 @@ SystemZELFObjectWriter::SystemZELFObjectWriter(uint8_t OSABI)
                               /*HasRelocationAddend_=*/true) {}
 
 // Return the relocation type for an absolute value of MCFixupKind Kind.
-static unsigned getAbsoluteReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
+unsigned SystemZELFObjectWriter::getAbsoluteReloc(SMLoc Loc,
+                                                  unsigned Kind) const {
   switch (Kind) {
   case FK_Data_1:
   case SystemZ::FK_390_U8Imm:
@@ -66,12 +68,12 @@ static unsigned getAbsoluteReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
   case FK_Data_8:
     return ELF::R_390_64;
   }
-  Ctx.reportError(Loc, "Unsupported absolute address");
+  reportError(Loc, "Unsupported absolute address");
   return 0;
 }
 
 // Return the relocation type for a PC-relative value of MCFixupKind Kind.
-static unsigned getPCRelReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
+unsigned SystemZELFObjectWriter::getPCRelReloc(SMLoc Loc, unsigned Kind) const {
   switch (Kind) {
   case FK_Data_2:
   case SystemZ::FK_390_U16Imm:
@@ -92,123 +94,112 @@ static unsigned getPCRelReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
   case SystemZ::FK_390_PC32DBL:
     return ELF::R_390_PC32DBL;
   }
-  Ctx.reportError(Loc, "Unsupported PC-relative address");
+  reportError(Loc, "Unsupported PC-relative address");
   return 0;
 }
 
-// Return the R_390_TLS_LE* relocation type for MCFixupKind Kind.
-static unsigned getTLSLEReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
-  switch (Kind) {
-  case FK_Data_4: return ELF::R_390_TLS_LE32;
-  case FK_Data_8: return ELF::R_390_TLS_LE64;
-  }
-  Ctx.reportError(Loc, "Unsupported thread-local address (local-exec)");
-  return 0;
-}
-
-// Return the R_390_TLS_LDO* relocation type for MCFixupKind Kind.
-static unsigned getTLSLDOReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
-  switch (Kind) {
-  case FK_Data_4: return ELF::R_390_TLS_LDO32;
-  case FK_Data_8: return ELF::R_390_TLS_LDO64;
-  }
-  Ctx.reportError(Loc, "Unsupported thread-local address (local-dynamic)");
-  return 0;
-}
-
-// Return the R_390_TLS_LDM* relocation type for MCFixupKind Kind.
-static unsigned getTLSLDMReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
-  switch (Kind) {
-  case FK_Data_4: return ELF::R_390_TLS_LDM32;
-  case FK_Data_8: return ELF::R_390_TLS_LDM64;
-  case SystemZ::FK_390_TLS_CALL: return ELF::R_390_TLS_LDCALL;
-  }
-  Ctx.reportError(Loc, "Unsupported thread-local address (local-dynamic)");
-  return 0;
-}
-
-// Return the R_390_TLS_GD* relocation type for MCFixupKind Kind.
-static unsigned getTLSGDReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
-  switch (Kind) {
-  case FK_Data_4: return ELF::R_390_TLS_GD32;
-  case FK_Data_8: return ELF::R_390_TLS_GD64;
-  case SystemZ::FK_390_TLS_CALL: return ELF::R_390_TLS_GDCALL;
-  }
-  Ctx.reportError(Loc, "Unsupported thread-local address (general-dynamic)");
-  return 0;
-}
-
-// Return the PLT relocation counterpart of MCFixupKind Kind.
-static unsigned getPLTReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
-  switch (Kind) {
-  case SystemZ::FK_390_PC12DBL: return ELF::R_390_PLT12DBL;
-  case SystemZ::FK_390_PC16DBL: return ELF::R_390_PLT16DBL;
-  case SystemZ::FK_390_PC24DBL: return ELF::R_390_PLT24DBL;
-  case SystemZ::FK_390_PC32DBL: return ELF::R_390_PLT32DBL;
-  }
-  Ctx.reportError(Loc, "Unsupported PC-relative PLT address");
-  return 0;
-}
-
-unsigned SystemZELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned SystemZELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                               const MCValue &Target,
-                                              const MCFixup &Fixup,
                                               bool IsPCRel) const {
   SMLoc Loc = Fixup.getLoc();
   unsigned Kind = Fixup.getKind();
-  auto Specifier = SystemZMCExpr::Specifier(Target.getSpecifier());
+  auto Specifier = SystemZ::Specifier(Target.getSpecifier());
   switch (Specifier) {
-  case SystemZMCExpr::VK_INDNTPOFF:
-  case SystemZMCExpr::VK_NTPOFF:
-  case SystemZMCExpr::VK_TLSGD:
-  case SystemZMCExpr::VK_TLSLD:
-  case SystemZMCExpr::VK_TLSLDM:
-  case SystemZMCExpr::VK_DTPOFF:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+  case SystemZ::S_INDNTPOFF:
+  case SystemZ::S_NTPOFF:
+  case SystemZ::S_TLSGD:
+  case SystemZ::S_TLSLD:
+  case SystemZ::S_TLSLDM:
+  case SystemZ::S_DTPOFF:
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
   }
 
   switch (Specifier) {
-  case SystemZMCExpr::VK_None:
+  case SystemZ::S_None:
     if (IsPCRel)
-      return getPCRelReloc(Ctx, Loc, Kind);
-    return getAbsoluteReloc(Ctx, Loc, Kind);
+      return getPCRelReloc(Loc, Kind);
+    return getAbsoluteReloc(Loc, Kind);
 
-  case SystemZMCExpr::VK_NTPOFF:
+  case SystemZ::S_NTPOFF:
     assert(!IsPCRel && "NTPOFF shouldn't be PC-relative");
-    return getTLSLEReloc(Ctx, Loc, Kind);
+    switch (Kind) {
+    case FK_Data_4:
+      return ELF::R_390_TLS_LE32;
+    case FK_Data_8:
+      return ELF::R_390_TLS_LE64;
+    }
+    reportError(Loc, "Unsupported thread-local address (local-exec)");
+    return 0;
 
-  case SystemZMCExpr::VK_INDNTPOFF:
+  case SystemZ::S_INDNTPOFF:
     if (IsPCRel && Kind == SystemZ::FK_390_PC32DBL)
       return ELF::R_390_TLS_IEENT;
-    Ctx.reportError(Loc, "Only PC-relative INDNTPOFF accesses are supported for now");
+    reportError(Loc,
+                "Only PC-relative INDNTPOFF accesses are supported for now");
     return 0;
 
-  case SystemZMCExpr::VK_DTPOFF:
+  case SystemZ::S_DTPOFF:
     assert(!IsPCRel && "DTPOFF shouldn't be PC-relative");
-    return getTLSLDOReloc(Ctx, Loc, Kind);
+    switch (Kind) {
+    case FK_Data_4:
+      return ELF::R_390_TLS_LDO32;
+    case FK_Data_8:
+      return ELF::R_390_TLS_LDO64;
+    }
+    reportError(Loc, "Unsupported thread-local address (local-dynamic)");
+    return 0;
 
-  case SystemZMCExpr::VK_TLSLDM:
+  case SystemZ::S_TLSLDM:
     assert(!IsPCRel && "TLSLDM shouldn't be PC-relative");
-    return getTLSLDMReloc(Ctx, Loc, Kind);
+    switch (Kind) {
+    case FK_Data_4:
+      return ELF::R_390_TLS_LDM32;
+    case FK_Data_8:
+      return ELF::R_390_TLS_LDM64;
+    case SystemZ::FK_390_TLS_CALL:
+      return ELF::R_390_TLS_LDCALL;
+    }
+    reportError(Loc, "Unsupported thread-local address (local-dynamic)");
+    return 0;
 
-  case SystemZMCExpr::VK_TLSGD:
+  case SystemZ::S_TLSGD:
     assert(!IsPCRel && "TLSGD shouldn't be PC-relative");
-    return getTLSGDReloc(Ctx, Loc, Kind);
+    switch (Kind) {
+    case FK_Data_4:
+      return ELF::R_390_TLS_GD32;
+    case FK_Data_8:
+      return ELF::R_390_TLS_GD64;
+    case SystemZ::FK_390_TLS_CALL:
+      return ELF::R_390_TLS_GDCALL;
+    }
+    reportError(Loc, "Unsupported thread-local address (general-dynamic)");
+    return 0;
 
-  case SystemZMCExpr::VK_GOT:
-  case SystemZMCExpr::VK_GOTENT:
+  case SystemZ::S_GOT:
+  case SystemZ::S_GOTENT:
     if (IsPCRel && Kind == SystemZ::FK_390_PC32DBL)
       return ELF::R_390_GOTENT;
-    Ctx.reportError(Loc, "Only PC-relative GOT accesses are supported for now");
+    reportError(Loc, "Only PC-relative GOT accesses are supported for now");
     return 0;
 
-  case SystemZMCExpr::VK_PLT:
+  case SystemZ::S_PLT:
     assert(IsPCRel && "@PLT shouldn't be PC-relative");
-    return getPLTReloc(Ctx, Loc, Kind);
+    switch (Kind) {
+    case SystemZ::FK_390_PC12DBL:
+      return ELF::R_390_PLT12DBL;
+    case SystemZ::FK_390_PC16DBL:
+      return ELF::R_390_PLT16DBL;
+    case SystemZ::FK_390_PC24DBL:
+      return ELF::R_390_PLT24DBL;
+    case SystemZ::FK_390_PC32DBL:
+      return ELF::R_390_PLT32DBL;
+    }
+    reportError(Loc, "Unsupported PC-relative PLT address");
+    return 0;
 
   default:
     llvm_unreachable("Modifier not supported");
@@ -216,11 +207,10 @@ unsigned SystemZELFObjectWriter::getRelocType(MCContext &Ctx,
 }
 
 bool SystemZELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
-                                                     const MCSymbol &Sym,
                                                      unsigned Type) const {
   switch (V.getSpecifier()) {
-  case SystemZMCExpr::VK_GOT:
-  case SystemZMCExpr::VK_PLT:
+  case SystemZ::S_GOT:
+  case SystemZ::S_PLT:
     return true;
   default:
     return false;

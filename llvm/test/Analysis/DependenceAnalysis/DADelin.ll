@@ -594,14 +594,15 @@ for.end12:                                        ; preds = %for.inc10, %entry
 }
 
 
+; FIXME? It seems that we cannot prove that %N is non-negative...
 define void @nonnegative(ptr nocapture %A, i32 %N) {
 ; CHECK-LABEL: 'nonnegative'
 ; CHECK-NEXT:  Src: store i32 1, ptr %arrayidx, align 4 --> Dst: store i32 1, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* *]!
 ; CHECK-NEXT:  Src: store i32 1, ptr %arrayidx, align 4 --> Dst: store i32 2, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - consistent output [0 0|<]!
+; CHECK-NEXT:    da analyze - output [* *|<]!
 ; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 4 --> Dst: store i32 2, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [* *]!
 ;
 entry:
   %cmp44 = icmp eq i32 %N, 0
@@ -626,6 +627,84 @@ for.latch:
   %add19 = add nuw i32 %h.045, 1
   %exitcond47 = icmp eq i32 %add19, %N
   br i1 %exitcond47, label %exit, label %for.outer
+
+exit:
+  ret void
+}
+
+; i = 0;
+; do {
+;   a[k * i] = 42;
+;   a[k * (i + 1)] = 42;
+;   i++;
+; } while (i != k);
+;
+; The dependency direction between the two stores depends on the sign of k.
+; Note that the loop guard is omitted intentionally.
+; FIXME: Each store has loop-carried dependencies on itself if k is zero.
+;
+define void @coeff_may_negative(ptr %a, i32 %k) {
+; CHECK-LABEL: 'coeff_may_negative'
+; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.0, align 1
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
+; CHECK-NEXT:    da analyze - output [*|<]!
+; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
+; CHECK-NEXT:    da analyze - none!
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %i.next = add i32 %i, 1
+  %subscript.0 = mul i32 %i, %k
+  %subscript.1 = mul i32 %i.next, %k
+  %idx.0 = getelementptr i8, ptr %a, i32 %subscript.0
+  %idx.1 = getelementptr i8, ptr %a, i32 %subscript.1
+  store i8 42, ptr %idx.0
+  store i8 42, ptr %idx.1
+  %cond.exit = icmp eq i32 %i.next, %k
+  br i1 %cond.exit, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; i = 0;
+; do {
+;   a[k * i] = 42;
+;   a[k * (i + 1)] = 42;
+;   i++;
+; } while (i != k);
+;
+; Note that the loop guard is omitted intentionally.
+; FIXME: In principle, we can infer that the value of k is non-negative from
+; the nsw flag.
+;
+define void @coeff_positive(ptr %a, i32 %k) {
+; CHECK-LABEL: 'coeff_positive'
+; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.0, align 1
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
+; CHECK-NEXT:    da analyze - output [*|<]!
+; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
+; CHECK-NEXT:    da analyze - none!
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %i.next = add nsw i32 %i, 1
+  %subscript.0 = mul i32 %i, %k
+  %subscript.1 = mul i32 %i.next, %k
+  %idx.0 = getelementptr i8, ptr %a, i32 %subscript.0
+  %idx.1 = getelementptr i8, ptr %a, i32 %subscript.1
+  store i8 42, ptr %idx.0
+  store i8 42, ptr %idx.1
+  %cond.exit = icmp eq i32 %i.next, %k
+  br i1 %cond.exit, label %exit, label %loop
 
 exit:
   ret void

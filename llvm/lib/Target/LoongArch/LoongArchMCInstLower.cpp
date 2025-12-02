@@ -13,7 +13,7 @@
 
 #include "LoongArch.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
-#include "MCTargetDesc/LoongArchMCExpr.h"
+#include "MCTargetDesc/LoongArchMCAsmInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -35,10 +35,8 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     Kind = LoongArchMCExpr::VK_None;
     break;
   case LoongArchII::MO_CALL:
-    Kind = LoongArchMCExpr::VK_CALL;
-    break;
   case LoongArchII::MO_CALL_PLT:
-    Kind = LoongArchMCExpr::VK_CALL_PLT;
+    Kind = ELF::R_LARCH_B26;
     break;
   case LoongArchII::MO_PCREL_HI:
     Kind = ELF::R_LARCH_PCALA_HI20;

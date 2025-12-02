@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -61,7 +62,7 @@ public:
 
   // Check if the specified value is at least DWORD aligned.
   bool isDWORDAligned(const Value *V) const {
-    KnownBits Known = computeKnownBits(V, DL, 0, AC);
+    KnownBits Known = computeKnownBits(V, DL, AC);
     return Known.countMinTrailingZeros() >= 2;
   }
 
@@ -79,8 +80,6 @@ private:
 
   /// The scalar type to convert to
   Type *const ConvertToScalar;
-  /// The set of visited Instructions
-  SmallPtrSet<Instruction *, 4> Visited;
   /// Map of Value -> Converted Value
   ValueToValueMap ValMap;
   /// Map of containing conversions from Optimal Type -> Original Type per BB.
@@ -151,7 +150,10 @@ public:
       if (!CVisited.insert(CII).second)
         continue;
 
-      if (CII->getParent() == II->getParent() && !IsLookThru(II))
+      // Same-BB filter must look at the *user*; and allow non-lookthrough
+      // users when the def is a PHI (loop-header pattern).
+      if (CII->getParent() == II->getParent() && !IsLookThru(CII) &&
+          !isa<PHINode>(II))
         continue;
 
       if (isOpLegal(CII))
@@ -288,6 +290,7 @@ bool LiveRegOptimizer::optimizeLiveType(
   SmallPtrSet<PHINode *, 4> PhiNodes;
   SmallPtrSet<Instruction *, 4> Defs;
   SmallPtrSet<Instruction *, 4> Uses;
+  SmallPtrSet<Instruction *, 4> Visited;
 
   Worklist.push_back(cast<Instruction>(I));
   while (!Worklist.empty()) {
@@ -386,10 +389,9 @@ bool LiveRegOptimizer::optimizeLiveType(
         Value *NextDeadValue = PHIWorklist.pop_back_val();
         VisitedPhis.insert(NextDeadValue);
         auto OriginalPhi =
-            std::find_if(PhiNodes.begin(), PhiNodes.end(),
-                         [this, &NextDeadValue](PHINode *CandPhi) {
-                           return ValMap[CandPhi] == NextDeadValue;
-                         });
+            llvm::find_if(PhiNodes, [this, &NextDeadValue](PHINode *CandPhi) {
+              return ValMap[CandPhi] == NextDeadValue;
+            });
         // This PHI may have already been removed from maps when
         // unwinding a previous Phi
         if (OriginalPhi != PhiNodes.end())
@@ -547,7 +549,8 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
-    AU.setPreservesAll();
+    // Invalidates UniformityInfo
+    AU.setPreservesCFG();
   }
 
   bool runOnFunction(Function &F) override;

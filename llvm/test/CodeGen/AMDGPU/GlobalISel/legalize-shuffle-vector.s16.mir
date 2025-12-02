@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -run-pass=legalizer -o - %s | FileCheck -check-prefix=GFX8 %s
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -run-pass=legalizer -o - %s | FileCheck -check-prefix=GFX9 %s
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -run-pass=legalizer -o - %s | FileCheck -check-prefix=GFX9 %s
-# RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -run-pass=legalizer -o - %s | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -mattr=-real-true16 -run-pass=legalizer -o - %s | FileCheck -check-prefixes=GFX9 %s
 
 ---
 name: shufflevector_v2s16_v2s16_undef_undef
@@ -237,16 +237,13 @@ body: |
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GFX8-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
-    ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C1]]
     ; GFX8-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C2]](s32)
+    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND]], [[C2]](s32)
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
-    ; GFX8-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; GFX8-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
+    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX8-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     ;
     ; GFX9-LABEL: name: shufflevector_v2s16_v2s16_0_0
     ; GFX9: liveins: $vgpr0, $vgpr1
@@ -257,10 +254,7 @@ body: |
     ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC]](s16)
     ; GFX9-NEXT: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = COPY $vgpr1
@@ -285,12 +279,10 @@ body: |
     ; GFX8-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LSHR1]], [[C]](s32)
+    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LSHR]], [[C]](s32)
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[LSHR]], [[SHL]]
-    ; GFX8-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; GFX8-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
+    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX8-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     ;
     ; GFX9-LABEL: name: shufflevector_v2s16_v2s16_1_1
     ; GFX9: liveins: $vgpr0, $vgpr1
@@ -301,10 +293,7 @@ body: |
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC]](s16)
     ; GFX9-NEXT: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = COPY $vgpr1
@@ -329,16 +318,13 @@ body: |
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GFX8-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY1]](<2 x s16>)
     ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY1]](<2 x s16>)
-    ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
-    ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C1]]
     ; GFX8-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C2]](s32)
+    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND]], [[C2]](s32)
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
-    ; GFX8-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; GFX8-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
+    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX8-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     ;
     ; GFX9-LABEL: name: shufflevector_v2s16_v2s16_2_2
     ; GFX9: liveins: $vgpr0, $vgpr1
@@ -349,10 +335,7 @@ body: |
     ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY1]](<2 x s16>)
     ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY1]](<2 x s16>)
-    ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC]](s16)
     ; GFX9-NEXT: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = COPY $vgpr1
@@ -641,12 +624,10 @@ body: |
     ; GFX8-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY1]](<2 x s16>)
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY1]](<2 x s16>)
-    ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LSHR1]], [[C]](s32)
+    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LSHR]], [[C]](s32)
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[LSHR]], [[SHL]]
-    ; GFX8-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; GFX8-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
+    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX8-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     ;
     ; GFX9-LABEL: name: shufflevector_v2s16_v2s16_3_3
     ; GFX9: liveins: $vgpr0, $vgpr1
@@ -657,10 +638,7 @@ body: |
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY1]](<2 x s16>)
-    ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC]](s16)
     ; GFX9-NEXT: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = COPY $vgpr1
@@ -733,16 +711,13 @@ body: |
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GFX8-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; GFX8-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; GFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
-    ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR1]], [[C1]]
     ; GFX8-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C2]](s32)
+    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND]], [[C2]](s32)
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
-    ; GFX8-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; GFX8-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
+    ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+    ; GFX8-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
     ;
     ; GFX9-LABEL: name: shufflevector_v2s16_v2s16_2_0
     ; GFX9: liveins: $vgpr0, $vgpr1
@@ -753,10 +728,7 @@ body: |
     ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC]](s16)
     ; GFX9-NEXT: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = COPY $vgpr1

@@ -41,13 +41,45 @@ class CodeGenOptionsBase {
   friend class CompilerInvocationBase;
 
 public:
-#define CODEGENOPT(Name, Bits, Default) unsigned Name : Bits;
-#define ENUM_CODEGENOPT(Name, Type, Bits, Default)
+  /// For ASTs produced with different option value, signifies their level of
+  /// compatibility.
+  enum class CompatibilityKind {
+    /// Does affect the construction of the AST in a way that does prevent
+    /// module interoperability.
+    NotCompatible,
+    /// Does affect the construction of the AST in a way that doesn't prevent
+    /// interoperability (that is, the value can be different between an
+    /// explicit module and the user of that module).
+    Compatible,
+    /// Does not affect the construction of the AST in any way (that is, the
+    /// value can be different between an implicit module and the user of that
+    /// module).
+    Benign,
+  };
+
+  using CFBranchLabelSchemeKind = clang::CFBranchLabelSchemeKind;
+  using ProfileInstrKind = llvm::driver::ProfileInstrKind;
+  using AsanDetectStackUseAfterReturnMode =
+      llvm::AsanDetectStackUseAfterReturnMode;
+  using AsanDtorKind = llvm::AsanDtorKind;
+  using VectorLibrary = llvm::driver::VectorLibrary;
+  using ZeroCallUsedRegsKind = llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind;
+  using WinX64EHUnwindV2Mode = llvm::WinX64EHUnwindV2Mode;
+
+  using DebugCompressionType = llvm::DebugCompressionType;
+  using EmitDwarfUnwindType = llvm::EmitDwarfUnwindType;
+  using DebugTemplateNamesKind = llvm::codegenoptions::DebugTemplateNamesKind;
+  using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
+  using DebuggerKind = llvm::DebuggerKind;
+
+#define CODEGENOPT(Name, Bits, Default, Compatibility) unsigned Name : Bits;
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)
 #include "clang/Basic/CodeGenOptions.def"
 
 protected:
-#define CODEGENOPT(Name, Bits, Default)
-#define ENUM_CODEGENOPT(Name, Type, Bits, Default) unsigned Name : Bits;
+#define CODEGENOPT(Name, Bits, Default, Compatibility)
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)              \
+  unsigned Name : Bits;
 #include "clang/Basic/CodeGenOptions.def"
 };
 
@@ -80,14 +112,6 @@ public:
     SRCK_InRegs    // Small structs in registers (-freg-struct-return).
   };
 
-  enum ProfileInstrKind {
-    ProfileNone,       // Profile instrumentation is turned off.
-    ProfileClangInstr, // Clang instrumentation to generate execution counts
-                       // to use with PGO.
-    ProfileIRInstr,    // IR level PGO instrumentation in LLVM.
-    ProfileCSIRInstr, // IR level PGO context sensitive instrumentation in LLVM.
-  };
-
   enum EmbedBitcodeKind {
     Embed_Off,      // No embedded bitcode.
     Embed_All,      // Embed both bitcode and commandline in the output.
@@ -110,6 +134,7 @@ public:
     DSH_MD5,
     DSH_SHA1,
     DSH_SHA256,
+    DSH_NONE,
   };
 
   // This field stores one of the allowed values for the option
@@ -130,10 +155,13 @@ public:
   std::string BinutilsVersion;
 
   enum class FramePointerKind {
-    None,     // Omit all frame pointers.
-    Reserved, // Maintain valid frame pointer chain.
-    NonLeaf,  // Keep non-leaf frame pointers.
-    All,      // Keep all frame pointers.
+    NonLeafNoReserve, // Keep non-leaf frame pointers, allow the FP to be used
+                      // as a GPR in leaf functions.
+    None,             // Omit all frame pointers.
+    Reserved,         // Maintain valid frame pointer chain.
+    NonLeaf, // Keep non-leaf frame pointers, don't allow the FP to be used as a
+             // GPR in leaf functions.
+    All,     // Keep all frame pointers.
   };
 
   static StringRef getFramePointerKindName(FramePointerKind Kind) {
@@ -142,6 +170,8 @@ public:
       return "none";
     case FramePointerKind::Reserved:
       return "reserved";
+    case FramePointerKind::NonLeafNoReserve:
+      return "non-leaf-no-reserve";
     case FramePointerKind::NonLeaf:
       return "non-leaf";
     case FramePointerKind::All:
@@ -150,6 +180,9 @@ public:
 
     llvm_unreachable("invalid FramePointerKind");
   }
+
+  /// Possible exception handling behavior.
+  enum class ExceptionHandlingKind { None, SjLj, WinEH, DwarfCFI, Wasm };
 
   enum class SwiftAsyncFramePointerKind {
     Auto, // Choose Swift async extended frame info based on deployment target.
@@ -168,6 +201,16 @@ public:
     Disabled,
     Enabled,
     Forced,
+  };
+
+  enum SanitizeDebugTrapReasonKind {
+    None,  ///< Trap Messages are omitted. This offers the smallest debug info
+           ///< size but at the cost of making traps hard to debug.
+    Basic, ///< Trap Message is fixed per SanitizerKind. Produces smaller debug
+           ///< info than `Detailed` but is not as helpful for debugging.
+    Detailed, ///< Trap Message includes more context (e.g. the expression being
+              ///< overflowed). This is more helpful for debugging but produces
+              ///< larger debug info than `Basic`.
   };
 
   /// The code model to use (-mcmodel).
@@ -336,6 +379,10 @@ public:
   /// -fsymbol-partition (see https://lld.llvm.org/Partitions.html).
   std::string SymbolPartition;
 
+  /// If non-empty, allow the compiler to assume that the given source file
+  /// identifier is unique at link time.
+  std::string UniqueSourceFileIdentifier;
+
   enum RemarkKind {
     RK_Missing,            // Remark argument not present on the command line.
     RK_Enabled,            // Remark enabled via '-Rgroup'.
@@ -398,6 +445,12 @@ public:
   /// for the given fraction of PGO counters will be excluded from sanitization
   /// (0.0 [default] to skip none, 1.0 to skip all).
   SanitizerMaskCutoffs SanitizeSkipHotCutoffs;
+
+  /// Set of sanitizer checks, for which the instrumentation will be annotated
+  /// with extra debug info.
+  SanitizerSet SanitizeAnnotateDebugInfo;
+
+  std::optional<double> AllowRuntimeCheckSkipHotCutoff;
 
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;
@@ -493,11 +546,21 @@ public:
   /// The name of a file to use with \c .secure_log_unique directives.
   std::string AsSecureLogFile;
 
+  /// A list of functions that are replacable by the loader.
+  std::vector<std::string> LoaderReplaceableFunctionNames;
+  /// The name of a file that contains functions which will be compiled for
+  /// hotpatching. See -fms-secure-hotpatch-functions-file.
+  std::string MSSecureHotPatchFunctionsFile;
+
+  /// A list of functions which will be compiled for hotpatching.
+  /// See -fms-secure-hotpatch-functions-list.
+  std::vector<std::string> MSSecureHotPatchFunctionsList;
+
 public:
   // Define accessors/mutators for code generation options of enumeration type.
-#define CODEGENOPT(Name, Bits, Default)
-#define ENUM_CODEGENOPT(Name, Type, Bits, Default) \
-  Type get##Name() const { return static_cast<Type>(Name); } \
+#define CODEGENOPT(Name, Bits, Default, Compatibility)
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)              \
+  Type get##Name() const { return static_cast<Type>(Name); }                   \
   void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
 #include "clang/Basic/CodeGenOptions.def"
 
@@ -507,37 +570,59 @@ public:
     return NoBuiltinFuncs;
   }
 
+  bool hasSjLjExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::SjLj;
+  }
+
+  bool hasSEHExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::WinEH;
+  }
+
+  bool hasDWARFExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::DwarfCFI;
+  }
+
+  bool hasWasmExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::Wasm;
+  }
+
   /// Check if Clang profile instrumenation is on.
   bool hasProfileClangInstr() const {
-    return getProfileInstr() == ProfileClangInstr;
+    return getProfileInstr() ==
+           llvm::driver::ProfileInstrKind::ProfileClangInstr;
   }
 
   /// Check if IR level profile instrumentation is on.
   bool hasProfileIRInstr() const {
-    return getProfileInstr() == ProfileIRInstr;
+    return getProfileInstr() == llvm::driver::ProfileInstrKind::ProfileIRInstr;
   }
 
   /// Check if CS IR level profile instrumentation is on.
   bool hasProfileCSIRInstr() const {
-    return getProfileInstr() == ProfileCSIRInstr;
+    return getProfileInstr() ==
+           llvm::driver::ProfileInstrKind::ProfileCSIRInstr;
   }
 
   /// Check if any form of instrumentation is on.
-  bool hasProfileInstr() const { return getProfileInstr() != ProfileNone; }
+  bool hasProfileInstr() const {
+    return getProfileInstr() != llvm::driver::ProfileInstrKind::ProfileNone;
+  }
 
   /// Check if Clang profile use is on.
   bool hasProfileClangUse() const {
-    return getProfileUse() == ProfileClangInstr;
+    return getProfileUse() == llvm::driver::ProfileInstrKind::ProfileClangInstr;
   }
 
   /// Check if IR level profile use is on.
   bool hasProfileIRUse() const {
-    return getProfileUse() == ProfileIRInstr ||
-           getProfileUse() == ProfileCSIRInstr;
+    return getProfileUse() == llvm::driver::ProfileInstrKind::ProfileIRInstr ||
+           getProfileUse() == llvm::driver::ProfileInstrKind::ProfileCSIRInstr;
   }
 
   /// Check if CSIR profile use is on.
-  bool hasProfileCSIRUse() const { return getProfileUse() == ProfileCSIRInstr; }
+  bool hasProfileCSIRUse() const {
+    return getProfileUse() == llvm::driver::ProfileInstrKind::ProfileCSIRInstr;
+  }
 
   /// Check if type and variable info should be emitted.
   bool hasReducedDebugInfo() const {
@@ -565,6 +650,12 @@ public:
   /// Reset all of the options that are not considered when building a
   /// module.
   void resetNonModularOptions(StringRef ModuleFormat);
+
+  // Is the given function name one of the functions that can be replaced by the
+  // loader?
+  bool isLoaderReplaceableFunctionName(StringRef FuncName) const {
+    return llvm::is_contained(LoaderReplaceableFunctionNames, FuncName);
+  }
 };
 
 }  // end namespace clang

@@ -528,23 +528,25 @@ RuntimeLibcallSignatureTable &getRuntimeLibcallSignatures() {
 // constructor for use with a static variable
 struct StaticLibcallNameMap {
   StringMap<RTLIB::Libcall> Map;
-  StaticLibcallNameMap() {
-    static const std::pair<const char *, RTLIB::Libcall> NameLibcalls[] = {
-#define HANDLE_LIBCALL(code, name) {(const char *)name, RTLIB::code},
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-    };
-    for (const auto &NameLibcall : NameLibcalls) {
-      if (NameLibcall.first != nullptr &&
-          getRuntimeLibcallSignatures().Table[NameLibcall.second] !=
-              unsupported) {
-        assert(!Map.contains(NameLibcall.first) &&
-               "duplicate libcall names in name map");
-        Map[NameLibcall.first] = NameLibcall.second;
+  StaticLibcallNameMap(const Triple &TT) {
+    // FIXME: This is broken if there are ever different triples compiled with
+    // different libcalls.
+    RTLIB::RuntimeLibcallsInfo RTCI(TT);
+
+    ArrayRef<RuntimeLibcallSignature> Table =
+        getRuntimeLibcallSignatures().Table;
+    for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
+      if (!RTCI.isAvailable(Impl))
+        continue;
+      RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
+      if (Table[LC] != unsupported) {
+        StringRef NameLibcall =
+            RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Impl);
+        // FIXME: Map should be to LibcallImpl
+        if (!Map.insert({NameLibcall, LC}).second)
+          llvm_unreachable("duplicate libcall names in name map");
       }
     }
-
-    Map["emscripten_return_address"] = RTLIB::RETURN_ADDRESS;
   }
 };
 
@@ -940,7 +942,7 @@ void WebAssembly::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
                                       StringRef Name,
                                       SmallVectorImpl<wasm::ValType> &Rets,
                                       SmallVectorImpl<wasm::ValType> &Params) {
-  static StaticLibcallNameMap LibcallNameMap;
+  static StaticLibcallNameMap LibcallNameMap(Subtarget.getTargetTriple());
   auto &Map = LibcallNameMap.Map;
   auto Val = Map.find(Name);
 #ifndef NDEBUG
