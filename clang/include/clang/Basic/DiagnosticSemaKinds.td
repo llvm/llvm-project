@@ -2769,9 +2769,6 @@ def err_deduction_guide_name_not_class_template : Error<
   "cannot specify deduction guide for "
   "%select{<error>|function template|variable template|alias template|"
   "template template parameter|concept|dependent template name}0 %1">;
-def err_deduction_guide_target_attr : Error<
-  "in CUDA/HIP, target attributes are not allowed on deduction guides; "
-  "deduction guides are implicitly enabled for both host and device">;
 def err_deduction_guide_wrong_scope : Error<
   "deduction guide must be declared in the same scope as template %q0">;
 def err_deduction_guide_defines_function : Error<

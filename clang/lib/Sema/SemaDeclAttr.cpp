@@ -7987,19 +7987,6 @@ void Sema::ProcessDeclAttributeList(
     }
   }
 
-  // CUDA/HIP: disallow explicit CUDA target attributes on deduction guides.
-  // Deduction guides are not callable functions and never participate in
-  // codegen; they are always treated as host+device for CUDA/HIP semantic
-  // checks, so explicit target attributes on them would be misleading.
-  if (getLangOpts().CUDA)
-    if (auto *Guide = dyn_cast<CXXDeductionGuideDecl>(D);
-        Guide &&
-        (Guide->hasAttr<CUDAHostAttr>() || Guide->hasAttr<CUDADeviceAttr>() ||
-         Guide->hasAttr<CUDAGlobalAttr>())) {
-      Diag(Guide->getLocation(), diag::err_deduction_guide_target_attr);
-      Guide->setInvalidDecl();
-    }
-
   // Do not permit 'constructor' or 'destructor' attributes on __device__ code.
   if (getLangOpts().CUDAIsDevice && D->hasAttr<CUDADeviceAttr>() &&
       (D->hasAttr<ConstructorAttr>() || D->hasAttr<DestructorAttr>()) &&
