@@ -2662,11 +2662,11 @@ static bool OptimizeNonTrivialIFuncs(
         // discard feature bits that are known to be available in the current
         // caller. As long as the known missing feature bits are a subset of the
         // callee feature bits, advance to the next callee and start over.
-        auto computeKnownBits = [&](unsigned BestCandidate) {
+        auto eliminateAvailableFeatures = [&](unsigned BestCandidate) {
           unsigned K = 0;
           while (K < I && BestCandidate < Callees.size()) {
-            APInt KnownBits = FeatureMask[Callers[K]] & ~CallerBits;
-            if (KnownBits.isSubsetOf(FeatureMask[Callees[BestCandidate]])) {
+            APInt MissingBits = FeatureMask[Callers[K]] & ~CallerBits;
+            if (MissingBits.isSubsetOf(FeatureMask[Callees[BestCandidate]])) {
               ++BestCandidate;
               // Start over.
               K = 0;
@@ -2676,7 +2676,8 @@ static bool OptimizeNonTrivialIFuncs(
           return BestCandidate;
         };
 
-        unsigned BestCandidate = AllowExpensiveChecks ? computeKnownBits(J) : J;
+        unsigned BestCandidate =
+            AllowExpensiveChecks ? eliminateAvailableFeatures(J) : J;
         // No callee candidate was found for this caller.
         if (BestCandidate == Callees.size())
           continue;
