@@ -254,6 +254,7 @@ __mmask16 test_mm512_kunpackb(__mmask16 A, __mmask16 B) {
   // OGCG: [[RES:%.*]] = shufflevector <8 x i1> [[B_HALF]], <8 x i1> [[A_HALF]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   // OGCG: bitcast <16 x i1> [[RES]] to i16
   return _mm512_kunpackb(A, B);
+}
 __m256 test_mm512_i64gather_ps(__m512i __index, void const *__addr) {
   // CIR-LABEL: test_mm512_i64gather_ps
   // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.qps.512"

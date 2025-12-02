@@ -291,7 +291,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vec_set_v32qi:
   case X86::BI__builtin_ia32_vec_set_v16hi:
   case X86::BI__builtin_ia32_vec_set_v8si:
-  case X86::BI__builtin_ia32_vec_set_v4di:{
+  case X86::BI__builtin_ia32_vec_set_v4di: {
     return emitVecInsert(builder, getLoc(expr->getExprLoc()), ops[0], ops[1],
                          ops[2]);
   }
