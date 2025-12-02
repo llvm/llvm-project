@@ -226,3 +226,7 @@ fjcvtzs w0, d0
 .arch_extension fcma
 fcmla v0.4s, v1.4s, v2.4s, #0
 // CHECK: fcmla v0.4s, v1.4s, v2.4s, #0
+
+.arch_extension bti
+bti c
+// CHECK: bti c
