@@ -2311,9 +2311,9 @@ struct AMDGPUMakeDmaBaseLowering
         LLVM::TruncOp::create(rewriter, loc, i32, first57BitsOfGlobalAddr);
     Value highHalf = LLVM::TruncOp::create(rewriter, loc, i32, shift);
 
-    Value typeMask = createI32Constant(rewriter, loc, 2 << 30);
+    Value typeField = createI32Constant(rewriter, loc, 2 << 30);
     Value highHalfPlusType =
-        LLVM::OrOp::create(rewriter, loc, highHalf, typeMask);
+        LLVM::OrOp::create(rewriter, loc, highHalf, typeField);
 
     Value c0 = createI32Constant(rewriter, loc, 0);
     Value c1 = createI32Constant(rewriter, loc, 1);
