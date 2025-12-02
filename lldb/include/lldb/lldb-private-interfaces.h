@@ -26,7 +26,7 @@ class Value;
 
 namespace lldb_private {
 class ScriptedInterfaceUsages;
-struct SyntheticFrameProviderDescriptor;
+struct ScriptedFrameProviderDescriptor;
 typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
 typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
@@ -91,7 +91,7 @@ typedef lldb::ScriptInterpreterSP (*ScriptInterpreterCreateInstance)(
 typedef llvm::Expected<lldb::SyntheticFrameProviderSP> (
     *ScriptedFrameProviderCreateInstance)(
     lldb::StackFrameListSP input_frames,
-    const lldb_private::SyntheticFrameProviderDescriptor &descriptor);
+    const lldb_private::ScriptedFrameProviderDescriptor &descriptor);
 typedef llvm::Expected<lldb::SyntheticFrameProviderSP> (
     *SyntheticFrameProviderCreateInstance)(
     lldb::StackFrameListSP input_frames,

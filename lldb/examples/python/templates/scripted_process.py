@@ -243,6 +243,7 @@ class ScriptedThread(metaclass=ABCMeta):
                 key/value pairs used by the scripted thread.
         """
         self.target = None
+        self.arch = None
         self.originating_process = None
         self.process = None
         self.args = None
@@ -264,6 +265,9 @@ class ScriptedThread(metaclass=ABCMeta):
             and process.IsValid()
         ):
             self.target = process.target
+            triple = self.target.triple
+            if triple:
+                self.arch = triple.split("-")[0]
             self.originating_process = process
             self.process = self.target.GetProcess()
             self.get_register_info()
@@ -350,17 +354,14 @@ class ScriptedThread(metaclass=ABCMeta):
     def get_register_info(self):
         if self.register_info is None:
             self.register_info = dict()
-            if "x86_64" in self.originating_process.arch:
+            if "x86_64" in self.arch:
                 self.register_info["sets"] = ["General Purpose Registers"]
                 self.register_info["registers"] = INTEL64_GPR
-            elif (
-                "arm64" in self.originating_process.arch
-                or self.originating_process.arch == "aarch64"
-            ):
+            elif "arm64" in self.arch or self.arch == "aarch64":
                 self.register_info["sets"] = ["General Purpose Registers"]
                 self.register_info["registers"] = ARM64_GPR
             else:
-                raise ValueError("Unknown architecture", self.originating_process.arch)
+                raise ValueError("Unknown architecture", self.arch)
         return self.register_info
 
     @abstractmethod
@@ -403,11 +404,12 @@ class ScriptedFrame(metaclass=ABCMeta):
         """Construct a scripted frame.
 
         Args:
-            thread (ScriptedThread): The thread owning this frame.
+            thread (ScriptedThread/lldb.SBThread): The thread owning this frame.
             args (lldb.SBStructuredData): A Dictionary holding arbitrary
                 key/value pairs used by the scripted frame.
         """
         self.target = None
+        self.arch = None
         self.originating_thread = None
         self.thread = None
         self.args = None
@@ -417,15 +419,17 @@ class ScriptedFrame(metaclass=ABCMeta):
         self.register_ctx = {}
         self.variables = []
 
-        if (
-            isinstance(thread, ScriptedThread)
-            or isinstance(thread, lldb.SBThread)
-            and thread.IsValid()
+        if isinstance(thread, ScriptedThread) or (
+            isinstance(thread, lldb.SBThread) and thread.IsValid()
         ):
-            self.target = thread.target
             self.process = thread.process
+            self.target = self.process.target
+            triple = self.target.triple
+            if triple:
+                self.arch = triple.split("-")[0]
+            tid = thread.tid if isinstance(thread, ScriptedThread) else thread.id
             self.originating_thread = thread
-            self.thread = self.process.GetThreadByIndexID(thread.tid)
+            self.thread = self.process.GetThreadByIndexID(tid)
             self.get_register_info()
 
     @abstractmethod
@@ -506,7 +510,18 @@ class ScriptedFrame(metaclass=ABCMeta):
 
     def get_register_info(self):
         if self.register_info is None:
-            self.register_info = self.originating_thread.get_register_info()
+            if isinstance(self.originating_thread, ScriptedThread):
+                self.register_info = self.originating_thread.get_register_info()
+            elif isinstance(self.originating_thread, lldb.SBThread):
+                self.register_info = dict()
+                if "x86_64" in self.arch:
+                    self.register_info["sets"] = ["General Purpose Registers"]
+                    self.register_info["registers"] = INTEL64_GPR
+                elif "arm64" in self.arch or self.arch == "aarch64":
+                    self.register_info["sets"] = ["General Purpose Registers"]
+                    self.register_info["registers"] = ARM64_GPR
+                else:
+                    raise ValueError("Unknown architecture", self.arch)
         return self.register_info
 
     @abstractmethod
@@ -640,12 +655,12 @@ class PassthroughScriptedThread(ScriptedThread):
 
             # TODO: Passthrough stop reason from driving process
             if self.driving_thread.GetStopReason() != lldb.eStopReasonNone:
-                if "arm64" in self.originating_process.arch:
+                if "arm64" in self.arch:
                     stop_reason["type"] = lldb.eStopReasonException
                     stop_reason["data"]["desc"] = (
                         self.driving_thread.GetStopDescription(100)
                     )
-                elif self.originating_process.arch == "x86_64":
+                elif self.arch == "x86_64":
                     stop_reason["type"] = lldb.eStopReasonSignal
                     stop_reason["data"]["signal"] = signal.SIGTRAP
                 else:
