@@ -15,6 +15,7 @@
 #include "NewPMDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -45,6 +46,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/SourceMgr.h"
@@ -58,11 +60,13 @@
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include <cassert>
 #include <memory>
 #include <optional>
 using namespace llvm;
 
 static codegen::RegisterCodeGenFlags CGF;
+static codegen::RegisterSaveStatsFlag SSF;
 
 // General options for llc.  Other pass-specific options are specified
 // within the corresponding llc passes, and target-specific options
@@ -262,7 +266,8 @@ static cl::opt<RunPassOption, true, cl::parser<std::string>> RunPass(
     cl::desc("Run compiler only for specified passes (comma separated list)"),
     cl::value_desc("pass-name"), cl::location(RunPassOpt));
 
-static int compileModule(char **, LLVMContext &);
+static int compileModule(char **argv, LLVMContext &Context,
+                         std::string &OutputFilename);
 
 [[noreturn]] static void reportError(Twine Msg, StringRef Filename = "") {
   SmallString<256> Prefix;
@@ -282,9 +287,7 @@ static int compileModule(char **, LLVMContext &);
   llvm_unreachable("reportError() should not return");
 }
 
-static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
-                                                       Triple::OSType OS,
-                                                       const char *ProgName) {
+static std::unique_ptr<ToolOutputFile> GetOutputStream(Triple::OSType OS) {
   // If we don't yet have an output filename, make one.
   if (OutputFilename.empty()) {
     if (InputFilename == "-")
@@ -450,18 +453,22 @@ int main(int argc, char **argv) {
     reportError(std::move(E), RemarksFilename);
   std::unique_ptr<ToolOutputFile> RemarksFile = std::move(*RemarksFileOrErr);
 
+  codegen::MaybeEnableStatistics();
+  std::string OutputFilename;
+
   if (InputLanguage != "" && InputLanguage != "ir" && InputLanguage != "mir")
     reportError("input language must be '', 'IR' or 'MIR'");
 
   // Compile the module TimeCompilations times to give better compile time
   // metrics.
   for (unsigned I = TimeCompilations; I; --I)
-    if (int RetVal = compileModule(argv, Context))
+    if (int RetVal = compileModule(argv, Context, OutputFilename))
       return RetVal;
 
   if (RemarksFile)
     RemarksFile->keep();
-  return 0;
+
+  return codegen::MaybeSaveStatistics(OutputFilename, "llc");
 }
 
 static bool addPass(PassManagerBase &PM, const char *argv0,
@@ -493,7 +500,8 @@ static bool addPass(PassManagerBase &PM, const char *argv0,
   return false;
 }
 
-static int compileModule(char **argv, LLVMContext &Context) {
+static int compileModule(char **argv, LLVMContext &Context,
+                         std::string &OutputFilename) {
   // Load the module to be compiled...
   SMDiagnostic Err;
   std::unique_ptr<Module> M;
@@ -671,12 +679,15 @@ static int compileModule(char **argv, LLVMContext &Context) {
     Target->Options.FloatABIType = codegen::getFloatABIForCalls();
 
   // Figure out where we are going to send the output.
-  std::unique_ptr<ToolOutputFile> Out =
-      GetOutputStream(TheTarget->getName(), TheTriple.getOS(), argv[0]);
-  if (!Out) return 1;
+  std::unique_ptr<ToolOutputFile> Out = GetOutputStream(TheTriple.getOS());
+  if (!Out)
+    return 1;
 
   // Ensure the filename is passed down to CodeViewDebug.
   Target->Options.ObjectFilenameForDebug = Out->outputFilename();
+
+  // Return a copy of the output filename via the output param
+  OutputFilename = Out->outputFilename();
 
   // Tell target that this tool is not necessarily used with argument ABI
   // compliance (i.e. narrow integer argument extensions).
