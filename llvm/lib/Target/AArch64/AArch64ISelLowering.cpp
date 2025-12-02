@@ -7741,12 +7741,13 @@ SDValue AArch64TargetLowering::LowerFMA(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   // Bail early if we're definitely not looking to merge FNEGs into the FMA.
-  if (!VT.isFixedLengthVector() || OpC.getOpcode() != ISD::FNEG) {
-    if (VT.isScalableVector() || VT.getScalarType() == MVT::bf16 ||
-        useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
-    return Op; // Fallback to NEON lowering.
-  }
+  if (VT != MVT::v8f16 && VT != MVT::v4f32 && VT != MVT::v2f64)
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED);
+
+  if (OpC.getOpcode() != ISD::FNEG)
+    return useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())
+               ? LowerToPredicatedOp(Op, DAG, AArch64ISD::FMA_PRED)
+               : Op; // Fallback to NEON lowering.
 
   // Convert FMA/FNEG nodes to SVE to enable the following patterns:
   // fma(a, b, neg(c)) -> fnmls(a, b, c)
@@ -7755,17 +7756,15 @@ SDValue AArch64TargetLowering::LowerFMA(SDValue Op, SelectionDAG &DAG) const {
   SDValue Pg = getPredicateForVector(DAG, DL, VT);
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
 
-  // Reuse `LowerToPredicatedOp` but drop the subsequent `extract_subvector`
-  OpA = OpA.getOpcode() == ISD::FNEG
-            ? LowerToPredicatedOp(OpA, DAG, AArch64ISD::FNEG_MERGE_PASSTHRU)
-                  ->getOperand(0)
-            : convertToScalableVector(DAG, ContainerVT, OpA);
-  OpB = OpB.getOpcode() == ISD::FNEG
-            ? LowerToPredicatedOp(OpB, DAG, AArch64ISD::FNEG_MERGE_PASSTHRU)
-                  ->getOperand(0)
-            : convertToScalableVector(DAG, ContainerVT, OpB);
-  OpC = LowerToPredicatedOp(OpC, DAG, AArch64ISD::FNEG_MERGE_PASSTHRU)
-            ->getOperand(0);
+  auto ConvertToScalableFnegMt = [&](SDValue Op) {
+    if (Op.getOpcode() == ISD::FNEG)
+      Op = LowerToPredicatedOp(Op, DAG, AArch64ISD::FNEG_MERGE_PASSTHRU);
+    return convertToScalableVector(DAG, ContainerVT, Op);
+  };
+
+  OpA = ConvertToScalableFnegMt(OpA);
+  OpB = ConvertToScalableFnegMt(OpB);
+  OpC = ConvertToScalableFnegMt(OpC);
 
   SDValue ScalableRes =
       DAG.getNode(AArch64ISD::FMA_PRED, DL, ContainerVT, Pg, OpA, OpB, OpC);
