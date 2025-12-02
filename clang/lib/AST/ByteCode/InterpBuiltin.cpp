@@ -48,6 +48,11 @@ static void discard(InterpStack &Stk, PrimType T) {
   TYPE_SWITCH(T, { Stk.discard<T>(); });
 }
 
+static uint64_t popToUInt64(const InterpState &S, const Expr *E) {
+  INT_TYPE_SWITCH(*S.getContext().classify(E->getType()),
+                  return static_cast<uint64_t>(S.Stk.pop<T>()));
+}
+
 static APSInt popToAPSInt(InterpStack &Stk, PrimType T) {
   INT_TYPE_SWITCH(T, return Stk.pop<T>().toAPSInt());
 }
@@ -212,8 +217,7 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   uint64_t Limit = ~static_cast<uint64_t>(0);
   if (ID == Builtin::BIstrncmp || ID == Builtin::BI__builtin_strncmp ||
       ID == Builtin::BIwcsncmp || ID == Builtin::BI__builtin_wcsncmp)
-    Limit = popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)))
-                .getZExtValue();
+    Limit = popToUInt64(S, Call->getArg(2));
 
   const Pointer &B = S.Stk.pop<Pointer>();
   const Pointer &A = S.Stk.pop<Pointer>();
@@ -991,7 +995,7 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
   };
 
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  const APSInt &SizeVal = popToAPSInt(S, Call->getArg(0));
+  uint64_t SizeVal = popToUInt64(S, Call->getArg(0));
 
   // For __atomic_is_lock_free(sizeof(_Atomic(T))), if the size is a power
   // of two less than or equal to the maximum inline atomic width, we know it
@@ -1003,7 +1007,7 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
   // x86-64 processors.
 
   // Check power-of-two.
-  CharUnits Size = CharUnits::fromQuantity(SizeVal.getZExtValue());
+  CharUnits Size = CharUnits::fromQuantity(SizeVal);
   if (Size.isPowerOfTwo()) {
     // Check against inlining width.
     unsigned InlineWidthBits =
@@ -1057,9 +1061,9 @@ static bool interp__builtin_c11_atomic_is_lock_free(InterpState &S,
                                                     CodePtr OpPC,
                                                     const InterpFrame *Frame,
                                                     const CallExpr *Call) {
-  const APSInt &SizeVal = popToAPSInt(S, Call->getArg(0));
+  uint64_t SizeVal = popToUInt64(S, Call->getArg(0));
 
-  CharUnits Size = CharUnits::fromQuantity(SizeVal.getZExtValue());
+  CharUnits Size = CharUnits::fromQuantity(SizeVal);
   if (Size.isPowerOfTwo()) {
     // Check against inlining width.
     unsigned InlineWidthBits =
@@ -1719,11 +1723,9 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
                                    const CallExpr *Call, unsigned ID) {
   assert(Call->getNumArgs() == 3);
   const ASTContext &ASTCtx = S.getASTContext();
-  APSInt Size = popToAPSInt(S, Call->getArg(2));
+  uint64_t Size = popToUInt64(S, Call->getArg(2));
   Pointer SrcPtr = S.Stk.pop<Pointer>().expand();
   Pointer DestPtr = S.Stk.pop<Pointer>().expand();
-
-  assert(!Size.isSigned() && "memcpy and friends take an unsigned size");
 
   if (ID == Builtin::BImemcpy || ID == Builtin::BImemmove)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
@@ -1736,7 +1738,7 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
                ID == Builtin::BI__builtin_wmemmove;
 
   // If the size is zero, we treat this as always being a valid no-op.
-  if (Size.isZero()) {
+  if (Size == 0) {
     S.Stk.push<Pointer>(DestPtr);
     return true;
   }
@@ -1798,11 +1800,10 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   if (WChar) {
     uint64_t WCharSize =
         ASTCtx.getTypeSizeInChars(ASTCtx.getWCharType()).getQuantity();
-    Size *= APSInt(APInt(Size.getBitWidth(), WCharSize, /*IsSigned=*/false),
-                   /*IsUnsigend=*/true);
+    Size *= WCharSize;
   }
 
-  if (Size.urem(DestElemSize) != 0) {
+  if (Size % DestElemSize != 0) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memcpy_unsupported)
         << Move << WChar << 0 << DestElemType << Size << DestElemSize;
@@ -1835,12 +1836,12 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   // Check if we have enough elements to read from and write to.
   size_t RemainingDestBytes = RemainingDestElems * DestElemSize;
   size_t RemainingSrcBytes = RemainingSrcElems * SrcElemSize;
-  if (Size.ugt(RemainingDestBytes) || Size.ugt(RemainingSrcBytes)) {
-    APInt N = Size.udiv(DestElemSize);
+  if (Size > RemainingDestBytes || Size > RemainingSrcBytes) {
+    APInt N = APInt(64, Size / DestElemSize);
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memcpy_unsupported)
-        << Move << WChar << (Size.ugt(RemainingSrcBytes) ? 1 : 2)
-        << DestElemType << toString(N, 10, /*Signed=*/false);
+        << Move << WChar << (Size > RemainingSrcBytes ? 1 : 2) << DestElemType
+        << toString(N, 10, /*Signed=*/false);
     return false;
   }
 
@@ -1857,18 +1858,17 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
 
     unsigned SrcIndex = SrcP.expand().getIndex() * SrcP.elemSize();
     unsigned DstIndex = DestP.expand().getIndex() * DestP.elemSize();
-    unsigned N = Size.getZExtValue();
 
-    if ((SrcIndex <= DstIndex && (SrcIndex + N) > DstIndex) ||
-        (DstIndex <= SrcIndex && (DstIndex + N) > SrcIndex)) {
+    if ((SrcIndex <= DstIndex && (SrcIndex + Size) > DstIndex) ||
+        (DstIndex <= SrcIndex && (DstIndex + Size) > SrcIndex)) {
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_overlap)
           << /*IsWChar=*/false;
       return false;
     }
   }
 
-  assert(Size.getZExtValue() % DestElemSize == 0);
-  if (!DoMemcpy(S, OpPC, SrcPtr, DestPtr, Bytes(Size.getZExtValue()).toBits()))
+  assert(Size % DestElemSize == 0);
+  if (!DoMemcpy(S, OpPC, SrcPtr, DestPtr, Bytes(Size).toBits()))
     return false;
 
   S.Stk.push<Pointer>(DestPtr);
@@ -1885,7 +1885,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call, unsigned ID) {
   assert(Call->getNumArgs() == 3);
-  const APSInt &Size = popToAPSInt(S, Call->getArg(2));
+  uint64_t Size = popToUInt64(S, Call->getArg(2));
   const Pointer &PtrB = S.Stk.pop<Pointer>();
   const Pointer &PtrA = S.Stk.pop<Pointer>();
 
@@ -1893,7 +1893,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
       ID == Builtin::BIwmemcmp)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
-  if (Size.isZero()) {
+  if (Size == 0) {
     pushInteger(S, 0, Call->getType());
     return true;
   }
@@ -1950,7 +1950,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     ElemSize = ASTCtx.getTypeSizeInChars(ASTCtx.getWCharType()).getQuantity();
   // The Size given for the wide variants is in wide-char units. Convert it
   // to bytes.
-  size_t ByteSize = Size.getZExtValue() * ElemSize;
+  size_t ByteSize = Size * ElemSize;
   size_t CmpSize = std::min(MinBufferSize, ByteSize);
 
   for (size_t I = 0; I != CmpSize; I += ElemSize) {
@@ -2238,7 +2238,7 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   // clear, objects are whole variables. If it is set, a closest surrounding
   // subobject is considered the object a pointer points to. The second bit
   // determines if maximum or minimum of remaining bytes is computed.
-  unsigned Kind = popToAPSInt(S, Call->getArg(1)).getZExtValue();
+  unsigned Kind = popToUInt64(S, Call->getArg(1));
   assert(Kind <= 3 && "unexpected kind");
   bool UseFieldDesc = (Kind & 1u);
   bool ReportMinimum = (Kind & 2u);

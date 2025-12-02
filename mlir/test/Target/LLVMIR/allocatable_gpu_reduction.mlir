@@ -1,3 +1,5 @@
+// Tests single-team by-ref GPU reductions.
+
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 : ui64, "dlti.global_memory_space" = 1 : ui64>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, omp.is_target_device = true} {
