@@ -28,6 +28,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
@@ -2801,10 +2802,14 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
             .getAsAlign();
     Attrs.addAlignmentAttr(Alignment);
 
-    if (isa_and_nonnull<CXXDestructorDecl>(
-            CalleeInfo.getCalleeDecl().getDecl())) {
-      auto *ClassDecl = dyn_cast<CXXRecordDecl>(
-          CalleeInfo.getCalleeDecl().getDecl()->getDeclContext());
+    const auto *DD = dyn_cast_if_present<CXXDestructorDecl>(
+        CalleeInfo.getCalleeDecl().getDecl());
+    if (DD && CodeGenOpts.MarkObjectsDeadAfterDestructors) {
+      const CXXRecordDecl *ClassDecl =
+          dyn_cast<CXXRecordDecl>(DD->getDeclContext());
+      // TODO(boomanaiden154): We are being intentionally conservative here
+      // as we gain experience with this optimization. These checks should be
+      // removed once we have done further integration testing.
       if (ClassDecl->getNumBases() == 0 && ClassDecl->getNumVBases() == 0) {
         Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
       }
