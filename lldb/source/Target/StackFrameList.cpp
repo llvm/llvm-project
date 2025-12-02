@@ -343,6 +343,7 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
         m_thread.shared_from_this(), frame_idx, concrete_frame_idx, cfa,
         cfa_is_valid, pc, StackFrame::Kind::Regular, artificial,
         behaves_like_zeroth_frame, &sc);
+    synth_frame->m_frame_list_wp = shared_from_this();
     m_frames.push_back(synth_frame);
     LLDB_LOG(log, "Pushed frame {0} at {1:x}", callee->GetDisplayName(), pc);
   }
@@ -458,6 +459,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
           unwind_frame_sp = std::make_shared<StackFrame>(
               m_thread.shared_from_this(), m_frames.size(), idx, reg_ctx_sp,
               cfa, pc, behaves_like_zeroth_frame, nullptr);
+          unwind_frame_sp->m_frame_list_wp = shared_from_this();
           m_frames.push_back(unwind_frame_sp);
         }
       } else {
@@ -492,6 +494,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       // although its concrete index will stay the same.
       SynthesizeTailCallFrames(*unwind_frame_sp.get());
 
+      unwind_frame_sp->m_frame_list_wp = shared_from_this();
       m_frames.push_back(unwind_frame_sp);
     }
 
@@ -516,6 +519,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
             unwind_frame_sp->GetRegisterContextSP(), cfa, next_frame_address,
             behaves_like_zeroth_frame, &next_frame_sc));
 
+        frame_sp->m_frame_list_wp = shared_from_this();
         m_frames.push_back(frame_sp);
         unwind_sc = next_frame_sc;
         curr_frame_address = next_frame_address;
@@ -572,6 +576,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       prev_frame->UpdatePreviousFrameFromCurrentFrame(*curr_frame);
       // Now copy the fixed up previous frame into the current frames so the
       // pointer doesn't change.
+      prev_frame_sp->m_frame_list_wp = shared_from_this();
       m_frames[curr_frame_idx] = prev_frame_sp;
 
 #if defined(DEBUG_STACK_FRAMES)
