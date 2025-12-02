@@ -21,7 +21,7 @@ define void @test_step2_div4(i64 %n) {
 ; CHECK-NEXT:    %iv.neg.1 = add i64 %iv, -1
 ; CHECK-NEXT:    --> {-1,+,2}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %div.neg.1 = udiv i64 %iv.neg.1, 4
-; CHECK-NEXT:    --> ({-1,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ({-2,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 2
 ; CHECK-NEXT:    --> {2,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_step2_div4
@@ -130,7 +130,7 @@ define void @test_step4_div4(i64 %n) {
 ; CHECK-NEXT:    %iv.5 = add i64 %iv, 5
 ; CHECK-NEXT:    --> {5,+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %div.5 = udiv i64 %iv.5, 4
-; CHECK-NEXT:    --> ({5,+,4}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> ({4,+,4}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 4
 ; CHECK-NEXT:    --> {4,+,4}<%loop> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_step4_div4
