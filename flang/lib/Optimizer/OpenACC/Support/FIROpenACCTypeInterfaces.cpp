@@ -1041,9 +1041,8 @@ mlir::Value OpenACCPointerLikeModel<Ty>::genLoad(
   mlir::Value loadedValue = fir::LoadOp::create(builder, loc, srcPtr);
 
   // If valueType is provided and differs from the loaded type, insert a convert
-  if (valueType && loadedValue.getType() != valueType) {
+  if (valueType && loadedValue.getType() != valueType)
     return fir::ConvertOp::create(builder, loc, valueType, loadedValue);
-  }
 
   return loadedValue;
 }
@@ -1097,10 +1096,9 @@ bool OpenACCPointerLikeModel<Ty>::genStore(
   mlir::Value convertedValue = valueToStore;
 
   // If the value type differs from the pointee type, insert a convert
-  if (valueType != pointeeTy) {
+  if (valueType != pointeeTy)
     convertedValue =
         fir::ConvertOp::create(builder, loc, pointeeTy, valueToStore);
-  }
 
   fir::StoreOp::create(builder, loc, convertedValue, destPtr);
   return true;
