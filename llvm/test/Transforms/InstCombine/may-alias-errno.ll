@@ -149,6 +149,64 @@ entry:
   ret <vscale x 4 x i32> %v
 }
 
+@internal_g = internal global i32 0
+
+; errno cannot alias an internal global variable, can do constant store-to-load forwarding.
+define i32 @does_not_alias_errno_internal_global(float %f) {
+; CHECK-LABEL: define i32 @does_not_alias_errno_internal_global(
+; CHECK-SAME: float [[F:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store i32 42, ptr @internal_g, align 4
+; CHECK-NEXT:    [[CALL:%.*]] = call float @sinf(float [[F]])
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr @internal_g, align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+entry:
+  store i32 42, ptr @internal_g, align 4
+  %call = call float @sinf(float %f)
+  %v = load i32, ptr @internal_g, align 4
+  ret i32 %v
+}
+
+@external_g = external global i32
+
+; errno cannot alias an external global variable unless known to be errno,
+; can do constant store-to-load forwarding.
+define i32 @does_not_alias_errno_external_global_known_by_name(float %f) {
+; CHECK-LABEL: define i32 @does_not_alias_errno_external_global_known_by_name(
+; CHECK-SAME: float [[F:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store i32 42, ptr @external_g, align 4
+; CHECK-NEXT:    [[CALL:%.*]] = call float @sinf(float [[F]])
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr @external_g, align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+entry:
+  store i32 42, ptr @external_g, align 4
+  %call = call float @sinf(float %f)
+  %v = load i32, ptr @external_g, align 4
+  ret i32 %v
+}
+
+@errno = external global i32
+
+; errno global variable does alias errno, cannot do constant store-to-load forwarding.
+define i32 @does_alias_errno_global(float %f) {
+; CHECK-LABEL: define i32 @does_alias_errno_global(
+; CHECK-SAME: float [[F:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store i32 42, ptr @errno, align 4
+; CHECK-NEXT:    [[CALL:%.*]] = call float @sinf(float [[F]])
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr @errno, align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+entry:
+  store i32 42, ptr @errno, align 4
+  %call = call float @sinf(float %f)
+  %v = load i32, ptr @errno, align 4
+  ret i32 %v
+}
+
 declare float @sinf(float) memory(errnomem: write)
 declare float @read_errno(ptr) memory(argmem: write, errnomem: read)
 declare void @escape(ptr %p)
