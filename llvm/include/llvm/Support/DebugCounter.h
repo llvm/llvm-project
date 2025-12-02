@@ -76,8 +76,8 @@ public:
 
     int64_t Count = 0;
     uint64_t CurrChunkIdx = 0;
-    std::string Name;
-    std::string Desc;
+    StringRef Name;
+    StringRef Desc;
     SmallVector<Chunk> Chunks;
 
   public:
@@ -157,7 +157,7 @@ public:
   unsigned int getNumCounters() const { return Counters.size(); }
 
   // Return the name and description of the counter with the given info.
-  std::pair<std::string, std::string> getCounterDesc(CounterInfo *Info) const {
+  std::pair<StringRef, StringRef> getCounterDesc(CounterInfo *Info) const {
     return {Info->Name, Info->Desc};
   }
 
