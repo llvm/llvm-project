@@ -1183,7 +1183,9 @@ static const char *getImportFailureString(swift::serialization::Status status) {
   case swift::serialization::Status::SDKMismatch:
     return "The module file was built with a different SDK version.";
   case swift::serialization::Status::ChannelIncompatible:
-    return "The distribution channel doesn't match.";
+    return "The distribution channel doesn't match."
+           " This version of LLDB is most likely from a different toolchain"
+           " than the Swift compiler that built this module.";
   }
 }
 
