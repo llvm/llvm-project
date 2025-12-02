@@ -7922,16 +7922,10 @@ concepts::Requirement *Sema::ActOnNestedRequirement(Expr *Constraint) {
 
 concepts::NestedRequirement *
 Sema::BuildNestedRequirement(Expr *Constraint) {
-  if (!Constraint->isValueDependent() &&
-      !Constraint->isInstantiationDependent()) {
-    Expr::EvalResult Result;
-    if (!Constraint->EvaluateAsConstantExpr(Result, Context)) {
-      Diag(Constraint->getExprLoc(), diag::err_nested_requirement_not_constant);
-      return nullptr;
-    }
-  }
   ConstraintSatisfaction Satisfaction;
+  LocalInstantiationScope Scope(*this);
   if (!Constraint->isInstantiationDependent() &&
+      !Constraint->isValueDependent() &&
       CheckConstraintSatisfaction(nullptr, AssociatedConstraint(Constraint),
                                   /*TemplateArgs=*/{},
                                   Constraint->getSourceRange(), Satisfaction))

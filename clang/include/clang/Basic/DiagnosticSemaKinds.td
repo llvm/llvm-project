@@ -3190,8 +3190,6 @@ def note_ambiguous_atomic_constraints_similar_expression : Note<
 def err_unsupported_placeholder_constraint : Error<
   "constrained placeholder types other than simple 'auto' on non-type template "
   "parameters not supported yet">;
-def err_nested_requirement_not_constant : Error<
-  "nested requirement is not a constant expression">;
 
 def err_template_different_requires_clause : Error<
   "requires clause differs in template redeclaration">;
