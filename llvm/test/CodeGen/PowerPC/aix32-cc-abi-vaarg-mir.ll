@@ -8,22 +8,22 @@ define i32 @int_va_arg(i32 %a, ...) local_unnamed_addr  {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r11 = ADDI %fixed-stack.0, 0
   ; CHECK-NEXT:   STW killed renamable $r4, 0, %fixed-stack.0 :: (store (s32) into %fixed-stack.0)
-  ; CHECK-NEXT:   STW killed renamable $r6, 8, %fixed-stack.0 :: (store (s32))
-  ; CHECK-NEXT:   STW killed renamable $r7, 12, %fixed-stack.0 :: (store (s32))
-  ; CHECK-NEXT:   STW killed renamable $r8, 16, %fixed-stack.0 :: (store (s32))
-  ; CHECK-NEXT:   STW killed renamable $r9, 20, %fixed-stack.0 :: (store (s32))
-  ; CHECK-NEXT:   STW killed renamable $r10, 24, %fixed-stack.0 :: (store (s32))
+  ; CHECK-NEXT:   STW killed renamable $r5, 4, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 4)
+  ; CHECK-NEXT:   STW killed renamable $r6, 8, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 8)
+  ; CHECK-NEXT:   STW killed renamable $r7, 12, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 12)
+  ; CHECK-NEXT:   STW killed renamable $r8, 16, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 16)
+  ; CHECK-NEXT:   STW killed renamable $r9, 20, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 20)
+  ; CHECK-NEXT:   STW killed renamable $r10, 24, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 24)
   ; CHECK-NEXT:   STW renamable $r11, 0, %stack.0.arg1 :: (store (s32) into %ir.arg1)
   ; CHECK-NEXT:   STW killed renamable $r11, 0, %stack.1.arg2 :: (store (s32) into %ir.arg2)
   ; CHECK-NEXT:   renamable $r4 = ADDI %fixed-stack.0, 4
   ; CHECK-NEXT:   STW renamable $r4, 0, %stack.0.arg1 :: (store (s32) into %ir.arg1)
-  ; CHECK-NEXT:   renamable $r6 = LWZ 0, %fixed-stack.0 :: (load (s32) from %ir.argp.cur)
+  ; CHECK-NEXT:   renamable $r5 = LWZ 0, %fixed-stack.0 :: (load (s32) from %ir.argp.cur)
   ; CHECK-NEXT:   STW killed renamable $r4, 0, %stack.1.arg2 :: (store (s32) into %ir.arg2)
   ; CHECK-NEXT:   renamable $r4 = LWZ 0, %fixed-stack.0 :: (load (s32) from %ir.argp.cur2)
-  ; CHECK-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r6, killed renamable $r3
+  ; CHECK-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r5, killed renamable $r3
   ; CHECK-NEXT:   renamable $r4 = RLWINM killed renamable $r4, 1, 0, 30
   ; CHECK-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r4
-  ; CHECK-NEXT:   STW killed renamable $r5, 4, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 4)
   ; CHECK-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3
 entry:
   %arg1 = alloca ptr, align 4
@@ -115,12 +115,12 @@ define double @double_va_arg(double %a, ...) local_unnamed_addr  {
   ; CHECK-NEXT:   liveins: $f1, $r5, $r6, $r7, $r8, $r9, $r10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $r3 = ADDI %fixed-stack.0, 0
-  ; CHECK-NEXT:   STW killed renamable $r7, 8, %fixed-stack.0 :: (store (s32), align 8)
+  ; CHECK-NEXT:   STW killed renamable $r7, 8, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 8, align 8)
   ; CHECK-NEXT:   STW renamable $r5, 0, %fixed-stack.0 :: (store (s32) into %fixed-stack.0, align 16)
   ; CHECK-NEXT:   STW renamable $r6, 4, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 4)
-  ; CHECK-NEXT:   STW killed renamable $r8, 12, %fixed-stack.0 :: (store (s32))
+  ; CHECK-NEXT:   STW killed renamable $r8, 12, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 12)
   ; CHECK-NEXT:   STW killed renamable $r9, 16, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 16, align 16)
-  ; CHECK-NEXT:   STW killed renamable $r10, 20, %fixed-stack.0 :: (store (s32))
+  ; CHECK-NEXT:   STW killed renamable $r10, 20, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 20)
   ; CHECK-NEXT:   STW renamable $r3, 0, %stack.0.arg1 :: (store (s32) into %ir.arg1)
   ; CHECK-NEXT:   STW killed renamable $r3, 0, %stack.1.arg2 :: (store (s32) into %ir.arg2)
   ; CHECK-NEXT:   STW renamable $r5, 0, %stack.2 :: (store (s32) into %stack.2, align 8)
