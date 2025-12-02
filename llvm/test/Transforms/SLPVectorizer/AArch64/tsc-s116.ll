@@ -17,12 +17,15 @@
 
 define void @s116_modified(ptr %a) {
 ; CHECK-LABEL: @s116_modified(
-; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds float, ptr [[GEP1:%.*]], i64 4
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds float, ptr [[GEP1:%.*]], i64 1
+; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds float, ptr [[GEP1]], i64 4
+; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 2, i32 3, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <4 x i32> <i32 poison, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP3]], float [[LD1]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP2]], float [[LD0]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[GEP1]], align 4
 ; CHECK-NEXT:    ret void

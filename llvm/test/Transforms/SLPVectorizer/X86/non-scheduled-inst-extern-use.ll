@@ -13,7 +13,7 @@ define void @test(i32 %arg) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    br i1 false, label %[[BB8:.*]], label %[[BB4:.*]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> zeroinitializer, [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    br label %[[BB8]]
 ; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x i32> [ [[TMP4]], %[[BB4]] ], [ [[TMP1]], %[[BB1]] ]

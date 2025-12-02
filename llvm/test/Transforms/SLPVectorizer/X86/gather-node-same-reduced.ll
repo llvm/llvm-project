@@ -5,7 +5,8 @@ define i64 @test(ptr %p) {
 ; CHECK-LABEL: define i64 @test(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 12
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = xor <3 x i32> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i32> [[TMP13]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i32> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i32> [[TMP4]], zeroinitializer
@@ -87,7 +88,8 @@ define i64 @test1(ptr %p) {
 ; CHECK-LABEL: define i64 @test1(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 12
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = xor <3 x i32> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i32> [[TMP13]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i32> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i32> [[TMP4]], zeroinitializer
