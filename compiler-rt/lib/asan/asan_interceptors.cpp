@@ -56,7 +56,7 @@ namespace __asan {
 #  define ASAN_READ_STRING(ctx, s, n) \
     ASAN_READ_STRING_OF_LEN((ctx), (s), internal_strlen(s), (n))
 
-static inline void internal_or_real_memcpy(void *new_mem, const char *s,
+static inline void internal_or_real_memcpy(void* new_mem, const char* s,
                                            uptr length) {
 #  if SANITIZER_INTERCEPT_MEMCPY
   REAL(memcpy)(new_mem, s, length + 1);
@@ -65,7 +65,7 @@ static inline void internal_or_real_memcpy(void *new_mem, const char *s,
 #  endif
 }
 
-[[maybe_unused]] static inline uptr MaybeRealStrnlen(const char *s,
+[[maybe_unused]] static inline uptr MaybeRealStrnlen(const char* s,
                                                      uptr maxlen) {
 #  if SANITIZER_INTERCEPT_STRNLEN
   if (static_cast<bool>(REAL(strnlen)))
@@ -294,7 +294,7 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
       result = REAL(pthread_create)(thread, attr, asan_thread_start, t);
 // AIX pthread_t is unsigned int.
 #    if SANITIZER_AIX
-      return result ? 0 : *(unsigned *)(thread);
+      return result ? 0 : *(unsigned*)(thread);
 #    else
       return result ? 0 : *(uptr *)(thread);
 #    endif

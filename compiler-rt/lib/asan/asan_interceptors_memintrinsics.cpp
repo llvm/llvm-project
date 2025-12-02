@@ -60,15 +60,15 @@ using namespace __asan;
     return REAL(memset)(block, c, size);      \
   } while (0)
 
-#define ASAN_MEMMOVE_IMPL(ctx, to, from, size) \
-  do {                                         \
-    if (LIKELY(replace_intrin_cached)) {       \
-      ASAN_READ_RANGE(ctx, from, size);        \
-      ASAN_WRITE_RANGE(ctx, to, size);         \
-    } else if (UNLIKELY(!AsanInited())) {      \
-      return internal_memmove(to, from, size); \
-    }                                          \
-    return ASAN_MEMMOVE_RETURN(to, from, size);\
+#define ASAN_MEMMOVE_IMPL(ctx, to, from, size)  \
+  do {                                          \
+    if (LIKELY(replace_intrin_cached)) {        \
+      ASAN_READ_RANGE(ctx, from, size);         \
+      ASAN_WRITE_RANGE(ctx, to, size);          \
+    } else if (UNLIKELY(!AsanInited())) {       \
+      return internal_memmove(to, from, size);  \
+    }                                           \
+    return ASAN_MEMMOVE_RETURN(to, from, size); \
   } while (0)
 
 void *__asan_memcpy(void *to, const void *from, uptr size) {

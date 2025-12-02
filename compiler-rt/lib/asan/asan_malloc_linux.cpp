@@ -62,7 +62,7 @@ INTERCEPTOR(void, cfree, void *ptr) {
 #endif // SANITIZER_INTERCEPT_CFREE
 
 #  if SANITIZER_AIX
-INTERCEPTOR(void *, vec_malloc, uptr size) {
+INTERCEPTOR(void*, vec_malloc, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Allocate(size);
   AsanInitFromRtl();
@@ -70,7 +70,7 @@ INTERCEPTOR(void *, vec_malloc, uptr size) {
   return asan_malloc(size, &stack);
 }
 
-INTERCEPTOR(void *, vec_calloc, uptr nmemb, uptr size) {
+INTERCEPTOR(void*, vec_calloc, uptr nmemb, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Callocate(nmemb, size);
   AsanInitFromRtl();
