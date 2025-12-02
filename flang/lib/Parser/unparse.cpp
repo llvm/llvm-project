@@ -2370,7 +2370,7 @@ public:
       }
     }
   }
-  void Unparse(const OmpLoopRangeClause &x) {
+  void Unparse(const OmpLooprangeClause &x) {
     Word("LOOPRANGE(");
     Walk(std::get<0>(x.t));
     Put(", ");
