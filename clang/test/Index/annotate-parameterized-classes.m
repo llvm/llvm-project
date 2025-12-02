@@ -34,5 +34,5 @@ typedef A<id<NSObject>, NSObject *> ASpecialization1;
 
 // RUN: c-index-test -test-annotate-tokens=%s:15:1:16:1 %s -target x86_64-apple-macosx10.7.0 | FileCheck -check-prefix=CHECK-SUPER %s
 // CHECK-SUPER: Identifier: "A" [15:40 - 15:41] ObjCSuperClassRef=A:7:12
-// CHECK-SUPER: Identifier: "T" [15:42 - 15:43] TypeRef=T:15:14
-// CHECK-SUPER: Identifier: "U" [15:45 - 15:46] TypeRef=U:15:22
+// CHECK-SUPER: Identifier: "T" [15:42 - 15:43] TypeRef=B::T:15:14
+// CHECK-SUPER: Identifier: "U" [15:45 - 15:46] TypeRef=B::U:15:22
