@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_DARWIN_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_DARWIN_H
 
+#include "Gnu.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Driver/CudaInstallationDetector.h"
@@ -338,6 +339,9 @@ private:
   virtual void
   AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
                               llvm::opt::ArgStringList &CC1Args) const;
+  virtual void
+  AddGnuCPlusPlusStdlibLibArgs(const llvm::opt::ArgList &Args,
+                               llvm::opt::ArgStringList &CmdArgs) const;
 };
 
 /// Darwin - The base Darwin tool chain.
@@ -640,6 +644,9 @@ public:
 
 /// DarwinClang - The Darwin toolchain used by Clang.
 class LLVM_LIBRARY_VISIBILITY DarwinClang : public Darwin {
+protected:
+  Generic_GCC::GCCInstallationDetector GCCInstallation;
+
 public:
   DarwinClang(const Driver &D, const llvm::Triple &Triple,
               const llvm::opt::ArgList &Args);
@@ -670,6 +677,8 @@ public:
   void AddLinkARCArgs(const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs) const override;
 
+  void printVerboseInfo(raw_ostream &OS) const override;
+
   unsigned GetDefaultDwarfVersion() const override;
   // Until dtrace (via CTF) and LLDB can deal with distributed debug info,
   // Darwin defaults to standalone/full debug info.
@@ -686,9 +695,17 @@ private:
                                StringRef Sanitizer,
                                bool shared = true) const;
 
+  bool
+  addLibStdCXXIncludePaths(Twine IncludeDir, StringRef Triple,
+                           const llvm::opt::ArgList &DriverArgs,
+                           llvm::opt::ArgStringList &CC1Args) const;
+
   void
   AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
                               llvm::opt::ArgStringList &CC1Args) const override;
+  void
+  AddGnuCPlusPlusStdlibLibArgs(const llvm::opt::ArgList &Args,
+                               llvm::opt::ArgStringList &CmdArgs) const override;
 
   bool AddGnuCPlusPlusIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args,

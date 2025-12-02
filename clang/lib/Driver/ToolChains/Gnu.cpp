@@ -1864,9 +1864,11 @@ static bool findBiarchMultilibs(const Driver &D,
                             .flag("-m64", /*Disallow=*/true)
                             .makeMultilib();
 
-  // GCC toolchain for IAMCU doesn't have crtbegin.o, so look for libgcc.a.
+  // GCC toolchain for IAMCU and Darwin doesn't have crtbegin.o, so look for libgcc.a.
   FilterNonExistent NonExistent(
-      Path, TargetTriple.isOSIAMCU() ? "/libgcc.a" : "/crtbegin.o", D.getVFS());
+      Path,
+      (TargetTriple.isOSIAMCU() || TargetTriple.isOSDarwin()) ? "/libgcc.a" : "/crtbegin.o",
+      D.getVFS());
 
   // Determine default multilib from: 32, 64, x32
   // Also handle cases such as 64 on 32, 32 on 64, etc.
@@ -2160,10 +2162,8 @@ void Generic_GCC::GCCInstallationDetector::init(
 
     // Next, look for prefix(es) that correspond to distribution-supplied gcc
     // installations.
-    if (D.SysRoot.empty()) {
-      // Typically /usr.
-      AddDefaultGCCPrefixes(TargetTriple, Prefixes, D.SysRoot);
-    }
+    // Typically /usr.
+    AddDefaultGCCPrefixes(TargetTriple, Prefixes, "");
 
     // Try to respect gcc-config on Gentoo if --gcc-toolchain is not provided.
     // This avoids accidentally enforcing the system GCC version when using a
@@ -2563,6 +2563,11 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       break;
     }
 
+    return;
+  }
+
+  if (TargetTriple.isOSDarwin()) {
+    LibDirs.push_back("/lib");
     return;
   }
 

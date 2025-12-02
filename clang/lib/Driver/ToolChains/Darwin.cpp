@@ -681,6 +681,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
 
+  getToolChain().AddFilePathLibArgs(Args, CmdArgs);
+
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   // Build the input file for -filelist (list of linker input files) in case we
   // need it later
@@ -1177,7 +1179,31 @@ Tool *MachO::buildAssembler() const {
 
 DarwinClang::DarwinClang(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
-    : Darwin(D, Triple, Args) {}
+    : Darwin(D, Triple, Args), GCCInstallation(D) {
+  GCCInstallation.init(Triple, Args);
+  if (GCCInstallation.isValid()) {
+    StringRef LibDir = GCCInstallation.getParentLibPath();
+    StringRef TripleStr = GCCInstallation.getTriple().str();
+    const Generic_GCC::GCCVersion &Version = GCCInstallation.getVersion();
+
+    std::string Path;
+
+    // Try /gcc/$triple/$version/
+    Path = LibDir.str() + "/gcc/" + TripleStr.str() + "/" + Version.Text;
+    if (getVFS().exists(Path))
+      getFilePaths().push_back(Path);
+
+    // Try /gcc/$triple/lib/
+    Path = LibDir.str() + "/gcc/" + TripleStr.str() + "/lib";
+    if (getVFS().exists(Path))
+      getFilePaths().push_back(Path);
+
+    // Try /../$triple/lib/
+    Path = LibDir.str() + "/../" + TripleStr.str() + "/lib";
+    if (getVFS().exists(Path))
+      getFilePaths().push_back(Path);
+  }
+}
 
 void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
   // Always error about undefined 'TARGET_OS_*' macros.
@@ -1547,13 +1573,9 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     return;
   }
 
-  // Reject -static-libgcc for now, we can deal with this when and if someone
-  // cares. This is useful in situations where someone wants to statically link
-  // something like libstdc++, and needs its runtime support routines.
-  if (const Arg *A = Args.getLastArg(options::OPT_static_libgcc)) {
-    getDriver().Diag(diag::err_drv_unsupported_opt) << A->getAsString(Args);
-    return;
-  }
+  // Don't complain about -static-libgcc as it is commonly used, but not
+  // necessary for our builds
+  Args.getLastArg(options::OPT_static_libgcc);
 
   const SanitizerArgs &Sanitize = getSanitizerArgs(Args);
 
@@ -2798,9 +2820,52 @@ void AppleMachO::AddGnuCPlusPlusIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {}
 
+bool DarwinClang::addLibStdCXXIncludePaths(Twine IncludeDir, StringRef Triple,
+                                           const llvm::opt::ArgList &DriverArgs,
+                                           llvm::opt::ArgStringList &CC1Args) const {
+  if (!getVFS().exists(IncludeDir))
+    return false;
+
+  // GPLUSPLUS_INCLUDE_DIR
+  addSystemInclude(DriverArgs, CC1Args, IncludeDir);
+  // GPLUSPLUS_TOOL_INCLUDE_DIR
+  addSystemInclude(DriverArgs, CC1Args, IncludeDir + "/" + Triple);
+  // GPLUSPLUS_BACKWARD_INCLUDE_DIR
+  addSystemInclude(DriverArgs, CC1Args, IncludeDir + "/backward");
+
+  return true;
+}
+
 void DarwinClang::AddGnuCPlusPlusIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
+  if (GCCInstallation.isValid()) {
+    // This is a stripped down version of Generic_GCC::addGCCLibStdCxxIncludePaths.
+    StringRef LibDir = GCCInstallation.getParentLibPath();
+    StringRef TripleStr = GCCInstallation.getTriple().str();
+    const Generic_GCC::GCCVersion &Version = GCCInstallation.getVersion();
+
+    // Try /../$triple/include/c++/$version
+    if (addLibStdCXXIncludePaths(
+            LibDir.str() + "/../" + TripleStr + "/include/c++/" + Version.Text,
+            TripleStr, DriverArgs, CC1Args))
+      return;
+
+    // Try /gcc/$triple/$version/include/c++/
+    if (addLibStdCXXIncludePaths(LibDir.str() + "/gcc/" + TripleStr + "/" +
+                                    Version.Text + "/include/c++/",
+                                TripleStr, DriverArgs, CC1Args))
+      return;
+
+    // Try /../include/c++/$version
+    if (addLibStdCXXIncludePaths(LibDir.str() + "/../include/c++/" + Version.Text,
+                                TripleStr, DriverArgs, CC1Args))
+      return;
+
+    getDriver().Diag(diag::warn_drv_libstdcxx_not_found);
+    return;
+  }
+
   llvm::SmallString<128> UsrIncludeCxx = GetEffectiveSysroot(DriverArgs);
   llvm::sys::path::append(UsrIncludeCxx, "usr", "include", "c++");
 
@@ -2853,39 +2918,52 @@ void AppleMachO::AddCXXStdlibLibArgs(const ArgList &Args,
     break;
 
   case ToolChain::CST_Libstdcxx:
+    AddGnuCPlusPlusStdlibLibArgs(Args, CmdArgs);
+    break;
+  }
+}
+
+void AppleMachO::AddGnuCPlusPlusStdlibLibArgs(
+    const ArgList &Args, ArgStringList &CmdArgs) const {
+  CmdArgs.push_back("-lstdc++");
+}
+
+void DarwinClang::AddGnuCPlusPlusStdlibLibArgs(
+    const ArgList &Args, ArgStringList &CmdArgs) const {
+  if (GCCInstallation.isValid()) {
+    if (Args.hasArg(options::OPT_static_libstdcxx)) {
+      // ld64 doesn't support -Bstatic, so we need to find the actual library
+      for (const auto &Path : getFilePaths()) {
+        llvm::SmallString<128> UsrLibStdCxx(Path);
+        llvm::sys::path::append(UsrLibStdCxx, "libstdc++.a");
+        if (getVFS().exists(UsrLibStdCxx)) {
+          CmdArgs.push_back(Args.MakeArgString(UsrLibStdCxx));
+          return;
+        }
+      }
+    }
+  } else {
     // Unfortunately, -lstdc++ doesn't always exist in the standard search path;
     // it was previously found in the gcc lib dir. However, for all the Darwin
     // platforms we care about it was -lstdc++.6, so we search for that
     // explicitly if we can't see an obvious -lstdc++ candidate.
 
-    // Check in the sysroot first.
-    if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
-      SmallString<128> P(A->getValue());
-      llvm::sys::path::append(P, "usr", "lib", "libstdc++.dylib");
+    llvm::SmallString<128> UsrLibStdCxx = GetEffectiveSysroot(Args);
+    llvm::sys::path::append(UsrLibStdCxx, "usr", "lib", "libstdc++.dylib");
 
-      if (!getVFS().exists(P)) {
-        llvm::sys::path::remove_filename(P);
-        llvm::sys::path::append(P, "libstdc++.6.dylib");
-        if (getVFS().exists(P)) {
-          CmdArgs.push_back(Args.MakeArgString(P));
-          return;
-        }
-      }
-    }
-
-    // Otherwise, look in the root.
     // FIXME: This should be removed someday when we don't have to care about
     // 10.6 and earlier, where /usr/lib/libstdc++.dylib does not exist.
-    if (!getVFS().exists("/usr/lib/libstdc++.dylib") &&
-        getVFS().exists("/usr/lib/libstdc++.6.dylib")) {
-      CmdArgs.push_back("/usr/lib/libstdc++.6.dylib");
-      return;
+    if (!getVFS().exists(UsrLibStdCxx)) {
+      llvm::sys::path::remove_filename(UsrLibStdCxx);
+      llvm::sys::path::append(UsrLibStdCxx, "libstdc++.6.dylib");
+      if (getVFS().exists(UsrLibStdCxx)) {
+        CmdArgs.push_back(Args.MakeArgString(UsrLibStdCxx));
+        return;
+      }
     }
-
-    // Otherwise, let the linker search.
-    CmdArgs.push_back("-lstdc++");
-    break;
   }
+
+  CmdArgs.push_back("-lstdc++");
 }
 
 void DarwinClang::AddCCKextLibArgs(const ArgList &Args,
@@ -3789,4 +3867,10 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
 void AppleMachO::printVerboseInfo(raw_ostream &OS) const {
   CudaInstallation->print(OS);
   RocmInstallation->print(OS);
+}
+
+void DarwinClang::printVerboseInfo(raw_ostream &OS) const {
+  // Print the information about how we detected the GCC installation.
+  GCCInstallation.print(OS);
+  Darwin::printVerboseInfo(OS);
 }
