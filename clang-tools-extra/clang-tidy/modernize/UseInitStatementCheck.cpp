@@ -52,6 +52,8 @@ AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
              }) != Statements.end();
 }
 
+AST_MATCHER(Decl, isTemplate) { return Node.isTemplated(); }
+
 // FIXME: support other std:: types, like std::vector
 const auto DefaultSafeDestructorTypes =
     "-*,::std::*string,::std::*string_view,::boost::*string,::boost::*string_"
@@ -92,6 +94,7 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
 
     return compoundStmt(
                unless(isExpansionInSystemHeader()),
+               unless(hasAncestor(functionDecl(isTemplate()))),
                hasAdjacentStmts(PrevStmtMatcher, StmtMatcherWithCondition),
                NoOtherVarRefs)
         .bind("compound");

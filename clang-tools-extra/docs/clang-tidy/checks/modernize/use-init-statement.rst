@@ -89,7 +89,7 @@ Options
 Limitations
 -----------
 
-* The check does not guarantee correct fixes for template code.
+* The check does not support template code;
 
 * The ``SafeDestructorTypes`` option does not include ``std::vector`` and
   other standard containers by default, because while the container itself

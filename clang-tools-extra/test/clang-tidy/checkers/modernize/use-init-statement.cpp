@@ -37,6 +37,40 @@ void good() {
     ++i2;
 }
 
+template<typename T>
+void good_template() {
+    T i1{};
+    if (i1 == 0) {
+        do_some();
+    }
+    ++i1;
+    T i2{};
+    switch (i2) {
+        case 0:
+            do_some();
+            break;
+    }
+    ++i2;
+}
+
+template<typename T>
+struct TEMPLATE_STRUCT {
+void good_template2() {
+    T i1{};
+    if (i1 == 0) {
+        do_some();
+    }
+    ++i1;
+    T i2{};
+    switch (i2) {
+        case 0:
+            do_some();
+            break;
+    }
+    ++i2;
+}
+};
+
 void good_already_has_init_stmt() {
     int i1 = 0;
     if (int i=0; i1 == 0) {

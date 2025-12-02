@@ -53,6 +53,42 @@ void good() {
     ++b2; // Used after switch, so don't suggest moving
 }
 
+template<typename T>
+void good_template() {
+    auto [a1, b1] = T{};
+    if (a1 == 0) {
+        do_some();
+    }
+    ++b1; // Used after if, so don't suggest moving
+
+    auto [a2, b2] = T{};
+    switch (a2) {
+        case 0:
+            do_some();
+            break;
+    }
+    ++b2; // Used after switch, so don't suggest moving
+}
+
+template<typename T>
+struct TEMPLATE_STRUCT {
+void good_template2() {
+    auto [a1, b1] = T{};
+    if (a1 == 0) {
+        do_some();
+    }
+    ++b1; // Used after if, so don't suggest moving
+
+    auto [a2, b2] = T{};
+    switch (a2) {
+        case 0:
+            do_some();
+            break;
+    }
+    ++b2; // Used after switch, so don't suggest moving
+}
+};
+
 void good_already_has_init_stmt() {
     int arr[2] = {1, 2};
     auto [a, b] = arr;
