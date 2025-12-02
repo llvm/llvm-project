@@ -219,11 +219,7 @@ struct pair
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   pair(piecewise_construct_t __pc, tuple<_Args1...> __first_args, tuple<_Args2...> __second_args) noexcept(
       is_nothrow_constructible<first_type, _Args1...>::value && is_nothrow_constructible<second_type, _Args2...>::value)
-      : pair(__pc,
-             __first_args,
-             __second_args,
-             __make_index_sequence<sizeof...(_Args1)>(),
-             __make_index_sequence<sizeof...(_Args2)>()) {}
+      : pair(__pc, __first_args, __second_args, __index_sequence_for<_Args1...>(), __index_sequence_for<_Args2...>()) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair&
   operator=(__conditional_t<is_copy_assignable<first_type>::value && is_copy_assignable<second_type>::value,

@@ -1833,12 +1833,10 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __async_func(__async_func&& __f) : __f_(std::move(__f.__f_)) {}
 
-  _LIBCPP_HIDE_FROM_ABI _Rp operator()() { return __execute(__make_index_sequence<sizeof...(_Args) + 1>()); }
-
-private:
-  template <size_t... _Indices>
-  _LIBCPP_HIDE_FROM_ABI _Rp __execute(__index_sequence<_Indices...>) {
-    return std::__invoke(std::move(std::get<_Indices>(__f_))...);
+  _LIBCPP_HIDE_FROM_ABI _Rp operator()() {
+    return [&]<size_t... _Indices>(__index_sequence<_Indices...>) -> _Rp {
+      return std::__invoke(std::move(std::get<_Indices>(__f_))...);
+    }(__index_sequence_for<_Fp, _Args...>{});
   }
 };
 
