@@ -139,35 +139,51 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
   return true;
 }
 
-// Check if a load can be hoisted by verifying it doesn't alias with any stores
-// in blocks between FirstBB and LastBB using scoped noalias metadata.
-static bool canHoistLoadWithNoAliasCheck(VPReplicateRecipe *Load,
-                                         VPBasicBlock *FirstBB,
-                                         VPBasicBlock *LastBB) {
-  // Get the load's memory location and check if it aliases with any stores
-  // using scoped noalias metadata.
-  auto LoadLoc = vputils::getMemoryLocation(*Load);
-  if (!LoadLoc || !LoadLoc->AATags.Scope)
+// Check if a memory operation doesn't alias with memory operations in blocks
+// between FirstBB and LastBB using scoped noalias metadata.
+// For load hoisting, we only check writes in one direction.
+// For store sinking, we check both reads and writes bidirectionally.
+static bool canHoistOrSinkWithNoAliasCheck(
+    const MemoryLocation &MemLoc, VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
+    bool CheckReads,
+    const SmallPtrSetImpl<VPRecipeBase *> *ExcludeRecipes = nullptr) {
+  if (!MemLoc.AATags.Scope)
     return false;
 
-  const AAMDNodes &LoadAA = LoadLoc->AATags;
+  const AAMDNodes &MemAA = MemLoc.AATags;
+
   for (VPBlockBase *Block = FirstBB; Block;
        Block = Block->getSingleSuccessor()) {
-    // This function assumes a simple linear chain of blocks. If there are
-    // multiple successors, we would need more complex analysis.
     assert(Block->getNumSuccessors() <= 1 &&
            "Expected at most one successor in block chain");
     auto *VPBB = cast<VPBasicBlock>(Block);
     for (VPRecipeBase &R : *VPBB) {
-      if (R.mayWriteToMemory()) {
-        auto Loc = vputils::getMemoryLocation(R);
-        // Bail out if we can't get the location or if the scoped noalias
-        // metadata indicates potential aliasing.
-        if (!Loc || ScopedNoAliasAAResult::mayAliasInScopes(
-                        LoadAA.Scope, Loc->AATags.NoAlias))
-          return false;
-      }
+      if (ExcludeRecipes && ExcludeRecipes->contains(&R))
+        continue;
+
+      // Skip recipes that don't need checking.
+      if (!R.mayWriteToMemory() && !(CheckReads && R.mayReadFromMemory()))
+        continue;
+
+      auto Loc = vputils::getMemoryLocation(R);
+      if (!Loc)
+        // Conservatively assume aliasing for memory operations without
+        // location.
+        return false;
+
+      // For reads, check if they don't alias in the reverse direction and
+      // skip if so.
+      if (CheckReads && R.mayReadFromMemory() &&
+          !ScopedNoAliasAAResult::mayAliasInScopes(Loc->AATags.Scope,
+                                                   MemAA.NoAlias))
+        continue;
+
+      // Check if the memory operations may alias in the forward direction.
+      if (ScopedNoAliasAAResult::mayAliasInScopes(MemAA.Scope,
+                                                  Loc->AATags.NoAlias))
+        return false;
     }
+
     if (Block == LastBB)
       break;
   }
@@ -4135,119 +4151,217 @@ void VPlanTransforms::hoistInvariantLoads(VPlan &Plan) {
   }
 }
 
-// Returns the intersection of metadata from a group of loads.
-static VPIRMetadata getCommonLoadMetadata(ArrayRef<VPReplicateRecipe *> Loads) {
-  VPIRMetadata CommonMetadata = *Loads.front();
-  for (VPReplicateRecipe *Load : drop_begin(Loads))
-    CommonMetadata.intersect(*Load);
+// Collect common metadata from a group of replicate recipes by intersecting
+// metadata from all recipes in the group.
+static VPIRMetadata getCommonMetadata(ArrayRef<VPReplicateRecipe *> Recipes) {
+  VPIRMetadata CommonMetadata = *Recipes.front();
+  for (VPReplicateRecipe *Recipe : drop_begin(Recipes))
+    CommonMetadata.intersect(*Recipe);
   return CommonMetadata;
 }
 
-void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
-                                           const Loop *L) {
+template <unsigned Opcode>
+static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
+collectComplementaryPredicatedMemOps(VPlan &Plan, ScalarEvolution &SE,
+                                     const Loop *L) {
+  static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
+                "Only Load and Store opcodes supported");
+  constexpr bool IsLoad = (Opcode == Instruction::Load);
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPTypeAnalysis TypeInfo(Plan);
-  VPDominatorTree VPDT(Plan);
 
-  // Group predicated loads by their address SCEV.
-  DenseMap<const SCEV *, SmallVector<VPReplicateRecipe *>> LoadsByAddress;
+  // Group predicated operations by their address SCEV.
+  DenseMap<const SCEV *, SmallVector<VPReplicateRecipe *>> RecipesByAddress;
   for (VPBlockBase *Block : vp_depth_first_shallow(LoopRegion->getEntry())) {
     auto *VPBB = cast<VPBasicBlock>(Block);
     for (VPRecipeBase &R : *VPBB) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || RepR->getOpcode() != Instruction::Load ||
-          !RepR->isPredicated())
+      if (!RepR || RepR->getOpcode() != Opcode || !RepR->isPredicated())
         continue;
 
-      VPValue *Addr = RepR->getOperand(0);
+      // For loads, operand 0 is address; for stores, operand 1 is address.
+      VPValue *Addr = RepR->getOperand(IsLoad ? 0 : 1);
       const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, SE, L);
       if (!isa<SCEVCouldNotCompute>(AddrSCEV))
-        LoadsByAddress[AddrSCEV].push_back(RepR);
+        RecipesByAddress[AddrSCEV].push_back(RepR);
     }
   }
 
-  // For each address, collect loads with complementary masks, sort by
-  // dominance, and use the earliest load.
-  for (auto &[Addr, Loads] : LoadsByAddress) {
-    if (Loads.size() < 2)
+  // For each address, collect operations with the same or complementary masks.
+  SmallVector<SmallVector<VPReplicateRecipe *, 4>> AllGroups;
+  auto GetLoadStoreValueType = [&](VPReplicateRecipe *Recipe) {
+    return TypeInfo.inferScalarType(IsLoad ? Recipe : Recipe->getOperand(0));
+  };
+  for (auto &[Addr, Recipes] : RecipesByAddress) {
+    if (Recipes.size() < 2)
       continue;
 
-    // Collect groups of loads with complementary masks.
-    SmallVector<SmallVector<VPReplicateRecipe *, 4>> LoadGroups;
-    for (VPReplicateRecipe *&LoadI : Loads) {
-      if (!LoadI)
+    // Collect groups with the same or complementary masks.
+    for (VPReplicateRecipe *&RecipeI : Recipes) {
+      if (!RecipeI)
         continue;
 
-      VPValue *MaskI = LoadI->getMask();
-      Type *TypeI = TypeInfo.inferScalarType(LoadI);
+      VPValue *MaskI = RecipeI->getMask();
+      Type *TypeI = GetLoadStoreValueType(RecipeI);
       SmallVector<VPReplicateRecipe *, 4> Group;
-      Group.push_back(LoadI);
-      LoadI = nullptr;
+      Group.push_back(RecipeI);
+      RecipeI = nullptr;
 
-      // Find all loads with the same type.
-      for (VPReplicateRecipe *&LoadJ : Loads) {
-        if (!LoadJ)
+      // Find all operations with the same or complementary masks.
+      bool HasComplementaryMask = false;
+      for (VPReplicateRecipe *&RecipeJ : Recipes) {
+        if (!RecipeJ)
           continue;
 
-        Type *TypeJ = TypeInfo.inferScalarType(LoadJ);
+        VPValue *MaskJ = RecipeJ->getMask();
+        Type *TypeJ = GetLoadStoreValueType(RecipeJ);
         if (TypeI == TypeJ) {
-          Group.push_back(LoadJ);
-          LoadJ = nullptr;
+          // Check if any operation in the group has a complementary mask with
+          // another, that is M1 == NOT(M2) or M2 == NOT(M1).
+          HasComplementaryMask |= match(MaskI, m_Not(m_Specific(MaskJ))) ||
+                                  match(MaskJ, m_Not(m_Specific(MaskI)));
+          Group.push_back(RecipeJ);
+          RecipeJ = nullptr;
         }
       }
 
-      // Check if any load in the group has a complementary mask with another,
-      // that is M1 == NOT(M2) or M2 == NOT(M1).
-      bool HasComplementaryMask =
-          any_of(drop_begin(Group), [MaskI](VPReplicateRecipe *Load) {
-            VPValue *MaskJ = Load->getMask();
-            return match(MaskI, m_Not(m_Specific(MaskJ))) ||
-                   match(MaskJ, m_Not(m_Specific(MaskI)));
-          });
-
-      if (HasComplementaryMask)
-        LoadGroups.push_back(std::move(Group));
-    }
-
-    // For each group, check memory dependencies and hoist the earliest load.
-    for (auto &Group : LoadGroups) {
-      // Sort loads by dominance order, with earliest (most dominating) first.
-      sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
-        return VPDT.properlyDominates(A, B);
-      });
-
-      VPReplicateRecipe *EarliestLoad = Group.front();
-      VPBasicBlock *FirstBB = EarliestLoad->getParent();
-      VPBasicBlock *LastBB = Group.back()->getParent();
-
-      // Check that the load doesn't alias with stores between first and last.
-      if (!canHoistLoadWithNoAliasCheck(EarliestLoad, FirstBB, LastBB))
-        continue;
-
-      // Find the load with minimum alignment to use.
-      auto *LoadWithMinAlign =
-          *min_element(Group, [](VPReplicateRecipe *A, VPReplicateRecipe *B) {
-            return cast<LoadInst>(A->getUnderlyingInstr())->getAlign() <
-                   cast<LoadInst>(B->getUnderlyingInstr())->getAlign();
-          });
-
-      // Collect common metadata from all loads in the group.
-      VPIRMetadata CommonMetadata = getCommonLoadMetadata(Group);
-
-      // Create an unpredicated load with minimum alignment using the earliest
-      // dominating address and common metadata.
-      auto *UnpredicatedLoad = new VPReplicateRecipe(
-          LoadWithMinAlign->getUnderlyingInstr(), EarliestLoad->getOperand(0),
-          /*IsSingleScalar=*/false, /*Mask=*/nullptr, /*Flags=*/{},
-          CommonMetadata);
-      UnpredicatedLoad->insertBefore(EarliestLoad);
-
-      // Replace all loads in the group with the unpredicated load.
-      for (VPReplicateRecipe *Load : Group) {
-        Load->replaceAllUsesWith(UnpredicatedLoad);
-        Load->eraseFromParent();
+      if (HasComplementaryMask) {
+        assert(Group.size() >= 2 && "must have at least 2 entries");
+        AllGroups.push_back(std::move(Group));
       }
     }
+  }
+
+  return AllGroups;
+}
+
+// Find the recipe with minimum alignment in the group.
+template <typename InstType>
+static VPReplicateRecipe *
+findRecipeWithMinAlign(ArrayRef<VPReplicateRecipe *> Group) {
+  return *min_element(Group, [](VPReplicateRecipe *A, VPReplicateRecipe *B) {
+    return cast<InstType>(A->getUnderlyingInstr())->getAlign() <
+           cast<InstType>(B->getUnderlyingInstr())->getAlign();
+  });
+}
+
+void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
+                                           const Loop *L) {
+  auto Groups =
+      collectComplementaryPredicatedMemOps<Instruction::Load>(Plan, SE, L);
+  if (Groups.empty())
+    return;
+
+  VPDominatorTree VPDT(Plan);
+
+  // Process each group of loads.
+  for (auto &Group : Groups) {
+    // Sort loads by dominance order, with earliest (most dominating) first.
+    sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
+      return VPDT.properlyDominates(A, B);
+    });
+
+    // Try to use the earliest (most dominating) load to replace all others.
+    VPReplicateRecipe *EarliestLoad = Group[0];
+    VPBasicBlock *FirstBB = EarliestLoad->getParent();
+    VPBasicBlock *LastBB = Group.back()->getParent();
+
+    // Check that the load doesn't alias with stores between first and last.
+    auto LoadLoc = vputils::getMemoryLocation(*EarliestLoad);
+    if (!LoadLoc || !canHoistOrSinkWithNoAliasCheck(*LoadLoc, FirstBB, LastBB,
+                                                    /*CheckReads=*/false))
+      continue;
+
+    // Collect common metadata from all loads in the group.
+    VPIRMetadata CommonMetadata = getCommonMetadata(Group);
+
+    // Find the load with minimum alignment to use.
+    auto *LoadWithMinAlign = findRecipeWithMinAlign<LoadInst>(Group);
+
+    // Create an unpredicated version of the earliest load with common
+    // metadata.
+    auto *UnpredicatedLoad = new VPReplicateRecipe(
+        LoadWithMinAlign->getUnderlyingInstr(), {EarliestLoad->getOperand(0)},
+        /*IsSingleScalar=*/false, /*Mask=*/nullptr, *EarliestLoad,
+        CommonMetadata);
+
+    UnpredicatedLoad->insertBefore(EarliestLoad);
+
+    // Replace all loads in the group with the unpredicated load.
+    for (VPReplicateRecipe *Load : Group) {
+      Load->replaceAllUsesWith(UnpredicatedLoad);
+      Load->eraseFromParent();
+    }
+  }
+}
+
+static bool
+canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink) {
+  auto StoreLoc = vputils::getMemoryLocation(*StoresToSink.front());
+  if (!StoreLoc || !StoreLoc->AATags.Scope)
+    return false;
+
+  // When sinking a group of stores, all members of the group alias each other.
+  // Skip them during the alias checks.
+  SmallPtrSet<VPRecipeBase *, 4> StoresToSinkSet(StoresToSink.begin(),
+                                                 StoresToSink.end());
+
+  VPBasicBlock *FirstBB = StoresToSink.front()->getParent();
+  VPBasicBlock *LastBB = StoresToSink.back()->getParent();
+  return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB,
+                                        /*CheckReads=*/true, &StoresToSinkSet);
+}
+
+void VPlanTransforms::sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
+                                           const Loop *L) {
+  auto Groups =
+      collectComplementaryPredicatedMemOps<Instruction::Store>(Plan, SE, L);
+  if (Groups.empty())
+    return;
+
+  VPDominatorTree VPDT(Plan);
+
+  for (auto &Group : Groups) {
+    sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
+      return VPDT.properlyDominates(A, B);
+    });
+
+    if (!canSinkStoreWithNoAliasCheck(Group))
+      continue;
+
+    // Use the last (most dominated) store's location for the unconditional
+    // store.
+    VPReplicateRecipe *LastStore = Group.back();
+    VPBasicBlock *InsertBB = LastStore->getParent();
+
+    // Collect common alias metadata from all stores in the group.
+    VPIRMetadata CommonMetadata = getCommonMetadata(Group);
+
+    // Build select chain for stored values.
+    VPValue *SelectedValue = Group[0]->getOperand(0);
+    VPBuilder Builder(InsertBB, LastStore->getIterator());
+
+    for (unsigned I = 1; I < Group.size(); ++I) {
+      VPValue *Mask = Group[I]->getMask();
+      VPValue *Value = Group[I]->getOperand(0);
+      SelectedValue = Builder.createSelect(Mask, Value, SelectedValue,
+                                           Group[I]->getDebugLoc());
+    }
+
+    // Find the store with minimum alignment to use.
+    auto *StoreWithMinAlign = findRecipeWithMinAlign<StoreInst>(Group);
+
+    // Create unconditional store with selected value and common metadata.
+    auto *UnpredicatedStore =
+        new VPReplicateRecipe(StoreWithMinAlign->getUnderlyingInstr(),
+                              {SelectedValue, LastStore->getOperand(1)},
+                              /*IsSingleScalar=*/false,
+                              /*Mask=*/nullptr, *LastStore, CommonMetadata);
+    UnpredicatedStore->insertBefore(*InsertBB, LastStore->getIterator());
+
+    // Remove all predicated stores from the group.
+    for (VPReplicateRecipe *Store : Group)
+      Store->eraseFromParent();
   }
 }
 
