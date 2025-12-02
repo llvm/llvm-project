@@ -412,6 +412,54 @@ Example Usage
    __host__ __device__ int Four(void) __attribute__((weak, alias("_Z6__Fourv")));
    __host__ __device__ float Four(float f) __attribute__((weak, alias("_Z6__Fourf")));
 
+C++17 Class Template Argument Deduction (CTAD) Support
+======================================================
+
+Clang supports C++17 Class Template Argument Deduction (CTAD) in both host and
+device code for HIP. This allows you to omit template arguments when creating
+class template instances, letting the compiler deduce them from constructor
+arguments.
+
+.. code-block:: c++
+
+   #include <tuple>
+
+   __host__ __device__ void func() {
+     std::tuple<int, int> t = std::tuple(1, 1);
+   }
+
+In the above example, ``std::tuple(1, 1)`` automatically deduces the type to be
+``std::tuple<int, int>``.
+
+Deduction Guides
+----------------
+
+User-defined deduction guides are also supported. Since deduction guides are not
+executable code and only participate in type deduction, they semantically behave
+as ``__host__ __device__``. This ensures they are available for deduction in both
+host and device contexts, and CTAD continues to respect any constraints on the
+corresponding constructors in the usual C++ way.
+
+.. code-block:: c++
+
+   template <typename T>
+   struct MyType {
+     T value;
+     __device__ MyType(T v) : value(v) {}
+   };
+
+   MyType(float) -> MyType<double>;
+
+   __device__ void deviceFunc() {
+     MyType m(1.0f); // Deduces MyType<double>
+   }
+
+.. note::
+
+   Explicit HIP target attributes such as ``__host__`` or ``__device__``
+   are not allowed on deduction guides. Clang treats all deduction guides
+   as if they were ``__host__ __device__`` and diagnoses any explicit
+   target attributes on them as errors.
 
 Host and Device Attributes of Default Destructors
 ===================================================
