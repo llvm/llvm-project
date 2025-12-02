@@ -707,8 +707,12 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
     return std::nullopt;
   }
 
+  auto diagnosticCallback = [&]() -> InFlightDiagnostic {
+    return getOperation().emitError();
+  };
+
   if (isaCallback)
-    if (failed(isaCallback(getOperation(), serializedISA.value())))
+    if (failed(isaCallback(serializedISA.value(), diagnosticCallback)))
       return std::nullopt;
 
 #define DEBUG_TYPE "serialize-to-isa"

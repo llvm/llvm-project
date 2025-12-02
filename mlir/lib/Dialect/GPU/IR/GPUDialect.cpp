@@ -2652,13 +2652,8 @@ TargetOptions::TargetOptions(
     StringRef cmdOptions, StringRef elfSection,
     CompilationTarget compilationTarget,
     function_ref<SymbolTable *()> getSymbolTableCallback,
-    function_ref<LogicalResult(Operation *op, llvm::Module &)>
-        initialLlvmIRCallback,
-    function_ref<LogicalResult(Operation *op, llvm::Module &)>
-        linkedLlvmIRCallback,
-    function_ref<LogicalResult(Operation *op, llvm::Module &)>
-        optimizedLlvmIRCallback,
-    function_ref<LogicalResult(Operation *op, StringRef)> isaCallback)
+    LLVMIRCallback initialLlvmIRCallback, LLVMIRCallback linkedLlvmIRCallback,
+    LLVMIRCallback optimizedLlvmIRCallback, ISACallback isaCallback)
     : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, librariesToLink,
                     cmdOptions, elfSection, compilationTarget,
                     getSymbolTableCallback, initialLlvmIRCallback,
@@ -2670,13 +2665,8 @@ TargetOptions::TargetOptions(
     StringRef cmdOptions, StringRef elfSection,
     CompilationTarget compilationTarget,
     function_ref<SymbolTable *()> getSymbolTableCallback,
-    function_ref<LogicalResult(Operation *op, llvm::Module &)>
-        initialLlvmIRCallback,
-    function_ref<LogicalResult(Operation *op, llvm::Module &)>
-        linkedLlvmIRCallback,
-    function_ref<LogicalResult(Operation *op, llvm::Module &)>
-        optimizedLlvmIRCallback,
-    function_ref<LogicalResult(Operation *op, StringRef)> isaCallback)
+    LLVMIRCallback initialLlvmIRCallback, LLVMIRCallback linkedLlvmIRCallback,
+    LLVMIRCallback optimizedLlvmIRCallback, ISACallback isaCallback)
     : toolkitPath(toolkitPath.str()), librariesToLink(librariesToLink),
       cmdOptions(cmdOptions.str()), elfSection(elfSection.str()),
       compilationTarget(compilationTarget),
@@ -2702,23 +2692,20 @@ SymbolTable *TargetOptions::getSymbolTable() const {
   return getSymbolTableCallback ? getSymbolTableCallback() : nullptr;
 }
 
-function_ref<LogicalResult(Operation *op, llvm::Module &)>
-TargetOptions::getInitialLlvmIRCallback() const {
+TargetOptions::LLVMIRCallback TargetOptions::getInitialLlvmIRCallback() const {
   return initialLlvmIRCallback;
 }
 
-function_ref<LogicalResult(Operation *op, llvm::Module &)>
-TargetOptions::getLinkedLlvmIRCallback() const {
+TargetOptions::LLVMIRCallback TargetOptions::getLinkedLlvmIRCallback() const {
   return linkedLlvmIRCallback;
 }
 
-function_ref<LogicalResult(Operation *op, llvm::Module &)>
+TargetOptions::LLVMIRCallback
 TargetOptions::getOptimizedLlvmIRCallback() const {
   return optimizedLlvmIRCallback;
 }
 
-function_ref<LogicalResult(Operation *op, StringRef)>
-TargetOptions::getISACallback() const {
+TargetOptions::ISACallback TargetOptions::getISACallback() const {
   return isaCallback;
 }
 
