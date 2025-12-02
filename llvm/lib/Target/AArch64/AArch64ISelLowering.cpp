@@ -17227,7 +17227,7 @@ SDValue AArch64TargetLowering::LowerVSCALE(SDValue Op,
 template <unsigned NumVecs>
 static bool
 setInfoSVEStN(const AArch64TargetLowering &TLI, const DataLayout &DL,
-              AArch64TargetLowering::IntrinsicInfo &Info, const CallInst &CI) {
+              AArch64TargetLowering::IntrinsicInfo &Info, const CallBase &CI) {
   Info.opc = ISD::INTRINSIC_VOID;
   // Retrieve EC from first vector argument.
   const EVT VT = TLI.getMemValueType(DL, CI.getArgOperand(0)->getType());
@@ -17252,7 +17252,7 @@ setInfoSVEStN(const AArch64TargetLowering &TLI, const DataLayout &DL,
 /// MemIntrinsicNodes.  The associated MachineMemOperands record the alignment
 /// specified in the intrinsic calls.
 bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                               const CallInst &I,
+                                               const CallBase &I,
                                                MachineFunction &MF,
                                                unsigned Intrinsic) const {
   auto &DL = I.getDataLayout();

@@ -1243,7 +1243,7 @@ public:
   /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
   /// true and store the intrinsic information into the IntrinsicInfo that was
   /// passed to the function.
-  virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
+  virtual bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
                                   MachineFunction &,
                                   unsigned /*Intrinsic*/) const {
     return false;
