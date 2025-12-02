@@ -3405,7 +3405,7 @@ static bool interp__builtin_ia32_cvtsd2ss(InterpState &S, CodePtr OpPC,
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
   // Copy all elements except lane 0 (overwritten below) from A to Dst.
-  for (unsigned I = 1; I < NumElems; ++I)
+  for (unsigned I = 1; I != NumElems; ++I)
     Dst.elem<Floating>(I) = A.elem<Floating>(I);
 
   // Convert element 0 from double to float.
