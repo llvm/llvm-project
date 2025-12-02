@@ -251,15 +251,8 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
   }
 
   if (FinalizeJITExecution(diagnostic_manager, exe_ctx, result_sp,
-                           function_stack_bottom, function_stack_top)) {
-    //    if (result_sp) {
-    //      // This is a bit of a hack, replace with a real API.  Trying to
-    //      force
-    //      // fetching all the dynamic info at this point.
-    //      result_sp->GetValueObject();
-    //    }
+                           function_stack_bottom, function_stack_top))
     return lldb::eExpressionCompleted;
-  }
 
   return lldb::eExpressionResultUnavailable;
 }
@@ -296,10 +289,9 @@ bool LLVMUserExpression::FinalizeJITExecution(
       GetResultAfterDematerialization(exe_ctx.GetBestExecutionContextScope());
 
   if (result) {
-    EvaluateExpressionOptions *options = GetOptions();
     // TransferAddress also does the offset_to_top calculation, so record the
     // dynamic option before we do that.
-    if (options)
+    if (EvaluateExpressionOptions *options = GetOptions())
       result->PreserveDynamicOption(options->GetUseDynamic());
     result->TransferAddress();
   }

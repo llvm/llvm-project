@@ -76,7 +76,7 @@ public:
 
     const bool zero_memory = false;
     IRMemoryMap::AllocationPolicy used_policy;
-    uint64_t malloc_size =
+    const uint64_t malloc_size =
         llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
             .value_or(0);
     auto address_or_error = map.Malloc(
