@@ -206,7 +206,7 @@ func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu_global_addrspace>
   // CHECK: %[[V4I32_0_3:.+]] = llvm.insertelement %[[MEM_INT_LOW]], %[[V4I32_0_2]][%[[C2]] : i32]
   // CHECK: %[[V4I32_0_4:.+]] = llvm.insertelement %[[MEM_INT_HIGH_TYPE]], %[[V4I32_0_3]][%[[C3]] : i32]
 
-  %0 = amdgpu.make_dma_base %smem[%idx], %mem[%idx] : memref<8xi32, #gpu_lds_addrspace>, memref<8xi32, #gpu_global_addrspace> -> !amdgpu.tdm_base<i32>
+  %0 = amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, #gpu_global_addrspace>, memref<8xi32, #gpu_lds_addrspace> -> !amdgpu.tdm_base<i32>
 
   func.return %0 : !amdgpu.tdm_base<i32>
 }
