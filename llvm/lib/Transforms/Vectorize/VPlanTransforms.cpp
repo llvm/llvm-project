@@ -139,6 +139,43 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
   return true;
 }
 
+// Return true if \p A and \p B are known to not alias for all VFs in the plan,
+// checked via the distance between the accesses
+static bool isNoAliasViaDistance(VPReplicateRecipe *A, VPReplicateRecipe *B,
+                                 ScalarEvolution &SE, const Loop &L,
+                                 VPTypeAnalysis &TypeInfo) {
+  if (A->getOpcode() != Instruction::Store ||
+      B->getOpcode() != Instruction::Store)
+    return false;
+
+  VPValue *AddrA = A->getOperand(1);
+  const SCEV *SCEVA = vputils::getSCEVExprForVPValue(AddrA, SE, &L);
+  VPValue *AddrB = B->getOperand(1);
+  const SCEV *SCEVB = vputils::getSCEVExprForVPValue(AddrB, SE, &L);
+  if (isa<SCEVCouldNotCompute>(SCEVA) || isa<SCEVCouldNotCompute>(SCEVB))
+    return false;
+
+  const SCEV *Distance = SE.getMinusSCEV(SCEVA, SCEVB);
+  auto *ConstDist = dyn_cast<SCEVConstant>(Distance);
+  if (!ConstDist)
+    return false;
+
+  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  Type *TyA = TypeInfo.inferScalarType(A->getOperand(0));
+  TypeSize SizeA = DL.getTypeStoreSize(TyA);
+  Type *TyB = TypeInfo.inferScalarType(B->getOperand(0));
+  TypeSize SizeB = DL.getTypeStoreSize(TyB);
+
+  // Use the maximum store size to ensure no overlap from either direction.
+  uint64_t MaxStoreSize =
+      std::max(SizeA.getFixedValue(), SizeB.getFixedValue());
+  const APInt &DistValue = ConstDist->getAPInt();
+  auto VFs = B->getParent()->getPlan()->vectorFactors();
+  ElementCount MaxVF = *max_element(VFs, ElementCount::isKnownLT);
+  return DistValue.abs().uge(
+      MaxVF.multiplyCoefficientBy(MaxStoreSize).getFixedValue());
+}
+
 // Check if a memory operation doesn't alias with memory operations in blocks
 // between FirstBB and LastBB using scoped noalias metadata.
 // For load hoisting, we only check writes in one direction.
@@ -146,7 +183,10 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
 static bool canHoistOrSinkWithNoAliasCheck(
     const MemoryLocation &MemLoc, VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
     bool CheckReads,
-    const SmallPtrSetImpl<VPRecipeBase *> *ExcludeRecipes = nullptr) {
+    const SmallPtrSetImpl<VPRecipeBase *> *ExcludeRecipes = nullptr,
+    ScalarEvolution *SE = nullptr, const Loop *L = nullptr,
+    VPTypeAnalysis *TypeInfo = nullptr,
+    ArrayRef<VPReplicateRecipe *> MemOpsInGroup = {}) {
   if (!MemLoc.AATags.Scope)
     return false;
 
@@ -164,6 +204,13 @@ static bool canHoistOrSinkWithNoAliasCheck(
       // Skip recipes that don't need checking.
       if (!R.mayWriteToMemory() && !(CheckReads && R.mayReadFromMemory()))
         continue;
+
+      // For stores, check if we can use SCEV to prove no-alias.
+      if (auto *Store = dyn_cast<VPReplicateRecipe>(&R)) {
+        if (SE && L && TypeInfo && !MemOpsInGroup.empty() &&
+            isNoAliasViaDistance(Store, MemOpsInGroup[0], *SE, *L, *TypeInfo))
+          continue;
+      }
 
       auto Loc = vputils::getMemoryLocation(R);
       if (!Loc)
@@ -4301,7 +4348,9 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan, ScalarEvolution &SE,
 }
 
 static bool
-canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink) {
+canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink,
+                             ScalarEvolution *SE, const Loop *L,
+                             VPTypeAnalysis &TypeInfo) {
   auto StoreLoc = vputils::getMemoryLocation(*StoresToSink.front());
   if (!StoreLoc || !StoreLoc->AATags.Scope)
     return false;
@@ -4314,7 +4363,8 @@ canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink) {
   VPBasicBlock *FirstBB = StoresToSink.front()->getParent();
   VPBasicBlock *LastBB = StoresToSink.back()->getParent();
   return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB,
-                                        /*CheckReads=*/true, &StoresToSinkSet);
+                                        /*CheckReads=*/true, &StoresToSinkSet,
+                                        SE, L, &TypeInfo, StoresToSink);
 }
 
 void VPlanTransforms::sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
@@ -4325,13 +4375,14 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan, ScalarEvolution &SE,
     return;
 
   VPDominatorTree VPDT(Plan);
+  VPTypeAnalysis TypeInfo(Plan);
 
   for (auto &Group : Groups) {
     sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
       return VPDT.properlyDominates(A, B);
     });
 
-    if (!canSinkStoreWithNoAliasCheck(Group))
+    if (!canSinkStoreWithNoAliasCheck(Group, &SE, L, TypeInfo))
       continue;
 
     // Use the last (most dominated) store's location for the unconditional
