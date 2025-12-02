@@ -14,6 +14,7 @@
 #define FORTRAN_PARSER_OPENMP_UTILS_H
 
 #include "flang/Common/indirection.h"
+#include "flang/Common/template.h"
 #include "flang/Parser/parse-tree.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
@@ -127,7 +128,62 @@ template <typename T> struct IsStatement<Statement<T>> {
 std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &x);
 std::optional<Label> GetFinalLabel(const OpenMPConstruct &x);
 
+namespace detail {
+// Clauses with OmpObjectList as its data member
+using MemberObjectListClauses =
+    std::tuple<OmpClause::Copyin, OmpClause::Copyprivate, OmpClause::Exclusive,
+        OmpClause::Firstprivate, OmpClause::HasDeviceAddr, OmpClause::Inclusive,
+        OmpClause::IsDevicePtr, OmpClause::Link, OmpClause::Private,
+        OmpClause::Shared, OmpClause::UseDeviceAddr, OmpClause::UseDevicePtr>;
+
+// Clauses with OmpObjectList in the tuple
+using TupleObjectListClauses = std::tuple<OmpClause::AdjustArgs,
+    OmpClause::Affinity, OmpClause::Aligned, OmpClause::Allocate,
+    OmpClause::Enter, OmpClause::From, OmpClause::InReduction,
+    OmpClause::Lastprivate, OmpClause::Linear, OmpClause::Map,
+    OmpClause::Reduction, OmpClause::TaskReduction, OmpClause::To>;
+
+template <typename...> struct WrappedInType;
+
+template <typename T> struct WrappedInType<T> {
+  static constexpr bool value{false};
+};
+
+template <typename T, typename U, typename... Us>
+struct WrappedInType<T, U, Us...> {
+  static constexpr bool value{//
+      std::is_same_v<T, decltype(U::v)> || WrappedInType<T, Us...>::value};
+};
+
+template <typename...> struct WrappedInTuple {
+  static constexpr bool value{false};
+};
+template <typename T, typename... Us>
+struct WrappedInTuple<T, std::tuple<Us...>> {
+  static constexpr bool value{WrappedInType<T, Us...>::value};
+};
+template <typename T, typename U>
+constexpr bool WrappedInTupleV{WrappedInTuple<T, U>::value};
+} // namespace detail
+
+template <typename T> const OmpObjectList *GetOmpObjectList(const T &clause) {
+  using namespace detail;
+
+  if constexpr (common::HasMember<T, MemberObjectListClauses>) {
+    return &clause.v;
+  } else if constexpr (common::HasMember<T, TupleObjectListClauses>) {
+    return &std::get<OmpObjectList>(clause.v.t);
+  } else if constexpr (WrappedInTupleV<T, TupleObjectListClauses>) {
+    return &std::get<OmpObjectList>(clause.t);
+  } else {
+    static_assert(std::is_class_v<T>, "Unexpected argument type");
+    return nullptr;
+  }
+}
+
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause);
+const OmpObjectList *GetOmpObjectList(const OmpClause::Depend &clause);
+const OmpObjectList *GetOmpObjectList(const OmpDependClause::TaskDep &x);
 
 template <typename T>
 const T *GetFirstArgument(const OmpDirectiveSpecification &spec) {
