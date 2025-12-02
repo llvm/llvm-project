@@ -2365,7 +2365,7 @@ struct AMDGPUMakeDmaDescriptorLowering
 
   Value setDataSize(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
-                    Value sgpr0, const SmallVector<Value> consts) const {
+                    Value sgpr0, ArrayRef<Value> consts) const {
     // Compute data_size.
     int elementTypeWidthInBytes = op.getElementTypeWidth() / 8;
 
@@ -2391,7 +2391,7 @@ struct AMDGPUMakeDmaDescriptorLowering
 
   Value setAtomicBarrier(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
-                         Value sgpr0, const SmallVector<Value> &consts) const {
+                         Value sgpr0, ArrayRef<Value> consts) const {
     bool atomic_barrier_enable = adaptor.getAtomicBarrierAddress() != nullptr;
     if (!atomic_barrier_enable)
       return sgpr0;
@@ -2401,7 +2401,7 @@ struct AMDGPUMakeDmaDescriptorLowering
 
   Value setIterateEnable(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
-                         Value sgpr0, const SmallVector<Value> &consts) const {
+                         Value sgpr0, ArrayRef<Value> consts) const {
     bool iterate_enable = adaptor.getGlobalIncrement() != nullptr;
     if (!iterate_enable)
       return sgpr0;
@@ -2411,7 +2411,7 @@ struct AMDGPUMakeDmaDescriptorLowering
 
   Value setPadEnable(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                      ConversionPatternRewriter &rewriter, Location loc,
-                     Value sgpr0, const SmallVector<Value> &consts) const {
+                     Value sgpr0, ArrayRef<Value> consts) const {
     bool pad_enable = op.getPadAmount() != nullptr;
     if (!pad_enable)
       return sgpr0;
@@ -2421,7 +2421,7 @@ struct AMDGPUMakeDmaDescriptorLowering
 
   Value setPadInterval(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                        ConversionPatternRewriter &rewriter, Location loc,
-                       Value sgpr0, const SmallVector<Value> &consts) const {
+                       Value sgpr0, ArrayRef<Value> consts) const {
     bool pad_enable = op.getPadAmount() != nullptr;
     if (!pad_enable)
       return sgpr0;
@@ -2438,7 +2438,7 @@ struct AMDGPUMakeDmaDescriptorLowering
 
   Value setPadAmount(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                      ConversionPatternRewriter &rewriter, Location loc,
-                     Value sgpr0, const SmallVector<Value> &consts) const {
+                     Value sgpr0, ArrayRef<Value> consts) const {
     bool pad_enable = op.getPadAmount() != nullptr;
     if (!pad_enable)
       return sgpr0;
@@ -2453,7 +2453,7 @@ struct AMDGPUMakeDmaDescriptorLowering
   Value setAtomicBarrierAddress(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &rewriter,
                                 Location loc, Value sgpr1,
-                                const SmallVector<Value> &consts) const {
+                                ArrayRef<Value> consts) const {
     bool atomic_barrier_enable = adaptor.getAtomicBarrierAddress() != nullptr;
     if (!atomic_barrier_enable)
       return sgpr1;
@@ -2470,10 +2470,11 @@ struct AMDGPUMakeDmaDescriptorLowering
     return setValueAtOffset(rewriter, loc, sgpr1, atomicBarrierAddress, 32);
   }
 
-  std::pair<Value, Value>
-  setTensorDim0(MakeDmaDescriptorOp op, OpAdaptor adaptor,
-                ConversionPatternRewriter &rewriter, Location loc, Value sgpr1,
-                Value sgpr2, const SmallVector<Value> &consts) const {
+  std::pair<Value, Value> setTensorDim0(MakeDmaDescriptorOp op,
+                                        OpAdaptor adaptor,
+                                        ConversionPatternRewriter &rewriter,
+                                        Location loc, Value sgpr1, Value sgpr2,
+                                        ArrayRef<Value> consts) const {
     SmallVector<OpFoldResult> mixedGlobalSizes = op.getMixedGlobalSizes();
     OpFoldResult tensorDim0OpFoldResult = mixedGlobalSizes.back();
     Value tensorDim0;
@@ -2490,10 +2491,11 @@ struct AMDGPUMakeDmaDescriptorLowering
     return {sgpr1, sgpr2};
   }
 
-  std::pair<Value, Value>
-  setTensorDim1(MakeDmaDescriptorOp op, OpAdaptor adaptor,
-                ConversionPatternRewriter &rewriter, Location loc, Value sgpr2,
-                Value sgpr3, const SmallVector<Value> &consts) const {
+  std::pair<Value, Value> setTensorDim1(MakeDmaDescriptorOp op,
+                                        OpAdaptor adaptor,
+                                        ConversionPatternRewriter &rewriter,
+                                        Location loc, Value sgpr2, Value sgpr3,
+                                        ArrayRef<Value> consts) const {
     SmallVector<OpFoldResult> mixedGlobalSizes = op.getMixedGlobalSizes();
     OpFoldResult tensorDim1OpFoldResult = *(mixedGlobalSizes.rbegin() + 1);
     Value tensorDim1;
@@ -2512,7 +2514,7 @@ struct AMDGPUMakeDmaDescriptorLowering
 
   Value setTileDimX(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
-                    Value sgpr, const SmallVector<Value> &consts, size_t dimX,
+                    Value sgpr, ArrayRef<Value> consts, size_t dimX,
                     int offset) const {
     SmallVector<OpFoldResult> mixedSharedSizes = op.getMixedSharedSizes();
 
@@ -2533,28 +2535,27 @@ struct AMDGPUMakeDmaDescriptorLowering
 
   Value setTileDim0(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
-                    Value sgpr3, const SmallVector<Value> &consts) const {
+                    Value sgpr3, ArrayRef<Value> consts) const {
     return setTileDimX(op, adaptor, rewriter, loc, sgpr3, consts, 0, 112);
   }
 
   Value setTileDim1(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
-                    Value sgpr4, const SmallVector<Value> &consts) const {
+                    Value sgpr4, ArrayRef<Value> consts) const {
     return setTileDimX(op, adaptor, rewriter, loc, sgpr4, consts, 1, 128);
   }
 
   Value setTileDim2(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
-                    Value sgpr4, const SmallVector<Value> &consts) const {
+                    Value sgpr4, ArrayRef<Value> consts) const {
     return setTileDimX(op, adaptor, rewriter, loc, sgpr4, consts, 2, 144);
   }
 
   std::pair<Value, Value>
   setTensorDimXStride(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
-                      Value sgprY, Value sgprZ,
-                      const SmallVector<Value> &consts, size_t dimX,
-                      int offset) const {
+                      Value sgprY, Value sgprZ, ArrayRef<Value> consts,
+                      size_t dimX, int offset) const {
     SmallVector<OpFoldResult> mixedGlobalStrides = op.getMixedGlobalStrides();
 
     if (mixedGlobalStrides.size() <= dimX) {
@@ -2595,8 +2596,7 @@ struct AMDGPUMakeDmaDescriptorLowering
   std::pair<Value, Value>
   setTensorDim0Stride(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
-                      Value sgpr5, Value sgpr6,
-                      const SmallVector<Value> &consts) const {
+                      Value sgpr5, Value sgpr6, ArrayRef<Value> consts) const {
     return setTensorDimXStride(op, adaptor, rewriter, loc, sgpr5, sgpr6, consts,
                                0, 160);
   }
@@ -2604,15 +2604,14 @@ struct AMDGPUMakeDmaDescriptorLowering
   std::pair<Value, Value>
   setTensorDim1Stride(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
-                      Value sgpr5, Value sgpr6,
-                      const SmallVector<Value> &consts) const {
+                      Value sgpr5, Value sgpr6, ArrayRef<Value> consts) const {
     return setTensorDimXStride(op, adaptor, rewriter, loc, sgpr5, sgpr6, consts,
                                1, 208);
   }
 
   Value getDGroup1(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                    ConversionPatternRewriter &rewriter, Location loc,
-                   const SmallVector<Value> &consts) const {
+                   ArrayRef<Value> consts) const {
 
     Value sgpr0, sgpr1, sgpr2, sgpr3, sgpr4, sgpr5, sgpr6, sgpr7;
     sgpr0 = sgpr1 = sgpr2 = sgpr3 = sgpr4 = sgpr5 = sgpr6 = sgpr7 = consts[0];
