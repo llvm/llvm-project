@@ -972,6 +972,13 @@ def int_arm_mve_vmaxnma_predicated: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty],
     [IntrNoMem]>;
 
+def int_arm_mve_vminnm: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+    [IntrNoMem]>;
+def int_arm_mve_vmaxnm: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>],
+    [IntrNoMem]>;
+
 multiclass MVEPredicated<list<LLVMType> rets, list<LLVMType> params,
                          LLVMType pred = llvm_anyvector_ty,
                          list<IntrinsicProperty> props = [IntrNoMem],
