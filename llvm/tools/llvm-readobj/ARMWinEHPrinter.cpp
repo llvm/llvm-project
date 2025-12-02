@@ -1457,10 +1457,14 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
       // The last register, an odd register without a pair
       if (RF.CR() == 1) {
         if (I == 0) { // If this is the only register pair
-          // CR=1 combined with RegI=1 doesn't map to a documented case;
-          // it doesn't map to any regular unwind info opcode, and the
-          // actual unwinder doesn't support it.
-          SW.startLine() << "INVALID!\n";
+          // CR=1 combined with RegI=1 maps to a special case; there's
+          // no unwind info opcode that saves a GPR together with LR
+          // with writeback to sp (no save_lrpair_x).
+          // Instead, this case expands to two instructions; a preceding
+          // (in prologue execution order) "sub sp, sp, #16", followed
+          // by a regular "stp x19, lr, [sp]" (save_lrpair).
+          SW.startLine() << format("stp x%d, lr, [sp]\n", 19);
+          SW.startLine() << format("sub sp, sp, #%d\n", SavSZ);
         } else
           SW.startLine() << format("stp x%d, lr, [sp, #%d]\n", 19 + 2 * I,
                                    16 * I);

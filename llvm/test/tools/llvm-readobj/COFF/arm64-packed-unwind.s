@@ -139,7 +139,8 @@
 // CHECK-NEXT:     FrameSize: 32
 // CHECK-NEXT:     Prologue [
 // CHECK-NEXT:       sub sp, sp, #16
-// CHECK-NEXT:       INVALID!
+// CHECK-NEXT:       stp x19, lr, [sp]
+// CHECK-NEXT:       sub sp, sp, #16
 // CHECK-NEXT:       end
 // CHECK-NEXT:     ]
 // CHECK-NEXT:   }
