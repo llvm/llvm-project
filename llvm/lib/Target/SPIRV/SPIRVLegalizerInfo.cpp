@@ -173,6 +173,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // non-shader contexts, vector sizes of 8 and 16 are also permitted, but
   // arbitrary sizes (e.g., 6 or 11) are not.
   uint32_t MaxVectorSize = ST.isShader() ? 4 : 16;
+  LLVM_DEBUG(dbgs() << "MaxVectorSize: " << MaxVectorSize << "\n");
 
   for (auto Opc : getTypeFoldingSupportedOpcodes()) {
     switch (Opc) {
@@ -221,8 +222,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .moreElementsToNextPow2(0)
       .lowerIf(vectorElementCountIsGreaterThan(0, MaxVectorSize))
       .moreElementsToNextPow2(1)
-      .lowerIf(vectorElementCountIsGreaterThan(1, MaxVectorSize))
-      .alwaysLegal();
+      .lowerIf(vectorElementCountIsGreaterThan(1, MaxVectorSize));
 
   getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
       .moreElementsToNextPow2(1)
@@ -263,8 +263,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   // If the result is still illegal, the combiner should be able to remove it.
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
-      .legalForCartesianProduct(allowedVectorTypes, allowedVectorTypes)
-      .moreElementsToNextPow2(0);
+      .legalForCartesianProduct(allowedVectorTypes, allowedVectorTypes);
 
   getActionDefinitionsBuilder(G_SPLAT_VECTOR)
       .legalFor(allowedVectorTypes)
