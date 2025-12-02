@@ -22,3 +22,6 @@ jobs:
 
       - name: Check generated files
         run: libcxx/utils/ci/run-buildbot check-generated-output
+        env:
+          CC: cc
+          CXX: c++
