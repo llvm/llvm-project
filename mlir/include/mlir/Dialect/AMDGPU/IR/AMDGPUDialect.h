@@ -48,11 +48,6 @@ inline void printMNKDimensionList(OpAsmPrinter &printer, Operation *,
                                   IntegerAttr m, IntegerAttr n, IntegerAttr k) {
   printMNKDimensionList(printer, m, n, k);
 }
-
-// Utility functions for quering the address space.
-bool hasGlobalMemorySpace(Attribute memorySpace);
-bool hasWorkgroupMemorySpace(Attribute memorySpace);
-bool hasFatRawBufferMemorySpace(Attribute memorySpace);
 } // namespace mlir::amdgpu
 
 #define GET_ATTRDEF_CLASSES
