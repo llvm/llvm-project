@@ -517,7 +517,9 @@ static inline odbg_ostream reportErrorStream() {
 #define REPORT_INT_OLD(...)                                                    \
   do {                                                                         \
     if (::llvm::offload::debug::isDebugEnabled()) {                            \
-      ODBG(ODT_Error, ODL_Error) << FORMAT_TO_STR(__VA_ARGS__);                \
+      ODBG(::llvm::omptarget::debug::ODT_Error,                                \
+           ::llvm::omptarget::debug::ODL_Error)                                \
+          << FORMAT_TO_STR(__VA_ARGS__);                                       \
     } else {                                                                   \
       FAILURE_MESSAGE(__VA_ARGS__);                                            \
     }                                                                          \
@@ -537,11 +539,5 @@ static inline odbg_ostream reportErrorStream() {
 #define REPORT(...) REPORT_INT##__VA_OPT__(_OLD)(__VA_ARGS__)
 
 } // namespace llvm::omptarget::debug
-
-using namespace llvm::omptarget::debug;
-
-static inline int getDebugLevel() {
-  return ::llvm::offload::debug::isDebugEnabled();
-}
 
 #endif // OMPTARGET_SHARED_DEBUG_H

@@ -38,6 +38,7 @@ using namespace llvm::omp::target::ompt;
 #endif
 
 using namespace llvm::omp::target::plugin;
+using namespace llvm::omptarget::debug;
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {
