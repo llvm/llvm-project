@@ -317,9 +317,9 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
 
   if (InsertElementInst *III = dyn_cast<InsertElementInst>(V)) {
     // If this is an insert to a variable element, we don't know what it is.
-    if (!isa<ConstantInt>(III->getOperand(2)))
+    uint64_t IIElt;
+    if (!match(III->getOperand(2), m_ConstantInt(IIElt)))
       return nullptr;
-    unsigned IIElt = cast<ConstantInt>(III->getOperand(2))->getZExtValue();
 
     // If this is an insert to the element we are looking for, return the
     // inserted value.
@@ -494,7 +494,7 @@ bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
   for (auto [i, M] : enumerate(Mask)) {
     if (M < 0)
       continue;
-    int Src = M >= (int)NumElts;
+    int Src = M >= NumElts;
     int Diff = (int)i - (M % NumElts);
     bool Match = false;
     for (int j = 0; j < 2; j++) {
@@ -1387,9 +1387,9 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       // wrap around the address space we would do a memory access at nullptr
       // even without the transformation. The wrapping checks are therefore
       // deferred until after we've formed the interleaved groups.
-      int64_t Stride =
-        getPtrStride(PSE, ElementTy, Ptr, TheLoop, Strides,
-                     /*Assume=*/true, /*ShouldCheckWrap=*/false).value_or(0);
+      int64_t Stride = getPtrStride(PSE, ElementTy, Ptr, TheLoop, *DT, Strides,
+                                    /*Assume=*/true, /*ShouldCheckWrap=*/false)
+                           .value_or(0);
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
@@ -1643,8 +1643,9 @@ void InterleavedAccessInfo::analyzeInterleaving(
     assert(Member && "Group member does not exist");
     Value *MemberPtr = getLoadStorePointerOperand(Member);
     Type *AccessTy = getLoadStoreType(Member);
-    if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, Strides,
-                     /*Assume=*/false, /*ShouldCheckWrap=*/true).value_or(0))
+    if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, *DT, Strides,
+                     /*Assume=*/false, /*ShouldCheckWrap=*/true)
+            .value_or(0))
       return false;
     LLVM_DEBUG(dbgs() << "LV: Invalidate candidate interleaved group due to "
                       << FirstOrLast

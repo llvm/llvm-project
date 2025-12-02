@@ -474,7 +474,7 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopConversion: rewriting loop:\n";
                loop.dump(););
-    LLVM_ATTRIBUTE_UNUSED auto loopAnalysis =
+    [[maybe_unused]] auto loopAnalysis =
         functionAnalysis.getChildLoopAnalysis(loop);
     if (!loopAnalysis.canPromoteToAffine())
       return rewriter.notifyMatchFailure(loop, "cannot promote to affine");

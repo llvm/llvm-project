@@ -9,7 +9,6 @@
 // REQUIRES: can-create-symlinks
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
-// UNSUPPORTED: availability-filesystem-missing
 
 // Android's fchmodat seems broken on various OS versions -- see D140183. This
 // test probably passes on new-enough phones (not the emulator).

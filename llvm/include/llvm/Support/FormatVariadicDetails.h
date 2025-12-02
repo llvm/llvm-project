@@ -63,8 +63,8 @@ template <typename T> class missing_format_adapter;
 template <class T> class has_FormatProvider {
 public:
   using Decayed = std::decay_t<T>;
-  typedef void (*Signature_format)(const Decayed &, llvm::raw_ostream &,
-                                   StringRef);
+  using Signature_format = void (*)(const Decayed &, llvm::raw_ostream &,
+                                    StringRef);
 
   template <typename U> using check = SameType<Signature_format, &U::format>;
 
@@ -78,23 +78,21 @@ public:
   using ConstRefT = const std::decay_t<T> &;
 
   template <typename U>
-  static char test(std::enable_if_t<
-                   std::is_same_v<decltype(std::declval<llvm::raw_ostream &>()
-                                           << std::declval<U>()),
-                                  llvm::raw_ostream &>,
-                   int *>);
+  static auto test(int)
+      -> std::is_same<decltype(std::declval<llvm::raw_ostream &>()
+                               << std::declval<U>()),
+                      llvm::raw_ostream &>;
 
-  template <typename U> static double test(...);
+  template <typename U> static auto test(...) -> std::false_type;
 
-  static bool const value = (sizeof(test<ConstRefT>(nullptr)) == 1);
+  static constexpr bool value = decltype(test<ConstRefT>(0))::value;
 };
 
 // Simple template that decides whether a type T should use the member-function
 // based format() invocation.
 template <typename T>
 struct uses_format_member
-    : public std::bool_constant<
-          std::is_base_of_v<format_adapter, std::remove_reference_t<T>>> {};
+    : public std::is_base_of<format_adapter, std::remove_reference_t<T>> {};
 
 // Simple template that decides whether a type T should use the format_provider
 // based format() invocation.  The member function takes priority, so this test

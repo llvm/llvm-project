@@ -72,7 +72,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QParg_test(
 ! CHECK-SAME:                           %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "n"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFarg_testEn"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {uniq_name = "_QFarg_testEn"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i64>
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (i64) -> index
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
@@ -106,10 +106,10 @@ end subroutine
 ! CHECK-SAME:                                %[[VAL_0:.*]]: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "x"},
 ! CHECK-SAME:                                %[[VAL_1:.*]]: !fir.class<!fir.type<_QMtype_defsTt>> {fir.bindc_name = "a"}) {
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] {uniq_name = "_QFdispatch_testEa"} : (!fir.class<!fir.type<_QMtype_defsTt>>, !fir.dscope) -> (!fir.class<!fir.type<_QMtype_defsTt>>, !fir.class<!fir.type<_QMtype_defsTt>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFdispatch_testEa"} : (!fir.class<!fir.type<_QMtype_defsTt>>, !fir.dscope) -> (!fir.class<!fir.type<_QMtype_defsTt>>, !fir.class<!fir.type<_QMtype_defsTt>>)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_5]]) dummy_scope %[[VAL_2]] {uniq_name = "_QFdispatch_testEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_5]]) dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFdispatch_testEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 10 : i64
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_9:.*]] = arith.subi %[[VAL_7]], %[[VAL_8]] : i64

@@ -9,10 +9,10 @@ BB1:
 v_nop_e64
 BB2:
 s_add_u32 vcc_lo, vcc_lo, (BB2-BB1)&4294967295
-// CHECK: s_add_u32 vcc_lo, vcc_lo, 8   // 000000000018: 806AFF6A 00000008
+// CHECK: s_add_u32 vcc_lo, vcc_lo, lit(0x8) // 000000000018: 806AFF6A 00000008
 s_addc_u32 vcc_hi, vcc_hi, (BB2-BB1)>>32
-// CHECK: s_addc_u32 vcc_hi, vcc_hi, 0  // 000000000020: 826BFF6B 00000000
+// CHECK: s_addc_u32 vcc_hi, vcc_hi, lit(0x0) // 000000000020: 826BFF6B 00000000
 s_add_u32 vcc_lo, vcc_lo, (BB0-BB1)&4294967295
-// CHECK: s_add_u32 vcc_lo, vcc_lo, -16 // 000000000028: 806AFF6A FFFFFFF0
+// CHECK: s_add_u32 vcc_lo, vcc_lo, lit(0xfffffff0) // 000000000028: 806AFF6A FFFFFFF0
 s_addc_u32 vcc_hi, vcc_hi, (BB0-BB1)>>32
-// CHECK: s_addc_u32 vcc_hi, vcc_hi, -1 // 000000000030: 826BFF6B FFFFFFFF
+// CHECK: s_addc_u32 vcc_hi, vcc_hi, lit(0xffffffff) // 000000000030: 826BFF6B FFFFFFFF

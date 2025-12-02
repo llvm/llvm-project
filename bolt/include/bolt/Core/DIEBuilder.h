@@ -60,7 +60,7 @@ public:
     uint32_t UnitLength = 0;
     bool IsConstructed = false;
     // A map of DIE offsets in original DWARF section to DIE ID.
-    // Whih is used to access DieInfoVector.
+    // Which is used to access DieInfoVector.
     std::unordered_map<uint64_t, uint32_t> DIEIDMap;
 
     // Some STL implementations don't have a noexcept move constructor for
@@ -217,7 +217,8 @@ private:
                                std::optional<BOLTDWARF5AccelTableData *> Parent,
                                uint32_t NumberParentsInChain);
 
-  void registerUnit(DWARFUnit &DU, bool NeedSort);
+  /// Returns true if DWARFUnit is registered successfully.
+  bool registerUnit(DWARFUnit &DU, bool NeedSort);
 
   /// \return the unique ID of \p U if it exists.
   std::optional<uint32_t> getUnitId(const DWARFUnit &DU);

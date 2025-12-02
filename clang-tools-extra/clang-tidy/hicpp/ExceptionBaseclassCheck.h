@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_EXCEPTION_BASECLASS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_EXCEPTION_BASECLASS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_EXCEPTIONBASECLASSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_EXCEPTIONBASECLASSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -17,7 +17,7 @@ namespace clang::tidy::hicpp {
 /// std::exception.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/hicpp/exception-baseclass.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/hicpp/exception-baseclass.html
 class ExceptionBaseclassCheck : public ClangTidyCheck {
 public:
   ExceptionBaseclassCheck(StringRef Name, ClangTidyContext *Context)
@@ -31,4 +31,4 @@ public:
 
 } // namespace clang::tidy::hicpp
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_EXCEPTION_BASECLASS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_EXCEPTIONBASECLASSCHECK_H

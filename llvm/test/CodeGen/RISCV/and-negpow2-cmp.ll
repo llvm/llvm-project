@@ -155,3 +155,109 @@ define i1 @test9(i64 %x) {
   %b = icmp eq i64 %a, u0x08000000
   ret i1 %b
 }
+
+; Make sure the and constant doesn't get converted to an opaque constant by
+; ConstantHoisting. If it's an opaque constant, we'll have addi -16 and addi 15.
+define i64 @test10(i64 %0) #0 {
+; RV32-LABEL: test10:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    andi a0, a0, -16
+; RV32-NEXT:    snez a0, a0
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test10:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    sraiw a0, a0, 4
+; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    ret
+entry:
+  %1 = add nuw nsw i64 %0, u0xffffffff
+  %2 = and i64 %1, u0xfffffff0
+  %3 = icmp ne i64 %2, 0
+  %4 = zext i1 %3 to i64
+  ret i64 %4
+}
+
+; Make sure the and constant doesn't get converted to an opaque constant by
+; ConstantHoisting. If it's an opaque constant, we'll have addi -16 and addi 15.
+define i64 @test11(i64 %0) #0 {
+; RV32-LABEL: test11:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    srai a0, a0, 4
+; RV32-NEXT:    addi a0, a0, 1621
+; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test11:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    sraiw a0, a0, 4
+; RV64-NEXT:    addi a0, a0, 1621
+; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    ret
+entry:
+  %1 = add nuw nsw i64 %0, u0xffffffff
+  %2 = and i64 %1, u0xfffffff0
+  %3 = icmp eq i64 %2, u0xffff9ab0
+  %4 = zext i1 %3 to i64
+  ret i64 %4
+}
+
+; Make sure the and constant doesn't get converted to an opaque constant by
+; ConstantHoisting. If it's an opaque constant we'll end up with constant
+; materialization sequences on RV64.
+define i64 @test12(i64 %0) #0 {
+; RV32-LABEL: test12:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    addi a0, a0, -3
+; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test12:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    addi a0, a0, -16
+; RV64-NEXT:    addiw a0, a0, 13
+; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    ret
+entry:
+  %1 = add nuw nsw i64 %0, u0xfffffff0
+  %2 = and i64 %1, u0xffffffff
+  %3 = icmp eq i64 %2, u0xfffffff3
+  %4 = zext i1 %3 to i64
+  ret i64 %4
+}
+
+; Make sure the and constant doesn't get converted to an opaque constant by
+; ConstantHoisting.
+define i64 @test13(i64 %0) #0 {
+; RV32-LABEL: test13:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lui a1, 524288
+; RV32-NEXT:    addi a1, a1, 15
+; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test13:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lui a1, 524288
+; RV64-NEXT:    addi a1, a1, -15
+; RV64-NEXT:    sub a0, a0, a1
+; RV64-NEXT:    sraiw a0, a0, 31
+; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    ret
+entry:
+  %1 = add nuw nsw i64 %0, u0x8000000f
+  %2 = and i64 %1, u0x80000000
+  %3 = icmp eq i64 %2, 0
+  %4 = zext i1 %3 to i64
+  ret i64 %4
+}

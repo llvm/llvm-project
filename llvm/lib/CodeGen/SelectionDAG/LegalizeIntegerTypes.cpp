@@ -429,7 +429,20 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Atomic0(AtomicSDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_Atomic1(AtomicSDNode *N) {
-  SDValue Op2 = GetPromotedInteger(N->getOperand(2));
+  SDValue Op2 = N->getOperand(2);
+  switch (TLI.getExtendForAtomicRMWArg(N->getOpcode())) {
+  case ISD::SIGN_EXTEND:
+    Op2 = SExtPromotedInteger(Op2);
+    break;
+  case ISD::ZERO_EXTEND:
+    Op2 = ZExtPromotedInteger(Op2);
+    break;
+  case ISD::ANY_EXTEND:
+    Op2 = GetPromotedInteger(Op2);
+    break;
+  default:
+    llvm_unreachable("Invalid atomic op extension");
+  }
   SDValue Res = DAG.getAtomic(N->getOpcode(), SDLoc(N),
                               N->getMemoryVT(),
                               N->getChain(), N->getBasePtr(),
@@ -1613,7 +1626,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z % bw)).
   if (NewBits >= (2 * OldBits) && !isa<ConstantSDNode>(Amt) &&
       !TLI.isOperationLegalOrCustom(Opcode, VT)) {
-    SDValue HiShift = DAG.getConstant(OldBits, DL, VT);
+    SDValue HiShift = DAG.getShiftAmountConstant(OldBits, VT, DL);
     Hi = DAG.getNode(ISD::SHL, DL, VT, Hi, HiShift);
     Lo = DAG.getZeroExtendInReg(Lo, DL, OldVT);
     SDValue Res = DAG.getNode(ISD::OR, DL, VT, Hi, Lo);
@@ -1624,13 +1637,14 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
   }
 
   // Shift Lo up to occupy the upper bits of the promoted type.
-  SDValue ShiftOffset = DAG.getConstant(NewBits - OldBits, DL, AmtVT);
-  Lo = DAG.getNode(ISD::SHL, DL, VT, Lo, ShiftOffset);
+  Lo = DAG.getNode(ISD::SHL, DL, VT, Lo,
+                   DAG.getShiftAmountConstant(NewBits - OldBits, VT, DL));
 
   // Increase Amount to shift the result into the lower bits of the promoted
   // type.
   if (IsFSHR)
-    Amt = DAG.getNode(ISD::ADD, DL, AmtVT, Amt, ShiftOffset);
+    Amt = DAG.getNode(ISD::ADD, DL, AmtVT, Amt,
+                      DAG.getConstant(NewBits - OldBits, DL, AmtVT));
 
   return DAG.getNode(Opcode, DL, VT, Hi, Lo, Amt);
 }
@@ -2857,18 +2871,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SET_ROUNDING(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntOp_STACKMAP(SDNode *N, unsigned OpNo) {
   assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
   SmallVector<SDValue> NewOps(N->ops());
-  SDValue Operand = N->getOperand(OpNo);
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Operand.getValueType());
-  NewOps[OpNo] = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Operand);
+  NewOps[OpNo] = GetPromotedInteger(NewOps[OpNo]);
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_PATCHPOINT(SDNode *N, unsigned OpNo) {
   assert(OpNo >= 7);
   SmallVector<SDValue> NewOps(N->ops());
-  SDValue Operand = N->getOperand(OpNo);
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Operand.getValueType());
-  NewOps[OpNo] = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Operand);
+  NewOps[OpNo] = GetPromotedInteger(NewOps[OpNo]);
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
@@ -3118,7 +3128,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::USHLSAT: ExpandIntRes_SHLSAT(N, Lo, Hi); break;
 
   case ISD::AVGCEILS:
-  case ISD::AVGCEILU: 
+  case ISD::AVGCEILU:
   case ISD::AVGFLOORS:
   case ISD::AVGFLOORU: ExpandIntRes_AVG(N, Lo, Hi); break;
 

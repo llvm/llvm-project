@@ -51,6 +51,7 @@ l1:
 l2:
   %val2 = phi ptr addrspace(4) [ %p, %l1 ], [ %val3, %l3 ]
   %val1 = phi ptr addrspace(4) [ addrspacecast (ptr addrspace(3) @G1 to ptr addrspace(4)), %l1 ], [ %val2, %l3 ]
+  store i16 0, ptr addrspace(4) %val1, align 2
   br i1 %f2, label %l3, label %exit
 
 l3:
@@ -75,6 +76,7 @@ l1:
 l2:
   %val1 = phi ptr addrspace(4) [ addrspacecast (ptr addrspace(3) @G1 to ptr addrspace(4)), %l1 ], [ %val2, %l3 ]
   %val2 = phi ptr addrspace(4) [ %p, %l1 ], [ %val3, %l3 ]
+  store i16 0, ptr addrspace(4) %val1, align 2
   br i1 %f2, label %l3, label %exit
 
 exit:

@@ -43,6 +43,6 @@ end
 ! CHECK-LABEL:   func.func private @_QFPtest(
 ! CHECK-SAME:                                %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xi32>> {fir.asynchronous, fir.bindc_name = "v"}) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<asynchronous>, uniq_name = "_QFFtestEv"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<asynchronous>, uniq_name = "_QFFtestEv"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK:           return
 ! CHECK:         }

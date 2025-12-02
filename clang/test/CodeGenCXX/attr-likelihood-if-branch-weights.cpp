@@ -10,7 +10,7 @@ extern bool B();
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2:![0-9]+]], !range [[RNG6:![0-9]+]], !noundef [[META7:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6:![0-9]+]], !range [[RNG8:![0-9]+]], !noundef [[META9:![0-9]+]]
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[LOADEDV_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[LOADEDV]], i1 true)
 // CHECK-NEXT:    br i1 [[LOADEDV_EXPVAL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
@@ -38,7 +38,7 @@ bool f() {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[LOADEDV_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[LOADEDV]], i1 false)
 // CHECK-NEXT:    br i1 [[LOADEDV_EXPVAL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
@@ -67,7 +67,7 @@ bool g() {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[LOADEDV_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[LOADEDV]], i1 false)
 // CHECK-NEXT:    br i1 [[LOADEDV_EXPVAL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
@@ -93,14 +93,14 @@ bool h() {
 // CHECK-LABEL: define dso_local void @_Z8NullStmtv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[LOADEDV_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[LOADEDV]], i1 false)
 // CHECK-NEXT:    br i1 [[LOADEDV_EXPVAL]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 // CHECK:       [[IF_THEN]]:
 // CHECK-NEXT:    br label %[[IF_END:.*]]
 // CHECK:       [[IF_ELSE]]:
-// CHECK-NEXT:    store volatile i8 1, ptr @b, align 1, !tbaa [[BOOL_TBAA2]]
+// CHECK-NEXT:    store volatile i8 1, ptr @b, align 1, !tbaa [[BOOL_TBAA6]]
 // CHECK-NEXT:    br label %[[IF_END]]
 // CHECK:       [[IF_END]]:
 // CHECK-NEXT:    ret void
@@ -117,7 +117,7 @@ void NullStmt() {
 // CHECK-LABEL: define dso_local void @_Z6IfStmtv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[LOADEDV_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[LOADEDV]], i1 false)
 // CHECK-NEXT:    br i1 [[LOADEDV_EXPVAL]], label %[[IF_THEN:.*]], label %[[IF_END2:.*]]
@@ -129,7 +129,7 @@ void NullStmt() {
 // CHECK:       [[IF_END]]:
 // CHECK-NEXT:    br label %[[IF_END2]]
 // CHECK:       [[IF_END2]]:
-// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV3:%.*]] = trunc i8 [[TMP1]] to i1
 // CHECK-NEXT:    br i1 [[LOADEDV3]], label %[[IF_THEN4:.*]], label %[[IF_END8:.*]]
 // CHECK:       [[IF_THEN4]]:
@@ -137,7 +137,7 @@ void NullStmt() {
 // CHECK-NEXT:    [[CALL5_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[CALL5]], i1 false)
 // CHECK-NEXT:    br i1 [[CALL5_EXPVAL]], label %[[IF_THEN6:.*]], label %[[IF_END7:.*]]
 // CHECK:       [[IF_THEN6]]:
-// CHECK-NEXT:    store volatile i8 0, ptr @b, align 1, !tbaa [[BOOL_TBAA2]]
+// CHECK-NEXT:    store volatile i8 0, ptr @b, align 1, !tbaa [[BOOL_TBAA6]]
 // CHECK-NEXT:    br label %[[IF_END7]]
 // CHECK:       [[IF_END7]]:
 // CHECK-NEXT:    br label %[[IF_END8]]
@@ -157,7 +157,7 @@ void IfStmt() {
 // CHECK-LABEL: define dso_local void @_Z9WhileStmtv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[LOADEDV_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[LOADEDV]], i1 false)
 // CHECK-NEXT:    br i1 [[LOADEDV_EXPVAL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
@@ -167,11 +167,11 @@ void IfStmt() {
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @_Z1Bv()
 // CHECK-NEXT:    br i1 [[CALL]], label %[[WHILE_BODY:.*]], label %[[WHILE_END:.*]]
 // CHECK:       [[WHILE_BODY]]:
-// CHECK-NEXT:    br label %[[WHILE_COND]], !llvm.loop [[LOOP8:![0-9]+]]
+// CHECK-NEXT:    br label %[[WHILE_COND]], !llvm.loop [[LOOP10:![0-9]+]]
 // CHECK:       [[WHILE_END]]:
 // CHECK-NEXT:    br label %[[IF_END]]
 // CHECK:       [[IF_END]]:
-// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV1:%.*]] = trunc i8 [[TMP1]] to i1
 // CHECK-NEXT:    br i1 [[LOADEDV1]], label %[[IF_THEN2:.*]], label %[[IF_END7:.*]]
 // CHECK:       [[IF_THEN2]]:
@@ -181,8 +181,8 @@ void IfStmt() {
 // CHECK-NEXT:    [[CALL4_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[CALL4]], i1 false)
 // CHECK-NEXT:    br i1 [[CALL4_EXPVAL]], label %[[WHILE_BODY5:.*]], label %[[WHILE_END6:.*]]
 // CHECK:       [[WHILE_BODY5]]:
-// CHECK-NEXT:    store volatile i8 0, ptr @b, align 1, !tbaa [[BOOL_TBAA2]]
-// CHECK-NEXT:    br label %[[WHILE_COND3]], !llvm.loop [[LOOP11:![0-9]+]]
+// CHECK-NEXT:    store volatile i8 0, ptr @b, align 1, !tbaa [[BOOL_TBAA6]]
+// CHECK-NEXT:    br label %[[WHILE_COND3]], !llvm.loop [[LOOP13:![0-9]+]]
 // CHECK:       [[WHILE_END6]]:
 // CHECK-NEXT:    br label %[[IF_END7]]
 // CHECK:       [[IF_END7]]:
@@ -200,7 +200,7 @@ void WhileStmt() {
 // CHECK-LABEL: define dso_local void @_Z6DoStmtv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[LOADEDV_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[LOADEDV]], i1 false)
 // CHECK-NEXT:    br i1 [[LOADEDV_EXPVAL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
@@ -210,11 +210,11 @@ void WhileStmt() {
 // CHECK-NEXT:    br label %[[DO_COND:.*]]
 // CHECK:       [[DO_COND]]:
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @_Z1Bv()
-// CHECK-NEXT:    br i1 [[CALL]], label %[[DO_BODY]], label %[[DO_END:.*]], !llvm.loop [[LOOP12:![0-9]+]]
+// CHECK-NEXT:    br i1 [[CALL]], label %[[DO_BODY]], label %[[DO_END:.*]], !llvm.loop [[LOOP14:![0-9]+]]
 // CHECK:       [[DO_END]]:
 // CHECK-NEXT:    br label %[[IF_END]]
 // CHECK:       [[IF_END]]:
-// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV1:%.*]] = trunc i8 [[TMP1]] to i1
 // CHECK-NEXT:    br i1 [[LOADEDV1]], label %[[IF_THEN2:.*]], label %[[IF_END7:.*]]
 // CHECK:       [[IF_THEN2]]:
@@ -223,7 +223,7 @@ void WhileStmt() {
 // CHECK-NEXT:    br label %[[DO_COND4:.*]]
 // CHECK:       [[DO_COND4]]:
 // CHECK-NEXT:    [[CALL5:%.*]] = call noundef zeroext i1 @_Z1Bv()
-// CHECK-NEXT:    br i1 [[CALL5]], label %[[DO_BODY3]], label %[[DO_END6:.*]], !llvm.loop [[LOOP13:![0-9]+]]
+// CHECK-NEXT:    br i1 [[CALL5]], label %[[DO_BODY3]], label %[[DO_END6:.*]], !llvm.loop [[LOOP15:![0-9]+]]
 // CHECK:       [[DO_END6]]:
 // CHECK-NEXT:    br label %[[IF_END7]]
 // CHECK:       [[IF_END7]]:
@@ -244,7 +244,7 @@ void DoStmt() {
 // CHECK-LABEL: define dso_local void @_Z7ForStmtv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[LOADEDV_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[LOADEDV]], i1 false)
 // CHECK-NEXT:    br i1 [[LOADEDV_EXPVAL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
@@ -254,11 +254,11 @@ void DoStmt() {
 // CHECK-NEXT:    [[CALL:%.*]] = call noundef zeroext i1 @_Z1Bv()
 // CHECK-NEXT:    br i1 [[CALL]], label %[[FOR_BODY:.*]], label %[[FOR_END:.*]]
 // CHECK:       [[FOR_BODY]]:
-// CHECK-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP14:![0-9]+]]
+// CHECK-NEXT:    br label %[[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
 // CHECK:       [[FOR_END]]:
 // CHECK-NEXT:    br label %[[IF_END]]
 // CHECK:       [[IF_END]]:
-// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV1:%.*]] = trunc i8 [[TMP1]] to i1
 // CHECK-NEXT:    br i1 [[LOADEDV1]], label %[[IF_THEN2:.*]], label %[[IF_END7:.*]]
 // CHECK:       [[IF_THEN2]]:
@@ -268,7 +268,7 @@ void DoStmt() {
 // CHECK-NEXT:    [[CALL4_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[CALL4]], i1 false)
 // CHECK-NEXT:    br i1 [[CALL4_EXPVAL]], label %[[FOR_BODY5:.*]], label %[[FOR_END6:.*]]
 // CHECK:       [[FOR_BODY5]]:
-// CHECK-NEXT:    br label %[[FOR_COND3]], !llvm.loop [[LOOP15:![0-9]+]]
+// CHECK-NEXT:    br label %[[FOR_COND3]], !llvm.loop [[LOOP17:![0-9]+]]
 // CHECK:       [[FOR_END6]]:
 // CHECK-NEXT:    br label %[[IF_END7]]
 // CHECK:       [[IF_END7]]:
@@ -286,14 +286,14 @@ void ForStmt() {
 // CHECK-LABEL: define dso_local void @_Z8GotoStmtv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[LOADEDV_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[LOADEDV]], i1 false)
 // CHECK-NEXT:    br i1 [[LOADEDV_EXPVAL]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 // CHECK:       [[IF_THEN]]:
 // CHECK-NEXT:    br label %[[END:.*]]
 // CHECK:       [[IF_ELSE]]:
-// CHECK-NEXT:    store volatile i8 1, ptr @b, align 1, !tbaa [[BOOL_TBAA2]]
+// CHECK-NEXT:    store volatile i8 1, ptr @b, align 1, !tbaa [[BOOL_TBAA6]]
 // CHECK-NEXT:    br label %[[IF_END:.*]]
 // CHECK:       [[IF_END]]:
 // CHECK-NEXT:    br label %[[END]]
@@ -313,14 +313,14 @@ end:;
 // CHECK-LABEL: define dso_local void @_Z10ReturnStmtv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[LOADEDV_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[LOADEDV]], i1 false)
 // CHECK-NEXT:    br i1 [[LOADEDV_EXPVAL]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 // CHECK:       [[IF_THEN]]:
 // CHECK-NEXT:    br label %[[IF_END:.*]]
 // CHECK:       [[IF_ELSE]]:
-// CHECK-NEXT:    store volatile i8 1, ptr @b, align 1, !tbaa [[BOOL_TBAA2]]
+// CHECK-NEXT:    store volatile i8 1, ptr @b, align 1, !tbaa [[BOOL_TBAA6]]
 // CHECK-NEXT:    br label %[[IF_END]]
 // CHECK:       [[IF_END]]:
 // CHECK-NEXT:    ret void
@@ -337,31 +337,31 @@ void ReturnStmt() {
 // CHECK-LABEL: define dso_local void @_Z10SwitchStmtv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[LOADEDV_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[LOADEDV]], i1 false)
 // CHECK-NEXT:    br i1 [[LOADEDV_EXPVAL]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 // CHECK:       [[IF_THEN]]:
-// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA16:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2:![0-9]+]]
 // CHECK-NEXT:    switch i32 [[TMP1]], label %[[SW_EPILOG:.*]] [
 // CHECK-NEXT:    ]
 // CHECK:       [[SW_EPILOG]]:
 // CHECK-NEXT:    br label %[[IF_END:.*]]
 // CHECK:       [[IF_ELSE]]:
-// CHECK-NEXT:    store volatile i8 1, ptr @b, align 1, !tbaa [[BOOL_TBAA2]]
+// CHECK-NEXT:    store volatile i8 1, ptr @b, align 1, !tbaa [[BOOL_TBAA6]]
 // CHECK-NEXT:    br label %[[IF_END]]
 // CHECK:       [[IF_END]]:
-// CHECK-NEXT:    [[TMP2:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA2]], !range [[RNG6]], !noundef [[META7]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[BOOL_TBAA6]], !range [[RNG8]], !noundef [[META9]]
 // CHECK-NEXT:    [[LOADEDV1:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK-NEXT:    br i1 [[LOADEDV1]], label %[[IF_THEN2:.*]], label %[[IF_ELSE4:.*]]
 // CHECK:       [[IF_THEN2]]:
-// CHECK-NEXT:    [[TMP3:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA16]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
 // CHECK-NEXT:    switch i32 [[TMP3]], label %[[SW_EPILOG3:.*]] [
 // CHECK-NEXT:    ]
 // CHECK:       [[SW_EPILOG3]]:
 // CHECK-NEXT:    br label %[[IF_END5:.*]]
 // CHECK:       [[IF_ELSE4]]:
-// CHECK-NEXT:    store volatile i8 1, ptr @b, align 1, !tbaa [[BOOL_TBAA2]]
+// CHECK-NEXT:    store volatile i8 1, ptr @b, align 1, !tbaa [[BOOL_TBAA6]]
 // CHECK-NEXT:    br label %[[IF_END5]]
 // CHECK:       [[IF_END5]]:
 // CHECK-NEXT:    ret void
@@ -383,20 +383,20 @@ void SwitchStmt() {
 }
 
 //.
-// CHECK: [[BOOL_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"bool", [[META4:![0-9]+]], i64 0}
+// CHECK: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
+// CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"Simple C++ TBAA"}
-// CHECK: [[RNG6]] = !{i8 0, i8 2}
-// CHECK: [[META7]] = !{}
-// CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
-// CHECK: [[META9]] = !{!"llvm.loop.mustprogress"}
-// CHECK: [[META10]] = !{!"llvm.loop.unroll.disable"}
-// CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META9]], [[META10]]}
-// CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META9]], [[META10]]}
-// CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META9]], [[META10]]}
-// CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META9]], [[META10]]}
-// CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META9]], [[META10]]}
-// CHECK: [[INT_TBAA16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
-// CHECK: [[META17]] = !{!"int", [[META4]], i64 0}
+// CHECK: [[BOOL_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// CHECK: [[META7]] = !{!"bool", [[META4]], i64 0}
+// CHECK: [[RNG8]] = !{i8 0, i8 2}
+// CHECK: [[META9]] = !{}
+// CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]], [[META12:![0-9]+]]}
+// CHECK: [[META11]] = !{!"llvm.loop.mustprogress"}
+// CHECK: [[META12]] = !{!"llvm.loop.unroll.disable"}
+// CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META11]], [[META12]]}
+// CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META11]], [[META12]]}
+// CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META11]], [[META12]]}
+// CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META11]], [[META12]]}
+// CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META11]], [[META12]]}
 //.

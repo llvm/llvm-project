@@ -209,6 +209,7 @@ class CheckRunner:
         args = (
             [
                 "clang-tidy",
+                "--experimental-custom-checks",
                 self.temp_file_name,
             ]
             + [
@@ -397,6 +398,8 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
 
 
 def main() -> None:
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
     args, extra_args = parse_arguments()
 
     abbreviated_stds = args.std

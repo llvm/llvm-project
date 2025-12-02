@@ -10,21 +10,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SystemZSelectionDAGInfo.h"
 #include "SystemZTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+
+#define GET_SDNODE_DESC
+#include "SystemZGenSDNodeInfo.inc"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "systemz-selectiondag-info"
 
-bool SystemZSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
-  return Opcode >= SystemZISD::FIRST_MEMORY_OPCODE &&
-         Opcode <= SystemZISD::LAST_MEMORY_OPCODE;
-}
+SystemZSelectionDAGInfo::SystemZSelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(SystemZGenSDNodeInfo) {}
 
-bool SystemZSelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
-  return Opcode >= SystemZISD::FIRST_STRICTFP_OPCODE &&
-         Opcode <= SystemZISD::LAST_STRICTFP_OPCODE;
+const char *SystemZSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
+  switch (static_cast<SystemZISD::NodeType>(Opcode)) {
+  case SystemZISD::GET_CCMASK:
+    return "SystemZISD::GET_CCMASK";
+  }
+
+  return SelectionDAGGenTargetInfo::getTargetNodeName(Opcode);
 }
 
 static unsigned getMemMemLenAdj(unsigned Op) {
@@ -263,7 +269,7 @@ static std::pair<SDValue, SDValue> getBoundedStrlen(SelectionDAG &DAG,
 
 std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForStrlen(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Src,
-    MachinePointerInfo SrcPtrInfo) const {
+    const CallInst *CI) const {
   EVT PtrVT = Src.getValueType();
   return getBoundedStrlen(DAG, DL, Chain, Src, DAG.getConstant(0, DL, PtrVT));
 }

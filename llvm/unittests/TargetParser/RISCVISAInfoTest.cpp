@@ -552,7 +552,7 @@ TEST(ParseArchString,
   const auto &Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
   EXPECT_EQ(Exts.count("zalasr"), 1U);
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izalasr0p1", true);
+  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izalasr0p9", true);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
   const auto &Exts2 = (*MaybeISAInfo2)->getExtensions();
   EXPECT_EQ(Exts2.size(), 2UL);
@@ -581,7 +581,7 @@ TEST(ParseArchString, RejectsUnrecognizedVersionForExperimentalExtension) {
       toString(
           RISCVISAInfo::parseArchString("rv64izalasr9p9", true).takeError()),
       "unsupported version number 9.9 for experimental extension 'zalasr' "
-      "(this compiler supports 0.1)");
+      "(this compiler supports 0.9)");
 }
 
 TEST(ParseArchString, RejectsExtensionVersionForG) {
@@ -730,6 +730,11 @@ TEST(ParseArchString, MissingDepency) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "");
   }
+
+  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64i_xsfvfbfexp16e", true)
+                         .takeError()),
+            "'xsfvfbfexp16e' requires 'zvfbfmin' or 'zvfbfa' extension to also "
+            "be specified");
 }
 
 TEST(ParseArchString, RejectsUnrecognizedProfileNames) {
@@ -1137,6 +1142,7 @@ R"(All available -march extensions for RISC-V
     xandesvbfhcvt        5.0
     xandesvdot           5.0
     xandesvpackfph       5.0
+    xandesvsinth         5.0
     xandesvsintload      5.0
     xcvalu               1.0
     xcvbi                1.0
@@ -1161,6 +1167,11 @@ R"(All available -march extensions for RISC-V
     xsfmm64t             0.6
     xsfmmbase            0.6
     xsfvcp               1.0
+    xsfvfbfexp16e        0.5
+    xsfvfexp16e          0.5
+    xsfvfexp32e          0.5
+    xsfvfexpa            0.2
+    xsfvfexpa64e         0.2
     xsfvfnrclipxfqf      1.0
     xsfvfwmaccqqq        1.0
     xsfvqmaccdod         1.0
@@ -1187,11 +1198,13 @@ Experimental extensions
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
-    zalasr               0.1
+    zalasr               0.9
     zvbc32e              0.7
     zvfbfa               0.1
+    zvfofp8min           0.2
     zvkgs                0.7
     zvqdotq              0.0
+    smpmpmt              0.6
     svukte               0.3
     xqccmp               0.3
     xqcia                0.7

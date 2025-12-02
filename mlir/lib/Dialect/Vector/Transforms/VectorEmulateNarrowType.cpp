@@ -38,6 +38,8 @@
 #include <cstdint>
 #include <optional>
 
+#include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+
 using namespace mlir;
 
 #define DEBUG_TYPE "vector-narrow-type-emulation"
@@ -88,13 +90,13 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
 
   Operation *maskOp = mask.getDefiningOp();
   SmallVector<vector::ExtractOp, 2> extractOps;
-  // TODO: add support to `vector.splat`.
+  // TODO: add support to `vector.broadcast`.
   // Finding the mask creation operation.
   while (maskOp &&
          !isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(
              maskOp)) {
     if (auto extractOp = dyn_cast<vector::ExtractOp>(maskOp)) {
-      maskOp = extractOp.getVector().getDefiningOp();
+      maskOp = extractOp.getSource().getDefiningOp();
       extractOps.push_back(extractOp);
     }
   }
@@ -546,7 +548,7 @@ namespace {
 // NOTE: By default, all RMW sequences are atomic. Set `disableAtomicRMW` to
 // `false` to generate non-atomic RMW sequences.
 struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   ConvertVectorStore(MLIRContext *context, bool disableAtomicRMW)
       : OpConversionPattern<vector::StoreOp>(context),
@@ -556,7 +558,6 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
   matchAndRewrite(vector::StoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    // See #115653
     if (op.getValueToStore().getType().getRank() != 1)
       return rewriter.notifyMatchFailure(op,
                                          "only 1-D vectors are supported ATM");
@@ -795,7 +796,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
                                currentSourceIndex, remainingElements, 0);
 
       // Generate back mask.
-      auto maskValues = SmallVector<bool>(emulatedPerContainerElem, 0);
+      auto maskValues = SmallVector<bool>(emulatedPerContainerElem, false);
       std::fill_n(maskValues.begin(), remainingElements, 1);
       auto backMask = arith::ConstantOp::create(
           rewriter, loc,
@@ -817,19 +818,25 @@ private:
 // ConvertVectorMaskedStore
 //===----------------------------------------------------------------------===//
 
-// TODO: Document-me
+/// Converts `vector.maskedstore` operations on narrow element types to work
+/// with wider, byte-aligned container types by adjusting the mask and using
+/// bitcasting.
+///
+/// Example: Storing `vector<6xi4>` is emulated by bitcasting to `vector<3xi8>`
+/// (each `i8` container element holds two `i4` values) and storing with an
+/// adjusted mask .
 struct ConvertVectorMaskedStore final
     : OpConversionPattern<vector::MaskedStoreOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::MaskedStoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    // See #115653
+    // Prerequisite: memref in the vector.maskedstore op is flattened into 1-D.
     if (op.getValueToStore().getType().getRank() != 1)
-      return rewriter.notifyMatchFailure(op,
-                                         "only 1-D vectors are supported ATM");
+      return rewriter.notifyMatchFailure(
+          op, "Memref in vector.maskedstore op must be flattened beforehand.");
 
     auto loc = op.getLoc();
     auto containerElemTy =
@@ -931,18 +938,27 @@ struct ConvertVectorMaskedStore final
 // ConvertVectorLoad
 //===----------------------------------------------------------------------===//
 
-// TODO: Document-me
+/// Converts `vector.load` on narrow element types to work with
+/// wider, byte-aligned container types by adjusting load sizes and using
+/// bitcasting.
+///
+/// Example: `vector.load` of `vector<4xi4>` from `memref<3x4xi4>` is emulated
+/// by loading `vector<2xi8>` from the linearized `memref<6xi8>` (each `i8`
+/// container holds two `i4` values) and bitcasting back.
+///
+/// There are cases where the number of elements to load is not byte-aligned. In
+/// those cases, loads are converted to byte-aligned, byte-sized loads and the
+/// target vector is extracted from the loaded vector.
 struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::LoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
-    // See #115653
+    // Prerequisite:  memref in the vector.load op is flattened into 1-D.
     if (op.getVectorType().getRank() != 1)
-      return rewriter.notifyMatchFailure(op,
-                                         "only 1-D vectors are supported ATM");
+      return rewriter.notifyMatchFailure(
+          op, "Memref in emulated vector ops must be flattened beforehand.");
 
     auto loc = op.getLoc();
     auto containerElemTy =
@@ -961,8 +977,6 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
 
     // Adjust the number of elements to load when emulating narrow types,
     // and then cast back to the original type with vector.bitcast op.
-    // Here only the 1-D vector load is considered, and the N-D memref types
-    // should be linearized.
     // For example, to emulate i4 to i8, the following op:
     //
     // %1 = vector.load %0[%c0, %c0] : memref<3x4xi4>, vector<4xi4>
@@ -1037,18 +1051,22 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
 // ConvertVectorMaskedLoad
 //===----------------------------------------------------------------------===//
 
-// TODO: Document-me
+/// Converts `vector.maskedload` operations on narrow element types to work with
+/// wider, byte-aligned container types by adjusting the mask and using
+/// bitcasting.
+///
+/// Example: Loading `vector<6xi4>` is emulated by loading `vector<3xi8>` and
+/// bitcasting, since each `i8` container element holds two `i4` values.
 struct ConvertVectorMaskedLoad final
     : OpConversionPattern<vector::MaskedLoadOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::MaskedLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // See #115653
     if (op.getVectorType().getRank() != 1)
-      return rewriter.notifyMatchFailure(op,
-                                         "only 1-D vectors are supported ATM");
+      return rewriter.notifyMatchFailure(
+          op, "Memref in emulated vector ops must be flattened beforehand.");
 
     auto loc = op.getLoc();
 
@@ -1229,7 +1247,6 @@ static bool fitsInMultiByteContainerTy(VectorType subByteVecTy,
 
   int elemsPerMultiByte = multiByteBits / subByteBits;
 
-  // TODO: This is a bit too restrictive for vectors rank > 1.
   return subByteVecTy.getShape().back() % elemsPerMultiByte == 0;
 }
 
@@ -1240,16 +1257,17 @@ static bool fitsInMultiByteContainerTy(VectorType subByteVecTy,
 // TODO: Document-me
 struct ConvertVectorTransferRead final
     : OpConversionPattern<vector::TransferReadOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(vector::TransferReadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    // See #115653
+    // Prerequisites:  memref in the vector.transfer_read op is flattened into
+    // 1-D.
     if (op.getVectorType().getRank() != 1)
-      return rewriter.notifyMatchFailure(op,
-                                         "only 1-D vectors are supported ATM");
+      return rewriter.notifyMatchFailure(
+          op, "Memref in emulated vector ops must be flattened beforehand.");
 
     auto loc = op.getLoc();
     auto containerElemTy =
@@ -1924,7 +1942,7 @@ namespace {
 /// advantage of high-level information to avoid leaving LLVM to scramble with
 /// peephole optimizations.
 struct RewriteBitCastOfTruncI : OpRewritePattern<vector::BitCastOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::BitCastOp bitCastOp,
                                 PatternRewriter &rewriter) const override {
@@ -2129,7 +2147,7 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
 ///   %5 = vector.bitcast %4 : vector<4xi8> to vector<8xi4>
 ///
 struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
-  using OpRewritePattern<arith::TruncIOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::TruncIOp truncOp,
                                 PatternRewriter &rewriter) const override {
@@ -2182,7 +2200,7 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
 ///   %2 = arith.trunci %1 : vector<16x8xi8> to vector<16x8xi4>
 ///
 struct RewriteVectorTranspose : OpRewritePattern<vector::TransposeOp> {
-  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
+  using Base::Base;
 
   RewriteVectorTranspose(MLIRContext *context, PatternBenefit benefit)
       : OpRewritePattern<vector::TransposeOp>(context, benefit) {}
@@ -2227,7 +2245,6 @@ struct RewriteVectorTranspose : OpRewritePattern<vector::TransposeOp> {
 void vector::populateVectorNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns, bool disableAtomicRMW) {
-
   // Populate `vector.*` conversion patterns.
   // TODO: #119553 support atomicity
   patterns.add<ConvertVectorLoad, ConvertVectorMaskedLoad,
@@ -2265,4 +2282,11 @@ void vector::populateVectorNarrowTypeRewritePatterns(
 void vector::populateVectorTransposeNarrowTypeRewritePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<RewriteVectorTranspose>(patterns.getContext(), benefit);
+}
+
+void vector::populateMemRefFlattenAndVectorNarrowTypeEmulationPatterns(
+    arith::NarrowTypeEmulationConverter &typeConverter,
+    RewritePatternSet &patterns) {
+  memref::populateFlattenVectorOpsOnMemrefPatterns(patterns);
+  vector::populateVectorNarrowTypeEmulationPatterns(typeConverter, patterns);
 }

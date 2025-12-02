@@ -93,9 +93,8 @@ public:
   std::string getQualifiedName() const;
 
   // Map of composite subreg indices.
-  typedef std::map<CodeGenSubRegIndex *, CodeGenSubRegIndex *,
-                   deref<std::less<>>>
-      CompMap;
+  using CompMap =
+      std::map<CodeGenSubRegIndex *, CodeGenSubRegIndex *, deref<std::less<>>>;
 
   // Returns the subreg index that results from composing this with Idx.
   // Returns NULL if this and Idx don't compose.
@@ -180,8 +179,8 @@ public:
   bool Constant = false;
 
   // Map SubRegIndex -> Register.
-  typedef std::map<CodeGenSubRegIndex *, CodeGenRegister *, deref<std::less<>>>
-      SubRegMap;
+  using SubRegMap =
+      std::map<CodeGenSubRegIndex *, CodeGenRegister *, deref<std::less<>>>;
 
   CodeGenRegister(const Record *R, unsigned Enum);
 
@@ -220,7 +219,7 @@ public:
     return SubReg2Idx.lookup(Reg);
   }
 
-  typedef std::vector<const CodeGenRegister *> SuperRegList;
+  using SuperRegList = std::vector<const CodeGenRegister *>;
 
   // Get the list of super-registers in topological order, small to large.
   // This is valid after computeSubRegs visits all registers during RegBank
@@ -248,8 +247,8 @@ public:
   }
 
   // List of register units in ascending order.
-  typedef SparseBitVector<> RegUnitList;
-  typedef SmallVector<LaneBitmask, 16> RegUnitLaneMaskList;
+  using RegUnitList = SparseBitVector<>;
+  using RegUnitLaneMaskList = SmallVector<LaneBitmask, 16>;
 
   // How many entries in RegUnitList are native?
   RegUnitList NativeRegUnits;
@@ -281,7 +280,7 @@ public:
   unsigned getWeight(const CodeGenRegBank &RegBank) const;
 
   // Canonically ordered set.
-  typedef std::vector<const CodeGenRegister *> Vec;
+  using Vec = std::vector<const CodeGenRegister *>;
 
 private:
   bool SubRegsComplete;
@@ -359,7 +358,7 @@ public:
   StringRef Namespace;
   SmallVector<ValueTypeByHwMode, 4> VTs;
   RegSizeInfoByHwMode RSI;
-  int CopyCost;
+  uint8_t CopyCost;
   bool Allocatable;
   StringRef AltOrderSelect;
   uint8_t AllocationPriority;
@@ -590,7 +589,7 @@ struct RegUnit {
 
 // Each RegUnitSet is a sorted vector with a name.
 struct RegUnitSet {
-  typedef std::vector<unsigned>::const_iterator iterator;
+  using iterator = std::vector<unsigned>::const_iterator;
 
   std::string Name;
   std::vector<unsigned> Units;
@@ -602,7 +601,7 @@ struct RegUnitSet {
 
 // Base vector for identifying TopoSigs. The contents uniquely identify a
 // TopoSig, only computeSuperRegs needs to know how.
-typedef SmallVector<unsigned, 16> TopoSigId;
+using TopoSigId = SmallVector<unsigned, 16>;
 
 // CodeGenRegBank - Represent a target's registers and the relations between
 // them.
@@ -621,8 +620,8 @@ class CodeGenRegBank {
 
   CodeGenSubRegIndex *createSubRegIndex(StringRef Name, StringRef NameSpace);
 
-  typedef std::map<SmallVector<CodeGenSubRegIndex *, 8>, CodeGenSubRegIndex *>
-      ConcatIdxMap;
+  using ConcatIdxMap =
+      std::map<SmallVector<CodeGenSubRegIndex *, 8>, CodeGenSubRegIndex *>;
   ConcatIdxMap ConcatIdx;
 
   // Registers.
@@ -639,7 +638,7 @@ class CodeGenRegBank {
   // Register classes.
   std::list<CodeGenRegisterClass> RegClasses;
   DenseMap<const Record *, CodeGenRegisterClass *> Def2RC;
-  typedef std::map<CodeGenRegisterClass::Key, CodeGenRegisterClass *> RCKeyMap;
+  using RCKeyMap = std::map<CodeGenRegisterClass::Key, CodeGenRegisterClass *>;
   RCKeyMap Key2RC;
 
   // Register categories.

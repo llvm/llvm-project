@@ -2070,7 +2070,7 @@ static const char *GetCompletionTypeString(QualType T, ASTContext &Context,
 
     // Anonymous tag types are constant strings.
     if (const TagType *TagT = dyn_cast<TagType>(T))
-      if (TagDecl *Tag = TagT->getOriginalDecl())
+      if (TagDecl *Tag = TagT->getDecl())
         if (!Tag->hasNameForLinkage()) {
           switch (Tag->getTagKind()) {
           case TagTypeKind::Struct:
@@ -5827,96 +5827,13 @@ private:
 // We accept some lossiness (like dropping parameters).
 // We only try to handle common expressions on the LHS of MemberExpr.
 QualType getApproximateType(const Expr *E, HeuristicResolver &Resolver) {
-  if (E->getType().isNull())
-    return QualType();
-  // Don't drop implicit cast if it's an array decay.
-  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E);
-      !ICE || ICE->getCastKind() != CK_ArrayToPointerDecay)
-    E = E->IgnoreParenImpCasts();
-  QualType Unresolved = E->getType();
-  // Resolve DependentNameType
-  if (const auto *DNT = Unresolved->getAs<DependentNameType>()) {
-    if (auto Decls = Resolver.resolveDependentNameType(DNT);
-        Decls.size() == 1) {
-      if (const auto *TD = dyn_cast<TypeDecl>(Decls[0]))
-        return TD->getASTContext().getTypeDeclType(TD);
-    }
-  }
-  // We only resolve DependentTy, or undeduced autos (including auto* etc).
-  if (!Unresolved->isSpecificBuiltinType(BuiltinType::Dependent)) {
-    AutoType *Auto = Unresolved->getContainedAutoType();
-    if (!Auto || !Auto->isUndeducedAutoType())
-      return Unresolved;
-  }
-  // A call: approximate-resolve callee to a function type, get its return type
-  if (const CallExpr *CE = llvm::dyn_cast<CallExpr>(E)) {
-    QualType Callee = getApproximateType(CE->getCallee(), Resolver);
-    if (Callee.isNull() ||
-        Callee->isSpecificPlaceholderType(BuiltinType::BoundMember))
-      Callee = Expr::findBoundMemberType(CE->getCallee());
-    if (Callee.isNull())
-      return Unresolved;
-
-    if (const auto *FnTypePtr = Callee->getAs<PointerType>()) {
-      Callee = FnTypePtr->getPointeeType();
-    } else if (const auto *BPT = Callee->getAs<BlockPointerType>()) {
-      Callee = BPT->getPointeeType();
-    }
-    if (const FunctionType *FnType = Callee->getAs<FunctionType>())
-      return FnType->getReturnType().getNonReferenceType();
-
-    // Unresolved call: try to guess the return type.
-    if (const auto *OE = llvm::dyn_cast<OverloadExpr>(CE->getCallee())) {
-      // If all candidates have the same approximate return type, use it.
-      // Discard references and const to allow more to be "the same".
-      // (In particular, if there's one candidate + ADL, resolve it).
-      const Type *Common = nullptr;
-      for (const auto *D : OE->decls()) {
-        QualType ReturnType;
-        if (const auto *FD = llvm::dyn_cast<FunctionDecl>(D))
-          ReturnType = FD->getReturnType();
-        else if (const auto *FTD = llvm::dyn_cast<FunctionTemplateDecl>(D))
-          ReturnType = FTD->getTemplatedDecl()->getReturnType();
-        if (ReturnType.isNull())
-          continue;
-        const Type *Candidate =
-            ReturnType.getNonReferenceType().getCanonicalType().getTypePtr();
-        if (Common && Common != Candidate)
-          return Unresolved; // Multiple candidates.
-        Common = Candidate;
-      }
-      if (Common != nullptr)
-        return QualType(Common, 0);
-    }
-  }
-  // A dependent member: resolve using HeuristicResolver.
-  if (const auto *CDSME = llvm::dyn_cast<CXXDependentScopeMemberExpr>(E)) {
-    for (const auto *Member : Resolver.resolveMemberExpr(CDSME)) {
-      if (const auto *VD = dyn_cast<ValueDecl>(Member)) {
-        return VD->getType().getNonReferenceType();
-      }
-    }
-  }
-  // A reference to an `auto` variable: approximate-resolve its initializer.
-  if (const auto *DRE = llvm::dyn_cast<DeclRefExpr>(E)) {
-    if (const auto *VD = llvm::dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (VD->hasInit())
-        return getApproximateType(VD->getInit(), Resolver);
-    }
-  }
-  if (const auto *UO = llvm::dyn_cast<UnaryOperator>(E)) {
-    if (UO->getOpcode() == UnaryOperatorKind::UO_Deref) {
-      // We recurse into the subexpression because it could be of dependent
-      // type.
-      if (auto Pointee =
-              getApproximateType(UO->getSubExpr(), Resolver)->getPointeeType();
-          !Pointee.isNull())
-        return Pointee;
-      // Our caller expects a non-null result, even though the SubType is
-      // supposed to have a pointee. Fall through to Unresolved anyway.
-    }
-  }
-  return Unresolved;
+  QualType Result = Resolver.resolveExprToType(E);
+  if (Result.isNull())
+    return Result;
+  Result = Resolver.simplifyType(Result.getNonReferenceType(), E, false);
+  if (Result.isNull())
+    return Result;
+  return Result.getNonReferenceType();
 }
 
 // If \p Base is ParenListExpr, assume a chain of comma operators and pick the
@@ -10290,6 +10207,24 @@ void SemaCodeCompletion::CodeCompletePreprocessorDirective(bool InConditional) {
   Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
   Builder.AddPlaceholderChunk("message");
   Results.AddResult(Builder.TakeString());
+
+  if (getLangOpts().C23) {
+    // #embed "file"
+    Builder.AddTypedTextChunk("embed");
+    Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+    Builder.AddTextChunk("\"");
+    Builder.AddPlaceholderChunk("file");
+    Builder.AddTextChunk("\"");
+    Results.AddResult(Builder.TakeString());
+
+    // #embed <file>
+    Builder.AddTypedTextChunk("embed");
+    Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+    Builder.AddTextChunk("<");
+    Builder.AddPlaceholderChunk("file");
+    Builder.AddTextChunk(">");
+    Results.AddResult(Builder.TakeString());
+  }
 
   // Note: #ident and #sccs are such crazy anachronisms that we don't provide
   // completions for them. And __include_macros is a Clang-internal extension

@@ -90,6 +90,8 @@ namespace cwg5 { // cwg5: 3.1
   const C c = e;
 } // namespace cwg5
 
+// cwg6 is in cwg6.cpp
+
 namespace cwg7 { // cwg7: 3.4
   class A { public: ~A(); };
   class B : virtual private A {}; // #cwg7-B

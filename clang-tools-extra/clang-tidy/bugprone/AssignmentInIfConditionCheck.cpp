@@ -66,7 +66,7 @@ void AssignmentInIfConditionCheck::check(
 }
 
 void AssignmentInIfConditionCheck::report(const Expr *AssignmentExpr) {
-  SourceLocation OpLoc =
+  const SourceLocation OpLoc =
       isa<BinaryOperator>(AssignmentExpr)
           ? cast<BinaryOperator>(AssignmentExpr)->getOperatorLoc()
           : cast<CXXOperatorCallExpr>(AssignmentExpr)->getOperatorLoc();

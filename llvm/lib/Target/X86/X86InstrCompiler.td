@@ -1256,8 +1256,17 @@ def : Pat<(i64 (X86Wrapper tconstpool  :$dst)),
           (MOV64ri32 tconstpool  :$dst)>, Requires<[KernelCode]>;
 def : Pat<(i64 (X86Wrapper tjumptable  :$dst)),
           (MOV64ri32 tjumptable  :$dst)>, Requires<[KernelCode]>;
-def : Pat<(i64 (X86Wrapper tglobaladdr :$dst)),
-          (MOV64ri32 tglobaladdr :$dst)>, Requires<[KernelCode]>;
+
+// If the globaladdr is an absolute_symbol, don't bother using the sign extending
+// instruction since there's no benefit to using it with absolute symbols.
+def globalAddrNoAbsSym : PatLeaf<(tglobaladdr:$dst), [{
+  auto *GA = cast<GlobalAddressSDNode>(N);
+  return !GA->getGlobal()->getAbsoluteSymbolRange();
+}]>;
+def : Pat<(i64 (X86Wrapper globalAddrNoAbsSym:$dst)),
+          (MOV64ri32 tglobaladdr:$dst)>,
+      Requires<[KernelCode]>;
+
 def : Pat<(i64 (X86Wrapper texternalsym:$dst)),
           (MOV64ri32 texternalsym:$dst)>, Requires<[KernelCode]>;
 def : Pat<(i64 (X86Wrapper mcsym:$dst)),
@@ -1324,8 +1333,8 @@ def : Pat<(X86imp_call (i64 tglobaladdr:$dst)),
 // %r11. This happens when calling a vararg function with 6 arguments.
 //
 // Match an X86tcret that uses less than 7 volatile registers.
-def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
-          (TCRETURNri ptr_rc_tailcall:$dst, timm:$off)>,
+def : Pat<(X86tcret GR32_TC:$dst, timm:$off),
+          (TCRETURNri GR32_TC:$dst, timm:$off)>,
           Requires<[Not64BitMode, IsNotHiPECCFunc, NotUseIndirectThunkCalls]>;
 
 def : Pat<(X86tcret GR32:$dst, timm:$off),

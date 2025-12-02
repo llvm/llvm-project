@@ -13,20 +13,19 @@ end subroutine forall_with_allocatable
 ! CHECK-LABEL: func @_QPforall_with_allocatable(
 ! CHECK-SAME:                                   %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>>{{.*}}) {
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca i32 {adapt.valuebyref, bindc_name = "i"}
-! CHECK:         %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "arr", uniq_name = "_QFforall_with_allocatableEarr"}
-! CHECK:         %[[VAL_3:.*]] = fir.alloca !fir.heap<!fir.array<?xf32>> {uniq_name = "_QFforall_with_allocatableEarr.addr"}
-! CHECK:         %[[VAL_4:.*]] = fir.alloca index {uniq_name = "_QFforall_with_allocatableEarr.lb0"}
-! CHECK:         %[[VAL_5:.*]] = fir.alloca index {uniq_name = "_QFforall_with_allocatableEarr.ext0"}
-! CHECK:         %[[VAL_6:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
-! CHECK:         fir.store %[[VAL_6]] to %[[VAL_3]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
+! CHECK:         %[[VAL_2:.*]] = fir.alloca !fir.heap<!fir.array<?xf32>> {uniq_name = "_QFforall_with_allocatableEarr.addr"}
+! CHECK:         %[[VAL_3:.*]] = fir.alloca index {uniq_name = "_QFforall_with_allocatableEarr.lb0"}
+! CHECK:         %[[VAL_4:.*]] = fir.alloca index {uniq_name = "_QFforall_with_allocatableEarr.ext0"}
+! CHECK:         %[[VAL_5:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+! CHECK:         fir.store %[[VAL_5]] to %[[VAL_2]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
 ! CHECK:         %[[VAL_7:.*]] = arith.constant 5 : i32
 ! CHECK:         %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i32) -> index
 ! CHECK:         %[[VAL_9:.*]] = arith.constant 15 : i32
 ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> index
 ! CHECK:         %[[VAL_11:.*]] = arith.constant 1 : index
-! CHECK:         %[[VAL_12:.*]] = fir.load %[[VAL_4]] : !fir.ref<index>
-! CHECK:         %[[VAL_13:.*]] = fir.load %[[VAL_5]] : !fir.ref<index>
-! CHECK:         %[[VAL_14:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
+! CHECK:         %[[VAL_12:.*]] = fir.load %[[VAL_3]] : !fir.ref<index>
+! CHECK:         %[[VAL_13:.*]] = fir.load %[[VAL_4]] : !fir.ref<index>
+! CHECK:         %[[VAL_14:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
 ! CHECK:         %[[VAL_15:.*]] = fir.shape_shift %[[VAL_12]], %[[VAL_13]] : (index, index) -> !fir.shapeshift<1>
 ! CHECK:         %[[VAL_16:.*]] = fir.array_load %[[VAL_14]](%[[VAL_15]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>) -> !fir.array<?xf32>
 ! CHECK:         %[[VAL_17:.*]] = fir.array_load %[[VAL_0]] : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>

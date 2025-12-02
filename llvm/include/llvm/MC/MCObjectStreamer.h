@@ -68,7 +68,7 @@ protected:
   MCObjectStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                    std::unique_ptr<MCObjectWriter> OW,
                    std::unique_ptr<MCCodeEmitter> Emitter);
-  ~MCObjectStreamer();
+  ~MCObjectStreamer() override;
 
 public:
   /// state management
@@ -77,7 +77,7 @@ public:
   /// Object streamers require the integrated assembler.
   bool isIntegratedAssemblerRequired() const override { return true; }
 
-  void emitFrames(MCAsmBackend *MAB);
+  void emitFrames();
   MCSymbol *emitCFILabel() override;
   void emitCFISections(bool EH, bool Debug, bool SFrame) override;
 
@@ -150,6 +150,9 @@ public:
                              MCSymbol *EndLabel = nullptr) override;
   void emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                  const MCSymbol *Label, SMLoc Loc);
+  void emitSFrameCalculateFuncOffset(const MCSymbol *FunCabsel,
+                                     const MCSymbol *FREBegin,
+                                     MCFragment *FDEFrag, SMLoc Loc);
   void emitCVLocDirective(unsigned FunctionId, unsigned FileNo, unsigned Line,
                           unsigned Column, bool PrologueEnd, bool IsStmt,
                           StringRef FileName, SMLoc Loc) override;
