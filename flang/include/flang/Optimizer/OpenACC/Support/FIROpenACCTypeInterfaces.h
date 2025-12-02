@@ -49,8 +49,8 @@ struct OpenACCPointerLikeModel
                       mlir::TypedValue<mlir::acc::PointerLikeType> srcPtr,
                       mlir::Type valueType) const;
 
-  bool genStore(mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
-                mlir::Value valueToStore,
+  bool genStore(mlir::Type pointer, mlir::OpBuilder &builder,
+                mlir::Location loc, mlir::Value valueToStore,
                 mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
 };
 
