@@ -80,6 +80,7 @@ namespace opts {
 extern cl::list<std::string> HotTextMoveSections;
 extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
+extern cl::opt<uint32_t> InstrumentationSleepTime;
 extern cl::opt<bool> KeepNops;
 extern cl::opt<bool> Lite;
 extern cl::list<std::string> PrintOnly;
@@ -1507,6 +1508,9 @@ Error RewriteInstance::discoverRtFiniAddress() {
   }
 
   if (!BC->FiniArrayAddress || !BC->FiniArraySize) {
+    // Missing fini hooks are allowed when instrumentation-sleep-time is in use.
+    if (opts::InstrumentationSleepTime > 0)
+      return Error::success();
     return createStringError(
         std::errc::not_supported,
         "Instrumentation needs either DT_FINI or DT_FINI_ARRAY");
@@ -1616,9 +1620,13 @@ Error RewriteInstance::updateRtFiniReloc() {
   if (!RT || !RT->getRuntimeFiniAddress())
     return Error::success();
 
-  if (!BC->FiniArrayAddress || !BC->FiniArraySize)
+  if (!BC->FiniArrayAddress || !BC->FiniArraySize) {
+    // Missing fini hooks are allowed when instrumentation-sleep-time is in use.
+    if (opts::InstrumentationSleepTime > 0)
+      return Error::success();
     return createStringError(std::errc::not_supported,
                              "inconsistent .fini_array state");
+  }
 
   ErrorOr<BinarySection &> FiniArraySection =
       BC->getSectionForAddress(*BC->FiniArrayAddress);

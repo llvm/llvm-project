@@ -41,7 +41,7 @@ define i32 @call1(ptr %obj) #0 {
   ret i32 %result
 }
 
-define i1 @call2(ptr %obj) #0 {
+define i1 @call2(ptr %obj, i32 %arg1) #0 {
   %vtable = load ptr, ptr %obj
   %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtable, i32 8, metadata !"typeid2")
   %fptr = extractvalue {ptr, i1} %pair, 0
@@ -49,7 +49,7 @@ define i1 @call2(ptr %obj) #0 {
   br i1 %p, label %cont, label %trap
 
 cont:
-  %result = call i1 %fptr(ptr %obj, i32 undef)
+  %result = call i1 %fptr(ptr %obj, i32 %arg1)
   ret i1 %result
 
 trap:
