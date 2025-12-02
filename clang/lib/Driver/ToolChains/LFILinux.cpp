@@ -13,12 +13,12 @@ using namespace clang::driver;
 using namespace clang::driver::toolchains;
 using namespace llvm::opt;
 
-ToolChain::CXXStdlibType LFILinuxToolChain::GetDefaultCXXStdlibType() const {
+ToolChain::CXXStdlibType LFILinux::GetDefaultCXXStdlibType() const {
   return ToolChain::CST_Libstdcxx;
 }
 
-void LFILinuxToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
-                                            ArgStringList &CmdArgs) const {
+void LFILinux::AddCXXStdlibLibArgs(const ArgList &Args,
+                                   ArgStringList &CmdArgs) const {
   ToolChain::AddCXXStdlibLibArgs(Args, CmdArgs);
   CmdArgs.push_back("-lc++abi");
 }

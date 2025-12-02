@@ -15,10 +15,10 @@ namespace clang {
 namespace driver {
 namespace toolchains {
 
-class LLVM_LIBRARY_VISIBILITY LFILinuxToolChain : public Linux {
+class LLVM_LIBRARY_VISIBILITY LFILinux : public Linux {
 public:
-  LFILinuxToolChain(const Driver &D, const llvm::Triple &Triple,
-                    const llvm::opt::ArgList &Args)
+  LFILinux(const Driver &D, const llvm::Triple &Triple,
+           const llvm::opt::ArgList &Args)
       : Linux(D, Triple, Args) {
     ExtraOpts.push_back("-z");
     ExtraOpts.push_back("separate-code");
