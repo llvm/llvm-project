@@ -48,6 +48,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/OptionParsing.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -835,7 +836,7 @@ SwiftLanguageRuntime::GetObjectDescriptionExpr_Ref(ValueObject &object) {
                       object.GetValueAsUnsigned(0)).str();
 
   if (log)
-    log->Printf("[GetObjectDescriptionExpr_Result] expression: %s",
+    log->Printf("[GetObjectDescriptionExpr_Ref] expression: %s",
                 expr_string.GetData());
   return expr_str;
 }
@@ -911,8 +912,9 @@ std::string SwiftLanguageRuntime::GetObjectDescriptionExpr_Copy(
   return expr_string;
 }
 
-llvm::Error SwiftLanguageRuntime::RunObjectDescriptionExpr(
-    ValueObject &object, std::string &expr_string, Stream &result) {
+static llvm::Expected<ValueObjectSP>
+runObjectDescription(ValueObject &object, std::string &expr_string,
+                     Process &process, bool disable_availability = false) {
   Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
   ValueObjectSP result_sp;
   EvaluateExpressionOptions eval_options;
@@ -920,16 +922,17 @@ llvm::Error SwiftLanguageRuntime::RunObjectDescriptionExpr(
   eval_options.SetLanguage(lldb::eLanguageTypeSwift);
   eval_options.SetSuppressPersistentResult(true);
   eval_options.SetIgnoreBreakpoints(true);
-  eval_options.SetTimeout(GetProcess().GetUtilityExpressionTimeout());
+  eval_options.SetTimeout(process.GetUtilityExpressionTimeout());
+  if (disable_availability)
+    eval_options.SetDisableAvailability();
 
   StackFrameSP frame_sp = object.GetFrameSP();
   if (!frame_sp)
-    frame_sp =
-        GetProcess().GetThreadList().GetSelectedThread()->GetSelectedFrame(
-            DoNoSelectMostRelevantFrame);
+    frame_sp = process.GetThreadList().GetSelectedThread()->GetSelectedFrame(
+        DoNoSelectMostRelevantFrame);
   if (!frame_sp)
     return llvm::createStringError("no execution context to run expression in");
-  auto eval_result = GetProcess().GetTarget().EvaluateExpression(
+  auto eval_result = process.GetTarget().EvaluateExpression(
       expr_string, frame_sp.get(), result_sp, eval_options);
 
   LLDB_LOG(log, "[RunObjectDescriptionExpr] {0}", toString(eval_result));
@@ -952,12 +955,28 @@ llvm::Error SwiftLanguageRuntime::RunObjectDescriptionExpr(
     return llvm::createStringError("expression produced invalid result type");
   }
 
+  return result_sp;
+}
+
+static llvm::Error dumpString(ValueObjectSP result_sp, Stream &strm);
+
+llvm::Error SwiftLanguageRuntime::RunObjectDescriptionExpr(
+    ValueObject &object, std::string &expr_string, Stream &strm) {
+  auto result_or_err = runObjectDescription(object, expr_string, GetProcess());
+  if (!result_or_err)
+    return result_or_err.takeError();
+
+  return dumpString(*result_or_err, strm);
+}
+
+static llvm::Error dumpString(ValueObjectSP result_sp, Stream &strm) {
+  Log *log(GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions));
   formatters::StringPrinter::ReadStringAndDumpToStreamOptions dump_options;
   dump_options.SetEscapeNonPrintables(false);
   dump_options.SetQuote('\0');
   dump_options.SetPrefixToken(nullptr);
   if (formatters::swift::String_SummaryProvider(
-          *result_sp.get(), result,
+          *result_sp, strm,
           TypeSummaryOptions()
               .SetLanguage(lldb::eLanguageTypeSwift)
               .SetCapping(eTypeSummaryUncapped),
@@ -1002,10 +1021,81 @@ static bool IsSwiftReferenceType(ValueObject &object) {
   return false;
 }
 
+static bool printObjectViaPointer(Stream &strm, ValueObject &object,
+                                  Process &process) {
+  Log *log = GetLog(LLDBLog::DataFormatters | LLDBLog::Expressions);
+
+  Flags flags(object.GetCompilerType().GetTypeInfo());
+  addr_t addr = LLDB_INVALID_ADDRESS;
+  if (flags.Test(eTypeInstanceIsPointer)) {
+    // Objects are pointers.
+    addr = object.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  } else {
+    // Get the address of non-object values (structs, enums).
+    auto addr_and_type = object.GetAddressOf(false);
+    if (addr_and_type.type != eAddressTypeLoad) {
+      LLDB_LOG(log, "address-of value object failed, preventing use of "
+                    "stringForPrintObject(_:mangledTypeName:)");
+      return false;
+    }
+    addr = addr_and_type.address;
+  }
+
+  if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  StringRef mangled_type_name = object.GetMangledTypeName();
+  // Swift's APIs that accept mangled names require the "$s" prefix removed.
+  mangled_type_name.consume_front("$s");
+
+  std::string expr_string =
+      llvm::formatv(
+          "Swift._DebuggerSupport.stringForPrintObject(UnsafeRawPointer("
+          "bitPattern: {0}), mangledTypeName: \"{1}\")",
+          addr, mangled_type_name)
+          .str();
+
+  auto result_or_err = runObjectDescription(object, expr_string, process, true);
+  if (!result_or_err) {
+    LLDB_LOG_ERROR(log, result_or_err.takeError(),
+                   "stringForPrintObject(_:mangledTypeName:) failed: {0}");
+    return false;
+  }
+
+  // A `(Bool, String)` tuple, where the bool indicates success/failure.
+  auto result_sp = *result_or_err;
+  auto success_sp = result_sp->GetChildAtIndex(0);
+  auto description_sp = result_sp->GetChildAtIndex(1);
+
+  StreamString dump_stream;
+  auto err = dumpString(description_sp, dump_stream);
+  if (err) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "decoding result of "
+                   "stringForPrintObject(_:mangledTypeName:) failed: {0}");
+    return false;
+  }
+
+  Status status;
+  if (!success_sp->IsLogicalTrue(status)) {
+    LLDB_LOGF(log,
+              "stringForPrintObject(_:mangledTypeName:) produced error: %s",
+              dump_stream.GetData());
+    return false;
+  }
+
+  LLDB_LOG(log, "stringForPrintObject(_:mangledTypeName:) succeeded");
+  strm.PutCString(dump_stream.GetString());
+  return true;
+}
+
 llvm::Error SwiftLanguageRuntime::GetObjectDescription(Stream &str,
                                                        ValueObject &object) {
   if (object.IsUninitializedReference())
     return llvm::createStringError("<uninitialized>");
+
+  if (tryPointerPrintObject(str, object, GetProcess()))
+    return llvm::Error::success();
 
   std::string expr_string;
 
