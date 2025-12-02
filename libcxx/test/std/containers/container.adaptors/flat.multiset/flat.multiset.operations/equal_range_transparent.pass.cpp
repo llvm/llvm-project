@@ -36,7 +36,7 @@ static_assert(!CanEqualRange<NonTransparentSet>);
 static_assert(!CanEqualRange<const NonTransparentSet>);
 
 template <class KeyContainer>
-constexpr void test_one() {
+TEST_CONSTEXPR_CXX26 void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_multiset<Key, TransparentComparator, KeyContainer>;
 
@@ -90,7 +90,7 @@ constexpr void test_one() {
   }
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_one<std::vector<std::string>>();
 #ifndef __cpp_lib_constexpr_deque
   if (!TEST_IS_CONSTANT_EVALUATED)

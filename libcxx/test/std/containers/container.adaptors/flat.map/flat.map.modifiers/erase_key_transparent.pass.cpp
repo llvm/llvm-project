@@ -50,7 +50,7 @@ struct HeterogeneousKey {
 };
 
 template <class KeyContainer, class ValueContainer>
-constexpr void test_simple() {
+TEST_CONSTEXPR_CXX26 void test_simple() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
@@ -71,7 +71,7 @@ constexpr void test_simple() {
 }
 
 template <class KeyContainer, class ValueContainer>
-constexpr void test_transparent_comparator() {
+TEST_CONSTEXPR_CXX26 void test_transparent_comparator() {
   using M = std::flat_map<std::string, int, TransparentComparator, KeyContainer, ValueContainer>;
   M m     = {{"alpha", 1}, {"beta", 2}, {"epsilon", 3}, {"eta", 4}, {"gamma", 5}};
   ASSERT_SAME_TYPE(decltype(m.erase(Transparent<std::string>{"abc"})), typename M::size_type);
@@ -87,7 +87,7 @@ constexpr void test_transparent_comparator() {
   assert(m == expected);
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_simple<std::vector<int>, std::vector<double>>();
   test_simple<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test_simple<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();

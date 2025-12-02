@@ -29,7 +29,7 @@
 #include "../../../test_compare.h"
 
 template <template <class...> class KeyContainer>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -156,7 +156,7 @@ constexpr void test() {
   }
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::vector>();
 
 #ifndef __cpp_lib_constexpr_deque

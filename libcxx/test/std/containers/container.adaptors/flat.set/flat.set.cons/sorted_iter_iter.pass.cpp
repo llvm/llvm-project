@@ -30,7 +30,7 @@
 #include "../../../test_compare.h"
 
 template <class KeyContainer>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   {
     // flat_set(sorted_unique_t, InputIterator, InputIterator);
     // cpp17_input_iterator
@@ -98,7 +98,7 @@ constexpr void test() {
 }
 
 template <template <class...> class KeyContainer>
-constexpr void test_alloc() {
+TEST_CONSTEXPR_CXX26 void test_alloc() {
   {
     // flat_set(sorted_unique_t, InputIterator , InputIterator, const Allocator&)
     using A1      = test_allocator<int>;
@@ -137,7 +137,7 @@ constexpr void test_alloc() {
   }
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.

@@ -33,7 +33,7 @@
 #include "../../../test_compare.h"
 
 template <class KeyContainer, class ValueContainer>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using P     = std::pair<Key, Value>;
@@ -100,7 +100,7 @@ constexpr void test() {
 }
 
 template <template <class...> class KeyContainer, template <class...> class ValueContainer>
-constexpr void test_alloc() {
+TEST_CONSTEXPR_CXX26 void test_alloc() {
   using P = std::pair<int, short>;
   P ar[]  = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
 
@@ -178,7 +178,7 @@ constexpr void test_alloc() {
   }
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<key_container_type, Alloc> is true

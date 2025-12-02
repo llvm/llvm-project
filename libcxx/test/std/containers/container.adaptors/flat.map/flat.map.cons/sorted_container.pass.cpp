@@ -35,7 +35,7 @@
 #include "../../../test_compare.h"
 
 template <template <class...> class KeyContainer, template <class...> class ValueContainer>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   {
     // flat_map(sorted_unique_t, key_container_type , mapped_container_type)
     using M                 = std::flat_map<int, char, std::less<int>, KeyContainer<int>, ValueContainer<char>>;
@@ -141,7 +141,7 @@ constexpr void test() {
   }
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<key_container_type, Alloc> is true

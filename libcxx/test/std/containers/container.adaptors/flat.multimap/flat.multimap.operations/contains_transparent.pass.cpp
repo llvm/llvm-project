@@ -37,7 +37,7 @@ static_assert(!CanContains<NonTransparentMap>);
 static_assert(!CanContains<const NonTransparentMap>);
 
 template <class KeyContainer, class ValueContainer>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_multimap<Key, Value, TransparentComparator, KeyContainer, ValueContainer>;
@@ -55,7 +55,7 @@ constexpr void test() {
   assert(m.contains(Transparent<std::string>{"g"}) == false);
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::vector<std::string>, std::vector<int>>();
 #ifndef __cpp_lib_constexpr_deque
   if (!TEST_IS_CONSTANT_EVALUATED)

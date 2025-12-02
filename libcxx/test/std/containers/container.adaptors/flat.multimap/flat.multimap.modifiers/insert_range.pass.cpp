@@ -41,7 +41,7 @@ static_assert(!CanInsertRange<Map, std::ranges::subrange<int*>>);
 static_assert(!CanInsertRange<Map, std::ranges::subrange<double*>>);
 
 template <class KeyContainer, class ValueContainer>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
 
@@ -71,7 +71,7 @@ constexpr void test() {
   }
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::vector<int>, std::vector<int>>();
 #ifndef __cpp_lib_constexpr_deque
   if (!TEST_IS_CONSTANT_EVALUATED)

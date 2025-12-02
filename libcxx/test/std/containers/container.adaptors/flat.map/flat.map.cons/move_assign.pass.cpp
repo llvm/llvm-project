@@ -27,7 +27,7 @@
 #include "min_allocator.h"
 
 template <template <class...> class KeyContainer, template <class...> class ValueContainer>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   {
     using C  = test_less<int>;
     using A1 = test_allocator<int>;
@@ -72,7 +72,7 @@ constexpr void test() {
   }
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::vector, std::vector>();
 
 #ifndef __cpp_lib_constexpr_deque

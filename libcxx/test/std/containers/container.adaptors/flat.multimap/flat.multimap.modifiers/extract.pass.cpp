@@ -35,7 +35,7 @@ static_assert(!CanExtract<std::flat_multimap<int, int> const&>);
 static_assert(!CanExtract<std::flat_multimap<int, int> const&&>);
 
 template <class KeyContainer, class ValueContainer>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   using M = std::flat_multimap<int, int, std::less<int>, KeyContainer, ValueContainer>;
   M m     = M({1, 2, 2, 2, 3, 3}, {4, 5, 6, 7, 8, 9});
 
@@ -51,7 +51,7 @@ constexpr void test() {
   LIBCPP_ASSERT(m.values().size() == 0);
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::vector<int>, std::vector<int>>();
 #ifndef __cpp_lib_constexpr_deque
   if (!TEST_IS_CONSTANT_EVALUATED)

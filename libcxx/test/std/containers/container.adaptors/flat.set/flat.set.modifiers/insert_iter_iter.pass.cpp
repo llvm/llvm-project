@@ -37,7 +37,7 @@ static_assert(!CanInsert<Set, int, int>);
 static_assert(!CanInsert<Set, cpp20_input_iterator<int*>, cpp20_input_iterator<int*>>);
 
 template <class KeyContainer>
-constexpr void test_one() {
+TEST_CONSTEXPR_CXX26 void test_one() {
   using M = std::flat_set<int, std::less<int>, KeyContainer>;
 
   int ar1[] = {
@@ -75,7 +75,7 @@ constexpr void test_one() {
   assert(m == expected2);
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_one<std::vector<int>>();
 #ifndef __cpp_lib_constexpr_deque
   if (!TEST_IS_CONSTANT_EVALUATED)

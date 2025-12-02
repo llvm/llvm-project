@@ -36,7 +36,7 @@ struct DefaultCtableComp {
 };
 
 template <template <class...> class KeyContainer, template <class...> class ValueContainer>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   std::pair<int, short> expected[] = {{1, 1}, {2, 2}, {3, 3}, {5, 2}};
   {
     // flat_map(initializer_list<value_type>);
@@ -107,7 +107,7 @@ constexpr void test() {
   }
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<key_container_type, Alloc> is true

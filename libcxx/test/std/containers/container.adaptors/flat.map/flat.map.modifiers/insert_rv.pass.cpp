@@ -25,7 +25,7 @@
 #include "../helpers.h"
 
 template <class Container, class Pair>
-constexpr void do_insert_rv_test() {
+TEST_CONSTEXPR_CXX26 void do_insert_rv_test() {
   using M = Container;
   using P = Pair;
   using R = std::pair<typename M::iterator, bool>;
@@ -60,7 +60,7 @@ constexpr void do_insert_rv_test() {
 }
 
 template <class KeyContainer, class ValueContainer>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_map<Key, Value, TransparentComparator, KeyContainer, ValueContainer>;
@@ -72,7 +72,7 @@ constexpr void test() {
   do_insert_rv_test<M, CP>();
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::vector<int>, std::vector<MoveOnly>>();
 #ifndef __cpp_lib_constexpr_deque
   if (!TEST_IS_CONSTANT_EVALUATED)

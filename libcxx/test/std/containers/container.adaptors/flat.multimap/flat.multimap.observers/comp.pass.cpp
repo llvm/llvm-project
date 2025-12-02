@@ -23,7 +23,7 @@
 
 #include "test_macros.h"
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     using M    = std::flat_multimap<int, char>;
     using Comp = std::less<int>; // the default

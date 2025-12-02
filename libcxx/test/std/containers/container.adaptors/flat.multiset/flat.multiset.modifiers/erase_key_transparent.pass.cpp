@@ -50,7 +50,7 @@ struct HeterogeneousKey {
 };
 
 template <class KeyContainer>
-constexpr void test_one() {
+TEST_CONSTEXPR_CXX26 void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_multiset<Key, std::less<Key>, KeyContainer>;
 
@@ -70,7 +70,7 @@ constexpr void test_one() {
 }
 
 template <class KeyContainer>
-constexpr void test_transparent_comparator() {
+TEST_CONSTEXPR_CXX26 void test_transparent_comparator() {
   using M = std::flat_multiset<std::string, TransparentComparator, KeyContainer>;
   {
     M m = {"alpha", "beta", "beta", "epsilon", "epsilon", "epsilon", "eta", "eta", "gamma"};
@@ -95,7 +95,7 @@ constexpr void test_transparent_comparator() {
   }
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_one<std::vector<int>>();
 #ifndef __cpp_lib_constexpr_deque
   if (!TEST_IS_CONSTANT_EVALUATED)

@@ -41,7 +41,7 @@ static_assert(CanInsert<Map, Iter, std::tuple<short, double>&&>);
 static_assert(!CanInsert<Map, int>);
 static_assert(!CanInsert<Map, Iter, int>);
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     // template<class K> pair<iterator, bool> insert(P&& x);
     bool transparent_used = false;

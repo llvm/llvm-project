@@ -39,7 +39,7 @@ static_assert(!CanInsert<Map, int, int>);
 static_assert(!CanInsert<Map, cpp20_input_iterator<Pair*>, cpp20_input_iterator<Pair*>>);
 
 template <class KeyContainer, class ValueContainer>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   using P = std::pair<int, double>;
   using M = std::flat_map<int, double, std::less<int>, KeyContainer, ValueContainer>;
 
@@ -96,7 +96,7 @@ constexpr void test() {
       });
 }
 
-constexpr void test_product_iterator() {
+TEST_CONSTEXPR_CXX26 void test_product_iterator() {
   using M = std::flat_map<int, int>;
   {
     M m1{{1, 1}, {2, 1}, {3, 1}};
@@ -116,7 +116,7 @@ constexpr void test_product_iterator() {
   }
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::vector<int>, std::vector<double>>();
 #ifndef __cpp_lib_constexpr_deque
   if (!TEST_IS_CONSTANT_EVALUATED)

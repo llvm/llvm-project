@@ -39,7 +39,7 @@ constexpr auto il2 = il<int, short>;
 constexpr auto il3 = il<short, int>;
 
 template <template <class...> class KeyContainer, template <class...> class ValueContainer>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   {
     // flat_map(sorted_unique_t, initializer_list<value_type>);
     using M       = std::flat_map<int, int, std::less<int>, KeyContainer<int>, ValueContainer<int>>;
@@ -112,7 +112,7 @@ constexpr void test() {
   }
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<key_container_type, Alloc> is true

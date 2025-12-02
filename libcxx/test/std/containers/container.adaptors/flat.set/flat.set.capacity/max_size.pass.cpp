@@ -24,7 +24,7 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     using A1 = limited_allocator<int, 10>;
     using C  = std::flat_set<int, std::less<int>, std::vector<int, A1>>;

@@ -40,7 +40,7 @@ static_assert(!CanInsert<Map, int, int>);
 static_assert(!CanInsert<Map, cpp20_input_iterator<Pair*>, cpp20_input_iterator<Pair*>>);
 
 template <class KeyContainer, class ValueContainer>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   using P = std::pair<int, double>;
   using M = std::flat_multimap<int, double, std::less<int>, KeyContainer, ValueContainer>;
 
@@ -99,7 +99,7 @@ constexpr void test() {
   check_invariant(m);
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::vector<int>, std::vector<double>>();
 #ifndef __cpp_lib_constexpr_deque
   if (!TEST_IS_CONSTANT_EVALUATED)

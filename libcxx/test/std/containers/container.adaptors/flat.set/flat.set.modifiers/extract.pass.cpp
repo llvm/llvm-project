@@ -33,7 +33,7 @@ static_assert(!CanExtract<std::flat_set<int> const&>);
 static_assert(!CanExtract<std::flat_set<int> const&&>);
 
 template <class KeyContainer>
-constexpr void test_one() {
+TEST_CONSTEXPR_CXX26 void test_one() {
   using M = std::flat_set<int, std::less<int>, KeyContainer>;
   {
     M m = M({1, 2, 3});
@@ -55,7 +55,7 @@ constexpr void test_one() {
   }
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_one<std::vector<int>>();
 #ifndef __cpp_lib_constexpr_deque
   if (!TEST_IS_CONSTANT_EVALUATED)

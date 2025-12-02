@@ -53,7 +53,7 @@ struct HeterogeneousKey {
 };
 
 template <class KeyContainer, class ValueContainer>
-constexpr void test_simple() {
+TEST_CONSTEXPR_CXX26 void test_simple() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_multimap<Key, Value, std::ranges::less, KeyContainer, ValueContainer>;
@@ -74,7 +74,7 @@ constexpr void test_simple() {
 }
 
 template <class KeyContainer, class ValueContainer>
-constexpr void test_transparent_comparator() {
+TEST_CONSTEXPR_CXX26 void test_transparent_comparator() {
   using M = std::flat_multimap<std::string, int, TransparentComparator, KeyContainer, ValueContainer>;
   using P = std::pair<std::string, int>;
   M m     = {
@@ -118,7 +118,7 @@ constexpr void test_transparent_comparator() {
   assert(std::ranges::equal(m, std::vector<P>{}));
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
 #ifndef __cpp_lib_constexpr_deque
   if (!TEST_IS_CONSTANT_EVALUATED)
 #endif

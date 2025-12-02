@@ -26,7 +26,7 @@
 #include "min_allocator.h"
 
 template <class KeyContainer, class ValueContainer, class Compare = std::less<>>
-constexpr void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   using M = std::flat_map<int, char, Compare, KeyContainer, ValueContainer>;
 
   auto make = [](std::initializer_list<int> il) {
@@ -70,7 +70,7 @@ constexpr void test() {
   assert(m.empty());
 }
 
-constexpr bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::vector<int>, std::vector<char>>();
   test<std::vector<int>, std::vector<char>, std::greater<>>();
 
