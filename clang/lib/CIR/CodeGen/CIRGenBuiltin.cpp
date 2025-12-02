@@ -266,7 +266,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_va_end:
     emitVAEnd(emitVAListRef(e->getArg(0)).getPointer());
     return {};
-
+  case Builtin::BI__builtin_va_copy: {
+    mlir::Value dstPtr = emitVAListRef(e->getArg(0)).getPointer();
+    mlir::Value srcPtr = emitVAListRef(e->getArg(1)).getPointer();
+    cir::VACopyOp::create(builder, dstPtr.getLoc(), dstPtr, srcPtr);
+    return {};
+  }
   case Builtin::BIcos:
   case Builtin::BIcosf:
   case Builtin::BIcosl:
@@ -320,6 +325,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_fabsl:
   case Builtin::BI__builtin_fabsf128:
     return emitUnaryMaybeConstrainedFPBuiltin<cir::FAbsOp>(*this, *e);
+
+  case Builtin::BIfloor:
+  case Builtin::BIfloorf:
+  case Builtin::BIfloorl:
+  case Builtin::BI__builtin_floor:
+  case Builtin::BI__builtin_floorf:
+  case Builtin::BI__builtin_floorf16:
+  case Builtin::BI__builtin_floorl:
+  case Builtin::BI__builtin_floorf128:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::FloorOp>(*this, *e);
 
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
@@ -526,6 +541,45 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     fnOp.setBuiltin(true);
     return emitCall(e->getCallee()->getType(), CIRGenCallee::forDirect(fnOp), e,
                     returnValue);
+  }
+
+  case Builtin::BI__builtin_constant_p: {
+    mlir::Type resultType = convertType(e->getType());
+
+    const Expr *arg = e->getArg(0);
+    QualType argType = arg->getType();
+    // FIXME: The allowance for Obj-C pointers and block pointers is historical
+    // and likely a mistake.
+    if (!argType->isIntegralOrEnumerationType() && !argType->isFloatingType() &&
+        !argType->isObjCObjectPointerType() && !argType->isBlockPointerType()) {
+      // Per the GCC documentation, only numeric constants are recognized after
+      // inlining.
+      return RValue::get(
+          builder.getConstInt(getLoc(e->getSourceRange()),
+                              mlir::cast<cir::IntType>(resultType), 0));
+    }
+
+    if (arg->HasSideEffects(getContext())) {
+      // The argument is unevaluated, so be conservative if it might have
+      // side-effects.
+      return RValue::get(
+          builder.getConstInt(getLoc(e->getSourceRange()),
+                              mlir::cast<cir::IntType>(resultType), 0));
+    }
+
+    mlir::Value argValue = emitScalarExpr(arg);
+    if (argType->isObjCObjectPointerType()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "__builtin_constant_p: Obj-C object pointer");
+      return {};
+    }
+    argValue = builder.createBitcast(argValue, convertType(argType));
+
+    mlir::Value result = cir::IsConstantOp::create(
+        builder, getLoc(e->getSourceRange()), argValue);
+    // IsConstantOp returns a bool, but __builtin_constant_p returns an int.
+    result = builder.createBoolToInt(result, resultType);
+    return RValue::get(result);
   }
   case Builtin::BI__builtin_dynamic_object_size:
   case Builtin::BI__builtin_object_size: {
