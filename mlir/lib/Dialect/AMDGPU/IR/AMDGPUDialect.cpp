@@ -711,8 +711,8 @@ LogicalResult TransposeLoadOp::verify() {
 
 LogicalResult MakeDmaBaseOp::verify() {
 
-  MemRefType ldsType = cast<MemRefType>(getLds().getType());
-  MemRefType globalType = cast<MemRefType>(getGlobal().getType());
+  auto ldsType = cast<MemRefType>(getLds().getType());
+  auto globalType = cast<MemRefType>(getGlobal().getType());
   if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace())) {
     return emitOpError(
         "lds memref must have workgroup address space attribute.");
