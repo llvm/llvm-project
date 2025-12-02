@@ -21,8 +21,8 @@ void force_emit() {
   GlobalFunc2();
 }
 
-// CHECK: cir.func lambda{{.*}} @[[L1_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[L1_R_NAME:.*]]]>}
-// CHECK: cir.func lambda{{.*}} @[[L2_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[L2_R_NAME:.*]], @[[L2_R2_NAME:.*]]]>}
+// CHECK: cir.func {{.*}}lambda{{.*}} @[[L1_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[L1_R_NAME:.*]]]>}
+// CHECK: cir.func {{.*}}lambda{{.*}} @[[L2_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[L2_R_NAME:.*]], @[[L2_R2_NAME:.*]]]>}
 //
 // CHECK: cir.func{{.*}} @[[G1_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G1_R_NAME:.*]], @[[G1_R2_NAME:.*]]]>}
 // CHECK: cir.func{{.*}} @[[G2_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G2_R_NAME:.*]]]>}

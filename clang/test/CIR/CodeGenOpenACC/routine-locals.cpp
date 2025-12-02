@@ -16,8 +16,8 @@ void InFunc() {
 };
 
 // CHECK: cir.func{{.*}} @[[G1_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G1_R_NAME:.*]]]>}
-// CHECK: cir.func lambda{{.*}} @[[L1_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[L1_R_NAME:.*]]]>}
-// CHECK: cir.func lambda{{.*}} @[[L2_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[L2_R_NAME:.*]]]>}
+// CHECK: cir.func {{.*}}lambda{{.*}} @[[L1_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[L1_R_NAME:.*]]]>}
+// CHECK: cir.func {{.*}}lambda{{.*}} @[[L2_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[L2_R_NAME:.*]]]>}
 
 // CHECK: acc.routine @[[L1_R_NAME]] func(@[[L1_NAME]]) seq
 // CHECK: acc.routine @[[G1_R_NAME]] func(@[[G1_NAME]]) seq
