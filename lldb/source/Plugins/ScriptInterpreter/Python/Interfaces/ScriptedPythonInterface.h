@@ -55,6 +55,62 @@ public:
     std::variant<std::monostate, InvalidArgumentCountPayload> payload;
   };
 
+  llvm::Expected<FileSpec> GetScriptedModulePath() override {
+    using namespace python;
+    using Locker = ScriptInterpreterPythonImpl::Locker;
+
+    Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
+                   Locker::FreeLock);
+
+    if (!m_object_instance_sp)
+      return llvm::createStringError("scripted Interface has invalid object");
+
+    PythonObject py_obj =
+        PythonObject(PyRefType::Borrowed,
+                     static_cast<PyObject *>(m_object_instance_sp->GetValue()));
+
+    if (!py_obj.IsAllocated())
+      return llvm::createStringError(
+          "scripted Interface has invalid python object");
+
+    PythonObject py_obj_class = py_obj.GetAttributeValue("__class__");
+    if (!py_obj_class.IsValid())
+      return llvm::createStringError(
+          "scripted Interface python object is missing '__class__' attribute");
+
+    PythonObject py_obj_module = py_obj_class.GetAttributeValue("__module__");
+    if (!py_obj_module.IsValid())
+      return llvm::createStringError(
+          "scripted Interface python object '__class__' is missing "
+          "'__module__' attribute");
+
+    PythonString py_obj_module_str = py_obj_module.Str();
+    if (!py_obj_module_str.IsValid())
+      return llvm::createStringError(
+          "scripted Interface python object '__class__.__module__' attribute "
+          "is not a string");
+
+    llvm::StringRef py_obj_module_str_ref = py_obj_module_str.GetString();
+    PythonModule py_module = PythonModule::AddModule(py_obj_module_str_ref);
+    if (!py_module.IsValid())
+      return llvm::createStringError("failed to import '%s' module",
+                                     py_obj_module_str_ref.data());
+
+    PythonObject py_module_file = py_module.GetAttributeValue("__file__");
+    if (!py_module_file.IsValid())
+      return llvm::createStringError(
+          "module '%s' is missing '__file__' attribute",
+          py_obj_module_str_ref.data());
+
+    PythonString py_module_file_str = py_module_file.Str();
+    if (!py_module_file_str.IsValid())
+      return llvm::createStringError(
+          "module '%s.__file__' attribute is not a string",
+          py_obj_module_str_ref.data());
+
+    return FileSpec(py_obj_module_str.GetString());
+  }
+
   llvm::Expected<std::map<llvm::StringLiteral, AbstractMethodCheckerPayload>>
   CheckAbstractMethodImplementation(
       const python::PythonDictionary &class_dict) const {
