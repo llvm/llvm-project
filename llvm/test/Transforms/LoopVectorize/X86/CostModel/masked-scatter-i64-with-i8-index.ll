@@ -18,38 +18,38 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; SSE2:  LV: Found an estimated cost of 5 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
-; SSE2:  LV: Found an estimated cost of 10 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
-; SSE2:  LV: Found an estimated cost of 20 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
-; SSE2:  LV: Found an estimated cost of 40 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
+; SSE2:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
+; SSE2:  LV: Found an estimated cost of 5 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
+; SSE2:  LV: Found an estimated cost of 10 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
+; SSE2:  LV: Found an estimated cost of 20 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
 ;
 ; SSE42-LABEL: 'test'
 ; SSE42:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; SSE42:  LV: Found an estimated cost of 4 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
-; SSE42:  LV: Found an estimated cost of 8 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
-; SSE42:  LV: Found an estimated cost of 16 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
-; SSE42:  LV: Found an estimated cost of 32 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
+; SSE42:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
+; SSE42:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
+; SSE42:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
+; SSE42:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; AVX1:  LV: Found an estimated cost of 4 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
-; AVX1:  LV: Found an estimated cost of 9 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
-; AVX1:  LV: Found an estimated cost of 18 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
-; AVX1:  LV: Found an estimated cost of 36 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
-; AVX1:  LV: Found an estimated cost of 72 for VF 32 For instruction: store i64 %valB, ptr %out, align 8
+; AVX1:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
+; AVX1:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
+; AVX1:  LV: Found an estimated cost of 9 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
+; AVX1:  LV: Found an estimated cost of 18 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
+; AVX1:  LV: Found an estimated cost of 36 for VF 32 For instruction: store i64 %valB, ptr %out, align 8
 ;
-; AVX2-NOFAST-LABEL: 'test'
-; AVX2-NOFAST:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; AVX2-NOFAST:  LV: Found an estimated cost of 4 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
-; AVX2-NOFAST:  LV: Found an estimated cost of 9 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
-; AVX2-NOFAST:  LV: Found an estimated cost of 18 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
-; AVX2-NOFAST:  LV: Found an estimated cost of 36 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
-; AVX2-NOFAST:  LV: Found an estimated cost of 72 for VF 32 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-LABEL: 'test'
+; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2:  LV: Found an estimated cost of 9 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2:  LV: Found an estimated cost of 18 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
+; AVX2-NOFAST: LV: Found an estimated cost of 36 for VF 32 For instruction: store i64 %valB, ptr %out, align 8
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; AVX512:  LV: Found an estimated cost of 8 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
-; AVX512:  LV: Found an estimated cost of 18 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
+; AVX512:  LV: Found an estimated cost of 5 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
+; AVX512:  LV: Found an estimated cost of 11 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
 ; AVX512:  LV: Found an estimated cost of 10 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
 ; AVX512:  LV: Found an estimated cost of 20 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
 ; AVX512:  LV: Found an estimated cost of 40 for VF 32 For instruction: store i64 %valB, ptr %out, align 8
@@ -86,5 +86,3 @@ end:
 for.cond.cleanup:
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX2: {{.*}}

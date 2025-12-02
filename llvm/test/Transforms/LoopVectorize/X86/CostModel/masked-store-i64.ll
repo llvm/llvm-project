@@ -17,17 +17,17 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test(ptr %C) {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; SSE2:  LV: Found an estimated cost of 5 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
-; SSE2:  LV: Found an estimated cost of 10 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
-; SSE2:  LV: Found an estimated cost of 20 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
-; SSE2:  LV: Found an estimated cost of 40 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
+; SSE2:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
+; SSE2:  LV: Found an estimated cost of 5 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
+; SSE2:  LV: Found an estimated cost of 10 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
+; SSE2:  LV: Found an estimated cost of 20 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
 ;
 ; SSE42-LABEL: 'test'
 ; SSE42:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; SSE42:  LV: Found an estimated cost of 4 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
-; SSE42:  LV: Found an estimated cost of 8 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
-; SSE42:  LV: Found an estimated cost of 16 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
-; SSE42:  LV: Found an estimated cost of 32 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
+; SSE42:  LV: Found an estimated cost of 2 for VF 2 For instruction: store i64 %valB, ptr %out, align 8
+; SSE42:  LV: Found an estimated cost of 4 for VF 4 For instruction: store i64 %valB, ptr %out, align 8
+; SSE42:  LV: Found an estimated cost of 8 for VF 8 For instruction: store i64 %valB, ptr %out, align 8
+; SSE42:  LV: Found an estimated cost of 16 for VF 16 For instruction: store i64 %valB, ptr %out, align 8
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
