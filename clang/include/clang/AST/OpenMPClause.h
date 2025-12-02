@@ -1527,12 +1527,13 @@ class OMPTransparentClause final : public OMPClause {
   /// Start location of the kind in source code.
   SourceLocation KindLoc;
 
+  /// Argument of the 'transparent' clause.
+  Stmt *Transparent = nullptr;
+
   /// Set kind of the clauses.
   ///
   /// \param K Argument of clause.
   void setTransparentKind(OpenMPTransparentKind K) { Kind = K; }
-
-  Stmt *Transparent = nullptr;
 
   /// Set argument location.
   ///
@@ -1574,7 +1575,8 @@ public:
   /// Returns location of clause kind.
   SourceLocation getTransparentKindLoc() const { return KindLoc; }
 
-  Expr *getTransparent() { return cast<Expr>(Transparent); }
+  /// Returns argument of the clause.
+  Expr *getTransparent() const { return cast<Expr>(Transparent); }
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());

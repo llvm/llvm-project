@@ -392,7 +392,7 @@ public:
   QualType getOMPEventHandleT() const { return OMPEventHandleT; }
 
   /// Returns the current value of OMPImpexT.
-  QualType getOMPImpexT() { return OMPImpexT; }
+  QualType getOMPImpexT() const { return OMPImpexT; }
 
   /// Sets the OMPImpexT to the provided QualType Ty.
   void setOMPImpexT(QualType Ty) { OMPImpexT = Ty; }
@@ -17404,8 +17404,8 @@ static bool findOMPImpexT(Sema &S, SourceLocation Loc, DSAStackTy *Stack) {
   IdentifierInfo *II = &S.PP.getIdentifierTable().get("omp_impex_t");
   ParsedType PT = S.getTypeName(*II, Loc, S.getCurScope());
   if (!PT.getAsOpaquePtr() || PT.get().isNull()) {
-	S.Diag(Loc, diag::err_omp_implied_type_not_found) << "omp_impex_t";
-	return false;
+    S.Diag(Loc, diag::err_omp_implied_type_not_found) << "omp_impex_t";
+    return false;
   }
   QualType ImpexTy = PT.get();
   ImpexTy.addConst();
