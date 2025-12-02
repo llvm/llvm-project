@@ -45,6 +45,48 @@ exit:
   ret i64 %res
 }
 
+define i64 @test_vectorize_select_umin_idx_signed_sentinel_possible(ptr %src, i64 %n) {
+; CHECK-LABEL: define i64 @test_vectorize_select_umin_idx_signed_sentinel_possible(
+; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[MIN_VAL]], [[L]]
+; CHECK-NEXT:    [[MIN_VAL_NEXT]] = tail call i64 @llvm.umin.i64(i64 [[MIN_VAL]], i64 [[L]])
+; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i64 [[INDEX]], i64 [[MIN_IDX]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RDX_SELECT:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[RDX_SELECT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %min.idx = phi i64 [ 0, %entry ], [ %min.idx.next, %loop ]
+  %min.val = phi i64 [ 0, %entry ], [ %min.val.next, %loop ]
+  %gep = getelementptr i64, ptr %src, i64 %iv
+  %l = load i64, ptr %gep
+  %cmp = icmp ugt i64 %min.val, %l
+  %min.val.next = tail call i64 @llvm.umin.i64(i64 %min.val, i64 %l)
+  %min.idx.next = select i1 %cmp, i64 %iv, i64 %min.idx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 100
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  %res = phi i64 [ %min.idx.next, %loop ]
+  ret i64 %res
+}
+
 define i64 @test_vectorize_select_umin_idx_cond_flipped(ptr %src, i64 %n) {
 ; CHECK-LABEL: define i64 @test_vectorize_select_umin_idx_cond_flipped(
 ; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]]) {
@@ -552,6 +594,53 @@ exit:
   %res = phi i64 [ %min.idx.next, %loop ]
   ret i64 %res
 }
+
+define i64 @test_vectorize_select_umin_idx_wraps(ptr %src, i64 %n, i64 %start) {
+; CHECK-LABEL: define i64 @test_vectorize_select_umin_idx_wraps(
+; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]], i64 [[START:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[MIN_VAL]], [[L]]
+; CHECK-NEXT:    [[MIN_VAL_NEXT]] = tail call i64 @llvm.umin.i64(i64 [[MIN_VAL]], i64 [[L]])
+; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i64 [[IDX]], i64 [[MIN_IDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add i64 [[IDX]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = phi i64 [ %start, %entry ], [ %idx.next, %loop ]
+  %min.idx = phi i64 [ 0, %entry ], [ %min.idx.next, %loop ]
+  %min.val = phi i64 [ 0, %entry ], [ %min.val.next, %loop ]
+  %gep = getelementptr i64, ptr %src, i64 %iv
+  %l = load i64, ptr %gep
+  %cmp = icmp ugt i64 %min.val, %l
+  %min.val.next = tail call i64 @llvm.umin.i64(i64 %min.val, i64 %l)
+  %min.idx.next = select i1 %cmp, i64 %idx, i64 %min.idx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %idx.next = add i64 %idx, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  %res = phi i64 [ %min.idx.next, %loop ]
+  ret i64 %res
+}
+
 
 declare i64 @llvm.umin.i64(i64, i64)
 declare i16 @llvm.umin.i16(i16, i16)
