@@ -783,6 +783,11 @@ void CGHLSLRuntime::emitSystemSemanticStore(IRBuilder<> &B, llvm::Value *Source,
     }
   }
 
+  if (SemanticName == "SV_TARGET") {
+    emitUserSemanticStore(B, Source, Decl, Semantic, Index);
+    return;
+  }
+
   llvm_unreachable(
       "Store hasn't been implemented yet for this system semantic. FIXME");
 }

@@ -1658,6 +1658,7 @@ public:
   }
 
   unsigned size() { return Syms.size(); }
+  void reserve(size_t Size) { Syms.reserve(Size); }
 
   void setToCompress(bool TC) { ToCompress = TC; }
   bool toCompress() { return ToCompress; }
