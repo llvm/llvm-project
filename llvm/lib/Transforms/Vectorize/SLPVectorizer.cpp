@@ -11352,6 +11352,7 @@ BoUpSLP::ScalarsVectorizationLegality BoUpSLP::getScalarsVectorizationLegality(
     assert(It != VL.end() && "Expected at least one GEP.");
     S = getSameOpcode(*It, *TLI);
   }
+  assert(S && "Must be valid.");
 
   // Don't handle vectors.
   if (!SLPReVec && getValueType(VL.front())->isVectorTy()) {
