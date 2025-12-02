@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
     printf("p1 is %p\n", p1);
     printf("Content of p1 is: %d\n", *p1);
     // CHECK: ERROR: AddressSanitizer: heap-buffer-overflow
-    // CHECK: {{#0 0x.* in main .*zero_alloc.cpp:}}[[@LINE-2]]
+    // CHECK: {{#0 0x.* in \.?main .*zero_alloc.cpp:}}[[@LINE-2]]
     free(p1);
   }
 
@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
     printf("p2 is %p\n", p2);
     printf("Content of p2 is: %d\n", *p2);
     // CHECK: ERROR: AddressSanitizer: heap-buffer-overflow
-    // CHECK: {{#0 0x.* in main .*zero_alloc.cpp:}}[[@LINE-2]]
+    // CHECK: {{#0 0x.* in \.?main .*zero_alloc.cpp:}}[[@LINE-2]]
     free(p2);
   }
 
@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
     printf("p3 is %p\n", p3);
     printf("Content of p2 is: %d\n", *p3);
     // CHECK: ERROR: AddressSanitizer: heap-buffer-overflow
-    // CHECK: {{#0 0x.* in main .*zero_alloc.cpp:}}[[@LINE-2]]
+    // CHECK: {{#0 0x.* in \.?main .*zero_alloc.cpp:}}[[@LINE-2]]
     free(p3);
   }
 

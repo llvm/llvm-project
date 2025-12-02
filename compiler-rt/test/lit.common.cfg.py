@@ -907,7 +907,7 @@ for postfix in ["2", "1", ""]:
         config.substitutions.append(
             (
                 "%ld_flags_rpath_exe" + postfix,
-                "-L%T -l%xdynamiclib_namespec" + postfix,
+                "-L%t.dir -l%xdynamiclib_namespec" + postfix,
             )
         )
         config.substitutions.append(("%ld_flags_rpath_so" + postfix, ""))
