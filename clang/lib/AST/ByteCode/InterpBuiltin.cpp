@@ -3411,8 +3411,8 @@ static bool interp__builtin_ia32_cvtsd2ss(InterpState &S, CodePtr OpPC,
   // Convert element 0 from double to float.
   Floating Conv = S.allocFloat(
       S.getASTContext().getFloatTypeSemantics(DstVTy->getElementType()));
-  APFloat SrcD = B.elem<Floating>(0).getAPFloat();
-  if (!convertDoubleToFloatStrict(SrcD, Conv, S, Call))
+  APFloat SrcVal = B.elem<Floating>(0).getAPFloat();
+  if (!convertDoubleToFloatStrict(SrcVal, Conv, S, Call))
     return false;
   Dst.elem<Floating>(0) = Conv;
 
@@ -3447,8 +3447,8 @@ static bool interp__builtin_ia32_cvtsd2ss_round_mask(InterpState &S,
   if (MaskInt.getZExtValue() & 0x1) {
     Floating Conv = S.allocFloat(
         S.getASTContext().getFloatTypeSemantics(DstVTy->getElementType()));
-    APFloat Src = B.elem<Floating>(0).getAPFloat();
-    if (!convertDoubleToFloatStrict(Src, Conv, S, Call))
+    APFloat SrcVal = B.elem<Floating>(0).getAPFloat();
+    if (!convertDoubleToFloatStrict(SrcVal, Conv, S, Call))
       return false;
     Dst.elem<Floating>(0) = Conv;
   } else {
@@ -3512,10 +3512,10 @@ static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
     if (IsMasked && !MaskVal[I])
       continue;
 
-    APFloat Src = Src.elem<Floating>(I).getAPFloat();
+    APFloat SrcVal = Src.elem<Floating>(I).getAPFloat();
     Floating Conv = S.allocFloat(
         S.getASTContext().getFloatTypeSemantics(RetVTy->getElementType()));
-    if (!convertDoubleToFloatStrict(Src, Conv, S, Call))
+    if (!convertDoubleToFloatStrict(SrcVal, Conv, S, Call))
       return false;
     Dst.elem<Floating>(I) = Conv;
   }
