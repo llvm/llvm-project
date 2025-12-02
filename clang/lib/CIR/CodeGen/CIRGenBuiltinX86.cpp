@@ -100,6 +100,44 @@ static mlir::Value emitX86MaskAddLogic(CIRGenBuilderTy &builder,
   return builder.createBitcast(resVec, ops[0].getType());
 }
 
+static mlir::Value emitX86MaskUnpack(CIRGenBuilderTy &builder,
+                                     mlir::Location loc,
+                                     const std::string &intrinsicName,
+                                     SmallVectorImpl<mlir::Value> &ops) {
+  unsigned numElems = cast<cir::IntType>(ops[0].getType()).getWidth();
+
+  // Convert both operands to mask vectors.
+  mlir::Value lhs = getMaskVecValue(builder, loc, ops[0], numElems);
+  mlir::Value rhs = getMaskVecValue(builder, loc, ops[1], numElems);
+
+  mlir::Type i32Ty = builder.getSInt32Ty();
+
+  // Create indices for extracting the first half of each vector.
+  SmallVector<mlir::Attribute, 32> halfIndices;
+  for (auto i : llvm::seq<unsigned>(0, numElems / 2))
+    halfIndices.push_back(cir::IntAttr::get(i32Ty, i));
+
+  // Extract first half of each vector. This gives better codegen than
+  // doing it in a single shuffle.
+  mlir::Value lhsHalf = builder.createVecShuffle(loc, lhs, lhs, halfIndices);
+  mlir::Value rhsHalf = builder.createVecShuffle(loc, rhs, rhs, halfIndices);
+
+  // Create indices for concatenating the vectors.
+  // NOTE: Operands are swapped to match the intrinsic definition.
+  // After the half extraction, both vectors have numElems/2 elements.
+  // In createVecShuffle(rhsHalf, lhsHalf, indices), indices [0..numElems/2-1]
+  // select from rhsHalf, and indices [numElems/2..numElems-1] select from
+  // lhsHalf.
+  SmallVector<mlir::Attribute, 64> concatIndices;
+  for (auto i : llvm::seq<unsigned>(0, numElems))
+    concatIndices.push_back(cir::IntAttr::get(i32Ty, i));
+
+  // Concat the vectors (RHS first, then LHS).
+  mlir::Value res =
+      builder.createVecShuffle(loc, rhsHalf, lhsHalf, concatIndices);
+  return builder.createBitcast(res, ops[0].getType());
+}
+
 static mlir::Value emitX86MaskLogic(CIRGenBuilderTy &builder,
                                     mlir::Location loc,
                                     cir::BinOpKind binOpKind,
@@ -257,7 +295,15 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     return emitVecInsert(builder, getLoc(expr->getExprLoc()), ops[0], ops[1],
                          ops[2]);
   }
-
+  case X86::BI__builtin_ia32_kunpckhi:
+    return emitX86MaskUnpack(builder, getLoc(expr->getExprLoc()),
+                             "x86.avx512.kunpackb", ops);
+  case X86::BI__builtin_ia32_kunpcksi:
+    return emitX86MaskUnpack(builder, getLoc(expr->getExprLoc()),
+                             "x86.avx512.kunpackw", ops);
+  case X86::BI__builtin_ia32_kunpckdi:
+    return emitX86MaskUnpack(builder, getLoc(expr->getExprLoc()),
+                             "x86.avx512.kunpackd", ops);
   case X86::BI_mm_setcsr:
   case X86::BI__builtin_ia32_ldmxcsr: {
     mlir::Location loc = getLoc(expr->getExprLoc());
@@ -947,9 +993,6 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
         getMaskVecValue(builder, getLoc(expr->getExprLoc()), ops[0], numElts);
     return builder.createBitcast(resVec, ops[0].getType());
   }
-  case X86::BI__builtin_ia32_kunpckdi:
-  case X86::BI__builtin_ia32_kunpcksi:
-  case X86::BI__builtin_ia32_kunpckhi:
   case X86::BI__builtin_ia32_sqrtsh_round_mask:
   case X86::BI__builtin_ia32_sqrtsd_round_mask:
   case X86::BI__builtin_ia32_sqrtss_round_mask:

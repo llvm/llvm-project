@@ -94,10 +94,3 @@ int Three(void) __attribute__ ((weak, alias("__Three")));
 int Three_(void) __attribute__ ((alias("__Three")));
 extern int __attribute__((weak, alias("__Three_var"))) Three_var;
 extern int __attribute__((alias("__Three_var"))) Three_var_;
-//.
-// HOST: [[META0:![0-9]+]] = !{i32 1, !"__Two_var", i32 0, i32 0}
-// HOST: [[META1:![0-9]+]] = !{i32 1, !"__Three_var", i32 0, i32 1}
-//.
-// DEVICE: [[META0:![0-9]+]] = !{i32 1, !"__Two_var", i32 0, i32 0}
-// DEVICE: [[META1:![0-9]+]] = !{i32 1, !"__Three_var", i32 0, i32 1}
-//.

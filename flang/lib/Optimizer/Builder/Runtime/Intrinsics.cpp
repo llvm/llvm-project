@@ -471,13 +471,6 @@ mlir::Value fir::runtime::genChdir(fir::FirOpBuilder &builder,
   return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
-void fir::runtime::genShowDescriptor(fir::FirOpBuilder &builder,
-                                     mlir::Location loc, mlir::Value descAddr) {
-  mlir::func::FuncOp func{
-      fir::runtime::getRuntimeFunc<mkRTKey(ShowDescriptor)>(loc, builder)};
-  fir::CallOp::create(builder, loc, func, descAddr);
-}
-
 mlir::Value fir::runtime::genIrand(fir::FirOpBuilder &builder,
                                    mlir::Location loc, mlir::Value i) {
   auto runtimeFunc = fir::runtime::getRuntimeFunc<mkRTKey(Irand)>(loc, builder);
