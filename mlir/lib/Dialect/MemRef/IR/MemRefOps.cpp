@@ -2539,9 +2539,10 @@ public:
       return rewriter.notifyMatchFailure(
           op, "no static-to-dynamic conversions found");
 
-    auto castSource = cast.getSource();
+    Value castSource = cast.getSource();
     auto castSourceType = llvm::cast<MemRefType>(castSource.getType());
-    auto reassociationIndices = op.getReassociationIndices();
+    SmallVector<ReassociationIndices> reassociationIndices =
+        op.getReassociationIndices();
     for (auto [idx, group] : llvm::enumerate(reassociationIndices)) {
       int64_t castSourceDynCount = castSourceType.isDynamicDim(idx) ? 1 : 0;
       auto newOutputShapeSizesSlice =
@@ -2554,8 +2555,9 @@ public:
                 "reassociation group");
     }
 
-    auto newResultTypeOrFailure = ExpandShapeOp::computeExpandedType(
-        castSourceType, newOutputShapeSizes, reassociationIndices);
+    FailureOr<MemRefType> newResultTypeOrFailure =
+        ExpandShapeOp::computeExpandedType(castSourceType, newOutputShapeSizes,
+                                           reassociationIndices);
 
     if (failed(newResultTypeOrFailure))
       return rewriter.notifyMatchFailure(
