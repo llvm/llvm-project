@@ -57,7 +57,8 @@ define <vscale x 8 x i16> @dupx_splat_convert(i16 %s) #0 {
 
 define <vscale x 16 x i8> @dup_all_active_i8(<vscale x 16 x i8> %v, i8 %s) #0 {
 ; CHECK-LABEL: @dup_all_active_i8(
-; CHECK-NEXT:    [[INSERT:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> [[V:%.*]], <vscale x 16 x i1> splat (i1 true), i8 [[S:%.*]])
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[S:%.*]], i64 0
+; CHECK-NEXT:    [[INSERT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[INSERT]]
 ;
   %insert = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> %v, <vscale x 16 x i1> splat(i1 true), i8 %s)
@@ -66,8 +67,7 @@ define <vscale x 16 x i8> @dup_all_active_i8(<vscale x 16 x i8> %v, i8 %s) #0 {
 
 define <vscale x 4 x i32> @dup_all_active_i32(<vscale x 4 x i32> %v) #0 {
 ; CHECK-LABEL: @dup_all_active_i32(
-; CHECK-NEXT:    [[INSERT:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> [[V:%.*]], <vscale x 4 x i1> splat (i1 true), i32 73)
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[INSERT]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> splat (i32 73)
 ;
   %insert = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> %v, <vscale x 4 x i1> splat(i1 true), i32 73)
   ret <vscale x 4 x i32> %insert
@@ -75,7 +75,8 @@ define <vscale x 4 x i32> @dup_all_active_i32(<vscale x 4 x i32> %v) #0 {
 
 define <vscale x 4 x float> @dup_all_active_f32(<vscale x 4 x float> %v, float %s) #0 {
 ; CHECK-LABEL: @dup_all_active_f32(
-; CHECK-NEXT:    [[INSERT:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> [[V:%.*]], <vscale x 4 x i1> splat (i1 true), float [[S:%.*]])
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[S:%.*]], i64 0
+; CHECK-NEXT:    [[INSERT:%.*]] = shufflevector <vscale x 4 x float> [[DOTSPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[INSERT]]
 ;
   %insert = tail call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> %v, <vscale x 4 x i1> splat(i1 true), float %s)
@@ -84,8 +85,7 @@ define <vscale x 4 x float> @dup_all_active_f32(<vscale x 4 x float> %v, float %
 
 define <vscale x 2 x double> @dup_all_active_f64(<vscale x 2 x double> %v) #0 {
 ; CHECK-LABEL: @dup_all_active_f64(
-; CHECK-NEXT:    [[INSERT:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> [[V:%.*]], <vscale x 2 x i1> splat (i1 true), double 1.000000e+00)
-; CHECK-NEXT:    ret <vscale x 2 x double> [[INSERT]]
+; CHECK-NEXT:    ret <vscale x 2 x double> splat (double 1.000000e+00)
 ;
   %insert = tail call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> %v, <vscale x 2 x i1> splat(i1 true), double 1.0)
   ret <vscale x 2 x double> %insert
