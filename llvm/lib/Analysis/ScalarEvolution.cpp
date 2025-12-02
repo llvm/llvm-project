@@ -13998,7 +13998,15 @@ static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
 }
 
 namespace llvm {
-raw_ostream &operator<<(raw_ostream &OS, ScalarEvolution::LoopDisposition LD) {
+// Note: these overloaded operators need to be in the llvm namespace for them
+// to be resolved correctly. If we put them outside the llvm namespace, the
+//
+// OS << ": " << SE.getLoopDisposition(SV, InnerL);
+//
+// code below "breaks" and start printing raw enum values as opposed to the
+// string values.
+static raw_ostream &operator<<(raw_ostream &OS,
+                               ScalarEvolution::LoopDisposition LD) {
   switch (LD) {
   case ScalarEvolution::LoopVariant:
     OS << "Variant";
@@ -14013,7 +14021,8 @@ raw_ostream &operator<<(raw_ostream &OS, ScalarEvolution::LoopDisposition LD) {
   return OS;
 }
 
-raw_ostream &operator<<(raw_ostream &OS, ScalarEvolution::BlockDisposition BD) {
+static raw_ostream &operator<<(raw_ostream &OS,
+                               llvm::ScalarEvolution::BlockDisposition BD) {
   switch (BD) {
   case ScalarEvolution::DoesNotDominateBlock:
     OS << "DoesNotDominate";
