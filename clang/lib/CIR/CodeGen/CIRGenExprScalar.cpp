@@ -2353,7 +2353,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
 
         // For sizeof and __datasizeof, we need to scale the number of elements
         // by the size of the array element type.
-        auto vlaSize = cgf.getVLASize(vat);
+        CIRGenFunction::VlaSizePair vlaSize = cgf.getVLASize(vat);
         mlir::Value numElts = vlaSize.numElts;
 
         // Scale the number of non-VLA elements by the non-VLA element size.
@@ -2363,7 +2363,8 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
           mlir::Value eltSizeValue =
               builder.getConstAPInt(numElts.getLoc(), numElts.getType(),
                                     cgf.cgm.getSize(eltSize).getValue());
-          return builder.createMul(loc, eltSizeValue, numElts);
+          return builder.createMul(loc, eltSizeValue, numElts,
+                                   cir::OverflowBehavior::NoUnsignedWrap);
         }
 
         return numElts;
