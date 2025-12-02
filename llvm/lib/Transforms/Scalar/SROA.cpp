@@ -3150,7 +3150,6 @@ private:
     assert(IsSplit || BeginOffset == NewBeginOffset);
     uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
 
-#ifndef NDEBUG
     StringRef OldName = OldPtr->getName();
     // Skip through the last '.sroa.' component of the name.
     size_t LastSROAPrefix = OldName.rfind(".sroa.");
@@ -3169,17 +3168,10 @@ private:
     }
     // Strip any SROA suffixes as well.
     OldName = OldName.substr(0, OldName.find(".sroa_"));
-#endif
 
     return getAdjustedPtr(IRB, DL, &NewAI,
                           APInt(DL.getIndexTypeSizeInBits(PointerTy), Offset),
-                          PointerTy,
-#ifndef NDEBUG
-                          Twine(OldName) + "."
-#else
-                          Twine()
-#endif
-    );
+                          PointerTy, Twine(OldName) + ".");
   }
 
   /// Compute suitable alignment to access this slice of the *new*
