@@ -1,4 +1,4 @@
-// RUN: %clang --driver-mode=dxc %s -T ps_6_8 -E main1 -O3 -spirv -Xclang -verify -Xclang -verify-ignore-unexpected=note
+// RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-pixel %s -emit-llvm-only -disable-llvm-passes -verify -verify-ignore-unexpected=note
 
 // The following code is not legal: both semantics A and B will be lowered
 // into a Location decoration. And mixing implicit and explicit Location
