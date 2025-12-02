@@ -1,7 +1,6 @@
 add_llvm_component_library(LLVMTransformUtils
   AddDiscriminators.cpp
   AMDGPUEmitPrintf.cpp
-  ARMCommonInstCombineIntrinsic.cpp
   ASanStackFrameLayout.cpp
   AssumeBundleBuilder.cpp
   BasicBlockUtils.cpp

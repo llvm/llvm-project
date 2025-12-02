@@ -28,7 +28,10 @@ Standard C++ Named modules
 In order to better understand the compiler's behavior, it is helpful to
 understand some terms and definitions for readers who are not familiar with the
 C++ feature. This document is not a tutorial on C++; it only introduces
-necessary concepts to better understand use of modules in a project.
+necessary concepts to better understand use of modules in a project. Other
+resources at `Wikipedia <https://en.wikipedia.org/wiki/Modules_(C++)>`_ and
+`cppreference <https://en.cppreference.com/w/cpp/language/modules.html>`_ can
+provide more background information about modules if needed.
 
 Background and terminology
 --------------------------
