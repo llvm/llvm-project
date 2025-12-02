@@ -4820,6 +4820,37 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
   }];
 }
 
+def CIR_VACopyOp : CIR_Op<"va_copy"> {
+  let summary = "Copied a variable argument list";
+  let description = [{
+    The `cir.copy` operation models the C/C++ va_copy macro.
+    The variable argument list passed as the `$src_list` is copied to an
+    unitialized `va_list` in the destination operand. The next argument that
+    can be extracted from the copied list is the same as the next argument in
+    the source list. The copied list must be destroyed with `va_end`.
+
+    Example:
+
+    ```mlir
+    // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %p = cir.cast array_to_ptrdecay %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+          -> !cir.ptr<!rec___va_list_tag>
+    cir.va_copy %p to %dst
+          : (!cir.ptr<!rec___va_list_tag>, !cir.ptr<!rec___va_list_tag>)
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_PointerType:$dst_list,
+    CIR_PointerType:$src_list
+  );
+
+  let assemblyFormat = [{
+    $src_list `to` $dst_list attr-dict `:` type(operands)
+  }];
+}
+
 def CIR_VAArgOp : CIR_Op<"va_arg"> {
   let summary = "Fetches next variadic element as a given type";
   let description = [{
