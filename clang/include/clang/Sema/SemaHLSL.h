@@ -168,6 +168,7 @@ public:
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL);
   void handleVkBindingAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkLocationAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
@@ -236,15 +237,31 @@ private:
 
   IdentifierInfo *RootSigOverrideIdent = nullptr;
 
+  // Information about the current subtree being flattened.
   struct SemanticInfo {
     HLSLParsedSemanticAttr *Semantic;
-    std::optional<uint32_t> Index;
+    std::optional<uint32_t> Index = std::nullopt;
   };
 
+  // Bitmask used to recall if the current semantic subtree is
+  // input, output or inout.
   enum IOType {
     In = 0b01,
     Out = 0b10,
     InOut = 0b11,
+  };
+
+  // The context shared by all semantics with the same IOType during
+  // flattening.
+  struct SemanticContext {
+    // Present if any semantic sharing the same IO type has an explicit or
+    // implicit SPIR-V location index assigned.
+    std::optional<bool> UsesExplicitVkLocations = std::nullopt;
+    // The set of semantics found to be active during flattening. Used to detect
+    // index collisions.
+    llvm::StringSet<> ActiveSemantics = {};
+    // The IOType of this semantic set.
+    IOType CurrentIOType;
   };
 
   struct SemanticStageInfo {
@@ -259,19 +276,17 @@ private:
 
   void checkSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAppliedSemanticAttr *SemanticAttr,
-                               bool IsInput);
+                               const SemanticContext &SC);
 
   bool determineActiveSemanticOnScalar(FunctionDecl *FD,
                                        DeclaratorDecl *OutputDecl,
                                        DeclaratorDecl *D,
                                        SemanticInfo &ActiveSemantic,
-                                       llvm::StringSet<> &ActiveSemantics,
-                                       bool IsInput);
+                                       SemanticContext &SC);
 
   bool determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *OutputDecl,
                                DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
-                               llvm::StringSet<> &ActiveSemantics,
-                               bool IsInput);
+                               SemanticContext &SC);
 
   void processExplicitBindingsOnDecl(VarDecl *D);
 
@@ -282,7 +297,7 @@ private:
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
 
   void diagnoseSemanticStageMismatch(
-      const Attr *A, llvm::Triple::EnvironmentType Stage, bool IsInput,
+      const Attr *A, llvm::Triple::EnvironmentType Stage, IOType CurrentIOType,
       std::initializer_list<SemanticStageInfo> AllowedStages);
 
   uint32_t getNextImplicitBindingOrderID() {
