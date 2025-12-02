@@ -1094,7 +1094,6 @@ void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
   std::optional<cir::CtorKind> ctorKind = funcOp.getCxxConstructorKind();
   if (ctorKind && *ctorKind == cir::CtorKind::Copy &&
       funcOp.isCxxTrivialMemberFunction()) {
-    llvm::outs() << "success \n";
     // Replace the trivial copy constructor call with a `CopyOp`
     CIRBaseBuilderTy builder(getContext());
     mlir::ValueRange operands = op.getOperands();
