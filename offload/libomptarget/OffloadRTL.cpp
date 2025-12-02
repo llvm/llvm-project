@@ -19,7 +19,7 @@
 #ifdef OMPT_SUPPORT
 extern void llvm::omp::target::ompt::connectLibrary();
 #endif
-using namespace llvm::omptarget::debug;
+using namespace llvm::omp::target::debug;
 
 static std::mutex PluginMtx;
 static uint32_t RefCount = 0;

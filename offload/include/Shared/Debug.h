@@ -450,7 +450,7 @@ inline bool isDebugEnabled() { return false; }
 
 } // namespace llvm::offload::debug
 
-namespace llvm::omptarget::debug {
+namespace llvm::omp::target::debug {
 using namespace llvm::offload::debug;
 
 enum OmpDebugLevel : uint32_t {
@@ -510,15 +510,15 @@ static inline odbg_ostream reportErrorStream() {
 
 // helper macro to support old DP and REPORT macros with printf syntax
 #define FORMAT_TO_STR(Format, ...)                                             \
-  ::llvm::omptarget::debug::formatToStr(Format __VA_OPT__(, ) __VA_ARGS__)
+  ::llvm::omp::target::debug::formatToStr(Format __VA_OPT__(, ) __VA_ARGS__)
 
 #define DP(...) ODBG() << FORMAT_TO_STR(__VA_ARGS__);
 
 #define REPORT_INT_OLD(...)                                                    \
   do {                                                                         \
     if (::llvm::offload::debug::isDebugEnabled()) {                            \
-      ODBG(::llvm::omptarget::debug::ODT_Error,                                \
-           ::llvm::omptarget::debug::ODL_Error)                                \
+      ODBG(::llvm::omp::target::debug::ODT_Error,                              \
+           ::llvm::omp::target::debug::ODL_Error)                              \
           << FORMAT_TO_STR(__VA_ARGS__);                                       \
     } else {                                                                   \
       FAILURE_MESSAGE(__VA_ARGS__);                                            \
@@ -533,11 +533,11 @@ static inline odbg_ostream reportErrorStream() {
 #endif // OMPTARGET_DEBUG
 
 // This is used for the new style REPORT macro
-#define REPORT_INT() ::llvm::omptarget::debug::reportErrorStream()
+#define REPORT_INT() ::llvm::omp::target::debug::reportErrorStream()
 
 // Make REPORT compatible with old and new syntax
 #define REPORT(...) REPORT_INT##__VA_OPT__(_OLD)(__VA_ARGS__)
 
-} // namespace llvm::omptarget::debug
+} // namespace llvm::omp::target::debug
 
 #endif // OMPTARGET_SHARED_DEBUG_H
