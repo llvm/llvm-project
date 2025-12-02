@@ -2544,12 +2544,11 @@ public:
     SmallVector<ReassociationIndices> reassociationIndices =
         op.getReassociationIndices();
     for (auto [idx, group] : llvm::enumerate(reassociationIndices)) {
-      int64_t castSourceDynCount = castSourceType.isDynamicDim(idx) ? 1 : 0;
       auto newOutputShapeSizesSlice =
           ArrayRef(newOutputShapeSizes).slice(group.front(), group.size());
-      int64_t newOutputDynCount =
-          llvm::count_if(newOutputShapeSizesSlice, ShapedType::isDynamic);
-      if (castSourceDynCount != newOutputDynCount)
+      bool newOutputDynamic =
+          llvm::is_contained(newOutputShapeSizesSlice, ShapedType::kDynamic);
+      if (castSourceType.isDynamicDim(idx) != newOutputDynamic)
         return rewriter.notifyMatchFailure(
             op, "folding cast will result in changing dynamicity in "
                 "reassociation group");
