@@ -45,6 +45,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
+// LLVM RTTI support.
+char StackFrame::ID;
+
 // The first bits in the flags are reserved for the SymbolContext::Scope bits
 // so we know if we have tried to look up information in our internal symbol
 // context (m_sc) already.
@@ -57,14 +60,14 @@ using namespace lldb_private;
 StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        user_id_t unwind_frame_index, addr_t cfa,
                        bool cfa_is_valid, addr_t pc, StackFrame::Kind kind,
-                       bool behaves_like_zeroth_frame,
+                       bool artificial, bool behaves_like_zeroth_frame,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index), m_reg_context_sp(),
       m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
       m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
-      m_stack_frame_kind(kind),
+      m_stack_frame_kind(kind), m_artificial(artificial),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
       m_recognized_frame_sp(), m_disassembly(), m_mutex() {
@@ -92,7 +95,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
       m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
-      m_stack_frame_kind(StackFrame::Kind::Regular),
+      m_stack_frame_kind(StackFrame::Kind::Regular), m_artificial(false),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
       m_recognized_frame_sp(), m_disassembly(), m_mutex() {
@@ -120,7 +123,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
            nullptr, thread_sp->GetProcess().get()),
       m_frame_code_addr(pc_addr), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
-      m_stack_frame_kind(StackFrame::Kind::Regular),
+      m_stack_frame_kind(StackFrame::Kind::Regular), m_artificial(false),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
       m_recognized_frame_sp(), m_disassembly(), m_mutex() {
@@ -1264,9 +1267,11 @@ bool StackFrame::IsHistorical() const {
   return m_stack_frame_kind == StackFrame::Kind::History;
 }
 
-bool StackFrame::IsArtificial() const {
-  return m_stack_frame_kind == StackFrame::Kind::Artificial;
+bool StackFrame::IsSynthetic() const {
+  return m_stack_frame_kind == StackFrame::Kind::Synthetic;
 }
+
+bool StackFrame::IsArtificial() const { return m_artificial; }
 
 bool StackFrame::IsHidden() {
   if (auto recognized_frame_sp = GetRecognizedFrame())
@@ -1342,18 +1347,18 @@ const char *StackFrame::GetDisplayFunctionName() {
 SourceLanguage StackFrame::GetLanguage() {
   CompileUnit *cu = GetSymbolContext(eSymbolContextCompUnit).comp_unit;
   if (cu)
-    return cu->GetLanguage();
+    return SourceLanguage{cu->GetLanguage()};
   return {};
 }
 
 SourceLanguage StackFrame::GuessLanguage() {
   SourceLanguage lang_type = GetLanguage();
 
-  if (lang_type == eLanguageTypeUnknown) {
+  if (!lang_type) {
     SymbolContext sc =
         GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol);
     if (sc.function)
-      lang_type = LanguageType(sc.function->GetMangled().GuessLanguage());
+      lang_type = SourceLanguage(sc.function->GetMangled().GuessLanguage());
     else if (sc.symbol)
       lang_type = SourceLanguage(sc.symbol->GetMangled().GuessLanguage());
   }
@@ -2055,7 +2060,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
       if (m_sc.comp_unit && m_sc.line_entry.IsValid()) {
         have_debuginfo = true;
         if (source_lines_before > 0 || source_lines_after > 0) {
-          SupportFileSP source_file_sp = m_sc.line_entry.file_sp;
+          SupportFileNSP source_file_sp = m_sc.line_entry.file_sp;
           uint32_t start_line = m_sc.line_entry.line;
           if (!start_line && m_sc.function) {
             m_sc.function->GetStartLineSourceInfo(source_file_sp, start_line);

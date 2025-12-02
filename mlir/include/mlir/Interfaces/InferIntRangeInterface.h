@@ -117,7 +117,8 @@ public:
   IntegerValueRange(ConstantIntRanges value) : value(std::move(value)) {}
 
   /// Create an integer value range lattice value.
-  IntegerValueRange(std::optional<ConstantIntRanges> value = std::nullopt)
+  explicit IntegerValueRange(
+      std::optional<ConstantIntRanges> value = std::nullopt)
       : value(std::move(value)) {}
 
   /// Whether the range is uninitialized. This happens when the state hasn't
@@ -166,6 +167,15 @@ using SetIntRangeFn =
 /// interface method.
 using SetIntLatticeFn =
     llvm::function_ref<void(Value, const IntegerValueRange &)>;
+
+/// Helper callback type to get the integer range of a value.
+using GetIntRangeFn = function_ref<IntegerValueRange(Value)>;
+
+/// Helper function to collect the integer range values of an array of op fold
+/// results.
+SmallVector<IntegerValueRange> getIntValueRanges(ArrayRef<OpFoldResult> values,
+                                                 GetIntRangeFn getIntRange,
+                                                 int32_t indexBitwidth);
 
 class InferIntRangeInterface;
 

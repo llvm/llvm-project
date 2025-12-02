@@ -344,6 +344,8 @@ def TuneAppleA7  : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
                                     FeatureZCRegMoveFPR128,
                                     FeatureZCZeroingGPR32,
                                     FeatureZCZeroingGPR64,
+                                    FeatureNoZCZeroingFPR64,
+                                    FeatureZCZeroingFPR128,
                                     FeatureZCZeroingFPWorkaround]>;
 
 def TuneAppleA10 : SubtargetFeature<"apple-a10", "ARMProcFamily", "AppleA10",
@@ -358,7 +360,9 @@ def TuneAppleA10 : SubtargetFeature<"apple-a10", "ARMProcFamily", "AppleA10",
                                     FeatureZCRegMoveGPR64,
                                     FeatureZCRegMoveFPR128,
                                     FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64]>;
+                                    FeatureZCZeroingGPR64,
+                                    FeatureNoZCZeroingFPR64,
+                                    FeatureZCZeroingFPR128]>;
 
 def TuneAppleA11 : SubtargetFeature<"apple-a11", "ARMProcFamily", "AppleA11",
                                     "Apple A11", [
@@ -372,7 +376,9 @@ def TuneAppleA11 : SubtargetFeature<"apple-a11", "ARMProcFamily", "AppleA11",
                                     FeatureZCRegMoveGPR64,
                                     FeatureZCRegMoveFPR128,
                                     FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64]>;
+                                    FeatureZCZeroingGPR64,
+                                    FeatureNoZCZeroingFPR64,
+                                    FeatureZCZeroingFPR128]>;
 
 def TuneAppleA12 : SubtargetFeature<"apple-a12", "ARMProcFamily", "AppleA12",
                                     "Apple A12", [
@@ -386,7 +392,9 @@ def TuneAppleA12 : SubtargetFeature<"apple-a12", "ARMProcFamily", "AppleA12",
                                     FeatureZCRegMoveGPR64,
                                     FeatureZCRegMoveFPR128,
                                     FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64]>;
+                                    FeatureZCZeroingGPR64,
+                                    FeatureNoZCZeroingFPR64,
+                                    FeatureZCZeroingFPR128]>;
 
 def TuneAppleA13 : SubtargetFeature<"apple-a13", "ARMProcFamily", "AppleA13",
                                     "Apple A13", [
@@ -400,7 +408,9 @@ def TuneAppleA13 : SubtargetFeature<"apple-a13", "ARMProcFamily", "AppleA13",
                                     FeatureZCRegMoveGPR64,
                                     FeatureZCRegMoveFPR128,
                                     FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64]>;
+                                    FeatureZCZeroingGPR64,
+                                    FeatureNoZCZeroingFPR64,
+                                    FeatureZCZeroingFPR128]>;
 
 def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     "Apple A14", [
@@ -419,7 +429,9 @@ def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     FeatureZCRegMoveGPR64,
                                     FeatureZCRegMoveFPR128,
                                     FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64]>;
+                                    FeatureZCZeroingGPR64,
+                                    FeatureNoZCZeroingFPR64,
+                                    FeatureZCZeroingFPR128]>;
 
 def TuneAppleA15 : SubtargetFeature<"apple-a15", "ARMProcFamily", "AppleA15",
                                     "Apple A15", [
@@ -438,7 +450,9 @@ def TuneAppleA15 : SubtargetFeature<"apple-a15", "ARMProcFamily", "AppleA15",
                                     FeatureZCRegMoveGPR64,
                                     FeatureZCRegMoveFPR128,
                                     FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64]>;
+                                    FeatureZCZeroingGPR64,
+                                    FeatureNoZCZeroingFPR64,
+                                    FeatureZCZeroingFPR128]>;
 
 def TuneAppleA16 : SubtargetFeature<"apple-a16", "ARMProcFamily", "AppleA16",
                                     "Apple A16", [
@@ -457,7 +471,9 @@ def TuneAppleA16 : SubtargetFeature<"apple-a16", "ARMProcFamily", "AppleA16",
                                     FeatureZCRegMoveGPR64,
                                     FeatureZCRegMoveFPR128,
                                     FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64]>;
+                                    FeatureZCZeroingGPR64,
+                                    FeatureNoZCZeroingFPR64,
+                                    FeatureZCZeroingFPR128]>;
 
 def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
                                     "Apple A17", [
@@ -476,7 +492,9 @@ def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
                                     FeatureZCRegMoveGPR64,
                                     FeatureZCRegMoveFPR128,
                                     FeatureZCZeroingGPR32,
-                                    FeatureZCZeroingGPR64]>;
+                                    FeatureZCZeroingGPR64,
+                                    FeatureNoZCZeroingFPR64,
+                                    FeatureZCZeroingFPR128]>;
 
 def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
                                      "Apple M4", [
@@ -494,7 +512,9 @@ def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
                                      FeatureZCRegMoveGPR64,
                                      FeatureZCRegMoveFPR128,
                                      FeatureZCZeroingGPR32,
-                                     FeatureZCZeroingGPR64]>;
+                                     FeatureZCZeroingGPR64,
+                                     FeatureNoZCZeroingFPR64,
+                                     FeatureZCZeroingFPR128]>;
 
 def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
@@ -573,6 +593,7 @@ def TuneNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily", "NeoverseN2
                                       FeatureALULSLFast,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
+                                      FeatureDisableMaximizeScalableBandwidth,
                                       FeaturePredictableSelectIsExpensive]>;
 
 def TuneNeoverseN3 : SubtargetFeature<"neoversen3", "ARMProcFamily", "NeoverseN3",
@@ -606,6 +627,7 @@ def TuneNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily", "NeoverseV1
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
                                       FeaturePredictableSelectIsExpensive,
+                                      FeatureDisableMaximizeScalableBandwidth,
                                       FeatureNoSVEFPLD1R]>;
 
 def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2",
@@ -1252,11 +1274,11 @@ def : ProcessorModel<"cortex-x2", NeoverseV2Model, ProcessorFeatures.X2,
                      [TuneX2]>;
 def : ProcessorModel<"cortex-x3", NeoverseV2Model, ProcessorFeatures.X3,
                      [TuneX3]>;
-def : ProcessorModel<"cortex-x4", NeoverseV2Model, ProcessorFeatures.X4,
+def : ProcessorModel<"cortex-x4", NeoverseV3Model, ProcessorFeatures.X4,
                      [TuneX4]>;
-def : ProcessorModel<"cortex-x925", NeoverseV2Model, ProcessorFeatures.X925,
+def : ProcessorModel<"cortex-x925", NeoverseV3Model, ProcessorFeatures.X925,
                      [TuneX925]>;
-def : ProcessorModel<"gb10", NeoverseV2Model, ProcessorFeatures.GB10,
+def : ProcessorModel<"gb10", NeoverseV3Model, ProcessorFeatures.GB10,
                      [TuneX925]>;
 def : ProcessorModel<"grace", NeoverseV2Model, ProcessorFeatures.Grace,
                      [TuneNeoverseV2]>;
@@ -1275,9 +1297,9 @@ def : ProcessorModel<"neoverse-v1", NeoverseV1Model,
                      ProcessorFeatures.NeoverseV1, [TuneNeoverseV1]>;
 def : ProcessorModel<"neoverse-v2", NeoverseV2Model,
                      ProcessorFeatures.NeoverseV2, [TuneNeoverseV2]>;
-def : ProcessorModel<"neoverse-v3", NeoverseV2Model,
+def : ProcessorModel<"neoverse-v3", NeoverseV3Model,
                      ProcessorFeatures.NeoverseV3, [TuneNeoverseV3]>;
-def : ProcessorModel<"neoverse-v3ae", NeoverseV2Model,
+def : ProcessorModel<"neoverse-v3ae", NeoverseV3AEModel,
                      ProcessorFeatures.NeoverseV3AE, [TuneNeoverseV3AE]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, ProcessorFeatures.ExynosM3,
                      [TuneExynosM3]>;

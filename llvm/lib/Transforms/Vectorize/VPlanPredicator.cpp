@@ -44,11 +44,6 @@ class VPPredicator {
   /// possibly inserting new recipes at \p Dst (using Builder's insertion point)
   VPValue *createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst);
 
-  /// Returns the *entry* mask for \p VPBB.
-  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
-    return BlockMaskCache.lookup(VPBB);
-  }
-
   /// Record \p Mask as the *entry* mask of \p VPBB, which is expected to not
   /// already have a mask.
   void setBlockInMask(VPBasicBlock *VPBB, VPValue *Mask) {
@@ -67,11 +62,12 @@ class VPPredicator {
     return EdgeMaskCache[{Src, Dst}] = Mask;
   }
 
-  /// Given a phi \p PhiR, try to see if its incoming blocks all share a common
-  /// edge and return its mask.
-  VPValue *findCommonEdgeMask(const VPPhi *PhiR) const;
-
 public:
+  /// Returns the *entry* mask for \p VPBB.
+  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
+    return BlockMaskCache.lookup(VPBB);
+  }
+
   /// Returns the precomputed predicate of the edge from \p Src to \p Dst.
   VPValue *getEdgeMask(const VPBasicBlock *Src, const VPBasicBlock *Dst) const {
     return EdgeMaskCache.lookup({Src, Dst});
@@ -172,7 +168,8 @@ void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
   // non-phi instructions.
 
   auto &Plan = *HeaderVPBB->getPlan();
-  auto *IV = new VPWidenCanonicalIVRecipe(Plan.getCanonicalIV());
+  auto *IV =
+      new VPWidenCanonicalIVRecipe(HeaderVPBB->getParent()->getCanonicalIV());
   Builder.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   Builder.insert(IV);
 
@@ -232,21 +229,6 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
   setEdgeMask(Src, DefaultDst, DefaultMask);
 }
 
-VPValue *VPPredicator::findCommonEdgeMask(const VPPhi *PhiR) const {
-  VPValue *EdgeMask = getEdgeMask(PhiR->getIncomingBlock(0), PhiR->getParent());
-  VPValue *CommonEdgeMask;
-  if (!EdgeMask ||
-      !match(EdgeMask, m_LogicalAnd(m_VPValue(CommonEdgeMask), m_VPValue())))
-    return nullptr;
-  for (const VPBasicBlock *InVPBB : drop_begin(PhiR->incoming_blocks())) {
-    EdgeMask = getEdgeMask(InVPBB, PhiR->getParent());
-    assert(EdgeMask && "Both null and non-null edge masks found");
-    if (!match(EdgeMask, m_LogicalAnd(m_Specific(CommonEdgeMask), m_VPValue())))
-      return nullptr;
-  }
-  return CommonEdgeMask;
-}
-
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
@@ -258,7 +240,6 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // be duplications since this is a simple recursive scan, but future
     // optimizations will clean it up.
 
-    VPValue *CommonEdgeMask = findCommonEdgeMask(PhiR);
     SmallVector<VPValue *, 2> OperandsWithMask;
     for (const auto &[InVPV, InVPBB] : PhiR->incoming_values_and_blocks()) {
       OperandsWithMask.push_back(InVPV);
@@ -267,14 +248,6 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
         assert(all_equal(PhiR->incoming_values()) &&
                "Distinct incoming values with one having a full mask");
         break;
-      }
-
-      // If all incoming blocks share a common edge, remove it from the mask.
-      if (CommonEdgeMask) {
-        VPValue *X;
-        if (match(EdgeMask,
-                  m_LogicalAnd(m_Specific(CommonEdgeMask), m_VPValue(X))))
-          EdgeMask = X;
       }
 
       OperandsWithMask.push_back(EdgeMask);
@@ -327,6 +300,35 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
       VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
 
     PrevVPBB = VPBB;
+  }
+
+  // If we folded the tail and introduced a header mask, any extract of the
+  // last element must be updated to extract from the last active lane of the
+  // header mask instead (i.e., the lane corresponding to the last active
+  // iteration).
+  if (FoldTail) {
+    assert(Plan.getExitBlocks().size() == 1 &&
+           "only a single-exit block is supported currently");
+    VPBasicBlock *EB = Plan.getExitBlocks().front();
+    assert(EB->getSinglePredecessor() == Plan.getMiddleBlock() &&
+           "the exit block must have middle block as single predecessor");
+
+    VPBuilder B(Plan.getMiddleBlock()->getTerminator());
+    for (auto &P : EB->phis()) {
+      auto *ExitIRI = cast<VPIRPhi>(&P);
+      VPValue *Inc = ExitIRI->getIncomingValue(0);
+      VPValue *Op;
+      if (!match(Inc, m_ExtractLastElement(m_VPValue(Op))))
+        continue;
+
+      // Compute the index of the last active lane.
+      VPValue *HeaderMask = Predicator.getBlockInMask(Header);
+      VPValue *LastActiveLane =
+          B.createNaryOp(VPInstruction::LastActiveLane, HeaderMask);
+      auto *Ext =
+          B.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
+      Inc->replaceAllUsesWith(Ext);
+    }
   }
   return Predicator.getBlockMaskCache();
 }

@@ -20,7 +20,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
 
-#include <list>
 #include <string>
 
 using namespace llvm;

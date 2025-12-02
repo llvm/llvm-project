@@ -92,7 +92,7 @@ void MemDGNode::print(raw_ostream &OS, bool PrintDeps) const {
   DGNode::print(OS, false);
   if (PrintDeps) {
     // Print memory preds.
-    static constexpr const unsigned Indent = 4;
+    static constexpr unsigned Indent = 4;
     for (auto *Pred : MemPreds)
       OS.indent(Indent) << "<-" << *Pred->getInstruction() << "\n";
   }

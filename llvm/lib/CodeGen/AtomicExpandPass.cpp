@@ -38,6 +38,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -770,7 +771,7 @@ struct PartwordMaskValues {
   Value *Inv_Mask = nullptr;
 };
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &O, const PartwordMaskValues &PMV) {
   auto PrintObj = [&O](auto *V) {
     if (V)
@@ -1259,8 +1260,7 @@ Value *AtomicExpandImpl::insertRMWLLSCLoop(
   BasicBlock *BB = Builder.GetInsertBlock();
   Function *F = BB->getParent();
 
-  assert(AddrAlign >=
-             F->getDataLayout().getTypeStoreSize(ResultTy) &&
+  assert(AddrAlign >= F->getDataLayout().getTypeStoreSize(ResultTy) &&
          "Expected at least natural alignment at this point.");
 
   // Given: atomicrmw some_op iN* %addr, iN %incr ordering
@@ -1295,7 +1295,13 @@ Value *AtomicExpandImpl::insertRMWLLSCLoop(
       TLI->emitStoreConditional(Builder, NewVal, Addr, MemOpOrder);
   Value *TryAgain = Builder.CreateICmpNE(
       StoreSuccess, ConstantInt::get(IntegerType::get(Ctx, 32), 0), "tryagain");
-  Builder.CreateCondBr(TryAgain, LoopBB, ExitBB);
+
+  Instruction *CondBr = Builder.CreateCondBr(TryAgain, LoopBB, ExitBB);
+
+  // Atomic RMW expands to a Load-linked / Store-Conditional loop, because it is
+  // hard to predict precise branch weigths we mark the branch as "unknown"
+  // (50/50) to prevent misleading optimizations.
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
 
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
   return Loaded;
@@ -1460,7 +1466,8 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 
   // If the cmpxchg doesn't actually need any ordering when it fails, we can
   // jump straight past that fence instruction (if it exists).
-  Builder.CreateCondBr(ShouldStore, ReleasingStoreBB, NoStoreBB);
+  Builder.CreateCondBr(ShouldStore, ReleasingStoreBB, NoStoreBB,
+                       MDBuilder(F->getContext()).createLikelyBranchWeights());
 
   Builder.SetInsertPoint(ReleasingStoreBB);
   if (ShouldInsertFencesForAtomic && !UseUnconditionalReleaseBarrier)
@@ -1479,7 +1486,8 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
       StoreSuccess, ConstantInt::get(Type::getInt32Ty(Ctx), 0), "success");
   BasicBlock *RetryBB = HasReleasedLoadBB ? ReleasedLoadBB : StartBB;
   Builder.CreateCondBr(StoreSuccess, SuccessBB,
-                       CI->isWeak() ? FailureBB : RetryBB);
+                       CI->isWeak() ? FailureBB : RetryBB,
+                       MDBuilder(F->getContext()).createLikelyBranchWeights());
 
   Builder.SetInsertPoint(ReleasedLoadBB);
   Value *SecondLoad;
@@ -1492,7 +1500,9 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 
     // If the cmpxchg doesn't actually need any ordering when it fails, we can
     // jump straight past that fence instruction (if it exists).
-    Builder.CreateCondBr(ShouldStore, TryStoreBB, NoStoreBB);
+    Builder.CreateCondBr(
+        ShouldStore, TryStoreBB, NoStoreBB,
+        MDBuilder(F->getContext()).createLikelyBranchWeights());
     // Update PHI node in TryStoreBB.
     LoadedTryStore->addIncoming(SecondLoad, ReleasedLoadBB);
   } else
@@ -1676,7 +1686,12 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
 
   Loaded->addIncoming(NewLoaded, LoopBB);
 
-  Builder.CreateCondBr(Success, ExitBB, LoopBB);
+  Instruction *CondBr = Builder.CreateCondBr(Success, ExitBB, LoopBB);
+
+  // Atomic RMW expands to a cmpxchg loop, Since precise branch weights
+  // cannot be easily determined here, we mark the branch as "unknown" (50/50)
+  // to prevent misleading optimizations.
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
 
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
   return NewLoaded;

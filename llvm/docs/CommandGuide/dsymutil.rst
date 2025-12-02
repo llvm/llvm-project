@@ -70,18 +70,18 @@ OPTIONS
 
  Print this help output.
 
+.. option:: --include-swiftmodules-from-interface
+
+ Whether or not to copy binary swiftmodules built from textual .swiftinterface
+ files into the dSYM bundle. These typically come only from the SDK (since
+ textual interfaces require library evolution) and thus are a waste of space to
+ copy into the bundle. Turn this on if the swiftmodules are different from
+ those in the SDK.
+
 .. option:: --keep-function-for-static
 
  Make a static variable keep the enclosing function even if it would have been
  omitted otherwise.
-
-.. option:: --minimize, -z
-
- When used when creating a dSYM file, this option will suppress the emission of
- the .debug_inlines, .debug_pubnames, and .debug_pubtypes sections since
- dsymutil currently has better equivalents: .apple_names and .apple_types. When
- used in conjunction with ``--update`` option, this option will cause redundant
- accelerator tables to be removed.
 
 .. option:: --no-object-timestamp
 

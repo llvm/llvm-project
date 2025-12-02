@@ -11,7 +11,7 @@ define void @test(ptr %A) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -32,23 +32,22 @@ define void @test(ptr %A) {
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[STRIDED_VEC]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP13]], i32 0
-; CHECK-NEXT:    store i32 [[TMP14]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP13]], i32 1
-; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP13]], i32 2
-; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i32> [[TMP13]], i32 3
+; CHECK-NEXT:    store i32 [[TMP14]], ptr [[TMP8]], align 4
+; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP9]], align 4
+; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 96, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 96, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[MUL]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4

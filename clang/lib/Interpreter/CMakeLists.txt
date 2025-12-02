@@ -28,7 +28,6 @@ add_clang_library(clangInterpreter
   Interpreter.cpp
   InterpreterValuePrinter.cpp
   InterpreterUtils.cpp
-  RemoteJITUtils.cpp
   Value.cpp
   InterpreterValuePrinter.cpp
   ${WASM_SRC}
@@ -47,6 +46,7 @@ add_clang_library(clangInterpreter
   clangFrontend
   clangFrontendTool
   clangLex
+  clangOptions
   clangParse
   clangSema
   clangSerialization

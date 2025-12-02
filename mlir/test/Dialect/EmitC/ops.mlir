@@ -203,6 +203,16 @@ func.func @test_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: f32, %arg4
   return %r : i32
 }
 
+func.func @test_expression_multiple_uses(%arg0: i32, %arg1: i32) -> i32 {
+  %r = emitc.expression %arg0, %arg1 : (i32, i32) -> i32 {
+    %a = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
+    %b = emitc.add %a, %arg0 : (i32, i32) -> i32
+    %c = emitc.mul %b, %a : (i32, i32) -> i32
+    emitc.yield %c : i32
+  }
+  return %r : i32
+}
+
 func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   emitc.for %i0 = %arg0 to %arg1 step %arg2 {
     %0 = emitc.call_opaque "func_const"(%i0) : (index) -> i32
@@ -324,4 +334,24 @@ emitc.class final @finalClass {
     %3 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
     return
   }
+}
+
+func.func @do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+  %3 = emitc.literal "3" : i32
+
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression %1, %2, %3 : (i32, i32, i32) -> i1 {
+      %add = emitc.add %1, %2 : (i32, i32) -> i32
+      %cmp = emitc.cmp eq, %add, %3 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+    
+    emitc.yield %r : i1
+  }
+
+  return
 }

@@ -195,6 +195,12 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "LLVM_ENABLE_LIBXML2=0" ]  # Must be 0.
   }
 
+  if (llvm_enable_ondisk_cas) {
+    extra_values += [ "LLVM_ENABLE_ONDISK_CAS=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_ONDISK_CAS=0" ]  # Must be 0.
+  }
+
   if (llvm_enable_expensive_checks) {
     extra_values += [ "LLVM_ENABLE_EXPENSIVE_CHECKS=1" ]
   } else {
@@ -265,6 +271,7 @@ group("test") {
     "//llvm/tools/llvm-as",
     "//llvm/tools/llvm-bcanalyzer",
     "//llvm/tools/llvm-c-test",
+    "//llvm/tools/llvm-cas",
     "//llvm/tools/llvm-cat",
     "//llvm/tools/llvm-cfi-verify",
     "//llvm/tools/llvm-cgdata",
@@ -284,7 +291,7 @@ group("test") {
     "//llvm/tools/llvm-dwp",
     "//llvm/tools/llvm-exegesis",
     "//llvm/tools/llvm-extract",
-    "//llvm/tools/llvm-gsymutil:llvm-gsymutil",
+    "//llvm/tools/llvm-gsymutil",
     "//llvm/tools/llvm-ifs",
     "//llvm/tools/llvm-ir2vec",
     "//llvm/tools/llvm-isel-fuzzer",
@@ -301,9 +308,10 @@ group("test") {
     "//llvm/tools/llvm-modextract",
     "//llvm/tools/llvm-mt",
     "//llvm/tools/llvm-nm",
-    "//llvm/tools/llvm-offload-wrapper",
     "//llvm/tools/llvm-objcopy:symlinks",
     "//llvm/tools/llvm-objdump:symlinks",
+    "//llvm/tools/llvm-offload-binary",
+    "//llvm/tools/llvm-offload-wrapper",
     "//llvm/tools/llvm-opt-fuzzer",
     "//llvm/tools/llvm-opt-report",
     "//llvm/tools/llvm-pdbutil",

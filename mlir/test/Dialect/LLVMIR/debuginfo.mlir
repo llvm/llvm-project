@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt -emit-bytecode %s | mlir-opt | FileCheck %s
 
 // CHECK-DAG: #[[FILE:.*]] = #llvm.di_file<"debuginfo.mlir" in "/test/">
 #file = #llvm.di_file<"debuginfo.mlir" in "/test/">
@@ -50,11 +51,12 @@
   line = 10, sizeInBits = 128, alignInBits = 32
 >
 
-// CHECK-DAG: #[[COMP1:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", file = #[[FILE]], scope = #[[FILE]], baseType = #[[INT0]], elements = #llvm.di_subrange<count = 4 : i64>>
+// CHECK-DAG: #[[COMP1:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", file = #[[FILE]], scope = #[[FILE]], baseType = #[[INT0]], allocated = {{.*}}, elements = #llvm.di_subrange<count = 4 : i64>>
 #comp1 = #llvm.di_composite_type<
   tag = DW_TAG_array_type, name = "array1", file = #file,
   scope = #file, baseType = #int0,
   // Specify the subrange count.
+  allocated = <[DW_OP_push_object_address, DW_OP_deref]>,
   elements = #llvm.di_subrange<count = 4>
 >
 

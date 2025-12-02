@@ -65,7 +65,7 @@ protected:
   }
 
   /// Build the VPlan for the loop starting from \p LoopHeader.
-  VPlanPtr buildVPlan(BasicBlock *LoopHeader) {
+  VPlanPtr buildVPlan(BasicBlock *LoopHeader, bool HasUncountableExit = false) {
     Function &F = *LoopHeader->getParent();
     assert(!verifyFunction(F) && "input function must be valid");
     doAnalysis(F);
@@ -75,7 +75,7 @@ protected:
     auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
                                              {}, PSE);
 
-    VPlanTransforms::handleEarlyExits(*Plan, false);
+    VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit);
     VPlanTransforms::addMiddleCheck(*Plan, true, false);
 
     VPlanTransforms::createLoopRegions(*Plan);
@@ -93,9 +93,12 @@ protected:
     BranchInst::Create(&*ScalarHeader, &*ScalarHeader);
   }
 
-  VPlan &getPlan(VPValue *TC = nullptr) {
-    Plans.push_back(std::make_unique<VPlan>(&*ScalarHeader, TC));
-    return *Plans.back();
+  VPlan &getPlan() {
+    Plans.push_back(std::make_unique<VPlan>(&*ScalarHeader));
+    VPlan &Plan = *Plans.back();
+    VPValue *DefaultTC = Plan.getConstantInt(32, 1024);
+    Plan.setTripCount(DefaultTC);
+    return Plan;
   }
 };
 

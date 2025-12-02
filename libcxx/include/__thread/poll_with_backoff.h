@@ -34,7 +34,7 @@ static _LIBCPP_CONSTEXPR const int __libcpp_polling_count = 64;
 // - __max_elapsed is the maximum duration to try polling for. If the maximum duration is exceeded,
 //   the polling loop will return false to report a timeout.
 template <class _Poll, class _Backoff>
-_LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_poll_with_backoff(
+_LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_poll_with_backoff(
     _Poll&& __poll, _Backoff&& __backoff, chrono::nanoseconds __max_elapsed = chrono::nanoseconds::zero()) {
   auto const __start = chrono::high_resolution_clock::now();
   for (int __count = 0;;) {

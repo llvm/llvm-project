@@ -6,12 +6,14 @@
 #
 # ===----------------------------------------------------------------------===##
 
-
 # Run our custom libc++ clang-tidy checks on all public headers.
 
-# RUN: %{python} %s %{libcxx-dir}/utils
+# REQUIRES: has-clang-tidy
 
-# block Lit from interpreting a RUN/XFAIL/etc inside the generation script
+# The GCC compiler flags are not always compatible with clang-tidy.
+# UNSUPPORTED: gcc
+
+# RUN: %{python} %s %{libcxx-dir}/utils
 # END.
 
 import sys
@@ -21,12 +23,6 @@ from libcxx.header_information import lit_header_restrictions, lit_header_undepr
 for header in public_headers:
   print(f"""\
 //--- {header}.sh.cpp
-
-// REQUIRES: has-clang-tidy
-
-// The GCC compiler flags are not always compatible with clang-tidy.
-// UNSUPPORTED: gcc
-
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 

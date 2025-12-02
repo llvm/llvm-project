@@ -33,7 +33,6 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -43,6 +42,8 @@
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Interpreter/Value.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Options/OptionUtils.h"
+#include "clang/Options/Options.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
@@ -105,10 +106,12 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
       Clang->getHeaderSearchOpts().ResourceDir.empty())
     Clang->getHeaderSearchOpts().ResourceDir =
-        CompilerInvocation::GetResourcesPath(Argv[0], nullptr);
+        GetResourcesPath(Argv[0], nullptr);
+
+  Clang->createVirtualFileSystem();
 
   // Create the actual diagnostics engine.
-  Clang->createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Clang->createDiagnostics();
   if (!Clang->hasDiagnostics())
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Initialization failed. "
@@ -183,7 +186,7 @@ IncrementalCompilerBuilder::create(std::string TT,
   llvm::ArrayRef<const char *> RF = llvm::ArrayRef(ClangArgv);
   std::unique_ptr<driver::Compilation> Compilation(Driver.BuildCompilation(RF));
 
-  if (Compilation->getArgs().hasArg(driver::options::OPT_v))
+  if (Compilation->getArgs().hasArg(options::OPT_v))
     Compilation->getJobs().Print(llvm::errs(), "\n", /*Quote=*/false);
 
   auto ErrOrCC1Args = GetCC1Arguments(&Diags, Compilation.get());
@@ -251,7 +254,8 @@ IncrementalCompilerBuilder::CreateCudaHost() {
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
                          llvm::Error &ErrOut,
                          std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder,
-                         std::unique_ptr<clang::ASTConsumer> Consumer)
+                         std::unique_ptr<clang::ASTConsumer> Consumer,
+                         JITConfig Config)
     : JITBuilder(std::move(JITBuilder)) {
   CI = std::move(Instance);
   llvm::ErrorAsOutParameter EAO(&ErrOut);
@@ -275,9 +279,10 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 
   if (Act->getCodeGen()) {
     Act->CacheCodeGenModule();
-    // The initial PTU is filled by `-include` or by CUDA includes
-    // automatically.
-    if (!CI->getPreprocessorOpts().Includes.empty()) {
+    // The initial PTU is filled by `-include`/`-include-pch` or by CUDA
+    // includes automatically.
+    if (!CI->getPreprocessorOpts().Includes.empty() ||
+        !CI->getPreprocessorOpts().ImplicitPCHInclude.empty()) {
       // We can't really directly pass the CachedInCodeGenModule to the Jit
       // because it will steal it, causing dangling references as explained in
       // Interpreter::Execute
@@ -285,7 +290,7 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
       ASTContext &C = CI->getASTContext();
       IncrParser->RegisterPTU(C.getTranslationUnitDecl(), std::move(M));
     }
-    if (llvm::Error Err = CreateExecutor()) {
+    if (llvm::Error Err = CreateExecutor(Config)) {
       ErrOut = joinErrors(std::move(ErrOut), std::move(Err));
       return;
     }
@@ -347,20 +352,132 @@ const char *const Runtimes = R"(
   EXTERN_C void __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType, ...);
 )";
 
+llvm::Expected<std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, uint32_t>>
+Interpreter::outOfProcessJITBuilder(JITConfig Config) {
+  std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
+  uint32_t childPid = -1;
+  if (!Config.OOPExecutor.empty()) {
+    // Launch an out-of-process executor locally in a child process.
+    auto ResultOrErr = IncrementalExecutor::launchExecutor(
+        Config.OOPExecutor, Config.UseSharedMemory, Config.SlabAllocateSize,
+        Config.CustomizeFork);
+    if (!ResultOrErr)
+      return ResultOrErr.takeError();
+    childPid = ResultOrErr->second;
+    auto EPCOrErr = std::move(ResultOrErr->first);
+    EPC = std::move(EPCOrErr);
+  } else if (Config.OOPExecutorConnect != "") {
+#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
+    auto EPCOrErr = IncrementalExecutor::connectTCPSocket(
+        Config.OOPExecutorConnect, Config.UseSharedMemory,
+        Config.SlabAllocateSize);
+    if (!EPCOrErr)
+      return EPCOrErr.takeError();
+    EPC = std::move(*EPCOrErr);
+#else
+    return llvm::make_error<llvm::StringError>(
+        "Out-of-process JIT over TCP is not supported on this platform",
+        std::error_code());
+#endif
+  }
+
+  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
+  if (EPC) {
+    auto JBOrErr = clang::Interpreter::createLLJITBuilder(
+        std::move(EPC), Config.OrcRuntimePath);
+    if (!JBOrErr)
+      return JBOrErr.takeError();
+    JB = std::move(*JBOrErr);
+  }
+
+  return std::make_pair(std::move(JB), childPid);
+}
+
+llvm::Expected<std::string>
+Interpreter::getOrcRuntimePath(const driver::ToolChain &TC) {
+  const std::array<const char *, 3> OrcRTLibNames = {
+      "liborc_rt.a", "liborc_rt_osx.a", "liborc_rt-x86_64.a"};
+
+  auto findInDir = [&](llvm::StringRef Base) -> std::optional<std::string> {
+    for (const char *LibName : OrcRTLibNames) {
+      llvm::SmallString<256> CandidatePath(Base);
+      llvm::sys::path::append(CandidatePath, LibName);
+      if (llvm::sys::fs::exists(CandidatePath))
+        return std::string(CandidatePath.str());
+    }
+    return std::nullopt;
+  };
+
+  std::string SearchedPaths;
+
+  if (std::optional<std::string> CompilerRTPath = TC.getCompilerRTPath()) {
+    if (auto Found = findInDir(*CompilerRTPath))
+      return *Found;
+    SearchedPaths += *CompilerRTPath;
+  } else {
+    return llvm::make_error<llvm::StringError>("CompilerRT path not found",
+                                               std::error_code());
+  }
+
+  if (std::optional<std::string> ResourceDir = TC.getRuntimePath()) {
+    if (auto Found = findInDir(*ResourceDir))
+      return *Found;
+    if (!SearchedPaths.empty())
+      SearchedPaths += "; ";
+    SearchedPaths += *ResourceDir;
+  } else {
+    return llvm::make_error<llvm::StringError>("ResourceDir path not found",
+                                               std::error_code());
+  }
+
+  return llvm::make_error<llvm::StringError>(
+      llvm::Twine("OrcRuntime library not found in: ") + SearchedPaths,
+      std::error_code());
+}
+
 llvm::Expected<std::unique_ptr<Interpreter>>
-Interpreter::create(std::unique_ptr<CompilerInstance> CI,
-                    std::unique_ptr<llvm::orc::LLJITBuilder> JB) {
+Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
+
+  if (Config.IsOutOfProcess) {
+    const TargetInfo &TI = CI->getTarget();
+    const llvm::Triple &Triple = TI.getTriple();
+
+    DiagnosticsEngine &Diags = CI->getDiagnostics();
+    std::string BinaryName = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
+    driver::Driver Driver(BinaryName, Triple.str(), Diags);
+    // Need fake args to get the driver to create a compilation.
+    std::vector<const char *> Args = {"clang", "--version"};
+    std::unique_ptr<clang::driver::Compilation> C(
+        Driver.BuildCompilation(Args));
+    if (!C) {
+      return llvm::make_error<llvm::StringError>(
+          "Failed to create driver compilation for out-of-process JIT",
+          std::error_code());
+    }
+    if (Config.OrcRuntimePath == "") {
+      const clang::driver::ToolChain &TC = C->getDefaultToolChain();
+
+      auto OrcRuntimePathOrErr = getOrcRuntimePath(TC);
+      if (!OrcRuntimePathOrErr) {
+        return OrcRuntimePathOrErr.takeError();
+      }
+
+      Config.OrcRuntimePath = *OrcRuntimePathOrErr;
+    }
+  }
+
   llvm::Error Err = llvm::Error::success();
-  auto Interp = std::unique_ptr<Interpreter>(
-      new Interpreter(std::move(CI), Err, JB ? std::move(JB) : nullptr));
-  if (Err)
-    return std::move(Err);
+  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
+
+  auto Interp = std::unique_ptr<Interpreter>(new Interpreter(
+      std::move(CI), Err, std::move(JB), /*Consumer=*/nullptr, Config));
+  if (auto E = std::move(Err))
+    return std::move(E);
 
   // Add runtime code and set a marker to hide it from user code. Undo will not
   // go through that.
-  Err = Interp->ParseAndExecute(Runtimes);
-  if (Err)
-    return std::move(Err);
+  if (auto E = Interp->ParseAndExecute(Runtimes))
+    return std::move(E);
 
   Interp->markUserCodeStart();
 
@@ -377,7 +494,8 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
       std::make_unique<llvm::vfs::OverlayFileSystem>(
           llvm::vfs::getRealFileSystem());
   OverlayVFS->pushOverlay(IMVFS);
-  CI->createFileManager(OverlayVFS);
+  CI->createVirtualFileSystem(OverlayVFS);
+  CI->createFileManager();
 
   llvm::Expected<std::unique_ptr<Interpreter>> InterpOrErr =
       Interpreter::create(std::move(CI));
@@ -444,6 +562,12 @@ size_t Interpreter::getEffectivePTUSize() const {
   return PTUs.size() - InitPTUSize;
 }
 
+uint32_t Interpreter::getOutOfProcessExecutorPID() const {
+  if (IncrExecutor)
+    return IncrExecutor->getOutOfProcessChildPid();
+  return -1;
+}
+
 llvm::Expected<PartialTranslationUnit &>
 Interpreter::Parse(llvm::StringRef Code) {
   // If we have a device parser, parse it first. The generated code will be
@@ -473,12 +597,7 @@ Interpreter::Parse(llvm::StringRef Code) {
   if (!TuOrErr)
     return TuOrErr.takeError();
 
-  PTUs.emplace_back(PartialTranslationUnit());
-  PartialTranslationUnit &LastPTU = PTUs.back();
-  LastPTU.TUPart = *TuOrErr;
-
-  if (std::unique_ptr<llvm::Module> M = Act->GenModule())
-    LastPTU.TheModule = std::move(M);
+  PartialTranslationUnit &LastPTU = IncrParser->RegisterPTU(*TuOrErr);
 
   return LastPTU;
 }
@@ -512,7 +631,7 @@ Interpreter::createLLJITBuilder(
   return std::move(*JB);
 }
 
-llvm::Error Interpreter::CreateExecutor() {
+llvm::Error Interpreter::CreateExecutor(JITConfig Config) {
   if (IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "Execution engine exists",
@@ -521,11 +640,31 @@ llvm::Error Interpreter::CreateExecutor() {
     return llvm::make_error<llvm::StringError>("Operation failed. "
                                                "No code generator available",
                                                std::error_code());
+
+  const std::string &TT = getCompilerInstance()->getTargetOpts().Triple;
+  llvm::Triple TargetTriple(TT);
+  bool IsWindowsTarget = TargetTriple.isOSWindows();
+
+  if (!IsWindowsTarget && Config.IsOutOfProcess) {
+    if (!JITBuilder) {
+      auto ResOrErr = outOfProcessJITBuilder(Config);
+      if (!ResOrErr)
+        return ResOrErr.takeError();
+      JITBuilder = std::move(ResOrErr->first);
+      Config.ExecutorPID = ResOrErr->second;
+    }
+    if (!JITBuilder)
+      return llvm::make_error<llvm::StringError>(
+          "Operation failed. No LLJITBuilder for out-of-process JIT",
+          std::error_code());
+  }
+
   if (!JITBuilder) {
-    const std::string &TT = getCompilerInstance()->getTargetOpts().Triple;
     auto JTMB = createJITTargetMachineBuilder(TT);
     if (!JTMB)
       return JTMB.takeError();
+    if (Config.CM)
+      JTMB->setCodeModel(Config.CM);
     auto JB = IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
     if (!JB)
       return JB.takeError();
@@ -533,11 +672,15 @@ llvm::Error Interpreter::CreateExecutor() {
   }
 
   llvm::Error Err = llvm::Error::success();
+
+  // Fix: Declare Executor as the appropriate unique_ptr type
+  std::unique_ptr<IncrementalExecutor> Executor;
+
 #ifdef __EMSCRIPTEN__
-  auto Executor = std::make_unique<WasmIncrementalExecutor>(*TSCtx);
+  Executor = std::make_unique<WasmIncrementalExecutor>(*TSCtx);
 #else
-  auto Executor =
-      std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err);
+  Executor =
+      std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Config, Err);
 #endif
   if (!Err)
     IncrExecutor = std::move(Executor);

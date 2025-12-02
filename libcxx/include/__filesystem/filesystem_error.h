@@ -27,7 +27,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-class _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY _LIBCPP_EXPORTED_FROM_ABI filesystem_error : public system_error {
+class _LIBCPP_EXPORTED_FROM_ABI filesystem_error : public system_error {
 public:
   _LIBCPP_HIDE_FROM_ABI filesystem_error(const string& __what, error_code __ec)
       : system_error(__ec, __what), __storage_(make_shared<_Storage>(path(), path())) {
@@ -69,14 +69,12 @@ private:
 
 #  if _LIBCPP_HAS_EXCEPTIONS
 template <class... _Args>
-[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY void
-__throw_filesystem_error(_Args&&... __args) {
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_filesystem_error(_Args&&... __args) {
   throw filesystem_error(std::forward<_Args>(__args)...);
 }
 #  else
 template <class... _Args>
-[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY void
-__throw_filesystem_error(_Args&&...) {
+[[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_filesystem_error(_Args&&...) {
   _LIBCPP_VERBOSE_ABORT("filesystem_error was thrown in -fno-exceptions mode");
 }
 #  endif

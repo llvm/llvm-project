@@ -14,7 +14,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <array>
 #include <atomic>
 #include <optional>
 #include <string>
@@ -287,11 +286,6 @@ std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
                                                   bool IgnoreUnknown) const {
   std::vector<std::string> Features;
   for (const auto &[ExtName, _] : Exts) {
-    // i is a base instruction set, not an extension (see
-    // https://github.com/riscv/riscv-isa-manual/blob/main/src/naming.adoc#base-integer-isa)
-    // and is not recognized in clang -cc1
-    if (ExtName == "i")
-      continue;
     if (IgnoreUnknown && !isSupportedExtension(ExtName))
       continue;
 
@@ -770,6 +764,12 @@ Error RISCVISAInfo::checkDependency() {
   if (HasZvl && !HasVector)
     return getExtensionRequiresError("zvl*b", "v' or 'zve*");
 
+  if (Exts.count("xsfvfbfexp16e") &&
+      !(Exts.count("zvfbfmin") || Exts.count("zvfbfa")))
+    return createStringError(errc::invalid_argument,
+                             "'xsfvfbfexp16e' requires 'zvfbfmin' or "
+                             "'zvfbfa' extension to also be specified");
+
   if (HasD && (HasC || Exts.count("zcd")))
     for (auto Ext : ZcdOverlaps)
       if (Exts.count(Ext.str()))
@@ -892,7 +892,7 @@ void RISCVISAInfo::updateImplication() {
 }
 
 static constexpr StringLiteral CombineIntoExts[] = {
-    {"b"},     {"zk"},    {"zkn"},  {"zks"},   {"zvkn"},
+    {"a"},     {"b"},     {"zk"},   {"zkn"},   {"zks"},   {"zvkn"},
     {"zvknc"}, {"zvkng"}, {"zvks"}, {"zvksc"}, {"zvksg"},
 };
 

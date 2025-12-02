@@ -15,7 +15,7 @@ In the example above the keyword ``inline`` is redundant since constexpr
 functions are implicitly inlined
 
 .. code-block:: c++
-   
+
    class MyClass {
        inline void myMethod() {}
    };

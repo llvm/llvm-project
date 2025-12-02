@@ -44,7 +44,20 @@ inline static std::string printArg(Program &P, CodePtr &OpPC) {
     std::string Result;
     llvm::raw_string_ostream SS(Result);
     auto Arg = OpPC.read<T>();
-    SS << Arg;
+    // Make sure we print the integral value of chars.
+    if constexpr (std::is_integral_v<T>) {
+      if constexpr (sizeof(T) == 1) {
+        if constexpr (std::is_signed_v<T>)
+          SS << static_cast<int32_t>(Arg);
+        else
+          SS << static_cast<uint32_t>(Arg);
+      } else {
+        SS << Arg;
+      }
+    } else {
+      SS << Arg;
+    }
+
     return Result;
   }
 }
@@ -310,6 +323,8 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
                         : TerminalColor{llvm::raw_ostream::RED, false});
       OS << (GP.isInitialized() ? "initialized " : "uninitialized ");
     }
+    if (GP.block()->isDummy())
+      OS << "dummy ";
     Desc->dump(OS);
 
     if (GP.isInitialized() && Desc->IsTemporary) {
@@ -421,8 +436,28 @@ LLVM_DUMP_METHOD void Descriptor::dumpFull(unsigned Offset,
 
       FO += ElemDesc->getAllocSize();
     }
+  } else if (isPrimitiveArray()) {
+    OS.indent(Spaces) << "Elements: " << getNumElems() << '\n';
+    OS.indent(Spaces) << "Element type: " << primTypeToString(getPrimType())
+                      << '\n';
+    unsigned FO = Offset + sizeof(InitMapPtr);
+    for (unsigned I = 0; I != getNumElems(); ++I) {
+      OS.indent(Spaces) << "Element " << I << " offset: " << FO << '\n';
+      FO += getElemSize();
+    }
   } else if (isRecord()) {
     ElemRecord->dump(OS, Indent + 1, Offset);
+    unsigned I = 0;
+    for (const Record::Field &F : ElemRecord->fields()) {
+      OS.indent(Spaces) << "- Field " << I << ": ";
+      {
+        ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_RED, true});
+        OS << F.Decl->getName();
+      }
+      OS << ". Offset " << (Offset + F.Offset) << "\n";
+      F.Desc->dumpFull(Offset + F.Offset, Indent + 1);
+      ++I;
+    }
   } else if (isPrimitive()) {
   } else {
   }

@@ -20,6 +20,7 @@ class OpResult;
 class OpBuilder;
 class ValueRange;
 class TypeConverter;
+class OpFoldResult;
 
 namespace xegpu {
 class DistributeLayoutAttr;
@@ -103,11 +104,15 @@ void removeLayoutAttrs(Operation *op);
 
 /// Sets the DistributeLayoutAttr for a given OpOperand or OpResult by attaching
 /// it to the owner's dictionary attributes
+/// If `respectPermLayout` is true the existing permament layout
+/// attribute will be kept and assigned to the attribute dict instead
+/// of the provided layout.
 template <typename T,
           typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
                                       std::is_same_v<T, OpResult>>>
 void setDistributeLayoutAttr(const T &operandOrResult,
-                             const DistributeLayoutAttr layout);
+                             const DistributeLayoutAttr layout,
+                             bool respectPermLayout = false);
 
 /// Set the DistributeLayoutAttr for each OpOperand and OpResult of the given
 /// operation. If the operation contains regions, it is also applied recursively
@@ -143,6 +148,11 @@ void doSCFStructuralTypeConversionWithTensorType(Operation *op,
 /// if no GPU module parent or XeVM target attribute exists.
 std::optional<std::string> getChipStr(Operation *op);
 
+/// Generates element-wise addition ops of two arrays with same length.
+SmallVector<OpFoldResult> addElementwise(OpBuilder &builder, Location loc,
+                                         ArrayRef<OpFoldResult> lhs,
+                                         ArrayRef<OpFoldResult> rhs);
+
 /// Generates element-wise addition ops of two arrays with automatic alignment.
 /// When the input arrays have different sizes, the shorter array is
 /// right-aligned with the longer array, and the unmatched leading elements from
@@ -156,6 +166,14 @@ std::optional<std::string> getChipStr(Operation *op);
 SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
                                               ArrayRef<OpFoldResult> lhs,
                                               ArrayRef<OpFoldResult> rhs);
+
+/// Helper Function to find a proper instruction multiple for the user-supplied
+/// sg-level data shape (diven by `dim`). `candidates` are uArch allowed shapes.
+/// `candidateMultiples` are uArch multiples of such shapes (i.e. block count or
+/// array length).
+template <typename T>
+int getLargestDivisor(T dim, ArrayRef<T> candidates,
+                      ArrayRef<T> candidateMultiples = {});
 
 } // namespace xegpu
 

@@ -11,7 +11,6 @@
 // been updated as appropriate.
 
 #include <clc/clc_as_type.h>
-#include <clc/clcmacro.h>
 #include <clc/float/definitions.h>
 #include <clc/integer/clc_abs.h>
 #include <clc/integer/clc_clz.h>

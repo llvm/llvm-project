@@ -102,18 +102,18 @@ public:
     return reinterpret_cast<StringMapEntryBase *>(TombstoneIntVal);
   }
 
-  unsigned getNumBuckets() const { return NumBuckets; }
-  unsigned getNumItems() const { return NumItems; }
+  [[nodiscard]] unsigned getNumBuckets() const { return NumBuckets; }
+  [[nodiscard]] unsigned getNumItems() const { return NumItems; }
 
-  bool empty() const { return NumItems == 0; }
-  unsigned size() const { return NumItems; }
+  [[nodiscard]] bool empty() const { return NumItems == 0; }
+  [[nodiscard]] unsigned size() const { return NumItems; }
 
   /// Returns the hash value that will be used for the given string.
   /// This allows precomputing the value and passing it explicitly
   /// to some of the functions.
   /// The implementation of this function is not guaranteed to be stable
   /// and may change.
-  LLVM_ABI static uint32_t hash(StringRef Key);
+  [[nodiscard]] LLVM_ABI static uint32_t hash(StringRef Key);
 
   void swap(StringMapImpl &Other) {
     std::swap(TheTable, Other.TheTable);
@@ -220,41 +220,44 @@ public:
   using const_iterator = StringMapIterBase<ValueTy, true>;
   using iterator = StringMapIterBase<ValueTy, false>;
 
-  iterator begin() { return iterator(TheTable, NumBuckets == 0); }
-  iterator end() { return iterator(TheTable + NumBuckets, true); }
-  const_iterator begin() const {
-    return const_iterator(TheTable, NumBuckets == 0);
+  [[nodiscard]] iterator begin() { return iterator(TheTable, NumBuckets != 0); }
+  [[nodiscard]] iterator end() { return iterator(TheTable + NumBuckets); }
+  [[nodiscard]] const_iterator begin() const {
+    return const_iterator(TheTable, NumBuckets != 0);
   }
-  const_iterator end() const {
-    return const_iterator(TheTable + NumBuckets, true);
+  [[nodiscard]] const_iterator end() const {
+    return const_iterator(TheTable + NumBuckets);
   }
 
-  iterator_range<StringMapKeyIterator<ValueTy>> keys() const {
+  [[nodiscard]] iterator_range<StringMapKeyIterator<ValueTy>> keys() const {
     return make_range(StringMapKeyIterator<ValueTy>(begin()),
                       StringMapKeyIterator<ValueTy>(end()));
   }
 
-  iterator find(StringRef Key) { return find(Key, hash(Key)); }
+  [[nodiscard]] iterator find(StringRef Key) { return find(Key, hash(Key)); }
 
-  iterator find(StringRef Key, uint32_t FullHashValue) {
+  [[nodiscard]] iterator find(StringRef Key, uint32_t FullHashValue) {
     int Bucket = FindKey(Key, FullHashValue);
     if (Bucket == -1)
       return end();
-    return iterator(TheTable + Bucket, true);
+    return iterator(TheTable + Bucket);
   }
 
-  const_iterator find(StringRef Key) const { return find(Key, hash(Key)); }
+  [[nodiscard]] const_iterator find(StringRef Key) const {
+    return find(Key, hash(Key));
+  }
 
-  const_iterator find(StringRef Key, uint32_t FullHashValue) const {
+  [[nodiscard]] const_iterator find(StringRef Key,
+                                    uint32_t FullHashValue) const {
     int Bucket = FindKey(Key, FullHashValue);
     if (Bucket == -1)
       return end();
-    return const_iterator(TheTable + Bucket, true);
+    return const_iterator(TheTable + Bucket);
   }
 
   /// lookup - Return the entry for the specified key, or a default
   /// constructed value if no such entry exists.
-  ValueTy lookup(StringRef Key) const {
+  [[nodiscard]] ValueTy lookup(StringRef Key) const {
     const_iterator Iter = find(Key);
     if (Iter != end())
       return Iter->second;
@@ -263,7 +266,7 @@ public:
 
   /// at - Return the entry for the specified key, or abort if no such
   /// entry exists.
-  const ValueTy &at(StringRef Val) const {
+  [[nodiscard]] const ValueTy &at(StringRef Val) const {
     auto Iter = this->find(Val);
     assert(Iter != this->end() && "StringMap::at failed due to a missing key");
     return Iter->second;
@@ -274,18 +277,22 @@ public:
   ValueTy &operator[](StringRef Key) { return try_emplace(Key).first->second; }
 
   /// contains - Return true if the element is in the map, false otherwise.
-  bool contains(StringRef Key) const { return find(Key) != end(); }
+  [[nodiscard]] bool contains(StringRef Key) const {
+    return find(Key) != end();
+  }
 
   /// count - Return 1 if the element is in the map, 0 otherwise.
-  size_type count(StringRef Key) const { return contains(Key) ? 1 : 0; }
+  [[nodiscard]] size_type count(StringRef Key) const {
+    return contains(Key) ? 1 : 0;
+  }
 
   template <typename InputTy>
-  size_type count(const StringMapEntry<InputTy> &MapEntry) const {
+  [[nodiscard]] size_type count(const StringMapEntry<InputTy> &MapEntry) const {
     return count(MapEntry.getKey());
   }
 
   /// equal - check whether both of the containers are equal.
-  bool operator==(const StringMap &RHS) const {
+  [[nodiscard]] bool operator==(const StringMap &RHS) const {
     if (size() != RHS.size())
       return false;
 
@@ -295,7 +302,7 @@ public:
       if (FindInRHS == RHS.end())
         return false;
 
-      if constexpr (!std::is_same_v<ValueTy, std::nullopt_t>) {
+      if constexpr (!std::is_same_v<ValueTy, EmptyStringSetTag>) {
         if (!(KeyValue.getValue() == FindInRHS->getValue()))
           return false;
       }
@@ -304,7 +311,9 @@ public:
     return true;
   }
 
-  bool operator!=(const StringMap &RHS) const { return !(*this == RHS); }
+  [[nodiscard]] bool operator!=(const StringMap &RHS) const {
+    return !(*this == RHS);
+  }
 
   /// insert - Insert the specified key/value pair into the map.  If the key
   /// already exists in the map, return false and ignore the request, otherwise
@@ -380,8 +389,7 @@ public:
     unsigned BucketNo = LookupBucketFor(Key, FullHashValue);
     StringMapEntryBase *&Bucket = TheTable[BucketNo];
     if (Bucket && Bucket != getTombstoneVal())
-      return {iterator(TheTable + BucketNo, false),
-              false}; // Already exists in map.
+      return {iterator(TheTable + BucketNo), false}; // Already exists in map.
 
     if (Bucket == getTombstoneVal())
       --NumTombstones;
@@ -391,7 +399,7 @@ public:
     assert(NumItems + NumTombstones <= NumBuckets);
 
     BucketNo = RehashTable(BucketNo);
-    return {iterator(TheTable + BucketNo, false), true};
+    return {iterator(TheTable + BucketNo), true};
   }
 
   // clear - Empties out the StringMap
@@ -444,15 +452,18 @@ public:
 
   StringMapIterBase() = default;
 
-  explicit StringMapIterBase(StringMapEntryBase **Bucket,
-                             bool NoAdvance = false)
+  explicit StringMapIterBase(StringMapEntryBase **Bucket, bool Advance = false)
       : Ptr(Bucket) {
-    if (!NoAdvance)
+    if (Advance)
       AdvancePastEmptyBuckets();
   }
 
-  reference operator*() const { return *static_cast<value_type *>(*Ptr); }
-  pointer operator->() const { return static_cast<value_type *>(*Ptr); }
+  [[nodiscard]] reference operator*() const {
+    return *static_cast<value_type *>(*Ptr);
+  }
+  [[nodiscard]] pointer operator->() const {
+    return static_cast<value_type *>(*Ptr);
+  }
 
   StringMapIterBase &operator++() { // Preincrement
     ++Ptr;
@@ -469,7 +480,7 @@ public:
   template <bool ToConst,
             typename = typename std::enable_if<!IsConst && ToConst>::type>
   operator StringMapIterBase<ValueTy, ToConst>() const {
-    return StringMapIterBase<ValueTy, ToConst>(Ptr, true);
+    return StringMapIterBase<ValueTy, ToConst>(Ptr);
   }
 
   friend bool operator==(const StringMapIterBase &LHS,

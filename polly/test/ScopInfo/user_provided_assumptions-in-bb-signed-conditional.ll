@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -pass-remarks-analysis="polly-scops" '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-analysis=polly-scops '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; REMARK: remark: <unknown>:0:0: Use user assumption: [n, b] -> {  : n <= 100 or (b = 0 and n >= 101) }
 ;
