@@ -194,7 +194,7 @@ class TestReports(unittest.TestCase):
                 """\
                 # Foo
 
-                The build succeeded and no tests ran. This is expected in some build configurations."""
+                :white_check_mark: The build succeeded and no tests ran. This is expected in some build configurations."""
             ),
         )
 
@@ -308,7 +308,9 @@ class TestReports(unittest.TestCase):
                     """\
               # Foo
 
-              * 1 test passed"""
+              * 1 test passed
+              
+              :white_check_mark: The build succeeded and all tests passed."""
                 )
             ),
         )
