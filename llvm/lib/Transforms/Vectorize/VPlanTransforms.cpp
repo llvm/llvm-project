@@ -2977,13 +2977,19 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         TypeInfo.inferScalarType(LoadR), {}, {}, DL);
   }
 
-  if (auto *StridedL = dyn_cast<VPWidenStridedLoadRecipe>(&CurRecipe))
-    if (StridedL->isMasked() &&
-        match(StridedL->getMask(), m_RemoveMask(HeaderMask, Mask)))
-      return new VPWidenStridedLoadRecipe(
-          *cast<LoadInst>(&StridedL->getIngredient()), StridedL->getAddr(),
-          StridedL->getStride(), &EVL, Mask, *StridedL,
-          StridedL->getDebugLoc());
+  VPValue *Stride;
+  if (match(&CurRecipe, m_Intrinsic<Intrinsic::experimental_vp_strided_load>(
+                            m_VPValue(Addr), m_VPValue(Stride),
+                            m_RemoveMask(HeaderMask, Mask),
+                            m_VPInstruction<Instruction::Trunc>(
+                                m_Specific(&Plan->getVF()))))) {
+    auto *I = cast<VPWidenIntrinsicRecipe>(&CurRecipe);
+    if (!Mask)
+      Mask = Plan->getTrue();
+    return new VPWidenMemIntrinsicRecipe(
+        *cast<LoadInst>(I->getUnderlyingInstr()), {Addr, Stride, Mask, &EVL},
+        *I, I->getDebugLoc());
+  }
 
   VPValue *StoredVal;
   if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(StoredVal),
@@ -3116,12 +3122,14 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
-  assert(
-      all_of(
-          Plan.getVF().users(),
-          IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
-                  VPWidenIntOrFpInductionRecipe, VPWidenStridedLoadRecipe>) &&
-      "User of VF that we can't transform to EVL.");
+  assert(all_of(Plan.getVF().users(),
+                [&LoopRegion](VPUser *U) {
+                  auto *R = cast<VPRecipeBase>(U);
+                  return (R->getParent()->getParent() != LoopRegion) ||
+                         isa<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
+                             VPWidenIntOrFpInductionRecipe>(R);
+                }) &&
+         "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
     return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
   });
@@ -6831,8 +6839,9 @@ determineBaseAndStride(VPWidenGEPRecipe *WidenGEP) {
     return {nullptr, nullptr, nullptr};
 
   Type *ElementTy = WidenGEP->getIndexedType(*VarIndex);
-  if (ElementTy->isScalableTy() || ElementTy->isStructTy() ||
-      ElementTy->isVectorTy())
+  assert(!ElementTy->isScalableTy() && !ElementTy->isVectorTy() &&
+         "Unexpected indexed type");
+  if (ElementTy->isStructTy())
     return {nullptr, nullptr, nullptr};
 
   unsigned VarOp = *VarIndex + 1;
@@ -6861,6 +6870,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
   DenseMap<VPWidenGEPRecipe *, std::tuple<VPValue *, VPValue *, Type *>>
       StrideCache;
   SmallVector<VPWidenMemoryRecipe *> ToErase;
+  VPValue *I32VF = nullptr;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -6914,6 +6924,14 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       assert(StrideInElement && ElementTy &&
              "Can not get stride information for a strided access");
 
+      // Add VF of i32 version for EVL.
+      if (!I32VF) {
+        VPBuilder Builder(Plan.getVectorPreheader());
+        I32VF = Builder.createScalarZExtOrTrunc(
+            &Plan.getVF(), Type::getInt32Ty(Plan.getContext()),
+            TypeInfo.inferScalarType(&Plan.getVF()), DebugLoc::getUnknown());
+      }
+
       // Create a new vector pointer for strided access.
       auto *NewPtr = new VPVectorPointerRecipe(
           BasePtr, ElementTy, StrideInElement, Ptr->getGEPNoWrapFlags(),
@@ -6935,10 +6953,14 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
         StrideInBytes = ScaledStride;
       }
 
-
-      auto *StridedLoad = new VPWidenStridedLoadRecipe(
-          *cast<LoadInst>(&Ingredient), NewPtr, StrideInBytes, &Plan.getVF(),
-          LoadR->getMask(), *LoadR, LoadR->getDebugLoc());
+      VPValue *Mask;
+      if (VPValue *LoadMask = LoadR->getMask())
+        Mask = LoadMask;
+      else
+        Mask = Plan.getTrue();
+      auto *StridedLoad = new VPWidenMemIntrinsicRecipe(
+          *cast<LoadInst>(&Ingredient), {NewPtr, StrideInBytes, Mask, I32VF},
+          *LoadR, LoadR->getDebugLoc());
       StridedLoad->insertBefore(LoadR);
       LoadR->replaceAllUsesWith(StridedLoad);
 

@@ -260,7 +260,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe, VPWidenCastRecipe,
           VPWidenIntrinsicRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
           VPVectorEndPointerRecipe, VPWidenCallRecipe, VPWidenLoadRecipe,
-          VPWidenLoadEVLRecipe, VPWidenStridedLoadRecipe>(V)) {
+          VPWidenLoadEVLRecipe>(V)) {
     Type *Ty = V->getScalarType();
     assert(Ty && "Scalar type must be set by recipe construction");
     return Ty;

@@ -72,6 +72,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return !cast<VPWidenCallRecipe>(this)
                 ->getCalledScalarFunction()
                 ->onlyReadsMemory();
+  case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPActiveLaneMaskPHISC:
@@ -91,7 +92,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenCastSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
-  case VPWidenStridedLoadSC:
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
   case VPWidenPHISC:
@@ -115,7 +115,6 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC:
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
-  case VPWidenStridedLoadSC:
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
     return true;
@@ -126,6 +125,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return !cast<VPWidenCallRecipe>(this)
                 ->getCalledScalarFunction()
                 ->onlyWritesMemory();
+  case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
   case VPBranchOnMaskSC:
@@ -185,6 +185,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
     return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
   }
+  case VPWidenMemIntrinsicSC:
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayHaveSideEffects();
   case VPBlendSC:
@@ -209,7 +210,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPInterleaveEVLSC:
   case VPInterleaveSC:
     return mayWriteToMemory();
-  case VPWidenStridedLoadSC:
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
   case VPWidenStoreEVLSC:
@@ -1938,7 +1938,7 @@ void VPWidenCallRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
+CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
 
   SmallVector<Type *, 2> TysForDecl;
@@ -1976,7 +1976,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   assert(VectorF &&
          "Can't retrieve vector intrinsic or vector-predication intrinsics.");
 
-  auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
+  auto *CI = dyn_cast_or_null<CallInst>(getUnderlyingValue());
   SmallVector<OperandBundleDef, 1> OpBundles;
   if (CI)
     CI->getOperandBundlesAsDefs(OpBundles);
@@ -1986,6 +1986,11 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   applyFlags(*V);
   applyMetadata(*V);
 
+  return V;
+}
+
+void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
+  CallInst *V = createVectorCall(State);
   if (!V->getType()->isVoidTy())
     State.set(this, V);
 }
@@ -2073,6 +2078,26 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << ")";
 }
 #endif
+
+void VPWidenMemIntrinsicRecipe::execute(VPTransformState &State) {
+  CallInst *MemI = createVectorCall(State);
+  MemI->addParamAttr(
+      0, Attribute::getWithAlignment(MemI->getContext(), Alignment));
+  State.set(this, MemI);
+}
+
+InstructionCost
+VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
+                                       VPCostContext &Ctx) const {
+  Type *Ty = toVectorTy(getScalarType(), VF);
+  const Instruction *Ingredient = getUnderlyingInstr();
+  const Value *Ptr = getLoadStorePointerOperand(Ingredient);
+  return Ctx.TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(getVectorIntrinsicID(), Ty, Ptr,
+                                 match(getOperand(2), m_True()), Alignment,
+                                 Ingredient),
+      Ctx.CostKind);
+}
 
 void VPHistogramRecipe::execute(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
@@ -3848,57 +3873,6 @@ void VPWidenLoadEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vp.load ";
   printOperands(O, SlotTracker);
-}
-#endif
-
-void VPWidenStridedLoadRecipe::execute(VPTransformState &State) {
-  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
-  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
-
-  auto &Builder = State.Builder;
-  Value *Addr = State.get(getAddr(), /*IsScalar*/ true);
-  Value *StrideInBytes = State.get(getStride(), /*IsScalar*/ true);
-  Value *Mask = nullptr;
-  if (VPValue *VPMask = getMask())
-    Mask = State.get(VPMask);
-  else
-    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
-  Value *RunTimeVF = Builder.CreateZExtOrTrunc(State.get(getVF(), VPLane(0)),
-                                               Builder.getInt32Ty());
-
-  auto *PtrTy = Addr->getType();
-  auto *StrideTy = StrideInBytes->getType();
-  CallInst *NewLI = Builder.CreateIntrinsic(
-      Intrinsic::experimental_vp_strided_load, {DataTy, PtrTy, StrideTy},
-      {Addr, StrideInBytes, Mask, RunTimeVF}, nullptr, "wide.strided.load");
-  NewLI->addParamAttr(
-      0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
-  applyMetadata(*NewLI);
-  State.set(this, NewLI);
-}
-
-InstructionCost
-VPWidenStridedLoadRecipe::computeCost(ElementCount VF,
-                                      VPCostContext &Ctx) const {
-  Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
-  const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
-  return Ctx.TTI.getMemIntrinsicInstrCost(
-      MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load, Ty,
-                                 Ptr, IsMasked, Alignment, &Ingredient),
-      Ctx.CostKind);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPWidenStridedLoadRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
-                                           VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN ";
-  printAsOperand(O, SlotTracker);
-  O << " = load ";
-  getAddr()->printAsOperand(O, SlotTracker);
-  O << ", stride = ";
-  getStride()->printAsOperand(O, SlotTracker);
-  O << ", runtimeVF = ";
-  getVF()->printAsOperand(O, SlotTracker);
 }
 #endif
 
