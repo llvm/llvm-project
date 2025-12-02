@@ -1087,7 +1087,7 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
 }
 
 void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
-  FuncOp funcOp = getCalledFunction(op);
+  cir::FuncOp funcOp = getCalledFunction(op);
   if (!funcOp)
     return;
 
