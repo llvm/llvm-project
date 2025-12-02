@@ -6,34 +6,18 @@
 define i32 @test_extract_v8i32_from_nxv8i32(<vscale x 8 x i32> %vec) {
 ; CHECK-LABEL: test_extract_v8i32_from_nxv8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov w9, v1.s[2]
-; CHECK-NEXT:    mov w10, v1.s[1]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov w11, v0.s[2]
-; CHECK-NEXT:    mov z2.s, z1.s[3]
-; CHECK-NEXT:    mov z3.s, z0.s[3]
-; CHECK-NEXT:    fmov w12, s1
+; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    stp w10, w9, [sp, #20]
-; CHECK-NEXT:    mov w9, v0.s[1]
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    str s2, [sp, #28]
-; CHECK-NEXT:    str s3, [sp, #12]
-; CHECK-NEXT:    str w12, [sp, #16]
-; CHECK-NEXT:    stp w9, w11, [sp, #4]
-; CHECK-NEXT:    str w10, [sp]
-; CHECK-NEXT:    ldr z0, [x8]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %1 = tail call <8 x i32> @llvm.vector.extract.v8i32.nxv8i32(<vscale x 8 x i32> %vec, i64 0)
   %2 = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %1)
