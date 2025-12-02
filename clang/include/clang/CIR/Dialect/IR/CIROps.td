@@ -1468,7 +1468,8 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
 
 def CIR_IndirectBrOp : CIR_Op<"indirectbr", [
   DeclareOpInterfaceMethods<BranchOpInterface>,
-  SameVariadicOperandSize, Terminator, Pure]> {
+  SameVariadicOperandSize, Terminator, Pure]
+> {
   let summary = "Indirect branch";
   let description = [{
     The `cir.indirectbr` operation represents an indirect branch to one of
