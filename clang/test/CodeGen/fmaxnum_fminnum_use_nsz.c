@@ -25,10 +25,10 @@ typedef double double2 __attribute__((ext_vector_type(2)));
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2:![0-9]+]]
-// CHECK-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call nsz float @llvm.minnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NEXT:    ret float [[TMP2]]
 //
@@ -37,10 +37,10 @@ typedef double double2 __attribute__((ext_vector_type(2)));
 // CHECK-NO-NANS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-NO-NANS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2:![0-9]+]]
-// CHECK-NO-NANS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-NO-NANS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-NO-NANS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = call nnan nsz float @llvm.minnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NO-NANS-NEXT:    ret float [[TMP2]]
 //
@@ -49,10 +49,10 @@ typedef double double2 __attribute__((ext_vector_type(2)));
 // CHECK-NO-INFS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-NO-INFS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2:![0-9]+]]
-// CHECK-NO-INFS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-NO-INFS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-NO-INFS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = call ninf nsz float @llvm.minnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NO-INFS-NEXT:    ret float [[TMP2]]
 //
@@ -61,10 +61,10 @@ typedef double double2 __attribute__((ext_vector_type(2)));
 // CHECK-FAST-NEXT:  [[ENTRY:.*:]]
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-FAST-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2:![0-9]+]]
-// CHECK-FAST-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-FAST-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-FAST-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-FAST-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.minnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-FAST-NEXT:    ret float [[TMP2]]
 //
@@ -73,10 +73,10 @@ typedef double double2 __attribute__((ext_vector_type(2)));
 // CHECK-STRICT-NEXT:  [[ENTRY:.*:]]
 // CHECK-STRICT-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-STRICT-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-STRICT-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2:![0-9]+]]
-// CHECK-STRICT-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-STRICT-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6:![0-9]+]]
+// CHECK-STRICT-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-STRICT-NEXT:    [[TMP2:%.*]] = call nsz float @llvm.experimental.constrained.minnum.f32(float [[TMP0]], float [[TMP1]], metadata !"fpexcept.strict") #[[ATTR2:[0-9]+]]
 // CHECK-STRICT-NEXT:    ret float [[TMP2]]
 //
@@ -88,10 +88,10 @@ float fmin32(float a, float b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call nsz float @llvm.minnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NEXT:    ret float [[TMP2]]
 //
@@ -100,10 +100,10 @@ float fmin32(float a, float b) {
 // CHECK-NO-NANS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-NO-NANS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-NANS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-NO-NANS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = call nnan nsz float @llvm.minnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NO-NANS-NEXT:    ret float [[TMP2]]
 //
@@ -112,10 +112,10 @@ float fmin32(float a, float b) {
 // CHECK-NO-INFS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-NO-INFS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-INFS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-NO-INFS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = call ninf nsz float @llvm.minnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NO-INFS-NEXT:    ret float [[TMP2]]
 //
@@ -124,10 +124,10 @@ float fmin32(float a, float b) {
 // CHECK-FAST-NEXT:  [[ENTRY:.*:]]
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-FAST-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-FAST-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-FAST-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-FAST-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.minnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-FAST-NEXT:    ret float [[TMP2]]
 //
@@ -136,10 +136,10 @@ float fmin32(float a, float b) {
 // CHECK-STRICT-NEXT:  [[ENTRY:.*:]]
 // CHECK-STRICT-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-STRICT-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-STRICT-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-STRICT-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-STRICT-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-STRICT-NEXT:    [[TMP2:%.*]] = call nsz float @llvm.experimental.constrained.minnum.f32(float [[TMP0]], float [[TMP1]], metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    ret float [[TMP2]]
 //
@@ -153,14 +153,14 @@ float fmin32b(float a, float b) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6:![0-9]+]]
-// CHECK-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8:![0-9]+]]
+// CHECK-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NEXT:    [[ELT_MIN:%.*]] = call nsz <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
-// CHECK-NEXT:    store <4 x float> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <4 x float> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NEXT:    ret <4 x float> [[TMP2]]
 //
 // CHECK-NO-NANS-LABEL: define dso_local nofpclass(nan) <4 x float> @pfmin32(
@@ -169,14 +169,14 @@ float fmin32b(float a, float b) {
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NO-NANS-NEXT:    [[C_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-NO-NANS-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6:![0-9]+]]
-// CHECK-NO-NANS-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8:![0-9]+]]
+// CHECK-NO-NANS-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-NANS-NEXT:    [[ELT_MIN:%.*]] = call nnan nsz <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
-// CHECK-NO-NANS-NEXT:    store <4 x float> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    store <4 x float> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-NANS-NEXT:    ret <4 x float> [[TMP2]]
 //
 // CHECK-NO-INFS-LABEL: define dso_local nofpclass(inf) <4 x float> @pfmin32(
@@ -185,14 +185,14 @@ float fmin32b(float a, float b) {
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NO-INFS-NEXT:    [[C_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-NO-INFS-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6:![0-9]+]]
-// CHECK-NO-INFS-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8:![0-9]+]]
+// CHECK-NO-INFS-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-INFS-NEXT:    [[ELT_MIN:%.*]] = call ninf nsz <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
-// CHECK-NO-INFS-NEXT:    store <4 x float> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    store <4 x float> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-INFS-NEXT:    ret <4 x float> [[TMP2]]
 //
 // CHECK-FAST-LABEL: define dso_local nofpclass(nan inf) <4 x float> @pfmin32(
@@ -201,14 +201,14 @@ float fmin32b(float a, float b) {
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-FAST-NEXT:    [[C_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-FAST-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6:![0-9]+]]
-// CHECK-FAST-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8:![0-9]+]]
+// CHECK-FAST-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-FAST-NEXT:    [[ELT_MIN:%.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
-// CHECK-FAST-NEXT:    store <4 x float> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    store <4 x float> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-FAST-NEXT:    ret <4 x float> [[TMP2]]
 //
 float4 pfmin32(float4 a, float4 b, float4 c) {
@@ -221,10 +221,10 @@ float4 pfmin32(float4 a, float4 b, float4 c) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7:![0-9]+]]
-// CHECK-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9:![0-9]+]]
+// CHECK-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call nsz double @llvm.minnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
 // CHECK-NEXT:    ret float [[CONV]]
@@ -234,10 +234,10 @@ float4 pfmin32(float4 a, float4 b, float4 c) {
 // CHECK-NO-NANS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-NO-NANS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7:![0-9]+]]
-// CHECK-NO-NANS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-NO-NANS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9:![0-9]+]]
+// CHECK-NO-NANS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = call nnan nsz double @llvm.minnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-NO-NANS-NEXT:    [[CONV:%.*]] = fptrunc nnan double [[TMP2]] to float
 // CHECK-NO-NANS-NEXT:    ret float [[CONV]]
@@ -247,10 +247,10 @@ float4 pfmin32(float4 a, float4 b, float4 c) {
 // CHECK-NO-INFS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-NO-INFS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7:![0-9]+]]
-// CHECK-NO-INFS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-NO-INFS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9:![0-9]+]]
+// CHECK-NO-INFS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = call ninf nsz double @llvm.minnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-NO-INFS-NEXT:    [[CONV:%.*]] = fptrunc ninf double [[TMP2]] to float
 // CHECK-NO-INFS-NEXT:    ret float [[CONV]]
@@ -260,10 +260,10 @@ float4 pfmin32(float4 a, float4 b, float4 c) {
 // CHECK-FAST-NEXT:  [[ENTRY:.*:]]
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-FAST-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7:![0-9]+]]
-// CHECK-FAST-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-FAST-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9:![0-9]+]]
+// CHECK-FAST-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-FAST-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf nsz arcp afn double @llvm.minnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-FAST-NEXT:    [[CONV:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn double [[TMP2]] to float
 // CHECK-FAST-NEXT:    ret float [[CONV]]
@@ -273,10 +273,10 @@ float4 pfmin32(float4 a, float4 b, float4 c) {
 // CHECK-STRICT-NEXT:  [[ENTRY:.*:]]
 // CHECK-STRICT-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-STRICT-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-STRICT-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA6:![0-9]+]]
-// CHECK-STRICT-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA6]]
-// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA6]]
-// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA8:![0-9]+]]
+// CHECK-STRICT-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA8]]
 // CHECK-STRICT-NEXT:    [[TMP2:%.*]] = call nsz double @llvm.experimental.constrained.minnum.f64(double [[TMP0]], double [[TMP1]], metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    [[CONV:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    ret float [[CONV]]
@@ -289,10 +289,10 @@ float fmin64(double a, double b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call nsz double @llvm.minnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
 // CHECK-NEXT:    ret float [[CONV]]
@@ -302,10 +302,10 @@ float fmin64(double a, double b) {
 // CHECK-NO-NANS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-NO-NANS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-NANS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-NO-NANS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = call nnan nsz double @llvm.minnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-NO-NANS-NEXT:    [[CONV:%.*]] = fptrunc nnan double [[TMP2]] to float
 // CHECK-NO-NANS-NEXT:    ret float [[CONV]]
@@ -315,10 +315,10 @@ float fmin64(double a, double b) {
 // CHECK-NO-INFS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-NO-INFS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-INFS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-NO-INFS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = call ninf nsz double @llvm.minnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-NO-INFS-NEXT:    [[CONV:%.*]] = fptrunc ninf double [[TMP2]] to float
 // CHECK-NO-INFS-NEXT:    ret float [[CONV]]
@@ -328,10 +328,10 @@ float fmin64(double a, double b) {
 // CHECK-FAST-NEXT:  [[ENTRY:.*:]]
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-FAST-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-FAST-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-FAST-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-FAST-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf nsz arcp afn double @llvm.minnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-FAST-NEXT:    [[CONV:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn double [[TMP2]] to float
 // CHECK-FAST-NEXT:    ret float [[CONV]]
@@ -341,10 +341,10 @@ float fmin64(double a, double b) {
 // CHECK-STRICT-NEXT:  [[ENTRY:.*:]]
 // CHECK-STRICT-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-STRICT-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-STRICT-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA6]]
-// CHECK-STRICT-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA6]]
-// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA6]]
-// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA8]]
 // CHECK-STRICT-NEXT:    [[TMP2:%.*]] = call nsz double @llvm.experimental.constrained.minnum.f64(double [[TMP0]], double [[TMP1]], metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    [[CONV:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    ret float [[CONV]]
@@ -359,14 +359,14 @@ float fmin64b(double a, double b) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <2 x double>, align 16
-// CHECK-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NEXT:    [[ELT_MIN:%.*]] = call nsz <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
-// CHECK-NEXT:    store <2 x double> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <2 x double> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NEXT:    ret <2 x double> [[TMP2]]
 //
 // CHECK-NO-NANS-LABEL: define dso_local nofpclass(nan) <2 x double> @pfmin64(
@@ -375,14 +375,14 @@ float fmin64b(double a, double b) {
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NO-NANS-NEXT:    [[C_ADDR:%.*]] = alloca <2 x double>, align 16
-// CHECK-NO-NANS-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-NANS-NEXT:    [[ELT_MIN:%.*]] = call nnan nsz <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
-// CHECK-NO-NANS-NEXT:    store <2 x double> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    store <2 x double> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-NANS-NEXT:    ret <2 x double> [[TMP2]]
 //
 // CHECK-NO-INFS-LABEL: define dso_local nofpclass(inf) <2 x double> @pfmin64(
@@ -391,14 +391,14 @@ float fmin64b(double a, double b) {
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NO-INFS-NEXT:    [[C_ADDR:%.*]] = alloca <2 x double>, align 16
-// CHECK-NO-INFS-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-INFS-NEXT:    [[ELT_MIN:%.*]] = call ninf nsz <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
-// CHECK-NO-INFS-NEXT:    store <2 x double> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    store <2 x double> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-INFS-NEXT:    ret <2 x double> [[TMP2]]
 //
 // CHECK-FAST-LABEL: define dso_local nofpclass(nan inf) <2 x double> @pfmin64(
@@ -407,14 +407,14 @@ float fmin64b(double a, double b) {
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-FAST-NEXT:    [[C_ADDR:%.*]] = alloca <2 x double>, align 16
-// CHECK-FAST-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-FAST-NEXT:    [[ELT_MIN:%.*]] = call reassoc nnan ninf nsz arcp afn <2 x double> @llvm.minnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
-// CHECK-FAST-NEXT:    store <2 x double> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    store <2 x double> [[ELT_MIN]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-FAST-NEXT:    ret <2 x double> [[TMP2]]
 //
 double2 pfmin64(double2 a, double2 b, double2 c) {
@@ -427,10 +427,10 @@ double2 pfmin64(double2 a, double2 b, double2 c) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9:![0-9]+]]
-// CHECK-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11:![0-9]+]]
+// CHECK-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call nsz x86_fp80 @llvm.minnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -439,10 +439,10 @@ double2 pfmin64(double2 a, double2 b, double2 c) {
 // CHECK-NO-NANS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-NO-NANS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9:![0-9]+]]
-// CHECK-NO-NANS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11:![0-9]+]]
+// CHECK-NO-NANS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = call nnan nsz x86_fp80 @llvm.minnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-NO-NANS-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -451,10 +451,10 @@ double2 pfmin64(double2 a, double2 b, double2 c) {
 // CHECK-NO-INFS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-NO-INFS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9:![0-9]+]]
-// CHECK-NO-INFS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11:![0-9]+]]
+// CHECK-NO-INFS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = call ninf nsz x86_fp80 @llvm.minnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-NO-INFS-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -463,10 +463,10 @@ double2 pfmin64(double2 a, double2 b, double2 c) {
 // CHECK-FAST-NEXT:  [[ENTRY:.*:]]
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-FAST-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9:![0-9]+]]
-// CHECK-FAST-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11:![0-9]+]]
+// CHECK-FAST-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-FAST-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf nsz arcp afn x86_fp80 @llvm.minnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-FAST-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -475,10 +475,10 @@ double2 pfmin64(double2 a, double2 b, double2 c) {
 // CHECK-STRICT-NEXT:  [[ENTRY:.*:]]
 // CHECK-STRICT-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-STRICT-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-STRICT-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8:![0-9]+]]
-// CHECK-STRICT-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
-// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
-// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA10:![0-9]+]]
+// CHECK-STRICT-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA10]]
+// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA10]]
+// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA10]]
 // CHECK-STRICT-NEXT:    [[TMP2:%.*]] = call nsz x86_fp80 @llvm.experimental.constrained.minnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]], metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -490,10 +490,10 @@ long double fmin80(long double a, long double b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call nsz x86_fp80 @llvm.minnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -502,10 +502,10 @@ long double fmin80(long double a, long double b) {
 // CHECK-NO-NANS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-NO-NANS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-NANS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-NANS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = call nnan nsz x86_fp80 @llvm.minnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-NO-NANS-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -514,10 +514,10 @@ long double fmin80(long double a, long double b) {
 // CHECK-NO-INFS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-NO-INFS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-INFS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-INFS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = call ninf nsz x86_fp80 @llvm.minnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-NO-INFS-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -526,10 +526,10 @@ long double fmin80(long double a, long double b) {
 // CHECK-FAST-NEXT:  [[ENTRY:.*:]]
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-FAST-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-FAST-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-FAST-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-FAST-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf nsz arcp afn x86_fp80 @llvm.minnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-FAST-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -538,10 +538,10 @@ long double fmin80(long double a, long double b) {
 // CHECK-STRICT-NEXT:  [[ENTRY:.*:]]
 // CHECK-STRICT-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-STRICT-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-STRICT-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
-// CHECK-STRICT-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
-// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
-// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA10]]
+// CHECK-STRICT-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA10]]
+// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA10]]
+// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA10]]
 // CHECK-STRICT-NEXT:    [[TMP2:%.*]] = call nsz x86_fp80 @llvm.experimental.constrained.minnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]], metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -553,10 +553,10 @@ long double fmin80b(long double a, long double b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call nsz float @llvm.maxnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NEXT:    ret float [[TMP2]]
 //
@@ -565,10 +565,10 @@ long double fmin80b(long double a, long double b) {
 // CHECK-NO-NANS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-NO-NANS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-NANS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-NO-NANS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = call nnan nsz float @llvm.maxnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NO-NANS-NEXT:    ret float [[TMP2]]
 //
@@ -577,10 +577,10 @@ long double fmin80b(long double a, long double b) {
 // CHECK-NO-INFS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-NO-INFS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-INFS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-NO-INFS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = call ninf nsz float @llvm.maxnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NO-INFS-NEXT:    ret float [[TMP2]]
 //
@@ -589,10 +589,10 @@ long double fmin80b(long double a, long double b) {
 // CHECK-FAST-NEXT:  [[ENTRY:.*:]]
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-FAST-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-FAST-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-FAST-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-FAST-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.maxnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-FAST-NEXT:    ret float [[TMP2]]
 //
@@ -601,10 +601,10 @@ long double fmin80b(long double a, long double b) {
 // CHECK-STRICT-NEXT:  [[ENTRY:.*:]]
 // CHECK-STRICT-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-STRICT-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-STRICT-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-STRICT-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-STRICT-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-STRICT-NEXT:    [[TMP2:%.*]] = call nsz float @llvm.experimental.constrained.maxnum.f32(float [[TMP0]], float [[TMP1]], metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    ret float [[TMP2]]
 //
@@ -616,10 +616,10 @@ float fmax32(float a, float b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call nsz float @llvm.maxnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NEXT:    ret float [[TMP2]]
 //
@@ -628,10 +628,10 @@ float fmax32(float a, float b) {
 // CHECK-NO-NANS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-NO-NANS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-NANS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-NO-NANS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = call nnan nsz float @llvm.maxnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NO-NANS-NEXT:    ret float [[TMP2]]
 //
@@ -640,10 +640,10 @@ float fmax32(float a, float b) {
 // CHECK-NO-INFS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-NO-INFS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-INFS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-NO-INFS-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = call ninf nsz float @llvm.maxnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-NO-INFS-NEXT:    ret float [[TMP2]]
 //
@@ -652,10 +652,10 @@ float fmax32(float a, float b) {
 // CHECK-FAST-NEXT:  [[ENTRY:.*:]]
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-FAST-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-FAST-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-FAST-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-FAST-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.maxnum.f32(float [[TMP0]], float [[TMP1]])
 // CHECK-FAST-NEXT:    ret float [[TMP2]]
 //
@@ -664,10 +664,10 @@ float fmax32(float a, float b) {
 // CHECK-STRICT-NEXT:  [[ENTRY:.*:]]
 // CHECK-STRICT-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
 // CHECK-STRICT-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4
-// CHECK-STRICT-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-STRICT-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA2]]
-// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA2]]
+// CHECK-STRICT-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    store float [[B]], ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR]], align 4, !tbaa [[TBAA6]]
 // CHECK-STRICT-NEXT:    [[TMP2:%.*]] = call nsz float @llvm.experimental.constrained.maxnum.f32(float [[TMP0]], float [[TMP1]], metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    ret float [[TMP2]]
 //
@@ -681,14 +681,14 @@ float fmax32b(float a, float b) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NEXT:    [[ELT_MAX:%.*]] = call nsz <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
-// CHECK-NEXT:    store <4 x float> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <4 x float> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NEXT:    ret <4 x float> [[TMP2]]
 //
 // CHECK-NO-NANS-LABEL: define dso_local nofpclass(nan) <4 x float> @pfmax32(
@@ -697,14 +697,14 @@ float fmax32b(float a, float b) {
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NO-NANS-NEXT:    [[C_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-NO-NANS-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-NANS-NEXT:    [[ELT_MAX:%.*]] = call nnan nsz <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
-// CHECK-NO-NANS-NEXT:    store <4 x float> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    store <4 x float> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-NANS-NEXT:    ret <4 x float> [[TMP2]]
 //
 // CHECK-NO-INFS-LABEL: define dso_local nofpclass(inf) <4 x float> @pfmax32(
@@ -713,14 +713,14 @@ float fmax32b(float a, float b) {
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-NO-INFS-NEXT:    [[C_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-NO-INFS-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-INFS-NEXT:    [[ELT_MAX:%.*]] = call ninf nsz <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
-// CHECK-NO-INFS-NEXT:    store <4 x float> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    store <4 x float> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-INFS-NEXT:    ret <4 x float> [[TMP2]]
 //
 // CHECK-FAST-LABEL: define dso_local nofpclass(nan inf) <4 x float> @pfmax32(
@@ -729,14 +729,14 @@ float fmax32b(float a, float b) {
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca <4 x float>, align 16
 // CHECK-FAST-NEXT:    [[C_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-FAST-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    store <4 x float> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    store <4 x float> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    store <4 x float> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-FAST-NEXT:    [[ELT_MAX:%.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
-// CHECK-FAST-NEXT:    store <4 x float> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    store <4 x float> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-FAST-NEXT:    ret <4 x float> [[TMP2]]
 //
 float4 pfmax32(float4 a, float4 b, float4 c) {
@@ -749,10 +749,10 @@ float4 pfmax32(float4 a, float4 b, float4 c) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call nsz double @llvm.maxnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
 // CHECK-NEXT:    ret float [[CONV]]
@@ -762,10 +762,10 @@ float4 pfmax32(float4 a, float4 b, float4 c) {
 // CHECK-NO-NANS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-NO-NANS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-NANS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-NO-NANS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = call nnan nsz double @llvm.maxnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-NO-NANS-NEXT:    [[CONV:%.*]] = fptrunc nnan double [[TMP2]] to float
 // CHECK-NO-NANS-NEXT:    ret float [[CONV]]
@@ -775,10 +775,10 @@ float4 pfmax32(float4 a, float4 b, float4 c) {
 // CHECK-NO-INFS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-NO-INFS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-INFS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-NO-INFS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = call ninf nsz double @llvm.maxnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-NO-INFS-NEXT:    [[CONV:%.*]] = fptrunc ninf double [[TMP2]] to float
 // CHECK-NO-INFS-NEXT:    ret float [[CONV]]
@@ -788,10 +788,10 @@ float4 pfmax32(float4 a, float4 b, float4 c) {
 // CHECK-FAST-NEXT:  [[ENTRY:.*:]]
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-FAST-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-FAST-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-FAST-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-FAST-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf nsz arcp afn double @llvm.maxnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-FAST-NEXT:    [[CONV:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn double [[TMP2]] to float
 // CHECK-FAST-NEXT:    ret float [[CONV]]
@@ -801,10 +801,10 @@ float4 pfmax32(float4 a, float4 b, float4 c) {
 // CHECK-STRICT-NEXT:  [[ENTRY:.*:]]
 // CHECK-STRICT-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-STRICT-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-STRICT-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA6]]
-// CHECK-STRICT-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA6]]
-// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA6]]
-// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA8]]
 // CHECK-STRICT-NEXT:    [[TMP2:%.*]] = call nsz double @llvm.experimental.constrained.maxnum.f64(double [[TMP0]], double [[TMP1]], metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    [[CONV:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    ret float [[CONV]]
@@ -817,10 +817,10 @@ float fmax64(double a, double b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call nsz double @llvm.maxnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-NEXT:    [[CONV:%.*]] = fptrunc double [[TMP2]] to float
 // CHECK-NEXT:    ret float [[CONV]]
@@ -830,10 +830,10 @@ float fmax64(double a, double b) {
 // CHECK-NO-NANS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-NO-NANS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-NANS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-NO-NANS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = call nnan nsz double @llvm.maxnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-NO-NANS-NEXT:    [[CONV:%.*]] = fptrunc nnan double [[TMP2]] to float
 // CHECK-NO-NANS-NEXT:    ret float [[CONV]]
@@ -843,10 +843,10 @@ float fmax64(double a, double b) {
 // CHECK-NO-INFS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-NO-INFS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-INFS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-NO-INFS-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = call ninf nsz double @llvm.maxnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-NO-INFS-NEXT:    [[CONV:%.*]] = fptrunc ninf double [[TMP2]] to float
 // CHECK-NO-INFS-NEXT:    ret float [[CONV]]
@@ -856,10 +856,10 @@ float fmax64(double a, double b) {
 // CHECK-FAST-NEXT:  [[ENTRY:.*:]]
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-FAST-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-FAST-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA7]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA7]]
+// CHECK-FAST-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA9]]
 // CHECK-FAST-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf nsz arcp afn double @llvm.maxnum.f64(double [[TMP0]], double [[TMP1]])
 // CHECK-FAST-NEXT:    [[CONV:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn double [[TMP2]] to float
 // CHECK-FAST-NEXT:    ret float [[CONV]]
@@ -869,10 +869,10 @@ float fmax64(double a, double b) {
 // CHECK-STRICT-NEXT:  [[ENTRY:.*:]]
 // CHECK-STRICT-NEXT:    [[A_ADDR:%.*]] = alloca double, align 8
 // CHECK-STRICT-NEXT:    [[B_ADDR:%.*]] = alloca double, align 8
-// CHECK-STRICT-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA6]]
-// CHECK-STRICT-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA6]]
-// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA6]]
-// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA6]]
+// CHECK-STRICT-NEXT:    store double [[A]], ptr [[A_ADDR]], align 8, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    store double [[B]], ptr [[B_ADDR]], align 8, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load double, ptr [[A_ADDR]], align 8, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load double, ptr [[B_ADDR]], align 8, !tbaa [[TBAA8]]
 // CHECK-STRICT-NEXT:    [[TMP2:%.*]] = call nsz double @llvm.experimental.constrained.maxnum.f64(double [[TMP0]], double [[TMP1]], metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    [[CONV:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    ret float [[CONV]]
@@ -887,14 +887,14 @@ float fmax64b(double a, double b) {
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <2 x double>, align 16
-// CHECK-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NEXT:    [[ELT_MAX:%.*]] = call nsz <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
-// CHECK-NEXT:    store <2 x double> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NEXT:    store <2 x double> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NEXT:    ret <2 x double> [[TMP2]]
 //
 // CHECK-NO-NANS-LABEL: define dso_local nofpclass(nan) <2 x double> @pfmax64(
@@ -903,14 +903,14 @@ float fmax64b(double a, double b) {
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NO-NANS-NEXT:    [[C_ADDR:%.*]] = alloca <2 x double>, align 16
-// CHECK-NO-NANS-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-NANS-NEXT:    [[ELT_MAX:%.*]] = call nnan nsz <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
-// CHECK-NO-NANS-NEXT:    store <2 x double> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-NANS-NEXT:    store <2 x double> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-NANS-NEXT:    ret <2 x double> [[TMP2]]
 //
 // CHECK-NO-INFS-LABEL: define dso_local nofpclass(inf) <2 x double> @pfmax64(
@@ -919,14 +919,14 @@ float fmax64b(double a, double b) {
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-NO-INFS-NEXT:    [[C_ADDR:%.*]] = alloca <2 x double>, align 16
-// CHECK-NO-INFS-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-INFS-NEXT:    [[ELT_MAX:%.*]] = call ninf nsz <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
-// CHECK-NO-INFS-NEXT:    store <2 x double> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-NO-INFS-NEXT:    store <2 x double> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-NO-INFS-NEXT:    ret <2 x double> [[TMP2]]
 //
 // CHECK-FAST-LABEL: define dso_local nofpclass(nan inf) <2 x double> @pfmax64(
@@ -935,14 +935,14 @@ float fmax64b(double a, double b) {
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca <2 x double>, align 16
 // CHECK-FAST-NEXT:    [[C_ADDR:%.*]] = alloca <2 x double>, align 16
-// CHECK-FAST-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    store <2 x double> [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    store <2 x double> [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    store <2 x double> [[C]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-FAST-NEXT:    [[ELT_MAX:%.*]] = call reassoc nnan ninf nsz arcp afn <2 x double> @llvm.maxnum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]])
-// CHECK-FAST-NEXT:    store <2 x double> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
-// CHECK-FAST-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA6]]
+// CHECK-FAST-NEXT:    store <2 x double> [[ELT_MAX]], ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-FAST-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[C_ADDR]], align 16, !tbaa [[TBAA8]]
 // CHECK-FAST-NEXT:    ret <2 x double> [[TMP2]]
 //
 double2 pfmax64(double2 a, double2 b, double2 c) {
@@ -955,10 +955,10 @@ double2 pfmax64(double2 a, double2 b, double2 c) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -967,10 +967,10 @@ double2 pfmax64(double2 a, double2 b, double2 c) {
 // CHECK-NO-NANS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-NO-NANS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-NANS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-NANS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = call nnan nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-NO-NANS-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -979,10 +979,10 @@ double2 pfmax64(double2 a, double2 b, double2 c) {
 // CHECK-NO-INFS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-NO-INFS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-INFS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-INFS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = call ninf nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-NO-INFS-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -991,10 +991,10 @@ double2 pfmax64(double2 a, double2 b, double2 c) {
 // CHECK-FAST-NEXT:  [[ENTRY:.*:]]
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-FAST-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-FAST-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-FAST-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-FAST-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf nsz arcp afn x86_fp80 @llvm.maxnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-FAST-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -1003,10 +1003,10 @@ double2 pfmax64(double2 a, double2 b, double2 c) {
 // CHECK-STRICT-NEXT:  [[ENTRY:.*:]]
 // CHECK-STRICT-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-STRICT-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-STRICT-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
-// CHECK-STRICT-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
-// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
-// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA10]]
+// CHECK-STRICT-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA10]]
+// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA10]]
+// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA10]]
 // CHECK-STRICT-NEXT:    [[TMP2:%.*]] = call nsz x86_fp80 @llvm.experimental.constrained.maxnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]], metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -1018,10 +1018,10 @@ long double fmax80(long double a, long double b) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = call nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -1030,10 +1030,10 @@ long double fmax80(long double a, long double b) {
 // CHECK-NO-NANS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-NANS-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NO-NANS-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-NO-NANS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-NANS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-NO-NANS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-NANS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-NANS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-NANS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-NO-NANS-NEXT:    [[TMP2:%.*]] = call nnan nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-NO-NANS-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -1042,10 +1042,10 @@ long double fmax80(long double a, long double b) {
 // CHECK-NO-INFS-NEXT:  [[ENTRY:.*:]]
 // CHECK-NO-INFS-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NO-INFS-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-NO-INFS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-INFS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-NO-INFS-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-INFS-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-INFS-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-NO-INFS-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-NO-INFS-NEXT:    [[TMP2:%.*]] = call ninf nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-NO-INFS-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -1054,10 +1054,10 @@ long double fmax80(long double a, long double b) {
 // CHECK-FAST-NEXT:  [[ENTRY:.*:]]
 // CHECK-FAST-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-FAST-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-FAST-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-FAST-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA9]]
-// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA9]]
+// CHECK-FAST-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-FAST-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-FAST-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA11]]
+// CHECK-FAST-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA11]]
 // CHECK-FAST-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf nsz arcp afn x86_fp80 @llvm.maxnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]])
 // CHECK-FAST-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -1066,10 +1066,10 @@ long double fmax80(long double a, long double b) {
 // CHECK-STRICT-NEXT:  [[ENTRY:.*:]]
 // CHECK-STRICT-NEXT:    [[A_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-STRICT-NEXT:    [[B_ADDR:%.*]] = alloca x86_fp80, align 16
-// CHECK-STRICT-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
-// CHECK-STRICT-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
-// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA8]]
-// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA8]]
+// CHECK-STRICT-NEXT:    store x86_fp80 [[A]], ptr [[A_ADDR]], align 16, !tbaa [[TBAA10]]
+// CHECK-STRICT-NEXT:    store x86_fp80 [[B]], ptr [[B_ADDR]], align 16, !tbaa [[TBAA10]]
+// CHECK-STRICT-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[A_ADDR]], align 16, !tbaa [[TBAA10]]
+// CHECK-STRICT-NEXT:    [[TMP1:%.*]] = load x86_fp80, ptr [[B_ADDR]], align 16, !tbaa [[TBAA10]]
 // CHECK-STRICT-NEXT:    [[TMP2:%.*]] = call nsz x86_fp80 @llvm.experimental.constrained.maxnum.f80(x86_fp80 [[TMP0]], x86_fp80 [[TMP1]], metadata !"fpexcept.strict") #[[ATTR2]]
 // CHECK-STRICT-NEXT:    ret x86_fp80 [[TMP2]]
 //
@@ -1078,52 +1078,52 @@ long double fmax80b(long double a, long double b) {
 }
 
 //.
-// CHECK: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"float", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[TBAA6]] = !{[[META4]], [[META4]], i64 0}
-// CHECK: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-// CHECK: [[META8]] = !{!"double", [[META4]], i64 0}
+// CHECK: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// CHECK: [[META7]] = !{!"float", [[META4]], i64 0}
+// CHECK: [[TBAA8]] = !{[[META4]], [[META4]], i64 0}
 // CHECK: [[TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
-// CHECK: [[META10]] = !{!"long double", [[META4]], i64 0}
+// CHECK: [[META10]] = !{!"double", [[META4]], i64 0}
+// CHECK: [[TBAA11]] = !{[[META12:![0-9]+]], [[META12]], i64 0}
+// CHECK: [[META12]] = !{!"long double", [[META4]], i64 0}
 //.
-// CHECK-NO-NANS: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK-NO-NANS: [[META3]] = !{!"float", [[META4:![0-9]+]], i64 0}
-// CHECK-NO-NANS: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK-NO-NANS: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK-NO-NANS: [[META5]] = !{!"Simple C/C++ TBAA"}
-// CHECK-NO-NANS: [[TBAA6]] = !{[[META4]], [[META4]], i64 0}
-// CHECK-NO-NANS: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-// CHECK-NO-NANS: [[META8]] = !{!"double", [[META4]], i64 0}
+// CHECK-NO-NANS: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// CHECK-NO-NANS: [[META7]] = !{!"float", [[META4]], i64 0}
+// CHECK-NO-NANS: [[TBAA8]] = !{[[META4]], [[META4]], i64 0}
 // CHECK-NO-NANS: [[TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
-// CHECK-NO-NANS: [[META10]] = !{!"long double", [[META4]], i64 0}
+// CHECK-NO-NANS: [[META10]] = !{!"double", [[META4]], i64 0}
+// CHECK-NO-NANS: [[TBAA11]] = !{[[META12:![0-9]+]], [[META12]], i64 0}
+// CHECK-NO-NANS: [[META12]] = !{!"long double", [[META4]], i64 0}
 //.
-// CHECK-NO-INFS: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK-NO-INFS: [[META3]] = !{!"float", [[META4:![0-9]+]], i64 0}
-// CHECK-NO-INFS: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK-NO-INFS: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK-NO-INFS: [[META5]] = !{!"Simple C/C++ TBAA"}
-// CHECK-NO-INFS: [[TBAA6]] = !{[[META4]], [[META4]], i64 0}
-// CHECK-NO-INFS: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-// CHECK-NO-INFS: [[META8]] = !{!"double", [[META4]], i64 0}
+// CHECK-NO-INFS: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// CHECK-NO-INFS: [[META7]] = !{!"float", [[META4]], i64 0}
+// CHECK-NO-INFS: [[TBAA8]] = !{[[META4]], [[META4]], i64 0}
 // CHECK-NO-INFS: [[TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
-// CHECK-NO-INFS: [[META10]] = !{!"long double", [[META4]], i64 0}
+// CHECK-NO-INFS: [[META10]] = !{!"double", [[META4]], i64 0}
+// CHECK-NO-INFS: [[TBAA11]] = !{[[META12:![0-9]+]], [[META12]], i64 0}
+// CHECK-NO-INFS: [[META12]] = !{!"long double", [[META4]], i64 0}
 //.
-// CHECK-FAST: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK-FAST: [[META3]] = !{!"float", [[META4:![0-9]+]], i64 0}
-// CHECK-FAST: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK-FAST: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK-FAST: [[META5]] = !{!"Simple C/C++ TBAA"}
-// CHECK-FAST: [[TBAA6]] = !{[[META4]], [[META4]], i64 0}
-// CHECK-FAST: [[TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-// CHECK-FAST: [[META8]] = !{!"double", [[META4]], i64 0}
+// CHECK-FAST: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// CHECK-FAST: [[META7]] = !{!"float", [[META4]], i64 0}
+// CHECK-FAST: [[TBAA8]] = !{[[META4]], [[META4]], i64 0}
 // CHECK-FAST: [[TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
-// CHECK-FAST: [[META10]] = !{!"long double", [[META4]], i64 0}
+// CHECK-FAST: [[META10]] = !{!"double", [[META4]], i64 0}
+// CHECK-FAST: [[TBAA11]] = !{[[META12:![0-9]+]], [[META12]], i64 0}
+// CHECK-FAST: [[META12]] = !{!"long double", [[META4]], i64 0}
 //.
-// CHECK-STRICT: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK-STRICT: [[META3]] = !{!"float", [[META4:![0-9]+]], i64 0}
-// CHECK-STRICT: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK-STRICT: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK-STRICT: [[META5]] = !{!"Simple C/C++ TBAA"}
 // CHECK-STRICT: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-// CHECK-STRICT: [[META7]] = !{!"double", [[META4]], i64 0}
+// CHECK-STRICT: [[META7]] = !{!"float", [[META4]], i64 0}
 // CHECK-STRICT: [[TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
-// CHECK-STRICT: [[META9]] = !{!"long double", [[META4]], i64 0}
+// CHECK-STRICT: [[META9]] = !{!"double", [[META4]], i64 0}
+// CHECK-STRICT: [[TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0}
+// CHECK-STRICT: [[META11]] = !{!"long double", [[META4]], i64 0}
 //.
