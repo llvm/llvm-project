@@ -965,6 +965,7 @@ bool AArch64DAGToDAGISel::SelectRDSVLShiftImm(SDValue N, SDValue &Imm) {
 /// operand is referred by the instructions have SP operand
 bool AArch64DAGToDAGISel::SelectAddUXTXRegister(SDValue N, SDValue &Reg,
                                                 SDValue &Shift) {
+  // TODO: Relax condition to apply to more scenarios
   if (N.getOpcode() != ISD::LOAD)
     return false;
   Reg = N;
