@@ -282,13 +282,6 @@ StmtResult Sema::ActOnCXXExpansionStmtPattern(
   if (DiagnoseUnexpandedParameterPack(ExpansionInitializer))
     return StmtError();
 
-  // Reject lambdas early.
-  if (auto *RD = ExpansionInitializer->getType()->getAsCXXRecordDecl();
-      RD && RD->isLambda()) {
-    Diag(ExpansionInitializer->getBeginLoc(), diag::err_expansion_stmt_lambda);
-    return StmtError();
-  }
-
   return BuildNonEnumeratingCXXExpansionStmtPattern(
       ESD, Init, DS, ExpansionInitializer, LParenLoc, ColonLoc, RParenLoc,
       LifetimeExtendTemps);
@@ -324,6 +317,13 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
   if (ExpansionInitializer->getType()->isVariableArrayType()) {
     Diag(ExpansionInitializer->getExprLoc(), diag::err_expansion_stmt_vla)
         << ExpansionInitializer->getType();
+    return StmtError();
+  }
+
+  // Reject lambdas early.
+  if (auto *RD = ExpansionInitializer->getType()->getAsCXXRecordDecl();
+      RD && RD->isLambda()) {
+    Diag(ExpansionInitializer->getBeginLoc(), diag::err_expansion_stmt_lambda);
     return StmtError();
   }
 
