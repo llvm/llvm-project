@@ -63,7 +63,7 @@ program omp_examples
 !PARSE-TREE: | | | | | Name = 'r'
 !PARSE-TREE: | | | Expr = '0_4'
 !PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '0'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
   !$omp declare reduction(*:tt:omp_out%r = omp_out%r * omp_in%r) initializer(omp_priv%r = 1)
 !CHECK-NEXT: !$OMP DECLARE REDUCTION(*:tt: omp_out%r = omp_out%r * omp_in%r) INITIALIZER(om&
@@ -103,7 +103,7 @@ program omp_examples
 !PARSE-TREE: | | | | | Name = 'r'
 !PARSE-TREE: | | | Expr = '1_4'
 !PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
   !$omp declare reduction(max:tt:omp_out = mymax(omp_out, omp_in)) initializer(omp_priv%r = 0)
 !CHECK-NEXT: !$OMP DECLARE REDUCTION(max:tt: omp_out = mymax(omp_out, omp_in)) INITIALIZER(&
@@ -140,7 +140,7 @@ program omp_examples
 !PARSE-TREE: | | | | | Name = 'r'
 !PARSE-TREE: | | | Expr = '0_4'
 !PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '0'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
   !$omp declare reduction(min:tt:omp_out%r = min(omp_out%r, omp_in%r)) initializer(omp_priv%r = 1)
 !CHECK-NEXT: !$OMP DECLARE REDUCTION(min:tt: omp_out%r = min(omp_out%r, omp_in%r)) INITIALI&
@@ -183,7 +183,7 @@ program omp_examples
 !PARSE-TREE: | | | | | Name = 'r'
 !PARSE-TREE: | | | Expr = '1_4'
 !PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
   call random_number(values%r)
 
@@ -197,8 +197,9 @@ program omp_examples
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
 !PARSE-TREE: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'sum'
-!PARSE-TREE: | | Flags = None
-!PARSE-TREE: | DoConstruct
+!PARSE-TREE: | | Flags = {}
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 
   do i = 1, n
      sum%r = sum%r + values(i)%r
@@ -214,8 +215,9 @@ program omp_examples
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Multiply
 !PARSE-TREE: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'prod'
-!PARSE-TREE: | | Flags = None
-!PARSE-TREE: | DoConstruct
+!PARSE-TREE: | | Flags = {}
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 
   do i = 1, n
      prod%r = prod%r * (values(i)%r+0.6)
@@ -231,8 +233,9 @@ program omp_examples
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> ProcedureDesignator -> Name = 'max'
 !PARSE-TREE: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'big'
-!PARSE-TREE: | | Flags = None
-!PARSE-TREE: | DoConstruct
+!PARSE-TREE: | | Flags = {}
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 
   do i = 1, n
      big = mymax(values(i), big)
@@ -248,8 +251,9 @@ program omp_examples
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> ProcedureDesignator -> Name = 'min'
 !PARSE-TREE: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'small'
-!PARSE-TREE: | | Flags = None
-!PARSE-TREE: | DoConstruct
+!PARSE-TREE: | | Flags = {}
+!PARSE-TREE: | Block
+!PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 
   do i = 1, n
      small%r = min(values(i)%r, small%r)

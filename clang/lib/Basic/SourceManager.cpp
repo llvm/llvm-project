@@ -928,41 +928,6 @@ SourceLocation SourceManager::getFileLocSlowCase(SourceLocation Loc) const {
   return Loc;
 }
 
-FileIDAndOffset SourceManager::getDecomposedExpansionLocSlowCase(
-    const SrcMgr::SLocEntry *E) const {
-  // If this is an expansion record, walk through all the expansion points.
-  FileID FID;
-  SourceLocation Loc;
-  unsigned Offset;
-  do {
-    Loc = E->getExpansion().getExpansionLocStart();
-
-    FID = getFileID(Loc);
-    E = &getSLocEntry(FID);
-    Offset = Loc.getOffset()-E->getOffset();
-  } while (!Loc.isFileID());
-
-  return std::make_pair(FID, Offset);
-}
-
-FileIDAndOffset
-SourceManager::getDecomposedSpellingLocSlowCase(const SrcMgr::SLocEntry *E,
-                                                unsigned Offset) const {
-  // If this is an expansion record, walk through all the expansion points.
-  FileID FID;
-  SourceLocation Loc;
-  do {
-    Loc = E->getExpansion().getSpellingLoc();
-    Loc = Loc.getLocWithOffset(Offset);
-
-    FID = getFileID(Loc);
-    E = &getSLocEntry(FID);
-    Offset = Loc.getOffset()-E->getOffset();
-  } while (!Loc.isFileID());
-
-  return std::make_pair(FID, Offset);
-}
-
 /// getImmediateSpellingLoc - Given a SourceLocation object, return the
 /// spelling location referenced by the ID.  This is the first level down
 /// towards the place where the characters that make up the lexed token can be
@@ -1194,17 +1159,11 @@ static bool isInvalid(LocType Loc, bool *Invalid) {
   return MyInvalid;
 }
 
-unsigned SourceManager::getSpellingColumnNumber(SourceLocation Loc,
-                                                bool *Invalid) const {
+unsigned SourceManager::getColumnNumber(SourceLocation Loc,
+                                        bool *Invalid) const {
+  assert(Loc.isFileID());
   if (isInvalid(Loc, Invalid)) return 0;
-  FileIDAndOffset LocInfo = getDecomposedSpellingLoc(Loc);
-  return getColumnNumber(LocInfo.first, LocInfo.second, Invalid);
-}
-
-unsigned SourceManager::getExpansionColumnNumber(SourceLocation Loc,
-                                                 bool *Invalid) const {
-  if (isInvalid(Loc, Invalid)) return 0;
-  FileIDAndOffset LocInfo = getDecomposedExpansionLoc(Loc);
+  FileIDAndOffset LocInfo = getDecomposedLoc(Loc);
   return getColumnNumber(LocInfo.first, LocInfo.second, Invalid);
 }
 
@@ -1402,18 +1361,13 @@ unsigned SourceManager::getLineNumber(FileID FID, unsigned FilePos,
   return LineNo;
 }
 
-unsigned SourceManager::getSpellingLineNumber(SourceLocation Loc,
-                                              bool *Invalid) const {
+unsigned SourceManager::getLineNumber(SourceLocation Loc, bool *Invalid) const {
+  assert(Loc.isFileID());
   if (isInvalid(Loc, Invalid)) return 0;
-  FileIDAndOffset LocInfo = getDecomposedSpellingLoc(Loc);
+  FileIDAndOffset LocInfo = getDecomposedLoc(Loc);
   return getLineNumber(LocInfo.first, LocInfo.second);
 }
-unsigned SourceManager::getExpansionLineNumber(SourceLocation Loc,
-                                               bool *Invalid) const {
-  if (isInvalid(Loc, Invalid)) return 0;
-  FileIDAndOffset LocInfo = getDecomposedExpansionLoc(Loc);
-  return getLineNumber(LocInfo.first, LocInfo.second);
-}
+
 unsigned SourceManager::getPresumedLineNumber(SourceLocation Loc,
                                               bool *Invalid) const {
   PresumedLoc PLoc = getPresumedLoc(Loc);

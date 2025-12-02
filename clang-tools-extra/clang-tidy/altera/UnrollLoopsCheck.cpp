@@ -127,7 +127,7 @@ bool UnrollLoopsCheck::hasKnownBounds(const Stmt *Statement,
   if (const auto *InitDeclStatement = dyn_cast<DeclStmt>(Initializer)) {
     if (const auto *VariableDecl =
             dyn_cast<VarDecl>(InitDeclStatement->getSingleDecl())) {
-      APValue *Evaluation = VariableDecl->evaluateValue();
+      const APValue *Evaluation = VariableDecl->evaluateValue();
       if (!Evaluation || !Evaluation->hasValue())
         return false;
     }

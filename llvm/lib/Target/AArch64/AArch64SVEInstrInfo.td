@@ -375,6 +375,11 @@ def AArch64fclamp : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
                                node:$Zm)
                                ]>;
 
+def AArch64fdot : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
+                            [(int_aarch64_sve_fdot_x2 node:$Zd, node:$Zn, node:$Zm),
+                             (partial_reduce_fmla node:$Zd, node:$Zn, node:$Zm)
+                            ]>;
+
 def SDT_AArch64FCVT : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVec<3>,
   SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>, SDTCisSameAs<0,3>
@@ -984,7 +989,7 @@ let Predicates = [HasSVE_or_SME] in {
             (DUP_ZR_D (MOVi64imm (bitcast_fpimm_to_i64 f64:$val)))>;
 
   // Duplicate FP immediate into all vector elements
-  let AddedComplexity = 2 in {
+  let AddedComplexity = 3 in {
     def : Pat<(nxv8f16 (splat_vector fpimm16:$imm8)),
               (FDUP_ZI_H fpimm16:$imm8)>;
     def : Pat<(nxv4f16 (splat_vector fpimm16:$imm8)),
@@ -2578,6 +2583,11 @@ let Predicates = [HasBF16, HasSVE_or_SME] in {
   defm BFMLALB_ZZZI : sve2_fp_mla_long_by_indexed_elem<0b100, "bfmlalb", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalb_lane_v2>;
   defm BFMLALT_ZZZI : sve2_fp_mla_long_by_indexed_elem<0b101, "bfmlalt", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlalt_lane_v2>;
 
+  def : Pat<(nxv4f32 (AArch64fmla_p (SVEAllActive), nxv4f32:$acc,
+                (nxv4f32 (AArch64fcvte_mt (SVEAllActive), nxv4bf16:$Zn, (undef))),
+                (nxv4f32 (AArch64fcvte_mt (SVEAllActive), nxv4bf16:$Zm, (undef))))),
+            (BFMLALB_ZZZ nxv4f32:$acc, ZPR:$Zn, ZPR:$Zm)>;
+
   defm BFCVT_ZPmZ   : sve_bfloat_convert<"bfcvt", int_aarch64_sve_fcvt_bf16f32_v2, AArch64fcvtr_mt>;
   defm BFCVTNT_ZPmZ : sve_bfloat_convert_top<"bfcvtnt", int_aarch64_sve_fcvtnt_bf16f32_v2>;
 } // End HasBF16, HasSVE_or_SME
@@ -3592,6 +3602,18 @@ let Predicates = [HasSVE_or_SME] in {
 
   def : Pat<(sext (i32 (vector_extract nxv4i32:$vec, VectorIndexS:$index))),
             (SMOVvi32to64 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index)>;
+
+  // Extracts of ``unsigned'' i8 or i16 elements lead to the zero-extend being
+  // transformed to an AND mask. The mask is redundant since UMOV already zeroes
+  // the high bits of the destination register.
+  def : Pat<(i32 (and (vector_extract nxv16i8:$vec, VectorIndexB:$index), 0xff)),
+            (UMOVvi8 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)>;
+  def : Pat<(i32 (and (vector_extract nxv8i16:$vec, VectorIndexH:$index), 0xffff)),
+            (UMOVvi16 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index)>;
+  def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract nxv16i8:$vec, VectorIndexB:$index)))), (i64 0xff))),
+            (SUBREG_TO_REG (i64 0), (i32 (UMOVvi8 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)), sub_32)>;
+  def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract nxv8i16:$vec, VectorIndexH:$index)))), (i64 0xffff))),
+            (SUBREG_TO_REG (i64 0), (i32 (UMOVvi16 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index)), sub_32)>;
   } // End HasNEON
 
   // Extract first element from vector.
@@ -4251,7 +4273,7 @@ defm PSEL_PPPRI : sve2_int_perm_sel_p<"psel", int_aarch64_sve_psel>;
 let Predicates = [HasSVE2p1_or_SME2] in {
 defm FCLAMP_ZZZ : sve_fp_clamp<"fclamp", AArch64fclamp>;
 
-defm FDOT_ZZZ_S  : sve_float_dot<0b0, 0b0, ZPR32, ZPR16, "fdot", nxv8f16, int_aarch64_sve_fdot_x2>;
+defm FDOT_ZZZ_S  : sve_float_dot<0b0, 0b0, ZPR32, ZPR16, "fdot", nxv8f16, AArch64fdot>;
 defm FDOT_ZZZI_S : sve_float_dot_indexed<0b0, 0b00, ZPR16, ZPR3b16, "fdot", nxv8f16, int_aarch64_sve_fdot_lane_x2>;
 
 defm BFMLSLB_ZZZ_S : sve2_fp_mla_long<0b110, "bfmlslb", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlslb>;

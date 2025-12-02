@@ -192,7 +192,7 @@ public:
   /// Determine whether the path from the most-derived type to the
   /// given base type is ambiguous (i.e., it refers to multiple subobjects of
   /// the same base type).
-  bool isAmbiguous(CanQualType BaseType);
+  bool isAmbiguous(CanQualType BaseType) const;
 
   /// Whether we are finding multiple paths to detect ambiguities.
   bool isFindingAmbiguities() const { return FindAmbiguities; }

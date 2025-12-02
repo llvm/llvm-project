@@ -9,13 +9,11 @@ target triple = "thumbv6m-none-none-eabi"
 define void @arm_mean_q7(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef %pResult) #0 {
 ; CHECK-LABEL: @arm_mean_q7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP_NOT10:%.*]] = icmp ult i32 [[BLOCKSIZE:%.*]], 16
-; CHECK-NEXT:    br i1 [[CMP_NOT10]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
-; CHECK:       while.body.preheader:
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[BLOCKSIZE]], 4
-; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[BLOCKSIZE:%.*]], 4
+; CHECK-NEXT:    [[CMP_NOT10:%.*]] = icmp eq i32 [[SHR]], 0
+; CHECK-NEXT:    br i1 [[CMP_NOT10]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[SUM_013:%.*]] = phi i32 [ [[TMP2:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM_013:%.*]] = phi i32 [ [[TMP2:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    [[PSRC_ADDR_012:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[WHILE_BODY]] ], [ [[PSRC:%.*]], [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[BLKCNT_011:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[SHR]], [[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[PSRC_ADDR_012]], align 1
@@ -30,8 +28,8 @@ define void @arm_mean_q7(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP3]]
 ; CHECK-NEXT:    br label [[WHILE_END]]
 ; CHECK:       while.end:
-; CHECK-NEXT:    [[PSRC_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PSRC]], [[ENTRY:%.*]] ], [ [[SCEVGEP]], [[WHILE_END_LOOPEXIT]] ]
-; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP2]], [[WHILE_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[PSRC_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PSRC]], [[WHILE_BODY_PREHEADER]] ], [ [[SCEVGEP]], [[WHILE_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[WHILE_BODY_PREHEADER]] ], [ [[TMP2]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[BLOCKSIZE]], 15
 ; CHECK-NEXT:    [[CMP2_NOT15:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP2_NOT15]], label [[WHILE_END5:%.*]], label [[VECTOR_BODY:%.*]]

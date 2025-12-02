@@ -1074,13 +1074,6 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
     return subview.getDynamicSize(sourceIndex);
   }
 
-  if (auto sizeInterface =
-          dyn_cast_or_null<OffsetSizeAndStrideOpInterface>(definingOp)) {
-    assert(sizeInterface.isDynamicSize(unsignedIndex) &&
-           "Expected dynamic subview size");
-    return sizeInterface.getDynamicSize(unsignedIndex);
-  }
-
   // dim(memrefcast) -> dim
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
@@ -2568,11 +2561,6 @@ computeCollapsedLayoutMap(MemRefType srcType,
     auto trailingReassocs = ArrayRef<int64_t>(reassoc).drop_front();
     auto stride = SaturatedInteger::wrap(resultStrides[resultStrideIndex--]);
     for (int64_t idx : llvm::reverse(trailingReassocs)) {
-      // Dimensions of size 1 should be skipped, because their strides are
-      // meaningless and could have any arbitrary value.
-      if (srcShape[idx - 1] == 1)
-        continue;
-
       stride = stride * SaturatedInteger::wrap(srcShape[idx]);
 
       // Both source and result stride must have the same static value. In that
@@ -2586,6 +2574,11 @@ computeCollapsedLayoutMap(MemRefType srcType,
       auto srcStride = SaturatedInteger::wrap(srcStrides[idx - 1]);
       if (strict && (stride.saturated || srcStride.saturated))
         return failure();
+
+      // Dimensions of size 1 should be skipped, because their strides are
+      // meaningless and could have any arbitrary value.
+      if (srcShape[idx - 1] == 1)
+        continue;
 
       if (!stride.saturated && !srcStride.saturated && stride != srcStride)
         return failure();

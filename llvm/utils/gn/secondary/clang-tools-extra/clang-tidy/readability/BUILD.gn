@@ -13,7 +13,7 @@ static_library("readability") {
   ]
   sources = [
     "AmbiguousSmartptrResetCallCheck.cpp",
-    "AvoidConstParamsInDecls.cpp",
+    "AvoidConstParamsInDeclsCheck.cpp",
     "AvoidNestedConditionalOperatorCheck.cpp",
     "AvoidReturnWithVoidValueCheck.cpp",
     "AvoidUnconditionalPreprocessorIfCheck.cpp",
@@ -22,7 +22,7 @@ static_library("readability") {
     "ContainerContainsCheck.cpp",
     "ContainerDataPointerCheck.cpp",
     "ContainerSizeEmptyCheck.cpp",
-    "ConvertMemberFunctionsToStatic.cpp",
+    "ConvertMemberFunctionsToStaticCheck.cpp",
     "DeleteNullPointerCheck.cpp",
     "DuplicateIncludeCheck.cpp",
     "ElseAfterReturnCheck.cpp",

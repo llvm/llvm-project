@@ -52,12 +52,12 @@
 #include "polly/MatmulOptimizer.h"
 #include "polly/Options.h"
 #include "polly/ScheduleTreeTransform.h"
+#include "polly/ScopInfo.h"
 #include "polly/Support/ISLOStream.h"
 #include "polly/Support/ISLTools.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "isl/options.h"
 
@@ -197,6 +197,10 @@ static cl::opt<bool> OptimizedScops(
              "the isl scheduling optimizer and the set of post-scheduling "
              "transformations is applied on the schedule tree"),
     cl::cat(PollyCategory));
+
+static cl::opt<bool> PollyPrintOptIsl("polly-print-opt-isl",
+                                      cl::desc("A polly pass"),
+                                      cl::cat(PollyCategory));
 
 STATISTIC(ScopsProcessed, "Number of scops processed");
 STATISTIC(ScopsRescheduled, "Number of scops rescheduled");
@@ -638,34 +642,6 @@ bool ScheduleTreeOptimizer::isProfitableSchedule(Scop &S,
   return changed;
 }
 
-class IslScheduleOptimizerWrapperPass final : public ScopPass {
-public:
-  static char ID;
-
-  explicit IslScheduleOptimizerWrapperPass() : ScopPass(ID) {}
-
-  /// Optimize the schedule of the SCoP @p S.
-  bool runOnScop(Scop &S) override;
-
-  /// Print the new schedule for the SCoP @p S.
-  void printScop(raw_ostream &OS, Scop &S) const override;
-
-  /// Register all analyses and transformation required.
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  /// Release the internal memory.
-  void releaseMemory() override {
-    LastSchedule = {};
-    IslCtx.reset();
-  }
-
-private:
-  std::shared_ptr<isl_ctx> IslCtx;
-  isl::schedule LastSchedule;
-};
-
-char IslScheduleOptimizerWrapperPass::ID = 0;
-
 #ifndef NDEBUG
 static void printSchedule(llvm::raw_ostream &OS, const isl::schedule &Schedule,
                           StringRef Desc) {
@@ -733,7 +709,7 @@ static void walkScheduleTreeForStatistics(isl::schedule Schedule, int Version) {
       &Version);
 }
 
-static void runIslScheduleOptimizer(
+static void runIslScheduleOptimizerImpl(
     Scop &S,
     function_ref<const Dependences &(Dependences::AnalysisLevel)> GetDeps,
     TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE,
@@ -927,8 +903,24 @@ static void runIslScheduleOptimizer(
     walkScheduleTreeForStatistics(Schedule, 2);
   }
 
+  // Check for why any computation could have failed
   if (MaxOpGuard.hasQuotaExceeded()) {
     POLLY_DEBUG(dbgs() << "Schedule optimizer calculation exceeds ISL quota\n");
+    return;
+  } else if (isl_ctx_last_error(Ctx) != isl_error_none) {
+    POLLY_DEBUG({
+      const char *File = isl_ctx_last_error_file(Ctx);
+      int Line = isl_ctx_last_error_line(Ctx);
+      const char *Msg = isl_ctx_last_error_msg(Ctx);
+      dbgs() << "ISL reported an error during the computation of a new "
+                "schedule at "
+             << File << ":" << Line << ": " << Msg;
+    });
+    isl_ctx_reset_error(Ctx);
+    return;
+  } else if (Schedule.is_null()) {
+    POLLY_DEBUG(dbgs() << "Schedule optimizer did not compute a new schedule "
+                          "for unknown reasons\n");
     return;
   }
 
@@ -948,30 +940,6 @@ static void runIslScheduleOptimizer(
 
   if (OptimizedScops)
     errs() << S;
-}
-
-bool IslScheduleOptimizerWrapperPass::runOnScop(Scop &S) {
-  releaseMemory();
-
-  Function &F = S.getFunction();
-  IslCtx = S.getSharedIslCtx();
-
-  auto getDependences =
-      [this](Dependences::AnalysisLevel) -> const Dependences & {
-    return getAnalysis<DependenceInfo>().getDependences(
-        Dependences::AL_Statement);
-  };
-  OptimizationRemarkEmitter &ORE =
-      getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-  TargetTransformInfo *TTI =
-      &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-
-  bool DepsChanged = false;
-  runIslScheduleOptimizer(S, getDependences, TTI, &ORE, LastSchedule,
-                          DepsChanged);
-  if (DepsChanged)
-    getAnalysis<DependenceInfo>().abandonDependences();
-  return false;
 }
 
 static void runScheduleOptimizerPrinter(raw_ostream &OS,
@@ -997,120 +965,25 @@ static void runScheduleOptimizerPrinter(raw_ostream &OS,
   free(ScheduleStr);
 }
 
-void IslScheduleOptimizerWrapperPass::printScop(raw_ostream &OS, Scop &) const {
-  runScheduleOptimizerPrinter(OS, LastSchedule);
-}
-
-void IslScheduleOptimizerWrapperPass::getAnalysisUsage(
-    AnalysisUsage &AU) const {
-  ScopPass::getAnalysisUsage(AU);
-  AU.addRequired<DependenceInfo>();
-  AU.addRequired<TargetTransformInfoWrapperPass>();
-  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-
-  AU.addPreserved<DependenceInfo>();
-  AU.addPreserved<OptimizationRemarkEmitterWrapperPass>();
-}
-
 } // namespace
 
-Pass *polly::createIslScheduleOptimizerWrapperPass() {
-  return new IslScheduleOptimizerWrapperPass();
-}
-
-INITIALIZE_PASS_BEGIN(IslScheduleOptimizerWrapperPass, "polly-opt-isl",
-                      "Polly - Optimize schedule of SCoP", false, false);
-INITIALIZE_PASS_DEPENDENCY(DependenceInfo);
-INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass);
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass);
-INITIALIZE_PASS_END(IslScheduleOptimizerWrapperPass, "polly-opt-isl",
-                    "Polly - Optimize schedule of SCoP", false, false)
-
-static llvm::PreservedAnalyses
-runIslScheduleOptimizerUsingNPM(Scop &S, ScopAnalysisManager &SAM,
-                                ScopStandardAnalysisResults &SAR, SPMUpdater &U,
-                                raw_ostream *OS) {
-  DependenceAnalysis::Result &Deps = SAM.getResult<DependenceAnalysis>(S, SAR);
+void polly::runIslScheduleOptimizer(Scop &S, TargetTransformInfo *TTI,
+                                    DependenceAnalysis::Result &Deps) {
   auto GetDeps = [&Deps](Dependences::AnalysisLevel) -> const Dependences & {
     return Deps.getDependences(Dependences::AL_Statement);
   };
   OptimizationRemarkEmitter ORE(&S.getFunction());
-  TargetTransformInfo *TTI = &SAR.TTI;
   isl::schedule LastSchedule;
   bool DepsChanged = false;
-  runIslScheduleOptimizer(S, GetDeps, TTI, &ORE, LastSchedule, DepsChanged);
+  runIslScheduleOptimizerImpl(S, GetDeps, TTI, &ORE, LastSchedule, DepsChanged);
   if (DepsChanged)
     Deps.abandonDependences();
 
-  if (OS) {
-    *OS << "Printing analysis 'Polly - Optimize schedule of SCoP' for region: '"
+  if (PollyPrintOptIsl) {
+    outs()
+        << "Printing analysis 'Polly - Optimize schedule of SCoP' for region: '"
         << S.getName() << "' in function '" << S.getFunction().getName()
         << "':\n";
-    runScheduleOptimizerPrinter(*OS, LastSchedule);
+    runScheduleOptimizerPrinter(outs(), LastSchedule);
   }
-  return PreservedAnalyses::all();
 }
-
-llvm::PreservedAnalyses
-IslScheduleOptimizerPass::run(Scop &S, ScopAnalysisManager &SAM,
-                              ScopStandardAnalysisResults &SAR, SPMUpdater &U) {
-  return runIslScheduleOptimizerUsingNPM(S, SAM, SAR, U, nullptr);
-}
-
-llvm::PreservedAnalyses
-IslScheduleOptimizerPrinterPass::run(Scop &S, ScopAnalysisManager &SAM,
-                                     ScopStandardAnalysisResults &SAR,
-                                     SPMUpdater &U) {
-  return runIslScheduleOptimizerUsingNPM(S, SAM, SAR, U, &OS);
-}
-
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Print result from IslScheduleOptimizerWrapperPass.
-class IslScheduleOptimizerPrinterLegacyPass final : public ScopPass {
-public:
-  static char ID;
-
-  IslScheduleOptimizerPrinterLegacyPass()
-      : IslScheduleOptimizerPrinterLegacyPass(outs()) {}
-  explicit IslScheduleOptimizerPrinterLegacyPass(llvm::raw_ostream &OS)
-      : ScopPass(ID), OS(OS) {}
-
-  bool runOnScop(Scop &S) override {
-    IslScheduleOptimizerWrapperPass &P =
-        getAnalysis<IslScheduleOptimizerWrapperPass>();
-
-    OS << "Printing analysis '" << P.getPassName() << "' for region: '"
-       << S.getRegion().getNameStr() << "' in function '"
-       << S.getFunction().getName() << "':\n";
-    P.printScop(OS, S);
-
-    return false;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    ScopPass::getAnalysisUsage(AU);
-    AU.addRequired<IslScheduleOptimizerWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-private:
-  llvm::raw_ostream &OS;
-};
-
-char IslScheduleOptimizerPrinterLegacyPass::ID = 0;
-} // namespace
-
-Pass *polly::createIslScheduleOptimizerPrinterLegacyPass(raw_ostream &OS) {
-  return new IslScheduleOptimizerPrinterLegacyPass(OS);
-}
-
-INITIALIZE_PASS_BEGIN(IslScheduleOptimizerPrinterLegacyPass,
-                      "polly-print-opt-isl",
-                      "Polly - Print optimizer schedule of SCoP", false, false);
-INITIALIZE_PASS_DEPENDENCY(IslScheduleOptimizerWrapperPass)
-INITIALIZE_PASS_END(IslScheduleOptimizerPrinterLegacyPass,
-                    "polly-print-opt-isl",
-                    "Polly - Print optimizer schedule of SCoP", false, false)

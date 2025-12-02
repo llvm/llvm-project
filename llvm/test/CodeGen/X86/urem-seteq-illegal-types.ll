@@ -138,22 +138,25 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; SSE2-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [683,u,819,u]
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,2,2,3]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1024,2048,2048,2]
+; SSE2-NEXT:    pmuludq %xmm0, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movl $1463, %eax # imm = 0x5B7
 ; SSE2-NEXT:    movd %eax, %xmm3
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[0,2,2,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [2048,u,2,u]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,2,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2047,2047,2047,2047]
-; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    movss {{.*#+}} xmm3 = xmm0[0],xmm3[1,2,3]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    psrld $1, %xmm0
-; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
-; SSE2-NEXT:    pslld $10, %xmm3
-; SSE2-NEXT:    por %xmm2, %xmm3
-; SSE2-NEXT:    pand %xmm1, %xmm3
+; SSE2-NEXT:    movss {{.*#+}} xmm3 = xmm0[0],xmm3[1,2,3]
+; SSE2-NEXT:    orps %xmm2, %xmm3
+; SSE2-NEXT:    andps %xmm1, %xmm3
 ; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
