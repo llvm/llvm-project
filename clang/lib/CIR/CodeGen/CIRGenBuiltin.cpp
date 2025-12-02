@@ -321,6 +321,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_fabsf128:
     return emitUnaryMaybeConstrainedFPBuiltin<cir::FAbsOp>(*this, *e);
 
+  case Builtin::BIfloor:
+  case Builtin::BIfloorf:
+  case Builtin::BIfloorl:
+  case Builtin::BI__builtin_floor:
+  case Builtin::BI__builtin_floorf:
+  case Builtin::BI__builtin_floorf16:
+  case Builtin::BI__builtin_floorl:
+  case Builtin::BI__builtin_floorf128:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::FloorOp>(*this, *e);
+
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
     if (e->getArg(0)->HasSideEffects(getContext()))

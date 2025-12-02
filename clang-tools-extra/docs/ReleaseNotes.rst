@@ -447,7 +447,8 @@ Changes in existing checks
   positives when pointers is transferred to non-const references
   and avoid false positives of function pointer and fix false
   positives on return of non-const pointer and fix false positives on
-  pointer-to-member operator.
+  pointer-to-member operator and avoid false positives when the address
+  of a variable is taken to be passed to a function.
 
 - Improved :doc:`misc-coroutine-hostile-raii
   <clang-tidy/checks/misc/coroutine-hostile-raii>` check by adding the option
