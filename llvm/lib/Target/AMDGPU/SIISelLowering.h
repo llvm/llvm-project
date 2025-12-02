@@ -45,9 +45,9 @@ public:
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const override;
 
-private:
   MachinePointerInfo getKernargSegmentPtrInfo(MachineFunction &MF) const;
 
+private:
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Chain, uint64_t Offset) const;
   SDValue getImplicitArgPtr(SelectionDAG &DAG, const SDLoc &SL) const;
