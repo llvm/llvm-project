@@ -18,31 +18,31 @@ void func_that_throws(Trivial t);
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_TRIVIAL:%.*]], align 8
-// CHECK-NEXT:    [[AGG_TMP1:%.*]] = alloca [[STRUCT_TRIVIAL]], align 8
+// CHECK-NEXT:    [[AGG_TMP2:%.*]] = alloca [[STRUCT_TRIVIAL]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AGG_TMP]]) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(400) [[AGG_TMP]], i8 0, i64 400, i1 false)
 // CHECK-NEXT:    invoke void @func_that_throws(ptr noundef nonnull byval([[STRUCT_TRIVIAL]]) align 8 [[AGG_TMP]])
-// CHECK-NEXT:            to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
+// CHECK-NEXT:            to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD1:.*]]
 // CHECK:       [[INVOKE_CONT]]:
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AGG_TMP1]]) #[[ATTR4]]
-// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(400) [[AGG_TMP1]], i8 0, i64 400, i1 false)
-// CHECK-NEXT:    invoke void @func_that_throws(ptr noundef nonnull byval([[STRUCT_TRIVIAL]]) align 8 [[AGG_TMP1]])
-// CHECK-NEXT:            to label %[[INVOKE_CONT4:.*]] unwind label %[[LPAD3:.*]]
-// CHECK:       [[INVOKE_CONT4]]:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP1]]) #[[ATTR4]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP]]) #[[ATTR4]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AGG_TMP2]]) #[[ATTR4]]
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(400) [[AGG_TMP2]], i8 0, i64 400, i1 false)
+// CHECK-NEXT:    invoke void @func_that_throws(ptr noundef nonnull byval([[STRUCT_TRIVIAL]]) align 8 [[AGG_TMP2]])
+// CHECK-NEXT:            to label %[[INVOKE_CONT5:.*]] unwind label %[[LPAD4:.*]]
+// CHECK:       [[INVOKE_CONT5]]:
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP2]]) #[[ATTR4]]
 // CHECK-NEXT:    br label %[[TRY_CONT:.*]]
-// CHECK:       [[LPAD]]:
+// CHECK:       [[LPAD1]]:
 // CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
 // CHECK-NEXT:            catch ptr null
 // CHECK-NEXT:    br label %[[EHCLEANUP:.*]]
-// CHECK:       [[LPAD3]]:
+// CHECK:       [[LPAD4]]:
 // CHECK-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i32 }
 // CHECK-NEXT:            catch ptr null
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP1]]) #[[ATTR4]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP2]]) #[[ATTR4]]
 // CHECK-NEXT:    br label %[[EHCLEANUP]]
 // CHECK:       [[EHCLEANUP]]:
-// CHECK-NEXT:    [[DOTPN:%.*]] = phi { ptr, i32 } [ [[TMP1]], %[[LPAD3]] ], [ [[TMP0]], %[[LPAD]] ]
+// CHECK-NEXT:    [[DOTPN:%.*]] = phi { ptr, i32 } [ [[TMP1]], %[[LPAD4]] ], [ [[TMP0]], %[[LPAD1]] ]
 // CHECK-NEXT:    [[EXN_SLOT_0:%.*]] = extractvalue { ptr, i32 } [[DOTPN]], 0
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP]]) #[[ATTR4]]
 // CHECK-NEXT:    [[TMP2:%.*]] = tail call ptr @__cxa_begin_catch(ptr [[EXN_SLOT_0]]) #[[ATTR4]]

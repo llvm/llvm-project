@@ -59,5 +59,5 @@ void foo() {
 // CHECK: call void @llvm.coro.await.suspend.void(
 // CHECK-NEXT: %{{[0-9]+}} = call i8 @llvm.coro.suspend(
 
-// CHECK-LABEL: cleanup.done20:
+// CHECK-LABEL: cond.end:
 // CHECK: call void @llvm.lifetime.end.p0(ptr [[AGG]])
