@@ -183,6 +183,17 @@ static void insertIfFunction(const Decl &D,
     Funcs.insert(FD);
 }
 
+static void insertIfParamOfNotThePrimaryFunction(
+    const Decl &D, llvm::SetVector<const ParmVarDecl *> &Locals,
+    const FunctionDecl *PrimaryFunction) {
+  if (auto *PVD = dyn_cast<ParmVarDecl>(&D)) {
+    if (!PrimaryFunction ||
+        PVD->getParentFunctionOrMethod() != PrimaryFunction) {
+      Locals.insert(PVD);
+    }
+  }
+}
+
 static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
   // Use getCalleeDecl instead of getMethodDecl in order to handle
   // pointer-to-member calls.
@@ -200,8 +211,9 @@ static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
 
 class ReferencedDeclsVisitor : public AnalysisASTVisitor {
 public:
-  ReferencedDeclsVisitor(ReferencedDecls &Referenced)
-      : Referenced(Referenced) {}
+  ReferencedDeclsVisitor(ReferencedDecls &Referenced,
+                         const FunctionDecl *PrimaryFunction)
+      : Referenced(Referenced), PrimaryFunction(PrimaryFunction) {}
 
   void traverseConstructorInits(const CXXConstructorDecl *Ctor) {
     for (const CXXCtorInitializer *Init : Ctor->inits()) {
@@ -235,6 +247,8 @@ public:
     insertIfGlobal(*E->getDecl(), Referenced.Globals);
     insertIfLocal(*E->getDecl(), Referenced.Locals);
     insertIfFunction(*E->getDecl(), Referenced.Functions);
+    insertIfParamOfNotThePrimaryFunction(
+        *E->getDecl(), Referenced.LambdaCapturedParams, PrimaryFunction);
     return true;
   }
 
@@ -271,11 +285,13 @@ public:
 
 private:
   ReferencedDecls &Referenced;
+  // May be null, if we are visiting a statement that is not a function body.
+  const FunctionDecl *const PrimaryFunction;
 };
 
 ReferencedDecls getReferencedDecls(const FunctionDecl &FD) {
   ReferencedDecls Result;
-  ReferencedDeclsVisitor Visitor(Result);
+  ReferencedDeclsVisitor Visitor(Result, &FD);
   Visitor.TraverseStmt(FD.getBody());
   if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(&FD))
     Visitor.traverseConstructorInits(CtorDecl);
@@ -307,7 +323,7 @@ ReferencedDecls getReferencedDecls(const FunctionDecl &FD) {
 
 ReferencedDecls getReferencedDecls(const Stmt &S) {
   ReferencedDecls Result;
-  ReferencedDeclsVisitor Visitor(Result);
+  ReferencedDeclsVisitor Visitor(Result, nullptr);
   Visitor.TraverseStmt(const_cast<Stmt *>(&S));
   return Result;
 }

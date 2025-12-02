@@ -10,6 +10,8 @@
 #include "TestingSupport.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclGroup.h"
+#include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -29,8 +31,11 @@ using ast_matchers::cxxRecordDecl;
 using ast_matchers::hasName;
 using ast_matchers::hasType;
 using ast_matchers::initListExpr;
+using ast_matchers::isInitCapture;
 using ast_matchers::match;
+using ast_matchers::parmVarDecl;
 using ast_matchers::selectFirst;
+using ast_matchers::varDecl;
 using test::findValueDecl;
 using testing::IsEmpty;
 using testing::UnorderedElementsAre;
@@ -118,9 +123,8 @@ TEST(ASTOpsTest, ReferencedDeclsLocalsNotParamsOrStatics) {
 TEST(ASTOpsTest, LambdaCaptures) {
   std::string Code = R"cc(
     void func(int CapturedByRef, int CapturedByValue, int NotCaptured) {
-    int Local;
-      auto Lambda = [&CapturedByRef, CapturedByValue, &Local](int LambdaParam) {
-      };
+      int Local;
+      auto Lambda = [&CapturedByRef, CapturedByValue, &Local](int LambdaParam) {};
     }
   )cc";
   std::unique_ptr<ASTUnit> Unit =
@@ -146,6 +150,34 @@ TEST(ASTOpsTest, LambdaCaptures) {
   // Captured locals must be seen in the body for them to appear in
   // ReferencedDecls.
   EXPECT_THAT(ForLambda.Locals, IsEmpty());
+}
+
+TEST(ASTOpsTest, LambdaInitCapture) {
+  std::string Code = R"cc(
+    void func(int I) {
+      auto Lambda = [C = I]() {};
+    }
+  )cc";
+  std::unique_ptr<ASTUnit> Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++17"});
+  auto &ASTCtx = Unit->getASTContext();
+
+  ASSERT_EQ(ASTCtx.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *IDecl = selectFirst<ParmVarDecl>(
+      "i", match(parmVarDecl(hasName("I")).bind("i"), ASTCtx));
+
+  // Synthesize a temporary DeclStmt for the assignment of Q to
+  // its initializing expression. This is an unusual pattern that does not
+  // perfectly reflect the CFG or AST for declaration or assignment of an
+  // init-capture, but is used for dataflow analysis, which requires a Stmt and
+  // not just a VarDecl with an initializer.
+  auto *CDecl = selectFirst<VarDecl>(
+      "c", match(varDecl(isInitCapture()).bind("c"), ASTCtx));
+  DeclStmt DS(DeclGroupRef(const_cast<VarDecl *>(CDecl)), CDecl->getBeginLoc(),
+              CDecl->getEndLoc());
+  EXPECT_THAT(getReferencedDecls(DS).LambdaCapturedParams,
+              UnorderedElementsAre(IDecl));
 }
 
 } // namespace
