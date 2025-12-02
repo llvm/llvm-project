@@ -287,7 +287,7 @@ ObjectFileWasm::ObjectFileWasm(const ModuleSP &module_sp, DataBufferSP data_sp,
                                offset_t offset, offset_t length)
     : ObjectFile(module_sp, file, offset, length, data_sp, data_offset),
       m_arch("wasm32-unknown-unknown-wasm") {
-  m_data.SetAddressByteSize(4);
+  m_data_nsp->SetAddressByteSize(4);
 }
 
 ObjectFileWasm::ObjectFileWasm(const lldb::ModuleSP &module_sp,
@@ -719,11 +719,11 @@ DataExtractor ObjectFileWasm::ReadImageData(offset_t offset, uint32_t size) {
         DataBufferSP buffer_sp(data_up.release());
         data.SetData(buffer_sp, 0, buffer_sp->GetByteSize());
       }
-    } else if (offset < m_data.GetByteSize()) {
-      size =
-          std::min(static_cast<uint64_t>(size), m_data.GetByteSize() - offset);
-      return DataExtractor(m_data.GetDataStart() + offset, size, GetByteOrder(),
-                           GetAddressByteSize());
+    } else if (offset < m_data_nsp->GetByteSize()) {
+      size = std::min(static_cast<uint64_t>(size),
+                      m_data_nsp->GetByteSize() - offset);
+      return DataExtractor(m_data_nsp->GetDataStart() + offset, size,
+                           GetByteOrder(), GetAddressByteSize());
     }
   }
   data.SetByteOrder(GetByteOrder());
