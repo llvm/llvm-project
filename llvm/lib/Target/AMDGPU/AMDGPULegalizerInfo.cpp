@@ -2328,7 +2328,6 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
   // implicit kernargs.
   if (AMDGPU::getAMDHSACodeObjectVersion(*MF.getFunction().getParent()) >=
       AMDGPU::AMDHSA_COV5) {
-    // TODO: can we be smarter about machine pointer info?
     MachinePointerInfo PtrInfo = getKernargSegmentPtrInfo(B.getMF());
 
     AMDGPUTargetLowering::ImplicitParameter Param =
