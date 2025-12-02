@@ -2558,9 +2558,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       }
 
       firOpBuilder.setInsertionPointAfter(mapInfo);
-      auto clonedOp = firOpBuilder.clone(*mapInfo.getOperation());
-      auto clonedMapInfo = mlir::dyn_cast<mlir::omp::MapInfoOp>(clonedOp);
-      assert(clonedMapInfo && "expected cloned map info op");
+      mlir::Operation *clonedOp = firOpBuilder.clone(*mapInfo.getOperation());
+      auto clonedMapInfo = mlir::cast<mlir::omp::MapInfoOp>(clonedOp);
       clauseOps.isDevicePtrVars[idx] = clonedMapInfo.getResult();
     }
     firOpBuilder.restoreInsertionPoint(insertionPt);
