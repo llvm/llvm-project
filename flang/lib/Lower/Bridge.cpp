@@ -307,7 +307,11 @@ private:
     if (!insertPointIfCreated.isSet())
       return; // fir.type_info was already built in a previous call.
 
-    // Set init, destroy, and nofinal attributes.
+    // Set abstract, init, destroy, and nofinal attributes.
+    const Fortran::semantics::Symbol &dtSymbol = info.typeSpec.typeSymbol();
+    if (dtSymbol.attrs().test(Fortran::semantics::Attr::ABSTRACT))
+      dt->setAttr(dt.getAbstractAttrName(), builder.getUnitAttr());
+
     if (!info.typeSpec.HasDefaultInitialization(/*ignoreAllocatable=*/false,
                                                 /*ignorePointer=*/false))
       dt->setAttr(dt.getNoInitAttrName(), builder.getUnitAttr());
@@ -331,10 +335,14 @@ private:
         if (details.numPrivatesNotOverridden() > 0)
           tbpName += "."s + std::to_string(details.numPrivatesNotOverridden());
         std::string bindingName = converter.mangleName(details.symbol());
-        fir::DTEntryOp::create(
+        auto dtEntry = fir::DTEntryOp::create(
             builder, info.loc,
             mlir::StringAttr::get(builder.getContext(), tbpName),
             mlir::SymbolRefAttr::get(builder.getContext(), bindingName));
+        // Propagate DEFERRED attribute on the binding to fir.dt_entry.
+        if (binding.get().attrs().test(Fortran::semantics::Attr::DEFERRED))
+          dtEntry->setAttr(fir::DTEntryOp::getDeferredAttrNameStr(),
+                           builder.getUnitAttr());
       }
       fir::FirEndOp::create(builder, info.loc);
     }
