@@ -463,6 +463,40 @@ TEST_F(PPCallbacksTest, FileNotFoundSkipped) {
   ASSERT_EQ(0u, DiagConsumer->getNumErrors());
 }
 
+TEST_F(PPCallbacksTest, EmbedFileNotFoundChained) {
+  const char *SourceText = "#embed \"notfound.h\"\n";
+
+  std::unique_ptr<llvm::MemoryBuffer> SourceBuf =
+      llvm::MemoryBuffer::getMemBuffer(SourceText);
+  SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
+
+  HeaderSearchOptions HSOpts;
+  TrivialModuleLoader ModLoader;
+  PreprocessorOptions PPOpts;
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+
+  DiagnosticConsumer *DiagConsumer = new DiagnosticConsumer;
+  DiagnosticsEngine EmbedFileNotFoundDiags(DiagID, DiagOpts, DiagConsumer);
+  Preprocessor PP(PPOpts, EmbedFileNotFoundDiags, LangOpts, SourceMgr,
+                  HeaderInfo, ModLoader, /*IILookup=*/nullptr,
+                  /*OwnsHeaderSearch=*/false);
+  PP.Initialize(*Target);
+
+  class EmbedFileNotFoundCallbacks : public PPCallbacks {
+  public:
+    bool EmbedFileNotFound(StringRef FileName) override { return true; }
+  };
+
+  PP.addPPCallbacks(std::make_unique<EmbedFileNotFoundCallbacks>());
+  PP.addPPCallbacks(std::make_unique<EmbedFileNotFoundCallbacks>());
+
+  // Lex source text.
+  PP.EnterMainSourceFile();
+  PP.LexTokensUntilEOF();
+
+  ASSERT_EQ(0u, DiagConsumer->getNumErrors());
+}
+
 TEST_F(PPCallbacksTest, OpenCLExtensionPragmaEnabled) {
   const char* Source =
     "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n";
