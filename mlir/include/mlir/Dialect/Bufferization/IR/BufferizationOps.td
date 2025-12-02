@@ -569,18 +569,29 @@ def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
 
     bool bufferizesToMemoryWrite(OpOperand &opOperand,
                                  const AnalysisState &state) {
-      return !getReadOnly();
+      // The returned memref may be written through later memref ops, but
+      // ToBufferOp itself does not perform a write. The write semantics are
+      // modeled on the users of the memref result, not on this op.
+      return false;
+    }
+
+    bool resultBufferizesToMemoryWrite(OpResult opResult,
+                                       const AnalysisState &state) {
+      // The ToBufferOp result is a memref view of an existing tensor buffer.
+      // The op itself does not perform a memory write; any writes are modeled
+      // on the users of the memref. Override the default implementation to
+      // avoid treating the result as an implicit write in tensor-only analysis.
+      return false;
     }
 
     AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state) const {
-      // The output memref aliases with the input tensor.
-      //
-      // Note: getResult() is a non-const helper. Use const_cast here to avoid
-      // duplicating accessors while still satisfying the const interface
-      // contract of BufferizableOpInterface.
-      return {{const_cast<ToBufferOp *>(this)->getResult(),
-               BufferRelation::Equivalent}};
+      // ToBufferOp does not produce a tensor result, so from the perspective
+      // of tensor-based BufferizableOpInterface analysis there is no tensor
+      // value that aliases with its tensor operand. The aliasing relationship
+      // between the tensor operand and the memref result is modeled separately
+      // in OneShotAnalysis via explicit alias set unions.
+      return {};
     }
 
     LogicalResult bufferize(RewriterBase &rewriter,

@@ -434,6 +434,12 @@ static void setInsertionPointAfter(OpBuilder &b, Value value) {
 /// Determine which OpOperand* will alias with `value` if the op is bufferized
 /// in place. Return all tensor OpOperand* if the op is not bufferizable.
 AliasingOpOperandList AnalysisState::getAliasingOpOperands(Value value) const {
+  // This helper is intended for tensor values. Non-tensor alias relationships
+  // (e.g., between ToBufferOp results and their tensor operands) are modeled
+  // separately in OneShotAnalysis via explicit alias set unions.
+  if (!llvm::isa<TensorType>(value.getType()))
+    return {};
+
   if (Operation *op = getOwnerOfValue(value))
     if (auto bufferizableOp = getOptions().dynCastBufferizableOp(op))
       return bufferizableOp.getAliasingOpOperands(value, *this);
