@@ -3445,6 +3445,10 @@ static bool interp__builtin_ia32_cvtsd2ss_round_mask(InterpState &S,
   // If mask bit 0 is set, convert element 0 from double to float; otherwise use
   // Src.
   if (MaskInt.getZExtValue() & 0x1) {
+
+    assert(S.getASTContext().FloatTy == DstVTy->getElementType() &&
+           "cvtsd2ss requires float element type in destination vector");
+
     Floating Conv = S.allocFloat(
         S.getASTContext().getFloatTypeSemantics(DstVTy->getElementType()));
     APFloat SrcVal = B.elem<Floating>(0).getAPFloat();
@@ -3506,6 +3510,9 @@ static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
     else
       Dst.elem<Floating>(I) = Floating(APFloat(0.0f));
 
+  assert(S.getASTContext().FloatTy == RetVTy->getElementType() &&
+          "cvtpd2ps requires float element type in return vector");
+          
   // Convert double to float for enabled elements (only process source elements
   // that exist).
   for (unsigned I = 0; I != SrcElems; ++I) {
@@ -3513,6 +3520,7 @@ static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
       continue;
 
     APFloat SrcVal = Src.elem<Floating>(I).getAPFloat();
+
     Floating Conv = S.allocFloat(
         S.getASTContext().getFloatTypeSemantics(RetVTy->getElementType()));
     if (!convertDoubleToFloatStrict(SrcVal, Conv, S, Call))
