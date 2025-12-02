@@ -1032,7 +1032,9 @@ def AArch64uqadd:   SDNode<"AArch64ISD::UQADD",   SDTFPBinOp>;
 def AArch64uqrshl:  SDNode<"AArch64ISD::UQRSHL",  SDTFPBinOp>;
 def AArch64uqshl:   SDNode<"AArch64ISD::UQSHL",   SDTFPBinOp>;
 def AArch64uqsub:   SDNode<"AArch64ISD::UQSUB",   SDTFPBinOp>;
-def AArch64sqdmull: SDNode<"AArch64ISD::SQDMULL", SDTFPMulOp>;
+def AArch64sqdmull: SDNode<"AArch64ISD::SQDMULL", 
+                           SDTypeProfile<1, 2, [ SDTCisSameAs<1, 2>, 
+                           SDTCisFP<0>, SDTCisFP<1>]>>;
 
 //def Aarch64softf32tobf16v8: SDNode<"AArch64ISD::", SDTFPRoundOp>;
 
