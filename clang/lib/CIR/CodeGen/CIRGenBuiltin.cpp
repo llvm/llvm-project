@@ -1885,6 +1885,7 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::ppc64le:
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
+    return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
   case llvm::Triple::systemz:
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:

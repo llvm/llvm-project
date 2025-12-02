@@ -1802,6 +1802,9 @@ public:
 
   LValue emitMemberExpr(const MemberExpr *e);
 
+  /// Emit a call to an AMDGPU builtin function.
+  mlir::Value emitAMDGPUBuiltinExpr(unsigned builtinID, const CallExpr *expr);
+
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
 
   LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
