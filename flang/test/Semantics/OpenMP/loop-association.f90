@@ -103,7 +103,7 @@
   !$omp parallel do private(c)
   do i = 1, N
      do j = 1, N
-        !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
+        !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
         !$omp parallel do shared(b)
         a = 3.14
      enddo
@@ -123,7 +123,7 @@
   !ERROR: Misplaced OpenMP end-directive
   !$omp end parallel do
 
-  !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp parallel do private(c)
 5 FORMAT (1PE12.4, I10)
   do i=1, N
@@ -140,7 +140,7 @@
   !ERROR: Misplaced OpenMP end-directive
   !$omp end parallel do simd
 
-  !ERROR: OpenMP loop construct should contain a DO-loop or a loop-nest-generating OpenMP construct
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating OpenMP construct
   !$omp simd
     a = i + 1
   !ERROR: Misplaced OpenMP end-directive

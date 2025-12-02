@@ -323,11 +323,10 @@ private:
 
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckLooprangeBounds(const parser::OpenMPLoopConstruct &x);
-  void CheckNestedFuse(const parser::OpenMPLoopConstruct &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
   void CheckNestedBlock(const parser::OpenMPLoopConstruct &x,
-      const parser::Block &body, size_t &nestedCount);
+      const parser::Block &body);
   void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
   void CheckFullUnroll(const parser::OpenMPLoopConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
