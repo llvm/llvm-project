@@ -1217,3 +1217,107 @@ TEST_F(DWARFExpressionMockProcessTestWithAArch, DW_op_deref_no_ptr_fixing) {
   llvm::Expected<Value> result_deref = evaluate_expr(expr_deref);
   EXPECT_THAT_EXPECTED(result_deref, ExpectLoadAddress(expected_value));
 }
+
+TEST_F(DWARFExpressionMockProcessTest, deref_register) {
+  TestContext test_ctx;
+  constexpr uint32_t reg_r0 = 0x504;
+  MockMemory::Map memory = {
+      {{0x004, 4}, {0x1, 0x2, 0x3, 0x4}},
+      {{0x504, 4}, {0xa, 0xb, 0xc, 0xd}},
+      {{0x505, 4}, {0x5, 0x6, 0x7, 0x8}},
+  };
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux",
+                                RegisterValue(reg_r0), memory, memory));
+
+  ExecutionContext exe_ctx(test_ctx.process_sp);
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+  auto Eval = [&](llvm::ArrayRef<uint8_t> expr_data) {
+    ExecutionContext exe_ctx(test_ctx.process_sp);
+    return Evaluate(expr_data, {}, &delegate, &exe_ctx,
+                    test_ctx.reg_ctx_sp.get());
+  };
+
+  // Reads from the register r0.
+  // Sets the context to RegisterInfo so we know this is a register location.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0}),
+                       ExpectScalar(reg_r0, Value::ContextType::RegisterInfo));
+
+  // Reads from the location(register r0).
+  // Clears the context so we know this is a value not a location.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0, DW_OP_deref}),
+                       ExpectLoadAddress(reg_r0, Value::ContextType::Invalid));
+
+  // Reads from the location(register r0) and adds the value to the host buffer.
+  // The evaluator should implicitly convert it to a memory location when
+  // added to a composite value and should add the contents of memory[r0]
+  // to the host buffer.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0, DW_OP_deref, DW_OP_piece, 4}),
+                       ExpectHostAddress({0xa, 0xb, 0xc, 0xd}));
+
+  // Reads from the location(register r0) and truncates the value to one byte.
+  // Clears the context so we know this is a value not a location.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_reg0, DW_OP_deref_size, 1}),
+      ExpectLoadAddress(reg_r0 & 0xff, Value::ContextType::Invalid));
+
+  // Reads from the location(register r0) and truncates to one byte then adds
+  // the value to the host buffer. The evaluator should implicitly convert it to
+  // a memory location when added to a composite value and should add the
+  // contents of memory[r0 & 0xff] to the host buffer.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_reg0, DW_OP_deref_size, 1, DW_OP_piece, 4}),
+                       ExpectHostAddress({0x1, 0x2, 0x3, 0x4}));
+
+  // Reads from the register r0 + 1.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_breg0, 1}),
+      ExpectLoadAddress(reg_r0 + 1, Value::ContextType::Invalid));
+
+  // Reads from address r0 + 1, which contains the bytes [5,6,7,8].
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_breg0, 1, DW_OP_deref}),
+      ExpectLoadAddress(0x08070605, Value::ContextType::Invalid));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, deref_implicit_value) {
+  TestContext test_ctx;
+  MockMemory::Map memory = {
+      {{0x4, 1}, {0x1}},
+      {{0x4, 4}, {0x1, 0x2, 0x3, 0x4}},
+  };
+  ASSERT_TRUE(CreateTestContext(&test_ctx, "i386-pc-linux", {}, memory));
+
+  ExecutionContext exe_ctx(test_ctx.process_sp);
+  MockDwarfDelegate delegate = MockDwarfDelegate::Dwarf5();
+  auto Eval = [&](llvm::ArrayRef<uint8_t> expr_data) {
+    ExecutionContext exe_ctx(test_ctx.process_sp);
+    return Evaluate(expr_data, {}, &delegate, &exe_ctx,
+                    test_ctx.reg_ctx_sp.get());
+  };
+
+  // Creates an implicit location with a value of 4.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4, DW_OP_stack_value}),
+                       ExpectScalar(0x4));
+
+  // Creates an implicit location with a value of 4. The deref reads the value
+  // out of the location and implicitly converts it to a load address.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4, DW_OP_stack_value, DW_OP_deref}),
+                       ExpectLoadAddress(0x4));
+
+  // Creates an implicit location with a value of 0x504 (uleb128(0x504) =
+  // 0xa84). The deref reads the low byte out of the location and implicitly
+  // converts it to a load address.
+  EXPECT_THAT_EXPECTED(
+      Eval({DW_OP_constu, 0x84, 0xa, DW_OP_stack_value, DW_OP_deref_size, 1}),
+      ExpectLoadAddress(0x4));
+
+  // The tests below are similar to the ones above, but there is no implicit
+  // location created by a stack_value operation. They are provided here as a
+  // reference to contrast with the above tests.
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4}), ExpectLoadAddress(0x4));
+
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4, DW_OP_deref}),
+                       ExpectLoadAddress(0x04030201));
+
+  EXPECT_THAT_EXPECTED(Eval({DW_OP_lit4, DW_OP_deref_size, 1}),
+                       ExpectLoadAddress(0x01));
+}
