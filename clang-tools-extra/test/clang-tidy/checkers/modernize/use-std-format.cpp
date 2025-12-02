@@ -1,11 +1,11 @@
-// RUN: %check_clang_tidy --match-partial-fixes \
-// RUN:   -std=c++20 %s modernize-use-std-format %t -- \
+// RUN: %check_clang_tidy \
+// RUN:   -std=c++20-or-later %s modernize-use-std-format %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-std-format.StrictMode: true}}" \
 // RUN:   -- -isystem %clang_tidy_headers \
 // RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
 // RUN:      -D__PRI_CMDLINE_MACRO="\"s\""
-// RUN: %check_clang_tidy --match-partial-fixes \
-// RUN:   -std=c++20 %s modernize-use-std-format %t -- \
+// RUN: %check_clang_tidy \
+// RUN:   -std=c++20-or-later %s modernize-use-std-format %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-std-format.StrictMode: false}}" \
 // RUN:   -- -isystem %clang_tidy_headers \
 // RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
@@ -70,32 +70,32 @@ std::string StrFormat_strict_conversion() {
 std::string StrFormat_field_width_and_precision() {
   auto s1 = absl::StrFormat("width only:%*d width and precision:%*.*f precision only:%.*f", 3, 42, 4, 2, 3.14159265358979323846, 5, 2.718);
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
-  // CHECK-FIXES: std::format("width only:{:{}} width and precision:{:{}.{}f} precision only:{:.{}f}", 42, 3, 3.14159265358979323846, 4, 2, 2.718, 5);
+  // CHECK-FIXES: auto s1 = std::format("width only:{:{}} width and precision:{:{}.{}f} precision only:{:.{}f}", 42, 3, 3.14159265358979323846, 4, 2, 2.718, 5);
 
   auto s2 = absl::StrFormat("width and precision positional:%1$*2$.*3$f after", 3.14159265358979323846, 4, 2);
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
-  // CHECK-FIXES: std::format("width and precision positional:{0:{1}.{2}f} after", 3.14159265358979323846, 4, 2);
+  // CHECK-FIXES: auto s2 = std::format("width and precision positional:{0:{1}.{2}f} after", 3.14159265358979323846, 4, 2);
 
   const int width = 10, precision = 3;
   const unsigned int ui1 = 42, ui2 = 43, ui3 = 44;
   auto s3 = absl::StrFormat("casts width only:%*d width and precision:%*.*d precision only:%.*d\n", 3, ui1, 4, 2, ui2, 5, ui3);
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
-  // CHECK-FIXES-NOTSTRICT: std::format("casts width only:{:{}} width and precision:{:{}.{}} precision only:{:.{}}", ui1, 3, ui2, 4, 2, ui3, 5);
-  // CHECK-FIXES-STRICT: std::format("casts width only:{:{}} width and precision:{:{}.{}} precision only:{:.{}}", static_cast<int>(ui1), 3, static_cast<int>(ui2), 4, 2, static_cast<int>(ui3), 5);
+  // CHECK-FIXES-NOTSTRICT: auto s3 = std::format("casts width only:{:{}} width and precision:{:{}.{}} precision only:{:.{}}", ui1, 3, ui2, 4, 2, ui3, 5);
+  // CHECK-FIXES-STRICT: auto s3 = std::format("casts width only:{:{}} width and precision:{:{}.{}} precision only:{:.{}}", static_cast<int>(ui1), 3, static_cast<int>(ui2), 4, 2, static_cast<int>(ui3), 5);
 
   auto s4 = absl::StrFormat("c_str removal width only:%*s width and precision:%*.*s precision only:%.*s", 3, s1.c_str(), 4, 2, s2.c_str(), 5, s3.c_str());
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
-  // CHECK-FIXES: std::format("c_str removal width only:{:>{}} width and precision:{:>{}.{}} precision only:{:.{}}", s1, 3, s2, 4, 2, s3, 5);
+  // CHECK-FIXES: auto s4 = std::format("c_str removal width only:{:>{}} width and precision:{:>{}.{}} precision only:{:.{}}", s1, 3, s2, 4, 2, s3, 5);
 
   const std::string *ps1 = &s1, *ps2 = &s2, *ps3 = &s3;
   auto s5 = absl::StrFormat("c_str() removal pointer width only:%-*s width and precision:%-*.*s precision only:%-.*s", 3, ps1->c_str(), 4, 2, ps2->c_str(), 5, ps3->c_str());
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
-  // CHECK-FIXES: std::format("c_str() removal pointer width only:{:{}} width and precision:{:{}.{}} precision only:{:.{}}", *ps1, 3, *ps2, 4, 2, *ps3, 5);
+  // CHECK-FIXES: auto s5 = std::format("c_str() removal pointer width only:{:{}} width and precision:{:{}.{}} precision only:{:.{}}", *ps1, 3, *ps2, 4, 2, *ps3, 5);
 
   iterator<std::string> is1, is2, is3;
   auto s6 = absl::StrFormat("c_str() removal iterator width only:%-*s width and precision:%-*.*s precision only:%-.*s", 3, is1->c_str(), 4, 2, is2->c_str(), 5, is3->c_str());
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
-  // CHECK-FIXES: std::format("c_str() removal iterator width only:{:{}} width and precision:{:{}.{}} precision only:{:.{}}", *is1, 3, *is2, 4, 2, *is3, 5);
+  // CHECK-FIXES: auto s6 = std::format("c_str() removal iterator width only:{:{}} width and precision:{:{}.{}} precision only:{:.{}}", *is1, 3, *is2, 4, 2, *is3, 5);
 
   return s1 + s2 + s3 + s4 + s5 + s6;
 }
@@ -105,7 +105,7 @@ void StrFormat_macros() {
 #define FORMAT absl::StrFormat
   auto s1 = FORMAT("Hello %d", 42);
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
-  // CHECK-FIXES: std::format("Hello {}", 42);
+  // CHECK-FIXES: auto s1 = std::format("Hello {}", 42);
 
   // Arguments that are macros aren't replaced with their value, even if they are rearranged.
 #define VALUE 3.14159265358979323846
@@ -113,7 +113,7 @@ void StrFormat_macros() {
 #define PRECISION 4
   auto s3 = absl::StrFormat("Hello %*.*f", WIDTH, PRECISION, VALUE);
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
-  // CHECK-FIXES: std::format("Hello {:{}.{}f}", VALUE, WIDTH, PRECISION);
+  // CHECK-FIXES: auto s3 = std::format("Hello {:{}.{}f}", VALUE, WIDTH, PRECISION);
 
   const uint64_t u64 = 42;
   const uint32_t u32 = 32;
@@ -121,11 +121,11 @@ void StrFormat_macros() {
 
   auto s4 = absl::StrFormat("Replaceable macro at end %" PRIu64, u64);
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
-  // CHECK-FIXES: std::format("Replaceable macro at end {}", u64);
+  // CHECK-FIXES: auto s4 = std::format("Replaceable macro at end {}", u64);
 
   auto s5 = absl::StrFormat("Replaceable macros in middle %" PRIu64 " %" PRIu32 "\n", u64, u32);
   // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
-  // CHECK-FIXES: std::format("Replaceable macros in middle {} {}\n", u64, u32);
+  // CHECK-FIXES: auto s5 = std::format("Replaceable macros in middle {} {}\n", u64, u32);
 
 // These need PRI and __PRI prefixes so that the check get as far as looking for
 // where the macro comes from.

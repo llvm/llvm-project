@@ -131,7 +131,7 @@ public:
                      << " on StorageLocation " << this << " of type "
                      << getType() << "\n";
         llvm::dbgs() << "Existing children:\n";
-        for ([[maybe_unused]] auto [Field, Loc] : Children) {
+        for (const auto &Field : Children.keys()) {
           llvm::dbgs() << Field->getNameAsString() << "\n";
         }
       }
@@ -144,6 +144,17 @@ public:
   /// The synthetic field must exist.
   StorageLocation &getSyntheticField(llvm::StringRef Name) const {
     StorageLocation *Loc = SyntheticFields.lookup(Name);
+    LLVM_DEBUG({
+      if (Loc == nullptr) {
+        llvm::dbgs() << "Couldn't find synthetic field " << Name
+                     << " on StorageLocation " << this << " of type "
+                     << getType() << "\n";
+        llvm::dbgs() << "Existing synthetic fields:\n";
+        for ([[maybe_unused]] const auto &[Name, Loc] : SyntheticFields) {
+          llvm::dbgs() << Name << "\n";
+        }
+      }
+    });
     assert(Loc != nullptr);
     return *Loc;
   }

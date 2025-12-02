@@ -1,4 +1,4 @@
-//===-------- IncludeInserter.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -69,7 +69,7 @@ IncludeSorter &IncludeInserter::getOrCreate(FileID FileID) {
 
 std::optional<FixItHint>
 IncludeInserter::createIncludeInsertion(FileID FileID, llvm::StringRef Header) {
-  bool IsAngled = Header.consume_front("<");
+  const bool IsAngled = Header.consume_front("<");
   if (IsAngled != Header.consume_back(">"))
     return std::nullopt;
   // We assume the same Header will never be included both angled and not
@@ -94,7 +94,7 @@ void IncludeInserter::addInclude(StringRef FileName, bool IsAngled,
                                  SourceLocation EndLocation) {
   assert(SourceMgr && "SourceMgr shouldn't be null; did you remember to call "
                       "registerPreprocessor()?");
-  FileID FileID = SourceMgr->getFileID(HashLocation);
+  const FileID FileID = SourceMgr->getFileID(HashLocation);
   getOrCreate(FileID).addInclude(FileName, IsAngled, HashLocation, EndLocation);
 }
 

@@ -30,7 +30,7 @@ def main(builtin_params={}):
     lit_config = lit.LitConfig.LitConfig(
         progname=os.path.basename(sys.argv[0]),
         path=opts.path,
-        quiet=opts.quiet,
+        diagnostic_level=opts.diagnostic_level,
         useValgrind=opts.useValgrind,
         valgrindLeakCheck=opts.valgrindLeakCheck,
         valgrindArgs=opts.valgrindArgs,
@@ -332,7 +332,7 @@ def print_results(tests, elapsed, opts):
             opts.printPathRelativeCWD,
         )
 
-    print_summary(total_tests, tests_by_code, opts.quiet, elapsed)
+    print_summary(total_tests, tests_by_code, opts.terse_summary, elapsed)
 
 
 def print_group(tests, code, shown_codes, printPathRelativeCWD):

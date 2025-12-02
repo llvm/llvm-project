@@ -14,13 +14,13 @@
 )
 */
 
-// CHECK-LABEL: wasmssa.func @shr_u_i32() -> i32 {
+// CHECK-LABEL: wasmssa.func exported @shr_u_i32() -> i32 {
 // CHECK:    %0 = wasmssa.const 10 : i32
 // CHECK:    %1 = wasmssa.const 3 : i32
 // CHECK:    %2 = wasmssa.shr_u %0 by %1 bits : i32
 // CHECK:    wasmssa.return %2 : i32
 
-// CHECK-LABEL: wasmssa.func @shr_u_i64() -> i64 {
+// CHECK-LABEL: wasmssa.func exported @shr_u_i64() -> i64 {
 // CHECK:    %0 = wasmssa.const 10 : i64
 // CHECK:    %1 = wasmssa.const 3 : i64
 // CHECK:    %2 = wasmssa.shr_u %0 by %1 bits : i64

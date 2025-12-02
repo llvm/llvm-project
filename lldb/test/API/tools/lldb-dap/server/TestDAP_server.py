@@ -37,7 +37,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
 
     def run_debug_session(self, connection, name, sleep_seconds_in_middle=None):
         self.dap_server = dap_server.DebugAdapterServer(
-            connection=connection,
+            connection=connection, spawn_helper=self.spawnSubprocess
         )
         program = self.getBuildArtifact("a.out")
         source = "main.c"
@@ -94,6 +94,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         (process, connection) = self.start_server(connection="listen://localhost:0")
         self.dap_server = dap_server.DebugAdapterServer(
             connection=connection,
+            spawn_helper=self.spawnSubprocess,
         )
         program = self.getBuildArtifact("a.out")
         source = "main.c"
@@ -127,7 +128,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         self.start_server(
             connection="listen://localhost:0",
             connection_timeout=1,
-            wait_seconds_for_termination=2,
+            wait_seconds_for_termination=5,
         )
 
     @skipIfWindows
@@ -139,7 +140,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         (_, connection) = self.start_server(
             connection="listen://localhost:0",
             connection_timeout=1,
-            wait_seconds_for_termination=2,
+            wait_seconds_for_termination=5,
         )
         # The connection timeout should not cut off the debug session
         self.run_debug_session(connection, "Alice", 1.5)
@@ -153,7 +154,7 @@ class TestDAP_server(lldbdap_testcase.DAPTestCaseBase):
         (_, connection) = self.start_server(
             connection="listen://localhost:0",
             connection_timeout=1,
-            wait_seconds_for_termination=2,
+            wait_seconds_for_termination=5,
         )
         time.sleep(0.5)
         # Should be able to connect to the server.

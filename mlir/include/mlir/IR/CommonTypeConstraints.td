@@ -623,6 +623,14 @@ class VectorOfLengthAndType<list<int> allowedLengths,
    VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
+class FixedVectorOfShapeAndType<list<int> shape, Type elType>: ShapedContainerType<
+  [elType],
+  And<[IsVectorOfShape<shape>, IsFixedVectorOfAnyRankTypePred]>,
+  "vector<" # !interleave(shape, "x") # "x" # elType # ">",
+  "::mlir::VectorType">,
+  BuildableType<"::mlir::VectorType::get({" # !interleave(shape, " ,") # "} , " # elType.builderCall # " );">;
+
+
 // Any fixed-length vector where the number of elements is from the given
 // `allowedLengths` list and the type is from the given `allowedTypes` list
 class FixedVectorOfLengthAndType<list<int> allowedLengths,

@@ -27,9 +27,9 @@ the tensor is sharded - not specified manually.
 
 ### Device Groups
 
-Each collective operation runs within a group of devices. You define groups
-using the `grid` and `grid_axes` attributes, which describe how to slice the
-full device grid into smaller groups.
+Collective operations run within groups of devices, which are defined
+using the `grid` and `grid_axes` attributes. These describe
+how the full device grid is sliced into smaller groups.
 
 Devices that have the same coordinates *outside* the listed `grid_axes` belong
 to the same group.

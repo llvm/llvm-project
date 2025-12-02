@@ -14,11 +14,15 @@
 #include "src/stdlib/exit.h"
 
 extern "C" int main(int argc, char **argv, char **envp);
+extern "C" void __cxa_finalize(void *dso);
 
 namespace LIBC_NAMESPACE_DECL {
 
 // FIXME: Factor this out into common logic so we don't need to stub it here.
 void teardown_main_tls() {}
+
+// FIXME: Touch this symbol to force this to be linked in statically.
+volatile void *dummy = &LIBC_NAMESPACE::rpc::client;
 
 DataEnvironment app;
 
@@ -68,9 +72,8 @@ _start(int argc, char **argv, char **envp, int *ret) {
 extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel,
              clang::amdgpu_flat_work_group_size(1, 1),
              clang::amdgpu_max_num_work_groups(1)]] void
-_end(int retval) {
-  // Only a single thread should call `exit` here, the rest should gracefully
-  // return from the kernel. This is so only one thread calls the destructors
-  // registred with 'atexit' above.
-  LIBC_NAMESPACE::exit(retval);
+_end() {
+  // Only a single thread should call the destructors registred with 'atexit'.
+  // The loader utility will handle the actual exit and return code cleanly.
+  __cxa_finalize(nullptr);
 }

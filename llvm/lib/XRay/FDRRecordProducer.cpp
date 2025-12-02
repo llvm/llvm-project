@@ -10,8 +10,8 @@
 
 #include <cstdint>
 
-namespace llvm {
-namespace xray {
+using namespace llvm;
+using namespace llvm::xray;
 
 namespace {
 
@@ -31,8 +31,9 @@ enum MetadataRecordKinds : uint8_t {
   // This is an end marker, used to identify the upper bound for this enum.
   EnumEndMarker,
 };
+} // namespace
 
-Expected<std::unique_ptr<Record>>
+static Expected<std::unique_ptr<Record>>
 metadataRecordType(const XRayFileHeader &Header, uint8_t T) {
 
   if (T >= static_cast<uint8_t>(MetadataRecordKinds::EnumEndMarker))
@@ -72,11 +73,9 @@ metadataRecordType(const XRayFileHeader &Header, uint8_t T) {
   llvm_unreachable("Unhandled MetadataRecordKinds enum value");
 }
 
-constexpr bool isMetadataIntroducer(uint8_t FirstByte) {
+static constexpr bool isMetadataIntroducer(uint8_t FirstByte) {
   return FirstByte & 0x01u;
 }
-
-} // namespace
 
 Expected<std::unique_ptr<Record>>
 FileBasedRecordProducer::findNextBufferExtent() {
@@ -193,6 +192,3 @@ Expected<std::unique_ptr<Record>> FileBasedRecordProducer::produce() {
   assert(R != nullptr);
   return std::move(R);
 }
-
-} // namespace xray
-} // namespace llvm

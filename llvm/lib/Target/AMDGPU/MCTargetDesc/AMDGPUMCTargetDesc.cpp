@@ -82,16 +82,35 @@ createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   MCSubtargetInfo *STI =
       createAMDGPUMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 
+  bool IsWave64 = STI->hasFeature(AMDGPU::FeatureWavefrontSize64);
+  bool IsWave32 = STI->hasFeature(AMDGPU::FeatureWavefrontSize32);
+
   // FIXME: We should error for the default target.
-  if (!STI->hasFeature(AMDGPU::FeatureWavefrontSize64) &&
-      !STI->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
+  if (STI->getFeatureBits().none())
+    STI->ToggleFeature(AMDGPU::FeatureSouthernIslands);
+
+  if (!IsWave64 && !IsWave32) {
     // If there is no default wave size it must be a generation before gfx10,
     // these have FeatureWavefrontSize64 in their definition already. For gfx10+
     // set wave32 as a default.
     STI->ToggleFeature(AMDGPU::isGFX10Plus(*STI)
                            ? AMDGPU::FeatureWavefrontSize32
                            : AMDGPU::FeatureWavefrontSize64);
+  } else if (IsWave64 && IsWave32) {
+    // The wave size is mutually exclusive. If both somehow end up set, wave32
+    // wins if supported.
+    STI->ToggleFeature(AMDGPU::supportsWave32(*STI)
+                           ? AMDGPU::FeatureWavefrontSize64
+                           : AMDGPU::FeatureWavefrontSize32);
+
+    // If both wavesizes were manually requested, hack in a feature to permit
+    // assembling modules with mixed wavesizes.
+    STI->ToggleFeature(AMDGPU::FeatureAssemblerPermissiveWavesize);
   }
+
+  assert((STI->hasFeature(AMDGPU::FeatureWavefrontSize64) !=
+          STI->hasFeature(AMDGPU::FeatureWavefrontSize32)) &&
+         "wavesize features are mutually exclusive");
 
   return STI;
 }
@@ -149,7 +168,7 @@ bool AMDGPUMCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
 
 void AMDGPUMCInstrAnalysis::updateState(const MCInst &Inst, uint64_t Addr) {
   if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_MSB_gfx12)
-    VgprMSBs = Inst.getOperand(0).getImm();
+    VgprMSBs = Inst.getOperand(0).getImm() & 0xff;
   else if (isTerminator(Inst))
     VgprMSBs = 0;
 }

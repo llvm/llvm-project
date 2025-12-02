@@ -2,8 +2,7 @@
 
 // The tests here are similar to those in aarch64-toolchain.c, however
 // these tests need to create symlinks to test directory trees in order to
-// set up the environment and therefore shell support is required.
-// REQUIRES: shell
+// set up the environment and therefore POSIX is required.
 // UNSUPPORTED: system-windows
 
 // If there is no GCC install detected then the driver searches for executables

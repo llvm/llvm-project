@@ -138,6 +138,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(argumentCountAtLeast);
   REGISTER_MATCHER(arraySubscriptExpr);
   REGISTER_MATCHER(arrayType);
+  REGISTER_MATCHER(arrayTypeLoc);
   REGISTER_MATCHER(asString);
   REGISTER_MATCHER(asmStmt);
   REGISTER_MATCHER(atomicExpr);
@@ -222,7 +223,6 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(declRefExpr);
   REGISTER_MATCHER(dependentNameType);
   REGISTER_MATCHER(dependentScopeDeclRefExpr);
-  REGISTER_MATCHER(dependentTemplateSpecializationType);
   REGISTER_MATCHER(declStmt);
   REGISTER_MATCHER(declaratorDecl);
   REGISTER_MATCHER(decltypeType);
@@ -247,6 +247,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(expr);
   REGISTER_MATCHER(exprWithCleanups);
   REGISTER_MATCHER(fieldDecl);
+  REGISTER_MATCHER(fileScopeAsmDecl);
   REGISTER_MATCHER(fixedPointLiteral);
   REGISTER_MATCHER(floatLiteral);
   REGISTER_MATCHER(forCallable);

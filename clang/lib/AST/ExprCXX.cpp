@@ -1725,9 +1725,9 @@ SizeOfPackExpr *SizeOfPackExpr::CreateDeserialized(ASTContext &Context,
   return new (Storage) SizeOfPackExpr(EmptyShell(), NumPartialArgs);
 }
 
-NamedDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
-  return cast<NamedDecl>(
-      getReplacedTemplateParameterList(getAssociatedDecl())->asArray()[Index]);
+NonTypeTemplateParmDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
+  return cast<NonTypeTemplateParmDecl>(
+      std::get<0>(getReplacedTemplateParameter(getAssociatedDecl(), Index)));
 }
 
 PackIndexingExpr *PackIndexingExpr::Create(
@@ -1793,7 +1793,7 @@ SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
 NonTypeTemplateParmDecl *
 SubstNonTypeTemplateParmPackExpr::getParameterPack() const {
   return cast<NonTypeTemplateParmDecl>(
-      getReplacedTemplateParameterList(getAssociatedDecl())->asArray()[Index]);
+      std::get<0>(getReplacedTemplateParameter(getAssociatedDecl(), Index)));
 }
 
 TemplateArgument SubstNonTypeTemplateParmPackExpr::getArgumentPack() const {

@@ -1,4 +1,4 @@
-//===--- UseBoolLiteralsCheck.cpp - clang-tidy-----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -50,14 +50,14 @@ void UseBoolLiteralsCheck::registerMatchers(MatchFinder *Finder) {
 void UseBoolLiteralsCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Literal = Result.Nodes.getNodeAs<IntegerLiteral>("literal");
   const auto *Cast = Result.Nodes.getNodeAs<Expr>("cast");
-  bool LiteralBooleanValue = Literal->getValue().getBoolValue();
+  const bool LiteralBooleanValue = Literal->getValue().getBoolValue();
 
   if (Literal->isInstantiationDependent())
     return;
 
   const Expr *Expression = Cast ? Cast : Literal;
 
-  bool InMacro = Expression->getBeginLoc().isMacroID();
+  const bool InMacro = Expression->getBeginLoc().isMacroID();
 
   if (InMacro && IgnoreMacros)
     return;

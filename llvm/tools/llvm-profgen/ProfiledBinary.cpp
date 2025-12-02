@@ -187,7 +187,7 @@ ProfiledBinary::ProfiledBinary(const StringRef ExeBinPath,
   load();
 }
 
-ProfiledBinary::~ProfiledBinary() {}
+ProfiledBinary::~ProfiledBinary() = default;
 
 void ProfiledBinary::warnNoFuncEntry() {
   uint64_t NoFuncEntryNum = 0;
@@ -250,14 +250,12 @@ void ProfiledBinary::load() {
 
   DisassembleFunctionSet.insert_range(DisassembleFunctions);
 
-  if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(Obj)) {
-    checkPseudoProbe(ELFObj);
-    if (UsePseudoProbes)
-      populateElfSymbolAddressList(ELFObj);
+  checkPseudoProbe(Obj);
+  if (UsePseudoProbes)
+    populateSymbolAddressList(Obj);
 
-    if (ShowDisassemblyOnly)
-      decodePseudoProbe(ELFObj);
-  }
+  if (ShowDisassemblyOnly)
+    decodePseudoProbe(Obj);
 
   // Disassemble the text sections.
   disassemble(Obj);
@@ -342,12 +340,48 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
         PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr &
                                                 ~(PageSize - 1U));
         TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
+      } else {
+        PhdrInfo Info;
+        Info.FileOffset = Phdr.p_offset;
+        Info.FileSz = Phdr.p_filesz;
+        Info.VirtualAddr = Phdr.p_vaddr;
+        NonTextPhdrInfo.push_back(Info);
       }
     }
   }
 
   if (PreferredTextSegmentAddresses.empty())
     exitWithError("no executable segment found", FileName);
+}
+
+uint64_t ProfiledBinary::CanonicalizeNonTextAddress(uint64_t Address) {
+  uint64_t FileOffset = 0;
+  auto MMapIter = NonTextMMapEvents.lower_bound(Address);
+  if (MMapIter == NonTextMMapEvents.end())
+    return Address; // No non-text mmap event found, return the address as is.
+
+  const auto &MMapEvent = MMapIter->second;
+
+  // If the address is within the non-text mmap event, calculate its file
+  // offset in the binary.
+  if (MMapEvent.Address <= Address &&
+      Address < MMapEvent.Address + MMapEvent.Size)
+    FileOffset = Address - MMapEvent.Address + MMapEvent.Offset;
+
+  // If the address is not within the non-text mmap event, return the address
+  // as is.
+  if (FileOffset == 0)
+    return Address;
+
+  for (const auto &PhdrInfo : NonTextPhdrInfo) {
+    // Find the program section that contains the file offset and map the
+    // file offset to the virtual address.
+    if (PhdrInfo.FileOffset <= FileOffset &&
+        FileOffset < PhdrInfo.FileOffset + PhdrInfo.FileSz)
+      return PhdrInfo.VirtualAddr + (FileOffset - PhdrInfo.FileOffset);
+  }
+
+  return Address;
 }
 
 void ProfiledBinary::setPreferredTextSegmentAddresses(const COFFObjectFile *Obj,
@@ -381,7 +415,7 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ObjectFile *Obj) {
     llvm_unreachable("invalid object format");
 }
 
-void ProfiledBinary::checkPseudoProbe(const ELFObjectFileBase *Obj) {
+void ProfiledBinary::checkPseudoProbe(const ObjectFile *Obj) {
   if (UseDwarfCorrelation)
     return;
 
@@ -404,7 +438,7 @@ void ProfiledBinary::checkPseudoProbe(const ELFObjectFileBase *Obj) {
   UsePseudoProbes = HasProbeDescSection && HasPseudoProbeSection;
 }
 
-void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
+void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
   if (!UsePseudoProbes)
     return;
 
@@ -475,7 +509,7 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
 void ProfiledBinary::decodePseudoProbe() {
   OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
   Binary &ExeBinary = *OBinary.getBinary();
-  auto *Obj = cast<ELFObjectFileBase>(&ExeBinary);
+  auto *Obj = cast<ObjectFile>(&ExeBinary);
   decodePseudoProbe(Obj);
 }
 
@@ -773,8 +807,7 @@ void ProfiledBinary::checkUseFSDiscriminator(
   }
 }
 
-void ProfiledBinary::populateElfSymbolAddressList(
-    const ELFObjectFileBase *Obj) {
+void ProfiledBinary::populateSymbolAddressList(const ObjectFile *Obj) {
   // Create a mapping from virtual address to symbol GUID and the other way
   // around.
   StringRef FileName = Obj->getFileName();
@@ -919,11 +952,10 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
                                                    bool UseProbeDiscriminator) {
   assert(this == IP.Binary &&
          "Binary should only symbolize its own instruction");
-  auto Addr = object::SectionedAddress{IP.Address,
-                                       object::SectionedAddress::UndefSection};
-  DIInliningInfo InlineStack = unwrapOrError(
-      Symbolizer->symbolizeInlinedCode(SymbolizerPath.str(), Addr),
-      SymbolizerPath);
+  DIInliningInfo InlineStack =
+      unwrapOrError(Symbolizer->symbolizeInlinedCode(
+                        SymbolizerPath.str(), getSectionedAddress(IP.Address)),
+                    SymbolizerPath);
 
   SampleContextFrameVector CallStack;
   for (int32_t I = InlineStack.getNumberOfFrames() - 1; I >= 0; I--) {
@@ -950,6 +982,16 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
   }
 
   return CallStack;
+}
+
+StringRef ProfiledBinary::symbolizeDataAddress(uint64_t Address) {
+  DIGlobal DataDIGlobal =
+      unwrapOrError(Symbolizer->symbolizeData(SymbolizerPath.str(),
+                                              getSectionedAddress(Address)),
+                    SymbolizerPath);
+  decltype(NameStrings)::iterator Iter;
+  std::tie(Iter, std::ignore) = NameStrings.insert(DataDIGlobal.Name);
+  return StringRef(*Iter);
 }
 
 void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t RangeBegin,
