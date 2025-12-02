@@ -71,6 +71,11 @@ private:
                   std::shared_ptr<ExecutionContextScope> ctx,
                   const IntegerLiteralNode *literal);
 
+  llvm::Expected<CompilerType>
+  VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
+                 CompilerType target_type, CastPromoKind &promo_kind,
+                 CastKind &cast_kind, int location);
+
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;
   llvm::StringRef m_expr;
