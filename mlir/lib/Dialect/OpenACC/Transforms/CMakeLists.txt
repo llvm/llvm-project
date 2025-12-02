@@ -2,6 +2,7 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   ACCImplicitData.cpp
   ACCImplicitDeclare.cpp
   ACCImplicitRoutine.cpp
+  ACCLegalizeSerial.cpp
   LegalizeDataValues.cpp
 
   ADDITIONAL_HEADER_DIRS

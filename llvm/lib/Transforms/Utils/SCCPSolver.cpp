@@ -2098,6 +2098,38 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
       return (void)mergeInValue(ValueState[II], II,
                                 ValueLatticeElement::getRange(Result));
     }
+    if (II->getIntrinsicID() == Intrinsic::experimental_get_vector_length) {
+      Value *CountArg = II->getArgOperand(0);
+      Value *VF = II->getArgOperand(1);
+      bool Scalable = cast<ConstantInt>(II->getArgOperand(2))->isOne();
+
+      // Computation happens in the larger type.
+      unsigned BitWidth = std::max(CountArg->getType()->getScalarSizeInBits(),
+                                   VF->getType()->getScalarSizeInBits());
+
+      ConstantRange Count = getValueState(CountArg)
+                                .asConstantRange(CountArg->getType(), false)
+                                .zeroExtend(BitWidth);
+      ConstantRange MaxLanes = getValueState(VF)
+                                   .asConstantRange(VF->getType(), false)
+                                   .zeroExtend(BitWidth);
+      if (Scalable)
+        MaxLanes =
+            MaxLanes.multiply(getVScaleRange(II->getFunction(), BitWidth));
+
+      // The result is always less than both Count and MaxLanes.
+      ConstantRange Result(
+          APInt::getZero(BitWidth),
+          APIntOps::umin(Count.getUpper(), MaxLanes.getUpper()));
+
+      // If Count <= MaxLanes, getvectorlength(Count, MaxLanes) = Count
+      if (Count.icmp(CmpInst::ICMP_ULE, MaxLanes))
+        Result = Count;
+
+      Result = Result.truncate(II->getType()->getScalarSizeInBits());
+      return (void)mergeInValue(ValueState[II], II,
+                                ValueLatticeElement::getRange(Result));
+    }
 
     if (ConstantRange::isIntrinsicSupported(II->getIntrinsicID())) {
       // Compute result range for intrinsics supported by ConstantRange.
