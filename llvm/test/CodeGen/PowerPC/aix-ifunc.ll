@@ -4,6 +4,9 @@
 ; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --function-sections %s -o - | FileCheck %s --check-prefixes=COMMON,FUNCSECT -DALIGN=3 -DPTR_SIZE=8 -DLOAD=ld -DOFF=16
 ; RUN: llc -mtriple=powerpc-ibm-aix-xcoff --function-sections %s -o - | FileCheck %s --check-prefixes=COMMON,FUNCSECT -DALIGN=2 -DPTR_SIZE=4 -DLOAD=lwz -DOFF=8
 
+; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --function-sections --code-model=large %s -o - | FileCheck %s --check-prefixes=LARGE -DALIGN=3 -DPTR_SIZE=8 -DLOAD=ld -DOFF=16
+; RUN: llc -mtriple=powerpc-ibm-aix-xcoff --function-sections --code-model=large %s -o - | FileCheck %s --check-prefixes=LARGE -DALIGN=2 -DPTR_SIZE=4 -DLOAD=lwz -DOFF=8
+
 ;;;; section __ifunc_sec holding the [foo:foo_resolver] pairs
 ; COMMON:              .csect __ifunc_sec[RW],2
 ; COMMON-NEXT:         .align  [[ALIGN]]
@@ -46,10 +49,18 @@
 ; COMMON-NEXT:         mtctr 12
 ; COMMON-NEXT:         bctr
 
+; -mcmodel=large:
+; LARGE:             .csect .foo[PR],5
+; LARGE:             addis 12, [[FOO_TOC:.*]]@u(2)
+; LARGE-NEXT:        [[LOAD]] 12, [[FOO_TOC]]@l(12)
+; LARGE-NEXT:        [[LOAD]] 11, [[OFF]](12)
+; LARGE-NEXT:        [[LOAD]] 12, 0(12)
+
 ;;;; foo's TOC entry
 ; COMMON: [[FOO_TOC]]:
 ; COMMON-NEXT:         .tc foo[TC],foo[DS]
-
+; LARGE: [[FOO_TOC]]:
+; LARGE-NEXT:          .tc foo[TE],foo[DS]
 
 @foo = ifunc i32 (...), ptr @foo.resolver
 

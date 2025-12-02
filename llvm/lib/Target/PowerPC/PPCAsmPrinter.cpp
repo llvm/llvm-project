@@ -3427,7 +3427,8 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
   // Query if the given function is local to the load module.
   auto IsLocalFunc = [](const Function *F) -> IsLocal {
     bool Result = F->isStrongDefinitionForLinker() && F->isDSOLocal();
-    LLVM_DEBUG(dbgs() << F->getName() << " is " << (Result ? "local\n" : "not local\n"));
+    LLVM_DEBUG(dbgs() << F->getName() << " is "
+                      << (Result ? "local\n" : "not local\n"));
     return Result ? IsLocal::True : IsLocal::False;
   };
 
@@ -3518,12 +3519,13 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
  *   .vbyte  4, 0
  *   .csect .foo[PR],5
  *   .ref ifunc_sec.foo[RW]
- *   lwz 12, L..foo_desc(2)                  # load foo's descriptor address
- *   lwz 11, 8(12)                           # load the env pointer if target might be a non-C/C++ function
- *   lwz 12, 0(12)                           # load foo.addr
+ *   lwz 12, L..foo_desc(2) # load foo's descriptor address
+ *   lwz 11, 8(12)          # load the env pointer (for non-C/C++ functions)
+ *   lwz 12, 0(12)          # load foo.addr
  *   mtctr 12
- *   bctr                                    # branch to CR without setting LR so that callee returns to the caller of .foo
- *                                           # -- End function
+ *   bctr                   # branch to CR without setting LR so that callee
+ *                          # returns to the caller of .foo
+ *                          # -- End function
  */
 void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   // Set the Subtarget to that of the resolver.
@@ -3600,23 +3602,41 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   if (TOCRestoreNeededForCallToImplementation(GI)) {
     reportFatalUsageError(
         "unimplemented: TOC register save/restore needed for ifunc \"" +
-        Twine(GI.getName()) + "\", because couldn't prove all candidates are "
-        "static or hidden/protected visibility definitions");
+        Twine(GI.getName()) + "\", because couldn't prove all candidates "
+        "are static or hidden/protected visibility definitions");
     return;
   }
 
-  //  lwz 12, L..foo_desc(2)
   auto FnDescTOCEntryType = getTOCEntryTypeForLinkage(GI.getLinkage());
   auto *FnDescTOCEntrySym =
       lookUpOrCreateTOCEntry(CurrentFnDescSym, FnDescTOCEntryType);
-  auto *Exp = MCSymbolRefExpr::create(FnDescTOCEntrySym, OutContext);
-  // Exp = getTOCEntryLoadingExprForXCOFF(MOSymbol, Exp, VK);// TODO: need this?
-  // need this uncommented
-  OutStreamer->emitInstruction(MCInstBuilder(IsPPC64 ? PPC::LD : PPC::LWZ)
-                                   .addReg(PPC::X12)
-                                   .addExpr(Exp)
-                                   .addReg(PPC::X2),
-                               *Subtarget);
+
+  if (TM.getCodeModel() == CodeModel::Large) {
+    //  addis 12, L..foo_desc@u(2)
+    //  lwz 12, L..foo_desc@l(12)
+    auto *Exp_U = symbolWithSpecifier(FnDescTOCEntrySym, PPC::S_U);
+    OutStreamer->emitInstruction(MCInstBuilder(PPC::ADDIS)
+                                     .addReg(PPC::X12)
+                                     .addReg(PPC::X2)
+                                     .addExpr(Exp_U),
+                                 *Subtarget);
+    auto *Exp_L = symbolWithSpecifier(FnDescTOCEntrySym, PPC::S_L);
+    OutStreamer->emitInstruction(MCInstBuilder(IsPPC64 ? PPC::LD : PPC::LWZ)
+                                     .addReg(PPC::X12)
+                                     .addExpr(Exp_L)
+                                     .addReg(PPC::X12),
+                                 *Subtarget);
+  } else {
+    //  lwz 12, L..foo_desc(2)
+    auto *Exp = MCSymbolRefExpr::create(FnDescTOCEntrySym, OutContext);
+    // Exp = getTOCEntryLoadingExprForXCOFF(MOSymbol, Exp, VK);
+    // TODO: do we need to uncomment this?
+    OutStreamer->emitInstruction(MCInstBuilder(IsPPC64 ? PPC::LD : PPC::LWZ)
+                                     .addReg(PPC::X12)
+                                     .addExpr(Exp)
+                                     .addReg(PPC::X2),
+                                 *Subtarget);
+  }
   //  lwz 11, 8(12)
   OutStreamer->emitInstruction(MCInstBuilder(IsPPC64 ? PPC::LD : PPC::LWZ)
                                    .addReg(PPC::X11)
