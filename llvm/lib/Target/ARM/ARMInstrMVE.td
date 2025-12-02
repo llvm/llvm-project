@@ -3570,10 +3570,13 @@ multiclass MVE_VRINT_m<MVEVectorVTInfo VTI, string suffix, bits<3> opcode,
                        SDPatternOperator unpred_op> {
   def "": MVE_VRINT<suffix, opcode, VTI.Suffix, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
+  defvar unpred_int = !cast<Intrinsic>("int_arm_mve_vrint"#suffix);
   defvar pred_int = !cast<Intrinsic>("int_arm_mve_vrint"#suffix#"_predicated");
 
   let Predicates = [HasMVEFloat] in {
     def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$val))),
+              (VTI.Vec (Inst (VTI.Vec MQPR:$val)))>;
+    def : Pat<(VTI.Vec (unpred_int (VTI.Vec MQPR:$val))),
               (VTI.Vec (Inst (VTI.Vec MQPR:$val)))>;
     def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$val), (VTI.Pred VCCR:$pred),
                                  (VTI.Vec MQPR:$inactive))),
