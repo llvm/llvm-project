@@ -33,8 +33,6 @@ static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
     return "nested";
   case SymbolTable::Visibility::Public:
     return "public";
-  default:
-    llvm_unreachable("invalid symboltable visibility type");
   }
 }
 
