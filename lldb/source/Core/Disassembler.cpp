@@ -208,7 +208,7 @@ Disassembler::GetFunctionDeclLineEntry(const SymbolContext &sc) {
     return {};
 
   LineEntry prologue_end_line = sc.line_entry;
-  SupportFileSP func_decl_file_sp;
+  SupportFileNSP func_decl_file_sp = std::make_shared<SupportFile>();
   uint32_t func_decl_line;
   sc.function->GetStartLineSourceInfo(func_decl_file_sp, func_decl_line);
 
@@ -299,16 +299,16 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
 // The goal is to give users helpful live variable hints alongside the
 // disassembled instruction stream, similar to how debug information
 // enhances source-level debugging.
-std::vector<std::string>
-VariableAnnotator::annotate(Instruction &inst, Target &target,
-                            const lldb::ModuleSP &module_sp) {
+std::vector<std::string> VariableAnnotator::Annotate(Instruction &inst) {
   std::vector<std::string> events;
+
+  auto module_sp = inst.GetAddress().GetModule();
 
   // If we lost module context, everything becomes <undef>.
   if (!module_sp) {
-    for (const auto &KV : Live_)
+    for (const auto &KV : m_live_vars)
       events.emplace_back(llvm::formatv("{0} = <undef>", KV.second.name).str());
-    Live_.clear();
+    m_live_vars.clear();
     return events;
   }
 
@@ -319,13 +319,13 @@ VariableAnnotator::annotate(Instruction &inst, Target &target,
   if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) ||
       !sc.function) {
     // No function context: everything dies here.
-    for (const auto &KV : Live_)
+    for (const auto &KV : m_live_vars)
       events.emplace_back(llvm::formatv("{0} = <undef>", KV.second.name).str());
-    Live_.clear();
+    m_live_vars.clear();
     return events;
   }
 
-  // Collect in-scope variables for this instruction into Current.
+  // Collect in-scope variables for this instruction into current_vars.
   VariableList var_list;
   // Innermost block containing iaddr.
   if (Block *B = sc.block) {
@@ -341,7 +341,7 @@ VariableAnnotator::annotate(Instruction &inst, Target &target,
   const lldb::addr_t func_file = sc.function->GetAddress().GetFileAddress();
 
   // ABI from Target (pretty reg names if plugin exists). Safe to be null.
-  lldb::ABISP abi_sp = ABI::FindPlugin(nullptr, target.GetArchitecture());
+  lldb::ABISP abi_sp = ABI::FindPlugin(nullptr, module_sp->GetArchitecture());
   ABI *abi = abi_sp.get();
 
   llvm::DIDumpOptions opts;
@@ -349,7 +349,7 @@ VariableAnnotator::annotate(Instruction &inst, Target &target,
   // Prefer "register-only" output when we have an ABI.
   opts.PrintRegisterOnly = static_cast<bool>(abi_sp);
 
-  llvm::DenseMap<lldb::user_id_t, VarState> Current;
+  llvm::DenseMap<lldb::user_id_t, VarState> current_vars;
 
   for (size_t i = 0, e = var_list.GetSize(); i != e; ++i) {
     lldb::VariableSP v = var_list.GetVariableAtIndex(i);
@@ -376,16 +376,16 @@ VariableAnnotator::annotate(Instruction &inst, Target &target,
     if (loc.empty())
       continue;
 
-    Current.try_emplace(v->GetID(),
-                        VarState{std::string(name), std::string(loc)});
+    current_vars.try_emplace(v->GetID(),
+                             VarState{std::string(name), std::string(loc)});
   }
 
-  // Diff Live_ → Current.
+  // Diff m_live_vars → current_vars.
 
-  // 1) Starts/changes: iterate Current and compare with Live_.
-  for (const auto &KV : Current) {
-    auto it = Live_.find(KV.first);
-    if (it == Live_.end()) {
+  // 1) Starts/changes: iterate current_vars and compare with m_live_vars.
+  for (const auto &KV : current_vars) {
+    auto it = m_live_vars.find(KV.first);
+    if (it == m_live_vars.end()) {
       // Newly live.
       events.emplace_back(
           llvm::formatv("{0} = {1}", KV.second.name, KV.second.last_loc).str());
@@ -396,14 +396,14 @@ VariableAnnotator::annotate(Instruction &inst, Target &target,
     }
   }
 
-  // 2) Ends: anything that was live but is not in Current becomes <undef>.
-  for (const auto &KV : Live_) {
-    if (!Current.count(KV.first))
+  // 2) Ends: anything that was live but is not in current_vars becomes <undef>.
+  for (const auto &KV : m_live_vars) {
+    if (!current_vars.count(KV.first))
       events.emplace_back(llvm::formatv("{0} = <undef>", KV.second.name).str());
   }
 
   // Commit new state.
-  Live_ = std::move(Current);
+  m_live_vars = std::move(current_vars);
   return events;
 }
 
@@ -539,7 +539,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                 LineEntry prologue_end_line = sc.line_entry;
                 if (!ElideMixedSourceAndDisassemblyLine(exe_ctx, sc,
                                                         prologue_end_line)) {
-                  SupportFileSP func_decl_file_sp;
+                  SupportFileNSP func_decl_file_sp =
+                      std::make_shared<SupportFile>();
                   uint32_t func_decl_line;
                   sc.function->GetStartLineSourceInfo(func_decl_file_sp,
                                                       func_decl_line);
@@ -676,7 +677,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                  address_text_size);
 
       if ((options & eOptionVariableAnnotations) && target_sp) {
-        auto annotations = annot.annotate(*inst, *target_sp, module_sp);
+        auto annotations = annot.Annotate(*inst);
         if (!annotations.empty()) {
           const size_t annotation_column = 100;
           inst_line.FillLastLineToColumn(annotation_column, ' ');

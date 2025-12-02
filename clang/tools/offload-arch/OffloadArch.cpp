@@ -17,6 +17,8 @@ static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 // Mark all our options with this category.
 static cl::OptionCategory OffloadArchCategory("offload-arch options");
 
+extern cl::OptionCategory AMDGPUArchByHIPCategory;
+
 enum VendorName {
   all,
   amdgpu,
@@ -62,7 +64,7 @@ const std::array<std::pair<VendorName, function_ref<int()>>, 3> VendorTable{
      {VendorName::intel, printIntel}}};
 
 int main(int argc, char *argv[]) {
-  cl::HideUnrelatedOptions(OffloadArchCategory);
+  cl::HideUnrelatedOptions({&OffloadArchCategory, &AMDGPUArchByHIPCategory});
 
   cl::SetVersionPrinter(PrintVersion);
   cl::ParseCommandLineOptions(

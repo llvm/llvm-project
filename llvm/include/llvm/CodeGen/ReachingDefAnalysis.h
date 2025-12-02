@@ -77,27 +77,27 @@ public:
     AllReachingDefs[MBBNumber].resize(NumRegUnits);
   }
 
-  void append(unsigned MBBNumber, unsigned Unit, int Def) {
-    AllReachingDefs[MBBNumber][Unit].push_back(Def);
+  void append(unsigned MBBNumber, MCRegUnit Unit, int Def) {
+    AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)].push_back(Def);
   }
 
-  void prepend(unsigned MBBNumber, unsigned Unit, int Def) {
-    auto &Defs = AllReachingDefs[MBBNumber][Unit];
+  void prepend(unsigned MBBNumber, MCRegUnit Unit, int Def) {
+    auto &Defs = AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)];
     Defs.insert(Defs.begin(), Def);
   }
 
-  void replaceFront(unsigned MBBNumber, unsigned Unit, int Def) {
-    assert(!AllReachingDefs[MBBNumber][Unit].empty());
-    *AllReachingDefs[MBBNumber][Unit].begin() = Def;
+  void replaceFront(unsigned MBBNumber, MCRegUnit Unit, int Def) {
+    assert(!AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)].empty());
+    *AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)].begin() = Def;
   }
 
   void clear() { AllReachingDefs.clear(); }
 
-  ArrayRef<ReachingDef> defs(unsigned MBBNumber, unsigned Unit) const {
+  ArrayRef<ReachingDef> defs(unsigned MBBNumber, MCRegUnit Unit) const {
     if (AllReachingDefs[MBBNumber].empty())
       // Block IDs are not necessarily dense.
       return ArrayRef<ReachingDef>();
-    return AllReachingDefs[MBBNumber][Unit];
+    return AllReachingDefs[MBBNumber][static_cast<unsigned>(Unit)];
   }
 
 private:

@@ -120,6 +120,13 @@ def SymbolOp : TEST_Op<"symbol", [NoMemoryEffect, Symbol]> {
                        OptionalAttr<StrAttr>:$sym_visibility);
 }
 
+def SymbolWithResultOp : TEST_Op<"symbol_with_result", [Symbol]> {
+  let summary = "invalid symbol operation that produces an SSA result";
+  let arguments = (ins StrAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
+  let results = (outs AnyType:$result);
+}
+
 def OverriddenSymbolVisibilityOp : TEST_Op<"overridden_symbol_visibility", [
   DeclareOpInterfaceMethods<Symbol, ["getVisibility", "setVisibility"]>,
 ]> {
@@ -1190,6 +1197,12 @@ def TestLocationSrcNoResOp : TEST_Op<"loc_src_no_res"> {
 def TestLocationDstNoResOp : TEST_Op<"loc_dst_no_res"> {
   let arguments = (ins I32:$input);
   let results = (outs);
+}
+
+def TestLocationAttrOp : TEST_Op<"op_with_loc_attr"> {
+  let arguments = (ins LocationAttr:$loc_attr);
+  let results = (outs );
+  let assemblyFormat = "$loc_attr attr-dict";
 }
 
 //===----------------------------------------------------------------------===//

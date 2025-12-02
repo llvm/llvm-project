@@ -201,6 +201,10 @@ def hlsl_Group : OptionGroup<"<HLSL group>">, Group<f_Group>,
                    DocName<"HLSL options">,
                    Visibility<[ClangOption]>;
 
+def fsan_cov_Group : OptionGroup<"<-fsanitize-coverage group>">,
+                   Group<f_clang_Group>,
+                   DocName<"Sanitizer Coverage options">;
+
 // Feature groups - these take command line options that correspond directly to
 // target specific features and can be translated directly from command line
 // options.
@@ -1423,6 +1427,16 @@ def fhip_emit_relocatable : Flag<["-"], "fhip-emit-relocatable">,
   HelpText<"Compile HIP source to relocatable">;
 def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
+def use_spirv_backend
+    : Flag<["-"], "use-spirv-backend">,
+      Group<hip_Group>,
+      Flags<[HelpHidden]>,
+      HelpText<"Use the SPIRV backend for compilation ">;
+def no_use_spirv_backend
+    : Flag<["-"], "no-use-spirv-backend">,
+      Group<hip_Group>,
+      Flags<[HelpHidden]>,
+      HelpText<"Do not use the SPIRV backend for compilation ">;
 }
 
 // Clang specific/exclusive options for OpenACC.
@@ -2407,26 +2421,26 @@ def : Flag<["-"], "fno-sanitize-blacklist">,
   Group<f_clang_Group>, Flags<[HelpHidden]>, Alias<fno_sanitize_ignorelist>;
 
 def fsanitize_coverage : CommaJoined<["-"], "fsanitize-coverage=">,
-  Group<f_clang_Group>,
+  Group<fsan_cov_Group>,
   HelpText<"Specify the type of coverage instrumentation for Sanitizers">;
 def fno_sanitize_coverage : CommaJoined<["-"], "fno-sanitize-coverage=">,
-  Group<f_clang_Group>, Visibility<[ClangOption, CLOption]>,
+  Group<fsan_cov_Group>, Visibility<[ClangOption, CLOption]>,
   HelpText<"Disable features of coverage instrumentation for Sanitizers">,
   Values<"func,bb,edge,indirect-calls,trace-bb,trace-cmp,trace-div,trace-gep,"
          "8bit-counters,trace-pc,trace-pc-guard,no-prune,inline-8bit-counters,"
          "inline-bool-flag">;
 def fsanitize_coverage_allowlist : Joined<["-"], "fsanitize-coverage-allowlist=">,
-    Group<f_clang_Group>, Visibility<[ClangOption, CLOption]>,
+    Group<fsan_cov_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones">,
     MarshallingInfoStringVector<CodeGenOpts<"SanitizeCoverageAllowlistFiles">>;
 def fsanitize_coverage_ignorelist : Joined<["-"], "fsanitize-coverage-ignorelist=">,
-    Group<f_clang_Group>, Visibility<[ClangOption, CLOption]>,
+    Group<fsan_cov_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Disable sanitizer coverage instrumentation for modules and functions "
              "that match the provided special case list, even the allowed ones">,
     MarshallingInfoStringVector<CodeGenOpts<"SanitizeCoverageIgnorelistFiles">>;
 def fsanitize_coverage_stack_depth_callback_min_EQ
     : Joined<["-"], "fsanitize-coverage-stack-depth-callback-min=">,
-      Group<f_clang_Group>,
+      Group<fsan_cov_Group>,
       MetaVarName<"<M>">,
       HelpText<"Use callback for max stack depth tracing with minimum stack "
                "depth M">,
@@ -2459,6 +2473,12 @@ def fsanitize_address_outline_instrumentation : Flag<["-"], "fsanitize-address-o
 def fno_sanitize_address_outline_instrumentation : Flag<["-"], "fno-sanitize-address-outline-instrumentation">,
                                                    Group<f_clang_Group>,
                                                    HelpText<"Use default code inlining logic for the address sanitizer">;
+def fsanitize_type_outline_instrumentation : Flag<["-"], "fsanitize-type-outline-instrumentation">,
+                                                Group<f_clang_Group>,
+                                                HelpText<"Always generate function calls for type sanitizer instrumentation">;
+def fno_sanitize_type_outline_instrumentation : Flag<["-"], "fno-sanitize-type-outline-instrumentation">,
+                                                   Group<f_clang_Group>,
+                                                   HelpText<"Use code inlining logic for the type sanitizer">;
 defm sanitize_stable_abi
   : OptInCC1FFlag<"sanitize-stable-abi", "Stable  ", "Conventional ",
     "ABI instrumentation for sanitizer runtime. Default: Conventional">;
@@ -2656,6 +2676,15 @@ defm sanitize_minimal_runtime : BoolOption<"f", "sanitize-minimal-runtime",
   PosFlag<SetTrue>,
   NegFlag<SetFalse>>,
   Group<f_clang_Group>;
+defm sanitize_handler_preserve_all_regs
+    : BoolOption<
+          "f", "sanitize-handler-preserve-all-regs",
+          CodeGenOpts<"SanitizeHandlerPreserveAllRegs">, DefaultFalse,
+          PosFlag<SetTrue, [], [],
+                  "Enable handlers with preserve_all calling convention">,
+          NegFlag<SetFalse, [], [],
+                  "Disable handlers with preserve_all calling convention">>,
+      Group<f_clang_Group>;
 def fsanitize_link_runtime : Flag<["-"], "fsanitize-link-runtime">,
                            Group<f_clang_Group>;
 def fno_sanitize_link_runtime : Flag<["-"], "fno-sanitize-link-runtime">,
@@ -2754,7 +2783,7 @@ defm sanitize_alloc_token_extended : BoolOption<"f", "sanitize-alloc-token-exten
 def falloc_token_max_EQ : Joined<["-"], "falloc-token-max=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<N>">,
-  HelpText<"Limit to maximum N allocation tokens (0 = no max)">;
+  HelpText<"Limit to maximum N allocation tokens (0 = target SIZE_MAX)">;
 
 def falloc_token_mode_EQ : Joined<["-"], "falloc-token-mode=">,
   Group<f_Group>, Visibility<[CC1Option]>,
@@ -2778,6 +2807,9 @@ def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">
   Group<f_Group>;
 def fassociative_math : Flag<["-"], "fassociative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
 def fno_associative_math : Flag<["-"], "fno-associative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
+def ffast_real_mod : Flag<["-"], "ffast-real-mod">,
+  Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Enable optimization of MOD for REAL types">;
 def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">,
   Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
   HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
@@ -4815,6 +4847,14 @@ defm column_info : BoolOption<"g", "column-info",
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
   PosFlag<SetTrue>, BothFlags<[], [ClangOption, CLOption, DXCOption]>>,
   Group<g_flags_Group>;
+defm call_site_info : BoolOption<"g", "call-site-info",
+  CodeGenOpts<"DebugCallSiteInfo">,
+  DefaultTrue,
+  PosFlag<SetTrue, [], [], "Enable">,
+  NegFlag<SetFalse, [], [], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option], " call site debug info">>,
+  Group<g_flags_Group>,
+  DocBrief<[{Call site debug info enables various debugger features including detecting tail calls for display in backtraces and displaying some source variable values that reference the call entry value.}]>;
 def gsplit_dwarf : Flag<["-"], "gsplit-dwarf">, Group<g_flags_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def gsplit_dwarf_EQ : Joined<["-"], "gsplit-dwarf=">, Group<g_flags_Group>,
@@ -5671,6 +5711,9 @@ def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings
 def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
 def momit_leaf_frame_pointer : Flag<["-"], "momit-leaf-frame-pointer">, Group<m_Group>,
   HelpText<"Omit frame pointer setup for leaf functions">;
+def mno_reserve_frame_pointer_reg : Flag<["-"], "mno-reserve-frame-pointer-reg">, Group<m_Group>;
+def mreserve_frame_pointer_reg : Flag<["-"], "mreserve-frame-pointer-reg">, Group<m_Group>,
+  HelpText<"Reserve the frame pointer register even if the function doesn't have a frame">;
 def moslib_EQ : Joined<["-"], "moslib=">, Group<m_Group>;
 def mpascal_strings : Flag<["-"], "mpascal-strings">, Alias<fpascal_strings>;
 def mred_zone : Flag<["-"], "mred-zone">, Group<m_Group>;
@@ -7903,70 +7946,87 @@ def linker_option : Joined<["--"], "linker-option=">,
   HelpText<"Add linker option">,
   MarshallingInfoStringVector<CodeGenOpts<"LinkerOptions">>;
 def fsanitize_coverage_type : Joined<["-"], "fsanitize-coverage-type=">,
+                              Group<fsan_cov_Group>,
                               HelpText<"Sanitizer coverage type">,
                               MarshallingInfoInt<CodeGenOpts<"SanitizeCoverageType">>;
 def fsanitize_coverage_indirect_calls
     : Flag<["-"], "fsanitize-coverage-indirect-calls">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable sanitizer coverage for indirect calls">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageIndirectCalls">>;
 def fsanitize_coverage_trace_bb
     : Flag<["-"], "fsanitize-coverage-trace-bb">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable basic block tracing in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceBB">>;
 def fsanitize_coverage_trace_cmp
     : Flag<["-"], "fsanitize-coverage-trace-cmp">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable cmp instruction tracing in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceCmp">>;
 def fsanitize_coverage_trace_div
     : Flag<["-"], "fsanitize-coverage-trace-div">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable div instruction tracing in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceDiv">>;
 def fsanitize_coverage_trace_gep
     : Flag<["-"], "fsanitize-coverage-trace-gep">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable gep instruction tracing in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceGep">>;
 def fsanitize_coverage_8bit_counters
     : Flag<["-"], "fsanitize-coverage-8bit-counters">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable frequency counters in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverage8bitCounters">>;
 def fsanitize_coverage_inline_8bit_counters
     : Flag<["-"], "fsanitize-coverage-inline-8bit-counters">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable inline 8-bit counters in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageInline8bitCounters">>;
 def fsanitize_coverage_inline_bool_flag
     : Flag<["-"], "fsanitize-coverage-inline-bool-flag">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable inline bool flag in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageInlineBoolFlag">>;
 def fsanitize_coverage_pc_table
     : Flag<["-"], "fsanitize-coverage-pc-table">,
+      Group<fsan_cov_Group>,
       HelpText<"Create a table of coverage-instrumented PCs">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoveragePCTable">>;
 def fsanitize_coverage_control_flow
     : Flag<["-"], "fsanitize-coverage-control-flow">,
+      Group<fsan_cov_Group>,
       HelpText<"Collect control flow of function">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageControlFlow">>;
 def fsanitize_coverage_trace_pc
     : Flag<["-"], "fsanitize-coverage-trace-pc">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable PC tracing in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTracePC">>;
 def fsanitize_coverage_trace_pc_guard
     : Flag<["-"], "fsanitize-coverage-trace-pc-guard">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable PC tracing with guard in sanitizer coverage">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTracePCGuard">>;
 def fsanitize_coverage_no_prune
     : Flag<["-"], "fsanitize-coverage-no-prune">,
+      Group<fsan_cov_Group>,
       HelpText<"Disable coverage pruning (i.e. instrument all blocks/edges)">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageNoPrune">>;
 def fsanitize_coverage_stack_depth
     : Flag<["-"], "fsanitize-coverage-stack-depth">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable max stack depth tracing">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageStackDepth">>;
 def fsanitize_coverage_trace_loads
     : Flag<["-"], "fsanitize-coverage-trace-loads">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable tracing of loads">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceLoads">>;
 def fsanitize_coverage_trace_stores
     : Flag<["-"], "fsanitize-coverage-trace-stores">,
+      Group<fsan_cov_Group>,
       HelpText<"Enable tracing of stores">,
       MarshallingInfoFlag<CodeGenOpts<"SanitizeCoverageTraceStores">>;
 def fexperimental_sanitize_metadata_EQ_covered
@@ -8499,8 +8559,8 @@ def pic_is_pie : Flag<["-"], "pic-is-pie">,
   MarshallingInfoFlag<LangOpts<"PIE">>;
 
 def mframe_pointer_EQ : Joined<["-"], "mframe-pointer=">,
-  HelpText<"Specify which frame pointers to retain.">, Values<"all,non-leaf,reserved,none">,
-  NormalizedValuesScope<"CodeGenOptions::FramePointerKind">, NormalizedValues<["All", "NonLeaf", "Reserved", "None"]>,
+  HelpText<"Specify which frame pointers to retain.">, Values<"all,non-leaf,non-leaf-no-reserve,reserved,none">,
+  NormalizedValuesScope<"CodeGenOptions::FramePointerKind">, NormalizedValues<["All", "NonLeaf", "NonLeafNoReserve", "Reserved", "None"]>,
   MarshallingInfoEnum<CodeGenOpts<"FramePointer">, "None">;
 
 

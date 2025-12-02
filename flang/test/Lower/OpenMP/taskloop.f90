@@ -3,6 +3,15 @@
 ! RUN: %flang_fc1 -emit-hlfir %openmp_flags -o - %s 2>&1 | FileCheck %s
 
 ! CHECK-LABEL:  omp.private
+! CHECK-SAME:       {type = private} @[[LAST_PRIVATE_I:.*]] : i32
+
+! CHECK-LABEL:  omp.private
+! CHECK-SAME:       {type = private} @[[LAST_PRIVATE_X:.*]] : i32
+
+! CHECK-LABEL:  omp.private
+! CHECK-SAME:       {type = private} @[[QFOMP_TASKLOOP_NOGROUPEI_PRIVATE_I32:.*]] : i32
+
+! CHECK-LABEL:  omp.private
 ! CHECK-SAME:       {type = private} @[[OMP_TASKLOOP_UNTIEDEI_PRIVATE_I32:.*]] : i32
 
 ! CHECK-LABEL:  omp.private
@@ -195,3 +204,46 @@ subroutine omp_taskloop_untied()
   end do
   !$omp end taskloop
 end subroutine
+
+!===============================================================================
+! `nogroup` clause
+!===============================================================================
+
+subroutine omp_taskloop_nogroup()
+  ! CHECK: omp.taskloop nogroup
+  !$omp taskloop nogroup
+  do i = 1, 10
+    call foo()
+  end do
+  !$omp end taskloop
+end subroutine
+
+!===============================================================================
+! `lastprivate` clause
+!===============================================================================
+
+! CHECK-LABEL:  func.func @_QPomp_taskloop_lastprivate
+! CHECK:          %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_taskloop_lastprivateEi"}
+! CHECK:          %[[DECL_I:.*]]:2 = hlfir.declare %[[ALLOCA_I]] {uniq_name = "_QFomp_taskloop_lastprivateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:          %[[ALLOCA_X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFomp_taskloop_lastprivateEx"}
+! CHECK:          %[[DECL_X:.*]]:2 = hlfir.declare %[[ALLOCA_X]] {uniq_name = "_QFomp_taskloop_lastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+subroutine omp_taskloop_lastprivate()
+   integer x
+   x = 0
+   ! CHECK:  omp.taskloop private(@[[LAST_PRIVATE_X]] %[[DECL_X]]#0 -> %[[ARG0]], @[[LAST_PRIVATE_I]] %[[DECL_I]]#0 -> %[[ARG1]] : !fir.ref<i32>, !fir.ref<i32>) {
+   !$omp taskloop lastprivate(x)
+   do i = 1, 100
+      ! CHECK: %[[DECL_ARG0:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFomp_taskloop_lastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      ! CHECK: %[[LOAD_ARG0:.*]] = fir.load %[[DECL_ARG0]]#0 : !fir.ref<i32>
+      ! CHECK: %[[RES_ADD:.*]] = arith.addi %[[LOAD_ARG0]], %{{.*}} : i32
+      ! CHECK:  hlfir.assign %[[RES_ADD]] to %[[DECL_ARG0]]#0 : i32, !fir.ref<i32>
+      x = x + 1
+      ! CHECK:  %[[SELCT_RESULT:.*]] = arith.select %{{.*}}, %{{.*}}, %{{.*}} : i1
+      ! CHECK:  fir.if %[[SELCT_RESULT]] {
+      ! CHECK:    %[[LOADED_SUM:.*]] = fir.load %[[DECL_ARG0]]#0 : !fir.ref<i32>
+      ! CHECK:    hlfir.assign %[[LOADED_SUM]] to %[[DECL_X]]#0 : i32, !fir.ref<i32>
+      ! CHECK:  }
+      ! CHECK:  omp.yield
+   end do
+   !$omp end taskloop
+end subroutine omp_taskloop_lastprivate
