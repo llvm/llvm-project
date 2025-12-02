@@ -4626,8 +4626,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pblendd256:
     return interp__builtin_ia32_shuffle_generic(
       S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
-        // bit index for mask
-        unsigned maskBit = (ShuffleMask >> (DstIdx % 8)) & 0x1;
+        // Bit index for mask.
+        unsigned MaskBit = (ShuffleMask >> (DstIdx % 8)) & 0x1;
         unsigned SrcVecIdx = maskBit ? 1 : 0;  // 1 = TrueVec, 0 = FalseVec
         return std::pair<unsigned, int>{SrcVecIdx, static_cast<int>(DstIdx)};
       });
