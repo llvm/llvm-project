@@ -7845,7 +7845,6 @@ static bool handleArmStateAttribute(Sema &S,
 /// indicate that the attribute was handled, false if it wasn't.
 static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
                                    QualType &type, CUDAFunctionTarget CFT) {
-
   Sema &S = state.getSema();
 
   FunctionTypeUnwrapper unwrapped(S, type);
