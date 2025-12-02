@@ -2355,6 +2355,13 @@ struct AMDGPUMakeDmaDescriptorLowering
       shiftAmount = createI32Constant(rewriter, loc, shift % 32);
       value = LLVM::ShlOp::create(rewriter, loc, value, shiftAmount);
     }
+
+    if (LLVM::ConstantOp op = accumulator.getDefiningOp<LLVM::ConstantOp>()) {
+      if (IntegerAttr attr = dyn_cast<IntegerAttr>(op.getValue());
+          attr.getInt() == 0) {
+        return value;
+      }
+    }
     return LLVM::OrOp::create(rewriter, loc, accumulator, value);
   }
 
