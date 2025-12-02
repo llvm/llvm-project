@@ -1072,7 +1072,7 @@ public:
     TypeCountMap &TypeCounts = getTypeSamplesAt(Loc);
     bool Overflowed = false;
 
-    for (const auto [Type, Count] : Other) {
+    for (const auto &[Type, Count] : Other) {
       FunctionId TypeId(Type);
       bool RowOverflow = false;
       TypeCounts[TypeId] = SaturatingMultiplyAdd(
@@ -1658,6 +1658,7 @@ public:
   }
 
   unsigned size() { return Syms.size(); }
+  void reserve(size_t Size) { Syms.reserve(Size); }
 
   void setToCompress(bool TC) { ToCompress = TC; }
   bool toCompress() { return ToCompress; }

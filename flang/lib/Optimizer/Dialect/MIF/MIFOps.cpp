@@ -15,9 +15,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/SmallVector.h"
 
-#define GET_OP_CLASSES
-#include "flang/Optimizer/Dialect/MIF/MIFOps.cpp.inc"
-
 //===----------------------------------------------------------------------===//
 // NumImagesOp
 //===----------------------------------------------------------------------===//
@@ -151,3 +148,60 @@ llvm::LogicalResult mif::CoSumOp::verify() {
     return emitOpError("`A` shall be of numeric type.");
   return mlir::success();
 }
+
+//===----------------------------------------------------------------------===//
+// ChangeTeamOp
+//===----------------------------------------------------------------------===//
+
+void mif::ChangeTeamOp::build(mlir::OpBuilder &builder,
+                              mlir::OperationState &result, mlir::Value team,
+                              bool ensureTerminator,
+                              llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  build(builder, result, team, /*stat*/ mlir::Value{}, /*errmsg*/ mlir::Value{},
+        ensureTerminator, attributes);
+}
+
+void mif::ChangeTeamOp::build(mlir::OpBuilder &builder,
+                              mlir::OperationState &result, mlir::Value team,
+                              mlir::Value stat, mlir::Value errmsg,
+                              bool ensureTerminator,
+                              llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  std::int32_t argStat = 0, argErrmsg = 0;
+  result.addOperands(team);
+  if (stat) {
+    result.addOperands(stat);
+    argStat++;
+  }
+  if (errmsg) {
+    result.addOperands(errmsg);
+    argErrmsg++;
+  }
+
+  mlir::Region *bodyRegion = result.addRegion();
+  bodyRegion->push_back(new mlir::Block{});
+  if (ensureTerminator)
+    ChangeTeamOp::ensureTerminator(*bodyRegion, builder, result.location);
+
+  result.addAttribute(getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr({1, argStat, argErrmsg}));
+  result.addAttributes(attributes);
+}
+
+static mlir::ParseResult parseChangeTeamOpBody(mlir::OpAsmParser &parser,
+                                               mlir::Region &body) {
+  if (parser.parseRegion(body))
+    return mlir::failure();
+
+  auto &builder = parser.getBuilder();
+  mif::ChangeTeamOp::ensureTerminator(body, builder, builder.getUnknownLoc());
+  return mlir::success();
+}
+
+static void printChangeTeamOpBody(mlir::OpAsmPrinter &p, mif::ChangeTeamOp op,
+                                  mlir::Region &body) {
+  p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/true,
+                /*printBlockTerminators=*/true);
+}
+
+#define GET_OP_CLASSES
+#include "flang/Optimizer/Dialect/MIF/MIFOps.cpp.inc"

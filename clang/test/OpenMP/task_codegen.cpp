@@ -41,6 +41,9 @@
 // RUN: -emit-llvm -o - -DOMP51 | FileCheck %s \
 // RUN: --implicit-check-not="{{__kmpc|__tgt}}"
 
+// RUN: %clang_cc1 -verify -Wno-vla -triple x86_64-apple-darwin10 -fopenmp -fopenmp-version=60 -DOMP60 -fopenmp-enable-irbuilder -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK6
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=60 -DOMP60 -fopenmp-enable-irbuilder -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=60 -DOMP60 -fopenmp-enable-irbuilder -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify -Wno-vla %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK6
 
 // expected-no-diagnostics
 #ifndef HEADER
@@ -65,6 +68,7 @@ struct S {
   S(const S &s) : a(s.a) {}
   ~S() {}
 };
+
 int a;
 int main() {
   char b;
@@ -147,6 +151,7 @@ int main() {
 
 
 
+
 // s1 = S();
 
 
@@ -215,6 +220,19 @@ void test_omp_all_memory()
   }
 }
 #endif // OMP51
+
+#ifdef OMP60
+void test_threadset()
+{
+#pragma omp task threadset(omp_team)
+  {
+  }
+#pragma omp task threadset(omp_pool)
+  {
+  }
+}
+#endif // OMP60
+
 #endif
 // CHECK1-LABEL: define {{[^@]+}}@main
 // CHECK1-SAME: () #[[ATTR0:[0-9]+]] {
@@ -10243,3 +10261,18 @@ void test_omp_all_memory()
 // CHECK4-51-NEXT:    call void @__cxx_global_var_init()
 // CHECK4-51-NEXT:    ret void
 //
+// CHECK6-LABEL: define void @_Z14test_threadsetv()
+// CHECK6-NEXT:  entry:
+// CHECK6-NEXT:       [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_23:%.*]], align 1
+// CHECK6-NEXT:       [[AGG_CAPTURED2:%.*]] = alloca [[STRUCT_ANON_25:%.*]], align 1
+// CHECK6-NEXT:       call i32 @__kmpc_global_thread_num(ptr @[[GLOB_PTR:[0-9]+]])
+// CHECK6-NEXT:       [[TMP0:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %omp_global_thread_num, i32 1, i64 40, i64 1, ptr @.omp_task_entry..[[ENTRY1:[0-9]+]])
+// CHECK6-NEXT:       getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr %0, i32 0, i32 0
+// CHECK6-NEXT:       call i32 @__kmpc_global_thread_num(ptr @[[GLOB_PTR:[0-9]+]])
+// CHECK6-NEXT:       call i32 @__kmpc_omp_task(ptr @1, i32 %omp_global_thread_num1, ptr %0)
+// CHECK6-NEXT:       call i32 @__kmpc_global_thread_num(ptr @[[GLOB_PTR2:[0-9]+]])
+// CHECK6-NEXT:       [[TMP3:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %omp_global_thread_num3, i32 129, i64 40, i64 1, ptr @.omp_task_entry..[[ENTRY2:[0-9]+]])
+// CHECK6-NEXT:       getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr %3, i32 0, i32 0
+// CHECK6-NEXT:       call i32 @__kmpc_global_thread_num(ptr @[[GLOB_PTR2:[0-9]+]])
+// CHECK6-NEXT:       call i32 @__kmpc_omp_task(ptr @1, i32 %omp_global_thread_num4, ptr %3)
+// CHECK6-NEXT:       ret void

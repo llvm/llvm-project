@@ -221,7 +221,7 @@ public:
   };
 
   // A map from regunits to the delay info for that regunit.
-  struct DelayState : DenseMap<unsigned, DelayInfo> {
+  struct DelayState : DenseMap<MCRegUnit, DelayInfo> {
     // Merge another DelayState into this one by merging the delay info for each
     // regunit.
     void merge(const DelayState &RHS) {
@@ -359,7 +359,8 @@ public:
     bool Changed = false;
     MachineInstr *LastDelayAlu = nullptr;
 
-    MCRegUnit LastSGPRFromVALU = 0;
+    // FIXME: 0 is a valid register unit.
+    MCRegUnit LastSGPRFromVALU = static_cast<MCRegUnit>(0);
     // Iterate over the contents of bundles, but don't emit any instructions
     // inside a bundle.
     for (auto &MI : MBB.instrs()) {
@@ -379,7 +380,8 @@ public:
         if (It != State.end()) {
           DelayInfo Info = It->getSecond();
           State.advanceByVALUNum(Info.VALUNum);
-          LastSGPRFromVALU = 0;
+          // FIXME: 0 is a valid register unit.
+          LastSGPRFromVALU = static_cast<MCRegUnit>(0);
         }
       }
 

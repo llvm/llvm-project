@@ -18,7 +18,7 @@ define void @unknown_sign(ptr %a, i64 %k) {
 ; CHECK-NEXT:  Src: store i8 1, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.0, align 1
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i8 1, ptr %idx.0, align 1 --> Dst: store i8 2, ptr %idx.1, align 1
-; CHECK-NEXT:    da analyze - output [<>]!
+; CHECK-NEXT:    da analyze - output [*|<]!
 ; CHECK-NEXT:  Src: store i8 2, ptr %idx.1, align 1 --> Dst: store i8 2, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - none!
 ;

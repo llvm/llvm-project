@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTION_ESCAPE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTION_ESCAPE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONESCAPECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONESCAPECHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "../utils/ExceptionAnalyzer.h"
@@ -35,11 +35,18 @@ public:
 private:
   StringRef RawFunctionsThatShouldNotThrow;
   StringRef RawIgnoredExceptions;
+  StringRef RawCheckedSwapFunctions;
+
+  const bool CheckDestructors;
+  const bool CheckMoveMemberFunctions;
+  const bool CheckMain;
+  const bool CheckNothrowFunctions;
 
   llvm::StringSet<> FunctionsThatShouldNotThrow;
+  llvm::StringSet<> CheckedSwapFunctions;
   utils::ExceptionAnalyzer Tracer;
 };
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTION_ESCAPE_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_EXCEPTIONESCAPECHECK_H

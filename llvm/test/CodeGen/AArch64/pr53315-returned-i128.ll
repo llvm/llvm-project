@@ -5,15 +5,15 @@ define void @test() nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Spill
 ; CHECK-NEXT:    mov x1, xzr
-; CHECK-NEXT:    str x1, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x1, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    mov x0, x1
 ; CHECK-NEXT:    bl returns_arg
-; CHECK-NEXT:    ldr x1, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x1, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    mov x0, x1
 ; CHECK-NEXT:    bl accepts_arg
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
   %x = call i128 @returns_arg(i128 0)

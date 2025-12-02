@@ -4,18 +4,23 @@
 
 @.str = private unnamed_addr constant [7 x i8] c"buffer\00", align 1
 
+; The i64 values in the extracts will be turned
+; into immidiate values. There should be no 64-bit
+; integers in the module.
+; CHECK-NOT:  OpTypeInt 64 0
+
 define void @main() "hlsl.shader"="pixel"  {
-; CHECK:         %24 = OpFunction %2 None %3 ; -- Begin function main
-; CHECK-NEXT:     %1 = OpLabel
-; CHECK-NEXT:    %25 = OpVariable %13 Function %22
-; CHECK-NEXT:    %26 = OpLoad %7 %23
-; CHECK-NEXT:    %27 = OpImageRead %5 %26 %15
-; CHECK-NEXT:    %28 = OpCompositeExtract %4 %27 0
-; CHECK-NEXT:    %29 = OpCompositeExtract %4 %27 1
-; CHECK-NEXT:    %30 = OpFAdd %4 %29 %28
-; CHECK-NEXT:    %31 = OpCompositeInsert %5 %30 %27 0
-; CHECK-NEXT:    %32 = OpLoad %7 %23
-; CHECK-NEXT:          OpImageWrite %32 %15 %31
+; CHECK:         %[[FUNC:[0-9]+]] = OpFunction %[[VOID:[0-9]+]] None %[[FNTYPE:[0-9]+]] ; -- Begin function main
+; CHECK-NEXT:     %[[LABEL:[0-9]+]] = OpLabel
+; CHECK-NEXT:    %[[VAR:[0-9]+]] = OpVariable %[[PTR_FN:[a-zA-Z0-9_]+]] Function %[[INIT:[a-zA-Z0-9_]+]]
+; CHECK-NEXT:    %[[LOAD1:[0-9]+]] = OpLoad %[[IMG_TYPE:[a-zA-Z0-9_]+]] %[[IMG_VAR:[a-zA-Z0-9_]+]]
+; CHECK-NEXT:    %[[READ:[0-9]+]] = OpImageRead %[[VEC4:[a-zA-Z0-9_]+]] %[[LOAD1]] %[[COORD:[a-zA-Z0-9_]+]]
+; CHECK-NEXT:    %[[EXTRACT1:[0-9]+]] = OpCompositeExtract %[[FLOAT:[a-zA-Z0-9_]+]] %[[READ]] 0
+; CHECK-NEXT:    %[[EXTRACT2:[0-9]+]] = OpCompositeExtract %[[FLOAT]] %[[READ]] 1
+; CHECK-NEXT:    %[[ADD:[0-9]+]] = OpFAdd %[[FLOAT]] %[[EXTRACT2]] %[[EXTRACT1]]
+; CHECK-NEXT:    %[[INSERT:[0-9]+]] = OpCompositeInsert %[[VEC4]] %[[ADD]] %[[READ]] 0
+; CHECK-NEXT:    %[[LOAD2:[0-9]+]] = OpLoad %[[IMG_TYPE]] %[[IMG_VAR]]
+; CHECK-NEXT:          OpImageWrite %[[LOAD2]] %[[COORD]] %[[INSERT]]
 ; CHECK-NEXT:          OpReturn
 ; CHECK-NEXT:          OpFunctionEnd
 entry:

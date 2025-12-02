@@ -2,7 +2,7 @@
 // Reported in https://bugs.llvm.org/show_bug.cgi?id=48014
 ///==========================================================================///
 
-// REQUIRES: nvptx-registered-target
+// REQUIRES: nvptx-registered-target, host-supports-cuda
 
 // RUN: %clang -x cuda -fopenmp -c %s -o - --cuda-path=%S/../Driver/Inputs/CUDA/usr/local/cuda -nocudalib -isystem %S/Inputs/include -isystem %S/../../lib/Headers -fsyntax-only
 

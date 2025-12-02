@@ -586,6 +586,41 @@ func.func @wmma_i32_16x16x32_i4(%arg0 : vector<16xi4>, %arg1 : vector<8xi32>) ->
   func.return %0 : vector<8xi32>
 }
 
+// CHECK-LABEL: func @wmma_f32_16x16x4_f32
+func.func @wmma_f32_16x16x4_f32(%arg0 : vector<2xf32>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // CHECK: amdgpu.wmma 16x16x4
+  %0 = amdgpu.wmma 16x16x4 %arg0 * %arg0 + %arg1 : vector<2xf32>, vector<2xf32>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @wmma_f32_16x16x64_f8
+func.func @wmma_f32_16x16x64_f8(%arg0 : vector<32xf8E4M3FN>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // CHECK: amdgpu.wmma 16x16x64
+  %0 = amdgpu.wmma 16x16x64 %arg0 * %arg0 + %arg1 : vector<32xf8E4M3FN>, vector<32xf8E4M3FN>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @wmma_f32_16x16x64_bf8
+func.func @wmma_f32_16x16x64_bf8(%arg0 : vector<32xf8E5M2>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // CHECK: amdgpu.wmma 16x16x64
+  %0 = amdgpu.wmma 16x16x64 %arg0 * %arg0 + %arg1 : vector<32xf8E5M2>, vector<32xf8E5M2>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @wmma_f16_16x16x64_bf8
+func.func @wmma_f16_16x16x64_bf8(%arg0 : vector<32xf8E5M2>, %arg1 : vector<8xf16>) -> vector<8xf16> {
+  // CHECK: amdgpu.wmma 16x16x64
+  %0 = amdgpu.wmma 16x16x64 %arg0 * %arg0 + %arg1 : vector<32xf8E5M2>, vector<32xf8E5M2>, vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
+// CHECK-LABEL: func @wmma_f16_16x16x64_f8
+func.func @wmma_f16_16x16x64_f8(%arg0 : vector<32xf8E4M3FN>, %arg1 : vector<8xf16>) -> vector<8xf16> {
+  // CHECK: amdgpu.wmma 16x16x64
+  %0 = amdgpu.wmma 16x16x64 %arg0 * %arg0 + %arg1 : vector<32xf8E4M3FN>, vector<32xf8E4M3FN>, vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
 // CHECK-LABEL: func @swizzle_bitmode
 func.func @swizzle_bitmode(%arg0 : f32) -> f32 {
   // CHECK: amdgpu.swizzle_bitmode
@@ -648,5 +683,68 @@ func.func @memory_counter_wait() {
   amdgpu.memory_counter_wait store(2)
   amdgpu.memory_counter_wait ds(3)
   amdgpu.memory_counter_wait exp(4)
+  func.return
+}
+
+// CHECK-LABEL: func @make_dma_base
+// CHECK-SAME: (%[[IDX:.+]]: index, %[[MEM:.+]]: memref<8xi32>, %[[SMEM:.+]]: memref<8xi32, #gpu.address_space<workgroup>>)
+func.func @make_dma_base(%idx: index, %mem: memref<8xi32>, %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
+  // CHECK: amdgpu.make_dma_base %[[MEM]][%[[IDX]]], %[[SMEM]][%[[IDX]]] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+  amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+
+  // CHECK: amdgpu.make_dma_base %[[SMEM]][%[[IDX]]], %[[MEM]][%[[IDX]]] : memref<8xi32, #gpu.address_space<workgroup>>, memref<8xi32> -> !amdgpu.tdm_base<i32>
+  amdgpu.make_dma_base %smem[%idx], %mem[%idx] : memref<8xi32, #gpu.address_space<workgroup>>, memref<8xi32> -> !amdgpu.tdm_base<i32>
+  func.return
+}
+
+// CHECK-LABEL: func @make_dma_descriptor
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[BARRIER:.+]]: memref<8xi32, #gpu.address_space<workgroup>>, %[[IDX:.+]]: index)
+func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8xi32, #gpu.address_space<workgroup>>, %idx: index) {
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [0]
+        globalSize [0]
+        // CHECK-SAME: globalStride [1]
+        globalStride [1]
+        // CHECK-SAME: sharedSize [0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+        sharedSize [0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [0]
+        globalSize [0]
+        // CHECK-SAME: globalStride [1]
+        globalStride [1]
+        // CHECK-SAME: sharedSize [0]
+        sharedSize [0]
+        // CHECK-SAME: padShared(%[[IDX]] every %[[IDX]])
+        padShared(%idx every %idx)
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [0]
+        globalSize [0]
+        // CHECK-SAME: globalStride [1]
+        globalStride [1]
+        // CHECK-SAME: sharedSize [0]
+        sharedSize [0]
+        // CHECK-SAME: atomicBarrier(%[[BARRIER]][%[[IDX]]] : memref<8xi32, #gpu.address_space<workgroup>>)
+        atomicBarrier(%barrier[%idx] : memref<8xi32, #gpu.address_space<workgroup>>)
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+
+  // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
+  amdgpu.make_dma_descriptor %base
+        // CHECK-SAME: globalSize [0]
+        globalSize [0]
+        // CHECK-SAME: globalStride [1]
+        globalStride [1]
+        // CHECK-SAME: sharedSize [0]
+        sharedSize [0]
+        // CHECK-SAME: iterate %[[IDX]], %[[IDX]], %[[IDX]]
+        iterate %idx, %idx, %idx
+        : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+
   func.return
 }

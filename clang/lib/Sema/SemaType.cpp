@@ -32,6 +32,8 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/DelayedDiagnostic.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
+#include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ParsedTemplate.h"
@@ -2259,6 +2261,8 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
              isSFINAEContext() ? diag::err_typecheck_zero_array_size
                                : diag::ext_typecheck_zero_array_size)
             << 0 << ArraySize->getSourceRange();
+        if (isSFINAEContext())
+          return QualType();
       }
 
       // Is the array too large?
@@ -2358,6 +2362,11 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return QualType();
   }
 
+  if (VecSize->isNegative()) {
+    Diag(SizeExpr->getExprLoc(), diag::err_attribute_vec_negative_size);
+    return QualType();
+  }
+
   if (CurType->isDependentType())
     return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
                                           VectorKind::Generic);
@@ -2394,7 +2403,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                VectorKind::Generic);
 }
 
-QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
+QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
                                   SourceLocation AttrLoc) {
   // Unlike gcc's vector_size attribute, we do not allow vectors to be defined
   // in conjunction with complex types (pointers, arrays, functions, etc.).
@@ -2417,35 +2426,40 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
       BIT && CheckBitIntElementType(*this, AttrLoc, BIT))
     return QualType();
 
-  if (!ArraySize->isTypeDependent() && !ArraySize->isValueDependent()) {
-    std::optional<llvm::APSInt> vecSize =
-        ArraySize->getIntegerConstantExpr(Context);
-    if (!vecSize) {
+  if (!SizeExpr->isTypeDependent() && !SizeExpr->isValueDependent()) {
+    std::optional<llvm::APSInt> VecSize =
+        SizeExpr->getIntegerConstantExpr(Context);
+    if (!VecSize) {
       Diag(AttrLoc, diag::err_attribute_argument_type)
-        << "ext_vector_type" << AANT_ArgumentIntegerConstant
-        << ArraySize->getSourceRange();
+          << "ext_vector_type" << AANT_ArgumentIntegerConstant
+          << SizeExpr->getSourceRange();
       return QualType();
     }
 
-    if (!vecSize->isIntN(32)) {
+    if (VecSize->isNegative()) {
+      Diag(SizeExpr->getExprLoc(), diag::err_attribute_vec_negative_size);
+      return QualType();
+    }
+
+    if (!VecSize->isIntN(32)) {
       Diag(AttrLoc, diag::err_attribute_size_too_large)
-          << ArraySize->getSourceRange() << "vector";
+          << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
     // Unlike gcc's vector_size attribute, the size is specified as the
     // number of elements, not the number of bytes.
-    unsigned vectorSize = static_cast<unsigned>(vecSize->getZExtValue());
+    unsigned VectorSize = static_cast<unsigned>(VecSize->getZExtValue());
 
-    if (vectorSize == 0) {
+    if (VectorSize == 0) {
       Diag(AttrLoc, diag::err_attribute_zero_size)
-          << ArraySize->getSourceRange() << "vector";
+          << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
 
-    return Context.getExtVectorType(T, vectorSize);
+    return Context.getExtVectorType(T, VectorSize);
   }
 
-  return Context.getDependentSizedExtVectorType(T, ArraySize, AttrLoc);
+  return Context.getDependentSizedExtVectorType(T, SizeExpr, AttrLoc);
 }
 
 QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
@@ -2785,13 +2799,14 @@ QualType Sema::GetTypeFromParser(ParsedType Ty, TypeSourceInfo **TInfo) {
     return QualType();
   }
 
-  TypeSourceInfo *DI = nullptr;
+  TypeSourceInfo *TSI = nullptr;
   if (const LocInfoType *LIT = dyn_cast<LocInfoType>(QT)) {
     QT = LIT->getType();
-    DI = LIT->getTypeSourceInfo();
+    TSI = LIT->getTypeSourceInfo();
   }
 
-  if (TInfo) *TInfo = DI;
+  if (TInfo)
+    *TInfo = TSI;
   return QT;
 }
 
@@ -5056,8 +5071,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // cv-qualifiers on return types are pointless except when the type is a
       // class type in C++.
       if ((T.getCVRQualifiers() || T->isAtomicType()) &&
+          // A dependent type or an undeduced type might later become a class
+          // type.
           !(S.getLangOpts().CPlusPlus &&
-            (T->isDependentType() || T->isRecordType()))) {
+            (T->isRecordType() || T->isDependentType() ||
+             T->isUndeducedAutoType()))) {
         if (T->isVoidType() && !S.getLangOpts().CPlusPlus &&
             D.getFunctionDefinitionKind() ==
                 FunctionDefinitionKind::Definition) {
@@ -10054,6 +10072,81 @@ QualType Sema::BuiltinChangeSignedness(QualType BaseType, UTTKind UKind,
   if (Underlying.isNull())
     return Underlying;
   return Context.getQualifiedType(Underlying, BaseType.getQualifiers());
+}
+
+bool Sema::BuiltinIsConvertible(QualType From, QualType To, SourceLocation Loc,
+                                bool CheckNothrow) {
+  if (To->isVoidType())
+    return From->isVoidType();
+
+  // [meta.rel]
+  // From and To shall be complete types, cv void, or arrays of unknown bound.
+  if ((!From->isIncompleteArrayType() && !From->isVoidType() &&
+       RequireCompleteType(
+           Loc, From, diag::err_incomplete_type_used_in_type_trait_expr)) ||
+      (!To->isIncompleteArrayType() && !To->isVoidType() &&
+       RequireCompleteType(Loc, To,
+                           diag::err_incomplete_type_used_in_type_trait_expr)))
+    return false;
+
+  // C++11 [meta.rel]p4:
+  //   Given the following function prototype:
+  //
+  //     template <class T>
+  //       typename add_rvalue_reference<T>::type create();
+  //
+  //   the predicate condition for a template specialization
+  //   is_convertible<From, To> shall be satisfied if and only if
+  //   the return expression in the following code would be
+  //   well-formed, including any implicit conversions to the return
+  //   type of the function:
+  //
+  //     To test() {
+  //       return create<From>();
+  //     }
+  //
+  //   Access checking is performed as if in a context unrelated to To and
+  //   From. Only the validity of the immediate context of the expression
+  //   of the return-statement (including conversions to the return type)
+  //   is considered.
+  //
+  // We model the initialization as a copy-initialization of a temporary
+  // of the appropriate type, which for this expression is identical to the
+  // return statement (since NRVO doesn't apply).
+
+  // Functions aren't allowed to return function or array types.
+  if (To->isFunctionType() || To->isArrayType())
+    return false;
+
+  // A function definition requires a non-abstract return type.
+  if (isAbstractType(Loc, To))
+    return false;
+
+  From = BuiltinAddRValueReference(From, Loc);
+
+  // Build a fake source and destination for initialization.
+  InitializedEntity ToEntity(InitializedEntity::InitializeTemporary(To));
+  OpaqueValueExpr FromExpr(Loc, From.getNonLValueExprType(Context),
+                           Expr::getValueKindForType(From));
+  InitializationKind Kind =
+      InitializationKind::CreateCopy(Loc, SourceLocation());
+
+  // Perform the initialization in an unevaluated context within a SFINAE
+  // trap at translation unit scope.
+  EnterExpressionEvaluationContext Unevaluated(
+      *this, Sema::ExpressionEvaluationContext::Unevaluated);
+  Sema::SFINAETrap SFINAE(*this, /*AccessCheckingSFINAE=*/true);
+  Sema::ContextRAII TUContext(*this, Context.getTranslationUnitDecl());
+  Expr *FromExprPtr = &FromExpr;
+  InitializationSequence Init(*this, ToEntity, Kind, FromExprPtr);
+  if (Init.Failed())
+    return false;
+
+  ExprResult Result = Init.Perform(*this, ToEntity, Kind, FromExprPtr);
+  if (Result.isInvalid() || SFINAE.hasErrorOccurred())
+    return false;
+
+  return !CheckNothrow || canThrow(Result.get()) == CT_Cannot;
 }
 
 QualType Sema::BuildUnaryTransformType(QualType BaseType, UTTKind UKind,
