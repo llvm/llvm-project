@@ -6,29 +6,19 @@ define void @trunc_v4i64_to_v4i32(ptr %res, ptr %a) nounwind {
 ; LA32-LABEL: trunc_v4i64_to_v4i32:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 2
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 6
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    vst $vr1, $a0, 0
+; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI0_0)
+; LA32-NEXT:    xvld $xr1, $a1, %pc_lo12(.LCPI0_0)
+; LA32-NEXT:    xvperm.w $xr0, $xr0, $xr1
+; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: trunc_v4i64_to_v4i32:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvpickve2gr.d $a1, $xr0, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 0
-; LA64-NEXT:    xvpickve2gr.d $a1, $xr0, 1
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA64-NEXT:    xvpickve2gr.d $a1, $xr0, 2
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA64-NEXT:    xvpickve2gr.d $a1, $xr0, 3
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA64-NEXT:    vst $vr1, $a0, 0
+; LA64-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI0_0)
+; LA64-NEXT:    xvld $xr1, $a1, %pc_lo12(.LCPI0_0)
+; LA64-NEXT:    xvperm.w $xr0, $xr0, $xr1
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %v = load <4 x i64>, ptr %a
@@ -99,45 +89,17 @@ define void @trunc_v8i32_to_v8i16(ptr %res, ptr %a) nounwind {
 ; LA32-LABEL: trunc_v8i32_to_v8i16:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 0
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a1, 0
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 1
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a1, 1
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 2
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a1, 2
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 3
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a1, 3
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 4
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a1, 4
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 5
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a1, 5
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 6
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a1, 6
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 7
-; LA32-NEXT:    vinsgr2vr.h $vr1, $a1, 7
-; LA32-NEXT:    vst $vr1, $a0, 0
+; LA32-NEXT:    xvpermi.d $xr1, $xr0, 78
+; LA32-NEXT:    xvpickev.h $xr0, $xr1, $xr0
+; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: trunc_v8i32_to_v8i16:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 0
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a1, 0
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 1
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a1, 1
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 2
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a1, 2
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 3
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a1, 3
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 4
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a1, 4
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 5
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a1, 5
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 6
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a1, 6
-; LA64-NEXT:    xvpickve2gr.w $a1, $xr0, 7
-; LA64-NEXT:    vinsgr2vr.h $vr1, $a1, 7
-; LA64-NEXT:    vst $vr1, $a0, 0
+; LA64-NEXT:    xvpermi.d $xr1, $xr0, 78
+; LA64-NEXT:    xvpickev.h $xr0, $xr1, $xr0
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %v = load <8 x i32>, ptr %a
@@ -180,79 +142,17 @@ define void @trunc_v16i16_to_v16i8(ptr %res, ptr %a) nounwind {
 ; LA32-LABEL: trunc_v16i16_to_v16i8:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 0
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 0
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 1
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 1
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 2
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 2
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 3
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 3
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 4
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 4
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 5
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 5
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 6
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 6
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 7
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 7
-; LA32-NEXT:    xvpermi.d $xr0, $xr0, 14
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 0
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 8
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 1
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 9
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 2
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 10
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 3
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 11
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 4
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 12
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 5
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 13
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 6
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 14
-; LA32-NEXT:    vpickve2gr.h $a1, $vr0, 7
-; LA32-NEXT:    vinsgr2vr.b $vr1, $a1, 15
-; LA32-NEXT:    vst $vr1, $a0, 0
+; LA32-NEXT:    xvpermi.d $xr1, $xr0, 78
+; LA32-NEXT:    xvpickev.b $xr0, $xr1, $xr0
+; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: trunc_v16i16_to_v16i8:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 0
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 0
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 1
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 1
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 2
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 2
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 3
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 3
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 4
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 4
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 5
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 5
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 6
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 6
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 7
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 7
-; LA64-NEXT:    xvpermi.d $xr0, $xr0, 14
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 0
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 8
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 1
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 9
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 2
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 10
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 3
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 11
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 4
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 12
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 5
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 13
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 6
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 14
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 7
-; LA64-NEXT:    vinsgr2vr.b $vr1, $a1, 15
-; LA64-NEXT:    vst $vr1, $a0, 0
+; LA64-NEXT:    xvpermi.d $xr1, $xr0, 78
+; LA64-NEXT:    xvpickev.b $xr0, $xr1, $xr0
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %v = load <16 x i16>, ptr %a

@@ -884,39 +884,25 @@ define i8 @xvmsk_ne_v4i32_concat_poison(<4 x i32> %vec) {
 }
 
 define i8 @xvmsk_ogt_v4f64_concat_poison(<4 x double> %vec) {
-; LA32-LABEL: xvmsk_ogt_v4f64_concat_poison:
-; LA32:       # %bb.0:
-; LA32-NEXT:    xvrepli.b $xr1, 0
-; LA32-NEXT:    xvfcmp.clt.d $xr0, $xr1, $xr0
-; LA32-NEXT:    xvpickve2gr.w $a0, $xr0, 6
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 4
-; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 2
-; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 0
-; LA32-NEXT:    vinsgr2vr.h $vr0, $a3, 0
-; LA32-NEXT:    vinsgr2vr.h $vr0, $a2, 1
-; LA32-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; LA32-NEXT:    vinsgr2vr.h $vr0, $a0, 3
-; LA32-NEXT:    vslli.h $vr0, $vr0, 15
-; LA32-NEXT:    vmskltz.h $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: xvmsk_ogt_v4f64_concat_poison:
-; LA64:       # %bb.0:
-; LA64-NEXT:    xvrepli.b $xr1, 0
-; LA64-NEXT:    xvfcmp.clt.d $xr0, $xr1, $xr0
-; LA64-NEXT:    xvpickve2gr.d $a0, $xr0, 3
-; LA64-NEXT:    xvpickve2gr.d $a1, $xr0, 2
-; LA64-NEXT:    xvpickve2gr.d $a2, $xr0, 1
-; LA64-NEXT:    xvpickve2gr.d $a3, $xr0, 0
-; LA64-NEXT:    vinsgr2vr.h $vr0, $a3, 0
-; LA64-NEXT:    vinsgr2vr.h $vr0, $a2, 1
-; LA64-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; LA64-NEXT:    vinsgr2vr.h $vr0, $a0, 3
-; LA64-NEXT:    vslli.h $vr0, $vr0, 15
-; LA64-NEXT:    vmskltz.h $vr0, $vr0
-; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: xvmsk_ogt_v4f64_concat_poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI34_0)
+; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI34_0)
+; CHECK-NEXT:    xvrepli.b $xr2, 0
+; CHECK-NEXT:    xvfcmp.clt.d $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 0
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 1
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 1
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 2
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 2
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 3
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 3
+; CHECK-NEXT:    vslli.h $vr0, $vr1, 15
+; CHECK-NEXT:    vmskltz.h $vr0, $vr0
+; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
+; CHECK-NEXT:    ret
   %tobool = fcmp ogt <4 x double> %vec, zeroinitializer
   %insertvec = shufflevector <4 x i1> %tobool, <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
   %res = bitcast <8 x i1> %insertvec to i8
