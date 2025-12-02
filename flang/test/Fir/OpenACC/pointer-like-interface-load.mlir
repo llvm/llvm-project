@@ -60,6 +60,16 @@ func.func @test_load_derived_type() {
 
 // -----
 
+func.func @test_load_constant_array() {
+  %ptr = fir.alloca !fir.array<10xf32> {test.ptr}
+  // CHECK: Successfully generated load for operation: %{{.*}} = fir.alloca !fir.array<10xf32> {test.ptr}
+  // CHECK: Loaded value type: !fir.array<10xf32>
+  // CHECK: Generated: %{{.*}} = fir.load %{{.*}} : !fir.ref<!fir.array<10xf32>>
+  return
+}
+
+// -----
+
 func.func @test_load_dynamic_array_fails() {
   %c10 = arith.constant 10 : index
   %ptr = fir.alloca !fir.array<?xf32>, %c10 {test.ptr}

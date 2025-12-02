@@ -50,6 +50,16 @@ func.func @test_store_with_type_conversion() {
 
 // -----
 
+func.func @test_store_constant_array() {
+  %val = fir.undefined !fir.array<10xf32> {test.value}
+  %ptr = fir.alloca !fir.array<10xf32> {test.ptr}
+  // CHECK: Successfully generated store for operation: %{{.*}} = fir.alloca !fir.array<10xf32> {test.ptr}
+  // CHECK: Generated: fir.store %{{.*}} to %{{.*}} : !fir.ref<!fir.array<10xf32>>
+  return
+}
+
+// -----
+
 func.func @test_store_dynamic_array_fails() {
   %c10 = arith.constant 10 : index
   %ptr = fir.alloca !fir.array<?xf32>, %c10 {test.ptr}
