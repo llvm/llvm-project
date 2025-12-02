@@ -81,9 +81,13 @@ class TestSwiftExpressionErrorReporting(TestBase):
 
         check(value)
 
+        # This succeeds using stringForPrintObject(_:mangledTypeName:), which
+        # doesn't require the type to be available.
+        # Note: (?s)^(?!.*<pattern>) checks that the pattern is not found.
+        # self.runCmd("log enable lldb formatters")
         self.expect(
             "dwim-print -O -- strct",
-            substrs=["error: Missing type", "properties = true"],
+            patterns=["(?s)^(?!.*error: Missing type)", "properties : true"],
         )
 
         process.Continue()

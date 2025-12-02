@@ -566,6 +566,10 @@ public:
 
   bool GetPreparePlaygroundStubFunctions() const { return m_prepare_playground_stub_functions; }
 
+  void SetDisableAvailability() { m_disable_availability = true; }
+
+  bool GetDisableAvailability() const { return m_disable_availability; }
+
 private:
   ExecutionPolicy m_execution_policy = default_execution_policy;
   SourceLanguage m_language;
@@ -606,6 +610,9 @@ private:
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
   bool m_prepare_playground_stub_functions = true;
+
+  /// Disable compiler availability checking.
+  bool m_disable_availability = false;
 
   /// During expression evaluation, any SymbolContext in this list will be
   /// used for symbol/function lookup before any other context (except for
