@@ -3,8 +3,6 @@
 
 %struct.foo = type { i32, i32, i32, i32 }
 
-declare <vscale x 1 x i64> @llvm.stepvector.nxv1i64()
-
 define <vscale x 1 x i64> @gather(ptr %a, i32 %len) {
 ; CHECK-LABEL: @gather(
 ; CHECK-NEXT:  vector.ph:
@@ -661,11 +659,6 @@ define <vscale x 1 x i64> @vector_base_vector_offset(ptr %p, <vscale x 1 x i64> 
   )
   ret <vscale x 1 x i64> %x
 }
-
-declare i64 @llvm.vscale.i64()
-declare void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64>, <vscale x 1 x ptr>, i32, <vscale x 1 x i1>)
-declare <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr>, i32, <vscale x 1 x i1>, <vscale x 1 x i64>)
-
 
 define <vscale x 1 x i64> @vp_gather(ptr %a, i32 %len) {
 ; CHECK-LABEL: @vp_gather(

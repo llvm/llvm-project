@@ -37,7 +37,10 @@ tablegen("ARMGenRegisterBank") {
 }
 
 tablegen("ARMGenSDNodeInfo") {
-  visibility = [ ":LLVMARMCodeGen" ]
+  visibility = [
+    ":LLVMARMCodeGen",
+    "//llvm/unittests/Target/ARM:ARMTests",
+  ]
   args = [ "-gen-sd-node-info" ]
   td_file = "ARM.td"
 }

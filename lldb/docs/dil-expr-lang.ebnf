@@ -3,12 +3,15 @@
 (* This is currently a subset of the final DIL Language, matching the current
    DIL implementation. *)
 
-expression = unary_expression ;
+expression = cast_expression;
+
+cast_expression = unary_expression
+                | "(" type_id ")" cast_expression;
 
 unary_expression = postfix_expression
-                 | unary_operator expression ;
+                 | unary_operator cast_expression ;
 
-unary_operator = "*" | "&" ;
+unary_operator = "*" | "&" | "+" | "-";
 
 postfix_expression = primary_expression
                    | postfix_expression "[" integer_literal "]"
@@ -44,9 +47,27 @@ nested_name_specifier = type_name "::"
                       | namespace_name '::'
                       | nested_name_specifier identifier "::" ;
 
+type_id = type_specifier_seq [abstract_declarator] ;
+
+type_specifier_seq = type_specifier [type_specifier];
+
+type_specifier = ["::"] [nested_name_specifier] type_name
+               | builtin_typename ;
+
+nested_name_specifier = type_name "::"
+                      | namespace_name "::"
+                      | nested_name_specifier identifier "::" ;
+
+abstract_declarator = ptr_operator [abstract_declarator] ;
+
+ptr_operator = "*"
+             | "&";
+
 type_name = class_name
           | enum_name
           | typedef_name;
+
+builtin_typename = identifier_seq;
 
 class_name = identifier ;
 
@@ -56,6 +77,7 @@ typedef_name = identifier ;
 
 namespace_name = identifier ;
 
-
+identifier_seq = identifier
+               | identifier identifier_seq;
 
 
