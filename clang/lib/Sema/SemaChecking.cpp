@@ -12590,7 +12590,7 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
     Source = cast<VectorType>(Source)->getElementType().getTypePtr();
     Target = cast<VectorType>(Target)->getElementType().getTypePtr();
   }
-  if (auto VecTy = dyn_cast<VectorType>(Target))
+  if (const auto *VecTy = dyn_cast<VectorType>(Target))
     Target = VecTy->getElementType().getTypePtr();
 
   if (isa<ConstantMatrixType>(Source)) {

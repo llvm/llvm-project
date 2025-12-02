@@ -2121,7 +2121,7 @@ static bool IsMatrixConversion(Sema &S, QualType FromType, QualType ToType,
   auto *ToMatrixType = ToType->getAs<ConstantMatrixType>();
   auto *FromMatrixType = FromType->getAs<ConstantMatrixType>();
 
-  // If both arguments are vectors, handle possible vector truncation and
+  // If both arguments are matrix, handle possible matrix truncation and
   // element conversion.
   if (ToMatrixType && FromMatrixType) {
     unsigned FromCols = FromMatrixType->getNumColumns();

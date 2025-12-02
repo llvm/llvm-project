@@ -2977,26 +2977,27 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return Builder.CreateExtractElement(Vec, Zero, "cast.vtrunc");
   }
   case CK_HLSLMatrixTruncation: {
-    assert((DestTy->isConstantMatrixType() || DestTy->isBuiltinType()) &&
+    assert((DestTy->isMatrixType() || DestTy->isBuiltinType()) &&
            "Destination type must be a matrix or builtin type.");
     Value *Mat = Visit(E);
-    unsigned NumCols = 1;
-    unsigned NumRows = 1;
-    SmallVector<int> Mask;
     if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
-      NumCols = MatTy->getNumColumns();
-      NumRows = MatTy->getNumRows();
-    }
-    unsigned ColOffset = NumCols;
-    if (auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>())
-      ColOffset = SrcMatTy->getNumColumns();
-    for (unsigned R = 0; R < NumRows; R++) {
-      for (unsigned C = 0; C < NumCols; C++) {
-        unsigned I = R * ColOffset + C;
-        Mask.push_back(I);
+      SmallVector<int> Mask;
+      unsigned NumCols = MatTy->getNumColumns();
+      unsigned NumRows = MatTy->getNumRows();
+      unsigned ColOffset = NumCols;
+      if (auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>())
+        ColOffset = SrcMatTy->getNumColumns();
+      for (unsigned R = 0; R < NumRows; R++) {
+        for (unsigned C = 0; C < NumCols; C++) {
+          unsigned I = R * ColOffset + C;
+          Mask.push_back(I);
+        }
       }
+
+      return Builder.CreateShuffleVector(Mat, Mask, "trunc");
     }
-    return Builder.CreateShuffleVector(Mat, Mask, "trunc");
+    llvm::Value *Zero = llvm::Constant::getNullValue(CGF.SizeTy);
+    return Builder.CreateExtractElement(Mat, Zero, "cast.mtrunc");
   }
   case CK_HLSLElementwiseCast: {
     RValue RV = CGF.EmitAnyExpr(E);
