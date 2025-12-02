@@ -65,9 +65,15 @@ define float @test_minnum_const_inf(float %x) {
 define float @test_maxnum_const_inf(float %x) {
 ; CHECK-LABEL: test_maxnum_const_inf:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    movw r0, #0
-; CHECK-NEXT:    movt r0, #32640
+; CHECK-NEXT:    vldr s0, .LCPI5_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmaxnm.f32 s0, s2, s0
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI5_0:
+; CHECK-NEXT:    .long 0x7f800000 @ float +Inf
   %r = call float @llvm.maxnum.f32(float %x, float 0x7ff0000000000000)
   ret float %r
 }
@@ -99,9 +105,15 @@ define float @test_minimum_const_inf(float %x) {
 define float @test_minnum_const_neg_inf(float %x) {
 ; CHECK-LABEL: test_minnum_const_neg_inf:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    movw r0, #0
-; CHECK-NEXT:    movt r0, #65408
+; CHECK-NEXT:    vldr s0, .LCPI8_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vminnm.f32 s0, s2, s0
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI8_0:
+; CHECK-NEXT:    .long 0xff800000 @ float -Inf
   %r = call float @llvm.minnum.f32(float %x, float 0xfff0000000000000)
   ret float %r
 }
@@ -447,9 +459,15 @@ define float @test_minnum_const_max_ninf(float %x) {
 define float @test_maxnum_const_max_ninf(float %x) {
 ; CHECK-LABEL: test_maxnum_const_max_ninf:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    movw r0, #65535
-; CHECK-NEXT:    movt r0, #32639
+; CHECK-NEXT:    vldr s0, .LCPI37_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmaxnm.f32 s0, s2, s0
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI37_0:
+; CHECK-NEXT:    .long 0x7f7fffff @ float 3.40282347E+38
   %r = call ninf float @llvm.maxnum.f32(float %x, float 0x47efffffe0000000)
   ret float %r
 }
@@ -481,8 +499,15 @@ define float @test_minimum_const_max_ninf(float %x) {
 define float @test_minnum_const_neg_max_ninf(float %x) {
 ; CHECK-LABEL: test_minnum_const_neg_max_ninf:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mvn r0, #8388608
+; CHECK-NEXT:    vldr s0, .LCPI40_0
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vminnm.f32 s0, s2, s0
+; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI40_0:
+; CHECK-NEXT:    .long 0xff7fffff @ float -3.40282347E+38
   %r = call ninf float @llvm.minnum.f32(float %x, float 0xc7efffffe0000000)
   ret float %r
 }

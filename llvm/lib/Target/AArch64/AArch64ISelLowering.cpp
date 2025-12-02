@@ -26983,20 +26983,23 @@ static SDValue performSelectCombine(SDNode *N,
   assert((N0.getValueType() == MVT::i1 || N0.getValueType() == MVT::i32) &&
          "Scalar-SETCC feeding SELECT has unexpected result type!");
 
-  // If NumMaskElts == 0, the comparison is larger than select result. The
-  // largest real NEON comparison is 64-bits per lane, which means the result is
-  // at most 32-bits and an illegal vector. Just bail out for now.
-  EVT SrcVT = N0.getOperand(0).getValueType();
-
   // Don't try to do this optimization when the setcc itself has i1 operands.
   // There are no legal vectors of i1, so this would be pointless. v1f16 is
   // ruled out to prevent the creation of setcc that need to be scalarized.
+  EVT SrcVT = N0.getOperand(0).getValueType();
   if (SrcVT == MVT::i1 ||
       (SrcVT.isFloatingPoint() && SrcVT.getSizeInBits() <= 16))
     return SDValue();
 
-  int NumMaskElts = ResVT.getSizeInBits() / SrcVT.getSizeInBits();
+  // If NumMaskElts == 0, the comparison is larger than select result. The
+  // largest real NEON comparison is 64-bits per lane, which means the result is
+  // at most 32-bits and an illegal vector. Just bail out for now.
+  unsigned NumMaskElts = ResVT.getSizeInBits() / SrcVT.getSizeInBits();
   if (!ResVT.isVector() || NumMaskElts == 0)
+    return SDValue();
+
+  // Avoid creating vectors with excessive VFs before legalization.
+  if (DCI.isBeforeLegalize() && NumMaskElts != ResVT.getVectorNumElements())
     return SDValue();
 
   SrcVT = EVT::getVectorVT(*DAG.getContext(), SrcVT, NumMaskElts);
