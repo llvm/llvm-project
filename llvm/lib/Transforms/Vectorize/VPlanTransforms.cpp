@@ -1342,6 +1342,21 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return Def->replaceAllUsesWith(
         Def->getOperand(0) == A ? Def->getOperand(1) : Def->getOperand(0));
 
+  const APInt *APC;
+  if (match(Def, m_c_Mul(m_VPValue(), m_APInt(APC))) && APC->isPowerOf2())
+    return Def->replaceAllUsesWith(Builder.createNaryOp(
+        Instruction::Shl,
+        {Def->getOperand(0),
+         Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
+        *cast<VPRecipeWithIRFlags>(Def), Def->getDebugLoc()));
+
+  if (match(Def, m_UDiv(m_VPValue(), m_APInt(APC))) && APC->isPowerOf2())
+    return Def->replaceAllUsesWith(Builder.createNaryOp(
+        Instruction::LShr,
+        {Def->getOperand(0),
+         Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
+        *cast<VPRecipeWithIRFlags>(Def), Def->getDebugLoc()));
+
   if (match(Def, m_Not(m_VPValue(A)))) {
     if (match(A, m_Not(m_VPValue(A))))
       return Def->replaceAllUsesWith(A);
