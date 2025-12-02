@@ -12571,9 +12571,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       if (SourceMgr.isInSystemMacro(CC))
         return;
       return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_vector_scalar);
-    } else if (getLangOpts().HLSL &&
-               Target->castAs<VectorType>()->getNumElements() <
-                   Source->castAs<VectorType>()->getNumElements()) {
+    }
+    if (getLangOpts().HLSL &&
+        Target->castAs<VectorType>()->getNumElements() <
+            Source->castAs<VectorType>()->getNumElements()) {
       // Diagnose vector truncation but don't return. We may also want to
       // diagnose an element conversion.
       DiagnoseImpCast(*this, E, T, CC,
@@ -12593,12 +12594,12 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
     Target = VecTy->getElementType().getTypePtr();
 
   if (isa<ConstantMatrixType>(Source)) {
-    if (!isa<ConstantMatrixType>(Target)) {
+    if (Target->isScalarType())
       return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_matrix_scalar);
-    } else if (getLangOpts().HLSL &&
-               Target->castAs<ConstantMatrixType>()->getNumElementsFlattened() <
-                   Source->castAs<ConstantMatrixType>()
-                       ->getNumElementsFlattened()) {
+
+    if (getLangOpts().HLSL &&
+        Target->castAs<ConstantMatrixType>()->getNumElementsFlattened() <
+            Source->castAs<ConstantMatrixType>()->getNumElementsFlattened()) {
       // Diagnose Matrix truncation but don't return. We may also want to
       // diagnose an element conversion.
       DiagnoseImpCast(*this, E, T, CC,

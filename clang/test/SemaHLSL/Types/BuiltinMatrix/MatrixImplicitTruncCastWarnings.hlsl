@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -Wmatrix-conversion -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header -verify %s
 
 export int3x4 trunc_cast(int4x4 i44) {
     int3x4 i34 = i44;

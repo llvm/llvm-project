@@ -2429,7 +2429,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
 
     llvm::Value *V =
         CGF.Builder.CreateLoad(CGF.CreateIRTemp(DestTy, "flatcast.tmp"));
-    // write to V.
+    // V is an allocated temporary to build the truncated matrix into.
     for (unsigned I = 0, E = MatTy->getNumElementsFlattened(); I < E; I++) {
       unsigned ColMajorIndex =
           (I % MatTy->getNumRows()) * MatTy->getNumColumns() +
@@ -2977,27 +2977,23 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return Builder.CreateExtractElement(Vec, Zero, "cast.vtrunc");
   }
   case CK_HLSLMatrixTruncation: {
-    assert((DestTy->isMatrixType() || DestTy->isBuiltinType()) &&
+    assert((DestTy->isConstantMatrixType() || DestTy->isBuiltinType()) &&
            "Destination type must be a matrix or builtin type.");
     Value *Mat = Visit(E);
-    if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
-      SmallVector<int> Mask;
-      unsigned NumCols = MatTy->getNumColumns();
-      unsigned NumRows = MatTy->getNumRows();
-      unsigned ColOffset = NumCols;
-      if (auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>())
-        ColOffset = SrcMatTy->getNumColumns();
-      for (unsigned R = 0; R < NumRows; R++) {
-        for (unsigned C = 0; C < NumCols; C++) {
-          unsigned I = R * ColOffset + C;
-          Mask.push_back(I);
-        }
+    auto *MatTy = DestTy->getAs<ConstantMatrixType>();
+    SmallVector<int> Mask;
+    unsigned NumCols = MatTy->getNumColumns();
+    unsigned NumRows = MatTy->getNumRows();
+    unsigned ColOffset = NumCols;
+    if (auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>())
+      ColOffset = SrcMatTy->getNumColumns();
+    for (unsigned R = 0; R < NumRows; R++) {
+      for (unsigned C = 0; C < NumCols; C++) {
+        unsigned I = R * ColOffset + C;
+        Mask.push_back(I);
       }
-
-      return Builder.CreateShuffleVector(Mat, Mask, "trunc");
     }
-    llvm::Value *Zero = llvm::Constant::getNullValue(CGF.SizeTy);
-    return Builder.CreateExtractElement(Mat, Zero, "cast.mtrunc");
+    return Builder.CreateShuffleVector(Mat, Mask, "trunc");
   }
   case CK_HLSLElementwiseCast: {
     RValue RV = CGF.EmitAnyExpr(E);
