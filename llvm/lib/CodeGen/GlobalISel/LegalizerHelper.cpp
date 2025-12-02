@@ -6684,13 +6684,24 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_STRICT_FADD:
   case TargetOpcode::G_STRICT_FSUB:
-  case TargetOpcode::G_STRICT_FMUL:
+  case TargetOpcode::G_STRICT_FMUL: {
+    Observer.changingInstr(MI);
+    moreElementsVectorSrc(MI, MoreTy, 1);
+    moreElementsVectorSrc(MI, MoreTy, 2);
+    moreElementsVectorDst(MI, MoreTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR: {
     Observer.changingInstr(MI);
     moreElementsVectorSrc(MI, MoreTy, 1);
-    moreElementsVectorSrc(MI, MoreTy, 2);
+    // The shift operand may have a different scalar type from the source and
+    // destination operands.
+    LLT ShiftMoreTy = MoreTy.changeElementType(
+        MRI.getType(MI.getOperand(2).getReg()).getElementType());
+    moreElementsVectorSrc(MI, ShiftMoreTy, 2);
     moreElementsVectorDst(MI, MoreTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
@@ -6806,12 +6817,10 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     LLT DstExtTy;
     if (TypeIdx == 0) {
       DstExtTy = MoreTy;
-      SrcExtTy = LLT::fixed_vector(
-          MoreTy.getNumElements(),
+      SrcExtTy = MoreTy.changeElementType(
           MRI.getType(MI.getOperand(1).getReg()).getElementType());
     } else {
-      DstExtTy = LLT::fixed_vector(
-          MoreTy.getNumElements(),
+      DstExtTy = MoreTy.changeElementType(
           MRI.getType(MI.getOperand(0).getReg()).getElementType());
       SrcExtTy = MoreTy;
     }
