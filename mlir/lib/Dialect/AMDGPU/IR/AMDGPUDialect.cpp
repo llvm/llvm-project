@@ -706,6 +706,24 @@ LogicalResult TransposeLoadOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// MakeDmaBaseOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MakeDmaBaseOp::verify() {
+  MemRefType ldsType = cast<MemRefType>(getLds().getType());
+  MemRefType globalType = cast<MemRefType>(getGlobal().getType());
+  if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace())) {
+    return emitOpError(
+        "lds memref must have workgroup address space attribute.");
+  }
+  if (!hasGlobalMemorySpace(globalType.getMemorySpace())) {
+    return emitOpError(
+        "global memref must have global address space attribute.");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // MakeDmaDescriptorOp
 //===----------------------------------------------------------------------===//
 
