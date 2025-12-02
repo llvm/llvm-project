@@ -7029,8 +7029,7 @@ static void handleModularFormat(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   D->addAttr(::new (S.Context) ModularFormatAttr(
-      S.Context, AL, ModularImplFn, ImplName,
-      Aspects.data(), Aspects.size()));
+      S.Context, AL, ModularImplFn, ImplName, Aspects.data(), Aspects.size()));
 }
 
 //===----------------------------------------------------------------------===//
