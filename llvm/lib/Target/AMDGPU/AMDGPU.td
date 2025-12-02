@@ -2124,7 +2124,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureBVHDualAndBVH8Insts,
    FeatureWaitsBeforeSystemScopeStores,
    FeatureD16Writes32BitVgpr,
-   FeatureCubeInsts, 
+   FeatureCubeInsts,
    FeatureLerpInst, 
    FeatureSadInsts,
    FeatureQsadInsts, 
@@ -2137,7 +2137,6 @@ def FeatureISAVersion12_50_Common : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
    FeatureRequiresAlignedVGPRs,
-   FeatureAddressableLocalMemorySize327680,
    FeatureCuMode,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
@@ -2206,17 +2205,18 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
-]>;
-
-def FeatureISAVersion12_50 : FeatureSet<
-  !listconcat(FeatureISAVersion12_50_Common.Features,
-  [FeatureCubeInsts, 
+   FeatureCubeInsts,
    FeatureLerpInst, 
    FeatureSadInsts, 
    FeatureQsadInsts, 
    FeatureCvtNormInsts, 
    FeatureCvtPkNormVOP2Insts, 
-   FeatureCvtPkNormVOP3Insts])>;
+   FeatureCvtPkNormVOP3Insts
+]>;
+
+def FeatureISAVersion12_50 : FeatureSet<
+  !listconcat(FeatureISAVersion12_50_Common.Features,
+  [FeatureAddressableLocalMemorySize327680])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50.Features,

@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"

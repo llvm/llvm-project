@@ -32,7 +32,7 @@ public:
                                const NVPTXSubtarget &STI);
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
                           MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
