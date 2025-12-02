@@ -11,8 +11,6 @@
 
 // RUN: %clang_cc1 -fsanitize=cfi-vcall -fno-sanitize-trap=cfi-vcall -fsanitize-recover=cfi-vcall -fsanitize-minimal-runtime -flto -fvisibility=hidden -triple x86_64-unknown-linux -fwhole-program-vtables -fsanitize-handler-preserve-all-regs -emit-llvm -o - %s | FileCheck --check-prefix=PRESERVE_MIN %s
 
-// RUN: %clang_cc1 -fsanitize=cfi-vcall -fno-sanitize-trap=cfi-vcall -fsanitize-recover=cfi-vcall -fsanitize-minimal-runtime -flto -fvisibility=hidden -triple i386-unknown-linux -fwhole-program-vtables -fsanitize-handler-preserve-all-regs -emit-llvm -o - %s | FileCheck --check-prefix=RECOVER_MIN_I386 %s
-
 // RUN: %clang_cc1 -fsanitize=cfi-vcall -fno-sanitize-trap=cfi-vcall -fsanitize-minimal-runtime -flto -fvisibility=hidden -triple x86_64-unknown-linux -fwhole-program-vtables -fsanitize-handler-preserve-all-regs -emit-llvm -o - %s | FileCheck --check-prefix=ABORT_MIN %s
 
 
@@ -129,32 +127,13 @@ struct S1 {
 // PRESERVE_MIN-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META5]]
 // PRESERVE_MIN-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF6:![0-9]+]], !nosanitize [[META5]]
 // PRESERVE_MIN:       [[HANDLER_CFI_CHECK_FAIL]]:
-// PRESERVE_MIN-NEXT:    call void @__ubsan_handle_cfi_check_fail_minimal() #[[ATTR3:[0-9]+]], !nosanitize [[META5]]
+// PRESERVE_MIN-NEXT:    call preserve_allcc void @__ubsan_handle_cfi_check_fail_minimal_preserve() #[[ATTR3:[0-9]+]], !nosanitize [[META5]]
 // PRESERVE_MIN-NEXT:    br label %[[CONT]], !nosanitize [[META5]]
 // PRESERVE_MIN:       [[CONT]]:
 // PRESERVE_MIN-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
 // PRESERVE_MIN-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VFN]], align 8
 // PRESERVE_MIN-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // PRESERVE_MIN-NEXT:    ret void
-//
-// RECOVER_MIN_I386-LABEL: define hidden void @_Z3s1fP2S1(
-// RECOVER_MIN_I386-SAME: ptr noundef [[S1:%.*]]) #[[ATTR0:[0-9]+]] {
-// RECOVER_MIN_I386-NEXT:  [[ENTRY:.*:]]
-// RECOVER_MIN_I386-NEXT:    [[S1_ADDR:%.*]] = alloca ptr, align 4
-// RECOVER_MIN_I386-NEXT:    store ptr [[S1]], ptr [[S1_ADDR]], align 4
-// RECOVER_MIN_I386-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S1_ADDR]], align 4
-// RECOVER_MIN_I386-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 4
-// RECOVER_MIN_I386-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS2S1"), !nosanitize [[META6:![0-9]+]]
-// RECOVER_MIN_I386-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META6]]
-// RECOVER_MIN_I386-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF7:![0-9]+]], !nosanitize [[META6]]
-// RECOVER_MIN_I386:       [[HANDLER_CFI_CHECK_FAIL]]:
-// RECOVER_MIN_I386-NEXT:    call void @__ubsan_handle_cfi_check_fail_minimal() #[[ATTR3:[0-9]+]], !nosanitize [[META6]]
-// RECOVER_MIN_I386-NEXT:    br label %[[CONT]], !nosanitize [[META6]]
-// RECOVER_MIN_I386:       [[CONT]]:
-// RECOVER_MIN_I386-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
-// RECOVER_MIN_I386-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VFN]], align 4
-// RECOVER_MIN_I386-NEXT:    call void [[TMP3]](ptr noundef nonnull align 4 dereferenceable(4) [[TMP0]])
-// RECOVER_MIN_I386-NEXT:    ret void
 //
 void s1f(S1 *s1) {
   s1->f();
@@ -177,7 +156,4 @@ void s1f(S1 *s1) {
 //.
 // PRESERVE_MIN: [[META5]] = !{}
 // PRESERVE_MIN: [[PROF6]] = !{!"branch_weights", i32 1048575, i32 1}
-//.
-// RECOVER_MIN_I386: [[META6]] = !{}
-// RECOVER_MIN_I386: [[PROF7]] = !{!"branch_weights", i32 1048575, i32 1}
 //.
