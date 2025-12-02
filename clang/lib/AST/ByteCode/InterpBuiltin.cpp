@@ -3392,47 +3392,28 @@ static bool interp__builtin_ia32_cvt_vec2mask(InterpState &S, CodePtr OpPC,
   return true;
 }
 static bool interp__builtin_ia32_cvtsd2ss(InterpState &S, CodePtr OpPC,
-                                          const CallExpr *Call) {
-  assert(Call->getNumArgs() == 2);
+                                          const CallExpr *Call, bool HasMask,
+                                          bool HasRounding) {
+  APSInt Rounding, MaskInt;
+  Pointer Src, B, A;
 
-  const Pointer &B = S.Stk.pop<Pointer>();
-  const Pointer &A = S.Stk.pop<Pointer>();
-  if (!CheckLoad(S, OpPC, A) || !CheckLoad(S, OpPC, B))
-    return false;
-
-  const auto *DstVTy = Call->getType()->castAs<VectorType>();
-  unsigned NumElems = DstVTy->getNumElements();
-  const Pointer &Dst = S.Stk.peek<Pointer>();
-
-  // Copy all elements except lane 0 (overwritten below) from A to Dst.
-  for (unsigned I = 1; I != NumElems; ++I)
-    Dst.elem<Floating>(I) = A.elem<Floating>(I);
-
-  // Convert element 0 from double to float.
-  Floating Conv = S.allocFloat(
-      S.getASTContext().getFloatTypeSemantics(DstVTy->getElementType()));
-  APFloat SrcVal = B.elem<Floating>(0).getAPFloat();
-  if (!convertDoubleToFloatStrict(SrcVal, Conv, S, Call))
-    return false;
-  Dst.elem<Floating>(0) = Conv;
-
-  Dst.initializeAllElements();
-  return true;
-}
-
-static bool interp__builtin_ia32_cvtsd2ss_round_mask(InterpState &S,
-                                                     CodePtr OpPC,
-                                                     const CallExpr *Call) {
-  assert(Call->getNumArgs() == 5);
-
-  APSInt Rounding = popToAPSInt(S, Call->getArg(4));
-  APSInt MaskInt = popToAPSInt(S, Call->getArg(3));
-  const Pointer &Src = S.Stk.pop<Pointer>();
-  const Pointer &B = S.Stk.pop<Pointer>();
-  const Pointer &A = S.Stk.pop<Pointer>();
-  if (!CheckLoad(S, OpPC, A) || !CheckLoad(S, OpPC, B) ||
-      !CheckLoad(S, OpPC, Src))
-    return false;
+  if (HasMask) {
+    assert(Call->getNumArgs() == 5);
+    Rounding = popToAPSInt(S, Call->getArg(4));
+    MaskInt = popToAPSInt(S, Call->getArg(3));
+    Src = S.Stk.pop<Pointer>();
+    B = S.Stk.pop<Pointer>();
+    A = S.Stk.pop<Pointer>();
+    if (!CheckLoad(S, OpPC, A) || !CheckLoad(S, OpPC, B) ||
+        !CheckLoad(S, OpPC, Src))
+      return false;
+  } else {
+    assert(Call->getNumArgs() == 2);
+    B = S.Stk.pop<Pointer>();
+    A = S.Stk.pop<Pointer>();
+    if (!CheckLoad(S, OpPC, A) || !CheckLoad(S, OpPC, B))
+      return false;
+  }
 
   const auto *DstVTy = Call->getType()->castAs<VectorType>();
   unsigned NumElems = DstVTy->getNumElements();
@@ -3442,10 +3423,8 @@ static bool interp__builtin_ia32_cvtsd2ss_round_mask(InterpState &S,
   for (unsigned I = 1; I != NumElems; ++I)
     Dst.elem<Floating>(I) = A.elem<Floating>(I);
 
-  // If mask bit 0 is set, convert element 0 from double to float; otherwise use
-  // Src.
-  if (MaskInt.getZExtValue() & 0x1) {
-
+  // Convert element 0 from double to float, or use Src if masked off.
+  if (!HasMask || (MaskInt.getZExtValue() & 0x1)) {
     assert(S.getASTContext().FloatTy == DstVTy->getElementType() &&
            "cvtsd2ss requires float element type in destination vector");
 
@@ -3464,11 +3443,8 @@ static bool interp__builtin_ia32_cvtsd2ss_round_mask(InterpState &S,
 }
 
 static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
-                                          const CallExpr *Call,
-                                          unsigned BuiltinID) {
-  bool IsMasked = (BuiltinID == X86::BI__builtin_ia32_cvtpd2ps_mask ||
-                   BuiltinID == X86::BI__builtin_ia32_cvtpd2ps512_mask);
-  bool HasRounding = (BuiltinID == X86::BI__builtin_ia32_cvtpd2ps512_mask);
+                                          const CallExpr *Call, bool IsMasked,
+                                          bool HasRounding) {
 
   APSInt MaskVal;
   Pointer PassThrough;
@@ -5342,16 +5318,18 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_ia32_cvt_vec2mask(S, OpPC, Call, BuiltinID);
 
   case X86::BI__builtin_ia32_cvtsd2ss:
-    return interp__builtin_ia32_cvtsd2ss(S, OpPC, Call);
+    return interp__builtin_ia32_cvtsd2ss(S, OpPC, Call, false, false);
 
   case X86::BI__builtin_ia32_cvtsd2ss_round_mask:
-    return interp__builtin_ia32_cvtsd2ss_round_mask(S, OpPC, Call);
+    return interp__builtin_ia32_cvtsd2ss(S, OpPC, Call, true, true);
 
   case X86::BI__builtin_ia32_cvtpd2ps:
   case X86::BI__builtin_ia32_cvtpd2ps256:
+    return interp__builtin_ia32_cvtpd2ps(S, OpPC, Call, false, false);
   case X86::BI__builtin_ia32_cvtpd2ps_mask:
+    return interp__builtin_ia32_cvtpd2ps(S, OpPC, Call, true, false);
   case X86::BI__builtin_ia32_cvtpd2ps512_mask:
-    return interp__builtin_ia32_cvtpd2ps(S, OpPC, Call, BuiltinID);
+    return interp__builtin_ia32_cvtpd2ps(S, OpPC, Call, true, true);
 
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpw128_mask:
