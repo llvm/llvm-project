@@ -5,13 +5,13 @@
 ; RUN:   | FileCheck -check-prefixes=CMOV,CMOV-NOZICOND %s
 ; RUN: llc -mtriple=riscv64 -mattr=+conditional-cmv-fusion,+c,+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=CMOV,CMOV-ZICOND %s
-; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-ialu -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND,SFB-NOZICOND-NOC %s
-; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+c -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-ialu,+c -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND,SFB-NOZICOND-C %s
-; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+zicond -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-ialu,+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-ZICOND %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-opt,+conditional-cmv-fusion -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-ialu,+conditional-cmv-fusion -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 
 ; The conditional move optimization in sifive-p450 requires that only a

@@ -22,7 +22,7 @@ define void @f(i1 %0) !prof !0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr null, i64 [[EVL_BASED_IV]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> poison, ptr align 8 [[TMP4]], <vscale x 2 x i1> [[TMP2]], i32 [[TMP3]])
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> poison, ptr align 8 [[TMP4]], <vscale x 2 x i1> [[TMP2]], i32 [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[EVL_BASED_IV]], [[TMP5]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw nsw i64 [[AVL]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
