@@ -178,9 +178,7 @@ static ManagedStatic<DebugCounterOwner> Owner;
 
 void llvm::initDebugCounterOptions() { (void)DebugCounter::instance(); }
 
-DebugCounter &DebugCounter::instance() {
-  return *Owner;
-}
+DebugCounter &DebugCounter::instance() { return *Owner; }
 
 // This is called by the command line parser when it sees a value for the
 // debug-counter option defined above.
@@ -259,8 +257,8 @@ bool DebugCounter::shouldExecuteImpl(CounterInfo &Counter) {
   auto &Us = instance();
   bool Res = Us.handleCounterIncrement(Counter);
   if (Us.ShouldPrintCounterQueries && Counter.IsSet) {
-    dbgs() << "DebugCounter " << Counter.Name << "="
-           << (Counter.Count - 1) << (Res ? " execute" : " skip") << "\n";
+    dbgs() << "DebugCounter " << Counter.Name << "=" << (Counter.Count - 1)
+           << (Res ? " execute" : " skip") << "\n";
   }
   return Res;
 }
