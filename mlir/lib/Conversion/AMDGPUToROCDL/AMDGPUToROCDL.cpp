@@ -2572,7 +2572,7 @@ struct AMDGPUMakeDmaDescriptorLowering
       tensorDimXStride = cast<Value>(tensorDimXStrideOpFoldResult);
     }
 
-    constexpr int64_t first48bits = 0xFFFFFFFFFFFF;
+    constexpr int64_t first48bits = (1ll << 48) - 1;
     Value mask = createI64Constant(rewriter, loc, first48bits);
     tensorDimXStride =
         LLVM::AndOp::create(rewriter, loc, mask, tensorDimXStride);
