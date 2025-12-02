@@ -1515,6 +1515,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     }
   }
 
+  // Simplify gep x, 0 -> x in unrolled VectorPointerRecipe.
+  if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(Def))
+    if (match(VPR->getOffset(), m_ZeroInt()))
+      return VPR->replaceAllUsesWith(VPR->getOperand(0));
+
   // VPScalarIVSteps for part 0 can be replaced by their start value, if only
   // the first lane is demanded.
   if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(Def)) {

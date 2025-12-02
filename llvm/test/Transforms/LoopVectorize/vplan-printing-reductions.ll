@@ -539,11 +539,9 @@ define i32 @print_mulacc_sub(ptr %a, ptr %b) {
 ; CHECK-NEXT:   EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%accum> = phi ir<0>, ir<%add>
 ; CHECK-NEXT:   CLONE ir<%gep.a> = getelementptr ir<%a>, vp<%index>
-; CHECK-NEXT:   vp<%1> = vector-pointer ir<%gep.a>, ir<0>
-; CHECK-NEXT:   WIDEN ir<%load.a> = load vp<%1>
+; CHECK-NEXT:   WIDEN ir<%load.a> = load ir<%gep.a>
 ; CHECK-NEXT:   CLONE ir<%gep.b> = getelementptr ir<%b>, vp<%index>
-; CHECK-NEXT:   vp<%2> = vector-pointer ir<%gep.b>, ir<0>
-; CHECK-NEXT:   WIDEN ir<%load.b> = load vp<%2>
+; CHECK-NEXT:   WIDEN ir<%load.b> = load ir<%gep.b>
 ; CHECK-NEXT:   WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i32
 ; CHECK-NEXT:   WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i32
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%ext.b>, ir<%ext.a>
@@ -660,11 +658,9 @@ define i32 @print_mulacc_negated(ptr %a, ptr %b) {
 ; CHECK-NEXT:   EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%accum> = phi ir<0>, ir<%add>
 ; CHECK-NEXT:   CLONE ir<%gep.a> = getelementptr ir<%a>, vp<%index>
-; CHECK-NEXT:   vp<%1> = vector-pointer ir<%gep.a>, ir<0>
-; CHECK-NEXT:   WIDEN ir<%load.a> = load vp<%1>
+; CHECK-NEXT:   WIDEN ir<%load.a> = load ir<%gep.a>
 ; CHECK-NEXT:   CLONE ir<%gep.b> = getelementptr ir<%b>, vp<%index>
-; CHECK-NEXT:   vp<%2> = vector-pointer ir<%gep.b>, ir<0>
-; CHECK-NEXT:   WIDEN ir<%load.b> = load vp<%2>
+; CHECK-NEXT:   WIDEN ir<%load.b> = load ir<%gep.b>
 ; CHECK-NEXT:   WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i32
 ; CHECK-NEXT:   WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i32
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%ext.b>, ir<%ext.a>

@@ -2528,9 +2528,6 @@ void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   Value *Step = State.get(getOffset(), true);
-  if (auto *C = dyn_cast<ConstantInt>(Step))
-    if (C->isZero())
-      return State.set(this, Ptr, /*IsScalar=*/true);
   Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Step, "",
                                        getGEPNoWrapFlags());
   State.set(this, ResultPtr, /*IsScalar*/ true);
