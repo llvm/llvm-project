@@ -774,9 +774,8 @@ static DiagnosedSilenceableFailure checkMappingSpec(
     ArrayRef<int64_t> numParallelIterations, ArrayRef<int64_t> blockOrGridSizes,
     int factor, bool useLinearMapping = false) {
   if (llvm::any_of(blockOrGridSizes, [](int64_t i) { return i <= 0; })) {
-    return definiteFailureHelper(
-        transformOp, forallOp,
-        "block/grid sizes must be strictly positive");
+    return definiteFailureHelper(transformOp, forallOp,
+                                 "block/grid sizes must be strictly positive");
   }
   if (!useLinearMapping && blockOrGridSizes.front() % factor != 0) {
     auto diag = definiteFailureHelper(
