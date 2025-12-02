@@ -3,13 +3,11 @@
 
 ; Note: This test case is reduced from: https://github.com/llvm/llvm-project/pull/166748#issuecomment-3600498185
 
-define i32 @test_extract_v8i32_from_nxv8i32(<vscale x 8 x i32> %vec) {
+define i32 @test_extract_v8i32_from_nxv8i32(<vscale x 8 x i32> %vec) nounwind {
 ; CHECK-LABEL: test_extract_v8i32_from_nxv8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ldr z0, [sp]
