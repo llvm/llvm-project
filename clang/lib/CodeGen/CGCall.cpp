@@ -5073,7 +5073,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
 
   AggValueSlot ArgSlot = AggValueSlot::ignored();
   // For arguments with aggregate type, create an alloca to store
-  // the value.  If the argument's type has a destructor, that destructor
+  // the value. If the argument's type has a destructor, that destructor
   // will run at the end of the full-expression; emit matching lifetime
   // markers.
   //
@@ -5083,12 +5083,20 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     RawAddress ArgSlotAlloca = Address::invalid();
     ArgSlot = CreateAggTemp(E->getType(), "agg.tmp", &ArgSlotAlloca);
 
-    // Emit a lifetime start/end for this temporary at the end of the full
-    // expression.
+    // Emit a lifetime start/end for this temporary. If the type has a
+    // destructor, then we need to keep it alive for the full expression.
     if (!CGM.getCodeGenOpts().NoLifetimeMarkersForTemporaries &&
-        EmitLifetimeStart(ArgSlotAlloca.getPointer()))
-      pushFullExprCleanup<CallLifetimeEnd>(CleanupKind::NormalEHLifetimeMarker,
-                                           ArgSlotAlloca);
+        EmitLifetimeStart(ArgSlotAlloca.getPointer())) {
+      if (E->getType().isDestructedType()) {
+        pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker,
+                                             ArgSlotAlloca);
+      } else {
+        args.addLifetimeCleanup({ArgSlotAlloca.getPointer()});
+        if (getInvokeDest())
+          pushFullExprCleanup<CallLifetimeEnd>(CleanupKind::EHCleanup,
+                                               ArgSlotAlloca);
+      }
+    }
   }
 
   args.add(EmitAnyExpr(E, ArgSlot), type);
@@ -6436,6 +6444,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // we can't use the full cleanup mechanism.
   for (CallLifetimeEnd &LifetimeEnd : CallLifetimeEndAfterCall)
     LifetimeEnd.Emit(*this, /*Flags=*/{});
+
+  // Add lifetime end markers for any temporary aggregates. Under
+  // NoLifetimeMarkersForTemporaries LifetimeCleanups will be empty, so this is
+  // still correct.
+  for (const CallArgList::EndLifetimeInfo &LT : CallArgs.getLifetimeCleanups())
+    EmitLifetimeEnd(LT.Addr);
 
   if (!ReturnValue.isExternallyDestructed() &&
       RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct)
