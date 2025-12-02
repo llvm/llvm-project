@@ -1661,10 +1661,10 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
       if (Ptr) {
         A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
         A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
-        if (Instruction *I = dyn_cast<Instruction>(Ptr))
-          if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+          if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Ptr)) {
             if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
               A.getOrCreateAAFor<AAAlign>(IRPosition::value(*Ptr));
+          }
       }
     }
   }
