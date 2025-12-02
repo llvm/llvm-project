@@ -2362,7 +2362,7 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
   if (!loadInputValue(QueuePtr, B, AMDGPUFunctionArgInfo::QUEUE_PTR))
     return Register();
 
-  // TODO: Use custom PseudoSourceValue
+  // TODO: can we be smarter about machine pointer info?
   MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
 
   // Offset into amd_queue_t for group_segment_aperture_base_hi /

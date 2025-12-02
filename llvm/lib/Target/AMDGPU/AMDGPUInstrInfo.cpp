@@ -35,13 +35,15 @@ bool AMDGPU::isUniformMMO(const MachineMemOperand *MMO) {
              PSV->isJumpTable();
     }
 
-    // Unknown value.
-    return false;
+    // FIXME: null value is should be treated as unknown, not as uniform.
+    return true;
   }
 
   // UndefValue means this is a load of a kernel input.  These are uniform.
   // Sometimes LDS instructions have constant pointers.
-  if (isa<UndefValue, Constant, GlobalValue>(Ptr))
+  // If Ptr is null, then that means this mem operand contains a
+  // PseudoSourceValue like GOT.
+  if (!Ptr || isa<UndefValue, Constant, GlobalValue>(Ptr))
     return true;
 
   if (MMO->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
