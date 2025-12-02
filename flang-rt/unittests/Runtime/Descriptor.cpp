@@ -160,18 +160,10 @@ TEST(Descriptor, FixedStride) {
   EXPECT_EQ(descriptor.FixedStride().value_or(-666), 0);
 }
 
-static std::string getAddrFilteredContent(FILE *fin) {
-  rewind(fin);
-  std::ostringstream content;
-  char buffer[1024];
-  size_t bytes_read;
-  while ((bytes_read = fread(buffer, 1, sizeof(buffer), fin)) > 0) {
-    content.write(buffer, bytes_read);
-  }
-  return std::regex_replace(
-      content.str(), std::regex("(0x[0-9a-fA-F]*)"), "[address]");
-}
-
+// The test below uses file operations that have nuances across multiple
+// platforms. Hence limit coverage by linux only unless wider coverage
+// should be required.
+#if defined(__linux__) && !defined(__ANDROID__)
 TEST(Descriptor, Dump) {
   StaticDescriptor<4> staticDesc[2];
   Descriptor &descriptor{staticDesc[0].descriptor()};
@@ -181,20 +173,37 @@ TEST(Descriptor, Dump) {
   TypeCode integer{TypeCategory::Integer, four};
   // Scalar
   descriptor.Establish(integer, four, data, 0);
-  FILE *tmpf = tmpfile();
+  FILE *tmpf = nullptr;
+  tmpf = tmpfile();
   ASSERT_TRUE(tmpf) << "tmpfile returned NULL";
   auto resetTmpFile = [tmpf]() {
+    fflush(tmpf);
     rewind(tmpf);
     ftruncate(fileno(tmpf), 0);
+  };
+
+  auto getAddrFilteredContent = [tmpf]() -> std::string {
+    rewind(tmpf);
+    std::ostringstream content;
+    char buffer[1024];
+    size_t bytes_read;
+    while ((bytes_read = fread(buffer, 1, sizeof(buffer), tmpf)) > 0) {
+      content.write(buffer, bytes_read);
+    }
+
+    return std::regex_replace(
+        std::regex_replace(content.str(), std::regex("Descriptor @.*:"),
+            "Descriptor @ [addr]:"),
+        std::regex("base_addr .*"), "base_addr [addr]");
   };
 
   descriptor.Dump(tmpf, /*dumpRawType=*/false);
   // also dump as CFI type
   descriptor.Dump(tmpf, /*dumpRawType=*/true);
-  std::string output = getAddrFilteredContent(tmpf);
+  std::string output = getAddrFilteredContent();
   ASSERT_STREQ(output.c_str(),
-      "Descriptor @ [address]:\n"
-      "  base_addr [address]\n"
+      "Descriptor @ [addr]:\n"
+      "  base_addr [addr]\n"
       "  elem_len  4\n"
       "  version   20240719\n"
       "  scalar\n"
@@ -203,8 +212,8 @@ TEST(Descriptor, Dump) {
       "  extra     0\n"
       "    addendum  0\n"
       "    alloc_idx 0\n"
-      "Descriptor @ [address]:\n"
-      "  base_addr [address]\n"
+      "Descriptor @ [addr]:\n"
+      "  base_addr [addr]\n"
       "  elem_len  4\n"
       "  version   20240719\n"
       "  scalar\n"
@@ -219,10 +228,10 @@ TEST(Descriptor, Dump) {
   descriptor.Establish(integer, four, data, 2, extent);
   resetTmpFile();
   descriptor.Dump(tmpf, /*dumpRawType=*/false);
-  output = getAddrFilteredContent(tmpf);
+  output = getAddrFilteredContent();
   ASSERT_STREQ(output.c_str(),
-      "Descriptor @ [address]:\n"
-      "  base_addr [address]\n"
+      "Descriptor @ [addr]:\n"
+      "  base_addr [addr]\n"
       "  elem_len  4\n"
       "  version   20240719\n"
       "  rank      2\n"
@@ -248,10 +257,10 @@ TEST(Descriptor, Dump) {
 
   resetTmpFile();
   descriptor.Dump(tmpf, /*dumpRawType=*/false);
-  output = getAddrFilteredContent(tmpf);
+  output = getAddrFilteredContent();
   ASSERT_STREQ(output.c_str(),
-      "Descriptor @ [address]:\n"
-      "  base_addr [address]\n"
+      "Descriptor @ [addr]:\n"
+      "  base_addr [addr]\n"
       "  elem_len  4\n"
       "  version   20240719\n"
       "  rank      3\n"
@@ -271,3 +280,4 @@ TEST(Descriptor, Dump) {
       "         sm          512\n");
   fclose(tmpf);
 }
+#endif // defined(__linux__) && !defined(__ANDROID__)
