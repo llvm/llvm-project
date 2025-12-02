@@ -1080,3 +1080,12 @@ void dependent_incomplete_type(T& s) {
 }
 
 template void dependent_incomplete_type<Incomplete>(Incomplete&); // expected-note {{in instantiation of function template specialization 'dependent_incomplete_type<Incomplete>' requested here}}
+
+template <typename T>
+void lambda_template(T a) {
+  template for (auto x : a) {} // expected-error {{cannot expand lambda closure type}}
+}
+
+void lambda_template_call() {
+  lambda_template([]{}); // expected-note {{in instantiation of function template specialization}}
+}
