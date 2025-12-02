@@ -40,6 +40,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
@@ -55,6 +56,7 @@
 #include <numeric>
 #include <optional>
 #include <string>
+#include <utility>
 
 using namespace clang;
 using namespace CodeGen;
@@ -2018,32 +2020,58 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(LValue lvalue,
                           lvalue.getTBAAInfo(), lvalue.isNontemporal());
 }
 
-static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
-                            llvm::APInt &Min, llvm::APInt &End,
-                            bool StrictEnums, bool IsBool) {
-  const auto *ED = Ty->getAsEnumDecl();
-  bool IsRegularCPlusPlusEnum =
-      CGF.getLangOpts().CPlusPlus && StrictEnums && ED && !ED->isFixed();
-  if (!IsBool && !IsRegularCPlusPlusEnum)
-    return false;
+std::optional<llvm::ConstantRange>
+CodeGenFunction::getRangeForType(QualType Ty, unsigned BitWidth,
+                                 bool ForceStrictEnums,
+                                 bool AssumeBooleanRepresentation) {
+  assert(BitWidth >= 1 && "Zero bits value range not meaningful.");
 
-  if (IsBool) {
-    Min = llvm::APInt(CGF.getContext().getTypeSize(Ty), 0);
-    End = llvm::APInt(CGF.getContext().getTypeSize(Ty), 2);
-  } else {
-    ED->getValueRange(End, Min);
+  if (AssumeBooleanRepresentation ||
+      (Ty->hasBooleanRepresentation() && !Ty->isVectorType())) {
+    if (BitWidth > 1)
+      return llvm::ConstantRange(llvm::APInt(BitWidth, 0),
+                                 llvm::APInt(BitWidth, 2));
+    else
+      return llvm::ConstantRange(BitWidth, /*isFullSet=*/true);
   }
-  return true;
+
+  const EnumDecl *ED = Ty->getAsEnumDecl();
+  bool StrictEnums = ForceStrictEnums || CGM.getCodeGenOpts().StrictEnums;
+  bool IsRegularCPlusPlusEnum =
+      getLangOpts().CPlusPlus && StrictEnums && ED && !ED->isFixed();
+  if (IsRegularCPlusPlusEnum) {
+    llvm::APInt Min, End;
+    ED->getValueRange(End, Min);
+    // getValueRange may produce [0, 0] or [2**(w-1),2**(w-1)] to indicate a
+    // full range
+    auto Range = Min == End
+                     ? llvm::ConstantRange(BitWidth, /*isFullSet=*/true)
+                     : llvm::ConstantRange(std::move(Min), std::move(End));
+    assert(Range.getActiveBits() <= BitWidth &&
+           "Representing type with fewer bits than necessary for values?");
+    if (Ty->isSignedIntegerOrEnumerationType())
+      return Range.sextOrTrunc(BitWidth);
+    else {
+      assert(Ty->isUnsignedIntegerOrEnumerationType());
+      return Range.zextOrTrunc(BitWidth);
+    }
+  }
+  return std::nullopt;
 }
 
 llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
-  llvm::APInt Min, End;
-  if (!getRangeForType(*this, Ty, Min, End, CGM.getCodeGenOpts().StrictEnums,
-                       Ty->hasBooleanRepresentation() && !Ty->isVectorType()))
+  llvm::Type *LTy = convertTypeForLoadStore(Ty);
+  if (!LTy->isIntegerTy())
+    return nullptr;
+
+  const std::optional<llvm::ConstantRange> Range =
+      getRangeForType(Ty, LTy->getIntegerBitWidth(), /*ForceStrictEnums=*/false,
+                      /*AssumeBooleanRepresentation=*/false);
+  if (!Range || Range->isFullSet() || Range->isEmptySet())
     return nullptr;
 
   llvm::MDBuilder MDHelper(getLLVMContext());
-  return MDHelper.createRange(Min, End);
+  return MDHelper.createRange(Range->getLower(), Range->getUpper());
 }
 
 void CodeGenFunction::maybeAttachRangeForLoad(llvm::LoadInst *Load, QualType Ty,
@@ -2085,9 +2113,14 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
       getContext().isTypeIgnoredBySanitizer(SanitizerKind::Enum, Ty))
     return false;
 
-  llvm::APInt Min, End;
-  if (!getRangeForType(*this, Ty, Min, End, /*StrictEnums=*/true, IsBool))
+  const std::optional<llvm::ConstantRange> Range = getRangeForType(
+      Ty, getContext().getTypeSize(Ty), /*ForceStrictEnums=*/true,
+      /*AssumeBooleanRepresentation=*/IsBool);
+  if (!Range || Range->isFullSet())
     return true;
+
+  llvm::APInt Min = Range->getLower();
+  llvm::APInt End = Range->getUpper();
 
   SanitizerKind::SanitizerOrdinal Kind =
       NeedsEnumCheck ? SanitizerKind::SO_Enum : SanitizerKind::SO_Bool;
