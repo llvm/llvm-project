@@ -120,15 +120,11 @@ struct GCNRegPressure {
     unsigned AGPRSpill =
         AGPRPressure > AGPRThreshold ? (AGPRPressure - AGPRThreshold) : 0;
 
-    unsigned UnifiedSpill = 0;
-
-    if (ST.hasGFX90AInsts()) {
-      unsigned CombinedThreshold = ST.getMaxNumVGPRs(MF);
-      unsigned UnifiedPressure = getVGPRNum(true);
-      UnifiedSpill = UnifiedPressure > CombinedThreshold
-                         ? (UnifiedPressure - CombinedThreshold)
-                         : 0;
-    }
+    unsigned CombinedThreshold = ST.getMaxNumVGPRs(MF);
+    unsigned UnifiedPressure = getVGPRNum(true);
+    unsigned UnifiedSpill = UnifiedPressure > CombinedThreshold
+                                ? (UnifiedPressure - CombinedThreshold)
+                                : 0;
 
     return std::max(UnifiedSpill, (ArchSpill + AGPRSpill));
   }
