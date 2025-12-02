@@ -8408,6 +8408,9 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
       Op.getValueType() == MVT::i64) {
     const SIMachineFunctionInfo *Info =
         DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
+    if (Info->get32BitAddressHighBits() == 0)
+      return DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i64, Src);
+
     SDValue Hi = DAG.getConstant(Info->get32BitAddressHighBits(), SL, MVT::i32);
     SDValue Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Hi);
     return DAG.getNode(ISD::BITCAST, SL, MVT::i64, Vec);

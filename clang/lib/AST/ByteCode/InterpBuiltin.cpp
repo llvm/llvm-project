@@ -1921,6 +1921,10 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   if (PtrA.isDummy() || PtrB.isDummy())
     return false;
 
+  if (!CheckRange(S, OpPC, PtrA, AK_Read) ||
+      !CheckRange(S, OpPC, PtrB, AK_Read))
+    return false;
+
   // Now, read both pointers to a buffer and compare those.
   BitcastBuffer BufferA(
       Bits(ASTCtx.getTypeSize(ElemTypeA) * PtrA.getNumElems()));
@@ -4998,6 +5002,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
+
+  case X86::BI__builtin_ia32_kmovb:
+  case X86::BI__builtin_ia32_kmovw:
+  case X86::BI__builtin_ia32_kmovd:
+  case X86::BI__builtin_ia32_kmovq:
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Src) { return Src; });
 
   case X86::BI__builtin_ia32_kunpckhi:
   case X86::BI__builtin_ia32_kunpckdi:
