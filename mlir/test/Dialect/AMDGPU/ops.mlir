@@ -746,12 +746,3 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x
   func.return
 }
 
-// CHECK-LABEL: @tensor_load_store
-// CHECK-SAME: (%[[DESC:.+]]: !amdgpu.tdm_descriptor)
-func.func @tensor_load_store(%desc: !amdgpu.tdm_descriptor) {
-  // CHECK: amdgpu.tensor_load_to_lds %[[DESC]]
-  amdgpu.tensor_load_to_lds %desc : !amdgpu.tdm_descriptor
-  // CHECK: amdgpu.tensor_store_from_lds %[[DESC]]
-  amdgpu.tensor_store_from_lds %desc : !amdgpu.tdm_descriptor
-  return
-}

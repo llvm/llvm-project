@@ -1352,34 +1352,4 @@ def AMDGPU_MakeDmaDescriptorOp :
   let hasVerifier = 1;
 }
 
-def AMDGPU_TensorLoadToLDSOp :
-  AMDGPU_Op<"tensor_load_to_lds", [MemoryEffects<[MemWrite]>, MemoryEffects<[MemRead]>]>,
-  Arguments<(ins AMDGPU_TDMDescriptorType: $desc)> {
-  let summary = "Load tensors from global memory to LDS.";
-  let description = [{
-    Load tensors of up to five dimensions from global memory to LDS.
-
-    The operation is fully described by the descriptor operand.
-  }];
-
-  let assemblyFormat = [{
-    $desc attr-dict `:` qualified(type($desc))
-  }];
-}
-
-def AMDGPU_TensorStoreFromLDSOp :
-  AMDGPU_Op<"tensor_store_from_lds", [MemoryEffects<[MemWrite]>, MemoryEffects<[MemRead]>]>,
-  Arguments<(ins AMDGPU_TDMDescriptorType: $desc)> {
-  let summary = "Store tensors from LDS to global memory.";
-  let description = [{
-    Store tensors of up to five dimensions from LDS to global memory.
-
-    The operation is fully described by the descriptor operand.
-  }];
-
-  let assemblyFormat = [{
-    $desc attr-dict `:` qualified(type($desc))
-  }];
-}
-
 #endif // AMDGPU
