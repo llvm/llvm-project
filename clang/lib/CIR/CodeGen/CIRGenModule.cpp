@@ -2501,23 +2501,21 @@ DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
 
 void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
                                    cir::LabelOp label) {
-  auto result = blockAddressInfoToLabel.try_emplace(blockInfo, label);
-  (void)result;
+  [[maybe_unused]] auto result =
+      blockAddressInfoToLabel.try_emplace(blockInfo, label);
   assert(result.second &&
          "attempting to map a blockaddress info that is already mapped");
 }
 
 void CIRGenModule::mapUnresolvedBlockAddress(cir::BlockAddressOp op) {
-  auto result = unresolvedBlockAddressToLabel.insert(op);
-  (void)result;
+  [[maybe_unused]] auto result = unresolvedBlockAddressToLabel.insert(op);
   assert(result.second &&
          "attempting to map a blockaddress operation that is already mapped");
 }
 
 void CIRGenModule::mapResolvedBlockAddress(cir::BlockAddressOp op,
                                            cir::LabelOp label) {
-  auto result = blockAddressToLabel.try_emplace(op, label);
-  (void)result;
+  [[maybe_unused]] auto result = blockAddressToLabel.try_emplace(op, label);
   assert(result.second &&
          "attempting to map a blockaddress operation that is already mapped");
 }

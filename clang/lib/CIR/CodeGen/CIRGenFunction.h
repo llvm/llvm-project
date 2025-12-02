@@ -1396,7 +1396,7 @@ public:
 
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
-  void getIndirectGotoBlock();
+  void instantiateIndirectGotoBlock();
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,

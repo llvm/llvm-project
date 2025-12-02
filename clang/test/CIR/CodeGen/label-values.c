@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir  %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm  %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
 void A(void) {
   void *ptr = &&LABEL_A;
@@ -21,6 +23,17 @@ LABEL_A:
 // CIR:    cir.label "LABEL_A"
 // CIR:    cir.return
 
+// OGCG: define dso_local void @A()
+// OGCG:   [[PTR:%.*]] = alloca ptr, align 8
+// OGCG:   store ptr blockaddress(@A, %LABEL_A), ptr [[PTR]], align 8
+// OGCG:   [[BLOCKADD:%.*]] = load ptr, ptr [[PTR]], align 8
+// OGCG:   br label %indirectgoto
+// OGCG: LABEL_A:                                                ; preds = %indirectgoto
+// OGCG:   ret void
+// OGCG: indirectgoto:                                     ; preds = %entry
+// OGCG:   %indirect.goto.dest = phi ptr [ [[BLOCKADD]], %entry ]
+// OGCG:   indirectbr ptr %indirect.goto.dest, [label %LABEL_A]
+
 void B(void) {
 LABEL_B:
   void *ptr = &&LABEL_B;
@@ -40,6 +53,17 @@ LABEL_B:
 // CIR:    cir.indirectbr [[PHI]] : <!void>, [
 // CIR-NEXT:    ^bb1
 // CIR:    ]
+
+// OGCG: define dso_local void @B
+// OGCG:   [[PTR:%.*]] = alloca ptr, align 8
+// OGCG:   br label %LABEL_B
+// OGCG: LABEL_B:                                                ; preds = %indirectgoto, %entry
+// OGCG:   store ptr blockaddress(@B, %LABEL_B), ptr [[PTR]], align 8
+// OGCG:   [[BLOCKADD:%.*]] = load ptr, ptr [[PTR]], align 8
+// OGCG:   br label %indirectgoto
+// OGCG: indirectgoto:                                     ; preds = %LABEL_B
+// OGCG:   %indirect.goto.dest = phi ptr [ [[BLOCKADD]], %LABEL_B ]
+// OGCG:   indirectbr ptr %indirect.goto.dest, [label %LABEL_B]
 
 void C(int x) {
   void *ptr = (x == 0) ? &&LABEL_A : &&LABEL_B;
@@ -71,6 +95,21 @@ LABEL_B:
 // CIR:    cir.label "LABEL_B"
 // CIR:    cir.br ^bb3
 
+// OGCG: define dso_local void @C
+// OGCG:   [[COND:%.*]] = select i1 [[CMP:%.*]], ptr blockaddress(@C, %LABEL_A), ptr blockaddress(@C, %LABEL_B)
+// OGCG:   store ptr [[COND]], ptr [[PTR:%.*]], align 8
+// OGCG:   [[BLOCKADD:%.*]] = load ptr, ptr [[PTR]], align 8
+// OGCG:   br label %indirectgoto
+// OGCG: LABEL_A:                                                ; preds = %indirectgoto
+// OGCG:   br label %return
+// OGCG: LABEL_B:                                                ; preds = %indirectgoto
+// OGCG:   br label %return
+// OGCG: return:                                           ; preds = %LABEL_B, %LABEL_A
+// OGCG:   ret void
+// OGCG: indirectgoto:                                     ; preds = %entry
+// OGCG:   %indirect.goto.dest = phi ptr [ [[BLOCKADD]], %entry ]
+// OGCG:   indirectbr ptr %indirect.goto.dest, [label %LABEL_A, label %LABEL_B]
+
 void D(void) {
   void *ptr = &&LABEL_A;
   void *ptr2 = &&LABEL_A;
@@ -101,6 +140,20 @@ LABEL_A:
 // CIR:    cir.store align(8) %[[BLK3]], %[[PTR3]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:    cir.return
 
+// OGCG: define dso_local void @D
+// OGCG:   %[[PTR:.*]] = alloca ptr, align 8
+// OGCG:   %[[PTR2:.*]] = alloca ptr, align 8
+// OGCG:   %[[PTR3:.*]] = alloca ptr, align 8
+// OGCG:   store ptr blockaddress(@D, %LABEL_A), ptr %[[PTR]], align 8
+// OGCG:   store ptr blockaddress(@D, %LABEL_A), ptr %[[PTR2]], align 8
+// OGCG:   %[[BLOCKADD:.*]] = load ptr, ptr %[[PTR2]], align 8
+// OGCG:   br label %indirectgoto
+// OGCG: LABEL_A:                                                ; preds = %indirectgoto, %indirectgoto, %indirectgoto
+// OGCG:   store ptr blockaddress(@D, %LABEL_A), ptr %[[PTR3]], align 8
+// OGCG:   ret void
+// OGCG: indirectgoto:                                     ; preds = %entry
+// OGCG:   %indirect.goto.dest = phi ptr [ %[[BLOCKADD]], %entry ]
+// OGCG:   indirectbr ptr %indirect.goto.dest, [label %LABEL_A, label %LABEL_A, label %LABEL_A]
 
 // This test checks that CIR preserves insertion order of blockaddresses
 // for indirectbr, even if some were resolved immediately and others later.
@@ -132,3 +185,20 @@ LABEL_D:
 //CIR:    cir.label "LABEL_C"
 //CIR:  ^bb5:  // 2 preds: ^bb1, ^bb4
 //CIR:    cir.label "LABEL_D"
+
+// OGCG: define dso_local void @E() #0 {
+// OGCG:   store ptr blockaddress(@E, %LABEL_D), ptr %ptr, align 8
+// OGCG:   store ptr blockaddress(@E, %LABEL_C), ptr %ptr2, align 8
+// OGCG:   br label %LABEL_A
+// OGCG: A:                                                ; preds = %indirectgoto, %entry
+// OGCG:   br label %LABEL_B
+// OGCG: B:                                                ; preds = %indirectgoto, %LABEL_A
+// OGCG:   store ptr blockaddress(@E, %LABEL_B), ptr %ptr3, align 8
+// OGCG:   store ptr blockaddress(@E, %LABEL_A), ptr %ptr4, align 8
+// OGCG:   br label %LABEL_C
+// OGCG: C:                                                ; preds = %LABEL_B, %indirectgoto
+// OGCG:   br label %LABEL_D
+// OGCG: D:                                                ; preds = %LABEL_C, %indirectgoto
+// OGCG:   ret void
+// OGCG: indirectgoto:                                     ; No predecessors!
+// OGCG:   indirectbr ptr poison, [label %LABEL_D, label %LABEL_C, label %LABEL_B, label %LABEL_A]

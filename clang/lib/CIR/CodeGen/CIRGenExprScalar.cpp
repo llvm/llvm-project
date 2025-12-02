@@ -188,7 +188,7 @@ public:
     } else {
       cgf.cgm.mapResolvedBlockAddress(blockAddressOp, resolvedLabel);
     }
-    cgf.getIndirectGotoBlock();
+    cgf.instantiateIndirectGotoBlock();
     return blockAddressOp;
   }
 

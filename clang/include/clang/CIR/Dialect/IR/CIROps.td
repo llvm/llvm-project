@@ -1467,8 +1467,8 @@ def CIR_BrCondOp : CIR_Op<"brcond", [
 //===----------------------------------------------------------------------===//
 
 def CIR_IndirectBrOp : CIR_Op<"indirectbr", [
-  DeclareOpInterfaceMethods<BranchOpInterface>
-  , SameVariadicOperandSize, Terminator, Pure]> {
+  DeclareOpInterfaceMethods<BranchOpInterface>,
+  SameVariadicOperandSize, Terminator, Pure]> {
   let summary = "Indirect branch";
   let description = [{
     The `cir.indirectbr` operation represents an indirect branch to one of
@@ -1479,7 +1479,7 @@ def CIR_IndirectBrOp : CIR_Op<"indirectbr", [
     the GCC extension `&&label` combined with an indirect `goto *ptr;`.
 
     The `poison` attribute is used to mark an `indirectbr` that was created
-    but is known to be invalid for instance, when a label address was
+    but is known to be invalid, for instance when a label address was
     taken but no indirect branch was ever emitted.
 
     Example:

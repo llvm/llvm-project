@@ -532,7 +532,6 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
 }
 
 void CIRGenFunction::resolveBlockAddresses() {
-
   for (cir::BlockAddressOp &blockAddress : cgm.unresolvedBlockAddressToLabel) {
     cir::LabelOp labelOp =
         cgm.lookupBlockAddressInfo(blockAddress.getBlockAddrInfo());
@@ -1128,7 +1127,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   return builder.getConstInt(*currSrcLoc, sizeTy, countFromCLAs);
 }
 
-void CIRGenFunction::getIndirectGotoBlock() {
+void CIRGenFunction::instantiateIndirectGotoBlock() {
   // If we already made the indirect branch for indirect goto, return its block.
   if (indirectGotoBlock)
     return;
