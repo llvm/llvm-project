@@ -388,7 +388,7 @@ bool RISCVVectorPeephole::convertAllOnesVMergeToVMv(MachineInstr &MI) const {
 }
 
 // If \p Reg is defined by one or more COPYs of virtual registers, traverses
-/// the chain and returns the root non-COPY source.
+// the chain and returns the root non-COPY source.
 Register RISCVVectorPeephole::lookThruCopies(Register Reg) const {
   while (MachineInstr *Def = MRI->getUniqueVRegDef(Reg)) {
     if (!Def->isFullCopy())
