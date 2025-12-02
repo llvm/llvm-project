@@ -44,8 +44,14 @@ void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
                     std::optional<fir::CharBoxValue> date,
                     std::optional<fir::CharBoxValue> time,
                     std::optional<fir::CharBoxValue> zone, mlir::Value values);
+
+mlir::Value genDsecnds(fir::FirOpBuilder &builder, mlir::Location loc,
+                       mlir::Value refTime);
+
 void genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
               mlir::Value values, mlir::Value time);
+
+void genFlush(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value unit);
 
 void genFree(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value ptr);
 
@@ -105,6 +111,9 @@ void genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genChdir(fir::FirOpBuilder &builder, mlir::Location loc,
                      mlir::Value name);
 
+/// generate dump of a descriptor
+void genShowDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
+                       mlir::Value descriptor);
 } // namespace runtime
 } // namespace fir
 

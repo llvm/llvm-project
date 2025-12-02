@@ -1,4 +1,4 @@
-//===--- BracesAroundStatement.cpp - clang-tidy -------- ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -48,7 +48,8 @@ FixItHint BraceInsertionHints::closingBraceFixIt() const {
 static tok::TokenKind getTokenKind(SourceLocation Loc, const SourceManager &SM,
                                    const LangOptions &LangOpts) {
   Token Tok;
-  SourceLocation Beginning = Lexer::GetBeginningOfToken(Loc, SM, LangOpts);
+  const SourceLocation Beginning =
+      Lexer::GetBeginningOfToken(Loc, SM, LangOpts);
   const bool Invalid = Lexer::getRawToken(Beginning, Tok, SM, LangOpts);
   assert(!Invalid && "Expected a valid token.");
 
@@ -77,15 +78,16 @@ static SourceLocation findEndLocation(const Stmt &S, const SourceManager &SM,
       // EOL, insert brace before.
       break;
     }
-    tok::TokenKind TokKind = getTokenKind(Loc, SM, LangOpts);
+    const tok::TokenKind TokKind = getTokenKind(Loc, SM, LangOpts);
     if (TokKind != tok::comment) {
       // Non-comment token, insert brace before.
       break;
     }
 
-    SourceLocation TokEndLoc = Lexer::getLocForEndOfToken(Loc, 0, SM, LangOpts);
-    SourceRange TokRange(Loc, TokEndLoc);
-    StringRef Comment = Lexer::getSourceText(
+    const SourceLocation TokEndLoc =
+        Lexer::getLocForEndOfToken(Loc, 0, SM, LangOpts);
+    const SourceRange TokRange(Loc, TokEndLoc);
+    const StringRef Comment = Lexer::getSourceText(
         CharSourceRange::getTokenRange(TokRange), SM, LangOpts);
     if (Comment.starts_with("/*") && Comment.contains('\n')) {
       // Multi-line block comment, insert brace before.
@@ -139,7 +141,7 @@ BraceInsertionHints getBraceInsertionsHints(const Stmt *const S,
 
   // StartLoc points at the location of the opening brace to be inserted.
   SourceLocation EndLoc;
-  std::string ClosingInsertion;
+  StringRef ClosingInsertion;
   if (EndLocHint.isValid()) {
     EndLoc = EndLocHint;
     ClosingInsertion = "} ";

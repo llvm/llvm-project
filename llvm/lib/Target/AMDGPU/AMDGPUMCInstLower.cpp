@@ -175,6 +175,40 @@ void AMDGPUMCInstLower::lowerT16D16Helper(const MachineInstr *MI,
   }
 }
 
+void AMDGPUMCInstLower::lowerT16FmaMixFP16(const MachineInstr *MI,
+                                           MCInst &OutMI) const {
+  unsigned Opcode = MI->getOpcode();
+  const auto *TII = static_cast<const SIInstrInfo *>(ST.getInstrInfo());
+  const SIRegisterInfo &TRI = TII->getRegisterInfo();
+
+  int VDstIdx = AMDGPU::getNamedOperandIdx(Opcode, llvm::AMDGPU::OpName::vdst);
+  const MachineOperand &VDst = MI->getOperand(VDstIdx);
+  bool IsHi = AMDGPU::isHi16Reg(VDst.getReg(), TRI);
+  switch (Opcode) {
+  case AMDGPU::V_FMA_MIX_F16_t16:
+    Opcode = IsHi ? AMDGPU::V_FMA_MIXHI_F16 : AMDGPU::V_FMA_MIXLO_F16;
+    break;
+  case AMDGPU::V_FMA_MIX_BF16_t16:
+    Opcode = IsHi ? AMDGPU::V_FMA_MIXHI_BF16 : AMDGPU::V_FMA_MIXLO_BF16;
+    break;
+  }
+  int MCOpcode = TII->pseudoToMCOpcode(Opcode);
+  assert(MCOpcode != -1 &&
+         "Pseudo instruction doesn't have a target-specific version");
+  OutMI.setOpcode(MCOpcode);
+
+  // lower operands
+  for (int I = 0, E = MI->getNumExplicitOperands(); I < E; I++) {
+    const MachineOperand &MO = MI->getOperand(I);
+    MCOperand MCOp;
+    if (I == VDstIdx)
+      MCOp = MCOperand::createReg(TRI.get32BitRegister(VDst.getReg()));
+    else
+      lowerOperand(MO, MCOp);
+    OutMI.addOperand(MCOp);
+  }
+}
+
 void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   unsigned Opcode = MI->getOpcode();
   const auto *TII = static_cast<const SIInstrInfo *>(ST.getInstrInfo());
@@ -201,11 +235,15 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   } else if (AMDGPU::getT16D16Helper(Opcode)) {
     lowerT16D16Helper(MI, OutMI);
     return;
+  } else if (Opcode == AMDGPU::V_FMA_MIX_F16_t16 ||
+             Opcode == AMDGPU::V_FMA_MIX_BF16_t16) {
+    lowerT16FmaMixFP16(MI, OutMI);
+    return;
   }
 
   int MCOpcode = TII->pseudoToMCOpcode(Opcode);
   if (MCOpcode == -1) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
+    LLVMContext &C = MI->getMF()->getFunction().getContext();
     C.emitError("AMDGPUMCInstLower::lower - Pseudo instruction doesn't have "
                 "a target-specific version: " + Twine(MI->getOpcode()));
   }
@@ -294,7 +332,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   StringRef Err;
   if (!STI.getInstrInfo()->verifyInstruction(*MI, Err)) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
+    LLVMContext &C = MI->getMF()->getFunction().getContext();
     C.emitError("Illegal instruction detected: " + Err);
     MI->print(errs());
   }
@@ -374,7 +412,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
                              *OutStreamer);
 
     if (isVerbose() && MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
-      unsigned V = MI->getOperand(0).getImm();
+      unsigned V = MI->getOperand(0).getImm() & 0xff;
       OutStreamer->AddComment(
           " msbs: dst=" + Twine(V >> 6) + " src0=" + Twine(V & 3) +
           " src1=" + Twine((V >> 2) & 3) + " src2=" + Twine((V >> 4) & 3));

@@ -1,4 +1,4 @@
-//===--- UseStdMinMaxCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -77,11 +77,11 @@ static QualType getNonTemplateAlias(QualType QT) {
 
 static QualType getReplacementCastType(const Expr *CondLhs, const Expr *CondRhs,
                                        QualType ComparedType) {
-  QualType LhsType = CondLhs->getType();
-  QualType RhsType = CondRhs->getType();
-  QualType LhsCanonicalType =
+  const QualType LhsType = CondLhs->getType();
+  const QualType RhsType = CondRhs->getType();
+  const QualType LhsCanonicalType =
       LhsType.getCanonicalType().getNonReferenceType().getUnqualifiedType();
-  QualType RhsCanonicalType =
+  const QualType RhsCanonicalType =
       RhsType.getCanonicalType().getNonReferenceType().getUnqualifiedType();
   QualType GlobalImplicitCastType;
   if (LhsCanonicalType != RhsCanonicalType) {
@@ -109,7 +109,7 @@ static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
   const llvm::StringRef AssignLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
 
-  QualType GlobalImplicitCastType =
+  const QualType GlobalImplicitCastType =
       getReplacementCastType(CondLhs, CondRhs, BO->getLHS()->getType());
 
   return (AssignLhsStr + " = " + FunctionName +

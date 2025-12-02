@@ -33,6 +33,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Regex.h"
 #include <algorithm>
 #include <functional>
@@ -76,6 +77,16 @@ cl::opt<std::string> CompDirOverride(
              "location, which is used with DW_AT_dwo_name to construct a path "
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
+
+static cl::opt<bool> CloneConstantIsland("clone-constant-island",
+                                         cl::desc("clone constant islands"),
+                                         cl::Hidden, cl::init(true),
+                                         cl::ZeroOrMore, cl::cat(BoltCategory));
+
+static cl::opt<bool>
+    FailOnInvalidPadding("fail-on-invalid-padding", cl::Hidden, cl::init(false),
+                         cl::desc("treat invalid code padding as error"),
+                         cl::ZeroOrMore, cl::cat(BoltCategory));
 } // namespace opts
 
 namespace llvm {
@@ -455,7 +466,8 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
       // of dynamic relocs, as we currently do not support cloning them.
       // Notice: we might fail to link because of this, if the original constant
       // island we are referring would be emitted too far away.
-      if (IslandIter->second->hasDynamicRelocationAtIsland()) {
+      if (IslandIter->second->hasDynamicRelocationAtIsland() ||
+          !opts::CloneConstantIsland) {
         MCSymbol *IslandSym =
             IslandIter->second->getOrCreateIslandAccess(Address);
         if (IslandSym)
@@ -463,6 +475,12 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
       } else if (MCSymbol *IslandSym =
                      IslandIter->second->getOrCreateProxyIslandAccess(Address,
                                                                       BF)) {
+        LLVM_DEBUG(
+            dbgs() << "BOLT-DEBUG: clone constant island at address 0x"
+                   << Twine::utohexstr(IslandIter->first) << " with size of 0x"
+                   << Twine::utohexstr(
+                          IslandIter->second->estimateConstantIslandSize())
+                   << " bytes, referenced by " << BF << "\n");
         BF.createIslandDependency(IslandSym, IslandIter->second);
         return std::make_pair(IslandSym, 0);
       }
@@ -510,6 +528,23 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
   MCSymbol *TargetSymbol = getOrCreateGlobalSymbol(Address, "DATAat");
   LLVM_DEBUG(dbgs() << "Created symbol " << TargetSymbol->getName() << '\n');
   return std::make_pair(TargetSymbol, 0);
+}
+
+MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
+                                                    BinaryFunction &BF) {
+  if (BF.isInConstantIsland(Address)) {
+    BF.setIgnored();
+    this->outs() << "BOLT-WARNING: ignoring entry point at address 0x"
+                 << Twine::utohexstr(Address)
+                 << " in constant island of function " << BF << '\n';
+    return nullptr;
+  }
+
+  const uint64_t Offset = Address - BF.getAddress();
+  assert(Offset < BF.getSize() &&
+         "Address should be inside the referenced function");
+
+  return Offset ? BF.addEntryPointAtOffset(Offset) : BF.getSymbol();
 }
 
 MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
@@ -755,13 +790,17 @@ void BinaryContext::populateJumpTables() {
   }
 
   if (opts::StrictMode && DataPCRelocations.size()) {
-    LLVM_DEBUG({
-      dbgs() << DataPCRelocations.size()
-             << " unclaimed PC-relative relocations left in data:\n";
-      for (uint64_t Reloc : DataPCRelocations)
-        dbgs() << Twine::utohexstr(Reloc) << '\n';
-    });
-    assert(0 && "unclaimed PC-relative relocations left in data\n");
+    this->errs() << "BOLT-ERROR: " << DataPCRelocations.size()
+                 << " unclaimed PC-relative relocation(s) left in data";
+    if (opts::Verbosity) {
+      this->errs() << ":\n";
+      for (uint64_t RelocOffset : DataPCRelocations)
+        this->errs() << "  @0x" << Twine::utohexstr(RelocOffset) << '\n';
+    } else {
+      this->errs() << ". Re-run with -v=1 to see the list\n";
+    }
+    this->errs() << "BOLT-ERROR: unable to proceed with --strict\n";
+    exit(1);
   }
   clearList(DataPCRelocations);
 }
@@ -843,7 +882,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     auto isSibling = std::bind(&BinaryContext::areRelatedFragments, this,
                                &Function, std::placeholders::_1);
     assert(llvm::all_of(JT->Parents, isSibling) &&
-           "cannot re-use jump table of a different function");
+           "cannot reuse jump table of a different function");
     (void)isSibling;
     if (opts::Verbosity > 2) {
       this->outs() << "BOLT-INFO: multiple fragments access the same jump table"
@@ -859,7 +898,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     return JT->getFirstLabel();
   }
 
-  // Re-use the existing symbol if possible.
+  // Reuse the existing symbol if possible.
   MCSymbol *JTLabel = nullptr;
   if (BinaryData *Object = getBinaryDataAtAddress(Address)) {
     if (!isInternalSymbolName(Object->getSymbol()->getName()))
@@ -941,8 +980,7 @@ std::string BinaryContext::generateJumpTableName(const BinaryFunction &BF,
 }
 
 bool BinaryContext::hasValidCodePadding(const BinaryFunction &BF) {
-  // FIXME: aarch64 support is missing.
-  if (!isX86())
+  if (!isX86() && !isAArch64())
     return true;
 
   if (BF.getSize() == BF.getMaxSize())
@@ -972,14 +1010,24 @@ bool BinaryContext::hasValidCodePadding(const BinaryFunction &BF) {
     return Offset - StartOffset;
   };
 
-  // Skip a sequence of zero bytes.
+  // Skip a sequence of zero bytes. For AArch64 we only skip 4's exact
+  // multiple number of zeros in case the following zeros belong to veneer.
   auto skipZeros = [&]() {
     const uint64_t StartOffset = Offset;
-    for (; Offset < BF.getMaxSize(); ++Offset)
-      if ((*FunctionData)[Offset] != 0)
+    uint64_t CurrentOffset = Offset;
+    for (; CurrentOffset < BF.getMaxSize(); ++CurrentOffset)
+      if ((*FunctionData)[CurrentOffset] != 0)
         break;
 
-    return Offset - StartOffset;
+    uint64_t NumZeros = CurrentOffset - StartOffset;
+    if (isAArch64())
+      NumZeros &= ~((uint64_t)0x3);
+
+    if (NumZeros == 0)
+      return false;
+    Offset += NumZeros;
+    InstrAddress += NumZeros;
+    return true;
   };
 
   // Accept the whole padding area filled with breakpoints.
@@ -992,6 +1040,8 @@ bool BinaryContext::hasValidCodePadding(const BinaryFunction &BF) {
   // Some functions have a jump to the next function or to the padding area
   // inserted after the body.
   auto isSkipJump = [&](const MCInst &Instr) {
+    if (!isX86())
+      return false;
     uint64_t TargetAddress = 0;
     if (MIB->isUnconditionalBranch(Instr) &&
         MIB->evaluateBranch(Instr, InstrAddress, InstrSize, TargetAddress)) {
@@ -1003,34 +1053,73 @@ bool BinaryContext::hasValidCodePadding(const BinaryFunction &BF) {
     return false;
   };
 
+  // For veneers that are not already covered by binary functions, only those
+  // that handleAArch64Veneer() can recognize are checked here.
+  auto skipAArch64Veneer = [&]() {
+    if (!isAArch64() || Offset >= BF.getMaxSize())
+      return false;
+    BinaryFunction *BFVeneer = getBinaryFunctionContainingAddress(InstrAddress);
+    if (BFVeneer) {
+      // A binary function may have been created to point to this veneer.
+      Offset += BFVeneer->getSize();
+      assert(Offset <= BF.getMaxSize() &&
+             "AArch64 veneeer goes past the max size of function");
+      InstrAddress += BFVeneer->getSize();
+      return true;
+    }
+    const uint64_t AArch64VeneerSize = 12;
+    if (Offset + AArch64VeneerSize <= BF.getMaxSize() &&
+        handleAArch64Veneer(InstrAddress, /*MatchOnly*/ true)) {
+      Offset += AArch64VeneerSize;
+      InstrAddress += AArch64VeneerSize;
+      this->errs() << "BOLT-WARNING: found unmarked AArch64 veneer at 0x"
+                   << Twine::utohexstr(BF.getAddress() + Offset) << '\n';
+      return true;
+    }
+    return false;
+  };
+
+  auto skipAArch64ConstantIsland = [&]() {
+    if (!isAArch64() || Offset >= BF.getMaxSize())
+      return false;
+    uint64_t Size;
+    if (BF.isInConstantIsland(InstrAddress, &Size)) {
+      Offset += Size;
+      InstrAddress += Size;
+      return true;
+    }
+    return false;
+  };
+
   // Skip over nops, jumps, and zero padding. Allow interleaving (this happens).
-  while (skipInstructions(isNoop) || skipInstructions(isSkipJump) ||
+  // For AArch64 also check veneers and skip constant islands.
+  while (skipAArch64Veneer() || skipAArch64ConstantIsland() ||
+         skipInstructions(isNoop) || skipInstructions(isSkipJump) ||
          skipZeros())
     ;
 
   if (Offset == BF.getMaxSize())
     return true;
 
-  if (opts::Verbosity >= 1) {
-    this->errs() << "BOLT-WARNING: bad padding at address 0x"
-                 << Twine::utohexstr(BF.getAddress() + BF.getSize())
-                 << " starting at offset " << (Offset - BF.getSize())
-                 << " in function " << BF << '\n'
-                 << FunctionData->slice(BF.getSize(),
-                                        BF.getMaxSize() - BF.getSize())
-                 << '\n';
-  }
-
+  this->errs() << "BOLT-WARNING: bad padding at address 0x"
+               << Twine::utohexstr(BF.getAddress() + BF.getSize())
+               << " starting at offset " << (Offset - BF.getSize())
+               << " in function " << BF << '\n'
+               << FunctionData->slice(BF.getSize(),
+                                      BF.getMaxSize() - BF.getSize())
+               << '\n';
   return false;
 }
 
 void BinaryContext::adjustCodePadding() {
+  uint64_t NumInvalid = 0;
   for (auto &BFI : BinaryFunctions) {
     BinaryFunction &BF = BFI.second;
     if (!shouldEmit(BF))
       continue;
 
     if (!hasValidCodePadding(BF)) {
+      NumInvalid++;
       if (HasRelocations) {
         this->errs() << "BOLT-WARNING: function " << BF
                      << " has invalid padding. Ignoring the function\n";
@@ -1039,6 +1128,11 @@ void BinaryContext::adjustCodePadding() {
         BF.setMaxSize(BF.getSize());
       }
     }
+  }
+  if (NumInvalid && opts::FailOnInvalidPadding) {
+    this->errs() << "BOLT-ERROR: found " << NumInvalid
+                 << " instance(s) of invalid code padding\n";
+    exit(1);
   }
 }
 
@@ -1336,8 +1430,10 @@ void BinaryContext::processInterproceduralReferences() {
             << Function.getPrintName() << " and "
             << TargetFunction->getPrintName() << '\n';
       }
-      if (uint64_t Offset = Address - TargetFunction->getAddress())
-        TargetFunction->addEntryPointAtOffset(Offset);
+
+      // Create an extra entry point if needed. Can also render the target
+      // function ignored if the reference is invalid.
+      handleExternalBranchTarget(Address, *TargetFunction);
 
       continue;
     }
@@ -1423,6 +1519,17 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
     // NB: there's no need to update BinaryDataMap and GlobalSymbols.
   }
   ChildBF.getSymbols().clear();
+
+  // Reset function mapping for local symbols.
+  for (uint64_t RelOffset : ChildBF.getInternalRefDataRelocations()) {
+    const Relocation *Rel = getRelocationAt(RelOffset);
+    if (!Rel || !Rel->Symbol)
+      continue;
+
+    WriteSymbolMapLock.lock();
+    SymbolToFunctionMap[Rel->Symbol] = nullptr;
+    WriteSymbolMapLock.unlock();
+  }
 
   // Move other names the child function is known under.
   llvm::move(ChildBF.Aliases, std::back_inserter(ParentBF.Aliases));
@@ -1623,20 +1730,45 @@ DWARFContext *BinaryContext::getDWOContext() const {
   return &DWOCUs.begin()->second->getContext();
 }
 
+bool BinaryContext::isValidDwarfUnit(DWARFUnit &DU) const {
+  // Invalid DWARF unit with a DWOId but lacking a dwo_name.
+  if (DU.getDWOId() && !DU.isDWOUnit() &&
+      !DU.getUnitDIE().find(
+          {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name})) {
+    this->outs() << "BOLT-ERROR: broken DWARF found in CU at offset 0x"
+                 << Twine::utohexstr(DU.getOffset()) << " (DWOId=0x"
+                 << Twine::utohexstr(*(DU.getDWOId()))
+                 << ", missing DW_AT_dwo_name / DW_AT_GNU_dwo_name)\n";
+    return false;
+  }
+  return true;
+}
+
 /// Handles DWO sections that can either be in .o, .dwo or .dwp files.
 void BinaryContext::preprocessDWODebugInfo() {
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
     DWARFUnit *const DwarfUnit = CU.get();
+    if (!isValidDwarfUnit(*DwarfUnit))
+      continue;
     if (std::optional<uint64_t> DWOId = DwarfUnit->getDWOId()) {
       std::string DWOName = dwarf::toString(
           DwarfUnit->getUnitDIE().find(
               {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
           "");
-      SmallString<16> AbsolutePath;
+      SmallString<16> AbsolutePath(DWOName);
+      std::string DWOCompDir = DwarfUnit->getCompilationDir();
       if (!opts::CompDirOverride.empty()) {
-        sys::path::append(AbsolutePath, opts::CompDirOverride);
-        sys::path::append(AbsolutePath, DWOName);
+        DWOCompDir = opts::CompDirOverride;
+      } else if (!sys::fs::exists(DWOCompDir) && sys::fs::exists(DWOName)) {
+        DWOCompDir = ".";
+        this->outs()
+            << "BOLT-WARNING: Debug Fission: Debug Compilation Directory of "
+            << DWOName
+            << " does not exist. Relative path will be used to process .dwo "
+               "files.\n";
       }
+      // Prevent failures when DWOName is already an absolute path.
+      sys::path::make_absolute(DWOCompDir, AbsolutePath);
       DWARFUnit *DWOCU =
           DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
@@ -1644,7 +1776,8 @@ void BinaryContext::preprocessDWODebugInfo() {
             << "BOLT-WARNING: Debug Fission: DWO debug information for "
             << DWOName
             << " was not retrieved and won't be updated. Please check "
-               "relative path.\n";
+               "relative path or use '--comp-dir-override' to specify the base "
+               "location.\n";
         continue;
       }
       DWOCUs[*DWOId] = DWOCU;
@@ -1877,6 +2010,9 @@ void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
     break;
   case MCCFIInstruction::OpGnuArgsSize:
     OS << "OpGnuArgsSize";
+    break;
+  case MCCFIInstruction::OpNegateRAState:
+    OS << "OpNegateRAState";
     break;
   default:
     OS << "Op#" << Operation;

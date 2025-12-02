@@ -3,10 +3,11 @@
 mpi-type-mismatch
 =================
 
-This check verifies if buffer type and MPI (Message Passing Interface) datatype
-pairs match for used MPI functions. All MPI datatypes defined by the MPI
-standard (3.1) are verified by this check. User defined typedefs, custom MPI
-datatypes and null pointer constants are skipped, in the course of verification.
+This check verifies if buffer type and MPI (Message Passing Interface)
+datatype pairs match for used MPI functions. All MPI datatypes defined
+by the MPI standard (3.1) are verified by this check. User defined typedefs,
+custom MPI datatypes and null pointer constants are skipped, in the course
+of verification.
 
 Example:
 

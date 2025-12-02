@@ -76,8 +76,6 @@ public:
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
   bool trySignedBitfieldInsertInSign(SDNode *Node);
-  bool trySignedBitfieldInsertInMask(SDNode *Node);
-  bool tryBitfieldInsertOpFromOrAndImm(SDNode *Node);
   bool tryUnsignedBitfieldExtract(SDNode *Node, const SDLoc &DL, MVT VT,
                                   SDValue X, unsigned Msb, unsigned Lsb);
   bool tryUnsignedBitfieldInsertInZero(SDNode *Node, const SDLoc &DL, MVT VT,
@@ -167,6 +165,7 @@ public:
   void selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked, bool IsOrdered);
 
   void selectVSETVLI(SDNode *Node);
+  void selectXSfmmVSET(SDNode *Node);
 
   void selectSF_VC_X_SE(SDNode *Node);
 

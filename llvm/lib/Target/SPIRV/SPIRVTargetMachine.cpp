@@ -12,6 +12,7 @@
 
 #include "SPIRVTargetMachine.h"
 #include "SPIRV.h"
+#include "SPIRVCBufferAccess.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVStructurizerWrapper.h"
@@ -48,6 +49,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVAsmPrinterPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
   initializeSPIRVStructurizerPass(PR);
+  initializeSPIRVCBufferAccessLegacyPass(PR);
   initializeSPIRVPreLegalizerCombinerPass(PR);
   initializeSPIRVLegalizePointerCastPass(PR);
   initializeSPIRVRegularizerPass(PR);
@@ -57,6 +59,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVEmitIntrinsicsPass(PR);
   initializeSPIRVEmitNonSemanticDIPass(PR);
   initializeSPIRVPrepareFunctionsPass(PR);
+  initializeSPIRVPrepareGlobalsPass(PR);
   initializeSPIRVStripConvergentIntrinsicsPass(PR);
 }
 
@@ -67,7 +70,7 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
 }
 
 // Pin SPIRVTargetObjectFile's vtables to this file.
-SPIRVTargetObjectFile::~SPIRVTargetObjectFile() {}
+SPIRVTargetObjectFile::~SPIRVTargetObjectFile() = default;
 
 SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
@@ -170,6 +173,7 @@ void SPIRVPassConfig::addIRPasses() {
 
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
+  addPass(createSPIRVPrepareGlobalsPass());
 }
 
 void SPIRVPassConfig::addISelPrepare() {
@@ -206,6 +210,7 @@ void SPIRVPassConfig::addISelPrepare() {
 
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
   addPass(createSPIRVLegalizeImplicitBindingPass());
+  addPass(createSPIRVCBufferAccessLegacyPass());
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())
     addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));
@@ -241,7 +246,8 @@ static cl::opt<bool> SPVEnableNonSemanticDI(
     cl::Optional, cl::init(false));
 
 void SPIRVPassConfig::addPreEmitPass() {
-  if (SPVEnableNonSemanticDI) {
+  if (SPVEnableNonSemanticDI ||
+      getSPIRVTargetMachine().getTargetTriple().getVendor() == Triple::AMD) {
     addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
   }
 }

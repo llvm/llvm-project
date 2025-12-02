@@ -1,0 +1,46 @@
+RUN: rm -rf %t && split-file %s %t && cd %t
+RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t/v5.dwo -dwarf-version=5 %t/v5.s -o %t/v5.o
+RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t/v4.dwo -dwarf-version=4 %t/v4.s -o %t/v4.o
+RUN: not llvm-dwp %t/v5.dwo %t/v4.dwo -o main.dwp 2>&1 | FileCheck %s
+
+CHECK: error: incompatible DWARF compile unit version: {{.*}}v4.dwo (version 4) and {{.*}}v5.dwo (version 5)
+
+#--- v5.s
+    .section	.debug_info.dwo,"e",@progbits
+    .long	.Ldebug_info_dwo_end2-.Ldebug_info_dwo_start2 # Length of Unit
+.Ldebug_info_dwo_start2:
+    .short	5                               # DWARF version number
+    .byte	5                               # DWARF Unit Type (DW_UT_split_compile)
+    .byte	8                               # Address Size (in bytes)
+    .long	0                               # Offset Into Abbrev. Section
+    .quad	1152943841751211454
+    .byte	1                               # Abbrev [1] DW_TAG_compile_unit
+.Ldebug_info_dwo_end2:
+    .section	.debug_abbrev.dwo,"e",@progbits
+    .byte	1                               # Abbreviation Code
+    .byte	17                              # DW_TAG_compile_unit
+    .byte	0                               # DW_CHILDREN_no
+    .byte	0                               # EOM(1)
+    .byte	0                               # EOM(2)
+    .byte	2                               # Abbreviation Code
+    .byte	65                              # DW_TAG_type_unit
+    .byte	1                               # DW_CHILDREN_yes
+    .byte	0                               # EOM
+    .byte	0                               # EOM
+    .byte	4                               # Abbreviation Code
+    .byte	65                              # DW_TAG_type_unit
+    .byte	1                               # DW_CHILDREN_yes
+    .byte	0                               # EOM
+    .byte	0                               # EOM
+    .byte	0                               # EOM
+
+#--- v4.s
+    .section	.debug_info.dwo,"e",@progbits
+    .long	.Ldebug_info_dwo_end2-.Ldebug_info_dwo_start2 # Length of Unit
+.Ldebug_info_dwo_start2:
+    .short	4                               # DWARF version number
+    .long	0                               # Offset Into Abbrev. Section
+    .byte	8                               # Address Size (in bytes)
+    .byte	1                               # Abbrev [1] DW_TAG_compile_unit
+    .quad	-6619898858003450627            # DW_AT_GNU_dwo_id
+.Ldebug_info_dwo_end2:

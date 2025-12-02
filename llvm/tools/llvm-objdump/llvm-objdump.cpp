@@ -688,7 +688,7 @@ public:
             LiveElementPrinter &LEP) {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LEP);
-    LEP.printStartLine(OS, Address);
+    LEP.printBoundaryLine(OS, Address, false);
     LEP.printBetweenInsts(OS, false);
 
     printRawData(Bytes, Address.Address, OS, STI);
@@ -728,11 +728,17 @@ public:
     } while (!Comments.empty());
     FOS.flush();
   }
+
+  // Hook invoked when starting to disassemble a symbol at the current position.
+  // Default is no-op.
+  virtual void onSymbolStart() {}
 };
 PrettyPrinter PrettyPrinterInst;
 
 class HexagonPrettyPrinter : public PrettyPrinter {
 public:
+  void onSymbolStart() override { reset(); }
+
   void printLead(ArrayRef<uint8_t> Bytes, uint64_t Address,
                  formatted_raw_ostream &OS) {
     if (LeadingAddr)
@@ -935,7 +941,7 @@ public:
                  LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LEP);
-    LEP.printStartLine(OS, Address);
+    LEP.printBoundaryLine(OS, Address, false);
     LEP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
@@ -990,7 +996,7 @@ public:
                  LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LEP);
-    LEP.printStartLine(OS, Address);
+    LEP.printBoundaryLine(OS, Address, false);
     LEP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
@@ -1029,7 +1035,7 @@ public:
                  LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LEP);
-    LEP.printStartLine(OS, Address);
+    LEP.printBoundaryLine(OS, Address, false);
     LEP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
@@ -2228,6 +2234,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         Start += Size;
         break;
       }
+      // Allow targets to reset any per-symbol state.
+      DT->Printer->onSymbolStart();
       formatted_raw_ostream FOS(OS);
       Index = Start;
       if (SectionAddr < StartAddress)
@@ -2593,7 +2601,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
         object::SectionedAddress NextAddr = {
             SectionAddr + Index + VMAAdjustment + Size, Section.getIndex()};
-        LEP.printEndLine(FOS, NextAddr);
+        LEP.printBoundaryLine(FOS, NextAddr, true);
 
         Index += Size;
       }

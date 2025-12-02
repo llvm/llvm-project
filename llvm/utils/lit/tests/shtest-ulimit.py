@@ -1,24 +1,27 @@
 # Check the ulimit command
 
 # ulimit does not work on non-POSIX platforms.
-# UNSUPPORTED: system-windows
+# Solaris for some reason does not respect ulimit -n, so mark it unsupported
+# as well.
+# UNSUPPORTED: system-windows, system-cygwin, system-solaris
 
-# TODO(boomanaiden154): The test fails on some non-Linux POSIX
-# platforms (like MacOS) due to the underlying system not supporting
-# ulimit -v. This test needs to be carved up so we keep full test
-# coverage on Linux and as much as possible on other platforms.
-# REQUIRES: system-linux
+# RUN: %{python} %S/Inputs/shtest-ulimit/print_limits.py | grep RLIMIT_NOFILE \
+# RUN:   | sed -n -e 's/.*=//p' | tr -d '\n' > %t.nofile_limit
 
-# RUN: not %{lit} -a -v %{inputs}/shtest-ulimit | FileCheck %s
+# RUN: not %{lit} -v %{inputs}/shtest-ulimit --order=lexical \
+# RUN:   | FileCheck -DBASE_NOFILE_LIMIT=%{readfile:%t.nofile_limit} %s
 
-# CHECK: -- Testing: 2 tests{{.*}}
+# CHECK: -- Testing: 3 tests{{.*}}
 
 # CHECK-LABEL: FAIL: shtest-ulimit :: ulimit-bad-arg.txt ({{[^)]*}})
 # CHECK: ulimit -n
 # CHECK: 'ulimit' requires two arguments
 
 # CHECK-LABEL: FAIL: shtest-ulimit :: ulimit_okay.txt ({{[^)]*}})
-# CHECK: ulimit -v 1048576
 # CHECK: ulimit -n 50
-# CHECK: RLIMIT_AS=1073741824
+# CHECK: ulimit -f 5
 # CHECK: RLIMIT_NOFILE=50
+# CHECK: RLIMIT_FSIZE=5
+
+# CHECK-LABEL: FAIL: shtest-ulimit :: ulimit_reset.txt ({{[^)]*}})
+# CHECK: RLIMIT_NOFILE=[[BASE_NOFILE_LIMIT]]

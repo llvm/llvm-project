@@ -1,4 +1,4 @@
-//===--- StaticDefinitionInAnonymousNamespaceCheck.cpp - clang-tidy--------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,8 +45,8 @@ void StaticDefinitionInAnonymousNamespaceCheck::check(
   while (Loc < Def->getSourceRange().getEnd() &&
          !Lexer::getRawToken(Loc, Tok, *Result.SourceManager, getLangOpts(),
                              true)) {
-    SourceRange TokenRange(Tok.getLocation(), Tok.getEndLoc());
-    StringRef SourceText =
+    const SourceRange TokenRange(Tok.getLocation(), Tok.getEndLoc());
+    const StringRef SourceText =
         Lexer::getSourceText(CharSourceRange::getTokenRange(TokenRange),
                              *Result.SourceManager, getLangOpts());
     if (SourceText == "static") {

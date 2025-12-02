@@ -1,4 +1,4 @@
-//===--- CERTTidyModule.cpp - clang-tidy ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,13 +10,22 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
+#include "../bugprone/CommandProcessorCheck.h"
+#include "../bugprone/CopyConstructorMutatesArgumentCheck.h"
+#include "../bugprone/DefaultOperatorNewOnOveralignedTypeCheck.h"
+#include "../bugprone/ExceptionCopyConstructorThrowsCheck.h"
+#include "../bugprone/FloatLoopCounterCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
+#include "../bugprone/RandomGeneratorSeedCheck.h"
+#include "../bugprone/RawMemoryCallOnNonTrivialTypeCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
 #include "../bugprone/SignedCharMisuseCheck.h"
 #include "../bugprone/SizeofExpressionCheck.h"
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
+#include "../bugprone/StdNamespaceModificationCheck.h"
 #include "../bugprone/SuspiciousMemoryComparisonCheck.h"
+#include "../bugprone/ThrowingStaticInitializationCheck.h"
 #include "../bugprone/UncheckedStringToNumberConversionCheck.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
 #include "../bugprone/UnsafeFunctionsCheck.h"
@@ -24,30 +33,21 @@
 #include "../concurrency/ThreadCanceltypeAsynchronousCheck.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
-#include "../misc/NonCopyableObjects.h"
+#include "../misc/NonCopyableObjectsCheck.h"
+#include "../misc/PredictableRandCheck.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
+#include "../modernize/AvoidSetjmpLongjmpCheck.h"
+#include "../modernize/AvoidVariadicFunctionsCheck.h"
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "CommandProcessorCheck.h"
-#include "DefaultOperatorNewAlignmentCheck.h"
-#include "DontModifyStdNamespaceCheck.h"
-#include "FloatLoopCounter.h"
-#include "LimitedRandomnessCheck.h"
-#include "MutatingCopyCheck.h"
-#include "NonTrivialTypesLibcMemoryCallsCheck.h"
-#include "ProperlySeededRandomGeneratorCheck.h"
-#include "SetLongJmpCheck.h"
-#include "StaticObjectExceptionCheck.h"
-#include "ThrownExceptionTypeCheck.h"
-#include "VariadicFunctionDefCheck.h"
 
 namespace {
 
 // Checked functions for cert-err33-c.
-// The following functions are deliberately excluded because they can be called
-// with NULL argument and in this case the check is not applicable:
+// The following functions are deliberately excluded because they can be
+// called with NULL argument and in this case the check is not applicable:
 // `mblen, mbrlen, mbrtowc, mbtowc, wctomb, wctomb_s`.
 // FIXME: The check can be improved to handle such cases.
 const llvm::StringRef CertErr33CCheckedFunctions = "^::aligned_alloc$;"
@@ -245,28 +245,34 @@ public:
         .registerCheck<bugprone::PointerArithmeticOnPolymorphicObjectCheck>(
             "cert-ctr56-cpp");
     // DCL
-    CheckFactories.registerCheck<VariadicFunctionDefCheck>("cert-dcl50-cpp");
+    CheckFactories.registerCheck<modernize::AvoidVariadicFunctionsCheck>(
+        "cert-dcl50-cpp");
     CheckFactories.registerCheck<bugprone::ReservedIdentifierCheck>(
         "cert-dcl51-cpp");
     CheckFactories.registerCheck<misc::NewDeleteOverloadsCheck>(
         "cert-dcl54-cpp");
-    CheckFactories.registerCheck<DontModifyStdNamespaceCheck>("cert-dcl58-cpp");
+    CheckFactories.registerCheck<bugprone::StdNamespaceModificationCheck>(
+        "cert-dcl58-cpp");
     CheckFactories.registerCheck<google::build::UnnamedNamespaceInHeaderCheck>(
         "cert-dcl59-cpp");
     // ERR
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err09-cpp");
-    CheckFactories.registerCheck<SetLongJmpCheck>("cert-err52-cpp");
-    CheckFactories.registerCheck<StaticObjectExceptionCheck>("cert-err58-cpp");
-    CheckFactories.registerCheck<ThrownExceptionTypeCheck>("cert-err60-cpp");
+    CheckFactories.registerCheck<modernize::AvoidSetjmpLongjmpCheck>(
+        "cert-err52-cpp");
+    CheckFactories.registerCheck<bugprone::ThrowingStaticInitializationCheck>(
+        "cert-err58-cpp");
+    CheckFactories.registerCheck<bugprone::ExceptionCopyConstructorThrowsCheck>(
+        "cert-err60-cpp");
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");
     // MEM
-    CheckFactories.registerCheck<DefaultOperatorNewAlignmentCheck>(
-        "cert-mem57-cpp");
+    CheckFactories
+        .registerCheck<bugprone::DefaultOperatorNewOnOveralignedTypeCheck>(
+            "cert-mem57-cpp");
     // MSC
-    CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc50-cpp");
-    CheckFactories.registerCheck<ProperlySeededRandomGeneratorCheck>(
+    CheckFactories.registerCheck<misc::PredictableRandCheck>("cert-msc50-cpp");
+    CheckFactories.registerCheck<bugprone::RandomGeneratorSeedCheck>(
         "cert-msc51-cpp");
     CheckFactories.registerCheck<bugprone::SignalHandlerCheck>(
         "cert-msc54-cpp");
@@ -275,9 +281,10 @@ public:
         "cert-oop11-cpp");
     CheckFactories.registerCheck<bugprone::UnhandledSelfAssignmentCheck>(
         "cert-oop54-cpp");
-    CheckFactories.registerCheck<NonTrivialTypesLibcMemoryCallsCheck>(
+    CheckFactories.registerCheck<bugprone::RawMemoryCallOnNonTrivialTypeCheck>(
         "cert-oop57-cpp");
-    CheckFactories.registerCheck<MutatingCopyCheck>("cert-oop58-cpp");
+    CheckFactories.registerCheck<bugprone::CopyConstructorMutatesArgumentCheck>(
+        "cert-oop58-cpp");
 
     // C checkers
     // ARR
@@ -293,7 +300,8 @@ public:
     CheckFactories.registerCheck<bugprone::ReservedIdentifierCheck>(
         "cert-dcl37-c");
     // ENV
-    CheckFactories.registerCheck<CommandProcessorCheck>("cert-env33-c");
+    CheckFactories.registerCheck<bugprone::CommandProcessorCheck>(
+        "cert-env33-c");
     // ERR
     CheckFactories.registerCheck<bugprone::UnusedReturnValueCheck>(
         "cert-err33-c");
@@ -304,7 +312,8 @@ public:
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-exp42-c");
     // FLP
-    CheckFactories.registerCheck<FloatLoopCounter>("cert-flp30-c");
+    CheckFactories.registerCheck<bugprone::FloatLoopCounterCheck>(
+        "cert-flp30-c");
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-flp37-c");
     // FIO
@@ -315,8 +324,8 @@ public:
     // MSC
     CheckFactories.registerCheck<bugprone::UnsafeFunctionsCheck>(
         "cert-msc24-c");
-    CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc30-c");
-    CheckFactories.registerCheck<ProperlySeededRandomGeneratorCheck>(
+    CheckFactories.registerCheck<misc::PredictableRandCheck>("cert-msc30-c");
+    CheckFactories.registerCheck<bugprone::RandomGeneratorSeedCheck>(
         "cert-msc32-c");
     CheckFactories.registerCheck<bugprone::UnsafeFunctionsCheck>(
         "cert-msc33-c");

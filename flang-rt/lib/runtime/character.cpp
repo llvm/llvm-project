@@ -428,7 +428,8 @@ static RT_API_ATTRS void GeneralCharFunc(Descriptor &result,
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
   if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
-    terminator.Crash("SCAN/VERIFY: could not allocate storage for result");
+    terminator.Crash(
+        "INDEX/SCAN/VERIFY: could not allocate storage for result");
   }
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
   std::size_t argElementChars{arg.ElementBytes() >> shift<CHAR>};
@@ -789,7 +790,7 @@ void RTDEF(LenTrim)(Descriptor &result, const Descriptor &string, int kind,
 
 std::size_t RTDEF(Scan1)(const char *x, std::size_t xLen, const char *set,
     std::size_t setLen, bool back) {
-  return ScanVerify<char, CharFunc::Scan>(x, xLen, set, setLen, back);
+  return ScanVerify<false>(x, xLen, set, setLen, back);
 }
 std::size_t RTDEF(Scan2)(const char16_t *x, std::size_t xLen,
     const char16_t *set, std::size_t setLen, bool back) {
@@ -873,7 +874,7 @@ void RTDEF(Trim)(Descriptor &result, const Descriptor &string,
 
 std::size_t RTDEF(Verify1)(const char *x, std::size_t xLen, const char *set,
     std::size_t setLen, bool back) {
-  return ScanVerify<char, CharFunc::Verify>(x, xLen, set, setLen, back);
+  return ScanVerify<true>(x, xLen, set, setLen, back);
 }
 std::size_t RTDEF(Verify2)(const char16_t *x, std::size_t xLen,
     const char16_t *set, std::size_t setLen, bool back) {

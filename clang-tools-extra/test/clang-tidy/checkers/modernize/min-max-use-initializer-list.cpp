@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s modernize-min-max-use-initializer-list %t
+// RUN: %check_clang_tidy %s modernize-min-max-use-initializer-list %t
 
 // CHECK-FIXES: #include <algorithm>
 namespace utils {
@@ -206,7 +206,7 @@ int min7 = std::min(1, std::min(2, 3, fless_than), fgreater_than);
 // CHECK-FIXES: int min7 = std::min(1, std::min(2, 3, fless_than), fgreater_than);
 
 int max8 = std::max(1, std::max(2, 3, fless_than), less_than);
-// CHECK-FIXES: int max8 = std::max(1, std::max(2, 3, fless_than), less_than)
+// CHECK-FIXES: int max8 = std::max(1, std::max(2, 3, fless_than), less_than);
 
 int min8 = std::min(1, std::min(2, 3, fless_than), less_than);
 // CHECK-FIXES: int min8 = std::min(1, std::min(2, 3, fless_than), less_than);

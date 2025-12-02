@@ -1,4 +1,4 @@
-//===-- CppCoreGuidelinesTidyModule.cpp - clang-tidy ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,7 +36,7 @@
 #include "OwningMemoryCheck.h"
 #include "PreferMemberInitializerCheck.h"
 #include "ProBoundsArrayToPointerDecayCheck.h"
-#include "ProBoundsAvoidUncheckedContainerAccess.h"
+#include "ProBoundsAvoidUncheckedContainerAccessCheck.h"
 #include "ProBoundsConstantArrayIndexCheck.h"
 #include "ProBoundsPointerArithmeticCheck.h"
 #include "ProTypeConstCastCheck.h"
@@ -108,7 +108,7 @@ public:
         "cppcoreguidelines-prefer-member-initializer");
     CheckFactories.registerCheck<ProBoundsArrayToPointerDecayCheck>(
         "cppcoreguidelines-pro-bounds-array-to-pointer-decay");
-    CheckFactories.registerCheck<ProBoundsAvoidUncheckedContainerAccess>(
+    CheckFactories.registerCheck<ProBoundsAvoidUncheckedContainerAccessCheck>(
         "cppcoreguidelines-pro-bounds-avoid-unchecked-container-access");
     CheckFactories.registerCheck<ProBoundsConstantArrayIndexCheck>(
         "cppcoreguidelines-pro-bounds-constant-array-index");

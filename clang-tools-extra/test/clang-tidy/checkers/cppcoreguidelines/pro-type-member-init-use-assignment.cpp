@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s cppcoreguidelines-pro-type-member-init %t -- -config="{CheckOptions: {cppcoreguidelines-pro-type-member-init.UseAssignment: true}}" -- -fsigned-char
+// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-member-init %t -- -config="{CheckOptions: {cppcoreguidelines-pro-type-member-init.UseAssignment: true}}" -- -fsigned-char
 
 struct T {
   int i;
@@ -30,7 +30,7 @@ struct S {
   double d;
   // CHECK-FIXES: double d = 0.0;
   long double ld;
-  // CHECK-FIXES: double ld = 0.0L;
+  // CHECK-FIXES: long double ld = 0.0L;
   int *ptr;
   // CHECK-FIXES: int *ptr = nullptr;
   T t;

@@ -20,7 +20,7 @@ namespace lldb_private {
 
 class ScriptedThread;
 
-class StackFrameList {
+class StackFrameList : public std::enable_shared_from_this<StackFrameList> {
 public:
   // Constructors and Destructors
   StackFrameList(Thread &thread, const lldb::StackFrameListSP &prev_frames_sp,
@@ -100,6 +100,9 @@ public:
 
   /// Returns whether we have currently fetched all the frames of a stack.
   bool WereAllFramesFetched() const;
+
+  /// Get the thread associated with this frame list.
+  Thread &GetThread() const { return m_thread; }
 
 protected:
   friend class Thread;

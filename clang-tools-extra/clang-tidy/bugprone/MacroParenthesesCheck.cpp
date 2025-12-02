@@ -1,4 +1,4 @@
-//===--- MacroParenthesesCheck.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -152,7 +152,6 @@ void MacroParenthesesPPCallbacks::replacementList(const Token &MacroNameTok,
 
 void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
                                            const MacroInfo *MI) {
-
   // Skip variable declaration.
   bool VarDecl = possibleVarDecl(MI, MI->tokens_begin());
 

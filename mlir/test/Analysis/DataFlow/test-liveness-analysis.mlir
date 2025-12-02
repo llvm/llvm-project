@@ -184,6 +184,18 @@ func.func private @private0(%0 : i32) -> i32 {
 // CHECK-NEXT:  result #0: live
 // CHECK-LABEL: test_tag: y:
 // CHECK-NEXT:  result #0: not live
+// CHECK-LABEL: test_tag: for:
+// CHECK-NEXT:  operand #0: live
+// CHECK-NEXT:  operand #1: live
+// CHECK-NEXT:  operand #2: live
+// CHECK-NEXT:  operand #3: live
+// CHECK-NEXT:  operand #4: not live
+// CHECK-NEXT:  result #0: live
+// CHECK-NEXT:  result #1: not live
+// CHECK-NEXT:  region: #0:
+// CHECK-NEXT:  argument: #0: live
+// CHECK-NEXT:  argument: #1: not live
+// CHECK-NEXT:  argument: #2: not live
 func.func @test_7_type_3(%arg0: memref<i32>) {
   %c0 = arith.constant {tag = "zero"} 0 : index
   %c10 = arith.constant {tag = "ten"} 10 : index
@@ -194,7 +206,7 @@ func.func @test_7_type_3(%arg0: memref<i32>) {
     %1 = arith.addi %x, %x : i32
     %2 = func.call @private0(%1) : (i32) -> i32
     scf.yield %2, %arg3 : i32, i32
-  }
+  } {tag = "for"}
   memref.store %0#0, %arg0[] : memref<i32>
   return
 }

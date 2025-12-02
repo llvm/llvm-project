@@ -23,6 +23,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallSet.h"
 
 namespace hlfir {
 #define GEN_PASS_DEF_CONVERTHLFIRTOFIR
@@ -148,13 +149,18 @@ public:
           !assignOp.isTemporaryLHS() &&
           mlir::isa<fir::RecordType>(fir::getElementTypeOf(lhsExv));
 
+      mlir::ArrayAttr accessGroups;
+      if (auto attrs = assignOp.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+              "access_groups"))
+        accessGroups = attrs;
+
       // genScalarAssignment() must take care of potential overlap
       // between LHS and RHS. Note that the overlap is possible
       // also for components of LHS/RHS, and the Assign() runtime
       // must take care of it.
-      fir::factory::genScalarAssignment(builder, loc, lhsExv, rhsExv,
-                                        needFinalization,
-                                        assignOp.isTemporaryLHS());
+      fir::factory::genScalarAssignment(
+          builder, loc, lhsExv, rhsExv, needFinalization,
+          assignOp.isTemporaryLHS(), accessGroups);
     }
     rewriter.eraseOp(assignOp);
     return mlir::success();
@@ -307,15 +313,18 @@ public:
         declareOp.getTypeparams(), declareOp.getDummyScope(),
         /*storage=*/declareOp.getStorage(),
         /*storage_offset=*/declareOp.getStorageOffset(),
-        declareOp.getUniqName(), fortranAttrs, dataAttr);
+        declareOp.getUniqName(), fortranAttrs, dataAttr,
+        declareOp.getDummyArgNoAttr());
 
     // Propagate other attributes from hlfir.declare to fir.declare.
     // OpenACC's acc.declare is one example. Right now, the propagation
     // is verbatim.
-    mlir::NamedAttrList elidedAttrs =
-        mlir::NamedAttrList{firDeclareOp->getAttrs()};
+    llvm::SmallSet<llvm::StringRef, 8> elidedAttrs;
+    for (const mlir::NamedAttribute &firAttr : firDeclareOp->getAttrs())
+      elidedAttrs.insert(firAttr.getName());
+    elidedAttrs.insert(declareOp.getSkipReboxAttrName());
     for (const mlir::NamedAttribute &attr : declareOp->getAttrs())
-      if (!elidedAttrs.get(attr.getName()))
+      if (!elidedAttrs.contains(attr.getName()))
         firDeclareOp->setAttr(attr.getName(), attr.getValue());
 
     auto firBase = firDeclareOp.getResult();
@@ -328,6 +337,8 @@ public:
       auto genHlfirBox = [&]() -> mlir::Value {
         if (auto baseBoxType =
                 mlir::dyn_cast<fir::BaseBoxType>(firBase.getType())) {
+          if (declareOp.getSkipRebox())
+            return firBase;
           // Rebox so that lower bounds and attributes are correct.
           if (baseBoxType.isAssumedRank())
             return fir::ReboxAssumedRankOp::create(

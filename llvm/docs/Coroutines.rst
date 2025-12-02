@@ -193,7 +193,7 @@ Values live across a suspend point need to be stored in the coroutine frame to
 be available in the continuation function. This frame is stored as a tail to the
 `async context`.
 
-Every suspend point takes an `context projection function` argument which
+Every suspend point takes a `context projection function` argument which
 describes how-to obtain the continuations `async context` and every suspend
 point has an associated `resume function` denoted by the
 `llvm.coro.async.resume` intrinsic. The coroutine is resumed by calling this
@@ -221,7 +221,7 @@ a parameter to the `llvm.coro.suspend.async` intrinsic.
                                               ptr %resume_func_ptr,
                                               ptr %context_projection_function
 
-The frontend should provide a `async function pointer` struct associated with
+The frontend should provide an `async function pointer` struct associated with
 each async coroutine by `llvm.coro.id.async`'s argument. The initial size and
 alignment of the `async context` must be provided as arguments to the
 `llvm.coro.id.async` intrinsic. Lowering will update the size entry with the
@@ -303,7 +303,7 @@ The LLVM IR for this coroutine looks like this:
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+    call void @llvm.coro.end(ptr %hdl, i1 false, token none)
     ret ptr %hdl
   }
 
@@ -314,7 +314,7 @@ coroutine handle. The second parameter of `coro.begin` is given a block of memor
 to be used if the coroutine frame needs to be allocated dynamically.
 
 The `coro.id`_ intrinsic serves as coroutine identity useful in cases when the
-`coro.begin`_ intrinsic get duplicated by optimization passes such as
+`coro.begin`_ intrinsic gets duplicated by optimization passes such as
 jump-threading.
 
 The `cleanup` block destroys the coroutine frame. The `coro.free`_ intrinsic,
@@ -637,7 +637,7 @@ store the current value produced by a coroutine.
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+    call void @llvm.coro.end(ptr %hdl, i1 false, token none)
     ret ptr %hdl
   }
 
@@ -806,7 +806,7 @@ The LLVM IR for a coroutine using a Coroutine with a custom ABI looks like:
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+    call void @llvm.coro.end(ptr %hdl, i1 false, token none)
     ret ptr %hdl
   }
 
@@ -1444,7 +1444,7 @@ A frontend should emit function attribute `presplitcoroutine` for the coroutine.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare i1 @llvm.coro.end(ptr <handle>, i1 <unwind>, token <result.token>)
+  declare void @llvm.coro.end(ptr <handle>, i1 <unwind>, token <result.token>)
 
 Overview:
 """""""""
@@ -1502,8 +1502,9 @@ For landingpad based exception model, it is expected that frontend uses the
 .. code-block:: llvm
 
     ehcleanup:
-      %InResumePart = call i1 @llvm.coro.end(ptr null, i1 true, token none)
-      br i1 %InResumePart, label %eh.resume, label %cleanup.cont
+      call void @llvm.coro.end(ptr null, i1 true, token none)
+      %InRamp = call i1 @llvm.coro.is_in_ramp()
+      br i1 %InRamp, label %cleanup.cont, label %eh.resume
 
     cleanup.cont:
       ; rest of the cleanup
@@ -1515,10 +1516,10 @@ For landingpad based exception model, it is expected that frontend uses the
       %lpad.val29 = insertvalue { ptr, i32 } %lpad.val, i32 %sel, 1
       resume { ptr, i32 } %lpad.val29
 
-The `CoroSpit` pass replaces `coro.end` with ``True`` in the resume functions,
-thus leading to immediate unwind to the caller, whereas in start function it
-is replaced with ``False``, thus allowing to proceed to the rest of the cleanup
-code that is only needed during initial invocation of the coroutine.
+The `CoroSpit` pass replaces `coro.is_in_ramp` with ``True`` in the ramp functions,
+thus allowing to proceed to the rest of the cleanup code that is only needed during
+initial invocation of the coroutine. Otherwise, it is replaced with ``False``,
+thus leading to immediate unwind to the caller.
 
 For Windows Exception handling model, a frontend should attach a funclet bundle
 referring to an enclosing cleanuppad as follows:
@@ -1527,7 +1528,7 @@ referring to an enclosing cleanuppad as follows:
 
     ehcleanup:
       %tok = cleanuppad within none []
-      %unused = call i1 @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %tok) ]
+      call void @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %tok) ]
       cleanupret from %tok unwind label %RestOfTheCleanup
 
 The `CoroSplit` pass, if the funclet bundle is present, will insert
@@ -1592,7 +1593,7 @@ The number of arguments must match the return type of the continuation function:
 
   cleanup:
     %tok = call token (...) @llvm.coro.end.results(i8 %val)
-    call i1 @llvm.coro.end(ptr %hdl, i1 0, token %tok)
+    call void @llvm.coro.end(ptr %hdl, i1 0, token %tok)
     unreachable
 
   ...
@@ -1604,7 +1605,7 @@ The number of arguments must match the return type of the continuation function:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare i1 @llvm.coro.end.async(ptr <handle>, i1 <unwind>, ...)
+  declare void @llvm.coro.end.async(ptr <handle>, i1 <unwind>, ...)
 
 Overview:
 """""""""
@@ -1635,10 +1636,10 @@ the function call.
 
 .. code-block:: llvm
 
-  call i1 (ptr, i1, ...) @llvm.coro.end.async(
-                           ptr %hdl, i1 0,
-                           ptr @must_tail_call_return,
-                           ptr %ctxt, ptr %task, ptr %actor)
+  call void (ptr, i1, ...) @llvm.coro.end.async(
+                             ptr %hdl, i1 0,
+                             ptr @must_tail_call_return,
+                             ptr %ctxt, ptr %task, ptr %actor)
   unreachable
 
 .. _coro.suspend:
@@ -2117,6 +2118,30 @@ Example:
       %hdl.result = ... ; get address of returned coroutine handle
       ret ptr %hdl.result
 
+'llvm.coro.is_in_ramp' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare i1 @llvm.coro.is_in_ramp()
+
+Overview:
+"""""""""
+
+The '``llvm.coro.is_in_ramp``' intrinsic returns a bool value that marks coroutine ramp
+function and resume/destroy function.
+
+Arguments:
+""""""""""
+
+None
+
+Semantics:
+""""""""""
+
+The `CoroSpit` pass replaces `coro.is_in_ramp` with ``True`` ramp functions.
+Otherwise, it is replaced with ``False``, allowing the frontend to separate
+ramp function and resume/destroy function.
+
 Coroutine Transformation Passes
 ===============================
 CoroEarly
@@ -2124,7 +2149,7 @@ CoroEarly
 The CoroEarly pass ensures later middle end passes correctly interpret coroutine 
 semantics and lowers coroutine intrinsics that not needed to be preserved to 
 help later coroutine passes. This pass lowers `coro.promise`_, `coro.frame`_ and 
-`coro.done`_ intrinsics. Afterwards, it replace uses of promise alloca with 
+`coro.done`_ intrinsics. Afterwards, it replaces uses of promise alloca with 
 `coro.promise`_ intrinsic.
 
 .. _CoroSplit:
@@ -2163,7 +2188,7 @@ Attributes
 coro_only_destroy_when_complete
 -------------------------------
 
-When the coroutine are marked with coro_only_destroy_when_complete, it indicates
+When the coroutine is marked with coro_only_destroy_when_complete, it indicates
 the coroutine must reach the final suspend point when it get destroyed.
 
 This attribute only works for switched-resume coroutines now.
@@ -2174,7 +2199,7 @@ coro_elide_safe
 When a Call or Invoke instruction to switch ABI coroutine `f` is marked with
 `coro_elide_safe`, CoroSplitPass generates a `f.noalloc` ramp function.
 `f.noalloc` has one more argument than its original ramp function `f`, which is
-the pointer to the allocated frame. `f.noalloc` also suppressed any allocations
+the pointer to the allocated frame. `f.noalloc` also suppresses any allocations
 or deallocations that may be guarded by `@llvm.coro.alloc` and `@llvm.coro.free`.
 
 CoroAnnotationElidePass performs the heap elision when possible. Note that for

@@ -5,8 +5,8 @@
 
 // REQUIRES: lld
 
-// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-a.o -g -fdebug-types-section -flimit-debug-info -DFILE_A
-// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-b.o -g -fdebug-types-section -flimit-debug-info -DFILE_B
+// RUN: %clangxx --target=x86_64-pc-linux -c %s -o %t-a.o -g -fdebug-types-section -flimit-debug-info -DFILE_A
+// RUN: %clangxx --target=x86_64-pc-linux -c %s -o %t-b.o -g -fdebug-types-section -flimit-debug-info -DFILE_B
 // RUN: ld.lld -z undefs %t-a.o %t-b.o -o %t
 // RUN: %lldb %t -o "target variable x" -o exit | FileCheck %s
 

@@ -29,7 +29,7 @@ define void @preserve_lcssa_when_reusing_existing_phi() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[TMP1]], 7
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 7
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[LOOP_1_LATCH_UNR_LCSSA:.*]], label %[[LOOP_4_PREHEADER_NEW:.*]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[LOOP_4_EPIL_PREHEADER:.*]], label %[[LOOP_4_PREHEADER_NEW:.*]]
 ; CHECK:       [[LOOP_4_PREHEADER_NEW]]:
 ; CHECK-NEXT:    br label %[[LOOP_4:.*]]
 ; CHECK:       [[LOOP_2_LATCH]]:
@@ -47,18 +47,18 @@ define void @preserve_lcssa_when_reusing_existing_phi() {
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[INC_I_7]] = add nuw nsw i32 [[IV_4]], 8
 ; CHECK-NEXT:    [[NITER_NEXT_7]] = add nuw nsw i32 [[NITER]], 8
-; CHECK-NEXT:    br i1 true, label %[[LOOP_1_LATCH_UNR_LCSSA_LOOPEXIT:.*]], label %[[LOOP_4]]
-; CHECK:       [[LOOP_1_LATCH_UNR_LCSSA_LOOPEXIT]]:
-; CHECK-NEXT:    [[IV_4_UNR_PH:%.*]] = phi i32 [ [[INC_I_7]], %[[LOOP_4]] ]
-; CHECK-NEXT:    br label %[[LOOP_1_LATCH_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 true, label %[[LOOP_1_LATCH_UNR_LCSSA:.*]], label %[[LOOP_4]]
 ; CHECK:       [[LOOP_1_LATCH_UNR_LCSSA]]:
-; CHECK-NEXT:    [[IV_4_UNR:%.*]] = phi i32 [ 0, %[[LOOP_4_PREHEADER]] ], [ [[IV_4_UNR_PH]], %[[LOOP_1_LATCH_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[IV_4_UNR:%.*]] = phi i32 [ [[INC_I_7]], %[[LOOP_4]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_4_EPIL_PREHEADER:.*]], label %[[LOOP_1_LATCH:.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_4_EPIL_PREHEADER]], label %[[LOOP_1_LATCH:.*]]
 ; CHECK:       [[LOOP_4_EPIL_PREHEADER]]:
+; CHECK-NEXT:    [[IV_4_EPIL_INIT:%.*]] = phi i32 [ 0, %[[LOOP_4_PREHEADER]] ], [ [[IV_4_UNR]], %[[LOOP_1_LATCH_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i32 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
 ; CHECK-NEXT:    br label %[[LOOP_4_EPIL:.*]]
 ; CHECK:       [[LOOP_4_EPIL]]:
-; CHECK-NEXT:    [[IV_4_EPIL:%.*]] = phi i32 [ [[INC_I_EPIL:%.*]], %[[LOOP_4_EPIL]] ], [ [[IV_4_UNR]], %[[LOOP_4_EPIL_PREHEADER]] ]
+; CHECK-NEXT:    [[IV_4_EPIL:%.*]] = phi i32 [ [[INC_I_EPIL:%.*]], %[[LOOP_4_EPIL]] ], [ [[IV_4_EPIL_INIT]], %[[LOOP_4_EPIL_PREHEADER]] ]
 ; CHECK-NEXT:    [[EPIL_ITER:%.*]] = phi i32 [ 0, %[[LOOP_4_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], %[[LOOP_4_EPIL]] ]
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[INC_I_EPIL]] = add i32 [[IV_4_EPIL]], 1
