@@ -239,7 +239,8 @@ static AllocTokenOptions getAllocTokenOptions(const LangOptions &LangOpts,
   AllocTokenOptions Opts;
   if (LangOpts.AllocTokenMode)
     Opts.Mode = *LangOpts.AllocTokenMode;
-  Opts.MaxTokens = LangOpts.AllocTokenMax;
+  if (LangOpts.AllocTokenMax)
+    Opts.MaxTokens = *LangOpts.AllocTokenMax;
   Opts.Extended = CGOpts.SanitizeAllocTokenExtended;
   Opts.FastABI = CGOpts.SanitizeAllocTokenFastABI;
   return Opts;
