@@ -712,17 +712,19 @@ LogicalResult TransposeLoadOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult MakeDmaBaseOp::verify() {
-  MemRefType srcType = cast<MemRefType>(getSrc().getType());
-  MemRefType dstType = cast<MemRefType>(getDst().getType());
-  bool store_from_lds = hasWorkgroupMemorySpace(srcType.getMemorySpace()) &&
-                        hasGlobalMemorySpace(dstType.getMemorySpace());
-  bool load_to_lds = hasGlobalMemorySpace(srcType.getMemorySpace()) &&
-                     hasWorkgroupMemorySpace(dstType.getMemorySpace());
-  bool is_valid = store_from_lds != load_to_lds;
-  if (!is_valid)
-    return emitOpError("invalid combination of address spaces.");
 
-  Type elementType = srcType.getElementType();
+  MemRefType ldsType = cast<MemRefType>(getLds().getType());
+  MemRefType globalType = cast<MemRefType>(getGlobal().getType());
+  if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace())) {
+    return emitOpError(
+        "lds memref must have workgroup address space attribute.");
+  }
+  if (!hasGlobalMemorySpace(globalType.getMemorySpace())) {
+    return emitOpError(
+        "global memref must have global address space attribute.");
+  }
+
+  Type elementType = ldsType.getElementType();
   int width;
   if (auto intType = dyn_cast<IntegerType>(elementType)) {
     width = intType.getWidth();
@@ -777,6 +779,16 @@ LogicalResult MakeDmaDescriptorOp::verify() {
     return emitOpError(
                "element type width must be 1, 2, 4 or 8 bytes, but was ")
            << elementTypeWidth << " bits long";
+  }
+
+  if (Value atomicBarrierAddress = getAtomicBarrierAddress()) {
+    MemRefType atomicBarrierAddressType =
+        cast<MemRefType>(atomicBarrierAddress.getType());
+    bool barrierInLDS =
+        hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
+    if (!barrierInLDS) {
+      return emitOpError("atomic barrier address must be in LDS.");
+    }
   }
 
   return success();

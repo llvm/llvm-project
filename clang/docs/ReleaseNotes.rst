@@ -518,6 +518,8 @@ Bug Fixes to Attribute Support
 - Fix handling of parameter indexes when an attribute is applied to a C++23 explicit object member function.
 - Fixed several false positives and false negatives in function effect (`nonblocking`) analysis. (#GH166078) (#GH166101) (#GH166110)
 - Fix ``cleanup`` attribute by delaying type checks until after the type is deduced. (#GH129631)
+- Fix a crash when instantiating a function template with ``constructor`` or ``destructor``
+  attributes without a priority argument. (#GH169072)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -561,6 +563,7 @@ Bug Fixes to C++ Support
 - Fix for clang incorrectly rejecting the default construction of a union with
   nontrivial member when another member has an initializer. (#GH81774)
 - Fixed a template depth issue when parsing lambdas inside a type constraint. (#GH162092)
+- Fix the support of zero-length arrays in SFINAE context. (#GH170040)
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
 - Fix a crash when extracting unavailable member type from alias in template deduction. (#GH165560)
 - Fix incorrect diagnostics for lambdas with init-captures inside braced initializers. (#GH163498)
@@ -639,8 +642,25 @@ RISC-V Support
 - `__GCC_CONSTRUCTIVE_SIZE` and `__GCC_DESTRUCTIVE_SIZE` are changed to 64. These values are
   unstable according to `Clang's documentation <https://clang.llvm.org/docs/LanguageExtensions.html#gcc-destructive-size-and-gcc-constructive-size>`_.
 
+- DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the RISC-V platform.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now supports C++17 Class Template Argument Deduction (CTAD) in CUDA/HIP
+  device code by treating deduction guides as if they were ``__host__ __device__``.
+
+- Clang avoids ambiguous CTAD in CUDA/HIP by not synthesizing duplicate implicit
+  deduction guides when ``__host__`` and ``__device__`` constructors differ only
+  in CUDA target attributes (same signature and constraints).
+
+- Clang diagnoses CUDA/HIP target attributes written on deduction guides as errors,
+  since deduction guides do not participate in code generation.
+
+- Clang preserves distinct implicit deduction guides for constructors that differ
+  by constraints, so constraint-based CTAD works in CUDA/HIP device code as in
+  standard C++.
 
 CUDA Support
 ^^^^^^^^^^^^
@@ -687,6 +707,7 @@ AST Matchers
 - Fixed detection of explicit parameter lists in ``LambdaExpr``. (#GH168452)
 - Added ``hasExplicitParameters`` for ``LambdaExpr`` as an output attribute to
   AST JSON dumps.
+- Add ``arrayTypeLoc`` matcher for matching ``ArrayTypeLoc``.
 
 clang-format
 ------------
@@ -704,6 +725,9 @@ clang-format
   ``AlignAfterOpenBracket`` option, and make ``AlignAfterOpenBracket`` a
   ``bool`` type.
 - Add ``AlignPPAndNotPP`` suboption to ``AlignTrailingComments``.
+- Rename ``(Binary|Decimal|Hex)MinDigits`` to ``...MinDigitsInsert`` and  add
+  ``(Binary|Decimal|Hex)MaxDigitsSeparator`` suboptions to
+  ``IntegerLiteralSeparator``.
 
 libclang
 --------

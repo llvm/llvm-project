@@ -2275,51 +2275,46 @@ struct AMDGPUMakeDmaBaseLowering
   LogicalResult
   matchAndRewrite(MakeDmaBaseOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx1250) {
+    if (chipset < kGfx1250)
       return op->emitOpError("make_dma_base is only supported on gfx1250");
-    }
 
     Location loc = op.getLoc();
 
-    ValueRange srcIndices = adaptor.getSrcIndices();
-    Value src = adaptor.getSrc();
-    auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
+    ValueRange ldsIndices = adaptor.getLdsIndices();
+    Value lds = adaptor.getLds();
+    auto ldsMemRefType = cast<MemRefType>(op.getLds().getType());
 
-    Value srcPtr =
-        getStridedElementPtr(rewriter, loc, srcMemRefType, src, srcIndices);
+    Value ldsPtr =
+        getStridedElementPtr(rewriter, loc, ldsMemRefType, lds, ldsIndices);
 
-    ValueRange dstIndices = adaptor.getDstIndices();
-    Value dst = adaptor.getDst();
-    auto dstMemRefType = cast<MemRefType>(op.getDst().getType());
+    ValueRange globalIndices = adaptor.getGlobalIndices();
+    Value global = adaptor.getGlobal();
+    auto globalMemRefType = cast<MemRefType>(op.getGlobal().getType());
 
-    Value dstPtr =
-        getStridedElementPtr(rewriter, loc, dstMemRefType, dst, dstIndices);
-
-    bool storeFrom = hasWorkgroupMemorySpace(srcMemRefType.getMemorySpace());
-    Value ldsAddr = storeFrom ? srcPtr : dstPtr;
-    Value globalAddr = storeFrom ? dstPtr : srcPtr;
+    Value globalPtr = getStridedElementPtr(rewriter, loc, globalMemRefType,
+                                           global, globalIndices);
 
     Type i32 = rewriter.getI32Type();
     Type i64 = rewriter.getI64Type();
 
-    Value castForLdsAddr =
-        LLVM::PtrToIntOp::create(rewriter, loc, i32, ldsAddr);
+    Value castForLdsAddr = LLVM::PtrToIntOp::create(rewriter, loc, i32, ldsPtr);
     Value castForGlobalAddr =
-        LLVM::PtrToIntOp::create(rewriter, loc, i64, globalAddr);
-
-    Value mask = createI64Constant(rewriter, loc, 0x1FFFFFFFFFFFFFF);
-    Value first57BitsOfGlobalAddr =
-        LLVM::AndOp::create(rewriter, loc, castForGlobalAddr, mask);
-    Value shift = LLVM::LShrOp::create(rewriter, loc, first57BitsOfGlobalAddr,
-                                       createI64Constant(rewriter, loc, 32));
+        LLVM::PtrToIntOp::create(rewriter, loc, i64, globalPtr);
 
     Value lowHalf =
-        LLVM::TruncOp::create(rewriter, loc, i32, first57BitsOfGlobalAddr);
+        LLVM::TruncOp::create(rewriter, loc, i32, castForGlobalAddr);
+
+    Value shift = LLVM::LShrOp::create(rewriter, loc, castForGlobalAddr,
+                                       createI64Constant(rewriter, loc, 32));
+
     Value highHalf = LLVM::TruncOp::create(rewriter, loc, i32, shift);
 
-    Value typeMask = createI32Constant(rewriter, loc, 2 << 30);
+    Value mask = createI32Constant(rewriter, loc, (1ull << 25) - 1);
+    Value validHighHalf = LLVM::AndOp::create(rewriter, loc, highHalf, mask);
+
+    Value typeField = createI32Constant(rewriter, loc, 2 << 30);
     Value highHalfPlusType =
-        LLVM::OrOp::create(rewriter, loc, highHalf, typeMask);
+        LLVM::OrOp::create(rewriter, loc, validHighHalf, typeField);
 
     Value c0 = createI32Constant(rewriter, loc, 0);
     Value c1 = createI32Constant(rewriter, loc, 1);
@@ -2327,8 +2322,8 @@ struct AMDGPUMakeDmaBaseLowering
     Value c3 = createI32Constant(rewriter, loc, 3);
 
     Type v4i32 = this->typeConverter->convertType(VectorType::get(4, i32));
-    Value result = LLVM::UndefOp::create(rewriter, loc, v4i32);
-    result = LLVM::InsertElementOp::create(rewriter, loc, result, c0, c0);
+    Value result = LLVM::PoisonOp::create(rewriter, loc, v4i32);
+    result = LLVM::InsertElementOp::create(rewriter, loc, result, c1, c0);
     result = LLVM::InsertElementOp::create(rewriter, loc, result,
                                            castForLdsAddr, c1);
     result = LLVM::InsertElementOp::create(rewriter, loc, result, lowHalf, c2);
@@ -2726,6 +2721,7 @@ struct ConvertAMDGPUToROCDLPass
       Type i32 = IntegerType::get(type.getContext(), 32);
       return converter.convertType(VectorType::get(4, i32));
     });
+
     populateAMDGPUToROCDLConversionPatterns(converter, patterns, *maybeChipset);
     LLVMConversionTarget target(getContext());
     target.addIllegalDialect<::mlir::amdgpu::AMDGPUDialect>();
@@ -2761,27 +2757,27 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                                    RewritePatternSet &patterns,
                                                    Chipset chipset) {
   populateAMDGPUMemorySpaceAttributeConversions(converter);
-  patterns.add<
-      FatRawBufferCastLowering,
-      RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,
-      RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawPtrBufferStoreOp>,
-      RawBufferOpLowering<RawBufferAtomicFaddOp,
-                          ROCDL::RawPtrBufferAtomicFaddOp>,
-      RawBufferOpLowering<RawBufferAtomicFmaxOp,
-                          ROCDL::RawPtrBufferAtomicFmaxOp>,
-      RawBufferOpLowering<RawBufferAtomicSmaxOp,
-                          ROCDL::RawPtrBufferAtomicSmaxOp>,
-      RawBufferOpLowering<RawBufferAtomicUminOp,
-                          ROCDL::RawPtrBufferAtomicUminOp>,
-      RawBufferOpLowering<RawBufferAtomicCmpswapOp,
-                          ROCDL::RawPtrBufferAtomicCmpSwap>,
-      AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
-      SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
-      WMMAOpLowering, ExtPackedFp8OpLowering, ScaledExtPacked816OpLowering,
-      ScaledExtPackedOpLowering, PackedScaledTruncOpLowering,
-      PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
-      GatherToLDSOpLowering, TransposeLoadOpLowering, AMDGPUPermlaneLowering,
-      AMDGPUMakeDmaBaseLowering, AMDGPUMakeDmaDescriptorLowering>(converter,
-                                                                  chipset);
+  patterns
+      .add<FatRawBufferCastLowering,
+           RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,
+           RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawPtrBufferStoreOp>,
+           RawBufferOpLowering<RawBufferAtomicFaddOp,
+                               ROCDL::RawPtrBufferAtomicFaddOp>,
+           RawBufferOpLowering<RawBufferAtomicFmaxOp,
+                               ROCDL::RawPtrBufferAtomicFmaxOp>,
+           RawBufferOpLowering<RawBufferAtomicSmaxOp,
+                               ROCDL::RawPtrBufferAtomicSmaxOp>,
+           RawBufferOpLowering<RawBufferAtomicUminOp,
+                               ROCDL::RawPtrBufferAtomicUminOp>,
+           RawBufferOpLowering<RawBufferAtomicCmpswapOp,
+                               ROCDL::RawPtrBufferAtomicCmpSwap>,
+           AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
+           SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
+           WMMAOpLowering, ExtPackedFp8OpLowering, ScaledExtPacked816OpLowering,
+           ScaledExtPackedOpLowering, PackedScaledTruncOpLowering,
+           PackedTrunc2xFp8OpLowering, PackedStochRoundFp8OpLowering,
+           GatherToLDSOpLowering, TransposeLoadOpLowering,
+           AMDGPUPermlaneLowering, AMDGPUMakeDmaBaseLowering,
+	   AMDGPUMakeDmaDescriptorLowering>(converter, chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
 }

@@ -691,15 +691,12 @@ func.func @memory_counter_wait() {
 func.func @make_dma_base(%idx: index, %mem: memref<8xi32>, %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
   // CHECK: amdgpu.make_dma_base %[[MEM]][%[[IDX]]], %[[SMEM]][%[[IDX]]] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
   amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
-
-  // CHECK: amdgpu.make_dma_base %[[SMEM]][%[[IDX]]], %[[MEM]][%[[IDX]]] : memref<8xi32, #gpu.address_space<workgroup>>, memref<8xi32> -> !amdgpu.tdm_base<i32>
-  amdgpu.make_dma_base %smem[%idx], %mem[%idx] : memref<8xi32, #gpu.address_space<workgroup>>, memref<8xi32> -> !amdgpu.tdm_base<i32>
   func.return
 }
 
 // CHECK-LABEL: func @make_dma_descriptor
-// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[BARRIER:.+]]: memref<8xi32>, %[[IDX:.+]]: index)
-func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8xi32>, %idx: index) {
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>, %[[BARRIER:.+]]: memref<8xi32, #gpu.address_space<workgroup>>, %[[IDX:.+]]: index)
+func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8xi32, #gpu.address_space<workgroup>>, %idx: index) {
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
   amdgpu.make_dma_descriptor %base
@@ -730,8 +727,8 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x
         globalStride [64, 1]
         // CHECK-SAME: sharedSize [64, 64]
         sharedSize [64, 64]
-        // CHECK-SAME: atomicBarrier(%[[BARRIER]][%[[IDX]]] : memref<8xi32>)
-        atomicBarrier(%barrier[%idx] : memref<8xi32>)
+        // CHECK-SAME: atomicBarrier(%[[BARRIER]][%[[IDX]]] : memref<8xi32, #gpu.address_space<workgroup>>)
+        atomicBarrier(%barrier[%idx] : memref<8xi32, #gpu.address_space<workgroup>>)
         : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   // CHECK: amdgpu.make_dma_descriptor %[[BASE]]
@@ -747,15 +744,5 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x
         : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
 
   func.return
-}
-
-// CHECK-LABEL: @tensor_load_store
-// CHECK-SAME: (%[[DESC:.+]]: !amdgpu.tdm_descriptor)
-func.func @tensor_load_store(%desc: !amdgpu.tdm_descriptor) {
-  // CHECK: amdgpu.tensor_load_to_lds %[[DESC]]
-  amdgpu.tensor_load_to_lds %desc : !amdgpu.tdm_descriptor
-  // CHECK: amdgpu.tensor_store_from_lds %[[DESC]]
-  amdgpu.tensor_store_from_lds %desc : !amdgpu.tdm_descriptor
-  return
 }
 

@@ -1228,12 +1228,11 @@ def AMDGPU_ScaledMFMAOp :
 }
 
 def AMDGPU_MakeDmaBaseOp :
-    AMDGPU_Op<"make_dma_base", [Pure, AttrSizedOperandSegments, AllElementTypesMatch<["src", "dst"]>]>,
-    Arguments<(ins
-                   Arg<AnyMemRef, "buffer to read from">:$src,
-                   Variadic<Index>:$src_indices,
-                   Arg<AnyMemRef, "buffer to write to">:$dst,
-                   Variadic<Index>:$dst_indices)>,
+    AMDGPU_Op<"make_dma_base", [Pure, AttrSizedOperandSegments, AllElementTypesMatch<["global", "lds"]>]>,
+    Arguments<(ins Arg<AnyMemRef>:$global,
+                   Variadic<Index>:$global_indices,
+                   Arg<AnyMemRef>:$lds,
+                   Variadic<Index>:$lds_indices)>,
     Results<(outs AMDGPU_TDMBaseType: $base)> {
 
   // TODO:
@@ -1250,7 +1249,7 @@ def AMDGPU_MakeDmaBaseOp :
     For example:
 
     ```mlir
-      %base = amdgpu.make_dma_base %src[%idx0], %dst[%idx1] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+      %base = amdgpu.make_dma_base %global[%idx0, %idx1], %lds[%idx2, %idx3] : memref<64x64xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
       %descriptor = amdgpu.make_dma_descriptor %base globalSize [2, 2] globalStride [2, 1] sharedSize [2, 2] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
       amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
     ```
@@ -1279,7 +1278,7 @@ def AMDGPU_MakeDmaBaseOp :
   }];
 
   let assemblyFormat = [{
-    $src `[` $src_indices `]` `,` $dst `[` $dst_indices `]` attr-dict `:` type($src) `,` type($dst) `->` type(results)
+    $global `[` $global_indices `]` `,` $lds `[` $lds_indices `]` attr-dict `:` type($global) `,` type($lds) `->` type(results)
   }];
 
   let hasVerifier = 1;
@@ -1326,13 +1325,13 @@ def AMDGPU_MakeDmaDescriptorOp :
 
      ```mlir
       // Example of moving a two-dimensional tensor to LDS.
-      %base = amdgpu.make_dma_base %src[0, 0], %dst[0, 0] : memref<64x64xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+      %base = amdgpu.make_dma_base %global[0, 0], %lds[0, 0] : memref<64x64xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
       %descriptor = amdgpu.make_dma_descriptor %base globalSize [64, 64] globalStride [64, 1] sharedSize [64, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
       amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
 
       // Example of moving a two dimension tensor to LDS where padding is applied after every integer.
-      %base = amdgpu.make_dma_base %src[0, 0], %dst[0, 0] : memref<32x32xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
-      %descriptor = amdgpu.make_dma_descriptor %base globalSize [32, 32] globalStride [32, 1] sharedSize [64, 64] padding(%pad_amount every %pad_interval) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+      %base = amdgpu.make_dma_base %global[0, 0], %lds[0, 0] : memref<32x32xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+      %descriptor = amdgpu.make_dma_descriptor %base globalSize [32, 32] globalStride [32, 1] sharedSize [64, 64] padding(%pad_amount pad_every %pad_interval) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
       amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
      ```
   }];
@@ -1342,7 +1341,7 @@ def AMDGPU_MakeDmaDescriptorOp :
     `globalSize` custom<DynamicIndexList>($global_dynamic_sizes, $global_static_sizes)
     `globalStride` custom<DynamicIndexList>($global_dynamic_strides, $global_static_strides)
     `sharedSize` custom<DynamicIndexList>($shared_dynamic_sizes, $shared_static_sizes)
-    ( `padShared` `(` $pad_amount^ `every` $pad_interval`)` )?
+    ( `padShared` `(` $pad_amount^ `every` $pad_interval `)` )?
     ( `atomicBarrier` `(` $atomic_barrier_address^ `[` $atomic_barrier_indices `]`
                       `:` type($atomic_barrier_address) `)`)?
     ( `iterate` $global_increment^ `,` $lds_increment `,` $iteration_count )?
@@ -1396,36 +1395,6 @@ def AMDGPU_MakeDmaDescriptorOp :
 
   let hasVerifier = 1;
   let hasFolder = 1;
-}
-
-def AMDGPU_TensorLoadToLDSOp :
-  AMDGPU_Op<"tensor_load_to_lds", [MemoryEffects<[MemWrite]>, MemoryEffects<[MemRead]>]>,
-  Arguments<(ins AMDGPU_TDMDescriptorType: $desc)> {
-  let summary = "Load tensors from global memory to LDS.";
-  let description = [{
-    Load tensors of up to five dimensions from global memory to LDS.
-
-    The operation is fully described by the descriptor operand.
-  }];
-
-  let assemblyFormat = [{
-    $desc attr-dict `:` qualified(type($desc))
-  }];
-}
-
-def AMDGPU_TensorStoreFromLDSOp :
-  AMDGPU_Op<"tensor_store_from_lds", [MemoryEffects<[MemWrite]>, MemoryEffects<[MemRead]>]>,
-  Arguments<(ins AMDGPU_TDMDescriptorType: $desc)> {
-  let summary = "Store tensors from LDS to global memory.";
-  let description = [{
-    Store tensors of up to five dimensions from LDS to global memory.
-
-    The operation is fully described by the descriptor operand.
-  }];
-
-  let assemblyFormat = [{
-    $desc attr-dict `:` qualified(type($desc))
-  }];
 }
 
 #endif // AMDGPU
