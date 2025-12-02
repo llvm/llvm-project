@@ -270,17 +270,15 @@ void Matrix<T>::moveColumns(unsigned srcPos, unsigned num, unsigned dstPos) {
          "move destination range exceeds matrix columns");
 
   unsigned numRows = getNumRows();
-
+  // std::rotate(start, middle, end) permutes the elements of [start, end] to
+  // [middle, end) + [start, middle). NOTE: &at(i, srcPos + num) will trigger an
+  // assert.
   if (dstPos > srcPos) {
-    // std::rotate(start, middle, end) permutes the elements of [start, end] to
-    // [middle, end) + [start, middle).
     for (unsigned i = 0; i < numRows; ++i) {
       std::rotate(&at(i, srcPos), &at(i, srcPos) + num, &at(i, dstPos) + num);
     }
     return;
   }
-  // std::rotate(start, middle, end) permutes the elements of [start, end] to
-  // [middle, start) + [end, middle).
   for (unsigned i = 0; i < numRows; ++i) {
     std::rotate(&at(i, dstPos), &at(i, srcPos), &at(i, srcPos) + num);
   }
