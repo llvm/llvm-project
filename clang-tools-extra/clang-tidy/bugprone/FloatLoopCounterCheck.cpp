@@ -31,6 +31,7 @@ void FloatLoopCounterCheck::registerMatchers(MatchFinder *Finder) {
 
 void FloatLoopCounterCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *FS = Result.Nodes.getNodeAs<ForStmt>("for");
+  if (!FS) return; // Check if FS is null and exit if it is.
 
   diag(FS->getInc()->getBeginLoc(), "loop induction expression should not have "
                                     "floating-point type")

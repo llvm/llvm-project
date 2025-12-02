@@ -179,6 +179,12 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::check(
     // Case: a.operator[](i) or a->operator[](i)
     const auto *Callee = dyn_cast<MemberExpr>(MCE->getCallee());
 
+    if (!Callee) {
+      diag(MatchedExpr->getCallee()->getBeginLoc(), "invalid member expression")
+          << MatchedExpr->getCallee()->getSourceRange();
+      return;
+    }
+
     if (FixMode == At) {
       // Cases: a.operator[](i) => a.at(i) and a->operator[](i) => a->at(i)
 
