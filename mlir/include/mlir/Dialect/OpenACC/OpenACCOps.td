@@ -3282,6 +3282,10 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
 
     // Add an entry to the 'seq' attribute for each additional device types.
     void addSeq(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add an entry to the 'vector' attribute for each additional device types.
+    void addVector(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add an entry to the 'worker' attribute for each additional device types.
+    void addWorker(MLIRContext *, llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{
