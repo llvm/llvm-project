@@ -1174,6 +1174,17 @@ public:
     return getTypeConversion(Context, VT).second;
   }
 
+  /// Perform getTypeToTransformTo repeatedly until a legal type is obtained.
+  /// Useful for vector operations that might take multiple steps to legalize.
+  EVT getLegalTypeToTransformTo(LLVMContext &Context, EVT VT) const {
+    EVT LegalVT = getTypeToTransformTo(Context, VT);
+    while (LegalVT != VT) {
+      VT = LegalVT;
+      LegalVT = getTypeToTransformTo(Context, VT);
+    }
+    return LegalVT;
+  }
+
   /// For types supported by the target, this is an identity function.  For
   /// types that must be expanded (i.e. integer types that are larger than the
   /// largest integer register or illegal floating point types), this returns
