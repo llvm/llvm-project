@@ -98,7 +98,7 @@ inline bool isLiteral(TokenKind K) {
   const bool isInLiteralRange =
       K >= tok::numeric_constant && K <= tok::utf32_string_literal;
 
-#if !NDEBUG
+#ifndef NDEBUG
   const bool isLiteralExplicit =
       K == tok::numeric_constant || K == tok::char_constant ||
       K == tok::wide_char_constant || K == tok::utf8_char_constant ||
