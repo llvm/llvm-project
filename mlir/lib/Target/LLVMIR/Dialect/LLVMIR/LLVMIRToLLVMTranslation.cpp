@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Support/LLVM.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -88,6 +90,7 @@ static ArrayRef<unsigned> getSupportedMetadataImpl(llvm::LLVMContext &context) {
       llvm::LLVMContext::MD_alias_scope,
       llvm::LLVMContext::MD_dereferenceable,
       llvm::LLVMContext::MD_dereferenceable_or_null,
+      llvm::LLVMContext::MD_mmra,
       context.getMDKindID(vecTypeHintMDName),
       context.getMDKindID(workGroupSizeHintMDName),
       context.getMDKindID(reqdWorkGroupSizeMDName),
@@ -110,7 +113,7 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     return failure();
 
   // Handle function entry count metadata.
-  if (name->getString() == "function_entry_count") {
+  if (name->getString() == llvm::MDProfLabels::FunctionEntryCount) {
 
     // TODO support function entry count metadata with GUID fields.
     if (node->getNumOperands() != 2)
@@ -128,15 +131,28 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
            << "expected function_entry_count to be attached to a function";
   }
 
-  if (name->getString() != "branch_weights")
+  if (name->getString() != llvm::MDProfLabels::BranchWeights)
     return failure();
+  // The branch_weights metadata must have at least 2 operands.
+  if (node->getNumOperands() < 2)
+    return failure();
+
+  ArrayRef<llvm::MDOperand> branchWeightOperands =
+      node->operands().drop_front();
+  if (auto *mdString = dyn_cast<llvm::MDString>(node->getOperand(1))) {
+    if (mdString->getString() != llvm::MDProfLabels::ExpectedBranchWeights)
+      return failure();
+    // The MLIR WeightedBranchOpInterface does not support the
+    // ExpectedBranchWeights field, so it is dropped.
+    branchWeightOperands = branchWeightOperands.drop_front();
+  }
 
   // Handle branch weights metadata.
   SmallVector<int32_t> branchWeights;
-  branchWeights.reserve(node->getNumOperands() - 1);
-  for (unsigned i = 1, e = node->getNumOperands(); i != e; ++i) {
+  branchWeights.reserve(branchWeightOperands.size());
+  for (const llvm::MDOperand &operand : branchWeightOperands) {
     llvm::ConstantInt *branchWeight =
-        llvm::mdconst::dyn_extract<llvm::ConstantInt>(node->getOperand(i));
+        llvm::mdconst::dyn_extract<llvm::ConstantInt>(operand);
     if (!branchWeight)
       return failure();
     branchWeights.push_back(branchWeight->getZExtValue());
@@ -209,6 +225,39 @@ static LogicalResult setDereferenceableAttr(const llvm::MDNode *node,
     return failure();
 
   iface.setDereferenceable(*dereferenceable);
+  return success();
+}
+
+/// Convert the given MMRA metadata (either an MMRA tag or an array of them)
+/// into corresponding MLIR attributes and set them on the given operation as a
+/// discardable `llvm.mmra` attribute.
+static LogicalResult setMmraAttr(llvm::MDNode *node, Operation *op,
+                                 LLVM::ModuleImport &moduleImport) {
+  if (!node)
+    return success();
+
+  // We don't use the LLVM wrappers here becasue we care about the order
+  // of the metadata for deterministic roundtripping.
+  MLIRContext *ctx = op->getContext();
+  auto toAttribute = [&](llvm::MDNode *tag) -> Attribute {
+    return LLVM::MMRATagAttr::get(
+        ctx, cast<llvm::MDString>(tag->getOperand(0))->getString(),
+        cast<llvm::MDString>(tag->getOperand(1))->getString());
+  };
+  Attribute mlirMmra;
+  if (llvm::MMRAMetadata::isTagMD(node)) {
+    mlirMmra = toAttribute(node);
+  } else {
+    SmallVector<Attribute> tags;
+    for (const llvm::MDOperand &operand : node->operands()) {
+      auto *tagNode = dyn_cast<llvm::MDNode>(operand.get());
+      if (!tagNode || !llvm::MMRAMetadata::isTagMD(tagNode))
+        return failure();
+      tags.push_back(toAttribute(tagNode));
+    }
+    mlirMmra = ArrayAttr::get(ctx, tags);
+  }
+  op->setAttr(LLVMDialect::getMmraAttrName(), mlirMmra);
   return success();
 }
 
@@ -432,7 +481,8 @@ public:
       return setDereferenceableAttr(
           node, llvm::LLVMContext::MD_dereferenceable_or_null, op,
           moduleImport);
-
+    if (kind == llvm::LLVMContext::MD_mmra)
+      return setMmraAttr(node, op, moduleImport);
     llvm::LLVMContext &context = node->getContext();
     if (kind == context.getMDKindID(vecTypeHintMDName))
       return setVecTypeHintAttr(builder, node, op, moduleImport);

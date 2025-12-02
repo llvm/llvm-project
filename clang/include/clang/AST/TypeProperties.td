@@ -575,7 +575,7 @@ let Class = TagType in {
     let Conditional = [{ !IsCanonical }];
     let Read = [{ node->getQualifier() }];
   }
-  def : Property<"TD", TagDeclRef> { let Read = [{ node->getOriginalDecl() }]; }
+  def : Property<"TD", TagDeclRef> { let Read = [{ node->getDecl() }]; }
 }
 
 let Class = EnumType in {
@@ -662,6 +662,9 @@ let Class = HLSLAttributedResourceType in {
   def : Property<"rawBuffer", Bool> {
     let Read = [{ node->getAttrs().RawBuffer }];
   }
+  def : Property<"isCounter", Bool> {
+    let Read = [{ node->getAttrs().IsCounter }];
+  }
   def : Property<"wrappedTy", QualType> {
     let Read = [{ node->getWrappedType() }];
   }
@@ -669,7 +672,7 @@ let Class = HLSLAttributedResourceType in {
     let Read = [{ node->getContainedType() }];
   }
   def : Creator<[{
-    HLSLAttributedResourceType::Attributes attrs(static_cast<llvm::dxil::ResourceClass>(resClass), isROV, rawBuffer);
+    HLSLAttributedResourceType::Attributes attrs(static_cast<llvm::dxil::ResourceClass>(resClass), isROV, rawBuffer, isCounter);
     return ctx.getHLSLAttributedResourceType(wrappedTy, containedTy, attrs);
   }]>;
 }
@@ -729,41 +732,6 @@ let Class = TemplateSpecializationType in {
   }]>;
 }
 
-let Class = DependentTemplateSpecializationType in {
-  def : ReadHelper<[{
-    const auto &dtn = node->getDependentTemplateName();
-    auto name = dtn.getName();
-  }]>;
-
-  def : Property<"qualifier", NestedNameSpecifier> {
-    let Read = [{ dtn.getQualifier() }];
-  }
-  def : Property<"identifier", Optional<Identifier>> {
-    let Read = [{ makeOptionalFromPointer(name.getIdentifier()) }];
-  }
-  def : Property<"operatorKind", OverloadedOperatorKind> {
-    let Conditional = [{ !identifier }];
-    let Read = [{ name.getOperator() }];
-  }
-  def : Property<"HasTemplateKeyword", Bool> {
-    let Read = [{ dtn.hasTemplateKeyword() }];
-  }
-
-  def : Property<"keyword", ElaboratedTypeKeyword> {
-    let Read = [{ node->getKeyword() }];
-  }
-  def : Property<"templateArguments", Array<TemplateArgument>> {
-    let Read = [{ node->template_arguments() }];
-  }
-
-  def : Creator<[{
-    DependentTemplateStorage S(qualifier, identifier ? IdentifierOrOverloadedOperator(*identifier) :
-                                                       IdentifierOrOverloadedOperator(*operatorKind),
-                               HasTemplateKeyword);
-    return ctx.getDependentTemplateSpecializationType(keyword, S, templateArguments);
-  }]>;
-}
-
 let Class = TemplateTypeParmType in {
   def : Property<"depth", UInt32> {
     let Read = [{ node->getDepth() }];
@@ -820,6 +788,12 @@ let Class = PackExpansionType in {
   }]>;
 }
 
+let Class = SubstPackType in {
+  def : Property<"replacementPack", TemplateArgument> {
+    let Read = [{ node->getArgumentPack() }];
+  }
+}
+
 let Class = SubstTemplateTypeParmPackType in {
   def : Property<"associatedDecl", DeclRef> {
     let Read = [{ node->getAssociatedDecl() }];
@@ -827,16 +801,17 @@ let Class = SubstTemplateTypeParmPackType in {
   def : Property<"Index", UInt32> {
     let Read = [{ node->getIndex() }];
   }
-  def : Property<"Final", Bool> {
-    let Read = [{ node->getFinal() }];
-  }
-  def : Property<"replacementPack", TemplateArgument> {
-    let Read = [{ node->getArgumentPack() }];
-  }
+  def : Property<"Final", Bool> { let Read = [{ node->getFinal() }]; }
 
   def : Creator<[{
     return ctx.getSubstTemplateTypeParmPackType(
                         associatedDecl, Index, Final, replacementPack);
+  }]>;
+}
+
+let Class = SubstBuiltinTemplatePackType in {
+  def : Creator<[{
+    return ctx.getSubstBuiltinTemplatePack(replacementPack);
   }]>;
 }
 

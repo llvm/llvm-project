@@ -533,11 +533,6 @@ public:
     for (unsigned I=0, N=TL.getNumArgs(); I < N; ++I)
       dumpTemplateArgumentLoc(TL.getArgLoc(I));
   }
-  void VisitDependentTemplateSpecializationTypeLoc(
-      DependentTemplateSpecializationTypeLoc TL) {
-    for (unsigned I=0, N=TL.getNumArgs(); I < N; ++I)
-      dumpTemplateArgumentLoc(TL.getArgLoc(I));
-  }
 
   void VisitTypedefDecl(const TypedefDecl *D) { Visit(D->getUnderlyingType()); }
 
@@ -625,6 +620,11 @@ public:
       Visit(E);
   }
 
+  void VisitOMPGroupPrivateDecl(const OMPGroupPrivateDecl *D) {
+    for (const auto *E : D->varlist())
+      Visit(E);
+  }
+
   void VisitOMPDeclareReductionDecl(const OMPDeclareReductionDecl *D) {
     Visit(D->getCombiner());
     if (const auto *Initializer = D->getInitializer())
@@ -649,21 +649,8 @@ public:
 
   template <typename SpecializationDecl>
   void dumpTemplateDeclSpecialization(const SpecializationDecl *D) {
-    for (const auto *RedeclWithBadType : D->redecls()) {
-      // FIXME: The redecls() range sometimes has elements of a less-specific
-      // type. (In particular, ClassTemplateSpecializationDecl::redecls() gives
-      // us TagDecls, and should give CXXRecordDecls).
-      auto *Redecl = dyn_cast<SpecializationDecl>(RedeclWithBadType);
-      if (!Redecl) {
-        // Found the injected-class-name for a class template. This will be
-        // dumped as part of its surrounding class so we don't need to dump it
-        // here.
-        assert(isa<CXXRecordDecl>(RedeclWithBadType) &&
-               "expected an injected-class-name");
-        continue;
-      }
-      Visit(Redecl);
-    }
+    for (const auto *Redecl : D->redecls())
+      Visit(cast<SpecializationDecl>(Redecl));
   }
 
   template <typename TemplateDecl>
@@ -783,7 +770,7 @@ public:
       // it will not be in the parent context:
       if (auto *TT = D->getFriendType()->getType()->getAs<TagType>())
         if (TT->isTagOwned())
-          Visit(TT->getOriginalDecl());
+          Visit(TT->getDecl());
     } else {
       Visit(D->getFriendDecl());
     }

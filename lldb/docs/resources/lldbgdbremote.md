@@ -1,3 +1,6 @@
+<!-- Packets are listed in alpabetical order, and if in a section, alphabetical
+     order within that section. -->
+
 # GDB Remote Protocol Extensions
 
 LLDB has added new GDB server packets to better support multi-threaded and
@@ -734,6 +737,57 @@ iOS now don't require us to read any memory!
 This is a performance optimization, which speeds up debugging by avoiding
 multiple round-trips for retrieving thread information. The information from this
 packet can be retrieved using a combination of `qThreadStopInfo` and `m` packets.
+
+### MultiMemRead
+
+Read memory from multiple memory ranges.
+
+This packet has one argument:
+
+* `ranges`: a list of pairs of numbers, formatted in base-16. Each pair is
+separated by a `,`, as is each number in each pair. The first number of the
+pair denotes the base address of the memory read, the second denotes the number
+of bytes to be read. The list must end with a `;`.
+
+The reply packet starts with a comma-separated list of numbers formatted in
+base-16, denoting how many bytes were read from each range, in the same order
+as the request packet. The list is followed by a `;`, followed by a sequence of
+bytes containing binary encoded data for all memory that was read. The length
+of the binary encodeed data, after being decoded as required by the GDB remote
+protocol, must be equal to the sum of the numbers provided at the start of the
+reply. The order of the binary data is the same as the order of the ranges in
+the request packet.
+
+If some part of a range is not readable, the stub may perform a partial read of
+a prefix of the range. In other words, partial reads will only ever be from the
+start of the range, never the middle or end. Support for partial reads depends
+on the debug stub.
+
+If, by applying the rules above, the stub has read zero bytes from a range, it
+must return a length of zero for that range in the reply packet; no bytes for
+this memory range are included in the sequence of bytes that follows.
+
+A stub that supports this packet must include `MultiMemRead+` in the reply to
+`qSupported`.
+
+```
+send packet: $MultiMemRead:ranges:100a00,4,200200,a0,400000,4;
+read packet: $4,0,2;<binary encoding of abcd1000><binary encoding of eeff>
+```
+
+In the example above, the first read produced `abcd1000`, the read of `a0`
+bytes from address `200200` failed to read any bytes, and the third read
+produced two bytes – `eeff` – out of the four requested.
+
+```
+send packet: $MultiMemRead:ranges:100a00,0;
+read packet: $0;
+```
+
+In the example above, a read of zero bytes was requested.
+
+**Priority to Implement:** Only required for performance, the debugger will
+fall back to doing separate read requests if this packet is unavailable.
 
 ## QEnvironment:NAME=VALUE
 
@@ -2113,7 +2167,7 @@ following keys and values:
          be outside the watchpoint that was triggered, the remote
          stub should determine which watchpoint was triggered and
          report an address from within its range.
-      2. Wwatchpoint hardware register index number.
+      2. Watchpoint hardware register index number.
       3. Actual watchpoint trap address, which may be outside
          the range of any watched region of memory. On MIPS, an addr
          outside a watched range means lldb should disable the wp,
@@ -2427,43 +2481,6 @@ Response is `F` plus the return value of `unlink()`, base 16 encoding.
 Return value may optionally be followed by a comma and the base16
 value of errno if unlink failed.
 
-## "x" - Binary memory read
-
-> **Warning:** The format of this packet was decided before GDB 16
-> introduced its own format for `x`. Future versions of LLDB may not
-> support the format described here, and new code should produce and
-> expect the format used by GDB.
-
-Like the `m` (read) and `M` (write) packets, this is a partner to the
-`X` (write binary data) packet, `x`.
-
-It is called like
-```
-xADDRESS,LENGTH
-```
-
-where both `ADDRESS` and `LENGTH` are big-endian base 16 values.
-
-To test if this packet is available, send a addr/len of 0:
-```
-x0,0
-```
-You will get an `OK` response if it is supported.
-
-The reply will be the data requested in 8-bit binary data format.
-The standard quoting is applied to the payload. Characters `}  #  $  *`
-will all be escaped with `}` (`0x7d`) character and then XOR'ed with `0x20`.
-
-A typical use to read 512 bytes at 0x1000 would look like:
-```
-x0x1000,0x200
-```
-The `0x` prefixes are optional - like most of the gdb-remote packets,
-omitting them will work fine; these numbers are always base 16.
-
-The length of the payload is not provided.  A reliable, 8-bit clean,
-transport layer is assumed.
-
 ## Wasm Packets
 
 The packet below are supported by the
@@ -2474,9 +2491,10 @@ The packet below are supported by the
 ### qWasmCallStack
 
 Get the Wasm call stack for the given thread id. This returns a hex-encoded
-list of PC values, one for each frame of the call stack. To match the Wasm
-specification, the addresses are encoded in little endian byte order, even if
-the endian of the Wasm runtime's host is not little endian.
+list (with no delimiters) of 64-bit PC values, one for each frame of the call
+stack. To match the Wasm specification, the addresses are encoded in little
+endian byte order, even if the endian of the Wasm runtime's host is not little
+endian.
 
 ```
 send packet: $qWasmCallStack:202dbe040#08
@@ -2530,3 +2548,40 @@ read packet: $e0030100#b9
 
 **Priority to Implement:** Only required for Wasm support. Necessary to show
 variables.
+
+## "x" - Binary memory read
+
+> **Warning:** The format of this packet was decided before GDB 16
+> introduced its own format for `x`. Future versions of LLDB may not
+> support the format described here, and new code should produce and
+> expect the format used by GDB.
+
+Like the `m` (read) and `M` (write) packets, this is a partner to the
+`X` (write binary data) packet, `x`.
+
+It is called like
+```
+xADDRESS,LENGTH
+```
+
+where both `ADDRESS` and `LENGTH` are big-endian base 16 values.
+
+To test if this packet is available, send a addr/len of 0:
+```
+x0,0
+```
+You will get an `OK` response if it is supported.
+
+The reply will be the data requested in 8-bit binary data format.
+The standard quoting is applied to the payload. Characters `}  #  $  *`
+will all be escaped with `}` (`0x7d`) character and then XOR'ed with `0x20`.
+
+A typical use to read 512 bytes at 0x1000 would look like:
+```
+x0x1000,0x200
+```
+The `0x` prefixes are optional - like most of the gdb-remote packets,
+omitting them will work fine; these numbers are always base 16.
+
+The length of the payload is not provided.  A reliable, 8-bit clean,
+transport layer is assumed.

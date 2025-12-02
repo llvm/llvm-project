@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++11-or-later %s abseil-upgrade-duration-conversions %t -- -- -I%S/Inputs
+// RUN: %check_clang_tidy -std=c++11-or-later %s abseil-upgrade-duration-conversions %t -- -- -I%S/Inputs
 
 using int64_t = long long;
 
@@ -49,22 +49,22 @@ void arithmeticOperatorBasicPositive() {
   ConvertibleTo<int64_t> c;
   d *= (c + c) * c + c;
   // CHECK-MESSAGES: [[@LINE-1]]:8: warning: implicit conversion to 'int64_t' is deprecated in this context; use an explicit cast instead
-  // CHECK-FIXES: d *= static_cast<int64_t>((c + c) * c + c)
+  // CHECK-FIXES: d *= static_cast<int64_t>((c + c) * c + c);
   d /= (c + c) * c + c;
   // CHECK-MESSAGES: [[@LINE-1]]:8: warning: implicit conversion to 'int64_t' is deprecated in this context; use an explicit cast instead
-  // CHECK-FIXES: d /= static_cast<int64_t>((c + c) * c + c)
+  // CHECK-FIXES: d /= static_cast<int64_t>((c + c) * c + c);
   d = d * c * c;
   // CHECK-MESSAGES: [[@LINE-1]]:11: warning: implicit conversion to 'int64_t' is deprecated in this context; use an explicit cast instead
   // CHECK-MESSAGES: [[@LINE-2]]:15: warning: implicit conversion to 'int64_t' is deprecated in this context; use an explicit cast instead
-  // CHECK-FIXES: d = d * static_cast<int64_t>(c) * static_cast<int64_t>(c)
+  // CHECK-FIXES: d = d * static_cast<int64_t>(c) * static_cast<int64_t>(c);
   d = c * d * c;
   // CHECK-MESSAGES: [[@LINE-1]]:7: warning: implicit conversion to 'int64_t' is deprecated in this context; use an explicit cast instead
   // CHECK-MESSAGES: [[@LINE-2]]:15: warning: implicit conversion to 'int64_t' is deprecated in this context; use an explicit cast instead
-  // CHECK-FIXES: d = static_cast<int64_t>(c) * d * static_cast<int64_t>(c)
+  // CHECK-FIXES: d = static_cast<int64_t>(c) * d * static_cast<int64_t>(c);
   d = d / c * c;
   // CHECK-MESSAGES: [[@LINE-1]]:11: warning: implicit conversion to 'int64_t' is deprecated in this context; use an explicit cast instead
   // CHECK-MESSAGES: [[@LINE-2]]:15: warning: implicit conversion to 'int64_t' is deprecated in this context; use an explicit cast instead
-  // CHECK-FIXES: d = d / static_cast<int64_t>(c) * static_cast<int64_t>(c)
+  // CHECK-FIXES: d = d / static_cast<int64_t>(c) * static_cast<int64_t>(c);
 }
 
 void arithmeticOperatorBasicNegative() {
@@ -407,7 +407,7 @@ template <typename T> void factoryTemplateAndMacro() {
   // CHECK-MESSAGES: [[@LINE-1]]:27: warning: implicit conversion to 'int64_t' is deprecated in this context; use an explicit cast instead
   (void)absl::Nanoseconds(CONVERTIBLE_TMP);
   // CHECK-MESSAGES: [[@LINE-1]]:27: warning: implicit conversion to 'int64_t' is deprecated in this context; use an explicit cast instead
-  // CHECK-FIXES: (void)absl::Nanoseconds(static_cast<int64_t>(CONVERTIBLE_TMP))
+  // CHECK-FIXES: (void)absl::Nanoseconds(static_cast<int64_t>(CONVERTIBLE_TMP));
   T_CALL_FACTORTY_INSIDE_MACRO;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: implicit conversion to 'int64_t' is deprecated in this context; use an explicit cast instead
 }
@@ -424,7 +424,7 @@ void factoryInMacros() {
   // CHECK-FIXES: (void)absl::Nanoseconds(static_cast<int64_t>(FUNCTION_MACRO(ConvertibleTo<int>())));
   (void)absl::Nanoseconds(CONVERTIBLE_TMP);
   // CHECK-MESSAGES: [[@LINE-1]]:27: warning: implicit conversion to 'int64_t' is deprecated in this context; use an explicit cast instead
-  // CHECK-FIXES: (void)absl::Nanoseconds(static_cast<int64_t>(CONVERTIBLE_TMP))
+  // CHECK-FIXES: (void)absl::Nanoseconds(static_cast<int64_t>(CONVERTIBLE_TMP));
   ONLY_WARN_INSIDE_MACRO_FACTORY;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: implicit conversion to 'int64_t' is deprecated in this context; use an explicit cast instead
   factoryTemplateAndMacro<ConvertibleTo<int>>();

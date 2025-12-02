@@ -352,10 +352,6 @@ public:
     return Fragment;
   }
 
-  // For ELF, use MCSymbolELF::setBinding instead.
-  bool isExternal() const { return IsExternal; }
-  void setExternal(bool Value) const { IsExternal = Value; }
-
   // COFF-specific
   bool isWeakExternal() const { return IsWeakExternal; }
 
@@ -386,6 +382,8 @@ inline raw_ostream &operator<<(raw_ostream &OS, const MCSymbol &Sym) {
   Sym.print(OS, nullptr);
   return OS;
 }
+
+bool isRangeRelaxable(const MCSymbol *Begin, const MCSymbol *End);
 
 } // end namespace llvm
 

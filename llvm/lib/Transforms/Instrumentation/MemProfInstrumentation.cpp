@@ -338,7 +338,7 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
       }
 
       auto *BasePtr = CI->getOperand(0 + OpOffset);
-      Access.MaybeMask = CI->getOperand(2 + OpOffset);
+      Access.MaybeMask = CI->getOperand(1 + OpOffset);
       Access.Addr = BasePtr;
     }
   }
@@ -490,7 +490,7 @@ void createProfileFileNameVar(Module &M) {
   }
 }
 
-// Set MemprofHistogramFlag as a Global veriable in IR. This makes it accessible
+// Set MemprofHistogramFlag as a Global variable in IR. This makes it accessible
 // to the runtime, changing shadow count behavior.
 void createMemprofHistogramFlagVar(Module &M) {
   const StringRef VarName(MemProfHistogramFlagVar);

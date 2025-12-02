@@ -303,8 +303,7 @@ bool TypeSpecTypeLoc::isKind(const TypeLoc &TL) {
 }
 
 bool TagTypeLoc::isDefinition() const {
-  return getTypePtr()->isTagOwned() &&
-         getOriginalDecl()->isCompleteDefinition();
+  return getTypePtr()->isTagOwned() && getDecl()->isCompleteDefinition();
 }
 
 // Reimplemented to account for GNU/C++ extension
@@ -477,8 +476,6 @@ NestedNameSpecifierLoc TypeLoc::getPrefix() const {
     return castAs<DependentNameTypeLoc>().getQualifierLoc();
   case TypeLoc::TemplateSpecialization:
     return castAs<TemplateSpecializationTypeLoc>().getQualifierLoc();
-  case TypeLoc::DependentTemplateSpecialization:
-    return castAs<DependentTemplateSpecializationTypeLoc>().getQualifierLoc();
   case TypeLoc::DeducedTemplateSpecialization:
     return castAs<DeducedTemplateSpecializationTypeLoc>().getQualifierLoc();
   case TypeLoc::Enum:
@@ -496,46 +493,6 @@ NestedNameSpecifierLoc TypeLoc::getPrefix() const {
   }
 }
 
-SourceLocation TypeLoc::getNonPrefixBeginLoc() const {
-  switch (getTypeLocClass()) {
-  case TypeLoc::TemplateSpecialization: {
-    auto TL = castAs<TemplateSpecializationTypeLoc>();
-    SourceLocation Loc = TL.getTemplateKeywordLoc();
-    if (!Loc.isValid())
-      Loc = TL.getTemplateNameLoc();
-    return Loc;
-  }
-  case TypeLoc::DependentTemplateSpecialization: {
-    auto TL = castAs<DependentTemplateSpecializationTypeLoc>();
-    SourceLocation Loc = TL.getTemplateKeywordLoc();
-    if (!Loc.isValid())
-      Loc = TL.getTemplateNameLoc();
-    return Loc;
-  }
-  case TypeLoc::DeducedTemplateSpecialization: {
-    auto TL = castAs<DeducedTemplateSpecializationTypeLoc>();
-    SourceLocation Loc = TL.getTemplateKeywordLoc();
-    if (!Loc.isValid())
-      Loc = TL.getTemplateNameLoc();
-    return Loc;
-  }
-  case TypeLoc::DependentName:
-    return castAs<DependentNameTypeLoc>().getNameLoc();
-  case TypeLoc::Enum:
-  case TypeLoc::Record:
-  case TypeLoc::InjectedClassName:
-    return castAs<TagTypeLoc>().getNameLoc();
-  case TypeLoc::Typedef:
-    return castAs<TypedefTypeLoc>().getNameLoc();
-  case TypeLoc::UnresolvedUsing:
-    return castAs<UnresolvedUsingTypeLoc>().getNameLoc();
-  case TypeLoc::Using:
-    return castAs<UsingTypeLoc>().getNameLoc();
-  default:
-    return getBeginLoc();
-  }
-}
-
 SourceLocation TypeLoc::getNonElaboratedBeginLoc() const {
   // For elaborated types (e.g. `struct a::A`) we want the portion after the
   // `struct` but including the namespace qualifier, `a::`.
@@ -546,12 +503,6 @@ SourceLocation TypeLoc::getNonElaboratedBeginLoc() const {
         .getNonElaboratedBeginLoc();
   case TypeLoc::TemplateSpecialization: {
     auto T = castAs<TemplateSpecializationTypeLoc>();
-    if (NestedNameSpecifierLoc QualifierLoc = T.getQualifierLoc())
-      return QualifierLoc.getBeginLoc();
-    return T.getTemplateNameLoc();
-  }
-  case TypeLoc::DependentTemplateSpecialization: {
-    auto T = castAs<DependentTemplateSpecializationTypeLoc>();
     if (NestedNameSpecifierLoc QualifierLoc = T.getQualifierLoc())
       return QualifierLoc.getBeginLoc();
     return T.getTemplateNameLoc();
@@ -690,20 +641,6 @@ void DependentNameTypeLoc::initializeLocal(ASTContext &Context,
   setNameLoc(Loc);
 }
 
-void
-DependentTemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
-                                                        SourceLocation Loc) {
-  initializeElaboratedKeyword(*this, Loc);
-  setQualifierLoc(initializeQualifier(
-      Context, getTypePtr()->getDependentTemplateName().getQualifier(), Loc));
-  setTemplateKeywordLoc(Loc);
-  setTemplateNameLoc(Loc);
-  setLAngleLoc(Loc);
-  setRAngleLoc(Loc);
-  TemplateSpecializationTypeLoc::initializeArgLocs(
-      Context, getTypePtr()->template_arguments(), getArgInfos(), Loc);
-}
-
 void TemplateSpecializationTypeLoc::set(SourceLocation ElaboratedKeywordLoc,
                                         NestedNameSpecifierLoc QualifierLoc,
                                         SourceLocation TemplateKeywordLoc,
@@ -750,8 +687,9 @@ void TemplateSpecializationTypeLoc::set(SourceLocation ElaboratedKeywordLoc,
 
 void TemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
                                                     SourceLocation Loc) {
-  QualifiedTemplateName *Name =
-      getTypePtr()->getTemplateName().getAsAdjustedQualifiedTemplateName();
+
+  auto [Qualifier, HasTemplateKeyword] =
+      getTypePtr()->getTemplateName().getQualifierAndTemplateKeyword();
 
   SourceLocation ElaboratedKeywordLoc =
       getTypePtr()->getKeyword() != ElaboratedTypeKeyword::None
@@ -759,8 +697,7 @@ void TemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
           : SourceLocation();
 
   NestedNameSpecifierLoc QualifierLoc;
-  if (NestedNameSpecifier Qualifier =
-          Name ? Name->getQualifier() : std::nullopt) {
+  if (Qualifier) {
     NestedNameSpecifierLocBuilder Builder;
     Builder.MakeTrivial(Context, Qualifier, Loc);
     QualifierLoc = Builder.getWithLocInContext(Context);
@@ -768,9 +705,7 @@ void TemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
 
   TemplateArgumentListInfo TAL(Loc, Loc);
   set(ElaboratedKeywordLoc, QualifierLoc,
-      /*TemplateKeywordLoc=*/Name && Name->hasTemplateKeyword()
-          ? Loc
-          : SourceLocation(),
+      /*TemplateKeywordLoc=*/HasTemplateKeyword ? Loc : SourceLocation(),
       /*NameLoc=*/Loc, /*LAngleLoc=*/Loc, /*RAngleLoc=*/Loc);
   initializeArgLocs(Context, getTypePtr()->template_arguments(), getArgInfos(),
                     Loc);
@@ -951,8 +886,5 @@ AutoTypeLoc TypeLoc::getContainedAutoTypeLoc() const {
 SourceLocation TypeLoc::getTemplateKeywordLoc() const {
   if (const auto TSTL = getAsAdjusted<TemplateSpecializationTypeLoc>())
     return TSTL.getTemplateKeywordLoc();
-  if (const auto DTSTL =
-          getAsAdjusted<DependentTemplateSpecializationTypeLoc>())
-    return DTSTL.getTemplateKeywordLoc();
   return SourceLocation();
 }

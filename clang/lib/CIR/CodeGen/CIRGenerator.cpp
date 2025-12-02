@@ -166,6 +166,18 @@ void CIRGenerator::HandleCXXStaticMemberVarInstantiation(VarDecl *D) {
   cgm->handleCXXStaticMemberVarInstantiation(D);
 }
 
+void CIRGenerator::HandleOpenACCRoutineReference(const FunctionDecl *FD,
+                                                 const OpenACCRoutineDecl *RD) {
+  llvm::StringRef mangledName = cgm->getMangledName(FD);
+  cir::FuncOp entry =
+      mlir::dyn_cast_if_present<cir::FuncOp>(cgm->getGlobalValue(mangledName));
+
+  // if this wasn't generated, don't force it to be.
+  if (!entry)
+    return;
+  cgm->emitOpenACCRoutineDecl(FD, entry, RD->getBeginLoc(), RD->clauses());
+}
+
 void CIRGenerator::CompleteTentativeDefinition(VarDecl *d) {
   if (diags.hasErrorOccurred())
     return;
@@ -177,5 +189,5 @@ void CIRGenerator::HandleVTable(CXXRecordDecl *rd) {
   if (diags.hasErrorOccurred())
     return;
 
-  cgm->errorNYI(rd->getSourceRange(), "HandleVTable");
+  cgm->emitVTable(rd);
 }

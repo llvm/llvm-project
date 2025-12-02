@@ -9,6 +9,7 @@
 #include "ModelInjector.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -24,7 +25,15 @@
 using namespace clang;
 using namespace ento;
 
-ModelInjector::ModelInjector(CompilerInstance &CI) : CI(CI) {}
+ModelInjector::ModelInjector(CompilerInstance &CI) : CI(CI) {
+  if (CI.getAnalyzerOpts().ShouldEmitErrorsOnInvalidConfigValue &&
+      !CI.getAnalyzerOpts().ModelPath.empty()) {
+    auto S = CI.getVirtualFileSystem().status(CI.getAnalyzerOpts().ModelPath);
+    if (!S || S->getType() != llvm::sys::fs::file_type::directory_file)
+      CI.getDiagnostics().Report(diag::err_analyzer_config_invalid_input)
+          << "model-path" << "a filename";
+  }
+}
 
 Stmt *ModelInjector::getBody(const FunctionDecl *D) {
   onBodySynthesis(D);
@@ -56,7 +65,7 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   else
     fileName = llvm::StringRef(D->getName().str() + ".model");
 
-  if (!llvm::sys::fs::exists(fileName.str())) {
+  if (!CI.getVirtualFileSystem().exists(fileName)) {
     Bodies[D->getName()] = nullptr;
     return;
   }
@@ -75,8 +84,8 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   // behavior for models
   CompilerInstance Instance(std::move(Invocation),
                             CI.getPCHContainerOperations());
+  Instance.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
   Instance.createDiagnostics(
-      CI.getVirtualFileSystem(),
       new ForwardingDiagnosticConsumer(CI.getDiagnosticClient()),
       /*ShouldOwnClient=*/true);
 
@@ -84,6 +93,7 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
 
   // The instance wants to take ownership, however DisableFree frontend option
   // is set to true to avoid double free issues
+  Instance.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
   Instance.setFileManager(CI.getFileManagerPtr());
   Instance.setSourceManager(SM);
   Instance.setPreprocessor(CI.getPreprocessorPtr());

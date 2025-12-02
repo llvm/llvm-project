@@ -23,6 +23,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallSet.h"
 
 namespace hlfir {
 #define GEN_PASS_DEF_CONVERTHLFIRTOFIR
@@ -148,13 +149,18 @@ public:
           !assignOp.isTemporaryLHS() &&
           mlir::isa<fir::RecordType>(fir::getElementTypeOf(lhsExv));
 
+      mlir::ArrayAttr accessGroups;
+      if (auto attrs = assignOp.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+              "access_groups"))
+        accessGroups = attrs;
+
       // genScalarAssignment() must take care of potential overlap
       // between LHS and RHS. Note that the overlap is possible
       // also for components of LHS/RHS, and the Assign() runtime
       // must take care of it.
-      fir::factory::genScalarAssignment(builder, loc, lhsExv, rhsExv,
-                                        needFinalization,
-                                        assignOp.isTemporaryLHS());
+      fir::factory::genScalarAssignment(
+          builder, loc, lhsExv, rhsExv, needFinalization,
+          assignOp.isTemporaryLHS(), accessGroups);
     }
     rewriter.eraseOp(assignOp);
     return mlir::success();
@@ -305,15 +311,20 @@ public:
     auto firDeclareOp = fir::DeclareOp::create(
         rewriter, loc, memref.getType(), memref, declareOp.getShape(),
         declareOp.getTypeparams(), declareOp.getDummyScope(),
-        declareOp.getUniqName(), fortranAttrs, dataAttr);
+        /*storage=*/declareOp.getStorage(),
+        /*storage_offset=*/declareOp.getStorageOffset(),
+        declareOp.getUniqName(), fortranAttrs, dataAttr,
+        declareOp.getDummyArgNoAttr());
 
     // Propagate other attributes from hlfir.declare to fir.declare.
     // OpenACC's acc.declare is one example. Right now, the propagation
     // is verbatim.
-    mlir::NamedAttrList elidedAttrs =
-        mlir::NamedAttrList{firDeclareOp->getAttrs()};
+    llvm::SmallSet<llvm::StringRef, 8> elidedAttrs;
+    for (const mlir::NamedAttribute &firAttr : firDeclareOp->getAttrs())
+      elidedAttrs.insert(firAttr.getName());
+    elidedAttrs.insert(declareOp.getSkipReboxAttrName());
     for (const mlir::NamedAttribute &attr : declareOp->getAttrs())
-      if (!elidedAttrs.get(attr.getName()))
+      if (!elidedAttrs.contains(attr.getName()))
         firDeclareOp->setAttr(attr.getName(), attr.getValue());
 
     auto firBase = firDeclareOp.getResult();
@@ -326,6 +337,8 @@ public:
       auto genHlfirBox = [&]() -> mlir::Value {
         if (auto baseBoxType =
                 mlir::dyn_cast<fir::BaseBoxType>(firBase.getType())) {
+          if (declareOp.getSkipRebox())
+            return firBase;
           // Rebox so that lower bounds and attributes are correct.
           if (baseBoxType.isAssumedRank())
             return fir::ReboxAssumedRankOp::create(
@@ -490,15 +503,18 @@ public:
         }
         baseEleTy = hlfir::getFortranElementType(componentType);
         shape = designate.getComponentShape();
-      } else {
-        // array%component[(indices) substring|complex part] cases.
-        // Component ref of array bases are dealt with below in embox/rebox.
-        assert(mlir::isa<fir::BaseBoxType>(designateResultType));
       }
     }
 
-    if (mlir::isa<fir::BaseBoxType>(designateResultType)) {
-      // Generate embox or rebox.
+    if (mlir::isa<fir::BaseBoxType>(designateResultType) ||
+        // Convert the component array slices using embox/rebox
+        // even if the result is a contiguous array section, e.g.:
+        //   hlfir.designate %base{"i"} shape %shape :
+        //       (!fir.box<!fir.array<2x!fir.type<_QMtypesTt{i:i32}>>>,
+        //        !fir.shape<1>) -> !fir.ref<!fir.array<2xi32>>
+        // fir.coordinate_of should probably be a better option, though.
+        (fieldIndex && baseEntity.isArray())) {
+      // Generate embox or rebox for slicing.
       mlir::Type eleTy = fir::unwrapPassByRefType(designateResultType);
       bool isScalarDesignator = !mlir::isa<fir::SequenceType>(eleTy);
       mlir::Value sourceBox;
@@ -575,8 +591,13 @@ public:
       else
         assert(sliceFields.empty() && substring.empty());
 
-      llvm::SmallVector<mlir::Type> resultType{
-          fir::updateTypeWithVolatility(designateResultType, isVolatile)};
+      // If the designate's result type is not a box, then create
+      // a box type to be used for the result of the embox/rebox.
+      mlir::Type resultType = designateResultType;
+      if (!mlir::isa<fir::BaseBoxType>(resultType))
+        resultType = fir::wrapInClassOrBoxType(resultType);
+
+      resultType = fir::updateTypeWithVolatility(resultType, isVolatile);
 
       mlir::Value resultBox;
       if (mlir::isa<fir::BaseBoxType>(base.getType())) {
@@ -586,6 +607,13 @@ public:
         resultBox =
             fir::EmboxOp::create(builder, loc, resultType, base, shape, slice,
                                  firBaseTypeParameters, sourceBox);
+      }
+
+      if (!mlir::isa<fir::BaseBoxType>(designateResultType)) {
+        // If the designate's result is not a box, use the raw address
+        // as the new result.
+        resultBox = fir::BoxAddrOp::create(rewriter, loc, resultBox);
+        resultBox = builder.createConvert(loc, designateResultType, resultBox);
       }
       rewriter.replaceOp(designate, resultBox);
       return mlir::success();

@@ -20,8 +20,12 @@ namespace lldb_private::dil {
 enum class NodeKind {
   eArraySubscriptNode,
   eBitExtractionNode,
+  eBooleanLiteralNode,
+  eCastNode,
   eErrorNode,
+  eFloatLiteralNode,
   eIdentifierNode,
+  eIntegerLiteralNode,
   eMemberOfNode,
   eUnaryOpNode,
 };
@@ -30,6 +34,16 @@ enum class NodeKind {
 enum class UnaryOpKind {
   AddrOf, // "&"
   Deref,  // "*"
+  Minus,  // "-"
+  Plus,   // "+"
+};
+
+/// The type casts allowed by DIL.
+enum class CastKind {
+  eEnumeration, ///< Casting from a scalar to an enumeration type
+  eNullptr,     ///< Casting to a nullptr type
+  eReference,   ///< Casting to a reference type
+  eNone,        ///< Type promotion casting
 };
 
 /// Forward declaration, for use in DIL AST nodes. Definition is at the very
@@ -178,6 +192,92 @@ private:
   int64_t m_last_index;
 };
 
+enum class IntegerTypeSuffix { None, Long, LongLong };
+
+class IntegerLiteralNode : public ASTNode {
+public:
+  IntegerLiteralNode(uint32_t location, llvm::APInt value, uint32_t radix,
+                     bool is_unsigned, IntegerTypeSuffix type)
+      : ASTNode(location, NodeKind::eIntegerLiteralNode),
+        m_value(std::move(value)), m_radix(radix), m_is_unsigned(is_unsigned),
+        m_type(type) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  const llvm::APInt &GetValue() const { return m_value; }
+  uint32_t GetRadix() const { return m_radix; }
+  bool IsUnsigned() const { return m_is_unsigned; }
+  IntegerTypeSuffix GetTypeSuffix() const { return m_type; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eIntegerLiteralNode;
+  }
+
+private:
+  llvm::APInt m_value;
+  uint32_t m_radix;
+  bool m_is_unsigned;
+  IntegerTypeSuffix m_type;
+};
+
+class FloatLiteralNode : public ASTNode {
+public:
+  FloatLiteralNode(uint32_t location, llvm::APFloat value)
+      : ASTNode(location, NodeKind::eFloatLiteralNode),
+        m_value(std::move(value)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  const llvm::APFloat &GetValue() const { return m_value; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eFloatLiteralNode;
+  }
+
+private:
+  llvm::APFloat m_value;
+};
+
+class BooleanLiteralNode : public ASTNode {
+public:
+  BooleanLiteralNode(uint32_t location, bool value)
+      : ASTNode(location, NodeKind::eBooleanLiteralNode), m_value(value) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  bool GetValue() const & { return m_value; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eBooleanLiteralNode;
+  }
+
+private:
+  bool m_value;
+};
+
+class CastNode : public ASTNode {
+public:
+  CastNode(uint32_t location, CompilerType type, ASTNodeUP operand,
+           CastKind kind)
+      : ASTNode(location, NodeKind::eCastNode), m_type(type),
+        m_operand(std::move(operand)), m_cast_kind(kind) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  CompilerType GetType() const { return m_type; }
+  ASTNode *GetOperand() const { return m_operand.get(); }
+  CastKind GetCastKind() const { return m_cast_kind; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eCastNode;
+  }
+
+private:
+  CompilerType m_type;
+  ASTNodeUP m_operand;
+  CastKind m_cast_kind;
+};
+
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -195,6 +295,13 @@ public:
   Visit(const ArraySubscriptNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const BitFieldExtractionNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const IntegerLiteralNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const FloatLiteralNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const BooleanLiteralNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode *node) = 0;
 };
 
 } // namespace lldb_private::dil

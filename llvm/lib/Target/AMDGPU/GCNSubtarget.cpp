@@ -137,13 +137,10 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (TT.isAMDGCN() && AddressableLocalMemorySize == 0)
+  if (AddressableLocalMemorySize == 0)
     AddressableLocalMemorySize = 32768;
 
-  LocalMemorySize = AddressableLocalMemorySize;
-  if (AMDGPU::isGFX10Plus(*this) &&
-      !getFeatureBits().test(AMDGPU::FeatureCuMode))
-    LocalMemorySize *= 2;
+  LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(this);
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
@@ -172,7 +169,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
-    TargetTriple(TT),
     TargetID(*this),
     InstrItins(getInstrItineraryForCPU(GPU)),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
@@ -544,7 +540,7 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
 
 unsigned GCNSubtarget::getBaseMaxNumVGPRs(
     const Function &F, std::pair<unsigned, unsigned> NumVGPRBounds) const {
-  const auto &[Min, Max] = NumVGPRBounds;
+  const auto [Min, Max] = NumVGPRBounds;
 
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
@@ -580,6 +576,7 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
 
   unsigned MaxNumVGPRs = MaxVectorRegs;
   unsigned MaxNumAGPRs = 0;
+  unsigned NumArchVGPRs = has1024AddressableVGPRs() ? 1024 : 256;
 
   // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
   // a wave may have up to 512 total vector registers combining together both
@@ -592,7 +589,6 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
   if (hasGFX90AInsts()) {
     unsigned MinNumAGPRs = 0;
     const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
-    const unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
 
     const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
 
@@ -617,11 +613,11 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
     MinNumAGPRs = std::min(std::min(MinNumAGPRs, TotalNumAGPRs), MaxNumAGPRs);
 
-    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, TotalNumVGPRs);
+    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
     MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
 
     assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
-           MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= TotalNumVGPRs &&
+           MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= NumArchVGPRs &&
            "invalid register counts");
   } else if (hasMAIInsts()) {
     // On gfx908 the number of AGPRs always equals the number of VGPRs.

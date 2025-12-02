@@ -13,8 +13,6 @@
 
 // basic_fstream();
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <fstream>
 
 #include "test_macros.h"

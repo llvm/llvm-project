@@ -400,6 +400,15 @@ def note_constexpr_non_const_vectorelements : Note<
   "cannot determine number of elements for sizeless vectors in a constant expression">;
 def note_constexpr_assumption_failed : Note<
   "assumption evaluated to false">;
+def note_constexpr_countzeroes_zero : Note<
+  "evaluation of %select{__builtin_elementwise_clzg|__builtin_elementwise_ctzg}0 "
+  "with a zero value is undefined">;
+def note_constexpr_infer_alloc_token_type_inference_failed : Note<
+  "could not infer allocation type for __builtin_infer_alloc_token">;
+def note_constexpr_infer_alloc_token_no_metadata : Note<
+  "could not get token metadata for inferred type">;
+def note_constexpr_infer_alloc_token_stateful_mode : Note<
+  "stateful alloc token mode not supported in constexpr">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 

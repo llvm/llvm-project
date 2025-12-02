@@ -182,7 +182,7 @@ void llvm::collectParametricTerms(ScalarEvolution &SE, const SCEV *Expr,
   LLVM_DEBUG({
     dbgs() << "Strides:\n";
     for (const SCEV *S : Strides)
-      dbgs() << *S << "\n";
+      dbgs().indent(2) << *S << "\n";
   });
 
   for (const SCEV *S : Strides) {
@@ -193,7 +193,7 @@ void llvm::collectParametricTerms(ScalarEvolution &SE, const SCEV *Expr,
   LLVM_DEBUG({
     dbgs() << "Terms:\n";
     for (const SCEV *T : Terms)
-      dbgs() << *T << "\n";
+      dbgs().indent(2) << *T << "\n";
   });
 
   SCEVCollectAddRecMultiplies MulCollector(Terms, SE);
@@ -294,7 +294,7 @@ void llvm::findArrayDimensions(ScalarEvolution &SE,
   LLVM_DEBUG({
     dbgs() << "Terms:\n";
     for (const SCEV *T : Terms)
-      dbgs() << *T << "\n";
+      dbgs().indent(2) << *T << "\n";
   });
 
   // Remove duplicates.
@@ -325,7 +325,7 @@ void llvm::findArrayDimensions(ScalarEvolution &SE,
   LLVM_DEBUG({
     dbgs() << "Terms after sorting:\n";
     for (const SCEV *T : NewTerms)
-      dbgs() << *T << "\n";
+      dbgs().indent(2) << *T << "\n";
   });
 
   if (NewTerms.empty() || !findArrayDimensionsRec(SE, NewTerms, Sizes)) {
@@ -339,7 +339,7 @@ void llvm::findArrayDimensions(ScalarEvolution &SE,
   LLVM_DEBUG({
     dbgs() << "Sizes:\n";
     for (const SCEV *S : Sizes)
-      dbgs() << *S << "\n";
+      dbgs().indent(2) << *S << "\n";
   });
 }
 
@@ -354,18 +354,24 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
     if (!AR->isAffine())
       return;
 
+  LLVM_DEBUG(dbgs() << "\ncomputeAccessFunctions\n"
+                    << "Memory Access Function: " << *Expr << "\n");
+
   const SCEV *Res = Expr;
   int Last = Sizes.size() - 1;
+
   for (int i = Last; i >= 0; i--) {
+    const SCEV *Size = Sizes[i];
     const SCEV *Q, *R;
-    SCEVDivision::divide(SE, Res, Sizes[i], &Q, &R);
+
+    SCEVDivision::divide(SE, Res, Size, &Q, &R);
 
     LLVM_DEBUG({
-      dbgs() << "Res: " << *Res << "\n";
-      dbgs() << "Sizes[i]: " << *Sizes[i] << "\n";
-      dbgs() << "Res divided by Sizes[i]:\n";
-      dbgs() << "Quotient: " << *Q << "\n";
-      dbgs() << "Remainder: " << *R << "\n";
+      dbgs() << "Computing 'MemAccFn / Sizes[" << i << "]':\n";
+      dbgs() << "  MemAccFn: " << *Res << "\n";
+      dbgs() << "  Sizes[" << i << "]: " << *Size << "\n";
+      dbgs() << "  Quotient (Leftover): " << *Q << "\n";
+      dbgs() << "  Remainder (Subscript Access Function): " << *R << "\n";
     });
 
     Res = Q;
@@ -397,7 +403,8 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
   LLVM_DEBUG({
     dbgs() << "Subscripts:\n";
     for (const SCEV *S : Subscripts)
-      dbgs() << *S << "\n";
+      dbgs().indent(2) << *S << "\n";
+    dbgs() << "\n";
   });
 }
 
@@ -469,21 +476,6 @@ void llvm::delinearize(ScalarEvolution &SE, const SCEV *Expr,
 
   // Third step: compute the access functions for each subscript.
   computeAccessFunctions(SE, Expr, Subscripts, Sizes);
-
-  if (Subscripts.empty())
-    return;
-
-  LLVM_DEBUG({
-    dbgs() << "succeeded to delinearize " << *Expr << "\n";
-    dbgs() << "ArrayDecl[UnknownSize]";
-    for (const SCEV *S : Sizes)
-      dbgs() << "[" << *S << "]";
-
-    dbgs() << "\nArrayRef";
-    for (const SCEV *S : Subscripts)
-      dbgs() << "[" << *S << "]";
-    dbgs() << "\n";
-  });
 }
 
 static std::optional<APInt> tryIntoAPInt(const SCEV *S) {
@@ -664,6 +656,108 @@ bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
   return !Subscripts.empty();
 }
 
+static bool isKnownNonNegative(ScalarEvolution *SE, const SCEV *S,
+                               const Value *Ptr) {
+  bool Inbounds = false;
+  if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(Ptr))
+    Inbounds = SrcGEP->isInBounds();
+  if (Inbounds) {
+    if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
+      if (AddRec->isAffine()) {
+        // We know S is for Ptr, the operand on a load/store, so doesn't wrap.
+        // If both parts are NonNegative, the end result will be NonNegative
+        if (SE->isKnownNonNegative(AddRec->getStart()) &&
+            SE->isKnownNonNegative(AddRec->getOperand(1)))
+          return true;
+      }
+    }
+  }
+
+  return SE->isKnownNonNegative(S);
+}
+
+/// Compare to see if S is less than Size, using
+///
+///    isKnownNegative(S - Size)
+///
+/// with some extra checking if S is an AddRec and we can prove less-than using
+/// the loop bounds.
+static bool isKnownLessThan(ScalarEvolution *SE, const SCEV *S,
+                            const SCEV *Size) {
+  // First unify to the same type
+  auto *SType = dyn_cast<IntegerType>(S->getType());
+  auto *SizeType = dyn_cast<IntegerType>(Size->getType());
+  if (!SType || !SizeType)
+    return false;
+  Type *MaxType =
+      (SType->getBitWidth() >= SizeType->getBitWidth()) ? SType : SizeType;
+  S = SE->getTruncateOrZeroExtend(S, MaxType);
+  Size = SE->getTruncateOrZeroExtend(Size, MaxType);
+
+  auto CollectUpperBound = [&](const Loop *L, Type *T) -> const SCEV * {
+    if (SE->hasLoopInvariantBackedgeTakenCount(L)) {
+      const SCEV *UB = SE->getBackedgeTakenCount(L);
+      return SE->getTruncateOrZeroExtend(UB, T);
+    }
+    return nullptr;
+  };
+
+  auto CheckAddRecBECount = [&]() {
+    const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(S);
+    if (!AddRec || !AddRec->isAffine() || !AddRec->hasNoSignedWrap())
+      return false;
+    const SCEV *BECount = CollectUpperBound(AddRec->getLoop(), MaxType);
+    // If the BTC cannot be computed, check the base case for S.
+    if (!BECount || isa<SCEVCouldNotCompute>(BECount))
+      return false;
+    const SCEV *Start = AddRec->getStart();
+    const SCEV *Step = AddRec->getStepRecurrence(*SE);
+    const SCEV *End = AddRec->evaluateAtIteration(BECount, *SE);
+    const SCEV *Diff0 = SE->getMinusSCEV(Start, Size);
+    const SCEV *Diff1 = SE->getMinusSCEV(End, Size);
+
+    // If the value of Step is non-negative and the AddRec is non-wrap, it
+    // reaches its maximum at the last iteration. So it's enouth to check
+    // whether End - Size is negative.
+    if (SE->isKnownNonNegative(Step) && SE->isKnownNegative(Diff1))
+      return true;
+
+    // If the value of Step is non-positive and the AddRec is non-wrap, the
+    // initial value is its maximum.
+    if (SE->isKnownNonPositive(Step) && SE->isKnownNegative(Diff0))
+      return true;
+
+    // Even if we don't know the sign of Step, either Start or End must be
+    // the maximum value of the AddRec since it is non-wrap.
+    if (SE->isKnownNegative(Diff0) && SE->isKnownNegative(Diff1))
+      return true;
+
+    return false;
+  };
+
+  if (CheckAddRecBECount())
+    return true;
+
+  // Check using normal isKnownNegative
+  const SCEV *LimitedBound = SE->getMinusSCEV(S, Size);
+  return SE->isKnownNegative(LimitedBound);
+}
+
+bool llvm::validateDelinearizationResult(ScalarEvolution &SE,
+                                         ArrayRef<const SCEV *> Sizes,
+                                         ArrayRef<const SCEV *> Subscripts,
+                                         const Value *Ptr) {
+  for (size_t I = 1; I < Sizes.size(); ++I) {
+    const SCEV *Size = Sizes[I - 1];
+    const SCEV *Subscript = Subscripts[I];
+    if (!isKnownNonNegative(&SE, Subscript, Ptr))
+      return false;
+    if (!isKnownLessThan(&SE, Subscript, Size))
+      return false;
+  }
+  return true;
+}
+
 bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
                                       const GetElementPtrInst *GEP,
                                       SmallVectorImpl<const SCEV *> &Subscripts,
@@ -671,6 +765,7 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
   assert(Subscripts.empty() && Sizes.empty() &&
          "Expected output lists to be empty on entry to this function.");
   assert(GEP && "getIndexExpressionsFromGEP called with a null GEP");
+  LLVM_DEBUG(dbgs() << "\nGEP to delinearize: " << *GEP << "\n");
   Type *Ty = nullptr;
   bool DroppedFirstDim = false;
   for (unsigned i = 1; i < GEP->getNumOperands(); i++) {
@@ -688,6 +783,8 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
 
     auto *ArrayTy = dyn_cast<ArrayType>(Ty);
     if (!ArrayTy) {
+      LLVM_DEBUG(dbgs() << "GEP delinearize failed: " << *Ty
+                        << " is not an array type.\n");
       Subscripts.clear();
       Sizes.clear();
       return false;
@@ -699,90 +796,61 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
 
     Ty = ArrayTy->getElementType();
   }
+  LLVM_DEBUG({
+    dbgs() << "Subscripts:\n";
+    for (const SCEV *S : Subscripts)
+      dbgs() << *S << "\n";
+    dbgs() << "\n";
+  });
+
   return !Subscripts.empty();
-}
-
-bool llvm::tryDelinearizeFixedSizeImpl(
-    ScalarEvolution *SE, Instruction *Inst, const SCEV *AccessFn,
-    SmallVectorImpl<const SCEV *> &Subscripts, SmallVectorImpl<int> &Sizes) {
-  Value *SrcPtr = getLoadStorePointerOperand(Inst);
-
-  // Check the simple case where the array dimensions are fixed size.
-  auto *SrcGEP = dyn_cast<GetElementPtrInst>(SrcPtr);
-  if (!SrcGEP)
-    return false;
-
-  getIndexExpressionsFromGEP(*SE, SrcGEP, Subscripts, Sizes);
-
-  // Check that the two size arrays are non-empty and equal in length and
-  // value.
-  // TODO: it would be better to let the caller to clear Subscripts, similar
-  // to how we handle Sizes.
-  if (Sizes.empty() || Subscripts.size() <= 1) {
-    Subscripts.clear();
-    return false;
-  }
-
-  // Check that for identical base pointers we do not miss index offsets
-  // that have been added before this GEP is applied.
-  Value *SrcBasePtr = SrcGEP->getOperand(0)->stripPointerCasts();
-  const SCEVUnknown *SrcBase =
-      dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
-  if (!SrcBase || SrcBasePtr != SrcBase->getValue()) {
-    Subscripts.clear();
-    return false;
-  }
-
-  assert(Subscripts.size() == Sizes.size() + 1 &&
-         "Expected equal number of entries in the list of size and "
-         "subscript.");
-
-  return true;
 }
 
 namespace {
 
 void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
                           ScalarEvolution *SE) {
-  O << "Delinearization on function " << F->getName() << ":\n";
+  O << "Printing analysis 'Delinearization' for function '" << F->getName()
+    << "':";
   for (Instruction &Inst : instructions(F)) {
     // Only analyze loads and stores.
-    if (!isa<StoreInst>(&Inst) && !isa<LoadInst>(&Inst) &&
-        !isa<GetElementPtrInst>(&Inst))
+    if (!isa<StoreInst>(&Inst) && !isa<LoadInst>(&Inst))
       continue;
 
     const BasicBlock *BB = Inst.getParent();
-    // Delinearize the memory access as analyzed in all the surrounding loops.
+    Loop *L = LI->getLoopFor(BB);
+    // Only delinearize the memory access in the innermost loop.
     // Do not analyze memory accesses outside loops.
-    for (Loop *L = LI->getLoopFor(BB); L != nullptr; L = L->getParentLoop()) {
-      const SCEV *AccessFn = SE->getSCEVAtScope(getPointerOperand(&Inst), L);
+    if (!L)
+      continue;
 
-      const SCEVUnknown *BasePointer =
-          dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
-      // Do not delinearize if we cannot find the base pointer.
-      if (!BasePointer)
-        break;
-      AccessFn = SE->getMinusSCEV(AccessFn, BasePointer);
+    const SCEV *AccessFn = SE->getSCEVAtScope(getPointerOperand(&Inst), L);
 
-      O << "\n";
-      O << "Inst:" << Inst << "\n";
-      O << "In Loop with Header: " << L->getHeader()->getName() << "\n";
-      O << "AccessFunction: " << *AccessFn << "\n";
+    const SCEVUnknown *BasePointer =
+        dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
+    // Do not delinearize if we cannot find the base pointer.
+    if (!BasePointer)
+      break;
+    AccessFn = SE->getMinusSCEV(AccessFn, BasePointer);
 
-      SmallVector<const SCEV *, 3> Subscripts, Sizes;
+    O << "\n";
+    O << "Inst:" << Inst << "\n";
+    O << "AccessFunction: " << *AccessFn << "\n";
 
-      auto IsDelinearizationFailed = [&]() {
-        return Subscripts.size() == 0 || Sizes.size() == 0 ||
-               Subscripts.size() != Sizes.size();
-      };
+    SmallVector<const SCEV *, 3> Subscripts, Sizes;
 
-      delinearize(*SE, AccessFn, Subscripts, Sizes, SE->getElementSize(&Inst));
-      if (UseFixedSizeArrayHeuristic && IsDelinearizationFailed()) {
-        Subscripts.clear();
-        Sizes.clear();
-        delinearizeFixedSizeArray(*SE, AccessFn, Subscripts, Sizes,
-                                  SE->getElementSize(&Inst));
-      }
+    auto IsDelinearizationFailed = [&]() {
+      return Subscripts.size() == 0 || Sizes.size() == 0 ||
+             Subscripts.size() != Sizes.size();
+    };
+
+    delinearize(*SE, AccessFn, Subscripts, Sizes, SE->getElementSize(&Inst));
+    if (UseFixedSizeArrayHeuristic && IsDelinearizationFailed()) {
+      Subscripts.clear();
+      Sizes.clear();
+      delinearizeFixedSizeArray(*SE, AccessFn, Subscripts, Sizes,
+                                SE->getElementSize(&Inst));
+    }
 
       if (IsDelinearizationFailed()) {
         O << "failed to delinearize\n";
@@ -800,7 +868,11 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
       for (int i = 0; i < Size; i++)
         O << "[" << *Subscripts[i] << "]";
       O << "\n";
-    }
+
+      bool IsValid = validateDelinearizationResult(
+          *SE, Sizes, Subscripts, getLoadStorePointerOperand(&Inst));
+      O << "Delinearization validation: " << (IsValid ? "Succeeded" : "Failed")
+        << "\n";
   }
 }
 

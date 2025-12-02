@@ -290,6 +290,5 @@ bool CCState::resultsCompatible(CallingConv::ID CalleeCC,
     llvm_unreachable("Unknown location kind");
   };
 
-  return std::equal(RVLocs1.begin(), RVLocs1.end(), RVLocs2.begin(),
-                    RVLocs2.end(), AreCompatible);
+  return llvm::equal(RVLocs1, RVLocs2, AreCompatible);
 }

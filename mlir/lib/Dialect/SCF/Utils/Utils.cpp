@@ -22,6 +22,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DebugLog.h"
@@ -202,8 +203,7 @@ FailureOr<func::FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
       OpBuilder::InsertionGuard g(rewriter);
       rewriter.setInsertionPointToStart(outlinedFuncBody);
       if (Operation *cst = orig.getDefiningOp<arith::ConstantIndexOp>()) {
-        IRMapping bvm;
-        repl = rewriter.clone(*cst, bvm)->getResult(0);
+        repl = rewriter.clone(*cst)->getResult(0);
       }
     }
     orig.replaceUsesWithIf(repl, [&](OpOperand &opOperand) {
@@ -291,55 +291,61 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
   return arith::DivUIOp::create(builder, loc, sum, divisor);
 }
 
-/// Returns the trip count of `forOp` if its' low bound, high bound and step are
-/// constants, or optional otherwise. Trip count is computed as
-/// ceilDiv(highBound - lowBound, step).
-static std::optional<int64_t> getConstantTripCount(scf::ForOp forOp) {
-  return constantTripCount(forOp.getLowerBound(), forOp.getUpperBound(),
-                           forOp.getStep());
-}
-
-/// Generates unrolled copies of scf::ForOp 'loopBodyBlock', with
-/// associated 'forOpIV' by 'unrollFactor', calling 'ivRemapFn' to remap
-/// 'forOpIV' for each unrolled body. If specified, annotates the Ops in each
-/// unrolled iteration using annotateFn.
-static void generateUnrolledLoop(
-    Block *loopBodyBlock, Value forOpIV, uint64_t unrollFactor,
+void mlir::generateUnrolledLoop(
+    Block *loopBodyBlock, Value iv, uint64_t unrollFactor,
     function_ref<Value(unsigned, Value, OpBuilder)> ivRemapFn,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
-    ValueRange iterArgs, ValueRange yieldedValues) {
+    ValueRange iterArgs, ValueRange yieldedValues,
+    IRMapping *clonedToSrcOpsMap) {
+
+  // Check if the op was cloned from another source op, and return it if found
+  // (or the same op if not found)
+  auto findOriginalSrcOp =
+      [](Operation *op, const IRMapping &clonedToSrcOpsMap) -> Operation * {
+    Operation *srcOp = op;
+    // If the source op derives from another op: traverse the chain to find the
+    // original source op
+    while (srcOp && clonedToSrcOpsMap.contains(srcOp))
+      srcOp = clonedToSrcOpsMap.lookup(srcOp);
+    return srcOp;
+  };
+
   // Builder to insert unrolled bodies just before the terminator of the body of
-  // 'forOp'.
+  // the loop.
   auto builder = OpBuilder::atBlockTerminator(loopBodyBlock);
 
-  constexpr auto defaultAnnotateFn = [](unsigned, Operation *, OpBuilder) {};
+  static const auto noopAnnotateFn = [](unsigned, Operation *, OpBuilder) {};
   if (!annotateFn)
-    annotateFn = defaultAnnotateFn;
+    annotateFn = noopAnnotateFn;
 
   // Keep a pointer to the last non-terminator operation in the original block
   // so that we know what to clone (since we are doing this in-place).
   Block::iterator srcBlockEnd = std::prev(loopBodyBlock->end(), 2);
 
-  // Unroll the contents of 'forOp' (append unrollFactor - 1 additional copies).
+  // Unroll the contents of the loop body (append unrollFactor - 1 additional
+  // copies).
   SmallVector<Value, 4> lastYielded(yieldedValues);
 
   for (unsigned i = 1; i < unrollFactor; i++) {
-    IRMapping operandMap;
-
     // Prepare operand map.
+    IRMapping operandMap;
     operandMap.map(iterArgs, lastYielded);
 
     // If the induction variable is used, create a remapping to the value for
     // this unrolled instance.
-    if (!forOpIV.use_empty()) {
-      Value ivUnroll = ivRemapFn(i, forOpIV, builder);
-      operandMap.map(forOpIV, ivUnroll);
+    if (!iv.use_empty()) {
+      Value ivUnroll = ivRemapFn(i, iv, builder);
+      operandMap.map(iv, ivUnroll);
     }
 
     // Clone the original body of 'forOp'.
     for (auto it = loopBodyBlock->begin(); it != std::next(srcBlockEnd); it++) {
-      Operation *clonedOp = builder.clone(*it, operandMap);
+      Operation *srcOp = &(*it);
+      Operation *clonedOp = builder.clone(*srcOp, operandMap);
       annotateFn(i, clonedOp, builder);
+      if (clonedToSrcOpsMap)
+        clonedToSrcOpsMap->map(clonedOp,
+                               findOriginalSrcOp(srcOp, *clonedToSrcOpsMap));
     }
 
     // Update yielded values.
@@ -377,7 +383,7 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
   Value stepUnrolled;
   bool generateEpilogueLoop = true;
 
-  std::optional<int64_t> constTripCount = getConstantTripCount(forOp);
+  std::optional<APInt> constTripCount = forOp.getStaticTripCount();
   if (constTripCount) {
     // Constant loop bounds computation.
     int64_t lbCst = getConstantIntValue(forOp.getLowerBound()).value();
@@ -391,7 +397,8 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     }
 
     int64_t tripCountEvenMultiple =
-        *constTripCount - (*constTripCount % unrollFactor);
+        constTripCount->getSExtValue() -
+        (constTripCount->getSExtValue() % unrollFactor);
     int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
     int64_t stepUnrolledCst = stepCst * unrollFactor;
 
@@ -487,15 +494,15 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
 /// Unrolls this loop completely.
 LogicalResult mlir::loopUnrollFull(scf::ForOp forOp) {
   IRRewriter rewriter(forOp.getContext());
-  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<APInt> mayBeConstantTripCount = forOp.getStaticTripCount();
   if (!mayBeConstantTripCount.has_value())
     return failure();
-  uint64_t tripCount = *mayBeConstantTripCount;
-  if (tripCount == 0)
+  const APInt &tripCount = *mayBeConstantTripCount;
+  if (tripCount.isZero())
     return success();
-  if (tripCount == 1)
+  if (tripCount.getSExtValue() == 1)
     return forOp.promoteIfSingleIteration(rewriter);
-  return loopUnrollByFactor(forOp, tripCount);
+  return loopUnrollByFactor(forOp, tripCount.getSExtValue());
 }
 
 /// Check if bounds of all inner loops are defined outside of `forOp`
@@ -535,18 +542,18 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
 
   // Currently, only constant trip count that divided by the unroll factor is
   // supported.
-  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
+  std::optional<APInt> tripCount = forOp.getStaticTripCount();
   if (!tripCount.has_value()) {
     // If the trip count is dynamic, do not unroll & jam.
     LDBG() << "failed to unroll and jam: trip count could not be determined";
     return failure();
   }
-  if (unrollJamFactor > *tripCount) {
+  if (unrollJamFactor > tripCount->getZExtValue()) {
     LDBG() << "unroll and jam factor is greater than trip count, set factor to "
               "trip "
               "count";
-    unrollJamFactor = *tripCount;
-  } else if (*tripCount % unrollJamFactor != 0) {
+    unrollJamFactor = tripCount->getZExtValue();
+  } else if (tripCount->getSExtValue() % unrollJamFactor != 0) {
     LDBG() << "failed to unroll and jam: unsupported trip count that is not a "
               "multiple of unroll jam factor";
     return failure();
@@ -678,9 +685,10 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
   return success();
 }
 
-Range emitNormalizedLoopBoundsForIndexType(RewriterBase &rewriter, Location loc,
-                                           OpFoldResult lb, OpFoldResult ub,
-                                           OpFoldResult step) {
+static Range emitNormalizedLoopBoundsForIndexType(RewriterBase &rewriter,
+                                                  Location loc, OpFoldResult lb,
+                                                  OpFoldResult ub,
+                                                  OpFoldResult step) {
   Range normalizedLoopBounds;
   normalizedLoopBounds.offset = rewriter.getIndexAttr(0);
   normalizedLoopBounds.stride = rewriter.getIndexAttr(1);
@@ -1511,4 +1519,139 @@ FailureOr<scf::ForallOp> mlir::normalizeForallOp(RewriterBase &rewriter,
 
   rewriter.replaceOp(forallOp, normalizedForallOp);
   return normalizedForallOp;
+}
+
+bool mlir::isPerfectlyNestedForLoops(
+    MutableArrayRef<LoopLikeOpInterface> loops) {
+  assert(!loops.empty() && "unexpected empty loop nest");
+  if (loops.size() == 1)
+    return isa_and_nonnull<scf::ForOp>(loops.front().getOperation());
+  for (auto [outerLoop, innerLoop] :
+       llvm::zip_equal(loops.drop_back(), loops.drop_front())) {
+    auto outerFor = dyn_cast_or_null<scf::ForOp>(outerLoop.getOperation());
+    auto innerFor = dyn_cast_or_null<scf::ForOp>(innerLoop.getOperation());
+    if (!outerFor || !innerFor)
+      return false;
+    auto outerBBArgs = outerFor.getRegionIterArgs();
+    auto innerIterArgs = innerFor.getInitArgs();
+    if (outerBBArgs.size() != innerIterArgs.size())
+      return false;
+
+    for (auto [outerBBArg, innerIterArg] :
+         llvm::zip_equal(outerBBArgs, innerIterArgs)) {
+      if (!llvm::hasSingleElement(outerBBArg.getUses()) ||
+          innerIterArg != outerBBArg)
+        return false;
+    }
+
+    ValueRange outerYields =
+        cast<scf::YieldOp>(outerFor.getBody()->getTerminator())->getOperands();
+    ValueRange innerResults = innerFor.getResults();
+    if (outerYields.size() != innerResults.size())
+      return false;
+    for (auto [outerYield, innerResult] :
+         llvm::zip_equal(outerYields, innerResults)) {
+      if (!llvm::hasSingleElement(innerResult.getUses()) ||
+          outerYield != innerResult)
+        return false;
+    }
+  }
+  return true;
+}
+
+llvm::SmallVector<int64_t>
+mlir::getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp) {
+  std::optional<SmallVector<OpFoldResult>> loBnds = loopOp.getLoopLowerBounds();
+  std::optional<SmallVector<OpFoldResult>> upBnds = loopOp.getLoopUpperBounds();
+  std::optional<SmallVector<OpFoldResult>> steps = loopOp.getLoopSteps();
+  if (!loBnds || !upBnds || !steps)
+    return {};
+  llvm::SmallVector<int64_t> tripCounts;
+  for (auto [lb, ub, step] : llvm::zip(*loBnds, *upBnds, *steps)) {
+    std::optional<llvm::APInt> numIter = constantTripCount(
+        lb, ub, step, /*isSigned=*/true, scf::computeUbMinusLb);
+    if (!numIter)
+      return {};
+    tripCounts.push_back(numIter->getSExtValue());
+  }
+  return tripCounts;
+}
+
+FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
+    scf::ParallelOp op, ArrayRef<uint64_t> unrollFactors,
+    RewriterBase &rewriter,
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
+    IRMapping *clonedToSrcOpsMap) {
+  const unsigned numLoops = op.getNumLoops();
+  assert(llvm::none_of(unrollFactors, [](uint64_t f) { return f == 0; }) &&
+         "Expected positive unroll factors");
+  assert((!unrollFactors.empty() && (unrollFactors.size() <= numLoops)) &&
+         "Expected non-empty unroll factors of size <= to the number of loops");
+
+  // Bail out if no valid unroll factors were provided
+  if (llvm::all_of(unrollFactors, [](uint64_t f) { return f == 1; }))
+    return rewriter.notifyMatchFailure(
+        op, "Unrolling not applied if all factors are 1");
+
+  // Return if the loop body is empty.
+  if (llvm::hasSingleElement(op.getBody()->getOperations()))
+    return rewriter.notifyMatchFailure(op, "Cannot unroll an empty loop body");
+
+  // If the provided unroll factors do not cover all the loop dims, they are
+  // applied to the inner loop dimensions.
+  const unsigned firstLoopDimIdx = numLoops - unrollFactors.size();
+
+  // Make sure that the unroll factors divide the iteration space evenly
+  // TODO: Support unrolling loops with dynamic iteration spaces.
+  const llvm::SmallVector<int64_t> tripCounts = getConstLoopTripCounts(op);
+  if (tripCounts.empty())
+    return rewriter.notifyMatchFailure(
+        op, "Failed to compute constant trip counts for the loop. Note that "
+            "dynamic loop sizes are not supported.");
+
+  for (unsigned dimIdx = firstLoopDimIdx; dimIdx < numLoops; dimIdx++) {
+    const uint64_t unrollFactor = unrollFactors[dimIdx - firstLoopDimIdx];
+    if (tripCounts[dimIdx] % unrollFactor)
+      return rewriter.notifyMatchFailure(
+          op, "Unroll factors don't divide the iteration space evenly");
+  }
+
+  std::optional<SmallVector<OpFoldResult>> maybeFoldSteps = op.getLoopSteps();
+  if (!maybeFoldSteps)
+    return rewriter.notifyMatchFailure(op, "Failed to retrieve loop steps");
+  llvm::SmallVector<size_t> steps{};
+  for (auto step : *maybeFoldSteps)
+    steps.push_back(static_cast<size_t>(*getConstantIntValue(step)));
+
+  for (unsigned dimIdx = firstLoopDimIdx; dimIdx < numLoops; dimIdx++) {
+    const uint64_t unrollFactor = unrollFactors[dimIdx - firstLoopDimIdx];
+    if (unrollFactor == 1)
+      continue;
+    const size_t origStep = steps[dimIdx];
+    const int64_t newStep = origStep * unrollFactor;
+    IRMapping clonedToSrcOpsMap;
+
+    ValueRange iterArgs = ValueRange(op.getRegionIterArgs());
+    auto yieldedValues = op.getBody()->getTerminator()->getOperands();
+
+    generateUnrolledLoop(
+        op.getBody(), op.getInductionVars()[dimIdx], unrollFactor,
+        [&](unsigned i, Value iv, OpBuilder b) {
+          // iv' = iv + step * i;
+          const AffineExpr expr = b.getAffineDimExpr(0) + (origStep * i);
+          const auto map =
+              b.getDimIdentityMap().dropResult(0).insertResult(expr, 0);
+          return affine::AffineApplyOp::create(b, iv.getLoc(), map,
+                                               ValueRange{iv});
+        },
+        /*annotateFn*/ annotateFn, iterArgs, yieldedValues, &clonedToSrcOpsMap);
+
+    // Update loop step
+    auto prevInsertPoint = rewriter.saveInsertionPoint();
+    rewriter.setInsertionPoint(op);
+    op.getStepMutable()[dimIdx].assign(
+        arith::ConstantIndexOp::create(rewriter, op.getLoc(), newStep));
+    rewriter.restoreInsertionPoint(prevInsertPoint);
+  }
+  return op;
 }

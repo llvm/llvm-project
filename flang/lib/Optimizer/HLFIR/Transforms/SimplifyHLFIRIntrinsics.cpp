@@ -2078,6 +2078,418 @@ private:
   }
 };
 
+class CmpCharOpConversion : public mlir::OpRewritePattern<hlfir::CmpCharOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::CmpCharOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::CmpCharOp cmp,
+                  mlir::PatternRewriter &rewriter) const override {
+
+    fir::FirOpBuilder builder{rewriter, cmp.getOperation()};
+    const mlir::Location &loc = cmp->getLoc();
+
+    auto toVariable =
+        [&builder,
+         &loc](mlir::Value val) -> std::pair<mlir::Value, hlfir::AssociateOp> {
+      mlir::Value opnd;
+      hlfir::AssociateOp associate;
+      if (mlir::isa<hlfir::ExprType>(val.getType())) {
+        hlfir::Entity entity{val};
+        mlir::NamedAttribute byRefAttr = fir::getAdaptToByRefAttr(builder);
+        associate = hlfir::genAssociateExpr(loc, builder, entity,
+                                            entity.getType(), "", byRefAttr);
+        opnd = associate.getBase();
+      } else {
+        opnd = val;
+      }
+      return {opnd, associate};
+    };
+
+    auto [lhsOpnd, lhsAssociate] = toVariable(cmp.getLchr());
+    auto [rhsOpnd, rhsAssociate] = toVariable(cmp.getRchr());
+
+    hlfir::Entity lhs{lhsOpnd};
+    hlfir::Entity rhs{rhsOpnd};
+
+    auto charTy = mlir::cast<fir::CharacterType>(lhs.getFortranElementType());
+    unsigned kind = charTy.getFKind();
+
+    auto bits = builder.getKindMap().getCharacterBitsize(kind);
+    auto intTy = builder.getIntegerType(bits);
+
+    auto idxTy = builder.getIndexType();
+    auto charLen1Ty =
+        fir::CharacterType::getSingleton(builder.getContext(), kind);
+    mlir::Type designatorType =
+        fir::ReferenceType::get(charLen1Ty, fir::isa_volatile_type(charTy));
+    auto idxAttr = builder.getIntegerAttr(idxTy, 0);
+
+    auto genExtractAndConvertToInt =
+        [&idxAttr, &intTy, &designatorType](
+            mlir::Location loc, fir::FirOpBuilder &builder,
+            hlfir::Entity &charStr, mlir::Value index, mlir::Value length) {
+          auto singleChr = hlfir::DesignateOp::create(
+              builder, loc, designatorType, charStr, /*component=*/{},
+              /*compShape=*/mlir::Value{}, hlfir::DesignateOp::Subscripts{},
+              /*substring=*/mlir::ValueRange{index, index},
+              /*complexPart=*/std::nullopt,
+              /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{length},
+              fir::FortranVariableFlagsAttr{});
+          auto chrVal = fir::LoadOp::create(builder, loc, singleChr);
+          mlir::Value intVal = fir::ExtractValueOp::create(
+              builder, loc, intTy, chrVal, builder.getArrayAttr(idxAttr));
+          return intVal;
+        };
+
+    mlir::arith::CmpIPredicate predicate = cmp.getPredicate();
+    mlir::Value oneIdx = builder.createIntegerConstant(loc, idxTy, 1);
+
+    mlir::Value lhsLen = builder.createConvert(
+        loc, idxTy, hlfir::genCharLength(loc, builder, lhs));
+    mlir::Value rhsLen = builder.createConvert(
+        loc, idxTy, hlfir::genCharLength(loc, builder, rhs));
+
+    enum class GenCmp { LeftToRight, LeftToBlank, BlankToRight };
+
+    mlir::Value zeroInt = builder.createIntegerConstant(loc, intTy, 0);
+    mlir::Value oneInt = builder.createIntegerConstant(loc, intTy, 1);
+    mlir::Value negOneInt = builder.createIntegerConstant(loc, intTy, -1);
+    mlir::Value blankInt = builder.createIntegerConstant(loc, intTy, ' ');
+
+    auto step = GenCmp::LeftToRight;
+    auto genCmp = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                      mlir::ValueRange index, mlir::ValueRange reductionArgs)
+        -> llvm::SmallVector<mlir::Value, 1> {
+      assert(index.size() == 1 && "expected single loop");
+      assert(reductionArgs.size() == 1 && "expected single reduction value");
+      mlir::Value inRes = reductionArgs[0];
+      auto accEQzero = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq, inRes, zeroInt);
+
+      mlir::Value res =
+          builder
+              .genIfOp(loc, {intTy}, accEQzero,
+                       /*withElseRegion=*/true)
+              .genThen([&]() {
+                mlir::Value offset =
+                    builder.createConvert(loc, idxTy, index[0]);
+                mlir::Value lhsInt;
+                mlir::Value rhsInt;
+                if (step == GenCmp::LeftToRight) {
+                  lhsInt = genExtractAndConvertToInt(loc, builder, lhs, offset,
+                                                     oneIdx);
+                  rhsInt = genExtractAndConvertToInt(loc, builder, rhs, offset,
+                                                     oneIdx);
+                } else if (step == GenCmp::LeftToBlank) {
+                  // lhsLen > rhsLen
+                  offset =
+                      mlir::arith::AddIOp::create(builder, loc, rhsLen, offset);
+
+                  lhsInt = genExtractAndConvertToInt(loc, builder, lhs, offset,
+                                                     oneIdx);
+                  rhsInt = blankInt;
+                } else if (step == GenCmp::BlankToRight) {
+                  // rhsLen > lhsLen
+                  offset =
+                      mlir::arith::AddIOp::create(builder, loc, lhsLen, offset);
+
+                  lhsInt = blankInt;
+                  rhsInt = genExtractAndConvertToInt(loc, builder, rhs, offset,
+                                                     oneIdx);
+                } else {
+                  llvm_unreachable(
+                      "unknown compare step for CmpCharOp lowering");
+                }
+
+                mlir::Value newVal = mlir::arith::SelectOp::create(
+                    builder, loc,
+                    mlir::arith::CmpIOp::create(builder, loc,
+                                                mlir::arith::CmpIPredicate::ult,
+                                                lhsInt, rhsInt),
+                    negOneInt, inRes);
+                newVal = mlir::arith::SelectOp::create(
+                    builder, loc,
+                    mlir::arith::CmpIOp::create(builder, loc,
+                                                mlir::arith::CmpIPredicate::ugt,
+                                                lhsInt, rhsInt),
+                    oneInt, newVal);
+                fir::ResultOp::create(builder, loc, newVal);
+              })
+              .genElse([&]() { fir::ResultOp::create(builder, loc, inRes); })
+              .getResults()[0];
+
+      return {res};
+    };
+
+    // First generate comparison of two strings for the legth of the shorter
+    // one.
+    mlir::Value minLen = mlir::arith::SelectOp::create(
+        builder, loc,
+        mlir::arith::CmpIOp::create(
+            builder, loc, mlir::arith::CmpIPredicate::slt, lhsLen, rhsLen),
+        lhsLen, rhsLen);
+
+    llvm::SmallVector<mlir::Value, 1> loopOut =
+        hlfir::genLoopNestWithReductions(loc, builder, {minLen},
+                                         /*reductionInits=*/{zeroInt}, genCmp,
+                                         /*isUnordered=*/false);
+    mlir::Value partRes = loopOut[0];
+
+    auto lhsLonger = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::sgt, lhsLen, rhsLen);
+    mlir::Value tempRes =
+        builder
+            .genIfOp(loc, {intTy}, lhsLonger,
+                     /*withElseRegion=*/true)
+            .genThen([&]() {
+              // If left is the longer string generate compare left to blank.
+              step = GenCmp::LeftToBlank;
+              auto lenDiff =
+                  mlir::arith::SubIOp::create(builder, loc, lhsLen, rhsLen);
+
+              llvm::SmallVector<mlir::Value, 1> output =
+                  hlfir::genLoopNestWithReductions(loc, builder, {lenDiff},
+                                                   /*reductionInits=*/{partRes},
+                                                   genCmp,
+                                                   /*isUnordered=*/false);
+              mlir::Value res = output[0];
+              fir::ResultOp::create(builder, loc, res);
+            })
+            .genElse([&]() {
+              // If right  is the longer string generate compare blank to
+              // right.
+              step = GenCmp::BlankToRight;
+              auto lenDiff =
+                  mlir::arith::SubIOp::create(builder, loc, rhsLen, lhsLen);
+              llvm::SmallVector<mlir::Value, 1> output =
+                  hlfir::genLoopNestWithReductions(loc, builder, {lenDiff},
+                                                   /*reductionInits=*/{partRes},
+                                                   genCmp,
+                                                   /*isUnordered=*/false);
+
+              mlir::Value res = output[0];
+              fir::ResultOp::create(builder, loc, res);
+            })
+            .getResults()[0];
+    if (lhsAssociate)
+      hlfir::EndAssociateOp::create(builder, loc, lhsAssociate);
+    if (rhsAssociate)
+      hlfir::EndAssociateOp::create(builder, loc, rhsAssociate);
+
+    auto finalCmpResult =
+        mlir::arith::CmpIOp::create(builder, loc, predicate, tempRes, zeroInt);
+    rewriter.replaceOp(cmp, finalCmpResult);
+    return mlir::success();
+  }
+};
+
+static std::pair<mlir::Value, hlfir::AssociateOp>
+getVariable(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value val) {
+  // If it is an expression - create a variable from it, or forward
+  // the value otherwise.
+  hlfir::AssociateOp associate;
+  if (!mlir::isa<hlfir::ExprType>(val.getType()))
+    return {val, associate};
+  hlfir::Entity entity{val};
+  mlir::NamedAttribute byRefAttr = fir::getAdaptToByRefAttr(builder);
+  associate = hlfir::genAssociateExpr(loc, builder, entity, entity.getType(),
+                                      "", byRefAttr);
+  return {associate.getBase(), associate};
+}
+
+class IndexOpConversion : public mlir::OpRewritePattern<hlfir::IndexOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::IndexOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::IndexOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    // We simplify only limited cases:
+    // 1) a substring length shall be known at compile time
+    // 2) if a substring length is 0 then replace with 1 for forward search,
+    //    or otherwise with the string length + 1 (builder shall const-fold if
+    //    lookup direction is known at compile time).
+    // 3) for known string length at compile time, if it is
+    //    shorter than substring  => replace with zero.
+    // 4) if a substring length is one => inline as simple search loop
+    // 5) for forward search with input strings of kind=1 runtime is faster.
+    // Do not simplify in all the other cases relying on a runtime call.
+
+    fir::FirOpBuilder builder{rewriter, op.getOperation()};
+    const mlir::Location &loc = op->getLoc();
+
+    auto resultTy = op.getType();
+    mlir::Value back = op.getBack();
+    auto substrLenCst =
+        hlfir::getCharLengthIfConst(hlfir::Entity{op.getSubstr()});
+    if (!substrLenCst) {
+      return rewriter.notifyMatchFailure(
+          op, "substring length unknown at compile time");
+    }
+    hlfir::Entity strEntity{op.getStr()};
+    auto i1Ty = builder.getI1Type();
+    auto idxTy = builder.getIndexType();
+    if (*substrLenCst == 0) {
+      mlir::Value oneIdx = builder.createIntegerConstant(loc, idxTy, 1);
+      // zero length substring. For back search replace with
+      // strLen+1, or otherwise with 1.
+      mlir::Value strLen = hlfir::genCharLength(loc, builder, strEntity);
+      mlir::Value strEnd = mlir::arith::AddIOp::create(
+          builder, loc, builder.createConvert(loc, idxTy, strLen), oneIdx);
+      if (back)
+        back = builder.createConvert(loc, i1Ty, back);
+      else
+        back = builder.createIntegerConstant(loc, i1Ty, 0);
+      mlir::Value result =
+          mlir::arith::SelectOp::create(builder, loc, back, strEnd, oneIdx);
+
+      rewriter.replaceOp(op, builder.createConvert(loc, resultTy, result));
+      return mlir::success();
+    }
+
+    if (auto strLenCst = hlfir::getCharLengthIfConst(strEntity)) {
+      if (*strLenCst < *substrLenCst) {
+        rewriter.replaceOp(op, builder.createIntegerConstant(loc, resultTy, 0));
+        return mlir::success();
+      }
+      if (*strLenCst == 0) {
+        // both strings have zero length
+        rewriter.replaceOp(op, builder.createIntegerConstant(loc, resultTy, 1));
+        return mlir::success();
+      }
+    }
+    if (*substrLenCst != 1) {
+      return rewriter.notifyMatchFailure(
+          op, "rely on runtime implementation if substring length > 1");
+    }
+    // For forward search and character kind=1 the runtime uses memchr
+    // which well optimized. But it looks like memchr idiom is not recognized
+    // in LLVM yet. On a micro-kernel test with strings of length 40 runtime
+    // had ~2x less execution time vs inlined code. For unknown search direction
+    // at compile time pessimistically assume "forward".
+    std::optional<bool> isBack;
+    if (back) {
+      if (auto backCst = fir::getIntIfConstant(back))
+        isBack = *backCst != 0;
+    } else {
+      isBack = false;
+    }
+    auto charTy = mlir::cast<fir::CharacterType>(
+        hlfir::getFortranElementType(op.getSubstr().getType()));
+    unsigned kind = charTy.getFKind();
+    if (kind == 1 && (!isBack || !*isBack)) {
+      return rewriter.notifyMatchFailure(
+          op, "rely on runtime implementation for character kind 1");
+    }
+
+    // All checks are passed here. Generate single character search loop.
+    auto [strV, strAssociate] = getVariable(builder, loc, op.getStr());
+    auto [substrV, substrAssociate] = getVariable(builder, loc, op.getSubstr());
+    hlfir::Entity str{strV};
+    hlfir::Entity substr{substrV};
+    mlir::Value oneIdx = builder.createIntegerConstant(loc, idxTy, 1);
+
+    auto genExtractAndConvertToInt = [&charTy, &idxTy, &oneIdx,
+                                      kind](mlir::Location loc,
+                                            fir::FirOpBuilder &builder,
+                                            hlfir::Entity &charStr,
+                                            mlir::Value index) {
+      auto bits = builder.getKindMap().getCharacterBitsize(kind);
+      auto intTy = builder.getIntegerType(bits);
+      auto charLen1Ty =
+          fir::CharacterType::getSingleton(builder.getContext(), kind);
+      mlir::Type designatorTy =
+          fir::ReferenceType::get(charLen1Ty, fir::isa_volatile_type(charTy));
+      auto idxAttr = builder.getIntegerAttr(idxTy, 0);
+
+      auto singleChr = hlfir::DesignateOp::create(
+          builder, loc, designatorTy, charStr, /*component=*/{},
+          /*compShape=*/mlir::Value{}, hlfir::DesignateOp::Subscripts{},
+          /*substring=*/mlir::ValueRange{index, index},
+          /*complexPart=*/std::nullopt,
+          /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{oneIdx},
+          fir::FortranVariableFlagsAttr{});
+      auto chrVal = fir::LoadOp::create(builder, loc, singleChr);
+      mlir::Value intVal = fir::ExtractValueOp::create(
+          builder, loc, intTy, chrVal, builder.getArrayAttr(idxAttr));
+      return intVal;
+    };
+
+    auto wantChar = genExtractAndConvertToInt(loc, builder, substr, oneIdx);
+
+    // Generate search loop body with the following C equivalent:
+    //  idx_t result = 0;
+    //  idx_t end = strlen + 1;
+    //  char want = substr[0];
+    //  for (idx_t idx = 1; idx < end; ++idx) {
+    //    if (result == 0) {
+    //        idx_t at = back ? end - idx: idx;
+    //        result = str[at-1] == want ? at : result;
+    //    }
+    //  }
+    mlir::Value strLen = hlfir::genCharLength(loc, builder, strEntity);
+    if (!back)
+      back = builder.createIntegerConstant(loc, i1Ty, 0);
+    else
+      back = builder.createConvert(loc, i1Ty, back);
+    mlir::Value strEnd = mlir::arith::AddIOp::create(
+        builder, loc, builder.createConvert(loc, idxTy, strLen), oneIdx);
+    mlir::Value zeroIdx = builder.createIntegerConstant(loc, idxTy, 0);
+    auto genSearchBody = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                             mlir::ValueRange index,
+                             mlir::ValueRange reductionArgs)
+        -> llvm::SmallVector<mlir::Value, 1> {
+      assert(index.size() == 1 && "expected single loop");
+      assert(reductionArgs.size() == 1 && "expected single reduction value");
+      mlir::Value inRes = reductionArgs[0];
+      auto resEQzero = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq, inRes, zeroIdx);
+
+      mlir::Value res =
+          builder
+              .genIfOp(loc, {idxTy}, resEQzero,
+                       /*withElseRegion=*/true)
+              .genThen([&]() {
+                mlir::Value idx = builder.createConvert(loc, idxTy, index[0]);
+                // offset = back ? end - idx : idx;
+                mlir::Value offset = mlir::arith::SelectOp::create(
+                    builder, loc, back,
+                    mlir::arith::SubIOp::create(builder, loc, strEnd, idx),
+                    idx);
+
+                auto haveChar =
+                    genExtractAndConvertToInt(loc, builder, str, offset);
+                auto charsEQ = mlir::arith::CmpIOp::create(
+                    builder, loc, mlir::arith::CmpIPredicate::eq, haveChar,
+                    wantChar);
+                mlir::Value newVal = mlir::arith::SelectOp::create(
+                    builder, loc, charsEQ, offset, inRes);
+
+                fir::ResultOp::create(builder, loc, newVal);
+              })
+              .genElse([&]() { fir::ResultOp::create(builder, loc, inRes); })
+              .getResults()[0];
+      return {res};
+    };
+
+    llvm::SmallVector<mlir::Value, 1> loopOut =
+        hlfir::genLoopNestWithReductions(loc, builder, {strLen},
+                                         /*reductionInits=*/{zeroIdx},
+                                         genSearchBody,
+                                         /*isUnordered=*/false);
+    mlir::Value result = builder.createConvert(loc, resultTy, loopOut[0]);
+
+    if (strAssociate)
+      hlfir::EndAssociateOp::create(builder, loc, strAssociate);
+    if (substrAssociate)
+      hlfir::EndAssociateOp::create(builder, loc, substrAssociate);
+
+    rewriter.replaceOp(op, result);
+    return mlir::success();
+  }
+};
+
 template <typename Op>
 class MatmulConversion : public mlir::OpRewritePattern<Op> {
 public:
@@ -2748,8 +3160,9 @@ public:
     patterns.insert<ReductionConversion<hlfir::SumOp>>(context);
     patterns.insert<ArrayShiftConversion<hlfir::CShiftOp>>(context);
     patterns.insert<ArrayShiftConversion<hlfir::EOShiftOp>>(context);
+    patterns.insert<CmpCharOpConversion>(context);
+    patterns.insert<IndexOpConversion>(context);
     patterns.insert<MatmulConversion<hlfir::MatmulTransposeOp>>(context);
-
     patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AllOp>>(context);

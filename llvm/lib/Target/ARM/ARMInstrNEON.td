@@ -95,28 +95,24 @@ def VectorIndex8 : Operand<i32>, ImmLeaf<i32, [{
 }]> {
   let ParserMatchClass = VectorIndex8Operand;
   let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i32imm);
 }
 def VectorIndex16 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint64_t)Imm) < 4;
 }]> {
   let ParserMatchClass = VectorIndex16Operand;
   let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i32imm);
 }
 def VectorIndex32 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint64_t)Imm) < 2;
 }]> {
   let ParserMatchClass = VectorIndex32Operand;
   let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i32imm);
 }
 def VectorIndex64 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint64_t)Imm) < 1;
 }]> {
   let ParserMatchClass = VectorIndex64Operand;
   let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i32imm);
 }
 
 // Register list of one D register.
@@ -479,6 +475,8 @@ def non_word_alignedstore : PatFrag<(ops node:$val, node:$ptr),
 //===----------------------------------------------------------------------===//
 
 def SDTARMVTST    : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<1, 2>]>;
+
+// Vector test bits.
 def NEONvtst      : SDNode<"ARMISD::VTST", SDTARMVTST>;
 
 // Types for vector shift by immediates.  The "SHX" version is for long and
@@ -491,10 +489,12 @@ def SDTARMVSHINSIMM  : SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
 
 def NEONvshrnImm     : SDNode<"ARMISD::VSHRNIMM", SDTARMVSHXIMM>;
 
+// Vector rounding shift by immediate
 def NEONvrshrsImm    : SDNode<"ARMISD::VRSHRsIMM", SDTARMVSHIMM>;
 def NEONvrshruImm    : SDNode<"ARMISD::VRSHRuIMM", SDTARMVSHIMM>;
 def NEONvrshrnImm    : SDNode<"ARMISD::VRSHRNIMM", SDTARMVSHXIMM>;
 
+// Vector saturating shift by immediate
 def NEONvqshlsImm    : SDNode<"ARMISD::VQSHLsIMM", SDTARMVSHIMM>;
 def NEONvqshluImm    : SDNode<"ARMISD::VQSHLuIMM", SDTARMVSHIMM>;
 def NEONvqshlsuImm   : SDNode<"ARMISD::VQSHLsuIMM", SDTARMVSHIMM>;
@@ -502,13 +502,16 @@ def NEONvqshrnsImm   : SDNode<"ARMISD::VQSHRNsIMM", SDTARMVSHXIMM>;
 def NEONvqshrnuImm   : SDNode<"ARMISD::VQSHRNuIMM", SDTARMVSHXIMM>;
 def NEONvqshrnsuImm  : SDNode<"ARMISD::VQSHRNsuIMM", SDTARMVSHXIMM>;
 
+// Vector saturating rounding shift by immediate
 def NEONvqrshrnsImm  : SDNode<"ARMISD::VQRSHRNsIMM", SDTARMVSHXIMM>;
 def NEONvqrshrnuImm  : SDNode<"ARMISD::VQRSHRNuIMM", SDTARMVSHXIMM>;
 def NEONvqrshrnsuImm : SDNode<"ARMISD::VQRSHRNsuIMM", SDTARMVSHXIMM>;
 
+// Vector shift and insert
 def NEONvsliImm      : SDNode<"ARMISD::VSLIIMM", SDTARMVSHINSIMM>;
 def NEONvsriImm      : SDNode<"ARMISD::VSRIIMM", SDTARMVSHINSIMM>;
 
+// Pseudo vector bitwise select
 def NEONvbsp      : SDNode<"ARMISD::VBSP",
                            SDTypeProfile<1, 3, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>,
@@ -522,15 +525,25 @@ def NEONvext      : SDNode<"ARMISD::VEXT", SDTARMVEXT>;
 def SDTARMVSHUF2  : SDTypeProfile<2, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
                                          SDTCisSameAs<0, 2>,
                                          SDTCisSameAs<0, 3>]>;
+
+// zip (interleave)
 def NEONzip       : SDNode<"ARMISD::VZIP", SDTARMVSHUF2>;
+
+// unzip (deinterleave)
 def NEONuzp       : SDNode<"ARMISD::VUZP", SDTARMVSHUF2>;
+
+// transpose
 def NEONtrn       : SDNode<"ARMISD::VTRN", SDTARMVSHUF2>;
 
 def SDTARMVTBL1   : SDTypeProfile<1, 2, [SDTCisVT<0, v8i8>, SDTCisVT<1, v8i8>,
                                          SDTCisVT<2, v8i8>]>;
 def SDTARMVTBL2   : SDTypeProfile<1, 3, [SDTCisVT<0, v8i8>, SDTCisVT<1, v8i8>,
                                          SDTCisVT<2, v8i8>, SDTCisVT<3, v8i8>]>;
+
+// 1-register shuffle with mask
 def NEONvtbl1     : SDNode<"ARMISD::VTBL1", SDTARMVTBL1>;
+
+// 2-register shuffle with mask
 def NEONvtbl2     : SDNode<"ARMISD::VTBL2", SDTARMVTBL2>;
 
 

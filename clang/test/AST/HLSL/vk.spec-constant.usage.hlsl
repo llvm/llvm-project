@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-compute -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -fnative-int16-type -triple spirv-unknown-vulkan-compute -x hlsl -ast-dump -o - %s | FileCheck %s
 
 // CHECK: VarDecl {{.*}} bool_const 'const hlsl_private bool' static cinit
 // CHECK-NEXT: CallExpr {{.*}} 'bool'

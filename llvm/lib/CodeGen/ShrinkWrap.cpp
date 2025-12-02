@@ -319,7 +319,7 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
       return isa<GlobalValue>(UO);
     }
     if (const PseudoSourceValue *PSV = Op->getPseudoValue())
-      return PSV->isJumpTable();
+      return PSV->isJumpTable() || PSV->isConstantPool();
     return false;
   };
   // Load/store operations may access the stack indirectly when we previously
@@ -967,12 +967,12 @@ bool ShrinkWrapImpl::run(MachineFunction &MF) {
                     << "\nRestore: " << printMBBReference(*Restore) << '\n');
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  SmallVector<MachineBasicBlock *, 4> SavePoints;
-  SmallVector<MachineBasicBlock *, 4> RestorePoints;
-  if (Save) {
-    SavePoints.push_back(Save);
-    RestorePoints.push_back(Restore);
-  }
+
+  // List of CalleeSavedInfo for registers will be added during prologepilog
+  // pass
+  SaveRestorePoints SavePoints({{Save, {}}});
+  SaveRestorePoints RestorePoints({{Restore, {}}});
+
   MFI.setSavePoints(SavePoints);
   MFI.setRestorePoints(RestorePoints);
   ++NumCandidates;

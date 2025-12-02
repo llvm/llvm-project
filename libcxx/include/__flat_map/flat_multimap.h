@@ -22,7 +22,6 @@
 #include <__algorithm/upper_bound.h>
 #include <__assert>
 #include <__compare/synth_three_way.h>
-#include <__concepts/convertible_to.h>
 #include <__concepts/swappable.h>
 #include <__config>
 #include <__cstddef/byte.h>
@@ -30,7 +29,6 @@
 #include <__flat_map/key_value_iterator.h>
 #include <__flat_map/sorted_equivalent.h>
 #include <__flat_map/utils.h>
-#include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
 #include <__fwd/vector.h>
@@ -47,7 +45,7 @@
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/drop_view.h>
 #include <__ranges/from_range.h>
-#include <__ranges/ref_view.h>
+#include <__ranges/range_adaptor.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__ranges/zip_view.h>
@@ -57,14 +55,12 @@
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/maybe_const.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/scope_guard.h>
 #include <__vector/vector.h>
 #include <initializer_list>
-#include <stdexcept>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -928,8 +924,7 @@ private:
 };
 
 template <class _KeyContainer, class _MappedContainer, class _Compare = less<typename _KeyContainer::value_type>>
-  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
-           !__is_allocator<_MappedContainer>::value &&
+  requires(!__is_allocator_v<_Compare> && !__is_allocator_v<_KeyContainer> && !__is_allocator_v<_MappedContainer> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
                           const typename _KeyContainer::value_type&>)
@@ -942,7 +937,7 @@ flat_multimap(_KeyContainer, _MappedContainer, _Compare = _Compare())
 
 template <class _KeyContainer, class _MappedContainer, class _Allocator>
   requires(uses_allocator_v<_KeyContainer, _Allocator> && uses_allocator_v<_MappedContainer, _Allocator> &&
-           !__is_allocator<_KeyContainer>::value && !__is_allocator<_MappedContainer>::value)
+           !__is_allocator_v<_KeyContainer> && !__is_allocator_v<_MappedContainer>)
 flat_multimap(_KeyContainer, _MappedContainer, _Allocator)
     -> flat_multimap<typename _KeyContainer::value_type,
                      typename _MappedContainer::value_type,
@@ -951,9 +946,8 @@ flat_multimap(_KeyContainer, _MappedContainer, _Allocator)
                      _MappedContainer>;
 
 template <class _KeyContainer, class _MappedContainer, class _Compare, class _Allocator>
-  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
-           !__is_allocator<_MappedContainer>::value && uses_allocator_v<_KeyContainer, _Allocator> &&
-           uses_allocator_v<_MappedContainer, _Allocator> &&
+  requires(!__is_allocator_v<_Compare> && !__is_allocator_v<_KeyContainer> && !__is_allocator_v<_MappedContainer> &&
+           uses_allocator_v<_KeyContainer, _Allocator> && uses_allocator_v<_MappedContainer, _Allocator> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
                           const typename _KeyContainer::value_type&>)
@@ -965,8 +959,7 @@ flat_multimap(_KeyContainer, _MappedContainer, _Compare, _Allocator)
                      _MappedContainer>;
 
 template <class _KeyContainer, class _MappedContainer, class _Compare = less<typename _KeyContainer::value_type>>
-  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
-           !__is_allocator<_MappedContainer>::value &&
+  requires(!__is_allocator_v<_Compare> && !__is_allocator_v<_KeyContainer> && !__is_allocator_v<_MappedContainer> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
                           const typename _KeyContainer::value_type&>)
@@ -979,7 +972,7 @@ flat_multimap(sorted_equivalent_t, _KeyContainer, _MappedContainer, _Compare = _
 
 template <class _KeyContainer, class _MappedContainer, class _Allocator>
   requires(uses_allocator_v<_KeyContainer, _Allocator> && uses_allocator_v<_MappedContainer, _Allocator> &&
-           !__is_allocator<_KeyContainer>::value && !__is_allocator<_MappedContainer>::value)
+           !__is_allocator_v<_KeyContainer> && !__is_allocator_v<_MappedContainer>)
 flat_multimap(sorted_equivalent_t, _KeyContainer, _MappedContainer, _Allocator)
     -> flat_multimap<typename _KeyContainer::value_type,
                      typename _MappedContainer::value_type,
@@ -988,9 +981,8 @@ flat_multimap(sorted_equivalent_t, _KeyContainer, _MappedContainer, _Allocator)
                      _MappedContainer>;
 
 template <class _KeyContainer, class _MappedContainer, class _Compare, class _Allocator>
-  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
-           !__is_allocator<_MappedContainer>::value && uses_allocator_v<_KeyContainer, _Allocator> &&
-           uses_allocator_v<_MappedContainer, _Allocator> &&
+  requires(!__is_allocator_v<_Compare> && !__is_allocator_v<_KeyContainer> && !__is_allocator_v<_MappedContainer> &&
+           uses_allocator_v<_KeyContainer, _Allocator> && uses_allocator_v<_MappedContainer, _Allocator> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
                           const typename _KeyContainer::value_type&>)
@@ -1002,19 +994,19 @@ flat_multimap(sorted_equivalent_t, _KeyContainer, _MappedContainer, _Compare, _A
                      _MappedContainer>;
 
 template <class _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>>
-  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator<_Compare>::value)
+  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator_v<_Compare>)
 flat_multimap(_InputIterator, _InputIterator, _Compare = _Compare())
     -> flat_multimap<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare>;
 
 template <class _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>>
-  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator<_Compare>::value)
+  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator_v<_Compare>)
 flat_multimap(sorted_equivalent_t, _InputIterator, _InputIterator, _Compare = _Compare())
     -> flat_multimap<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare>;
 
 template <ranges::input_range _Range,
           class _Compare   = less<__range_key_type<_Range>>,
           class _Allocator = allocator<byte>,
-          class            = __enable_if_t<!__is_allocator<_Compare>::value && __is_allocator<_Allocator>::value>>
+          class            = __enable_if_t<!__is_allocator_v<_Compare> && __is_allocator_v<_Allocator>>>
 flat_multimap(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator()) -> flat_multimap<
     __range_key_type<_Range>,
     __range_mapped_type<_Range>,
@@ -1022,7 +1014,7 @@ flat_multimap(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Alloc
     vector<__range_key_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>,
     vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
 
-template <ranges::input_range _Range, class _Allocator, class = __enable_if_t<__is_allocator<_Allocator>::value>>
+template <ranges::input_range _Range, class _Allocator, class = __enable_if_t<__is_allocator_v<_Allocator>>>
 flat_multimap(from_range_t, _Range&&, _Allocator) -> flat_multimap<
     __range_key_type<_Range>,
     __range_mapped_type<_Range>,
@@ -1031,11 +1023,11 @@ flat_multimap(from_range_t, _Range&&, _Allocator) -> flat_multimap<
     vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
 
 template <class _Key, class _Tp, class _Compare = less<_Key>>
-  requires(!__is_allocator<_Compare>::value)
+  requires(!__is_allocator_v<_Compare>)
 flat_multimap(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare()) -> flat_multimap<_Key, _Tp, _Compare>;
 
 template <class _Key, class _Tp, class _Compare = less<_Key>>
-  requires(!__is_allocator<_Compare>::value)
+  requires(!__is_allocator_v<_Compare>)
 flat_multimap(sorted_equivalent_t, initializer_list<pair<_Key, _Tp>>, _Compare = _Compare())
     -> flat_multimap<_Key, _Tp, _Compare>;
 

@@ -174,6 +174,9 @@ protected:
     DefineStd(Builder, "unix", Opts);
     if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
+
+    if (Opts.C11)
+      Builder.defineMacro("__STDC_NO_THREADS__");
   }
 
 public:
@@ -325,9 +328,21 @@ protected:
       Builder.defineMacro("_REENTRANT");
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
   }
 public:
-  using OSTargetInfo<Target>::OSTargetInfo;
+  HurdTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    switch (Triple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      this->HasFloat128 = true;
+      break;
+    }
+  }
 };
 
 // Linux target
@@ -392,6 +407,12 @@ public:
 
   const char *getStaticInitSectionSpecifier() const override {
     return ".text.startup";
+  }
+
+  // This allows template specializations, see
+  // LinuxTargetInfo<AArch64leTargetInfo>::setABI
+  bool setABI(const std::string &Name) override {
+    return OSTargetInfo<Target>::setABI(Name);
   }
 };
 
@@ -927,6 +948,23 @@ class LLVM_LIBRARY_VISIBILITY WASITargetInfo
                     MacroBuilder &Builder) const final {
     WebAssemblyOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
     Builder.defineMacro("__wasi__");
+  }
+
+public:
+  using WebAssemblyOSTargetInfo<Target>::WebAssemblyOSTargetInfo;
+};
+
+// WALI target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY WALITargetInfo
+    : public WebAssemblyOSTargetInfo<Target> {
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const final {
+    WebAssemblyOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
+    // Linux defines; list based off of gcc output
+    DefineStd(Builder, "unix", Opts);
+    DefineStd(Builder, "linux", Opts);
+    Builder.defineMacro("__wali__");
   }
 
 public:

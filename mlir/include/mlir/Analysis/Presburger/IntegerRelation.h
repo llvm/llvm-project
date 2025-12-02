@@ -196,6 +196,7 @@ public:
   inline DynamicAPInt atIneq(unsigned i, unsigned j) const {
     return inequalities(i, j);
   }
+
   /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
   /// value does not fit in an int64_t.
   inline int64_t atIneq64(unsigned i, unsigned j) const {
@@ -207,6 +208,19 @@ public:
 
   unsigned getNumConstraints() const {
     return getNumInequalities() + getNumEqualities();
+  }
+
+  // Unified indexing into the constraints. Index into the inequalities
+  // if i < getNumInequalities() and into the equalities otherwise.
+  inline DynamicAPInt atConstraint(unsigned i, unsigned j) const {
+    assert(i < getNumConstraints());
+    unsigned numIneqs = getNumInequalities();
+    return i < numIneqs ? atIneq(i, j) : atEq(i - numIneqs, j);
+  }
+  inline DynamicAPInt &atConstraint(unsigned i, unsigned j) {
+    assert(i < getNumConstraints());
+    unsigned numIneqs = getNumInequalities();
+    return i < numIneqs ? atIneq(i, j) : atEq(i - numIneqs, j);
   }
 
   unsigned getNumDomainVars() const { return space.getNumDomainVars(); }
@@ -479,10 +493,12 @@ public:
   /// respect to a positive constant `divisor`. Two constraints are added to the
   /// system to capture equivalence with the floordiv:
   /// q = dividend floordiv c    <=>   c*q <= dividend <= c*q + c - 1.
-  void addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
-                        const DynamicAPInt &divisor);
-  void addLocalFloorDiv(ArrayRef<int64_t> dividend, int64_t divisor) {
-    addLocalFloorDiv(getDynamicAPIntVec(dividend), DynamicAPInt(divisor));
+  /// Returns the column position of the new local variable.
+  unsigned addLocalFloorDiv(ArrayRef<DynamicAPInt> dividend,
+                            const DynamicAPInt &divisor);
+  unsigned addLocalFloorDiv(ArrayRef<int64_t> dividend, int64_t divisor) {
+    return addLocalFloorDiv(getDynamicAPIntVec(dividend),
+                            DynamicAPInt(divisor));
   }
 
   /// Adds a new local variable as the modulus of an affine function of other
@@ -920,6 +936,11 @@ protected:
   /// Coefficients of affine inequalities (in >= 0 form).
   IntMatrix inequalities;
 };
+
+inline raw_ostream &operator<<(raw_ostream &os, const IntegerRelation &rel) {
+  rel.print(os);
+  return os;
+}
 
 /// An IntegerPolyhedron represents the set of points from a PresburgerSpace
 /// that satisfy a list of affine constraints. Affine constraints can be

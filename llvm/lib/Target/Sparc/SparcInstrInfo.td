@@ -96,8 +96,25 @@ def HasFSMULD : Predicate<"!Subtarget->hasNoFSMULD()">;
 def UseDeprecatedInsts : Predicate<"Subtarget->useV8DeprecatedInsts()">;
 
 //===----------------------------------------------------------------------===//
+// HwModes Pattern Stuff
+//===----------------------------------------------------------------------===//
+
+defvar SPARC32 = DefaultMode;
+def SPARC64 : HwMode<[Is64Bit]>;
+
+//===----------------------------------------------------------------------===//
 // Instruction Pattern Stuff
 //===----------------------------------------------------------------------===//
+
+def sparc_ptr_rc : RegClassByHwMode<
+  [SPARC32, SPARC64],
+  [IntRegs, I64Regs]>;
+
+// Both cases can use the same decoder method, so avoid the dispatch
+// by hwmode by setting an explicit DecoderMethod
+def ptr_op : RegisterOperand<sparc_ptr_rc> {
+  let DecoderMethod = "DecodeIntRegsRegisterClass";
+}
 
 // FIXME these should have AsmOperandClass.
 def uimm3 : PatLeaf<(imm), [{ return isUInt<3>(N->getZExtValue()); }]>;
@@ -178,12 +195,12 @@ def simm13Op : Operand<iPTR> {
 
 def MEMrr : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, ptr_rc);
+  let MIOperandInfo = (ops ptr_op, ptr_op);
   let ParserMatchClass = SparcMEMrrAsmOperand;
 }
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_rc, simm13Op);
+  let MIOperandInfo = (ops ptr_op, simm13Op);
   let ParserMatchClass = SparcMEMriAsmOperand;
 }
 
@@ -352,7 +369,7 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_SPCallSeqStart,
 def callseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_SPCallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-def SDT_SPCall    : SDTypeProfile<0, -1, [SDTCisVT<0, i32>]>;
+def SDT_SPCall    : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 def call          : SDNode<"SPISD::CALL", SDT_SPCall,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                             SDNPVariadic]>;
@@ -560,6 +577,9 @@ class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
   let isCodeGenOnly = 1;
   let isPseudo = 1;
 }
+
+// Full memory barrier for V8.
+def V8BAR : Pseudo<(outs), (ins), "!V8BAR", []>, Requires<[HasNoV9]>;
 
 // GETPCX for PIC
 let Defs = [O7] in {
@@ -888,7 +908,7 @@ defm SUB    : F3_12  <"sub"  , 0b000100, sub, IntRegs, i32, simm13Op>;
 let Uses = [ICC], Defs = [ICC] in
   defm SUBE   : F3_12  <"subxcc" , 0b011100, sube, IntRegs, i32, simm13Op>;
 
-let Defs = [ICC], hasPostISelHook = true in
+let Defs = [ICC], hasPostISelHook = true, isCompare = 1 in
   defm SUBCC  : F3_12  <"subcc", 0b010100, subc, IntRegs, i32, simm13Op>;
 
 let Uses = [ICC] in
@@ -1785,22 +1805,22 @@ let Predicates = [HasV9], Uses = [ASR3], Constraints = "$swap = $rd" in
 // as inline assembler-supported instructions.
 let Predicates = [HasUMAC_SMAC], Defs = [Y, ASR18], Uses = [Y, ASR18] in {
   def SMACrr :  F3_1<2, 0b111111,
-                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
                    "smac $rs1, $rs2, $rd",
                    [], IIC_smac_umac>;
 
   def SMACri :  F3_2<2, 0b111111,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
                    "smac $rs1, $simm13, $rd",
                    [], IIC_smac_umac>;
 
   def UMACrr :  F3_1<2, 0b111110,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
                    "umac $rs1, $rs2, $rd",
                    [], IIC_smac_umac>;
 
   def UMACri :  F3_2<2, 0b111110,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
                    "umac $rs1, $simm13, $rd",
                    [], IIC_smac_umac>;
 }
@@ -1957,12 +1977,30 @@ def : Pat<(i32 (zextloadi1 ADDRri:$src)), (LDUBri ADDRri:$src)>;
 def : Pat<(store (i32 0), ADDRrr:$dst), (STrr ADDRrr:$dst, (i32 G0))>;
 def : Pat<(store (i32 0), ADDRri:$dst), (STri ADDRri:$dst, (i32 G0))>;
 
-// store bar for all atomic_fence in V8.
-let Predicates = [HasNoV9] in
-  def : Pat<(atomic_fence timm, timm), (STBAR)>;
+// All load-type operations in V8 comes with implicit acquire semantics.
+let Predicates = [HasNoV9] in {
+  // Acquire -> nop
+  def : Pat<(atomic_fence (i32 4), timm), (NOP)>;
+  // Release / AcqRel -> stbar
+  def : Pat<(atomic_fence (i32 5), timm), (STBAR)>;
+  // AcqRel and stronger -> stbar; ldstub [%sp-1], %g0
+  def : Pat<(atomic_fence timm, timm), (V8BAR)>;
+}
 
-let Predicates = [HasV9] in
+// We have to handle both 32 and 64-bit cases.
+let Predicates = [HasV9] in {
+  // Acquire -> membar #LoadLoad | #LoadStore
+  def : Pat<(atomic_fence (i32 4), timm), (MEMBARi 0x5)>;
+  def : Pat<(atomic_fence (i64 4), timm), (MEMBARi 0x5)>;
+  // Release -> membar #LoadStore | #StoreStore
+  def : Pat<(atomic_fence (i32 5), timm), (MEMBARi 0xc)>;
+  def : Pat<(atomic_fence (i64 5), timm), (MEMBARi 0xc)>;
+  // AcqRel -> membar #LoadLoad | #LoadStore | #StoreStore
+  def : Pat<(atomic_fence (i32 6), timm), (MEMBARi 0xd)>;
+  def : Pat<(atomic_fence (i64 6), timm), (MEMBARi 0xd)>;
+  // SeqCst -> membar #StoreLoad | #LoadLoad | #LoadStore | #StoreStore
   def : Pat<(atomic_fence timm, timm), (MEMBARi 0xf)>;
+}
 
 // atomic_load addr -> load addr
 def : Pat<(i32 (atomic_load_azext_8 ADDRrr:$src)), (LDUBrr ADDRrr:$src)>;

@@ -65,6 +65,7 @@ public:
   ///     diagnostics (i.e. errors, warnings or notes from Clang).
   ClangExpressionParser(ExecutionContextScope *exe_scope, Expression &expr,
                         bool generate_debug_info,
+                        DiagnosticManager &diagnostic_manager,
                         std::vector<std::string> include_directories = {},
                         std::string filename = "<clang expression>");
 

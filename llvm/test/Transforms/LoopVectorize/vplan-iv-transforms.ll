@@ -21,7 +21,7 @@ define void @iv_no_binary_op_in_descriptor(i1 %c, ptr %dst) {
 ; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr inbounds ir<%dst>, vp<[[STEPS:%.+]]>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%iv>
 ; CHECK-NEXT:     EMIT vp<[[CAN_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_INC]]>, vp<[[VEC_TC]]>
@@ -88,7 +88,14 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK:      VPlan 'Final VPlan for VF={8},UF={1}'
-; CHECK:      ir-bb<vector.ph>:
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, ir<8>
+; CHECK-NEXT:     EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, vector.ph
+; CHECK-EMPTY:
+; CHECK:      vector.ph:
 ; CHECK-NEXT:     EMIT vp<%n.mod.vf> = urem ir<%n>, ir<8>
 ; CHECK-NEXT:     EMIT vp<%n.vec> = sub ir<%n>, vp<%n.mod.vf>
 ; CHECK-NEXT:     EMIT vp<[[STEP_VECTOR:%.+]]> = step-vector
@@ -100,8 +107,8 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[SCALAR_PHI:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:   WIDEN-PHI ir<%iv> = phi [ vp<[[INDUCTION]]>, ir-bb<vector.ph> ], [ vp<%vec.ind.next>, vector.body ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[SCALAR_PHI:%.+]]> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:   WIDEN-PHI ir<%iv> = phi [ vp<[[INDUCTION]]>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
 ; CHECK-NEXT:   CLONE ir<%q> = getelementptr ir<%p>, vp<[[SCALAR_PHI]]>
 ; CHECK-NEXT:   WIDEN ir<%x> = load ir<%q>
 ; CHECK-NEXT:   WIDEN ir<%y> = add ir<%x>, ir<%iv>

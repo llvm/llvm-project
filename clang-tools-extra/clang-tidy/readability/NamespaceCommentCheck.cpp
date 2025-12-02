@@ -1,4 +1,4 @@
-//===--- NamespaceCommentCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -70,7 +70,7 @@ getNamespaceNameAsWritten(SourceLocation &Loc, const SourceManager &Sources,
       --Nesting;
     } else if (Nesting == 0) {
       if (T->is(tok::raw_identifier)) {
-        StringRef ID = T->getRawIdentifier();
+        const StringRef ID = T->getRawIdentifier();
         if (ID != "namespace")
           Result.append(std::string(ID));
         if (ID == "inline")
@@ -96,13 +96,13 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Don't require closing comments for namespaces spanning less than certain
   // number of lines.
-  unsigned StartLine = Sources.getSpellingLineNumber(ND->getBeginLoc());
-  unsigned EndLine = Sources.getSpellingLineNumber(ND->getRBraceLoc());
+  const unsigned StartLine = Sources.getSpellingLineNumber(ND->getBeginLoc());
+  const unsigned EndLine = Sources.getSpellingLineNumber(ND->getRBraceLoc());
   if (EndLine - StartLine + 1 <= ShortNamespaceLines)
     return;
 
   // Find next token after the namespace closing brace.
-  SourceLocation AfterRBrace = Lexer::getLocForEndOfToken(
+  const SourceLocation AfterRBrace = Lexer::getLocForEndOfToken(
       ND->getRBraceLoc(), /*Offset=*/0, Sources, getLangOpts());
   SourceLocation Loc = AfterRBrace;
   SourceLocation LBraceLoc = ND->getBeginLoc();
@@ -137,7 +137,8 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   if (!locationsInSameFile(Sources, ND->getRBraceLoc(), Loc))
     return;
 
-  bool NextTokenIsOnSameLine = Sources.getSpellingLineNumber(Loc) == EndLine;
+  const bool NextTokenIsOnSameLine =
+      Sources.getSpellingLineNumber(Loc) == EndLine;
   // If we insert a line comment before the token in the same line, we need
   // to insert a line break.
   bool NeedLineBreak = NextTokenIsOnSameLine && Tok.isNot(tok::eof);
@@ -148,11 +149,12 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Try to find existing namespace closing comment on the same line.
   if (Tok.is(tok::comment) && NextTokenIsOnSameLine) {
-    StringRef Comment(Sources.getCharacterData(Loc), Tok.getLength());
+    const StringRef Comment(Sources.getCharacterData(Loc), Tok.getLength());
     SmallVector<StringRef, 7> Groups;
     if (NamespaceCommentPattern.match(Comment, &Groups)) {
-      StringRef NamespaceNameInComment = Groups.size() > 5 ? Groups[5] : "";
-      StringRef Anonymous = Groups.size() > 3 ? Groups[3] : "";
+      const StringRef NamespaceNameInComment =
+          Groups.size() > 5 ? Groups[5] : "";
+      const StringRef Anonymous = Groups.size() > 3 ? Groups[3] : "";
 
       if ((ND->isAnonymousNamespace() && NamespaceNameInComment.empty()) ||
           (*NamespaceNameAsWritten == NamespaceNameInComment &&
@@ -186,7 +188,7 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
     // multi-line or there may be other tokens behind it.
   }
 
-  std::string NamespaceNameForDiag =
+  const std::string NamespaceNameForDiag =
       ND->isAnonymousNamespace()
           ? "anonymous namespace"
           : ("namespace '" + *NamespaceNameAsWritten + "'");
@@ -203,7 +205,7 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
     Fix.append("\n");
 
   // Place diagnostic at an old comment, or closing brace if we did not have it.
-  SourceLocation DiagLoc =
+  const SourceLocation DiagLoc =
       OldCommentRange.getBegin() != OldCommentRange.getEnd()
           ? OldCommentRange.getBegin()
           : ND->getRBraceLoc();

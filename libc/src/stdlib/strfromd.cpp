@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/strfromd.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/printf_core/core_structs.h"
+#include "src/stdio/printf_core/error_mapper.h"
 #include "src/stdlib/str_from_util.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -36,7 +39,13 @@ LLVM_LIBC_FUNCTION(int, strfromd,
   if (n > 0)
     wb.buff[wb.buff_cur] = '\0';
 
-  return writer.get_chars_written();
+  if (writer.get_chars_written() >
+      static_cast<size_t>(cpp::numeric_limits<int>::max())) {
+    libc_errno =
+        printf_core::internal_error_to_errno(-printf_core::OVERFLOW_ERROR);
+    return -1;
+  }
+  return static_cast<int>(writer.get_chars_written());
 }
 
 } // namespace LIBC_NAMESPACE_DECL

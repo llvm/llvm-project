@@ -155,10 +155,13 @@ public:
   std::string BinutilsVersion;
 
   enum class FramePointerKind {
-    None,     // Omit all frame pointers.
-    Reserved, // Maintain valid frame pointer chain.
-    NonLeaf,  // Keep non-leaf frame pointers.
-    All,      // Keep all frame pointers.
+    NonLeafNoReserve, // Keep non-leaf frame pointers, allow the FP to be used
+                      // as a GPR in leaf functions.
+    None,             // Omit all frame pointers.
+    Reserved,         // Maintain valid frame pointer chain.
+    NonLeaf, // Keep non-leaf frame pointers, don't allow the FP to be used as a
+             // GPR in leaf functions.
+    All,     // Keep all frame pointers.
   };
 
   static StringRef getFramePointerKindName(FramePointerKind Kind) {
@@ -167,6 +170,8 @@ public:
       return "none";
     case FramePointerKind::Reserved:
       return "reserved";
+    case FramePointerKind::NonLeafNoReserve:
+      return "non-leaf-no-reserve";
     case FramePointerKind::NonLeaf:
       return "non-leaf";
     case FramePointerKind::All:
@@ -196,6 +201,16 @@ public:
     Disabled,
     Enabled,
     Forced,
+  };
+
+  enum SanitizeDebugTrapReasonKind {
+    None,  ///< Trap Messages are omitted. This offers the smallest debug info
+           ///< size but at the cost of making traps hard to debug.
+    Basic, ///< Trap Message is fixed per SanitizerKind. Produces smaller debug
+           ///< info than `Detailed` but is not as helpful for debugging.
+    Detailed, ///< Trap Message includes more context (e.g. the expression being
+              ///< overflowed). This is more helpful for debugging but produces
+              ///< larger debug info than `Basic`.
   };
 
   /// The code model to use (-mcmodel).

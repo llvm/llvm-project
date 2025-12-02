@@ -17,8 +17,8 @@ define dso_local double @test(ptr %Arr) {
 ; CHECK-NEXT:    [[TMP3]] = fadd fast <2 x double> [[TMP2]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       middle.block:
+; CHECK-NEXT:    br i1 [[TMP4]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       for.end:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <2 x double> [ [[TMP3]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[DOTLCSSA]])
 ; CHECK-NEXT:    ret double [[TMP5]]

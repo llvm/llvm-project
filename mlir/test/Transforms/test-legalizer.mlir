@@ -145,36 +145,6 @@ func.func @no_remap_nested() {
 
 // -----
 
-// CHECK-LABEL: func @remap_moved_region_args
-func.func @remap_moved_region_args() {
-  // CHECK-NEXT: return
-  // CHECK-NEXT: ^bb1(%{{.*}}: f64, %{{.*}}: f64, %{{.*}}: f16, %{{.*}}: f16):
-  // CHECK-NEXT: "test.cast"{{.*}} : (f16, f16) -> f32
-  // CHECK-NEXT: "test.valid"{{.*}} : (f64, f64, f32)
-  "test.region"() ({
-    ^bb1(%i0: i64, %unused: i16, %i1: i64, %2: f32):
-      "test.invalid"(%i0, %i1, %2) : (i64, i64, f32) -> ()
-  }) : () -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
-  return
-}
-
-// -----
-
-// CHECK-LABEL: func @remap_cloned_region_args
-func.func @remap_cloned_region_args() {
-  // CHECK-NEXT: return
-  // CHECK-NEXT: ^bb1(%{{.*}}: f64, %{{.*}}: f64, %{{.*}}: f16, %{{.*}}: f16):
-  // CHECK-NEXT: "test.cast"{{.*}} : (f16, f16) -> f32
-  // CHECK-NEXT: "test.valid"{{.*}} : (f64, f64, f32)
-  "test.region"() ({
-    ^bb1(%i0: i64, %unused: i16, %i1: i64, %2: f32):
-      "test.invalid"(%i0, %i1, %2) : (i64, i64, f32) -> ()
-  }) {legalizer.should_clone} : () -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
-  return
-}
-
 // CHECK-LABEL: func @remap_drop_region
 func.func @remap_drop_region() {
   // CHECK-NEXT: return
@@ -191,8 +161,8 @@ func.func @remap_drop_region() {
 
 // CHECK-LABEL: func @dropped_input_in_use
 func.func @dropped_input_in_use(%arg: i16, %arg2: i64) {
-  // CHECK-NEXT: "test.cast"{{.*}} : () -> i16
-  // CHECK-NEXT: "work"{{.*}} : (i16)
+  // CHECK-NEXT: %[[cast:.*]] = "test.cast"() : () -> i16
+  // CHECK-NEXT: "work"(%[[cast]]) : (i16)
   // expected-remark@+1 {{op 'work' is not legalizable}}
   "work"(%arg) : (i16) -> ()
 }
@@ -265,15 +235,33 @@ builtin.module {
 
 // CHECK-LABEL: @replace_block_arg_1_to_n
 func.func @replace_block_arg_1_to_n() {
-  // CHECK: "test.block_arg_replace"
-  "test.block_arg_replace"() ({
+  // CHECK: "test.legal_op"
+  "test.legal_op"() ({
   ^bb0(%arg0: i32, %arg1: i16):
-    // CHECK: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16):
-    // CHECK: %[[cast:.*]] = "test.cast"(%[[ARG1]], %[[ARG1]]) : (i16, i16) -> i32
+    // CHECK-NEXT: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16):
+    // CHECK-NEXT: %[[cast:.*]] = "test.cast"(%[[ARG1]], %[[ARG1]]) : (i16, i16) -> i32
+    // CHECK-NEXT: "test.value_replace"(%[[cast]], %[[ARG1]]) {is_legal} : (i32, i16) -> ()
     // CHECK-NEXT: "test.return"(%[[cast]]) : (i32)
+    "test.value_replace"(%arg0, %arg1) : (i32, i16) -> ()
     "test.return"(%arg0) : (i32) -> ()
   }) : () -> ()
   "test.return"() : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: @replace_op_result_1_to_n
+func.func @replace_op_result_1_to_n() {
+  // CHECK: %[[orig:.*]] = "test.legal_op"() : () -> i32
+  // CHECK: %[[repl:.*]] = "test.legal_op"() : () -> i16
+  %0 = "test.legal_op"() : () -> i32
+  %1 = "test.legal_op"() : () -> i16
+
+  // CHECK-NEXT: %[[cast:.*]] = "test.cast"(%[[repl]], %[[repl]]) : (i16, i16) -> i32
+  // CHECK-NEXT: "test.value_replace"(%[[cast]], %[[repl]]) {is_legal} : (i32, i16) -> ()
+  // CHECK-NEXT: "test.return"(%[[cast]]) : (i32)
+  "test.value_replace"(%0, %1) : (i32, i16) -> ()
+  "test.return"(%0) : (i32) -> ()
 }
 
 // -----
@@ -459,4 +447,36 @@ func.func @test_working_1to1_pattern(%arg0: f16) {
   // CHECK-NEXT: "test.return"() : () -> ()
   "test.type_consumer"(%arg0) : (f16) -> ()
   "test.return"() : () -> ()
+}
+
+// -----
+
+// The region of "test.post_order_legalization" is converted before the op.
+
+// CHECK: notifyBlockInserted into test.post_order_legalization: was unlinked
+// CHECK: notifyOperationInserted: test.invalid
+// CHECK: notifyBlockErased
+// CHECK: notifyOperationInserted: test.valid, was unlinked
+// CHECK: notifyOperationReplaced: test.invalid
+// CHECK: notifyOperationErased: test.invalid
+// CHECK: notifyOperationModified: test.post_order_legalization
+
+// CHECK-LABEL: func @test_preorder_legalization
+//       CHECK:   "test.post_order_legalization"() ({
+//       CHECK:   ^{{.*}}(%[[arg0:.*]]: f64):
+// Note: The survival of a not-explicitly-invalid operation does *not* cause
+// a conversion failure in when applying a partial conversion.
+//       CHECK:     %[[cast:.*]] = "test.cast"(%[[arg0]]) : (f64) -> i64
+//       CHECK:     "test.remaining_consumer"(%[[cast]]) : (i64) -> ()
+//       CHECK:     "test.valid"(%[[arg0]]) : (f64) -> ()
+//       CHECK:   }) {is_legal} : () -> ()
+func.func @test_preorder_legalization() {
+  "test.post_order_legalization"() ({
+  ^bb0(%arg0: i64):
+    // expected-remark @+1 {{'test.remaining_consumer' is not legalizable}}
+    "test.remaining_consumer"(%arg0) : (i64) -> ()
+    "test.invalid"(%arg0) : (i64) -> ()
+  }) : () -> ()
+  // expected-remark @+1 {{'func.return' is not legalizable}}
+  return
 }
