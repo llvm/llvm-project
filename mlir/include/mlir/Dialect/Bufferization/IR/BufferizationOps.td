@@ -481,7 +481,12 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     AliasingValueList getAliasingValues(OpOperand &opOperand,
                                         const AnalysisState &state) const {
       // The output tensor aliases with the input memref.
-      return {{const_cast<ToTensorOp *>(this)->getResult(), BufferRelation::Equivalent}};
+      //
+      // Note: getResult() is a non-const helper. Use const_cast here to avoid
+      // duplicating accessors while still satisfying the const interface
+      // contract of BufferizableOpInterface.
+      return {{const_cast<ToTensorOp *>(this)->getResult(),
+               BufferRelation::Equivalent}};
     }
 
     bool bufferizesToMemoryRead(OpOperand &opOperand,
@@ -570,7 +575,12 @@ def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
     AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state) const {
       // The output memref aliases with the input tensor.
-      return {{const_cast<ToBufferOp *>(this)->getResult(), BufferRelation::Equivalent}};
+      //
+      // Note: getResult() is a non-const helper. Use const_cast here to avoid
+      // duplicating accessors while still satisfying the const interface
+      // contract of BufferizableOpInterface.
+      return {{const_cast<ToBufferOp *>(this)->getResult(),
+               BufferRelation::Equivalent}};
     }
 
     LogicalResult bufferize(RewriterBase &rewriter,

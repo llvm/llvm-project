@@ -745,6 +745,36 @@ func.func @test_to_tensor_without_restrict_works(
 
 // -----
 
+// Forum example: to_buffer (to_memref) + external memref call + to_tensor
+// This mirrors the IR discussed in the MLIR forum thread:
+// "Bufferization fails in the presence of `bufferization.to_memref`
+//  and `bufferization.to_tensor`".
+//
+// CHECK-LABEL: func @forum_to_tensor_to_buffer_example(
+//  CHECK-SAME:     %[[ARG0:.*]]: memref<2xf32
+func.func @forum_to_tensor_to_buffer_example(%arg0: tensor<2xf32>) {
+  %m = bufferization.to_buffer %arg0 : tensor<2xf32> to memref<2xf32>
+  func.call @some_func_operating_on_memref(%m)
+      : (memref<2xf32>) -> ()
+  %t = bufferization.to_tensor %m : memref<2xf32> to tensor<2xf32>
+  %c0 = arith.constant 0 : index
+  %v = tensor.extract %t[%c0] : tensor<2xf32>
+  vector.print %v : f32
+  return
+}
+
+// The external memref function should remain a memref-based function after
+// bufferization and there should be no remaining to_tensor/to_buffer ops.
+// CHECK: func.func private @some_func_operating_on_memref(
+// CHECK-SAME: memref<2xf32>
+// CHECK-NOT: bufferization.to_tensor
+// CHECK-NOT: bufferization.to_buffer
+func.func private @some_func_operating_on_memref(%m: memref<2xf32>) -> () {
+  return
+}
+
+// -----
+
 // Note: The cf.br canonicalizes away, so there's nothing to check here. There
 // is a detailed test in ControlFlow/bufferize.mlir.
 
