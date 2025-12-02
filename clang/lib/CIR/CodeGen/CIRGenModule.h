@@ -453,6 +453,14 @@ public:
                                     bool performInit);
 
   void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
+  void emitGlobalOpenACCRoutineDecl(const clang::OpenACCRoutineDecl *cd);
+  void emitGlobalOpenACCDeclareDecl(const clang::OpenACCDeclareDecl *cd);
+  template <typename BeforeOpTy, typename DataClauseTy>
+  void emitGlobalOpenACCDeclareDataOperands(const Expr *varOperand,
+                                            DataClauseTy dataClause,
+                                            OpenACCModifierKind modifiers,
+                                            bool structured, bool implicit,
+                                            bool requiresDtor);
 
   // C++ related functions.
   void emitDeclContext(const DeclContext *dc);

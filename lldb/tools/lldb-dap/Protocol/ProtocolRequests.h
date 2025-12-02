@@ -350,6 +350,12 @@ struct AttachRequestArguments {
   /// Path to the core file to debug.
   std::string coreFile;
 
+  /// Unique ID of an existing target to attach to.
+  std::optional<lldb::user_id_t> targetId;
+
+  /// ID of an existing debugger instance to use.
+  std::optional<int> debuggerId;
+
   /// @}
 };
 bool fromJSON(const llvm::json::Value &, AttachRequestArguments &,

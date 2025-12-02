@@ -1330,7 +1330,7 @@ def PseudoQC_E_SH : PseudoStore<"qc.e.sh">;
 def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
 } // Predicates = [HasVendorXqcilo, IsRV32]
 
-let Predicates = [HasShortForwardBranchOpt] in {
+let Predicates = [HasShortForwardBranchIALU] in {
 def PseudoCCQC_LI : SFBQC_LI;
 def PseudoCCQC_E_LI : SFBQC_E_LI;
 }
@@ -1571,7 +1571,7 @@ def: Pat<(i32 (ctlz (not (i32 GPR:$rs1)))), (QC_CLO GPR:$rs1)>;
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
 
-let Predicates = [HasVendorXqcicm, NoShortForwardBranchOpt, IsRV32] in {
+let Predicates = [HasVendorXqcicm, NoShortForwardBranch, IsRV32] in {
 def : QCIMVCCPat<SETEQ,  QC_MVEQ>;
 def : QCIMVCCPat<SETNE,  QC_MVNE>;
 def : QCIMVCCPat<SETLT,  QC_MVLT>;
