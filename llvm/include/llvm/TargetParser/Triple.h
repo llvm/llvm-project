@@ -248,7 +248,8 @@ public:
     Serenity,
     Vulkan, // Vulkan SPIR-V
     CheriotRTOS,
-    LastOSType = CheriotRTOS
+    OpenCL,
+    LastOSType = OpenCL
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -308,7 +309,6 @@ public:
     Mesh,
     Amplification,
     RootSignature,
-    OpenCL,
     OpenHOS,
     Mlibc,
 
