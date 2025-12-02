@@ -776,10 +776,10 @@ Interpreter::Visit(const BooleanLiteralNode *node) {
   return ValueObject::CreateValueObjectFromBool(m_target, value, "result");
 }
 
-llvm::Expected<CompilerType> Interpreter::VerifyCastType(
-    lldb::ValueObjectSP &operand, CompilerType &op_type,
-    CompilerType target_type, CastPromoKind &promo_kind,
-    CastKind &cast_kind, int location) {
+llvm::Expected<CompilerType>
+Interpreter::VerifyCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
+                            CompilerType target_type, CastPromoKind &promo_kind,
+                            CastKind &cast_kind, int location) {
 
   promo_kind = CastPromoKind::eNone;
   if (op_type.IsReferenceType())
@@ -802,8 +802,8 @@ llvm::Expected<CompilerType> Interpreter::VerifyCastType(
       // Cast from pointer to float/double is not allowed.
       if (target_type.IsFloat()) {
         std::string errMsg = llvm::formatv(
-            "Cast from {0} to {1} is not allowed",
-            op_type.TypeDescription(), target_type.TypeDescription());
+            "Cast from {0} to {1} is not allowed", op_type.TypeDescription(),
+            target_type.TypeDescription());
         return llvm::make_error<DILDiagnosticError>(
             m_expr, std::move(errMsg), location,
             op_type.TypeDescription().length());
@@ -840,9 +840,9 @@ llvm::Expected<CompilerType> Interpreter::VerifyCastType(
   } else if (target_type.IsEnumerationType()) {
     // Cast to enum type.
     if (!op_type.IsScalarType() && !op_type.IsEnumerationType()) {
-      std::string errMsg = llvm::formatv(
-          "Cast from {0} to {1} is not allowed",
-          op_type.TypeDescription(), target_type.TypeDescription());
+      std::string errMsg = llvm::formatv("Cast from {0} to {1} is not allowed",
+                                         op_type.TypeDescription(),
+                                         target_type.TypeDescription());
 
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
@@ -871,9 +871,9 @@ llvm::Expected<CompilerType> Interpreter::VerifyCastType(
         (!operand->IsIntegerType(is_signed) ||
          (is_signed && operand->GetValueAsSigned(0) != 0) ||
          (!is_signed && operand->GetValueAsUnsigned(0) != 0))) {
-      std::string errMsg = llvm::formatv(
-          "Cast from {0} to {1} is not allowed",
-          op_type.TypeDescription(), target_type.TypeDescription());
+      std::string errMsg = llvm::formatv("Cast from {0} to {1} is not allowed",
+                                         op_type.TypeDescription(),
+                                         target_type.TypeDescription());
 
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
@@ -907,9 +907,8 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode *node) {
   CastKind cast_kind = CastKind::eNone;
   CastPromoKind promo_kind = CastPromoKind::eNone;
 
-  auto type_or_err =
-      VerifyCastType(operand, op_type, node->GetType(), promo_kind,
-                     cast_kind, node->GetLocation());
+  auto type_or_err = VerifyCastType(operand, op_type, node->GetType(),
+                                    promo_kind, cast_kind, node->GetLocation());
   if (!type_or_err)
     return type_or_err.takeError();
 

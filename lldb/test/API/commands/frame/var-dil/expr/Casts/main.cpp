@@ -8,7 +8,6 @@
 #include <memory>
 #include <string>
 
-
 namespace ns {
 
 typedef int myint;
@@ -16,7 +15,6 @@ typedef int myint;
 class Foo {};
 
 } // namespace ns
-
 
 int main(int argc, char **argv) {
   int a = 1;
