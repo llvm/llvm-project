@@ -110,5 +110,14 @@ float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line);
 // Extension subroutine SHOW_DESCRIPTOR(D)
 void RTNAME(ShowDescriptor)(const Fortran::runtime::Descriptor *descr);
 
+// GNU extension function IRAND(I)
+int RTNAME(Irand)(int *i);
+
+// GNU extension function RAND(I)
+float RTNAME(Rand)(int *i, const char *sourceFile, int line);
+
+// GNU extension subroutine SRAND(SEED)
+void FORTRAN_PROCEDURE_NAME(srand)(int *seed);
+
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_

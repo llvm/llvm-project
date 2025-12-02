@@ -31,7 +31,7 @@ void test(const char *fmt, __builtin_va_list ap) {
   vprintf(fmt, ap);
 }
 
-// CIR: cir.func internal private @__vprintfieee128.inline({{.*}}) -> !s32i inline(always)
+// CIR: cir.func always_inline internal private @__vprintfieee128.inline({{.*}}) -> !s32i
 // CIR:   cir.call @__vfprintf_chkieee128(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}})
 //
 // CIR: cir.func {{.*}} @test({{.*}})

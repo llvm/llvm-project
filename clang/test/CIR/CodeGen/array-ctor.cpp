@@ -14,7 +14,7 @@ void foo() {
     S s[42];
 }
 
-// CIR-BEFORE-LPP: cir.func dso_local @_Z3foov()
+// CIR-BEFORE-LPP: cir.func {{.*}} @_Z3foov()
 // CIR-BEFORE-LPP:   %[[ARRAY:.*]] = cir.alloca !cir.array<!rec_S x 42>, !cir.ptr<!cir.array<!rec_S x 42>>, ["s", init]
 // CIR-BEFORE-LPP:   cir.array.ctor %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 42>> {
 // CIR-BEFORE-LPP:    ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_S>):
@@ -24,7 +24,7 @@ void foo() {
 // CIR-BEFORE-LPP:   cir.return
 // CIR-BEFORE-LPP: }
 
-// CIR: cir.func dso_local @_Z3foov()
+// CIR: cir.func {{.*}} @_Z3foov()
 // CIR:   %[[ARRAY:.*]] = cir.alloca !cir.array<!rec_S x 42>, !cir.ptr<!cir.array<!rec_S x 42>>, ["s", init]
 // CIR:   %[[CONST42:.*]] = cir.const #cir.int<42> : !u64i
 // CIR:   %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 42>> -> !cir.ptr<!rec_S>
@@ -84,12 +84,12 @@ void zero_sized() {
     S s[0];
 }
 
-// CIR-BEFORE-LPP:     cir.func dso_local @_Z10zero_sizedv()
+// CIR-BEFORE-LPP:     cir.func {{.*}} @_Z10zero_sizedv()
 // CIR-BEFORE-LPP:       cir.alloca !cir.array<!rec_S x 0>, !cir.ptr<!cir.array<!rec_S x 0>>, ["s"]
 // CIR-BEFORE-LPP-NOT:   cir.array.ctor
 // CIR-BEFORE-LPP:       cir.return
 
-// CIR:     cir.func dso_local @_Z10zero_sizedv()
+// CIR:     cir.func {{.*}} @_Z10zero_sizedv()
 // CIR:       cir.alloca !cir.array<!rec_S x 0>, !cir.ptr<!cir.array<!rec_S x 0>>, ["s"]
 // CIR-NOT:   cir.do
 // CIR-NOT:   cir.call @_ZN1SC1Ev

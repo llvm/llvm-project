@@ -17,7 +17,7 @@ int varargs(int count, ...) {
     return res;
 }
 
-// CIR-LABEL: cir.func dso_local @varargs(
+// CIR-LABEL: cir.func {{.*}} @varargs(
 // CIR:   %[[COUNT_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["count", init]
 // CIR:   %[[RET_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   %[[VAAREA:.+]] = cir.alloca !cir.array<!rec___va_list_tag x 1>, !cir.ptr<!cir.array<!rec___va_list_tag x 1>>, ["args"]
@@ -93,7 +93,7 @@ int stdarg_start(int count, ...) {
     return res;
 }
 
-// CIR-LABEL: cir.func dso_local @stdarg_start(
+// CIR-LABEL: cir.func {{.*}} @stdarg_start(
 // CIR:   %[[COUNT_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["count", init]
 // CIR:   %[[RET_ADDR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   %[[VAAREA:.+]] = cir.alloca !cir.array<!rec___va_list_tag x 1>, !cir.ptr<!cir.array<!rec___va_list_tag x 1>>, ["args"]

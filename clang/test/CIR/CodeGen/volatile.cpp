@@ -9,7 +9,7 @@ int test_load(volatile int *ptr) {
   return *ptr;
 }
 
-// CIR: cir.func dso_local @_Z9test_loadPVi
+// CIR: cir.func {{.*}} @_Z9test_loadPVi
 // CIR:   cir.load volatile
 
 // LLVM: define {{.*}} i32 @_Z9test_loadPVi
@@ -22,7 +22,7 @@ void test_store(volatile int *ptr) {
   *ptr = 42;
 }
 
-// CIR: cir.func dso_local @_Z10test_storePVi
+// CIR: cir.func {{.*}} @_Z10test_storePVi
 // CIR:   cir.store volatile
 
 // LLVM: define {{.*}} void @_Z10test_storePVi
@@ -41,7 +41,7 @@ int test_load_field1(volatile Foo *ptr) {
   return ptr->x;
 }
 
-// CIR: cir.func dso_local @_Z16test_load_field1PV3Foo
+// CIR: cir.func {{.*}} @_Z16test_load_field1PV3Foo
 // CIR:   %[[MEMBER_ADDR:.*]] = cir.get_member
 // CIR:   %{{.+}} = cir.load volatile{{.*}} %[[MEMBER_ADDR]]
 
@@ -57,7 +57,7 @@ int test_load_field2(Foo *ptr) {
   return ptr->y;
 }
 
-// CIR: cir.func dso_local @_Z16test_load_field2P3Foo
+// CIR: cir.func {{.*}} @_Z16test_load_field2P3Foo
 // CIR:   %[[MEMBER_ADDR:.*]] = cir.get_member
 // CIR:   %{{.+}} = cir.load volatile{{.*}} %[[MEMBER_ADDR]]
 
@@ -73,7 +73,7 @@ int test_load_field3(Foo *ptr) {
   return ptr->z;
 }
 
-// CIR: cir.func dso_local @_Z16test_load_field3P3Foo
+// CIR: cir.func {{.*}} @_Z16test_load_field3P3Foo
 // CIR:   %[[MEMBER_ADDR:.*]] = cir.get_member
 // CIR:   %{{.*}} = cir.get_bitfield align(4) (#bfi_z, %[[MEMBER_ADDR:.+]] {is_volatile} : !cir.ptr<!u8i>) -> !s32i
 
@@ -95,7 +95,7 @@ void test_store_field1(volatile Foo *ptr) {
   ptr->x = 42;
 }
 
-// CIR: cir.func dso_local @_Z17test_store_field1PV3Foo
+// CIR: cir.func {{.*}} @_Z17test_store_field1PV3Foo
 // CIR:   %[[MEMBER_ADDR:.*]] = cir.get_member
 // CIR:   cir.store volatile{{.*}} %{{.+}}, %[[MEMBER_ADDR]]
 
@@ -111,7 +111,7 @@ void test_store_field2(Foo *ptr) {
   ptr->y = 42;
 }
 
-// CIR: cir.func dso_local @_Z17test_store_field2P3Foo
+// CIR: cir.func {{.*}} @_Z17test_store_field2P3Foo
 // CIR:   %[[MEMBER_ADDR:.*]] = cir.get_member
 // CIR:   cir.store volatile{{.*}} %{{.+}}, %[[MEMBER_ADDR]]
 
@@ -127,7 +127,7 @@ void test_store_field3(Foo *ptr) {
   ptr->z = 4;
 }
 
-// CIR: cir.func dso_local @_Z17test_store_field3P3Foo
+// CIR: cir.func {{.*}} @_Z17test_store_field3P3Foo
 // CIR:   %[[MEMBER_ADDR:.*]] = cir.get_member
 // CIR:   cir.set_bitfield align(4) (#bfi_z, %[[MEMBER_ADDR:.+]] : !cir.ptr<!u8i>, %1 : !s32i) {is_volatile}
 
@@ -155,7 +155,7 @@ void A::set_x(int val) volatile {
   x = val;
 }
 
-// CIR: cir.func dso_local @_ZNV1A5set_xEi
+// CIR: cir.func {{.*}} @_ZNV1A5set_xEi
 // CIR:   %[[MEMBER_ADDR:.*]] = cir.get_member %{{.*}}[0] {name = "x"}
 // CIR:   cir.store volatile {{.*}} %{{.*}}, %[[MEMBER_ADDR]]
 
@@ -171,7 +171,7 @@ int A::get_x() volatile {
   return x;
 }
 
-// CIR: cir.func dso_local @_ZNV1A5get_xEv
+// CIR: cir.func {{.*}} @_ZNV1A5get_xEv
 // CIR:   %[[MEMBER_ADDR:.*]] = cir.get_member %{{.*}}[0] {name = "x"}
 // CIR:   cir.load volatile {{.*}} %[[MEMBER_ADDR]]
 

@@ -467,6 +467,13 @@ fir.type_info @cpinfo : !fir.type<cpinfo{comp_i:!fir.array<10x20xi32>}> componen
   fir.dt_component "component_info" lbs [2, 3]
 }
 
+// CHECK-LABEL: fir.type_info @abstract_dispatch_tbl abstract : !fir.type<abstract_dispatch_tbl{i:i32}> dispatch_table {
+// CHECK: fir.dt_entry "deferred_method", @deferred_impl deferred
+// CHECK: }
+fir.type_info @abstract_dispatch_tbl abstract : !fir.type<abstract_dispatch_tbl{i:i32}> dispatch_table {
+  fir.dt_entry "deferred_method", @deferred_impl deferred
+}
+
 // CHECK-LABEL: func @compare_complex(
 // CHECK-SAME: [[VAL_151:%.*]]: complex<f128>, [[VAL_152:%.*]]: complex<f128>) {
 func.func @compare_complex(%a : complex<f128>, %b : complex<f128>) {
