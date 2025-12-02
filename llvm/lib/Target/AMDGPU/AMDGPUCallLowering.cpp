@@ -415,8 +415,8 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
   MachineFunction &MF = B.getMF();
   const Function &F = MF.getFunction();
   const DataLayout &DL = F.getDataLayout();
-
-  MachinePointerInfo PtrInfo = getKernargSegmentPtrInfo(B.getMF());
+  const SITargetLowering &TLI = *getTLI<SITargetLowering>();
+  MachinePointerInfo PtrInfo = TLI.getKernargSegmentPtrInfo(B.getMF());
 
   LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
 
