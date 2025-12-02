@@ -354,3 +354,50 @@ func.func @scaled_mfma_invalid_k(%arg0 : vector<4xf8E8M0FNU>, %arg1 : vector<32x
   %0 = amdgpu.scaled_mfma 32x32x32 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2 : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<16xf32>
   func.return %0 : vector<16xf32>
 }
+
+// -----
+
+func.func @make_dma_base_invalid_barrier(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8xi32>, %idx: index) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op atomic barrier address must be in LDS.}}
+  amdgpu.make_dma_descriptor %base globalSize [0] globalStride [1] sharedSize [0] atomicBarrier(%barrier[%idx] : memref<8xi32>) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+}
+
+// -----
+
+// CHECK-LABEL: func @make_dma_descriptor_invalid_empty_strides
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
+func.func @make_dma_descriptor_invalid_empty_strides(%base: !amdgpu.tdm_base<i32>) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op strides must not be empty.}}
+  amdgpu.make_dma_descriptor %base globalSize [0] globalStride [] sharedSize [0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @make_dma_descriptor_invalid_innermost_stride
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
+func.func @make_dma_descriptor_invalid_innermost_stride(%base: !amdgpu.tdm_base<i32>) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op strides for the innermost dimension must be 1.}}
+  amdgpu.make_dma_descriptor %base globalSize [2, 2] globalStride [1, 2] sharedSize [0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @make_dma_descriptor_invalid_size_and_stride_sizes
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
+func.func @make_dma_descriptor_invalid_size_and_stride_sizes(%base: !amdgpu.tdm_base<i32>) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op strides and sizes must have same rank.}}
+  amdgpu.make_dma_descriptor %base globalSize [1] globalStride [1, 1] sharedSize [0] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @make_dma_descriptor_invalid_shared_and_global_rank
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_base<i32>)
+func.func @make_dma_descriptor_invalid_shared_and_global_rank(%base: !amdgpu.tdm_base<i32>) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op tensor must have same rank as tile.}}
+  amdgpu.make_dma_descriptor %base globalSize [4, 4] globalStride [1, 1] sharedSize [2] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  func.return
+}

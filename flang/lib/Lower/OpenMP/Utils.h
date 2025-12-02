@@ -167,6 +167,8 @@ void genObjectList(const ObjectList &objects,
 void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
                                      mlir::Location loc);
 
+pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval);
+
 int64_t collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
     lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
