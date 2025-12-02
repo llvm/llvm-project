@@ -3499,6 +3499,9 @@ bool CombinerHelper::matchCombineBuildUnmerge(MachineInstr &MI,
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
   LLT UnmergeSrcTy = MRI.getType(UnmergeSrc);
 
+  if (!UnmergeSrcTy.isVector())
+    return false;
+
   // Ensure we only generate legal instructions post-legalizer
   if (!IsPreLegalize &&
       !isLegal({TargetOpcode::G_CONCAT_VECTORS, {DstTy, UnmergeSrcTy}}))

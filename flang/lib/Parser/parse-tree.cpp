@@ -435,17 +435,36 @@ const OmpClauseList &OmpDirectiveSpecification::Clauses() const {
 }
 
 const DoConstruct *OpenMPLoopConstruct::GetNestedLoop() const {
-  if (auto &body{std::get<Block>(t)}; !body.empty()) {
-    return Unwrap<DoConstruct>(body.front());
-  }
-  return nullptr;
+  auto getFromBlock{[](const Block &body, auto self) -> const DoConstruct * {
+    for (auto &stmt : body) {
+      if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+        return self(std::get<Block>(block->t), self);
+      }
+      if (auto *loop{Unwrap<DoConstruct>(&stmt)}) {
+        return loop;
+      }
+    }
+    return nullptr;
+  }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
 }
 
 const OpenMPLoopConstruct *OpenMPLoopConstruct::GetNestedConstruct() const {
-  if (auto &body{std::get<Block>(t)}; !body.empty()) {
-    return Unwrap<OpenMPLoopConstruct>(body.front());
-  }
-  return nullptr;
+  auto getFromBlock{
+      [](const Block &body, auto self) -> const OpenMPLoopConstruct * {
+        for (auto &stmt : body) {
+          if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+            return self(std::get<Block>(block->t), self);
+          }
+          if (auto *omp{Unwrap<OpenMPLoopConstruct>(&stmt)}) {
+            return omp;
+          }
+        }
+        return nullptr;
+      }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
 }
 
 static bool InitCharBlocksFromStrings(llvm::MutableArrayRef<CharBlock> blocks,

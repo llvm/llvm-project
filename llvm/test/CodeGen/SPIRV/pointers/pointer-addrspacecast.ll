@@ -10,6 +10,7 @@
 ; CHECK-DAG:  OpName %[[#func_chain:]] "chain"
 
 @global = internal addrspace(10) global i32 zeroinitializer
+@G = global i32 0
 
 define void @simple() {
 ; CHECK: %[[#func_simple]] = OpFunction
@@ -17,6 +18,7 @@ entry:
   %ptr = getelementptr i32, ptr addrspace(10) @global, i32 0
   %casted = addrspacecast ptr addrspace(10) %ptr to ptr
   %val = load i32, ptr %casted
+  store i32 %val, ptr @G
 ; CHECK: %{{.*}} = OpLoad %[[#uint]] %[[#var]] Aligned 4
   ret void
 }
@@ -31,6 +33,7 @@ entry:
   %e = addrspacecast ptr addrspace(10) %d to ptr
 
   %val = load i32, ptr %e
+  store i32 %val, ptr @G
 ; CHECK: %{{.*}} = OpLoad %[[#uint]] %[[#var]] Aligned 4
   ret void
 }
