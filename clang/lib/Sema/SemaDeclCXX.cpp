@@ -5670,7 +5670,7 @@ static void DiagnoseBaseOrMemInitializerOrder(
   // Don't check initializers order unless the warning is enabled at the
   // location of at least one initializer.
   bool ShouldCheckOrder = false;
-  for (CXXCtorInitializer *Init : Inits) {
+  for (const CXXCtorInitializer *Init : Inits) {
     if (!SemaRef.Diags.isIgnored(diag::warn_initializer_out_of_order,
                                  Init->getSourceLocation())) {
       ShouldCheckOrder = true;
@@ -13461,15 +13461,13 @@ bool Sema::CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
   for (const NamedDecl *D : Prev) {
     bool DTypename;
     NestedNameSpecifier DQual = std::nullopt;
-    if (const UsingDecl *UD = dyn_cast<UsingDecl>(D)) {
+    if (const auto *UD = dyn_cast<UsingDecl>(D)) {
       DTypename = UD->hasTypename();
       DQual = UD->getQualifier();
-    } else if (const UnresolvedUsingValueDecl *UD =
-                   dyn_cast<UnresolvedUsingValueDecl>(D)) {
+    } else if (const auto *UD = dyn_cast<UnresolvedUsingValueDecl>(D)) {
       DTypename = false;
       DQual = UD->getQualifier();
-    } else if (const UnresolvedUsingTypenameDecl *UD =
-                   dyn_cast<UnresolvedUsingTypenameDecl>(D)) {
+    } else if (const auto *UD = dyn_cast<UnresolvedUsingTypenameDecl>(D)) {
       DTypename = true;
       DQual = UD->getQualifier();
     } else
