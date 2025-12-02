@@ -1325,12 +1325,12 @@ def AMDGPU_MakeDmaDescriptorOp :
 
      ```mlir
       // Example of moving a two-dimensional tensor to LDS.
-      %base = amdgpu.make_dma_base %lds[0, 0], %global[0, 0] : memref<64x64xi32, #gpu.address_space<workgroup>>, memref<64x64xi32, #gpu.address_space<global>> -> !amdgpu.tdm_base<i32>
+      %base = amdgpu.make_dma_base %global[0, 0], %lds[0, 0] : memref<64x64xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
       %descriptor = amdgpu.make_dma_descriptor %base globalSize [64, 64] globalStride [64, 1] sharedSize [64, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
       amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
 
       // Example of moving a two dimension tensor to LDS where padding is applied after every integer.
-      %base = amdgpu.make_dma_base %lds[0, 0], %global[0, 0] : memref<32x32xi32, #gpu.address_space<workgroup>>, memref<64x64xi32, #gpu.address_space<global>> -> !amdgpu.tdm_base<i32>
+      %base = amdgpu.make_dma_base %global[0, 0], %lds[0, 0] : memref<32x32xi32>, memref<64x64xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
       %descriptor = amdgpu.make_dma_descriptor %base globalSize [32, 32] globalStride [32, 1] sharedSize [64, 64] padding(%pad pad_every %pad_every) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
       amdgpu.tensor_load_to_lds %descriptor : !amdgpu.tdm_descriptor
      ```
