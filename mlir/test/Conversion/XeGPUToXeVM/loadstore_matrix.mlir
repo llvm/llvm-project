@@ -33,22 +33,29 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     
     %subview = memref.subview %view[32, 0] [32, 32] [1, 1] : memref<64x32xf32, 3> to memref<32x32xf32, strided<[32, 1], offset: 1024>, 3>
 
+    //CHECK: %[[base_buffer:.*]], %[[offset:.*]], %[[sizes:.*]]:2, %[[strides:.*]]:2 = memref.extract_strided_metadata %{{.*}} : memref<32x32xf32, strided<[32, 1], offset: 1024>, 3> -> memref<f32, 3>, index, index, index, index, index
+    //CHECK: %[[intptr:.*]] = memref.extract_aligned_pointer_as_index %[[base_buffer]] : memref<f32, 3> -> index
+    //CHECK: %[[ptr_i32:.*]] = arith.index_castui %[[intptr]] : index to i32
+    //CHECK: %[[offset_i32:.*]] = arith.index_castui %[[offset]] : index to i32
+    //CHECK: %[[c4_i32:.*]] = arith.constant 4 : i32
+    //CHECK: %[[mul:.*]] = arith.muli %[[offset_i32]], %[[c4_i32]] : i32
+    //CHECK: %[[add:.*]] = arith.addi %[[ptr_i32]], %[[mul]] : i32
+
     %0 = xegpu.create_mem_desc %subview : memref<32x32xf32, strided<[32, 1], offset: 1024>, 3> -> !xegpu.mem_desc<32x32xf32>
 
     //CHECK: %[[TID:.*]] = gpu.thread_id x
     //CHECK: %[[C1:.*]] = arith.constant 1 : index
     //CHECK: %[[MUL1:.*]] = arith.muli %[[TID]], %[[C1]] : index
-    //CHECK: %[[C4:.*]] = arith.constant 4 : i32
-    //CHECK: %[[MUL2:.*]] = arith.muli {{.*}}, %[[C4]] : i32
+     //CHECK: %[[MUL2:.*]] = arith.muli {{.*}}, {{.*}} : i32
     //CHECK: llvm.load {{.*}} : !llvm.ptr<3> -> f32
 
     %tid_x = gpu.thread_id x
- 
+  
     %1 = xegpu.load_matrix %0[%c0, %tid_x]: !xegpu.mem_desc<32x32xf32>, index, index -> f32
 
     //CHECK: llvm.store {{.*}}, {{.*}} : f32, !llvm.ptr<3>
 
-     xegpu.store_matrix %1, %0[%c0, %tid_x]: f32, !xegpu.mem_desc<32x32xf32>, index, index
+    xegpu.store_matrix %1, %0[%c0, %tid_x]: f32, !xegpu.mem_desc<32x32xf32>, index, index
 
     gpu.return %1: f32
   }
@@ -99,8 +106,6 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
   //CHECK-LABEL: load_store_matrix_blocked_nostride
   gpu.func @load_store_matrix_blocked_nostride(%arg0: memref<4096xi8, 3>) -> f16 {
 
-    //CHECK: %[[intptr:.*]] = memref.extract_aligned_pointer_as_index %arg0 : memref<4096xi8, 3> -> index
-    //CHECK: %[[basePtrI64:.*]] = arith.index_castui %[[intptr]] : index to i32
     %0 = xegpu.create_mem_desc %arg0 : memref<4096xi8, 3> -> !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>
     
     //CHECK: %[[tid_x:.*]] = gpu.thread_id x
@@ -178,7 +183,8 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
   //CHECK-LABEL: load_store_matrix_blocked_subgroupblockio
   gpu.func @load_store_matrix_blocked_subgroupblockio(%arg0: memref<4096xi8, 3>) -> vector<8xf16> {
 
-    //CHECK: %[[intptr:.*]] = memref.extract_aligned_pointer_as_index %arg0 : memref<4096xi8, 3> -> index
+    //CHECK: %[[base_buffer:.*]], %[[offset:.*]], %[[sizes:.*]], %[[strides:.*]] = memref.extract_strided_metadata %arg0 : memref<4096xi8, 3> -> memref<i8, 3>, index, index, index
+    //CHECK: %[[intptr:.*]] = memref.extract_aligned_pointer_as_index %[[base_buffer]] : memref<i8, 3> -> index
     //CHECK: %[[basePtrI32:.*]] = arith.index_castui %[[intptr]] : index to i32
      %0 = xegpu.create_mem_desc %arg0 : memref<4096xi8, 3> -> !xegpu.mem_desc<32x64xf16, #xegpu.mem_layout<block = [16, 16]>>
 
@@ -206,7 +212,7 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     //CHECK: %[[linearOffsetI64:.*]] = arith.index_castui %[[linearOffset]] : index to i32
     //CHECK: %[[c2:.*]] = arith.constant 2 : i32
     //CHECK: %[[byteOffset:.*]] = arith.muli %[[linearOffsetI64]], %[[c2]] : i32
-    //CHECK: %[[finalPtr:.*]] = arith.addi %[[basePtrI32]], %[[byteOffset]] : i32
+    //CHECK: %[[finalPtr:.*]] = arith.addi %[[basePtrI32:.*]], %[[byteOffset]] : i32
     //CHECK: %[[ptr:.*]] = llvm.inttoptr %[[finalPtr]] : i32 to !llvm.ptr<3>
     //CHECK: %[[loadedI16:.*]] = xevm.blockload %[[ptr]] : (!llvm.ptr<3>) -> vector<8xi16>
     //CHECK: %[[loaded:.*]] = vector.bitcast %[[loadedI16]] : vector<8xi16> to vector<8xf16>

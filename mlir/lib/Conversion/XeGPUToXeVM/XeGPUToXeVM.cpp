@@ -999,7 +999,7 @@ struct ConvertXeGPUToXeVMPass
     // LLVM type converter puts unrealized casts for the following cases:
     // add materialization casts to handle them.
 
-    // Materialization to convert memref to i64
+    // Materialization to convert memref to i64 or i32 depending on global/SLM
     auto memrefMaterializationCast = [](OpBuilder &builder, Type type,
                                         ValueRange inputs,
                                         Location loc) -> Value {
@@ -1007,11 +1007,44 @@ struct ConvertXeGPUToXeVMPass
         return {};
       auto input = inputs.front();
       if (auto memrefTy = dyn_cast<MemRefType>(input.getType())) {
+        unsigned rank = memrefTy.getRank();
+        Type indexType = builder.getIndexType();
 
-        Value addr =
-            memref::ExtractAlignedPointerAsIndexOp::create(builder, loc, input);
-        return arith::IndexCastUIOp::create(builder, loc, type, addr)
-            .getResult();
+        SmallVector<Type> resultTypes;
+        // Result types: [base_memref, offset, stride0, stride1, ..., strideN-1,
+        // size0, size1, ..., sizeN-1]
+        resultTypes.push_back(MemRefType::get(
+            {}, memrefTy.getElementType(), MemRefLayoutAttrInterface(),
+            memrefTy.getMemorySpace()));  // base memref (unranked)
+        resultTypes.push_back(indexType); // offset
+        for (unsigned i = 0; i < rank; ++i)
+          resultTypes.push_back(indexType); // strides
+        for (unsigned i = 0; i < rank; ++i)
+          resultTypes.push_back(indexType); // sizes
+
+        auto meta = memref::ExtractStridedMetadataOp::create(
+            builder, loc, resultTypes, input);
+
+        auto addr = memref::ExtractAlignedPointerAsIndexOp::create(
+            builder, loc, meta.getBaseBuffer());
+        auto offset = meta.getOffset();
+
+        auto addr_casted =
+            arith::IndexCastUIOp::create(builder, loc, type, addr);
+        auto offset_casted =
+            arith::IndexCastUIOp::create(builder, loc, type, offset);
+
+        // Compute the final address: base address + byte offset
+        auto byte_size = arith::ConstantOp::create(
+            builder, loc, type,
+            builder.getIntegerAttr(type,
+                                   memrefTy.getElementTypeBitWidth() / 8));
+        auto byte_offset =
+            arith::MulIOp::create(builder, loc, offset_casted, byte_size);
+        auto addr_with_offset =
+            arith::AddIOp::create(builder, loc, addr_casted, byte_offset);
+
+        return addr_with_offset.getResult();
       }
       return {};
     };
