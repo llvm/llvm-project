@@ -838,15 +838,29 @@ TEST(ConstantsTest, BlockAddressCAPITest) {
 TEST(ConstantsTest, Float128Test) {
   LLVMTypeRef Ty128 = LLVMFP128TypeInContext(LLVMGetGlobalContext());
   LLVMTypeRef TyPPC128 = LLVMPPCFP128TypeInContext(LLVMGetGlobalContext());
+  LLVMTypeRef TyFloat = LLVMFloatTypeInContext(LLVMGetGlobalContext());
+  LLVMTypeRef TyDouble = LLVMDoubleTypeInContext(LLVMGetGlobalContext());
+  LLVMTypeRef TyHalf = LLVMHalfTypeInContext(LLVMGetGlobalContext());
   LLVMBuilderRef Builder = LLVMCreateBuilder();
   uint64_t n[2] = {0x4000000000000000, 0x0}; //+2
   uint64_t m[2] = {0xC000000000000000, 0x0}; //-2
-  LLVMValueRef val1 = LLVMConstFP128(Ty128, n);
-  LLVMValueRef val2 = LLVMConstFP128(Ty128, m);
+  LLVMValueRef val1 = LLVMConstFPFromBits(Ty128, n);
+  EXPECT_TRUE(val1 != nullptr);
+  LLVMValueRef val2 = LLVMConstFPFromBits(Ty128, m);
+  EXPECT_TRUE(val2 != nullptr);
   LLVMValueRef val3 = LLVMBuildFAdd(Builder, val1, val2, "test");
   EXPECT_TRUE(val3 != nullptr);
-  LLVMValueRef val4 = LLVMConstFP128(TyPPC128, n);
+  LLVMValueRef val4 = LLVMConstFPFromBits(TyPPC128, n);
   EXPECT_TRUE(val4 != nullptr);
+  uint64_t p[1] = {0x0000000040000000}; //+2
+  LLVMValueRef val5 = LLVMConstFPFromBits(TyFloat, p);
+  EXPECT_TRUE(val5 != nullptr);
+  uint64_t q[1] = {0x4000000000000000}; //+2
+  LLVMValueRef val6 = LLVMConstFPFromBits(TyDouble, q);
+  EXPECT_TRUE(val6 != nullptr);
+  uint64_t r[1] = {0x0000000000003c00}; //+1
+  LLVMValueRef val7 = LLVMConstFPFromBits(TyHalf, r);
+  EXPECT_TRUE(val7 != nullptr);
 }
 
 } // end anonymous namespace
