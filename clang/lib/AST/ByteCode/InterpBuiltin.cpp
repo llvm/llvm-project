@@ -3439,7 +3439,7 @@ static bool interp__builtin_ia32_cvtsd2ss_round_mask(InterpState &S,
   const Pointer &Dst = S.Stk.peek<Pointer>();
 
   // Copy all elements except lane 0 (overwritten below) from A to Dst.
-  for (unsigned I = 1; I < NumElems; ++I)
+  for (unsigned I = 1; I != NumElems; ++I)
     Dst.elem<Floating>(I) = A.elem<Floating>(I);
 
   // If mask bit 0 is set, convert element 0 from double to float; otherwise use
@@ -3483,7 +3483,7 @@ static bool interp__builtin_ia32_cvtpd2ps(InterpState &S, CodePtr OpPC,
       PassThrough = S.Stk.pop<Pointer>();
       Src = S.Stk.pop<Pointer>();
     } else {
-      MaskVal = popToAPSInt(S, Call->getArg(2)->getType());
+      MaskVal = popToAPSInt(S, Call->getArg(2));
       PassThrough = S.Stk.pop<Pointer>();
       Src = S.Stk.pop<Pointer>();
     }
@@ -5346,6 +5346,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case X86::BI__builtin_ia32_cvtsd2ss_round_mask:
     return interp__builtin_ia32_cvtsd2ss_round_mask(S, OpPC, Call);
+  
   case X86::BI__builtin_ia32_cvtpd2ps:
   case X86::BI__builtin_ia32_cvtpd2ps256:
   case X86::BI__builtin_ia32_cvtpd2ps_mask:
