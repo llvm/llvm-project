@@ -61,7 +61,7 @@ define void @take_128bit_struct(ptr %ptr, [2 x i64] %in) {
 ; CHECK-LABEL: name: test_split_struct
 ; CHECK: [[LD1:%[0-9]+]]:_(s64) = G_LOAD %0(p0) :: (load (s64) from %ir.ptr)
 ; CHECK: [[CST:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST]](s64)
+; CHECK: [[GEP:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %0, [[CST]](s64)
 ; CHECK: [[LD2:%[0-9]+]]:_(s64) = G_LOAD %3(p0) :: (load (s64) from %ir.ptr + 8)
 
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp

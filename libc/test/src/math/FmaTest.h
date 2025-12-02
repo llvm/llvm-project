@@ -45,13 +45,11 @@ class FmaTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   static constexpr InStorageType IN_MIN_SUBNORMAL_U =
       InFPBits::min_subnormal().uintval();
 
-  OutConstants out;
-  InConstants in;
-
   InStorageType get_random_bit_pattern() {
     InStorageType bits{0};
     for (InStorageType i = 0; i < sizeof(InStorageType) / 2; ++i) {
-      bits = (bits << 2) + static_cast<uint16_t>(LIBC_NAMESPACE::rand());
+      bits = static_cast<InStorageType>(
+          (bits << 2) + static_cast<uint16_t>(LIBC_NAMESPACE::rand()));
     }
     return bits;
   }
@@ -60,9 +58,10 @@ public:
   using FmaFunc = OutType (*)(InType, InType, InType);
 
   void test_subnormal_range(FmaFunc func) {
-    constexpr InStorageType COUNT = 100'001;
-    constexpr InStorageType STEP =
+    constexpr InStorageType COUNT = 10'001;
+    constexpr InStorageType RAW_STEP =
         (IN_MAX_SUBNORMAL_U - IN_MIN_SUBNORMAL_U) / COUNT;
+    constexpr InStorageType STEP = (RAW_STEP == 0 ? 1 : RAW_STEP);
     LIBC_NAMESPACE::srand(1);
     for (InStorageType v = IN_MIN_SUBNORMAL_U, w = IN_MAX_SUBNORMAL_U;
          v <= IN_MAX_SUBNORMAL_U && w >= IN_MIN_SUBNORMAL_U;
@@ -77,8 +76,10 @@ public:
   }
 
   void test_normal_range(FmaFunc func) {
-    constexpr InStorageType COUNT = 100'001;
-    constexpr InStorageType STEP = (IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT;
+    constexpr InStorageType COUNT = 10'001;
+    constexpr InStorageType RAW_STEP =
+        (IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT;
+    constexpr InStorageType STEP = (RAW_STEP == 0 ? 1 : RAW_STEP);
     LIBC_NAMESPACE::srand(1);
     for (InStorageType v = IN_MIN_NORMAL_U, w = IN_MAX_NORMAL_U;
          v <= IN_MAX_NORMAL_U && w >= IN_MIN_NORMAL_U; v += STEP, w -= STEP) {
@@ -91,5 +92,15 @@ public:
     }
   }
 };
+
+#define LIST_FMA_TESTS(T, func)                                                \
+  using LlvmLibcFmaTest = FmaTestTemplate<T>;                                  \
+  TEST_F(LlvmLibcFmaTest, SubnormalRange) { test_subnormal_range(&func); }     \
+  TEST_F(LlvmLibcFmaTest, NormalRange) { test_normal_range(&func); }
+
+#define LIST_NARROWING_FMA_TESTS(OutType, InType, func)                        \
+  using LlvmLibcFmaTest = FmaTestTemplate<OutType, InType>;                    \
+  TEST_F(LlvmLibcFmaTest, SubnormalRange) { test_subnormal_range(&func); }     \
+  TEST_F(LlvmLibcFmaTest, NormalRange) { test_normal_range(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_FMATEST_H

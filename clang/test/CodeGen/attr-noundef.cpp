@@ -27,7 +27,7 @@ struct NoCopy {
 NoCopy ret_nocopy() { return {}; }
 void pass_nocopy(NoCopy e) {}
 // CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
-// CHECK: [[DEF]] void @{{.*}}pass_nocopy{{.*}}(ptr noundef %
+// CHECK: [[DEF]] void @{{.*}}pass_nocopy{{.*}}(ptr dead_on_return noundef %
 
 struct Huge {
   int a[1024];
@@ -35,7 +35,8 @@ struct Huge {
 Huge ret_huge() { return {}; }
 void pass_huge(Huge h) {}
 // CHECK: [[DEF]] void @{{.*}}ret_huge{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
-// CHECK: [[DEF]] void @{{.*}}pass_huge{{.*}}(ptr noundef
+// CHECK-INTEL: [[DEF]] void @{{.*}}pass_huge{{.*}}(ptr noundef
+// CHECK-AARCH: [[DEF]] void @{{.*}}pass_huge{{.*}}(ptr dead_on_return noundef
 } // namespace check_structs
 
 //************ Passing unions by value
@@ -59,7 +60,7 @@ union NoCopy {
 NoCopy ret_nocopy() { return {}; }
 void pass_nocopy(NoCopy e) {}
 // CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
-// CHECK: [[DEF]] void @{{.*}}pass_nocopy{{.*}}(ptr noundef %
+// CHECK: [[DEF]] void @{{.*}}pass_nocopy{{.*}}(ptr dead_on_return noundef %
 } // namespace check_unions
 
 //************ Passing `this` pointers
@@ -157,11 +158,10 @@ void pass_large_BitInt(_BitInt(127) e) {
 // CHECK: [[DEF]] ptr @{{.*}}ret_npt{{.*}}()
 // CHECK: [[DEF]] void @{{.*}}pass_npt{{.*}}(ptr %
 
-// TODO: for now, ExtInt is only noundef if it is sign/zero-extended
 // CHECK-INTEL: [[DEF]] noundef signext i3 @{{.*}}ret_BitInt{{.*}}()
-// CHECK-AARCH: [[DEF]] i3 @{{.*}}ret_BitInt{{.*}}()
+// CHECK-AARCH: [[DEF]] noundef i3 @{{.*}}ret_BitInt{{.*}}()
 // CHECK-INTEL: [[DEF]] void @{{.*}}pass_BitInt{{.*}}(i3 noundef signext %
-// CHECK-AARCH: [[DEF]] void @{{.*}}pass_BitInt{{.*}}(i3 %
-// CHECK-INTEL: [[DEF]] void @{{.*}}pass_large_BitInt{{.*}}(i64 %{{.*}}, i64 %
-// CHECK-AARCH: [[DEF]] void @{{.*}}pass_large_BitInt{{.*}}(i127 %
+// CHECK-AARCH: [[DEF]] void @{{.*}}pass_BitInt{{.*}}(i3 noundef %
+// CHECK-INTEL: [[DEF]] void @{{.*}}pass_large_BitInt{{.*}}(i64 noundef %{{.*}}, i64 noundef %
+// CHECK-AARCH: [[DEF]] void @{{.*}}pass_large_BitInt{{.*}}(i127 noundef %
 } // namespace check_exotic

@@ -546,3 +546,40 @@ void testAlsoNonMoveable() {
 }
 
 } // namespace issue_62550
+
+namespace GH111450 {
+struct Status;
+
+struct Error {
+    Error(const Status& S);
+};
+
+struct Result {
+  Error E;
+  Result(Status&& S) : E(std::move(S)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: passing result of std::move() as a const reference argument; no move will actually happen [performance-move-const-arg]
+};
+} // namespace GH111450
+
+namespace GH126515 {
+
+struct TernaryMoveCall {
+TernaryMoveCall();
+TernaryMoveCall(const TernaryMoveCall&);
+TernaryMoveCall operator=(const TernaryMoveCall&);
+
+void TernaryCheckTriviallyCopyable(const char * c) {}
+
+void testTernaryMove() {
+  TernaryMoveCall t1;
+  TernaryMoveCall other(false ? TernaryMoveCall() : TernaryMoveCall(std::move(t1)) );
+  // CHECK-MESSAGES: :[[@LINE-1]]:69: warning: passing result of std::move() as a const reference argument; no move will actually happen [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-11]]:8: note: 'TernaryMoveCall' is not move assignable/constructible
+
+  const char* a = "a";
+  TernaryCheckTriviallyCopyable(true ? std::move(a) : "" );
+  // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: std::move of the variable 'a' of the trivially-copyable type 'const char *' has no effect; remove std::move() [performance-move-const-arg]
+}
+
+};
+} // namespace GH126515

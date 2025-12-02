@@ -14,10 +14,12 @@
 
 #include "llvm/Transforms/Scalar/PartiallyInlineLibCalls.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Scalar.h"
@@ -26,6 +28,10 @@
 
 using namespace llvm;
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
+
 #define DEBUG_TYPE "partially-inline-libcalls"
 
 DEBUG_COUNTER(PILCounter, "partially-inline-libcalls-transform",
@@ -33,7 +39,8 @@ DEBUG_COUNTER(PILCounter, "partially-inline-libcalls-transform",
 
 static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
                          BasicBlock &CurrBB, Function::iterator &BB,
-                         const TargetTransformInfo *TTI, DomTreeUpdater *DTU) {
+                         const TargetTransformInfo *TTI, DomTreeUpdater *DTU,
+                         OptimizationRemarkEmitter *ORE) {
   // There is no need to change the IR, since backend will emit sqrt
   // instruction if the call has already been marked read-only.
   if (Call->onlyReadsMemory())
@@ -92,7 +99,14 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
                     : Builder.CreateFCmpOGE(Call->getOperand(0),
                                             ConstantFP::get(Ty, 0.0));
   CurrBBTerm->setCondition(FCmp);
-
+  if (!ProfcheckDisableMetadataFixes &&
+      CurrBBTerm->getFunction()->getEntryCount()) {
+    // Presume the quick path - where we don't call the library call - is the
+    // frequent one
+    MDBuilder MDB(CurrBBTerm->getContext());
+    CurrBBTerm->setMetadata(LLVMContext::MD_prof,
+                            MDB.createLikelyBranchWeights());
+  }
   // Add phi operands.
   Phi->addIncoming(Call, &CurrBB);
   Phi->addIncoming(LibCall, LibCallBB);
@@ -103,7 +117,8 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
 
 static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
                                        const TargetTransformInfo *TTI,
-                                       DominatorTree *DT) {
+                                       DominatorTree *DT,
+                                       OptimizationRemarkEmitter *ORE) {
   std::optional<DomTreeUpdater> DTU;
   if (DT)
     DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
@@ -140,7 +155,7 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
       case LibFunc_sqrt:
         if (TTI->haveFastSqrt(Call->getType()) &&
             optimizeSQRT(Call, CalledFunc, *CurrBB, BB, TTI,
-                         DTU ? &*DTU : nullptr))
+                         DTU ? &*DTU : nullptr, ORE))
           break;
         continue;
       default:
@@ -160,7 +175,8 @@ PartiallyInlineLibCallsPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
-  if (!runPartiallyInlineLibCalls(F, &TLI, &TTI, DT))
+  auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  if (!runPartiallyInlineLibCalls(F, &TLI, &TTI, DT, &ORE))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
@@ -181,6 +197,7 @@ public:
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
@@ -195,7 +212,8 @@ public:
     DominatorTree *DT = nullptr;
     if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
       DT = &DTWP->getDomTree();
-    return runPartiallyInlineLibCalls(F, TLI, TTI, DT);
+    auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+    return runPartiallyInlineLibCalls(F, TLI, TTI, DT, ORE);
   }
 };
 }
@@ -208,6 +226,7 @@ INITIALIZE_PASS_BEGIN(PartiallyInlineLibCallsLegacyPass,
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(PartiallyInlineLibCallsLegacyPass,
                     "partially-inline-libcalls",
                     "Partially inline calls to library functions", false, false)

@@ -37,10 +37,7 @@ public:
   void Enter(const parser::DataImpliedDo &);
   void Leave(const parser::DataImpliedDo &);
   void Leave(const parser::DataStmtSet &);
-  // These cases are for legacy DATA-like /initializations/
-  void Leave(const parser::ComponentDecl &);
   void Leave(const parser::EntityDecl &);
-
   // After all DATA statements have been processed, converts their
   // initializations into per-symbol static initializers.
   void CompileDataInitializationsIntoInitializers();

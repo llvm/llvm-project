@@ -511,3 +511,33 @@ constexpr bool9 bad_short_to_bool9 = __builtin_bit_cast(bool9, static_cast<unsig
 constexpr bool17 bad_int_to_bool17 = __builtin_bit_cast(bool17, 0x0001CAFEU);
 
 }
+
+namespace test_complex {
+  constexpr _Complex unsigned test_int_complex = { 0x0C05FEFE, 0xCAFEBABE };
+  static_assert(round_trip<_Complex unsigned>(0xCAFEBABE0C05FEFEULL), "");
+  static_assert(bit_cast<unsigned long long>(test_int_complex) == (LITTLE_END
+                                                                   ? 0xCAFEBABE0C05FEFE
+                                                                   : 0x0C05FEFECAFEBABE), "");
+  static_assert(sizeof(double) == 2 * sizeof(float));
+  struct TwoFloats { float A; float B; };
+  constexpr _Complex float test_float_complex = {1.0f, 2.0f};
+  constexpr TwoFloats TF = __builtin_bit_cast(TwoFloats, test_float_complex);
+  static_assert(TF.A == 1.0f && TF.B == 2.0f);
+
+  constexpr double D = __builtin_bit_cast(double, test_float_complex);
+  constexpr int M = __builtin_bit_cast(int, test_int_complex); // expected-error {{size of '__builtin_bit_cast' source type 'const _Complex unsigned int' does not match destination type 'int' (8 vs 4 bytes)}}
+}
+
+namespace InvalidBaseClass {
+  class F {
+  public:
+    char c;
+  };
+
+  class InBetween : public F{};
+  class E : public InBetween {
+  public:
+    constexpr E() :  F{3} {} // expected-error {{not a direct or virtual base}}
+  };
+  static_assert(__builtin_bit_cast(char, E()) == 0); // expected-error {{not an integral constant expression}}
+}

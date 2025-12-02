@@ -34,6 +34,16 @@ namespace linalg {
 // Utilities for inferring various semantics properties of Linalg ops.
 //===----------------------------------------------------------------------===//
 
+/// Compute inverse permutation for the destination tensor (i.e. in the packed
+/// domain).
+SmallVector<int64_t> getPackInverseDestPerm(linalg::PackOp packOp,
+                                            PackingMetadata &metadata);
+
+/// Compute inverse permutation for the source tensor (i.e. in the packed
+/// domain).
+SmallVector<int64_t> getUnPackInverseSrcPerm(linalg::UnPackOp,
+                                             PackingMetadata &metadata);
+
 //===----------------------------------------------------------------------===//
 // General utilities
 //===----------------------------------------------------------------------===//
@@ -53,12 +63,14 @@ bool isParallelIterator(utils::IteratorType iteratorType);
 /// Check if iterator type  has "reduction" semantics.
 bool isReductionIterator(utils::IteratorType iteratorType);
 
-/// Create a tensor::PadOp that pads `source` to the size of the statically
-/// sized `type` whose static sizes are assumed to be greater than the dynamic
-/// `source` size. The padding introduces trailing `pad` values until the
-/// target size is met. If `source` is defined by one or more LinalgOps that
-/// have been padded with the same value and sizes, return their padded result
-/// instead of creating a tensor::PadOp.
+/// Create a tensor::PadOp that pads `source` to the shape of `type` whose sizes
+/// are assumed to be greater than the dynamic `source` size. If `typeDynDims`
+/// is specified, then it must contain the sizes of all the dynamic dimensions
+/// in order of appearance in `type`, otherwise the function will pad those
+/// values to `0`. The padding introduces trailing `pad` values until the target
+/// size is met. If `source` is defined by one or more LinalgOps that have been
+/// padded with the same  value and sizes, return their padded result instead of
+/// creating a tensor::PadOp.
 ///
 /// Example:
 /// ```
@@ -73,13 +85,8 @@ bool isReductionIterator(utils::IteratorType iteratorType);
 /// %4 = tensor.pad %3 low[0, 0] high[...] { tensor.yield %other_cst }
 /// ```
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
-                            Value source, Value pad, bool nofold);
-
-/// Returns a GenericOp that transposes `inputTensor` into `outputTensor`
-/// using `transposeVector` to permute the `inputTensor` dimensions.
-GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
-                          Value outputTensor,
-                          ArrayRef<int64_t> transposeVector);
+                            Value source, Value padding, bool nofold,
+                            ValueRange typeDynDims = {});
 
 /// Returns GenericOp that copies an n-D memref. Unlike the current
 /// implementation of memref::CopyOp, this op can further tile, lower to loops
@@ -94,6 +101,17 @@ GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to);
 /// point (and potentially cannot be handled).
 std::optional<SmallVector<ReassociationIndices>>
 getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
+
+//===----------------------------------------------------------------------===//
+// Convolution matcher utility
+//===----------------------------------------------------------------------===//
+
+/// Given a linalg `op` this function returns true if it is a convolution op of
+/// type `ConvOpTy` and populates `dilations` and `strides` with values inferred
+/// from the indexing maps.
+template <typename ConvOpTy>
+bool isaConvolutionOpOfType(LinalgOp op, SmallVector<int64_t> *dilations,
+                            SmallVector<int64_t> *strides);
 
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
@@ -178,11 +196,12 @@ computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
 /// at offsets `lbs` and with sizes `subShapeSizes`. `omitPartialTileCheck`
 /// controls whether to omit the partial/boundary tile condition check in
 /// cases where we statically know that it is unnecessary.
-Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
-                     ArrayRef<OpFoldResult> tileSizes, AffineMap map,
-                     ArrayRef<OpFoldResult> lbs, ArrayRef<OpFoldResult> ubs,
-                     ArrayRef<OpFoldResult> subShapeSizes,
-                     bool omitPartialTileCheck);
+Operation *makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
+                          ArrayRef<OpFoldResult> tileSizes, AffineMap map,
+                          ArrayRef<OpFoldResult> lbs,
+                          ArrayRef<OpFoldResult> ubs,
+                          ArrayRef<OpFoldResult> subShapeSizes,
+                          bool omitPartialTileCheck);
 
 /// Creates extract_slice/subview ops for all `valuesToTile` of the given
 /// `linalgOp` with `builder`, assuming `linalgOp` is being fused into a loop
@@ -219,7 +238,6 @@ struct FusionInfo {
   LinalgOp fusedProducer;
 };
 
-/// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
 /// transformation and thus requires the `consumerOpOperand` to be a
 /// `extract_slice` op (generally obtained by applying the tiling
@@ -227,7 +245,6 @@ struct FusionInfo {
 FailureOr<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
                                            OpOperand &consumerOpOperand);
 
-/// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
 /// transformation and thus requires the `consumerOpOperand` to be a
 /// `extract_slice` op (generally obtained by applying the tiling

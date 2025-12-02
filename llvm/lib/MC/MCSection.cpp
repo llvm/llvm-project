@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSection.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -20,13 +18,10 @@
 
 using namespace llvm;
 
-MCSection::MCSection(SectionVariant V, StringRef Name, SectionKind K,
-                     MCSymbol *Begin)
-    : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
-      HasLayout(false), IsRegistered(false), DummyFragment(this), Name(Name),
-      Variant(V), Kind(K) {
-  // The initial subsection number is 0. Create a fragment list.
-  CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
+MCSection::MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin)
+    : Begin(Begin), HasInstructions(false), IsRegistered(false), IsText(IsText),
+      IsBss(IsBss), Name(Name) {
+  DummyFragment.setParent(this);
 }
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
@@ -37,91 +32,72 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
 
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
 
-MCSection::~MCSection() {
-  for (auto &[_, Chain] : Subsections) {
-    for (MCFragment *X = Chain.Head, *Y; X; X = Y) {
-      Y = X->Next;
-      X->destroy();
-    }
-  }
-}
-
-void MCSection::setBundleLockState(BundleLockStateType NewState) {
-  if (NewState == NotBundleLocked) {
-    if (BundleLockNestingDepth == 0) {
-      report_fatal_error("Mismatched bundle_lock/unlock directives");
-    }
-    if (--BundleLockNestingDepth == 0) {
-      BundleLockState = NotBundleLocked;
-    }
-    return;
-  }
-
-  // If any of the directives is an align_to_end directive, the whole nested
-  // group is align_to_end. So don't downgrade from align_to_end to just locked.
-  if (BundleLockState != BundleLockedAlignToEnd) {
-    BundleLockState = NewState;
-  }
-  ++BundleLockNestingDepth;
-}
-
-void MCSection::switchSubsection(unsigned Subsection) {
-  size_t I = 0, E = Subsections.size();
-  while (I != E && Subsections[I].first < Subsection)
-    ++I;
-  // If the subsection number is not in the sorted Subsections list, create a
-  // new fragment list.
-  if (I == E || Subsections[I].first != Subsection)
-    Subsections.insert(Subsections.begin() + I, {Subsection, FragList{}});
-  CurFragList = &Subsections[I].second;
-}
-
-StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
-
-void MCSection::addPendingLabel(MCSymbol *label, unsigned Subsection) {
-  PendingLabels.push_back(PendingLabel(label, Subsection));
-}
-
-void MCSection::flushPendingLabels(MCFragment *F, unsigned Subsection) {
-  // Set the fragment and fragment offset for all pending symbols in the
-  // specified Subsection, and remove those symbols from the pending list.
-  for (auto It = PendingLabels.begin(); It != PendingLabels.end(); ++It) {
-    PendingLabel& Label = *It;
-    if (Label.Subsection == Subsection) {
-      Label.Sym->setFragment(F);
-      assert(Label.Sym->getOffset() == 0);
-      PendingLabels.erase(It--);
-    }
-  }
-}
-
-void MCSection::flushPendingLabels() {
-  // Make sure all remaining pending labels point to data fragments, by
-  // creating new empty data fragments for each Subsection with labels pending.
-  while (!PendingLabels.empty()) {
-    PendingLabel& Label = PendingLabels[0];
-    switchSubsection(Label.Subsection);
-    MCFragment *F = new MCDataFragment();
-    addFragment(*F);
-    F->setParent(this);
-    flushPendingLabels(F, Label.Subsection);
-  }
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MCSection::dump() const {
+LLVM_DUMP_METHOD void MCSection::dump(
+    DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>> *FragToSyms)
+    const {
   raw_ostream &OS = errs();
 
-  OS << "<MCSection Name:" << getName();
-  OS << " Fragments:[\n      ";
-  bool First = true;
+  OS << "MCSection Name:" << getName();
+  if (isLinkerRelaxable())
+    OS << " FirstLinkerRelaxable:" << firstLinkerRelaxable();
   for (auto &F : *this) {
-    if (First)
-      First = false;
-    else
-      OS << ",\n      ";
+    OS << '\n';
     F.dump();
+    if (!FragToSyms)
+      continue;
+    auto It = FragToSyms->find(&F);
+    if (It == FragToSyms->end())
+      continue;
+    for (auto *Sym : It->second) {
+      OS << "\n  Symbol @" << Sym->getOffset() << ' ' << Sym->getName();
+      if (Sym->isTemporary())
+        OS << " Temporary";
+    }
   }
-  OS << "]>";
 }
 #endif
+
+void MCFragment::setVarContents(ArrayRef<char> Contents) {
+  auto &S = getParent()->ContentStorage;
+  if (VarContentStart + Contents.size() > VarContentEnd) {
+    VarContentStart = S.size();
+    S.resize_for_overwrite(S.size() + Contents.size());
+  }
+  VarContentEnd = VarContentStart + Contents.size();
+  llvm::copy(Contents, S.begin() + VarContentStart);
+}
+
+void MCFragment::addFixup(MCFixup Fixup) { appendFixups({Fixup}); }
+
+void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
+  auto &S = getParent()->FixupStorage;
+  if (LLVM_UNLIKELY(FixupEnd != S.size())) {
+    // Move the elements to the end. Reserve space to avoid invalidating
+    // S.begin()+I for `append`.
+    auto Size = FixupEnd - FixupStart;
+    auto I = std::exchange(FixupStart, S.size());
+    S.reserve(S.size() + Size);
+    S.append(S.begin() + I, S.begin() + I + Size);
+  }
+  S.append(Fixups.begin(), Fixups.end());
+  FixupEnd = S.size();
+}
+
+void MCFragment::setVarFixups(ArrayRef<MCFixup> Fixups) {
+  assert(Fixups.size() < 256 &&
+         "variable-size tail cannot have more than 256 fixups");
+  auto &S = getParent()->FixupStorage;
+  if (Fixups.size() > VarFixupSize) {
+    VarFixupStart = S.size();
+    S.resize_for_overwrite(S.size() + Fixups.size());
+  }
+  VarFixupSize = Fixups.size();
+  // Source fixup offsets are relative to the variable part's start. Add the
+  // fixed part size to make them relative to the fixed part's start.
+  std::transform(Fixups.begin(), Fixups.end(), S.begin() + VarFixupStart,
+                 [Fixed = getFixedSize()](MCFixup F) {
+                   F.setOffset(Fixed + F.getOffset());
+                   return F;
+                 });
+}

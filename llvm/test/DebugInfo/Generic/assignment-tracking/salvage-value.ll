@@ -1,7 +1,5 @@
 ; RUN: opt %s -S -o - -passes=instcombine \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
-; RUN: opt --try-experimental-debuginfo-iterators %s -S -o - -passes=instcombine \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
 ;; Hand-written (the debug info doesn't necessarily make sense and isn't fully
 ;; formed). Test salvaging a dbg.assign value and address. Checks and comments
@@ -32,8 +30,8 @@ entry:
   %arrayidx2 = getelementptr inbounds i32, ptr %p, i32 %x
   call void @llvm.dbg.assign(metadata i32 %x, metadata !34, metadata !DIExpression(), metadata !19, metadata ptr %arrayidx2, metadata !DIExpression()), !dbg !16
 ;; Variadic DIExpressions for dbg.assign address component is not supported -
-;; set undef.
-; CHECK-NEXT: #dbg_assign(i32 %x,{{.+}}, !DIExpression(),{{.+}}, ptr undef, !DIExpression(),
+;; set poison.
+; CHECK-NEXT: #dbg_assign(i32 %x,{{.+}}, !DIExpression(),{{.+}}, ptr poison, !DIExpression(),
 
   ret void
 }

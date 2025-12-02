@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_ISATTY_H
 #define LLVM_LIBC_SRC_UNISTD_ISATTY_H
 
-#include <unistd.h>
+#include "hdr/unistd_macros.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int isatty(int fd);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_ISATTY_H

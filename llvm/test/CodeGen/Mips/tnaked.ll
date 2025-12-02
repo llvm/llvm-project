@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel < %s -verify-machineinstrs | FileCheck %s
+; RUN: llc -mtriple=mipsel < %s -verify-machineinstrs | FileCheck %s
 
 
 define void @tnaked() #0 {
@@ -25,5 +25,5 @@ entry:
 ; CHECK:	.fmask	0x00000000,0
 ; CHECK: 	addiu	$sp, $sp, -8
 
-attributes #0 = { naked noinline nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { naked noinline nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }

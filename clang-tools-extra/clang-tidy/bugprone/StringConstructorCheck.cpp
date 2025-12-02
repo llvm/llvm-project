@@ -1,4 +1,4 @@
-//===--- StringConstructorCheck.cpp - clang-tidy---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,23 +20,22 @@ namespace {
 AST_MATCHER_P(IntegerLiteral, isBiggerThan, unsigned, N) {
   return Node.getValue().getZExtValue() > N;
 }
+} // namespace
 
-const char DefaultStringNames[] =
+static const char DefaultStringNames[] =
     "::std::basic_string;::std::basic_string_view";
 
 static std::vector<StringRef>
 removeNamespaces(const std::vector<StringRef> &Names) {
   std::vector<StringRef> Result;
   Result.reserve(Names.size());
-  for (StringRef Name : Names) {
-    std::string::size_type ColonPos = Name.rfind(':');
+  for (const StringRef Name : Names) {
+    const std::string::size_type ColonPos = Name.rfind(':');
     Result.push_back(
         Name.substr(ColonPos == std::string::npos ? 0 : ColonPos + 1));
   }
   return Result;
 }
-
-} // namespace
 
 StringConstructorCheck::StringConstructorCheck(StringRef Name,
                                                ClangTidyContext *Context)
@@ -82,7 +81,7 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxConstructExpr(
           hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
-          hasArgument(0, hasType(qualType(isInteger()))),
+          argumentCountIs(2), hasArgument(0, hasType(qualType(isInteger()))),
           hasArgument(1, hasType(qualType(isInteger()))),
           anyOf(
               // Detect the expression: string('x', 40);
@@ -102,7 +101,7 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
       cxxConstructExpr(
           hasDeclaration(cxxConstructorDecl(ofClass(
               cxxRecordDecl(hasAnyName(removeNamespaces(StringNames)))))),
-          hasArgument(0, hasType(CharPtrType)),
+          argumentCountIs(2), hasArgument(0, hasType(CharPtrType)),
           hasArgument(1, hasType(isInteger())),
           anyOf(
               // Detect the expression: string("...", 0);
@@ -114,7 +113,34 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
               // Detect the expression: string("lit", 5)
               allOf(hasArgument(0, ConstStrLiteral.bind("literal-with-length")),
                     hasArgument(1, ignoringParenImpCasts(
-                                       integerLiteral().bind("int"))))))
+                                       integerLiteral().bind("length"))))))
+          .bind("constructor"),
+      this);
+
+  // Check the literal string constructor with char pointer, start position and
+  // length parameters. [i.e. string (const char* s, size_t pos, size_t count);]
+  Finder->addMatcher(
+      cxxConstructExpr(
+          hasDeclaration(cxxConstructorDecl(ofClass(
+              cxxRecordDecl(hasAnyName(removeNamespaces(StringNames)))))),
+          argumentCountIs(3), hasArgument(0, hasType(CharPtrType)),
+          hasArgument(1, hasType(qualType(isInteger()))),
+          hasArgument(2, hasType(qualType(isInteger()))),
+          anyOf(
+              // Detect the expression: string("...", 1, 0);
+              hasArgument(2, ZeroExpr.bind("empty-string")),
+              // Detect the expression: string("...", -4, 1);
+              hasArgument(1, NegativeExpr.bind("negative-pos")),
+              // Detect the expression: string("...", 0, -4);
+              hasArgument(2, NegativeExpr.bind("negative-length")),
+              // Detect the expression: string("lit", 0, 0x1234567);
+              hasArgument(2, LargeLengthExpr.bind("large-length")),
+              // Detect the expression: string("lit", 1, 5)
+              allOf(hasArgument(0, ConstStrLiteral.bind("literal-with-length")),
+                    hasArgument(
+                        1, ignoringParenImpCasts(integerLiteral().bind("pos"))),
+                    hasArgument(2, ignoringParenImpCasts(
+                                       integerLiteral().bind("length"))))))
           .bind("constructor"),
       this);
 
@@ -142,7 +168,7 @@ void StringConstructorCheck::check(const MatchFinder::MatchResult &Result) {
   const ASTContext &Ctx = *Result.Context;
   const auto *E = Result.Nodes.getNodeAs<CXXConstructExpr>("constructor");
   assert(E && "missing constructor expression");
-  SourceLocation Loc = E->getBeginLoc();
+  const SourceLocation Loc = E->getBeginLoc();
 
   if (Result.Nodes.getNodeAs<Expr>("swapped-parameter")) {
     const Expr *P0 = E->getArg(0);
@@ -155,14 +181,27 @@ void StringConstructorCheck::check(const MatchFinder::MatchResult &Result) {
     diag(Loc, "constructor creating an empty string");
   } else if (Result.Nodes.getNodeAs<Expr>("negative-length")) {
     diag(Loc, "negative value used as length parameter");
+  } else if (Result.Nodes.getNodeAs<Expr>("negative-pos")) {
+    diag(Loc, "negative value used as position of the "
+              "first character parameter");
   } else if (Result.Nodes.getNodeAs<Expr>("large-length")) {
     if (WarnOnLargeLength)
       diag(Loc, "suspicious large length parameter");
   } else if (Result.Nodes.getNodeAs<Expr>("literal-with-length")) {
     const auto *Str = Result.Nodes.getNodeAs<StringLiteral>("str");
-    const auto *Lit = Result.Nodes.getNodeAs<IntegerLiteral>("int");
-    if (Lit->getValue().ugt(Str->getLength())) {
+    const auto *Length = Result.Nodes.getNodeAs<IntegerLiteral>("length");
+    if (Length->getValue().ugt(Str->getLength())) {
       diag(Loc, "length is bigger than string literal size");
+      return;
+    }
+    if (const auto *Pos = Result.Nodes.getNodeAs<IntegerLiteral>("pos")) {
+      if (Pos->getValue().uge(Str->getLength())) {
+        diag(Loc, "position of the first character parameter is bigger than "
+                  "string literal character range");
+      } else if (Length->getValue().ugt(
+                     (Str->getLength() - Pos->getValue()).getZExtValue())) {
+        diag(Loc, "length is bigger than remaining string literal size");
+      }
     }
   } else if (const auto *Ptr = Result.Nodes.getNodeAs<Expr>("from-ptr")) {
     Expr::EvalResult ConstPtr;

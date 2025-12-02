@@ -9,14 +9,11 @@
 #include "TestBase.h"
 #include "lldb/Host/Host.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gtest/gtest.h"
 
 using namespace llgs_tests;
 using namespace lldb_private;
 using namespace llvm;
-
-#ifdef SendMessage
-#undef SendMessage
-#endif
 
 // Disable this test on Windows as it appears to have a race condition
 // that causes lldb-server not to exit after the inferior hangs up.
@@ -77,4 +74,17 @@ TEST_F(TestBase, LLGS_TEST(vAttachRichError)) {
           &ErrorInfoBase::message,
           testing::StartsWith(
               "cannot attach to process 1 when another process with pid"))));
+}
+
+TEST_F(TestBase, LLGS_TEST(qStructuredDataPlugins)) {
+  auto ClientOr = TestClient::launchCustom(
+      getLogFileName(),
+      /* disable_stdio */ true, {}, {getInferiorPath("environment_check")});
+  ASSERT_THAT_EXPECTED(ClientOr, Succeeded());
+  auto &Client = **ClientOr;
+  std::string response_string;
+  ASSERT_THAT_ERROR(
+      Client.SendMessage("qStructuredDataPlugins", response_string),
+      Succeeded());
+  EXPECT_STREQ("[]", response_string.c_str());
 }

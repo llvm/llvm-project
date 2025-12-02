@@ -61,12 +61,12 @@ void CCState::HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
 /// Mark a register and all of its aliases as allocated.
 void CCState::MarkAllocated(MCPhysReg Reg) {
   for (MCRegAliasIterator AI(Reg, &TRI, true); AI.isValid(); ++AI)
-    UsedRegs[*AI / 32] |= 1 << (*AI & 31);
+    UsedRegs[(*AI).id() / 32] |= 1 << ((*AI).id() & 31);
 }
 
 void CCState::MarkUnallocated(MCPhysReg Reg) {
   for (MCRegAliasIterator AI(Reg, &TRI, true); AI.isValid(); ++AI)
-    UsedRegs[*AI / 32] &= ~(1 << (*AI & 31));
+    UsedRegs[(*AI).id() / 32] &= ~(1 << ((*AI).id() & 31));
 }
 
 bool CCState::IsShadowAllocatedReg(MCRegister Reg) const {
@@ -89,7 +89,7 @@ CCState::AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
   for (unsigned i = 0; i != NumArgs; ++i) {
     MVT ArgVT = Ins[i].VT;
     ISD::ArgFlagsTy ArgFlags = Ins[i].Flags;
-    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, *this))
+    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, Ins[i].OrigTy, *this))
       report_fatal_error("unable to allocate function argument #" + Twine(i));
   }
 }
@@ -102,7 +102,7 @@ bool CCState::CheckReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     MVT VT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-    if (Fn(i, VT, VT, CCValAssign::Full, ArgFlags, *this))
+    if (Fn(i, VT, VT, CCValAssign::Full, ArgFlags, Outs[i].OrigTy, *this))
       return false;
   }
   return true;
@@ -116,7 +116,7 @@ void CCState::AnalyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     MVT VT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-    if (Fn(i, VT, VT, CCValAssign::Full, ArgFlags, *this))
+    if (Fn(i, VT, VT, CCValAssign::Full, ArgFlags, Outs[i].OrigTy, *this))
       report_fatal_error("unable to allocate function return #" + Twine(i));
   }
 }
@@ -129,7 +129,8 @@ void CCState::AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
   for (unsigned i = 0; i != NumOps; ++i) {
     MVT ArgVT = Outs[i].VT;
     ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, *this)) {
+    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, Outs[i].OrigTy,
+           *this)) {
 #ifndef NDEBUG
       dbgs() << "Call operand #" << i << " has unhandled type "
              << ArgVT << '\n';
@@ -142,12 +143,13 @@ void CCState::AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
 /// Same as above except it takes vectors of types and argument flags.
 void CCState::AnalyzeCallOperands(SmallVectorImpl<MVT> &ArgVTs,
                                   SmallVectorImpl<ISD::ArgFlagsTy> &Flags,
+                                  SmallVectorImpl<Type *> &OrigTys,
                                   CCAssignFn Fn) {
   unsigned NumOps = ArgVTs.size();
   for (unsigned i = 0; i != NumOps; ++i) {
     MVT ArgVT = ArgVTs[i];
     ISD::ArgFlagsTy ArgFlags = Flags[i];
-    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, *this)) {
+    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, OrigTys[i], *this)) {
 #ifndef NDEBUG
       dbgs() << "Call operand #" << i << " has unhandled type "
              << ArgVT << '\n';
@@ -164,7 +166,7 @@ void CCState::AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
   for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
     MVT VT = Ins[i].VT;
     ISD::ArgFlagsTy Flags = Ins[i].Flags;
-    if (Fn(i, VT, VT, CCValAssign::Full, Flags, *this)) {
+    if (Fn(i, VT, VT, CCValAssign::Full, Flags, Ins[i].OrigTy, *this)) {
 #ifndef NDEBUG
       dbgs() << "Call result #" << i << " has unhandled type "
              << VT << '\n';
@@ -175,8 +177,8 @@ void CCState::AnalyzeCallResult(const SmallVectorImpl<ISD::InputArg> &Ins,
 }
 
 /// Same as above except it's specialized for calls that produce a single value.
-void CCState::AnalyzeCallResult(MVT VT, CCAssignFn Fn) {
-  if (Fn(0, VT, VT, CCValAssign::Full, ISD::ArgFlagsTy(), *this)) {
+void CCState::AnalyzeCallResult(MVT VT, Type *OrigTy, CCAssignFn Fn) {
+  if (Fn(0, VT, VT, CCValAssign::Full, ISD::ArgFlagsTy(), OrigTy, *this)) {
 #ifndef NDEBUG
     dbgs() << "Call result has unhandled type "
            << VT << '\n';
@@ -198,7 +200,7 @@ static bool isValueTypeInRegForCC(CallingConv::ID CC, MVT VT) {
   return (CC == CallingConv::X86_VectorCall || CC == CallingConv::X86_FastCall);
 }
 
-void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs,
+void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCRegister> &Regs,
                                           MVT VT, CCAssignFn Fn) {
   uint64_t SavedStackSize = StackSize;
   Align SavedMaxStackArgAlign = MaxStackArgAlign;
@@ -213,7 +215,8 @@ void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs,
   // location in memory.
   bool HaveRegParm;
   do {
-    if (Fn(0, VT, VT, CCValAssign::Full, Flags, *this)) {
+    Type *OrigTy = EVT(VT).getTypeForEVT(Context);
+    if (Fn(0, VT, VT, CCValAssign::Full, Flags, OrigTy, *this)) {
 #ifndef NDEBUG
       dbgs() << "Call has unhandled type " << VT
              << " while computing remaining regparms\n";
@@ -227,7 +230,7 @@ void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs,
   assert(NumLocs < Locs.size() && "CC assignment failed to add location");
   for (unsigned I = NumLocs, E = Locs.size(); I != E; ++I)
     if (Locs[I].isRegLoc())
-      Regs.push_back(MCPhysReg(Locs[I].getLocReg()));
+      Regs.push_back(Locs[I].getLocReg());
 
   // Clear the assigned values and stack memory. We leave the registers marked
   // as allocated so that future queries don't return the same registers, i.e.
@@ -247,11 +250,11 @@ void CCState::analyzeMustTailForwardedRegisters(
   SaveAndRestore SavedMustTail(AnalyzingMustTailForwardedRegs, true);
 
   for (MVT RegVT : RegParmTypes) {
-    SmallVector<MCPhysReg, 8> RemainingRegs;
+    SmallVector<MCRegister, 8> RemainingRegs;
     getRemainingRegParmsForType(RemainingRegs, RegVT, Fn);
     const TargetLowering *TL = MF.getSubtarget().getTargetLowering();
     const TargetRegisterClass *RC = TL->getRegClassFor(RegVT);
-    for (MCPhysReg PReg : RemainingRegs) {
+    for (MCRegister PReg : RemainingRegs) {
       Register VReg = MF.addLiveIn(PReg, RC);
       Forwards.push_back(ForwardedRegister(VReg, PReg, RegVT));
     }
@@ -287,6 +290,5 @@ bool CCState::resultsCompatible(CallingConv::ID CalleeCC,
     llvm_unreachable("Unknown location kind");
   };
 
-  return std::equal(RVLocs1.begin(), RVLocs1.end(), RVLocs2.begin(),
-                    RVLocs2.end(), AreCompatible);
+  return llvm::equal(RVLocs1, RVLocs2, AreCompatible);
 }

@@ -7,3 +7,18 @@ void PR28623() {
   void helper(char); // expected-note{{target}}
   __atomic_store_n(helper, 0, 0); // expected-error{{reference to overloaded function could not be resolved}}
 }
+
+template<typename>
+struct X {
+  char arr[1];
+};
+
+extern X<void>* p, *q;
+
+// They should be accepted.
+void f() {
+  __atomic_exchange(p, p, q, __ATOMIC_RELAXED);
+  __atomic_load(p, p, __ATOMIC_RELAXED);
+  __atomic_store(p, p, __ATOMIC_RELAXED);
+  __atomic_compare_exchange(p, p, q, 0, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+}

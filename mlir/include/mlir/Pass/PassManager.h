@@ -11,7 +11,6 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/Timing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
@@ -19,7 +18,6 @@
 
 #include <functional>
 #include <optional>
-#include <vector>
 
 namespace mlir {
 class AnalysisManager;
@@ -142,10 +140,12 @@ public:
   detail::OpPassManagerImpl &getImpl();
 
   /// Prints out the passes of the pass manager as the textual representation
-  /// of pipelines.
+  /// of pipelines. When `pretty` is true, the printed pipeline is formatted
+  /// for readability.
+  ///
   /// Note: The quality of the string representation depends entirely on the
   /// the correctness of per-pass overrides of Pass::printAsTextualPipeline.
-  void printAsTextualPipeline(raw_ostream &os) const;
+  void printAsTextualPipeline(raw_ostream &os, bool pretty = false) const;
 
   /// Raw dump of the pass manager to llvm::errs().
   void dump();

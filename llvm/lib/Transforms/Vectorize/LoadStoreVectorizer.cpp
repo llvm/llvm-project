@@ -157,6 +157,8 @@ using EqClassKey =
 struct ChainElem {
   Instruction *Inst;
   APInt OffsetFromLeader;
+  ChainElem(Instruction *Inst, APInt OffsetFromLeader)
+      : Inst(std::move(Inst)), OffsetFromLeader(std::move(OffsetFromLeader)) {}
 };
 using Chain = SmallVector<ChainElem, 1>;
 
@@ -187,7 +189,7 @@ constexpr unsigned StackAdjustedAlignment = 4;
 Instruction *propagateMetadata(Instruction *I, const Chain &C) {
   SmallVector<Value *, 8> Values;
   for (const ChainElem &E : C)
-    Values.push_back(E.Inst);
+    Values.emplace_back(E.Inst);
   return propagateMetadata(I, Values);
 }
 
@@ -202,12 +204,12 @@ void reorder(Instruction *I) {
   SmallPtrSet<Instruction *, 16> InstructionsToMove;
   SmallVector<Instruction *, 16> Worklist;
 
-  Worklist.push_back(I);
+  Worklist.emplace_back(I);
   while (!Worklist.empty()) {
     Instruction *IW = Worklist.pop_back_val();
     int NumOperands = IW->getNumOperands();
-    for (int i = 0; i < NumOperands; i++) {
-      Instruction *IM = dyn_cast<Instruction>(IW->getOperand(i));
+    for (int Idx = 0; Idx < NumOperands; Idx++) {
+      Instruction *IM = dyn_cast<Instruction>(IW->getOperand(Idx));
       if (!IM || IM->getOpcode() == Instruction::PHI)
         continue;
 
@@ -216,9 +218,11 @@ void reorder(Instruction *I) {
       if (IM->getParent() != I->getParent())
         continue;
 
+      assert(IM != I && "Unexpected cycle while re-ordering instructions");
+
       if (!IM->comesBefore(I)) {
         InstructionsToMove.insert(IM);
-        Worklist.push_back(IM);
+        Worklist.emplace_back(IM);
       }
     }
   }
@@ -226,9 +230,9 @@ void reorder(Instruction *I) {
   // All instructions to move should follow I. Start from I, not from begin().
   for (auto BBI = I->getIterator(), E = I->getParent()->end(); BBI != E;) {
     Instruction *IM = &*(BBI++);
-    if (!InstructionsToMove.count(IM))
+    if (!InstructionsToMove.contains(IM))
       continue;
-    IM->moveBefore(I);
+    IM->moveBefore(I->getIterator());
   }
 }
 
@@ -252,7 +256,7 @@ public:
   Vectorizer(Function &F, AliasAnalysis &AA, AssumptionCache &AC,
              DominatorTree &DT, ScalarEvolution &SE, TargetTransformInfo &TTI)
       : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI),
-        DL(F.getParent()->getDataLayout()), Builder(SE.getContext()) {}
+        DL(F.getDataLayout()), Builder(SE.getContext()) {}
 
   bool run();
 
@@ -318,7 +322,13 @@ private:
   template <bool IsLoadChain>
   bool isSafeToMove(
       Instruction *ChainElem, Instruction *ChainBegin,
-      const DenseMap<Instruction *, APInt /*OffsetFromLeader*/> &ChainOffsets);
+      const DenseMap<Instruction *, APInt /*OffsetFromLeader*/> &ChainOffsets,
+      BatchAAResults &BatchAA);
+
+  /// Merges the equivalence classes if they have underlying objects that differ
+  /// by one level of indirection (i.e., one is a getelementptr and the other is
+  /// the base pointer in that getelementptr).
+  void mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const;
 
   /// Collects loads and stores grouped by "equivalence class", where:
   ///   - all elements in an eq class are a load or all are a store,
@@ -436,11 +446,11 @@ bool Vectorizer::run() {
     assert(!BB->empty());
 
     SmallVector<BasicBlock::iterator, 8> Barriers;
-    Barriers.push_back(BB->begin());
+    Barriers.emplace_back(BB->begin());
     for (Instruction &I : *BB)
       if (!isGuaranteedToTransferExecutionToSuccessor(&I))
-        Barriers.push_back(I.getIterator());
-    Barriers.push_back(BB->end());
+        Barriers.emplace_back(I.getIterator());
+    Barriers.emplace_back(BB->end());
 
     for (auto It = Barriers.begin(), End = std::prev(Barriers.end()); It != End;
          ++It)
@@ -534,6 +544,10 @@ std::vector<Chain> Vectorizer::splitChainByMayAliasInstrs(Chain &C) {
   for (const auto &E : C)
     ChainOffsets.insert({&*E.Inst, E.OffsetFromLeader});
 
+  // Across a single invocation of this function the IR is not changing, so
+  // using a batched Alias Analysis is safe and can reduce compile time.
+  BatchAAResults BatchAA(AA);
+
   // Loads get hoisted up to the first load in the chain.  Stores get sunk
   // down to the last store in the chain.  Our algorithm for loads is:
   //
@@ -557,14 +571,14 @@ std::vector<Chain> Vectorizer::splitChainByMayAliasInstrs(Chain &C) {
 
     std::vector<Chain> Chains;
     SmallVector<ChainElem, 1> NewChain;
-    NewChain.push_back(*ChainBegin);
+    NewChain.emplace_back(*ChainBegin);
     for (auto ChainIt = std::next(ChainBegin); ChainIt != ChainEnd; ++ChainIt) {
       if (isSafeToMove<IsLoad>(ChainIt->Inst, NewChain.front().Inst,
-                               ChainOffsets)) {
+                               ChainOffsets, BatchAA)) {
         LLVM_DEBUG(dbgs() << "LSV: No intervening may-alias instrs; can merge "
                           << *ChainIt->Inst << " into " << *ChainBegin->Inst
                           << "\n");
-        NewChain.push_back(*ChainIt);
+        NewChain.emplace_back(*ChainIt);
       } else {
         LLVM_DEBUG(
             dbgs() << "LSV: Found intervening may-alias instrs; cannot merge "
@@ -574,7 +588,7 @@ std::vector<Chain> Vectorizer::splitChainByMayAliasInstrs(Chain &C) {
             dbgs() << "LSV: got nontrivial chain without aliasing instrs:\n";
             dumpChain(NewChain);
           });
-          Chains.push_back(std::move(NewChain));
+          Chains.emplace_back(std::move(NewChain));
         }
 
         // Start a new chain.
@@ -586,7 +600,7 @@ std::vector<Chain> Vectorizer::splitChainByMayAliasInstrs(Chain &C) {
         dbgs() << "LSV: got nontrivial chain without aliasing instrs:\n";
         dumpChain(NewChain);
       });
-      Chains.push_back(std::move(NewChain));
+      Chains.emplace_back(std::move(NewChain));
     }
     return Chains;
   };
@@ -612,26 +626,38 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
   std::vector<Chain> Ret;
   Ret.push_back({C.front()});
 
+  unsigned ChainElemTyBits = DL.getTypeSizeInBits(getChainElemTy(C));
+  APInt PrevReadEnd = C[0].OffsetFromLeader +
+                      DL.getTypeStoreSize(getLoadStoreType(&*C[0].Inst));
   for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
-    // `prev` accesses offsets [PrevDistFromBase, PrevReadEnd).
     auto &CurChain = Ret.back();
-    const ChainElem &Prev = CurChain.back();
-    unsigned SzBits = DL.getTypeSizeInBits(getLoadStoreType(&*Prev.Inst));
-    assert(SzBits % 8 == 0 && "Non-byte sizes should have been filtered out by "
-                              "collectEquivalenceClass");
-    APInt PrevReadEnd = Prev.OffsetFromLeader + SzBits / 8;
+    unsigned SzBytes = DL.getTypeStoreSize(getLoadStoreType(&*It->Inst));
 
     // Add this instruction to the end of the current chain, or start a new one.
-    bool AreContiguous = It->OffsetFromLeader == PrevReadEnd;
-    LLVM_DEBUG(dbgs() << "LSV: Instructions are "
-                      << (AreContiguous ? "" : "not ") << "contiguous: "
-                      << *Prev.Inst << " (ends at offset " << PrevReadEnd
-                      << ") -> " << *It->Inst << " (starts at offset "
+    assert(
+        8 * SzBytes % ChainElemTyBits == 0 &&
+        "Every chain-element size must be a multiple of the element size after "
+        "vectorization.");
+    APInt ReadEnd = It->OffsetFromLeader + SzBytes;
+    // Allow redundancy: partial or full overlap counts as contiguous.
+    bool AreContiguous = false;
+    if (It->OffsetFromLeader.sle(PrevReadEnd)) {
+      // Check overlap is a multiple of the element size after vectorization.
+      uint64_t Overlap = (PrevReadEnd - It->OffsetFromLeader).getZExtValue();
+      if (8 * Overlap % ChainElemTyBits == 0)
+        AreContiguous = true;
+    }
+
+    LLVM_DEBUG(dbgs() << "LSV: Instruction is "
+                      << (AreContiguous ? "contiguous" : "chain-breaker")
+                      << *It->Inst << " (starts at offset "
                       << It->OffsetFromLeader << ")\n");
+
     if (AreContiguous)
       CurChain.push_back(*It);
     else
       Ret.push_back({*It});
+    PrevReadEnd = APIntOps::smax(PrevReadEnd, ReadEnd);
   }
 
   // Filter out length-1 chains, these are uninteresting.
@@ -687,7 +713,7 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
   });
 
   bool IsLoadChain = isa<LoadInst>(C[0].Inst);
-  auto getVectorFactor = [&](unsigned VF, unsigned LoadStoreSize,
+  auto GetVectorFactor = [&](unsigned VF, unsigned LoadStoreSize,
                              unsigned ChainSizeBytes, VectorType *VecTy) {
     return IsLoadChain ? TTI.getLoadVectorFactor(VF, LoadStoreSize,
                                                  ChainSizeBytes, VecTy)
@@ -713,14 +739,20 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
     // These chains are over the closed interval [CBegin, CEnd].
     SmallVector<std::pair<unsigned /*CEnd*/, unsigned /*SizeBytes*/>, 8>
         CandidateChains;
+    // Need to compute the size of every candidate chain from its beginning
+    // because of possible overlapping among chain elements.
+    unsigned Sz = DL.getTypeStoreSize(getLoadStoreType(C[CBegin].Inst));
+    APInt PrevReadEnd = C[CBegin].OffsetFromLeader + Sz;
     for (unsigned CEnd = CBegin + 1, Size = C.size(); CEnd < Size; ++CEnd) {
-      APInt Sz = C[CEnd].OffsetFromLeader +
-                 DL.getTypeStoreSize(getLoadStoreType(C[CEnd].Inst)) -
-                 C[CBegin].OffsetFromLeader;
-      if (Sz.sgt(VecRegBytes))
+      APInt ReadEnd = C[CEnd].OffsetFromLeader +
+                      DL.getTypeStoreSize(getLoadStoreType(C[CEnd].Inst));
+      unsigned BytesAdded =
+          PrevReadEnd.sle(ReadEnd) ? (ReadEnd - PrevReadEnd).getSExtValue() : 0;
+      Sz += BytesAdded;
+      if (Sz > VecRegBytes)
         break;
-      CandidateChains.push_back(
-          {CEnd, static_cast<unsigned>(Sz.getLimitedValue())});
+      CandidateChains.emplace_back(CEnd, Sz);
+      PrevReadEnd = APIntOps::smax(PrevReadEnd, ReadEnd);
     }
 
     // Consider the longest chain first.
@@ -744,7 +776,7 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
       unsigned VF = 8 * VecRegBytes / VecElemBits;
 
       // Check that TTI is happy with this vectorization factor.
-      unsigned TargetVF = getVectorFactor(VF, VecElemBits,
+      unsigned TargetVF = GetVectorFactor(VF, VecElemBits,
                                           VecElemBits * NumVecElems / 8, VecTy);
       if (TargetVF != VF && TargetVF < NumVecElems) {
         LLVM_DEBUG(
@@ -838,7 +870,7 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
       // Hooray, we can vectorize this chain!
       Chain &NewChain = Ret.emplace_back();
       for (unsigned I = CBegin; I <= CEnd; ++I)
-        NewChain.push_back(C[I]);
+        NewChain.emplace_back(C[I]);
       CBegin = CEnd; // Skip over the instructions we've added to the chain.
       break;
     }
@@ -860,15 +892,24 @@ bool Vectorizer::vectorizeChain(Chain &C) {
   Type *VecElemTy = getChainElemTy(C);
   bool IsLoadChain = isa<LoadInst>(C[0].Inst);
   unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
-  unsigned ChainBytes = std::accumulate(
-      C.begin(), C.end(), 0u, [&](unsigned Bytes, const ChainElem &E) {
-        return Bytes + DL.getTypeStoreSize(getLoadStoreType(E.Inst));
-      });
-  assert(ChainBytes % DL.getTypeStoreSize(VecElemTy) == 0);
+  unsigned BytesAdded = DL.getTypeStoreSize(getLoadStoreType(&*C[0].Inst));
+  APInt PrevReadEnd = C[0].OffsetFromLeader + BytesAdded;
+  unsigned ChainBytes = BytesAdded;
+  for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
+    unsigned SzBytes = DL.getTypeStoreSize(getLoadStoreType(&*It->Inst));
+    APInt ReadEnd = It->OffsetFromLeader + SzBytes;
+    // Update ChainBytes considering possible overlap.
+    BytesAdded =
+        PrevReadEnd.sle(ReadEnd) ? (ReadEnd - PrevReadEnd).getSExtValue() : 0;
+    ChainBytes += BytesAdded;
+    PrevReadEnd = APIntOps::smax(PrevReadEnd, ReadEnd);
+  }
+
+  assert(8 * ChainBytes % DL.getTypeSizeInBits(VecElemTy) == 0);
   // VecTy is a power of 2 and 1 byte at smallest, but VecElemTy may be smaller
   // than 1 byte (e.g. VecTy == <32 x i1>).
-  Type *VecTy = FixedVectorType::get(
-      VecElemTy, 8 * ChainBytes / DL.getTypeSizeInBits(VecElemTy));
+  unsigned NumElem = 8 * ChainBytes / DL.getTypeSizeInBits(VecElemTy);
+  Type *VecTy = FixedVectorType::get(VecElemTy, NumElem);
 
   Align Alignment = getLoadStoreAlignment(C[0].Inst);
   // If this is a load/store of an alloca, we might have upgraded the alloca's
@@ -895,27 +936,32 @@ bool Vectorizer::vectorizeChain(Chain &C) {
         llvm::min_element(C, [](const auto &A, const auto &B) {
           return A.Inst->comesBefore(B.Inst);
         })->Inst);
-
+    // This can happen due to a chain of redundant loads.
+    // In this case, just use the element-type, and avoid ExtractElement.
+    if (NumElem == 1)
+      VecTy = VecElemTy;
     // Chain is in offset order, so C[0] is the instr with the lowest offset,
     // i.e. the root of the vector.
     VecInst = Builder.CreateAlignedLoad(VecTy,
                                         getLoadStorePointerOperand(C[0].Inst),
                                         Alignment);
 
-    unsigned VecIdx = 0;
     for (const ChainElem &E : C) {
       Instruction *I = E.Inst;
       Value *V;
       Type *T = getLoadStoreType(I);
-      if (auto *VT = dyn_cast<FixedVectorType>(T)) {
+      unsigned EOffset =
+          (E.OffsetFromLeader - C[0].OffsetFromLeader).getZExtValue();
+      unsigned VecIdx = 8 * EOffset / DL.getTypeSizeInBits(VecElemTy);
+      if (!VecTy->isVectorTy()) {
+        V = VecInst;
+      } else if (auto *VT = dyn_cast<FixedVectorType>(T)) {
         auto Mask = llvm::to_vector<8>(
             llvm::seq<int>(VecIdx, VecIdx + VT->getNumElements()));
         V = Builder.CreateShuffleVector(VecInst, Mask, I->getName());
-        VecIdx += VT->getNumElements();
       } else {
         V = Builder.CreateExtractElement(VecInst, Builder.getInt32(VecIdx),
                                          I->getName());
-        ++VecIdx;
       }
       if (V->getType() != I->getType())
         V = Builder.CreateBitOrPointerCast(V, I->getType());
@@ -950,22 +996,25 @@ bool Vectorizer::vectorizeChain(Chain &C) {
 
     // Build the vector to store.
     Value *Vec = PoisonValue::get(VecTy);
-    unsigned VecIdx = 0;
-    auto InsertElem = [&](Value *V) {
+    auto InsertElem = [&](Value *V, unsigned VecIdx) {
       if (V->getType() != VecElemTy)
         V = Builder.CreateBitOrPointerCast(V, VecElemTy);
-      Vec = Builder.CreateInsertElement(Vec, V, Builder.getInt32(VecIdx++));
+      Vec = Builder.CreateInsertElement(Vec, V, Builder.getInt32(VecIdx));
     };
     for (const ChainElem &E : C) {
-      auto I = cast<StoreInst>(E.Inst);
+      auto *I = cast<StoreInst>(E.Inst);
+      unsigned EOffset =
+          (E.OffsetFromLeader - C[0].OffsetFromLeader).getZExtValue();
+      unsigned VecIdx = 8 * EOffset / DL.getTypeSizeInBits(VecElemTy);
       if (FixedVectorType *VT =
               dyn_cast<FixedVectorType>(getLoadStoreType(I))) {
         for (int J = 0, JE = VT->getNumElements(); J < JE; ++J) {
           InsertElem(Builder.CreateExtractElement(I->getValueOperand(),
-                                                  Builder.getInt32(J)));
+                                                  Builder.getInt32(J)),
+                     VecIdx++);
         }
       } else {
-        InsertElem(I->getValueOperand());
+        InsertElem(I->getValueOperand(), VecIdx);
       }
     }
 
@@ -980,7 +1029,7 @@ bool Vectorizer::vectorizeChain(Chain &C) {
   propagateMetadata(VecInst, C);
 
   for (const ChainElem &E : C)
-    ToErase.push_back(E.Inst);
+    ToErase.emplace_back(E.Inst);
 
   ++NumVectorInstructions;
   NumScalarsVectorized += C.size();
@@ -990,7 +1039,8 @@ bool Vectorizer::vectorizeChain(Chain &C) {
 template <bool IsLoadChain>
 bool Vectorizer::isSafeToMove(
     Instruction *ChainElem, Instruction *ChainBegin,
-    const DenseMap<Instruction *, APInt /*OffsetFromLeader*/> &ChainOffsets) {
+    const DenseMap<Instruction *, APInt /*OffsetFromLeader*/> &ChainOffsets,
+    BatchAAResults &BatchAA) {
   LLVM_DEBUG(dbgs() << "LSV: isSafeToMove(" << *ChainElem << " -> "
                     << *ChainBegin << ")\n");
 
@@ -1057,7 +1107,8 @@ bool Vectorizer::isSafeToMove(
         LLVM_DEBUG({
           // Double check that AA also sees this alias.  If not, we probably
           // have a bug.
-          ModRefInfo MR = AA.getModRefInfo(I, MemoryLocation::get(ChainElem));
+          ModRefInfo MR =
+              BatchAA.getModRefInfo(I, MemoryLocation::get(ChainElem));
           assert(IsLoadChain ? isModSet(MR) : isModOrRefSet(MR));
           dbgs() << "LSV: Found alias in chain: " << *I << "\n";
         });
@@ -1068,7 +1119,7 @@ bool Vectorizer::isSafeToMove(
     }
 
     LLVM_DEBUG(dbgs() << "LSV: Querying AA for " << *I << "\n");
-    ModRefInfo MR = AA.getModRefInfo(I, MemoryLocation::get(ChainElem));
+    ModRefInfo MR = BatchAA.getModRefInfo(I, MemoryLocation::get(ChainElem));
     if (IsLoadChain ? isModSet(MR) : isModOrRefSet(MR)) {
       LLVM_DEBUG(dbgs() << "LSV: Found alias in chain:\n"
                         << "  Aliasing instruction:\n"
@@ -1260,14 +1311,12 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
     // When computing known bits, use the GEPs as context instructions, since
     // they likely are in the same BB as the load/store.
     KnownBits Known(BitWidth);
-    computeKnownBits((IdxDiff.sge(0) ? ValA : OpB), Known, DL, 0, &AC,
-                     ContextInst, &DT);
+    computeKnownBits((IdxDiff.sge(0) ? ValA : OpB), Known, DL, &AC, ContextInst,
+                     &DT);
     APInt BitsAllowedToBeSet = Known.Zero.zext(IdxDiff.getBitWidth());
     if (Signed)
       BitsAllowedToBeSet.clearBit(BitWidth - 1);
-    if (BitsAllowedToBeSet.ult(IdxDiff.abs()))
-      return std::nullopt;
-    Safe = true;
+    Safe = BitsAllowedToBeSet.uge(IdxDiff.abs());
   }
 
   if (Safe)
@@ -1289,7 +1338,7 @@ std::optional<APInt> Vectorizer::getConstantOffsetSelects(
                         << *ContextInst << ", Depth=" << Depth << "\n");
       std::optional<APInt> TrueDiff = getConstantOffset(
           SelectA->getTrueValue(), SelectB->getTrueValue(), ContextInst, Depth);
-      if (!TrueDiff.has_value())
+      if (!TrueDiff)
         return std::nullopt;
       std::optional<APInt> FalseDiff =
           getConstantOffset(SelectA->getFalseValue(), SelectB->getFalseValue(),
@@ -1301,12 +1350,126 @@ std::optional<APInt> Vectorizer::getConstantOffsetSelects(
   return std::nullopt;
 }
 
+void Vectorizer::mergeEquivalenceClasses(EquivalenceClassMap &EQClasses) const {
+  if (EQClasses.size() < 2) // There is nothing to merge.
+    return;
+
+  // The reduced key has all elements of the ECClassKey except the underlying
+  // object. Check that EqClassKey has 4 elements and define the reduced key.
+  static_assert(std::tuple_size_v<EqClassKey> == 4,
+                "EqClassKey has changed - EqClassReducedKey needs changes too");
+  using EqClassReducedKey =
+      std::tuple<std::tuple_element_t<1, EqClassKey> /* AddrSpace */,
+                 std::tuple_element_t<2, EqClassKey> /* Element size */,
+                 std::tuple_element_t<3, EqClassKey> /* IsLoad; */>;
+  using ECReducedKeyToUnderlyingObjectMap =
+      MapVector<EqClassReducedKey,
+                SmallPtrSet<std::tuple_element_t<0, EqClassKey>, 4>>;
+
+  // Form a map from the reduced key (without the underlying object) to the
+  // underlying objects: 1 reduced key to many underlying objects, to form
+  // groups of potentially merge-able equivalence classes.
+  ECReducedKeyToUnderlyingObjectMap RedKeyToUOMap;
+  bool FoundPotentiallyOptimizableEC = false;
+  for (const auto &EC : EQClasses) {
+    const auto &Key = EC.first;
+    EqClassReducedKey RedKey{std::get<1>(Key), std::get<2>(Key),
+                             std::get<3>(Key)};
+    auto &UOMap = RedKeyToUOMap[RedKey];
+    UOMap.insert(std::get<0>(Key));
+    if (UOMap.size() > 1)
+      FoundPotentiallyOptimizableEC = true;
+  }
+  if (!FoundPotentiallyOptimizableEC)
+    return;
+
+  LLVM_DEBUG({
+    dbgs() << "LSV: mergeEquivalenceClasses: before merging:\n";
+    for (const auto &EC : EQClasses) {
+      dbgs() << "  Key: {" << EC.first << "}\n";
+      for (const auto &Inst : EC.second)
+        dbgs() << "    Inst: " << *Inst << '\n';
+    }
+  });
+  LLVM_DEBUG({
+    dbgs() << "LSV: mergeEquivalenceClasses: RedKeyToUOMap:\n";
+    for (const auto &RedKeyToUO : RedKeyToUOMap) {
+      dbgs() << "  Reduced key: {" << std::get<0>(RedKeyToUO.first) << ", "
+             << std::get<1>(RedKeyToUO.first) << ", "
+             << static_cast<int>(std::get<2>(RedKeyToUO.first)) << "} --> "
+             << RedKeyToUO.second.size() << " underlying objects:\n";
+      for (auto UObject : RedKeyToUO.second)
+        dbgs() << "    " << *UObject << '\n';
+    }
+  });
+
+  using UObjectToUObjectMap = DenseMap<const Value *, const Value *>;
+
+  // Compute the ultimate targets for a set of underlying objects.
+  auto GetUltimateTargets =
+      [](SmallPtrSetImpl<const Value *> &UObjects) -> UObjectToUObjectMap {
+    UObjectToUObjectMap IndirectionMap;
+    for (const auto *UObject : UObjects) {
+      const unsigned MaxLookupDepth = 1; // look for 1-level indirections only
+      const auto *UltimateTarget = getUnderlyingObject(UObject, MaxLookupDepth);
+      if (UltimateTarget != UObject)
+        IndirectionMap[UObject] = UltimateTarget;
+    }
+    UObjectToUObjectMap UltimateTargetsMap;
+    for (const auto *UObject : UObjects) {
+      auto Target = UObject;
+      auto It = IndirectionMap.find(Target);
+      for (; It != IndirectionMap.end(); It = IndirectionMap.find(Target))
+        Target = It->second;
+      UltimateTargetsMap[UObject] = Target;
+    }
+    return UltimateTargetsMap;
+  };
+
+  // For each item in RedKeyToUOMap, if it has more than one underlying object,
+  // try to merge the equivalence classes.
+  for (auto &[RedKey, UObjects] : RedKeyToUOMap) {
+    if (UObjects.size() < 2)
+      continue;
+    auto UTMap = GetUltimateTargets(UObjects);
+    for (const auto &[UObject, UltimateTarget] : UTMap) {
+      if (UObject == UltimateTarget)
+        continue;
+
+      EqClassKey KeyFrom{UObject, std::get<0>(RedKey), std::get<1>(RedKey),
+                         std::get<2>(RedKey)};
+      EqClassKey KeyTo{UltimateTarget, std::get<0>(RedKey), std::get<1>(RedKey),
+                       std::get<2>(RedKey)};
+      // The entry for KeyFrom is guarantted to exist, unlike KeyTo. Thus,
+      // request the reference to the instructions vector for KeyTo first.
+      const auto &VecTo = EQClasses[KeyTo];
+      const auto &VecFrom = EQClasses[KeyFrom];
+      SmallVector<Instruction *, 8> MergedVec;
+      std::merge(VecFrom.begin(), VecFrom.end(), VecTo.begin(), VecTo.end(),
+                 std::back_inserter(MergedVec),
+                 [](Instruction *A, Instruction *B) {
+                   return A && B && A->comesBefore(B);
+                 });
+      EQClasses[KeyTo] = std::move(MergedVec);
+      EQClasses.erase(KeyFrom);
+    }
+  }
+  LLVM_DEBUG({
+    dbgs() << "LSV: mergeEquivalenceClasses: after merging:\n";
+    for (const auto &EC : EQClasses) {
+      dbgs() << "  Key: {" << EC.first << "}\n";
+      for (const auto &Inst : EC.second)
+        dbgs() << "    Inst: " << *Inst << '\n';
+    }
+  });
+}
+
 EquivalenceClassMap
 Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
                                       BasicBlock::iterator End) {
   EquivalenceClassMap Ret;
 
-  auto getUnderlyingObject = [](const Value *Ptr) -> const Value * {
+  auto GetUnderlyingObject = [](const Value *Ptr) -> const Value * {
     const Value *ObjPtr = llvm::getUnderlyingObject(Ptr);
     if (const auto *Sel = dyn_cast<SelectInst>(ObjPtr)) {
       // The select's themselves are distinct instructions even if they share
@@ -1367,12 +1530,13 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
         (VecTy && TTI.getLoadVectorFactor(VF, TySize, TySize / 8, VecTy) == 0))
       continue;
 
-    Ret[{getUnderlyingObject(Ptr), AS,
+    Ret[{GetUnderlyingObject(Ptr), AS,
          DL.getTypeSizeInBits(getLoadStoreType(&I)->getScalarType()),
          /*IsLoad=*/LI != nullptr}]
-        .push_back(&I);
+        .emplace_back(&I);
   }
 
+  mergeEquivalenceClasses(Ret);
   return Ret;
 }
 
@@ -1432,15 +1596,14 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
     auto ChainIter = MRU.begin();
     for (size_t J = 0; J < MaxChainsToTry && ChainIter != MRU.end();
          ++J, ++ChainIter) {
-      std::optional<APInt> Offset = getConstantOffset(
-          getLoadStorePointerOperand(ChainIter->first),
-          getLoadStorePointerOperand(I),
-          /*ContextInst=*/
-          (ChainIter->first->comesBefore(I) ? I : ChainIter->first));
-      if (Offset.has_value()) {
+      if (std::optional<APInt> Offset = getConstantOffset(
+              getLoadStorePointerOperand(ChainIter->first),
+              getLoadStorePointerOperand(I),
+              /*ContextInst=*/
+              (ChainIter->first->comesBefore(I) ? I : ChainIter->first))) {
         // `Offset` might not have the expected number of bits, if e.g. AS has a
         // different number of bits than opaque pointers.
-        ChainIter->second.push_back(ChainElem{I, Offset.value()});
+        ChainIter->second.emplace_back(I, Offset.value());
         // Move ChainIter to the front of the MRU list.
         MRU.remove(*ChainIter);
         MRU.push_front(*ChainIter);
@@ -1452,7 +1615,7 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
     if (!MatchFound) {
       APInt ZeroOffset(ASPtrBits, 0);
       InstrListElem *E = new (Allocator.Allocate()) InstrListElem(I);
-      E->second.push_back(ChainElem{I, ZeroOffset});
+      E->second.emplace_back(I, ZeroOffset);
       MRU.push_front(*E);
       Chains.insert(E);
     }
@@ -1463,7 +1626,7 @@ std::vector<Chain> Vectorizer::gatherChains(ArrayRef<Instruction *> Instrs) {
   // Iterate over MRU rather than Chains so the order is deterministic.
   for (auto &E : MRU)
     if (E.second.size() > 1)
-      Ret.push_back(std::move(E.second));
+      Ret.emplace_back(std::move(E.second));
   return Ret;
 }
 
@@ -1507,9 +1670,8 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
       return (OffsetB - OffsetA + Dist).sextOrTrunc(OrigBitWidth);
     }
   }
-  std::optional<APInt> Diff =
-      getConstantOffsetComplexAddrs(PtrA, PtrB, ContextInst, Depth);
-  if (Diff.has_value())
+  if (std::optional<APInt> Diff =
+          getConstantOffsetComplexAddrs(PtrA, PtrB, ContextInst, Depth))
     return (OffsetB - OffsetA + Diff->sext(OffsetB.getBitWidth()))
         .sextOrTrunc(OrigBitWidth);
   return std::nullopt;

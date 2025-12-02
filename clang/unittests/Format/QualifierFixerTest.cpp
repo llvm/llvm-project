@@ -215,6 +215,8 @@ TEST_F(QualifierFixerTest, RightQualifier) {
                Style);
   verifyFormat("void foo() const override;", Style);
   verifyFormat("void foo() const override LLVM_READONLY;", Style);
+  verifyFormat("MOCK_METHOD(ReturnType, myMethod, (int), (const override));",
+               Style);
   verifyFormat("void foo() const final;", Style);
   verifyFormat("void foo() const final LLVM_READONLY;", Style);
   verifyFormat("void foo() const LLVM_READONLY;", Style);
@@ -305,7 +307,7 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("Foo inline static const;", "Foo inline const static;", Style);
   verifyFormat("Foo inline static const;", Style);
 
-  verifyFormat("Foo<T volatile>::Bar<Type const, 5> const volatile A:: *;",
+  verifyFormat("Foo<T volatile>::Bar<Type const, 5> const volatile A::*;",
                "volatile const Foo<volatile T>::Bar<const Type, 5> A::*;",
                Style);
 
@@ -523,15 +525,19 @@ TEST_F(QualifierFixerTest, RightQualifier) {
   verifyFormat("const INTPTR a;", Style);
 
   // Pointers to members
-  verifyFormat("int S:: *a;", Style);
-  verifyFormat("int const S:: *a;", "const int S:: *a;", Style);
-  verifyFormat("int const S:: *const a;", "const int S::* const a;", Style);
-  verifyFormat("int A:: *const A:: *p1;", Style);
-  verifyFormat("float (C:: *p)(int);", Style);
-  verifyFormat("float (C:: *const p)(int);", Style);
-  verifyFormat("float (C:: *p)(int) const;", Style);
-  verifyFormat("float const (C:: *p)(int);", "const float (C::*p)(int);",
-               Style);
+  verifyFormat("int S::*a;", Style);
+  verifyFormat("int const S::*a;", "const int S::*a;", Style);
+  verifyFormat("int const S::*const a;", "const int S::* const a;", Style);
+  verifyFormat("int A::*const A::*p1;", Style);
+  verifyFormat("float (C::*p)(int);", Style);
+  verifyFormat("float (C::*const p)(int);", Style);
+  verifyFormat("float (C::*p)(int) const;", Style);
+  verifyFormat("float const (C::*p)(int);", "const float (C::*p)(int);", Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  verifyFormat("auto foo() -> T const { return bar; }",
+               "auto foo() -> const T { return bar; }", Style);
 }
 
 TEST_F(QualifierFixerTest, LeftQualifier) {
@@ -831,15 +837,14 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
   verifyFormat("INTPTR const a;", Style);
 
   // Pointers to members
-  verifyFormat("int S:: *a;", Style);
-  verifyFormat("const int S:: *a;", "int const S:: *a;", Style);
-  verifyFormat("const int S:: *const a;", "int const S::* const a;", Style);
-  verifyFormat("int A:: *const A:: *p1;", Style);
-  verifyFormat("float (C:: *p)(int);", Style);
-  verifyFormat("float (C:: *const p)(int);", Style);
-  verifyFormat("float (C:: *p)(int) const;", Style);
-  verifyFormat("const float (C:: *p)(int);", "float const (C::*p)(int);",
-               Style);
+  verifyFormat("int S::*a;", Style);
+  verifyFormat("const int S::*a;", "int const S::*a;", Style);
+  verifyFormat("const int S::*const a;", "int const S::*const a;", Style);
+  verifyFormat("int A::*const A::*p1;", Style);
+  verifyFormat("float (C::*p)(int);", Style);
+  verifyFormat("float (C::*const p)(int);", Style);
+  verifyFormat("float (C::*p)(int) const;", Style);
+  verifyFormat("const float (C::*p)(int);", "float const (C::*p)(int);", Style);
 }
 
 TEST_F(QualifierFixerTest, ConstVolatileQualifiersOrder) {
@@ -1119,14 +1124,17 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
 }
 
 TEST_F(QualifierFixerTest, IsMacro) {
-
   auto Tokens = annotate("INT INTPR Foo int");
   ASSERT_EQ(Tokens.size(), 5u) << Tokens;
-
   EXPECT_TRUE(isPossibleMacro(Tokens[0]));
   EXPECT_TRUE(isPossibleMacro(Tokens[1]));
   EXPECT_FALSE(isPossibleMacro(Tokens[2]));
   EXPECT_FALSE(isPossibleMacro(Tokens[3]));
+
+  Tokens = annotate("FOO::BAR");
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_FALSE(isPossibleMacro(Tokens[0]));
+  EXPECT_FALSE(isPossibleMacro(Tokens[2]));
 }
 
 TEST_F(QualifierFixerTest, OverlappingQualifier) {
@@ -1186,6 +1194,41 @@ TEST_F(QualifierFixerTest, QualifiersBrokenUpByPPDirectives) {
                "    constexpr\n"
                "#endif\n"
                "    int i = 0;",
+               Style);
+}
+
+TEST_F(QualifierFixerTest, QualifierOrderingAfterPreprocessorDirectives) {
+  auto Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"static", "inline", "const", "type"};
+
+  verifyFormat("#if 1\n"
+               "void foo(const int par);\n"
+               "const int var1;\n"
+               "#endif\n"
+               "\n"
+               "const int var2;\n"
+               "const int var3;",
+               "#if 1\n"
+               "void foo(int const par);\n"
+               "int const var1;\n"
+               "#endif\n"
+               "\n"
+               "int const var2;\n"
+               "int const var3;",
+               Style);
+  verifyFormat("#if defined(FOO)\n"
+               "static const int x = 1;\n"
+               "#else\n"
+               "static const int x = 2;\n"
+               "#endif\n"
+               "static const int y = 3;",
+               "#if defined(FOO)\n"
+               "const static int x = 1;\n"
+               "#else\n"
+               "const static int x = 2;\n"
+               "#endif\n"
+               "const static int y = 3;",
                Style);
 }
 
@@ -1274,6 +1317,33 @@ TEST_F(QualifierFixerTest, WithConstraints) {
                "  requires Concept1<F> && Concept2<F>\n"
                "constexpr constructor();",
                Style);
+}
+
+TEST_F(QualifierFixerTest, WithCpp11Attribute) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"static", "constexpr", "inline", "type"};
+
+  verifyFormat("[[nodiscard]] static constexpr inline int func() noexcept {}",
+               "[[nodiscard]] inline constexpr static int func() noexcept {}",
+               Style);
+  verifyFormat("[[maybe_unused]] static constexpr int A",
+               "[[maybe_unused]] constexpr static int A", Style);
+}
+
+TEST_F(QualifierFixerTest, WithQualifiedTypeName) {
+  auto Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"constexpr", "type", "const"};
+
+  verifyFormat("constexpr ::int64_t x{1};", "::int64_t constexpr x{1};", Style);
+  verifyFormat("constexpr std::int64_t x{123};",
+               "std::int64_t constexpr x{123};", Style);
+  verifyFormat("constexpr ::std::int64_t x{123};",
+               "::std::int64_t constexpr x{123};", Style);
+
+  Style.TypeNames.push_back("bar");
+  verifyFormat("constexpr foo::bar x{12};", "foo::bar constexpr x{12};", Style);
 }
 
 TEST_F(QualifierFixerTest, DisableRegions) {

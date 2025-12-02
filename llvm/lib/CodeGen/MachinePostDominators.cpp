@@ -18,26 +18,46 @@
 using namespace llvm;
 
 namespace llvm {
-template class DominatorTreeBase<MachineBasicBlock, true>; // PostDomTreeBase
+template class LLVM_EXPORT_TEMPLATE
+    DominatorTreeBase<MachineBasicBlock, true>; // PostDomTreeBase
 
 namespace DomTreeBuilder {
 
-template void Calculate<MBBPostDomTree>(MBBPostDomTree &DT);
-template void InsertEdge<MBBPostDomTree>(MBBPostDomTree &DT,
-                                         MachineBasicBlock *From,
-                                         MachineBasicBlock *To);
-template void DeleteEdge<MBBPostDomTree>(MBBPostDomTree &DT,
-                                         MachineBasicBlock *From,
-                                         MachineBasicBlock *To);
-template void ApplyUpdates<MBBPostDomTree>(MBBPostDomTree &DT,
-                                           MBBPostDomTreeGraphDiff &,
-                                           MBBPostDomTreeGraphDiff *);
-template bool Verify<MBBPostDomTree>(const MBBPostDomTree &DT,
-                                     MBBPostDomTree::VerificationLevel VL);
+template LLVM_EXPORT_TEMPLATE void
+Calculate<MBBPostDomTree>(MBBPostDomTree &DT);
+template LLVM_EXPORT_TEMPLATE void
+InsertEdge<MBBPostDomTree>(MBBPostDomTree &DT, MachineBasicBlock *From,
+                           MachineBasicBlock *To);
+template LLVM_EXPORT_TEMPLATE void
+DeleteEdge<MBBPostDomTree>(MBBPostDomTree &DT, MachineBasicBlock *From,
+                           MachineBasicBlock *To);
+template LLVM_EXPORT_TEMPLATE void
+ApplyUpdates<MBBPostDomTree>(MBBPostDomTree &DT, MBBPostDomTreeGraphDiff &,
+                             MBBPostDomTreeGraphDiff *);
+template LLVM_EXPORT_TEMPLATE bool
+Verify<MBBPostDomTree>(const MBBPostDomTree &DT,
+                       MBBPostDomTree::VerificationLevel VL);
 
 } // namespace DomTreeBuilder
 extern bool VerifyMachineDomInfo;
 } // namespace llvm
+
+AnalysisKey MachinePostDominatorTreeAnalysis::Key;
+
+MachinePostDominatorTreeAnalysis::Result
+MachinePostDominatorTreeAnalysis::run(MachineFunction &MF,
+                                      MachineFunctionAnalysisManager &) {
+  return MachinePostDominatorTree(MF);
+}
+
+PreservedAnalyses
+MachinePostDominatorTreePrinterPass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  OS << "MachinePostDominatorTree for machine function: " << MF.getName()
+     << '\n';
+  MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF).print(OS);
+  return PreservedAnalyses::all();
+}
 
 char MachinePostDominatorTreeWrapperPass::ID = 0;
 
@@ -64,12 +84,23 @@ void MachinePostDominatorTreeWrapperPass::getAnalysisUsage(
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
+bool MachinePostDominatorTree::invalidate(
+    MachineFunction &, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on machine functions, or the
+  // machine function's CFG have been preserved.
+  auto PAC = PA.getChecker<MachinePostDominatorTreeAnalysis>();
+  return !PAC.preserved() &&
+         !PAC.preservedSet<AllAnalysesOn<MachineFunction>>() &&
+         !PAC.preservedSet<CFGAnalyses>();
+}
+
 MachineBasicBlock *MachinePostDominatorTree::findNearestCommonDominator(
     ArrayRef<MachineBasicBlock *> Blocks) const {
   assert(!Blocks.empty());
 
-  MachineBasicBlock *NCD = Blocks.front();
-  for (MachineBasicBlock *BB : Blocks.drop_front()) {
+  MachineBasicBlock *NCD = Blocks.consume_front();
+  for (MachineBasicBlock *BB : Blocks) {
     NCD = Base::findNearestCommonDominator(NCD, BB);
 
     // Stop when the root is reached.

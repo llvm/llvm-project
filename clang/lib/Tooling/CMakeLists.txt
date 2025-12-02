@@ -25,6 +25,7 @@ add_clang_library(clangTooling
   GuessTargetAndModeCompilationDatabase.cpp
   InterpolatingCompilationDatabase.cpp
   JSONCompilationDatabase.cpp
+  LocateToolCompilationDatabase.cpp
   Refactoring.cpp
   RefactoringCallbacks.cpp
   StandaloneExecution.cpp
@@ -39,6 +40,7 @@ add_clang_library(clangTooling
   clangASTMatchers
   clangBasic
   clangDriver
+  clangOptions
   clangFormat
   clangFrontend
   clangLex

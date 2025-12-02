@@ -1,3 +1,5 @@
+clang/bindings/python/.git_archival.txt  export-subst
+
 libcxx/src/**/*.cpp     merge=libcxx-reformat
 libcxx/include/**/*.h   merge=libcxx-reformat
 

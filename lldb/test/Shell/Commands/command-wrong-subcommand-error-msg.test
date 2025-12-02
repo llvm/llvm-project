@@ -1,0 +1,8 @@
+# UNSUPPORTED: system-windows
+#
+# RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
+# RUN: not %lldb -b -o 'breakpoint foo' %t.out -o exit 2>&1 | FileCheck %s --check-prefix BP-MSG
+# RUN: not %lldb -b -o 'watchpoint set foo' %t.out -o exit 2>&1 | FileCheck %s --check-prefix WP-MSG
+# CHECK: at main.c:2:21
+# BP-MSG: "foo" is not a valid subcommand of "breakpoint". Valid subcommands are: clear, command, delete, disable, enable, and others. Use "help breakpoint" to find out more.
+# WP-MSG: "foo" is not a valid subcommand of "watchpoint set". Valid subcommands are: expression, variable. Use "help watchpoint set" to find out more.

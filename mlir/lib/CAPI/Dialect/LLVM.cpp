@@ -27,6 +27,10 @@ MlirType mlirLLVMPointerTypeGet(MlirContext ctx, unsigned addressSpace) {
   return wrap(LLVMPointerType::get(unwrap(ctx), addressSpace));
 }
 
+MlirTypeID mlirLLVMPointerTypeGetTypeID() {
+  return wrap(LLVM::LLVMPointerType::getTypeID());
+}
+
 bool mlirTypeIsALLVMPointerType(MlirType type) {
   return isa<LLVM::LLVMPointerType>(unwrap(type));
 }
@@ -43,6 +47,10 @@ MlirType mlirLLVMArrayTypeGet(MlirType elementType, unsigned numElements) {
   return wrap(LLVMArrayType::get(unwrap(elementType), numElements));
 }
 
+MlirType mlirLLVMArrayTypeGetElementType(MlirType type) {
+  return wrap(cast<LLVM::LLVMArrayType>(unwrap(type)).getElementType());
+}
+
 MlirType mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
                                  MlirType const *argumentTypes, bool isVarArg) {
   SmallVector<Type, 2> argumentStorage;
@@ -51,8 +59,26 @@ MlirType mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
       unwrapList(nArgumentTypes, argumentTypes, argumentStorage), isVarArg));
 }
 
+intptr_t mlirLLVMFunctionTypeGetNumInputs(MlirType type) {
+  return llvm::cast<LLVM::LLVMFunctionType>(unwrap(type)).getNumParams();
+}
+
+MlirType mlirLLVMFunctionTypeGetInput(MlirType type, intptr_t pos) {
+  assert(pos >= 0 && "pos in array must be positive");
+  return wrap(llvm::cast<LLVM::LLVMFunctionType>(unwrap(type))
+                  .getParamType(static_cast<unsigned>(pos)));
+}
+
+MlirType mlirLLVMFunctionTypeGetReturnType(MlirType type) {
+  return wrap(llvm::cast<LLVM::LLVMFunctionType>(unwrap(type)).getReturnType());
+}
+
 bool mlirTypeIsALLVMStructType(MlirType type) {
   return isa<LLVM::LLVMStructType>(unwrap(type));
+}
+
+MlirTypeID mlirLLVMStructTypeGetTypeID() {
+  return wrap(LLVM::LLVMStructType::getTypeID());
 }
 
 bool mlirLLVMStructTypeIsLiteral(MlirType type) {
@@ -141,9 +167,8 @@ MlirAttribute mlirLLVMDIExpressionAttrGet(MlirContext ctx, intptr_t nOperations,
 
   return wrap(DIExpressionAttr::get(
       unwrap(ctx),
-      llvm::map_to_vector(
-          unwrapList(nOperations, operations, attrStorage),
-          [](Attribute a) { return cast<DIExpressionElemAttr>(a); })));
+      llvm::map_to_vector(unwrapList(nOperations, operations, attrStorage),
+                          llvm::CastTo<DIExpressionElemAttr>)));
 }
 
 MlirAttribute mlirLLVMDINullTypeAttrGet(MlirContext ctx) {
@@ -159,9 +184,14 @@ MlirAttribute mlirLLVMDIBasicTypeAttrGet(MlirContext ctx, unsigned int tag,
       unwrap(ctx), tag, cast<StringAttr>(unwrap(name)), sizeInBits, encoding));
 }
 
+MlirAttribute mlirLLVMDICompositeTypeAttrGetRecSelf(MlirAttribute recId) {
+  return wrap(
+      DICompositeTypeAttr::getRecSelf(cast<DistinctAttr>(unwrap(recId))));
+}
+
 MlirAttribute mlirLLVMDICompositeTypeAttrGet(
-    MlirContext ctx, unsigned int tag, MlirAttribute recId, MlirAttribute name,
-    MlirAttribute file, uint32_t line, MlirAttribute scope,
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, unsigned int tag,
+    MlirAttribute name, MlirAttribute file, uint32_t line, MlirAttribute scope,
     MlirAttribute baseType, int64_t flags, uint64_t sizeInBits,
     uint64_t alignInBits, intptr_t nElements, MlirAttribute const *elements,
     MlirAttribute dataLocation, MlirAttribute rank, MlirAttribute allocated,
@@ -170,16 +200,16 @@ MlirAttribute mlirLLVMDICompositeTypeAttrGet(
   elementsStorage.reserve(nElements);
 
   return wrap(DICompositeTypeAttr::get(
-      unwrap(ctx), tag, cast<DistinctAttr>(unwrap(recId)),
+      unwrap(ctx), cast<DistinctAttr>(unwrap(recId)), isRecSelf, tag,
       cast<StringAttr>(unwrap(name)), cast<DIFileAttr>(unwrap(file)), line,
       cast<DIScopeAttr>(unwrap(scope)), cast<DITypeAttr>(unwrap(baseType)),
       DIFlags(flags), sizeInBits, alignInBits,
-      llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
-                          [](Attribute a) { return cast<DINodeAttr>(a); }),
       cast<DIExpressionAttr>(unwrap(dataLocation)),
       cast<DIExpressionAttr>(unwrap(rank)),
       cast<DIExpressionAttr>(unwrap(allocated)),
-      cast<DIExpressionAttr>(unwrap(associated))));
+      cast<DIExpressionAttr>(unwrap(associated)),
+      llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
+                          llvm::CastTo<DINodeAttr>)));
 }
 
 MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
@@ -230,17 +260,16 @@ MlirAttribute mlirLLVMDIFileAttrGet(MlirContext ctx, MlirAttribute name,
                               cast<StringAttr>(unwrap(directory))));
 }
 
-MlirAttribute
-mlirLLVMDICompileUnitAttrGet(MlirContext ctx, MlirAttribute id,
-                             unsigned int sourceLanguage, MlirAttribute file,
-                             MlirAttribute producer, bool isOptimized,
-                             MlirLLVMDIEmissionKind emissionKind,
-                             MlirLLVMDINameTableKind nameTableKind) {
+MlirAttribute mlirLLVMDICompileUnitAttrGet(
+    MlirContext ctx, MlirAttribute id, unsigned int sourceLanguage,
+    MlirAttribute file, MlirAttribute producer, bool isOptimized,
+    MlirLLVMDIEmissionKind emissionKind, MlirLLVMDINameTableKind nameTableKind,
+    MlirAttribute splitDebugFilename) {
   return wrap(DICompileUnitAttr::get(
       unwrap(ctx), cast<DistinctAttr>(unwrap(id)), sourceLanguage,
       cast<DIFileAttr>(unwrap(file)), cast<StringAttr>(unwrap(producer)),
-      isOptimized, DIEmissionKind(emissionKind),
-      DINameTableKind(nameTableKind)));
+      isOptimized, DIEmissionKind(emissionKind), DINameTableKind(nameTableKind),
+      cast<StringAttr>(unwrap(splitDebugFilename))));
 }
 
 MlirAttribute mlirLLVMDIFlagsAttrGet(MlirContext ctx, uint64_t value) {
@@ -266,15 +295,14 @@ MlirAttribute mlirLLVMDILexicalBlockFileAttrGet(MlirContext ctx,
       cast<DIFileAttr>(unwrap(file)), discriminator));
 }
 
-MlirAttribute
-mlirLLVMDILocalVariableAttrGet(MlirContext ctx, MlirAttribute scope,
-                               MlirAttribute name, MlirAttribute diFile,
-                               unsigned int line, unsigned int arg,
-                               unsigned int alignInBits, MlirAttribute diType) {
+MlirAttribute mlirLLVMDILocalVariableAttrGet(
+    MlirContext ctx, MlirAttribute scope, MlirAttribute name,
+    MlirAttribute diFile, unsigned int line, unsigned int arg,
+    unsigned int alignInBits, MlirAttribute diType, int64_t flags) {
   return wrap(DILocalVariableAttr::get(
       unwrap(ctx), cast<DIScopeAttr>(unwrap(scope)),
       cast<StringAttr>(unwrap(name)), cast<DIFileAttr>(unwrap(diFile)), line,
-      arg, alignInBits, cast<DITypeAttr>(unwrap(diType))));
+      arg, alignInBits, cast<DITypeAttr>(unwrap(diType)), DIFlags(flags)));
 }
 
 MlirAttribute mlirLLVMDISubroutineTypeAttrGet(MlirContext ctx,
@@ -287,21 +315,40 @@ MlirAttribute mlirLLVMDISubroutineTypeAttrGet(MlirContext ctx,
   return wrap(DISubroutineTypeAttr::get(
       unwrap(ctx), callingConvention,
       llvm::map_to_vector(unwrapList(nTypes, types, attrStorage),
-                          [](Attribute a) { return cast<DITypeAttr>(a); })));
+                          llvm::CastTo<DITypeAttr>)));
+}
+
+MlirAttribute mlirLLVMDISubprogramAttrGetRecSelf(MlirAttribute recId) {
+  return wrap(DISubprogramAttr::getRecSelf(cast<DistinctAttr>(unwrap(recId))));
 }
 
 MlirAttribute mlirLLVMDISubprogramAttrGet(
-    MlirContext ctx, MlirAttribute id, MlirAttribute compileUnit,
-    MlirAttribute scope, MlirAttribute name, MlirAttribute linkageName,
-    MlirAttribute file, unsigned int line, unsigned int scopeLine,
-    uint64_t subprogramFlags, MlirAttribute type) {
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
+    MlirAttribute compileUnit, MlirAttribute scope, MlirAttribute name,
+    MlirAttribute linkageName, MlirAttribute file, unsigned int line,
+    unsigned int scopeLine, uint64_t subprogramFlags, MlirAttribute type,
+    intptr_t nRetainedNodes, MlirAttribute const *retainedNodes,
+    intptr_t nAnnotations, MlirAttribute const *annotations) {
+  SmallVector<Attribute> nodesStorage;
+  nodesStorage.reserve(nRetainedNodes);
+
+  SmallVector<Attribute> annotationsStorage;
+  annotationsStorage.reserve(nAnnotations);
+
   return wrap(DISubprogramAttr::get(
-      unwrap(ctx), cast<DistinctAttr>(unwrap(id)),
+      unwrap(ctx), cast<DistinctAttr>(unwrap(recId)), isRecSelf,
+      cast<DistinctAttr>(unwrap(id)),
       cast<DICompileUnitAttr>(unwrap(compileUnit)),
       cast<DIScopeAttr>(unwrap(scope)), cast<StringAttr>(unwrap(name)),
       cast<StringAttr>(unwrap(linkageName)), cast<DIFileAttr>(unwrap(file)),
       line, scopeLine, DISubprogramFlags(subprogramFlags),
-      cast<DISubroutineTypeAttr>(unwrap(type))));
+      cast<DISubroutineTypeAttr>(unwrap(type)),
+      llvm::map_to_vector(
+          unwrapList(nRetainedNodes, retainedNodes, nodesStorage),
+          llvm::CastTo<DINodeAttr>),
+      llvm::map_to_vector(
+          unwrapList(nAnnotations, annotations, annotationsStorage),
+          llvm::CastTo<DINodeAttr>)));
 }
 
 MlirAttribute mlirLLVMDISubprogramAttrGetScope(MlirAttribute diSubprogram) {
@@ -345,4 +392,24 @@ MlirAttribute mlirLLVMDIModuleAttrGet(MlirContext ctx, MlirAttribute file,
 
 MlirAttribute mlirLLVMDIModuleAttrGetScope(MlirAttribute diModule) {
   return wrap(cast<DIModuleAttr>(unwrap(diModule)).getScope());
+}
+
+MlirAttribute mlirLLVMDIImportedEntityAttrGet(
+    MlirContext ctx, unsigned int tag, MlirAttribute scope,
+    MlirAttribute entity, MlirAttribute file, unsigned int line,
+    MlirAttribute name, intptr_t nElements, MlirAttribute const *elements) {
+  SmallVector<Attribute> elementsStorage;
+  elementsStorage.reserve(nElements);
+  return wrap(DIImportedEntityAttr::get(
+      unwrap(ctx), tag, cast<DIScopeAttr>(unwrap(scope)),
+      cast<DINodeAttr>(unwrap(entity)), cast<DIFileAttr>(unwrap(file)), line,
+      cast<StringAttr>(unwrap(name)),
+      llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
+                          llvm::CastTo<DINodeAttr>)));
+}
+
+MlirAttribute mlirLLVMDIAnnotationAttrGet(MlirContext ctx, MlirAttribute name,
+                                          MlirAttribute value) {
+  return wrap(DIAnnotationAttr::get(unwrap(ctx), cast<StringAttr>(unwrap(name)),
+                                    cast<StringAttr>(unwrap(value))));
 }

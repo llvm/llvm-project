@@ -21,7 +21,6 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <memory>
 #include <utility>
 #include <vector>
 
@@ -286,8 +285,7 @@ Expected<MSFLayout> MSFBuilder::generateLayout() {
   SB->NumBlocks = FreeBlocks.size();
 
   ulittle32_t *DirBlocks = Allocator.Allocate<ulittle32_t>(NumDirectoryBlocks);
-  std::uninitialized_copy_n(DirectoryBlocks.begin(), NumDirectoryBlocks,
-                            DirBlocks);
+  llvm::uninitialized_copy(DirectoryBlocks, DirBlocks);
   L.DirectoryBlocks = ArrayRef<ulittle32_t>(DirBlocks, NumDirectoryBlocks);
 
   // The stream sizes should be re-allocated as a stable pointer and the stream
@@ -300,8 +298,7 @@ Expected<MSFLayout> MSFBuilder::generateLayout() {
       Sizes[I] = StreamData[I].first;
       ulittle32_t *BlockList =
           Allocator.Allocate<ulittle32_t>(StreamData[I].second.size());
-      std::uninitialized_copy_n(StreamData[I].second.begin(),
-                                StreamData[I].second.size(), BlockList);
+      llvm::uninitialized_copy(StreamData[I].second, BlockList);
       L.StreamMap[I] =
           ArrayRef<ulittle32_t>(BlockList, StreamData[I].second.size());
     }

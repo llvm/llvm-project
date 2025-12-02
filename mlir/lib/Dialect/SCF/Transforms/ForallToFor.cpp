@@ -21,10 +21,7 @@ namespace mlir {
 #include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
 } // namespace mlir
 
-using namespace llvm;
 using namespace mlir;
-using scf::ForallOp;
-using scf::ForOp;
 using scf::LoopNest;
 
 LogicalResult

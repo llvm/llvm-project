@@ -1,4 +1,4 @@
-//===-- SimplifyBooleanExprCheck.cpp - clang-tidy -------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,7 @@
 #include "SimplifyBooleanExprCheck.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -20,19 +21,16 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-namespace {
-
-StringRef getText(const ASTContext &Context, SourceRange Range) {
+static StringRef getText(const ASTContext &Context, SourceRange Range) {
   return Lexer::getSourceText(CharSourceRange::getTokenRange(Range),
                               Context.getSourceManager(),
                               Context.getLangOpts());
 }
 
-template <typename T> StringRef getText(const ASTContext &Context, T &Node) {
+template <typename T>
+static StringRef getText(const ASTContext &Context, T &Node) {
   return getText(Context, Node.getSourceRange());
 }
-
-} // namespace
 
 static constexpr char SimplifyOperatorDiagnostic[] =
     "redundant boolean literal supplied to boolean operator";
@@ -205,7 +203,7 @@ static std::string replacementExpression(const ASTContext &Context,
                          .str(),
                      NeedsStaticCast));
 
-    StringRef Text = getText(Context, *E);
+    const StringRef Text = getText(Context, *E);
     if (!NeedsStaticCast && needsParensAfterUnaryNegation(E))
       return ("!(" + Text + ")").str();
 
@@ -368,7 +366,7 @@ public:
      * if (false) ThenStmt(); -> <Empty>;
      * if (false) ThenStmt(); else ElseStmt() -> ElseStmt();
      */
-    Expr *Cond = If->getCond()->IgnoreImplicit();
+    const Expr *Cond = If->getCond()->IgnoreImplicit();
     if (std::optional<bool> Bool = getAsBoolLiteral(Cond, true)) {
       if (*Bool)
         Check->replaceWithThenStatement(Context, If, Cond);
@@ -381,9 +379,9 @@ public:
        * if (Cond) return true; else return false; -> return Cond;
        * if (Cond) return false; else return true; -> return !Cond;
        */
-      if (ExprAndBool ThenReturnBool =
+      if (const ExprAndBool ThenReturnBool =
               checkSingleStatement(If->getThen(), parseReturnLiteralBool)) {
-        ExprAndBool ElseReturnBool =
+        const ExprAndBool ElseReturnBool =
             checkSingleStatement(If->getElse(), parseReturnLiteralBool);
         if (ElseReturnBool && ThenReturnBool.Bool != ElseReturnBool.Bool) {
           if (Check->ChainedConditionalReturn ||
@@ -420,9 +418,9 @@ public:
             return {ME->getMemberDecl(), *RightasBool};
           return {};
         };
-        if (DeclAndBool ThenAssignment =
+        if (const DeclAndBool ThenAssignment =
                 checkSingleStatement(If->getThen(), VarBoolAssignmentMatcher)) {
-          DeclAndBool ElseAssignment =
+          const DeclAndBool ElseAssignment =
               checkSingleStatement(If->getElse(), VarBoolAssignmentMatcher);
           if (ElseAssignment.Item == ThenAssignment.Item &&
               ElseAssignment.Bool != ThenAssignment.Bool) {
@@ -463,7 +461,7 @@ public:
          Second != End; ++Second, ++First) {
       PrevIf = CurIf;
       CurIf = isa<IfStmt>(*First);
-      ExprAndBool TrailingReturnBool = parseReturnLiteralBool(*Second);
+      const ExprAndBool TrailingReturnBool = parseReturnLiteralBool(*Second);
       if (!TrailingReturnBool)
         continue;
 
@@ -475,7 +473,7 @@ public:
         auto *If = cast<IfStmt>(*First);
         if (!If->hasInitStorage() && !If->hasVarStorage() &&
             !If->isConsteval()) {
-          ExprAndBool ThenReturnBool =
+          const ExprAndBool ThenReturnBool =
               checkSingleStatement(If->getThen(), parseReturnLiteralBool);
           if (ThenReturnBool &&
               ThenReturnBool.Bool != TrailingReturnBool.Bool) {
@@ -499,7 +497,7 @@ public:
         auto *SubIf = dyn_cast<IfStmt>(SubStmt);
         if (SubIf && !SubIf->getElse() && !SubIf->hasInitStorage() &&
             !SubIf->hasVarStorage() && !SubIf->isConsteval()) {
-          ExprAndBool ThenReturnBool =
+          const ExprAndBool ThenReturnBool =
               checkSingleStatement(SubIf->getThen(), parseReturnLiteralBool);
           if (ThenReturnBool &&
               ThenReturnBool.Bool != TrailingReturnBool.Bool) {
@@ -576,7 +574,7 @@ public:
       if (Check->reportDeMorgan(Context, Op, BinaryOp, !IsProcessing, parent(),
                                 Parens) &&
           !Check->areDiagsSelfContained()) {
-        llvm::SaveAndRestore RAII(IsProcessing, true);
+        const llvm::SaveAndRestore RAII(IsProcessing, true);
         return Base::TraverseUnaryOperator(Op);
       }
     }
@@ -640,13 +638,13 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
   if (!isa<CXXBoolLiteralExpr>(Other) && containsBoolLiteral(Other))
     return;
 
-  bool BoolValue = Bool->getValue();
+  const bool BoolValue = Bool->getValue();
 
   auto ReplaceWithExpression = [this, &Context, LHS, RHS,
                                 Bool](const Expr *ReplaceWith, bool Negated) {
-    std::string Replacement =
+    const std::string Replacement =
         replacementExpression(Context, Negated, ReplaceWith);
-    SourceRange Range(LHS->getBeginLoc(), RHS->getEndLoc());
+    const SourceRange Range(LHS->getBeginLoc(), RHS->getEndLoc());
     issueDiag(Context, Bool->getBeginLoc(), SimplifyOperatorDiagnostic, Range,
               Replacement);
   };
@@ -702,18 +700,21 @@ bool SimplifyBooleanExprCheck::canBeBypassed(const Stmt *S) const {
   return IgnoreMacros && S->getBeginLoc().isMacroID();
 }
 
-void SimplifyBooleanExprCheck::issueDiag(const ASTContext &Context,
+/// @brief return true when replacement created.
+bool SimplifyBooleanExprCheck::issueDiag(const ASTContext &Context,
                                          SourceLocation Loc,
                                          StringRef Description,
                                          SourceRange ReplacementRange,
                                          StringRef Replacement) {
-  CharSourceRange CharRange =
+  const CharSourceRange CharRange =
       Lexer::makeFileCharRange(CharSourceRange::getTokenRange(ReplacementRange),
                                Context.getSourceManager(), getLangOpts());
 
-  DiagnosticBuilder Diag = diag(Loc, Description);
-  if (!containsDiscardedTokens(Context, CharRange))
+  const DiagnosticBuilder Diag = diag(Loc, Description);
+  const bool HasReplacement = !containsDiscardedTokens(Context, CharRange);
+  if (HasReplacement)
     Diag << FixItHint::CreateReplacement(CharRange, Replacement);
+  return HasReplacement;
 }
 
 void SimplifyBooleanExprCheck::replaceWithThenStatement(
@@ -736,7 +737,7 @@ void SimplifyBooleanExprCheck::replaceWithElseStatement(
 void SimplifyBooleanExprCheck::replaceWithCondition(
     const ASTContext &Context, const ConditionalOperator *Ternary,
     bool Negated) {
-  std::string Replacement =
+  const std::string Replacement =
       replacementExpression(Context, Negated, Ternary->getCond());
   issueDiag(Context, Ternary->getTrueExpr()->getBeginLoc(),
             "redundant boolean literal in ternary expression result",
@@ -746,13 +747,23 @@ void SimplifyBooleanExprCheck::replaceWithCondition(
 void SimplifyBooleanExprCheck::replaceWithReturnCondition(
     const ASTContext &Context, const IfStmt *If, const Expr *BoolLiteral,
     bool Negated) {
-  StringRef Terminator = isa<CompoundStmt>(If->getElse()) ? ";" : "";
-  std::string Condition =
+  const StringRef Terminator = isa<CompoundStmt>(If->getElse()) ? ";" : "";
+  const std::string Condition =
       replacementExpression(Context, Negated, If->getCond());
-  std::string Replacement = ("return " + Condition + Terminator).str();
-  SourceLocation Start = BoolLiteral->getBeginLoc();
-  issueDiag(Context, Start, SimplifyConditionalReturnDiagnostic,
-            If->getSourceRange(), Replacement);
+  const std::string Replacement = ("return " + Condition + Terminator).str();
+  const SourceLocation Start = BoolLiteral->getBeginLoc();
+
+  const bool HasReplacement =
+      issueDiag(Context, Start, SimplifyConditionalReturnDiagnostic,
+                If->getSourceRange(), Replacement);
+
+  if (!HasReplacement) {
+    const SourceRange ConditionRange = If->getCond()->getSourceRange();
+    if (ConditionRange.isValid())
+      diag(ConditionRange.getBegin(), "conditions that can be simplified",
+           DiagnosticIDs::Note)
+          << ConditionRange;
+  }
 }
 
 void SimplifyBooleanExprCheck::replaceCompoundReturnWithCondition(
@@ -760,9 +771,23 @@ void SimplifyBooleanExprCheck::replaceCompoundReturnWithCondition(
     const IfStmt *If, const Expr *ThenReturn) {
   const std::string Replacement =
       "return " + replacementExpression(Context, Negated, If->getCond());
-  issueDiag(Context, ThenReturn->getBeginLoc(),
-            SimplifyConditionalReturnDiagnostic,
-            SourceRange(If->getBeginLoc(), Ret->getEndLoc()), Replacement);
+
+  const bool HasReplacement = issueDiag(
+      Context, ThenReturn->getBeginLoc(), SimplifyConditionalReturnDiagnostic,
+      SourceRange(If->getBeginLoc(), Ret->getEndLoc()), Replacement);
+
+  if (!HasReplacement) {
+    const SourceRange ConditionRange = If->getCond()->getSourceRange();
+    if (ConditionRange.isValid())
+      diag(ConditionRange.getBegin(), "conditions that can be simplified",
+           DiagnosticIDs::Note)
+          << ConditionRange;
+    const SourceRange ReturnRange = Ret->getSourceRange();
+    if (ReturnRange.isValid())
+      diag(ReturnRange.getBegin(), "return statement that can be simplified",
+           DiagnosticIDs::Note)
+          << ReturnRange;
+  }
 }
 
 void SimplifyBooleanExprCheck::replaceWithAssignment(const ASTContext &Context,
@@ -770,12 +795,13 @@ void SimplifyBooleanExprCheck::replaceWithAssignment(const ASTContext &Context,
                                                      const Expr *Var,
                                                      SourceLocation Loc,
                                                      bool Negated) {
-  SourceRange Range = IfAssign->getSourceRange();
-  StringRef VariableName = getText(Context, *Var);
-  StringRef Terminator = isa<CompoundStmt>(IfAssign->getElse()) ? ";" : "";
-  std::string Condition =
+  const SourceRange Range = IfAssign->getSourceRange();
+  const StringRef VariableName = getText(Context, *Var);
+  const StringRef Terminator =
+      isa<CompoundStmt>(IfAssign->getElse()) ? ";" : "";
+  const std::string Condition =
       replacementExpression(Context, Negated, IfAssign->getCond());
-  std::string Replacement =
+  const std::string Replacement =
       (VariableName + " = " + Condition + Terminator).str();
   issueDiag(Context, Loc, "redundant boolean literal in conditional assignment",
             Range, Replacement);

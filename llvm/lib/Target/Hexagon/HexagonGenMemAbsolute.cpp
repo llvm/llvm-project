@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "hexagon-abs"
 
@@ -32,23 +31,16 @@ STATISTIC(HexagonNumLoadAbsConversions,
 STATISTIC(HexagonNumStoreAbsConversions,
           "Number of Store instructions converted to absolute-set form");
 
-namespace llvm {
-FunctionPass *createHexagonGenMemAbsolute();
-void initializeHexagonGenMemAbsolutePass(PassRegistry &Registry);
-} // namespace llvm
-
 namespace {
 
 class HexagonGenMemAbsolute : public MachineFunctionPass {
-  const HexagonInstrInfo *TII;
-  MachineRegisterInfo *MRI;
-  const TargetRegisterInfo *TRI;
+  const HexagonInstrInfo *TII = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
 
 public:
   static char ID;
-  HexagonGenMemAbsolute() : MachineFunctionPass(ID), TII(0), MRI(0), TRI(0) {
-    initializeHexagonGenMemAbsolutePass(*PassRegistry::getPassRegistry());
-  }
+  HexagonGenMemAbsolute() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Hexagon Generate Load/Store Set Absolute Address Instruction";
@@ -86,11 +78,9 @@ bool HexagonGenMemAbsolute::runOnMachineFunction(MachineFunction &Fn) {
       getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   // Loop over all of the basic blocks
-  for (MachineFunction::iterator MBBb = Fn.begin(), MBBe = Fn.end();
-       MBBb != MBBe; ++MBBb) {
-    MachineBasicBlock *MBB = &*MBBb;
+  for (MachineBasicBlock &MBB : Fn) {
     // Traverse the basic block
-    for (MachineBasicBlock::iterator MII = MBB->begin(); MII != MBB->end();
+    for (MachineBasicBlock::iterator MII = MBB.begin(); MII != MBB.end();
          ++MII) {
       MachineInstr *MI = &*MII;
       int Opc = MI->getOpcode();
@@ -205,7 +195,7 @@ bool HexagonGenMemAbsolute::runOnMachineFunction(MachineFunction &Fn) {
 
       LLVM_DEBUG(dbgs() << "Replaced with " << *MIB << "\n");
       // Erase the instructions that got replaced.
-      MII = MBB->erase(MI);
+      MII = MBB.erase(MI);
       --MII;
       NextMI->getParent()->erase(NextMI);
     }

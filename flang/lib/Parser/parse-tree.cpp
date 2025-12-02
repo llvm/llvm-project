@@ -7,10 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Parser/parse-tree.h"
+
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/tools.h"
 #include "flang/Parser/user-state.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
@@ -184,7 +188,7 @@ StructureConstructor ArrayElement::ConvertToStructureConstructor(
   std::list<ComponentSpec> components;
   for (auto &subscript : subscripts) {
     components.emplace_back(std::optional<Keyword>{},
-        ComponentDataSource{std::move(*Unwrap<Expr>(subscript))});
+        ComponentDataSource{std::move(UnwrapRef<Expr>(subscript))});
   }
   DerivedTypeSpec spec{std::move(name), std::list<TypeParamSpec>{}};
   spec.derivedTypeSpec = &derived;
@@ -251,5 +255,241 @@ CharBlock Variable::GetSource() const {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Name &x) {
   return os << x.ToString();
+}
+
+OmpDirectiveName::OmpDirectiveName(const Verbatim &name) {
+  std::string_view nameView{name.source.begin(), name.source.size()};
+  std::string nameLower{ToLowerCaseLetters(nameView)};
+  // The function getOpenMPDirectiveKind will return OMPD_unknown in two cases:
+  // (1) if the given string doesn't match any actual directive, or
+  // (2) if the given string was "unknown".
+  // The Verbatim(<token>) parser will succeed as long as the given token
+  // matches the source.
+  // Since using "construct<OmpDirectiveName>(verbatim(...))" will succeed
+  // if the verbatim parser succeeds, in order to get OMPD_unknown the
+  // token given to Verbatim must be invalid. Because it's an internal issue
+  // asserting is ok.
+  v = llvm::omp::getOpenMPDirectiveKind(nameLower);
+  assert(v != llvm::omp::Directive::OMPD_unknown && "Invalid directive name");
+  source = name.source;
+}
+
+OmpDependenceType::Value OmpDoacross::GetDepType() const {
+  return common::visit( //
+      common::visitors{
+          [](const OmpDoacross::Sink &) {
+            return OmpDependenceType::Value::Sink;
+          },
+          [](const OmpDoacross::Source &) {
+            return OmpDependenceType::Value::Source;
+          },
+      },
+      u);
+}
+
+OmpTaskDependenceType::Value OmpDependClause::TaskDep::GetTaskDepType() const {
+  using Modifier = OmpDependClause::TaskDep::Modifier;
+  auto &modifiers{std::get<std::optional<std::list<Modifier>>>(t)};
+  if (modifiers) {
+    for (auto &m : *modifiers) {
+      if (auto *dep{std::get_if<OmpTaskDependenceType>(&m.u)}) {
+        return dep->v;
+      }
+    }
+    llvm_unreachable("expecting OmpTaskDependenceType in TaskDep");
+  } else {
+    llvm_unreachable("expecting modifiers on OmpDependClause::TaskDep");
+  }
+}
+
+std::string OmpTraitSelectorName::ToString() const {
+  return common::visit( //
+      common::visitors{
+          [&](Value v) { //
+            return std::string(EnumToString(v));
+          },
+          [&](llvm::omp::Directive d) {
+            return llvm::omp::getOpenMPDirectiveName(
+                d, llvm::omp::FallbackVersion)
+                .str();
+          },
+          [&](const std::string &s) { //
+            return s;
+          },
+      },
+      u);
+}
+
+std::string OmpTraitSetSelectorName::ToString() const {
+  return std::string(EnumToString(v));
+}
+
+llvm::omp::Clause OpenMPAtomicConstruct::GetKind() const {
+  const OmpDirectiveSpecification &dirSpec{std::get<OmpBeginDirective>(t)};
+  for (auto &clause : dirSpec.Clauses().v) {
+    switch (clause.Id()) {
+    case llvm::omp::Clause::OMPC_read:
+    case llvm::omp::Clause::OMPC_write:
+    case llvm::omp::Clause::OMPC_update:
+      return clause.Id();
+    default:
+      break;
+    }
+  }
+  return llvm::omp::Clause::OMPC_update;
+}
+
+bool OpenMPAtomicConstruct::IsCapture() const {
+  const OmpDirectiveSpecification &dirSpec{std::get<OmpBeginDirective>(t)};
+  return llvm::any_of(dirSpec.Clauses().v, [](auto &clause) {
+    return clause.Id() == llvm::omp::Clause::OMPC_capture;
+  });
+}
+
+bool OpenMPAtomicConstruct::IsCompare() const {
+  const OmpDirectiveSpecification &dirSpec{std::get<OmpBeginDirective>(t)};
+  return llvm::any_of(dirSpec.Clauses().v, [](auto &clause) {
+    return clause.Id() == llvm::omp::Clause::OMPC_compare;
+  });
+}
+} // namespace Fortran::parser
+
+template <typename C> static llvm::omp::Clause getClauseIdForClass(C &&) {
+  using namespace Fortran;
+  using A = llvm::remove_cvref_t<C>; // A is referenced in OMP.inc
+  // The code included below contains a sequence of checks like the following
+  // for each OpenMP clause
+  //   if constexpr (std::is_same_v<A, parser::OmpClause::AcqRel>)
+  //     return llvm::omp::Clause::OMPC_acq_rel;
+  //   [...]
+#define GEN_FLANG_CLAUSE_PARSER_KIND_MAP
+#include "llvm/Frontend/OpenMP/OMP.inc"
+}
+
+namespace Fortran::parser {
+llvm::omp::Clause OmpClause::Id() const {
+  return std::visit([](auto &&s) { return getClauseIdForClass(s); }, u);
+}
+
+bool OmpDirectiveName::IsExecutionPart() const {
+  // Can the directive appear in the execution part of the program.
+  llvm::omp::Directive id{v};
+  switch (llvm::omp::getDirectiveCategory(id)) {
+  case llvm::omp::Category::Executable:
+    return true;
+  case llvm::omp::Category::Declarative:
+    switch (id) {
+    case llvm::omp::Directive::OMPD_allocate:
+      return true;
+    default:
+      return false;
+    }
+    break;
+  case llvm::omp::Category::Informational:
+    switch (id) {
+    case llvm::omp::Directive::OMPD_assume:
+      return true;
+    default:
+      return false;
+    }
+    break;
+  case llvm::omp::Category::Meta:
+    return true;
+  case llvm::omp::Category::Subsidiary:
+    switch (id) {
+    // TODO: case llvm::omp::Directive::OMPD_task_iteration:
+    case llvm::omp::Directive::OMPD_section:
+    case llvm::omp::Directive::OMPD_scan:
+      return true;
+    default:
+      return false;
+    }
+    break;
+  case llvm::omp::Category::Utility:
+    switch (id) {
+    case llvm::omp::Directive::OMPD_error:
+    case llvm::omp::Directive::OMPD_nothing:
+      return true;
+    default:
+      return false;
+    }
+    break;
+  }
+  return false;
+}
+
+const OmpArgumentList &OmpDirectiveSpecification::Arguments() const {
+  static OmpArgumentList empty{decltype(OmpArgumentList::v){}};
+  if (auto &arguments = std::get<std::optional<OmpArgumentList>>(t)) {
+    return *arguments;
+  }
+  return empty;
+}
+
+const OmpClauseList &OmpDirectiveSpecification::Clauses() const {
+  static OmpClauseList empty{decltype(OmpClauseList::v){}};
+  if (auto &clauses = std::get<std::optional<OmpClauseList>>(t)) {
+    return *clauses;
+  }
+  return empty;
+}
+
+const DoConstruct *OpenMPLoopConstruct::GetNestedLoop() const {
+  auto getFromBlock{[](const Block &body, auto self) -> const DoConstruct * {
+    for (auto &stmt : body) {
+      if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+        return self(std::get<Block>(block->t), self);
+      }
+      if (auto *loop{Unwrap<DoConstruct>(&stmt)}) {
+        return loop;
+      }
+    }
+    return nullptr;
+  }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
+}
+
+const OpenMPLoopConstruct *OpenMPLoopConstruct::GetNestedConstruct() const {
+  auto getFromBlock{
+      [](const Block &body, auto self) -> const OpenMPLoopConstruct * {
+        for (auto &stmt : body) {
+          if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+            return self(std::get<Block>(block->t), self);
+          }
+          if (auto *omp{Unwrap<OpenMPLoopConstruct>(&stmt)}) {
+            return omp;
+          }
+        }
+        return nullptr;
+      }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
+}
+
+static bool InitCharBlocksFromStrings(llvm::MutableArrayRef<CharBlock> blocks,
+    llvm::ArrayRef<std::string> strings) {
+  for (auto [i, n] : llvm::enumerate(strings)) {
+    blocks[i] = CharBlock(n);
+  }
+  return true;
+}
+
+// The names should have static storage duration. Keep these names
+// in a sigle place.
+llvm::ArrayRef<CharBlock> OmpCombinerExpression::Variables() {
+  static std::string names[]{"omp_in", "omp_out"};
+  static CharBlock vars[std::size(names)];
+
+  [[maybe_unused]] static bool init = InitCharBlocksFromStrings(vars, names);
+  return vars;
+}
+
+llvm::ArrayRef<CharBlock> OmpInitializerExpression::Variables() {
+  static std::string names[]{"omp_orig", "omp_priv"};
+  static CharBlock vars[std::size(names)];
+
+  [[maybe_unused]] static bool init = InitCharBlocksFromStrings(vars, names);
+  return vars;
 }
 } // namespace Fortran::parser

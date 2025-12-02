@@ -5,11 +5,11 @@ float base(float a, float b, float c) {
 // CHECK-LABEL: _Z4basefff
 // FLAG: %[[A:.+]] = fdiv arcp float %b, %c
 // FLAG: %[[M:.+]] = fdiv arcp float %[[A]], %b
-// FLAG-NEXT: fadd arcp float %[[M]], %c
+// FLAG-NEXT: fadd arcp float %c, %[[M]]
 
 // DEFAULT: %[[A:.+]] = fdiv float %b, %c
 // DEFAULT: %[[M:.+]] = fdiv float %[[A]], %b
-// DEFAULT-NEXT: fadd float %[[M]], %c
+// DEFAULT-NEXT: fadd float %c, %[[M]]
   a = b / c;
   return a / b + c;
 }
@@ -19,7 +19,7 @@ float fp_recip_simple(float a, float b, float c) {
 // CHECK-LABEL: _Z15fp_recip_simplefff
 // CHECK: %[[A:.+]] = fdiv arcp float %b, %c
 // CHECK: %[[M:.+]] = fdiv arcp float %[[A]], %b
-// CHECK-NEXT: fadd arcp float %[[M]], %c
+// CHECK-NEXT: fadd arcp float %c, %[[M]]
 #pragma clang fp reciprocal(on)
   a = b / c;
   return a / b + c;
@@ -30,7 +30,7 @@ float fp_recip_disable(float a, float b, float c) {
 // CHECK-LABEL: _Z16fp_recip_disablefff
 // CHECK: %[[A:.+]] = fdiv float %b, %c
 // CHECK: %[[M:.+]] = fdiv float %[[A]], %b
-// CHECK-NEXT: fadd float %[[M]], %c
+// CHECK-NEXT: fadd float %c, %[[M]]
 #pragma clang fp reciprocal(off)
   a = b / c;
   return a / b + c;
@@ -40,7 +40,7 @@ float fp_recip_with_reassoc_simple(float a, float b, float c) {
 // CHECK-LABEL: _Z28fp_recip_with_reassoc_simplefff
 // CHECK: %[[A:.+]] = fmul reassoc arcp float %b, %c
 // CHECK: %[[M:.+]] = fdiv reassoc arcp float %b, %[[A]]
-// CHECK-NEXT: fadd reassoc arcp float %[[M]], %c
+// CHECK-NEXT: fadd reassoc arcp float %c, %[[M]]
 #pragma clang fp reciprocal(on) reassociate(on)
   a = b / c;
   return a / b + c;
@@ -72,7 +72,7 @@ float fp_recip_template(float a, float b, float c) {
   // CHECK-LABEL: _Z17fp_recip_templatefff
   // CHECK: %[[A1:.+]] = fdiv arcp float %a, %b
   // CHECK-NEXT: %[[A2:.+]] = fsub arcp float %[[A1]], %c
-  // CHECK-NEXT: fadd arcp float %[[A2]], %c
+  // CHECK-NEXT: fadd arcp float %c, %[[A2]]
   return template_recip<float>(a, b, c);
 }
 

@@ -10,6 +10,7 @@
 #include "LibcBenchmark.h"
 #include "LibcMemoryBenchmark.h"
 #include "MemorySizeDistributions.h"
+#include "src/__support/macros/config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -21,7 +22,7 @@
 #include <cstring>
 #include <unistd.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 extern void *memcpy(void *__restrict, const void *__restrict, size_t);
 extern void *memmove(void *, const void *, size_t);
@@ -30,7 +31,7 @@ extern void bzero(void *, size_t);
 extern int memcmp(const void *, const void *, size_t);
 extern int bcmp(const void *, const void *, size_t);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 namespace llvm {
 namespace libc_benchmarks {
@@ -160,11 +161,11 @@ private:
     if (Percent == LastPercent)
       return;
     LastPercent = Percent;
-    size_t I = 0;
+    size_t i = 0;
     errs() << '[';
-    for (; I <= Percent; ++I)
+    for (; i <= Percent; ++i)
       errs() << '#';
-    for (; I <= 100; ++I)
+    for (; i <= 100; ++i)
       errs() << '_';
     errs() << "] " << Percent << '%' << '\r';
   }

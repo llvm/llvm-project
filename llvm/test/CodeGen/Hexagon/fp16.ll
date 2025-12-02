@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This test validates the following facts for half-precision floating point
 ; conversions.
@@ -13,7 +13,7 @@
 ; Validate that we generate correct lib calls to convert fp16
 
 ;CHECK-LABEL: @test1
-;CHECK: call __extendhfsf2
+;CHECK: jump __extendhfsf2
 ;CHECK: r0 = memuh
 define dso_local float @test1(ptr nocapture readonly %a) local_unnamed_addr #0 {
 entry:

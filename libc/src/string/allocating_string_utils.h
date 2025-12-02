@@ -11,28 +11,28 @@
 
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/optional.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/string_utils.h"
 
 #include <stddef.h> // For size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-LIBC_INLINE cpp::optional<char *> strdup(const char *src) {
+template <typename T> LIBC_INLINE cpp::optional<T *> strdup(const T *src) {
   if (src == nullptr)
     return cpp::nullopt;
   size_t len = string_length(src) + 1;
   AllocChecker ac;
-  char *newstr = new (ac) char[len];
+  T *newstr = new (ac) T[len];
   if (!ac)
     return cpp::nullopt;
-  inline_memcpy(newstr, src, len);
+  inline_memcpy(newstr, src, len * sizeof(T));
   return newstr;
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_ALLOCATING_STRING_UTILS_H

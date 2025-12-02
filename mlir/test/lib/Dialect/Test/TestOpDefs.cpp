@@ -8,6 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
@@ -15,6 +16,32 @@
 
 using namespace mlir;
 using namespace test;
+
+//===----------------------------------------------------------------------===//
+// OverridenSymbolVisibilityOp
+//===----------------------------------------------------------------------===//
+
+SymbolTable::Visibility OverriddenSymbolVisibilityOp::getVisibility() {
+  return SymbolTable::Visibility::Private;
+}
+
+static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
+  switch (visibility) {
+  case SymbolTable::Visibility::Private:
+    return "private";
+  case SymbolTable::Visibility::Nested:
+    return "nested";
+  case SymbolTable::Visibility::Public:
+    return "public";
+  }
+}
+
+void OverriddenSymbolVisibilityOp::setVisibility(
+    SymbolTable::Visibility visibility) {
+
+  emitOpError("cannot change visibility of symbol to ")
+      << getVisibilityString(visibility);
+}
 
 //===----------------------------------------------------------------------===//
 // TestBranchOp
@@ -123,6 +150,14 @@ RegionKind SSACFGRegionOp::getRegionKind(unsigned index) {
 //===----------------------------------------------------------------------===//
 
 RegionKind GraphRegionOp::getRegionKind(unsigned index) {
+  return RegionKind::Graph;
+}
+
+//===----------------------------------------------------------------------===//
+// IsolatedGraphRegionOp
+//===----------------------------------------------------------------------===//
+
+RegionKind IsolatedGraphRegionOp::getRegionKind(unsigned index) {
   return RegionKind::Graph;
 }
 
@@ -277,18 +312,18 @@ LogicalResult OpWithResultShapeInterfaceOp::reifyReturnTypeShapes(
         llvm::map_range(llvm::seq<int64_t>(0, rank), [&](int64_t dim) -> Value {
           return builder.createOrFold<tensor::DimOp>(loc, operand, dim);
         }));
-    shapes.push_back(builder.create<tensor::FromElementsOp>(
-        getLoc(), RankedTensorType::get({rank}, builder.getIndexType()),
-        currShape));
+    shapes.push_back(tensor::FromElementsOp::create(
+        builder, getLoc(),
+        RankedTensorType::get({rank}, builder.getIndexType()), currShape));
   }
   return success();
 }
 
 //===----------------------------------------------------------------------===//
-// OpWithResultShapePerDimInterfaceOp
+// ReifyShapedTypeUsingReifyResultShapesOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
+LogicalResult ReifyShapedTypeUsingReifyResultShapesOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
   Location loc = getLoc();
   shapes.reserve(getNumOperands());
@@ -307,6 +342,103 @@ LogicalResult OpWithResultShapePerDimInterfaceOp::reifyResultShapes(
     shapes.emplace_back(std::move(currShape));
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ReifyShapedTypeUsingReifyShapeOfResultOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReifyShapedTypeUsingReifyShapeOfResultOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+ReifyShapedTypeUsingReifyShapeOfResultOp::reifyShapeOfResult(OpBuilder &builder,
+                                                             int resultIndex) {
+  Location loc = getLoc();
+  Value sourceOperand = getOperand(getNumOperands() - 1 - resultIndex);
+  SmallVector<OpFoldResult> shape =
+      tensor::getMixedSizes(builder, loc, sourceOperand);
+  return shape;
+}
+
+//===----------------------------------------------------------------------===//
+// ReifyShapedTypeUsingReifyDimOfResultOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReifyShapedTypeUsingReifyDimOfResultOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+ReifyShapedTypeUsingReifyDimOfResultOp::reifyShapeOfResult(OpBuilder &builder,
+                                                           int resultIndex) {
+  return failure();
+}
+
+FailureOr<OpFoldResult>
+ReifyShapedTypeUsingReifyDimOfResultOp::reifyDimOfResult(OpBuilder &builder,
+                                                         int resultIndex,
+                                                         int dim) {
+  Location loc = getLoc();
+  Value sourceOperand = getOperand(getNumOperands() - 1 - resultIndex);
+  OpFoldResult shape = tensor::getMixedSize(builder, loc, sourceOperand, dim);
+  return shape;
+}
+
+//===----------------------------------------------------------------------===//
+// UnreifableResultShapesOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UnreifiableResultShapesOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  Location loc = getLoc();
+  shapes.resize(1);
+  shapes[0] = {tensor::getMixedSize(builder, loc, getOperand(), 0),
+               OpFoldResult()};
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// UnreifableResultShapeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UnreifiableResultShapeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+UnreifiableResultShapeOp::reifyShapeOfResult(OpBuilder &builder,
+                                             int resultIndex) {
+  SmallVector<OpFoldResult> shape = {
+      tensor::getMixedSize(builder, getLoc(), getOperand(), 0), OpFoldResult()};
+  return shape;
+}
+
+//===----------------------------------------------------------------------===//
+// UnreifableResultShapeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UnreifiableDimOfResultShapeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &shapes) {
+  return failure();
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+UnreifiableDimOfResultShapeOp::reifyShapeOfResult(OpBuilder &builder,
+                                                  int resultIndex) {
+  return failure();
+}
+
+FailureOr<OpFoldResult>
+UnreifiableDimOfResultShapeOp::reifyDimOfResult(OpBuilder &builder,
+                                                int resultIndex, int dim) {
+  if (dim == 0)
+    return tensor::getMixedSize(builder, getLoc(), getOperand(), 0);
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//
@@ -329,8 +461,6 @@ void SideEffectOp::getEffects(
   if (!effectsAttr)
     return;
 
-  // If there is one, it is an array of dictionary attributes that hold
-  // information on the effects of this operation.
   for (Attribute element : effectsAttr) {
     DictionaryAttr effectElement = cast<DictionaryAttr>(element);
 
@@ -350,7 +480,7 @@ void SideEffectOp::getEffects(
 
     // Check for a result to affect.
     if (effectElement.get("on_result"))
-      effects.emplace_back(effect, getResult(), resource);
+      effects.emplace_back(effect, getOperation()->getOpResults()[0], resource);
     else if (Attribute ref = effectElement.get("on_reference"))
       effects.emplace_back(effect, cast<SymbolRefAttr>(ref), resource);
     else
@@ -359,6 +489,51 @@ void SideEffectOp::getEffects(
 }
 
 void SideEffectOp::getEffects(
+    SmallVectorImpl<TestEffects::EffectInstance> &effects) {
+  testSideEffectOpGetEffect(getOperation(), effects);
+}
+
+void SideEffectWithRegionOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  // Check for an effects attribute on the op instance.
+  ArrayAttr effectsAttr = (*this)->getAttrOfType<ArrayAttr>("effects");
+  if (!effectsAttr)
+    return;
+
+  for (Attribute element : effectsAttr) {
+    DictionaryAttr effectElement = cast<DictionaryAttr>(element);
+
+    // Get the specific memory effect.
+    MemoryEffects::Effect *effect =
+        StringSwitch<MemoryEffects::Effect *>(
+            cast<StringAttr>(effectElement.get("effect")).getValue())
+            .Case("allocate", MemoryEffects::Allocate::get())
+            .Case("free", MemoryEffects::Free::get())
+            .Case("read", MemoryEffects::Read::get())
+            .Case("write", MemoryEffects::Write::get());
+
+    // Check for a non-default resource to use.
+    SideEffects::Resource *resource = SideEffects::DefaultResource::get();
+    if (effectElement.get("test_resource"))
+      resource = TestResource::get();
+
+    // Check for a result to affect.
+    if (effectElement.get("on_result"))
+      effects.emplace_back(effect, getOperation()->getOpResults()[0], resource);
+    else if (effectElement.get("on_operand"))
+      effects.emplace_back(effect, &getOperation()->getOpOperands()[0],
+                           resource);
+    else if (effectElement.get("on_argument"))
+      effects.emplace_back(effect, getOperation()->getRegion(0).getArgument(0),
+                           resource);
+    else if (Attribute ref = effectElement.get("on_reference"))
+      effects.emplace_back(effect, cast<SymbolRefAttr>(ref), resource);
+    else
+      effects.emplace_back(effect, resource);
+  }
+}
+
+void SideEffectWithRegionOp::getEffects(
     SmallVectorImpl<TestEffects::EffectInstance> &effects) {
   testSideEffectOpGetEffect(getOperation(), effects);
 }
@@ -456,6 +631,38 @@ void CustomResultsNameOp::getAsmResultNames(
 }
 
 //===----------------------------------------------------------------------===//
+// ResultNameFromTypeOp
+//===----------------------------------------------------------------------===//
+
+void ResultNameFromTypeOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  auto result = getResult();
+  auto setResultNameFn = [&](::llvm::StringRef name) {
+    setNameFn(result, name);
+  };
+  auto opAsmTypeInterface =
+      ::mlir::cast<::mlir::OpAsmTypeInterface>(result.getType());
+  opAsmTypeInterface.getAsmName(setResultNameFn);
+}
+
+//===----------------------------------------------------------------------===//
+// BlockArgumentNameFromTypeOp
+//===----------------------------------------------------------------------===//
+
+void BlockArgumentNameFromTypeOp::getAsmBlockArgumentNames(
+    ::mlir::Region &region, ::mlir::OpAsmSetValueNameFn setNameFn) {
+  for (auto &block : region) {
+    for (auto arg : block.getArguments()) {
+      if (auto opAsmTypeInterface =
+              ::mlir::dyn_cast<::mlir::OpAsmTypeInterface>(arg.getType())) {
+        auto setArgNameFn = [&](StringRef name) { setNameFn(arg, name); };
+        opAsmTypeInterface.getAsmName(setArgNameFn);
+      }
+    }
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // ResultTypeWithTraitOp
 //===----------------------------------------------------------------------===//
 
@@ -523,8 +730,9 @@ ParseResult RegionIfOp::parse(OpAsmParser &parser, OperationState &result) {
                                 parser.getCurrentLocation(), result.operands);
 }
 
-OperandRange RegionIfOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(llvm::is_contained({&getThenRegion(), &getElseRegion()}, point) &&
+OperandRange RegionIfOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert(llvm::is_contained({&getThenRegion(), &getElseRegion()},
+                            successor.getSuccessor()) &&
          "invalid region index");
   return getOperands();
 }
@@ -533,10 +741,11 @@ void RegionIfOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // We always branch to the join region.
   if (!point.isParent()) {
-    if (point != getJoinRegion())
+    if (point.getTerminatorPredecessorOrNull()->getParentRegion() !=
+        &getJoinRegion())
       regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
     else
-      regions.push_back(RegionSuccessor(getResults()));
+      regions.push_back(RegionSuccessor(getOperation(), getResults()));
     return;
   }
 
@@ -563,7 +772,7 @@ void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
   if (point.isParent())
     regions.emplace_back(&getRegion());
   else
-    regions.emplace_back(getResults());
+    regions.emplace_back(getOperation(), getResults());
 }
 
 void AnyCondOp::getRegionInvocationBounds(
@@ -647,6 +856,7 @@ LogicalResult TestVerifiersOp::verifyRegions() {
 
 //===----------------------------------------------------------------------===//
 // TestWithBoundsOp
+//===----------------------------------------------------------------------===//
 
 void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                          SetIntRangeFn setResultRanges) {
@@ -655,6 +865,7 @@ void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 //===----------------------------------------------------------------------===//
 // TestWithBoundsRegionOp
+//===----------------------------------------------------------------------===//
 
 ParseResult TestWithBoundsRegionOp::parse(OpAsmParser &parser,
                                           OperationState &result) {
@@ -688,6 +899,7 @@ void TestWithBoundsRegionOp::inferResultRanges(
 
 //===----------------------------------------------------------------------===//
 // TestIncrementOp
+//===----------------------------------------------------------------------===//
 
 void TestIncrementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                         SetIntRangeFn setResultRanges) {
@@ -700,6 +912,7 @@ void TestIncrementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 //===----------------------------------------------------------------------===//
 // TestReflectBoundsOp
+//===----------------------------------------------------------------------===//
 
 void TestReflectBoundsOp::inferResultRanges(
     ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRanges) {
@@ -709,12 +922,14 @@ void TestReflectBoundsOp::inferResultRanges(
   Type sIntTy, uIntTy;
   // For plain `IntegerType`s, we can derive the appropriate signed and unsigned
   // Types for the Attributes.
-  if (auto intTy = llvm::dyn_cast<IntegerType>(getType())) {
+  Type type = getElementTypeOrSelf(getType());
+  if (auto intTy = llvm::dyn_cast<IntegerType>(type)) {
     unsigned bitwidth = intTy.getWidth();
     sIntTy = b.getIntegerType(bitwidth, /*isSigned=*/true);
     uIntTy = b.getIntegerType(bitwidth, /*isSigned=*/false);
-  } else
-    sIntTy = uIntTy = getType();
+  } else {
+    sIntTy = uIntTy = type;
+  }
 
   setUminAttr(b.getIntegerAttr(uIntTy, range.umin()));
   setUmaxAttr(b.getIntegerAttr(uIntTy, range.umax()));
@@ -744,6 +959,16 @@ void ConversionFuncOp::print(OpAsmPrinter &p) {
   function_interface_impl::printFunctionOp(
       p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
       getArgAttrsAttrName(), getResAttrsAttrName());
+}
+
+//===----------------------------------------------------------------------===//
+// TestValueWithBoundsOp
+//===----------------------------------------------------------------------===//
+
+void TestValueWithBoundsOp::populateBoundsForIndexValue(
+    Value v, ValueBoundsConstraintSet &cstr) {
+  cstr.bound(v) >= getMin().getSExtValue();
+  cstr.bound(v) <= getMax().getSExtValue();
 }
 
 //===----------------------------------------------------------------------===//
@@ -924,6 +1149,32 @@ LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
 }
 
 //===----------------------------------------------------------------------===//
+// TilingNoDpsOp
+//===----------------------------------------------------------------------===//
+
+SmallVector<Range> TilingNoDpsOp::getIterationDomain(OpBuilder &builder) {
+  return {};
+}
+
+SmallVector<utils::IteratorType> TilingNoDpsOp::getLoopIteratorTypes() {
+  return {};
+}
+
+FailureOr<TilingResult>
+TilingNoDpsOp::getTiledImplementation(OpBuilder &builder,
+                                      ArrayRef<OpFoldResult> offsets,
+                                      ArrayRef<OpFoldResult> sizes) {
+  return failure();
+}
+
+LogicalResult TilingNoDpsOp::getResultTilePosition(
+    OpBuilder &builder, unsigned resultNumber, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
+    SmallVector<OpFoldResult> &resultSizes) {
+  return failure();
+}
+
+//===----------------------------------------------------------------------===//
 // OpWithShapedTypeInferTypeAdaptorInterfaceOp
 //===----------------------------------------------------------------------===//
 
@@ -981,11 +1232,11 @@ void LoopBlockOp::getSuccessorRegions(
   if (point.isParent())
     return;
 
-  regions.emplace_back((*this)->getResults());
+  regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
-OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(point == getBody());
+OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert(successor.getSuccessor() == &getBody());
   return MutableOperandRange(getInitMutable());
 }
 
@@ -994,8 +1245,8 @@ OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionBranchPoint point) {
 //===----------------------------------------------------------------------===//
 
 MutableOperandRange
-LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionBranchPoint point) {
-  if (point.isParent())
+LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  if (successor.isParent())
     return getExitArgMutable();
   return getNextIterArgMutable();
 }
@@ -1027,7 +1278,7 @@ void ReadBufferOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   // The buffer operand is read.
-  effects.emplace_back(MemoryEffects::Read::get(), getBuffer(),
+  effects.emplace_back(MemoryEffects::Read::get(), &getBufferMutable(),
                        SideEffects::DefaultResource::get());
   // The buffer contents are dumped.
   effects.emplace_back(MemoryEffects::Write::get(),
@@ -1040,13 +1291,14 @@ void ReadBufferOp::getEffects(
 
 //===----------------------------------------------------------------------===//
 // TestCallAndStoreOp
+//===----------------------------------------------------------------------===//
 
 CallInterfaceCallable TestCallAndStoreOp::getCallableForCallee() {
   return getCallee();
 }
 
 void TestCallAndStoreOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  setCalleeAttr(callee.get<SymbolRefAttr>());
+  setCalleeAttr(cast<SymbolRefAttr>(callee));
 }
 
 Operation::operand_range TestCallAndStoreOp::getArgOperands() {
@@ -1059,13 +1311,14 @@ MutableOperandRange TestCallAndStoreOp::getArgOperandsMutable() {
 
 //===----------------------------------------------------------------------===//
 // TestCallOnDeviceOp
+//===----------------------------------------------------------------------===//
 
 CallInterfaceCallable TestCallOnDeviceOp::getCallableForCallee() {
   return getCallee();
 }
 
 void TestCallOnDeviceOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  setCalleeAttr(callee.get<SymbolRefAttr>());
+  setCalleeAttr(cast<SymbolRefAttr>(callee));
 }
 
 Operation::operand_range TestCallOnDeviceOp::getArgOperands() {
@@ -1078,17 +1331,19 @@ MutableOperandRange TestCallOnDeviceOp::getArgOperandsMutable() {
 
 //===----------------------------------------------------------------------===//
 // TestStoreWithARegion
+//===----------------------------------------------------------------------===//
 
 void TestStoreWithARegion::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (point.isParent())
     regions.emplace_back(&getBody(), getBody().front().getArguments());
   else
-    regions.emplace_back();
+    regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 //===----------------------------------------------------------------------===//
 // TestStoreWithALoopRegion
+//===----------------------------------------------------------------------===//
 
 void TestStoreWithALoopRegion::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
@@ -1097,7 +1352,7 @@ void TestStoreWithALoopRegion::getSuccessorRegions(
   // enter the body.
   regions.emplace_back(
       RegionSuccessor(&getBody(), getBody().front().getArguments()));
-  regions.emplace_back();
+  regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1150,7 +1405,7 @@ void TestVersionedOpA::writeProperties(mlir::DialectBytecodeWriter &writer) {
 // TestOpWithVersionedProperties
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult TestOpWithVersionedProperties::readFromMlirBytecode(
+llvm::LogicalResult TestOpWithVersionedProperties::readFromMlirBytecode(
     mlir::DialectBytecodeReader &reader, test::VersionedProperties &prop) {
   uint64_t value1, value2 = 0;
   if (failed(reader.readVarInt(value1)))
@@ -1198,8 +1453,8 @@ llvm::SmallVector<MemorySlot> TestMultiSlotAlloca::getPromotableSlots() {
 
 Value TestMultiSlotAlloca::getDefaultValue(const MemorySlot &slot,
                                            OpBuilder &builder) {
-  return builder.create<TestOpConstant>(getLoc(), slot.elemType,
-                                        builder.getI32IntegerAttr(42));
+  return TestOpConstant::create(builder, getLoc(), slot.elemType,
+                                builder.getI32IntegerAttr(42));
 }
 
 void TestMultiSlotAlloca::handleBlockArgument(const MemorySlot &slot,
@@ -1231,7 +1486,7 @@ createNewMultiAllocaWithoutSlot(const MemorySlot &slot, OpBuilder &builder,
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPoint(oldOp);
   auto replacement =
-      builder.create<TestMultiSlotAlloca>(oldOp->getLoc(), newTypes);
+      TestMultiSlotAlloca::create(builder, oldOp->getLoc(), newTypes);
   for (auto [oldResult, newResult] :
        llvm::zip_equal(remainingValues, replacement.getResults()))
     oldResult.replaceAllUsesWith(newResult);
@@ -1278,9 +1533,9 @@ DenseMap<Attribute, MemorySlot> TestMultiSlotAlloca::destructure(
   DenseMap<Attribute, MemorySlot> slotMap;
 
   for (Attribute usedIndex : usedIndices) {
-    Type elemType = slot.elementPtrs.lookup(usedIndex);
+    Type elemType = slot.subelementTypes.lookup(usedIndex);
     MemRefType elemPtr = MemRefType::get({}, elemType);
-    auto subAlloca = builder.create<TestMultiSlotAlloca>(getLoc(), elemPtr);
+    auto subAlloca = TestMultiSlotAlloca::create(builder, getLoc(), elemPtr);
     newAllocators.push_back(subAlloca);
     slotMap.try_emplace<MemorySlot>(usedIndex,
                                     {subAlloca.getResult(0), elemType});
@@ -1293,4 +1548,92 @@ std::optional<DestructurableAllocationOpInterface>
 TestMultiSlotAlloca::handleDestructuringComplete(
     const DestructurableMemorySlot &slot, OpBuilder &builder) {
   return createNewMultiAllocaWithoutSlot(slot, builder, *this);
+}
+
+namespace {
+/// Returns test dialect's memref layout for test dialect's tensor encoding when
+/// applicable.
+MemRefLayoutAttrInterface
+getMemRefLayoutForTensorEncoding(RankedTensorType tensorType) {
+  if (auto encoding =
+          dyn_cast<test::TestTensorEncodingAttr>(tensorType.getEncoding())) {
+    return cast<MemRefLayoutAttrInterface>(test::TestMemRefLayoutAttr::get(
+        tensorType.getContext(), encoding.getDummy()));
+  }
+  return {};
+}
+
+/// Auxiliary bufferization function for test and builtin tensors.
+bufferization::BufferLikeType
+convertTensorToBuffer(mlir::Operation *op,
+                      const bufferization::BufferizationOptions &options,
+                      bufferization::TensorLikeType tensorLike) {
+  auto buffer =
+      *tensorLike.getBufferType(options, [&]() { return op->emitError(); });
+  if (auto memref = dyn_cast<MemRefType>(buffer)) {
+    // Note: For the sake of testing, we want to ensure that encoding -> layout
+    // bufferization happens. This is currently achieved manually.
+    auto layout =
+        getMemRefLayoutForTensorEncoding(cast<RankedTensorType>(tensorLike));
+    return cast<bufferization::BufferLikeType>(
+        MemRefType::get(memref.getShape(), memref.getElementType(), layout,
+                        memref.getMemorySpace()));
+  }
+  return buffer;
+}
+} // namespace
+
+::mlir::LogicalResult test::TestDummyTensorOp::bufferize(
+    ::mlir::RewriterBase &rewriter,
+    const ::mlir::bufferization::BufferizationOptions &options,
+    ::mlir::bufferization::BufferizationState &state) {
+  auto buffer =
+      mlir::bufferization::getBuffer(rewriter, getInput(), options, state);
+  if (mlir::failed(buffer))
+    return failure();
+
+  const auto outType = getOutput().getType();
+  const auto bufferizedOutType =
+      convertTensorToBuffer(getOperation(), options, outType);
+  // replace op with memref analogy
+  auto dummyMemrefOp = test::TestDummyMemrefOp::create(
+      rewriter, getLoc(), bufferizedOutType, *buffer);
+
+  mlir::bufferization::replaceOpWithBufferizedValues(rewriter, getOperation(),
+                                                     dummyMemrefOp.getResult());
+
+  return mlir::success();
+}
+
+::mlir::LogicalResult test::TestCreateTensorOp::bufferize(
+    ::mlir::RewriterBase &rewriter,
+    const ::mlir::bufferization::BufferizationOptions &options,
+    ::mlir::bufferization::BufferizationState &state) {
+  // Note: mlir::bufferization::getBufferType() would internally call
+  // TestCreateTensorOp::getBufferType()
+  const auto bufferizedOutType =
+      mlir::bufferization::getBufferType(getOutput(), options, state);
+  if (mlir::failed(bufferizedOutType))
+    return failure();
+
+  // replace op with memref analogy
+  auto createMemrefOp =
+      test::TestCreateMemrefOp::create(rewriter, getLoc(), *bufferizedOutType);
+
+  mlir::bufferization::replaceOpWithBufferizedValues(
+      rewriter, getOperation(), createMemrefOp.getResult());
+
+  return mlir::success();
+}
+
+mlir::FailureOr<mlir::bufferization::BufferLikeType>
+test::TestCreateTensorOp::getBufferType(
+    mlir::Value value, const mlir::bufferization::BufferizationOptions &options,
+    const mlir::bufferization::BufferizationState &,
+    llvm::SmallVector<::mlir::Value> &) {
+  const auto type = dyn_cast<bufferization::TensorLikeType>(value.getType());
+  if (type == nullptr)
+    return failure();
+
+  return convertTensorToBuffer(getOperation(), options, type);
 }

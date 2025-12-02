@@ -33,7 +33,7 @@
 // ===
 // Compile for OpenCL 2.0 for the first time. The module should change.
 // RUN: %clang_cc1 -triple spir-unknown-unknown -O0 -emit-llvm -o - -cl-std=CL2.0 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -fdisable-module-hash -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
-// RUN: not diff %t/1_0.pcm %t/opencl_c.pcm
+// RUN: not diff %t/1_0.pcm %t/opencl_c.pcm > /dev/null
 // RUN: chmod u-w %t/opencl_c.pcm
 
 // ===
@@ -44,10 +44,10 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // RUN: %clang_cc1 -triple spir64-unknown-unknown -emit-llvm -o - -cl-std=CL1.2 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MOD %s
-// RUN: %clang_cc1 -triple amdgcn--amdhsa -O0 -emit-llvm -o - -cl-std=CL2.0 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
+// RUN: %clang_cc1 -triple amdgcn--amdhsa -target-cpu gfx700 -O0 -emit-llvm -o - -cl-std=CL2.0 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
 // RUN: chmod u-w %t 
 // RUN: %clang_cc1 -triple spir64-unknown-unknown -emit-llvm -o - -cl-std=CL1.2 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MOD %s
-// RUN: %clang_cc1 -triple amdgcn--amdhsa -O0 -emit-llvm -o - -cl-std=CL2.0 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
+// RUN: %clang_cc1 -triple amdgcn--amdhsa -target-cpu gfx700 -O0 -emit-llvm -o - -cl-std=CL2.0 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
 // RUN: chmod u+w %t
 
 // Verify that called builtins occur in the generated IR.
@@ -190,6 +190,12 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #if __opencl_c_ext_image_raw10_raw12 != 1
 #error "Incorrectly defined __opencl_c_ext_image_raw10_raw12"
 #endif
+#if __opencl_c_ext_image_unorm_int_2_101010 != 1
+#error "Incorrectly defined __opencl_c_ext_image_unorm_int_2_101010"
+#endif
+#if __opencl_c_ext_image_unsigned_10x6_12x4_14x2 != 1
+#error "Incorrectly defined __opencl_c_ext_image_unsigned_10x6_12x4_14x2"
+#endif
 
 #else
 
@@ -276,6 +282,12 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #endif
 #ifdef __opencl_c_ext_image_raw10_raw12
 #error "Incorrect __opencl_c_ext_image_raw10_raw12 define"
+#endif
+#ifdef __opencl_c_ext_image_unorm_int_2_101010
+#error "Incorrect __opencl_c_ext_image_unorm_int_2_101010 define"
+#endif
+#ifdef __opencl_c_ext_image_unsigned_10x6_12x4_14x2
+#error "Incorrect __opencl_c_ext_image_unsigned_10x6_12x4_14x2 define"
 #endif
 
 #endif //(defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)

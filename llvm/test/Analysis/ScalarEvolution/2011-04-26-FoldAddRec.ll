@@ -2,7 +2,7 @@
 ; PR9633: Tests that SCEV handles the mul.i2 recurrence being folded to
 ; constant zero.
 
-define signext i8 @func_14(i8 signext %p_18) nounwind readnone ssp {
+define signext i8 @func_14(i8 signext %p_18, i1 %arg) nounwind readnone ssp {
 entry:
   br label %for.inc
 
@@ -16,7 +16,7 @@ for.cond:
   %shl.i = select i1 %tobool.i, i32 13, i32 0
   %shl.left.i = shl i32 %add, %shl.i
   %conv.i4 = trunc i32 %shl.left.i to i8
-  br i1 undef, label %for.inc9, label %if.then
+  br i1 %arg, label %for.inc9, label %if.then
 
 for.inc9:
   %p_18.addr.011 = phi i8 [ %add12, %for.inc9 ], [ %p_18, %for.cond ]

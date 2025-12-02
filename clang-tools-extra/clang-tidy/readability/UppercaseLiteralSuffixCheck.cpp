@@ -1,4 +1,4 @@
-//===--- UppercaseLiteralSuffixCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/SmallString.h"
 #include <cctype>
 #include <optional>
 
@@ -26,14 +25,12 @@ struct IntegerLiteralCheck {
   static constexpr llvm::StringLiteral Name = llvm::StringLiteral("integer");
   // What should be skipped before looking for the Suffixes? (Nothing here.)
   static constexpr llvm::StringLiteral SkipFirst = llvm::StringLiteral("");
-  // Suffix can only consist of 'u' and 'l' chars, and can be a complex number
-  // ('i', 'j'). In MS compatibility mode, suffixes like i32 are supported.
+  // Suffix can only consist of 'u', 'l', and 'z' chars, can be a bit-precise
+  // integer (wb), and can be a complex number ('i', 'j'). In MS compatibility
+  // mode, suffixes like i32 are supported.
   static constexpr llvm::StringLiteral Suffixes =
-      llvm::StringLiteral("uUlLiIjJ");
+      llvm::StringLiteral("uUlLzZwWiIjJ");
 };
-constexpr llvm::StringLiteral IntegerLiteralCheck::Name;
-constexpr llvm::StringLiteral IntegerLiteralCheck::SkipFirst;
-constexpr llvm::StringLiteral IntegerLiteralCheck::Suffixes;
 
 struct FloatingLiteralCheck {
   using type = clang::FloatingLiteral;
@@ -46,14 +43,11 @@ struct FloatingLiteralCheck {
   // Since the exponent ('p'/'P') is mandatory for hexadecimal floating-point
   // literals, we first skip everything before the exponent.
   static constexpr llvm::StringLiteral SkipFirst = llvm::StringLiteral("pP");
-  // Suffix can only consist of 'f', 'l', "f16", 'h', 'q' chars,
-  // and can be a complex number ('i', 'j').
+  // Suffix can only consist of 'f', 'l', "f16", "bf16", "df", "dd", "dl",
+  // 'h', 'q' chars, and can be a complex number ('i', 'j').
   static constexpr llvm::StringLiteral Suffixes =
-      llvm::StringLiteral("fFlLhHqQiIjJ");
+      llvm::StringLiteral("fFlLbBdDhHqQiIjJ");
 };
-constexpr llvm::StringLiteral FloatingLiteralCheck::Name;
-constexpr llvm::StringLiteral FloatingLiteralCheck::SkipFirst;
-constexpr llvm::StringLiteral FloatingLiteralCheck::Suffixes;
 
 struct NewSuffix {
   SourceRange LiteralLocation;
@@ -61,8 +55,10 @@ struct NewSuffix {
   std::optional<FixItHint> FixIt;
 };
 
-std::optional<SourceLocation> getMacroAwareLocation(SourceLocation Loc,
-                                                    const SourceManager &SM) {
+} // namespace
+
+static std::optional<SourceLocation>
+getMacroAwareLocation(SourceLocation Loc, const SourceManager &SM) {
   // Do nothing if the provided location is invalid.
   if (Loc.isInvalid())
     return std::nullopt;
@@ -73,8 +69,8 @@ std::optional<SourceLocation> getMacroAwareLocation(SourceLocation Loc,
   return SpellingLoc;
 }
 
-std::optional<SourceRange> getMacroAwareSourceRange(SourceRange Loc,
-                                                    const SourceManager &SM) {
+static std::optional<SourceRange>
+getMacroAwareSourceRange(SourceRange Loc, const SourceManager &SM) {
   std::optional<SourceLocation> Begin =
       getMacroAwareLocation(Loc.getBegin(), SM);
   std::optional<SourceLocation> End = getMacroAwareLocation(Loc.getEnd(), SM);
@@ -83,7 +79,7 @@ std::optional<SourceRange> getMacroAwareSourceRange(SourceRange Loc,
   return SourceRange(*Begin, *End);
 }
 
-std::optional<std::string>
+static std::optional<std::string>
 getNewSuffix(llvm::StringRef OldSuffix,
              const std::vector<StringRef> &NewSuffixes) {
   // If there is no config, just uppercase the entirety of the suffix.
@@ -102,7 +98,7 @@ getNewSuffix(llvm::StringRef OldSuffix,
 }
 
 template <typename LiteralType>
-std::optional<NewSuffix>
+static std::optional<NewSuffix>
 shouldReplaceLiteralSuffix(const Expr &Literal,
                            const std::vector<StringRef> &NewSuffixes,
                            const SourceManager &SM, const LangOptions &LO) {
@@ -114,7 +110,7 @@ shouldReplaceLiteralSuffix(const Expr &Literal,
   ReplacementDsc.LiteralLocation = L.getSourceRange();
 
   // Was this literal fully spelled or is it a product of macro expansion?
-  bool RangeCanBeFixed =
+  const bool RangeCanBeFixed =
       utils::rangeCanBeFixed(ReplacementDsc.LiteralLocation, &SM);
 
   // The literal may have macro expansion, we need the final expanded src range.
@@ -180,14 +176,12 @@ shouldReplaceLiteralSuffix(const Expr &Literal,
   return ReplacementDsc;
 }
 
-} // namespace
-
 UppercaseLiteralSuffixCheck::UppercaseLiteralSuffixCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       NewSuffixes(
           utils::options::parseStringList(Options.get("NewSuffixes", ""))),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void UppercaseLiteralSuffixCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

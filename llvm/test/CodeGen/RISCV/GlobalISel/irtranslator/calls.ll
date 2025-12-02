@@ -350,31 +350,6 @@ entry:
 %struct.Foo = type { i32, i32, i32, i16, i8 }
 @foo = global %struct.Foo { i32 1, i32 2, i32 3, i16 4, i8 5 }, align 4
 
-declare void @void_byval_args(ptr byval(%struct.Foo) %f)
-
-define void @test_void_byval_args() {
-  ; RV32I-LABEL: name: test_void_byval_args
-  ; RV32I: bb.1.entry:
-  ; RV32I-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @foo
-  ; RV32I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; RV32I-NEXT:   $x10 = COPY [[GV]](p0)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @void_byval_args, csr_ilp32_lp64, implicit-def $x1, implicit $x10
-  ; RV32I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; RV32I-NEXT:   PseudoRET
-  ;
-  ; RV64I-LABEL: name: test_void_byval_args
-  ; RV64I: bb.1.entry:
-  ; RV64I-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @foo
-  ; RV64I-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-  ; RV64I-NEXT:   $x10 = COPY [[GV]](p0)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @void_byval_args, csr_ilp32_lp64, implicit-def $x1, implicit $x10
-  ; RV64I-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-  ; RV64I-NEXT:   PseudoRET
-entry:
-  call void @void_byval_args(ptr byval(%struct.Foo) @foo)
-  ret void
-}
-
 declare void @void_sret_args(ptr sret(%struct.Foo) %f)
 
 define void @test_void_sret_args() {

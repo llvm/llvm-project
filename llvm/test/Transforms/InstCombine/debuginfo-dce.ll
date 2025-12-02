@@ -1,5 +1,4 @@
 ; RUN: opt -passes=instcombine %s -S -o - | FileCheck %s
-; RUN: opt -passes=instcombine %s -S -o - --try-experimental-debuginfo-iterators | FileCheck %s
 ; Verify that the eliminated instructions (bitcast, gep, load) are salvaged into
 ; a DIExpression.
 ;
@@ -126,15 +125,15 @@ attributes #1 = { nounwind readnone }
 !19 = !DILocation(line: 6, column: 17, scope: !14)
 !20 = !DIExpression(DW_OP_plus_uconst, 0)
 !21 = !DILocation(line: 11, column: 1, scope: !14)
-!22 = distinct !DISubprogram(name: "scan", scope: !1, file: !1, line: 4, type: !15, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !17)
+!22 = distinct !DISubprogram(name: "scan", scope: !1, file: !1, line: 4, type: !15, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !23 = !DILocation(line: 6, column: 17, scope: !22)
 !24 = !DILocalVariable(name: "entry", scope: !22, file: !1, line: 6, type: !4)
-!25 = distinct !DISubprogram(name: "scan", scope: !1, file: !1, line: 4, type: !15, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !17)
+!25 = distinct !DISubprogram(name: "scan", scope: !1, file: !1, line: 4, type: !15, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !26 = !DILocation(line: 6, column: 17, scope: !25)
 !27 = !DILocalVariable(name: "entry", scope: !25, file: !1, line: 6, type: !4)
-!28 = distinct !DISubprogram(name: "scan", scope: !1, file: !1, line: 4, type: !15, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !17)
+!28 = distinct !DISubprogram(name: "scan", scope: !1, file: !1, line: 4, type: !15, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !29 = !DILocation(line: 6, column: 17, scope: !28)
 !30 = !DILocalVariable(name: "entry", scope: !28, file: !1, line: 6, type: !4)
-!31 = distinct !DISubprogram(name: "scan", scope: !1, file: !1, line: 4, type: !15, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !17)
+!31 = distinct !DISubprogram(name: "scan", scope: !1, file: !1, line: 4, type: !15, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !32 = !DILocation(line: 6, column: 17, scope: !31)
 !33 = !DILocalVariable(name: "entry", scope: !31, file: !1, line: 6, type: !4)

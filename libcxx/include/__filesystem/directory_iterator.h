@@ -22,7 +22,6 @@
 #include <__ranges/enable_view.h>
 #include <__system_error/error_code.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -31,11 +30,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#if _LIBCPP_STD_VER >= 17 && _LIBCPP_HAS_FILESYSTEM
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
-
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 class _LIBCPP_HIDDEN __dir_stream;
 class directory_iterator {
@@ -128,23 +125,19 @@ inline _LIBCPP_HIDE_FROM_ABI directory_iterator begin(directory_iterator __iter)
 
 inline _LIBCPP_HIDE_FROM_ABI directory_iterator end(directory_iterator) noexcept { return directory_iterator(); }
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
-
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #  if _LIBCPP_STD_VER >= 20
 
 template <>
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY inline constexpr bool
-    std::ranges::enable_borrowed_range<std::filesystem::directory_iterator> = true;
+inline constexpr bool std::ranges::enable_borrowed_range<std::filesystem::directory_iterator> = true;
 
 template <>
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY inline constexpr bool
-    std::ranges::enable_view<std::filesystem::directory_iterator> = true;
+inline constexpr bool std::ranges::enable_view<std::filesystem::directory_iterator> = true;
 
 #  endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#endif // _LIBCPP_STD_VER >= 17 && _LIBCPP_HAS_FILESYSTEM
 
 _LIBCPP_POP_MACROS
 

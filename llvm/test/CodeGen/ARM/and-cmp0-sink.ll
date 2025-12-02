@@ -186,7 +186,7 @@ exit:
 }
 
 ; Test with a mask that can be encoded with T32 instruction set, but not with A32.
-define i32 @f0(i1 %c0, i32 %v) {
+define i32 @f0(i1 %c0, i32 %v, ptr %p) {
 ; V7M-LABEL: f0:
 ; V7M:       @ %bb.0: @ %E
 ; V7M-NEXT:    lsls r0, r0, #31
@@ -198,7 +198,9 @@ define i32 @f0(i1 %c0, i32 %v) {
 ; V7M-NEXT:    bxeq lr
 ; V7M-NEXT:    b .LBB1_3
 ; V7M-NEXT:  .LBB1_2: @ %B
+; V7M-NEXT:    movs r0, #1
 ; V7M-NEXT:    tst.w r1, #16843009
+; V7M-NEXT:    str r0, [r2]
 ; V7M-NEXT:    itt ne
 ; V7M-NEXT:    movne r0, #0
 ; V7M-NEXT:    bxne lr
@@ -208,10 +210,10 @@ define i32 @f0(i1 %c0, i32 %v) {
 ;
 ; V7A-LABEL: f0:
 ; V7A:       @ %bb.0: @ %E
-; V7A-NEXT:    movw r2, #257
+; V7A-NEXT:    movw r3, #257
 ; V7A-NEXT:    tst r0, #1
-; V7A-NEXT:    movt r2, #257
-; V7A-NEXT:    and r1, r1, r2
+; V7A-NEXT:    movt r3, #257
+; V7A-NEXT:    and r1, r1, r3
 ; V7A-NEXT:    beq .LBB1_3
 ; V7A-NEXT:  @ %bb.1: @ %A
 ; V7A-NEXT:    cmp r1, #0
@@ -221,8 +223,10 @@ define i32 @f0(i1 %c0, i32 %v) {
 ; V7A-NEXT:    mov r0, #1
 ; V7A-NEXT:    bx lr
 ; V7A-NEXT:  .LBB1_3: @ %B
-; V7A-NEXT:    mov r0, #0
+; V7A-NEXT:    mov r0, #1
 ; V7A-NEXT:    cmp r1, #0
+; V7A-NEXT:    str r0, [r2]
+; V7A-NEXT:    mov r0, #0
 ; V7A-NEXT:    moveq r0, #1
 ; V7A-NEXT:    bx lr
 ;
@@ -237,7 +241,9 @@ define i32 @f0(i1 %c0, i32 %v) {
 ; V7A-T-NEXT:    bxeq lr
 ; V7A-T-NEXT:    b .LBB1_3
 ; V7A-T-NEXT:  .LBB1_2: @ %B
+; V7A-T-NEXT:    movs r0, #1
 ; V7A-T-NEXT:    tst.w r1, #16843009
+; V7A-T-NEXT:    str r0, [r2]
 ; V7A-T-NEXT:    itt ne
 ; V7A-T-NEXT:    movne r0, #0
 ; V7A-T-NEXT:    bxne lr
@@ -247,18 +253,20 @@ define i32 @f0(i1 %c0, i32 %v) {
 ;
 ; V6M-LABEL: f0:
 ; V6M:       @ %bb.0: @ %E
-; V6M-NEXT:    ldr r2, .LCPI1_0
-; V6M-NEXT:    ands r2, r1
+; V6M-NEXT:    ldr r3, .LCPI1_0
+; V6M-NEXT:    ands r3, r1
 ; V6M-NEXT:    lsls r0, r0, #31
 ; V6M-NEXT:    beq .LBB1_3
 ; V6M-NEXT:  @ %bb.1: @ %A
-; V6M-NEXT:    cmp r2, #0
+; V6M-NEXT:    cmp r3, #0
 ; V6M-NEXT:    bne .LBB1_5
 ; V6M-NEXT:  @ %bb.2:
 ; V6M-NEXT:    movs r0, #0
 ; V6M-NEXT:    bx lr
 ; V6M-NEXT:  .LBB1_3: @ %B
-; V6M-NEXT:    cmp r2, #0
+; V6M-NEXT:    movs r0, #1
+; V6M-NEXT:    str r0, [r2]
+; V6M-NEXT:    cmp r3, #0
 ; V6M-NEXT:    beq .LBB1_5
 ; V6M-NEXT:  @ %bb.4:
 ; V6M-NEXT:    movs r0, #0
@@ -280,6 +288,7 @@ A:
 
 B:
   %c2 = icmp eq i32 %a, 0
+  store i32 1, ptr %p, align 4
   br i1 %c2, label %D, label %C
 
 C:
@@ -294,7 +303,7 @@ X:
 }
 
 ; Test with a mask that can be encoded both with T32 and A32 instruction sets.
-define i32 @f1(i1 %c0, i32 %v) {
+define i32 @f1(i1 %c0, i32 %v, ptr %p) {
 ; V7M-LABEL: f1:
 ; V7M:       @ %bb.0: @ %E
 ; V7M-NEXT:    lsls r0, r0, #31
@@ -306,7 +315,9 @@ define i32 @f1(i1 %c0, i32 %v) {
 ; V7M-NEXT:    bxeq lr
 ; V7M-NEXT:    b .LBB2_3
 ; V7M-NEXT:  .LBB2_2: @ %B
+; V7M-NEXT:    movs r0, #1
 ; V7M-NEXT:    tst.w r1, #100663296
+; V7M-NEXT:    str r0, [r2]
 ; V7M-NEXT:    itt ne
 ; V7M-NEXT:    movne r0, #0
 ; V7M-NEXT:    bxne lr
@@ -326,8 +337,10 @@ define i32 @f1(i1 %c0, i32 %v) {
 ; V7A-NEXT:    mov r0, #1
 ; V7A-NEXT:    bx lr
 ; V7A-NEXT:  .LBB2_3: @ %B
-; V7A-NEXT:    mov r0, #0
+; V7A-NEXT:    mov r0, #1
 ; V7A-NEXT:    tst r1, #100663296
+; V7A-NEXT:    str r0, [r2]
+; V7A-NEXT:    mov r0, #0
 ; V7A-NEXT:    moveq r0, #1
 ; V7A-NEXT:    bx lr
 ;
@@ -342,7 +355,9 @@ define i32 @f1(i1 %c0, i32 %v) {
 ; V7A-T-NEXT:    bxeq lr
 ; V7A-T-NEXT:    b .LBB2_3
 ; V7A-T-NEXT:  .LBB2_2: @ %B
+; V7A-T-NEXT:    movs r0, #1
 ; V7A-T-NEXT:    tst.w r1, #100663296
+; V7A-T-NEXT:    str r0, [r2]
 ; V7A-T-NEXT:    itt ne
 ; V7A-T-NEXT:    movne r0, #0
 ; V7A-T-NEXT:    bxne lr
@@ -352,19 +367,21 @@ define i32 @f1(i1 %c0, i32 %v) {
 ;
 ; V6M-LABEL: f1:
 ; V6M:       @ %bb.0: @ %E
-; V6M-NEXT:    movs r2, #3
-; V6M-NEXT:    lsls r2, r2, #25
-; V6M-NEXT:    ands r2, r1
+; V6M-NEXT:    movs r3, #3
+; V6M-NEXT:    lsls r3, r3, #25
+; V6M-NEXT:    ands r3, r1
 ; V6M-NEXT:    lsls r0, r0, #31
 ; V6M-NEXT:    beq .LBB2_3
 ; V6M-NEXT:  @ %bb.1: @ %A
-; V6M-NEXT:    cmp r2, #0
+; V6M-NEXT:    cmp r3, #0
 ; V6M-NEXT:    bne .LBB2_5
 ; V6M-NEXT:  @ %bb.2:
 ; V6M-NEXT:    movs r0, #0
 ; V6M-NEXT:    bx lr
 ; V6M-NEXT:  .LBB2_3: @ %B
-; V6M-NEXT:    cmp r2, #0
+; V6M-NEXT:    movs r0, #1
+; V6M-NEXT:    str r0, [r2]
+; V6M-NEXT:    cmp r3, #0
 ; V6M-NEXT:    beq .LBB2_5
 ; V6M-NEXT:  @ %bb.4:
 ; V6M-NEXT:    movs r0, #0
@@ -382,6 +399,7 @@ A:
 
 B:
   %c2 = icmp eq i32 %a, 0
+  store i32 1, ptr %p, align 4
   br i1 %c2, label %D, label %C
 
 C:

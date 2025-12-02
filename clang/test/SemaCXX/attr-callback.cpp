@@ -1,9 +1,14 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only
+// RUN: %clang_cc1 %s -std=c++23 -verify -fsyntax-only
 
 // expected-no-diagnostics
 
 class C_in_class {
 #include "../Sema/attr-callback.c"
+};
+
+class ExplicitParameterObject {
+  __attribute__((callback(2, 1))) void explicit_this_idx(this ExplicitParameterObject* self, void (*callback)(ExplicitParameterObject*));
+  __attribute__((callback(2, self))) void explicit_this_identifier(this ExplicitParameterObject* self, void (*callback)(ExplicitParameterObject*));
 };
 
 struct Base {

@@ -37,6 +37,7 @@ if (current_toolchain != host_toolchain) {
       ":lit_site_cfg",
       "//compiler-rt/include($host_toolchain)",
       "//compiler-rt/lib/cfi:ignorelist($host_toolchain)",
+      "//compiler-rt/lib/hwasan:hwasan_preinit",
       "//compiler-rt/lib/hwasan:hwasan_shared",
       "//compiler-rt/test:lit_common_configured",
       "//llvm/utils/FileCheck($host_toolchain)",
@@ -57,7 +58,7 @@ if (current_toolchain != host_toolchain) {
 }
 
 supported_toolchains = []
-if (host_os == "linux" && host_cpu == "x64") {
+if (host_os == "linux" && (host_cpu == "arm64" || host_cpu == "x64")) {
   supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
 }
 if (llvm_build_AArch64 && android_ndk_path != "") {

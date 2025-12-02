@@ -1,4 +1,4 @@
-// arm64 Mac-based targets default to Apple A13.
+// arm64/arm64e Mac-based targets default to Apple M1.
 
 // RUN: %clang --target=arm64-apple-macos             -### -c %s 2>&1 | FileCheck %s
 // RUN: %clang --target=arm64-apple-ios-macabi        -### -c %s 2>&1 | FileCheck %s
@@ -21,4 +21,4 @@
 // EXPLICIT-A11: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a11"
 // EXPLICIT-A7: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a7"
 // EXPLICIT-A14: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a14"
-// EXPLICIT-M1: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-m1"
+// EXPLICIT-M1: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "apple-a14"

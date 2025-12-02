@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s --verify-roundtrip | FileCheck %s
 // RUN: mlir-opt %s --mlir-print-op-generic | mlir-opt | FileCheck %s
 
 // CHECK-LABEL: func @atan(
@@ -59,6 +59,18 @@ func.func @sin(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
   %1 = math.sin %v : vector<4xf32>
   // CHECK: %{{.*}} = math.sin %[[T]] : tensor<4x4x?xf32>
   %2 = math.sin %t : tensor<4x4x?xf32>
+  return
+}
+
+// CHECK-LABEL: func @sincos(
+// CHECK-SAME:            %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
+func.func @sincos(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
+  // CHECK: %{{.*}} = math.sincos %[[F]] : f32
+  %0:2 = math.sincos %f : f32
+  // CHECK: %{{.*}} = math.sincos %[[V]] : vector<4xf32>
+  %1:2 = math.sincos %v : vector<4xf32>
+  // CHECK: %{{.*}} = math.sincos %[[T]] : tensor<4x4x?xf32>
+  %2:2 = math.sincos %t : tensor<4x4x?xf32>
   return
 }
 
@@ -297,4 +309,56 @@ func.func @fastmath(%f: f32, %i: i32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) 
   // CHECK: math.fpowi %[[F]], %[[I]] fastmath<fast> : f32, i32
   %4 = math.fpowi %f, %i fastmath<fast> : f32, i32
   return
+}
+
+// CHECK-LABEL: func @fpclassify(
+// CHECK-SAME:    %[[F:.+]]: f32, %[[D:.+]]: f64,
+// CHECK-SAME:    %[[V:.+]]: vector<4xf32>, %[[T:.+]]: tensor<4x?xf32>
+func.func @fpclassify(%f: f32, %d: f64, %v: vector<4xf32>, %t: tensor<4x?xf32>) {
+  // CHECK: math.isfinite %[[F]] : f32
+  // CHECK: math.isfinite %[[D]] : f64
+  // CHECK: math.isfinite %[[V]] : vector<4xf32>
+  // CHECK: math.isfinite %[[T]] : tensor<4x?xf32>
+  math.isfinite %f : f32
+  math.isfinite %d : f64
+  math.isfinite %v : vector<4xf32>
+  math.isfinite %t : tensor<4x?xf32>
+  // CHECK: math.isinf %[[F]] : f32
+  // CHECK: math.isinf %[[D]] : f64
+  // CHECK: math.isinf %[[V]] : vector<4xf32>
+  // CHECK: math.isinf %[[T]] : tensor<4x?xf32>
+  math.isinf %f : f32
+  math.isinf %d : f64
+  math.isinf %v : vector<4xf32>
+  math.isinf %t : tensor<4x?xf32>
+  // CHECK: math.isnan %[[F]] : f32
+  // CHECK: math.isnan %[[D]] : f64
+  // CHECK: math.isnan %[[V]] : vector<4xf32>
+  // CHECK: math.isnan %[[T]] : tensor<4x?xf32>
+  math.isnan %f : f32
+  math.isnan %d : f64
+  math.isnan %v : vector<4xf32>
+  math.isnan %t : tensor<4x?xf32>
+  // CHECK: math.isnormal %[[F]] : f32
+  // CHECK: math.isnormal %[[D]] : f64
+  // CHECK: math.isnormal %[[V]] : vector<4xf32>
+  // CHECK: math.isnormal %[[T]] : tensor<4x?xf32>
+  math.isnormal %f : f32
+  math.isnormal %d : f64
+  math.isnormal %v : vector<4xf32>
+  math.isnormal %t : tensor<4x?xf32>
+  return
+}
+
+// CHECK-LABEL: func @clampf(
+func.func @clampf(%av: vector<3x4xf32>, %mv: vector<3x4xf32>, %Mv: vector<3x4xf32>,
+                  %as: f32, %ms: f32, %Ms: f32,
+                  %at: tensor<?xf80>, %mt: tensor<?xf80>, %Mt: tensor<?xf80>) {
+  // CHECK: math.clampf %{{.*}} to [%{{.*}}, %{{.*}}] fastmath<fast> : vector<3x4xf32>
+  %rv = math.clampf %av to [%mv, %Mv] fastmath<fast> : vector<3x4xf32>
+  // CHECK: math.clampf %{{.*}} to [%{{.*}}, %{{.*}}] : f32
+  %rs = math.clampf %as to [%ms, %Ms] fastmath<none> : f32
+  // CHECK: math.clampf %{{.*}} to [%{{.*}}, %{{.*}}] : tensor<?xf80>
+  %rt = math.clampf %at to [%mt, %Mt] : tensor<?xf80>
+  return 
 }

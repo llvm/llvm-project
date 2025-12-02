@@ -10,18 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _OMPTARGET_OMPTINTERFACE_H
-#define _OMPTARGET_OMPTINTERFACE_H
+#ifndef OFFLOAD_INCLUDE_OPENMP_OMPT_INTERFACE_H
+#define OFFLOAD_INCLUDE_OPENMP_OMPT_INTERFACE_H
 
 // Only provide functionality if target OMPT support is enabled
 #ifdef OMPT_SUPPORT
-#include <functional>
-#include <tuple>
-
 #include "Callback.h"
 #include "omp-tools.h"
 
 #include "llvm/Support/ErrorHandling.h"
+
+#include <functional>
+#include <tuple>
 
 #define OMPT_IF_BUILT(stmt) stmt
 
@@ -109,6 +109,25 @@ public:
   /// Top-level function for invoking callback after target update construct
   void endTargetUpdate(int64_t DeviceId, void *Code);
 
+  /// Top-level function for invoking callback before target associate API
+  void beginTargetAssociatePointer(int64_t DeviceId, void *HstPtrBegin,
+                                   void *TgtPtrBegin, size_t Size, void *Code);
+
+  /// Top-level function for invoking callback after target associate API
+  void endTargetAssociatePointer(int64_t DeviceId, void *HstPtrBegin,
+                                 void *TgtPtrBegin, size_t Size, void *Code);
+
+  /// Top-level function for invoking callback before target disassociate API
+  void beginTargetDisassociatePointer(int64_t DeviceId, void *HstPtrBegin,
+                                      void *TgtPtrBegin, size_t Size,
+                                      void *Code);
+
+  /// Top-level function for invoking callback after target disassociate API
+  void endTargetDisassociatePointer(int64_t DeviceId, void *HstPtrBegin,
+                                    void *TgtPtrBegin, size_t Size, void *Code);
+
+  // Target kernel callbacks
+
   /// Top-level function for invoking callback before target construct
   void beginTarget(int64_t DeviceId, void *Code);
 
@@ -136,6 +155,16 @@ public:
                   OpType == ompt_target_data_transfer_from_device_async)
       return std::make_pair(std::mem_fn(&Interface::beginTargetDataRetrieve),
                             std::mem_fn(&Interface::endTargetDataRetrieve));
+
+    if constexpr (OpType == ompt_target_data_associate)
+      return std::make_pair(
+          std::mem_fn(&Interface::beginTargetAssociatePointer),
+          std::mem_fn(&Interface::endTargetAssociatePointer));
+
+    if constexpr (OpType == ompt_target_data_disassociate)
+      return std::make_pair(
+          std::mem_fn(&Interface::beginTargetDisassociatePointer),
+          std::mem_fn(&Interface::endTargetDisassociatePointer));
 
     llvm_unreachable("Unhandled target data operation type!");
   }
@@ -297,4 +326,4 @@ private:
 #define OMPT_IF_BUILT(stmt)
 #endif
 
-#endif // _OMPTARGET_OMPTINTERFACE_H
+#endif // OFFLOAD_INCLUDE_OPENMP_OMPT_INTERFACE_H

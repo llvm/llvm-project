@@ -16,9 +16,8 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/TokenConcatenation.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/RewriteBuffer.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -635,8 +634,8 @@ static void HighlightMacrosImpl(
   // Temporarily change the diagnostics object so that we ignore any generated
   // diagnostics from this pass.
   DiagnosticsEngine TmpDiags(PP.getDiagnostics().getDiagnosticIDs(),
-                             &PP.getDiagnostics().getDiagnosticOptions(),
-                      new IgnoringDiagConsumer);
+                             PP.getDiagnostics().getDiagnosticOptions(),
+                             new IgnoringDiagConsumer);
 
   // FIXME: This is a huge hack; we reuse the input preprocessor because we want
   // its state, but we aren't actually changing it (we hope). This should really

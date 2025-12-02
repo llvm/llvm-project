@@ -54,6 +54,8 @@ using namespace llvm;
 STATISTIC(NumOfPGOMemOPOpt, "Number of memop intrinsics optimized.");
 STATISTIC(NumOfPGOMemOPAnnotate, "Number of memop intrinsics annotated.");
 
+namespace llvm {
+
 // The minimum call count to optimize memory intrinsic calls.
 static cl::opt<unsigned>
     MemOPCountThreshold("pgo-memop-count-threshold", cl::Hidden, cl::init(1000),
@@ -92,6 +94,8 @@ cl::opt<bool>
 static cl::opt<unsigned>
     MemOpMaxOptSize("memop-value-prof-max-opt-size", cl::Hidden, cl::init(128),
                     cl::desc("Optimize the memop size <= this value"));
+
+} // end namespace llvm
 
 namespace {
 
@@ -247,12 +251,11 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   if (!MemOPOptMemcmpBcmp && (MO.isMemcmp(TLI) || MO.isBcmp(TLI)))
     return false;
 
-  uint32_t NumVals = INSTR_PROF_NUM_BUCKETS;
   uint32_t MaxNumVals = INSTR_PROF_NUM_BUCKETS;
   uint64_t TotalCount;
-  auto ValueDataArray = getValueProfDataFromInst(
-      *MO.I, IPVK_MemOPSize, MaxNumVals, NumVals, TotalCount);
-  if (!ValueDataArray)
+  auto VDs =
+      getValueProfDataFromInst(*MO.I, IPVK_MemOPSize, MaxNumVals, TotalCount);
+  if (VDs.empty())
     return false;
 
   uint64_t ActualCount = TotalCount;
@@ -264,7 +267,6 @@ bool MemOPSizeOpt::perform(MemOp MO) {
     ActualCount = *BBEdgeCount;
   }
 
-  ArrayRef<InstrProfValueData> VDs(ValueDataArray.get(), NumVals);
   LLVM_DEBUG(dbgs() << "Read one memory intrinsic profile with count "
                     << ActualCount << "\n");
   LLVM_DEBUG(
@@ -388,7 +390,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   PHINode *PHI = nullptr;
   if (!MemOpTy->isVoidTy()) {
     // Insert a phi for the return values at the merge block.
-    IRBuilder<> IRBM(MergeBB->getFirstNonPHI());
+    IRBuilder<> IRBM(MergeBB, MergeBB->getFirstNonPHIIt());
     PHI = IRBM.CreatePHI(MemOpTy, SizeIds.size() + 1, "MemOP.RVMerge");
     MO.I->replaceAllUsesWith(PHI);
     PHI->addIncoming(MO.I, DefaultBB);
@@ -397,10 +399,10 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   // Clear the value profile data.
   MO.I->setMetadata(LLVMContext::MD_prof, nullptr);
   // If all promoted, we don't need the MD.prof metadata.
-  if (SavedRemainCount > 0 || Version != NumVals) {
+  if (SavedRemainCount > 0 || Version != VDs.size()) {
     // Otherwise we need update with the un-promoted records back.
     annotateValueSite(*Func.getParent(), *MO.I, RemainingVDs, SavedRemainCount,
-                      IPVK_MemOPSize, NumVals);
+                      IPVK_MemOPSize, VDs.size());
   }
 
   LLVM_DEBUG(dbgs() << "\n\n== Basic Block After==\n");
@@ -434,7 +436,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   Updates.clear();
 
   if (MaxCount)
-    setProfMetadata(Func.getParent(), SI, CaseCounts, MaxCount);
+    setProfMetadata(SI, CaseCounts, MaxCount);
 
   LLVM_DEBUG(dbgs() << *BB << "\n");
   LLVM_DEBUG(dbgs() << *DefaultBB << "\n");
@@ -458,7 +460,7 @@ static bool PGOMemOPSizeOptImpl(Function &F, BlockFrequencyInfo &BFI,
   if (DisableMemOPOPT)
     return false;
 
-  if (F.hasFnAttribute(Attribute::OptimizeForSize))
+  if (F.hasOptSize())
     return false;
   MemOPSizeOpt MemOPSizeOpt(F, BFI, ORE, DT, TLI);
   MemOPSizeOpt.perform();

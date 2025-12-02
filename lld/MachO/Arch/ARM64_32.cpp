@@ -10,15 +10,11 @@
 #include "Arch/ARM64Common.h"
 #include "InputFiles.h"
 #include "Symbols.h"
-#include "SyntheticSections.h"
 #include "Target.h"
 
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/Support/Endian.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace llvm::MachO;
 using namespace llvm::support::endian;

@@ -33,7 +33,7 @@ public:
 
   ~ValueObjectPrinter() = default;
 
-  bool PrintValueObject();
+  llvm::Error PrintValueObject();
 
 protected:
   typedef std::set<uint64_t> InstancePointersSet;
@@ -75,8 +75,6 @@ protected:
 
   void SetupMostSpecializedValue();
 
-  const char *GetDescriptionForDisplay();
-
   const char *GetRootNameForDisplay();
 
   bool ShouldPrintValueObject();
@@ -108,7 +106,7 @@ protected:
 
   bool PrintValueAndSummaryIfNeeded(bool &value_printed, bool &summary_printed);
 
-  bool PrintObjectDescriptionIfNeeded(bool value_printed, bool summary_printed);
+  void PrintObjectDescriptionIfNeeded(std::optional<std::string> object_desc);
 
   bool
   ShouldPrintChildren(DumpValueObjectOptions::PointerDepth &curr_ptr_depth);
@@ -132,7 +130,7 @@ protected:
   PrintChildren(bool value_printed, bool summary_printed,
                 const DumpValueObjectOptions::PointerDepth &curr_ptr_depth);
 
-  void PrintChildrenIfNeeded(bool value_printed, bool summary_printed);
+  llvm::Error PrintChildrenIfNeeded(bool value_printed, bool summary_printed);
 
   bool PrintChildrenOneLiner(bool hide_names);
 
@@ -140,6 +138,7 @@ protected:
 
 private:
   bool ShouldShowName() const;
+  bool ShouldPrintObjectDescription();
 
   ValueObject &m_orig_valobj;
   /// Cache the current "most specialized" value.  Don't use this

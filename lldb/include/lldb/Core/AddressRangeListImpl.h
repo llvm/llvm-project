@@ -13,7 +13,9 @@
 #include <cstddef>
 
 namespace lldb {
+class SBAddressRangeList;
 class SBBlock;
+class SBProcess;
 }
 
 namespace lldb_private {
@@ -22,9 +24,8 @@ class AddressRangeListImpl {
 public:
   AddressRangeListImpl();
 
-  AddressRangeListImpl(const AddressRangeListImpl &rhs) = default;
-
-  AddressRangeListImpl &operator=(const AddressRangeListImpl &rhs);
+  explicit AddressRangeListImpl(AddressRanges ranges)
+      : m_ranges(std::move(ranges)) {}
 
   size_t GetSize() const;
 
@@ -39,7 +40,9 @@ public:
   lldb_private::AddressRange GetAddressRangeAtIndex(size_t index);
 
 private:
+  friend class lldb::SBAddressRangeList;
   friend class lldb::SBBlock;
+  friend class lldb::SBProcess;
 
   AddressRanges &ref();
 

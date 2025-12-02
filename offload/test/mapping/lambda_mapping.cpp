@@ -4,6 +4,8 @@
 // RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
 // RUN: %libomptarget-compileoptxx-run-and-check-generic
 
+// REQUIRES: libc
+
 #include <iostream>
 
 template <typename LOOP_BODY>

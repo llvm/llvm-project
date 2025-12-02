@@ -16,15 +16,16 @@
 #define MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 
 #include "mlir/Analysis/Presburger/Fraction.h"
-#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <bitset>
 #include <cassert>
 
 namespace mlir {
 namespace presburger {
+using llvm::ArrayRef;
+using llvm::MutableArrayRef;
+using llvm::raw_ostream;
+using llvm::SmallVector;
 
 /// This is a class to represent a resizable matrix.
 ///
@@ -321,7 +322,7 @@ public:
   // The parameter is what [the original
   // paper](https://www.cs.cmu.edu/~avrim/451f11/lectures/lect1129_LLL.pdf)
   // calls `y`, usually 3/4.
-  void LLL(Fraction delta);
+  void LLL(const Fraction &delta);
 
   // Multiply each row of the matrix by the LCM of the denominators, thereby
   // converting it to an integer matrix.

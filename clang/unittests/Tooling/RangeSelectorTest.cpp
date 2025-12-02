@@ -339,6 +339,13 @@ TEST(RangeSelectorTest, NodeOpExpression) {
   EXPECT_THAT_EXPECTED(select(node("id"), Match), HasValue("3"));
 }
 
+TEST(RangeSelectorTest, NodeOpTypeLoc) {
+  StringRef Code = "namespace ns {struct Foo{};} ns::Foo a;";
+  TestMatch Match =
+      matchCode(Code, varDecl(hasTypeLoc(typeLoc().bind("typeloc"))));
+  EXPECT_THAT_EXPECTED(select(node("typeloc"), Match), HasValue("ns::Foo"));
+}
+
 TEST(RangeSelectorTest, StatementOp) {
   StringRef Code = "int f() { return 3; }";
   TestMatch Match = matchCode(Code, expr().bind("id"));
@@ -474,15 +481,15 @@ TEST(RangeSelectorTest, NameOpTypeLoc) {
   // Matches declaration of `a`
   TestMatch MatchA = matchCode(
       Code, varDecl(hasName("a"), hasTypeLoc(typeLoc().bind(CtorTy))));
-  EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchA), HasValue("Foo"));
+  EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchA), HasValue("ns::Foo"));
   // Matches call of Foo(int)
   TestMatch MatchB = matchCode(
       Code, cxxFunctionalCastExpr(hasTypeLoc(typeLoc().bind(CtorTy))));
-  EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchB), HasValue("Foo"));
+  EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchB), HasValue("ns::Foo"));
   // Matches call of Foo(int, int)
   TestMatch MatchC = matchCode(
       Code, cxxTemporaryObjectExpr(hasTypeLoc(typeLoc().bind(CtorTy))));
-  EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchC), HasValue("Foo"));
+  EXPECT_THAT_EXPECTED(select(name(CtorTy), MatchC), HasValue("ns::Foo"));
 }
 
 TEST(RangeSelectorTest, NameOpTemplateSpecializationTypeLoc) {
@@ -525,6 +532,31 @@ TEST(RangeSelectorTest, NameOpDeclRefError) {
       Failed<StringError>(testing::Property(
           &StringError::getMessage,
           AllOf(HasSubstr(Ref), HasSubstr("requires property 'identifier'")))));
+}
+
+TEST(RangeSelectorTest, NameOpDeclInMacroArg) {
+  StringRef Code = R"cc(
+  #define MACRO(name) int name;
+  MACRO(x)
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, varDecl().bind(ID));
+  EXPECT_THAT_EXPECTED(select(name(ID), Match), HasValue("x"));
+}
+
+TEST(RangeSelectorTest, NameOpDeclInMacroBodyError) {
+  StringRef Code = R"cc(
+  #define MACRO int x;
+  MACRO
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, varDecl().bind(ID));
+  EXPECT_THAT_EXPECTED(
+      name(ID)(Match.Result),
+      Failed<StringError>(testing::Property(
+          &StringError::getMessage,
+          AllOf(HasSubstr("range selected by name(node id="),
+                HasSubstr("' is different from decl name 'x'")))));
 }
 
 TEST(RangeSelectorTest, CallArgsOp) {
@@ -649,6 +681,94 @@ TEST(RangeSelectorTest, CallArgsErrors) {
                        Failed<StringError>(withUnboundNodeMessage()));
   EXPECT_THAT_EXPECTED(selectFromAssorted(callArgs("stmt")),
                        Failed<StringError>(withTypeErrorMessage("stmt")));
+}
+
+TEST(RangeSelectorTest, ConstructExprArgs) {
+  const StringRef Code = R"cc(
+    struct C {
+      C(int, int);
+    };
+    C f() {
+      return C(1, 2);
+    }
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, cxxTemporaryObjectExpr().bind(ID));
+  EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue("1, 2"));
+}
+
+TEST(RangeSelectorTest, ConstructExprBracedArgs) {
+  const StringRef Code = R"cc(
+    struct C {
+      C(int, int);
+    };
+    C f() {
+      return {1, 2};
+    }
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, cxxConstructExpr().bind(ID));
+  EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue("1, 2"));
+}
+
+TEST(RangeSelectorTest, ConstructExprNoArgs) {
+  const StringRef Code = R"cc(
+    struct C {
+      C();
+    };
+    C f() {
+      return C();
+    }
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, cxxTemporaryObjectExpr().bind(ID));
+  EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue(""));
+}
+
+TEST(RangeSelectorTest, ConstructExprArgsDirectInitialization) {
+  const StringRef Code = R"cc(
+    struct C {
+      C(int, int);
+    };
+    void f() {
+      C c(1, 2);
+    }
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, cxxConstructExpr().bind(ID));
+  EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue("1, 2"));
+}
+
+TEST(RangeSelectorTest, ConstructExprArgsDirectBraceInitialization) {
+  const StringRef Code = R"cc(
+    struct C {
+      C(int, int);
+    };
+    void f() {
+      C c{1, 2};
+    }
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, cxxConstructExpr().bind(ID));
+  EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue("1, 2"));
+}
+
+TEST(RangeSelectorTest, ConstructExprArgsImplicitConstruction) {
+  const StringRef Code = R"cc(
+    struct C {
+      C(int, int = 42);
+    };
+    void sink(C);
+    void f() {
+      sink(1);
+    }
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(
+      Code,
+      cxxConstructExpr(ignoringElidableConstructorCall(cxxConstructExpr()))
+          .bind(ID));
+  EXPECT_THAT_EXPECTED(select(constructExprArgs(ID), Match), HasValue("1"));
 }
 
 TEST(RangeSelectorTest, StatementsOp) {

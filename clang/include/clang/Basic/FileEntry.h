@@ -68,8 +68,13 @@ public:
   StringRef getNameAsRequested() const { return ME->first(); }
 
   const FileEntry &getFileEntry() const {
-    return *getBaseMapEntry().second->V.get<FileEntry *>();
+    return *cast<FileEntry *>(getBaseMapEntry().second->V);
   }
+
+  // This function is used if the buffer size needs to be increased
+  // due to potential z/OS EBCDIC -> UTF-8 conversion
+  inline void updateFileEntryBufferSize(unsigned BufferSize);
+
   DirectoryEntryRef getDir() const { return ME->second->Dir; }
 
   inline off_t getSize() const;
@@ -77,6 +82,7 @@ public:
   inline const llvm::sys::fs::UniqueID &getUniqueID() const;
   inline time_t getModificationTime() const;
   inline bool isNamedPipe() const;
+  inline bool isDeviceFile() const;
   inline void closeFile() const;
 
   /// Check if the underlying FileEntry is the same, intentially ignoring
@@ -212,11 +218,7 @@ class OptionalStorage<clang::FileEntryRef>
       clang::FileMgr::MapEntryOptionalStorage<clang::FileEntryRef>;
 
 public:
-  OptionalStorage() = default;
-
-  template <class... ArgTypes>
-  explicit OptionalStorage(std::in_place_t, ArgTypes &&...Args)
-      : StorageImpl(std::in_place_t{}, std::forward<ArgTypes>(Args)...) {}
+  using StorageImpl::StorageImpl;
 
   OptionalStorage &operator=(clang::FileEntryRef Ref) {
     StorageImpl::operator=(Ref);
@@ -311,6 +313,7 @@ class FileEntry {
   llvm::sys::fs::UniqueID UniqueID;
   unsigned UID = 0; // A unique (small) ID for the file.
   bool IsNamedPipe = false;
+  bool IsDeviceFile = false;
 
   /// The open file, if it is owned by the \p FileEntry.
   mutable std::unique_ptr<llvm::vfs::File> File;
@@ -323,6 +326,8 @@ public:
 
   StringRef tryGetRealPathName() const { return RealPathName; }
   off_t getSize() const { return Size; }
+  // Size may increase due to potential z/OS EBCDIC -> UTF-8 conversion.
+  void setSize(off_t NewSize) { Size = NewSize; }
   unsigned getUID() const { return UID; }
   const llvm::sys::fs::UniqueID &getUniqueID() const { return UniqueID; }
   time_t getModificationTime() const { return ModTime; }
@@ -333,6 +338,7 @@ public:
   /// Check whether the file is a named pipe (and thus can't be opened by
   /// the native FileManager methods).
   bool isNamedPipe() const { return IsNamedPipe; }
+  bool isDeviceFile() const { return IsDeviceFile; }
 
   void closeFile() const;
 };
@@ -350,8 +356,15 @@ time_t FileEntryRef::getModificationTime() const {
 }
 
 bool FileEntryRef::isNamedPipe() const { return getFileEntry().isNamedPipe(); }
+bool FileEntryRef::isDeviceFile() const {
+  return getFileEntry().isDeviceFile();
+}
 
 void FileEntryRef::closeFile() const { getFileEntry().closeFile(); }
+
+void FileEntryRef::updateFileEntryBufferSize(unsigned BufferSize) {
+  cast<FileEntry *>(getBaseMapEntry().second->V)->setSize(BufferSize);
+}
 
 } // end namespace clang
 

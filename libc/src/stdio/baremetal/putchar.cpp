@@ -9,15 +9,16 @@
 #include "src/stdio/putchar.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/io.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
   char uc = static_cast<char>(c);
 
-  write_to_stderr(cpp::string_view(&uc, 1));
+  write_to_stdout(cpp::string_view(&uc, 1));
 
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

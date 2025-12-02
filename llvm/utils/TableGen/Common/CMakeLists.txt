@@ -10,7 +10,7 @@ set(LLVM_LINK_COMPONENTS
   TableGen
   )
 
-add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
+add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_LINK_LLVM_DYLIB
   GlobalISel/CodeExpander.cpp
   GlobalISel/CombinerUtils.cpp
   GlobalISel/CXXPredicates.cpp
@@ -29,10 +29,12 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
   CodeGenTarget.cpp
   DAGISelMatcher.cpp
   InfoByHwMode.cpp
+  InstructionEncoding.cpp
   OptEmitter.cpp
   PredicateExpander.cpp
   SubtargetFeatureInfo.cpp
   Types.cpp
+  Utils.cpp
   VarLenCodeEmitterGen.cpp
 
   LINK_LIBS

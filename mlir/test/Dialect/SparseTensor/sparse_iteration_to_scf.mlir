@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s --lower-sparse-iteration-to-scf | FileCheck %s
 // RUN: mlir-opt %s --sparse-space-collapse --lower-sparse-iteration-to-scf | FileCheck %s --check-prefix COLLAPSED
+// RUN: mlir-opt %s --sparsification-and-bufferization="sparse-emit-strategy=sparse-iterator" | FileCheck %s --check-prefix COLLAPSED
 
 #COO = #sparse_tensor.encoding<{
   map = (i, j) -> (

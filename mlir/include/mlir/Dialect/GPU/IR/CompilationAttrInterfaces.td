@@ -43,12 +43,29 @@ def GPUTargetAttrInterface : AttrInterface<"TargetAttrInterface"> {
     InterfaceMethod<[{
         Creates a GPU object attribute from a binary string.
 
+        The `module` parameter must be a `GPUModuleOp` and can be used to
+        retrieve additional information like the list of kernels in the binary.
         The `object` parameter is a binary string. The `options` parameter is
         meant to be used for passing additional options that are not in the
         attribute.
       }], "::mlir::Attribute", "createObject",
-        (ins "const ::llvm::SmallVector<char, 0>&":$object,
-             "const ::mlir::gpu::TargetOptions&":$options)>
+        (ins "::mlir::Operation *":$module,
+             "const ::llvm::SmallVector<char, 0> &":$object,
+             "const ::mlir::gpu::TargetOptions &":$options)>
+  ];
+}
+
+def GPUTargetAttrVerifyInterface : AttrInterface<"TargetAttrVerifyInterface"> {
+  let description = [{
+    Interface for GPU target attributes that verify the target attribute
+    of a given GPU module.
+  }];
+  let cppNamespace = "::mlir::gpu";
+  let methods = [
+    InterfaceMethod<[{
+        Verifies that the target attribute is valid for the given GPU module.
+      }], "::mlir::LogicalResult", "verifyTarget",
+      (ins "::mlir::Operation *":$module)>
   ];
 }
 
@@ -113,7 +130,7 @@ def OffloadingLLVMTranslationAttrInterface :
         The first argument has to be a GPU binary operation.
         If the function fails at any point, it must return `failure`.
       }],
-      "::mlir::LogicalResult", "embedBinary",
+      "::llvm::LogicalResult", "embedBinary",
       (ins "::mlir::Operation*":$binaryOp,
            "::llvm::IRBuilderBase&":$hostBuilder,
            "::mlir::LLVM::ModuleTranslation&":$hostModuleTranslation)
@@ -130,7 +147,7 @@ def OffloadingLLVMTranslationAttrInterface :
         respectively. If the function fails at any point, it must return
         `failure`.
       }],
-      "::mlir::LogicalResult", "launchKernel",
+      "::llvm::LogicalResult", "launchKernel",
       (ins "::mlir::Operation*":$launchFunc, "::mlir::Operation*":$binaryOp,
            "::llvm::IRBuilderBase&":$hostBuilder,
            "::mlir::LLVM::ModuleTranslation&":$hostModuleTranslation)

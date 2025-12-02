@@ -15,6 +15,7 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
   class Constant;
@@ -26,6 +27,9 @@ namespace llvm {
   class FileSystem;
   }
 }
+
+// Prefix of the name of the artificial inline frame.
+inline constexpr llvm::StringRef ClangTrapPrefix = "__clang_trap_msg";
 
 namespace clang {
   class CodeGenOptions;
@@ -47,6 +51,12 @@ namespace CodeGen {
 /// This is not really an abstract interface.
 class CodeGenerator : public ASTConsumer {
   virtual void anchor();
+
+protected:
+  /// True if we've finished generating IR. This prevents us from generating
+  /// additional LLVM IR after emitting output in HandleTranslationUnit. This
+  /// can happen when Clang plugins trigger additional AST deserialization.
+  bool IRGenFinished = false;
 
 public:
   /// Return an opaque reference to the CodeGenModule object, which can
@@ -109,6 +119,23 @@ CodeGenerator *CreateLLVMCodeGen(DiagnosticsEngine &Diags,
                                  const CodeGenOptions &CGO,
                                  llvm::LLVMContext &C,
                                  CoverageSourceInfo *CoverageInfo = nullptr);
+
+namespace CodeGen {
+/// Demangle the artificial function name (\param FuncName) used to encode trap
+/// reasons used in debug info for traps (e.g. __builtin_verbose_trap). See
+/// `CGDebugInfo::CreateTrapFailureMessageFor`.
+///
+/// \param FuncName - The function name to demangle.
+///
+/// \return A std::optional. If demangling succeeds the optional will contain
+/// a pair of StringRefs where the first field is the trap category and the
+/// second is the trap message. These can both be empty. If demangling fails the
+/// optional will not contain a value. Note the returned StringRefs if non-empty
+/// point into the underlying storage for \param FuncName and thus have the same
+/// lifetime.
+std::optional<std::pair<StringRef, StringRef>>
+DemangleTrapReasonInDebugInfo(StringRef FuncName);
+} // namespace CodeGen
 
 } // end namespace clang
 

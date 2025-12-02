@@ -78,13 +78,13 @@ uptr GetMmapGranularity();
 uptr GetMaxVirtualAddress();
 uptr GetMaxUserVirtualAddress();
 // Threads
-tid_t GetTid();
-int TgKill(pid_t pid, tid_t tid, int sig);
+ThreadID GetTid();
+int TgKill(pid_t pid, ThreadID tid, int sig);
 uptr GetThreadSelf();
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
                                 uptr *stack_bottom);
-void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
-                          uptr *tls_addr, uptr *tls_size);
+void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
+                          uptr *tls_begin, uptr *tls_end);
 
 // Memory management
 void *MmapOrDie(uptr size, const char *mem_type, bool raw_report = false);
@@ -166,7 +166,7 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
 
 // Used to check if we can map shadow memory to a fixed location.
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end);
-// Releases memory pages entirely within the [beg, end] address range. Noop if
+// Releases memory pages entirely within the [beg, end) address range. Noop if
 // the provided range does not contain at least one entire page.
 void ReleaseMemoryPagesToOS(uptr beg, uptr end);
 void IncreaseTotalMmap(uptr size);
@@ -177,7 +177,7 @@ bool DontDumpShadowMemory(uptr addr, uptr length);
 // Check if the built VMA size matches the runtime one.
 void CheckVMASize();
 void RunMallocHooks(void *ptr, uptr size);
-void RunFreeHooks(void *ptr);
+int RunFreeHooks(void *ptr);
 
 class ReservedAddressRange {
  public:
@@ -239,13 +239,15 @@ void RemoveANSIEscapeSequencesFromString(char *buffer);
 void Printf(const char *format, ...) FORMAT(1, 2);
 void Report(const char *format, ...) FORMAT(1, 2);
 void SetPrintfAndReportCallback(void (*callback)(const char *));
-#define VReport(level, ...)                                              \
-  do {                                                                   \
-    if ((uptr)Verbosity() >= (level)) Report(__VA_ARGS__); \
+#define VReport(level, ...)                     \
+  do {                                          \
+    if (UNLIKELY((uptr)Verbosity() >= (level))) \
+      Report(__VA_ARGS__);                      \
   } while (0)
-#define VPrintf(level, ...)                                              \
-  do {                                                                   \
-    if ((uptr)Verbosity() >= (level)) Printf(__VA_ARGS__); \
+#define VPrintf(level, ...)                     \
+  do {                                          \
+    if (UNLIKELY((uptr)Verbosity() >= (level))) \
+      Printf(__VA_ARGS__);                      \
   } while (0)
 
 // Lock sanitizer error reporting and protects against nested errors.
@@ -266,7 +268,15 @@ class ScopedErrorReportLock {
 extern uptr stoptheworld_tracer_pid;
 extern uptr stoptheworld_tracer_ppid;
 
+// Returns true if the entire range can be read.
 bool IsAccessibleMemoryRange(uptr beg, uptr size);
+// Attempts to copy `n` bytes from memory range starting at `src` to `dest`.
+// Returns true if the entire range can be read. Returns `false` if any part of
+// the source range cannot be read, in which case the contents of `dest` are
+// undefined.
+bool TryMemCpy(void *dest, const void *src, uptr n);
+// Copies accessible memory, and zero fill inaccessible.
+void MemCpyAccessible(void *dest, const void *src, uptr n);
 
 // Error report formatting.
 const char *StripPathPrefix(const char *filepath,
@@ -380,6 +390,9 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
 void SetAlternateSignalStack();
 void UnsetAlternateSignalStack();
 
+bool IsSignalHandlerFromSanitizer(int signum);
+bool SetSignalHandlerFromSanitizer(int signum, bool new_state);
+
 // Construct a one-line string:
 //   SUMMARY: SanitizerToolName: error_message
 // and pass it to __sanitizer_report_error_summary.
@@ -472,6 +485,13 @@ inline constexpr bool IsAligned(uptr a, uptr alignment) {
 inline uptr Log2(uptr x) {
   CHECK(IsPowerOfTwo(x));
   return LeastSignificantSetBitIndex(x);
+}
+
+inline bool IntervalsAreSeparate(uptr start1, uptr end1, uptr start2,
+                                 uptr end2) {
+  CHECK_LE(start1, end1);
+  CHECK_LE(start2, end2);
+  return (end1 < start2) || (end2 < start1);
 }
 
 // Don't use std::min, std::max or std::swap, to minimize dependency
@@ -724,6 +744,7 @@ enum ModuleArch {
   kModuleArchARMV7S,
   kModuleArchARMV7K,
   kModuleArchARM64,
+  kModuleArchARM64E,
   kModuleArchLoongArch64,
   kModuleArchRISCV64,
   kModuleArchHexagon
@@ -797,6 +818,8 @@ inline const char *ModuleArchToString(ModuleArch arch) {
       return "armv7k";
     case kModuleArchARM64:
       return "arm64";
+    case kModuleArchARM64E:
+      return "arm64e";
     case kModuleArchLoongArch64:
       return "loongarch64";
     case kModuleArchRISCV64:
@@ -915,13 +938,6 @@ class ListOfModules {
 // Callback type for iterating over a set of memory ranges.
 typedef void (*RangeIteratorCallback)(uptr begin, uptr end, void *arg);
 
-enum AndroidApiLevel {
-  ANDROID_NOT_ANDROID = 0,
-  ANDROID_KITKAT = 19,
-  ANDROID_LOLLIPOP_MR1 = 22,
-  ANDROID_POST_LOLLIPOP = 23
-};
-
 void WriteToSyslog(const char *buffer);
 
 #if defined(SANITIZER_WINDOWS) && defined(_MSC_VER) && !defined(__clang__)
@@ -954,19 +970,8 @@ inline void AndroidLogInit() {}
 inline void SetAbortMessage(const char *) {}
 #endif
 
-#if SANITIZER_ANDROID
-void SanitizerInitializeUnwinder();
-AndroidApiLevel AndroidGetApiLevel();
-#else
-inline void AndroidLogWrite(const char *buffer_unused) {}
-inline void SanitizerInitializeUnwinder() {}
-inline AndroidApiLevel AndroidGetApiLevel() { return ANDROID_NOT_ANDROID; }
-#endif
-
 inline uptr GetPthreadDestructorIterations() {
-#if SANITIZER_ANDROID
-  return (AndroidGetApiLevel() == ANDROID_LOLLIPOP_MR1) ? 8 : 4;
-#elif SANITIZER_POSIX
+#if SANITIZER_POSIX
   return 4;
 #else
 // Unused on Windows.

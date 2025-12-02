@@ -1,4 +1,3 @@
-  .hidden ret32
   .globl  ret32
 ret32:
   .functype ret32 (f32) -> (i32)

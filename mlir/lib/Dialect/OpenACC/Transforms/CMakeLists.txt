@@ -1,5 +1,8 @@
 add_mlir_dialect_library(MLIROpenACCTransforms
-  LegalizeData.cpp
+  ACCImplicitData.cpp
+  ACCImplicitDeclare.cpp
+  ACCImplicitRoutine.cpp
+  LegalizeDataValues.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/OpenACC
@@ -10,10 +13,14 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   MLIROpenACCEnumsIncGen
   MLIROpenACCAttributesIncGen
   MLIROpenACCMPOpsInterfacesIncGen
+  MLIROpenACCOpsInterfacesIncGen
   MLIROpenACCTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysis
+  MLIROpenACCAnalysis
   MLIROpenACCDialect
+  MLIROpenACCUtils
   MLIRFuncDialect
   MLIRIR
   MLIRPass

@@ -18,22 +18,30 @@
 
 namespace llvm {
 
+// TODO: We should use the infrastructure in RISCV/RISCVInsertVSETVLI.cpp.
+// TODO: We should take vl into consideration.
+using VTypeInfo = std::pair<RISCVVType::VLMUL, unsigned>;
+
 /// A GenericScheduler implementation for RISCV pre RA scheduling.
 class RISCVPreRAMachineSchedStrategy : public GenericScheduler {
 private:
-  RISCVII::VLMUL PrevVLMUL;
-  unsigned PrevVSEW;
+  VTypeInfo TopVType;
+  VTypeInfo BottomVType;
+
+  bool tryVType(VTypeInfo TryVType, VTypeInfo CandVtype,
+                GenericSchedulerBase::SchedCandidate &TryCand,
+                GenericSchedulerBase::SchedCandidate &Cand,
+                GenericSchedulerBase::CandReason Reason) const;
 
 public:
   RISCVPreRAMachineSchedStrategy(const MachineSchedContext *C)
       : GenericScheduler(C) {}
 
 protected:
-  SUnit *pickNode(bool &IsTopNode) override;
-
   bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
                     SchedBoundary *Zone) const override;
-
+  void enterMBB(MachineBasicBlock *MBB) override;
+  void leaveMBB() override;
   void schedNode(SUnit *SU, bool IsTopNode) override;
 };
 

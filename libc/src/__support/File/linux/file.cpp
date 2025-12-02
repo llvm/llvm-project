@@ -8,19 +8,21 @@
 
 #include "file.h"
 
+#include "hdr/stdio_macros.h"
+#include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
 #include "src/__support/File/linux/lseekImpl.h"
 #include "src/__support/OSUtil/fcntl.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
-#include "src/errno/libc_errno.h"         // For error macros
+#include "src/__support/libc_errno.h"     // For error macros
+#include "src/__support/macros/config.h"
 
-#include <fcntl.h> // For mode_t and other flags to the open syscall
-#include <stdio.h>
-#include <sys/stat.h>    // For S_IS*, S_IF*, and S_IR* flags.
-#include <sys/syscall.h> // For syscall numbers
+#include "hdr/fcntl_macros.h" // For mode_t and other flags to the open syscall
+#include <sys/stat.h>         // For S_IS*, S_IF*, and S_IR* flags.
+#include <sys/syscall.h>      // For syscall numbers
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 FileIOResult linux_file_write(File *f, const void *data, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
@@ -42,7 +44,7 @@ FileIOResult linux_file_read(File *f, void *buf, size_t size) {
   return ret;
 }
 
-ErrorOr<long> linux_file_seek(File *f, long offset, int whence) {
+ErrorOr<off_t> linux_file_seek(File *f, off_t offset, int whence) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
   auto result = internal::lseekimpl(lf->get_fd(), offset, whence);
   if (!result.has_value())
@@ -126,10 +128,11 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
     return Error(EINVAL);
   }
 
-  int fd_flags = internal::fcntl(fd, F_GETFL);
-  if (fd_flags == -1) {
+  auto result = internal::fcntl(fd, F_GETFL);
+  if (!result.has_value()) {
     return Error(EBADF);
   }
+  int fd_flags = result.value();
 
   using OpenMode = File::OpenMode;
   if (((fd_flags & O_ACCMODE) == O_RDONLY &&
@@ -143,8 +146,9 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   if ((modeflags & static_cast<ModeFlags>(OpenMode::APPEND)) &&
       !(fd_flags & O_APPEND)) {
     do_seek = true;
-    if (internal::fcntl(fd, F_SETFL,
-                        reinterpret_cast<void *>(fd_flags | O_APPEND)) == -1) {
+    if (!internal::fcntl(fd, F_SETFL,
+                         reinterpret_cast<void *>(fd_flags | O_APPEND))
+             .has_value()) {
       return Error(EBADF);
     }
   }
@@ -178,4 +182,4 @@ int get_fileno(File *f) {
   return lf->get_fd();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

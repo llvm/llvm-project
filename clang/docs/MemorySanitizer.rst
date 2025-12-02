@@ -8,10 +8,17 @@ MemorySanitizer
 Introduction
 ============
 
-MemorySanitizer is a detector of uninitialized reads. It consists of a
+MemorySanitizer is a detector of uninitialized memory use. It consists of a
 compiler instrumentation module and a run-time library.
 
 Typical slowdown introduced by MemorySanitizer is **3x**.
+
+Here is a not comprehensive of list cases when MemorySanitizer will report an error:
+
+* Uninitialized value was used in a conditional branch.
+* Uninitialized pointer was used for memory accesses.
+* Uninitialized value was passed or returned from a function call, which is considered an undefined behavior. The check can be disabled with ``-fno-sanitize-memory-param-retval``.
+* Uninitialized data was passed into some libc calls.
 
 How to build
 ============
@@ -169,7 +176,7 @@ for `lifetime <https://eel.is/c++draft/basic.life#1>`_ definition.
 
 This feature can be disabled with either:
 
-#. Pass addition Clang option ``-fno-sanitize-memory-use-after-dtor`` during
+#. Pass additional Clang option ``-fno-sanitize-memory-use-after-dtor`` during
    compilation.
 #. Set environment variable `MSAN_OPTIONS=poison_in_dtor=0` before running
    the program.
@@ -190,6 +197,14 @@ to run MemorySanitizer-instrumented programs linked with
 uninstrumented libc. For example, the authors were able to bootstrap
 MemorySanitizer-instrumented Clang compiler by linking it with
 self-built instrumented libc++ (as a replacement for libstdc++).
+
+Security Considerations
+=======================
+
+MemorySanitizer is a bug detection tool and its runtime is not meant to be
+linked against production executables. While it may be useful for testing,
+MemorySanitizer's runtime was not developed with security-sensitive
+constraints in mind and may compromise the security of the resulting executable.
 
 Supported Platforms
 ===================

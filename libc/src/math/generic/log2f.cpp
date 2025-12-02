@@ -7,14 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/log2f.h"
-#include "common_constants.h" // Lookup table for (1/f)
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"   // LIBC_UNLIKELY
+#include "src/__support/math/common_constants.h" // Lookup table for (1/f)
 
 // This is a correctly-rounded algorithm for log2(x) in single precision with
 // round-to-nearest, tie-to-even mode from the RLIBM project at:
@@ -51,9 +52,10 @@
 // Dept. of Comp. Sci., Rutgets U., Technical Report DCS-TR-758, Nov. 2021.
 // https://arxiv.org/pdf/2111.12852.pdf.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
+  using namespace common_constants_internal;
   using FPBits = typename fputil::FPBits<float>;
 
   FPBits xbits(x);
@@ -71,14 +73,14 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   // Exceptional inputs.
   if (LIBC_UNLIKELY(x_u < FPBits::min_normal().uintval() ||
                     x_u > FPBits::max_normal().uintval())) {
-    if (xbits.is_zero()) {
+    if (x == 0.0f) {
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
       return FPBits::inf(Sign::NEG).get_val();
     }
     if (xbits.is_neg() && !xbits.is_nan()) {
       fputil::set_errno_if_required(EDOM);
-      fputil::raise_except(FE_INVALID);
+      fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
     }
     if (xbits.is_inf_or_nan()) {
@@ -96,11 +98,11 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
 
   float u = xbits.get_val();
   double v;
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
   v = static_cast<double>(fputil::multiply_add(u, R[index], -1.0f)); // Exact.
 #else
   v = fputil::multiply_add(static_cast<double>(u), RD[index], -1.0); // Exact
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 
   double extra_factor = static_cast<double>(m) + LOG2_R[index];
 
@@ -120,4 +122,4 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   return static_cast<float>(r);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

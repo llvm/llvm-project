@@ -5,20 +5,13 @@ import itertools
 import math
 import numbers
 import os
+import pathlib
 import platform
 import re
 import signal
 import subprocess
 import sys
 import threading
-
-
-def is_string(value):
-    try:
-        # Python 2 and Python 3 are different here.
-        return isinstance(value, basestring)
-    except NameError:
-        return isinstance(value, str)
 
 
 def pythonize_bool(value):
@@ -28,7 +21,7 @@ def pythonize_bool(value):
         return value
     if isinstance(value, numbers.Number):
         return value != 0
-    if is_string(value):
+    if isinstance(value, str):
         if value.lower() in ("1", "true", "on", "yes"):
             return True
         if value.lower() in ("", "0", "false", "off", "no"):
@@ -139,50 +132,19 @@ def abs_path_preserve_drive(path):
         # Since Python 3.8, os.path.realpath resolves sustitute drives,
         # so we should not use it. In Python 3.7, os.path.realpath
         # was implemented as os.path.abspath.
+        if isinstance(path, pathlib.Path):
+            return path.absolute()
         return os.path.abspath(path)
     else:
         # On UNIX, the current directory always has symbolic links resolved,
         # so any program accepting relative paths cannot preserve symbolic
         # links in paths and we should always use os.path.realpath.
+        if isinstance(path, pathlib.Path):
+            return path.resolve()
         return os.path.realpath(path)
 
-def mkdir(path):
-    try:
-        if platform.system() == "Windows":
-            from ctypes import windll
-            from ctypes import GetLastError, WinError
 
-            path = os.path.abspath(path)
-            # Make sure that the path uses backslashes here, in case
-            # python would have happened to use forward slashes, as the
-            # NT path format only supports backslashes.
-            path = path.replace("/", "\\")
-            NTPath = to_unicode(r"\\?\%s" % path)
-            if not windll.kernel32.CreateDirectoryW(NTPath, None):
-                raise WinError(GetLastError())
-        else:
-            os.mkdir(path)
-    except OSError:
-        e = sys.exc_info()[1]
-        # ignore EEXIST, which may occur during a race condition
-        if e.errno != errno.EEXIST:
-            raise
-
-
-def mkdir_p(path):
-    """mkdir_p(path) - Make the "path" directory, if it does not exist; this
-    will also make directories for any missing parent directories."""
-    if not path or os.path.exists(path):
-        return
-
-    parent = os.path.dirname(path)
-    if parent != path:
-        mkdir_p(parent)
-
-    mkdir(path)
-
-
-def listdir_files(dirname, suffixes=None, exclude_filenames=None):
+def listdir_files(dirname, suffixes=None, exclude_filenames=None, prefixes=None):
     """Yields files in a directory.
 
     Filenames that are not excluded by rules below are yielded one at a time, as
@@ -214,12 +176,15 @@ def listdir_files(dirname, suffixes=None, exclude_filenames=None):
         exclude_filenames = set()
     if suffixes is None:
         suffixes = {""}
+    if prefixes is None:
+        prefixes = {""}
     for filename in os.listdir(dirname):
         if (
             os.path.isdir(os.path.join(dirname, filename))
             or filename.startswith(".")
             or filename in exclude_filenames
             or not any(filename.endswith(sfx) for sfx in suffixes)
+            or not any(filename.startswith(pfx) for pfx in prefixes)
         ):
             continue
         yield filename
@@ -408,7 +373,7 @@ def executeCommand(
         out, err = p.communicate(input=input)
         exitCode = p.wait()
     finally:
-        if timerObject != None:
+        if timerObject is not None:
             timerObject.cancel()
 
     # Ensure the resulting output is always of string type.
@@ -502,7 +467,7 @@ def killProcessAndChildrenIsSupported():
         otherwise is contains a string describing why the function is
         not supported.
     """
-    if platform.system() == "AIX":
+    if platform.system() == "AIX" or platform.system() == "OS/390":
         return (True, "")
     try:
         import psutil  # noqa: F401
@@ -528,6 +493,9 @@ def killProcessAndChildren(pid):
     """
     if platform.system() == "AIX":
         subprocess.call("kill -kill $(ps -o pid= -L{})".format(pid), shell=True)
+    elif platform.system() == "OS/390":
+        # FIXME: Only the process is killed.
+        subprocess.call("kill -KILL $(ps -s {} -o pid=)".format(pid), shell=True)
     else:
         import psutil
 

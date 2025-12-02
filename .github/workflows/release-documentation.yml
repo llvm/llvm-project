@@ -25,19 +25,23 @@ on:
         description: 'Upload documentation'
         required: false
         type: boolean
+    secrets:
+      WWW_RELEASES_TOKEN:
+        description: "Secret used to create a PR with the documentation changes."
+        required: false
 
 jobs:
   release-documentation:
     name: Build and Upload Release Documentation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
       - name: Setup Python env
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with:
           cache: 'pip'
           cache-dependency-path: './llvm/docs/requirements.txt'
@@ -59,30 +63,33 @@ jobs:
           ./llvm/utils/release/build-docs.sh -release "${{ inputs.release-version }}" -no-doxygen
 
       - name: Create Release Notes Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
         with:
           name: release-notes
           path: docs-build/html-export/
 
       - name: Clone www-releases
         if: env.upload
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           repository: ${{ github.repository_owner }}/www-releases
           ref: main
           fetch-depth: 0
           path: www-releases
+          persist-credentials: false
 
       - name: Upload Release Notes
         if: env.upload
         env:
-          WWW_RELEASES_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
+          GH_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
         run: |
-          mkdir -p ../www-releases/${{ inputs.release-version }}
-          mv ./docs-build/html-export/* ../www-releases/${{ inputs.release-version }}
-          cd ../www-releases
+          mkdir -p www-releases/${{ inputs.release-version }}
+          mv ./docs-build/html-export/* www-releases/${{ inputs.release-version }}
+          cd www-releases
+          git checkout -b ${{ inputs.release-version }}
           git add ${{ inputs.release-version }}
           git config user.email "llvmbot@llvm.org"
           git config user.name "llvmbot"
           git commit -a -m "Add ${{ inputs.release-version }} documentation"
-          git push "https://$WWW_RELEASES_TOKEN@github.com/${{ github.repository_owner }}/www-releases" main:main
+          git push --force  "https://$GH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/${{ inputs.release-version }}
+          gh pr create -f -B main -H ${{ inputs.release-version }} -R llvmbot/www-releases

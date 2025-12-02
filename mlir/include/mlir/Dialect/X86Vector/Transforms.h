@@ -80,6 +80,18 @@ struct MaskHelper {
 };
 
 //===----------------------------------------------------------------------===//
+
+// A set of patterns for specialized lowering of vector contraction
+// operation to vector fused multiply and add (FMA) operation.
+void populateVectorContractToFMAPatterns(RewritePatternSet &patterns);
+
+// A set of patterns for lowering 32-bit packed vector contraction operations
+// to their corresponding packed-type dot-product operations, ultimately
+// targeting the relevant x86 LLVM intrinsics (e.g., BF16 and Int8).
+void populateVectorContractToPackedTypeDotProductPatterns(
+    RewritePatternSet &patterns);
+
+//===----------------------------------------------------------------------===//
 /// Helpers extracted from:
 ///   - clang/lib/Headers/avxintrin.h
 ///   - clang/test/CodeGen/X86/avx-builtins.c
@@ -176,7 +188,7 @@ void populateSpecializedTransposeLoweringPatterns(
 /// Collect a set of patterns to lower X86Vector ops to ops that map to LLVM
 /// intrinsics.
 void populateX86VectorLegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns);
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns);
 
 /// Configure the target to support lowering X86Vector ops to ops that map to
 /// LLVM intrinsics.

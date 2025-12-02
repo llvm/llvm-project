@@ -11,6 +11,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Constants.h"
@@ -26,6 +27,8 @@
 
 namespace llvm {
 
+using namespace SCEVPatternMatch;
+
 // We use this fixture to ensure that we clean up ScalarEvolution before
 // deleting the PassManager.
 class ScalarEvolutionsTest : public testing::Test {
@@ -39,7 +42,8 @@ protected:
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<LoopInfo> LI;
 
-  ScalarEvolutionsTest() : M("", Context), TLII(), TLI(TLII) {}
+  ScalarEvolutionsTest()
+      : M("", Context), TLII(M.getTargetTriple()), TLI(TLII) {}
 
   ScalarEvolution buildSE(Function &F) {
     AC.reset(new AssumptionCache(F));
@@ -62,11 +66,6 @@ static std::optional<APInt> computeConstantDifference(ScalarEvolution &SE,
                                                       const SCEV *RHS) {
   return SE.computeConstantDifference(LHS, RHS);
 }
-
-  static bool matchURem(ScalarEvolution &SE, const SCEV *Expr, const SCEV *&LHS,
-                        const SCEV *&RHS) {
-    return SE.matchURem(Expr, LHS, RHS);
-  }
 
   static bool isImpliedCond(
       ScalarEvolution &SE, ICmpInst::Predicate Pred, const SCEV *LHS,
@@ -133,17 +132,17 @@ TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
   BasicBlock *LoopBB = BasicBlock::Create(Context, "loop", F);
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
   BranchInst::Create(LoopBB, EntryBB);
-  BranchInst::Create(LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)),
+  BranchInst::Create(LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)),
                      LoopBB);
   ReturnInst::Create(Context, nullptr, ExitBB);
   auto *Ty = Type::getInt32Ty(Context);
-  auto *PN = PHINode::Create(Ty, 2, "", &*LoopBB->begin());
+  auto *PN = PHINode::Create(Ty, 2, "", LoopBB->begin());
   PN->addIncoming(Constant::getNullValue(Ty), EntryBB);
-  PN->addIncoming(UndefValue::get(Ty), LoopBB);
+  PN->addIncoming(PoisonValue::get(Ty), LoopBB);
   ScalarEvolution SE = buildSE(*F);
-  auto *S1 = SE.getSCEV(PN);
-  auto *S2 = SE.getSCEV(PN);
-  auto *ZeroConst = SE.getConstant(Ty, 0);
+  const SCEV *S1 = SE.getSCEV(PN);
+  const SCEV *S2 = SE.getSCEV(PN);
+  const SCEV *ZeroConst = SE.getConstant(Ty, 0);
 
   // At some point, only the first call to getSCEV returned the simplified
   // SCEVConstant and later calls just returned a SCEVUnknown referencing the
@@ -238,9 +237,9 @@ TEST_F(ScalarEvolutionsTest, CommutativeExprOperandOrder) {
     auto *IV0 = getInstructionByName(F, "iv0");
     auto *IV0Inc = getInstructionByName(F, "iv0.inc");
 
-    auto *FirstExprForIV0 = SE.getSCEV(IV0);
-    auto *FirstExprForIV0Inc = SE.getSCEV(IV0Inc);
-    auto *SecondExprForIV0 = SE.getSCEV(IV0);
+    const SCEV *FirstExprForIV0 = SE.getSCEV(IV0);
+    const SCEV *FirstExprForIV0Inc = SE.getSCEV(IV0Inc);
+    const SCEV *SecondExprForIV0 = SE.getSCEV(IV0);
 
     EXPECT_TRUE(isa<SCEVAddRecExpr>(FirstExprForIV0));
     EXPECT_TRUE(isa<SCEVAddRecExpr>(FirstExprForIV0Inc));
@@ -260,12 +259,12 @@ TEST_F(ScalarEvolutionsTest, CommutativeExprOperandOrder) {
     SmallVector<const SCEV *, 3> Ops4 = {C, B, A};
     SmallVector<const SCEV *, 3> Ops5 = {C, A, B};
 
-    auto *Mul0 = SE.getMulExpr(Ops0);
-    auto *Mul1 = SE.getMulExpr(Ops1);
-    auto *Mul2 = SE.getMulExpr(Ops2);
-    auto *Mul3 = SE.getMulExpr(Ops3);
-    auto *Mul4 = SE.getMulExpr(Ops4);
-    auto *Mul5 = SE.getMulExpr(Ops5);
+    const SCEV *Mul0 = SE.getMulExpr(Ops0);
+    const SCEV *Mul1 = SE.getMulExpr(Ops1);
+    const SCEV *Mul2 = SE.getMulExpr(Ops2);
+    const SCEV *Mul3 = SE.getMulExpr(Ops3);
+    const SCEV *Mul4 = SE.getMulExpr(Ops4);
+    const SCEV *Mul5 = SE.getMulExpr(Ops5);
 
     EXPECT_EQ(Mul0, Mul1) << "Expected " << *Mul0 << " == " << *Mul1;
     EXPECT_EQ(Mul1, Mul2) << "Expected " << *Mul1 << " == " << *Mul2;
@@ -328,11 +327,11 @@ TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
   for (int i = 0; i < 8; i++) {
     PHINode *Phi = cast<PHINode>(&*II++);
     Phi->addIncoming(Acc[i], LoopBB);
-    Phi->addIncoming(UndefValue::get(Ty), EntryBB);
+    Phi->addIncoming(PoisonValue::get(Ty), EntryBB);
   }
 
   BasicBlock *ExitBB = BasicBlock::Create(Context, "bb2", F);
-  BranchInst::Create(LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)),
+  BranchInst::Create(LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)),
                      LoopBB);
 
   Acc[0] = BinaryOperator::CreateAdd(Acc[0], Acc[1], "", ExitBB);
@@ -383,8 +382,8 @@ TEST_F(ScalarEvolutionsTest, CompareValueComplexity) {
   // CompareValueComplexity that is both fast and more accurate.
 
   ScalarEvolution SE = buildSE(*F);
-  auto *A = SE.getSCEV(MulA);
-  auto *B = SE.getSCEV(MulB);
+  const SCEV *A = SE.getSCEV(MulA);
+  const SCEV *B = SE.getSCEV(MulB);
   EXPECT_NE(A, B);
 }
 
@@ -430,21 +429,21 @@ TEST_F(ScalarEvolutionsTest, SCEVAddExpr) {
   EXPECT_EQ(AddWithNUW->getNumOperands(), 3u);
   EXPECT_EQ(AddWithNUW->getNoWrapFlags(), SCEV::FlagNUW);
 
-  auto *AddWithAnyWrap =
+  const SCEV *AddWithAnyWrap =
       SE.getAddExpr(SE.getSCEV(A3), SE.getSCEV(A4), SCEV::FlagAnyWrap);
   auto *AddWithAnyWrapNUW = cast<SCEVAddExpr>(
       SE.getAddExpr(AddWithAnyWrap, SE.getSCEV(A5), SCEV::FlagNUW));
   EXPECT_EQ(AddWithAnyWrapNUW->getNumOperands(), 3u);
   EXPECT_EQ(AddWithAnyWrapNUW->getNoWrapFlags(), SCEV::FlagAnyWrap);
 
-  auto *AddWithNSW = SE.getAddExpr(
+  const SCEV *AddWithNSW = SE.getAddExpr(
       SE.getSCEV(A2), SE.getConstant(APInt(32, 99)), SCEV::FlagNSW);
   auto *AddWithNSW_NUW = cast<SCEVAddExpr>(
       SE.getAddExpr(AddWithNSW, SE.getSCEV(A5), SCEV::FlagNUW));
   EXPECT_EQ(AddWithNSW_NUW->getNumOperands(), 3u);
   EXPECT_EQ(AddWithNSW_NUW->getNoWrapFlags(), SCEV::FlagAnyWrap);
 
-  auto *AddWithNSWNUW =
+  const SCEV *AddWithNSWNUW =
       SE.getAddExpr(SE.getSCEV(A2), SE.getSCEV(A4),
                     ScalarEvolution::setFlags(SCEV::FlagNUW, SCEV::FlagNSW));
   auto *AddWithNSWNUW_NUW = cast<SCEVAddExpr>(
@@ -491,7 +490,7 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
       "  %iv1 = phi i32 [ %iv1.inc, %loop ], [ -2147483648, %loop.ph ] "
       "  %iv0.inc = add i32 %iv0, 1 "
       "  %iv1.inc = add i32 %iv1, 3 "
-      "  br i1 undef, label %for.end.loopexit, label %loop "
+      "  br i1 poison, label %for.end.loopexit, label %loop "
       " "
       "for.end.loopexit: "
       "  ret void "
@@ -503,19 +502,18 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
       "  br label %loop_0 "
       " "
       "loop_0: "
-      "  br i1 undef, label %loop_0, label %loop_1 "
+      "  br i1 poison, label %loop_0, label %loop_1 "
       " "
       "loop_1: "
-      "  br i1 undef, label %loop_2, label %loop_1 "
+      "  br i1 poison, label %loop_2, label %loop_1 "
       " "
       " "
       "loop_2: "
-      "  br i1 undef, label %end, label %loop_2 "
+      "  br i1 poison, label %end, label %loop_2 "
       " "
       "end: "
       "  ret void "
-      "} "
-      ,
+      "} ",
       Err, C);
 
   assert(M && "Could not parse module?");
@@ -780,8 +778,8 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
 
   // The add recurrence {5,+,1} does not correspond to any PHI in the IR, and
   // that is relevant to this test.
-  auto *Five = SE.getConstant(APInt(/*numBits=*/64, 5));
-  auto *AR =
+  const SCEV *Five = SE.getConstant(APInt(/*numBits=*/64, 5));
+  const SCEV *AR =
       SE.getAddRecExpr(Five, SE.getOne(T_int64), Loop, SCEV::FlagAnyWrap);
   const SCEV *ARAtLoopExit = SE.getSCEVAtScope(AR, nullptr);
   EXPECT_FALSE(isa<SCEVCouldNotCompute>(ARAtLoopExit));
@@ -914,7 +912,7 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
      %1 = shl i64 %0, 32
      %2 = ashr exact i64 %1, 32
      %3 = add i64 %2, -9223372036854775808
-     br i1 undef, label %exit, label %loop
+     br i1 poison, label %exit, label %loop
     exit:
      ret void
    */
@@ -929,11 +927,13 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
       ConstantInt::get(Context, APInt(64, 0x8000000000000000U, true));
   auto *Int64_32 = ConstantInt::get(Context, APInt(64, 32));
   auto *Br = BranchInst::Create(
-      LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
-  auto *Phi = PHINode::Create(Type::getInt64Ty(Context), 2, "", Br);
-  auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br);
-  auto *AShr = BinaryOperator::CreateExactAShr(Shl, Int64_32, "", Br);
-  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt64, "", Br);
+      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
+  auto *Phi =
+      PHINode::Create(Type::getInt64Ty(Context), 2, "", Br->getIterator());
+  auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br->getIterator());
+  auto *AShr =
+      BinaryOperator::CreateExactAShr(Shl, Int64_32, "", Br->getIterator());
+  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt64, "", Br->getIterator());
   Phi->addIncoming(MinInt64, EntryBB);
   Phi->addIncoming(Add, LoopBB);
   // exit:
@@ -971,7 +971,7 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
      %2 = shl i32 %1, 16
      %3 = ashr exact i32 %2, 16
      %4 = add i32 %3, -2147483648
-     br i1 undef, label %exit, label %loop
+     br i1 poison, label %exit, label %loop
     exit:
      ret void
    */
@@ -982,14 +982,15 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
   // entry:
   BranchInst::Create(LoopBB, EntryBB);
   // loop:
-  auto *MinInt32 = ConstantInt::get(Context, APInt(32, 0x80000000U, true));
+  auto *MinInt32 = ConstantInt::get(Context, APInt(32, 0x80000000U));
   auto *Int32_16 = ConstantInt::get(Context, APInt(32, 16));
   auto *Br = BranchInst::Create(
-      LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
-  auto *Phi = PHINode::Create(Int32Ty, 2, "", Br);
-  auto *Shl = BinaryOperator::CreateShl(Phi, Int32_16, "", Br);
-  auto *AShr = BinaryOperator::CreateExactAShr(Shl, Int32_16, "", Br);
-  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt32, "", Br);
+      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
+  auto *Phi = PHINode::Create(Int32Ty, 2, "", Br->getIterator());
+  auto *Shl = BinaryOperator::CreateShl(Phi, Int32_16, "", Br->getIterator());
+  auto *AShr =
+      BinaryOperator::CreateExactAShr(Shl, Int32_16, "", Br->getIterator());
+  auto *Add = BinaryOperator::CreateAdd(AShr, MinInt32, "", Br->getIterator());
   auto *Arg = &*(F->arg_begin());
   Phi->addIncoming(Arg, EntryBB);
   Phi->addIncoming(Add, LoopBB);
@@ -1019,19 +1020,19 @@ TEST_F(ScalarEvolutionsTest, SCEVFoldSumOfTruncs) {
   ScalarEvolution SE = buildSE(*F);
 
   auto *Arg = &*(F->arg_begin());
-  const auto *ArgSCEV = SE.getSCEV(Arg);
+  const SCEV *ArgSCEV = SE.getSCEV(Arg);
 
   // Build the SCEV
-  const auto *A0 = SE.getNegativeSCEV(ArgSCEV);
-  const auto *A1 = SE.getTruncateExpr(A0, Int32Ty);
-  const auto *A = SE.getNegativeSCEV(A1);
+  const SCEV *A0 = SE.getNegativeSCEV(ArgSCEV);
+  const SCEV *A1 = SE.getTruncateExpr(A0, Int32Ty);
+  const SCEV *A = SE.getNegativeSCEV(A1);
 
-  const auto *B0 = SE.getTruncateExpr(ArgSCEV, Int32Ty);
-  const auto *B = SE.getNegativeSCEV(B0);
+  const SCEV *B0 = SE.getTruncateExpr(ArgSCEV, Int32Ty);
+  const SCEV *B = SE.getNegativeSCEV(B0);
 
-  const auto *Expr = SE.getAddExpr(A, B);
+  const SCEV *Expr = SE.getAddExpr(A, B);
   // Verify that the SCEV was folded to 0
-  const auto *ZeroConst = SE.getConstant(Int32Ty, 0);
+  const SCEV *ZeroConst = SE.getConstant(Int32Ty, 0);
   EXPECT_EQ(Expr, ZeroConst);
 }
 
@@ -1108,7 +1109,7 @@ TEST_F(ScalarEvolutionsTest, SCEVLoopDecIntrinsic) {
   ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
 
   runWithSE(*M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *ScevInc = SE.getSCEV(getInstructionByName(F, "inc"));
+    const SCEV *ScevInc = SE.getSCEV(getInstructionByName(F, "inc"));
     EXPECT_TRUE(isa<SCEVAddRecExpr>(ScevInc));
   });
 }
@@ -1117,35 +1118,72 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
   LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(
-      "define void @foo(i32 %sz, i32 %pp) { "
-      "entry: "
-      "  %v0 = add i32 %pp, 0 "
-      "  %v3 = add i32 %pp, 3 "
-      "  br label %loop.body "
-      "loop.body: "
-      "  %iv = phi i32 [ %iv.next, %loop.body ], [ 0, %entry ] "
-      "  %xa = add nsw i32 %iv, %v0 "
-      "  %yy = add nsw i32 %iv, %v3 "
-      "  %xb = sub nsw i32 %yy, 3 "
-      "  %iv.next = add nsw i32 %iv, 1 "
-      "  %cmp = icmp sle i32 %iv.next, %sz "
-      "  br i1 %cmp, label %loop.body, label %exit "
-      "exit: "
-      "  ret void "
-      "} ",
+      R"(define void @foo(ptr %ptr, i32 %sz, i32 %pp, i32 %x) {
+      entry:
+        %v0 = add i32 %pp, 0
+        %v3 = add i32 %pp, 3
+        %vx = add i32 %pp, %x
+        %vx3 = add i32 %vx, 3
+        br label %loop.body
+      loop.body:
+        %iv = phi i32 [ %iv.next, %loop.body ], [ 0, %entry ]
+        %xa = add nsw i32 %iv, %v0
+        %yy = add nsw i32 %iv, %v3
+        %xb = sub nsw i32 %yy, 3
+        %iv.next = add nsw i32 %iv, 1
+        %cmp = icmp sle i32 %iv.next, %sz
+        br i1 %cmp, label %loop.body, label %loop2.body
+      loop2.body:
+        %iv2 = phi i32 [ %iv2.next, %loop2.body ], [ %iv, %loop.body ]
+        %iv2.next = add nsw i32 %iv2, 1
+        %iv2p3 = add i32 %iv2, 3
+        %var = load i32, ptr %ptr
+        %iv2pvar = add i32 %iv2, %var
+        %iv2pvarp3 = add i32 %iv2pvar, 3
+        %iv2pvarm3 = mul i32 %iv2pvar, 3
+        %iv2pvarp3m3 = mul i32 %iv2pvarp3, 3
+        %cmp2 = icmp sle i32 %iv2.next, %sz
+        br i1 %cmp2, label %loop2.body, label %exit
+      exit:
+        ret void
+      })",
       Err, C);
 
-  ASSERT_TRUE(M && "Could not parse module?");
-  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
 
   runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *ScevV0 = SE.getSCEV(getInstructionByName(F, "v0")); // %pp
-    auto *ScevV3 = SE.getSCEV(getInstructionByName(F, "v3")); // (3 + %pp)
-    auto *ScevIV = SE.getSCEV(getInstructionByName(F, "iv")); // {0,+,1}
-    auto *ScevXA = SE.getSCEV(getInstructionByName(F, "xa")); // {%pp,+,1}
-    auto *ScevYY = SE.getSCEV(getInstructionByName(F, "yy")); // {(3 + %pp),+,1}
-    auto *ScevXB = SE.getSCEV(getInstructionByName(F, "xb")); // {%pp,+,1}
-    auto *ScevIVNext = SE.getSCEV(getInstructionByName(F, "iv.next")); // {1,+,1}
+    const SCEV *ScevV0 = SE.getSCEV(getInstructionByName(F, "v0")); // %pp
+    const SCEV *ScevV3 = SE.getSCEV(getInstructionByName(F, "v3")); // (3 + %pp)
+    const SCEV *ScevVX =
+        SE.getSCEV(getInstructionByName(F, "vx")); // (%pp + %x)
+    // (%pp + %x + 3)
+    const SCEV *ScevVX3 = SE.getSCEV(getInstructionByName(F, "vx3"));
+    const SCEV *ScevIV = SE.getSCEV(getInstructionByName(F, "iv")); // {0,+,1}
+    const SCEV *ScevXA = SE.getSCEV(getInstructionByName(F, "xa")); // {%pp,+,1}
+    const SCEV *ScevYY =
+        SE.getSCEV(getInstructionByName(F, "yy")); // {(3 + %pp),+,1}
+    const SCEV *ScevXB = SE.getSCEV(getInstructionByName(F, "xb")); // {%pp,+,1}
+    const SCEV *ScevIVNext =
+        SE.getSCEV(getInstructionByName(F, "iv.next")); // {1,+,1}
+    // {{0,+,1},+,1}
+    const SCEV *ScevIV2 = SE.getSCEV(getInstructionByName(F, "iv2"));
+    // {{3,+,1},+,1}
+    const SCEV *ScevIV2P3 = SE.getSCEV(getInstructionByName(F, "iv2p3"));
+    // %var + {{0,+,1},+,1}
+    const SCEV *ScevIV2PVar = SE.getSCEV(getInstructionByName(F, "iv2pvar"));
+    // %var + {{3,+,1},+,1}
+    const SCEV *ScevIV2PVarP3 =
+        SE.getSCEV(getInstructionByName(F, "iv2pvarp3"));
+    // 3 * (%var + {{0,+,1},+,1})
+    const SCEV *ScevIV2PVarM3 =
+        SE.getSCEV(getInstructionByName(F, "iv2pvarm3"));
+    // 3 * (%var + {{3,+,1},+,1})
+    const SCEV *ScevIV2PVarP3M3 =
+        SE.getSCEV(getInstructionByName(F, "iv2pvarp3m3"));
 
     auto diff = [&SE](const SCEV *LHS, const SCEV *RHS) -> std::optional<int> {
       auto ConstantDiffOrNone = computeConstantDifference(SE, LHS, RHS);
@@ -1162,6 +1200,7 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     EXPECT_EQ(diff(ScevV0, ScevV3), -3);
     EXPECT_EQ(diff(ScevV0, ScevV0), 0);
     EXPECT_EQ(diff(ScevV3, ScevV3), 0);
+    EXPECT_EQ(diff(ScevVX3, ScevVX), 3);
     EXPECT_EQ(diff(ScevIV, ScevIV), 0);
     EXPECT_EQ(diff(ScevXA, ScevXB), 0);
     EXPECT_EQ(diff(ScevXA, ScevYY), -3);
@@ -1169,6 +1208,9 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     EXPECT_EQ(diff(ScevIV, ScevIVNext), -1);
     EXPECT_EQ(diff(ScevIVNext, ScevIV), 1);
     EXPECT_EQ(diff(ScevIVNext, ScevIVNext), 0);
+    EXPECT_EQ(diff(ScevIV2P3, ScevIV2), 3);
+    EXPECT_EQ(diff(ScevIV2PVar, ScevIV2PVarP3), -3);
+    EXPECT_EQ(diff(ScevIV2PVarP3M3, ScevIV2PVarM3), 9);
     EXPECT_EQ(diff(ScevV0, ScevIV), std::nullopt);
     EXPECT_EQ(diff(ScevIVNext, ScevV3), std::nullopt);
     EXPECT_EQ(diff(ScevYY, ScevV3), std::nullopt);
@@ -1197,16 +1239,17 @@ TEST_F(ScalarEvolutionsTest, SCEVrewriteUnknowns) {
   ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
 
   runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *ScevIV = SE.getSCEV(getInstructionByName(F, "iv")); // {0,+,1}
-    auto *ScevI = SE.getSCEV(getArgByName(F, "i"));           // {0,+,1}
+    const SCEV *ScevIV = SE.getSCEV(getInstructionByName(F, "iv")); // {0,+,1}
+    const SCEV *ScevI = SE.getSCEV(getArgByName(F, "i"));           // {0,+,1}
 
     ValueToSCEVMapTy RewriteMap;
     RewriteMap[cast<SCEVUnknown>(ScevI)->getValue()] =
         SE.getUMinExpr(ScevI, SE.getConstant(ScevI->getType(), 17));
-    auto *WithUMin = SCEVParameterRewriter::rewrite(ScevIV, SE, RewriteMap);
+    const SCEV *WithUMin =
+        SCEVParameterRewriter::rewrite(ScevIV, SE, RewriteMap);
 
     EXPECT_NE(WithUMin, ScevIV);
-    auto *AR = dyn_cast<SCEVAddRecExpr>(WithUMin);
+    const auto *AR = dyn_cast<SCEVAddRecExpr>(WithUMin);
     EXPECT_TRUE(AR);
     EXPECT_EQ(AR->getStart(),
               SE.getUMinExpr(ScevI, SE.getConstant(ScevI->getType(), 17)));
@@ -1227,9 +1270,9 @@ TEST_F(ScalarEvolutionsTest, SCEVAddNUW) {
   ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
 
   runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *X = SE.getSCEV(getArgByName(F, "x"));
-    auto *One = SE.getOne(X->getType());
-    auto *Sum = SE.getAddExpr(X, One, SCEV::FlagNUW);
+    const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
+    const SCEV *One = SE.getOne(X->getType());
+    const SCEV *Sum = SE.getAddExpr(X, One, SCEV::FlagNUW);
     EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_UGE, Sum, X));
     EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_UGT, Sum, X));
   });
@@ -1253,16 +1296,17 @@ TEST_F(ScalarEvolutionsTest, SCEVgetRanges) {
       Err, C);
 
   runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *ScevIV = SE.getSCEV(getInstructionByName(F, "iv")); // {0,+,1}
-    auto *ScevI = SE.getSCEV(getArgByName(F, "i"));
+    const SCEV *ScevIV = SE.getSCEV(getInstructionByName(F, "iv")); // {0,+,1}
+    const SCEV *ScevI = SE.getSCEV(getArgByName(F, "i"));
     EXPECT_EQ(SE.getUnsignedRange(ScevIV).getLower(), 0);
     EXPECT_EQ(SE.getUnsignedRange(ScevIV).getUpper(), 16);
 
-    auto *Add = SE.getAddExpr(ScevI, ScevIV);
+    const SCEV *Add = SE.getAddExpr(ScevI, ScevIV);
     ValueToSCEVMapTy RewriteMap;
     RewriteMap[cast<SCEVUnknown>(ScevI)->getValue()] =
         SE.getUMinExpr(ScevI, SE.getConstant(ScevI->getType(), 17));
-    auto *AddWithUMin = SCEVParameterRewriter::rewrite(Add, SE, RewriteMap);
+    const SCEV *AddWithUMin =
+        SCEVParameterRewriter::rewrite(Add, SE, RewriteMap);
     EXPECT_EQ(SE.getUnsignedRange(AddWithUMin).getLower(), 0);
     EXPECT_EQ(SE.getUnsignedRange(AddWithUMin).getUpper(), 33);
   });
@@ -1290,7 +1334,7 @@ TEST_F(ScalarEvolutionsTest, SCEVgetExitLimitForGuardedLoop) {
   ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
 
   runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *ScevIV = SE.getSCEV(getInstructionByName(F, "iv")); // {0,+,1}
+    const SCEV *ScevIV = SE.getSCEV(getInstructionByName(F, "iv")); // {0,+,1}
     const Loop *L = cast<SCEVAddRecExpr>(ScevIV)->getLoop();
 
     const SCEV *BTC = SE.getBackedgeTakenCount(L);
@@ -1325,7 +1369,7 @@ TEST_F(ScalarEvolutionsTest, ImpliedViaAddRecStart) {
   ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
 
   runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *X = SE.getSCEV(getInstructionByName(F, "x"));
+    const SCEV *X = SE.getSCEV(getInstructionByName(F, "x"));
     auto *Context = getInstructionByName(F, "iv.next");
     EXPECT_TRUE(SE.isKnownPredicateAt(ICmpInst::ICMP_NE, X,
                                       SE.getZero(X->getType()), Context));
@@ -1354,8 +1398,8 @@ TEST_F(ScalarEvolutionsTest, UnsignedIsImpliedViaOperations) {
   ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
 
   runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *X = SE.getSCEV(getInstructionByName(F, "x"));
-    auto *Y = SE.getSCEV(getInstructionByName(F, "y"));
+    const SCEV *X = SE.getSCEV(getInstructionByName(F, "x"));
+    const SCEV *Y = SE.getSCEV(getInstructionByName(F, "y"));
     auto *Guarded = getInstructionByName(F, "y")->getParent();
     ASSERT_TRUE(Guarded);
     EXPECT_TRUE(
@@ -1397,8 +1441,8 @@ TEST_F(ScalarEvolutionsTest, ProveImplicationViaNarrowing) {
   ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
 
   runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *IV = SE.getSCEV(getInstructionByName(F, "iv"));
-    auto *Zero = SE.getZero(IV->getType());
+    const SCEV *IV = SE.getSCEV(getInstructionByName(F, "iv"));
+    const SCEV *Zero = SE.getZero(IV->getType());
     auto *Backedge = getInstructionByName(F, "iv.next")->getParent();
     ASSERT_TRUE(Backedge);
     (void)IV;
@@ -1478,7 +1522,7 @@ TEST_F(ScalarEvolutionsTest, MatchURem) {
       auto *URemI = getInstructionByName(F, N);
       auto *S = SE.getSCEV(URemI);
       const SCEV *LHS, *RHS;
-      EXPECT_TRUE(matchURem(SE, S, LHS, RHS));
+      EXPECT_TRUE(match(S, m_scev_URem(m_SCEV(LHS), m_SCEV(RHS), SE)));
       EXPECT_EQ(LHS, SE.getSCEV(URemI->getOperand(0)));
       EXPECT_EQ(RHS, SE.getSCEV(URemI->getOperand(1)));
       EXPECT_EQ(LHS->getType(), S->getType());
@@ -1491,7 +1535,7 @@ TEST_F(ScalarEvolutionsTest, MatchURem) {
     auto *URem1 = getInstructionByName(F, "rem4");
     auto *S = SE.getSCEV(Ext);
     const SCEV *LHS, *RHS;
-    EXPECT_TRUE(matchURem(SE, S, LHS, RHS));
+    EXPECT_TRUE(match(S, m_scev_URem(m_SCEV(LHS), m_SCEV(RHS), SE)));
     EXPECT_NE(LHS, SE.getSCEV(URem1->getOperand(0)));
     // RHS and URem1->getOperand(1) have different widths, so compare the
     // integer values.
@@ -1525,8 +1569,8 @@ TEST_F(ScalarEvolutionsTest, SCEVUDivFloorCeiling) {
         using namespace llvm::APIntOps;
         APInt FloorInt = RoundingUDiv(NInt, DInt, APInt::Rounding::DOWN);
         APInt CeilingInt = RoundingUDiv(NInt, DInt, APInt::Rounding::UP);
-        auto *NS = SE.getConstant(NInt);
-        auto *DS = SE.getConstant(DInt);
+        const SCEV *NS = SE.getConstant(NInt);
+        const SCEV *DS = SE.getConstant(DInt);
         auto *FloorS = cast<SCEVConstant>(SE.getUDivExpr(NS, DS));
         auto *CeilingS = cast<SCEVConstant>(SE.getUDivCeilSCEV(NS, DS));
         ASSERT_TRUE(FloorS->getAPInt() == FloorInt);
@@ -1578,14 +1622,284 @@ TEST_F(ScalarEvolutionsTest, ApplyLoopGuards) {
   ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
 
   runWithSE(*M, "test", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *TCScev = SE.getSCEV(getArgByName(F, "num"));
-    auto *ApplyLoopGuardsTC = SE.applyLoopGuards(TCScev, *LI.begin());
+    const SCEV *TCScev = SE.getSCEV(getArgByName(F, "num"));
+    const SCEV *ApplyLoopGuardsTC = SE.applyLoopGuards(TCScev, *LI.begin());
     // Assert that the new TC is (4 * ((4 umax %num) /u 4))
     APInt Four(32, 4);
-    auto *Constant4 = SE.getConstant(Four);
-    auto *Max = SE.getUMaxExpr(TCScev, Constant4);
-    auto *Mul = SE.getMulExpr(SE.getUDivExpr(Max, Constant4), Constant4);
+    const SCEV *Constant4 = SE.getConstant(Four);
+    const SCEV *Max = SE.getUMaxExpr(TCScev, Constant4);
+    const SCEV *Mul = SE.getMulExpr(SE.getUDivExpr(Max, Constant4), Constant4);
     ASSERT_TRUE(Mul == ApplyLoopGuardsTC);
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, ForgetValueWithOverflowInst) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "declare { i32, i1 } @llvm.smul.with.overflow.i32(i32, i32) "
+      "define void @foo(i32 %i) { "
+      "entry: "
+      "  br label %loop.body "
+      "loop.body: "
+      "  %iv = phi i32 [ %iv.next, %loop.body ], [ 0, %entry ] "
+      "  %iv.next = add nsw i32 %iv, 1 "
+      "  %call = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %iv, i32 -2) "
+      "  %extractvalue = extractvalue {i32, i1} %call, 0 "
+      "  %cmp = icmp eq i32 %iv.next, 16 "
+      "  br i1 %cmp, label %exit, label %loop.body "
+      "exit: "
+      "  ret void "
+      "} ",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *ExtractValue = getInstructionByName(F, "extractvalue");
+    auto *IV = getInstructionByName(F, "iv");
+
+    auto *ExtractValueScev = SE.getSCEV(ExtractValue);
+    EXPECT_NE(ExtractValueScev, nullptr);
+
+    SE.forgetValue(IV);
+    auto *ExtractValueScevForgotten = SE.getExistingSCEV(ExtractValue);
+    EXPECT_EQ(ExtractValueScevForgotten, nullptr);
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering) {
+  // Regression test for a case where caching of equivalent values caused the
+  // comparator to get inconsistent.
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+    define i32 @foo(i32 %arg0) {
+      %1 = add i32 %arg0, 1
+      %2 = add i32 %arg0, 1
+      %3 = xor i32 %2, %1
+      %4 = add i32 %3, %2
+      %5 = add i32 %arg0, 1
+      %6 = xor i32 %5, %arg0
+      %7 = add i32 %arg0, %6
+      %8 = add i32 %5, %7
+      %9 = xor i32 %8, %7
+      %10 = add i32 %9, %8
+      %11 = xor i32 %10, %9
+      %12 = add i32 %11, %10
+      %13 = xor i32 %12, %11
+      %14 = add i32 %12, %13
+      %15 = add i32 %14, %4
+      ret i32 %15
+    })",
+                                                  Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
+    // crash if the comparator has the specific caching bug.
+    SE.getSCEV(F.getEntryBlock().getTerminator()->getOperand(0));
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering2) {
+  // Regression test for a case where caching of equivalent values caused the
+  // comparator to get inconsistent.
+
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  Type *PtrTy = PointerType::get(Context, 0);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context),
+                                        {PtrTy, PtrTy, PtrTy, Int64Ty}, false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
+  BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
+  ReturnInst::Create(Context, nullptr, BB);
+
+  ScalarEvolution SE = buildSE(*F);
+
+  const SCEV *S0 = SE.getSCEV(F->getArg(0));
+  const SCEV *S1 = SE.getSCEV(F->getArg(1));
+  const SCEV *S2 = SE.getSCEV(F->getArg(2));
+
+  const SCEV *P0 = SE.getPtrToIntExpr(S0, Int64Ty);
+  const SCEV *P1 = SE.getPtrToIntExpr(S1, Int64Ty);
+  const SCEV *P2 = SE.getPtrToIntExpr(S2, Int64Ty);
+
+  const SCEV *M0 = SE.getNegativeSCEV(P0);
+  const SCEV *M2 = SE.getNegativeSCEV(P2);
+
+  SmallVector<const SCEV *, 6> Ops = {M2, P0, M0, P1, P2};
+  // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
+  // crash if the comparator has the specific caching bug.
+  SE.getAddExpr(Ops);
+}
+
+TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering3) {
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  Constant *Init = Constant::getNullValue(Int64Ty);
+  Type *PtrTy = PointerType::get(Context, 0);
+  Constant *Null = Constant::getNullValue(PtrTy);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), {}, false);
+
+  Value *V0 = new GlobalVariable(M, Int64Ty, false,
+                                 GlobalValue::ExternalLinkage, Init, "V0");
+  Value *V1 = new GlobalVariable(M, Int64Ty, false,
+                                 GlobalValue::ExternalLinkage, Init, "V1");
+  Value *V2 = new GlobalVariable(M, Int64Ty, false,
+                                 GlobalValue::InternalLinkage, Init, "V2");
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
+  BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
+  Value *C0 = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, V0, Null,
+                               "c0", BB);
+  Value *C1 = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, V1, Null,
+                               "c1", BB);
+  Value *C2 = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, V2, Null,
+                               "c2", BB);
+  Value *Or0 = BinaryOperator::CreateOr(C0, C1, "or0", BB);
+  Value *Or1 = BinaryOperator::CreateOr(Or0, C2, "or1", BB);
+  ReturnInst::Create(Context, nullptr, BB);
+  ScalarEvolution SE = buildSE(*F);
+  // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
+  // crash if the comparator is inconsistent about global variable linkage.
+  SE.getSCEV(Or1);
+}
+
+TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define i32 @foo(ptr %loc, i32 %a, i32 %b) {"
+                          "entry: "
+                          "  ret i32 %a "
+                          "} ",
+                          Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  // Remove common factor when there's no signed wrapping.
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *VS = SE.getVScale(A->getType());
+    const SCEV *VSxA = SE.getMulExpr(VS, A, SCEV::FlagNSW);
+    const SCEV *VSxB = SE.getMulExpr(VS, B, SCEV::FlagNSW);
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_ULT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_EQ;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_EQ);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    // Verify the common factor's position doesn't impede simplification.
+    {
+      const SCEV *C = SE.getConstant(A->getType(), 100);
+      const SCEV *CxVS = SE.getMulExpr(C, VS, SCEV::FlagNSW);
+
+      // Verify common factor is available at different indices.
+      ASSERT_TRUE(isa<SCEVVScale>(cast<SCEVMulExpr>(VSxA)->getOperand(0)) !=
+                  isa<SCEVVScale>(cast<SCEVMulExpr>(CxVS)->getOperand(0)));
+
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = CxVS;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, C);
+    }
+  });
+
+  // Remove common factor when there's no unsigned wrapping.
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *VS = SE.getVScale(A->getType());
+    const SCEV *VSxA = SE.getMulExpr(VS, A, SCEV::FlagNUW);
+    const SCEV *VSxB = SE.getMulExpr(VS, B, SCEV::FlagNUW);
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+    }
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_ULT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_EQ;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_EQ);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+  });
+
+  // Do not remove common factor due to wrap flag mismatch.
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *VS = SE.getVScale(A->getType());
+    const SCEV *VSxA = SE.getMulExpr(VS, A, SCEV::FlagNSW);
+    const SCEV *VSxB = SE.getMulExpr(VS, B, SCEV::FlagNUW);
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+    }
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_ULT;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+    }
+
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_EQ;
+      const SCEV *NewLHS = VSxA;
+      const SCEV *NewRHS = VSxB;
+      EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+    }
   });
 }
 

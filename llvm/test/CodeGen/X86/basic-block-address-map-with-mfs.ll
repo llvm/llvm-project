@@ -47,32 +47,43 @@ declare i32 @qux()
 ; CHECK-LABEL:  .Lfunc_begin0:
 ; CHECK-LABEL:  .LBB_END0_0:
 ; CHECK-LABEL:  .LBB0_1:
+; CHECK-LABEL:  .LBB0_1_CS0:
+; CHECK-LABEL:  .LBB0_1_CS1:
 ; CHECK-LABEL:  .LBB_END0_1:
 ; CHECK:          .section .text.split.foo,"ax",@progbits
 ; CHECK-LABEL:  foo.cold:
+; CHECK-LABEL:  .LBB0_2_CS0:
+; CHECK-LABEL:  .LBB0_2_CS1:
 ; CHECK-LABEL:  .LBB_END0_2:
 ; CHECK-LABEL:  .Lfunc_end0:
 
 ; CHECK:                .section        .llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text.hot.foo
-; CHECK-NEXT:   .byte   2               # version
-; BASIC-NEXT:   .byte   8               # feature
-; PGO-NEXT:     .byte   15              # feature
+; CHECK-NEXT:   .byte   4               # version
+; BASIC-NEXT:   .byte   40              # feature
+; PGO-NEXT:     .byte   47              # feature
 ; CHECK-NEXT:   .byte   2               # number of basic block ranges
 ; CHECK-NEXT:   .quad   .Lfunc_begin0   # base address
 ; CHECK-NEXT:   .byte   2               # number of basic blocks
 ; CHECK-NEXT:   .byte   0               # BB id
 ; CHECK-NEXT:   .uleb128 .Lfunc_begin0-.Lfunc_begin0
+; CHECK-NEXT:   .byte   0               # number of callsites
 ; CHECK-NEXT:   .uleb128 .LBB_END0_0-.Lfunc_begin0
 ; CHECK-NEXT:   .byte   8
 ; CHECK-NEXT:   .byte   1               # BB id
 ; CHECK-NEXT:   .uleb128 .LBB0_1-.LBB_END0_0
-; CHECK-NEXT:   .uleb128 .LBB_END0_1-.LBB0_1
+; CHECK-NEXT:   .byte   2               # number of callsites
+; CHECK-NEXT:   .uleb128 .LBB0_1_CS0-.LBB0_1
+; CHECK-NEXT:   .uleb128 .LBB0_1_CS1-.LBB0_1_CS0
+; CHECK-NEXT:   .uleb128 .LBB_END0_1-.LBB0_1_CS1
 ; CHECK-NEXT:   .byte   3
-; CHECK-NEXT:   .quad   foo.cold    # base address
+; CHECK-NEXT:   .quad   foo.cold        # base address
 ; CHECK-NEXT:   .byte   1               # number of basic blocks
 ; CHECK-NEXT:   .byte   2               # BB id
 ; CHECK-NEXT:   .uleb128 foo.cold-foo.cold
-; CHECK-NEXT:   .uleb128 .LBB_END0_2-foo.cold
+; CHECK-NEXT:   .byte   2               # number of callsites
+; CHECK-NEXT:   .uleb128 .LBB0_2_CS0-foo.cold
+; CHECK-NEXT:   .uleb128 .LBB0_2_CS1-.LBB0_2_CS0
+; CHECK-NEXT:   .uleb128 .LBB_END0_2-.LBB0_2_CS1
 ; CHECK-NEXT:   .byte   3
 
 ;; PGO Analysis Map
@@ -84,6 +95,6 @@ declare i32 @qux()
 ; PGO-NEXT:    .byte   2                                  # successor BB ID
 ; PGO-NEXT:    .byte   0                                  # successor branch probability
 ; PGO-NEXT:    .ascii  "\200\200\200\374\377\377\377\037" # basic block frequency
-; PGO-NEXT:    .byte   0		                       # basic block successor count
+; PGO-NEXT:    .byte   0		                  # basic block successor count
 ; PGO-NEXT:    .ascii  "\200\200\200\004"                 # basic block frequency
 ; PGO-NEXT:    .byte   0                                  # basic block successor count

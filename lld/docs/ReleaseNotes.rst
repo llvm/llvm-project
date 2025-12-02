@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================
 lld |release| Release Notes
 ===========================
@@ -26,31 +29,8 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``--compress-sections <section-glib>={none,zlib,zstd}[:level]`` is added to compress
-  matched output sections without the ``SHF_ALLOC`` flag.
-  (`#84855 <https://github.com/llvm/llvm-project/pull/84855>`_)
-  (`#90567 <https://github.com/llvm/llvm-project/pull/90567>`_)
-* The default compression level for zlib is now independent of linker
-  optimization level (``Z_BEST_SPEED``).
-* ``GNU_PROPERTY_AARCH64_FEATURE_PAUTH`` notes, ``R_AARCH64_AUTH_ABS64`` and
-  ``R_AARCH64_AUTH_RELATIVE`` relocations are now supported.
-  (`#72714 <https://github.com/llvm/llvm-project/pull/72714>`_)
-* ``--debug-names`` is added to create a merged ``.debug_names`` index
-  from input ``.debug_names`` sections. Type units are not handled yet.
-  (`#86508 <https://github.com/llvm/llvm-project/pull/86508>`_)
-* ``--enable-non-contiguous-regions`` option allows automatically packing input
-  sections into memory regions by automatically spilling to later matches if a
-  region would overflow. This reduces the toil of manually packing regions
-  (typical for embedded). It also makes full LTO feasible in such cases, since
-  IR merging currently prevents the linker script from referring to input
-  files. (`#90007 <https://github.com/llvm/llvm-project/pull/90007>`_)
-* ``--force-group-allocation`` is implemented to discard ``SHT_GROUP`` sections
-  and combine relocation sections if their relocated section group members are
-  placed to the same output section.
-  (`#94704 <https://github.com/llvm/llvm-project/pull/94704>`_)
-* ``--build-id`` now defaults to generating a 20-byte digest ("sha1") instead
-  of 8-byte ("fast"). This improves compatibility with RPM packaging tools.
-  (`#93943 <https://github.com/llvm/llvm-project/pull/93943>`_)
+* ``--print-gc-sections=<file>`` prints garbage collection section listing to a file.
+  (`#159706 <https://github.com/llvm/llvm-project/pull/159706>`_)
 
 Breaking changes
 ----------------
@@ -64,8 +44,16 @@ MinGW Improvements
 MachO Improvements
 ------------------
 
+* ``--separate-cstring-literal-sections`` emits cstring literal sections into sections defined by their section name.
+  (`#158720 <https://github.com/llvm/llvm-project/pull/158720>`_)
+* ``--tail-merge-strings`` enables tail merging of cstring literals.
+  (`#161262 <https://github.com/llvm/llvm-project/pull/161262>`_)
+
 WebAssembly Improvements
 ------------------------
+
+* The ``--stack-first`` flag is now enabled by default. The old
+  behavior can be enabled using ``--no-stack-first``.
 
 Fixes
 #####

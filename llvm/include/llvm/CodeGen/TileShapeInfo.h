@@ -54,11 +54,9 @@ public:
   bool operator!=(const ShapeT &Shape) const { return !(*this == Shape); }
 
   MachineOperand *getRow() const { return Row; }
-
   MachineOperand *getCol() const { return Col; }
 
   int64_t getRowImm() const { return RowImm; }
-
   int64_t getColImm() const { return ColImm; }
 
   bool isValid() { return (Row != nullptr) && (Col != nullptr); }

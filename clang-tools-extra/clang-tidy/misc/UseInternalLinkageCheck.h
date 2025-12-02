@@ -1,4 +1,4 @@
-//===--- UseInternalLinkageCheck.h - clang-tidy -----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,20 +17,25 @@ namespace clang::tidy::misc {
 /// an anonymous namespace to enforce internal linkage.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/use-internal-linkage.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/use-internal-linkage.html
 class UseInternalLinkageCheck : public ClangTidyCheck {
 public:
-  UseInternalLinkageCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context),
-        HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
+  UseInternalLinkageCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
 
+  enum class FixModeKind {
+    None,
+    UseStatic,
+  };
+
 private:
   FileExtensionsSet HeaderFileExtensions;
+  FixModeKind FixMode;
 };
 
 } // namespace clang::tidy::misc

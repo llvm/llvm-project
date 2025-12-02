@@ -11,8 +11,11 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IntrinsicInst.h"
 
+using namespace llvm;
+
 namespace llvm {
 class BasicBlock;
+}
 
 //===----------------------------------------------------------------------===//
 //                                 User Class
@@ -113,7 +116,17 @@ MutableArrayRef<uint8_t> User::getDescriptor() {
 }
 
 bool User::isDroppable() const {
-  return isa<AssumeInst>(this) || isa<PseudoProbeInst>(this);
+  if (auto *II = dyn_cast<IntrinsicInst>(this)) {
+    switch (II->getIntrinsicID()) {
+    default:
+      return false;
+    case Intrinsic::assume:
+    case Intrinsic::pseudoprobe:
+    case Intrinsic::experimental_noalias_scope_decl:
+      return true;
+    }
+  }
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -135,7 +148,7 @@ void *User::allocateFixedOperandUser(size_t Size, unsigned Us,
       ::operator new(Size + sizeof(Use) * Us + DescBytesToAllocate));
   Use *Start = reinterpret_cast<Use *>(Storage + DescBytesToAllocate);
   Use *End = Start + Us;
-  User *Obj = reinterpret_cast<User*>(End);
+  User *Obj = reinterpret_cast<User *>(End);
   Obj->NumUserOperands = Us;
   Obj->HasHungOffUses = false;
   Obj->HasDescriptor = DescBytes != 0;
@@ -150,15 +163,17 @@ void *User::allocateFixedOperandUser(size_t Size, unsigned Us,
   return Obj;
 }
 
-void *User::operator new(size_t Size, unsigned Us) {
-  return allocateFixedOperandUser(Size, Us, 0);
+void *User::operator new(size_t Size, IntrusiveOperandsAllocMarker allocTrait) {
+  return allocateFixedOperandUser(Size, allocTrait.NumOps, 0);
 }
 
-void *User::operator new(size_t Size, unsigned Us, unsigned DescBytes) {
-  return allocateFixedOperandUser(Size, Us, DescBytes);
+void *User::operator new(size_t Size,
+                         IntrusiveOperandsAndDescriptorAllocMarker allocTrait) {
+  return allocateFixedOperandUser(Size, allocTrait.NumOps,
+                                  allocTrait.DescBytes);
 }
 
-void *User::operator new(size_t Size) {
+void *User::operator new(size_t Size, HungOffOperandsAllocMarker) {
   // Allocate space for a single Use*
   void *Storage = ::operator new(Size + sizeof(Use *));
   Use **HungOffOperandList = static_cast<Use **>(Storage);
@@ -202,5 +217,3 @@ LLVM_NO_SANITIZE_MEMORY_ATTRIBUTE void User::operator delete(void *Usr) {
     ::operator delete(Storage);
   }
 }
-
-} // namespace llvm

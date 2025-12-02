@@ -772,3 +772,30 @@ void test_scoped_enum_vector(EnumClass ea, v2u v2ua) {
 }
 #endif
 }
+
+namespace GH105486 {
+__attribute__((__vector_size__(sizeof(double)))) double a;
+double b = a - (long)(*0); // expected-error {{indirection requires pointer operand ('int' invalid)}} \
+                           // expected-error {{cannot initialize a variable of type 'double' with an rvalue of type '__attribute__((__vector_size__(1 * sizeof(double)))) double' (vector of 1 'double' value)}}
+
+__attribute__((__vector_size__(sizeof(long)))) long c;
+long d = c - (long)(*0); // expected-error {{indirection requires pointer operand ('int' invalid)}} \
+                         // expected-error {{cannot initialize a variable of type 'long' with an rvalue of type '__attribute__((__vector_size__(1 * sizeof(long)))) long' (vector of 1 'long' value)}}
+
+const long long e = *0; // expected-error {{indirection requires pointer operand ('int' invalid)}}
+double f = a - e;       // expected-error {{cannot initialize a variable of type 'double' with an rvalue of type '__attribute__((__vector_size__(1 * sizeof(double)))) double' (vector of 1 'double' value)}}
+int h = c - e;          // expected-error {{cannot initialize a variable of type 'int' with an rvalue of type '__attribute__((__vector_size__(1 * sizeof(long)))) long' (vector of 1 'long' value)}}
+}
+
+typedef int v_neg_size __attribute__((vector_size(-8))); // expected-error{{vector must have non-negative size}}
+typedef int v_neg_size_2 __attribute__((vector_size(-1 * 8))); // expected-error{{vector must have non-negative size}}
+typedef int v_ext_neg_size __attribute__((ext_vector_type(-8))); // expected-error{{vector must have non-negative size}}
+typedef int v_ext_neg_size2 __attribute__((ext_vector_type(-1 * 8))); // expected-error{{vector must have non-negative size}}
+
+
+#if __cplusplus >= 201103L
+
+template <int N> using templated_v_size = int  __attribute__((vector_size(N))); // expected-error{{vector must have non-negative size}}
+templated_v_size<-8> templated_v_neg_size; //expected-note{{in instantiation of template type alias 'templated_v_size' requested here}}
+
+#endif

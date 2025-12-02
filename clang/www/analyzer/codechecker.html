@@ -2,7 +2,9 @@
           "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 <head>
-  <title>CodeChecker: running the analyzer from the command line</title>
+  <title>The CodeChecker documentation has moved to clang.llvm.org</title>
+  <link rel="canonical" href="https://clang.llvm.org/docs/analyzer/user-docs/CommandLineUsage.html#codechecker"/>
+  <meta http-equiv="refresh" content="0;url=https://clang.llvm.org/docs/analyzer/user-docs/CommandLineUsage.html#codechecker" />
   <link type="text/css" rel="stylesheet" href="content.css">
   <link type="text/css" rel="stylesheet" href="menu.css">
   <script type="text/javascript" src="scripts/menu.js"></script>
@@ -13,61 +15,11 @@
 <!--#include virtual="menu.html.incl"-->
 <div id="content">
 
-<h1>CodeChecker: running the analyzer from the command line</h1>
+<h1>The Codechecker documentation has moved to clang.llvm.org</h1>
+<p style="color:red; font-size:200%">This page is deprecated and will be removed in release 21.0</p>
+<a href="https://clang.llvm.org/docs/analyzer/user-docs/CommandLineUsage.html#codechecker">The new site</a>
+<script>window.location='https://clang.llvm.org/docs/analyzer/user-docs/CommandLineUsage.html#codechecker'</script>
 
-<h2>Basic Usage</h2>
-
-<p>
-Install CodeChecker as described here: <a href="https://github.com/Ericsson/codechecker/#Install-guide"> CodeChecker Install Guide.</a>
-</p>
-
-<p>
-Create a compilation database. If you use cmake then pass the <tt>-DCMAKE_EXPORT_COMPILE_COMMANDS=1</tt> parameter to cmake. Cmake will create a <tt>compile_commands.json</tt> file.
-If you have a Makefile based or similar build system then you can log the build commands with the help of CodeChecker:
-<pre class="code_example">
-make clean
-CodeChecker log -b "make" -o compile_commands.json
-</pre>
-</p>
-
-<p>
-Analyze your project.
-<pre class="code_example">
-CodeChecker analyze compile_commands.json -o ./reports
-</pre>
-</p>
-
-<p>
-View the analysis results.
-Print the detailed results in the command line:
-<pre class="code_example">
-CodeChecker parse --print-steps ./reports
-</pre>
-Or view the detailed results in a browser:
-<pre class="code_example">
-CodeChecker parse ./reports -e html -o ./reports_html
-firefox ./reports_html/index.html
-</pre>
-</p>
-
-<p>
-Optional: store the analysis results in a DB.
-<pre class="code_example">
-mkdir ./ws
-CodeChecker server -w ./ws -v 8555 &
-CodeChecker store ./reports --name my-project --url http://localhost:8555/Default
-</pre>
-</p>
-
-<p>
-Optional: manage (categorize, suppress) the results in your web browser:
-<pre class="code_example">
-firefox http://localhost:8555/Default
-</pre>
-</p>
-
-<h2>Detailed Usage</h2>
-
-<p>
-For extended documentation please refer to the <a href="https://github.com/Ericsson/codechecker/blob/master/docs/usage.md">official site of CodeChecker</a>!
-</p>
+</div> <!-- content -->
+</div> <!-- page -->
+</body>

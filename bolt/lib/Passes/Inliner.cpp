@@ -49,6 +49,12 @@ ForceInlineFunctions("force-inline",
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
+static cl::list<std::string> SkipInlineFunctions(
+    "skip-inline", cl::CommaSeparated,
+    cl::desc("list of functions to never consider for inlining"),
+    cl::value_desc("func1,func2,func3,..."), cl::Hidden,
+    cl::cat(BoltOptCategory));
+
 static cl::opt<bool> InlineAll("inline-all", cl::desc("inline all functions"),
                                cl::cat(BoltOptCategory));
 
@@ -103,6 +109,12 @@ bool mustConsider(const llvm::bolt::BinaryFunction &Function) {
     if (Function.hasName(Name))
       return true;
   return false;
+}
+
+bool mustSkip(const llvm::bolt::BinaryFunction &Function) {
+  return llvm::any_of(opts::SkipInlineFunctions, [&](const std::string &Name) {
+    return Function.hasName(Name);
+  });
 }
 
 void syncOptions() {
@@ -183,6 +195,13 @@ InliningInfo getInliningInfo(const BinaryFunction &BF) {
         if (BC.MIB->isPush(Inst) || BC.MIB->isPop(Inst))
           continue;
 
+        // Pointer signing and authenticatin instructions are used around
+        // Push and Pop. These are also straightforward to handle.
+        if (BC.isAArch64() &&
+            (BC.MIB->isPSignOnLR(Inst) || BC.MIB->isPAuthOnLR(Inst) ||
+             BC.MIB->isPAuthAndRet(Inst)))
+          continue;
+
         DirectSP |= BC.MIB->hasDefOfPhysReg(Inst, SPReg) ||
                     BC.MIB->hasUseOfPhysReg(Inst, SPReg);
       }
@@ -223,7 +242,7 @@ InliningInfo getInliningInfo(const BinaryFunction &BF) {
 void Inliner::findInliningCandidates(BinaryContext &BC) {
   for (const auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction &Function = BFI.second;
-    if (!shouldOptimize(Function))
+    if (!shouldOptimize(Function) || opts::mustSkip(Function))
       continue;
     const InliningInfo InlInfo = getInliningInfo(Function);
     if (InlInfo.Type != INL_NONE)
@@ -310,13 +329,13 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
       if (MIB.isPseudo(Inst))
         continue;
 
-      MIB.stripAnnotations(Inst, /*KeepTC=*/BC.isX86());
+      MIB.stripAnnotations(Inst, /*KeepTC=*/BC.isX86() || BC.isAArch64());
 
       // Fix branch target. Strictly speaking, we don't have to do this as
       // targets of direct branches will be fixed later and don't matter
       // in the CFG state. However, disassembly may look misleading, and
       // hence we do the fixing.
-      if (MIB.isBranch(Inst)) {
+      if (MIB.isBranch(Inst) && !MIB.isTailCall(Inst)) {
         assert(!MIB.isIndirectBranch(Inst) &&
                "unexpected indirect branch in callee");
         const BinaryBasicBlock *TargetBB =
@@ -326,6 +345,18 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
                                 BC.Ctx.get());
       }
 
+      // Handling fused authentication and return instructions (Armv8.3-A):
+      // if the Callee does not end in a tailcall, the return will be removed
+      // from the inlined block. If that return is RETA(A|B), we have to keep
+      // the authentication part.
+      // RETAA -> AUTIASP
+      // RETAB -> AUTIBSP
+      if (!CSIsTailCall && BC.isAArch64() && BC.MIB->isPAuthAndRet(Inst)) {
+        MCInst Auth;
+        BC.MIB->createMatchingAuth(Inst, Auth);
+        InsertII =
+            std::next(InlinedBB->insertInstruction(InsertII, std::move(Auth)));
+      }
       if (CSIsTailCall || (!MIB.isCall(Inst) && !MIB.isReturn(Inst))) {
         InsertII =
             std::next(InlinedBB->insertInstruction(InsertII, std::move(Inst)));

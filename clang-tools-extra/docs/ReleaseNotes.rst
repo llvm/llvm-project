@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ====================================================
 Extra Clang Tools |release| |ReleaseNotesTitle|
 ====================================================
@@ -43,7 +46,41 @@ infrastructure are described first, followed by tool-specific sections.
 Major New Features
 ------------------
 
-...
+Potentially Breaking Changes
+----------------------------
+
+- Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
+  moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
+  in the 24th release.
+
+- Removed :program:`clang-tidy`'s global options `IgnoreMacros` and
+  `StrictMode`, which were documented as deprecated since
+  :program:`clang-tidy-20`. Users should use the check-specific options of the
+  same name instead.
+
+- Renamed a few :program:`clang-tidy` check options, as they
+  were misspelled:
+
+  - `NamePrefixSuffixSilenceDissimilarityTreshold` to
+    `NamePrefixSuffixSilenceDissimilarityThreshold` in
+    :doc:`bugprone-easily-swappable-parameters
+    <clang-tidy/checks/bugprone/easily-swappable-parameters>`
+
+  - `CharTypdefsToIgnore` to `CharTypedefsToIgnore` in
+    :doc:`bugprone-signed-char-misuse
+    <clang-tidy/checks/bugprone/signed-char-misuse>`
+
+- Modified the custom message format of :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` by assigning a special meaning
+  to the character ``>`` at the start of the value of the option
+  ``CustomFunctions``. If the option value starts with ``>``, then the
+  replacement suggestion part of the message (which would be included by
+  default) is omitted. (This does not change the warning locations.)
+
+- :program:`clang-tidy` now displays warnings from all non-system headers by
+  default. Previously, users had to explicitly opt-in to header warnings using
+  `-header-filter='.*'`. To disable warnings from non-system, set `-header-filter`
+  to an empty string.
 
 Improvements to clangd
 ----------------------
@@ -69,8 +106,13 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
-- The tweak for turning unscoped into scoped enums now removes redundant prefixes
-  from the enum values.
+- New ``Override pure virtual methods`` code action. When invoked on a class
+  definition, this action automatically generates C++ ``override`` declarations
+  for all pure virtual methods inherited from its base classes that have not yet
+  been implemented. The generated method stubs prompts the user for the actual
+  implementation. The overrides are intelligently grouped under their original
+  access specifiers (e.g., ``public``, ``protected``), creating new access
+  specifier blocks if necessary.
 
 Signature help
 ^^^^^^^^^^^^^^
@@ -84,398 +126,441 @@ Objective-C
 Miscellaneous
 ^^^^^^^^^^^^^
 
-- Added a boolean option `AnalyzeAngledIncludes` to `Includes` config section,
-  which allows to enable unused includes detection for all angled ("system") headers.
-  At this moment umbrella headers are not supported, so enabling this option
-  may result in false-positives.
-
 Improvements to clang-doc
 -------------------------
 
 Improvements to clang-query
 ---------------------------
 
-- Added the `file` command to dynamically load a list of commands and matchers
-  from an external file, allowing the cost of reading the compilation database
-  and building the AST to be imposed just once for faster prototyping.
-
-- Removed support for ``enable output srcloc``. Fixes #GH82591
-
-Improvements to clang-rename
-----------------------------
-
-The improvements are...
+- Matcher queries interpreted by clang-query are now support trailing comma (,)
+  in matcher arguments. Note that C++ still doesn't allow this in function
+  arguments. So when porting a query to C++, remove all instances of trailing
+  comma (otherwise C++ compiler will just complain about "expected expression").
 
 Improvements to clang-tidy
 --------------------------
 
-- Improved :program:`run-clang-tidy.py` script. Added argument `-source-filter`
-  to filter source files from the compilation database, via a RegEx. In a
-  similar fashion to what `-header-filter` does for header files.
+- The :program:`check_clang_tidy.py` tool now recognizes the ``-std`` argument
+  when run over C files. If ``-std`` is not specified, it defaults to
+  ``c99-or-later``.
 
-- Improved :program:`check_clang_tidy.py` script. Added argument `-export-fixes`
-  to aid in clang-tidy and test development.
+- :program:`clang-tidy` now displays warnings from all non-system headers by
+  default. Previously, users had to explicitly opt-in to header warnings using
+  `-header-filter='.*'`. To disable warnings from non-system, set `-header-filter`
+  to an empty string.
 
-- Fixed bug where big values for unsigned check options overflowed into negative values
-  when being printed with `--dump-config`.
+- :program:`clang-tidy` no longer attempts to analyze code from system headers
+  by default, greatly improving performance. This behavior is disabled if the
+  `SystemHeaders` option is enabled.
 
-- Fixed `--verify-config` option not properly parsing checks when using the
-  literal operator in the `.clang-tidy` config.
+- :program:`clang-tidy` now supports query based custom checks by `CustomChecks`
+  configuration option.
+  :doc:`Query Based Custom Check Document <clang-tidy/QueryBasedCustomChecks>`
 
-- Added argument `--exclude-header-filter` and config option `ExcludeHeaderFilterRegex`
-  to exclude headers from analysis via a RegEx.
+- The :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` scripts
+  now run checks in parallel by default using all available hardware threads.
+  Both scripts display the number of threads being used in their output.
+
+- Improved :program:`run-clang-tidy.py` by adding a new option
+  `enable-check-profile` to enable per-check timing profiles and print a
+  report based on all analyzed files.
+
+- Improved documentation of the `-line-filter` command-line flag of
+  :program:`clang-tidy` and :program:`run-clang-tidy.py`.
+
+- Improved :program:`clang-tidy` option `-quiet` by suppressing diagnostic
+  count messages.
+
+- Improved :program:`clang-tidy` by not crashing when an empty `directory`
+  field is used in a compilation database; the current working directory
+  will be used instead, and an error message will be printed.
+
+- Removed :program:`clang-tidy`'s global options `IgnoreMacros` and
+  `StrictMode`, which were documented as deprecated since
+  :program:`clang-tidy-20`. Users should use the check-specific options of the
+  same name instead.
+
+- Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py`
+  scripts by adding the `-hide-progress` option to suppress progress and
+  informational messages.
+
+- Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
+  moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
+  in the 24th release.
 
 New checks
 ^^^^^^^^^^
 
-- New :doc:`bugprone-crtp-constructor-accessibility
-  <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check.
+- New :doc:`bugprone-derived-method-shadowing-base-method
+  <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
 
-  Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
-  can be constructed outside itself and the derived class.
+  Finds derived class methods that shadow a (non-virtual) base class method.
 
-- New :doc:`bugprone-return-const-ref-from-parameter
-  <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check.
+- New :doc:`bugprone-invalid-enum-default-initialization
+  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
 
-  Detects return statements that return a constant reference parameter as constant
-  reference. This may cause use-after-free errors if the caller uses xvalues as
-  arguments.
+  Detects default initialization (to 0) of variables with ``enum`` type where
+  the enum has no enumerator with value of 0.
 
-- New :doc:`bugprone-suspicious-stringview-data-usage
-  <clang-tidy/checks/bugprone/suspicious-stringview-data-usage>` check.
+- New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`
+  check.
 
-  Identifies suspicious usages of ``std::string_view::data()`` that could lead
-  to reading out-of-bounds data due to inadequate or incorrect string null
-  termination.
+  Finds calls to ``operator[]`` in STL containers and suggests replacing them
+  with safe alternatives.
 
-- New :doc:`misc-use-internal-linkage
-  <clang-tidy/checks/misc/use-internal-linkage>` check.
+- New :doc:`google-runtime-float
+  <clang-tidy/checks/google/runtime-float>` check.
 
-  Detects variables and functions that can be marked as static or moved into
-  an anonymous namespace to enforce internal linkage.
+  Finds uses of ``long double`` and suggests against their use due to lack of
+  portability.
 
-- New :doc:`modernize-min-max-use-initializer-list
-  <clang-tidy/checks/modernize/min-max-use-initializer-list>` check.
+- New :doc:`llvm-mlir-op-builder
+  <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
 
-  Replaces nested ``std::min`` and ``std::max`` calls with an initializer list
-  where applicable.
+  Checks for uses of MLIR's old/to be deprecated ``OpBuilder::create<T>`` form
+  and suggests using ``T::create`` instead.
 
-- New :doc:`modernize-use-designated-initializers
-  <clang-tidy/checks/modernize/use-designated-initializers>` check.
+- New :doc:`llvm-use-ranges
+  <clang-tidy/checks/llvm/use-ranges>` check.
 
-  Finds initializer lists for aggregate types that could be
-  written as designated initializers instead.
+  Finds calls to STL library iterator algorithms that could be replaced with
+  LLVM range-based algorithms from ``llvm/ADT/STLExtras.h``.
 
-- New :doc:`modernize-use-std-format
-  <clang-tidy/checks/modernize/use-std-format>` check.
+- New :doc:`misc-override-with-different-visibility
+  <clang-tidy/checks/misc/override-with-different-visibility>` check.
 
-  Converts calls to ``absl::StrFormat``, or other functions via
-  configuration options, to C++20's ``std::format``, or another function
-  via a configuration option, modifying the format string appropriately and
-  removing now-unnecessary calls to ``std::string::c_str()`` and
-  ``std::string::data()``.
+  Finds virtual function overrides with different visibility than the function
+  in the base class.
 
-- New :doc:`readability-enum-initial-value
-  <clang-tidy/checks/readability/enum-initial-value>` check.
+- New :doc:`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check.
 
-  Enforces consistent style for enumerators' initialization, covering three
-  styles: none, first only, or all initialized explicitly.
+  Detect redundant parentheses.
 
-- New :doc:`readability-math-missing-parentheses
-  <clang-tidy/checks/readability/math-missing-parentheses>` check.
+- New :doc:`readability-redundant-typename
+  <clang-tidy/checks/readability/redundant-typename>` check.
 
-  Check for missing parentheses in mathematical expressions that involve
-  operators of different priorities.
-
-- New :doc:`readability-use-std-min-max
-  <clang-tidy/checks/readability/use-std-min-max>` check.
-
-  Replaces certain conditional statements with equivalent calls to
-  ``std::min`` or ``std::max``.
+  Finds redundant uses of the ``typename`` keyword.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
-- New alias :doc:`cert-int09-c <clang-tidy/checks/cert/int09-c>` to
-  :doc:`readability-enum-initial-value <clang-tidy/checks/readability/enum-initial-value>`
-  was added.
+- Renamed :doc:`cert-dcl50-cpp <clang-tidy/checks/cert/dcl50-cpp>` to
+  :doc:`modernize-avoid-variadic-functions
+  <clang-tidy/checks/modernize/avoid-variadic-functions>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-dcl58-cpp <clang-tidy/checks/cert/dcl58-cpp>` to
+  :doc:`bugprone-std-namespace-modification
+  <clang-tidy/checks/bugprone/std-namespace-modification>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-env33-c <clang-tidy/checks/cert/env33-c>` to
+  :doc:`bugprone-command-processor
+  <clang-tidy/checks/bugprone/command-processor>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-err34-c <clang-tidy/checks/cert/err34-c>` to
+  :doc:`bugprone-unchecked-string-to-number-conversion
+  <clang-tidy/checks/bugprone/unchecked-string-to-number-conversion>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-err52-cpp <clang-tidy/checks/cert/err52-cpp>` to
+  :doc:`modernize-avoid-setjmp-longjmp
+  <clang-tidy/checks/modernize/avoid-setjmp-longjmp>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-err58-cpp <clang-tidy/checks/cert/err58-cpp>` to
+  :doc:`bugprone-throwing-static-initialization
+  <clang-tidy/checks/bugprone/throwing-static-initialization>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-err60-cpp <clang-tidy/checks/cert/err60-cpp>` to
+  :doc:`bugprone-exception-copy-constructor-throws
+  <clang-tidy/checks/bugprone/exception-copy-constructor-throws>`
+
+- Renamed :doc:`cert-flp30-c <clang-tidy/checks/cert/flp30-c>` to
+  :doc:`bugprone-float-loop-counter
+  <clang-tidy/checks/bugprone/float-loop-counter>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-mem57-cpp <clang-tidy/checks/cert/mem57-cpp>` to
+  :doc:`bugprone-default-operator-new-on-overaligned-type
+  <clang-tidy/checks/bugprone/default-operator-new-on-overaligned-type>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc30-c <clang-tidy/checks/cert/msc30-c>` to
+  :doc:`misc-predictable-rand
+  <clang-tidy/checks/misc/predictable-rand>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc32-c <clang-tidy/checks/cert/msc32-c>` to
+  :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc50-cpp <clang-tidy/checks/cert/msc50-cpp>` to
+  :doc:`misc-predictable-rand
+  <clang-tidy/checks/misc/predictable-rand>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-msc51-cpp <clang-tidy/checks/cert/msc51-cpp>` to
+  :doc:`bugprone-random-generator-seed
+  <clang-tidy/checks/bugprone/random-generator-seed>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-oop57-cpp <clang-tidy/checks/cert/oop57-cpp>` to
+  :doc:`bugprone-raw-memory-call-on-non-trivial-type
+  <clang-tidy/checks/bugprone/raw-memory-call-on-non-trivial-type>`
+  keeping initial check as an alias to the new one.
+
+- Renamed :doc:`cert-oop58-cpp <clang-tidy/checks/cert/oop58-cpp>` to
+  :doc:`bugprone-copy-constructor-mutates-argument
+  <clang-tidy/checks/bugprone/copy-constructor-mutates-argument>`
+  keeping initial check as an alias to the new one.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Improved :doc:`bugprone-assert-side-effect
-  <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
-  effect from calling a method with non-const reference parameters.
+- Improved :doc:`bugprone-easily-swappable-parameters
+  <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
+  correcting a spelling mistake on its option
+  ``NamePrefixSuffixSilenceDissimilarityTreshold``.
 
-- Improved :doc:`bugprone-casting-through-void
-  <clang-tidy/checks/bugprone/casting-through-void>` check by ignoring casts
-  where source is already a ``void``` pointer, making middle ``void`` pointer
-  casts bug-free.
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
+  exceptions from captures are now diagnosed, exceptions in the bodies of
+  lambdas that aren't actually invoked are not. Additionally, fixed an issue
+  where the check wouldn't diagnose throws in arguments to functions or
+  constructors. Added fine-grained configuration via options
+  `CheckDestructors`, `CheckMoveMemberFunctions`, `CheckMain`,
+  `CheckedSwapFunctions`, and `CheckNothrowFunctions`.
 
-- Improved :doc:`bugprone-forwarding-reference-overload
-  <clang-tidy/checks/bugprone/forwarding-reference-overload>`
-  check to ignore deleted constructors which won't hide other overloads.
+- Improved :doc:`bugprone-infinite-loop
+  <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
+  variables introduced by structured bindings.
 
-- Improved :doc:`bugprone-inc-dec-in-conditions
-  <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check to ignore code
-  within unevaluated contexts, such as ``decltype``.
+- Improved :doc:`bugprone-invalid-enum-default-initialization
+  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` with new
+  `IgnoredEnums` option to ignore specified enums during analysis.
 
-- Improved :doc:`bugprone-lambda-function-name<clang-tidy/checks/bugprone/lambda-function-name>`
-  check by ignoring ``__func__`` macro in lambda captures, initializers of
-  default parameters and nested function declarations.
+- Improved :doc:`bugprone-narrowing-conversions
+  <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing
+  false positive from analysis of a conditional expression in C.
 
-- Improved :doc:`bugprone-multi-level-implicit-pointer-conversion
-  <clang-tidy/checks/bugprone/multi-level-implicit-pointer-conversion>` check
-  by ignoring implicit pointer conversions that are part of a cast expression.
+- Improved :doc:`bugprone-not-null-terminated-result
+  <clang-tidy/checks/bugprone/not-null-terminated-result>` check by fixing
+  bogus fix-its for ``strncmp`` and ``wcsncmp`` on Windows and
+  a crash caused by certain value-dependent expressions.
 
-- Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
-  <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
-  eliminating false positives resulting from direct usage of bitwise operators
-  within parentheses.
+- Improved :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone/reserved-identifier>` check by ignoring
+  declarations and macros in system headers.
 
-- Improved :doc:`bugprone-optional-value-conversion
-  <clang-tidy/checks/bugprone/optional-value-conversion>` check by eliminating
-  false positives resulting from use of optionals in unevaluated context.
+- Improved :doc:`bugprone-signed-char-misuse
+  <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
+  false positives on C23 enums with the fixed underlying type of signed char.
 
 - Improved :doc:`bugprone-sizeof-expression
-  <clang-tidy/checks/bugprone/sizeof-expression>` check by eliminating some
-  false positives and adding a new (off-by-default) option
-  `WarnOnSizeOfPointer` that reports all ``sizeof(pointer)`` expressions
-  (except for a few that are idiomatic).
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by fixing
+  a crash on ``sizeof`` of an array of dependent type.
 
 - Improved :doc:`bugprone-suspicious-include
-  <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
-  options `HeaderFileExtensions` and `ImplementationFileExtensions` by the
-  global options of the same name.
+  <clang-tidy/checks/bugprone/suspicious-include>` check by adding
+  `IgnoredRegex` option.
 
-- Improved :doc:`bugprone-too-small-loop-variable
-  <clang-tidy/checks/bugprone/too-small-loop-variable>` check by incorporating
-  better support for ``const`` loop boundaries.
+- Improved :doc:`bugprone-tagged-union-member-count
+  <clang-tidy/checks/bugprone/tagged-union-member-count>` by fixing a false
+  positive when enums or unions from system header files or the ``std``
+  namespace are treated as the tag or the data part of a user-defined
+  tagged union respectively.
 
-- Improved :doc:`bugprone-unused-local-non-trivial-variable
-  <clang-tidy/checks/bugprone/unused-local-non-trivial-variable>` check by
-  ignoring local variable with ``[maybe_unused]`` attribute.
+- Improved :doc:`bugprone-throw-keyword-missing
+  <clang-tidy/checks/bugprone/throw-keyword-missing>` check by only considering
+  the canonical types of base classes as written and adding a note on the base
+  class that triggered the warning.
 
-- Improved :doc:`bugprone-unused-return-value
-  <clang-tidy/checks/bugprone/unused-return-value>` check by updating the
-  parameter `CheckedFunctions` to support regexp, avoiding false positive for
-  function with the same prefix as the default argument, e.g. ``std::unique_ptr``
-  and ``std::unique``, avoiding false positive for assignment operator overloading.
+- Improved :doc:`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check by supporting
+  ``NullableValue::makeValue`` and ``NullableValue::makeValueInplace`` to
+  prevent false-positives for ``BloombergLP::bdlb::NullableValue`` type, and by
+  adding the `IgnoreValueCalls` option to suppress diagnostics for
+  ``optional::value()`` and the `IgnoreSmartPointerDereference` option to
+  ignore optionals reached via smart-pointer-like dereference, while still
+  diagnosing UB-prone dereferences via ``operator*`` and ``operator->``.
 
-- Improved :doc:`bugprone-use-after-move
-  <clang-tidy/checks/bugprone/use-after-move>` check to also handle
-  calls to ``std::forward``.
+- Improved :doc:`bugprone-unhandled-self-assignment
+  <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
+  an additional matcher that generalizes the copy-and-swap idiom pattern
+  detection.
+
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` check by hiding the default
+  suffix when the reason starts with the character `>` in the `CustomFunctions`
+  option.
+
+- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
+  by adding a new option `AllowThreadLocal` that suppresses warnings on
+  non-const global variables with thread-local storage duration.
+
+- Improved :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
+  insertion location for function pointers with multiple parameters.
 
 - Improved :doc:`cppcoreguidelines-macro-usage
-  <clang-tidy/checks/cppcoreguidelines/macro-usage>` check by ignoring macro with
-  hash preprocessing token.
-
-- Improved :doc:`cppcoreguidelines-missing-std-forward
-  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
-  giving false positives for deleted functions, by fixing false negatives when only
-  a few parameters are forwarded and by ignoring parameters without a name (unused
-  arguments).
-
-- Improved :doc:`cppcoreguidelines-owning-memory
-  <clang-tidy/checks/cppcoreguidelines/owning-memory>` check to properly handle
-  return type in lambdas and in nested functions.
+  <clang-tidy/checks/cppcoreguidelines/macro-usage>` check by excluding macro
+  bodies that starts with ``__attribute__((..))`` keyword.
+  Such a macro body is unlikely a proper expression and so suggesting users
+  an impossible rewrite into a template function should be avoided.
 
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
-  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check
-  by removing enforcement of rule `C.48
-  <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c48-prefer-in-class-initializers-to-member-initializers-in-constructors-for-constant-initializers>`_,
-  which was deprecated since :program:`clang-tidy` 17. This rule is now covered
-  by :doc:`cppcoreguidelines-use-default-member-init
-  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>`. Fixed
-  incorrect hints when using list-initialization.
+  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
+  avoid false positives on inherited members in class templates.
 
-- Improved :doc:`cppcoreguidelines-special-member-functions
-  <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check with a
-  new option `AllowImplicitlyDeletedCopyOrMove`, which removes the requirement
-  for explicit copy or move special member functions when they are already
-  implicitly deleted.
+- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check
+  adding an option to allow pointer arithmetic via prefix/postfix increment or
+  decrement operators.
 
-- Improved :doc:`google-build-namespaces
-  <clang-tidy/checks/google/build-namespaces>` check by replacing the local
-  option `HeaderFileExtensions` by the global option of the same name.
+- Improved :doc:`google-readability-casting
+  <clang-tidy/checks/google/readability-casting>` check by adding fix-it
+  notes for downcasts and casts to void pointer.
 
-- Improved :doc:`google-explicit-constructor
-  <clang-tidy/checks/google/explicit-constructor>` check to better handle
-  C++20 `explicit(bool)`.
+- Improved :doc:`google-readability-todo
+  <clang-tidy/checks/google/readability-todo>` check to accept the new TODO
+  format from the Google Style Guide.
 
-- Improved :doc:`google-global-names-in-headers
-  <clang-tidy/checks/google/global-names-in-headers>` check by replacing the local
-  option `HeaderFileExtensions` by the global option of the same name.
+- Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
+  <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
 
-- Improved :doc:`google-runtime-int <clang-tidy/checks/google/runtime-int>`
-  check performance through optimizations.
+  - Fix-it handles callees with nested-name-specifier correctly.
 
-- Improved :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
-  check by ignoring false positives involving positive integer literals behind
-  implicit casts when `IgnorePositiveIntegerLiterals` is enabled.
+  - ``if`` statements with init-statement (``if (auto X = ...; ...)``) are
+    handled correctly.
 
-- Improved :doc:`hicpp-ignored-remove-result <clang-tidy/checks/hicpp/ignored-remove-result>`
-  check by ignoring other functions with same prefixes as the target specific
-  functions.
-
-- Improved :doc:`linuxkernel-must-check-errs
-  <clang-tidy/checks/linuxkernel/must-check-errs>` check documentation to
-  consistently use the check's proper name.
-
-- Improved :doc:`llvm-header-guard
-  <clang-tidy/checks/llvm/header-guard>` check by replacing the local
-  option `HeaderFileExtensions` by the global option of the same name.
+  - ``for`` loops are supported.
 
 - Improved :doc:`misc-const-correctness
-  <clang-tidy/checks/misc/const-correctness>` check by avoiding infinite recursion
-  for recursive functions with forwarding reference parameters and reference
-  variables which refer to themselves.
+  <clang-tidy/checks/misc/const-correctness>` check to avoid false
+  positives when pointers is transferred to non-const references
+  and avoid false positives of function pointer and fix false
+  positives on return of non-const pointer and fix false positives on
+  pointer-to-member operator.
 
-- Improved :doc:`misc-definitions-in-headers
-  <clang-tidy/checks/misc/definitions-in-headers>` check by replacing the local
-  option `HeaderFileExtensions` by the global option of the same name.
-  Additionally, the option `UseHeaderFileExtensions` is removed, so that the
-  check uses the `HeaderFileExtensions` option unconditionally.
+- Improved :doc:`misc-coroutine-hostile-raii
+  <clang-tidy/checks/misc/coroutine-hostile-raii>` check by adding the option
+  `AllowedCallees`, that allows exempting safely awaitable callees from the
+  check.
 
 - Improved :doc:`misc-header-include-cycle
-  <clang-tidy/checks/misc/header-include-cycle>` check by avoiding crash for self
-  include cycles.
-
-- Improved :doc:`misc-unused-using-decls
-  <clang-tidy/checks/misc/unused-using-decls>` check by replacing the local
-  option `HeaderFileExtensions` by the global option of the same name.
-
-- Improved :doc:`misc-use-anonymous-namespace
-  <clang-tidy/checks/misc/use-anonymous-namespace>` check by replacing the local
-  option `HeaderFileExtensions` by the global option of the same name.
+  <clang-tidy/checks/misc/header-include-cycle>` check performance.
 
 - Improved :doc:`modernize-avoid-c-arrays
-  <clang-tidy/checks/modernize/avoid-c-arrays>` check by introducing the new
-  `AllowStringArrays` option, enabling the exclusion of array types with deduced
-  length initialized from string literals.
-
-- Improved :doc:`modernize-loop-convert
-  <clang-tidy/checks/modernize/loop-convert>` check by ensuring that fix-its
-  don't remove parentheses used in ``sizeof`` calls when they have array index
-  accesses as arguments.
+  <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
+  which are part of an implicit instantiation of a template.
 
 - Improved :doc:`modernize-use-constraints
-  <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash that
-  occurred in some scenarios and excluding system headers from analysis.
+  <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash on
+  uses of non-standard ``enable_if`` with a signature different from
+  ``std::enable_if`` (such as ``boost::enable_if``).
+
+- Improved :doc:`modernize-use-default-member-init
+  <clang-tidy/checks/modernize/use-default-member-init>` check to
+  enhance the robustness of the member initializer detection.
+
+- Improved :doc:`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/use-designated-initializers>` check to
+  suggest using designated initializers for aliased aggregate types.
+
+- Improved :doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` by providing
+  correct fix-its when the right-hand side of a comparison contains a
+  non-C-style cast.
 
 - Improved :doc:`modernize-use-nullptr
-  <clang-tidy/checks/modernize/use-nullptr>` check to include support for C23,
-  which also has introduced the ``nullptr`` keyword.
+  <clang-tidy/checks/modernize/use-nullptr>` check by fixing a crash
+  on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
+  binary.
 
-- Improved :doc:`modernize-use-override
-  <clang-tidy/checks/modernize/use-override>` check to also remove any trailing
-  whitespace when deleting the ``virtual`` keyword.
+- Improved :doc:`modernize-use-scoped-lock
+  <clang-tidy/checks/modernize/use-scoped-lock>` check by fixing a crash
+  on malformed code (common when using :program:`clang-tidy` through
+  :program:`clangd`).
 
-- Improved :doc:`modernize-use-starts-ends-with
-  <clang-tidy/checks/modernize/use-starts-ends-with>` check to also handle
-  calls to ``compare`` method.
+- Improved :doc:`modernize-use-std-format
+  <clang-tidy/checks/modernize/use-std-format>` check to correctly match
+  when the format string is converted to a different type by an implicit
+  constructor call.
 
 - Improved :doc:`modernize-use-std-print
-  <clang-tidy/checks/modernize/use-std-print>` check to not crash if the
-  format string parameter of the function to be replaced is not of the
-  expected type.
-
-- Improved :doc:`modernize-use-using <clang-tidy/checks/modernize/use-using>`
-  check by adding support for detection of typedefs declared on function level.
-
-- Improved :doc:`performance-inefficient-vector-operation
-  <clang-tidy/checks/performance/inefficient-vector-operation>` fixing false
-  negatives caused by different variable definition type and variable initial
-  value type in loop initialization expression.
-
-- Improved :doc:`performance-move-const-arg
-  <clang-tidy/checks/performance/move-const-arg>` check by ignoring
-  ``std::move()`` calls when their target is used as an rvalue.
+  <clang-tidy/checks/modernize/use-std-print>` check to correctly match
+  when the format string is converted to a different type by an implicit
+  constructor call, and fixed a crash when handling format strings
+  containing non-ASCII characters.
 
 - Improved :doc:`performance-unnecessary-copy-initialization
-  <clang-tidy/checks/performance/unnecessary-copy-initialization>` check by
-  detecting more cases of constant access. In particular, pointers can be
-  analyzed, so the check now handles the common patterns
-  `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
-  Calls to mutable function where there exists a `const` overload are also
-  handled.
+  <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
+  the type of the diagnosed variable.
 
-- Improved :doc:`readability-avoid-return-with-void-value
-  <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding
-  fix-its.
+- Improved :doc:`performance-unnecessary-value-param
+  <clang-tidy/checks/performance/unnecessary-value-param>` by printing
+  the type of the diagnosed variable and correctly generating fix-it hints for
+  parameter-pack arguments.
 
-- Improved :doc:`readability-const-return-type
-  <clang-tidy/checks/readability/const-return-type>` check to eliminate false
-  positives when returning types with const not at the top level.
+- Improved :doc:`portability-template-virtual-member-function
+  <clang-tidy/checks/portability/template-virtual-member-function>` check to
+  avoid false positives on pure virtual member functions.
+
+- Improved :doc:`readability-container-contains
+  <clang-tidy/checks/readability/container-contains>` to support string
+  comparisons to ``npos``. Internal changes may cause new rare false positives
+  in non-standard containers.
+
+- Improved :doc:`readability-container-data-pointer
+  <clang-tidy/checks/readability/container-data-pointer>` check by correctly
+  adding parentheses when the container expression is a dereference.
 
 - Improved :doc:`readability-container-size-empty
-  <clang-tidy/checks/readability/container-size-empty>` check to prevent false
-  positives when utilizing ``size`` or ``length`` methods that accept parameter.
-  Fixed crash when facing template user defined literals.
+  <clang-tidy/checks/readability/container-size-empty>` check by correctly
+  generating fix-it hints when size method is called from implicit ``this``,
+  ignoring default constructors with user provided arguments and adding
+  detection in container's method except ``empty``.
 
 - Improved :doc:`readability-duplicate-include
-  <clang-tidy/checks/readability/duplicate-include>` check by excluding include
-  directives that form the filename using macro.
-
-- Improved :doc:`readability-else-after-return
-  <clang-tidy/checks/readability/else-after-return>` check to ignore
-  `if consteval` statements, for which the `else` branch must not be removed.
+  <clang-tidy/checks/readability/duplicate-include>` check by adding
+  the ``IgnoredFilesList`` option (semicolon-separated list of regexes or
+  filenames) to allow intentional duplicates.
 
 - Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
-  mode by resolving symbolic links to header files. Fixed handling of Hungarian
-  Prefix when configured to `LowerCase`. Added support for renaming designated
-  initializers. Added support for renaming macro arguments. Fixed renaming
-  conflicts arising from out-of-line member function template definitions.
+  <clang-tidy/checks/readability/identifier-naming>` check by ignoring
+  declarations and macros in system headers. The documentation is also improved
+  to differentiate the general options from the specific ones. Options for
+  fine-grained control over ``constexpr`` variables were added.
 
 - Improved :doc:`readability-implicit-bool-conversion
-  <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
-  valid fix suggestions for ``static_cast`` without a preceding space and
-  fixed problem with duplicate parentheses in double implicit casts. Corrected
-  the fix suggestions for C23 and later by using C-style casts instead of
-  ``static_cast``. Fixed false positives in C++20 spaceship operator by ignoring
-  casts in implicit and defaulted functions.
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check by correctly
+  adding parentheses when the inner expression are implicitly converted
+  multiple times.
 
-- Improved :doc:`readability-redundant-inline-specifier
-  <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
-  emit warnings for static data member with an in-class initializer.
+- Improved :doc:`readability-qualified-auto
+  <clang-tidy/checks/readability/qualified-auto>` check by adding the option
+  `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
 
-- Improved :doc:`readability-redundant-member-init
-  <clang-tidy/checks/readability/redundant-member-init>` check to avoid
-  false-positives when type of the member does not match the type of the
-  initializer.
+- Improved :doc:`readability-uppercase-literal-suffix
+  <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
+  literal suffixes added in C++23 and C23.
 
-- Improved :doc:`readability-static-accessed-through-instance
-  <clang-tidy/checks/readability/static-accessed-through-instance>` check to
-  support calls to overloaded operators as base expression and provide fixes to
-  expressions with side-effects.
-
-- Improved :doc:`readability-simplify-boolean-expr
-  <clang-tidy/checks/readability/simplify-boolean-expr>` check to avoid to emit
-  warning for macro when IgnoreMacro option is enabled.
-
-- Improved :doc:`readability-static-definition-in-anonymous-namespace
-  <clang-tidy/checks/readability/static-definition-in-anonymous-namespace>`
-  check by resolving fix-it overlaps in template code by disregarding implicit
-  instances.
-
-- Improved :doc:`readability-string-compare
-  <clang-tidy/checks/readability/string-compare>` check to also detect
-  usages of ``std::string_view::compare``. Added a `StringLikeClasses` option
-  to detect usages of ``compare`` method in custom string-like classes.
+- Improved :doc:`readability-use-concise-preprocessor-directives
+  <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check to
+  generate correct fix-its for forms without a space after the directive.
 
 Removed checks
 ^^^^^^^^^^^^^^
 
-- Removed `cert-dcl21-cpp`, which was deprecated since :program:`clang-tidy` 17,
-  since the rule DCL21-CPP has been removed from the CERT guidelines.
-
 Miscellaneous
 ^^^^^^^^^^^^^
-
-- Fixed incorrect formatting in :program:`clang-apply-replacements` when no
-  `--format` option is specified. Now :program:`clang-apply-replacements`
-  applies formatting only with the option.
 
 Improvements to include-fixer
 -----------------------------

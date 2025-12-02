@@ -82,7 +82,7 @@
   entry:
     %0 = bitcast ptr %s to ptr
     %bytes = load i32, ptr %0, !dbg !34
-    call void @llvm.dbg.declare(metadata i32 %bytes, metadata !35, metadata !28), !dbg !34
+    call void @llvm.dbg.value(metadata i32 %bytes, metadata !35, metadata !28), !dbg !34
     %1 = add i32 %bytes, %acc, !dbg !36
     ret i32 %1, !dbg !36
   }
@@ -174,8 +174,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
   - { id: 0, type: spill-slot, offset: -8, size: 4, alignment: 4, stack-id: default,
       callee-saved-register: '$esi' }
@@ -232,8 +232,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
   - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '' }

@@ -1,5 +1,6 @@
 llvm_canonicalize_cmake_booleans(
   ENABLE_BACKTRACES
+  LLVM_ENABLE_THREADS
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_ZSTD
   LLVM_ENABLE_LIBXML2
@@ -48,6 +49,7 @@ if (NOT LLD_BUILT_STANDALONE)
     llvm-ar
     llvm-as
     llvm-bcanalyzer
+    llvm-cgdata
     llvm-config
     llvm-cvtres
     llvm-dis
@@ -64,6 +66,7 @@ if (NOT LLD_BUILT_STANDALONE)
     llvm-profdata
     llvm-readelf
     llvm-readobj
+    llvm-strings
     llvm-strip
     llvm-symbolizer
     not

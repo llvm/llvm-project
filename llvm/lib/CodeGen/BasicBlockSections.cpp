@@ -72,11 +72,14 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/UniqueBBID.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 
@@ -180,8 +183,7 @@ updateBranches(MachineFunction &MF,
 // clusters are ordered in increasing order of their IDs, with the "Exception"
 // and "Cold" succeeding all other clusters.
 // FuncClusterInfo represents the cluster information for basic blocks. It
-// maps from BBID of basic blocks to their cluster information. If this is
-// empty, it means unique sections for all basic blocks in the function.
+// maps from BBID of basic blocks to their cluster information.
 static void
 assignSections(MachineFunction &MF,
                const DenseMap<UniqueBBID, BBClusterInfo> &FuncClusterInfo) {
@@ -194,10 +196,8 @@ assignSections(MachineFunction &MF,
   for (auto &MBB : MF) {
     // With the 'all' option, every basic block is placed in a unique section.
     // With the 'list' option, every basic block is placed in a section
-    // associated with its cluster, unless we want individual unique sections
-    // for every basic block in this function (if FuncClusterInfo is empty).
-    if (MF.getTarget().getBBSectionsType() == llvm::BasicBlockSection::All ||
-        FuncClusterInfo.empty()) {
+    // associated with its cluster.
+    if (MF.getTarget().getBBSectionsType() == llvm::BasicBlockSection::All) {
       // If unique sections are desired for all basic blocks of the function, we
       // set every basic block's section ID equal to its original position in
       // the layout (which is equal to its number). This ensures that basic
@@ -305,26 +305,21 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
   if (BBSectionsType == BasicBlockSection::List &&
       hasInstrProfHashMismatch(MF))
     return false;
-  // Renumber blocks before sorting them. This is useful for accessing the
-  // original layout positions and finding the original fallthroughs.
-  MF.RenumberBlocks();
-
-  if (BBSectionsType == BasicBlockSection::Labels) {
-    MF.setBBSectionsType(BBSectionsType);
-    return true;
-  }
 
   DenseMap<UniqueBBID, BBClusterInfo> FuncClusterInfo;
   if (BBSectionsType == BasicBlockSection::List) {
-    auto [HasProfile, ClusterInfo] =
-        getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
-            .getClusterInfoForFunction(MF.getName());
-    if (!HasProfile)
+    auto ClusterInfo = getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
+                           .getClusterInfoForFunction(MF.getName());
+    if (ClusterInfo.empty())
       return false;
     for (auto &BBClusterInfo : ClusterInfo) {
       FuncClusterInfo.try_emplace(BBClusterInfo.BBID, BBClusterInfo);
     }
   }
+
+  // Renumber blocks before sorting them. This is useful for accessing the
+  // original layout positions and finding the original fallthroughs.
+  MF.RenumberBlocks();
 
   MF.setBBSectionsType(BBSectionsType);
   assignSections(MF, FuncClusterInfo);
@@ -380,8 +375,6 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
 // avoids the need to store basic block IDs in the BB address map section, since
 // they can be determined implicitly.
 bool BasicBlockSections::handleBBAddrMap(MachineFunction &MF) {
-  if (MF.getTarget().getBBSectionsType() == BasicBlockSection::Labels)
-    return false;
   if (!MF.getTarget().Options.BBAddrMap)
     return false;
   MF.RenumberBlocks();
@@ -393,12 +386,21 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   auto R1 = handleBBSections(MF);
   // Handle basic block address map after basic block sections are finalized.
   auto R2 = handleBBAddrMap(MF);
+
+  // We renumber blocks, so update the dominator tree we want to preserve.
+  if (auto *WP = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
+    WP->getDomTree().updateBlockNumbers();
+  if (auto *WP = getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>())
+    WP->getPostDomTree().updateBlockNumbers();
+
   return R1 || R2;
 }
 
 void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<BasicBlockSectionsProfileReaderWrapperPass>();
+  AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();
+  AU.addUsedIfAvailable<MachinePostDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

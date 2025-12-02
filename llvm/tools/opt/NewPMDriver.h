@@ -31,6 +31,10 @@ class TargetMachine;
 class ToolOutputFile;
 class TargetLibraryInfoImpl;
 
+namespace RTLIB {
+struct RuntimeLibcallsInfo;
+}
+
 extern cl::opt<bool> DebugifyEach;
 extern cl::opt<std::string> DebugifyExport;
 
@@ -44,7 +48,7 @@ enum OutputKind {
   OK_OutputBitcode,
   OK_OutputThinLTOBitcode,
 };
-enum VerifierKind { VK_NoVerifier, VK_VerifyOut, VK_VerifyEachPass };
+enum class VerifierKind { None, InputOutput, EachPass };
 enum PGOKind {
   NoPGO,
   InstrGen,
@@ -52,7 +56,7 @@ enum PGOKind {
   SampleUse
 };
 enum CSPGOKind { NoCSPGO, CSInstrGen, CSInstrUse };
-}
+} // namespace opt_tool
 
 void printPasses(raw_ostream &OS);
 
@@ -67,15 +71,15 @@ void printPasses(raw_ostream &OS);
 /// nullptr.
 bool runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
-    ToolOutputFile *Out, ToolOutputFile *ThinLinkOut,
-    ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins,
-    ArrayRef<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks,
+    RTLIB::RuntimeLibcallsInfo &RTLCI, ToolOutputFile *Out,
+    ToolOutputFile *ThinLinkOut, ToolOutputFile *OptRemarkFile,
+    StringRef PassPipeline, ArrayRef<PassPlugin> PassPlugins,
+    ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks,
     opt_tool::OutputKind OK, opt_tool::VerifierKind VK,
     bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
     bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
-    bool UnifiedLTO = false);
+    bool EnableProfcheck, bool UnifiedLTO = false);
 } // namespace llvm
 
 #endif
