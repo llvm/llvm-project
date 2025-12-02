@@ -422,7 +422,7 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
 
     Fragments.append(getFragmentsForNNS(TagTy->getQualifier(), Context, After));
 
-    const TagDecl *Decl = TagTy->getOriginalDecl();
+    const TagDecl *Decl = TagTy->getDecl();
     // Anonymous decl, skip this fragment.
     if (Decl->getName().empty())
       return Fragments.append("{ ... }",

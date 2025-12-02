@@ -61,6 +61,8 @@ extern cl::OptionCategory BoltOptCategory;
 
 extern cl::opt<bool> EnableBAT;
 extern cl::opt<bool> Instrument;
+extern cl::list<std::string> PrintOnly;
+extern cl::opt<std::string> PrintOnlyFile;
 extern cl::opt<bool> StrictMode;
 extern cl::opt<bool> UpdateDebugSections;
 extern cl::opt<unsigned> Verbosity;
@@ -130,14 +132,6 @@ static cl::opt<bool>
 PrintDynoStatsOnly("print-dyno-stats-only",
   cl::desc("while printing functions output dyno-stats and skip instructions"),
   cl::init(false),
-  cl::Hidden,
-  cl::cat(BoltCategory));
-
-static cl::list<std::string>
-PrintOnly("print-only",
-  cl::CommaSeparated,
-  cl::desc("list of functions to print"),
-  cl::value_desc("func1,func2,func3,..."),
   cl::Hidden,
   cl::cat(BoltCategory));
 
@@ -1035,12 +1029,8 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   return BranchType;
 }
 
-MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address,
-                                                bool CreatePastEnd) {
+MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address) {
   const uint64_t Offset = Address - getAddress();
-
-  if ((Offset == getSize()) && CreatePastEnd)
-    return getFunctionEndLabel();
 
   auto LI = Labels.find(Offset);
   if (LI != Labels.end())
@@ -1051,6 +1041,9 @@ MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address,
     if (MCSymbol *IslandSym = getOrCreateIslandAccess(Address))
       return IslandSym;
   }
+
+  if (Offset == getSize())
+    return getFunctionEndLabel();
 
   MCSymbol *Label = BC.Ctx->createNamedTempSymbol();
   Labels[Offset] = Label;
@@ -1427,10 +1420,9 @@ Error BinaryFunction::disassemble() {
                 !(BC.isAArch64() &&
                   BC.handleAArch64Veneer(TargetAddress, /*MatchOnly*/ true))) {
               // Result of __builtin_unreachable().
-              LLVM_DEBUG(dbgs() << "BOLT-DEBUG: jump past end detected at 0x"
-                                << Twine::utohexstr(AbsoluteInstrAddr)
-                                << " in function " << *this
-                                << " : replacing with nop.\n");
+              errs() << "BOLT-WARNING: jump past end detected at 0x"
+                     << Twine::utohexstr(AbsoluteInstrAddr) << " in function "
+                     << *this << " : replacing with nop.\n";
               BC.MIB->createNoop(Instruction);
               if (IsCondBranch) {
                 // Register branch offset for profile validation.
@@ -1699,11 +1691,12 @@ bool BinaryFunction::scanExternalRefs() {
       if (!TargetFunction || ignoreFunctionRef(*TargetFunction))
         continue;
 
-      const uint64_t FunctionOffset =
-          TargetAddress - TargetFunction->getAddress();
+      // Get a reference symbol for the function when address is a valid code
+      // reference.
       BranchTargetSymbol =
-          FunctionOffset ? TargetFunction->addEntryPointAtOffset(FunctionOffset)
-                         : TargetFunction->getSymbol();
+          BC.handleExternalBranchTarget(TargetAddress, *TargetFunction);
+      if (!BranchTargetSymbol)
+        continue;
     }
 
     // Can't find more references. Not creating relocations since we are not
@@ -1897,16 +1890,6 @@ bool BinaryFunction::scanExternalRefs() {
     }
   }
 
-  // Inform BinaryContext that this function symbols will not be defined and
-  // relocations should not be created against them.
-  if (BC.HasRelocations) {
-    for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
-      BC.UndefinedSymbols.insert(LI.second);
-    for (MCSymbol *const EndLabel : FunctionEndLabels)
-      if (EndLabel)
-        BC.UndefinedSymbols.insert(EndLabel);
-  }
-
   clearList(Relocations);
   clearList(ExternallyReferencedOffsets);
 
@@ -1995,7 +1978,7 @@ void BinaryFunction::postProcessJumpTables() {
       if (IsBuiltinUnreachable) {
         BinaryFunction *TargetBF = BC.getBinaryFunctionAtAddress(EntryAddress);
         MCSymbol *Label = TargetBF ? TargetBF->getSymbol()
-                                   : getOrCreateLocalLabel(EntryAddress, true);
+                                   : getOrCreateLocalLabel(EntryAddress);
         JT.Entries.push_back(Label);
         continue;
       }
@@ -2006,7 +1989,7 @@ void BinaryFunction::postProcessJumpTables() {
           BC.getBinaryFunctionContainingAddress(EntryAddress);
       MCSymbol *Label;
       if (HasOneParent && TargetBF == this) {
-        Label = getOrCreateLocalLabel(EntryAddress, true);
+        Label = getOrCreateLocalLabel(EntryAddress);
       } else {
         const uint64_t Offset = EntryAddress - TargetBF->getAddress();
         Label = Offset ? TargetBF->addEntryPointAtOffset(Offset)
@@ -2178,13 +2161,10 @@ bool BinaryFunction::postProcessIndirectBranches(
         continue;
       }
 
-      // If this block contains an epilogue code and has an indirect branch,
-      // then most likely it's a tail call. Otherwise, we cannot tell for sure
-      // what it is and conservatively reject the function's CFG.
-      bool IsEpilogue = llvm::any_of(BB, [&](const MCInst &Instr) {
-        return BC.MIB->isLeave(Instr) || BC.MIB->isPop(Instr);
-      });
-      if (IsEpilogue) {
+      // If this block contains epilogue code and has an indirect branch,
+      // then most likely it's a tail call. Otherwise, we cannot tell for
+      // sure what it is and conservatively reject the function's CFG.
+      if (BC.MIB->isEpilogue(BB)) {
         BC.MIB->convertJmpToTailCall(Instr);
         BB.removeAllSuccessors();
         continue;
@@ -2814,14 +2794,8 @@ private:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
     case MCCFIInstruction::OpNegateRAState:
-      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
-        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
-                         "as produced by '-mbranch-protection=pac-ret') are "
-                         "currently not supported by BOLT.");
-      }
+      llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
@@ -2836,6 +2810,7 @@ public:
   void advanceTo(int32_t State) {
     for (int32_t I = CurState, E = State; I != E; ++I) {
       const MCCFIInstruction &Instr = FDE[I];
+      assert(Instr.getOperation() != MCCFIInstruction::OpNegateRAState);
       if (Instr.getOperation() != MCCFIInstruction::OpRestoreState) {
         update(Instr, I);
         continue;
@@ -2960,15 +2935,9 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
+    case MCCFIInstruction::OpNegateRAState:
       llvm_unreachable("unsupported CFI opcode");
       return false;
-    case MCCFIInstruction::OpNegateRAState:
-      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
-        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
-                         "as produced by '-mbranch-protection=pac-ret') are "
-                         "currently not supported by BOLT.");
-      }
-      break;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -3117,14 +3086,8 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
     case MCCFIInstruction::OpNegateRAState:
-      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
-        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
-                         "as produced by '-mbranch-protection=pac-ret') are "
-                         "currently not supported by BOLT.");
-      }
+      llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpGnuArgsSize:
       // do not affect CFI state
@@ -3252,14 +3215,6 @@ void BinaryFunction::clearDisasmState() {
   clearList(Instructions);
   clearList(IgnoredBranches);
   clearList(TakenBranches);
-
-  if (BC.HasRelocations) {
-    for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
-      BC.UndefinedSymbols.insert(LI.second);
-    for (MCSymbol *const EndLabel : FunctionEndLabels)
-      if (EndLabel)
-        BC.UndefinedSymbols.insert(EndLabel);
-  }
 }
 
 void BinaryFunction::setTrapOnEntry() {
@@ -3892,7 +3847,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
     if (FunctionSymbol == Symbol)
       return 0;
 
-  // Check all secondary entries available as either basic blocks or lables.
+  // Check all secondary entries available as either basic blocks or labels.
   uint64_t NumEntries = 1;
   for (const BinaryBasicBlock *BB : BasicBlocks) {
     MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB);

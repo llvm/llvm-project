@@ -56,3 +56,71 @@ mbb5291:                                           ; preds = %mbb4321
   store volatile [2 x i32] %i5293, ptr addrspace(5) null, align 4
   ret void
 }
+
+define fastcc void @undef_phi_callbr(i64 %i5247, i1 %i4530, i1 %i4936.not) {
+; CHECK-LABEL: define fastcc void @undef_phi_callbr(
+; CHECK-SAME: i64 [[I5247:%.*]], i1 [[I4530:%.*]], i1 [[I4936_NOT:%.*]]) {
+; CHECK-NEXT:  [[MBB:.*:]]
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label %[[MBB3932:.*]] []
+; CHECK:       [[MBB3932]]:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label %[[MBB4454:.*]] []
+; CHECK:       [[MBB4321:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[I5247]] to i32
+; CHECK-NEXT:    [[I5290:%.*]] = icmp eq i32 [[TMP0]], 0
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[I5290]])
+; CHECK-NEXT:            to label %[[MBB3932]] [label %mbb4321.target.mbb5291]
+; CHECK:       [[MBB4454]]:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[I4530]])
+; CHECK-NEXT:            to label %[[MBB4535:.*]] [label %mbb4454.target.mbb4454.target.mbb4531]
+; CHECK:       [[MBB4531:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[MBB4535]]:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[I4936_NOT]])
+; CHECK-NEXT:            to label %[[MBB4535_TARGET_MBB4321:.*]] [label %mbb4454]
+; CHECK:       [[MBB5291:.*]]:
+; CHECK-NEXT:    [[I5293:%.*]] = insertvalue [2 x i32] zeroinitializer, i32 [[DOTMOVED:%.*]], 1
+; CHECK-NEXT:    store volatile [2 x i32] [[I5293]], ptr addrspace(5) null, align 4
+; CHECK-NEXT:    ret void
+; CHECK:       [[MBB4454_TARGET_MBB4531:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD:.*]]
+; CHECK:       [[MBB4321_TARGET_MBB5291:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[LOOP_EXIT_GUARD]]:
+; CHECK-NEXT:    [[DOTMOVED]] = phi i32 [ poison, %[[MBB4454_TARGET_MBB4531]] ], [ [[TMP0]], %[[MBB4321_TARGET_MBB5291]] ]
+; CHECK-NEXT:    [[GUARD_MBB4531:%.*]] = phi i1 [ true, %[[MBB4454_TARGET_MBB4531]] ], [ false, %[[MBB4321_TARGET_MBB5291]] ]
+; CHECK-NEXT:    br i1 [[GUARD_MBB4531]], label %[[MBB4531]], label %[[MBB5291]]
+; CHECK:       [[MBB4454_TARGET_MBB4454_TARGET_MBB4531:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD1:.*]]
+; CHECK:       [[MBB4535_TARGET_MBB4321]]:
+; CHECK-NEXT:    br label %[[LOOP_EXIT_GUARD1]]
+; CHECK:       [[LOOP_EXIT_GUARD1]]:
+; CHECK-NEXT:    [[GUARD_MBB4454_TARGET_MBB4531:%.*]] = phi i1 [ true, %[[MBB4454_TARGET_MBB4454_TARGET_MBB4531]] ], [ false, %[[MBB4535_TARGET_MBB4321]] ]
+; CHECK-NEXT:    br i1 [[GUARD_MBB4454_TARGET_MBB4531]], label %[[MBB4454_TARGET_MBB4531]], label %[[MBB4321]]
+;
+mbb:
+  callbr void asm "", ""() to label %mbb3932 []
+
+mbb3932:                                           ; preds = %mbb4321, %mbb
+  callbr void asm "", ""() to label %mbb4454 []
+
+mbb4321:                                           ; preds = %mbb4535
+  %0 = trunc i64 %i5247 to i32
+  %i5290 = icmp eq i32 %0, 0
+  callbr void asm "", "r,!i"(i1 %i5290) to label %mbb3932 [label %mbb5291]
+
+mbb4454:                                           ; preds = %mbb4535, %mbb3932
+  callbr void asm "", "r,!i"(i1 %i4530) to label %mbb4535 [label %mbb4531]
+
+mbb4531:                                           ; preds = %mbb4454
+  ret void
+
+mbb4535:                                           ; preds = %mbb4454
+  callbr void asm "", "r,!i"(i1 %i4936.not) to label %mbb4321 [label %mbb4454]
+
+mbb5291:                                           ; preds = %mbb4321
+  %i5293 = insertvalue [2 x i32] zeroinitializer, i32 %0, 1
+  store volatile [2 x i32] %i5293, ptr addrspace(5) null, align 4
+  ret void
+}

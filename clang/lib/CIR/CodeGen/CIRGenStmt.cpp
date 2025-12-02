@@ -66,7 +66,7 @@ static mlir::LogicalResult emitStmtWithResult(CIRGenFunction &cgf,
 mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
     const CompoundStmt &s, Address *lastValue, AggValueSlot slot) {
   mlir::LogicalResult result = mlir::success();
-  const Stmt *exprResult = s.getStmtExprResult();
+  const Stmt *exprResult = s.body_back();
   assert((!lastValue || (lastValue && exprResult)) &&
          "If lastValue is not null then the CompoundStmt must have a "
          "StmtExprResult");
@@ -91,8 +91,9 @@ mlir::LogicalResult CIRGenFunction::emitCompoundStmt(const CompoundStmt &s,
   SymTableScopeTy varScope(symbolTable);
   mlir::Location scopeLoc = getLoc(s.getSourceRange());
   mlir::OpBuilder::InsertPoint scopeInsPt;
-  builder.create<cir::ScopeOp>(
-      scopeLoc, [&](mlir::OpBuilder &b, mlir::Type &type, mlir::Location loc) {
+  cir::ScopeOp::create(
+      builder, scopeLoc,
+      [&](mlir::OpBuilder &b, mlir::Type &type, mlir::Location loc) {
         scopeInsPt = b.saveInsertionPoint();
       });
   mlir::OpBuilder::InsertionGuard guard(builder);
@@ -154,6 +155,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitWhileStmt(cast<WhileStmt>(*s));
   case Stmt::DoStmtClass:
     return emitDoStmt(cast<DoStmt>(*s));
+  case Stmt::CXXTryStmtClass:
+    return emitCXXTryStmt(cast<CXXTryStmt>(*s));
   case Stmt::CXXForRangeStmtClass:
     return emitCXXForRangeStmt(cast<CXXForRangeStmt>(*s), attr);
   case Stmt::OpenACCComputeConstructClass:
@@ -197,8 +200,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::SEHLeaveStmtClass:
   case Stmt::SYCLKernelCallStmtClass:
   case Stmt::CoroutineBodyStmtClass:
+    return emitCoroutineBody(cast<CoroutineBodyStmt>(*s));
   case Stmt::CoreturnStmtClass:
-  case Stmt::CXXTryStmtClass:
   case Stmt::IndirectGotoStmtClass:
   case Stmt::OMPParallelDirectiveClass:
   case Stmt::OMPTaskwaitDirectiveClass:
@@ -216,6 +219,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::OMPSimdDirectiveClass:
   case Stmt::OMPTileDirectiveClass:
   case Stmt::OMPUnrollDirectiveClass:
+  case Stmt::OMPFuseDirectiveClass:
   case Stmt::OMPForDirectiveClass:
   case Stmt::OMPForSimdDirectiveClass:
   case Stmt::OMPSectionsDirectiveClass:
@@ -420,12 +424,12 @@ mlir::LogicalResult CIRGenFunction::emitIfStmt(const IfStmt &s) {
   // LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
   // The if scope contains the full source range for IfStmt.
   mlir::Location scopeLoc = getLoc(s.getSourceRange());
-  builder.create<cir::ScopeOp>(
-      scopeLoc, /*scopeBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        LexicalScope lexScope{*this, scopeLoc, builder.getInsertionBlock()};
-        res = ifStmtBuilder();
-      });
+  cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
+                       [&](mlir::OpBuilder &b, mlir::Location loc) {
+                         LexicalScope lexScope{*this, scopeLoc,
+                                               builder.getInsertionBlock()};
+                         res = ifStmtBuilder();
+                       });
 
   return res;
 }
@@ -443,54 +447,89 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   mlir::Location loc = getLoc(s.getSourceRange());
   const Expr *rv = s.getRetValue();
 
-  if (getContext().getLangOpts().ElideConstructors && s.getNRVOCandidate() &&
-      s.getNRVOCandidate()->isNRVOVariable()) {
-    assert(!cir::MissingFeatures::openMP());
-    assert(!cir::MissingFeatures::nrvo());
-  } else if (!rv) {
-    // No return expression. Do nothing.
-  } else if (rv->getType()->isVoidType()) {
-    // Make sure not to return anything, but evaluate the expression
-    // for side effects.
-    if (rv) {
-      emitAnyExpr(rv);
-    }
-  } else if (cast<FunctionDecl>(curGD.getDecl())
-                 ->getReturnType()
-                 ->isReferenceType()) {
-    // If this function returns a reference, take the address of the
-    // expression rather than the value.
-    RValue result = emitReferenceBindingToExpr(rv);
-    builder.CIRBaseBuilderTy::createStore(loc, result.getValue(), *fnRetAlloca);
-  } else {
-    mlir::Value value = nullptr;
-    switch (CIRGenFunction::getEvaluationKind(rv->getType())) {
-    case cir::TEK_Scalar:
-      value = emitScalarExpr(rv);
-      if (value) { // Change this to an assert once emitScalarExpr is complete
-        builder.CIRBaseBuilderTy::createStore(loc, value, *fnRetAlloca);
+  RunCleanupsScope cleanupScope(*this);
+  bool createNewScope = false;
+  if (const auto *ewc = dyn_cast_or_null<ExprWithCleanups>(rv)) {
+    rv = ewc->getSubExpr();
+    createNewScope = true;
+  }
+
+  auto handleReturnVal = [&]() {
+    if (getContext().getLangOpts().ElideConstructors && s.getNRVOCandidate() &&
+        s.getNRVOCandidate()->isNRVOVariable()) {
+      assert(!cir::MissingFeatures::openMP());
+      assert(!cir::MissingFeatures::nrvo());
+    } else if (!rv) {
+      // No return expression. Do nothing.
+    } else if (rv->getType()->isVoidType()) {
+      // Make sure not to return anything, but evaluate the expression
+      // for side effects.
+      if (rv) {
+        emitAnyExpr(rv);
       }
-      break;
-    case cir::TEK_Complex:
-      getCIRGenModule().errorNYI(s.getSourceRange(),
-                                 "complex function return type");
-      break;
-    case cir::TEK_Aggregate:
-      assert(!cir::MissingFeatures::aggValueSlotGC());
-      emitAggExpr(rv, AggValueSlot::forAddr(returnValue, Qualifiers(),
-                                            AggValueSlot::IsDestructed,
-                                            AggValueSlot::IsNotAliased,
-                                            getOverlapForReturnValue()));
-      break;
+    } else if (cast<FunctionDecl>(curGD.getDecl())
+                   ->getReturnType()
+                   ->isReferenceType()) {
+      // If this function returns a reference, take the address of the
+      // expression rather than the value.
+      RValue result = emitReferenceBindingToExpr(rv);
+      builder.CIRBaseBuilderTy::createStore(loc, result.getValue(),
+                                            *fnRetAlloca);
+    } else {
+      mlir::Value value = nullptr;
+      switch (CIRGenFunction::getEvaluationKind(rv->getType())) {
+      case cir::TEK_Scalar:
+        value = emitScalarExpr(rv);
+        if (value) { // Change this to an assert once emitScalarExpr is complete
+          builder.CIRBaseBuilderTy::createStore(loc, value, *fnRetAlloca);
+        }
+        break;
+      case cir::TEK_Complex:
+        emitComplexExprIntoLValue(rv,
+                                  makeAddrLValue(returnValue, rv->getType()),
+                                  /*isInit=*/true);
+        break;
+      case cir::TEK_Aggregate:
+        assert(!cir::MissingFeatures::aggValueSlotGC());
+        emitAggExpr(rv, AggValueSlot::forAddr(returnValue, Qualifiers(),
+                                              AggValueSlot::IsDestructed,
+                                              AggValueSlot::IsNotAliased,
+                                              getOverlapForReturnValue()));
+        break;
+      }
+    }
+  };
+
+  if (!createNewScope) {
+    handleReturnVal();
+  } else {
+    mlir::Location scopeLoc =
+        getLoc(rv ? rv->getSourceRange() : s.getSourceRange());
+    // First create cir.scope and later emit it's body. Otherwise all CIRGen
+    // dispatched by `handleReturnVal()` might needs to manipulate blocks and
+    // look into parents, which are all unlinked.
+    mlir::OpBuilder::InsertPoint scopeBody;
+    cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
+                         [&](mlir::OpBuilder &b, mlir::Location loc) {
+                           scopeBody = b.saveInsertionPoint();
+                         });
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.restoreInsertionPoint(scopeBody);
+      CIRGenFunction::LexicalScope lexScope{*this, scopeLoc,
+                                            builder.getInsertionBlock()};
+      handleReturnVal();
     }
   }
 
+  cleanupScope.forceCleanup();
+
+  // In CIR we might have returns in different scopes.
+  // FIXME(cir): cleanup code is handling actual return emission, the logic
+  // should try to match traditional codegen more closely (to the extent which
+  // is possible).
   auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
-  // This should emit a branch through the cleanup block if one exists.
-  builder.create<cir::BrOp>(loc, retBlock);
-  assert(!cir::MissingFeatures::emitBranchThroughCleanup());
-  if (ehStack.stable_begin() != currentCleanupStackDepth)
-    cgm.errorNYI(s.getSourceRange(), "return with cleanup stack");
+  emitBranchThroughCleanup(loc, returnBlock(retBlock));
 
   // Insert the new block to continue codegen after branch to ret block.
   builder.createBlock(builder.getBlock()->getParent());
@@ -533,16 +572,16 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   mlir::Block *currBlock = builder.getBlock();
   mlir::Block *labelBlock = currBlock;
 
-  if (!currBlock->empty()) {
+  if (!currBlock->empty() || currBlock->isEntryBlock()) {
     {
       mlir::OpBuilder::InsertionGuard guard(builder);
       labelBlock = builder.createBlock(builder.getBlock()->getParent());
     }
-    builder.create<cir::BrOp>(getLoc(d.getSourceRange()), labelBlock);
+    cir::BrOp::create(builder, getLoc(d.getSourceRange()), labelBlock);
   }
 
   builder.setInsertionPointToEnd(labelBlock);
-  builder.create<cir::LabelOp>(getLoc(d.getSourceRange()), d.getName());
+  cir::LabelOp::create(builder, getLoc(d.getSourceRange()), d.getName());
   builder.setInsertionPointToEnd(labelBlock);
 
   //  FIXME: emit debug info for labels, incrementProfileCounter
@@ -579,7 +618,7 @@ CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
   const Stmt *sub = stmt->getSubStmt();
 
   mlir::OpBuilder::InsertPoint insertPoint;
-  builder.create<CaseOp>(loc, value, kind, insertPoint);
+  CaseOp::create(builder, loc, value, kind, insertPoint);
 
   {
     mlir::OpBuilder::InsertionGuard guardSwitch(builder);
@@ -751,16 +790,16 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
 
   mlir::LogicalResult res = mlir::success();
   mlir::Location scopeLoc = getLoc(s.getSourceRange());
-  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
-                               [&](mlir::OpBuilder &b, mlir::Location loc) {
-                                 // Create a cleanup scope for the condition
-                                 // variable cleanups. Logical equivalent from
-                                 // LLVM codegn for LexicalScope
-                                 // ConditionScope(*this, S.getSourceRange())...
-                                 LexicalScope lexScope{
-                                     *this, loc, builder.getInsertionBlock()};
-                                 res = forStmtBuilder();
-                               });
+  cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
+                       [&](mlir::OpBuilder &b, mlir::Location loc) {
+                         // Create a cleanup scope for the condition
+                         // variable cleanups. Logical equivalent from
+                         // LLVM codegn for LexicalScope
+                         // ConditionScope(*this, S.getSourceRange())...
+                         LexicalScope lexScope{*this, loc,
+                                               builder.getInsertionBlock()};
+                         res = forStmtBuilder();
+                       });
 
   if (res.failed())
     return res;
@@ -803,7 +842,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
             // scalar type.
             condVal = evaluateExprAsBool(s.getCond());
           } else {
-            condVal = b.create<cir::ConstantOp>(loc, builder.getTrueAttr());
+            condVal = cir::ConstantOp::create(b, loc, builder.getTrueAttr());
           }
           builder.createCondition(condVal);
         },
@@ -827,12 +866,12 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
 
   auto res = mlir::success();
   auto scopeLoc = getLoc(s.getSourceRange());
-  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
-                               [&](mlir::OpBuilder &b, mlir::Location loc) {
-                                 LexicalScope lexScope{
-                                     *this, loc, builder.getInsertionBlock()};
-                                 res = forStmtBuilder();
-                               });
+  cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
+                       [&](mlir::OpBuilder &b, mlir::Location loc) {
+                         LexicalScope lexScope{*this, loc,
+                                               builder.getInsertionBlock()};
+                         res = forStmtBuilder();
+                       });
 
   if (res.failed())
     return res;
@@ -878,12 +917,12 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
 
   mlir::LogicalResult res = mlir::success();
   mlir::Location scopeLoc = getLoc(s.getSourceRange());
-  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
-                               [&](mlir::OpBuilder &b, mlir::Location loc) {
-                                 LexicalScope lexScope{
-                                     *this, loc, builder.getInsertionBlock()};
-                                 res = doStmtBuilder();
-                               });
+  cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
+                       [&](mlir::OpBuilder &b, mlir::Location loc) {
+                         LexicalScope lexScope{*this, loc,
+                                               builder.getInsertionBlock()};
+                         res = doStmtBuilder();
+                       });
 
   if (res.failed())
     return res;
@@ -934,12 +973,12 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
 
   mlir::LogicalResult res = mlir::success();
   mlir::Location scopeLoc = getLoc(s.getSourceRange());
-  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
-                               [&](mlir::OpBuilder &b, mlir::Location loc) {
-                                 LexicalScope lexScope{
-                                     *this, loc, builder.getInsertionBlock()};
-                                 res = whileStmtBuilder();
-                               });
+  cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
+                       [&](mlir::OpBuilder &b, mlir::Location loc) {
+                         LexicalScope lexScope{*this, loc,
+                                               builder.getInsertionBlock()};
+                         res = whileStmtBuilder();
+                       });
 
   if (res.failed())
     return res;
@@ -1010,8 +1049,8 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
     assert(!cir::MissingFeatures::insertBuiltinUnpredictable());
 
     mlir::LogicalResult res = mlir::success();
-    swop = builder.create<SwitchOp>(
-        getLoc(s.getBeginLoc()), condV,
+    swop = SwitchOp::create(
+        builder, getLoc(s.getBeginLoc()), condV,
         /*switchBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc, mlir::OperationState &os) {
           curLexScope->setAsSwitch();
@@ -1029,12 +1068,12 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
   // The switch scope contains the full source range for SwitchStmt.
   mlir::Location scopeLoc = getLoc(s.getSourceRange());
   mlir::LogicalResult res = mlir::success();
-  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
-                               [&](mlir::OpBuilder &b, mlir::Location loc) {
-                                 LexicalScope lexScope{
-                                     *this, loc, builder.getInsertionBlock()};
-                                 res = switchStmtBuilder();
-                               });
+  cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
+                       [&](mlir::OpBuilder &b, mlir::Location loc) {
+                         LexicalScope lexScope{*this, loc,
+                                               builder.getInsertionBlock()};
+                         res = switchStmtBuilder();
+                       });
 
   llvm::SmallVector<CaseOp> cases;
   swop.collectCases(cases);
@@ -1058,7 +1097,7 @@ void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
   }
   mlir::Block *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
   assert(!cir::MissingFeatures::emitBranchThroughCleanup());
-  builder.create<cir::BrOp>(loc, retBlock);
+  cir::BrOp::create(builder, loc, retBlock);
   if (ehStack.stable_begin() != currentCleanupStackDepth)
-    cgm.errorNYI(loc, "return with cleanup stack");
+    cgm.errorNYI(loc, "return of r-value with cleanup stack");
 }

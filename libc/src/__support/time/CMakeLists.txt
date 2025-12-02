@@ -19,3 +19,12 @@ add_object_library(
   DEPENDS
     libc.src.__support.time.${LIBC_TARGET_OS}.clock_gettime
 )
+
+if(TARGET libc.src.__support.time.${LIBC_TARGET_OS}.clock_settime)  
+  add_object_library(
+    clock_settime
+    ALIAS
+    DEPENDS
+      libc.src.__support.time.${LIBC_TARGET_OS}.clock_settime
+  )
+endif()

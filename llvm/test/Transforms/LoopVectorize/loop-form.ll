@@ -79,17 +79,7 @@ define void @bottom_tested(ptr %p, i32 %n) {
 ; TAILFOLD-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; TAILFOLD-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TAILFOLD:       middle.block:
-; TAILFOLD-NEXT:    br label [[IF_END:%.*]]
-; TAILFOLD:       scalar.ph:
 ; TAILFOLD-NEXT:    br label [[FOR_COND:%.*]]
-; TAILFOLD:       for.cond:
-; TAILFOLD-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[INC:%.*]], [[FOR_COND]] ]
-; TAILFOLD-NEXT:    [[IPROM:%.*]] = sext i32 [[I]] to i64
-; TAILFOLD-NEXT:    [[B:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[IPROM]]
-; TAILFOLD-NEXT:    store i16 0, ptr [[B]], align 4
-; TAILFOLD-NEXT:    [[INC]] = add nsw i32 [[I]], 1
-; TAILFOLD-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I]], [[N]]
-; TAILFOLD-NEXT:    br i1 [[CMP]], label [[FOR_COND]], label [[IF_END]]
 ; TAILFOLD:       if.end:
 ; TAILFOLD-NEXT:    ret void
 ;
@@ -1383,4 +1373,50 @@ exit.1:
 
 exit.2:
   ret i16 1
+}
+
+; Loop with a switch terminator in the latch block. Cannot be vectorized
+; currently.
+; Test case for https://github.com/llvm/llvm-project/issues/156894.
+define void @switch_in_latch(ptr %a) {
+; CHECK-LABEL: @switch_in_latch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[A:%.*]], i32 [[IV]]
+; CHECK-NEXT:    store i32 1, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    switch i32 [[IV_NEXT]], label [[LOOP]] [
+; CHECK-NEXT:      i32 100, label [[EXIT:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+; TAILFOLD-LABEL: @switch_in_latch(
+; TAILFOLD-NEXT:  entry:
+; TAILFOLD-NEXT:    br label [[LOOP:%.*]]
+; TAILFOLD:       loop:
+; TAILFOLD-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; TAILFOLD-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[A:%.*]], i32 [[IV]]
+; TAILFOLD-NEXT:    store i32 1, ptr [[GEP]], align 4
+; TAILFOLD-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; TAILFOLD-NEXT:    switch i32 [[IV_NEXT]], label [[LOOP]] [
+; TAILFOLD-NEXT:      i32 100, label [[EXIT:%.*]]
+; TAILFOLD-NEXT:    ]
+; TAILFOLD:       exit:
+; TAILFOLD-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i32, ptr %a, i32 %iv
+  store i32 1, ptr %gep, align 4
+  %iv.next = add i32 %iv, 1
+  switch i32 %iv.next, label %loop [i32 100, label %exit]
+
+exit:
+  ret void
 }

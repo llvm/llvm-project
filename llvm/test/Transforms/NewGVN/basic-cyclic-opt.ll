@@ -4,7 +4,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ;; Function Attrs: nounwind ssp uwtable
 ;; We should eliminate the sub, and one of the phi nodes
-define void @vnum_test1(ptr %data) #0 {
+define void @vnum_test1(ptr %data) {
 ; CHECK-LABEL: @vnum_test1(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 3
@@ -74,7 +74,7 @@ bb19:                                             ; preds = %bb4
 ;; We should eliminate the sub, one of the phi nodes, prove the store of the sub
 ;; and the load of data are equivalent, that the load always produces constant 0, and
 ;; delete the load replacing it with constant 0.
-define i32 @vnum_test2(ptr %data) #0 {
+define i32 @vnum_test2(ptr %data) {
 ; CHECK-LABEL: @vnum_test2(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 3
@@ -142,11 +142,10 @@ bb21:                                             ; preds = %bb4
   ret i32 %p.0
 }
 
-
 ; Function Attrs: nounwind ssp uwtable
 ;; Same as test 2, with a conditional store of m-n, so it has to also discover
 ;; that data ends up with the same value no matter what branch is taken.
-define i32 @vnum_test3(ptr %data) #0 {
+define i32 @vnum_test3(ptr %data) {
 ; CHECK-LABEL: @vnum_test3(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[DATA:%.*]], i64 3
@@ -305,7 +304,6 @@ bb3:                                              ; preds = %bb2
   %tmp3 = sub i32 %tmp, %phi2
   ret i32 %tmp3
 }
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0, !0, !0}
 

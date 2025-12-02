@@ -9,10 +9,6 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03
 
-// This test requires the fix for http://llvm.org/PR38682 (616ef1863fae). We mark the
-// test as UNSUPPORTED instead of XFAIL because the test doesn't fail consistently.
-// UNSUPPORTED: using-built-library-before-llvm-10
-
 // This test is designed to cause and allow TSAN to detect a race condition
 // in std::async, as reported in https://llvm.org/PR38682.
 

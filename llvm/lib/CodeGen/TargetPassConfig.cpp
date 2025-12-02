@@ -272,6 +272,12 @@ static cl::opt<bool>
                     cl::desc("Split static data sections into hot and cold "
                              "sections using profile information"));
 
+cl::opt<bool> EmitBBHash(
+    "emit-bb-hash",
+    cl::desc(
+        "Emit the hash of basic block in the SHT_LLVM_BB_ADDR_MAP section."),
+    cl::init(false), cl::Optional);
+
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -394,8 +400,6 @@ struct InsertedPass {
 } // end anonymous namespace
 
 namespace llvm {
-
-extern cl::opt<bool> EnableFSDiscriminator;
 
 class PassConfigImpl {
 public:
@@ -1281,6 +1285,8 @@ void TargetPassConfig::addMachinePasses() {
   // address map (or both).
   if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
       TM->Options.BBAddrMap) {
+    if (EmitBBHash)
+      addPass(llvm::createMachineBlockHashInfoPass());
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));

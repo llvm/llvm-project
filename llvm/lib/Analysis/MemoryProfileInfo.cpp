@@ -22,6 +22,8 @@ using namespace llvm::memprof;
 
 #define DEBUG_TYPE "memory-profile-info"
 
+namespace llvm {
+
 cl::opt<bool> MemProfReportHintedSizes(
     "memprof-report-hinted-sizes", cl::init(false), cl::Hidden,
     cl::desc("Report total allocation sizes of hinted allocations"));
@@ -51,6 +53,12 @@ cl::opt<unsigned> MinCallsiteColdBytePercent(
 cl::opt<unsigned> MinPercentMaxColdSize(
     "memprof-min-percent-max-cold-size", cl::init(100), cl::Hidden,
     cl::desc("Min percent of max cold bytes for critical cold context"));
+
+LLVM_ABI cl::opt<bool> MemProfUseAmbiguousAttributes(
+    "memprof-ambiguous-attributes", cl::init(true), cl::Hidden,
+    cl::desc("Apply ambiguous memprof attribute to ambiguous allocations"));
+
+} // end namespace llvm
 
 bool llvm::memprof::metadataIncludesAllContextSizeInfo() {
   return MemProfReportHintedSizes || MinClonedColdBytePercent < 100;
@@ -129,6 +137,8 @@ void llvm::memprof::removeAnyExistingAmbiguousAttribute(CallBase *CB) {
 }
 
 void llvm::memprof::addAmbiguousAttribute(CallBase *CB) {
+  if (!MemProfUseAmbiguousAttributes)
+    return;
   // We may have an existing ambiguous attribute if we are reanalyzing
   // after inlining.
   if (CB->hasFnAttr("memprof")) {
@@ -231,9 +241,13 @@ static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
       ColdBytes += TotalSize;
       // If we have the max cold context size from summary information and have
       // requested identification of contexts above a percentage of the max, see
-      // if this context qualifies.
-      if (MaxColdSize > 0 && MinPercentMaxColdSize < 100 &&
-          TotalSize * 100 >= MaxColdSize * MinPercentMaxColdSize)
+      // if this context qualifies. We should assume this is large if we rebuilt
+      // the trie from existing metadata (i.e. to update after inlining), in
+      // which case we don't have a MaxSize from the profile - we assume any
+      // context size info in existence on the metadata should be propagated.
+      if (BuiltFromExistingMetadata ||
+          (MaxColdSize > 0 && MinPercentMaxColdSize < 100 &&
+           TotalSize * 100 >= MaxColdSize * MinPercentMaxColdSize))
         LargeColdContext = true;
     }
     // Only add the context size info as metadata if we need it in the thin

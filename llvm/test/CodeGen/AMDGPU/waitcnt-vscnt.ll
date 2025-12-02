@@ -369,10 +369,9 @@ define amdgpu_kernel void @barrier_vmcnt_vscnt_flat_workgroup(ptr %arg) {
 ; GFX8-NEXT:    flat_load_dword v3, v[2:3]
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 1, v0
 ; GFX8-NEXT:    v_lshrrev_b64 v[0:1], 30, v[1:2]
-; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, v4, v1, vcc
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_barrier
 ; GFX8-NEXT:    flat_store_dword v[0:1], v3
 ; GFX8-NEXT:    s_endpgm
@@ -393,10 +392,9 @@ define amdgpu_kernel void @barrier_vmcnt_vscnt_flat_workgroup(ptr %arg) {
 ; GFX9-NEXT:    flat_load_dword v3, v[2:3]
 ; GFX9-NEXT:    v_add_u32_e32 v2, 1, v0
 ; GFX9-NEXT:    v_lshrrev_b64 v[0:1], 30, v[1:2]
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v4, v1, vcc
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_barrier
 ; GFX9-NEXT:    flat_store_dword v[0:1], v3
 ; GFX9-NEXT:    s_endpgm

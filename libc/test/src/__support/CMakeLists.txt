@@ -151,7 +151,7 @@ add_libc_test(
     wcs_to_integer_test.cpp
   DEPENDS
     libc.src.__support.integer_literals
-    libc.src.__support.wcs_to_integer
+    libc.src.__support.str_to_integer
 )
 
 add_libc_test(

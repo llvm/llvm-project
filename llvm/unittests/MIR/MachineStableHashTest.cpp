@@ -22,7 +22,7 @@ using namespace llvm;
 
 class MachineStableHashTest : public testing::Test {
 public:
-  MachineStableHashTest() {}
+  MachineStableHashTest() = default;
 
 protected:
   LLVMContext Context;

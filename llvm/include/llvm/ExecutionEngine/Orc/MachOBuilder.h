@@ -36,7 +36,7 @@ size_t writeMachOStruct(MutableArrayRef<char> Buf, size_t Offset, MachOStruct S,
 
 /// Base type for MachOBuilder load command wrappers.
 struct MachOBuilderLoadCommandBase {
-  virtual ~MachOBuilderLoadCommandBase() {}
+  virtual ~MachOBuilderLoadCommandBase() = default;
   virtual size_t size() const = 0;
   virtual size_t write(MutableArrayRef<char> Buf, size_t Offset,
                        bool SwapStruct) = 0;

@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
 
@@ -482,12 +483,13 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
   }
 
   sort(StackIntervals, [](const LiveInterval *A, const LiveInterval *B) {
+    // The ordering has to be strictly weak.
     /// Sort heaviest intervals first to prioritize their unspilling
-    if (A->weight() > B->weight())
-      return true;
+    if (A->weight() != B->weight())
+      return A->weight() > B->weight();
 
-    if (A->getSize() > B->getSize())
-      return true;
+    if (A->getSize() != B->getSize())
+      return A->getSize() > B->getSize();
 
     // Tie breaker by number to avoid need for stable sort
     return A->reg().stackSlotIndex() < B->reg().stackSlotIndex();
@@ -658,7 +660,11 @@ AMDGPURewriteAGPRCopyMFMAPass::run(MachineFunction &MF,
   if (!Impl.run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  PA.preserve<LiveStacksAnalysis>();
+  PA.preserveSet<CFGAnalyses>()
+      .preserve<LiveStacksAnalysis>()
+      .preserve<VirtRegMapAnalysis>()
+      .preserve<SlotIndexesAnalysis>()
+      .preserve<LiveIntervalsAnalysis>()
+      .preserve<LiveRegMatrixAnalysis>();
   return PA;
 }

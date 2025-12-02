@@ -3,7 +3,8 @@
 modernize-avoid-setjmp-longjmp
 ==============================
 
-Flags all call expressions involving ``setjmp()`` and ``longjmp()`` in C++ code.
+Flags all call expressions involving ``setjmp()`` and
+``longjmp()`` in C++ code.
 
 Exception handling with ``throw`` and ``catch`` should be used instead.
 

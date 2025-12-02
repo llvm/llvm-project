@@ -1491,7 +1491,6 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_lshr_b32 s4, s6, 16
-; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB14_4
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
@@ -1521,7 +1520,6 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s4, s6, 16
-; VI-NEXT:    s_cmp_lg_u32 s4, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB14_4
 ; VI-NEXT:  ; %bb.1: ; %else
 ; VI-NEXT:    s_mov_b32 s11, 0xf000

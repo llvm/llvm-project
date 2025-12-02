@@ -264,3 +264,90 @@ body:             |
     $sgpr0 = COPY %16:sreg_32
     SI_RETURN_TO_EPILOG $sgpr0
 ...
+
+---
+name:            s_pack_ll_b32_b16
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_pack_ll_b32_b16
+    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 [[DEF]], implicit $exec
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_MOV_B32_e32_]].lo16, %subreg.lo16, [[DEF1]].lo16, %subreg.hi16
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %1:vgpr_32
+    %3:sreg_32 = S_PACK_LL_B32_B16 %0:sreg_32, %2:sreg_32, implicit-def dead $scc
+...
+
+---
+name:            s_pack_lh_b32_b16
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_pack_lh_b32_b16
+    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 [[DEF]], implicit $exec
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_MOV_B32_e32_]].lo16, %subreg.lo16, [[DEF1]].hi16, %subreg.hi16
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %1:vgpr_32
+    %3:sreg_32 = S_PACK_LH_B32_B16 %0:sreg_32, %2:sreg_32, implicit-def dead $scc
+...
+
+---
+name:            s_pack_hl_b32_b16
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_pack_hl_b32_b16
+    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 [[DEF]], implicit $exec
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_MOV_B32_e32_]].hi16, %subreg.lo16, [[DEF1]].lo16, %subreg.hi16
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %1:vgpr_32
+    %3:sreg_32 = S_PACK_HL_B32_B16 %0:sreg_32, %2:sreg_32, implicit-def dead $scc
+...
+
+---
+name:            s_pack_hh_b32_b16
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_pack_hh_b32_b16
+    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 [[DEF]], implicit $exec
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_MOV_B32_e32_]].hi16, %subreg.lo16, [[DEF1]].hi16, %subreg.hi16
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_32 = COPY %1:vgpr_32
+    %3:sreg_32 = S_PACK_HH_B32_B16 %0:sreg_32, %2:sreg_32, implicit-def dead $scc
+...
+
+---
+name:            s_pack_ll_b32_b16_use_SALU16
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_pack_ll_b32_b16_use_SALU16
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_FMAC_F16_t16_e64_:%[0-9]+]]:vgpr_16 = V_FMAC_F16_t16_e64 0, [[DEF]].lo16, 0, [[DEF]].lo16, 0, [[DEF]].lo16, 0, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_FMAC_F16_t16_e64_]], %subreg.lo16, [[DEF]].lo16, %subreg.hi16
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = COPY %0:vgpr_32
+    %2:sreg_32 = S_FMAC_F16 %1:sreg_32, %1:sreg_32, %1:sreg_32, implicit $mode
+    %3:sreg_32 = S_PACK_LL_B32_B16 %2:sreg_32, %1:sreg_32, implicit-def dead $scc
+...
+
+---
+name:            s_pack_ll_b32_b16_use_imm
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: s_pack_ll_b32_b16_use_imm
+    ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_MOV_B32_e32_]].lo16, %subreg.lo16, [[DEF]].lo16, %subreg.hi16
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:sreg_32 = COPY %0:vgpr_32
+    %2:sreg_32 = S_PACK_LL_B32_B16 1, %1:sreg_32, implicit-def dead $scc
+...

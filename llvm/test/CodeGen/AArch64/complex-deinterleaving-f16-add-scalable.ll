@@ -17,11 +17,10 @@ define <vscale x 4 x half> @complex_add_v4f16(<vscale x 4 x half> %a, <vscale x 
 ; CHECK-NEXT:    uunpklo z3.d, z3.s
 ; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    fsubr z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    movprfx z1, z3
-; CHECK-NEXT:    fadd z1.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    zip2 z2.d, z0.d, z1.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z2.s
+; CHECK-NEXT:    fadd z2.h, p0/m, z2.h, z3.h
+; CHECK-NEXT:    zip2 z1.d, z0.d, z2.d
+; CHECK-NEXT:    zip1 z0.d, z0.d, z2.d
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:
   %a.deinterleaved = tail call { <vscale x 2 x half>, <vscale x 2 x half> } @llvm.vector.deinterleave2.nxv4f16(<vscale x 4 x half> %a)

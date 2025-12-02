@@ -66,7 +66,7 @@ namespace {
                           MachineBasicBlock &MBB);
     void addDirtySuccessor(MachineBasicBlock &MBB);
 
-    using BlockExitState = enum { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
+    enum BlockExitState { PASS_THROUGH, EXITS_CLEAN, EXITS_DIRTY };
 
     static const char* getBlockExitStateName(BlockExitState ST);
 

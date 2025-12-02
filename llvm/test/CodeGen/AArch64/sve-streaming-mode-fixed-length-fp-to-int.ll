@@ -1391,11 +1391,11 @@ define void @fcvtzu_v16f64_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-LABEL: fcvtzu_v16f64_v16i16:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #304
-; NONEON-NOSVE-NEXT:    str x29, [sp, #288] // 8-byte Folded Spill
+; NONEON-NOSVE-NEXT:    str x29, [sp, #288] // 8-byte Spill
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 304
 ; NONEON-NOSVE-NEXT:    .cfi_offset w29, -16
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [x0, #32]
-; NONEON-NOSVE-NEXT:    ldr x29, [sp, #288] // 8-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr x29, [sp, #288] // 8-byte Reload
 ; NONEON-NOSVE-NEXT:    ldp q6, q7, [x0]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0, #64]
 ; NONEON-NOSVE-NEXT:    ldp q4, q5, [x0, #96]
@@ -3096,11 +3096,11 @@ define void @fcvtzs_v16f64_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-LABEL: fcvtzs_v16f64_v16i16:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #304
-; NONEON-NOSVE-NEXT:    str x29, [sp, #288] // 8-byte Folded Spill
+; NONEON-NOSVE-NEXT:    str x29, [sp, #288] // 8-byte Spill
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 304
 ; NONEON-NOSVE-NEXT:    .cfi_offset w29, -16
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [x0, #32]
-; NONEON-NOSVE-NEXT:    ldr x29, [sp, #288] // 8-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr x29, [sp, #288] // 8-byte Reload
 ; NONEON-NOSVE-NEXT:    ldp q6, q7, [x0]
 ; NONEON-NOSVE-NEXT:    ldp q2, q3, [x0, #64]
 ; NONEON-NOSVE-NEXT:    ldp q4, q5, [x0, #96]

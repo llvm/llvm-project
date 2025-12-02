@@ -270,6 +270,10 @@ namespace llvm {
     HADD,
     HSUB,
 
+    /// Integer horizontal saturating add/sub.
+    HADDS,
+    HSUBS,
+
     /// Floating point horizontal add/sub.
     FHADD,
     FHSUB,
@@ -471,8 +475,7 @@ namespace llvm {
     // VBMI2 Concat & Shift.
     VSHLD,
     VSHRD,
-    VSHLDV,
-    VSHRDV,
+
     // Shuffle Packed Values at 128-bit granularity.
     SHUF128,
     MOVDDUP,
@@ -1245,8 +1248,7 @@ namespace llvm {
     getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
                                   const Value *Rhs) const override;
 
-    bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                           CombineLevel Level) const override;
+    bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
     bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override;
 
@@ -1594,7 +1596,6 @@ namespace llvm {
     bool useLoadStackGuardNode(const Module &M) const override;
     bool useStackGuardXorFP() const override;
     void insertSSPDeclarations(Module &M) const override;
-    Function *getSSPStackGuardCheck(const Module &M) const override;
     SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
                                 const SDLoc &DL) const override;
 

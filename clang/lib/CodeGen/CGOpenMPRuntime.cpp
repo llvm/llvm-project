@@ -1039,6 +1039,7 @@ CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
       hasRequiresUnifiedSharedMemory(), /*HasRequiresDynamicAllocators*/ false);
   Config.setDefaultTargetAS(
       CGM.getContext().getTargetInfo().getTargetAddressSpace(LangAS::Default));
+  Config.setRuntimeCC(CGM.getRuntimeCC());
 
   OMPBuilder.setConfig(Config);
   OMPBuilder.initialize();
@@ -1542,15 +1543,14 @@ static llvm::TargetRegionEntryInfo getEntryInfoFromPresumedLoc(
     SourceManager &SM = CGM.getContext().getSourceManager();
     PresumedLoc PLoc = SM.getPresumedLoc(BeginLoc);
 
-    llvm::sys::fs::UniqueID ID;
-    if (llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID)) {
+    if (!CGM.getFileSystem()->exists(PLoc.getFilename()))
       PLoc = SM.getPresumedLoc(BeginLoc, /*UseLineDirectives=*/false);
-    }
 
     return std::pair<std::string, uint64_t>(PLoc.getFilename(), PLoc.getLine());
   };
 
-  return OMPBuilder.getTargetEntryUniqueInfo(FileInfoCallBack, ParentName);
+  return OMPBuilder.getTargetEntryUniqueInfo(FileInfoCallBack,
+                                             *CGM.getFileSystem(), ParentName);
 }
 
 ConstantAddress CGOpenMPRuntime::getAddrOfDeclareTargetVar(const VarDecl *VD) {
@@ -1715,12 +1715,12 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
     // Copying constructor for the threadprivate variable.
     // Must be NULL - reserved by runtime, but currently it requires that this
     // parameter is always NULL. Otherwise it fires assertion.
-    CopyCtor = llvm::Constant::getNullValue(CGM.UnqualPtrTy);
+    CopyCtor = llvm::Constant::getNullValue(CGM.DefaultPtrTy);
     if (Ctor == nullptr) {
-      Ctor = llvm::Constant::getNullValue(CGM.UnqualPtrTy);
+      Ctor = llvm::Constant::getNullValue(CGM.DefaultPtrTy);
     }
     if (Dtor == nullptr) {
-      Dtor = llvm::Constant::getNullValue(CGM.UnqualPtrTy);
+      Dtor = llvm::Constant::getNullValue(CGM.DefaultPtrTy);
     }
     if (!CGF) {
       auto *InitFunctionTy =
@@ -1763,8 +1763,11 @@ void CGOpenMPRuntime::emitDeclareTargetFunction(const FunctionDecl *FD,
   // access its value.
   llvm::GlobalValue *Addr = GV;
   if (CGM.getLangOpts().OpenMPIsTargetDevice) {
+    llvm::PointerType *FnPtrTy = llvm::PointerType::get(
+        CGM.getLLVMContext(),
+        CGM.getModule().getDataLayout().getProgramAddressSpace());
     Addr = new llvm::GlobalVariable(
-        CGM.getModule(), CGM.VoidPtrTy,
+        CGM.getModule(), FnPtrTy,
         /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, GV, Name,
         nullptr, llvm::GlobalValue::NotThreadLocal,
         CGM.getModule().getDataLayout().getDefaultGlobalsAddressSpace());
@@ -1998,22 +2001,29 @@ void CGOpenMPRuntime::emitCriticalRegion(CodeGenFunction &CGF,
   // Prepare arguments and build a call to __kmpc_critical
   if (!CGF.HaveInsertPoint())
     return;
+  llvm::FunctionCallee RuntimeFcn = OMPBuilder.getOrCreateRuntimeFunction(
+      CGM.getModule(),
+      Hint ? OMPRTL___kmpc_critical_with_hint : OMPRTL___kmpc_critical);
+  llvm::Value *LockVar = getCriticalRegionLock(CriticalName);
+  unsigned LockVarArgIdx = 2;
+  if (cast<llvm::GlobalVariable>(LockVar)->getAddressSpace() !=
+      RuntimeFcn.getFunctionType()
+          ->getParamType(LockVarArgIdx)
+          ->getPointerAddressSpace())
+    LockVar = CGF.Builder.CreateAddrSpaceCast(
+        LockVar, RuntimeFcn.getFunctionType()->getParamType(LockVarArgIdx));
   llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
-                         getCriticalRegionLock(CriticalName)};
+                         LockVar};
   llvm::SmallVector<llvm::Value *, 4> EnterArgs(std::begin(Args),
                                                 std::end(Args));
   if (Hint) {
     EnterArgs.push_back(CGF.Builder.CreateIntCast(
         CGF.EmitScalarExpr(Hint), CGM.Int32Ty, /*isSigned=*/false));
   }
-  CommonActionTy Action(
-      OMPBuilder.getOrCreateRuntimeFunction(
-          CGM.getModule(),
-          Hint ? OMPRTL___kmpc_critical_with_hint : OMPRTL___kmpc_critical),
-      EnterArgs,
-      OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_end_critical),
-      Args);
+  CommonActionTy Action(RuntimeFcn, EnterArgs,
+                        OMPBuilder.getOrCreateRuntimeFunction(
+                            CGM.getModule(), OMPRTL___kmpc_end_critical),
+                        Args);
   CriticalOpGen.setAction(Action);
   emitInlinedDirective(CGF, OMPD_critical, CriticalOpGen);
 }
@@ -2703,37 +2713,27 @@ llvm::Value *CGOpenMPRuntime::emitForNext(CodeGenFunction &CGF,
 }
 
 llvm::Value *CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
-                                                const Expr *Message) {
+                                                const Expr *Message,
+                                                SourceLocation Loc) {
   if (!Message)
     return llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
   return CGF.EmitScalarExpr(Message);
 }
 
 llvm::Value *
-CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
-                                   const OMPMessageClause *MessageClause) {
-  return emitMessageClause(
-      CGF, MessageClause ? MessageClause->getMessageString() : nullptr);
-}
-
-llvm::Value *
-CGOpenMPRuntime::emitSeverityClause(OpenMPSeverityClauseKind Severity) {
+CGOpenMPRuntime::emitSeverityClause(OpenMPSeverityClauseKind Severity,
+                                    SourceLocation Loc) {
   // OpenMP 6.0, 10.4: "If no severity clause is specified then the effect is
   // as if sev-level is fatal."
   return llvm::ConstantInt::get(CGM.Int32Ty,
                                 Severity == OMPC_SEVERITY_warning ? 1 : 2);
 }
 
-llvm::Value *
-CGOpenMPRuntime::emitSeverityClause(const OMPSeverityClause *SeverityClause) {
-  return emitSeverityClause(SeverityClause ? SeverityClause->getSeverityKind()
-                                           : OMPC_SEVERITY_unknown);
-}
-
 void CGOpenMPRuntime::emitNumThreadsClause(
     CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
     OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
-    const Expr *Message) {
+    SourceLocation SeverityLoc, const Expr *Message,
+    SourceLocation MessageLoc) {
   if (!CGF.HaveInsertPoint())
     return;
   llvm::SmallVector<llvm::Value *, 4> Args(
@@ -2745,8 +2745,8 @@ void CGOpenMPRuntime::emitNumThreadsClause(
   RuntimeFunction FnID = OMPRTL___kmpc_push_num_threads;
   if (Modifier == OMPC_NUMTHREADS_strict) {
     FnID = OMPRTL___kmpc_push_num_threads_strict;
-    Args.push_back(emitSeverityClause(Severity));
-    Args.push_back(emitMessageClause(CGF, Message));
+    Args.push_back(emitSeverityClause(Severity, SeverityLoc));
+    Args.push_back(emitMessageClause(CGF, Message, MessageLoc));
   }
   CGF.EmitRuntimeCall(
       OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), FnID), Args);
@@ -3739,6 +3739,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     DestructorsFlag = 0x8,
     PriorityFlag = 0x20,
     DetachableFlag = 0x40,
+    FreeAgentFlag = 0x80,
   };
   unsigned Flags = Data.Tied ? TiedFlag : 0;
   bool NeedsCleanup = false;
@@ -3747,6 +3748,11 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
         checkDestructorsRequired(KmpTaskTWithPrivatesQTyRD, Privates);
     if (NeedsCleanup)
       Flags = Flags | DestructorsFlag;
+  }
+  if (const auto *Clause = D.getSingleClause<OMPThreadsetClause>()) {
+    OpenMPThreadsetKind Kind = Clause->getThreadsetKind();
+    if (Kind == OMPC_THREADSET_omp_pool)
+      Flags = Flags | FreeAgentFlag;
   }
   if (Data.Priority.getInt())
     Flags = Flags | PriorityFlag;
@@ -6804,12 +6810,13 @@ public:
   /// they were computed by collectAttachPtrExprInfo(), if they are semantically
   /// different.
   struct AttachPtrExprComparator {
-    const MappableExprsHandler *Handler = nullptr;
+    const MappableExprsHandler &Handler;
     // Cache of previous equality comparison results.
     mutable llvm::DenseMap<std::pair<const Expr *, const Expr *>, bool>
         CachedEqualityComparisons;
 
-    AttachPtrExprComparator(const MappableExprsHandler *H) : Handler(H) {}
+    AttachPtrExprComparator(const MappableExprsHandler &H) : Handler(H) {}
+    AttachPtrExprComparator() = delete;
 
     // Return true iff LHS is "less than" RHS.
     bool operator()(const Expr *LHS, const Expr *RHS) const {
@@ -6817,15 +6824,15 @@ public:
         return false;
 
       // First, compare by complexity (depth)
-      const auto ItLHS = Handler->AttachPtrComponentDepthMap.find(LHS);
-      const auto ItRHS = Handler->AttachPtrComponentDepthMap.find(RHS);
+      const auto ItLHS = Handler.AttachPtrComponentDepthMap.find(LHS);
+      const auto ItRHS = Handler.AttachPtrComponentDepthMap.find(RHS);
 
       std::optional<size_t> DepthLHS =
-          (ItLHS != Handler->AttachPtrComponentDepthMap.end()) ? ItLHS->second
-                                                               : std::nullopt;
+          (ItLHS != Handler.AttachPtrComponentDepthMap.end()) ? ItLHS->second
+                                                              : std::nullopt;
       std::optional<size_t> DepthRHS =
-          (ItRHS != Handler->AttachPtrComponentDepthMap.end()) ? ItRHS->second
-                                                               : std::nullopt;
+          (ItRHS != Handler.AttachPtrComponentDepthMap.end()) ? ItRHS->second
+                                                              : std::nullopt;
 
       // std::nullopt (no attach pointer) has lowest complexity
       if (!DepthLHS.has_value() && !DepthRHS.has_value()) {
@@ -6873,8 +6880,8 @@ public:
     /// Returns true iff LHS was computed before RHS by
     /// collectAttachPtrExprInfo().
     bool wasComputedBefore(const Expr *LHS, const Expr *RHS) const {
-      const size_t &OrderLHS = Handler->AttachPtrComputationOrderMap.at(LHS);
-      const size_t &OrderRHS = Handler->AttachPtrComputationOrderMap.at(RHS);
+      const size_t &OrderLHS = Handler.AttachPtrComputationOrderMap.at(LHS);
+      const size_t &OrderRHS = Handler.AttachPtrComputationOrderMap.at(RHS);
 
       return OrderLHS < OrderRHS;
     }
@@ -6893,7 +6900,7 @@ public:
       if (!LHS || !RHS)
         return false;
 
-      ASTContext &Ctx = Handler->CGF.getContext();
+      ASTContext &Ctx = Handler.CGF.getContext();
       // Strip away parentheses and no-op casts to get to the core expression
       LHS = LHS->IgnoreParenNoopCasts(Ctx);
       RHS = RHS->IgnoreParenNoopCasts(Ctx);
@@ -7241,6 +7248,10 @@ private:
   /// collectAttachPtrExprInfo().
   llvm::DenseMap<const Expr *, size_t> AttachPtrComputationOrderMap = {
       {nullptr, 0}};
+
+  /// An instance of attach-ptr-expr comparator that can be used throughout the
+  /// lifetime of this handler.
+  AttachPtrExprComparator AttachPtrComparator;
 
   llvm::Value *getExprTypeSize(const Expr *E) const {
     QualType ExprTy = E->getType().getCanonicalType();
@@ -8623,6 +8634,15 @@ private:
       if (llvm::is_contained(C->getMotionModifiers(),
                              OMPC_MOTION_MODIFIER_present))
         Kind = Present;
+      if (llvm::is_contained(C->getMotionModifiers(),
+                             OMPC_MOTION_MODIFIER_iterator)) {
+        if (auto *IteratorExpr = dyn_cast<OMPIteratorExpr>(
+                C->getIteratorModifier()->IgnoreParenImpCasts())) {
+          const auto *VD = cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
+          CGF.EmitVarDecl(*VD);
+        }
+      }
+
       const auto *EI = C->getVarRefs().begin();
       for (const auto L : C->component_lists()) {
         InfoGen(std::get<0>(L), Kind, std::get<1>(L), OMPC_MAP_to, {},
@@ -8639,6 +8659,15 @@ private:
       if (llvm::is_contained(C->getMotionModifiers(),
                              OMPC_MOTION_MODIFIER_present))
         Kind = Present;
+      if (llvm::is_contained(C->getMotionModifiers(),
+                             OMPC_MOTION_MODIFIER_iterator)) {
+        if (auto *IteratorExpr = dyn_cast<OMPIteratorExpr>(
+                C->getIteratorModifier()->IgnoreParenImpCasts())) {
+          const auto *VD = cast<VarDecl>(IteratorExpr->getIteratorDecl(0));
+          CGF.EmitVarDecl(*VD);
+        }
+      }
+
       const auto *EI = C->getVarRefs().begin();
       for (const auto L : C->component_lists()) {
         InfoGen(std::get<0>(L), Kind, std::get<1>(L), OMPC_MAP_from, {},
@@ -8959,7 +8988,7 @@ private:
 
 public:
   MappableExprsHandler(const OMPExecutableDirective &Dir, CodeGenFunction &CGF)
-      : CurDir(&Dir), CGF(CGF) {
+      : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {
     // Extract firstprivate clause information.
     for (const auto *C : Dir.getClausesOfKind<OMPFirstprivateClause>())
       for (const auto *D : C->varlist())
@@ -9005,7 +9034,7 @@ public:
 
   /// Constructor for the declare mapper directive.
   MappableExprsHandler(const OMPDeclareMapperDecl &Dir, CodeGenFunction &CGF)
-      : CurDir(&Dir), CGF(CGF) {}
+      : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {}
 
   /// Generate code for the combined entry if we have a partially mapped struct
   /// and take care of the mapping flags of the arguments corresponding to
@@ -10003,19 +10032,44 @@ static llvm::Value *emitDeviceID(
   return DeviceID;
 }
 
-static llvm::Value *emitDynCGGroupMem(const OMPExecutableDirective &D,
-                                      CodeGenFunction &CGF) {
-  llvm::Value *DynCGroupMem = CGF.Builder.getInt32(0);
+static std::pair<llvm::Value *, OMPDynGroupprivateFallbackType>
+emitDynCGroupMem(const OMPExecutableDirective &D, CodeGenFunction &CGF) {
+  llvm::Value *DynGP = CGF.Builder.getInt32(0);
+  auto DynGPFallback = OMPDynGroupprivateFallbackType::Abort;
 
-  if (auto *DynMemClause = D.getSingleClause<OMPXDynCGroupMemClause>()) {
-    CodeGenFunction::RunCleanupsScope DynCGroupMemScope(CGF);
-    llvm::Value *DynCGroupMemVal = CGF.EmitScalarExpr(
-        DynMemClause->getSize(), /*IgnoreResultAssign=*/true);
-    DynCGroupMem = CGF.Builder.CreateIntCast(DynCGroupMemVal, CGF.Int32Ty,
-                                             /*isSigned=*/false);
+  if (auto *DynGPClause = D.getSingleClause<OMPDynGroupprivateClause>()) {
+    CodeGenFunction::RunCleanupsScope DynGPScope(CGF);
+    llvm::Value *DynGPVal =
+        CGF.EmitScalarExpr(DynGPClause->getSize(), /*IgnoreResultAssign=*/true);
+    DynGP = CGF.Builder.CreateIntCast(DynGPVal, CGF.Int32Ty,
+                                      /*isSigned=*/false);
+    auto FallbackModifier = DynGPClause->getDynGroupprivateFallbackModifier();
+    switch (FallbackModifier) {
+    case OMPC_DYN_GROUPPRIVATE_FALLBACK_abort:
+      DynGPFallback = OMPDynGroupprivateFallbackType::Abort;
+      break;
+    case OMPC_DYN_GROUPPRIVATE_FALLBACK_null:
+      DynGPFallback = OMPDynGroupprivateFallbackType::Null;
+      break;
+    case OMPC_DYN_GROUPPRIVATE_FALLBACK_default_mem:
+    case OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown:
+      // This is the default for dyn_groupprivate.
+      DynGPFallback = OMPDynGroupprivateFallbackType::DefaultMem;
+      break;
+    default:
+      llvm_unreachable("Unknown fallback modifier for OpenMP dyn_groupprivate");
+    }
+  } else if (auto *OMPXDynCGClause =
+                 D.getSingleClause<OMPXDynCGroupMemClause>()) {
+    CodeGenFunction::RunCleanupsScope DynCGMemScope(CGF);
+    llvm::Value *DynCGMemVal = CGF.EmitScalarExpr(OMPXDynCGClause->getSize(),
+                                                  /*IgnoreResultAssign=*/true);
+    DynGP = CGF.Builder.CreateIntCast(DynCGMemVal, CGF.Int32Ty,
+                                      /*isSigned=*/false);
   }
-  return DynCGroupMem;
+  return {DynGP, DynGPFallback};
 }
+
 static void genMapInfoForCaptures(
     MappableExprsHandler &MEHandler, CodeGenFunction &CGF,
     const CapturedStmt &CS, llvm::SmallVectorImpl<llvm::Value *> &CapturedVars,
@@ -10224,7 +10278,7 @@ static void emitTargetCallKernelLaunch(
     llvm::Value *RTLoc = OMPRuntime->emitUpdateLocation(CGF, D.getBeginLoc());
     llvm::Value *NumIterations =
         OMPRuntime->emitTargetNumIterationsCall(CGF, D, SizeEmitter);
-    llvm::Value *DynCGGroupMem = emitDynCGGroupMem(D, CGF);
+    auto [DynCGroupMem, DynCGroupMemFallback] = emitDynCGroupMem(D, CGF);
     llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
         CGF.AllocaInsertPt->getParent(), CGF.AllocaInsertPt->getIterator());
 
@@ -10234,7 +10288,7 @@ static void emitTargetCallKernelLaunch(
 
     llvm::OpenMPIRBuilder::TargetKernelArgs Args(
         NumTargetItems, RTArgs, NumIterations, NumTeams, NumThreads,
-        DynCGGroupMem, HasNoWait);
+        DynCGroupMem, HasNoWait, DynCGroupMemFallback);
 
     llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
         cantFail(OMPRuntime->getOMPBuilder().emitKernelLaunch(
@@ -12654,7 +12708,8 @@ llvm::Value *CGOpenMPSIMDRuntime::emitForNext(CodeGenFunction &CGF,
 void CGOpenMPSIMDRuntime::emitNumThreadsClause(
     CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
     OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
-    const Expr *Message) {
+    SourceLocation SeverityLoc, const Expr *Message,
+    SourceLocation MessageLoc) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

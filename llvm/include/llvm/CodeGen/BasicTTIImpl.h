@@ -302,7 +302,6 @@ private:
   /// (e.g. scalarization).
   std::optional<InstructionCost> getMultipleResultIntrinsicVectorLibCallCost(
       const IntrinsicCostAttributes &ICA, TTI::TargetCostKind CostKind,
-      RTLIB::Libcall LC,
       std::optional<unsigned> CallRetElementIndex = {}) const {
     Type *RetTy = ICA.getReturnType();
     // Vector variants of the intrinsic can be mapped to a vector library call.
@@ -311,26 +310,38 @@ private:
         !isVectorizedStructTy(cast<StructType>(RetTy)))
       return std::nullopt;
 
+    Type *Ty = getContainedTypes(RetTy).front();
+    EVT VT = getTLI()->getValueType(DL, Ty);
+
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+
+    switch (ICA.getID()) {
+    case Intrinsic::modf:
+      LC = RTLIB::getMODF(VT);
+      break;
+    case Intrinsic::sincospi:
+      LC = RTLIB::getSINCOSPI(VT);
+      break;
+    case Intrinsic::sincos:
+      LC = RTLIB::getSINCOS(VT);
+      break;
+    default:
+      return std::nullopt;
+    }
+
     // Find associated libcall.
-    const char *LCName = getTLI()->getLibcallName(LC);
-    if (!LCName)
+    RTLIB::LibcallImpl LibcallImpl = getTLI()->getLibcallImpl(LC);
+    if (LibcallImpl == RTLIB::Unsupported)
       return std::nullopt;
 
-    // Search for a corresponding vector variant.
     LLVMContext &Ctx = RetTy->getContext();
-    ElementCount VF = getVectorizedTypeVF(RetTy);
-    VecDesc const *VD = nullptr;
-    for (bool Masked : {false, true}) {
-      if ((VD = LibInfo->getVectorMappingInfo(LCName, VF, Masked)))
-        break;
-    }
-    if (!VD)
-      return std::nullopt;
 
     // Cost the call + mask.
     auto Cost =
         thisT()->getCallInstrCost(nullptr, RetTy, ICA.getArgTypes(), CostKind);
-    if (VD->isMasked()) {
+
+    if (RTLIB::RuntimeLibcallsInfo::hasVectorMaskArgument(LibcallImpl)) {
+      ElementCount VF = getVectorizedTypeVF(RetTy);
       auto VecTy = VectorType::get(IntegerType::getInt1Ty(Ctx), VF);
       Cost += thisT()->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
                                       VecTy, {}, CostKind, 0, nullptr, {});
@@ -366,7 +377,7 @@ private:
 protected:
   explicit BasicTTIImplBase(const TargetMachine *TM, const DataLayout &DL)
       : BaseT(DL) {}
-  virtual ~BasicTTIImplBase() = default;
+  ~BasicTTIImplBase() override = default;
 
   using TargetTransformInfoImplBase::DL;
 
@@ -594,12 +605,13 @@ public:
 
     // Check if suitable for a bit test
     if (N <= DL.getIndexSizeInBits(0u)) {
-      SmallPtrSet<const BasicBlock *, 4> Dests;
-      for (auto I : SI.cases())
-        Dests.insert(I.getCaseSuccessor());
+      DenseMap<const BasicBlock *, unsigned int> DestMap;
+      for (auto I : SI.cases()) {
+        const BasicBlock *BB = I.getCaseSuccessor();
+        ++DestMap[BB];
+      }
 
-      if (TLI->isSuitableForBitTests(Dests.size(), N, MinCaseVal, MaxCaseVal,
-                                     DL))
+      if (TLI->isSuitableForBitTests(DestMap, MinCaseVal, MaxCaseVal, DL))
         return 1;
     }
 
@@ -821,13 +833,13 @@ public:
         SimplifyAndSetOp);
   }
 
-  virtual std::optional<unsigned>
+  std::optional<unsigned>
   getCacheSize(TargetTransformInfo::CacheLevel Level) const override {
     return std::optional<unsigned>(
         getST()->getCacheSize(static_cast<unsigned>(Level)));
   }
 
-  virtual std::optional<unsigned>
+  std::optional<unsigned>
   getCacheAssociativity(TargetTransformInfo::CacheLevel Level) const override {
     std::optional<unsigned> TargetResult =
         getST()->getCacheAssociativity(static_cast<unsigned>(Level));
@@ -838,31 +850,31 @@ public:
     return BaseT::getCacheAssociativity(Level);
   }
 
-  virtual unsigned getCacheLineSize() const override {
+  unsigned getCacheLineSize() const override {
     return getST()->getCacheLineSize();
   }
 
-  virtual unsigned getPrefetchDistance() const override {
+  unsigned getPrefetchDistance() const override {
     return getST()->getPrefetchDistance();
   }
 
-  virtual unsigned getMinPrefetchStride(unsigned NumMemAccesses,
-                                        unsigned NumStridedMemAccesses,
-                                        unsigned NumPrefetches,
-                                        bool HasCall) const override {
+  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                unsigned NumStridedMemAccesses,
+                                unsigned NumPrefetches,
+                                bool HasCall) const override {
     return getST()->getMinPrefetchStride(NumMemAccesses, NumStridedMemAccesses,
                                          NumPrefetches, HasCall);
   }
 
-  virtual unsigned getMaxPrefetchIterationsAhead() const override {
+  unsigned getMaxPrefetchIterationsAhead() const override {
     return getST()->getMaxPrefetchIterationsAhead();
   }
 
-  virtual bool enableWritePrefetching() const override {
+  bool enableWritePrefetching() const override {
     return getST()->enableWritePrefetching();
   }
 
-  virtual bool shouldPrefetchAddressSpace(unsigned AS) const override {
+  bool shouldPrefetchAddressSpace(unsigned AS) const override {
     return getST()->shouldPrefetchAddressSpace(AS);
   }
 
@@ -1305,8 +1317,8 @@ public:
       bool SplitDst =
           TLI->getTypeAction(Dst->getContext(), TLI->getValueType(DL, Dst)) ==
           TargetLowering::TypeSplitVector;
-      if ((SplitSrc || SplitDst) && SrcVTy->getElementCount().isVector() &&
-          DstVTy->getElementCount().isVector()) {
+      if ((SplitSrc || SplitDst) && SrcVTy->getElementCount().isKnownEven() &&
+          DstVTy->getElementCount().isKnownEven()) {
         Type *SplitDstTy = VectorType::getHalfElementsVectorType(DstVTy);
         Type *SplitSrcTy = VectorType::getHalfElementsVectorType(SrcVTy);
         const T *TTI = thisT();
@@ -1546,9 +1558,13 @@ public:
   }
 
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *DataTy, Align Alignment,
-                        unsigned AddressSpace,
+  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const override {
+    Type *DataTy = MICA.getDataType();
+    Align Alignment = MICA.getAlignment();
+    unsigned Opcode = MICA.getID() == Intrinsic::masked_load
+                          ? Instruction::Load
+                          : Instruction::Store;
     // TODO: Pass on AddressSpace when we have test coverage.
     return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, true, false,
                                        CostKind);
@@ -1564,10 +1580,14 @@ public:
   }
 
   InstructionCost
-  getExpandCompressMemoryOpCost(unsigned Opcode, Type *DataTy,
-                                bool VariableMask, Align Alignment,
-                                TTI::TargetCostKind CostKind,
-                                const Instruction *I = nullptr) const override {
+  getExpandCompressMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                TTI::TargetCostKind CostKind) const override {
+    unsigned Opcode = MICA.getID() == Intrinsic::masked_expandload
+                          ? Instruction::Load
+                          : Instruction::Store;
+    Type *DataTy = MICA.getDataType();
+    bool VariableMask = MICA.getVariableMask();
+    Align Alignment = MICA.getAlignment();
     // Treat expand load/compress store as gather/scatter operation.
     // TODO: implement more precise cost estimation for these intrinsics.
     return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
@@ -1605,10 +1625,13 @@ public:
 
     // Firstly, the cost of load/store operation.
     InstructionCost Cost;
-    if (UseMaskForCond || UseMaskForGaps)
-      Cost = thisT()->getMaskedMemoryOpCost(Opcode, VecTy, Alignment,
-                                            AddressSpace, CostKind);
-    else
+    if (UseMaskForCond || UseMaskForGaps) {
+      unsigned IID = Opcode == Instruction::Load ? Intrinsic::masked_load
+                                                 : Intrinsic::masked_store;
+      Cost = thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, VecTy, Alignment, AddressSpace),
+          CostKind);
+    } else
       Cost = thisT()->getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace,
                                       CostKind);
 
@@ -1794,7 +1817,16 @@ public:
           }
         }
       }
-
+      if (ICA.getID() == Intrinsic::vp_load_ff) {
+        Type *RetTy = ICA.getReturnType();
+        Type *DataTy = cast<StructType>(RetTy)->getElementType(0);
+        Align Alignment;
+        if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
+          Alignment = VPI->getPointerAlignment().valueOrOne();
+        return thisT()->getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(ICA.getID(), DataTy, Alignment),
+            CostKind);
+      }
       if (ICA.getID() == Intrinsic::vp_scatter) {
         if (ICA.isTypeBasedOnly()) {
           IntrinsicCostAttributes MaskedScatter(
@@ -1807,9 +1839,11 @@ public:
         if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
           Alignment = VPI->getPointerAlignment().valueOrOne();
         bool VarMask = isa<Constant>(ICA.getArgs()[2]);
-        return thisT()->getGatherScatterOpCost(
-            Instruction::Store, ICA.getArgTypes()[0], ICA.getArgs()[1], VarMask,
-            Alignment, CostKind, nullptr);
+        return thisT()->getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(Intrinsic::vp_scatter,
+                                       ICA.getArgTypes()[0], ICA.getArgs()[1],
+                                       VarMask, Alignment, nullptr),
+            CostKind);
       }
       if (ICA.getID() == Intrinsic::vp_gather) {
         if (ICA.isTypeBasedOnly()) {
@@ -1823,9 +1857,11 @@ public:
         if (auto *VPI = dyn_cast_or_null<VPIntrinsic>(ICA.getInst()))
           Alignment = VPI->getPointerAlignment().valueOrOne();
         bool VarMask = isa<Constant>(ICA.getArgs()[1]);
-        return thisT()->getGatherScatterOpCost(
-            Instruction::Load, ICA.getReturnType(), ICA.getArgs()[0], VarMask,
-            Alignment, CostKind, nullptr);
+        return thisT()->getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(Intrinsic::vp_gather,
+                                       ICA.getReturnType(), ICA.getArgs()[0],
+                                       VarMask, Alignment, nullptr),
+            CostKind);
       }
 
       if (ICA.getID() == Intrinsic::vp_select ||
@@ -1927,34 +1963,40 @@ public:
       return thisT()->getMemcpyCost(ICA.getInst());
 
     case Intrinsic::masked_scatter: {
-      const Value *Mask = Args[3];
-      bool VarMask = !isa<Constant>(Mask);
-      Align Alignment = cast<ConstantInt>(Args[2])->getAlignValue();
-      return thisT()->getGatherScatterOpCost(Instruction::Store,
-                                             ICA.getArgTypes()[0], Args[1],
-                                             VarMask, Alignment, CostKind, I);
-    }
-    case Intrinsic::masked_gather: {
       const Value *Mask = Args[2];
       bool VarMask = !isa<Constant>(Mask);
-      Align Alignment = cast<ConstantInt>(Args[1])->getAlignValue();
-      return thisT()->getGatherScatterOpCost(Instruction::Load, RetTy, Args[0],
-                                             VarMask, Alignment, CostKind, I);
+      Align Alignment = I->getParamAlign(1).valueOrOne();
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(Intrinsic::masked_scatter,
+                                     ICA.getArgTypes()[0], Args[1], VarMask,
+                                     Alignment, I),
+          CostKind);
+    }
+    case Intrinsic::masked_gather: {
+      const Value *Mask = Args[1];
+      bool VarMask = !isa<Constant>(Mask);
+      Align Alignment = I->getParamAlign(0).valueOrOne();
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(Intrinsic::masked_gather, RetTy, Args[0],
+                                     VarMask, Alignment, I),
+          CostKind);
     }
     case Intrinsic::masked_compressstore: {
       const Value *Data = Args[0];
       const Value *Mask = Args[2];
       Align Alignment = I->getParamAlign(1).valueOrOne();
-      return thisT()->getExpandCompressMemoryOpCost(
-          Instruction::Store, Data->getType(), !isa<Constant>(Mask), Alignment,
-          CostKind, I);
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, Data->getType(), !isa<Constant>(Mask),
+                                     Alignment, I),
+          CostKind);
     }
     case Intrinsic::masked_expandload: {
       const Value *Mask = Args[1];
       Align Alignment = I->getParamAlign(0).valueOrOne();
-      return thisT()->getExpandCompressMemoryOpCost(Instruction::Load, RetTy,
-                                                    !isa<Constant>(Mask),
-                                                    Alignment, CostKind, I);
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, RetTy, !isa<Constant>(Mask),
+                                     Alignment, I),
+          CostKind);
     }
     case Intrinsic::experimental_vp_strided_store: {
       const Value *Data = Args[0];
@@ -1965,9 +2007,10 @@ public:
       Type *EltTy = cast<VectorType>(Data->getType())->getElementType();
       Align Alignment =
           I->getParamAlign(1).value_or(thisT()->DL.getABITypeAlign(EltTy));
-      return thisT()->getStridedMemoryOpCost(Instruction::Store,
-                                             Data->getType(), Ptr, VarMask,
-                                             Alignment, CostKind, I);
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, Data->getType(), Ptr, VarMask,
+                                     Alignment, I),
+          CostKind);
     }
     case Intrinsic::experimental_vp_strided_load: {
       const Value *Ptr = Args[0];
@@ -1977,8 +2020,9 @@ public:
       Type *EltTy = cast<VectorType>(RetTy)->getElementType();
       Align Alignment =
           I->getParamAlign(0).value_or(thisT()->DL.getABITypeAlign(EltTy));
-      return thisT()->getStridedMemoryOpCost(Instruction::Load, RetTy, Ptr,
-                                             VarMask, Alignment, CostKind, I);
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, RetTy, Ptr, VarMask, Alignment, I),
+          CostKind);
     }
     case Intrinsic::stepvector: {
       if (isa<ScalableVectorType>(RetTy))
@@ -2136,22 +2180,6 @@ public:
     case Intrinsic::modf:
     case Intrinsic::sincos:
     case Intrinsic::sincospi: {
-      Type *Ty = getContainedTypes(RetTy).front();
-      EVT VT = getTLI()->getValueType(DL, Ty);
-
-      RTLIB::Libcall LC = [&] {
-        switch (ICA.getID()) {
-        case Intrinsic::modf:
-          return RTLIB::getMODF;
-        case Intrinsic::sincos:
-          return RTLIB::getSINCOS;
-        case Intrinsic::sincospi:
-          return RTLIB::getSINCOSPI;
-        default:
-          llvm_unreachable("unexpected intrinsic");
-        }
-      }()(VT.getScalarType());
-
       std::optional<unsigned> CallRetElementIndex;
       // The first element of the modf result is returned by value in the
       // libcall.
@@ -2159,7 +2187,7 @@ public:
         CallRetElementIndex = 0;
 
       if (auto Cost = getMultipleResultIntrinsicVectorLibCallCost(
-              ICA, CostKind, LC, CallRetElementIndex))
+              ICA, CostKind, CallRetElementIndex))
         return *Cost;
       // Otherwise, fallback to default scalarization cost.
       break;
@@ -2407,28 +2435,32 @@ public:
     case Intrinsic::masked_store: {
       Type *Ty = Tys[0];
       Align TyAlign = thisT()->DL.getABITypeAlign(Ty);
-      return thisT()->getMaskedMemoryOpCost(Instruction::Store, Ty, TyAlign, 0,
-                                            CostKind);
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, Ty, TyAlign, 0), CostKind);
     }
     case Intrinsic::masked_load: {
       Type *Ty = RetTy;
       Align TyAlign = thisT()->DL.getABITypeAlign(Ty);
-      return thisT()->getMaskedMemoryOpCost(Instruction::Load, Ty, TyAlign, 0,
-                                            CostKind);
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, Ty, TyAlign, 0), CostKind);
     }
     case Intrinsic::experimental_vp_strided_store: {
       auto *Ty = cast<VectorType>(ICA.getArgTypes()[0]);
       Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
-      return thisT()->getStridedMemoryOpCost(
-          Instruction::Store, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
-          Alignment, CostKind, ICA.getInst());
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, Ty, /*Ptr=*/nullptr,
+                                     /*VariableMask=*/true, Alignment,
+                                     ICA.getInst()),
+          CostKind);
     }
     case Intrinsic::experimental_vp_strided_load: {
       auto *Ty = cast<VectorType>(ICA.getReturnType());
       Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
-      return thisT()->getStridedMemoryOpCost(
-          Instruction::Load, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
-          Alignment, CostKind, ICA.getInst());
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, Ty, /*Ptr=*/nullptr,
+                                     /*VariableMask=*/true, Alignment,
+                                     ICA.getInst()),
+          CostKind);
     }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
@@ -3014,6 +3046,50 @@ public:
 
     // This is going to be turned into a library call, make it expensive.
     return SingleCallCost;
+  }
+
+  /// Get memory intrinsic cost based on arguments.
+  InstructionCost
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const override {
+    unsigned Id = MICA.getID();
+    Type *DataTy = MICA.getDataType();
+    const Value *Ptr = MICA.getPointer();
+    const Instruction *I = MICA.getInst();
+    bool VariableMask = MICA.getVariableMask();
+    Align Alignment = MICA.getAlignment();
+
+    switch (Id) {
+    case Intrinsic::experimental_vp_strided_load:
+    case Intrinsic::experimental_vp_strided_store: {
+      unsigned Opcode = Id == Intrinsic::experimental_vp_strided_load
+                            ? Instruction::Load
+                            : Instruction::Store;
+      return thisT()->getStridedMemoryOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                             Alignment, CostKind, I);
+    }
+    case Intrinsic::masked_scatter:
+    case Intrinsic::masked_gather:
+    case Intrinsic::vp_scatter:
+    case Intrinsic::vp_gather: {
+      unsigned Opcode =
+          (Id == Intrinsic::masked_gather || Id == Intrinsic::vp_gather)
+              ? Instruction::Load
+              : Instruction::Store;
+      return thisT()->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                             Alignment, CostKind, I);
+    }
+    case Intrinsic::masked_load:
+    case Intrinsic::masked_store:
+      return thisT()->getMaskedMemoryOpCost(MICA, CostKind);
+    case Intrinsic::masked_compressstore:
+    case Intrinsic::masked_expandload:
+      return thisT()->getExpandCompressMemoryOpCost(MICA, CostKind);
+    case Intrinsic::vp_load_ff:
+      return InstructionCost::getInvalid();
+    default:
+      llvm_unreachable("unexpected intrinsic");
+    }
   }
 
   /// Compute a cost of the given call instruction.

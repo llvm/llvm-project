@@ -14,7 +14,8 @@
 #define LLVM_CLANG_AST_INTERP_INTERPFRAME_H
 
 #include "Frame.h"
-#include "Program.h"
+#include "InterpBlock.h"
+#include "Pointer.h"
 
 namespace clang {
 namespace interp {
@@ -54,6 +55,10 @@ public:
   void destroy(unsigned Idx);
   void initScope(unsigned Idx);
   void destroyScopes();
+  void enableLocal(unsigned Idx);
+  bool isLocalEnabled(unsigned Idx) const {
+    return localInlineDesc(Idx)->IsActive;
+  }
 
   /// Describes the frame with arguments for diagnostic purposes.
   void describe(llvm::raw_ostream &OS) const override;
@@ -93,7 +98,7 @@ public:
     auto Pt = Params.find(Offset);
     if (Pt == Params.end())
       return stackRef<T>(Offset);
-    return Pointer(reinterpret_cast<Block *>(Pt->second.get())).deref<T>();
+    return reinterpret_cast<const Block *>(Pt->second.get())->deref<T>();
   }
 
   /// Mutates a local copy of a parameter.
@@ -108,6 +113,7 @@ public:
   /// Returns the 'this' pointer.
   const Pointer &getThis() const {
     assert(hasThisPointer());
+    assert(!isBottomFrame());
     return stackRef<Pointer>(ThisPointerOffset);
   }
 
@@ -115,6 +121,7 @@ public:
   const Pointer &getRVOPtr() const {
     assert(Func);
     assert(Func->hasRVO());
+    assert(!isBottomFrame());
     return stackRef<Pointer>(0);
   }
 
@@ -151,7 +158,7 @@ private:
 
   /// Returns an offset to a local.
   template <typename T> T &localRef(unsigned Offset) const {
-    return getLocalPointer(Offset).deref<T>();
+    return localBlock(Offset)->deref<T>();
   }
 
   /// Returns a pointer to a local's block.

@@ -81,10 +81,13 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
   let description = [{
     Convert FIR structured control flow ops to SCF dialect.
   }];
-  let constructor = "::fir::createFIRToSCFPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::scf::SCFDialect"
   ];
+  let options = [Option<"parallelUnordered", "parallel-unordered", "bool",
+                        /*default=*/"false",
+                        "Allow converting a fir.do_loop with the `unordered` "
+                        "attribute to scf.parallel (experimental).">];
 }
 
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
@@ -246,6 +249,10 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "int32_t",
            /*default=*/"0",
            "dwarf version">,
+    Option<"splitDwarfFile", "split-dwarf-file",
+           "std::string", /*default=*/"std::string{}",
+           "Name of the split dwarf file">
+
   ];
 }
 
@@ -432,7 +439,7 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               "Set the no-signed-zeros-fp-math attribute on functions in the "
               "module.">,
        Option<"unsafeFPMath", "unsafe-fp-math", "bool", /*default=*/"false",
-              "Set the unsafe-fp-math attribute on functions in the module.">,
+              "Set all fast-math flags on instructions in the module.">,
        Option<"reciprocals", "mrecip", "std::string", /*default=*/"",
               "Set the reciprocal-estimates attribute on functions in the "
               "module.">,
@@ -463,11 +470,19 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
   ];
 }
 
+def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
+  let summary = "Convert allocation related CUF operations to runtime calls";
+  let dependentDialects = ["fir::FIROpsDialect"];
+}
+
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::gpu::GPUDialect", "mlir::DLTIDialect"
   ];
+  let options = [Option<"allocationConversion", "allocation-conversion", "bool",
+                        /*default=*/"true",
+                        "Convert allocation related operation with this pass">];
 }
 
 def CUFDeviceGlobal :
@@ -574,6 +589,11 @@ def OptimizeArrayRepacking
     then this pass erases such operations. The corresponding
     fir.unpack_array operations are also removed.
   }];
+}
+
+def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
+  let summary = "Convert some MIF operations to runtime calls";
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES
