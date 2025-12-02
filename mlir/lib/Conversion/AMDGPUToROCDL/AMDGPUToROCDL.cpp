@@ -2348,7 +2348,7 @@ struct AMDGPUMakeDmaDescriptorLowering
   Value getDGroup0(OpAdaptor adaptor) const { return adaptor.getBase(); }
 
   Value setValueAtOffset(ConversionPatternRewriter &rewriter, Location loc,
-                         Value accumulator, Value value, int shift) const {
+                         Value accumulator, Value value, int64_t shift) const {
     shift = shift % 32;
     Value shiftAmount;
     if (shift != 0) {
@@ -2510,7 +2510,7 @@ struct AMDGPUMakeDmaDescriptorLowering
   Value setTileDimX(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr, ArrayRef<Value> consts, size_t dimX,
-                    int offset) const {
+                    int64_t offset) const {
     SmallVector<OpFoldResult> mixedSharedSizes = op.getMixedSharedSizes();
 
     if (mixedSharedSizes.size() <= dimX) {
@@ -2550,7 +2550,7 @@ struct AMDGPUMakeDmaDescriptorLowering
   setTensorDimXStride(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgprY, Value sgprZ, ArrayRef<Value> consts,
-                      size_t dimX, int offset) const {
+                      size_t dimX, int64_t offset) const {
     SmallVector<OpFoldResult> mixedGlobalStrides = op.getMixedGlobalStrides();
 
     if (mixedGlobalStrides.size() <= dimX) {
@@ -2575,7 +2575,7 @@ struct AMDGPUMakeDmaDescriptorLowering
     Value tensorDimXStrideLow =
         LLVM::TruncOp::create(rewriter, loc, i32, tensorDimXStride);
 
-    int shift = (offset % 32) == 0 ? 32 : offset % 32;
+    int64_t shift = (offset % 32) == 0 ? 32 : offset % 32;
     Value shiftVal = createI64Constant(rewriter, loc, shift);
     Value tensorDimXStrideHigh =
         LLVM::LShrOp::create(rewriter, loc, tensorDimXStride, shiftVal);
