@@ -7012,9 +7012,6 @@ static void handleModularFormat(Sema &S, Decl *D, const ParsedAttr &AL) {
     Aspects.push_back(Aspect);
   }
 
-  if (HasDuplicate)
-    return;
-
   // Store aspects sorted.
   llvm::sort(Aspects);
 
@@ -7027,6 +7024,9 @@ static void handleModularFormat(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
     D->dropAttr<ModularFormatAttr>();
   }
+
+  if (HasDuplicate)
+    return;
 
   D->addAttr(::new (S.Context) ModularFormatAttr(
       S.Context, AL, ModularImplFn, ImplName, Aspects.data(), Aspects.size()));
