@@ -285,8 +285,6 @@ bb:
 define amdgpu_kernel void @test_array_vector() #0 {
 ; CHECK-LABEL: @test_array_vector(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5:%.*]] = alloca <8 x half>, align 16
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[B_BLOCKWISE_COPY_SROA_5]], i8 0, i32 16, i1 false)
 ; CHECK-NEXT:    [[DATA:%.*]] = load <4 x float>, ptr undef, align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
@@ -318,8 +316,6 @@ bb:
 define amdgpu_kernel void @test_array_vector2() #0 {
 ; CHECK-LABEL: @test_array_vector2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_5:%.*]] = alloca <8 x half>, align 16
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[B_BLOCKWISE_COPY_SROA_5]], i8 0, i32 16, i1 false)
 ; CHECK-NEXT:    [[DATA:%.*]] = load <4 x float>, ptr undef, align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[DATA]] to <8 x i16>
 ; CHECK-NEXT:    br label [[BB:%.*]]
@@ -355,12 +351,10 @@ define amdgpu_kernel void @test_array_vector_no_vector_common_type() #0 {
 ; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4:%.*]] = alloca float, align 4
 ; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_7:%.*]] = alloca float, align 8
 ; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_10:%.*]] = alloca float, align 4
-; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_13:%.*]] = alloca <8 x half>, align 16
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[B_BLOCKWISE_COPY_SROA_0]], i8 0, i32 4, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[B_BLOCKWISE_COPY_SROA_4]], i8 0, i32 4, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 8 [[B_BLOCKWISE_COPY_SROA_7]], i8 0, i32 4, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[B_BLOCKWISE_COPY_SROA_10]], i8 0, i32 4, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[B_BLOCKWISE_COPY_SROA_13]], i8 0, i32 16, i1 false)
 ; CHECK-NEXT:    [[DATA1:%.*]] = load float, ptr undef, align 4
 ; CHECK-NEXT:    [[DATA2:%.*]] = load float, ptr undef, align 4
 ; CHECK-NEXT:    [[DATA3:%.*]] = load float, ptr undef, align 4

@@ -491,6 +491,10 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
   for_each(DVRAssignMarkerRange, MigrateDbgAssign);
 }
 
+static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
+                              uint64_t Size);
+static Type *getTypePartition(const AllocaInst &AI, const Partition &P);
+
 namespace {
 
 /// A custom IRBuilder inserter which prefixes all names, but only in
@@ -1010,6 +1014,35 @@ static Value *foldPHINodeOrSelectInst(Instruction &I) {
   return foldSelectInst(cast<SelectInst>(I));
 }
 
+/// Returns a fixed vector type equivalent to the memory set by II or nullptr if
+/// not viable.
+static FixedVectorType *getVectorTypeFor(const DataLayout &DL, Type *PartTy,
+                                         const MemSetInst &II) {
+  auto *PartVecTy = dyn_cast_or_null<FixedVectorType>(PartTy);
+  if (!PartVecTy)
+    return nullptr;
+
+  const uint64_t PartVecSize = DL.getTypeStoreSize(PartVecTy).getFixedValue();
+
+  const ConstantInt *Length = dyn_cast<ConstantInt>(II.getLength());
+  if (!Length)
+    return nullptr;
+
+  const APInt &Val = Length->getValue();
+  if (Val.ugt(PartVecSize))
+    return nullptr;
+
+  // Element type will always be i8. TODO: Support
+  // llvm.experimental.memset.pattern?
+  return FixedVectorType::get(II.getValue()->getType(), Val.getZExtValue());
+}
+
+static FixedVectorType *getVectorTypeFor(const AllocaInst &AI,
+                                         const Partition &P,
+                                         const MemSetInst &II) {
+  return getVectorTypeFor(AI.getDataLayout(), getTypePartition(AI, P), II);
+}
+
 /// Builder for the alloca slices.
 ///
 /// This class builds a set of alloca slices by recursively visiting the uses
@@ -1021,6 +1054,7 @@ class AllocaSlices::SliceBuilder : public PtrUseVisitor<SliceBuilder> {
   using Base = PtrUseVisitor<SliceBuilder>;
 
   const uint64_t AllocSize;
+  const AllocaInst &AI;
   AllocaSlices &AS;
 
   SmallDenseMap<Instruction *, unsigned> MemTransferSliceMap;
@@ -1033,7 +1067,7 @@ public:
   SliceBuilder(const DataLayout &DL, AllocaInst &AI, AllocaSlices &AS)
       : PtrUseVisitor<SliceBuilder>(DL),
         AllocSize(DL.getTypeAllocSize(AI.getAllocatedType()).getFixedValue()),
-        AS(AS) {}
+        AI(AI), AS(AS) {}
 
 private:
   void markAsDead(Instruction &I) {
@@ -1181,10 +1215,17 @@ private:
     if (!IsOffsetKnown)
       return PI.setAborted(&II);
 
-    insertUse(II, Offset,
-              Length ? Length->getLimitedValue()
-                     : AllocSize - Offset.getLimitedValue(),
-              (bool)Length);
+    uint64_t Size = Length ? Length->getLimitedValue()
+                           : AllocSize - Offset.getLimitedValue();
+    bool Splittable = (bool)Length;
+    if (Splittable) {
+      // Encourage the use of vector types by making this non-splittable if the
+      // memset corresponds to viable vector type.
+      Type *PartTy = getTypePartition(DL, AI.getAllocatedType(),
+                                      Offset.getLimitedValue(), Size);
+      Splittable = !getVectorTypeFor(DL, PartTy, II);
+    }
+    insertUse(II, Offset, Size, Splittable);
   }
 
   void visitMemTransferInst(MemTransferInst &II) {
@@ -2108,11 +2149,12 @@ static Value *convertValue(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
 ///
 /// This function is called to test each entry in a partition which is slated
 /// for a single slice.
-static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
-                                            VectorType *Ty,
+static bool isVectorPromotionViableForSlice(const AllocaInst &AI, Partition &P,
+                                            const Slice &S, VectorType *Ty,
                                             uint64_t ElementSize,
-                                            const DataLayout &DL,
                                             unsigned VScale) {
+  const DataLayout &DL = AI.getDataLayout();
+
   // First validate the slice offsets.
   uint64_t BeginOffset =
       std::max(S.beginOffset(), P.beginOffset()) - P.beginOffset();
@@ -2140,8 +2182,20 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
   if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(U->getUser())) {
     if (MI->isVolatile())
       return false;
-    if (!S.isSplittable())
-      return false; // Skip any unsplittable intrinsics.
+
+    if (!S.isSplittable()) {
+      // Skip any non-memset unsplittable intrinsics.
+      auto *II = dyn_cast<MemSetInst>(U->getUser());
+      if (!II)
+        return false;
+
+      // For memset, allow if we have a viable vector type
+      Type *VTy = getVectorTypeFor(AI, P, *II);
+      if (!VTy)
+        return false;
+      if (!canConvertValue(DL, SliceTy, VTy))
+        return false;
+    }
   } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U->getUser())) {
     if (!II->isLifetimeStartOrEnd() && !II->isDroppable())
       return false;
@@ -2183,8 +2237,9 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
 /// This implements the necessary checking for \c checkVectorTypesForPromotion
 /// (and thus isVectorPromotionViable) over all slices of the alloca for the
 /// given VectorType.
-static bool checkVectorTypeForPromotion(Partition &P, VectorType *VTy,
-                                        const DataLayout &DL, unsigned VScale) {
+static bool checkVectorTypeForPromotion(const AllocaInst &AI, Partition &P,
+                                        VectorType *VTy, unsigned VScale) {
+  const DataLayout &DL = AI.getDataLayout();
   uint64_t ElementSize =
       DL.getTypeSizeInBits(VTy->getElementType()).getFixedValue();
 
@@ -2197,11 +2252,11 @@ static bool checkVectorTypeForPromotion(Partition &P, VectorType *VTy,
   ElementSize /= 8;
 
   for (const Slice &S : P)
-    if (!isVectorPromotionViableForSlice(P, S, VTy, ElementSize, DL, VScale))
+    if (!isVectorPromotionViableForSlice(AI, P, S, VTy, ElementSize, VScale))
       return false;
 
   for (const Slice *S : P.splitSliceTails())
-    if (!isVectorPromotionViableForSlice(P, *S, VTy, ElementSize, DL, VScale))
+    if (!isVectorPromotionViableForSlice(AI, P, *S, VTy, ElementSize, VScale))
       return false;
 
   return true;
@@ -2212,11 +2267,12 @@ static bool checkVectorTypeForPromotion(Partition &P, VectorType *VTy,
 /// This implements the necessary checking for \c isVectorPromotionViable over
 /// all slices of the alloca for the given VectorType.
 static VectorType *
-checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
+checkVectorTypesForPromotion(const AllocaInst &AI, Partition &P,
                              SmallVectorImpl<VectorType *> &CandidateTys,
                              bool HaveCommonEltTy, Type *CommonEltTy,
                              bool HaveVecPtrTy, bool HaveCommonVecPtrTy,
                              VectorType *CommonVecPtrTy, unsigned VScale) {
+  const DataLayout &DL = AI.getDataLayout();
   // If we didn't find a vector type, nothing to do here.
   if (CandidateTys.empty())
     return nullptr;
@@ -2292,7 +2348,7 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
   });
 
   for (VectorType *VTy : CandidateTys)
-    if (checkVectorTypeForPromotion(P, VTy, DL, VScale))
+    if (checkVectorTypeForPromotion(AI, P, VTy, VScale))
       return VTy;
 
   return nullptr;
@@ -2300,10 +2356,11 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
 
 static VectorType *createAndCheckVectorTypesForPromotion(
     SetVector<Type *> &OtherTys, ArrayRef<VectorType *> CandidateTysCopy,
-    function_ref<void(Type *)> CheckCandidateType, Partition &P,
-    const DataLayout &DL, SmallVectorImpl<VectorType *> &CandidateTys,
+    function_ref<void(Type *)> CheckCandidateType, const AllocaInst &AI,
+    Partition &P, SmallVectorImpl<VectorType *> &CandidateTys,
     bool &HaveCommonEltTy, Type *&CommonEltTy, bool &HaveVecPtrTy,
     bool &HaveCommonVecPtrTy, VectorType *&CommonVecPtrTy, unsigned VScale) {
+  const DataLayout &DL = AI.getDataLayout();
   [[maybe_unused]] VectorType *OriginalElt =
       CandidateTysCopy.size() ? CandidateTysCopy[0] : nullptr;
   // Consider additional vector types where the element type size is a
@@ -2329,7 +2386,7 @@ static VectorType *createAndCheckVectorTypesForPromotion(
   }
 
   return checkVectorTypesForPromotion(
-      P, DL, CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
+      AI, P, CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
       HaveCommonVecPtrTy, CommonVecPtrTy, VScale);
 }
 
@@ -2342,10 +2399,11 @@ static VectorType *createAndCheckVectorTypesForPromotion(
 /// SSA value. We only can ensure this for a limited set of operations, and we
 /// don't want to do the rewrites unless we are confident that the result will
 /// be promotable, so we have an early test here.
-static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL,
+static VectorType *isVectorPromotionViable(const AllocaInst &AI, Partition &P,
                                            unsigned VScale) {
   // Collect the candidate types for vector-based promotion. Also track whether
   // we have different element types.
+  const DataLayout &DL = AI.getDataLayout();
   SmallVector<VectorType *, 4> CandidateTys;
   SetVector<Type *> LoadStoreTys;
   SetVector<Type *> DeferredTys;
@@ -2385,12 +2443,16 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL,
 
   // Put load and store types into a set for de-duplication.
   for (const Slice &S : P) {
-    Type *Ty;
+    Type *Ty = nullptr;
     if (auto *LI = dyn_cast<LoadInst>(S.getUse()->getUser()))
       Ty = LI->getType();
     else if (auto *SI = dyn_cast<StoreInst>(S.getUse()->getUser()))
       Ty = SI->getValueOperand()->getType();
-    else
+    else if (auto *II = dyn_cast<MemSetInst>(S.getUse()->getUser())) {
+      Ty = getVectorTypeFor(AI, P, *II);
+      if (!Ty)
+        continue;
+    } else
       continue;
 
     auto CandTy = Ty->getScalarType();
@@ -2408,14 +2470,14 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL,
 
   SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
   if (auto *VTy = createAndCheckVectorTypesForPromotion(
-          LoadStoreTys, CandidateTysCopy, CheckCandidateType, P, DL,
+          LoadStoreTys, CandidateTysCopy, CheckCandidateType, AI, P,
           CandidateTys, HaveCommonEltTy, CommonEltTy, HaveVecPtrTy,
           HaveCommonVecPtrTy, CommonVecPtrTy, VScale))
     return VTy;
 
   CandidateTys.clear();
   return createAndCheckVectorTypesForPromotion(
-      DeferredTys, CandidateTysCopy, CheckCandidateType, P, DL, CandidateTys,
+      DeferredTys, CandidateTysCopy, CheckCandidateType, AI, P, CandidateTys,
       HaveCommonEltTy, CommonEltTy, HaveVecPtrTy, HaveCommonVecPtrTy,
       CommonVecPtrTy, VScale);
 }
@@ -4692,6 +4754,13 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
   return SubTy;
 }
 
+static Type *getTypePartition(const AllocaInst &AI, const Partition &P) {
+  if (P.empty())
+    return nullptr;
+  return getTypePartition(AI.getDataLayout(), AI.getAllocatedType(),
+                          P.beginOffset(), P.size());
+}
+
 /// Pre-split loads and stores to simplify rewriting.
 ///
 /// We want to break up the splittable load+store pairs as much as
@@ -5239,12 +5308,12 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
 
   // If the common use types are not viable for promotion then attempt to find
   // another type that is viable.
-  if (SliceVecTy && !checkVectorTypeForPromotion(P, SliceVecTy, DL, VScale))
+  if (SliceVecTy && !checkVectorTypeForPromotion(AI, P, SliceVecTy, VScale))
     if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
                                                  P.beginOffset(), P.size())) {
       VectorType *TypePartitionVecTy = dyn_cast<VectorType>(TypePartitionTy);
       if (TypePartitionVecTy &&
-          checkVectorTypeForPromotion(P, TypePartitionVecTy, DL, VScale))
+          checkVectorTypeForPromotion(AI, P, TypePartitionVecTy, VScale))
         SliceTy = TypePartitionTy;
     }
 
@@ -5255,7 +5324,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   bool IsIntegerPromotable = isIntegerWideningViable(P, SliceTy, DL);
 
   VectorType *VecTy =
-      IsIntegerPromotable ? nullptr : isVectorPromotionViable(P, DL, VScale);
+      IsIntegerPromotable ? nullptr : isVectorPromotionViable(AI, P, VScale);
   if (VecTy)
     SliceTy = VecTy;
 
