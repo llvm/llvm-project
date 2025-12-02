@@ -771,12 +771,33 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   }
 }
 
+static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
+                                HLSLAppliedSemanticAttr *Semantic,
+                                bool IsInput) {
+  if (AstContext.getTargetInfo().getTriple().getOS() != llvm::Triple::Vulkan)
+    return false;
+
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "Entry point has no shader attribute");
+  llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
+  auto SemanticName = Semantic->getSemanticName().upper();
+
+  // The SV_Position semantic is lowered to:
+  //  - Position built-in for vertex output.
+  //  - FragCoord built-in for fragment input.
+  if (SemanticName == "SV_POSITION") {
+    return (ST == llvm::Triple::Vertex && !IsInput) ||
+           (ST == llvm::Triple::Pixel && IsInput);
+  }
+
+  return false;
+}
+
 bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
                                                DeclaratorDecl *OutputDecl,
                                                DeclaratorDecl *D,
                                                SemanticInfo &ActiveSemantic,
-                                               llvm::StringSet<> &UsedSemantics,
-                                               bool IsInput) {
+                                               SemaHLSL::SemanticContext &SC) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
     if (ActiveSemantic.Semantic)
@@ -795,10 +816,25 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
   if (!A)
     return false;
 
-  checkSemanticAnnotation(FD, D, A, IsInput);
+  checkSemanticAnnotation(FD, D, A, SC);
   OutputDecl->addAttr(A);
 
   unsigned Location = ActiveSemantic.Index.value_or(0);
+
+  if (!isVkPipelineBuiltin(getASTContext(), FD, A,
+                           SC.CurrentIOType & IOType::In)) {
+    bool HasVkLocation = false;
+    if (auto *A = D->getAttr<HLSLVkLocationAttr>()) {
+      HasVkLocation = true;
+      Location = A->getLocation();
+    }
+
+    if (SC.UsesExplicitVkLocations.value_or(HasVkLocation) != HasVkLocation) {
+      Diag(D->getLocation(), diag::err_hlsl_semantic_partial_explicit_indexing);
+      return false;
+    }
+    SC.UsesExplicitVkLocations = HasVkLocation;
+  }
 
   const ConstantArrayType *AT = dyn_cast<ConstantArrayType>(D->getType());
   unsigned ElementCount = AT ? AT->getZExtSize() : 1;
@@ -808,7 +844,7 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
   for (unsigned I = 0; I < ElementCount; ++I) {
     Twine VariableName = BaseName.concat(Twine(Location + I));
 
-    auto [_, Inserted] = UsedSemantics.insert(VariableName.str());
+    auto [_, Inserted] = SC.ActiveSemantics.insert(VariableName.str());
     if (!Inserted) {
       Diag(D->getLocation(), diag::err_hlsl_semantic_index_overlap)
           << VariableName.str();
@@ -823,8 +859,7 @@ bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD,
                                        DeclaratorDecl *OutputDecl,
                                        DeclaratorDecl *D,
                                        SemanticInfo &ActiveSemantic,
-                                       llvm::StringSet<> &UsedSemantics,
-                                       bool IsInput) {
+                                       SemaHLSL::SemanticContext &SC) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
     if (ActiveSemantic.Semantic)
@@ -837,13 +872,12 @@ bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD,
   const RecordType *RT = dyn_cast<RecordType>(T);
   if (!RT)
     return determineActiveSemanticOnScalar(FD, OutputDecl, D, ActiveSemantic,
-                                           UsedSemantics, IsInput);
+                                           SC);
 
   const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *Field : RD->fields()) {
     SemanticInfo Info = ActiveSemantic;
-    if (!determineActiveSemantic(FD, OutputDecl, Field, Info, UsedSemantics,
-                                 IsInput)) {
+    if (!determineActiveSemantic(FD, OutputDecl, Field, Info, SC)) {
       Diag(Field->getLocation(), diag::note_hlsl_semantic_used_here) << Field;
       return false;
     }
@@ -916,7 +950,9 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
     llvm_unreachable("Unhandled environment in triple");
   }
 
-  llvm::StringSet<> ActiveInputSemantics;
+  SemaHLSL::SemanticContext InputSC = {};
+  InputSC.CurrentIOType = IOType::In;
+
   for (ParmVarDecl *Param : FD->parameters()) {
     SemanticInfo ActiveSemantic;
     ActiveSemantic.Semantic = Param->getAttr<HLSLParsedSemanticAttr>();
@@ -924,26 +960,25 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
       ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
 
     // FIXME: Verify output semantics in parameters.
-    if (!determineActiveSemantic(FD, Param, Param, ActiveSemantic,
-                                 ActiveInputSemantics, /* IsInput= */ true)) {
+    if (!determineActiveSemantic(FD, Param, Param, ActiveSemantic, InputSC)) {
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();
     }
   }
 
   SemanticInfo ActiveSemantic;
-  llvm::StringSet<> ActiveOutputSemantics;
+  SemaHLSL::SemanticContext OutputSC = {};
+  OutputSC.CurrentIOType = IOType::Out;
   ActiveSemantic.Semantic = FD->getAttr<HLSLParsedSemanticAttr>();
   if (ActiveSemantic.Semantic)
     ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
   if (!FD->getReturnType()->isVoidType())
-    determineActiveSemantic(FD, FD, FD, ActiveSemantic, ActiveOutputSemantics,
-                            /* IsInput= */ false);
+    determineActiveSemantic(FD, FD, FD, ActiveSemantic, OutputSC);
 }
 
 void SemaHLSL::checkSemanticAnnotation(
     FunctionDecl *EntryPoint, const Decl *Param,
-    const HLSLAppliedSemanticAttr *SemanticAttr, bool IsInput) {
+    const HLSLAppliedSemanticAttr *SemanticAttr, const SemanticContext &SC) {
   auto *ShaderAttr = EntryPoint->getAttr<HLSLShaderAttr>();
   assert(ShaderAttr && "Entry point has no shader attribute");
   llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
@@ -954,7 +989,7 @@ void SemaHLSL::checkSemanticAnnotation(
       SemanticName == "SV_GROUPID") {
 
     if (ST != llvm::Triple::Compute)
-      diagnoseSemanticStageMismatch(SemanticAttr, ST, IsInput,
+      diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
                                     {{llvm::Triple::Compute, IOType::In}});
 
     if (SemanticAttr->getSemanticIndex() != 0) {
@@ -970,14 +1005,14 @@ void SemaHLSL::checkSemanticAnnotation(
   if (SemanticName == "SV_POSITION") {
     // SV_Position can be an input or output in vertex shaders,
     // but only an input in pixel shaders.
-    diagnoseSemanticStageMismatch(SemanticAttr, ST, IsInput,
+    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
                                   {{llvm::Triple::Vertex, IOType::InOut},
                                    {llvm::Triple::Pixel, IOType::In}});
     return;
   }
 
   if (SemanticName == "SV_TARGET") {
-    diagnoseSemanticStageMismatch(SemanticAttr, ST, IsInput,
+    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
                                   {{llvm::Triple::Pixel, IOType::Out}});
     return;
   }
@@ -1003,16 +1038,14 @@ void SemaHLSL::diagnoseAttrStageMismatch(
 }
 
 void SemaHLSL::diagnoseSemanticStageMismatch(
-    const Attr *A, llvm::Triple::EnvironmentType Stage, bool IsInput,
+    const Attr *A, llvm::Triple::EnvironmentType Stage, IOType CurrentIOType,
     std::initializer_list<SemanticStageInfo> Allowed) {
 
   for (auto &Case : Allowed) {
     if (Case.Stage != Stage)
       continue;
 
-    if (IsInput && Case.AllowedIOTypesMask & IOType::In)
-      return;
-    if (!IsInput && Case.AllowedIOTypesMask & IOType::Out)
+    if (CurrentIOType & Case.AllowedIOTypesMask)
       return;
 
     SmallVector<std::string, 8> ValidCases;
@@ -1028,7 +1061,7 @@ void SemaHLSL::diagnoseSemanticStageMismatch(
                  " " + join(ValidType, "/");
         });
     Diag(A->getLoc(), diag::err_hlsl_semantic_unsupported_iotype_for_stage)
-        << A->getAttrName() << (IsInput ? "input" : "output")
+        << A->getAttrName() << (CurrentIOType & IOType::In ? "input" : "output")
         << llvm::Triple::getEnvironmentTypeName(Case.Stage)
         << join(ValidCases, ", ");
     return;
@@ -1755,6 +1788,15 @@ void SemaHLSL::handleVkBindingAttr(Decl *D, const ParsedAttr &AL) {
 
   D->addAttr(::new (getASTContext())
                  HLSLVkBindingAttr(getASTContext(), AL, Binding, Set));
+}
+
+void SemaHLSL::handleVkLocationAttr(Decl *D, const ParsedAttr &AL) {
+  uint32_t Location;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Location))
+    return;
+
+  D->addAttr(::new (getASTContext())
+                 HLSLVkLocationAttr(getASTContext(), AL, Location));
 }
 
 bool SemaHLSL::diagnoseInputIDType(QualType T, const ParsedAttr &AL) {
