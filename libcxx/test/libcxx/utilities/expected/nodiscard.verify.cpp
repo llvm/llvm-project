@@ -15,34 +15,6 @@
 #include <expected>
 #include <utility>
 
-struct LVal {
-  constexpr std::expected<int, int> operator()(int&) { return 1; }
-  std::expected<int, int> operator()(const int&)  = delete;
-  std::expected<int, int> operator()(int&&)       = delete;
-  std::expected<int, int> operator()(const int&&) = delete;
-};
-
-struct CLVal {
-  std::expected<int, int> operator()(int&) = delete;
-  constexpr std::expected<int, int> operator()(const int&) { return 1; }
-  std::expected<int, int> operator()(int&&)       = delete;
-  std::expected<int, int> operator()(const int&&) = delete;
-};
-
-struct RVal {
-  std::expected<int, int> operator()(int&)       = delete;
-  std::expected<int, int> operator()(const int&) = delete;
-  constexpr std::expected<int, int> operator()(int&&) { return 1; }
-  std::expected<int, int> operator()(const int&&) = delete;
-};
-
-struct CRVal {
-  std::expected<int, int> operator()(int&)       = delete;
-  std::expected<int, int> operator()(const int&) = delete;
-  std::expected<int, int> operator()(int&&)      = delete;
-  constexpr std::expected<int, int> operator()(const int&&) { return 1; }
-};
-
 void test() {
   // [expected.bad.void]
 
@@ -56,8 +28,8 @@ void test() {
 
   // [expected.bad]
 
-  std::bad_expected_access<char> ex('z');
-  const std::bad_expected_access<char> cEx('z');
+  std::bad_expected_access<char> ex{'z'};
+  const std::bad_expected_access<char> cEx{'z'};
 
   ex.error();             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cEx.error();            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -97,22 +69,22 @@ void test() {
   std::move(exp).error_or(82);
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  exp.and_then(LVal{});
+  exp.and_then([](int&) { return std::expected<int, int>{94}; });
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  cExp.and_then(CLVal{});
+  cExp.and_then([](const int&) { return std::expected<int, int>{94}; });
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move(exp).and_then(RVal{});
+  std::move(exp).and_then([](int&&) { return std::expected<int, int>{94}; });
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move(cExp).and_then(CRVal{});
+  std::move(cExp).and_then([](const int&&) { return std::expected<int, int>{94}; });
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  exp.or_else(LVal{});
+  exp.or_else([](int&) { return std::expected<int, int>{82}; });
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  cExp.or_else(CLVal{});
+  cExp.or_else([](const int&) { return std::expected<int, int>{82}; });
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move(exp).or_else(RVal{});
+  std::move(exp).or_else([](int&&) { return std::expected<int, int>{82}; });
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move(cExp).or_else(CRVal{});
+  std::move(cExp).or_else([](const int&&) { return std::expected<int, int>{82}; });
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   exp.transform([](int) { return 94; });
