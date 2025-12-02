@@ -11634,29 +11634,6 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   return Flags;
 }
 
-SDValue PPCTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
-                                                  SelectionDAG &DAG) const {
-  unsigned IntrinsicID = Op.getConstantOperandVal(1);
-
-  SDLoc dl(Op);
-  switch (IntrinsicID) {
-  case Intrinsic::ppc_amo_lwat:
-  case Intrinsic::ppc_amo_ldat:
-    SDValue Ptr = Op.getOperand(2);
-    SDValue Val1 = Op.getOperand(3);
-    SDValue FC = Op.getOperand(4);
-    SDValue Ops[] = {Ptr, Val1, FC};
-    bool IsLwat = IntrinsicID == Intrinsic::ppc_amo_lwat;
-    unsigned Opcode = IsLwat ? PPC::LWAT_PSEUDO : PPC::LDAT_PSEUDO;
-    MachineSDNode *MNode = DAG.getMachineNode(
-        Opcode, dl, {IsLwat ? MVT::i32 : MVT::i64, MVT::Other}, Ops);
-    SDValue Result = SDValue(MNode, 0);
-    SDValue OutChain = SDValue(MNode, 1);
-    return DAG.getMergeValues({Result, OutChain}, dl);
-  }
-  return SDValue();
-}
-
 SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                                SelectionDAG &DAG) const {
   // SelectionDAGBuilder::visitTargetIntrinsic may insert one extra chain to
@@ -12827,9 +12804,9 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerFP_ROUND(Op, DAG);
   case ISD::ROTL:               return LowerROTL(Op, DAG);
 
-  // For counter-based loop handling, and amo load.
+  // For counter-based loop handling.
   case ISD::INTRINSIC_W_CHAIN:
-    return LowerINTRINSIC_W_CHAIN(Op, DAG);
+    return SDValue();
 
   case ISD::BITCAST:            return LowerBITCAST(Op, DAG);
 
@@ -14756,16 +14733,19 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
           .addImm(PPC::sub_32);
     else
       Val64 = ValReg;
-    Register Pair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Pair);
-    Register PairWithVal = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
-    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::INSERT_SUBREG), PairWithVal)
-        .addReg(Pair)
+
+    Register G8rPair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    Register UndefG8r = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), UndefG8r);
+    BuildMI(*BB, MI, DL, TII->get(PPC::REG_SEQUENCE), G8rPair)
+        .addReg(UndefG8r)
+        .addImm(PPC::sub_gp8_x0)
         .addReg(Val64)
         .addImm(PPC::sub_gp8_x1);
+
     Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
     BuildMI(*BB, MI, DL, TII->get(IsLwat ? PPC::LWAT : PPC::LDAT), PairResult)
-        .addReg(PairWithVal)
+        .addReg(G8rPair)
         .addReg(PtrReg)
         .addImm(FC);
     Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);

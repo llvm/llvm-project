@@ -6,7 +6,7 @@
  *
 \*===----------------------------------------------------------------------===*/
 
-/* This header provides compatibility wrappers for GCC's AMO functions.
+/* This header provides compatibility for GCC's AMO functions.
  * The functions here call Clang's underlying AMO builtins.
  */
 

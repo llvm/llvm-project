@@ -338,7 +338,7 @@ def LDAT_PSEUDO : PPCCustomInserterPseudo<
     (outs g8rc:$dst),
     (ins ptr_rc_nor0:$ptr, g8rc:$val, u5imm:$fc),
     "#LDAT_PSEUDO",
-    []>;
+    [(set i64:$dst, (int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val, timm:$fc))]>;
 
 let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
 def STDCX : XForm_1_memOp<31, 214, (outs), (ins g8rc:$RST, (memrr $RA, $RB):$addr),
