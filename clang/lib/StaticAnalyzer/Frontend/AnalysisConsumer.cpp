@@ -364,7 +364,7 @@ private:
   void storeTopLevelDecls(DeclGroupRef DG);
 
   /// Check if we should skip (not analyze) the given function.
-  AnalysisMode getModeForDecl(const Decl *D, AnalysisMode Mode);
+  AnalysisMode getModeForDecl(const Decl *D, AnalysisMode Mode) const;
   void runAnalysisOnTranslationUnit(ASTContext &C);
 
   /// Print \p S to stderr if \c Opts.AnalyzerDisplayProgress is set.
@@ -677,7 +677,7 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
 }
 
 AnalysisConsumer::AnalysisMode
-AnalysisConsumer::getModeForDecl(const Decl *D, AnalysisMode Mode) {
+AnalysisConsumer::getModeForDecl(const Decl *D, AnalysisMode Mode) const {
   if (!Opts.AnalyzeSpecificFunction.empty() &&
       AnalysisDeclContext::getFunctionName(D) != Opts.AnalyzeSpecificFunction &&
       cross_tu::CrossTranslationUnitContext::getLookupName(D).value_or("") !=
