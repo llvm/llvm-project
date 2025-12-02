@@ -2505,7 +2505,7 @@ variables.
 
 Get the value of a Wasm function argument or local variable for the given frame
 index at the given variable index. The indexes are encoded as base 10. The
-result is a hex-encoded address from where to read the value.
+result is a hex-encoded little-endian value of the local.
 
 
 ```
