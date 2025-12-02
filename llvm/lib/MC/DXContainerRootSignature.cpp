@@ -22,9 +22,8 @@ static uint32_t writePlaceholder(raw_svector_ostream &Stream) {
 
 static void rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
                                        uint32_t Offset) {
-  uint32_t Value =
-      support::endian::byte_swap<uint32_t, llvm::endianness::little>(
-          Stream.tell());
+  uint32_t Value = support::endian::byte_swap<uint32_t>(
+      Stream.tell(), llvm::endianness::little);
   Stream.pwrite(reinterpret_cast<const char *>(&Value), sizeof(Value), Offset);
 }
 
