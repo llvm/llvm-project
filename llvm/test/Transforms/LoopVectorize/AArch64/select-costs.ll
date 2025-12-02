@@ -76,9 +76,9 @@ exit:
 
 define i32 @select_vpinst_for_tail_folding(i8 %n) {
 ; CHECK: LV: Checking a loop in 'select_vpinst_for_tail_folding'
-; CHECK: Cost of 6 for VF 2: EMIT vp<{{.+}}> = select vp<{{.+}}>, ir<%red.next>, ir<%red>
-; CHECK: Cost of 12 for VF 4: EMIT vp<{{.+}}> = select vp<{{.+}}>, ir<%red.next>, ir<%red>
-; CHECK: LV: Selecting VF: 1
+; CHECK: Cost of 1 for VF 2: EMIT vp<{{.+}}> = select vp<{{.+}}>, ir<%red.next>, ir<%red>
+; CHECK: Cost of 1 for VF 4: EMIT vp<{{.+}}> = select vp<{{.+}}>, ir<%red.next>, ir<%red>
+; CHECK: LV: Selecting VF: 4
 
 entry:
   %c = icmp ne i8 %n, 0
