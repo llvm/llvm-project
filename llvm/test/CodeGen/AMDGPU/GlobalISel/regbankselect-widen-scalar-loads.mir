@@ -14,24 +14,24 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), align 8, addrspace 4)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, align 8, addrspace 4)
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
     ;
     ; GFX9-LABEL: name: constant_load_i8_align8
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), align 8, addrspace 4)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, align 8, addrspace 4)
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
     ;
     ; GFX10-LABEL: name: constant_load_i8_align8
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), align 8, addrspace 4)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, align 8, addrspace 4)
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
    %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_LOAD %0 :: (invariant load (s8), align 8, addrspace 4)
+   %1:_(s32) = G_LOAD %0 :: (invariant load (s8) from constant-pool, align 8, addrspace 4)
    S_ENDPGM 0, implicit %1
 ...
 ---
@@ -45,24 +45,24 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
     ;
     ; GFX9-LABEL: name: constant_load_i8_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
     ;
     ; GFX10-LABEL: name: constant_load_i8_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
    %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_LOAD %0 :: (invariant load (s8), align 4, addrspace 4)
+   %1:_(s32) = G_LOAD %0 :: (invariant load (s8) from constant-pool, align 4, addrspace 4)
    S_ENDPGM 0, implicit %1
 ...
 ---
@@ -76,24 +76,24 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
     ;
     ; GFX9-LABEL: name: constant_load_i16_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
     ;
     ; GFX10-LABEL: name: constant_load_i16_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
    %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_LOAD %0 :: (invariant load (s16), align 4, addrspace 4)
+   %1:_(s32) = G_LOAD %0 :: (invariant load (s16) from constant-pool, align 4, addrspace 4)
    S_ENDPGM 0, implicit %1
 ...
 ---
@@ -107,7 +107,7 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 8
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
     ;
@@ -115,7 +115,7 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 8
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
     ;
@@ -123,11 +123,11 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX10-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 8
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
    %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s8), align 4, addrspace 4)
+   %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s8) from constant-pool, align 4, addrspace 4)
    S_ENDPGM 0, implicit %1
 ...
 ---
@@ -141,7 +141,7 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 16
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
     ;
@@ -149,7 +149,7 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 16
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
     ;
@@ -157,11 +157,11 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX10-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 16
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
    %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s16), align 4, addrspace 4)
+   %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s16) from constant-pool, align 4, addrspace 4)
    S_ENDPGM 0, implicit %1
 ...
 
@@ -176,7 +176,7 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX8-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 255
     ; GFX8-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
@@ -185,7 +185,7 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX9-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 255
     ; GFX9-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
@@ -194,12 +194,12 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX10-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 255
     ; GFX10-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
    %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s8), align 4, addrspace 4)
+   %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s8) from constant-pool, align 4, addrspace 4)
    S_ENDPGM 0, implicit %1
 ...
 ---
@@ -213,7 +213,7 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX8-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
     ; GFX8-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
@@ -222,7 +222,7 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX9-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
     ; GFX9-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
@@ -231,12 +231,12 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX10-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
     ; GFX10-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
    %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s16), align 4, addrspace 4)
+   %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s16) from constant-pool, align 4, addrspace 4)
    S_ENDPGM 0, implicit %1
 ...
 ---
@@ -250,24 +250,24 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
     ;
     ; GFX9-LABEL: name: global_load_i8_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
     ;
     ; GFX10-LABEL: name: global_load_i8_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
    %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_LOAD %0 :: (invariant load (s8), align 4, addrspace 1)
+   %1:_(s32) = G_LOAD %0 :: (invariant load (s8) from constant-pool, align 4, addrspace 1)
    S_ENDPGM 0, implicit %1
 ...
 ---
@@ -281,24 +281,24 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
     ;
     ; GFX9-LABEL: name: global_load_i16_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
     ;
     ; GFX10-LABEL: name: global_load_i16_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
    %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_LOAD %0 :: (invariant load (s16), align 4, addrspace 1)
+   %1:_(s32) = G_LOAD %0 :: (invariant load (s16) from constant-pool, align 4, addrspace 1)
    S_ENDPGM 0, implicit %1
 ...
 ---
@@ -312,7 +312,7 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 8
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
     ;
@@ -320,7 +320,7 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 8
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
     ;
@@ -328,11 +328,11 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX10-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 8
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
    %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s8), align 4, addrspace 1)
+   %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s8) from constant-pool, align 4, addrspace 1)
    S_ENDPGM 0, implicit %1
 ...
 ---
@@ -346,7 +346,7 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX8-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
     ; GFX8-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
@@ -355,7 +355,7 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX9-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
     ; GFX9-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
@@ -364,12 +364,12 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32) from constant-pool, addrspace 4)
     ; GFX10-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
     ; GFX10-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
    %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s16), align 4, addrspace 1)
+   %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s16) from constant-pool, align 4, addrspace 1)
    S_ENDPGM 0, implicit %1
 ...
 # Some negative test cases
@@ -383,7 +383,7 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s8), align 2, addrspace 4)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s8) from constant-pool, align 2, addrspace 4)
     ; GFX8-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -391,7 +391,7 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s8), align 2, addrspace 4)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s8) from constant-pool, align 2, addrspace 4)
     ; GFX9-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -399,11 +399,11 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s8), align 2, addrspace 4)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s8) from constant-pool, align 2, addrspace 4)
     ; GFX10-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (invariant load (s8), align 2, addrspace 4)
+    %1:_(s32) = G_LOAD %0 :: (invariant load (s8) from constant-pool, align 2, addrspace 4)
     S_ENDPGM 0, implicit %1
 ...
 ---
@@ -417,7 +417,7 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s16), addrspace 4)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s16) from constant-pool, addrspace 4)
     ; GFX8-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -425,7 +425,7 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s16), addrspace 4)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s16) from constant-pool, addrspace 4)
     ; GFX9-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -433,11 +433,11 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s16), addrspace 4)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s16) from constant-pool, addrspace 4)
     ; GFX10-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (invariant load (s16), align 2, addrspace 4)
+    %1:_(s32) = G_LOAD %0 :: (invariant load (s16) from constant-pool, align 2, addrspace 4)
     S_ENDPGM 0, implicit %1
 ...
 ---
@@ -451,7 +451,7 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY]](p1) :: (invariant load (s8), align 2, addrspace 4)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY]](p1) :: (invariant load (s8) from constant-pool, align 2, addrspace 4)
     ; GFX8-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[SEXTLOAD]]
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -459,7 +459,7 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY]](p1) :: (invariant load (s8), align 2, addrspace 4)
+    ; GFX9-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY]](p1) :: (invariant load (s8) from constant-pool, align 2, addrspace 4)
     ; GFX9-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[SEXTLOAD]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -467,11 +467,11 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY]](p1) :: (invariant load (s8), align 2, addrspace 4)
+    ; GFX10-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY]](p1) :: (invariant load (s8) from constant-pool, align 2, addrspace 4)
     ; GFX10-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[SEXTLOAD]]
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s8), align 2, addrspace 4)
+    %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s8) from constant-pool, align 2, addrspace 4)
     S_ENDPGM 0, implicit %1
 ...
 ---
@@ -485,7 +485,7 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY]](p1) :: (invariant load (s16), addrspace 4)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY]](p1) :: (invariant load (s16) from constant-pool, addrspace 4)
     ; GFX8-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[SEXTLOAD]]
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -493,7 +493,7 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY]](p1) :: (invariant load (s16), addrspace 4)
+    ; GFX9-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY]](p1) :: (invariant load (s16) from constant-pool, addrspace 4)
     ; GFX9-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[SEXTLOAD]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -501,11 +501,11 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY]](p1) :: (invariant load (s16), addrspace 4)
+    ; GFX10-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY]](p1) :: (invariant load (s16) from constant-pool, addrspace 4)
     ; GFX10-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[SEXTLOAD]]
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s16), align 2, addrspace 4)
+    %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s16) from constant-pool, align 2, addrspace 4)
     S_ENDPGM 0, implicit %1
 ...
 ---
@@ -519,7 +519,7 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY]](p1) :: (invariant load (s8), align 2, addrspace 4)
+    ; GFX8-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY]](p1) :: (invariant load (s8) from constant-pool, align 2, addrspace 4)
     ; GFX8-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[ZEXTLOAD]]
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -527,7 +527,7 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY]](p1) :: (invariant load (s8), align 2, addrspace 4)
+    ; GFX9-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY]](p1) :: (invariant load (s8) from constant-pool, align 2, addrspace 4)
     ; GFX9-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[ZEXTLOAD]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -535,11 +535,11 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY]](p1) :: (invariant load (s8), align 2, addrspace 4)
+    ; GFX10-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY]](p1) :: (invariant load (s8) from constant-pool, align 2, addrspace 4)
     ; GFX10-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[ZEXTLOAD]]
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s8), align 2, addrspace 4)
+    %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s8) from constant-pool, align 2, addrspace 4)
     S_ENDPGM 0, implicit %1
 ...
 ---
@@ -553,7 +553,7 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY]](p1) :: (invariant load (s16), addrspace 4)
+    ; GFX8-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY]](p1) :: (invariant load (s16) from constant-pool, addrspace 4)
     ; GFX8-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[ZEXTLOAD]]
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -561,7 +561,7 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY]](p1) :: (invariant load (s16), addrspace 4)
+    ; GFX9-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY]](p1) :: (invariant load (s16) from constant-pool, addrspace 4)
     ; GFX9-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[ZEXTLOAD]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -569,11 +569,11 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY]](p1) :: (invariant load (s16), addrspace 4)
+    ; GFX10-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY]](p1) :: (invariant load (s16) from constant-pool, addrspace 4)
     ; GFX10-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[ZEXTLOAD]]
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s16), align 2, addrspace 4)
+    %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s16) from constant-pool, align 2, addrspace 4)
     S_ENDPGM 0, implicit %1
 ...
 ---
@@ -587,7 +587,7 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (load (s8), align 4, addrspace 3)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (load (s8) from constant-pool, align 4, addrspace 3)
     ; GFX8-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -595,7 +595,7 @@ body: |
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (load (s8), align 4, addrspace 3)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (load (s8) from constant-pool, align 4, addrspace 3)
     ; GFX9-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     ;
@@ -603,11 +603,11 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (load (s8), align 4, addrspace 3)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY]](p1) :: (load (s8) from constant-pool, align 4, addrspace 3)
     ; GFX10-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[AMDGPU_READANYLANE]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s8), align 4, addrspace 3)
+    %1:_(s32) = G_LOAD %0 :: (load (s8) from constant-pool, align 4, addrspace 3)
     S_ENDPGM 0, implicit %1
 ...
 ---
@@ -622,7 +622,7 @@ body: |
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s8), align 4, addrspace 5)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s8) from constant-pool, align 4, addrspace 5)
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
     ;
     ; GFX9-LABEL: name: private_load_i8_align4
@@ -630,7 +630,7 @@ body: |
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s8), align 4, addrspace 5)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s8) from constant-pool, align 4, addrspace 5)
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
     ;
     ; GFX10-LABEL: name: private_load_i8_align4
@@ -638,9 +638,9 @@ body: |
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s8), align 4, addrspace 5)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s8) from constant-pool, align 4, addrspace 5)
     ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s8), align 4, addrspace 5)
+    %1:_(s32) = G_LOAD %0 :: (load (s8) from constant-pool, align 4, addrspace 5)
     S_ENDPGM 0, implicit %1
 ...

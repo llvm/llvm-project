@@ -215,6 +215,12 @@ CUDAFunctionTarget SemaCUDA::IdentifyTarget(const FunctionDecl *D,
   if (D == nullptr)
     return CurCUDATargetCtx.Target;
 
+  // C++ deduction guides are never codegen'ed and only participate in template
+  // argument deduction.  Treat them as if they were always host+device so that
+  // CUDA/HIP target checking never rejects their use based solely on target.
+  if (isa<CXXDeductionGuideDecl>(D))
+    return CUDAFunctionTarget::HostDevice;
+
   if (D->hasAttr<CUDAInvalidTargetAttr>())
     return CUDAFunctionTarget::InvalidTarget;
 
@@ -984,6 +990,12 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
 
   const auto &ExprEvalCtx = SemaRef.currentEvaluationContext();
   if (ExprEvalCtx.isUnevaluated() || ExprEvalCtx.isConstantEvaluated())
+    return true;
+
+  // C++ deduction guides participate in overload resolution but are not
+  // callable functions and are never codegen'ed.  Treat them as always
+  // allowed for CUDA/HIP compatibility checking.
+  if (isa<CXXDeductionGuideDecl>(Callee))
     return true;
 
   // FIXME: Is bailing out early correct here?  Should we instead assume that

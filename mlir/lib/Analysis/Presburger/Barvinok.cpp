@@ -178,13 +178,13 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
   for (unsigned i = 0; i < d; ++i) {
     // First ensure that the diagonal element is nonzero, by swapping
     // it with a row that is non-zero at column i.
-    if (equations(i, i) != 0)
-      continue;
-    for (unsigned j = i + 1; j < d; ++j) {
-      if (equations(j, i) == 0)
-        continue;
-      equations.swapRows(j, i);
-      break;
+    if (equations(i, i) == 0) {
+      for (unsigned j = i + 1; j < d; ++j) {
+        if (equations(j, i) == 0)
+          continue;
+        equations.swapRows(j, i);
+        break;
+      }
     }
 
     Fraction diagElement = equations(i, i);

@@ -135,7 +135,11 @@ struct DebugCounterOwner : DebugCounter {
       cl::Optional,
       cl::location(this->ShouldPrintCounter),
       cl::init(false),
-      cl::desc("Print out debug counter info after all counters accumulated")};
+      cl::desc("Print out debug counter info after all counters accumulated"),
+      cl::callback([&](const bool &Value) {
+        if (Value)
+          enableAllCounters();
+      })};
   cl::opt<bool, true> PrintDebugCounterQueries{
       "print-debug-counter-queries",
       cl::Hidden,
