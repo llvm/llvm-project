@@ -632,8 +632,8 @@ MachineSMEABI::findStateChangeInsertionPoint(
     PhysLiveRegs = Block.PhysLiveRegsAtExit;
   }
 
-  if (!(PhysLiveRegs & LiveRegs::NZCV))
-    return {InsertPt, PhysLiveRegs}; // Nothing to do (no live flags).
+  if (PhysLiveRegs == LiveRegs::None)
+    return {InsertPt, PhysLiveRegs}; // Nothing to do (no live regs).
 
   // Find the previous state change. We can not move before this point.
   MachineBasicBlock::iterator PrevStateChangeI;
@@ -650,15 +650,21 @@ MachineSMEABI::findStateChangeInsertionPoint(
   // Note: LiveUnits will only accurately track X0 and NZCV.
   LiveRegUnits LiveUnits(*TRI);
   setPhysLiveRegs(LiveUnits, PhysLiveRegs);
+  auto BestCandidate = std::make_pair(InsertPt, PhysLiveRegs);
   for (MachineBasicBlock::iterator I = InsertPt; I != PrevStateChangeI; --I) {
     // Don't move before/into a call (which may have a state change before it).
     if (I->getOpcode() == TII->getCallFrameDestroyOpcode() || I->isCall())
       break;
     LiveUnits.stepBackward(*I);
-    if (LiveUnits.available(AArch64::NZCV))
-      return {I, getPhysLiveRegs(LiveUnits)};
+    LiveRegs CurrentPhysLiveRegs = getPhysLiveRegs(LiveUnits);
+    // Find places where NZCV is available, but keep looking for locations where
+    // both NZCV and X0 are available, which can avoid some copies.
+    if (!(CurrentPhysLiveRegs & LiveRegs::NZCV))
+      BestCandidate = {I, CurrentPhysLiveRegs};
+    if (CurrentPhysLiveRegs == LiveRegs::None)
+      break;
   }
-  return {InsertPt, PhysLiveRegs};
+  return BestCandidate;
 }
 
 void MachineSMEABI::insertStateChanges(EmitContext &Context,

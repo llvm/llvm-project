@@ -6,7 +6,7 @@ void A(void) {
 LABEL_A:
   return;
 }
-// CIR:  cir.func dso_local @A
+// CIR:  cir.func {{.*}} @A
 // CIR:    [[PTR:%.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init] {alignment = 8 : i64}
 // CIR:    [[BLOCK:%.*]] = cir.block_address <@A, "LABEL_A"> : !cir.ptr<!void>
 // CIR:    cir.store align(8) [[BLOCK]], [[PTR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
@@ -20,7 +20,7 @@ LABEL_B:
   void *ptr = &&LABEL_B;
 }
 
-// CIR:  cir.func dso_local @B()
+// CIR:  cir.func {{.*}} @B()
 // CIR:    [[PTR:%.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init] {alignment = 8 : i64}
 // CIR:    cir.br ^bb1
 // CIR:   ^bb1:
@@ -37,7 +37,7 @@ LABEL_B:
     return;
 }
 
-// CIR:  cir.func dso_local @C
+// CIR:  cir.func {{.*}} @C
 // CIR:    [[BLOCK1:%.*]] = cir.block_address <@C, "LABEL_A"> : !cir.ptr<!void>
 // CIR:    [[BLOCK2:%.*]] = cir.block_address <@C, "LABEL_B"> : !cir.ptr<!void>
 // CIR:    [[COND:%.*]] = cir.select if [[CMP:%.*]] then [[BLOCK1]] else [[BLOCK2]] : (!cir.bool, !cir.ptr<!void>, !cir.ptr<!void>) -> !cir.ptr<!void>
@@ -60,7 +60,7 @@ LABEL_A:
   return;
 }
 
-// CIR:  cir.func dso_local @D
+// CIR:  cir.func {{.*}} @D
 // CIR:    %[[PTR:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init]
 // CIR:    %[[PTR2:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr2", init]
 // CIR:    %[[PTR3:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr3", init]

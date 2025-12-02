@@ -1870,8 +1870,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
         clone.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
             &cgm.getMLIRContext(), cir::GlobalLinkageKind::InternalLinkage));
         clone.setSymVisibility("private");
-        clone.setInlineKindAttr(cir::InlineAttr::get(
-            &cgm.getMLIRContext(), cir::InlineKind::AlwaysInline));
+        clone.setInlineKind(cir::InlineKind::AlwaysInline);
       }
       return CIRGenCallee::forDirect(clone, gd);
     }
