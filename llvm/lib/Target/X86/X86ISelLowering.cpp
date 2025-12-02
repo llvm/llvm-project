@@ -59427,6 +59427,31 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         }
       }
       break;
+    case ISD::SETCC:
+      if (!IsSplat && EltSizeInBits == 1 &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op0.getOperand(0).getValueType() ==
+                       Op.getOperand(0).getValueType() &&
+                   Op0.getOperand(2) == Op.getOperand(2);
+          })) {
+        EVT SrcVT = Op0.getOperand(0).getValueType();
+        EVT NewSrcVT = EVT::getVectorVT(Ctx, SrcVT.getScalarType(),
+                                        NumOps * SrcVT.getVectorNumElements());
+        unsigned SrcSizeInBits = SrcVT.getScalarSizeInBits();
+        if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(NewSrcVT) &&
+            (NewSrcVT.is256BitVector() ||
+             (NewSrcVT.is512BitVector() && Subtarget.useAVX512Regs() &&
+              (SrcSizeInBits >= 32 || Subtarget.useBWIRegs())))) {
+          SDValue LHS = CombineSubOperand(NewSrcVT.getSimpleVT(), Ops, 0);
+          SDValue RHS = CombineSubOperand(NewSrcVT.getSimpleVT(), Ops, 1);
+          if (LHS || RHS)
+            return DAG.getNode(Opcode, DL, VT,
+                               LHS ? LHS : ConcatSubOperand(NewSrcVT, Ops, 0),
+                               RHS ? RHS : ConcatSubOperand(NewSrcVT, Ops, 1),
+                               Op0.getOperand(2));
+        }
+      }
+      break;
     case ISD::CTPOP:
     case ISD::CTTZ:
     case ISD::CTLZ:
@@ -59791,13 +59816,16 @@ static SDValue combineCONCAT_VECTORS(SDNode *N, SelectionDAG &DAG,
       }
     }
 
-    // Attempt to merge logic ops if the type is legal.
-    if (TLI.isTypeLegal(VT) && all_of(Ops, [](SDValue Op) {
-          return ISD::isBitwiseLogicOp(Op.getOpcode());
-        }))
+    // Attempt to merge comparison/logic ops if the type is legal.
+    if (TLI.isTypeLegal(VT) &&
+        (all_of(Ops, [](SDValue Op) { return Op.getOpcode() == ISD::SETCC; }) ||
+         all_of(Ops, [](SDValue Op) {
+           return ISD::isBitwiseLogicOp(Op.getOpcode());
+         }))) {
       if (SDValue R = combineConcatVectorOps(SDLoc(N), VT.getSimpleVT(), Ops,
                                              DAG, Subtarget))
         return R;
+    }
 
     // Don't do anything else for i1 vectors.
     return SDValue();
