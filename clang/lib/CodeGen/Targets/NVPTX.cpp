@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/Support/Signals.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -277,9 +278,9 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
     }
   }
   // Attach kernel metadata directly if compiling for NVPTX.
-  // NOTE: Don't set kernel calling convention for handled OpenCL kernel,
-  // otherwise the stub version of kernel would be incorrect.
-  if (FD->hasAttr<DeviceKernelAttr>() && !M.getLangOpts().OpenCL)
+  // NOTE: Don't set kernel calling convention for OpenCL kernel stub.
+  if (FD->hasAttr<DeviceKernelAttr>() &&
+      !GV->getName().starts_with("__clang_ocl_kern_imp_"))
     F->setCallingConv(getDeviceKernelCallingConv());
 }
 

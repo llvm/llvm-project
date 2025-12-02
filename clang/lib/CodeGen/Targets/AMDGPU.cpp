@@ -441,7 +441,8 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (FD) {
     setFunctionDeclAttributes(FD, F, M);
-    if (FD->hasAttr<DeviceKernelAttr>() && !M.getLangOpts().OpenCL)
+    if (FD->hasAttr<DeviceKernelAttr>() &&
+        !GV->getName().starts_with("__clang_ocl_kern_imp_"))
       F->setCallingConv(getDeviceKernelCallingConv());
   }
   if (!getABIInfo().getCodeGenOpts().EmitIEEENaNCompliantInsts)
