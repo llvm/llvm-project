@@ -158,7 +158,7 @@ public:
 #ifdef NDEBUG
     return false;
 #else
-    return instance().Enabled || instance().ShouldPrintCounter;
+    return instance().Enabled;
 #endif
   }
 
