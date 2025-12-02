@@ -10356,11 +10356,8 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
 
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  BlockFrequencyInfo *BFI = nullptr;
-  GetBFI = [&AM, &F, &BFI]() -> BlockFrequencyInfo & {
-    if (!BFI)
-      BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
-    return *BFI;
+  GetBFI = [&AM, &F]() -> BlockFrequencyInfo & {
+    return AM.getResult<BlockFrequencyAnalysis>(F);
   };
   LoopVectorizeResult Result = runImpl(F);
   if (!Result.MadeAnyChange)
