@@ -2576,21 +2576,6 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
                       << "Update Instr: " << *It);
   }
 
-  // XCnt may be already consumed by a load wait.
-  // When we wait for KmCnt==0, all SMEM operations (including address
-  // translations) are complete, so XCNT wait is redundant. When we wait for
-  // LoadCnt==0 and XCnt==0, the LoadCnt wait already ensures all address
-  // translations are complete (since XCnt follows LoadCnt for loads). When the
-  // current instruction is a VMEM access, translations are in-order.
-  if (Wait.XCnt != ~0u) {
-    if (Wait.KmCnt == 0)
-      Wait.XCnt = ~0u;
-    else if (Wait.LoadCnt == 0 && Wait.XCnt == 0)
-      Wait.XCnt = ~0u;
-    else if (isVmemAccess(*It))
-      Wait.XCnt = ~0u;
-  }
-
   if (WCG->createNewWaitcnt(Block, It, Wait, &ScoreBrackets))
     Modified = true;
 
