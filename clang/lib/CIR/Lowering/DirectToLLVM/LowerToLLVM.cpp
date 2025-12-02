@@ -210,6 +210,15 @@ mlir::LogicalResult CIRToLLVMExp2OpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMFloorOpLowering::matchAndRewrite(
+    cir::FloorOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::FFloorOp>(op, resTy,
+                                                    adaptor.getSrc());
+  return mlir::success();
+}
+
 static mlir::Value getLLVMIntCast(mlir::ConversionPatternRewriter &rewriter,
                                   mlir::Value llvmSrc, mlir::Type llvmDstIntTy,
                                   bool isUnsigned, uint64_t cirSrcWidth,
@@ -1978,10 +1987,10 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
-  if (auto inlineKind = op.getInlineKind()) {
-    fn.setNoInline(inlineKind == cir::InlineKind::NoInline);
-    fn.setInlineHint(inlineKind == cir::InlineKind::InlineHint);
-    fn.setAlwaysInline(inlineKind == cir::InlineKind::AlwaysInline);
+  if (std::optional<cir::InlineKind> inlineKind = op.getInlineKind()) {
+    fn.setNoInline(*inlineKind == cir::InlineKind::NoInline);
+    fn.setInlineHint(*inlineKind == cir::InlineKind::InlineHint);
+    fn.setAlwaysInline(*inlineKind == cir::InlineKind::AlwaysInline);
   }
 
   fn.setVisibility_Attr(mlir::LLVM::VisibilityAttr::get(
@@ -4049,6 +4058,18 @@ mlir::LogicalResult CIRToLLVMVAEndOpLowering::matchAndRewrite(
   auto vaList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
                                               adaptor.getArgList());
   rewriter.replaceOpWithNewOp<mlir::LLVM::VaEndOp>(op, vaList);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVACopyOpLowering::matchAndRewrite(
+    cir::VACopyOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto opaquePtr = mlir::LLVM::LLVMPointerType::get(getContext());
+  auto dstList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
+                                               adaptor.getDstList());
+  auto srcList = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(), opaquePtr,
+                                               adaptor.getSrcList());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::VaCopyOp>(op, dstList, srcList);
   return mlir::success();
 }
 
