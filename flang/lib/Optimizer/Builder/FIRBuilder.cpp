@@ -1677,7 +1677,7 @@ mlir::Value fir::factory::createOneValue(fir::FirOpBuilder &builder,
   if (mlir::isa<fir::LogicalType>(type) || type == i1)
     return builder.createConvert(loc, type, builder.createBool(loc, true));
   if (fir::isa_integer(type))
-    return builder.createIntegerConstant(loc, type, 0);
+    return builder.createIntegerConstant(loc, type, 1);
   if (fir::isa_real(type))
     return builder.createRealOneConstant(loc, type);
   if (fir::isa_complex(type)) {
