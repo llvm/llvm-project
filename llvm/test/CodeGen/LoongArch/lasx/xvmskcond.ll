@@ -886,20 +886,18 @@ define i8 @xvmsk_ne_v4i32_concat_poison(<4 x i32> %vec) {
 define i8 @xvmsk_ogt_v4f64_concat_poison(<4 x double> %vec) {
 ; CHECK-LABEL: xvmsk_ogt_v4f64_concat_poison:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI34_0)
-; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI34_0)
-; CHECK-NEXT:    xvrepli.b $xr2, 0
-; CHECK-NEXT:    xvfcmp.clt.d $xr0, $xr2, $xr0
-; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvrepli.b $xr1, 0
+; CHECK-NEXT:    xvfcmp.clt.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
 ; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 0
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 1
+; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 2
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 3
-; CHECK-NEXT:    vslli.h $vr0, $vr1, 15
+; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 1
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr1, 0
+; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 2
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr1, 2
+; CHECK-NEXT:    vinsgr2vr.h $vr2, $a0, 3
+; CHECK-NEXT:    vslli.h $vr0, $vr2, 15
 ; CHECK-NEXT:    vmskltz.h $vr0, $vr0
 ; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; CHECK-NEXT:    ret

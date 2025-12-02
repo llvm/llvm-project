@@ -6,18 +6,16 @@ define void @trunc_v4i64_to_v4i32(ptr %res, ptr %a) nounwind {
 ; LA32-LABEL: trunc_v4i64_to_v4i32:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    xvld $xr0, $a1, 0
-; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI0_0)
-; LA32-NEXT:    xvld $xr1, $a1, %pc_lo12(.LCPI0_0)
-; LA32-NEXT:    xvperm.w $xr0, $xr0, $xr1
+; LA32-NEXT:    xvpermi.q $xr1, $xr0, 1
+; LA32-NEXT:    vpickev.w $vr0, $vr1, $vr0
 ; LA32-NEXT:    vst $vr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: trunc_v4i64_to_v4i32:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    xvld $xr0, $a1, 0
-; LA64-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI0_0)
-; LA64-NEXT:    xvld $xr1, $a1, %pc_lo12(.LCPI0_0)
-; LA64-NEXT:    xvperm.w $xr0, $xr0, $xr1
+; LA64-NEXT:    xvpermi.q $xr1, $xr0, 1
+; LA64-NEXT:    vpickev.w $vr0, $vr1, $vr0
 ; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
