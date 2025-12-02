@@ -937,7 +937,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
                 GEP->getSourceElementType())) {
           if (UsedInLoad && UserVecTy->getNumElements() > DynIdxNumElmLimit) {
             return RejectUser(Inst, 
-              "user has too many number of elements for dynamic index");
+              "user has too many elements for dynamic index");
           }
         }
       }
