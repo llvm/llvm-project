@@ -1079,6 +1079,18 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_READSTEADYCOUNTER, G_READCYCLECOUNTER}, Standard)
       .Uni(S64, {{Sgpr64}, {}});
 
+  addRulesForGOpcs({G_STRICT_FMA}, Standard)
+    .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16, VgprV2S16}})
+    .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16, VgprV2S16}})
+    .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32, VgprV2S32, VgprV2S32}}})
+    .Any({{DivV2S32}, {{VgprV2S32}, {VgprV2S32, VgprV2S32, VgprV2S32}}})
+    .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16, Vgpr16}})
+    .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}})
+    .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64, Vgpr64}})
+    .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16, Vgpr16}})
+    .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32, Vgpr32}}) 
+    .Uni(S64, {{UniInVgprS64}, {Vgpr64, Vgpr64, Vgpr64}});
+  
   addRulesForGOpcs({G_BLOCK_ADDR}).Any({{UniP0}, {{SgprP0}, {}}});
 
   addRulesForGOpcs({G_GLOBAL_VALUE})
