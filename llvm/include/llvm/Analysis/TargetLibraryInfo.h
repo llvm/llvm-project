@@ -89,6 +89,7 @@ class TargetLibraryInfoImpl {
 #include "llvm/Analysis/TargetLibraryInfo.inc"
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return;
   unsigned SizeOfInt;
+  bool IsErrnoFunctionCall;
   bool IsErrnoThreadLocal;
 
   enum AvailabilityState {
@@ -259,7 +260,6 @@ public:
   LLVM_ABI static bool isCallingConvCCompatible(Function *Callee);
 
   LLVM_ABI bool mayBeErrnoGlobal(const GlobalVariable *GV) const;
-  LLVM_ABI bool isErrnoThreadLocal() const { return IsErrnoThreadLocal; }
 };
 
 /// Provides information about what library functions are available for
@@ -611,10 +611,6 @@ public:
   bool mayBeErrnoGlobal(const GlobalVariable *GV) const {
     return Impl->mayBeErrnoGlobal(GV);
   }
-
-  /// Returns whether the target C library implements errno as a thread-local
-  /// variable, which is de facto the standard for non-baremetal targets.
-  bool isErrnoThreadLocal() const { return Impl->isErrnoThreadLocal(); }
 };
 
 /// Analysis pass providing the \c TargetLibraryInfo.

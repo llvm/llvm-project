@@ -703,20 +703,26 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
   }
 }
 
-TEST_F(TargetLibraryInfoTest, IsErrnoThreadLocal) {
-  EXPECT_TRUE(TargetLibraryInfoImpl(Triple("x86_64-unknown-linux-gnu"))
-                  .isErrnoThreadLocal());
-  EXPECT_TRUE(
-      TargetLibraryInfoImpl(Triple("arm64-apple-macosx")).isErrnoThreadLocal());
-  EXPECT_TRUE(TargetLibraryInfoImpl(Triple("x86_64-pc-windows-msvc"))
-                  .isErrnoThreadLocal());
-  EXPECT_TRUE(TargetLibraryInfoImpl(Triple("x86_64-unknown-freebsd"))
-                  .isErrnoThreadLocal());
+TEST_F(TargetLibraryInfoTest, IsErrnoGlobal) {
+  using TLII = TargetLibraryInfoImpl;
+  parseAssembly(R"(
+    @global = external global i32
+  )");
+  auto *GV = M->getNamedGlobal("global");
 
-  EXPECT_FALSE(
-      TargetLibraryInfoImpl(Triple("arm-none-eabi")).isErrnoThreadLocal());
-  EXPECT_FALSE(TargetLibraryInfoImpl(Triple("aarch64-unknown-unknown"))
-                   .isErrnoThreadLocal());
+  // Errno is not a global on the following environments.
+  EXPECT_FALSE(TLII(Triple("x86_64-unknown-linux-gnu")).mayBeErrnoGlobal(GV));
+  EXPECT_FALSE(TLII(Triple("x86_64-pc-windows-msvc")).mayBeErrnoGlobal(GV));
+
+  // Errno is thread-local on the following OSes.
+  EXPECT_FALSE(TLII(Triple("arm64-apple-macosx")).mayBeErrnoGlobal(GV));
+  EXPECT_FALSE(TLII(Triple("x86_64-unknown-freebsd")).mayBeErrnoGlobal(GV));
+
+  // Unknown.
+  EXPECT_TRUE(TLII(Triple("arm-none-eabi")).mayBeErrnoGlobal(GV));
+  EXPECT_TRUE(TLII(Triple("aarch64-unknown-unknown")).mayBeErrnoGlobal(GV));
+  GV->setThreadLocalMode(GlobalVariable::GeneralDynamicTLSModel);
+  EXPECT_TRUE(TLII(Triple("x86_64-pc-linux")).mayBeErrnoGlobal(GV));
 }
 
 namespace {

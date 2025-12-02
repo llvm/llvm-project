@@ -911,9 +911,20 @@ static bool initializeIsErrnoThreadLocal(const Triple &T) {
   return T.isOSDarwin() || T.isOSFreeBSD() || T.isOSLinux() || T.isOSWindows();
 }
 
+static bool initializeIsErrnoFunctionCall(const Triple &T) {
+  // Assume errno is implemented as a function call on the following
+  // environments.
+  // TODO: Could refine known environments.
+  return T.isAndroid() || T.isGNUEnvironment() || T.isMusl() ||
+         T.getEnvironment() == Triple::LLVM ||
+         T.getEnvironment() == Triple::Mlibc ||
+         T.getEnvironment() == Triple::MSVC;
+}
+
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T,
                                              VectorLibrary VecLib)
-    : IsErrnoThreadLocal(initializeIsErrnoThreadLocal(T)) {
+    : IsErrnoFunctionCall(initializeIsErrnoFunctionCall(T)),
+      IsErrnoThreadLocal(initializeIsErrnoThreadLocal(T)) {
   // Default to everything being available.
   memset(AvailableArray, -1, sizeof(AvailableArray));
 
@@ -925,7 +936,8 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
-      SizeOfInt(TLI.SizeOfInt), IsErrnoThreadLocal(TLI.IsErrnoThreadLocal) {
+      SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall),
+      IsErrnoThreadLocal(TLI.IsErrnoThreadLocal) {
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
@@ -937,7 +949,8 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
-      SizeOfInt(TLI.SizeOfInt), IsErrnoThreadLocal(TLI.IsErrnoThreadLocal) {
+      SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall),
+      IsErrnoThreadLocal(TLI.IsErrnoThreadLocal) {
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   VectorDescs = TLI.VectorDescs;
@@ -951,6 +964,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoI
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
+  IsErrnoFunctionCall = TLI.IsErrnoFunctionCall;
   IsErrnoThreadLocal = TLI.IsErrnoThreadLocal;
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   return *this;
@@ -963,6 +977,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
+  IsErrnoFunctionCall = TLI.IsErrnoFunctionCall;
   IsErrnoThreadLocal = TLI.IsErrnoThreadLocal;
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
@@ -1478,10 +1493,10 @@ unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {
 }
 
 bool TargetLibraryInfoImpl::mayBeErrnoGlobal(const GlobalVariable *GV) const {
-  // TODO: Should consider C++ mangled names for errno.
-  static constexpr auto ErrnoGlobalNames = {"errno", "__libc_errno"};
   assert(GV && "Expecting existing GlobalVariable.");
-  if (GV->hasName() && !is_contained(ErrnoGlobalNames, GV->getName()))
+  if (IsErrnoFunctionCall)
+    return false;
+  if (!GV->isThreadLocal() && IsErrnoThreadLocal)
     return false;
   return true;
 }

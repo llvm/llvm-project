@@ -1879,15 +1879,12 @@ AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
     if (GV->hasLocalLinkage())
       return AliasResult::NoAlias;
 
-    // Neither can it alias external globals which are known not to represent
-    // errno.
-    if (GV->hasExternalLinkage() && !TLI.mayBeErrnoGlobal(GV))
-      return AliasResult::NoAlias;
-
-    // A non-thread-local global cannot alias a thread-local errno.
-    if (!GV->isThreadLocal() && TLI.isErrnoThreadLocal())
+    // Neither can it alias globals where environments define it as a function
+    // call, nor can a non-thread-local global alias a thread-local errno.
+    if (!TLI.mayBeErrnoGlobal(GV))
       return AliasResult::NoAlias;
   }
+
   return AliasResult::MayAlias;
 }
 
