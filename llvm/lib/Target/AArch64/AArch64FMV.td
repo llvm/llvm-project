@@ -22,64 +22,64 @@
 
 
 // Something you can add to target_version or target_clones.
-class FMVExtension<string n, string b, int p> {
+class FMVExtension<string name, string enumeration> {
     // Name, as spelled in target_version or target_clones. e.g. "memtag".
-    string Name = n;
+    string Name = name;
 
     // A C++ expression giving the number of the bit in the FMV ABI.
     // Currently this is given as a value from the enum "CPUFeatures".
-    string Bit = b;
+    string FeatureBit = "FEAT_" # enumeration;
 
     // SubtargetFeature enabled for codegen when this FMV feature is present.
-    string BackendFeature = n;
+    string BackendFeature = name;
 
-    // The FMV priority.
-    int Priority = p;
+    // A C++ expression giving the number of the priority bit.
+    // Currently this is given as a value from the enum "FeatPriorities".
+    string PriorityBit = "PRIOR_" # enumeration;
 }
 
-def : FMVExtension<"aes", "FEAT_PMULL", 150>;
-def : FMVExtension<"bf16", "FEAT_BF16", 280>;
-def : FMVExtension<"bti", "FEAT_BTI", 510>;
-def : FMVExtension<"crc", "FEAT_CRC", 110>;
-def : FMVExtension<"dit", "FEAT_DIT", 180>;
-def : FMVExtension<"dotprod", "FEAT_DOTPROD", 104>;
-let BackendFeature = "ccpp" in def : FMVExtension<"dpb", "FEAT_DPB", 190>;
-let BackendFeature = "ccdp" in def : FMVExtension<"dpb2", "FEAT_DPB2", 200>;
-def : FMVExtension<"f32mm", "FEAT_SVE_F32MM", 350>;
-def : FMVExtension<"f64mm", "FEAT_SVE_F64MM", 360>;
-def : FMVExtension<"fcma", "FEAT_FCMA", 220>;
-def : FMVExtension<"flagm", "FEAT_FLAGM", 20>;
-let BackendFeature = "altnzcv" in def : FMVExtension<"flagm2", "FEAT_FLAGM2", 30>;
-def : FMVExtension<"fp", "FEAT_FP", 90>;
-def : FMVExtension<"fp16", "FEAT_FP16", 170>;
-def : FMVExtension<"fp16fml", "FEAT_FP16FML", 175>;
-let BackendFeature = "fptoint" in def : FMVExtension<"frintts", "FEAT_FRINTTS", 250>;
-def : FMVExtension<"i8mm", "FEAT_I8MM", 270>;
-def : FMVExtension<"jscvt", "FEAT_JSCVT", 210>;
-def : FMVExtension<"ls64", "FEAT_LS64_ACCDATA", 520>;
-def : FMVExtension<"lse", "FEAT_LSE", 80>;
-def : FMVExtension<"memtag", "FEAT_MEMTAG2", 440>;
-def : FMVExtension<"mops", "FEAT_MOPS", 650>;
-def : FMVExtension<"predres", "FEAT_PREDRES", 480>;
-def : FMVExtension<"rcpc", "FEAT_RCPC", 230>;
-let BackendFeature = "rcpc-immo" in def : FMVExtension<"rcpc2", "FEAT_RCPC2", 240>;
-def : FMVExtension<"rcpc3", "FEAT_RCPC3", 241>;
-def : FMVExtension<"rdm", "FEAT_RDM", 108>;
-def : FMVExtension<"rng", "FEAT_RNG", 10>;
-def : FMVExtension<"sb", "FEAT_SB", 470>;
-def : FMVExtension<"sha2", "FEAT_SHA2", 130>;
-def : FMVExtension<"sha3", "FEAT_SHA3", 140>;
-def : FMVExtension<"simd", "FEAT_SIMD", 100>;
-def : FMVExtension<"sm4", "FEAT_SM4", 106>;
-def : FMVExtension<"sme", "FEAT_SME", 430>;
-def : FMVExtension<"sme-f64f64", "FEAT_SME_F64", 560>;
-def : FMVExtension<"sme-i16i64", "FEAT_SME_I64", 570>;
-def : FMVExtension<"sme2", "FEAT_SME2", 580>;
-def : FMVExtension<"ssbs", "FEAT_SSBS2", 490>;
-def : FMVExtension<"sve", "FEAT_SVE", 310>;
-def : FMVExtension<"sve2", "FEAT_SVE2", 370>;
-def : FMVExtension<"sve2-aes", "FEAT_SVE_PMULL128", 380>;
-def : FMVExtension<"sve2-bitperm", "FEAT_SVE_BITPERM", 400>;
-def : FMVExtension<"sve2-sha3", "FEAT_SVE_SHA3", 410>;
-def : FMVExtension<"sve2-sm4", "FEAT_SVE_SM4", 420>;
-def : FMVExtension<"wfxt", "FEAT_WFXT", 550>;
+def : FMVExtension<"aes", "PMULL">;
+def : FMVExtension<"bf16", "BF16">;
+def : FMVExtension<"bti", "BTI">;
+def : FMVExtension<"crc", "CRC">;
+def : FMVExtension<"dit", "DIT">;
+def : FMVExtension<"dotprod", "DOTPROD">;
+let BackendFeature = "ccpp" in def : FMVExtension<"dpb", "DPB">;
+let BackendFeature = "ccdp" in def : FMVExtension<"dpb2", "DPB2">;
+def : FMVExtension<"f32mm", "SVE_F32MM">;
+def : FMVExtension<"f64mm", "SVE_F64MM">;
+def : FMVExtension<"fcma", "FCMA">;
+def : FMVExtension<"flagm", "FLAGM">;
+let BackendFeature = "altnzcv" in def : FMVExtension<"flagm2", "FLAGM2">;
+def : FMVExtension<"fp", "FP">;
+def : FMVExtension<"fp16", "FP16">;
+def : FMVExtension<"fp16fml", "FP16FML">;
+let BackendFeature = "fptoint" in def : FMVExtension<"frintts", "FRINTTS">;
+def : FMVExtension<"i8mm", "I8MM">;
+def : FMVExtension<"jscvt", "JSCVT">;
+def : FMVExtension<"lse", "LSE">;
+def : FMVExtension<"memtag", "MEMTAG2">;
+def : FMVExtension<"mops", "MOPS">;
+def : FMVExtension<"rcpc", "RCPC">;
+let BackendFeature = "rcpc-immo" in def : FMVExtension<"rcpc2", "RCPC2">;
+def : FMVExtension<"rcpc3", "RCPC3">;
+def : FMVExtension<"rdm", "RDM">;
+def : FMVExtension<"rng", "RNG">;
+def : FMVExtension<"sb", "SB">;
+def : FMVExtension<"sha2", "SHA2">;
+def : FMVExtension<"sha3", "SHA3">;
+def : FMVExtension<"simd", "SIMD">;
+def : FMVExtension<"sm4", "SM4">;
+def : FMVExtension<"sme", "SME">;
+def : FMVExtension<"sme-f64f64", "SME_F64">;
+def : FMVExtension<"sme-i16i64", "SME_I64">;
+def : FMVExtension<"sme2", "SME2">;
+def : FMVExtension<"ssbs", "SSBS2">;
+def : FMVExtension<"sve", "SVE">;
+def : FMVExtension<"sve2", "SVE2">;
+def : FMVExtension<"sve2-aes", "SVE_PMULL128">;
+def : FMVExtension<"sve2-bitperm", "SVE_BITPERM">;
+def : FMVExtension<"sve2-sha3", "SVE_SHA3">;
+def : FMVExtension<"sve2-sm4", "SVE_SM4">;
+def : FMVExtension<"wfxt", "WFXT">;
+def : FMVExtension<"cssc", "CSSC">;

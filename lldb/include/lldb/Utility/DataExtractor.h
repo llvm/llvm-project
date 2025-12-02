@@ -334,7 +334,8 @@ public:
   /// \return
   ///     A pointer to the bytes in this object's data if the offset
   ///     and length are valid, or nullptr otherwise.
-  const void *GetData(lldb::offset_t *offset_ptr, lldb::offset_t length) const {
+  virtual const void *GetData(lldb::offset_t *offset_ptr,
+                              lldb::offset_t length) const {
     const uint8_t *ptr = PeekData(*offset_ptr, length);
     if (ptr)
       *offset_ptr += length;
@@ -609,17 +610,17 @@ public:
   ///     The extracted uint8_t value.
   uint8_t GetU8(lldb::offset_t *offset_ptr) const;
 
-  uint8_t GetU8_unchecked(lldb::offset_t *offset_ptr) const {
+  virtual uint8_t GetU8_unchecked(lldb::offset_t *offset_ptr) const {
     uint8_t val = m_start[*offset_ptr];
     *offset_ptr += 1;
     return val;
   }
 
-  uint16_t GetU16_unchecked(lldb::offset_t *offset_ptr) const;
+  virtual uint16_t GetU16_unchecked(lldb::offset_t *offset_ptr) const;
 
-  uint32_t GetU32_unchecked(lldb::offset_t *offset_ptr) const;
+  virtual uint32_t GetU32_unchecked(lldb::offset_t *offset_ptr) const;
 
-  uint64_t GetU64_unchecked(lldb::offset_t *offset_ptr) const;
+  virtual uint64_t GetU64_unchecked(lldb::offset_t *offset_ptr) const;
   /// Extract \a count uint8_t values from \a *offset_ptr.
   ///
   /// Extract \a count uint8_t values from the binary data at the offset
@@ -829,7 +830,8 @@ public:
   ///     A non-nullptr data pointer if \a offset is a valid offset and
   ///     there are \a length bytes available at that offset, nullptr
   ///     otherwise.
-  const uint8_t *PeekData(lldb::offset_t offset, lldb::offset_t length) const {
+  virtual const uint8_t *PeekData(lldb::offset_t offset,
+                                  lldb::offset_t length) const {
     if (ValidOffsetForDataOfSize(offset, length))
       return m_start + offset;
     return nullptr;
@@ -994,7 +996,7 @@ protected:
     constexpr size_t src_size = sizeof(T);
     T val = fail_value;
 
-    const T *src = static_cast<const T *>(GetData(offset_ptr, src_size));
+    const void *src = GetData(offset_ptr, src_size);
     if (!src)
       return val;
 

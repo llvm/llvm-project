@@ -98,13 +98,13 @@ struct MemTransferLowerTest : public testing::Test {
 // For that reason expandMemCpyAsLoop is expected to  explicitly mark
 // loads from source and stores to destination as not aliasing.
 TEST_F(MemTransferLowerTest, MemCpyKnownLength) {
-  ParseAssembly("declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8 *, i64, i1)\n"
-                "define void @foo(i8* %dst, i8* %src, i64 %n) optsize {\n"
+  ParseAssembly("declare void @llvm.memcpy.p0i8.p0i8.i64(ptr, ptr, i64, i1)\n"
+                "define void @foo(ptr %dst, ptr %src, i64 %n) optsize {\n"
                 "entry:\n"
-                "  %is_not_equal = icmp ne i8* %dst, %src\n"
+                "  %is_not_equal = icmp ne ptr %dst, %src\n"
                 "  br i1 %is_not_equal, label %memcpy, label %exit\n"
                 "memcpy:\n"
-                "  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, "
+                "  call void @llvm.memcpy.p0i8.p0i8.i64(ptr %dst, ptr %src, "
                 "i64 1024, i1 false)\n"
                 "  br label %exit\n"
                 "exit:\n"
@@ -138,13 +138,13 @@ TEST_F(MemTransferLowerTest, MemCpyKnownLength) {
 // llvm.memcpy lowering) doesn't alias by making sure the loop can be
 // successfully vectorized without additional runtime checks.
 TEST_F(MemTransferLowerTest, VecMemCpyKnownLength) {
-  ParseAssembly("declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8 *, i64, i1)\n"
-                "define void @foo(i8* %dst, i8* %src, i64 %n) optsize {\n"
+  ParseAssembly("declare void @llvm.memcpy.p0i8.p0i8.i64(ptr, ptr, i64, i1)\n"
+                "define void @foo(ptr %dst, ptr %src, i64 %n) optsize {\n"
                 "entry:\n"
-                "  %is_not_equal = icmp ne i8* %dst, %src\n"
+                "  %is_not_equal = icmp ne ptr %dst, %src\n"
                 "  br i1 %is_not_equal, label %memcpy, label %exit\n"
                 "memcpy:\n"
-                "  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, "
+                "  call void @llvm.memcpy.p0i8.p0i8.i64(ptr %dst, ptr %src, "
                 "i64 1024, i1 false)\n"
                 "  br label %exit\n"
                 "exit:\n"
@@ -176,16 +176,16 @@ TEST_F(MemTransferLowerTest, VecMemCpyKnownLength) {
 
 TEST_F(MemTransferLowerTest, AtomicMemCpyKnownLength) {
   ParseAssembly("declare void "
-                "@llvm.memcpy.element.unordered.atomic.p0i32.p0i32.i64(i32*, "
+                "@llvm.memcpy.element.unordered.atomic.p0i32.p0i32.i64(ptr, "
                 "i32 *, i64, i32)\n"
-                "define void @foo(i32* %dst, i32* %src, i64 %n) optsize {\n"
+                "define void @foo(ptr %dst, ptr %src, i64 %n) optsize {\n"
                 "entry:\n"
-                "  %is_not_equal = icmp ne i32* %dst, %src\n"
+                "  %is_not_equal = icmp ne ptr %dst, %src\n"
                 "  br i1 %is_not_equal, label %memcpy, label %exit\n"
                 "memcpy:\n"
                 "  call void "
-                "@llvm.memcpy.element.unordered.atomic.p0i32.p0i32.i64(i32* "
-                "%dst, i32* %src, "
+                "@llvm.memcpy.element.unordered.atomic.p0i32.p0i32.i64(ptr "
+                "%dst, ptr %src, "
                 "i64 1024, i32 4)\n"
                 "  br label %exit\n"
                 "exit:\n"
@@ -198,9 +198,9 @@ TEST_F(MemTransferLowerTest, AtomicMemCpyKnownLength) {
         TargetTransformInfo TTI(M->getDataLayout());
         auto *MemCpyBB = getBasicBlockByName(F, "memcpy");
         Instruction *Inst = &MemCpyBB->front();
-        assert(isa<AtomicMemCpyInst>(Inst) &&
+        assert(isa<AnyMemCpyInst>(Inst) &&
                "Expecting llvm.memcpy.p0i8.i64 instructon");
-        AtomicMemCpyInst *MemCpyI = cast<AtomicMemCpyInst>(Inst);
+        AnyMemCpyInst *MemCpyI = cast<AnyMemCpyInst>(Inst);
         auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
         expandAtomicMemCpyAsLoop(MemCpyI, TTI, &SE);
         auto *CopyLoopBB = getBasicBlockByName(F, "load-store-loop");
@@ -221,16 +221,16 @@ TEST_F(MemTransferLowerTest, AtomicMemCpyKnownLength) {
 
 TEST_F(MemTransferLowerTest, AtomicMemCpyUnKnownLength) {
   ParseAssembly("declare void "
-                "@llvm.memcpy.element.unordered.atomic.p0i32.p0i32.i64(i32*, "
+                "@llvm.memcpy.element.unordered.atomic.p0i32.p0i32.i64(ptr, "
                 "i32 *, i64, i32)\n"
-                "define void @foo(i32* %dst, i32* %src, i64 %n) optsize {\n"
+                "define void @foo(ptr %dst, ptr %src, i64 %n) optsize {\n"
                 "entry:\n"
-                "  %is_not_equal = icmp ne i32* %dst, %src\n"
+                "  %is_not_equal = icmp ne ptr %dst, %src\n"
                 "  br i1 %is_not_equal, label %memcpy, label %exit\n"
                 "memcpy:\n"
                 "  call void "
-                "@llvm.memcpy.element.unordered.atomic.p0i32.p0i32.i64(i32* "
-                "%dst, i32* %src, "
+                "@llvm.memcpy.element.unordered.atomic.p0i32.p0i32.i64(ptr "
+                "%dst, ptr %src, "
                 "i64 %n, i32 4)\n"
                 "  br label %exit\n"
                 "exit:\n"
@@ -243,9 +243,9 @@ TEST_F(MemTransferLowerTest, AtomicMemCpyUnKnownLength) {
         TargetTransformInfo TTI(M->getDataLayout());
         auto *MemCpyBB = getBasicBlockByName(F, "memcpy");
         Instruction *Inst = &MemCpyBB->front();
-        assert(isa<AtomicMemCpyInst>(Inst) &&
+        assert(isa<AnyMemCpyInst>(Inst) &&
                "Expecting llvm.memcpy.p0i8.i64 instructon");
-        AtomicMemCpyInst *MemCpyI = cast<AtomicMemCpyInst>(Inst);
+        auto *MemCpyI = cast<AnyMemCpyInst>(Inst);
         auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
         expandAtomicMemCpyAsLoop(MemCpyI, TTI, &SE);
         auto *CopyLoopBB = getBasicBlockByName(F, "loop-memcpy-expansion");

@@ -22,13 +22,13 @@ StringRef ARM::getArchSynonym(StringRef Arch) {
       .Case("v5e", "v5te")
       .Case("v6j", "v6")
       .Case("v6hl", "v6k")
-      .Cases("v6m", "v6sm", "v6s-m", "v6-m")
-      .Cases("v6z", "v6zk", "v6kz")
-      .Cases("v7", "v7a", "v7hl", "v7l", "v7-a")
+      .Cases({"v6m", "v6sm", "v6s-m"}, "v6-m")
+      .Cases({"v6z", "v6zk"}, "v6kz")
+      .Cases({"v7", "v7a", "v7hl", "v7l"}, "v7-a")
       .Case("v7r", "v7-r")
       .Case("v7m", "v7-m")
       .Case("v7em", "v7e-m")
-      .Cases("v8", "v8a", "v8l", "aarch64", "arm64", "v8-a")
+      .Cases({"v8", "v8a", "v8l", "aarch64", "arm64"}, "v8-a")
       .Case("v8.1a", "v8.1-a")
       .Case("v8.2a", "v8.2-a")
       .Case("v8.3a", "v8.3-a")
@@ -39,13 +39,14 @@ StringRef ARM::getArchSynonym(StringRef Arch) {
       .Case("v8.8a", "v8.8-a")
       .Case("v8.9a", "v8.9-a")
       .Case("v8r", "v8-r")
-      .Cases("v9", "v9a", "v9-a")
+      .Cases({"v9", "v9a"}, "v9-a")
       .Case("v9.1a", "v9.1-a")
       .Case("v9.2a", "v9.2-a")
       .Case("v9.3a", "v9.3-a")
       .Case("v9.4a", "v9.4-a")
       .Case("v9.5a", "v9.5-a")
       .Case("v9.6a", "v9.6-a")
+      .Case("v9.7a", "v9.7-a")
       .Case("v8m.base", "v8-m.base")
       .Case("v8m.main", "v8-m.main")
       .Case("v8.1m.main", "v8.1-m.main")
@@ -82,9 +83,9 @@ StringRef ARM::getCanonicalArchName(StringRef Arch) {
   // Ex. "armebv7", move past the "eb".
   if (offset != StringRef::npos && A.substr(offset, 2) == "eb")
     offset += 2;
-  // Or, if it ends with eb ("armv7eb"), chop it off.
-  else if (A.ends_with("eb"))
-    A = A.substr(0, A.size() - 2);
+  else
+    // Or, if it ends with eb ("armv7eb"), chop it off.
+    A.consume_back("eb");
   // Trim the head
   if (offset != StringRef::npos)
     A = A.substr(offset);

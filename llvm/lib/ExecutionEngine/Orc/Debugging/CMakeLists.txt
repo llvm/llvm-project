@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMOrcDebugging
   DebugInfoSupport.cpp
   DebuggerSupport.cpp
   DebuggerSupportPlugin.cpp
+  ELFDebugObjectPlugin.cpp
   LLJITUtilsCBindings.cpp
   PerfSupportPlugin.cpp
   VTuneSupportPlugin.cpp
@@ -18,8 +19,10 @@ add_llvm_component_library(LLVMOrcDebugging
   ${rt_lib}
 
   LINK_COMPONENTS
+  BinaryFormat
   DebugInfoDWARF
   JITLink
+  Object
   OrcJIT
   OrcShared
   Support

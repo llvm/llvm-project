@@ -277,18 +277,18 @@ void pointer_to_iterator() {
 void loop() {
   for (std::vector<int>::iterator I = Vec.begin(); I != Vec.end(); ++I) {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use auto when declaring iterators
-    // CHECK-FIXES: for (auto I = Vec.begin(); I != Vec.end(); ++I)
+    // CHECK-FIXES: for (auto I = Vec.begin(); I != Vec.end(); ++I) {
   }
 
   for (int_iterator I = Vec.begin(), E = Vec.end(); I != E; ++I) {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use auto when declaring iterators
-    // CHECK-FIXES: for (auto I = Vec.begin(), E = Vec.end(); I != E; ++I)
+    // CHECK-FIXES: for (auto I = Vec.begin(), E = Vec.end(); I != E; ++I) {
   }
 
   std::vector<std::vector<int>::iterator> IterVec;
   for (std::vector<int>::iterator I : IterVec) {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use auto when declaring iterators
-    // CHECK-FIXES: for (auto I : IterVec)
+    // CHECK-FIXES: for (auto I : IterVec) {
   }
 }
 

@@ -27,6 +27,9 @@ struct EntryProperties {
   unsigned NumThreadsX{0}; // X component
   unsigned NumThreadsY{0}; // Y component
   unsigned NumThreadsZ{0}; // Z component
+  unsigned WaveSizeMin{0}; // Minimum component
+  unsigned WaveSizeMax{0}; // Maximum component
+  unsigned WaveSizePref{0}; // Preferred component
 
   EntryProperties(const Function *Fn = nullptr) : Entry(Fn) {};
 };

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_GENERATE_N_H
-#define _LIBCPP___ALGORITHM_GENERATE_N_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_GENERATE_N_H
+#define _LIBCPP___CXX03___ALGORITHM_GENERATE_N_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__utility/convert_to_integral.h>
@@ -19,8 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _OutputIterator, class _Size, class _Generator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
-generate_n(_OutputIterator __first, _Size __orig_n, _Generator __gen) {
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator generate_n(_OutputIterator __first, _Size __orig_n, _Generator __gen) {
   typedef decltype(std::__convert_to_integral(__orig_n)) _IntegralSize;
   _IntegralSize __n = __orig_n;
   for (; __n > 0; ++__first, (void)--__n)
@@ -30,4 +29,4 @@ generate_n(_OutputIterator __first, _Size __orig_n, _Generator __gen) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_GENERATE_N_H
+#endif // _LIBCPP___CXX03___ALGORITHM_GENERATE_N_H

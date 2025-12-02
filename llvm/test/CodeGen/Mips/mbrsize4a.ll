@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands   < %s | FileCheck %s -check-prefix=jal16
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands < %s | FileCheck %s -check-prefix=jal16
 
 @j = global i32 10, align 4
 @.str = private unnamed_addr constant [11 x i8] c"at bottom\0A\00", align 1
@@ -30,8 +30,8 @@ declare i32 @foo(...) #1
 
 declare i32 @printf(ptr, ...) #1
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #2 = { nounwind }
 
 !1 = !{i32 68}

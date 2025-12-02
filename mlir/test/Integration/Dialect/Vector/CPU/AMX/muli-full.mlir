@@ -100,8 +100,8 @@ func.func @entry() -> i32 {
   ]> : tensor<16x64xi8>
 
   // Set up memory.
-  %a = bufferization.to_memref %0 : tensor<16x64xi8> to memref<16x64xi8>
-  %b = bufferization.to_memref %1 : tensor<16x64xi8> to memref<16x64xi8>
+  %a = bufferization.to_buffer %0 : tensor<16x64xi8> to memref<16x64xi8>
+  %b = bufferization.to_buffer %1 : tensor<16x64xi8> to memref<16x64xi8>
   %c = memref.alloc() : memref<16x16xi32>
 
   // Call kernel.

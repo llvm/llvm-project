@@ -157,11 +157,6 @@ llvm.func @invalid_returned_attr_type(%0 : i32 {llvm.returned = !llvm.ptr})
 
 // -----
 
-// expected-error@below {{"llvm.alignstack" attribute attached to non-pointer LLVM type}}
-llvm.func @invalid_alignstack_arg_type(%0 : i32 {llvm.alignstack = 10 : i32})
-
-// -----
-
 // expected-error@below {{"llvm.alignstack" should be an integer attribute}}
 llvm.func @invalid_alignstack_attr_type(%0 : i32 {llvm.alignstack = "foo"})
 

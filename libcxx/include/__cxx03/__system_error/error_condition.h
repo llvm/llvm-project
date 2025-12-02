@@ -7,10 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SYSTEM_ERROR_ERROR_CONDITION_H
-#define _LIBCPP___SYSTEM_ERROR_ERROR_CONDITION_H
+#ifndef _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CONDITION_H
+#define _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CONDITION_H
 
-#include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/hash.h>
 #include <__cxx03/__functional/unary_function.h>
@@ -28,18 +27,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_error_condition_enum : public false_type {};
 
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_error_condition_enum_v = is_error_condition_enum<_Tp>::value;
-#endif
-
 template <>
 struct _LIBCPP_TEMPLATE_VIS is_error_condition_enum<errc> : true_type {};
 
-#ifdef _LIBCPP_CXX03_LANG
 template <>
 struct _LIBCPP_TEMPLATE_VIS is_error_condition_enum<errc::__lx> : true_type {};
-#endif
 
 namespace __adl_only {
 // Those cause ADL to trigger but they are not viable candidates,
@@ -97,8 +89,6 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator==(const error_condition& __x, const e
   return __x.category() == __y.category() && __x.value() == __y.value();
 }
 
-#if _LIBCPP_STD_VER <= 17
-
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const error_condition& __x, const error_condition& __y) _NOEXCEPT {
   return !(__x == __y);
 }
@@ -106,17 +96,6 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const error_condition& __x, const e
 inline _LIBCPP_HIDE_FROM_ABI bool operator<(const error_condition& __x, const error_condition& __y) _NOEXCEPT {
   return __x.category() < __y.category() || (__x.category() == __y.category() && __x.value() < __y.value());
 }
-
-#else // _LIBCPP_STD_VER <= 17
-
-inline _LIBCPP_HIDE_FROM_ABI strong_ordering
-operator<=>(const error_condition& __x, const error_condition& __y) noexcept {
-  if (auto __c = __x.category() <=> __y.category(); __c != 0)
-    return __c;
-  return __x.value() <=> __y.value();
-}
-
-#endif // _LIBCPP_STD_VER <= 17
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<error_condition> : public __unary_function<error_condition, size_t> {
@@ -127,4 +106,4 @@ struct _LIBCPP_TEMPLATE_VIS hash<error_condition> : public __unary_function<erro
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SYSTEM_ERROR_ERROR_CONDITION_H
+#endif // _LIBCPP___CXX03___SYSTEM_ERROR_ERROR_CONDITION_H

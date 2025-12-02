@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___UTILITY_SCOPE_GUARD_H
 #define _LIBCPP___UTILITY_SCOPE_GUARD_H
 
-#include <__assert>
 #include <__config>
 #include <__utility/move.h>
 
@@ -43,6 +42,8 @@ public:
   __scope_guard(__scope_guard&&) = delete;
 #endif
 };
+
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__scope_guard);
 
 template <class _Func>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __scope_guard<_Func> __make_scope_guard(_Func __func) {

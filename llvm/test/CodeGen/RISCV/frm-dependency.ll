@@ -30,8 +30,6 @@ define float @fadd_s(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.fma.f32(float, float, float)
-
 define float @fmadd_s(float %a, float %b, float %c) nounwind {
   ; RV32IF-LABEL: name: fmadd_s
   ; RV32IF: bb.0 (%ir-block.0):
@@ -87,16 +85,17 @@ define double @fcvt_d_w(i32 %a) nounwind {
   ; RV32IF-NEXT:   liveins: $x10
   ; RV32IF-NEXT: {{  $}}
   ; RV32IF-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
-  ; RV32IF-NEXT:   %1:fpr64 = nofpexcept FCVT_D_W [[COPY]]
-  ; RV32IF-NEXT:   $f10_d = COPY %1
+  ; RV32IF-NEXT:   [[FCVT_D_W:%[0-9]+]]:fpr64 = FCVT_D_W [[COPY]], 0
+  ; RV32IF-NEXT:   $f10_d = COPY [[FCVT_D_W]]
   ; RV32IF-NEXT:   PseudoRET implicit $f10_d
+  ;
   ; RV64IF-LABEL: name: fcvt_d_w
   ; RV64IF: bb.0 (%ir-block.0):
   ; RV64IF-NEXT:   liveins: $x10
   ; RV64IF-NEXT: {{  $}}
   ; RV64IF-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
-  ; RV64IF-NEXT:   %1:fpr64 = nofpexcept FCVT_D_W [[COPY]]
-  ; RV64IF-NEXT:   $f10_d = COPY %1
+  ; RV64IF-NEXT:   [[FCVT_D_W:%[0-9]+]]:fpr64 = FCVT_D_W [[COPY]], 0
+  ; RV64IF-NEXT:   $f10_d = COPY [[FCVT_D_W]]
   ; RV64IF-NEXT:   PseudoRET implicit $f10_d
   %1 = sitofp i32 %a to double
   ret double %1

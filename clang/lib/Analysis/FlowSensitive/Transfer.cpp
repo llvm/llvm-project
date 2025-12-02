@@ -20,17 +20,19 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
+#include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Debug.h"
 #include <assert.h>
 #include <cassert>
 
@@ -60,7 +62,14 @@ static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
   Value *LHSValue = Env.getValue(LHS);
   Value *RHSValue = Env.getValue(RHS);
 
-  if (LHSValue == RHSValue)
+  // When two unsupported values are compared, both are nullptr. Only supported
+  // values should evaluate to equal.
+  if (LHSValue == RHSValue && LHSValue)
+    return Env.getBoolLiteralValue(true);
+
+  // Special case: `NullPtrLiteralExpr == itself`. When both sides are untyped
+  // nullptr, they do not have an assigned Value, but they compare equal.
+  if (LHS.getType()->isNullPtrType() && RHS.getType()->isNullPtrType())
     return Env.getBoolLiteralValue(true);
 
   if (auto *LHSBool = dyn_cast_or_null<BoolValue>(LHSValue))
@@ -281,7 +290,7 @@ public:
     }
   }
 
-  void VisitImplicitCastExpr(const ImplicitCastExpr *S) {
+  void VisitCastExpr(const CastExpr *S) {
     const Expr *SubExpr = S->getSubExpr();
     assert(SubExpr != nullptr);
 
@@ -311,6 +320,60 @@ public:
       break;
     }
 
+    case CK_BaseToDerived: {
+      // This is a cast of (single-layer) pointer or reference to a record type.
+      // We should now model the fields for the derived type.
+
+      // Get the RecordStorageLocation for the record object underneath.
+      RecordStorageLocation *Loc = nullptr;
+      if (S->getType()->isPointerType()) {
+        auto *PV = Env.get<PointerValue>(*SubExpr);
+        assert(PV != nullptr);
+        if (PV == nullptr)
+          break;
+        Loc = cast<RecordStorageLocation>(&PV->getPointeeLoc());
+      } else {
+        assert(S->getType()->isRecordType());
+        if (SubExpr->isGLValue()) {
+          Loc = Env.get<RecordStorageLocation>(*SubExpr);
+        } else {
+          Loc = &Env.getResultObjectLocation(*SubExpr);
+        }
+      }
+      if (!Loc) {
+        // Nowhere to add children or propagate from, so we're done.
+        break;
+      }
+
+      // Get the derived record type underneath the reference or pointer.
+      QualType Derived = S->getType().getNonReferenceType();
+      if (Derived->isPointerType()) {
+        Derived = Derived->getPointeeType();
+      }
+
+      // Add children to the storage location for fields (including synthetic
+      // fields) of the derived type and initialize their values.
+      for (const FieldDecl *Field :
+           Env.getDataflowAnalysisContext().getModeledFields(Derived)) {
+        assert(Field != nullptr);
+        QualType FieldType = Field->getType();
+        if (FieldType->isReferenceType()) {
+          Loc->addChild(*Field, nullptr);
+        } else {
+          Loc->addChild(*Field, &Env.createStorageLocation(FieldType));
+        }
+
+        for (const auto &Entry :
+             Env.getDataflowAnalysisContext().getSyntheticFields(Derived)) {
+          Loc->addSyntheticField(Entry.getKey(),
+                                 Env.createStorageLocation(Entry.getValue()));
+        }
+      }
+      Env.initializeFieldsWithValues(*Loc, Derived);
+
+      // Fall through to propagate SubExpr's StorageLocation to the CastExpr.
+      [[fallthrough]];
+    }
     case CK_IntegralCast:
       // FIXME: This cast creates a new integral value from the
       // subexpression. But, because we don't model integers, we don't
@@ -318,10 +381,9 @@ public:
       // modeling is added, then update this code to create a fresh location and
       // value.
     case CK_UncheckedDerivedToBase:
+    case CK_DerivedToBase:
     case CK_ConstructorConversion:
     case CK_UserDefinedConversion:
-      // FIXME: Add tests that excercise CK_UncheckedDerivedToBase,
-      // CK_ConstructorConversion, and CK_UserDefinedConversion.
     case CK_NoOp: {
       // FIXME: Consider making `Environment::getStorageLocation` skip noop
       // expressions (this and other similar expressions in the file) instead
@@ -548,7 +610,15 @@ public:
       // Even if the copy/move constructor call is elidable, we choose to copy
       // the record in all cases (which isn't wrong, just potentially not
       // optimal).
-      copyRecord(*ArgLoc, Loc, Env);
+      //
+      // To handle cases of base class initializers in constructors, where a
+      // sibling derived class can be used to initialize a shared-base-class
+      // subobject through a DerivedToBase cast, intentionally copy only the
+      // parts of `ArgLoc` that are part of the base class being initialized.
+      // This is necessary because the type of `Loc` in these cases is the
+      // derived type ultimately being constructed, not the type of the base
+      // class subobject.
+      copyRecord(*ArgLoc, Loc, Env, S->getType());
       return;
     }
 
@@ -587,7 +657,12 @@ public:
       if (LocSrc == nullptr || LocDst == nullptr)
         return;
 
-      copyRecord(*LocSrc, *LocDst, Env);
+      // If the destination object here is of a derived class, `Arg0` may be a
+      // cast of that object to a base class, and the source object may be of a
+      // sibling derived class. To handle these cases, ensure we are copying
+      // only the fields for `Arg0`'s type, not the type of the underlying
+      // `RecordStorageLocation`.
+      copyRecord(*LocSrc, *LocDst, Env, Arg0->getType());
 
       // The assignment operator can have an arbitrary return type. We model the
       // return value only if the return type is the same as or a base class of
@@ -678,15 +753,6 @@ public:
     propagateValue(*SubExpr, *S, Env);
   }
 
-  void VisitCXXStaticCastExpr(const CXXStaticCastExpr *S) {
-    if (S->getCastKind() == CK_NoOp) {
-      const Expr *SubExpr = S->getSubExpr();
-      assert(SubExpr != nullptr);
-
-      propagateValueOrStorageLocation(*SubExpr, *S, Env);
-    }
-  }
-
   void VisitConditionalOperator(const ConditionalOperator *S) {
     const Environment *TrueEnv = StmtToEnv.getEnvironment(*S->getTrueExpr());
     const Environment *FalseEnv = StmtToEnv.getEnvironment(*S->getFalseExpr());
@@ -703,8 +769,29 @@ public:
       StorageLocation *TrueLoc = TrueEnv->getStorageLocation(*S->getTrueExpr());
       StorageLocation *FalseLoc =
           FalseEnv->getStorageLocation(*S->getFalseExpr());
-      if (TrueLoc == FalseLoc && TrueLoc != nullptr)
+      if (TrueLoc == FalseLoc && TrueLoc != nullptr) {
         Env.setStorageLocation(*S, *TrueLoc);
+      } else if (!S->getType()->isRecordType()) {
+        // Ideally, we would have something like an "alias set" to say that the
+        // result StorageLocation can be either of the locations from the
+        // TrueEnv or FalseEnv. Then, when this ConditionalOperator is
+        // (a) used in an LValueToRValue cast, the value is the join of all of
+        //     the values in the alias set.
+        // (b) or, used in an assignment to the resulting LValue, the assignment
+        //     *may* update all of the locations in the alias set.
+        // For now, we do the simpler thing of creating a new StorageLocation
+        // and joining the values right away, handling only case (a).
+        // Otherwise, the dataflow framework needs to be updated be able to
+        // represent alias sets and weak updates (for the "may").
+        if (Value *Val = Environment::joinValues(
+                S->getType(), TrueEnv->getValue(*S->getTrueExpr()), *TrueEnv,
+                FalseEnv->getValue(*S->getFalseExpr()), *FalseEnv, Env,
+                Model)) {
+          StorageLocation &Loc = Env.createStorageLocation(*S);
+          Env.setStorageLocation(*S, Loc);
+          Env.setValue(Loc, *Val);
+        }
+      }
     } else if (!S->getType()->isRecordType()) {
       // The conditional operator can evaluate to either of the values of the
       // two branches. To model this, join these two values together to yield

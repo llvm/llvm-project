@@ -14,7 +14,8 @@
 #define LLVM_CLANG_AST_INTERP_INTERPFRAME_H
 
 #include "Frame.h"
-#include "Program.h"
+#include "InterpBlock.h"
+#include "Pointer.h"
 
 namespace clang {
 namespace interp {
@@ -27,6 +28,9 @@ class InterpFrame final : public Frame {
 public:
   /// The frame of the previous function.
   InterpFrame *Caller;
+
+  /// Bottom Frame.
+  InterpFrame(InterpState &S);
 
   /// Creates a new frame for a method call.
   InterpFrame(InterpState &S, const Function *Func, InterpFrame *Caller,
@@ -42,15 +46,25 @@ public:
   /// Destroys the frame, killing all live pointers to stack slots.
   ~InterpFrame();
 
+  static void free(InterpFrame *F) {
+    if (!F->isBottomFrame())
+      delete F;
+  }
+
   /// Invokes the destructors for a scope.
   void destroy(unsigned Idx);
   void initScope(unsigned Idx);
+  void destroyScopes();
+  void enableLocal(unsigned Idx);
+  bool isLocalEnabled(unsigned Idx) const {
+    return localInlineDesc(Idx)->IsActive;
+  }
 
   /// Describes the frame with arguments for diagnostic purposes.
   void describe(llvm::raw_ostream &OS) const override;
 
   /// Returns the parent frame object.
-  Frame *getCaller() const override;
+  Frame *getCaller() const override { return Caller; }
 
   /// Returns the location of the call to the frame.
   SourceRange getCallRange() const override;
@@ -77,13 +91,14 @@ public:
 
   /// Returns a pointer to a local variables.
   Pointer getLocalPointer(unsigned Offset) const;
+  Block *getLocalBlock(unsigned Offset) const;
 
   /// Returns the value of an argument.
   template <typename T> const T &getParam(unsigned Offset) const {
     auto Pt = Params.find(Offset);
     if (Pt == Params.end())
       return stackRef<T>(Offset);
-    return Pointer(reinterpret_cast<Block *>(Pt->second.get())).deref<T>();
+    return reinterpret_cast<const Block *>(Pt->second.get())->deref<T>();
   }
 
   /// Mutates a local copy of a parameter.
@@ -94,11 +109,21 @@ public:
   /// Returns a pointer to an argument - lazily creates a block.
   Pointer getParamPointer(unsigned Offset);
 
+  bool hasThisPointer() const { return Func && Func->hasThisPointer(); }
   /// Returns the 'this' pointer.
-  const Pointer &getThis() const { return This; }
+  const Pointer &getThis() const {
+    assert(hasThisPointer());
+    assert(!isBottomFrame());
+    return stackRef<Pointer>(ThisPointerOffset);
+  }
 
   /// Returns the RVO pointer, if the Function has one.
-  const Pointer &getRVOPtr() const { return RVOPtr; }
+  const Pointer &getRVOPtr() const {
+    assert(Func);
+    assert(Func->hasRVO());
+    assert(!isBottomFrame());
+    return stackRef<Pointer>(0);
+  }
 
   /// Checks if the frame is a root frame - return should quit the interpreter.
   bool isRoot() const { return !Func; }
@@ -110,7 +135,7 @@ public:
   CodePtr getRetPC() const { return RetPC; }
 
   /// Map a location to a source.
-  virtual SourceInfo getSource(CodePtr PC) const;
+  SourceInfo getSource(CodePtr PC) const;
   const Expr *getExpr(CodePtr PC) const;
   SourceLocation getLocation(CodePtr PC) const;
   SourceRange getRange(CodePtr PC) const;
@@ -118,6 +143,8 @@ public:
   unsigned getDepth() const { return Depth; }
 
   bool isStdFunction() const;
+
+  bool isBottomFrame() const { return !Caller; }
 
   void dump() const { dump(llvm::errs(), 0); }
   void dump(llvm::raw_ostream &OS, unsigned Indent = 0) const;
@@ -131,7 +158,7 @@ private:
 
   /// Returns an offset to a local.
   template <typename T> T &localRef(unsigned Offset) const {
-    return getLocalPointer(Offset).deref<T>();
+    return localBlock(Offset)->deref<T>();
   }
 
   /// Returns a pointer to a local's block.
@@ -151,10 +178,8 @@ private:
   unsigned Depth;
   /// Reference to the function being executed.
   const Function *Func;
-  /// Current object pointer for methods.
-  Pointer This;
-  /// Pointer the non-primitive return value gets constructed in.
-  Pointer RVOPtr;
+  /// Offset of the instance pointer. Use with stackRef<>().
+  unsigned ThisPointerOffset;
   /// Return address.
   CodePtr RetPC;
   /// The size of all the arguments.

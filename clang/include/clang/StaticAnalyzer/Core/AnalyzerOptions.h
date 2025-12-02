@@ -19,6 +19,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 #include <utility>
 #include <vector>
@@ -124,6 +125,36 @@ enum UserModeKind {
 
 enum class CTUPhase1InliningKind { None, Small, All };
 
+class PositiveAnalyzerOption {
+public:
+  constexpr PositiveAnalyzerOption() = default;
+  constexpr PositiveAnalyzerOption(unsigned Value) : Value(Value) {
+    assert(Value > 0 && "only positive values are accepted");
+  }
+  constexpr PositiveAnalyzerOption(const PositiveAnalyzerOption &) = default;
+  constexpr PositiveAnalyzerOption &
+  operator=(const PositiveAnalyzerOption &Other) {
+    Value = Other.Value;
+    return *this;
+  }
+
+  static constexpr std::optional<PositiveAnalyzerOption> create(unsigned Val) {
+    if (Val == 0)
+      return std::nullopt;
+    return PositiveAnalyzerOption{Val};
+  }
+  static std::optional<PositiveAnalyzerOption> create(StringRef Str) {
+    unsigned Parsed = 0;
+    if (Str.getAsInteger(0, Parsed))
+      return std::nullopt;
+    return PositiveAnalyzerOption::create(Parsed);
+  }
+  constexpr operator unsigned() const { return Value; }
+
+private:
+  unsigned Value = 1;
+};
+
 /// Stores options for the analyzer from the command line.
 ///
 /// Some options are frontend flags (e.g.: -analyzer-output), but some are
@@ -146,7 +177,7 @@ enum class CTUPhase1InliningKind { None, Small, All };
 /// and should be eventually converted into -analyzer-config flags. New analyzer
 /// options should not be implemented as frontend flags. Frontend flags still
 /// make sense for things that do not affect the actual analysis.
-class AnalyzerOptions : public RefCountedBase<AnalyzerOptions> {
+class AnalyzerOptions {
 public:
   using ConfigTable = llvm::StringMap<std::string>;
 
@@ -239,7 +270,8 @@ public:
   unsigned NoRetryExhausted : 1;
 
   /// Emit analyzer warnings as errors.
-  bool AnalyzerWerror : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned AnalyzerWerror : 1;
 
   /// The inlining stack depth limit.
   unsigned InlineMaxStackDepth;
@@ -279,8 +311,7 @@ public:
       return AnalyzerConfigCmdFlags;
     }();
 
-    return !std::binary_search(AnalyzerConfigCmdFlags.begin(),
-                               AnalyzerConfigCmdFlags.end(), Name);
+    return !llvm::binary_search(AnalyzerConfigCmdFlags, Name);
   }
 
   AnalyzerOptions()
@@ -380,13 +411,11 @@ public:
             // an alias to the new verbose filename option because this
             // closely mimics the behavior under the old option.
             ShouldWriteStableReportFilename || ShouldWriteVerboseReportFilename,
-            AnalyzerWerror,
+            static_cast<bool>(AnalyzerWerror),
             ShouldApplyFixIts,
             ShouldDisplayCheckerNameForText};
   }
 };
-
-using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;
 
 //===----------------------------------------------------------------------===//
 // We'll use AnalyzerOptions in the frontend, but we can't link the frontend

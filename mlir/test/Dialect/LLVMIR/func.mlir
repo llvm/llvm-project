@@ -210,8 +210,8 @@ module {
   }
 
   // CHECK-LABEL: llvm.func @memory_attr
-  // CHECK-SAME: attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite>} {
-  llvm.func @memory_attr() attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite>} {
+  // CHECK-SAME: attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>} {
+  llvm.func @memory_attr() attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>} {
     llvm.return
   }
 
@@ -258,12 +258,6 @@ module {
     llvm.return
   }
 
-  llvm.func @unsafe_fp_math_roundtrip() attributes {unsafe_fp_math = true} {
-    // CHECK: @unsafe_fp_math_roundtrip
-    // CHECK-SAME: attributes {unsafe_fp_math = true}
-    llvm.return
-  }
-
   llvm.func @no_infs_fp_math_roundtrip() attributes {no_infs_fp_math = true} {
     // CHECK: @no_infs_fp_math_roundtrip
     // CHECK-SAME: attributes {no_infs_fp_math = true}
@@ -273,12 +267,6 @@ module {
   llvm.func @no_nans_fp_math_roundtrip() attributes {no_nans_fp_math = true} {
     // CHECK: @no_nans_fp_math_roundtrip
     // CHECK-SAME: attributes {no_nans_fp_math = true}
-    llvm.return
-  }
-
-  llvm.func @approx_func_fp_math_roundtrip() attributes {approx_func_fp_math = true} {
-    // CHECK: @approx_func_fp_math_roundtrip
-    // CHECK-SAME: attributes {approx_func_fp_math = true}
     llvm.return
   }
 
@@ -309,6 +297,18 @@ module {
   llvm.func @fp_contract_roundtrip() attributes {fp_contract = "fast"} {
     // CHECK: @fp_contract_roundtrip
     // CHECK-SAME: attributes {fp_contract = "fast"}
+    llvm.return
+  }
+
+  llvm.func @instrument_function_entry_function() attributes {instrument_function_entry = "__cyg_profile_func_enter"} {
+    // CHECK: @instrument_function_entry_function
+    // CHECK-SAME: attributes {instrument_function_entry = "__cyg_profile_func_enter"}
+    llvm.return
+  }
+
+  llvm.func @instrument_function_exit_function() attributes {instrument_function_exit = "__cyg_profile_func_exit"} {
+    // CHECK: @instrument_function_exit_function
+    // CHECK-SAME: attributes {instrument_function_exit = "__cyg_profile_func_exit"}
     llvm.return
   }
 
@@ -428,7 +428,7 @@ module {
 
 module {
   "llvm.func"() ({
-  // expected-error @below {{invalid Calling Conventions specification: cc_12}}
+  // expected-error @below {{expected one of [ccc, fastcc, coldcc, cc_10, cc_11, anyregcc, preserve_mostcc, preserve_allcc, swiftcc, cxx_fast_tlscc, tailcc, cfguard_checkcc, swifttailcc, x86_stdcallcc, x86_fastcallcc, arm_apcscc, arm_aapcscc, arm_aapcs_vfpcc, msp430_intrcc, x86_thiscallcc, ptx_kernelcc, ptx_devicecc, spir_funccc, spir_kernelcc, intel_ocl_bicc, x86_64_sysvcc, win64cc, x86_vectorcallcc, hhvmcc, hhvm_ccc, x86_intrcc, avr_intrcc, avr_builtincc, amdgpu_vscc, amdgpu_gscc, amdgpu_cscc, amdgpu_kernelcc, x86_regcallcc, amdgpu_hscc, msp430_builtincc, amdgpu_lscc, amdgpu_escc, aarch64_vectorcallcc, aarch64_sve_vectorcallcc, wasm_emscripten_invokecc, amdgpu_gfxcc, m68k_intrcc] for Calling Conventions, got: cc_12}}
   // expected-error @below {{failed to parse CConvAttr parameter 'CallingConv' which is to be a `CConv`}}
   }) {sym_name = "generic_unknown_calling_convention", CConv = #llvm.cconv<cc_12>, function_type = !llvm.func<i64 (i64, i64)>} : () -> ()
 }
@@ -479,3 +479,9 @@ llvm.func @intel_reqd_sub_group_size_hint() attributes {llvm.intel_reqd_sub_grou
 // CHECK-SAME: llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<512 : i64, i32>
 // CHECK-SAME: llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<128 : i64, !llvm.struct<(i32, i64, f32)>
 llvm.func @workgroup_attribution(%arg0: !llvm.ptr {llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<512 : i64, i32>}, %arg1: !llvm.ptr {llvm.workgroup_attribution = #llvm.mlir.workgroup_attribution<128 : i64, !llvm.struct<(i32, i64, f32)>>})
+
+// -----
+
+// CHECK: @constant_range_negative
+// CHECK-SAME: llvm.range = #llvm.constant_range<i32, 0, -2147483648>
+llvm.func @constant_range_negative() -> (i32 {llvm.range = #llvm.constant_range<i32, 0, -2147483648>})

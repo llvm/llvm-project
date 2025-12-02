@@ -64,11 +64,11 @@ void PPCXCOFFStreamer::emitInstruction(const MCInst &Inst,
   emitPrefixedInstruction(Inst, STI);
 }
 
-MCXCOFFStreamer *
-llvm::createPPCXCOFFStreamer(MCContext &Context,
-                             std::unique_ptr<MCAsmBackend> MAB,
-                             std::unique_ptr<MCObjectWriter> OW,
-                             std::unique_ptr<MCCodeEmitter> Emitter) {
-  return new PPCXCOFFStreamer(Context, std::move(MAB), std::move(OW),
+MCStreamer *
+llvm::createPPCXCOFFStreamer(const Triple &, MCContext &C,
+                             std::unique_ptr<MCAsmBackend> &&MAB,
+                             std::unique_ptr<MCObjectWriter> &&OW,
+                             std::unique_ptr<MCCodeEmitter> &&Emitter) {
+  return new PPCXCOFFStreamer(C, std::move(MAB), std::move(OW),
                               std::move(Emitter));
 }

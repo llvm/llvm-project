@@ -1,4 +1,4 @@
-! RUN: bbc -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false -fwrapv %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPss1()
 subroutine ss1
@@ -122,7 +122,7 @@ end
 ! CHECK:   %[[V_50:[0-9]+]] = fir.slice %[[C_1]], %[[C_2]], %[[C_1]] : (index, index, index) -> !fir.slice<1>
 ! CHECK:   %[[V_51:[0-9]+]] = fir.embox %[[V_4]](%[[V_5]]) [%[[V_50]]] : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<2xf32>>
 ! CHECK:   %[[V_52:[0-9]+]] = fir.convert %[[V_51:[0-9]+]] : (!fir.box<!fir.array<2xf32>>) -> !fir.box<none>
-! CHECK:   %[[V_53:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_49]], %[[V_52]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK:   %[[V_53:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_49]], %[[V_52]]) fastmath<contract> {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:   %[[V_54:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
 ! CHECK:   %[[V_55:[0-9]+]] = arith.subi %[[V_54]], %[[C_1_i32]] : i32
 ! CHECK:   %[[V_56:[0-9]+]] = fir.convert %[[V_55:[0-9]+]] : (i32) -> index
@@ -130,8 +130,8 @@ end
 ! CHECK:   %[[V_58:[0-9]+]] = fir.slice %[[V_56]], %[[V_57]], %[[C_1]] : (index, index, index) -> !fir.slice<1>
 ! CHECK:   %[[V_59:[0-9]+]] = fir.embox %[[V_4]](%[[V_5]]) [%[[V_58]]] : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:   %[[V_60:[0-9]+]] = fir.convert %[[V_59:[0-9]+]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
-! CHECK:   %[[V_61:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_49]], %[[V_60]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
-! CHECK:   %[[V_62:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_49]]) fastmath<contract> : (!fir.ref<i8>) -> i32
+! CHECK:   %[[V_61:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_49]], %[[V_60]]) fastmath<contract> {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK:   %[[V_62:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_49]]) fastmath<contract> {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:   return
 ! CHECK:   }
 
@@ -248,7 +248,7 @@ end
 ! CHECK:   %[[V_74:[0-9]+]] = fir.slice %[[C_1]], %[[C_2]], %[[C_1]], %[[C_1]], %[[C_2]], %[[C_1]] : (index, index, index, index, index, index) -> !fir.slice<2>
 ! CHECK:   %[[V_75:[0-9]+]] = fir.embox %[[V_4]](%[[V_5]]) [%[[V_74]]] : (!fir.ref<!fir.array<2x?xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x2xf32>>
 ! CHECK:   %[[V_76:[0-9]+]] = fir.convert %[[V_75:[0-9]+]] : (!fir.box<!fir.array<?x2xf32>>) -> !fir.box<none>
-! CHECK:   %[[V_77:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_76]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK:   %[[V_77:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_76]]) fastmath<contract> {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:   %[[V_78:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
 ! CHECK:   %[[V_79:[0-9]+]] = arith.subi %[[V_78]], %[[C_1_i32]] : i32
 ! CHECK:   %[[V_80:[0-9]+]] = fir.convert %[[V_79:[0-9]+]] : (i32) -> index
@@ -256,8 +256,8 @@ end
 ! CHECK:   %[[V_82:[0-9]+]] = fir.slice %[[C_1]], %[[C_2]], %[[C_1]], %[[V_80]], %[[V_81]], %[[C_1]] : (index, index, index, index, index, index) -> !fir.slice<2>
 ! CHECK:   %[[V_83:[0-9]+]] = fir.embox %[[V_4]](%[[V_5]]) [%[[V_82]]] : (!fir.ref<!fir.array<2x?xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK:   %[[V_84:[0-9]+]] = fir.convert %[[V_83:[0-9]+]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
-! CHECK:   %[[V_85:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_84]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
-! CHECK:   %[[V_86:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_73]]) fastmath<contract> : (!fir.ref<i8>) -> i32
+! CHECK:   %[[V_85:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_84]]) fastmath<contract> {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK:   %[[V_86:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_73]]) fastmath<contract> {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:   return
 ! CHECK:   }
 
@@ -374,7 +374,7 @@ end
 ! CHECK:   %[[V_74:[0-9]+]] = fir.slice %[[C_1]], %[[C_2]], %[[C_1]], %[[C_1]], %[[C_2]], %[[C_1]] : (index, index, index, index, index, index) -> !fir.slice<2>
 ! CHECK:   %[[V_75:[0-9]+]] = fir.embox %[[V_4]](%[[V_5]]) [%[[V_74]]] : (!fir.ref<!fir.array<?x2xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<2x?xf32>>
 ! CHECK:   %[[V_76:[0-9]+]] = fir.convert %[[V_75:[0-9]+]] : (!fir.box<!fir.array<2x?xf32>>) -> !fir.box<none>
-! CHECK:   %[[V_77:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_76]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK:   %[[V_77:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_76]]) fastmath<contract> {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:   %[[V_78:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
 ! CHECK:   %[[V_79:[0-9]+]] = arith.subi %[[V_78]], %[[C_1_i32]] : i32
 ! CHECK:   %[[V_80:[0-9]+]] = fir.convert %[[V_79:[0-9]+]] : (i32) -> index
@@ -382,8 +382,8 @@ end
 ! CHECK:   %[[V_82:[0-9]+]] = fir.slice %[[V_80]], %[[V_81]], %[[C_1]], %[[C_1]], %[[C_2]], %[[C_1]] : (index, index, index, index, index, index) -> !fir.slice<2>
 ! CHECK:   %[[V_83:[0-9]+]] = fir.embox %[[V_4]](%[[V_5]]) [%[[V_82]]] : (!fir.ref<!fir.array<?x2xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK:   %[[V_84:[0-9]+]] = fir.convert %[[V_83:[0-9]+]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
-! CHECK:   %[[V_85:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_84]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
-! CHECK:   %[[V_86:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_73]]) fastmath<contract> : (!fir.ref<i8>) -> i32
+! CHECK:   %[[V_85:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_84]]) fastmath<contract> {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK:   %[[V_86:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_73]]) fastmath<contract> {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:   return
 ! CHECK:   }
 

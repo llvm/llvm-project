@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: availability-filesystem-missing
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <filesystem>

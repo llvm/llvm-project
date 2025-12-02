@@ -160,31 +160,6 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) {
   ret void
 }
 
-define i32 @atomic_load_global_align1(ptr addrspace(1) %ptr) {
-; GFX90A-LABEL: define i32 @atomic_load_global_align1(
-; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; GFX90A-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; GFX90A-NEXT:    [[TMP2:%.*]] = alloca i32, align 4, addrspace(5)
-; GFX90A-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[TMP2]])
-; GFX90A-NEXT:    call void @__atomic_load(i64 4, ptr [[TMP1]], ptr addrspace(5) [[TMP2]], i32 5)
-; GFX90A-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[TMP2]], align 4
-; GFX90A-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[TMP2]])
-; GFX90A-NEXT:    ret i32 [[TMP3]]
-;
-; GFX1100-LABEL: define i32 @atomic_load_global_align1(
-; GFX1100-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; GFX1100-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; GFX1100-NEXT:    [[TMP2:%.*]] = alloca i32, align 4, addrspace(5)
-; GFX1100-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[TMP2]])
-; GFX1100-NEXT:    call void @__atomic_load(i64 4, ptr [[TMP1]], ptr addrspace(5) [[TMP2]], i32 5)
-; GFX1100-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(5) [[TMP2]], align 4
-; GFX1100-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[TMP2]])
-; GFX1100-NEXT:    ret i32 [[TMP3]]
-;
-  %val = load atomic i32, ptr addrspace(1) %ptr  seq_cst, align 1, !mmra !2
-  ret i32 %val
-}
-
 !0 = !{!"foo", !"bar"}
 !1 = !{!"bux", !"baz"}
 !2 = !{!0, !1}

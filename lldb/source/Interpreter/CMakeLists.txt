@@ -55,6 +55,10 @@ add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
   Property.cpp
   ScriptInterpreter.cpp
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Interpreter
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbInterpreterInterfaces
     lldbCommands
@@ -63,9 +67,6 @@ add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
     lldbHost
     lldbTarget
     lldbUtility
-
-  LINK_COMPONENTS
-    Support
   )
 
 add_dependencies(lldbInterpreter

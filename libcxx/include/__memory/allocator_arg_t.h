@@ -23,7 +23,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_TEMPLATE_VIS allocator_arg_t {
+struct allocator_arg_t {
   explicit allocator_arg_t() = default;
 };
 
@@ -39,10 +39,10 @@ constexpr allocator_arg_t allocator_arg = allocator_arg_t();
 
 template <class _Tp, class _Alloc, class... _Args>
 struct __uses_alloc_ctor_imp {
-  typedef _LIBCPP_NODEBUG __remove_cvref_t<_Alloc> _RawAlloc;
-  static const bool __ua = uses_allocator<_Tp, _RawAlloc>::value;
-  static const bool __ic = is_constructible<_Tp, allocator_arg_t, _Alloc, _Args...>::value;
-  static const int value = __ua ? 2 - __ic : 0;
+  using _RawAlloc _LIBCPP_NODEBUG = __remove_cvref_t<_Alloc>;
+  static const bool __ua          = uses_allocator<_Tp, _RawAlloc>::value;
+  static const bool __ic          = is_constructible<_Tp, allocator_arg_t, _Alloc, _Args...>::value;
+  static const int value          = __ua ? 2 - __ic : 0;
 };
 
 template <class _Tp, class _Alloc, class... _Args>

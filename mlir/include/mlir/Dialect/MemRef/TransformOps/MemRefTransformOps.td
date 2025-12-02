@@ -245,7 +245,7 @@ def MemRefEraseDeadAllocAndStoresOp
     ]> {
   let description = [{
     This applies memory optimization on memref. In particular it does store to
-    load forwarding, dead store elimination and dead alloc elimination.
+    load forwarding, dead store elimination and dead alloc/alloca elimination.
 
     #### Return modes
 

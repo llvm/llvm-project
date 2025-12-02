@@ -42,6 +42,10 @@ static const unsigned WebAssemblyAddrSpaceMap[] = {
     0,  // ptr32_uptr
     0,  // ptr64
     0,  // hlsl_groupshared
+    0,  // hlsl_constant
+    0,  // hlsl_private
+    0,  // hlsl_device
+    0,  // hlsl_input
     20, // wasm_funcref
 };
 
@@ -60,6 +64,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
+  bool HasGC = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
@@ -83,12 +88,23 @@ public:
     LongDoubleWidth = LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
-    // size_t being unsigned long for both wasm32 and wasm64 makes mangled names
-    // more consistent between the two.
-    SizeType = UnsignedLong;
-    PtrDiffType = SignedLong;
-    IntPtrType = SignedLong;
     HasUnalignedAccess = true;
+    if (T.isWALI()) {
+      // The WALI ABI is documented here:
+      // https://doc.rust-lang.org/rustc/platform-support/wasm32-wali-linux.html
+      // Currently, this ABI only applies to wasm32 targets and notably requires
+      // 64-bit longs
+      LongAlign = LongWidth = 64;
+      SizeType = UnsignedInt;
+      PtrDiffType = SignedInt;
+      IntPtrType = SignedInt;
+    } else {
+      // size_t being unsigned long for both wasm32 and wasm64 makes mangled
+      // names more consistent between the two.
+      SizeType = UnsignedLong;
+      PtrDiffType = SignedLong;
+      IntPtrType = SignedLong;
+    }
   }
 
   StringRef getABI() const override;
@@ -120,8 +136,7 @@ private:
 
   bool setCPU(const std::string &Name) final { return isValidCPUName(Name); }
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const final;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const final;
 
   BuiltinVaListKind getBuiltinVaListKind() const final {
     return VoidPtrBuiltinVaList;
@@ -173,7 +188,8 @@ private:
 
   bool hasProtectedVisibility() const override { return false; }
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
 };
 
 class LLVM_LIBRARY_VISIBILITY WebAssembly32TargetInfo
@@ -183,11 +199,12 @@ public:
                                    const TargetOptions &Opts)
       : WebAssemblyTargetInfo(T, Opts) {
     if (T.isOSEmscripten())
-      resetDataLayout("e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-f128:64-n32:64-"
-                      "S128-ni:1:10:20");
-    else
       resetDataLayout(
-          "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128-ni:1:10:20");
+          "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-f128:64-n32:64-"
+          "S128-ni:1:10:20");
+    else
+      resetDataLayout("e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-"
+                      "S128-ni:1:10:20");
   }
 
 protected:
@@ -207,11 +224,12 @@ public:
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
     if (T.isOSEmscripten())
-      resetDataLayout("e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-f128:64-n32:64-"
-                      "S128-ni:1:10:20");
-    else
       resetDataLayout(
-          "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-n32:64-S128-ni:1:10:20");
+          "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-i128:128-f128:64-n32:64-"
+          "S128-ni:1:10:20");
+    else
+      resetDataLayout("e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-"
+                      "S128-ni:1:10:20");
   }
 
 protected:

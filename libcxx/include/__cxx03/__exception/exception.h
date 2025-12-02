@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___EXCEPTION_EXCEPTION_H
-#define _LIBCPP___EXCEPTION_EXCEPTION_H
+#ifndef _LIBCPP___CXX03___EXCEPTION_EXCEPTION_H
+#define _LIBCPP___CXX03___EXCEPTION_EXCEPTION_H
 
 #include <__cxx03/__config>
 
@@ -91,4 +91,4 @@ public:
 
 } // namespace std
 
-#endif // _LIBCPP___EXCEPTION_EXCEPTION_H
+#endif // _LIBCPP___CXX03___EXCEPTION_EXCEPTION_H

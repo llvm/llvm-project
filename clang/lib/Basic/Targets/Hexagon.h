@@ -64,10 +64,11 @@ public:
     // for modeling predicate registers in HVX, and the bool -> byte
     // correspondence matches the HVX architecture.
     BoolWidth = BoolAlign = 8;
+    BFloat16Width = BFloat16Align = 16;
+    BFloat16Format = &llvm::APFloat::BFloat();
   }
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override {
@@ -95,6 +96,8 @@ public:
   bool isCLZForZeroUndef() const override { return false; }
 
   bool hasFeature(StringRef Feature) const override;
+
+  bool hasBFloat16Type() const override;
 
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,

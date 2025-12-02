@@ -88,11 +88,11 @@ struct constant_op_binder {
 
     // Fold the constant to an attribute.
     SmallVector<OpFoldResult, 1> foldedOp;
-    LogicalResult result = op->fold(/*operands=*/std::nullopt, foldedOp);
+    LogicalResult result = op->fold(/*operands=*/{}, foldedOp);
     (void)result;
     assert(succeeded(result) && "expected ConstantLike op to be foldable");
 
-    if (auto attr = llvm::dyn_cast<AttrT>(foldedOp.front().get<Attribute>())) {
+    if (auto attr = llvm::dyn_cast<AttrT>(cast<Attribute>(foldedOp.front()))) {
       if (bind_value)
         *bind_value = attr;
       return true;
@@ -436,12 +436,6 @@ inline detail::constant_float_predicate_matcher m_NegInfFloat() {
   return {[](const APFloat &value) {
     return value.isNegative() && value.isInfinity();
   }};
-}
-
-/// Matches a constant scalar / vector splat / tensor splat with denormal
-/// values.
-inline detail::constant_float_predicate_matcher m_isDenormalFloat() {
-  return {[](const APFloat &value) { return value.isDenormal(); }};
 }
 
 /// Matches a constant scalar / vector splat / tensor splat integer zero.

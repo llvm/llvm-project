@@ -300,13 +300,48 @@ func.func @negative_no_ub_estimate(%arg0: tensor<?x12xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    // expected-error @below {{ailed to pad op}}
+    // expected-error @below {{failed to pad op}}
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       // Note - attempting to pad non-static dim
       padding_dimensions=[1],
       nofold_flags=[1, 1, 1]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Test dynamic padding using `use_prescribed_tensor_shapes`
+
+// CHECK: #[[MAP:.*]] = affine_map<()[s0] -> (-s0 + (s0 ceildiv 7) * 7)>
+// CHECK: @use_prescribed_tensor_shapes
+// CHECK: (%[[ARG0:.*]]: tensor<?x12xf32>, %[[ARG1:.*]]: tensor<12x?xf32>
+func.func @use_prescribed_tensor_shapes(%arg0: tensor<?x12xf32>,
+                                   %arg1: tensor<12x?xf32>,
+                                   %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // CHECK: %[[C1_0:.*]] = arith.constant 1 : index
+  // CHECK: %[[DIM_0:.*]] = tensor.dim %[[ARG1]], %[[C1_0]] : tensor<12x?xf32>
+  // CHECK: %[[PADDING:.*]] = affine.apply #[[MAP]]()[%[[DIM_0]]]
+  // CHECK: %[[PADDED:.*]] = tensor.pad %[[ARG1]] low[0, 0] high[0, %[[PADDING]]] {
+  // CHECK: linalg.matmul ins(%[[ARG0]], %[[PADDED]] : tensor<?x12xf32>, tensor<12x?xf32>) 
+  %0 = linalg.matmul ins(%arg0, %arg1 : tensor<?x12xf32>, tensor<12x?xf32>) outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  func.return %0 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %padded, %pad, %copy_back = transform.structured.pad %0
+    pad_to_multiple_of [7] use_prescribed_tensor_shapes {
+      padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[1]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.canonicalization
+    } {apply_cse} : !transform.any_op
     transform.yield
   }
 }
@@ -416,6 +451,41 @@ module attributes {transform.with_named_sequence} {
       padding_dimensions=[0, 1, 2],
       nofold_flags=[1, 1, 1]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
-    transform.yield
+    transform.yield 
   }
 }
+
+// -----
+
+// This test checks that by using `simplify_min_max_affine_ops` after padding
+// and tiling, it's possible to recover static tiled slices.
+
+// CHECK-LABEL: @dyn_pad_tiling
+// CHECK: %[[LHS:.*]] = tensor.pad
+// CHECK: %[[RHS:.*]] = tensor.pad
+// CHECK: scf.for
+// CHECK-DAG: tensor.extract_slice %[[LHS]][0, %{{.*}}] [%{{.*}}, 32]
+// CHECK-DAG: tensor.extract_slice %[[RHS]][%{{.*}}, 0] [32, %{{.*}}]
+func.func @dyn_pad_tiling(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %padded, %pad, %copy = transform.structured.pad %0 pad_to_multiple_of [32] use_prescribed_tensor_shapes {padding_dimensions = [2], padding_values = [0.000000e+00 : f32, 0.000000e+00 : f32, 0.000000e+00 : f32]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %tiled_linalg_op, %loops = transform.structured.tile_using_for %padded tile_sizes [0, 0, 32] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %1 = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %2 = transform.apply_registered_pass "resolve-shaped-type-result-dims" to %1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %2 {
+      transform.apply_patterns.canonicalization
+    } {apply_cse} : !transform.any_op
+    %3 = transform.structured.match ops{["affine.min", "affine.max"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.affine.simplify_min_max_affine_ops %3 : !transform.any_op
+    transform.apply_patterns to %2 {
+      transform.apply_patterns.canonicalization
+    } {apply_cse} : !transform.any_op
+    transform.yield 
+  }
+}
+

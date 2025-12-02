@@ -40,22 +40,22 @@ using namespace llvm;
 
 namespace {
 
-  struct QuotRemPair {
-    Value *Quotient;
-    Value *Remainder;
+struct QuotRemPair {
+  Value *Quotient;
+  Value *Remainder;
 
-    QuotRemPair(Value *InQuotient, Value *InRemainder)
-        : Quotient(InQuotient), Remainder(InRemainder) {}
-  };
+  QuotRemPair(Value *InQuotient, Value *InRemainder)
+      : Quotient(InQuotient), Remainder(InRemainder) {}
+};
 
-  /// A quotient and remainder, plus a BB from which they logically "originate".
-  /// If you use Quotient or Remainder in a Phi node, you should use BB as its
-  /// corresponding predecessor.
-  struct QuotRemWithBB {
-    BasicBlock *BB = nullptr;
-    Value *Quotient = nullptr;
-    Value *Remainder = nullptr;
-  };
+/// A quotient and remainder, plus a BB from which they logically "originate".
+/// If you use Quotient or Remainder in a Phi node, you should use BB as its
+/// corresponding predecessor.
+struct QuotRemWithBB {
+  BasicBlock *BB = nullptr;
+  Value *Quotient = nullptr;
+  Value *Remainder = nullptr;
+};
 
 using DivCacheTy = DenseMap<DivRemMapKey, QuotRemPair>;
 using BypassWidthsTy = DenseMap<unsigned, unsigned>;
@@ -457,7 +457,7 @@ bool llvm::bypassSlowDivision(BasicBlock *BB,
     Next = Next->getNextNode();
 
     // Ignore dead code to save time and avoid bugs.
-    if (I->hasNUses(0))
+    if (I->use_empty())
       continue;
 
     FastDivInsertionTask Task(I, BypassWidths);

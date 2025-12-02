@@ -256,7 +256,7 @@ class VisualStudio(
         for bp in self._debugger.Breakpoints:
             # We're looking at the user-set breakpoints so there should be no
             # Parent.
-            assert bp.Parent == None
+            assert bp.Parent is None
             this_vsbp = VSBreakpoint(
                 PurePath(bp.File), bp.FileLine, bp.FileColumn, bp.Condition
             )
@@ -308,7 +308,7 @@ class VisualStudio(
         self.context.logger.note("Launching VS debugger...")
         self._fn_go(False)
 
-    def step(self):
+    def step_in(self):
         self._fn_step(False)
 
     def go(self) -> ReturnCode:

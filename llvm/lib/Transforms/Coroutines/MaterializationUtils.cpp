@@ -70,20 +70,21 @@ struct RematGraph {
                std::deque<std::unique_ptr<RematNode>> &WorkList,
                User *FirstUse) {
     RematNode *N = NUPtr.get();
-    if (Remats.count(N->Node))
+    auto [It, Inserted] = Remats.try_emplace(N->Node);
+    if (!Inserted)
       return;
 
     // We haven't see this node yet - add to the list
-    Remats[N->Node] = std::move(NUPtr);
+    It->second = std::move(NUPtr);
     for (auto &Def : N->Node->operands()) {
       Instruction *D = dyn_cast<Instruction>(Def.get());
       if (!D || !MaterializableCallback(*D) ||
           !Checker.isDefinitionAcrossSuspend(*D, FirstUse))
         continue;
 
-      if (Remats.count(D)) {
+      if (auto It = Remats.find(D); It != Remats.end()) {
         // Already have this in the graph
-        N->Operands.push_back(Remats[D].get());
+        N->Operands.push_back(It->second.get());
         continue;
       }
 
@@ -136,8 +137,7 @@ struct RematGraph {
 
 } // namespace
 
-namespace llvm {
-template <> struct GraphTraits<RematGraph *> {
+template <> struct llvm::GraphTraits<RematGraph *> {
   using NodeRef = RematGraph::RematNode *;
   using ChildIteratorType = RematGraph::RematNode **;
 
@@ -147,8 +147,6 @@ template <> struct GraphTraits<RematGraph *> {
   }
   static ChildIteratorType child_end(NodeRef N) { return N->Operands.end(); }
 };
-
-} // end namespace llvm
 
 // For each instruction identified as materializable across the suspend point,
 // and its associated DAG of other rematerializable instructions,
@@ -180,12 +178,12 @@ static void rewriteMaterializableInstructions(
     // insert the remats into the end of the predecessor (there should only be
     // one). This is so that suspend blocks always have the suspend instruction
     // as the first instruction.
-    auto InsertPoint = &*Use->getParent()->getFirstInsertionPt();
+    BasicBlock::iterator InsertPoint = Use->getParent()->getFirstInsertionPt();
     if (isa<AnyCoroSuspendInst>(Use)) {
       BasicBlock *SuspendPredecessorBlock =
           Use->getParent()->getSinglePredecessor();
       assert(SuspendPredecessorBlock && "malformed coro suspend instruction");
-      InsertPoint = SuspendPredecessorBlock->getTerminator();
+      InsertPoint = SuspendPredecessorBlock->getTerminator()->getIterator();
     }
 
     // Note: skip the first instruction as this is the actual use that we're
@@ -197,7 +195,7 @@ static void rewriteMaterializableInstructions(
       CurrentMaterialization = D->clone();
       CurrentMaterialization->setName(D->getName());
       CurrentMaterialization->insertBefore(InsertPoint);
-      InsertPoint = CurrentMaterialization;
+      InsertPoint = CurrentMaterialization->getIterator();
 
       // Replace all uses of Def in the instructions being added as part of this
       // rematerialization group
@@ -292,7 +290,8 @@ void coro::doRematerializations(
     for (Instruction *U : E.second) {
       // Don't process a user twice (this can happen if the instruction uses
       // more than one rematerializable def)
-      if (AllRemats.count(U))
+      auto [It, Inserted] = AllRemats.try_emplace(U);
+      if (!Inserted)
         continue;
 
       // Constructor creates the whole RematGraph for the given Use
@@ -305,7 +304,7 @@ void coro::doRematerializations(
                       ++I) { (*I)->Node->dump(); } dbgs()
                  << "\n";);
 
-      AllRemats[U] = std::move(RematUPtr);
+      It->second = std::move(RematUPtr);
     }
   }
 

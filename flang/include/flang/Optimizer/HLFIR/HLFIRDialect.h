@@ -82,6 +82,17 @@ inline bool isPolymorphicType(mlir::Type type) {
   return fir::isPolymorphicType(type);
 }
 
+/// Is this the FIR type of a Fortran procedure pointer?
+inline bool isFortranProcedurePointerType(mlir::Type type) {
+  return fir::isBoxProcAddressType(type);
+}
+
+inline bool isFortranPointerObjectType(mlir::Type type) {
+  auto boxTy =
+      llvm::dyn_cast_or_null<fir::BaseBoxType>(fir::dyn_cast_ptrEleTy(type));
+  return boxTy && boxTy.isPointer();
+}
+
 /// Is this an SSA value type for the value of a Fortran procedure
 /// designator ?
 inline bool isFortranProcedureValue(mlir::Type type) {
@@ -135,6 +146,9 @@ mlir::Value genExprShape(mlir::OpBuilder &builder, const mlir::Location &loc,
 /// that cannot depend on HLFIRBuilder (there will be a cyclic dependency).
 /// This has to be cleaned up, when HLFIR is the default.
 bool mayHaveAllocatableComponent(mlir::Type ty);
+
+/// Scalar integer or a sequence of integers (via boxed array or expr).
+bool isFortranIntegerScalarOrArrayObject(mlir::Type type);
 
 } // namespace hlfir
 

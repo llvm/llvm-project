@@ -16,6 +16,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Language.h"
+#include "lldb/lldb-private-enumerations.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -23,10 +24,10 @@ using namespace lldb_private::plugin::dwarf;
 
 DWARFIndex::~DWARFIndex() = default;
 
-bool DWARFIndex::ProcessFunctionDIE(
+IterationAction DWARFIndex::ProcessFunctionDIE(
     const Module::LookupInfo &lookup_info, DWARFDIE die,
     const CompilerDeclContext &parent_decl_ctx,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   llvm::StringRef name = lookup_info.GetLookupName().GetStringRef();
   FunctionNameType name_type_mask = lookup_info.GetNameTypeMask();
 
@@ -43,7 +44,7 @@ bool DWARFIndex::ProcessFunctionDIE(
 
     if (!lookup_info.NameMatchesLookupInfo(name_to_match_against,
                                            lookup_info.GetLanguageType()))
-      return true;
+      return IterationAction::Continue;
   }
 
   // Exit early if we're searching exclusively for methods or selectors and
@@ -51,12 +52,12 @@ bool DWARFIndex::ProcessFunctionDIE(
   uint32_t looking_for_nonmethods =
       name_type_mask & ~(eFunctionNameTypeMethod | eFunctionNameTypeSelector);
   if (!looking_for_nonmethods && parent_decl_ctx.IsValid())
-    return true;
+    return IterationAction::Continue;
 
   // Otherwise, we need to also check that the context matches. If it does not
   // match, we do nothing.
   if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-    return true;
+    return IterationAction::Continue;
 
   // In case of a full match, we just insert everything we find.
   if (name_type_mask & eFunctionNameTypeFull && die.GetMangledName() == name)
@@ -79,25 +80,26 @@ bool DWARFIndex::ProcessFunctionDIE(
       return callback(die);
   }
 
-  return true;
+  return IterationAction::Continue;
 }
 
 DWARFIndex::DIERefCallbackImpl::DIERefCallbackImpl(
-    const DWARFIndex &index, llvm::function_ref<bool(DWARFDIE die)> callback,
+    const DWARFIndex &index,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback,
     llvm::StringRef name)
     : m_index(index),
       m_dwarf(*llvm::cast<SymbolFileDWARF>(
           index.m_module.GetSymbolFile()->GetBackingSymbolFile())),
       m_callback(callback), m_name(name) {}
 
-bool DWARFIndex::DIERefCallbackImpl::operator()(DIERef ref) const {
+IterationAction DWARFIndex::DIERefCallbackImpl::operator()(DIERef ref) const {
   if (DWARFDIE die = m_dwarf.GetDIE(ref))
     return m_callback(die);
   m_index.ReportInvalidDIERef(ref, m_name);
-  return true;
+  return IterationAction::Continue;
 }
 
-bool DWARFIndex::DIERefCallbackImpl::operator()(
+IterationAction DWARFIndex::DIERefCallbackImpl::operator()(
     const llvm::AppleAcceleratorTable::Entry &entry) const {
   return this->operator()(DIERef(std::nullopt, DIERef::Section::DebugInfo,
                                  *entry.getDIESectionOffset()));
@@ -112,42 +114,43 @@ void DWARFIndex::ReportInvalidDIERef(DIERef ref, llvm::StringRef name) const {
 
 void DWARFIndex::GetFullyQualifiedType(
     const DWARFDeclContext &context,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   GetTypes(context, [&](DWARFDIE die) {
     return GetFullyQualifiedTypeImpl(context, die, callback);
   });
 }
 
-bool DWARFIndex::GetFullyQualifiedTypeImpl(
+IterationAction DWARFIndex::GetFullyQualifiedTypeImpl(
     const DWARFDeclContext &context, DWARFDIE die,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   DWARFDeclContext dwarf_decl_ctx = die.GetDWARFDeclContext();
   if (dwarf_decl_ctx == context)
     return callback(die);
-  return true;
+  return IterationAction::Continue;
 }
 
 void DWARFIndex::GetTypesWithQuery(
-    TypeQuery &query, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    TypeQuery &query,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   GetTypes(query.GetTypeBasename(), [&](DWARFDIE die) {
     return ProcessTypeDIEMatchQuery(query, die, callback);
   });
 }
 
-bool DWARFIndex::ProcessTypeDIEMatchQuery(
+IterationAction DWARFIndex::ProcessTypeDIEMatchQuery(
     TypeQuery &query, DWARFDIE die,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   // Check the language, but only if we have a language filter.
   if (query.HasLanguage() &&
       !query.LanguageMatches(SymbolFileDWARF::GetLanguageFamily(*die.GetCU())))
-    return true; // Keep iterating over index types, language mismatch.
+    return IterationAction::Continue;
 
   // Since mangled names are unique, we only need to check if the names are
   // the same.
   if (query.GetSearchByMangledName()) {
     if (die.GetMangledName(/*substitute_name_allowed=*/false) !=
         query.GetTypeBasename().GetStringRef())
-      return true; // Keep iterating over index types, mangled name mismatch.
+      return IterationAction::Continue;
     return callback(die);
   }
 
@@ -158,22 +161,22 @@ bool DWARFIndex::ProcessTypeDIEMatchQuery(
     die_context = die.GetTypeLookupContext();
 
   if (!query.ContextMatches(die_context))
-    return true;
+    return IterationAction::Continue;
   return callback(die);
 }
 
 void DWARFIndex::GetNamespacesWithParents(
     ConstString name, const CompilerDeclContext &parent_decl_ctx,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   GetNamespaces(name, [&](DWARFDIE die) {
     return ProcessNamespaceDieMatchParents(parent_decl_ctx, die, callback);
   });
 }
 
-bool DWARFIndex::ProcessNamespaceDieMatchParents(
+IterationAction DWARFIndex::ProcessNamespaceDieMatchParents(
     const CompilerDeclContext &parent_decl_ctx, DWARFDIE die,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-    return true;
+    return IterationAction::Continue;
   return callback(die);
 }

@@ -136,12 +136,12 @@ int X86FastPreTileConfig::getStackSpaceFor(Register VirtReg) {
 /// If \p VirtReg live out of the current MBB, it must live out of the current
 /// config
 bool X86FastPreTileConfig::mayLiveOut(Register VirtReg, MachineInstr *CfgMI) {
-  if (MayLiveAcrossBlocks.test(Register::virtReg2Index(VirtReg)))
+  if (MayLiveAcrossBlocks.test(VirtReg.virtRegIndex()))
     return true;
 
   for (const MachineInstr &UseInst : MRI->use_nodbg_instructions(VirtReg)) {
     if (UseInst.getParent() != MBB) {
-      MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
+      MayLiveAcrossBlocks.set(VirtReg.virtRegIndex());
       return true;
     }
 
@@ -150,7 +150,7 @@ bool X86FastPreTileConfig::mayLiveOut(Register VirtReg, MachineInstr *CfgMI) {
     // tile register.
     if (CfgMI) {
       if (dominates(*MBB, *CfgMI, UseInst)) {
-        MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
+        MayLiveAcrossBlocks.set(VirtReg.virtRegIndex());
         return true;
       }
     }
@@ -206,8 +206,7 @@ void X86FastPreTileConfig::spill(MachineBasicBlock::iterator Before,
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   // Don't need shape information for tile store, becasue it is adjacent to
   // the tile def instruction.
-  TII->storeRegToStackSlot(*MBB, Before, VirtReg, Kill, FI, &RC, TRI,
-                           Register());
+  TII->storeRegToStackSlot(*MBB, Before, VirtReg, Kill, FI, &RC, Register());
   ++NumStores;
 
   // TODO: update DBG_VALUEs
@@ -267,24 +266,16 @@ void X86FastPreTileConfig::reload(MachineBasicBlock::iterator UseMI,
                     << printReg(TileReg, TRI) << '\n');
 }
 
-static unsigned getTileDefNum(MachineRegisterInfo *MRI, Register Reg) {
-  if (Reg.isVirtual()) {
-    unsigned RegClassID = MRI->getRegClass(Reg)->getID();
-    if (RegClassID == X86::TILERegClassID)
-      return 1;
-    if (RegClassID == X86::TILEPAIRRegClassID)
-      return 2;
-  } else {
-    if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
-      return 1;
-    if (Reg >= X86::TMM0_TMM1 && Reg <= X86::TMM6_TMM7)
-      return 2;
+static bool isTileRegister(MachineRegisterInfo *MRI, Register Reg) {
+  if (Reg.isVirtual() &&
+      (MRI->getRegClass(Reg)->getID() == X86::TILERegClassID)) {
+    return true;
   }
-  return 0;
-}
 
-static bool isTileRegister(MachineRegisterInfo *MRI, Register VirtReg) {
-  return getTileDefNum(MRI, VirtReg) > 0;
+  if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
+    return true;
+
+  return false;
 }
 
 static bool isTileDef(MachineRegisterInfo *MRI, MachineInstr &MI) {
@@ -296,7 +287,7 @@ static bool isTileDef(MachineRegisterInfo *MRI, MachineInstr &MI) {
   if (!MO.isReg())
     return false;
 
-  return getTileDefNum(MRI, MO.getReg()) > 0;
+  return isTileRegister(MRI, MO.getReg());
 }
 
 static ShapeT getShape(MachineRegisterInfo *MRI, Register TileReg) {
@@ -355,14 +346,15 @@ void X86FastPreTileConfig::convertPHI(MachineBasicBlock *MBB,
     // Mark it as liveout, so that it will be spilled when visit
     // the incoming MBB. Otherwise since phi will be deleted, it
     // would miss spill when visit incoming MBB.
-    MayLiveAcrossBlocks.set(Register::virtReg2Index(InTileReg));
+    MayLiveAcrossBlocks.set(InTileReg.virtRegIndex());
     MachineBasicBlock *InMBB = PHI.getOperand(I + 1).getMBB();
 
     MachineInstr *TileDefMI = MRI->getVRegDef(InTileReg);
     MachineBasicBlock::iterator InsertPos;
     if (TileDefMI->isPHI()) {
       InsertPos = TileDefMI->getParent()->getFirstNonPHI();
-      if (VisitedPHIs.count(TileDefMI)) { // circular phi reference
+      if (auto It = VisitedPHIs.find(TileDefMI);
+          It != VisitedPHIs.end()) { // circular phi reference
         //        def t1
         //       /       \
         //  def t2       t3 = phi(t1, t4) <--
@@ -372,9 +364,9 @@ void X86FastPreTileConfig::convertPHI(MachineBasicBlock *MBB,
         // For each (row, column and stack address) append phi incoming value.
         // Create r3 = phi(r1, r4)
         // Create r4 = phi(r2, r3)
-        Register InRowReg = VisitedPHIs[TileDefMI].Row;
-        Register InColReg = VisitedPHIs[TileDefMI].Col;
-        Register InStackAddrReg = VisitedPHIs[TileDefMI].StackAddr;
+        Register InRowReg = It->second.Row;
+        Register InColReg = It->second.Col;
+        Register InStackAddrReg = It->second.StackAddr;
         RowPHI.addReg(InRowReg).addMBB(InMBB);
         ColPHI.addReg(InColReg).addMBB(InMBB);
         AddrPHI.addReg(InStackAddrReg).addMBB(InMBB);
@@ -563,8 +555,17 @@ bool X86FastPreTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
       MachineBasicBlock::iterator I;
       if (LastShapeMI && dominates(MBB, MI, LastShapeMI))
         I = ++LastShapeMI->getIterator();
-      else
-        I = ++MI.getIterator();
+      else {
+        // Call can overwrite registers like rax, ensure the tile config
+        // instruction is sinked closer to first instruction that uses tile.
+        auto UseIt = MI.getIterator();
+        while (UseIt != MBB.end()) {
+          if (HasTileOperand(MRI, *UseIt))
+            break;
+          ++UseIt;
+        }
+        I = UseIt;
+      }
       Config(*I);
       HasUnconfigTile = false;
       continue;
@@ -626,19 +627,7 @@ bool X86FastPreTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
       else if (dominates(MBB, LastShapeMI, ColMI))
         LastShapeMI = ColMI;
     }
-    unsigned TileDefNum = getTileDefNum(MRI, MI.getOperand(0).getReg());
-    if (TileDefNum > 1) {
-      for (unsigned I = 1; I < TileDefNum; I++) {
-        MachineOperand *ColxMO = &MI.getOperand(2 + I);
-        MachineInstr *ColxMI = MRI->getVRegDef(ColxMO->getReg());
-        if (ColxMI->getParent() == &MBB) {
-          if (!LastShapeMI)
-            LastShapeMI = ColxMI;
-          else if (dominates(MBB, LastShapeMI, ColxMI))
-            LastShapeMI = ColxMI;
-        }
-      }
-    }
+
     // If there is user live out of the tilecfg, spill it and reload in
     // before the user.
     Register TileReg = MI.getOperand(0).getReg();

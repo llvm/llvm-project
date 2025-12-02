@@ -201,13 +201,13 @@ mlir::Value hlfir::genExprShape(mlir::OpBuilder &builder,
   for (std::int64_t extent : expr.getShape()) {
     if (extent == hlfir::ExprType::getUnknownExtent())
       return {};
-    extents.emplace_back(builder.create<mlir::arith::ConstantOp>(
-        loc, indexTy, builder.getIntegerAttr(indexTy, extent)));
+    extents.emplace_back(mlir::arith::ConstantOp::create(
+        builder, loc, indexTy, builder.getIntegerAttr(indexTy, extent)));
   }
 
   fir::ShapeType shapeTy =
       fir::ShapeType::get(builder.getContext(), expr.getRank());
-  fir::ShapeOp shape = builder.create<fir::ShapeOp>(loc, shapeTy, extents);
+  fir::ShapeOp shape = fir::ShapeOp::create(builder, loc, shapeTy, extents);
   return shape.getResult();
 }
 
@@ -227,4 +227,13 @@ mlir::Type hlfir::getExprType(mlir::Type variableType) {
   }
   return hlfir::ExprType::get(variableType.getContext(), typeShape, type,
                               isPolymorphic);
+}
+
+bool hlfir::isFortranIntegerScalarOrArrayObject(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
+
+  mlir::Type unwrappedType = fir::unwrapPassByRefType(fir::unwrapRefType(type));
+  mlir::Type elementType = getFortranElementType(unwrappedType);
+  return mlir::isa<mlir::IntegerType>(elementType);
 }

@@ -85,9 +85,9 @@
 
 //--- The linker input flags should be moved to the end of input list and appear only when linking.
 // RUN: %clang --target=aarch64-unknown-linux-gnu --config %S/Inputs/config-l.cfg %s -lmylib -Wl,foo.a -### 2>&1 | FileCheck %s -check-prefix CHECK-LINKING
-// RUN: %clang --target=aarch64-unknown-linux-gnu --config %S/Inputs/config-l.cfg -fopenmp %s -lmylib -Wl,foo.a -### 2>&1 | FileCheck %s -check-prefix CHECK-LINKING-LIBOMP-GOES-AFTER
+// RUN: %clang --target=aarch64-unknown-linux-gnu --config %S/Inputs/config-l.cfg -fopenmp=libomp %s -lmylib -Wl,foo.a -### 2>&1 | FileCheck %s -check-prefix CHECK-LINKING-LIBOMP-GOES-AFTER
 // RUN: %clang --target=aarch64-unknown-linux-gnu --config %S/Inputs/config-l.cfg -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-NOLINKING
-// RUN: %clang --target=aarch64-unknown-linux-gnu --config %S/Inputs/config-l.cfg -fopenmp -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-NOLINKING-OPENMP
+// RUN: %clang --target=aarch64-unknown-linux-gnu --config %S/Inputs/config-l.cfg -fopenmp=libomp -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-NOLINKING-OPENMP
 // RUN: %clang --target=x86_64-pc-windows-msvc    --config %S/Inputs/config-l.cfg %s -lmylib -Wl,foo.lib -### 2>&1 | FileCheck %s -check-prefix CHECK-LINKING-MSVC
 // RUN: %clang --target=x86_64-pc-windows-msvc    --config %S/Inputs/config-l.cfg -S %s -### 2>&1 | FileCheck %s -check-prefix CHECK-NOLINKING-MSVC
 // CHECK-LINKING: Configuration file: {{.*}}Inputs{{.}}config-l.cfg

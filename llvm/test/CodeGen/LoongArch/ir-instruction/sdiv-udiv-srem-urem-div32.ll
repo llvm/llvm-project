@@ -84,10 +84,9 @@ define signext i32 @sextw_rmv(i32 signext %a, i32 signext %b, i32 signext %c) {
 ;
 ; LA64-DIV32-LABEL: sextw_rmv:
 ; LA64-DIV32:       # %bb.0: # %entry
-; LA64-DIV32-NEXT:    mul.d $a0, $a1, $a0
-; LA64-DIV32-NEXT:    addi.w $a1, $a0, 0
-; LA64-DIV32-NEXT:    div.w $a0, $a2, $a0
-; LA64-DIV32-NEXT:    sltu $a0, $a0, $a1
+; LA64-DIV32-NEXT:    mul.w $a0, $a1, $a0
+; LA64-DIV32-NEXT:    div.w $a1, $a2, $a0
+; LA64-DIV32-NEXT:    sltu $a0, $a1, $a0
 ; LA64-DIV32-NEXT:    ret
 entry:
   %mul = mul nsw i32 %b, %a

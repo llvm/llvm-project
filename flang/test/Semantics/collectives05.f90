@@ -1,5 +1,4 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! XFAIL: *
 ! This test checks for semantic errors in co_reduce subroutine calls based on
 ! the co_reduce interface defined in section 16.9.49 of the Fortran 2018 standard.
 ! To Do: add co_reduce to the list of intrinsics
@@ -63,119 +62,122 @@ program main
   ! executing in multiple images is not.
 
   ! argument 'a' cannot be polymorphic
-  !ERROR: to be determined
+  !ERROR: No explicit type declared for 'derived_type_op'
   call co_reduce(polymorphic, derived_type_op)
 
   ! argument 'a' cannot be coindexed
-  !ERROR: (message to be determined)
+  !ERROR: 'a' argument to 'co_reduce' may not be a coindexed object
   call co_reduce(coindexed[1], int_op)
 
   ! argument 'a' is intent(inout)
-  !ERROR: (message to be determined)
+  !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'a=' is not definable
+  !ERROR: 'i+1_4' is not a variable or pointer
   call co_reduce(i + 1, int_op)
 
   ! operation must be a pure function
-  !ERROR: (message to be determined)
+  !ERROR: OPERATION= argument of CO_REDUCE() must be a pure function of two data arguments
   call co_reduce(i, operation=not_pure)
 
   ! operation must have exactly two arguments
-  !ERROR: (message to be determined)
+  !ERROR: OPERATION= argument of CO_REDUCE() must be a pure function of two data arguments
   call co_reduce(i, too_many_args)
 
   ! operation result must be a scalar
-  !ERROR: (message to be determined)
+  !ERROR: OPERATION= argument of CO_REDUCE() must be a scalar function
   call co_reduce(i, array_result)
 
   ! operation result must be non-allocatable
-  !ERROR: (message to be determined)
+  !ERROR: Result of OPERATION= procedure of CO_REDUCE() must be scalar and neither allocatable, pointer, nor polymorphic
   call co_reduce(i, allocatable_result)
 
   ! operation result must be non-pointer
-  !ERROR: (message to be determined)
+  !ERROR: Result of OPERATION= procedure of CO_REDUCE() must be scalar and neither allocatable, pointer, nor polymorphic
   call co_reduce(i, pointer_result)
 
   ! operation's arguments must be scalars
-  !ERROR: (message to be determined)
+  !ERROR: Arguments of OPERATION= procedure of CO_REDUCE() must be both scalar of the same type as A=, and neither allocatable, pointer, polymorphic, nor optional
   call co_reduce(i, array_args)
 
   ! operation arguments must be non-allocatable
-  !ERROR: (message to be determined)
+  !ERROR: Arguments of OPERATION= procedure of CO_REDUCE() must be both scalar of the same type as A=, and neither allocatable, pointer, polymorphic, nor optional
   call co_reduce(i, allocatable_args)
 
   ! operation arguments must be non-pointer
-  !ERROR: (message to be determined)
+  !ERROR: Arguments of OPERATION= procedure of CO_REDUCE() must be both scalar of the same type as A=, and neither allocatable, pointer, polymorphic, nor optional
   call co_reduce(i, pointer_args)
 
   ! operation arguments must be non-polymorphic
-  !ERROR: (message to be determined)
+  !ERROR: OPERATION= argument of CO_REDUCE() must have the same type as A=
   call co_reduce(i, polymorphic_args)
 
   ! operation: type of 'operation' result and arguments must match type of argument 'a'
-  !ERROR: (message to be determined)
+  !ERROR: OPERATION= argument of CO_REDUCE() must have the same type as A=
   call co_reduce(i, real_op)
 
   ! operation: kind type parameter of 'operation' result and arguments must match kind type parameter of argument 'a'
-  !ERROR: (message to be determined)
+  !ERROR: OPERATION= argument of CO_REDUCE() must have the same type as A=
   call co_reduce(x, double_precision_op)
 
   ! arguments must be non-optional
-  !ERROR: (message to be determined)
+  !ERROR: Arguments of OPERATION= procedure of CO_REDUCE() must be both scalar of the same type as A=, and neither allocatable, pointer, polymorphic, nor optional
   call co_reduce(i, optional_args)
 
   ! if one argument is asynchronous, the other must be also
-  !ERROR: (message to be determined)
+  !ERROR: If either argument of the OPERATION= procedure of CO_REDUCE() has the ASYNCHRONOUS, TARGET, or VALUE attribute, both must have that attribute
   call co_reduce(i, asynchronous_mismatch)
 
   ! if one argument is a target, the other must be also
-  !ERROR: (message to be determined)
+  !ERROR: If either argument of the OPERATION= procedure of CO_REDUCE() has the ASYNCHRONOUS, TARGET, or VALUE attribute, both must have that attribute
   call co_reduce(i, target_mismatch)
 
   ! if one argument has the value attribute, the other must have it also
-  !ERROR: (message to be determined)
+  !ERROR: If either argument of the OPERATION= procedure of CO_REDUCE() has the ASYNCHRONOUS, TARGET, or VALUE attribute, both must have that attribute
   call co_reduce(i, value_mismatch)
 
   ! result_image argument must be an integer scalar
-  !ERROR: to be determined
+  !ERROR: 'result_image=' argument has unacceptable rank 1
   call co_reduce(i, int_op, result_image=integer_array)
 
   ! result_image argument must be an integer
-  !ERROR: to be determined
+  !ERROR: Actual argument for 'result_image=' has bad type 'LOGICAL(4)'
   call co_reduce(i, int_op, result_image=bool)
 
   ! stat not allowed to be coindexed
-  !ERROR: to be determined
+  !ERROR: 'errmsg' argument to 'co_reduce' may not be a coindexed object
   call co_reduce(i, int_op, stat=coindexed[1])
 
   ! stat argument must be an integer scalar
-  !ERROR: to be determined
+  !ERROR: 'stat=' argument has unacceptable rank 1
   call co_reduce(i, int_op, result_image=1, stat=integer_array)
 
   ! stat argument has incorrect type
   !ERROR: Actual argument for 'stat=' has bad type 'CHARACTER(KIND=1,LEN=1_8)'
-  call co_reduce(i, int_op, result_image=1, string)
+  call co_reduce(i, int_op, result_image=1, stat=string)
 
   ! stat argument is intent(out)
-  !ERROR: to be determined
+  !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'stat=' is not definable
+  !ERROR: '2_4' is not a variable or pointer
   call co_reduce(i, int_op, result_image=1, stat=1+1)
 
   ! errmsg argument must not be coindexed
-  !ERROR: to be determined
+  !ERROR: No explicit type declared for 'conindexed_string'
   call co_reduce(i, int_op, result_image=1, stat=status, errmsg=conindexed_string[1])
 
   ! errmsg argument must be a character scalar
-  !ERROR: to be determined
+  !ERROR: 'errmsg=' argument has unacceptable rank 1
   call co_reduce(i, int_op, result_image=1, stat=status, errmsg=character_array)
 
   ! errmsg argument must be a character
-  !ERROR: to be determined
+  !ERROR: Actual argument for 'errmsg=' has bad type 'INTEGER(4)'
   call co_reduce(i, int_op, result_image=1, stat=status, errmsg=i)
 
   ! errmsg argument is intent(inout)
-  !ERROR: to be determined
+  !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'errmsg=' is not definable
+  !ERROR: '"literal constant"' is not a variable or pointer
   call co_reduce(i, int_op, result_image=1, stat=status, errmsg="literal constant")
 
   ! too many arguments to the co_reduce() call
-  !ERROR: too many actual arguments for intrinsic 'co_reduce'
+  !ERROR: actual argument #6 without a keyword may not follow an actual argument with a keyword
   call co_reduce(i, int_op, result_image=1, stat=status, errmsg=message, 3.4)
 
   ! non-existent keyword argument

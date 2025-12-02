@@ -17,7 +17,7 @@ func.func @_QPsub1() {
 // CHECK: %[[AHOST:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub1Eahost"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 // CHECK: %[[AHOST_BOX:.*]] = fir.convert %[[AHOST]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: %[[ADEV_BOX:.*]] = fir.convert %[[ADEV]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%[[AHOST_BOX]], %[[ADEV_BOX]], %c1{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%[[AHOST_BOX]], %[[ADEV_BOX]], %c1{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPsub2() {
   %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "adev", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub2Eadev"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -38,7 +38,7 @@ func.func @_QPsub2() {
 // CHECK: fir.store %[[EMBOX]] to %[[TEMP_BOX]] : !fir.ref<!fir.box<i32>>
 // CHECK: %[[ADEV_BOX:.*]] = fir.convert %[[ADEV]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: %[[TEMP_CONV:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<i32>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferCstDesc(%[[ADEV_BOX]], %[[TEMP_CONV]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferCstDesc(%[[ADEV_BOX]], %[[TEMP_CONV]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPsub3() {
   %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "adev", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub3Eadev"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -58,7 +58,7 @@ func.func @_QPsub3() {
 // CHECK: fir.store %[[EMBOX]] to %[[TEMP_BOX]] : !fir.ref<!fir.box<i32>>
 // CHECK: %[[ADEV_BOX:.*]] = fir.convert %[[ADEV]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: %[[V_CONV:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<i32>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferCstDesc(%[[ADEV_BOX]], %[[V_CONV]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferCstDesc(%[[ADEV_BOX]], %[[V_CONV]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
   
 func.func @_QPsub4() {
   %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "adev", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub4Eadev"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -81,12 +81,12 @@ func.func @_QPsub4() {
 // CHECK: fir.store %[[EMBOX]] to %[[TEMP_BOX]] : !fir.ref<!fir.box<!fir.array<10xi32>>>
 // CHECK: %[[ADEV_BOX:.*]] = fir.convert %[[ADEV]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: %[[AHOST_BOX:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<10xi32>>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%[[ADEV_BOX]], %[[AHOST_BOX]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%[[ADEV_BOX]], %[[AHOST_BOX]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
 // CHECK: %[[EMBOX:.*]] = fir.embox %[[AHOST]]#0(%[[AHOST_SHAPE]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
 // CHECK: fir.store %[[EMBOX]] to %[[TEMP_BOX1]] : !fir.ref<!fir.box<!fir.array<10xi32>>>
 // CHECK: %[[AHOST_BOX:.*]] = fir.convert %[[TEMP_BOX1]] : (!fir.ref<!fir.box<!fir.array<10xi32>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: %[[ADEV_BOX:.*]] = fir.convert %[[ADEV]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferDescDescNoRealloc(%[[AHOST_BOX]], %[[ADEV_BOX]], %c1{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferDescDescNoRealloc(%[[AHOST_BOX]], %[[ADEV_BOX]], %c1{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPsub5(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
   %0 = fir.dummy_scope : !fir.dscope
@@ -123,12 +123,12 @@ func.func @_QPsub5(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
 // CHECK: fir.store %[[EMBOX]] to %[[TEMP_BOX]] : !fir.ref<!fir.box<!fir.array<?x?xi32>>>
 // CHECK: %[[ADEV_BOX:.*]] = fir.convert %[[ADEV]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: %[[AHOST_BOX:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<?x?xi32>>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%[[ADEV_BOX]], %[[AHOST_BOX]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%[[ADEV_BOX]], %[[AHOST_BOX]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
 // CHECK: %[[EMBOX:.*]] = fir.embox %[[AHOST]]#1(%[[SHAPE]]) : (!fir.ref<!fir.array<?x?xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xi32>>
 // CHECK: fir.store %[[EMBOX]] to %[[TEMP_BOX1]] : !fir.ref<!fir.box<!fir.array<?x?xi32>>>
 // CHECK: %[[AHOST_BOX:.*]] = fir.convert %[[TEMP_BOX1]] : (!fir.ref<!fir.box<!fir.array<?x?xi32>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: %[[ADEV_BOX:.*]] = fir.convert %[[ADEV]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferDescDescNoRealloc(%[[AHOST_BOX]], %[[ADEV_BOX]], %c1{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferDescDescNoRealloc(%[[AHOST_BOX]], %[[ADEV_BOX]], %c1{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPsub6() {
   %0 = cuf.alloc i32 {bindc_name = "idev", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub6Eidev"} -> !fir.ref<i32>
@@ -149,12 +149,12 @@ func.func @_QPsub6() {
 // CHECK: %[[IHOST:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsub6Eihost"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK: %[[DST:.*]] = fir.convert %[[IHOST]]#0 : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
 // CHECK: %[[SRC:.*]] = fir.convert %[[IDEV]]#0 : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DST]], %[[SRC]], %c4{{.*}}, %c1{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DST]], %[[SRC]], %c4{{.*}}, %c1{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> ()
 // CHECK: %[[LOAD:.*]] = fir.load %[[IHOST]]#0 : !fir.ref<i32>
 // CHECK: %[[ASSOC:.*]]:3 = hlfir.associate %[[LOAD]] {uniq_name = ".cuf_host_tmp"} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 // CHECK: %[[DST:.*]] = fir.convert %[[IDEV]]#0 : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
 // CHECK: %[[SRC:.*]] = fir.convert %[[ASSOC]]#0 : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DST]], %[[SRC]], %c4{{.*}}, %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DST]], %[[SRC]], %c4{{.*}}, %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPsub7() {
   %c10 = arith.constant 10 : index
@@ -177,11 +177,11 @@ func.func @_QPsub7() {
 // CHECK: %[[BYTES:.*]] = arith.muli %c10{{.*}}, %c4{{.*}} : i64
 // CHECK: %[[DST:.*]] = fir.convert %[[IHOST]]#0 : (!fir.ref<!fir.array<10xi32>>) -> !fir.llvm_ptr<i8>
 // CHECK: %[[SRC:.*]] = fir.convert %[[IDEV]]#0 : (!fir.ref<!fir.array<10xi32>>) -> !fir.llvm_ptr<i8>
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DST]], %[[SRC]], %[[BYTES]], %c1{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DST]], %[[SRC]], %[[BYTES]], %c1{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> ()
 // CHECK: %[[BYTES:.*]] = arith.muli %c10{{.*}}, %c4{{.*}} : i64
 // CHECK: %[[DST:.*]] = fir.convert %[[IDEV]]#0 : (!fir.ref<!fir.array<10xi32>>) -> !fir.llvm_ptr<i8>
 // CHECK: %[[SRC:.*]] = fir.convert %[[IHOST]]#0 : (!fir.ref<!fir.array<10xi32>>) -> !fir.llvm_ptr<i8>
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DST]], %[[SRC]], %[[BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DST]], %[[SRC]], %[[BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> ()
 
 fir.global @_QMmtestsEn(dense<[3, 4, 5, 6, 7]> : tensor<5xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<5xi32>
 func.func @_QPsub8() attributes {fir.bindc_name = "t"} {
@@ -198,6 +198,7 @@ func.func @_QPsub8() attributes {fir.bindc_name = "t"} {
 // CHECK-LABEL: func.func @_QPsub8()
 // CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.array<5xi32> 
 // CHECK: %[[LOCAL:.*]] = fir.declare %[[ALLOCA]]
+// CHECK: fir.address_of(@_QMmtestsEn) : !fir.ref<!fir.array<5xi32>>
 // CHECK: %[[GBL:.*]] = fir.address_of(@_QMmtestsEn) : !fir.ref<!fir.array<5xi32>>
 // CHECK: %[[GBL_CONV:.*]] = fir.convert %[[GBL]] : (!fir.ref<!fir.array<5xi32>>) -> !fir.llvm_ptr<i8>
 // CHECK: %[[ADDR:.*]] = fir.call @_FortranACUFGetDeviceAddress(%[[GBL_CONV]], %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
@@ -205,7 +206,7 @@ func.func @_QPsub8() attributes {fir.bindc_name = "t"} {
 // CHECK: %[[DECL:.*]] = fir.declare %[[ADDR_CONV]]
 // CHECK: %[[DST:.*]] = fir.convert %[[LOCAL]] : (!fir.ref<!fir.array<5xi32>>) -> !fir.llvm_ptr<i8>
 // CHECK: %[[SRC:.*]] = fir.convert %[[DECL]] : (!fir.ref<!fir.array<5xi32>>) -> !fir.llvm_ptr<i8>
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DST]], %[[SRC]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DST]], %[[SRC]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> ()
 
 
 func.func @_QPsub9() {
@@ -222,6 +223,7 @@ func.func @_QPsub9() {
 // CHECK-LABEL: func.func @_QPsub9()
 // CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.array<5xi32> 
 // CHECK: %[[LOCAL:.*]] = fir.declare %[[ALLOCA]]
+// CHECK: fir.address_of(@_QMmtestsEn) : !fir.ref<!fir.array<5xi32>>
 // CHECK: %[[GBL:.*]] = fir.address_of(@_QMmtestsEn) : !fir.ref<!fir.array<5xi32>>
 // CHECK: %[[GBL_CONV:.*]] = fir.convert %[[GBL]] : (!fir.ref<!fir.array<5xi32>>) -> !fir.llvm_ptr<i8>
 // CHECK: %[[ADDR:.*]] = fir.call @_FortranACUFGetDeviceAddress(%[[GBL_CONV]], %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
@@ -229,7 +231,7 @@ func.func @_QPsub9() {
 // CHECK: %[[DECL:.*]] = fir.declare %[[ADDR_CONV]]
 // CHECK: %[[DST:.*]] = fir.convert %[[DECL]] : (!fir.ref<!fir.array<5xi32>>) -> !fir.llvm_ptr<i8>
 // CHECK: %[[SRC:.*]] = fir.convert %[[LOCAL]] : (!fir.ref<!fir.array<5xi32>>) -> !fir.llvm_ptr<i8>
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DST]], %[[SRC]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[DST]], %[[SRC]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> ()
 
 fir.global @_QMmod1Ea {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xi32>>> {
   %c0 = arith.constant 0 : index
@@ -252,7 +254,7 @@ func.func @_QQdesc_global() attributes {fir.bindc_name = "host_sub"} {
 // CHECK: %[[GLOBAL_ADDRESS:.*]] = fir.address_of(@_QMmod1Ea) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK: %[[GLOBAL_DECL:.*]]:2 = hlfir.declare %[[GLOBAL_ADDRESS]] {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmod1Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 // CHECK: %[[BOX_NONE:.*]] = fir.convert %[[GLOBAL_DECL:.*]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferGlobalDescDesc(%[[BOX_NONE]],{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferGlobalDescDesc(%[[BOX_NONE]],{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
 
 fir.global @_QMmod2Eadev {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xi32>>> {
   %c0 = arith.constant 0 : index
@@ -283,7 +285,7 @@ func.func @_QPdesc_global_ptr() {
 // CHECK: fir.store %[[EMBOX]] to %[[TEMP_BOX]] : !fir.ref<!fir.box<!fir.array<10xi32>>>
 // CHECK: %[[ADEV_BOXNONE:.*]] = fir.convert %[[DECL_ADEV]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: %[[AHOST_BOXNONE:.*]] = fir.convert %[[TEMP_BOX]] : (!fir.ref<!fir.box<!fir.array<10xi32>>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferGlobalDescDesc(%[[ADEV_BOXNONE]], %[[AHOST_BOXNONE]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferGlobalDescDesc(%[[ADEV_BOXNONE]], %[[AHOST_BOXNONE]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPscalar_to_array() {
   %c1_i32 = arith.constant 1 : i32
@@ -310,7 +312,7 @@ func.func @_QPtest_type() {
 }
 
 // CHECK-LABEL: func.func @_QPtest_type()
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %{{.*}}, %c12{{.*}}, %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %{{.*}}, %c12{{.*}}, %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPtest_array_type() {
   %c10 = arith.constant 10 : index
@@ -327,9 +329,9 @@ func.func @_QPtest_array_type() {
 // CHECK-LABEL: func.func @_QPtest_array_type()
 // CHECK: %[[BYTES:.*]] = arith.muli %c10{{.*}}, %c12 : index
 // CHECK: %[[CONV_BYTES:.*]] = fir.convert %[[BYTES]] : (index) -> i64
-// CHECK: fir.call @_FortranACUFMemAlloc(%[[CONV_BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFMemAlloc(%[[CONV_BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) {cuf.data_attr = #cuf.cuda<device>} : (i64, i32, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 // CHECK: %[[BYTES:.*]] = arith.muli %c10{{.*}}, %c12{{.*}} : i64
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %{{.*}}, %[[BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %{{.*}}, %[[BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPshape_shift() {
   %c0_i32 = arith.constant 0 : i32
@@ -363,7 +365,7 @@ func.func @_QPshape_shift2() {
 // CHECK-LABEL: func.func @_QPshape_shift2()
 // CHECK: %[[C10:.*]] = fir.convert %c10{{.*}} : (index) -> i64
 // CHECK: %[[BYTES:.*]] = arith.muli %[[C10]], %c4{{.*}} : i64
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %{{.*}}, %[[BYTES]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %{{.*}}, %[[BYTES]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> ()
 
 fir.global @_QMmod1Ea_dev {data_attr = #cuf.cuda<device>} : !fir.array<4xf32> {
   %0 = fir.zero_bits !fir.array<4xf32>
@@ -380,6 +382,7 @@ func.func @_QPdevice_addr_conv() {
 }
 
 // CHECK-LABEL: func.func @_QPdevice_addr_conv()
+// CHECK: fir.address_of(@_QMmod1Ea_dev) : !fir.ref<!fir.array<4xf32>>
 // CHECK: %[[GBL:.*]] = fir.address_of(@_QMmod1Ea_dev) : !fir.ref<!fir.array<4xf32>>
 // CHECK: %[[GBL_CONV:.*]] = fir.convert %[[GBL]] : (!fir.ref<!fir.array<4xf32>>) -> !fir.llvm_ptr<i8>
 // CHECK: %[[ADDR:.*]] = fir.call @_FortranACUFGetDeviceAddress(%[[GBL_CONV]], %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
@@ -404,7 +407,7 @@ func.func @_QQchar_transfer() attributes {fir.bindc_name = "char_transfer"} {
 // CHECK-LABEL:  func.func @_QQchar_transfer()
 // CHECK: fir.call @_FortranACUFMemAlloc
 // CHECK: %[[BYTES:.*]] = arith.muli %c10{{.*}}, %c1{{.*}} : i64
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %{{.*}}, %[[BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %{{.*}}, %[[BYTES]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPdevmul(%arg0: !fir.ref<!fir.array<1x?xf32>> {fir.bindc_name = "b"}, %arg1: !fir.ref<i32> {fir.bindc_name = "wa"}, %arg2: !fir.ref<i32> {fir.bindc_name = "wb"}) {
   %c0_i64 = arith.constant 0 : i64
@@ -444,10 +447,10 @@ func.func @_QPdevmul(%arg0: !fir.ref<!fir.array<1x?xf32>> {fir.bindc_name = "b"}
 // CHECK: %[[EMBOX:.*]] = fir.embox %{{.*}}(%{{.*}}) [%{{.*}}] : (!fir.ref<!fir.array<1x?xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK: fir.store %[[EMBOX]] to %[[ALLOCA1]] : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
 // CHECK: %[[SRC:.*]] = fir.convert %[[ALLOCA1]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%{{.*}}, %[[SRC]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%{{.*}}, %[[SRC]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
 // CHECK: fir.store %[[EMBOX]] to %[[ALLOCA0]] : !fir.ref<!fir.box<!fir.array<?x?xf32>>>
 // CHECK: %[[DST:.*]] = fir.convert %[[ALLOCA0]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%[[DST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%[[DST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPlogical_cst() {
   %c0_i64 = arith.constant 0 : i64
@@ -460,14 +463,14 @@ func.func @_QPlogical_cst() {
 }
 
 // CHECK-LABEL: func.func @_QPlogical_cst()
-// CHECK: %[[DESC:.*]] = fir.alloca !fir.box<!fir.logical<4>>
-// CHECK: %[[CONST:.*]] = fir.alloca !fir.logical<4>
-// CHECK: %[[CONV:.*]] = fir.convert %false : (i1) -> !fir.logical<4>
-// CHECK: fir.store %[[CONV]] to %[[CONST]] : !fir.ref<!fir.logical<4>>
-// CHECK: %[[EMBOX:.*]] = fir.embox %[[CONST]] : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
-// CHECK: fir.store %[[EMBOX]] to %[[DESC]] : !fir.ref<!fir.box<!fir.logical<4>>>
-// CHECK: %[[BOX_NONE:.*]] = fir.convert %[[DESC]] : (!fir.ref<!fir.box<!fir.logical<4>>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferCstDesc(%{{.*}}, %[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: %[[DESC:.*]] = fir.alloca !fir.box<!fir.logical<1>>
+// CHECK: %[[CONST:.*]] = fir.alloca !fir.logical<1>
+// CHECK: %[[CONV:.*]] = fir.convert %false : (i1) -> !fir.logical<1>
+// CHECK: fir.store %[[CONV]] to %[[CONST]] : !fir.ref<!fir.logical<1>>
+// CHECK: %[[EMBOX:.*]] = fir.embox %[[CONST]] : (!fir.ref<!fir.logical<1>>) -> !fir.box<!fir.logical<1>>
+// CHECK: fir.store %[[EMBOX]] to %[[DESC]] : !fir.ref<!fir.box<!fir.logical<1>>>
+// CHECK: %[[BOX_NONE:.*]] = fir.convert %[[DESC]] : (!fir.ref<!fir.box<!fir.logical<1>>>) -> !fir.ref<!fir.box<none>>
+// CHECK: fir.call @_FortranACUFDataTransferCstDesc(%{{.*}}, %[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPcallkernel(%arg0: !fir.box<!fir.array<?x?xcomplex<f32>>> {fir.bindc_name = "a"}, %arg1: !fir.ref<f32> {fir.bindc_name = "b"}, %arg2: !fir.ref<f32> {fir.bindc_name = "c"}) {
   %c0_i64 = arith.constant 0 : i64
@@ -514,7 +517,7 @@ func.func @_QPcallkernel(%arg0: !fir.box<!fir.array<?x?xcomplex<f32>>> {fir.bind
 // CHECK: %[[REBOX1:.*]] = fir.rebox %[[REBOX0]] [%{{.*}}] : (!fir.box<!fir.array<?x?xcomplex<f32>>>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xcomplex<f32>>>
 // CHECK: fir.store %[[REBOX1]] to %[[ALLOCA]] : !fir.ref<!fir.box<!fir.array<?x?xcomplex<f32>>>>
 // CHECK: %[[BOX_NONE:.*]] = fir.convert %[[ALLOCA]] : (!fir.ref<!fir.box<!fir.array<?x?xcomplex<f32>>>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%{{.*}}, %[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferDescDesc(%{{.*}}, %[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPsrc_cst() {
   %0 = fir.dummy_scope : !fir.dscope
@@ -554,7 +557,7 @@ func.func @_QPsrc_cst() {
 // CHECK: %[[CST:.*]] = arith.constant -4.000000e+00 : f32
 // CHECK: fir.store %[[CST]] to %[[ALLOCA]] : !fir.ref<f32>
 // CHECK: %[[CONV:.*]] = fir.convert %[[ALLOCA]] : (!fir.ref<f32>) -> !fir.llvm_ptr<i8>
-// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %[[CONV]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{.*}}, %[[CONV]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>, i64, i32, !fir.ref<i8>, i32) -> ()
 
 func.func @_QPchecksums(%arg0: !fir.box<!fir.array<?xf64>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}) {
   %c0 = arith.constant 0 : index
@@ -577,6 +580,150 @@ func.func @_QPchecksums(%arg0: !fir.box<!fir.array<?xf64>> {cuf.data_attr = #cuf
 // CHECK-LABEL: func.func @_QPchecksums
 // CHECK: %[[DST:.*]] = fir.convert %{{.*}} : (!fir.ref<!fir.box<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: %[[SRC:.*]] = fir.convert %{{.*}} : (!fir.ref<!fir.box<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFDataTransferDescDescNoRealloc(%[[DST]], %[[SRC]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFDataTransferDescDescNoRealloc(%[[DST]], %[[SRC]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
+
+func.func @_QPsub20() {
+  %0 = cuf.alloc !fir.box<!fir.heap<f32>> {bindc_name = "r", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub20Er"} -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %1 = fir.zero_bits !fir.heap<f32>
+  %2 = fir.embox %1 {allocator_idx = 2 : i32} : (!fir.heap<f32>) -> !fir.box<!fir.heap<f32>>
+  fir.store %2 to %0 : !fir.ref<!fir.box<!fir.heap<f32>>>
+  %3:2 = hlfir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub20Er"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  %c0_i32 = arith.constant 0 : i32
+  cuf.data_transfer %c0_i32 to %3#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : i32, !fir.ref<!fir.box<!fir.heap<f32>>>
+  return
+}
+
+// CHECK-LABEL:func.func @_QPsub20
+// CHECK: %[[BOX_ALLOCA:.*]] = fir.alloca !fir.box<f32>
+// CHECK: %[[TMP:.*]] = fir.alloca f32
+// CHECK: %[[CONV:.*]] = fir.convert %c0{{.*}} : (i32) -> f32
+// CHECK: fir.store %[[CONV]] to %[[TMP]] : !fir.ref<f32>
+// CHECK: %[[BOX:.*]] = fir.embox %[[TMP]] : (!fir.ref<f32>) -> !fir.box<f32>
+// CHECK: fir.store %[[BOX]] to %[[BOX_ALLOCA]] : !fir.ref<!fir.box<f32>>
+// CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX_ALLOCA]] : (!fir.ref<!fir.box<f32>>) -> !fir.ref<!fir.box<none>>
+// CHECK: fir.call @_FortranACUFDataTransferCstDesc(%13, %[[BOX_NONE]], %c0{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
+
+func.func @_QPsub28() {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = cuf.alloc !fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>> {bindc_name = "id2", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub28Eid2"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>>
+  %2 = fir.zero_bits !fir.heap<!fir.array<?x?x!fir.logical<8>>>
+  %c0 = arith.constant 0 : index
+  %3 = fir.shape %c0, %c0 : (index, index) -> !fir.shape<2>
+  %4 = fir.embox %2(%3) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?x!fir.logical<8>>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>
+  fir.store %4 to %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>>
+  %5:2 = hlfir.declare %1 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsub28Eid2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>>)
+  %c1 = arith.constant 1 : index
+  %c10_i32 = arith.constant 10 : i32
+  %c0_i32 = arith.constant 0 : i32
+  %6 = fir.convert %5#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>>) -> !fir.ref<!fir.box<none>>
+  %7 = fir.convert %c1 : (index) -> i64
+  %8 = fir.convert %c10_i32 : (i32) -> i64
+  fir.call @_FortranAAllocatableSetBounds(%6, %c0_i32, %7, %8) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+  %c1_0 = arith.constant 1 : index
+  %c10_i32_1 = arith.constant 10 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %9 = fir.convert %5#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>>) -> !fir.ref<!fir.box<none>>
+  %10 = fir.convert %c1_0 : (index) -> i64
+  %11 = fir.convert %c10_i32_1 : (i32) -> i64
+  fir.call @_FortranAAllocatableSetBounds(%9, %c1_i32, %10, %11) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+  %12 = cuf.allocate %5#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>> {data_attr = #cuf.cuda<device>} -> i32
+  %false = arith.constant false
+  cuf.data_transfer %false to %5#0 {transfer_kind = #cuf.cuda_transfer<host_device>} : i1, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>>
+  %13 = fir.load %5#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>>
+  %14 = fir.box_addr %13 : (!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>) -> !fir.heap<!fir.array<?x?x!fir.logical<8>>>
+  %15 = fir.convert %14 : (!fir.heap<!fir.array<?x?x!fir.logical<8>>>) -> i64
+  %c0_i64 = arith.constant 0 : i64
+  %16 = arith.cmpi ne, %15, %c0_i64 : i64
+  fir.if %16 {
+    %17 = cuf.deallocate %5#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>> {data_attr = #cuf.cuda<device>} -> i32
+  }
+  cuf.free %5#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.logical<8>>>>> {data_attr = #cuf.cuda<device>}
+  return
+}
+
+// CHECK-LABEL: func.func @_QPsub28()
+// CHECK: %[[DESC:.*]] = fir.alloca !fir.box<!fir.logical<8>>
+// CHECK: %[[L8:.*]] = fir.alloca !fir.logical<8>
+// CHECK: %[[FALSE:.*]] = fir.convert %false{{.*}} : (i1) -> !fir.logical<8>
+// CHECK: fir.store %[[FALSE]] to %[[L8]] : !fir.ref<!fir.logical<8>>
+// CHECK: %[[EMBOX:.*]] = fir.embox %[[L8]] : (!fir.ref<!fir.logical<8>>) -> !fir.box<!fir.logical<8>>
+// CHECK: fir.store %[[EMBOX]] to %[[DESC]] : !fir.ref<!fir.box<!fir.logical<8>>>
+// CHECK: %[[BOX_NONE:.*]] = fir.convert %[[DESC]] : (!fir.ref<!fir.box<!fir.logical<8>>>) -> !fir.ref<!fir.box<none>>
+// CHECK: fir.call @_FortranACUFDataTransferCstDesc(%{{.*}}, %[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<!fir.box<none>>, i32, !fir.ref<i8>, i32) -> ()
+
+func.func @_QPtesti4(%arg0: !fir.ref<i32> {fir.bindc_name = "n1"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n2"}, %arg2: !fir.ref<i32> {fir.bindc_name = "n3"}, %arg3: !fir.ref<i32> {fir.bindc_name = "n4"}) {
+  %true = arith.constant true
+  %c0 = arith.constant 0 : index
+  %c2_i32 = arith.constant 2 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtesti4En1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtesti4En2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtesti4En3"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %4:2 = hlfir.declare %arg3 dummy_scope %0 {uniq_name = "_QFtesti4En4"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %5 = fir.load %1#0 : !fir.ref<i32>
+  %6 = arith.divsi %5, %c2_i32 : i32
+  %7 = fir.convert %6 : (i32) -> index
+  %8 = arith.cmpi sgt, %7, %c0 : index
+  %9 = arith.select %8, %7, %c0 : index
+  %10 = fir.load %2#0 : !fir.ref<i32>
+  %11 = arith.divsi %10, %c2_i32 : i32
+  %12 = fir.convert %11 : (i32) -> index
+  %13 = arith.cmpi sgt, %12, %c0 : index
+  %14 = arith.select %13, %12, %c0 : index
+  %15 = fir.load %3#0 : !fir.ref<i32>
+  %16 = arith.divsi %15, %c2_i32 : i32
+  %17 = fir.convert %16 : (i32) -> index
+  %18 = arith.cmpi sgt, %17, %c0 : index
+  %19 = arith.select %18, %17, %c0 : index
+  %20 = fir.load %4#0 : !fir.ref<i32>
+  %21 = arith.divsi %20, %c2_i32 : i32
+  %22 = fir.convert %21 : (i32) -> index
+  %23 = arith.cmpi sgt, %22, %c0 : index
+  %24 = arith.select %23, %22, %c0 : index
+  %25 = cuf.alloc !fir.array<?x?x?x?x!fir.logical<4>>, %9, %14, %19, %24 : index, index, index, index {bindc_name = "lma", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtesti4Elma"} -> !fir.ref<!fir.array<?x?x?x?x!fir.logical<4>>>
+  %26 = fir.shape %9, %14, %19, %24 : (index, index, index, index) -> !fir.shape<4>
+  %27:2 = hlfir.declare %25(%26) {data_attr = #cuf.cuda<managed>, uniq_name = "_QFtesti4Elma"} : (!fir.ref<!fir.array<?x?x?x?x!fir.logical<4>>>, !fir.shape<4>) -> (!fir.box<!fir.array<?x?x?x?x!fir.logical<4>>>, !fir.ref<!fir.array<?x?x?x?x!fir.logical<4>>>)
+  cuf.data_transfer %true to %27#1, %26 : !fir.shape<4> {transfer_kind = #cuf.cuda_transfer<host_device>} : i1, !fir.ref<!fir.array<?x?x?x?x!fir.logical<4>>>
+  cuf.free %27#1 : !fir.ref<!fir.array<?x?x?x?x!fir.logical<4>>> {data_attr = #cuf.cuda<managed>}
+  return
+}
+
+// CHECK-LABEL: func.func @_QPtesti4
+// CHECK: fir.call @_FortranACUFDataTransferCstDesc
+
+// -----
+
+func.func @_QQmain() attributes {fir.bindc_name = "T"} {
+  %c2 = arith.constant 2 : index
+  %c1 = arith.constant 1 : index
+  %c80 = arith.constant 80 : index
+  %c0 = arith.constant 0 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = cuf.alloc !fir.box<!fir.heap<!fir.array<?x?x?xf16>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf16>>>>
+  %2 = fir.zero_bits !fir.heap<!fir.array<?x?x?xf16>>
+  %3 = fir.shape %c0, %c0, %c0 : (index, index, index) -> !fir.shape<3>
+  %4 = fir.embox %2(%3) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?x?xf16>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xf16>>>
+  fir.store %4 to %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf16>>>>
+  %5 = fir.declare %1 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf16>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf16>>>>
+  %6 = fir.address_of(@_QFEha) : !fir.ref<!fir.array<80x80x80xf32>>
+  %7 = fir.shape %c80, %c80, %c80 : (index, index, index) -> !fir.shape<3>
+  %8 = fir.declare %6(%7) {uniq_name = "_QFEha"} : (!fir.ref<!fir.array<80x80x80xf32>>, !fir.shape<3>) -> !fir.ref<!fir.array<80x80x80xf32>>
+  %9 = fir.address_of(@_QFECn) : !fir.ref<i32>
+  %10 = fir.declare %9 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFECn"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %11 = fir.load %5 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xf16>>>>
+  %12:3 = fir.box_dims %11, %c0 : (!fir.box<!fir.heap<!fir.array<?x?x?xf16>>>, index) -> (index, index, index)
+  %13:3 = fir.box_dims %11, %c1 : (!fir.box<!fir.heap<!fir.array<?x?x?xf16>>>, index) -> (index, index, index)
+  %14:3 = fir.box_dims %11, %c2 : (!fir.box<!fir.heap<!fir.array<?x?x?xf16>>>, index) -> (index, index, index)
+  %15 = fir.shape %12#1, %13#1, %14#1 : (index, index, index) -> !fir.shape<3>
+  %16 = fir.allocmem !fir.array<?x?x?xf16>, %12#1, %13#1, %14#1 {bindc_name = ".tmp", uniq_name = ""}
+  %17 = fir.declare %16(%15) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?x?x?xf16>>, !fir.shape<3>) -> !fir.heap<!fir.array<?x?x?xf16>>
+  %18 = fir.embox %17(%15) : (!fir.heap<!fir.array<?x?x?xf16>>, !fir.shape<3>) -> !fir.box<!fir.array<?x?x?xf16>>
+  cuf.data_transfer %11 to %18 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.box<!fir.heap<!fir.array<?x?x?xf16>>>, !fir.box<!fir.array<?x?x?xf16>>
+  return
+}
+
+// CHECK-LABEL: func.func @_QQmain() 
+// CHECK: fir.call @_FortranACUFDataTransferDescDesc
 
 } // end of module
+

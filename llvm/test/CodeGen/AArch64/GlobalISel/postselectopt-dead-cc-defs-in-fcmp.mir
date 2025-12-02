@@ -130,9 +130,9 @@ body:             |
     FCMPSrr %3, %4, implicit-def $nzcv, implicit $fpcr
     %12:gpr32 = SUBSWrr %2, %26, implicit-def $nzcv
     FCMPSrr %3, %4, implicit-def $nzcv, implicit $fpcr
-    %12:gpr32 = SUBSWrr %2, %26, implicit-def $nzcv
+    %13:gpr32 = SUBSWrr %2, %26, implicit-def $nzcv
     FCMPSrr %3, %4, implicit-def $nzcv, implicit $fpcr
-    %14:gpr32common = UBFMWri %12, 1, 31
+    %14:gpr32common = UBFMWri %13, 1, 31
     %60:gpr32 = MOVi32imm 1
     %16:gpr32 = CSELWr %14, %60, 8, implicit $nzcv
     $w0 = COPY %16

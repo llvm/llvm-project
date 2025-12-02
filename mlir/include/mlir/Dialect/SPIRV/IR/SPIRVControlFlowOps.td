@@ -15,6 +15,7 @@
 #define MLIR_DIALECT_SPIRV_IR_CONTROLFLOW_OPS
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -187,7 +188,8 @@ def SPIRV_BranchConditionalOp : SPIRV_Op<"BranchConditional", [
 // -----
 
 def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
-    InFunctionScope, DeclareOpInterfaceMethods<CallOpInterface>]> {
+    InFunctionScope, DeclareOpInterfaceMethods<CallOpInterface>,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Call a function.";
 
   let description = [{
@@ -214,12 +216,23 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
 
   let arguments = (ins
     FlatSymbolRefAttr:$callee,
-    Variadic<SPIRV_Type>:$arguments
+    Variadic<SPIRV_Type>:$arguments,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
 
   let results = (outs
     Optional<SPIRV_Type>:$return_value
   );
+
+  let builders = [
+    OpBuilder<(ins "Type":$returnType, "FlatSymbolRefAttr":$callee,
+      "ValueRange":$arguments),
+    [{
+      build($_builder, $_state, returnType, callee, arguments,
+            /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr);
+    }]>
+  ];
 
   let autogenSerialization = 0;
 
@@ -227,6 +240,154 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
     $callee `(` $arguments `)` attr-dict `:`
       functional-type($arguments, results)
   }];
+}
+
+// -----
+
+def SPIRV_SwitchOp : SPIRV_Op<"Switch",
+    [AttrSizedOperandSegments, InFunctionScope,
+     DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+     Pure, Terminator]> {
+  let summary = [{
+    Multi-way branch to one of the operand label <id>.
+  }];
+
+  let description = [{
+    Selector must have a type of OpTypeInt. Selector is compared for equality to
+    the Target literals.
+
+    Default must be the <id> of a label. If Selector does not equal any of the
+    Target literals, control flow branches to the Default label <id>.
+
+    Target must be alternating scalar integer literals and the <id> of a label.
+    If Selector equals a literal, control flow branches to the following label
+    <id>. It is invalid for any two literal to be equal to each other. If Selector
+    does not equal any literal, control flow branches to the Default label <id>.
+    Each literal is interpreted with the type of Selector: The bit width of
+    Selector’s type is the width of each literal’s type. If this width is not a
+    multiple of 32-bits and the OpTypeInt Signedness is set to 1, the literal values
+    are interpreted as being sign extended.
+
+    If Selector is an OpUndef, behavior is undefined.
+
+    This instruction must be the last instruction in a block.
+
+    #### Example:
+
+    ```mlir
+    spirv.Switch %selector : si32, [
+      default: ^bb1(%a : i32),
+      0: ^bb1(%b : i32),
+      1: ^bb3(%c : i32)
+    ]
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Integer:$selector,
+    Variadic<AnyType>:$defaultOperands,
+    VariadicOfVariadic<AnyType, "case_operand_segments">:$targetOperands,
+    OptionalAttr<AnyIntElementsAttr>:$literals,
+    DenseI32ArrayAttr:$case_operand_segments
+  );
+
+  let results = (outs);
+
+  let successors = (successor AnySuccessor:$defaultTarget,
+                              VariadicSuccessor<AnySuccessor>:$targets);
+
+  let builders = [
+    OpBuilder<(ins "Value":$selector,
+      "Block *":$defaultTarget,
+      "ValueRange":$defaultOperands,
+      CArg<"ArrayRef<APInt>", "{}">:$literals,
+      CArg<"BlockRange", "{}">:$targets,
+      CArg<"ArrayRef<ValueRange>", "{}">:$targetOperands)>,
+    OpBuilder<(ins "Value":$selector,
+      "Block *":$defaultTarget,
+      "ValueRange":$defaultOperands,
+      CArg<"ArrayRef<int32_t>", "{}">:$literals,
+      CArg<"BlockRange", "{}">:$targets,
+      CArg<"ArrayRef<ValueRange>", "{}">:$targetOperands)>,
+    OpBuilder<(ins "Value":$selector,
+      "Block *":$defaultTarget,
+      "ValueRange":$defaultOperands,
+      CArg<"DenseIntElementsAttr", "{}">:$literals,
+      CArg<"BlockRange", "{}">:$targets,
+      CArg<"ArrayRef<ValueRange>", "{}">:$targetOperands)>
+  ];
+
+  let assemblyFormat = [{
+    $selector `:` type($selector) `,` `[` `\n`
+      custom<SwitchOpCases>(ref(type($selector)),$defaultTarget,
+                            $defaultOperands,
+                            type($defaultOperands),
+                            $literals,
+                            $targets,
+                            $targetOperands,
+                            type($targetOperands))
+   `]`
+    attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Return the operands for the target block at the given index.
+    OperandRange getTargetOperands(unsigned index) {
+      return getTargetOperands()[index];
+    }
+
+    /// Return a mutable range of operands for the target block at the
+    /// given index.
+    MutableOperandRange getTargetOperandsMutable(unsigned index) {
+      return getTargetOperandsMutable()[index];
+    }
+  }];
+
+  let autogenSerialization = 0;
+  let hasVerifier = 1;
+}
+
+
+// -----
+
+def SPIRV_KillOp : SPIRV_Op<"Kill", [Terminator]> {
+  let summary = [{
+    Deprecated (use OpTerminateInvocation or OpDemoteToHelperInvocation).
+  }];
+
+  let description = [{
+    Fragment-shader discard.
+
+    Ceases all further processing in any invocation that executes it: Only
+    instructions these invocations executed before OpKill have observable
+    side effects. If this instruction is executed in non-uniform control
+    flow, all subsequent control flow is non-uniform (for invocations that
+    continue to execute).
+
+    This instruction must be the last instruction in a block.
+
+    This instruction is only valid in the Fragment Execution Model.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    spirv.Kill
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Shader]>
+  ];
+
+  let arguments = (ins);
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+  let hasVerifier = 0;
 }
 
 // -----
@@ -258,17 +419,27 @@ def SPIRV_LoopOp : SPIRV_Op<"mlir.loop", [InFunctionScope]> {
     The continue block should be the second to last block and it should have a
     branch to the loop header block. The loop continue block should be the only
     block, except the entry block, branching to the header block.
+
+    Values defined inside the loop regions cannot be directly used
+    outside of them; however, the loop region can yield values. These values are
+    yielded using a `spirv.mlir.merge` op and returned as a result of the loop op.
   }];
 
   let arguments = (ins
     SPIRV_LoopControlAttr:$loop_control
   );
 
-  let results = (outs);
+  let results = (outs Variadic<AnyType>:$results);
 
   let regions = (region AnyRegion:$body);
 
-  let builders = [OpBuilder<(ins)>];
+  let builders = [
+    OpBuilder<(ins)>,
+    OpBuilder<(ins "spirv::LoopControl":$loopControl),
+    [{
+      build($_builder, $_state, TypeRange(), loopControl);
+    }]>
+  ];
 
   let extraClassDeclaration = [{
     // Returns the entry block.
@@ -298,7 +469,8 @@ def SPIRV_LoopOp : SPIRV_Op<"mlir.loop", [InFunctionScope]> {
 
 // -----
 
-def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [Pure, Terminator]> {
+def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [
+    Pure, Terminator, ParentOneOf<["SelectionOp", "LoopOp"]>, ReturnLike]> {
   let summary = "A special terminator for merging a structured selection/loop.";
 
   let description = [{
@@ -307,17 +479,29 @@ def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [Pure, Terminator]> {
     merge point, which is the next op following the `spirv.mlir.selection` or
     `spirv.mlir.loop` op. This op does not have a corresponding instruction in the
     SPIR-V binary format; it's solely for structural purpose.
+
+    The instruction is also used to yield values from inside the selection/loop region
+    to the outside, as values that were sunk into the region cannot otherwise escape it.
   }];
 
-  let arguments = (ins);
+  let arguments = (ins Variadic<AnyType>:$operands);
 
   let results = (outs);
 
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+
+  let builders = [
+    OpBuilder<(ins),
+    [{
+      build($_builder, $_state, ValueRange());
+    }]>
+  ];
 
   let hasOpcode = 0;
 
   let autogenSerialization = 0;
+
+  let hasVerifier = 0;
 }
 
 // -----
@@ -409,13 +593,17 @@ def SPIRV_SelectionOp : SPIRV_Op<"mlir.selection", [InFunctionScope]> {
     header block, and one selection merge. The selection header block should be
     the first block. The selection merge block should be the last block.
     The merge block should only contain a `spirv.mlir.merge` op.
+
+    Values defined inside the selection regions cannot be directly used
+    outside of them; however, the selection region can yield values. These values are
+    yielded using a `spirv.mlir.merge` op and returned as a result of the selection op.
   }];
 
   let arguments = (ins
     SPIRV_SelectionControlAttr:$selection_control
   );
 
-  let results = (outs);
+  let results = (outs Variadic<AnyType>:$results);
 
   let regions = (region AnyRegion:$body);
 
@@ -437,6 +625,13 @@ def SPIRV_SelectionOp : SPIRV_Op<"mlir.selection", [InFunctionScope]> {
         function_ref<void(OpBuilder &builder)> thenBody,
         OpBuilder &builder);
   }];
+
+  let builders = [
+    OpBuilder<(ins "spirv::SelectionControl":$selectionControl),
+    [{
+      build($_builder, $_state, TypeRange(), selectionControl);
+    }]>
+  ];
 
   let hasOpcode = 0;
 

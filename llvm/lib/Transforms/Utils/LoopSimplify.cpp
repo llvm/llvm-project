@@ -378,11 +378,11 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
     if (P != Preheader) BackedgeBlocks.push_back(P);
   }
 
-  // Create and insert the new backedge block...
+  // Create and insert the new backedge block.
   BasicBlock *BEBlock = BasicBlock::Create(Header->getContext(),
                                            Header->getName() + ".backedge", F);
   BranchInst *BETerminator = BranchInst::Create(Header, BEBlock);
-  BETerminator->setDebugLoc(Header->getFirstNonPHI()->getDebugLoc());
+  BETerminator->setDebugLoc(Header->getFirstNonPHIIt()->getDebugLoc());
 
   LLVM_DEBUG(dbgs() << "LoopSimplify: Inserting unique backedge block "
                     << BEBlock->getName() << "\n");
@@ -737,39 +737,39 @@ bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
 }
 
 namespace {
-  struct LoopSimplify : public FunctionPass {
-    static char ID; // Pass identification, replacement for typeid
-    LoopSimplify() : FunctionPass(ID) {
-      initializeLoopSimplifyPass(*PassRegistry::getPassRegistry());
-    }
+struct LoopSimplify : public FunctionPass {
+  static char ID; // Pass identification, replacement for typeid
+  LoopSimplify() : FunctionPass(ID) {
+    initializeLoopSimplifyPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool runOnFunction(Function &F) override;
+  bool runOnFunction(Function &F) override;
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<AssumptionCacheTracker>();
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
 
-      // We need loop information to identify the loops...
-      AU.addRequired<DominatorTreeWrapperPass>();
-      AU.addPreserved<DominatorTreeWrapperPass>();
+    // We need loop information to identify the loops.
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
 
-      AU.addRequired<LoopInfoWrapperPass>();
-      AU.addPreserved<LoopInfoWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
 
-      AU.addPreserved<BasicAAWrapperPass>();
-      AU.addPreserved<AAResultsWrapperPass>();
-      AU.addPreserved<GlobalsAAWrapperPass>();
-      AU.addPreserved<ScalarEvolutionWrapperPass>();
-      AU.addPreserved<SCEVAAWrapperPass>();
-      AU.addPreservedID(LCSSAID);
-      AU.addPreservedID(BreakCriticalEdgesID);  // No critical edges added.
-      AU.addPreserved<BranchProbabilityInfoWrapperPass>();
-      AU.addPreserved<MemorySSAWrapperPass>();
-    }
+    AU.addPreserved<BasicAAWrapperPass>();
+    AU.addPreserved<AAResultsWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addPreserved<ScalarEvolutionWrapperPass>();
+    AU.addPreserved<SCEVAAWrapperPass>();
+    AU.addPreservedID(LCSSAID);
+    AU.addPreservedID(BreakCriticalEdgesID); // No critical edges added.
+    AU.addPreserved<BranchProbabilityInfoWrapperPass>();
+    AU.addPreserved<MemorySSAWrapperPass>();
+  }
 
-    /// verifyAnalysis() - Verify LoopSimplifyForm's guarantees.
-    void verifyAnalysis() const override;
-  };
-}
+  /// verifyAnalysis() - Verify LoopSimplifyForm's guarantees.
+  void verifyAnalysis() const override;
+};
+} // namespace
 
 char LoopSimplify::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopSimplify, "loop-simplify",
@@ -778,14 +778,14 @@ INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(LoopSimplify, "loop-simplify", "Canonicalize natural loops",
-                    false, true)
+                    false, false)
 
-// Publicly exposed interface to pass...
+// Publicly exposed interface to pass.
 char &llvm::LoopSimplifyID = LoopSimplify::ID;
 Pass *llvm::createLoopSimplifyPass() { return new LoopSimplify(); }
 
 /// runOnFunction - Run down all loops in the CFG (recursively, but we could do
-/// it in any convenient order) inserting preheaders...
+/// it in any convenient order) inserting preheaders.
 ///
 bool LoopSimplify::runOnFunction(Function &F) {
   bool Changed = false;

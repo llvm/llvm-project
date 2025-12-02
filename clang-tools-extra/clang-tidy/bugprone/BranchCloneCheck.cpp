@@ -1,4 +1,4 @@
-//===--- BranchCloneCheck.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/CloneDetection.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/Support/Casting.h"
 
 using namespace clang;
 using namespace clang::ast_matchers;
@@ -63,6 +62,7 @@ static bool isFallthroughSwitchBranch(const SwitchBranch &Branch) {
       return true; // Ignore sub-switches
     }
 
+    // NOLINTNEXTLINE(readability-identifier-naming) - FIXME
     bool TraverseSwitchCase(SwitchCase *, DataRecursionQueue * = nullptr) {
       return true; // Ignore cases
     }
@@ -117,7 +117,6 @@ void BranchCloneCheck::registerMatchers(MatchFinder *Finder) {
 ///
 static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
                             const Stmt *Stmt2, bool IgnoreSideEffects) {
-
   if (!Stmt1 || !Stmt2)
     return !Stmt1 && !Stmt2;
 
@@ -250,10 +249,10 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
 
     if (!llvm::all_of(llvm::zip(CompStmt1->body(), CompStmt2->body()),
                       [&Ctx, IgnoreSideEffects](
-                          std::tuple<const Stmt *, const Stmt *> stmtPair) {
-                        const Stmt *stmt0 = std::get<0>(stmtPair);
-                        const Stmt *stmt1 = std::get<1>(stmtPair);
-                        return isIdenticalStmt(Ctx, stmt0, stmt1,
+                          std::tuple<const Stmt *, const Stmt *> StmtPair) {
+                        const Stmt *Stmt0 = std::get<0>(StmtPair);
+                        const Stmt *Stmt1 = std::get<1>(StmtPair);
+                        return isIdenticalStmt(Ctx, Stmt0, Stmt1,
                                                IgnoreSideEffects);
                       })) {
       return false;
@@ -281,8 +280,8 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
     const auto *IntLit1 = cast<IntegerLiteral>(Stmt1);
     const auto *IntLit2 = cast<IntegerLiteral>(Stmt2);
 
-    llvm::APInt I1 = IntLit1->getValue();
-    llvm::APInt I2 = IntLit2->getValue();
+    const llvm::APInt I1 = IntLit1->getValue();
+    const llvm::APInt I2 = IntLit2->getValue();
     if (I1.getBitWidth() != I2.getBitWidth())
       return false;
     return I1 == I2;
@@ -352,7 +351,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
       }
     }
 
-    size_t N = Branches.size();
+    const size_t N = Branches.size();
     llvm::BitVector KnownAsClone(N);
 
     for (size_t I = 0; I + 1 < N; I++) {
@@ -375,7 +374,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
           // We report the first occurrence only when we find the second one.
           diag(Branches[I]->getBeginLoc(),
                "repeated branch body in conditional chain");
-          SourceLocation End =
+          const SourceLocation End =
               Lexer::getLocForEndOfToken(Branches[I]->getEndLoc(), 0,
                                          *Result.SourceManager, getLangOpts());
           if (End.isValid()) {
@@ -477,7 +476,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *IS = Result.Nodes.getNodeAs<IfStmt>("ifWithDescendantIf")) {
     const Stmt *Then = IS->getThen();
-    auto CS = dyn_cast<CompoundStmt>(Then);
+    const auto *CS = dyn_cast<CompoundStmt>(Then);
     if (CS && (!CS->body_empty())) {
       const auto *InnerIf = dyn_cast<IfStmt>(*CS->body_begin());
       if (InnerIf && isIdenticalStmt(Context, IS->getCond(), InnerIf->getCond(),

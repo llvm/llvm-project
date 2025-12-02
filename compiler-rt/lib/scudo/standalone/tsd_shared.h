@@ -93,6 +93,7 @@ struct TSDRegistrySharedT {
 
   void disable() NO_THREAD_SAFETY_ANALYSIS {
     Mutex.lock();
+    MutexTSDs.lock();
     for (u32 I = 0; I < TSDsArraySize; I++)
       TSDs[I].lock();
   }
@@ -100,6 +101,7 @@ struct TSDRegistrySharedT {
   void enable() NO_THREAD_SAFETY_ANALYSIS {
     for (s32 I = static_cast<s32>(TSDsArraySize - 1); I >= 0; I--)
       TSDs[I].unlock();
+    MutexTSDs.unlock();
     Mutex.unlock();
   }
 
@@ -127,7 +129,7 @@ struct TSDRegistrySharedT {
       // analyzer.
       TSDs[I].assertLocked(/*BypassCheck=*/true);
       Str->append("  Shared TSD[%zu]:\n", I);
-      TSDs[I].getCache().getStats(Str);
+      TSDs[I].getSizeClassAllocator().getStats(Str);
       TSDs[I].unlock();
     }
   }

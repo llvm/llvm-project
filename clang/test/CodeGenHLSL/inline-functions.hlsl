@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE,OPT_ATTR
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE,OPT_ATTR
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE,NOOPT_ATTR
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,NOINLINE
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -O0 -o - | FileCheck %s --check-prefixes=CHECK,INLINE,OPT_ATTR
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute %s -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK,INLINE,NOOPT_ATTR
 
 // Tests that user functions will always be inlined.
 // This includes exported functions and mangled entry point implementation functions.
@@ -15,7 +15,7 @@ float nums[MAX];
 
 // Verify that all functions have the alwaysinline attribute
 // NOINLINE: Function Attrs: alwaysinline
-// NOINLINE: define void @_Z4swapA100_jjj(ptr noundef byval([100 x i32]) align 4 %Buf, i32 noundef %ix1, i32 noundef %ix2) [[IntAttr:\#[0-9]+]]
+// NOINLINE: define hidden void @_Z4swapA100_jjj(ptr noundef byval([100 x i32]) align 4 %Buf, i32 noundef %ix1, i32 noundef %ix2) [[Attr:\#[0-9]+]]
 // NOINLINE: ret void
 // Swap the values of Buf at indices ix1 and ix2
 void swap(unsigned Buf[MAX], unsigned ix1, unsigned ix2) {
@@ -25,7 +25,7 @@ void swap(unsigned Buf[MAX], unsigned ix1, unsigned ix2) {
 }
 
 // NOINLINE: Function Attrs: alwaysinline
-// NOINLINE: define void @_Z10BubbleSortA100_jj(ptr noundef byval([100 x i32]) align 4 %Buf, i32 noundef %size) [[IntAttr]]
+// NOINLINE: define hidden void @_Z10BubbleSortA100_jj(ptr noundef byval([100 x i32]) align 4 %Buf, i32 noundef %size) [[Attr]]
 // NOINLINE: ret void
 // Inefficiently sort Buf in place
 void BubbleSort(unsigned Buf[MAX], unsigned size) {
@@ -43,7 +43,7 @@ void BubbleSort(unsigned Buf[MAX], unsigned size) {
 
 // Note ExtAttr is the inlined export set of attribs
 // CHECK: Function Attrs: alwaysinline
-// CHECK: define noundef i32 @_Z11RemoveDupesA100_jj(ptr {{[a-z_ ]*}}noundef byval([100 x i32]) align 4 %Buf, i32 noundef %size) {{[a-z_ ]*}}[[ExtAttr:\#[0-9]+]]
+// CHECK: define noundef i32 @_Z11RemoveDupesA100_jj(ptr {{[a-z_ ]*}}noundef byval([100 x i32]) align 4 {{.*}}%Buf, i32 noundef %size) {{[a-z_ ]*}}[[Attr:\#[0-9]+]]
 // CHECK: ret i32
 // Sort Buf and remove any duplicate values
 // returns the number of values left
@@ -65,13 +65,14 @@ RWBuffer<unsigned> Indices;
 
 // The mangled version of main only remains without inlining
 // because it has internal linkage from the start
-// Note main functions get the norecurse attrib, which IntAttr reflects
+// Note main functions get the alwaysinline attrib, which Attr reflects
 // NOINLINE: Function Attrs: alwaysinline
-// NOINLINE: define internal void @_Z4mainj(i32 noundef %GI) [[IntAttr]]
+// NOINLINE: define internal void @_Z4mainj(i32 noundef %GI) [[Attr]]
 // NOINLINE: ret void
 
 // The unmangled version is not inlined, EntryAttr reflects that
-// CHECK: Function Attrs: {{.*}}noinline
+// OPT_ATTR: Function Attrs: {{.*}}optnone
+// NOOPT_ATTR-NOT: Function Attrs: {{.*}}optnone
 // CHECK: define void @main() {{[a-z_ ]*}}[[EntryAttr:\#[0-9]+]]
 // Make sure function calls are inlined when AlwaysInline is run
 // This only leaves calls to llvm. intrinsics
@@ -92,13 +93,14 @@ void main(unsigned int GI : SV_GroupIndex) {
 
 // The mangled version of main only remains without inlining
 // because it has internal linkage from the start
-// Note main functions get the norecurse attrib, which IntAttr reflects
+// Note main functions get the alwaysinline attrib, which Attr reflects
 // NOINLINE: Function Attrs: alwaysinline
-// NOINLINE: define internal void @_Z6main10v() [[IntAttr]]
+// NOINLINE: define internal void @_Z6main10v() [[Attr]]
 // NOINLINE: ret void
 
 // The unmangled version is not inlined, EntryAttr reflects that
-// CHECK: Function Attrs: {{.*}}noinline
+// OPT_ATTR: Function Attrs: {{.*}}optnone
+// NOOPT_ATTR-NOT: Function Attrs: {{.*}}optnone
 // CHECK: define void @main10() {{[a-z_ ]*}}[[EntryAttr]]
 // Make sure function calls are inlined when AlwaysInline is run
 // This only leaves calls to llvm. intrinsics
@@ -111,6 +113,5 @@ void main10() {
   main(10);
 }
 
-// NOINLINE: attributes [[IntAttr]] = {{.*}} alwaysinline
-// CHECK: attributes [[ExtAttr]] = {{.*}} alwaysinline
+// CHECK: attributes [[Attr]] = {{.*}} alwaysinline
 // CHECK: attributes [[EntryAttr]] = {{.*}} noinline

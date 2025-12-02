@@ -17,7 +17,6 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "Symbols.h"
-#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
@@ -203,7 +202,7 @@ void SymbolTable::handleDynamicList() {
       syms = findByVersion(ver);
 
     for (Symbol *sym : syms)
-      sym->exportDynamic = sym->inDynamicList = true;
+      sym->isExported = sym->inDynamicList = true;
   }
 }
 
@@ -318,7 +317,7 @@ void SymbolTable::scanVersionScript() {
     // script with `global: *` are used.
     //
     // '--retain-symbol-file' adds a "*" pattern to
-    // 'config->versionDefinitions[VER_NDX_LOCAL].nonLocalPatterns', see
+    // 'versionDefinitions[VER_NDX_LOCAL].nonLocalPatterns', see
     // 'readConfigs()' in 'Driver.cpp'. Note that it is not '.localPatterns',
     // and may seem counterintuitive, but still works as expected. Here we can
     // exploit that and skip analyzing the pattern added for this option.
@@ -350,10 +349,8 @@ void SymbolTable::scanVersionScript() {
         assignAsterisk(pat, &v, true);
   }
 
-  // isPreemptible is false at this point. To correctly compute the binding of a
-  // Defined (which is used by includeInDynsym(ctx)), we need to know if it is
-  // VER_NDX_LOCAL or not. Compute symbol versions before handling
-  // --dynamic-list.
+  // Handle --dynamic-list. If a specified symbol is also matched by local: in a
+  // version script, the version script takes precedence.
   handleDynamicList();
 }
 

@@ -6,7 +6,7 @@ add_subdirectory(support)
 
 # Configure the Features.inc file.
 if (NOT DEFINED CLANGD_BUILD_XPC)
-  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     set(CLANGD_BUILD_XPC_DEFAULT ON)
   else ()
     set(CLANGD_BUILD_XPC_DEFAULT OFF)
@@ -91,7 +91,6 @@ add_clang_library(clangDaemon STATIC
   GlobalCompilationDatabase.cpp
   Headers.cpp
   HeaderSourceSwitch.cpp
-  HeuristicResolver.cpp
   Hover.cpp
   IncludeCleaner.cpp
   IncludeFixer.cpp
@@ -109,6 +108,7 @@ add_clang_library(clangDaemon STATIC
   SemanticHighlighting.cpp
   SemanticSelection.cpp
   SourceCode.cpp
+  SymbolDocumentation.cpp
   SystemIncludeExtractor.cpp
   TidyProvider.cpp
   TUScheduler.cpp
@@ -165,6 +165,7 @@ clang_target_link_libraries(clangDaemon
   clangBasic
   clangDependencyScanning
   clangDriver
+  clangOptions
   clangFormat
   clangFrontend
   clangIndex
@@ -193,7 +194,7 @@ if(CLANGD_TIDY_CHECKS)
 endif()
 
 add_subdirectory(refactor/tweaks)
-if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   # FIXME: Make fuzzer not use linux-specific APIs, build it everywhere.
   add_subdirectory(fuzzer)
 endif()
@@ -211,6 +212,9 @@ if (CLANGD_ENABLE_REMOTE)
   include(AddGRPC)
 endif()
 
+option(CLANGD_BUILD_DEXP "Build the dexp tool as part of Clangd" ON)
+llvm_canonicalize_cmake_booleans(CLANGD_BUILD_DEXP)
+
 if(CLANG_INCLUDE_TESTS)
   add_subdirectory(test)
   add_subdirectory(unittests)
@@ -221,4 +225,7 @@ option(CLANGD_ENABLE_REMOTE "Use gRPC library to enable remote index support for
 set(GRPC_INSTALL_PATH "" CACHE PATH "Path to gRPC library manual installation.")
 
 add_subdirectory(index/remote)
-add_subdirectory(index/dex/dexp)
+
+if(CLANGD_BUILD_DEXP)
+  add_subdirectory(index/dex/dexp)
+endif()

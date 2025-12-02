@@ -4,8 +4,10 @@
 ; CHECK: in function dot_double3
 ; CHECK-SAME: Cannot create Dot3 operation: Invalid overload type
 
-define noundef double @dot_double3(<3 x double> noundef %a, <3 x double> noundef %b) {
+define noundef double @dot_double3(double noundef %a1, double noundef %a2,
+                                   double noundef %a3, double noundef %b1,
+                                   double noundef %b2, double noundef %b3) {
 entry:
-  %dx.dot = call double @llvm.dx.dot3.v3f64(<3 x double> %a, <3 x double> %b)
+  %dx.dot = call double @llvm.dx.dot3(double %a1, double %a2, double %a3, double %b1, double %b2, double %b3)
   ret double %dx.dot
 }

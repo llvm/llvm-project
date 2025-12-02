@@ -6,11 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// In macosx10.9 to macosx10.14, streams are provided in the dylib AND they
-// have a bug in how they handle null-termination in case of errors (see D40677).
-// Requires 396145d in the built library.
-// XFAIL: using-built-library-before-llvm-9
-
 // <istream>
 
 // basic_istream<charT,traits>& getline(char_type* s, streamsize n, char_type delim);

@@ -131,10 +131,10 @@ define i1 @test5(double %x, i1 %cond) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       if.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[X]], i32 408)
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[Y:%.*]] = phi double [ -1.000000e+00, [[ENTRY:%.*]] ], [ [[X]], [[IF_END]] ]
-; CHECK-NEXT:    [[RET:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[Y]], i32 408)
+; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ [[TMP0]], [[IF_END]] ]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
@@ -391,11 +391,9 @@ define float @test_signbit_check_fail(float %x, i1 %cond) {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN2:%.*]], label [[IF_END]]
 ; CHECK:       if.then2:
-; CHECK-NEXT:    [[FNEG2:%.*]] = fneg float [[X]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[VALUE:%.*]] = phi float [ [[FNEG]], [[IF_THEN1]] ], [ [[FNEG2]], [[IF_THEN2]] ], [ [[X]], [[IF_ELSE]] ]
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.fabs.f32(float [[VALUE]])
+; CHECK-NEXT:    [[RET:%.*]] = phi float [ [[FNEG]], [[IF_THEN1]] ], [ [[X]], [[IF_THEN2]] ], [ [[X]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    ret float [[RET]]
 ;
   %i32 = bitcast float %x to i32
@@ -456,3 +454,93 @@ if.end:
   %ret = call <2 x float> @llvm.fabs.v2f32(<2 x float> %value)
   ret <2 x float> %ret
 }
+
+define i1 @pr118257(half %v0, half %v1) {
+; CHECK-LABEL: define i1 @pr118257(
+; CHECK-SAME: half [[V0:%.*]], half [[V1:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp une half [[V1]], 0xH0000
+; CHECK-NEXT:    [[CAST0:%.*]] = bitcast half [[V0]] to i16
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i16 [[CAST0]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[CAST1:%.*]] = bitcast half [[V1]] to i16
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i16 [[CAST1]], 0
+; CHECK-NEXT:    ret i1 [[CMP3]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp1 = fcmp une half %v1, 0.000000e+00
+  %cast0 = bitcast half %v0 to i16
+  %cmp2 = icmp slt i16 %cast0, 0
+  %or.cond = or i1 %cmp1, %cmp2
+  br i1 %or.cond, label %if.end, label %if.else
+
+if.else:
+  %cast1 = bitcast half %v1 to i16
+  %cmp3 = icmp slt i16 %cast1, 0
+  ret i1 %cmp3
+
+if.end:
+  ret i1 false
+}
+
+define i1 @pr118257_is_fpclass(half %v0, half %v1) {
+; CHECK-LABEL: define i1 @pr118257_is_fpclass(
+; CHECK-SAME: half [[V0:%.*]], half [[V1:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp une half [[V1]], 0xH0000
+; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.is.fpclass.f16(half [[V0]], i32 35)
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[CAST1:%.*]] = bitcast half [[V1]] to i16
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i16 [[CAST1]], 0
+; CHECK-NEXT:    ret i1 [[CMP3]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp1 = fcmp une half %v1, 0.000000e+00
+  %cmp2 = call i1 @llvm.is.fpclass.half(half %v0, i32 35)
+  %or.cond = or i1 %cmp1, %cmp2
+  br i1 %or.cond, label %if.end, label %if.else
+
+if.else:
+  %cast1 = bitcast half %v1 to i16
+  %cmp3 = icmp slt i16 %cast1, 0
+  ret i1 %cmp3
+
+if.end:
+  ret i1 false
+}
+
+define i1 @test_inv_and(float %x, i1 %cond2) {
+; CHECK-LABEL: define i1 @test_inv_and(
+; CHECK-SAME: float [[X:%.*]], i1 [[COND2:%.*]]) {
+; CHECK-NEXT:    [[COND:%.*]] = fcmp oge float [[X]], -1.000000e+00
+; CHECK-NEXT:    call void @use(i1 [[COND]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[COND2]], [[NOT]]
+; CHECK-NEXT:    br i1 [[AND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+  %cond = fcmp oge float %x, -1.0
+  %neg = fneg float %x
+  call void @use(i1 %cond)
+  %not = xor i1 %cond, true
+  %and = and i1 %not, %cond2
+  br i1 %and, label %if.then, label %if.else
+if.then:
+  %ret1 = fcmp oeq float %neg, 0xFFF0000000000000
+  ret i1 %ret1
+if.else:
+  ret i1 false
+}
+
+declare void @use(i1)

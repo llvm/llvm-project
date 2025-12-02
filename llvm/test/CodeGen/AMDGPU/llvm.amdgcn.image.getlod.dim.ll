@@ -1,8 +1,8 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefixes=GCN,PRE-GFX10,PRE-GFX12 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck --check-prefixes=GCN,PRE-GFX10,PRE-GFX12 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck --check-prefixes=GCN,GFX10,PRE-GFX12 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck --check-prefixes=GCN,GFX10,PRE-GFX12 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck --check-prefixes=GCN,GFX12 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=verde | FileCheck --check-prefixes=GCN,PRE-GFX10,PRE-GFX12 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx900 | FileCheck --check-prefixes=GCN,PRE-GFX10,PRE-GFX12 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 | FileCheck --check-prefixes=GCN,GFX10,PRE-GFX12 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 | FileCheck --check-prefixes=GCN,GFX10,PRE-GFX12 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 | FileCheck --check-prefixes=GCN,GFX12 %s
 
 ; GCN-LABEL: {{^}}getlod_1d:
 ; PRE-GFX10: image_get_lod v[0:3], v0, s[0:7], s[8:11] dmask:0xf{{$}}

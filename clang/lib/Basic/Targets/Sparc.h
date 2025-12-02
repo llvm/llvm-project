@@ -48,10 +48,9 @@ public:
 
   bool hasFeature(StringRef Feature) const override;
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override {
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override {
     // FIXME: Implement!
-    return {nullptr, {}};
+    return {};
   }
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -167,6 +166,13 @@ public:
       PtrDiffType = SignedLong;
       break;
     }
+
+    // The SPARCv8 System V ABI has long double 128-bits in size, but 64-bit
+    // aligned.
+    LongDoubleWidth = 128;
+    LongDoubleAlign = 64;
+    LongDoubleFormat = &llvm::APFloat::IEEEquad();
+
     // Up to 32 bits (V8) or 64 bits (V9) are lock-free atomic, but we're
     // willing to do atomic ops on up to 64 bits.
     MaxAtomicPromoteWidth = 64;

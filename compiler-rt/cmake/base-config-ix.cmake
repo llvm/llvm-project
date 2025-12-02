@@ -59,9 +59,9 @@ if (LLVM_TREE_AVAILABLE)
     set(_host_executable_suffix ${CMAKE_EXECUTABLE_SUFFIX})
   endif()
   set(COMPILER_RT_TEST_COMPILER
-    ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang${_host_executable_suffix})
+    ${LLVM_TOOLS_BINARY_DIR}/clang${_host_executable_suffix})
   set(COMPILER_RT_TEST_CXX_COMPILER
-    ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++${_host_executable_suffix})
+    ${LLVM_TOOLS_BINARY_DIR}/clang++${_host_executable_suffix})
 else()
     # Take output dir and install path from the user.
   set(COMPILER_RT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH
@@ -87,6 +87,11 @@ elseif("${_test_compiler_name}" MATCHES "cl.exe$")
 else()
   message(STATUS "Unknown compiler ${COMPILER_RT_TEST_COMPILER}, assuming GNU")
   set(COMPILER_RT_TEST_COMPILER_ID GNU)
+endif()
+
+# AppleClang expects 'Clang' as compiler-rt test compiler ID.
+if ("${COMPILER_RT_TEST_COMPILER_ID}" STREQUAL "AppleClang")
+  set(COMPILER_RT_TEST_COMPILER_ID Clang)
 endif()
 
 if(NOT DEFINED COMPILER_RT_OS_DIR)

@@ -45,14 +45,13 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
-#include <map>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -109,7 +108,7 @@ enum ThinLTOModes {
   THINALL
 };
 
-cl::opt<ThinLTOModes> ThinLTOMode(
+static cl::opt<ThinLTOModes> ThinLTOMode(
     "thinlto-action", cl::desc("Perform a single ThinLTO stage:"),
     cl::values(
         clEnumValN(
@@ -264,15 +263,6 @@ static cl::opt<bool>
     LTOSaveBeforeOpt("lto-save-before-opt", cl::init(false),
                      cl::desc("Save the IR before running optimizations"));
 
-static cl::opt<bool> TryUseNewDbgInfoFormat(
-    "try-experimental-debuginfo-iterators",
-    cl::desc("Enable debuginfo iterator positions, if they're built in"),
-    cl::init(false), cl::Hidden);
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-
 namespace {
 
 struct ModuleInfo {
@@ -388,7 +378,7 @@ static void printIndexStats() {
 
     unsigned Calls = 0, Refs = 0, Functions = 0, Alias = 0, Globals = 0;
     for (auto &Summaries : *Index) {
-      for (auto &Summary : Summaries.second.SummaryList) {
+      for (auto &Summary : Summaries.second.getSummaryList()) {
         Refs += Summary->refs().size();
         if (auto *FuncSummary = dyn_cast<FunctionSummary>(Summary.get())) {
           Functions++;
@@ -484,6 +474,8 @@ static void testLTOModule(const TargetOptions &Options) {
         printLTOSymbolAttributes(Module->getSymbolAttributes(I));
         outs() << "\n";
       }
+      for (int I = 0, E = Module->getAsmUndefSymbolCount(); I != E; ++I)
+        outs() << Module->getAsmUndefSymbolName(I) << "    { asm extern }\n";
     }
     if (QueryHasCtorDtor)
       outs() << Filename
@@ -1007,20 +999,6 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::HideUnrelatedOptions({&LTOCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm LTO linker\n");
-  // Load bitcode into the new debug info format by default.
-  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
-    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
-
-  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format.
-  if (TryUseNewDbgInfoFormat) {
-    // Turn the new debug-info format on.
-    UseNewDbgInfoFormat = true;
-  }
-  // Since llvm-lto collects multiple IR modules together, for simplicity's sake
-  // we disable the "PreserveInputDbgFormat" flag to enforce a single debug info
-  // format.
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
 
   if (OptLevel < '0' || OptLevel > '3')
     error("optimization level must be between 0 and 3");
@@ -1102,9 +1080,7 @@ int main(int argc, char **argv) {
   CodeGen.setTargetOptions(Options);
   CodeGen.setShouldRestoreGlobalsLinkage(RestoreGlobalsLinkage);
 
-  StringSet<MallocAllocator> DSOSymbolsSet;
-  for (unsigned i = 0; i < DSOSymbols.size(); ++i)
-    DSOSymbolsSet.insert(DSOSymbols[i]);
+  StringSet<MallocAllocator> DSOSymbolsSet(llvm::from_range, DSOSymbols);
 
   std::vector<std::string> KeptDSOSyms;
 
@@ -1161,7 +1137,6 @@ int main(int argc, char **argv) {
     if (SaveLinkedModuleFile) {
       std::string ModuleFilename = OutputFilename;
       ModuleFilename += ".linked.bc";
-      std::string ErrMsg;
 
       if (!CodeGen.writeMergedModules(ModuleFilename))
         error("writing linked module failed.");
@@ -1175,7 +1150,6 @@ int main(int argc, char **argv) {
     if (SaveModuleFile) {
       std::string ModuleFilename = OutputFilename;
       ModuleFilename += ".merged.bc";
-      std::string ErrMsg;
 
       if (!CodeGen.writeMergedModules(ModuleFilename))
         error("writing merged module failed.");

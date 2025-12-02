@@ -72,7 +72,7 @@ private:
   }
 
   std::optional<Value> GetValue(const parser::CaseValue &caseValue) {
-    const parser::Expr &expr{caseValue.thing.thing.value()};
+    const auto &expr{parser::UnwrapRef<parser::Expr>(caseValue)};
     auto *x{expr.typedExpr.get()};
     if (x && x->v) { // C1147
       auto type{x->v->GetType()};
@@ -253,6 +253,10 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
       common::SearchTypes(
           TypeVisitor<TypeCategory::Integer>{context_, *exprType, caseList});
       return;
+    case TypeCategory::Unsigned:
+      common::SearchTypes(
+          TypeVisitor<TypeCategory::Unsigned>{context_, *exprType, caseList});
+      return;
     case TypeCategory::Logical:
       CaseValues<evaluate::Type<TypeCategory::Logical, 1>>{context_, *exprType}
           .Check(caseList);
@@ -266,6 +270,8 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
     }
   }
   context_.Say(selectExpr.source,
-      "SELECT CASE expression must be integer, logical, or character"_err_en_US);
+      context_.IsEnabled(common::LanguageFeature::Unsigned)
+          ? "SELECT CASE expression must be integer, unsigned, logical, or character"_err_en_US
+          : "SELECT CASE expression must be integer, logical, or character"_err_en_US);
 }
 } // namespace Fortran::semantics

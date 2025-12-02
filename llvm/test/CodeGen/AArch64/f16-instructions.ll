@@ -84,11 +84,8 @@ define half @test_fmadd(half %a, half %b, half %c) #0 {
 ; CHECK-CVT-SD:       // %bb.0:
 ; CHECK-CVT-SD-NEXT:    fcvt s1, h1
 ; CHECK-CVT-SD-NEXT:    fcvt s0, h0
-; CHECK-CVT-SD-NEXT:    fmul s0, s0, s1
-; CHECK-CVT-SD-NEXT:    fcvt s1, h2
-; CHECK-CVT-SD-NEXT:    fcvt h0, s0
-; CHECK-CVT-SD-NEXT:    fcvt s0, h0
-; CHECK-CVT-SD-NEXT:    fadd s0, s0, s1
+; CHECK-CVT-SD-NEXT:    fcvt s2, h2
+; CHECK-CVT-SD-NEXT:    fmadd s0, s0, s1, s2
 ; CHECK-CVT-SD-NEXT:    fcvt h0, s0
 ; CHECK-CVT-SD-NEXT:    ret
 ;
@@ -785,18 +782,17 @@ define void @test_fccmp(half %in, ptr %out) {
 ;
 ; CHECK-CVT-GI-LABEL: test_fccmp:
 ; CHECK-CVT-GI:       // %bb.0:
-; CHECK-CVT-GI-NEXT:    mov w8, #17664 // =0x4500
-; CHECK-CVT-GI-NEXT:    mov w9, #18432 // =0x4800
 ; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-CVT-GI-NEXT:    fcvt s2, h0
-; CHECK-CVT-GI-NEXT:    fmov s1, w8
-; CHECK-CVT-GI-NEXT:    fmov s3, w9
-; CHECK-CVT-GI-NEXT:    fmov w9, s0
-; CHECK-CVT-GI-NEXT:    fcvt s1, h1
-; CHECK-CVT-GI-NEXT:    fcvt s3, h3
-; CHECK-CVT-GI-NEXT:    fcmp s2, s1
-; CHECK-CVT-GI-NEXT:    fccmp s2, s3, #4, mi
-; CHECK-CVT-GI-NEXT:    csel w8, w9, w8, gt
+; CHECK-CVT-GI-NEXT:    fcvt s1, h0
+; CHECK-CVT-GI-NEXT:    fmov s2, #5.00000000
+; CHECK-CVT-GI-NEXT:    adrp x8, .LCPI29_0
+; CHECK-CVT-GI-NEXT:    fmov s3, #8.00000000
+; CHECK-CVT-GI-NEXT:    fcmp s1, s2
+; CHECK-CVT-GI-NEXT:    ldr h2, [x8, :lo12:.LCPI29_0]
+; CHECK-CVT-GI-NEXT:    fmov w8, s0
+; CHECK-CVT-GI-NEXT:    fmov w9, s2
+; CHECK-CVT-GI-NEXT:    fccmp s1, s3, #4, mi
+; CHECK-CVT-GI-NEXT:    csel w8, w8, w9, gt
 ; CHECK-CVT-GI-NEXT:    strh w8, [x0]
 ; CHECK-CVT-GI-NEXT:    ret
 ;
@@ -1248,6 +1244,15 @@ define half @test_atan(half %a) #0 {
 }
 
 define half @test_atan2(half %a, half %b) #0 {
+; CHECK-LABEL: test_atan2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    fcvt s0, h0
+; CHECK-NEXT:    fcvt s1, h1
+; CHECK-NEXT:    bl atan2f
+; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
   %r = call half @llvm.atan2.f16(half %a, half %b)
   ret half %r
 }

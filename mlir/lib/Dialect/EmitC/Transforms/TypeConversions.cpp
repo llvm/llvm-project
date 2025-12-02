@@ -21,7 +21,7 @@ Value materializeAsUnrealizedCast(OpBuilder &builder, Type resultType,
   if (inputs.size() != 1)
     return Value();
 
-  return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+  return UnrealizedConversionCastOp::create(builder, loc, resultType, inputs)
       .getResult(0);
 }
 
@@ -33,7 +33,6 @@ void mlir::populateEmitCSizeTTypeConversions(TypeConverter &converter) {
 
   converter.addSourceMaterialization(materializeAsUnrealizedCast);
   converter.addTargetMaterialization(materializeAsUnrealizedCast);
-  converter.addArgumentMaterialization(materializeAsUnrealizedCast);
 }
 
 /// Get an unsigned integer or size data type corresponding to \p ty.

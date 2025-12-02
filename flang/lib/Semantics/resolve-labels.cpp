@@ -122,6 +122,8 @@ constexpr Legality IsLegalBranchTarget(const parser::Statement<A> &) {
       std::is_same_v<A, parser::EndCriticalStmt> ||
       std::is_same_v<A, parser::ForallConstructStmt> ||
       std::is_same_v<A, parser::WhereConstructStmt> ||
+      std::is_same_v<A, parser::ChangeTeamStmt> ||
+      std::is_same_v<A, parser::EndChangeTeamStmt> ||
       std::is_same_v<A, parser::EndFunctionStmt> ||
       std::is_same_v<A, parser::EndMpSubprogramStmt> ||
       std::is_same_v<A, parser::EndProgramStmt> ||
@@ -210,8 +212,9 @@ public:
         // subprograms.  Visit that statement in advance so that results
         // are placed in the correct programUnits_ slot.
         auto targetFlags{ConstructBranchTargetFlags(endStmt)};
-        AddTargetLabelDefinition(
-            endStmt.label.value(), targetFlags, currentScope_);
+        AddTargetLabelDefinition(endStmt.label.value(), targetFlags,
+            currentScope_,
+            /*isExecutableConstructEndStmt=*/false);
       }
     }
     return true;
@@ -238,18 +241,20 @@ public:
             parser::EndProgramStmt, parser::EndSubroutineStmt>;
     auto targetFlags{ConstructBranchTargetFlags(statement)};
     if constexpr (common::HasMember<A, LabeledConstructStmts>) {
-      AddTargetLabelDefinition(label.value(), targetFlags, ParentScope());
+      AddTargetLabelDefinition(label.value(), targetFlags, ParentScope(),
+          /*isExecutableConstructEndStmt=*/false);
     } else if constexpr (std::is_same_v<A, parser::EndIfStmt> ||
         std::is_same_v<A, parser::EndSelectStmt>) {
       // the label on an END IF/SELECT is not in the last part/case
-      AddTargetLabelDefinition(label.value(), targetFlags, ParentScope(), true);
+      AddTargetLabelDefinition(label.value(), targetFlags, ParentScope(),
+          /*isExecutableConstructEndStmt=*/true);
     } else if constexpr (common::HasMember<A, LabeledConstructEndStmts>) {
-      constexpr bool isExecutableConstructEndStmt{true};
       AddTargetLabelDefinition(label.value(), targetFlags, currentScope_,
-          isExecutableConstructEndStmt);
+          /*isExecutableConstructEndStmt=*/true);
     } else if constexpr (!common::HasMember<A, LabeledProgramUnitEndStmts>) {
       // Program unit END statements have already been processed.
-      AddTargetLabelDefinition(label.value(), targetFlags, currentScope_);
+      AddTargetLabelDefinition(label.value(), targetFlags, currentScope_,
+          /*isExecutableConstructEndStmt=*/false);
     }
     return true;
   }
@@ -484,15 +489,29 @@ public:
 
   // C1401
   void Post(const parser::MainProgram &mainProgram) {
+    // Uppercase the name of the main program, so that its symbol name
+    // would be unique from similarly named non-main-program symbols.
+    auto upperCaseCharBlock = [](const parser::CharBlock &cb) {
+      auto ch{const_cast<char *>(cb.begin())};
+      for (char *endCh{ch + cb.size()}; ch != endCh; ++ch) {
+        *ch = parser::ToUpperCaseLetter(*ch);
+      }
+    };
+    const parser::CharBlock *progName{nullptr};
+    if (const auto &program{
+            std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(
+                mainProgram.t)}) {
+      progName = &program->statement.v.source;
+      upperCaseCharBlock(*progName);
+    }
     if (const parser::CharBlock *
         endName{GetStmtName(std::get<parser::Statement<parser::EndProgramStmt>>(
             mainProgram.t))}) {
-      if (const auto &program{
-              std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(
-                  mainProgram.t)}) {
-        if (*endName != program->statement.v.source) {
+      upperCaseCharBlock(*endName);
+      if (progName) {
+        if (*endName != *progName) {
           context_.Say(*endName, "END PROGRAM name mismatch"_err_en_US)
-              .Attach(program->statement.v.source, "should be"_en_US);
+              .Attach(*progName, "should be"_en_US);
         }
       } else {
         context_.Say(*endName,
@@ -826,7 +845,7 @@ private:
   // 6.2.5., paragraph 2
   void AddTargetLabelDefinition(parser::Label label,
       LabeledStmtClassificationSet labeledStmtClassificationSet,
-      ProxyForScope scope, bool isExecutableConstructEndStmt = false) {
+      ProxyForScope scope, bool isExecutableConstructEndStmt) {
     CheckLabelInRange(label);
     TargetStmtMap &targetStmtMap{disposableMaps_.empty()
             ? programUnits_.back().targetStmts
@@ -912,7 +931,7 @@ bool InBody(const parser::CharBlock &position,
   return false;
 }
 
-LabeledStatementInfoTuplePOD GetLabel(
+static LabeledStatementInfoTuplePOD GetLabel(
     const TargetStmtMap &labels, const parser::Label &label) {
   const auto iter{labels.find(label)};
   if (iter == labels.cend()) {

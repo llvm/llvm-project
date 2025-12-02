@@ -15,7 +15,7 @@ define float @select_max_ugt(float %a, float %b) {
 define float @select_max_uge(float %a, float %b) {
 ; CHECK-LABEL: @select_max_uge(
 ; CHECK-NEXT:    [[CMP_INV:%.*]] = fcmp nnan olt float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select nnan i1 [[CMP_INV]], float [[B]], float [[A]]
+; CHECK-NEXT:    [[SEL:%.*]] = select nnan ninf i1 [[CMP_INV]], float [[B]], float [[A]]
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %cmp = fcmp nnan uge float %a, %b
@@ -25,7 +25,8 @@ define float @select_max_uge(float %a, float %b) {
 
 define float @select_min_ugt(float %a, float %b) {
 ; CHECK-LABEL: @select_min_ugt(
-; CHECK-NEXT:    [[SEL:%.*]] = call fast float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    [[CMP_INV:%.*]] = fcmp fast ole float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select reassoc nnan ninf i1 [[CMP_INV]], float [[A]], float [[B]]
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %cmp = fcmp fast ugt float %a, %b
@@ -35,8 +36,7 @@ define float @select_min_ugt(float %a, float %b) {
 
 define float @select_min_uge(float %a, float %b) {
 ; CHECK-LABEL: @select_min_uge(
-; CHECK-NEXT:    [[CMP_INV:%.*]] = fcmp nsz olt float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select nsz i1 [[CMP_INV]], float [[A]], float [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = call reassoc nsz arcp contract afn float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %cmp = fcmp nsz uge float %a, %b
@@ -47,7 +47,7 @@ define float @select_min_uge(float %a, float %b) {
 define float @select_max_ult(float %a, float %b) {
 ; CHECK-LABEL: @select_max_ult(
 ; CHECK-NEXT:    [[CMP_INV:%.*]] = fcmp arcp oge float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select arcp i1 [[CMP_INV]], float [[A]], float [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = select nnan ninf i1 [[CMP_INV]], float [[A]], float [[B]]
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %cmp = fcmp arcp ult float %a, %b
@@ -57,7 +57,7 @@ define float @select_max_ult(float %a, float %b) {
 
 define float @select_max_ule(float %a, float %b) {
 ; CHECK-LABEL: @select_max_ule(
-; CHECK-NEXT:    [[SEL:%.*]] = call fast float @llvm.maxnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = call nnan ninf nsz float @llvm.maxnum.f32(float [[A:%.*]], float [[B:%.*]])
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %cmp = fcmp fast ule float %a, %b
@@ -67,8 +67,7 @@ define float @select_max_ule(float %a, float %b) {
 
 define float @select_min_ult(float %a, float %b) {
 ; CHECK-LABEL: @select_min_ult(
-; CHECK-NEXT:    [[CMP_INV:%.*]] = fcmp nsz oge float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select nsz i1 [[CMP_INV]], float [[B]], float [[A]]
+; CHECK-NEXT:    [[SEL:%.*]] = call reassoc nsz arcp contract afn float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %cmp = fcmp nsz ult float %a, %b
@@ -79,7 +78,7 @@ define float @select_min_ult(float %a, float %b) {
 define float @select_min_ule(float %a, float %b) {
 ; CHECK-LABEL: @select_min_ule(
 ; CHECK-NEXT:    [[CMP_INV:%.*]] = fcmp arcp ogt float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select arcp i1 [[CMP_INV]], float [[B]], float [[A]]
+; CHECK-NEXT:    [[SEL:%.*]] = select ninf i1 [[CMP_INV]], float [[B]], float [[A]]
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %cmp = fcmp arcp ule float %a, %b
@@ -90,7 +89,7 @@ define float @select_min_ule(float %a, float %b) {
 define float @select_fcmp_une(float %a, float %b) {
 ; CHECK-LABEL: @select_fcmp_une(
 ; CHECK-NEXT:    [[CMP_INV:%.*]] = fcmp reassoc oeq float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select reassoc i1 [[CMP_INV]], float [[B]], float [[A]]
+; CHECK-NEXT:    [[SEL:%.*]] = select nnan i1 [[CMP_INV]], float [[B]], float [[A]]
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %cmp = fcmp reassoc une float %a, %b
@@ -101,7 +100,7 @@ define float @select_fcmp_une(float %a, float %b) {
 define float @select_fcmp_ueq(float %a, float %b) {
 ; CHECK-LABEL: @select_fcmp_ueq(
 ; CHECK-NEXT:    [[CMP_INV:%.*]] = fcmp reassoc one float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select reassoc i1 [[CMP_INV]], float [[B]], float [[A]]
+; CHECK-NEXT:    [[SEL:%.*]] = select nnan arcp i1 [[CMP_INV]], float [[B]], float [[A]]
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %cmp = fcmp reassoc ueq float %a, %b
@@ -115,7 +114,7 @@ define float @select_max_ugt_2_use_cmp(float %a, float %b) {
 ; CHECK-LABEL: @select_max_ugt_2_use_cmp(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp reassoc ugt float [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    call void @foo(i1 [[CMP]])
-; CHECK-NEXT:    [[SEL:%.*]] = call reassoc ninf nsz arcp contract afn float @llvm.maxnum.f32(float [[A]], float [[B]])
+; CHECK-NEXT:    [[SEL:%.*]] = call reassoc nsz arcp contract afn float @llvm.maxnum.f32(float [[A]], float [[B]])
 ; CHECK-NEXT:    ret float [[SEL]]
 ;
   %cmp = fcmp reassoc ugt float %a, %b
@@ -134,5 +133,30 @@ define float @select_min_uge_2_use_cmp(float %a, float %b) {
   %cmp = fcmp ninf uge float %a, %b
   call void @foo(i1 %cmp)
   %sel = select nsz i1 %cmp, float %b, float %a
+  ret float %sel
+}
+
+; Make sure that we do not recognize the following pattern as a SPF
+; unless the nsz flag is set on the select instruction.
+
+define float @pr141017(float %x) {
+; CHECK-LABEL: @pr141017(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz olt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float -0.000000e+00, float [[X]]
+; CHECK-NEXT:    ret float [[SEL]]
+;
+  %cmp = fcmp nsz olt float %x, 0.0
+  %sel = select i1 %cmp, float -0.0, float %x
+  ret float %sel
+}
+
+define float @pr141017_select_nsz(float %x) {
+; CHECK-LABEL: @pr141017_select_nsz(
+; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp ole float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[DOTINV]], float -0.000000e+00, float [[X]]
+; CHECK-NEXT:    ret float [[SEL1]]
+;
+  %cmp = fcmp olt float %x, 0.0
+  %sel = select nsz i1 %cmp, float -0.0, float %x
   ret float %sel
 }

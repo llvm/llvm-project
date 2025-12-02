@@ -115,12 +115,12 @@ struct Configuration {
   enum ManifestKind { Default, SideBySide, Embed, No };
   bool is64() const { return llvm::COFF::is64Bit(machine); }
 
+  std::unique_ptr<MemoryBuffer> dosStub;
   llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
   bool machineInferred = false;
   size_t wordsize;
   bool verbose = false;
   WindowsSubsystem subsystem = llvm::COFF::IMAGE_SUBSYSTEM_UNKNOWN;
-  Symbol *entry = nullptr;
   bool noEntry = false;
   std::string outputFile;
   std::string importName;
@@ -162,11 +162,8 @@ struct Configuration {
   bool dll = false;
   StringRef implib;
   bool noimplib = false;
-  std::vector<Export> exports;
-  bool hadExplicitExports;
   std::set<std::string> delayLoads;
   std::map<std::string, int> dllOrder;
-  Symbol *delayLoadHelper = nullptr;
   Symbol *arm64ECIcallHelper = nullptr;
 
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
@@ -195,6 +192,21 @@ struct Configuration {
   // Used for /lldltocachepolicy=policy
   llvm::CachePruningPolicy ltoCachePolicy;
 
+  // Used for /thinlto-distributor:<path>
+  StringRef dtltoDistributor;
+
+  // Used for /thinlto-distributor-arg:<arg>
+  llvm::SmallVector<llvm::StringRef, 0> dtltoDistributorArgs;
+
+  // Used for /thinlto-remote-compiler:<path>
+  StringRef dtltoCompiler;
+
+  // Used for /thinlto-remote-compiler-prepend-arg:<arg>
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerPrependArgs;
+
+  // Used for /thinlto-remote-compiler-arg:<arg>
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
+
   // Used for /opt:[no]ltodebugpassmanager
   bool ltoDebugPassManager = false;
 
@@ -203,6 +215,8 @@ struct Configuration {
 
   // Used for /section=.name,{DEKPRSW} to set section attributes.
   std::map<StringRef, uint32_t> section;
+  // Used for /sectionlayout: to layout sections in specified order.
+  std::map<std::string, int> sectionOrder;
 
   // Options for manifest files.
   ManifestKind manifest = Default;
@@ -214,17 +228,14 @@ struct Configuration {
   StringRef manifestUIAccess = "'false'";
   StringRef manifestFile;
 
+  // used for /arm64xsameaddress
+  std::vector<std::pair<Symbol *, Symbol *>> sameAddresses;
+
   // used for /dwodir
   StringRef dwoDir;
 
-  // Used for /aligncomm.
-  std::map<std::string, int> alignComm;
-
   // Used for /failifmismatch.
   std::map<StringRef, std::pair<StringRef, InputFile *>> mustMatch;
-
-  // Used for /alternatename.
-  std::map<StringRef, StringRef> alternateNames;
 
   // Used for /order.
   llvm::StringMap<int> order;
@@ -304,18 +315,24 @@ struct Configuration {
   bool dynamicBase = true;
   bool allowBind = true;
   bool cetCompat = false;
+  bool cetCompatStrict = false;
+  bool cetCompatIpValidationRelaxed = false;
+  bool cetCompatDynamicApisInProcOnly = false;
+  bool hotpatchCompat = false;
   bool nxCompat = true;
   bool allowIsolation = true;
   bool terminalServerAware = true;
   bool largeAddressAware = false;
   bool highEntropyVA = false;
   bool appContainer = false;
+  bool mergeDebugDirectory = true;
   bool mingw = false;
   bool warnMissingOrderSymbol = true;
   bool warnLocallyDefinedImported = true;
   bool warnDebugInfoUnusable = true;
   bool warnLongSectionNames = true;
   bool warnStdcallFixup = true;
+  bool warnImportedDllMain = true;
   bool incremental = true;
   bool integrityCheck = false;
   bool killAt = false;

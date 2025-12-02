@@ -86,10 +86,14 @@ preemptible2:
 // CHECK-PLT-NEXT:   d00034: d4 d4 d4 d4      .word   0xd4d4d4d4
 // CHECK-PLT-NEXT:   d00038: d4 d4 d4 d4      .word   0xd4d4d4d4
 // CHECK-PLT-NEXT:   d0003c: d4 d4 d4 d4      .word   0xd4d4d4d4
+// CHECK-PLT-EMPTY:
+// CHECK-PLT-NEXT: <preemptible@plt>:
 // CHECK-PLT-NEXT:   d00040: add     r12, pc, #0, #12
 // CHECK-PLT-NEXT:   d00044: add     r12, r12, #32, #20
 // CHECK-PLT-NEXT:   d00048: ldr     pc, [r12, #124]!
 // CHECK-PLT-NEXT:   d0004c: d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK-PLT-EMPTY:
+// CHECK-PLT-NEXT: <preemptible2@plt>:
 // CHECK-PLT-NEXT:   d00050: add     r12, pc, #0, #12
 // CHECK-PLT-NEXT:   d00054: add     r12, r12, #32, #20
 // CHECK-PLT-NEXT:   d00058: ldr     pc, [r12, #112]!

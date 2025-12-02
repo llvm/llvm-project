@@ -19,25 +19,6 @@
 
 namespace llvm {
 
-namespace WebAssemblyISD {
-
-enum NodeType : unsigned {
-  FIRST_NUMBER = ISD::BUILTIN_OP_END,
-#define HANDLE_NODETYPE(NODE) NODE,
-#define HANDLE_MEM_NODETYPE(NODE)
-#include "WebAssemblyISD.def"
-  FIRST_MEM_OPCODE = ISD::FIRST_TARGET_MEMORY_OPCODE,
-#undef HANDLE_NODETYPE
-#undef HANDLE_MEM_NODETYPE
-#define HANDLE_NODETYPE(NODE)
-#define HANDLE_MEM_NODETYPE(NODE) NODE,
-#include "WebAssemblyISD.def"
-#undef HANDLE_NODETYPE
-#undef HANDLE_MEM_NODETYPE
-};
-
-} // end namespace WebAssemblyISD
-
 class WebAssemblySubtarget;
 
 class WebAssemblyTargetLowering final : public TargetLowering {
@@ -61,7 +42,6 @@ private:
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
-  const char *getTargetNodeName(unsigned Opcode) const override;
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
@@ -89,13 +69,15 @@ private:
 
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
+  bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                  EVT VT) const override;
 
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
@@ -138,6 +120,7 @@ private:
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
   SDValue Replace128Op(SDNode *N, SelectionDAG &DAG) const;
+  SDValue LowerUADDO(SDValue Op, SelectionDAG &DAG) const;
 
   // Custom DAG combine hooks
   SDValue

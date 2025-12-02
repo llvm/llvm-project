@@ -402,7 +402,7 @@ void StackLayoutModifier::classifyCFIs() {
         break;
       case MCCFIInstruction::OpRestoreState: {
         assert(!CFIStack.empty() && "Corrupt CFI stack");
-        std::pair<int64_t, uint16_t> &Elem = CFIStack.top();
+        std::pair<int64_t, uint16_t> Elem = CFIStack.top();
         CFIStack.pop();
         CfaOffset = Elem.first;
         CfaReg = Elem.second;
@@ -825,14 +825,13 @@ void ShrinkWrapping::computeSaveLocations() {
     if (!CSA.CalleeSaved[I])
       continue;
 
-    std::stable_sort(BestSavePos[I].begin(), BestSavePos[I].end(),
-                     [&](const MCInst *A, const MCInst *B) {
-                       const BinaryBasicBlock *BBA = InsnToBB[A];
-                       const BinaryBasicBlock *BBB = InsnToBB[B];
-                       const uint64_t CountA = BBA->getKnownExecutionCount();
-                       const uint64_t CountB = BBB->getKnownExecutionCount();
-                       return CountB < CountA;
-                     });
+    llvm::stable_sort(BestSavePos[I], [&](const MCInst *A, const MCInst *B) {
+      const BinaryBasicBlock *BBA = InsnToBB[A];
+      const BinaryBasicBlock *BBB = InsnToBB[B];
+      const uint64_t CountA = BBA->getKnownExecutionCount();
+      const uint64_t CountB = BBB->getKnownExecutionCount();
+      return CountB < CountA;
+    });
 
     for (MCInst *Pos : BestSavePos[I]) {
       const BinaryBasicBlock *BB = InsnToBB[Pos];

@@ -2,104 +2,104 @@
 # RUN: llc --mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs -passes si-fold-operands,si-shrink-instructions %s -o - | FileCheck %s
 --- |
   define amdgpu_kernel void @add_f32_1.0_one_f16_use() #0 {
-    %f16.val0 = load volatile half, ptr addrspace(1) undef
-    %f16.val1 = load volatile half, ptr addrspace(1) undef
-    %f32.val = load volatile float, ptr addrspace(1) undef
+    %f16.val0 = load volatile half, ptr addrspace(1) poison
+    %f16.val1 = load volatile half, ptr addrspace(1) poison
+    %f32.val = load volatile float, ptr addrspace(1) poison
     %f16.add0 = fadd half %f16.val0, 0xH3C00
     %f32.add = fadd float %f32.val, 1.000000e+00
-    store volatile half %f16.add0, ptr addrspace(1) undef
-    store volatile float %f32.add, ptr addrspace(1) undef
+    store volatile half %f16.add0, ptr addrspace(1) poison
+    store volatile float %f32.add, ptr addrspace(1) poison
     ret void
   }
 
   define amdgpu_kernel void @add_f32_1.0_multi_f16_use() #0 {
-    %f16.val0 = load volatile half, ptr addrspace(1) undef
-    %f16.val1 = load volatile half, ptr addrspace(1) undef
-    %f32.val = load volatile float, ptr addrspace(1) undef
+    %f16.val0 = load volatile half, ptr addrspace(1) poison
+    %f16.val1 = load volatile half, ptr addrspace(1) poison
+    %f32.val = load volatile float, ptr addrspace(1) poison
     %f16.add0 = fadd half %f16.val0, 0xH3C00
     %f32.add = fadd float %f32.val, 1.000000e+00
-    store volatile half %f16.add0, ptr addrspace(1) undef
-    store volatile float %f32.add, ptr addrspace(1) undef
+    store volatile half %f16.add0, ptr addrspace(1) poison
+    store volatile float %f32.add, ptr addrspace(1) poison
     ret void
   }
 
   define amdgpu_kernel void @add_f32_1.0_one_f32_use_one_f16_use () #0 {
-    %f16.val0 = load volatile half, ptr addrspace(1) undef
-    %f16.val1 = load volatile half, ptr addrspace(1) undef
-    %f32.val = load volatile float, ptr addrspace(1) undef
+    %f16.val0 = load volatile half, ptr addrspace(1) poison
+    %f16.val1 = load volatile half, ptr addrspace(1) poison
+    %f32.val = load volatile float, ptr addrspace(1) poison
     %f16.add0 = fadd half %f16.val0, 0xH3C00
     %f32.add = fadd float %f32.val, 1.000000e+00
-    store volatile half %f16.add0, ptr addrspace(1) undef
-    store volatile float %f32.add, ptr addrspace(1) undef
+    store volatile half %f16.add0, ptr addrspace(1) poison
+    store volatile float %f32.add, ptr addrspace(1) poison
     ret void
   }
 
   define amdgpu_kernel void @add_f32_1.0_one_f32_use_multi_f16_use () #0 {
-    %f16.val0 = load volatile half, ptr addrspace(1) undef
-    %f16.val1 = load volatile half, ptr addrspace(1) undef
-    %f32.val = load volatile float, ptr addrspace(1) undef
+    %f16.val0 = load volatile half, ptr addrspace(1) poison
+    %f16.val1 = load volatile half, ptr addrspace(1) poison
+    %f32.val = load volatile float, ptr addrspace(1) poison
     %f16.add0 = fadd half %f16.val0, 0xH3C00
     %f16.add1 = fadd half %f16.val1, 0xH3C00
     %f32.add = fadd float %f32.val, 1.000000e+00
-    store volatile half %f16.add0, ptr addrspace(1) undef
-    store volatile half %f16.add1, ptr addrspace(1) undef
-    store volatile float %f32.add, ptr addrspace(1) undef
+    store volatile half %f16.add0, ptr addrspace(1) poison
+    store volatile half %f16.add1, ptr addrspace(1) poison
+    store volatile float %f32.add, ptr addrspace(1) poison
     ret void
   }
 
   define amdgpu_kernel void @add_i32_1_multi_f16_use() #0 {
-    %f16.val0 = load volatile half, ptr addrspace(1) undef
-    %f16.val1 = load volatile half, ptr addrspace(1) undef
+    %f16.val0 = load volatile half, ptr addrspace(1) poison
+    %f16.val1 = load volatile half, ptr addrspace(1) poison
     %f16.add0 = fadd half %f16.val0, 0xH0001
     %f16.add1 = fadd half %f16.val1, 0xH0001
-    store volatile half %f16.add0, ptr addrspace(1) undef
-    store volatile half %f16.add1,ptr addrspace(1) undef
+    store volatile half %f16.add0, ptr addrspace(1) poison
+    store volatile half %f16.add1,ptr addrspace(1) poison
     ret void
   }
 
   define amdgpu_kernel void @add_i32_m2_one_f32_use_multi_f16_use () #0 {
-    %f16.val0 = load volatile half, ptr addrspace(1) undef
-    %f16.val1 = load volatile half, ptr addrspace(1) undef
-    %f32.val = load volatile float, ptr addrspace(1) undef
+    %f16.val0 = load volatile half, ptr addrspace(1) poison
+    %f16.val1 = load volatile half, ptr addrspace(1) poison
+    %f32.val = load volatile float, ptr addrspace(1) poison
     %f16.add0 = fadd half %f16.val0, 0xHFFFE
     %f16.add1 = fadd half %f16.val1, 0xHFFFE
     %f32.add = fadd float %f32.val, 0xffffffffc0000000
-    store volatile half %f16.add0, ptr addrspace(1) undef
-    store volatile half %f16.add1, ptr addrspace(1) undef
-    store volatile float %f32.add, ptr addrspace(1) undef
+    store volatile half %f16.add0, ptr addrspace(1) poison
+    store volatile half %f16.add1, ptr addrspace(1) poison
+    store volatile float %f32.add, ptr addrspace(1) poison
     ret void
   }
 
   define amdgpu_kernel void @add_f16_1.0_multi_f32_use() #0 {
-    %f32.val0 = load volatile float, ptr addrspace(1) undef
-    %f32.val1 = load volatile float, ptr addrspace(1) undef
-    %f32.val = load volatile float, ptr addrspace(1) undef
+    %f32.val0 = load volatile float, ptr addrspace(1) poison
+    %f32.val1 = load volatile float, ptr addrspace(1) poison
+    %f32.val = load volatile float, ptr addrspace(1) poison
     %f32.add0 = fadd float %f32.val0, 1.0
     %f32.add1 = fadd float %f32.val1, 1.0
-    store volatile float %f32.add0, ptr addrspace(1) undef
-    store volatile float %f32.add1, ptr addrspace(1) undef
+    store volatile float %f32.add0, ptr addrspace(1) poison
+    store volatile float %f32.add1, ptr addrspace(1) poison
     ret void
   }
 
   define amdgpu_kernel void @add_f16_1.0_other_high_bits_multi_f16_use() #0 {
-    %f16.val0 = load volatile half, ptr addrspace(1) undef
-    %f16.val1 = load volatile half, ptr addrspace(1) undef
-    %f32.val = load volatile half, ptr addrspace(1) undef
+    %f16.val0 = load volatile half, ptr addrspace(1) poison
+    %f16.val1 = load volatile half, ptr addrspace(1) poison
+    %f32.val = load volatile half, ptr addrspace(1) poison
     %f16.add0 = fadd half %f16.val0, 0xH3C00
     %f32.add = fadd half %f32.val, 1.000000e+00
-    store volatile half %f16.add0, ptr addrspace(1) undef
-    store volatile half %f32.add, ptr addrspace(1) undef
+    store volatile half %f16.add0, ptr addrspace(1) poison
+    store volatile half %f32.add, ptr addrspace(1) poison
     ret void
   }
 
   define amdgpu_kernel void @add_f16_1.0_other_high_bits_use_f16_f32() #0 {
-    %f16.val0 = load volatile half, ptr addrspace(1) undef
-    %f16.val1 = load volatile half, ptr addrspace(1) undef
-    %f32.val = load volatile half, ptr addrspace(1) undef
+    %f16.val0 = load volatile half, ptr addrspace(1) poison
+    %f16.val1 = load volatile half, ptr addrspace(1) poison
+    %f32.val = load volatile half, ptr addrspace(1) poison
     %f16.add0 = fadd half %f16.val0, 0xH3C00
     %f32.add = fadd half %f32.val, 1.000000e+00
-    store volatile half %f16.add0, ptr addrspace(1) undef
-    store volatile half %f32.add, ptr addrspace(1) undef
+    store volatile half %f16.add0, ptr addrspace(1) poison
+    store volatile half %f32.add, ptr addrspace(1) poison
     ret void
   }
 
@@ -159,10 +159,10 @@ body:             |
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
     %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
-    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) undef`)
+    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %12 = V_MOV_B32_e32 1065353216, implicit $exec
     %13 = V_ADD_F16_e64 0, killed %11, 0, %12, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_SHORT_OFFSET killed %13, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) undef`)
+    BUFFER_STORE_SHORT_OFFSET killed %13, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) poison`)
     S_ENDPGM 0
 
 ...
@@ -222,13 +222,13 @@ body:             |
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
     %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
-    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) undef`)
-    %12 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
+    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
+    %12 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
     %13 = V_MOV_B32_e32 1065353216, implicit $exec
     %14 = V_ADD_F16_e64 0, killed %11, 0, %13, 0, 0, implicit $mode, implicit $exec
     %15 = V_ADD_F16_e64 0, killed %12, 0, killed %13, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_SHORT_OFFSET killed %14, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) undef`)
-    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) undef`)
+    BUFFER_STORE_SHORT_OFFSET killed %14, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) poison`)
+    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) poison`)
     S_ENDPGM 0
 
 ...
@@ -289,14 +289,14 @@ body:             |
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
     %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
-    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) undef`)
-    %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) undef`)
-    %13 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
+    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
+    %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
+    %13 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
     %14 = V_MOV_B32_e32 1065353216, implicit $exec
     %15 = V_ADD_F16_e64 0, %11, 0, %14, 0, 0, implicit $mode, implicit $exec
     %16 = V_ADD_F32_e64 0, killed %13, 0, killed %14, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) undef`)
-    BUFFER_STORE_DWORD_OFFSET killed %16, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`)
+    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) poison`)
+    BUFFER_STORE_DWORD_OFFSET killed %16, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`)
     S_ENDPGM 0
 
 ...
@@ -359,16 +359,16 @@ body:             |
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
     %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
-    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) undef`)
-    %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) undef`)
-    %13 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
+    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
+    %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
+    %13 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
     %14 = V_MOV_B32_e32 1065353216, implicit $exec
     %15 = V_ADD_F16_e64 0, %11, 0, %14, 0, 0, implicit $mode, implicit $exec
     %16 = V_ADD_F16_e64 0, %12, 0, %14, 0, 0, implicit $mode, implicit $exec
     %17 = V_ADD_F32_e64 0, killed %13, 0, killed %14, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) undef`)
-    BUFFER_STORE_SHORT_OFFSET killed %16, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) undef`)
-    BUFFER_STORE_DWORD_OFFSET killed %17, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`)
+    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) poison`)
+    BUFFER_STORE_SHORT_OFFSET killed %16, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) poison`)
+    BUFFER_STORE_DWORD_OFFSET killed %17, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`)
     S_ENDPGM 0
 
 ...
@@ -425,13 +425,13 @@ body:             |
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
     %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
-    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) undef`)
-    %12 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
+    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
+    %12 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
     %13 = V_MOV_B32_e32 1, implicit $exec
     %14 = V_ADD_F16_e64 0, killed %11, 0, %13, 0, 0, implicit $mode, implicit $exec
     %15 = V_ADD_F16_e64 0, killed %12, 0, killed %13, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_SHORT_OFFSET killed %14, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) undef`)
-    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) undef`)
+    BUFFER_STORE_SHORT_OFFSET killed %14, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) poison`)
+    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) poison`)
     S_ENDPGM 0
 
 ...
@@ -491,16 +491,16 @@ body:             |
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
     %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
-    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) undef`)
-    %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) undef`)
-    %13 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
+    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
+    %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
+    %13 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
     %14 = V_MOV_B32_e32 -2, implicit $exec
     %15 = V_ADD_F16_e64 0, %11, 0, %14, 0, 0, implicit $mode, implicit $exec
     %16 = V_ADD_F16_e64 0, %12, 0, %14, 0, 0, implicit $mode, implicit $exec
     %17 = V_ADD_F32_e64 0, killed %13, 0, killed %14, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) undef`)
-    BUFFER_STORE_SHORT_OFFSET killed %16, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) undef`)
-    BUFFER_STORE_DWORD_OFFSET killed %17, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`)
+    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) poison`)
+    BUFFER_STORE_SHORT_OFFSET killed %16, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) poison`)
+    BUFFER_STORE_DWORD_OFFSET killed %17, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`)
     S_ENDPGM 0
 
 ...
@@ -560,13 +560,13 @@ body:             |
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
     %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
-    %11 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
-    %12 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
+    %11 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
+    %12 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
     %13 = V_MOV_B32_e32 15360, implicit $exec
     %14 = V_ADD_F32_e64 0, %11, 0, %13, 0, 0, implicit $mode, implicit $exec
     %15 = V_ADD_F32_e64 0, %12, 0, %13, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed %14, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`)
-    BUFFER_STORE_DWORD_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`)
+    BUFFER_STORE_DWORD_OFFSET killed %14, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`)
+    BUFFER_STORE_DWORD_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`)
     S_ENDPGM 0
 
 ...
@@ -625,13 +625,13 @@ body:             |
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
     %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
-    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) undef`)
-    %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) undef`)
+    %11 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
+    %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %13 = V_MOV_B32_e32 80886784, implicit $exec
     %14 = V_ADD_F16_e64 0, %11, 0, %13, 0, 0, implicit $mode, implicit $exec
     %15 = V_ADD_F16_e64 0, %12, 0, %13, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_SHORT_OFFSET killed %14, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) undef`)
-    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) undef`)
+    BUFFER_STORE_SHORT_OFFSET killed %14, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) poison`)
+    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) poison`)
     S_ENDPGM 0
 
 ...
@@ -687,13 +687,13 @@ body:             |
     %8 = S_MOV_B32 61440
     %9 = S_MOV_B32 -1
     %10 = REG_SEQUENCE killed %7, 1, killed %5, 2, killed %9, 3, killed %8, 4
-    %11 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
-    %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) undef`)
+    %11 = BUFFER_LOAD_DWORD_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
+    %12 = BUFFER_LOAD_USHORT_OFFSET %10, 0, 0, 0, 0, implicit $exec :: (volatile load (s16) from `ptr addrspace(1) poison`)
     %13 = V_MOV_B32_e32 305413120, implicit $exec
     %14 = V_ADD_F32_e64 0, %11, 0, %13, 0, 0, implicit $mode, implicit $exec
     %15 = V_ADD_F16_e64 0, %12, 0, %13, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET killed %14, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) undef`)
-    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) undef`)
+    BUFFER_STORE_DWORD_OFFSET killed %14, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`)
+    BUFFER_STORE_SHORT_OFFSET killed %15, %10, 0, 0, 0, 0, implicit $exec :: (volatile store (s16) into `ptr addrspace(1) poison`)
     S_ENDPGM 0
 
 ...

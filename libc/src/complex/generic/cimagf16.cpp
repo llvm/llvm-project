@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/complex/cimagf16.h"
-#if defined(LIBC_TYPES_HAS_CFLOAT16)
-
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/complex_type.h"
@@ -21,5 +19,3 @@ LLVM_LIBC_FUNCTION(float16, cimagf16, (cfloat16 x)) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LIBC_TYPES_HAS_CFLOAT16

@@ -7,6 +7,8 @@ add_libc_unittest(
   SRCS
     posix_spawn_file_actions_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
     libc.include.spawn
     libc.src.spawn.file_actions
     libc.src.spawn.posix_spawn_file_actions_addclose
@@ -14,5 +16,4 @@ add_libc_unittest(
     libc.src.spawn.posix_spawn_file_actions_addopen
     libc.src.spawn.posix_spawn_file_actions_destroy
     libc.src.spawn.posix_spawn_file_actions_init
-    libc.src.errno.errno
 )

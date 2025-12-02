@@ -181,12 +181,12 @@ define <64 x i16> @test8(<64 x i8> %x, <64 x i16> %a, <64 x i16> %b) {
 ; CHECK-KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-KNL-NEXT:    vpmovsxbw %xmm0, %ymm0
 ; CHECK-KNL-NEXT:    vinserti64x4 $1, %ymm0, %zmm6, %zmm0
-; CHECK-KNL-NEXT:    vpternlogq $202, %zmm3, %zmm1, %zmm0
+; CHECK-KNL-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm3 ^ (zmm0 & (zmm1 ^ zmm3))
 ; CHECK-KNL-NEXT:    vpmovsxbw %xmm5, %ymm1
 ; CHECK-KNL-NEXT:    vextracti128 $1, %ymm5, %xmm3
 ; CHECK-KNL-NEXT:    vpmovsxbw %xmm3, %ymm3
 ; CHECK-KNL-NEXT:    vinserti64x4 $1, %ymm3, %zmm1, %zmm1
-; CHECK-KNL-NEXT:    vpternlogq $202, %zmm4, %zmm2, %zmm1
+; CHECK-KNL-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm4 ^ (zmm1 & (zmm2 ^ zmm4))
 ; CHECK-KNL-NEXT:    retq
   %c = icmp eq <64 x i8> %x, zeroinitializer
   %ret = select <64 x i1> %c, <64 x i16> %a, <64 x i16> %b

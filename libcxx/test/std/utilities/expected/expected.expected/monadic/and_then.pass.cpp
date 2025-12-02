@@ -263,8 +263,8 @@ constexpr void test_val_types() {
 constexpr void test_sfinae() {
   std::expected<NonConst, int> e(std::unexpected<int>(2));
   auto l = [](auto&& x) { return x.non_const(); };
-  e.and_then(l);
-  std::move(e).and_then(l);
+  (void)e.and_then(l);
+  (void)std::move(e).and_then(l);
 }
 
 constexpr void test_move_only_error_type() {
@@ -272,14 +272,14 @@ constexpr void test_move_only_error_type() {
   {
     std::expected<int, MoveOnlyErrorType> e;
     auto l = [](int) { return std::expected<int, MoveOnlyErrorType>{}; };
-    std::move(e).and_then(l);
+    (void)std::move(e).and_then(l);
   }
 
   // Test const&&
   {
     const std::expected<int, MoveOnlyErrorType> e;
     auto l = [](const int) { return std::expected<int, MoveOnlyErrorType>{}; };
-    std::move(e).and_then(l);
+    (void)std::move(e).and_then(l);
   }
 }
 
@@ -296,10 +296,10 @@ constexpr bool test() {
     return std::expected<int, int>();
   };
 
-  e.and_then(never_called);
-  std::move(e).and_then(never_called);
-  ce.and_then(never_called);
-  std::move(ce).and_then(never_called);
+  (void)e.and_then(never_called);
+  (void)std::move(e).and_then(never_called);
+  (void)ce.and_then(never_called);
+  (void)std::move(ce).and_then(never_called);
 
   return true;
 }

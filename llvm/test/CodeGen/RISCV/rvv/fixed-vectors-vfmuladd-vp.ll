@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfh,+v,+m -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
 
-declare <2 x half> @llvm.vp.fmuladd.v2f16(<2 x half>, <2 x half>, <2 x half>, <2 x i1>, i32)
-
 define <2 x half> @vfma_vv_v2f16(<2 x half> %va, <2 x half> %b, <2 x half> %c, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v2f16:
 ; CHECK:       # %bb.0:
@@ -50,8 +48,6 @@ define <2 x half> @vfma_vf_v2f16_unmasked(<2 x half> %va, half %b, <2 x half> %v
   %v = call <2 x half> @llvm.vp.fmuladd.v2f16(<2 x half> %va, <2 x half> %vb, <2 x half> %vc, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x half> %v
 }
-
-declare <4 x half> @llvm.vp.fmuladd.v4f16(<4 x half>, <4 x half>, <4 x half>, <4 x i1>, i32)
 
 define <4 x half> @vfma_vv_v4f16(<4 x half> %va, <4 x half> %b, <4 x half> %c, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v4f16:
@@ -98,8 +94,6 @@ define <4 x half> @vfma_vf_v4f16_unmasked(<4 x half> %va, half %b, <4 x half> %v
   ret <4 x half> %v
 }
 
-declare <8 x half> @llvm.vp.fmuladd.v8f16(<8 x half>, <8 x half>, <8 x half>, <8 x i1>, i32)
-
 define <8 x half> @vfma_vv_v8f16(<8 x half> %va, <8 x half> %b, <8 x half> %c, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v8f16:
 ; CHECK:       # %bb.0:
@@ -144,8 +138,6 @@ define <8 x half> @vfma_vf_v8f16_unmasked(<8 x half> %va, half %b, <8 x half> %v
   %v = call <8 x half> @llvm.vp.fmuladd.v8f16(<8 x half> %va, <8 x half> %vb, <8 x half> %vc, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x half> %v
 }
-
-declare <16 x half> @llvm.vp.fmuladd.v16f16(<16 x half>, <16 x half>, <16 x half>, <16 x i1>, i32)
 
 define <16 x half> @vfma_vv_v16f16(<16 x half> %va, <16 x half> %b, <16 x half> %c, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v16f16:
@@ -192,8 +184,6 @@ define <16 x half> @vfma_vf_v16f16_unmasked(<16 x half> %va, half %b, <16 x half
   ret <16 x half> %v
 }
 
-declare <2 x float> @llvm.vp.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>, <2 x i1>, i32)
-
 define <2 x float> @vfma_vv_v2f32(<2 x float> %va, <2 x float> %b, <2 x float> %c, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v2f32:
 ; CHECK:       # %bb.0:
@@ -238,8 +228,6 @@ define <2 x float> @vfma_vf_v2f32_unmasked(<2 x float> %va, float %b, <2 x float
   %v = call <2 x float> @llvm.vp.fmuladd.v2f32(<2 x float> %va, <2 x float> %vb, <2 x float> %vc, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x float> %v
 }
-
-declare <4 x float> @llvm.vp.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>, <4 x i1>, i32)
 
 define <4 x float> @vfma_vv_v4f32(<4 x float> %va, <4 x float> %b, <4 x float> %c, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v4f32:
@@ -286,8 +274,6 @@ define <4 x float> @vfma_vf_v4f32_unmasked(<4 x float> %va, float %b, <4 x float
   ret <4 x float> %v
 }
 
-declare <8 x float> @llvm.vp.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>, <8 x i1>, i32)
-
 define <8 x float> @vfma_vv_v8f32(<8 x float> %va, <8 x float> %b, <8 x float> %c, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v8f32:
 ; CHECK:       # %bb.0:
@@ -332,8 +318,6 @@ define <8 x float> @vfma_vf_v8f32_unmasked(<8 x float> %va, float %b, <8 x float
   %v = call <8 x float> @llvm.vp.fmuladd.v8f32(<8 x float> %va, <8 x float> %vb, <8 x float> %vc, <8 x i1> splat (i1 true), i32 %evl)
   ret <8 x float> %v
 }
-
-declare <16 x float> @llvm.vp.fmuladd.v16f32(<16 x float>, <16 x float>, <16 x float>, <16 x i1>, i32)
 
 define <16 x float> @vfma_vv_v16f32(<16 x float> %va, <16 x float> %b, <16 x float> %c, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v16f32:
@@ -380,8 +364,6 @@ define <16 x float> @vfma_vf_v16f32_unmasked(<16 x float> %va, float %b, <16 x f
   ret <16 x float> %v
 }
 
-declare <2 x double> @llvm.vp.fmuladd.v2f64(<2 x double>, <2 x double>, <2 x double>, <2 x i1>, i32)
-
 define <2 x double> @vfma_vv_v2f64(<2 x double> %va, <2 x double> %b, <2 x double> %c, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v2f64:
 ; CHECK:       # %bb.0:
@@ -426,8 +408,6 @@ define <2 x double> @vfma_vf_v2f64_unmasked(<2 x double> %va, double %b, <2 x do
   %v = call <2 x double> @llvm.vp.fmuladd.v2f64(<2 x double> %va, <2 x double> %vb, <2 x double> %vc, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x double> %v
 }
-
-declare <4 x double> @llvm.vp.fmuladd.v4f64(<4 x double>, <4 x double>, <4 x double>, <4 x i1>, i32)
 
 define <4 x double> @vfma_vv_v4f64(<4 x double> %va, <4 x double> %b, <4 x double> %c, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v4f64:
@@ -474,8 +454,6 @@ define <4 x double> @vfma_vf_v4f64_unmasked(<4 x double> %va, double %b, <4 x do
   ret <4 x double> %v
 }
 
-declare <8 x double> @llvm.vp.fmuladd.v8f64(<8 x double>, <8 x double>, <8 x double>, <8 x i1>, i32)
-
 define <8 x double> @vfma_vv_v8f64(<8 x double> %va, <8 x double> %b, <8 x double> %c, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v8f64:
 ; CHECK:       # %bb.0:
@@ -521,8 +499,6 @@ define <8 x double> @vfma_vf_v8f64_unmasked(<8 x double> %va, double %b, <8 x do
   ret <8 x double> %v
 }
 
-declare <15 x double> @llvm.vp.fmuladd.v15f64(<15 x double>, <15 x double>, <15 x double>, <15 x i1>, i32)
-
 define <15 x double> @vfma_vv_v15f64(<15 x double> %va, <15 x double> %b, <15 x double> %c, <15 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v15f64:
 ; CHECK:       # %bb.0:
@@ -547,8 +523,6 @@ define <15 x double> @vfma_vv_v15f64_unmasked(<15 x double> %va, <15 x double> %
   %v = call <15 x double> @llvm.vp.fmuladd.v15f64(<15 x double> %va, <15 x double> %b, <15 x double> %c, <15 x i1> splat (i1 true), i32 %evl)
   ret <15 x double> %v
 }
-
-declare <16 x double> @llvm.vp.fmuladd.v16f64(<16 x double>, <16 x double>, <16 x double>, <16 x i1>, i32)
 
 define <16 x double> @vfma_vv_v16f64(<16 x double> %va, <16 x double> %b, <16 x double> %c, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v16f64:
@@ -599,8 +573,6 @@ define <16 x double> @vfma_vf_v16f64_unmasked(<16 x double> %va, double %b, <16 
   ret <16 x double> %v
 }
 
-declare <32 x double> @llvm.vp.fmuladd.v32f64(<32 x double>, <32 x double>, <32 x double>, <32 x i1>, i32)
-
 define <32 x double> @vfma_vv_v32f64(<32 x double> %va, <32 x double> %b, <32 x double> %c, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v32f64:
 ; CHECK:       # %bb.0:
@@ -615,12 +587,12 @@ define <32 x double> @vfma_vv_v32f64(<32 x double> %va, <32 x double> %b, <32 x 
 ; CHECK-NEXT:    mul a1, a1, a3
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    addi a1, a2, 128
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a2)
@@ -630,10 +602,10 @@ define <32 x double> @vfma_vv_v32f64(<32 x double> %va, <32 x double> %b, <32 x 
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vle64.v v8, (a2)
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    mv a0, a4
@@ -647,14 +619,14 @@ define <32 x double> @vfma_vv_v32f64(<32 x double> %va, <32 x double> %b, <32 x 
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    addi a0, a4, -16
 ; CHECK-NEXT:    sltu a1, a4, a0
 ; CHECK-NEXT:    addi a1, a1, -1
@@ -665,14 +637,14 @@ define <32 x double> @vfma_vv_v32f64(<32 x double> %va, <32 x double> %b, <32 x 
 ; CHECK-NEXT:    mul a1, a1, a2
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v24, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vl8r.v v8, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    vmv.v.v v16, v8
@@ -680,7 +652,7 @@ define <32 x double> @vfma_vv_v32f64(<32 x double> %va, <32 x double> %b, <32 x 
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 5
 ; CHECK-NEXT:    add sp, sp, a0
@@ -706,19 +678,19 @@ define <32 x double> @vfma_vv_v32f64_unmasked(<32 x double> %va, <32 x double> %
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    addi a1, a2, 128
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v16, (a2)
 ; CHECK-NEXT:    addi a2, a0, 128
 ; CHECK-NEXT:    vle64.v v8, (a1)
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vle64.v v24, (a2)
 ; CHECK-NEXT:    vle64.v v0, (a0)
 ; CHECK-NEXT:    li a1, 16
@@ -731,7 +703,7 @@ define <32 x double> @vfma_vv_v32f64_unmasked(<32 x double> %va, <32 x double> %
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v8, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v0, v8, v16
 ; CHECK-NEXT:    addi a0, a4, -16
@@ -742,9 +714,9 @@ define <32 x double> @vfma_vv_v32f64_unmasked(<32 x double> %va, <32 x double> %
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vl8r.v v8, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v24, v16, v8
 ; CHECK-NEXT:    vmv8r.v v8, v0

@@ -1,0 +1,71 @@
+//===-- Lower/CUDA.h -- CUDA Fortran utilities ------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef FORTRAN_LOWER_CUDA_H
+#define FORTRAN_LOWER_CUDA_H
+
+#include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
+#include "flang/Runtime/allocator-registry-consts.h"
+#include "flang/Semantics/tools.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
+
+namespace mlir {
+class Value;
+class Location;
+class MLIRContext;
+} // namespace mlir
+
+namespace hlfir {
+class ElementalOp;
+} // namespace hlfir
+
+namespace Fortran::lower {
+
+class AbstractConverter;
+
+static inline unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
+  std::optional<Fortran::common::CUDADataAttr> cudaAttr =
+      Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
+  if (cudaAttr) {
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Pinned)
+      return kPinnedAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Device)
+      return kDeviceAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Managed)
+      return kManagedAllocatorPos;
+    if (*cudaAttr == Fortran::common::CUDADataAttr::Unified)
+      return kUnifiedAllocatorPos;
+  }
+  return kDefaultAllocator;
+}
+
+mlir::Type gatherDeviceComponentCoordinatesAndType(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, fir::RecordType recTy,
+    llvm::SmallVector<mlir::Value> &coordinates);
+
+/// Translate the CUDA Fortran attributes of \p sym into the FIR CUDA attribute
+/// representation.
+cuf::DataAttributeAttr
+translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
+                                const Fortran::semantics::Symbol &sym);
+
+/// Check if the rhs has an implicit conversion. Return the elemental op if
+/// there is a conversion. Return null otherwise.
+hlfir::ElementalOp isTransferWithConversion(mlir::Value rhs);
+
+} // end namespace Fortran::lower
+
+#endif // FORTRAN_LOWER_CUDA_H

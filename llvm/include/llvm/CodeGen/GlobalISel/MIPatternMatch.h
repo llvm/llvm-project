@@ -14,8 +14,11 @@
 #define LLVM_CODEGEN_GLOBALISEL_MIPATTERNMATCH_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/InstrTypes.h"
 
 namespace llvm {
@@ -30,6 +33,12 @@ template <typename Reg, typename Pattern>
 template <typename Pattern>
 [[nodiscard]] bool mi_match(MachineInstr &MI, const MachineRegisterInfo &MRI,
                             Pattern &&P) {
+  return P.match(MRI, &MI);
+}
+
+template <typename Pattern>
+[[nodiscard]] bool mi_match(const MachineInstr &MI,
+                            const MachineRegisterInfo &MRI, Pattern &&P) {
   return P.match(MRI, &MI);
 }
 
@@ -183,23 +192,36 @@ m_GFCstOrSplat(std::optional<FPValueAndVReg> &FPValReg) {
 
 /// Matcher for a specific constant value.
 struct SpecificConstantMatch {
-  int64_t RequestedVal;
-  SpecificConstantMatch(int64_t RequestedVal) : RequestedVal(RequestedVal) {}
+  APInt RequestedVal;
+  SpecificConstantMatch(const APInt &RequestedVal)
+      : RequestedVal(RequestedVal) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
-    int64_t MatchedVal;
-    return mi_match(Reg, MRI, m_ICst(MatchedVal)) && MatchedVal == RequestedVal;
+    APInt MatchedVal;
+    if (mi_match(Reg, MRI, m_ICst(MatchedVal))) {
+      if (MatchedVal.getBitWidth() > RequestedVal.getBitWidth())
+        RequestedVal = RequestedVal.sext(MatchedVal.getBitWidth());
+      else
+        MatchedVal = MatchedVal.sext(RequestedVal.getBitWidth());
+
+      return APInt::isSameValue(MatchedVal, RequestedVal);
+    }
+    return false;
   }
 };
 
 /// Matches a constant equal to \p RequestedValue.
-inline SpecificConstantMatch m_SpecificICst(int64_t RequestedValue) {
+inline SpecificConstantMatch m_SpecificICst(const APInt &RequestedValue) {
   return SpecificConstantMatch(RequestedValue);
+}
+
+inline SpecificConstantMatch m_SpecificICst(int64_t RequestedValue) {
+  return SpecificConstantMatch(APInt(64, RequestedValue, /* isSigned */ true));
 }
 
 /// Matcher for a specific constant splat.
 struct SpecificConstantSplatMatch {
-  int64_t RequestedVal;
-  SpecificConstantSplatMatch(int64_t RequestedVal)
+  APInt RequestedVal;
+  SpecificConstantSplatMatch(const APInt &RequestedVal)
       : RequestedVal(RequestedVal) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     return isBuildVectorConstantSplat(Reg, MRI, RequestedVal,
@@ -208,19 +230,32 @@ struct SpecificConstantSplatMatch {
 };
 
 /// Matches a constant splat of \p RequestedValue.
-inline SpecificConstantSplatMatch m_SpecificICstSplat(int64_t RequestedValue) {
+inline SpecificConstantSplatMatch
+m_SpecificICstSplat(const APInt &RequestedValue) {
   return SpecificConstantSplatMatch(RequestedValue);
+}
+
+inline SpecificConstantSplatMatch m_SpecificICstSplat(int64_t RequestedValue) {
+  return SpecificConstantSplatMatch(
+      APInt(64, RequestedValue, /* isSigned */ true));
 }
 
 /// Matcher for a specific constant or constant splat.
 struct SpecificConstantOrSplatMatch {
-  int64_t RequestedVal;
-  SpecificConstantOrSplatMatch(int64_t RequestedVal)
+  APInt RequestedVal;
+  SpecificConstantOrSplatMatch(const APInt &RequestedVal)
       : RequestedVal(RequestedVal) {}
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
-    int64_t MatchedVal;
-    if (mi_match(Reg, MRI, m_ICst(MatchedVal)) && MatchedVal == RequestedVal)
-      return true;
+    APInt MatchedVal;
+    if (mi_match(Reg, MRI, m_ICst(MatchedVal))) {
+      if (MatchedVal.getBitWidth() > RequestedVal.getBitWidth())
+        RequestedVal = RequestedVal.sext(MatchedVal.getBitWidth());
+      else
+        MatchedVal = MatchedVal.sext(RequestedVal.getBitWidth());
+
+      if (APInt::isSameValue(MatchedVal, RequestedVal))
+        return true;
+    }
     return isBuildVectorConstantSplat(Reg, MRI, RequestedVal,
                                       /* AllowUndef */ false);
   }
@@ -229,17 +264,23 @@ struct SpecificConstantOrSplatMatch {
 /// Matches a \p RequestedValue constant or a constant splat of \p
 /// RequestedValue.
 inline SpecificConstantOrSplatMatch
-m_SpecificICstOrSplat(int64_t RequestedValue) {
+m_SpecificICstOrSplat(const APInt &RequestedValue) {
   return SpecificConstantOrSplatMatch(RequestedValue);
 }
 
-///{
-/// Convenience matchers for specific integer values.
-inline SpecificConstantMatch m_ZeroInt() { return SpecificConstantMatch(0); }
-inline SpecificConstantMatch m_AllOnesInt() {
-  return SpecificConstantMatch(-1);
+inline SpecificConstantOrSplatMatch
+m_SpecificICstOrSplat(int64_t RequestedValue) {
+  return SpecificConstantOrSplatMatch(
+      APInt(64, RequestedValue, /* isSigned */ true));
 }
-///}
+
+/// Convenience matchers for specific integer values.
+inline SpecificConstantMatch m_ZeroInt() {
+  return SpecificConstantMatch(APInt::getZero(64));
+}
+inline SpecificConstantMatch m_AllOnesInt() {
+  return SpecificConstantMatch(APInt::getAllOnes(64));
+}
 
 /// Matcher for a specific register.
 struct SpecificRegisterMatch {
@@ -337,8 +378,21 @@ template <> struct bind_helper<MachineInstr *> {
   }
 };
 
+template <> struct bind_helper<const MachineInstr *> {
+  static bool bind(const MachineRegisterInfo &MRI, const MachineInstr *&MI,
+                   Register Reg) {
+    MI = MRI.getVRegDef(Reg);
+    return MI;
+  }
+  static bool bind(const MachineRegisterInfo &MRI, const MachineInstr *&MI,
+                   const MachineInstr *Inst) {
+    MI = Inst;
+    return MI;
+  }
+};
+
 template <> struct bind_helper<LLT> {
-  static bool bind(const MachineRegisterInfo &MRI, LLT Ty, Register Reg) {
+  static bool bind(const MachineRegisterInfo &MRI, LLT &Ty, Register Reg) {
     Ty = MRI.getType(Reg);
     if (Ty.isValid())
       return true;
@@ -368,9 +422,43 @@ template <typename Class> struct bind_ty {
 
 inline bind_ty<Register> m_Reg(Register &R) { return R; }
 inline bind_ty<MachineInstr *> m_MInstr(MachineInstr *&MI) { return MI; }
-inline bind_ty<LLT> m_Type(LLT Ty) { return Ty; }
+inline bind_ty<const MachineInstr *> m_MInstr(const MachineInstr *&MI) {
+  return MI;
+}
+inline bind_ty<LLT> m_Type(LLT &Ty) { return Ty; }
 inline bind_ty<CmpInst::Predicate> m_Pred(CmpInst::Predicate &P) { return P; }
 inline operand_type_match m_Pred() { return operand_type_match(); }
+inline bind_ty<FPClassTest> m_FPClassTest(FPClassTest &T) { return T; }
+
+template <typename BindTy> struct deferred_helper {
+  static bool match(const MachineRegisterInfo &MRI, BindTy &VR, BindTy &V) {
+    return VR == V;
+  }
+};
+
+template <> struct deferred_helper<LLT> {
+  static bool match(const MachineRegisterInfo &MRI, LLT VT, Register R) {
+    return VT == MRI.getType(R);
+  }
+};
+
+template <typename Class> struct deferred_ty {
+  Class &VR;
+
+  deferred_ty(Class &V) : VR(V) {}
+
+  template <typename ITy> bool match(const MachineRegisterInfo &MRI, ITy &&V) {
+    return deferred_helper<Class>::match(MRI, VR, V);
+  }
+};
+
+/// Similar to m_SpecificReg/Type, but the specific value to match originated
+/// from an earlier sub-pattern in the same mi_match expression. For example,
+/// we cannot match `(add X, X)` with `m_GAdd(m_Reg(X), m_SpecificReg(X))`
+/// because `X` is not initialized at the time it's passed to `m_SpecificReg`.
+/// Instead, we can use `m_GAdd(m_Reg(x), m_DeferredReg(X))`.
+inline deferred_ty<Register> m_DeferredReg(Register &R) { return R; }
+inline deferred_ty<LLT> m_DeferredType(LLT &Ty) { return Ty; }
 
 struct ImplicitDefMatch {
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
@@ -388,7 +476,7 @@ inline bind_ty<const ConstantFP *> m_GFCst(const ConstantFP *&C) { return C; }
 
 // General helper for all the binary generic MI such as G_ADD/G_SUB etc
 template <typename LHS_P, typename RHS_P, unsigned Opcode,
-          bool Commutable = false>
+          bool Commutable = false, unsigned Flags = MachineInstr::NoFlags>
 struct BinaryOp_match {
   LHS_P L;
   RHS_P R;
@@ -396,13 +484,20 @@ struct BinaryOp_match {
   BinaryOp_match(const LHS_P &LHS, const RHS_P &RHS) : L(LHS), R(RHS) {}
   template <typename OpTy>
   bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
-    MachineInstr *TmpMI;
+    const MachineInstr *TmpMI;
     if (mi_match(Op, MRI, m_MInstr(TmpMI))) {
       if (TmpMI->getOpcode() == Opcode && TmpMI->getNumOperands() == 3) {
-        return (L.match(MRI, TmpMI->getOperand(1).getReg()) &&
-                R.match(MRI, TmpMI->getOperand(2).getReg())) ||
-               (Commutable && (R.match(MRI, TmpMI->getOperand(1).getReg()) &&
-                               L.match(MRI, TmpMI->getOperand(2).getReg())));
+        if ((!L.match(MRI, TmpMI->getOperand(1).getReg()) ||
+             !R.match(MRI, TmpMI->getOperand(2).getReg())) &&
+            // NOTE: When trying the alternative operand ordering
+            // with a commutative operation, it is imperative to always run
+            // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
+            // (i.e. `R`). Otherwise, m_DeferredReg/Type will not work as
+            // expected.
+            (!Commutable || !L.match(MRI, TmpMI->getOperand(2).getReg()) ||
+             !R.match(MRI, TmpMI->getOperand(1).getReg())))
+          return false;
+        return (TmpMI->getFlags() & Flags) == Flags;
       }
     }
     return false;
@@ -426,8 +521,13 @@ struct BinaryOpc_match {
           TmpMI->getNumOperands() == 3) {
         return (L.match(MRI, TmpMI->getOperand(1).getReg()) &&
                 R.match(MRI, TmpMI->getOperand(2).getReg())) ||
-               (Commutable && (R.match(MRI, TmpMI->getOperand(1).getReg()) &&
-                               L.match(MRI, TmpMI->getOperand(2).getReg())));
+               // NOTE: When trying the alternative operand ordering
+               // with a commutative operation, it is imperative to always run
+               // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
+               // (i.e. `R`). Otherwise, m_DeferredReg/Type will not work as
+               // expected.
+               (Commutable && (L.match(MRI, TmpMI->getOperand(2).getReg()) &&
+                               R.match(MRI, TmpMI->getOperand(1).getReg())));
       }
     }
     return false;
@@ -520,6 +620,19 @@ inline BinaryOp_match<LHS, RHS, TargetOpcode::G_OR, true> m_GOr(const LHS &L,
 }
 
 template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_OR, true,
+                      MachineInstr::Disjoint>
+m_GDisjointOr(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_OR, true,
+                        MachineInstr::Disjoint>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_GAddLike(const LHS &L, const RHS &R) {
+  return m_any_of(m_GAdd(L, R), m_GDisjointOr(L, R));
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SHL, false>
 m_GShl(const LHS &L, const RHS &R) {
   return BinaryOp_match<LHS, RHS, TargetOpcode::G_SHL, false>(L, R);
@@ -538,15 +651,27 @@ m_GAShr(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
-inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SMAX, false>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SMAX, true>
 m_GSMax(const LHS &L, const RHS &R) {
-  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SMAX, false>(L, R);
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SMAX, true>(L, R);
 }
 
 template <typename LHS, typename RHS>
-inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SMIN, false>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_SMIN, true>
 m_GSMin(const LHS &L, const RHS &R) {
-  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SMIN, false>(L, R);
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_SMIN, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_UMAX, true>
+m_GUMax(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_UMAX, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_UMIN, true>
+m_GUMin(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_UMIN, true>(L, R);
 }
 
 // Helper for unary instructions (G_[ZSA]EXT/G_TRUNC) etc
@@ -662,9 +787,39 @@ struct CompareOp_match {
     Register RHS = TmpMI->getOperand(3).getReg();
     if (L.match(MRI, LHS) && R.match(MRI, RHS))
       return true;
+    // NOTE: When trying the alternative operand ordering
+    // with a commutative operation, it is imperative to always run
+    // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
+    // (i.e. `R`). Otherwise, m_DeferredReg/Type will not work as expected.
     if (Commutable && L.match(MRI, RHS) && R.match(MRI, LHS) &&
         P.match(MRI, CmpInst::getSwappedPredicate(TmpPred)))
       return true;
+    return false;
+  }
+};
+
+template <typename LHS_P, typename Test_P, unsigned Opcode>
+struct ClassifyOp_match {
+  LHS_P L;
+  Test_P T;
+
+  ClassifyOp_match(const LHS_P &LHS, const Test_P &Tst) : L(LHS), T(Tst) {}
+
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
+    MachineInstr *TmpMI;
+    if (!mi_match(Op, MRI, m_MInstr(TmpMI)) || TmpMI->getOpcode() != Opcode)
+      return false;
+
+    Register LHS = TmpMI->getOperand(1).getReg();
+    if (!L.match(MRI, LHS))
+      return false;
+
+    FPClassTest TmpClass =
+        static_cast<FPClassTest>(TmpMI->getOperand(2).getImm());
+    if (T.match(MRI, TmpClass))
+      return true;
+
     return false;
   }
 };
@@ -709,6 +864,14 @@ template <typename Pred, typename LHS, typename RHS>
 inline CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_FCMP, true>
 m_c_GFCmp(const Pred &P, const LHS &L, const RHS &R) {
   return CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_FCMP, true>(P, L, R);
+}
+
+/// Matches the register and immediate used in a fpclass test
+/// G_IS_FPCLASS %val, 96
+template <typename LHS, typename Test>
+inline ClassifyOp_match<LHS, Test, TargetOpcode::G_IS_FPCLASS>
+m_GIsFPClass(const LHS &L, const Test &T) {
+  return ClassifyOp_match<LHS, Test, TargetOpcode::G_IS_FPCLASS>(L, T);
 }
 
 // Helper for checking if a Reg is of specific type.

@@ -6,19 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+// clang-format off
 #include "IRModule.h"
-
-#include "PybindUtils.h"
-
 #include "mlir/Bindings/Python/IRTypes.h"
+// clang-format on
 
+#include <optional>
+
+#include "IRModule.h"
+#include "NanobindUtils.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Support.h"
 
-#include <optional>
-
-namespace py = pybind11;
+namespace nb = nanobind;
 using namespace mlir;
 using namespace mlir::python;
 
@@ -48,7 +49,7 @@ public:
           MlirType t = mlirIntegerTypeGet(context->get(), width);
           return PyIntegerType(context->getRef(), t);
         },
-        py::arg("width"), py::arg("context") = py::none(),
+        nb::arg("width"), nb::arg("context") = nb::none(),
         "Create a signless integer type");
     c.def_static(
         "get_signed",
@@ -56,7 +57,7 @@ public:
           MlirType t = mlirIntegerTypeSignedGet(context->get(), width);
           return PyIntegerType(context->getRef(), t);
         },
-        py::arg("width"), py::arg("context") = py::none(),
+        nb::arg("width"), nb::arg("context") = nb::none(),
         "Create a signed integer type");
     c.def_static(
         "get_unsigned",
@@ -64,25 +65,25 @@ public:
           MlirType t = mlirIntegerTypeUnsignedGet(context->get(), width);
           return PyIntegerType(context->getRef(), t);
         },
-        py::arg("width"), py::arg("context") = py::none(),
+        nb::arg("width"), nb::arg("context") = nb::none(),
         "Create an unsigned integer type");
-    c.def_property_readonly(
+    c.def_prop_ro(
         "width",
         [](PyIntegerType &self) { return mlirIntegerTypeGetWidth(self); },
         "Returns the width of the integer type");
-    c.def_property_readonly(
+    c.def_prop_ro(
         "is_signless",
         [](PyIntegerType &self) -> bool {
           return mlirIntegerTypeIsSignless(self);
         },
         "Returns whether this is a signless integer");
-    c.def_property_readonly(
+    c.def_prop_ro(
         "is_signed",
         [](PyIntegerType &self) -> bool {
           return mlirIntegerTypeIsSigned(self);
         },
         "Returns whether this is a signed integer");
-    c.def_property_readonly(
+    c.def_prop_ro(
         "is_unsigned",
         [](PyIntegerType &self) -> bool {
           return mlirIntegerTypeIsUnsigned(self);
@@ -107,7 +108,7 @@ public:
           MlirType t = mlirIndexTypeGet(context->get());
           return PyIndexType(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a index type.");
+        nb::arg("context") = nb::none(), "Create a index type.");
   }
 };
 
@@ -118,7 +119,7 @@ public:
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c) {
-    c.def_property_readonly(
+    c.def_prop_ro(
         "width", [](PyFloatType &self) { return mlirFloatTypeGetWidth(self); },
         "Returns the width of the floating-point type");
   }
@@ -141,7 +142,7 @@ public:
           MlirType t = mlirFloat4E2M1FNTypeGet(context->get());
           return PyFloat4E2M1FNType(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a float4_e2m1fn type.");
+        nb::arg("context") = nb::none(), "Create a float4_e2m1fn type.");
   }
 };
 
@@ -162,7 +163,7 @@ public:
           MlirType t = mlirFloat6E2M3FNTypeGet(context->get());
           return PyFloat6E2M3FNType(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a float6_e2m3fn type.");
+        nb::arg("context") = nb::none(), "Create a float6_e2m3fn type.");
   }
 };
 
@@ -183,7 +184,7 @@ public:
           MlirType t = mlirFloat6E3M2FNTypeGet(context->get());
           return PyFloat6E3M2FNType(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a float6_e3m2fn type.");
+        nb::arg("context") = nb::none(), "Create a float6_e3m2fn type.");
   }
 };
 
@@ -204,7 +205,7 @@ public:
           MlirType t = mlirFloat8E4M3FNTypeGet(context->get());
           return PyFloat8E4M3FNType(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a float8_e4m3fn type.");
+        nb::arg("context") = nb::none(), "Create a float8_e4m3fn type.");
   }
 };
 
@@ -224,7 +225,7 @@ public:
           MlirType t = mlirFloat8E5M2TypeGet(context->get());
           return PyFloat8E5M2Type(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a float8_e5m2 type.");
+        nb::arg("context") = nb::none(), "Create a float8_e5m2 type.");
   }
 };
 
@@ -244,7 +245,7 @@ public:
           MlirType t = mlirFloat8E4M3TypeGet(context->get());
           return PyFloat8E4M3Type(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a float8_e4m3 type.");
+        nb::arg("context") = nb::none(), "Create a float8_e4m3 type.");
   }
 };
 
@@ -265,7 +266,7 @@ public:
           MlirType t = mlirFloat8E4M3FNUZTypeGet(context->get());
           return PyFloat8E4M3FNUZType(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a float8_e4m3fnuz type.");
+        nb::arg("context") = nb::none(), "Create a float8_e4m3fnuz type.");
   }
 };
 
@@ -286,7 +287,7 @@ public:
           MlirType t = mlirFloat8E4M3B11FNUZTypeGet(context->get());
           return PyFloat8E4M3B11FNUZType(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a float8_e4m3b11fnuz type.");
+        nb::arg("context") = nb::none(), "Create a float8_e4m3b11fnuz type.");
   }
 };
 
@@ -307,7 +308,7 @@ public:
           MlirType t = mlirFloat8E5M2FNUZTypeGet(context->get());
           return PyFloat8E5M2FNUZType(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a float8_e5m2fnuz type.");
+        nb::arg("context") = nb::none(), "Create a float8_e5m2fnuz type.");
   }
 };
 
@@ -327,7 +328,7 @@ public:
           MlirType t = mlirFloat8E3M4TypeGet(context->get());
           return PyFloat8E3M4Type(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a float8_e3m4 type.");
+        nb::arg("context") = nb::none(), "Create a float8_e3m4 type.");
   }
 };
 
@@ -348,7 +349,7 @@ public:
           MlirType t = mlirFloat8E8M0FNUTypeGet(context->get());
           return PyFloat8E8M0FNUType(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a float8_e8m0fnu type.");
+        nb::arg("context") = nb::none(), "Create a float8_e8m0fnu type.");
   }
 };
 
@@ -368,7 +369,7 @@ public:
           MlirType t = mlirBF16TypeGet(context->get());
           return PyBF16Type(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a bf16 type.");
+        nb::arg("context") = nb::none(), "Create a bf16 type.");
   }
 };
 
@@ -388,7 +389,7 @@ public:
           MlirType t = mlirF16TypeGet(context->get());
           return PyF16Type(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a f16 type.");
+        nb::arg("context") = nb::none(), "Create a f16 type.");
   }
 };
 
@@ -408,7 +409,7 @@ public:
           MlirType t = mlirTF32TypeGet(context->get());
           return PyTF32Type(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a tf32 type.");
+        nb::arg("context") = nb::none(), "Create a tf32 type.");
   }
 };
 
@@ -428,7 +429,7 @@ public:
           MlirType t = mlirF32TypeGet(context->get());
           return PyF32Type(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a f32 type.");
+        nb::arg("context") = nb::none(), "Create a f32 type.");
   }
 };
 
@@ -448,7 +449,7 @@ public:
           MlirType t = mlirF64TypeGet(context->get());
           return PyF64Type(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a f64 type.");
+        nb::arg("context") = nb::none(), "Create a f64 type.");
   }
 };
 
@@ -468,7 +469,7 @@ public:
           MlirType t = mlirNoneTypeGet(context->get());
           return PyNoneType(context->getRef(), t);
         },
-        py::arg("context") = py::none(), "Create a none type.");
+        nb::arg("context") = nb::none(), "Create a none type.");
   }
 };
 
@@ -490,16 +491,20 @@ public:
             MlirType t = mlirComplexTypeGet(elementType);
             return PyComplexType(elementType.getContext(), t);
           }
-          throw py::value_error(
+          throw nb::value_error(
               (Twine("invalid '") +
-               py::repr(py::cast(elementType)).cast<std::string>() +
+               nb::cast<std::string>(nb::repr(nb::cast(elementType))) +
                "' and expected floating point or integer type.")
-                  .str());
+                  .str()
+                  .c_str());
         },
         "Create a complex type");
-    c.def_property_readonly(
+    c.def_prop_ro(
         "element_type",
-        [](PyComplexType &self) { return mlirComplexTypeGetElementType(self); },
+        [](PyComplexType &self) -> nb::typed<nb::object, PyType> {
+          return PyType(self.getContext(), mlirComplexTypeGetElementType(self))
+              .maybeDownCast();
+        },
         "Returns element type.");
   }
 };
@@ -508,22 +513,25 @@ public:
 
 // Shaped Type Interface - ShapedType
 void mlir::PyShapedType::bindDerived(ClassTy &c) {
-  c.def_property_readonly(
+  c.def_prop_ro(
       "element_type",
-      [](PyShapedType &self) { return mlirShapedTypeGetElementType(self); },
+      [](PyShapedType &self) -> nb::typed<nb::object, PyType> {
+        return PyType(self.getContext(), mlirShapedTypeGetElementType(self))
+            .maybeDownCast();
+      },
       "Returns the element type of the shaped type.");
-  c.def_property_readonly(
+  c.def_prop_ro(
       "has_rank",
       [](PyShapedType &self) -> bool { return mlirShapedTypeHasRank(self); },
       "Returns whether the given shaped type is ranked.");
-  c.def_property_readonly(
+  c.def_prop_ro(
       "rank",
       [](PyShapedType &self) {
         self.requireHasRank();
         return mlirShapedTypeGetRank(self);
       },
       "Returns the rank of the given ranked shaped type.");
-  c.def_property_readonly(
+  c.def_prop_ro(
       "has_static_shape",
       [](PyShapedType &self) -> bool {
         return mlirShapedTypeHasStaticShape(self);
@@ -535,22 +543,37 @@ void mlir::PyShapedType::bindDerived(ClassTy &c) {
         self.requireHasRank();
         return mlirShapedTypeIsDynamicDim(self, dim);
       },
-      py::arg("dim"),
+      nb::arg("dim"),
       "Returns whether the dim-th dimension of the given shaped type is "
       "dynamic.");
+  c.def(
+      "is_static_dim",
+      [](PyShapedType &self, intptr_t dim) -> bool {
+        self.requireHasRank();
+        return mlirShapedTypeIsStaticDim(self, dim);
+      },
+      nb::arg("dim"),
+      "Returns whether the dim-th dimension of the given shaped type is "
+      "static.");
   c.def(
       "get_dim_size",
       [](PyShapedType &self, intptr_t dim) {
         self.requireHasRank();
         return mlirShapedTypeGetDimSize(self, dim);
       },
-      py::arg("dim"),
+      nb::arg("dim"),
       "Returns the dim-th dimension of the given ranked shaped type.");
   c.def_static(
       "is_dynamic_size",
       [](int64_t size) -> bool { return mlirShapedTypeIsDynamicSize(size); },
-      py::arg("dim_size"),
+      nb::arg("dim_size"),
       "Returns whether the given dimension size indicates a dynamic "
+      "dimension.");
+  c.def_static(
+      "is_static_size",
+      [](int64_t size) -> bool { return mlirShapedTypeIsStaticSize(size); },
+      nb::arg("dim_size"),
+      "Returns whether the given dimension size indicates a static "
       "dimension.");
   c.def(
       "is_dynamic_stride_or_offset",
@@ -558,10 +581,19 @@ void mlir::PyShapedType::bindDerived(ClassTy &c) {
         self.requireHasRank();
         return mlirShapedTypeIsDynamicStrideOrOffset(val);
       },
-      py::arg("dim_size"),
+      nb::arg("dim_size"),
       "Returns whether the given value is used as a placeholder for dynamic "
       "strides and offsets in shaped types.");
-  c.def_property_readonly(
+  c.def(
+      "is_static_stride_or_offset",
+      [](PyShapedType &self, int64_t val) -> bool {
+        self.requireHasRank();
+        return mlirShapedTypeIsStaticStrideOrOffset(val);
+      },
+      nb::arg("dim_size"),
+      "Returns whether the given shaped type stride or offset value is "
+      "statically-sized.");
+  c.def_prop_ro(
       "shape",
       [](PyShapedType &self) {
         self.requireHasRank();
@@ -587,7 +619,7 @@ void mlir::PyShapedType::bindDerived(ClassTy &c) {
 
 void mlir::PyShapedType::requireHasRank() {
   if (!mlirShapedTypeHasRank(*this)) {
-    throw py::value_error(
+    throw nb::value_error(
         "calling this method requires that the type has a rank.");
   }
 }
@@ -607,15 +639,20 @@ public:
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c) {
-    c.def_static("get", &PyVectorType::get, py::arg("shape"),
-                 py::arg("element_type"), py::kw_only(),
-                 py::arg("scalable") = py::none(),
-                 py::arg("scalable_dims") = py::none(),
-                 py::arg("loc") = py::none(), "Create a vector type")
-        .def_property_readonly(
+    c.def_static("get", &PyVectorType::getChecked, nb::arg("shape"),
+                 nb::arg("element_type"), nb::kw_only(),
+                 nb::arg("scalable") = nb::none(),
+                 nb::arg("scalable_dims") = nb::none(),
+                 nb::arg("loc") = nb::none(), "Create a vector type")
+        .def_static("get_unchecked", &PyVectorType::get, nb::arg("shape"),
+                    nb::arg("element_type"), nb::kw_only(),
+                    nb::arg("scalable") = nb::none(),
+                    nb::arg("scalable_dims") = nb::none(),
+                    nb::arg("context") = nb::none(), "Create a vector type")
+        .def_prop_ro(
             "scalable",
             [](MlirType self) { return mlirVectorTypeIsScalable(self); })
-        .def_property_readonly("scalable_dims", [](MlirType self) {
+        .def_prop_ro("scalable_dims", [](MlirType self) {
           std::vector<bool> scalableDims;
           size_t rank = static_cast<size_t>(mlirShapedTypeGetRank(self));
           scalableDims.reserve(rank);
@@ -626,12 +663,13 @@ public:
   }
 
 private:
-  static PyVectorType get(std::vector<int64_t> shape, PyType &elementType,
-                          std::optional<py::list> scalable,
-                          std::optional<std::vector<int64_t>> scalableDims,
-                          DefaultingPyLocation loc) {
+  static PyVectorType
+  getChecked(std::vector<int64_t> shape, PyType &elementType,
+             std::optional<nb::list> scalable,
+             std::optional<std::vector<int64_t>> scalableDims,
+             DefaultingPyLocation loc) {
     if (scalable && scalableDims) {
-      throw py::value_error("'scalable' and 'scalable_dims' kwargs "
+      throw nb::value_error("'scalable' and 'scalable_dims' kwargs "
                             "are mutually exclusive.");
     }
 
@@ -639,10 +677,10 @@ private:
     MlirType type;
     if (scalable) {
       if (scalable->size() != shape.size())
-        throw py::value_error("Expected len(scalable) == len(shape).");
+        throw nb::value_error("Expected len(scalable) == len(shape).");
 
       SmallVector<bool> scalableDimFlags = llvm::to_vector(llvm::map_range(
-          *scalable, [](const py::handle &h) { return h.cast<bool>(); }));
+          *scalable, [](const nb::handle &h) { return nb::cast<bool>(h); }));
       type = mlirVectorTypeGetScalableChecked(loc, shape.size(), shape.data(),
                                               scalableDimFlags.data(),
                                               elementType);
@@ -650,7 +688,7 @@ private:
       SmallVector<bool> scalableDimFlags(shape.size(), false);
       for (int64_t dim : *scalableDims) {
         if (static_cast<size_t>(dim) >= scalableDimFlags.size() || dim < 0)
-          throw py::value_error("Scalable dimension index out of bounds.");
+          throw nb::value_error("Scalable dimension index out of bounds.");
         scalableDimFlags[dim] = true;
       }
       type = mlirVectorTypeGetScalableChecked(loc, shape.size(), shape.data(),
@@ -659,6 +697,42 @@ private:
     } else {
       type = mlirVectorTypeGetChecked(loc, shape.size(), shape.data(),
                                       elementType);
+    }
+    if (mlirTypeIsNull(type))
+      throw MLIRError("Invalid type", errors.take());
+    return PyVectorType(elementType.getContext(), type);
+  }
+
+  static PyVectorType get(std::vector<int64_t> shape, PyType &elementType,
+                          std::optional<nb::list> scalable,
+                          std::optional<std::vector<int64_t>> scalableDims,
+                          DefaultingPyMlirContext context) {
+    if (scalable && scalableDims) {
+      throw nb::value_error("'scalable' and 'scalable_dims' kwargs "
+                            "are mutually exclusive.");
+    }
+
+    PyMlirContext::ErrorCapture errors(context->getRef());
+    MlirType type;
+    if (scalable) {
+      if (scalable->size() != shape.size())
+        throw nb::value_error("Expected len(scalable) == len(shape).");
+
+      SmallVector<bool> scalableDimFlags = llvm::to_vector(llvm::map_range(
+          *scalable, [](const nb::handle &h) { return nb::cast<bool>(h); }));
+      type = mlirVectorTypeGetScalable(shape.size(), shape.data(),
+                                       scalableDimFlags.data(), elementType);
+    } else if (scalableDims) {
+      SmallVector<bool> scalableDimFlags(shape.size(), false);
+      for (int64_t dim : *scalableDims) {
+        if (static_cast<size_t>(dim) >= scalableDimFlags.size() || dim < 0)
+          throw nb::value_error("Scalable dimension index out of bounds.");
+        scalableDimFlags[dim] = true;
+      }
+      type = mlirVectorTypeGetScalable(shape.size(), shape.data(),
+                                       scalableDimFlags.data(), elementType);
+    } else {
+      type = mlirVectorTypeGet(shape.size(), shape.data(), elementType);
     }
     if (mlirTypeIsNull(type))
       throw MLIRError("Invalid type", errors.take());
@@ -689,16 +763,33 @@ public:
             throw MLIRError("Invalid type", errors.take());
           return PyRankedTensorType(elementType.getContext(), t);
         },
-        py::arg("shape"), py::arg("element_type"),
-        py::arg("encoding") = py::none(), py::arg("loc") = py::none(),
+        nb::arg("shape"), nb::arg("element_type"),
+        nb::arg("encoding") = nb::none(), nb::arg("loc") = nb::none(),
         "Create a ranked tensor type");
-    c.def_property_readonly(
+    c.def_static(
+        "get_unchecked",
+        [](std::vector<int64_t> shape, PyType &elementType,
+           std::optional<PyAttribute> &encodingAttr,
+           DefaultingPyMlirContext context) {
+          PyMlirContext::ErrorCapture errors(context->getRef());
+          MlirType t = mlirRankedTensorTypeGet(
+              shape.size(), shape.data(), elementType,
+              encodingAttr ? encodingAttr->get() : mlirAttributeGetNull());
+          if (mlirTypeIsNull(t))
+            throw MLIRError("Invalid type", errors.take());
+          return PyRankedTensorType(elementType.getContext(), t);
+        },
+        nb::arg("shape"), nb::arg("element_type"),
+        nb::arg("encoding") = nb::none(), nb::arg("context") = nb::none(),
+        "Create a ranked tensor type");
+    c.def_prop_ro(
         "encoding",
-        [](PyRankedTensorType &self) -> std::optional<MlirAttribute> {
+        [](PyRankedTensorType &self)
+            -> std::optional<nb::typed<nb::object, PyAttribute>> {
           MlirAttribute encoding = mlirRankedTensorTypeGetEncoding(self.get());
           if (mlirAttributeIsNull(encoding))
             return std::nullopt;
-          return encoding;
+          return PyAttribute(self.getContext(), encoding).maybeDownCast();
         });
   }
 };
@@ -723,7 +814,18 @@ public:
             throw MLIRError("Invalid type", errors.take());
           return PyUnrankedTensorType(elementType.getContext(), t);
         },
-        py::arg("element_type"), py::arg("loc") = py::none(),
+        nb::arg("element_type"), nb::arg("loc") = nb::none(),
+        "Create a unranked tensor type");
+    c.def_static(
+        "get_unchecked",
+        [](PyType &elementType, DefaultingPyMlirContext context) {
+          PyMlirContext::ErrorCapture errors(context->getRef());
+          MlirType t = mlirUnrankedTensorTypeGet(elementType);
+          if (mlirTypeIsNull(t))
+            throw MLIRError("Invalid type", errors.take());
+          return PyUnrankedTensorType(elementType.getContext(), t);
+        },
+        nb::arg("element_type"), nb::arg("context") = nb::none(),
         "Create a unranked tensor type");
   }
 };
@@ -754,13 +856,36 @@ public:
              throw MLIRError("Invalid type", errors.take());
            return PyMemRefType(elementType.getContext(), t);
          },
-         py::arg("shape"), py::arg("element_type"),
-         py::arg("layout") = py::none(), py::arg("memory_space") = py::none(),
-         py::arg("loc") = py::none(), "Create a memref type")
-        .def_property_readonly(
+         nb::arg("shape"), nb::arg("element_type"),
+         nb::arg("layout") = nb::none(), nb::arg("memory_space") = nb::none(),
+         nb::arg("loc") = nb::none(), "Create a memref type")
+        .def_static(
+            "get_unchecked",
+            [](std::vector<int64_t> shape, PyType &elementType,
+               PyAttribute *layout, PyAttribute *memorySpace,
+               DefaultingPyMlirContext context) {
+              PyMlirContext::ErrorCapture errors(context->getRef());
+              MlirAttribute layoutAttr =
+                  layout ? *layout : mlirAttributeGetNull();
+              MlirAttribute memSpaceAttr =
+                  memorySpace ? *memorySpace : mlirAttributeGetNull();
+              MlirType t =
+                  mlirMemRefTypeGet(elementType, shape.size(), shape.data(),
+                                    layoutAttr, memSpaceAttr);
+              if (mlirTypeIsNull(t))
+                throw MLIRError("Invalid type", errors.take());
+              return PyMemRefType(elementType.getContext(), t);
+            },
+            nb::arg("shape"), nb::arg("element_type"),
+            nb::arg("layout") = nb::none(),
+            nb::arg("memory_space") = nb::none(),
+            nb::arg("context") = nb::none(), "Create a memref type")
+        .def_prop_ro(
             "layout",
-            [](PyMemRefType &self) -> MlirAttribute {
-              return mlirMemRefTypeGetLayout(self);
+            [](PyMemRefType &self) -> nb::typed<nb::object, PyAttribute> {
+              return PyAttribute(self.getContext(),
+                                 mlirMemRefTypeGetLayout(self))
+                  .maybeDownCast();
             },
             "The layout of the MemRef type.")
         .def(
@@ -775,20 +900,21 @@ public:
               return {strides, offset};
             },
             "The strides and offset of the MemRef type.")
-        .def_property_readonly(
+        .def_prop_ro(
             "affine_map",
             [](PyMemRefType &self) -> PyAffineMap {
               MlirAffineMap map = mlirMemRefTypeGetAffineMap(self);
               return PyAffineMap(self.getContext(), map);
             },
             "The layout of the MemRef type as an affine map.")
-        .def_property_readonly(
+        .def_prop_ro(
             "memory_space",
-            [](PyMemRefType &self) -> std::optional<MlirAttribute> {
+            [](PyMemRefType &self)
+                -> std::optional<nb::typed<nb::object, PyAttribute>> {
               MlirAttribute a = mlirMemRefTypeGetMemorySpace(self);
               if (mlirAttributeIsNull(a))
                 return std::nullopt;
-              return a;
+              return PyAttribute(self.getContext(), a).maybeDownCast();
             },
             "Returns the memory space of the given MemRef type.");
   }
@@ -820,15 +946,32 @@ public:
              throw MLIRError("Invalid type", errors.take());
            return PyUnrankedMemRefType(elementType.getContext(), t);
          },
-         py::arg("element_type"), py::arg("memory_space"),
-         py::arg("loc") = py::none(), "Create a unranked memref type")
-        .def_property_readonly(
+         nb::arg("element_type"), nb::arg("memory_space").none(),
+         nb::arg("loc") = nb::none(), "Create a unranked memref type")
+        .def_static(
+            "get_unchecked",
+            [](PyType &elementType, PyAttribute *memorySpace,
+               DefaultingPyMlirContext context) {
+              PyMlirContext::ErrorCapture errors(context->getRef());
+              MlirAttribute memSpaceAttr = {};
+              if (memorySpace)
+                memSpaceAttr = *memorySpace;
+
+              MlirType t = mlirUnrankedMemRefTypeGet(elementType, memSpaceAttr);
+              if (mlirTypeIsNull(t))
+                throw MLIRError("Invalid type", errors.take());
+              return PyUnrankedMemRefType(elementType.getContext(), t);
+            },
+            nb::arg("element_type"), nb::arg("memory_space").none(),
+            nb::arg("context") = nb::none(), "Create a unranked memref type")
+        .def_prop_ro(
             "memory_space",
-            [](PyUnrankedMemRefType &self) -> std::optional<MlirAttribute> {
+            [](PyUnrankedMemRefType &self)
+                -> std::optional<nb::typed<nb::object, PyAttribute>> {
               MlirAttribute a = mlirUnrankedMemrefGetMemorySpace(self);
               if (mlirAttributeIsNull(a))
                 return std::nullopt;
-              return a;
+              return PyAttribute(self.getContext(), a).maybeDownCast();
             },
             "Returns the memory space of the given Unranked MemRef type.");
   }
@@ -846,20 +989,38 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get_tuple",
+        [](const std::vector<PyType> &elements,
+           DefaultingPyMlirContext context) {
+          std::vector<MlirType> mlirElements;
+          mlirElements.reserve(elements.size());
+          for (const auto &element : elements)
+            mlirElements.push_back(element.get());
+          MlirType t = mlirTupleTypeGet(context->get(), elements.size(),
+                                        mlirElements.data());
+          return PyTupleType(context->getRef(), t);
+        },
+        nb::arg("elements"), nb::arg("context") = nb::none(),
+        "Create a tuple type");
+    c.def_static(
+        "get_tuple",
         [](std::vector<MlirType> elements, DefaultingPyMlirContext context) {
           MlirType t = mlirTupleTypeGet(context->get(), elements.size(),
                                         elements.data());
           return PyTupleType(context->getRef(), t);
         },
-        py::arg("elements"), py::arg("context") = py::none(),
+        nb::arg("elements"), nb::arg("context") = nb::none(),
+        // clang-format off
+        nb::sig("def get_tuple(elements: Sequence[Type], context: Context | None = None) -> TupleType"),
+        // clang-format on
         "Create a tuple type");
     c.def(
         "get_type",
-        [](PyTupleType &self, intptr_t pos) {
-          return mlirTupleTypeGetType(self, pos);
+        [](PyTupleType &self, intptr_t pos) -> nb::typed<nb::object, PyType> {
+          return PyType(self.getContext(), mlirTupleTypeGetType(self, pos))
+              .maybeDownCast();
         },
-        py::arg("pos"), "Returns the pos-th type in the tuple type.");
-    c.def_property_readonly(
+        nb::arg("pos"), "Returns the pos-th type in the tuple type.");
+    c.def_prop_ro(
         "num_types",
         [](PyTupleType &self) -> intptr_t {
           return mlirTupleTypeGetNumTypes(self);
@@ -880,6 +1041,26 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
+        [](std::vector<PyType> inputs, std::vector<PyType> results,
+           DefaultingPyMlirContext context) {
+          std::vector<MlirType> mlirInputs;
+          mlirInputs.reserve(inputs.size());
+          for (const auto &input : inputs)
+            mlirInputs.push_back(input.get());
+          std::vector<MlirType> mlirResults;
+          mlirResults.reserve(results.size());
+          for (const auto &result : results)
+            mlirResults.push_back(result.get());
+
+          MlirType t = mlirFunctionTypeGet(context->get(), inputs.size(),
+                                           mlirInputs.data(), results.size(),
+                                           mlirResults.data());
+          return PyFunctionType(context->getRef(), t);
+        },
+        nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
+        "Gets a FunctionType from a list of input and result types");
+    c.def_static(
+        "get",
         [](std::vector<MlirType> inputs, std::vector<MlirType> results,
            DefaultingPyMlirContext context) {
           MlirType t =
@@ -887,13 +1068,16 @@ public:
                                   results.size(), results.data());
           return PyFunctionType(context->getRef(), t);
         },
-        py::arg("inputs"), py::arg("results"), py::arg("context") = py::none(),
+        nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
+        // clang-format off
+        nb::sig("def get(inputs: Sequence[Type], results: Sequence[Type], context: Context | None = None) -> FunctionType"),
+        // clang-format on
         "Gets a FunctionType from a list of input and result types");
-    c.def_property_readonly(
+    c.def_prop_ro(
         "inputs",
         [](PyFunctionType &self) {
           MlirType t = self;
-          py::list types;
+          nb::list types;
           for (intptr_t i = 0, e = mlirFunctionTypeGetNumInputs(self); i < e;
                ++i) {
             types.append(mlirFunctionTypeGetInput(t, i));
@@ -901,10 +1085,10 @@ public:
           return types;
         },
         "Returns the list of input types in the FunctionType.");
-    c.def_property_readonly(
+    c.def_prop_ro(
         "results",
         [](PyFunctionType &self) {
-          py::list types;
+          nb::list types;
           for (intptr_t i = 0, e = mlirFunctionTypeGetNumResults(self); i < e;
                ++i) {
             types.append(mlirFunctionTypeGetResult(self, i));
@@ -931,28 +1115,28 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](std::string dialectNamespace, std::string typeData,
+        [](const std::string &dialectNamespace, const std::string &typeData,
            DefaultingPyMlirContext context) {
           MlirType type = mlirOpaqueTypeGet(context->get(),
                                             toMlirStringRef(dialectNamespace),
                                             toMlirStringRef(typeData));
           return PyOpaqueType(context->getRef(), type);
         },
-        py::arg("dialect_namespace"), py::arg("buffer"),
-        py::arg("context") = py::none(),
+        nb::arg("dialect_namespace"), nb::arg("buffer"),
+        nb::arg("context") = nb::none(),
         "Create an unregistered (opaque) dialect type.");
-    c.def_property_readonly(
+    c.def_prop_ro(
         "dialect_namespace",
         [](PyOpaqueType &self) {
           MlirStringRef stringRef = mlirOpaqueTypeGetDialectNamespace(self);
-          return py::str(stringRef.data, stringRef.length);
+          return nb::str(stringRef.data, stringRef.length);
         },
         "Returns the dialect namespace for the Opaque type as a string.");
-    c.def_property_readonly(
+    c.def_prop_ro(
         "data",
         [](PyOpaqueType &self) {
           MlirStringRef stringRef = mlirOpaqueTypeGetData(self);
-          return py::str(stringRef.data, stringRef.length);
+          return nb::str(stringRef.data, stringRef.length);
         },
         "Returns the data for the Opaque type as a string.");
   }
@@ -960,7 +1144,7 @@ public:
 
 } // namespace
 
-void mlir::python::populateIRTypes(py::module &m) {
+void mlir::python::populateIRTypes(nb::module_ &m) {
   PyIntegerType::bind(m);
   PyFloatType::bind(m);
   PyIndexType::bind(m);
