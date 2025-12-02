@@ -426,6 +426,24 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   Args.AddAllArgs(CmdArgs, options::OPT_sub__library);
   Args.AddAllArgs(CmdArgs, options::OPT_sub__umbrella);
 
+  // Pass -L <toolchain-install>/bin/../lib/ to linker to prioritize the
+  // toolchain's libc++.dylib over the sysroot-provided one. This matches
+  // what we do for determining which libc++ headers to use.
+  //
+  // If the toolchain does not provide libc++.dylib, we will fall back to the
+  // normal system search paths for finding libc++.dylib (on Darwin, that would
+  // be in the SDK so we would find Apple's system libc++ instead of using
+  // LLVM's).
+  {
+    llvm::SmallString<128> InstallBinPath =
+        llvm::StringRef(D.Dir); // <install>/bin
+    llvm::SmallString<128> InstallLibPath = InstallBinPath;
+    llvm::sys::path::append(InstallLibPath, "..",
+                            "lib"); // <install>/bin/../lib
+    CmdArgs.push_back("-L");
+    CmdArgs.push_back(C.getArgs().MakeArgString(InstallLibPath));
+  }
+
   // Give --sysroot= preference, over the Apple specific behavior to also use
   // --isysroot as the syslibroot.
   // We check `OPT__sysroot_EQ` directly instead of `getSysRoot` to make sure we
