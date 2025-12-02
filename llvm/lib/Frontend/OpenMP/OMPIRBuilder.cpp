@@ -5515,7 +5515,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
   case OMPScheduleType::BaseStatic:
   case OMPScheduleType::BaseDistribute:
     assert((!ChunkSize || !DistScheduleChunkSize) &&
-                             "No chunk size with static-chunked schedule");
+           "No chunk size with static-chunked schedule");
     if (IsOrdered && !HasDistSchedule)
       return applyDynamicWorkshareLoop(DL, CLI, AllocaIP, EffectiveScheduleType,
                                        NeedsBarrier, ChunkSize);
