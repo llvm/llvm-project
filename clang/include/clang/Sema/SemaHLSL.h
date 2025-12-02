@@ -134,9 +134,6 @@ public:
   void CheckEntryPoint(FunctionDecl *FD);
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
                           SourceLocation Loc);
-  void DiagnoseAttrStageMismatch(
-      const Attr *A, llvm::Triple::EnvironmentType Stage,
-      std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
 
   QualType handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
                                        QualType LHSType, QualType RHSType,
@@ -244,6 +241,17 @@ private:
     std::optional<uint32_t> Index;
   };
 
+  enum IOType {
+    In = 0b01,
+    Out = 0b10,
+    InOut = 0b11,
+  };
+
+  struct SemanticStageInfo {
+    llvm::Triple::EnvironmentType Stage;
+    IOType AllowedIOTypesMask;
+  };
+
 private:
   void collectResourceBindingsOnVarDecl(VarDecl *D);
   void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
@@ -268,6 +276,14 @@ private:
   void processExplicitBindingsOnDecl(VarDecl *D);
 
   void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);
+
+  void diagnoseAttrStageMismatch(
+      const Attr *A, llvm::Triple::EnvironmentType Stage,
+      std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
+
+  void diagnoseSemanticStageMismatch(
+      const Attr *A, llvm::Triple::EnvironmentType Stage, bool IsInput,
+      std::initializer_list<SemanticStageInfo> AllowedStages);
 
   uint32_t getNextImplicitBindingOrderID() {
     return ImplicitBindingNextOrderID++;
