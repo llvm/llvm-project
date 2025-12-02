@@ -697,6 +697,19 @@ SDValue LoongArchTargetLowering::lowerTRUNCATE(SDValue Op,
   for (unsigned i = 0; i < NumElts; ++i)
     Mask[i] = 2 * i;
 
+  // Specially handling for v4i32 using a 128-bit shuffle.
+  // FIXME: Otherwise, a worse XVPERM_W + Mask load will match early when
+  // legalizing VECTOR_SHUFFLE. Better be handled in lowerVECTOR_SHUFFLE.
+  if (VT == MVT::v4i32) {
+    SDValue OpLo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i64, Src,
+                               DAG.getVectorIdxConstant(0, DL));
+    SDValue OpHi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i64, Src,
+                               DAG.getVectorIdxConstant(2, DL));
+    static const int ShufMask[] = {0, 2, 4, 6};
+    return DAG.getVectorShuffle(VT, DL, DAG.getBitcast(VT, OpLo),
+                                DAG.getBitcast(VT, OpHi), ShufMask);
+  }
+
   MVT NewVT = MVT::getVectorVT(EltVT, WidenNumElts);
   SDValue CastSrc = DAG.getBitcast(NewVT, Src);
   SDValue Result = DAG.getVectorShuffle(NewVT, DL, CastSrc, CastSrc, Mask);
