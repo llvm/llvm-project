@@ -1372,7 +1372,7 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
     // Check if coefficient could be zero. If so, 0/0 is undefined and we
     // cannot conclude that only same-iteration dependencies exist.
     // When coeff=0, all iterations access the same location.
-    if (isa<SCEVConstant>(Coeff) || SE->isKnownNonZero(Coeff)) {
+    if (SE->isKnownNonZero(Coeff)) {
       LLVM_DEBUG(
           dbgs() << "\t    Coefficient proven non-zero by SCEV analysis\n");
     } else {
@@ -3564,10 +3564,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
 
   FullDependence Result(Src, Dst, SCEVUnionPredicate(Assume, *SE),
                         PossiblyLoopIndependent, CommonLevels);
-  // Track assumptions before running dependence tests. If new assumptions are
-  // added during tests, we must return the result even if AllEqual to preserve
-  // those assumptions for the caller.
-  size_t AssumptionsBeforeTests = Result.Assumptions.getPredicates().size();
   ++TotalArrayPairs;
 
   for (unsigned P = 0; P < Pairs; ++P) {
@@ -3693,8 +3689,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   } else {
     // On the other hand, if all directions are equal and there's no
     // loop-independent dependence possible, then no dependence exists.
-    // However, if we added runtime assumptions during the dependence tests,
-    // we must return the result to preserve those assumptions for the caller.
+    // However, if there are runtime assumptions, we must return the result.
     bool AllEqual = true;
     for (unsigned II = 1; II <= CommonLevels; ++II) {
       if (Result.getDirection(II) != Dependence::DVEntry::EQ) {
@@ -3702,9 +3697,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
         break;
       }
     }
-    bool AddedAssumptionsDuringTests =
-        Result.Assumptions.getPredicates().size() > AssumptionsBeforeTests;
-    if (AllEqual && !AddedAssumptionsDuringTests)
+    if (AllEqual && Result.Assumptions.getPredicates().empty())
       return nullptr;
   }
 
