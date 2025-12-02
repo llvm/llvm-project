@@ -228,3 +228,194 @@ __mmask16 test_kmov_w(__mmask16 A) {
   // OGCG: bitcast <16 x i1> {{.*}} to i16
   return __builtin_ia32_kmovw(A);
 }
+__m256 test_mm512_i64gather_ps(__m512i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_i64gather_ps
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.qps.512"
+
+  // LLVM-LABEL: test_mm512_i64gather_ps
+  // LLVM: call <8 x float> @llvm.x86.avx512.mask.gather.qps.512
+
+  // OGCG-LABEL: test_mm512_i64gather_ps
+  // OGCG: call <8 x float> @llvm.x86.avx512.mask.gather.qps.512
+  return _mm512_i64gather_ps(__index, __addr, 2);
+}
+
+__m256 test_mm512_mask_i64gather_ps(__m256 __v1_old, __mmask8 __mask, __m512i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_mask_i64gather_ps
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.qps.512"
+
+  // LLVM-LABEL: test_mm512_mask_i64gather_ps
+  // LLVM: call <8 x float> @llvm.x86.avx512.mask.gather.qps.512
+
+  // OGCG-LABEL: test_mm512_mask_i64gather_ps
+  // OGCG: call <8 x float> @llvm.x86.avx512.mask.gather.qps.512
+  return _mm512_mask_i64gather_ps(__v1_old, __mask, __index, __addr, 2);
+}
+
+__m256i test_mm512_i64gather_epi32(__m512i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_i64gather_epi32
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.qpi.512"
+
+  // LLVM-LABEL: test_mm512_i64gather_epi32
+  // LLVM: call <8 x i32> @llvm.x86.avx512.mask.gather.qpi.512
+
+  // OGCG-LABEL: test_mm512_i64gather_epi32
+  // OGCG: call <8 x i32> @llvm.x86.avx512.mask.gather.qpi.512
+  return _mm512_i64gather_epi32(__index, __addr, 2);
+}
+
+__m256i test_mm512_mask_i64gather_epi32(__m256i __v1_old, __mmask8 __mask, __m512i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_mask_i64gather_epi32
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.qpi.512"
+
+  // LLVM-LABEL: test_mm512_mask_i64gather_epi32
+  // LLVM: call <8 x i32> @llvm.x86.avx512.mask.gather.qpi.512
+
+  // OGCG-LABEL: test_mm512_mask_i64gather_epi32
+  // OGCG: call <8 x i32> @llvm.x86.avx512.mask.gather.qpi.512
+  return _mm512_mask_i64gather_epi32(__v1_old, __mask, __index, __addr, 2);
+}
+
+__m512d test_mm512_i64gather_pd(__m512i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_i64gather_pd
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.qpd.512
+
+  // LLVM-LABEL: test_mm512_i64gather_pd
+  // LLVM: call <8 x double> @llvm.x86.avx512.mask.gather.qpd.512
+
+  // OGCG-LABEL: test_mm512_i64gather_pd
+  // OGCG: call <8 x double> @llvm.x86.avx512.mask.gather.qpd.512
+  return _mm512_i64gather_pd(__index, __addr, 2);
+}
+
+__m512d test_mm512_mask_i64gather_pd(__m512d __v1_old, __mmask8 __mask, __m512i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_mask_i64gather_pd
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.qpd.512
+
+  // LLVM-LABEL: test_mm512_mask_i64gather_pd
+  // LLVM: call <8 x double> @llvm.x86.avx512.mask.gather.qpd.512
+
+  // OGCG-LABEL: test_mm512_mask_i64gather_pd
+  // OGCG: call <8 x double> @llvm.x86.avx512.mask.gather.qpd.512
+  return _mm512_mask_i64gather_pd(__v1_old, __mask, __index, __addr, 2);
+}
+
+__m512i test_mm512_i64gather_epi64(__m512i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_i64gather_epi64
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.qpq.512
+
+  // LLVM-LABEL: test_mm512_i64gather_epi64
+  // LLVM: call <8 x i64> @llvm.x86.avx512.mask.gather.qpq.512
+
+  // OGCG-LABEL: test_mm512_i64gather_epi64
+  // OGCG: call <8 x i64> @llvm.x86.avx512.mask.gather.qpq.512
+  return _mm512_i64gather_epi64(__index, __addr, 2);
+}
+
+__m512i test_mm512_mask_i64gather_epi64(__m512i __v1_old, __mmask8 __mask, __m512i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_mask_i64gather_epi64
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.qpq.512
+
+  // LLVM-LABEL: test_mm512_mask_i64gather_epi64
+  // LLVM: call <8 x i64> @llvm.x86.avx512.mask.gather.qpq.512
+
+  // OGCG-LABEL: test_mm512_mask_i64gather_epi64
+  // OGCG: call <8 x i64> @llvm.x86.avx512.mask.gather.qpq.512
+  return _mm512_mask_i64gather_epi64(__v1_old, __mask, __index, __addr, 2);
+}
+
+__m512 test_mm512_i32gather_ps(__m512i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_i32gather_ps
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.dps.512
+
+  // LLVM-LABEL: test_mm512_i32gather_ps
+  // LLVM: call <16 x float> @llvm.x86.avx512.mask.gather.dps.512
+
+  // OGCG-LABEL: test_mm512_i32gather_ps
+  // OGCG: call <16 x float> @llvm.x86.avx512.mask.gather.dps.512
+  return _mm512_i32gather_ps(__index, __addr, 2);
+}
+
+__m512 test_mm512_mask_i32gather_ps(__m512 v1_old, __mmask16 __mask, __m512i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_mask_i32gather_ps
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.dps.512
+
+  // LLVM-LABEL: test_mm512_mask_i32gather_ps
+  // LLVM: call <16 x float> @llvm.x86.avx512.mask.gather.dps.512
+
+  // OGCG-LABEL: test_mm512_mask_i32gather_ps
+  // OGCG: call <16 x float> @llvm.x86.avx512.mask.gather.dps.512
+  return _mm512_mask_i32gather_ps(v1_old, __mask, __index, __addr, 2);
+}
+
+__m512i test_mm512_i32gather_epi32(__m512i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_i32gather_epi32
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.dpi.512
+
+  // LLVM-LABEL: test_mm512_i32gather_epi32
+  // LLVM: call <16 x i32> @llvm.x86.avx512.mask.gather.dpi.512
+
+  // OGCG-LABEL: test_mm512_i32gather_epi32
+  // OGCG: call <16 x i32> @llvm.x86.avx512.mask.gather.dpi.512
+  return _mm512_i32gather_epi32(__index, __addr, 2);
+}
+
+__m512i test_mm512_mask_i32gather_epi32(__m512i __v1_old, __mmask16 __mask, __m512i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_mask_i32gather_epi32
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.dpi.512
+
+  // LLVM-LABEL: test_mm512_mask_i32gather_epi32
+  // LLVM: call <16 x i32> @llvm.x86.avx512.mask.gather.dpi.512
+
+  // OGCG-LABEL: test_mm512_mask_i32gather_epi32
+  // OGCG: call <16 x i32> @llvm.x86.avx512.mask.gather.dpi.512
+  return _mm512_mask_i32gather_epi32(__v1_old, __mask, __index, __addr, 2);
+}
+
+__m512d test_mm512_i32gather_pd(__m256i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_i32gather_pd
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.dpd.512
+
+  // LLVM-LABEL: test_mm512_i32gather_pd
+  // LLVM: call <8 x double> @llvm.x86.avx512.mask.gather.dpd.512
+
+  // OGCG-LABEL: test_mm512_i32gather_pd
+  // OGCG: call <8 x double> @llvm.x86.avx512.mask.gather.dpd.512
+  return _mm512_i32gather_pd(__index, __addr, 2);
+}
+
+__m512d test_mm512_mask_i32gather_pd(__m512d __v1_old, __mmask8 __mask, __m256i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_mask_i32gather_pd
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.dpd.512
+
+  // LLVM-LABEL: test_mm512_mask_i32gather_pd
+  // LLVM: call <8 x double> @llvm.x86.avx512.mask.gather.dpd.512
+
+  // OGCG-LABEL: test_mm512_mask_i32gather_pd
+  // OGCG: call <8 x double> @llvm.x86.avx512.mask.gather.dpd.512
+  return _mm512_mask_i32gather_pd(__v1_old, __mask, __index, __addr, 2);
+}
+
+__m512i test_mm512_i32gather_epi64(__m256i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_i32gather_epi64
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.dpq.512
+
+  // LLVM-LABEL: test_mm512_i32gather_epi64
+  // LLVM: call <8 x i64> @llvm.x86.avx512.mask.gather.dpq.512
+ 
+  // OGCG-LABEL: test_mm512_i32gather_epi64
+  // OGCG: call <8 x i64> @llvm.x86.avx512.mask.gather.dpq.512
+  return _mm512_i32gather_epi64(__index, __addr, 2);
+}
+
+__m512i test_mm512_mask_i32gather_epi64(__m512i __v1_old, __mmask8 __mask, __m256i __index, void const *__addr) {
+  // CIR-LABEL: test_mm512_mask_i32gather_epi64
+  // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.dpq.512
+
+  // LLVM-LABEL: test_mm512_mask_i32gather_epi64
+  // LLVM: call <8 x i64> @llvm.x86.avx512.mask.gather.dpq.512
+ 
+  // OGCG-LABEL: test_mm512_mask_i32gather_epi64
+  // OGCG: call <8 x i64> @llvm.x86.avx512.mask.gather.dpq.512
+  return _mm512_mask_i32gather_epi64(__v1_old, __mask, __index, __addr, 2);
+}
