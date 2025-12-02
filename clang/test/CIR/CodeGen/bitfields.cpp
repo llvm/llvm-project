@@ -35,7 +35,7 @@ void def() {
 int load_field(S* s) {
   return s->c;
 }
-// CIR: cir.func dso_local @_Z10load_field
+// CIR: cir.func {{.*}} @_Z10load_field
 // CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init]
 // CIR:   [[TMP1:%.*]] = cir.load{{.*}} [[TMP0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 // CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][0] {name = "c"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
@@ -63,7 +63,7 @@ void store_field() {
   S s;
   s.a = 3;
 }
-// CIR: cir.func dso_local @_Z11store_field
+// CIR: cir.func {{.*}} @_Z11store_field
 // CIR:   [[TMP0:%.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>
 // CIR:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
 // CIR:   [[TMP2:%.*]] = cir.get_member [[TMP0]][0] {name = "a"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
@@ -88,7 +88,7 @@ void store_bitfield_to_bitfield(S* s) {
   s->a = s->b = 3;
 }
 
-// CIR: cir.func dso_local @_Z26store_bitfield_to_bitfieldP1S
+// CIR: cir.func {{.*}} @_Z26store_bitfield_to_bitfieldP1S
 // CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init] {alignment = 8 : i64}
 // CIR:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
 // CIR:   [[TMP2:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
