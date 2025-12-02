@@ -10,7 +10,7 @@ func.func @product_box_known_extents(%arg0: !fir.box<!fir.array<2x3xi32>>) -> !h
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<2x3xi32>>) -> !hlfir.expr<2xi32> {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : index
-// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : i32
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : i32
 // CHECK:           %[[CONSTANT_3:.*]] = arith.constant 2 : index
 // CHECK:           %[[CONSTANT_4:.*]] = arith.constant 3 : index
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_3]] : (index) -> !fir.shape<1>
@@ -42,7 +42,7 @@ func.func @product_expr_known_extents(%arg0: !hlfir.expr<2x3xi32>) -> !hlfir.exp
 // CHECK-LABEL:   func.func @product_expr_known_extents(
 // CHECK-SAME:      %[[ARG0:.*]]: !hlfir.expr<2x3xi32>) -> !hlfir.expr<3xi32> {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
-// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : i32
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : i32
 // CHECK:           %[[CONSTANT_2:.*]] = arith.constant 2 : index
 // CHECK:           %[[CONSTANT_3:.*]] = arith.constant 3 : index
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_3]] : (index) -> !fir.shape<1>
@@ -57,6 +57,7 @@ func.func @product_expr_known_extents(%arg0: !hlfir.expr<2x3xi32>) -> !hlfir.exp
 // CHECK:           }
 // CHECK:           return %[[ELEMENTAL_0]] : !hlfir.expr<3xi32>
 // CHECK:         }
+
 
 // box with unknown extent
 func.func @product_box_unknown_extent1(%arg0: !fir.box<!fir.array<?x3xcomplex<f64>>>) -> !hlfir.expr<3xcomplex<f64>> {
@@ -95,6 +96,7 @@ func.func @product_box_unknown_extent1(%arg0: !fir.box<!fir.array<?x3xcomplex<f6
 // CHECK:           return %[[ELEMENTAL_0]] : !hlfir.expr<3xcomplex<f64>>
 // CHECK:         }
 
+
 func.func @product_box_unknown_extent2(%arg0: !fir.box<!fir.array<?x3xcomplex<f64>>>) -> !hlfir.expr<?xcomplex<f64>> {
   %cst = arith.constant 2 : i32
   %res = hlfir.product %arg0 dim %cst : (!fir.box<!fir.array<?x3xcomplex<f64>>>, i32) -> !hlfir.expr<?xcomplex<f64>>
@@ -131,6 +133,7 @@ func.func @product_box_unknown_extent2(%arg0: !fir.box<!fir.array<?x3xcomplex<f6
 // CHECK:           return %[[ELEMENTAL_0]] : !hlfir.expr<?xcomplex<f64>>
 // CHECK:         }
 
+
 // expr with unknown extent
 func.func @product_expr_unknown_extent1(%arg0: !hlfir.expr<?x3xf32>) -> !hlfir.expr<3xf32> {
   %cst = arith.constant 1 : i32
@@ -156,6 +159,7 @@ func.func @product_expr_unknown_extent1(%arg0: !hlfir.expr<?x3xf32>) -> !hlfir.e
 // CHECK:           }
 // CHECK:           return %[[ELEMENTAL_0]] : !hlfir.expr<3xf32>
 // CHECK:         }
+
 
 func.func @product_expr_unknown_extent2(%arg0: !hlfir.expr<?x3xf32>) -> !hlfir.expr<?xf32> {
   %cst = arith.constant 2 : i32
@@ -259,6 +263,7 @@ func.func @product_scalar_boxed_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !fir.bo
 // CHECK:           return %[[ELEMENTAL_0]] : !hlfir.expr<3xf32>
 // CHECK:         }
 
+
 // array mask
 func.func @product_array_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !fir.box<!fir.array<?x3x!fir.logical<1>>>) -> !hlfir.expr<?xf32> {
   %cst = arith.constant 2 : i32
@@ -308,6 +313,7 @@ func.func @product_array_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !fir.box<!fir.
 // CHECK:           }
 // CHECK:           return %[[ELEMENTAL_0]] : !hlfir.expr<?xf32>
 // CHECK:         }
+
 
 // array expr mask
 func.func @product_array_expr_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !hlfir.expr<?x3x!fir.logical<1>>) -> !hlfir.expr<?xf32> {
@@ -368,6 +374,7 @@ func.func @product_unordered_reduction(%arg0: !hlfir.expr<2x3xf32>) -> !hlfir.ex
 // CHECK:           return %[[ELEMENTAL_0]] : !hlfir.expr<3xf32>
 // CHECK:         }
 
+
 // total 1d reduction
 func.func @product_total_1d_reduction(%arg0: !fir.box<!fir.array<3xi32>>) -> i32 {
   %cst = arith.constant 1 : i32
@@ -378,7 +385,7 @@ func.func @product_total_1d_reduction(%arg0: !fir.box<!fir.array<3xi32>>) -> i32
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<3xi32>>) -> i32 {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 3 : index
-// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : i32
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : i32
 // CHECK:           %[[CONSTANT_3:.*]] = arith.constant 1 : index
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_3]] to %[[CONSTANT_1]] step %[[CONSTANT_3]] unordered iter_args(%[[VAL_1:.*]] = %[[CONSTANT_2]]) -> (i32) {
 // CHECK:             %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[ARG0]], %[[CONSTANT_0]] : (!fir.box<!fir.array<3xi32>>, index) -> (index, index, index)
@@ -400,7 +407,7 @@ func.func @product_total_2d_reduction(%arg0: !fir.box<!fir.array<?x3xi32>>) -> i
 // CHECK-LABEL:   func.func @product_total_2d_reduction(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<?x3xi32>>) -> i32 {
 // CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
-// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : i32
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : i32
 // CHECK:           %[[CONSTANT_2:.*]] = arith.constant 3 : index
 // CHECK:           %[[CONSTANT_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[ARG0]], %[[CONSTANT_3]] : (!fir.box<!fir.array<?x3xi32>>, index) -> (index, index, index)
@@ -421,6 +428,7 @@ func.func @product_total_2d_reduction(%arg0: !fir.box<!fir.array<?x3xi32>>) -> i
 // CHECK:           }
 // CHECK:           return %[[DO_LOOP_0]] : i32
 // CHECK:         }
+
 
 // negative: invalid dim==0
 func.func @product_invalid_dim0(%arg0: !hlfir.expr<2x3xi32>) -> !hlfir.expr<3xi32> {
