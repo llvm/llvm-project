@@ -338,8 +338,7 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
     // enabled, we split caretcaret into two carets: the first being the binary
     // operator and the second being the introducer for the block.
     if (OpToken.is(tok::caretcaret)) {
-      assert(getLangOpts().Reflection &&
-             "reflection support disabled - compile with -freflection");
+      assert(getLangOpts().Reflection);
       if (getLangOpts().Blocks) {
         OpToken.setKind(tok::caret);
         Token Caret;
