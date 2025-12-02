@@ -2153,7 +2153,7 @@ public:
   void Post(const parser::AssignedGotoStmt &);
   void Post(const parser::CompilerDirective &);
 
-  bool Pre(const parser::ArrayElement &);
+  bool Pre(const parser::SectionSubscript &);
 
   // These nodes should never be reached: they are handled in ProgramUnit
   bool Pre(const parser::MainProgram &) {
@@ -8770,12 +8770,7 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
             return ResolveStructureComponent(y.value());
           },
           [&](const Indirection<parser::ArrayElement> &y) {
-            {
-              // Turn off "in EQUIVALENCE" check for array indexing, because
-              // the indices themselves are not part of the EQUIVALENCE.
-              auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
-              Walk(y.value().subscripts);
-            }
+            Walk(y.value().subscripts);
             const parser::Name *name{ResolveDataRef(y.value().base)};
             if (name && name->symbol) {
               if (!IsProcedure(*name->symbol)) {
@@ -10224,14 +10219,11 @@ template <typename A> std::set<SourceName> GetUses(const A &x) {
   return uses;
 }
 
-bool ResolveNamesVisitor::Pre(const parser::ArrayElement &x) {
-  Walk(x.base);
-  {
-    // Turn off "in EQUIVALENCE" check for array indexing, because
-    // the indices themselves are not part of the EQUIVALENCE.
-    auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
-    Walk(x.subscripts);
-  }
+bool ResolveNamesVisitor::Pre(const parser::SectionSubscript &x) {
+  // Turn off "in EQUIVALENCE" check for array indexing, because
+  // the indices themselves are not part of the EQUIVALENCE.
+  auto restorer{common::ScopedSet(inEquivalenceStmt_, false)};
+  Walk(x.u);
   return false;
 }
 
