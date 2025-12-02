@@ -14,8 +14,9 @@ inputs:
   upload:
     description: >-
       Whether or not to upload the file and attestation to the release.  If this
-      is set to false, then the atteastion will still be generated and attached as
-      an artifact to the workflow, but won't be uploaded to the release.
+      is set to false, then the file will be uploaded to the job as an artifact,
+      but no atteastion will be generated and the artifact won't be uploaded
+      to the release.
     default: true
   user-token:
     description: >-
@@ -30,7 +31,6 @@ inputs:
       $attestation-name.jsonl.  If this is not set, it will default
       to the falue of `files`.
     required: false
-
 
 runs:
   using: "composite"
@@ -49,12 +49,14 @@ runs:
         fi
         echo "attestation-name=$name" >> $GITHUB_OUTPUT
     - name: Attest Build Provenance
+      if: inputs.upload == 'true'
       id: provenance
       uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
       with:
         subject-path: ${{ inputs.files }}
 
     - name: Rename attestation file
+      if: inputs.upload == 'true'
       shell: bash
       run: |
         mv ${{ steps.provenance.outputs.bundle-path }} ${{ steps.vars.outputs.attestation-name }}.jsonl
@@ -65,7 +67,7 @@ runs:
         name: ${{ steps.vars.outputs.attestation-name }}
         path: |
           ${{ inputs.files }}
-          ${{ steps.vars.outputs.attestation-name }}.jsonl
+          ${{(inputs.upload == 'true' && format('{0}.jsonl', steps.vars.outputs.attestation-name)) || '' }}
 
     - name: Install Python Requirements
       if: inputs.upload == 'true'
