@@ -618,6 +618,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerVECREDUCE(Op, DAG);
   case ISD::ConstantFP:
     return lowerConstantFP(Op, DAG);
+  case ISD::TRUNCATE:
+    return lowerTRUNCATE(Op, DAG);
   }
   return SDValue();
 }
@@ -673,6 +675,47 @@ static SDValue isNOT(SDValue V, SelectionDAG &DAG) {
   // not(slt(C, X)) -> slt(X - 1, C)
 
   return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerTRUNCATE(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  unsigned NumElts = VT.getVectorNumElements();
+  MVT EltVT = VT.getVectorElementType();
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  // Only need to consider v4i64->v4i32, v8i32->v8i16 and v16i16->v16i8.
+  if (VT != MVT::v4i32 && VT != MVT::v8i16 && VT != MVT::v16i8)
+    return SDValue();
+  if (SrcVT != MVT::v4i64 && SrcVT != MVT::v8i32 && SrcVT != MVT::v16i16)
+    return SDValue();
+
+  unsigned WidenNumElts = NumElts * 2;
+  SmallVector<int, 32> Mask(WidenNumElts, -1);
+  for (unsigned i = 0; i < NumElts; ++i)
+    Mask[i] = 2 * i;
+
+  // Specially handling for v4i32 using a 128-bit shuffle.
+  // FIXME: Otherwise, a worse XVPERM_W + Mask load will match early when
+  // legalizing VECTOR_SHUFFLE. Better be handled in lowerVECTOR_SHUFFLE.
+  if (VT == MVT::v4i32) {
+    SDValue OpLo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i64, Src,
+                               DAG.getVectorIdxConstant(0, DL));
+    SDValue OpHi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i64, Src,
+                               DAG.getVectorIdxConstant(2, DL));
+    static const int ShufMask[] = {0, 2, 4, 6};
+    return DAG.getVectorShuffle(VT, DL, DAG.getBitcast(VT, OpLo),
+                                DAG.getBitcast(VT, OpHi), ShufMask);
+  }
+
+  MVT NewVT = MVT::getVectorVT(EltVT, WidenNumElts);
+  SDValue CastSrc = DAG.getBitcast(NewVT, Src);
+  SDValue Result = DAG.getVectorShuffle(NewVT, DL, CastSrc, CastSrc, Mask);
+
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Result,
+                     DAG.getVectorIdxConstant(0, DL));
 }
 
 SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
