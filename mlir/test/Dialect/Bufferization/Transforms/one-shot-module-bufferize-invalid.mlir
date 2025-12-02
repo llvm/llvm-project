@@ -84,6 +84,16 @@ func.func @to_tensor_op_unsupported(%m: memref<?xf32>, %idx: index) -> (f32) {
 
 // -----
 
+// Test case: to_tensor without restrict attribute that returns a tensor
+func.func @test_to_tensor_without_restrict(%m: memref<?xf32>) -> tensor<?xf32> {
+  // to_tensor without restrict should cause an error
+  // expected-error @+1 {{to_tensor ops without `restrict` are not supported by One-Shot Analysis}}
+  %t = bufferization.to_tensor %m : memref<?xf32> to tensor<?xf32>
+  return %t : tensor<?xf32>
+}
+
+// -----
+
 func.func @yield_alloc_dominance_test_2(%cst : f32, %idx : index,
                                         %idx2 : index) -> f32 {
   %1 = bufferization.alloc_tensor(%idx) : tensor<?xf32>

@@ -710,6 +710,23 @@ func.func @to_buffer_op_unsupported(
 
 // -----
 
+// Test case: to_buffer creates a copy because it cannot be analyzed
+// CHECK-LABEL: func @test_to_buffer_copy(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32,
+func.func @test_to_buffer_copy(
+    %t: tensor<?xf32> {bufferization.writable = true}, %idx: index) -> vector<5xf32> {
+  // to_buffer cannot be analyzed, so a copy is created
+  // CHECK: %[[alloc:.*]] = memref.alloc
+  // CHECK: memref.copy %[[arg0]], %[[alloc]]
+  %m = bufferization.to_buffer %t : tensor<?xf32> to memref<?xf32>
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
+  %r = vector.transfer_read %t[%c0], %cst : tensor<?xf32>, vector<5xf32>
+  return %r : vector<5xf32>
+}
+
+// -----
+
 // Note: The cf.br canonicalizes away, so there's nothing to check here. There
 // is a detailed test in ControlFlow/bufferize.mlir.
 
