@@ -177,13 +177,7 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::check(
     }
   } else if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(MatchedExpr)) {
     // Case: a.operator[](i) or a->operator[](i)
-    const auto *Callee = dyn_cast<MemberExpr>(MCE->getCallee());
-
-    if (!Callee) {
-      diag(MatchedExpr->getCallee()->getBeginLoc(), "invalid member expression")
-          << MatchedExpr->getCallee()->getSourceRange();
-      return;
-    }
+    const auto *Callee = cast<MemberExpr>(MCE->getCallee());
 
     if (FixMode == At) {
       // Cases: a.operator[](i) => a.at(i) and a->operator[](i) => a->at(i)
