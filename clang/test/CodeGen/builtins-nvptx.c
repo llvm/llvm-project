@@ -1599,15 +1599,6 @@ __device__ void nvvm_add_sub_mul_f16_sat() {
   // CHECK: call <2 x half> @llvm.nvvm.add.rn.ftz.sat.f16x2
   __nvvm_add_rn_ftz_sat_f16x2(F16X2, F16X2_2);
 
-  // CHECK: call half @llvm.nvvm.sub.rn.sat.f16
-  __nvvm_sub_rn_sat_f16(F16, F16_2);
-  // CHECK: call half @llvm.nvvm.sub.rn.ftz.sat.f16
-  __nvvm_sub_rn_ftz_sat_f16(F16, F16_2);
-  // CHECK: call <2 x half> @llvm.nvvm.sub.rn.sat.f16x2
-  __nvvm_sub_rn_sat_f16x2(F16X2, F16X2_2);
-  // CHECK: call <2 x half> @llvm.nvvm.sub.rn.ftz.sat.f16x2
-  __nvvm_sub_rn_ftz_sat_f16x2(F16X2, F16X2_2);
-
   // CHECK: call half @llvm.nvvm.mul.rn.sat.f16
   __nvvm_mul_rn_sat_f16(F16, F16_2);
   // CHECK: call half @llvm.nvvm.mul.rn.ftz.sat.f16

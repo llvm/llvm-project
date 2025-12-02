@@ -1973,10 +1973,34 @@ let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
 // Sub
 //
 
-def INT_NVVM_SUB_RN_SAT_F16 : F_MATH_2<"sub.rn.sat.f16", B16, B16, B16, int_nvvm_sub_rn_sat_f16>;
-def INT_NVVM_SUB_RN_FTZ_SAT_F16 : F_MATH_2<"sub.rn.ftz.sat.f16", B16, B16, B16, int_nvvm_sub_rn_ftz_sat_f16>;
-def INT_NVVM_SUB_RN_SAT_F16X2 : F_MATH_2<"sub.rn.sat.f16x2", B32, B32, B32, int_nvvm_sub_rn_sat_f16x2>;
-def INT_NVVM_SUB_RN_FTZ_SAT_F16X2 : F_MATH_2<"sub.rn.ftz.sat.f16x2", B32, B32, B32, int_nvvm_sub_rn_ftz_sat_f16x2>;
+def SUB_RN_SAT_F16_NODE : SDNode<"NVPTXISD::SUB_RN_SAT_F16", SDTFPBinOp>;
+def SUB_RN_FTZ_SAT_F16_NODE : 
+  SDNode<"NVPTXISD::SUB_RN_FTZ_SAT_F16", SDTFPBinOp>;
+def SUB_RN_SAT_F16X2_NODE : 
+  SDNode<"NVPTXISD::SUB_RN_SAT_F16X2", SDTFPBinOp>;
+def SUB_RN_FTZ_SAT_F16X2_NODE : 
+  SDNode<"NVPTXISD::SUB_RN_FTZ_SAT_F16X2", SDTFPBinOp>;
+
+def INT_NVVM_SUB_RN_SAT_F16 : 
+  BasicNVPTXInst<(outs B16:$dst), (ins B16:$a, B16:$b),
+    "sub.rn.sat.f16",
+    [(set f16:$dst, (SUB_RN_SAT_F16_NODE f16:$a, f16:$b))]>;
+
+def INT_NVVM_SUB_RN_FTZ_SAT_F16 : 
+  BasicNVPTXInst<(outs B16:$dst), (ins B16:$a, B16:$b),
+    "sub.rn.ftz.sat.f16",
+    [(set f16:$dst, (SUB_RN_FTZ_SAT_F16_NODE f16:$a, f16:$b))]>;
+
+def INT_NVVM_SUB_RN_SAT_F16X2 : 
+  BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+    "sub.rn.sat.f16x2",
+    [(set v2f16:$dst, (SUB_RN_SAT_F16X2_NODE v2f16:$a, v2f16:$b))]>;
+
+def INT_NVVM_SUB_RN_FTZ_SAT_F16X2 : 
+  BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+    "sub.rn.ftz.sat.f16x2",
+    [(set v2f16:$dst, (SUB_RN_FTZ_SAT_F16X2_NODE v2f16:$a, v2f16:$b))]>;
+
 
 //
 // Mul

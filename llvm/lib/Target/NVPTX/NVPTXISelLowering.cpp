@@ -867,15 +867,29 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
 
   // We have some custom DAG combine patterns for these nodes
-  setTargetDAGCombine(
-      {ISD::ADD,         ISD::AND,          ISD::EXTRACT_VECTOR_ELT,
-       ISD::FADD,        ISD::FMAXNUM,      ISD::FMINNUM,
-       ISD::FMAXIMUM,    ISD::FMINIMUM,     ISD::FMAXIMUMNUM,
-       ISD::FMINIMUMNUM, ISD::MUL,          ISD::SELECT,
-       ISD::SHL,         ISD::SREM,         ISD::UREM,
-       ISD::VSELECT,     ISD::BUILD_VECTOR, ISD::ADDRSPACECAST,
-       ISD::LOAD,        ISD::STORE,        ISD::ZERO_EXTEND,
-       ISD::SIGN_EXTEND});
+  setTargetDAGCombine({ISD::ADD,
+                       ISD::AND,
+                       ISD::EXTRACT_VECTOR_ELT,
+                       ISD::FADD,
+                       ISD::FMAXNUM,
+                       ISD::FMINNUM,
+                       ISD::FMAXIMUM,
+                       ISD::FMINIMUM,
+                       ISD::FMAXIMUMNUM,
+                       ISD::FMINIMUMNUM,
+                       ISD::MUL,
+                       ISD::SELECT,
+                       ISD::SHL,
+                       ISD::SREM,
+                       ISD::UREM,
+                       ISD::VSELECT,
+                       ISD::BUILD_VECTOR,
+                       ISD::ADDRSPACECAST,
+                       ISD::LOAD,
+                       ISD::STORE,
+                       ISD::ZERO_EXTEND,
+                       ISD::SIGN_EXTEND,
+                       ISD::INTRINSIC_WO_CHAIN});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -6836,6 +6850,38 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
   }
 }
 
+// Combine add.sat(a, fneg(b)) -> sub.sat(a, b)
+static SDValue combineAddSatWithNeg(SDNode *N, SelectionDAG &DAG,
+                                    unsigned SubOpc) {
+  SDValue Op2 = N->getOperand(2);
+
+  if (Op2.getOpcode() != ISD::FNEG)
+    return SDValue();
+
+  SDLoc DL(N);
+  return DAG.getNode(SubOpc, DL, N->getValueType(0), N->getOperand(1),
+                     Op2.getOperand(0));
+}
+
+static SDValue combineIntrinsicWOChain(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI,
+                                       const NVPTXSubtarget &STI) {
+  unsigned IntID = N->getConstantOperandVal(0);
+
+  switch (IntID) {
+  case Intrinsic::nvvm_add_rn_sat_f16:
+    return combineAddSatWithNeg(N, DCI.DAG, NVPTXISD::SUB_RN_SAT_F16);
+  case Intrinsic::nvvm_add_rn_ftz_sat_f16:
+    return combineAddSatWithNeg(N, DCI.DAG, NVPTXISD::SUB_RN_FTZ_SAT_F16);
+  case Intrinsic::nvvm_add_rn_sat_f16x2:
+    return combineAddSatWithNeg(N, DCI.DAG, NVPTXISD::SUB_RN_SAT_F16X2);
+  case Intrinsic::nvvm_add_rn_ftz_sat_f16x2:
+    return combineAddSatWithNeg(N, DCI.DAG, NVPTXISD::SUB_RN_FTZ_SAT_F16X2);
+  default:
+    return SDValue();
+  }
+}
+
 static SDValue combineProxyReg(SDNode *N,
                                TargetLowering::DAGCombinerInfo &DCI) {
 
@@ -6904,6 +6950,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformSELECTShiftCombine(N, DCI);
   case ISD::VSELECT:
     return PerformVSELECTCombine(N, DCI);
+  case ISD::INTRINSIC_WO_CHAIN:
+    return combineIntrinsicWOChain(N, DCI, STI);
   }
   return SDValue();
 }

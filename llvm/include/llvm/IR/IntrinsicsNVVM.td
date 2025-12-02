@@ -1619,17 +1619,6 @@ let TargetPrefix = "nvvm" in {
           DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
     } // rnd
   }
-  
-  //
-  // Sub
-  //
-  foreach ftz = ["", "_ftz"] in {
-    def int_nvvm_sub_rn # ftz # _sat_f16 : NVVMBuiltin,
-      PureIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
-
-    def int_nvvm_sub_rn # ftz # _sat_f16x2 : NVVMBuiltin,
-      PureIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
-  } // ftz
 
   //
   // Mul
