@@ -242,6 +242,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64AdvSIMDScalarPass(PR);
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsPass(PR);
+  initializeAArch64BranchSplitPass(PR);
   initializeAArch64CollectLOHPass(PR);
   initializeAArch64CompressJumpTablesPass(PR);
   initializeAArch64ConditionalComparesPass(PR);
@@ -780,6 +781,8 @@ bool AArch64PassConfig::addILPOpts() {
     addPass(createAArch64ConditionOptimizerPass());
   if (EnableCCMP)
     addPass(createAArch64ConditionalCompares());
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAArch64BranchSplitPass());
   if (EnableMCR)
     addPass(&MachineCombinerID);
   if (EnableCondBrTuning)

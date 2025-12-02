@@ -54,6 +54,7 @@ FunctionPass *createFalkorHWPFFixPass();
 FunctionPass *createFalkorMarkStridedAccessesPass();
 FunctionPass *createAArch64PointerAuthPass();
 FunctionPass *createAArch64BranchTargetsPass();
+FunctionPass *createAArch64BranchSplitPass();
 FunctionPass *createAArch64MIPeepholeOptPass();
 FunctionPass *createAArch64PostCoalescerPass();
 
@@ -83,6 +84,7 @@ void initializeAArch64AdvSIMDScalarPass(PassRegistry&);
 void initializeAArch64AsmPrinterPass(PassRegistry &);
 void initializeAArch64PointerAuthPass(PassRegistry&);
 void initializeAArch64BranchTargetsPass(PassRegistry&);
+void initializeAArch64BranchSplitPass(PassRegistry&);
 void initializeAArch64CFIFixupPass(PassRegistry&);
 void initializeAArch64CollectLOHPass(PassRegistry &);
 void initializeAArch64CompressJumpTablesPass(PassRegistry&);
