@@ -12,7 +12,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/Support/Signals.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
