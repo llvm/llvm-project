@@ -35,10 +35,10 @@ public:
 private:
   const std::vector<CheckedFunction> CustomPrintfFunctions;
   const std::vector<CheckedFunction> CustomScanfFunctions;
-  const StringLiteral *
+  static const StringLiteral *
   getFormatLiteral(const CallExpr *,
                    const std::vector<CheckedFunction> &CustomFunctions);
-  bool hasUnboundedStringSpecifier(StringRef Fmt, bool IsScanfFamily);  
+  static bool hasUnboundedStringSpecifier(StringRef Fmt, bool IsScanfFamily);
 };
 
 } // namespace clang::tidy::bugprone

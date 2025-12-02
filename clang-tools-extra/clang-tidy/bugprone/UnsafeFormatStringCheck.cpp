@@ -143,11 +143,13 @@ void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
     IsScanfFamily = FunctionName.contains("scanf");
   } else if (Result.Nodes.getNodeAs<CallExpr>(PrintfCallBind)) {
     Call = Result.Nodes.getNodeAs<CallExpr>(PrintfCallBind);
-    Format = getFormatLiteral(Call, CustomPrintfFunctions);
+    Format =
+        UnsafeFormatStringCheck::getFormatLiteral(Call, CustomPrintfFunctions);
     IsScanfFamily = false;
   } else if (Result.Nodes.getNodeAs<CallExpr>(ScanfCallBind)) {
     Call = Result.Nodes.getNodeAs<CallExpr>(ScanfCallBind);
-    Format = getFormatLiteral(Call, CustomScanfFunctions);
+    Format =
+        UnsafeFormatStringCheck::getFormatLiteral(Call, CustomScanfFunctions);
     IsScanfFamily = true;
   } else {
     Call = nullptr;
@@ -168,7 +170,8 @@ void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
     convertUTF32ToUTF8String(Format->getBytes(), FormatString);
   }
 
-  if (!hasUnboundedStringSpecifier(FormatString, IsScanfFamily))
+  if (!UnsafeFormatStringCheck::hasUnboundedStringSpecifier(FormatString,
+                                                            IsScanfFamily))
     return;
 
   diag(Call->getBeginLoc(),
