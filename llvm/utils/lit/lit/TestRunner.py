@@ -21,7 +21,6 @@ from lit.ShCommands import GlobItem, Command
 import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
-from lit.util import to_bytes, to_string, to_unicode
 from lit.BooleanExpression import BooleanExpression
 
 
@@ -391,18 +390,14 @@ def executeBuiltinEcho(cmd, shenv):
     # Some tests have un-redirected echo commands to help debug test failures.
     # Buffer our output and return it to the caller.
     is_redirected = True
-    encode = lambda x: x
     if stdout == subprocess.PIPE:
         is_redirected = False
         stdout = StringIO()
     elif kIsWindows:
-        # Reopen stdout in binary mode to avoid CRLF translation. The versions
-        # of echo we are replacing on Windows all emit plain LF, and the LLVM
-        # tests now depend on this.
-        # When we open as binary, however, this also means that we have to write
-        # 'bytes' objects to stdout instead of 'str' objects.
-        encode = lit.util.to_bytes
-        stdout = open(stdout.name, stdout.mode + "b")
+        # Reopen stdout with `newline=""` to avoid CRLF translation.
+        # The versions of echo we are replacing on Windows all emit plain LF,
+        # and the LLVM tests now depend on this.
+        stdout = open(stdout.name, stdout.mode, encoding="utf-8", newline="")
         opened_files.append((None, None, stdout, None))
 
     # Implement echo flags. We only support -e and -n, and not yet in
@@ -423,16 +418,15 @@ def executeBuiltinEcho(cmd, shenv):
         if not interpret_escapes:
             return arg
 
-        arg = lit.util.to_bytes(arg)
-        return arg.decode("unicode_escape")
+        return arg.encode("utf-8").decode("unicode_escape")
 
     if args:
         for arg in args[:-1]:
-            stdout.write(encode(maybeUnescape(arg)))
-            stdout.write(encode(" "))
-        stdout.write(encode(maybeUnescape(args[-1])))
+            stdout.write(maybeUnescape(arg))
+            stdout.write(" ")
+        stdout.write(maybeUnescape(args[-1]))
     if write_newline:
-        stdout.write(encode("\n"))
+        stdout.write("\n")
 
     for (name, mode, f, path) in opened_files:
         f.close()
@@ -463,7 +457,7 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
     exitCode = 0
     for dir in args:
         dir = pathlib.Path(dir)
-        cwd = pathlib.Path(to_unicode(cmd_shenv.cwd))
+        cwd = pathlib.Path(cmd_shenv.cwd)
         if not dir.is_absolute():
             dir = lit.util.abs_path_preserve_drive(cwd / dir)
         if parent:
@@ -508,8 +502,6 @@ def executeBuiltinRm(cmd, cmd_shenv):
     exitCode = 0
     for path in args:
         cwd = cmd_shenv.cwd
-        path = to_unicode(path) if kIsWindows else to_bytes(path)
-        cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(path):
             path = lit.util.abs_path_preserve_drive(os.path.join(cwd, path))
         if force and not os.path.exists(path):
@@ -718,10 +710,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
         else:
             # Make sure relative paths are relative to the cwd.
             redir_filename = os.path.join(cmd_shenv.cwd, name)
-            redir_filename = (
-                to_unicode(redir_filename) if kIsWindows else to_bytes(redir_filename)
-            )
-            fd = open(redir_filename, mode)
+            fd = open(redir_filename, mode, encoding="utf-8")
         # Workaround a Win32 and/or subprocess bug when appending.
         #
         # FIXME: Actually, this is probably an instance of PR6753.
@@ -1083,14 +1072,14 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             if out is None:
                 out = ""
             else:
-                out = to_string(out.decode("utf-8", errors="replace"))
+                out = out.decode("utf-8", errors="replace")
         except:
             out = str(out)
         try:
             if err is None:
                 err = ""
             else:
-                err = to_string(err.decode("utf-8", errors="replace"))
+                err = err.decode("utf-8", errors="replace")
         except:
             err = str(err)
 
@@ -1284,7 +1273,7 @@ def executeScriptInternal(
 
         # Add the command output, if redirected.
         for (name, path, data) in result.outputFiles:
-            data = to_string(data.decode("utf-8", errors="replace"))
+            data = data.decode("utf-8", errors="replace")
             out += formatOutput(f"redirected output from '{name}'", data, limit=1024)
         if result.stdout.strip():
             out += formatOutput("command stdout", result.stdout)
@@ -1340,13 +1329,6 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
         script += ".bat"
 
     # Write script file
-    mode = "w"
-    open_kwargs = {}
-    if litConfig.isWindows and not isWin32CMDEXE:
-        mode += "b"  # Avoid CRLFs when writing bash scripts.
-    else:
-        open_kwargs["encoding"] = "utf-8"
-    f = open(script, mode, **open_kwargs)
     if isWin32CMDEXE:
         for i, ln in enumerate(commands):
             match = re.fullmatch(kPdbgRegex, ln)
@@ -1355,8 +1337,9 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 commands[i] = match.expand(
                     "echo '\\1' > nul && " if command else "echo '\\1' > nul"
                 )
-        f.write("@echo on\n")
-        f.write("\n@if %ERRORLEVEL% NEQ 0 EXIT\n".join(commands))
+        with open(script, "w", encoding="utf-8") as f:
+            f.write("@echo on\n")
+            f.write("\n@if %ERRORLEVEL% NEQ 0 EXIT\n".join(commands))
     else:
         for i, ln in enumerate(commands):
             match = re.fullmatch(kPdbgRegex, ln)
@@ -1395,8 +1378,6 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 # seen the latter manage to terminate the shell running lit.
                 if command:
                     commands[i] += f" && {{ {command}; }}"
-        if test.config.pipefail:
-            f.write(b"set -o pipefail;" if mode == "wb" else "set -o pipefail;")
 
         # Manually export any DYLD_* variables used by dyld on macOS because
         # otherwise they are lost when the shell executable is run, before the
@@ -1406,14 +1387,14 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
             for k, v in test.config.environment.items()
             if k.startswith("DYLD_")
         )
-        f.write(bytes(env_str, "utf-8") if mode == "wb" else env_str)
-        f.write(b"set -x;" if mode == "wb" else "set -x;")
-        if mode == "wb":
-            f.write(bytes("{ " + "; } &&\n{ ".join(commands) + "; }", "utf-8"))
-        else:
+
+        with open(script, "w", encoding="utf-8", newline="") as f:
+            if test.config.pipefail:
+                f.write("set -o pipefail;")
+            f.write(env_str)
+            f.write("set -x;")
             f.write("{ " + "; } &&\n{ ".join(commands) + "; }")
-    f.write(b"\n" if mode == "wb" else "\n")
-    f.close()
+            f.write("\n")
 
     if isWin32CMDEXE:
         command = ["cmd", "/c", script]
@@ -1449,19 +1430,11 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
     (line_number, command_type, line).
     """
 
-    # This code is carefully written to be dual compatible with Python 2.5+ and
-    # Python 3 without requiring input files to always have valid codings. The
-    # trick we use is to open the file in binary mode and use the regular
-    # expression library to find the commands, with it scanning strings in
-    # Python2 and bytes in Python3.
-    #
-    # Once we find a match, we do require each script line to be decodable to
-    # UTF-8, so we convert the outputs to UTF-8 before returning. This way the
-    # remaining code can work with "strings" agnostic of the executing Python
-    # version.
+    # We use `bytes` for scanning input files to avoid requiring them to always
+    # have valid codings.
 
     keywords_re = re.compile(
-        to_bytes("(%s)(.*)\n" % ("|".join(re.escape(k) for k in keywords),))
+        b"(%s)(.*)\n" % (b"|".join(re.escape(k.encode("utf-8")) for k in keywords),)
     )
 
     f = open(source_path, "rb")
@@ -1470,8 +1443,8 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
         data = f.read()
 
         # Ensure the data ends with a newline.
-        if not data.endswith(to_bytes("\n")):
-            data = data + to_bytes("\n")
+        if not data.endswith(b"\n"):
+            data = data + b"\n"
 
         # Iterate over the matches.
         line_number = 1
@@ -1480,15 +1453,11 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
             # Compute the updated line number by counting the intervening
             # newlines.
             match_position = match.start()
-            line_number += data.count(
-                to_bytes("\n"), last_match_position, match_position
-            )
+            line_number += data.count(b"\n", last_match_position, match_position)
             last_match_position = match_position
 
             # Convert the keyword and line to UTF-8 strings and yield the
-            # command. Note that we take care to return regular strings in
-            # Python 2, to avoid other code having to differentiate between the
-            # str and unicode types.
+            # command.
             #
             # Opening the file in binary mode prevented Windows \r newline
             # characters from being converted to Unix \n newlines, so manually
@@ -1496,8 +1465,8 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
             keyword, ln = match.groups()
             yield (
                 line_number,
-                to_string(keyword.decode("utf-8")),
-                to_string(ln.decode("utf-8").rstrip("\r")),
+                keyword.decode("utf-8"),
+                ln.decode("utf-8").rstrip("\r"),
             )
     finally:
         f.close()
