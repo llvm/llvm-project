@@ -7,16 +7,61 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnsafeFormatStringCheck.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/Support/ConvertUTF.h"
+#include <string>
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+static constexpr llvm::StringLiteral OptionNameCustomPrintfFunctions =
+    "CustomPrintfFunctions";
+static constexpr llvm::StringLiteral OptionNameCustomScanfFunctions =
+    "CustomScanfFunctions";
+
+static constexpr llvm::StringLiteral BuiltInFormatBind = "format";
+static constexpr llvm::StringLiteral BuiltInCallBind = "call";
+static constexpr llvm::StringLiteral PrintfCallBind = "printfcall";
+static constexpr llvm::StringLiteral ScanfCallBind = "scanfcall";
+
+static std::vector<UnsafeFormatStringCheck::CheckedFunction>
+parseCheckedFunctions(StringRef Option, ClangTidyContext *Context) {
+  const std::vector<StringRef> Functions =
+      utils::options::parseStringList(Option);
+  std::vector<UnsafeFormatStringCheck::CheckedFunction> Result;
+  Result.reserve(Functions.size());
+
+  for (const StringRef Function : Functions) {
+    if (Function.empty())
+      continue;
+    const auto [Name, ParamCount] = Function.split(',');
+    unsigned long Count = 0;
+    if (Name.trim().empty() || ParamCount.trim().empty() ||
+        ParamCount.trim().getAsInteger(10, Count)) {
+      Context->configurationDiag(
+          "invalid configuration value for option '%0'; "
+          "expected <functionname>, <paramcount>; pairs.")
+          << OptionNameCustomPrintfFunctions;
+      continue;
+    }
+    Result.push_back(
+        {Name.trim().str(),
+         matchers::MatchesAnyListedNameMatcher::NameMatcher(Name.trim()),
+         Count});
+  }
+
+  return Result;
+}
+
 UnsafeFormatStringCheck::UnsafeFormatStringCheck(StringRef Name,
                                                  ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {}
+    : ClangTidyCheck(Name, Context),
+      CustomPrintfFunctions(parseCheckedFunctions(
+          Options.get(OptionNameCustomPrintfFunctions, ""), Context)),
+      CustomScanfFunctions(parseCheckedFunctions(
+          Options.get(OptionNameCustomScanfFunctions, ""), Context)) {}
 
 void UnsafeFormatStringCheck::registerMatchers(MatchFinder *Finder) {
   // Matches sprintf and scanf family functions in std namespace in C++ and
@@ -30,17 +75,87 @@ void UnsafeFormatStringCheck::registerMatchers(MatchFinder *Finder) {
           callee(functionDecl(VulnerableFunctions,
                               anyOf(isInStdNamespace(),
                                     hasDeclContext(translationUnitDecl())))),
-          anyOf(hasArgument(0, stringLiteral().bind("format")),
-                hasArgument(1, stringLiteral().bind("format"))))
-          .bind("call"),
+          anyOf(hasArgument(0, stringLiteral().bind(BuiltInFormatBind)),
+                hasArgument(1, stringLiteral().bind(BuiltInFormatBind))))
+          .bind(BuiltInCallBind),
       this);
+
+  if (!CustomPrintfFunctions.empty()) {
+    std::vector<llvm::StringRef> FunctionNames;
+    FunctionNames.reserve(CustomPrintfFunctions.size());
+
+    for (const auto &Entry : CustomPrintfFunctions)
+      FunctionNames.emplace_back(Entry.Name);
+
+    auto CustomFunctionsMatcher = matchers::matchesAnyListedName(FunctionNames);
+
+    Finder->addMatcher(callExpr(callee((functionDecl(CustomFunctionsMatcher))))
+                           .bind(PrintfCallBind),
+                       this);
+  }
+
+  if (!CustomScanfFunctions.empty()) {
+    std::vector<llvm::StringRef> FunctionNames;
+    FunctionNames.reserve(CustomScanfFunctions.size());
+
+    for (const auto &Entry : CustomScanfFunctions)
+      FunctionNames.emplace_back(Entry.Name);
+
+    auto CustomFunctionsMatcher = matchers::matchesAnyListedName(FunctionNames);
+
+    Finder->addMatcher(callExpr(callee((functionDecl(CustomFunctionsMatcher))))
+                           .bind(ScanfCallBind),
+                       this);
+  }
+}
+
+void UnsafeFormatStringCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, OptionNameCustomPrintfFunctions, "");
+  Options.store(Opts, OptionNameCustomScanfFunctions, "");
+}
+
+const StringLiteral *UnsafeFormatStringCheck::getFormatLiteral(
+    const CallExpr *Call, const std::vector<CheckedFunction> &CustomFunctions) {
+  const FunctionDecl *FD = cast<FunctionDecl>(Call->getDirectCallee());
+  if (!FD)
+    return nullptr;
+  for (const auto &Entry : CustomFunctions) {
+    if (Entry.Pattern.match(*FD)) {
+      if (Entry.FormatStringLocation >= Call->getNumArgs())
+        return nullptr;
+      const Expr *Arg =
+          Call->getArg(Entry.FormatStringLocation)->IgnoreImpCasts();
+      return dyn_cast<StringLiteral>(Arg);
+    }
+  }
+  return nullptr;
 }
 
 void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
-  const auto *Format = Result.Nodes.getNodeAs<StringLiteral>("format");
+  const CallExpr *Call;
+  const StringLiteral *Format;
+  bool IsScanfFamily = false;
+  if (Result.Nodes.getNodeAs<CallExpr>(BuiltInCallBind)) {
+    Call = Result.Nodes.getNodeAs<CallExpr>(BuiltInCallBind);
+    Format = Result.Nodes.getNodeAs<StringLiteral>(BuiltInFormatBind);
+    const auto *Callee = cast<FunctionDecl>(Call->getCalleeDecl());
+    const StringRef FunctionName = Callee->getName();
+    IsScanfFamily = FunctionName.contains("scanf");
+  } else if (Result.Nodes.getNodeAs<CallExpr>(PrintfCallBind)) {
+    Call = Result.Nodes.getNodeAs<CallExpr>(PrintfCallBind);
+    Format = getFormatLiteral(Call, CustomPrintfFunctions);
+    IsScanfFamily = false;
+  } else if (Result.Nodes.getNodeAs<CallExpr>(ScanfCallBind)) {
+    Call = Result.Nodes.getNodeAs<CallExpr>(ScanfCallBind);
+    Format = getFormatLiteral(Call, CustomScanfFunctions);
+    IsScanfFamily = true;
+  } else {
+    Call = nullptr;
+    Format = nullptr;
+  }
 
-  assert(Call && Format);
+  if (!Call || !Format)
+    return;
 
   std::string FormatString;
   if (Format->getCharByteWidth() == 1) {
@@ -52,11 +167,6 @@ void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
     // Handle wide strings by converting to narrow string for analysis
     convertUTF32ToUTF8String(Format->getBytes(), FormatString);
   }
-
-  const auto *Callee = cast<FunctionDecl>(Call->getCalleeDecl());
-  const StringRef FunctionName = Callee->getName();
-
-  const bool IsScanfFamily = FunctionName.contains("scanf");
 
   if (!hasUnboundedStringSpecifier(FormatString, IsScanfFamily))
     return;
@@ -73,7 +183,7 @@ void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
 bool UnsafeFormatStringCheck::hasUnboundedStringSpecifier(StringRef Fmt,
                                                           bool IsScanfFamily) {
   size_t Pos = 0;
-  size_t N = Fmt.size();
+  const size_t N = Fmt.size();
   while ((Pos = Fmt.find('%', Pos)) != StringRef::npos) {
     if (Pos + 1 >= N)
       break;

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNSAFEFORMATSTRINGCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "../utils/Matchers.h"
 
 namespace clang::tidy::bugprone {
 
@@ -21,10 +22,22 @@ namespace clang::tidy::bugprone {
 class UnsafeFormatStringCheck : public ClangTidyCheck {
 public:
   UnsafeFormatStringCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
+  struct CheckedFunction {
+    std::string Name;
+    matchers::MatchesAnyListedNameMatcher::NameMatcher Pattern;
+    unsigned long FormatStringLocation;
+  };
+
 private:
+  const std::vector<CheckedFunction> CustomPrintfFunctions;
+  const std::vector<CheckedFunction> CustomScanfFunctions;
+  const StringLiteral *
+  getFormatLiteral(const CallExpr *,
+                   const std::vector<CheckedFunction> &CustomFunctions);
   bool hasUnboundedStringSpecifier(StringRef Fmt, bool IsScanfFamily);
   std::string getSafeAlternative(StringRef FunctionName);
 };

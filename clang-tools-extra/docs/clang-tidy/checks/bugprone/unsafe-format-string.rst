@@ -51,6 +51,7 @@ Examples
   // Safe alternative: use safer functions
   snprintf(buffer, sizeof(buffer), "%s", input);
 
+
 Checked Functions
 -----------------
 
@@ -64,6 +65,43 @@ The check detects unsafe format strings in these functions:
 * ``vscanf``, ``vfscanf``, ``vsscanf``
 * ``wscanf``, ``fwscanf``, ``swscanf``
 * ``vwscanf``, ``vfwscanf``, ``vswscanf``
+
+Configuration
+-------------
+
+The checker offers 2 configuration options.
+
+* `CustomPrintfFunctions` The user can specify own printf-like functions with dangerous format string parameter.
+* `CustomScanfFunctions` The user can specify own scanf-like functions with dangerous format string parameter.
+
+Format:
+Both options have the following format.
+.. code::
+  
+   bugprone-unsafe-functions.CustomPrintfFunctions="
+     functionRegex1, format-string-position;
+     functionRegex2, format-string-position;
+     ...
+   "
+
+The first parameter in the pairs is a function regular expression matching the function name, 
+the second parameter is the count of the format string literal argument.
+
+The following configuration will give warning:
+
+.. code::
+  
+  bugprone-unsafe-format-string.CustomPrintfFunctions: 'mysprintf, 0;'
+  bugprone-unsafe-format-string.CustomScanfFunctions: 'myscanf, 1;'
+
+  extern int myscanf( const char* format, ... );
+  extern int mysprintf( char* buffer, const char* format, ... );
+  void test() {
+    char buffer[100];
+    const char* input = "user input";    
+    mysprintf(buffer, "%s", input); // warning 
+    myscanf("%s", buffer); //warning
+  }
 
 Recommendations
 ---------------
