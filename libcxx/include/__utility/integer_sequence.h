@@ -42,6 +42,9 @@ using __index_sequence _LIBCPP_NODEBUG = __integer_sequence<size_t, _Indices...>
 template <size_t _SequenceSize>
 using __make_index_sequence _LIBCPP_NODEBUG = __make_integer_sequence_impl<__integer_sequence, size_t, _SequenceSize>;
 
+template <class... _Args>
+using __index_sequence_for _LIBCPP_NODEBUG = __make_index_sequence<sizeof...(_Args)>;
+
 #  if _LIBCPP_STD_VER >= 14
 
 template <class _Tp, _Tp... _Indices>
