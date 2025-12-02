@@ -8,8 +8,11 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +sse2 -fno-signed-char -fclangir -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=OGCG
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=OGCG
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=OGCG
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=OGCG
+
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=OGCG
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse2 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=OGCG
 
 // This test mimics clang/test/CodeGen/X86/sse2-builtins.c, which eventually
 // CIR shall be able to support fully.
@@ -107,4 +110,52 @@ void test_mm_pause(void) {
   // CIR: {{%.*}} = cir.call_llvm_intrinsic "x86.sse2.pause" : () -> !void
   // LLVM: call void @llvm.x86.sse2.pause()
   // OGCG: call void @llvm.x86.sse2.pause()
+}
+
+__m128i test_mm_shufflelo_epi16(__m128i A) {
+  // CIR-LABEL: _mm_shufflelo_epi16
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>) [#cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i] : !cir.vector<8 x !s16i>
+
+  // LLVM-LABEL: test_mm_shufflelo_epi16
+  // LLVM: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7>
+
+  // OGCG-LABEL: test_mm_shufflelo_epi16
+  // OGCG: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7>
+  return _mm_shufflelo_epi16(A, 0);
+}
+
+__m128i test_mm_shufflehi_epi16(__m128i A) {
+  // CIR-LABEL: _mm_shufflehi_epi16
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<4> : !s32i, #cir.int<4> : !s32i, #cir.int<4> : !s32i] : !cir.vector<8 x !s16i>
+
+  // LLVM-LABEL: test_mm_shufflehi_epi16
+  // LLVM: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4>
+
+  // OGCG-LABEL: test_mm_shufflehi_epi16
+  // OGCG: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4>
+  return _mm_shufflehi_epi16(A, 0);
+}
+
+__m128d test_mm_shuffle_pd(__m128d A, __m128d B) {
+  // CIR-LABEL: test_mm_shuffle_pd
+  // CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<2 x !cir.double>) [#cir.int<1> : !s32i, #cir.int<2> : !s32i] : !cir.vector<2 x !cir.double>
+
+  // LLVM-LABEL: test_mm_shuffle_pd
+  // LLVM: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x i32> <i32 1, i32 2>
+
+  // OGCG-LABEL: test_mm_shuffle_pd
+  // OGCG: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x i32> <i32 1, i32 2>
+  return _mm_shuffle_pd(A, B, 1);
+}
+
+__m128i test_mm_shuffle_epi32(__m128i A) {
+	// CIR-LABEL: test_mm_shuffle_epi32
+	// CIR: %{{.*}} = cir.vec.shuffle(%{{.*}}, %{{.*}}: !cir.vector<4 x !s32i>) [#cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<4 x !s32i>
+
+    // LLVM-LABEL: test_mm_shuffle_epi32
+	// LLVM: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+
+	// OGCG-LABEL: test_mm_shuffle_epi32
+    // OGCG: shufflevector <4 x i32> %{{.*}}, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
+    return _mm_shuffle_epi32(A, 0x4E);
 }
