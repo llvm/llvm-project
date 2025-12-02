@@ -591,7 +591,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
   if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
     // If the attribute is an unsigned integer or a 1-bit integer, zero-extend
     // the value to the bit width of the LLVM type. Otherwise, sign-extend.
-    auto intTy = mlir::dyn_cast<IntegerType>(intAttr.getType());
+    auto intTy = dyn_cast<IntegerType>(intAttr.getType());
     APInt value;
     if (intTy && (intTy.isUnsigned() || intTy.getWidth() == 1))
       value = intAttr.getValue().zextOrTrunc(llvmType->getIntegerBitWidth());
