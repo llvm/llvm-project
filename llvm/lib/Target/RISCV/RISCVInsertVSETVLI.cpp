@@ -861,7 +861,7 @@ public:
   /// Implement operator<<.
   /// @{
   void print(raw_ostream &OS) const {
-    OS << "{";
+    OS << '{';
     switch (State) {
     case AVLState::Uninitialized:
       OS << "Uninitialized";
@@ -879,24 +879,26 @@ public:
       OS << "AVLVLMAX";
       break;
     }
-    OS << ", ";
+    if (isValid() && !isUnknown()) {
+      OS << ", ";
 
-    unsigned LMul;
-    bool Fractional;
-    std::tie(LMul, Fractional) = decodeVLMUL(VLMul);
+      unsigned LMul;
+      bool Fractional;
+      std::tie(LMul, Fractional) = decodeVLMUL(VLMul);
 
-    OS << "VLMul=";
-    if (Fractional)
-      OS << "mf";
-    else
-      OS << "m";
-    OS << LMul << ", "
-       << "SEW=e" << (unsigned)SEW << ", "
-       << "TailAgnostic=" << (bool)TailAgnostic << ", "
-       << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
-       << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << ", "
-       << "TWiden=" << (unsigned)TWiden << ", "
-       << "AltFmt=" << (bool)AltFmt << "}";
+      OS << "VLMul=m";
+      if (Fractional)
+        OS << 'f';
+      OS << LMul << ", "
+         << "SEW=e" << (unsigned)SEW << ", "
+         << "TailAgnostic=" << (bool)TailAgnostic << ", "
+         << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
+         << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << ", "
+         << "TWiden=" << (unsigned)TWiden << ", "
+         << "AltFmt=" << (bool)AltFmt;
+    }
+
+    OS << '}';
   }
 #endif
 };

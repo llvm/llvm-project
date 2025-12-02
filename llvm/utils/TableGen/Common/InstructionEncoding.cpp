@@ -35,9 +35,6 @@ InstructionEncoding::findOperandDecoderMethod(const Record *Record) {
     Decoder = "Decode" + Record->getName().str() + "RegisterClass";
   } else if (Record->isSubClassOf("RegClassByHwMode")) {
     Decoder = "Decode" + Record->getName().str() + "RegClassByHwMode";
-  } else if (Record->isSubClassOf("PointerLikeRegClass")) {
-    Decoder = "DecodePointerLikeRegClass" +
-              utostr(Record->getValueAsInt("RegClassKind"));
   }
 
   return {Decoder, true};

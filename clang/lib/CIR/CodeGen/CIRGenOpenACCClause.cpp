@@ -61,9 +61,6 @@ class OpenACCClauseCIREmitter final
   // This is necessary since a few of the clauses emit differently based on the
   // directive kind they are attached to.
   OpenACCDirectiveKind dirKind;
-  // TODO(cir): This source location should be able to go away once the NYI
-  // diagnostics are gone.
-  SourceLocation dirLoc;
 
   llvm::SmallVector<mlir::acc::DeviceType> lastDeviceTypeValues;
   // Keep track of the async-clause so that we can shortcut updating the data
@@ -71,10 +68,6 @@ class OpenACCClauseCIREmitter final
   bool hasAsyncClause = false;
   // Keep track of the data operands so that we can update their async clauses.
   llvm::SmallVector<mlir::Operation *> dataOperands;
-
-  void clauseNotImplemented(const OpenACCClause &c) {
-    cgf.cgm.errorNYI(c.getSourceRange(), "OpenACC Clause", c.getClauseKind());
-  }
 
   void setLastDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
     lastDeviceTypeValues.clear();
@@ -150,7 +143,7 @@ class OpenACCClauseCIREmitter final
     mlir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPoint(operation.loopOp);
     OpenACCClauseCIREmitter<mlir::acc::LoopOp> loopEmitter{
-        operation.loopOp, recipeInsertLocation, cgf, builder, dirKind, dirLoc};
+        operation.loopOp, recipeInsertLocation, cgf, builder, dirKind};
     loopEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
     loopEmitter.Visit(&c);
   }
@@ -161,12 +154,7 @@ class OpenACCClauseCIREmitter final
     mlir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPoint(operation.computeOp);
     OpenACCClauseCIREmitter<typename OpTy::ComputeOpTy> computeEmitter{
-        operation.computeOp,
-        recipeInsertLocation,
-        cgf,
-        builder,
-        dirKind,
-        dirLoc};
+        operation.computeOp, recipeInsertLocation, cgf, builder, dirKind};
 
     computeEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
 
@@ -342,12 +330,12 @@ public:
                           mlir::OpBuilder::InsertPoint &recipeInsertLocation,
                           CIRGen::CIRGenFunction &cgf,
                           CIRGen::CIRGenBuilderTy &builder,
-                          OpenACCDirectiveKind dirKind, SourceLocation dirLoc)
+                          OpenACCDirectiveKind dirKind)
       : operation(operation), recipeInsertLocation(recipeInsertLocation),
-        cgf(cgf), builder(builder), dirKind(dirKind), dirLoc(dirLoc) {}
+        cgf(cgf), builder(builder), dirKind(dirKind) {}
 
   void VisitClause(const OpenACCClause &clause) {
-    clauseNotImplemented(clause);
+    llvm_unreachable("Unknown/unhandled clause kind");
   }
 
   // The entry point for the CIR emitter. All users should use this rather than
@@ -406,9 +394,7 @@ public:
       // Nothing to do here either, combined constructs are just going to use
       // 'lastDeviceTypeValues' to set the value for the child visitor.
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. routine construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitDeviceTypeClause");
     }
   }
 
@@ -472,9 +458,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain. update construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitAsyncClause");
     }
   }
 
@@ -601,7 +585,7 @@ public:
     } else {
       // TODO: When we've implemented this for everything, switch this to an
       // unreachable. update construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitWaitClause");
     }
   }
 
@@ -620,9 +604,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitSeqClause");
     }
   }
 
@@ -632,9 +614,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine, construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitAutoClause");
     }
   }
 
@@ -644,9 +624,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitIndependentClause");
     }
   }
 
@@ -706,9 +684,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitWorkerClause");
     }
   }
 
@@ -724,9 +700,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitVectorClause");
     }
   }
 
@@ -1128,29 +1102,28 @@ auto makeClauseEmitter(OpTy &op,
                        mlir::OpBuilder::InsertPoint &recipeInsertLocation,
                        CIRGen::CIRGenFunction &cgf,
                        CIRGen::CIRGenBuilderTy &builder,
-                       OpenACCDirectiveKind dirKind, SourceLocation dirLoc) {
+                       OpenACCDirectiveKind dirKind) {
   return OpenACCClauseCIREmitter<OpTy>(op, recipeInsertLocation, cgf, builder,
-                                       dirKind, dirLoc);
+                                       dirKind);
 }
 } // namespace
 
 template <typename Op>
 void CIRGenFunction::emitOpenACCClauses(
-    Op &op, OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
+    Op &op, OpenACCDirectiveKind dirKind,
     ArrayRef<const OpenACCClause *> clauses) {
   mlir::OpBuilder::InsertionGuard guardCase(builder);
 
   // Sets insertion point before the 'op', since every new expression needs to
   // be before the operation.
   builder.setInsertionPoint(op);
-  makeClauseEmitter(op, lastRecipeLocation, *this, builder, dirKind, dirLoc)
+  makeClauseEmitter(op, lastRecipeLocation, *this, builder, dirKind)
       .emitClauses(clauses);
 }
 
 #define EXPL_SPEC(N)                                                           \
   template void CIRGenFunction::emitOpenACCClauses<N>(                         \
-      N &, OpenACCDirectiveKind, SourceLocation,                               \
-      ArrayRef<const OpenACCClause *>);
+      N &, OpenACCDirectiveKind, ArrayRef<const OpenACCClause *>);
 EXPL_SPEC(mlir::acc::ParallelOp)
 EXPL_SPEC(mlir::acc::SerialOp)
 EXPL_SPEC(mlir::acc::KernelsOp)
@@ -1174,20 +1147,20 @@ EXPL_SPEC(mlir::acc::DeclareEnterOp)
 template <typename ComputeOp, typename LoopOp>
 void CIRGenFunction::emitOpenACCClauses(
     ComputeOp &op, LoopOp &loopOp, OpenACCDirectiveKind dirKind,
-    SourceLocation dirLoc, ArrayRef<const OpenACCClause *> clauses) {
+    ArrayRef<const OpenACCClause *> clauses) {
   static_assert(std::is_same_v<mlir::acc::LoopOp, LoopOp>);
 
   CombinedConstructClauseInfo<ComputeOp> inf{op, loopOp};
   // We cannot set the insertion point here and do so in the emitter, but make
   // sure we reset it with the 'guard' anyway.
   mlir::OpBuilder::InsertionGuard guardCase(builder);
-  makeClauseEmitter(inf, lastRecipeLocation, *this, builder, dirKind, dirLoc)
+  makeClauseEmitter(inf, lastRecipeLocation, *this, builder, dirKind)
       .emitClauses(clauses);
 }
 
 #define EXPL_SPEC(N)                                                           \
   template void CIRGenFunction::emitOpenACCClauses<N, mlir::acc::LoopOp>(      \
-      N &, mlir::acc::LoopOp &, OpenACCDirectiveKind, SourceLocation,          \
+      N &, mlir::acc::LoopOp &, OpenACCDirectiveKind,                          \
       ArrayRef<const OpenACCClause *>);
 
 EXPL_SPEC(mlir::acc::ParallelOp)

@@ -226,7 +226,7 @@ class LLVMConfig(object):
                         continue
 
                     # We found it, stop enumerating.
-                    return lit.util.to_string(candidate_path)
+                    return candidate_path
             except:
                 continue
 
@@ -287,8 +287,8 @@ class LLVMConfig(object):
                 env=self.config.environment,
             )
             stdout, stderr = cmd.communicate()
-            stdout = lit.util.to_string(stdout)
-            stderr = lit.util.to_string(stderr)
+            stdout = stdout.decode("utf-8", errors="replace")
+            stderr = stderr.decode("utf-8", errors="replace")
             return (stdout, stderr)
         except OSError:
             self.lit_config.fatal("Could not run process %s" % command)
