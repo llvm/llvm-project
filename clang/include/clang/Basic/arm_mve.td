@@ -783,15 +783,15 @@ let params = T.Unsigned in {
 }
 let params = T.Float in {
   def vminnmq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                                 (IRIntBase<"minnum", [Vector]> $a, $b)>;
+                                 (fminnm $a, $b)>;
   def vmaxnmq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                                 (IRIntBase<"maxnum", [Vector]> $a, $b)>;
+                                 (fmaxnm $a, $b)>;
   def vminnmaq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                                  (IRIntBase<"minnum", [Vector]>
+                                  (fminnm
                                    (IRIntBase<"fabs", [Vector]> $a),
                                    (IRIntBase<"fabs", [Vector]> $b))>;
   def vmaxnmaq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
-                                  (IRIntBase<"maxnum", [Vector]>
+                                  (fmaxnm
                                    (IRIntBase<"fabs", [Vector]> $a),
                                    (IRIntBase<"fabs", [Vector]> $b))>;
 }
