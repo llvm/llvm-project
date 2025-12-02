@@ -1653,6 +1653,18 @@ func.func @acc_reduc_test(%a : memref<i64>) -> () {
 // CHECK:         %[[REDUCTION_A:.*]] = acc.reduction varPtr(%[[ARG0]] : memref<i64>) recipe(@reduction_add_memref_i64) -> memref<i64>
 // CHECK-NEXT:    acc.serial reduction(%[[REDUCTION_A]] : memref<i64>)
 
+func.func @acc_kernels_reduc_test(%a : memref<i64>) -> () {
+  %reduction_a = acc.reduction varPtr(%a : memref<i64>) recipe(@reduction_add_memref_i64) -> memref<i64>
+  acc.kernels reduction(%reduction_a : memref<i64>) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @acc_kernels_reduc_test(
+// CHECK-SAME:    %[[ARG0:.*]]: memref<i64>)
+// CHECK:         %[[REDUCTION_A:.*]] = acc.reduction varPtr(%[[ARG0]] : memref<i64>) recipe(@reduction_add_memref_i64) -> memref<i64>
+// CHECK-NEXT:    acc.kernels reduction(%[[REDUCTION_A]] : memref<i64>)
+
 // -----
 
 func.func @testdeclareop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {

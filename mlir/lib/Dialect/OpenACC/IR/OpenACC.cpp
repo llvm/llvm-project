@@ -2689,6 +2689,13 @@ void acc::KernelsOp::addFirstPrivatization(
   getFirstprivateOperandsMutable().append(op.getResult());
 }
 
+void acc::KernelsOp::addReduction(MLIRContext *context,
+                                  mlir::acc::ReductionOp op,
+                                  mlir::acc::ReductionRecipeOp recipe) {
+  op.setRecipeAttr(mlir::SymbolRefAttr::get(context, recipe.getSymName()));
+  getReductionOperandsMutable().append(op.getResult());
+}
+
 void acc::KernelsOp::addNumWorkersOperand(
     MLIRContext *context, mlir::Value newValue,
     llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {

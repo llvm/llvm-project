@@ -2018,6 +2018,7 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
       Variadic<IntOrIndex>:$vectorLength,
       OptionalAttr<DeviceTypeArrayAttr>:$vectorLengthDeviceType,
       Optional<I1>:$ifCond, Optional<I1>:$selfCond, UnitAttr:$selfAttr,
+      Variadic<OpenACC_AnyPointerOrMappableType>:$reductionOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$dataClauseOperands,
@@ -2117,6 +2118,10 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     /// recipe.
     void addFirstPrivatization(MLIRContext *, mlir::acc::FirstprivateOp op,
                                mlir::acc::FirstprivateRecipeOp recipe);
+    /// Adds a reduction clause variable to this operation, including its
+    /// recipe.
+    void addReduction(MLIRContext *, mlir::acc::ReductionOp op,
+                      mlir::acc::ReductionRecipeOp recipe);
   }];
 
   let assemblyFormat = [{
@@ -2138,6 +2143,7 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
           $waitOnly)
       | `self` `(` $selfCond `)`
       | `if` `(` $ifCond `)`
+      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
     )
     $region attr-dict-with-keyword
   }];
