@@ -202,6 +202,11 @@ New checks
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
 
+- New :doc:`bugprone-smart-ptr-initialization
+  <clang-tidy/checks/bugprone/smart-ptr-initialization>` check.
+
+  FIXME: Write a short description.
+
 - New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`
   check.
