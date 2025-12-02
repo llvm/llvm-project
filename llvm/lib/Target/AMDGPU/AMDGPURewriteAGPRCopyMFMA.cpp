@@ -155,10 +155,9 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
       // either AGPR or VGPR in src0/src1. We still need to check constraint
       // effects for scale variant, which does not allow AGPR.
       if (isRewriteCandidate(*MI)) {
-        unsigned OpNo = &MO - &MI->getOperand(0);
         int AGPROp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
         const MCInstrDesc &AGPRDesc = TII.get(AGPROp);
-        const TargetRegisterClass *NewRC = TII.getRegClass(AGPRDesc, OpNo);
+        const TargetRegisterClass *NewRC = TII.getRegClass(AGPRDesc, MO.getOperandNo());
         if (!TRI.hasAGPRs(NewRC))
           return false;
 
