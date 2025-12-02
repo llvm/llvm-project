@@ -307,21 +307,6 @@ bool ThreadPlanStepOut::ValidatePlan(Stream *error) {
   return true;
 }
 
-/// Returns true if :
-/// 1. All breakpoints in this site are internal, and
-/// 2. All breakpoint locations in this site are NOT valid for `thread`.
-static bool NoUserBreakpointsHere(BreakpointSite &site, Thread &thread) {
-  for (unsigned bp_idx = 0; bp_idx < site.GetNumberOfConstituents(); bp_idx++) {
-    BreakpointLocation &bp_loc = *site.GetConstituentAtIndex(bp_idx);
-    const Breakpoint &bp = bp_loc.GetBreakpoint();
-    if (bp.IsInternal())
-      continue;
-    if (bp_loc.ValidForThisThread(thread))
-      return false;
-  }
-  return true;
-}
-
 bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
   // If the step out plan is done, then we just need to step through the
   // inlined frame.
@@ -375,7 +360,7 @@ bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
         // If the thread also hit a user breakpoint on its way out, the plan is
         // done but should not claim to explain the stop. It is more important
         // to report the user breakpoint than the step out completion.
-        if (NoUserBreakpointsHere(*site_sp, GetThread()))
+        if (!site_sp->ContainsUserBreakpointForThread(GetThread()))
           return true;
       }
       return false;
