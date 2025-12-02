@@ -8293,7 +8293,6 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
              vputils::getVFScaleFactor(Accumulator->getDefiningRecipe()) &&
          "all accumulators in chain must have same scale factor");
 
-  unsigned ReductionOpcode = Reduction->getOpcode();
   auto *ReductionI = Reduction->getUnderlyingInstr();
   if (Reduction->getOpcode() == Instruction::FAdd &&
       !ReductionI->hasAllowReassoc())
