@@ -11193,6 +11193,7 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
             FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
                                                   /*LookForGlobal*/ true, Name);
         Destructor->setOperatorGlobalDelete(GlobalOperatorDelete);
+        MarkFunctionReferenced(Loc, GlobalOperatorDelete);
       }
 
       if (Context.getTargetInfo().emitVectorDeletingDtors(
@@ -11209,6 +11210,8 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
                                                     /*LookForGlobal*/ true,
                                                     VDeleteName);
           Destructor->setGlobalOperatorArrayDelete(GlobalArrOperatorDelete);
+          if (Context.classNeedsVectorDeletingDestructor(RD))
+            MarkFunctionReferenced(Loc, GlobalArrOperatorDelete);
         } else if (!ArrOperatorDelete) {
           ArrOperatorDelete = FindDeallocationFunctionForDestructor(
               Loc, RD, /*Diagnose*/ false,
@@ -11217,6 +11220,8 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
         assert(ArrOperatorDelete &&
                "Should've found at least global array delete");
         Destructor->setOperatorArrayDelete(ArrOperatorDelete);
+        if (Context.classNeedsVectorDeletingDestructor(RD))
+          MarkFunctionReferenced(Loc, ArrOperatorDelete);
       }
     }
   }
