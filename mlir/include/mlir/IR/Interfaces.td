@@ -147,7 +147,7 @@ class TypeInterface<string name, list<Interface> baseInterfaces = []>
 			!if(!empty(cppNamespace),"", cppNamespace # "::") # name
     >;
 
-// DialectInterface represents an interface registered to an operation.
+// DialectInterface represents a Dialect Interface.
 class DialectInterface<string name, list<Interface> baseInterfaces = []>
   : Interface<name, baseInterfaces>, OpInterfaceTrait<name>;
 

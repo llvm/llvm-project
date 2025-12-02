@@ -27,10 +27,10 @@ def NoDefaultMethod : DialectInterface<"NoDefaultMethod"> {
 }
 
 // DECL:   class NoDefaultMethod : public {{.*}}DialectInterface::Base<NoDefaultMethod>
-// DECL:   virtual bool isExampleDialect() const = 0;
-// DECL:   virtual unsigned supportSecondMethod(::mlir::Type type) const = 0;
-// DECL:   protected:
+// DECL:   public:
 // DECL-NEXT:   NoDefaultMethod(::mlir::Dialect *dialect) : Base(dialect) {}
+// DECL:   virtual bool isExampleDialect() const {}
+// DECL:   virtual unsigned supportSecondMethod(::mlir::Type type) const {}
 
 def WithDefaultMethodInterface : DialectInterface<"WithDefaultMethodInterface"> {
   let description = [{
@@ -59,8 +59,7 @@ def WithDefaultMethodInterface : DialectInterface<"WithDefaultMethodInterface"> 
   ];
 }
 
-// DECL:  virtual bool isExampleDialect() const;
-// DECL:  bool ::mlir::example::WithDefaultMethodInterface::isExampleDialect() const {
+// DECL:  virtual bool isExampleDialect() const {
 // DECL-NEXT:  return true;
 // DECL-NEXT: }
 

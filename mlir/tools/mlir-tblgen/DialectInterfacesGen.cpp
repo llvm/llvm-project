@@ -74,7 +74,6 @@ public:
 
 protected:
   void emitInterfaceDecl(const Interface &interface);
-  void emitInterfaceMethodsDef(const Interface &interface);
 
   /// The set of interface records to emit.
   std::vector<const Record *> defs;
@@ -93,17 +92,18 @@ static void emitInterfaceMethodDoc(const InterfaceMethod &method,
     tblgen::emitDescriptionComment(*description, os, prefix);
 }
 
-static void emitInterfaceDeclMethods(const Interface &interface,
-                                     raw_ostream &os) {
+static void emitInterfaceMethodsDef(const Interface &interface,
+                                    raw_ostream &os) {
   for (auto &method : interface.getMethods()) {
     emitInterfaceMethodDoc(method, os, "  ");
     os << "  virtual ";
     emitCPPType(method.getReturnType(), os);
     emitMethodNameAndArgs(method, method.getName(), os);
-    if (!method.getBody())
+    if (auto body = method.getBody())
+      os << " {\n    " << body << "\n  }\n";
+    else
       // no default method body
-      os << " = 0";
-    os << ";\n";
+      os << " {}\n";
   }
 }
 
@@ -117,30 +117,14 @@ void DialectInterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
 
   // Emit the main interface class declaration.
   os << llvm::formatv(
-      "class {0} : public ::mlir::DialectInterface::Base<{0}> {{\n"
-      "public:\n",
+      "class {0} : public ::mlir::DialectInterface::Base<{0}> {\n"
+      "public:\n"
+      "  {0}(::mlir::Dialect *dialect) : Base(dialect) {{}\n",
       interfaceName);
 
-  emitInterfaceDeclMethods(interface, os);
-  os << llvm::formatv("\nprotected:\n"
-                      "  {0}(::mlir::Dialect *dialect) : Base(dialect) {{}\n",
-                      interfaceName);
+  emitInterfaceMethodsDef(interface, os);
 
   os << "};\n";
-}
-
-void DialectInterfaceGenerator::emitInterfaceMethodsDef(
-    const Interface &interface) {
-
-  for (auto &method : interface.getMethods()) {
-    if (auto body = method.getBody()) {
-      emitCPPType(method.getReturnType(), os);
-      os << interface.getCppNamespace() << "::";
-      os << interface.getName() << "::";
-      emitMethodNameAndArgs(method, method.getName(), os);
-      os << " {\n  " << body.value() << "\n}\n";
-    }
-  }
 }
 
 bool DialectInterfaceGenerator::emitInterfaceDecls() {
@@ -156,10 +140,6 @@ bool DialectInterfaceGenerator::emitInterfaceDecls() {
 
   for (const Record *def : sortedDefs)
     emitInterfaceDecl(Interface(def));
-
-  os << "\n";
-  for (const Record *def : sortedDefs)
-    emitInterfaceMethodsDef(Interface(def));
 
   return false;
 }
