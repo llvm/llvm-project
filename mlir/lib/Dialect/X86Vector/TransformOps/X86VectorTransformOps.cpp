@@ -32,6 +32,11 @@ void mlir::transform::ApplyVectorContractToPackedTypeDotProductPatternsOp::
   x86vector::populateVectorContractToPackedTypeDotProductPatterns(patterns);
 }
 
+void mlir::transform::ApplyVectorContractBF16ToFMAPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  x86vector::populateVectorContractBF16ToFMAPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//
