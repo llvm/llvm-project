@@ -159,7 +159,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
         int AGPROp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
         const MCInstrDesc &AGPRDesc = TII.get(AGPROp);
         const TargetRegisterClass *NewRC = TII.getRegClass(AGPRDesc, OpNo);
-        if (!NewRC || !TRI.hasAGPRs(NewRC))
+        if (!TRI.hasAGPRs(NewRC))
           return false;
 
         const MachineOperand *VDst =
