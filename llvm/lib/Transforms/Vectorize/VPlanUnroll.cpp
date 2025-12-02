@@ -306,9 +306,9 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Increment = Builder.createScalarZExtOrTrunc(
           Increment, TypeInfo.inferScalarType(Prev), IncTy,
           DebugLoc::getCompilerGenerated());
-      VPIRFlags Flags = VPIRFlags::WrapFlagsTy(true, true);
-      VPInstruction *Add = Builder.createNaryOp(
-          Instruction::Add, {Prev, Increment}, Flags, VPR->getDebugLoc());
+      VPInstruction *Add =
+          Builder.createOverflowingOp(Instruction::Add, {Prev, Increment},
+                                      {true, true}, VPR->getDebugLoc());
       Copy->setOperand(0, VPR->getOperand(0));
       Copy->setOperand(1, Add);
       continue;
