@@ -188,12 +188,12 @@ static mlir::Value emitX86FunnelShift(CIRGenBuilderTy &builder,
     auto amtTy = mlir::cast<cir::IntType>(amt.getType());
     auto vecElemTy = mlir::cast<cir::IntType>(vecTy.getElementType());
 
-    // Cast to same width unsigned if not already unsigned.
+    // If signed, cast to the same width but unsigned first to
+    // ensure zero-extension when casting to a bigger unsigned `vecElemeTy`.
     if (amtTy.isSigned()) {
       cir::IntType unsignedAmtTy = builder.getUIntNTy(amtTy.getWidth());
       amt = builder.createIntCast(amt, unsignedAmtTy);
     }
-    // Cast the unsigned `amt` to operand element type's width unsigned.
     cir::IntType unsignedVecElemType = builder.getUIntNTy(vecElemTy.getWidth());
     amt = builder.createIntCast(amt, unsignedVecElemType);
     amt = cir::VecSplatOp::create(
