@@ -2431,7 +2431,7 @@ define <vscale x 4 x i32> @scalable_add_to_disjoint_or(i8 %x, <vscale x 4 x i32>
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shl nuw nsw i32 [[EXTX]], 8
 ; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[SHIFT]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[SPLAT]], [[RHS:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint <vscale x 4 x i32> [[SPLAT]], [[RHS:%.*]]
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
   %extx = zext i8 %x to i32
