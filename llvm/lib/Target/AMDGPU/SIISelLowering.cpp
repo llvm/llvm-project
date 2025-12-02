@@ -9450,10 +9450,11 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   if (!IsGFX12Plus || BaseOpcode->Sampler || BaseOpcode->MSAA)
     Ops.push_back(Unorm);
   Ops.push_back(DAG.getTargetConstant(CPol, DL, MVT::i32));
-  Ops.push_back(IsA16 && // r128, a16 for gfx9
-                        ST->hasFeature(AMDGPU::FeatureR128A16)
-                    ? True
-                    : False);
+  if (ST->hasFeature(AMDGPU::FeatureR128A16))
+    Ops.push_back(IsA16 ? True : False);
+  else
+    Ops.push_back(RsrcVT == MVT::v4i32 ? True : False); // r128
+
   if (IsGFX10Plus)
     Ops.push_back(IsA16 ? True : False);
 
