@@ -76,6 +76,7 @@
 #include "gtest/gtest.h"
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <regex>
 
 #include "AMDGPUNextUseAnalysis.h"
@@ -131,17 +132,17 @@ protected:
 
   // Helper function to map sub-register names to LaneBitmask values using LLVM
   // API
-  LaneBitmask getSubRegLaneMask(const std::string &subRegName, Register VReg,
+  LaneBitmask getSubRegLaneMask(const std::string &SubRegName, Register VReg,
                                 const SIRegisterInfo *TRI,
                                 const MachineRegisterInfo *MRI) {
-    if (subRegName.empty()) {
+    if (SubRegName.empty()) {
       return MRI->getMaxLaneMaskForVReg(VReg); // Proper full register mask
     }
 
-    for (unsigned i = 1, e = TRI->getNumSubRegIndices(); i < e; ++i) {
-      const char *Name = TRI->getSubRegIndexName(i);
-      if (Name && subRegName == Name) {
-        return TRI->getSubRegIndexLaneMask(i);
+    for (unsigned I = 1, E = TRI->getNumSubRegIndices(); I < E; ++I) {
+      const char *Name = TRI->getSubRegIndexName(I);
+      if (Name && SubRegName == Name) {
+        return TRI->getSubRegIndexLaneMask(I);
       }
     }
 
@@ -151,69 +152,69 @@ protected:
 
   // Helper function to parse expected distances from CHECK patterns
   llvm::DenseMap<VRegMaskPair, unsigned>
-  parseExpectedDistances(const std::vector<std::string> &checkPatterns,
-                         const std::string &instrString,
+  parseExpectedDistances(const std::vector<std::string> &CheckPatterns,
+                         const std::string &InstrString,
                          const SIRegisterInfo *TRI,
                          const MachineRegisterInfo *MRI) {
-    llvm::DenseMap<VRegMaskPair, unsigned> expectedDistances;
+    llvm::DenseMap<VRegMaskPair, unsigned> ExpectedDistances;
 
     // Clean up the instruction string - remove newlines and extra spaces
-    std::string cleanInstrString = instrString;
-    cleanInstrString.erase(
-        std::remove(cleanInstrString.begin(), cleanInstrString.end(), '\n'),
-        cleanInstrString.end());
+    std::string CleanInstrString = InstrString;
+    CleanInstrString.erase(
+        std::remove(CleanInstrString.begin(), CleanInstrString.end(), '\n'),
+        CleanInstrString.end());
 
     // Find the CHECK pattern that matches this instruction
-    for (size_t i = 0; i < checkPatterns.size(); ++i) {
-      const std::string &pattern = checkPatterns[i];
+    for (size_t I = 0; I < CheckPatterns.size(); ++I) {
+      const std::string &Pattern = CheckPatterns[I];
 
       // Look for instruction patterns like "CHECK: Instr: %9:vgpr_32 = COPY
       // killed $vgpr1"
-      if (pattern.find("CHECK: Instr:") != std::string::npos) {
+      if (Pattern.find("CHECK: Instr:") != std::string::npos) {
         // Extract the instruction part after "Instr: "
-        size_t instrPos = pattern.find("Instr: ") + 7;
-        std::string checkInstr = pattern.substr(instrPos);
+        size_t InstrPos = Pattern.find("Instr: ") + 7;
+        std::string CheckInstr = Pattern.substr(InstrPos);
 
         // Matching: compare the actual instruction content
         // Remove leading/trailing whitespace from both
-        checkInstr =
-            std::regex_replace(checkInstr, std::regex("^\\s+|\\s+$"), "");
-        std::string trimmedInstrString =
-            std::regex_replace(cleanInstrString, std::regex("^\\s+|\\s+$"), "");
+        CheckInstr =
+            std::regex_replace(CheckInstr, std::regex("^\\s+|\\s+$"), "");
+        std::string TrimmedInstrString =
+            std::regex_replace(CleanInstrString, std::regex("^\\s+|\\s+$"), "");
 
         // Extract the core instruction (everything after the first space)
-        size_t firstSpace = checkInstr.find(' ');
-        size_t instrFirstSpace = trimmedInstrString.find(' ');
+        size_t FirstSpace = CheckInstr.find(' ');
+        size_t InstrFirstSpace = TrimmedInstrString.find(' ');
 
-        if (firstSpace != std::string::npos &&
-            instrFirstSpace != std::string::npos) {
-          std::string checkCore = checkInstr.substr(firstSpace + 1);
-          std::string instrCore =
-              trimmedInstrString.substr(instrFirstSpace + 1);
+        if (FirstSpace != std::string::npos &&
+            InstrFirstSpace != std::string::npos) {
+          std::string CheckCore = CheckInstr.substr(FirstSpace + 1);
+          std::string InstrCore =
+              TrimmedInstrString.substr(InstrFirstSpace + 1);
 
           // Match if the core instruction parts are identical
-          if (checkCore == instrCore) {
+          if (CheckCore == InstrCore) {
             // Also verify the destination register matches
-            std::regex destRegex(R"(^(%\d+:[a-zA-Z_0-9]+)\s*=)");
-            std::smatch checkMatch, instrMatch;
+            std::regex DestRegex(R"(^(%\d+:[a-zA-Z_0-9]+)\s*=)");
+            std::smatch CheckMatch, InstrMatch;
 
-            if (std::regex_search(checkInstr, checkMatch, destRegex) &&
-                std::regex_search(trimmedInstrString, instrMatch, destRegex) &&
-                checkMatch[1].str() == instrMatch[1].str()) {
+            if (std::regex_search(CheckInstr, CheckMatch, DestRegex) &&
+                std::regex_search(TrimmedInstrString, InstrMatch, DestRegex) &&
+                CheckMatch[1].str() == InstrMatch[1].str()) {
 
               // Found exact match, look for subsequent Vreg distance patterns
-              // Track full register uses by virtual register to apply precedence
-              llvm::DenseMap<Register, unsigned> fullRegDistances;
+              // Track all mask/distance pairs per VReg for overlap computation
+              llvm::DenseMap<Register, SmallVector<std::pair<LaneBitmask, unsigned>, 4>> 
+                  AllMaskDistances;
               
-              for (size_t j = i + 1; j < checkPatterns.size(); ++j) {
-                const std::string &distPattern = checkPatterns[j];
+              for (size_t J = I + 1; J < CheckPatterns.size(); ++J) {
+                const std::string &DistPattern = CheckPatterns[J];
 
                 // Stop if we hit another instruction or non-Vreg pattern
-                if (distPattern.find("CHECK: Instr:") != std::string::npos ||
-                    distPattern.find("CHECK: ---") != std::string::npos ||
-                    distPattern.find("CHECK-LABEL:") != std::string::npos ||
-                    distPattern.find("CHECK: Block End Distances:") !=
-                        std::string::npos) {
+                if (DistPattern.find("CHECK: Instr:") != std::string::npos ||
+                    DistPattern.find("CHECK: ---") != std::string::npos ||
+                    DistPattern.find("CHECK-LABEL:") != std::string::npos ||
+                    DistPattern.find("Block End Distances:") != std::string::npos) {
                   break;
                 }
 
@@ -221,38 +222,38 @@ protected:
                 // Vreg: %15:sub0[ 22 ]" Group 1: register number, Group 2: full
                 // sub-register part (optional), Group 3: sub-register name,
                 // Group 4: distance
-                std::regex vregRegex(
+                std::regex VregRegex(
                     R"(CHECK:\s*Vreg:\s*%(\d+)(:([a-zA-Z_0-9]+))?\[\s*(\d+)\s*\])");
-                std::smatch vregMatch;
+                std::smatch VregMatch;
 
-                if (std::regex_search(distPattern, vregMatch, vregRegex) &&
-                    vregMatch.size() >= 5) {
-                  unsigned regNum = std::stoul(vregMatch[1].str());
-                  std::string subRegName =
-                      vregMatch[3].str(); // May be empty for full register
-                  unsigned distance = std::stoul(vregMatch[4].str());                  Register VReg = Register::index2VirtReg(regNum);
-                  LaneBitmask mask = getSubRegLaneMask(subRegName, VReg, TRI, MRI);
+                if (std::regex_search(DistPattern, VregMatch, VregRegex) &&
+                    VregMatch.size() >= 5) {
+                  unsigned RegNum = std::stoul(VregMatch[1].str());
+                  std::string SubRegName =
+                      VregMatch[3].str(); // May be empty for full register
+                  unsigned Distance = std::stoul(VregMatch[4].str());                  
+                  Register VReg = Register::index2VirtReg(RegNum);
+                  LaneBitmask Mask = getSubRegLaneMask(SubRegName, VReg, TRI, MRI);
                   
-                  // Check if this is a full register use
-                  if (subRegName.empty() || mask == MRI->getMaxLaneMaskForVReg(VReg)) {
-                    // This is a full register use - record it for precedence
-                    fullRegDistances[VReg] = distance;
-                    VRegMaskPair VMP(VReg, mask);
-                    expectedDistances[VMP] = distance;
-                  } else {
-                    // This is a sub-register use  
-                    // Check if we already have a full register use for this VReg with closer distance
-                    auto FullIt = fullRegDistances.find(VReg);
-                    if (FullIt != fullRegDistances.end() && FullIt->second < distance) {
-                      // Full register use exists and is closer - use its distance
-                      VRegMaskPair VMP(VReg, mask);
-                      expectedDistances[VMP] = FullIt->second;
-                    } else {
-                      // No full register use or sub-register is closer - use sub-register distance
-                      VRegMaskPair VMP(VReg, mask);
-                      expectedDistances[VMP] = distance;
+                  // Record this mask/distance pair for later overlap computation
+                  AllMaskDistances[VReg].push_back({Mask, Distance});
+                }
+              }
+              
+              // Now build ExpectedDistances using overlap semantics:
+              // For each recorded VMP, find the minimum distance among all
+              // stored masks that overlap with it (matching getFromSortedRecords logic)
+              for (auto &[VReg, MaskDistPairs] : AllMaskDistances) {
+                for (auto &[QueryMask, _] : MaskDistPairs) {
+                  unsigned MinDist = std::numeric_limits<unsigned>::max();
+                  for (auto &[StoredMask, Dist] : MaskDistPairs) {
+                    // Check for any overlap (same as getFromSortedRecords)
+                    if ((QueryMask & StoredMask).any()) {
+                      MinDist = std::min(MinDist, Dist);
                     }
                   }
+                  VRegMaskPair VMP(VReg, QueryMask);
+                  ExpectedDistances[VMP] = MinDist;
                 }
               }
               break;
@@ -262,13 +263,13 @@ protected:
       }
     }
 
-    return expectedDistances;
+    return ExpectedDistances;
   }
 
   void SetUp() override {
     // Only enable debug output if environment variable is set
-    const char *debugEnv = std::getenv("AMDGPU_NUA_DEBUG");
-    if (debugEnv && std::string(debugEnv) == "1") {
+    const char *DebugEnv = std::getenv("AMDGPU_NUA_DEBUG");
+    if (DebugEnv && std::string(DebugEnv) == "1") {
       DebugFlag = true;
       setCurrentDebugType("amdgpu-next-use");
     }
@@ -290,36 +291,36 @@ protected:
   }
 
   // Helper to find all .mir files in a directory
-  std::vector<std::string> findMirFiles(const std::string& dirPath) {
-    std::vector<std::string> mirFiles;
+  std::vector<std::string> findMirFiles(const std::string& DirPath) {
+    std::vector<std::string> MirFiles;
     
-    if (!std::filesystem::exists(dirPath)) {
-      return mirFiles;
+    if (!std::filesystem::exists(DirPath)) {
+      return MirFiles;
     }
     
-    for (const auto& entry : std::filesystem::directory_iterator(dirPath)) {
-      if (entry.is_regular_file() && entry.path().extension() == ".mir") {
-        mirFiles.push_back(entry.path().filename().string());
+    for (const auto& Entry : std::filesystem::directory_iterator(DirPath)) {
+      if (Entry.is_regular_file() && Entry.path().extension() == ".mir") {
+        MirFiles.push_back(Entry.path().filename().string());
       }
     }
     
-    std::sort(mirFiles.begin(), mirFiles.end());
-    return mirFiles;
+    std::sort(MirFiles.begin(), MirFiles.end());
+    return MirFiles;
   }
   
   // Helper to parse CHECK patterns from file comments
-  std::vector<std::string> parseCheckPatterns(const std::string& filePath) {
-    std::vector<std::string> patterns;
-    std::ifstream file(filePath);
-    std::string line;
+  std::vector<std::string> parseCheckPatterns(const std::string& FilePath) {
+    std::vector<std::string> Patterns;
+    std::ifstream File(FilePath);
+    std::string Line;
     
-    while (std::getline(file, line)) {
-      if (line.find("# CHECK") == 0) {
-        patterns.push_back(line);
+    while (std::getline(File, Line)) {
+      if (Line.find("# CHECK") == 0) {
+        Patterns.push_back(Line);
       }
     }
     
-    return patterns;
+    return Patterns;
   }
 
   std::unique_ptr<Module> parseMIRString(const std::string &MIRContent,
@@ -391,26 +392,27 @@ GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(NextUseAnalysisParameterizedTest);
 
 std::string getTestDirectory() {
   // First try environment variable
-  const char *testDirEnv = std::getenv("AMDGPU_NUA_TEST_DIR");
-  if (testDirEnv) {
-    return std::string(testDirEnv);
+  const char *TestDirEnv = std::getenv("AMDGPU_NUA_TEST_DIR");
+  if (TestDirEnv) {
+    return std::string(TestDirEnv);
   }
 
   // Try to find relative to unit test binary
   // Unit tests are typically in build/unittests/Target/AMDGPU/
   // Source tests are in llvm/test/CodeGen/AMDGPU/NextUseAnalysis/
-  std::filesystem::path currentPath = std::filesystem::current_path();
+  std::filesystem::path CurrentPath = std::filesystem::current_path();
 
   // Look for the source tree from build directory
-  std::vector<std::string> possiblePaths = {
+  std::vector<std::string> PossiblePaths = {
+      "../../llvm/test/CodeGen/AMDGPU/NextUseAnalysis",  // From build/Debug or build/Release
       "../../../llvm/test/CodeGen/AMDGPU/NextUseAnalysis",
       "../../../../llvm/test/CodeGen/AMDGPU/NextUseAnalysis",
       "../../../../../llvm/test/CodeGen/AMDGPU/NextUseAnalysis"};
 
-  for (const auto &path : possiblePaths) {
-    std::filesystem::path testPath = currentPath / path;
-    if (std::filesystem::exists(testPath)) {
-      return testPath.string();
+  for (const auto &Path : PossiblePaths) {
+    std::filesystem::path TestPath = CurrentPath / Path;
+    if (std::filesystem::exists(TestPath)) {
+      return TestPath.string();
     }
   }
 
@@ -419,57 +421,67 @@ std::string getTestDirectory() {
 
 // Generate test parameters from available .mir files
 std::vector<std::string> getMirFiles() {
-  const char *testFileEnv = std::getenv("AMDGPU_NUA_TEST_FILE");
+  const char *TestFileEnv = std::getenv("AMDGPU_NUA_TEST_FILE");
 
   // If specific file is requested, test only that
-  if (testFileEnv) {
-    return {std::string(testFileEnv)};
+  if (TestFileEnv) {
+    return {std::string(TestFileEnv)};
   }
 
   // Use the same directory resolution as the test
-  std::string testDir = getTestDirectory();
+  std::string TestDir = getTestDirectory();
 
-  // If no test directory found, return empty vector
-  if (testDir.empty()) {
+  // If no test directory found, print help and return empty vector
+  if (TestDir.empty()) {
+    std::cerr << "Warning: NextUseAnalysis test directory not found.\n"
+              << "Run from build/Debug (or build/Release) directory:\n"
+              << "  cd build/Debug && ./unittests/Target/AMDGPU/AMDGPUTests "
+              << "--gtest_filter=\"AllMirFiles*\"\n"
+              << "Or set AMDGPU_NUA_TEST_DIR to the test directory:\n"
+              << "  AMDGPU_NUA_TEST_DIR=/path/to/llvm/test/CodeGen/AMDGPU/"
+              << "NextUseAnalysis\n";
     return {};
   }
 
   // Find all .mir files in the directory
-  std::vector<std::string> mirFiles;
+  std::vector<std::string> MirFiles;
 
-  for (const auto &entry : std::filesystem::directory_iterator(testDir)) {
-    if (entry.is_regular_file() && entry.path().extension() == ".mir") {
-      mirFiles.push_back(entry.path().filename().string());
+  for (const auto &Entry : std::filesystem::directory_iterator(TestDir)) {
+    if (Entry.is_regular_file() && Entry.path().extension() == ".mir") {
+      MirFiles.push_back(Entry.path().filename().string());
     }
   }
 
-  std::sort(mirFiles.begin(), mirFiles.end());
-  return mirFiles;
+  std::sort(MirFiles.begin(), MirFiles.end());
+  return MirFiles;
 }
 
 TEST_P(NextUseAnalysisParameterizedTest, ProcessMirFile) {
-  std::string mirFileName = GetParam();
+  std::string MirFileName = GetParam();
   
   // Get test directory from environment or use default
-  std::string testDir = getTestDirectory();
+  std::string TestDir = getTestDirectory();
 
-  if (testDir.empty()) {
+  if (TestDir.empty()) {
     GTEST_SKIP()
-        << "NextUseAnalysis test directory not found. "
-        << "Set AMDGPU_NUA_TEST_DIR environment variable or ensure "
-        << "tests are run from build directory with source tree available.";
+        << "NextUseAnalysis test directory not found.\n"
+        << "Run from build/Debug (or build/Release) directory:\n"
+        << "  cd build/Debug && ./unittests/Target/AMDGPU/AMDGPUTests "
+        << "--gtest_filter=\"AllMirFiles*\"\n"
+        << "Or set AMDGPU_NUA_TEST_DIR to the test directory:\n"
+        << "  AMDGPU_NUA_TEST_DIR=/path/to/llvm/test/CodeGen/AMDGPU/NextUseAnalysis";
   }
 
-  std::string fullPath = testDir + "/" + mirFileName;
+  std::string FullPath = TestDir + "/" + MirFileName;
   
   // Parse CHECK patterns from the file
-  auto checkPatterns = parseCheckPatterns(fullPath);
-  ASSERT_FALSE(checkPatterns.empty()) << "No CHECK patterns found in " << mirFileName;
+  auto CheckPatterns = parseCheckPatterns(FullPath);
+  ASSERT_FALSE(CheckPatterns.empty()) << "No CHECK patterns found in " << MirFileName;
   
   LLVMContext Ctx;
   legacy::PassManager PM;
-  auto Module = parseMIRFile(fullPath, Ctx, *TM, PM);
-  ASSERT_TRUE(Module) << "Failed to parse MIR file: " << mirFileName;
+  auto Module = parseMIRFile(FullPath, Ctx, *TM, PM);
+  ASSERT_TRUE(Module) << "Failed to parse MIR file: " << MirFileName;
 
   for (auto &F : Module->functions()) {
     MachineFunction *MF = MMI->getMachineFunction(F);
@@ -487,28 +499,28 @@ TEST_P(NextUseAnalysisParameterizedTest, ProcessMirFile) {
     for (auto &MBB : *MF) {
       for (auto &MI : MBB) {
         // Convert MachineInstr to string for pattern matching
-        std::string instrString = machineInstrToString(MI);
+        std::string InstrString = machineInstrToString(MI);
 
         // Parse expected distances from CHECK patterns for this instruction
-        auto expectedDistances =
-            parseExpectedDistances(checkPatterns, instrString, TRI, MRI);
+        auto ExpectedDistances =
+            parseExpectedDistances(CheckPatterns, InstrString, TRI, MRI);
 
         // Validate each expected distance
-        for (const auto &expected : expectedDistances) {
-          VRegMaskPair VMP = expected.first;
-          unsigned expectedDistance = expected.second;
+        for (const auto &Expected : ExpectedDistances) {
+          VRegMaskPair VMP = Expected.first;
+          unsigned ExpectedDistance = Expected.second;
 
-          unsigned actualDistance =
+          unsigned ActualDistance =
               NU.getNextUseDistance(MI.getIterator(), VMP);
 
-          EXPECT_EQ(actualDistance, expectedDistance)
+          EXPECT_EQ(ActualDistance, ExpectedDistance)
               << "Distance mismatch for register "
               << printReg(VMP.getVReg(), TRI,
                           getSubRegIndexForLaneMask(VMP.getLaneMask(), TRI),
                           MRI)
-              << " in instruction: " << instrString.substr(0, 50) << "..."
-              << " Expected: " << expectedDistance
-              << " Actual: " << actualDistance;
+              << " in instruction: " << InstrString.substr(0, 50) << "..."
+              << " Expected: " << ExpectedDistance
+              << " Actual: " << ActualDistance;
         }
       }
     }
@@ -516,7 +528,7 @@ TEST_P(NextUseAnalysisParameterizedTest, ProcessMirFile) {
 }
 
 // Test getSortedSubregUses API with minimal SSA MIR pattern
-TEST_F(NextUseAnalysisParameterizedTest, GetSortedSubregUsesDistanceOrdering) {
+TEST_F(NextUseAnalysisTestBase, GetSortedSubregUsesDistanceOrdering) {
   // Minimal MIR pattern based on real SSA spiller case:
   // Large register with sub-register accesses at different distances
   // sub0 is accessed last (furthest distance) and should appear first in sorted
@@ -647,7 +659,7 @@ body: |
   // (dist 6),
   //                   sub28 (dist 4), sub29 (dist 3), sub30 (dist 2), sub31
   //                   (dist 1)
-  std::vector<unsigned> expectedSubRegs = {
+  std::vector<unsigned> ExpectedSubRegs = {
       AMDGPU::sub0,  // Distance 9 (furthest)
       AMDGPU::sub1,  // Distance 8
       AMDGPU::sub2,  // Distance 7
@@ -659,13 +671,13 @@ body: |
   };
 
   // Verify exact order: furthest uses first
-  for (size_t i = 0; i < expectedSubRegs.size(); ++i) {
-    LaneBitmask ExpectedMask = TRI->getSubRegIndexLaneMask(expectedSubRegs[i]);
-    LaneBitmask ActualMask = SortedUses[i].getLaneMask();
+  for (size_t I = 0; I < ExpectedSubRegs.size(); ++I) {
+    LaneBitmask ExpectedMask = TRI->getSubRegIndexLaneMask(ExpectedSubRegs[I]);
+    LaneBitmask ActualMask = SortedUses[I].getLaneMask();
 
     EXPECT_EQ(ActualMask, ExpectedMask)
-        << "Position " << i << ": Expected sub-register "
-        << TRI->getSubRegIndexName(expectedSubRegs[i]) << " (mask "
+        << "Position " << I << ": Expected sub-register "
+        << TRI->getSubRegIndexName(ExpectedSubRegs[I]) << " (mask "
         << ExpectedMask.getAsInteger() << "), "
         << "but got mask " << ActualMask.getAsInteger();
   }

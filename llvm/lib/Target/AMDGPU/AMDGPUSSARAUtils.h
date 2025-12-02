@@ -51,9 +51,12 @@ getCoveringSubRegsForLaneMask(LaneBitmask Mask, const TargetRegisterClass *RC,
   }
 
   SmallVector<unsigned> OptimalSubIndices;
-  llvm::stable_sort(Candidates, [&](unsigned A, unsigned B) {
-    return TRI->getSubRegIndexLaneMask(A).getNumLanes() >
-           TRI->getSubRegIndexLaneMask(B).getNumLanes();
+  llvm::sort(Candidates, [&](unsigned A, unsigned B) {
+    unsigned LanesA = TRI->getSubRegIndexLaneMask(A).getNumLanes();
+    unsigned LanesB = TRI->getSubRegIndexLaneMask(B).getNumLanes();
+    if (LanesA != LanesB)
+      return LanesA > LanesB;
+    return A < B;
   });
   for (unsigned SubIdx : Candidates) {
     LaneBitmask SubMask = TRI->getSubRegIndexLaneMask(SubIdx);

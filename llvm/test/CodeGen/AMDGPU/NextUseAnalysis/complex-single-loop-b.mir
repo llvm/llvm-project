@@ -2335,9 +2335,8 @@
 # CHECK-NEXT: Next-use distances:
 # CHECK: (no register uses)
 # CHECK: Block End Distances:
-# CHECK: (no registers live at block end)
+# CHECK:     (no registers live at block end)
 # CHECK: === End NextUseAnalysis Results ===
-
 --- |
   define amdgpu_ps i32 @test11 (ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, i32 %TC, i32 %Val, i1 %cond1) {
   0:

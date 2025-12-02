@@ -1,14 +1,13 @@
-//===------- VRegMaskPair.h ----------------------------------------*-
-// C++-*-===//
+//===-- VRegMaskPair.h - Virtual Register and Lane Mask Pair ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// ile
-/// rief Defines VRegMaskPair and VRegMaskPairSet for managing sets of
+//
+/// \file
+/// Defines VRegMaskPair and VRegMaskPairSet for managing sets of
 /// virtual registers and their lane masks.
 ///
 /// Set operations (union, intersection, subtraction) are implemented based on
@@ -103,7 +102,12 @@ public:
 };
 
 class VRegMaskPairSet {
-
+  // std::set provides both sorted iteration (required for getCoverage and
+  // iteration semantics) AND efficient membership testing (required by
+  // insert/contains/count). A sorted vector would provide ordering but
+  // only O(log n) lookup via binary search, while std::set provides O(log n)
+  // for both operations with better performance characteristics for our
+  // typical workload of frequent inserts and lookups.
   using MaskSet = std::set<LaneBitmask>;
   using SetStorageT = DenseMap<Register, MaskSet>;
   using LinearStorageT = std::vector<VRegMaskPair>;
