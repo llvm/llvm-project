@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestSBFrameExtensions(TestBase):
+    NO_DEBUG_INFO_TESTCASE = True
+
     def setUp(self):
         TestBase.setUp(self)
         self.source = "main.c"
