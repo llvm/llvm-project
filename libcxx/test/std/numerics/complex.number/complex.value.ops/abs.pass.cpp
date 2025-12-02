@@ -26,32 +26,44 @@ test()
     assert(abs(z) == 5);
 }
 
-void test_edges()
-{
-    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
-    for (unsigned i = 0; i < N; ++i)
-    {
-        double r = abs(testcases[i]);
-        switch (classify(testcases[i]))
-        {
-        case zero:
-            assert(r == 0);
-            assert(!std::signbit(r));
-            break;
-        case non_zero:
-            assert(std::isfinite(r) && r > 0);
-            break;
-        case inf:
-            assert(std::isinf(r) && r > 0);
-            break;
-        case NaN:
-            assert(std::isnan(r));
-            break;
-        case non_zero_nan:
-            assert(std::isnan(r));
-            break;
-        }
+template <class T>
+void test_edges() {
+  const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
+  for (unsigned i = 0; i < N; ++i) {
+    T r = abs(testcases<T>[i]);
+    switch (classify(testcases<T>[i])) {
+    case zero:
+      assert(r == 0);
+      assert(!std::signbit(r));
+      break;
+    case lowest_value: {
+      // It appears that `lowest<float> - relatively_small_number == lowest<float>`, so we check to
+      // make sure that abs was actually effective before asserting that it should be infinity.
+      bool const ineffective_abs = testcases<T>[i].real() + testcases<T>[i].imag() == -r;
+      assert((std::isinf(r) && r > 0) || ineffective_abs);
+      break;
     }
+    case maximum_value: {
+      // It appears that `max<float> + relatively_small_number == max<float>`, so we check to
+      // make sure that abs was actually effective before asserting that it should be infinity.
+      bool const ineffective_abs = testcases<T>[i].real() + testcases<T>[i].imag() == r;
+      assert((std::isinf(r) && r > 0) || ineffective_abs);
+      break;
+    }
+    case non_zero:
+      assert(std::isfinite(r) && r > 0);
+      break;
+    case inf:
+      assert(std::isinf(r) && r > 0);
+      break;
+    case NaN:
+      assert(std::isnan(r));
+      break;
+    case non_zero_nan:
+      assert(std::isnan(r));
+      break;
+    }
+  }
 }
 
 int main(int, char**)
@@ -59,7 +71,9 @@ int main(int, char**)
     test<float>();
     test<double>();
     test<long double>();
-    test_edges();
+    test_edges<float>();
+    test_edges<double>();
+    test_edges<long double>();
 
-  return 0;
+    return 0;
 }
