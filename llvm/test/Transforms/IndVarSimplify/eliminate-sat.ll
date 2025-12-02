@@ -13,7 +13,7 @@ define void @uadd_sat(ptr %p) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[SAT1:%.*]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    store volatile i32 [[SAT1]], ptr [[P:%.*]]
+; CHECK-NEXT:    store volatile i32 [[SAT1]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[I_INC]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[END:%.*]]
@@ -42,7 +42,7 @@ define void @sadd_sat(ptr %p) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[SAT1:%.*]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    store volatile i32 [[SAT1]], ptr [[P:%.*]]
+; CHECK-NEXT:    store volatile i32 [[SAT1]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[I_INC]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[END:%.*]]
@@ -71,7 +71,7 @@ define void @usub_sat(ptr %p) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[SAT1:%.*]] = sub nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    store volatile i32 [[SAT1]], ptr [[P:%.*]]
+; CHECK-NEXT:    store volatile i32 [[SAT1]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[I_INC]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[END:%.*]]
@@ -100,7 +100,7 @@ define void @ssub_sat(ptr %p) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[SAT1:%.*]] = sub nsw i32 [[I]], 1
-; CHECK-NEXT:    store volatile i32 [[SAT1]], ptr [[P:%.*]]
+; CHECK-NEXT:    store volatile i32 [[SAT1]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[I_INC]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[END:%.*]]

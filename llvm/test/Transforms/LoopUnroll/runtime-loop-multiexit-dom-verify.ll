@@ -265,8 +265,8 @@ define void @test4(i16 %c3) {
 ; CHECK-NEXT:    br label [[EXITING_PROL:%.*]]
 ; CHECK:       exiting.prol:
 ; CHECK-NEXT:    switch i16 [[C3:%.*]], label [[DEFAULT_LOOPEXIT_LOOPEXIT1:%.*]] [
-; CHECK-NEXT:    i16 45, label [[OTHEREXIT_LOOPEXIT2:%.*]]
-; CHECK-NEXT:    i16 95, label [[LATCH_PROL]]
+; CHECK-NEXT:      i16 45, label [[OTHEREXIT_LOOPEXIT2:%.*]]
+; CHECK-NEXT:      i16 95, label [[LATCH_PROL]]
 ; CHECK-NEXT:    ]
 ; CHECK:       latch.prol:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_PROL]] = add nuw nsw i64 [[INDVARS_IV_PROL]], 1
@@ -288,29 +288,29 @@ define void @test4(i16 %c3) {
 ; CHECK-NEXT:    br label [[EXITING:%.*]]
 ; CHECK:       exiting:
 ; CHECK-NEXT:    switch i16 [[C3]], label [[DEFAULT_LOOPEXIT_LOOPEXIT:%.*]] [
-; CHECK-NEXT:    i16 45, label [[OTHEREXIT_LOOPEXIT:%.*]]
-; CHECK-NEXT:    i16 95, label [[LATCH:%.*]]
+; CHECK-NEXT:      i16 45, label [[OTHEREXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:      i16 95, label [[LATCH:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       latch:
 ; CHECK-NEXT:    br label [[EXITING_1:%.*]]
 ; CHECK:       exiting.1:
 ; CHECK-NEXT:    switch i16 [[C3]], label [[DEFAULT_LOOPEXIT_LOOPEXIT]] [
-; CHECK-NEXT:    i16 45, label [[OTHEREXIT_LOOPEXIT]]
-; CHECK-NEXT:    i16 95, label [[LATCH_1:%.*]]
+; CHECK-NEXT:      i16 45, label [[OTHEREXIT_LOOPEXIT]]
+; CHECK-NEXT:      i16 95, label [[LATCH_1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       latch.1:
 ; CHECK-NEXT:    br label [[EXITING_2:%.*]]
 ; CHECK:       exiting.2:
 ; CHECK-NEXT:    switch i16 [[C3]], label [[DEFAULT_LOOPEXIT_LOOPEXIT]] [
-; CHECK-NEXT:    i16 45, label [[OTHEREXIT_LOOPEXIT]]
-; CHECK-NEXT:    i16 95, label [[LATCH_2:%.*]]
+; CHECK-NEXT:      i16 45, label [[OTHEREXIT_LOOPEXIT]]
+; CHECK-NEXT:      i16 95, label [[LATCH_2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    br label [[EXITING_3:%.*]]
 ; CHECK:       exiting.3:
 ; CHECK-NEXT:    switch i16 [[C3]], label [[DEFAULT_LOOPEXIT_LOOPEXIT]] [
-; CHECK-NEXT:    i16 45, label [[OTHEREXIT_LOOPEXIT]]
-; CHECK-NEXT:    i16 95, label [[LATCH_3]]
+; CHECK-NEXT:      i16 45, label [[OTHEREXIT_LOOPEXIT]]
+; CHECK-NEXT:      i16 95, label [[LATCH_3]]
 ; CHECK-NEXT:    ]
 ; CHECK:       latch.3:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_3]] = add nuw nsw i64 [[INDVARS_IV]], 4
