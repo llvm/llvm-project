@@ -114,6 +114,12 @@ mlir::Value genChdir(fir::FirOpBuilder &builder, mlir::Location loc,
 /// generate dump of a descriptor
 void genShowDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
                        mlir::Value descriptor);
+
+mlir::Value genIrand(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value i);
+mlir::Value genRand(fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Value i);
+
 } // namespace runtime
 } // namespace fir
 
