@@ -28,7 +28,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
@@ -2808,11 +2807,12 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       const CXXRecordDecl *ClassDecl =
           dyn_cast<CXXRecordDecl>(DD->getDeclContext());
       // TODO(boomanaiden154): We are being intentionally conservative here
-      // as we gain experience with this optimization. These checks should be
-      // removed once we have done further integration testing.
-      if (ClassDecl->getNumBases() == 0 && ClassDecl->getNumVBases() == 0) {
+      // as we gain experience with this optimization. We should remove the
+      // condition for non-virtual bases after more testing. We cannot add
+      // dead_on_return if we have virtual base classes because they will
+      // generally still be live after the base object destructor.
+      if (ClassDecl->getNumBases() == 0 && ClassDecl->getNumVBases() == 0)
         Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
-      }
     }
 
     ArgAttrs[IRArgs.first] = llvm::AttributeSet::get(getLLVMContext(), Attrs);

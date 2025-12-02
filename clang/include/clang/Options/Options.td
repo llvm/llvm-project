@@ -2923,10 +2923,10 @@ defm mark_objects_dead_after_destructors
           NegFlag<SetFalse, [], [ClangOption, CC1Option],
                   "Do not mark an object dead after its destructor returns">,
           PosFlag<SetTrue, [], [ClangOption, CC1Option],
-                  "Mark an object dead after is destructor returns">,
+                  "Mark an object dead after its destructor returns">,
           BothFlags<[], [ClangOption, CLOption]>>,
       DocBrief<
-          [{When enabled, mark an object dead after is destructor returns which allows the
+          [{When enabled, mark an object dead after its destructor returns which allows the
 the optimizer to perform more aggressive optimizations in some cases, particularly dead
 store elimination.}]>;
 
