@@ -827,8 +827,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       }
 
       if (Subtarget.hasVSX()) {
-        setOperationAction(ISD::FMAXNUM, VT, Legal);
-        setOperationAction(ISD::FMINNUM, VT, Legal);
+        setOperationAction(ISD::FMAXNUM_IEEE, VT, Legal);
+        setOperationAction(ISD::FMINNUM_IEEE, VT, Legal);
         setOperationAction(ISD::FCANONICALIZE, VT, Legal);
       }
 
