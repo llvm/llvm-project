@@ -28,8 +28,17 @@ Intrinsic::ID AMDGPU::getIntrinsicID(const MachineInstr &I) {
 
 // TODO: Should largely merge with AMDGPUTTIImpl::isSourceOfDivergence.
 bool AMDGPU::isUniformMMO(const MachineMemOperand *MMO) {
-  // FIXME: null value is should be treated as unknown, not as uniform.
   const Value *Ptr = MMO->getValue();
+  if (!Ptr) {
+    if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
+      return PSV->isConstantPool() || PSV->isStack() || PSV->isGOT() ||
+             PSV->isJumpTable();
+    }
+
+    // FIXME: null value is should be treated as unknown, not as uniform.
+    return true;
+  }
+
   // UndefValue means this is a load of a kernel input.  These are uniform.
   // Sometimes LDS instructions have constant pointers.
   // If Ptr is null, then that means this mem operand contains a
