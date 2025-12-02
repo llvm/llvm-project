@@ -26,8 +26,10 @@ using namespace __asan;
 // here.
 #if !SANITIZER_AIX
 #  define ASAN_MEMCPY_RETURN(to, from, size) REAL(memcpy)(to, from, size)
+#  define ASAN_MEMMOVE_RETURN(to, from, size) REAL(memmove)(to, from, size)
 #else
 #  define ASAN_MEMCPY_RETURN(to, from, size) internal_memcpy(to, from, size)
+#  define ASAN_MEMMOVE_RETURN(to, from, size) internal_memmove(to, from, size)
 #endif
 
 // memcpy is called during __asan_init() from the internals of printf(...).
@@ -66,7 +68,7 @@ using namespace __asan;
     } else if (UNLIKELY(!AsanInited())) {      \
       return internal_memmove(to, from, size); \
     }                                          \
-    return REAL(memmove)(to, from, size);      \
+    return ASAN_MEMMOVE_RETURN(to, from, size);\
   } while (0)
 
 void *__asan_memcpy(void *to, const void *from, uptr size) {
