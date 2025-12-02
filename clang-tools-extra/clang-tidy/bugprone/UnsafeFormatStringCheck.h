@@ -38,8 +38,7 @@ private:
   const StringLiteral *
   getFormatLiteral(const CallExpr *,
                    const std::vector<CheckedFunction> &CustomFunctions);
-  bool hasUnboundedStringSpecifier(StringRef Fmt, bool IsScanfFamily);
-  std::string getSafeAlternative(StringRef FunctionName);
+  bool hasUnboundedStringSpecifier(StringRef Fmt, bool IsScanfFamily);  
 };
 
 } // namespace clang::tidy::bugprone
