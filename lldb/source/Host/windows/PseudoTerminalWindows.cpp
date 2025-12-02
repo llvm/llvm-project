@@ -34,6 +34,8 @@ llvm::Error PseudoTerminalWindows::OpenFirstAvailablePrimary(int oflag) {
   swprintf(pipe_name, MAX_PATH, L"\\\\.\\pipe\\conpty-lldb-%d-%p",
            GetCurrentProcessId(), this);
 
+  // A 4096 bytes buffer should be large enough for the majority of console
+  // burst outputs.
   hOutputRead =
       CreateNamedPipeW(pipe_name, PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
                        PIPE_TYPE_BYTE | PIPE_WAIT, 1, 4096, 4096, 0, NULL);

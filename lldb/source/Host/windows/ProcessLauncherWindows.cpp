@@ -111,10 +111,10 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
                                     /*dwAttributeCount=*/1, /*dwFlags=*/0,
                                     &attributelist_size);
 
-  startupinfoex.lpAttributeList = (LPPROC_THREAD_ATTRIBUTE_LIST)HeapAlloc(
-      GetProcessHeap(), 0, attributelist_size);
-  auto free_attributelist = llvm::make_scope_exit(
-      [&] { HeapFree(GetProcessHeap(), 0, startupinfoex.lpAttributeList); });
+  startupinfoex.lpAttributeList =
+      static_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(malloc(attributelist_size));
+  auto free_attributelist =
+      llvm::make_scope_exit([&] { free(startupinfoex.lpAttributeList); });
   if (!InitializeProcThreadAttributeList(startupinfoex.lpAttributeList,
                                          /*dwAttributeCount=*/1, /*dwFlags=*/0,
                                          &attributelist_size)) {
