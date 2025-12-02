@@ -9661,6 +9661,10 @@ become a call to ``__modular_printf`` with the same arguments, as would
 relocation against the symbol ``__printf_float``, which would bring floating
 point support for ``printf`` into the link.
 
+If the attribute appears more than once on a declaration, or across a chain of
+redeclarations, it is an error for the attributes to have different arguments,
+excepting that the aspects may be in any order.
+
 The following aspects are currently supported:
 
 - ``float``: The call has a floating point argument

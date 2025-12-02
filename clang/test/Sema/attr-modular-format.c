@@ -11,11 +11,16 @@ int multi_dupe(const char *fmt, ...)  __attribute__((modular_format(__modular_pr
 int same_attr(const char *fmt, ...) __attribute__((modular_format(__modular_printf, "__printf", "float"), modular_format(__modular_printf, "__printf", "float"), format(printf, 1, 2))); // no-warning
 
 // Test with multiple different attributes on the same declaration.
-int diff_attr(const char *fmt, ...) __attribute__((modular_format(__modular_printf, "__printf", "float"), format(printf, 1, 2), modular_format(__modular_printf, "__printf", "int"))); // expected-warning {{attribute 'modular_format' is already applied with different arguments}} expected-note {{conflicting attribute is here}}
+int diff_attr(const char *fmt, ...) __attribute__((modular_format(__modular_printf, "__printf", "float"), format(printf, 1, 2), modular_format(__modular_printf, "__printf", "int"))); // expected-error {{attribute 'modular_format' is already applied with different arguments}} expected-note {{conflicting attribute is here}}
 
-int diff_attr2(const char *fmt, ...) __attribute__((modular_format(__modular_printf, "__printf", "float"), format(printf, 1, 2), modular_format(__modular_printf, "__other", "float"))); // expected-warning {{attribute 'modular_format' is already applied with different arguments}} expected-note {{conflicting attribute is here}}
+int diff_attr2(const char *fmt, ...) __attribute__((modular_format(__modular_printf, "__printf", "float"), format(printf, 1, 2), modular_format(__modular_printf, "__other", "float"))); // expected-error {{attribute 'modular_format' is already applied with different arguments}} expected-note {{conflicting attribute is here}}
 
-int diff_attr3(const char *fmt, ...) __attribute__((modular_format(__modular_printf, "__printf", "float"), format(printf, 1, 2), modular_format(__other, "__printf", "float"))); // expected-warning {{attribute 'modular_format' is already applied with different arguments}} expected-note {{conflicting attribute is here}}
+int diff_attr3(const char *fmt, ...) __attribute__((modular_format(__modular_printf, "__printf", "float"), format(printf, 1, 2), modular_format(__other, "__printf", "float"))); // expected-error {{attribute 'modular_format' is already applied with different arguments}} expected-note {{conflicting attribute is here}}
 
 // Test with same attributes but different aspect order.
-int diff_order(const char *fmt, ...) __attribute__((modular_format(__modular_printf, "__printf", "float", "int"), format(printf, 1, 2), modular_format(__modular_printf, "__printf", "int", "float"))); // no-warning
+int diff_order(const char *fmt, ...) __attribute__((modular_format(__modular_printf, "__printf", "float", "int"), format(printf, 1, 2), modular_format(__modular_printf, "__printf", "int", "float"))); // no-error
+
+// Test with multiple different attributes on a declaration and a redeclaration
+int redecl(const char *fmt, ...) __attribute__((format(printf, 1, 2))); // no-error
+int redecl(const char *fmt, ...) __attribute__((modular_format(__modular_printf, "__printf", "float"))); // expected-note {{conflicting attribute is here}}
+int redecl(const char *fmt, ...) __attribute__((modular_format(__modular_printf, "__printf", "int"))); // expected-error {{attribute 'modular_format' is already applied with different arguments}}

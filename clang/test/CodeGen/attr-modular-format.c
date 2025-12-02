@@ -15,11 +15,12 @@ void test_explicit_format(void) {
   myprintf("hello");
 }
 
-int redecl(const char *fmt, ...) __attribute__((modular_format(__first_impl, "__first", "one"), format(printf, 1, 2)));
-int redecl(const char *fmt, ...) __attribute__((modular_format(__second_impl, "__second", "two", "three")));
+int redecl(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+int redecl(const char *fmt, ...) __attribute__((modular_format(__dupe_impl, "__dupe", "1")));
+int redecl(const char *fmt, ...) __attribute__((modular_format(__dupe_impl, "__dupe", "1")));
 
 // CHECK-LABEL: define dso_local void @test_redecl(
-// CHECK:    {{.*}} = call i32 (ptr, ...) @redecl(ptr noundef @.str) #[[ATTR_REDECL:[0-9]+]]
+// CHECK:    {{.*}} = call i32 (ptr, ...) @redecl(ptr noundef @.str) #[[ATTR_DUPE_IDENTICAL:[0-9]+]]
 void test_redecl(void) {
   redecl("hello");
 }
@@ -35,15 +36,14 @@ void test_order(void) {
   order2("hello");
 }
 
-int overwrite(const char *fmt, ...) __attribute__((modular_format(__impl1, "__name1", "1"), modular_format(__impl2, "__name2", "2"), format(printf, 1, 2)));
+int duplicate_identical(const char *fmt, ...) __attribute__((modular_format(__dupe_impl, "__dupe", "1"), modular_format(__dupe_impl, "__dupe", "1"), format(printf, 1, 2)));
 
-// CHECK-LABEL: define dso_local void @test_overwrite(
-// CHECK:    {{.*}} = call i32 (ptr, ...) @overwrite(ptr noundef @.str) #[[ATTR_OVERWRITE:[0-9]+]]
-void test_overwrite(void) {
-  overwrite("hello");
+// CHECK-LABEL: define dso_local void @test_duplicate_identical(
+// CHECK:    {{.*}} = call i32 (ptr, ...) @duplicate_identical(ptr noundef @.str) #[[ATTR_DUPE_IDENTICAL]]
+void test_duplicate_identical(void) {
+  duplicate_identical("hello");
 }
 
 // CHECK: attributes #[[ATTR]] = { "modular-format"="printf,1,2,__modular_printf,__printf,float" }
-// CHECK: attributes #[[ATTR_REDECL]] = { "modular-format"="printf,1,2,__second_impl,__second,three,two" }
+// CHECK: attributes #[[ATTR_DUPE_IDENTICAL]] = { "modular-format"="printf,1,2,__dupe_impl,__dupe,1" }
 // CHECK: attributes #[[ATTR_ORDER]] = { "modular-format"="printf,1,2,__modular_printf,__printf,a,b" }
-// CHECK: attributes #[[ATTR_OVERWRITE]] = { "modular-format"="printf,1,2,__impl2,__name2,2" }
