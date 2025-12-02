@@ -73,3 +73,18 @@ void ignoreNonConstRefOps() {
   int* p2 {nullptr};
   int*& r2 = (int*&)p2;
 }
+
+void pointer_to_pointer_param(int**);
+void pass_address_to_pointer_to_pointer() {
+  int i = 0;
+  int* ip = &i;
+  // CHECK-NOT: warning
+  pointer_to_pointer_param(&ip);
+}
+
+void void_pointer_to_pointer_param(void**);
+void pass_address_to_void_pointer_to_pointer() {
+  void* ptr = nullptr;
+  // CHECK-NOT: warning
+  void_pointer_to_pointer_param(&ptr);
+}
