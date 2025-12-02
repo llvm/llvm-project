@@ -2065,10 +2065,16 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   OI.ExitBB = TaskloopExitBB;
 
   // Add the thread ID argument.
-  SmallVector<Instruction *, 4> ToBeDeleted;
+  SmallVector<Instruction *> ToBeDeleted;
   // dummy instruction to be used as a fake argument
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
       Builder, AllocaIP, ToBeDeleted, TaskloopAllocaIP, "global.tid", false));
+  createFakeIntVal(Builder, AllocaIP, ToBeDeleted, TaskloopAllocaIP,
+                   "global.lb", false);
+  createFakeIntVal(Builder, AllocaIP, ToBeDeleted, TaskloopAllocaIP,
+                   "global.ub", false);
+  createFakeIntVal(Builder, AllocaIP, ToBeDeleted, TaskloopAllocaIP,
+                   "global.step", false);
 
   OI.PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Tied,
                       TaskloopAllocaBB, CLI, Loc,
@@ -2078,9 +2084,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
 
-    // HasShareds is true if any variables are captured in the outlined region,
-    // false otherwise.
-    bool HasShareds = StaleCI->arg_size() > 1;
     Builder.SetInsertPoint(StaleCI);
 
     // Gather the arguments for emitting the runtime call for
@@ -2101,20 +2104,17 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     Value *TaskSize = Builder.getInt64(
         divideCeil(M.getDataLayout().getTypeSizeInBits(Taskloop), 8));
 
-    Value *SharedsSize = Builder.getInt64(0);
-    if (HasShareds) {
-      AllocaInst *ArgStructAlloca =
-          dyn_cast<AllocaInst>(StaleCI->getArgOperand(1));
-      assert(ArgStructAlloca &&
-             "Unable to find the alloca instruction corresponding to arguments "
-             "for extracted function");
-      StructType *ArgStructType =
-          dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
-      assert(ArgStructType && "Unable to find struct type corresponding to "
-                              "arguments for extracted function");
-      SharedsSize =
-          Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
-    }
+    AllocaInst *ArgStructAlloca =
+        dyn_cast<AllocaInst>(StaleCI->getArgOperand(1));
+    assert(ArgStructAlloca &&
+           "Unable to find the alloca instruction corresponding to arguments "
+           "for extracted function");
+    StructType *ArgStructType =
+        dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
+    assert(ArgStructType && "Unable to find struct type corresponding to "
+                            "arguments for extracted function");
+    Value *SharedsSize =
+        Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
 
     // Emit the @__kmpc_omp_task_alloc runtime call
     // The runtime call returns a pointer to an area where the task captured
@@ -2124,31 +2124,25 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
                       /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
                       /*task_func=*/&OutlinedFn});
 
+    Value *Shareds = StaleCI->getArgOperand(1);
+    Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
+    Value *TaskShareds = Builder.CreateLoad(VoidPtr, TaskData);
+    Builder.CreateMemCpy(TaskShareds, Alignment, Shareds, Alignment,
+                         SharedsSize);
     // Get the pointer to loop lb, ub, step from task ptr
     // and set up the lowerbound,upperbound and step values
-    llvm::Value *lb =
-        Builder.CreateStructGEP(OpenMPIRBuilder::Taskloop, TaskData, 5);
-    Value *LbVal_ext = Builder.CreateSExt(LBVal, Builder.getInt64Ty());
-    Builder.CreateStore(LbVal_ext, lb);
+    llvm::Value *Lb = Builder.CreateStructGEP(ArgStructType, TaskShareds, 0);
+    Value *LbValExt = Builder.CreateSExt(LBVal, Builder.getInt64Ty());
+    Builder.CreateStore(LbValExt, Lb);
 
-    llvm::Value *ub =
-        Builder.CreateStructGEP(OpenMPIRBuilder::Taskloop, TaskData, 6);
-    Value *UbVal_ext = Builder.CreateSExt(UBVal, Builder.getInt64Ty());
-    Builder.CreateStore(UbVal_ext, ub);
+    llvm::Value *Ub = Builder.CreateStructGEP(ArgStructType, TaskShareds, 1);
+    Value *UbValExt = Builder.CreateSExt(UBVal, Builder.getInt64Ty());
+    Builder.CreateStore(UbValExt, Ub);
 
-    llvm::Value *step =
-        Builder.CreateStructGEP(OpenMPIRBuilder::Taskloop, TaskData, 7);
-    Value *Step_ext = Builder.CreateSExt(StepVal, Builder.getInt64Ty());
-    Builder.CreateStore(Step_ext, step);
-    llvm::Value *loadstep = Builder.CreateLoad(Builder.getInt64Ty(), step);
-
-    if (HasShareds) {
-      Value *Shareds = StaleCI->getArgOperand(1);
-      Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
-      Value *TaskShareds = Builder.CreateLoad(VoidPtr, TaskData);
-      Builder.CreateMemCpy(TaskShareds, Alignment, Shareds, Alignment,
-                           SharedsSize);
-    }
+    llvm::Value *Step = Builder.CreateStructGEP(ArgStructType, TaskShareds, 2);
+    Value *StepExt = Builder.CreateSExt(StepVal, Builder.getInt64Ty());
+    Builder.CreateStore(StepExt, Step);
+    llvm::Value *Loadstep = Builder.CreateLoad(Builder.getInt64Ty(), Step);
 
     // set up the arguments for emitting kmpc_taskloop runtime call
     // setting default values for ifval, nogroup, sched, grainsize, task_dup
@@ -2160,8 +2154,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     // TODO: Handle the case when TaskDup pointer isn't empty
     Value *TaskDup = Constant::getNullValue(Builder.getPtrTy());
 
-    Value *Args[] = {Ident,    ThreadID, TaskData, IfVal,     lb,     ub,
-                     loadstep, NoGroup,  Sched,    GrainSize, TaskDup};
+    Value *Args[] = {Ident,    ThreadID, TaskData, IfVal,     Lb,     Ub,
+                     Loadstep, NoGroup,  Sched,    GrainSize, TaskDup};
 
     // taskloop runtime call
     Function *TaskloopFn =
@@ -2177,29 +2171,53 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
 
     Builder.SetInsertPoint(TaskloopAllocaBB, TaskloopAllocaBB->begin());
 
-    if (HasShareds) {
-      LoadInst *Shareds = Builder.CreateLoad(VoidPtr, OutlinedFn.getArg(1));
-      OutlinedFn.getArg(1)->replaceUsesWithIf(
-          Shareds, [Shareds](Use &U) { return U.getUser() != Shareds; });
-    }
+    LoadInst *SharedsOutlined =
+        Builder.CreateLoad(VoidPtr, OutlinedFn.getArg(1));
+    OutlinedFn.getArg(1)->replaceUsesWithIf(
+        SharedsOutlined,
+        [SharedsOutlined](Use &U) { return U.getUser() != SharedsOutlined; });
 
     Value *IV = CLI->getIndVar();
     Type *IVTy = IV->getType();
     Constant *One = ConstantInt::get(IVTy, 1);
 
-    Value *TaskLB = Builder.CreateStructGEP(OpenMPIRBuilder::Taskloop,
-                                            OutlinedFn.getArg(1), 5, "gep_lb");
-    Value *LoadTaskLB = Builder.CreateLoad(Builder.getInt64Ty(), TaskLB);
-    Value *LowerBound = Builder.CreateTrunc(LoadTaskLB, IVTy, "lb");
-
-    Value *TaskUB = Builder.CreateStructGEP(OpenMPIRBuilder::Taskloop,
-                                            OutlinedFn.getArg(1), 6, "gep_ub");
-    Value *LoadTaskUB = Builder.CreateLoad(Builder.getInt64Ty(), TaskUB);
-    Value *UpperBound = Builder.CreateTrunc(LoadTaskUB, IVTy, "ub");
+    // When outlining, CodeExtractor will create GEP's to the LowerBound and
+    // UpperBound. These GEP's can be reused for loading the tasks respective
+    // bounds.
+    Value *TaskLB = nullptr;
+    Value *TaskUB = nullptr;
+    Value *LoadTaskLB = nullptr;
+    Value *LoadTaskUB = nullptr;
+    for (Instruction &I : *TaskloopAllocaBB) {
+      if (I.getOpcode() == Instruction::GetElementPtr) {
+        GetElementPtrInst &Gep = cast<GetElementPtrInst>(I);
+        if (ConstantInt *CI = dyn_cast<ConstantInt>(Gep.getOperand(2))) {
+          switch (CI->getZExtValue()) {
+          case 0:
+            TaskLB = &I;
+            break;
+          case 1:
+            TaskUB = &I;
+            break;
+          }
+        }
+      } else if (I.getOpcode() == Instruction::Load) {
+        LoadInst &Load = cast<LoadInst>(I);
+        if (Load.getPointerOperand() == TaskLB) {
+          assert(TaskLB != nullptr && "Expected value for TaskLB");
+          LoadTaskLB = &I;
+        } else if (Load.getPointerOperand() == TaskUB) {
+          assert(TaskUB != nullptr && "Expected value for TaskUB");
+          LoadTaskUB = &I;
+        }
+      }
+    }
 
     Builder.SetInsertPoint(CLI->getPreheader()->getTerminator());
 
-    Value *TripCountMinusOne = Builder.CreateSub(UpperBound, LowerBound);
+    assert(LoadTaskLB != nullptr && "Expected value for LoadTaskLB");
+    assert(LoadTaskUB != nullptr && "Expected value for LoadTaskUB");
+    Value *TripCountMinusOne = Builder.CreateSub(LoadTaskUB, LoadTaskLB);
     Value *TripCount = Builder.CreateAdd(TripCountMinusOne, One, "trip_cnt");
     // set the trip count in the CLI
     CLI->setTripCount(TripCount);
@@ -2213,13 +2231,16 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
         if (Add->getOpcode() == llvm::Instruction::Add) {
           if (llvm::isa<llvm::BinaryOperator>(Add->getOperand(0))) {
             // update the starting index of the loop
-            Add->setOperand(1, LowerBound);
+            Add->setOperand(1, LoadTaskLB);
           }
         }
       }
     }
 
     for (Instruction *I : llvm::reverse(ToBeDeleted)) {
+      while (!I->use_empty()) {
+        I->user_back()->eraseFromParent();
+      }
       I->eraseFromParent();
     }
   };
