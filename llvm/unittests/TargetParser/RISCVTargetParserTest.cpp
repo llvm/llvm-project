@@ -38,16 +38,14 @@ TEST(RISCVTuneFeature, AllTuneFeatures) {
   RISCV::getAllTuneFeatures(AllTuneFeatures);
   // Only allowed subtarget features that are explicitly marked by
   // special TableGen class.
-  EXPECT_EQ(AllTuneFeatures.size(), 28U);
+  EXPECT_EQ(AllTuneFeatures.size(), 26U);
   for (auto F : {"conditional-cmv-fusion",
-                 "dlen-factor-2",
                  "disable-latency-sched-heuristic",
                  "disable-misched-load-clustering",
                  "disable-misched-store-clustering",
                  "disable-postmisched-load-clustering",
                  "disable-postmisched-store-clustering",
                  "single-element-vec-fp64",
-                 "log-vrgather",
                  "no-default-unroll",
                  "no-sink-splat-operands",
                  "optimized-nf2-segment-load-store",
@@ -73,9 +71,9 @@ TEST(RISCVTuneFeature, AllTuneFeatures) {
 TEST(RISCVTuneFeature, LegalTuneFeatureStrings) {
   SmallVector<std::string> Result;
   EXPECT_FALSE(errorToBool(RISCV::parseTuneFeatureString(
-      "log-vrgather,no-short-forward-branch-opt,vl-dependent-latency",
+      "prefer-w-inst,no-short-forward-branch-opt,vl-dependent-latency",
       Result)));
-  EXPECT_TRUE(is_contained(Result, "+log-vrgather"));
+  EXPECT_TRUE(is_contained(Result, "+prefer-w-inst"));
   EXPECT_TRUE(is_contained(Result, "+vl-dependent-latency"));
   EXPECT_TRUE(is_contained(Result, "-short-forward-branch-opt"));
   EXPECT_TRUE(is_contained(Result, "-short-forward-branch-i-minmax"));
@@ -102,25 +100,25 @@ TEST(RISCVTuneFeature, LegalTuneFeatureStrings) {
 
 TEST(RISCVTuneFeature, IgnoreUnrecognizedTuneFeature) {
   SmallVector<std::string> Result;
-  auto Err = RISCV::parseTuneFeatureString("32bit,log-vrgather", Result);
+  auto Err = RISCV::parseTuneFeatureString("32bit,prefer-w-inst", Result);
   // This should be an warning.
   EXPECT_TRUE(Err.isA<RISCV::ParserWarning>());
   EXPECT_EQ(toString(std::move(Err)),
             "unrecognized tune feature directive '32bit'");
-  EXPECT_TRUE(is_contained(Result, "+log-vrgather"));
+  EXPECT_TRUE(is_contained(Result, "+prefer-w-inst"));
 }
 
 TEST(RISCVTuneFeature, DuplicatedFeatures) {
   SmallVector<std::string> Result;
-  EXPECT_EQ(toString(RISCV::parseTuneFeatureString("log-vrgather,log-vrgather",
-                                                   Result)),
-            "cannot specify more than one instance of 'log-vrgather'");
+  EXPECT_EQ(toString(RISCV::parseTuneFeatureString(
+                "prefer-w-inst,prefer-w-inst", Result)),
+            "cannot specify more than one instance of 'prefer-w-inst'");
 
   EXPECT_EQ(toString(RISCV::parseTuneFeatureString(
-                "log-vrgather,no-log-vrgather,short-forward-branch-i-mul,no-"
+                "prefer-w-inst,no-prefer-w-inst,short-forward-branch-i-mul,no-"
                 "short-forward-branch-i-mul",
                 Result)),
-            "Feature(s) 'log-vrgather', 'short-forward-branch-i-mul' cannot "
+            "Feature(s) 'prefer-w-inst', 'short-forward-branch-i-mul' cannot "
             "appear in both positive and negative directives");
 
   // The error message should show the feature name for those using custom

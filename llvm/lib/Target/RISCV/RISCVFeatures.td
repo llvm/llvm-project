@@ -1796,8 +1796,7 @@ def FeatureUnalignedVectorMem
 
 def TuneNLogNVRGather
    : SubtargetFeature<"log-vrgather", "RISCVVRGatherCostModel", "NLog2N",
-                      "Has vrgather.vv with LMUL*log2(LMUL) latency">,
-     RISCVSimpleTuneFeature;
+                      "Has vrgather.vv with LMUL*log2(LMUL) latency">;
 
 def TunePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">,
@@ -1858,8 +1857,7 @@ def Experimental
 // that can be done in parallel.
 def TuneDLenFactor2
    : SubtargetFeature<"dlen-factor-2", "DLenFactor2", "true",
-                      "Vector unit DLEN(data path width) is half of VLEN">,
-      RISCVSimpleTuneFeature;
+                      "Vector unit DLEN(data path width) is half of VLEN">;
 
 def TuneNoDefaultUnroll
     : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
