@@ -1224,7 +1224,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   // Find binding info for the resource array. For implicit binding
   // an HLSLResourceBindingAttr should have been added by SemaHLSL.
   ResourceBindingAttrs Binding(ArrayDecl);
-  assert((Binding.hasBinding()) &&
+  assert(Binding.hasBinding() &&
          "resource array must have a binding attribute");
 
   // Find the individual resource type.
@@ -1286,7 +1286,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
 bool CGHLSLRuntime::emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr,
                                           CodeGenFunction &CGF) {
   QualType ResultTy = RHSExpr->getType();
-  assert((ResultTy->isHLSLResourceRecordArray()) && "expected resource array");
+  assert(ResultTy->isHLSLResourceRecordArray() && "expected resource array");
 
   // Let Clang codegen handle local and static resource array copies.
   const VarDecl *ArrayDecl = dyn_cast_or_null<VarDecl>(getArrayDecl(RHSExpr));
@@ -1297,7 +1297,7 @@ bool CGHLSLRuntime::emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr,
   // Find binding info for the resource array. For implicit binding
   // the HLSLResourceBindingAttr should have been added by SemaHLSL.
   ResourceBindingAttrs Binding(ArrayDecl);
-  assert((Binding.hasBinding()) &&
+  assert(Binding.hasBinding() &&
          "resource array must have a binding attribute");
 
   // Find the individual resource type.
