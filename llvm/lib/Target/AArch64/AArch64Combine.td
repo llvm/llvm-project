@@ -280,6 +280,14 @@ def form_truncstore : GICombineRule<
   (apply [{ applyFormTruncstore(*${root}, MRI, B, Observer, ${matchinfo}); }])
 >;
 
+def split_store_128_matchdata : GIDefMatchData<"std::pair<Register, Register>">;
+def split_store_128 : GICombineRule<
+  (defs root:$root, split_store_128_matchdata:$matchinfo),
+  (match (G_STORE $src, $addr):$root,
+          [{ return matchSplitStore128(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applySplitStore128(*${root}, MRI, B, Observer, ${matchinfo}); }])
+>;
+
 def fold_merge_to_zext : GICombineRule<
   (defs root:$d),
   (match (wip_match_opcode G_MERGE_VALUES):$d,
@@ -339,7 +347,8 @@ def AArch64PostLegalizerLowering
     : GICombiner<"AArch64PostLegalizerLoweringImpl",
                        [shuffle_vector_lowering, vashr_vlshr_imm,
                         icmp_lowering, build_vector_lowering,
-                        lower_vector_fcmp, form_truncstore, fconstant_to_constant,
+                        lower_vector_fcmp, form_truncstore, split_store_128,
+                        fconstant_to_constant,
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mulv2s64,
                         vector_unmerge_lowering, insertelt_nonconst,

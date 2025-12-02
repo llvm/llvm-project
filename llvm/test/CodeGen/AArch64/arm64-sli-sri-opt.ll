@@ -663,19 +663,11 @@ define void @testRightBad2x64(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) nounw
 }
 
 define void @testLeftShouldNotCreateSLI1x128(<1 x i128> %src1, <1 x i128> %src2, ptr %dest) nounwind {
-; CHECK-SD-LABEL: testLeftShouldNotCreateSLI1x128:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bfi x1, x2, #6, #58
-; CHECK-SD-NEXT:    stp x0, x1, [x4]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: testLeftShouldNotCreateSLI1x128:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov.d v0[0], x0
-; CHECK-GI-NEXT:    bfi x1, x2, #6, #58
-; CHECK-GI-NEXT:    mov.d v0[1], x1
-; CHECK-GI-NEXT:    str q0, [x4]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: testLeftShouldNotCreateSLI1x128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bfi x1, x2, #6, #58
+; CHECK-NEXT:    stp x0, x1, [x4]
+; CHECK-NEXT:    ret
   %and.i = and <1 x i128> %src1, <i128 1180591620717411303423>
   %vshl_n = shl <1 x i128> %src2, <i128 70>
   %result = or <1 x i128> %and.i, %vshl_n
