@@ -563,6 +563,7 @@ Bug Fixes to C++ Support
 - Fix for clang incorrectly rejecting the default construction of a union with
   nontrivial member when another member has an initializer. (#GH81774)
 - Fixed a template depth issue when parsing lambdas inside a type constraint. (#GH162092)
+- Fix the support of zero-length arrays in SFINAE context. (#GH170040)
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
 - Fix a crash when extracting unavailable member type from alias in template deduction. (#GH165560)
 - Fix incorrect diagnostics for lambdas with init-captures inside braced initializers. (#GH163498)
