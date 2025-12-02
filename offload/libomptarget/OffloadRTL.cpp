@@ -35,7 +35,7 @@ void initRuntime() {
 
   RefCount++;
   if (RefCount == 1) {
-    ODBG() << "Init offload library!";
+    ODBG(ODT_Init) << "Init offload library!";
 #ifdef OMPT_SUPPORT
     // Initialize OMPT first
     llvm::omp::target::ompt::connectLibrary();
@@ -54,12 +54,12 @@ void deinitRuntime() {
   assert(PM && "Runtime not initialized");
 
   if (RefCount == 1) {
-    DP("Deinit offload library!\n");
+    ODBG(ODT_Deinit) << "Deinit offload library!";
     // RTL deinitialization has started
     RTLAlive = false;
     while (RTLOngoingSyncs > 0) {
-      DP("Waiting for ongoing syncs to finish, count: %d\n",
-         RTLOngoingSyncs.load());
+      ODBG(ODT_Sync) << "Waiting for ongoing syncs to finish, count:"
+                     << RTLOngoingSyncs.load();
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     PM->deinit();
