@@ -2356,12 +2356,11 @@ struct AMDGPUMakeDmaDescriptorLowering
       value = LLVM::ShlOp::create(rewriter, loc, value, shiftAmount);
     }
 
-    if (LLVM::ConstantOp op = accumulator.getDefiningOp<LLVM::ConstantOp>()) {
+    if (LLVM::ConstantOp op = accumulator.getDefiningOp<LLVM::ConstantOp>())
       if (IntegerAttr attr = dyn_cast<IntegerAttr>(op.getValue());
-          attr.getInt() == 0) {
+          attr.getInt() == 0)
         return value;
-      }
-    }
+
     return LLVM::OrOp::create(rewriter, loc, accumulator, value);
   }
 
@@ -2480,12 +2479,12 @@ struct AMDGPUMakeDmaDescriptorLowering
     SmallVector<OpFoldResult> mixedGlobalSizes = op.getMixedGlobalSizes();
     OpFoldResult tensorDim0OpFoldResult = mixedGlobalSizes.back();
     Value tensorDim0;
-    if (auto attr = dyn_cast<Attribute>(tensorDim0OpFoldResult)) {
+    if (auto attr = dyn_cast<Attribute>(tensorDim0OpFoldResult))
       tensorDim0 =
           createI32Constant(rewriter, loc, cast<IntegerAttr>(attr).getInt());
-    } else {
+    else
       tensorDim0 = cast<Value>(tensorDim0OpFoldResult);
-    }
+
     Value c16 = createI32Constant(rewriter, loc, 16);
     Value tensorDim0High = LLVM::LShrOp::create(rewriter, loc, tensorDim0, c16);
     sgpr1 = setValueAtOffset(rewriter, loc, sgpr1, tensorDim0, 48);
@@ -2501,12 +2500,12 @@ struct AMDGPUMakeDmaDescriptorLowering
     SmallVector<OpFoldResult> mixedGlobalSizes = op.getMixedGlobalSizes();
     OpFoldResult tensorDim1OpFoldResult = *(mixedGlobalSizes.rbegin() + 1);
     Value tensorDim1;
-    if (auto attr = dyn_cast<Attribute>(tensorDim1OpFoldResult)) {
+    if (auto attr = dyn_cast<Attribute>(tensorDim1OpFoldResult))
       tensorDim1 =
           createI32Constant(rewriter, loc, cast<IntegerAttr>(attr).getInt());
-    } else {
+    else
       tensorDim1 = cast<Value>(tensorDim1OpFoldResult);
-    }
+
     Value c16 = createI32Constant(rewriter, loc, 16);
     Value tensorDim1High = LLVM::LShrOp::create(rewriter, loc, tensorDim1, c16);
     sgpr2 = setValueAtOffset(rewriter, loc, sgpr2, tensorDim1, 80);
@@ -2520,18 +2519,17 @@ struct AMDGPUMakeDmaDescriptorLowering
                     int64_t offset) const {
     SmallVector<OpFoldResult> mixedSharedSizes = op.getMixedSharedSizes();
 
-    if (mixedSharedSizes.size() <= dimX) {
+    if (mixedSharedSizes.size() <= dimX)
       return sgpr;
-    }
 
     OpFoldResult tileDimXOpFoldResult = *(mixedSharedSizes.rbegin() + dimX);
     Value tileDimX;
-    if (auto attr = dyn_cast<Attribute>(tileDimXOpFoldResult)) {
+    if (auto attr = dyn_cast<Attribute>(tileDimXOpFoldResult))
       tileDimX =
           createI32Constant(rewriter, loc, cast<IntegerAttr>(attr).getInt());
-    } else {
+    else
       tileDimX = cast<Value>(tileDimXOpFoldResult);
-    }
+
     return setValueAtOffset(rewriter, loc, sgpr, tileDimX, offset);
   }
 
@@ -2560,19 +2558,17 @@ struct AMDGPUMakeDmaDescriptorLowering
                       size_t dimX, int64_t offset) const {
     SmallVector<OpFoldResult> mixedGlobalStrides = op.getMixedGlobalStrides();
 
-    if (mixedGlobalStrides.size() <= dimX) {
+    if (mixedGlobalStrides.size() <= dimX)
       return {sgprY, sgprZ};
-    }
 
     OpFoldResult tensorDimXStrideOpFoldResult =
         *(mixedGlobalStrides.rbegin() + dimX);
     Value tensorDimXStride;
-    if (auto attr = dyn_cast<Attribute>(tensorDimXStrideOpFoldResult)) {
+    if (auto attr = dyn_cast<Attribute>(tensorDimXStrideOpFoldResult))
       tensorDimXStride =
           createI64Constant(rewriter, loc, cast<IntegerAttr>(attr).getInt());
-    } else {
+    else
       tensorDimXStride = cast<Value>(tensorDimXStrideOpFoldResult);
-    }
 
     constexpr int64_t first48bits = (1ll << 48) - 1;
     Value mask = createI64Constant(rewriter, loc, first48bits);
@@ -2666,14 +2662,12 @@ struct AMDGPUMakeDmaDescriptorLowering
   LogicalResult
   matchAndRewrite(MakeDmaDescriptorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset < kGfx1250) {
+    if (chipset < kGfx1250)
       return op->emitOpError(
           "make_dma_descriptor is only supported on gfx1250");
-    }
 
-    if (op.getRank() != 2) {
+    if (op.getRank() != 2)
       return op->emitOpError("unimplemented");
-    }
 
     Location loc = op.getLoc();
 
@@ -2681,9 +2675,8 @@ struct AMDGPUMakeDmaDescriptorLowering
     Type v4i32 = this->typeConverter->convertType(VectorType::get(4, i32));
 
     SmallVector<Value> consts;
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++)
       consts.push_back(createI32Constant(rewriter, loc, i));
-    }
 
     Value dgroup0 = this->getDGroup0(adaptor);
     Value dgroup1 = this->getDGroup1(op, adaptor, rewriter, loc, consts);

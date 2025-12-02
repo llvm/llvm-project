@@ -692,15 +692,14 @@ LogicalResult TransposeLoadOp::verify() {
   };
 
   auto validNumElems = kValidLoadSizeMap.find(elementTypeSize);
-  if (validNumElems == kValidLoadSizeMap.end()) {
+  if (validNumElems == kValidLoadSizeMap.end())
     return emitOpError("Unsupported element type size for transpose load: ")
            << elementTypeSize << " bits";
-  }
-  if (numElements != validNumElems->second) {
+
+  if (numElements != validNumElems->second)
     return emitOpError(
                "Transferring type size mismatch: expected num of elements: ")
            << validNumElems->second;
-  }
 
   return success();
 }
@@ -713,30 +712,26 @@ LogicalResult MakeDmaBaseOp::verify() {
 
   auto ldsType = cast<MemRefType>(getLds().getType());
   auto globalType = cast<MemRefType>(getGlobal().getType());
-  if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace())) {
+  if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace()))
     return emitOpError(
         "lds memref must have workgroup address space attribute.");
-  }
-  if (!hasGlobalMemorySpace(globalType.getMemorySpace())) {
+  if (!hasGlobalMemorySpace(globalType.getMemorySpace()))
     return emitOpError(
         "global memref must have global address space attribute.");
-  }
 
   Type elementType = ldsType.getElementType();
   int width;
-  if (auto intType = dyn_cast<IntegerType>(elementType)) {
+  if (auto intType = dyn_cast<IntegerType>(elementType))
     width = intType.getWidth();
-  } else if (auto floatType = dyn_cast<FloatType>(elementType)) {
+  else if (auto floatType = dyn_cast<FloatType>(elementType))
     width = floatType.getWidth();
-  } else {
+  else
     return emitOpError("element type must have type width");
-  }
 
-  if (!llvm::is_contained({8, 16, 32, 64}, width)) {
+  if (!llvm::is_contained({8, 16, 32, 64}, width))
     return emitOpError(
                "element type must be 1, 2, 4, or 8 bytes long but type was ")
            << width << " bits long.";
-  }
 
   return success();
 }
@@ -748,45 +743,37 @@ LogicalResult MakeDmaBaseOp::verify() {
 LogicalResult MakeDmaDescriptorOp::verify() {
   ArrayRef<int64_t> globalStaticStrides = getGlobalStaticStrides();
 
-  if (globalStaticStrides.empty()) {
+  if (globalStaticStrides.empty())
     return emitOpError("strides must not be empty.");
-  }
-  if (globalStaticStrides.back() != 1) {
+  if (globalStaticStrides.back() != 1)
     return emitOpError("strides for the innermost dimension must be 1.");
-  }
 
   ArrayRef<int64_t> globalStaticSizes = getGlobalStaticSizes();
   size_t rank = globalStaticSizes.size();
-  if (rank < 2) {
+  if (rank < 2)
     return emitOpError("tensor and tile must be at least of rank 2.");
-  }
-  if (rank > 5) {
+  if (rank > 5)
     return emitOpError("tensor and tile must be at most of rank 5.");
-  }
-  if (rank != globalStaticStrides.size()) {
+  if (rank != globalStaticStrides.size())
     return emitOpError("strides and sizes must have same rank.");
-  }
 
   ArrayRef<int64_t> sharedStaticSizes = getSharedStaticSizes();
-  if (rank != sharedStaticSizes.size()) {
+  if (rank != sharedStaticSizes.size())
     return emitOpError("tensor must have same rank as tile.");
-  }
 
   int elementTypeWidth = getElementTypeWidth();
-  if (!llvm::is_contained({8, 16, 32, 64}, elementTypeWidth)) {
+  if (!llvm::is_contained({8, 16, 32, 64}, elementTypeWidth))
     return emitOpError(
                "element type width must be 1, 2, 4 or 8 bytes, but was ")
            << elementTypeWidth << " bits long";
-  }
 
   if (Value atomicBarrierAddress = getAtomicBarrierAddress()) {
-    MemRefType atomicBarrierAddressType =
+    auto atomicBarrierAddressType =
         cast<MemRefType>(atomicBarrierAddress.getType());
     bool barrierInLDS =
         hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
-    if (!barrierInLDS) {
+    if (!barrierInLDS)
       return emitOpError("atomic barrier address must be in LDS.");
-    }
   }
 
   return success();
