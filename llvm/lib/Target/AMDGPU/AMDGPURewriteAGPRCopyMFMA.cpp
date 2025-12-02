@@ -157,7 +157,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
       if (isRewriteCandidate(*MI)) {
         int AGPROp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
         const MCInstrDesc &AGPRDesc = TII.get(AGPROp);
-        const TargetRegisterClass *NewRC = TII.getRegClass(AGPRDesc, MO.getOperandNo());
+        const TargetRegisterClass *NewRC =
+            TII.getRegClass(AGPRDesc, MO.getOperandNo());
         if (!TRI.hasAGPRs(NewRC))
           return false;
 
