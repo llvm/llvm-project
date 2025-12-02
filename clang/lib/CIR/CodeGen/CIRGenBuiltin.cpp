@@ -266,7 +266,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_va_end:
     emitVAEnd(emitVAListRef(e->getArg(0)).getPointer());
     return {};
-
+  case Builtin::BI__builtin_va_copy: {
+    mlir::Value dstPtr = emitVAListRef(e->getArg(0)).getPointer();
+    mlir::Value srcPtr = emitVAListRef(e->getArg(1)).getPointer();
+    cir::VACopyOp::create(builder, dstPtr.getLoc(), dstPtr, srcPtr);
+    return {};
+  }
   case Builtin::BIcos:
   case Builtin::BIcosf:
   case Builtin::BIcosl:
@@ -320,6 +325,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_fabsl:
   case Builtin::BI__builtin_fabsf128:
     return emitUnaryMaybeConstrainedFPBuiltin<cir::FAbsOp>(*this, *e);
+
+  case Builtin::BIfloor:
+  case Builtin::BIfloorf:
+  case Builtin::BIfloorl:
+  case Builtin::BI__builtin_floor:
+  case Builtin::BI__builtin_floorf:
+  case Builtin::BI__builtin_floorf16:
+  case Builtin::BI__builtin_floorl:
+  case Builtin::BI__builtin_floorf128:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::FloorOp>(*this, *e);
 
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {

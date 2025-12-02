@@ -179,7 +179,8 @@ public:
 protected:
   CodeGenModule &CGM;
 
-  llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B,
+                                      const FunctionDecl *FD, llvm::Type *Type,
                                       const clang::DeclaratorDecl *Decl,
                                       HLSLAppliedSemanticAttr *Semantic,
                                       std::optional<unsigned> Index);
@@ -278,6 +279,7 @@ private:
                                    HLSLResourceBindingAttr *RBA);
 
   llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                         const clang::DeclaratorDecl *Decl,
                                          HLSLAppliedSemanticAttr *Semantic,
                                          std::optional<unsigned> Index);
   llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
@@ -289,6 +291,7 @@ private:
                                     std::optional<unsigned> Index);
 
   void emitSPIRVUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                                  const clang::DeclaratorDecl *Decl,
                                   HLSLAppliedSemanticAttr *Semantic,
                                   std::optional<unsigned> Index);
   void emitDXILUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,

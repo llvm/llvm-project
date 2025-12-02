@@ -1635,6 +1635,22 @@ void CodeGenModule::EmitBackendOptionsMetadata(
     getModule().addModuleFlag(llvm::Module::Min, "SmallDataLimit",
                               CodeGenOpts.SmallDataLimit);
   }
+
+  // Set AllocToken configuration for backend pipeline.
+  if (LangOpts.AllocTokenMode) {
+    StringRef S = llvm::getAllocTokenModeAsString(*LangOpts.AllocTokenMode);
+    getModule().addModuleFlag(llvm::Module::Error, "alloc-token-mode",
+                              llvm::MDString::get(VMContext, S));
+  }
+  if (LangOpts.AllocTokenMax)
+    getModule().addModuleFlag(
+        llvm::Module::Error, "alloc-token-max",
+        llvm::ConstantInt::get(llvm::Type::getInt64Ty(VMContext),
+                               *LangOpts.AllocTokenMax));
+  if (CodeGenOpts.SanitizeAllocTokenFastABI)
+    getModule().addModuleFlag(llvm::Module::Error, "alloc-token-fast-abi", 1);
+  if (CodeGenOpts.SanitizeAllocTokenExtended)
+    getModule().addModuleFlag(llvm::Module::Error, "alloc-token-extended", 1);
 }
 
 void CodeGenModule::UpdateCompletedType(const TagDecl *TD) {

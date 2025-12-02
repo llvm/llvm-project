@@ -2769,6 +2769,9 @@ def err_deduction_guide_name_not_class_template : Error<
   "cannot specify deduction guide for "
   "%select{<error>|function template|variable template|alias template|"
   "template template parameter|concept|dependent template name}0 %1">;
+def err_deduction_guide_target_attr : Error<
+  "in CUDA/HIP, target attributes are not allowed on deduction guides; "
+  "deduction guides are implicitly enabled for both host and device">;
 def err_deduction_guide_wrong_scope : Error<
   "deduction guide must be declared in the same scope as template %q0">;
 def err_deduction_guide_defines_function : Error<
@@ -9532,6 +9535,8 @@ def err_kern_is_nonstatic_method : Error<
   "kernel function %0 must be a free function or static member function">;
 def err_config_scalar_return : Error<
   "CUDA special function '%0' must have scalar return type">;
+def err_config_pointer_return
+    : Error<"CUDA special function '%0' must have pointer return type">;
 def err_kern_call_not_global_function : Error<
   "kernel call to non-global function %0">;
 def err_global_call_not_config : Error<
@@ -13233,6 +13238,12 @@ def err_hlsl_semantic_indexing_not_supported
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
+def err_hlsl_semantic_unsupported_iotype_for_stage
+    : Error<"semantic %0 is unsupported in %2 shaders as %1, requires one of "
+            "the following: %3">;
+def err_hlsl_semantic_partial_explicit_indexing
+    : Error<"partial explicit stage input location assignment via "
+            "vk::location(X) unsupported">;
 
 def warn_hlsl_user_defined_type_missing_member: Warning<"binding type '%select{t|u|b|s|c}0' only applies to types containing %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric types}0">, InGroup<LegacyConstantRegisterBinding>;
 def err_hlsl_binding_type_mismatch: Error<"binding type '%select{t|u|b|s|c}0' only applies to %select{SRV resources|UAV resources|constant buffer resources|sampler state|numeric variables in the global scope}0">;
@@ -13749,4 +13760,9 @@ def warn_comparison_in_enum_initializer : Warning<
 def note_enum_compare_typo_suggest : Note<
   "use '%0' to perform a bitwise shift">;
 
+def err_cuda_device_kernel_launch_not_supported
+    : Error<"device-side kernel call/launch is not supported">;
+def err_cuda_device_kernel_launch_require_rdc
+    : Error<"kernel launch from __device__ or __global__ function requires "
+            "relocatable device code (i.e. requires -fgpu-rdc)">;
 } // end of sema component.
