@@ -2722,10 +2722,13 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     PrevInChain = NewRed;
     NextInChain = NewRed;
   } else if (isPartialReduction()) {
-    assert(Kind == RecurKind::Add && "Unexpected partial reduction kind");
+    assert((Kind == RecurKind::Add || Kind == RecurKind::FAdd) &&
+           "Unexpected partial reduction kind");
     Value *PrevInChain = State.get(getChainOp(), /*IsScalar*/ false);
     NewRed = State.Builder.CreateIntrinsic(
-        PrevInChain->getType(), Intrinsic::vector_partial_reduce_add,
+        PrevInChain->getType(),
+        Kind == RecurKind::Add ? Intrinsic::vector_partial_reduce_add
+                               : Intrinsic::vector_partial_reduce_fadd,
         {PrevInChain, NewVecOp}, nullptr, "partial.reduce");
     PrevInChain = NewRed;
     NextInChain = NewRed;
@@ -2797,11 +2800,58 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
       CondCost = Ctx.TTI.getCmpSelInstrCost(Instruction::Select, VectorTy,
                                             CondTy, Pred, Ctx.CostKind);
     }
-    return CondCost + Ctx.TTI.getPartialReductionCost(
-                          Opcode, ElementTy, ElementTy, ElementTy, VF,
-                          TargetTransformInfo::PR_None,
-                          TargetTransformInfo::PR_None, std::nullopt,
-                          Ctx.CostKind);
+    if (!match(getVecOp(), m_FMul(m_VPValue(), m_VPValue()))) {
+      auto *PhiType = Ctx.Types.inferScalarType(getChainOp());
+      auto *InputType = Ctx.Types.inferScalarType(getVecOp());
+      return CondCost + Ctx.TTI.getPartialReductionCost(
+                            Opcode, InputType, InputType, PhiType, VF,
+                            TTI::PR_None, TTI::PR_None, {}, Ctx.CostKind);
+    }
+
+    VPRecipeBase *OpR = getVecOp()->getDefiningRecipe();
+    Type *InputTypeA = nullptr, *InputTypeB = nullptr;
+    TTI::PartialReductionExtendKind ExtAType = TTI::PR_None,
+                                    ExtBType = TTI::PR_None;
+
+    auto GetExtendKind = [](VPRecipeBase *R) {
+      if (!R)
+        return TTI::PR_None;
+      auto *WidenCastR = dyn_cast<VPWidenCastRecipe>(R);
+      if (!WidenCastR)
+        return TTI::PR_None;
+      if (WidenCastR->getOpcode() == Instruction::CastOps::ZExt)
+        return TTI::PR_ZeroExtend;
+      if (WidenCastR->getOpcode() == Instruction::CastOps::SExt)
+        return TTI::PR_SignExtend;
+      if (WidenCastR->getOpcode() == Instruction::CastOps::FPExt)
+        return TTI::PR_FPExtend;
+      return TTI::PR_None;
+    };
+
+    if (auto Widen = dyn_cast<VPWidenRecipe>(OpR)) {
+      unsigned WidenOpcode = Widen->getOpcode();
+      VPRecipeBase *ExtAR = Widen->getOperand(0)->getDefiningRecipe();
+      VPRecipeBase *ExtBR = Widen->getOperand(1)->getDefiningRecipe();
+      InputTypeA = Ctx.Types.inferScalarType(ExtAR ? ExtAR->getOperand(0)
+                                                   : Widen->getOperand(0));
+      InputTypeB = Ctx.Types.inferScalarType(ExtBR ? ExtBR->getOperand(0)
+                                                   : Widen->getOperand(1));
+      ExtAType = GetExtendKind(ExtAR);
+      ExtBType = GetExtendKind(ExtBR);
+
+      using namespace VPlanPatternMatch;
+      const APInt *C;
+      if (!ExtBR && match(Widen->getOperand(1), m_APInt(C)) &&
+          canConstantBeExtended(C, InputTypeA, ExtAType)) {
+        InputTypeB = InputTypeA;
+        ExtBType = ExtAType;
+      }
+
+      auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
+      return CondCost + Ctx.TTI.getPartialReductionCost(
+                            Opcode, InputTypeA, InputTypeB, PhiType, VF,
+                            ExtAType, ExtBType, WidenOpcode, Ctx.CostKind);
+    }
   }
 
   // TODO: Support any-of reductions.
