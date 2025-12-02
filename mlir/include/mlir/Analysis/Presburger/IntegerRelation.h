@@ -196,6 +196,7 @@ public:
   inline DynamicAPInt atIneq(unsigned i, unsigned j) const {
     return inequalities(i, j);
   }
+
   /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
   /// value does not fit in an int64_t.
   inline int64_t atIneq64(unsigned i, unsigned j) const {
@@ -207,6 +208,19 @@ public:
 
   unsigned getNumConstraints() const {
     return getNumInequalities() + getNumEqualities();
+  }
+
+  // Unified indexing into the constraints. Index into the inequalities
+  // if i < getNumInequalities() and into the equalities otherwise.
+  inline DynamicAPInt atConstraint(unsigned i, unsigned j) const {
+    assert(i < getNumConstraints());
+    unsigned numIneqs = getNumInequalities();
+    return i < numIneqs ? atIneq(i, j) : atEq(i - numIneqs, j);
+  }
+  inline DynamicAPInt &atConstraint(unsigned i, unsigned j) {
+    assert(i < getNumConstraints());
+    unsigned numIneqs = getNumInequalities();
+    return i < numIneqs ? atIneq(i, j) : atEq(i - numIneqs, j);
   }
 
   unsigned getNumDomainVars() const { return space.getNumDomainVars(); }

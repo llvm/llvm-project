@@ -560,6 +560,7 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
+  case AArch64::G_PMULL:
     return true;
   case TargetOpcode::G_INTRINSIC:
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {

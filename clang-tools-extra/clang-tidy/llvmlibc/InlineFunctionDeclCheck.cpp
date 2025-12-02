@@ -78,7 +78,8 @@ void InlineFunctionDeclCheck::check(const MatchFinder::MatchResult &Result) {
   // Check if decl starts with LIBC_INLINE
   auto Loc = FullSourceLoc(Result.SourceManager->getFileLoc(SrcBegin),
                            *Result.SourceManager);
-  llvm::StringRef SrcText = Loc.getBufferData().drop_front(Loc.getFileOffset());
+  const llvm::StringRef SrcText =
+      Loc.getBufferData().drop_front(Loc.getFileOffset());
   if (SrcText.starts_with("LIBC_INLINE"))
     return;
 

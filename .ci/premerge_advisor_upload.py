@@ -45,7 +45,7 @@ def main(commit_sha, workflow_run_number, build_log_files):
         for name, failure_message in ninja_failures:
             failure_info["failures"].append({"name": name, "message": failure_message})
     for premerge_advisor_url in PREMERGE_ADVISOR_URLS:
-        requests.post(premerge_advisor_url, json=failure_info)
+        requests.post(premerge_advisor_url, json=failure_info, timeout=5)
 
 
 if __name__ == "__main__":
@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     # Skip uploading results on AArch64 for now because the premerge advisor
     # service is not available on AWS currently.
-    if platform.machine() == "arm64":
+    if platform.machine() == "arm64" or platform.machine() == "aarch64":
         sys.exit(0)
 
     main(args.commit_sha, args.workflow_run_number, args.build_log_files)

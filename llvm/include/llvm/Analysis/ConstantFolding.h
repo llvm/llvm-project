@@ -119,12 +119,6 @@ ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS, Constant *RHS,
 LLVM_ABI Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
                                    bool IsOutput);
 
-/// Attempt to constant fold a select instruction with the specified
-/// operands. The constant result is returned if successful; if not, null is
-/// returned.
-LLVM_ABI Constant *ConstantFoldSelectInstruction(Constant *Cond, Constant *V1,
-                                                 Constant *V2);
-
 /// Attempt to constant fold a cast with the specified operand.  If it
 /// fails, it returns a constant expression of the specified operand.
 LLVM_ABI Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C,
@@ -134,40 +128,6 @@ LLVM_ABI Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C,
 /// DestTy is wider or narrower than C. Returns nullptr on failure.
 LLVM_ABI Constant *ConstantFoldIntegerCast(Constant *C, Type *DestTy,
                                            bool IsSigned, const DataLayout &DL);
-
-/// ConstantFoldInsertValueInstruction - Attempt to constant fold an insertvalue
-/// instruction with the specified operands and indices.  The constant result is
-/// returned if successful; if not, null is returned.
-LLVM_ABI Constant *ConstantFoldInsertValueInstruction(Constant *Agg,
-                                                      Constant *Val,
-                                                      ArrayRef<unsigned> Idxs);
-
-/// Attempt to constant fold an extractvalue instruction with the
-/// specified operands and indices.  The constant result is returned if
-/// successful; if not, null is returned.
-LLVM_ABI Constant *ConstantFoldExtractValueInstruction(Constant *Agg,
-                                                       ArrayRef<unsigned> Idxs);
-
-/// Attempt to constant fold an insertelement instruction with the
-/// specified operands and indices.  The constant result is returned if
-/// successful; if not, null is returned.
-LLVM_ABI Constant *ConstantFoldInsertElementInstruction(Constant *Val,
-                                                        Constant *Elt,
-                                                        Constant *Idx);
-
-/// Attempt to constant fold an extractelement instruction with the
-/// specified operands and indices.  The constant result is returned if
-/// successful; if not, null is returned.
-LLVM_ABI Constant *ConstantFoldExtractElementInstruction(Constant *Val,
-                                                         Constant *Idx);
-
-/// Attempt to constant fold a shufflevector instruction with the
-/// specified operands and mask.  See class ShuffleVectorInst for a description
-/// of the mask representation. The constant result is returned if successful;
-/// if not, null is returned.
-LLVM_ABI Constant *ConstantFoldShuffleVectorInstruction(Constant *V1,
-                                                        Constant *V2,
-                                                        ArrayRef<int> Mask);
 
 /// Extract value of C at the given Offset reinterpreted as Ty. If bits past
 /// the end of C are accessed, they are assumed to be poison.

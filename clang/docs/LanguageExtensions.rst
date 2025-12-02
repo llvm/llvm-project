@@ -385,7 +385,9 @@ Builtin Macros
 
 ``__COUNTER__``
   Defined to an integer value that starts at zero and is incremented each time
-  the ``__COUNTER__`` macro is expanded.
+  the ``__COUNTER__`` macro is expanded. This is a standard feature in C2y but
+  is an extension in earlier language modes and in C++. This macro can only be
+  expanded 2147483647 times at most.
 
 ``__INCLUDE_LEVEL__``
   Defined to an integral value that is the include depth of the file currently
@@ -805,6 +807,8 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_exp(T x)               returns the base-e exponential, e^x, of the specified value            floating point types
  T __builtin_elementwise_exp2(T x)              returns the base-2 exponential, 2^x, of the specified value            floating point types
  T __builtin_elementwise_exp10(T x)             returns the base-10 exponential, 10^x, of the specified value          floating point types
+ T __builtin_elementwise_ldexp(T x, IntT y)     returns the product of x and 2 raised to the power y.                  T: floating point types,
+                                                y must be an integer type matching the shape of x.                     IntT: integer types
 
  T __builtin_elementwise_sqrt(T x)              return the square root of a floating-point number                      floating point types
  T __builtin_elementwise_roundeven(T x)         round x to the nearest integer value in floating point format,         floating point types
@@ -1821,12 +1825,30 @@ Octal literals prefixed with ``0o`` or ``0O``                                  C
 ``_Countof`` (N3369, N3469)                                                    C2y           C89
 ``_Generic`` with a type operand (N3260)                                       C2y           C89, C++
 ``++``/``--`` on ``_Complex`` value (N3259)                                    C2y           C89, C++
+``__COUNTER__`` (N3457)                                                        C2y           C89, C++
 ============================================= ================================ ============= =============
 
 Builtin type aliases
 ====================
 
 Clang provides a few builtin aliases to improve the throughput of certain metaprogramming facilities.
+
+__builtin_common_reference
+--------------------------
+
+.. code-block:: c++
+
+  template <template <class, class, template <class> class, template <class> class> class BasicCommonReferenceT,
+            template <class... Args> CommonTypeT,
+            template <class> HasTypeMember,
+            class HasNoTypeMember,
+            class... Ts>
+  using __builtin_common_reference = ...;
+
+This alias is used for implementing ``std::common_reference``. If ``std::common_reference`` should contain a ``type``
+member, it is an alias to ``HasTypeMember<TheCommonReference>``. Otherwse it is an alias to ``HasNoTypeMember``. The
+``CommonTypeT`` is usually ``std::common_type_t``. ``BasicCommonReferenceT`` is usually an alias template to
+``basic_common_reference<T, U, TX, UX>::type``.
 
 __builtin_common_type
 ---------------------
@@ -2405,6 +2427,16 @@ those modes.
 
 Use ``__has_feature(c_fixed_enum)`` to determine whether support for fixed
 underlying types is available in C23 and later.
+
+Enumerations with no enumerators
+--------------------------------
+
+Clang provides support for Microsoft extensions to support enumerations with no enumerators.
+
+.. code-block:: c++
+
+  typedef enum empty { } A;
+
 
 Interoperability with C++11 lambdas
 -----------------------------------
@@ -4838,6 +4870,14 @@ are identical to the standard GNU / GCC atomic builtins but taking an extra
 memory scope argument. These are designed to be a generic alternative to the
 ``__opencl_atomic_*`` builtin functions for targets that support atomic memory
 scopes.
+
+Clang provides two additional __scoped_atomic builtins:
+
+* ``__scoped_atomic_uinc_wrap``
+* ``__scoped_atomic_udec_wrap``
+
+See LLVM IR `atomicrmw <https://llvm.org/docs/LangRef.html#atomicrmw-instruction>`_
+instruction for the semantics of uinc_wrap and udec_wrap.
 
 Atomic memory scopes are designed to assist optimizations for systems with
 several levels of memory hierarchy like GPUs. The following memory scopes are

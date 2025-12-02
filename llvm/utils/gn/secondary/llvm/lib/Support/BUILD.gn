@@ -190,6 +190,7 @@ static_library("Support") {
     "regfree.c",
     "regstrlcpy.c",
     "xxhash.cpp",
+    "zOSLibFunctions.cpp",
 
     # System
     "Atomic.cpp",
