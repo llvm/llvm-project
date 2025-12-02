@@ -1743,20 +1743,40 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
     // If profiling expansion is enabled and we have score brackets,
     // emit an expanded sequence
     if (ExpandWaitcntProfiling && ScoreBrackets) {
+      // Check if any of the counters to be waited on are out-of-order.
+      // If so, fall back to normal (non-expanded) behavior since expansion
+      // would provide misleading profiling information.
+      bool AnyOutOfOrder = false;
       for (auto CT : {LOAD_CNT, DS_CNT, EXP_CNT}) {
         unsigned &WaitCnt = getCounterRef(Wait, CT);
-        if (WaitCnt == ~0u)
-          continue;
+        if (WaitCnt != ~0u && ScoreBrackets->counterOutOfOrder(CT)) {
+          AnyOutOfOrder = true;
+          break;
+        }
+      }
 
-        unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(CT) -
-                                            ScoreBrackets->getScoreLB(CT),
-                                        getWaitCountMax(CT) - 1);
-        emitExpandedWaitcnt(Outstanding, WaitCnt, [&](unsigned Count) {
-          AMDGPU::Waitcnt W;
-          getCounterRef(W, CT) = Count;
-          BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT))
-              .addImm(AMDGPU::encodeWaitcnt(IV, W));
-        });
+      if (AnyOutOfOrder) {
+        // Fall back to non-expanded wait
+        unsigned Enc = AMDGPU::encodeWaitcnt(IV, Wait);
+        BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT)).addImm(Enc);
+        Modified = true;
+      } else {
+        // All counters are in-order, safe to expand
+        for (auto CT : {LOAD_CNT, DS_CNT, EXP_CNT}) {
+          unsigned &WaitCnt = getCounterRef(Wait, CT);
+          if (WaitCnt == ~0u)
+            continue;
+
+          unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(CT) -
+                                              ScoreBrackets->getScoreLB(CT),
+                                          getWaitCountMax(CT) - 1);
+          emitExpandedWaitcnt(Outstanding, WaitCnt, [&](unsigned Count) {
+            AMDGPU::Waitcnt W;
+            getCounterRef(W, CT) = Count;
+            BuildMI(Block, It, DL, TII->get(AMDGPU::S_WAITCNT))
+                .addImm(AMDGPU::encodeWaitcnt(IV, W));
+          });
+        }
       }
     } else {
       // Normal behavior: emit single combined waitcnt
@@ -1774,7 +1794,9 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
   if (Wait.hasWaitStoreCnt()) {
     assert(ST->hasVscnt());
 
-    if (ExpandWaitcntProfiling && ScoreBrackets && Wait.StoreCnt != ~0u) {
+    if (ExpandWaitcntProfiling && ScoreBrackets && Wait.StoreCnt != ~0u &&
+        !ScoreBrackets->counterOutOfOrder(STORE_CNT)) {
+      // Only expand if counter is not out-of-order
       unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(STORE_CNT) -
                                           ScoreBrackets->getScoreLB(STORE_CNT),
                                       getWaitCountMax(STORE_CNT) - 1);
@@ -2121,6 +2143,14 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
       unsigned Count = getWait(Wait, CT);
       if (Count == ~0u)
         continue;
+
+      // Skip expansion for out-of-order counters - emit normal wait instead
+      if (ScoreBrackets->counterOutOfOrder(CT)) {
+        BuildMI(Block, It, DL, TII->get(instrsForExtendedCounterTypes[CT]))
+            .addImm(Count);
+        Modified = true;
+        continue;
+      }
 
       unsigned Outstanding = std::min(ScoreBrackets->getScoreUB(CT) -
                                           ScoreBrackets->getScoreLB(CT),

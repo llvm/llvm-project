@@ -24,8 +24,6 @@ define amdgpu_kernel void @test_lgkmcnt_scalar_loads(ptr addrspace(4) %ptr_a, pt
 ; GFX9-EXPAND-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; GFX9-EXPAND-NEXT:    s_load_dword s1, s[10:11], 0x0
 ; GFX9-EXPAND-NEXT:    s_load_dword s2, s[12:13], 0x0
-; GFX9-EXPAND-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX9-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX9-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-EXPAND-NEXT:    s_add_i32 s0, s0, s1
 ; GFX9-EXPAND-NEXT:    s_add_i32 s0, s0, s2
@@ -56,8 +54,6 @@ define amdgpu_kernel void @test_lgkmcnt_scalar_loads(ptr addrspace(4) %ptr_a, pt
 ; GFX10-EXPAND-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; GFX10-EXPAND-NEXT:    s_load_dword s1, s[10:11], 0x0
 ; GFX10-EXPAND-NEXT:    s_load_dword s2, s[12:13], 0x0
-; GFX10-EXPAND-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX10-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX10-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-EXPAND-NEXT:    s_add_i32 s0, s0, s1
 ; GFX10-EXPAND-NEXT:    s_add_i32 s0, s0, s2
@@ -87,8 +83,6 @@ define amdgpu_kernel void @test_lgkmcnt_scalar_loads(ptr addrspace(4) %ptr_a, pt
 ; GFX11-EXPAND-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-EXPAND-NEXT:    s_load_b32 s1, s[2:3], 0x0
 ; GFX11-EXPAND-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-EXPAND-NEXT:    s_add_i32 s0, s0, s1
 ; GFX11-EXPAND-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -119,8 +113,6 @@ define amdgpu_kernel void @test_lgkmcnt_scalar_loads(ptr addrspace(4) %ptr_a, pt
 ; GFX12-EXPAND-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX12-EXPAND-NEXT:    s_load_b32 s1, s[2:3], 0x0
 ; GFX12-EXPAND-NEXT:    s_load_b32 s2, s[4:5], 0x0
-; GFX12-EXPAND-NEXT:    s_wait_kmcnt 0x2
-; GFX12-EXPAND-NEXT:    s_wait_kmcnt 0x1
 ; GFX12-EXPAND-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-EXPAND-NEXT:    s_add_co_i32 s0, s0, s1
 ; GFX12-EXPAND-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
@@ -313,7 +305,6 @@ define amdgpu_kernel void @test_lgkmcnt_lds_operations(ptr addrspace(3) %lds_ptr
 ; GFX9-EXPAND-NEXT:    s_load_dword s2, s[4:5], 0x24
 ; GFX9-EXPAND-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
 ; GFX9-EXPAND-NEXT:    v_mov_b32_e32 v3, 0
-; GFX9-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX9-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-EXPAND-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX9-EXPAND-NEXT:    ds_read2_b32 v[0:1], v2 offset1:1
@@ -346,7 +337,6 @@ define amdgpu_kernel void @test_lgkmcnt_lds_operations(ptr addrspace(3) %lds_ptr
 ; GFX10-EXPAND-NEXT:    s_clause 0x1
 ; GFX10-EXPAND-NEXT:    s_load_dword s2, s[4:5], 0x24
 ; GFX10-EXPAND-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
-; GFX10-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX10-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-EXPAND-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX10-EXPAND-NEXT:    ds_read2_b32 v[0:1], v2 offset1:1
@@ -381,7 +371,6 @@ define amdgpu_kernel void @test_lgkmcnt_lds_operations(ptr addrspace(3) %lds_ptr
 ; GFX11-EXPAND-NEXT:    s_clause 0x1
 ; GFX11-EXPAND-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; GFX11-EXPAND-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
-; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-EXPAND-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX11-EXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
@@ -416,7 +405,6 @@ define amdgpu_kernel void @test_lgkmcnt_lds_operations(ptr addrspace(3) %lds_ptr
 ; GFX12-EXPAND-NEXT:    s_clause 0x1
 ; GFX12-EXPAND-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; GFX12-EXPAND-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
-; GFX12-EXPAND-NEXT:    s_wait_kmcnt 0x1
 ; GFX12-EXPAND-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-EXPAND-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX12-EXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
@@ -464,11 +452,9 @@ define amdgpu_kernel void @test_combined_vmcnt_lgkmcnt(ptr addrspace(4) %scalar_
 ; GFX9-EXPAND-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-EXPAND-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX9-EXPAND-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX9-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-EXPAND-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GFX9-EXPAND-NEXT:    s_load_dword s5, s[2:3], 0x0
-; GFX9-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX9-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-EXPAND-NEXT:    s_add_i32 s0, s4, s5
 ; GFX9-EXPAND-NEXT:    v_mov_b32_e32 v1, s0
@@ -495,11 +481,9 @@ define amdgpu_kernel void @test_combined_vmcnt_lgkmcnt(ptr addrspace(4) %scalar_
 ; GFX10-EXPAND-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-EXPAND-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX10-EXPAND-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX10-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-EXPAND-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GFX10-EXPAND-NEXT:    s_load_dword s5, s[2:3], 0x0
-; GFX10-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX10-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-EXPAND-NEXT:    s_add_i32 s0, s4, s5
 ; GFX10-EXPAND-NEXT:    v_mov_b32_e32 v1, s0
@@ -526,11 +510,9 @@ define amdgpu_kernel void @test_combined_vmcnt_lgkmcnt(ptr addrspace(4) %scalar_
 ; GFX11-EXPAND-NEXT:    s_clause 0x1
 ; GFX11-EXPAND-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-EXPAND-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-EXPAND-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-EXPAND-NEXT:    s_load_b32 s1, s[2:3], 0x0
-; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-EXPAND-NEXT:    s_add_i32 s0, s0, s1
 ; GFX11-EXPAND-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -558,11 +540,9 @@ define amdgpu_kernel void @test_combined_vmcnt_lgkmcnt(ptr addrspace(4) %scalar_
 ; GFX12-EXPAND-NEXT:    s_clause 0x1
 ; GFX12-EXPAND-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-EXPAND-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX12-EXPAND-NEXT:    s_wait_kmcnt 0x1
 ; GFX12-EXPAND-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-EXPAND-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX12-EXPAND-NEXT:    s_load_b32 s1, s[2:3], 0x0
-; GFX12-EXPAND-NEXT:    s_wait_kmcnt 0x1
 ; GFX12-EXPAND-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-EXPAND-NEXT:    s_add_co_i32 s0, s0, s1
 ; GFX12-EXPAND-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -590,5 +570,148 @@ define amdgpu_kernel void @test_combined_vmcnt_lgkmcnt(ptr addrspace(4) %scalar_
 
   %result = add i32 %scalar_val1, %scalar_val2
   store i32 %result, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+; Test that expansion is NOT applied when counters are out-of-order (mixed event types).
+; In pre-GFX12, LDS and SMEM operations both use DS_CNT (lgkmcnt), but they can complete
+; out-of-order relative to each other. When both are in-flight, we should NOT expand
+; because the expansion would be misleading.
+define amdgpu_kernel void @test_outoforder_lds_and_smem(ptr addrspace(3) %lds_ptr, ptr addrspace(4) %smem_ptr, ptr addrspace(1) %out) {
+; GFX9-EXPAND-LABEL: test_outoforder_lds_and_smem:
+; GFX9-EXPAND:       ; %bb.0:
+; GFX9-EXPAND-NEXT:    s_load_dword s6, s[4:5], 0x24
+; GFX9-EXPAND-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX9-EXPAND-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-EXPAND-NEXT:    v_mov_b32_e32 v0, s6
+; GFX9-EXPAND-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
+; GFX9-EXPAND-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GFX9-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-EXPAND-NEXT:    v_add_u32_e32 v0, v0, v1
+; GFX9-EXPAND-NEXT:    v_add_u32_e32 v0, s0, v0
+; GFX9-EXPAND-NEXT:    global_store_dword v2, v0, s[2:3]
+; GFX9-EXPAND-NEXT:    s_endpgm
+;
+; GFX9-NOEXPAND-LABEL: test_outoforder_lds_and_smem:
+; GFX9-NOEXPAND:       ; %bb.0:
+; GFX9-NOEXPAND-NEXT:    s_load_dword s6, s[4:5], 0x24
+; GFX9-NOEXPAND-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX9-NOEXPAND-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NOEXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NOEXPAND-NEXT:    v_mov_b32_e32 v0, s6
+; GFX9-NOEXPAND-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
+; GFX9-NOEXPAND-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GFX9-NOEXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NOEXPAND-NEXT:    v_add_u32_e32 v0, v0, v1
+; GFX9-NOEXPAND-NEXT:    v_add_u32_e32 v0, s0, v0
+; GFX9-NOEXPAND-NEXT:    global_store_dword v2, v0, s[2:3]
+; GFX9-NOEXPAND-NEXT:    s_endpgm
+;
+; GFX10-EXPAND-LABEL: test_outoforder_lds_and_smem:
+; GFX10-EXPAND:       ; %bb.0:
+; GFX10-EXPAND-NEXT:    s_clause 0x1
+; GFX10-EXPAND-NEXT:    s_load_dword s6, s[4:5], 0x24
+; GFX10-EXPAND-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX10-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-EXPAND-NEXT:    v_mov_b32_e32 v0, s6
+; GFX10-EXPAND-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GFX10-EXPAND-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
+; GFX10-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-EXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX10-EXPAND-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-EXPAND-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX10-EXPAND-NEXT:    global_store_dword v1, v0, s[2:3]
+; GFX10-EXPAND-NEXT:    s_endpgm
+;
+; GFX10-NOEXPAND-LABEL: test_outoforder_lds_and_smem:
+; GFX10-NOEXPAND:       ; %bb.0:
+; GFX10-NOEXPAND-NEXT:    s_clause 0x1
+; GFX10-NOEXPAND-NEXT:    s_load_dword s6, s[4:5], 0x24
+; GFX10-NOEXPAND-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX10-NOEXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NOEXPAND-NEXT:    v_mov_b32_e32 v0, s6
+; GFX10-NOEXPAND-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GFX10-NOEXPAND-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
+; GFX10-NOEXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX10-NOEXPAND-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX10-NOEXPAND-NEXT:    global_store_dword v1, v0, s[2:3]
+; GFX10-NOEXPAND-NEXT:    s_endpgm
+;
+; GFX11-EXPAND-LABEL: test_outoforder_lds_and_smem:
+; GFX11-EXPAND:       ; %bb.0:
+; GFX11-EXPAND-NEXT:    s_clause 0x1
+; GFX11-EXPAND-NEXT:    s_load_b32 s6, s[4:5], 0x24
+; GFX11-EXPAND-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
+; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-EXPAND-NEXT:    v_mov_b32_e32 v0, s6
+; GFX11-EXPAND-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX11-EXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v0 offset1:1
+; GFX11-EXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-EXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX11-EXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-EXPAND-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX11-EXPAND-NEXT:    global_store_b32 v1, v0, s[2:3]
+; GFX11-EXPAND-NEXT:    s_endpgm
+;
+; GFX11-NOEXPAND-LABEL: test_outoforder_lds_and_smem:
+; GFX11-NOEXPAND:       ; %bb.0:
+; GFX11-NOEXPAND-NEXT:    s_clause 0x1
+; GFX11-NOEXPAND-NEXT:    s_load_b32 s6, s[4:5], 0x24
+; GFX11-NOEXPAND-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
+; GFX11-NOEXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NOEXPAND-NEXT:    v_mov_b32_e32 v0, s6
+; GFX11-NOEXPAND-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX11-NOEXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v0 offset1:1
+; GFX11-NOEXPAND-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NOEXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX11-NOEXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX11-NOEXPAND-NEXT:    global_store_b32 v1, v0, s[2:3]
+; GFX11-NOEXPAND-NEXT:    s_endpgm
+;
+; GFX12-EXPAND-LABEL: test_outoforder_lds_and_smem:
+; GFX12-EXPAND:       ; %bb.0:
+; GFX12-EXPAND-NEXT:    s_clause 0x1
+; GFX12-EXPAND-NEXT:    s_load_b32 s6, s[4:5], 0x24
+; GFX12-EXPAND-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
+; GFX12-EXPAND-NEXT:    s_wait_kmcnt 0x0
+; GFX12-EXPAND-NEXT:    v_mov_b32_e32 v0, s6
+; GFX12-EXPAND-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX12-EXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v0 offset1:1
+; GFX12-EXPAND-NEXT:    s_wait_dscnt 0x0
+; GFX12-EXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX12-EXPAND-NEXT:    s_wait_kmcnt 0x0
+; GFX12-EXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-EXPAND-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX12-EXPAND-NEXT:    global_store_b32 v1, v0, s[2:3]
+; GFX12-EXPAND-NEXT:    s_endpgm
+;
+; GFX12-NOEXPAND-LABEL: test_outoforder_lds_and_smem:
+; GFX12-NOEXPAND:       ; %bb.0:
+; GFX12-NOEXPAND-NEXT:    s_clause 0x1
+; GFX12-NOEXPAND-NEXT:    s_load_b32 s6, s[4:5], 0x24
+; GFX12-NOEXPAND-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
+; GFX12-NOEXPAND-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NOEXPAND-NEXT:    v_mov_b32_e32 v0, s6
+; GFX12-NOEXPAND-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX12-NOEXPAND-NEXT:    ds_load_2addr_b32 v[0:1], v0 offset1:1
+; GFX12-NOEXPAND-NEXT:    s_wait_dscnt 0x0
+; GFX12-NOEXPAND-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; GFX12-NOEXPAND-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NOEXPAND-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NOEXPAND-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX12-NOEXPAND-NEXT:    global_store_b32 v1, v0, s[2:3]
+; GFX12-NOEXPAND-NEXT:    s_endpgm
+
+  %lds_val1 = load i32, ptr addrspace(3) %lds_ptr, align 4
+  %smem_val = load i32, ptr addrspace(4) %smem_ptr, align 4
+  %lds_ptr2 = getelementptr i32, ptr addrspace(3) %lds_ptr, i32 1
+  %lds_val2 = load i32, ptr addrspace(3) %lds_ptr2, align 4
+  %sum1 = add i32 %lds_val1, %lds_val2
+  %sum2 = add i32 %sum1, %smem_val
+  store i32 %sum2, ptr addrspace(1) %out, align 4
   ret void
 }
