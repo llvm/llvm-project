@@ -29,12 +29,11 @@ namespace detail {
 template <typename Impl, typename SyclObject> class ObjBase;
 template <typename Impl, typename SyclObject>
 class ObjBase<Impl *, SyclObject> {
-public:
+protected:
   using ImplType = Impl;
   using ImplPtrType = Impl *;
   using Base = ObjBase<Impl *, SyclObject>;
 
-protected:
   ImplPtrType impl;
 
   explicit ObjBase(ImplPtrType pImpl) : impl(pImpl) {
