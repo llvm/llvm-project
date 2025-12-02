@@ -119,7 +119,6 @@ private:
   bool CheckDesignator(const parser::Designator &);
   bool CheckDataRef(const parser::CharBlock &, const parser::DataRef &);
   bool CheckObject(const parser::Name &);
-  bool CheckSectionSubscript(const parser::CharBlock &, const parser::SectionSubscript &);
   bool CheckArrayBound(const parser::Expr &);
   bool CheckSubstringBound(const parser::Expr &, bool);
   bool IsCharacterSequenceType(const DeclTypeSpec *);
