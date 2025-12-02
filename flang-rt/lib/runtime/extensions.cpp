@@ -416,14 +416,6 @@ std::int64_t RTNAME(time)() { return time(nullptr); }
 // MCLOCK: returns accumulated CPU time in ticks
 std::int32_t FORTRAN_PROCEDURE_NAME(mclock)() { return std::clock(); }
 
-void RTNAME(ShowDescriptor)(const Fortran::runtime::Descriptor *descr) {
-  if (descr) {
-    descr->Dump(stderr, /*dumpRawType=*/false);
-  } else {
-    std::fprintf(stderr, "NULL\n");
-  }
-}
-
 static void _internal_srand(int seed) { rand_seed = seed ? seed : 123459876; }
 
 // IRAND(I)
