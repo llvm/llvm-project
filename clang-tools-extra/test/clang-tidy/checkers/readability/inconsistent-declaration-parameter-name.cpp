@@ -191,3 +191,32 @@ struct S {
 void S::f(int y)
 {
 }
+
+//////////////////////////////////////////////////////
+
+template<typename... Args>
+void variadicFunctionNoWarning(Args... args);
+
+template<>
+// CHECK-NOT: warning: function template specialization 'variadicFunctionNoWarning<int>'
+// CHECK-NOT: readability-inconsistent-declaration-parameter-name
+void variadicFunctionNoWarning(int a) {}
+
+template<>
+// CHECK-NOT: warning: function template specialization 'variadicFunctionNoWarning<int, int>'
+// CHECK-NOT: readability-inconsistent-declaration-parameter-name
+void variadicFunctionNoWarning(int a, int b) {}
+
+template<typename... Args>
+void variadicFunction2WithWarning(int fixed, Args... args);
+
+template<>
+// CHECK-NOT: warning: function template specialization 'variadicFunction2WithWarning<int>'
+// CHECK-NOT: readability-inconsistent-declaration-parameter-name
+void variadicFunction2WithWarning(int fixed, int a) {}
+
+template<>
+// CHECK-MESSAGES: :[[@LINE+3]]:6: warning: function template specialization 'variadicFunction2WithWarning<float>' has a primary template
+// CHECK-MESSAGES: :[[@LINE-9]]:6: note: the primary template declaration seen here
+// CHECK-MESSAGES: :[[@LINE+1]]:6: note: differing parameters are named here: ('wrong'), in primary template declaration: ('fixed')
+void variadicFunction2WithWarning(int wrong, float a) {}
