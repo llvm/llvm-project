@@ -1252,14 +1252,21 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
   if (PAC && !FPLRPair)
     return false;
   int H = Nops == 4;
-  // There's an inconsistency regarding packed unwind info with homed
-  // parameters; according to the documentation, the epilog shouldn't have
-  // the same corresponding nops (and thus, to set the H bit, we should
-  // require an epilog which isn't exactly symmetrical - we shouldn't accept
-  // an exact mirrored epilog for those cases), but in practice,
-  // RtlVirtualUnwind behaves as if it does expect the epilogue to contain
-  // the same nops. See https://github.com/llvm/llvm-project/issues/54879.
-  // To play it safe, don't produce packed unwind info with homed parameters.
+  // For packed unwind info with the H bit set, the prolog and epilog
+  // actually shouldn't be symmetrical; the epilog shouldn't have any
+  // nop instructions/opcodes while the prolog has them. We currently
+  // require exactly symmetrical prologs/epilogs, which is wrong for this
+  // case - therefore, don't emit packed unwind info for this case.
+  // See https://github.com/llvm/llvm-project/issues/54879 for details.
+  //
+  // Additionally - older versions of Windows also deviated from the
+  // documentation here; older versions of Windows (at least up until
+  // 10.0.22000.2176) incorrectly did assume that the epilog has matching
+  // nop instructions. This is fixed at least in version 10.0.26100.6899.
+  // As long as we can't assume that the generated code always will run on
+  // a new enough version, don't emit the packed format here, even if the
+  // implementation would be fixed to match for the asymmetrical form
+  // according to the documentation.
   if (H)
     return false;
   int IntSZ = 8 * RegI;
