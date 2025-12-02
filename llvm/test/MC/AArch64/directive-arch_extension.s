@@ -222,3 +222,7 @@ fexpa z0.s, z31.s
 .arch_extension jscvt
 fjcvtzs w0, d0
 // CHECK: fjcvtzs w0, d0
+
+.arch_extension fcma
+fcmla v0.4s, v1.4s, v2.4s, #0
+// CHECK: fcmla v0.4s, v1.4s, v2.4s, #0
