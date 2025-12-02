@@ -2564,9 +2564,9 @@ def CIR_FuncOp : CIR_Op<"func", [
     Similarly, for global destructors both `global_dtor` and
     `global_dtor(<priority>)` are available.
 
-    The `inline(never)` keyword marks a function that should not be inlined.
-    The `inline(always)` keyword marks a function that should always be inlined.
-    The `inline(hint)` keyword suggests that the function should be inlined.
+    The `no_inline` attribute marks a function that should not be inlined.
+    The `always_inline` attribute marks a function that should always be inlined.
+    The `inline_hint` attribute suggests that the function should be inlined.
 
     Example:
 
@@ -2580,7 +2580,10 @@ def CIR_FuncOp : CIR_Op<"func", [
 
     // Linkage information
     cir.func linkonce_odr @some_method(...)
-    ```
+
+    // Inline information
+    cir.func no_inline @some_method(...)
+    
     // Builtin function
     cir.func builtin @__builtin_coro_end(!cir.ptr<i8>, !cir.bool) -> !cir.bool
     // Coroutine
@@ -2592,26 +2595,29 @@ def CIR_FuncOp : CIR_Op<"func", [
     ```
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name,
-                       CIR_VisibilityAttr:$global_visibility,
-                       TypeAttrOf<CIR_FuncType>:$function_type,
-                       UnitAttr:$builtin,
-                       UnitAttr:$coroutine,
-                       UnitAttr:$lambda,
-                       UnitAttr:$no_proto,
-                       UnitAttr:$dso_local,
-                       DefaultValuedAttr<CIR_GlobalLinkageKind,
-                                         "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
-                       OptionalAttr<CIR_InlineAttr>:$inline_kind,
-                       OptionalAttr<StrAttr>:$sym_visibility,
-                       UnitAttr:$comdat,
-                       OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs,
-                       OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-                       CIR_OptionalPriorityAttr:$global_ctor_priority,
-                       CIR_OptionalPriorityAttr:$global_dtor_priority,
-                       OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
-   );
+  let arguments = (ins 
+    SymbolNameAttr:$sym_name,
+    CIR_VisibilityAttr:$global_visibility,
+    TypeAttrOf<CIR_FuncType>:$function_type,
+    UnitAttr:$builtin,
+    UnitAttr:$coroutine,
+    OptionalAttr<CIR_InlineKind>:$inline_kind,
+    UnitAttr:$lambda,
+    UnitAttr:$no_proto,
+    UnitAttr:$dso_local,
+    DefaultValuedAttr<
+      CIR_GlobalLinkageKind,
+      "cir::GlobalLinkageKind::ExternalLinkage"
+    >:$linkage,
+    OptionalAttr<StrAttr>:$sym_visibility,
+    UnitAttr:$comdat,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs,
+    OptionalAttr<FlatSymbolRefAttr>:$aliasee,
+    CIR_OptionalPriorityAttr:$global_ctor_priority,
+    CIR_OptionalPriorityAttr:$global_dtor_priority,
+    OptionalAttr<CIR_CXXSpecialMemberAttr>:$cxx_special_member
+  );
 
   let regions = (region AnyRegion:$body);
 
@@ -4811,6 +4817,37 @@ def CIR_VAEndOp : CIR_Op<"va_end"> {
 
   let assemblyFormat = [{
     $arg_list attr-dict `:` type(operands)
+  }];
+}
+
+def CIR_VACopyOp : CIR_Op<"va_copy"> {
+  let summary = "Copied a variable argument list";
+  let description = [{
+    The `cir.copy` operation models the C/C++ va_copy macro.
+    The variable argument list passed as the `$src_list` is copied to an
+    unitialized `va_list` in the destination operand. The next argument that
+    can be extracted from the copied list is the same as the next argument in
+    the source list. The copied list must be destroyed with `va_end`.
+
+    Example:
+
+    ```mlir
+    // %args : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+    %p = cir.cast array_to_ptrdecay %args
+          : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
+          -> !cir.ptr<!rec___va_list_tag>
+    cir.va_copy %p to %dst
+          : (!cir.ptr<!rec___va_list_tag>, !cir.ptr<!rec___va_list_tag>)
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_PointerType:$dst_list,
+    CIR_PointerType:$src_list
+  );
+
+  let assemblyFormat = [{
+    $src_list `to` $dst_list attr-dict `:` type(operands)
   }];
 }
 
