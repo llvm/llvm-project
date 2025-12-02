@@ -85,6 +85,11 @@ static cl::opt<unsigned>
                             "when sorting profitable allocas"),
                    cl::init(4));
 
+static cl::opt<unsigned> DynIdxNumElmLimit("dynamic-index-num-element-limit",
+    cl::desc("Maximum number of elements for promoting alloca with dynamic"
+      " index"),
+    cl::init(8));
+
 // Shared implementation which can do both promotion to vector and to LDS.
 class AMDGPUPromoteAllocaImpl {
 private:
@@ -919,6 +924,23 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       Value *Index = GEPToVectorIndex(GEP, &Alloca, VecEltTy, *DL, NewGEPInsts);
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
+      
+      if (!isa<ConstantInt>(Index)) {
+        bool UsedInLoad = false;
+        for (auto *U : GEP->users()) {
+          if(isa<LoadInst>(U)) {
+            UsedInLoad = true;
+            break;
+          }
+        }
+        if (auto *UserVecTy = dyn_cast<FixedVectorType>(
+                GEP->getSourceElementType())) {
+          if (UsedInLoad && UserVecTy->getNumElements() > DynIdxNumElmLimit) {
+            return RejectUser(Inst, 
+              "user has too many number of elements for dynamic index");
+          }
+        }
+      }
 
       GEPVectorIdx[GEP] = Index;
       UsersToRemove.push_back(Inst);
