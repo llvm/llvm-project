@@ -577,8 +577,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
     mlir::Value result = cir::IsConstantOp::create(
         builder, getLoc(e->getSourceRange()), argValue);
-    if (result.getType() != resultType)
-      result = builder.createBoolToInt(result, resultType);
+    // IsConstantOp returns a bool, but __builtin_constant_p returns an int.
+    result = builder.createBoolToInt(result, resultType);
     return RValue::get(result);
   }
   case Builtin::BI__builtin_dynamic_object_size:

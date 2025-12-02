@@ -1178,6 +1178,7 @@ def CIR_SwitchOp : CIR_Op<"switch", [
 //===----------------------------------------------------------------------===//
 
 def CIR_IsConstantOp : CIR_Op<"is_constant", [Pure]> {
+  let summary = "Test for manifest compile-time constant";
   let description = [{
     Returns `true` if the argument is known to be a manifest compile-time
     constant otherwise returns `false`. If the argument is a constant expression
