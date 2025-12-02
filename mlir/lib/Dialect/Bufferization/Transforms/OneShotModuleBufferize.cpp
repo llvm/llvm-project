@@ -75,6 +75,8 @@
 using namespace mlir;
 using namespace mlir::bufferization;
 using namespace mlir::bufferization::func_ext;
+using llvm::DenseMap;
+using llvm::DenseSet;
 
 /// A mapping of FuncOps to their callers.
 using FuncCallerMap = DenseMap<func::FuncOp, DenseSet<Operation *>>;
@@ -229,6 +231,192 @@ static void annotateFuncArgAccess(func::FuncOp funcOp, int64_t idx, bool isRead,
                     accessType);
 }
 
+/// Initialize conservative assumptions for inter-procedural fixed-point
+/// analysis. All function arguments are assumed to be read and written, and
+/// all return values are assumed to be new allocations (no aliasing).
+static void initializeConservativeAssumptions(
+    SmallVector<func::FuncOp> &funcOps, FuncAnalysisState &funcState) {
+  for (func::FuncOp funcOp : funcOps) {
+    FunctionType funcType = funcOp.getFunctionType();
+
+    // Initialize all tensor arguments as read and written
+    for (unsigned i = 0; i < funcType.getNumInputs(); ++i) {
+      if (isa<TensorType>(funcType.getInput(i))) {
+        funcState.readBbArgs[funcOp].insert(i);
+        funcState.writtenBbArgs[funcOp].insert(i);
+      }
+    }
+
+    // Clear aliasing return values (assume all returns are new allocations)
+    funcState.aliasingReturnVals[funcOp].clear();
+    funcState.equivalentFuncArgs[funcOp].clear();
+
+    // Initialize iteration count
+    funcState.iterationCount[funcOp] = 0;
+  }
+}
+
+/// Check if function analysis results have changed by comparing current state
+/// with previous snapshot.
+static bool hasAnalysisChanged(
+    FuncOp funcOp, FuncAnalysisState &funcState,
+    const DenseMap<FuncOp, FuncAnalysisState::BbArgIndexSet> &prevReadBbArgs,
+    const DenseMap<FuncOp, FuncAnalysisState::BbArgIndexSet> &prevWrittenBbArgs,
+    const DenseMap<FuncOp, FuncAnalysisState::IndexToIndexListMapping>
+        &prevAliasingReturnVals) {
+  // Check if readBbArgs changed
+  auto readIt = funcState.readBbArgs.find(funcOp);
+  auto prevReadIt = prevReadBbArgs.find(funcOp);
+  if ((readIt == funcState.readBbArgs.end()) !=
+          (prevReadIt == prevReadBbArgs.end()) ||
+      (readIt != funcState.readBbArgs.end() &&
+       readIt->getSecond() != prevReadIt->getSecond()))
+    return true;
+
+  // Check if writtenBbArgs changed
+  auto writtenIt = funcState.writtenBbArgs.find(funcOp);
+  auto prevWrittenIt = prevWrittenBbArgs.find(funcOp);
+  if ((writtenIt == funcState.writtenBbArgs.end()) !=
+          (prevWrittenIt == prevWrittenBbArgs.end()) ||
+      (writtenIt != funcState.writtenBbArgs.end() &&
+       writtenIt->getSecond() != prevWrittenIt->getSecond()))
+    return true;
+
+  // Check if aliasingReturnVals changed
+  auto aliasIt = funcState.aliasingReturnVals.find(funcOp);
+  auto prevAliasIt = prevAliasingReturnVals.find(funcOp);
+  if ((aliasIt == funcState.aliasingReturnVals.end()) !=
+          (prevAliasIt == prevAliasingReturnVals.end()))
+    return true;
+
+  if (aliasIt != funcState.aliasingReturnVals.end()) {
+    const auto &currAliases = aliasIt->getSecond();
+    const auto &prevAliases = prevAliasIt->getSecond();
+    if (currAliases.size() != prevAliases.size())
+      return true;
+
+    for (const auto &entry : currAliases) {
+      auto prevEntry = prevAliases.find(entry.first);
+      if (prevEntry == prevAliases.end() ||
+          prevEntry->getSecond() != entry.getSecond())
+        return true;
+    }
+  }
+
+  return false;
+}
+
+/// Run inter-procedural fixed-point analysis for functions with recursive calls.
+/// This function implements the fixed-point iteration algorithm that converges
+/// to a stable solution for recursive call graphs.
+static LogicalResult runInterProceduralFixedPointAnalysis(
+    Operation *moduleOp, SmallVector<func::FuncOp> &funcOps,
+    OneShotAnalysisState &state, FuncAnalysisState &funcState,
+    BufferizationStatistics *statistics) {
+  int maxIterations = state.getOptions().maxFixedPointIterations;
+
+  // Initialize conservative assumptions
+  initializeConservativeAssumptions(funcOps, funcState);
+
+  // Initialize worklist with all functions
+  SmallVector<FuncOp> worklist;
+  for (FuncOp funcOp : funcOps) {
+    if (!state.getOptions().isOpAllowed(funcOp))
+      continue;
+    funcState.inWorklist.insert(funcOp);
+    worklist.push_back(funcOp);
+  }
+
+  int iteration = 0;
+  bool changed = true;
+
+  while (changed && iteration < maxIterations) {
+    changed = false;
+    iteration++;
+
+    // Snapshot of current state for comparison (before reanalysis)
+    DenseMap<FuncOp, FuncAnalysisState::BbArgIndexSet> prevReadBbArgs;
+    DenseMap<FuncOp, FuncAnalysisState::BbArgIndexSet> prevWrittenBbArgs;
+    DenseMap<FuncOp, FuncAnalysisState::IndexToIndexListMapping>
+        prevAliasingReturnVals;
+    DenseMap<FuncOp, FuncAnalysisState::IndexMapping> prevEquivalentFuncArgs;
+
+    for (auto &entry : funcState.readBbArgs)
+      prevReadBbArgs[entry.first] = entry.second;
+    for (auto &entry : funcState.writtenBbArgs)
+      prevWrittenBbArgs[entry.first] = entry.second;
+    for (auto &entry : funcState.aliasingReturnVals)
+      prevAliasingReturnVals[entry.first] = entry.second;
+    for (auto &entry : funcState.equivalentFuncArgs)
+      prevEquivalentFuncArgs[entry.first] = entry.second;
+
+    // Process all functions in worklist
+    SmallVector<FuncOp> newWorklist;
+    funcState.inWorklist.clear();
+    SmallVector<FuncOp> currentWorklist = worklist;
+    worklist.clear();
+
+    for (FuncOp funcOp : currentWorklist) {
+      if (!state.getOptions().isOpAllowed(funcOp))
+        continue;
+
+      // Reset analysis state for this function before reanalysis
+      // Clear previous analysis results (they will be recomputed)
+      funcState.readBbArgs[funcOp].clear();
+      funcState.writtenBbArgs[funcOp].clear();
+      funcState.aliasingReturnVals[funcOp].clear();
+      funcState.equivalentFuncArgs[funcOp].clear();
+
+      // Start function analysis (this initializes the data structures)
+      funcState.startFunctionAnalysis(funcOp);
+
+      // Analyze function body
+      if (failed(analyzeOp(funcOp, state, statistics)))
+        return failure();
+
+      // Run function-specific analyses
+      if (failed(aliasingFuncOpBBArgsAnalysis(funcOp, state, funcState)) ||
+          failed(funcOpBbArgReadWriteAnalysis(funcOp, state, funcState)))
+        return failure();
+
+      // Mark as analyzed
+      funcState.analyzedFuncOps[funcOp] = FuncOpAnalysisState::Analyzed;
+      funcState.iterationCount[funcOp] = iteration;
+
+      // Check if analysis results changed
+      if (hasAnalysisChanged(funcOp, funcState, prevReadBbArgs,
+                             prevWrittenBbArgs, prevAliasingReturnVals)) {
+        changed = true;
+
+        // Add callers to worklist for next iteration
+        auto reverseIt = funcState.reverseCallGraph.find(funcOp);
+        if (reverseIt != funcState.reverseCallGraph.end()) {
+          for (FuncOp caller : reverseIt->getSecond()) {
+            if (!funcState.inWorklist.contains(caller) &&
+                !llvm::is_contained(worklist, caller)) {
+              funcState.inWorklist.insert(caller);
+              worklist.push_back(caller);
+            }
+          }
+        }
+      }
+    }
+
+    // If no changes, we're done
+    if (!changed)
+      break;
+  }
+
+  if (iteration >= maxIterations && changed) {
+    moduleOp->emitWarning()
+        << "Inter-procedural fixed-point analysis did not converge after "
+        << maxIterations << " iterations";
+    // Continue anyway - analysis results may still be useful
+  }
+
+  return success();
+}
+
 /// Determine which FuncOp bbArgs are read and which are written. When run on a
 /// function with unknown ops, we conservatively assume that such ops bufferize
 /// to a read + write.
@@ -371,6 +559,82 @@ static LogicalResult getFuncOpsOrderedByCalls(
   return success();
 }
 
+/// Build the call graph for inter-procedural fixed-point analysis.
+/// This function populates callGraph and reverseCallGraph in FuncAnalysisState
+/// and detects recursive calls.
+static void buildCallGraph(Operation *moduleOp, FuncAnalysisState &funcState) {
+  funcState.callGraph.clear();
+  funcState.reverseCallGraph.clear();
+  funcState.hasRecursiveCall = false;
+
+  // Build forward call graph (caller -> callees)
+  for (mlir::Region &region : moduleOp->getRegions()) {
+    for (mlir::Block &block : region.getBlocks()) {
+      for (func::FuncOp funcOp : block.getOps<func::FuncOp>()) {
+        DenseSet<FuncOp> calledCallees; // Track unique callees per caller
+        funcOp.walk([&](func::CallOp callOp) {
+          func::FuncOp callee =
+              getCalledFunction(callOp, funcState.symbolTables);
+          if (!callee || !hasTensorSignature(callee))
+            return;
+
+          func::FuncOp caller = callOp->getParentOfType<func::FuncOp>();
+          if (!caller)
+            return;
+
+          // Add to forward call graph (avoid duplicates)
+          if (calledCallees.insert(callee).second) {
+            funcState.callGraph[caller].push_back(callee);
+          }
+
+          // Add to reverse call graph (avoid duplicates)
+          auto &callers = funcState.reverseCallGraph[callee];
+          if (!llvm::is_contained(callers, caller)) {
+            callers.push_back(caller);
+          }
+        });
+      }
+    }
+  }
+
+  // Detect recursive calls using DFS
+  DenseSet<FuncOp> visited;
+  DenseSet<FuncOp> recursionStack;
+
+  // Helper lambda to detect cycles
+  auto hasCycle = [&](FuncOp func, auto &hasCycleRef) -> bool {
+    if (recursionStack.contains(func)) {
+      funcState.hasRecursiveCall = true;
+      return true;
+    }
+    if (visited.contains(func))
+      return false;
+
+    visited.insert(func);
+    recursionStack.insert(func);
+
+    if (auto it = funcState.callGraph.find(func); it != funcState.callGraph.end()) {
+      for (FuncOp callee : it->getSecond()) {
+        if (hasCycleRef(callee, hasCycleRef))
+          return true;
+      }
+    }
+
+    recursionStack.erase(func);
+    return false;
+  };
+
+  for (mlir::Region &region : moduleOp->getRegions()) {
+    for (mlir::Block &block : region.getBlocks()) {
+      for (func::FuncOp funcOp : block.getOps<func::FuncOp>()) {
+        if (!visited.contains(funcOp) && hasTensorSignature(funcOp)) {
+          hasCycle(funcOp, hasCycle);
+        }
+      }
+    }
+  }
+}
+
 /// Helper function that extracts the source from a memref.cast. If the given
 /// value is not a memref.cast result, simply returns the given value.
 static Value unpackCast(Value v) {
@@ -455,6 +719,9 @@ mlir::bufferization::analyzeModuleOp(Operation *moduleOp,
          "expected that function boundary bufferization is activated");
   FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
 
+  // Build call graph and detect recursive calls
+  buildCallGraph(moduleOp, funcState);
+
   // A list of non-circular functions in the order in which they are analyzed
   // and bufferized.
   SmallVector<func::FuncOp> orderedFuncOps;
@@ -470,6 +737,21 @@ mlir::bufferization::analyzeModuleOp(Operation *moduleOp,
                                       remainingFuncOps, callerMap,
                                       funcState.symbolTables)))
     return failure();
+
+  // If there are recursive calls, use inter-procedural fixed-point analysis
+  if (funcState.hasRecursiveCall && !remainingFuncOps.empty()) {
+    // Combine all functions for fixed-point analysis
+    SmallVector<func::FuncOp> allFuncOps;
+    llvm::append_range(allFuncOps, orderedFuncOps);
+    llvm::append_range(allFuncOps, remainingFuncOps);
+
+    // Run fixed-point analysis on all functions
+    if (failed(runInterProceduralFixedPointAnalysis(
+            moduleOp, allFuncOps, state, funcState, statistics)))
+      return failure();
+
+    return success();
+  }
 
   // Analyze functions in order. Starting with functions that are not calling
   // any other functions.
