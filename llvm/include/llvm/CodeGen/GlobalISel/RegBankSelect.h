@@ -510,9 +510,6 @@ protected:
   /// Optimization mode of the pass.
   Mode OptMode;
 
-  /// Current target configuration. Controls how the pass handles errors.
-  const TargetPassConfig *TPC;
-
   /// Assign the register bank of each operand of \p MI.
   /// \return True on success, false otherwise.
   bool assignInstr(MachineInstr &MI);

@@ -4451,16 +4451,14 @@ bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode *N) const {
   const auto *Ld = cast<LoadSDNode>(N);
   const MachineMemOperand *MMO = Ld->getMemOperand();
 
-  if (Ld->isDivergent()) {
-    // FIXME: We ought to able able to take the direct isDivergent result. We
-    // cannot rely on the MMO for a uniformity check, and should stop using
-    // it. This is a hack for 2 ways that the IR divergence analysis is superior
-    // to the DAG divergence: Recognizing shift-of-workitem-id as always
-    // uniform, and isSingleLaneExecution. These should be handled in the DAG
-    // version, and then this can be dropped.
-    if (!MMO->getValue() || !AMDGPU::isUniformMMO(MMO))
-      return false;
-  }
+  // FIXME: We ought to able able to take the direct isDivergent result. We
+  // cannot rely on the MMO for a uniformity check, and should stop using
+  // it. This is a hack for 2 ways that the IR divergence analysis is superior
+  // to the DAG divergence: Recognizing shift-of-workitem-id as always
+  // uniform, and isSingleLaneExecution. These should be handled in the DAG
+  // version, and then this can be dropped.
+  if (Ld->isDivergent() && !AMDGPU::isUniformMMO(MMO))
+    return false;
 
   return MMO->getSize().hasValue() &&
          Ld->getAlign() >=

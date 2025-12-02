@@ -12,7 +12,8 @@
                                  defined(cl_khr_int64_extended_atomics))
 #define __CLC_HAVE_64_ATOMIC
 #endif
-#if defined(__CLC_FPSIZE) && (__CLC_FPSIZE < 64 || defined(__CLC_HAVE_64_ATOMIC)
+#if defined(__CLC_FPSIZE) &&                                                   \
+    (__CLC_FPSIZE < 64 || defined(__CLC_HAVE_64_ATOMIC))
 #define __CLC_HAVE_FP_ATOMIC
 #endif
 #if defined(__CLC_GENSIZE) &&                                                  \

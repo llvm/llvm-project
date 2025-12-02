@@ -162,6 +162,10 @@
   #ifndef __opencl_c_program_scope_global_variables
     #error "Missing __opencl_c_program_scope_global_variables define"
   #endif
+
+  #ifndef __opencl_c_read_write_images
+    #error "Missing __opencl_c_read_write_images define"
+  #endif
 #endif
 
 #if (__OPENCL_C_VERSION__ >= 300)
