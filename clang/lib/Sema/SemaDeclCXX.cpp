@@ -17949,9 +17949,10 @@ DeclResult Sema::ActOnTemplatedFriendTag(
 
   if (Invalid) return true;
 
-  const bool isAllExplicitSpecializations = std::all_of(
-      TempParamLists.begin(), TempParamLists.end(),
-      [](const TemplateParameterList *List) { return List->size() == 0; });
+  const bool isAllExplicitSpecializations =
+      llvm::all_of(TempParamLists, [](const TemplateParameterList *List) {
+        return List->size() == 0;
+      });
 
   // FIXME: don't ignore attributes.
 
