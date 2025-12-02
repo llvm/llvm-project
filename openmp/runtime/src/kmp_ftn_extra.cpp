@@ -27,6 +27,56 @@ char const __kmp_version_ftnextra[] =
 #define FTN_STDCALL /* nothing to do */
 #include "kmp_ftn_os.h"
 #include "kmp_ftn_entry.h"
+
+#if KMP_FTN_ENTRIES == KMP_FTN_PLAIN
+#define FTN_KMP_GET_UID_FROM_DEVICE __kmp_get_uid_from_device
+#define FTN_KMP_GET_DEVICE_FROM_UID __kmp_get_device_from_uid
+#endif
+#if KMP_FTN_ENTRIES == KMP_FTN_APPEND
+#define FTN_KMP_GET_UID_FROM_DEVICE __kmp_get_uid_from_device_
+#define FTN_KMP_GET_DEVICE_FROM_UID __kmp_get_device_from_uid_
+#endif
+#if KMP_FTN_ENTRIES == KMP_FTN_UPPER
+#define FTN_KMP_GET_UID_FROM_DEVICE __KMP_GET_UID_FROM_DEVICE
+#define FTN_KMP_GET_DEVICE_FROM_UID __KMP_GET_DEVICE_FROM_UID
+#endif
+#if KMP_FTN_ENTRIES == KMP_FTN_UAPPEND
+#define FTN_KMP_GET_UID_FROM_DEVICE __KMP_GET_UID_FROM_DEVICE_
+#define FTN_KMP_GET_DEVICE_FROM_UID __KMP_GET_DEVICE_FROM_UID_
+#endif
+
+extern "C" {
+const char *FTN_STDCALL KMP_EXPAND_NAME(FTN_KMP_GET_UID_FROM_DEVICE)(
+    int device_num) KMP_WEAK_ATTRIBUTE_EXTERNAL;
+const char *FTN_STDCALL
+KMP_EXPAND_NAME(FTN_KMP_GET_UID_FROM_DEVICE)(int device_num) {
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
+  return nullptr;
+#else
+  const char *(*fptr)(int);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_uid_from_device")))
+    return (*fptr)(device_num);
+  // Returns the same string as used by libomptarget
+  return "HOST";
+#endif
+}
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_KMP_GET_DEVICE_FROM_UID)(
+    const char *device_uid) KMP_WEAK_ATTRIBUTE_EXTERNAL;
+int FTN_STDCALL
+KMP_EXPAND_NAME(FTN_KMP_GET_DEVICE_FROM_UID)(const char *device_uid) {
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
+  return omp_invalid_device;
+#else
+  int (*fptr)(const char *);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_device_from_uid")))
+    return (*fptr)(device_uid);
+  return KMP_EXPAND_NAME(FTN_GET_INITIAL_DEVICE)();
+#endif
+}
+
+KMP_VERSION_SYMBOL(FTN_KMP_GET_UID_FROM_DEVICE, 60, "OMP_6.0");
+KMP_VERSION_SYMBOL(FTN_KMP_GET_DEVICE_FROM_UID, 60, "OMP_6.0");
+} // extern "C"
 #else
                        "no";
 #endif /* KMP_FTN_ENTRIES */
