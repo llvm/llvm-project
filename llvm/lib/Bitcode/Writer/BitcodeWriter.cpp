@@ -5337,8 +5337,10 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     NameVals.push_back(ModuleIdMap[AS->modulePath()]);
     NameVals.push_back(
         getEncodedGVSummaryFlags(AS->flags(), shouldImportValueAsDecl(AS)));
-    auto AliaseeValueId = SummaryToValueIdMap[&AS->getAliasee()];
-    assert(AliaseeValueId);
+    // Set value id to 0 when an alias is imported but the aliasee summary is
+    // not contained in the index.
+    auto AliaseeValueId =
+        AS->hasAliasee() ? SummaryToValueIdMap[&AS->getAliasee()] : 0;
     NameVals.push_back(AliaseeValueId);
 
     // Emit the finished record.
@@ -5346,8 +5348,9 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     NameVals.clear();
     MaybeEmitOriginalName(*AS);
 
-    if (auto *FS = dyn_cast<FunctionSummary>(&AS->getAliasee()))
-      getReferencedTypeIds(FS, ReferencedTypeIds);
+    if (AS->hasAliasee())
+      if (auto *FS = dyn_cast<FunctionSummary>(&AS->getAliasee()))
+        getReferencedTypeIds(FS, ReferencedTypeIds);
   }
 
   SmallVector<StringRef, 4> Functions;

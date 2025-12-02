@@ -20,7 +20,7 @@ namespace lldb_private {
 
 class ScriptedThread;
 
-class StackFrameList {
+class StackFrameList : public std::enable_shared_from_this<StackFrameList> {
 public:
   // Constructors and Destructors
   StackFrameList(Thread &thread, const lldb::StackFrameListSP &prev_frames_sp,

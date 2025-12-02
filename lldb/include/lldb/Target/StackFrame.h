@@ -532,6 +532,19 @@ public:
 
   lldb::RecognizedStackFrameSP GetRecognizedFrame();
 
+  /// Get the StackFrameList that contains this frame.
+  ///
+  /// Returns the StackFrameList that contains this frame, allowing
+  /// frames to resolve execution contexts without calling
+  /// Thread::GetStackFrameList(), which can cause circular dependencies
+  /// during frame provider initialization.
+  ///
+  /// \return
+  ///   The StackFrameList that contains this frame, or nullptr if not set.
+  virtual lldb::StackFrameListSP GetContainingStackFrameList() const {
+    return m_frame_list_wp.lock();
+  }
+
 protected:
   friend class StackFrameList;
 
@@ -574,6 +587,7 @@ protected:
   /// well as any other frame with the same trait.
   bool m_behaves_like_zeroth_frame;
   lldb::VariableListSP m_variable_list_sp;
+  lldb::StackFrameListWP m_frame_list_wp;
   /// Value objects for each variable in m_variable_list_sp.
   ValueObjectList m_variable_list_value_objects;
   std::optional<lldb::RecognizedStackFrameSP> m_recognized_frame_sp;
