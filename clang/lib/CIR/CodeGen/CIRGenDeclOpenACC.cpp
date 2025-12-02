@@ -345,8 +345,8 @@ void CIRGenModule::emitOpenACCRoutineDecl(
   // count on the visitor/emitter to fill these in.
   auto routineOp = mlir::acc::RoutineOp::create(
       builder, routineLoc, routineName,
-      mlir::SymbolRefAttr::get(builder.getContext(), func.getName()), {}, {},
-      {}, {}, {}, {}, {}, /*hasNoHost=*/false, /*implicit=*/false, {}, {}, {});
+      mlir::SymbolRefAttr::get(builder.getContext(), func.getName()),
+      /*implicit=*/false);
 
   // We have to add a pointer going the other direction via an acc.routine_info,
   // from the func to the routine.
