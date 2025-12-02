@@ -155,13 +155,16 @@ struct ReferencedDecls {
   /// the surrounding function) that the lambda captures. Captured local
   /// variables are already included in `Locals` above.
   ///
-  /// This set also includes any referenced parameters of functions other than
-  /// the function whose body is targeted for visitation. When calling
-  /// `getReferencedDecls(const Stmt& S)`, there is no such targeted function,
-  /// so any referenced function parameters are included in this set. This
-  /// supports the collection of ReferencedDecls from a DeclStmt constructed for
-  /// lambda init-capture VarDecls for the purpose of performing a dataflow
-  /// analysis on the declaration/initialization.
+  /// When analyzing a standalone `Stmt` directly, this set includes any
+  /// referenced function parameters. This supports the collection of
+  /// ReferencedDecls from a DeclStmt constructed for lambda init-capture
+  /// VarDecls for the purpose of performing a dataflow analysis on the
+  /// declaration/initialization. When analyzing any `FunctionDecl`, this set
+  /// would also include any parameters of other functions that are referenced
+  /// in the analyzed function's body, though there is no known case where this
+  /// happens. If other (especially non-lambda-related) cases are found, this
+  /// group of parameters could be moved out of `LambdaCapturedParams` into a
+  /// separate set.
   llvm::SetVector<const ParmVarDecl *> LambdaCapturedParams;
 };
 

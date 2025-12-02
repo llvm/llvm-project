@@ -180,4 +180,25 @@ TEST(ASTOpsTest, LambdaInitCapture) {
               UnorderedElementsAre(IDecl));
 }
 
+TEST(ASTOpsTest, NoLambdaCapturedParamsWhenAnalyzingFunctionNotLambdaOperator) {
+  std::string Code = R"cc(
+    void func(int I) {
+      I++; // Parameters of the function being analyzed don't get included in `LambdaCapturedParams`.
+      auto Lambda = [&I](int L) { // We don't see the capture of `I` when analyzing `func`.
+        L++; // We don't see the lambda body when analyzing `func`.
+        I++; // This is a parameter of the function being analyzed, and it's not seen when analyzing `func`.
+      };
+    }
+  )cc";
+  std::unique_ptr<ASTUnit> Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++17"});
+  auto &ASTCtx = Unit->getASTContext();
+
+  ASSERT_EQ(ASTCtx.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto *Func = cast<FunctionDecl>(findValueDecl(ASTCtx, "func"));
+  ASSERT_NE(Func, nullptr);
+  EXPECT_THAT(getReferencedDecls(*Func).LambdaCapturedParams, IsEmpty());
+}
+
 } // namespace

@@ -183,17 +183,6 @@ static void insertIfFunction(const Decl &D,
     Funcs.insert(FD);
 }
 
-static void insertIfParamOfNotThePrimaryFunction(
-    const Decl &D, llvm::SetVector<const ParmVarDecl *> &Locals,
-    const FunctionDecl *PrimaryFunction) {
-  if (auto *PVD = dyn_cast<ParmVarDecl>(&D)) {
-    if (!PrimaryFunction ||
-        PVD->getParentFunctionOrMethod() != PrimaryFunction) {
-      Locals.insert(PVD);
-    }
-  }
-}
-
 static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
   // Use getCalleeDecl instead of getMethodDecl in order to handle
   // pointer-to-member calls.
@@ -212,8 +201,8 @@ static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
 class ReferencedDeclsVisitor : public AnalysisASTVisitor {
 public:
   ReferencedDeclsVisitor(ReferencedDecls &Referenced,
-                         const FunctionDecl *PrimaryFunction)
-      : Referenced(Referenced), PrimaryFunction(PrimaryFunction) {}
+                         const FunctionDecl *AnalyzedFunction)
+      : Referenced(Referenced), AnalyzedFunction(AnalyzedFunction) {}
 
   void traverseConstructorInits(const CXXConstructorDecl *Ctor) {
     for (const CXXCtorInitializer *Init : Ctor->inits()) {
@@ -247,8 +236,17 @@ public:
     insertIfGlobal(*E->getDecl(), Referenced.Globals);
     insertIfLocal(*E->getDecl(), Referenced.Locals);
     insertIfFunction(*E->getDecl(), Referenced.Functions);
-    insertIfParamOfNotThePrimaryFunction(
-        *E->getDecl(), Referenced.LambdaCapturedParams, PrimaryFunction);
+
+    // Collect referenced parameters of functions other than the function being
+    // analyzed, or of any function if we are analyzing a standalone statement.
+    // See comments on `LambdaCapturedParams` for motivations.
+    if (auto *P = dyn_cast<ParmVarDecl>(E->getDecl())) {
+      if (!AnalyzedFunction ||
+          P->getParentFunctionOrMethod() != AnalyzedFunction) {
+        Referenced.LambdaCapturedParams.insert(P);
+      }
+    }
+
     return true;
   }
 
@@ -286,7 +284,7 @@ public:
 private:
   ReferencedDecls &Referenced;
   // May be null, if we are visiting a statement that is not a function body.
-  const FunctionDecl *const PrimaryFunction;
+  const FunctionDecl *const AnalyzedFunction;
 };
 
 ReferencedDecls getReferencedDecls(const FunctionDecl &FD) {
