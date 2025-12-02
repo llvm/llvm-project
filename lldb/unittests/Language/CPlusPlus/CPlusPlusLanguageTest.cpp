@@ -72,6 +72,9 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
       {"bool Ball[abi:BALL]<int>::operator<<[abi:operator]<int>(int)", "bool",
        "Ball[abi:BALL]<int>", "operator<<[abi:operator]<int>", "(int)", "",
        "Ball[abi:BALL]<int>::operator<<[abi:operator]<int>"},
+      {"bool Ball[abi:BALL]<int>::operator>>[abi:operator]<int>(int)", "bool",
+       "Ball[abi:BALL]<int>", "operator>>[abi:operator]<int>", "(int)", "",
+       "Ball[abi:BALL]<int>::operator>>[abi:operator]<int>"},
       // Internal classes
       {"operator<<(Cls, Cls)::Subclass::function()", "",
        "operator<<(Cls, Cls)::Subclass", "function", "()", "",
