@@ -89,7 +89,6 @@ define i64 @srl_i64_zext(i64 %v, i32 %x) {
   ret i64 %a
 }
 
-
 define i64 @shl_i64(i64 %v, i64 %x) {
 ; CHECK-LABEL: shl_i64:
 ; CHECK:         .functype shl_i64 (i64, i64) -> (i64)
