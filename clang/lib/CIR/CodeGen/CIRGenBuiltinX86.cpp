@@ -92,12 +92,12 @@ static mlir::Value getMaskVecValue(CIRGenBuilderTy &builder, mlir::Location loc,
 // way: The immediate is truncated to 8 bits, separated into 4 2-bit fields. The
 // i-th field's value represents the resulting index of the i-th element in the
 // half lane after shuffling. The other half of the lane remains unchanged.
-static cir::VecShuffleOp emitPshufWord(CIRGenFunction &cgf,
-                                       CIRGenBuilderTy &builder,
+static cir::VecShuffleOp emitPshufWord(CIRGenBuilderTy &builder,
                                        const mlir::Value vec,
                                        const mlir::Value immediate,
-                                       const CallExpr *expr, const bool isLow) {
-  uint32_t imm = cgf.getZExtIntValueFromConstOp(immediate);
+                                       const mlir::Location loc,
+                                       const bool isLow) {
+  uint32_t imm = CIRGenFunction::getZExtIntValueFromConstOp(immediate);
 
   auto vecTy = cast<cir::VectorType>(vec.getType());
   unsigned numElts = vecTy.getSize();
@@ -118,14 +118,15 @@ static cir::VecShuffleOp emitPshufWord(CIRGenFunction &cgf,
       indices[l + i] = l + i;
   }
 
-  return builder.createVecShuffle(cgf.getLoc(expr->getExprLoc()), vec,
-                                  ArrayRef(indices, numElts));
+  return builder.createVecShuffle(loc, vec, ArrayRef(indices, numElts));
 }
 
 // Builds the shuffle mask for pshufd and shufpd/shufps x86 builtins.
-static llvm::SmallVector<int64_t, 16>
+// The shuffle mask is written to outIndices.
+static void
 computeFullLaneShuffleMask(CIRGenFunction &cgf, const mlir::Value vec,
-                           uint32_t imm, const bool isShufP) {
+                           uint32_t imm, const bool isShufP,
+                           llvm::SmallVectorImpl<int64_t> &outIndices) {
   auto vecTy = cast<cir::VectorType>(vec.getType());
   unsigned numElts = vecTy.getSize();
   unsigned numLanes = cgf.cgm.getDataLayout().getTypeSizeInBits(vecTy) / 128;
@@ -134,18 +135,17 @@ computeFullLaneShuffleMask(CIRGenFunction &cgf, const mlir::Value vec,
   // Splat the 8-bits of immediate 4 times to help the loop wrap around.
   imm = (imm & 0xff) * 0x01010101;
 
-  llvm::SmallVector<int64_t, 16> indices(numElts);
   for (unsigned l = 0; l != numElts; l += numLaneElts) {
     for (unsigned i = 0; i != numLaneElts; ++i) {
       uint32_t idx = imm % numLaneElts;
       imm /= numLaneElts;
       if (isShufP && i >= (numLaneElts / 2))
         idx += numElts;
-      indices[l + i] = l + idx;
+      outIndices[l + i] = l + idx;
     }
   }
 
-  return indices;
+  outIndices.resize(numElts);
 }
 
 static mlir::Value emitX86MaskAddLogic(CIRGenBuilderTy &builder,
@@ -644,14 +644,14 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
     return {};
   case X86::BI__builtin_ia32_pshuflw:
   case X86::BI__builtin_ia32_pshuflw256:
-  case X86::BI__builtin_ia32_pshuflw512: {
-    return emitPshufWord(*this, builder, ops[0], ops[1], expr, true);
-  }
+  case X86::BI__builtin_ia32_pshuflw512:
+    return emitPshufWord(builder, ops[0], ops[1], getLoc(expr->getExprLoc()),
+                         true);
   case X86::BI__builtin_ia32_pshufhw:
   case X86::BI__builtin_ia32_pshufhw256:
-  case X86::BI__builtin_ia32_pshufhw512: {
-    return emitPshufWord(*this, builder, ops[0], ops[1], expr, false);
-  }
+  case X86::BI__builtin_ia32_pshufhw512:
+    return emitPshufWord(builder, ops[0], ops[1], getLoc(expr->getExprLoc()),
+                         false);
   case X86::BI__builtin_ia32_pshufd:
   case X86::BI__builtin_ia32_pshufd256:
   case X86::BI__builtin_ia32_pshufd512:
@@ -662,8 +662,9 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_vpermilpd512:
   case X86::BI__builtin_ia32_vpermilps512: {
     const uint32_t imm = getSExtIntValueFromConstOp(ops[1]);
-    const llvm::SmallVector<int64_t, 16> mask =
-        computeFullLaneShuffleMask(*this, ops[0], imm, false);
+
+    llvm::SmallVector<int64_t, 16> mask(16);
+    computeFullLaneShuffleMask(*this, ops[0], imm, false, mask);
 
     return builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[0], mask);
   }
@@ -674,8 +675,9 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_shufps256:
   case X86::BI__builtin_ia32_shufps512: {
     const uint32_t imm = getZExtIntValueFromConstOp(ops[2]);
-    const llvm::SmallVector<int64_t, 16> mask =
-        computeFullLaneShuffleMask(*this, ops[0], imm, true);
+
+    llvm::SmallVector<int64_t, 16> mask(16);
+    computeFullLaneShuffleMask(*this, ops[0], imm, true, mask);
 
     return builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[0], ops[1],
                                     mask);
