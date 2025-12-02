@@ -682,7 +682,7 @@ define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %
 ; I64-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV_1]]
 ; I64-NEXT:    [[L_SRC:%.*]] = load float, ptr [[GEP_SRC]], align 4
 ; I64-NEXT:    [[C:%.*]] = fcmp oeq float [[L_SRC]], 0.000000e+00
-; I64-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[LOOP_LATCH]], !prof [[PROF8:![0-9]+]]
+; I64-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
 ; I64:       [[THEN]]:
 ; I64-NEXT:    [[IV_MUL:%.*]] = mul i64 [[IV_1]], [[START]]
 ; I64-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr i8, ptr [[SRC_2]], i64 [[IV_MUL]]
@@ -832,7 +832,7 @@ loop.header:
   %gep.src = getelementptr i8, ptr %src, i64 %iv.1
   %l.src = load float, ptr %gep.src, align 4
   %c = fcmp oeq float %l.src, 0.000000e+00
-  br i1 %c, label %then, label %loop.latch, !prof !2
+  br i1 %c, label %then, label %loop.latch
 
 then:
   %iv.mul = mul i64 %iv.1, %start
@@ -852,8 +852,6 @@ loop.latch:
 exit:
   ret void
 }
-
-!2 = !{!"branch_weights", i32 1, i32 1}
 
 define void @address_use_in_different_block(ptr noalias %dst, ptr %src.0, ptr %src.1, i32 %x) #0 {
 ; I64-LABEL: define void @address_use_in_different_block(
@@ -968,7 +966,7 @@ define void @address_use_in_different_block(ptr noalias %dst, ptr %src.0, ptr %s
 ; I64-NEXT:    store double [[TMP91]], ptr [[TMP83]], align 8
 ; I64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; I64-NEXT:    [[TMP92:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
-; I64-NEXT:    br i1 [[TMP92]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; I64-NEXT:    br i1 [[TMP92]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; I64:       [[MIDDLE_BLOCK]]:
 ; I64-NEXT:    br label %[[SCALAR_PH:.*]]
 ; I64:       [[SCALAR_PH]]:
@@ -1034,7 +1032,7 @@ define void @address_use_in_different_block(ptr noalias %dst, ptr %src.0, ptr %s
 ; I32-NEXT:    store double [[TMP44]], ptr [[TMP40]], align 8
 ; I32-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; I32-NEXT:    [[TMP45:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; I32-NEXT:    br i1 [[TMP45]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; I32-NEXT:    br i1 [[TMP45]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; I32:       [[MIDDLE_BLOCK]]:
 ; I32-NEXT:    br label %[[SCALAR_PH:.*]]
 ; I32:       [[SCALAR_PH]]:
@@ -1050,7 +1048,7 @@ loop.header:
   %gep.src.0 = getelementptr i32, ptr %src.0, i64 %7
   %l8 = load i32, ptr %gep.src.0, align 4
   %c = icmp sgt i32 %x, 0
-  br i1 %c, label %loop.latch, label %then, !prof !2
+  br i1 %c, label %loop.latch, label %then
 
 then:
   br label %loop.latch

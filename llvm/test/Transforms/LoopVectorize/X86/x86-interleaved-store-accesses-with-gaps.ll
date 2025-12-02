@@ -313,7 +313,7 @@ define dso_local void @test(ptr noalias nocapture %points, ptr noalias nocapture
 ; DISABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE6]] ]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[X:%.*]], i64 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP0]], align 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], splat (i16 1)
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], zeroinitializer
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = mul nuw nsw <4 x i64> [[VEC_IND]], splat (i64 3)
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; DISABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
@@ -366,7 +366,7 @@ define dso_local void @test(ptr noalias nocapture %points, ptr noalias nocapture
 ; ENABLED_MASKED_STRIDED-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE6]] ]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[X:%.*]], i64 [[INDEX]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP0]], align 2
-; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], splat (i16 1)
+; ENABLED_MASKED_STRIDED-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], zeroinitializer
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP2:%.*]] = mul nuw nsw <4 x i64> [[VEC_IND]], splat (i64 3)
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; ENABLED_MASKED_STRIDED-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
@@ -418,7 +418,7 @@ for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i16, ptr %x, i64 %indvars.iv
   %0 = load i16, ptr %arrayidx, align 2
-  %cmp1 = icmp sgt i16 %0, 1
+  %cmp1 = icmp sgt i16 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:

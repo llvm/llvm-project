@@ -30,7 +30,7 @@ for.body:                                         ; preds = %for.body.preheader,
   %i.07 = phi i64 [ %inc, %for.inc ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %i.07
   %0 = load i32, ptr %arrayidx, align 4
-  %tobool.not = icmp eq i32 %0, 1
+  %tobool.not = icmp eq i32 %0, 0
   br i1 %tobool.not, label %for.inc, label %if.then
 
 if.then:                                          ; preds = %for.body

@@ -271,7 +271,7 @@ define void @scalarized_predicated_struct_return(ptr %a) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i64> [[WIDE_LOAD]], splat (i64 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i64> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
@@ -313,8 +313,8 @@ for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
   %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
   %in_val = load i64, ptr %arrayidx, align 8
-  %sgt_one = icmp sgt i64 %in_val, 1
-  br i1 %sgt_one, label %if.then, label %for.inc
+  %sgt_zero = icmp sgt i64 %in_val, 0
+  br i1 %sgt_zero, label %if.then, label %for.inc
 
 if.then:
   %call = tail call { i64, i64 } @bar_i64(i64 %in_val) #6

@@ -14,7 +14,7 @@ define void @pr154103(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalia
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X]] to i64
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 0, [[CONV]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[DIV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[DIV]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[LATCH]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[B]], align 1
@@ -41,7 +41,7 @@ loop:
   %x = load i8, ptr %gep, align 1
   %conv = zext i8 %x to i64
   %div = sdiv i64 0, %conv
-  %cmp = icmp sgt i64 %div, 1
+  %cmp = icmp sgt i64 %div, 0
   br i1 %cmp, label %then, label %latch
 
 then:

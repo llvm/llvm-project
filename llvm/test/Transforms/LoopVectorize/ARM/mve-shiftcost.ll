@@ -21,7 +21,7 @@ for.body386:                                      ; preds = %entry, %l77
   %arrayidx388 = getelementptr inbounds [101 x i32], ptr %src, i32 0, i32 %add387
   %l41 = load i32, ptr %arrayidx388, align 4
   %l42 = and i32 %l41, 65535
-  %l43 = icmp eq i32 %l42, 1
+  %l43 = icmp eq i32 %l42, 0
   br i1 %l43, label %l77, label %l44
 
 l44:                                               ; preds = %for.body386

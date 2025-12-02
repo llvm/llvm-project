@@ -25,7 +25,7 @@ define i64 @predicated_udiv_scalarized_operand(ptr %a, i64 %x) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, [[ENTRY]] ], [ [[TMP17:%.*]], [[PRED_UDIV_CONTINUE2]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i64> [[WIDE_LOAD]], splat (i64 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i64> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; CHECK:       pred.udiv.if:
@@ -65,7 +65,7 @@ for.body:
   %r = phi i64 [ 0, %entry ], [ %var6, %for.inc ]
   %var0 = getelementptr inbounds i64, ptr %a, i64 %i
   %var2 = load i64, ptr %var0, align 4
-  %cond0 = icmp sgt i64 %var2, 1
+  %cond0 = icmp sgt i64 %var2, 0
   br i1 %cond0, label %if.then, label %for.inc
 
 if.then:
