@@ -287,6 +287,22 @@
 // CHECK-NEXT:       end
 // CHECK-NEXT:     ]
 // CHECK-NEXT:   }
+// CHECK-NEXT:   RuntimeFunction {
+// CHECK-NEXT:     Function: func18
+// CHECK-NEXT:     Fragment: No
+// CHECK-NEXT:     FunctionLength: 44
+// CHECK-NEXT:     RegF: 0
+// CHECK-NEXT:     RegI: 0
+// CHECK-NEXT:     HomedParameters: Yes
+// CHECK-NEXT:     CR: 3
+// CHECK-NEXT:     FrameSize: 528
+// CHECK-NEXT:     Prologue [
+// CHECK-NEXT:       mov x29, sp
+// CHECK-NEXT:       stp x29, lr, [sp, #0]
+// CHECK-NEXT:       sub sp, sp, #528
+// CHECK-NEXT:       end
+// CHECK-NEXT:     ]
+// CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
         .text
@@ -308,6 +324,7 @@ func14:
 func15:
 func16:
 func17:
+func18:
         ret
 
         .section .pdata,"dr"
@@ -345,3 +362,5 @@ func17:
         .long 0x03b00039 // FunctionLength=14 RegF=0 RegI=0 H=1 CR=1 FrameSize=7
         .long func17@IMGREL
         .long 0x0370002d // FunctionLength=11 RegF=0 RegI=0 H=1 CR=3 FrameSize=6
+        .long func18@IMGREL
+        .long 0x10f0002d // FunctionLength=11 RegF=0 RegI=0 H=1 CR=3 FrameSize=6
