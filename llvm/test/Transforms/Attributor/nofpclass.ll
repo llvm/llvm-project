@@ -2684,6 +2684,19 @@ define <vscale x 4 x float> @scalable_splat_zero() {
   ret <vscale x 4 x float> zeroinitializer
 }
 
+define <vscale x 4 x float> @scalable_splat_nnan(float nofpclass(nan) %x) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan) <vscale x 4 x float> @scalable_splat_nnan
+; CHECK-SAME: (float nofpclass(nan) [[X:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[HEAD:%.*]] = insertelement <vscale x 4 x float> poison, float [[X]], i32 0
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x float> [[HEAD]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 4 x float> [[SPLAT]]
+;
+  %head = insertelement <vscale x 4 x float> poison, float %x, i32 0
+  %splat = shufflevector <vscale x 4 x float> %head, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
+  ret <vscale x 4 x float> %splat
+}
+
 ; Verify we do not derive 'nofpclass(inf zero sub norm)' for the argument __x.
 ; See https://github.com/llvm/llvm-project/issues/78507
 
