@@ -218,3 +218,7 @@ wfit x0
 .arch_extension ssve-fexpa
 fexpa z0.s, z31.s
 // CHECK: fexpa z0.s, z31.s
+
+.arch_extension jscvt
+fjcvtzs w0, d0
+// CHECK: fjcvtzs w0, d0

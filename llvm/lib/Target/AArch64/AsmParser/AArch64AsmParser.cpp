@@ -3956,6 +3956,7 @@ static const struct Extension {
     {"btie", {AArch64::FeatureBTIE}},
     {"dit", {AArch64::FeatureDIT}},
     {"brbe", {AArch64::FeatureBRBE}},
+    {"jscvt", {AArch64::FeatureJS}},
     {"pauth-lr", {AArch64::FeaturePAuthLR}},
     {"ssve-fexpa", {AArch64::FeatureSSVE_FEXPA}},
     {"wfxt", {AArch64::FeatureWFxT}},
