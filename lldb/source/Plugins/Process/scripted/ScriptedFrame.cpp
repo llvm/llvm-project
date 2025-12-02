@@ -13,6 +13,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char ScriptedFrame::ID;
+
 void ScriptedFrame::CheckInterpreterAndScriptObject() const {
   lldbassert(m_script_object_sp && "Invalid Script Object.");
   lldbassert(GetInterface() && "Invalid Scripted Frame Interface.");
