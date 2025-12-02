@@ -7421,8 +7421,8 @@ void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
   }
 }
 
-unsigned clang::getOptimizationLevel(const ArgList &Args, InputKind IK,
-                                     DiagnosticsEngine &Diags) {
+unsigned clang::driver::getOptimizationLevel(const ArgList &Args, InputKind IK,
+                                             DiagnosticsEngine &Diags) {
   unsigned DefaultOpt = 0;
   if ((IK.getLanguage() == Language::OpenCL ||
        IK.getLanguage() == Language::OpenCLCXX) &&
@@ -7462,7 +7462,7 @@ unsigned clang::getOptimizationLevel(const ArgList &Args, InputKind IK,
   return DefaultOpt;
 }
 
-unsigned clang::getOptimizationLevelSize(const ArgList &Args) {
+unsigned clang::driver::getOptimizationLevelSize(const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O)) {
       switch (A->getValue()[0]) {
