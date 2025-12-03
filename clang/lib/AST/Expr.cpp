@@ -1939,6 +1939,7 @@ bool CastExpr::CastConsistency() const {
   case CK_FixedPointToBoolean:
   case CK_HLSLArrayRValue:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
   CheckNoBasePath:

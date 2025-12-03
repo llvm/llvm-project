@@ -1751,7 +1751,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_ZeroToOCLOpaqueType:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
-
+  case CK_HLSLMatrixTruncation:
   case CK_IntToOCLSampler:
   case CK_FloatingToFixedPoint:
   case CK_FixedPointToFloating:
@@ -2411,6 +2411,7 @@ static bool castPreservesZero(const CastExpr *CE) {
   case CK_BoundsSafetyPointerCast:
   /* TO_UPSTREAM(BoundsSafety) OFF */
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
     return true;
