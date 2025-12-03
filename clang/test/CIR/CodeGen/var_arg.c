@@ -141,7 +141,7 @@ int stdarg_start(int count, ...) {
 // OGCG:   %[[COND:.+]] = icmp ule i32 %[[GPOFFSET]], 40
 // OGCG:   br i1 %[[COND]], label %vaarg.in_reg, label %vaarg.in_mem
 //
-// OGCG: vaarg.in_reg:                                   
+// OGCG: vaarg.in_reg:
 // OGCG:   %[[REGSAVE_PTR:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %[[DECAY1]], i32 0, i32 3
 // OGCG:   %[[REGSAVE:.+]] = load ptr, ptr %[[REGSAVE_PTR]]
 // OGCG:   %[[VAADDR1:.+]] = getelementptr i8, ptr %[[REGSAVE]], i32 %[[GPOFFSET]]
@@ -164,3 +164,23 @@ int stdarg_start(int count, ...) {
 // OGCG:   call void @llvm.va_end.p0(ptr %[[DECAY2]])
 // OGCG:   %[[VAL:.+]] = load i32, ptr %[[RES_ADDR]]
 // OGCG:   ret i32 %[[VAL]]
+
+void stdarg_copy() {
+    __builtin_va_list src, dest;
+    __builtin_va_copy(src, dest);
+}
+
+// CIR-LABEL: @stdarg_copy
+// CIR:    %{{.*}} = cir.cast array_to_ptrdecay %{{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
+// CIR:    %{{.*}} = cir.cast array_to_ptrdecay %{{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
+// CIR:    cir.va_copy %{{.*}} to %{{.*}} : !cir.ptr<!rec___va_list_tag>, !cir.ptr<!rec___va_list_tag>
+
+// LLVM-LABEL: @stdarg_copy
+// LLVM:   %{{.*}} = getelementptr %struct.__va_list_tag, ptr %{{.*}}
+// LLVM:   %{{.*}} = getelementptr %struct.__va_list_tag, ptr %{{.*}}
+// LLVM:   call void @llvm.va_copy.p0(ptr %{{.*}}, ptr %{{.*}}
+
+// OGCG-LABEL: @stdarg_copy
+// OGCG:   %{{.*}} = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %{{.*}}
+// OGCG:   %{{.*}} = getelementptr inbounds [1 x %struct.__va_list_tag], ptr %{{.*}}
+// OGCG:   call void @llvm.va_copy.p0(ptr %{{.*}}, ptr %{{.*}}
