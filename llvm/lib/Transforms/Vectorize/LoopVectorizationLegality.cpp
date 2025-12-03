@@ -2143,6 +2143,7 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 void LoopVectorizationLegality::prepareToFoldTailByMasking() {
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;
+
   // Mark all blocks for predication, including those that ordinarily do not
   // need predication such as the header block.
   for (BasicBlock *BB : TheLoop->blocks()) {
