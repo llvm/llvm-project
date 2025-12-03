@@ -1,7 +1,7 @@
 <!-- If you want to modify sections/contents permanently, you should modify both
 ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
-# Flang {{release}} {{in_progress}}Release Notes
+# Flang {{version}} {{in_progress}}Release Notes
 
 > **warning**
 >
@@ -12,7 +12,7 @@ ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 ## Introduction
 
 This document contains the release notes for the Flang Fortran frontend,
-part of the LLVM Compiler Infrastructure, release {{release}}. Here we
+part of the LLVM Compiler Infrastructure, release {{version}}. Here we
 describe the status of Flang in some detail, including major
 improvements from the previous release and new feature work. For the
 general LLVM release notes, see [the LLVM
