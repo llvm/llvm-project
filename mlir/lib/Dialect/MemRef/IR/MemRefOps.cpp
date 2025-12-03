@@ -2524,7 +2524,7 @@ public:
 
     // Convert output shape dims from dynamic to static where possible.
     for (auto [dimIdx, dimSize] : enumerate(originalOutputShape)) {
-      auto sizeOpt = getConstantIntValue(dimSize);
+      std::optional<int64_t> sizeOpt = getConstantIntValue(dimSize);
       if (sizeOpt.has_value()) {
         newOutputShapeSizes.push_back(sizeOpt.value());
         newOutputShape[dimIdx] = rewriter.getIndexAttr(sizeOpt.value());
