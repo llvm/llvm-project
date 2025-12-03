@@ -114,8 +114,7 @@ static LoopExpansionInfo insertLoopExpansion(Instruction *InsertBefore,
   // Calculate the main loop trip count and remaining units to cover after the
   // loop.
   Type *LenType = Len->getType();
-  IntegerType *ILenType = dyn_cast<IntegerType>(LenType);
-  assert(ILenType && "expected length to be an integer type!");
+  IntegerType *ILenType = cast<IntegerType>(LenType);
   ConstantInt *CIMainLoopStep = ConstantInt::get(ILenType, MainLoopStep);
 
   Value *LoopUnits = Len;
@@ -162,7 +161,7 @@ static LoopExpansionInfo insertLoopExpansion(Instruction *InsertBefore,
   // Instruction (i.e., it cannot be a Constant).
   LEI.MainLoopIP = cast<Instruction>(NewIndex);
 
-  if (0 < ResidualLoopStep && ResidualLoopStep < MainLoopStep) {
+  if (ResidualLoopStep > 0 && ResidualLoopStep < MainLoopStep) {
     // Loop body for the residual accesses.
     BasicBlock *ResLoopBB =
         BasicBlock::Create(Ctx, BBNamePrefix + "-expansion-residual-body",
