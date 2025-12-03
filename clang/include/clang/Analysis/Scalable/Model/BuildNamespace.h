@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_BUILD_NAMESPACE_H
-#define LLVM_CLANG_ANALYSIS_SCALABLE_BUILD_NAMESPACE_H
+#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_BUILDNAMESPACE_H
+#define LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_BUILDNAMESPACE_H
 
 #include "llvm/ADT/StringRef.h"
 #include <optional>
@@ -79,4 +79,4 @@ public:
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_ANALYSIS_SCALABLE_BUILD_NAMESPACE_H
+#endif // LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_BUILDNAMESPACE_H

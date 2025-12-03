@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_ENTITY_NAME_H
-#define LLVM_CLANG_ANALYSIS_SCALABLE_ENTITY_NAME_H
+#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_ENTITYNAME_H
+#define LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_ENTITYNAME_H
 
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "llvm/ADT/SmallString.h"
@@ -42,4 +42,4 @@ public:
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_ANALYSIS_SCALABLE_ENTITY_NAME_H
+#endif // LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_ENTITYNAME_H

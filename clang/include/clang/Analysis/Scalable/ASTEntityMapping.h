@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_ASTMAPPING_H
-#define LLVM_CLANG_ANALYSIS_SCALABLE_ASTMAPPING_H
+#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_ASTENTITYMAPPING_H
+#define LLVM_CLANG_ANALYSIS_SCALABLE_ASTENTITYMAPPING_H
 
 #include "clang/Analysis/Scalable/Model/EntityName.h"
 #include "clang/AST/Decl.h"
@@ -41,4 +41,4 @@ std::optional<EntityName> getLocalEntityNameForFunctionReturn(const FunctionDecl
 
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_ANALYSIS_SCALABLE_ASTMAPPING_H
+#endif // LLVM_CLANG_ANALYSIS_SCALABLE_ASTENTITYMAPPING_H
