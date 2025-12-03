@@ -264,7 +264,7 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
 bool SystemZHLASMAsmStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                                   MCSymbolAttr Attribute) {
-  return goff::setSymbolAttribute(static_cast<MCSymbolGOFF *>(Sym), Attribute);
+  return static_cast<MCSymbolGOFF *>(Sym)->setSymbolAttribute(Attribute);
 }
 
 void SystemZHLASMAsmStreamer::emitRawTextImpl(StringRef String) {

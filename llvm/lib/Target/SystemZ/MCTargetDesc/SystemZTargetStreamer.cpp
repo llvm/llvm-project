@@ -61,7 +61,3 @@ const MCExpr *SystemZTargetGOFFStreamer::createWordDiffExpr(
                               MCSymbolRefExpr::create(Lo, Ctx), Ctx),
       MCConstantExpr::create(1, Ctx), Ctx);
 }
-
-MCGOFFStreamer &SystemZTargetGOFFStreamer::getGOFFStreamer() {
-  return static_cast<MCGOFFStreamer &>(getStreamer());
-}

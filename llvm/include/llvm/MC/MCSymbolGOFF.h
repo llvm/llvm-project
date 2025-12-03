@@ -14,6 +14,7 @@
 #define LLVM_MC_MCSYMBOLGOFF_H
 
 #include "llvm/BinaryFormat/GOFF.h"
+#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbol.h"
@@ -64,7 +65,18 @@ public:
   void setLinkage(GOFF::ESDLinkageType Value) { Linkage = Value; }
   GOFF::ESDLinkageType getLinkage() const { return Linkage; }
 
-  GOFF::ESDBindingScope getBindingScope() const;
+  GOFF::ESDBindingScope getBindingScope() const {
+    return isExternal() ? (isExported() ? GOFF::ESD_BSC_ImportExport
+                                        : GOFF::ESD_BSC_Library)
+                        : GOFF::ESD_BSC_Section;
+  }
+
+  GOFF::ESDBindingStrength getBindingStrength() const {
+    return isWeak() ? GOFF::ESDBindingStrength::ESD_BST_Weak
+                    : GOFF::ESDBindingStrength::ESD_BST_Strong;
+  }
+
+  bool setSymbolAttribute(MCSymbolAttr Attribute);
 };
 } // end namespace llvm
 

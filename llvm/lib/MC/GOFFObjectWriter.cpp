@@ -342,11 +342,8 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
   GOFFSymbol LD(Symbol.getName(), Symbol.getIndex(), Section.getOrdinal(),
                 Section.getEDAttributes().NameSpace,
                 GOFF::LDAttr{false, Symbol.getCodeData(),
-                             Symbol.isWeak()
-                                 ? GOFF::ESDBindingStrength::ESD_BST_Weak
-                                 : GOFF::ESDBindingStrength::ESD_BST_Strong,
-                             Symbol.getLinkage(), GOFF::ESD_AMODE_64,
-                             Symbol.getBindingScope()});
+                             Symbol.getBindingStrength(), Symbol.getLinkage(),
+                             GOFF::ESD_AMODE_64, Symbol.getBindingScope()});
   if (Symbol.getADA())
     LD.ADAEsdId = Symbol.getADA()->getOrdinal();
   LD.Offset = Asm.getSymbolOffset(Symbol);
@@ -355,10 +352,7 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
 
 void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
   GOFFSymbol ER(Symbol.getName(), Symbol.getIndex(), RootSD->getOrdinal(),
-                GOFF::ERAttr{Symbol.getCodeData(),
-                             Symbol.isWeak()
-                                 ? GOFF::ESDBindingStrength::ESD_BST_Weak
-                                 : GOFF::ESDBindingStrength::ESD_BST_Strong,
+                GOFF::ERAttr{Symbol.getCodeData(), Symbol.getBindingStrength(),
                              Symbol.getLinkage(), GOFF::ESD_AMODE_64,
                              Symbol.getBindingScope()});
   writeSymbol(ER);

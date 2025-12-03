@@ -67,7 +67,6 @@ public:
 class SystemZTargetGOFFStreamer : public SystemZTargetStreamer {
 public:
   SystemZTargetGOFFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
-  MCGOFFStreamer &getGOFFStreamer();
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                    const MCSymbol *Lo) override;
 };
