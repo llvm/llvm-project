@@ -934,7 +934,8 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
                             isa<AllocaInst>(PtrOperand->stripPointerCasts());
       Align Alignment = getLoadStoreAlignment(C[CBegin].Inst);
       Align PrefAlign = Align(StackAdjustedAlignment);
-      if (IsAllocaAccess && Alignment.value() % SizeBytes != 0) {
+      if (IsAllocaAccess && Alignment.value() % SizeBytes != 0 &&
+          accessIsAllowedAndFast(SizeBytes, AS, PrefAlign, VecElemBits)) {
         Align NewAlign = getOrEnforceKnownAlignment(
             PtrOperand, PrefAlign, DL, C[CBegin].Inst, nullptr, &DT);
         if (NewAlign >= Alignment) {

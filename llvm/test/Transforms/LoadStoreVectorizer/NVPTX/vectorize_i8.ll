@@ -58,9 +58,9 @@ define void @int8x3a4(ptr nocapture align 4 %ptr) {
   %l1 = load i8, ptr %ptr1, align 1
   %l2 = load i8, ptr %ptr2, align 2
 
-  store i8 %l2, ptr %ptr0, align 2
+  store i8 %l2, ptr %ptr0, align 4
   store i8 %l1, ptr %ptr1, align 1
-  store i8 %l0, ptr %ptr2, align 4
+  store i8 %l0, ptr %ptr2, align 2
 
   ret void
 
