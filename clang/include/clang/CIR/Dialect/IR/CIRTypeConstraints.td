@@ -250,8 +250,8 @@ def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
 
 def CIR_AnyVectorType : CIR_TypeBase<"::cir::VectorType", "vector type">;
 
-def CIR_VectorElementType : AnyTypeOf<[CIR_AnyIntOrFloatType, CIR_AnyPtrType],
-    "any cir integer, floating point or pointer type"
+def CIR_VectorElementType : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType, CIR_AnyPtrType],
+    "any cir boolean, integer, floating point or pointer type"
 > {
     let cppFunctionName = "isValidVectorTypeElementType";
 }
@@ -265,6 +265,16 @@ class CIR_VectorTypeOf<list<Type> types, string summary = "">
         !if(!empty(summary),
             "vector of " # CIR_TypeSummaries<types>.value,
             summary)>;
+
+class CIR_VectorOf<Type T> : CIR_ConfinedType<
+  CIR_AnyVectorType,
+  [CIR_ElementTypePred<T.predicate>],
+  "CIR vector of " # T.summary>;
+
+// Type constraint accepting a either a type T or a vector of type T
+// Mimicking LLVMIR's LLVM_ScalarOrVectorOf
+class CIR_ScalarOrVectorOf<Type T> :
+    AnyTypeOf<[T, CIR_VectorOf<T>]>;
 
 // Vector of integral type
 def IntegerVector : Type<

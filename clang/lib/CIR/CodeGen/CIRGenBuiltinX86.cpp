@@ -152,6 +152,71 @@ computeFullLaneShuffleMask(CIRGenFunction &cgf, const mlir::Value vec,
   outIndices.resize(numElts);
 }
 
+static mlir::Value getBoolMaskVecValue(CIRGenBuilderTy &builder,
+                                       mlir::Location loc, mlir::Value mask,
+                                       unsigned numElems) {
+
+  cir::BoolType boolTy = builder.getBoolTy();
+  auto maskTy = cir::VectorType::get(
+      boolTy, cast<cir::IntType>(mask.getType()).getWidth());
+  mlir::Value maskVec = builder.createBitcast(mask, maskTy);
+
+  if (numElems < 8) {
+    SmallVector<mlir::Attribute, 4> indices;
+    mlir::Type i32Ty = builder.getSInt32Ty();
+    for (auto i : llvm::seq<unsigned>(0, numElems))
+      indices.push_back(cir::IntAttr::get(i32Ty, i));
+
+    maskVec = builder.createVecShuffle(loc, maskVec, maskVec, indices);
+  }
+  return maskVec;
+}
+
+// Helper function mirroring OG's bool Constant::isAllOnesValue()
+static bool isAllOnesValue(mlir::Value value) {
+  auto constOp = mlir::dyn_cast_or_null<cir::ConstantOp>(value.getDefiningOp());
+  if (!constOp)
+    return false;
+
+  // Check for -1 integers
+  if (auto intAttr = constOp.getValueAttr<cir::IntAttr>()) {
+    return intAttr.getValue().isAllOnes();
+  }
+
+  // Check for FP which are bitcasted from -1 integers
+  if (auto fpAttr = constOp.getValueAttr<cir::FPAttr>()) {
+    return fpAttr.getValue().bitcastToAPInt().isAllOnes();
+  }
+
+  // Check for constant vectors with splat values
+  if (cir::VectorType v = dyn_cast<cir::VectorType>(constOp.getType())) {
+    if (auto vecAttr = constOp.getValueAttr<mlir::DenseElementsAttr>()) {
+      if (vecAttr.isSplat()) {
+        auto splatAttr = vecAttr.getSplatValue<mlir::Attribute>();
+        if (auto splatInt = mlir::dyn_cast<cir::IntAttr>(splatAttr)) {
+          return splatInt.getValue().isAllOnes();
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
+                                 mlir::Value mask, mlir::Value op0,
+                                 mlir::Value op1) {
+
+  // If the mask is all ones just return first argument.
+  if (isAllOnesValue(mask))
+    return op0;
+
+  mask = getBoolMaskVecValue(builder, loc, mask,
+                             cast<cir::VectorType>(op0.getType()).getSize());
+
+  return builder.createSelect(loc, mask, op0, op1);
+}
+
 static mlir::Value emitX86MaskAddLogic(CIRGenBuilderTy &builder,
                                        mlir::Location loc,
                                        const std::string &intrinsicName,
@@ -887,7 +952,31 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_extractf64x2_256_mask:
   case X86::BI__builtin_ia32_extracti64x2_256_mask:
   case X86::BI__builtin_ia32_extractf64x2_512_mask:
-  case X86::BI__builtin_ia32_extracti64x2_512_mask:
+  case X86::BI__builtin_ia32_extracti64x2_512_mask: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    cir::VectorType dstTy = cast<cir::VectorType>(convertType(expr->getType()));
+    unsigned numElts = dstTy.getSize();
+    unsigned srcNumElts = cast<cir::VectorType>(ops[0].getType()).getSize();
+    unsigned subVectors = srcNumElts / numElts;
+    unsigned index =
+        ops[1].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
+
+    index &= subVectors - 1; // Remove any extra bits.
+    index *= numElts;
+
+    int64_t indices[16];
+    for (unsigned i = 0; i != numElts; ++i)
+      indices[i] = i + index;
+
+    mlir::Value zero = builder.getNullValue(ops[0].getType(), loc);
+    mlir::Value res =
+        builder.createVecShuffle(loc, ops[0], zero, ArrayRef(indices, numElts));
+    if (ops.size() == 4) {
+      res = emitX86Select(builder, loc, ops[3], res, ops[2]);
+    }
+
+    return res;
+  }
   case X86::BI__builtin_ia32_vinsertf128_pd256:
   case X86::BI__builtin_ia32_vinsertf128_ps256:
   case X86::BI__builtin_ia32_vinsertf128_si256:

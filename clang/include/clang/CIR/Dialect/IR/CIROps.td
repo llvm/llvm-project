@@ -1870,8 +1870,8 @@ def CIR_SelectOp : CIR_Op<"select", [
   let summary = "Yield one of two values based on a boolean value";
   let description = [{
     The `cir.select` operation takes three operands. The first operand
-    `condition` is a boolean value of type `!cir.bool`. The second and the third
-    operand can be of any CIR types, but their types must be the same. If the
+    `condition` is either a boolean value of type `!cir.bool` or a boolean vector of type `!cir.bool`. 
+    The second and the third operand can be of any CIR types, but their types must be the same. If the
     first operand is `true`, the operation yields its second operand. Otherwise,
     the operation yields its third operand.
 
@@ -1885,7 +1885,7 @@ def CIR_SelectOp : CIR_Op<"select", [
     ```
   }];
 
-  let arguments = (ins CIR_BoolType:$condition, CIR_AnyType:$true_value,
+  let arguments = (ins CIR_ScalarOrVectorOf<CIR_BoolType>:$condition, CIR_AnyType:$true_value,
                        CIR_AnyType:$false_value);
   let results = (outs CIR_AnyType:$result);
 
