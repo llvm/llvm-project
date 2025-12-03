@@ -19,6 +19,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 
@@ -2357,10 +2358,8 @@ struct AMDGPUMakeDmaDescriptorLowering
       value = LLVM::ShlOp::create(rewriter, loc, value, shiftAmount);
     }
 
-    if (LLVM::ConstantOp op = accumulator.getDefiningOp<LLVM::ConstantOp>())
-      if (IntegerAttr attr = dyn_cast<IntegerAttr>(op.getValue());
-          attr.getInt() == 0)
-        return value;
+    if (matchPattern(accumulator, mlir::m_Zero()))
+      return value;
 
     return LLVM::OrOp::create(rewriter, loc, accumulator, value);
   }
