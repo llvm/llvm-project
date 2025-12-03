@@ -464,19 +464,6 @@ llvm.func private @mbarrier_arrive_nocomplete_shared(%barrier: !llvm.ptr<3>) {
   llvm.return
 }
 
-llvm.func private @mbarrier_test_wait(%barrier: !llvm.ptr, %token : i64) -> i1 {  
-  // CHECK:   nvvm.mbarrier.test.wait %{{.*}}
-  %isComplete = nvvm.mbarrier.test.wait %barrier, %token : !llvm.ptr, i64 -> i1
-  llvm.return %isComplete : i1
-}
-
-llvm.func private @mbarrier_test_wait_shared(%barrier: !llvm.ptr<3>, %token : i64) {
-  %count = nvvm.read.ptx.sreg.ntid.x : i32
-  // CHECK:   nvvm.mbarrier.test.wait %{{.*}}
-  %isComplete = nvvm.mbarrier.test.wait %barrier, %token : !llvm.ptr<3>, i64 -> i1
-  llvm.return
-}
-
 // CHECK-LABEL: @wgmma_fence_aligned
 func.func @wgmma_fence_aligned() {
   // CHECK: nvvm.wgmma.fence.aligned

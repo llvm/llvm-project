@@ -25,6 +25,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/SmallSet.h"
+#include <deque>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -150,29 +152,38 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   EmulateInstruction::InstructionCondition last_condition =
       EmulateInstruction::UnconditionalCondition;
 
-  for (const InstructionSP &inst : inst_list.Instructions()) {
-    if (!inst)
-      continue;
-    DumpInstToLog(log, *inst, inst_list);
+  std::deque<std::size_t> to_visit = {0};
+  llvm::SmallSet<std::size_t, 0> enqueued = {0};
+
+  // Instructions reachable through jumps are inserted on the front.
+  // The next instruction is inserted on the back.
+  // Pop from the back to ensure non-branching instructions are visited
+  // sequentially.
+  while (!to_visit.empty()) {
+    const std::size_t current_index = to_visit.back();
+    Instruction &inst = *inst_list.GetInstructionAtIndex(current_index);
+    to_visit.pop_back();
+    DumpInstToLog(log, inst, inst_list);
 
     m_curr_row_modified = false;
     m_forward_branch_offset = 0;
 
     lldb::addr_t current_offset =
-        inst->GetAddress().GetFileAddress() - base_addr;
+        inst.GetAddress().GetFileAddress() - base_addr;
     auto it = saved_unwind_states.upper_bound(current_offset);
     assert(it != saved_unwind_states.begin() &&
            "Unwind row for the function entry missing");
     --it; // Move it to the row corresponding to the current offset
 
-    // If the offset of m_state.row doesn't match with the offset we see in
-    // saved_unwind_states then we have to update current unwind state to
-    // the saved values. It is happening after we processed an epilogue and a
-    // return to caller instruction.
+    // When state is forwarded through a branch, the offset of m_state.row is
+    // different from the offset available in saved_unwind_states. Use the
+    // forwarded state in this case, as the previous instruction may have been
+    // an unconditional jump.
+    // FIXME: this assignment can always be done unconditionally.
     if (it->second.row.GetOffset() != m_state.row.GetOffset())
       m_state = it->second;
 
-    m_inst_emulator_up->SetInstruction(inst->GetOpcode(), inst->GetAddress(),
+    m_inst_emulator_up->SetInstruction(inst.GetOpcode(), inst.GetAddress(),
                                        nullptr);
     const EmulateInstruction::InstructionCondition new_condition =
         m_inst_emulator_up->GetInstructionCondition();
@@ -199,13 +210,21 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
     // If the current instruction is a branch forward then save the current
     // CFI information for the offset where we are branching.
+    Address branch_address = inst.GetAddress();
+    branch_address.Slide(m_forward_branch_offset);
     if (m_forward_branch_offset != 0 &&
-        range.ContainsFileAddress(inst->GetAddress().GetFileAddress() +
-                                  m_forward_branch_offset)) {
+        range.ContainsFileAddress(branch_address.GetFileAddress())) {
       if (auto [it, inserted] = saved_unwind_states.emplace(
               current_offset + m_forward_branch_offset, m_state);
-          inserted)
+          inserted) {
         it->second.row.SetOffset(current_offset + m_forward_branch_offset);
+        if (std::size_t dest_instr_index =
+                inst_list.GetIndexOfInstructionAtAddress(branch_address);
+            dest_instr_index < inst_list.GetSize()) {
+          to_visit.push_front(dest_instr_index);
+          enqueued.insert(dest_instr_index);
+        }
+      }
     }
 
     // Were there any changes to the CFI while evaluating this instruction?
@@ -213,12 +232,17 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
       // Save the modified row if we don't already have a CFI row in the
       // current address
       const lldb::addr_t next_inst_offset =
-          current_offset + inst->GetOpcode().GetByteSize();
+          current_offset + inst.GetOpcode().GetByteSize();
       if (saved_unwind_states.count(next_inst_offset) == 0) {
         m_state.row.SetOffset(next_inst_offset);
         saved_unwind_states.emplace(next_inst_offset, m_state);
       }
     }
+
+    const size_t next_idx = current_index + 1;
+    const bool never_enqueued = enqueued.insert(next_idx).second;
+    if (never_enqueued && next_idx < inst_list.GetSize())
+      to_visit.push_back(next_idx);
   }
 
   for (auto &[_, state] : saved_unwind_states)
