@@ -202,7 +202,9 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
       const Stmt *Inner = CS->body_front();
 
       // Captures:
-      // if (cond) { // Comment B ... }
+      // if (cond) { // Comment B
+      // ...
+      // }
       // if (cond) { /* Comment B */ x = y; }
       AppendNormalized(GetSourceText(CS->getBeginLoc(), Inner->getBeginLoc()));
 
