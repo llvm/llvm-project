@@ -991,9 +991,8 @@ struct ConvertXeGPUToXeVMPass
     });
 
     typeConverter.addConversion([&](MemRefType type) -> Type {
-      if (type.getMemorySpaceAsInt() == 3)
-        return IntegerType::get(&getContext(), 32);
-      return IntegerType::get(&getContext(), 64);
+      return IntegerType::get(&getContext(),
+                              (xegpu::isSharedMemRef(type) ? 32 : 64));
     });
 
     // LLVM type converter puts unrealized casts for the following cases:
@@ -1010,24 +1009,35 @@ struct ConvertXeGPUToXeVMPass
         unsigned rank = memrefTy.getRank();
         Type indexType = builder.getIndexType();
 
-        SmallVector<Type> resultTypes;
-        // Result types: [base_memref, offset, stride0, stride1, ..., strideN-1,
-        // size0, size1, ..., sizeN-1]
-        resultTypes.push_back(MemRefType::get(
-            {}, memrefTy.getElementType(), MemRefLayoutAttrInterface(),
-            memrefTy.getMemorySpace()));  // base memref (unranked)
-        resultTypes.push_back(indexType); // offset
-        for (unsigned i = 0; i < rank; ++i)
-          resultTypes.push_back(indexType); // strides
-        for (unsigned i = 0; i < rank; ++i)
-          resultTypes.push_back(indexType); // sizes
+        int64_t intOffsets;
+        SmallVector<int64_t> intStrides;
+        Value addr;
+        Value offset;
+        if (failed(memrefTy.getStridesAndOffset(intStrides, intOffsets))) {
 
-        auto meta = memref::ExtractStridedMetadataOp::create(
-            builder, loc, resultTypes, input);
+          // Result types: [base_memref, offset, stride0, stride1, ...,
+          // strideN-1, size0, size1, ..., sizeN-1]
+          SmallVector<Type> resultTypes{
+              MemRefType::get({}, memrefTy.getElementType(),
+                              MemRefLayoutAttrInterface(),
+                              memrefTy.getMemorySpace()),
+              indexType};
+          // strides + sizes
+          resultTypes.append(2 * rank, indexType);
 
-        auto addr = memref::ExtractAlignedPointerAsIndexOp::create(
-            builder, loc, meta.getBaseBuffer());
-        auto offset = meta.getOffset();
+          auto meta = memref::ExtractStridedMetadataOp::create(
+              builder, loc, resultTypes, input);
+
+          addr = memref::ExtractAlignedPointerAsIndexOp::create(
+              builder, loc, meta.getBaseBuffer());
+          offset = meta.getOffset();
+
+        } else {
+          addr = memref::ExtractAlignedPointerAsIndexOp::create(builder, loc,
+                                                                input);
+          offset = arith::ConstantOp::create(builder, loc,
+                                             builder.getIndexAttr(intOffsets));
+        }
 
         auto addr_casted =
             arith::IndexCastUIOp::create(builder, loc, type, addr);
