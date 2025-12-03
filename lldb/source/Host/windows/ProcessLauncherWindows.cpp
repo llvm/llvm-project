@@ -87,6 +87,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   error.Clear();
 
   std::string executable;
+  std::vector<HANDLE> inherited_handles;
   STARTUPINFOEXW startupinfoex = {};
   STARTUPINFOW &startupinfo = startupinfoex.StartupInfo;
   PROCESS_INFORMATION pi = {};
@@ -112,7 +113,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
     error = Status(inherited_handles_or_err.getError());
     return HostProcess();
   }
-  std::vector<HANDLE> inherited_handles = inherited_handles;
+  inherited_handles = *inherited_handles_or_err;
 
   SIZE_T attributelist_size = 0;
   InitializeProcThreadAttributeList(/*lpAttributeList=*/nullptr,
