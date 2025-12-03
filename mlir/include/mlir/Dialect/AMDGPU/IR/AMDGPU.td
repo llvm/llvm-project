@@ -1357,15 +1357,8 @@ def AMDGPU_MakeDmaDescriptorOp :
       return getGlobalStaticSizes().size();
     }
 
-    int getElementTypeWidth() {
-      Type elementType = getBase().getType().getElementType();
-      unsigned width;
-      if (elementType.isIntOrFloat()) {
-        width = elementType.getIntOrFloatBitWidth();
-      } else {
-        llvm_unreachable("element type must have getWidth interface");
-      }
-      return width;
+    unsigned getElementTypeWidth() {
+      return getBase().getType().getElementType().getIntOrFloatBitWidth();
     }
 
     SmallVector<OpFoldResult> getMixedList(SmallVector<Value> dynamics, ArrayRef<int64_t> statics) {
