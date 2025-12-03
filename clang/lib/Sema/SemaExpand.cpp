@@ -50,7 +50,7 @@ static auto InitListContainsPack(const InitListExpr *ILE) {
 static bool HasDependentSize(const CXXExpansionStmtPattern *Pattern) {
   switch (Pattern->getKind()) {
   case CXXExpansionStmtPattern::ExpansionStmtKind::Enumerating: {
-    auto *SelectExpr = cast<CXXExpansionInitListSelectExpr>(
+    auto *SelectExpr = cast<CXXExpansionSelectExpr>(
         Pattern->getExpansionVariable()->getInit());
     return InitListContainsPack(SelectExpr->getRangeExpr());
   }
@@ -123,7 +123,7 @@ StmtResult Sema::ActOnCXXExpansionStmtPattern(
   if (auto *ILE = dyn_cast<InitListExpr>(ExpansionInitializer)) {
     assert(ILE->isSyntacticForm());
     ExprResult Initializer =
-        BuildCXXExpansionInitListSelectExpr(ILE, BuildIndexDRE(*this, ESD));
+        BuildCXXExpansionSelectExpr(ILE, BuildIndexDRE(*this, ESD));
     if (FinaliseExpansionVar(*this, ExpansionVar, Initializer))
       return StmtError();
 
@@ -219,11 +219,9 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
   return Expansion;
 }
 
-ExprResult
-Sema::BuildCXXExpansionInitListSelectExpr(InitListExpr *Range,
-                                          Expr *Idx) {
+ExprResult Sema::BuildCXXExpansionSelectExpr(InitListExpr *Range, Expr *Idx) {
   if (Idx->isValueDependent() || InitListContainsPack(Range))
-    return new (Context) CXXExpansionInitListSelectExpr(Context, Range, Idx);
+    return new (Context) CXXExpansionSelectExpr(Context, Range, Idx);
 
   // The index is a DRE to a template parameter; we should never
   // fail to evaluate it.
@@ -240,7 +238,7 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
   assert(!HasDependentSize(Expansion));
 
   if (Expansion->isEnumerating())
-    return cast<CXXExpansionInitListSelectExpr>(
+    return cast<CXXExpansionSelectExpr>(
                Expansion->getExpansionVariable()->getInit())
         ->getRangeExpr()
         ->getNumInits();

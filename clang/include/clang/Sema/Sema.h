@@ -15660,8 +15660,7 @@ public:
                                                      SourceLocation ColonLoc,
                                                      SourceLocation RParenLoc);
 
-  ExprResult BuildCXXExpansionInitListSelectExpr(InitListExpr *Range,
-                                                 Expr *Idx);
+  ExprResult BuildCXXExpansionSelectExpr(InitListExpr *Range, Expr *Idx);
 
   std::optional<uint64_t>
   ComputeExpansionSize(CXXExpansionStmtPattern *Expansion);

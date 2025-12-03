@@ -9383,8 +9383,8 @@ ExprResult TreeTransform<Derived>::TransformCXXExpansionSelectExpr(
       Idx.get() == E->getIndexExpr())
     return E;
 
-  return SemaRef.BuildCXXExpansionSelectExpr(
-      Range.getAs<InitListExpr>(), Idx.get());
+  return SemaRef.BuildCXXExpansionSelectExpr(Range.getAs<InitListExpr>(),
+                                             Idx.get());
 }
 
 template<typename Derived>
