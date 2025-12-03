@@ -103,12 +103,12 @@ int custom_iterator() {
 // CHECK: @_ZZ2f4vE1a = internal constant %struct.Array.1 { [2 x i32] [i32 1, i32 2] }, align 4
 // CHECK: @_ZZ2f4vE1b = internal constant %struct.Array.1 { [2 x i32] [i32 3, i32 4] }, align 4
 // CHECK: @_ZZN7Private11member_funcEvE2p1 = internal constant %struct.Private zeroinitializer, align 1
-// CHECK: @_ZN7Private8integersE = {{.*}} constant %struct.Array { [3 x i32] [i32 1, i32 2, i32 3] }, comdat, align 4
 // CHECK: @_ZZ15custom_iteratorvE1c = internal constant %struct.CustomIterator zeroinitializer, align 1
 // CHECK: @__const._Z15custom_iteratorv.__begin1 = private {{.*}} constant %"struct.CustomIterator::iterator" { i32 1 }, align 4
 // CHECK: @__const._Z15custom_iteratorv.__end1 = private {{.*}} constant %"struct.CustomIterator::iterator" { i32 5 }, align 4
 // CHECK: @__const._Z15custom_iteratorv.__begin1.1 = private {{.*}} constant %"struct.CustomIterator::iterator" { i32 1 }, align 4
 // CHECK: @__const._Z15custom_iteratorv.__end1.2 = private {{.*}} constant %"struct.CustomIterator::iterator" { i32 5 }, align 4
+// CHECK: @_ZN7Private8integersE = {{.*}} constant %struct.Array { [3 x i32] [i32 1, i32 2, i32 3] }, comdat, align 4
 
 // CHECK-LABEL: define {{.*}} i32 @_Z2f1v()
 // CHECK: entry:
@@ -117,38 +117,46 @@ int custom_iterator() {
 // CHECK-NEXT:   %__begin1 = alloca ptr, align 8
 // CHECK-NEXT:   %__end1 = alloca ptr, align 8
 // CHECK-NEXT:   %x = alloca i32, align 4
-// CHECK-NEXT:   %x1 = alloca i32, align 4
-// CHECK-NEXT:   %x4 = alloca i32, align 4
+// CHECK-NEXT:   %x2 = alloca i32, align 4
+// CHECK-NEXT:   %x6 = alloca i32, align 4
 // CHECK-NEXT:   store i32 0, ptr %sum, align 4
 // CHECK-NEXT:   store ptr @_ZZ2f1vE8integers, ptr %__range1, align 8
-// CHECK-NEXT:   store ptr @_ZZ2f1vE8integers, ptr %__begin1, align 8
-// CHECK-NEXT:   store ptr getelementptr (i8, ptr @_ZZ2f1vE8integers, i64 12), ptr %__end1, align 8
-// CHECK-NEXT:   %0 = load i32, ptr @_ZZ2f1vE8integers, align 4
-// CHECK-NEXT:   store i32 %0, ptr %x, align 4
-// CHECK-NEXT:   %1 = load i32, ptr %x, align 4
-// CHECK-NEXT:   %2 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add = add nsw i32 %2, %1
+// CHECK-NEXT:   %call = call {{.*}} ptr @_ZNK5ArrayIiLm3EE5beginEv(ptr {{.*}} @_ZZ2f1vE8integers)
+// CHECK-NEXT:   store ptr %call, ptr %__begin1, align 8
+// CHECK-NEXT:   %call1 = call {{.*}} ptr @_ZNK5ArrayIiLm3EE3endEv(ptr {{.*}} @_ZZ2f1vE8integers)
+// CHECK-NEXT:   store ptr %call1, ptr %__end1, align 8
+// CHECK-NEXT:   %0 = load ptr, ptr %__begin1, align 8
+// CHECK-NEXT:   %add.ptr = getelementptr inbounds i32, ptr %0, i64 0
+// CHECK-NEXT:   %1 = load i32, ptr %add.ptr, align 4
+// CHECK-NEXT:   store i32 %1, ptr %x, align 4
+// CHECK-NEXT:   %2 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %3 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add = add nsw i32 %3, %2
 // CHECK-NEXT:   store i32 %add, ptr %sum, align 4
 // CHECK-NEXT:   br label %expand.next
 // CHECK: expand.next:
-// CHECK-NEXT:   %3 = load i32, ptr getelementptr inbounds (i32, ptr @_ZZ2f1vE8integers, i64 1), align 4
-// CHECK-NEXT:   store i32 %3, ptr %x1, align 4
-// CHECK-NEXT:   %4 = load i32, ptr %x1, align 4
-// CHECK-NEXT:   %5 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add2 = add nsw i32 %5, %4
-// CHECK-NEXT:   store i32 %add2, ptr %sum, align 4
-// CHECK-NEXT:   br label %expand.next3
-// CHECK: expand.next3:
-// CHECK-NEXT:   %6 = load i32, ptr getelementptr inbounds (i32, ptr @_ZZ2f1vE8integers, i64 2), align 4
-// CHECK-NEXT:   store i32 %6, ptr %x4, align 4
-// CHECK-NEXT:   %7 = load i32, ptr %x4, align 4
-// CHECK-NEXT:   %8 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add5 = add nsw i32 %8, %7
-// CHECK-NEXT:   store i32 %add5, ptr %sum, align 4
+// CHECK-NEXT:   %4 = load ptr, ptr %__begin1, align 8
+// CHECK-NEXT:   %add.ptr3 = getelementptr inbounds i32, ptr %4, i64 1
+// CHECK-NEXT:   %5 = load i32, ptr %add.ptr3, align 4
+// CHECK-NEXT:   store i32 %5, ptr %x2, align 4
+// CHECK-NEXT:   %6 = load i32, ptr %x2, align 4
+// CHECK-NEXT:   %7 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add4 = add nsw i32 %7, %6
+// CHECK-NEXT:   store i32 %add4, ptr %sum, align 4
+// CHECK-NEXT:   br label %expand.next5
+// CHECK: expand.next5:
+// CHECK-NEXT:   %8 = load ptr, ptr %__begin1, align 8
+// CHECK-NEXT:   %add.ptr7 = getelementptr inbounds i32, ptr %8, i64 2
+// CHECK-NEXT:   %9 = load i32, ptr %add.ptr7, align 4
+// CHECK-NEXT:   store i32 %9, ptr %x6, align 4
+// CHECK-NEXT:   %10 = load i32, ptr %x6, align 4
+// CHECK-NEXT:   %11 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add8 = add nsw i32 %11, %10
+// CHECK-NEXT:   store i32 %add8, ptr %sum, align 4
 // CHECK-NEXT:   br label %expand.end
 // CHECK: expand.end:
-// CHECK-NEXT:   %9 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   ret i32 %9
+// CHECK-NEXT:   %12 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   ret i32 %12
 
 
 // CHECK-LABEL: define {{.*}} i32 @_Z2f2v()
@@ -211,127 +219,145 @@ int custom_iterator() {
 // CHECK-NEXT:   %__begin2 = alloca ptr, align 8
 // CHECK-NEXT:   %__end2 = alloca ptr, align 8
 // CHECK-NEXT:   %y = alloca i32, align 4
-// CHECK-NEXT:   %y2 = alloca i32, align 4
-// CHECK-NEXT:   %x6 = alloca i32, align 4
-// CHECK-NEXT:   %__range27 = alloca ptr, align 8
-// CHECK-NEXT:   %__begin28 = alloca ptr, align 8
-// CHECK-NEXT:   %__end29 = alloca ptr, align 8
-// CHECK-NEXT:   %y10 = alloca i32, align 4
-// CHECK-NEXT:   %y14 = alloca i32, align 4
-// CHECK-NEXT:   %__range119 = alloca ptr, align 8
-// CHECK-NEXT:   %__begin120 = alloca ptr, align 8
-// CHECK-NEXT:   %__end121 = alloca ptr, align 8
-// CHECK-NEXT:   %x22 = alloca i32, align 4
-// CHECK-NEXT:   %__range223 = alloca ptr, align 8
-// CHECK-NEXT:   %__begin224 = alloca ptr, align 8
-// CHECK-NEXT:   %__end225 = alloca ptr, align 8
-// CHECK-NEXT:   %y26 = alloca i32, align 4
-// CHECK-NEXT:   %y29 = alloca i32, align 4
-// CHECK-NEXT:   %x33 = alloca i32, align 4
-// CHECK-NEXT:   %__range234 = alloca ptr, align 8
-// CHECK-NEXT:   %__begin235 = alloca ptr, align 8
-// CHECK-NEXT:   %__end236 = alloca ptr, align 8
-// CHECK-NEXT:   %y37 = alloca i32, align 4
-// CHECK-NEXT:   %y40 = alloca i32, align 4
+// CHECK-NEXT:   %y6 = alloca i32, align 4
+// CHECK-NEXT:   %x11 = alloca i32, align 4
+// CHECK-NEXT:   %__range213 = alloca ptr, align 8
+// CHECK-NEXT:   %__begin214 = alloca ptr, align 8
+// CHECK-NEXT:   %__end216 = alloca ptr, align 8
+// CHECK-NEXT:   %y18 = alloca i32, align 4
+// CHECK-NEXT:   %y23 = alloca i32, align 4
+// CHECK-NEXT:   %__range129 = alloca ptr, align 8
+// CHECK-NEXT:   %__begin130 = alloca ptr, align 8
+// CHECK-NEXT:   %__end131 = alloca ptr, align 8
+// CHECK-NEXT:   %x32 = alloca i32, align 4
+// CHECK-NEXT:   %__range233 = alloca ptr, align 8
+// CHECK-NEXT:   %__begin234 = alloca ptr, align 8
+// CHECK-NEXT:   %__end235 = alloca ptr, align 8
+// CHECK-NEXT:   %y36 = alloca i32, align 4
+// CHECK-NEXT:   %y39 = alloca i32, align 4
+// CHECK-NEXT:   %x43 = alloca i32, align 4
+// CHECK-NEXT:   %__range244 = alloca ptr, align 8
+// CHECK-NEXT:   %__begin245 = alloca ptr, align 8
+// CHECK-NEXT:   %__end246 = alloca ptr, align 8
+// CHECK-NEXT:   %y47 = alloca i32, align 4
+// CHECK-NEXT:   %y50 = alloca i32, align 4
 // CHECK-NEXT:   store i32 0, ptr %sum, align 4
 // CHECK-NEXT:   store ptr @_ZZ2f4vE1a, ptr %__range1, align 8
-// CHECK-NEXT:   store ptr @_ZZ2f4vE1a, ptr %__begin1, align 8
-// CHECK-NEXT:   store ptr getelementptr (i8, ptr @_ZZ2f4vE1a, i64 8), ptr %__end1, align 8
-// CHECK-NEXT:   %0 = load i32, ptr @_ZZ2f4vE1a, align 4
-// CHECK-NEXT:   store i32 %0, ptr %x, align 4
+// CHECK-NEXT:   %call = call {{.*}} ptr @_ZNK5ArrayIiLm2EE5beginEv(ptr {{.*}} @_ZZ2f4vE1a)
+// CHECK-NEXT:   store ptr %call, ptr %__begin1, align 8
+// CHECK-NEXT:   %call1 = call {{.*}} ptr @_ZNK5ArrayIiLm2EE3endEv(ptr {{.*}} @_ZZ2f4vE1a)
+// CHECK-NEXT:   store ptr %call1, ptr %__end1, align 8
+// CHECK-NEXT:   %0 = load ptr, ptr %__begin1, align 8
+// CHECK-NEXT:   %add.ptr = getelementptr inbounds i32, ptr %0, i64 0
+// CHECK-NEXT:   %1 = load i32, ptr %add.ptr, align 4
+// CHECK-NEXT:   store i32 %1, ptr %x, align 4
 // CHECK-NEXT:   store ptr @_ZZ2f4vE1b, ptr %__range2, align 8
-// CHECK-NEXT:   store ptr @_ZZ2f4vE1b, ptr %__begin2, align 8
-// CHECK-NEXT:   store ptr getelementptr (i8, ptr @_ZZ2f4vE1b, i64 8), ptr %__end2, align 8
-// CHECK-NEXT:   %1 = load i32, ptr @_ZZ2f4vE1b, align 4
-// CHECK-NEXT:   store i32 %1, ptr %y, align 4
-// CHECK-NEXT:   %2 = load i32, ptr %x, align 4
-// CHECK-NEXT:   %3 = load i32, ptr %y, align 4
-// CHECK-NEXT:   %add = add nsw i32 %2, %3
-// CHECK-NEXT:   %4 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add1 = add nsw i32 %4, %add
-// CHECK-NEXT:   store i32 %add1, ptr %sum, align 4
+// CHECK-NEXT:   %call2 = call {{.*}} ptr @_ZNK5ArrayIiLm2EE5beginEv(ptr {{.*}} @_ZZ2f4vE1b)
+// CHECK-NEXT:   store ptr %call2, ptr %__begin2, align 8
+// CHECK-NEXT:   %call3 = call {{.*}} ptr @_ZNK5ArrayIiLm2EE3endEv(ptr {{.*}} @_ZZ2f4vE1b)
+// CHECK-NEXT:   store ptr %call3, ptr %__end2, align 8
+// CHECK-NEXT:   %2 = load ptr, ptr %__begin2, align 8
+// CHECK-NEXT:   %add.ptr4 = getelementptr inbounds i32, ptr %2, i64 0
+// CHECK-NEXT:   %3 = load i32, ptr %add.ptr4, align 4
+// CHECK-NEXT:   store i32 %3, ptr %y, align 4
+// CHECK-NEXT:   %4 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %5 = load i32, ptr %y, align 4
+// CHECK-NEXT:   %add = add nsw i32 %4, %5
+// CHECK-NEXT:   %6 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add5 = add nsw i32 %6, %add
+// CHECK-NEXT:   store i32 %add5, ptr %sum, align 4
 // CHECK-NEXT:   br label %expand.next
 // CHECK: expand.next:
-// CHECK-NEXT:   %5 = load i32, ptr getelementptr inbounds (i32, ptr @_ZZ2f4vE1b, i64 1), align 4
-// CHECK-NEXT:   store i32 %5, ptr %y2, align 4
-// CHECK-NEXT:   %6 = load i32, ptr %x, align 4
-// CHECK-NEXT:   %7 = load i32, ptr %y2, align 4
-// CHECK-NEXT:   %add3 = add nsw i32 %6, %7
-// CHECK-NEXT:   %8 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add4 = add nsw i32 %8, %add3
-// CHECK-NEXT:   store i32 %add4, ptr %sum, align 4
+// CHECK-NEXT:   %7 = load ptr, ptr %__begin2, align 8
+// CHECK-NEXT:   %add.ptr7 = getelementptr inbounds i32, ptr %7, i64 1
+// CHECK-NEXT:   %8 = load i32, ptr %add.ptr7, align 4
+// CHECK-NEXT:   store i32 %8, ptr %y6, align 4
+// CHECK-NEXT:   %9 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %10 = load i32, ptr %y6, align 4
+// CHECK-NEXT:   %add8 = add nsw i32 %9, %10
+// CHECK-NEXT:   %11 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add9 = add nsw i32 %11, %add8
+// CHECK-NEXT:   store i32 %add9, ptr %sum, align 4
 // CHECK-NEXT:   br label %expand.end
 // CHECK: expand.end:
-// CHECK-NEXT:   br label %expand.next5
-// CHECK: expand.next5:
-// CHECK-NEXT:   %9 = load i32, ptr getelementptr inbounds (i32, ptr @_ZZ2f4vE1a, i64 1), align 4
-// CHECK-NEXT:   store i32 %9, ptr %x6, align 4
-// CHECK-NEXT:   store ptr @_ZZ2f4vE1b, ptr %__range27, align 8
-// CHECK-NEXT:   store ptr @_ZZ2f4vE1b, ptr %__begin28, align 8
-// CHECK-NEXT:   store ptr getelementptr (i8, ptr @_ZZ2f4vE1b, i64 8), ptr %__end29, align 8
-// CHECK-NEXT:   %10 = load i32, ptr @_ZZ2f4vE1b, align 4
-// CHECK-NEXT:   store i32 %10, ptr %y10, align 4
-// CHECK-NEXT:   %11 = load i32, ptr %x6, align 4
-// CHECK-NEXT:   %12 = load i32, ptr %y10, align 4
-// CHECK-NEXT:   %add11 = add nsw i32 %11, %12
-// CHECK-NEXT:   %13 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add12 = add nsw i32 %13, %add11
-// CHECK-NEXT:   store i32 %add12, ptr %sum, align 4
-// CHECK-NEXT:   br label %expand.next13
-// CHECK: expand.next13:
-// CHECK-NEXT:   %14 = load i32, ptr getelementptr inbounds (i32, ptr @_ZZ2f4vE1b, i64 1), align 4
-// CHECK-NEXT:   store i32 %14, ptr %y14, align 4
-// CHECK-NEXT:   %15 = load i32, ptr %x6, align 4
-// CHECK-NEXT:   %16 = load i32, ptr %y14, align 4
-// CHECK-NEXT:   %add15 = add nsw i32 %15, %16
-// CHECK-NEXT:   %17 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add16 = add nsw i32 %17, %add15
-// CHECK-NEXT:   store i32 %add16, ptr %sum, align 4
-// CHECK-NEXT:   br label %expand.end17
-// CHECK: expand.end17:
-// CHECK-NEXT:   br label %expand.end18
-// CHECK: expand.end18:
-// CHECK-NEXT:   store ptr @_ZZ2f4vE1a, ptr %__range119, align 8
-// CHECK-NEXT:   store ptr @_ZZ2f4vE1a, ptr %__begin120, align 8
-// CHECK-NEXT:   store ptr getelementptr (i8, ptr @_ZZ2f4vE1a, i64 8), ptr %__end121, align 8
-// CHECK-NEXT:   store i32 1, ptr %x22, align 4
-// CHECK-NEXT:   store ptr @_ZZ2f4vE1b, ptr %__range223, align 8
-// CHECK-NEXT:   store ptr @_ZZ2f4vE1b, ptr %__begin224, align 8
-// CHECK-NEXT:   store ptr getelementptr (i8, ptr @_ZZ2f4vE1b, i64 8), ptr %__end225, align 8
-// CHECK-NEXT:   store i32 3, ptr %y26, align 4
+// CHECK-NEXT:   br label %expand.next10
+// CHECK: expand.next10:
+// CHECK-NEXT:   %12 = load ptr, ptr %__begin1, align 8
+// CHECK-NEXT:   %add.ptr12 = getelementptr inbounds i32, ptr %12, i64 1
+// CHECK-NEXT:   %13 = load i32, ptr %add.ptr12, align 4
+// CHECK-NEXT:   store i32 %13, ptr %x11, align 4
+// CHECK-NEXT:   store ptr @_ZZ2f4vE1b, ptr %__range213, align 8
+// CHECK-NEXT:   %call15 = call {{.*}} ptr @_ZNK5ArrayIiLm2EE5beginEv(ptr {{.*}} @_ZZ2f4vE1b)
+// CHECK-NEXT:   store ptr %call15, ptr %__begin214, align 8
+// CHECK-NEXT:   %call17 = call {{.*}} ptr @_ZNK5ArrayIiLm2EE3endEv(ptr {{.*}} @_ZZ2f4vE1b)
+// CHECK-NEXT:   store ptr %call17, ptr %__end216, align 8
+// CHECK-NEXT:   %14 = load ptr, ptr %__begin214, align 8
+// CHECK-NEXT:   %add.ptr19 = getelementptr inbounds i32, ptr %14, i64 0
+// CHECK-NEXT:   %15 = load i32, ptr %add.ptr19, align 4
+// CHECK-NEXT:   store i32 %15, ptr %y18, align 4
+// CHECK-NEXT:   %16 = load i32, ptr %x11, align 4
+// CHECK-NEXT:   %17 = load i32, ptr %y18, align 4
+// CHECK-NEXT:   %add20 = add nsw i32 %16, %17
 // CHECK-NEXT:   %18 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add27 = add nsw i32 %18, 4
-// CHECK-NEXT:   store i32 %add27, ptr %sum, align 4
-// CHECK-NEXT:   br label %expand.next28
-// CHECK: expand.next28:
-// CHECK-NEXT:   store i32 4, ptr %y29, align 4
-// CHECK-NEXT:   %19 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add30 = add nsw i32 %19, 5
-// CHECK-NEXT:   store i32 %add30, ptr %sum, align 4
-// CHECK-NEXT:   br label %expand.end31
-// CHECK: expand.end31:
-// CHECK-NEXT:   br label %expand.next32
-// CHECK: expand.next32:
-// CHECK-NEXT:   store i32 2, ptr %x33, align 4
-// CHECK-NEXT:   store ptr @_ZZ2f4vE1b, ptr %__range234, align 8
-// CHECK-NEXT:   store ptr @_ZZ2f4vE1b, ptr %__begin235, align 8
-// CHECK-NEXT:   store ptr getelementptr (i8, ptr @_ZZ2f4vE1b, i64 8), ptr %__end236, align 8
-// CHECK-NEXT:   store i32 3, ptr %y37, align 4
-// CHECK-NEXT:   %20 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add38 = add nsw i32 %20, 5
-// CHECK-NEXT:   store i32 %add38, ptr %sum, align 4
-// CHECK-NEXT:   br label %expand.next39
-// CHECK: expand.next39:
-// CHECK-NEXT:   store i32 4, ptr %y40, align 4
-// CHECK-NEXT:   %21 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add41 = add nsw i32 %21, 6
-// CHECK-NEXT:   store i32 %add41, ptr %sum, align 4
-// CHECK-NEXT:   br label %expand.end42
-// CHECK: expand.end42:
-// CHECK-NEXT:   br label %expand.end43
-// CHECK: expand.end43:
-// CHECK-NEXT:   %22 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   ret i32 %22
+// CHECK-NEXT:   %add21 = add nsw i32 %18, %add20
+// CHECK-NEXT:   store i32 %add21, ptr %sum, align 4
+// CHECK-NEXT:   br label %expand.next22
+// CHECK: expand.next22:
+// CHECK-NEXT:   %19 = load ptr, ptr %__begin214, align 8
+// CHECK-NEXT:   %add.ptr24 = getelementptr inbounds i32, ptr %19, i64 1
+// CHECK-NEXT:   %20 = load i32, ptr %add.ptr24, align 4
+// CHECK-NEXT:   store i32 %20, ptr %y23, align 4
+// CHECK-NEXT:   %21 = load i32, ptr %x11, align 4
+// CHECK-NEXT:   %22 = load i32, ptr %y23, align 4
+// CHECK-NEXT:   %add25 = add nsw i32 %21, %22
+// CHECK-NEXT:   %23 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add26 = add nsw i32 %23, %add25
+// CHECK-NEXT:   store i32 %add26, ptr %sum, align 4
+// CHECK-NEXT:   br label %expand.end27
+// CHECK: expand.end27:
+// CHECK-NEXT:   br label %expand.end28
+// CHECK: expand.end28:
+// CHECK-NEXT:   store ptr @_ZZ2f4vE1a, ptr %__range129, align 8
+// CHECK-NEXT:   store ptr @_ZZ2f4vE1a, ptr %__begin130, align 8
+// CHECK-NEXT:   store ptr getelementptr (i8, ptr @_ZZ2f4vE1a, i64 8), ptr %__end131, align 8
+// CHECK-NEXT:   store i32 1, ptr %x32, align 4
+// CHECK-NEXT:   store ptr @_ZZ2f4vE1b, ptr %__range233, align 8
+// CHECK-NEXT:   store ptr @_ZZ2f4vE1b, ptr %__begin234, align 8
+// CHECK-NEXT:   store ptr getelementptr (i8, ptr @_ZZ2f4vE1b, i64 8), ptr %__end235, align 8
+// CHECK-NEXT:   store i32 3, ptr %y36, align 4
+// CHECK-NEXT:   %24 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add37 = add nsw i32 %24, 4
+// CHECK-NEXT:   store i32 %add37, ptr %sum, align 4
+// CHECK-NEXT:   br label %expand.next38
+// CHECK: expand.next38:
+// CHECK-NEXT:   store i32 4, ptr %y39, align 4
+// CHECK-NEXT:   %25 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add40 = add nsw i32 %25, 5
+// CHECK-NEXT:   store i32 %add40, ptr %sum, align 4
+// CHECK-NEXT:   br label %expand.end41
+// CHECK: expand.end41:
+// CHECK-NEXT:   br label %expand.next42
+// CHECK: expand.next42:
+// CHECK-NEXT:   store i32 2, ptr %x43, align 4
+// CHECK-NEXT:   store ptr @_ZZ2f4vE1b, ptr %__range244, align 8
+// CHECK-NEXT:   store ptr @_ZZ2f4vE1b, ptr %__begin245, align 8
+// CHECK-NEXT:   store ptr getelementptr (i8, ptr @_ZZ2f4vE1b, i64 8), ptr %__end246, align 8
+// CHECK-NEXT:   store i32 3, ptr %y47, align 4
+// CHECK-NEXT:   %26 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add48 = add nsw i32 %26, 5
+// CHECK-NEXT:   store i32 %add48, ptr %sum, align 4
+// CHECK-NEXT:   br label %expand.next49
+// CHECK: expand.next49:
+// CHECK-NEXT:   store i32 4, ptr %y50, align 4
+// CHECK-NEXT:   %27 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add51 = add nsw i32 %27, 6
+// CHECK-NEXT:   store i32 %add51, ptr %sum, align 4
+// CHECK-NEXT:   br label %expand.end52
+// CHECK: expand.end52:
+// CHECK-NEXT:   br label %expand.end53
+// CHECK: expand.end53:
+// CHECK-NEXT:   %28 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   ret i32 %28
 
 
 // CHECK-LABEL: define {{.*}} i32 @_ZN7Private11member_funcEv()
@@ -341,38 +367,46 @@ int custom_iterator() {
 // CHECK-NEXT:   %__begin1 = alloca ptr, align 8
 // CHECK-NEXT:   %__end1 = alloca ptr, align 8
 // CHECK-NEXT:   %x = alloca i32, align 4
-// CHECK-NEXT:   %x1 = alloca i32, align 4
-// CHECK-NEXT:   %x4 = alloca i32, align 4
+// CHECK-NEXT:   %x2 = alloca i32, align 4
+// CHECK-NEXT:   %x6 = alloca i32, align 4
 // CHECK-NEXT:   store i32 0, ptr %sum, align 4
 // CHECK-NEXT:   store ptr @_ZZN7Private11member_funcEvE2p1, ptr %__range1, align 8
-// CHECK-NEXT:   store ptr @_ZN7Private8integersE, ptr %__begin1, align 8
-// CHECK-NEXT:   store ptr getelementptr (i8, ptr @_ZN7Private8integersE, i64 12), ptr %__end1, align 8
-// CHECK-NEXT:   %0 = load i32, ptr @_ZN7Private8integersE, align 4
-// CHECK-NEXT:   store i32 %0, ptr %x, align 4
-// CHECK-NEXT:   %1 = load i32, ptr %x, align 4
-// CHECK-NEXT:   %2 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add = add nsw i32 %2, %1
+// CHECK-NEXT:   %call = call {{.*}} ptr @_ZNK7Private5beginEv(ptr {{.*}} @_ZZN7Private11member_funcEvE2p1)
+// CHECK-NEXT:   store ptr %call, ptr %__begin1, align 8
+// CHECK-NEXT:   %call1 = call {{.*}} ptr @_ZNK7Private3endEv(ptr {{.*}} @_ZZN7Private11member_funcEvE2p1)
+// CHECK-NEXT:   store ptr %call1, ptr %__end1, align 8
+// CHECK-NEXT:   %0 = load ptr, ptr %__begin1, align 8
+// CHECK-NEXT:   %add.ptr = getelementptr inbounds i32, ptr %0, i64 0
+// CHECK-NEXT:   %1 = load i32, ptr %add.ptr, align 4
+// CHECK-NEXT:   store i32 %1, ptr %x, align 4
+// CHECK-NEXT:   %2 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %3 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add = add nsw i32 %3, %2
 // CHECK-NEXT:   store i32 %add, ptr %sum, align 4
 // CHECK-NEXT:   br label %expand.next
 // CHECK: expand.next:
-// CHECK-NEXT:   %3 = load i32, ptr getelementptr inbounds (i32, ptr @_ZN7Private8integersE, i64 1), align 4
-// CHECK-NEXT:   store i32 %3, ptr %x1, align 4
-// CHECK-NEXT:   %4 = load i32, ptr %x1, align 4
-// CHECK-NEXT:   %5 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add2 = add nsw i32 %5, %4
-// CHECK-NEXT:   store i32 %add2, ptr %sum, align 4
-// CHECK-NEXT:   br label %expand.next3
-// CHECK: expand.next3:
-// CHECK-NEXT:   %6 = load i32, ptr getelementptr inbounds (i32, ptr @_ZN7Private8integersE, i64 2), align 4
-// CHECK-NEXT:   store i32 %6, ptr %x4, align 4
-// CHECK-NEXT:   %7 = load i32, ptr %x4, align 4
-// CHECK-NEXT:   %8 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   %add5 = add nsw i32 %8, %7
-// CHECK-NEXT:   store i32 %add5, ptr %sum, align 4
+// CHECK-NEXT:   %4 = load ptr, ptr %__begin1, align 8
+// CHECK-NEXT:   %add.ptr3 = getelementptr inbounds i32, ptr %4, i64 1
+// CHECK-NEXT:   %5 = load i32, ptr %add.ptr3, align 4
+// CHECK-NEXT:   store i32 %5, ptr %x2, align 4
+// CHECK-NEXT:   %6 = load i32, ptr %x2, align 4
+// CHECK-NEXT:   %7 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add4 = add nsw i32 %7, %6
+// CHECK-NEXT:   store i32 %add4, ptr %sum, align 4
+// CHECK-NEXT:   br label %expand.next5
+// CHECK: expand.next5:
+// CHECK-NEXT:   %8 = load ptr, ptr %__begin1, align 8
+// CHECK-NEXT:   %add.ptr7 = getelementptr inbounds i32, ptr %8, i64 2
+// CHECK-NEXT:   %9 = load i32, ptr %add.ptr7, align 4
+// CHECK-NEXT:   store i32 %9, ptr %x6, align 4
+// CHECK-NEXT:   %10 = load i32, ptr %x6, align 4
+// CHECK-NEXT:   %11 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add8 = add nsw i32 %11, %10
+// CHECK-NEXT:   store i32 %add8, ptr %sum, align 4
 // CHECK-NEXT:   br label %expand.end
 // CHECK: expand.end:
-// CHECK-NEXT:   %9 = load i32, ptr %sum, align 4
-// CHECK-NEXT:   ret i32 %9
+// CHECK-NEXT:   %12 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   ret i32 %12
 
 
 // CHECK-LABEL: define {{.*}} i32 @_Z15custom_iteratorv()
