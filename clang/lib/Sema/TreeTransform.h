@@ -9295,37 +9295,8 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
 }
 
 template <typename Derived>
-StmtResult TreeTransform<Derived>::TransformCXXEnumeratingExpansionStmtPattern(
-    CXXEnumeratingExpansionStmtPattern *S) {
-  llvm_unreachable("TOOD");
-}
-
-template <typename Derived>
-StmtResult TreeTransform<Derived>::TransformCXXIteratingExpansionStmtPattern(
-    CXXIteratingExpansionStmtPattern *S) {
-  llvm_unreachable("TOOD");
-}
-
-template <typename Derived>
-StmtResult TreeTransform<Derived>::TransformCXXDependentExpansionStmtPattern(
-    CXXDependentExpansionStmtPattern *S) {
-  llvm_unreachable("TOOD");
-}
-
-template <typename Derived>
-StmtResult
-TreeTransform<Derived>::TransformCXXDestructuringExpansionStmtPattern(
-    CXXDestructuringExpansionStmtPattern *) {
-  // The only time we instantiate an expansion statement is if its expansion
-  // size is dependent (otherwise, we only instantiate the expansions and
-  // leave the underlying CXXExpansionStmtPattern as-is). Since destructuring
-  // expansion statements never have a dependent size, we should never get here.
-  llvm_unreachable("Should never be instantiated");
-}
-
-template <typename Derived>
-ExprResult TreeTransform<Derived>::TransformCXXExpansionInitListExpr(
-    CXXExpansionInitListExpr *E) {
+StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtPattern(
+    CXXExpansionStmtPattern *S) {
   llvm_unreachable("TOOD");
 }
 
