@@ -110,8 +110,8 @@ std::unique_ptr<NextUseResult> NextUseAnalysisTestWrapper::Captured;
 
 /// Parse "CHECK: Vreg: %N:subreg[ D ]" or "CHECK: Vreg: %N[ D ]" pattern.
 /// Returns true if matched, fills RegNum, SubRegName, Distance.
-bool parseVregPattern(StringRef Line, unsigned &RegNum,
-                      StringRef &SubRegName, unsigned &Distance) {
+bool parseVregPattern(StringRef Line, unsigned &RegNum, StringRef &SubRegName,
+                      unsigned &Distance) {
   if (!Line.consume_front("CHECK:"))
     return false;
   Line = Line.ltrim();
@@ -204,8 +204,7 @@ protected:
   // Uses StringRef-based parsing for performance (avoids std::regex overhead).
   llvm::DenseMap<VRegMaskPair, unsigned>
   parseExpectedDistances(const std::vector<std::string> &CheckPatterns,
-                         StringRef InstrRef,
-                         const SIRegisterInfo *TRI,
+                         StringRef InstrRef, const SIRegisterInfo *TRI,
                          const MachineRegisterInfo *MRI) {
     llvm::DenseMap<VRegMaskPair, unsigned> ExpectedDistances;
 
@@ -320,35 +319,35 @@ protected:
   }
 
   // Helper to find all .mir files in a directory
-  std::vector<std::string> findMirFiles(const std::string& DirPath) {
+  std::vector<std::string> findMirFiles(const std::string &DirPath) {
     std::vector<std::string> MirFiles;
-    
+
     if (!std::filesystem::exists(DirPath)) {
       return MirFiles;
     }
-    
-    for (const auto& Entry : std::filesystem::directory_iterator(DirPath)) {
+
+    for (const auto &Entry : std::filesystem::directory_iterator(DirPath)) {
       if (Entry.is_regular_file() && Entry.path().extension() == ".mir") {
         MirFiles.push_back(Entry.path().filename().string());
       }
     }
-    
+
     std::sort(MirFiles.begin(), MirFiles.end());
     return MirFiles;
   }
-  
+
   // Helper to parse CHECK patterns from file comments
-  std::vector<std::string> parseCheckPatterns(const std::string& FilePath) {
+  std::vector<std::string> parseCheckPatterns(const std::string &FilePath) {
     std::vector<std::string> Patterns;
     std::ifstream File(FilePath);
     std::string Line;
-    
+
     while (std::getline(File, Line)) {
       if (Line.find("# CHECK") == 0) {
         Patterns.push_back(Line);
       }
     }
-    
+
     return Patterns;
   }
 
@@ -412,9 +411,9 @@ protected:
 };
 
 // Parameterized test for all .mir files
-class NextUseAnalysisParameterizedTest : public NextUseAnalysisTestBase, 
-                                         public testing::WithParamInterface<std::string> {
-};
+class NextUseAnalysisParameterizedTest
+    : public NextUseAnalysisTestBase,
+      public testing::WithParamInterface<std::string> {};
 
 // Allow uninstantiated test when test files are not available
 GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(NextUseAnalysisParameterizedTest);
@@ -433,7 +432,8 @@ std::string getTestDirectory() {
 
   // Look for the source tree from build directory
   std::vector<std::string> PossiblePaths = {
-      "../../llvm/test/CodeGen/AMDGPU/NextUseAnalysis",  // From build/Debug or build/Release
+      "../../llvm/test/CodeGen/AMDGPU/NextUseAnalysis", // From build/Debug or
+                                                        // build/Release
       "../../../llvm/test/CodeGen/AMDGPU/NextUseAnalysis",
       "../../../../llvm/test/CodeGen/AMDGPU/NextUseAnalysis",
       "../../../../../llvm/test/CodeGen/AMDGPU/NextUseAnalysis"};
@@ -487,26 +487,28 @@ std::vector<std::string> getMirFiles() {
 
 TEST_P(NextUseAnalysisParameterizedTest, ProcessMirFile) {
   std::string MirFileName = GetParam();
-  
+
   // Get test directory from environment or use default
   std::string TestDir = getTestDirectory();
 
   if (TestDir.empty()) {
-    GTEST_SKIP()
-        << "NextUseAnalysis test directory not found.\n"
-        << "Run from build/Debug (or build/Release) directory:\n"
-        << "  cd build/Debug && ./unittests/Target/AMDGPU/AMDGPUTests "
-        << "--gtest_filter=\"AllMirFiles*\"\n"
-        << "Or set AMDGPU_NUA_TEST_DIR to the test directory:\n"
-        << "  AMDGPU_NUA_TEST_DIR=/path/to/llvm/test/CodeGen/AMDGPU/NextUseAnalysis";
+    GTEST_SKIP() << "NextUseAnalysis test directory not found.\n"
+                 << "Run from build/Debug (or build/Release) directory:\n"
+                 << "  cd build/Debug && ./unittests/Target/AMDGPU/AMDGPUTests "
+                 << "--gtest_filter=\"AllMirFiles*\"\n"
+                 << "Or set AMDGPU_NUA_TEST_DIR to the test directory:\n"
+                 << "  "
+                    "AMDGPU_NUA_TEST_DIR=/path/to/llvm/test/CodeGen/AMDGPU/"
+                    "NextUseAnalysis";
   }
 
   std::string FullPath = TestDir + "/" + MirFileName;
-  
+
   // Parse CHECK patterns from the file
   auto CheckPatterns = parseCheckPatterns(FullPath);
-  ASSERT_FALSE(CheckPatterns.empty()) << "No CHECK patterns found in " << MirFileName;
-  
+  ASSERT_FALSE(CheckPatterns.empty())
+      << "No CHECK patterns found in " << MirFileName;
+
   LLVMContext Ctx;
   legacy::PassManager PM;
   auto Module = parseMIRFile(FullPath, Ctx, *TM, PM);
@@ -534,7 +536,8 @@ TEST_P(NextUseAnalysisParameterizedTest, ProcessMirFile) {
         printMachineInstr(MI, InstrBuf);
 
         // Parse expected distances from CHECK patterns for this instruction
-        auto ExpectedDistances = parseExpectedDistances(CheckPatterns, InstrBuf, TRI, MRI);
+        auto ExpectedDistances =
+            parseExpectedDistances(CheckPatterns, InstrBuf, TRI, MRI);
 
         // Validate each expected distance
         for (const auto &Expected : ExpectedDistances) {
@@ -549,7 +552,8 @@ TEST_P(NextUseAnalysisParameterizedTest, ProcessMirFile) {
               << printReg(VMP.getVReg(), TRI,
                           getSubRegIndexForLaneMask(VMP.getLaneMask(), TRI),
                           MRI)
-              << " in instruction: " << StringRef(InstrBuf).substr(0, 50) << "..."
+              << " in instruction: " << StringRef(InstrBuf).substr(0, 50)
+              << "..."
               << " Expected: " << ExpectedDistance
               << " Actual: " << ActualDistance;
         }
@@ -716,18 +720,16 @@ body: |
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(
-  AllMirFiles,
-  NextUseAnalysisParameterizedTest,
-  testing::ValuesIn(getMirFiles()),
-  [](const testing::TestParamInfo<std::string>& info) {
-    std::string name = info.param;
-    // Replace non-alphanumeric characters with underscores for valid test names
-    std::replace_if(name.begin(), name.end(), [](char c) { 
-      return !std::isalnum(c); 
-    }, '_');
-    return name;
-  }
-);
+INSTANTIATE_TEST_SUITE_P(AllMirFiles, NextUseAnalysisParameterizedTest,
+                         testing::ValuesIn(getMirFiles()),
+                         [](const testing::TestParamInfo<std::string> &info) {
+                           std::string name = info.param;
+                           // Replace non-alphanumeric characters with
+                           // underscores for valid test names
+                           std::replace_if(
+                               name.begin(), name.end(),
+                               [](char c) { return !std::isalnum(c); }, '_');
+                           return name;
+                         });
 
 } // end anonymous namespace
