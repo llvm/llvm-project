@@ -240,6 +240,28 @@ public:
     return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
+  bool isTargetMemLoc(IRMemLocation Loc) {
+    return static_cast<unsigned>(Loc) >=
+           static_cast<unsigned>(Location::FirstTarget);
+  }
+
+  // We need to check if target memory is the same for all locations.
+  // So it behaves the same as default read/write, but for Target
+  // locations only
+  bool targetMemSameForAll() {
+    std::optional<ModRefInfo> First;
+    for (unsigned ILoc = static_cast<unsigned>(IRMemLocation::FirstTarget);
+         ILoc <= static_cast<unsigned>(IRMemLocation::Last); ++ILoc) {
+      const auto Loc = static_cast<IRMemLocation>(ILoc);
+      ModRefInfo MR = getModRef(Loc);
+      if (!First)
+        First = MR;
+      else if (*First != MR)
+        return false;
+    }
+    return true;
+  }
+
   /// Whether this function only (at most) accesses errno memory.
   bool onlyAccessesErrnoMem() const {
     return getWithoutLoc(Location::ErrnoMem).doesNotAccessMemory();
