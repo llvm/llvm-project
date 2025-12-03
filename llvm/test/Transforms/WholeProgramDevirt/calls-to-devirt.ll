@@ -1,5 +1,3 @@
-; REQUIRES: asserts
-
 ; Devirt calls debug counter is not explicitly set. Expect 3 remark messages.
 ; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import \
 ; RUN:   -pass-remarks=wholeprogramdevirt \
