@@ -1361,30 +1361,16 @@ def AMDGPU_MakeDmaDescriptorOp :
       return getBase().getType().getElementType().getIntOrFloatBitWidth();
     }
 
-    SmallVector<OpFoldResult> getMixedList(SmallVector<Value> dynamics, ArrayRef<int64_t> statics) {
-      SmallVector<OpFoldResult> result;
-      unsigned ctr = 0;
-      OpBuilder b(getContext());
-      for (int64_t static_elem : statics) {
-        if (ShapedType::isDynamic(static_elem)) {
-          result.push_back(dynamics[ctr++]);
-        } else {
-          result.push_back(b.getIndexAttr(static_elem));
-        }
-      }
-      return result;
-    }
-
     SmallVector<OpFoldResult> getMixedGlobalSizes() {
-      return getMixedList(getGlobalDynamicSizes(), getGlobalStaticSizes());
+      return getMixedValues(getGlobalStaticSizes(), getGlobalDynamicSizes(), getContext());
     }
 
     SmallVector<OpFoldResult> getMixedGlobalStrides() {
-      return getMixedList(getGlobalDynamicStrides(), getGlobalStaticStrides());
+      return getMixedValues(getGlobalStaticStrides(), getGlobalDynamicStrides(), getContext());
     }
 
     SmallVector<OpFoldResult> getMixedSharedSizes() {
-      return getMixedList(getSharedDynamicSizes(), getSharedStaticSizes());
+      return getMixedValues(getSharedStaticSizes(), getSharedDynamicSizes(), getContext());
     }
   }];
 
