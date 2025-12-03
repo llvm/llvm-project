@@ -62,8 +62,8 @@ define void @scalable_wide_active_lane_mask(ptr noalias %dst, ptr readonly %src,
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK7:%.*]] = phi <vscale x 16 x i1> [ [[TMP18]], [[VECTOR_PH1]] ], [ [[TMP57:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK8:%.*]] = phi <vscale x 16 x i1> [ [[TMP19]], [[VECTOR_PH1]] ], [ [[TMP58:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-UF4-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-UF4-NEXT:    [[TMP32:%.*]] = add nuw nsw i64 [[TMP1]], [[TMP1]]
-; CHECK-UF4-NEXT:    [[TMP29:%.*]] = add nuw nsw i64 [[TMP32]], [[TMP1]]
+; CHECK-UF4-NEXT:    [[TMP32:%.*]] = mul nuw nsw i64 [[TMP1]], 2
+; CHECK-UF4-NEXT:    [[TMP29:%.*]] = mul nuw nsw i64 [[TMP1]], 3
 ; CHECK-UF4-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[TMP20]], i64 [[TMP1]]
 ; CHECK-UF4-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, ptr [[TMP20]], i64 [[TMP32]]
 ; CHECK-UF4-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i8, ptr [[TMP20]], i64 [[TMP29]]
@@ -214,8 +214,8 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK7:%.*]] = phi <vscale x 2 x i1> [ [[TMP13]], [[VECTOR_PH]] ], [ [[TMP52:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK8:%.*]] = phi <vscale x 2 x i1> [ [[TMP14]], [[VECTOR_PH]] ], [ [[TMP53:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-UF4-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-UF4-NEXT:    [[TMP21:%.*]] = add nuw nsw i64 [[TMP1]], [[TMP1]]
-; CHECK-UF4-NEXT:    [[TMP24:%.*]] = add nuw nsw i64 [[TMP21]], [[TMP1]]
+; CHECK-UF4-NEXT:    [[TMP21:%.*]] = mul nuw nsw i64 [[TMP1]], 2
+; CHECK-UF4-NEXT:    [[TMP24:%.*]] = mul nuw nsw i64 [[TMP1]], 3
 ; CHECK-UF4-NEXT:    [[TMP29:%.*]] = getelementptr inbounds double, ptr [[TMP15]], i64 [[TMP1]]
 ; CHECK-UF4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds double, ptr [[TMP15]], i64 [[TMP21]]
 ; CHECK-UF4-NEXT:    [[TMP25:%.*]] = getelementptr inbounds double, ptr [[TMP15]], i64 [[TMP24]]

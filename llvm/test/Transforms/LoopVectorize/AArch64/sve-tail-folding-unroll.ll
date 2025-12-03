@@ -41,8 +41,8 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK8:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY4]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT12:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK9:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY5]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT13:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX6]]
-; CHECK-NEXT:    [[TMP56:%.*]] = add nuw nsw i64 [[TMP1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP59:%.*]] = add nuw nsw i64 [[TMP56]], [[TMP1]]
+; CHECK-NEXT:    [[TMP56:%.*]] = mul nuw nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP59:%.*]] = mul nuw nsw i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP54:%.*]] = getelementptr i32, ptr [[TMP47]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP57:%.*]] = getelementptr i32, ptr [[TMP47]], i64 [[TMP56]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = getelementptr i32, ptr [[TMP47]], i64 [[TMP59]]
@@ -124,8 +124,8 @@ define void @cond_memset(i32 %val, ptr noalias readonly %cond_ptr, ptr noalias %
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK8:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY4]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT15:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK9:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY5]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT16:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr i32, ptr [[COND_PTR:%.*]], i64 [[INDEX6]]
-; CHECK-NEXT:    [[TMP56:%.*]] = add nuw nsw i64 [[TMP1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP59:%.*]] = add nuw nsw i64 [[TMP56]], [[TMP1]]
+; CHECK-NEXT:    [[TMP56:%.*]] = mul nuw nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP59:%.*]] = mul nuw nsw i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP54:%.*]] = getelementptr i32, ptr [[TMP47]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP57:%.*]] = getelementptr i32, ptr [[TMP47]], i64 [[TMP56]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = getelementptr i32, ptr [[TMP47]], i64 [[TMP59]]

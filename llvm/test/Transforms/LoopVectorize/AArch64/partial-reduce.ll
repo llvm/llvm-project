@@ -746,8 +746,8 @@ define i32 @zext_sub_reduc_i8_i32_has_neon_dotprod(ptr %a) #1 {
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI2:%.*]] = phi <vscale x 8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP4]], [[TMP4]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = add nuw nsw i64 [[TMP7]], [[TMP4]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = mul nuw nsw i64 [[TMP4]], 2
+; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = mul nuw nsw i64 [[TMP4]], 3
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP4]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP7]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP10]]

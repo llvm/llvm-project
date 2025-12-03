@@ -156,8 +156,8 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-VLA-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-4-VLA-NEXT:    [[VEC_PHI4:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[INDEX]]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[TMP5]], [[TMP5]]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP12:%.*]] = add nuw nsw i64 [[TMP9]], [[TMP5]]
+; INTERLEAVE-4-VLA-NEXT:    [[TMP9:%.*]] = mul nuw nsw i64 [[TMP5]], 2
+; INTERLEAVE-4-VLA-NEXT:    [[TMP12:%.*]] = mul nuw nsw i64 [[TMP5]], 3
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 [[TMP5]]
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 [[TMP9]]
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 [[TMP12]]

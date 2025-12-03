@@ -545,8 +545,8 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[TMP8]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = uitofp <vscale x 4 x i16> [[BROADCAST_SPLAT]] to <vscale x 4 x double>
-; DEFAULT-NEXT:    [[TMP14:%.*]] = add nuw nsw i64 [[TMP11]], [[TMP11]]
-; DEFAULT-NEXT:    [[TMP17:%.*]] = add nuw nsw i64 [[TMP14]], [[TMP11]]
+; DEFAULT-NEXT:    [[TMP14:%.*]] = mul nuw nsw i64 [[TMP11]], 2
+; DEFAULT-NEXT:    [[TMP17:%.*]] = mul nuw nsw i64 [[TMP11]], 3
 ; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr double, ptr [[NEXT_GEP1]], i64 [[TMP11]]
 ; DEFAULT-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[NEXT_GEP1]], i64 [[TMP14]]
 ; DEFAULT-NEXT:    [[TMP18:%.*]] = getelementptr double, ptr [[NEXT_GEP1]], i64 [[TMP17]]
