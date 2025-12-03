@@ -427,6 +427,15 @@ public:
 
   ArrayRef<const SCEVPredicate *> getPredicates() const { return Preds; }
 
+  /// Returns a new SCEVUnionPredicate that is the union of this predicate
+  /// and the given predicate \p N.
+  SCEVUnionPredicate getUnionWith(const SCEVPredicate *N,
+                                  ScalarEvolution &SE) const {
+    SCEVUnionPredicate Result(Preds, SE);
+    Result.add(N, SE);
+    return Result;
+  }
+
   /// Implementation of the SCEVPredicate interface
   bool isAlwaysTrue() const override;
   bool implies(const SCEVPredicate *N, ScalarEvolution &SE) const override;
@@ -1077,6 +1086,9 @@ public:
   LLVM_ABI bool
   isKnownMultipleOf(const SCEV *S, uint64_t M,
                     SmallVectorImpl<const SCEVPredicate *> &Assumptions);
+
+  /// Return true if we know that S1 and S2 must have the same sign.
+  LLVM_ABI bool haveSameSign(const SCEV *S1, const SCEV *S2);
 
   /// Splits SCEV expression \p S into two SCEVs. One of them is obtained from
   /// \p S by substitution of all AddRec sub-expression related to loop \p L
