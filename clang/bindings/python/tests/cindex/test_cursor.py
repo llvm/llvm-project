@@ -15,8 +15,6 @@ from clang.cindex import (
     conf,
 )
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import gc
 import unittest
