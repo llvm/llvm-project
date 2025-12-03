@@ -1223,7 +1223,7 @@ DWARF:
   ASSERT_TRUE(static_cast<bool>(ts_or_err));
   llvm::consumeError(ts_or_err.takeError());
   auto *parser =
-      static_cast<DWARFASTParserClang *>((*ts_or_err)->GetDWARFParser());
+      llvm::cast<DWARFASTParserClang>((*ts_or_err)->GetDWARFParser());
 
   auto context_die = cu_die.GetFirstChild();
   ASSERT_TRUE(context_die.IsValid());
@@ -1400,7 +1400,7 @@ DWARF:
   llvm::consumeError(ts_or_err.takeError());
 
   auto *ts = static_cast<TypeSystemClang *>(ts_or_err->get());
-  auto *parser = static_cast<DWARFASTParserClang *>(ts->GetDWARFParser());
+  auto *parser = llvm::cast<DWARFASTParserClang>(ts->GetDWARFParser());
 
   auto subprogram = cu_die.GetFirstChild();
   ASSERT_TRUE(subprogram.IsValid());
