@@ -8870,8 +8870,7 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
   EVT IntVT = VT.changeTypeToInteger();
   EVT FloatVT = VT.changeElementType(MVT::f32);
   SDValue LHSTrunc = LHS;
-  if (!isTypeLegal(IntVT) &&
-      !isOperationLegal(ISD::IS_FPCLASS, VT)) {
+  if (!isTypeLegal(IntVT) && !isOperationLegal(ISD::IS_FPCLASS, VT)) {
     LHSTrunc = DAG.getNode(ISD::FP_ROUND, DL, FloatVT, LHS,
                            DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
   }
