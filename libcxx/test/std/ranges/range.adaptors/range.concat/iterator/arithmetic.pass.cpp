@@ -39,9 +39,11 @@ concept canMinusEqual = requires(T& t, U& u) { t -= u; };
 constexpr bool test() {
   int buffer1[5] = {1, 2, 3, 4, 5};
   int buffer2[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+  int buffer3[4] = {4, 5, 6, 7};
 
   SimpleCommonRandomAccessSized a{buffer1};
   SimpleCommonRandomAccessSized b{buffer2};
+  SimpleCommonRandomAccessSized c{buffer3};
 
   {
     // operator+(x, n) and operator+=
@@ -61,6 +63,70 @@ constexpr bool test() {
     auto x1 = *it2;
     assert(x1 == buffer1[3]);
 
+    //  reaches the end of one range so it should jump to the beginning of next range
+    auto it = v.begin() + 5;
+    assert(*it == buffer2[0]);
+
+    using Iter = decltype(it1);
+    static_assert(canPlusEqual<Iter, std::intptr_t>);
+  }
+
+  {
+    // operator+(x, n) and operator+=
+    // has empty view
+    std::array<int, 0> e{};
+    std::ranges::concat_view v(a, e, b);
+    auto it1 = v.begin();
+
+    auto it2 = it1 + 3;
+    auto x2  = *it2;
+    assert(x2 == buffer1[3]);
+
+    auto it3 = 3 + it1;
+    auto x3  = *it3;
+    assert(x3 == buffer1[3]);
+
+    it1 += 3;
+    assert(it1 == it2);
+    auto x1 = *it2;
+    assert(x1 == buffer1[3]);
+
+    // jumps over to next range but next range is empty, so it should go futher
+    auto it = v.begin() + 5;
+    assert(*it == buffer2[0]);
+
+    using Iter = decltype(it1);
+    static_assert(canPlusEqual<Iter, std::intptr_t>);
+  }
+
+  {
+    // operator+(x, n) and operator+=
+    // has more than 2 ranges
+    std::array<int, 0> e{};
+    std::ranges::concat_view v(a, e, b, c);
+    auto it1 = v.begin();
+
+    auto it2 = it1 + 3;
+    auto x2  = *it2;
+    assert(x2 == buffer1[3]);
+
+    auto it3 = 3 + it1;
+    auto x3  = *it3;
+    assert(x3 == buffer1[3]);
+
+    it1 += 3;
+    assert(it1 == it2);
+    auto x1 = *it2;
+    assert(x1 == buffer1[3]);
+
+    // jumps over to next range but next range is empty, so it should go futher
+    auto it = v.begin() + 5;
+    assert(*it == buffer2[0]);
+
+    // jumps big enough to skip several number of ranges
+    it = v.begin() + 14;
+    assert(*it == buffer3[0]);
+
     using Iter = decltype(it1);
     static_assert(canPlusEqual<Iter, std::intptr_t>);
   }
@@ -78,6 +144,63 @@ constexpr bool test() {
     assert(it1 == it2);
     auto x1 = *it2;
     assert(x1 == buffer2[6]);
+
+    // move back to one past the begining,
+    // so it should point to the last element of the previous range
+
+    auto it = v.end() - 10;
+    assert(*it == buffer1[4]);
+
+    using Iter = decltype(it1);
+    static_assert(canMinusEqual<Iter, std::intptr_t>);
+  }
+
+  {
+    // operator-(x, n) and operator-=
+    // has empty view
+    std::array<int, 0> e{};
+    std::ranges::concat_view v(a, e, b);
+    auto it1 = v.end();
+
+    auto it2 = it1 - 3;
+    auto x2  = *it2;
+    assert(x2 == buffer2[6]);
+
+    it1 -= 3;
+    assert(it1 == it2);
+    auto x1 = *it2;
+    assert(x1 == buffer2[6]);
+
+    // move back to an empty range
+    // so it should skip empty range point to the last element of the previous range
+
+    auto it = v.end() - 10;
+    assert(*it == buffer1[4]);
+
+    using Iter = decltype(it1);
+    static_assert(canMinusEqual<Iter, std::intptr_t>);
+  }
+
+  {
+    // operator-(x, n) and operator-=
+    // has more than 2 views
+    std::array<int, 0> e{};
+    std::ranges::concat_view v(a, e, b, c);
+    auto it1 = v.end();
+
+    auto it2 = it1 - 3;
+    auto x2  = *it2;
+    assert(x2 == buffer3[1]);
+
+    it1 -= 3;
+    assert(it1 == it2);
+    auto x1 = *it2;
+    assert(x1 == buffer3[1]);
+
+    // move back to multiple ranges
+
+    auto it = v.end() - 14;
+    assert(*it == buffer1[4]);
 
     using Iter = decltype(it1);
     static_assert(canMinusEqual<Iter, std::intptr_t>);
@@ -97,20 +220,22 @@ constexpr bool test() {
     // operator-(sentinel, x)
     std::array<int, 2> array1{0, 1};
     std::array<int, 2> array2{2, 3};
-    std::ranges::concat_view view(std::views::all(array1), std::views::all(array2));
+    std::array<int, 2> array3{4, 5};
+    std::ranges::concat_view view(std::views::all(array1), std::views::all(array2), std::views::all(array3));
     auto it1 = view.begin();
     auto res = std::default_sentinel_t{} - it1;
-    assert(res == 4);
+    assert(res == 6);
   }
 
   {
     // operator-(x, sentinel)
     std::array<int, 2> array1{0, 1};
     std::array<int, 2> array2{2, 3};
-    std::ranges::concat_view view(std::views::all(array1), std::views::all(array2));
+    std::array<int, 2> array3{4, 5};
+    std::ranges::concat_view view(std::views::all(array1), std::views::all(array2), std::views::all(array3));
     auto it1 = view.begin();
     auto res = it1 - std::default_sentinel_t{};
-    assert(res == -4);
+    assert(res == -6);
   }
 
   {
