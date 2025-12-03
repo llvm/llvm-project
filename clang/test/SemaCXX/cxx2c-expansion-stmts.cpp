@@ -187,8 +187,8 @@ struct Private {
   friend constexpr int friend_func();
 
 private:
-  constexpr const int* begin() const { return integers.begin(); } // expected-note 2 {{declared private here}}
-  constexpr const int* end() const { return integers.end(); } // expected-note 2 {{declared private here}}
+  constexpr const int* begin() const { return integers.begin(); } // expected-note 3 {{declared private here}}
+  constexpr const int* end() const { return integers.end(); } // expected-note 3 {{declared private here}}
 
 public:
   static constexpr int member_func() {
@@ -203,8 +203,8 @@ struct Protected {
   friend constexpr int friend_func();
 
 protected:
-  constexpr const int* begin() const { return integers.begin(); } // expected-note 2 {{declared protected here}}
-  constexpr const int* end() const { return integers.end(); } // expected-note 2 {{declared protected here}}
+  constexpr const int* begin() const { return integers.begin(); } // expected-note 3 {{declared protected here}}
+  constexpr const int* end() const { return integers.end(); } // expected-note 3 {{declared protected here}}
 
 public:
   static constexpr int member_func() {
@@ -217,10 +217,10 @@ public:
 
 void access_control() {
   static constexpr Private p1;
-  template for (auto x : p1) g(x); // expected-error 2 {{'begin' is a private member of 'Private'}} expected-error 2 {{'end' is a private member of 'Private'}}
+  template for (auto x : p1) g(x); // expected-error 3 {{'begin' is a private member of 'Private'}} expected-error 3 {{'end' is a private member of 'Private'}}
 
   static constexpr Protected p2;
-  template for (auto x : p2) g(x); // expected-error 2 {{'begin' is a protected member of 'Protected'}} expected-error 2 {{'end' is a protected member of 'Protected'}}
+  template for (auto x : p2) g(x); // expected-error 3 {{'begin' is a protected member of 'Protected'}} expected-error 3 {{'end' is a protected member of 'Protected'}}
 }
 
 constexpr int friend_func() {
@@ -634,8 +634,7 @@ consteval int f() {
   // expected-error@#invalid-ref {{constexpr variable '__begin1' must be initialized by a constant expression}}
   // expected-error@#invalid-ref {{constexpr variable '__end1' must be initialized by a constant expression}}
   // expected-error@#invalid-ref {{expansion size is not a constant expression}}
-  // expected-note@#invalid-ref 2 {{member call on variable '__range1' whose value is not known}}
-  // expected-note@#invalid-ref {{initializer of '__begin1' is not a constant expression}}
+  // expected-note@#invalid-ref 3 {{member call on variable '__range1' whose value is not known}}
   // expected-note@#invalid-ref 3 {{declared here}}
   // expected-note@#invalid-ref {{reference to 'arr' is not a constant expression}}
   // expected-note@#invalid-ref {{in call to}}
@@ -1093,4 +1092,49 @@ void lambda_template(T a) {
 
 void lambda_template_call() {
   lambda_template([]{}); // expected-note {{in instantiation of function template specialization}}
+}
+
+// CWG 3131 makes it possible to expand over non-constexpr ranges.
+namespace cwg3131 {
+constexpr int f1() {
+  int j = 0;
+  template for (auto i : Array<int, 3>{1, 2, 3}) j +=i;
+  return j;
+}
+
+constexpr int f2() {
+  Array<int, 3> a{1, 2, 3};
+  int j = 0;
+  template for (auto i : a) j +=i;
+  return j;
+}
+
+static_assert(f1() == 6);
+static_assert(f2() == 6);
+
+template <typename T>
+struct Span {
+  T* data;
+  __SIZE_TYPE__ size;
+
+  template <__SIZE_TYPE__ N>
+  constexpr Span(T(&a)[N]) : data{a}, size{N} {}
+
+  constexpr auto begin() const -> T* { return data; }
+  constexpr auto end() const -> T* { return data + size; }
+};
+
+constexpr int arr[3] = { 1, 2, 3 };
+consteval Span<const int> foo() {
+  return Span<const int>(arr);
+}
+
+constexpr int f3() {
+  int r = 0;
+  template for (constexpr auto m : foo())
+    r += m;
+  return r;
+}
+
+static_assert(f3() == 6);
 }
