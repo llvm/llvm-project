@@ -9,16 +9,13 @@
 #include "lldb/Core/Module.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
-#include "Plugins/Platform/Linux/PlatformLinux.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
-#include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Language.h"
-#include "lldb/lldb-enumerations.h"
 #include "gtest/gtest.h"
 #include <optional>
 
@@ -72,12 +69,8 @@ TEST(ModuleTest, FindFunctionsCppMangledName) {
     }
   };
   SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab,
-                CPlusPlusLanguage, 
-                MockLanguageWithBogusLookupInfo> subsystems;
-
-
-  std::call_once(TestUtilities::g_debugger_initialize_flag,
-                 []() { Debugger::Initialize(nullptr); });
+                CPlusPlusLanguage, MockLanguageWithBogusLookupInfo>
+      subsystems;
 
   // Create a simple ELF module with std::vector::size() as the only symbol.
   auto ExpectedFile = TestFile::fromYaml(R"(
