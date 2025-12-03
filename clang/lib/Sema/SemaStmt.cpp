@@ -2410,10 +2410,10 @@ void NoteForRangeBeginEndFunction(Sema &SemaRef, Expr *E,
 
 /// Build a variable declaration for a for-range statement.
 VarDecl *BuildForRangeVarDecl(Sema &SemaRef, SourceLocation Loc, QualType Type,
-                              StringRef Name, bool ForExpansionStmt) {
+                              StringRef Name, bool Constexpr) {
   // Making the variable constexpr doesn't automatically add 'const' to the
   // type, so do that now.
-  if (ForExpansionStmt && !Type->isReferenceType())
+  if (Constexpr && !Type->isReferenceType())
     Type = Type.withConst();
 
   DeclContext *DC = SemaRef.CurContext;
@@ -2423,7 +2423,7 @@ VarDecl *BuildForRangeVarDecl(Sema &SemaRef, SourceLocation Loc, QualType Type,
                                   TInfo, SC_None);
   Decl->setImplicit();
   Decl->setCXXForRangeImplicitVar(true);
-  if (ForExpansionStmt)
+  if (Constexpr)
     // CWG 3044: Do not make the variable 'static'.
     Decl->setConstexpr(true);
   return Decl;
@@ -2742,7 +2742,17 @@ Sema::ForRangeBeginEndInfo Sema::BuildCXXForRangeBeginEndVars(
   //
   // CWG 3043 – Do not apply lifetime extension to iterating
   // expansion statements.
-  if (getLangOpts().CPlusPlus23 && !ForExpansionStmt)
+  //
+  // Note: CWG 3131 makes it so the 'range' variable need not be
+  // constexpr anymore, which means that we probably *do* want
+  // lifetime extension in that case after all, contrary to what
+  // CWG 3043 currently states. This just works out naturally with
+  // this implementation at the moment, but wg21 insist on no lifetime
+  // extension for iterating expansion statements, then this instead
+  // needs to check whether we're building this for an expansion statement
+  // instead of just applying lifetime extension if the variable isn't
+  // constexpr (or we could pass in an empty range for 'LifetimeExtendTemps').
+  if (getLangOpts().CPlusPlus23 && !Constexpr)
     ApplyForRangeOrExpansionStatementLifetimeExtension(RangeVar,
                                                        LifetimeExtendTemps);
 

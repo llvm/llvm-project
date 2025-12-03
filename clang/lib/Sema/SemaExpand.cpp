@@ -157,17 +157,34 @@ TryBuildIterableExpansionStmtInitializer(Sema &S, Expr *ExpansionInitializer,
   Data.TheState = IterableExpansionStmtData::State::Error;
   Scope *Scope = S.getCurScope();
 
-  // TODO: CWG 3131 changes how this range is declared.
-  StmtResult Var = S.BuildCXXForRangeRangeVar(Scope, ExpansionInitializer,
-                                              /*ForExpansionStmt=*/true);
+  // CWG 3131: The declaration of 'range' is of the form
+  //
+  //     constexpr[opt] decltype(auto) range = (expansion-initializer);
+  //
+  // where 'constexpr' is present iff the for-range-declaration is 'constexpr'.
+  StmtResult Var = S.BuildCXXForRangeRangeVar(
+      Scope, S.ActOnParenExpr(ColonLoc, ColonLoc, ExpansionInitializer).get(),
+      S.Context.getAutoType(QualType(), AutoTypeKeyword::DecltypeAuto,
+                            /*IsDependent*/ false),
+      VarIsConstexpr);
   if (Var.isInvalid())
     return Data;
 
+  // CWG 3131: Discussion around this core issue (though as of the time of
+  // writing not the resolution itself) suggests that the other variables we
+  // create here should likewise be 'constexpr' iff the range variable is
+  // declared 'constexpr'.
+  //
+  // FIXME: As of CWG 3131, 'end' is no longer used outside the lambda that
+  // performs the size calculation (despite that, CWG 3131 currently still
+  // lists it in the generated code, but this is likely an oversight). Ideally,
+  // we should only create 'begin' here instead, but that requires another
+  // substantial refactor of the for-range code.
   auto *RangeVar = cast<DeclStmt>(Var.get());
   Sema::ForRangeBeginEndInfo Info = S.BuildCXXForRangeBeginEndVars(
       Scope, cast<VarDecl>(RangeVar->getSingleDecl()), ColonLoc,
       /*CoawaitLoc=*/{},
-      /*LifetimeExtendTemps=*/{}, Sema::BFRK_Build, /*ForExpansionStmt=*/true);
+      /*LifetimeExtendTemps=*/{}, Sema::BFRK_Build, VarIsConstexpr);
 
   if (!Info.isValid())
     return Data;
@@ -269,6 +286,10 @@ StmtResult Sema::ActOnCXXExpansionStmtPattern(
     // Note that lifetime extension only applies to destructuring expansion
     // statements, so we just ignore 'LifetimeExtendedTemps' entirely for other
     // types of expansion statements (this is CWG 3043).
+    //
+    // TODO: CWG 3131 makes it so the 'range' variable of an iterating
+    // expansion statement need no longer be 'constexpr'... so do we want
+    // lifetime extension for iterating expansion statements after all?
     return BuildCXXEnumeratingExpansionStmtPattern(ESD, Init, DS, LParenLoc,
                                                    ColonLoc, RParenLoc);
   }
@@ -461,14 +482,15 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
         ->getRangeExpr()
         ->getNumInits();
 
-  // By [stmt.expand]5.2, N is the result of evaluating the expression
+  // CWG 3131: N is the result of evaluating the expression
   //
-  // [] consteval {
+  // [&] consteval {
   //    std::ptrdiff_t result = 0;
-  //    for (auto i = begin; i != end; ++i) ++result;
+  //    auto b = begin-expr;
+  //    auto e = end-expr;
+  //    for (; b != e; ++b) ++result;
   //    return result;
   // }()
-  // TODO: CWG 3131 changes this lambda a bit.
   if (auto *Iterating = dyn_cast<CXXIteratingExpansionStmtPattern>(Expansion)) {
     SourceLocation Loc = Expansion->getColonLoc();
     EnterExpressionEvaluationContext ExprEvalCtx(
@@ -531,32 +553,32 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
     // Start the for loop.
     ParseScope ForScope(*this, Scope::DeclScope | Scope::ControlScope);
 
-    // auto i = begin;
-    VarDecl *IterationVar = VarDecl::Create(
-        Context, CurContext, Loc, Loc, &PP.getIdentifierTable().get("__i"),
-        Context.getAutoDeductType(),
-        Context.getTrivialTypeSourceInfo(Context.getAutoDeductType(), Loc),
-        SC_None);
-    DeclRefExpr *Begin = BuildDeclRefExpr(
-        Iterating->getBeginVar(),
-        Iterating->getBeginVar()->getType().getNonReferenceType(), VK_LValue,
-        Loc);
-    AddInitializerToDecl(IterationVar, Begin, false);
-    StmtResult IterationVarStmt =
-        ActOnDeclStmt(ConvertDeclToDeclGroup(IterationVar), Loc, Loc);
-    if (IterationVarStmt.isInvalid() || IterationVar->isInvalidDecl())
+    // auto b = begin-expr;
+    // auto e = end-expr;
+    ForRangeBeginEndInfo Info = BuildCXXForRangeBeginEndVars(
+        getCurScope(), Iterating->getRangeVar(), Loc,
+        /*CoawaitLoc=*/{},
+        /*LifetimeExtendTemps=*/{}, BFRK_Build, /*Constexpr=*/false);
+    if (!Info.isValid())
       return std::nullopt;
 
-    // i != end
-    DeclRefExpr *IterationVarDeclRef = BuildDeclRefExpr(
-        IterationVar, IterationVar->getType().getNonReferenceType(), VK_LValue,
-        Loc);
-    DeclRefExpr *End = BuildDeclRefExpr(
-        Iterating->getEndVar(),
-        Iterating->getEndVar()->getType().getNonReferenceType(), VK_LValue,
-        Loc);
-    ExprResult NotEqual = ActOnBinOp(getCurScope(), Loc, tok::exclaimequal,
-                                     IterationVarDeclRef, End);
+    StmtResult BeginStmt =
+        ActOnDeclStmt(ConvertDeclToDeclGroup(Info.BeginVar), Loc, Loc);
+    StmtResult EndStmt =
+        ActOnDeclStmt(ConvertDeclToDeclGroup(Info.EndVar), Loc, Loc);
+    if (BeginStmt.isInvalid() || EndStmt.isInvalid())
+      return std::nullopt;
+
+    // b != e
+    auto GetDeclRef = [&](VarDecl *VD) -> DeclRefExpr * {
+      return BuildDeclRefExpr(VD, VD->getType().getNonReferenceType(),
+                              VK_LValue, Loc);
+    };
+
+    DeclRefExpr *Begin = GetDeclRef(Info.BeginVar);
+    DeclRefExpr *End = GetDeclRef(Info.EndVar);
+    ExprResult NotEqual =
+        ActOnBinOp(getCurScope(), Loc, tok::exclaimequal, Begin, End);
     if (NotEqual.isInvalid())
       return std::nullopt;
     ConditionResult Condition = ActOnCondition(
@@ -565,12 +587,10 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
     if (Condition.isInvalid())
       return std::nullopt;
 
-    // ++i
-    IterationVarDeclRef = BuildDeclRefExpr(
-        IterationVar, IterationVar->getType().getNonReferenceType(), VK_LValue,
-        Loc);
+    // ++b
+    Begin = GetDeclRef(Info.BeginVar);
     ExprResult Increment =
-        ActOnUnaryOp(getCurScope(), Loc, tok::plusplus, IterationVarDeclRef);
+        ActOnUnaryOp(getCurScope(), Loc, tok::plusplus, Begin);
     if (Increment.isInvalid())
       return std::nullopt;
     FullExprArg ThirdPart = MakeFullDiscardedValueExpr(Increment.get());
@@ -593,9 +613,8 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
     // Exit the for loop.
     InnerScope.Exit();
     ForScope.Exit();
-    StmtResult ForLoop =
-        ActOnForStmt(Loc, Loc, IterationVarStmt.get(), Condition, ThirdPart,
-                     Loc, IncrementStmt.get());
+    StmtResult ForLoop = ActOnForStmt(Loc, Loc, /*First=*/nullptr, Condition,
+                                      ThirdPart, Loc, IncrementStmt.get());
     if (ForLoop.isInvalid())
       return std::nullopt;
 
@@ -607,9 +626,11 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
       return std::nullopt;
 
     // Finally, we can build the compound statement that is the lambda body.
-    StmtResult LambdaBody = ActOnCompoundStmt(
-        Loc, Loc, {ResultVarStmt.get(), ForLoop.get(), Return.get()},
-        /*isStmtExpr=*/false);
+    StmtResult LambdaBody =
+        ActOnCompoundStmt(Loc, Loc,
+                          {ResultVarStmt.get(), BeginStmt.get(), EndStmt.get(),
+                           ForLoop.get(), Return.get()},
+                          /*isStmtExpr=*/false);
     if (LambdaBody.isInvalid())
       return std::nullopt;
 
