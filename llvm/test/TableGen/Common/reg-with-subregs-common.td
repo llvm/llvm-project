@@ -19,7 +19,7 @@ class Indexes<int N> {
 #ifdef USE_NAMESPACE
   let Namespace = "TestNamespace" in {
 #endif
-foreach Index = 0...31 in {
+foreach Index = 0...63 in {
   def sub#Index : SubRegIndex<32, !shl(Index, 5)>;
 }
 

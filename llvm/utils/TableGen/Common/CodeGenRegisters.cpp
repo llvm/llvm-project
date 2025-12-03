@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -577,19 +578,29 @@ struct TupleExpander : SetTheory::Expander {
     const RecTy *RegisterRecTy = RecordRecTy::get(RegisterCl);
     std::vector<StringRef> RegNames =
         Def->getValueAsListOfStrings("RegAsmNames");
+    const int NameStride = Def->getValueAsInt("CompressedTupleNameStride");
+    if (NameStride < 0)
+      PrintFatalError(Def->getLoc(),
+                      "CompressedTupleNameStride must be non-negative");
 
     // Zip them up.
     RecordKeeper &RK = Def->getRecords();
     for (unsigned n = 0; n != Length; ++n) {
-      std::string Name;
       const Record *Proto = Lists[0][n];
       std::vector<Init *> Tuple;
-      for (unsigned i = 0; i != Dim; ++i) {
-        const Record *Reg = Lists[i][n];
-        if (i)
-          Name += '_';
-        Name += Reg->getName();
-        Tuple.push_back(Reg->getDefInit());
+      transform(Lists, std::back_inserter(Tuple),
+                [&](SetTheory::RecSet &RS) { return RS[n]->getDefInit(); });
+
+      std::string Name;
+      if (NameStride == 0) {
+        // Default name is the catenation of all names delimited by underscores.
+        Name = formatv("{:$[_]}", map_range(Lists, [&](SetTheory::RecSet &RS) {
+                         return RS[n]->getName();
+                       }));
+      } else {
+        // Use a compact vector/strided name if the user requested it.
+        Name = formatv("{}_TO_{}_BY_{}", Lists[0][n]->getName(),
+                       Lists[Dim - 1][n]->getName(), NameStride);
       }
 
       // Take the cost list of the first register in the tuple.

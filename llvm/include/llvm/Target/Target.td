@@ -459,6 +459,20 @@ class RegisterTuples<list<SubRegIndex> Indices, list<dag> Regs,
   // PositionOrder - Indicate tablegen to place the newly added register at a later
   // position to avoid iterations on them on unsupported target.
   int PositionOrder = 0;
+
+  // Request a compact synthetic name. By default, the name is the concatenation
+  // of all names in the tuple. This becomes unwieldy for targets with very long
+  // tuples. For example, a 16-tuple might look like this by default:
+  //
+  //   R0_R1_R2_R3_R4_R5_R6_R7_R8_R9_R10_R11_R12_R13_R14_R15
+  //
+  // By setting this option to one, the name becomes:
+  //
+  //   R0_TO_R15_BY_1
+  //
+  // Similarly for any positive stride. The default setting of zero keeps the
+  // default naming.
+  int CompressedTupleNameStride = 0;
 }
 
 // RegisterCategory - This class is a list of RegisterClasses that belong to a
