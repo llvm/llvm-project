@@ -1273,6 +1273,10 @@ public:
   /// \p VF is the vectorization factor that will be used to vectorize \p I.
   bool isScalarWithPredication(Instruction *I, ElementCount VF);
 
+  /// Wrapper function for LoopVectorizationLegality::isMaskRequired,
+  /// that passes the \p I and if we fold tail.
+  bool isMaskRequired(Instruction *I) const;
+
   /// Returns true if \p I is an instruction that needs to be predicated
   /// at runtime.  The result is independent of the predication mechanism.
   /// Superset of instructions that return true for isScalarWithPredication.
@@ -2867,13 +2871,16 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   }
 }
 
+bool LoopVectorizationCostModel::isMaskRequired(Instruction *I) const {
+  return Legal->isMaskRequired(I, foldTailByMasking());
+}
+
 // TODO: Fold into LoopVectorizationLegality::isMaskRequired.
 bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   // TODO: We can use the loop-preheader as context point here and get
   // context sensitive reasoning for isSafeToSpeculativelyExecute.
   if (isSafeToSpeculativelyExecute(I) ||
-      (isa<LoadInst, StoreInst, CallInst>(I) &&
-      !Legal->isMaskRequired(I, foldTailByMasking())) ||
+      (isa<LoadInst, StoreInst, CallInst>(I) && !isMaskRequired(I)) ||
       isa<UncondBrInst, CondBrInst, SwitchInst, PHINode, AllocaInst>(I))
     return false;
 
@@ -2898,7 +2905,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   case Instruction::Call:
     // Side-effects of a Call are assumed to be non-invariant, needing a
     // (fold-tail) mask.
-    assert(Legal->isMaskRequired(I, foldTailByMasking()) &&
+    assert(isMaskRequired(I) &&
            "should have returned earlier for calls not needing a mask");
     return true;
   case Instruction::Load:
@@ -3045,8 +3052,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   // (either a gap at the end of a load-access that may result in a speculative
   // load, or any gaps in a store-access).
   bool PredicatedAccessRequiresMasking =
-      blockNeedsPredicationForAnyReason(I->getParent()) &&
-      Legal->isMaskRequired(I, foldTailByMasking());
+      blockNeedsPredicationForAnyReason(I->getParent()) && isMaskRequired(I);
   bool LoadAccessWithGapsRequiresEpilogMasking =
       isa<LoadInst>(I) && Group->requiresScalarEpilogue() &&
       !isScalarEpilogueAllowed();
@@ -5375,7 +5381,7 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
          "Stride should be 1 or -1 for consecutive memory access");
   const Align Alignment = getLoadStoreAlignment(I);
   InstructionCost Cost = 0;
-  if (Legal->isMaskRequired(I, foldTailByMasking())) {
+  if (isMaskRequired(I)) {
     unsigned IID = I->getOpcode() == Instruction::Load
                        ? Intrinsic::masked_load
                        : Intrinsic::masked_store;
@@ -5444,8 +5450,8 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
                      : Intrinsic::masked_scatter;
   return TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, CostKind) +
          TTI.getMemIntrinsicInstrCost(
-             MemIntrinsicCostAttributes(IID, VectorTy, Ptr,
-                                        Legal->isMaskRequired(I, foldTailByMasking()), Alignment, I),
+             MemIntrinsicCostAttributes(IID, VectorTy, Ptr, isMaskRequired(I),
+                                        Alignment, I),
              CostKind);
 }
 
@@ -5475,12 +5481,11 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
       (isa<StoreInst>(I) && !Group->isFull());
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
       InsertPos->getOpcode(), WideVecTy, Group->getFactor(), Indices,
-      Group->getAlign(), AS, CostKind,
-      Legal->isMaskRequired(I, foldTailByMasking()), UseMaskForGaps);
+      Group->getAlign(), AS, CostKind, isMaskRequired(I), UseMaskForGaps);
 
   if (Group->isReverse()) {
     // TODO: Add support for reversed masked interleaved access.
-    assert(!Legal->isMaskRequired(I, foldTailByMasking()) &&
+    assert(!isMaskRequired(I) &&
            "Reverse masked interleaved access not supported.");
     Cost += Group->getNumMembers() *
             TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
