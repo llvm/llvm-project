@@ -120,8 +120,8 @@ mlir::LogicalResult CIRToLLVMSqrtOpLowering::matchAndRewrite(
   if (!module.lookupSymbol<LLVM::LLVMFuncOp>(intrinsicName)) {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(module.getBody());
-    auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmResTy, {llvmResTy},
-                                                    /*isVarArg=*/false);
+    auto llvmFnType = LLVM::LLVMFunctionType::get(ctx, llvmResTy, {llvmResTy},
+                                                  /*isVarArg=*/false);
     rewriter.create<LLVM::LLVMFuncOp>(loc, intrinsicName, llvmFnType);
   }
 
