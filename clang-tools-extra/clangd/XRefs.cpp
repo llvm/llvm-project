@@ -971,21 +971,26 @@ public:
         PT == nullptr || !isLikelyForwardingFunction(PT)) {
       return false;
     }
+    std::vector<CXXConstructorDecl *> *Constructors = nullptr;
     if (auto Entry = AST.ForwardingToConstructorCache.find(FD);
         Entry != AST.ForwardingToConstructorCache.end()) {
-      for (auto *Constructor : Entry->getSecond()) {
+      Constructors = &Entry->getSecond();
+    }
+    if (Constructors == nullptr) {
+      ForwardingToConstructorVisitor Visitor{};
+      Visitor.TraverseStmt(FD->getBody());
+      auto Iter = AST.ForwardingToConstructorCache.try_emplace(
+          FD, std::move(Visitor.Constructors));
+      if (Iter.second) {
+        Constructors = &Iter.first->getSecond();
+      }
+    }
+    if (Constructors != nullptr) {
+      for (auto *Constructor : *Constructors) {
         if (TargetConstructors.contains(Constructor)) {
           return true;
         }
       }
-      return false;
-    }
-    ForwardingToConstructorVisitor Visitor{&TargetConstructors};
-    Visitor.TraverseStmt(FD->getBody());
-    auto Iter = AST.ForwardingToConstructorCache.try_emplace(
-        FD, std::move(Visitor.Constructors));
-    if (Iter.second) {
-      return !Iter.first->getSecond().empty();
     }
     return false;
   }

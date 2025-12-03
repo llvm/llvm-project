@@ -263,16 +263,10 @@ class ForwardingToConstructorVisitor
 public:
   ForwardingToConstructorVisitor() {}
 
-  ForwardingToConstructorVisitor(
-      llvm::DenseSet<const CXXConstructorDecl *> *TargetConstructors)
-      : Targets(TargetConstructors) {}
-
   bool VisitCXXNewExpr(CXXNewExpr *E) {
     if (auto *CE = E->getConstructExpr()) {
       if (auto *Callee = CE->getConstructor()) {
-        if (Targets == nullptr || Targets->contains(Callee)) {
-          Constructors.push_back(Callee);
-        }
+        Constructors.push_back(Callee);
       }
     }
     return true;
@@ -280,9 +274,6 @@ public:
 
   // Output of this visitor
   std::vector<CXXConstructorDecl *> Constructors{};
-
-private:
-  llvm::DenseSet<const CXXConstructorDecl *> *Targets = nullptr;
 };
 
 } // namespace clangd
