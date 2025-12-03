@@ -55,7 +55,7 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[IND_END6:%.*]] = add i64 [[IV_START]], [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[IV_START]], [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -82,7 +82,7 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX8]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT13]] = add <4 x i32> [[VEC_IND12]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC4]]
-; CHECK-NEXT:    br i1 [[TMP30]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP30]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC4]]
 ; CHECK-NEXT:    br i1 [[CMP_N16]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -101,7 +101,7 @@ define void @test_pr59459(i64 %iv.start, ptr %arr) {
 ; CHECK-NEXT:    store i16 [[STORE_VAL]], ptr [[ADDR]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp sgt i32 [[IV_TRUNC]], 91
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -161,9 +161,9 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub <16 x i16> [[STEP_ADD_2]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <16 x i16> [[STEP_ADD_3]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[K:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i32 16
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i32 32
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i32 48
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i64 16
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i64 32
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i64 48
 ; CHECK-NEXT:    store <16 x i16> [[TMP4]], ptr [[TMP8]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP5]], ptr [[TMP10]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP6]], ptr [[TMP21]], align 2
@@ -179,7 +179,7 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    [[DOTCAST9:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    [[IND_END10:%.*]] = mul i16 [[DOTCAST9]], [[TMP0]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -208,7 +208,7 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    [[INDEX_NEXT24]] = add nuw i64 [[INDEX12]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT21]] = add <8 x i16> [[VEC_IND20]], [[BROADCAST_SPLAT23]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT24]], [[N_VEC5]]
-; CHECK-NEXT:    br i1 [[TMP20]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP20]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N25:%.*]] = icmp eq i64 [[L]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[CMP_N25]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -224,7 +224,7 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    store i16 [[ADD]], ptr [[ARRAYIDX3]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[L]]
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -258,19 +258,15 @@ define i8 @multiple_inductions_start_at_0() {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <32 x i8> [ zeroinitializer, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <32 x i8> [[VEC_IND]], zeroinitializer
-; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <32 x i8> [[STEP_ADD]], zeroinitializer
-; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <32 x i8> [[STEP_ADD_2]], zeroinitializer
+; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = phi <32 x i8> [ zeroinitializer, [[VECTOR_PH]] ], [ [[STEP_ADD_3]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 128
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <32 x i8> [[STEP_ADD_3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <32 x i8> [[STEP_ADD_3]], i32 31
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF11:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
@@ -285,7 +281,7 @@ define i8 @multiple_inductions_start_at_0() {
 ; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i32 [[INDEX1]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT4]] = add <4 x i8> [[VEC_IND2]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT3]], 1052
-; CHECK-NEXT:    br i1 [[TMP3]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i8> [[VEC_IND2]], i32 3
 ; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -300,7 +296,7 @@ define i8 @multiple_inductions_start_at_0() {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[IV_2]] to i8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ugt i32 [[IV]], 1050
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ [[TRUNC]], [[LOOP]] ], [ [[TMP1]], [[MIDDLE_BLOCK]] ], [ [[TMP4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i8 [[RES]]

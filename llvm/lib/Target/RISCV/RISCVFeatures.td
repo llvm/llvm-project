@@ -194,6 +194,10 @@ def HasStdExtZilsd : Predicate<"Subtarget->hasStdExtZilsd()">,
                        AssemblerPredicate<(all_of FeatureStdExtZilsd),
                                           "'Zilsd' (Load/Store pair instructions)">;
 
+def FeatureZilsd4ByteAlign
+    : SubtargetFeature<"zilsd-4byte-align", "AllowZilsd4ByteAlign", "true",
+                       "Allow 4-byte alignment for Zilsd LD/SD instructions">;
+
 // Multiply Extensions
 
 def FeatureStdExtZmmul
@@ -218,6 +222,7 @@ def HasStdExtZaamo
     : Predicate<"Subtarget->hasStdExtZaamo()">,
       AssemblerPredicate<(any_of FeatureStdExtZaamo),
                          "'Zaamo' (Atomic Memory Operations)">;
+def NoStdExtZaamo : Predicate<"!Subtarget->hasStdExtZaamo()">;
 
 def FeatureStdExtZalrsc
     : RISCVExtension<1, 0, "Load-Reserved/Store-Conditional">;
@@ -955,6 +960,9 @@ def FeatureStdExtSsdbltrp
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
 
+def FeatureStdExtSmpmpmt
+    : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
+
 def FeatureStdExtSmrnmi
     : RISCVExtension<1, 0, "Resumable Non-Maskable Interrupts">;
 def HasStdExtSmrnmi : Predicate<"Subtarget->hasStdExtSmrnmi()">,
@@ -1123,7 +1131,8 @@ def HasStdExtZbkbOrP
                          "'Base P' (Packed-SIMD)">;
 
 def HasStdExtZbbOrZbkbOrP
-    : Predicate<"Subtarget->HasStdExtZbbOrZbkb()|| Subtarget->hasStdExtP()">,
+    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbkb() || "
+                "Subtarget->hasStdExtP()">,
       AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbkb, FeatureStdExtP),
                          "'Zbb' (Basic Bit-Manipulation) or "
                          "'Zbkb' (Bitmanip instructions for Cryptography) or "
@@ -1333,6 +1342,44 @@ def HasVendorXSfvfnrclipxfqf
     : Predicate<"Subtarget->hasVendorXSfvfnrclipxfqf()">,
       AssemblerPredicate<(all_of FeatureVendorXSfvfnrclipxfqf),
                          "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)">;
+
+// Note: XSfvfbfexp16e depends on either Zvfbfmin _or_ Zvfbfa, which cannot be expressed here in
+// TableGen. Instead, we check that in RISCVISAInfo.
+def FeatureVendorXSfvfbfexp16e
+    : RISCVExtension<0, 5,
+                     "SiFive Vector Floating-Point Exponential Function Instruction, BFloat16">;
+def HasVendorXSfvfbfexp16e : Predicate<"Subtarget->hasVendorXSfvfbfexp16e()">;
+
+def FeatureVendorXSfvfexp16e
+    : RISCVExtension<0, 5,
+                     "SiFive Vector Floating-Point Exponential Function Instruction, Half Precision",
+                     [FeatureStdExtZvfh]>;
+def HasVendorXSfvfexp16e : Predicate<"Subtarget->hasVendorXSfvfexp16e()">;
+
+def FeatureVendorXSfvfexp32e
+    : RISCVExtension<0, 5,
+                     "SiFive Vector Floating-Point Exponential Function Instruction, Single Precision",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSfvfexp32e : Predicate<"Subtarget->hasVendorXSfvfexp32e()">;
+
+def HasVendorXSfvfexpAnyFloat : Predicate<"Subtarget->hasVendorXSfvfexp16e() || Subtarget->hasVendorXSfvfexp32e()">;
+def HasVendorXSfvfexpAny : Predicate<"Subtarget->hasVendorXSfvfbfexp16e() || Subtarget->hasVendorXSfvfexp16e() || Subtarget->hasVendorXSfvfexp32e()">,
+                           AssemblerPredicate<(any_of FeatureVendorXSfvfbfexp16e, FeatureVendorXSfvfexp16e, FeatureVendorXSfvfexp32e),
+                           "'Xsfvfbfexp16e', 'Xsfvfexp16e', or 'Xsfvfexp32e' (SiFive Vector Floating-Point Exponential Function Instruction)">;
+
+def FeatureVendorXSfvfexpa
+    : RISCVExtension<0, 2,
+                     "SiFive Vector Floating-Point Exponential Approximation Instruction",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSfvfexpa : Predicate<"Subtarget->hasVendorXSfvfexpa()">,
+                         AssemblerPredicate<(all_of FeatureVendorXSfvfexpa),
+                         "'Xsfvfexpa' (SiFive Vector Floating-Point Exponential Approximation Instruction)">;
+
+def FeatureVendorXSfvfexpa64e
+    : RISCVExtension<0, 2,
+                     "SiFive Vector Floating-Point Exponential Approximation Instruction with Double-Precision",
+                     [FeatureVendorXSfvfexpa, FeatureStdExtZve64d]>;
+def HasVendorXSfvfexpa64e : Predicate<"Subtarget->hasVendorXSfvfexpa64e()">;
 
 def FeatureVendorXSiFivecdiscarddlone
     : RISCVExtension<1, 0,
@@ -1803,13 +1850,44 @@ def TuneNoDefaultUnroll
     : SubtargetFeature<"no-default-unroll", "EnableDefaultUnroll", "false",
                        "Disable default unroll preference.">;
 
-// SiFive 7 is able to fuse integer ALU operations with a preceding branch
-// instruction.
-def TuneShortForwardBranchOpt
-    : SubtargetFeature<"short-forward-branch-opt", "HasShortForwardBranchOpt",
-                       "true", "Enable short forward branch optimization">;
-def HasShortForwardBranchOpt : Predicate<"Subtarget->hasShortForwardBranchOpt()">;
-def NoShortForwardBranchOpt : Predicate<"!Subtarget->hasShortForwardBranchOpt()">;
+// Many Microarchitectures are able to fuse a branch over a single instruction
+// with the branched-over instruction. We call this fusion "short forward
+// branches".
+//
+// We can do this for a variety of instruction groups, depending on the
+// microarch. We broadly group these by their scheduler class:
+// - IALU: RVI Integer instructions, plus ANDN/ORN/XNOR (Zbb/Zbkb)
+// - IMinMax: Zbb MIN(U)/MAX(U)
+// - IMul: MUL
+//
+// We make the simplifying assumption that any microarches that implement
+// any "short forward branches" can do the IALU fusions, and can opt into
+// the other fusions they implement.
+//
+// The important Pseudo used by all these instructions requires the IALU
+// short forward branches.
+//
+// Vendor-specific short-forward-branch opts may be added under IALU, as
+// the vendor-specific instructions should only be enabled for vendor
+// cores.
+def TuneShortForwardBranchIALU
+    : SubtargetFeature<"short-forward-branch-ialu", "HasShortForwardBranchIALU",
+                       "true", "Enable short forward branch optimization for RVI base instructions">;
+def HasShortForwardBranchIALU : Predicate<"Subtarget->hasShortForwardBranchIALU()">;
+def NoShortForwardBranch : Predicate<"!Subtarget->hasShortForwardBranchIALU()">;
+
+def TuneShortForwardBranchIMinMax
+    : SubtargetFeature<"short-forward-branch-iminmax", "HasShortForwardBranchIMinMax",
+                       "true", "Enable short forward branch optimization for MIN,MAX instructions in Zbb",
+                       [TuneShortForwardBranchIALU]>;
+def HasShortForwardBranchIMinMax : Predicate<"Subtarget->hasShortForwardBranchIMinMax()">;
+
+def TuneShortForwardBranchIMul
+    : SubtargetFeature<"short-forward-branch-imul", "HasShortForwardBranchIMul",
+                       "true", "Enable short forward branch optimization for MUL instruction",
+                       [TuneShortForwardBranchIALU]>;
+def HasShortForwardBranchIMul : Predicate<"Subtarget->hasShortForwardBranchIMul()">;
+
 
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
@@ -1864,7 +1942,26 @@ def FeatureForcedAtomics : SubtargetFeature<
     "forced-atomics", "HasForcedAtomics", "true",
     "Assume that lock-free native-width atomics are available">;
 def HasAtomicLdSt
-    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasForcedAtomics()">;
+    : Predicate<"Subtarget->hasStdExtZalrsc() || Subtarget->hasForcedAtomics()">;
+
+// The RISC-V Unprivileged Architecture - ISA Volume 1 (Version: 20250508)
+// [https://docs.riscv.org/reference/isa/_attachments/riscv-unprivileged.pdf]
+// in section 13.3. Eventual Success of Store-Conditional Instructions, defines
+// _constrained_ LR/SC loops:
+//   The dynamic code executed between the LR and SC instructions can only
+//   contain instructions from the base ''I'' instruction set, excluding loads,
+//   stores, backward jumps, taken backward branches, JALR, FENCE, and SYSTEM
+//   instructions. Compressed forms of the aforementioned ''I'' instructions in
+//   the Zca and Zcb extensions are also permitted.
+// LR/SC loops that do not adhere to the above are _unconstrained_ LR/SC loops,
+// and success is implementation specific. For implementations which know that
+// non-base instructions (such as the ''B'' extension) will not violate any
+// forward progress guarantees, using these instructions to reduce the LR/SC
+// sequence length is desirable.
+def FeaturePermissiveZalrsc
+    : SubtargetFeature<
+          "permissive-zalrsc", "HasPermissiveZalrsc", "true",
+          "Implementation permits non-base instructions between LR/SC pairs">;
 
 def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",

@@ -30,6 +30,10 @@
   }
 
 namespace lldb_private {
+
+/// Returns a pretty printed json string of a `llvm::json::Value`.
+std::string PrettyPrint(const llvm::json::Value &E);
+
 std::string GetInputFilePath(const llvm::Twine &name);
 
 class TestUtilities {

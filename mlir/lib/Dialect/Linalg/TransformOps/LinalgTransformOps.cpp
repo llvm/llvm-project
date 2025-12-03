@@ -437,13 +437,15 @@ transform::PromoteTensorOp::apply(transform::TransformRewriter &rewriter,
     for (auto [pos, dim] : llvm::enumerate(type.getShape())) {
       if (!ShapedType::isDynamic(dim))
         continue;
-      Value cst = rewriter.create<arith::ConstantIndexOp>(tensor.getLoc(), pos);
-      auto dimOp = rewriter.create<tensor::DimOp>(tensor.getLoc(), tensor, cst);
+      Value cst =
+          arith::ConstantIndexOp::create(rewriter, tensor.getLoc(), pos);
+      auto dimOp =
+          tensor::DimOp::create(rewriter, tensor.getLoc(), tensor, cst);
       preservedOps.insert(dimOp);
       dynamicDims.push_back(dimOp);
     }
-    auto allocation = rewriter.create<bufferization::AllocTensorOp>(
-        tensor.getLoc(), type, dynamicDims);
+    auto allocation = bufferization::AllocTensorOp::create(
+        rewriter, tensor.getLoc(), type, dynamicDims);
     // Set memory space if provided.
     if (getMemorySpaceAttr())
       allocation.setMemorySpaceAttr(getMemorySpaceAttr());
@@ -452,8 +454,8 @@ transform::PromoteTensorOp::apply(transform::TransformRewriter &rewriter,
     // Only insert a materialization (typically bufferizes to a copy) when the
     // value may be read from.
     if (needsMaterialization) {
-      auto copy = rewriter.create<bufferization::MaterializeInDestinationOp>(
-          tensor.getLoc(), tensor, allocated);
+      auto copy = bufferization::MaterializeInDestinationOp::create(
+          rewriter, tensor.getLoc(), tensor, allocated);
       preservedOps.insert(copy);
       promoted.push_back(copy.getResult());
     } else {
@@ -995,8 +997,11 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
       // Iterate over the outputs of the producer and over the loop bbArgs and
       // check if any bbArg points to the same value as the producer output. In
       // such case, make the producer output point to the bbArg directly.
-      for (OpOperand &initOperandPtr :
-           cast<DestinationStyleOpInterface>(clone).getDpsInitsMutable()) {
+      auto dpsInterface = dyn_cast<DestinationStyleOpInterface>(clone);
+      if (!dpsInterface)
+        return;
+
+      for (OpOperand &initOperandPtr : dpsInterface.getDpsInitsMutable()) {
         Value producerOperand =
             clone->getOperand(initOperandPtr.getOperandNumber());
         for (BlockArgument containerIterArg :
@@ -1058,7 +1063,7 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
       resultNumber, offsets, sizes);
 
   // Cleanup clone.
-  if (dyn_cast<LoopLikeOpInterface>(containingOp))
+  if (isa<LoopLikeOpInterface>(containingOp))
     rewriter.eraseOp(tileableProducer);
 
   return std::make_tuple(tileAndFuseResult->tiledOps, newContainingOp);
@@ -1956,7 +1961,7 @@ enum class OuterOrInnerPerm { Outer = 0, Inner = 1 };
 /// Return true if either `op` or `permutation` are empty to allow a simpler
 /// polymorphic implementation.
 template <typename RelayoutOpTy>
-bool isValidPackingPermutation(
+static bool isValidPackingPermutation(
     RelayoutOpTy op, ArrayRef<int64_t> permutation,
     OuterOrInnerPerm outerOrInnerPerm = OuterOrInnerPerm::Outer) {
   static_assert(
@@ -2462,6 +2467,8 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
         .setPaddingSizes(getMixedPaddingSizes())
         .setPadToMultipleOf(getPadToMultipleOf());
 
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPointAfter(targetOp);
     auto maybePadOps = rewriteAsPaddedOp(
         rewriter, cast<TilingInterface>(targetOp.getOperation()), options);
     if (failed(maybePadOps)) {
@@ -4318,9 +4325,10 @@ DiagnosedSilenceableFailure transform::TransposeMatmulOp::applyToOne(
 // InsertSliceToCopyOp
 //===----------------------------------------------------------------------===//
 template <typename OpTy>
-DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
-                                 transform::ApplyToEachResultList &results,
-                                 transform::TransformState &state) {
+static DiagnosedSilenceableFailure
+doit(RewriterBase &rewriter, OpTy target,
+     transform::ApplyToEachResultList &results,
+     transform::TransformState &state) {
   static_assert(llvm::is_one_of<OpTy, tensor::InsertSliceOp,
                                 tensor::ParallelInsertSliceOp>() &&
                 "wrong op type");
@@ -4495,7 +4503,7 @@ DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
             maybeTransformed = decomposeWinogradOutputTransformOp(rewriter, op);
             return true;
           })
-          .Default([&](Operation *op) { return false; });
+          .Default(false);
 
   if (!supported) {
     DiagnosedSilenceableFailure diag =

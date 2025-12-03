@@ -1061,6 +1061,7 @@ def SuperSubClassMismatch : DiagGroup<"super-class-method-mismatch">;
 def OverridingMethodMismatch : DiagGroup<"overriding-method-mismatch">;
 def VariadicMacros : DiagGroup<"variadic-macros">;
 def VectorConversion : DiagGroup<"vector-conversion">;      // clang specific
+def MatrixConversion : DiagGroup<"matrix-conversion">;      // clang specific
 def VexingParse : DiagGroup<"vexing-parse">;
 def VLAUseStaticAssert : DiagGroup<"vla-extension-static-assert">;
 def VLACxxExtension : DiagGroup<"vla-cxx-extension", [VLAUseStaticAssert]>;
@@ -1314,7 +1315,7 @@ def Consumed       : DiagGroup<"consumed">;
 // DefaultIgnore in addition to putting it here.
 def All : DiagGroup<"all", [Most, Parentheses, Switch, SwitchBool,
                             MisleadingIndentation, PackedNonPod,
-                            VLACxxExtension, PerfConstraintImpliesNoexcept]>;
+                            VLACxxExtension]>;
 
 // Warnings that should be in clang-cl /w4.
 def : DiagGroup<"CL4", [All, Extra]>;
@@ -1335,6 +1336,8 @@ def : DiagGroup<"int-conversions",
                 [IntConversion]>; // -Wint-conversions = -Wint-conversion
 def : DiagGroup<"vector-conversions",
                 [VectorConversion]>; // -Wvector-conversions = -Wvector-conversion
+def : DiagGroup<"matrix-conversions",
+                [MatrixConversion]>; // -Wmatrix-conversions = -Wmatrix-conversion
 def : DiagGroup<"unused-local-typedefs", [UnusedLocalTypedef]>;
                 // -Wunused-local-typedefs = -Wunused-local-typedef
 
@@ -1436,6 +1439,7 @@ def MicrosoftDrectveSection : DiagGroup<"microsoft-drectve-section">;
 def MicrosoftInclude : DiagGroup<"microsoft-include">;
 def MicrosoftCppMacro : DiagGroup<"microsoft-cpp-macro">;
 def MicrosoftFixedEnum : DiagGroup<"microsoft-fixed-enum">;
+def MicrosoftEmptyEnum : DiagGroup<"microsoft-empty-enum">;
 def MicrosoftSealed : DiagGroup<"microsoft-sealed">;
 def MicrosoftAbstract : DiagGroup<"microsoft-abstract">;
 def MicrosoftUnqualifiedFriend : DiagGroup<"microsoft-unqualified-friend">;
@@ -1489,7 +1493,8 @@ def Microsoft : DiagGroup<"microsoft",
      MicrosoftConstInit, MicrosoftVoidPseudoDtor, MicrosoftAnonTag,
      MicrosoftCommentPaste, MicrosoftEndOfFile,
      MicrosoftInitFromPredefined, MicrosoftStringLiteralFromPredefined,
-     MicrosoftInconsistentDllImport, MicrosoftInlineOnNonFunction]>;
+     MicrosoftInconsistentDllImport, MicrosoftInlineOnNonFunction,
+     MicrosoftEmptyEnum]>;
 
 def ClangClPch : DiagGroup<"clang-cl-pch">;
 

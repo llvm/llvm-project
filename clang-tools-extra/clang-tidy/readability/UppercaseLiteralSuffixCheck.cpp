@@ -110,7 +110,7 @@ shouldReplaceLiteralSuffix(const Expr &Literal,
   ReplacementDsc.LiteralLocation = L.getSourceRange();
 
   // Was this literal fully spelled or is it a product of macro expansion?
-  bool RangeCanBeFixed =
+  const bool RangeCanBeFixed =
       utils::rangeCanBeFixed(ReplacementDsc.LiteralLocation, &SM);
 
   // The literal may have macro expansion, we need the final expanded src range.

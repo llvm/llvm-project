@@ -1318,6 +1318,11 @@ public:
   /// the loop, in which case some special-case heuristics may be used.
   bool AllFixupsOutsideLoop = true;
 
+  /// This records whether all of the fixups using this LSRUse are unconditional
+  /// within the loop, meaning they will be executed on every path to the loop
+  /// latch. This includes fixups before early exits.
+  bool AllFixupsUnconditional = true;
+
   /// RigidFormula is set to true to guarantee that this use will be associated
   /// with a single formula--the one that initially matched. Some SCEV
   /// expressions cannot be expanded. This allows LSR to consider the registers
@@ -1421,16 +1426,22 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
     if (TTI->isIndexedLoadLegal(TTI->MIM_PostInc, AR->getType()) ||
         TTI->isIndexedStoreLegal(TTI->MIM_PostInc, AR->getType())) {
       const SCEV *Start;
-      const SCEVConstant *Step;
-      if (match(AR, m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant(Step))))
+      const APInt *Step;
+      if (match(AR, m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(Step)))) {
         // If the step size matches the base offset, we could use pre-indexed
         // addressing.
-        if (((AMK & TTI::AMK_PreIndexed) && F.BaseOffset.isFixed() &&
-             Step->getAPInt() == F.BaseOffset.getFixedValue()) ||
-            ((AMK & TTI::AMK_PostIndexed) && !isa<SCEVConstant>(Start) &&
-             SE->isLoopInvariant(Start, L)))
+        bool CanPreIndex = (AMK & TTI::AMK_PreIndexed) &&
+                           F.BaseOffset.isFixed() &&
+                           *Step == F.BaseOffset.getFixedValue();
+        bool CanPostIndex = (AMK & TTI::AMK_PostIndexed) &&
+                            !isa<SCEVConstant>(Start) &&
+                            SE->isLoopInvariant(Start, L);
+        // We can only pre or post index when the load/store is unconditional.
+        if ((CanPreIndex || CanPostIndex) && LU.AllFixupsUnconditional)
           LoopCost = 0;
+      }
     }
+
     // If the loop counts down to zero and we'll be using a hardware loop then
     // the addrec will be combined into the hardware loop instruction.
     if (LU.Kind == LSRUse::ICmpZero && F.countsDownToZero() &&
@@ -1782,6 +1793,9 @@ void LSRUse::print(raw_ostream &OS) const {
 
   if (AllFixupsOutsideLoop)
     OS << ", all-fixups-outside-loop";
+
+  if (AllFixupsUnconditional)
+    OS << ", all-fixups-unconditional";
 
   if (WidestFixupType)
     OS << ", widest fixup type: " << *WidestFixupType;
@@ -2213,6 +2227,7 @@ class LSRInstance {
   void InsertSupplementalFormula(const SCEV *S, LSRUse &LU, size_t LUIdx);
   void CountRegisters(const Formula &F, size_t LUIdx);
   bool InsertFormula(LSRUse &LU, unsigned LUIdx, const Formula &F);
+  bool IsFixupExecutedEachIncrement(const LSRFixup &LF) const;
 
   void CollectLoopInvariantFixupsAndFormulae();
 
@@ -3607,6 +3622,7 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
     LF.PostIncLoops = TmpPostIncLoops;
     LF.Offset = Offset;
     LU.AllFixupsOutsideLoop &= LF.isUseFullyOutsideLoop(L);
+    LU.AllFixupsUnconditional &= IsFixupExecutedEachIncrement(LF);
 
     // Create SCEV as Formula for calculating baseline cost
     if (!VisitedLSRUse.count(LUIdx) && !LF.isUseFullyOutsideLoop(L)) {
@@ -3678,6 +3694,14 @@ bool LSRInstance::InsertFormula(LSRUse &LU, unsigned LUIdx, const Formula &F) {
 
   CountRegisters(F, LUIdx);
   return true;
+}
+
+/// Test whether this fixup will be executed each time the corresponding IV
+/// increment instruction is executed.
+bool LSRInstance::IsFixupExecutedEachIncrement(const LSRFixup &LF) const {
+  // If the fixup block dominates the IV increment block then there is no path
+  // through the loop to the increment that doesn't pass through the fixup.
+  return DT.dominates(LF.UserInst->getParent(), IVIncInsertPos->getParent());
 }
 
 /// Check for other uses of loop-invariant values which we're tracking. These
@@ -3803,6 +3827,7 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
         LF.OperandValToReplace = U;
         LF.Offset = Offset;
         LU.AllFixupsOutsideLoop &= LF.isUseFullyOutsideLoop(L);
+        LU.AllFixupsUnconditional &= IsFixupExecutedEachIncrement(LF);
         if (!LU.WidestFixupType ||
             SE.getTypeSizeInBits(LU.WidestFixupType) <
             SE.getTypeSizeInBits(LF.OperandValToReplace->getType()))
@@ -4940,6 +4965,7 @@ void LSRInstance::NarrowSearchSpaceByCollapsingUnrolledCode() {
       LLVM_DEBUG(dbgs() << "  Deleting use "; LU.print(dbgs()); dbgs() << '\n');
 
       LUThatHas->AllFixupsOutsideLoop &= LU.AllFixupsOutsideLoop;
+      LUThatHas->AllFixupsUnconditional &= LU.AllFixupsUnconditional;
 
       // Transfer the fixups of LU to LUThatHas.
       for (LSRFixup &Fixup : LU.Fixups) {
@@ -5998,33 +6024,34 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
     DeadInsts.emplace_back(OperandIsInstr);
 }
 
-// Trying to hoist the IVInc to loop header if all IVInc users are in
-// the loop header. It will help backend to generate post index load/store
-// when the latch block is different from loop header block.
-static bool canHoistIVInc(const TargetTransformInfo &TTI, const LSRFixup &Fixup,
-                          const LSRUse &LU, Instruction *IVIncInsertPos,
-                          Loop *L) {
+// Determine where to insert the transformed IV increment instruction for this
+// fixup. By default this is the default insert position, but if this is a
+// postincrement opportunity then we try to insert it in the same block as the
+// fixup user instruction, as this is needed for a postincrement instruction to
+// be generated.
+static Instruction *getFixupInsertPos(const TargetTransformInfo &TTI,
+                                      const LSRFixup &Fixup, const LSRUse &LU,
+                                      Instruction *IVIncInsertPos,
+                                      DominatorTree &DT) {
+  // Only address uses can be postincremented
   if (LU.Kind != LSRUse::Address)
-    return false;
+    return IVIncInsertPos;
 
-  // For now this code do the conservative optimization, only work for
-  // the header block. Later we can hoist the IVInc to the block post
-  // dominate all users.
-  BasicBlock *LHeader = L->getHeader();
-  if (IVIncInsertPos->getParent() == LHeader)
-    return false;
-
-  if (!Fixup.OperandValToReplace ||
-      any_of(Fixup.OperandValToReplace->users(), [&LHeader](User *U) {
-        Instruction *UI = cast<Instruction>(U);
-        return UI->getParent() != LHeader;
-      }))
-    return false;
-
+  // Don't try to postincrement if it's not legal
   Instruction *I = Fixup.UserInst;
   Type *Ty = I->getType();
-  return (isa<LoadInst>(I) && TTI.isIndexedLoadLegal(TTI.MIM_PostInc, Ty)) ||
-         (isa<StoreInst>(I) && TTI.isIndexedStoreLegal(TTI.MIM_PostInc, Ty));
+  if (!(isa<LoadInst>(I) && TTI.isIndexedLoadLegal(TTI.MIM_PostInc, Ty)) &&
+      !(isa<StoreInst>(I) && TTI.isIndexedStoreLegal(TTI.MIM_PostInc, Ty)))
+    return IVIncInsertPos;
+
+  // It's only legal to hoist to the user block if it dominates the default
+  // insert position.
+  BasicBlock *HoistBlock = I->getParent();
+  BasicBlock *IVIncBlock = IVIncInsertPos->getParent();
+  if (!DT.dominates(I, IVIncBlock))
+    return IVIncInsertPos;
+
+  return HoistBlock->getTerminator();
 }
 
 /// Rewrite all the fixup locations with new values, following the chosen
@@ -6045,9 +6072,7 @@ void LSRInstance::ImplementSolution(
   for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx)
     for (const LSRFixup &Fixup : Uses[LUIdx].Fixups) {
       Instruction *InsertPos =
-          canHoistIVInc(TTI, Fixup, Uses[LUIdx], IVIncInsertPos, L)
-              ? L->getHeader()->getTerminator()
-              : IVIncInsertPos;
+          getFixupInsertPos(TTI, Fixup, Uses[LUIdx], IVIncInsertPos, DT);
       Rewriter.setIVIncInsertPos(L, InsertPos);
       Rewrite(Uses[LUIdx], Fixup, *Solution[LUIdx], DeadInsts);
       Changed = true;

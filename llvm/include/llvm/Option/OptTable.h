@@ -148,15 +148,13 @@ public:
                             StringRef SubCommand) const {
     assert(!SubCommand.empty() &&
            "This helper is only for valid registered subcommands.");
-    auto SCIT =
-        std::find_if(SubCommands.begin(), SubCommands.end(),
-                     [&](const auto &C) { return SubCommand == C.Name; });
+    auto SCIT = llvm::find_if(
+        SubCommands, [&](const auto &C) { return SubCommand == C.Name; });
     assert(SCIT != SubCommands.end() &&
            "This helper is only for valid registered subcommands.");
     auto SubCommandIDs = CandidateInfo->getSubCommandIDs(SubCommandIDsTable);
     unsigned CurrentSubCommandID = SCIT - &SubCommands[0];
-    return std::find(SubCommandIDs.begin(), SubCommandIDs.end(),
-                     CurrentSubCommandID) != SubCommandIDs.end();
+    return llvm::is_contained(SubCommandIDs, CurrentSubCommandID);
   }
 
 private:

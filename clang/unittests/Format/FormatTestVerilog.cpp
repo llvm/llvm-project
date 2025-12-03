@@ -676,6 +676,16 @@ TEST_F(FormatTestVerilog, Hierarchy) {
                "  endprogram\n"
                "endmodule");
   // Test that an extern declaration doesn't change the indentation.
+  verifyFormat("import \"DPI-C\" context MyCFunc = function integer MapID\n"
+               "    (int portID);\n"
+               "x = x;");
+  verifyFormat("export \"DPI-C\" function exported_sv_func;\n"
+               "x = x;");
+  verifyFormat("import \"DPI-C\" function void f1\n"
+               "    (input int i1,\n"
+               "     pair i2,\n"
+               "     output logic [63 : 0] o3);\n"
+               "x = x;");
   verifyFormat("extern module x;\n"
                "x = x;");
   // Test complex headers

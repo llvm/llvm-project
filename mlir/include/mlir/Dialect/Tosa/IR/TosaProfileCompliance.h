@@ -70,7 +70,7 @@ public:
 
 private:
   TypeInfo convertTypeToInfo(Type type) {
-    return {type.getTypeID(), type.getIntOrFloatBitWidth()};
+    return {type.getTypeID(), tosa::getBitWidth(type)};
   }
 
   TypeInfo convertValueToInfo(Value value) {
@@ -79,7 +79,8 @@ private:
 
   LogicalResult populatationDispatch(Operation *op);
 
-  LogicalResult populateProfileInfo(ValueRange operands, Value output);
+  // Add input operands and output results to the profile type info list
+  LogicalResult populateProfileInfo(ValueRange operands, ValueRange results);
 
   // Base
   template <typename T>
@@ -147,10 +148,12 @@ public:
     case Extension::fp8e4m3:
     case Extension::fp8e5m2:
     case Extension::fft:
+    case Extension::mxfp:
       return {Profile::pro_fp};
     case Extension::variable:
     case Extension::controlflow:
     case Extension::dynamic:
+    case Extension::int64:
       return {Profile::pro_fp, Profile::pro_int};
     case Extension::none:
       return {};

@@ -10,8 +10,8 @@ By default, only the suffixes that begin with ``l`` (``l``, ``ll``, ``lu``,
 `hicpp-uppercase-literal-suffix` redirects here as an alias for this check.
 
 Detects when the integral literal or floating point (decimal or hexadecimal)
-literal has a non-uppercase suffix and provides a fix-it hint with the uppercase
-suffix.
+literal has a non-uppercase suffix and provides a fix-it hint with the
+uppercase suffix.
 
 All valid combinations of suffixes are supported.
 

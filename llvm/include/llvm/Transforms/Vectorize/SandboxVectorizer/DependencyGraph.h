@@ -305,7 +305,7 @@ public:
     return make_range(MemSuccs.begin(), MemSuccs.end());
   }
 #ifndef NDEBUG
-  virtual void print(raw_ostream &OS, bool PrintDeps = true) const override;
+  void print(raw_ostream &OS, bool PrintDeps = true) const override;
 #endif // NDEBUG
 };
 

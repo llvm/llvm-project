@@ -84,7 +84,7 @@ bb3:                                              ; preds = %bb3, %bb
 ; Function Attrs: nounwind readnone
 declare i64 @llvm.objectsize.i64.p0(ptr, i1) #1
 
-attributes #0 = { nounwind ssp "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind ssp "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 
 !1 = !{!2, !2, i64 0}

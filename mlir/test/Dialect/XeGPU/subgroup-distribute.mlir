@@ -214,3 +214,119 @@ gpu.module @xevm_module{
 
   }
 }
+
+// -----
+// CHECK-LABEL: gpu.func @warp_scf_for_unused_uniform_for_result(
+// CHECK:         %[[W:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[16] args(%{{.*}} : index,
+// CHECK-SAME:      !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>,
+// CHECK-SAME:      memref<16x16xf32>) -> (vector<16x1xf32>, vector<16x1xf32>) {
+// CHECK:           gpu.yield %{{.*}}, {{.*}} : vector<16x16xf32>, vector<16x1xf32>
+// CHECK:         }
+// CHECK:         %{{.*}}:2 = scf.for {{.*}} to %{{.*}} step %{{.*}} iter_args
+// CHECK-SAME:      (%{{.*}} = %[[W]]#0, %{{.*}} = %[[W]]#1) -> (vector<16x1xf32>, vector<16x1xf32>) {
+// CHECK:           %[[W1:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[16]
+// CHECK-SAME:        args(%{{.*}} : vector<16x1xf32>, vector<16x1xf32>) -> (vector<16x1xf32>, vector<16x1xf32>) {
+// CHECK:             gpu.yield %{{.*}}, %{{.*}} : vector<16x16xf32>, vector<16x1xf32>
+// CHECK:           }
+// CHECK:           scf.yield %[[W1]]#0, %[[W1]]#1 : vector<16x1xf32>, vector<16x1xf32>
+// CHECK:         }
+gpu.module @xevm_module{
+  gpu.func @warp_scf_for_unused_uniform_for_result(%arg0: index,
+    %arg1: !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>,
+    %arg2: memref<16x16xf32>) {
+    %c128 = arith.constant 128 : index
+    %c1 = arith.constant 1 : index
+    %c0 = arith.constant 0 : index
+    %ini = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+      : () -> (vector<16x1xf32>)
+    %ini2 = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+      : () -> (vector<16x16xf32>)
+    %3:2 = scf.for %arg3 = %c0 to %c128 step %c1 iter_args(%arg4 = %ini2, %arg5 = %ini) -> (vector<16x16xf32>, vector<16x1xf32>) {
+      %1  = "some_def"(%arg5)
+        {
+          layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+          layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+        }
+        : (vector<16x1xf32>) -> (vector<16x1xf32>)
+      %acc = "some_def"(%arg4, %1)
+        {
+          layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+          layout_operand_1 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+          layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+        }
+        : (vector<16x16xf32>, vector<16x1xf32>) -> (vector<16x16xf32>)
+      scf.yield %acc, %1 : vector<16x16xf32>, vector<16x1xf32>
+    }
+    {
+      layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }
+    xegpu.store_nd %3#0, %arg1[%c0, %c0]
+      : vector<16x16xf32>, !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    gpu.return
+  }
+}
+
+// -----
+// CHECK-LABEL: gpu.func @load_store_matrix_1({{.*}}) {
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C8:.*]] = arith.constant 8 : index
+// CHECK: %[[LANE_ID:.*]] = gpu.lane_id
+// CHECK: %[[REMU1:.*]] = index.remu %[[LANE_ID]], %[[C8]]
+// CHECK: %[[DIVU:.*]] = index.divu %[[LANE_ID]], %[[C8]]
+// CHECK: %[[REMU2:.*]] = index.remu %[[DIVU]], %[[C2]]
+// CHECK: %[[REMU3:.*]] = index.remu %[[REMU2]], %[[C2]]
+// CHECK: %[[REMU4:.*]] = index.remu %[[REMU1]], %[[C8]]
+// CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[REMU3]], %[[REMU4]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<1x1xf32>
+// CHECK: xegpu.store_matrix %[[MAT]], %arg0[%[[REMU3]], %[[REMU4]]] : vector<1x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+gpu.module @xevm_module{
+  gpu.func @load_store_matrix_1(%arg0: !xegpu.mem_desc<32x32xf32>) {
+    %c0 = arith.constant 0 : index
+    %1 = xegpu.load_matrix %arg0[%c0, %c0] <{layout = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}> : !xegpu.mem_desc<32x32xf32>, index, index -> vector<2x8xf32>
+    xegpu.store_matrix %1, %arg0[%c0, %c0] <{layout = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}> : vector<2x8xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+    gpu.return
+  }
+}
+
+// -----
+// CHECK-LABEL: gpu.func @load_store_matrix_2({{.*}}) {
+// CHECK: %[[C8:.*]] = arith.constant 8 : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C4:.*]] = arith.constant 4 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[LANE_ID:.*]] = gpu.lane_id
+// CHECK: %[[REMU1:.*]] = index.remu %[[LANE_ID]], %[[C4]]
+// CHECK: %[[DIVU:.*]] = index.divu %[[LANE_ID]], %[[C4]]
+// CHECK: %[[REMU2:.*]] = index.remu %[[DIVU]], %[[C4]]
+// CHECK: %[[MUL:.*]] = index.mul %[[REMU2]], %[[C2]]
+// CHECK: %[[REMU3:.*]] = index.remu %[[MUL]], %[[C8]]
+// CHECK: %[[REMU4:.*]] = index.remu %[[REMU1]], %[[C4]]
+// CHECK: %[[ADD:.*]] = index.add %[[REMU4]], %[[C1]]
+// CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[REMU3]], %[[ADD]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<2x1xf32>
+// CHECK: xegpu.store_matrix %[[MAT]], %arg0[%[[REMU3]], %[[ADD]]] : vector<2x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+gpu.module @xevm_module{
+  gpu.func @load_store_matrix_2(%arg0: !xegpu.mem_desc<32x32xf32>) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %1 = xegpu.load_matrix %arg0[%c0, %c1] <{layout = #xegpu.layout<lane_layout = [4, 4], lane_data = [2, 1]>}> : !xegpu.mem_desc<32x32xf32>, index, index -> vector<8x4xf32>
+    xegpu.store_matrix %1, %arg0[%c0, %c1] <{layout = #xegpu.layout<lane_layout = [4, 4], lane_data = [2, 1]>}> : vector<8x4xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+    gpu.return
+  }
+}
+
+// -----
+// CHECK-LABEL: gpu.func @load_store_matrix_3({{.*}}) {
+// CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%{{.*}}, %{{.*}}] <{subgroup_block_io}>:
+// CHECK-SAME: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<block = [16, 1], stride = [1, 32]>>, index, index -> vector<1x2xf32>
+// CHECK: xegpu.store_matrix %[[MAT]], %arg0[%{{.*}}, %{{.*}}] <{subgroup_block_io}>:
+// CHECK-SAME: vector<1x2xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<block = [16, 1], stride = [1, 32]>>, index, index
+gpu.module @xevm_module{
+  gpu.func @load_store_matrix_3(%arg0: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [1, 32], block = [16, 1]>>) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %1 = xegpu.load_matrix %arg0[%c0, %c1] {subgroup_block_io, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>} :
+      !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [1, 32], block = [16, 1]>>, index, index -> vector<16x2xf32>
+    xegpu.store_matrix %1, %arg0[%c0, %c1] {subgroup_block_io, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>} :
+      vector<16x2xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [1, 32], block = [16, 1]>>, index, index
+    gpu.return
+  }
+}

@@ -1,3 +1,7 @@
+; This test fails under the profcheck configuration due to profcheck creating
+; metadata.
+; UNSUPPORTED: profcheck
+
 ; Test prof-verify for functions without entry count
 
 ; RUN: not opt -passes=prof-verify %s -o - 2>&1 | FileCheck %s

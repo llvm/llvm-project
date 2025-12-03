@@ -6,10 +6,9 @@ define void @shufflevector_reverse_v32i8(ptr %res, ptr %a) nounwind {
 ; CHECK-LABEL: shufflevector_reverse_v32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI0_0)
-; CHECK-NEXT:    xvld $xr1, $a1, %pc_lo12(.LCPI0_0)
 ; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 78
-; CHECK-NEXT:    xvshuf.b $xr0, $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvshuf4i.w $xr0, $xr0, 27
+; CHECK-NEXT:    xvshuf4i.b $xr0, $xr0, 27
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -23,11 +22,9 @@ define void @shufflevector_reverse_v16i16(ptr %res, ptr %a) nounwind {
 ; CHECK-LABEL: shufflevector_reverse_v16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI1_0)
-; CHECK-NEXT:    xvld $xr1, $a1, %pc_lo12(.LCPI1_0)
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 78
-; CHECK-NEXT:    xvshuf.h $xr1, $xr0, $xr0
-; CHECK-NEXT:    xvst $xr1, $a0, 0
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 27
+; CHECK-NEXT:    xvshuf4i.h $xr0, $xr0, 27
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i16>, ptr %a
