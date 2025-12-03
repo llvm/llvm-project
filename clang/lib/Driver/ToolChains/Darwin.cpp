@@ -2865,7 +2865,7 @@ void AppleMachO::AddCXXStdlibLibArgs(const ArgList &Args,
     // name) which may have been configured with different options, be at a
     // different version, etc.
     SmallString<128> InstallLib = llvm::sys::path::parent_path(getDriver().Dir);
-    llvm::sys::path::append(InstallLib, "lib"); // <install>/bin/../lib
+    llvm::sys::path::append(InstallLib, "lib"); // <install>/lib
     auto Link = [&](StringRef Library) {
       SmallString<128> Shared(InstallLib);
       llvm::sys::path::append(Shared,
