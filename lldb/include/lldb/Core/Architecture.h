@@ -138,6 +138,18 @@ public:
       std::shared_ptr<const UnwindPlan> current_unwindplan) {
     return lldb::UnwindPlanSP();
   }
+
+  /// Returns whether a given byte sequence is a valid breakpoint for the
+  /// architecture. Some architectures have breakpoint instructions that
+  /// have immediates that can take on any value, resulting in a family
+  /// of valid byte sequences. Bases the size comparison on the reference.
+  virtual bool
+  IsValidBreakpointInstruction(llvm::ArrayRef<uint8_t> reference,
+                               llvm::ArrayRef<uint8_t> observed) const {
+    if (reference.size() > observed.size())
+      return false;
+    return !std::memcmp(reference.data(), observed.data(), reference.size());
+  }
 };
 
 } // namespace lldb_private

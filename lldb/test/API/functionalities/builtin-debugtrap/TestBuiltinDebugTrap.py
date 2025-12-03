@@ -11,16 +11,15 @@ from lldbsuite.test.lldbtest import *
 class BuiltinDebugTrapTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    # Currently this depends on behavior in debugserver to
-    # advance the pc past __builtin_trap instructions so that
-    # continue works.  Everyone is in agreement that this
-    # should be moved up into lldb instead of depending on the
-    # remote stub rewriting the pc values.
-    @skipUnlessDarwin
     def test(self):
+        platform_stop_reason = lldb.eStopReasonSignal
+        platform = self.getPlatform()
+        if platform == "darwin" or platform == "windows":
+            platform_stop_reason = lldb.eStopReasonException
+
         self.build()
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "// Set a breakpoint here", lldb.SBFileSpec("main.cpp")
+            self, "// Set a breakpoint here", lldb.SBFileSpec("main.c")
         )
 
         # Continue to __builtin_debugtrap()
@@ -31,7 +30,7 @@ class BuiltinDebugTrapTestCase(TestBase):
             self.runCmd("ta v global")
 
         self.assertEqual(
-            process.GetSelectedThread().GetStopReason(), lldb.eStopReasonException
+            process.GetSelectedThread().GetStopReason(), platform_stop_reason
         )
 
         list = target.FindGlobalVariables("global", 1, lldb.eMatchTypeNormal)
@@ -49,7 +48,7 @@ class BuiltinDebugTrapTestCase(TestBase):
             self.runCmd("ta v global")
 
         self.assertEqual(
-            process.GetSelectedThread().GetStopReason(), lldb.eStopReasonException
+            process.GetSelectedThread().GetStopReason(), platform_stop_reason
         )
 
         # "global" is now 10.
@@ -63,8 +62,12 @@ class BuiltinDebugTrapTestCase(TestBase):
             self.runCmd("bt")
             self.runCmd("ta v global")
 
+        # Some platforms might exit when seeing the trap instruction
+        if process.GetState() == lldb.eStateExited:
+            return
+
         self.assertEqual(
-            process.GetSelectedThread().GetStopReason(), lldb.eStopReasonException
+            process.GetSelectedThread().GetStopReason(), platform_stop_reason
         )
 
         # "global" is still 10.

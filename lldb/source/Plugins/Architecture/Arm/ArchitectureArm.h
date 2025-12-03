@@ -34,6 +34,10 @@ public:
       lldb_private::Thread &thread, lldb_private::RegisterContextUnwind *regctx,
       std::shared_ptr<const UnwindPlan> current_unwindplan) override;
 
+  bool
+  IsValidBreakpointInstruction(llvm::ArrayRef<uint8_t> reference,
+                               llvm::ArrayRef<uint8_t> observed) const override;
+
 private:
   static std::unique_ptr<Architecture> Create(const ArchSpec &arch);
   ArchitectureArm() = default;

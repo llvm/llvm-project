@@ -330,6 +330,17 @@ public:
   virtual std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) = 0;
 
+  /// Get the bytes of the platform's software interrupt instruction.
+  ///
+  /// \param[in] arch
+  ///     The architecture of the inferior
+  /// \param size_hint
+  ///     A hint to disambiguate which instruction is used on platforms where
+  ///     there are multiple interrupts with different sizes in the ISA (e.g
+  ///     ARM Thumb, RISC-V)
+  llvm::ArrayRef<uint8_t> SoftwareTrapOpcodeTable(const ArchSpec &arch,
+                                                  size_t size_hint = 0);
+
   virtual size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                                  BreakpointSite *bp_site);
 

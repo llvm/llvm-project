@@ -13,6 +13,8 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 
+#include "llvm/Support/Endian.h"
+
 using namespace lldb_private;
 using namespace lldb;
 
@@ -140,4 +142,19 @@ bool ArchitectureAArch64::ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
   reg_data.SetByteOrder(reg_context.GetByteOrder());
 
   return true;
+}
+
+bool ArchitectureAArch64::IsValidBreakpointInstruction(
+    llvm::ArrayRef<uint8_t> reference, llvm::ArrayRef<uint8_t> observed) const {
+  if (reference.size() < 4 || observed.size() < 4)
+    return false;
+  auto ref_bytes = llvm::support::endian::read32le(reference.data());
+  auto bytes = llvm::support::endian::read32le(observed.data());
+  // Only the 11 highest bits define the breakpoint, the others include an
+  // immediate which is stored to a CPU register.
+  uint32_t mask = 0xFFE00000;
+  // Check that the masked bytes match the reference, but also check that the
+  // immediate in the instruction is the default output by llvm.debugtrap
+  // The reference has the immediate set as all-zero, so mask and check here
+  return (ref_bytes == (bytes & mask)) && ((bytes & ~mask) >> 5 == 0xF000);
 }
