@@ -393,3 +393,179 @@ entry:
   musttail call void @sret_callee(ptr sret({ double, double }) align 8 %result)
   ret void
 }
+
+%twenty_bytes = type { [5 x i32] }
+declare void @large_callee(%twenty_bytes* byval(%twenty_bytes) align 4)
+
+; Functions with byval parameters can be tail-called, because the value is
+; actually passed in registers in the same way for the caller and callee.
+define void @large_caller(%twenty_bytes* byval(%twenty_bytes) align 4 %a) {
+; RV32-LABEL: large_caller:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    tail large_callee
+;
+; RV64-LABEL: large_caller:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    tail large_callee
+entry:
+  musttail call void @large_callee(%twenty_bytes* byval(%twenty_bytes) align 4 %a)
+  ret void
+}
+
+; As above, but with some inline asm to test that the arguments in r4 is
+; re-loaded before the call.
+define void @large_caller_check_regs(%twenty_bytes* byval(%twenty_bytes) align 4 %a) nounwind {
+; RV32-LABEL: large_caller_check_regs:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    #APP
+; RV32-NEXT:    #NO_APP
+; RV32-NEXT:    tail large_callee
+;
+; RV64-LABEL: large_caller_check_regs:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    #APP
+; RV64-NEXT:    #NO_APP
+; RV64-NEXT:    tail large_callee
+entry:
+  tail call void asm sideeffect "", "~{r4}"()
+  musttail call void @large_callee(%twenty_bytes* byval(%twenty_bytes) align 4 %a)
+  ret void
+}
+
+; The IR for this one looks dodgy, because it has an alloca passed to a
+; musttail function, but it is passed as a byval argument, so will be copied
+; into the stack space allocated by @large_caller_new_value's caller, so is
+; valid.
+define void @large_caller_new_value(%twenty_bytes* byval(%twenty_bytes) align 4 %a) nounwind {
+; RV32-LABEL: large_caller_new_value:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    addi sp, sp, -32
+; RV32-NEXT:    li a1, 1
+; RV32-NEXT:    li a2, 2
+; RV32-NEXT:    li a3, 3
+; RV32-NEXT:    li a4, 4
+; RV32-NEXT:    sw zero, 12(sp)
+; RV32-NEXT:    sw a1, 16(sp)
+; RV32-NEXT:    sw a2, 20(sp)
+; RV32-NEXT:    sw a3, 24(sp)
+; RV32-NEXT:    sw a4, 28(sp)
+; RV32-NEXT:    sw a4, 16(a0)
+; RV32-NEXT:    sw zero, 0(a0)
+; RV32-NEXT:    sw a1, 4(a0)
+; RV32-NEXT:    sw a2, 8(a0)
+; RV32-NEXT:    sw a3, 12(a0)
+; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    tail large_callee
+;
+; RV64-LABEL: large_caller_new_value:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    addi sp, sp, -32
+; RV64-NEXT:    li a1, 1
+; RV64-NEXT:    li a2, 2
+; RV64-NEXT:    li a3, 3
+; RV64-NEXT:    li a4, 4
+; RV64-NEXT:    sw zero, 12(sp)
+; RV64-NEXT:    sw a1, 16(sp)
+; RV64-NEXT:    sw a2, 20(sp)
+; RV64-NEXT:    sw a3, 24(sp)
+; RV64-NEXT:    sw a4, 28(sp)
+; RV64-NEXT:    sw a4, 16(a0)
+; RV64-NEXT:    sw zero, 0(a0)
+; RV64-NEXT:    sw a1, 4(a0)
+; RV64-NEXT:    sw a2, 8(a0)
+; RV64-NEXT:    sw a3, 12(a0)
+; RV64-NEXT:    addi sp, sp, 32
+; RV64-NEXT:    tail large_callee
+entry:
+  %y = alloca %twenty_bytes, align 4
+  store i32 0, ptr %y, align 4
+  %0 = getelementptr inbounds i8, ptr %y, i32 4
+  store i32 1, ptr %0, align 4
+  %1 = getelementptr inbounds i8, ptr %y, i32 8
+  store i32 2, ptr %1, align 4
+  %2 = getelementptr inbounds i8, ptr %y, i32 12
+  store i32 3, ptr %2, align 4
+  %3 = getelementptr inbounds i8, ptr %y, i32 16
+  store i32 4, ptr %3, align 4
+  musttail call void @large_callee(%twenty_bytes* byval(%twenty_bytes) align 4 %y)
+  ret void
+}
+
+declare void @two_byvals_callee(%twenty_bytes* byval(%twenty_bytes) align 4, %twenty_bytes* byval(%twenty_bytes) align 4)
+define void @swap_byvals(%twenty_bytes* byval(%twenty_bytes) align 4 %a, %twenty_bytes* byval(%twenty_bytes) align 4 %b) {
+; RV32-LABEL: swap_byvals:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    mv a2, a0
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    tail two_byvals_callee
+;
+; RV64-LABEL: swap_byvals:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    mv a2, a0
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    mv a1, a2
+; RV64-NEXT:    tail two_byvals_callee
+entry:
+  musttail call void @two_byvals_callee(%twenty_bytes* byval(%twenty_bytes) align 4 %b, %twenty_bytes* byval(%twenty_bytes) align 4 %a)
+  ret void
+}
+
+; A forwarded byval arg, but in a different argument register, so it needs to
+; be moved between registers first. This can't be musttail because of the
+; different signatures, but is still tail-called as an optimisation.
+declare void @shift_byval_callee(%twenty_bytes* byval(%twenty_bytes) align 4)
+define void @shift_byval(i32 %a, %twenty_bytes* byval(%twenty_bytes) align 4 %b) {
+; RV32-LABEL: shift_byval:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    tail shift_byval_callee
+;
+; RV64-LABEL: shift_byval:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    tail shift_byval_callee
+entry:
+  tail call void @shift_byval_callee(%twenty_bytes* byval(%twenty_bytes) align 4 %b)
+  ret void
+}
+
+; A global object passed to a byval argument, so it must be copied, but doesn't
+; need a stack temporary.
+@large_global = external global %twenty_bytes
+define void @large_caller_from_global(%twenty_bytes* byval(%twenty_bytes) align 4 %a) {
+; RV32-LABEL: large_caller_from_global:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lui a1, %hi(large_global)
+; RV32-NEXT:    addi a1, a1, %lo(large_global)
+; RV32-NEXT:    lw a2, 16(a1)
+; RV32-NEXT:    sw a2, 16(a0)
+; RV32-NEXT:    lw a2, 12(a1)
+; RV32-NEXT:    sw a2, 12(a0)
+; RV32-NEXT:    lw a2, 8(a1)
+; RV32-NEXT:    sw a2, 8(a0)
+; RV32-NEXT:    lw a2, 4(a1)
+; RV32-NEXT:    sw a2, 4(a0)
+; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    tail large_callee
+;
+; RV64-LABEL: large_caller_from_global:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lui a1, %hi(large_global)
+; RV64-NEXT:    addi a1, a1, %lo(large_global)
+; RV64-NEXT:    lw a2, 16(a1)
+; RV64-NEXT:    sw a2, 16(a0)
+; RV64-NEXT:    lw a2, 12(a1)
+; RV64-NEXT:    sw a2, 12(a0)
+; RV64-NEXT:    lw a2, 8(a1)
+; RV64-NEXT:    sw a2, 8(a0)
+; RV64-NEXT:    lw a2, 4(a1)
+; RV64-NEXT:    sw a2, 4(a0)
+; RV64-NEXT:    lw a1, 0(a1)
+; RV64-NEXT:    sw a1, 0(a0)
+; RV64-NEXT:    tail large_callee
+entry:
+  musttail call void @large_callee(%twenty_bytes* byval(%twenty_bytes) align 4 @large_global)
+  ret void
+}

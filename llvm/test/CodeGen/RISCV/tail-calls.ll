@@ -247,24 +247,20 @@ declare i32 @callee_indirect_args(fp128 %a)
 define void @caller_indirect_args() nounwind {
 ; CHECK-LABEL: caller_indirect_args:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    lui a1, 262128
 ; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    sw zero, 0(sp)
 ; CHECK-NEXT:    sw zero, 4(sp)
 ; CHECK-NEXT:    sw zero, 8(sp)
 ; CHECK-NEXT:    sw a1, 12(sp)
-; CHECK-NEXT:    call callee_indirect_args
-; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 32
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    tail callee_indirect_args
 ;
 ; CHECK-LARGE-ZICFILP-LABEL: caller_indirect_args:
 ; CHECK-LARGE-ZICFILP:       # %bb.0: # %entry
 ; CHECK-LARGE-ZICFILP-NEXT:    lpad 0
-; CHECK-LARGE-ZICFILP-NEXT:    addi sp, sp, -32
-; CHECK-LARGE-ZICFILP-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; CHECK-LARGE-ZICFILP-NEXT:    addi sp, sp, -16
 ; CHECK-LARGE-ZICFILP-NEXT:    lui a1, 262128
 ; CHECK-LARGE-ZICFILP-NEXT:  .Lpcrel_hi9:
 ; CHECK-LARGE-ZICFILP-NEXT:    auipc a0, %pcrel_hi(.LCPI7_0)
@@ -274,10 +270,8 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-LARGE-ZICFILP-NEXT:    sw zero, 4(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:    sw zero, 8(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:    sw a1, 12(sp)
-; CHECK-LARGE-ZICFILP-NEXT:    jalr t2
-; CHECK-LARGE-ZICFILP-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-LARGE-ZICFILP-NEXT:    addi sp, sp, 32
-; CHECK-LARGE-ZICFILP-NEXT:    ret
+; CHECK-LARGE-ZICFILP-NEXT:    addi sp, sp, 16
+; CHECK-LARGE-ZICFILP-NEXT:    jr t2
 entry:
   %call = tail call i32 @callee_indirect_args(fp128 0xL00000000000000003FFF000000000000)
   ret void
@@ -400,24 +394,30 @@ define i32 @caller_byval() nounwind {
 ; CHECK-LABEL: caller_byval:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    lw a1, 12(sp)
-; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    sw a1, 8(sp)
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    lw a0, 8(sp)
+; CHECK-NEXT:    sw a0, 4(sp)
+; CHECK-NEXT:    addi a0, sp, 4
+; CHECK-NEXT:    call callee_byval
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    tail callee_byval
+; CHECK-NEXT:    ret
 ;
 ; CHECK-LARGE-ZICFILP-LABEL: caller_byval:
 ; CHECK-LARGE-ZICFILP:       # %bb.0: # %entry
 ; CHECK-LARGE-ZICFILP-NEXT:    lpad 0
 ; CHECK-LARGE-ZICFILP-NEXT:    addi sp, sp, -16
-; CHECK-LARGE-ZICFILP-NEXT:    lw a1, 12(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-LARGE-ZICFILP-NEXT:    lw a0, 8(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    sw a0, 4(sp)
 ; CHECK-LARGE-ZICFILP-NEXT:  .Lpcrel_hi12:
 ; CHECK-LARGE-ZICFILP-NEXT:    auipc a0, %pcrel_hi(.LCPI10_0)
 ; CHECK-LARGE-ZICFILP-NEXT:    lw t2, %pcrel_lo(.Lpcrel_hi12)(a0)
-; CHECK-LARGE-ZICFILP-NEXT:    addi a0, sp, 8
-; CHECK-LARGE-ZICFILP-NEXT:    sw a1, 8(sp)
+; CHECK-LARGE-ZICFILP-NEXT:    addi a0, sp, 4
+; CHECK-LARGE-ZICFILP-NEXT:    jalr t2
+; CHECK-LARGE-ZICFILP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-LARGE-ZICFILP-NEXT:    addi sp, sp, 16
-; CHECK-LARGE-ZICFILP-NEXT:    jr t2
+; CHECK-LARGE-ZICFILP-NEXT:    ret
 entry:
   %a = alloca ptr
   %r = tail call i32 @callee_byval(ptr byval(ptr) %a)
