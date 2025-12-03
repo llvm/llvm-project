@@ -2659,24 +2659,8 @@ struct AMDGPUMakeDmaDescriptorLowering
 
     Value dgroup0 = this->getDGroup0(adaptor);
     Value dgroup1 = this->getDGroup1(op, adaptor, rewriter, loc, consts);
-    Value undefV4I32 = LLVM::UndefOp::create(rewriter, loc, v4i32);
-    Value dgroup2 = undefV4I32;
-    Value dgroup3 = undefV4I32;
 
-    if (op.getRank() == 2) {
-      Value nullConstant = createI32Constant(rewriter, loc, 0x7c);
-      dgroup2 = LLVM::InsertElementOp::create(rewriter, loc, dgroup2,
-                                              nullConstant, consts[0]);
-      dgroup2 = LLVM::InsertElementOp::create(rewriter, loc, dgroup2, consts[0],
-                                              consts[1]);
-      dgroup2 = LLVM::InsertElementOp::create(rewriter, loc, dgroup2, consts[0],
-                                              consts[2]);
-      dgroup2 = LLVM::InsertElementOp::create(rewriter, loc, dgroup2, consts[0],
-                                              consts[3]);
-      dgroup3 = dgroup2;
-    }
-
-    SmallVector<Value> results = {dgroup0, dgroup1, dgroup2, dgroup3};
+    SmallVector<Value> results = {dgroup0, dgroup1};
     rewriter.replaceOpWithMultiple(op, {results});
     return success();
   }

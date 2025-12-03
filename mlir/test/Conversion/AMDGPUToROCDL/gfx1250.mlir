@@ -302,16 +302,7 @@ func.func @make_dma_descriptor(%base: !amdgpu.tdm_base<i32>) -> !amdgpu.tdm_desc
   // CHECK: %[[DGROUP1_6:.+]] = llvm.insertelement %[[SGPR6]], %[[DGROUP1_5]][%[[C6]] : i32]
   // CHECK: %[[DGROUP1:.+]] = llvm.insertelement %[[SGPR7]], %[[DGROUP1_6]][%[[C7]] : i32]
 
-  // CHECK-DAG: %[[V4I32:.+]] = llvm.mlir.undef : vector<4xi32>
-
-  // CHECK-DAG: %[[NULL:.+]] = llvm.mlir.constant(124 : i32)
-
-  // CHECK: %[[NULL_GROUP_0:.+]] = llvm.insertelement %[[NULL]], %[[V4I32]][%[[C0]] : i32]
-  // CHECK: %[[NULL_GROUP_1:.+]] = llvm.insertelement %[[C0]], %[[NULL_GROUP_0]][%[[C1]] : i32]
-  // CHECK: %[[NULL_GROUP_2:.+]] = llvm.insertelement %[[C0]], %[[NULL_GROUP_1]][%[[C2]] : i32]
-  // CHECK: %[[NULL_GROUP:.+]] = llvm.insertelement %[[C0]], %[[NULL_GROUP_2]][%[[C3]] : i32]
-
-  // CHECK: %[[DGROUPS:.+]] = builtin.unrealized_conversion_cast %[[DGROUP0]], %[[DGROUP1]], %[[NULL_GROUP]], %[[NULL_GROUP]] : vector<4xi32>, vector<8xi32>, vector<4xi32>, vector<4xi32> to !amdgpu.tdm_descriptor
+  // CHECK: %[[DGROUPS:.+]] = builtin.unrealized_conversion_cast %[[DGROUP0]], %[[DGROUP1]] : vector<4xi32>, vector<8xi32> to !amdgpu.tdm_descriptor
   %descriptor = amdgpu.make_dma_descriptor %base globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
   func.return %descriptor : !amdgpu.tdm_descriptor
 }
