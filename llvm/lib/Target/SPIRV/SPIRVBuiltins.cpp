@@ -1181,6 +1181,36 @@ static bool builtinMayNeedPromotionToVec(uint32_t BuiltinNumber) {
 // Implementation functions for each builtin group
 //===----------------------------------------------------------------------===//
 
+static SmallVector<Register>
+getOpExtCallArguments(const SPIRV::IncomingCall *Call, uint32_t BuiltinNumber,
+                      MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry *GR) {
+
+  Register ReturnTypeId = GR->getSPIRVTypeID(Call->ReturnType);
+  unsigned ResultElementCount =
+      GR->getScalarOrVectorComponentCount(ReturnTypeId);
+  bool MayNeedPromotionToVec =
+      builtinMayNeedPromotionToVec(BuiltinNumber) && ResultElementCount > 1;
+
+  if (!MayNeedPromotionToVec)
+    return {Call->Arguments.begin(), Call->Arguments.end()};
+
+  SmallVector<Register> Arguments;
+  for (Register Argument : Call->Arguments) {
+    Register VecArg = Argument;
+    SPIRVType *ArgumentType = GR->getSPIRVTypeForVReg(Argument);
+    if (ArgumentType != Call->ReturnType) {
+      VecArg = createVirtualRegister(Call->ReturnType, GR, MIRBuilder);
+      auto VecSplat = MIRBuilder.buildInstr(SPIRV::OpCompositeConstruct)
+                          .addDef(VecArg)
+                          .addUse(ReturnTypeId);
+      for (unsigned I = 0; I != ResultElementCount; ++I)
+        VecSplat.addUse(Argument);
+    }
+    Arguments.push_back(VecArg);
+  }
+  return Arguments;
+}
+
 static bool generateExtInst(const SPIRV::IncomingCall *Call,
                             MachineIRBuilder &MIRBuilder,
                             SPIRVGlobalRegistry *GR, const CallBase &CB) {
@@ -1203,24 +1233,8 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
   }
 
   Register ReturnTypeId = GR->getSPIRVTypeID(Call->ReturnType);
-  SmallVector<Register> Arguments;
-  unsigned ResultElementCount =
-      GR->getScalarOrVectorComponentCount(ReturnTypeId);
-  bool MayNeedPromotionToVec =
-      builtinMayNeedPromotionToVec(Number) && ResultElementCount > 1;
-  for (Register Argument : Call->Arguments) {
-    Register PromotedArg = Argument;
-    SPIRVType *ArgumentType = GR->getSPIRVTypeForVReg(Argument);
-    if (MayNeedPromotionToVec && ArgumentType != Call->ReturnType) {
-      PromotedArg = createVirtualRegister(Call->ReturnType, GR, MIRBuilder);
-      auto VecBroadcast = MIRBuilder.buildInstr(SPIRV::OpCompositeConstruct)
-                              .addDef(PromotedArg)
-                              .addUse(ReturnTypeId);
-      for (unsigned I = 0; I != ResultElementCount; ++I)
-        VecBroadcast.addUse(Argument);
-    }
-    Arguments.push_back(PromotedArg);
-  }
+  SmallVector<Register> Arguments =
+      getOpExtCallArguments(Call, Number, MIRBuilder, GR);
 
   // Build extended instruction.
   auto MIB =
