@@ -4401,7 +4401,7 @@ bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
 
 bool SIInstrInfo::mayAccessScratch(const MachineInstr &MI) const {
   // Instructions that access scratch use FLAT encoding or BUF encodings.
-  if ((!isFLAT(MI) && !isBUF(MI)) || isFLATGlobal(MI))
+  if ((!isFLAT(MI) || isFLATGlobal(MI)) && !isBUF(MI))
     return false;
 
   // If scratch is not initialized, we can never access it.
