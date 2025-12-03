@@ -248,6 +248,7 @@ def RemoveDeadValues : Pass<"remove-dead-values"> {
     ```
   }];
   let constructor = "mlir::createRemoveDeadValuesPass()";
+  let dependentDialects = ["ub::UBDialect"];
 }
 
 def PrintIRPass : Pass<"print-ir"> {
