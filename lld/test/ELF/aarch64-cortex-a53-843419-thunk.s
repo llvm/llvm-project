@@ -42,6 +42,7 @@ t3_ff8_ldr:
 // CHECK-NEXT: adrp    x0, 0x10010000
 // CHECK-NEXT: ldr     x1, [x1]
 // CHECK-NEXT: b       0x11008
+// CHECK: 0000000000011004 <__CortexA53843419_11000_ret>:
 // CHECK-NEXT: ret
 // CHECK: 0000000000011008 <__CortexA53843419_11000>:
 // CHECK-NEXT: ldr     x0, [x0, #8]

@@ -388,6 +388,8 @@ public:
   uint64_t patcheeOffset;
   // A label for the start of the Patch that we can use as a relocation target.
   Symbol *patchSym;
+  // A label for the return location.
+  Symbol *retSym;
 };
 
 Patch843419Section::Patch843419Section(Ctx &ctx, InputSection *p, uint64_t off)
@@ -399,6 +401,12 @@ Patch843419Section::Patch843419Section(Ctx &ctx, InputSection *p, uint64_t off)
       ctx, ctx.saver.save("__CortexA53843419_" + utohexstr(getLDSTAddr())),
       STT_FUNC, 0, getSize(), *this);
   addSyntheticLocal(ctx, ctx.saver.save("$x"), STT_NOTYPE, 0, 0, *this);
+  retSym = addSyntheticLocal(
+      ctx, ctx.saver.save("__CortexA53843419_" + utohexstr(getLDSTAddr()) + "_ret"),
+      STT_FUNC, off + 4, 4, *p);
+
+  // Relocation must be created as soon as possible, so it'll be picked up.
+  addReloc({R_PC, R_AARCH64_JUMP26, 4, 0, retSym});
 }
 
 uint64_t Patch843419Section::getLDSTAddr() const {
@@ -410,13 +418,12 @@ void Patch843419Section::writeTo(uint8_t *buf) {
   // patchee Section.
   write32le(buf, read32le(patchee->content().begin() + patcheeOffset));
 
-  // Apply any relocation transferred from the original patchee section.
-  ctx.target->relocateAlloc(*this, buf);
+  // Note: The jump back was configured in this classe's constructor, and
+  // will be filled by the relocation. Adding the relocation here would be
+  // too late.
 
-  // Return address is the next instruction after the one we have just copied.
-  uint64_t s = getLDSTAddr() + 4;
-  uint64_t p = patchSym->getVA(ctx) + 4;
-  ctx.target->relocateNoSym(buf + 4, R_AARCH64_JUMP26, s - p);
+  // Apply relocations
+  ctx.target->relocateAlloc(*this, buf);
 }
 
 void AArch64Err843419Patcher::init() {

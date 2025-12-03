@@ -1922,7 +1922,7 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *isec) {
     if (isec->outSecOff < first->outSecOff || last->outSecOff < isec->outSecOff)
       continue;
 
-    ts = addThunkSection(tos, isd, isec->outSecOff);
+    ts = addThunkSection(tos, isd, isec->outSecOff, /* isPrefix */ true);
     thunkedSections[isec] = ts;
     return ts;
   }
@@ -1981,11 +1981,12 @@ void ThunkCreator::createInitialThunkSections(
 
 ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
                                             InputSectionDescription *isd,
-                                            uint64_t off) {
+                                            uint64_t off,
+                                            bool isPrefix) {
   auto *ts = make<ThunkSection>(ctx, os, off);
   ts->partition = os->partition;
   if ((ctx.arg.fixCortexA53Errata843419 || ctx.arg.fixCortexA8) &&
-      !isd->sections.empty()) {
+      !isd->sections.empty() && !isPrefix) {
     // The errata fixes are sensitive to addresses modulo 4 KiB. When we add
     // thunks we disturb the base addresses of sections placed after the thunks
     // this makes patches we have generated redundant, and may cause us to
