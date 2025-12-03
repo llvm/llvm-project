@@ -1078,6 +1078,9 @@ public:
   isKnownMultipleOf(const SCEV *S, uint64_t M,
                     SmallVectorImpl<const SCEVPredicate *> &Assumptions);
 
+  /// Return true if we know that S1 and S2 must have the same sign.
+  LLVM_ABI bool haveSameSign(const SCEV *S1, const SCEV *S2);
+
   /// Splits SCEV expression \p S into two SCEVs. One of them is obtained from
   /// \p S by substitution of all AddRec sub-expression related to loop \p L
   /// with initial value of that SCEV. The second is obtained from \p S by
