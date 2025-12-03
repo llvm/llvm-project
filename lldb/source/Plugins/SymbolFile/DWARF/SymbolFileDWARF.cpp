@@ -1560,8 +1560,8 @@ bool SymbolFileDWARF::HasForwardDeclForCompilerType(
   auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (!clang_type_system)
     return false;
-  DWARFASTParserClang *ast_parser =
-      static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
+  auto *ast_parser =
+      llvm::cast<DWARFASTParserClang>(clang_type_system->GetDWARFParser());
   return ast_parser->GetClangASTImporter().CanImport(compiler_type);
 }
 
@@ -1569,8 +1569,8 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (clang_type_system) {
-    DWARFASTParserClang *ast_parser =
-        static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
+    auto *ast_parser =
+        llvm::cast<DWARFASTParserClang>(clang_type_system->GetDWARFParser());
     if (ast_parser &&
         ast_parser->GetClangASTImporter().CanImport(compiler_type))
       return ast_parser->GetClangASTImporter().CompleteType(compiler_type);
@@ -1614,8 +1614,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
 
   if (decl_die != def_die) {
     GetDIEToType()[def_die.GetDIE()] = type;
-    DWARFASTParserClang *ast_parser =
-        static_cast<DWARFASTParserClang *>(dwarf_ast);
+    auto *ast_parser = llvm::cast<DWARFASTParserClang>(dwarf_ast);
     ast_parser->MapDeclDIEToDefDIE(decl_die, def_die);
   }
 
