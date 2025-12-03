@@ -2413,11 +2413,11 @@ struct AMDGPUMakeDmaDescriptorLowering
 
     IntegerType i32 = rewriter.getI32Type();
     Value padInterval = adaptor.getPadInterval();
-    // pre-condition: padInterval can be a power of two between 2 and 256
+    // pre-condition: padInterval can be a power of two between 2 and 256.
     padInterval = LLVM::CountTrailingZerosOp::create(rewriter, loc, i32,
                                                      padInterval, false);
     padInterval = LLVM::SubOp::create(rewriter, loc, padInterval, consts[1]);
-    // post-condition: padInterval can be a value between 0 and 7
+    // post-condition: padInterval can be a value between 0 and 7.
     return setValueAtOffset(rewriter, loc, sgpr0, padInterval, 22);
   }
 
@@ -2429,9 +2429,9 @@ struct AMDGPUMakeDmaDescriptorLowering
       return sgpr0;
 
     Value padAmount = adaptor.getPadAmount();
-    // pre-condition: padAmount is a value between 1-128
+    // pre-condition: padAmount is a value between 1-128.
     padAmount = LLVM::SubOp::create(rewriter, loc, padAmount, consts[1]);
-    // post-condition: padAmount is a value between 0-127
+    // post-condition: padAmount is a value between 0-127.
     return setValueAtOffset(rewriter, loc, sgpr0, padAmount, 25);
   }
 
