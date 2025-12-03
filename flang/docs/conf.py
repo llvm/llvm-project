@@ -10,6 +10,7 @@
 # serve to show the default.
 
 from datetime import date
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -277,8 +278,9 @@ texinfo_documents = [
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 # texinfo_show_urls = 'footnote'
 
-# This can be treated as its own sphinx extension. The setup function will be
-# called by sphinx. Register a callback to be called when the configuration has
+
+# This can be treated as its own sphinx extension. setup() will be called by
+# sphinx. In it, register a function to be called when the configuration has
 # been initialized. The configuration will contain the values of the -D options
 # passed to sphinx-build on the command line.
 #
@@ -291,5 +293,6 @@ def setup(app):
 # Override the myst_parser substitutions map after the configuration has been
 # initialized.
 def myst_substitutions_update(app, config):
-    config.myst_substitutions["release"] = config.release
-    config.myst_substitutions["version"] = config.version
+    config.myst_substitutions.update(
+        {"release": config.release, "version": config.version}
+    )
