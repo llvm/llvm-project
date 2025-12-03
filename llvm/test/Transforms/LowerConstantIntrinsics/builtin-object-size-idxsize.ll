@@ -168,12 +168,12 @@ entry:
   ret i32 %res
 }
 
-; In this test the index will be out-of-bounds, but the current analysis won't
-; detect that. The analysis will find out that %offset is in the range [-2,
-; 10] which includes valid offsets that aren't out-of-bounds. Therefore we can
-; expect to get -1 for %objsize_max even if an advanced analysis should be
-; able to derive that we are out-of-bounds (returning 0 also for
-; %objsize_max).
+; In this test the index will be out-of-bounds (both 10 and -2 is
+; out-of-bounds), but the current analysis won't detect that. The analysis
+; will find out that %offset is in the range [-2, 10] which includes valid
+; offsets that aren't out-of-bounds. Therefore we can expect to get -1 for
+; %objsize_max even if an advanced analysis should be able to derive that we
+; are out-of-bounds (returning 0 also for %objsize_max).
 define i32 @out_of_bounds_gep_i16_pos_neg(i1 %c0, i1 %c1) {
 ; CHECK-LABEL: define i32 @out_of_bounds_gep_i16_pos_neg(
 ; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]]) {
@@ -195,7 +195,7 @@ entry:
 }
 
 ; With 16-bit index size %offset is either 32767 or -32768. Thus, when
-; aggregating the possible offsets it we know that it is in the range [-32768,
+; aggregating the possible offsets we know that they are in the range [-32768,
 ; 32767], which includes valid offsets that aren't out-of-bounds. This is
 ; similar to the out_of_bounds_gep_i16_pos_neg test above, and the current
 ; implementation is expected to derive the result -1 for %objsize_max.
