@@ -8,6 +8,7 @@
 
 # REQUIRES: target={{x86_64-.+}}
 # UNSUPPORTED: target={{.*-windows.*}}
+# UNSUPPORTED: target={{.*-apple.*}}
 
 # Inline assembly isn't supported by Memory Sanitizer
 # UNSUPPORTED: msan
