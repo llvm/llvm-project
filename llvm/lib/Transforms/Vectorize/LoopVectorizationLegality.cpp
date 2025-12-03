@@ -517,7 +517,18 @@ public:
         SE.getMulExpr(Step, SE.getConstant(Ty, StepMultiplier));
     const SCEV *ScaledOffset = SE.getMulExpr(Step, SE.getConstant(Ty, Offset));
     const SCEV *NewStart = SE.getAddExpr(Expr->getStart(), ScaledOffset);
-    return SE.getAddRecExpr(NewStart, NewStep, TheLoop, SCEV::FlagAnyWrap);
+    // We have to be careful when creating new SCEVAddRec expressions because
+    // we may pick up a cached SCEV object with wrap flags already set. This
+    // then leads to random behaviour depending upon which combinations of
+    // offset, StepMultiplier and TheLoop are used. The safest thing we can do
+    // here is to reuse existing wrap flags on the scalar SCEV, since if the
+    // scalar version of the SCEV cannot wrap then the vector version also
+    // cannot. There are situations where the lane of the vector may exceed the
+    // trip count, such as tail-folding. In those cases we shouldn't even be
+    // asking if something is uniform anyway.
+    const SCEV *Res =
+        SE.getAddRecExpr(NewStart, NewStep, TheLoop, Expr->getNoWrapFlags());
+    return Res;
   }
 
   const SCEV *visit(const SCEV *S) {
@@ -554,7 +565,6 @@ public:
     SCEVAddRecForUniformityRewriter Rewriter(SE, StepMultiplier, Offset,
                                              TheLoop);
     const SCEV *Result = Rewriter.visit(S);
-
     if (Rewriter.canAnalyze())
       return Result;
     return SE.getCouldNotCompute();
@@ -566,6 +576,8 @@ public:
 bool LoopVectorizationLegality::isUniform(Value *V, ElementCount VF) const {
   if (isInvariant(V))
     return true;
+  // TODO: Even for scalable vectors we can use the maximum value of vscale
+  // to estimate the maximum possible lane.
   if (VF.isScalable())
     return false;
   if (VF.isScalar())
@@ -605,7 +617,16 @@ bool LoopVectorizationLegality::isUniformMemOp(Instruction &I,
   // stores from being uniform.  The current lowering simply doesn't handle
   // it; in particular, the cost model distinguishes scatter/gather from
   // scalar w/predication, and we currently rely on the scalar path.
-  return isUniform(Ptr, VF) && !blockNeedsPredication(I.getParent());
+  // NOTE: Loops with uncountable early exits may have vectors whose lanes
+  // exceed the exit point so it's unsafe to reason about uniformity.
+  // FIXME: What about tail-folding? I think there is a serious bug here.
+  // We cannot reason about uniformity when tail-folding because in the last
+  // vector iteration the pointer calculations are being performed beyond
+  // the end of the loop. The function isUniformMemOp assumes that the
+  // calculations are only being performed up to the actual exit point
+  // because it passes in the scalar loop pointer.
+  return !hasUncountableEarlyExit() && !blockNeedsPredication(I.getParent()) &&
+         isUniform(Ptr, VF);
 }
 
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
