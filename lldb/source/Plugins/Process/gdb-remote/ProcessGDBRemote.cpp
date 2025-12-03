@@ -210,11 +210,9 @@ void ProcessGDBRemote::Terminate() {
 lldb::ProcessSP ProcessGDBRemote::CreateInstance(
     lldb::TargetSP target_sp, ListenerSP listener_sp,
     const FileSpec *crash_file_path, bool can_connect) {
-  lldb::ProcessSP process_sp;
-  if (crash_file_path == nullptr)
-    process_sp = std::shared_ptr<ProcessGDBRemote>(
-        new ProcessGDBRemote(target_sp, listener_sp));
-  return process_sp;
+  if (crash_file_path)
+    return nullptr; // Cannot create a GDBRemote process from a crash_file
+  return lldb::ProcessSP(new ProcessGDBRemote(target_sp, listener_sp));
 }
 
 void ProcessGDBRemote::DumpPluginHistory(Stream &s) {

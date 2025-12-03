@@ -168,10 +168,8 @@ define <1 x i64> @sqshl1d_constant(ptr %A) nounwind {
 define i64 @sqshl_scalar(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqshl_scalar:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    sqshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -363,10 +361,8 @@ define <1 x i64> @uqshl1d_constant(ptr %A) nounwind {
 define i64 @uqshl_scalar(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: uqshl_scalar:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    uqshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -888,10 +884,8 @@ define <1 x i64> @sqrshl1d_constant(ptr %A) nounwind {
 define i64 @sqrshl_scalar(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqrshl_scalar:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    sqrshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -904,10 +898,9 @@ define i64 @sqrshl_scalar(ptr %A, ptr %B) nounwind {
 define i64 @sqrshl_scalar_constant(ptr %A) nounwind {
 ; CHECK-LABEL: sqrshl_scalar_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    mov x8, #1 // =0x1
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    fmov d0, x9
 ; CHECK-NEXT:    sqrshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -997,10 +990,8 @@ define <1 x i64> @uqrshl1d_constant(ptr %A) nounwind {
 define i64 @uqrshl_scalar(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: uqrshl_scalar:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    uqrshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
@@ -1013,10 +1004,9 @@ define i64 @uqrshl_scalar(ptr %A, ptr %B) nounwind {
 define i64 @uqrshl_scalar_constant(ptr %A) nounwind {
 ; CHECK-LABEL: uqrshl_scalar_constant:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    mov x8, #1 // =0x1
+; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    fmov d0, x9
 ; CHECK-NEXT:    uqrshl d0, d0, d1
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret

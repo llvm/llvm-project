@@ -297,7 +297,7 @@ def OMPC_Link : Clause<[Spelling<"link">]> {
 }
 def OMPC_LoopRange : Clause<[Spelling<"looprange">]> {
   let clangClass = "OMPLoopRangeClause";
-  let flangClass = "OmpLoopRangeClause";
+  let flangClass = "OmpLooprangeClause";
 }
 def OMPC_Map : Clause<[Spelling<"map">]> {
   let clangClass = "OMPMapClause";
