@@ -70,33 +70,6 @@ enum OffloadEntryFlags : uint32_t {
 /// offsets from the beginning of the file.
 class OffloadBinary : public Binary {
 public:
-  struct Header {
-    uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
-    uint32_t Version = OffloadBinary::Version;   // Version identifier.
-    uint64_t Size;          // Size in bytes of this entire binary.
-    uint64_t EntriesOffset; // Offset in bytes to the start of entries block.
-    uint64_t EntriesCount;  // Number of metadata entries in the binary.
-  };
-
-  struct Entry {
-    ImageKind TheImageKind;     // The kind of the image stored.
-    OffloadKind TheOffloadKind; // The producer of this image.
-    uint32_t Flags;             // Additional flags associated with the entry.
-    uint64_t StringOffset;      // Offset in bytes to the string map.
-    uint64_t NumStrings;        // Number of entries in the string map.
-    uint64_t ImageOffset;       // Offset in bytes of the actual binary image.
-    uint64_t ImageSize;         // Size in bytes of the binary image.
-  };
-
-  struct StringEntry {
-    uint64_t KeyOffset;
-    uint64_t ValueOffset;
-    uint64_t ValueSize; // Size of the value in bytes.
-  };
-
-  using StringMap = MapVector<StringRef, StringRef>;
-  using entry_iterator = SmallVector<std::pair<const Entry *, StringMap>, 1>::const_iterator;
-  using entry_iterator_range = iterator_range<entry_iterator>;
   using string_iterator = MapVector<StringRef, StringRef>::const_iterator;
   using string_iterator_range = iterator_range<string_iterator>;
 
@@ -123,69 +96,72 @@ public:
 
   static uint64_t getAlignment() { return 8; }
 
-  ImageKind getImageKind() const { return Entries[Index].first->TheImageKind; }
-  OffloadKind getOffloadKind() const { return Entries[Index].first->TheOffloadKind; }
+  ImageKind getImageKind() const { return TheEntry->TheImageKind; }
+  OffloadKind getOffloadKind() const { return TheEntry->TheOffloadKind; }
   uint32_t getVersion() const { return TheHeader->Version; }
+  uint32_t getFlags() const { return TheEntry->Flags; }
   uint64_t getSize() const { return TheHeader->Size; }
-  uint64_t getEntriesCount() const { return TheHeader->EntriesCount; }
 
   StringRef getTriple() const { return getString("triple"); }
   StringRef getArch() const { return getString("arch"); }
   StringRef getImage() const {
-    return StringRef(&Buffer[Entries[Index].first->ImageOffset], Entries[Index].first->ImageSize);
-  }
-
-  // Iterator access to all entries in the binary
-  entry_iterator_range entries() const {
-    return make_range(Entries.begin(), Entries.end());
-  }
-  entry_iterator entries_begin() const { return Entries.begin(); }
-  entry_iterator entries_end() const { return Entries.end(); }
-
-  // Access specific entry by index.
-  const std::pair<const Entry *, StringMap> &getEntry(size_t Index) const {
-    assert(Index < Entries.size() && "Entry index out of bounds");
-    return Entries[Index];
+    return StringRef(&Buffer[TheEntry->ImageOffset], TheEntry->ImageSize);
   }
 
   // Iterator over all the key and value pairs in the binary.
-  string_iterator_range strings() const { return Entries[Index].second; }
+  string_iterator_range strings() const { return StringData; }
 
-  StringRef getString(StringRef Key) const { return Entries[Index].second.lookup(Key); }
+  StringRef getString(StringRef Key) const { return StringData.lookup(Key); }
 
   static bool classof(const Binary *V) { return V->isOffloadFile(); }
 
+  struct Header {
+    uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
+    uint32_t Version = OffloadBinary::Version;   // Version identifier.
+    uint64_t Size;        // Size in bytes of this entire binary.
+    uint64_t EntriesOffset; // Offset in bytes to the start of entries block.
+    uint64_t EntriesCount;  // Number of metadata entries in the binary.
+  };
+
+  struct Entry {
+    ImageKind TheImageKind;     // The kind of the image stored.
+    OffloadKind TheOffloadKind; // The producer of this image.
+    uint32_t Flags;             // Additional flags associated with the entry.
+    uint64_t StringOffset;      // Offset in bytes to the string map.
+    uint64_t NumStrings;        // Number of entries in the string map.
+    uint64_t ImageOffset;       // Offset in bytes of the actual binary image.
+    uint64_t ImageSize;         // Size in bytes of the binary image.
+  };
+
+  struct StringEntry {
+    uint64_t KeyOffset;
+    uint64_t ValueOffset;
+    uint64_t ValueSize; // Size of the value in bytes.
+  };
+
 private:
   OffloadBinary(MemoryBufferRef Source, const Header *TheHeader,
-                const Entry *EntriesBegin)
+                const Entry *TheEntry)
       : Binary(Binary::ID_Offload, Source), Buffer(Source.getBufferStart()),
-        TheHeader(TheHeader) {
-    for (uint64_t EI = 0, EE = TheHeader->EntriesCount; EI != EE; ++EI) {
-      const Entry *TheEntry = &EntriesBegin[EI];
-      const StringEntry *StringMapBegin = reinterpret_cast<const StringEntry *>(
-          &Buffer[TheEntry->StringOffset]);
-      StringMap Strings;
-      for (uint64_t SI = 0, SE = TheEntry->NumStrings; SI != SE; ++SI) {
-        StringRef Key = &Buffer[StringMapBegin[SI].KeyOffset];
-        StringRef Value = StringRef(
-            &Buffer[StringMapBegin[SI].ValueOffset], StringMapBegin[SI].ValueSize);
-        Strings.insert({Key, Value});
-      }
-      Entries.push_back(std::make_pair(TheEntry, std::move(Strings)));
+        TheHeader(TheHeader), TheEntry(TheEntry) {
+    const StringEntry *StringMapBegin =
+        reinterpret_cast<const StringEntry *>(&Buffer[TheEntry->StringOffset]);
+    for (uint64_t I = 0, E = TheEntry->NumStrings; I != E; ++I) {
+      StringRef Key = &Buffer[StringMapBegin[I].KeyOffset];
+      StringData[Key] = StringRef(&Buffer[StringMapBegin[I].ValueOffset], StringMapBegin[I].ValueSize);
     }
   }
 
   OffloadBinary(const OffloadBinary &Other) = delete;
 
-  /// Location of the metadata entries within the binary mapped to
-  /// the key-value string data.
-  SmallVector<std::pair<const Entry *, StringMap>, 1> Entries;
+  /// Map from keys to offsets in the binary.
+  MapVector<StringRef, StringRef> StringData;
   /// Raw pointer to the MemoryBufferRef for convenience.
   const char *Buffer;
   /// Location of the header within the binary.
   const Header *TheHeader;
-  /// Index of Entry represented by the current object.
-  const uint64_t Index;
+  /// Location of the metadata entries within the binary.
+  const Entry *TheEntry;
 };
 
 /// A class to contain the binary information for a single OffloadBinary that
