@@ -928,7 +928,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
 
       if (!isa<ConstantInt>(Index)) {
         bool UsedInLoad = llvm::any_of(
-            GEP->users(), [&](const auto *U){ return isa<LoadInst>(U); });
+            GEP->users(), [&](const auto *U) { return isa<LoadInst>(U); });
         if (auto *UserVecTy =
                 dyn_cast<FixedVectorType>(GEP->getSourceElementType())) {
           if (UsedInLoad &&
