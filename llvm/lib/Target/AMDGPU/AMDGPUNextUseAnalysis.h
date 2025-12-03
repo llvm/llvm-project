@@ -141,7 +141,7 @@ class NextUseResult {
     void clear(VRegMaskPair VMP) {
       if (NextUseMap.contains(VMP.getVReg())) {
         auto &Dists = NextUseMap[VMP.getVReg()];
-        for (auto It = Dists.begin(); It != Dists.end(); ) {
+        for (auto It = Dists.begin(); It != Dists.end();) {
           LaneBitmask Masked = It->first & ~VMP.getLaneMask();
           if (Masked.none()) {
             It = Dists.erase(It);
@@ -238,7 +238,8 @@ private:
   static constexpr int64_t DeadTag = (int64_t)1 << 60; // ~1e18, >> LoopTag
 
   // Unsigned Infinity for external API/DAG users who want a sentinel.
-  static constexpr unsigned PrintedInfinity = std::numeric_limits<unsigned>::max();
+  static constexpr unsigned PrintedInfinity =
+      std::numeric_limits<unsigned>::max();
 
   const uint16_t Infinity = std::numeric_limits<unsigned short>::max();
   void init(const MachineFunction &MF);
@@ -255,9 +256,9 @@ private:
   struct PrintDist {
     bool IsInfinity;
     bool IsDead;
-    int64_t LoopMultiplier;  // How many LoopTags are in the distance
-    int64_t Rema;            // remainder after extracting LoopTags
-    
+    int64_t LoopMultiplier; // How many LoopTags are in the distance
+    int64_t Rema;           // remainder after extracting LoopTags
+
     PrintDist(int64_t Mat64) {
       if (Mat64 >= DeadTag) {
         IsInfinity = false;
@@ -320,7 +321,8 @@ private:
         if (PDist.LoopMultiplier == 1)
           O << "[ LoopTag+" << PDist.Rema << " ]\n";
         else if (PDist.LoopMultiplier > 1)
-          O << "[ LoopTag*" << PDist.LoopMultiplier << "+" << PDist.Rema << " ]\n";
+          O << "[ LoopTag*" << PDist.LoopMultiplier << "+" << PDist.Rema
+            << " ]\n";
         else
           O << "[ INF+" << PDist.Rema << " ]\n";
       else

@@ -1,5 +1,5 @@
-#include "AMDGPU.h"
 #include "AMDGPUNextUseAnalysis.h"
+#include "AMDGPU.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -22,25 +22,27 @@
 using namespace llvm;
 
 // Command-line option to enable timing instrumentation
-static cl::opt<bool> EnableTimers("amdgpu-next-use-analysis-timers",
-                                  cl::desc("Enable timing for Next Use Analysis"),
-                                  cl::init(false), cl::Hidden);
+static cl::opt<bool>
+    EnableTimers("amdgpu-next-use-analysis-timers",
+                 cl::desc("Enable timing for Next Use Analysis"),
+                 cl::init(false), cl::Hidden);
 
 // Static timers for performance tracking across all analysis runs
 static llvm::TimerGroup TG("amdgpu-next-use", "AMDGPU Next Use Analysis");
 static llvm::Timer AnalyzeTimer("analyze", "Time spent in analyze()", TG);
-static llvm::Timer GetDistanceTimer("getNextUseDistance", 
-                                     "Time spent in getNextUseDistance()", TG);
+static llvm::Timer GetDistanceTimer("getNextUseDistance",
+                                    "Time spent in getNextUseDistance()", TG);
 
 // Three-tier ranking system for spiller decisions
-unsigned NextUseResult::materializeForRank(int64_t Stored, unsigned SnapshotOffset) const {
+unsigned NextUseResult::materializeForRank(int64_t Stored,
+                                           unsigned SnapshotOffset) const {
   int64_t Mat64 = materialize(Stored, SnapshotOffset);
 
   // Tier 1: Finite distances (0 to LoopTag-1) → return as-is
-  // Tier 2: Loop-exit distances (LoopTag to DeadTag-1) → map to 60000-64999 range
-  // Tier 3: Dead registers (DeadTag+) → return Infinity (65535)
+  // Tier 2: Loop-exit distances (LoopTag to DeadTag-1) → map to 60000-64999
+  // range Tier 3: Dead registers (DeadTag+) → return Infinity (65535)
   if (Mat64 >= DeadTag) {
-    return Infinity;  // Tier 3: Dead registers get maximum distance
+    return Infinity; // Tier 3: Dead registers get maximum distance
   }
   if (Mat64 >= LoopTag) {
     // Tier 2: Loop-exit distances get mapped to high range [60000, 64999]
@@ -51,11 +53,10 @@ unsigned NextUseResult::materializeForRank(int64_t Stored, unsigned SnapshotOffs
     return 60000 + ClampedRemainder;
   }
   if (Mat64 <= 0) {
-    return 0;  // Tier 1: Zero-distance for immediate uses
+    return 0; // Tier 1: Zero-distance for immediate uses
   }
-  return static_cast<unsigned>(Mat64);  // Tier 1: Finite distances as-is
+  return static_cast<unsigned>(Mat64); // Tier 1: Finite distances as-is
 }
-
 
 void NextUseResult::init(const MachineFunction &MF) {
   for (auto *L : LI->getLoopsInPreorder()) {
@@ -100,7 +101,8 @@ void NextUseResult::analyze(const MachineFunction &MF) {
         VRegDistances SuccDist = UpwardNextUses[SuccNum];
         LLVM_DEBUG({
           dbgs() << "\nMerging "
-                 << "MBB_" << Succ->getNumber() << "." << Succ->getName() << "\n";
+                 << "MBB_" << Succ->getNumber() << "." << Succ->getName()
+                 << "\n";
         });
 
         // Check if the edge from MBB to Succ goes out of the Loop
@@ -116,7 +118,8 @@ void NextUseResult::analyze(const MachineFunction &MF) {
           // Clear out the Loop-Exiting weights.
           for (auto &P : SuccDist) {
             auto &Dists = P.second;
-            // Collect items that need to be updated to avoid iterator invalidation
+            // Collect items that need to be updated to avoid iterator
+            // invalidation
             SmallVector<std::pair<LaneBitmask, int64_t>, 4> ToUpdate;
             for (auto R : Dists) {
               if (R.second >= LoopTag) {
@@ -189,8 +192,9 @@ void NextUseResult::analyze(const MachineFunction &MF) {
           ++Offset;
       }
 
-      // EntryOff needs the TOTAL instruction count for correct predecessor distances
-      // while InstrOffset uses individual instruction offsets for materialization
+      // EntryOff needs the TOTAL instruction count for correct predecessor
+      // distances while InstrOffset uses individual instruction offsets for
+      // materialization
 
       LLVM_DEBUG({
         dbgs() << "\nFinal distances for MBB_" << MBB->getNumber() << "."
@@ -237,8 +241,10 @@ void NextUseResult::getFromSortedRecords(
 
     // Check for any overlap between the queried mask and the use mask.
     // This handles both subregister and superregister uses:
-    // - If UseMask covers Mask: superregister use (e.g., querying sub0, finding full reg)
-    // - If Mask covers UseMask: subregister use (e.g., querying full reg, finding sub0)
+    // - If UseMask covers Mask: superregister use (e.g., querying sub0, finding
+    // full reg)
+    // - If Mask covers UseMask: subregister use (e.g., querying full reg,
+    // finding sub0)
     // - If they overlap partially: partial overlap (both are valid uses)
     if ((Mask & UseMask).any()) {
       // Use materializeForRank for three-tier ranking system
@@ -267,9 +273,8 @@ NextUseResult::getSortedSubregUses(const MachineBasicBlock::iterator I,
       });
       for (auto P : reverse(Dists)) {
         LaneBitmask UseMask = P.first;
-        LLVM_DEBUG({
-          dbgs() << "Used mask : [" << PrintLaneMask(UseMask) << "]\n";
-        });
+        LLVM_DEBUG(
+            { dbgs() << "Used mask : [" << PrintLaneMask(UseMask) << "]\n"; });
         if ((UseMask & VMP.getLaneMask()) == UseMask) {
           Result.push_back({VMP.getVReg(), UseMask});
         }
@@ -288,9 +293,8 @@ NextUseResult::getSortedSubregUses(const MachineBasicBlock &MBB,
       NextUseMap[MBBNum].Bottom.contains(VMP.getVReg())) {
     VRegDistances::SortedRecords Dists =
         NextUseMap[MBBNum].Bottom[VMP.getVReg()];
-    LLVM_DEBUG({
-      dbgs() << "Mask : [" << PrintLaneMask(VMP.getLaneMask()) << "]\n";
-    });
+    LLVM_DEBUG(
+        { dbgs() << "Mask : [" << PrintLaneMask(VMP.getLaneMask()) << "]\n"; });
     for (auto P : reverse(Dists)) {
       LaneBitmask UseMask = P.first;
       LLVM_DEBUG(dbgs() << "Used mask : [" << PrintLaneMask(UseMask) << "]\n");
@@ -316,7 +320,7 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
                                            const VRegMaskPair VMP) {
   if (EnableTimers)
     GetDistanceTimer.startTimer();
-  
+
   unsigned Dist = Infinity;
   const MachineBasicBlock *MBB = I->getParent();
   unsigned MBBNum = MBB->getNumber();
@@ -326,8 +330,8 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
     if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP.getVReg())) {
       // printSortedRecords(Dists[VMP.VReg], VMP.VReg);
       unsigned SnapOff = NextUseMap[MBBNum].InstrOffset[&*I];
-      getFromSortedRecords(Dists[VMP.getVReg()], VMP.getLaneMask(),
-                           SnapOff, Dist);
+      getFromSortedRecords(Dists[VMP.getVReg()], VMP.getLaneMask(), SnapOff,
+                           Dist);
     }
   }
 
@@ -340,7 +344,7 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock &MBB,
                                            const VRegMaskPair VMP) {
   if (EnableTimers)
     GetDistanceTimer.startTimer();
-  
+
   unsigned Dist = Infinity;
   unsigned MBBNum = MBB.getNumber();
   if (NextUseMap.contains(MBBNum)) {
@@ -349,7 +353,7 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock &MBB,
                            VMP.getLaneMask(), 0, Dist);
     }
   }
-  
+
   if (EnableTimers)
     GetDistanceTimer.stopTimer();
   return Dist;

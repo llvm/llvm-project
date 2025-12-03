@@ -94,7 +94,7 @@ class LaneCoverageResult {
 
 public:
   LaneCoverageResult() = default;
-  LaneCoverageResult(const LaneBitmask Mask) : Data(Mask), NotCovered(Mask){};
+  LaneCoverageResult(const LaneBitmask Mask) : Data(Mask), NotCovered(Mask) {};
   bool isFullyCovered() { return Data == Covered; }
   bool isFullyUncovered() { return Data == NotCovered; }
   LaneBitmask getCovered() { return Covered; }
@@ -192,7 +192,8 @@ public:
 
   bool contains(const VRegMaskPair &VMP) const {
     auto It = SetStorage.find(VMP.VReg);
-    return It != SetStorage.end() && It->second.find(VMP.LaneMask) != It->second.end();
+    return It != SetStorage.end() &&
+           It->second.find(VMP.LaneMask) != It->second.end();
   }
 
   void clear() {
