@@ -8,8 +8,7 @@
 
 #include "clang/Analysis/Scalable/Model/EntityName.h"
 
-namespace clang {
-namespace ssaf {
+namespace clang::ssaf {
 
 EntityName::EntityName(llvm::StringRef USR, llvm::StringRef Suffix,
                        NestedBuildNamespace Namespace)
@@ -40,5 +39,4 @@ EntityName EntityName::makeQualified(NestedBuildNamespace Namespace) {
   return Copy;
 }
 
-} // namespace ssaf
-} // namespace clang
+} // namespace clang::ssaf

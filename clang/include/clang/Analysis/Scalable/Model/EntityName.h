@@ -14,8 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
-namespace clang {
-namespace ssaf {
+namespace clang::ssaf {
 
 /// Uniquely identifies an entity in a program.
 ///
@@ -41,7 +40,6 @@ public:
   friend class SerializationFormat;
 };
 
-} // namespace ssaf
-} // namespace clang
+} // namespace clang::ssaf
 
 #endif // LLVM_CLANG_ANALYSIS_SCALABLE_ENTITY_NAME_H

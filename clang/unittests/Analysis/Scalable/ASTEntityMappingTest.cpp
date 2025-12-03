@@ -16,8 +16,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace ssaf {
+namespace clang::ssaf {
 namespace {
 
 // Helper function to find a declaration by name
@@ -339,5 +338,4 @@ TEST(ASTEntityMappingTest, FunctionReturnRedeclaration) {
 }
 
 } // namespace
-} // namespace ssaf
-} // namespace clang
+} // namespace clang::ssaf

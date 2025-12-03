@@ -10,8 +10,7 @@
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "gtest/gtest.h"
 
-namespace clang {
-namespace ssaf {
+namespace clang::ssaf {
 namespace {
 
 TEST(EntityNameTest, Equality) {
@@ -58,5 +57,4 @@ TEST(EntityNameTest, MakeQualified) {
 }
 
 } // namespace
-} // namespace ssaf
-} // namespace clang
+} // namespace clang::ssaf

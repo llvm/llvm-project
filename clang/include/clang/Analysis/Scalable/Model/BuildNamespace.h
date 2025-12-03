@@ -14,8 +14,7 @@
 #include <string>
 #include <vector>
 
-namespace clang {
-namespace ssaf {
+namespace clang::ssaf {
 
 enum class BuildNamespaceKind : unsigned short {
   CompilationUnit,
@@ -78,7 +77,6 @@ public:
   friend class LinkUnitResolution;
 };
 
-} // namespace ssaf
-} // namespace clang
+} // namespace clang::ssaf
 
 #endif // LLVM_CLANG_ANALYSIS_SCALABLE_BUILD_NAMESPACE_H

@@ -16,8 +16,7 @@
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/SmallString.h"
 
-namespace clang {
-namespace ssaf {
+namespace clang::ssaf {
 
 std::optional<EntityName> getLocalEntityNameForDecl(const Decl* D) {
   if (!D)
@@ -81,5 +80,4 @@ std::optional<EntityName> getLocalEntityNameForFunctionReturn(const FunctionDecl
   return EntityName(USRBuf.str(), "0", {});
 }
 
-} // namespace ssaf
-} // namespace clang
+} // namespace clang::ssaf

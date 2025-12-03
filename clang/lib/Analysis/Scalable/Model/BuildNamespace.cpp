@@ -9,8 +9,7 @@
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "llvm/Support/ErrorHandling.h"
 
-namespace clang {
-namespace ssaf {
+namespace clang::ssaf {
 
 std::string toString(BuildNamespaceKind BNK) {
   switch(BNK) {
@@ -68,5 +67,4 @@ bool NestedBuildNamespace::operator<(const NestedBuildNamespace& Other) const {
   return Namespaces < Other.Namespaces;
 }
 
-} // namespace ssaf
-} // namespace clang
+} // namespace clang::ssaf

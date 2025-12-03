@@ -14,8 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
-namespace clang {
-namespace ssaf {
+namespace clang::ssaf {
 
 /// Maps a declaration to an EntityName.
 ///
@@ -40,7 +39,6 @@ std::optional<EntityName> getLocalEntityNameForDecl(const Decl* D);
 /// \return An EntityName for the function's return type.
 std::optional<EntityName> getLocalEntityNameForFunctionReturn(const FunctionDecl* FD);
 
-} // namespace ssaf
-} // namespace clang
+} // namespace clang::ssaf
 
 #endif // LLVM_CLANG_ANALYSIS_SCALABLE_ASTMAPPING_H
