@@ -408,7 +408,7 @@ foreach mx = SchedMxList in {
   }
 
   // Mask loads and stores
-  let Latency = 1, ReleaseAtCycles = [2] in {
+  let ReleaseAtCycles = [2] in {
     defm "" : LMULWriteResMX<"WriteVLDM", [SMX60_VLS], mx, IsWorstCase>;
   }
   let Latency = 2, ReleaseAtCycles = [2] in {
