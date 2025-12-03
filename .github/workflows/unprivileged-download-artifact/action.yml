@@ -97,8 +97,8 @@ runs:
       if: steps.artifact-url.outputs.names != ''
       run: |
         artifact_names=(${{ steps.artifact-url.outputs.names }})
-        for name in "${artifact_urls[@]}"; do
-          unzip "${name}.zip"
+        for name in "${artifact_names[@]}"; do
+          unzip "${artifact_names[$i]}.zip"
         done
 
         ls
