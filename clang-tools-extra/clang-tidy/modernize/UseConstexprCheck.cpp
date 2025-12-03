@@ -9,6 +9,7 @@
 #include "UseConstexprCheck.h"
 #include "../utils/ASTUtils.h"
 #include "../utils/LexerUtils.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/STLExtras.h"
@@ -141,6 +142,17 @@ static bool isLiteralType(const Type *T, const ASTContext &Ctx,
     return true;
 
   if (const CXXRecordDecl *Rec = T->getAsCXXRecordDecl()) {
+    if (!Rec->hasDefinition())
+      return false;
+
+    if (!Rec->hasTrivialDestructor())
+      return false;
+
+    if (!llvm::all_of(Rec->fields(), [&](const FieldDecl *Field) {
+          return isLiteralType(Field->getType(), Ctx, ConservativeLiteralType);
+        }))
+      return false;
+
     if (llvm::any_of(Rec->ctors(), [](const CXXConstructorDecl *Ctor) {
           return !Ctor->isCopyOrMoveConstructor() &&
                  Ctor->isConstexprSpecified();
@@ -350,19 +362,7 @@ AST_MATCHER_P(VarDecl, satisfiesVariableProperties, bool,
     return Func && Func->isConstexpr();
   }();
 
-  if (Node.isStaticLocal() && IsDeclaredInsideConstexprFunction)
-    return false;
-
-  if (!Ctx.getLangOpts().CPlusPlus20)
-    return true;
-
-  const CXXRecordDecl *RDecl = T->getAsCXXRecordDecl();
-  const Type *const ArrayOrPtrElement = T->getPointeeOrArrayElementType();
-  if (ArrayOrPtrElement)
-    RDecl = ArrayOrPtrElement->getAsCXXRecordDecl();
-
-  return !(RDecl &&
-           (!RDecl->hasDefinition() || !RDecl->hasConstexprDestructor()));
+  return !(Node.isStaticLocal() && IsDeclaredInsideConstexprFunction);
 }
 } // namespace
 
