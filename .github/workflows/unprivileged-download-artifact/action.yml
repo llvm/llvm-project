@@ -75,7 +75,7 @@ runs:
             })
 
             artifact_ids.push(artifact_to_download.id)
-            artifact_urls.push('"' + url_response.url '"')
+            artifact_urls.push('"' + url_response.url + '"')
             artifact_names.push(artifact_to_download.name)
           }
 
