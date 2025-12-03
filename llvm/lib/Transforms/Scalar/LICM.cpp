@@ -1497,11 +1497,11 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
 
   bool MadeAnyChanges = false;
   MemoryAccess *ExitDef = nullptr;
+  MemorySSA *MSSA = MSSAU.getMemorySSA();
 
   for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
-
     // Skip terminator.
-    if (Preheader->getTerminator() == &I)
+    if (I.isTerminator())
       continue;
 
     // New instructions were inserted at the end of the preheader.
@@ -1520,18 +1520,13 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
 
     // Determine if there is a use in or before the loop (direct or
     // otherwise).
-    bool UsedInLoopOrPreheader = false;
-    for (Use &U : I.uses()) {
+    bool UsedInLoopOrPreheader = llvm::any_of(I.uses(), [Preheader, L](Use &U) {
       auto *UserI = cast<Instruction>(U.getUser());
       BasicBlock *UseBB = UserI->getParent();
-      if (auto *PN = dyn_cast<PHINode>(UserI)) {
+      if (auto *PN = dyn_cast<PHINode>(UserI))
         UseBB = PN->getIncomingBlock(U);
-      }
-      if (UseBB == Preheader || L->contains(UseBB)) {
-        UsedInLoopOrPreheader = true;
-        break;
-      }
-    }
+      return UseBB == Preheader || L->contains(UseBB);
+    });
     if (UsedInLoopOrPreheader)
       continue;
 
@@ -1543,43 +1538,22 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
       SE->forgetValue(&I);
 
     // Update MemorySSA.
-    if (auto *OldMA = MSSAU.getMemorySSA()->getMemoryAccess(&I)) {
-      // apviding the expensive getPreviousDefRecursive call by manually
+    if (auto *OldMA = MSSA->getMemoryAccess(&I)) {
+      // avoiding the expensive getPreviousDefRecursive call by manually
       // setting the defining access.
-      if (!ExitDef) {
-        if (auto *MPhi = MSSAU.getMemorySSA()->getMemoryAccess(ExitBlock)) {
-          ExitDef = MPhi;
-        } else {
-          BasicBlock *Current = *predecessors(ExitBlock).begin();
-          while (true) {
-            if (auto *Accesses =
-                    MSSAU.getMemorySSA()->getBlockAccesses(Current)) {
-              if (!Accesses->empty()) {
-                MemoryAccess *Back =
-                    const_cast<MemoryAccess *>(&Accesses->back());
-                if (isa<MemoryDef>(Back) || isa<MemoryPhi>(Back))
-                  ExitDef = Back;
-                else
-                  ExitDef = MSSAU.getMemorySSA()
-                                ->getWalker()
-                                ->getClobberingMemoryAccess(Back);
-                break;
-              }
-            }
-
-            if (Current == L->getHeader()) {
-              Current = Preheader;
-              continue;
-            }
-
-            if (pred_empty(Current)) {
-              ExitDef = MSSAU.getMemorySSA()->getLiveOnEntryDef();
-              break;
-            }
-            Current = *pred_begin(Current);
-          }
+      auto FindExitDef = [MSSA, Preheader]() -> MemoryAccess * {
+        if (auto *Accesses = MSSA->getBlockAccesses(Preheader)) {
+          if (Accesses->empty())
+            return nullptr;
+          MemoryAccess *Back = const_cast<MemoryAccess *>(&Accesses->back());
+          if (!isa<MemoryUse>(Back))
+            return Back;
+          return MSSA->getWalker()->getClobberingMemoryAccess(Back);
         }
-      }
+        return nullptr;
+      };
+      if (!ExitDef)
+        ExitDef = FindExitDef();
       MemoryAccess *NewMA = MSSAU.createMemoryAccessInBB(&I, ExitDef, ExitBlock,
                                                          MemorySSA::Beginning);
       OldMA->replaceAllUsesWith(NewMA);
