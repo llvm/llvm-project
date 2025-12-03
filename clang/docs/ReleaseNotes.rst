@@ -170,9 +170,9 @@ Clang Python Bindings Potentially Breaking Changes
   ElaboratedTypes. The value becomes unused, and all the existing users should
   expect the former underlying type to be reported instead.
 - Remove ``AccessSpecifier.NONE`` kind. No libclang interfaces ever returned this kind.
-- Added the environment variables ``LIBCLANG_LIBRARY_PATH`` and ``LIBCLANG_LIBRARY_FILE``,
-  which allow users to specify the directory path and the exact library file that
-  should be used to locate libclang.
+- Allow setting the path to the libclang library via environment variables: ``LIBCLANG_LIBRARY_PATH``
+  to specifiy the path to the folder, or ``LIBCLANG_LIBRARY_FILE`` to specify the path to
+  the library file
 
 What's New in Clang |release|?
 ==============================
