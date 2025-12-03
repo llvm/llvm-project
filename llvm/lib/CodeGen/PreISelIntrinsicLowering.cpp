@@ -478,15 +478,16 @@ static bool expandProtectedFieldPtr(Function &Intr) {
       Intrinsic::getOrInsertDeclaration(&M, Intrinsic::ptrauth_auth, {});
 
   auto *EmuFnTy = FunctionType::get(Int64Ty, {Int64Ty, Int64Ty}, false);
-  FunctionCallee EmuSignIntr = M.getOrInsertFunction("__emupac_pacda", EmuFnTy);
-  FunctionCallee EmuAuthIntr = M.getOrInsertFunction("__emupac_autda", EmuFnTy);
 
   auto CreateSign = [&](IRBuilder<> &B, Value *Val, Value *Disc,
                         OperandBundleDef DSBundle) {
     Function *F = B.GetInsertBlock()->getParent();
     Attribute FSAttr = F->getFnAttribute("target-features");
     if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
-      return B.CreateCall(SignIntr, {Val, B.getInt32(2), Disc}, DSBundle);
+      return B.CreateCall(
+          SignIntr, {Val, B.getInt32(/*AArch64PACKey::DA*/ 2), Disc}, DSBundle);
+    FunctionCallee EmuSignIntr =
+        M.getOrInsertFunction("__emupac_pacda", EmuFnTy);
     return B.CreateCall(EmuSignIntr, {Val, Disc}, DSBundle);
   };
 
@@ -495,7 +496,10 @@ static bool expandProtectedFieldPtr(Function &Intr) {
     Function *F = B.GetInsertBlock()->getParent();
     Attribute FSAttr = F->getFnAttribute("target-features");
     if (FSAttr.isValid() && FSAttr.getValueAsString().contains("+pauth"))
-      return B.CreateCall(AuthIntr, {Val, B.getInt32(2), Disc}, DSBundle);
+      return B.CreateCall(
+          AuthIntr, {Val, B.getInt32(/*AArch64PACKey::DA*/ 2), Disc}, DSBundle);
+    FunctionCallee EmuAuthIntr =
+        M.getOrInsertFunction("__emupac_autda", EmuFnTy);
     return B.CreateCall(EmuAuthIntr, {Val, Disc}, DSBundle);
   };
 
@@ -513,7 +517,8 @@ static bool expandProtectedFieldPtr(Function &Intr) {
     auto *Disc = Call->getArgOperand(1);
     bool UseHWEncoding =
         cast<ConstantInt>(Call->getArgOperand(2))->getZExtValue();
-    assert(UseHWEncoding && "software encoding currently unsupported");
+    if (!UseHWEncoding)
+      reportFatalUsageError("software encoding currently unsupported");
 
     auto *DS = GetDeactivationSymbol(Call);
     OperandBundleDef DSBundle("deactivation-symbol", DS);
