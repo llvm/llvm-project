@@ -6869,17 +6869,18 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   unsigned IntID = N->getConstantOperandVal(0);
 
   switch (IntID) {
+  default:
+    break;
   case Intrinsic::nvvm_add_rn_sat_f16:
     return combineAddSatWithNeg(N, DCI.DAG, NVPTXISD::SUB_RN_SAT_F16);
   case Intrinsic::nvvm_add_rn_ftz_sat_f16:
     return combineAddSatWithNeg(N, DCI.DAG, NVPTXISD::SUB_RN_FTZ_SAT_F16);
-  case Intrinsic::nvvm_add_rn_sat_f16x2:
+  case Intrinsic::nvvm_add_rn_sat_v2f16:
     return combineAddSatWithNeg(N, DCI.DAG, NVPTXISD::SUB_RN_SAT_F16X2);
-  case Intrinsic::nvvm_add_rn_ftz_sat_f16x2:
+  case Intrinsic::nvvm_add_rn_ftz_sat_v2f16:
     return combineAddSatWithNeg(N, DCI.DAG, NVPTXISD::SUB_RN_FTZ_SAT_F16X2);
-  default:
-    return SDValue();
   }
+  return SDValue();
 }
 
 static SDValue combineProxyReg(SDNode *N,

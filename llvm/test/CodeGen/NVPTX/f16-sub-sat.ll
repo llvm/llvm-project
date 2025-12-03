@@ -32,7 +32,7 @@ define <2 x half> @sub_rn_sat_f16x2(<2 x half> %a, <2 x half> %b) {
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %1 = fneg <2 x half> %b
-  %res = call <2 x half> @llvm.nvvm.add.rn.sat.f16x2(<2 x half> %a, <2 x half> %1)
+  %res = call <2 x half> @llvm.nvvm.add.rn.sat.v2f16(<2 x half> %a, <2 x half> %1)
   ret <2 x half> %res
 }
 
@@ -64,6 +64,6 @@ define <2 x half> @sub_rn_ftz_sat_f16x2(<2 x half> %a, <2 x half> %b) {
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %1 = fneg <2 x half> %b
-  %res = call <2 x half> @llvm.nvvm.add.rn.ftz.sat.f16x2(<2 x half> %a, <2 x half> %1)
+  %res = call <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16(<2 x half> %a, <2 x half> %1)
   ret <2 x half> %res
 }

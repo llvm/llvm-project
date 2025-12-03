@@ -1588,7 +1588,7 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_add_rn # ftz # _sat_f16 : NVVMBuiltin,
       PureIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
 
-    def int_nvvm_add_rn # ftz # _sat_f16x2 : NVVMBuiltin,
+    def int_nvvm_add_rn # ftz # _sat_v2f16 : NVVMBuiltin,
       PureIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
         
   } // ftz
@@ -1614,7 +1614,7 @@ let TargetPrefix = "nvvm" in {
     def int_nvvm_mul_rn # ftz # _sat_f16 : NVVMBuiltin,
       PureIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
 
-    def int_nvvm_mul_rn # ftz # _sat_f16x2 : NVVMBuiltin,
+    def int_nvvm_mul_rn # ftz # _sat_v2f16 : NVVMBuiltin,
       PureIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
   } // ftz
 

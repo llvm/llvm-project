@@ -1594,19 +1594,19 @@ __device__ void nvvm_add_mul_f16_sat() {
   __nvvm_add_rn_sat_f16(F16, F16_2);
   // CHECK: call half @llvm.nvvm.add.rn.ftz.sat.f16
   __nvvm_add_rn_ftz_sat_f16(F16, F16_2);
-  // CHECK: call <2 x half> @llvm.nvvm.add.rn.sat.f16x2
-  __nvvm_add_rn_sat_f16x2(F16X2, F16X2_2);
-  // CHECK: call <2 x half> @llvm.nvvm.add.rn.ftz.sat.f16x2
-  __nvvm_add_rn_ftz_sat_f16x2(F16X2, F16X2_2);
+  // CHECK: call <2 x half> @llvm.nvvm.add.rn.sat.v2f16
+  __nvvm_add_rn_sat_v2f16(F16X2, F16X2_2);
+  // CHECK: call <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16
+  __nvvm_add_rn_ftz_sat_v2f16(F16X2, F16X2_2);
 
   // CHECK: call half @llvm.nvvm.mul.rn.sat.f16
   __nvvm_mul_rn_sat_f16(F16, F16_2);
   // CHECK: call half @llvm.nvvm.mul.rn.ftz.sat.f16
   __nvvm_mul_rn_ftz_sat_f16(F16, F16_2);
-  // CHECK: call <2 x half> @llvm.nvvm.mul.rn.sat.f16x2
-  __nvvm_mul_rn_sat_f16x2(F16X2, F16X2_2);
-  // CHECK: call <2 x half> @llvm.nvvm.mul.rn.ftz.sat.f16x2
-  __nvvm_mul_rn_ftz_sat_f16x2(F16X2, F16X2_2);
+  // CHECK: call <2 x half> @llvm.nvvm.mul.rn.sat.v2f16
+  __nvvm_mul_rn_sat_v2f16(F16X2, F16X2_2);
+  // CHECK: call <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16
+  __nvvm_mul_rn_ftz_sat_v2f16(F16X2, F16X2_2);
   
   // CHECK: ret void
 }

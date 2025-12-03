@@ -28,7 +28,7 @@ define <2 x half> @mul_rn_sat_f16x2(<2 x half> %a, <2 x half> %b) {
 ; CHECK-NEXT:    mul.rn.sat.f16x2 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
-  %1 = call <2 x half> @llvm.nvvm.mul.rn.sat.f16x2(<2 x half> %a, <2 x half> %b)
+  %1 = call <2 x half> @llvm.nvvm.mul.rn.sat.v2f16(<2 x half> %a, <2 x half> %b)
   ret <2 x half> %1
 }
 
@@ -58,6 +58,6 @@ define <2 x half> @mul_rn_ftz_sat_f16x2(<2 x half> %a, <2 x half> %b) {
 ; CHECK-NEXT:    mul.rn.ftz.sat.f16x2 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
-  %1 = call <2 x half> @llvm.nvvm.mul.rn.ftz.sat.f16x2(<2 x half> %a, <2 x half> %b)
+  %1 = call <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16(<2 x half> %a, <2 x half> %b)
   ret <2 x half> %1
 }
