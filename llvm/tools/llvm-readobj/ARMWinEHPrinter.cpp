@@ -1404,6 +1404,12 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
     FpSZ += 8;
   int SavSZ = (IntSZ + FpSZ + 8 * 8 * RF.H() + 0xf) & ~0xf;
   int LocSZ = (RF.FrameSize() << 4) - SavSZ;
+  bool Homing = RF.H();
+
+  if (RF.H() && RF.RegI() == 0 && RF.RegF() == 0 && RF.CR() != 1) {
+    LocSZ += SavSZ;
+    Homing = false;
+  }
 
   if (RF.CR() == 2 || RF.CR() == 3) {
     SW.startLine() << "mov x29, sp\n";
@@ -1419,18 +1425,11 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
   } else if ((RF.CR() != 3 && RF.CR() != 2 && LocSZ > 0) || LocSZ > 512) {
     SW.startLine() << format("sub sp, sp, #%d\n", LocSZ);
   }
-  if (RF.H()) {
+  if (Homing) {
     SW.startLine() << format("stp x6, x7, [sp, #%d]\n", SavSZ - 16);
     SW.startLine() << format("stp x4, x5, [sp, #%d]\n", SavSZ - 32);
     SW.startLine() << format("stp x2, x3, [sp, #%d]\n", SavSZ - 48);
-    if (RF.RegI() > 0 || RF.RegF() > 0 || RF.CR() == 1) {
-      SW.startLine() << format("stp x0, x1, [sp, #%d]\n", SavSZ - 64);
-    } else {
-      // This case isn't documented; if neither RegI nor RegF nor CR=1
-      // have decremented the stack pointer by SavSZ, we need to do it here
-      // (as the final stack adjustment of LocSZ excludes SavSZ).
-      SW.startLine() << format("stp x0, x1, [sp, #-%d]!\n", SavSZ);
-    }
+    SW.startLine() << format("stp x0, x1, [sp, #%d]\n", SavSZ - 64);
   }
   int FloatRegs = RF.RegF() > 0 ? RF.RegF() + 1 : 0;
   for (int I = (FloatRegs + 1) / 2 - 1; I >= 0; I--) {
