@@ -140,7 +140,6 @@ def DialectInlinerInterface : DialectInterface<"DialectInlinerInterface"> {
 The header file can be generated via the following command:
 ```bash
 mlir-tblgen gen-dialect-interface-decls DialectInterface.td
-
 ```
 
 #### DialectInterfaceCollection
