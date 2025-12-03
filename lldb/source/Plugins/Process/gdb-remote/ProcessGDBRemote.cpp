@@ -211,7 +211,7 @@ lldb::ProcessSP ProcessGDBRemote::CreateInstance(
     lldb::TargetSP target_sp, ListenerSP listener_sp,
     const FileSpec *crash_file_path, bool can_connect) {
   if (crash_file_path)
-    return nullptr; // Cannot create a GDBRemote process from a crash_file
+    return nullptr; // Cannot create a GDBRemote process from a crash_file.
   return lldb::ProcessSP(new ProcessGDBRemote(target_sp, listener_sp));
 }
 
