@@ -437,8 +437,8 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmtPattern(
   if (FinaliseExpansionVar(*this, ExpansionVar, Select))
     return StmtError();
 
-  return new (Context) CXXDestructuringExpansionStmtPattern(
-      ESD, Init, ExpansionVarStmt, DS, LParenLoc, ColonLoc, RParenLoc);
+  return CXXExpansionStmtPattern::CreateDestructuring(
+      Context, ESD, Init, ExpansionVarStmt, DS, LParenLoc, ColonLoc, RParenLoc);
 }
 
 StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
@@ -749,9 +749,6 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
     return ER.Val.getInt().getZExtValue();
   }
 
-  if (auto *Destructuring =
-          dyn_cast<CXXDestructuringExpansionStmtPattern>(Expansion))
-    return Destructuring->getDecompositionDecl()->bindings().size();
-
-  llvm_unreachable("Invalid expansion statement class");
+  assert(Expansion->isDestructuring());
+  return Expansion->getDecompositionDecl()->bindings().size();
 }
