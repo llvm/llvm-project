@@ -329,6 +329,10 @@ public:
   void VisitVectorClause(const OpenACCVectorClause &clause) {
     routineOp.addVector(builder.getContext(), lastDeviceTypeValues);
   }
+
+  void VisitNoHostClause(const OpenACCNoHostClause &clause) {
+    routineOp.setNohost(/*attrValue=*/true);
+  }
 };
 } // namespace
 

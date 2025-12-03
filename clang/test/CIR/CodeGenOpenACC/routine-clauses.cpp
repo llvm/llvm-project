@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
-#pragma acc routine seq
+#pragma acc routine seq nohost
 void Func1() {}
 
 void Func2() {}
@@ -10,16 +10,16 @@ void Func2() {}
 void Func3() {}
 
 void Func4() {}
-#pragma acc routine(Func4) worker
+#pragma acc routine(Func4) worker nohost
 
-#pragma acc routine vector
+#pragma acc routine nohost vector
 void Func5() {}
 
 void Func6() {}
-#pragma acc routine(Func6) vector
+#pragma acc routine(Func6) nohost vector
 
 // CHECK: cir.func{{.*}} @[[F1_NAME:.*Func1[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F1_R_NAME:.*]]]>}
-// CHECK: acc.routine @[[F1_R_NAME]] func(@[[F1_NAME]]) seq
+// CHECK: acc.routine @[[F1_R_NAME]] func(@[[F1_NAME]]) seq nohost
 
 // CHECK: cir.func{{.*}} @[[F2_NAME:.*Func2[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F2_R_NAME:.*]]]>}
 
@@ -34,5 +34,5 @@ void Func6() {}
 // CHECK: cir.func{{.*}} @[[F6_NAME:.*Func6[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[F6_R_NAME:.*]]]>}
 
 // CHECK: acc.routine @[[F2_R_NAME]] func(@[[F2_NAME]]) seq
-// CHECK: acc.routine @[[F4_R_NAME]] func(@[[F4_NAME]]) worker
-// CHECK: acc.routine @[[F6_R_NAME]] func(@[[F6_NAME]]) vector
+// CHECK: acc.routine @[[F4_R_NAME]] func(@[[F4_NAME]]) worker nohost
+// CHECK: acc.routine @[[F6_R_NAME]] func(@[[F6_NAME]]) vector nohost
