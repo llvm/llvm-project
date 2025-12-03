@@ -123,6 +123,10 @@ public:
     return Resolver.get();
   }
 
+  /// Cache for constructors called through forwarding, e.g. make_unique
+  llvm::DenseMap<const FunctionDecl *, std::vector<CXXConstructorDecl *>>
+      ForwardingToConstructorCache;
+
 private:
   ParsedAST(PathRef TUPath, llvm::StringRef Version,
             std::shared_ptr<const PreambleData> Preamble,

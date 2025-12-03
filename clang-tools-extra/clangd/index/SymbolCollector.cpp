@@ -25,11 +25,11 @@
 #include "index/SymbolLocation.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -52,6 +52,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -577,21 +578,29 @@ SymbolCollector::getRefContainer(const Decl *Enclosing,
   return Enclosing;
 }
 
-class ForwardingToConstructorVisitor
-    : public RecursiveASTVisitor<ForwardingToConstructorVisitor> {
-public:
-  ForwardingToConstructorVisitor() {}
-
-  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
-    if (auto *Callee = E->getConstructor()) {
-      Constructors.push_back(Callee);
-    }
-    return true;
+std::vector<CXXConstructorDecl *>
+SymbolCollector::findIndirectConstructors(const Decl *D) {
+  auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+  if (FD == nullptr || !FD->isTemplateInstantiation()) {
+    return {};
   }
-
-  // Output of this visitor
-  std::vector<CXXConstructorDecl *> Constructors{};
-};
+  if (auto *PT = FD->getPrimaryTemplate();
+      PT == nullptr || !isLikelyForwardingFunction(PT)) {
+    return {};
+  }
+  if (auto Entry = ForwardingToConstructorCache.find(FD);
+      Entry != ForwardingToConstructorCache.end()) {
+    return Entry->getSecond();
+  }
+  ForwardingToConstructorVisitor Visitor{};
+  Visitor.TraverseStmt(FD->getBody());
+  auto Iter = ForwardingToConstructorCache.try_emplace(
+      FD, std::move(Visitor.Constructors));
+  if (Iter.second) {
+    return Iter.first->getSecond();
+  }
+  return {};
+}
 
 // Always return true to continue indexing.
 bool SymbolCollector::handleDeclOccurrence(
@@ -683,22 +692,19 @@ bool SymbolCollector::handleDeclOccurrence(
     auto FileLoc = SM.getFileLoc(Loc);
     auto FID = SM.getFileID(FileLoc);
     if (Opts.RefsInHeaders || FID == SM.getMainFileID()) {
+      auto *Container = getRefContainer(ASTNode.Parent, Opts);
       addRef(ID, SymbolRef{FileLoc, FID, Roles, index::getSymbolInfo(ND).Kind,
-                           getRefContainer(ASTNode.Parent, Opts),
-                           isSpelled(FileLoc, *ND)});
+                           Container, isSpelled(FileLoc, *ND)});
       // Also collect indirect constructor calls like `make_unique`
-      if (auto *FD = llvm::dyn_cast<clang::FunctionDecl>(ASTNode.OrigD);
-          FD && FD->isTemplateInstantiation()) {
-        if (auto *PT = FD->getPrimaryTemplate();
-            PT && isLikelyForwardingFunction(PT)) {
-          ForwardingToConstructorVisitor Visitor{};
-          Visitor.TraverseStmt(FD->getBody());
-          for (auto *Constructor : Visitor.Constructors) {
-            addRef(getSymbolIDCached(Constructor),
-                   SymbolRef{FileLoc, FID, Roles, index::getSymbolInfo(ND).Kind,
-                             getRefContainer(ASTNode.Parent, Opts),
-                             isSpelled(FileLoc, *ND)});
-          }
+      for (auto *Constructor : findIndirectConstructors(ASTNode.OrigD)) {
+        if (!shouldCollectSymbol(*Constructor, *ASTCtx, Opts, IsMainFileOnly)) {
+          continue;
+        }
+        if (auto ConstructorID = getSymbolIDCached(Constructor)) {
+          addRef(ConstructorID,
+                 SymbolRef{FileLoc, FID, Roles,
+                           index::getSymbolInfo(Constructor).Kind, Container,
+                           isSpelled(FileLoc, *Constructor)});
         }
       }
     }

@@ -916,47 +916,6 @@ std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
 
 namespace {
 
-class ForwardingToConstructorVisitor
-    : public RecursiveASTVisitor<ForwardingToConstructorVisitor> {
-public:
-  ForwardingToConstructorVisitor(
-      llvm::DenseSet<const CXXConstructorDecl *> &TargetConstructors)
-      : Targets(TargetConstructors) {}
-
-  bool VisitCXXConstructExpr(CXXConstructExpr *E) {
-    if (auto *Callee = E->getConstructor()) {
-      if (Targets.contains(Callee)) {
-        ConstructorFound = true;
-      }
-    }
-    // It is enough to find 1 constructor
-    return !ConstructorFound;
-  }
-
-  // Output of this visitor
-  bool ConstructorFound = false;
-
-private:
-  llvm::DenseSet<const CXXConstructorDecl *> &Targets;
-};
-
-bool forwardsToConstructor(
-    const Decl *D,
-    llvm::DenseSet<const CXXConstructorDecl *> &TargetConstructors) {
-  if (!TargetConstructors.empty()) {
-    if (auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
-        FD && FD->isTemplateInstantiation()) {
-      if (auto *PT = FD->getPrimaryTemplate();
-          PT && isLikelyForwardingFunction(PT)) {
-        ForwardingToConstructorVisitor Visitor{TargetConstructors};
-        Visitor.TraverseStmt(FD->getBody());
-        return Visitor.ConstructorFound;
-      }
-    }
-  }
-  return false;
-}
-
 /// Collects references to symbols within the main file.
 class ReferenceFinder : public index::IndexDataConsumer {
 public:
@@ -970,7 +929,7 @@ public:
     }
   };
 
-  ReferenceFinder(const ParsedAST &AST,
+  ReferenceFinder(ParsedAST &AST,
                   const llvm::ArrayRef<const NamedDecl *> Targets,
                   bool PerToken)
       : PerToken(PerToken), AST(AST) {
@@ -1000,13 +959,44 @@ public:
     return std::move(References);
   }
 
+  bool forwardsToConstructor(const Decl *D) {
+    if (TargetConstructors.empty()) {
+      return false;
+    }
+    auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+    if (FD == nullptr || !FD->isTemplateInstantiation()) {
+      return false;
+    }
+    if (auto *PT = FD->getPrimaryTemplate();
+        PT == nullptr || !isLikelyForwardingFunction(PT)) {
+      return false;
+    }
+    if (auto Entry = AST.ForwardingToConstructorCache.find(FD);
+        Entry != AST.ForwardingToConstructorCache.end()) {
+      for (auto *Constructor : Entry->getSecond()) {
+        if (TargetConstructors.contains(Constructor)) {
+          return true;
+        }
+      }
+      return false;
+    }
+    ForwardingToConstructorVisitor Visitor{&TargetConstructors};
+    Visitor.TraverseStmt(FD->getBody());
+    auto Iter = AST.ForwardingToConstructorCache.try_emplace(
+        FD, std::move(Visitor.Constructors));
+    if (Iter.second) {
+      return !Iter.first->getSecond().empty();
+    }
+    return false;
+  }
+
   bool
   handleDeclOccurrence(const Decl *D, index::SymbolRoleSet Roles,
                        llvm::ArrayRef<index::SymbolRelation> Relations,
                        SourceLocation Loc,
                        index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
     if (!TargetDecls.contains(D->getCanonicalDecl()) &&
-        !forwardsToConstructor(ASTNode.OrigD, TargetConstructors)) {
+        !forwardsToConstructor(ASTNode.OrigD)) {
       return true;
     }
     const SourceManager &SM = AST.getSourceManager();
@@ -1047,7 +1037,7 @@ public:
 private:
   bool PerToken; // If true, report 3 references for split ObjC selector names.
   std::vector<Reference> References;
-  const ParsedAST &AST;
+  ParsedAST &AST;
   llvm::DenseSet<const Decl *> TargetDecls;
   // Constructors need special handling since they can be hidden behind forwards
   llvm::DenseSet<const CXXConstructorDecl *> TargetConstructors;

@@ -19,6 +19,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/MacroInfo.h"
@@ -254,8 +255,36 @@ resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth = 10);
 bool isExpandedFromParameterPack(const ParmVarDecl *D);
 
 /// Heuristic that checks if FT is forwarding a parameter pack to another
-/// function. (e.g. `make_unique`).
+/// function (e.g. `make_unique`).
 bool isLikelyForwardingFunction(FunctionTemplateDecl *FT);
+
+
+class ForwardingToConstructorVisitor
+    : public RecursiveASTVisitor<ForwardingToConstructorVisitor> {
+public:
+  ForwardingToConstructorVisitor() {}
+
+  ForwardingToConstructorVisitor(
+      llvm::DenseSet<const CXXConstructorDecl *> *TargetConstructors)
+      : Targets(TargetConstructors) {}
+
+  bool VisitCXXNewExpr(CXXNewExpr *E) {
+    if (auto *CE = E->getConstructExpr()) {
+      if (auto *Callee = CE->getConstructor()) {
+        if (Targets == nullptr || Targets->contains(Callee)) {
+          Constructors.push_back(Callee);
+        }
+      }
+    }
+    return true;
+  }
+
+  // Output of this visitor
+  std::vector<CXXConstructorDecl *> Constructors{};
+
+private:
+  llvm::DenseSet<const CXXConstructorDecl *> *Targets = nullptr;
+};
 
 } // namespace clangd
 } // namespace clang
