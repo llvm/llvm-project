@@ -9363,15 +9363,10 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionStmtPattern(
         Range.getAs<DeclStmt>(), Begin.getAs<DeclStmt>(), End.getAs<DeclStmt>(),
         S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc());
   } else if (S->isDependent()) {
-    ExprResult ExpansionInitializer =
-        getDerived().TransformExpr(S->getExpansionInitializer());
-    if (ExpansionInitializer.isInvalid())
-      return StmtError();
-
     StmtResult Res = SemaRef.BuildNonEnumeratingCXXExpansionStmtPattern(
         NewESD, Init, ExpansionVarStmt, ExpansionInitializer.get(),
         S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc(),
-        /*LifetimeExtendTemps=*/{});
+        LifetimeExtendTemps);
 
     if (Res.isInvalid())
       return StmtError();
