@@ -1094,8 +1094,9 @@ llvm::Error SwiftLanguageRuntime::GetObjectDescription(Stream &str,
   if (object.IsUninitializedReference())
     return llvm::createStringError("<uninitialized>");
 
-  if (printObjectViaPointer(str, object, GetProcess()))
-    return llvm::Error::success();
+  if (GetProcess().GetTarget().GetSwiftUseNewPrintObject())
+    if (printObjectViaPointer(str, object, GetProcess()))
+      return llvm::Error::success();
 
   std::string expr_string;
 
