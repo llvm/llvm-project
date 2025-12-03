@@ -6260,7 +6260,8 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
   if (ST.hasFlatScratchHiInB64InstHazard() &&
       MO.getReg() == AMDGPU::SRC_FLAT_SCRATCH_BASE_HI && isSALU(MI)) {
     if (const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::sdst)) {
-      if (AMDGPU::getRegBitWidth(*MRI.getRegClass(Dst->getReg())) == 64)
+      if (AMDGPU::getRegBitWidth(*RI.getRegClassForReg(MRI, Dst->getReg())) ==
+          64)
         return false;
     }
     if (Opc == AMDGPU::S_BITCMP0_B64 || Opc == AMDGPU::S_BITCMP1_B64)
