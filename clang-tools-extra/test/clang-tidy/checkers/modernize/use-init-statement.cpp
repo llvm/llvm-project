@@ -204,6 +204,35 @@ void good_array_of_unique_lock_using() {
     ++counter;
 }
 
+void good_unused() {
+    int var = 0;
+
+    // doesn't make sence to fix, this is a job for another checker
+    int var2 = 0;
+    if (var) {}
+
+    // same
+    int var3 = 0;
+    switch (var) {
+        case 0:
+            break;
+    }
+}
+
+void good_unused_multiple() {
+    int var = 0;
+
+    // doesn't make sence to fix, this is a job for another checker
+    int var2 = 0, var3 = 0;
+    if (var) {}
+
+    // same
+    int var4 = 0, var5 = 0;
+    switch (var) {
+        case 0:
+            break;
+    }
+}
 
 void bad1() {
     int i1 = 0; DUMMY_TOKEN
@@ -302,6 +331,44 @@ void bad_const() {
 // CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
 // CHECK-FIXES: DUMMY_TOKEN
 // CHECK-FIXES-NEXT: switch (const int i2 = 0; i2) {
+        case 0:
+            do_some();
+            break;
+    }
+}
+
+void bad_volatile() {
+    volatile int i1 = 0; DUMMY_TOKEN
+    if (i1 == 0) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (volatile int i1 = 0; i1 == 0) {
+        do_some();
+    }
+    volatile int i2 = 0; DUMMY_TOKEN
+    switch (i2) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (volatile int i2 = 0; i2) {
+        case 0:
+            do_some();
+            break;
+    }
+}
+
+void bad_const_volatile() {
+    const volatile int i1 = 0; DUMMY_TOKEN
+    if (i1 == 0) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: if (const volatile int i1 = 0; i1 == 0) {
+        do_some();
+    }
+    const volatile int i2 = 0; DUMMY_TOKEN
+    switch (i2) {
+// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-FIXES: DUMMY_TOKEN
+// CHECK-FIXES-NEXT: switch (const volatile int i2 = 0; i2) {
         case 0:
             do_some();
             break;
@@ -504,7 +571,7 @@ void bad_condition_with_declaration() {
 void bad_prevents_redeclaration1() {
     int i1 = 0;
     if (int i1 = 0) {
-// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'i1' declaration before if statement could be moved into if init statement [modernize-use-init-statement]
 // CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
 // CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
         do_some();
@@ -512,7 +579,7 @@ void bad_prevents_redeclaration1() {
 
     int i2 = 0;
     switch (int i2 = 0)
-// CHECK-MESSAGES: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
+// CHECK-MESSAGES-NOT: [[@LINE-2]]:5: warning: variable 'i2' declaration before switch statement could be moved into switch init statement [modernize-use-init-statement]
 // CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
 // CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
     {

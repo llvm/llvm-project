@@ -97,6 +97,41 @@ void good_already_has_init_stmt() {
     }
 }
 
+// FIXME: enable it
+// void good_unused() {
+//     int i =0;
+
+//     // doesn't make sence to fix, this is a job for another checker
+//     int arr2[2] = {1, 2};
+//     auto [a2, b2] = arr2;
+//     if (i == 0) {}
+
+//     // same
+//     int arr3[2] = {1, 2};
+//     auto [a3, b3] = arr3;
+//     switch (i) {
+//         case 0:
+//             break;
+//     }
+// }
+
+// void good_unused_multiple() {
+//     int i = 0;
+
+//     // doesn't make sence to fix, this is a job for another checker
+//     int arr3[2] = {1, 2};
+//     auto [a3, b3] = arr3;
+//     if (i == 0) {}
+
+//     // same
+//     int arr4[2] = {1, 2};
+//     auto [a4, b4] = arr4;
+//     switch (i) {
+//         case 0:
+//             break;
+//     }
+// }
+
 
 using unique_lock_t = std::unique_lock<std::mutex>;
 

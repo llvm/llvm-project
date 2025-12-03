@@ -54,6 +54,12 @@ AST_MATCHER_P2(CompoundStmt, hasAdjacentStmts,
 
 AST_MATCHER(Decl, isTemplate) { return Node.isTemplated(); }
 
+AST_MATCHER(VarDecl, isUsed) {
+  if (Node.getType().isConstQualified())
+    return true; // FIXME: implement proper "used" check for consts
+  return Node.isUsed();
+}
+
 AST_MATCHER_P(VarDecl, hasSameNameAsBoundNode,
               std::string, BindingID) {
   auto VarName = Node.getNameAsString();
@@ -131,15 +137,15 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
   const auto CheckLTE = optionally(hasInitializer(
       expr(hasDescendant(expr(materializeTemporaryExpr().bind("lte"))))));
 
-  // Matchers for variable declarations
-  const auto SingleVarDeclWithDtor =
-      varDecl(HasDtor, CheckLTE).bind("singleVar");
-  const auto SingleVarDecl = varDecl(CheckLTE).bind("singleVar");
-  const auto RefToBoundVarDecl =
-      declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
-
   // declStmt as previous statement
   {
+    // Matchers for variable declarations
+    const auto SingleVarDeclWithDtor =
+        varDecl(HasDtor, CheckLTE, isUsed()).bind("singleVar");
+    const auto SingleVarDecl = varDecl(CheckLTE, isUsed()).bind("singleVar");
+    const auto RefToBoundVarDecl =
+        declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
+
     // Matchers for declaration statements that precede if/switch
     const auto PrevDeclStmtWithDtor =
         declStmt(forEach(SingleVarDeclWithDtor)).bind("prevDecl");
@@ -159,6 +165,13 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
 
   // C++17 structured binding as previous statement
   {
+    // Matchers for variable declarations
+    const auto SingleVarDeclWithDtor =
+        varDecl(HasDtor, CheckLTE).bind("singleVar");
+    const auto SingleVarDecl = varDecl(CheckLTE).bind("singleVar");
+    const auto RefToBoundVarDecl =
+        declRefExpr(to(varDecl(equalsBoundNode("singleVar"))));
+
     const auto DecompositionDecl =
         decompositionDecl(forEach(bindingDecl().bind("bindingDecl")));
     const auto PrevDecomposeStmtWithDtor =
@@ -168,17 +181,17 @@ void UseInitStatementCheck::registerMatchers(MatchFinder *Finder) {
         declStmt(has(DecompositionDecl), has(SingleVarDecl)).bind("prevDecl");
     const auto PrevDecomposeStmtMatcher =
         anyOf(PrevDecomposeStmtWithDtor, PrevDecomposeStmt);
-    const auto RefToBoundVarDecl =
+    const auto RefToBoundBindDecl =
         declRefExpr(to(bindingDecl(equalsBoundNode("bindingDecl"))));
 
     // Register matchers for if and switch statements
     Finder->addMatcher(MakeCompoundStmtMatcher(ifStmt, "ifStmt",
                                                PrevDecomposeStmtMatcher,
-                                               RefToBoundVarDecl),
+                                               RefToBoundBindDecl),
                        this);
     Finder->addMatcher(MakeCompoundStmtMatcher(switchStmt, "switchStmt",
                                                PrevDecomposeStmtMatcher,
-                                               RefToBoundVarDecl),
+                                               RefToBoundBindDecl),
                        this);
   }
 }
