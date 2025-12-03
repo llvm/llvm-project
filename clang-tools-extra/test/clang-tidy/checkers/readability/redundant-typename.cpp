@@ -279,3 +279,15 @@ template <typename T>
 Wrapper<typename ClassWrapper<T>::R> ClassWrapper<T>::f() {
     return {};
 }
+
+template <typename T> struct StructWrapper {};
+template <typename T>
+class ClassWithNestedStruct {
+  struct Nested {};
+  StructWrapper<Nested> f();
+};
+
+template <typename T>
+StructWrapper<typename ClassWithNestedStruct<T>::Nested> ClassWithNestedStruct<T>::f() {
+  return {};
+}
