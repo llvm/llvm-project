@@ -2830,6 +2830,9 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
   // Emit the intrinsics of (type_test and assume) for the features of WPD and
   // speculative devirtualization. For WPD, emit the intrinsics only for the
   // case of non_public LTO visibility.
+  // TODO: refactor this condition and similar ones into a function (e.g.,
+  // ShouldEmitDevirtualizationMD) to encapsulate the details of the different
+  // types of devirtualization.
   else if ((CGM.getCodeGenOpts().WholeProgramVTables &&
             !CGM.AlwaysHasLTOVisibilityPublic(RD)) ||
            CGM.getCodeGenOpts().DevirtualizeSpeculatively) {

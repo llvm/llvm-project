@@ -1666,6 +1666,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // Add devirtualization pass only when LTO is not enabled, as otherwise
   // the pass is already enabled in the LTO pipeline.
   if (PTO.DevirtualizeSpeculatively && LTOPhase == ThinOrFullLTOPhase::None) {
+    // TODO: explore a better pipeline configuration that can improve
+    // compilation time overhead.
     MPM.addPass(WholeProgramDevirtPass(
         /*ExportSummary*/ nullptr,
         /*ImportSummary*/ nullptr,

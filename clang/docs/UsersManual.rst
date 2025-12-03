@@ -2368,7 +2368,7 @@ are listed below.
    when there's a single implementation of the virtual function in the module.
    There could be a single implementation of the virtual function
    either because the function is not overridden in any derived class,
-   or because there is a single instantiated object that is using the function.
+   or because all objects are instances of the same class/type.
 
    Ex of IR before the optimization:
   .. code-block:: llvm
