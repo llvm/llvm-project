@@ -1428,8 +1428,9 @@ bool MachineBasicBlock::canSplitCriticalEdge(const MachineBasicBlock *Succ,
     if (!MLI)
       return false;
     const MachineLoop *L = MLI->getLoopFor(Succ);
-    // If `Succ` is a loop header, splitting the critical edge will not
-    // break structured CFG.
+    // Only if `Succ` is a loop header, splitting the critical edge will not
+    // break structured CFG. And fallthrough to check if this's terminator is
+    // analyzable.
     if (!L || L->getHeader() != Succ)
       return false;
   }
