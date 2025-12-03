@@ -1752,10 +1752,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::SEHExceptStmtClass:
     case Stmt::SEHLeaveStmtClass:
     case Stmt::SEHFinallyStmtClass:
-    case Stmt::CXXEnumeratingExpansionStmtPatternClass:
-    case Stmt::CXXIteratingExpansionStmtPatternClass:
-    case Stmt::CXXDestructuringExpansionStmtPatternClass:
-    case Stmt::CXXDependentExpansionStmtPatternClass:
+    case Stmt::CXXExpansionStmtPatternClass:
     case Stmt::CXXExpansionStmtInstantiationClass:
     case Stmt::CXXExpansionInitListSelectExprClass:
     case Stmt::CXXDestructuringExpansionSelectExprClass:

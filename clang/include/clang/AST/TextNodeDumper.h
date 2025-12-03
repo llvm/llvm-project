@@ -266,6 +266,7 @@ public:
   void VisitCoawaitExpr(const CoawaitExpr *Node);
   void VisitCoreturnStmt(const CoreturnStmt *Node);
   void VisitCompoundStmt(const CompoundStmt *Node);
+  void VisitCXXExpansionStmtPattern(const CXXExpansionStmtPattern *Node);
   void
   VisitCXXExpansionStmtInstantiation(const CXXExpansionStmtInstantiation *Node);
   void VisitConstantExpr(const ConstantExpr *Node);

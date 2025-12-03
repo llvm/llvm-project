@@ -1836,19 +1836,10 @@ enum StmtCode {
 
   STMT_CXX_FOR_RANGE,
 
-  /// A CXXEnumeratedExpansionStmt.
-  STMT_CXX_ENUMERATING_EXPANSION,
+  /// A CXXExpansionPatternStmt.
+  STMT_CXX_EXPANSION_PATTERN,
 
-  /// A CXXIteratingExpansionStmtPattern.
-  STMT_CXX_ITERATING_EXPANSION,
-
-  /// A CXXDestructuringExpansionStmtPattern.
-  STMT_CXX_DESTRUCTURING_EXPANSION,
-
-  /// A CXXDependentExpansionStmtPattern,
-  STMT_CXX_DEPENDENT_EXPANSION,
-
-  /// A CXXExpansionStmtInstantiation.
+  /// A CXXExpansionInstantiationStmt.
   STMT_CXX_EXPANSION_INSTANTIATION,
 
   /// A CXXOperatorCallExpr record.

@@ -1502,6 +1502,24 @@ void clang::TextNodeDumper::VisitCoreturnStmt(const CoreturnStmt *Node) {
     OS << " implicit";
 }
 
+void TextNodeDumper::VisitCXXExpansionStmtPattern(
+    const CXXExpansionStmtPattern *Node) {
+  switch (Node->getKind()) {
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Enumerating:
+    OS << " enumerating";
+    break;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Iterating:
+    OS << " iterating";
+    break;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Destructuring:
+    OS << " destructuring";
+    break;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Dependent:
+    OS << " dependent";
+    break;
+  }
+}
+
 void TextNodeDumper::VisitCXXExpansionStmtInstantiation(
     const CXXExpansionStmtInstantiation *Node) {
   if (Node->shouldApplyLifetimeExtensionToSharedStmts())

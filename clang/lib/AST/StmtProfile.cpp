@@ -369,26 +369,6 @@ void StmtProfiler::VisitCXXExpansionStmtPattern(
   VisitStmt(S);
 }
 
-void StmtProfiler::VisitCXXEnumeratingExpansionStmtPattern(
-    const CXXEnumeratingExpansionStmtPattern *S) {
-  VisitCXXExpansionStmtPattern(S);
-}
-
-void StmtProfiler::VisitCXXIteratingExpansionStmtPattern(
-    const CXXIteratingExpansionStmtPattern *S) {
-  VisitCXXExpansionStmtPattern(S);
-}
-
-void StmtProfiler::VisitCXXDestructuringExpansionStmtPattern(
-    const CXXDestructuringExpansionStmtPattern *S) {
-  VisitCXXExpansionStmtPattern(S);
-}
-
-void StmtProfiler::VisitCXXDependentExpansionStmtPattern(
-    const CXXDependentExpansionStmtPattern *S) {
-  VisitCXXExpansionStmtPattern(S);
-}
-
 void StmtProfiler::VisitCXXExpansionStmtInstantiation(
     const CXXExpansionStmtInstantiation *S) {
   VisitStmt(S);

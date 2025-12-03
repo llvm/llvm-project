@@ -160,8 +160,6 @@ namespace {
     }
 
     void VisitCXXNamedCastExpr(CXXNamedCastExpr *Node);
-    void VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *Node,
-                                      Expr *Initializer = nullptr);
 
 #define ABSTRACT_STMT(CLASS)
 #define STMT(CLASS, PARENT) \
@@ -450,8 +448,7 @@ void StmtPrinter::VisitCXXForRangeStmt(CXXForRangeStmt *Node) {
   PrintControlledStmt(Node->getBody());
 }
 
-void StmtPrinter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *Node,
-                                               Expr *Initializer) {
+void StmtPrinter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *Node) {
   OS << "template for (";
   if (Node->getInit())
     PrintInitStmt(Node->getInit(), 14);
@@ -459,30 +456,16 @@ void StmtPrinter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *Node,
   SubPolicy.SuppressInitializers = true;
   Node->getExpansionVariable()->print(OS, SubPolicy, IndentLevel);
   OS << " : ";
-  PrintExpr(Initializer ? Initializer
-                        : Node->getExpansionVariable()->getInit());
+
+  if (Node->isIterating())
+    PrintExpr(Node->getRangeVar()->getInit());
+  else if (Node->isDependent())
+    PrintExpr(Node->getExpansionInitializer());
+  else
+    PrintExpr(Node->getExpansionVariable()->getInit());
+
   OS << ")";
   PrintControlledStmt(Node->getBody());
-}
-
-void StmtPrinter::VisitCXXEnumeratingExpansionStmtPattern(
-    CXXEnumeratingExpansionStmtPattern *Node) {
-  VisitCXXExpansionStmtPattern(Node);
-}
-
-void StmtPrinter::VisitCXXIteratingExpansionStmtPattern(
-    CXXIteratingExpansionStmtPattern *Node) {
-  VisitCXXExpansionStmtPattern(Node, Node->getRangeVar()->getInit());
-}
-
-void StmtPrinter::VisitCXXDestructuringExpansionStmtPattern(
-    CXXDestructuringExpansionStmtPattern *Node) {
-  VisitCXXExpansionStmtPattern(Node);
-}
-
-void StmtPrinter::VisitCXXDependentExpansionStmtPattern(
-    CXXDependentExpansionStmtPattern *Node) {
-  VisitCXXExpansionStmtPattern(Node, Node->getExpansionInitializer());
 }
 
 void StmtPrinter::VisitCXXExpansionStmtInstantiation(

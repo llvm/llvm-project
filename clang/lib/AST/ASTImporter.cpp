@@ -609,14 +609,7 @@ namespace clang {
     ExpectedStmt VisitCXXCatchStmt(CXXCatchStmt *S);
     ExpectedStmt VisitCXXTryStmt(CXXTryStmt *S);
     ExpectedStmt VisitCXXForRangeStmt(CXXForRangeStmt *S);
-    ExpectedStmt VisitCXXEnumeratingExpansionStmtPattern(
-        CXXEnumeratingExpansionStmtPattern *S);
-    ExpectedStmt
-    VisitCXXIteratingExpansionStmtPattern(CXXIteratingExpansionStmtPattern *S);
-    ExpectedStmt VisitCXXDestructuringExpansionStmtPattern(
-        CXXDestructuringExpansionStmtPattern *S);
-    ExpectedStmt
-    VisitCXXDependentExpansionStmtPattern(CXXDependentExpansionStmtPattern *S);
+    ExpectedStmt VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S);
     ExpectedStmt
     VisitCXXExpansionStmtInstantiation(CXXExpansionStmtInstantiation *S);
     // FIXME: MSDependentExistsStmt
@@ -7493,8 +7486,8 @@ ExpectedStmt ASTNodeImporter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
       ToBody, ToForLoc, ToCoawaitLoc, ToColonLoc, ToRParenLoc);
 }
 
-ExpectedStmt ASTNodeImporter::VisitCXXEnumeratingExpansionStmtPattern(
-    CXXEnumeratingExpansionStmtPattern *S) {
+ExpectedStmt ASTNodeImporter::VisitCXXExpansionStmtPattern(
+    CXXExpansionStmtPattern *S) {
   Error Err = Error::success();
   auto ToESD = importChecked(Err, S->getDecl());
   auto ToInit = importChecked(Err, S->getInit());
@@ -7505,64 +7498,49 @@ ExpectedStmt ASTNodeImporter::VisitCXXEnumeratingExpansionStmtPattern(
   if (Err)
     return std::move(Err);
 
-  return new (Importer.getToContext()) CXXEnumeratingExpansionStmtPattern(
-      ToESD, ToInit, ToExpansionVar, ToLParenLoc, ToColonLoc, ToRParenLoc);
-}
-ExpectedStmt ASTNodeImporter::VisitCXXIteratingExpansionStmtPattern(
-    CXXIteratingExpansionStmtPattern *S) {
-  Error Err = Error::success();
-  auto ToESD = importChecked(Err, S->getDecl());
-  auto ToInit = importChecked(Err, S->getInit());
-  auto ToExpansionVar = importChecked(Err, S->getExpansionVarStmt());
-  auto ToRange = importChecked(Err, S->getRangeVarStmt());
-  auto ToBegin = importChecked(Err, S->getBeginVarStmt());
-  auto ToEnd = importChecked(Err, S->getEndVarStmt());
-  auto ToLParenLoc = importChecked(Err, S->getLParenLoc());
-  auto ToColonLoc = importChecked(Err, S->getColonLoc());
-  auto ToRParenLoc = importChecked(Err, S->getRParenLoc());
-  if (Err)
-    return std::move(Err);
+  switch (S->getKind()) {
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Enumerating:
+    return CXXExpansionStmtPattern::CreateEnumerating(
+        Importer.getToContext(), ToESD, ToInit, ToExpansionVar, ToLParenLoc,
+        ToColonLoc, ToRParenLoc);
 
-  return new (Importer.getToContext()) CXXIteratingExpansionStmtPattern(
-      ToESD, ToInit, ToExpansionVar, ToRange, ToBegin, ToEnd, ToLParenLoc,
-      ToColonLoc, ToRParenLoc);
-}
-ExpectedStmt ASTNodeImporter::VisitCXXDestructuringExpansionStmtPattern(
-    CXXDestructuringExpansionStmtPattern *S) {
-  Error Err = Error::success();
-  auto ToESD = importChecked(Err, S->getDecl());
-  auto ToInit = importChecked(Err, S->getInit());
-  auto ToExpansionVar = importChecked(Err, S->getExpansionVarStmt());
-  auto ToDecompositionDeclStmt =
-      importChecked(Err, S->getDecompositionDeclStmt());
-  auto ToLParenLoc = importChecked(Err, S->getLParenLoc());
-  auto ToColonLoc = importChecked(Err, S->getColonLoc());
-  auto ToRParenLoc = importChecked(Err, S->getRParenLoc());
-  if (Err)
-    return std::move(Err);
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Iterating: {
+    auto ToRange = importChecked(Err, S->getRangeVarStmt());
+    auto ToBegin = importChecked(Err, S->getBeginVarStmt());
+    auto ToEnd = importChecked(Err, S->getEndVarStmt());
+    if (Err)
+      return std::move(Err);
 
-  return new (Importer.getToContext()) CXXDestructuringExpansionStmtPattern(
-      ToESD, ToInit, ToExpansionVar, ToDecompositionDeclStmt, ToLParenLoc,
-      ToColonLoc, ToRParenLoc);
-}
-ExpectedStmt ASTNodeImporter::VisitCXXDependentExpansionStmtPattern(
-    CXXDependentExpansionStmtPattern *S) {
-  Error Err = Error::success();
-  auto ToESD = importChecked(Err, S->getDecl());
-  auto ToInit = importChecked(Err, S->getInit());
-  auto ToExpansionVar = importChecked(Err, S->getExpansionVarStmt());
-  auto ToExpansionInitializer =
-      importChecked(Err, S->getExpansionInitializer());
-  auto ToLParenLoc = importChecked(Err, S->getLParenLoc());
-  auto ToColonLoc = importChecked(Err, S->getColonLoc());
-  auto ToRParenLoc = importChecked(Err, S->getRParenLoc());
-  if (Err)
-    return std::move(Err);
+    return CXXExpansionStmtPattern::CreateIterating(
+        Importer.getToContext(), ToESD, ToInit, ToExpansionVar, ToRange,
+        ToBegin, ToEnd, ToLParenLoc, ToColonLoc, ToRParenLoc);
+  }
 
-  return new (Importer.getToContext()) CXXDependentExpansionStmtPattern(
-      ToESD, ToInit, ToExpansionVar, ToExpansionInitializer, ToLParenLoc,
-      ToColonLoc, ToRParenLoc);
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Destructuring: {
+    auto ToDecompositionDeclStmt =
+        importChecked(Err, S->getDecompositionDeclStmt());
+    if (Err)
+      return std::move(Err);
+
+    return CXXExpansionStmtPattern::CreateDestructuring(
+        Importer.getToContext(), ToESD, ToInit, ToExpansionVar,
+        ToDecompositionDeclStmt, ToLParenLoc, ToColonLoc, ToRParenLoc);
+  }
+
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Dependent: {
+    auto ToExpansionInitializer =
+        importChecked(Err, S->getExpansionInitializer());
+    if (Err)
+      return std::move(Err);
+    return CXXExpansionStmtPattern::CreateDependent(
+        Importer.getToContext(), ToESD, ToInit, ToExpansionVar,
+        ToExpansionInitializer, ToLParenLoc, ToColonLoc, ToRParenLoc);
+  }
+  }
+
+  llvm_unreachable("invalid pattern kind");
 }
+
 ExpectedStmt ASTNodeImporter::VisitCXXExpansionStmtInstantiation(
     CXXExpansionStmtInstantiation *S) {
   Error Err = Error::success();

@@ -1706,13 +1706,14 @@ void ASTStmtWriter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
 
 void ASTStmtWriter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
   VisitStmt(S);
+  Record.push_back(static_cast<unsigned>(S->getKind()));
   Record.AddSourceLocation(S->getLParenLoc());
   Record.AddSourceLocation(S->getColonLoc());
   Record.AddSourceLocation(S->getRParenLoc());
   Record.AddDeclRef(S->getDecl());
-  Record.AddStmt(S->getInit());
-  Record.AddStmt(S->getExpansionVarStmt());
-  Record.AddStmt(S->getBody());
+  for (Stmt* SubStmt : S->children())
+    Record.AddStmt(SubStmt);
+  Code = serialization::STMT_CXX_EXPANSION_PATTERN;
 }
 
 void ASTStmtWriter::VisitCXXExpansionStmtInstantiation(
@@ -1726,35 +1727,6 @@ void ASTStmtWriter::VisitCXXExpansionStmtInstantiation(
     Record.AddStmt(St);
   Record.push_back(S->shouldApplyLifetimeExtensionToSharedStmts());
   Code = serialization::STMT_CXX_EXPANSION_INSTANTIATION;
-}
-
-void ASTStmtWriter::VisitCXXEnumeratingExpansionStmtPattern(
-    CXXEnumeratingExpansionStmtPattern *S) {
-  VisitCXXExpansionStmtPattern(S);
-  Code = serialization::STMT_CXX_ENUMERATING_EXPANSION;
-}
-
-void ASTStmtWriter::VisitCXXIteratingExpansionStmtPattern(
-    CXXIteratingExpansionStmtPattern *S) {
-  VisitCXXExpansionStmtPattern(S);
-  Record.AddStmt(S->getRangeVarStmt());
-  Record.AddStmt(S->getBeginVarStmt());
-  Record.AddStmt(S->getEndVarStmt());
-  Code = serialization::STMT_CXX_ITERATING_EXPANSION;
-}
-
-void ASTStmtWriter::VisitCXXDestructuringExpansionStmtPattern(
-    CXXDestructuringExpansionStmtPattern *S) {
-  VisitCXXExpansionStmtPattern(S);
-  Record.AddStmt(S->getDecompositionDeclStmt());
-  Code = serialization::STMT_CXX_DESTRUCTURING_EXPANSION;
-}
-
-void ASTStmtWriter::VisitCXXDependentExpansionStmtPattern(
-    CXXDependentExpansionStmtPattern *S) {
-  VisitCXXExpansionStmtPattern(S);
-  Record.AddStmt(S->getExpansionInitializer());
-  Code = serialization::STMT_CXX_DEPENDENT_EXPANSION;
 }
 
 void ASTStmtWriter::VisitCXXExpansionInitListSelectExpr(

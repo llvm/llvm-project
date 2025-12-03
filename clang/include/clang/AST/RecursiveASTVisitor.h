@@ -3125,10 +3125,7 @@ DEF_TRAVERSE_STMT(RequiresExpr, {
     TRY_TO(TraverseConceptRequirement(Req));
 })
 
-DEF_TRAVERSE_STMT(CXXEnumeratingExpansionStmtPattern, {})
-DEF_TRAVERSE_STMT(CXXIteratingExpansionStmtPattern, {})
-DEF_TRAVERSE_STMT(CXXDestructuringExpansionStmtPattern, {})
-DEF_TRAVERSE_STMT(CXXDependentExpansionStmtPattern, {})
+DEF_TRAVERSE_STMT(CXXExpansionStmtPattern, {})
 DEF_TRAVERSE_STMT(CXXExpansionStmtInstantiation, {})
 DEF_TRAVERSE_STMT(CXXExpansionInitListSelectExpr, {})
 DEF_TRAVERSE_STMT(CXXDestructuringExpansionSelectExpr, {})

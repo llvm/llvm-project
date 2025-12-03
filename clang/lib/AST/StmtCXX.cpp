@@ -127,33 +127,93 @@ CoroutineBodyStmt::CoroutineBodyStmt(CoroutineBodyStmt::CtorArgs const &Args)
   llvm::copy(Args.ParamMoves, const_cast<Stmt **>(getParamMoves().data()));
 }
 
-CXXExpansionStmtPattern::CXXExpansionStmtPattern(StmtClass SC, EmptyShell Empty)
-    : Stmt(SC, Empty) {}
+CXXExpansionStmtPattern::CXXExpansionStmtPattern(ExpansionStmtKind PatternKind,
+                                                 EmptyShell Empty)
+    : Stmt(CXXExpansionStmtPatternClass, Empty), PatternKind(PatternKind) {}
 
 CXXExpansionStmtPattern::CXXExpansionStmtPattern(
-    StmtClass SC, CXXExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVar,
-
-    SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation RParenLoc)
-    : Stmt(SC), ParentDecl(ESD), LParenLoc(LParenLoc), ColonLoc(ColonLoc),
-      RParenLoc(RParenLoc) {
+    ExpansionStmtKind PatternKind, CXXExpansionStmtDecl *ESD, Stmt *Init,
+    DeclStmt *ExpansionVar, SourceLocation LParenLoc, SourceLocation ColonLoc,
+    SourceLocation RParenLoc)
+    : Stmt(CXXExpansionStmtPatternClass), PatternKind(PatternKind),
+      LParenLoc(LParenLoc), ColonLoc(ColonLoc), RParenLoc(RParenLoc),
+      ParentDecl(ESD) {
   setInit(Init);
   setExpansionVarStmt(ExpansionVar);
   setBody(nullptr);
 }
 
-CXXEnumeratingExpansionStmtPattern::CXXEnumeratingExpansionStmtPattern(
-    EmptyShell Empty)
-    : CXXExpansionStmtPattern(CXXEnumeratingExpansionStmtPatternClass, Empty) {}
+template <typename... Args>
+CXXExpansionStmtPattern *CXXExpansionStmtPattern::AllocateAndConstruct(
+    ASTContext &Context, ExpansionStmtKind Kind, Args &&...Arguments) {
+  std::size_t Size = totalSizeToAlloc<Stmt *>(getNumSubStmts(Kind));
+  void *Mem = Context.Allocate(Size, alignof(CXXExpansionStmtPattern));
+  return new (Mem)
+      CXXExpansionStmtPattern(Kind, std::forward<Args>(Arguments)...);
+}
 
-CXXEnumeratingExpansionStmtPattern::CXXEnumeratingExpansionStmtPattern(
-    CXXExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVar,
-    SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation RParenLoc)
-    : CXXExpansionStmtPattern(CXXEnumeratingExpansionStmtPatternClass, ESD,
+CXXExpansionStmtPattern *CXXExpansionStmtPattern::CreateDependent(
+    ASTContext &Context, CXXExpansionStmtDecl *ESD, Stmt *Init,
+    DeclStmt *ExpansionVar, Expr *ExpansionInitializer,
+    SourceLocation LParenLoc, SourceLocation ColonLoc,
+    SourceLocation RParenLoc) {
+  CXXExpansionStmtPattern *Pattern =
+      AllocateAndConstruct(Context, ExpansionStmtKind::Dependent, ESD, Init,
+                           ExpansionVar, LParenLoc, ColonLoc, RParenLoc);
+  Pattern->setExpansionInitializer(ExpansionInitializer);
+  return Pattern;
+}
+
+CXXExpansionStmtPattern *CXXExpansionStmtPattern::CreateDestructuring(
+    ASTContext &Context, CXXExpansionStmtDecl *ESD, Stmt *Init,
+    DeclStmt *ExpansionVar, Stmt *DecompositionDeclStmt,
+    SourceLocation LParenLoc, SourceLocation ColonLoc,
+    SourceLocation RParenLoc) {
+  CXXExpansionStmtPattern *Pattern =
+      AllocateAndConstruct(Context, ExpansionStmtKind::Destructuring, ESD, Init,
+                           ExpansionVar, LParenLoc, ColonLoc, RParenLoc);
+  Pattern->setDecompositionDeclStmt(DecompositionDeclStmt);
+  return Pattern;
+}
+
+CXXExpansionStmtPattern *
+CXXExpansionStmtPattern::CreateEmpty(ASTContext &Context, EmptyShell Empty,
+                                     ExpansionStmtKind Kind) {
+  return AllocateAndConstruct(Context, Kind, Empty);
+}
+
+CXXExpansionStmtPattern *CXXExpansionStmtPattern::CreateEnumerating(
+    ASTContext &Context, CXXExpansionStmtDecl *ESD, Stmt *Init,
+    DeclStmt *ExpansionVar, SourceLocation LParenLoc, SourceLocation ColonLoc,
+    SourceLocation RParenLoc) {
+  return AllocateAndConstruct(Context, ExpansionStmtKind::Enumerating, ESD,
                               Init, ExpansionVar, LParenLoc, ColonLoc,
-                              RParenLoc) {}
+                              RParenLoc);
+}
+
+CXXExpansionStmtPattern *CXXExpansionStmtPattern::CreateIterating(
+    ASTContext &Context, CXXExpansionStmtDecl *ESD, Stmt *Init,
+    DeclStmt *ExpansionVar, DeclStmt *Range, DeclStmt *Begin, DeclStmt *End,
+    SourceLocation LParenLoc, SourceLocation ColonLoc,
+    SourceLocation RParenLoc) {
+  CXXExpansionStmtPattern *Pattern =
+      AllocateAndConstruct(Context, ExpansionStmtKind::Iterating, ESD, Init,
+                           ExpansionVar, LParenLoc, ColonLoc, RParenLoc);
+  Pattern->setRangeVarStmt(Range);
+  Pattern->setBeginVarStmt(Begin);
+  Pattern->setEndVarStmt(End);
+  return Pattern;
+}
 
 SourceLocation CXXExpansionStmtPattern::getBeginLoc() const {
   return ParentDecl->getLocation();
+}
+
+DecompositionDecl *
+CXXExpansionStmtPattern::getDecompositionDecl() {
+  assert(isDestructuring());
+  return cast<DecompositionDecl>(
+      cast<DeclStmt>(getDecompositionDeclStmt())->getSingleDecl());
 }
 
 VarDecl *CXXExpansionStmtPattern::getExpansionVariable() {
@@ -162,53 +222,20 @@ VarDecl *CXXExpansionStmtPattern::getExpansionVariable() {
   return cast<VarDecl>(LV);
 }
 
-CXXIteratingExpansionStmtPattern::CXXIteratingExpansionStmtPattern(
-    EmptyShell Empty)
-    : CXXExpansionStmtPattern(CXXIteratingExpansionStmtPatternClass, Empty) {}
+unsigned
+CXXExpansionStmtPattern::getNumSubStmts(ExpansionStmtKind PatternKind) {
+  switch (PatternKind) {
+  case ExpansionStmtKind::Enumerating:
+    return COUNT_Enumerating;
+  case ExpansionStmtKind::Iterating:
+    return COUNT_Iterating;
+  case ExpansionStmtKind::Destructuring:
+    return COUNT_Destructuring;
+  case ExpansionStmtKind::Dependent:
+    return COUNT_Dependent;
+  }
 
-CXXIteratingExpansionStmtPattern::CXXIteratingExpansionStmtPattern(
-    CXXExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVar,
-    DeclStmt *Range, DeclStmt *Begin, DeclStmt *End, SourceLocation LParenLoc,
-    SourceLocation ColonLoc, SourceLocation RParenLoc)
-    : CXXExpansionStmtPattern(CXXIteratingExpansionStmtPatternClass, ESD, Init,
-                              ExpansionVar, LParenLoc, ColonLoc, RParenLoc) {
-  setRangeVarStmt(Range);
-  setBeginVarStmt(Begin);
-  setEndVarStmt(End);
-}
-
-CXXDestructuringExpansionStmtPattern::CXXDestructuringExpansionStmtPattern(
-    EmptyShell Empty)
-    : CXXExpansionStmtPattern(CXXDestructuringExpansionStmtPatternClass,
-                              Empty) {}
-
-CXXDestructuringExpansionStmtPattern::CXXDestructuringExpansionStmtPattern(
-    CXXExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVar,
-    Stmt *DecompositionDeclStmt, SourceLocation LParenLoc,
-    SourceLocation ColonLoc, SourceLocation RParenLoc)
-    : CXXExpansionStmtPattern(CXXDestructuringExpansionStmtPatternClass, ESD,
-                              Init, ExpansionVar, LParenLoc, ColonLoc,
-                              RParenLoc) {
-  setDecompositionDeclStmt(DecompositionDeclStmt);
-}
-
-DecompositionDecl *
-CXXDestructuringExpansionStmtPattern::getDecompositionDecl() {
-  return cast<DecompositionDecl>(
-      cast<DeclStmt>(getDecompositionDeclStmt())->getSingleDecl());
-}
-
-CXXDependentExpansionStmtPattern::CXXDependentExpansionStmtPattern(
-    EmptyShell Empty)
-    : CXXExpansionStmtPattern(CXXDependentExpansionStmtPatternClass, Empty) {}
-
-CXXDependentExpansionStmtPattern::CXXDependentExpansionStmtPattern(
-    CXXExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVar,
-    Expr *ExpansionInitializer, SourceLocation LParenLoc,
-    SourceLocation ColonLoc, SourceLocation RParenLoc)
-    : CXXExpansionStmtPattern(CXXDependentExpansionStmtPatternClass, ESD, Init,
-                              ExpansionVar, LParenLoc, ColonLoc, RParenLoc) {
-  setExpansionInitializer(ExpansionInitializer);
+  llvm_unreachable("invalid pattern kind");
 }
 
 CXXExpansionStmtInstantiation::CXXExpansionStmtInstantiation(

@@ -59,11 +59,7 @@ def CoroutineBodyStmt : StmtNode<Stmt>;
 def CoreturnStmt : StmtNode<Stmt>;
 
 // C++ expansion statements (P1306)
-def CXXExpansionStmtPattern : StmtNode<Stmt, 1>;
-def CXXEnumeratingExpansionStmtPattern : StmtNode<CXXExpansionStmtPattern>;
-def CXXIteratingExpansionStmtPattern : StmtNode<CXXExpansionStmtPattern>;
-def CXXDestructuringExpansionStmtPattern : StmtNode<CXXExpansionStmtPattern>;
-def CXXDependentExpansionStmtPattern : StmtNode<CXXExpansionStmtPattern>;
+def CXXExpansionStmtPattern : StmtNode<Stmt>;
 def CXXExpansionStmtInstantiation
     : StmtNode<Stmt>; // *Not* derived from CXXExpansionStmtPattern!
 

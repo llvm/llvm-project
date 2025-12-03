@@ -1732,13 +1732,13 @@ void ASTStmtReader::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
 
 void ASTStmtReader::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
   VisitStmt(S);
+  Record.skipInts(1); // Skip kind.
   S->LParenLoc = readSourceLocation();
   S->ColonLoc = readSourceLocation();
   S->RParenLoc = readSourceLocation();
   S->ParentDecl = cast<CXXExpansionStmtDecl>(Record.readDeclRef());
-  S->setInit(Record.readSubStmt());
-  S->setExpansionVarStmt(Record.readSubStmt());
-  S->setBody(Record.readSubStmt());
+  for (Stmt *&SubStmt : S->children())
+    SubStmt = Record.readSubStmt();
 }
 
 void ASTStmtReader::VisitCXXExpansionStmtInstantiation(
@@ -1750,31 +1750,6 @@ void ASTStmtReader::VisitCXXExpansionStmtInstantiation(
   for (unsigned I = 0; I < S->getNumSubStmts(); ++I)
     S->getAllSubStmts()[I] = Record.readSubStmt();
   S->setShouldApplyLifetimeExtensionToSharedStmts(Record.readBool());
-}
-
-void ASTStmtReader::VisitCXXEnumeratingExpansionStmtPattern(
-    CXXEnumeratingExpansionStmtPattern *S) {
-  VisitCXXExpansionStmtPattern(S);
-}
-
-void ASTStmtReader::VisitCXXIteratingExpansionStmtPattern(
-    CXXIteratingExpansionStmtPattern *S) {
-  VisitCXXExpansionStmtPattern(S);
-  S->setRangeVarStmt(cast<DeclStmt>(Record.readSubStmt()));
-  S->setBeginVarStmt(cast<DeclStmt>(Record.readSubStmt()));
-  S->setEndVarStmt(cast<DeclStmt>(Record.readSubStmt()));
-}
-
-void ASTStmtReader::VisitCXXDestructuringExpansionStmtPattern(
-    CXXDestructuringExpansionStmtPattern *S) {
-  VisitCXXExpansionStmtPattern(S);
-  S->setDecompositionDeclStmt(Record.readSubStmt());
-}
-
-void ASTStmtReader::VisitCXXDependentExpansionStmtPattern(
-    CXXDependentExpansionStmtPattern *S) {
-  VisitCXXExpansionStmtPattern(S);
-  S->setExpansionInitializer(Record.readSubExpr());
 }
 
 void ASTStmtReader::VisitCXXExpansionInitListSelectExpr(
@@ -3627,20 +3602,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
              /*numHandlers=*/Record[ASTStmtReader::NumStmtFields]);
       break;
 
-    case STMT_CXX_ENUMERATING_EXPANSION:
-      S = new (Context) CXXEnumeratingExpansionStmtPattern(Empty);
-      break;
-
-    case STMT_CXX_ITERATING_EXPANSION:
-      S = new (Context) CXXIteratingExpansionStmtPattern(Empty);
-      break;
-
-    case STMT_CXX_DESTRUCTURING_EXPANSION:
-      S = new (Context) CXXDestructuringExpansionStmtPattern(Empty);
-      break;
-
-    case STMT_CXX_DEPENDENT_EXPANSION:
-      S = new (Context) CXXDependentExpansionStmtPattern(Empty);
+    case STMT_CXX_EXPANSION_PATTERN:
+      S = CXXExpansionStmtPattern::CreateEmpty(
+          Context, Empty,
+          static_cast<CXXExpansionStmtPattern::ExpansionStmtKind>(
+              Record[ASTStmtReader::NumStmtFields]));
       break;
 
     case STMT_CXX_EXPANSION_INSTANTIATION:
