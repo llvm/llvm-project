@@ -323,6 +323,16 @@ public:
   void VisitSeqClause(const OpenACCSeqClause &clause) {
     routineOp.addSeq(builder.getContext(), lastDeviceTypeValues);
   }
+  void VisitWorkerClause(const OpenACCWorkerClause &clause) {
+    routineOp.addWorker(builder.getContext(), lastDeviceTypeValues);
+  }
+  void VisitVectorClause(const OpenACCVectorClause &clause) {
+    routineOp.addVector(builder.getContext(), lastDeviceTypeValues);
+  }
+
+  void VisitNoHostClause(const OpenACCNoHostClause &clause) {
+    routineOp.setNohost(/*attrValue=*/true);
+  }
 };
 } // namespace
 

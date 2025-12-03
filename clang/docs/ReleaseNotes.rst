@@ -448,6 +448,11 @@ Improvements to Clang's diagnostics
 - A new warning ``-Wenum-compare-typo`` has been added to detect potential erroneous
   comparison operators when mixed with bitwise operators in enum value initializers.
   This can be locally disabled by explicitly casting the initializer value.
+- Clang now provides correct caret placement when attributes appear before
+  `enum class` (#GH163224).
+
+- A new warning ``-Wshadow-header`` has been added to detect when a header file
+  is found in multiple search directories (excluding system paths).
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -648,20 +653,6 @@ RISC-V Support
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Clang now supports C++17 Class Template Argument Deduction (CTAD) in CUDA/HIP
-  device code by treating deduction guides as if they were ``__host__ __device__``.
-
-- Clang avoids ambiguous CTAD in CUDA/HIP by not synthesizing duplicate implicit
-  deduction guides when ``__host__`` and ``__device__`` constructors differ only
-  in CUDA target attributes (same signature and constraints).
-
-- Clang diagnoses CUDA/HIP target attributes written on deduction guides as errors,
-  since deduction guides do not participate in code generation.
-
-- Clang preserves distinct implicit deduction guides for constructors that differ
-  by constraints, so constraint-based CTAD works in CUDA/HIP device code as in
-  standard C++.
-
 CUDA Support
 ^^^^^^^^^^^^
 
@@ -751,6 +742,8 @@ Crash and bug fixes
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 - Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
 - Fixed a crash when compiling ``__real__`` or ``__imag__`` unary operator on scalar value with type promotion. (#GH160583)
+- Fixed a crash when parsing invalid nested name specifier sequences
+  containing a single colon. (#GH167905)
 
 Improvements
 ^^^^^^^^^^^^

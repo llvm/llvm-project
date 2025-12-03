@@ -58,6 +58,10 @@ Potentially Breaking Changes
   :program:`clang-tidy-20`. Users should use the check-specific options of the
   same name instead.
 
+- Removed `clang-analyzer-*` checks from default checks in :program:`clang-tidy`.
+  From now on, users should specify explicitly that they want CSA checks to run
+  in :program:`clang-tidy` via `clang-analyzer-*`.
+
 - Renamed a few :program:`clang-tidy` check options, as they
   were misspelled:
 
@@ -183,6 +187,10 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py`
   scripts by adding the `-hide-progress` option to suppress progress and
   informational messages.
+
+- Removed `clang-analyzer-*` check from default checks in :program:`clang-tidy`.
+  From now on, users should specify explicitly that they want CSA checks to run
+  in :program:`clang-tidy`.
 
 - Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
   moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
@@ -423,6 +431,11 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check
   adding an option to allow pointer arithmetic via prefix/postfix increment or
   decrement operators.
+
+- Improved :doc:`cppcoreguidelines-pro-type-member-init
+  <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to
+  correctly ignore ``std::array`` and other array-like containers when
+  `IgnoreArrays` option is set to `true`.
 
 - Improved :doc:`google-readability-casting
   <clang-tidy/checks/google/readability-casting>` check by adding fix-it
