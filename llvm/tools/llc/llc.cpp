@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/LinkAllAsmWriterComponents.h"
@@ -727,6 +728,10 @@ static int compileModule(char **argv, LLVMContext &Context,
   // Build up all of the passes that we want to do to the module.
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
+  PM.add(new RuntimeLibraryInfoWrapper(
+      M->getTargetTriple(), Target->Options.ExceptionModel,
+      Target->Options.FloatABIType, Target->Options.EABIVersion,
+      Options.MCOptions.ABIName, Target->Options.VecLib));
 
   {
     raw_pwrite_stream *OS = &Out->os();

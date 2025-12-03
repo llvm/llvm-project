@@ -180,7 +180,7 @@ define void @test_step2_start_outer_add_rec_step_16(i64 %n, i64 %m) {
 ; CHECK-NEXT:    %iv.1 = add i64 %iv, 1
 ; CHECK-NEXT:    --> {{\{\{}}1,+,16}<%outer.header>,+,2}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div.1 = udiv i64 %iv.1, 4
-; CHECK-NEXT:    --> ({{\{\{}}1,+,16}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    --> ({{\{\{}}0,+,16}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %iv.2 = add i64 %iv, 2
 ; CHECK-NEXT:    --> {{\{\{}}2,+,16}<%outer.header>,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div.2 = udiv i64 %iv.2, 4
@@ -188,7 +188,7 @@ define void @test_step2_start_outer_add_rec_step_16(i64 %n, i64 %m) {
 ; CHECK-NEXT:    %iv.3 = add i64 %iv, 3
 ; CHECK-NEXT:    --> {{\{\{}}3,+,16}<%outer.header>,+,2}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div.3 = udiv i64 %iv.3, 4
-; CHECK-NEXT:    --> ({{\{\{}}3,+,16}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    --> ({{\{\{}}2,+,16}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %iv.4 = add i64 %iv, 4
 ; CHECK-NEXT:    --> {{\{\{}}4,+,16}<%outer.header>,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div.4 = udiv i64 %iv.4, 4
@@ -196,11 +196,11 @@ define void @test_step2_start_outer_add_rec_step_16(i64 %n, i64 %m) {
 ; CHECK-NEXT:    %iv.5 = add i64 %iv, 5
 ; CHECK-NEXT:    --> {{\{\{}}5,+,16}<%outer.header>,+,2}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div.5 = udiv i64 %iv.5, 4
-; CHECK-NEXT:    --> ({{\{\{}}5,+,16}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    --> ({{\{\{}}4,+,16}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %iv.neg.1 = add i64 %iv, -1
 ; CHECK-NEXT:    --> {{\{\{}}-1,+,16}<%outer.header>,+,2}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div.neg.1 = udiv i64 %iv.neg.1, 4
-; CHECK-NEXT:    --> ({{\{\{}}-1,+,16}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    --> ({{\{\{}}-2,+,16}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div3.0 = udiv i64 %iv, 3
 ; CHECK-NEXT:    --> ({{\{\{}}0,+,16}<%outer.header>,+,2}<%loop> /u 3) U: [0,6148914691236517205) S: [0,6148914691236517206) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div3.1 = udiv i64 %iv.1, 3
@@ -296,7 +296,7 @@ define void @test_step2_div4_start_outer_add_rec_step_2(i64 %n, i64 %m) {
 ; CHECK-NEXT:    %iv.1 = add i64 %iv, 1
 ; CHECK-NEXT:    --> {{\{\{}}1,+,2}<%outer.header>,+,2}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div.1 = udiv i64 %iv.1, 4
-; CHECK-NEXT:    --> ({{\{\{}}1,+,2}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    --> ({{\{\{}}0,+,2}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %iv.2 = add i64 %iv, 2
 ; CHECK-NEXT:    --> {{\{\{}}2,+,2}<%outer.header>,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div.2 = udiv i64 %iv.2, 4
@@ -304,7 +304,7 @@ define void @test_step2_div4_start_outer_add_rec_step_2(i64 %n, i64 %m) {
 ; CHECK-NEXT:    %iv.3 = add i64 %iv, 3
 ; CHECK-NEXT:    --> {{\{\{}}3,+,2}<%outer.header>,+,2}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div.3 = udiv i64 %iv.3, 4
-; CHECK-NEXT:    --> ({{\{\{}}3,+,2}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    --> ({{\{\{}}2,+,2}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %iv.4 = add i64 %iv, 4
 ; CHECK-NEXT:    --> {{\{\{}}4,+,2}<%outer.header>,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div.4 = udiv i64 %iv.4, 4
@@ -312,11 +312,11 @@ define void @test_step2_div4_start_outer_add_rec_step_2(i64 %n, i64 %m) {
 ; CHECK-NEXT:    %iv.5 = add i64 %iv, 5
 ; CHECK-NEXT:    --> {{\{\{}}5,+,2}<%outer.header>,+,2}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div.5 = udiv i64 %iv.5, 4
-; CHECK-NEXT:    --> ({{\{\{}}5,+,2}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    --> ({{\{\{}}4,+,2}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %iv.neg.1 = add i64 %iv, -1
 ; CHECK-NEXT:    --> {{\{\{}}-1,+,2}<%outer.header>,+,2}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div.neg.1 = udiv i64 %iv.neg.1, 4
-; CHECK-NEXT:    --> ({{\{\{}}-1,+,2}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    --> ({{\{\{}}-2,+,2}<%outer.header>,+,2}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div3.0 = udiv i64 %iv, 3
 ; CHECK-NEXT:    --> ({{\{\{}}0,+,2}<%outer.header>,+,2}<%loop> /u 3) U: [0,6148914691236517205) S: [0,6148914691236517206) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div3.1 = udiv i64 %iv.1, 3
