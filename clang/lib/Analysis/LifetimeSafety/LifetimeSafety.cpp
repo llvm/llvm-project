@@ -32,8 +32,11 @@ namespace clang::lifetimes {
 namespace internal {
 
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                                               LifetimeSafetyReporter *Reporter)
-    : AC(AC), Reporter(Reporter) {}
+                                               LifetimeSafetyReporter *Reporter,
+                                              uint32_t BlockFactNumThreshold)
+    : BlockFactNumThreshold(BlockFactNumThreshold), AC(AC), Reporter(Reporter) {
+  FactMgr.setBlockFactNumThreshold(BlockFactNumThreshold);
+    }
 
 void LifetimeSafetyAnalysis::run() {
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
@@ -46,6 +49,7 @@ void LifetimeSafetyAnalysis::run() {
   FactsGenerator FactGen(FactMgr, AC);
   FactGen.run();
   DEBUG_WITH_TYPE("LifetimeFacts", FactMgr.dump(Cfg, AC));
+  DEBUG_WITH_TYPE("LifetimeCFGSizes", FactMgr.dumpBlockSizes(Cfg, AC));
 
   /// TODO(opt): Consider optimizing individual blocks before running the
   /// dataflow analysis.
@@ -66,13 +70,14 @@ void LifetimeSafetyAnalysis::run() {
   DEBUG_WITH_TYPE("LiveOrigins",
                   LiveOrigins->dump(llvm::dbgs(), FactMgr.getTestPoints()));
 
-  runLifetimeChecker(*LoanPropagation, *LiveOrigins, FactMgr, AC, Reporter);
+  runLifetimeChecker(*LoanPropagation, *LiveOrigins, FactMgr, AC, Reporter, BlockFactNumThreshold);
 }
 } // namespace internal
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter) {
-  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter);
+                               LifetimeSafetyReporter *Reporter,
+                              uint32_t BlockFactNumThreshold) {
+  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter, BlockFactNumThreshold);
   Analysis.run();
 }
 } // namespace clang::lifetimes

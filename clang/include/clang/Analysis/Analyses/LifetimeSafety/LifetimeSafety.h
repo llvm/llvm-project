@@ -51,7 +51,8 @@ public:
 
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter);
+                               LifetimeSafetyReporter *Reporter,
+                              uint32_t BlockFactNumThreshold);
 
 namespace internal {
 /// An object to hold the factories for immutable collections, ensuring
@@ -67,7 +68,8 @@ struct LifetimeFactory {
 class LifetimeSafetyAnalysis {
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                         LifetimeSafetyReporter *Reporter);
+                         LifetimeSafetyReporter *Reporter,
+                        uint32_t BlockFactNumThreshold);
 
   void run();
 
@@ -79,6 +81,7 @@ public:
   FactManager &getFactManager() { return FactMgr; }
 
 private:
+  uint32_t BlockFactNumThreshold;
   AnalysisDeclContext &AC;
   LifetimeSafetyReporter *Reporter;
   LifetimeFactory Factory;

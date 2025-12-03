@@ -218,6 +218,9 @@ public:
 
   void dump(const CFG &Cfg, AnalysisDeclContext &AC) const;
 
+  // A utility function to print the size of the CFG blocks in the analysis context.
+  void dumpBlockSizes(const CFG &Cfg, AnalysisDeclContext &AC) const;
+
   /// Retrieves program points that were specially marked in the source code
   /// for testing.
   ///
@@ -238,6 +241,9 @@ public:
   const LoanManager &getLoanMgr() const { return LoanMgr; }
   OriginManager &getOriginMgr() { return OriginMgr; }
   const OriginManager &getOriginMgr() const { return OriginMgr; }
+  void setBlockFactNumThreshold(uint32_t Threshold) {
+    BlockFactNumThreshold = Threshold;
+  }
 
 private:
   FactID NextFactID{0};
@@ -246,6 +252,7 @@ private:
   /// Facts for each CFG block, indexed by block ID.
   llvm::SmallVector<llvm::SmallVector<const Fact *>> BlockToFacts;
   llvm::BumpPtrAllocator FactAllocator;
+  uint32_t BlockFactNumThreshold = 0;
 };
 } // namespace clang::lifetimes::internal
 

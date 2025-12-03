@@ -58,13 +58,20 @@ private:
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                   const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
-                  AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter)
+                  AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter, uint32_t BlockFactNumThreshold)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
         Reporter(Reporter) {
-    for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
+    if (BlockFactNumThreshold <= 0) {
+      llvm::errs() << "Warning: BlockFactNumThreshold should be positive.\n";
+    }
+    for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>()) {
+      const auto& BlockFacts = FactMgr.getFacts(B);
+      if (BlockFactNumThreshold > 0 && BlockFacts.size() > BlockFactNumThreshold)
+        continue;
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
           checkExpiry(EF);
+    }
     issuePendingWarnings();
   }
 
@@ -138,9 +145,10 @@ public:
 void runLifetimeChecker(const LoanPropagationAnalysis &LP,
                         const LiveOriginsAnalysis &LO,
                         const FactManager &FactMgr, AnalysisDeclContext &ADC,
-                        LifetimeSafetyReporter *Reporter) {
+                        LifetimeSafetyReporter *Reporter,
+                      uint32_t BlockFactNumThreshold) {
   llvm::TimeTraceScope TimeProfile("LifetimeChecker");
-  LifetimeChecker Checker(LP, LO, FactMgr, ADC, Reporter);
+  LifetimeChecker Checker(LP, LO, FactMgr, ADC, Reporter, BlockFactNumThreshold);
 }
 
 } // namespace clang::lifetimes::internal

@@ -3107,7 +3107,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
     if (AC.getCFG()) {
       lifetimes::LifetimeSafetyReporterImpl LifetimeSafetyReporter(S);
-      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter);
+      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter, S.getLangOpts().BlockFactNumThreshold);
     }
   }
   // Check for violations of "called once" parameter properties.
