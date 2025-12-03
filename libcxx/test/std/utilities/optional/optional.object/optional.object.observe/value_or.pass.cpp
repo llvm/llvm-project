@@ -40,6 +40,12 @@ struct X
         {return x.i_ == y.i_;}
 };
 
+struct Z {
+  int i_, j_;
+  constexpr Z(int i, int j) : i_(i), j_(j) {}
+  friend constexpr bool operator==(const Z& z1, const Z& z2) { return z1.i_ == z2.i_ && z1.j_ == z2.j_; }
+};
+
 constexpr int test()
 {
     {
@@ -64,6 +70,24 @@ constexpr int test()
         assert(std::move(opt).value_or(Y(3)) == 4);
         assert(!opt);
     }
+    {
+      optional<X> opt;
+      assert(std::move(opt).value_or({Y(3)}) == 4);
+      assert(!opt);
+    }
+    {
+      optional<Z> opt;
+      assert((std::move(opt).value_or({2, 3}) == Z{2, 3}));
+      assert(!opt);
+    }
+#if TEST_STD_VER >= 26
+    {
+      int y = 2;
+      optional<int&> opt;
+      assert(std::move(opt).value_or(y) == 2);
+      assert(!opt);
+    }
+#endif
     return 0;
 }
 

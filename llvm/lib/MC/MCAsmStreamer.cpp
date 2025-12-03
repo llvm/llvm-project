@@ -295,7 +295,7 @@ public:
                              unsigned Flags, unsigned Isa,
                              unsigned Discriminator, StringRef FileName,
                              StringRef Location = {}) override;
-  virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
+  void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
 
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
 

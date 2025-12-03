@@ -1282,7 +1282,16 @@ bool ExposureChecker::isExposureCandidate(const NamedDecl *D) {
   //   (outside the private-module-fragment, if any) or
   //   module partition is an exposure, the program is ill-formed.
   Module *M = D->getOwningModule();
-  if (!M || !M->isInterfaceOrPartition())
+  if (!M)
+    return false;
+  // If M is implicit global module, the declaration must be in the purview of
+  // a module unit.
+  if (M->isImplicitGlobalModule()) {
+    M = M->Parent;
+    assert(M && "Implicit global module must have a parent");
+  }
+
+  if (!M->isInterfaceOrPartition())
     return false;
 
   if (D->isImplicit())
@@ -1495,6 +1504,16 @@ bool ExposureChecker::checkExposure(const Stmt *S, bool Diag) {
 
 void ExposureChecker::checkExposureInContext(const DeclContext *DC) {
   for (auto *TopD : DC->noload_decls()) {
+    if (auto *Export = dyn_cast<ExportDecl>(TopD)) {
+      checkExposureInContext(Export);
+      continue;
+    }
+
+    if (auto *LinkageSpec = dyn_cast<LinkageSpecDecl>(TopD)) {
+      checkExposureInContext(LinkageSpec);
+      continue;
+    }
+
     auto *TopND = dyn_cast<NamedDecl>(TopD);
     if (!TopND)
       continue;

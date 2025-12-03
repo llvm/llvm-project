@@ -25,7 +25,6 @@
 #include <map>
 #include <set>
 #include <string>
-#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -79,9 +78,12 @@ OptSpecifier::OptSpecifier(const Option *Opt) : ID(Opt->getID()) {}
 
 OptTable::OptTable(const StringTable &StrTable,
                    ArrayRef<StringTable::Offset> PrefixesTable,
-                   ArrayRef<Info> OptionInfos, bool IgnoreCase)
+                   ArrayRef<Info> OptionInfos, bool IgnoreCase,
+                   ArrayRef<SubCommand> SubCommands,
+                   ArrayRef<unsigned> SubCommandIDsTable)
     : StrTable(&StrTable), PrefixesTable(PrefixesTable),
-      OptionInfos(OptionInfos), IgnoreCase(IgnoreCase) {
+      OptionInfos(OptionInfos), IgnoreCase(IgnoreCase),
+      SubCommands(SubCommands), SubCommandIDsTable(SubCommandIDsTable) {
   // Explicitly zero initialize the error to work around a bug in array
   // value-initialization on MinGW with gcc 4.3.5.
 
@@ -715,9 +717,10 @@ static const char *getOptionHelpGroup(const OptTable &Opts, OptSpecifier Id) {
 
 void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                          bool ShowHidden, bool ShowAllAliases,
-                         Visibility VisibilityMask) const {
+                         Visibility VisibilityMask,
+                         StringRef SubCommand) const {
   return internalPrintHelp(
-      OS, Usage, Title, ShowHidden, ShowAllAliases,
+      OS, Usage, Title, SubCommand, ShowHidden, ShowAllAliases,
       [VisibilityMask](const Info &CandidateInfo) -> bool {
         return (CandidateInfo.Visibility & VisibilityMask) == 0;
       },
@@ -730,7 +733,7 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
   bool ShowHidden = !(FlagsToExclude & HelpHidden);
   FlagsToExclude &= ~HelpHidden;
   return internalPrintHelp(
-      OS, Usage, Title, ShowHidden, ShowAllAliases,
+      OS, Usage, Title, /*SubCommand=*/{}, ShowHidden, ShowAllAliases,
       [FlagsToInclude, FlagsToExclude](const Info &CandidateInfo) {
         if (FlagsToInclude && !(CandidateInfo.Flags & FlagsToInclude))
           return true;
@@ -742,15 +745,59 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
 }
 
 void OptTable::internalPrintHelp(
-    raw_ostream &OS, const char *Usage, const char *Title, bool ShowHidden,
-    bool ShowAllAliases, std::function<bool(const Info &)> ExcludeOption,
+    raw_ostream &OS, const char *Usage, const char *Title, StringRef SubCommand,
+    bool ShowHidden, bool ShowAllAliases,
+    std::function<bool(const Info &)> ExcludeOption,
     Visibility VisibilityMask) const {
   OS << "OVERVIEW: " << Title << "\n\n";
-  OS << "USAGE: " << Usage << "\n\n";
 
   // Render help text into a map of group-name to a list of (option, help)
   // pairs.
   std::map<std::string, std::vector<OptionInfo>> GroupedOptionHelp;
+
+  auto ActiveSubCommand = llvm::find_if(
+      SubCommands, [&](const auto &C) { return SubCommand == C.Name; });
+  if (!SubCommand.empty()) {
+    assert(ActiveSubCommand != SubCommands.end() &&
+           "Not a valid registered subcommand.");
+    OS << ActiveSubCommand->HelpText << "\n\n";
+    if (!StringRef(ActiveSubCommand->Usage).empty())
+      OS << "USAGE: " << ActiveSubCommand->Usage << "\n\n";
+  } else {
+    OS << "USAGE: " << Usage << "\n\n";
+    if (SubCommands.size() > 1) {
+      OS << "SUBCOMMANDS:\n\n";
+      for (const auto &C : SubCommands)
+        OS << C.Name << " - " << C.HelpText << "\n";
+      OS << "\n";
+    }
+  }
+
+  auto DoesOptionBelongToSubcommand = [&](const Info &CandidateInfo) {
+    // Retrieve the SubCommandIDs registered to the given current CandidateInfo
+    // Option.
+    ArrayRef<unsigned> SubCommandIDs =
+        CandidateInfo.getSubCommandIDs(SubCommandIDsTable);
+
+    // If no registered subcommands, then only global options are to be printed.
+    // If no valid SubCommand (empty) in commandline then print the current
+    // global CandidateInfo Option.
+    if (SubCommandIDs.empty())
+      return SubCommand.empty();
+
+    // Handle CandidateInfo Option which has at least one registered SubCommand.
+    // If no valid SubCommand (empty) in commandline, this CandidateInfo option
+    // should not be printed.
+    if (SubCommand.empty())
+      return false;
+
+    // Find the ID of the valid subcommand passed in commandline (its index in
+    // the SubCommands table which contains all subcommands).
+    unsigned ActiveSubCommandID = ActiveSubCommand - &SubCommands[0];
+    // Print if the ActiveSubCommandID is registered with the CandidateInfo
+    // Option.
+    return llvm::is_contained(SubCommandIDs, ActiveSubCommandID);
+  };
 
   for (unsigned Id = 1, e = getNumOptions() + 1; Id != e; ++Id) {
     // FIXME: Split out option groups.
@@ -762,6 +809,9 @@ void OptTable::internalPrintHelp(
       continue;
 
     if (ExcludeOption(CandidateInfo))
+      continue;
+
+    if (!DoesOptionBelongToSubcommand(CandidateInfo))
       continue;
 
     // If an alias doesn't have a help text, show a help text for the aliased
@@ -791,8 +841,11 @@ void OptTable::internalPrintHelp(
 
 GenericOptTable::GenericOptTable(const StringTable &StrTable,
                                  ArrayRef<StringTable::Offset> PrefixesTable,
-                                 ArrayRef<Info> OptionInfos, bool IgnoreCase)
-    : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase) {
+                                 ArrayRef<Info> OptionInfos, bool IgnoreCase,
+                                 ArrayRef<SubCommand> SubCommands,
+                                 ArrayRef<unsigned> SubCommandIDsTable)
+    : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase, SubCommands,
+               SubCommandIDsTable) {
 
   std::set<StringRef> TmpPrefixesUnion;
   for (auto const &Info : OptionInfos.drop_front(FirstSearchableIndex))

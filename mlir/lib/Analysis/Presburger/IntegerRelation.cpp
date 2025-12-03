@@ -25,6 +25,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -716,7 +717,7 @@ bool IntegerRelation::isEmpty() const {
     // that aren't the intended use case for IntegerRelation. This is
     // needed since FM has a worst case exponential complexity in theory.
     if (tmpCst.getNumConstraints() >= kExplosionFactor * getNumVars()) {
-      LLVM_DEBUG(llvm::dbgs() << "FM constraint explosion detected\n");
+      LDBG() << "FM constraint explosion detected";
       return false;
     }
 
@@ -1111,15 +1112,29 @@ unsigned IntegerRelation::gaussianEliminateVars(unsigned posStart,
   return posLimit - posStart;
 }
 
+static std::optional<unsigned>
+findEqualityWithNonZeroAfterRow(IntegerRelation &rel, unsigned fromRow,
+                                unsigned colIdx) {
+  assert(fromRow < rel.getNumEqualities() && colIdx < rel.getNumCols() &&
+         "position out of bounds");
+  for (unsigned rowIdx = fromRow, e = rel.getNumEqualities(); rowIdx < e;
+       ++rowIdx) {
+    if (rel.atEq(rowIdx, colIdx) != 0)
+      return rowIdx;
+  }
+  return std::nullopt;
+}
+
 bool IntegerRelation::gaussianEliminate() {
   gcdTightenInequalities();
   unsigned firstVar = 0, vars = getNumVars();
   unsigned nowDone, eqs;
   std::optional<unsigned> pivotRow;
   for (nowDone = 0, eqs = getNumEqualities(); nowDone < eqs; ++nowDone) {
-    // Finds the first non-empty column.
+    // Finds the first non-empty column that we haven't dealt with.
     for (; firstVar < vars; ++firstVar) {
-      if ((pivotRow = findConstraintWithNonZeroAt(firstVar, /*isEq=*/true)))
+      if ((pivotRow =
+               findEqualityWithNonZeroAfterRow(*this, nowDone, firstVar)))
         break;
     }
     // The matrix has been normalized to row echelon form.
@@ -1142,6 +1157,10 @@ bool IntegerRelation::gaussianEliminate() {
       inequalities.normalizeRow(i);
     }
     gcdTightenInequalities();
+
+    // The column is finished. Tell the next iteration to start at the next
+    // column.
+    firstVar++;
   }
 
   // No redundant rows.
@@ -1943,7 +1962,7 @@ void IntegerRelation::removeTrivialRedundancy() {
 // which can prove the existence of a solution if there is one.
 void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
                                               bool *isResultIntegerExact) {
-  LLVM_DEBUG(llvm::dbgs() << "FM input (eliminate pos " << pos << "):\n");
+  LDBG() << "FM input (eliminate pos " << pos << "):";
   LLVM_DEBUG(dump());
   assert(pos < getNumVars() && "invalid position");
   assert(hasConsistentState());
@@ -1955,7 +1974,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
       LogicalResult ret = gaussianEliminateVar(pos);
       (void)ret;
       assert(ret.succeeded() && "Gaussian elimination guaranteed to succeed");
-      LLVM_DEBUG(llvm::dbgs() << "FM output (through Gaussian elimination):\n");
+      LDBG() << "FM output (through Gaussian elimination):";
       LLVM_DEBUG(dump());
       return;
     }
@@ -1969,7 +1988,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     // If it doesn't appear, just remove the column and return.
     // TODO: refactor removeColumns to use it from here.
     removeVar(pos);
-    LLVM_DEBUG(llvm::dbgs() << "FM output:\n");
+    LDBG() << "FM output:";
     LLVM_DEBUG(dump());
     return;
   }
@@ -2052,8 +2071,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     }
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "FM isResultIntegerExact: " << allLCMsAreOne
-                          << "\n");
+  LDBG() << "FM isResultIntegerExact: " << allLCMsAreOne;
   if (allLCMsAreOne && isResultIntegerExact)
     *isResultIntegerExact = true;
 
@@ -2090,7 +2108,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
   newRel.normalizeConstraintsByGCD();
   newRel.removeTrivialRedundancy();
   clearAndCopyFrom(newRel);
-  LLVM_DEBUG(llvm::dbgs() << "FM output:\n");
+  LDBG() << "FM output:";
   LLVM_DEBUG(dump());
 }
 
@@ -2265,11 +2283,11 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
     newLb[d] = lbFloorDivisor;
     newUb[d] = -lbFloorDivisor;
     // Copy over the symbolic part + constant term.
-    std::copy(minLb.begin(), minLb.end(), newLb.begin() + getNumDimVars());
+    llvm::copy(minLb, newLb.begin() + getNumDimVars());
     std::transform(newLb.begin() + getNumDimVars(), newLb.end(),
                    newLb.begin() + getNumDimVars(),
                    std::negate<DynamicAPInt>());
-    std::copy(maxUb.begin(), maxUb.end(), newUb.begin() + getNumDimVars());
+    llvm::copy(maxUb, newUb.begin() + getNumDimVars());
 
     boundingLbs.emplace_back(newLb);
     boundingUbs.emplace_back(newUb);

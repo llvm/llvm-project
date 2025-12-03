@@ -38,7 +38,7 @@
 template <class T>
 struct optional {
   T val_;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_INTRODUCED_IN_LLVM_11_ATTRIBUTE T value() const { return val_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_INTRODUCED_IN_LLVM_18_ATTRIBUTE T value() const { return val_; }
 };
 
 using PMF = int (optional<int>::*)() const;

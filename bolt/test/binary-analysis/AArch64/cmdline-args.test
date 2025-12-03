@@ -33,6 +33,7 @@ HELP-NEXT:  OPTIONS:
 HELP-EMPTY:
 HELP-NEXT:  BinaryAnalysis options:
 HELP-EMPTY:
+HELP-NEXT:   --auth-traps-on-failure - Assume authentication instructions always trap on failure
 HELP-NEXT:   --scanners=<value> - which gadget scanners to run
 HELP-NEXT:   =pacret - pac-ret: return address protection (subset of "pauth")
 HELP-NEXT:   =pauth - All Pointer Authentication scanners

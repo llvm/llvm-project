@@ -22,7 +22,7 @@ define i32 @test(ptr %ptr) {
 ; CHECK-NEXT:    tbnz w10, #0, LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb343
 ; CHECK-NEXT:    and w9, w10, #0x1
-; CHECK-NEXT:    mov w0, #-1
+; CHECK-NEXT:    mov w0, #-1 ; =0xffffffff
 ; CHECK-NEXT:    str w9, [x8]
 ; CHECK-NEXT:    ret
 bb:

@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "Context.h"
+#include "Boolean.h"
 #include "ByteCodeEmitter.h"
 #include "Compiler.h"
 #include "EvalEmitter.h"
-#include "Interp.h"
+#include "Integral.h"
 #include "InterpFrame.h"
+#include "InterpHelpers.h"
 #include "InterpStack.h"
+#include "Pointer.h"
 #include "PrimType.h"
 #include "Program.h"
 #include "clang/AST/ASTLambda.h"
@@ -236,6 +239,52 @@ bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
   return evaluateStringRepr(Parent, SizeExpr, PtrExpr, Result);
 }
 
+bool Context::evaluateString(State &Parent, const Expr *E,
+                             std::string &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    const Descriptor *FieldDesc = Ptr.getFieldDesc();
+    if (!FieldDesc->isPrimitiveArray())
+      return false;
+
+    if (!Ptr.isConst())
+      return false;
+
+    unsigned N = Ptr.getNumElems();
+
+    if (Ptr.elemSize() == 1 /* bytes */) {
+      const char *Chars = reinterpret_cast<const char *>(Ptr.getRawAddress());
+      unsigned Length = strnlen(Chars, N);
+      // Wasn't null terminated.
+      if (N == Length)
+        return false;
+      Result.assign(Chars, Length);
+      return true;
+    }
+
+    PrimType ElemT = FieldDesc->getPrimType();
+    for (unsigned I = Ptr.getIndex(); I != N; ++I) {
+      INT_TYPE_SWITCH(ElemT, {
+        auto Elem = Ptr.elem<T>(I);
+        if (Elem.isZero())
+          return true;
+        Result.push_back(static_cast<char>(Elem));
+      });
+    }
+    // We didn't find a 0 byte.
+    return false;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+  return true;
+}
+
 bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
   assert(Stk.empty());
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
@@ -243,6 +292,9 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
   auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
     const Descriptor *FieldDesc = Ptr.getFieldDesc();
     if (!FieldDesc->isPrimitiveArray())
+      return false;
+
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray())
       return false;
 
     unsigned N = Ptr.getNumElems();
@@ -516,10 +568,21 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
 
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
-  for (const ParmVarDecl *PD : FuncDecl->parameters()) {
+  const auto *FuncProto = FuncDecl->getType()->getAs<FunctionProtoType>();
+  for (auto [ParamIndex, PD] : llvm::enumerate(FuncDecl->parameters())) {
+    bool IsConst = PD->getType().isConstQualified();
+    bool IsVolatile = PD->getType().isVolatileQualified();
+
+    if (!getASTContext().hasSameType(PD->getType(),
+                                     FuncProto->getParamType(ParamIndex)))
+      return nullptr;
+
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT);
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
+                                           IsConst, /*IsTemporary=*/false,
+                                           /*IsMutable=*/false, IsVolatile);
+
     ParamDescriptors.insert({ParamOffset, {PT, Desc}});
     ParamOffsets.push_back(ParamOffset);
     ParamOffset += align(primSize(PT));
@@ -545,9 +608,14 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
   for (const ParmVarDecl *PD : BD->parameters()) {
+    bool IsConst = PD->getType().isConstQualified();
+    bool IsVolatile = PD->getType().isVolatileQualified();
+
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT);
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
+                                           IsConst, /*IsTemporary=*/false,
+                                           /*IsMutable=*/false, IsVolatile);
     ParamDescriptors.insert({ParamOffset, {PT, Desc}});
     ParamOffsets.push_back(ParamOffset);
     ParamOffset += align(primSize(PT));

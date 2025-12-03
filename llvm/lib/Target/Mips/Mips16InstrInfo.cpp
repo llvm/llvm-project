@@ -37,11 +37,7 @@ using namespace llvm;
 #define DEBUG_TYPE "mips16-instrinfo"
 
 Mips16InstrInfo::Mips16InstrInfo(const MipsSubtarget &STI)
-    : MipsInstrInfo(STI, Mips::Bimm16), RI(STI) {}
-
-const MipsRegisterInfo &Mips16InstrInfo::getRegisterInfo() const {
-  return RI;
-}
+    : MipsInstrInfo(STI, RI, Mips::Bimm16), RI(STI) {}
 
 /// isLoadFromStackSlot - If the specified machine instruction is a direct
 /// load from a stack slot, return the virtual or physical register number of
@@ -105,7 +101,6 @@ void Mips16InstrInfo::storeRegToStack(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I,
                                       Register SrcReg, bool isKill, int FI,
                                       const TargetRegisterClass *RC,
-                                      const TargetRegisterInfo *TRI,
                                       int64_t Offset,
                                       MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
@@ -120,10 +115,12 @@ void Mips16InstrInfo::storeRegToStack(MachineBasicBlock &MBB,
       .addMemOperand(MMO);
 }
 
-void Mips16InstrInfo::loadRegFromStack(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
-    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    int64_t Offset, MachineInstr::MIFlag Flags) const {
+void Mips16InstrInfo::loadRegFromStack(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator I,
+                                       Register DestReg, int FI,
+                                       const TargetRegisterClass *RC,
+                                       int64_t Offset,
+                                       MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
   MachineMemOperand *MMO = GetMemOperand(MBB, FI, MachineMemOperand::MOLoad);
@@ -405,9 +402,9 @@ unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
       }
       if (SecondRegSaved)
         copyPhysReg(MBB, II, DL, SecondRegSavedTo, SecondRegSaved, true);
+    } else {
+      Available.reset(SpReg);
     }
-   else
-     Available.reset(SpReg);
     copyPhysReg(MBB, II, DL, SpReg, Mips::SP, false);
     BuildMI(MBB, II, DL, get(Mips::AdduRxRyRz16), Reg)
         .addReg(SpReg, RegState::Kill)

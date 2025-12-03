@@ -38,7 +38,7 @@ std::optional<std::string> createIncludeHeaderName(const StringRef FullPath) {
 
 bool isHeaderFile(StringRef Path) {
   return StringSwitch<bool>(sys::path::extension(Path))
-      .Cases(".h", ".H", ".hh", ".hpp", ".hxx", true)
+      .Cases({".h", ".H", ".hh", ".hpp", ".hxx"}, true)
       .Default(false);
 }
 

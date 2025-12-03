@@ -8,7 +8,7 @@
 // CHECK-LABEL: @init_mbarrier
 llvm.func @init_mbarrier(%barrier_gen : !llvm.ptr, %barrier : !llvm.ptr<3>, %count : i32, %pred : i1) {
   //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.init.shared.b64 [$0], $1;", "r,r,b" 
-  nvvm.mbarrier.init.shared %barrier, %count, predicate = %pred : !llvm.ptr<3>, i32, i1 
+  nvvm.mbarrier.init %barrier, %count, predicate = %pred : !llvm.ptr<3>, i32, i1 
   //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.init.b64 [$0], $1;", "l,r,b" 
   nvvm.mbarrier.init %barrier_gen, %count, predicate = %pred : !llvm.ptr, i32, i1
   llvm.return
@@ -16,17 +16,13 @@ llvm.func @init_mbarrier(%barrier_gen : !llvm.ptr, %barrier : !llvm.ptr<3>, %cou
 
 // CHECK-LABEL: @init_mbarrier_arrive_expect_tx
 llvm.func @init_mbarrier_arrive_expect_tx(%barrier : !llvm.ptr<3>, %txcount : i32, %pred : i1) {
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mbarrier.arrive.expect_tx.shared.b64 _, [$0], $1;", "r,r"
-  nvvm.mbarrier.arrive.expect_tx.shared %barrier, %txcount : !llvm.ptr<3>, i32
   //CHECK:  llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.arrive.expect_tx.shared.b64 _, [$0], $1;", "r,r,b"
-  nvvm.mbarrier.arrive.expect_tx.shared %barrier, %txcount, predicate = %pred : !llvm.ptr<3>, i32, i1 
+  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount, predicate = %pred : !llvm.ptr<3>, i32, i1 
   llvm.return
 }
 
 // CHECK-LABEL: @init_mbarrier_arrive_expect_tx_generic
 llvm.func @init_mbarrier_arrive_expect_tx_generic(%barrier : !llvm.ptr, %txcount : i32, %pred : i1) {
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mbarrier.arrive.expect_tx.b64 _, [$0], $1;", "l,r" 
-  nvvm.mbarrier.arrive.expect_tx %barrier, %txcount : !llvm.ptr, i32
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.arrive.expect_tx.b64 _, [$0], $1;", "l,r,b"
   nvvm.mbarrier.arrive.expect_tx %barrier, %txcount, predicate = %pred : !llvm.ptr, i32, i1 
   llvm.return
@@ -44,7 +40,7 @@ llvm.func @init_mbarrier_try_wait_shared(%barrier : !llvm.ptr<3>, %ticks : i32, 
   // CHECK-SAME: DONE:
   // CHECK-SAME: }",
   // CHECK-SAME: "r,r,r"
-   nvvm.mbarrier.try_wait.parity.shared %barrier, %phase, %ticks : !llvm.ptr<3>, i32, i32
+   nvvm.mbarrier.try_wait.parity %barrier, %phase, %ticks : !llvm.ptr<3>, i32, i32
   llvm.return
 }
 
@@ -88,10 +84,10 @@ func.func @cp_async_mbarrier_arrive(%bar_shared: !llvm.ptr<3>, %bar_gen: !llvm.p
   nvvm.cp.async.mbarrier.arrive %bar_gen : !llvm.ptr
   // CHECK: nvvm.cp.async.mbarrier.arrive %{{.*}} {noinc = true}
   nvvm.cp.async.mbarrier.arrive %bar_gen {noinc = true} : !llvm.ptr
-  // CHECK: nvvm.cp.async.mbarrier.arrive.shared %{{.*}}
-  nvvm.cp.async.mbarrier.arrive.shared %bar_shared : !llvm.ptr<3>
-  // CHECK: nvvm.cp.async.mbarrier.arrive.shared %{{.*}} {noinc = true}
-  nvvm.cp.async.mbarrier.arrive.shared %bar_shared {noinc = true} : !llvm.ptr<3>
+  // CHECK: nvvm.cp.async.mbarrier.arrive %{{.*}}
+  nvvm.cp.async.mbarrier.arrive %bar_shared : !llvm.ptr<3>
+  // CHECK: nvvm.cp.async.mbarrier.arrive %{{.*}} {noinc = true}
+  nvvm.cp.async.mbarrier.arrive %bar_shared {noinc = true} : !llvm.ptr<3>
   llvm.return
 }
 
@@ -544,8 +540,8 @@ func.func @elect_one_leader_sync() {
 
 // -----
 
-// CHECK-LABEL: @init_mbarrier_arrive_expect_tx
-llvm.func @init_mbarrier_arrive_expect_tx(%desc : !llvm.ptr, %pred : i1) {
+// CHECK-LABEL: @test_nvvm_prefetch
+llvm.func @test_nvvm_prefetch(%desc : !llvm.ptr, %pred : i1) {
   //CHECK: nvvm.prefetch tensormap, %{{.*}}
   nvvm.prefetch tensormap, %desc : !llvm.ptr
   //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$1 prefetch.tensormap [$0];", "l,b"

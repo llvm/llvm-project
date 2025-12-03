@@ -719,7 +719,6 @@ void PlatformDarwinKernel::UpdateKextandKernelsLocalScan() {
 
 Status PlatformDarwinKernel::GetSharedModule(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   Status error;
   module_sp.reset();
@@ -734,14 +733,12 @@ Status PlatformDarwinKernel::GetSharedModule(
     // UUID search can get here with no name - and it may be a kernel.
     if (kext_bundle_id == "mach_kernel" || kext_bundle_id.empty()) {
       error = GetSharedModuleKernel(module_spec, process, module_sp,
-                                    module_search_paths_ptr, old_modules,
-                                    did_create_ptr);
+                                    old_modules, did_create_ptr);
       if (error.Success() && module_sp) {
         return error;
       }
     } else {
-      return GetSharedModuleKext(module_spec, process, module_sp,
-                                 module_search_paths_ptr, old_modules,
+      return GetSharedModuleKext(module_spec, process, module_sp, old_modules,
                                  did_create_ptr);
     }
   }
@@ -749,13 +746,11 @@ Status PlatformDarwinKernel::GetSharedModule(
   // Give the generic methods, including possibly calling into DebugSymbols
   // framework on macOS systems, a chance.
   return PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
-                                         module_search_paths_ptr, old_modules,
-                                         did_create_ptr);
+                                         old_modules, did_create_ptr);
 }
 
 Status PlatformDarwinKernel::GetSharedModuleKext(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   Status error;
   module_sp.reset();
@@ -782,8 +777,7 @@ Status PlatformDarwinKernel::GetSharedModuleKext(
   // Give the generic methods, including possibly calling into  DebugSymbols
   // framework on macOS systems, a chance.
   error = PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
-                                          module_search_paths_ptr, old_modules,
-                                          did_create_ptr);
+                                          old_modules, did_create_ptr);
   if (error.Success() && module_sp.get()) {
     return error;
   }
@@ -793,7 +787,6 @@ Status PlatformDarwinKernel::GetSharedModuleKext(
 
 Status PlatformDarwinKernel::GetSharedModuleKernel(
     const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
-    const FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   assert(module_sp.get() == nullptr);
   UpdateKextandKernelsLocalScan();
@@ -848,8 +841,7 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
   // Give the generic methods, including possibly calling into DebugSymbols
   // framework on macOS systems, a chance.
   return PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
-                                         module_search_paths_ptr, old_modules,
-                                         did_create_ptr);
+                                         old_modules, did_create_ptr);
 }
 
 std::vector<lldb_private::FileSpec>
@@ -888,8 +880,8 @@ Status PlatformDarwinKernel::ExamineKextForMatchingUUID(
       ModuleSP module_sp(new Module(exe_spec));
       if (module_sp && module_sp->GetObjectFile() &&
           module_sp->MatchesModuleSpec(exe_spec)) {
-        Status error = ModuleList::GetSharedModule(exe_spec, exe_module_sp,
-                                                   NULL, NULL, NULL);
+        Status error =
+            ModuleList::GetSharedModule(exe_spec, exe_module_sp, NULL, NULL);
         if (exe_module_sp && exe_module_sp->GetObjectFile()) {
           return error;
         }

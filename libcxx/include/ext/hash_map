@@ -570,10 +570,7 @@ hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_map(
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_map(const hash_map& __u) : __table_(__u.__table_) {
-  __table_.__rehash_unique(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
+hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_map(const hash_map& __u) : __table_(__u.__table_) {}
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 typename hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
@@ -787,10 +784,7 @@ hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_multimap(
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_multimap(const hash_multimap& __u) : __table_(__u.__table_) {
-  __table_.__rehash_multi(__u.bucket_count());
-  insert(__u.begin(), __u.end());
-}
+hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::hash_multimap(const hash_multimap& __u) : __table_(__u.__table_) {}
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>

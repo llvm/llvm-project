@@ -169,7 +169,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
-    TargetTriple(TT),
     TargetID(*this),
     InstrItins(getInstrItineraryForCPU(GPU)),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
@@ -541,7 +540,7 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
 
 unsigned GCNSubtarget::getBaseMaxNumVGPRs(
     const Function &F, std::pair<unsigned, unsigned> NumVGPRBounds) const {
-  const auto &[Min, Max] = NumVGPRBounds;
+  const auto [Min, Max] = NumVGPRBounds;
 
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.

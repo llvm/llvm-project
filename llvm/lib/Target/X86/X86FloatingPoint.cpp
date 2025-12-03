@@ -31,6 +31,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -38,6 +40,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
@@ -48,265 +51,272 @@
 #include <bitset>
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-codegen"
+#define DEBUG_TYPE "x86-fp-stackifier"
 
 STATISTIC(NumFXCH, "Number of fxch instructions inserted");
-STATISTIC(NumFP  , "Number of floating point instructions");
+STATISTIC(NumFP, "Number of floating point instructions");
 
 namespace {
-  const unsigned ScratchFPReg = 7;
+const unsigned ScratchFPReg = 7;
 
-  struct FPS : public MachineFunctionPass {
-    static char ID;
-    FPS() : MachineFunctionPass(ID) {
-      // This is really only to keep valgrind quiet.
-      // The logic in isLive() is too much for it.
-      memset(Stack, 0, sizeof(Stack));
-      memset(RegMap, 0, sizeof(RegMap));
-    }
+class FPS {
+public:
+  bool shouldRun(MachineFunction &MF);
+  bool run(MachineFunction &MF, EdgeBundles *EdgeBundles);
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      AU.addRequired<EdgeBundlesWrapperLegacy>();
-      AU.addPreservedID(MachineLoopInfoID);
-      AU.addPreservedID(MachineDominatorsID);
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+private:
+  const TargetInstrInfo *TII = nullptr; // Machine instruction info.
 
-    bool runOnMachineFunction(MachineFunction &MF) override;
+  // Two CFG edges are related if they leave the same block, or enter the same
+  // block. The transitive closure of an edge under this relation is a
+  // LiveBundle. It represents a set of CFG edges where the live FP stack
+  // registers must be allocated identically in the x87 stack.
+  //
+  // A LiveBundle is usually all the edges leaving a block, or all the edges
+  // entering a block, but it can contain more edges if critical edges are
+  // present.
+  //
+  // The set of live FP registers in a LiveBundle is calculated by bundleCFG,
+  // but the exact mapping of FP registers to stack slots is fixed later.
+  struct LiveBundle {
+    // Bit mask of live FP registers. Bit 0 = FP0, bit 1 = FP1, &c.
+    unsigned Mask = 0;
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
+    // Number of pre-assigned live registers in FixStack. This is 0 when the
+    // stack order has not yet been fixed.
+    unsigned FixCount = 0;
 
-    StringRef getPassName() const override { return "X86 FP Stackifier"; }
+    // Assigned stack order for live-in registers.
+    // FixStack[i] == getStackEntry(i) for all i < FixCount.
+    unsigned char FixStack[8];
 
-  private:
-    const TargetInstrInfo *TII = nullptr; // Machine instruction info.
+    LiveBundle() = default;
 
-    // Two CFG edges are related if they leave the same block, or enter the same
-    // block. The transitive closure of an edge under this relation is a
-    // LiveBundle. It represents a set of CFG edges where the live FP stack
-    // registers must be allocated identically in the x87 stack.
-    //
-    // A LiveBundle is usually all the edges leaving a block, or all the edges
-    // entering a block, but it can contain more edges if critical edges are
-    // present.
-    //
-    // The set of live FP registers in a LiveBundle is calculated by bundleCFG,
-    // but the exact mapping of FP registers to stack slots is fixed later.
-    struct LiveBundle {
-      // Bit mask of live FP registers. Bit 0 = FP0, bit 1 = FP1, &c.
-      unsigned Mask = 0;
+    // Have the live registers been assigned a stack order yet?
+    bool isFixed() const { return !Mask || FixCount; }
+  };
 
-      // Number of pre-assigned live registers in FixStack. This is 0 when the
-      // stack order has not yet been fixed.
-      unsigned FixCount = 0;
+  // Numbered LiveBundle structs. LiveBundles[0] is used for all CFG edges
+  // with no live FP registers.
+  SmallVector<LiveBundle, 8> LiveBundles;
 
-      // Assigned stack order for live-in registers.
-      // FixStack[i] == getStackEntry(i) for all i < FixCount.
-      unsigned char FixStack[8];
+  // The edge bundle analysis provides indices into the LiveBundles vector.
+  EdgeBundles *Bundles = nullptr;
 
-      LiveBundle() = default;
-
-      // Have the live registers been assigned a stack order yet?
-      bool isFixed() const { return !Mask || FixCount; }
-    };
-
-    // Numbered LiveBundle structs. LiveBundles[0] is used for all CFG edges
-    // with no live FP registers.
-    SmallVector<LiveBundle, 8> LiveBundles;
-
-    // The edge bundle analysis provides indices into the LiveBundles vector.
-    EdgeBundles *Bundles = nullptr;
-
-    // Return a bitmask of FP registers in block's live-in list.
-    static unsigned calcLiveInMask(MachineBasicBlock *MBB, bool RemoveFPs) {
-      unsigned Mask = 0;
-      for (MachineBasicBlock::livein_iterator I = MBB->livein_begin();
-           I != MBB->livein_end(); ) {
-        MCPhysReg Reg = I->PhysReg;
-        static_assert(X86::FP6 - X86::FP0 == 6, "sequential regnums");
-        if (Reg >= X86::FP0 && Reg <= X86::FP6) {
-          Mask |= 1 << (Reg - X86::FP0);
-          if (RemoveFPs) {
-            I = MBB->removeLiveIn(I);
-            continue;
-          }
+  // Return a bitmask of FP registers in block's live-in list.
+  static unsigned calcLiveInMask(MachineBasicBlock *MBB, bool RemoveFPs) {
+    unsigned Mask = 0;
+    for (MachineBasicBlock::livein_iterator I = MBB->livein_begin();
+         I != MBB->livein_end();) {
+      MCPhysReg Reg = I->PhysReg;
+      static_assert(X86::FP6 - X86::FP0 == 6, "sequential regnums");
+      if (Reg >= X86::FP0 && Reg <= X86::FP6) {
+        Mask |= 1 << (Reg - X86::FP0);
+        if (RemoveFPs) {
+          I = MBB->removeLiveIn(I);
+          continue;
         }
-        ++I;
       }
-      return Mask;
+      ++I;
     }
+    return Mask;
+  }
 
-    // Partition all the CFG edges into LiveBundles.
-    void bundleCFGRecomputeKillFlags(MachineFunction &MF);
+  // Partition all the CFG edges into LiveBundles.
+  void bundleCFGRecomputeKillFlags(MachineFunction &MF);
 
-    MachineBasicBlock *MBB = nullptr;     // Current basic block
+  MachineBasicBlock *MBB = nullptr; // Current basic block
 
-    // The hardware keeps track of how many FP registers are live, so we have
-    // to model that exactly. Usually, each live register corresponds to an
-    // FP<n> register, but when dealing with calls, returns, and inline
-    // assembly, it is sometimes necessary to have live scratch registers.
-    unsigned Stack[8];          // FP<n> Registers in each stack slot...
-    unsigned StackTop = 0;      // The current top of the FP stack.
+  // The hardware keeps track of how many FP registers are live, so we have
+  // to model that exactly. Usually, each live register corresponds to an
+  // FP<n> register, but when dealing with calls, returns, and inline
+  // assembly, it is sometimes necessary to have live scratch registers.
+  unsigned Stack[8] = {}; // FP<n> Registers in each stack slot...
+  unsigned StackTop = 0;  // The current top of the FP stack.
 
-    enum {
-      NumFPRegs = 8             // Including scratch pseudo-registers.
-    };
+  enum {
+    NumFPRegs = 8 // Including scratch pseudo-registers.
+  };
 
-    // For each live FP<n> register, point to its Stack[] entry.
-    // The first entries correspond to FP0-FP6, the rest are scratch registers
-    // used when we need slightly different live registers than what the
-    // register allocator thinks.
-    unsigned RegMap[NumFPRegs];
+  // For each live FP<n> register, point to its Stack[] entry.
+  // The first entries correspond to FP0-FP6, the rest are scratch registers
+  // used when we need slightly different live registers than what the
+  // register allocator thinks.
+  unsigned RegMap[NumFPRegs] = {};
 
-    // Set up our stack model to match the incoming registers to MBB.
-    void setupBlockStack();
+  // Set up our stack model to match the incoming registers to MBB.
+  void setupBlockStack();
 
-    // Shuffle live registers to match the expectations of successor blocks.
-    void finishBlockStack();
+  // Shuffle live registers to match the expectations of successor blocks.
+  void finishBlockStack();
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    void dumpStack() const {
-      dbgs() << "Stack contents:";
-      for (unsigned i = 0; i != StackTop; ++i) {
-        dbgs() << " FP" << Stack[i];
-        assert(RegMap[Stack[i]] == i && "Stack[] doesn't match RegMap[]!");
-      }
+  void dumpStack() const {
+    dbgs() << "Stack contents:";
+    for (unsigned i = 0; i != StackTop; ++i) {
+      dbgs() << " FP" << Stack[i];
+      assert(RegMap[Stack[i]] == i && "Stack[] doesn't match RegMap[]!");
     }
+  }
 #endif
 
-    /// getSlot - Return the stack slot number a particular register number is
-    /// in.
-    unsigned getSlot(unsigned RegNo) const {
-      assert(RegNo < NumFPRegs && "Regno out of range!");
-      return RegMap[RegNo];
-    }
+  /// getSlot - Return the stack slot number a particular register number is
+  /// in.
+  unsigned getSlot(unsigned RegNo) const {
+    assert(RegNo < NumFPRegs && "Regno out of range!");
+    return RegMap[RegNo];
+  }
 
-    /// isLive - Is RegNo currently live in the stack?
-    bool isLive(unsigned RegNo) const {
-      unsigned Slot = getSlot(RegNo);
-      return Slot < StackTop && Stack[Slot] == RegNo;
-    }
+  /// isLive - Is RegNo currently live in the stack?
+  bool isLive(unsigned RegNo) const {
+    unsigned Slot = getSlot(RegNo);
+    return Slot < StackTop && Stack[Slot] == RegNo;
+  }
 
-    /// getStackEntry - Return the X86::FP<n> register in register ST(i).
-    unsigned getStackEntry(unsigned STi) const {
-      if (STi >= StackTop)
-        report_fatal_error("Access past stack top!");
-      return Stack[StackTop-1-STi];
-    }
+  /// getStackEntry - Return the X86::FP<n> register in register ST(i).
+  unsigned getStackEntry(unsigned STi) const {
+    if (STi >= StackTop)
+      report_fatal_error("Access past stack top!");
+    return Stack[StackTop - 1 - STi];
+  }
 
-    /// getSTReg - Return the X86::ST(i) register which contains the specified
-    /// FP<RegNo> register.
-    unsigned getSTReg(unsigned RegNo) const {
-      return StackTop - 1 - getSlot(RegNo) + X86::ST0;
-    }
+  /// getSTReg - Return the X86::ST(i) register which contains the specified
+  /// FP<RegNo> register.
+  unsigned getSTReg(unsigned RegNo) const {
+    return StackTop - 1 - getSlot(RegNo) + X86::ST0;
+  }
 
-    // pushReg - Push the specified FP<n> register onto the stack.
-    void pushReg(unsigned Reg) {
-      assert(Reg < NumFPRegs && "Register number out of range!");
-      if (StackTop >= 8)
-        report_fatal_error("Stack overflow!");
-      Stack[StackTop] = Reg;
-      RegMap[Reg] = StackTop++;
-    }
+  // pushReg - Push the specified FP<n> register onto the stack.
+  void pushReg(unsigned Reg) {
+    assert(Reg < NumFPRegs && "Register number out of range!");
+    if (StackTop >= 8)
+      report_fatal_error("Stack overflow!");
+    Stack[StackTop] = Reg;
+    RegMap[Reg] = StackTop++;
+  }
 
-    // popReg - Pop a register from the stack.
-    void popReg() {
-      if (StackTop == 0)
-        report_fatal_error("Cannot pop empty stack!");
-      RegMap[Stack[--StackTop]] = ~0;     // Update state
-    }
+  // popReg - Pop a register from the stack.
+  void popReg() {
+    if (StackTop == 0)
+      report_fatal_error("Cannot pop empty stack!");
+    RegMap[Stack[--StackTop]] = ~0; // Update state
+  }
 
-    bool isAtTop(unsigned RegNo) const { return getSlot(RegNo) == StackTop-1; }
-    void moveToTop(unsigned RegNo, MachineBasicBlock::iterator I) {
-      DebugLoc dl = I == MBB->end() ? DebugLoc() : I->getDebugLoc();
-      if (isAtTop(RegNo)) return;
+  bool isAtTop(unsigned RegNo) const { return getSlot(RegNo) == StackTop - 1; }
+  void moveToTop(unsigned RegNo, MachineBasicBlock::iterator I) {
+    DebugLoc dl = I == MBB->end() ? DebugLoc() : I->getDebugLoc();
+    if (isAtTop(RegNo))
+      return;
 
-      unsigned STReg = getSTReg(RegNo);
-      unsigned RegOnTop = getStackEntry(0);
+    unsigned STReg = getSTReg(RegNo);
+    unsigned RegOnTop = getStackEntry(0);
 
-      // Swap the slots the regs are in.
-      std::swap(RegMap[RegNo], RegMap[RegOnTop]);
+    // Swap the slots the regs are in.
+    std::swap(RegMap[RegNo], RegMap[RegOnTop]);
 
-      // Swap stack slot contents.
-      if (RegMap[RegOnTop] >= StackTop)
-        report_fatal_error("Access past stack top!");
-      std::swap(Stack[RegMap[RegOnTop]], Stack[StackTop-1]);
+    // Swap stack slot contents.
+    if (RegMap[RegOnTop] >= StackTop)
+      report_fatal_error("Access past stack top!");
+    std::swap(Stack[RegMap[RegOnTop]], Stack[StackTop - 1]);
 
-      // Emit an fxch to update the runtime processors version of the state.
-      BuildMI(*MBB, I, dl, TII->get(X86::XCH_F)).addReg(STReg);
-      ++NumFXCH;
-    }
+    // Emit an fxch to update the runtime processors version of the state.
+    BuildMI(*MBB, I, dl, TII->get(X86::XCH_F)).addReg(STReg);
+    ++NumFXCH;
+  }
 
-    void duplicateToTop(unsigned RegNo, unsigned AsReg,
-                        MachineBasicBlock::iterator I) {
-      DebugLoc dl = I == MBB->end() ? DebugLoc() : I->getDebugLoc();
-      unsigned STReg = getSTReg(RegNo);
-      pushReg(AsReg);   // New register on top of stack
+  void duplicateToTop(unsigned RegNo, unsigned AsReg,
+                      MachineBasicBlock::iterator I) {
+    DebugLoc dl = I == MBB->end() ? DebugLoc() : I->getDebugLoc();
+    unsigned STReg = getSTReg(RegNo);
+    pushReg(AsReg); // New register on top of stack
 
-      BuildMI(*MBB, I, dl, TII->get(X86::LD_Frr)).addReg(STReg);
-    }
+    BuildMI(*MBB, I, dl, TII->get(X86::LD_Frr)).addReg(STReg);
+  }
 
-    /// popStackAfter - Pop the current value off of the top of the FP stack
-    /// after the specified instruction.
-    void popStackAfter(MachineBasicBlock::iterator &I);
+  /// popStackAfter - Pop the current value off of the top of the FP stack
+  /// after the specified instruction.
+  void popStackAfter(MachineBasicBlock::iterator &I);
 
-    /// freeStackSlotAfter - Free the specified register from the register
-    /// stack, so that it is no longer in a register.  If the register is
-    /// currently at the top of the stack, we just pop the current instruction,
-    /// otherwise we store the current top-of-stack into the specified slot,
-    /// then pop the top of stack.
-    void freeStackSlotAfter(MachineBasicBlock::iterator &I, unsigned Reg);
+  /// freeStackSlotAfter - Free the specified register from the register
+  /// stack, so that it is no longer in a register.  If the register is
+  /// currently at the top of the stack, we just pop the current instruction,
+  /// otherwise we store the current top-of-stack into the specified slot,
+  /// then pop the top of stack.
+  void freeStackSlotAfter(MachineBasicBlock::iterator &I, unsigned Reg);
 
-    /// freeStackSlotBefore - Just the pop, no folding. Return the inserted
-    /// instruction.
-    MachineBasicBlock::iterator
-    freeStackSlotBefore(MachineBasicBlock::iterator I, unsigned FPRegNo);
+  /// freeStackSlotBefore - Just the pop, no folding. Return the inserted
+  /// instruction.
+  MachineBasicBlock::iterator freeStackSlotBefore(MachineBasicBlock::iterator I,
+                                                  unsigned FPRegNo);
 
-    /// Adjust the live registers to be the set in Mask.
-    void adjustLiveRegs(unsigned Mask, MachineBasicBlock::iterator I);
+  /// Adjust the live registers to be the set in Mask.
+  void adjustLiveRegs(unsigned Mask, MachineBasicBlock::iterator I);
 
-    /// Shuffle the top FixCount stack entries such that FP reg FixStack[0] is
-    /// st(0), FP reg FixStack[1] is st(1) etc.
-    void shuffleStackTop(const unsigned char *FixStack, unsigned FixCount,
-                         MachineBasicBlock::iterator I);
+  /// Shuffle the top FixCount stack entries such that FP reg FixStack[0] is
+  /// st(0), FP reg FixStack[1] is st(1) etc.
+  void shuffleStackTop(const unsigned char *FixStack, unsigned FixCount,
+                       MachineBasicBlock::iterator I);
 
-    bool processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB);
+  bool processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB);
 
-    void handleCall(MachineBasicBlock::iterator &I);
-    void handleReturn(MachineBasicBlock::iterator &I);
-    void handleZeroArgFP(MachineBasicBlock::iterator &I);
-    void handleOneArgFP(MachineBasicBlock::iterator &I);
-    void handleOneArgFPRW(MachineBasicBlock::iterator &I);
-    void handleTwoArgFP(MachineBasicBlock::iterator &I);
-    void handleCompareFP(MachineBasicBlock::iterator &I);
-    void handleCondMovFP(MachineBasicBlock::iterator &I);
-    void handleSpecialFP(MachineBasicBlock::iterator &I);
+  void handleCall(MachineBasicBlock::iterator &I);
+  void handleReturn(MachineBasicBlock::iterator &I);
+  void handleZeroArgFP(MachineBasicBlock::iterator &I);
+  void handleOneArgFP(MachineBasicBlock::iterator &I);
+  void handleOneArgFPRW(MachineBasicBlock::iterator &I);
+  void handleTwoArgFP(MachineBasicBlock::iterator &I);
+  void handleCompareFP(MachineBasicBlock::iterator &I);
+  void handleCondMovFP(MachineBasicBlock::iterator &I);
+  void handleSpecialFP(MachineBasicBlock::iterator &I);
 
-    // Check if a COPY instruction is using FP registers.
-    static bool isFPCopy(MachineInstr &MI) {
-      Register DstReg = MI.getOperand(0).getReg();
-      Register SrcReg = MI.getOperand(1).getReg();
+  // Check if a COPY instruction is using FP registers.
+  static bool isFPCopy(MachineInstr &MI) {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
 
-      return X86::RFP80RegClass.contains(DstReg) ||
-        X86::RFP80RegClass.contains(SrcReg);
-    }
+    return X86::RFP80RegClass.contains(DstReg) ||
+           X86::RFP80RegClass.contains(SrcReg);
+  }
 
-    void setKillFlags(MachineBasicBlock &MBB) const;
-  };
-}
+  void setKillFlags(MachineBasicBlock &MBB) const;
+};
 
-char FPS::ID = 0;
+class X86FPStackifierLegacy : public MachineFunctionPass {
+public:
+  X86FPStackifierLegacy() : MachineFunctionPass(ID) {}
 
-INITIALIZE_PASS_BEGIN(FPS, DEBUG_TYPE, "X86 FP Stackifier",
+  static char ID;
+
+private:
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<EdgeBundlesWrapperLegacy>();
+    AU.addPreservedID(MachineLoopInfoID);
+    AU.addPreservedID(MachineDominatorsID);
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+
+  StringRef getPassName() const override { return "X86 FP Stackifier"; }
+};
+} // namespace
+
+char X86FPStackifierLegacy::ID = 0;
+
+INITIALIZE_PASS_BEGIN(X86FPStackifierLegacy, DEBUG_TYPE, "X86 FP Stackifier",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundlesWrapperLegacy)
-INITIALIZE_PASS_END(FPS, DEBUG_TYPE, "X86 FP Stackifier",
+INITIALIZE_PASS_END(X86FPStackifierLegacy, DEBUG_TYPE, "X86 FP Stackifier",
                     false, false)
 
-FunctionPass *llvm::createX86FloatingPointStackifierPass() { return new FPS(); }
+FunctionPass *llvm::createX86FPStackifierLegacyPass() {
+  return new X86FPStackifierLegacy();
+}
 
 /// getFPReg - Return the X86::FPx register number for the specified operand.
 /// For example, this returns 3 for X86::FP3.
@@ -317,26 +327,25 @@ static unsigned getFPReg(const MachineOperand &MO) {
   return Reg - X86::FP0;
 }
 
+bool FPS::shouldRun(MachineFunction &MF) {
+  // We only need to run this pass if there are any FP registers used in this
+  // function.  If it is all integer, there is nothing for us to do!
+  static_assert(X86::FP6 == X86::FP0 + 6,
+                "Register enums aren't sorted right!");
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (unsigned I = 0; I <= 6; ++I)
+    if (!MRI.reg_nodbg_empty(X86::FP0 + I)) {
+      return true;
+    }
+
+  return false;
+}
+
 /// runOnMachineFunction - Loop over all of the basic blocks, transforming FP
 /// register references into FP stack references.
 ///
-bool FPS::runOnMachineFunction(MachineFunction &MF) {
-  // We only need to run this pass if there are any FP registers used in this
-  // function.  If it is all integer, there is nothing for us to do!
-  bool FPIsUsed = false;
-
-  static_assert(X86::FP6 == X86::FP0+6, "Register enums aren't sorted right!");
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (unsigned i = 0; i <= 6; ++i)
-    if (!MRI.reg_nodbg_empty(X86::FP0 + i)) {
-      FPIsUsed = true;
-      break;
-    }
-
-  // Early exit.
-  if (!FPIsUsed) return false;
-
-  Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
+bool FPS::run(MachineFunction &MF, EdgeBundles *FunctionBundles) {
+  Bundles = FunctionBundles;
   TII = MF.getSubtarget().getInstrInfo();
 
   // Prepare cross-MBB liveness.
@@ -346,16 +355,17 @@ bool FPS::runOnMachineFunction(MachineFunction &MF) {
 
   // Process the function in depth first order so that we process at least one
   // of the predecessors for every reachable block in the function.
-  df_iterator_default_set<MachineBasicBlock*> Processed;
+  df_iterator_default_set<MachineBasicBlock *> Processed;
   MachineBasicBlock *Entry = &MF.front();
 
   LiveBundle &Bundle =
-    LiveBundles[Bundles->getBundle(Entry->getNumber(), false)];
+      LiveBundles[Bundles->getBundle(Entry->getNumber(), false)];
 
   // In regcall convention, some FP registers may not be passed through
   // the stack, so they will need to be assigned to the stack first
   if ((Entry->getParent()->getFunction().getCallingConv() ==
-    CallingConv::X86_RegCall) && (Bundle.Mask && !Bundle.FixCount)) {
+       CallingConv::X86_RegCall) &&
+      (Bundle.Mask && !Bundle.FixCount)) {
     // In the register calling convention, up to one FP argument could be
     // saved in the first FP register.
     // If bundle.mask is non-zero and Bundle.FixCount is zero, it means
@@ -363,7 +373,7 @@ bool FPS::runOnMachineFunction(MachineFunction &MF) {
     // The actual value is passed in FP0.
     // Here we fix the stack and mark FP0 as pre-assigned register.
     assert((Bundle.Mask & 0xFE) == 0 &&
-      "Only FP0 could be passed as an argument");
+           "Only FP0 could be passed as an argument");
     Bundle.FixCount = 1;
     Bundle.FixStack[0] = 0;
   }
@@ -450,13 +460,13 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
     }
 
     if (FPInstClass == X86II::NotFP)
-      continue;  // Efficiently ignore non-fp insts!
+      continue; // Efficiently ignore non-fp insts!
 
     MachineInstr *PrevMI = nullptr;
     if (I != BB.begin())
       PrevMI = &*std::prev(I);
 
-    ++NumFP;  // Keep track of # of pseudo instrs
+    ++NumFP; // Keep track of # of pseudo instrs
     LLVM_DEBUG(dbgs() << "\nFPInst:\t" << MI);
 
     // Get dead variables list now because the MI pointer may be deleted as part
@@ -467,14 +477,29 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
         DeadRegs.push_back(MO.getReg());
 
     switch (FPInstClass) {
-    case X86II::ZeroArgFP:  handleZeroArgFP(I); break;
-    case X86II::OneArgFP:   handleOneArgFP(I);  break;  // fstp ST(0)
-    case X86II::OneArgFPRW: handleOneArgFPRW(I); break; // ST(0) = fsqrt(ST(0))
-    case X86II::TwoArgFP:   handleTwoArgFP(I);  break;
-    case X86II::CompareFP:  handleCompareFP(I); break;
-    case X86II::CondMovFP:  handleCondMovFP(I); break;
-    case X86II::SpecialFP:  handleSpecialFP(I); break;
-    default: llvm_unreachable("Unknown FP Type!");
+    case X86II::ZeroArgFP:
+      handleZeroArgFP(I);
+      break;
+    case X86II::OneArgFP:
+      handleOneArgFP(I);
+      break; // fstp ST(0)
+    case X86II::OneArgFPRW:
+      handleOneArgFPRW(I);
+      break; // ST(0) = fsqrt(ST(0))
+    case X86II::TwoArgFP:
+      handleTwoArgFP(I);
+      break;
+    case X86II::CompareFP:
+      handleCompareFP(I);
+      break;
+    case X86II::CondMovFP:
+      handleCondMovFP(I);
+      break;
+    case X86II::SpecialFP:
+      handleSpecialFP(I);
+      break;
+    default:
+      llvm_unreachable("Unknown FP Type!");
     }
 
     // Check to see if any of the values defined by this instruction are dead
@@ -483,9 +508,9 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
       // Check if Reg is live on the stack. An inline-asm register operand that
       // is in the clobber list and marked dead might not be live on the stack.
       static_assert(X86::FP7 - X86::FP0 == 7, "sequential FP regnumbers");
-      if (Reg >= X86::FP0 && Reg <= X86::FP6 && isLive(Reg-X86::FP0)) {
+      if (Reg >= X86::FP0 && Reg <= X86::FP6 && isLive(Reg - X86::FP0)) {
         LLVM_DEBUG(dbgs() << "Register FP#" << Reg - X86::FP0 << " is dead!\n");
-        freeStackSlotAfter(I, Reg-X86::FP0);
+        freeStackSlotAfter(I, Reg - X86::FP0);
       }
     }
 
@@ -524,7 +549,7 @@ void FPS::setupBlockStack() {
   StackTop = 0;
   // Get the live-in bundle for MBB.
   const LiveBundle &Bundle =
-    LiveBundles[Bundles->getBundle(MBB->getNumber(), false)];
+      LiveBundles[Bundles->getBundle(MBB->getNumber(), false)];
 
   if (!Bundle.Mask) {
     LLVM_DEBUG(dbgs() << "Block has no FP live-ins.\n");
@@ -538,7 +563,7 @@ void FPS::setupBlockStack() {
   for (unsigned i = Bundle.FixCount; i > 0; --i) {
     LLVM_DEBUG(dbgs() << "Live-in st(" << (i - 1) << "): %fp"
                       << unsigned(Bundle.FixStack[i - 1]) << '\n');
-    pushReg(Bundle.FixStack[i-1]);
+    pushReg(Bundle.FixStack[i - 1]);
   }
 
   // Kill off unwanted live-ins. This can happen with a critical edge.
@@ -589,25 +614,23 @@ void FPS::finishBlockStack() {
   }
 }
 
-
 //===----------------------------------------------------------------------===//
 // Efficient Lookup Table Support
 //===----------------------------------------------------------------------===//
 
 namespace {
-  struct TableEntry {
-    uint16_t from;
-    uint16_t to;
-    bool operator<(const TableEntry &TE) const { return from < TE.from; }
-    friend bool operator<(const TableEntry &TE, unsigned V) {
-      return TE.from < V;
-    }
-    friend bool LLVM_ATTRIBUTE_UNUSED operator<(unsigned V,
-                                                const TableEntry &TE) {
-      return V < TE.from;
-    }
-  };
-}
+struct TableEntry {
+  uint16_t from;
+  uint16_t to;
+  bool operator<(const TableEntry &TE) const { return from < TE.from; }
+  friend bool operator<(const TableEntry &TE, unsigned V) {
+    return TE.from < V;
+  }
+  [[maybe_unused]] friend bool operator<(unsigned V, const TableEntry &TE) {
+    return V < TE.from;
+  }
+};
+} // namespace
 
 static int Lookup(ArrayRef<TableEntry> Table, unsigned Opcode) {
   const TableEntry *I = llvm::lower_bound(Table, Opcode);
@@ -639,168 +662,168 @@ static int Lookup(ArrayRef<TableEntry> Table, unsigned Opcode) {
 // concrete X86 instruction which uses the register stack.
 //
 static const TableEntry OpcodeTable[] = {
-  { X86::ABS_Fp32     , X86::ABS_F     },
-  { X86::ABS_Fp64     , X86::ABS_F     },
-  { X86::ABS_Fp80     , X86::ABS_F     },
-  { X86::ADD_Fp32m    , X86::ADD_F32m  },
-  { X86::ADD_Fp64m    , X86::ADD_F64m  },
-  { X86::ADD_Fp64m32  , X86::ADD_F32m  },
-  { X86::ADD_Fp80m32  , X86::ADD_F32m  },
-  { X86::ADD_Fp80m64  , X86::ADD_F64m  },
-  { X86::ADD_FpI16m32 , X86::ADD_FI16m },
-  { X86::ADD_FpI16m64 , X86::ADD_FI16m },
-  { X86::ADD_FpI16m80 , X86::ADD_FI16m },
-  { X86::ADD_FpI32m32 , X86::ADD_FI32m },
-  { X86::ADD_FpI32m64 , X86::ADD_FI32m },
-  { X86::ADD_FpI32m80 , X86::ADD_FI32m },
-  { X86::CHS_Fp32     , X86::CHS_F     },
-  { X86::CHS_Fp64     , X86::CHS_F     },
-  { X86::CHS_Fp80     , X86::CHS_F     },
-  { X86::CMOVBE_Fp32  , X86::CMOVBE_F  },
-  { X86::CMOVBE_Fp64  , X86::CMOVBE_F  },
-  { X86::CMOVBE_Fp80  , X86::CMOVBE_F  },
-  { X86::CMOVB_Fp32   , X86::CMOVB_F   },
-  { X86::CMOVB_Fp64   , X86::CMOVB_F  },
-  { X86::CMOVB_Fp80   , X86::CMOVB_F  },
-  { X86::CMOVE_Fp32   , X86::CMOVE_F  },
-  { X86::CMOVE_Fp64   , X86::CMOVE_F   },
-  { X86::CMOVE_Fp80   , X86::CMOVE_F   },
-  { X86::CMOVNBE_Fp32 , X86::CMOVNBE_F },
-  { X86::CMOVNBE_Fp64 , X86::CMOVNBE_F },
-  { X86::CMOVNBE_Fp80 , X86::CMOVNBE_F },
-  { X86::CMOVNB_Fp32  , X86::CMOVNB_F  },
-  { X86::CMOVNB_Fp64  , X86::CMOVNB_F  },
-  { X86::CMOVNB_Fp80  , X86::CMOVNB_F  },
-  { X86::CMOVNE_Fp32  , X86::CMOVNE_F  },
-  { X86::CMOVNE_Fp64  , X86::CMOVNE_F  },
-  { X86::CMOVNE_Fp80  , X86::CMOVNE_F  },
-  { X86::CMOVNP_Fp32  , X86::CMOVNP_F  },
-  { X86::CMOVNP_Fp64  , X86::CMOVNP_F  },
-  { X86::CMOVNP_Fp80  , X86::CMOVNP_F  },
-  { X86::CMOVP_Fp32   , X86::CMOVP_F   },
-  { X86::CMOVP_Fp64   , X86::CMOVP_F   },
-  { X86::CMOVP_Fp80   , X86::CMOVP_F   },
-  { X86::COM_FpIr32   , X86::COM_FIr   },
-  { X86::COM_FpIr64   , X86::COM_FIr   },
-  { X86::COM_FpIr80   , X86::COM_FIr   },
-  { X86::COM_Fpr32    , X86::COM_FST0r },
-  { X86::COM_Fpr64    , X86::COM_FST0r },
-  { X86::COM_Fpr80    , X86::COM_FST0r },
-  { X86::DIVR_Fp32m   , X86::DIVR_F32m },
-  { X86::DIVR_Fp64m   , X86::DIVR_F64m },
-  { X86::DIVR_Fp64m32 , X86::DIVR_F32m },
-  { X86::DIVR_Fp80m32 , X86::DIVR_F32m },
-  { X86::DIVR_Fp80m64 , X86::DIVR_F64m },
-  { X86::DIVR_FpI16m32, X86::DIVR_FI16m},
-  { X86::DIVR_FpI16m64, X86::DIVR_FI16m},
-  { X86::DIVR_FpI16m80, X86::DIVR_FI16m},
-  { X86::DIVR_FpI32m32, X86::DIVR_FI32m},
-  { X86::DIVR_FpI32m64, X86::DIVR_FI32m},
-  { X86::DIVR_FpI32m80, X86::DIVR_FI32m},
-  { X86::DIV_Fp32m    , X86::DIV_F32m  },
-  { X86::DIV_Fp64m    , X86::DIV_F64m  },
-  { X86::DIV_Fp64m32  , X86::DIV_F32m  },
-  { X86::DIV_Fp80m32  , X86::DIV_F32m  },
-  { X86::DIV_Fp80m64  , X86::DIV_F64m  },
-  { X86::DIV_FpI16m32 , X86::DIV_FI16m },
-  { X86::DIV_FpI16m64 , X86::DIV_FI16m },
-  { X86::DIV_FpI16m80 , X86::DIV_FI16m },
-  { X86::DIV_FpI32m32 , X86::DIV_FI32m },
-  { X86::DIV_FpI32m64 , X86::DIV_FI32m },
-  { X86::DIV_FpI32m80 , X86::DIV_FI32m },
-  { X86::ILD_Fp16m32  , X86::ILD_F16m  },
-  { X86::ILD_Fp16m64  , X86::ILD_F16m  },
-  { X86::ILD_Fp16m80  , X86::ILD_F16m  },
-  { X86::ILD_Fp32m32  , X86::ILD_F32m  },
-  { X86::ILD_Fp32m64  , X86::ILD_F32m  },
-  { X86::ILD_Fp32m80  , X86::ILD_F32m  },
-  { X86::ILD_Fp64m32  , X86::ILD_F64m  },
-  { X86::ILD_Fp64m64  , X86::ILD_F64m  },
-  { X86::ILD_Fp64m80  , X86::ILD_F64m  },
-  { X86::ISTT_Fp16m32 , X86::ISTT_FP16m},
-  { X86::ISTT_Fp16m64 , X86::ISTT_FP16m},
-  { X86::ISTT_Fp16m80 , X86::ISTT_FP16m},
-  { X86::ISTT_Fp32m32 , X86::ISTT_FP32m},
-  { X86::ISTT_Fp32m64 , X86::ISTT_FP32m},
-  { X86::ISTT_Fp32m80 , X86::ISTT_FP32m},
-  { X86::ISTT_Fp64m32 , X86::ISTT_FP64m},
-  { X86::ISTT_Fp64m64 , X86::ISTT_FP64m},
-  { X86::ISTT_Fp64m80 , X86::ISTT_FP64m},
-  { X86::IST_Fp16m32  , X86::IST_F16m  },
-  { X86::IST_Fp16m64  , X86::IST_F16m  },
-  { X86::IST_Fp16m80  , X86::IST_F16m  },
-  { X86::IST_Fp32m32  , X86::IST_F32m  },
-  { X86::IST_Fp32m64  , X86::IST_F32m  },
-  { X86::IST_Fp32m80  , X86::IST_F32m  },
-  { X86::IST_Fp64m32  , X86::IST_FP64m },
-  { X86::IST_Fp64m64  , X86::IST_FP64m },
-  { X86::IST_Fp64m80  , X86::IST_FP64m },
-  { X86::LD_Fp032     , X86::LD_F0     },
-  { X86::LD_Fp064     , X86::LD_F0     },
-  { X86::LD_Fp080     , X86::LD_F0     },
-  { X86::LD_Fp132     , X86::LD_F1     },
-  { X86::LD_Fp164     , X86::LD_F1     },
-  { X86::LD_Fp180     , X86::LD_F1     },
-  { X86::LD_Fp32m     , X86::LD_F32m   },
-  { X86::LD_Fp32m64   , X86::LD_F32m   },
-  { X86::LD_Fp32m80   , X86::LD_F32m   },
-  { X86::LD_Fp64m     , X86::LD_F64m   },
-  { X86::LD_Fp64m80   , X86::LD_F64m   },
-  { X86::LD_Fp80m     , X86::LD_F80m   },
-  { X86::MUL_Fp32m    , X86::MUL_F32m  },
-  { X86::MUL_Fp64m    , X86::MUL_F64m  },
-  { X86::MUL_Fp64m32  , X86::MUL_F32m  },
-  { X86::MUL_Fp80m32  , X86::MUL_F32m  },
-  { X86::MUL_Fp80m64  , X86::MUL_F64m  },
-  { X86::MUL_FpI16m32 , X86::MUL_FI16m },
-  { X86::MUL_FpI16m64 , X86::MUL_FI16m },
-  { X86::MUL_FpI16m80 , X86::MUL_FI16m },
-  { X86::MUL_FpI32m32 , X86::MUL_FI32m },
-  { X86::MUL_FpI32m64 , X86::MUL_FI32m },
-  { X86::MUL_FpI32m80 , X86::MUL_FI32m },
-  { X86::SQRT_Fp32    , X86::SQRT_F    },
-  { X86::SQRT_Fp64    , X86::SQRT_F    },
-  { X86::SQRT_Fp80    , X86::SQRT_F    },
-  { X86::ST_Fp32m     , X86::ST_F32m   },
-  { X86::ST_Fp64m     , X86::ST_F64m   },
-  { X86::ST_Fp64m32   , X86::ST_F32m   },
-  { X86::ST_Fp80m32   , X86::ST_F32m   },
-  { X86::ST_Fp80m64   , X86::ST_F64m   },
-  { X86::ST_FpP80m    , X86::ST_FP80m  },
-  { X86::SUBR_Fp32m   , X86::SUBR_F32m },
-  { X86::SUBR_Fp64m   , X86::SUBR_F64m },
-  { X86::SUBR_Fp64m32 , X86::SUBR_F32m },
-  { X86::SUBR_Fp80m32 , X86::SUBR_F32m },
-  { X86::SUBR_Fp80m64 , X86::SUBR_F64m },
-  { X86::SUBR_FpI16m32, X86::SUBR_FI16m},
-  { X86::SUBR_FpI16m64, X86::SUBR_FI16m},
-  { X86::SUBR_FpI16m80, X86::SUBR_FI16m},
-  { X86::SUBR_FpI32m32, X86::SUBR_FI32m},
-  { X86::SUBR_FpI32m64, X86::SUBR_FI32m},
-  { X86::SUBR_FpI32m80, X86::SUBR_FI32m},
-  { X86::SUB_Fp32m    , X86::SUB_F32m  },
-  { X86::SUB_Fp64m    , X86::SUB_F64m  },
-  { X86::SUB_Fp64m32  , X86::SUB_F32m  },
-  { X86::SUB_Fp80m32  , X86::SUB_F32m  },
-  { X86::SUB_Fp80m64  , X86::SUB_F64m  },
-  { X86::SUB_FpI16m32 , X86::SUB_FI16m },
-  { X86::SUB_FpI16m64 , X86::SUB_FI16m },
-  { X86::SUB_FpI16m80 , X86::SUB_FI16m },
-  { X86::SUB_FpI32m32 , X86::SUB_FI32m },
-  { X86::SUB_FpI32m64 , X86::SUB_FI32m },
-  { X86::SUB_FpI32m80 , X86::SUB_FI32m },
-  { X86::TST_Fp32     , X86::TST_F     },
-  { X86::TST_Fp64     , X86::TST_F     },
-  { X86::TST_Fp80     , X86::TST_F     },
-  { X86::UCOM_FpIr32  , X86::UCOM_FIr  },
-  { X86::UCOM_FpIr64  , X86::UCOM_FIr  },
-  { X86::UCOM_FpIr80  , X86::UCOM_FIr  },
-  { X86::UCOM_Fpr32   , X86::UCOM_Fr   },
-  { X86::UCOM_Fpr64   , X86::UCOM_Fr   },
-  { X86::UCOM_Fpr80   , X86::UCOM_Fr   },
-  { X86::XAM_Fp32     , X86::XAM_F     },
-  { X86::XAM_Fp64     , X86::XAM_F     },
-  { X86::XAM_Fp80     , X86::XAM_F     },
+    {X86::ABS_Fp32, X86::ABS_F},
+    {X86::ABS_Fp64, X86::ABS_F},
+    {X86::ABS_Fp80, X86::ABS_F},
+    {X86::ADD_Fp32m, X86::ADD_F32m},
+    {X86::ADD_Fp64m, X86::ADD_F64m},
+    {X86::ADD_Fp64m32, X86::ADD_F32m},
+    {X86::ADD_Fp80m32, X86::ADD_F32m},
+    {X86::ADD_Fp80m64, X86::ADD_F64m},
+    {X86::ADD_FpI16m32, X86::ADD_FI16m},
+    {X86::ADD_FpI16m64, X86::ADD_FI16m},
+    {X86::ADD_FpI16m80, X86::ADD_FI16m},
+    {X86::ADD_FpI32m32, X86::ADD_FI32m},
+    {X86::ADD_FpI32m64, X86::ADD_FI32m},
+    {X86::ADD_FpI32m80, X86::ADD_FI32m},
+    {X86::CHS_Fp32, X86::CHS_F},
+    {X86::CHS_Fp64, X86::CHS_F},
+    {X86::CHS_Fp80, X86::CHS_F},
+    {X86::CMOVBE_Fp32, X86::CMOVBE_F},
+    {X86::CMOVBE_Fp64, X86::CMOVBE_F},
+    {X86::CMOVBE_Fp80, X86::CMOVBE_F},
+    {X86::CMOVB_Fp32, X86::CMOVB_F},
+    {X86::CMOVB_Fp64, X86::CMOVB_F},
+    {X86::CMOVB_Fp80, X86::CMOVB_F},
+    {X86::CMOVE_Fp32, X86::CMOVE_F},
+    {X86::CMOVE_Fp64, X86::CMOVE_F},
+    {X86::CMOVE_Fp80, X86::CMOVE_F},
+    {X86::CMOVNBE_Fp32, X86::CMOVNBE_F},
+    {X86::CMOVNBE_Fp64, X86::CMOVNBE_F},
+    {X86::CMOVNBE_Fp80, X86::CMOVNBE_F},
+    {X86::CMOVNB_Fp32, X86::CMOVNB_F},
+    {X86::CMOVNB_Fp64, X86::CMOVNB_F},
+    {X86::CMOVNB_Fp80, X86::CMOVNB_F},
+    {X86::CMOVNE_Fp32, X86::CMOVNE_F},
+    {X86::CMOVNE_Fp64, X86::CMOVNE_F},
+    {X86::CMOVNE_Fp80, X86::CMOVNE_F},
+    {X86::CMOVNP_Fp32, X86::CMOVNP_F},
+    {X86::CMOVNP_Fp64, X86::CMOVNP_F},
+    {X86::CMOVNP_Fp80, X86::CMOVNP_F},
+    {X86::CMOVP_Fp32, X86::CMOVP_F},
+    {X86::CMOVP_Fp64, X86::CMOVP_F},
+    {X86::CMOVP_Fp80, X86::CMOVP_F},
+    {X86::COM_FpIr32, X86::COM_FIr},
+    {X86::COM_FpIr64, X86::COM_FIr},
+    {X86::COM_FpIr80, X86::COM_FIr},
+    {X86::COM_Fpr32, X86::COM_FST0r},
+    {X86::COM_Fpr64, X86::COM_FST0r},
+    {X86::COM_Fpr80, X86::COM_FST0r},
+    {X86::DIVR_Fp32m, X86::DIVR_F32m},
+    {X86::DIVR_Fp64m, X86::DIVR_F64m},
+    {X86::DIVR_Fp64m32, X86::DIVR_F32m},
+    {X86::DIVR_Fp80m32, X86::DIVR_F32m},
+    {X86::DIVR_Fp80m64, X86::DIVR_F64m},
+    {X86::DIVR_FpI16m32, X86::DIVR_FI16m},
+    {X86::DIVR_FpI16m64, X86::DIVR_FI16m},
+    {X86::DIVR_FpI16m80, X86::DIVR_FI16m},
+    {X86::DIVR_FpI32m32, X86::DIVR_FI32m},
+    {X86::DIVR_FpI32m64, X86::DIVR_FI32m},
+    {X86::DIVR_FpI32m80, X86::DIVR_FI32m},
+    {X86::DIV_Fp32m, X86::DIV_F32m},
+    {X86::DIV_Fp64m, X86::DIV_F64m},
+    {X86::DIV_Fp64m32, X86::DIV_F32m},
+    {X86::DIV_Fp80m32, X86::DIV_F32m},
+    {X86::DIV_Fp80m64, X86::DIV_F64m},
+    {X86::DIV_FpI16m32, X86::DIV_FI16m},
+    {X86::DIV_FpI16m64, X86::DIV_FI16m},
+    {X86::DIV_FpI16m80, X86::DIV_FI16m},
+    {X86::DIV_FpI32m32, X86::DIV_FI32m},
+    {X86::DIV_FpI32m64, X86::DIV_FI32m},
+    {X86::DIV_FpI32m80, X86::DIV_FI32m},
+    {X86::ILD_Fp16m32, X86::ILD_F16m},
+    {X86::ILD_Fp16m64, X86::ILD_F16m},
+    {X86::ILD_Fp16m80, X86::ILD_F16m},
+    {X86::ILD_Fp32m32, X86::ILD_F32m},
+    {X86::ILD_Fp32m64, X86::ILD_F32m},
+    {X86::ILD_Fp32m80, X86::ILD_F32m},
+    {X86::ILD_Fp64m32, X86::ILD_F64m},
+    {X86::ILD_Fp64m64, X86::ILD_F64m},
+    {X86::ILD_Fp64m80, X86::ILD_F64m},
+    {X86::ISTT_Fp16m32, X86::ISTT_FP16m},
+    {X86::ISTT_Fp16m64, X86::ISTT_FP16m},
+    {X86::ISTT_Fp16m80, X86::ISTT_FP16m},
+    {X86::ISTT_Fp32m32, X86::ISTT_FP32m},
+    {X86::ISTT_Fp32m64, X86::ISTT_FP32m},
+    {X86::ISTT_Fp32m80, X86::ISTT_FP32m},
+    {X86::ISTT_Fp64m32, X86::ISTT_FP64m},
+    {X86::ISTT_Fp64m64, X86::ISTT_FP64m},
+    {X86::ISTT_Fp64m80, X86::ISTT_FP64m},
+    {X86::IST_Fp16m32, X86::IST_F16m},
+    {X86::IST_Fp16m64, X86::IST_F16m},
+    {X86::IST_Fp16m80, X86::IST_F16m},
+    {X86::IST_Fp32m32, X86::IST_F32m},
+    {X86::IST_Fp32m64, X86::IST_F32m},
+    {X86::IST_Fp32m80, X86::IST_F32m},
+    {X86::IST_Fp64m32, X86::IST_FP64m},
+    {X86::IST_Fp64m64, X86::IST_FP64m},
+    {X86::IST_Fp64m80, X86::IST_FP64m},
+    {X86::LD_Fp032, X86::LD_F0},
+    {X86::LD_Fp064, X86::LD_F0},
+    {X86::LD_Fp080, X86::LD_F0},
+    {X86::LD_Fp132, X86::LD_F1},
+    {X86::LD_Fp164, X86::LD_F1},
+    {X86::LD_Fp180, X86::LD_F1},
+    {X86::LD_Fp32m, X86::LD_F32m},
+    {X86::LD_Fp32m64, X86::LD_F32m},
+    {X86::LD_Fp32m80, X86::LD_F32m},
+    {X86::LD_Fp64m, X86::LD_F64m},
+    {X86::LD_Fp64m80, X86::LD_F64m},
+    {X86::LD_Fp80m, X86::LD_F80m},
+    {X86::MUL_Fp32m, X86::MUL_F32m},
+    {X86::MUL_Fp64m, X86::MUL_F64m},
+    {X86::MUL_Fp64m32, X86::MUL_F32m},
+    {X86::MUL_Fp80m32, X86::MUL_F32m},
+    {X86::MUL_Fp80m64, X86::MUL_F64m},
+    {X86::MUL_FpI16m32, X86::MUL_FI16m},
+    {X86::MUL_FpI16m64, X86::MUL_FI16m},
+    {X86::MUL_FpI16m80, X86::MUL_FI16m},
+    {X86::MUL_FpI32m32, X86::MUL_FI32m},
+    {X86::MUL_FpI32m64, X86::MUL_FI32m},
+    {X86::MUL_FpI32m80, X86::MUL_FI32m},
+    {X86::SQRT_Fp32, X86::SQRT_F},
+    {X86::SQRT_Fp64, X86::SQRT_F},
+    {X86::SQRT_Fp80, X86::SQRT_F},
+    {X86::ST_Fp32m, X86::ST_F32m},
+    {X86::ST_Fp64m, X86::ST_F64m},
+    {X86::ST_Fp64m32, X86::ST_F32m},
+    {X86::ST_Fp80m32, X86::ST_F32m},
+    {X86::ST_Fp80m64, X86::ST_F64m},
+    {X86::ST_FpP80m, X86::ST_FP80m},
+    {X86::SUBR_Fp32m, X86::SUBR_F32m},
+    {X86::SUBR_Fp64m, X86::SUBR_F64m},
+    {X86::SUBR_Fp64m32, X86::SUBR_F32m},
+    {X86::SUBR_Fp80m32, X86::SUBR_F32m},
+    {X86::SUBR_Fp80m64, X86::SUBR_F64m},
+    {X86::SUBR_FpI16m32, X86::SUBR_FI16m},
+    {X86::SUBR_FpI16m64, X86::SUBR_FI16m},
+    {X86::SUBR_FpI16m80, X86::SUBR_FI16m},
+    {X86::SUBR_FpI32m32, X86::SUBR_FI32m},
+    {X86::SUBR_FpI32m64, X86::SUBR_FI32m},
+    {X86::SUBR_FpI32m80, X86::SUBR_FI32m},
+    {X86::SUB_Fp32m, X86::SUB_F32m},
+    {X86::SUB_Fp64m, X86::SUB_F64m},
+    {X86::SUB_Fp64m32, X86::SUB_F32m},
+    {X86::SUB_Fp80m32, X86::SUB_F32m},
+    {X86::SUB_Fp80m64, X86::SUB_F64m},
+    {X86::SUB_FpI16m32, X86::SUB_FI16m},
+    {X86::SUB_FpI16m64, X86::SUB_FI16m},
+    {X86::SUB_FpI16m80, X86::SUB_FI16m},
+    {X86::SUB_FpI32m32, X86::SUB_FI32m},
+    {X86::SUB_FpI32m64, X86::SUB_FI32m},
+    {X86::SUB_FpI32m80, X86::SUB_FI32m},
+    {X86::TST_Fp32, X86::TST_F},
+    {X86::TST_Fp64, X86::TST_F},
+    {X86::TST_Fp80, X86::TST_F},
+    {X86::UCOM_FpIr32, X86::UCOM_FIr},
+    {X86::UCOM_FpIr64, X86::UCOM_FIr},
+    {X86::UCOM_FpIr80, X86::UCOM_FIr},
+    {X86::UCOM_Fpr32, X86::UCOM_Fr},
+    {X86::UCOM_Fpr64, X86::UCOM_Fr},
+    {X86::UCOM_Fpr80, X86::UCOM_Fr},
+    {X86::XAM_Fp32, X86::XAM_F},
+    {X86::XAM_Fp64, X86::XAM_F},
+    {X86::XAM_Fp80, X86::XAM_F},
 };
 
 static unsigned getConcreteOpcode(unsigned Opcode) {
@@ -818,31 +841,25 @@ static unsigned getConcreteOpcode(unsigned Opcode) {
 // element is an instruction, the second is the version which pops.
 //
 static const TableEntry PopTable[] = {
-  { X86::ADD_FrST0 , X86::ADD_FPrST0  },
+    {X86::ADD_FrST0, X86::ADD_FPrST0},
 
-  { X86::COMP_FST0r, X86::FCOMPP      },
-  { X86::COM_FIr   , X86::COM_FIPr    },
-  { X86::COM_FST0r , X86::COMP_FST0r  },
+    {X86::COMP_FST0r, X86::FCOMPP},      {X86::COM_FIr, X86::COM_FIPr},
+    {X86::COM_FST0r, X86::COMP_FST0r},
 
-  { X86::DIVR_FrST0, X86::DIVR_FPrST0 },
-  { X86::DIV_FrST0 , X86::DIV_FPrST0  },
+    {X86::DIVR_FrST0, X86::DIVR_FPrST0}, {X86::DIV_FrST0, X86::DIV_FPrST0},
 
-  { X86::IST_F16m  , X86::IST_FP16m   },
-  { X86::IST_F32m  , X86::IST_FP32m   },
+    {X86::IST_F16m, X86::IST_FP16m},     {X86::IST_F32m, X86::IST_FP32m},
 
-  { X86::MUL_FrST0 , X86::MUL_FPrST0  },
+    {X86::MUL_FrST0, X86::MUL_FPrST0},
 
-  { X86::ST_F32m   , X86::ST_FP32m    },
-  { X86::ST_F64m   , X86::ST_FP64m    },
-  { X86::ST_Frr    , X86::ST_FPrr     },
+    {X86::ST_F32m, X86::ST_FP32m},       {X86::ST_F64m, X86::ST_FP64m},
+    {X86::ST_Frr, X86::ST_FPrr},
 
-  { X86::SUBR_FrST0, X86::SUBR_FPrST0 },
-  { X86::SUB_FrST0 , X86::SUB_FPrST0  },
+    {X86::SUBR_FrST0, X86::SUBR_FPrST0}, {X86::SUB_FrST0, X86::SUB_FPrST0},
 
-  { X86::UCOM_FIr  , X86::UCOM_FIPr   },
+    {X86::UCOM_FIr, X86::UCOM_FIPr},
 
-  { X86::UCOM_FPr  , X86::UCOM_FPPr   },
-  { X86::UCOM_Fr   , X86::UCOM_FPr    },
+    {X86::UCOM_FPr, X86::UCOM_FPPr},     {X86::UCOM_Fr, X86::UCOM_FPr},
 };
 
 static bool doesInstructionSetFPSW(MachineInstr &MI) {
@@ -884,7 +901,7 @@ void FPS::popStackAfter(MachineBasicBlock::iterator &I) {
     if (Opcode == X86::FCOMPP || Opcode == X86::UCOM_FPPr)
       I->removeOperand(0);
     MI.dropDebugNumber();
-  } else {    // Insert an explicit pop
+  } else { // Insert an explicit pop
     // If this instruction sets FPSW, which is read in following instruction,
     // insert pop after that reader.
     if (doesInstructionSetFPSW(MI)) {
@@ -902,7 +919,7 @@ void FPS::popStackAfter(MachineBasicBlock::iterator &I) {
 /// of the stack, we just pop the current instruction, otherwise we store the
 /// current top-of-stack into the specified slot, then pop the top of stack.
 void FPS::freeStackSlotAfter(MachineBasicBlock::iterator &I, unsigned FPRegNo) {
-  if (getStackEntry(0) == FPRegNo) {  // already at the top of stack? easy.
+  if (getStackEntry(0) == FPRegNo) { // already at the top of stack? easy.
     popStackAfter(I);
     return;
   }
@@ -917,12 +934,12 @@ void FPS::freeStackSlotAfter(MachineBasicBlock::iterator &I, unsigned FPRegNo) {
 /// folding.
 MachineBasicBlock::iterator
 FPS::freeStackSlotBefore(MachineBasicBlock::iterator I, unsigned FPRegNo) {
-  unsigned STReg    = getSTReg(FPRegNo);
-  unsigned OldSlot  = getSlot(FPRegNo);
-  unsigned TopReg   = Stack[StackTop-1];
-  Stack[OldSlot]    = TopReg;
-  RegMap[TopReg]    = OldSlot;
-  RegMap[FPRegNo]   = ~0;
+  unsigned STReg = getSTReg(FPRegNo);
+  unsigned OldSlot = getSlot(FPRegNo);
+  unsigned TopReg = Stack[StackTop - 1];
+  Stack[OldSlot] = TopReg;
+  RegMap[TopReg] = OldSlot;
+  RegMap[FPRegNo] = ~0;
   Stack[--StackTop] = ~0;
   return BuildMI(*MBB, I, DebugLoc(), TII->get(X86::ST_FPrr))
       .addReg(STReg)
@@ -979,7 +996,7 @@ void FPS::adjustLiveRegs(unsigned Mask, MachineBasicBlock::iterator I) {
   }
 
   // Load zeros for all the imp-defs.
-  while(Defs) {
+  while (Defs) {
     unsigned DReg = llvm::countr_zero(Defs);
     LLVM_DEBUG(dbgs() << "Defining %fp" << DReg << " as 0\n");
     BuildMI(*MBB, I, DebugLoc(), TII->get(X86::LD_F0));
@@ -995,8 +1012,7 @@ void FPS::adjustLiveRegs(unsigned Mask, MachineBasicBlock::iterator I) {
 /// shuffleStackTop - emit fxch instructions before I to shuffle the top
 /// FixCount entries into the order given by FixStack.
 /// FIXME: Is there a better algorithm than insertion sort?
-void FPS::shuffleStackTop(const unsigned char *FixStack,
-                          unsigned FixCount,
+void FPS::shuffleStackTop(const unsigned char *FixStack, unsigned FixCount,
                           MachineBasicBlock::iterator I) {
   // Move items into place, starting from the desired stack bottom.
   while (FixCount--) {
@@ -1013,7 +1029,6 @@ void FPS::shuffleStackTop(const unsigned char *FixStack,
   }
   LLVM_DEBUG(dumpStack());
 }
-
 
 //===----------------------------------------------------------------------===//
 // Instruction transformation implementation
@@ -1123,7 +1138,8 @@ void FPS::handleReturn(MachineBasicBlock::iterator &I) {
   // We may have been carrying spurious live-ins, so make sure only the
   // returned registers are left live.
   adjustLiveRegs(LiveMask, MI);
-  if (!LiveMask) return;  // Quick check to see if any are possible.
+  if (!LiveMask)
+    return; // Quick check to see if any are possible.
 
   // There are only four possibilities here:
   // 1) we are returning a single FP value.  In this case, it has to be in
@@ -1145,7 +1161,7 @@ void FPS::handleReturn(MachineBasicBlock::iterator &I) {
   // 2) If returning the same value for both, we only have one thing in the FP
   //    stack.  Consider:  RET FP1, FP1
   if (StackTop == 1) {
-    assert(FirstFPRegOp == SecondFPRegOp && FirstFPRegOp == getStackEntry(0)&&
+    assert(FirstFPRegOp == SecondFPRegOp && FirstFPRegOp == getStackEntry(0) &&
            "Stack misconfiguration for RET!");
 
     // Duplicate the TOS so that we return it twice.  Just pick some other FPx
@@ -1223,7 +1239,7 @@ void FPS::handleOneArgFP(MachineBasicBlock::iterator &I) {
                     MI.getOpcode() == X86::ST_FpP80m)) {
     duplicateToTop(Reg, ScratchFPReg, I);
   } else {
-    moveToTop(Reg, I);            // Move to the top of the stack...
+    moveToTop(Reg, I); // Move to the top of the stack...
   }
 
   // Convert from the pseudo instruction to the concrete instruction.
@@ -1244,7 +1260,6 @@ void FPS::handleOneArgFP(MachineBasicBlock::iterator &I) {
 
   MI.dropDebugNumber();
 }
-
 
 /// handleOneArgFPRW: Handle instructions that read from the top of stack and
 /// replace the value with a newly computed value.  These instructions may have
@@ -1286,75 +1301,61 @@ void FPS::handleOneArgFPRW(MachineBasicBlock::iterator &I) {
   MI.dropDebugNumber();
 }
 
-
 //===----------------------------------------------------------------------===//
 // Define tables of various ways to map pseudo instructions
 //
 
 // ForwardST0Table - Map: A = B op C  into: ST(0) = ST(0) op ST(i)
 static const TableEntry ForwardST0Table[] = {
-  { X86::ADD_Fp32  , X86::ADD_FST0r },
-  { X86::ADD_Fp64  , X86::ADD_FST0r },
-  { X86::ADD_Fp80  , X86::ADD_FST0r },
-  { X86::DIV_Fp32  , X86::DIV_FST0r },
-  { X86::DIV_Fp64  , X86::DIV_FST0r },
-  { X86::DIV_Fp80  , X86::DIV_FST0r },
-  { X86::MUL_Fp32  , X86::MUL_FST0r },
-  { X86::MUL_Fp64  , X86::MUL_FST0r },
-  { X86::MUL_Fp80  , X86::MUL_FST0r },
-  { X86::SUB_Fp32  , X86::SUB_FST0r },
-  { X86::SUB_Fp64  , X86::SUB_FST0r },
-  { X86::SUB_Fp80  , X86::SUB_FST0r },
+    {X86::ADD_Fp32, X86::ADD_FST0r}, {X86::ADD_Fp64, X86::ADD_FST0r},
+    {X86::ADD_Fp80, X86::ADD_FST0r}, {X86::DIV_Fp32, X86::DIV_FST0r},
+    {X86::DIV_Fp64, X86::DIV_FST0r}, {X86::DIV_Fp80, X86::DIV_FST0r},
+    {X86::MUL_Fp32, X86::MUL_FST0r}, {X86::MUL_Fp64, X86::MUL_FST0r},
+    {X86::MUL_Fp80, X86::MUL_FST0r}, {X86::SUB_Fp32, X86::SUB_FST0r},
+    {X86::SUB_Fp64, X86::SUB_FST0r}, {X86::SUB_Fp80, X86::SUB_FST0r},
 };
 
 // ReverseST0Table - Map: A = B op C  into: ST(0) = ST(i) op ST(0)
 static const TableEntry ReverseST0Table[] = {
-  { X86::ADD_Fp32  , X86::ADD_FST0r  },   // commutative
-  { X86::ADD_Fp64  , X86::ADD_FST0r  },   // commutative
-  { X86::ADD_Fp80  , X86::ADD_FST0r  },   // commutative
-  { X86::DIV_Fp32  , X86::DIVR_FST0r },
-  { X86::DIV_Fp64  , X86::DIVR_FST0r },
-  { X86::DIV_Fp80  , X86::DIVR_FST0r },
-  { X86::MUL_Fp32  , X86::MUL_FST0r  },   // commutative
-  { X86::MUL_Fp64  , X86::MUL_FST0r  },   // commutative
-  { X86::MUL_Fp80  , X86::MUL_FST0r  },   // commutative
-  { X86::SUB_Fp32  , X86::SUBR_FST0r },
-  { X86::SUB_Fp64  , X86::SUBR_FST0r },
-  { X86::SUB_Fp80  , X86::SUBR_FST0r },
+    {X86::ADD_Fp32, X86::ADD_FST0r}, // commutative
+    {X86::ADD_Fp64, X86::ADD_FST0r}, // commutative
+    {X86::ADD_Fp80, X86::ADD_FST0r}, // commutative
+    {X86::DIV_Fp32, X86::DIVR_FST0r},
+    {X86::DIV_Fp64, X86::DIVR_FST0r},
+    {X86::DIV_Fp80, X86::DIVR_FST0r},
+    {X86::MUL_Fp32, X86::MUL_FST0r}, // commutative
+    {X86::MUL_Fp64, X86::MUL_FST0r}, // commutative
+    {X86::MUL_Fp80, X86::MUL_FST0r}, // commutative
+    {X86::SUB_Fp32, X86::SUBR_FST0r},
+    {X86::SUB_Fp64, X86::SUBR_FST0r},
+    {X86::SUB_Fp80, X86::SUBR_FST0r},
 };
 
 // ForwardSTiTable - Map: A = B op C  into: ST(i) = ST(0) op ST(i)
 static const TableEntry ForwardSTiTable[] = {
-  { X86::ADD_Fp32  , X86::ADD_FrST0  },   // commutative
-  { X86::ADD_Fp64  , X86::ADD_FrST0  },   // commutative
-  { X86::ADD_Fp80  , X86::ADD_FrST0  },   // commutative
-  { X86::DIV_Fp32  , X86::DIVR_FrST0 },
-  { X86::DIV_Fp64  , X86::DIVR_FrST0 },
-  { X86::DIV_Fp80  , X86::DIVR_FrST0 },
-  { X86::MUL_Fp32  , X86::MUL_FrST0  },   // commutative
-  { X86::MUL_Fp64  , X86::MUL_FrST0  },   // commutative
-  { X86::MUL_Fp80  , X86::MUL_FrST0  },   // commutative
-  { X86::SUB_Fp32  , X86::SUBR_FrST0 },
-  { X86::SUB_Fp64  , X86::SUBR_FrST0 },
-  { X86::SUB_Fp80  , X86::SUBR_FrST0 },
+    {X86::ADD_Fp32, X86::ADD_FrST0}, // commutative
+    {X86::ADD_Fp64, X86::ADD_FrST0}, // commutative
+    {X86::ADD_Fp80, X86::ADD_FrST0}, // commutative
+    {X86::DIV_Fp32, X86::DIVR_FrST0},
+    {X86::DIV_Fp64, X86::DIVR_FrST0},
+    {X86::DIV_Fp80, X86::DIVR_FrST0},
+    {X86::MUL_Fp32, X86::MUL_FrST0}, // commutative
+    {X86::MUL_Fp64, X86::MUL_FrST0}, // commutative
+    {X86::MUL_Fp80, X86::MUL_FrST0}, // commutative
+    {X86::SUB_Fp32, X86::SUBR_FrST0},
+    {X86::SUB_Fp64, X86::SUBR_FrST0},
+    {X86::SUB_Fp80, X86::SUBR_FrST0},
 };
 
 // ReverseSTiTable - Map: A = B op C  into: ST(i) = ST(i) op ST(0)
 static const TableEntry ReverseSTiTable[] = {
-  { X86::ADD_Fp32  , X86::ADD_FrST0 },
-  { X86::ADD_Fp64  , X86::ADD_FrST0 },
-  { X86::ADD_Fp80  , X86::ADD_FrST0 },
-  { X86::DIV_Fp32  , X86::DIV_FrST0 },
-  { X86::DIV_Fp64  , X86::DIV_FrST0 },
-  { X86::DIV_Fp80  , X86::DIV_FrST0 },
-  { X86::MUL_Fp32  , X86::MUL_FrST0 },
-  { X86::MUL_Fp64  , X86::MUL_FrST0 },
-  { X86::MUL_Fp80  , X86::MUL_FrST0 },
-  { X86::SUB_Fp32  , X86::SUB_FrST0 },
-  { X86::SUB_Fp64  , X86::SUB_FrST0 },
-  { X86::SUB_Fp80  , X86::SUB_FrST0 },
+    {X86::ADD_Fp32, X86::ADD_FrST0}, {X86::ADD_Fp64, X86::ADD_FrST0},
+    {X86::ADD_Fp80, X86::ADD_FrST0}, {X86::DIV_Fp32, X86::DIV_FrST0},
+    {X86::DIV_Fp64, X86::DIV_FrST0}, {X86::DIV_Fp80, X86::DIV_FrST0},
+    {X86::MUL_Fp32, X86::MUL_FrST0}, {X86::MUL_Fp64, X86::MUL_FrST0},
+    {X86::MUL_Fp80, X86::MUL_FrST0}, {X86::SUB_Fp32, X86::SUB_FrST0},
+    {X86::SUB_Fp64, X86::SUB_FrST0}, {X86::SUB_Fp80, X86::SUB_FrST0},
 };
-
 
 /// handleTwoArgFP - Handle instructions like FADD and friends which are virtual
 /// instructions which need to be simplified and possibly transformed.
@@ -1365,8 +1366,10 @@ static const TableEntry ReverseSTiTable[] = {
 ///         ST(i) = fsubr ST(0), ST(i)
 ///
 void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
-  ASSERT_SORTED(ForwardST0Table); ASSERT_SORTED(ReverseST0Table);
-  ASSERT_SORTED(ForwardSTiTable); ASSERT_SORTED(ReverseSTiTable);
+  ASSERT_SORTED(ForwardST0Table);
+  ASSERT_SORTED(ReverseST0Table);
+  ASSERT_SORTED(ForwardSTiTable);
+  ASSERT_SORTED(ReverseSTiTable);
   MachineInstr &MI = *I;
 
   unsigned NumOperands = MI.getDesc().getNumOperands();
@@ -1382,12 +1385,12 @@ void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
 
   // One of our operands must be on the top of the stack.  If neither is yet, we
   // need to move one.
-  if (Op0 != TOS && Op1 != TOS) {   // No operand at TOS?
+  if (Op0 != TOS && Op1 != TOS) { // No operand at TOS?
     // We can choose to move either operand to the top of the stack.  If one of
     // the operands is killed by this instruction, we want that one so that we
     // can update right on top of the old version.
     if (KillsOp0) {
-      moveToTop(Op0, I);         // Move dead operand to TOS.
+      moveToTop(Op0, I); // Move dead operand to TOS.
       TOS = Op0;
     } else if (KillsOp1) {
       moveToTop(Op1, I);
@@ -1450,15 +1453,15 @@ void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
   // overwriting the other one.
   if (KillsOp0 && KillsOp1 && Op0 != Op1) {
     assert(!updateST0 && "Should have updated other operand!");
-    popStackAfter(I);   // Pop the top of stack
+    popStackAfter(I); // Pop the top of stack
   }
 
   // Update stack information so that we know the destination register is now on
   // the stack.
   unsigned UpdatedSlot = getSlot(updateST0 ? TOS : NotTOS);
   assert(UpdatedSlot < StackTop && Dest < 7);
-  Stack[UpdatedSlot]   = Dest;
-  RegMap[Dest]         = UpdatedSlot;
+  Stack[UpdatedSlot] = Dest;
+  RegMap[Dest] = UpdatedSlot;
   MBB->getParent()->deleteMachineInstr(&MI); // Remove the old instruction
 }
 
@@ -1486,8 +1489,10 @@ void FPS::handleCompareFP(MachineBasicBlock::iterator &I) {
   MI.dropDebugNumber();
 
   // If any of the operands are killed by this instruction, free them.
-  if (KillsOp0) freeStackSlotAfter(I, Op0);
-  if (KillsOp1 && Op0 != Op1) freeStackSlotAfter(I, Op1);
+  if (KillsOp0)
+    freeStackSlotAfter(I, Op0);
+  if (KillsOp1 && Op0 != Op1)
+    freeStackSlotAfter(I, Op1);
 }
 
 /// handleCondMovFP - Handle two address conditional move instructions.  These
@@ -1519,7 +1524,6 @@ void FPS::handleCondMovFP(MachineBasicBlock::iterator &I) {
   }
 }
 
-
 /// handleSpecialFP - Handle special instructions which behave unlike other
 /// floating point instructions.  This is primarily intended for use by pseudo
 /// instructions.
@@ -1538,7 +1542,8 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
   }
 
   switch (MI.getOpcode()) {
-  default: llvm_unreachable("Unknown SpecialFP instruction!");
+  default:
+    llvm_unreachable("Unknown SpecialFP instruction!");
   case TargetOpcode::COPY: {
     // We handle three kinds of copies: FP <- FP, FP <- ST, and ST <- FP.
     const MachineOperand &MO1 = MI.getOperand(1);
@@ -1771,7 +1776,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
   }
   }
 
-  Inst = MBB->erase(Inst);  // Remove the pseudo instruction
+  Inst = MBB->erase(Inst); // Remove the pseudo instruction
 
   // We want to leave I pointing to the previous instruction, but what if we
   // just erased the first instruction?
@@ -1819,4 +1824,30 @@ void FPS::setKillFlags(MachineBasicBlock &MBB) const {
 
     LPR.stepBackward(MI);
   }
+}
+
+bool X86FPStackifierLegacy::runOnMachineFunction(MachineFunction &MF) {
+  FPS Impl;
+  if (!Impl.shouldRun(MF))
+    return false;
+
+  EdgeBundles *Bundles =
+      &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
+  return FPS().run(MF, Bundles);
+}
+
+PreservedAnalyses
+X86FPStackifierPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  FPS Impl;
+  if (!Impl.shouldRun(MF))
+    return PreservedAnalyses::all();
+
+  EdgeBundles *Bundles = &MFAM.getResult<EdgeBundlesAnalysis>(MF);
+  bool Changed = Impl.run(MF, Bundles);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

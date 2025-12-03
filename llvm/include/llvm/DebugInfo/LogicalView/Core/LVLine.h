@@ -53,7 +53,7 @@ public:
   }
   LVLine(const LVLine &) = delete;
   LVLine &operator=(const LVLine &) = delete;
-  virtual ~LVLine() = default;
+  ~LVLine() override = default;
 
   static bool classof(const LVElement *Element) {
     return Element->getSubclassID() == LVSubclassID::LV_LINE;
@@ -117,7 +117,7 @@ public:
   LVLineDebug() : LVLine() { setIsLineDebug(); }
   LVLineDebug(const LVLineDebug &) = delete;
   LVLineDebug &operator=(const LVLineDebug &) = delete;
-  ~LVLineDebug() = default;
+  ~LVLineDebug() override = default;
 
   // Additional line information. It includes attributes that describes
   // states in the machine instructions (basic block, end prologue, etc).
@@ -142,7 +142,7 @@ public:
   LVLineAssembler() : LVLine() { setIsLineAssembler(); }
   LVLineAssembler(const LVLineAssembler &) = delete;
   LVLineAssembler &operator=(const LVLineAssembler &) = delete;
-  ~LVLineAssembler() = default;
+  ~LVLineAssembler() override = default;
 
   // Print blanks as the line number.
   std::string noLineAsString(bool ShowZero) const override {

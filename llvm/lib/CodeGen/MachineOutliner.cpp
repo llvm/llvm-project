@@ -420,10 +420,10 @@ struct InstructionMapper {
   InstructionMapper(const MachineModuleInfo &MMI_) : MMI(MMI_) {
     // Make sure that the implementation of DenseMapInfo<unsigned> hasn't
     // changed.
-    assert(DenseMapInfo<unsigned>::getEmptyKey() == (unsigned)-1 &&
-           "DenseMapInfo<unsigned>'s empty key isn't -1!");
-    assert(DenseMapInfo<unsigned>::getTombstoneKey() == (unsigned)-2 &&
-           "DenseMapInfo<unsigned>'s tombstone key isn't -2!");
+    static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
+                  static_cast<unsigned>(-1));
+    static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
+                  static_cast<unsigned>(-2));
   }
 };
 
@@ -593,14 +593,11 @@ struct MachineOutliner : public ModulePass {
 
 char MachineOutliner::ID = 0;
 
-namespace llvm {
-ModulePass *createMachineOutlinerPass(RunOutliner RunOutlinerMode) {
+ModulePass *llvm::createMachineOutlinerPass(RunOutliner RunOutlinerMode) {
   MachineOutliner *OL = new MachineOutliner();
   OL->RunOutlinerMode = RunOutlinerMode;
   return OL;
 }
-
-} // namespace llvm
 
 INITIALIZE_PASS(MachineOutliner, DEBUG_TYPE, "Machine Function Outliner", false,
                 false)

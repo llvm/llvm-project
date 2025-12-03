@@ -348,6 +348,9 @@
 .attribute arch, "rv32i_smepmp1p0"
 # CHECK: attribute      5, "rv32i2p1_smepmp1p0"
 
+.attribute arch, "rv32i_smpmpmt0p6"
+# CHECK: attribute      5, "rv32i2p1_smpmpmt0p6"
+
 .attribute arch, "rv32i_smrnmi1p0"
 # CHECK: attribute      5, "rv32i2p1_smrnmi1p0"
 
@@ -420,8 +423,8 @@
 .attribute arch, "rv32ia_zacas1p0"
 # CHECK: attribute      5, "rv32i2p1_a2p1_zaamo1p0_zacas1p0_zalrsc1p0"
 
-.attribute arch, "rv32izalasr0p1"
-# CHECK: attribute      5, "rv32i2p1_zalasr0p1"
+.attribute arch, "rv32izalasr0p9"
+# CHECK: attribute      5, "rv32i2p1_zalasr0p9"
 
 .attribute arch, "rv32i_xcvalu"
 # CHECK: attribute      5, "rv32i2p1_xcvalu1p0"

@@ -101,6 +101,7 @@ void parser<unsigned long long>::anchor() {}
 void parser<double>::anchor() {}
 void parser<float>::anchor() {}
 void parser<std::string>::anchor() {}
+void parser<std::optional<std::string>>::anchor() {}
 void parser<char>::anchor() {}
 
 // These anchor functions instantiate opt<T> and reference its virtual
@@ -381,7 +382,7 @@ public:
     RegisteredSubCommands.erase(sub);
   }
 
-  iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+  iterator_range<SmallPtrSet<SubCommand *, 4>::iterator>
   getRegisteredSubcommands() {
     return make_range(RegisteredSubCommands.begin(),
                       RegisteredSubCommands.end());
@@ -601,10 +602,7 @@ static Option *LookupNearestOption(StringRef Arg,
   // Find the closest match.
   Option *Best = nullptr;
   unsigned BestDistance = 0;
-  for (StringMap<Option *>::const_iterator it = OptionsMap.begin(),
-                                           ie = OptionsMap.end();
-       it != ie; ++it) {
-    Option *O = it->second;
+  for (const auto &[_, O] : OptionsMap) {
     // Do not suggest really hidden options (not shown in any help).
     if (O->getOptionHiddenFlag() == ReallyHidden)
       continue;
@@ -2261,6 +2259,22 @@ void parser<std::string>::printOptionDiff(const Option &O, StringRef V,
   outs() << ")\n";
 }
 
+void parser<std::optional<std::string>>::printOptionDiff(
+    const Option &O, std::optional<StringRef> V,
+    const OptionValue<std::optional<std::string>> &D,
+    size_t GlobalWidth) const {
+  printOptionName(O, GlobalWidth);
+  outs() << "= " << V;
+  size_t VSize = V.has_value() ? V.value().size() : 0;
+  size_t NumSpaces = MaxOptWidth > VSize ? MaxOptWidth - VSize : 0;
+  outs().indent(NumSpaces) << " (default: ";
+  if (D.hasValue() && D.getValue().has_value())
+    outs() << D.getValue();
+  else
+    outs() << "*no value*";
+  outs() << ")\n";
+}
+
 // Print a placeholder for options that don't yet support printOptionDiff().
 void basic_parser_impl::printOptionNoValue(const Option &O,
                                            size_t GlobalWidth) const {
@@ -2326,10 +2340,10 @@ namespace {
 class HelpPrinter {
 protected:
   const bool ShowHidden;
-  typedef SmallVector<std::pair<const char *, Option *>, 128>
-      StrOptionPairVector;
-  typedef SmallVector<std::pair<const char *, SubCommand *>, 128>
-      StrSubCommandPairVector;
+  using StrOptionPairVector =
+      SmallVector<std::pair<const char *, Option *>, 128>;
+  using StrSubCommandPairVector =
+      SmallVector<std::pair<const char *, SubCommand *>, 128>;
   // Print the options. Opts is assumed to be alphabetically sorted.
   virtual void printOptions(StrOptionPairVector &Opts, size_t MaxArgLen) {
     for (const auto &Opt : Opts)
@@ -2813,7 +2827,7 @@ StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
   return Sub.OptionsMap;
 }
 
-iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+iterator_range<SmallPtrSet<SubCommand *, 4>::iterator>
 cl::getRegisteredSubcommands() {
   return GlobalParser->getRegisteredSubcommands();
 }

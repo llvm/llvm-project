@@ -37,6 +37,7 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -1263,6 +1264,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   switch (BuiltinID) {
   default:
     return;
+  case Builtin::BI__builtin_strcat:
+  case Builtin::BIstrcat:
   case Builtin::BI__builtin_stpcpy:
   case Builtin::BIstpcpy:
   case Builtin::BI__builtin_strcpy:
@@ -1273,6 +1276,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BI__builtin___strcat_chk:
   case Builtin::BI__builtin___stpcpy_chk:
   case Builtin::BI__builtin___strcpy_chk: {
     DiagID = diag::warn_fortify_strlen_overflow;
@@ -1496,6 +1500,24 @@ static void builtinAllocaAddrSpace(Sema &S, CallExpr *TheCall) {
   RT = RT->getPointeeType();
   RT = S.Context.getAddrSpaceQualType(RT, LangAS::opencl_private);
   TheCall->setType(S.Context.getPointerType(RT));
+}
+
+static bool checkBuiltinInferAllocToken(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCountAtLeast(TheCall, 1))
+    return true;
+
+  for (Expr *Arg : TheCall->arguments()) {
+    // If argument is dependent on a template parameter, we can't resolve now.
+    if (Arg->isTypeDependent() || Arg->isValueDependent())
+      continue;
+    // Reject void types.
+    QualType ArgTy = Arg->IgnoreParenImpCasts()->getType();
+    if (ArgTy->isVoidType())
+      return S.Diag(Arg->getBeginLoc(), diag::err_param_with_void_type);
+  }
+
+  TheCall->setType(S.Context.getSizeType());
+  return false;
 }
 
 namespace {
@@ -2200,6 +2222,39 @@ static bool BuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
   return false;
 }
 
+/// Checks that __builtin_bswapg was called with a single argument, which is an
+/// unsigned integer, and overrides the return value type to the integer type.
+static bool BuiltinBswapg(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 1))
+    return true;
+  ExprResult ArgRes = S.DefaultLvalueConversion(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  Expr *Arg = ArgRes.get();
+  TheCall->setArg(0, Arg);
+  if (Arg->isTypeDependent())
+    return false;
+
+  QualType ArgTy = Arg->getType();
+
+  if (!ArgTy->isIntegerType()) {
+    S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+        << 1 << /*scalar=*/1 << /*unsigned integer=*/1 << /*floating point=*/0
+        << ArgTy;
+    return true;
+  }
+  if (const auto *BT = dyn_cast<BitIntType>(ArgTy)) {
+    if (BT->getNumBits() % 16 != 0 && BT->getNumBits() != 8) {
+      S.Diag(Arg->getBeginLoc(), diag::err_bswapg_invalid_bit_width)
+          << ArgTy << BT->getNumBits();
+      return true;
+    }
+  }
+  TheCall->setType(ArgTy);
+  return false;
+}
+
 /// Checks that __builtin_popcountg was called with a single argument, which is
 /// an unsigned integer.
 static bool BuiltinPopcountg(Sema &S, CallExpr *TheCall) {
@@ -2268,7 +2323,8 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
 }
 
 static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
-                                   unsigned Pos, bool Vector = true) {
+                                   unsigned Pos, bool AllowConst,
+                                   bool AllowAS) {
   QualType MaskTy = MaskArg->getType();
   if (!MaskTy->isExtVectorBoolType())
     return S.Diag(MaskArg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
@@ -2276,11 +2332,38 @@ static bool CheckMaskedBuiltinArgs(Sema &S, Expr *MaskArg, Expr *PtrArg,
            << MaskTy;
 
   QualType PtrTy = PtrArg->getType();
-  if (!PtrTy->isPointerType() ||
-      (Vector && !PtrTy->getPointeeType()->isVectorType()) ||
-      (!Vector && PtrTy->getPointeeType()->isVectorType()))
+  if (!PtrTy->isPointerType() || PtrTy->getPointeeType()->isVectorType())
     return S.Diag(PtrArg->getExprLoc(), diag::err_vec_masked_load_store_ptr)
-           << Pos << (Vector ? "pointer to vector" : "scalar pointer");
+           << Pos << "scalar pointer";
+
+  QualType PointeeTy = PtrTy->getPointeeType();
+  if (PointeeTy.isVolatileQualified() || PointeeTy->isAtomicType() ||
+      (!AllowConst && PointeeTy.isConstQualified()) ||
+      (!AllowAS && PointeeTy.hasAddressSpace())) {
+    QualType Target =
+        S.Context.getPointerType(PointeeTy.getAtomicUnqualifiedType());
+    return S.Diag(PtrArg->getExprLoc(),
+                  diag::err_typecheck_convert_incompatible)
+           << PtrTy << Target << /*different qualifiers=*/5
+           << /*qualifier difference=*/0 << /*parameter mismatch=*/3 << 2
+           << PtrTy << Target;
+  }
+  return false;
+}
+
+static bool ConvertMaskedBuiltinArgs(Sema &S, CallExpr *TheCall) {
+  bool TypeDependent = false;
+  for (unsigned Arg = 0, E = TheCall->getNumArgs(); Arg != E; ++Arg) {
+    ExprResult Converted =
+        S.DefaultFunctionArrayLvalueConversion(TheCall->getArg(Arg));
+    if (Converted.isInvalid())
+      return true;
+    TheCall->setArg(Arg, Converted.get());
+    TypeDependent |= Converted.get()->isTypeDependent();
+  }
+
+  if (TypeDependent)
+    TheCall->setType(S.Context.DependentTy);
   return false;
 }
 
@@ -2288,33 +2371,35 @@ static ExprResult BuiltinMaskedLoad(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCountRange(TheCall, 2, 3))
     return ExprError();
 
+  if (ConvertMaskedBuiltinArgs(S, TheCall))
+    return ExprError();
+
   Expr *MaskArg = TheCall->getArg(0);
   Expr *PtrArg = TheCall->getArg(1);
-  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 2))
+  if (TheCall->isTypeDependent())
+    return TheCall;
+
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 2, /*AllowConst=*/true,
+                             TheCall->getBuiltinCallee() ==
+                                 Builtin::BI__builtin_masked_load))
     return ExprError();
 
   QualType MaskTy = MaskArg->getType();
   QualType PtrTy = PtrArg->getType();
   QualType PointeeTy = PtrTy->getPointeeType();
   const VectorType *MaskVecTy = MaskTy->getAs<VectorType>();
-  const VectorType *DataVecTy = PointeeTy->getAs<VectorType>();
 
+  QualType RetTy = S.Context.getExtVectorType(PointeeTy.getUnqualifiedType(),
+                                              MaskVecTy->getNumElements());
   if (TheCall->getNumArgs() == 3) {
     Expr *PassThruArg = TheCall->getArg(2);
     QualType PassThruTy = PassThruArg->getType();
-    if (!S.Context.hasSameType(PassThruTy, PointeeTy))
+    if (!S.Context.hasSameType(PassThruTy, RetTy))
       return S.Diag(PtrArg->getExprLoc(), diag::err_vec_masked_load_store_ptr)
-             << /* third argument */ 3 << PointeeTy;
+             << /* third argument */ 3 << RetTy;
   }
 
-  if (MaskVecTy->getNumElements() != DataVecTy->getNumElements())
-    return ExprError(
-        S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
-        << S.getASTContext().BuiltinInfo.getQuotedName(
-               TheCall->getBuiltinCallee())
-        << MaskTy << PointeeTy);
-
-  TheCall->setType(PointeeTy);
+  TheCall->setType(RetTy);
   return TheCall;
 }
 
@@ -2322,11 +2407,18 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 3))
     return ExprError();
 
+  if (ConvertMaskedBuiltinArgs(S, TheCall))
+    return ExprError();
+
   Expr *MaskArg = TheCall->getArg(0);
   Expr *ValArg = TheCall->getArg(1);
   Expr *PtrArg = TheCall->getArg(2);
+  if (TheCall->isTypeDependent())
+    return TheCall;
 
-  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3))
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*AllowConst=*/false,
+                             TheCall->getBuiltinCallee() ==
+                                 Builtin::BI__builtin_masked_store))
     return ExprError();
 
   QualType MaskTy = MaskArg->getType();
@@ -2339,18 +2431,10 @@ static ExprResult BuiltinMaskedStore(Sema &S, CallExpr *TheCall) {
 
   QualType PointeeTy = PtrTy->getPointeeType();
   const VectorType *MaskVecTy = MaskTy->getAs<VectorType>();
-  const VectorType *ValVecTy = ValTy->getAs<VectorType>();
-  const VectorType *PtrVecTy = PointeeTy->getAs<VectorType>();
-
-  if (MaskVecTy->getNumElements() != ValVecTy->getNumElements() ||
-      MaskVecTy->getNumElements() != PtrVecTy->getNumElements())
-    return ExprError(
-        S.Diag(TheCall->getBeginLoc(), diag::err_vec_masked_load_store_size)
-        << S.getASTContext().BuiltinInfo.getQuotedName(
-               TheCall->getBuiltinCallee())
-        << MaskTy << PointeeTy);
-
-  if (!S.Context.hasSameType(ValTy, PointeeTy))
+  QualType MemoryTy = S.Context.getExtVectorType(PointeeTy.getUnqualifiedType(),
+                                                 MaskVecTy->getNumElements());
+  if (!S.Context.hasSameType(ValTy.getUnqualifiedType(),
+                             MemoryTy.getUnqualifiedType()))
     return ExprError(S.Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                      << TheCall->getDirectCallee() << /*isMorethantwoArgs*/ 2
@@ -2365,10 +2449,17 @@ static ExprResult BuiltinMaskedGather(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCountRange(TheCall, 3, 4))
     return ExprError();
 
+  if (ConvertMaskedBuiltinArgs(S, TheCall))
+    return ExprError();
+
   Expr *MaskArg = TheCall->getArg(0);
   Expr *IdxArg = TheCall->getArg(1);
   Expr *PtrArg = TheCall->getArg(2);
-  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*Vector=*/false))
+  if (TheCall->isTypeDependent())
+    return TheCall;
+
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*AllowConst=*/true,
+                             /*AllowAS=*/true))
     return ExprError();
 
   QualType IdxTy = IdxArg->getType();
@@ -2389,8 +2480,8 @@ static ExprResult BuiltinMaskedGather(Sema &S, CallExpr *TheCall) {
                TheCall->getBuiltinCallee())
         << MaskTy << IdxTy);
 
-  QualType RetTy =
-      S.Context.getExtVectorType(PointeeTy, MaskVecTy->getNumElements());
+  QualType RetTy = S.Context.getExtVectorType(PointeeTy.getUnqualifiedType(),
+                                              MaskVecTy->getNumElements());
   if (TheCall->getNumArgs() == 4) {
     Expr *PassThruArg = TheCall->getArg(3);
     QualType PassThruTy = PassThruArg->getType();
@@ -2408,12 +2499,18 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 4))
     return ExprError();
 
+  if (ConvertMaskedBuiltinArgs(S, TheCall))
+    return ExprError();
+
   Expr *MaskArg = TheCall->getArg(0);
   Expr *IdxArg = TheCall->getArg(1);
   Expr *ValArg = TheCall->getArg(2);
   Expr *PtrArg = TheCall->getArg(3);
+  if (TheCall->isTypeDependent())
+    return TheCall;
 
-  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 3, /*Vector=*/false))
+  if (CheckMaskedBuiltinArgs(S, MaskArg, PtrArg, 4, /*AllowConst=*/false,
+                             /*AllowAS=*/true))
     return ExprError();
 
   QualType IdxTy = IdxArg->getType();
@@ -2443,9 +2540,9 @@ static ExprResult BuiltinMaskedScatter(Sema &S, CallExpr *TheCall) {
                TheCall->getBuiltinCallee())
         << MaskTy << ValTy);
 
-  QualType ArgTy =
-      S.Context.getExtVectorType(PointeeTy, MaskVecTy->getNumElements());
-  if (!S.Context.hasSameType(ValTy, ArgTy))
+  QualType ArgTy = S.Context.getExtVectorType(PointeeTy.getUnqualifiedType(),
+                                              MaskVecTy->getNumElements());
+  if (!S.Context.hasSameType(ValTy.getUnqualifiedType(), ArgTy))
     return ExprError(S.Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                      << TheCall->getDirectCallee() << /*isMoreThanTwoArgs*/ 2
@@ -2547,6 +2644,18 @@ static ExprResult BuiltinInvoke(Sema &S, CallExpr *TheCall) {
   }
   return S.ActOnCallExpr(S.getCurScope(), Args.front(), TheCall->getBeginLoc(),
                          Args.drop_front(), TheCall->getRParenLoc());
+}
+
+// Performs a similar job to Sema::UsualUnaryConversions, but without any
+// implicit promotion of integral/enumeration types.
+static ExprResult BuiltinVectorMathConversions(Sema &S, Expr *E) {
+  // First, convert to an r-value.
+  ExprResult Res = S.DefaultFunctionArrayLvalueConversion(E);
+  if (Res.isInvalid())
+    return ExprError();
+
+  // Promote floating-point types.
+  return S.UsualUnaryFPConversions(Res.get());
 }
 
 ExprResult
@@ -2736,6 +2845,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (getLangOpts().OpenCL) {
       builtinAllocaAddrSpace(*this, TheCall);
     }
+    break;
+  case Builtin::BI__builtin_infer_alloc_token:
+    if (checkBuiltinInferAllocToken(*this, TheCall))
+      return ExprError();
     break;
   case Builtin::BI__arithmetic_fence:
     if (BuiltinArithmeticFence(TheCall))
@@ -3209,6 +3322,46 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
 
+  case Builtin::BI__builtin_elementwise_ldexp: {
+    if (checkArgCount(TheCall, 2))
+      return ExprError();
+
+    ExprResult A = BuiltinVectorMathConversions(*this, TheCall->getArg(0));
+    if (A.isInvalid())
+      return ExprError();
+    QualType TyA = A.get()->getType();
+    if (checkMathBuiltinElementType(*this, A.get()->getBeginLoc(), TyA,
+                                    EltwiseBuiltinArgTyRestriction::FloatTy, 1))
+      return ExprError();
+
+    ExprResult Exp = UsualUnaryConversions(TheCall->getArg(1));
+    if (Exp.isInvalid())
+      return ExprError();
+    QualType TyExp = Exp.get()->getType();
+    if (checkMathBuiltinElementType(*this, Exp.get()->getBeginLoc(), TyExp,
+                                    EltwiseBuiltinArgTyRestriction::IntegerTy,
+                                    2))
+      return ExprError();
+
+    // Check the two arguments are either scalars or vectors of equal length.
+    const auto *Vec0 = TyA->getAs<VectorType>();
+    const auto *Vec1 = TyExp->getAs<VectorType>();
+    unsigned Arg0Length = Vec0 ? Vec0->getNumElements() : 0;
+    unsigned Arg1Length = Vec1 ? Vec1->getNumElements() : 0;
+    if (Arg0Length != Arg1Length) {
+      Diag(Exp.get()->getBeginLoc(),
+           diag::err_typecheck_vector_lengths_not_equal)
+          << TyA << TyExp << A.get()->getSourceRange()
+          << Exp.get()->getSourceRange();
+      return ExprError();
+    }
+
+    TheCall->setArg(0, A.get());
+    TheCall->setArg(1, Exp.get());
+    TheCall->setType(TyA);
+    break;
+  }
+
   // These builtins restrict the element type to floating point
   // types only, and take in two arguments.
   case Builtin::BI__builtin_elementwise_minnum:
@@ -3406,6 +3559,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+  case Builtin::BI__builtin_bswapg:
+    if (BuiltinBswapg(*this, TheCall))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_popcountg:
     if (BuiltinPopcountg(*this, TheCall))
       return ExprError();
@@ -3478,9 +3635,7 @@ bool Sema::ValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum) {
 
 bool Sema::getFormatStringInfo(const Decl *D, unsigned FormatIdx,
                                unsigned FirstArg, FormatStringInfo *FSI) {
-  bool IsCXXMember = false;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
-    IsCXXMember = MD->isInstance();
+  bool HasImplicitThisParam = hasImplicitObjectParameter(D);
   bool IsVariadic = false;
   if (const FunctionType *FnTy = D->getFunctionType())
     IsVariadic = cast<FunctionProtoType>(FnTy)->isVariadic();
@@ -3489,11 +3644,12 @@ bool Sema::getFormatStringInfo(const Decl *D, unsigned FormatIdx,
   else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(D))
     IsVariadic = OMD->isVariadic();
 
-  return getFormatStringInfo(FormatIdx, FirstArg, IsCXXMember, IsVariadic, FSI);
+  return getFormatStringInfo(FormatIdx, FirstArg, HasImplicitThisParam,
+                             IsVariadic, FSI);
 }
 
 bool Sema::getFormatStringInfo(unsigned FormatIdx, unsigned FirstArg,
-                               bool IsCXXMember, bool IsVariadic,
+                               bool HasImplicitThisParam, bool IsVariadic,
                                FormatStringInfo *FSI) {
   if (FirstArg == 0)
     FSI->ArgPassingKind = FAPK_VAList;
@@ -3507,7 +3663,7 @@ bool Sema::getFormatStringInfo(unsigned FormatIdx, unsigned FirstArg,
   // The way the format attribute works in GCC, the implicit this argument
   // of member functions is counted. However, it doesn't appear in our own
   // lists, so decrement format_idx in that case.
-  if (IsCXXMember) {
+  if (HasImplicitThisParam) {
     if(FSI->FormatIdx == 0)
       return false;
     --FSI->FormatIdx;
@@ -3538,9 +3694,8 @@ static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
   // As a special case, transparent unions initialized with zero are
   // considered null for the purposes of the nonnull attribute.
   if (const RecordType *UT = Expr->getType()->getAsUnionType();
-      UT && UT->getOriginalDecl()
-                ->getMostRecentDecl()
-                ->hasAttr<TransparentUnionAttr>()) {
+      UT &&
+      UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>()) {
     if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(Expr))
       if (const auto *ILE = dyn_cast<InitListExpr>(CLE->getInitializer()))
         Expr = ILE->getInit(0);
@@ -4328,6 +4483,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__scoped_atomic_or_fetch:
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_nand_fetch:
+  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
+  case AtomicExpr::AO__scoped_atomic_udec_wrap:
     Form = Arithmetic;
     break;
 
@@ -5912,6 +6069,9 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
     if (Result > Sema::MaximumAlignment)
       Diag(TheCall->getBeginLoc(), diag::warn_assume_aligned_too_great)
           << SecondArg->getSourceRange() << Sema::MaximumAlignment;
+
+    TheCall->setArg(1,
+                    ConstantExpr::Create(Context, SecondArg, APValue(Result)));
   }
 
   if (NumArgs > 2) {
@@ -6882,12 +7042,13 @@ StringRef Sema::GetFormatStringTypeName(FormatStringType FST) {
 
 FormatStringType Sema::GetFormatStringType(StringRef Flavor) {
   return llvm::StringSwitch<FormatStringType>(Flavor)
-      .Case("scanf", FormatStringType::Scanf)
-      .Cases("printf", "printf0", "syslog", FormatStringType::Printf)
-      .Cases("NSString", "CFString", FormatStringType::NSString)
-      .Case("strftime", FormatStringType::Strftime)
-      .Case("strfmon", FormatStringType::Strfmon)
-      .Cases("kprintf", "cmn_err", "vcmn_err", "zcmn_err",
+      .Cases({"gnu_scanf", "scanf"}, FormatStringType::Scanf)
+      .Cases({"gnu_printf", "printf", "printf0", "syslog"},
+             FormatStringType::Printf)
+      .Cases({"NSString", "CFString"}, FormatStringType::NSString)
+      .Cases({"gnu_strftime", "strftime"}, FormatStringType::Strftime)
+      .Cases({"gnu_strfmon", "strfmon"}, FormatStringType::Strfmon)
+      .Cases({"kprintf", "cmn_err", "vcmn_err", "zcmn_err"},
              FormatStringType::Kprintf)
       .Case("freebsd_kprintf", FormatStringType::FreeBSDKPrintf)
       .Case("os_trace", FormatStringType::OSLog)
@@ -7006,7 +7167,6 @@ bool Sema::CheckFormatArguments(ArrayRef<const Expr *> Args,
     case FormatStringType::Kprintf:
     case FormatStringType::FreeBSDKPrintf:
     case FormatStringType::Printf:
-    case FormatStringType::Syslog:
       Diag(FormatLoc, diag::note_format_security_fixit)
         << FixItHint::CreateInsertion(FormatLoc, "\"%s\", ");
       break;
@@ -7673,6 +7833,14 @@ void CheckPrintfHandler::handleInvalidMaskType(StringRef MaskType) {
   S.Diag(getLocationOfByte(MaskType.data()), diag::err_invalid_mask_type_size);
 }
 
+// Error out if struct or complex type argments are passed to os_log.
+static bool isInvalidOSLogArgTypeForCodeGen(FormatStringType FSType,
+                                            QualType T) {
+  if (FSType != FormatStringType::OSLog)
+    return false;
+  return T->isRecordType() || T->isComplexType();
+}
+
 bool CheckPrintfHandler::HandleAmount(
     const analyze_format_string::OptionalAmount &Amt, unsigned k,
     const char *startSpecifier, unsigned specifierLen) {
@@ -7705,11 +7873,14 @@ bool CheckPrintfHandler::HandleAmount(
       assert(AT.isValid());
 
       if (!AT.matchesType(S.Context, T)) {
-        EmitFormatDiagnostic(S.PDiag(diag::warn_printf_asterisk_wrong_type)
-                               << k << AT.getRepresentativeTypeName(S.Context)
-                               << T << Arg->getSourceRange(),
+        unsigned DiagID = isInvalidOSLogArgTypeForCodeGen(FSType, T)
+                              ? diag::err_printf_asterisk_wrong_type
+                              : diag::warn_printf_asterisk_wrong_type;
+        EmitFormatDiagnostic(S.PDiag(DiagID)
+                                 << k << AT.getRepresentativeTypeName(S.Context)
+                                 << T << Arg->getSourceRange(),
                              getLocationOfByte(Amt.getStart()),
-                             /*IsStringLocation*/true,
+                             /*IsStringLocation*/ true,
                              getSpecifierRange(startSpecifier, specifierLen));
         // Don't do any more checking.  We will just emit
         // spurious errors.
@@ -8755,8 +8926,10 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       case ArgType::Match:
       case ArgType::MatchPromotion:
       case ArgType::NoMatchPromotionTypeConfusion:
-      case ArgType::NoMatchSignedness:
         llvm_unreachable("expected non-matching");
+      case ArgType::NoMatchSignedness:
+        Diag = diag::warn_format_conversion_argument_type_mismatch_signedness;
+        break;
       case ArgType::NoMatchPedantic:
         Diag = diag::warn_format_conversion_argument_type_mismatch_pedantic;
         break;
@@ -8764,7 +8937,9 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         Diag = diag::warn_format_conversion_argument_type_mismatch_confusion;
         break;
       case ArgType::NoMatch:
-        Diag = diag::warn_format_conversion_argument_type_mismatch;
+        Diag = isInvalidOSLogArgTypeForCodeGen(FSType, ExprTy)
+                   ? diag::err_format_conversion_argument_type_mismatch
+                   : diag::warn_format_conversion_argument_type_mismatch;
         break;
       }
 
@@ -9123,8 +9298,7 @@ static void CheckFormatString(
   if (Type == FormatStringType::Printf || Type == FormatStringType::NSString ||
       Type == FormatStringType::Kprintf ||
       Type == FormatStringType::FreeBSDKPrintf ||
-      Type == FormatStringType::OSLog || Type == FormatStringType::OSTrace ||
-      Type == FormatStringType::Syslog) {
+      Type == FormatStringType::OSLog || Type == FormatStringType::OSTrace) {
     bool IsObjC =
         Type == FormatStringType::NSString || Type == FormatStringType::OSTrace;
     if (ReferenceFormatString == nullptr) {
@@ -9160,8 +9334,7 @@ bool Sema::CheckFormatStringsCompatible(
   if (Type != FormatStringType::Printf && Type != FormatStringType::NSString &&
       Type != FormatStringType::Kprintf &&
       Type != FormatStringType::FreeBSDKPrintf &&
-      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace &&
-      Type != FormatStringType::Syslog)
+      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace)
     return true;
 
   bool IsObjC =
@@ -9195,8 +9368,7 @@ bool Sema::ValidateFormatString(FormatStringType Type,
   if (Type != FormatStringType::Printf && Type != FormatStringType::NSString &&
       Type != FormatStringType::Kprintf &&
       Type != FormatStringType::FreeBSDKPrintf &&
-      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace &&
-      Type != FormatStringType::Syslog)
+      Type != FormatStringType::OSLog && Type != FormatStringType::OSTrace)
     return true;
 
   FormatStringLiteral RefLit = Str;
@@ -12253,13 +12425,20 @@ static void DiagnoseMixedUnicodeImplicitConversion(Sema &S, const Type *Source,
                                                    SourceLocation CC) {
   assert(Source->isUnicodeCharacterType() && Target->isUnicodeCharacterType() &&
          Source != Target);
+
+  // Lone surrogates have a distinct representation in UTF-32.
+  // Converting between UTF-16 and UTF-32 codepoints seems very widespread,
+  // so don't warn on such conversion.
+  if (Source->isChar16Type() && Target->isChar32Type())
+    return;
+
   Expr::EvalResult Result;
   if (E->EvaluateAsInt(Result, S.getASTContext(), Expr::SE_AllowSideEffects,
                        S.isConstantEvaluatedContext())) {
     llvm::APSInt Value(32);
     Value = Result.Val.getInt();
     bool IsASCII = Value <= 0x7F;
-    bool IsBMP = Value <= 0xD7FF || (Value >= 0xE000 && Value <= 0xFFFF);
+    bool IsBMP = Value <= 0xDFFF || (Value >= 0xE000 && Value <= 0xFFFF);
     bool ConversionPreservesSemantics =
         IsASCII || (!Source->isChar8Type() && !Target->isChar8Type() && IsBMP);
 
@@ -12288,14 +12467,9 @@ static void DiagnoseMixedUnicodeImplicitConversion(Sema &S, const Type *Source,
   }
 }
 
-enum CFIUncheckedCalleeChange {
-  None,
-  Adding,
-  Discarding,
-};
-
-static CFIUncheckedCalleeChange AdjustingCFIUncheckedCallee(QualType From,
-                                                            QualType To) {
+bool Sema::DiscardingCFIUncheckedCallee(QualType From, QualType To) const {
+  From = Context.getCanonicalType(From);
+  To = Context.getCanonicalType(To);
   QualType MaybePointee = From->getPointeeType();
   if (!MaybePointee.isNull() && MaybePointee->getAs<FunctionType>())
     From = MaybePointee;
@@ -12307,25 +12481,10 @@ static CFIUncheckedCalleeChange AdjustingCFIUncheckedCallee(QualType From,
     if (const auto *ToFn = To->getAs<FunctionType>()) {
       if (FromFn->getCFIUncheckedCalleeAttr() &&
           !ToFn->getCFIUncheckedCalleeAttr())
-        return Discarding;
-      if (!FromFn->getCFIUncheckedCalleeAttr() &&
-          ToFn->getCFIUncheckedCalleeAttr())
-        return Adding;
+        return true;
     }
   }
-  return None;
-}
-
-bool Sema::DiscardingCFIUncheckedCallee(QualType From, QualType To) const {
-  From = Context.getCanonicalType(From);
-  To = Context.getCanonicalType(To);
-  return ::AdjustingCFIUncheckedCallee(From, To) == Discarding;
-}
-
-bool Sema::AddingCFIUncheckedCallee(QualType From, QualType To) const {
-  From = Context.getCanonicalType(From);
-  To = Context.getCanonicalType(To);
-  return ::AdjustingCFIUncheckedCallee(From, To) == Adding;
+  return false;
 }
 
 void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
@@ -12412,9 +12571,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       if (SourceMgr.isInSystemMacro(CC))
         return;
       return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_vector_scalar);
-    } else if (getLangOpts().HLSL &&
-               Target->castAs<VectorType>()->getNumElements() <
-                   Source->castAs<VectorType>()->getNumElements()) {
+    }
+    if (getLangOpts().HLSL &&
+        Target->castAs<VectorType>()->getNumElements() <
+            Source->castAs<VectorType>()->getNumElements()) {
       // Diagnose vector truncation but don't return. We may also want to
       // diagnose an element conversion.
       DiagnoseImpCast(*this, E, T, CC,
@@ -12430,9 +12590,22 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
     Source = cast<VectorType>(Source)->getElementType().getTypePtr();
     Target = cast<VectorType>(Target)->getElementType().getTypePtr();
   }
-  if (auto VecTy = dyn_cast<VectorType>(Target))
+  if (const auto *VecTy = dyn_cast<VectorType>(Target))
     Target = VecTy->getElementType().getTypePtr();
 
+  if (isa<ConstantMatrixType>(Source)) {
+    if (Target->isScalarType())
+      return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_matrix_scalar);
+
+    if (getLangOpts().HLSL &&
+        Target->castAs<ConstantMatrixType>()->getNumElementsFlattened() <
+            Source->castAs<ConstantMatrixType>()->getNumElementsFlattened()) {
+      // Diagnose Matrix truncation but don't return. We may also want to
+      // diagnose an element conversion.
+      DiagnoseImpCast(*this, E, T, CC,
+                      diag::warn_hlsl_impcast_matrix_truncation);
+    }
+  }
   // Strip complex types.
   if (isa<ComplexType>(Source)) {
     if (!isa<ComplexType>(Target)) {
@@ -12822,8 +12995,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   if (const EnumType *SourceEnum = Source->getAsCanonical<EnumType>())
     if (const EnumType *TargetEnum = Target->getAsCanonical<EnumType>())
-      if (SourceEnum->getOriginalDecl()->hasNameForLinkage() &&
-          TargetEnum->getOriginalDecl()->hasNameForLinkage() &&
+      if (SourceEnum->getDecl()->hasNameForLinkage() &&
+          TargetEnum->getDecl()->hasNameForLinkage() &&
           SourceEnum != TargetEnum) {
         if (SourceMgr.isInSystemMacro(CC))
           return;
@@ -13030,7 +13203,19 @@ static void AnalyzeImplicitConversions(
 
   // Skip past explicit casts.
   if (auto *CE = dyn_cast<ExplicitCastExpr>(E)) {
-    E = CE->getSubExpr()->IgnoreParenImpCasts();
+    E = CE->getSubExpr();
+    // In the special case of a C++ function-style cast with braces,
+    // CXXFunctionalCastExpr has an InitListExpr as direct child with a single
+    // initializer. This InitListExpr basically belongs to the cast itself, so
+    // we skip it too. Specifically this is needed to silence -Wdouble-promotion
+    if (isa<CXXFunctionalCastExpr>(CE)) {
+      if (auto *InitListE = dyn_cast<InitListExpr>(E)) {
+        if (InitListE->getNumInits() == 1) {
+          E = InitListE->getInit(0);
+        }
+      }
+    }
+    E = E->IgnoreParenImpCasts();
     if (!CE->getType()->isVoidType() && E->getType()->isAtomicType())
       S.Diag(E->getBeginLoc(), diag::warn_atomic_implicit_seq_cst);
     WorkList.push_back({E, CC, IsListInit});
@@ -14817,13 +15002,11 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
       // Diag message shows element size in bits and in "bytes" (platform-
       // dependent CharUnits)
       DiagRuntimeBehavior(BaseExpr->getBeginLoc(), BaseExpr,
-                          PDiag(DiagID)
-                              << toString(index, 10, true) << AddrBits
-                              << (unsigned)ASTC.toBits(*ElemCharUnits)
-                              << toString(ElemBytes, 10, false)
-                              << toString(MaxElems, 10, false)
-                              << (unsigned)MaxElems.getLimitedValue(~0U)
-                              << IndexExpr->getSourceRange());
+                          PDiag(DiagID) << index << AddrBits
+                                        << (unsigned)ASTC.toBits(*ElemCharUnits)
+                                        << ElemBytes << MaxElems
+                                        << MaxElems.getZExtValue()
+                                        << IndexExpr->getSourceRange());
 
       const NamedDecl *ND = nullptr;
       // Try harder to find a NamedDecl to point at in the note.
@@ -14906,10 +15089,10 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     unsigned CastMsg = (!ASE || BaseType == EffectiveType) ? 0 : 1;
     QualType CastMsgTy = ASE ? ASE->getLHS()->getType() : QualType();
 
-    DiagRuntimeBehavior(
-        BaseExpr->getBeginLoc(), BaseExpr,
-        PDiag(DiagID) << toString(index, 10, true) << ArrayTy->desugar()
-                      << CastMsg << CastMsgTy << IndexExpr->getSourceRange());
+    DiagRuntimeBehavior(BaseExpr->getBeginLoc(), BaseExpr,
+                        PDiag(DiagID)
+                            << index << ArrayTy->desugar() << CastMsg
+                            << CastMsgTy << IndexExpr->getSourceRange());
   } else {
     unsigned DiagID = diag::warn_array_index_precedes_bounds;
     if (!ASE) {
@@ -14918,8 +15101,7 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     }
 
     DiagRuntimeBehavior(BaseExpr->getBeginLoc(), BaseExpr,
-                        PDiag(DiagID) << toString(index, 10, true)
-                                      << IndexExpr->getSourceRange());
+                        PDiag(DiagID) << index << IndexExpr->getSourceRange());
   }
 
   const NamedDecl *ND = nullptr;
@@ -15882,7 +16064,7 @@ void Sema::RefersToMemberWithReducedAlignment(
   }
 
   // Check if the synthesized offset fulfills the alignment.
-  if (Offset % ExpectedAlignment != 0 ||
+  if (!Offset.isMultipleOf(ExpectedAlignment) ||
       // It may fulfill the offset it but the effective alignment may still be
       // lower than the expected expression alignment.
       CompleteObjectAlignment < ExpectedAlignment) {
@@ -15917,18 +16099,6 @@ void Sema::CheckAddressOfPackedMember(Expr *rhs) {
   RefersToMemberWithReducedAlignment(
       rhs, std::bind(&Sema::AddPotentialMisalignedMembers, std::ref(*this), _1,
                      _2, _3, _4));
-}
-
-// Performs a similar job to Sema::UsualUnaryConversions, but without any
-// implicit promotion of integral/enumeration types.
-static ExprResult BuiltinVectorMathConversions(Sema &S, Expr *E) {
-  // First, convert to an r-value.
-  ExprResult Res = S.DefaultFunctionArrayLvalueConversion(E);
-  if (Res.isInvalid())
-    return ExprError();
-
-  // Promote floating-point types.
-  return S.UsualUnaryFPConversions(Res.get());
 }
 
 bool Sema::PrepareBuiltinElementwiseMathOneArgCall(
@@ -16174,9 +16344,9 @@ getAndVerifyMatrixDimension(Expr *Expr, StringRef Name, Sema &S) {
     return {};
   }
   uint64_t Dim = Value->getZExtValue();
-  if (!ConstantMatrixType::isDimensionValid(Dim)) {
+  if (Dim == 0 || Dim > S.Context.getLangOpts().MaxMatrixDimension) {
     S.Diag(Expr->getBeginLoc(), diag::err_builtin_matrix_invalid_dimension)
-        << Name << ConstantMatrixType::getMaxElementsPerDimension();
+        << Name << S.Context.getLangOpts().MaxMatrixDimension;
     return {};
   }
   return Dim;

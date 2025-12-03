@@ -19,6 +19,14 @@ namespace mlir {
 struct WasmBinaryEncoding {
   /// Byte encodings for Wasm instructions.
   struct OpCode {
+    // Control instructions.
+    static constexpr std::byte block{0x02};
+    static constexpr std::byte loop{0x03};
+    static constexpr std::byte ifOpCode{0x04};
+    static constexpr std::byte elseOpCode{0x05};
+    static constexpr std::byte branchIf{0x0D};
+    static constexpr std::byte call{0x10};
+
     // Locals, globals, constants.
     static constexpr std::byte localGet{0x20};
     static constexpr std::byte localSet{0x21};
@@ -28,6 +36,42 @@ struct WasmBinaryEncoding {
     static constexpr std::byte constI64{0x42};
     static constexpr std::byte constFP32{0x43};
     static constexpr std::byte constFP64{0x44};
+
+    // Comparisons.
+    static constexpr std::byte eqzI32{0x45};
+    static constexpr std::byte eqI32{0x46};
+    static constexpr std::byte neI32{0x47};
+    static constexpr std::byte ltSI32{0x48};
+    static constexpr std::byte ltUI32{0x49};
+    static constexpr std::byte gtSI32{0x4A};
+    static constexpr std::byte gtUI32{0x4B};
+    static constexpr std::byte leSI32{0x4C};
+    static constexpr std::byte leUI32{0x4D};
+    static constexpr std::byte geSI32{0x4E};
+    static constexpr std::byte geUI32{0x4F};
+    static constexpr std::byte eqzI64{0x50};
+    static constexpr std::byte eqI64{0x51};
+    static constexpr std::byte neI64{0x52};
+    static constexpr std::byte ltSI64{0x53};
+    static constexpr std::byte ltUI64{0x54};
+    static constexpr std::byte gtSI64{0x55};
+    static constexpr std::byte gtUI64{0x56};
+    static constexpr std::byte leSI64{0x57};
+    static constexpr std::byte leUI64{0x58};
+    static constexpr std::byte geSI64{0x59};
+    static constexpr std::byte geUI64{0x5A};
+    static constexpr std::byte eqF32{0x5B};
+    static constexpr std::byte neF32{0x5C};
+    static constexpr std::byte ltF32{0x5D};
+    static constexpr std::byte gtF32{0x5E};
+    static constexpr std::byte leF32{0x5F};
+    static constexpr std::byte geF32{0x60};
+    static constexpr std::byte eqF64{0x61};
+    static constexpr std::byte neF64{0x62};
+    static constexpr std::byte ltF64{0x63};
+    static constexpr std::byte gtF64{0x64};
+    static constexpr std::byte leF64{0x65};
+    static constexpr std::byte geF64{0x66};
 
     // Numeric operations.
     static constexpr std::byte clzI32{0x67};
@@ -93,6 +137,33 @@ struct WasmBinaryEncoding {
     static constexpr std::byte maxF64{0xA5};
     static constexpr std::byte copysignF64{0xA6};
     static constexpr std::byte wrap{0xA7};
+
+    // Conversion operations
+    static constexpr std::byte extendS{0xAC};
+    static constexpr std::byte extendU{0xAD};
+    static constexpr std::byte convertSI32F32{0xB2};
+    static constexpr std::byte convertUI32F32{0xB3};
+    static constexpr std::byte convertSI64F32{0xB4};
+    static constexpr std::byte convertUI64F32{0xB5};
+
+    static constexpr std::byte demoteF64ToF32{0xB6};
+
+    static constexpr std::byte convertSI32F64{0xB7};
+    static constexpr std::byte convertUI32F64{0xB8};
+    static constexpr std::byte convertSI64F64{0xB9};
+    static constexpr std::byte convertUI64F64{0xBA};
+
+    static constexpr std::byte promoteF32ToF64{0xBB};
+    static constexpr std::byte reinterpretF32AsI32{0xBC};
+    static constexpr std::byte reinterpretF64AsI64{0xBD};
+    static constexpr std::byte reinterpretI32AsF32{0xBE};
+    static constexpr std::byte reinterpretI64AsF64{0xBF};
+
+    static constexpr std::byte extendI328S{0xC0};
+    static constexpr std::byte extendI3216S{0xC1};
+    static constexpr std::byte extendI648S{0xC2};
+    static constexpr std::byte extendI6416S{0xC3};
+    static constexpr std::byte extendI6432S{0xC4};
   };
 
   /// Byte encodings of types in Wasm binaries

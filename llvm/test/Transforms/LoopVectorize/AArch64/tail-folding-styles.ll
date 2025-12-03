@@ -66,21 +66,12 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
 ; DATA-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[UMAX]])
 ; DATA-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
-; DATA-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP10]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
+; DATA-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[TMP10]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; DATA-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP5]]
 ; DATA-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT2]], [[N_VEC]]
 ; DATA-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DATA:       middle.block:
-; DATA-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
-; DATA:       scalar.ph:
 ; DATA-NEXT:    br label [[WHILE_BODY:%.*]]
-; DATA:       while.body:
-; DATA-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
-; DATA-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
-; DATA-NEXT:    store i32 [[VAL]], ptr [[GEP]], align 4
-; DATA-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
-; DATA-NEXT:    [[CMP10:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N]]
-; DATA-NEXT:    br i1 [[CMP10]], label [[WHILE_BODY]], label [[WHILE_END_LOOPEXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DATA:       while.end.loopexit:
 ; DATA-NEXT:    ret void
 ;
@@ -110,21 +101,12 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK-NEXT:    [[VEC_IV:%.*]] = add <vscale x 4 x i64> [[BROADCAST_SPLAT3]], [[TMP11]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP12:%.*]] = icmp ule <vscale x 4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
-; DATA_NO_LANEMASK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT5]], ptr [[TMP13]], i32 4, <vscale x 4 x i1> [[TMP12]])
+; DATA_NO_LANEMASK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT5]], ptr align 4 [[TMP13]], <vscale x 4 x i1> [[TMP12]])
 ; DATA_NO_LANEMASK-NEXT:    [[INDEX_NEXT6]] = add i64 [[INDEX1]], [[TMP5]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC]]
 ; DATA_NO_LANEMASK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DATA_NO_LANEMASK:       middle.block:
-; DATA_NO_LANEMASK-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
-; DATA_NO_LANEMASK:       scalar.ph:
 ; DATA_NO_LANEMASK-NEXT:    br label [[WHILE_BODY:%.*]]
-; DATA_NO_LANEMASK:       while.body:
-; DATA_NO_LANEMASK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
-; DATA_NO_LANEMASK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
-; DATA_NO_LANEMASK-NEXT:    store i32 [[VAL]], ptr [[GEP]], align 4
-; DATA_NO_LANEMASK-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
-; DATA_NO_LANEMASK-NEXT:    [[CMP10:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N]]
-; DATA_NO_LANEMASK-NEXT:    br i1 [[CMP10]], label [[WHILE_BODY]], label [[WHILE_END_LOOPEXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DATA_NO_LANEMASK:       while.end.loopexit:
 ; DATA_NO_LANEMASK-NEXT:    ret void
 ;
@@ -143,23 +125,14 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DATA_AND_CONTROL-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
-; DATA_AND_CONTROL-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP10]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
+; DATA_AND_CONTROL-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[TMP10]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; DATA_AND_CONTROL-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP5]]
 ; DATA_AND_CONTROL-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX_NEXT2]], i64 [[UMAX]])
 ; DATA_AND_CONTROL-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; DATA_AND_CONTROL-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true
 ; DATA_AND_CONTROL-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DATA_AND_CONTROL:       middle.block:
-; DATA_AND_CONTROL-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
-; DATA_AND_CONTROL:       scalar.ph:
 ; DATA_AND_CONTROL-NEXT:    br label [[WHILE_BODY:%.*]]
-; DATA_AND_CONTROL:       while.body:
-; DATA_AND_CONTROL-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
-; DATA_AND_CONTROL-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
-; DATA_AND_CONTROL-NEXT:    store i32 [[VAL]], ptr [[GEP]], align 4
-; DATA_AND_CONTROL-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
-; DATA_AND_CONTROL-NEXT:    [[CMP10:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N]]
-; DATA_AND_CONTROL-NEXT:    br i1 [[CMP10]], label [[WHILE_BODY]], label [[WHILE_END_LOOPEXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DATA_AND_CONTROL:       while.end.loopexit:
 ; DATA_AND_CONTROL-NEXT:    ret void
 ;
@@ -183,23 +156,14 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT2:%.*]], [[VECTOR_BODY]] ]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP11]], i32 4, <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
+; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT]], ptr align 4 [[TMP11]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP1]]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[TMP9]])
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP12:%.*]] = xor i1 [[TMP15]], true
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DATA_AND_CONTROL_NO_RT_CHECK:       middle.block:
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
-; DATA_AND_CONTROL_NO_RT_CHECK:       scalar.ph:
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
-; DATA_AND_CONTROL_NO_RT_CHECK:       while.body:
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    store i32 [[VAL]], ptr [[GEP]], align 4
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[CMP10:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N]]
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br i1 [[CMP10]], label [[WHILE_BODY]], label [[WHILE_END_LOOPEXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DATA_AND_CONTROL_NO_RT_CHECK:       while.end.loopexit:
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    ret void
 ;
