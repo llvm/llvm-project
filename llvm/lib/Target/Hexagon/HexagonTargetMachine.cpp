@@ -48,6 +48,14 @@ static cl::opt<bool>
                          cl::desc("Disable Hardware Loops for Hexagon target"));
 
 static cl::opt<bool>
+    EnableGenWideningVec("hexagon-widening-vectors", cl::init(true), cl::Hidden,
+                         cl::desc("Generate widening vector instructions"));
+
+static cl::opt<bool>
+    EnableOptShuffleVec("hexagon-opt-shuffvec", cl::init(true), cl::Hidden,
+                        cl::desc("Enable optimization of shuffle vectors"));
+
+static cl::opt<bool>
     DisableAModeOpt("disable-hexagon-amodeopt", cl::Hidden,
                     cl::desc("Disable Hexagon Addressing Mode Optimization"));
 
@@ -321,6 +329,8 @@ TargetPassConfig *HexagonTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void HexagonPassConfig::addIRPasses() {
+  HexagonTargetMachine &HTM = getHexagonTargetMachine();
+
   TargetPassConfig::addIRPasses();
   bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
 
@@ -350,6 +360,13 @@ void HexagonPassConfig::addIRPasses() {
     // Replace certain combinations of shifts and ands with extracts.
     if (EnableGenExtract)
       addPass(createHexagonGenExtract());
+    if (EnableGenWideningVec) {
+      addPass(createHexagonGenWideningVecInstr(HTM));
+      addPass(createHexagonGenWideningVecFloatInstr(HTM));
+      addPass(createDeadCodeEliminationPass());
+    }
+    if (EnableOptShuffleVec)
+      addPass(createHexagonOptShuffleVector(HTM));
   }
 }
 
