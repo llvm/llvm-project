@@ -268,7 +268,10 @@ public:
     m_tid = LLDB_INVALID_THREAD_ID;
   }
 
-  void ClearFrame() { m_stack_id.Clear(); }
+  void ClearFrame() {
+    m_stack_id.Clear();
+    m_frame_list_wp.reset();
+  }
 
 protected:
   // Member variables
@@ -279,7 +282,14 @@ protected:
                                               ///< object refers to in case the
                                               /// backing object changes
   StackID m_stack_id; ///< The stack ID that this object refers to in case the
-                      ///backing object changes
+                      ///< backing object changes
+  mutable lldb::StackFrameListWP
+      m_frame_list_wp; ///< Weak reference to the
+                       ///< frame list that contains
+                       ///< this frame. If we can create a valid
+                       ///< StackFrameListSP from it, we must use it to resolve
+                       ///< the StackID, otherwise, we should ask the Thread's
+                       ///< StackFrameList.
 };
 
 /// \class ExecutionContext ExecutionContext.h
