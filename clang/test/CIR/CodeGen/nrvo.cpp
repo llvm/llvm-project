@@ -98,4 +98,3 @@ NonTrivial test_nrvo() {
 // OGCG:   br label %[[SKIPDTOR]]
 // OGCG: [[SKIPDTOR]]:
 // OGCG:   ret void
-  
