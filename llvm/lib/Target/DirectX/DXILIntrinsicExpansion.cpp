@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -200,6 +201,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::assume:
   case Intrinsic::abs:
   case Intrinsic::atan2:
+  case Intrinsic::fshl:
   case Intrinsic::exp:
   case Intrinsic::is_fpclass:
   case Intrinsic::log:
@@ -656,6 +658,29 @@ static Value *expandAtan2Intrinsic(CallInst *Orig) {
   return Result;
 }
 
+static Value *expandFunnelShiftIntrinsic(CallInst *Orig) {
+  Type *Ty = Orig->getType();
+  Value *A = Orig->getOperand(0);
+  Value *B = Orig->getOperand(1);
+  Value *Shift = Orig->getOperand(2);
+
+  IRBuilder<> Builder(Orig);
+
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+  Constant *Mask = ConstantInt::get(Ty, BitWidth - 1);
+  Constant *Size = ConstantInt::get(Ty, BitWidth);
+
+  // The shift is not required to be masked as DXIL op will do so automatically
+  Value *Left = Builder.CreateShl(A, Shift);
+
+  Value *MaskedShift = Builder.CreateAnd(Shift, Mask);
+  Value *InverseShift = Builder.CreateSub(Size, MaskedShift);
+  Value *Right = Builder.CreateLShr(B, InverseShift);
+
+  Value *Result = Builder.CreateOr(Left, Right);
+  return Result;
+}
+
 static Value *expandPowIntrinsic(CallInst *Orig, Intrinsic::ID IntrinsicId) {
 
   Value *X = Orig->getOperand(0);
@@ -994,6 +1019,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     return true;
   case Intrinsic::atan2:
     Result = expandAtan2Intrinsic(Orig);
+    break;
+  case Intrinsic::fshl:
+    Result = expandFunnelShiftIntrinsic(Orig);
     break;
   case Intrinsic::exp:
     Result = expandExpIntrinsic(Orig);
