@@ -1831,16 +1831,14 @@ def TunePredictableSelectIsExpensive
 def TuneOptimizedZeroStrideLoad
    : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
                       "true", "Optimized (perform fewer memory operations)"
-                      "zero-stride vector load">,
-      RISCVSimpleTuneFeature;
+                      "zero-stride vector load">;
 
 foreach nf = {2-8} in
   def TuneOptimizedNF#nf#SegmentLoadStore :
       SubtargetFeature<"optimized-nf"#nf#"-segment-load-store",
                        "HasOptimizedNF"#nf#"SegmentLoadStore",
                        "true", "vlseg"#nf#"eN.v and vsseg"#nf#"eN.v are "
-                       "implemented as a wide memory op and shuffle">,
-      RISCVSimpleTuneFeature;
+                       "implemented as a wide memory op and shuffle">;
 
 def TuneVLDependentLatency
     : SubtargetFeature<"vl-dependent-latency", "HasVLDependentLatency", "true",

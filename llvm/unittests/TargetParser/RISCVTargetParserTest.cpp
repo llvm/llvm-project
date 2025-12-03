@@ -38,33 +38,17 @@ TEST(RISCVTuneFeature, AllTuneFeatures) {
   RISCV::getAllTuneFeatures(AllTuneFeatures);
   // Only allowed subtarget features that are explicitly marked by
   // special TableGen class.
-  EXPECT_EQ(AllTuneFeatures.size(), 26U);
-  for (auto F : {"conditional-cmv-fusion",
-                 "disable-latency-sched-heuristic",
-                 "disable-misched-load-clustering",
-                 "disable-misched-store-clustering",
-                 "disable-postmisched-load-clustering",
-                 "disable-postmisched-store-clustering",
-                 "single-element-vec-fp64",
-                 "no-default-unroll",
-                 "no-sink-splat-operands",
-                 "optimized-nf2-segment-load-store",
-                 "optimized-nf3-segment-load-store",
-                 "optimized-nf4-segment-load-store",
-                 "optimized-nf5-segment-load-store",
-                 "optimized-nf6-segment-load-store",
-                 "optimized-nf7-segment-load-store",
-                 "optimized-nf8-segment-load-store",
-                 "optimized-zero-stride-load",
-                 "use-postra-scheduler",
-                 "predictable-select-expensive",
-                 "prefer-vsetvli-over-read-vlenb",
-                 "prefer-w-inst",
-                 "short-forward-branch-i-minmax",
-                 "short-forward-branch-i-mul",
-                 "short-forward-branch-opt",
-                 "vl-dependent-latency",
-                 "vxrm-pipeline-flush"})
+  EXPECT_EQ(AllTuneFeatures.size(), 18U);
+  for (auto F :
+       {"conditional-cmv-fusion", "disable-latency-sched-heuristic",
+        "disable-misched-load-clustering", "disable-misched-store-clustering",
+        "disable-postmisched-load-clustering",
+        "disable-postmisched-store-clustering", "single-element-vec-fp64",
+        "no-default-unroll", "no-sink-splat-operands", "use-postra-scheduler",
+        "predictable-select-expensive", "prefer-vsetvli-over-read-vlenb",
+        "prefer-w-inst", "short-forward-branch-i-minmax",
+        "short-forward-branch-i-mul", "short-forward-branch-opt",
+        "vl-dependent-latency", "vxrm-pipeline-flush"})
     EXPECT_TRUE(is_contained(AllTuneFeatures, F));
 }
 
