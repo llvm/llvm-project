@@ -1618,18 +1618,18 @@ __device__ void nvvm_fma_oob() {
   __nvvm_fma_rn_oob_f16(F16, F16_2, F16_2);
   // CHECK_PTX81_SM90: call half @llvm.nvvm.fma.rn.oob.relu.f16
   __nvvm_fma_rn_oob_relu_f16(F16, F16_2, F16_2);
-  // CHECK_PTX81_SM90: call <2 x half> @llvm.nvvm.fma.rn.oob.f16x2
+  // CHECK_PTX81_SM90: call <2 x half> @llvm.nvvm.fma.rn.oob.v2f16
   __nvvm_fma_rn_oob_f16x2(F16X2, F16X2_2, F16X2_2);
-  // CHECK_PTX81_SM90: call <2 x half> @llvm.nvvm.fma.rn.oob.relu.f16x2
+  // CHECK_PTX81_SM90: call <2 x half> @llvm.nvvm.fma.rn.oob.relu.v2f16
   __nvvm_fma_rn_oob_relu_f16x2(F16X2, F16X2_2, F16X2_2);
 
   // CHECK_PTX81_SM90: call bfloat @llvm.nvvm.fma.rn.oob.bf16
   __nvvm_fma_rn_oob_bf16(BF16, BF16_2, BF16_2);
   // CHECK_PTX81_SM90: call bfloat @llvm.nvvm.fma.rn.oob.relu.bf16
   __nvvm_fma_rn_oob_relu_bf16(BF16, BF16_2, BF16_2);
-  // CHECK_PTX81_SM90: call <2 x bfloat> @llvm.nvvm.fma.rn.oob.bf16x2
+  // CHECK_PTX81_SM90: call <2 x bfloat> @llvm.nvvm.fma.rn.oob.v2bf16
   __nvvm_fma_rn_oob_bf16x2(BF16X2, BF16X2_2, BF16X2_2);
-  // CHECK_PTX81_SM90: call <2 x bfloat> @llvm.nvvm.fma.rn.oob.relu.bf16x2
+  // CHECK_PTX81_SM90: call <2 x bfloat> @llvm.nvvm.fma.rn.oob.relu.v2bf16
   __nvvm_fma_rn_oob_relu_bf16x2(BF16X2, BF16X2_2, BF16X2_2);
 #endif
   // CHECK: ret void

@@ -1512,21 +1512,8 @@ let TargetPrefix = "nvvm" in {
   // oob (out-of-bounds) - clamps the result to 0 if either of the operands is 
   // OOB NaN value.
   foreach relu = ["", "_relu"] in {
-    def int_nvvm_fma_rn_oob # relu # _f16 : NVVMBuiltin,
-      PureIntrinsic<[llvm_half_ty],
-        [llvm_half_ty, llvm_half_ty, llvm_half_ty]>;
-
-    def int_nvvm_fma_rn_oob # relu # _f16x2 : NVVMBuiltin,
-      PureIntrinsic<[llvm_v2f16_ty],
-        [llvm_v2f16_ty, llvm_v2f16_ty, llvm_v2f16_ty]>;
-    
-    def int_nvvm_fma_rn_oob # relu # _bf16 : NVVMBuiltin,
-      PureIntrinsic<[llvm_bfloat_ty],
-        [llvm_bfloat_ty, llvm_bfloat_ty, llvm_bfloat_ty]>;
-
-    def int_nvvm_fma_rn_oob # relu # _bf16x2 : NVVMBuiltin,
-      PureIntrinsic<[llvm_v2bf16_ty],
-        [llvm_v2bf16_ty, llvm_v2bf16_ty, llvm_v2bf16_ty]>;
+    def int_nvvm_fma_rn_oob # relu : PureIntrinsic<[llvm_anyfloat_ty],
+          [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
   } // relu
 
   foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {

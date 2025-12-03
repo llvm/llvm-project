@@ -46,7 +46,7 @@ define <2 x half> @fma_oob_f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c) {
 ; CHECK-NEXT:    fma.rn.oob.f16x2 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
-  %1 = call <2 x half> @llvm.nvvm.fma.rn.oob.f16x2( <2 x half> %a, <2 x half> %b, <2 x half> %c)
+  %1 = call <2 x half> @llvm.nvvm.fma.rn.oob.v2f16( <2 x half> %a, <2 x half> %b, <2 x half> %c)
   ret <2 x half> %1
 }
 
@@ -62,7 +62,7 @@ define <2 x half> @fma_oob_relu_f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %
 ; CHECK-NEXT:    fma.rn.oob.relu.f16x2 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
-  %1 = call <2 x half> @llvm.nvvm.fma.rn.oob.relu.f16x2( <2 x half> %a, <2 x half> %b, <2 x half> %c)
+  %1 = call <2 x half> @llvm.nvvm.fma.rn.oob.relu.v2f16( <2 x half> %a, <2 x half> %b, <2 x half> %c)
   ret <2 x half> %1
 }
 
@@ -110,7 +110,7 @@ define <2 x bfloat> @fma_oob_bf16x2(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloa
 ; CHECK-NEXT:    fma.rn.oob.bf16x2 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
-  %1 = call <2 x bfloat> @llvm.nvvm.fma.rn.oob.bf16x2( <2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
+  %1 = call <2 x bfloat> @llvm.nvvm.fma.rn.oob.v2bf16( <2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
   ret <2 x bfloat> %1
 }
 
@@ -126,6 +126,6 @@ define <2 x bfloat> @fma_oob_relu_bf16x2(<2 x bfloat> %a, <2 x bfloat> %b, <2 x 
 ; CHECK-NEXT:    fma.rn.oob.relu.bf16x2 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
-  %1 = call <2 x bfloat> @llvm.nvvm.fma.rn.oob.relu.bf16x2( <2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
+  %1 = call <2 x bfloat> @llvm.nvvm.fma.rn.oob.relu.v2bf16( <2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
   ret <2 x bfloat> %1
 }

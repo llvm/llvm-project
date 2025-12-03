@@ -1703,18 +1703,10 @@ multiclass FMA_INST {
       [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_ftz_relu_f16", int_nvvm_fma_rn_ftz_relu_f16, B16,
       [hasPTX<70>, hasSM<80>]>,
-    FMA_TUPLE<"_rn_oob_f16", int_nvvm_fma_rn_oob_f16, B16,
-      [hasPTX<81>, hasSM<90>]>,
-    FMA_TUPLE<"_rn_oob_relu_f16", int_nvvm_fma_rn_oob_relu_f16, B16,
-      [hasPTX<81>, hasSM<90>]>,
 
     FMA_TUPLE<"_rn_bf16", int_nvvm_fma_rn_bf16, B16, [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_relu_bf16", int_nvvm_fma_rn_relu_bf16, B16,
       [hasPTX<70>, hasSM<80>]>,
-    FMA_TUPLE<"_rn_oob_bf16", int_nvvm_fma_rn_oob_bf16, B16,
-      [hasPTX<81>, hasSM<90>]>,
-    FMA_TUPLE<"_rn_oob_relu_bf16", int_nvvm_fma_rn_oob_relu_bf16, B16,
-      [hasPTX<81>, hasSM<90>]>,
 
     FMA_TUPLE<"_rn_f16x2", int_nvvm_fma_rn_f16x2, B32,
       [hasPTX<42>, hasSM<53>]>,
@@ -1728,19 +1720,11 @@ multiclass FMA_INST {
       [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_ftz_relu_f16x2", int_nvvm_fma_rn_ftz_relu_f16x2,
       B32, [hasPTX<70>, hasSM<80>]>,
-    FMA_TUPLE<"_rn_oob_f16x2", int_nvvm_fma_rn_oob_f16x2, B32,
-      [hasPTX<81>, hasSM<90>]>,
-    FMA_TUPLE<"_rn_oob_relu_f16x2", int_nvvm_fma_rn_oob_relu_f16x2, B32,
-      [hasPTX<81>, hasSM<90>]>,
 
     FMA_TUPLE<"_rn_bf16x2", int_nvvm_fma_rn_bf16x2, B32,
       [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_relu_bf16x2", int_nvvm_fma_rn_relu_bf16x2, B32,
       [hasPTX<70>, hasSM<80>]>,
-    FMA_TUPLE<"_rn_oob_bf16x2", int_nvvm_fma_rn_oob_bf16x2, B32,
-      [hasPTX<81>, hasSM<90>]>,
-    FMA_TUPLE<"_rn_oob_relu_bf16x2", int_nvvm_fma_rn_oob_relu_bf16x2, B32,
-      [hasPTX<81>, hasSM<90>]>,
   ] in {
     def P.Variant :
       F_MATH_3<!strconcat("fma", !subst("_", ".", P.Variant)),
@@ -1776,6 +1760,31 @@ let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
             (INT_NVVM_MIXED_FMA_rn_f32_bf16 B16:$a, B16:$b, B32:$c)>;
 }
 
+class FMA_OOB_INST<NVPTXRegClass RC, string suffix> : 
+  BasicNVPTXInst<(outs RC:$dst), (ins RC:$a, RC:$b, RC:$c),
+    "fma.rn.oob" # suffix>;
+
+class FMA_OOB_TYPE<ValueType VT, NVPTXRegClass RC, string TypeName> {
+  ValueType Type = VT;
+  NVPTXRegClass RegClass = RC;
+  string TypeStr = TypeName;
+}
+
+let Predicates = [hasPTX<81>, hasSM<90>] in {
+  foreach relu = ["", "_relu"] in {
+    foreach ty = [
+      FMA_OOB_TYPE<f16, B16, "f16">,
+      FMA_OOB_TYPE<v2f16, B32, "f16x2">,
+      FMA_OOB_TYPE<bf16, B16, "bf16">,
+      FMA_OOB_TYPE<v2bf16, B32, "bf16x2">
+    ] in {
+      defvar Intr = !cast<Intrinsic>("int_nvvm_fma_rn_oob" # relu);
+      defvar suffix = !subst("_", ".", relu # "_" # ty.TypeStr);
+      def : Pat<(ty.Type (Intr ty.Type:$a, ty.Type:$b, ty.Type:$c)), 
+                (FMA_OOB_INST<ty.RegClass, suffix> $a, $b, $c)>;
+    }
+  }
+}
 //
 // Rcp
 //
