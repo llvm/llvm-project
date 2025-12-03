@@ -20,11 +20,11 @@
 #include <type_traits>
 #include <utility>
 
-template<typename T>
+template <typename T>
 constexpr bool test() {
   using Opt = std::optional<T>;
-  using I = Opt::iterator;
-  using CI = Opt::const_iterator;
+  using I   = Opt::iterator;
+  using CI  = Opt::const_iterator;
 
   static_assert(std::three_way_comparable<I>);
   static_assert(std::three_way_comparable<CI>);
@@ -81,7 +81,6 @@ constexpr bool test() {
 
   return true;
 }
-
 
 constexpr bool test() {
   test<int>();
