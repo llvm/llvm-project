@@ -222,13 +222,11 @@ static bool satisfiesProperties11(
 
     bool WalkUpFromNullStmt(NullStmt *) { return false; }
     bool WalkUpFromDeclStmt(DeclStmt *DS) {
-      for (const Decl *D : DS->decls())
-        if (!llvm::isa<StaticAssertDecl, TypedefNameDecl, UsingDecl,
-                       UsingDirectiveDecl>(D)) {
-          Possible = false;
-          return false;
-        }
-      return true;
+      Possible &= llvm::all_of(DS->decls(), [](const Decl *D) {
+        return llvm::isa<StaticAssertDecl, TypedefNameDecl, UsingDecl,
+                         UsingDirectiveDecl>(D);
+      });
+      return Possible;
     }
 
     bool WalkUpFromExpr(Expr *) { return true; }
@@ -347,7 +345,7 @@ AST_MATCHER_P2(FunctionDecl, satisfiesProperties, bool, ConservativeLiteralType,
 
 AST_MATCHER_P(VarDecl, satisfiesVariableProperties, bool,
               ConservativeLiteralType) {
-  ASTContext &Ctx = Finder->getASTContext();
+  const ASTContext &Ctx = Finder->getASTContext();
 
   const QualType QT = Node.getType();
   const Type *T = QT.getTypePtr();
