@@ -27,10 +27,10 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     EMIT vp<[[PADD:%.+]]> = ptradd ir<%A>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VPTR:%.]]> = vector-pointer vp<[[PADD]]>, ir<0>
+; CHECK-NEXT:     vp<[[VPTR:%.]]> = vector-pointer vp<[[PADD]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VPTR]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add nsw ir<%l>, ir<10>
-; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer vp<[[PADD]]>, ir<0>
+; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer vp<[[PADD]]>
 ; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, ir<%add>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV:%.+]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
@@ -69,12 +69,13 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   vp<[[VPTR1:%.]]> = vector-pointer ir<%A>
 ; CHECK-NEXT:   vp<[[VPTR2:%.]]> = vector-pointer ir<%A>, ir<8>
-; CHECK-NEXT:   WIDEN ir<%l> = load ir<%A>
+; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[VPTR1]]>
 ; CHECK-NEXT:   WIDEN ir<%l>.1 = load vp<[[VPTR2]]>
 ; CHECK-NEXT:   WIDEN ir<%add> = add nsw ir<%l>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%add>.1 = add nsw ir<%l>.1, ir<10>
-; CHECK-NEXT:   WIDEN store ir<%A>, ir<%add>
+; CHECK-NEXT:   WIDEN store vp<[[VPTR1]]>, ir<%add>
 ; CHECK-NEXT:   WIDEN store vp<[[VPTR2]]>, ir<%add>.1
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:

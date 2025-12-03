@@ -7664,10 +7664,7 @@ VPWidenMemoryRecipe *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
           Ptr, &Plan.getVF(), getLoadStoreType(I),
           /*Stride*/ -1, Flags, VPI->getDebugLoc());
     } else {
-      const DataLayout &DL = I->getDataLayout();
-      VPValue *Offset = Plan.getConstantInt(
-          DL.getIndexType(Ptr->getUnderlyingValue()->getType()), 0);
-      VectorPtr = new VPVectorPointerRecipe(Ptr, Offset, getLoadStoreType(I),
+      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),
                                             GEP ? GEP->getNoWrapFlags()
                                                 : GEPNoWrapFlags::none(),
                                             VPI->getDebugLoc());

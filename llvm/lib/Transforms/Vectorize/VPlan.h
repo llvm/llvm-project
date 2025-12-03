@@ -1966,27 +1966,25 @@ protected:
 #endif
 };
 
-/// A recipe to compute the pointers for widened memory accesses of
-/// SourceElementTy. The recipe produces a GEP when executed, but has different
-/// semantics from a plain GEP; the pointer and initial offset (which should be
-/// the constant zero, passed as ZeroOffset) are used while unrolling: for every
-/// unrolled copy of the recipe, the offset is VF + the offset of the previous
-/// copy. When no unrolling is in effect, this recipe can be optimized away, as
-/// it is just a GEP x, 0.
+/// A recipe to compute the pointers for widened memory accesses of \p
+/// SourceElementTy. The recipe has one operand prior to unrolling, \p Ptr.
+/// After unrolling, it has an extra operand which can be queried using \p
+/// getOffset, and it produces `GEP Ptr, Offset` with flags \p GEPFlags, when
+/// executed. The recipe is a no-op when no unrolling is in effect (IC = 1).
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, VPValue *ZeroOffset,
-                        Type *SourceElementTy, GEPNoWrapFlags GEPFlags,
-                        DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, {Ptr, ZeroOffset},
-                            GEPFlags, DL),
+  VPVectorPointerRecipe(VPValue *Ptr, Type *SourceElementTy,
+                        GEPNoWrapFlags GEPFlags, DebugLoc DL)
+      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, Ptr, GEPFlags, DL),
         SourceElementTy(SourceElementTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
 
-  VPValue *getOffset() { return getOperand(1); }
+  VPValue *getOffset() {
+    return getNumOperands() == 2 ? getOperand(1) : nullptr;
+  }
 
   void execute(VPTransformState &State) override;
 
@@ -2007,9 +2005,11 @@ public:
   }
 
   VPVectorPointerRecipe *clone() override {
-    return new VPVectorPointerRecipe(getOperand(0), getOffset(),
-                                     SourceElementTy, getGEPNoWrapFlags(),
-                                     getDebugLoc());
+    auto *Clone = new VPVectorPointerRecipe(getOperand(0), SourceElementTy,
+                                            getGEPNoWrapFlags(), getDebugLoc());
+    if (auto *Off = getOffset())
+      Clone->addOperand(Off);
+    return Clone;
   }
 
   /// Return the cost of this VPHeaderPHIRecipe.

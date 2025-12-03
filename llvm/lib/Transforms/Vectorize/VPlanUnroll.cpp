@@ -300,7 +300,14 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R)) {
       VPBuilder Builder(VPR);
       auto *Prev = cast<VPVectorPointerRecipe>(getValueForPart(VPR, Part - 1))
-                       ->getOperand(1);
+                       ->getOffset();
+      if (!Prev) {
+        // Start with offset 0 for first part.
+        const DataLayout &DL =
+            Plan.getScalarHeader()->getIRBasicBlock()->getDataLayout();
+        Prev = Plan.getConstantInt(
+            DL.getIndexType(TypeInfo.inferScalarType(VPR)), 0);
+      }
       VPValue *Increment = &Plan.getVF();
       Type *IncTy = TypeInfo.inferScalarType(Increment);
       Increment = Builder.createScalarZExtOrTrunc(
@@ -310,7 +317,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
           Builder.createOverflowingOp(Instruction::Add, {Prev, Increment},
                                       {true, true}, VPR->getDebugLoc());
       Copy->setOperand(0, VPR->getOperand(0));
-      Copy->setOperand(1, Add);
+      Copy->addOperand(Add);
       continue;
     }
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {
