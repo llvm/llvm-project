@@ -3707,12 +3707,10 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
     }
   }
 
-  DWARFASTParserClang *src_dwarf_ast_parser =
-      static_cast<DWARFASTParserClang *>(
-          SymbolFileDWARF::GetDWARFParser(*src_class_die.GetCU()));
-  DWARFASTParserClang *dst_dwarf_ast_parser =
-      static_cast<DWARFASTParserClang *>(
-          SymbolFileDWARF::GetDWARFParser(*dst_class_die.GetCU()));
+  auto *src_dwarf_ast_parser = llvm::cast<DWARFASTParserClang>(
+      SymbolFileDWARF::GetDWARFParser(*src_class_die.GetCU()));
+  auto *dst_dwarf_ast_parser = llvm::cast<DWARFASTParserClang>(
+      SymbolFileDWARF::GetDWARFParser(*dst_class_die.GetCU()));
   auto link = [&](DWARFDIE src, DWARFDIE dst) {
     auto &die_to_type = dst_class_die.GetDWARF()->GetDIEToType();
     clang::DeclContext *dst_decl_ctx =

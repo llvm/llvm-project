@@ -42,6 +42,52 @@ public:
     return keys;
   }
 };
+
+/// Helper structure for DWARFASTParserClang tests that want to parse DWARF
+/// generated using yaml2obj. On construction parses the supplied YAML data
+/// into a DWARF module and thereafter vends a DWARFASTParserClang and
+/// TypeSystemClang that are guaranteed to live for the duration of this object.
+class DWARFASTParserClangYAMLTester {
+public:
+  DWARFASTParserClangYAMLTester(llvm::StringRef yaml_data)
+      : m_module_tester(yaml_data) {}
+
+  DWARFDIE GetCUDIE() {
+    DWARFUnit *unit = m_module_tester.GetDwarfUnit();
+    assert(unit);
+
+    const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+    assert(cu_entry->Tag() == DW_TAG_compile_unit);
+
+    return DWARFDIE(unit, cu_entry);
+  }
+
+  DWARFASTParserClang &GetParser() {
+    auto *parser = GetTypeSystem().GetDWARFParser();
+
+    assert(llvm::isa_and_nonnull<DWARFASTParserClang>(parser));
+
+    return *llvm::cast<DWARFASTParserClang>(parser);
+  }
+
+  TypeSystemClang &GetTypeSystem() {
+    ModuleSP module_sp = m_module_tester.GetModule();
+    assert(module_sp);
+
+    SymbolFile *symfile = module_sp->GetSymbolFile();
+    assert(symfile);
+
+    TypeSystemSP ts_sp = llvm::cantFail(
+        symfile->GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus));
+
+    assert(llvm::isa_and_nonnull<TypeSystemClang>(ts_sp.get()));
+
+    return llvm::cast<TypeSystemClang>(*ts_sp);
+  }
+
+private:
+  YAMLModuleTester m_module_tester;
+};
 } // namespace
 
 // If your implementation needs to dereference the dummy pointers we are
@@ -248,17 +294,9 @@ DWARF:
         - AbbrCode:        0x0
 ...
 )";
-  YAMLModuleTester t(yamldata);
+  DWARFASTParserClangYAMLTester tester(yamldata);
 
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   std::vector<std::string> found_function_types;
   // The DWARF above is just a list of functions. Parse all of them to
@@ -267,7 +305,8 @@ DWARF:
     ASSERT_EQ(func.Tag(), DW_TAG_subprogram);
     SymbolContext sc;
     bool new_type = false;
-    lldb::TypeSP type = ast_parser.ParseTypeFromDWARF(sc, func, &new_type);
+    lldb::TypeSP type =
+        tester.GetParser().ParseTypeFromDWARF(sc, func, &new_type);
     found_function_types.push_back(
         type->GetForwardCompilerType().GetTypeName().AsCString());
   }
@@ -394,18 +433,9 @@ DWARF:
         - AbbrCode:        0x00 # end of child tags of 0x0c
 ...
 )";
-  YAMLModuleTester t(yamldata);
+  DWARFASTParserClangYAMLTester tester(yamldata);
 
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
-
+  DWARFDIE cu_die = tester.GetCUDIE();
   DWARFDIE ptrauth_variable = cu_die.GetFirstChild();
   ASSERT_EQ(ptrauth_variable.Tag(), DW_TAG_variable);
   DWARFDIE ptrauth_type =
@@ -415,7 +445,7 @@ DWARF:
   SymbolContext sc;
   bool new_type = false;
   lldb::TypeSP type_sp =
-      ast_parser.ParseTypeFromDWARF(sc, ptrauth_type, &new_type);
+      tester.GetParser().ParseTypeFromDWARF(sc, ptrauth_type, &new_type);
   CompilerType compiler_type = type_sp->GetForwardCompilerType();
   ASSERT_EQ(compiler_type.GetPtrAuthKey(), 0U);
   ASSERT_EQ(compiler_type.GetPtrAuthAddressDiversity(), false);
@@ -554,24 +584,17 @@ TEST_F(DWARFASTParserClangTests, TestDefaultTemplateParamParsing) {
   auto BufferOrError = llvm::MemoryBuffer::getFile(
       GetInputFilePath("DW_AT_default_value-test.yaml"), /*IsText=*/true);
   ASSERT_TRUE(BufferOrError);
-  YAMLModuleTester t(BufferOrError.get()->getBuffer());
 
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(BufferOrError.get()->getBuffer());
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   llvm::SmallVector<lldb::TypeSP, 2> types;
   for (DWARFDIE die : cu_die.children()) {
     if (die.Tag() == DW_TAG_class_type) {
       SymbolContext sc;
       bool new_type = false;
-      types.push_back(ast_parser.ParseTypeFromDWARF(sc, die, &new_type));
+      types.push_back(
+          tester.GetParser().ParseTypeFromDWARF(sc, die, &new_type));
     }
   }
 
@@ -605,23 +628,14 @@ TEST_F(DWARFASTParserClangTests, TestSpecDeclExistsError) {
   auto BufferOrError = llvm::MemoryBuffer::getFile(
       GetInputFilePath("DW_AT_spec_decl_exists-test.yaml"), /*IsText=*/true);
   ASSERT_TRUE(BufferOrError);
-  YAMLModuleTester t(BufferOrError.get()->getBuffer());
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(BufferOrError.get()->getBuffer());
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   llvm::SmallVector<lldb::TypeSP, 2> specializations;
   for (DWARFDIE die : cu_die.children()) {
     SymbolContext sc;
     bool new_type = false;
-    auto type = ast_parser.ParseTypeFromDWARF(sc, die, &new_type);
+    auto type = tester.GetParser().ParseTypeFromDWARF(sc, die, &new_type);
     llvm::StringRef die_name = llvm::StringRef(die.GetName());
     if (die_name.starts_with("_Optional_payload")) {
       specializations.push_back(std::move(type));
@@ -730,18 +744,8 @@ DWARF:
         - AbbrCode:        0x00 # end of child tags of 0x0c
 ...
 )";
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   DWARFDIE decl_die;
   DWARFDIE def_die;
@@ -761,6 +765,8 @@ DWARF:
 
   ParsedDWARFTypeAttributes attrs(def_die);
   ASSERT_TRUE(attrs.decl.IsValid());
+
+  DWARFASTParserClang &ast_parser = tester.GetParser();
 
   SymbolContext sc;
   bool new_type = false;
@@ -906,18 +912,8 @@ DWARF:
         - AbbrCode: 0x0
 ...
 )";
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   auto context_die = cu_die.GetFirstChild();
   ASSERT_TRUE(context_die.IsValid());
@@ -932,7 +928,8 @@ DWARF:
     auto param_die = decl_die.GetFirstChild();
     ASSERT_TRUE(param_die.IsValid());
 
-    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(decl_die, context_die));
+    EXPECT_EQ(param_die,
+              tester.GetParser().GetObjectParameter(decl_die, context_die));
   }
 
   {
@@ -945,8 +942,8 @@ DWARF:
     auto param_die = subprogram_definition.GetFirstChild();
     ASSERT_TRUE(param_die.IsValid());
 
-    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(subprogram_definition,
-                                                       context_die));
+    EXPECT_EQ(param_die, tester.GetParser().GetObjectParameter(
+                             subprogram_definition, context_die));
   }
 }
 
@@ -1076,18 +1073,8 @@ DWARF:
         - AbbrCode: 0x0
 ...
 )";
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   auto context_die = cu_die.GetFirstChild();
   ASSERT_TRUE(context_die.IsValid());
@@ -1105,7 +1092,7 @@ DWARF:
   auto param_die = subprogram_definition.GetFirstChild();
   ASSERT_TRUE(param_die.IsValid());
   EXPECT_EQ(param_die,
-            ast_parser.GetObjectParameter(subprogram_definition, {}));
+            tester.GetParser().GetObjectParameter(subprogram_definition, {}));
 }
 
 TEST_F(DWARFASTParserClangTests, TestParseSubroutine_ExplicitObjectParameter) {
@@ -1243,21 +1230,15 @@ DWARF:
         - AbbrCode: 0x0
 ...
 )";
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   auto ts_or_err =
       cu_die.GetDWARF()->GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   ASSERT_TRUE(static_cast<bool>(ts_or_err));
   llvm::consumeError(ts_or_err.takeError());
   auto *parser =
-      static_cast<DWARFASTParserClang *>((*ts_or_err)->GetDWARFParser());
+      llvm::cast<DWARFASTParserClang>((*ts_or_err)->GetDWARFParser());
 
   auto context_die = cu_die.GetFirstChild();
   ASSERT_TRUE(context_die.IsValid());
@@ -1419,22 +1400,8 @@ DWARF:
         - AbbrCode: 0x0
 ...
 )";
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto ts_or_err =
-      cu_die.GetDWARF()->GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
-  ASSERT_TRUE(static_cast<bool>(ts_or_err));
-  llvm::consumeError(ts_or_err.takeError());
-
-  auto *ts = static_cast<TypeSystemClang *>(ts_or_err->get());
-  auto *parser = static_cast<DWARFASTParserClang *>(ts->GetDWARFParser());
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   auto subprogram = cu_die.GetFirstChild();
   ASSERT_TRUE(subprogram.IsValid());
@@ -1442,11 +1409,13 @@ DWARF:
 
   SymbolContext sc;
   bool new_type;
-  auto type_sp = parser->ParseTypeFromDWARF(sc, subprogram, &new_type);
+  auto type_sp =
+      tester.GetParser().ParseTypeFromDWARF(sc, subprogram, &new_type);
   ASSERT_NE(type_sp, nullptr);
 
-  auto result = ts->GetTranslationUnitDecl()->lookup(
-      clang_utils::getDeclarationName(*ts, "func"));
+  TypeSystemClang &ts = tester.GetTypeSystem();
+  auto result = ts.GetTranslationUnitDecl()->lookup(
+      clang_utils::getDeclarationName(ts, "func"));
   ASSERT_TRUE(result.isSingleResult());
 
   auto const *func = llvm::cast<clang::FunctionDecl>(result.front());
@@ -1609,19 +1578,8 @@ DWARF:
         - AbbrCode: 0x0
 ...
 )";
-
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   auto context_die = cu_die.GetFirstChild();
   ASSERT_TRUE(context_die.IsValid());
@@ -1640,7 +1598,8 @@ DWARF:
     auto param_die = sub1.GetFirstChild().GetSibling();
     ASSERT_TRUE(param_die.IsValid());
 
-    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(sub1, context_die));
+    EXPECT_EQ(param_die,
+              tester.GetParser().GetObjectParameter(sub1, context_die));
   }
 
   // Object parameter is at constant index 0
@@ -1648,7 +1607,8 @@ DWARF:
     auto param_die = sub2.GetFirstChild();
     ASSERT_TRUE(param_die.IsValid());
 
-    EXPECT_EQ(param_die, ast_parser.GetObjectParameter(sub2, context_die));
+    EXPECT_EQ(param_die,
+              tester.GetParser().GetObjectParameter(sub2, context_die));
   }
 }
 
@@ -1711,19 +1671,8 @@ DWARF:
             - Value: 0x02
 ...
 )";
-
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   auto type_die = cu_die.GetFirstChild();
   ASSERT_TRUE(type_die.IsValid());
@@ -1734,8 +1683,8 @@ DWARF:
   EXPECT_EQ(attrs.data_bit_size.value_or(0), 2U);
 
   SymbolContext sc;
-  auto type_sp =
-      ast_parser.ParseTypeFromDWARF(sc, type_die, /*type_is_new_ptr=*/nullptr);
+  auto type_sp = tester.GetParser().ParseTypeFromDWARF(
+      sc, type_die, /*type_is_new_ptr=*/nullptr);
   ASSERT_NE(type_sp, nullptr);
 
   EXPECT_EQ(llvm::expectedToOptional(type_sp->GetByteSize(nullptr)).value_or(0),
@@ -1857,27 +1806,17 @@ DWARF:
 ...
 
 )";
-
-  YAMLModuleTester t(yamldata);
-
-  DWARFUnit *unit = t.GetDwarfUnit();
-  ASSERT_NE(unit, nullptr);
-  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
-  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
-  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
-  DWARFDIE cu_die(unit, cu_entry);
-
-  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
-  auto &ast_ctx = *holder->GetAST();
-  DWARFASTParserClangStub ast_parser(ast_ctx);
+  DWARFASTParserClangYAMLTester tester(yamldata);
+  DWARFDIE cu_die = tester.GetCUDIE();
 
   auto type_die = cu_die.GetFirstChild();
   ASSERT_TRUE(type_die.IsValid());
 
   {
     SymbolContext sc;
-    auto type_sp = ast_parser.ParseTypeFromDWARF(sc, type_die,
-                                                 /*type_is_new_ptr=*/nullptr);
+    auto type_sp =
+        tester.GetParser().ParseTypeFromDWARF(sc, type_die,
+                                              /*type_is_new_ptr=*/nullptr);
     ASSERT_NE(type_sp, nullptr);
 
     EXPECT_EQ(
@@ -1891,8 +1830,9 @@ DWARF:
   {
     type_die = type_die.GetSibling();
     SymbolContext sc;
-    auto type_sp = ast_parser.ParseTypeFromDWARF(sc, type_die,
-                                                 /*type_is_new_ptr=*/nullptr);
+    auto type_sp =
+        tester.GetParser().ParseTypeFromDWARF(sc, type_die,
+                                              /*type_is_new_ptr=*/nullptr);
     ASSERT_NE(type_sp, nullptr);
 
     EXPECT_EQ(
@@ -1906,8 +1846,9 @@ DWARF:
   {
     type_die = type_die.GetSibling();
     SymbolContext sc;
-    auto type_sp = ast_parser.ParseTypeFromDWARF(sc, type_die,
-                                                 /*type_is_new_ptr=*/nullptr);
+    auto type_sp =
+        tester.GetParser().ParseTypeFromDWARF(sc, type_die,
+                                              /*type_is_new_ptr=*/nullptr);
     ASSERT_NE(type_sp, nullptr);
 
     EXPECT_EQ(
@@ -1922,8 +1863,9 @@ DWARF:
   {
     type_die = type_die.GetSibling();
     SymbolContext sc;
-    auto type_sp = ast_parser.ParseTypeFromDWARF(sc, type_die,
-                                                 /*type_is_new_ptr=*/nullptr);
+    auto type_sp =
+        tester.GetParser().ParseTypeFromDWARF(sc, type_die,
+                                              /*type_is_new_ptr=*/nullptr);
     ASSERT_NE(type_sp, nullptr);
 
     EXPECT_EQ(
@@ -1938,8 +1880,9 @@ DWARF:
   {
     type_die = type_die.GetSibling();
     SymbolContext sc;
-    auto type_sp = ast_parser.ParseTypeFromDWARF(sc, type_die,
-                                                 /*type_is_new_ptr=*/nullptr);
+    auto type_sp =
+        tester.GetParser().ParseTypeFromDWARF(sc, type_die,
+                                              /*type_is_new_ptr=*/nullptr);
     ASSERT_NE(type_sp, nullptr);
 
     EXPECT_EQ(

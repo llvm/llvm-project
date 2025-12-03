@@ -11,10 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/ValueRange.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -229,6 +233,40 @@ static mlir::Value emitVecInsert(CIRGenBuilderTy &builder, mlir::Location loc,
   cir::ConstantOp indexVal = builder.getUInt64(index, loc);
 
   return cir::VecInsertOp::create(builder, loc, vec, value, indexVal);
+}
+
+static mlir::Value emitX86FunnelShift(CIRGenBuilderTy &builder,
+                                      mlir::Location location, mlir::Value &op0,
+                                      mlir::Value &op1, mlir::Value &amt,
+                                      bool isRight) {
+  mlir::Type op0Ty = op0.getType();
+
+  // Amount may be scalar immediate, in which case create a splat vector.
+  // Funnel shifts amounts are treated as modulo and types are all power-of-2
+  // so we only care about the lowest log2 bits anyway.
+  if (amt.getType() != op0Ty) {
+    auto vecTy = mlir::cast<cir::VectorType>(op0Ty);
+    uint64_t numElems = vecTy.getSize();
+
+    auto amtTy = mlir::cast<cir::IntType>(amt.getType());
+    auto vecElemTy = mlir::cast<cir::IntType>(vecTy.getElementType());
+
+    // If signed, cast to the same width but unsigned first to
+    // ensure zero-extension when casting to a bigger unsigned `vecElemeTy`.
+    if (amtTy.isSigned()) {
+      cir::IntType unsignedAmtTy = builder.getUIntNTy(amtTy.getWidth());
+      amt = builder.createIntCast(amt, unsignedAmtTy);
+    }
+    cir::IntType unsignedVecElemType = builder.getUIntNTy(vecElemTy.getWidth());
+    amt = builder.createIntCast(amt, unsignedVecElemType);
+    amt = cir::VecSplatOp::create(
+        builder, location, cir::VectorType::get(unsignedVecElemType, numElems),
+        amt);
+  }
+
+  const StringRef intrinsicName = isRight ? "fshr" : "fshl";
+  return emitIntrinsicCallOp(builder, location, intrinsicName, op0Ty,
+                             mlir::ValueRange{op0, op1, amt});
 }
 
 mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
@@ -926,12 +964,16 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_prolq128:
   case X86::BI__builtin_ia32_prolq256:
   case X86::BI__builtin_ia32_prolq512:
+    return emitX86FunnelShift(builder, getLoc(expr->getExprLoc()), ops[0],
+                              ops[0], ops[1], false);
   case X86::BI__builtin_ia32_prord128:
   case X86::BI__builtin_ia32_prord256:
   case X86::BI__builtin_ia32_prord512:
   case X86::BI__builtin_ia32_prorq128:
   case X86::BI__builtin_ia32_prorq256:
   case X86::BI__builtin_ia32_prorq512:
+    return emitX86FunnelShift(builder, getLoc(expr->getExprLoc()), ops[0],
+                              ops[0], ops[1], true);
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
   case X86::BI__builtin_ia32_selectb_512:
