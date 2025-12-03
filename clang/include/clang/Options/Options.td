@@ -6176,6 +6176,8 @@ def : Flag<["-"], "nogpulib">,
 def : Flag<["-"], "nocudalib">, Alias<no_offloadlib>;
 def gpulibc : Flag<["-"], "gpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Link the LLVM C Library for GPUs">;
+def fgpu_flang_rt : Flag<["-"], "fgpu-flang-rt">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def fno_gpu_flang_rt : Flag<["-"], "fno-gpu-flang-rt">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def nogpulibc : Flag<["-"], "nogpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def nodefaultlibs : Flag<["-"], "nodefaultlibs">,
   Visibility<[ClangOption, FlangOption]>;
