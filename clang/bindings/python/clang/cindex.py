@@ -4468,11 +4468,12 @@ class Config:
         try:
             library = cdll.LoadLibrary(self.get_filename())
         except OSError as e:
-            msg = (
-                str(e) + ". To provide a path to libclang use "
-                "Config.set_library_path() or "
-                "Config.set_library_file()."
-            )
+            msg = str(e) + (
+                "To provide the path to libclang, you can use the environment variable "
+                "LIBCLANG_LIBRARY_PATH or call Config.set_library_path(). "
+                "Alternatively, you can specify the exact library file using "
+                "LIBCLANG_LIBRARY_FILE or Config.set_library_file()."
+             )
             raise LibclangError(msg)
 
         return library
