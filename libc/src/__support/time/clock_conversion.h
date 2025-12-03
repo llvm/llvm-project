@@ -16,28 +16,27 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-/**
- * @brief Convert a timespec value from one clock domain to another.
- *
- * The function takes a timestamp that is expressed in terms of the clock
- * identified by param from and returns an equivalent timestamp expressed
- * in terms of the clock identified by param to.
- *
- * Internally it obtains the current time of both clocks with
- * clock_gettime, then subtracts the source clock’s value and
- * adds the target clock’s value. The result is normalised so that
- * the nanoseconds field is always in the range [0, 1 s).
- *
- * This is useful, for example, for converting a value obtained from
- * CLOCK_MONOTONIC to CLOCK_REALTIME (or vice‑versa) so that the
- * timestamp can be displayed to a user or stored in a format that
- * is independent of the original clock domain.
- *
- * @param input The timestamp to convert
- * @param from Clock ID of the original timestamp (e.g. CLOCK_MONOTONIC).
- * @param to Clock ID of the desired timestamp (e.g. CLOCK_REALTIME).
- * @return The converted timespec
- */
+// @brief Convert a timespec value from one clock domain to another.
+//
+// The function takes a timestamp that is expressed in terms of the clock
+// identified by param from and returns an equivalent timestamp expressed
+// in terms of the clock identified by param to.
+//
+// Internally it obtains the current time of both clocks with
+// clock_gettime, then subtracts the source clock’s value and
+// adds the target clock’s value. The result is normalised so that
+// the nanoseconds field is always in the range [0, 1 s).
+//
+// This is useful, for example, for converting a value obtained from
+// CLOCK_MONOTONIC to CLOCK_REALTIME (or vice‑versa) so that the
+// timestamp can be displayed to a user or stored in a format that
+// is independent of the original clock domain.
+//
+// @param input The timestamp to convert
+// @param from Clock ID of the original timestamp (e.g. CLOCK_MONOTONIC).
+// @param to Clock ID of the desired timestamp (e.g. CLOCK_REALTIME).
+// @return The converted timespec
+//
 LIBC_INLINE timespec convert_clock(timespec input, clockid_t from,
                                    clockid_t to) {
   using namespace time_units;
