@@ -11,6 +11,9 @@
 // RUN: %clang_cc1 -x cl -cl-std=CL3.0 %s -verify -triple amdgcn-unknown-unknown -Wpedantic-core-features -DTEST_CORE_FEATURES
 // RUN: %clang_cc1 -x cl -cl-std=CL3.0 %s -verify -triple amdgcn-unknown-unknown -target-cpu gfx700 -Wpedantic-core-features -DTEST_CORE_FEATURES -DFLAT_SUPPORT
 
+// Test none target with amdhsa triple, which implies >= gfx700
+// RUN: %clang_cc1 -x cl -cl-std=CL3.0 %s -verify -triple amdgcn-unknown-amdhsa -Wpedantic-core-features -DTEST_CORE_FEATURES -DFLAT_SUPPORT
+
 // Extensions in all versions
 #ifndef cl_clang_storage_class_specifiers
 #error "Missing cl_clang_storage_class_specifiers define"
