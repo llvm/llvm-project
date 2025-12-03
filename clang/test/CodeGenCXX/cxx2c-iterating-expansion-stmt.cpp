@@ -74,13 +74,14 @@ struct CustomIterator {
       return {n + m};
     }
 
+    constexpr void operator++() { ++n; }
+
     constexpr int operator*() const {
       return n;
     }
 
-    // FIXME: Should be '!=' once we support that properly.
-    friend constexpr __PTRDIFF_TYPE__ operator-(iterator a, iterator b) {
-      return a.n - b.n;
+    friend constexpr bool operator!=(iterator a, iterator b) {
+      return a.n != b.n;
     }
   };
 
