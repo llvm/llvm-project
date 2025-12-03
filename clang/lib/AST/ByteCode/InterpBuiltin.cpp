@@ -4255,6 +4255,30 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return APInt(sizeof(unsigned char) * 8, (A | B) == 0);
         });
 
+  case clang::X86::BI__builtin_ia32_kshiftliqi:
+  case clang::X86::BI__builtin_ia32_kshiftlihi:
+  case clang::X86::BI__builtin_ia32_kshiftlisi:
+  case clang::X86::BI__builtin_ia32_kshiftlidi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          unsigned Amt = RHS.getZExtValue() & 0xFF;
+          if (Amt >= LHS.getBitWidth())
+            return APInt::getZero(LHS.getBitWidth());
+          return LHS.shl(Amt);
+        });
+
+  case clang::X86::BI__builtin_ia32_kshiftriqi:
+  case clang::X86::BI__builtin_ia32_kshiftrihi:
+  case clang::X86::BI__builtin_ia32_kshiftrisi:
+  case clang::X86::BI__builtin_ia32_kshiftridi:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          unsigned Amt = RHS.getZExtValue() & 0xFF;
+          if (Amt >= LHS.getBitWidth())
+            return APInt::getZero(LHS.getBitWidth());
+          return LHS.lshr(Amt);
+        });
+
   case clang::X86::BI__builtin_ia32_lzcnt_u16:
   case clang::X86::BI__builtin_ia32_lzcnt_u32:
   case clang::X86::BI__builtin_ia32_lzcnt_u64:
