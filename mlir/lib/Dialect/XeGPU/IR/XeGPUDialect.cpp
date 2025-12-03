@@ -391,6 +391,13 @@ LayoutAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
   return genCoordinates(builder, loc, ids, layout, subShape, shape);
 }
 
+bool LayoutAttr::isIdentical(const xegpu::DistributeLayoutAttr &other) {
+  if (dyn_cast<xegpu::SliceAttr>(other))
+    return false;
+
+  return *this == dyn_cast<xegpu::LayoutAttr>(other);
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_SliceAttr
 //===----------------------------------------------------------------------===//
@@ -509,6 +516,20 @@ bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {
       flattenedThis.getDims().asArrayRef().end());
   return llvm::all_of(flattenedOther.getDims().asArrayRef(),
                       [&](int64_t dim) { return thisDims.contains(dim); });
+}
+
+bool SliceAttr::isIdentical(const xegpu::DistributeLayoutAttr &other) {
+  if (dyn_cast<xegpu::LayoutAttr>(other))
+    return false;
+
+  auto flattenedThis = flatten();
+  auto flattenedOther = dyn_cast<xegpu::SliceAttr>(other).flatten();
+
+  if ((flattenedThis.getParent() == flattenedOther.getParent()) &&
+      (flattenedThis.getDims() == flattenedOther.getDims())) {
+    return true;
+  }
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

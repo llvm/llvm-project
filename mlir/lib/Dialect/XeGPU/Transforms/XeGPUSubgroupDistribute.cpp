@@ -1424,6 +1424,128 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
   }
 };
 
+/// This pattern distributes the `vector.broadcast` operation across lanes in a
+/// warp. The pattern supports three use cases:
+///
+/// 1) Broadcast a low-rank vector to high-rank vector: The low-rank input
+/// vector
+///    must have a slice layout of the result. If the distributed source and
+///    target vector types are identical, this lowers to a no-op; otherwise, it
+///    remains a broadcast but operates on distributed vectors.
+///
+/// 2) Broadcast a same-rank vector with identical layouts for source and
+/// target:
+///    The source vector must have unit dimensions, and lane_layout must be unit
+///    size for those unit dims. This always lowers to a no-op.
+///
+/// 3) Broadcast a scalar with no layout: This always lowers to a broadcast from
+///    scalar to distributed result type.
+///
+/// Example 1 (lowering to a broadcast with distributed types):
+/// ```
+/// %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<8x1xf32>) {
+///   %0 = "some_def"() {layout_result_0 =
+///   #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
+///   dims = [0]> } : () -> (vector<32xf32>) %2 = vector.broadcast %1
+///   {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
+///   1]>}: vector<32xf32> to vector<8x32xf32> gpu.yield %1 : vector<8x32xf32>
+/// }
+/// ```
+/// is lowered to:
+/// ```
+/// %r:1 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xf32>) {
+///   %0 = "some_def"() {layout_result_0 =
+///   #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
+///   dims = [0]> } : () -> (vector<32xf32>) gpu.yield %0 : vector<32xf32>
+/// }
+/// %2 = vector.broadcast %r#0 : vector<1xf32> to vector<8x1xf32>
+///
+/// Example 2 (no-op):
+/// ```
+/// %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<8x32xf32>) {
+///   %0 = "some_def"() {layout_result_0 =
+///   #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
+///   dims = [1]> } : () -> (vector<8xf32>) %1 = vector.shape_cast %0
+///   {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
+///   1]>}: vector<8xf32> to vector<8x1xf32> %2 = vector.broadcast %1
+///   {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
+///   1]>}: vector<8x1xf32> to vector<8x32xf32> gpu.yield %1 : vector<8x32xf32>
+/// }
+/// ```
+/// is lowered to:
+/// ```
+/// %r:1 = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<8x1xf32>) {
+///   %0 = "some_def"() {layout_result_0 =
+///   #xegpu.slice<#xegpu.layout<lane_layout = [1, 32], lane_data = [1, 1]>,
+///   dims = [1]> } : () -> (vector<8xf32>) %1 = vector.shape_cast %0
+///   {layout_result_0 = #xegpu.layout<lane_layout = [1, 32], lane_data = [1,
+///   1]>}: vector<8xf32> to vector<8x1xf32> gpu.yield %0 : vector<8x1xf32>
+/// }
+/// // The broadcast is implicit through layout transformation (no-op)
+///  %2 = vector.broadcast %r#0 : vector<8x1xf32> to vector<8x1xf32>
+/// ```
+struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *yieldOperand =
+        getWarpResult(warpOp, llvm::IsaPred<vector::BroadcastOp>);
+    if (!yieldOperand)
+      return failure();
+    auto broadcastOp =
+        cast<vector::BroadcastOp>(yieldOperand->get().getDefiningOp());
+    unsigned operandIdx = yieldOperand->getOperandNumber();
+
+    // Get the input layout - must be a slice layout
+    VectorType sourceType = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    xegpu::DistributeLayoutAttr sourceLayout =
+        xegpu::getDistributeLayoutAttr(broadcastOp.getSource());
+    if (sourceType) {
+      if (!sourceLayout || !isa<xegpu::SliceAttr>(sourceLayout))
+        return rewriter.notifyMatchFailure(
+            warpOp,
+            "Broadcast input must be scalar or have a slice layout attribute.");
+      // also the sourceLayout must be a slice of the broadcast result layout
+      xegpu::DistributeLayoutAttr resultLayout =
+          xegpu::getDistributeLayoutAttr(broadcastOp.getResult());
+      assert(resultLayout && "Broadcast result must have layout attribute.");
+      if (!sourceLayout.isSliceOf(resultLayout) ||
+          sourceLayout.isIdentical(resultLayout))
+        return rewriter.notifyMatchFailure(
+            warpOp, "Broadcast input layout must be a slice of result layout.");
+    }
+    // Get the distributed source type based on layout
+    FailureOr<VectorType> sourceDistTypeOrFailure =
+        getDistVecTypeBasedOnLaneLayout(sourceLayout, sourceType);
+    if (failed(sourceDistTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          warpOp, "Failed to distribute the source vector type.");
+
+    // Yield the source from the warp op - broadcast is a no-op
+    SmallVector<size_t> newRetIndices;
+    auto newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+        rewriter, warpOp, {broadcastOp.getSource()},
+        {sourceDistTypeOrFailure.value()}, newRetIndices);
+
+    // Replace the broadcast result with the distributed source
+    Value distributedVal = newWarpOp.getResult(newRetIndices[0]);
+    Value newBroadcast = distributedVal;
+    // if sourceDistType is same as orignial warp result type, no need to
+    //  re-create broadcast op
+    if (distributedVal.getType() != warpOp.getResult(operandIdx).getType()) {
+      // generate broadcast op outside warp op to have correct type
+      rewriter.setInsertionPointAfter(newWarpOp);
+      newBroadcast = vector::BroadcastOp::create(
+          rewriter, newWarpOp.getLoc(),
+          cast<VectorType>(warpOp.getResult(operandIdx).getType()),
+          distributedVal);
+    }
+
+    rewriter.replaceAllUsesWith(newWarpOp.getResult(operandIdx), newBroadcast);
+    return success();
+  }
+};
+
 /// Distribute a `vector.shape_cast` op feeding into yield op of an enclosing
 /// `gpu.warp_execute_on_lane_0` region.
 struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
@@ -1855,9 +1977,9 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
   patterns.add<CreateNdDescDistribution, StoreNdDistribution,
                LoadNdDistribution, DpasDistribution, PrefetchNdDistribution,
                GpuBarrierDistribution, VectorMultiReductionDistribution,
-               LoadDistribution, StoreDistribution, VectorTransposeDistribution,
-               VectorBitcastDistribution, LoadMatrixDistribution,
-               StoreMatrixDistribution,
+               VectorBroadcastDistribution, LoadDistribution, StoreDistribution,
+               VectorTransposeDistribution, VectorBitcastDistribution,
+               LoadMatrixDistribution, StoreMatrixDistribution,
                MemrefExtractAlignedPointerAsIndexDistribution>(
       patterns.getContext(),
       /*pattern benefit=*/regularPatternBenefit);

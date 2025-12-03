@@ -283,9 +283,14 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                       }
                       return true;
                     }]>,
-    InterfaceMethod</*desc=*/[{Check if this layout is a slice of some other layout.}],
+    InterfaceMethod</*desc=*/[{Check if this layout is a slice of another layout.}],
                     /*retTy=*/"bool",
                     /*methodName=*/"isSliceOf",
+                    /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>,
+
+    InterfaceMethod</*desc=*/[{Check if this layout is identical to another layout.}],
+                    /*retTy=*/"bool",
+                    /*methodName=*/"isIdentical",
                     /*args=*/(ins "const xegpu::DistributeLayoutAttr&": $other)>
   ];
 }
@@ -501,6 +506,9 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
+    
+    /// Check if this is identical to some other layout.
+    bool isIdentical(const xegpu::DistributeLayoutAttr &other); 
 
   }];
 
@@ -670,7 +678,9 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
-
+    
+    /// Check if this is identical to some other layout.
+    bool isIdentical(const xegpu::DistributeLayoutAttr &other); 
   }];
 
   let assemblyFormat = "`<` qualified($parent) `,` `dims` `=` $dims `>`";

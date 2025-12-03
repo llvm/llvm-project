@@ -588,9 +588,33 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
 
   // Only consider nD -> nD broadcast.
   if (sourceTy.getRank() != resultTy.getRank()) {
-    broadcast.emitWarning("Expecting source and result to have same rank.");
+    //  broadcast.emitWarning("Expecting source and result to have same rank.");
+
+    auto sourceDims = sourceTy.getShape();
+    auto resultDims = resultTy.getShape();
+    // adding the missing leading missing dims
+    SmallVector<int64_t> bcastDims;
+    int64_t dimDiff = resultTy.getRank() - sourceTy.getRank();
+    for (int i = 0; i < dimDiff; i++) {
+      bcastDims.push_back(i);
+    }
+
+    // for the rest dims in the resultTy, if sourceTy dim is 1, then it's
+    // broadcasted dim
+    for (size_t i = 0; i < sourceDims.size(); i++) {
+      if ((sourceDims[i] == 1) && (resultDims[i + dimDiff] != 1))
+        bcastDims.push_back(i + dimDiff);
+    }
+
+    // create a slice layout for the source
+    xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
+        broadcast->getContext(), cast<xegpu::LayoutAttr>(resultLayout.get()),
+        DenseI64ArrayAttr::get(broadcast->getContext(), bcastDims));
+
+    propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
     return;
   }
+
   SetVector<int64_t> broadcastUnitDims = broadcast.computeBroadcastedUnitDims();
   if (broadcastUnitDims.size() != 1) {
     broadcast.emitWarning("Expecting source type to be nD vector only with "
