@@ -140,7 +140,7 @@ public:
   }
 
   // Iterate through the registered counters
-  typedef UniqueVector<std::string> CounterVector;
+  using CounterVector = UniqueVector<std::string>;
   CounterVector::const_iterator begin() const {
     return RegisteredCounters.begin();
   }
@@ -158,7 +158,7 @@ public:
 #ifdef NDEBUG
     return false;
 #else
-    return instance().Enabled || instance().ShouldPrintCounter;
+    return instance().Enabled;
 #endif
   }
 

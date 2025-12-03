@@ -12,6 +12,7 @@
 
 // flat_multimap& operator=(const flat_multimap& m);
 
+#include <cassert>
 #include <deque>
 #include <flat_map>
 #include <functional>

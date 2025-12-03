@@ -140,7 +140,7 @@ void SignedCharMisuseCheck::check(const MatchFinder::MatchResult &Result) {
   if (!SignedCastExpression->isValueDependent() &&
       SignedCastExpression->getSubExpr()->EvaluateAsInt(EVResult,
                                                         *Result.Context)) {
-    llvm::APSInt Value = EVResult.Val.getInt();
+    const llvm::APSInt Value = EVResult.Val.getInt();
     if (Value.isNonNegative())
       return;
   }
@@ -154,7 +154,7 @@ void SignedCharMisuseCheck::check(const MatchFinder::MatchResult &Result) {
     if (!UnSignedCastExpression->isValueDependent() &&
         UnSignedCastExpression->getSubExpr()->EvaluateAsInt(EVResult,
                                                             *Result.Context)) {
-      llvm::APSInt Value = EVResult.Val.getInt();
+      const llvm::APSInt Value = EVResult.Val.getInt();
       if (Value <= UnsignedASCIIUpperBound)
         return;
     }

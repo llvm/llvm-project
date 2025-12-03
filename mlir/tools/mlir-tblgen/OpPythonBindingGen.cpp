@@ -341,6 +341,22 @@ static std::string attrSizedTraitForKind(const char *kind) {
                  StringRef(kind).drop_front());
 }
 
+static StringRef getPythonType(StringRef cppType) {
+  return llvm::StringSwitch<StringRef>(cppType)
+      .Case("::mlir::MemRefType", "_ods_ir.MemRefType")
+      .Case("::mlir::UnrankedMemRefType", "_ods_ir.UnrankedMemRefType")
+      .Case("::mlir::RankedTensorType", "_ods_ir.RankedTensorType")
+      .Case("::mlir::UnrankedTensorType", "_ods_ir.UnrankedTensorType")
+      .Case("::mlir::VectorType", "_ods_ir.VectorType")
+      .Case("::mlir::IntegerType", "_ods_ir.IntegerType")
+      .Case("::mlir::FloatType", "_ods_ir.FloatType")
+      .Case("::mlir::IndexType", "_ods_ir.IndexType")
+      .Case("::mlir::ComplexType", "_ods_ir.ComplexType")
+      .Case("::mlir::TupleType", "_ods_ir.TupleType")
+      .Case("::mlir::NoneType", "_ods_ir.NoneType")
+      .Default(StringRef());
+}
+
 /// Emits accessors to "elements" of an Op definition. Currently, the supported
 /// elements are operands and results, indicated by `kind`, which must be either
 /// `operand` or `result` and is used verbatim in the emitted code.
@@ -370,8 +386,11 @@ static void emitElementAccessors(
         seenVariableLength = true;
       if (element.name.empty())
         continue;
-      const char *type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
+      std::string type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
                                                            : "_ods_ir.OpResult";
+      if (StringRef pythonType = getPythonType(element.constraint.getCppType());
+          !pythonType.empty())
+        type = llvm::formatv("{0}[{1}]", type, pythonType);
       if (element.isVariableLength()) {
         if (element.isOptional()) {
           os << formatv(opOneOptionalTemplate, sanitizeName(element.name), kind,
@@ -418,6 +437,12 @@ static void emitElementAccessors(
           type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
                                                    : "_ods_ir.OpResult";
         }
+        if (std::strcmp(type.c_str(), "_ods_ir.Value") == 0 ||
+            std::strcmp(type.c_str(), "_ods_ir.OpResult") == 0) {
+          StringRef pythonType = getPythonType(element.constraint.getCppType());
+          if (!pythonType.empty())
+            type += "[" + pythonType.str() + "]";
+        }
         os << formatv(opVariadicEqualPrefixTemplate, sanitizeName(element.name),
                       kind, numSimpleLength, numVariadicGroups,
                       numPrecedingSimple, numPrecedingVariadic, type);
@@ -449,6 +474,12 @@ static void emitElementAccessors(
       if (!element.isVariableLength() || element.isOptional()) {
         type = std::strcmp(kind, "operand") == 0 ? "_ods_ir.Value"
                                                  : "_ods_ir.OpResult";
+        if (std::strcmp(type.c_str(), "_ods_ir.Value") == 0 ||
+            std::strcmp(type.c_str(), "_ods_ir.OpResult") == 0) {
+          StringRef pythonType = getPythonType(element.constraint.getCppType());
+          if (!pythonType.empty())
+            type += "[" + pythonType.str() + "]";
+        }
         if (!element.isVariableLength()) {
           trailing = "[0]";
         } else if (element.isOptional()) {

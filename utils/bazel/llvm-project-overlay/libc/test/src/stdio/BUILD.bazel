@@ -87,6 +87,8 @@ libc_test(
     name = "fprintf_test",
     srcs = ["fprintf_test.cpp"],
     deps = [
+        "//libc:__support_cpp_limits",
+        "//libc:__support_macros_properties_architectures",
         "//libc:fprintf",
     ],
 )

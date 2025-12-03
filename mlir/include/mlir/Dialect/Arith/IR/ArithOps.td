@@ -158,6 +158,18 @@ class Arith_IntBinaryOpWithOverflowFlags<string mnemonic, list<Trait> traits = [
                           attr-dict `:` type($result) }];
 }
 
+class Arith_IntBinaryOpWithExactFlag<string mnemonic, list<Trait> traits = []> :
+    Arith_BinaryOp<mnemonic, traits #
+      [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>,
+    Arguments<(ins SignlessIntegerOrIndexLike:$lhs,
+               SignlessIntegerOrIndexLike:$rhs,
+               UnitAttr:$isExact)>,
+    Results<(outs SignlessIntegerOrIndexLike:$result)> {
+
+  let assemblyFormat = [{ $lhs `,` $rhs (`exact` $isExact^)?
+                          attr-dict `:` type($result) }];
+}
+
 //===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
@@ -482,7 +494,8 @@ def Arith_MulUIExtendedOp : Arith_Op<"mului_extended", [Pure, Commutative,
 // DivUIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_DivUIOp : Arith_IntBinaryOp<"divui", [ConditionallySpeculatable]> {
+def Arith_DivUIOp : Arith_IntBinaryOpWithExactFlag<"divui",
+                                                   [ConditionallySpeculatable]> {
   let summary = "unsigned integer division operation";
   let description = [{
     Unsigned integer division. Rounds towards zero. Treats the leading bit as
@@ -493,11 +506,17 @@ def Arith_DivUIOp : Arith_IntBinaryOp<"divui", [ConditionallySpeculatable]> {
     `tensor` values, the behavior is undefined if _any_ elements are divided by
     zero.
 
+    If the `exact` attribute is present, the result value is poison if `lhs` is
+    not a multiple of `rhs`.
+
     Example:
 
     ```mlir
     // Scalar unsigned integer division.
     %a = arith.divui %b, %c : i64
+
+    // Scalar unsigned integer division where %b is known to be a multiple of %c.
+    %a = arith.divui %b, %c exact : i64
 
     // SIMD vector element-wise division.
     %f = arith.divui %g, %h : vector<4xi32>
@@ -519,7 +538,8 @@ def Arith_DivUIOp : Arith_IntBinaryOp<"divui", [ConditionallySpeculatable]> {
 // DivSIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_DivSIOp : Arith_IntBinaryOp<"divsi", [ConditionallySpeculatable]> {
+def Arith_DivSIOp : Arith_IntBinaryOpWithExactFlag<"divsi",
+                                                   [ConditionallySpeculatable]> {
   let summary = "signed integer division operation";
   let description = [{
     Signed integer division. Rounds towards zero. Treats the leading bit as
@@ -530,11 +550,17 @@ def Arith_DivSIOp : Arith_IntBinaryOp<"divsi", [ConditionallySpeculatable]> {
     behavior is undefined if _any_ of its elements are divided by zero or has a
     signed division overflow.
 
+    If the `exact` attribute is present, the result value is poison if `lhs` is
+    not a multiple of `rhs`.
+
     Example:
 
     ```mlir
     // Scalar signed integer division.
     %a = arith.divsi %b, %c : i64
+
+    // Scalar signed integer division where %b is known to be a multiple of %c.
+    %a = arith.divsi %b, %c exact : i64
 
     // SIMD vector element-wise division.
     %f = arith.divsi %g, %h : vector<4xi32>
@@ -821,7 +847,7 @@ def Arith_ShLIOp : Arith_IntBinaryOpWithOverflowFlags<"shli"> {
 // ShRUIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_ShRUIOp : Arith_TotalIntBinaryOp<"shrui"> {
+def Arith_ShRUIOp : Arith_IntBinaryOpWithExactFlag<"shrui", [Pure]> {
   let summary = "unsigned integer right-shift";
   let description = [{
     The `shrui` operation shifts an integer value of the first operand to the right
@@ -830,12 +856,17 @@ def Arith_ShRUIOp : Arith_TotalIntBinaryOp<"shrui"> {
     filled with zeros. If the value of the second operand is greater or equal than the
     bitwidth of the first operand, then the operation returns poison.
 
+    If the `exact` attribute is present, the result value of shrui is a poison
+    value if any of the bits shifted out are non-zero.
+
     Example:
 
     ```mlir
-    %1 = arith.constant 160 : i8               // %1 is 0b10100000
+    %1 = arith.constant 160 : i8        // %1 is 0b10100000
     %2 = arith.constant 3 : i8
-    %3 = arith.shrui %1, %2 : (i8, i8) -> i8   // %3 is 0b00010100
+    %3 = arith.constant 6 : i8
+    %4 = arith.shrui %1, %2 exact : i8  // %4 is 0b00010100
+    %5 = arith.shrui %1, %3 : i8        // %3 is 0b00000010
     ```
   }];
   let hasFolder = 1;
@@ -845,7 +876,7 @@ def Arith_ShRUIOp : Arith_TotalIntBinaryOp<"shrui"> {
 // ShRSIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_ShRSIOp : Arith_TotalIntBinaryOp<"shrsi"> {
+def Arith_ShRSIOp : Arith_IntBinaryOpWithExactFlag<"shrsi", [Pure]> {
   let summary = "signed integer right-shift";
   let description = [{
     The `shrsi` operation shifts an integer value of the first operand to the right
@@ -856,14 +887,17 @@ def Arith_ShRSIOp : Arith_TotalIntBinaryOp<"shrsi"> {
     operand is greater or equal than bitwidth of the first operand, then the operation
     returns poison.
 
+    If the `exact` attribute is present, the result value of shrsi is a poison
+    value if any of the bits shifted out are non-zero.
+
     Example:
 
     ```mlir
-    %1 = arith.constant 160 : i8               // %1 is 0b10100000
+    %1 = arith.constant 160 : i8         // %1 is 0b10100000
     %2 = arith.constant 3 : i8
-    %3 = arith.shrsi %1, %2 : (i8, i8) -> i8   // %3 is 0b11110100
-    %4 = arith.constant 96 : i8                   // %4 is 0b01100000
-    %5 = arith.shrsi %4, %2 : (i8, i8) -> i8   // %5 is 0b00001100
+    %3 = arith.shrsi %1, %2 exact : i8   // %3 is 0b11110100
+    %4 = arith.constant 98 : i8          // %4 is 0b01100010
+    %5 = arith.shrsi %4, %2 : i8         // %5 is 0b00001100
     ```
   }];
   let hasFolder = 1;

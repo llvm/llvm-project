@@ -432,8 +432,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 
   // Return the successors of `region` if the latter is not null. Else return
   // the successors of `regionBranchOp`.
-  auto getSuccessors = [&](Region *region = nullptr) {
-    auto point = region ? region : RegionBranchPoint::parent();
+  auto getSuccessors = [&](RegionBranchPoint point) {
     SmallVector<RegionSuccessor> successors;
     regionBranchOp.getSuccessorRegions(point, successors);
     return successors;
@@ -456,7 +455,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
   // `nonForwardedOperands`.
   auto markNonForwardedOperands = [&](BitVector &nonForwardedOperands) {
     nonForwardedOperands.resize(regionBranchOp->getNumOperands(), true);
-    for (const RegionSuccessor &successor : getSuccessors()) {
+    for (const RegionSuccessor &successor :
+         getSuccessors(RegionBranchPoint::parent())) {
       for (OpOperand *opOperand : getForwardedOpOperands(successor))
         nonForwardedOperands.reset(opOperand->getOperandNumber());
     }
@@ -469,10 +469,13 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
         for (Region &region : regionBranchOp->getRegions()) {
           if (region.empty())
             continue;
+          // TODO: this isn't correct in face of multiple terminators.
           Operation *terminator = region.front().getTerminator();
           nonForwardedRets[terminator] =
               BitVector(terminator->getNumOperands(), true);
-          for (const RegionSuccessor &successor : getSuccessors(&region)) {
+          for (const RegionSuccessor &successor :
+               getSuccessors(RegionBranchPoint(
+                   cast<RegionBranchTerminatorOpInterface>(terminator)))) {
             for (OpOperand *opOperand :
                  getForwardedOpOperands(successor, terminator))
               nonForwardedRets[terminator].reset(opOperand->getOperandNumber());
@@ -489,8 +492,13 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
           DenseMap<Region *, BitVector> &argsToKeep, Region *region = nullptr) {
         Operation *terminator =
             region ? region->front().getTerminator() : nullptr;
+        RegionBranchPoint point =
+            terminator
+                ? RegionBranchPoint(
+                      cast<RegionBranchTerminatorOpInterface>(terminator))
+                : RegionBranchPoint::parent();
 
-        for (const RegionSuccessor &successor : getSuccessors(region)) {
+        for (const RegionSuccessor &successor : getSuccessors(point)) {
           Region *successorRegion = successor.getSuccessor();
           for (auto [opOperand, input] :
                llvm::zip(getForwardedOpOperands(successor, terminator),
@@ -517,7 +525,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
         resultsOrArgsToKeepChanged = false;
 
         // Recompute `resultsToKeep` and `argsToKeep` based on `operandsToKeep`.
-        for (const RegionSuccessor &successor : getSuccessors()) {
+        for (const RegionSuccessor &successor :
+             getSuccessors(RegionBranchPoint::parent())) {
           Region *successorRegion = successor.getSuccessor();
           for (auto [opOperand, input] :
                llvm::zip(getForwardedOpOperands(successor),
@@ -551,7 +560,9 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
           if (region.empty())
             continue;
           Operation *terminator = region.front().getTerminator();
-          for (const RegionSuccessor &successor : getSuccessors(&region)) {
+          for (const RegionSuccessor &successor :
+               getSuccessors(RegionBranchPoint(
+                   cast<RegionBranchTerminatorOpInterface>(terminator)))) {
             Region *successorRegion = successor.getSuccessor();
             for (auto [opOperand, input] :
                  llvm::zip(getForwardedOpOperands(successor, terminator),
@@ -731,7 +742,49 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
 static void cleanUpDeadVals(RDVFinalCleanupList &list) {
   LDBG() << "Starting cleanup of dead values...";
 
-  // 1. Operations
+  // 1. Blocks, We must remove the block arguments and successor operands before
+  // deleting the operation, as they may reside in the region operation.
+  LDBG() << "Cleaning up " << list.blocks.size() << " block argument lists";
+  for (auto &b : list.blocks) {
+    // blocks that are accessed via multiple codepaths processed once
+    if (b.b->getNumArguments() != b.nonLiveArgs.size())
+      continue;
+    LDBG() << "Erasing " << b.nonLiveArgs.count()
+           << " non-live arguments from block: " << b.b;
+    // it iterates backwards because erase invalidates all successor indexes
+    for (int i = b.nonLiveArgs.size() - 1; i >= 0; --i) {
+      if (!b.nonLiveArgs[i])
+        continue;
+      LDBG() << "  Erasing block argument " << i << ": " << b.b->getArgument(i);
+      b.b->getArgument(i).dropAllUses();
+      b.b->eraseArgument(i);
+    }
+  }
+
+  // 2. Successor Operands
+  LDBG() << "Cleaning up " << list.successorOperands.size()
+         << " successor operand lists";
+  for (auto &op : list.successorOperands) {
+    SuccessorOperands successorOperands =
+        op.branch.getSuccessorOperands(op.successorIndex);
+    // blocks that are accessed via multiple codepaths processed once
+    if (successorOperands.size() != op.nonLiveOperands.size())
+      continue;
+    LDBG() << "Erasing " << op.nonLiveOperands.count()
+           << " non-live successor operands from successor "
+           << op.successorIndex << " of branch: "
+           << OpWithFlags(op.branch, OpPrintingFlags().skipRegions());
+    // it iterates backwards because erase invalidates all successor indexes
+    for (int i = successorOperands.size() - 1; i >= 0; --i) {
+      if (!op.nonLiveOperands[i])
+        continue;
+      LDBG() << "  Erasing successor operand " << i << ": "
+             << successorOperands[i];
+      successorOperands.erase(i);
+    }
+  }
+
+  // 3. Operations
   LDBG() << "Cleaning up " << list.operations.size() << " operations";
   for (auto &op : list.operations) {
     LDBG() << "Erasing operation: "
@@ -740,14 +793,14 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     op->erase();
   }
 
-  // 2. Values
+  // 4. Values
   LDBG() << "Cleaning up " << list.values.size() << " values";
   for (auto &v : list.values) {
     LDBG() << "Dropping all uses of value: " << v;
     v.dropAllUses();
   }
 
-  // 3. Functions
+  // 5. Functions
   LDBG() << "Cleaning up " << list.functions.size() << " functions";
   // Record which function arguments were erased so we can shrink call-site
   // argument segments for CallOpInterface operations (e.g. ops using
@@ -769,7 +822,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     (void)f.funcOp.eraseResults(f.nonLiveRets);
   }
 
-  // 4. Operands
+  // 6. Operands
   LDBG() << "Cleaning up " << list.operands.size() << " operand lists";
   for (OperationToCleanup &o : list.operands) {
     // Handle call-specific cleanup only when we have a cached callee reference.
@@ -811,7 +864,7 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
     }
   }
 
-  // 5. Results
+  // 7. Results
   LDBG() << "Cleaning up " << list.results.size() << " result lists";
   for (auto &r : list.results) {
     LDBG() << "Erasing " << r.nonLive.count()
@@ -819,48 +872,6 @@ static void cleanUpDeadVals(RDVFinalCleanupList &list) {
            << OpWithFlags(r.op, OpPrintingFlags().skipRegions());
     dropUsesAndEraseResults(r.op, r.nonLive);
   }
-
-  // 6. Blocks
-  LDBG() << "Cleaning up " << list.blocks.size() << " block argument lists";
-  for (auto &b : list.blocks) {
-    // blocks that are accessed via multiple codepaths processed once
-    if (b.b->getNumArguments() != b.nonLiveArgs.size())
-      continue;
-    LDBG() << "Erasing " << b.nonLiveArgs.count()
-           << " non-live arguments from block: " << b.b;
-    // it iterates backwards because erase invalidates all successor indexes
-    for (int i = b.nonLiveArgs.size() - 1; i >= 0; --i) {
-      if (!b.nonLiveArgs[i])
-        continue;
-      LDBG() << "  Erasing block argument " << i << ": " << b.b->getArgument(i);
-      b.b->getArgument(i).dropAllUses();
-      b.b->eraseArgument(i);
-    }
-  }
-
-  // 7. Successor Operands
-  LDBG() << "Cleaning up " << list.successorOperands.size()
-         << " successor operand lists";
-  for (auto &op : list.successorOperands) {
-    SuccessorOperands successorOperands =
-        op.branch.getSuccessorOperands(op.successorIndex);
-    // blocks that are accessed via multiple codepaths processed once
-    if (successorOperands.size() != op.nonLiveOperands.size())
-      continue;
-    LDBG() << "Erasing " << op.nonLiveOperands.count()
-           << " non-live successor operands from successor "
-           << op.successorIndex << " of branch: "
-           << OpWithFlags(op.branch, OpPrintingFlags().skipRegions());
-    // it iterates backwards because erase invalidates all successor indexes
-    for (int i = successorOperands.size() - 1; i >= 0; --i) {
-      if (!op.nonLiveOperands[i])
-        continue;
-      LDBG() << "  Erasing successor operand " << i << ": "
-             << successorOperands[i];
-      successorOperands.erase(i);
-    }
-  }
-
   LDBG() << "Finished cleanup of dead values";
 }
 

@@ -9,7 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "AssertEquals.h"
+#include "AssertEqualsCheck.h"
 #include "AvoidNSErrorInitCheck.h"
 #include "DeallocInCategoryCheck.h"
 #include "ForbiddenSubclassingCheck.h"
@@ -29,7 +29,7 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidNSErrorInitCheck>(
         "objc-avoid-nserror-init");
-    CheckFactories.registerCheck<AssertEquals>("objc-assert-equals");
+    CheckFactories.registerCheck<AssertEqualsCheck>("objc-assert-equals");
 
     CheckFactories.registerCheck<DeallocInCategoryCheck>(
         "objc-dealloc-in-category");

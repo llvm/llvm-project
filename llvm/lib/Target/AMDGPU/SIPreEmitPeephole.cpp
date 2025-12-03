@@ -296,7 +296,7 @@ bool SIPreEmitPeephole::optimizeSetGPR(MachineInstr &First,
   for (MachineBasicBlock::instr_iterator I = std::next(First.getIterator()),
                                          E = MI.getIterator();
        I != E; ++I) {
-    if (I->isBundle())
+    if (I->isBundle() || I->isDebugInstr())
       continue;
     switch (I->getOpcode()) {
     case AMDGPU::S_SET_GPR_IDX_MODE:
@@ -640,7 +640,7 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
 }
 
 void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
-  MachineOperand DstOp = I.getOperand(0);
+  const MachineOperand &DstOp = I.getOperand(0);
 
   uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
   assert(UnpackedOpcode != std::numeric_limits<uint16_t>::max() &&

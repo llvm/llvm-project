@@ -135,7 +135,6 @@ IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(
     const LangOptions &LangOpts, const SourceManager &SM, bool CheckHeaderFile)
     : IncludesToBeProcessed(IncludesToBeProcessed), SM(SM),
       CheckHeaderFile(CheckHeaderFile) {
-
   static constexpr std::pair<StringRef, StringRef> CXX98Headers[] = {
       {"assert.h", "cassert"}, {"complex.h", "complex"},
       {"ctype.h", "cctype"},   {"errno.h", "cerrno"},
@@ -167,7 +166,6 @@ void IncludeModernizePPCallbacks::InclusionDirective(
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
     StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
     bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
-
   // If we don't want to warn for non-main file reports and this is one, skip
   // it.
   if (!CheckHeaderFile && !SM.isInMainFile(HashLoc))
@@ -184,7 +182,7 @@ void IncludeModernizePPCallbacks::InclusionDirective(
   // 1. Insert std prefix for every such symbol occurrence.
   // 2. Insert `using namespace std;` to the beginning of TU.
   // 3. Do nothing and let the user deal with the migration himself.
-  SourceLocation DiagLoc = FilenameRange.getBegin();
+  const SourceLocation DiagLoc = FilenameRange.getBegin();
   if (auto It = CStyledHeaderToCxx.find(FileName);
       It != CStyledHeaderToCxx.end()) {
     IncludesToBeProcessed.emplace_back(IncludeMarker{
