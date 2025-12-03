@@ -2,24 +2,36 @@ import unittest
 import unittest.mock
 import sys
 import os
-from clang.cindex import Config
+
+
+def reset_import_and_get_frech_config():
+    # Reloads the clang.cindex module to reset any class-level state in Config.
+    sys.modules.pop("clang.cindex", None)
+    sys.modules.pop("clang", None)
+    from clang.cindex import Config
+
+    return Config()
 
 
 class TestEnvironementVariable(unittest.TestCase):
     def test_working_libclang_library_file(self):
-        ref_libclang_library_file = Config().get_filename()
+        ref_libclang_library_file = reset_import_and_get_frech_config().get_filename()
         with unittest.mock.patch.dict(
             os.environ, {"LIBCLANG_LIBRARY_FILE": ref_libclang_library_file}
         ):
-            Config().lib
+            reset_import_and_get_frech_config().lib
 
     @unittest.mock.patch.dict("os.environ", {"LIBCLANG_LIBRARY_FILE": "/dev/null"})
-    def _test_non_working_libclang_library_file(self):
+    def test_non_working_libclang_library_file(self):
+        config = reset_import_and_get_frech_config()
+        import clang.cindex
+
         with self.assertRaises(clang.cindex.LibclangError):
-            Config().lib
+            config.lib
 
     def test_working_libclang_library_path(self):
-        ref_libclang_library_file = Config().get_filename()
+        # Get adequate libclang path
+        ref_libclang_library_file = reset_import_and_get_frech_config().get_filename()
         ref_libclang_library_path, filename = os.path.split(ref_libclang_library_file)
         filename_root, filename_ext = os.path.splitext(filename)
 
@@ -34,9 +46,12 @@ class TestEnvironementVariable(unittest.TestCase):
         with unittest.mock.patch.dict(
             os.environ, {"LIBCLANG_LIBRARY_PATH": ref_libclang_library_path}
         ):
-            Config().lib
+            reset_import_and_get_frech_config().lib
 
     @unittest.mock.patch.dict("os.environ", {"LIBCLANG_LIBRARY_PATH": "not_a_real_dir"})
     def _test_non_working_libclang_library_path(self):
+        config = reset_import_and_get_frech_config()
+        import clang.cindex
+
         with self.assertRaises(clang.cindex.LibclangError):
-            Config().lib
+            config.lib
