@@ -1,4 +1,4 @@
-//===- DependencyScanningService.h - clang-scan-deps service ===-*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
-#define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
+#ifndef LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
+#define LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 
-#include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
-#include "clang/Tooling/DependencyScanning/InProcessModuleCache.h"
+#include "clang/DependencyScanning/DependencyScanningFilesystem.h"
+#include "clang/DependencyScanning/InProcessModuleCache.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/Chrono.h"
 
 namespace clang {
-namespace tooling {
 namespace dependencies {
 
 /// The mode in which the dependency scanner will operate to find the
@@ -125,7 +124,6 @@ private:
 };
 
 } // end namespace dependencies
-} // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
+#endif // LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
