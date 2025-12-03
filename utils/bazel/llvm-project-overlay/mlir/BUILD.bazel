@@ -4444,6 +4444,7 @@ cc_library(
         ":SCFIncGen",
         ":SideEffectInterfaces",
         ":TensorDialect",
+        ":TransformUtils",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -4795,6 +4796,7 @@ cc_library(
         ":IR",
         ":InliningUtils",
         ":SideEffectInterfaces",
+        ":UBDialect",
         "//llvm:Support",
     ],
 )
@@ -10407,6 +10409,7 @@ cc_library(
         ":OpenACCDialect",
         ":OpenACCPassIncGen",
         ":Pass",
+        ":Support",
         ":TransformUtils",
         ":ViewLikeInterface",
         "//llvm:Support",
