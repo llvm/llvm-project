@@ -3939,6 +3939,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
   GetSplitVector(N->getOperand(0), Lo, Hi);
 
   ElementCount LoElts = Lo.getValueType().getVectorElementCount();
+  // Note: For scalable vectors, the index is scaled by vscale.
   ElementCount IdxVal =
       ElementCount::get(Idx->getAsZExtVal(), SubVT.isScalableVector());
   uint64_t IdxValMin = IdxVal.getKnownMinValue();
@@ -3951,8 +3952,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
 
   unsigned LoEltsMin = LoElts.getKnownMinValue();
-  if (IdxValMin < LoEltsMin &&
-      !(SubVT.isScalableVector() || SrcVT.isScalableVector())) {
+  if (IdxValMin < LoEltsMin && SubVT.isFixedLengthVector() &&
+      SrcVT.isFixedLengthVector()) {
     // Extracted subvector crosses vector split, so we need to blend the two
     // halves.
     // TODO: May be able to emit partial extract_subvector.
