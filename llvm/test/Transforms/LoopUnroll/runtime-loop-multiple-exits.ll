@@ -4651,7 +4651,7 @@ define void @test8() {
 ; PROLOG-NEXT:    %i4.7 = add nuw nsw i64 %i3, 8
 ; PROLOG-NEXT:    br i1 false, label %outerloop.loopexit.loopexit, label %latch.7
 ; PROLOG:       latch.7:
-; PROLOG-NEXT:    %i6.7 = icmp ult i64 %i4.7, 100
+; PROLOG-NEXT:    %i6.7 = icmp samesign ult i64 %i4.7, 100
 ; PROLOG-NEXT:    br i1 %i6.7, label %innerH, label %exit.unr-lcssa
 ; PROLOG:       exit.unr-lcssa:
 ; PROLOG-NEXT:    br label %exit
@@ -4685,7 +4685,7 @@ define void @test8() {
 ; PROLOG-BLOCK-NEXT:    %i4.1.1 = add nuw nsw i64 %i3.1, 2
 ; PROLOG-BLOCK-NEXT:    br i1 false, label %outerloop.loopexit.loopexit.1, label %latch.1.1
 ; PROLOG-BLOCK:       latch.1.1:
-; PROLOG-BLOCK-NEXT:    %i6.1.1 = icmp ult i64 %i4.1.1, 100
+; PROLOG-BLOCK-NEXT:    %i6.1.1 = icmp samesign ult i64 %i4.1.1, 100
 ; PROLOG-BLOCK-NEXT:    br i1 %i6.1.1, label %innerH.1, label %exit.unr-lcssa.loopexit2, !llvm.loop !12
 ; PROLOG-BLOCK:       outerloop.loopexit.loopexit.1:
 ; PROLOG-BLOCK-NEXT:    br label %outerloop.loopexit.1
@@ -4718,7 +4718,7 @@ define void @test8() {
 ; PROLOG-BLOCK-NEXT:    %i4.1 = add nuw nsw i64 %i3, 2
 ; PROLOG-BLOCK-NEXT:    br i1 false, label %outerloop.loopexit.loopexit, label %latch.1
 ; PROLOG-BLOCK:       latch.1:
-; PROLOG-BLOCK-NEXT:    %i6.1 = icmp ult i64 %i4.1, 100
+; PROLOG-BLOCK-NEXT:    %i6.1 = icmp samesign ult i64 %i4.1, 100
 ; PROLOG-BLOCK-NEXT:    br i1 %i6.1, label %innerH, label %exit.unr-lcssa.loopexit, !llvm.loop !12
 ; PROLOG-BLOCK:       exit.unr-lcssa.loopexit:
 ; PROLOG-BLOCK-NEXT:    br label %exit.unr-lcssa

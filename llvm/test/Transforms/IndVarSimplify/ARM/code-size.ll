@@ -749,7 +749,7 @@ define i32 @different_ivs(ptr %array, i32 %length, i32 %n) #0 {
 ; CHECK-V8M-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-V8M-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-V8M-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; CHECK-V8M-NEXT:    [[CONTINUE:%.*]] = icmp ult i64 [[I_NEXT]], [[N64]]
+; CHECK-V8M-NEXT:    [[CONTINUE:%.*]] = icmp samesign ult i64 [[I_NEXT]], [[N64]]
 ; CHECK-V8M-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8M:       exit:
 ; CHECK-V8M-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]
@@ -778,7 +778,7 @@ define i32 @different_ivs(ptr %array, i32 %length, i32 %n) #0 {
 ; CHECK-V8A-NEXT:    [[ARRAY_I:%.*]] = load i32, ptr [[ARRAY_I_PTR]], align 4
 ; CHECK-V8A-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-V8A-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; CHECK-V8A-NEXT:    [[CONTINUE:%.*]] = icmp ult i64 [[I_NEXT]], [[N64]]
+; CHECK-V8A-NEXT:    [[CONTINUE:%.*]] = icmp samesign ult i64 [[I_NEXT]], [[N64]]
 ; CHECK-V8A-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8A:       exit:
 ; CHECK-V8A-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED]] ]

@@ -20,7 +20,7 @@ define i64 @test1() {
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 2, [[PREHEADER]] ], [ [[ADD_IV_3:%.*]], [[LATCH_3:%.*]] ]
 ; CHECK-NEXT:    [[ADD_IV:%.*]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[ADD_IV]], [[TRIP]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i64 [[ADD_IV]], [[TRIP]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LATCH:%.*]], label [[HEADEREXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[SHFT:%.*]] = ashr i64 [[ADD_IV]], 1
@@ -28,7 +28,7 @@ define i64 @test1() {
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[HEADER_1:%.*]], label [[LATCHEXIT:%.*]]
 ; CHECK:       header.1:
 ; CHECK-NEXT:    [[ADD_IV_1:%.*]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp ult i64 [[ADD_IV_1]], [[TRIP]]
+; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp samesign ult i64 [[ADD_IV_1]], [[TRIP]]
 ; CHECK-NEXT:    br i1 [[CMP1_1]], label [[LATCH_1:%.*]], label [[HEADEREXIT]]
 ; CHECK:       latch.1:
 ; CHECK-NEXT:    [[SHFT_1:%.*]] = ashr i64 [[ADD_IV_1]], 1
@@ -36,7 +36,7 @@ define i64 @test1() {
 ; CHECK-NEXT:    br i1 [[CMP2_1]], label [[HEADER_2:%.*]], label [[LATCHEXIT]]
 ; CHECK:       header.2:
 ; CHECK-NEXT:    [[ADD_IV_2:%.*]] = add nuw nsw i64 [[IV]], 6
-; CHECK-NEXT:    [[CMP1_2:%.*]] = icmp ult i64 [[ADD_IV_2]], [[TRIP]]
+; CHECK-NEXT:    [[CMP1_2:%.*]] = icmp samesign ult i64 [[ADD_IV_2]], [[TRIP]]
 ; CHECK-NEXT:    br i1 [[CMP1_2]], label [[LATCH_2:%.*]], label [[HEADEREXIT]]
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    [[SHFT_2:%.*]] = ashr i64 [[ADD_IV_2]], 1
@@ -44,7 +44,7 @@ define i64 @test1() {
 ; CHECK-NEXT:    br i1 [[CMP2_2]], label [[HEADER_3:%.*]], label [[LATCHEXIT]]
 ; CHECK:       header.3:
 ; CHECK-NEXT:    [[ADD_IV_3]] = add nuw nsw i64 [[IV]], 8
-; CHECK-NEXT:    [[CMP1_3:%.*]] = icmp ult i64 [[ADD_IV_3]], [[TRIP]]
+; CHECK-NEXT:    [[CMP1_3:%.*]] = icmp samesign ult i64 [[ADD_IV_3]], [[TRIP]]
 ; CHECK-NEXT:    br i1 [[CMP1_3]], label [[LATCH_3]], label [[HEADEREXIT]]
 ; CHECK:       latch.3:
 ; CHECK-NEXT:    [[SHFT_3:%.*]] = ashr i64 [[ADD_IV_3]], 1
@@ -102,7 +102,7 @@ define  void @test2(i1 %cond, i32 %n) {
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 2, [[PREHEADER]] ], [ [[ADD_IV_3:%.*]], [[LATCH_3:%.*]] ]
 ; CHECK-NEXT:    [[ADD_IV:%.*]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[ADD_IV]], [[TRIP]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i64 [[ADD_IV]], [[TRIP]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LATCH:%.*]], label [[HEADEREXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[SHFT:%.*]] = ashr i64 [[ADD_IV]], 1
@@ -110,7 +110,7 @@ define  void @test2(i1 %cond, i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[HEADER_1:%.*]], label [[LATCHEXIT:%.*]]
 ; CHECK:       header.1:
 ; CHECK-NEXT:    [[ADD_IV_1:%.*]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp ult i64 [[ADD_IV_1]], [[TRIP]]
+; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp samesign ult i64 [[ADD_IV_1]], [[TRIP]]
 ; CHECK-NEXT:    br i1 [[CMP1_1]], label [[LATCH_1:%.*]], label [[HEADEREXIT]]
 ; CHECK:       latch.1:
 ; CHECK-NEXT:    [[SHFT_1:%.*]] = ashr i64 [[ADD_IV_1]], 1
@@ -118,7 +118,7 @@ define  void @test2(i1 %cond, i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP2_1]], label [[HEADER_2:%.*]], label [[LATCHEXIT]]
 ; CHECK:       header.2:
 ; CHECK-NEXT:    [[ADD_IV_2:%.*]] = add nuw nsw i64 [[IV]], 6
-; CHECK-NEXT:    [[CMP1_2:%.*]] = icmp ult i64 [[ADD_IV_2]], [[TRIP]]
+; CHECK-NEXT:    [[CMP1_2:%.*]] = icmp samesign ult i64 [[ADD_IV_2]], [[TRIP]]
 ; CHECK-NEXT:    br i1 [[CMP1_2]], label [[LATCH_2:%.*]], label [[HEADEREXIT]]
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    [[SHFT_2:%.*]] = ashr i64 [[ADD_IV_2]], 1
@@ -126,7 +126,7 @@ define  void @test2(i1 %cond, i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP2_2]], label [[HEADER_3:%.*]], label [[LATCHEXIT]]
 ; CHECK:       header.3:
 ; CHECK-NEXT:    [[ADD_IV_3]] = add nuw nsw i64 [[IV]], 8
-; CHECK-NEXT:    [[CMP1_3:%.*]] = icmp ult i64 [[ADD_IV_3]], [[TRIP]]
+; CHECK-NEXT:    [[CMP1_3:%.*]] = icmp samesign ult i64 [[ADD_IV_3]], [[TRIP]]
 ; CHECK-NEXT:    br i1 [[CMP1_3]], label [[LATCH_3]], label [[HEADEREXIT]]
 ; CHECK:       latch.3:
 ; CHECK-NEXT:    [[SHFT_3:%.*]] = ashr i64 [[ADD_IV_3]], 1
@@ -179,7 +179,7 @@ define i64 @test3(i32 %n) {
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 2, [[PREHEADER]] ], [ [[ADD_IV_3:%.*]], [[LATCH_3:%.*]] ]
 ; CHECK-NEXT:    [[ADD_IV:%.*]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[ADD_IV]], [[TRIP]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i64 [[ADD_IV]], [[TRIP]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LATCH:%.*]], label [[HEADEREXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[SHFT:%.*]] = ashr i64 [[ADD_IV]], 1
@@ -187,7 +187,7 @@ define i64 @test3(i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[HEADER_1:%.*]], label [[LATCHEXIT:%.*]]
 ; CHECK:       header.1:
 ; CHECK-NEXT:    [[ADD_IV_1:%.*]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp ult i64 [[ADD_IV_1]], [[TRIP]]
+; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp samesign ult i64 [[ADD_IV_1]], [[TRIP]]
 ; CHECK-NEXT:    br i1 [[CMP1_1]], label [[LATCH_1:%.*]], label [[HEADEREXIT]]
 ; CHECK:       latch.1:
 ; CHECK-NEXT:    [[SHFT_1:%.*]] = ashr i64 [[ADD_IV_1]], 1
@@ -195,7 +195,7 @@ define i64 @test3(i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP2_1]], label [[HEADER_2:%.*]], label [[LATCHEXIT]]
 ; CHECK:       header.2:
 ; CHECK-NEXT:    [[ADD_IV_2:%.*]] = add nuw nsw i64 [[IV]], 6
-; CHECK-NEXT:    [[CMP1_2:%.*]] = icmp ult i64 [[ADD_IV_2]], [[TRIP]]
+; CHECK-NEXT:    [[CMP1_2:%.*]] = icmp samesign ult i64 [[ADD_IV_2]], [[TRIP]]
 ; CHECK-NEXT:    br i1 [[CMP1_2]], label [[LATCH_2:%.*]], label [[HEADEREXIT]]
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    [[SHFT_2:%.*]] = ashr i64 [[ADD_IV_2]], 1
@@ -203,7 +203,7 @@ define i64 @test3(i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP2_2]], label [[HEADER_3:%.*]], label [[LATCHEXIT]]
 ; CHECK:       header.3:
 ; CHECK-NEXT:    [[ADD_IV_3]] = add nuw nsw i64 [[IV]], 8
-; CHECK-NEXT:    [[CMP1_3:%.*]] = icmp ult i64 [[ADD_IV_3]], [[TRIP]]
+; CHECK-NEXT:    [[CMP1_3:%.*]] = icmp samesign ult i64 [[ADD_IV_3]], [[TRIP]]
 ; CHECK-NEXT:    br i1 [[CMP1_3]], label [[LATCH_3]], label [[HEADEREXIT]]
 ; CHECK:       latch.3:
 ; CHECK-NEXT:    [[SHFT_3:%.*]] = ashr i64 [[ADD_IV_3]], 1
@@ -314,7 +314,7 @@ define void @test4(i16 %c3) {
 ; CHECK-NEXT:    ]
 ; CHECK:       latch.3:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_3]] = add nuw nsw i64 [[INDVARS_IV]], 4
-; CHECK-NEXT:    [[C2_3:%.*]] = icmp ult i64 [[INDVARS_IV_NEXT_3]], [[C1]]
+; CHECK-NEXT:    [[C2_3:%.*]] = icmp samesign ult i64 [[INDVARS_IV_NEXT_3]], [[C1]]
 ; CHECK-NEXT:    br i1 [[C2_3]], label [[HEADER]], label [[LATCHEXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       latchexit.unr-lcssa:
 ; CHECK-NEXT:    br label [[LATCHEXIT]]

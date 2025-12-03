@@ -535,7 +535,7 @@ define void @min.unsigned.3(ptr %a, i32 %n) {
 ; CHECK-NEXT:    store i32 [[IDX]], ptr [[ADDR]], align 4
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[BE_COND:%.*]] = icmp ult i32 [[IDX_INC]], [[UMIN]]
+; CHECK-NEXT:    [[BE_COND:%.*]] = icmp samesign ult i32 [[IDX_INC]], [[UMIN]]
 ; CHECK-NEXT:    br i1 [[BE_COND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -586,7 +586,7 @@ define void @min.unsigned.4(ptr %a, i32 %n) {
 ; CHECK-NEXT:    store i32 [[IDX]], ptr [[ADDR]], align 4
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[BE_COND:%.*]] = icmp ult i32 [[IDX_INC]], [[UMIN]]
+; CHECK-NEXT:    [[BE_COND:%.*]] = icmp samesign ult i32 [[IDX_INC]], [[UMIN]]
 ; CHECK-NEXT:    br i1 [[BE_COND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
