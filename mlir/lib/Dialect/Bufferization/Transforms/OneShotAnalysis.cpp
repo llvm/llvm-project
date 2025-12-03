@@ -936,6 +936,13 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &operand,
   // Look for a read-only tensor among all aliases.
   bool foundReadOnly = false;
   auto checkReadOnly = [&](Value v) {
+    // Only tensor values participate in writability analysis. Memrefs may
+    // appear in the alias sets (e.g., via to_tensor/to_buffer), but
+    // OneShotAnalysis is a tensor-only analysis and memref writability is
+    // modeled separately. Querying isWritable() on memrefs can lead to
+    // spurious "NOT-WRITABLE" annotations (e.g., on memref.alloc).
+    if (!isa<TensorType>(v.getType()))
+      return;
     if (!state.isWritable(v)) {
       foundReadOnly = true;
       if (state.getOptions().printConflicts)
