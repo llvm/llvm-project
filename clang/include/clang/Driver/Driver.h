@@ -916,12 +916,13 @@ void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                           llvm::StringSet<> &SavedStrings, StringRef EnvVar,
                           raw_ostream *OS = nullptr);
 
+} // end namespace driver
+
 unsigned getOptimizationLevel(const llvm::opt::ArgList &Args, InputKind IK,
                               DiagnosticsEngine &Diags);
 
 unsigned getOptimizationLevelSize(const llvm::opt::ArgList &Args);
 
-} // end namespace driver
 } // end namespace clang
 
 #endif
