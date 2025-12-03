@@ -45,30 +45,30 @@
 
 using namespace cir;
 using namespace llvm;
-using namespace mlir;
 
-static std::string getLLVMIntrinsicNameForType(Type llvmTy) {
+
+static std::string getLLVMIntrinsicNameForType(mlir::Type llvmTy) {
   std::string s;
   {
     llvm::raw_string_ostream os(s);
     llvm::Type *unused = nullptr;
     os << llvmTy;
   }
-  if (auto vecTy = llvmTy.dyn_cast<LLVM::LLVMType>()) {
+  if (auto vecTy = llvmTy.dyn_cast<mlir::LLVM::LLVMType>()) {
   }
   return s;
 }
 
 // Actual lowering
-LogicalResult CIRToLLVMSqrtOpLowering::matchAndRewrite(
+mlir::LogicalResult CIRToLLVMSqrtOpLowering::matchAndRewrite(
     cir::SqrtOp op, typename cir::SqrtOp::Adaptor adaptor,
-    ConversionPatternRewriter &rewriter) const {
+    mlir::ConversionPatternRewriter &rewriter) const {
 
-  Location loc = op.getLoc();
-  MLIRContext *ctx = rewriter.getContext();
+  mlir::Location loc = op.getLoc();
+  mlir::MLIRContext *ctx = rewriter.getContext();
 
-  Type cirResTy = op.getResult().getType();
-  Type llvmResTy = getTypeConverter()->convertType(cirResTy);
+  mlir::Type cirResTy = op.getResult().getType();
+  mlir::Type llvmResTy = getTypeConverter()->convertType(cirResTy);
   if (!llvmResTy)
     return op.emitOpError(
         "expected LLVM dialect result type for cir.sqrt lowering");
