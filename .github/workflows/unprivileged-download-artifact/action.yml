@@ -49,7 +49,7 @@ runs:
 
           artifacts_to_download = []
           for (artifact of response.data.artifacts) {
-            if (artifact.name.startswith(${{ inputs.artifact-name }})) {
+            if (artifact.name.startswith("${{ inputs.artifact-name }}")) {
               artifacts_to_download.push(artifact)
             }
           }
