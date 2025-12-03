@@ -1833,23 +1833,6 @@ Builtin type aliases
 
 Clang provides a few builtin aliases to improve the throughput of certain metaprogramming facilities.
 
-__builtin_common_reference
---------------------------
-
-.. code-block:: c++
-
-  template <template <class, class, template <class> class, template <class> class> class BasicCommonReferenceT,
-            template <class... Args> CommonTypeT,
-            template <class> HasTypeMember,
-            class HasNoTypeMember,
-            class... Ts>
-  using __builtin_common_reference = ...;
-
-This alias is used for implementing ``std::common_reference``. If ``std::common_reference`` should contain a ``type``
-member, it is an alias to ``HasTypeMember<TheCommonReference>``. Otherwse it is an alias to ``HasNoTypeMember``. The
-``CommonTypeT`` is usually ``std::common_type_t``. ``BasicCommonReferenceT`` is usually an alias template to
-``basic_common_reference<T, U, TX, UX>::type``.
-
 __builtin_common_type
 ---------------------
 
