@@ -4962,10 +4962,13 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   }
 
   AggValueSlot ArgSlot = AggValueSlot::ignored();
-  // If the callee returns a reference, skip this stack saving optimization;
-  // we don't want to prematurely end the lifetime of the temporary. It may be
-  // possible to still perform this optimization if the return type is a
-  // reference to a different type than the parameter.
+  // For arguments with aggregate type, create an alloca to store
+  // the value.  If the argument's type has a destructor, that destructor
+  // will run at the end of the full-expression; emit matching lifetime
+  // markers.
+  //
+  // FIXME: For types which don't have a destructor, consider using a
+  // narrower lifetime bound.
   if (hasAggregateEvaluationKind(E->getType())) {
     RawAddress ArgSlotAlloca = Address::invalid();
     ArgSlot = CreateAggTemp(E->getType(), "agg.tmp", &ArgSlotAlloca);
