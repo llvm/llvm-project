@@ -2520,24 +2520,18 @@ public:
     SmallVector<OpFoldResult> originalOutputShape = op.getMixedOutputShape();
     SmallVector<OpFoldResult> newOutputShape = originalOutputShape;
     SmallVector<int64_t> newOutputShapeSizes;
-    SmallVector<Value> newOperands;
 
     // Convert output shape dims from dynamic to static where possible.
     for (auto [dimIdx, dimSize] : enumerate(originalOutputShape)) {
       std::optional<int64_t> sizeOpt = getConstantIntValue(dimSize);
-      if (sizeOpt.has_value()) {
-        newOutputShapeSizes.push_back(sizeOpt.value());
-        newOutputShape[dimIdx] = rewriter.getIndexAttr(sizeOpt.value());
+      if (!sizeOpt.has_value()) {
+        newOutputShapeSizes.push_back(ShapedType::kDynamic);
         continue;
       }
 
-      newOperands.push_back(llvm::cast<Value>(dimSize));
-      newOutputShapeSizes.push_back(ShapedType::kDynamic);
+      newOutputShapeSizes.push_back(sizeOpt.value());
+      newOutputShape[dimIdx] = rewriter.getIndexAttr(sizeOpt.value());
     }
-
-    if (newOperands.size() == op->getNumOperands())
-      return rewriter.notifyMatchFailure(
-          op, "no static-to-dynamic conversions found");
 
     Value castSource = cast.getSource();
     auto castSourceType = llvm::cast<MemRefType>(castSource.getType());
