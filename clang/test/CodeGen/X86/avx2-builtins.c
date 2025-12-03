@@ -1111,12 +1111,34 @@ __m256i test_mm256_permute4x64_epi64(__m256i a) {
   // CHECK: shufflevector <4 x i64> %{{.*}}, <4 x i64> poison, <4 x i32> <i32 3, i32 0, i32 2, i32 0>
   return _mm256_permute4x64_epi64(a, 35);
 }
+// Control value 0x00: [0,0,0,0] -> broadcast element 0
+TEST_CONSTEXPR(match_v4di(_mm256_permute4x64_epi64(_mm256_set_epi64x(40LL, 30LL, 20LL, 10LL), 0x00), 10LL, 10LL, 10LL, 10LL));
+// Control value 0x1B: [0,1,2,3] -> reverse order [3,2,1,0] = [D,C,B,A]
+TEST_CONSTEXPR(match_v4di(_mm256_permute4x64_epi64(_mm256_set_epi64x(40LL, 30LL, 20LL, 10LL), 0x1B), 40LL, 30LL, 20LL, 10LL));
+// Control value 0x39: [1,2,3,0] -> rotate left [B,C,D,A]
+TEST_CONSTEXPR(match_v4di(_mm256_permute4x64_epi64(_mm256_set_epi64x(40LL, 30LL, 20LL, 10LL), 0x39), 20LL, 30LL, 40LL, 10LL));
+// Control value 0x12: [2,1,0,1] -> [C,B,A,B]
+TEST_CONSTEXPR(match_v4di(_mm256_permute4x64_epi64(_mm256_set_epi64x(40LL, 30LL, 20LL, 10LL), 0x12), 30LL, 20LL, 10LL, 20LL));
+// Control value 0xE4: [3,2,1,0] -> identity [A,B,C,D]
+TEST_CONSTEXPR(match_v4di(_mm256_permute4x64_epi64(_mm256_set_epi64x(40LL, 30LL, 20LL, 10LL), 0xE4), 10LL, 20LL, 30LL, 40LL));
+// Test with negative values
+TEST_CONSTEXPR(match_v4di(_mm256_permute4x64_epi64(_mm256_set_epi64x(-40LL, -30LL, -20LL, -10LL), 0x1B), -40LL, -30LL, -20LL, -10LL));
 
 __m256d test_mm256_permute4x64_pd(__m256d a) {
   // CHECK-LABEL: test_mm256_permute4x64_pd
   // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> poison, <4 x i32> <i32 1, i32 2, i32 1, i32 0>
   return _mm256_permute4x64_pd(a, 25);
 }
+// Control value 0x00: [0,0,0,0] -> broadcast element 0
+TEST_CONSTEXPR(match_m256d(_mm256_permute4x64_pd(_mm256_set_pd(4.0, 3.0, 2.0, 1.0), 0x00), 1.0, 1.0, 1.0, 1.0));
+// Control value 0x1B: [0,1,2,3] -> reverse order [3,2,1,0] = [D,C,B,A]
+TEST_CONSTEXPR(match_m256d(_mm256_permute4x64_pd(_mm256_set_pd(4.0, 3.0, 2.0, 1.0), 0x1B), 4.0, 3.0, 2.0, 1.0));
+// Control value 0x39: [1,2,3,0] -> rotate left [B,C,D,A]
+TEST_CONSTEXPR(match_m256d(_mm256_permute4x64_pd(_mm256_set_pd(4.0, 3.0, 2.0, 1.0), 0x39), 2.0, 3.0, 4.0, 1.0));
+// Control value 0x12: [2,1,0,1] -> [C,B,A,B]
+TEST_CONSTEXPR(match_m256d(_mm256_permute4x64_pd(_mm256_set_pd(4.0, 3.0, 2.0, 1.0), 0x12), 3.0, 2.0, 1.0, 2.0));
+// Control value 0xE4: [3,2,1,0] -> identity [A,B,C,D]
+TEST_CONSTEXPR(match_m256d(_mm256_permute4x64_pd(_mm256_set_pd(4.0, 3.0, 2.0, 1.0), 0xE4), 1.0, 2.0, 3.0, 4.0));
 
 __m256i test_mm256_permutevar8x32_epi32(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_permutevar8x32_epi32
