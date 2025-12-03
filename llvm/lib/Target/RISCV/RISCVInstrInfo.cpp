@@ -531,6 +531,15 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   if (RISCV::GPRPairRegClass.contains(DstReg, SrcReg)) {
+    if (STI.isRV32() && STI.hasStdExtZdinx()) {
+      // On RV32_Zdinx, FMV.D will move a pair of registers to another pair of
+      // registers, in one instruction.
+      BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_D_IN32X), DstReg)
+          .addReg(SrcReg, getRenamableRegState(RenamableSrc))
+          .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
+      return;
+    }
+
     MCRegister EvenReg = TRI->getSubReg(SrcReg, RISCV::sub_gpr_even);
     MCRegister OddReg = TRI->getSubReg(SrcReg, RISCV::sub_gpr_odd);
     // We need to correct the odd register of X0_Pair.
@@ -1812,7 +1821,7 @@ bool RISCVInstrInfo::analyzeSelect(const MachineInstr &MI,
   Cond.push_back(MI.getOperand(2));
   Cond.push_back(MI.getOperand(3));
   // We can only fold when we support short forward branch opt.
-  Optimizable = STI.hasShortForwardBranchOpt();
+  Optimizable = STI.hasShortForwardBranchIALU();
   return false;
 }
 
@@ -1822,7 +1831,7 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
                                bool PreferFalse) const {
   assert(MI.getOpcode() == RISCV::PseudoCCMOVGPR &&
          "Unknown select instruction");
-  if (!STI.hasShortForwardBranchOpt())
+  if (!STI.hasShortForwardBranchIALU())
     return nullptr;
 
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
