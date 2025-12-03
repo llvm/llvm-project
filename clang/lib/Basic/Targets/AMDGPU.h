@@ -84,6 +84,18 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
     return TT.getArch() == llvm::Triple::r600;
   }
 
+  bool hasFlatSupport() const {
+    if (GPUKind >= llvm::AMDGPU::GK_GFX700)
+      return true;
+
+    // Dummy target is assumed to be gfx700+ for amdhsa.
+    if (GPUKind == llvm::AMDGPU::GK_NONE &&
+        getTriple().getOS() == llvm::Triple::AMDHSA)
+      return true;
+
+    return false;
+  }
+
 public:
   AMDGPUTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 
@@ -325,7 +337,7 @@ public:
       Opts["__opencl_c_atomic_order_seq_cst"] = true;
       Opts["__opencl_c_atomic_scope_all_devices"] = true;
 
-      if (GPUKind >= llvm::AMDGPU::GK_GFX700) {
+      if (hasFlatSupport()) {
         Opts["__opencl_c_generic_address_space"] = true;
         Opts["__opencl_c_device_enqueue"] = true;
       }
