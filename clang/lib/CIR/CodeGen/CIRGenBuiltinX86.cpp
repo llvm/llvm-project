@@ -758,7 +758,7 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
         std::min(cast<cir::VectorType>(ops[0].getType()).getSize(),
                  cast<cir::VectorType>(ops[2].getType()).getSize());
     ops[3] = getMaskVecValue(builder, loc, ops[3], minElts);
-    return emitIntrinsicCallOp(builder, loc, intrinsicName.str(),
+    return emitIntrinsicCallOp(builder, loc, intrinsicName,
                                convertType(expr->getType()), ops);
   }
   case X86::BI__builtin_ia32_scattersiv8df:
@@ -784,7 +784,94 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI__builtin_ia32_scattersiv4sf:
   case X86::BI__builtin_ia32_scattersiv4si:
   case X86::BI__builtin_ia32_scattersiv8sf:
-  case X86::BI__builtin_ia32_scattersiv8si:
+  case X86::BI__builtin_ia32_scattersiv8si: {
+    llvm::StringRef intrinsicName;
+    switch (builtinID) {
+    default:
+      llvm_unreachable("Unexpected builtin");
+    case X86::BI__builtin_ia32_scattersiv8df:
+      intrinsicName = "x86.avx512.mask.scatter.dpd.512";
+      break;
+    case X86::BI__builtin_ia32_scattersiv16sf:
+      intrinsicName = "x86.avx512.mask.scatter.dps.512";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv8df:
+      intrinsicName = "x86.avx512.mask.scatter.qpd.512";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv16sf:
+      intrinsicName = "x86.avx512.mask.scatter.qps.512";
+      break;
+    case X86::BI__builtin_ia32_scattersiv8di:
+      intrinsicName = "x86.avx512.mask.scatter.dpq.512";
+      break;
+    case X86::BI__builtin_ia32_scattersiv16si:
+      intrinsicName = "x86.avx512.mask.scatter.dpi.512";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv8di:
+      intrinsicName = "x86.avx512.mask.scatter.qpq.512";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv16si:
+      intrinsicName = "x86.avx512.mask.scatter.qpi.512";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv2df:
+      intrinsicName = "x86.avx512.mask.scatterdiv2.df";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv2di:
+      intrinsicName = "x86.avx512.mask.scatterdiv2.di";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv4df:
+      intrinsicName = "x86.avx512.mask.scatterdiv4.df";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv4di:
+      intrinsicName = "x86.avx512.mask.scatterdiv4.di";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv4sf:
+      intrinsicName = "x86.avx512.mask.scatterdiv4.sf";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv4si:
+      intrinsicName = "x86.avx512.mask.scatterdiv4.si";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv8sf:
+      intrinsicName = "x86.avx512.mask.scatterdiv8.sf";
+      break;
+    case X86::BI__builtin_ia32_scatterdiv8si:
+      intrinsicName = "x86.avx512.mask.scatterdiv8.si";
+      break;
+    case X86::BI__builtin_ia32_scattersiv2df:
+      intrinsicName = "x86.avx512.mask.scattersiv2.df";
+      break;
+    case X86::BI__builtin_ia32_scattersiv2di:
+      intrinsicName = "x86.avx512.mask.scattersiv2.di";
+      break;
+    case X86::BI__builtin_ia32_scattersiv4df:
+      intrinsicName = "x86.avx512.mask.scattersiv4.df";
+      break;
+    case X86::BI__builtin_ia32_scattersiv4di:
+      intrinsicName = "x86.avx512.mask.scattersiv4.di";
+      break;
+    case X86::BI__builtin_ia32_scattersiv4sf:
+      intrinsicName = "x86.avx512.mask.scattersiv4.sf";
+      break;
+    case X86::BI__builtin_ia32_scattersiv4si:
+      intrinsicName = "x86.avx512.mask.scattersiv4.si";
+      break;
+    case X86::BI__builtin_ia32_scattersiv8sf:
+      intrinsicName = "x86.avx512.mask.scattersiv8.sf";
+      break;
+    case X86::BI__builtin_ia32_scattersiv8si:
+      intrinsicName = "x86.avx512.mask.scattersiv8.si";
+      break;
+    }
+
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    unsigned minElts =
+        std::min(cast<cir::VectorType>(ops[2].getType()).getSize(),
+                 cast<cir::VectorType>(ops[3].getType()).getSize());
+    ops[1] = getMaskVecValue(builder, loc, ops[1], minElts);
+
+    return emitIntrinsicCallOp(builder, loc, intrinsicName,
+                               convertType(expr->getType()), ops);
+  }
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:
   case X86::BI__builtin_ia32_vextractf128_si256:
