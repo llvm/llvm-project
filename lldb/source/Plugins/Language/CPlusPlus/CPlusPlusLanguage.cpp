@@ -551,7 +551,7 @@ bool CPlusPlusLanguage::CxxMethodName::NameMatches(llvm::StringRef full_name,
 
   while (f_idx < full_name.size()) {
     const char in_char = full_name[f_idx];
-    // input may have extra abi_tag / template so we still loop
+    // Input may have extra abi_tag / template so we still loop.
     const bool match_empty = p_idx >= pattern.size();
     const char ma_char = match_empty ? '\0' : pattern[p_idx];
 
@@ -568,7 +568,7 @@ bool CPlusPlusLanguage::CxxMethodName::NameMatches(llvm::StringRef full_name,
           if (match_tag_end != llvm::StringRef::npos) {
             const size_t ma_tag_len = match_tag_end - p_idx + 1;
 
-            // match may only have only one of the input's abi_tags.
+            // Match may only have only one of the input's abi_tags.
             // we only skip if the abi_tag matches.
             if ((in_tag_len == ma_tag_len) &&
                 full_name.substr(f_idx, in_tag_len) ==
@@ -583,7 +583,7 @@ bool CPlusPlusLanguage::CxxMethodName::NameMatches(llvm::StringRef full_name,
       }
     }
 
-    // skip template_tags.
+    // Skip template_tags.
     if (options.skip_templates && in_char == open_angle &&
         ma_char != open_angle) {
       size_t depth = 1;
@@ -609,7 +609,7 @@ bool CPlusPlusLanguage::CxxMethodName::NameMatches(llvm::StringRef full_name,
       }
     }
 
-    // input contains characters that are not in match.
+    // Input contains characters that are not in match.
     if (match_empty || in_char != ma_char)
       return false;
 
@@ -621,6 +621,26 @@ bool CPlusPlusLanguage::CxxMethodName::NameMatches(llvm::StringRef full_name,
   return p_idx == pattern.size();
 }
 
+/// Extracts the next context component from a C++ scope resolution string.
+///
+/// This function parses a C++ qualified name (e.g., "ns::Class<T>::method")
+/// from right to left, extracting one scope context at a time. It handles
+/// nested templates, abi_tags and array brackets while searching
+/// for scope resolution operators (::).
+/// \param context The full context string to parse (e.g.,
+/// "std::vector<int>::size")
+/// \param end_pos [in,out] The position to start searching backwards from. On
+///                 return, contains the position of the previous scope
+///                 separator (::), or llvm::StringRef::npos if no more
+///                 components exist.
+///
+/// Example:
+///   llvm::StringRef scope = "ns::inner::Class<int>";
+///   size_t pos = scope.size();
+///
+///   ctx1 = NextContext(context, pos); // returns "Class<int>", pos = 9
+///   ctx2 = NextContext(context, pos); // returns "inner", pos = 2
+///   ctx3 = NextContext(context, pos); // returns "ns", pos = StringRef::npos
 static llvm::StringRef NextContext(llvm::StringRef context, size_t &end_pos) {
   if (end_pos == llvm::StringRef::npos)
     return {};
@@ -643,7 +663,7 @@ static llvm::StringRef NextContext(llvm::StringRef context, size_t &end_pos) {
       return context.substr(idx + 1, end_pos - idx);
     }
 
-    // in contexts you cannot have a standlone bracket such
+    // In contexts, you cannot have a standlone bracket such
     // as `operator<` use only one variable to track depth.
     if (val == '<' || val == '(' || val == '[')
       depth++;
@@ -682,8 +702,8 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsContext(
     if (next_pat_pos == llvm::StringRef::npos)
       return false;
 
-    // context does not match. advance the full_name cursor (consume the
-    // current full_namecontext) and resest the path cursor to the beginning.
+    // context does not match. advance the full_name pos (consume the
+    // current full_name context) and reset the pat_pos to the beginning.
     full_pos = next_full_pos;
     pat_pos = 0;
   }
