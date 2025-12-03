@@ -268,16 +268,14 @@ WHOLE_TYPE_IN_MACRO Macro2;
 #define WHOLE_DECLARATION_IN_MACRO typename NotDependent::R Macro3
 WHOLE_DECLARATION_IN_MACRO;
 
-template<typename T> struct ListWrapper {};
-template<typename T>
-class ClassWrapper {
-public:
-    using Argument = ListWrapper<T>;
-    ListWrapper<Argument> arguments;
-    ListWrapper<Argument> getArguments() const;
+template <typename T> struct Wrapper {};
+template <typename T>
+struct ClassWrapper {
+    using R = T;
+    Wrapper<R> f();
 };
-template<typename T>
-ListWrapper<typename ClassWrapper<T>::Argument> ClassWrapper<T>::getArguments() const {
-    return arguments;
+
+template <typename T>
+Wrapper<typename ClassWrapper<T>::R> ClassWrapper<T>::f() {
+    return {};
 }
-// CHECK-NOT: warning: redundant 'typename' [readability-redundant-typename]
