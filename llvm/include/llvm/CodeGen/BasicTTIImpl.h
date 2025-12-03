@@ -1571,10 +1571,15 @@ public:
   }
 
   InstructionCost
-  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const override {
+  getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                         TTI::TargetCostKind CostKind) const override {
+    unsigned Opcode = (MICA.getID() == Intrinsic::masked_gather ||
+                       MICA.getID() == Intrinsic::vp_gather)
+                          ? Instruction::Load
+                          : Instruction::Store;
+    Type *DataTy = MICA.getDataType();
+    bool VariableMask = MICA.getVariableMask();
+    Align Alignment = MICA.getAlignment();
     return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
                                        true, CostKind);
   }
@@ -1594,16 +1599,20 @@ public:
                                        /*IsGatherScatter*/ true, CostKind);
   }
 
-  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override {
+  InstructionCost
+  getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                         TTI::TargetCostKind CostKind) const override {
     // For a target without strided memory operations (or for an illegal
     // operation type on one which does), assume we lower to a gather/scatter
     // operation.  (Which may in turn be scalarized.)
-    return thisT()->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                           Alignment, CostKind, I);
+    unsigned IID = MICA.getID() == Intrinsic::experimental_vp_strided_load
+                       ? Intrinsic::masked_gather
+                       : Intrinsic::masked_scatter;
+    return thisT()->getGatherScatterOpCost(
+        MemIntrinsicCostAttributes(IID, MICA.getDataType(), MICA.getPointer(),
+                                   MICA.getVariableMask(), MICA.getAlignment(),
+                                   MICA.getInst()),
+        CostKind);
   }
 
   InstructionCost getInterleavedMemoryOpCost(
@@ -3053,32 +3062,16 @@ public:
   getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
                            TTI::TargetCostKind CostKind) const override {
     unsigned Id = MICA.getID();
-    Type *DataTy = MICA.getDataType();
-    const Value *Ptr = MICA.getPointer();
-    const Instruction *I = MICA.getInst();
-    bool VariableMask = MICA.getVariableMask();
-    Align Alignment = MICA.getAlignment();
 
     switch (Id) {
     case Intrinsic::experimental_vp_strided_load:
-    case Intrinsic::experimental_vp_strided_store: {
-      unsigned Opcode = Id == Intrinsic::experimental_vp_strided_load
-                            ? Instruction::Load
-                            : Instruction::Store;
-      return thisT()->getStridedMemoryOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                             Alignment, CostKind, I);
-    }
+    case Intrinsic::experimental_vp_strided_store:
+      return thisT()->getStridedMemoryOpCost(MICA, CostKind);
     case Intrinsic::masked_scatter:
     case Intrinsic::masked_gather:
     case Intrinsic::vp_scatter:
-    case Intrinsic::vp_gather: {
-      unsigned Opcode =
-          (Id == Intrinsic::masked_gather || Id == Intrinsic::vp_gather)
-              ? Instruction::Load
-              : Instruction::Store;
-      return thisT()->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                             Alignment, CostKind, I);
-    }
+    case Intrinsic::vp_gather:
+      return thisT()->getGatherScatterOpCost(MICA, CostKind);
     case Intrinsic::masked_load:
     case Intrinsic::masked_store:
       return thisT()->getMaskedMemoryOpCost(MICA, CostKind);
