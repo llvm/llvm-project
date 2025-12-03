@@ -48,15 +48,11 @@ myst_heading_anchors = 6
 
 # Enable myst's substitution extension since markdown files cannot use the
 # |version| and |release| substitutions available to .rst files.
-myst_enable_extensions = [
-    'substitution'
-]
+myst_enable_extensions = ["substitution"]
 
 # The substitutions to use in markdown files. This contains unconditional
 # substitutions, but more may be added once the configuration is obtained.
-myst_substitutions = {
-    'in_progress': "(In-Progress) " if tags.has("PreRelease") else ""
-}
+myst_substitutions = {"in_progress": "(In-Progress) " if tags.has("PreRelease") else ""}
 
 # It is not clear who calls setup and when. In any case, when it is called, the
 # configurations options are available. These include, among the other things,
@@ -66,10 +62,9 @@ myst_substitutions = {
 # See llvm/cmake/modules/AddSphinxTarget.cmake for details on how sphinx-build
 # is invoked.
 def setup(sphinx):
-    sphinx.config.myst_substitutions.update({
-        'release': sphinx.config.release,
-        'version': sphinx.config.version
-    })
+    sphinx.config.myst_substitutions.update(
+        {'release': sphinx.config.release, 'version': sphinx.config.version}
+    )
 
 import sphinx
 
