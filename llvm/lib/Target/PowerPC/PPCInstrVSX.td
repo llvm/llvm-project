@@ -2762,13 +2762,21 @@ def : Pat<(v1i128 (vselect v1i128:$vA, v1i128:$vB, v1i128:$vC)),
 
 def : Pat<(v4f32 (fmaxnum_ieee v4f32:$src1, v4f32:$src2)),
           (v4f32 (XVMAXSP $src1, $src2))>;
+def : Pat<(v4f32 (any_fmaxnum v4f32:$src1, v4f32:$src2)),
+          (v4f32 (XVMAXSP $src1, $src2))>;
 def : Pat<(v4f32 (fminnum_ieee v4f32:$src1, v4f32:$src2)),
+          (v4f32 (XVMINSP $src1, $src2))>;
+def : Pat<(v4f32 (any_fminnum v4f32:$src1, v4f32:$src2)),
           (v4f32 (XVMINSP $src1, $src2))>;
 def : Pat<(v4f32 (fcanonicalize v4f32:$src1)),
           (v4f32 (XVMAXSP $src1, $src1))>;
 def : Pat<(v2f64 (fmaxnum_ieee v2f64:$src1, v2f64:$src2)),
           (v2f64 (XVMAXDP $src1, $src2))>;
+def : Pat<(v2f64 (any_fmaxnum v2f64:$src1, v2f64:$src2)),
+          (v2f64 (XVMAXDP $src1, $src2))>;
 def : Pat<(v2f64 (fminnum_ieee v2f64:$src1, v2f64:$src2)),
+          (v2f64 (XVMINDP $src1, $src2))>;
+def : Pat<(v2f64 (any_fminnum v2f64:$src1, v2f64:$src2)),
           (v2f64 (XVMINDP $src1, $src2))>;
 def : Pat<(v2f64 (fcanonicalize v2f64:$src1)),
           (v2f64 (XVMAXDP $src1, $src1))>;
