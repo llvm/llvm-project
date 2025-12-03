@@ -47,6 +47,9 @@ void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceLocation ElaboratedKeywordLoc = [&] {
     if (const auto *NonDependentTypeLoc =
             Result.Nodes.getNodeAs<TypeLoc>("nonDependentTypeLoc")) {
+      if (NonDependentTypeLoc->getType()->isDependentType())
+        return SourceLocation();
+
       if (const auto TL = NonDependentTypeLoc->getAs<TypedefTypeLoc>())
         return TL.getElaboratedKeywordLoc();
 
@@ -59,8 +62,7 @@ void RedundantTypenameCheck::check(const MatchFinder::MatchResult &Result) {
 
       if (const auto TL =
               NonDependentTypeLoc->getAs<TemplateSpecializationTypeLoc>())
-        if (!TL.getType()->isDependentType())
-          return TL.getElaboratedKeywordLoc();
+        return TL.getElaboratedKeywordLoc();
     } else {
       TypeLoc InnermostTypeLoc =
           *Result.Nodes.getNodeAs<TypeLoc>("dependentTypeLoc");
