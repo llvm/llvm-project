@@ -1007,9 +1007,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 
   switch (getOpcode()) {
   case Instruction::Select: {
-    // TODO: It may be possible to improve this by analyzing where the
-    // condition operand comes from.
-    CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+    llvm::CmpPredicate Pred = CmpInst::BAD_ICMP_PREDICATE;
+    match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue()));
     auto *CondTy = Ctx.Types.inferScalarType(getOperand(0));
     auto *VecTy = Ctx.Types.inferScalarType(getOperand(1));
     if (!vputils::onlyFirstLaneUsed(this)) {
