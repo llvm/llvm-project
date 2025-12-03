@@ -43,11 +43,13 @@
 // RUN: %clang -fsanitize=fuzzer --target=i386-unknown-linux -stdlib=libc++ -static-libstdc++ %s -### 2>&1 | FileCheck --check-prefixes=CHECK-LIBCXX-STATIC %s
 // CHECK-LIBCXX-STATIC: "-Bstatic" "-lc++"
 
-// Check that we add required sanitizer dependencies when dynamically linking
-// the sanitizer runtime (e.g. libFuzzer uses ceilf in libm).
+// Check that we add required dependencies when linking the sanitizer runtime
+// (e.g. libFuzzer uses sqrt in libm).
 //
 // RUN: %clang -fsanitize=fuzzer -shared-libsan --target=x86_64-linux-gnu %s -### 2>&1 | FileCheck --check-prefixes=CHECK-SHARED-LIBSAN %s
 // CHECK-SHARED-LIBSAN: -lm
+// RUN: %clang -fsanitize=fuzzer -static-libsan --target=x86_64-linux-gnu %s -### 2>&1 | FileCheck --check-prefixes=CHECK-STATIC-LIBSAN %s
+// CHECK-STATIC-LIBSAN: -lm
 
 int LLVMFuzzerTestOneInput(const char *Data, long Size) {
   return 0;
