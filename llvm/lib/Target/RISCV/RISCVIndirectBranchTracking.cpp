@@ -20,7 +20,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 
-#define DEBUG_TYPE "riscv-indrect-branch-tracking"
+#define DEBUG_TYPE "riscv-indirect-branch-tracking"
 #define PASS_NAME "RISC-V Indirect Branch Tracking"
 
 using namespace llvm;
@@ -61,6 +61,16 @@ static void emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII,
       .addImm(Label);
 }
 
+static bool IsCallReturnTwice(llvm::MachineOperand &MOp) {
+  if (!MOp.isGlobal())
+    return false;
+  auto *CalleeFn = dyn_cast<Function>(MOp.getGlobal());
+  if (!CalleeFn)
+    return false;
+  AttributeList Attrs = CalleeFn->getAttributes();
+  return Attrs.hasFnAttr(Attribute::ReturnsTwice);
+}
+
 bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
   const auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
@@ -97,6 +107,22 @@ bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
       if (MBB.getAlignment() < LpadAlign)
         MBB.setAlignment(LpadAlign);
       Changed = true;
+    }
+  }
+
+  // Check for calls to functions with ReturnsTwice attribute and insert
+  // LPAD after such calls
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
+      if (I->isCall() && I->getNumOperands() > 0) {
+        if (IsCallReturnTwice(I->getOperand(0))) {
+          auto NextI = std::next(I);
+          BuildMI(MBB, NextI, MBB.findDebugLoc(NextI), TII->get(RISCV::AUIPC),
+                  RISCV::X0)
+              .addImm(FixedLabel);
+          Changed = true;
+        }
+      }
     }
   }
 
