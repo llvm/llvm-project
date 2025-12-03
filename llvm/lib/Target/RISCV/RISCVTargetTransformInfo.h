@@ -144,6 +144,10 @@ public:
   bool shouldConsiderVectorizationRegPressure() const override { return true; }
 
   InstructionCost
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const override;
+
+  InstructionCost
   getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                         TTI::TargetCostKind CostKind) const override;
 
@@ -190,22 +194,17 @@ public:
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const override;
 
-  InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override;
+  InstructionCost
+  getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                         TTI::TargetCostKind CostKind) const override;
 
   InstructionCost
-  getExpandCompressMemoryOpCost(unsigned Opcode, Type *Src, bool VariableMask,
-                                Align Alignment, TTI::TargetCostKind CostKind,
-                                const Instruction *I = nullptr) const override;
+  getExpandCompressMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                TTI::TargetCostKind CostKind) const override;
 
-  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override;
+  InstructionCost
+  getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                         TTI::TargetCostKind CostKind) const override;
 
   InstructionCost
   getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const override;

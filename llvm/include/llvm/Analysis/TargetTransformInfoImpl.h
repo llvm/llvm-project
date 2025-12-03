@@ -852,24 +852,20 @@ public:
   }
 
   virtual InstructionCost
-  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const {
-    return 1;
-  }
-
-  virtual InstructionCost getExpandCompressMemoryOpCost(
-      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
-      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) const {
+  getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                         TTI::TargetCostKind CostKind) const {
     return 1;
   }
 
   virtual InstructionCost
-  getStridedMemoryOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const {
+  getExpandCompressMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                TTI::TargetCostKind CostKind) const {
+    return 1;
+  }
+
+  virtual InstructionCost
+  getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                         TTI::TargetCostKind CostKind) const {
     return InstructionCost::getInvalid();
   }
 
@@ -929,6 +925,11 @@ public:
     return 1;
   }
 
+  virtual InstructionCost
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const {
+    return 1;
+  }
   virtual InstructionCost getCallInstrCost(Function *F, Type *RetTy,
                                            ArrayRef<Type *> Tys,
                                            TTI::TargetCostKind CostKind) const {

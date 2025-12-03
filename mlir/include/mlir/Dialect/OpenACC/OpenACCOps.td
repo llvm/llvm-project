@@ -3232,6 +3232,18 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
       OptionalAttr<DeviceTypeArrayAttr>:$gangDimDeviceType);
 
   let extraClassDeclaration = [{
+    // 'create' function to generate an 'empty' routine.
+    static RoutineOp create(::mlir::OpBuilder & builder,
+                            ::mlir::Location location,
+                            ::llvm::StringRef sym_name,
+                            mlir::SymbolRefAttr func_name, bool implicit) {
+      return create(builder, location, sym_name, func_name, /*bindIDName=*/{},
+                    /*bindStrName=*/{}, /*bindIdNameDeviceType=*/{},
+                    /*bindStrnameDeviceType=*/{}, /*worker=*/{}, /*vector=*/{},
+                    /*seq=*/{}, /*nohost=*/false, implicit, /*gang=*/{},
+                    /*gangDim=*/{}, /*gangDimDeviceType=*/{});
+    }
+
     static StringRef getGangDimKeyword() { return "dim"; }
 
     /// Return true if the op has the worker attribute for the
@@ -3267,6 +3279,13 @@ def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
 
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue();
     std::optional<::std::variant<mlir::SymbolRefAttr, mlir::StringAttr>> getBindNameValue(mlir::acc::DeviceType deviceType);
+
+    // Add an entry to the 'seq' attribute for each additional device types.
+    void addSeq(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add an entry to the 'vector' attribute for each additional device types.
+    void addVector(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    // Add an entry to the 'worker' attribute for each additional device types.
+    void addWorker(MLIRContext *, llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{
