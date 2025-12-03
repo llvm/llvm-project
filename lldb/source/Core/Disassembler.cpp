@@ -309,7 +309,7 @@ std::vector<std::string> VariableAnnotator::Annotate(Instruction &inst) {
   std::vector<std::string> events;
   events.reserve(structured_annotations.size());
 
-  for (const auto &annotation : structured_annotations) {
+  for (const VariableAnnotation &annotation : structured_annotations) {
     const llvm::StringRef location =
         (annotation.location_description == kUndefLocation
              ? llvm::StringRef(kUndefLocationFormatted)
