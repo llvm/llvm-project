@@ -250,7 +250,7 @@ jobs:
       id: build-windows
       if: runner.os == 'Windows'
       env:
-        INSTALLER_ARCH: 
+        LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
       run: |
         subst S: ${{ github.workspace }}
         cd S:\llvm\utils\release\
