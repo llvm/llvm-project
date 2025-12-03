@@ -61,7 +61,10 @@ public:
 
   static NestedBuildNamespace makeTU(llvm::StringRef CompilationId);
 
-  NestedBuildNamespace makeQualified(NestedBuildNamespace Namespace) {
+  /// Creates a new NestedBuildNamespace by appending additional namespace.
+  ///
+  /// \param Namespace The namespace to append.
+  NestedBuildNamespace makeQualified(NestedBuildNamespace Namespace) const {
     auto Copy = *this;
     Copy.Namespaces.reserve(Copy.Namespaces.size() + Namespace.Namespaces.size());
     llvm::append_range(Copy.Namespaces, Namespace.Namespaces);

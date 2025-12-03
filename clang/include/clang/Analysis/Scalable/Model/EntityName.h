@@ -34,7 +34,10 @@ public:
   bool operator!=(const EntityName& Other) const;
   bool operator<(const EntityName& Other) const;
 
-  EntityName makeQualified(NestedBuildNamespace Namespace);
+  /// Creates a new EntityName with additional build namespace qualification.
+  ///
+  /// \param Namespace The namespace steps to append to this entity's namespace.
+  EntityName makeQualified(NestedBuildNamespace Namespace) const;
 
   friend class LinkUnitResolution;
   friend class SerializationFormat;

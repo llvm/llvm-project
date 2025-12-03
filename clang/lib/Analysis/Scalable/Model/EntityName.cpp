@@ -32,7 +32,7 @@ bool EntityName::operator<(const EntityName& Other) const {
   return Namespace < Other.Namespace;
 }
 
-EntityName EntityName::makeQualified(NestedBuildNamespace Namespace) {
+EntityName EntityName::makeQualified(NestedBuildNamespace Namespace) const {
   auto Copy = *this;
   Copy.Namespace = Copy.Namespace.makeQualified(Namespace);
 
