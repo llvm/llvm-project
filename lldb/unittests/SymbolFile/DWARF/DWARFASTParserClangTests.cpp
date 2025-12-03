@@ -67,7 +67,7 @@ public:
 
     assert(llvm::isa_and_nonnull<DWARFASTParserClang>(parser));
 
-    return *llvm::dyn_cast<DWARFASTParserClang>(parser);
+    return *llvm::cast<DWARFASTParserClang>(parser);
   }
 
   TypeSystemClang &GetTypeSystem() {
