@@ -87,8 +87,8 @@ runs:
       if: steps.artifact-url.outputs.urls != ''
       id: download-artifact
       run: |
-        artifact_urls = (${{ steps.artifact-url.outputs.urls }})
-        artifact_names = (${{ steps.artifact-url.outputs.names }})
+        artifact_urls=(${{ steps.artifact-url.outputs.urls }})
+        artifact_names=(${{ steps.artifact-url.outputs.names }})
         for i in "${!artifact_urls[@]}"; do
           curl -L -o "${artifact_names[$i]}.zip" "${artifact_urls[$i]}"
         done
