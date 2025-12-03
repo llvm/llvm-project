@@ -765,7 +765,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   FPM.addPass(DSEPass());
   FPM.addPass(MoveAutoInitPass());
-  FPM.addPass(MoveEntryAllocaInitPass());
 
   FPM.addPass(createFunctionToLoopPassAdaptor(
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
@@ -2141,7 +2140,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Nuke dead stores.
   MainFPM.addPass(DSEPass());
   MainFPM.addPass(MoveAutoInitPass());
-  MainFPM.addPass(MoveEntryAllocaInitPass());
   MainFPM.addPass(MergedLoadStoreMotionPass());
 
   invokeVectorizerStartEPCallbacks(MainFPM, Level);

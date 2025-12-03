@@ -226,23 +226,8 @@ PreservedAnalyses MoveAutoInitPass::run(Function &F,
   auto ShouldProcess = [](const Instruction &I) -> bool {
     return hasAutoInitMetadata(I);
   };
-  if (!runMoveAutoInit(F, DT, MSSA, ShouldProcess))
-    return PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<MemorySSAAnalysis>();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
-}
-
-PreservedAnalyses MoveEntryAllocaInitPass::run(Function &F,
-                                               FunctionAnalysisManager &AM) {
-
-  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  auto ShouldProcess = [](const Instruction &) { return true; };
-  if (!runMoveAutoInit(F, DT, MSSA, ShouldProcess))
+  if (!runMoveAutoInit(F, DT, MSSA, ShouldProcess) &&
+      !runMoveAutoInit(F, DT, MSSA, [](const Instruction &) { return true; }))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
