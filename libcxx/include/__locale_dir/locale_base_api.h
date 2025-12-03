@@ -106,12 +106,8 @@
 
 #if _LIBCPP_HAS_LOCALIZATION
 
-#  if defined(__APPLE__)
-#    include <__locale_dir/support/apple.h>
-#  elif defined(__FreeBSD__)
-#    include <__locale_dir/support/freebsd.h>
-#  elif defined(__NetBSD__)
-#    include <__locale_dir/support/netbsd.h>
+#  if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#    include <__locale_dir/support/bsd_like.h>
 #  elif defined(_LIBCPP_MSVCRT_LIKE)
 #    include <__locale_dir/support/windows.h>
 #  elif defined(__Fuchsia__)
