@@ -205,8 +205,8 @@ New checks
 - New :doc:`bugprone-unsafe-format-string
   <clang-tidy/checks/bugprone/unsafe-format-string>` check.
 
-  Detects usage of vulnerable printf and scanf-like format 
-  string functions  with unbounded ``%s`` specifiers that can cause buffer overflows.
+  Detects usage of vulnerable ``printf`` and ``scanf``-like format string 
+  functions with unbounded ``%s`` specifiers that can cause buffer overflows.
 
 - New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`

@@ -3,8 +3,8 @@
 bugprone-unsafe-format-string
 =============================
 
-Detects usage of vulnerable format string functions with unbounded ``%s``
-specifiers that can cause buffer overflows.
+Detects usage of vulnerable ``printf`` and ``scanf``-like format string 
+functions with unbounded ``%s`` specifiers that can cause buffer overflows.
 
 The check identifies calls to format string functions like ``sprintf``, ``scanf``,
 and their variants that use ``%s`` format specifiers without proper limits.
@@ -71,11 +71,14 @@ Configuration
 
 The checker offers 2 configuration options.
 
-* `CustomPrintfFunctions` The user can specify own printf-like functions with dangerous format string parameter.
-* `CustomScanfFunctions` The user can specify own scanf-like functions with dangerous format string parameter.
+* `CustomPrintfFunctions` The user can specify own printf-like functions
+  with dangerous format string parameter. Default: ``""``.
+* `CustomScanfFunctions` The user can specify own scanf-like functions
+  with dangerous format string parameter. Default: ``""``.
 
 Format:
 Both options have the following format.
+
 .. code::
   
    bugprone-unsafe-functions.CustomPrintfFunctions="

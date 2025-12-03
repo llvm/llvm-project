@@ -116,7 +116,7 @@ void UnsafeFormatStringCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 const StringLiteral *UnsafeFormatStringCheck::getFormatLiteral(
     const CallExpr *Call, const std::vector<CheckedFunction> &CustomFunctions) {
-  auto *FD = cast<FunctionDecl>(Call->getDirectCallee());
+  const auto *FD = cast<FunctionDecl>(Call->getDirectCallee());
   if (!FD)
     return nullptr;
   for (const auto &Entry : CustomFunctions) {
