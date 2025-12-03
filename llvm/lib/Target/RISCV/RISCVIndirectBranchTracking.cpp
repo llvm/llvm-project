@@ -16,6 +16,7 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -54,14 +55,16 @@ FunctionPass *llvm::createRISCVIndirectBranchTrackingPass() {
   return new RISCVIndirectBranchTracking();
 }
 
-static void emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII,
-                     uint32_t Label) {
-  auto I = MBB.begin();
+static void
+emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII, uint32_t Label,
+         MachineBasicBlock::iterator I = MachineBasicBlock::iterator{}) {
+  if (!I.isValid())
+    I = MBB.begin();
   BuildMI(MBB, I, MBB.findDebugLoc(I), TII->get(RISCV::AUIPC), RISCV::X0)
       .addImm(Label);
 }
 
-static bool IsCallReturnTwice(llvm::MachineOperand &MOp) {
+static bool isCallReturnTwice(MachineOperand &MOp) {
   if (!MOp.isGlobal())
     return false;
   auto *CalleeFn = dyn_cast<Function>(MOp.getGlobal());
@@ -114,14 +117,11 @@ bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
   // LPAD after such calls
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
-      if (I->isCall() && I->getNumOperands() > 0) {
-        if (IsCallReturnTwice(I->getOperand(0))) {
-          auto NextI = std::next(I);
-          BuildMI(MBB, NextI, MBB.findDebugLoc(NextI), TII->get(RISCV::AUIPC),
-                  RISCV::X0)
-              .addImm(FixedLabel);
-          Changed = true;
-        }
+      if (I->isCall() && I->getNumOperands() > 0 &&
+          isCallReturnTwice(I->getOperand(0))) {
+        auto NextI = std::next(I);
+        emitLpad(MBB, TII, FixedLabel, NextI);
+        Changed = true;
       }
     }
   }
