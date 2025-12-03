@@ -1404,6 +1404,12 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
     FpSZ += 8;
   int SavSZ = (IntSZ + FpSZ + 8 * 8 * RF.H() + 0xf) & ~0xf;
   int LocSZ = (RF.FrameSize() << 4) - SavSZ;
+  bool Homing = RF.H();
+
+  if (RF.H() && RF.RegI() == 0 && RF.RegF() == 0 && RF.CR() != 1) {
+    LocSZ += SavSZ;
+    Homing = false;
+  }
 
   if (RF.CR() == 2 || RF.CR() == 3) {
     SW.startLine() << "mov x29, sp\n";
@@ -1419,18 +1425,11 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
   } else if ((RF.CR() != 3 && RF.CR() != 2 && LocSZ > 0) || LocSZ > 512) {
     SW.startLine() << format("sub sp, sp, #%d\n", LocSZ);
   }
-  if (RF.H()) {
+  if (Homing) {
     SW.startLine() << format("stp x6, x7, [sp, #%d]\n", SavSZ - 16);
     SW.startLine() << format("stp x4, x5, [sp, #%d]\n", SavSZ - 32);
     SW.startLine() << format("stp x2, x3, [sp, #%d]\n", SavSZ - 48);
-    if (RF.RegI() > 0 || RF.RegF() > 0 || RF.CR() == 1) {
-      SW.startLine() << format("stp x0, x1, [sp, #%d]\n", SavSZ - 64);
-    } else {
-      // This case isn't documented; if neither RegI nor RegF nor CR=1
-      // have decremented the stack pointer by SavSZ, we need to do it here
-      // (as the final stack adjustment of LocSZ excludes SavSZ).
-      SW.startLine() << format("stp x0, x1, [sp, #-%d]!\n", SavSZ);
-    }
+    SW.startLine() << format("stp x0, x1, [sp, #%d]\n", SavSZ - 64);
   }
   int FloatRegs = RF.RegF() > 0 ? RF.RegF() + 1 : 0;
   for (int I = (FloatRegs + 1) / 2 - 1; I >= 0; I--) {
@@ -1457,10 +1456,14 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
       // The last register, an odd register without a pair
       if (RF.CR() == 1) {
         if (I == 0) { // If this is the only register pair
-          // CR=1 combined with RegI=1 doesn't map to a documented case;
-          // it doesn't map to any regular unwind info opcode, and the
-          // actual unwinder doesn't support it.
-          SW.startLine() << "INVALID!\n";
+          // CR=1 combined with RegI=1 maps to a special case; there's
+          // no unwind info opcode that saves a GPR together with LR
+          // with writeback to sp (no save_lrpair_x).
+          // Instead, this case expands to two instructions; a preceding
+          // (in prologue execution order) "sub sp, sp, #16", followed
+          // by a regular "stp x19, lr, [sp]" (save_lrpair).
+          SW.startLine() << format("stp x%d, lr, [sp]\n", 19);
+          SW.startLine() << format("sub sp, sp, #%d\n", SavSZ);
         } else
           SW.startLine() << format("stp x%d, lr, [sp, #%d]\n", 19 + 2 * I,
                                    16 * I);
