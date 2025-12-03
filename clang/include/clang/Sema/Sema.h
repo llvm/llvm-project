@@ -1200,6 +1200,15 @@ public:
   /// Scope actions.
   void ActOnTranslationUnitScope(Scope *S);
 
+  /// EnterScope - Start a new scope.
+  void EnterScope(unsigned ScopeFlags);
+
+  /// ExitScope - Pop a scope off the scope stack.
+  void ExitScope();
+
+  /// Delete the scope stack and all cached scopes.
+  void FreeScopes();
+
   /// Determine whether \param D is function like (function or function
   /// template) for parsing.
   bool isDeclaratorFunctionLike(Declarator &D);
@@ -1575,9 +1584,11 @@ private:
   sema::SemaPPCallbacks *SemaPPCallbackHandler;
 
   /// The parser's current scope.
-  ///
-  /// The parser maintains this state here.
   Scope *CurScope;
+
+  /// ScopeCache - Cache scopes to reduce malloc traffic.
+  static constexpr unsigned MaxScopeCacheSize = 16;
+  SmallVector<std::unique_ptr<Scope>, MaxScopeCacheSize> ScopeCache;
 
   mutable IdentifierInfo *Ident_super;
 
@@ -4218,7 +4229,7 @@ public:
   TopLevelStmtDecl *ActOnStartTopLevelStmtDecl(Scope *S);
   void ActOnFinishTopLevelStmtDecl(TopLevelStmtDecl *D, Stmt *Statement);
 
-  void ActOnPopScope(SourceLocation Loc, Scope *S);
+  void ActOnPopScope(Scope *S);
 
   /// ParsedFreeStandingDeclSpec - This method is invoked when a declspec with
   /// no declarator (e.g. "struct foo;") is parsed.

@@ -63,10 +63,10 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
     P->ConsumeAnyToken();
     // FIXME: Clang does not call ExitScope on finalizing the regular TU, we
     // might want to do that around HandleEndOfTranslationUnit.
-    P->ExitScope();
+    S.ExitScope();
     S.CurContext = nullptr;
     // Start a new PTU.
-    P->EnterScope(Scope::DeclScope);
+    S.EnterScope(Scope::DeclScope);
     S.ActOnTranslationUnitScope(P->getCurScope());
   }
 

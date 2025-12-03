@@ -1219,9 +1219,9 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   Declarator D(DS, ParsedAttributesView::none(), DeclaratorContext::LambdaExpr);
   TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
 
-  ParseScope LambdaScope(this, Scope::LambdaScope | Scope::DeclScope |
-                                   Scope::FunctionDeclarationScope |
-                                   Scope::FunctionPrototypeScope);
+  ParseScope LambdaScope(Actions, Scope::LambdaScope | Scope::DeclScope |
+                                      Scope::FunctionDeclarationScope |
+                                      Scope::FunctionPrototypeScope);
 
   Actions.PushLambdaScope();
   Actions.ActOnLambdaExpressionAfterIntroducer(Intro, getCurScope());
@@ -1249,7 +1249,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     D.takeAttributesAppending(Attributes);
   }
 
-  MultiParseScope TemplateParamScope(*this);
+  MultiParseScope TemplateParamScope(Actions);
   if (Tok.is(tok::less)) {
     Diag(Tok, getLangOpts().CPlusPlus20
                   ? diag::warn_cxx17_compat_lambda_template_parameter_list
@@ -1313,9 +1313,9 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   bool HasSpecifiers = false;
   SourceLocation MutableLoc;
 
-  ParseScope Prototype(this, Scope::FunctionPrototypeScope |
-                                 Scope::FunctionDeclarationScope |
-                                 Scope::DeclScope);
+  ParseScope Prototype(Actions, Scope::FunctionPrototypeScope |
+                                    Scope::FunctionDeclarationScope |
+                                    Scope::DeclScope);
 
   // Parse parameter-declaration-clause.
   SmallVector<DeclaratorChunk::ParamInfo, 16> ParamInfo;
@@ -1469,7 +1469,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   // it.
   unsigned ScopeFlags = Scope::BlockScope | Scope::FnScope | Scope::DeclScope |
                         Scope::CompoundStmtScope;
-  ParseScope BodyScope(this, ScopeFlags);
+  ParseScope BodyScope(Actions, ScopeFlags);
 
   Actions.ActOnStartOfLambdaDefinition(Intro, D, DS);
 
@@ -3139,8 +3139,8 @@ ExprResult Parser::ParseRequiresExpression() {
   BalancedDelimiterTracker Parens(*this, tok::l_paren);
   if (Tok.is(tok::l_paren)) {
     // requirement parameter list is present.
-    ParseScope LocalParametersScope(this, Scope::FunctionPrototypeScope |
-                                    Scope::DeclScope);
+    ParseScope LocalParametersScope(Actions, Scope::FunctionPrototypeScope |
+                                                 Scope::DeclScope);
     Parens.consumeOpen();
     if (!Tok.is(tok::r_paren)) {
       ParsedAttributes FirstArgAttrs(getAttrFactory());
@@ -3169,7 +3169,7 @@ ExprResult Parser::ParseRequiresExpression() {
   EnterExpressionEvaluationContext Ctx(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
 
-  ParseScope BodyScope(this, Scope::DeclScope);
+  ParseScope BodyScope(Actions, Scope::DeclScope);
   // Create a separate diagnostic pool for RequiresExprBodyDecl.
   // Dependent diagnostics are attached to this Decl and non-depenedent
   // diagnostics are surfaced after this parse.

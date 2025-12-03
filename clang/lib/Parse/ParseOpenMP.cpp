@@ -246,9 +246,9 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
   unsigned I = 0, E = ReductionTypes.size();
   for (Decl *D : DRD.get()) {
     TentativeParsingAction TPA(*this);
-    ParseScope OMPDRScope(this, Scope::FnScope | Scope::DeclScope |
-                                    Scope::CompoundStmtScope |
-                                    Scope::OpenMPDirectiveScope);
+    ParseScope OMPDRScope(Actions, Scope::FnScope | Scope::DeclScope |
+                                       Scope::CompoundStmtScope |
+                                       Scope::OpenMPDirectiveScope);
     // Parse <combiner> expression.
     Actions.OpenMP().ActOnOpenMPDeclareReductionCombinerStart(getCurScope(), D);
     ExprResult CombinerResult = Actions.ActOnFinishFullExpr(
@@ -282,9 +282,9 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
           !T.expectAndConsume(diag::err_expected_lparen_after, "initializer") &&
           IsCorrect;
       if (Tok.isNot(tok::annot_pragma_openmp_end)) {
-        ParseScope OMPDRScope(this, Scope::FnScope | Scope::DeclScope |
-                                        Scope::CompoundStmtScope |
-                                        Scope::OpenMPDirectiveScope);
+        ParseScope OMPDRScope(Actions, Scope::FnScope | Scope::DeclScope |
+                                           Scope::CompoundStmtScope |
+                                           Scope::OpenMPDirectiveScope);
         // Parse expression.
         VarDecl *OmpPrivParm =
             Actions.OpenMP().ActOnOpenMPDeclareReductionInitializerStart(
@@ -463,7 +463,7 @@ Parser::ParseOpenMPDeclareMapperDirective(AccessSpecifier AS) {
   SourceLocation Loc = Tok.getLocation();
   unsigned ScopeFlags = Scope::FnScope | Scope::DeclScope |
                         Scope::CompoundStmtScope | Scope::OpenMPDirectiveScope;
-  ParseScope OMPDirectiveScope(this, ScopeFlags);
+  ParseScope OMPDirectiveScope(Actions, ScopeFlags);
   Actions.OpenMP().StartOpenMPDSABlock(OMPD_declare_mapper, DirName,
                                        getCurScope(), Loc);
 
@@ -611,14 +611,15 @@ namespace {
 class FNContextRAII final {
   Parser &P;
   Sema::CXXThisScopeRAII *ThisScope;
-  Parser::MultiParseScope Scopes;
+  MultiParseScope Scopes;
   bool HasFunScope = false;
   FNContextRAII() = delete;
   FNContextRAII(const FNContextRAII &) = delete;
   FNContextRAII &operator=(const FNContextRAII &) = delete;
 
 public:
-  FNContextRAII(Parser &P, Parser::DeclGroupPtrTy Ptr) : P(P), Scopes(P) {
+  FNContextRAII(Parser &P, Parser::DeclGroupPtrTy Ptr)
+      : P(P), Scopes(P.getActions()) {
     Decl *D = *Ptr.get().begin();
     NamedDecl *ND = dyn_cast<NamedDecl>(D);
     RecordDecl *RD = dyn_cast_or_null<RecordDecl>(D->getDeclContext());
@@ -2332,7 +2333,7 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     ScopeFlags |= Scope::OpenMPLoopDirectiveScope;
   if (isOpenMPSimdDirective(DKind))
     ScopeFlags |= Scope::OpenMPSimdDirectiveScope;
-  ParseScope OMPDirectiveScope(this, ScopeFlags);
+  ParseScope OMPDirectiveScope(Actions, ScopeFlags);
   Actions.OpenMP().StartOpenMPDSABlock(DKind, DirName, Actions.getCurScope(),
                                        Loc);
 
@@ -2459,7 +2460,7 @@ StmtResult Parser::ParseOpenMPInformationalDirective(
   DeclarationNameInfo DirName;
   unsigned ScopeFlags = Scope::FnScope | Scope::DeclScope |
                         Scope::CompoundStmtScope | Scope::OpenMPDirectiveScope;
-  ParseScope OMPDirectiveScope(this, ScopeFlags);
+  ParseScope OMPDirectiveScope(Actions, ScopeFlags);
 
   Actions.OpenMP().StartOpenMPDSABlock(DKind, DirName, Actions.getCurScope(),
                                        Loc);
@@ -4748,7 +4749,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         // where iterator-specifier is [ iterator-type ] identifier =
         // range-specification
         HasIterator = true;
-        EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);
+        Actions.EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);
         ExprResult IteratorRes = ParseOpenMPIteratorsExpr();
         Data.DepModOrTailExpr = IteratorRes.get();
         // Parse ','
@@ -4861,7 +4862,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     // Handle optional iterator map modifier.
     if (Tok.is(tok::identifier) && PP.getSpelling(Tok) == "iterator") {
       HasIterator = true;
-      EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);
+      Actions.EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);
       Data.MapTypeModifiers.push_back(OMPC_MAP_MODIFIER_iterator);
       Data.MapTypeModifiersLoc.push_back(Tok.getLocation());
       ExprResult IteratorRes = ParseOpenMPIteratorsExpr();
@@ -4978,7 +4979,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       Tail = parseOpenMPAllocateClauseModifiers(*this, Kind, Data);
     } else {
       HasIterator = true;
-      EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);
+      Actions.EnterScope(Scope::OpenMPDirectiveScope | Scope::DeclScope);
       Tail = ParseOpenMPIteratorsExpr();
     }
     Tail = Actions.ActOnFinishFullExpr(Tail.get(), T.getOpenLocation(),
@@ -5068,7 +5069,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   const bool MayHaveTail = (Kind == OMPC_linear || Kind == OMPC_aligned);
   while (IsComma || (Tok.isNot(tok::r_paren) && Tok.isNot(tok::colon) &&
                      Tok.isNot(tok::annot_pragma_openmp_end))) {
-    ParseScope OMPListScope(this, Scope::OpenMPDirectiveScope);
+    ParseScope OMPListScope(Actions, Scope::OpenMPDirectiveScope);
     ColonProtectionRAIIObject ColonRAII(*this, MayHaveTail);
     if (!ParseOpenMPReservedLocator(Kind, Data, getLangOpts())) {
       // Parse variable
@@ -5183,7 +5184,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     Data.RLoc = T.getCloseLocation();
   // Exit from scope when the iterator is used in depend clause.
   if (HasIterator)
-    ExitScope();
+    Actions.ExitScope();
   return (Kind != OMPC_depend && Kind != OMPC_doacross && Kind != OMPC_map &&
           Vars.empty()) ||
          (MustHaveTail && !Data.DepModOrTailExpr && StepFound) ||

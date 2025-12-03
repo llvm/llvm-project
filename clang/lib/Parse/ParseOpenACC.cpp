@@ -1682,7 +1682,7 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
         getActions().OpenACC(), DirInfo.DirKind, DirInfo.DirLoc, {},
         DirInfo.Clauses);
     ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
-    ParseScope ACCScope(this, getOpenACCScopeFlags(DirInfo.DirKind));
+    ParseScope ACCScope(Actions, getOpenACCScopeFlags(DirInfo.DirKind));
 
     AssocStmt = getActions().OpenACC().ActOnAssociatedStmt(
         DirInfo.StartLoc, DirInfo.DirKind, DirInfo.AtomicKind, DirInfo.Clauses,
