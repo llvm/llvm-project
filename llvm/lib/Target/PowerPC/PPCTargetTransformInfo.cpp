@@ -905,6 +905,17 @@ InstructionCost PPCTTIImpl::getInterleavedMemoryOpCost(
 InstructionCost
 PPCTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                   TTI::TargetCostKind CostKind) const {
+/*
+  if (ICA.getID() == Intrinsic::vp_load) {
+    MemIntrinsicCostAttributes MICA(Intrinsic::masked_load, ICA.getReturnType(), Align(1), 0);
+    return getMaskedMemoryOpCost(MICA, CostKind);
+  }
+  if (ICA.getID() == Intrinsic::vp_store) {
+    Type *Ty = ICA.getArgTypes()[0];
+    MemIntrinsicCostAttributes MICA(Intrinsic::masked_store, ICA.getArgTypes()[0], Align(1), 0);
+    return getMaskedMemoryOpCost(MICA, CostKind);
+  }
+*/
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
@@ -1087,26 +1098,28 @@ bool PPCTTIImpl::hasActiveVectorLength() const {
   unsigned CPU = ST->getCPUDirective();
   if (!PPCEVL)
     return false;
-  if (CPU == PPC::DIR_PWR10 || CPU == PPC::DIR_PWR_FUTURE ||
-      (Pwr9EVL && CPU == PPC::DIR_PWR9))
-    return true;
-  return false;
+  return CPU == PPC::DIR_PWR10 || CPU == PPC::DIR_PWR_FUTURE ||
+         (Pwr9EVL && CPU == PPC::DIR_PWR9);
 }
 
 bool PPCTTIImpl::isLegalMaskedLoad(Type *DataType, Align Alignment,
-                                   unsigned AddressSpace) const {
+                                   unsigned AddressSpace,
+                                   TTI::MaskKind MaskKind) const {
   if (!hasActiveVectorLength())
     return false;
+
   auto IsLegalLoadWithLengthType = [](EVT VT) {
     if (VT != MVT::i64 && VT != MVT::i32 && VT != MVT::i16 && VT != MVT::i8)
       return false;
     return true;
   };
+
   return IsLegalLoadWithLengthType(TLI->getValueType(DL, DataType, true));
 }
 
 bool PPCTTIImpl::isLegalMaskedStore(Type *DataType, Align Alignment,
-                                    unsigned AddressSpace) const {
+                                    unsigned AddressSpace,
+                                    TTI::MaskKind MaskKind) const {
   return isLegalMaskedLoad(DataType, Alignment, AddressSpace);
 }
 
@@ -1137,8 +1150,8 @@ PPCTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   // Cost is 1 (scalar compare) + 1 (scalar select) +
   //  1 * vectorCostAdjustmentFactor (vector load with length)
   // Maybe + 1 (scalar shift)
-  InstructionCost Cost = 1 + 1 +
-      vectorCostAdjustmentFactor(Opcode, DataTy, nullptr);
+  InstructionCost Cost =
+      1 + 1 + vectorCostAdjustmentFactor(Opcode, DataTy, nullptr);
   if (ST->getCPUDirective() != PPC::DIR_PWR_FUTURE ||
       VecTy->getScalarSizeInBits() != 8)
     Cost += 1; // need shift for length

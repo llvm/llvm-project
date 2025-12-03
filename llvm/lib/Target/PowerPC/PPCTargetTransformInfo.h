@@ -155,10 +155,14 @@ public:
 
   bool hasActiveVectorLength() const override;
 
-  bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned AddressSpace) const override;
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned AddressSpace) const override;
+  bool
+  isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddressSpace,
+                     TTI::MaskKind MaskKind =
+                         TTI::MaskKind::VariableOrConstantMask) const override;
+  bool
+  isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
+                    TTI::MaskKind MaskKind =
+                        TTI::MaskKind::VariableOrConstantMask) const override;
 
   InstructionCost
   getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
