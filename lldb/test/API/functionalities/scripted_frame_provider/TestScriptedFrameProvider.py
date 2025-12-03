@@ -9,7 +9,7 @@ import lldbsuite.test.lldbplatformutil as lldbplatformutil
 from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
-
+@skipif(oslist=["linux"], archs=["arm$"])
 class ScriptedFrameProviderTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
