@@ -54,6 +54,7 @@ myst_enable_extensions = ["substitution"]
 # substitutions, but more may be added once the configuration is obtained.
 myst_substitutions = {"in_progress": "(In-Progress) " if tags.has("PreRelease") else ""}
 
+
 # It is not clear who calls setup and when. In any case, when it is called, the
 # configurations options are available. These include, among the other things,
 # the values of the -D options passed to sphinx-build. Populate the myst
