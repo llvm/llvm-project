@@ -94,7 +94,9 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
@@ -176,6 +178,8 @@ public:
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<MemorySSAWrapperPass>();
   }
 
   bool runOnFunction(Function &F) override;
@@ -186,8 +190,9 @@ class InferAddressSpacesImpl {
   Function *F = nullptr;
   const DominatorTree *DT = nullptr;
   const TargetTransformInfo *TTI = nullptr;
+  MemorySSA *MSSA = nullptr;
+  mutable BatchAAResults BatchAA;
   const DataLayout *DL = nullptr;
-
   /// Target specific address space which uses of should be replaced if
   /// possible.
   unsigned FlatAddrSpace = 0;
@@ -245,11 +250,19 @@ class InferAddressSpacesImpl {
 
   unsigned getPredicatedAddrSpace(const Value &PtrV,
                                   const Value *UserCtx) const;
+  unsigned
+  getLoadPtrAddrSpaceImpl(const LoadInst *LI, unsigned NewAS, MemoryAccess *MA,
+                          ValueToAddrSpaceMapTy &InferredAddrSpace,
+                          SmallPtrSet<MemoryAccess *, 8> Visited) const;
+  unsigned getLoadPtrAddrSpace(const LoadInst *LI,
+                               ValueToAddrSpaceMapTy &InferredAddrSpace) const;
 
 public:
   InferAddressSpacesImpl(AssumptionCache &AC, const DominatorTree *DT,
-                         const TargetTransformInfo *TTI, unsigned FlatAddrSpace)
-      : AC(AC), DT(DT), TTI(TTI), FlatAddrSpace(FlatAddrSpace) {}
+                         const TargetTransformInfo *TTI, MemorySSA *MSSA,
+                         AliasAnalysis *AA, unsigned FlatAddrSpace)
+      : AC(AC), DT(DT), TTI(TTI), MSSA(MSSA), BatchAA(*AA),
+        FlatAddrSpace(FlatAddrSpace) {}
   bool run(Function &F);
 };
 
@@ -261,6 +274,8 @@ INITIALIZE_PASS_BEGIN(InferAddressSpaces, DEBUG_TYPE, "Infer address spaces",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(InferAddressSpaces, DEBUG_TYPE, "Infer address spaces",
                     false, false)
 
@@ -327,6 +342,9 @@ static bool isAddressExpression(const Value &V, const DataLayout &DL,
   case Instruction::AddrSpaceCast:
   case Instruction::GetElementPtr:
     return true;
+  case Instruction::Load:
+    return TTI->getAssumedLiveOnEntryDefAddrSpace(&V) !=
+           UninitializedAddressSpace;
   case Instruction::Select:
     return Op->getType()->isPtrOrPtrVectorTy();
   case Instruction::Call: {
@@ -360,6 +378,8 @@ getPointerOperands(const Value &V, const DataLayout &DL,
   case Instruction::AddrSpaceCast:
   case Instruction::GetElementPtr:
     return {Op.getOperand(0)};
+  case Instruction::Load:
+    return {};
   case Instruction::Select:
     return {Op.getOperand(1), Op.getOperand(2)};
   case Instruction::Call: {
@@ -561,9 +581,11 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
       PushPtrOperand(GEP->getPointerOperand());
     } else if (auto *LI = dyn_cast<LoadInst>(&I))
       PushPtrOperand(LI->getPointerOperand());
-    else if (auto *SI = dyn_cast<StoreInst>(&I))
+    else if (auto *SI = dyn_cast<StoreInst>(&I)) {
       PushPtrOperand(SI->getPointerOperand());
-    else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
+      if (SI->getValueOperand()->getType()->isPtrOrPtrVectorTy())
+        PushPtrOperand(SI->getValueOperand());
+    } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
       PushPtrOperand(RMW->getPointerOperand());
     else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I))
       PushPtrOperand(CmpX->getPointerOperand());
@@ -900,6 +922,14 @@ Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
     return NewI;
   }
 
+  if (auto *LD = dyn_cast<LoadInst>(V)) {
+    Type *NewPtrTy = getPtrOrVecOfPtrsWithNewAS(LD->getType(), NewAddrSpace);
+    auto *NewI = new AddrSpaceCastInst(V, NewPtrTy);
+    NewI->insertAfter(LD->getIterator());
+    NewI->setDebugLoc(LD->getDebugLoc());
+    return NewI;
+  }
+
   if (Instruction *I = dyn_cast<Instruction>(V)) {
     Value *NewV = cloneInstructionWithNewAddressSpace(
         I, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS, PoisonUsesToFix);
@@ -1027,6 +1057,117 @@ InferAddressSpacesImpl::getPredicatedAddrSpace(const Value &Ptr,
   return UninitializedAddressSpace;
 }
 
+static bool isReallyAClobber(const Value *Ptr, MemoryDef *Def,
+                             BatchAAResults *AA,
+                             const TargetTransformInfo *TTI) {
+  Instruction *DI = Def->getMemoryInst();
+
+  if (auto *CB = dyn_cast<CallBase>(DI);
+      CB && CB->onlyAccessesInaccessibleMemory())
+    return false;
+
+  if (isa<FenceInst>(DI))
+    return false;
+
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DI);
+      II && TTI->isArtificialClobber(II->getIntrinsicID())) {
+    return false;
+  }
+
+  // Ignore atomics not aliasing with the original load, any atomic is a
+  // universal MemoryDef from MSSA's point of view too, just like a fence.
+  const auto checkNoAlias = [AA, Ptr](auto I) -> bool {
+    return I && AA->isNoAlias(MemoryLocation::get(dyn_cast<Instruction>(
+                                  I->getPointerOperand())),
+                              MemoryLocation::get(dyn_cast<LoadInst>(Ptr)));
+  };
+
+  if (checkNoAlias(dyn_cast<AtomicCmpXchgInst>(DI)) ||
+      checkNoAlias(dyn_cast<AtomicRMWInst>(DI)))
+    return false;
+
+  return true;
+}
+
+unsigned InferAddressSpacesImpl::getLoadPtrAddrSpaceImpl(
+    const LoadInst *LI, unsigned AS, MemoryAccess *MA,
+    ValueToAddrSpaceMapTy &InferredAddrSpace,
+    SmallPtrSet<MemoryAccess *, 8> Visited) const {
+  MemorySSAWalker *Walker = MSSA->getWalker();
+  MemoryLocation Loc(MemoryLocation::get(LI));
+
+  if (MSSA->isLiveOnEntryDef(MA))
+    return TTI->getAssumedLiveOnEntryDefAddrSpace(LI);
+
+  if (!Visited.insert(MA).second)
+    return AS;
+
+  if (MemoryDef *Def = dyn_cast<MemoryDef>(MA)) {
+    LLVM_DEBUG(dbgs() << "  Def: " << *Def->getMemoryInst() << '\n');
+
+    if (!isReallyAClobber(LI->getPointerOperand(), Def, &BatchAA, TTI))
+      return getLoadPtrAddrSpaceImpl(
+          LI, AS,
+          Walker->getClobberingMemoryAccess(Def->getDefiningAccess(), Loc),
+          InferredAddrSpace, Visited);
+
+    LLVM_DEBUG(dbgs() << "      -> load is clobbered\n");
+    Instruction *DI = Def->getMemoryInst();
+
+    StoreInst *SI = dyn_cast<StoreInst>(DI);
+
+    // TODO: handle other memory writing instructions
+    if (!SI)
+      return FlatAddrSpace;
+
+    Type *ValType = SI->getValueOperand()->getType();
+    unsigned ValAS = FlatAddrSpace;
+    auto I = InferredAddrSpace.find(SI->getValueOperand());
+    if (I != InferredAddrSpace.end())
+      ValAS = I->second;
+    else if (ValType->isPtrOrPtrVectorTy())
+      ValAS = ValType->getPointerAddressSpace();
+
+    AS = joinAddressSpaces(AS, ValAS);
+
+    if (AS == FlatAddrSpace)
+      return FlatAddrSpace;
+
+    if (BatchAA.isMustAlias(Loc, MemoryLocation::get(SI))) {
+      LLVM_DEBUG(dbgs() << "      -> must alias with store: " << *SI << "\n");
+      return AS;
+    }
+
+    return getLoadPtrAddrSpaceImpl(
+        LI, AS,
+        Walker->getClobberingMemoryAccess(Def->getDefiningAccess(), Loc),
+        InferredAddrSpace, Visited);
+  }
+
+  const MemoryPhi *Phi = cast<MemoryPhi>(MA);
+  for (const auto &Use : Phi->incoming_values()) {
+    AS = getLoadPtrAddrSpaceImpl(LI, AS, cast<MemoryAccess>(&Use),
+                                 InferredAddrSpace, Visited);
+    if (AS == FlatAddrSpace)
+      return FlatAddrSpace;
+  }
+
+  return AS;
+}
+
+unsigned InferAddressSpacesImpl::getLoadPtrAddrSpace(
+    const LoadInst *LI, ValueToAddrSpaceMapTy &InferredAddrSpace) const {
+  if (TTI->getAssumedLiveOnEntryDefAddrSpace(LI) == UninitializedAddressSpace)
+    return UninitializedAddressSpace;
+
+  SmallPtrSet<MemoryAccess *, 8> Visited;
+  LLVM_DEBUG(dbgs() << "Checking clobbering of: " << *LI << '\n');
+  return getLoadPtrAddrSpaceImpl(
+      LI, UninitializedAddressSpace,
+      MSSA->getWalker()->getClobberingMemoryAccess(LI), InferredAddrSpace,
+      Visited);
+}
+
 bool InferAddressSpacesImpl::updateAddressSpace(
     const Value &V, ValueToAddrSpaceMapTy &InferredAddrSpace,
     PredicatedAddrSpaceMapTy &PredicatedAS) const {
@@ -1045,6 +1186,8 @@ bool InferAddressSpacesImpl::updateAddressSpace(
   if (AS != UninitializedAddressSpace) {
     // Use the assumed address space directly.
     NewAS = AS;
+  } else if (auto *LD = dyn_cast<LoadInst>(&V)) {
+    NewAS = getLoadPtrAddrSpace(LD, InferredAddrSpace);
   } else {
     // Otherwise, infer the address space from its pointer operands.
     SmallVector<Constant *, 2> ConstantPtrOps;
@@ -1455,7 +1598,8 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
   return InferAddressSpacesImpl(
              getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F), DT,
              &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
-             FlatAddrSpace)
+             &getAnalysis<MemorySSAWrapperPass>().getMSSA(),
+             &getAnalysis<AAResultsWrapperPass>().getAAResults(), FlatAddrSpace)
       .run(F);
 }
 
@@ -1473,7 +1617,9 @@ PreservedAnalyses InferAddressSpacesPass::run(Function &F,
   bool Changed =
       InferAddressSpacesImpl(AM.getResult<AssumptionAnalysis>(F),
                              AM.getCachedResult<DominatorTreeAnalysis>(F),
-                             &AM.getResult<TargetIRAnalysis>(F), FlatAddrSpace)
+                             &AM.getResult<TargetIRAnalysis>(F),
+                             &AM.getResult<MemorySSAAnalysis>(F).getMSSA(),
+                             &AM.getResult<AAManager>(F), FlatAddrSpace)
           .run(F);
   if (Changed) {
     PreservedAnalyses PA;

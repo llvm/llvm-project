@@ -81,8 +81,8 @@ entry:
 define amdgpu_kernel void @flat_ptr_arg(ptr nocapture readonly noalias %Arg, ptr nocapture noalias %Out, i32 %X) {
 ; CHECK-LABEL: @flat_ptr_arg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OUT_GLOBAL:%.*]] = addrspacecast ptr [[OUT:%.*]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[ARG_GLOBAL:%.*]] = addrspacecast ptr [[ARG:%.*]] to ptr addrspace(1)
+; CHECK-NEXT:    [[OUT_GLOBAL:%.*]] = addrspacecast ptr [[OUT:%.*]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[ARG_GLOBAL]], i64 [[IDXPROM]]

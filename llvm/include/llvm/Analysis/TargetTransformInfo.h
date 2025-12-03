@@ -562,6 +562,8 @@ public:
 
   LLVM_ABI unsigned getAssumedAddrSpace(const Value *V) const;
 
+  LLVM_ABI unsigned getAssumedLiveOnEntryDefAddrSpace(const Value *V) const;
+
   LLVM_ABI bool isSingleThreaded() const;
 
   LLVM_ABI std::pair<const Value *, unsigned>
@@ -575,6 +577,10 @@ public:
   LLVM_ABI Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                    Value *OldV,
                                                    Value *NewV) const;
+
+  /// Return true if \p IID only performs an artificial clobber to facilitate
+  /// ordering constraints.
+  LLVM_ABI bool isArtificialClobber(Intrinsic::ID IID) const;
 
   /// Test whether calls to a function lower to actual program function
   /// calls.

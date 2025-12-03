@@ -158,6 +158,10 @@ public:
 
   virtual unsigned getAssumedAddrSpace(const Value *V) const { return -1; }
 
+  virtual unsigned getAssumedLiveOnEntryDefAddrSpace(const Value *V) const {
+    return -1;
+  }
+
   virtual bool isSingleThreaded() const { return false; }
 
   virtual std::pair<const Value *, unsigned>
@@ -170,6 +174,8 @@ public:
                                                   Value *NewV) const {
     return nullptr;
   }
+
+  virtual bool isArtificialClobber(Intrinsic::ID IID) const { return false; }
 
   virtual bool isLoweredToCall(const Function *F) const {
     assert(F && "A concrete function must be provided to this routine.");

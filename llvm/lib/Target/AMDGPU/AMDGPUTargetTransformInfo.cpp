@@ -1223,6 +1223,28 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   }
 }
 
+bool GCNTTIImpl::isArtificialClobber(Intrinsic::ID IID) const {
+  switch (IID) {
+  case Intrinsic::amdgcn_s_barrier:
+  case Intrinsic::amdgcn_s_cluster_barrier:
+  case Intrinsic::amdgcn_s_barrier_signal:
+  case Intrinsic::amdgcn_s_barrier_signal_var:
+  case Intrinsic::amdgcn_s_barrier_signal_isfirst:
+  case Intrinsic::amdgcn_s_barrier_init:
+  case Intrinsic::amdgcn_s_barrier_join:
+  case Intrinsic::amdgcn_s_barrier_wait:
+  case Intrinsic::amdgcn_s_barrier_leave:
+  case Intrinsic::amdgcn_s_get_barrier_state:
+  case Intrinsic::amdgcn_wave_barrier:
+  case Intrinsic::amdgcn_sched_barrier:
+  case Intrinsic::amdgcn_sched_group_barrier:
+  case Intrinsic::amdgcn_iglp_opt:
+    return true;
+  default:
+    return false;
+  }
+}
+
 InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *DstTy, VectorType *SrcTy,
                                            ArrayRef<int> Mask,

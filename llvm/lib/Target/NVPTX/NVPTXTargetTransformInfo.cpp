@@ -592,6 +592,32 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   return nullptr;
 }
 
+bool NVPTXTTIImpl::isArtificialClobber(Intrinsic::ID IID) const {
+  switch (IID) {
+  case Intrinsic::nvvm_bar_warp_sync:
+  case Intrinsic::nvvm_barrier_cluster_arrive:
+  case Intrinsic::nvvm_barrier_cluster_arrive_aligned:
+  case Intrinsic::nvvm_barrier_cluster_arrive_relaxed:
+  case Intrinsic::nvvm_barrier_cluster_arrive_relaxed_aligned:
+  case Intrinsic::nvvm_barrier_cluster_wait:
+  case Intrinsic::nvvm_barrier_cluster_wait_aligned:
+  case Intrinsic::nvvm_barrier_cta_arrive_aligned_count:
+  case Intrinsic::nvvm_barrier_cta_arrive_count:
+  case Intrinsic::nvvm_barrier_cta_sync_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_sync_aligned_count:
+  case Intrinsic::nvvm_barrier_cta_sync_all:
+  case Intrinsic::nvvm_barrier_cta_sync_count:
+  case Intrinsic::nvvm_barrier0_and:
+  case Intrinsic::nvvm_barrier0_or:
+  case Intrinsic::nvvm_barrier0_popc:
+  case Intrinsic::nvvm_membar_cta:
+  case Intrinsic::nvvm_membar_gl:
+  case Intrinsic::nvvm_membar_sys:
+    return true;
+  default:
+    return false;
+  }
+}
 bool NVPTXTTIImpl::isLegalMaskedStore(Type *DataTy, Align Alignment,
                                       unsigned AddrSpace,
                                       TTI::MaskKind MaskKind) const {
@@ -657,6 +683,28 @@ unsigned NVPTXTTIImpl::getAssumedAddrSpace(const Value *V) const {
     }
   }
 
+  if (const auto *LD = dyn_cast<LoadInst>(V)) {
+    // It must be a generic pointer loaded.
+    assert(V->getType()->getPointerAddressSpace() == ADDRESS_SPACE_GENERIC);
+
+    // For a generic pointer loaded from the readonly and noalias arg, it could
+    // be assumed as a global pointer since the readonly memory is only
+    // populated on the host side.
+    if (const Argument *Arg =
+            dyn_cast<Argument>(getUnderlyingObject(LD->getPointerOperand())))
+      if (isKernelFunction(*Arg->getParent()) && Arg->onlyReadsMemory() &&
+          Arg->hasNoAliasAttr())
+        return ADDRESS_SPACE_GLOBAL;
+  }
+  return -1;
+}
+
+unsigned NVPTXTTIImpl::getAssumedLiveOnEntryDefAddrSpace(const Value *V) const {
+  if (const Instruction *I = dyn_cast<Instruction>(V)) {
+    if (isKernelFunction(*I->getParent()->getParent())) {
+      return ADDRESS_SPACE_GLOBAL;
+    }
+  }
   return -1;
 }
 

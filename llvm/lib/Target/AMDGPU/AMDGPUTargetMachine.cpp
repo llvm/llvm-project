@@ -1043,13 +1043,38 @@ unsigned AMDGPUTargetMachine::getAssumedAddrSpace(const Value *V) const {
   assert(V->getType()->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS);
 
   const auto *Ptr = LD->getPointerOperand();
-  if (Ptr->getType()->getPointerAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
-    return AMDGPUAS::UNKNOWN_ADDRESS_SPACE;
+
   // For a generic pointer loaded from the constant memory, it could be assumed
   // as a global pointer since the constant memory is only populated on the
   // host side. As implied by the offload programming model, only global
   // pointers could be referenced on the host side.
-  return AMDGPUAS::GLOBAL_ADDRESS;
+  if (Ptr->getType()->getPointerAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS)
+    return AMDGPUAS::GLOBAL_ADDRESS;
+
+  // For a generic pointer loaded from the readonly and noalias arg, same as
+  // above.
+  if (const Argument *Arg = dyn_cast<Argument>(getUnderlyingObject(Ptr)))
+    if (AMDGPU::isModuleEntryFunctionCC(Arg->getParent()->getCallingConv()) &&
+        Arg->onlyReadsMemory() && Arg->hasNoAliasAttr())
+      return AMDGPUAS::GLOBAL_ADDRESS;
+
+  return AMDGPUAS::UNKNOWN_ADDRESS_SPACE;
+}
+
+unsigned
+AMDGPUTargetMachine::getAssumedLiveOnEntryDefAddrSpace(const Value *V) const {
+  if (const Instruction *I = dyn_cast<Instruction>(V)) {
+    if (AMDGPU::isModuleEntryFunctionCC(
+            I->getParent()->getParent()->getCallingConv()))
+      return AMDGPUAS::GLOBAL_ADDRESS;
+  }
+  if (const LoadInst *LD = dyn_cast<LoadInst>(V)) {
+    // same as getAssumedAddrSpace
+    if (LD->getPointerOperandType()->getPointerAddressSpace() ==
+        AMDGPUAS::CONSTANT_ADDRESS)
+      return AMDGPUAS::GLOBAL_ADDRESS;
+  }
+  return AMDGPUAS::UNKNOWN_ADDRESS_SPACE;
 }
 
 std::pair<const Value *, unsigned>

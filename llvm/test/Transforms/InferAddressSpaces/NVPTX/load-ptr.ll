@@ -10,10 +10,11 @@ define ptx_kernel void @globalmem_flat_ptr_with_global(ptr %a, ptr %b){
 ; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[A]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[B]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr addrspace(1) [[TMP0]], align 8
+; CHECK-NEXT:    [[DOTGLOBAL:%.*]] = addrspacecast ptr [[TMP2]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call noundef i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP2]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[DOTGLOBAL]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TMP1]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr addrspace(1) [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    ret void
@@ -29,23 +30,24 @@ entry:
   ret void
 }
 
-@shared_ptrs = internal unnamed_addr addrspace(3) global [32 x ptr] undef, align 8
+@shared_ptrs = internal unnamed_addr addrspace(3) global [32 x ptr] poison, align 8
 
 define ptx_kernel void @sharedmem_flat_ptr_with_global(ptr %a, ptr %b) {
 ; CHECK-LABEL: define ptx_kernel void @sharedmem_flat_ptr_with_global(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[A]] to ptr addrspace(1)
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(1) [[TMP0]] to ptr
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast ptr [[B]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call noundef i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TMP0]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = addrspacecast ptr addrspace(1) [[ARRAYIDX1]] to ptr
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds ptr, ptr addrspace(3) @shared_ptrs, i64 [[IDXPROM]]
 ; CHECK-NEXT:    store ptr [[ARRAYIDX]], ptr addrspace(3) [[ARRAYIDX3]], align 8
 ; CHECK-NEXT:    tail call void @llvm.nvvm.bar.warp.sync(i32 -1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr addrspace(3) [[ARRAYIDX3]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[DOTGLOBAL:%.*]] = addrspacecast ptr [[TMP4]] to ptr addrspace(1)
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(1) [[DOTGLOBAL]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TMP2]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr addrspace(1) [[ARRAYIDX9]], align 4
 ; CHECK-NEXT:    ret void
@@ -73,11 +75,13 @@ define dso_local ptx_kernel void @device_var_with_global(ptr %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[B]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspace(1) @a, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[DOTGLOBAL1:%.*]] = addrspacecast ptr [[TMP1]] to ptr addrspace(1)
+; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr addrspace(1) [[DOTGLOBAL1]], align 8
+; CHECK-NEXT:    [[DOTGLOBAL:%.*]] = addrspacecast ptr [[TMP2]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call noundef i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP2]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[DOTGLOBAL]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(1) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TMP0]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr addrspace(1) [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    ret void
@@ -102,13 +106,15 @@ define ptx_kernel void @globalmem_flat_ptr_with_global_clobber(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr [[A]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[B]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr addrspace(1) [[TMP0]], align 8
+; CHECK-NEXT:    [[DOTGLOBAL:%.*]] = addrspacecast ptr [[TMP2]] to ptr addrspace(1)
+; CHECK-NEXT:    [[TMP3:%.*]] = addrspacecast ptr addrspace(1) [[DOTGLOBAL]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call noundef i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[TMP4]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds ptr, ptr addrspace(1) [[TMP1]], i64 [[IDXPROM]]
-; CHECK-NEXT:    store ptr [[TMP2]], ptr addrspace(1) [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 4
-; CHECK-NEXT:    store i32 [[TMP5]], ptr [[ARRAYIDX4]], align 4
+; CHECK-NEXT:    store ptr [[TMP3]], ptr addrspace(1) [[ARRAYIDX]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(1) [[DOTGLOBAL]], align 4
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DOTGLOBAL]], i64 4
+; CHECK-NEXT:    store i32 [[TMP5]], ptr addrspace(1) [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -127,7 +133,7 @@ entry:
 }
 
 
-@s_int2 = internal addrspace(3) global [2 x i32] undef, align 4
+@s_int2 = internal addrspace(3) global [2 x i32] poison, align 4
 
 ; Function Attrs: convergent mustprogress noinline norecurse nounwind
 define dso_local ptx_kernel void @phi_clobber_with_diff_as(ptr %a, ptr %b) {
@@ -205,7 +211,8 @@ define ptx_kernel void @phi_clobber_with_same_as(ptr %a, ptr %b) {
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr addrspace(1) [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[DOTGLOBAL:%.*]] = addrspacecast ptr [[TMP3]] to ptr addrspace(3)
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(3) [[DOTGLOBAL]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[TMP1]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr addrspace(1) [[ARRAYIDX7]], align 4
 ; CHECK-NEXT:    ret void

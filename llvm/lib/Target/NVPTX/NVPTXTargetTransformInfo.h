@@ -193,7 +193,12 @@ public:
 
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const override;
+
+  bool isArtificialClobber(Intrinsic::ID IID) const override;
+
   unsigned getAssumedAddrSpace(const Value *V) const override;
+
+  unsigned getAssumedLiveOnEntryDefAddrSpace(const Value *V) const override;
 
   void collectKernelLaunchBounds(
       const Function &F,

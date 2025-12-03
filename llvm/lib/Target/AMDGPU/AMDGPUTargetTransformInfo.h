@@ -216,6 +216,8 @@ public:
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const override;
 
+  bool isArtificialClobber(Intrinsic::ID IID) const override;
+
   bool canSimplifyLegacyMulToMul(const Instruction &I, const Value *Op0,
                                  const Value *Op1, InstCombiner &IC) const;
 
