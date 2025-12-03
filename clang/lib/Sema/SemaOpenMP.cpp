@@ -2243,7 +2243,7 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
     //  - For pointers mapped by value that have either an implicit map or an
     //    array section, the runtime library may pass the NULL value to the
     //    device instead of the value passed to it by the compiler.
-    //  - If both a pointer an a dereference of it are mapped, then the pointer
+    //  - If both a pointer and a dereference of it are mapped, then the pointer
     //    should be passed by reference.
 
     if (Ty->isReferenceType())

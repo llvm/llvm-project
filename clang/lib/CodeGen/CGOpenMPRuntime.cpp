@@ -7609,7 +7609,7 @@ private:
     // &p, &p[1], sizeof(void*),    ATTACH // attach pointer/pointee, if both
     //                                     // are present, and either is new
     //
-    // map((22])p)
+    // map(([22])p)
     // p,  p, 22*sizeof(float), TARGET_PARAM | TO | FROM
     // &p, p, sizeof(void*),    ATTACH
     //
@@ -7949,7 +7949,7 @@ private:
       // If we have a valid attach-ptr, we skip processing all components until
       // after the attach-ptr.
       if (HasAttachPtr && !SeenAttachPtr) {
-        SeenAttachPtr |= I->getAssociatedExpression() == AttachPtrExpr;
+        SeenAttachPtr = I->getAssociatedExpression() == AttachPtrExpr;
         continue;
       }
 
