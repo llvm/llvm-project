@@ -46,6 +46,7 @@ runs:
           }
 
           console.log(response)
+          console.log(response.data.artifacts)
 
           artifacts_to_download = []
           for (artifact of response.data.artifacts) {
