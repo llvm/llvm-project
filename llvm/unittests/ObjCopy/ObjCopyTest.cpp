@@ -343,8 +343,9 @@ TEST(UpdateSectionKeepSymbols, ELF) {
   SCOPED_TRACE("updateSectionToFileELFKeepSymbols");
 
   addOrUpdateSectionToFileImpl(
-      SimpleFileELFWithSymbolYAML, [](const Binary &File) { return File.isELF(); },
-      ".foo", "1234", UpdateSection);
+      SimpleFileELFWithSymbolYAML,
+      [](const Binary &File) { return File.isELF(); }, ".foo", "1234",
+      UpdateSection);
 }
 
 TEST(UpdateSection, MachO) {
