@@ -316,21 +316,26 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
 SDValue DAGTypeLegalizer::SoftenFloatRes_FCANONICALIZE(SDNode *N) {
   SDLoc dl(N);
 
-  // Create a constant 1.0, then soften it to integer and record the mapping.
-  SDValue CstFP = DAG.getConstantFP(1.0, dl, N->getValueType(0));
-  SDValue CstInt = SoftenFloatRes_ConstantFP(CstFP.getNode());
+  // This implements llvm.canonicalize.f* by multiplication with 1.0, as
+  // suggested in
+  // https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic.
+  // It uses strict_fp operations even outside a strict_fp context in order
+  // to guarantee that the canonicalization is not optimized away by later
+  // passes. The result chain introduced by that is intentionally ignored
+  // since no ordering requirement is intended here.
 
-  if (!SoftenedFloats[getTableId(CstFP)])
-    SetSoftenedFloat(CstFP, CstInt);
-
-  // Multiply the input by 1.0 to canonicalize it. We use `MorphNodeTo` to
-  // avoid constant folding, which happens with `DAG.getNode(ISD::FMUL, ...)`.
-  SDNode *Node =
-      DAG.MorphNodeTo(N, ISD::FMUL, DAG.getVTList(N->getValueType(0)),
-                      {N->getOperand(0), CstFP});
-  return SoftenFloatRes_Binary(
-      Node, GetFPLibCall(N->getValueType(0), RTLIB::MUL_F32, RTLIB::MUL_F64,
-                         RTLIB::MUL_F80, RTLIB::MUL_F128, RTLIB::MUL_PPCF128));
+  // Create strict multiplication by 1.0.
+  SDValue Operand = N->getOperand(0);
+  EVT VT = Operand.getValueType();
+  SDValue One = DAG.getConstantFP(1.0, dl, VT);
+  SDValue Chain = DAG.getEntryNode();
+  // Propagate existing flags on canonicalize, and additionally set
+  // NoFPExcept.
+  SDNodeFlags CanonicalizeFlags = N->getFlags();
+  CanonicalizeFlags.setNoFPExcept(true);
+  SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
+                            {Chain, Operand, One}, CanonicalizeFlags);
+  return BitConvertToInteger(Mul);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMINNUM(SDNode *N) {
