@@ -4399,7 +4399,7 @@ bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
          Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);
 }
 
-bool SIInstrInfo::mayAccessScratchThroughFlat(const MachineInstr &MI) const {
+bool SIInstrInfo::mayAccessScratch(const MachineInstr &MI) const {
   // Instructions that access scratch use FLAT encoding or BUF encodings.
   if ((!isFLAT(MI) && !isBUF(MI)) || isFLATGlobal(MI))
     return false;
