@@ -3328,9 +3328,10 @@ void Ripple::genVectorInstructions() {
 
     irBuilder.SetInsertPoint(Call);
     // Create a vectorized Intrinsic with arguments that should be vectorized
+    Twine Name = ReturnType->isVoidTy() ? Twine("") : vectorizedName(Call);
     CallInst *VecCall = irBuilder.CreateIntrinsic(
         ReturnType, VectorIntrId, BcastedArgs,
-        isa<FPMathOperator>(Call) ? Call : nullptr, vectorizedName(Call));
+        isa<FPMathOperator>(Call) ? Call : nullptr, Name);
 
     setReplacementFor(Call, VecCall, ToShape);
   };
@@ -4465,7 +4466,7 @@ void Ripple::applyMaskToOps(iterator_range<IteratorT> BBs, Value *VectorMask,
       auto MaskToApply = getMaskWithShape(InstructionShape);
 
       LLVM_DEBUG(dbgs() << "Applying mask " << *MaskToApply << " with shape "
-                        << MaskShape << " to " << I << "\n");
+                        << InstructionShape << " to " << I << "\n");
 
       irBuilder.SetInsertPoint(&I);
       if (LoadInst *Load = dyn_cast<LoadInst>(&I)) {
