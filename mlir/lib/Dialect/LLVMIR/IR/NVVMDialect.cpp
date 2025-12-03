@@ -1664,8 +1664,7 @@ void addBlockScaleAttributes(OpBuilder &builder, OperationState &result,
   MLIRContext *ctx = builder.getContext();
   result.addAttribute(
       "shape", builder.getAttr<MMAShapeAttr>(shape[0], shape[1], shape[2]));
-  result.addAttribute(
-      "scaleVecSize", ScaleVecSizeAttr::get(ctx, scaleVecSize));
+  result.addAttribute("scaleVecSize", ScaleVecSizeAttr::get(ctx, scaleVecSize));
   result.addAttribute("blockScaleFormat",
                       BlockScaleFormatAttr::get(ctx, blockScaleFormat));
   result.addAttribute("kind", MMABlockScaleKindAttr::get(ctx, kind));
