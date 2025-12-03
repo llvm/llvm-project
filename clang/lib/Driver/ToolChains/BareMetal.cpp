@@ -494,8 +494,13 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   if (SysRootDir.empty())
     return;
 
+  SmallString<128> Dir(SysRootDir);
+  llvm::sys::path::append(Dir, Target, "include", "c++", "v1");
+  if (D.getVFS().exists(Dir))
+    addSystemInclude(DriverArgs, CC1Args, Dir.str());
+
   for (const Multilib &M : getOrderedMultilibs()) {
-    SmallString<128> Dir(SysRootDir);
+    Dir = SysRootDir;
     llvm::sys::path::append(Dir, M.gccSuffix());
     switch (GetCXXStdlibType(DriverArgs)) {
     case ToolChain::CST_Libcxx: {
@@ -509,10 +514,6 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       // Add generic paths if nothing else succeeded so far.
       llvm::sys::path::append(Dir, "include", "c++", "v1");
       addSystemInclude(DriverArgs, CC1Args, Dir.str());
-      Dir = SysRootDir;
-      llvm::sys::path::append(Dir, Target, "include", "c++", "v1");
-      if (D.getVFS().exists(Dir))
-        addSystemInclude(DriverArgs, CC1Args, Dir.str());
       break;
     }
     case ToolChain::CST_Libstdcxx: {
