@@ -115,7 +115,8 @@ createReplacement(const Expr *CondLhs, const Expr *CondRhs,
           (!GlobalImplicitCastType.isNull()
                ? "<" + GlobalImplicitCastType.getAsString() + ">("
                : "(") +
-          CondLhsStr + ", " + CondRhsStr + ");" + Comment)
+          CondLhsStr + ", " + CondRhsStr + ");" + (Comment.empty() ? "" : " ") +
+          Comment)
       .str();
 }
 
@@ -171,14 +172,45 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto ReplaceAndDiagnose = [&](const llvm::StringRef FunctionName) {
     const SourceManager &Source = *Result.SourceManager;
-    const std::string Comment =
-        Lexer::getSourceText(
-            CharSourceRange::getCharRange(
-                Lexer::getLocForEndOfToken(If->getRParenLoc(), 0, Source, LO),
-                If->getThen()->getBeginLoc()),
-            Source, LO)
-            .rtrim()
-            .str();
+    llvm::SmallString<64> Comment;
+
+    const auto AppendNormalized = [&](llvm::StringRef Text) {
+      Text = Text.ltrim();
+      if (!Text.empty()) {
+        if (!Comment.empty())
+          Comment += " ";
+        Comment += Text;
+      }
+    };
+
+    AppendNormalized(Lexer::getSourceText(
+        CharSourceRange::getCharRange(
+            Lexer::getLocForEndOfToken(If->getRParenLoc(), 0, Source, LO),
+            If->getThen()->getBeginLoc()),
+        Source, LO));
+
+    if (const auto *CS = dyn_cast<CompoundStmt>(If->getThen())) {
+      const Stmt *Inner = CS->body_front();
+      AppendNormalized(Lexer::getSourceText(
+          CharSourceRange::getCharRange(
+              Lexer::getLocForEndOfToken(CS->getBeginLoc(), 0, Source, LO),
+              Inner->getBeginLoc()),
+          Source, LO));
+
+      llvm::StringRef PostInner = Lexer::getSourceText(
+          CharSourceRange::getCharRange(
+              Lexer::getLocForEndOfToken(Inner->getEndLoc(), 0, Source, LO),
+              CS->getEndLoc()),
+          Source, LO);
+
+      const size_t Semi = PostInner.find(';');
+      if (Semi != llvm::StringRef::npos &&
+          PostInner.take_front(Semi).trim().empty()) {
+        PostInner = PostInner.drop_front(Semi + 1);
+      }
+      AppendNormalized(PostInner);
+    }
+
     diag(IfLocation, "use `%0` instead of `%1`")
         << FunctionName << BinaryOp->getOpcodeStr()
         << FixItHint::CreateReplacement(

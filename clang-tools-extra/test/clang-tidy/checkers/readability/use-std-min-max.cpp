@@ -12,7 +12,7 @@ constexpr int myConstexprMax(int a, int b) {
 #define MY_IF_MACRO(condition, statement) \
   if (condition) {                        \
     statement                             \
-  }                                       
+  }
 
 class MyClass {
 public:
@@ -28,22 +28,22 @@ void foo(T value7) {
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: value1 = std::max(value1, value2);
   if (value1 < value2)
-    value1 = value2; 
+    value1 = value2;
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: value2 = std::min(value1, value2);
   if (value1 < value2)
-    value2 = value1; 
+    value2 = value1;
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
   // CHECK-FIXES: value2 = std::min(value2, value1);
   if (value2 > value1)
-    value2 = value1; 
+    value2 = value1;
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `>` [readability-use-std-min-max]
   // CHECK-FIXES: value1 = std::max(value2, value1);
   if (value2 > value1)
-    value1 = value2; 
+    value1 = value2;
 
   // No suggestion needed here
   if (value1 == value2)
@@ -53,102 +53,102 @@ void foo(T value7) {
   // CHECK-FIXES: value1 = std::max<int>(value1, value4);
   short value4;
   if(value1<value4)
-    value1=value4; 
-  
+    value1=value4;
+
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: value3 = std::min(value1+value2, value3);
   if(value1+value2<value3)
-    value3 = value1+value2; 
-  
+    value3 = value1+value2;
+
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: value1 = std::max(value1, myConstexprMin(value2, value3));
   if (value1 < myConstexprMin(value2, value3))
-    value1 = myConstexprMin(value2, value3); 
-  
+    value1 = myConstexprMin(value2, value3);
+
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
   // CHECK-FIXES: value1 = std::min(value1, myConstexprMax(value2, value3));
   if (value1 > myConstexprMax(value2, value3))
-    value1 = myConstexprMax(value2, value3); 
-  
+    value1 = myConstexprMax(value2, value3);
+
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<=` [readability-use-std-min-max]
   // CHECK-FIXES: value2 = std::min(value1, value2);
   if (value1 <= value2)
-    value2 = value1; 
+    value2 = value1;
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<=` [readability-use-std-min-max]
   // CHECK-FIXES: value1 = std::max(value1, value2);
   if (value1 <= value2)
-    value1 = value2; 
+    value1 = value2;
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `>=` [readability-use-std-min-max]
   // CHECK-FIXES: value1 = std::max(value2, value1);
   if (value2 >= value1)
-    value1 = value2; 
+    value1 = value2;
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>=` [readability-use-std-min-max]
   // CHECK-FIXES: value2 = std::min(value2, value1);
   if (value2 >= value1)
-    value2 = value1; 
-  
+    value2 = value1;
+
   // CHECK-MESSAGES: :[[@LINE+3]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: obj.member1 = std::max(obj.member1, obj.member2);
   MyClass obj;
   if (obj.member1 < obj.member2)
-    obj.member1 = obj.member2; 
+    obj.member1 = obj.member2;
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: obj.member2 = std::min(obj.member1, obj.member2);
   if (obj.member1 < obj.member2)
-    obj.member2 = obj.member1; 
+    obj.member2 = obj.member1;
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
   // CHECK-FIXES: obj.member2 = std::min(obj.member2, obj.member1);
   if (obj.member2 > obj.member1)
-    obj.member2 = obj.member1; 
+    obj.member2 = obj.member1;
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `>` [readability-use-std-min-max]
   // CHECK-FIXES: obj.member1 = std::max(obj.member2, obj.member1);
   if (obj.member2 > obj.member1)
-    obj.member1 = obj.member2; 
-  
+    obj.member1 = obj.member2;
+
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: obj.member1 = std::max<int>(obj.member1, value4);
   if (obj.member1 < value4)
-    obj.member1 = value4; 
-  
+    obj.member1 = value4;
+
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: value3 = std::min(obj.member1 + value2, value3);
   if (obj.member1 + value2 < value3)
-    value3 = obj.member1 + value2; 
-  
+    value3 = obj.member1 + value2;
+
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<=` [readability-use-std-min-max]
   // CHECK-FIXES: obj.member2 = std::min(value1, obj.member2);
   if (value1 <= obj.member2)
-    obj.member2 = value1; 
+    obj.member2 = value1;
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<=` [readability-use-std-min-max]
   // CHECK-FIXES: value1 = std::max(value1, obj.member2);
   if (value1 <= obj.member2)
-    value1 = obj.member2; 
+    value1 = obj.member2;
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `>=` [readability-use-std-min-max]
   // CHECK-FIXES: value1 = std::max(obj.member2, value1);
   if (obj.member2 >= value1)
-    value1 = obj.member2; 
+    value1 = obj.member2;
 
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>=` [readability-use-std-min-max]
   // CHECK-FIXES: obj.member2 = std::min(obj.member2, value1);
   if (obj.member2 >= value1)
-    obj.member2 = value1; 
-  
+    obj.member2 = value1;
+
   // No suggestion needed here
   if (MY_MACRO_MIN(value1, value2) < value3)
-    value3 = MY_MACRO_MIN(value1, value2); 
-  
+    value3 = MY_MACRO_MIN(value1, value2);
+
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: value4 = std::max<int>(value4, value2);
   if (value4 < value2){
-    value4 = value2; 
+    value4 = value2;
   }
 
   // No suggestion needed here
@@ -156,18 +156,18 @@ void foo(T value7) {
     value2 = value1;
   else
     value2 = value3;
-  
+
   // No suggestion needed here
   if(value1<value2){
-    value2 = value1; 
+    value2 = value1;
   }
   else{
-    value2 = value3;  
+    value2 = value3;
   }
 
   // No suggestion needed here
   if(value1<value2){
-    value2 = value1; 
+    value2 = value1;
     int res = value1 + value2;
   }
 
@@ -202,7 +202,7 @@ void foo(T value7) {
       value2 = value3;
     }
   }
-  
+
   // CHECK-MESSAGES: :[[@LINE+4]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
   // CHECK-FIXES: value6 = std::min<unsigned int>(value5, value6);
   unsigned int value5;
@@ -221,7 +221,7 @@ void foo(T value7) {
   const int value8 = 5;
   if(value8<value1)
     value1 = value8;
-  
+
   //CHECK-MESSAGES: :[[@LINE+3]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
   //CHECK-FIXES: value1 = std::min(value9, value1);
   volatile int value9 = 6;
@@ -274,13 +274,98 @@ void useRight() {
 
 } // namespace gh121676
 
-void testComment() {
+void testComments() {
   int box_depth = 10;
   int max_depth = 5;
+
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
-  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // limit the depth to max
-  if (box_depth > max_depth) // limit the depth to max
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // here
+  if (box_depth > max_depth) // here
   {
     box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); /* here */
+  if (box_depth > max_depth) /* here */
+  {
+    box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // here
+  if (box_depth > max_depth)
+  // here
+  {
+    box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); /* here */
+  if (box_depth > max_depth)
+  /* here */
+  {
+    box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+4]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); /* here
+  // CHECK-FIXES-NEXT: and here
+  // CHECK-FIXES-NEXT: */
+  if (box_depth > max_depth) /* here
+  and here
+  */
+  {
+    box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); /* here */
+  if (box_depth > max_depth) { /* here */
+    box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // here
+  if (box_depth > max_depth) { // here
+    box_depth = max_depth;
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); /* here */
+  if (box_depth > max_depth) {
+    box_depth = max_depth; /* here */
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // here
+  if (box_depth > max_depth) {
+    box_depth = max_depth; // here
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); /* here */
+  if (box_depth > max_depth) {
+    box_depth = max_depth;
+    /* here */
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // here
+  if (box_depth > max_depth) {
+    box_depth = max_depth;
+    // here
+  }
+
+  // CHECK-MESSAGES: :[[@LINE+5]]:3: warning: use `std::min` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: box_depth = std::min(box_depth, max_depth); // here
+  // CHECK-FIXES-NEXT: // and
+  // CHECK-FIXES-NEXT: /* there
+  // CHECK-FIXES-NEXT: again*/
+  if (box_depth > max_depth) {
+    // here
+    box_depth = max_depth; // and
+    /* there
+     again*/
   }
 }
