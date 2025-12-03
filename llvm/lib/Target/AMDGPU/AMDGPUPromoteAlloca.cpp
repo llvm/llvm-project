@@ -85,7 +85,7 @@ static cl::opt<unsigned>
                             "when sorting profitable allocas"),
                    cl::init(4));
 
-static cl::opt<unsigned> DynIdxNumElmLimit(
+static cl::opt<unsigned> DynamicIndexNumberElementLimit(
     "amdgpu-dynamic-index-num-element-limit",
     cl::desc("Maximum number of elements for promoting alloca with dynamic"
              " index"),
@@ -931,7 +931,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
             [&](const auto *U){ return isa<LoadInst>(U); });
         if (auto *UserVecTy =
                 dyn_cast<FixedVectorType>(GEP->getSourceElementType())) {
-          if (UsedInLoad && UserVecTy->getNumElements() > DynIdxNumElmLimit) {
+          if (UsedInLoad &&
+              UserVecTy->getNumElements() > DynamicIndexNumberElementLimit) {
             return RejectUser(Inst,
                               "user has too many elements for dynamic index");
           }
