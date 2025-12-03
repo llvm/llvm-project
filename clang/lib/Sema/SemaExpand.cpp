@@ -42,6 +42,21 @@ static bool FinaliseExpansionVar(Sema &S, VarDecl *ExpansionVar,
   return ExpansionVar->isInvalidDecl();
 }
 
+static auto InitListContainsPack(const InitListExpr *ILE) {
+  return llvm::any_of(ArrayRef(ILE->getInits(), ILE->getNumInits()),
+                      [](const Expr *E) { return isa<PackExpansionExpr>(E); });
+}
+
+static bool HasDependentSize(const CXXExpansionStmtPattern* pattern) {
+  if (isa<CXXEnumeratingExpansionStmtPattern>(pattern)) {
+    auto *SelectExpr = cast<CXXExpansionInitListSelectExpr>(
+        pattern->getExpansionVariable()->getInit());
+    return InitListContainsPack(SelectExpr->getRangeExpr());
+  }
+
+  llvm_unreachable("Invalid expansion statement class");
+}
+
 CXXExpansionStmtDecl *
 Sema::ActOnCXXExpansionStmtDecl(unsigned TemplateDepth,
                                 SourceLocation TemplateKWLoc) {
@@ -74,8 +89,7 @@ Sema::BuildCXXExpansionStmtDecl(DeclContext *Ctx, SourceLocation TemplateKWLoc,
 ExprResult Sema::ActOnCXXExpansionInitList(MultiExprArg SubExprs,
                                            SourceLocation LBraceLoc,
                                            SourceLocation RBraceLoc) {
-  return CXXExpansionInitListExpr::Create(Context, SubExprs, LBraceLoc,
-                                          RBraceLoc);
+  return new (Context) InitListExpr(Context, LBraceLoc, SubExprs, RBraceLoc);
 }
 
 StmtResult Sema::ActOnCXXExpansionStmtPattern(
@@ -99,7 +113,8 @@ StmtResult Sema::ActOnCXXExpansionStmtPattern(
     return StmtError();
 
   // This is an enumerating expansion statement.
-  if (auto *ILE = dyn_cast<CXXExpansionInitListExpr>(ExpansionInitializer)) {
+  if (auto *ILE = dyn_cast<InitListExpr>(ExpansionInitializer)) {
+    assert(ILE->isSyntacticForm());
     ExprResult Initializer =
         BuildCXXExpansionInitListSelectExpr(ILE, BuildIndexDRE(*this, ESD));
     if (FinaliseExpansionVar(*this, ExpansionVar, Initializer))
@@ -133,7 +148,7 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
          "should not rebuild expansion statement after instantiation");
 
   Expansion->setBody(Body);
-  if (Expansion->hasDependentSize())
+  if (HasDependentSize(Expansion))
     return Expansion;
 
   // This can fail if this is an iterating expansion statement.
@@ -199,9 +214,9 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
 }
 
 ExprResult
-Sema::BuildCXXExpansionInitListSelectExpr(CXXExpansionInitListExpr *Range,
+Sema::BuildCXXExpansionInitListSelectExpr(InitListExpr *Range,
                                           Expr *Idx) {
-  if (Range->containsPackExpansion() || Idx->isValueDependent())
+  if (Idx->isValueDependent() || InitListContainsPack(Range))
     return new (Context) CXXExpansionInitListSelectExpr(Context, Range, Idx);
 
   // The index is a DRE to a template parameter; we should never
@@ -211,19 +226,18 @@ Sema::BuildCXXExpansionInitListSelectExpr(CXXExpansionInitListExpr *Range,
     llvm_unreachable("Failed to evaluate expansion index");
 
   uint64_t I = ER.Val.getInt().getZExtValue();
-  return Range->getExprs()[I];
+  return Range->getInit(I);
 }
 
 std::optional<uint64_t>
 Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
-  assert(!Expansion->hasDependentSize());
+  assert(!HasDependentSize(Expansion));
 
   if (isa<CXXEnumeratingExpansionStmtPattern>(Expansion))
     return cast<CXXExpansionInitListSelectExpr>(
                Expansion->getExpansionVariable()->getInit())
         ->getRangeExpr()
-        ->getExprs()
-        .size();
+        ->getNumInits();
 
   llvm_unreachable("TODO");
 }
