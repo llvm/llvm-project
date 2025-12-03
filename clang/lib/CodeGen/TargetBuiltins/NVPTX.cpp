@@ -986,15 +986,15 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
                       llvm::FixedVectorType::get(Builder.getBFloatTy(), 2), E,
                       *this);
   case NVPTX::BI__nvvm_fma_rn_oob_relu_f16:
-    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu, Builder.getHalfTy(),
-                      E, *this);
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu, Builder.getHalfTy(), E,
+                      *this);
   case NVPTX::BI__nvvm_fma_rn_oob_relu_f16x2:
     return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu,
                       llvm::FixedVectorType::get(Builder.getHalfTy(), 2), E,
                       *this);
   case NVPTX::BI__nvvm_fma_rn_oob_relu_bf16:
-    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu,
-                      Builder.getBFloatTy(), E, *this);
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu, Builder.getBFloatTy(), E,
+                      *this);
   case NVPTX::BI__nvvm_fma_rn_oob_relu_bf16x2:
     return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu,
                       llvm::FixedVectorType::get(Builder.getBFloatTy(), 2), E,
