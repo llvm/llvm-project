@@ -787,7 +787,7 @@ static bool maybeUpdateDynamicIndexList(
   int index = 0;
 
   for (int64_t static_element : staticElements) {
-    if (!ShapedType::isDynamic(static_element)) {
+    if (ShapedType::isStatic(static_element)) {
       newStaticElements.push_back(static_element);
       continue;
     }
