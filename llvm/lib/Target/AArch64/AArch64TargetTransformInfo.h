@@ -192,10 +192,8 @@ public:
                         TTI::TargetCostKind CostKind) const override;
 
   InstructionCost
-  getGatherScatterOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
-                         bool VariableMask, Align Alignment,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr) const override;
+  getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                         TTI::TargetCostKind CostKind) const override;
 
   bool isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst,
                           Type *Src) const;
@@ -323,13 +321,32 @@ public:
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned /*AddressSpace*/) const override {
+                         unsigned /*AddressSpace*/,
+                         TTI::MaskKind /*MaskKind*/) const override {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned /*AddressSpace*/) const override {
+                          unsigned /*AddressSpace*/,
+                          TTI::MaskKind /*MaskKind*/) const override {
     return isLegalMaskedLoadStore(DataType, Alignment);
+  }
+
+  bool isElementTypeLegalForCompressStore(Type *Ty) const {
+    return Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isIntegerTy(32) ||
+           Ty->isIntegerTy(64);
+  }
+
+  bool isLegalMaskedCompressStore(Type *DataType,
+                                  Align Alignment) const override {
+    if (!ST->isSVEAvailable())
+      return false;
+
+    if (isa<FixedVectorType>(DataType) &&
+        DataType->getPrimitiveSizeInBits() < 128)
+      return false;
+
+    return isElementTypeLegalForCompressStore(DataType->getScalarType());
   }
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {

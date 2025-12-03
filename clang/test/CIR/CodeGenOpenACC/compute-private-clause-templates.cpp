@@ -54,18 +54,18 @@ void dependent_version(const T &cc, const U &ndc, const V &dtor, const W &someIn
 #pragma acc parallel private(cc, ndc, dtor, someInt)
   ;
   // CHECK: %[[PRIV_LOAD:.*]] = cir.load %[[CC]] : !cir.ptr<!cir.ptr<!rec_CopyConstruct>>, !cir.ptr<!rec_CopyConstruct>
-  // CHECK-NEXT: %[[PRIVATE1:.*]] = acc.private varPtr(%[[PRIV_LOAD]] : !cir.ptr<!rec_CopyConstruct>) -> !cir.ptr<!rec_CopyConstruct> {name = "cc"}
+  // CHECK-NEXT: %[[PRIVATE1:.*]] = acc.private varPtr(%[[PRIV_LOAD]] : !cir.ptr<!rec_CopyConstruct>) recipe(@privatization__ZTS13CopyConstruct) -> !cir.ptr<!rec_CopyConstruct> {name = "cc"}
   // CHECK-NEXT: %[[PRIV_LOAD:.*]] = cir.load %[[NDC]] : !cir.ptr<!cir.ptr<!rec_NonDefaultCtor>>, !cir.ptr<!rec_NonDefaultCtor>
-  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.private varPtr(%[[PRIV_LOAD]] : !cir.ptr<!rec_NonDefaultCtor>) -> !cir.ptr<!rec_NonDefaultCtor> {name = "ndc"}
+  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.private varPtr(%[[PRIV_LOAD]] : !cir.ptr<!rec_NonDefaultCtor>) recipe(@privatization__ZTS14NonDefaultCtor) -> !cir.ptr<!rec_NonDefaultCtor> {name = "ndc"}
   // CHECK-NEXT: %[[PRIV_LOAD:.*]] = cir.load %[[DTOR]] : !cir.ptr<!cir.ptr<!rec_HasDtor>>, !cir.ptr<!rec_HasDtor>
-  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.private varPtr(%[[PRIV_LOAD]] : !cir.ptr<!rec_HasDtor>) -> !cir.ptr<!rec_HasDtor> {name = "dtor"}
+  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.private varPtr(%[[PRIV_LOAD]] : !cir.ptr<!rec_HasDtor>) recipe(@privatization__ZTS7HasDtor) -> !cir.ptr<!rec_HasDtor> {name = "dtor"}
   // CHECK-NEXT: %[[PRIV_LOAD:.*]] = cir.load %[[SOMEINT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.private varPtr(%[[PRIV_LOAD]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "someInt"}
+  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.private varPtr(%[[PRIV_LOAD]] : !cir.ptr<!s32i>) recipe(@privatization__ZTSi) -> !cir.ptr<!s32i> {name = "someInt"}
 
-  // CHECK-NEXT: acc.parallel private(@privatization__ZTS13CopyConstruct -> %[[PRIVATE1]] : !cir.ptr<!rec_CopyConstruct>, 
-  // CHECK-SAME: @privatization__ZTS14NonDefaultCtor -> %[[PRIVATE2]] : !cir.ptr<!rec_NonDefaultCtor>,
-  // CHECK-SAME: @privatization__ZTS7HasDtor -> %[[PRIVATE3]] : !cir.ptr<!rec_HasDtor>,
-  // CHECK-SAME: @privatization__ZTSi -> %[[PRIVATE4]] : !cir.ptr<!s32i>) {
+  // CHECK-NEXT: acc.parallel private(%[[PRIVATE1]], %[[PRIVATE2]], %[[PRIVATE3]], %[[PRIVATE4]] : !cir.ptr<!rec_CopyConstruct>, 
+  // CHECK-SAME: !cir.ptr<!rec_NonDefaultCtor>,
+  // CHECK-SAME: !cir.ptr<!rec_HasDtor>,
+  // CHECK-SAME: !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
 }
