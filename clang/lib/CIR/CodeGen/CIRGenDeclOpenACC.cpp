@@ -303,7 +303,7 @@ void CIRGenModule::emitGlobalOpenACCRoutineDecl(const OpenACCRoutineDecl *d) {
 namespace {
 class OpenACCRoutineClauseEmitter final
     : public OpenACCClauseVisitor<OpenACCRoutineClauseEmitter> {
-      CIRGenModule &cgm;
+  CIRGenModule &cgm;
   CIRGen::CIRGenBuilderTy &builder;
   mlir::acc::RoutineOp routineOp;
   llvm::SmallVector<mlir::acc::DeviceType> lastDeviceTypeValues;

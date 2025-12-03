@@ -4368,7 +4368,7 @@ void RoutineOp::addWorker(MLIRContext *context,
 }
 
 void RoutineOp::addGang(MLIRContext *context,
-                          llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+                        llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   setGangAttr(addDeviceTypeAffectedOperandHelper(context, getGangAttr(),
                                                  effectiveDeviceTypes));
 }
@@ -4393,8 +4393,8 @@ void RoutineOp::addGang(MLIRContext *context,
         acc::DeviceTypeAttr::get(context, acc::DeviceType::None));
   } else {
     for (DeviceType dt : effectiveDeviceTypes) {
-    dimValues.push_back(
-        mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), val));
+      dimValues.push_back(
+          mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), val));
       deviceTypes.push_back(acc::DeviceTypeAttr::get(context, dt));
     }
   }
