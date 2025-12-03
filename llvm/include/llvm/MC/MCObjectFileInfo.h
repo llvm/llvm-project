@@ -81,6 +81,9 @@ protected:
   /// section to emit import call data to.
   MCSection *ImportCallSection = nullptr;
 
+  /// Section for ray tracing global variables.
+  MCSection *RayTracingGlobalVariableSection = nullptr;
+
   // Dwarf sections for debug info.  If a target supports debug info, these must
   // be set.
   MCSection *DwarfAbbrevSection = nullptr;
@@ -278,6 +281,7 @@ public:
   MCSection *getLSDASection() const { return LSDASection; }
   MCSection *getImportCallSection() const { return ImportCallSection; }
   MCSection *getCompactUnwindSection() const { return CompactUnwindSection; }
+  MCSection *getRayTracingGlobalVariableSection() const { return RayTracingGlobalVariableSection; }
   MCSection *getDwarfAbbrevSection() const { return DwarfAbbrevSection; }
   MCSection *getDwarfInfoSection() const { return DwarfInfoSection; }
   MCSection *getDwarfInfoSection(uint64_t Hash) const {

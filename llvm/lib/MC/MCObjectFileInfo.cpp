@@ -560,6 +560,10 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
       Ctx->getELFSection(".pseudo_probe_desc", DebugSecType, 0);
 
   LLVMStatsSection = Ctx->getELFSection(".llvm_stats", ELF::SHT_PROGBITS, 0);
+
+  // Custom section for ray tracing global variables.
+  RayTracingGlobalVariableSection = Ctx->getELFSection(".lgc.rt.global.variables",
+                                                    ELF::SHT_PROGBITS, 0);
 }
 
 void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
