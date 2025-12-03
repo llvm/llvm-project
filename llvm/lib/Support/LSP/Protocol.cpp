@@ -1037,3 +1037,21 @@ llvm::json::Value llvm::lsp::toJSON(const CodeAction &Value) {
     CodeAction["edit"] = *Value.edit;
   return std::move(CodeAction);
 }
+
+//===----------------------------------------------------------------------===//
+// ShowMessageParams
+//===----------------------------------------------------------------------===//
+
+llvm::json::Value llvm::lsp::toJSON(const ShowMessageParams &Params) {
+  auto Out = llvm::json::Object{
+      {"type", static_cast<int>(Params.type)},
+      {"message", Params.message},
+  };
+  if (Params.actions)
+    Out["actions"] = *Params.actions;
+  return Out;
+}
+
+llvm::json::Value llvm::lsp::toJSON(const MessageActionItem &Params) {
+  return llvm::json::Object{{"title", Params.title}};
+}
