@@ -82,7 +82,7 @@ ProcessSP ProcessWindows::CreateInstance(lldb::TargetSP target_sp,
                                          const FileSpec *crash_file_path,
                                          bool can_connect) {
   if (crash_file_path)
-    return nullptr; // Cannot create a Windows process from a crash_file
+    return nullptr; // Cannot create a Windows process from a crash_file.
   return ProcessSP(new ProcessWindows(target_sp, listener_sp));
 }
 
