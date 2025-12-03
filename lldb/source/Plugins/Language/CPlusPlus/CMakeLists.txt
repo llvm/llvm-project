@@ -31,6 +31,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   LibCxxValarray.cpp
   LibCxxVector.cpp
   LibStdcpp.cpp
+  LibStdcppSpan.cpp
   LibStdcppTuple.cpp
   LibStdcppUniquePointer.cpp
   MsvcStl.cpp
