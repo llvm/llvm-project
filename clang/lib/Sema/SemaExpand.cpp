@@ -20,8 +20,7 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
-
-#include <llvm/ADT/ScopeExit.h>
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace sema;
@@ -493,9 +492,9 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
     // Make the lambda 'consteval'.
     {
       ParseScope Prototype(*this, Scope::FunctionPrototypeScope |
-                                     Scope::FunctionDeclarationScope |
-                                     Scope::DeclScope);
-      const char* PrevSpec = nullptr;
+                                      Scope::FunctionDeclarationScope |
+                                      Scope::DeclScope);
+      const char *PrevSpec = nullptr;
       unsigned DiagId = 0;
       DS.SetConstexprSpec(ConstexprSpecKind::Consteval, Loc, PrevSpec, DiagId);
       assert(DiagId == 0 && PrevSpec == nullptr);
