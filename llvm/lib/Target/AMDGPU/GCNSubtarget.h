@@ -1868,6 +1868,12 @@ public:
     return GFX1250Insts && getGeneration() == GFX12;
   }
 
+  // src_flat_scratch_hi cannot be used as a source in SALU producing a 64-bit
+  // result.
+  bool hasFlatScratchHiInB64InstHazard() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
   /// \returns true if the subtarget supports clusters of workgroups.
   bool hasClusters() const { return HasClusters; }
 
