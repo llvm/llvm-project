@@ -12166,7 +12166,36 @@ static bool evalShuffleGeneric(
   Out = APValue(ResultElements.data(), ResultElements.size());
   return true;
 }
+static bool ConvertDoubleToFloatStrict(EvalInfo &Info, const Expr *E,
+                                       APFloat OrigVal, APValue &Result) {
 
+  if (OrigVal.isInfinity()) {
+    Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << 0;
+    return false;
+  }
+  if (OrigVal.isNaN()) {
+    Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << 1;
+    return false;
+  }
+
+  APFloat Val = OrigVal;
+  bool LosesInfo = false;
+  APFloat::opStatus Status = Val.convert(
+      APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &LosesInfo);
+
+  if (LosesInfo || Val.isDenormal()) {
+    Info.CCEDiag(E, diag::note_constexpr_float_arithmetic_strict);
+    return false;
+  }
+
+  if (Status != APFloat::opOK) {
+    Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
+    return false;
+  }
+
+  Result = APValue(Val);
+  return true;
+}
 static bool evalShiftWithCount(
     EvalInfo &Info, const CallExpr *Call, APValue &Out,
     llvm::function_ref<APInt(const APInt &, uint64_t)> ShiftOp,
@@ -12925,6 +12954,120 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+
+  case X86::BI__builtin_ia32_cvtsd2ss: {
+    APValue VecA, VecB;
+    if (!EvaluateAsRValue(Info, E->getArg(0), VecA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), VecB))
+      return false;
+
+    SmallVector<APValue, 4> Elements;
+
+    APValue ResultVal;
+    if (!ConvertDoubleToFloatStrict(Info, E, VecB.getVectorElt(0).getFloat(),
+                                    ResultVal))
+      return false;
+
+    Elements.push_back(ResultVal);
+
+    unsigned NumEltsA = VecA.getVectorLength();
+    for (unsigned I = 1; I < NumEltsA; ++I) {
+      Elements.push_back(VecA.getVectorElt(I));
+    }
+
+    return Success(Elements, E);
+  }
+  case X86::BI__builtin_ia32_cvtsd2ss_round_mask: {
+    APValue VecA, VecB, VecSrc, MaskValue;
+
+    if (!EvaluateAsRValue(Info, E->getArg(0), VecA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), VecB) ||
+        !EvaluateAsRValue(Info, E->getArg(2), VecSrc) ||
+        !EvaluateAsRValue(Info, E->getArg(3), MaskValue))
+      return false;
+
+    unsigned Mask = MaskValue.getInt().getZExtValue();
+    SmallVector<APValue, 4> Elements;
+
+    if (Mask & 1) {
+      APValue ResultVal;
+      if (!ConvertDoubleToFloatStrict(Info, E, VecB.getVectorElt(0).getFloat(),
+                                      ResultVal))
+        return false;
+      Elements.push_back(ResultVal);
+    } else {
+      Elements.push_back(VecSrc.getVectorElt(0));
+    }
+
+    unsigned NumEltsA = VecA.getVectorLength();
+    for (unsigned I = 1; I < NumEltsA; ++I) {
+      Elements.push_back(VecA.getVectorElt(I));
+    }
+
+    return Success(Elements, E);
+  }
+  case X86::BI__builtin_ia32_cvtpd2ps:
+  case X86::BI__builtin_ia32_cvtpd2ps256:
+  case X86::BI__builtin_ia32_cvtpd2ps_mask:
+  case X86::BI__builtin_ia32_cvtpd2ps512_mask: {
+
+    const auto BuiltinID = E->getBuiltinCallee();
+    bool IsMasked = (BuiltinID == X86::BI__builtin_ia32_cvtpd2ps_mask ||
+                     BuiltinID == X86::BI__builtin_ia32_cvtpd2ps512_mask);
+
+    APValue InputValue;
+    if (!EvaluateAsRValue(Info, E->getArg(0), InputValue))
+      return false;
+
+    APValue MergeValue;
+    unsigned Mask = 0xFFFFFFFF;
+    bool NeedsMerge = false;
+    if (IsMasked) {
+      APValue MaskValue;
+      if (!EvaluateAsRValue(Info, E->getArg(2), MaskValue))
+        return false;
+      Mask = MaskValue.getInt().getZExtValue();
+      auto NumEltsResult = E->getType()->getAs<VectorType>()->getNumElements();
+      for (unsigned I = 0; I < NumEltsResult; ++I) {
+        if (!((Mask >> I) & 1)) {
+          NeedsMerge = true;
+          break;
+        }
+      }
+      if (NeedsMerge) {
+        if (!EvaluateAsRValue(Info, E->getArg(1), MergeValue))
+          return false;
+      }
+    }
+
+    unsigned NumEltsResult =
+        E->getType()->getAs<VectorType>()->getNumElements();
+    unsigned NumEltsInput = InputValue.getVectorLength();
+    SmallVector<APValue, 8> Elements;
+    for (unsigned I = 0; I < NumEltsResult; ++I) {
+      if (IsMasked && !((Mask >> I) & 1)) {
+        if (!NeedsMerge) {
+          return false;
+        }
+        Elements.push_back(MergeValue.getVectorElt(I));
+        continue;
+      }
+
+      if (I >= NumEltsInput) {
+        Elements.push_back(APValue(APFloat::getZero(APFloat::IEEEsingle())));
+        continue;
+      }
+
+      APValue ResultVal;
+      if (!ConvertDoubleToFloatStrict(
+              Info, E, InputValue.getVectorElt(I).getFloat(), ResultVal))
+        return false;
+
+      Elements.push_back(ResultVal);
+    }
+    return Success(Elements, E);
+  }
+
   case X86::BI__builtin_ia32_shufps:
   case X86::BI__builtin_ia32_shufps256:
   case X86::BI__builtin_ia32_shufps512: {
