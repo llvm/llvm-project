@@ -401,8 +401,12 @@ class ClangFormatDiagConsumer : public DiagnosticConsumer {
 };
 
 // Returns true on error.
-static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
+static bool format(StringRef FileName, bool ErrorOnIncompleteFormat,
+                   bool IsIgnored) {
   const bool IsSTDIN = FileName == "-";
+  // We don't need to do anything, there are no changes to make.
+  if (IsIgnored && (Inplace || OutputXML))
+    return false;
   if (!OutputXML && Inplace && IsSTDIN) {
     errs() << "error: cannot use -i when reading from stdin.\n";
     return true;
@@ -422,6 +426,12 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
     return false; // Empty files are formatted correctly.
 
   StringRef BufStr = Code->getBuffer();
+  // The user is requesting to output the formatted file to stdout. If the file
+  // is ignored, this means we just leave it untouched and print it.
+  if (IsIgnored) {
+    outs() << BufStr;
+    return false;
+  }
 
   const char *InvalidBOM = SrcMgr::ContentCache::getInvalidBOM(BufStr);
 
@@ -701,9 +711,8 @@ int main(int argc, const char **argv) {
   }
 
   if (FileNames.empty()) {
-    if (isIgnored(AssumeFileName))
-      return 0;
-    return clang::format::format("-", FailOnIncompleteFormat);
+    return clang::format::format("-", FailOnIncompleteFormat,
+                                 isIgnored(AssumeFileName));
   }
 
   if (FileNames.size() > 1 &&
@@ -722,13 +731,11 @@ int main(int argc, const char **argv) {
         outs() << FileName << '\n';
       continue;
     }
-    if (Ignored)
-      continue;
-    if (Verbose) {
+    if (!Ignored && Verbose) {
       errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "
              << FileName << "\n";
     }
-    Error |= clang::format::format(FileName, FailOnIncompleteFormat);
+    Error |= clang::format::format(FileName, FailOnIncompleteFormat, Ignored);
   }
   return Error ? 1 : 0;
 }

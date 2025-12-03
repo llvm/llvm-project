@@ -46,15 +46,19 @@
 // CHECK5-NEXT: {{Formatting \[4/5] .*foo\.c}}
 // CHECK5-NOT: foo.js
 
+// Check that ignored files are unformatted, but still output.
 // RUN: echo "foo.*" > .clang-format-ignore
 // RUN: echo "int i ;" > foo.c
 // RUN: clang-format -assume-filename=foo.c < foo.c \
-// RUN:   | FileCheck %s -check-prefix=CHECK6 -allow-empty
-// CHECK6-NOT: int
+// RUN:   | FileCheck %s -check-prefix=CHECK6 -match-full-lines
+// CHECK6: int i ;
+// RUN: clang-format foo.c \
+// RUN:   | FileCheck %s -check-prefix=CHECK7 -match-full-lines
+// CHECK7: int i ;
 
 // RUN: clang-format -assume-filename=bar.c < foo.c \
-// RUN:   | FileCheck %s -check-prefix=CHECK7 -match-full-lines
-// CHECK7: int i;
+// RUN:   | FileCheck %s -check-prefix=CHECK8 -match-full-lines
+// CHECK8: int i;
 
 // RUN: cd ..
 // RUN: rm -r %t.dir
