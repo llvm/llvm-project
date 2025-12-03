@@ -54,8 +54,6 @@ static std::string getLLVMIntrinsicNameForType(Type llvmTy) {
     llvm::Type *unused = nullptr;
     os << llvmTy;
   }
-  if (auto vecTy = llvmTy.dyn_cast<LLVM::LLVMType>()) {
-  }
   return s;
 }
 
