@@ -2059,6 +2059,40 @@ protected:
   }
 
 private:
+  bool GetDefaultFile(Target &target, FileSpec &file,
+                      CommandReturnObject &result) {
+    // First use the Source Manager's default file. Then use the current stack
+    // frame's file.
+    if (auto maybe_file_and_line =
+            target.GetSourceManager().GetDefaultFileAndLine()) {
+      file = maybe_file_and_line->support_file_nsp->GetSpecOnly();
+      return true;
+    }
+
+      StackFrame *cur_frame = m_exe_ctx.GetFramePtr();
+      if (cur_frame == nullptr) {
+        result.AppendError(
+            "No selected frame to use to find the default file.");
+        return false;
+      }
+      if (!cur_frame->HasDebugInformation()) {
+        result.AppendError("Cannot use the selected frame to find the default "
+                           "file, it has no debug info.");
+        return false;
+      }
+
+        const SymbolContext &sc =
+            cur_frame->GetSymbolContext(eSymbolContextLineEntry);
+        if (sc.line_entry.GetFile()) {
+          file = sc.line_entry.GetFile();
+        } else {
+          result.AppendError("Can't find the file for the selected frame to "
+                             "use as the default file.");
+          return false;
+    }
+    return true;
+  }
+
   BreakpointOptionGroup m_bp_opts;
   BreakpointDummyOptionGroup m_dummy_options;
   OptionGroupPythonClassWithDict m_python_class_options;

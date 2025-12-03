@@ -794,12 +794,12 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
     } else {
       ModuleSP module_sp(m_objfile_sp->GetModule());
       if (module_sp) {
-        auto initialize_cu = [&](lldb::SupportFileSP support_file_sp,
+        auto initialize_cu = [&](SupportFileNSP support_file_nsp,
                                  LanguageType cu_language,
                                  SupportFileList &&support_files = {}) {
           BuildCuTranslationTable();
           cu_sp = std::make_shared<CompileUnit>(
-              module_sp, &dwarf_cu, support_file_sp,
+              module_sp, &dwarf_cu, support_file_nsp,
               *GetDWARFUnitIndex(dwarf_cu.GetID()), cu_language,
               eLazyBoolCalculate, std::move(support_files));
 
@@ -1560,8 +1560,8 @@ bool SymbolFileDWARF::HasForwardDeclForCompilerType(
   auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (!clang_type_system)
     return false;
-  DWARFASTParserClang *ast_parser =
-      static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
+  auto *ast_parser =
+      llvm::cast<DWARFASTParserClang>(clang_type_system->GetDWARFParser());
   return ast_parser->GetClangASTImporter().CanImport(compiler_type);
 }
 
@@ -1569,8 +1569,8 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (clang_type_system) {
-    DWARFASTParserClang *ast_parser =
-        static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
+    auto *ast_parser =
+        llvm::cast<DWARFASTParserClang>(clang_type_system->GetDWARFParser());
     if (ast_parser &&
         ast_parser->GetClangASTImporter().CanImport(compiler_type))
       return ast_parser->GetClangASTImporter().CompleteType(compiler_type);
@@ -1614,8 +1614,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
 
   if (decl_die != def_die) {
     GetDIEToType()[def_die.GetDIE()] = type;
-    DWARFASTParserClang *ast_parser =
-        static_cast<DWARFASTParserClang *>(dwarf_ast);
+    auto *ast_parser = llvm::cast<DWARFASTParserClang>(dwarf_ast);
     ast_parser->MapDeclDIEToDefDIE(decl_die, def_die);
   }
 
@@ -2341,7 +2340,7 @@ void SymbolFileDWARF::FindGlobalVariables(
   bool name_is_mangled = Mangled::GetManglingScheme(name.GetStringRef()) !=
                          Mangled::eManglingSchemeNone;
 
-  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetCString(),
+  if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetStringRef(),
                                                       context, basename))
     basename = name.GetStringRef();
 

@@ -2381,8 +2381,19 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   Entry.IsZExt = !isSigned;
   Args.push_back(Entry);
 
-  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
-                                         TLI.getPointerTy(DAG.getDataLayout()));
+  RTLIB::LibcallImpl LibcallImpl = TLI.getLibcallImpl(LC);
+  if (LibcallImpl == RTLIB::Unsupported) {
+    DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                Node->getOperationName(&DAG));
+    SDValue Poison = DAG.getPOISON(RetVT);
+    Results.push_back(Poison);
+    Results.push_back(Poison);
+    return;
+  }
+
+  SDValue Callee =
+      DAG.getExternalSymbol(TLI.getLibcallImplName(LibcallImpl).data(),
+                            TLI.getPointerTy(DAG.getDataLayout()));
 
   SDLoc dl(Node);
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -4842,9 +4853,15 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     RTLIB::Libcall LC = Node->getOpcode() == ISD::FSINCOS
                             ? RTLIB::getSINCOS(VT)
                             : RTLIB::getSINCOSPI(VT);
-    bool Expanded = DAG.expandMultipleResultFPLibCall(LC, Node, Results);
-    if (!Expanded)
-      llvm_unreachable("Expected scalar FSINCOS[PI] to expand to libcall!");
+    bool Expanded = TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results);
+    if (!Expanded) {
+      DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                  Node->getOperationName(&DAG));
+      SDValue Poison = DAG.getPOISON(VT);
+      Results.push_back(Poison);
+      Results.push_back(Poison);
+    }
+
     break;
   }
   case ISD::FLOG:
@@ -4934,7 +4951,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     EVT VT = Node->getValueType(0);
     RTLIB::Libcall LC = Node->getOpcode() == ISD::FMODF ? RTLIB::getMODF(VT)
                                                         : RTLIB::getFREXP(VT);
-    bool Expanded = DAG.expandMultipleResultFPLibCall(LC, Node, Results,
+    bool Expanded = TLI.expandMultipleResultFPLibCall(DAG, LC, Node, Results,
                                                       /*CallRetResNo=*/0);
     if (!Expanded)
       llvm_unreachable("Expected scalar FFREXP/FMODF to expand to libcall!");

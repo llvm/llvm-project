@@ -2160,25 +2160,25 @@ def Vector_GatherOp :
   ];
 }
 
-def Vector_ScatterOp :
-  Vector_Op<"scatter", [
-      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
-      DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
-    ]>,
-    Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
-               Variadic<Index>:$offsets,
-               VectorOfNonZeroRankOf<[AnyInteger, Index]>:$indices,
-               VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$valueToStore,
-               OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
+def Vector_ScatterOp
+    : Vector_Op<"scatter",
+                [DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
+                 DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]>,
+      Arguments<(ins Arg<TensorOrMemRef<[AnyType]>, "", [MemWrite]>:$base,
+          Variadic<Index>:$offsets,
+          VectorOfNonZeroRankOf<[AnyInteger, Index]>:$indices,
+          VectorOfNonZeroRankOf<[I1]>:$mask,
+          AnyVectorOfNonZeroRank:$valueToStore,
+          OptionalAttr<IntValidAlignment<I64Attr>>:$alignment)>,
+      Results<(outs Optional<AnyRankedTensor>:$result)> {
 
   let summary = [{
-    scatters elements from a vector into memory as defined by an index vector
+    scatters elements from a vector into memory or ranked tensor as defined by an index vector
     and a mask vector
   }];
 
   let description = [{
-    The scatter operation stores elements from a n-D vector into memory as
+    The scatter operation stores elements from a n-D vector into memory or ranked tensor as
     defined by a base with indices and an additional n-D index vector, but
     only if the corresponding bit in a n-D mask vector is set. Otherwise, no
     action is taken for that element. Informally the semantics are:
@@ -2221,31 +2221,28 @@ def Vector_ScatterOp :
   }];
 
   let extraClassDeclaration = [{
-    MemRefType getMemRefType() { return getBase().getType(); }
+    ShapedType getBaseType() { return getBase().getType(); }
     VectorType getIndexVectorType() { return getIndices().getType(); }
     VectorType getMaskVectorType() { return getMask().getType(); }
     VectorType getVectorType() { return getValueToStore().getType(); }
   }];
 
-  let assemblyFormat =
-      "$base `[` $offsets `]` `[` $indices `]` `,` "
-      "$mask `,` $valueToStore attr-dict `:` type($base) `,` "
-      "type($indices)  `,` type($mask) `,` type($valueToStore)";
+  let assemblyFormat = "$base `[` $offsets `]` `[` $indices `]` `,` "
+                       "$mask `,` $valueToStore attr-dict `:` type($base) `,` "
+                       "type($indices)  `,` type($mask) `,` "
+                       "type($valueToStore) (`->` type($result)^)?";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 
-  let builders = [
-    OpBuilder<(ins "Value":$base,
-                   "ValueRange":$indices,
-                   "Value":$index_vec,
-                   "Value":$mask,
-                   "Value":$valueToStore,
-                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">: $alignment), [{
-      return build($_builder, $_state, base, indices, index_vec, mask, valueToStore,
+  let builders = [OpBuilder<
+      (ins "Type":$resultType, "Value":$base, "ValueRange":$indices,
+          "Value":$index_vec, "Value":$mask, "Value":$valueToStore,
+          CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment),
+      [{
+      return build($_builder, $_state, resultType, base, indices, index_vec, mask, valueToStore,
                    alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
-    }]>
-  ];
+    }]>];
 }
 
 def Vector_ExpandLoadOp :
@@ -2427,6 +2424,7 @@ def Vector_CompressStoreOp :
 
 def Vector_ShapeCastOp :
   Vector_Op<"shape_cast", [Pure,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
   ]>,
     Arguments<(ins AnyVectorOfAnyRank:$source)>,

@@ -922,15 +922,12 @@ struct NVGPUMBarrierArriveExpectTxLowering
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
     Value txcount = truncToI32(b, adaptor.getTxcount());
-
-    if (isMbarrierShared(op.getBarriers().getType())) {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxSharedOp>(
-          op, barrier, txcount, adaptor.getPredicate());
-      return success();
-    }
-
     rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxOp>(
-        op, barrier, txcount, adaptor.getPredicate());
+        op, Type{},       // return-value is optional and is void by default
+        barrier, txcount, // barrier and txcount
+        NVVM::MemScopeKind::CTA, // default scope is CTA
+        false,                   // relaxed-semantics is false
+        adaptor.getPredicate());
     return success();
   }
 };
@@ -949,13 +946,6 @@ struct NVGPUMBarrierTryWaitParityLowering
     Value ticks = truncToI32(b, adaptor.getTicks());
     Value phase =
         LLVM::ZExtOp::create(b, b.getI32Type(), adaptor.getPhaseParity());
-
-    if (isMbarrierShared(op.getBarriers().getType())) {
-      rewriter.replaceOpWithNewOp<NVVM::MBarrierTryWaitParitySharedOp>(
-          op, barrier, phase, ticks);
-      return success();
-    }
-
     rewriter.replaceOpWithNewOp<NVVM::MBarrierTryWaitParityOp>(op, barrier,
                                                                phase, ticks);
     return success();

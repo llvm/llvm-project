@@ -19,15 +19,12 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <tuple>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 

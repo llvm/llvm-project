@@ -48,7 +48,7 @@ SourceLocation findPreviousAnyTokenKind(SourceLocation Start,
   if (Start.isInvalid() || Start.isMacroID())
     return {};
   while (true) {
-    SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
+    const SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
     if (L.isInvalid() || L.isMacroID())
       return {};
 
@@ -76,7 +76,7 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
     if (!CurrentToken)
       return {};
 
-    Token PotentialMatch = *CurrentToken;
+    const Token PotentialMatch = *CurrentToken;
     if (PotentialMatch.isOneOf(TK, TKs...))
       return PotentialMatch.getLocation();
 

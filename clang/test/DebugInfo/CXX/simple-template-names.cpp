@@ -114,12 +114,28 @@ void f() {
 
   f3<t1>();
   // CHECK: !DISubprogram(name: "_STN|f3|<t1>",
-  
+
   f1<_BitInt(3)>();
-  // CHECK: !DISubprogram(name: "f1<_BitInt(3)>",
+  // CHECK: !DISubprogram(name: "_STN|f1|<_BitInt(3)>",
 
   f1<const unsigned _BitInt(5)>();
-  // CHECK: !DISubprogram(name: "f1<const unsigned _BitInt(5)>",
+  // CHECK: !DISubprogram(name: "_STN|f1|<const unsigned _BitInt(5)>",
+
+  f1<_BitInt(120)>();
+  // CHECK: !DISubprogram(name: "_STN|f1|<_BitInt(120)>",
+
+  f1<const unsigned _BitInt(120)>();
+  // CHECK: !DISubprogram(name: "_STN|f1|<const unsigned _BitInt(120)>",
+
+  f2<_BitInt(2), 1>();
+  // CHECK: !DISubprogram(name: "_STN|f2|<_BitInt(2), (_BitInt(2))1>",
+
+  f2<_BitInt(64), 12>();
+  // CHECK: !DISubprogram(name: "_STN|f2|<_BitInt(64), (_BitInt(64))12>",
+
+  // FIXME: make block forms reconstitutable
+  f2<_BitInt(65), 1>();
+// CHECK: !DISubprogram(name: "f2<_BitInt(65), (_BitInt(65))1>",
 
   // Add a parameter just so this differs from other attributed function types
   // that don't mangle differently.

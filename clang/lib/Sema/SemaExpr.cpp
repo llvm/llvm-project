@@ -4189,6 +4189,14 @@ static bool CheckVectorElementsTraitOperandType(Sema &S, QualType T,
            << ""
            << "__builtin_vectorelements" << T << ArgRange;
 
+  if (auto *FD = dyn_cast<FunctionDecl>(S.CurContext)) {
+    if (T->isSVESizelessBuiltinType()) {
+      llvm::StringMap<bool> CallerFeatureMap;
+      S.Context.getFunctionFeatureMap(CallerFeatureMap, FD);
+      return S.ARM().checkSVETypeSupport(T, Loc, FD, CallerFeatureMap);
+    }
+  }
+
   return false;
 }
 
@@ -6728,14 +6736,13 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
     checkDirectCallValidity(*this, Fn, FD, ArgExprs);
 
-    // If this expression is a call to a builtin function in HIP device
-    // compilation, allow a pointer-type argument to default address space to be
-    // passed as a pointer-type parameter to a non-default address space.
-    // If Arg is declared in the default address space and Param is declared
-    // in a non-default address space, perform an implicit address space cast to
-    // the parameter type.
-    if (getLangOpts().HIP && getLangOpts().CUDAIsDevice && FD &&
-        FD->getBuiltinID()) {
+    // If this expression is a call to a builtin function in HIP compilation,
+    // allow a pointer-type argument to default address space to be passed as a
+    // pointer-type parameter to a non-default address space. If Arg is declared
+    // in the default address space and Param is declared in a non-default
+    // address space, perform an implicit address space cast to the parameter
+    // type.
+    if (getLangOpts().HIP && FD && FD->getBuiltinID()) {
       for (unsigned Idx = 0; Idx < ArgExprs.size() && Idx < FD->param_size();
           ++Idx) {
         ParmVarDecl *Param = FD->getParamDecl(Idx);
@@ -10726,7 +10733,7 @@ static void DetectPrecisionLossInComplexDivision(Sema &S, QualType DivisorTy,
   if (!CT)
     return;
 
-  QualType ElementType = CT->getElementType();
+  QualType ElementType = CT->getElementType().getCanonicalType();
   bool IsComplexRangePromoted = S.getLangOpts().getComplexRange() ==
                                 LangOptions::ComplexRangeKind::CX_Promoted;
   if (!ElementType->isFloatingType() || !IsComplexRangePromoted)
@@ -20565,31 +20572,36 @@ void Sema::MarkDeclarationsReferencedInExpr(Expr *E,
 }
 
 /// Emit a diagnostic when statements are reachable.
-/// FIXME: check for reachability even in expressions for which we don't build a
-///        CFG (eg, in the initializer of a global or in a constant expression).
-///        For example,
-///        namespace { auto *p = new double[3][false ? (1, 2) : 3]; }
 bool Sema::DiagIfReachable(SourceLocation Loc, ArrayRef<const Stmt *> Stmts,
                            const PartialDiagnostic &PD) {
-  if (!Stmts.empty() && getCurFunctionOrMethodDecl()) {
-    if (!FunctionScopes.empty())
-      FunctionScopes.back()->PossiblyUnreachableDiags.push_back(
-          sema::PossiblyUnreachableDiag(PD, Loc, Stmts));
-    return true;
-  }
-
+  VarDecl *Decl = ExprEvalContexts.back().DeclForInitializer;
   // The initializer of a constexpr variable or of the first declaration of a
   // static data member is not syntactically a constant evaluated constant,
   // but nonetheless is always required to be a constant expression, so we
   // can skip diagnosing.
-  // FIXME: Using the mangling context here is a hack.
-  if (auto *VD = dyn_cast_or_null<VarDecl>(
-          ExprEvalContexts.back().ManglingContextDecl)) {
-    if (VD->isConstexpr() ||
-        (VD->isStaticDataMember() && VD->isFirstDecl() && !VD->isInline()))
-      return false;
-    // FIXME: For any other kind of variable, we should build a CFG for its
-    // initializer and check whether the context in question is reachable.
+  if (Decl &&
+      (Decl->isConstexpr() || (Decl->isStaticDataMember() &&
+                               Decl->isFirstDecl() && !Decl->isInline())))
+    return false;
+
+  if (Stmts.empty()) {
+    Diag(Loc, PD);
+    return true;
+  }
+
+  if (getCurFunction()) {
+    FunctionScopes.back()->PossiblyUnreachableDiags.push_back(
+        sema::PossiblyUnreachableDiag(PD, Loc, Stmts));
+    return true;
+  }
+
+  // For non-constexpr file-scope variables with reachability context (non-empty
+  // Stmts), build a CFG for the initializer and check whether the context in
+  // question is reachable.
+  if (Decl && Decl->isFileVarDecl()) {
+    AnalysisWarnings.registerVarDeclWarning(
+        Decl, sema::PossiblyUnreachableDiag(PD, Loc, Stmts));
+    return true;
   }
 
   Diag(Loc, PD);

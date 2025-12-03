@@ -738,6 +738,22 @@ func.func @ops_supporting_overflow(%arg0: i64, %arg1: i64) {
 
 // -----
 
+// CHECK-LABEL: @ops_supporting_exact
+func.func @ops_supporting_exact(i32, i32) {
+^bb0(%arg0: i32, %arg1: i32):
+// CHECK: = llvm.ashr exact %arg0, %arg1 : i32
+  %0 = arith.shrsi %arg0, %arg1 exact : i32
+// CHECK: = llvm.lshr exact %arg0, %arg1 : i32
+  %1 = arith.shrui %arg0, %arg1 exact : i32
+// CHECK: = llvm.sdiv exact %arg0, %arg1 : i32
+  %2 = arith.divsi %arg0, %arg1 exact : i32
+// CHECK: = llvm.udiv exact %arg0, %arg1 : i32
+  %3 = arith.divui %arg0, %arg1 exact : i32
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @memref_bitcast
 //  CHECK-SAME:   (%[[ARG:.*]]: memref<?xi16>)
 //       CHECK:   %[[V1:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : memref<?xi16> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
@@ -754,12 +770,14 @@ func.func @memref_bitcast(%1: memref<?xi16>) -> memref<?xbf16> {
 //       CHECK:   arith.addf {{.*}} : f4E2M1FN
 //       CHECK:   arith.addf {{.*}} : vector<4xf4E2M1FN>
 //       CHECK:   arith.addf {{.*}} : vector<8x4xf4E2M1FN>
+//       CHECK:   arith.cmpf {{.*}} : f4E2M1FN
 //       CHECK:   llvm.select {{.*}} : i1, i4
 func.func @unsupported_fp_type(%arg0: f4E2M1FN, %arg1: vector<4xf4E2M1FN>, %arg2: vector<8x4xf4E2M1FN>, %arg3: f4E2M1FN, %arg4: i1) {
   %0 = arith.addf %arg0, %arg0 : f4E2M1FN
   %1 = arith.addf %arg1, %arg1 : vector<4xf4E2M1FN>
   %2 = arith.addf %arg2, %arg2 : vector<8x4xf4E2M1FN>
-  %3 = arith.select %arg4, %arg0, %arg3 : f4E2M1FN
+  %3 = arith.cmpf oeq, %arg0, %arg3 : f4E2M1FN
+  %4 = arith.select %arg4, %arg0, %arg3 : f4E2M1FN
   return
 }
 
@@ -769,9 +787,11 @@ func.func @unsupported_fp_type(%arg0: f4E2M1FN, %arg1: vector<4xf4E2M1FN>, %arg2
 //         CHECK:   llvm.fadd {{.*}} : f32
 //         CHECK:   llvm.fadd {{.*}} : vector<4xf32>
 // CHECK-COUNT-4:   llvm.fadd {{.*}} : vector<8xf32>
-func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8xf32>) -> (f32, vector<4xf32>, vector<4x8xf32>) {
+//         CHECK:   llvm.fcmp {{.*}} : f32
+func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8xf32>, %arg3: f32) {
   %0 = arith.addf %arg0, %arg0 : f32
   %1 = arith.addf %arg1, %arg1 : vector<4xf32>
   %2 = arith.addf %arg2, %arg2 : vector<4x8xf32>
-  return %0, %1, %2 : f32, vector<4xf32>, vector<4x8xf32>
+  %3 = arith.cmpf oeq, %arg0, %arg3 : f32
+  return
 }

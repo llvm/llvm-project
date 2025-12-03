@@ -35,8 +35,15 @@ public:
 private:
   StringRef RawFunctionsThatShouldNotThrow;
   StringRef RawIgnoredExceptions;
+  StringRef RawCheckedSwapFunctions;
+
+  const bool CheckDestructors;
+  const bool CheckMoveMemberFunctions;
+  const bool CheckMain;
+  const bool CheckNothrowFunctions;
 
   llvm::StringSet<> FunctionsThatShouldNotThrow;
+  llvm::StringSet<> CheckedSwapFunctions;
   utils::ExceptionAnalyzer Tracer;
 };
 
