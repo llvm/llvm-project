@@ -228,6 +228,33 @@ __mmask16 test_kmov_w(__mmask16 A) {
   // OGCG: bitcast <16 x i1> {{.*}} to i16
   return __builtin_ia32_kmovw(A);
 }
+
+__mmask16 test_mm512_kunpackb(__mmask16 A, __mmask16 B) {
+  // CIR-LABEL: _mm512_kunpackb
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<u, 1>>
+  // CIR: cir.vec.shuffle
+  // CIR: cir.vec.shuffle
+  // CIR: cir.vec.shuffle
+  // CIR: cir.cast bitcast {{.*}} : !cir.vector<16 x !cir.int<u, 1>> -> !u16i
+
+  // LLVM-LABEL: _mm512_kunpackb
+  // LLVM: [[A_VEC:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[B_VEC:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: [[A_HALF:%.*]] = shufflevector <16 x i1> [[A_VEC]], <16 x i1> [[A_VEC]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // LLVM: [[B_HALF:%.*]] = shufflevector <16 x i1> [[B_VEC]], <16 x i1> [[B_VEC]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // LLVM: [[RES:%.*]] = shufflevector <8 x i1> [[B_HALF]], <8 x i1> [[A_HALF]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // LLVM: bitcast <16 x i1> [[RES]] to i16
+
+  // OGCG-LABEL: _mm512_kunpackb
+  // OGCG: [[A_VEC:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: [[B_VEC:%.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // OGCG: [[A_HALF:%.*]] = shufflevector <16 x i1> [[A_VEC]], <16 x i1> [[A_VEC]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // OGCG: [[B_HALF:%.*]] = shufflevector <16 x i1> [[B_VEC]], <16 x i1> [[B_VEC]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  // OGCG: [[RES:%.*]] = shufflevector <8 x i1> [[B_HALF]], <8 x i1> [[A_HALF]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  // OGCG: bitcast <16 x i1> [[RES]] to i16
+  return _mm512_kunpackb(A, B);
+}
 __m256 test_mm512_i64gather_ps(__m512i __index, void const *__addr) {
   // CIR-LABEL: test_mm512_i64gather_ps
   // CIR: cir.call_llvm_intrinsic "x86.avx512.mask.gather.qps.512"

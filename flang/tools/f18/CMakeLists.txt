@@ -31,7 +31,6 @@ set(MODULES_WITHOUT_IMPLEMENTATION
   "iso_fortran_env"
   "f90deviceio"
   "iso_fortran_env_impl"
-  "flang_debug"
 )
 
 set(MODULES ${MODULES_WITH_IMPLEMENTATION} ${MODULES_WITHOUT_IMPLEMENTATION})

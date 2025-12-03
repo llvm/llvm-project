@@ -4018,7 +4018,9 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     // process explicit bindings
     processExplicitBindingsOnDecl(VD);
 
-    if (VD->getType()->isHLSLResourceRecordArray()) {
+    // Add implicit binding attribute to non-static resource arrays.
+    if (VD->getType()->isHLSLResourceRecordArray() &&
+        VD->getStorageClass() != SC_Static) {
       // If the resource array does not have an explicit binding attribute,
       // create an implicit one. It will be used to transfer implicit binding
       // order_ID to codegen.
@@ -4212,8 +4214,8 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   if (VD->getType().getAddressSpace() == LangAS::hlsl_constant)
     return true;
 
-  // Initialize resources at the global scope
-  if (VD->hasGlobalStorage()) {
+  // Initialize non-static resources at the global scope.
+  if (VD->hasGlobalStorage() && VD->getStorageClass() != SC_Static) {
     const Type *Ty = VD->getType().getTypePtr();
     if (Ty->isHLSLResourceRecord())
       return initGlobalResourceDecl(VD);
@@ -4237,10 +4239,10 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
   while (auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
     E = ASE->getBase()->IgnoreParenImpCasts();
 
-  // Report error if LHS is a resource declared at a global scope.
+  // Report error if LHS is a non-static resource declared at a global scope.
   if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
     if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (VD->hasGlobalStorage()) {
+      if (VD->hasGlobalStorage() && VD->getStorageClass() != SC_Static) {
         // assignment to global resource is not allowed
         SemaRef.Diag(Loc, diag::err_hlsl_assign_to_global_resource) << VD;
         SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
