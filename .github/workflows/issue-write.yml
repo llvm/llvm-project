@@ -47,7 +47,12 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             var fs = require('fs');
-            const comments = JSON.parse(fs.readFileSync('./comments'));
+            var comments = []
+            for (local_file of fs.readdirSync('.')) {
+              if (local_file.startsWith("comments")) {
+                comments.push(...JSON.parse(fs.readFileSync(local_file)))
+              }
+            }
             if (!comments || comments.length == 0) {
               return;
             }
