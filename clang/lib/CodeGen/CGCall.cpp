@@ -2803,7 +2803,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     const auto *DD = dyn_cast_if_present<CXXDestructorDecl>(
         CalleeInfo.getCalleeDecl().getDecl());
-    if (DD && CodeGenOpts.MarkObjectsDeadAfterDestructors) {
+    if (DD && CodeGenOpts.StrictLifetimes) {
       const CXXRecordDecl *ClassDecl =
           dyn_cast<CXXRecordDecl>(DD->getDeclContext());
       // TODO(boomanaiden154): We are being intentionally conservative here

@@ -2916,15 +2916,15 @@ attribute as undefined behavior. (And, thus the optimizer may assume that any
 pointer used in such a way must not have been null and optimize away the
 branches accordingly.) On by default.}]>;
 
-defm mark_objects_dead_after_destructors
-    : BoolFOption<
-          "mark-objects-dead-after-destructors",
-          CodeGenOpts<"MarkObjectsDeadAfterDestructors">, DefaultTrue,
-          NegFlag<SetFalse, [], [ClangOption, CC1Option],
-                  "Do not mark an object dead after its destructor returns">,
-          PosFlag<SetTrue, [], [ClangOption, CC1Option],
-                  "Mark an object dead after its destructor returns">,
-          BothFlags<[], [ClangOption, CLOption]>>,
+defm lifetime_dse
+    : BoolFOption<"lifetime-dse", CodeGenOpts<"StrictLifetimes">, DefaultTrue,
+                  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+                          "Do not aggressively delete stores after the end of "
+                          "an object's lifetime">,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                          "Aggressively delete stores after the end of an "
+                          "object's lifetime">,
+                  BothFlags<[], [ClangOption, CLOption]>>,
       DocBrief<
           [{When enabled, mark an object dead after its destructor returns which allows the
 the optimizer to perform more aggressive optimizations in some cases, particularly dead

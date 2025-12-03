@@ -5626,8 +5626,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptOutFlag(CmdArgs, options::OPT_fdelete_null_pointer_checks,
                      options::OPT_fno_delete_null_pointer_checks);
 
-  Args.addOptOutFlag(CmdArgs, options::OPT_fmark_objects_dead_after_destructors,
-                     options::OPT_fno_mark_objects_dead_after_destructors);
+  Args.addOptOutFlag(CmdArgs, options::OPT_flifetime_dse,
+                     options::OPT_fno_lifetime_dse);
 
   // LLVM Code Generator Options.
 
