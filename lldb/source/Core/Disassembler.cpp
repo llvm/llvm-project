@@ -315,10 +315,7 @@ std::vector<std::string> VariableAnnotator::Annotate(Instruction &inst) {
              ? llvm::StringRef(kUndefLocationFormatted)
              : llvm::StringRef(annotation.location_description));
 
-    const auto display_string =
-        llvm::formatv("{0} = {1}", annotation.variable_name, location).str();
-
-    events.push_back(std::move(display_string));
+    events.push_back(llvm::formatv("{0} = {1}", annotation.variable_name, location).str());
   }
 
   return events;
