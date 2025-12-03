@@ -3,9 +3,9 @@
 // RUN:     -emit-llvm -o - | FileCheck --check-prefixes=OPENCL12 %s
 // RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -cl-std=CL2.0 \
 // RUN:     -emit-llvm -o - | FileCheck --check-prefixes=OPENCL20 %s
-// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -cl-std=CL3.0 \
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-mesa3d -target-cpu gfx600 -cl-std=CL3.0 \
 // RUN:     -emit-llvm -o - | FileCheck --check-prefixes=OPENCL30 %s
-// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space \
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -cl-std=CL3.0 \
 // RUN:     -emit-llvm -o - | FileCheck --check-prefixes=OPENCL30GAS %s
 
 // OPENCL-LABEL: define dso_local void @test1_builtin_alloca(

@@ -188,6 +188,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     case CK_HLSLArrayRValue:
     case CK_HLSLElementwiseCast:
     case CK_HLSLVectorTruncation:
+    case CK_HLSLMatrixTruncation:
     case CK_IntToOCLSampler:
     case CK_IntegralCast:
     case CK_IntegralComplexCast:
@@ -1323,6 +1324,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLArrayRValue:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:

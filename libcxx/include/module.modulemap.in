@@ -1517,7 +1517,6 @@ module std [system] {
       header "__iterator/iterator_traits.h"
       export std_core.type_traits.integral_constant
       export std_core.type_traits.is_convertible
-      export std_core.type_traits.nat
     }
     module iterator_with_data         { header "__iterator/iterator_with_data.h" }
     module iterator                   { header "__iterator/iterator.h" }

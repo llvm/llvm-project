@@ -37,6 +37,7 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -12570,9 +12571,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       if (SourceMgr.isInSystemMacro(CC))
         return;
       return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_vector_scalar);
-    } else if (getLangOpts().HLSL &&
-               Target->castAs<VectorType>()->getNumElements() <
-                   Source->castAs<VectorType>()->getNumElements()) {
+    }
+    if (getLangOpts().HLSL &&
+        Target->castAs<VectorType>()->getNumElements() <
+            Source->castAs<VectorType>()->getNumElements()) {
       // Diagnose vector truncation but don't return. We may also want to
       // diagnose an element conversion.
       DiagnoseImpCast(*this, E, T, CC,
@@ -12588,9 +12590,22 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
     Source = cast<VectorType>(Source)->getElementType().getTypePtr();
     Target = cast<VectorType>(Target)->getElementType().getTypePtr();
   }
-  if (auto VecTy = dyn_cast<VectorType>(Target))
+  if (const auto *VecTy = dyn_cast<VectorType>(Target))
     Target = VecTy->getElementType().getTypePtr();
 
+  if (isa<ConstantMatrixType>(Source)) {
+    if (Target->isScalarType())
+      return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_matrix_scalar);
+
+    if (getLangOpts().HLSL &&
+        Target->castAs<ConstantMatrixType>()->getNumElementsFlattened() <
+            Source->castAs<ConstantMatrixType>()->getNumElementsFlattened()) {
+      // Diagnose Matrix truncation but don't return. We may also want to
+      // diagnose an element conversion.
+      DiagnoseImpCast(*this, E, T, CC,
+                      diag::warn_hlsl_impcast_matrix_truncation);
+    }
+  }
   // Strip complex types.
   if (isa<ComplexType>(Source)) {
     if (!isa<ComplexType>(Target)) {
