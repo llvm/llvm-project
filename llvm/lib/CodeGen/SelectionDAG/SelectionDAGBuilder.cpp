@@ -3512,6 +3512,11 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
 /// - they do not need custom argument handling (no
 /// TLI.CollectTargetIntrinsicOperands())
 void SelectionDAGBuilder::visitCallBrIntrinsic(const CallBrInst &I) {
+  TargetLowering::IntrinsicInfo Info;
+  assert(!DAG.getTargetLoweringInfo().getTgtMemIntrinsic(
+             Info, I, DAG.getMachineFunction(), I.getIntrinsicID()) &&
+         "Intrinsic touches memory");
+
   auto [HasChain, OnlyLoad] = getTargetIntrinsicCallProperties(I);
 
   SmallVector<SDValue, 8> Ops =
