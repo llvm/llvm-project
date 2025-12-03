@@ -544,8 +544,6 @@ bool CPlusPlusLanguage::CxxMethodName::NameMatches(llvm::StringRef full_name,
                                                    MatchOptions options) {
   constexpr llvm::StringRef abi_prefix = "[abi:";
   constexpr char abi_end = ']';
-  constexpr char open_angle = '<';
-  constexpr char close_angle = '>';
   size_t f_idx = 0;
   size_t p_idx = 0;
 
@@ -584,16 +582,15 @@ bool CPlusPlusLanguage::CxxMethodName::NameMatches(llvm::StringRef full_name,
     }
 
     // Skip template_tags.
-    if (options.skip_templates && in_char == open_angle &&
-        ma_char != open_angle) {
+    if (options.skip_templates && in_char == '<' && ma_char != '<') {
       size_t depth = 1;
       size_t tmp_idx = f_idx + 1;
       bool found_end = false;
       for (; tmp_idx < full_name.size(); ++tmp_idx) {
         const char cur = full_name[tmp_idx];
-        if (cur == open_angle)
+        if (cur == '<')
           depth++;
-        else if (cur == close_angle) {
+        else if (cur == '>') {
           depth--;
 
           if (depth == 0) {
