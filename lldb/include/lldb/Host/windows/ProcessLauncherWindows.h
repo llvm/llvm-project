@@ -50,10 +50,10 @@ protected:
   ///   `std::vector<HANDLE>` containing all handles that the child must
   ///   inherit.
   llvm::ErrorOr<std::vector<HANDLE>>
-  GetInheritedHandlesW(const ProcessLaunchInfo &launch_info,
-                       STARTUPINFOEXW &startupinfoex,
-                       HANDLE stdout_handle = NULL, HANDLE stderr_handle = NULL,
-                       HANDLE stdin_handle = NULL);
+  GetInheritedHandles(const ProcessLaunchInfo &launch_info,
+                      STARTUPINFOEXW &startupinfoex,
+                      HANDLE stdout_handle = NULL, HANDLE stderr_handle = NULL,
+                      HANDLE stdin_handle = NULL);
 };
 }
 

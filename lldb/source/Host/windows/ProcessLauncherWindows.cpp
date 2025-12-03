@@ -194,7 +194,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   return HostProcess(pi.hProcess);
 }
 
-llvm::ErrorOr<std::vector<HANDLE>> ProcessLauncherWindows::GetInheritedHandlesW(
+llvm::ErrorOr<std::vector<HANDLE>> ProcessLauncherWindows::GetInheritedHandles(
     const ProcessLaunchInfo &launch_info, STARTUPINFOEXW &startupinfoex,
     HANDLE stdout_handle, HANDLE stderr_handle, HANDLE stdin_handle) {
   std::vector<HANDLE> inherited_handles;
