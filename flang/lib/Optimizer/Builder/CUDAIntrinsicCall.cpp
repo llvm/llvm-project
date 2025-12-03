@@ -17,6 +17,8 @@
 #include "flang/Evaluate/common.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -1489,6 +1491,13 @@ void CUDAIntrinsicLibrary::genTMABulkG2S(
       builder, loc, dst, src, barrier, fir::getBase(args[3]), {}, {});
 }
 
+static void setAlignment(mlir::Value ptr, unsigned alignment) {
+  if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(ptr.getDefiningOp()))
+    if (auto sharedOp = mlir::dyn_cast<cuf::SharedMemoryOp>(
+            declareOp.getMemref().getDefiningOp()))
+      sharedOp.setAlignment(alignment);
+}
+
 static void genTMABulkLoad(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value barrier, mlir::Value src,
                            mlir::Value dst, mlir::Value nelem,
@@ -1496,6 +1505,7 @@ static void genTMABulkLoad(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value size = mlir::arith::MulIOp::create(builder, loc, nelem, eleSize);
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
   barrier = builder.createConvert(loc, llvmPtrTy, barrier);
+  setAlignment(dst, 16);
   dst = builder.createConvert(loc, llvmPtrTy, dst);
   src = builder.createConvert(loc, llvmPtrTy, src);
   mlir::NVVM::InlinePtxOp::create(
