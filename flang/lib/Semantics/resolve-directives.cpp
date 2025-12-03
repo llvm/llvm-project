@@ -2567,7 +2567,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPAllocatorsConstruct &x) {
 
   for (const auto &clause : dirSpec.Clauses().v) {
     if (std::get_if<parser::OmpClause::Allocate>(&clause.u)) {
-      ResolveOmpObjectList(*parser::omp::GetOmpObjectList(x),
+      ResolveOmpObjectList(*parser::omp::GetOmpObjectList(clause),
           Symbol::Flag::OmpExecutableAllocateDirective);
     }
   }

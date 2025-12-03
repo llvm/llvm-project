@@ -129,55 +129,81 @@ std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &x);
 std::optional<Label> GetFinalLabel(const OpenMPConstruct &x);
 
 namespace detail {
-// Clauses with OmpObjectList as its data member
+// Clauses with flangClass = "OmpObjectList".
 using MemberObjectListClauses =
     std::tuple<OmpClause::Copyin, OmpClause::Copyprivate, OmpClause::Exclusive,
         OmpClause::Firstprivate, OmpClause::HasDeviceAddr, OmpClause::Inclusive,
         OmpClause::IsDevicePtr, OmpClause::Link, OmpClause::Private,
         OmpClause::Shared, OmpClause::UseDeviceAddr, OmpClause::UseDevicePtr>;
 
-// Clauses with OmpObjectList in the tuple
+// Clauses with flangClass = "OmpSomeClause", and OmpObjectList a
+// member of tuple OmpSomeClause::t.
 using TupleObjectListClauses = std::tuple<OmpClause::AdjustArgs,
     OmpClause::Affinity, OmpClause::Aligned, OmpClause::Allocate,
     OmpClause::Enter, OmpClause::From, OmpClause::InReduction,
     OmpClause::Lastprivate, OmpClause::Linear, OmpClause::Map,
     OmpClause::Reduction, OmpClause::TaskReduction, OmpClause::To>;
 
-template <typename...> struct WrappedInType;
+// Does U have WrapperTrait (i.e. has a member 'v'), and if so, is T the
+// type of v?
+template <typename T, typename U, bool IsWrapper> struct WrappedInType {
+  static constexpr bool value{false};
+};
 
-template <typename T> struct WrappedInType<T> {
+template <typename T, typename U> struct WrappedInType<T, U, true> {
+  static constexpr bool value{std::is_same_v<T, decltype(U::v)>};
+};
+
+// Same as WrappedInType, but with a list of types Us. Satisfied if any
+// type U in Us satisfies WrappedInType<T, U>.
+template <typename...> struct WrappedInTypes;
+
+template <typename T> struct WrappedInTypes<T> {
   static constexpr bool value{false};
 };
 
 template <typename T, typename U, typename... Us>
-struct WrappedInType<T, U, Us...> {
-  static constexpr bool value{//
-      std::is_same_v<T, decltype(U::v)> || WrappedInType<T, Us...>::value};
+struct WrappedInTypes<T, U, Us...> {
+  static constexpr bool value{WrappedInType<T, U, WrapperTrait<U>>::value ||
+      WrappedInTypes<T, Us...>::value};
 };
 
-template <typename...> struct WrappedInTuple {
+// Same as WrappedInTypes, but takes type list in a form of a tuple or
+// a variant.
+template <typename...> struct WrappedInTupleOrVariant {
   static constexpr bool value{false};
 };
 template <typename T, typename... Us>
-struct WrappedInTuple<T, std::tuple<Us...>> {
-  static constexpr bool value{WrappedInType<T, Us...>::value};
+struct WrappedInTupleOrVariant<T, std::tuple<Us...>> {
+  static constexpr bool value{WrappedInTypes<T, Us...>::value};
+};
+template <typename T, typename... Us>
+struct WrappedInTupleOrVariant<T, std::variant<Us...>> {
+  static constexpr bool value{WrappedInTypes<T, Us...>::value};
 };
 template <typename T, typename U>
-constexpr bool WrappedInTupleV{WrappedInTuple<T, U>::value};
+constexpr bool WrappedInTupleOrVariantV{WrappedInTupleOrVariant<T, U>::value};
 } // namespace detail
 
 template <typename T> const OmpObjectList *GetOmpObjectList(const T &clause) {
   using namespace detail;
+  static_assert(std::is_class_v<T>, "Unexpected argument type");
 
-  if constexpr (common::HasMember<T, MemberObjectListClauses>) {
-    return &clause.v;
-  } else if constexpr (common::HasMember<T, TupleObjectListClauses>) {
-    return &std::get<OmpObjectList>(clause.v.t);
-  } else if constexpr (WrappedInTupleV<T, TupleObjectListClauses>) {
+  if constexpr (common::HasMember<T, decltype(OmpClause::u)>) {
+    if constexpr (common::HasMember<T, MemberObjectListClauses>) {
+      return &clause.v;
+    } else if constexpr (common::HasMember<T, TupleObjectListClauses>) {
+      return &std::get<OmpObjectList>(clause.v.t);
+    } else {
+      return nullptr;
+    }
+  } else if constexpr (WrappedInTupleOrVariantV<T, TupleObjectListClauses>) {
     return &std::get<OmpObjectList>(clause.t);
-  } else {
-    static_assert(std::is_class_v<T>, "Unexpected argument type");
+  } else if constexpr (WrappedInTupleOrVariantV<T, decltype(OmpClause::u)>) {
     return nullptr;
+  } else {
+    // The condition should be type-dependent, but it should always be false.
+    static_assert(sizeof(T) < 0 && "Unexpected argument type");
   }
 }
 
