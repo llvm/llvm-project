@@ -852,7 +852,7 @@ define i32 @test_litter_conditions_constant(i32 %start, i32 %len) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[CANONICAL_IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[CANONICAL_IV_NEXT:%.*]], [[BACKEDGE]] ]
-; CHECK-NEXT:    [[CONSTANT_CHECK:%.*]] = icmp ult i32 [[CANONICAL_IV]], 65635
+; CHECK-NEXT:    [[CONSTANT_CHECK:%.*]] = icmp samesign ult i32 [[CANONICAL_IV]], 65635
 ; CHECK-NEXT:    br i1 [[CONSTANT_CHECK]], label [[CONSTANT_CHECK_PASSED:%.*]], label [[CONSTANT_CHECK_FAILED:%.*]]
 ; CHECK:       constant_check_passed:
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp ne i32 [[IV]], 0
