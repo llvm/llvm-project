@@ -45,7 +45,7 @@ add_header_library(
   HDRS
     monotonicity.h
   DEPENDS
-    libc.src.__support.time.clock_conversion
     .abs_timeout
     libc.hdr.time_macros
+    libc.src.__support.time.clock_conversion
 )
